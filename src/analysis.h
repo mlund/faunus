@@ -1282,52 +1282,96 @@ namespace Faunus {
             }; // end of multipole distribution
 
         /** @brief Sample scattering intensity */
-        template<class Tspace, class Tformfactor=Scatter::FormFactorUnity<double>>
+        template<class Space>
             class ScatteringFunction : public Analysisbase {
-                Tspace &spc;
-                bool usecom;                    // scatter from mass center, only?
-                std::string filename;           // output file name
-                std::vector<Point> p;           // vector of scattering points
-                std::vector<int> ids;           // Molecule ids
-                std::vector<std::string> names; // Molecule names
-                Scatter::DebyeFormula<Tformfactor> debye;
+                private:
+                    enum Schemes { DEBYE, EXPLICIT }; // two different schemes
+                    Schemes scheme = DEBYE;
+                    Space &spc;
+                    bool usecom;                    // scatter from mass center, only?
+                    std::string filename;           // output file name
+                    std::vector<Point> p;           // vector of scattering points
+                    std::vector<int> ids;           // Molecule ids
+                    std::vector<std::string> names; // Molecule names
+                    typedef Scatter::FormFactorUnity<double> Tformfactor;
 
-                void _sample() override {
-                    p.clear();
-                    for (int id : ids) { // loop over molecule names
-                        auto groups = spc.findMolecules(id);
-                        for (auto &g : groups) // loop over groups
-                            if (usecom && !g.atomic)
-                                p.push_back( g.cm );
-                            else
-                                for (auto &i : g) // loop over particle index in group
-                                    p.push_back( i.pos );
-                    }
-                    debye.sample( p, spc.geo.getVolume() );
-                }
-
-                void _to_json(json &j) const override {
-                    j = { { "molecules", names }, { "com", usecom } };
-                }
-
+                    std::shared_ptr<Scatter::DebyeFormula<Tformfactor>> debye;
+                    std::shared_ptr<Scatter::StructureFactor<double>> explicit_average;
                 public:
-                ScatteringFunction(const json &j, Tspace &spc) try : spc(spc), debye(j) {
-                    from_json(j);
-                    name = "scatter";
-                    usecom = j.value("com", true);
-                    filename = j.at("file").get<std::string>();
-                    names = j.at("molecules").get<decltype(names)>(); // molecule names
-                    ids = names2ids(molecules<typename Tspace::Tpvec>, names);// names --> molids
-                }
-                catch( std::exception &e ) {
-                    std::cerr << "Debye Formula Scattering: ";
-                    throw;
-                }
+                    void _sample() {
+                        p.clear();
+                        for (int id : ids) { // loop over molecule names
+                            auto groups = spc.findMolecules(id);
+                            for (auto &g : groups) // loop over groups
+                                if (usecom && !g.atomic)
+                                    p.push_back(g.cm);
+                                else
+                                    for (auto &i : g) // loop over particle index in group
+                                        p.push_back(i.pos);
+                        }
+                        switch (scheme) {
+                            case DEBYE:
+                                debye->sample(p, spc.geo.getVolume());
+                                break;
+                            case EXPLICIT:
+                                explicit_average->sample(p, spc.geo.getLength().x());
+                                break;
+                        }
+                    }
+                    void _to_json(json &j) const {
+                        j = {{"molecules", names}, {"com", usecom}};
+                        switch (scheme) {
+                            case DEBYE:
+                                j["scheme"] = "debye";
+                                j["qmin"] = debye->qmin;
+                                j["qmax"] = debye->qmax;
+                                break;
+                            case EXPLICIT:
+                                j["scheme"] = "explicit";
+                                j["pmax"] = explicit_average->pmax;
+                                break;
+                        }
+                    }
 
-                ~ScatteringFunction() {
-                    debye.save( filename );
-                }
+                    ScatteringFunction(const json &j, Space &spc) try : spc(spc) {
+                        from_json(j);
+                        name = "scatter";
+                        usecom = j.value("com", true);
+                        filename = j.at("file").get<std::string>();
+                        names = j.at("molecules").get<decltype(names)>(); // molecule names
+                        ids = names2ids(molecules<typename Space::Tpvec>, names);                // names --> molids
+
+                        std::string scheme_str = j.value("scheme", "explicit");
+                        if (scheme_str == "debye") {
+                            scheme = DEBYE;
+                            debye = std::make_shared<Scatter::DebyeFormula<Tformfactor>>(j);
+                            // todo: add warning if used on PBC system
+                            // if (spc.geo.geometry->boundary_conditions.x() == Geometry::PERIODIC)
+                            //    faunus_logger->warn("{0}: '{1}' scheme used on PBC system; consider 'explicit' instead", name,
+                            //    scheme_str);
+                        } else if (scheme_str == "explicit") {
+                            scheme = EXPLICIT;
+                            int pmax = j.value("pmax", 15);
+                            explicit_average = std::make_shared<Scatter::StructureFactor<double>>(pmax);
+                            // todo: add warning if used a non-cubic system
+                        } else
+                            throw std::runtime_error("unknown scheme");
+                    } catch (std::exception &e) {
+                        throw std::runtime_error("scatter: "s + e.what());
+                    }
+
+                    void _to_disk() {
+                        switch (scheme) {
+                            case DEBYE:
+                                debye->save(filename);
+                                break;
+                            case EXPLICIT:
+                                explicit_average->save(filename);
+                                break;
+                        }
+                    }
             };
+
 
         /**
          * @brief Analysis of polymer shape - radius of gyration, shape factor etc.

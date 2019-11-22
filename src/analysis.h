@@ -389,6 +389,7 @@ class ScatteringFunction : public Analysisbase {
     Schemes scheme = DEBYE;
     Space &spc;
     bool usecom;                    // scatter from mass center, only?
+    bool save_after_sample = false; // if true, save average S(q) after each sample point
     std::string filename;           // output file name
     std::vector<Point> p;           // vector of scattering points
     std::vector<int> ids;           // Molecule ids

@@ -1278,12 +1278,21 @@ void ScatteringFunction::_sample() {
                 for (auto &i : g) // loop over particle index in group
                     p.push_back(i.pos);
     }
+
+    // zero-padded suffix to use with `save_after_sample`
+    std::string suffix = std::to_string(cnt);
+    suffix = std::string(7 - suffix.length(), '0') + suffix;
+
     switch (scheme) {
     case DEBYE:
         debye->sample(p, spc.geo.getVolume());
+        if (save_after_sample)
+            debye->save(filename + "." + suffix);
         break;
     case EXPLICIT:
         explicit_average->sample(p, spc.geo.getLength().x());
+        if (save_after_sample)
+            explicit_average->save(filename + "." + suffix);
         break;
     }
 }
@@ -1298,6 +1307,7 @@ void ScatteringFunction::_to_json(json &j) const {
     case EXPLICIT:
         j["scheme"] = "explicit";
         j["pmax"] = explicit_average->pmax;
+        j["ipbc"] = explicit_average->ipbc;
         break;
     }
 }
@@ -1306,6 +1316,7 @@ ScatteringFunction::ScatteringFunction(const json &j, Space &spc) try : spc(spc)
     from_json(j);
     name = "scatter";
     usecom = j.value("com", true);
+    save_after_sample = j.value("stepsave", false); // save to disk for each sample
     filename = j.at("file").get<std::string>();
     names = j.at("molecules").get<decltype(names)>(); // molecule names
     ids = names2ids(molecules, names);                // names --> molids
@@ -1321,7 +1332,8 @@ ScatteringFunction::ScatteringFunction(const json &j, Space &spc) try : spc(spc)
     } else if (scheme_str == "explicit") {
         scheme = EXPLICIT;
         int pmax = j.value("pmax", 15);
-        explicit_average = std::make_shared<Scatter::StructureFactor<double>>(pmax);
+        bool ipbc = j.value("ipbc", false);
+        explicit_average = std::make_shared<Scatter::StructureFactor<double>>(pmax, ipbc);
         // todo: add warning if used a non-cubic system
     } else
         throw std::runtime_error("unknown scheme");

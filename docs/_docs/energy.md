@@ -827,7 +827,7 @@ follow the order of insertion specified in `insertmolecules`.
 General keywords  | Description 
 ----------------- | -------------------------------------------------------------------
 `index`           | Atom index, atom id or group index
-`indexes`         | Array of atomic indexes
+`indexes`         | Array of atomic indexes (`[a,b]` or `[a,b,c,d]`)
 `range`           | Array w. [min:max] value
 `resolution`      | Resolution along the coordinate (Å)
 `dir`             | Axes of the reaction coordinate, $e.g.$, `[1,1,0]` for the $xy$-plane  
@@ -856,7 +856,7 @@ General keywords  | Description
 `N`                         | Number of atoms in group
 `Q`                         | Monopole moment (net charge)
 `atomatom`                  | Distance along `dir` between 2 atoms specified by the `indexes` array
-`cmcm`                      | Absolute mass-center separation between groups `indexes[0:1]` or atomic `indexes[0:1]` and `indexes[2:3]`
+`cmcm`                      | Absolute mass-center separation between group indexes `a` and `b` or atomic indexes `a`–`b` and `c`–`d`
 `cmcm_z`                    | $z$-component of `cmcm`
 `mindist`                   | Minimum distance between particles of id `indexes[0]` and `indexes[1]`
 `L/R`                       | Ratio between height and radius of a cylindrical vesicle

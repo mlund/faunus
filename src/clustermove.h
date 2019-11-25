@@ -21,6 +21,7 @@ class Cluster : public Movebase {
     bool rotate; // true if cluster should be rotated
     bool spread; // true if cluster should spread outside of the first layer of surrounding molecules
     Point dir = {1, 1, 1}, dp;
+    Point dirrot = {0, 0, 0}; // predefined axis of rotation
     std::vector<std::string> names; // names of molecules to be considered
     std::vector<int> ids;           // molecule id's of molecules to be considered
     std::set<int> satellites;       // subset of molecules to cluster, but NOT act as nuclei (cluster centers)

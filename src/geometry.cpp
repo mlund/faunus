@@ -1,7 +1,9 @@
 #include "geometry.h"
 #include "atomdata.h"
 #include "random.h"
+#include "auxiliary.h"
 #include "aux/eigensupport.h"
+#include "spdlog/spdlog.h"
 
 namespace Faunus {
 namespace Geometry {
@@ -580,6 +582,26 @@ void from_json(const json &j, Chameleon &g) {
 }
 
 void to_json(json &j, const Chameleon &g) { g.to_json(j); }
+
+ParticleVector mapParticlesOnSphere(ParticleVector particles) {
+    assert(particles.size() > 1);
+    Point &COM = particles.front().pos;
+    COM = massCenter(particles.begin() + 1, particles.end());
+    Average<double> radius; // average radial distance
+    for (auto &i : particles) {
+        if (&i.pos != &COM) {
+            i.pos = i.pos - COM;     // move to origin
+            double r = i.pos.norm(); // radial distance
+            i.pos = i.pos / r;       // normalize to unit vector
+            radius += r;             // radius is the average r
+        }
+    }
+    for (auto &i : particles) // scale positions to surface of sphere
+        i.pos = i.pos * radius.avg() + COM;
+
+    faunus_logger->info("{} particles mapped on sphere of radius {}", particles.size(), radius.avg());
+    return particles;
+}
 
 Chameleon::Chameleon(const Variant type) {
     makeGeometry(type);

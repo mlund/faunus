@@ -99,6 +99,7 @@ Properties of molecules and their default values:
 `atoms=[]`              | Array of atom names; required if `atomic=true`
 `bondlist`              | List of _internal_ bonds (harmonic, dihedrals etc.)
 `compressible=false`    | If true, molecular internal coordinates are scaled upon volume moves
+`ensphere=false`        | Radial rescale of positions to sphere w. radius of average radial distance from COM
 `excluded_neighbours=0` | Generate an `exclusionlist` from the bonded interaction: Add all atom pairs which are `excluded_neighbours` or less bonds apart
 `exclusionlist`         | List of _internal_ atom pairs which nonbonded interactions are excluded
 `implicit=false`        | If this species is implicit in GCMC schemes

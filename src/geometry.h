@@ -551,5 +551,18 @@ Tensor inertia(iter begin, iter end, const Point origin = {0,0,0},
     return I;
 }
 
+/**
+ * @brief Scale particles to the surface of a sphere
+ * @param particles Vector of particles
+ *
+ * The sphere radius is taken as the average radial distance
+ * of all particles with respect to the geometric center.
+ * The _first_ particle of the given particles are excluded
+ * from the COM calculation and re-positions to the center
+ * of the sphere. Therefore, make sure to add a dummy particle
+ * to the beginning of the particle vector.
+ */
+ParticleVector mapParticlesOnSphere(ParticleVector particles);
+
 } // namespace Geometry
 } // namespace Faunus

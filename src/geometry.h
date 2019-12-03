@@ -552,17 +552,34 @@ Tensor inertia(iter begin, iter end, const Point origin = {0,0,0},
 }
 
 /**
+ * @brief Root-mean-square deviation of two data sets represented by iterators
+ *
+ * A binary function must be given that returns the difference between data points
+ * in the two sets, for example `[](int a, int b){return a-b;}`.
+ */
+template <typename InputIt1, typename InputIt2, typename BinaryOperation>
+double rootMeanSquareDeviation(InputIt1 begin, InputIt1 end, InputIt2 d_begin, BinaryOperation difffunc) {
+    assert(std::distance(begin, end) > 0);
+    double sq_sum = 0;
+    for (InputIt1 i = begin; i != end; ++i) {
+        sq_sum += std::pow(difffunc(*i, *d_begin), 2);
+        ++d_begin;
+    }
+    return std::sqrt(sq_sum / std::distance(begin, end));
+}
+
+/**
  * @brief Scale particles to the surface of a sphere
  * @param particles Vector of particles
  *
  * The sphere radius is taken as the average radial distance
  * of all particles with respect to the geometric center.
  * The _first_ particle of the given particles are excluded
- * from the COM calculation and re-positions to the center
+ * from the COM calculation and re-positioned at the center
  * of the sphere. Therefore, make sure to add a dummy particle
  * to the beginning of the particle vector.
  */
-ParticleVector mapParticlesOnSphere(ParticleVector particles);
+ParticleVector mapParticlesOnSphere(const ParticleVector &);
 
 } // namespace Geometry
 } // namespace Faunus

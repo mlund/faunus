@@ -583,23 +583,27 @@ void from_json(const json &j, Chameleon &g) {
 
 void to_json(json &j, const Chameleon &g) { g.to_json(j); }
 
-ParticleVector mapParticlesOnSphere(ParticleVector particles) {
+ParticleVector mapParticlesOnSphere(const ParticleVector &particles) {
     assert(particles.size() > 1);
-    Point &COM = particles.front().pos;
-    COM = massCenter(particles.begin() + 1, particles.end());
     Average<double> radius; // average radial distance
-    for (auto &i : particles) {
-        if (&i.pos != &COM) {
-            i.pos = i.pos - COM;     // move to origin
-            double r = i.pos.norm(); // radial distance
-            i.pos = i.pos / r;       // normalize to unit vector
-            radius += r;             // radius is the average r
-        }
+    ParticleVector dst(particles.size());
+    Point COM = massCenter(particles.begin() + 1, particles.end());
+    for (size_t i = 1; i < particles.size(); i++) {
+        dst[i].pos = particles[i].pos - COM; // make COM origin
+        double r = dst[i].pos.norm();        // radial distance
+        dst[i].pos /= r;                     // normalize to unit vector
+        radius += r;                         // radius is the average r
     }
-    for (auto &i : particles) // scale positions to surface of sphere
+    dst[0].pos.setZero();
+    for (auto &i : dst) // scale positions to surface of sphere
         i.pos = i.pos * radius.avg() + COM;
 
-    faunus_logger->info("{} particles mapped on sphere of radius {}", particles.size(), radius.avg());
+    // rmsd, skipping the first particle
+    double _rmsd = rootMeanSquareDeviation(dst.begin() + 1, dst.end(), particles.begin() + 1,
+                                           [](const Particle &a, const Particle &b) { return (a.pos - b.pos).norm(); });
+
+    faunus_logger->info("{} particles mapped on sphere of radius {} with RMSD {} {}", dst.size(), radius.avg(), _rmsd,
+                        u8::angstrom);
     return particles;
 }
 

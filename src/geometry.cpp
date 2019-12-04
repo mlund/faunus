@@ -599,8 +599,9 @@ ParticleVector mapParticlesOnSphere(const ParticleVector &particles) {
         i.pos = i.pos * radius.avg() + COM;
 
     // rmsd, skipping the first particle
-    double _rmsd = rootMeanSquareDeviation(dst.begin() + 1, dst.end(), particles.begin() + 1,
-                                           [](const Particle &a, const Particle &b) { return (a.pos - b.pos).norm(); });
+    double _rmsd =
+        rootMeanSquareDeviation(dst.begin() + 1, dst.end(), particles.begin() + 1,
+                                [](const Particle &a, const Particle &b) { return (a.pos - b.pos).squaredNorm(); });
 
     faunus_logger->info("{} particles mapped on sphere of radius {} with RMSD {} {}", dst.size(), radius.avg(), _rmsd,
                         u8::angstrom);

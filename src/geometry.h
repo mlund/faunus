@@ -558,11 +558,11 @@ Tensor inertia(iter begin, iter end, const Point origin = {0,0,0},
  * in the two sets, for example `[](int a, int b){return a-b;}`.
  */
 template <typename InputIt1, typename InputIt2, typename BinaryOperation>
-double rootMeanSquareDeviation(InputIt1 begin, InputIt1 end, InputIt2 d_begin, BinaryOperation difffunc) {
+double rootMeanSquareDeviation(InputIt1 begin, InputIt1 end, InputIt2 d_begin, BinaryOperation diff_squared_func) {
     assert(std::distance(begin, end) > 0);
     double sq_sum = 0;
     for (InputIt1 i = begin; i != end; ++i) {
-        sq_sum += std::pow(difffunc(*i, *d_begin), 2);
+        sq_sum += diff_squared_func(*i, *d_begin);
         ++d_begin;
     }
     return std::sqrt(sq_sum / std::distance(begin, end));
@@ -573,11 +573,13 @@ double rootMeanSquareDeviation(InputIt1 begin, InputIt1 end, InputIt2 d_begin, B
  * @param particles Vector of particles
  *
  * The sphere radius is taken as the average radial distance
- * of all particles with respect to the geometric center.
- * The _first_ particle of the given particles are excluded
+ * of all particles with respect to the mass center.
+ * The _first_ particle of the given particles is excluded
  * from the COM calculation and re-positioned at the center
  * of the sphere. Therefore, make sure to add a dummy particle
- * to the beginning of the particle vector.
+ * to the beginning of the particle vector; it's positions is
+ * not used and will be overwritten.
+ * Similar to routine described in doi:10.1021/jp010360o
  */
 ParticleVector mapParticlesOnSphere(const ParticleVector &);
 

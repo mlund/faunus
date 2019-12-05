@@ -231,7 +231,7 @@ endif ()
 foreach (file coulombgalore.h LICENSE)
     if (NOT EXISTS "${CMAKE_BINARY_DIR}/_deps/coulombgalore/${file}")
         file(DOWNLOAD
-            "https://raw.githubusercontent.com/mlund/coulombgalore/f55b4df/${file}"
+            "https://raw.githubusercontent.com/mlund/coulombgalore/006fe13/${file}"
             "${CMAKE_BINARY_DIR}/_deps/coulombgalore/${file}" STATUS status)
     endif ()
 endforeach ()

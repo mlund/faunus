@@ -668,6 +668,8 @@ void QuadrantJump::_move(Change &change) {
     assert(!spc.groups.empty());
     assert(spc.geo.getVolume() > 0);
 
+    _sqd = 0.0;
+
     // pick random group from the system matching molecule type
     // TODO: This can be slow -- implement look-up-table in Space
     auto mollist = spc.findMolecules(molid, Space::ACTIVE); // list of molecules w. 'molid'
@@ -743,6 +745,7 @@ typename Space::Tpvec::iterator AtomicSwapCharge::randomAtom() {
     return spc.p.end();
 }
 void AtomicSwapCharge::_move(Change &change) {
+    _sqd = 0.0;
     auto p = randomAtom();
     if (p != spc.p.end()) {
         // auto &g = spc.groups[cdata.index];
@@ -797,6 +800,8 @@ void TranslateRotate::_move(Change &change) {
     assert(!spc.groups.empty());
     assert(spc.geo.getVolume() > 0);
 
+    _sqd = 0;
+
     // pick random group from the system matching molecule type
     // TODO: This can be slow -- implement look-up-table in Space
     auto mollist = spc.findMolecules(molid, Space::ACTIVE); // list of molecules w. 'molid'
@@ -828,8 +833,18 @@ void TranslateRotate::_move(Change &change) {
                 d.all = true;                                       // *all* atoms in group were moved
                 change.groups.push_back(d);                         // add to list of moved groups
             }
-            assert(spc.geo.sqdist(it->cm, Geometry::massCenter(it->begin(), it->end(), spc.geo.getBoundaryFunc(),
-                                                               -it->cm)) < 1e-6);
+#ifndef NDEBUG
+            // check if mass center is correctly moved and can be re-calculated
+            Point cm_recalculated = Geometry::massCenter(it->begin(), it->end(), spc.geo.getBoundaryFunc(), -it->cm);
+            double should_be_small = spc.geo.sqdist(it->cm, cm_recalculated);
+            if (should_be_small > 1e-6) {
+                std::cerr << "cm recalculated: " << cm_recalculated.transpose() << "\n";
+                std::cerr << "cm in group:     " << it->cm.transpose() << "\n";
+                assert(false);
+            }
+//            assert(spc.geo.sqdist(it->cm, Geometry::massCenter(it->begin(), it->end(), spc.geo.getBoundaryFunc(),
+//                                                               -it->cm)) < 1e-6);////////////////
+#endif
         }
     }
 }
@@ -898,6 +913,7 @@ void SmartTranslateRotate::_move(Change &change) {
     assert(!spc.groups.empty());
     assert(spc.geo.getVolume() > 0);
     _bias = 0.0;
+    _sqd = 0.0;
 
     // pick random group from the system matching molecule type
     // TODO: This can be slow -- implement look-up-table in Space

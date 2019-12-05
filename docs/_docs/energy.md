@@ -139,7 +139,7 @@ composition. Currently, parallelisation is disabled by default.
  `type`                |  Coulomb type, see below
  `cutoff`              |  Spherical cutoff, $R_c$ (Å) after which the potential is zero
  `epsr`                |  Relative dielectric constant of the medium
- `utol=1e-5`           |  Error tolerence for splining
+ `utol=0.005/lB`       |  Error tolerence for splining; default value depends on the Bjerrum length, lB
  `debyelength=`$\infty$|  Debye length (Å) if using `ewald`, `poisson`, `yukawa`
 
 This is a multipurpose potential that handles several electrostatic methods.
@@ -193,7 +193,12 @@ depending on `C` and `D`. Thus, for an infinite Debye length, the following hold
 ### Debye Screening Length
 
 A background screening due to implicit ions can be added by specifying the keyword `debyelength` to the schemes
-`ewald`, `poisson`, and `yukawa`. The latter is an alias for `poisson` with `C=1`, and `D=-1` which
+
+- `yukawa`
+- `ewald`
+- `poisson`
+
+The former is an alias for `poisson` with `C=1`, and `D=-1` which
 gives a plain and shifted Coulomb potential with exponential screening.
 If `shift=false`, the potential is left unshifted and any given cutoff is ignored and instead set to infinity.
 

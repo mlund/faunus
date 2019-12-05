@@ -276,6 +276,8 @@ void MoleculeBuilder::readParticles(const json &j_properties) {
         bool read_charges = j_properties.value("keepcharges", true);
         MoleculeStructureReader structure_reader(read_charges);
         structure_reader.readJson(particles, *j_structure_it);
+        if (j_properties.value("ensphere", false))
+            particles = Geometry::mapParticlesOnSphere(particles);
     } else {
         // allow virtual molecules :-/
         // shall we rather try to fallback on readAtomic()?

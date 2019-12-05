@@ -1,7 +1,9 @@
 #include "geometry.h"
 #include "atomdata.h"
 #include "random.h"
+#include "auxiliary.h"
 #include "aux/eigensupport.h"
+#include "spdlog/spdlog.h"
 
 namespace Faunus {
 namespace Geometry {
@@ -580,6 +582,31 @@ void from_json(const json &j, Chameleon &g) {
 }
 
 void to_json(json &j, const Chameleon &g) { g.to_json(j); }
+
+ParticleVector mapParticlesOnSphere(const ParticleVector &particles) {
+    assert(particles.size() > 1);
+    Average<double> radius; // average radial distance
+    ParticleVector dst(particles.size());
+    Point COM = massCenter(particles.begin() + 1, particles.end());
+    for (size_t i = 1; i < particles.size(); i++) {
+        dst[i].pos = particles[i].pos - COM; // make COM origin
+        double r = dst[i].pos.norm();        // radial distance
+        dst[i].pos /= r;                     // normalize to unit vector
+        radius += r;                         // radius is the average r
+    }
+    dst[0].pos.setZero();
+    for (auto &i : dst) // scale positions to surface of sphere
+        i.pos = i.pos * radius.avg() + COM;
+
+    // rmsd, skipping the first particle
+    double _rmsd =
+        rootMeanSquareDeviation(dst.begin() + 1, dst.end(), particles.begin() + 1,
+                                [](const Particle &a, const Particle &b) { return (a.pos - b.pos).squaredNorm(); });
+
+    faunus_logger->info("{} particles mapped on sphere of radius {} with RMSD {} {}", dst.size(), radius.avg(), _rmsd,
+                        u8::angstrom);
+    return particles;
+}
 
 Chameleon::Chameleon(const Variant type) {
     makeGeometry(type);

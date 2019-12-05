@@ -385,6 +385,14 @@ TEST_CASE("[Faunus] anyCenter") {
     CHECK(cm.z() == doctest::Approx(0));
 }
 
+TEST_CASE("[Faunus] rootMeanSquareDeviation") {
+    std::vector<double> v1 = {1.3, 4.4, -1.1};
+    std::vector<double> v2 = {1.1, 4.6, -1.0};
+    auto f = [](double a, double b) { return std::pow(a - b, 2); };
+    double rmsd = Geometry::rootMeanSquareDeviation(v1.begin(), v1.end(), v2.begin(), f);
+    CHECK(rmsd == doctest::Approx(0.17320508075688745));
+}
+
 } // namespace Geometry
 } // namespace Faunus
 

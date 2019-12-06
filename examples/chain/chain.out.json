@@ -4,22 +4,22 @@
             "Polymer Shape": {
                 "molecules": {
                     "POL": {
-                        "√⟨Re²⟩": 46.44395424229019,
+                        "√⟨Re²⟩": 29.864626826393966,
                         "√⟨Rgxyz²⟩": [
-                            10.500761843228984,
-                            10.490419760452415,
-                            10.397552442133234
+                            7.1929381468052584,
+                            7.281834579213997,
+                            7.169975835838661
                         ],
-                        "√⟨Rg²⟩": 18.12247231548763,
-                        "⟨Re²⟩/⟨Rg²⟩": 6.567853954344732,
-                        "⟨Re⟩": 43.91471915378456,
-                        "⟨Rg²⟩": 328.4240028256157,
-                        "⟨Rg²⟩-⟨Rg⟩²": 10.3,
-                        "⟨Rg⟩": 17.839258515301303
+                        "√⟨Rg²⟩": 12.496880711173997,
+                        "⟨Re²⟩/⟨Rg²⟩": 5.710983904762236,
+                        "⟨Re⟩": 27.415533806484582,
+                        "⟨Rg²⟩": 156.17202750931273,
+                        "⟨Rg²⟩-⟨Rg⟩²": 9.334439944067896,
+                        "⟨Rg⟩": 12.117656026032627
                     }
                 },
                 "nstep": 10,
-                "samples": 4000
+                "samples": 10000
             }
         },
         {
@@ -28,7 +28,7 @@
             }
         }
     ],
-    "compiler": "Clang 10.0.0",
+    "compiler": "9.2.0",
     "energy": [
         {
             "hamiltonian": [
@@ -386,28 +386,7 @@
                                 }
                             }
                         ],
-                        "relative time": 0.0324838435273608
-                    }
-                },
-                {
-                    "nonbonded": {
-                        "cutoff_g2g": {
-                            "POL POL": null
-                        },
-                        "pairpot": {
-                            "functor potential": {
-                                "default": [
-                                    {
-                                        "hardsphere": {}
-                                    }
-                                ],
-                                "selfenergy": {
-                                    "dipole": false,
-                                    "monopole": false
-                                }
-                            }
-                        },
-                        "relative time": 0.3417576148789959
+                        "relative time": 0.17473658619416446
                     }
                 }
             ]
@@ -421,7 +400,7 @@
         ],
         "type": "cuboid"
     },
-    "git revision": "2aac54e7 (2019-10-28)",
+    "git revision": "1099af7b (2019-12-02)",
     "groups": [
         {
             "POL": {
@@ -437,50 +416,33 @@
     "last move": "pivot",
     "moves": [
         {
-            "transrot": {
-                "acceptance": 0.202,
-                "dir": [
-                    1.0,
-                    1.0,
-                    1.0
-                ],
-                "molecule": "POL",
-                "molid": 0,
-                "moves": 399710,
-                "relative time": 0.0581,
-                "relative time (without energy calc)": 0.0103,
-                "repeat": 10,
-                "√⟨r²⟩": 0.26
-            }
-        },
-        {
             "crankshaft": {
-                "acceptance": 0.917,
+                "acceptance": 0.918,
                 "dprot": 0.5,
                 "molecule": "POL",
-                "moves": 399397,
-                "relative time": 0.461,
-                "relative time (without energy calc)": 0.0302,
+                "moves": 1001028,
+                "relative time": 0.391,
+                "relative time (without energy calc)": 0.148,
                 "repeat": 10,
-                "√⟨r_cm²⟩": 0.731
+                "√⟨r_cm²⟩": 0.343
             }
         },
         {
             "pivot": {
-                "acceptance": 0.95,
+                "acceptance": 0.972,
                 "dprot": 0.5,
                 "molecule": "POL",
-                "moves": 400893,
-                "relative time": 0.447,
-                "relative time (without energy calc)": 0.0333,
+                "moves": 998972,
+                "relative time": 0.514,
+                "relative time (without energy calc)": 0.195,
                 "repeat": 10,
-                "√⟨r_cm²⟩": 1.5
+                "√⟨r_cm²⟩": 1.01
             }
         }
     ],
     "number of groups": 1,
     "number of particles": 36,
     "reactionlist": null,
-    "relative drift": -3.16328502030316e-12,
+    "relative drift": 0.0,
     "temperature": 300.0
 }

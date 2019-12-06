@@ -45,7 +45,7 @@ void from_json(const json &j, InteractionData &a) {
     }
 }
 
-void from_json(SingleUseJSON &j, InteractionData &a) {
+void from_single_use_json(SingleUseJSON &j, InteractionData &a) {
     auto j_copy = j;
     for (const auto &j_it : j_copy.items()) {
         if (j_it.value().is_number()) {
@@ -132,7 +132,7 @@ void from_json(const json &j, AtomData &a) {
         // as sigma is unfortunately accessed in loops
         a.sigma = a.interaction.get("sigma");
 
-        from_json(val, a.interaction);
+        from_single_use_json(val, a.interaction);
         if (!val.empty()) {
             throw std::runtime_error("unused key(s) for atom '"s + a.name + "':\n" + val.items().begin().key() +
                                      usageTip["atomlist"]);

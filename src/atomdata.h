@@ -14,7 +14,6 @@ class InteractionData {
     typedef std::string Tkey;
     std::map<Tkey, double> data; //!< arbitrary additional properties
     friend void to_json(json &, const InteractionData &);
-    friend void from_json(const json &, InteractionData &);
   public:
     bool has(const Tkey name) const;               // like C++20 map::contains
     double get(const Tkey name) const;             // like map::at()
@@ -24,7 +23,7 @@ class InteractionData {
 
 void to_json(json &j, const InteractionData &a);
 void from_json(const json &j, InteractionData &a);
-void from_json(SingleUseJSON &j, InteractionData &a);
+void from_single_use_json(SingleUseJSON &j, InteractionData &a);
 
 /**
  * @brief General properties for atoms

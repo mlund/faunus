@@ -135,12 +135,16 @@ SystemEnergy::SystemEnergy(const json &j, Energy::Hamiltonian &pot) {
     auto u = energyFunc();
     uinit = std::accumulate(u.begin(), u.end(), 0.0); // initial energy
 }
+void SystemEnergy::_to_disk() {
+    if (f)
+        f.flush(); // empty buffer
+}
 
 void SaveState::_to_json(json &j) const { j["file"] = file; }
 
 void SaveState::_sample() { writeFunc(file); }
 
-SaveState::~SaveState() {
+void SaveState::_to_disk() {
     if (steps == -1)
         _sample();
 }
@@ -204,26 +208,6 @@ SaveState::SaveState(const json &j, Space &spc) {
 
 PairFunctionBase::PairFunctionBase(const json &j) { from_json(j); }
 
-PairFunctionBase::~PairFunctionBase() {
-    std::ofstream f(MPI::prefix + file);
-    if (f) {
-        double Vr = 1, sum = hist.sumy();
-        hist.stream_decorator = [&](std::ostream &o, double r, double N) {
-            if (dim == 3)
-                Vr = 4 * pc::pi * std::pow(r, 2) * dr;
-            else if (dim == 2) {
-                Vr = 2 * pc::pi * r * dr;
-                if (Rhypersphere > 0)
-                    Vr = 2.0 * pc::pi * Rhypersphere * std::sin(r / Rhypersphere) * dr;
-            } else if (dim == 1)
-                Vr = dr;
-            if (Vr > 0)
-                o << r << " " << N * V / (Vr * sum) << "\n";
-        };
-        f << hist;
-    }
-}
-
 void PairFunctionBase::_to_json(json &j) const {
     j = {{"dr", dr / 1.0_angstrom}, {"name1", name1},        {"name2", name2}, {"file", file}, {"dim", dim},
          {"slicedir", slicedir},    {"thickness", thickness}};
@@ -243,10 +227,29 @@ void PairFunctionBase::_from_json(const json &j) {
     hist.setResolution(dr, 0);
     Rhypersphere = j.value("Rhyper", -1.0);
 }
+void PairFunctionBase::_to_disk() {
+    std::ofstream f(MPI::prefix + file);
+    if (f) {
+        double Vr = 1, sum = hist.sumy();
+        hist.stream_decorator = [&](std::ostream &o, double r, double N) {
+            if (dim == 3)
+                Vr = 4 * pc::pi * std::pow(r, 2) * dr;
+            else if (dim == 2) {
+                Vr = 2 * pc::pi * r * dr;
+                if (Rhypersphere > 0)
+                    Vr = 2.0 * pc::pi * Rhypersphere * std::sin(r / Rhypersphere) * dr;
+            } else if (dim == 1)
+                Vr = dr;
+            if (Vr > 0)
+                o << r << " " << N * V / (Vr * sum) << "\n";
+        };
+        f << hist;
+    }
+}
 
 PairAngleFunctionBase::PairAngleFunctionBase(const json &j) : PairFunctionBase(j) { from_json(j); }
 
-PairAngleFunctionBase::~PairAngleFunctionBase() {
+void PairAngleFunctionBase::_to_disk() {
     std::ofstream f(MPI::prefix + file);
     if (f) {
         hist2.stream_decorator = [&](std::ostream &o, double r, double N) {
@@ -316,6 +319,10 @@ VirtualVolume::VirtualVolume(const json &j, Space &spc, Energy::Energybase &pot)
     getVolume = [&spc]() { return spc.geo.getVolume(); };
     scaleVolume = [&spc](double Vnew) { spc.scaleVolume(Vnew); };
 }
+void VirtualVolume::_to_disk() {
+    if (f)
+        f.flush(); // empty buffer
+}
 
 void QRtraj::_sample() { write_to_file(); }
 
@@ -340,14 +347,17 @@ QRtraj::QRtraj(const json &j, Space &spc) {
         f << "\n";               // newline for every frame
     };
 }
+void QRtraj::_to_disk() {
+    if (f)
+        f.flush(); // empty buffer
+}
 
 void CombinedAnalysis::sample() {
     for (auto &ptr : this->vec)
         ptr->sample();
 }
 
-CombinedAnalysis::~CombinedAnalysis() {
-    // this is really a hack; the destructor should not be in charge of this
+void CombinedAnalysis::to_disk() {
     for (auto &ptr : this->vec)
         ptr->to_disk();
 }
@@ -445,6 +455,10 @@ FileReactionCoordinate::FileReactionCoordinate(const json &j, Space &spc) {
     file.open(filename); // output file
     type = j.at("type").get<std::string>();
     rc = ReactionCoordinate::createReactionCoordinate({{type, j}}, spc);
+}
+void FileReactionCoordinate::_to_disk() {
+    if (file)
+        file.flush(); // empty buffer
 }
 
 void WidomInsertion::_sample() {
@@ -603,7 +617,7 @@ Density::Density(const json &j, Space &spc) : spc(spc) {
         }
     }
 }
-Density::~Density() {
+void Density::_to_disk() {
     for (auto &m : atmdhist) { // atomic molecules
         std::string file = "rho-"s + molecules.at(m.first).name + ".dat";
         std::ofstream f(MPI::prefix + file);
@@ -657,6 +671,7 @@ Density::~Density() {
         }
     }
 }
+
 void SanityCheck::_sample() {
     // loop over all groups
     for (auto &g : spc.groups) {
@@ -905,7 +920,7 @@ MultipoleDistribution::MultipoleDistribution(const json &j, Space &spc) : spc(sp
         throw std::runtime_error("specify exactly two molecules");
 }
 
-MultipoleDistribution::~MultipoleDistribution() { save(); }
+void MultipoleDistribution::_to_disk() { save(); }
 
 // =============== AtomInertia ===============
 
@@ -929,6 +944,10 @@ AtomInertia::AtomInertia(const json &j, Space &spc) : spc(spc) {
     filename = MPI::prefix + j.at("file").get<std::string>();
     file.open(filename); // output file
     index = j.at("index").get<size_t>(); // atom id
+}
+void AtomInertia::_to_disk() {
+    if (file)
+        file.flush(); // empty buffer
 }
 
 // =============== InertiaTensor ===============
@@ -960,6 +979,10 @@ InertiaTensor::InertiaTensor(const json &j, Space &spc) : spc(spc) {
     file.open(filename); // output file
     index = j.at("index").get<size_t>(); // group index
     indexes = j.value("indexes", std::vector<size_t>({0, spc.groups[index].size()})); // whole molecule by default
+}
+void InertiaTensor::_to_disk() {
+    if (file)
+        file.flush(); // empty buffer
 }
 
 // =============== MultipoleMoments ===============
@@ -1010,6 +1033,10 @@ MultipoleMoments::MultipoleMoments(const json &j, Space &spc) : spc(spc) {
     index = j.at("index").get<size_t>(); // group index
     indexes = j.value("indexes", std::vector<size_t>({0, spc.groups[index].size()-1})); // whole molecule by default
     mol_cm = j.value("mol_cm", true); // use the mass center of the whole molecule
+}
+void MultipoleMoments::_to_disk() {
+    if (file)
+        file.flush(); // empty buffer
 }
 
 // =============== PolymerShape ===============
@@ -1168,7 +1195,7 @@ SlicedDensity::SlicedDensity(const json &j, Space &spc) : spc(spc) {
     name = "sliceddensity";
     from_json(j);
 }
-SlicedDensity::~SlicedDensity() {
+void SlicedDensity::_to_disk() {
     std::ofstream f(MPI::prefix + file);
     if (f and cnt > 0) {
         f << "# z rho/M\n";

@@ -65,6 +65,7 @@ class FileReactionCoordinate : public Analysisbase {
 
     void _to_json(json &j) const override;
     void _sample() override;
+    void _to_disk() override;
 
   public:
     FileReactionCoordinate(const json &j, Space &spc);
@@ -136,10 +137,10 @@ class SlicedDensity : public Analysisbase {
     void _from_json(const json &j) override;
     void _to_json(json &j) const override;
     void _sample() override;
+    void _to_disk() override;
 
   public:
     SlicedDensity(const json &j, Space &spc);
-    ~SlicedDensity();
 };
 
 /**
@@ -160,10 +161,10 @@ class Density : public Analysisbase {
 
     void _sample() override;
     void _to_json(json &) const override;
+    void _to_disk() override;
 
   public:
     Density(const json &, Space &);
-    virtual ~Density();
 };
 
 class ChargeFluctuations : public Analysisbase {
@@ -216,6 +217,7 @@ class SystemEnergy : public Analysisbase {
     void _sample() override;
     void _to_json(json &) const override;
     void _from_json(const json &) override;
+    void _to_disk() override;
 
   public:
     SystemEnergy(const json &, Energy::Hamiltonian &);
@@ -239,11 +241,11 @@ class SaveState : public Analysisbase {
     std::string file;
     bool saverandom;
     void _to_json(json &) const override;
+    void _to_disk() override;
     void _sample() override;
 
   public:
     SaveState(const json &, Space &);
-    ~SaveState();
 };
 
 /**
@@ -265,10 +267,10 @@ class PairFunctionBase : public Analysisbase {
   private:
     void _from_json(const json &) override;
     void _to_json(json &) const override;
+    void _to_disk() override;
 
   public:
     PairFunctionBase(const json &);
-    virtual ~PairFunctionBase();
 };
 
 class PairAngleFunctionBase : public PairFunctionBase {
@@ -276,11 +278,11 @@ class PairAngleFunctionBase : public PairFunctionBase {
     Equidistant2DTable<double, Average<double>> hist2;
 
   private:
-    void _from_json(const json &);
+    void _from_json(const json &) override;
+    void _to_disk() override;
 
   public:
     PairAngleFunctionBase(const json &);
-    virtual ~PairAngleFunctionBase();
 };
 
 /** @brief Atomic radial distribution function, g(r) */
@@ -344,6 +346,7 @@ class VirtualVolume : public Analysisbase {
     void _sample() override;
     void _from_json(const json &j) override;
     void _to_json(json &j) const override;
+    void _to_disk() override;
 
   public:
     VirtualVolume(const json &j, Space &spc, Energy::Energybase &pot);
@@ -373,10 +376,10 @@ class MultipoleDistribution : public Analysisbase {
     void save() const;                              //!< save to disk
     void _sample() override;
     void _to_json(json &j) const override;
+    void _to_disk() override;
 
   public:
     MultipoleDistribution(const json &j, Space &spc);
-    ~MultipoleDistribution();
 
 }; // end of multipole distribution
 
@@ -419,6 +422,7 @@ class AtomInertia : public Analysisbase {
     Point compute();
     void _to_json(json &j) const override;
     void _sample() override;
+    void _to_disk() override;
 
   public:
     AtomInertia(const json &j, Space &spc);
@@ -441,6 +445,7 @@ class InertiaTensor : public Analysisbase {
     Data compute();
     void _to_json(json &j) const override;
     void _sample() override;
+    void _to_disk() override;
 
   public:
     InertiaTensor(const json &j, Space &spc);
@@ -466,6 +471,7 @@ class MultipoleMoments : public Analysisbase {
     Data compute();
     void _to_json(json &j) const override;
     void _sample() override;
+    void _to_disk() override;
 
   public:
     MultipoleMoments(const json &j, Space &spc);
@@ -504,6 +510,7 @@ class QRtraj : public Analysisbase {
     std::function<void()> write_to_file;
     void _sample() override;
     void _to_json(json &j) const override;
+    void _to_disk() override;
 
   public:
     QRtraj(const json &j, Space &spc);
@@ -512,7 +519,7 @@ class QRtraj : public Analysisbase {
 struct CombinedAnalysis : public BasePointerVector<Analysisbase> {
     CombinedAnalysis(const json &j, Space &spc, Energy::Hamiltonian &pot);
     void sample();
-    ~CombinedAnalysis();
+    void to_disk(); // prompt all analysis to safe to disk if appropriate
 }; //!< Aggregates analysis
 
 /** @brief Example analysis */

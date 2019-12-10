@@ -202,7 +202,7 @@ void insertMolecules(const json &j, Space &spc) {
             if (m.is_object() && m.size() == 1)
                 for (auto it = m.begin(); it != m.end(); ++it) {
                     auto mol = findName(molvec, it.key()); // is the molecule defined?
-                    if (mol != molvec.end()) {
+                    if (mol != molvec.end()) {             // yes it is
 
                         int N = it.value().at("N").get<int>(); // number of molecules to insert
                         int cnt = N;

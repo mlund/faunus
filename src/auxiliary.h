@@ -230,21 +230,36 @@ namespace Faunus
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 
     /**
-     * @brief Quake inverse square root approximation
+     * @brief Fast inverse square-root approximation
+     *
+     * Modified to work with both double and float and with one (less precise) or
+     * two (more precise) iterations. Template conditionals should be optimized out
+     * at compile time.
+     *
+     * @note Code comments supposedly from the original Quake III Arena code
      */
-    template<class Tint=std::int32_t>
-        float invsqrtQuake( float number )
-        {
-            static_assert(sizeof(Tint) == 4, "Integer size must be 4 bytes for quake invsqrt.");
-            float y = number;
-            float x2 = y * 0.5F;
-            Tint i = *(Tint *) &y;
-            i = 0x5f3759df - (i >> 1);
-            y = *(float *) &i;
-            y = y * (1.5F - (x2 * y * y));   // 1st iteration
-            //      y  = y * ( 1.5F - ( x2 * y * y ) );   // 2nd iteration, this can be removed
-            return y;
-        }
+    template <typename T, char iterations = 2> inline T inv_sqrt(T x) {
+        static_assert(std::is_floating_point<T>::value, "T must be floating point");
+        static_assert(iterations == 1 or iterations == 2, "itarations must equal 1 or 2");
+        typedef typename std::conditional<sizeof(T) == 8, std::int64_t, std::int32_t>::type Tint;
+        T y = x;
+        T x2 = y * 0.5;
+        Tint i = *(Tint *)&y;                                              // evil floating point bit level hacking
+        i = (sizeof(T) == 8 ? 0x5fe6eb50c7b537a9 : 0x5f3759df) - (i >> 1); // what the fuck?
+        y = *(T *)&i;
+        y = y * (1.5 - (x2 * y * y)); // 1st iteration
+        if (iterations > 1)
+            y = y * (1.5 - (x2 * y * y)); // 2nd iteration, this can be removed
+        return y;
+    }
+
+#ifdef DOCTEST_LIBRARY_INCLUDED
+    TEST_CASE_TEMPLATE("inv_sqrt", T, double, float) {
+        std::vector<T> vals = {0.23, 3.3, 10.2, 100.45, 512.06};
+        for (auto x : vals)
+            CHECK(inv_sqrt<T>(x) == doctest::Approx(1.0 / std::sqrt(x)));
+    }
+#endif
 
     /**
      * @brief n'th integer power of float
@@ -352,62 +367,58 @@ namespace Faunus
             return fallback;
         }
 
-    /**
-     * @brief Evaluate n'th degree Legendre polynomium
-     *
-     * Example:
-     * @code
-     * legendre<float> l(10);
-     * l.eval(1.3);
-     * cout << l.p[3]
-     * @endcode
-     *
-     * @author Mikael Lund
-     * @date Canberra 2005-2006
-     */
-    template<typename T=double>
-        class legendre
-        {
-            private:
-                int n;           //!< Legendre order
-                void resize( int order )
-                {
-                    n = order;
-                    assert(n >= 0);
-                    P.resize(n + 1);
-                    P[0] = 1.;
-                }
+        /**
+         * @brief Evaluate n'th degree Legendre polynomial
+         *
+         * Example:
+         * @code
+         * Legendre<float> l(10);
+         * auto P = l.eval(1.3)
+         * std::cout << P[3]; --> third order value
+         * @endcode
+         *
+         * @author Mikael Lund
+         * @date Canberra 2005-2006
+         * @note Since C++17 there's `std::legendre` but this seems more efficient
+         *       if a range of degrees are needed
+         */
+        template <typename T = double> class Legendre {
+          private:
+            size_t n;         //!< Maximum Legendre order
+            std::vector<T> P; //!< Legendre terms stored here
+            std::vector<T> y; //!< Lookup table for 1+1/i (overkill?)
+          public:
+            /** @brief Construct w. polynomial order>=0 */
+            Legendre(size_t max_order) : n(max_order) {
+                P.resize(n + 1);
+                P[0] = 1.0;
+                y.resize(n + 1);
+                for (size_t i = 1; i < n; i++)
+                    y[i] = 1.0 + 1.0 / T(i);
+            }
 
-            public:
-                /** @brief Construct w. polynomium order>=0 */
-                legendre( int order ) { resize(order); }
-
-                /** @brief Legendre terms stored here */
-                std::vector<T> P;
-
-                /** @brief Evaluate polynomium at x */
-                void eval( T x )
-                {
-                    if ( n > 0 )
-                    {
-                        P[1] = x;
-                        for ( int i = 1; i < n; ++i )
-                            P[i+1] = (2*i+1) * x / (i+1) * P[i] - i * P[i-1] / (i+1);
+            /** @brief Evaluate polynomials at x */
+            const std::vector<T> &eval(T x) {
+                if (n > 0) {
+                    P[1] = x;
+                    for (size_t i = 1; i < n; ++i) {
+                        P[i + 1] = ((y[i] + 1.0) * x * P[i] - P[i - 1]) / y[i];
                     }
                 }
+                return P;
+            }
         };
 #ifdef DOCTEST_LIBRARY_INCLUDED
-    TEST_CASE("[Faunus] legendre")
-    {
-        using doctest::Approx;
-        legendre<double> l(3);
-        double x=2.2;
-        l.eval(x);
-        CHECK( l.P[0] == Approx(1));
-        CHECK( l.P[1] == Approx(x));
-        CHECK( l.P[2] == Approx(0.5*(3*x*x-1)));
-        CHECK( l.P[3] == Approx(0.5*(5*x*x*x-3*x)));
-    }
+        TEST_CASE("[Faunus] Legendre") {
+            using doctest::Approx;
+            Legendre<double> l(3);
+            double x = 2.2;
+            auto P = l.eval(x);
+            CHECK(P[0] == Approx(1));
+            CHECK(P[1] == Approx(x));
+            CHECK(P[2] == Approx(0.5 * (3 * x * x - 1)));
+            CHECK(P[3] == Approx(0.5 * (5 * x * x * x - 3 * x)));
+        }
 #endif
 
     /**
@@ -1899,9 +1910,7 @@ namespace Faunus
                     return sum;
                 } //!< sum all y-values
 
-                const std::vector<Ty>& yvec() const { 
-                    return vec;
-                } //!< vector with y-values
+                const std::vector<Ty> &yvec() const { return vec; } //!< vector with y-values
 
                 std::vector<Tx> xvec() const {
                     std::vector<Tx> v;
@@ -2033,27 +2042,18 @@ namespace Faunus
                 Tunit delta;
                 std::chrono::steady_clock::time_point t0, tx;
             public:
-                TimeRelativeOfTotal() : delta(0) {
-                    t0 = std::chrono::steady_clock::now();
-                } 
+              TimeRelativeOfTotal() : delta(0) { t0 = std::chrono::steady_clock::now(); }
 
-                operator bool() const {
-                    return delta.count()!=0 ? true : false;
-                }
+              operator bool() const { return delta.count() != 0 ? true : false; }
 
-                void start() { tx = std::chrono::steady_clock::now(); }
+              void start() { tx = std::chrono::steady_clock::now(); }
 
-                void stop()
-                {
-                    delta += std::chrono::duration_cast<Tunit>
-                        (std::chrono::steady_clock::now() - tx);
-                }
+              void stop() { delta += std::chrono::duration_cast<Tunit>(std::chrono::steady_clock::now() - tx); }
 
-                double result() const
-                {
-                    auto now = std::chrono::steady_clock::now();
-                    auto total = std::chrono::duration_cast<Tunit>(now - t0);
-                    return delta.count() / double(total.count());
+              double result() const {
+                  auto now = std::chrono::steady_clock::now();
+                  auto total = std::chrono::duration_cast<Tunit>(now - t0);
+                  return delta.count() / double(total.count());
                 }
         };
 

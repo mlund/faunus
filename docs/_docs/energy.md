@@ -557,14 +557,10 @@ customexternal:
 ## Bonded Interactions
 
 Bonds and angular potentials are added via the keyword `bondlist` either directly
-in a molecule definition (topology) or in energy/bonded where the latter can be
-used to add inter-molecular bonds:
+in a molecule definition (topology) for intra-molecular bonds, or in `energy->bonded`
+where the latter can be used to add inter-molecular bonds:
 
 ~~~ yaml
-energy:
-    - bonded:
-        bondlist: # absolute index
-           - harmonic: { index: [56,921], k: 10, req: 15 }
 moleculelist:
     - water: # TIP3P
         structure: "water.xyz"
@@ -572,6 +568,10 @@ moleculelist:
             - harmonic: { index: [0,1], k: 5024, req: 0.9572 }
             - harmonic: { index: [0,2], k: 5024, req: 0.9572 }
             - harmonic_torsion: { index: [1,0,2], k: 628, aeq: 104.52 }
+energy:
+    - bonded:
+        bondlist: # absolute index; can be between molecules
+           - harmonic: { index: [56,921], k: 10, req: 15 }
 ~~~
 
 Bonded potential types:
@@ -588,7 +588,7 @@ $\mu V T$ ensembles and Widom insertion are currently unsupported for molecules 
 `index`        | Array with _exactly two_ indices (relative to molecule)
 
 $$
-u(r) = \frac{1}{2}k(r-r_{\mathrm{eq}})^2
+u(r) = \frac{1}{2}k(r-r\_{\mathrm{eq}})^2
 $$
 
 ### Finite Extensible Nonlinear Elastic
@@ -604,8 +604,8 @@ Finite extensible nonlinear elastic potential long range repulsive potential.
 $$
      u(r) =
   \begin{cases} 
-   -\frac{1}{2} k r_{\mathrm{max}}^2 \ln \left [ 1-(r/r_{\mathrm{max}})^2 \right ],       & \text{if } r < r_{\mathrm{max}} \\
-   \infty, & \text{if } r \geq r_{\mathrm{max}}
+   -\frac{1}{2} k r\_{\mathrm{max}}^2 \ln \left [ 1-(r/r\_{\mathrm{max}})^2 \right ],       & \text{if } r < r\_{\mathrm{max}} \\
+   \infty, & \text{if } r \geq r\_{\mathrm{max}}
   \end{cases}
 $$
 

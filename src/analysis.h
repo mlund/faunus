@@ -335,7 +335,7 @@ class XTCtraj : public Analysisbase {
  */
 class VirtualVolume : public Analysisbase {
     std::string file; // output filename
-    std::ofstream f;  // output filestream
+    std::ofstream output_file; // output filestream
     double dV; // volume perturbation
     Change c;
     Energy::Energybase &pot;

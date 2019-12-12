@@ -271,18 +271,22 @@ void VirtualVolume::_sample() {
         scaleVolume(Vold);                               // restore saved system
 
         double du = Unew - Uold;          // system energy change
-        if (-du < pc::max_exp_argument) { // does minus energy change fits exp() function?
+        if (-du < pc::max_exp_argument) { // does minus energy change fit exp() function?
             double exp_du = std::exp(-du);
             assert(not std::isnan(exp_du));
             duexp += exp_du; // collect average, <exp(-du)>
-            if (f)           // write sample event to output file
-                f << cnt << " " << dV << " " << du << " " << exp_du << " " << std::log(duexp.avg()) / dV << "\n";
-#ifndef NDEBUG
-            if (Uold != 0) { // check if volume and particle positions are properly restored
-                double should_be_small = std::fabs((Uold - pot.energy(c)) / Uold);
-                assert(should_be_small < 1e-4); // expensive
+            if (output_file) // write sample event to output file
+                output_file << cnt << " " << dV << " " << du << " " << exp_du << " " << std::log(duexp.avg()) / dV
+                            << "\n";
+
+            // Check if volume and particle positions are properly restored.
+            // Expensive and one would normally not perform this test and we trigger it
+            // only when using log-level "debug" or lower
+            if (faunus_logger->level() <= spdlog::level::debug and Uold != 0) {
+                double should_be_small = std::fabs((Uold - pot.energy(c)) / Uold); // expensive!
+                if (should_be_small > 1e-6)
+                    faunus_logger->error("{} failed to restore system", name);
             }
-#endif
         } else {   // energy change too large (negative) to fit exp() function
             cnt--; // cnt is incremented by sample() so we need to decrease
             faunus_logger->warn("{0}: skipping sample event due to excessive energy, dU/kT={1}", name, du);
@@ -294,14 +298,15 @@ void VirtualVolume::_from_json(const json &j) {
     dV = j.at("dV");
     file = MPI::prefix + j.value("file", std::string());
     if (not file.empty()) { // if filename is given, create output file
-        if (f)
-            f.close();
-        f.open(file);
-        if (!f)
+        if (output_file)
+            output_file.close();
+        output_file.open(file);
+        if (!output_file)
             throw std::runtime_error(name + ": cannot open output file " + file);
-        f << "# steps dV/" + u8::angstrom + u8::cubed + " du/kT exp(-du/kT) <Pex>/kT/" + u8::angstrom + u8::cubed
-          << "\n"; // file header
-        f.precision(14);
+        output_file << "# steps dV/" + u8::angstrom + u8::cubed + " du/kT exp(-du/kT) <Pex>/kT/" + u8::angstrom +
+                           u8::cubed
+                    << "\n"; // file header
+        output_file.precision(14);
     }
 }
 
@@ -320,8 +325,8 @@ VirtualVolume::VirtualVolume(const json &j, Space &spc, Energy::Energybase &pot)
     scaleVolume = [&spc](double Vnew) { spc.scaleVolume(Vnew); };
 }
 void VirtualVolume::_to_disk() {
-    if (f)
-        f.flush(); // empty buffer
+    if (output_file)
+        output_file.flush(); // empty buffer
 }
 
 void QRtraj::_sample() { write_to_file(); }

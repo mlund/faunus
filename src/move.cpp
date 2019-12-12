@@ -4,7 +4,6 @@
 #include "clustermove.h"
 #include "chainmove.h"
 #include "aux/iteratorsupport.h"
-#include "aux/eigensupport.h"
 #include "spdlog/spdlog.h"
 
 namespace Faunus {

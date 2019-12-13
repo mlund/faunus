@@ -216,6 +216,7 @@ void SpeciationMove::_move(Change &change) {
     } else
         throw std::runtime_error("No reactions in list, disable rcmc or add reactions");
 }
+
 double SpeciationMove::bias(Change &, double, double) {
     // The acceptance/rejection of the move is affected by the equilibrium constant
     // but unaffected by the change in bonded energy

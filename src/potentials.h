@@ -563,7 +563,7 @@ class NewCoulombGalore : public PairPotentialBase {
   public:
     NewCoulombGalore(const std::string & = "coulomb");
     inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
-        return lB * pot.ion_ion_energy(a.charge, b.charge, r.norm());
+        return lB * pot.ion_ion_energy(a.charge, b.charge, r.norm() + std::numeric_limits<double>::epsilon());
     }
     Point force(const Particle &, const Particle &, double, const Point &) const override;
     void from_json(const json &) override;

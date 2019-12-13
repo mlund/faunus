@@ -87,7 +87,11 @@ void MCSimulation::move() {
         if (mv != moves.end()) {
             change.clear();
             (**mv).move(change);
-
+#ifndef NDEBUG
+            // check if atom index indeed belong to the group (index)
+            if (not change.sanityCheck(state1.spc))
+                throw std::runtime_error("insane change object\n" + json(change).dump(4));
+#endif
             if (change) {
                 lastMoveName = (**mv).name; // store name of move for output
                 double unew, uold, du;

@@ -12,6 +12,8 @@ struct reservoir {
     bool canonic;
 };
 
+struct Space;
+
 /**
  * @brief Specify change to a new state
  *
@@ -42,11 +44,17 @@ struct Change {
         return ranges::view::transform(groups, [](data &i) -> int { return i.index; });
     } //!< List of moved groups (index)
 
+    /** List of changed atom index relative to first particle in system) */
+    std::vector<int> touchedParticleIndex(const std::vector<Group<Particle>> &);
+
     void clear();       //!< Clear all change data
     bool empty() const; //!< Check if change object is empty
     explicit operator bool() const;
+    bool sanityCheck(Space &) const; //!< Performs a sanity check on contained object data
 };
 
+void to_json(json &, const Change::data &); //!< Serialize Change data to json
+void to_json(json &, const Change &);       //!< Serialise Change object to json
 
 /**
  * @brief Placeholder for atoms and molecules
@@ -175,6 +183,12 @@ struct Space {
     auto findGroupContaining(const Particle &i) {
         return std::find_if(groups.begin(), groups.end(), [&i](auto &g) { return g.contains(i); });
     } //!< Finds the groups containing the given atom
+
+    auto findGroupContaining(size_t index) {
+        assert(index < p.size());
+        return std::find_if(groups.begin(), groups.end(),
+                            [&](auto &g) { return index < std::distance(p.begin(), g.end()); });
+    } //!< Finds group containing given atom index
 
     auto activeParticles() {
         auto f = [&groups = groups](Particle &i) {

@@ -16,7 +16,7 @@ class Cluster : public Movebase {
     typedef typename Space::Tgroup Tgroup;
     Tspace &spc;
     Average<double> msqd, msqd_angle, N;
-    double dptrans = 0, dprot = 0, angle = 0, _bias = 0;
+    double dptrans = 0, dprot = 0, angle = 0, _bias = 0, probability=1.0;
     size_t bias_rejected = 0;
     bool rotate; // true if cluster should be rotated
     bool spread; // true if cluster should spread outside of the first layer of surrounding molecules

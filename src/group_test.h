@@ -87,7 +87,7 @@ TEST_CASE("[Faunus] Group") {
         CHECK( std::distance(slice1.begin(), slice1.end()) == 2 );
 
         // find *one* random value with id=1
-        auto slice2 = slice1 | ranges::view::sample(1, rand.engine) | ranges::view::bounded;
+        auto slice2 = slice1 | ranges::views::sample(1, rand.engine) | ranges::views::common;
         CHECK( std::distance(slice2.begin(), slice2.end()) == 1 );
 
         // check rotation

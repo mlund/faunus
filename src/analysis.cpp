@@ -731,7 +731,7 @@ void MoleculeRDF::_sample() {
     V += spc.geo.getVolume(dim);
     auto mollist1 = spc.findMolecules(id1, Space::ACTIVE);
     auto mollist2 = spc.findMolecules(id2, Space::ACTIVE);
-    auto mollist = ranges::view::concat(mollist1, mollist2);
+    auto mollist = ranges::views::concat(mollist1, mollist2);
     for (auto i = mollist.begin(); i != mollist.end(); ++i) {
         for (auto j = i; ++j != mollist.end();) {
             if ((i->id == id1 && j->id == id2) || (i->id == id2 && j->id == id1)) {
@@ -840,7 +840,7 @@ void XTCtraj::_sample() {
     // the ranges::view::filter(rng,unaryp) clears the `filter` function.
     // Using the ranges piping seem to solve the issue.
     assert(filter);
-    auto particles = spc.p | ranges::view::filter(filter);
+    auto particles = spc.p | ranges::cpp20::views::filter(filter);
     assert(filter);
     bool rc = xtc.save(file, particles.begin(), particles.end());
     if (rc == false)

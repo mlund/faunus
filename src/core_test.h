@@ -12,7 +12,7 @@ TEST_SUITE_BEGIN("Core");
 
 TEST_CASE("[Faunus] distance") {
     std::vector<long long int> v = {10, 20, 30, 40, 30};
-    auto rng = v | ranges::view::filter([](int i) { return i == 30; });
+    auto rng = v | ranges::cpp20::views::filter([](int i) { return i == 30; });
     CHECK(Faunus::distance(v.begin(), rng.begin()) == 2);
     auto it = rng.begin();
     CHECK(Faunus::distance(v.begin(), ++it) == 4);

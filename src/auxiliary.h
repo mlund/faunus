@@ -276,7 +276,9 @@ namespace Faunus
         /**
          * @brief Approximate exp() function
          * @note see [Cawley 2000](http://dx.doi.org/10.1162/089976600300015033)
-         * @warning Does not work in big endian systems!
+         * @warning Does not work in big endian systems, nor on gcc
+         *
+         * Update 2019: http://www.federicoperini.info/wp-content/uploads/FastExp-Final.pdf
          */
         template <class Tint = std::int32_t> double exp_cawley(double y) {
             static_assert(2 * sizeof(Tint) == sizeof(double), "Approximate exp() requires 4-byte integer");

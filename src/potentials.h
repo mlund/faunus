@@ -559,6 +559,7 @@ class FENE : public PairPotentialBase {
 class NewCoulombGalore : public PairPotentialBase {
   protected:
     ::CoulombGalore::Splined pot;
+    virtual void setSelfEnergy();
 
   public:
     NewCoulombGalore(const std::string & = "coulomb");
@@ -577,6 +578,9 @@ class NewCoulombGalore : public PairPotentialBase {
  * @note Only dipole-dipole interactions are currently enabled
  */
 class Multipole : public NewCoulombGalore {
+  private:
+    void setSelfEnergy() override;
+
   public:
     Multipole(const std::string & = "multipole");
     inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {

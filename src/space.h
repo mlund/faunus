@@ -158,7 +158,7 @@ struct Space {
                                             Selection sel = ACTIVE); //!< Random group; groups.end() if not found
 
     auto findAtoms(int atomid) {
-        return p | ranges::cpp20::views::filter([&](const Particle &i) {
+        return p | ranges::cpp20::views::filter([&, atomid](const Particle &i) {
                    if (i.id == atomid)
                        for (const auto &g : groups)
                            if (g.contains(i))

@@ -131,7 +131,8 @@ Point PairPotentialBase::force(const Particle &, const Particle &, double, const
 
 void MixerPairPotentialBase::init() {
     json j_combination_rule = combination_rule;
-    faunus_logger->debug("Combination rule {} in effect for the {} potential.", j_combination_rule, name);
+    faunus_logger->debug("Combination rule {} in effect for the {} potential.", j_combination_rule.get<std::string>(),
+                         name);
     initPairMatrices();
 }
 

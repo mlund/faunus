@@ -493,7 +493,7 @@ void WidomInsertion::_from_json(const json &j) {
     if (it != molecules.end()) {
         molid = it->id();
         auto m = spc.findMolecules(molid, Space::INACTIVE);  // look for inactive molecules in space
-        if (size(m) > 0) {                                   // did we find any?
+        if (not ranges::cpp20::empty(m)) {                   // did we find any?
             if (m.begin()->size() == 0) {                    // pick the first and check if it's really inactive
                 if (m.begin()->capacity() > 0) {             // and it must have a non-zero capacity
                     change.clear();
@@ -556,11 +556,11 @@ void Density::_sample() {
         for (auto &rit : reactions) {
             for (auto pid : rit._prodid_a) {
                 auto atomlist = spc.findAtoms(pid.first);
-                swpdhist[pid.first](size(atomlist))++;
+                swpdhist[pid.first](rng_size(atomlist))++;
             }
             for (auto rid : rit._reagid_a) {
                 auto atomlist = spc.findAtoms(rid.first);
-                swpdhist[rid.first](size(atomlist))++;
+                swpdhist[rid.first](rng_size(atomlist))++;
             }
         }
     }
@@ -731,11 +731,16 @@ void MoleculeRDF::_sample() {
     V += spc.geo.getVolume(dim);
     auto mollist1 = spc.findMolecules(id1, Space::ACTIVE);
     auto mollist2 = spc.findMolecules(id2, Space::ACTIVE);
-    auto mollist = ranges::views::concat(mollist1, mollist2);
+    // auto mollist = ranges::views::concat(mollist1, mollist2);
+
+    std::vector<std::reference_wrapper<Tspace::Tgroup>> mollist;
+    mollist.insert(mollist.end(), mollist1.begin(), mollist1.end());
+    mollist.insert(mollist.end(), mollist2.begin(), mollist2.end());
+
     for (auto i = mollist.begin(); i != mollist.end(); ++i) {
         for (auto j = i; ++j != mollist.end();) {
-            if ((i->id == id1 && j->id == id2) || (i->id == id2 && j->id == id1)) {
-                double r = std::sqrt(spc.geo.sqdist(i->cm, j->cm));
+            if ((i->get().id == id1 && j->get().id == id2) || (i->get().id == id2 && j->get().id == id1)) {
+                double r = std::sqrt(spc.geo.sqdist(i->get().cm, j->get().cm));
                 hist(r)++;
             }
         }
@@ -1210,7 +1215,7 @@ void ChargeFluctuations::_to_json(json &j) const {
 void ChargeFluctuations::_to_disk() {
     if (not file.empty()) {
         auto molecules = spc.findMolecules(mol_iter->id(), Space::ALL);
-        if (Faunus::size(molecules) > 0) {
+        if (not ranges::cpp20::empty(molecules)) {
             auto &g = *molecules.begin();
             ParticleVector pvec;        // temporary particle vector
             pvec.reserve(g.capacity()); // allocate required memory already now

@@ -169,8 +169,8 @@ double IdealTerm(Space &spc_n, Space &spc_o, const Change &change) {
                 for (int id : {id1, id2}) {
                     auto atomlist_n = spc_n.findAtoms(id);
                     auto atomlist_o = spc_o.findAtoms(id);
-                    N_n = size(atomlist_n);
-                    N_o = size(atomlist_o);
+                    N_n = rng_size(atomlist_n);
+                    N_o = rng_size(atomlist_o);
                     int dN = N_n - N_o;
                     double V_n = spc_n.geo.getVolume();
                     double V_o = spc_o.geo.getVolume();
@@ -185,10 +185,11 @@ double IdealTerm(Space &spc_n, Space &spc_o, const Change &change) {
                 if (m.dNatomic) {
                     auto mollist_n = spc_n.findMolecules(spc_n.groups[m.index].id, Space::ALL);
                     auto mollist_o = spc_o.findMolecules(spc_o.groups[m.index].id, Space::ALL);
-                    if (size(mollist_n) > 1 || size(mollist_o) > 1)
+                    if (rng_size(mollist_n) > 1 || rng_size(mollist_o) > 1)
                         throw std::runtime_error("Bad definition: One group per atomic molecule!");
                     if (not molecules[spc_n.groups[m.index].id].atomic)
                         throw std::runtime_error("Only atomic molecules!");
+
                     // Below is safe due to the catches above
                     // add consistency criteria with m.atoms.size() == N
                     N_n = mollist_n.begin()->size();
@@ -196,8 +197,8 @@ double IdealTerm(Space &spc_n, Space &spc_o, const Change &change) {
                 } else {
                     auto mollist_n = spc_n.findMolecules(spc_n.groups[m.index].id, Space::ACTIVE);
                     auto mollist_o = spc_o.findMolecules(spc_o.groups[m.index].id, Space::ACTIVE);
-                    N_n = size(mollist_n);
-                    N_o = size(mollist_o);
+                    N_n = rng_size(mollist_n);
+                    N_o = rng_size(mollist_o);
                 }
                 int dN = N_n - N_o;
                 if (dN != 0) {

@@ -107,12 +107,13 @@ add_dependencies(spdlog project_spdlog)
 # MODERN JSON
 FetchContent_Declare(
     modernjson
-    URL "https://github.com/nlohmann/json/releases/download/v3.5.0/include.zip"
-    URL_HASH SHA256=3564da9c5b0cf2e032f97c69baedf10ddbc98030c337d0327a215ea72259ea21)
+    URL "https://github.com/nlohmann/json/releases/download/v3.7.3/include.zip"
+    URL_HASH SHA256=87b5884741427220d3a33df1363ae0e8b898099fbc59f1c451113f6732891014)
 FetchContent_GetProperties(modernjson)
 if(NOT modernjson_POPULATED)
     FetchContent_Populate(modernjson)
 endif()
+add_compile_definitions("NLOHMANN_JSON_HPP") # older versions used this macro. Now it's suffixed with "_"
 
 # RANGE-V3
 FetchContent_Declare(
@@ -268,7 +269,7 @@ endif ()
 
 # Add third-party headers to include path. Note this is done with SYSTEM
 # to disable potential compiler warnings
-include_directories(SYSTEM ${eigen_SOURCE_DIR} ${doctest_SOURCE_DIR} ${modernjson_SOURCE_DIR} ${rangev3_SOURCE_DIR}/include
+include_directories(SYSTEM ${eigen_SOURCE_DIR} ${doctest_SOURCE_DIR} ${modernjson_SOURCE_DIR}/include ${rangev3_SOURCE_DIR}/include
     ${Pybind11IncludeDir} ${DocoptIncludeDir} ${CppsidIncludeDir} ${XdrfileIncludeDir} ${SpdlogIncludeDir}
     ${ProgressTrackerIncludeDir} ${exprtk_SOURCE_DIR})
 

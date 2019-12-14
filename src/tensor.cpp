@@ -1,5 +1,5 @@
-#include <nlohmann/json.hpp>
 #include "tensor.h"
+#include <nlohmann/json.hpp>
 
 namespace Faunus {
 

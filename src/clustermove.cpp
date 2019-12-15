@@ -164,7 +164,7 @@ void Cluster::_move(Change &change) {
             double sum_m = 0;
             Point cm(0, 0, 0);
             Point O = spc.groups[*cluster.begin()].cm;
-            for (auto i : cluster) {
+            for (auto i : cluster) { // loop over clustered molecules (index)
                 auto &g = spc.groups[i];
                 Point t = g.cm - O;
                 boundary(t);
@@ -218,7 +218,10 @@ void Cluster::_move(Change &change) {
             Point newCOM = clusterCOM();          // org. cluster center
             Point d = spc.geo.vdist(COM, newCOM); // distance between new and old COM
             double _zero = (d + dp).norm();       // |d+dp| should ideally be zero...
-            assert(std::fabs(_zero) < 1e-6 && "cluster likely too large");
+            if (std::fabs(_zero) > 1e-9) {
+                _bias = pc::infty; // by setting bias=oo the move is rejected
+                faunus_logger->warn("Skipping too large cluster: COM difference = {}", _zero);
+            }
         }
 #endif
     }

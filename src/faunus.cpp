@@ -197,8 +197,9 @@ int main(int argc, char **argv) {
                     }
                     sim.move();
                     analysis.sample();
-                }
-            }
+                }                   // end of micro steps
+                analysis.to_disk(); // save analysis to disk
+            }                       // end of macro steps
             if (progress_tracker && mpi.isMaster()) {
                 progress_tracker->done();
             }

@@ -267,6 +267,13 @@ add_test(
     WORKING_DIRECTORY ${EXAMPLES_DIR}/cluster)
 
 add_test(
+    NAME cluster-ideal
+    COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} cluster-ideal.yml\
+    | $<TARGET_FILE:faunus> --quiet\
+    && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} cluster-ideal.out.json out.json --tol 0.01"
+    WORKING_DIRECTORY ${EXAMPLES_DIR}/cluster)
+
+add_test(
     NAME bulk
     COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} bulk.yml\
     | $<TARGET_FILE:faunus> --quiet --state bulk.state.json\

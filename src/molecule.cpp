@@ -259,6 +259,8 @@ void MoleculeBuilder::readCompoundValues(const json &j) {
 
 void MoleculeBuilder::readAtomic(const json &j_properties) {
     auto j_atoms = j_properties.value("atoms", json::array());
+    if (not j_atoms.is_array())
+        throw ConfigurationError("`atoms` must be an array");
     particles.reserve(j_atoms.size());
     for (auto atom_id : j_atoms) {
         std::string atom_name = atom_id.get<std::string>();

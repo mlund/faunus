@@ -27,6 +27,41 @@ bool Change::empty() const {
 }
 Change::operator bool() const { return not empty(); }
 
+std::vector<int> Change::touchedParticleIndex(const std::vector<Group<Particle>> &group_vector) {
+    std::vector<int> atom_indexes; // atom index rel. to first particle in system
+    auto begin = group_vector.front().begin();
+    for (auto &d : groups)     // loop over changes groups
+        for (auto i : d.atoms) // atom index rel. to group
+            atom_indexes.push_back(i + std::distance(begin, group_vector.at(d.index).begin()));
+    return atom_indexes;
+}
+
+bool Change::sanityCheck(Space &spc) const {
+    // make sure "atoms" belong to the "index"th group
+    bool rc = true;
+    for (auto &d : groups) {
+        auto &g = spc.groups.at(d.index);
+        for (size_t atom_index : d.atoms)     // all atoms must be within `g`
+            if (atom_index >= g.capacity()) { // atom_index is w. respect to group.begin()
+                size_t first = std::distance(spc.p.begin(), g.begin());
+                size_t last = std::distance(spc.p.begin(), g.trueend()) - 1;
+                faunus_logger->debug("atom {} is outside capacity of group '{}' ({}-{})", atom_index + first,
+                                     molecules.at(g.id).name, first, last);
+                rc = false;
+            }
+    }
+    return rc;
+}
+
+void to_json(json &j, const Change::data &d) {
+    j = {{"all", d.all},           {"internal", d.internal}, {"dNswap", d.dNswap},
+         {"dNatomic", d.dNatomic}, {"index", d.index},       {"atoms", d.atoms}};
+}
+
+void to_json(json &j, const Change &c) {
+    j = {{"dV", c.dV}, {"all", c.all}, {"dN", c.dN}, {"moved2moved", c.moved2moved}, {"groups", c.groups}};
+}
+
 void Space::clear() {
     p.clear();
     groups.clear();

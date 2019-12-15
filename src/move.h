@@ -16,7 +16,7 @@ class Movebase {
     virtual void _move(Change &) = 0;                          //!< Perform move and modify change object
     virtual void _accept(Change &);                            //!< Call after move is accepted
     virtual void _reject(Change &);                            //!< Call after move is rejected
-    virtual void _to_json(json &j) const = 0;                  //!< Extra info for report if needed
+    virtual void _to_json(json &) const = 0;                   //!< Extra info for report if needed
     virtual void _from_json(const json &) = 0;                 //!< Extra info for report if needed
     TimeRelativeOfTotal<std::chrono::microseconds> timer;      //!< Timer for whole move
     TimeRelativeOfTotal<std::chrono::microseconds> timer_move; //!< Timer for _move() only
@@ -31,13 +31,13 @@ class Movebase {
     std::string cite;    //!< Reference
     int repeat = 1;      //!< How many times the move should be repeated per sweep
 
-    void from_json(const json &j);
-    void to_json(json &j) const; //!< JSON report w. statistics, output etc.
-    void move(Change &change);   //!< Perform move and modify given change object
-    void accept(Change &c);
-    void reject(Change &c);
-    virtual double bias(Change &, double uold,
-                        double unew); //!< adds extra energy change not captured by the Hamiltonian
+    void from_json(const json &);
+    void to_json(json &) const; //!< JSON report w. statistics, output etc.
+    void move(Change &);        //!< Perform move and modify given change object
+    void accept(Change &);
+    void reject(Change &);
+    virtual double bias(Change &, double,
+                        double); //!< adds extra energy change not captured by the Hamiltonian
     inline virtual ~Movebase() = default;
 };
 

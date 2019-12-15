@@ -47,7 +47,7 @@ bool SpeciationMove::swapReaction(Change &change, std::vector<ReactionData>::ite
         assert((m1.size() == 1) and (m2.size() == 1) &&
                "Bad definition: Only 2 explicit atoms per reaction!"); // Swap A = B
         auto atomlist = spc.findAtoms(m1.begin()->first);
-        if (rng_size(atomlist) < 1)                                    // Make sure that there are any active atoms to swap
+        if (ranges::cpp20::empty(atomlist))                        // Make sure that there are any active atoms to swap
             return false;                                          // Slip out the back door
         auto ait = slump.sample(atomlist.begin(), atomlist.end()); // Random particle iterator
         auto git = spc.findGroupContaining(*ait);
@@ -208,7 +208,7 @@ void SpeciationMove::_move(Change &change) {
 
         if (rit->empty(forward)) // Enforce canonic constraint if invoked
             return;              // Out of material, slip out the back door
-        if (insertProducts(rit))
+        if (insertProducts(rit) == false)
             return;
         if (swapReaction(change, rit) == false)
             return;

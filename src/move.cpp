@@ -494,8 +494,8 @@ void ChargeTransfer::_move(Change &change) {
         if (!git1->empty() && !git2->empty()) { // check that both molecule1 and molecule 2 exist
 
             if (dq > 0) {
-                change.chargeMove =
-                    true; // setting to true makes the self-energy being computed and added to the total energy
+                // change.chargeMove =
+                //    true; // setting to true makes the self-energy being computed and added to the total energy
                 mol1.numOfAtoms = Faunus::distance(git1->begin(), git1->end());
                 mol2.numOfAtoms = Faunus::distance(git2->begin(), git2->end());
 

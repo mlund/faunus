@@ -584,8 +584,8 @@ void TabulatedPotential::from_json(const json &j) {
 }
 
 void NewCoulombGalore::setSelfEnergy() {
-    selfEnergy = [lB = lB, pot = pot](const Particle &p) {
-        return lB * pot.self_energy({p.charge * p.charge, 0.0});
+    selfEnergy = [lB = lB, self_energy = pot.selfEnergyFunctor](const Particle &p) {
+        return lB * self_energy({p.charge * p.charge, 0.0});
     }; // expose self-energy as a functor in potential base class
 }
 
@@ -656,11 +656,11 @@ Multipole::Multipole(const std::string &name) : NewCoulombGalore(name) {
 }
 
 void Multipole::setSelfEnergy() {
-    selfEnergy = [lB = lB, pot = pot](const Particle &p) {
+    selfEnergy = [lB = lB, self_energy = pot.selfEnergyFunctor](const Particle &p) {
         double mu_x_mu = 0;   // dipole-dipole product
         if (p.hasExtension()) // only access dipole of the particle has extended properties
             mu_x_mu = p.getExt().mulen * p.getExt().mulen;
-        return lB * pot.self_energy({p.charge * p.charge, mu_x_mu});
+        return lB * self_energy({p.charge * p.charge, mu_x_mu});
     }; // expose self-energy as a functor in potential base class
 }
 

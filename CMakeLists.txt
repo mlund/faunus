@@ -232,8 +232,8 @@ endif ()
 # COULOMBGALORE
 FetchContent_Declare(
     coulombgalore
-    URL https://github.com/mlund/coulombgalore/archive/eec4fa56cd41fe70d96a0018e53b214a2b8c6f44.tar.gz
-    URL_HASH MD5=e7316d826b1493e2e79d0b6d5514e194)
+    URL https://github.com/mlund/coulombgalore/archive/4055f58538d781acccb2937ab4580855fcba31f8.tar.gz
+    URL_HASH MD5=922f0c5988c0f70c887d65b7cf2762ac)
 FetchContent_GetProperties(coulombgalore)
 if(NOT coulombgalore_POPULATED)
     FetchContent_Populate(coulombgalore)

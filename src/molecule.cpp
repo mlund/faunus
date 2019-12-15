@@ -263,9 +263,10 @@ void MoleculeBuilder::readAtomic(const json &j_properties) {
         throw ConfigurationError("`atoms` must be an array");
     particles.reserve(j_atoms.size());
     for (auto atom_id : j_atoms) {
-        auto atom_it = findName(atoms, atom_id.get<std::string>());
+        std::string atom_name = atom_id.get<std::string>();
+        auto atom_it = findName(atoms, atom_name);
         if(atom_it == atoms.end()) {
-            faunus_logger->error("Unknown atom '{}' in molecule '{}'", atom_id, molecule_name);
+            faunus_logger->error("Unknown atom '{}' in molecule '{}'", atom_name, molecule_name);
             throw ConfigurationError("unknown atom in atomic molecule");
         }
         particles.emplace_back(*atom_it);

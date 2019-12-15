@@ -156,7 +156,7 @@ AtomicTranslateRotate::AtomicTranslateRotate(Space &spc) : spc(spc) {
 std::vector<Particle>::iterator AtomicTranslateRotate::randomAtom() {
     assert(molid >= 0);
     auto mollist = spc.findMolecules(molid, Space::ALL); // all `molid` groups
-    if (size(mollist) > 0) {
+    if (not ranges::cpp20::empty(mollist)) {
         auto git = slump.sample(mollist.begin(), mollist.end()); // random molecule iterator
         if (not git->empty()) {
             auto p = slump.sample(git->begin(), git->end());         // random particle iterator
@@ -487,7 +487,7 @@ void ChargeTransfer::_move(Change &change) {
 
     auto mollist1 = spc.findMolecules(mol1.id, Space::ACTIVE);
     auto mollist2 = spc.findMolecules(mol2.id, Space::ACTIVE);
-    if (size(mollist1) > 0 && size(mollist2) > 0) {
+    if ((not ranges::cpp20::empty(mollist1)) and (not ranges::cpp20::empty(mollist2))) {
         auto git1 = slump.sample(mollist1.begin(), mollist1.end()); // selecting a random molecule of type molecule1
         auto git2 = slump.sample(mollist2.begin(), mollist2.end()); // selecting a random molecule of type molecule2
 
@@ -673,7 +673,7 @@ void QuadrantJump::_move(Change &change) {
     // pick random group from the system matching molecule type
     // TODO: This can be slow -- implement look-up-table in Space
     auto mollist = spc.findMolecules(molid, Space::ACTIVE); // list of molecules w. 'molid'
-    if (size(mollist) > 0) {
+    if (not ranges::cpp20::empty(mollist)) {
         auto it = slump.sample(mollist.begin(), mollist.end());
         if (not it->empty()) {
             assert(it->id == molid);
@@ -733,7 +733,7 @@ void AtomicSwapCharge::_from_json(const json &j) {
 typename Space::Tpvec::iterator AtomicSwapCharge::randomAtom() {
     assert(molid >= 0);
     auto mollist = spc.findMolecules(molid); // all `molid` groups
-    if (size(mollist) > 0) {
+    if (not ranges::cpp20::empty(mollist)) {
         auto git = slump.sample(mollist.begin(), mollist.end()); // random molecule iterator
         if (!git->empty()) {
             auto p = slump.sample(git->begin(), git->end());         // random particle iterator
@@ -805,7 +805,7 @@ void TranslateRotate::_move(Change &change) {
     // pick random group from the system matching molecule type
     // TODO: This can be slow -- implement look-up-table in Space
     auto mollist = spc.findMolecules(molid, Space::ACTIVE); // list of molecules w. 'molid'
-    if (size(mollist) > 0) {
+    if (not ranges::cpp20::empty(mollist)) {
         auto it = slump.sample(mollist.begin(), mollist.end());
         if (not it->empty()) {
             assert(it->id == molid);
@@ -920,7 +920,7 @@ void SmartTranslateRotate::_move(Change &change) {
     auto mollist = spc.findMolecules(molid, Space::ACTIVE); // list of molecules w. 'molid'
     auto reflist1 = spc.findAtoms(refid1);                  // list of atoms w. 'refid1'
     auto reflist2 = spc.findAtoms(refid2);                  // list of atoms w. 'refid2'
-    if (size(mollist) > 0) {
+    if (not ranges::cpp20::empty(mollist)) {
         auto it = slump.sample(mollist.begin(), mollist.end()); // chosing random molecule in group of type molname
         auto ref1 = slump.sample(reflist1.begin(), reflist1.end());
         auto ref2 = slump.sample(reflist2.begin(), reflist2.end());
@@ -1090,7 +1090,7 @@ void ConformationSwap::_move(Change &change) {
     assert(change.empty());
 
     auto mollist = spc.findMolecules(molid, Space::ACTIVE); // list of molecules w. 'molid'
-    if (size(mollist) > 0) {
+    if (not ranges::cpp20::empty(mollist)) {
         auto g = slump.sample(mollist.begin(), mollist.end());
         if (not g->empty()) {
             inserter.offset = g->cm;

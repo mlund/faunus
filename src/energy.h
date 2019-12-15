@@ -446,8 +446,9 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
                 }
             }
         } else { // only a subset has changed
-            auto fixed = view::ints(0, int(g.size())) |
-                         view::remove_if([&index](int i) { return std::binary_search(index.begin(), index.end(), i); });
+            auto fixed = ranges::views::ints(0, int(g.size())) | ranges::views::remove_if([&index](int i) {
+                             return std::binary_search(index.begin(), index.end(), i);
+                         });
             for (int i : index) {
                 for (int j : fixed) { // moved<->static
                     if (!molecule.isPairExcluded(i, j)) {
@@ -546,7 +547,7 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
                     for (auto j = g2.begin(); j != g2.end(); ++j)
                         u += i2i(*(g1.begin() + i), *j);
                 if (not jndex.empty()) {
-                    auto fixed = view::ints(0, int(g1.size())) | view::remove_if([&index](int i) {
+                    auto fixed = ranges::views::ints(0, int(g1.size())) | ranges::views::remove_if([&index](int i) {
                                      return std::binary_search(index.begin(), index.end(), i);
                                  });
                     for (auto i : jndex)     // moved2        <-|
@@ -652,7 +653,6 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
     }
 
     double energy(Change &change) override {
-        using namespace ranges;
         double u = 0;
 
         if (change) {
@@ -704,7 +704,7 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
             }
 
             auto moved = change.touchedGroupIndex(); // index of moved groups
-            auto fixed = view::ints(0, int(spc.groups.size())) | view::remove_if([&moved](int i) {
+            auto fixed = ranges::views::ints(0, int(spc.groups.size())) | ranges::views::remove_if([&moved](int i) {
                              return std::binary_search(moved.begin(), moved.end(), i);
                          }); // index of static groups
 
@@ -715,7 +715,7 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
                     Moved.push_back(i);
                 }
                 std::sort( Moved.begin(), Moved.end() );
-                auto fixed = view::ints( 0, int(spc.groups.size()) )
+                auto fixed = ranges::views::ints( 0, int(spc.groups.size()) )
                     | view::remove_if(
                             [&Moved](int i){return std::binary_search(Moved.begin(), Moved.end(), i);}
                             ); // index of static groups*/
@@ -760,7 +760,7 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
 
             // moved<->static
             if (omp_enable and omp_g2g) {
-                std::vector<std::pair<int, int>> pairs(size(moved) * size(fixed));
+                std::vector<std::pair<int, int>> pairs(size(moved) * rng_size(fixed));
                 size_t cnt = 0;
                 for (auto i : moved)
                     for (auto j : fixed)
@@ -837,7 +837,6 @@ template <typename Tpairpot> class NonbondedCached : public Nonbonded<Tpairpot> 
     } //!< Cache pair interactions in matrix
 
     double energy(Change &change) override {
-        using namespace ranges;
         double u = 0;
 
         if (change) {
@@ -866,9 +865,10 @@ template <typename Tpairpot> class NonbondedCached : public Nonbonded<Tpairpot> 
             }
 
             auto moved = change.touchedGroupIndex(); // index of moved groups
-            auto fixed = view::ints(0, int(base::spc.groups.size())) | view::remove_if([&moved](int i) {
-                             return std::binary_search(moved.begin(), moved.end(), i);
-                         }); // index of static groups
+            auto fixed =
+                ranges::views::ints(0, int(base::spc.groups.size())) | ranges::views::remove_if([&moved](int i) {
+                    return std::binary_search(moved.begin(), moved.end(), i);
+                }); // index of static groups
 
             // moved<->moved
             if (change.moved2moved)
@@ -877,7 +877,7 @@ template <typename Tpairpot> class NonbondedCached : public Nonbonded<Tpairpot> 
                         u += g2g(base::spc.groups[*i], base::spc.groups[*j]);
             // moved<->static
             if (this->omp_enable and this->omp_g2g) {
-                std::vector<std::pair<int, int>> pairs(size(moved) * size(fixed));
+                std::vector<std::pair<int, int>> pairs(size(moved) * rng_size(fixed));
                 size_t cnt = 0;
                 for (auto i : moved)
                     for (auto j : fixed)

@@ -20,7 +20,7 @@ bool SpeciationMove::insertProducts(std::vector<ReactionData>::iterator rit) {
     for (auto &m : rit->Molecules2Add(forward)) { // Addition checks
         auto mollist = spc.findMolecules(m.first, Tspace::ALL);
         if (molecules[m.first].atomic) {
-            if (size(mollist) != 1) // There can be only one
+            if (rng_size(mollist) != 1) // There can be only one
                 throw std::runtime_error("Bad definition: One group per atomic molecule!");
             auto git = mollist.begin();
             if ((git->size() + m.second) > git->capacity()) { // Assure that there are atoms enough in the group
@@ -31,7 +31,7 @@ bool SpeciationMove::insertProducts(std::vector<ReactionData>::iterator rit) {
                 mollist = spc.findMolecules(m.first, Tspace::INACTIVE_NEUTRAL);
             else
                 mollist = spc.findMolecules(m.first, Tspace::INACTIVE);
-            if (size(mollist) < m.second) {
+            if (rng_size(mollist) < m.second) {
                 return false; // Not possible to perform change, escape through the back door
             }
         }
@@ -47,7 +47,7 @@ bool SpeciationMove::swapReaction(Change &change, std::vector<ReactionData>::ite
         assert((m1.size() == 1) and (m2.size() == 1) &&
                "Bad definition: Only 2 explicit atoms per reaction!"); // Swap A = B
         auto atomlist = spc.findAtoms(m1.begin()->first);
-        if (size(atomlist) < 1)                                    // Make sure that there are any active atoms to swap
+        if (rng_size(atomlist) < 1)                                    // Make sure that there are any active atoms to swap
             return false;                                          // Slip out the back door
         auto ait = slump.sample(atomlist.begin(), atomlist.end()); // Random particle iterator
         auto git = spc.findGroupContaining(*ait);

@@ -135,7 +135,7 @@ namespace Faunus {
 
             auto find_id(int id) const {
                 //return Faunus::filter(begin(), end(), [id](T &i){return (i.id==id);} );
-                return *this | ranges::view::filter( [id](T &i){ return (i.id==id); } );
+                return *this | ranges::cpp20::views::filter([id](T &i) { return (i.id == id); });
             } //!< Range of all (active) elements with matching particle id
 
             /*
@@ -149,7 +149,8 @@ namespace Faunus {
                     if (not index.empty()) 
                         assert( *std::max_element(index.begin(), index.end()) < size() );
 #endif
-                    return index | ranges::view::transform([this](Tint i) -> T& { return *(this->begin()+i); });
+                    return index |
+                           ranges::cpp20::views::transform([this](Tint i) -> T & { return *(this->begin() + i); });
                 }
 
             double mass() const; //!< Sum of all active masses

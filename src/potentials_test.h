@@ -306,8 +306,8 @@ TEST_CASE("[Faunus] FunctorPotential") {
 
         functor = j;
         Multipole multipole = j["default"][0];
-        CHECK(functor.selfEnergy(a) == Approx(multipole.selfEnergy(a)));
-        CHECK(functor.selfEnergy(c) == Approx(multipole.selfEnergy(c)));
+        CHECK(functor.selfEnergy(a) == Approx(multipole.selfEnergy(a))); // q=1, mu=0
+        CHECK(functor.selfEnergy(c) == Approx(multipole.selfEnergy(c))); // q=0, mu=2
     }
 }
 

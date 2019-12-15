@@ -6,7 +6,7 @@ include(CheckIPOSupported)
 include(ExternalProject)
 include(FetchContent)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
 set(CMAKE_CXX_EXTENSIONS NO)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
@@ -107,18 +107,20 @@ add_dependencies(spdlog project_spdlog)
 # MODERN JSON
 FetchContent_Declare(
     modernjson
-    URL "https://github.com/nlohmann/json/releases/download/v3.5.0/include.zip"
-    URL_HASH SHA256=3564da9c5b0cf2e032f97c69baedf10ddbc98030c337d0327a215ea72259ea21)
+    URL "https://github.com/nlohmann/json/releases/download/v3.7.3/include.zip"
+    URL_HASH SHA256=87b5884741427220d3a33df1363ae0e8b898099fbc59f1c451113f6732891014)
 FetchContent_GetProperties(modernjson)
 if(NOT modernjson_POPULATED)
     FetchContent_Populate(modernjson)
 endif()
+add_compile_definitions("NLOHMANN_JSON_HPP") # older versions used this macro. Now it's suffixed with "_"
 
 # RANGE-V3
 FetchContent_Declare(
     rangev3
-    URL "https://github.com/ericniebler/range-v3/archive/0.5.0.tar.gz"
-    URL_HASH MD5=42f932808ef51df9f1732a3d5b0ae06c)
+    URL "https://github.com/ericniebler/range-v3/archive/0.10.0.tar.gz"
+    URL_HASH MD5=2a68ca385f70d62398365cc2923d0573)
+
 FetchContent_GetProperties(rangev3)
 if(NOT rangev3_POPULATED)
     FetchContent_Populate(rangev3)
@@ -227,15 +229,16 @@ if (ENABLE_FREESASA)
     add_dependencies(freesasa project_freesasa)
 endif ()
 
-# Download CoulombGalore header
-foreach (file coulombgalore.h LICENSE)
-    if (NOT EXISTS "${CMAKE_BINARY_DIR}/_deps/coulombgalore/${file}")
-        file(DOWNLOAD
-            "https://raw.githubusercontent.com/mlund/coulombgalore/006fe13/${file}"
-            "${CMAKE_BINARY_DIR}/_deps/coulombgalore/${file}" STATUS status)
-    endif ()
-endforeach ()
-include_directories(SYSTEM "${CMAKE_BINARY_DIR}/_deps/coulombgalore")
+# COULOMBGALORE
+FetchContent_Declare(
+    coulombgalore
+    URL https://github.com/mlund/coulombgalore/archive/4055f58538d781acccb2937ab4580855fcba31f8.tar.gz
+    URL_HASH MD5=922f0c5988c0f70c887d65b7cf2762ac)
+FetchContent_GetProperties(coulombgalore)
+if(NOT coulombgalore_POPULATED)
+    FetchContent_Populate(coulombgalore)
+endif()
+include_directories(${coulombgalore_SOURCE_DIR})
 
 # GIT
 if (VERSION_STRING)
@@ -266,7 +269,7 @@ endif ()
 
 # Add third-party headers to include path. Note this is done with SYSTEM
 # to disable potential compiler warnings
-include_directories(SYSTEM ${eigen_SOURCE_DIR} ${doctest_SOURCE_DIR} ${modernjson_SOURCE_DIR} ${rangev3_SOURCE_DIR}/include
+include_directories(SYSTEM ${eigen_SOURCE_DIR} ${doctest_SOURCE_DIR} ${modernjson_SOURCE_DIR}/include ${rangev3_SOURCE_DIR}/include
     ${Pybind11IncludeDir} ${DocoptIncludeDir} ${CppsidIncludeDir} ${XdrfileIncludeDir} ${SpdlogIncludeDir}
     ${ProgressTrackerIncludeDir} ${exprtk_SOURCE_DIR})
 

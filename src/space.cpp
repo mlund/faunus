@@ -217,7 +217,7 @@ json Space::info() {
 
 Space::Tgvec::iterator Space::randomMolecule(int molid, Random &rand, Space::Selection sel) {
     auto m = findMolecules(molid, sel);
-    if (size(m) > 0)
+    if (not ranges::cpp20::empty(m))
         return groups.begin() + (&*rand.sample(m.begin(), m.end()) - &*groups.begin());
     return groups.end();
 }

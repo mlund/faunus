@@ -41,7 +41,7 @@ struct Change {
     std::vector<data> groups; //!< Touched groups by index in group vector
 
     inline auto touchedGroupIndex() {
-        return ranges::view::transform(groups, [](data &i) -> int { return i.index; });
+        return ranges::cpp20::views::transform(groups, [](data &i) -> int { return i.index; });
     } //!< List of moved groups (index)
 
     /** List of changed atom index relative to first particle in system) */
@@ -86,7 +86,7 @@ struct Space {
     Tgeometry geo; //!< Container geometry // TODO as a dependency injection in the constructor
 
     auto positions() const {
-        return ranges::view::transform(p, [](auto &i) -> const Point & { return i.pos; });
+        return ranges::cpp20::views::transform(p, [](auto &i) -> const Point & { return i.pos; });
     } //!< Iterable range with positions
 
     //!< Keywords to select particles based on the their active/inactive state and charge neutrality
@@ -159,25 +159,20 @@ struct Space {
             break;
 
         }
-        return groups | ranges::view::filter(f);
+        return groups | ranges::cpp20::views::filter(f);
     }
 
     typename Tgvec::iterator randomMolecule(int molid, Random &rand,
                                             Selection sel = ACTIVE); //!< Random group; groups.end() if not found
 
-    // auto findAtoms(int atomid) const {
-    //    return p | ranges::view::filter( [atomid](auto &i){ return i.id==atomid; } );
-    // } //!< Range with all atoms of type `atomid` (complexity: order N)
-
     auto findAtoms(int atomid) {
-        auto f = [atomid, &groups = groups](Particle &i) {
-            if (i.id == atomid)
-                for (auto &g : groups)
-                    if (g.contains(i))
-                        return true;
-            return false;
-        };
-        return ranges::view::filter(p, f);
+        return p | ranges::cpp20::views::filter([&, atomid](const Particle &i) {
+                   if (i.id == atomid)
+                       for (const auto &g : groups)
+                           if (g.contains(i))
+                               return true;
+                   return false;
+               });
     } //!< Range with all atoms of type `atomid` (complexity: order N)
 
     auto findGroupContaining(const Particle &i) {
@@ -197,7 +192,7 @@ struct Space {
                     return true;
             return false;
         };
-        return p | ranges::view::filter(f);
+        return p | ranges::cpp20::views::filter(f);
     } //!< Returns range with all *active* particles in space
 
     void sync(Space &other, const Tchange &change); //!< Copy differing data from other (o) Space using Change object

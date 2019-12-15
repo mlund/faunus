@@ -131,7 +131,8 @@ Point PairPotentialBase::force(const Particle &, const Particle &, double, const
 
 void MixerPairPotentialBase::init() {
     json j_combination_rule = combination_rule;
-    faunus_logger->debug("Combination rule {} in effect for the {} potential.", j_combination_rule, name);
+    faunus_logger->debug("Combination rule {} in effect for the {} potential.", j_combination_rule.get<std::string>(),
+                         name);
     initPairMatrices();
 }
 
@@ -487,6 +488,8 @@ void FunctorPotential::to_json(json &j) const {
 }
 
 void FunctorPotential::from_json(const json &j) {
+    have_monopole_self_energy = false;
+    have_dipole_self_energy = false;
     _j = j;
     umatrix = decltype(umatrix)(atoms.size(), combineFunc(_j.at("default")));
     for (auto it = _j.begin(); it != _j.end(); ++it) {
@@ -580,11 +583,13 @@ void TabulatedPotential::from_json(const json &j) {
     }
 }
 
-NewCoulombGalore::NewCoulombGalore(const std::string &name) : PairPotentialBase(name) {
-    selfEnergy = [&lB = lB, &pot = pot](const Particle &p) {
-        return lB * pot.self_energy({p.charge * p.charge, 0.0});
+void NewCoulombGalore::setSelfEnergy() {
+    selfEnergy = [lB = lB, self_energy = pot.selfEnergyFunctor](const Particle &p) {
+        return lB * self_energy({p.charge * p.charge, 0.0});
     }; // expose self-energy as a functor in potential base class
 }
+
+NewCoulombGalore::NewCoulombGalore(const std::string &name) : PairPotentialBase(name) { setSelfEnergy(); }
 
 Point NewCoulombGalore::force(const Particle &a, const Particle &b, double, const Point &r) const {
     return lB * pot.ion_ion_force(a.charge, b.charge, r);
@@ -634,7 +639,10 @@ void NewCoulombGalore::from_json(const json &j) {
         pot.spline<::CoulombGalore::ReactionField>(j);
     else
         throw std::runtime_error("unknown coulomb scheme");
-    faunus_logger->info("{} splined with {} knots", type, pot.numKnots()[0]);
+
+    faunus_logger->info("{} splined with {} knots", type, pot.numKnots().at(0));
+
+    setSelfEnergy();
 }
 
 void NewCoulombGalore::to_json(json &j) const {
@@ -644,11 +652,15 @@ void NewCoulombGalore::to_json(json &j) const {
 
 Multipole::Multipole(const std::string &name) : NewCoulombGalore(name) {
     isotropic = false; // this potential is angular dependent
-    selfEnergy = [&lB = lB, &pot = pot](const Particle &p) {
+    setSelfEnergy();
+}
+
+void Multipole::setSelfEnergy() {
+    selfEnergy = [lB = lB, self_energy = pot.selfEnergyFunctor](const Particle &p) {
         double mu_x_mu = 0;   // dipole-dipole product
         if (p.hasExtension()) // only access dipole of the particle has extended properties
             mu_x_mu = p.getExt().mulen * p.getExt().mulen;
-        return lB * pot.self_energy({p.charge * p.charge, mu_x_mu});
+        return lB * self_energy({p.charge * p.charge, mu_x_mu});
     }; // expose self-energy as a functor in potential base class
 }
 

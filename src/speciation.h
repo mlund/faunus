@@ -30,7 +30,7 @@ class SpeciationMove : public Movebase {
     void _to_json(json &) const override;
     void _from_json(const json &) override;
 
-    bool insertProducts(std::vector<ReactionData>::iterator);
+    bool checkInsertProducts(std::vector<ReactionData>::iterator);
     bool swapReaction(Change &, std::vector<ReactionData>::iterator);
 
     void activateProducts(Change &, std::vector<Faunus::ReactionData>::iterator);

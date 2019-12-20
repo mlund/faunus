@@ -41,6 +41,26 @@ atomlist:
     - Na+: { q: 1.0, mw: 22.99 }
 ~~~
 
+Generating several input files for a parameter scan, it can be helpful to use
+an input _template file_,
+
+~~~ yaml
+# template.yml
+geometry: {type: cylinder, length: {{length}}, radius: {{radius}}}
+~~~
+
+which can be populated using python:
+
+~~~ python
+from jinja2 import Template
+with open('template.yml') as f:
+    output = Template(f.read()).render(
+            length = 200,
+            radius = 50 )
+    print(output)
+~~~
+
+
 ### Post-Processing
 
 JSON formatted output can conveniently be converted to

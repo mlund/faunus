@@ -169,11 +169,11 @@ struct Space {
         return p | ranges::cpp20::views::filter([&, atomid](const Particle &i) {
                    if (i.id == atomid)
                        for (const auto &g : groups)
-                           if (g.contains(i))
+                           if (g.contains(i, false))
                                return true;
                    return false;
                });
-    } //!< Range with all atoms of type `atomid` (complexity: order N)
+    } //!< Range with all active atoms of type `atomid` (complexity: order N)
 
     auto findGroupContaining(const Particle &i) {
         return std::find_if(groups.begin(), groups.end(), [&i](auto &g) { return g.contains(i); });

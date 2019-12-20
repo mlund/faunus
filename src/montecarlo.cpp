@@ -157,63 +157,66 @@ void MCSimulation::State::sync(MCSimulation::State &other, Change &change) {
 
 void to_json(json &j, MCSimulation &mc) { mc.to_json(j); }
 
+/**
+ * Entropic, contribution to the change associated with a density fluctuation.
+ * This far tested with particle fluctuations, only.
+ */
 double IdealTerm(Space &spc_n, Space &spc_o, const Change &change) {
-    using Tpvec = typename Space::Tpvec;
     double NoverO = 0;
-    if (change.dN) { // Has the number of any molecules changed?
-        for (auto &m : change.groups) {
-            int N_o = 0;
-            int N_n = 0;
-            if (m.dNswap) {
-                assert(m.atoms.size() == 1);
-                auto &g_n = spc_n.groups.at(m.index);
-                int id1 = (g_n.begin() + m.atoms.front())->id;
-                auto &g_o = spc_o.groups.at(m.index);
-                int id2 = (g_o.begin() + m.atoms.front())->id;
-                for (int id : {id1, id2}) {
-                    auto atomlist_n = spc_n.findAtoms(id);
-                    auto atomlist_o = spc_o.findAtoms(id);
-                    N_n = rng_size(atomlist_n);
-                    N_o = rng_size(atomlist_o);
-                    int dN = N_n - N_o;
-                    double V_n = spc_n.geo.getVolume();
-                    double V_o = spc_o.geo.getVolume();
-                    if (dN > 0)
-                        for (int n = 0; n < dN; n++)
-                            NoverO += std::log((N_o + 1 + n) / (V_n * 1.0_molar));
-                    else
-                        for (int n = 0; n < (-dN); n++)
-                            NoverO -= std::log((N_o - n) / (V_o * 1.0_molar));
-                }
-            } else {
-                if (m.dNatomic) {
-                    auto mollist_n = spc_n.findMolecules(spc_n.groups[m.index].id, Space::ALL);
-                    auto mollist_o = spc_o.findMolecules(spc_o.groups[m.index].id, Space::ALL);
-                    if (rng_size(mollist_n) > 1 || rng_size(mollist_o) > 1)
-                        throw std::runtime_error("Bad definition: One group per atomic molecule!");
-                    if (not molecules[spc_n.groups[m.index].id].atomic)
-                        throw std::runtime_error("Only atomic molecules!");
-
-                    // Below is safe due to the catches above
-                    // add consistency criteria with m.atoms.size() == N
-                    N_n = mollist_n.begin()->size();
-                    N_o = mollist_o.begin()->size();
-                } else {
-                    auto mollist_n = spc_n.findMolecules(spc_n.groups[m.index].id, Space::ACTIVE);
-                    auto mollist_o = spc_o.findMolecules(spc_o.groups[m.index].id, Space::ACTIVE);
-                    N_n = rng_size(mollist_n);
-                    N_o = rng_size(mollist_o);
-                }
+    if (not change.dN)
+        return NoverO;
+    for (const Change::data &m : change.groups) { // loop over each change group
+        int N_o = 0;                              // number of molecules/atoms before change
+        int N_n = 0;                              // number of molecules/atoms after change
+        if (m.dNswap) {                           // the number of atoms has changed as a result of a swap move
+            assert(m.atoms.size() == 1);
+            auto &g_n = spc_n.groups.at(m.index);
+            auto &g_o = spc_o.groups.at(m.index);
+            int id1 = (g_n.begin() + m.atoms.front())->id;
+            int id2 = (g_o.begin() + m.atoms.front())->id;
+            for (int atom_id : {id1, id2}) {
+                auto mollist_n = spc_n.findAtoms(atom_id);
+                auto mollist_o = spc_o.findAtoms(atom_id);
+                N_n = rng_size(mollist_n);
+                N_o = rng_size(mollist_o);
                 int dN = N_n - N_o;
-                if (dN != 0) {
-                    double V = spc_n.geo.getVolume() * 1.0_molar;
-                    if (dN > 0)
-                        for (int n = 0; n < dN; n++)
-                            NoverO += std::log( (N_o + 1 + n) / V );
-                    else
-                        for (int n = 0; n < (-dN); n++)
-                            NoverO -= std::log( (N_o - n) / V );
-                }
+                double V_n = spc_n.geo.getVolume();
+                double V_o = spc_o.geo.getVolume();
+                if (dN > 0)
+                    for (int n = 0; n < dN; n++)
+                        NoverO += std::log((N_o + 1 + n) / (V_n * 1.0_molar));
+                else
+                    for (int n = 0; n < (-dN); n++)
+                        NoverO -= std::log((N_o - n) / (V_o * 1.0_molar));
+            }
+        } else {              // it is not a swap move
+            if (m.dNatomic) { // the number of atomic molecules has changed
+                auto mollist_n = spc_n.findMolecules(spc_n.groups[m.index].id, Space::ALL); // why not "ACTIVE"?
+                auto mollist_o = spc_o.findMolecules(spc_o.groups[m.index].id, Space::ALL);
+                if (rng_size(mollist_n) > 1 || rng_size(mollist_o) > 1)
+                    throw std::runtime_error("Bad definition: One group per atomic molecule!");
+                if (not molecules[spc_n.groups[m.index].id].atomic)
+                    throw std::runtime_error("Only atomic molecules!");
+
+                // Below is safe due to the catches above
+                // add consistency criteria with m.atoms.size() == N
+                N_n = mollist_n.begin()->size();
+                N_o = mollist_o.begin()->size();
+            } else {
+                auto mollist_n = spc_n.findMolecules(spc_n.groups[m.index].id, Space::ACTIVE);
+                auto mollist_o = spc_o.findMolecules(spc_o.groups[m.index].id, Space::ACTIVE);
+                N_n = rng_size(mollist_n);
+                N_o = rng_size(mollist_o);
+            }
+            int dN = N_n - N_o;
+            if (dN != 0) {
+                double V = spc_n.geo.getVolume() * 1.0_molar;
+                if (dN > 0)
+                    for (int n = 0; n < dN; n++)
+                        NoverO += std::log((N_o + 1 + n) / V);
+                else
+                    for (int n = 0; n < (-dN); n++)
+                        NoverO -= std::log((N_o - n) / V);
             }
         }
     }

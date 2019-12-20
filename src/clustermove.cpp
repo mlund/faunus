@@ -1,11 +1,12 @@
 #include "clustermove.h"
 #include "aux/eigensupport.h"
+#include <algorithm>
 
 namespace Faunus {
 namespace Move {
 
 double Cluster::clusterProbability(const Cluster::Tgroup &g1, const Cluster::Tgroup &g2) const {
-    if (spc.geo.sqdist(g1.cm, g2.cm) <= thresholdsq(g1.id, g2.id))
+    if (spc.geo.sqdist(g1.cm, g2.cm) <= group_thresholds(g1.id, g2.id))
         return 1.0;
     return 0.0;
 }
@@ -25,11 +26,11 @@ void Cluster::_to_json(json &j) const {
 
     // print threshold matrix
     auto &_j = j["threshold"];
-    for (auto i : ids)
-        for (auto j : ids)
+    for (auto i : molids)
+        for (auto j : molids)
             if (i >= j) {
                 auto str = Faunus::molecules[i].name + " " + Faunus::molecules[j].name;
-                _j[str] = std::sqrt(thresholdsq(i, j));
+                _j[str] = std::sqrt(group_thresholds(i, j));
                 _roundjson(_j[str], 3);
             }
 
@@ -46,26 +47,24 @@ void Cluster::_from_json(const json &j) {
     dptrans = j.at("dp");
     dir = j.value("dir", Point(1, 1, 1));
     dirrot = j.value("dirrot", Point(0, 0, 0)); // predefined axis of rotation
+    dirrot.normalize();                         // make sure dirrot is a unit-vector
     dprot = j.at("dprot");
     spread = j.value("spread", true);
-    names = j.at("molecules").get<decltype(names)>(); // molecule names
-    ids = names2ids(molecules, names);                // names --> molids
-    index.clear();
-    for (auto &g : spc.groups)            // loop over all groups
-        if (not g.atomic)                 // only molecular groups
-            if (g.size() == g.capacity()) // only active particles
-                if (std::find(ids.begin(), ids.end(), g.id) != ids.end())
-                    index.push_back(&g - &spc.groups.front());
-    if (repeat < 0)
-        repeat = index.size();
+    molecule_names = j.at("molecules").get<decltype(molecule_names)>(); // molecule names
+    molids = names2ids(molecules, molecule_names);                      // names --> molids
+
+    updateMoleculeIndex();
+
+    repeat = std::max<size_t>(1, molecule_index.size());
 
     // read satellite ids (molecules NOT to be considered as cluster centers)
     auto satnames = j.value("satellites", std::vector<std::string>()); // molecule names
     auto vec = names2ids(Faunus::molecules, satnames);                 // names --> molids
     satellites = std::set<int>(vec.begin(), vec.end());
 
+    // make sure the satellites are in `molids`
     for (auto id : satellites)
-        if (std::find(ids.begin(), ids.end(), id) == ids.end())
+        if (std::find(molids.begin(), molids.end(), id) == molids.end())
             throw std::runtime_error("satellite molecules must be defined in `molecules`");
 
     // read cluster thresholds
@@ -73,10 +72,10 @@ void Cluster::_from_json(const json &j) {
         auto &_j = j.at("threshold");
         // threshold is given as a single number
         if (_j.is_number()) {
-            for (auto i : ids)
-                for (auto j : ids)
+            for (auto i : molids)
+                for (auto j : molids)
                     if (i >= j)
-                        thresholdsq.set(i, j, std::pow(_j.get<double>(), 2));
+                        group_thresholds.set(i, j, std::pow(_j.get<double>(), 2));
         }
         // threshold is given as pairs of clustering molecules
         else if (_j.is_object()) {
@@ -87,7 +86,7 @@ void Cluster::_from_json(const json &j) {
                     auto it2 = findName(Faunus::molecules, v[1]);
                     if (it1 == Faunus::molecules.end() or it2 == Faunus::molecules.end())
                         throw std::runtime_error("unknown molecule(s): ["s + v[0] + " " + v[1] + "]");
-                    thresholdsq.set(it1->id(), it2->id(), std::pow(it.value().get<double>(), 2));
+                    group_thresholds.set(it1->id(), it2->id(), std::pow(it.value().get<double>(), 2));
                 } else
                     throw std::runtime_error("threshold requires exactly two space-separated molecules");
             }
@@ -97,7 +96,7 @@ void Cluster::_from_json(const json &j) {
 }
 void Cluster::findCluster(Space &spc, size_t first, std::set<size_t> &cluster) {
     assert(first < spc.p.size());
-    std::set<size_t> pool(index.begin(), index.end());
+    std::set<size_t> pool(molecule_index.begin(), molecule_index.end());
     assert(pool.count(first) > 0);
 
     cluster.clear();
@@ -135,16 +134,17 @@ void Cluster::findCluster(Space &spc, size_t first, std::set<size_t> &cluster) {
 void Cluster::_move(Change &change) {
     _bias = 0;
     rotate = true;
-    if (not index.empty()) {
+    updateMoleculeIndex();
+    if (not molecule_index.empty()) {
         std::set<size_t> cluster; // all group index in cluster
 
         // find "nuclei" or cluster center and exclude any molecule id listed as "satellite".
-        size_t first;
+        size_t index_of_nuclei;
         do {
-            first = *slump.sample(index.begin(), index.end()); // random molecule (nuclei)
-        } while (satellites.count(spc.groups[first].id) != 0);
+            index_of_nuclei = *slump.sample(molecule_index.begin(), molecule_index.end()); // random molecule (nuclei)
+        } while (satellites.count(spc.groups[index_of_nuclei].id) != 0);
 
-        findCluster(spc, first, cluster); // find cluster around first
+        findCluster(spc, index_of_nuclei, cluster); // find cluster around first
 
         N += cluster.size();                       // average cluster size
         clusterSizeDistribution[cluster.size()]++; // update cluster size distribution
@@ -152,16 +152,11 @@ void Cluster::_move(Change &change) {
         d.all = true;
         dp = ranunit(slump, dir) * dptrans * slump();
 
-        if (rotate)
-            angle = dprot * (slump() - 0.5);
-        else
-            angle = 0;
-
         auto boundary = spc.geo.getBoundaryFunc();
 
         // lambda function to calculate cluster COM
         auto clusterCOM = [&]() {
-            double sum_m = 0;
+            double mass_sum = 0;
             Point cm(0, 0, 0);
             Point O = spc.groups[*cluster.begin()].cm;
             for (auto i : cluster) { // loop over clustered molecules (index)
@@ -170,19 +165,25 @@ void Cluster::_move(Change &change) {
                 boundary(t);
                 double m = g.mass();
                 cm += m * t;
-                sum_m += m;
+                mass_sum += m;
             }
-            cm = cm / sum_m + O;
+            cm = cm / mass_sum + O;
             boundary(cm);
             return cm;
         };
 
         Point COM = clusterCOM(); // org. cluster center
         Eigen::Quaterniond Q;
-        Point u = ranunit(slump);
-        if (dirrot.count() > 0)
-            u = dirrot;
-        Q = Eigen::AngleAxisd(angle, u); // quaternion
+        if (rotate) {
+            Point u;
+            if (dirrot.count() > 0)
+                u = dirrot;
+            else
+                u = ranunit(slump);
+            angle = dprot * (slump() - 0.5);
+            Q = Eigen::AngleAxisd(angle, u); // quaternion
+        } else
+            angle = 0;
 
         for (auto i : cluster) { // loop over molecules in cluster
             auto &g = spc.groups[i];
@@ -205,7 +206,7 @@ void Cluster::_move(Change &change) {
         // currently implemented in `findCluster()`.
 
         std::set<size_t> aftercluster;         // all group index in cluster _after_move
-        findCluster(spc, first, aftercluster); // find cluster around first
+        findCluster(spc, index_of_nuclei, aftercluster); // find cluster around first
         if (aftercluster == cluster)
             _bias = 0;
         else {
@@ -238,8 +239,24 @@ void Cluster::_accept(Change &) {
 Cluster::Cluster(Space &spc) : spc(spc) {
     cite = "doi:10/cj9gnn";
     name = "cluster";
-    repeat = -1; // meaning repeat N times
+    repeat = -1;
 }
 
+/**
+ * search for molecules participating in the cluster
+ * move. This is called for every move event as a
+ * grand canonical move may have changed the number
+ * of particles.
+ */
+void Cluster::updateMoleculeIndex() {
+    assert(not molids.empty());
+    molecule_index.clear();
+    for (auto &g : spc.groups) {          // loop over all groups
+        if (not g.atomic)                 // only molecular groups
+            if (g.size() == g.capacity()) // only active particles
+                if (std::find(molids.begin(), molids.end(), g.id) != molids.end())
+                    molecule_index.push_back(&g - &spc.groups.front());
+    }
+}
 } // namespace Move
 } // namespace Faunus

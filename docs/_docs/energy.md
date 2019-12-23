@@ -10,7 +10,7 @@ MathJax.Hub.Config({
 The system energy, or Hamiltonian, consists of a sum of potential energy terms,
 
 $$
-\mathcal{H}_{sys} = U_1 + U_2 + ...
+\mathcal{H}\_{sys} = U\_1 + U\_2 + ...
 $$
 
 The energy terms are specified in `energy` at the top level input and evaluated in the order given.
@@ -36,7 +36,6 @@ The keyword `maxenergy` can be used to skip further energy evaluation if a term 
 energy change (in kT), which will likely lead to rejection.
 The default value is _infinity_.
 
-**Note:**
 _Energies_ in MC may contain implicit degrees of freedom, _i.e._ be temperature-dependent,
 effective potentials. This is inconsequential for sampling
 density of states, but care should be taken when interpreting derived functions such as
@@ -51,7 +50,6 @@ a set of conditions exists to evaluate the acceptance of the proposed move:
 - always accept if energy change is from NaN to finite energy
 - always accept if the energy _difference_ is NaN (i.e. from infinity to minus infinity)
 
-**Note:**
 These conditions should be carefully considered if equilibrating a system far from equilibrium.
 
 
@@ -75,7 +73,7 @@ where $N$ is the total number of molecules and atomic species.
 
 This term loops over pairs of atoms, $i$, and $j$, summing a given pair-wise additive potential, $u_{ij}$,
 
-$$ U = \sum_{i=0}^{N-1}\sum_{j=i+1}^N u_{ij}(\textbf{r}_j-\textbf{r}_i)$$
+$$ U = \sum_{i=0}^{N-1}\sum_{j=i+1}^N u_{ij}(\textbf{r}\_j-\textbf{r}\_i)$$
 
 Using `nonbonded`, potentials can be arbitrarily mixed and customized for specific particle
 combinations. `nonbonded_splined` internally _splines_ the combined potential in an interval [`rmin`,`rmax`] determined
@@ -137,40 +135,40 @@ composition. Currently, parallelisation is disabled by default.
  `coulomb`             |  Description
  --------------------- |  -------------------------------------------------
  `type`                |  Coulomb type, see below
- `cutoff`              |  Spherical cutoff, $R_c$ (Å) after which the potential is zero
+ `cutoff`              |  Spherical cutoff, $R\_c$ (Å) after which the potential is zero
  `epsr`                |  Relative dielectric constant of the medium
  `utol=0.005/lB`       |  Error tolerence for splining; default value depends on the Bjerrum length, lB
  `debyelength=`$\infty$|  Debye length (Å) if using `ewald`, `poisson`, `yukawa`
 
 This is a multipurpose potential that handles several electrostatic methods.
-Beyond a spherical real-space cutoff, $R_c$, the potential is zero while if
+Beyond a spherical real-space cutoff, $R\_c$, the potential is zero while if
 below,
 
 $$
-\tilde{u}^{(zz)}_{ij}({\bf r}) = \frac{e^2 z_i z_j }{ 4\pi\epsilon_0\epsilon_r |{\bf r}| }\mathcal{S}(q)
+\tilde{u}^{(zz)}\_{ij}({\bf r}) = \frac{e^2 z\_i z\_j }{ 4\pi\epsilon\_0\epsilon\_r |{\bf r}| }\mathcal{S}(q)
 $$
 
-where ${\bf r} = {\bf r}_j - {\bf r}_i$, and tilde indicate that a short-range function $\mathcal{S}(q=|{\bf r}|/R_c)$ is used to trucate the interactions. The available short-range functions are:
+where ${\bf r} = {\bf r}\_j - {\bf r}\_i$, and tilde indicate that a short-range function $\mathcal{S}(q=|{\bf r}|/R\_c)$ is used to trucate the interactions. The available short-range functions are:
 
 coulomb types                            | Keywords          | $\mathcal{S}(q)$
 ---------------------------------------- | ----------------- | ---------------------------------------------------
 [`plain`](http://doi.org/ctnnsj)         |                   | 1
-[`ewald`](http://doi.org/dgpdmc)         | `alpha`           | $\frac{1}{2}\text{erfc}\left(\alpha R_c q + \frac{\kappa}{2\alpha}\right)\text{exp}\left(2\kappa R_c q\right) + \frac{1}{2}\text{erfc}\left(\alpha R_c q - \frac{\kappa}{2\alpha}\right)$
-[`reactionfield`](http://doi.org/dbs99w) | `epsrf`           | $1+\frac{\epsilon_{RF}-\epsilon_r}{2\epsilon_{RF}+\epsilon_r}q^3-3\frac{\epsilon_{RF}}{2\epsilon_{RF}+\epsilon_r}q$
+[`ewald`](http://doi.org/dgpdmc)         | `alpha`           | $\frac{1}{2}\text{erfc}\left(\alpha R\_c q + \frac{\kappa}{2\alpha}\right)\text{exp}\left(2\kappa R\_c q\right) + \frac{1}{2}\text{erfc}\left(\alpha R\_c q - \frac{\kappa}{2\alpha}\right)$
+[`reactionfield`](http://doi.org/dbs99w) | `epsrf`           | $1+\frac{\epsilon_{RF}-\epsilon\_r}{2\epsilon_{RF}+\epsilon\_r}q^3-3\frac{\epsilon_{RF}}{2\epsilon_{RF}+\epsilon\_r}q$
 [`poisson`](http://doi.org/10/c5fr)      | `C=3`, `D=3`      | $(1-\acute{q})^{D+1}\sum_{c=0}^{C-1}\frac{C-c}{C}{D-1+c\choose c}\acute{q}^c$
 [`qpotential`](https://arxiv.org/abs/1904.10335) | `order`   | $\prod_{n=1}^{\text{order}}(1-q^n)$
 [`fanourgakis`](http://doi.org/f639q5)   |                   | $1-\frac{7}{4}q+\frac{21}{4}q^5-7q^6+\frac{5}{2}q^7$
-[`fennell`](http://doi.org/10/bqgmv2)    | `alpha`           | $\text{erfc}(\alpha R_cq)-q\text{erfc}(\alpha R_c)+(q-1)q\left(\text{erfc}(\alpha R_c)+\frac{2\alpha R_c}{\sqrt{\pi}}\text{exp}(-\alpha^2R_c^2)\right)$
-[`zerodipole`](http://doi.org/10/fhcfn4) | `alpha`           | $\text{erfc}(\alpha R_cq)-q\text{erfc}(\alpha R_c)+\frac{(q^2-1)}{2}q\left(\text{erfc}(\alpha R_c)+\frac{2\alpha R_c}{\sqrt{\pi}}\text{exp}(-\alpha^2R_c^2)\right)$
-[`zahn`](http://doi.org/10/cmx5vd)       | `alpha`           | $\text{erfc}(\alpha R_c q)-(q-1)q\left(\text{erfc}(\alpha R_c)+\frac{2\alpha R_c}{\sqrt{\pi}}\text{exp}(-\alpha^2R_c^2)\right)$
-[`wolf`](http://doi.org/cfcxdk)          | `alpha`           | $\text{erfc}(\alpha R_cq)-\text{erfc}(\alpha R_c)q$
+[`fennell`](http://doi.org/10/bqgmv2)    | `alpha`           | $\text{erfc}(\alpha R\_cq)-q\text{erfc}(\alpha R\_c)+(q-1)q\left(\text{erfc}(\alpha R\_c)+\frac{2\alpha R\_c}{\sqrt{\pi}}\text{exp}(-\alpha^2R\_c^2)\right)$
+[`zerodipole`](http://doi.org/10/fhcfn4) | `alpha`           | $\text{erfc}(\alpha R\_cq)-q\text{erfc}(\alpha R\_c)+\frac{(q^2-1)}{2}q\left(\text{erfc}(\alpha R\_c)+\frac{2\alpha R\_c}{\sqrt{\pi}}\text{exp}(-\alpha^2R\_c^2)\right)$
+[`zahn`](http://doi.org/10/cmx5vd)       | `alpha`           | $\text{erfc}(\alpha R\_c q)-(q-1)q\left(\text{erfc}(\alpha R\_c)+\frac{2\alpha R\_c}{\sqrt{\pi}}\text{exp}(-\alpha^2R\_c^2)\right)$
+[`wolf`](http://doi.org/cfcxdk)          | `alpha`           | $\text{erfc}(\alpha R\_cq)-\text{erfc}(\alpha R\_c)q$
 `yukawa`                                 | `debyelength`, `shift=true` | Same as `poisson` with `C=1` and `D=-1`
 
 Internally $\mathcal{S}(q)$ is _splined_ whereby all types evaluate at similar speed.
 For the `poisson` potential,
 
 $$
-\acute{q} = \frac{1-\exp\left(2\kappa R_c q\right)}{1-\exp\left(2\kappa R_c\right)}
+\acute{q} = \frac{1-\exp\left(2\kappa R\_c q\right)}{1-\exp\left(2\kappa R\_c\right)}
 $$
 
 which as the inverse Debye length, $\kappa\to 0$ gives $\acute{q}=q$.
@@ -212,15 +210,13 @@ The `zahn` and `fennell` approaches have undefined dipolar self-energies and are
 The ion-dipole interaction is described by
 
 $$
-\tilde{u}^{(z\mu)}_{ij}({\bf r}) =
--\frac{ez_i\left(\mu_j\cdot \hat{\bf r}\right) }{|{\bf r}|^2} \left( \mathcal{S}(q)
-- q\mathcal{S}^{\prime}(q) \right)
+\tilde{u}^{(z\mu)}\_{ij}({\bf r}) = -\frac{ez\_i\left(\mu\_j\cdot \hat{\bf r}\right) }{|{\bf r}|^2} \left( \mathcal{S}(q) - q\mathcal{S}^{\prime}(q) \right)
 $$
 
 where $\hat{\bf r} = {\bf r}/|{\bf r}|$, and the dipole-dipole interaction by
 
 $$
-\tilde{u}^{\mu\mu}_{ij}({\bf r}) = -\left ( \frac{3 ( \boldsymbol{\mu}_i \cdot \hat{\bf r} ) \left(\boldsymbol{\mu}_j\cdot\hat{\bf r}\right) - \boldsymbol{\mu}_i\cdot\boldsymbol{\mu}_j }{|{\bf r}|^3}\right) \left( \mathcal{S}(q) - q\mathcal{S}^{\prime}(q)  + \frac{q^2}{3}\mathcal{S}^{\prime\prime}(q) \right) - \frac{\left(\boldsymbol{\mu}_i\cdot\boldsymbol{\mu}_j\right)}{|{\bf r}|^3}\frac{q^2}{3}\mathcal{S}^{\prime\prime}(q).
+\tilde{u}^{\mu\mu}\_{ij}({\bf r}) = -\left ( \frac{3 ( \boldsymbol{\mu}\_i \cdot \hat{\bf r} ) \left(\boldsymbol{\mu}\_j\cdot\hat{\bf r}\right) - \boldsymbol{\mu}\_i\cdot\boldsymbol{\mu}\_j }{|{\bf r}|^3}\right) \left( \mathcal{S}(q) - q\mathcal{S}^{\prime}(q)  + \frac{q^2}{3}\mathcal{S}^{\prime\prime}(q) \right) - \frac{\left(\boldsymbol{\mu}\_i\cdot\boldsymbol{\mu}\_j\right)}{|{\bf r}|^3}\frac{q^2}{3}\mathcal{S}^{\prime\prime}(q).
 $$
 
 
@@ -230,8 +226,8 @@ When using `coulomb` or `multipole`, an electrostatic self-energy term is automa
 added to the Hamiltonian. The monopole and dipole contributions are evaluated according to
 
 $$
-U\_{self} = -\frac{1}{2}\sum\_i^N\sum\_{*\in\{z,\mu\}} \lim\_{|{\bf r}\_{ii}|\to 0}\left( u^{(**)}\_{ii}({\bf r}\_{ii})
-- \tilde{u}^{(**)}\_{ii}({\bf r}\_{ii}) \right )
+U\_{self} = -\frac{1}{2}\sum\_i^N\sum\_{\ast\in\{z,\mu\}} \lim\_{|{\bf r}\_{ii}|\to 0}\left( u^{(\ast\ast)}\_{ii}({\bf r}\_{ii})
+- \tilde{u}^{(\ast\ast)}\_{ii}({\bf r}\_{ii}) \right )
 $$
 
 where no tilde indicates that $\mathcal{S}(q)\equiv 1$ for any $q$.
@@ -253,13 +249,13 @@ self energies are automatically added to the Hamiltonian, activating additional 
 The added energy terms are:
 
 $$
-U_{\text{reciprocal}} = \frac{2\pi f}{V} \sum_{ {\bf k} \ne {\bf 0}} A_k \vert Q^{q\mu} \vert^2 
+U_{\text{reciprocal}} = \frac{2\pi f}{V} \sum_{ {\bf k} \ne {\bf 0}} A\_k \vert Q^{q\mu} \vert^2 
 $$
 
 $$
 U_{\text{surface}} = \frac{ 2\pi f }{ (2\varepsilon_{surf} + 1) V }
 \left(
-\left|\sum_{j}q_j{\bf r}_j\right|^2 + 2 \sum_j q_i {\bf r}_j \cdot \sum_j \boldsymbol{\mu}_j + \left| \sum_j \boldsymbol{\mu}_j \right|^2
+\left|\sum_{j}q\_j{\bf r}\_j\right|^2 + 2 \sum\_j q\_i {\bf r}\_j \cdot \sum\_j \boldsymbol{\mu}\_j + \left| \sum\_j \boldsymbol{\mu}\_j \right|^2
 \right )
 $$
 
@@ -342,9 +338,9 @@ $$
     \beta u_{ij} = -\frac{\lambda_B z_i^2 \alpha_j}{2r_{ij}^4}
 $$
 
-where $a_j$ is the radius of the non-polar particle and $\alpha_j$ is set in
+where $a\_j$ is the radius of the non-polar particle and $\alpha\_j$ is set in
 the atom topology, `alphax`.
-For non-polar particles in a polar medium, $\alpha_i$ is a negative number.
+For non-polar particles in a polar medium, $\alpha\_i$ is a negative number.
 For more information, see
 [J. Israelachvili's book, Chapter 5.](https://www.sciencedirect.com/science/book/9780123751829)
 
@@ -352,7 +348,6 @@ For more information, see
 -------------------- | ---------------------------------------
 `epsr`               | Relative dielectric constant of medium
 
-**Limitations:**
 Charge-polarizability products for each pair of species is evaluated once during
 construction and based on the defined atom types.
 
@@ -370,13 +365,13 @@ while zero for $r>r\_c+w\_c$.
 `cos2` | Description
 ------ | --------------------------
 `eps`  | Depth, $\epsilon$ (kJ/mol)
-`rc`   | Width, $r_c$ (Å)
-`wc`   | Decay range, $w_c$ (Å)
+`rc`   | Width, $r\_c$ (Å)
+`wc`   | Decay range, $w\_c$ (Å)
 
 ### Assorted Short Ranged Potentials
 
 The potentials below are often used to keep particles apart and/or to introduce stickiness.
-The atomic interaction parameters, e.g., $\sigma_i$ and $\epsilon\_i$, are taken from the
+The atomic interaction parameters, e.g., $\sigma\_i$ and $\epsilon\_i$, are taken from the
 topology.
 
 Type             | Atomic parameters | $u(r)$ (non-zero part)
@@ -416,13 +411,11 @@ as shown in the example bellow.
     custom:
       - Na Cl: {eps: 0.2, sigma: 2}
       - K Cl: { ... }
-
 - hertz:
     mixing: LB
     eps: eps_hz
     custom:
       - Na Cl: {eps_hz: 0.2, sigma: 2}
-
 - hardsphere:
     mixing: arithmetic
     sigma: sigma_hs
@@ -574,10 +567,9 @@ energy:
            - harmonic: { index: [56,921], k: 10, req: 15 }
 ~~~
 
-Bonded potential types:
-
-**Note:**
 $\mu V T$ ensembles and Widom insertion are currently unsupported for molecules with bonds.
+
+The following shows the possible bonded potential types:
 
 ### Harmonic
 
@@ -609,8 +601,7 @@ $$
   \end{cases}
 $$
 
-**Note:**
-It is recommend to only use the potential if the initial configuration is near equilibrium, which prevalently depends on the value of `rmax`.
+It is recommended to only use the potential if the initial configuration is near equilibrium, which prevalently depends on the value of `rmax`.
 Should one insist on conducting simulations far from equilibrium, a large displacement parameter is recommended to reach finite energies.
 
 ### Finite Extensible Nonlinear Elastic + WCA

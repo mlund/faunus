@@ -32,7 +32,7 @@ but should compile on most unix operating systems and possibly under Cygwin (Win
 ### Requirements
 
 - CMake 3.11+
-- C/C++14 compiler (Clang 3.9+, GCC 6.5+, etc.)
+- C/C++17 compiler (Clang 4+, GCC 7+, etc.)
 - Python 3.6+ with the following packages:
   - `ruamel_yaml` or `yaml`
 

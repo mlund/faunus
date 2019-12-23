@@ -21,8 +21,9 @@ analysis:
     - ...
 ~~~
 
-**Note:** all analysis methods support the `nstep` keyword that defines the interval between
-sampling points and the `nskip` keyword that defines the number of initial steps that are excluded from the analysis. In addition all analysis provide output statistics of number of sample
+All analysis methods support the `nstep` keyword that defines the interval between
+sampling points and the `nskip` keyword that defines the number of initial steps that are excluded from the analysis.
+In addition all analysis provide output statistics of number of sample
 points, and the relative run-time spent on the analysis.
 
 ## Density
@@ -33,7 +34,7 @@ points, and the relative run-time spent on the analysis.
 ----------- |  -------------------------------------------
 `nstep=0`   |  Interval between samples
 
-This calculates the average density, $\langle N_i/V \rangle$ of molecules and atoms
+This calculates the average density, $\langle N\_i/V \rangle$ of molecules and atoms
 which may fluctuate in _e.g._ the isobaric ensemble or the Grand Canonical ensemble.
 For atomic groups, densities of individual atom types are reported.
 The analysis also files probability density distributions of atomic and polyatomic molecules
@@ -294,7 +295,7 @@ the following:
 
 The points 1-3 above will be done as a function of group-to-group
 mass center separation, $R$ and moments
-on molecule $a$ and $b$ with charges $q_i$ in position $\boldsymbol{r}_i$
+on molecule $a$ and $b$ with charges $q\_i$ in position $\boldsymbol{r}\_i$
 with respect to the mass center are calculated according to:
 
 $$

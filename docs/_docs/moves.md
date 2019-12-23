@@ -88,22 +88,22 @@ Atomic _rotation_ affects only anisotropic particles such as dipoles, spherocyli
 `cluster`       | Description
 --------------- | --------------------------------------------
 `molecules`     | Array of molecule names; `[*]` selects all
-`threshold`     | Mass-center threshold for forming a cluster
+`threshold`     | Mass-center threshold for forming a cluster (number or object)
 `dir=[1,1,1]`   | Directions to translate
-`dirrot=[0,0,0]`| Predefined axis of rotation
+`dirrot=[0,0,0]`| Predefined axis of rotation. If zero, a random unit vector is generated for each move event
 `dprot`         | Rotational displacement (radians)
 `dp`            | Translational displacement (Å)
-`spread`        | If false, stops cluster-growth after one layer around centered molecule (experimental)
+`spread=true`   | If `false`, stops cluster-growth after one layer around centered molecule (experimental)
 `satellites`    | Subset of `molecules` that cannot be cluster centers
 
 This will attempt to rotate and translate clusters of molecular `molecules` defined by a distance `threshold`
 between mass centers.
 The `threshold` can be specified as a single number or as a complete list of combinations.
-For simulations where small molecules cluster around a large macro-molecules it can be useful to use the `satellites`
+For simulations where small molecules cluster around large macro-molecules, it can be useful to use the `satellites`
 keyword which denotes a list of molecules that can be part of a cluster, but cannot be the cluster nucleus or
 starting point. All molecules listed in `satellites` must be part of `molecules`.
 A predefined axis of rotation can be specified as `dirrot`. For example, setting `dirrot` to [1,0,0], [0,1,0] or [0,0,1] 
-results in rotations about the $x-$, $y-$, and $z-$axis, respectively.
+results in rotations about the $x-$, $y-$, or $z-$axis, respectively.
 
 The move is associated with [bias](http://dx.doi.org/10/cj9gnn), such that
 the cluster size and composition remain unaltered.
@@ -122,10 +122,6 @@ cluster:
    dp: 3
    dprot: 1
 ```
-
-**Restrictions:**
-Currently, the number of `molecules` must be constant throughout simulation, _i.e._
-grand canonical schemes are unsupported.
 
 ## Internal Degrees of Freedom
 

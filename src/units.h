@@ -10,15 +10,16 @@ namespace Faunus {
     namespace PhysicalConstants {
         typedef double T; //!< Float size
         constexpr T infty = std::numeric_limits<T>::infinity(), //!< Numerical infinity
-                  epsilon_dbl = std::numeric_limits<T>::epsilon(), //!< Numerical precision
-                  max_exp_argument = 709.8, //!< Largest value exp() can take before overflow (hard-coded for double)
-                  pi = 3.141592653589793, //!< Pi
-                  e0 = 8.85419e-12,  //!< Permittivity of vacuum [C^2/(J*m)]
-                  e = 1.602177e-19,  //!< Absolute electronic unit charge [C]
-                  kB = 1.380658e-23, //!< Boltzmann's constant [J/K]
-                  Nav = 6.022137e23, //!< Avogadro's number [1/mol]
-                  c = 299792458.0,   //!< Speed of light [m/s]
-                  R = kB * Nav;      //!< Molar gas constant [J/(K*mol)]
+            epsilon_dbl = std::numeric_limits<T>::epsilon(),    //!< Numerical precision
+            max_exp_argument =
+                709.782712893384,    //!< Largest value exp() can take before overflow (hard-coded for double)
+            pi = 3.141592653589793,  //!< Pi
+            e0 = 8.85419e-12,        //!< Permittivity of vacuum [C^2/(J*m)]
+            e = 1.602177e-19,        //!< Absolute electronic unit charge [C]
+            kB = 1.380658e-23,       //!< Boltzmann's constant [J/K]
+            Nav = 6.022137e23,       //!< Avogadro's number [1/mol]
+            c = 299792458.0,         //!< Speed of light [m/s]
+            R = kB * Nav;            //!< Molar gas constant [J/(K*mol)]
         extern T temperature;        //!< Temperature (Kelvin)
         static inline T kT() { return temperature*kB; } //!< Thermal energy (Joule)
         static inline T lB( T epsilon_r ) {

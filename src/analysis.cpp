@@ -116,6 +116,7 @@ void SystemEnergy::_from_json(const json &j) {
     for (auto &n : names)
         f << sep << n;
     f << "\n";
+    f.precision(16);
 }
 SystemEnergy::SystemEnergy(const json &j, Energy::Hamiltonian &pot) {
     for (auto i : pot.vec)

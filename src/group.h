@@ -138,6 +138,15 @@ namespace Faunus {
                 return *this | ranges::cpp20::views::filter([id](T &i) { return (i.id == id); });
             } //!< Range of all (active) elements with matching particle id
 
+            /**
+             * @brief Returns i'th element in group
+             * @param i index starting at zero
+             * @return reference to value at i'th element
+             * @note No range-checking and i must be in interval `[0:size[`
+             */
+            inline auto &operator[](size_t i) { return *(this->first + i); }
+            inline const auto &operator[](size_t i) const { return *(this->first + i); }
+
             /*
              * @brief Reference to subset of given index, where 0 is the start of the group
              * @note do not parse index as `const&` which would create a dangling reference

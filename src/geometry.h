@@ -5,6 +5,7 @@
 #include "particle.h"
 #include "tensor.h"
 #include <Eigen/Geometry>
+#include <iostream>
 
 /** @brief Faunus main namespace */
 namespace Faunus {
@@ -66,11 +67,6 @@ struct GeometryBase {
     virtual void randompos(Point &, Random &) const = 0;           //!< Generate random position
     virtual Point vdist(const Point &, const Point &) const = 0;   //!< (Minimum) distance between two points
     virtual Point getLength() const = 0;                           //!< Side lengths
-
-    inline double sqdist(const Point &a, const Point &b) const {
-        return vdist(a, b).squaredNorm();
-    } //!< Squared (minimum) distance between two points
-
     virtual ~GeometryBase();
     virtual void to_json(json &j) const = 0;
     virtual void from_json(const json &j) = 0;
@@ -284,6 +280,7 @@ class TruncatedOctahedron : public GeometryImplementation {
  */
 class Chameleon : public GeometryBase {
   private:
+    Point len_or_zero = {0, 0, 0}; //!< Box length (if PBC) or zero (if no PBC) in given direction
     Point len, len_half, len_inv; //!< Cached box dimensions, their half-values, and reciprocal values.
     std::unique_ptr<GeometryImplementation> geometry = nullptr; //!< A concrete geometry implementation.
     Variant _type;                                              //!< Type of concrete geometry.
@@ -295,15 +292,16 @@ class Chameleon : public GeometryBase {
     const Variant &type = _type;     //!< Type of concrete geometry, read-only.
     const std::string &name = _name; //!< Name of concrete geometry, e.g., for json, read-only.
     double getVolume(int dim = 3) const override;
-    Point setVolume(double V, VolumeMethod method = ISOTROPIC) override;
+    Point setVolume(double, VolumeMethod = ISOTROPIC) override;
     Point getLength() const override; //!< A minimal containing cubic box.
     // setLength() needed only for IO::FormatXTC::loadnextframe().
-    void setLength(const Point &l);                             //!< Sets the box dimensions.
-    void boundary(Point &a) const override;                     //!< Apply boundary conditions
-    Point vdist(const Point &a, const Point &b) const override; //!< (Minimum) distance between two points
-    void randompos(Point &m, Random &rand) const override;
-    bool collision(const Point &a) const override;
-    void from_json(const json &j) override;
+    void setLength(const Point &);                            //!< Sets the box dimensions.
+    void boundary(Point &) const override;                    //!< Apply boundary conditions
+    Point vdist(const Point &, const Point &) const override; //!< (Minimum) distance between two points
+    double sqdist(const Point &, const Point &) const;        //!< (Minimum) squared distance between two points
+    void randompos(Point &, Random &) const override;
+    bool collision(const Point &) const override;
+    void from_json(const json &) override;
     void to_json(json &j) const override;
 
     static const std::map<std::string, Variant> names; //!< Geometry names.
@@ -326,23 +324,6 @@ class Chameleon : public GeometryBase {
     //! During the assignment copy everything, but clone the geometry.
     Chameleon &operator=(const Chameleon &geo);
 };
-
-inline void Chameleon::_setLength(const Point &l) {
-    len = l;
-    len_half = l * 0.5;
-    len_inv = l.cwiseInverse();
-}
-
-inline double Chameleon::getVolume(int dim) const {
-    assert(geometry);
-    return geometry->getVolume(dim);
-}
-
-inline Point Chameleon::setVolume(double V, VolumeMethod method) {
-    auto scale = geometry->setVolume(V, method);
-    _setLength(geometry->getLength());
-    return scale;
-}
 
 inline void Chameleon::randompos(Point &m, Random &rand) const {
     assert(geometry);
@@ -401,6 +382,26 @@ inline Point Chameleon::vdist(const Point &a, const Point &b) const {
         distance = geometry->vdist(a, b);
     }
     return distance;
+}
+
+/**
+ * More readable alternative, nearly same performance:
+ *
+ * ~~~ cpp
+ * Point d(a - b);
+ * for (size_t i = 0; i < 3; i++) {
+ *     d[i] = std::fabs(d[i]);
+ *     d[i] = d[i] - len_or_zero[i] * (d[i] > len_half[i]); // casting faster than branching
+ * }
+ * return d.squaredNorm();
+ * ~~~
+ */
+inline double Chameleon::sqdist(const Point &a, const Point &b) const {
+    if (geometry->boundary_conditions.coordinates == ORTHOGONAL) {
+        Point d((a - b).cwiseAbs());
+        return (d - (d.array() > len_half.array()).cast<double>().matrix().cwiseProduct(len_or_zero)).squaredNorm();
+    } else
+        return geometry->vdist(a, b).squaredNorm();
 }
 
 void to_json(json &, const Chameleon &);

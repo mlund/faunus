@@ -437,10 +437,12 @@ template <typename Tpairpot, bool allow_anisotropic_pair_potential = true> class
         }
     }
 
-    /*
+    /**
      * Internal energy in group, calculating all with all or, if `index`
      * is given, only a subset. Index specifies the internal index (starting
      * from zero) of changed particles within the group.
+     *
+     * @todo investigate overhead of `fixed_index` filtering
      */
     double g_internal(const Tgroup &g, const std::vector<int> &moved_index = std::vector<int>()) {
         timer_g_internal.start(); // measure time spent in this subroutine
@@ -451,24 +453,17 @@ template <typename Tpairpot, bool allow_anisotropic_pair_potential = true> class
             return u;
 
         switch (moved_index.size()) {
-        case 0: // if zero, assume all atoms have changed
-            for (auto particle_i = g.begin(); particle_i != g.end(); ++particle_i) {
-                int i = std::distance(g.begin(), particle_i);
-                for (auto particle_j = std::next(particle_i); particle_j != g.end(); ++particle_j) {
-                    int j = std::distance(g.begin(), particle_j);
-                    if (!moldata.isPairExcluded(i, j)) {
-                        u += i2i(*particle_i, *particle_j);
-                    }
-                }
-            }
+
+        // if zero, assume all particles have changed
+        case 0:
+            for (int i = 0; i < (int)g.size() - 1; i++)
+                for (int j = i + 1; j < (int)g.size(); j++)
+                    if (not moldata.isPairExcluded(i, j))
+                        u += i2i(g[i], g[j]);
             break; // exit switch
-                   //            // why does this cause `examples/speciation` to stall?
-                   //            for (size_t i = 0; i < g.size() - 1; i++)
-                   //                for (size_t j = i + 1; j < g.size(); j++)
-                   //                    if (not moldata.isPairExcluded(i, j))
-                   //                        u += i2i(g[i], g[j]);
-                   //            break; // exit switch
-        case 1:    // a single atom has changed in an atomic group; no exclusion check.
+
+        // a single particle has changed in an atomic group; no exclusion check
+        case 1:
             if (g.atomic) {
                 size_t i = moved_index[0];
                 for (size_t j = 0; j < i; j++)
@@ -477,11 +472,12 @@ template <typename Tpairpot, bool allow_anisotropic_pair_potential = true> class
                     u += i2i(g[i], g[j]);
                 break; // exit switch only if atomic group, otherwise continue to default:
             }
-        default: // one or more particles have changed
-            // index of all static particles
+
+        // one or more particle(s) have changed
+        default:
             auto fixed_index = ranges::views::ints(0, int(g.size())) | ranges::views::remove_if([&moved_index](int i) {
                                    return std::binary_search(moved_index.begin(), moved_index.end(), i);
-                               }); // todo: investigate overhead
+                               }); // index of all static particles
             for (int i : moved_index) {
                 for (int j : fixed_index) // moved <-> static
                     if (not moldata.isPairExcluded(i, j))

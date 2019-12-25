@@ -161,6 +161,7 @@ template <typename T = double> class Andrea : public TabulatorBase<T> {
     inline T eval(const typename base::data &d, T r2) const {
         size_t pos = std::lower_bound(d.r2.begin(), d.r2.end(), r2) - d.r2.begin() - 1;
         size_t pos6 = 6 * pos;
+        assert((pos6 + 5) < d.c.size());
         T dz = r2 - d.r2[pos];
         return d.c[pos6] +
                dz * (d.c[pos6 + 1] +
@@ -302,7 +303,6 @@ TEST_CASE("[Faunus] Andrea") {
     CHECK(spline.eval(d, 1e-9) == Approx(f(1e-9)));
     CHECK(spline.eval(d, 5) == Approx(f(5)));
     CHECK(spline.eval(d, 10) == Approx(f(10)));
-    CHECK(spline.eval(d, 10 + 1e-9) != Approx(10 + 1e-9));
 
     // Check if numerical derivation of *splined* function
     // matches the analytical solution in `evalDer()`.

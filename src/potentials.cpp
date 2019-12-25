@@ -405,7 +405,7 @@ void FunctorPotential::registerSelfEnergy(PairPotentialBase *pot) {
 }
 
 FunctorPotential::uFunc FunctorPotential::combineFunc(json &j) {
-    uFunc u = [](const Particle &, const Particle &, const Point &) { return 0.0; };
+    uFunc u = [](const Particle &, const Particle &, double, const Point &) { return 0.0; };
     if (j.is_array()) {
         for (auto &i : j) { // loop over all defined potentials in array
             if (i.is_object() and (i.size() == 1)) {
@@ -468,8 +468,8 @@ FunctorPotential::uFunc FunctorPotential::combineFunc(json &j) {
                     }
 
                     if (_u != nullptr) // if found, sum them into new function object
-                        u = [u, _u](const Particle &a, const Particle &b, const Point &r) {
-                            return u(a, b, r) + _u(a, b, r);
+                        u = [u, _u](const Particle &a, const Particle &b, double r2, const Point &r) {
+                            return u(a, b, r2, r) + _u(a, b, r2, r);
                         };
                     else
                         throw std::runtime_error("unknown potential: " + it.key());
@@ -510,7 +510,7 @@ void TabulatedPotential::from_json(const json &j) {
     if (not isotropic)
         throw std::runtime_error("cannot spline anisotropic potentials");
 
-    tblt.setTolerance(j.value("utol", 1e-5), j.value("ftol", 1e-2));
+    spline.setTolerance(j.value("utol", 1e-5), j.value("ftol", 1e-2));
     double u_at_rmin = j.value("u_at_rmin", 20);
     double u_at_rmax = j.value("u_at_rmax", 1e-6);
     hardsphere = j.value("hardsphere", false);
@@ -520,8 +520,8 @@ void TabulatedPotential::from_json(const json &j) {
     for (size_t i = 0; i < atoms.size(); ++i) {
         for (size_t k = 0; k <= i; ++k) {
             if (atoms[i].implicit == false and atoms[k].implicit == false) {
-                Particle a = atoms.at(i);
-                Particle b = atoms.at(k);
+                Particle a = atoms[i];
+                Particle b = atoms[k];
                 double rmin2 = .5 * (atoms[i].sigma + atoms[k].sigma);
                 rmin2 = rmin2 * rmin2;
                 double rmax2 = rmin2 * 100;
@@ -539,7 +539,7 @@ void TabulatedPotential::from_json(const json &j) {
                 // the given energy threshold (u_at_min2)
                 double dr = 1e-2;
                 while (rmin2 >= dr) {
-                    double u = std::fabs(this->umatrix(i, k)(a, b, {0, 0, sqrt(rmin2)}));
+                    double u = std::fabs(this->umatrix(i, k)(a, b, rmin2, {0, 0, sqrt(rmin2)}));
                     if (u > u_at_rmin * 1.1)
                         rmin2 = rmin2 + dr;
                     else if (u < u_at_rmin / 1.1)
@@ -551,7 +551,7 @@ void TabulatedPotential::from_json(const json &j) {
                 assert(rmin2 >= 0);
 
                 while (rmax2 >= dr) {
-                    double u = std::fabs(this->umatrix(i, k)(a, b, {0, 0, sqrt(rmax2)}));
+                    double u = std::fabs(this->umatrix(i, k)(a, b, rmax2, {0, 0, sqrt(rmax2)}));
                     if (u > u_at_rmax)
                         rmax2 = rmax2 + dr;
                     else
@@ -560,23 +560,26 @@ void TabulatedPotential::from_json(const json &j) {
 
                 assert(rmin2 < rmax2);
 
-                Ttable knotdata = tblt.generate(
+                KnotData knotdata = spline.generate(
                     [&](double r2) {
-                        return this->umatrix(i, k)(a, b, {0, 0, sqrt(r2)});
+                        return this->umatrix(i, k)(a, b, r2, {0, 0, 0});
                     },
                     rmin2, rmax2);
 
                 // assert if potential is negative for r<rmin
-                if (tblt.eval(knotdata, knotdata.rmin2 + dr) < 0)
+                if (spline.eval(knotdata, knotdata.rmin2 + dr) < 0) {
+                    assert(hardsphere == false && "`hardsphere` is set, but potential is negative for r<rmin");
                     knotdata.isNegativeBelowRmin = true;
+                }
 
-                tmatrix.set(i, k, knotdata);
+                matrix_of_knots.set(i, k, knotdata);
                 if (j.value("to_disk", false)) {
                     std::ofstream f(atoms[i].name + "-" + atoms[k].name + "_tabulated.dat"); // output file
                     f << "# r splined exact\n";
                     Point r = {dr, 0, 0}; // variable distance vector between particle a and b
                     for (; r.x() < sqrt(rmax2); r.x() += dr)
-                        f << r.x() << " " << operator()(a, b, r) << " " << this->umatrix(i, k)(a, b, r) << "\n";
+                        f << r.x() << " " << operator()(a, b, r.x() * r.x(), r) << " "
+                          << this->umatrix(i, k)(a, b, r.x() * r.x(), r) << "\n";
                 }
             }
         }

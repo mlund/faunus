@@ -302,6 +302,7 @@ TEST_CASE("[Faunus] Chameleon") {
             CHECK(d_cham.x() == Approx(d_geo.x()));
             CHECK(d_cham.y() == Approx(d_geo.y()));
             CHECK(d_cham.z() == Approx(d_geo.z()));
+            CHECK(chameleon.sqdist(a, b) == Approx(d_cham.squaredNorm()));
         }
     };
 

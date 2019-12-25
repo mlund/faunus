@@ -676,6 +676,31 @@ void Chameleon::to_json(json &j) const {
     j["type"] = name;
 }
 
+void Chameleon::_setLength(const Point &l) {
+    len = l;
+    len_half = l * 0.5;
+    len_inv = l.cwiseInverse();
+    len_or_zero.setZero();
+
+    // this is to speed up the `sqdist()` by avoiding branching when testing
+    // for PBC in each direction. The variable `len_or_zero` either equals
+    // `len` for PBC or zero if not.
+    if (geometry->boundary_conditions.coordinates == ORTHOGONAL)
+        for (size_t i = 0; i < 3; i++)
+            len_or_zero[i] = len[i] * (geometry->boundary_conditions.direction[i] == PERIODIC);
+}
+
+double Chameleon::getVolume(int dim) const {
+    assert(geometry);
+    return geometry->getVolume(dim);
+}
+
+Point Chameleon::setVolume(double V, VolumeMethod method) {
+    auto scale = geometry->setVolume(V, method);
+    _setLength(geometry->getLength());
+    return scale;
+}
+
 Chameleon::VariantName Chameleon::variantName(const std::string &name) {
     auto it = names.find(name);
     if (it == names.end()) {
@@ -692,6 +717,7 @@ Chameleon &Chameleon::operator=(const Chameleon &geo) {
         len = geo.len;
         len_half = geo.len_half;
         len_inv = geo.len_inv;
+        len_or_zero = geo.len_or_zero;
         _type = geo._type;
         _name = geo._name;
         geometry = geo.geometry != nullptr ? geo.geometry->clone() : nullptr;

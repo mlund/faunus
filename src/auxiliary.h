@@ -537,7 +537,7 @@ namespace Faunus
 
                 auto size() const { return m.size(); }
 
-                const T& operator()(size_t i, size_t j) const {
+                inline const T &operator()(size_t i, size_t j) const {
                     if (triangular)
                         if (j>i)
                             std::swap(i,j);

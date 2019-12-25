@@ -21,7 +21,6 @@ conda upgrade faunus
 ~~~
 
 For the adventurous, sporadically updated development versions can be installed with `conda install -c teokem faunus`. 
-
 Starting from version 2.1, we adhere to [semantic versioning](https://semver.org).
 
 ## Building from source code
@@ -34,11 +33,10 @@ but should compile on most unix operating systems and possibly under Cygwin (Win
 - CMake 3.11+
 - C/C++17 compiler (Clang 4+, GCC 7+, etc.)
 - Python 3.6+ with the following packages:
-  - `ruamel_yaml` or `yaml`
+  - `jinja2`, `ruamel_yaml` or `yaml`
 
 The following are optional:
 
-- `jinja2`
 - `pandoc`
 - `pypandoc`
 - `BeautifulSoup4`
@@ -76,7 +74,7 @@ CMake Option                         | Description
 `-DENABLE_PYTHON=ON`                 | Build python bindings (experimental)
 `-DENABLE_FREESASA=ON`               | Enable SASA routines (external download)
 `-DBUILD_STATIC=OFF`                 | Build statically linked binaries
-`-DCMAKE_BUILD_TYPE=RelWithDebInfo`  | Alternatives: `Debug` or `Release` (faster)
+`-DCMAKE_BUILD_TYPE=RelWithDebInfo`  | Alternatives: `Debug` or `Release` (faster, adventurous)
 `-DCMAKE_CXX_FLAGS_RELEASE="..."`    | Compiler options for Release mode
 `-DCMAKE_CXX_FLAGS_DEBUG="..."`      | Compiler options for Debug mode
 `-DCMAKE_INSTALL_PREFIX:PATH="..."`  | Install location (default: `/usr/local`)
@@ -130,7 +128,7 @@ To change the compiler or for another reason reset the build system, do:
 
 ~~~ bash
 make clean
-rm -fR CMakeCache.txt CMakeFiles
+rm -fR CMakeCache.txt CMakeFiles _deps
 ~~~
 
 # Development

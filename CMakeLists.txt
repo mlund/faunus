@@ -163,8 +163,8 @@ set_property(TARGET cppsid PROPERTY IMPORTED_LOCATION ${binary_dir}/libcppsid.a)
 # PYBIND11
 FetchContent_Declare(
     pybind11
-    URL https://github.com/pybind/pybind11/archive/v2.2.4.tar.gz
-    URL_HASH MD5=c533a107bc95bd0c5525ff650b11bfa1)
+    URL https://github.com/pybind/pybind11/archive/v2.4.3.tar.gz
+    URL_HASH MD5=62254c40f89925bb894be421fe4cdef2)
 
 # EIGEN
 FetchContent_Declare(
@@ -199,8 +199,8 @@ set_target_properties(xdrfile PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 # DOCTEST
 FetchContent_Declare(
     doctest
-    URL "https://github.com/onqtam/doctest/archive/2.2.0.tar.gz"
-    URL_MD5 3f91262877b792e545f971e54afb7602)
+    URL "https://github.com/onqtam/doctest/archive/2.3.6.tar.gz"
+    URL_MD5 298e5773f3eb9825f6e3015e8f9511ca)
 FetchContent_GetProperties(doctest)
 if(NOT doctest_POPULATED)
     FetchContent_Populate(doctest)
@@ -287,6 +287,10 @@ endif()
 # in Debug mode, all warnings are treated as errors and we want no optimisations
 add_compile_options($<$<CONFIG:Debug>:-Werror>)
 add_compile_options($<$<CONFIG:Debug>:-O0>)
+
+# in Release mode, add aggressive optimizations
+add_compile_options($<$<CONFIG:Release>:-march=native>)
+add_compile_options($<$<CONFIG:Release>:-Ofast>)
 
 add_subdirectory(src)
 add_subdirectory(docs)

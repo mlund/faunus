@@ -383,6 +383,8 @@ template <typename Tpairpot, bool allow_anisotropic_pair_potential = true> class
     PairMatrix<double> cutoff2; // matrix w. group-to-group cutoff
     std::vector<const Particle *> i_interact_with_these;
 
+    TimeRelativeOfTotal<> timer_g_internal;
+
   protected:
     typedef typename Space::Tgroup Tgroup;
     double Rc2_g2g = pc::infty;
@@ -411,6 +413,8 @@ template <typename Tpairpot, bool allow_anisotropic_pair_potential = true> class
             for (auto &b : Faunus::molecules)
                 if (a.id() >= b.id())
                     _j[a.name + " " + b.name] = sqrt(cutoff2(a.id(), b.id()));
+
+        j["timings"] = {{"g_internal", timer_g_internal.result()}};
     }
 
     template <typename T> inline bool cut(const T &g1, const T &g2) {
@@ -424,7 +428,7 @@ template <typename Tpairpot, bool allow_anisotropic_pair_potential = true> class
     } //!< true if group<->group interaction can be skipped
 
     template <typename T> inline double i2i(const T &a, const T &b) {
-        assert(&a != &b && "a and b cannot be the same particle");
+        assert(&a != &b); // a and b cannot be the same particle
         if constexpr (allow_anisotropic_pair_potential) {
             Point r = spc.geo.vdist(a.pos, b.pos);
             return pairpot(a, b, r.squaredNorm(), r);
@@ -439,50 +443,56 @@ template <typename Tpairpot, bool allow_anisotropic_pair_potential = true> class
      * from zero) of changed particles within the group.
      */
     double g_internal(const Tgroup &g, const std::vector<int> &moved_index = std::vector<int>()) {
+        timer_g_internal.start(); // measure time spent in this subroutine
         using namespace ranges;
         double u = 0;
-        auto &molecule = molecules.at(g.id);
-        // all atoms have changed
-        if (moved_index.empty() && !molecule.rigid) {
+        auto &moldata = g.traits();
+        if (moldata.rigid)
+            return u;
+
+        switch (moved_index.size()) {
+        case 0: // if zero, assume all atoms have changed
             for (auto particle_i = g.begin(); particle_i != g.end(); ++particle_i) {
                 int i = std::distance(g.begin(), particle_i);
                 for (auto particle_j = std::next(particle_i); particle_j != g.end(); ++particle_j) {
                     int j = std::distance(g.begin(), particle_j);
-                    if (!molecule.isPairExcluded(i, j)) {
+                    if (!moldata.isPairExcluded(i, j)) {
                         u += i2i(*particle_i, *particle_j);
                     }
                 }
             }
-        }
-        // a single atom has changed in an atomic group, i.e. no exclusion check.
-        else if (moved_index.size() == 1 and g.atomic) {
-            size_t i = moved_index[0];
-            for (size_t j = 0; j < i; j++)
-                u += i2i(g[i], g[j]);
-            for (size_t j = i + 1; j < g.size(); j++)
-                u += i2i(g[i], g[j]);
-        }
-        // a subset has changed
-        else {
+            break; // exit switch
+                   //            // why does this cause `examples/speciation` to stall?
+                   //            for (size_t i = 0; i < g.size() - 1; i++)
+                   //                for (size_t j = i + 1; j < g.size(); j++)
+                   //                    if (not moldata.isPairExcluded(i, j))
+                   //                        u += i2i(g[i], g[j]);
+                   //            break; // exit switch
+        case 1:    // a single atom has changed in an atomic group; no exclusion check.
+            if (g.atomic) {
+                size_t i = moved_index[0];
+                for (size_t j = 0; j < i; j++)
+                    u += i2i(g[i], g[j]);
+                for (size_t j = i + 1; j < g.size(); j++)
+                    u += i2i(g[i], g[j]);
+                break; // exit switch only if atomic group, otherwise continue to default:
+            }
+        default: // one or more particles have changed
+            // index of all static particles
             auto fixed_index = ranges::views::ints(0, int(g.size())) | ranges::views::remove_if([&moved_index](int i) {
                                    return std::binary_search(moved_index.begin(), moved_index.end(), i);
-                               }); // what is the overhead of this filtering?
+                               }); // todo: investigate overhead
             for (int i : moved_index) {
-                auto &particle_i = g[i];
-                for (int j : fixed_index) { // moved <-> static
-                    if (not molecule.isPairExcluded(i, j)) {
-                        u += i2i(particle_i, g[j]);
-                    }
-                }
-                for (int j : moved_index) { // moved <-> moved
-                    if (j > i) {
-                        if (not molecule.isPairExcluded(i, j)) {
-                            u += i2i(particle_i, g[j]);
-                        }
-                    }
-                }
+                for (int j : fixed_index) // moved <-> static
+                    if (not moldata.isPairExcluded(i, j))
+                        u += i2i(g[i], g[j]);
+                for (int j : moved_index) // moved <-> moved
+                    if (j > i)
+                        if (not moldata.isPairExcluded(i, j))
+                            u += i2i(g[i], g[j]);
             }
         }
+        timer_g_internal.stop();
         return u;
     }
 

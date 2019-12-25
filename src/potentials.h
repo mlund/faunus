@@ -616,7 +616,7 @@ class CustomPairPotential : public PairPotentialBase {
         d->s2 = atoms[b.id].sigma;
         return expr();
     }
-    CustomPairPotential(const std::string &name = "custom") : PairPotentialBase(name), d(std::make_shared<Data>()) {};
+    CustomPairPotential(const std::string & = "custom");
 
     void from_json(const json &) override;
     void to_json(json &) const override;
@@ -669,13 +669,13 @@ class FunctorPotential : public PairPotentialBase {
     PairMatrix<uFunc, true> umatrix; // matrix with potential for each atom pair; cannot be Eigen matrix
 
   public:
-    inline FunctorPotential(const std::string &name = "functor potential") : PairPotentialBase(name){};
+    FunctorPotential(const std::string &name = "functor potential");
     void to_json(json &j) const override;
     void from_json(const json &j) override;
 
     inline double operator()(const Particle &a, const Particle &b, double r2,
                              const Point &r = {0, 0, 0}) const override {
-        return umatrix(a.id, b.id)(a, b, r2, r); // pc::infty;
+        return umatrix(a.id, b.id)(a, b, r2, r);
     }
 };
 

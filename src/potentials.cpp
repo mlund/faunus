@@ -278,6 +278,8 @@ void CustomPairPotential::to_json(json &j) const {
     if (std::isfinite(Rc2))
         j["cutoff"] = std::sqrt(Rc2);
 }
+CustomPairPotential::CustomPairPotential(const std::string &name)
+    : PairPotentialBase(name), d(std::make_shared<Data>()) {}
 
 // =============== Dummy ===============
 
@@ -500,6 +502,8 @@ void FunctorPotential::from_json(const json &j) {
         }
     }
 }
+
+FunctorPotential::FunctorPotential(const std::string &name) : PairPotentialBase(name) {}
 
 //---------------- TabulatedPotential ---------------------
 

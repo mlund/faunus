@@ -728,10 +728,8 @@ Chameleon &Chameleon::operator=(const Chameleon &geo) {
 const BoundaryCondition &Chameleon::boundaryConditions() const { return geometry->boundary_conditions; }
 
 Chameleon::Chameleon(const Chameleon &geo)
-    : GeometryBase(geo), len(geo.len), len_half(geo.len_half), len_inv(geo.len_inv), _type(geo._type),
-      _name(geo._name) {
-    geometry = geo.geometry != nullptr ? geo.geometry->clone() : nullptr;
-}
+    : GeometryBase(geo), len(geo.len), len_half(geo.len_half), len_inv(geo.len_inv),
+      geometry(geo.geometry != nullptr ? geo.geometry->clone() : nullptr), _type(geo._type), _name(geo._name) {}
 
 } // namespace Geometry
 } // namespace Faunus

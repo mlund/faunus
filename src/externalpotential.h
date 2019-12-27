@@ -74,7 +74,7 @@ class ExternalPotential : public Energybase {
  *
  * @warning: under construction
  */
-std::function<double(const Particle &)> createGouyChapmanPotential(const json &);
+std::function<double(const Particle &)> createGouyChapmanPotential(const json &j, const Geometry::Chameleon &);
 
 /**
  * @brief Custom external potential on molecules

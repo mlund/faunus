@@ -574,9 +574,12 @@ void TabulatedPotential::from_json(const json &j) {
                 if (spline.eval(knotdata, knotdata.rmin2 + dr) < 0) {
                     assert(hardsphere == false && "`hardsphere` is set, but potential is negative for r<rmin");
                     knotdata.isNegativeBelowRmin = true;
-                }
+                } else
+                    matrix_of_knots.set(i, k, knotdata);
 
-                matrix_of_knots.set(i, k, knotdata);
+                faunus_logger->debug("Potential for {}-{} splined with {} knot(s)", atoms[i].name, atoms[k].name,
+                                     knotdata.numKnots());
+
                 if (j.value("to_disk", false)) {
                     std::ofstream f(atoms[i].name + "-" + atoms[k].name + "_tabulated.dat"); // output file
                     f << "# r splined exact\n";

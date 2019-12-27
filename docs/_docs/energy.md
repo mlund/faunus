@@ -546,12 +546,11 @@ customexternal:
            0;
 ~~~
 
-A set of predefined values for `function` is available:
-
 ### Gouy Chapman
 
-If `function=gouychapman`, an electric potential from a uniformly, charged planar surface
-in a salt solution is added. If a surface potential, $\varphi\_0$ is specified,
+By setting `function=gouychapman`, an electric potential from a uniformly, charged plane
+in a salt solution is added; see _e.g._ the book _Colloidal Domain_ by Evans and Wennerström, 1999.
+If a surface potential, $\varphi\_0$ is specified,
 
 $$
 \rho = \sqrt{\frac{2 c\_0}{\pi \lambda\_B} } \sinh ( \beta e \varphi\_0 / 2 )
@@ -563,14 +562,17 @@ $$
 where $\lambda\_B$ is the Bjerrum length. With $\Gamma\_0 = \tanh{ \beta e \varphi\_0 / 4 }$
 the final, non-linearized external potential is:
 $$
-\phi_i = 2 k_BT z_i e
-\ln \left ( \frac{1+\Gamma_0e^{-\kappa r_{z,i}}}{1-\Gamma_0 e^{-\kappa r_{z,i}}} \right )
+\phi\_i = \frac{2 k\_BT z\_i}{e}
+\ln \left ( \frac{1+\Gamma\_0e^{-\kappa r\_{z,i}}}{1-\Gamma\_0 e^{-\kappa r\_{z,i}}} \right )
 $$
-where $z_i$ is the particle charge and $r_{z,i}$ the distance from the charged plane.
+where
+$z\_i$ is the particle charge;
+$e$ is the electron unit charge;
+and $r\_{z,i}$ is the distance from the charged plane.
 
 `constants`        | Description
 -----------------  | --------------------------------------
-`ionicstrength`    | Ionic strength, $c_0$ (mol/l)
+`ionicstrength`    | Ionic strength, $c\_0$ (mol/l)
 `epsr`             | Relative dielectric constant
 `phi0=0`           | Unitless surface potential ($\beta e \varphi\_0$) if `qarea` not given
 `qarea=f(phiq)`    | Charge per area (1/eÅ²) if `phi0` not given
@@ -578,11 +580,12 @@ where $z_i$ is the particle charge and $r_{z,i}$ the distance from the charged p
 `linearize=false`  | Use linearized Poisson-Boltzmann approximation?
 `zpos=-Lz/2`       | $z$-position of charged plane in the (slit) simulation box
 
-Some notes and limitations:
+Notes and silly limitations:
 
 - this is experimental and subject to change
-- the salt concentration is assumed equal to the ionic strength, i.e. 1:1 salt only
 - does not work with volume fluctuations in the $z$-direction
+- the salt concentration is assumed equal to the ionic strength, _i.e._ 1:1 salt only
+- temperature is hardcoded to 300 K.
 
 
 ## Bonded Interactions

@@ -61,7 +61,13 @@ double MCSimulation::drift() {
     return std::numeric_limits<double>::quiet_NaN();
 }
 
-MCSimulation::MCSimulation(const json &j, MPI::MPIController &mpi) : state1(j), state2(j), moves(j, state2.spc, mpi) {
+/*
+ * We need to construct two identical State objects and to avoid duplicate logs, we
+ * temporarily disable the logger for the second object by the arcane _comma operator_
+ */
+MCSimulation::MCSimulation(const json &j, MPI::MPIController &mpi)
+    : log_level(faunus_logger->level()), state1(j), state2((faunus_logger->set_level(spdlog::level::off), j)),
+      moves((faunus_logger->set_level(log_level), j), state2.spc, mpi) {
     init();
 }
 

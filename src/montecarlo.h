@@ -12,6 +12,8 @@ class MCSimulation {
 
     std::string lastMoveName; //!< name of latest move
 
+    spdlog::level::level_enum log_level; //!< Storage for original loglevel
+
     bool metropolis(double du) const; //!< Metropolis criterion (true=accept)
 
     struct State {
@@ -39,7 +41,7 @@ class MCSimulation {
     const auto &geometry() const { return state1.spc.geo; }
     const auto &particles() const { return state1.spc.p; }
 
-    MCSimulation(const json &j, MPI::MPIController &mpi);
+    MCSimulation(const json &, MPI::MPIController &);
     double drift(); //!< Calculates the relative energy drift from initial configuration
 
     /* currently unused -- see Analysis::SaveState.

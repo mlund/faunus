@@ -583,29 +583,31 @@ void from_json(const json &j, Chameleon &g) {
 
 void to_json(json &j, const Chameleon &g) { g.to_json(j); }
 
-ParticleVector mapParticlesOnSphere(const ParticleVector &particles) {
-    assert(particles.size() > 1);
+ParticleVector mapParticlesOnSphere(const ParticleVector &source) {
+    assert(source.size() > 1);
     Average<double> radius; // average radial distance
-    ParticleVector dst(particles.size());
-    Point COM = massCenter(particles.begin() + 1, particles.end());
-    for (size_t i = 1; i < particles.size(); i++) {
-        dst[i].pos = particles[i].pos - COM; // make COM origin
-        double r = dst[i].pos.norm();        // radial distance
-        dst[i].pos /= r;                     // normalize to unit vector
+    ParticleVector destination = source;
+    Point COM = massCenter(source.begin() + 1, source.end());
+    for (size_t i = 1; i < source.size(); i++) {
+        destination[i].pos = source[i].pos - COM; // make COM origin
+        double r = destination[i].pos.norm();     // radial distance
+        destination[i].pos /= r;                  // normalize to unit vector
         radius += r;                         // radius is the average r
     }
-    dst[0].pos.setZero();
-    for (auto &i : dst) // scale positions to surface of sphere
+    destination[0].pos.setZero();
+    for (auto &i : destination) // scale positions to surface of sphere
         i.pos = i.pos * radius.avg() + COM;
 
     // rmsd, skipping the first particle
     double _rmsd =
-        rootMeanSquareDeviation(dst.begin() + 1, dst.end(), particles.begin() + 1,
+        rootMeanSquareDeviation(destination.begin() + 1, destination.end(), source.begin() + 1,
                                 [](const Particle &a, const Particle &b) { return (a.pos - b.pos).squaredNorm(); });
 
-    faunus_logger->info("{} particles mapped on sphere of radius {} with RMSD {} {}", dst.size(), radius.avg(), _rmsd,
-                        u8::angstrom);
-    return particles;
+    faunus_logger->info("{} particles mapped on sphere of radius {} with RMSD {} {}; the first particle ({}) is a "
+                        "dummy and COM placeholder",
+                        destination.size(), radius.avg(), _rmsd, u8::angstrom,
+                        Faunus::atoms.at(destination.at(0).id).name);
+    return destination;
 }
 
 Chameleon::Chameleon(const Variant type) {

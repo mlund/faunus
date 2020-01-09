@@ -576,8 +576,8 @@ double rootMeanSquareDeviation(InputIt1 begin, InputIt1 end, InputIt2 d_begin, B
  * The _first_ particle of the given particles is excluded
  * from the COM calculation and re-positioned at the center
  * of the sphere. Therefore, make sure to add a dummy particle
- * to the beginning of the particle vector; it's positions is
- * not used and will be overwritten.
+ * to the beginning of the particle vector; its initial positions
+ * are ignored and will be overwritten.
  * Similar to routine described in doi:10.1021/jp010360o
  */
 ParticleVector mapParticlesOnSphere(const ParticleVector &);

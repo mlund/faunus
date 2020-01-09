@@ -1,6 +1,7 @@
 #pragma once
 
 #include <fstream>
+#include <algorithm>
 
 namespace Faunus {
 
@@ -203,7 +204,7 @@ template <class Tformfactor, class Tgeometry = Geometry::Chameleon, class T = fl
  *
  * For more information, see http://doi.org/d8zgw5 and http://doi.org/10.1063/1.449987
  *
- * @todo Add OpenMP pragmas and particle formfactors
+ * @todo Add OpenMP pragmas and particle formfactors or std::execution::par when available
  */
 template <typename T = double> class StructureFactor {
   private:
@@ -223,7 +224,7 @@ template <typename T = double> class StructureFactor {
     int pmax; //!< Multiples of q to be sampled
 
     template <class Tpvec> void sample(const Tpvec &positions, double boxlength) {
-        for (auto &dir : directions) {                         // loop over 3+6+4=13 directions
+        auto func = [&](Point &dir) {
             for (int p = 1; p <= pmax; p++) {                  // loop over multiples of q
                 Point _q = (2 * pc::pi * p / boxlength) * dir; // scattering vector
                 double sum_sin = 0, sum_cos = 0;               // temporary sums
@@ -236,7 +237,8 @@ template <typename T = double> class StructureFactor {
                 S[_q.norm()] += (sum_sin * sum_sin + sum_cos * sum_cos) / double(positions.size());
                 W[_q.norm()] += 1.0;
             }
-        }
+        };
+        std::for_each(directions.begin(), directions.end(), func); // add std::execution::par policy?
     }
 
     void save(const std::string &filename) {

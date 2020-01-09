@@ -10,6 +10,17 @@ using doctest::Approx;
 
 TEST_SUITE_BEGIN("Core");
 
+TEST_CASE("[Faunus] infinite/nan") {
+    CHECK(std::isnan(0.0 / 0.0));
+    CHECK(std::isnan(0.0 / 0.0 * 1.0));
+    CHECK(std::isinf(pc::infty));
+    CHECK(std::isinf(std::log(0.0)));
+    CHECK(std::isnan(std::sqrt(-1.0)));
+    CHECK(std::numeric_limits<double>::has_signaling_NaN);
+    CHECK(std::isnan(std::numeric_limits<double>::signaling_NaN()));
+    CHECK(std::isnan(std::numeric_limits<double>::signaling_NaN() * 1.0));
+}
+
 TEST_CASE("[Faunus] distance") {
     std::vector<long long int> v = {10, 20, 30, 40, 30};
     auto rng = v | ranges::cpp20::views::filter([](int i) { return i == 30; });

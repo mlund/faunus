@@ -523,28 +523,32 @@ template <typename Tpairpot, bool allow_anisotropic_pair_potential = true> class
         return u;
     }
 
-    double i2all_parallel(const typename Space::Tparticle &i) {
-        i_interact_with_these.clear();
+    double i2all_parallel(const Particle &p_i) {
+        using ranges::cpp20::views::filter;
+        using ranges::cpp20::views::transform;
+
+        i_interact_with_these.clear(); // vector of particle pointers to interact with
         double u = 0;
-        auto it = spc.findGroupContaining(i); // iterator to group
-        if (it != spc.groups.end()) {         // check if i belongs to group in space
-            for (size_t ig = 0; ig < spc.groups.size(); ig++) {
-                auto &g = spc.groups[ig];
-                if (&g != &(*it))                                // avoid self-interaction
-                    if (not cut(g, *it))                         // check g2g cut-off
-                        for (auto &j : g)                        // loop over particles in other group
-                            i_interact_with_these.push_back(&j); // u += i2i(i, j);
+        auto own_group = spc.findGroupContaining(p_i); // iterator to group containing p_i
+        if (own_group != spc.groups.end()) {           // check if p_i belongs to group in space
+            for (auto &g : spc.groups) {
+                if (&g != &(*own_group))        // avoid self-interaction
+                    if (not cut(g, *own_group)) // check g2g cut-off
+                        std::transform(g.begin(), g.end(), std::back_inserter(i_interact_with_these),
+                                       [](auto &p) { return &p; });
             }
-            for (auto &j : *it) // i with all particles in own group
-                if (&j != &i)
-                    i_interact_with_these.push_back(&j); // u += i2i(i, j);
-        } else                                           // particle does not belong to any group
+            // p_i with all particles in own group - avoid self interaction
+            auto f = *own_group | filter([&](auto &j) { return &j != &p_i; }) | transform([](auto &j) { return &j; });
+            i_interact_with_these.insert(i_interact_with_these.end(), f.begin(), f.end());
+        } else {                                         // particle does not belong to any group
             for (auto &g : spc.groups)                   // i with all other *active* particles
                 for (auto &j : g)                        // (this will include only active particles)
                     i_interact_with_these.push_back(&j); // u += i2i(i, j);
+        }
+
 #pragma omp parallel for reduction(+ : u) if (omp_enable and omp_i2all)
         for (size_t k = 0; k < i_interact_with_these.size(); k++)
-            u += i2i(i, *i_interact_with_these[k]);
+            u += i2i(p_i, *i_interact_with_these[k]);
         return u;
     }
 
@@ -712,7 +716,7 @@ template <typename Tpairpot, bool allow_anisotropic_pair_potential = true> class
                 auto &d = change.groups[0];
                 auto gindex = spc.groups.at(d.index).to_index(spc.p.begin()).first;
 
-                // exactly one atom has move
+                // exactly one atom has moved
                 if (d.atoms.size() == 1)
                     return i2all(spc.p.at(gindex + d.atoms[0]));
 

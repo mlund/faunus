@@ -430,7 +430,7 @@ to estimate an energy based on transfer-free-energies (TFE) and surface tension.
 The total surface area is calculated as
 
 $$
-    A = 4\pi \left ( R^2 + r^2 \right ) - 2\pi \left (  Rh_1 + rh_2  \right )
+    A = 4\pi \left ( R^2 + r^2 \right ) - 2\pi \left (  Rh\_1 + rh\_2  \right )
 $$
 
 where $h\_1$ and $h\_2$ are the heights of the spherical caps comprising the lens
@@ -439,20 +439,20 @@ full area of the bigger sphere or the sum of both spheres are returned.
 The pair-energy is calculated as:
 
 $$
-    u_{ij} = A \left ( \gamma_{ij} + c_s \varepsilon_{\text{tfe},ij} \right )
+    u_{ij} = A \left ( \gamma\_{ij} + c\_s \varepsilon\_{\text{tfe},ij} \right )
 $$
 
 where $\gamma\_{ij}$ and $\varepsilon\_{\text{tfe},ij}$ are the arithmetic means of
  `tension` and `tfe` provided in the atomlist.
 
 Note that SASA is strictly not additive and this pair-potential is merely
-a poor-mans way of approximately take into account ion-specificity and
+a poor-mans way of approximately taking into account ion-specificity and
 hydrophobic/hydrophilic interactions. Faunus offers also a full, albeit yet
 experimental implementation of [Solvent Accessible Surface Area] energy.
 
 `sasa`       | Description
 ------------ | ----------------------------------------------------------
-`molarity`   | Molar concentration of co-solute, $c_s$
+`molarity`   | Molar concentration of co-solute, $c\_s$
 `radius=1.4` | Probe radius for SASA calculation (Å)
 `shift=true` | Shift to zero at large separations
 
@@ -545,6 +545,47 @@ customexternal:
         else
            0;
 ~~~
+
+### Gouy Chapman
+
+By setting `function=gouychapman`, an electric potential from a uniformly, charged plane
+in a salt solution is added; see _e.g._ the book _Colloidal Domain_ by Evans and Wennerström, 1999.
+If a surface potential, $\varphi\_0$ is specified,
+
+$$
+\rho = \sqrt{\frac{2 c\_0}{\pi \lambda\_B} } \sinh ( \beta e \varphi\_0 / 2 )
+$$
+while if instead a surface charge density, $\rho$, is given,
+$$
+\beta e \varphi\_0 = 2\mbox{asinh} \left ( \rho \sqrt{\frac{\pi \lambda\_B} {2 c\_0}} \right )
+$$
+where $\lambda\_B$ is the Bjerrum length. With $\Gamma\_0 = \tanh{ \beta e \varphi\_0 / 4 }$
+the final, non-linearized external potential is:
+$$
+\phi\_i = \frac{2 k\_BT z\_i}{e}
+\ln \left ( \frac{1+\Gamma\_0e^{-\kappa r\_{z,i}}}{1-\Gamma\_0 e^{-\kappa r\_{z,i}}} \right )
+$$
+where
+$z\_i$ is the particle charge;
+$e$ is the electron unit charge;
+and $r\_{z,i}$ is the distance from the charged plane.
+
+`constants`        | Description
+-----------------  | --------------------------------------
+`ionicstrength`    | Ionic strength, $c\_0$ (mol/l)
+`epsr`             | Relative dielectric constant
+`phi0=0`           | Unitless surface potential ($\beta e \varphi\_0$) if `qarea` not given
+`qarea=f(phiq)`    | Charge per area (1/eÅ²) if `phi0` not given
+`area=1/qarea`     | Area per charge (eÅ²) if `qarea` not given
+`linearize=false`  | Use linearized Poisson-Boltzmann approximation?
+`zpos=-Lz/2`       | $z$-position of charged plane in the (slit) simulation box
+
+Notes and silly limitations:
+
+- this is experimental and subject to change
+- does not work with volume fluctuations in the $z$-direction
+- the salt concentration is assumed equal to the ionic strength, _i.e._ 1:1 salt only
+- temperature is hardcoded to 300 K.
 
 
 ## Bonded Interactions

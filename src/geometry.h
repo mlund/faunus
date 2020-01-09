@@ -304,6 +304,8 @@ class Chameleon : public GeometryBase {
     void from_json(const json &) override;
     void to_json(json &j) const override;
 
+    const BoundaryCondition &boundaryConditions() const; //!< Get info on boundary conditions
+
     static const std::map<std::string, Variant> names; //!< Geometry names.
     typedef std::pair<std::string, Variant> VariantName;
 
@@ -315,11 +317,7 @@ class Chameleon : public GeometryBase {
     Chameleon(const GeometryImplementation &geo, const Variant type);
 
     //! Copy everything, but clone the geometry.
-    Chameleon(const Chameleon &geo)
-        : GeometryBase(geo), len(geo.len), len_half(geo.len_half), len_inv(geo.len_inv), _type(geo._type),
-          _name(geo._name) {
-        geometry = geo.geometry != nullptr ? geo.geometry->clone() : nullptr;
-    }
+    Chameleon(const Chameleon &geo);
 
     //! During the assignment copy everything, but clone the geometry.
     Chameleon &operator=(const Chameleon &geo);

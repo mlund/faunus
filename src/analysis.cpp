@@ -1419,7 +1419,7 @@ void VirtualTranslate::_sample() {
                 it->translate(dr, spc.geo.getBoundaryFunc());  // translate
                 double unew = pot.energy(change);              // new energy
                 it->translate(-dr, spc.geo.getBoundaryFunc()); // restore positions
-                double du = uold - unew;
+                double du = unew - uold;
                 if (-du > pc::max_exp_argument)
                     faunus_logger->warn("{}: energy too negative to sample", name);
                 else {

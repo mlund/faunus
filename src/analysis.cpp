@@ -1407,13 +1407,7 @@ void VirtualTranslate::_sample() {
             throw std::runtime_error(name + ": maximum ONE active molecule allowed");
         if (not ranges::cpp20::empty(mollist)) {
             if (auto it = random.sample(mollist.begin(), mollist.end()); not it->empty()) {
-                // we change only a single molecule in the virtual move
-                Change change;
-                Change::data data;
-                data.index = &*it - &*spc.groups.begin(); // group index
-                data.internal = false;
-                change.groups.push_back(data);
-
+                change.groups[0].index = &*it - &*spc.groups.begin(); // group index
                 double uold = pot.energy(change);              // old energy
                 Point dr = dL * dir;                           // translation vector
                 it->translate(dr, spc.geo.getBoundaryFunc());  // translate
@@ -1438,6 +1432,8 @@ void VirtualTranslate::_to_json(json &j) const {
 VirtualTranslate::VirtualTranslate(const json &j, Space &spc, Energy::Energybase &pot) : pot(pot), spc(spc) {
     from_json(j);
     name = "virtualtranslate";
+    data.internal = false;
+    change.groups.push_back(data);
 }
 void VirtualTranslate::_to_disk() {
     if (output_file)

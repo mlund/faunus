@@ -360,6 +360,8 @@ class VirtualVolume : public Analysisbase {
  * using dA=-kT*ln<exp(-dU)> and the resulting force, -dA/dL
  */
 class VirtualTranslate : public Analysisbase {
+    Change change;         //!< Change object for energy calc.
+    Change::data data;     //!< Change data for molecule
     std::string file;      //!< output filename
     int molid;             //!< molid to operate on
     Point dir = {0, 0, 1}; //!< direction to move

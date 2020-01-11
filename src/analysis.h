@@ -361,7 +361,7 @@ class MultipoleDistribution : public Analysisbase {
     typedef typename Space::Tgroup Tgroup;
 
     struct data {
-        Average<double> tot, ii, id, iq, dd, mucorr;
+        Average<double> exact, ii, id, iq, dd, mucorr;
     };
 
     std::vector<std::string> names; //!< Molecule names (len=2)

@@ -882,22 +882,21 @@ double MultipoleDistribution::g2g(const MultipoleDistribution::Tgroup &g1, const
             u += i.charge * j.charge / spc.geo.vdist(i.pos, j.pos).norm();
     return u;
 }
+
+/**
+ * @note `fmt` is currently included w. spdlog but has been accepted into c++20.
+ */
 void MultipoleDistribution::save() const {
-    using std::setw;
     if (cnt > 0) {
-        std::ofstream f(MPI::prefix + filename.c_str());
-        if (f) {
-            char w = 12;
-            f.precision(4);
-            f << "# Multipolar energies (kT/lB)\n"
-              << std::left << setw(w) << "# R/AA" << std::right << setw(w) << "exact" << setw(w) << "total" << setw(w)
-              << "ionion" << setw(w) << "iondip" << setw(w) << "dipdip" << setw(w) << "ionquad" << setw(w)
-              << "mucorr\n";
-            for (auto &i : m)
-                f << std::left << setw(w) << i.first * dr << std::right << setw(w) << i.second.tot << setw(w)
-                  << i.second.ii.avg() + i.second.id.avg() + i.second.dd.avg() + i.second.iq.avg() << setw(w)
-                  << i.second.ii << setw(w) << i.second.id << setw(w) << i.second.dd << setw(w) << i.second.iq
-                  << setw(w) << i.second.mucorr << "\n";
+        if (std::ofstream file(MPI::prefix + filename.c_str()); file) {
+            file << "# Multipolar energies (kT/lB)\n"
+                 << fmt::format("# {:>8}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}\n", "R", "exact", "tot", "ii", "id",
+                                "dd", "iq", "mucorr");
+            for (auto [r, u] : m) {
+                double u_tot = u.ii.avg() + u.id.avg() + u.dd.avg() + u.iq.avg();
+                file << fmt::format("{:10.4f}{:10.4f}{:10.4f}{:10.4f}{:10.4f}{:10.4f}{:10.4f}{:10.4f}\n", r * dr,
+                                    u.exact, u_tot, u.ii, u.id, u.dd, u.iq, u.mucorr);
+            }
         }
     }
 }
@@ -909,7 +908,7 @@ void MultipoleDistribution::_sample() {
                 auto b = Faunus::toMultipole(gj, spc.geo.getBoundaryFunc());
                 Point R = spc.geo.vdist(gi.cm, gj.cm);
                 auto &d = m[to_bin(R.norm(), dr)];
-                d.tot += g2g(gi, gj);
+                d.exact += g2g(gi, gj);
                 d.ii += a.charge * b.charge / R.norm();
                 d.id += q2mu(a.charge * b.getExt().mulen, b.getExt().mu, b.charge * a.getExt().mulen, a.getExt().mu, R);
                 d.dd += mu2mu(a.getExt().mu, b.getExt().mu, a.getExt().mulen * b.getExt().mulen, R);

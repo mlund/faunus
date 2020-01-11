@@ -349,7 +349,35 @@ class VirtualVolume : public Analysisbase {
     void _to_disk() override;
 
   public:
-    VirtualVolume(const json &j, Space &spc, Energy::Energybase &pot);
+    VirtualVolume(const json &, Space &, Energy::Energybase &);
+};
+
+/**
+ * @brief Virtual translation move to calculate force
+ *
+ * Displace a single molecule of `molid` with `dL` in the
+ * direction `dir` and measure the free energy of the process
+ * using dA=-kT*ln<exp(-dU)> and the resulting force, -dA/dL
+ */
+class VirtualTranslate : public Analysisbase {
+    Change change;         //!< Change object for energy calc.
+    Change::data data;     //!< Change data for molecule
+    std::string file;      //!< output filename
+    int molid;             //!< molid to operate on
+    Point dir = {0, 0, 1}; //!< direction to move
+    double dL = 0;         //!< distance perturbation
+    Energy::Energybase &pot;
+    Space &spc;
+    Average<double> average_exp_du; //!< <exp(-du/kT)>
+    std::ofstream output_file;      // output filestream
+
+    void _sample() override;
+    void _from_json(const json &) override;
+    void _to_json(json &) const override;
+    void _to_disk() override;
+
+  public:
+    VirtualTranslate(const json &, Space &, Energy::Energybase &);
 };
 
 /**

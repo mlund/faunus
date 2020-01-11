@@ -415,6 +415,8 @@ CombinedAnalysis::CombinedAnalysis(const json &j, Space &spc, Energy::Hamiltonia
                             emplace_back<SystemEnergy>(it.value(), pot);
                         else if (it.key() == "virtualvolume")
                             emplace_back<VirtualVolume>(it.value(), spc, pot);
+                        else if (it.key() == "virtualtranslate")
+                            emplace_back<VirtualTranslate>(it.value(), spc, pot);
                         else if (it.key() == "widom")
                             emplace_back<WidomInsertion>(it.value(), spc, pot);
                         else if (it.key() == "xtcfile")
@@ -1375,6 +1377,66 @@ void ScatteringFunction::_to_disk() {
         explicit_average->save(filename);
         break;
     }
+}
+
+void VirtualTranslate::_from_json(const json &j) {
+    std::string molname = j.at("molecule");
+    if (auto it = findName(Faunus::molecules, molname); it == molecules.end())
+        throw std::runtime_error("unknown molecule '" + molname + "'");
+    else
+        molid = it->id();
+    dL = j.at("dL").get<double>();
+    dir = j.value("dir", Point(0, 0, 1));
+    dir.normalize(); // -> unit vector
+
+    // if filename is given, open output stream and add header
+    if (file = j.value("file", ""s); not file.empty()) {
+        file = MPI::prefix + file;
+        output_file.open(file);
+        if (!output_file)
+            throw std::runtime_error(name + ": cannot open output file " + file);
+        output_file << "# steps dL/" + u8::angstrom + " du/kT <F>/kT/" + u8::angstrom + "\n"s;
+        output_file.precision(14);
+    }
+}
+void VirtualTranslate::_sample() {
+    if (fabs(dL) > 0) {
+        auto mollist = spc.findMolecules(molid, Space::ACTIVE); // list of molecules
+        if (ranges::distance(mollist.begin(), mollist.end()) > 1)
+            throw std::runtime_error(name + ": maximum ONE active molecule allowed");
+        if (not ranges::cpp20::empty(mollist)) {
+            if (auto it = random.sample(mollist.begin(), mollist.end()); not it->empty()) {
+                change.groups[0].index = &*it - &*spc.groups.begin(); // group index
+                double uold = pot.energy(change);              // old energy
+                Point dr = dL * dir;                           // translation vector
+                it->translate(dr, spc.geo.getBoundaryFunc());  // translate
+                double unew = pot.energy(change);              // new energy
+                it->translate(-dr, spc.geo.getBoundaryFunc()); // restore positions
+                double du = unew - uold;
+                if (-du > pc::max_exp_argument)
+                    faunus_logger->warn("{}: energy too negative to sample", name);
+                else {
+                    average_exp_du += std::exp(-du); // widom / perturbation average
+                    if (output_file)                 // write sample event to output file
+                        output_file << cnt << " " << dL << " " << du << " "
+                                    << " " << std::log(average_exp_du) / dL << "\n";
+                }
+            }
+        }
+    }
+}
+void VirtualTranslate::_to_json(json &j) const {
+    j = {{"dL", dL}, {"force", std::log(average_exp_du) / dL}, {"dir", dir}};
+}
+VirtualTranslate::VirtualTranslate(const json &j, Space &spc, Energy::Energybase &pot) : pot(pot), spc(spc) {
+    from_json(j);
+    name = "virtualtranslate";
+    data.internal = false;
+    change.groups.push_back(data);
+}
+void VirtualTranslate::_to_disk() {
+    if (output_file)
+        output_file.flush(); // empty buffer
 }
 
 } // namespace Analysis

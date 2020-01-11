@@ -432,8 +432,9 @@ All units in $k_BT$.
 `file`           |  Output filename for energy vs. step output
 `nstep=0`        |  Interval between samples
 
+## Perturbations
 
-## Virtual Volume Move
+### Virtual Volume Move
 
 Performs a [virtual volume move](http://doi.org/cppxt6) by
 scaling the simulation volume to $V+\Delta V$ along with
@@ -453,8 +454,25 @@ surface tension etc., see [here](http://doi.org/ckfh).
 `nstep`         | Interval between samples
 `file`          | Optional output filename for writing data as a function of steps
 
+### Virtual Translate Move
 
-## Widom Insertion
+Performs a virtual displacement, $dL$, of a single `molecule` in
+the direction `dir` and measure the force by perturbation,
+
+$$
+    f = \frac {k_BT \ln \langle \exp{\left (-dU/k_BT \right )} \rangle_0 }{ dL }
+$$
+
+`virtualtranslate` | Description
+------------------ | ---------------------------------------------------------------
+`molecule`         | Molecule name; only _one_ of these is allowed in the system
+`dL`               | Displacement (Å)
+`dir=[0,0,1]`      | Displacement direction (length ignored)
+`nstep`            | Interval between samples
+`file`             | Optional output filename for writing data as a function of steps
+
+
+### Widom Insertion
 
 This will insert a non-perturbing ghost molecule into
 the system and calculate a [Widom average](http://doi.org/dkv4s6)

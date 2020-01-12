@@ -134,70 +134,91 @@ void FormatXTC::setbox(double x, double y, double z) {
     xdbox[2][2] = 0.1 * z; // in nanometers!
 }
 
-void FormatXTC::setbox(double len) { setbox(len, len, len); }
+void FormatXTC::setbox(double box_length) { setbox(box_length, box_length, box_length); }
 
-void FormatXTC::setbox(const Point &p) { setbox(p.x(), p.y(), p.z()); }
+void FormatXTC::setbox(const Point &box_length) { setbox(box_length.x(), box_length.y(), box_length.z()); }
 
-std::string FormatPQR::writeCryst1(const Point &len, const Point &angle) {
-    char buf[500];
-    sprintf(buf, "CRYST1%9.3f%9.3f%9.3f%7.2f%7.2f%7.2f P 1           1\n", len.x(), len.y(), len.z(), angle.x(),
-            angle.y(), angle.z());
-    return std::string(buf);
+std::string FormatPQR::writeCryst1(const Point &box_length, const Point &angle) {
+    return fmt::format("CRYST1{:9.3f}{:9.3f}{:9.3f}{:7.2f}{:7.2f}{:7.2f} P 1           1\n", box_length.x(),
+                       box_length.y(), box_length.z(), angle.x(), angle.y(), angle.z());
 }
 
-Point FormatPQR::load(const std::string &file, FormatPQR::Tpvec &p, bool keep_charges) {
-    Point len(0, 0, 0);
-    std::ifstream in(file);
-    if (in) {
-        Particle a;
-        int iatom, ires;
-        std::string line, key, aname, rname;
+bool FormatPQR::readCrystalRecord(const std::string &record, Point &box_length) {
+    std::stringstream o(record);
+    std::string key;
+    o >> key;
+    if (key == "CRYST1") {
+        o >> box_length.x() >> box_length.y() >> box_length.z();
+        return true;
+    } else
+        return false;
+}
+
+bool FormatPQR::readAtomRecord(const std::string &record, Particle &particle, double &radius) {
+    std::stringstream o(record);
+    std::string key;
+    o >> key;
+    if (key == "ATOM" or key == "HETATM") {
+        int atom_index, res_index;
+        std::string atom_name, res_name;
+        o >> atom_index >> atom_name;
+        auto it = findName(Faunus::atoms, atom_name);
+        if (it == atoms.end())
+            throw std::runtime_error("PQR load error: unknown atom name '" + atom_name + "'.");
+        particle = *it;
+        o >> res_name >> res_index >> particle.pos.x() >> particle.pos.y() >> particle.pos.z() >> particle.charge >>
+            radius;
+        return true;
+    }
+    return false;
+}
+
+Point FormatPQR::load(const std::string &filename, FormatPQR::Tpvec &destination, bool keep_charges) {
+    Point box_length(0, 0, 0);
+    std::ifstream file(filename);
+    if (file) {
         bool log_charge = true, log_radius = true; // emit warnings only once
-        while (std::getline(in, line)) {
-            std::stringstream o(line);
-            while (o >> key)
-                if (key == "ATOM" or key == "HETATM") {
-                    double radius;
-                    o >> iatom >> aname;
-                    auto it = findName(atoms, aname);
-                    if (it == atoms.end())
-                        throw std::runtime_error("PQR load error: unknown atom name '" + aname + "'.");
-                    a = *it;
-                    o >> rname >> ires >> a.pos.x() >> a.pos.y() >> a.pos.z() >> a.charge >> radius;
+        std::string record;
+        int atom_index = 0;
+        while (std::getline(file, record)) {
+            double radius;
+            Particle particle;
+            if (readAtomRecord(record, particle, radius)) { // read ATOM or HETATOM record
+                atom_index++;
+                AtomData &atom_data = Faunus::atoms.at(particle.id);
 
-                    // does charge match AtomData?
-                    if (std::fabs(it->charge - a.charge) > pc::epsilon_dbl) {
-                        if (log_charge) {
-                            faunus_logger->warn("charge mismatches in PQR file {0}: using {1} values", file,
-                                                keep_charges ? "PQR" : "atomlist");
-                            log_charge = false;
-                        }
-                        if (keep_charges)
-                            faunus_logger->debug("charge mismatch on atom {0} {1}: using {2} (PQR) over {3} (atomlist)",
-                                                aname, ires, a.charge, it->charge);
-                        else {
-                            faunus_logger->debug("charge mismatch on atom {0} {1}: using {2} (atomlist) over {3} (PQR)",
-                                                aname, ires, it->charge, a.charge);
-                            a.charge = it->charge;
-                        }
+                // does charge match AtomData?
+                if (std::fabs(atom_data.charge - particle.charge) > pc::epsilon_dbl) {
+                    if (log_charge) {
+                        faunus_logger->warn("charge mismatches in PQR file {0}: using {1} values", filename,
+                                            keep_charges ? "PQR" : "atomlist");
+                        log_charge = false;
                     }
-
-                    // does radius match AtomData?
-                    if (std::fabs(it->sigma - 2 * radius) > pc::epsilon_dbl) {
-                        if (log_radius) {
-                            faunus_logger->warn("radius mismatches in PQR file {0}: using atomlist values", file);
-                            log_radius = false;
-                        }
-                        faunus_logger->info("radius mismatch on atom {0} {1}: using {2} (atomlist) over {3} (PQR)",
-                                            aname, ires, it->sigma / 2, radius);
+                    if (keep_charges)
+                        faunus_logger->debug("charge mismatch on atom {0} {1}: using {2} (PQR) over {3} (atomlist)",
+                                             atom_data.name, atom_index, particle.charge, atom_data.charge);
+                    else {
+                        faunus_logger->debug("charge mismatch on atom {0} {1}: using {2} (atomlist) over {3} (PQR)",
+                                             atom_data.name, atom_index, atom_data.charge, particle.charge);
+                        particle.charge = atom_data.charge;
                     }
-                    p.push_back(a);
+                }
 
-                } else if (key == "CRYST1")
-                    o >> len.x() >> len.y() >> len.z();
+                // does radius match AtomData?
+                if (std::fabs(atom_data.sigma - 2 * radius) > pc::epsilon_dbl) {
+                    if (log_radius) {
+                        faunus_logger->warn("radius mismatches in PQR file {0}: using atomlist values", filename);
+                        log_radius = false;
+                    }
+                    faunus_logger->info("radius mismatch on atom {0} {1}: using {2} (atomlist) over {3} (PQR)",
+                                        atom_data.name, atom_index, atom_data.sigma / 2, radius);
+                }
+                destination.push_back(particle);
+            } else // is it a CRYST1 record? (unit cell information)
+                readCrystalRecord(record, box_length);
         }
     }
-    return len;
+    return box_length;
 }
 
 void FormatPQR::load(const std::string &file, std::vector<FormatPQR::Tpvec> &v) {
@@ -229,33 +250,44 @@ void FormatPQR::load(const std::string &file, std::vector<FormatPQR::Tpvec> &v) 
         throw std::runtime_error("Error loading PQR trajectory " + file);
 }
 
-bool FormatPQR::save(const std::string &file, const FormatPQR::Tpvec &p, Point len, int n) {
+/**
+ * @param particles Particle vector
+ * @param boxlength Unit cell dimensions (optional)
+ * @param n Number of atoms in each residue (default: 1e9)
+ */
+std::string FormatPQR::toString(const Tpvec &particles, Point boxlength, int n) {
     int nres = 1, natom = 1;
-    char buf[500];
     std::ostringstream o;
-    if (len.norm() > 1e-6)
-        o << writeCryst1(len);
-    for (auto &p_i : p) {
-        auto &prop = atoms.at(p_i.id);
-        std::string name = prop.name;
-        double radius = prop.sigma / 2;
-        sprintf(buf, "ATOM  %5d %-4s %-4s%5d    %8.3f %8.3f %8.3f %.3f %.3f\n", natom++, name.c_str(), name.c_str(),
-                nres, (p_i.pos + len / 2).x(), (p_i.pos + len / 2).y(), (p_i.pos + len / 2).z(), p_i.charge,
-                radius); // move particles inside the sim. box
-        o << buf;
-        if (atoms.at(p_i.id).name == "CTR")
+    if (boxlength.norm() > 1e-6)
+        o << writeCryst1(boxlength);
+    for (auto &i : particles) {
+        AtomData &d = atoms.at(i.id);        // atom properties as defined in topology
+        Point pos = i.pos + 0.5 * boxlength; // move origin to corner of box (faunus used the middle)
+        o << fmt::format("ATOM  {:5d} {:4} {:4}{:5d}    {:8.3f} {:8.3f} {:8.3f} {:.3f} {:.3f}", natom++, d.name, d.name,
+                         nres, pos.x(), pos.y(), pos.z(), i.charge, 0.5 * d.sigma);
+        if (d.name == "CTR")
             nres++;
         else if (natom % n == 0)
             nres++;
     }
     o << "END\n";
-    return IO::writeFile(file, o.str());
+    return o.str();
 }
 
-bool FormatXYZ::save(const std::string &file, const FormatXYZ::Tpvec &p, const Point &box) {
+/**
+ * @param filename Output PQR filename
+ * @param particles Particle vector
+ * @param boxlength Unit cell dimensions (default: [0,0,0], not printed)
+ * @param n Number of atoms in each residue (default: 1e9)
+ */
+bool FormatPQR::save(const std::string &filename, const Tpvec &particles, Point boxlength, int n) {
+    return IO::writeFile(filename, toString(particles, boxlength, n));
+}
+
+bool FormatXYZ::save(const std::string &file, const FormatXYZ::Tpvec &particles, const Point &box) {
     std::ostringstream o;
-    o << p.size() << "\n" << box.transpose() << "\n";
-    for (auto &i : p)
+    o << particles.size() << "\n" << box.transpose() << "\n";
+    for (auto &i : particles)
         o << atoms.at(i.id).name << " " << i.pos.transpose() << "\n";
     return IO::writeFile(file, o.str());
 }
@@ -359,41 +391,19 @@ bool FormatGRO::load(const std::string &file, FormatGRO::Tpvec &p) {
     return false;
 }
 
-bool FormatGRO::save(const std::string &file, FormatGRO::Tpvec &p, std::string mode) {
-    int nres = 1, natom = 1;
-    char buf[79];
-    double halflen = len / 20; // halflen in nm
-    std::ostringstream o;
-    o << "Generated by Faunus -- http://faunus.sourceforge.net" << std::endl << p.size() << std::endl;
-    for (auto &pi : p) {
-        std::string name = atoms.at(pi.id).name;
-        sprintf(buf, "%5d%5s%5s%5d%8.3f%8.3f%8.3f\n", nres, name.c_str(), name.c_str(), natom++,
-                pi.pos.x() / 10 + halflen, pi.pos.y() / 10 + halflen, pi.pos.z() / 10 + halflen);
-        o << buf;
-        if (atoms[pi.id].name == "CTR")
-            nres++;
+std::vector<Particle> fastaToParticles(const std::string &fasta_sequence, double bond_length, const Point &origin) {
+    std::vector<Particle> particles; // particle vector
+    particles.reserve(fasta_sequence.size());
+    Particle p;                                      // single particle
+    p.pos = origin;                                  // first atom placed at `origin`
+    for (auto id : fastaToAtomIds(fasta_sequence)) { // loop over atom ids
+        p.id = id;
+        p.charge = Faunus::atoms[id].charge;
+        if (not particles.empty())
+            p.pos = particles.back().pos + ranunit(random) * bond_length;
+        particles.push_back(p);
     }
-    if (len > 0)
-        o << len / 10 << " " << len / 10 << " " << len / 10 << std::endl; // box side length in nm
-    if (mode == "append")
-        return IO::writeFile(file, o.str(), std::ios_base::app);
-    else
-        return IO::writeFile(file, o.str(), std::ios_base::out);
-}
-
-std::vector<Particle> fastaToParticles(const std::string &fasta, double spacing, const Point &origin) {
-    std::vector<Particle> vec; // particle vector
-    Particle p;                // single particle
-    p.pos = origin;            // first atom place here
-    auto ids = fastaToAtomIds(fasta);
-    for (auto i : ids) { // loop over atom ids
-        p.id = i;
-        p.charge = atoms[i].charge;
-        if (not vec.empty())
-            p.pos = vec.back().pos + ranunit(random) * spacing;
-        vec.push_back(p);
-    }
-    return vec;
+    return particles;
 }
 
 bool loadStructure(const std::string &file, std::vector<Particle> &dst, bool append, bool keep_charges) {
@@ -406,9 +416,7 @@ bool loadStructure(const std::string &file, std::vector<Particle> &dst, bool app
         FormatPQR::load(file, dst, keep_charges);
     if (suffix == "xyz")
         FormatXYZ::load(file, dst);
-    if (not dst.empty())
-        return true;
-    return false;
+    return !dst.empty();
 }
 
 } // namespace Faunus

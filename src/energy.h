@@ -472,6 +472,7 @@ template <typename Tpairpot, bool allow_anisotropic_pair_potential = true> class
                     u += i2i(g[i], g[j]);
                 break; // exit switch only if atomic group, otherwise continue to default:
             }
+            [[fallthrough]];
 
         // one or more particle(s) have changed
         default:

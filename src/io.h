@@ -19,29 +19,17 @@ namespace Faunus {
 
 namespace IO {
 
-/* @brief Read lines from file into vector */
-bool readFile(const std::string &file, std::vector<std::string> &v);
+bool readFile(const std::string &, std::vector<std::string> &); //!< Read lines from file into vector
 
-/**
- * @brief Write std::string to file
- * @param file Filename
- * @param s String to write
- * @param mode `std::ios_base::out` (new, default) or `std::ios_base::app` (append)
- */
-bool writeFile(const std::string &file, const std::string &s, std::ios_base::openmode mode = std::ios_base::out);
+bool writeFile(const std::string &file, const std::string &s,
+               std::ios_base::openmode mode = std::ios_base::out); //!< Write string to file
 
-/**
- * @brief Strip lines matching a pattern
- * @param v vector of std::string
- * @param pat Pattern to search for
- */
-void strip(std::vector<std::string> &v, const std::string &pat);
+void strip(std::vector<std::string> &string_vector, const std::string &pattern); //!< Strip lines matching a pattern
 
 } // namespace IO
 
 /**
  * @brief Read/write AAM file format
- * @todo Make "p" vector private.
  *
  * The AAM format is a simple format for loading particle positions
  * charges, radii and molecular weights. The structure is as follows:
@@ -65,78 +53,29 @@ void strip(std::vector<std::string> &v, const std::string &pat);
 class FormatAAM {
   private:
     static bool keepcharges; // true of we prefer charges from AAM file over AtomData
-
-    static std::string p2s(const Particle &a, int i) {
-        std::ostringstream o;
-        o.precision(5);
-        auto &atom = Faunus::atoms.at(a.id);
-        o << atom.name << " " << i + 1 << " " << a.pos.transpose() << " " << a.charge << " " << atom.mw << " "
-          << atom.sigma / 2 << std::endl;
-        return o.str();
-    }
-
-    // convert string line to particle
-    static Particle &s2p(const std::string &s, Particle &a);
+    static std::string p2s(const Particle &, int);
+    static Particle &s2p(const std::string &, Particle &); // convert string line to particle
 
   public:
-    typedef std::vector<Particle> Tpvec;
-    static bool load(const std::string &file, Tpvec &target, bool _keepcharges = true);
-
-    static bool save(const std::string &file, const Tpvec &pv);
+    static bool load(const std::string &, ParticleVector &, bool = true);
+    static bool save(const std::string &, const ParticleVector &);
 };
 
 /**
- * @brief PQR format
+ * @brief Create and read PQR files
  * @date December 2007
- *
- * Saves particles as a PQR file. This format is very similar
- * to PDB but also contains charges and radii
  */
 class FormatPQR {
   private:
-    /** Write box dimensions (standard PDB format) */
-    static std::string writeCryst1(const Point &box_length, const Point &angle = {90, 90, 90});
-
-    /** Read CRYST1 record */
-    static bool readCrystalRecord(const std::string &, Point &);
-
-    /** Read single ATOM or HETATOM record */
-    static bool readAtomRecord(const std::string &, Particle &, double &);
+    static std::string writeCryst1(const Point &, const Point & = {90, 90, 90}); //!< Write CRYST1 record
+    static bool readCrystalRecord(const std::string &, Point &);                 //!< Read CRYST1 record
+    static bool readAtomRecord(const std::string &, Particle &, double &);       //!< Read ATOM or HETATOM record
 
   public:
-    typedef std::vector<Particle> Tpvec;
-
-    /**
-     * @brief Simple loader for PQR files
-     *
-     * This will load coordinates from a PQR file into
-     * a particle vector. Atoms are identified by the
-     * `ATOM` and `HETATM` keywords and the PQR atom
-     * name is used to identify the particle from `AtomMap`.
-     * If the unit cell dimension, given by `CRYST1`, is
-     * found a non-zero vector is returned.
-     *
-     * @param filename PQR file to load
-     * @param destination Target particle vector to *append* to
-     * @return Vector with unit cell dimensions. Zero length if not found.
-     * @note This is a lazy and unsafe loader that doesn't properly
-     *       respect the PQR fixed column format. Has been tested to
-     *       work with files from VMD, pdb2pqr, and Faunus.
-     */
-    static Point load(const std::string &filename, Tpvec &destination, bool keep_charges);
-
-    /**
-     * @brief Read trajectory. Each frame must be separated by the "END" keyword.
-     * @param file File name
-     * @param v Vector of particle vectors
-     */
-    static void load(const std::string &file, std::vector<Tpvec> &v);
-
-    /** @brief Convert particle vector to PQR string */
-    static std::string toString(const Tpvec &, Point = Point(0, 0, 0), int = 1e9);
-
-    /** @brief Write particle vector to PQR file */
-    static bool save(const std::string &, const Tpvec &, Point = Point(0, 0, 0), int = 1e9);
+    typedef std::vector<Particle> ParticleVector;                                   //!< Particle vector
+    static Point load(const std::string &, ParticleVector &, bool);                 //!< Load PQR file
+    static void loadTrajectory(const std::string &, std::vector<ParticleVector> &); //!< Load trajectory
+    static bool save(const std::string &, const ParticleVector &, Point = Point(0, 0, 0), int = 1e9); //!< Save PQR file
 };
 
 /**
@@ -148,21 +87,8 @@ class FormatPQR {
  * particles xyz position on each line
  */
 struct FormatXYZ {
-    typedef std::vector<Particle> Tpvec;
-    static bool save(const std::string &file, const Tpvec &particles, const Point &box = {0, 0, 0});
-
-    /*
-     * @brief Load XYZ file with atom positions
-     *
-     * Loads coordinates from XYZ file into particle vector. Remaining atom properties
-     * are taken from the defined atom list; a warning is issued of the atom name
-     * is unknown.
-     *
-     * @param file Filename
-     * @param p Destination particle vector
-     * @param append True means append to `p` (default). If `false`,`p` is first cleared.
-     */
-    static bool load(const std::string &file, Tpvec &p, bool append = true);
+    static bool save(const std::string &, const ParticleVector &, const Point & = {0, 0, 0});           //!< Save XYZ
+    static bool load(const std::string &filename, ParticleVector &particle_vector, bool append = true); //!< Load XYZ
 };
 
 /**
@@ -177,16 +103,12 @@ struct FormatXYZ {
  */
 class FormatMXYZ {
   private:
-    static std::string p2s(const Particle &a, int);
-
-    static Particle &s2p(const std::string &s, Particle &a);
-
-  public:
-    typedef std::vector<Particle> Tpvec;
-    static bool save(const std::string &file, const Tpvec &p, const Point &len, int time);
+    static std::string p2s(const Particle &, int);
+    static Particle &s2p(const std::string &, Particle &);
 
   public:
-    static bool load(const std::string &file, Tpvec &p, Point &len);
+    static bool save(const std::string &, const ParticleVector &, const Point &, int);
+    static bool load(const std::string &, ParticleVector &, Point &);
 };
 
 /**
@@ -197,11 +119,9 @@ class FormatMXYZ {
 class FormatGRO {
   private:
     std::vector<std::string> v;
-
-    void s2p(const std::string &s, Particle &dst);
+    void s2p(const std::string &, Particle &);
 
   public:
-    typedef std::vector<Particle> Tpvec;
     double boxlength; //!< Box side length (cubic so far)
 
     /**
@@ -209,7 +129,7 @@ class FormatGRO {
      * @param file Filename
      * @param p Destination particle vector
      */
-    bool load(const std::string &file, Tpvec &p);
+    bool load(const std::string &, ParticleVector &);
 
     template <class Tspace> bool static save(const std::string &filename, const Tspace &spc) {
         if (std::ofstream file(filename); bool(file)) {
@@ -335,77 +255,28 @@ class FormatXTC {
      * This will open an xtc file for reading. The number of atoms in each frame
      * is saved and memory for the coordinate array is allocated.
      */
-    bool open(std::string s);
-    void close();
 
-    FormatXTC(double len);
+    FormatXTC(double);
     ~FormatXTC();
-
-    void setbox(double x, double y, double z);
-    void setbox(double box_length);
-    void setbox(const Point &box_length);
+    bool open(std::string);
+    void close();
+    void setbox(double, double, double);
+    void setbox(double);
+    void setbox(const Point &);
 };
 
-/**
- * @brief Convert FASTA sequence to atom id sequence
- * @param fasta FASTA sequence, capital letters.
- * @return vector of verified and existing atom id's
- */
-inline auto fastaToAtomIds(const std::string &fasta) {
-    std::map<char, std::string> map = {{'A', "ALA"},
-                                       {'R', "ARG"},
-                                       {'N', "ASN"},
-                                       {'D', "ASP"},
-                                       {'C', "CYS"},
-                                       {'E', "GLU"},
-                                       {'Q', "GLN"},
-                                       {'G', "GLY"},
-                                       {'H', "HIS"},
-                                       {'I', "ILE"},
-                                       {'L', "LEU"},
-                                       {'K', "LYS"},
-                                       {'M', "MET"},
-                                       {'F', "PHE"},
-                                       {'P', "PRO"},
-                                       {'S', "SER"},
-                                       {'T', "THR"},
-                                       {'W', "TRP"},
-                                       {'Y', "TYR"},
-                                       {'V', "VAL"},
-                                       // faunus specific codes
-                                       {'n', "NTR"},
-                                       {'c', "CTR"},
-                                       {'a', "ANK"}};
-
-    std::vector<std::string> names;
-    names.reserve(fasta.size());
-
-    for (auto c : fasta) {     // loop over letters
-        auto it = map.find(c); // is it in map?
-        if (it == map.end())
-            throw std::runtime_error("Invalid FASTA letter '" + std::string(1, c) + "'");
-        else
-            names.push_back(it->second);
-    }
-    return Faunus::names2ids(atoms, names);
-}
+std::vector<int> fastaToAtomIds(const std::string &); //!< Convert FASTA sequence to atom id sequence
 
 /**
  * @brief Create particle vector from FASTA sequence with equally spaced atoms
  *
  * Particle positions is generated as a random walk
  */
-std::vector<Particle> fastaToParticles(const std::string &fasta_sequence, double bond_length = 7,
-                                       const Point &origin = {0, 0, 0});
+std::vector<Particle> fastaToParticles(const std::string &, double = 7, const Point & = {0, 0, 0});
 
 /**
  * @brief Load structure file into particle vector
- * @param file filename to load (aam, pqr, xyz, ...)
- * @param dst destination particle vector
- * @param append if true, expand dst vector
- * @param keep_charges if true, ignore AtomData charges
- * @return true if successfully loaded
  */
-bool loadStructure(const std::string &file, std::vector<Particle> &dst, bool append, bool keep_charges = true);
+bool loadStructure(const std::string &, std::vector<Particle> &, bool, bool = true);
 
 } // namespace Faunus

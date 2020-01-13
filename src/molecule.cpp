@@ -84,7 +84,7 @@ void MoleculeData::createMolecularConformations(const json &val) {
 
     conformations.clear(); // remove all previous conformations
     // read tracjectory w. conformations from disk
-    FormatPQR::load(traj, conformations.vec);
+    FormatPQR::loadTrajectory(traj, conformations.vec);
     if (not conformations.empty()) {
         // create atom list
         atoms.clear();

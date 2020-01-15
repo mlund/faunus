@@ -227,15 +227,16 @@ if (ENABLE_FREESASA)
     add_dependencies(freesasa project_freesasa)
 endif ()
 
-# Download CoulombGalore header
-foreach (file coulombgalore.h LICENSE)
-    if (NOT EXISTS "${CMAKE_BINARY_DIR}/_deps/coulombgalore/${file}")
-        file(DOWNLOAD
-            "https://raw.githubusercontent.com/mlund/coulombgalore/006fe13/${file}"
-            "${CMAKE_BINARY_DIR}/_deps/coulombgalore/${file}" STATUS status)
-    endif ()
-endforeach ()
-include_directories(SYSTEM "${CMAKE_BINARY_DIR}/_deps/coulombgalore")
+# COULOMBGALORE
+FetchContent_Declare(
+    coulombgalore
+    URL https://github.com/mlund/coulombgalore/archive/4055f58538d781acccb2937ab4580855fcba31f8.tar.gz
+    URL_HASH MD5=922f0c5988c0f70c887d65b7cf2762ac)
+FetchContent_GetProperties(coulombgalore)
+if(NOT coulombgalore_POPULATED)
+    FetchContent_Populate(coulombgalore)
+endif()
+include_directories(${coulombgalore_SOURCE_DIR})
 
 # GIT
 if (VERSION_STRING)

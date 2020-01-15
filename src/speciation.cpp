@@ -208,7 +208,7 @@ void SpeciationMove::_move(Change &change) {
 
         if (rit->empty(forward)) // Enforce canonic constraint if invoked
             return;              // Out of material, slip out the back door
-        if (insertProducts(rit))
+        if (insertProducts(rit) == false)
             return;
         if (swapReaction(change, rit) == false)
             return;

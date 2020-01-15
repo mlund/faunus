@@ -86,7 +86,7 @@ Atomic _rotation_ affects only anisotropic particles such as dipoles, spherocyli
 ### Cluster Move
 
 `cluster`       | Description
---------------– | -----------------------
+--------------- | --------------------------------------------
 `molecules`     | Array of molecule names; `[*]` selects all
 `threshold`     | Mass-center threshold for forming a cluster
 `dir=[1,1,1]`   | Directions to translate

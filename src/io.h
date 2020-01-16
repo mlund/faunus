@@ -93,26 +93,6 @@ struct FormatXYZ {
 };
 
 /**
- * @brief MXYZ format
- * @date June 2013
- *
- * Saves particles as a modifiedXYZ file. This format has number of particles at the first line
- * comment on second line, which we use to have a box information, and this is followed by positions,
- * direction and patch direction on each line
- *
- * @todo Under construction
- */
-class FormatMXYZ {
-  private:
-    static std::string p2s(const Particle &, int);
-    static Particle &s2p(const std::string &, Particle &);
-
-  public:
-    static bool save(const std::string &, const ParticleVector &, const Point &, int);
-    static bool load(const std::string &, ParticleVector &, Point &);
-};
-
-/**
  * @brief Gromacs GRO format
  * @date December 2007
  * @todo Non cubic dimensions
@@ -192,7 +172,7 @@ class FormatXTC {
      *       You may want to transfer the new box size to the pair potential if
      *       periodic boundaries are used.
      */
-    template <class Tspace> bool loadnextframe(Tspace &c, bool setbox = true, bool applypbc = false) {
+    template <class Tspace> bool loadNextFrame(Tspace &c, bool setbox = true, bool applypbc = false) {
         if (xd != nullptr) {
             if (natoms_xtc == (int)c.p.size()) {
                 int rc = read_xtc(xd, natoms_xtc, &step_xtc, &time_xtc, xdbox, x_xtc, &prec_xtc);
@@ -261,9 +241,8 @@ class FormatXTC {
     ~FormatXTC();
     bool open(std::string);
     void close();
-    void setbox(double, double, double);
-    void setbox(double);
-    void setbox(const Point &);
+    void setLength(double);
+    void setLength(const Point &);
 };
 
 std::vector<int> fastaToAtomIds(const std::string &); //!< Convert FASTA sequence to atom id sequence

@@ -134,26 +134,24 @@ void FormatXTC::close() {
 FormatXTC::FormatXTC(double len) {
     prec_xtc = 1000.;
     time_xtc = step_xtc = 0;
-    setbox(len);
+    setLength(len);
     xd = NULL;
     x_xtc = NULL;
 }
 
 FormatXTC::~FormatXTC() { close(); }
 
-void FormatXTC::setbox(double x, double y, double z) {
-    assert(x > 0 && y > 0 && z > 0);
+void FormatXTC::setLength(const Point &box) {
+    assert(box.x() > 0 && box.y() > 0 && box.z() > 0);
     for (int i = 0; i < 3; i++)
         for (int j = 0; j < 3; j++)
             xdbox[i][j] = 0;
-    xdbox[0][0] = 0.1 * x; // corners of the
-    xdbox[1][1] = 0.1 * y; // rectangular box
-    xdbox[2][2] = 0.1 * z; // in nanometers!
+    xdbox[0][0] = 0.1 * box.x(); // corners of the
+    xdbox[1][1] = 0.1 * box.y(); // rectangular box
+    xdbox[2][2] = 0.1 * box.z(); // in nanometers!
 }
 
-void FormatXTC::setbox(double box_length) { setbox(box_length, box_length, box_length); }
-
-void FormatXTC::setbox(const Point &box_length) { setbox(box_length.x(), box_length.y(), box_length.z()); }
+void FormatXTC::setLength(double box) { setLength({box, box, box}); }
 
 std::string FormatPQR::writeCryst1(const Point &box_length, const Point &angle) {
     return fmt::format("CRYST1{:9.3f}{:9.3f}{:9.3f}{:7.2f}{:7.2f}{:7.2f} P 1           1\n", box_length.x(),
@@ -375,51 +373,6 @@ bool FormatXYZ::load(const std::string &filename, ParticleVector &particle_vecto
         }
         if (!particle_vector.empty())
             return true;
-    }
-    return false;
-}
-
-std::string FormatMXYZ::p2s(const Particle &, int) {
-    assert(false && "under construction");
-    std::ostringstream o;
-    o.precision(5);
-    // o << a.transpose() << " " << a.dir.transpose() << " " << a.patchdir.transpose() << "\n";
-    return o.str();
-}
-
-Particle &FormatMXYZ::s2p(const std::string &s, Particle &a) {
-    assert(false && "under construction");
-    std::stringstream o;
-    o << s;
-    // o >> a.x() >> a.y() >> a.z() >> a.dir.x() >> a.dir.y() >> a.dir.z() >> a.patchdir.x() >> a.patchdir.y() >>
-    //    a.patchdir.z();
-    // a.init();
-    return a;
-}
-
-bool FormatMXYZ::save(const std::string &file, const ParticleVector &p, const Point &len, int time) {
-    std::ostringstream o;
-    o << p.size() << "\n"
-      << "sweep " << time << "; box " << len.transpose() << "\n";
-    for (size_t i = 0; i < p.size(); i++)
-        o << p2s(p[i], i);
-    return IO::writeFile(file, o.str(), std::ios_base::app);
-}
-
-bool FormatMXYZ::load(const std::string &file, ParticleVector &p, Point &len) {
-    std::stringstream o;
-    std::vector<std::string> v;
-    if (IO::readFile(file, v)) {
-        IO::strip(v, "#");
-        size_t n = atoi(v[0].c_str());
-        if (p.size() != n)
-            faunus_logger->error("mxyz load error: number of particles in xyz file {0} does not match input file ({1})",
-                                 n, p.size());
-        o << v[1].erase(0, v[1].find_last_of("x") + 1);
-        o >> len.x() >> len.y() >> len.z();
-        for (size_t i = 2; i < n + 2; i++)
-            s2p(v.at(i), p.at(i - 2));
-        return true;
     }
     return false;
 }

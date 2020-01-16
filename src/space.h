@@ -271,4 +271,11 @@ struct getActiveParticles {
 
 // Make a global alias to easy transition to non-templated code
 using Tspace = Space;
+
+namespace SpaceFactory {
+
+void makeNaCl(Space &, int, const Geometry::Chameleon &); //!< Create a simple salt system
+
+} // namespace SpaceFactory
+
 } // namespace Faunus

@@ -376,4 +376,35 @@ size_t getActiveParticles::size() const {
                            [](size_t sum, const auto &g) { return sum + g.size(); });
 }
 getActiveParticles::getActiveParticles(const Space &spc) : spc(spc){}
+
+namespace SpaceFactory {
+
+/**
+ * @param space Space to insert into (will be overwritten)
+ * @param num_particles Number of salt pairs to insert
+ * @param geometry Geometry to use
+ *
+ * Create a system with two atom types, "Na" and "Cl", forming
+ * an atomic molecule, "salt". N salt pairs a randomly inserted
+ */
+void makeNaCl(Space &space, int num_particles, const Geometry::Chameleon &geometry) {
+    pc::temperature = 298.15_K;
+    space.geo = geometry;
+
+    Faunus::atoms = R"([
+             { "Na": { "sigma": 3.8, "eps": 0.1, "q": 1.0 } },
+             { "Cl": { "sigma": 4.0, "eps": 0.05, "q": -1.0 } }
+             ])"_json.get<decltype(atoms)>();
+
+    Faunus::molecules = R"([
+                { "salt": {"atomic": true, "atoms": ["Na", "Cl"] } }
+            ])"_json.get<decltype(molecules)>();
+
+    json j = json::array();
+    j.push_back({{"salt", {{"N", num_particles}}}});
+    Faunus::insertMolecules(j, space);
+}
+
+} // namespace SpaceFactory
+
 } // namespace Faunus

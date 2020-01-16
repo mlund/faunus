@@ -112,6 +112,12 @@ TEST_CASE("[Faunus] Space") {
         }
         CHECK(vals == std::vector<int>({1, 2, 6, 7, 8}));
     }
+
+    SUBCASE("SpaceFactory") {
+        Space spc;
+        SpaceFactory::makeNaCl(spc, 10, R"( {"type": "cuboid", "length": 20} )"_json);
+        CHECK(spc.numParticles() == 20);
+    }
 }
 
 TEST_SUITE_END();

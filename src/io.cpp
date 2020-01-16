@@ -191,28 +191,27 @@ bool FormatPQR::readAtomRecord(const std::string &record, Particle &particle, do
 }
 
 /**
- * This will load coordinates from a PQR file into
+ * This will load coordinates from a PQR stream into
  * a particle vector. Atoms are identified by the
  * `ATOM` and `HETATM` keywords and the PQR atom
  * name is used to identify the particle from `AtomMap`.
  * If the unit cell dimension, given by `CRYST1`, is
  * found a non-zero vector is returned.
  *
- * @param filename PQR file to load
+ * @param stream PQR (file)stream to load from
  * @param destination Target particle vector to *append* to
  * @return Vector with unit cell dimensions. Zero length if not found.
  * @note This is a lazy and unsafe loader that doesn't properly
  *       respect the PQR fixed column format. Has been tested to
  *       work with files from VMD, pdb2pqr, and Faunus.
  */
-Point FormatPQR::load(const std::string &filename, ParticleVector &destination, bool keep_charges) {
+Point FormatPQR::load(std::istream &stream, ParticleVector &destination, bool keep_charges) {
     Point box_length(0, 0, 0);
-    std::ifstream file(filename);
-    if (file) {
+    if (stream) {
         bool log_charge = true, log_radius = true; // emit warnings only once
         std::string record;
         int atom_index = 0;
-        while (std::getline(file, record)) {
+        while (std::getline(stream, record)) {
             double radius;
             Particle particle;
             if (readAtomRecord(record, particle, radius)) { // read ATOM or HETATOM record
@@ -222,7 +221,7 @@ Point FormatPQR::load(const std::string &filename, ParticleVector &destination, 
                 // does charge match AtomData?
                 if (std::fabs(atom_data.charge - particle.charge) > pc::epsilon_dbl) {
                     if (log_charge) {
-                        faunus_logger->warn("charge mismatches in PQR file {0}: using {1} values", filename,
+                        faunus_logger->warn("charge mismatches in PQR file: using {0} values",
                                             keep_charges ? "PQR" : "atomlist");
                         log_charge = false;
                     }
@@ -239,7 +238,7 @@ Point FormatPQR::load(const std::string &filename, ParticleVector &destination, 
                 // does radius match AtomData?
                 if (std::fabs(atom_data.sigma - 2 * radius) > pc::epsilon_dbl) {
                     if (log_radius) {
-                        faunus_logger->warn("radius mismatches in PQR file {0}: using atomlist values", filename);
+                        faunus_logger->warn("radius mismatches in PQR file: using atomlist values");
                         log_radius = false;
                     }
                     faunus_logger->info("radius mismatch on atom {0} {1}: using {2} (atomlist) over {3} (PQR)",
@@ -251,6 +250,16 @@ Point FormatPQR::load(const std::string &filename, ParticleVector &destination, 
         }
     }
     return box_length;
+}
+
+/**
+ * @param filename PQR filename to load from
+ * @param destination Target particle vector to *append* to
+ * @return Vector with unit cell dimensions. Zero length if not found.
+ */
+Point FormatPQR::load(const std::string &filename, ParticleVector &destination, bool keep_charges) {
+    std::ifstream f(filename);
+    return load(f, destination, keep_charges);
 }
 
 /**
@@ -285,6 +294,33 @@ void FormatPQR::loadTrajectory(const std::string &filename, std::vector<Particle
 }
 
 /**
+ * @param stream Output stream
+ * @param particles Particle vector
+ * @param box_length Unit cell dimensions (default: [0,0,0], not printed)
+ * @param n Number of atoms in each residue (default: automatic)
+ */
+bool FormatPQR::save(std::ostream &stream, const ParticleVector &particles, Point box_length, int n) {
+    if (stream and !particles.empty()) {
+        int residue_cnt = 1, atom_cnt = 1;
+        if (box_length.norm() > pc::epsilon_dbl)
+            stream << writeCryst1(box_length);
+        for (auto &i : particles) {
+            AtomData &d = atoms.at(i.id);         // atom properties as defined in topology
+            Point pos = i.pos + 0.5 * box_length; // move origin to corner of box (faunus used the middle)
+            stream << fmt::format("ATOM  {:5d} {:4} {:4}{:5d}    {:8.3f} {:8.3f} {:8.3f} {:.3f} {:.3f}\n", atom_cnt++,
+                                  d.name, d.name, residue_cnt, pos.x(), pos.y(), pos.z(), i.charge, 0.5 * d.sigma);
+            if (d.name == "CTR")
+                residue_cnt++;
+            else if (atom_cnt % n == 0)
+                residue_cnt++;
+        }
+        stream << "END\n";
+        return true;
+    }
+    return false;
+}
+
+/**
  * @param filename Output PQR filename
  * @param particles Particle vector
  * @param box_length Unit cell dimensions (default: [0,0,0], not printed)
@@ -293,23 +329,7 @@ void FormatPQR::loadTrajectory(const std::string &filename, std::vector<Particle
 bool FormatPQR::save(const std::string &filename, const ParticleVector &particles, Point box_length, int n) {
     if (not particles.empty()) {
         std::ofstream file(filename);
-        if (file) {
-            int residue_cnt = 1, atom_cnt = 1;
-            if (box_length.norm() > pc::epsilon_dbl)
-                file << writeCryst1(box_length);
-            for (auto &i : particles) {
-                AtomData &d = atoms.at(i.id);         // atom properties as defined in topology
-                Point pos = i.pos + 0.5 * box_length; // move origin to corner of box (faunus used the middle)
-                file << fmt::format("ATOM  {:5d} {:4} {:4}{:5d}    {:8.3f} {:8.3f} {:8.3f} {:.3f} {:.3f}\n", atom_cnt++,
-                                    d.name, d.name, residue_cnt, pos.x(), pos.y(), pos.z(), i.charge, 0.5 * d.sigma);
-                if (d.name == "CTR")
-                    residue_cnt++;
-                else if (atom_cnt % n == 0)
-                    residue_cnt++;
-            }
-            file << "END\n";
-            return true;
-        }
+        return save(file, particles, box_length, n);
     }
     return false;
 }

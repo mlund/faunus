@@ -72,9 +72,10 @@ class FormatPQR {
     static bool readAtomRecord(const std::string &, Particle &, double &);       //!< Read ATOM or HETATOM record
 
   public:
-    typedef std::vector<Particle> ParticleVector;                                   //!< Particle vector
-    static Point load(const std::string &, ParticleVector &, bool);                 //!< Load PQR file
+    static Point load(std::istream &, ParticleVector &, bool);                      //!< Load PQR from stream
+    static Point load(const std::string &, ParticleVector &, bool);                 //!< Load PQR from file
     static void loadTrajectory(const std::string &, std::vector<ParticleVector> &); //!< Load trajectory
+    static bool save(std::ostream &, const ParticleVector &, Point = Point(0, 0, 0), int = 1e9);      //!< Save PQR file
     static bool save(const std::string &, const ParticleVector &, Point = Point(0, 0, 0), int = 1e9); //!< Save PQR file
 };
 

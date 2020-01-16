@@ -33,10 +33,12 @@ double ExternalPotential::_energy(const Group<Particle> &g) const {
     double u = 0;
     if (molids.find(g.id) != molids.end()) {
         if (COM and g.atomic == false) { // apply only to center of mass
-            Particle cm;                 // temp. particle representing molecule
-            cm.charge = Faunus::monopoleMoment(g.begin(), g.end());
-            cm.pos = g.cm;
-            return func(cm);
+            if (g.size() == g.capacity()) { // only apply if group is active
+                Particle cm;                // temp. particle representing molecule
+                cm.charge = Faunus::monopoleMoment(g.begin(), g.end());
+                cm.pos = g.cm;
+                return func(cm);
+            }
         } else {
             for (auto &p : g) { // loop over active particles
                 u += func(p);

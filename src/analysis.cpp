@@ -862,7 +862,7 @@ void XTCtraj::_from_json(const json &j) {
 }
 
 void XTCtraj::_sample() {
-    xtc.setbox(spc.geo.getLength()); // set box dimensions for frame
+    xtc.setLength(spc.geo.getLength()); // set box dimensions for frame
 
     // On some gcc/clang and certain ubuntu/macos combinations,
     // the ranges::view::filter(rng,unaryp) clears the `filter` function.

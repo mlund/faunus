@@ -195,6 +195,18 @@ struct Space {
         return p | ranges::cpp20::views::filter(f);
     } //!< Returns range with all *active* particles in space
 
+    size_t numParticles(Selection sel = ACTIVE) const {
+        size_t n = 0;
+        if (sel == ALL)
+            n = p.size();
+        else if (sel == ACTIVE)
+            for (auto &g : groups)
+                n += g.size();
+        else
+            throw std::runtime_error("invalid selection");
+        return n;
+    } //!< Number of particles, all or active (default)
+
     void sync(Space &other, const Tchange &change); //!< Copy differing data from other (o) Space using Change object
 
     /*
@@ -259,4 +271,11 @@ struct getActiveParticles {
 
 // Make a global alias to easy transition to non-templated code
 using Tspace = Space;
+
+namespace SpaceFactory {
+
+void makeNaCl(Space &, int, const Geometry::Chameleon &); //!< Create a simple salt system
+
+} // namespace SpaceFactory
+
 } // namespace Faunus

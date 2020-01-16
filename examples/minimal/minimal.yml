@@ -1,23 +1,23 @@
 #!/usr/bin/env yason.py
 energy:                              # define system energy
-    - nonbonded_splined:             # nonbonded interactions can be arbitrarily
+    - nonbonded:                     # nonbonded interactions can be arbitrarily
         default:                     # mixed and splined
             - lennardjones: {mixing: LB}
-            - coulomb: {type: plain, epsr: 80, debyelength: 7, cutoff: 100}
+            - coulomb: {type: plain, epsr: 80}
 atomlist:                             # define atom types
-    - Na: {q:  1.0, eps: 0.15, sigma: 4.0, dp: 40}
-    - Cl: {q: -1.0, eps: 0.20, sigma: 10.0, dp: 10}
+    - Na: {q:  1.0, eps: 0.15, sigma: 4.0, dp: 50}
+    - Cl: {q: -1.0, eps: 0.20, sigma: 4.0, dp: 50}
 moleculelist:                        # define molecule types
     - salt: {atoms: [Na, Cl], atomic: true}
 insertmolecules:                     # create an initial system (random insertion)
     - salt: {N: 20}
 moves:                               # define Monte Carlo moves
-    - transrot: { molecule: salt }   # atomic translation (and rotation if anisotropic atoms)
+    - transrot: {molecule: salt}     # atomic translation (and rotation if anisotropic atoms)
 analysis:                            # define on the fly analysis
     - systemenergy: {file: energy.dat, nstep: 100} # save system energy
     - savestate: {file: confout.pqr} # save PQR file for visualization
     - savestate: {file: state.json } # save restart file
-mcloop: {macro: 10, micro: 1000}     # number of MC steps
+mcloop: {macro: 10, micro: 5000}     # number of MC steps
 geometry: {type: cuboid, length: 50} # sidelength(s): number OR array
 temperature: 300                     # in K
-random: { seed: fixed }              # seed for pseudo random number generator
+random: {seed: fixed}                # seed for pseudo random number generator

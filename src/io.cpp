@@ -268,8 +268,7 @@ Point FormatPQR::load(const std::string &filename, ParticleVector &destination, 
  * ignored.
  */
 void FormatPQR::loadTrajectory(const std::string &filename, std::vector<ParticleVector> &traj) {
-    std::ifstream file(filename);
-    if (file) {
+    if (std::ifstream file(filename); bool(file)) {
         std::string record;
         traj.clear();
         traj.resize(1); // prepare first frame
@@ -284,9 +283,10 @@ void FormatPQR::loadTrajectory(const std::string &filename, std::vector<Particle
                 traj.back().reserve(traj.front().size()); // reserve memory
             }
         }
+        if (traj.back().empty()) // delete empty frame after last "END" record
+            traj.pop_back();
         if (traj.empty())
             faunus_logger->warn("pqr trajectory {} is empty", filename);
-
     } else
         throw std::runtime_error("pqr file not found: " + filename);
 }

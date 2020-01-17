@@ -1101,7 +1101,7 @@ void ConformationSwap::_move(Change &change) {
             if (p.size() not_eq g->size())
                 throw std::runtime_error(name + ": conformation atom count mismatch");
 
-            newconfid = molecules[molid].conformations.index;
+            newconfid = molecules[molid].conformations.getLastIndex();
 
             std::copy(p.begin(), p.end(), g->begin()); // override w. new conformation
 #ifndef NDEBUG

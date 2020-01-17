@@ -75,53 +75,50 @@ void to_json(json &j, const MoleculeData &a) {
     }
 }
 
-void MoleculeData::createMolecularConformations(const json &val) {
-    assert(val.is_object());
+void MoleculeData::createMolecularConformations(const json &j) {
+    assert(j.is_object());
 
-    std::string traj = val.value("traj", std::string());
-    if (traj.empty())
-        return;
+    if (auto trajfile = j.value("traj", ""s); not trajfile.empty()) {
+        conformations.clear();                                  // remove all previous conformations
+        FormatPQR::loadTrajectory(trajfile, conformations.vec); // read traj. from disk
+        if (not conformations.empty()) {
+            faunus_logger->debug("{} conformations loaded from {}", conformations.size(), trajfile);
 
-    conformations.clear(); // remove all previous conformations
-    // read tracjectory w. conformations from disk
-    FormatPQR::loadTrajectory(traj, conformations.vec);
-    if (not conformations.empty()) {
-        // create atom list
-        atoms.clear();
-        atoms.reserve(conformations.vec.front().size());
-        for (auto &p : conformations.vec.front()) // add atoms to atomlist
-            atoms.push_back(p.id);
+            // create atom list
+            atoms.clear();
+            atoms.reserve(conformations.vec.front().size());
+            for (auto &p : conformations.vec.front()) // add atoms to atomlist
+                atoms.push_back(p.id);
 
-        // center mass center for each frame to origo assuming whole molecules
-        if (val.value("trajcenter", false)) {
-            faunus_logger->debug("Centering conformations in trajectory file {}", traj);
-            for (auto &p : conformations.vec) // loop over conformations
-                Geometry::cm2origo(p.begin(), p.end());
-        }
+            // center mass center for each frame to origo assuming whole molecules
+            if (j.value("trajcenter", false)) {
+                faunus_logger->debug("Centering conformations from {}", trajfile);
+                for (auto &p : conformations.vec) // loop over conformations
+                    Geometry::cm2origo(p.begin(), p.end());
+            }
 
-        // set default uniform weight
-        std::vector<float> w(conformations.size(), 1);
-        conformations.setWeight(w);
+            std::vector<float> weights(conformations.size(), 1.0); // default uniform weight
+            conformations.setWeight(weights);
 
-        // look for weight file
-        std::string weightfile = val.value("trajweight", std::string());
-        if (not weightfile.empty()) {
-            std::ifstream f(weightfile.c_str());
-            if (f) {
-                w.clear();
-                w.reserve(conformations.size());
-                double _val;
-                while (f >> _val)
-                    w.push_back(_val);
-                if (w.size() == conformations.size())
-                    conformations.setWeight(w);
-                else
-                    throw std::runtime_error("Number of weights does not match conformations.");
-            } else
-                throw std::runtime_error("Weight file " + weightfile + " not found.");
-        }
-    } else
-        throw std::runtime_error("Trajectory " + traj + " not loaded or empty.");
+            // look for weight file
+            if (auto weightfile = j.value("trajweight", ""s); not weightfile.empty()) {
+                if (std::ifstream f(weightfile); bool(f)) {
+                    weights.clear();
+                    weights.reserve(conformations.size());
+                    float _val;
+                    while (f >> _val)
+                        weights.push_back(_val);
+                    if (weights.size() == conformations.size()) {
+                        faunus_logger->debug("{} weights loaded from {}", conformations.size(), weightfile);
+                        conformations.setWeight(weights);
+                    } else
+                        throw std::runtime_error("Number of weights does not match conformations.");
+                } else
+                    throw std::runtime_error(weightfile + " not found.");
+            }
+        } else
+            throw std::runtime_error(trajfile + " not loaded or empty.");
+    }
 } // done handling conformations
 
 // ============ NeighboursGenerator ============
@@ -518,7 +515,7 @@ ParticleVector RandomInserter::operator()(Geometry::GeometryBase &geo, const Par
         throw std::runtime_error("geometry has zero volume");
 
     ParticleVector v = mol.conformations.get(); // get random, weighted conformation
-    conformation_ndx = mol.conformations.index; // lastest index
+    conformation_ndx = mol.conformations.getLastIndex(); // latest index
 
     do {
         if (cnt++ > max_trials)

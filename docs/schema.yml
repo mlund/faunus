@@ -1,5 +1,41 @@
 $schema: http://json-schema.org/schema#
 properties:
+
+    geometry:
+        type: object
+        properties:
+            type:
+                type: string
+                enum: [cuboid, slit, sphere, cylinder, hexagonal]
+            radius: {type: number}
+            length:
+                anyOf:
+                    - {type: number}
+                    - {type: array, items: {type: number}, minItems: 3, maxItems: 3}
+        required: [type]
+        additionalProperties: false
+        allOf:
+            - if:
+                  properties: {type: {const: "cuboid"}}
+              then:
+                  required: [length]
+            - if:
+                  properties: {type: {const: "slit"}}
+              then:
+                  required: [length]
+            - if:
+                  properties: {type: {const: "sphere"}}
+              then:
+                  required: [radius]
+            - if:
+                  properties: {type: {const: "cylinder"}}
+              then:
+                  required: [radius, length]
+            - if:
+                  properties: {type: {const: "hexagonal"}}
+              then:
+                  required: [radius, length]
+
     atomlist:
         type: array
         items:
@@ -34,11 +70,18 @@ properties:
             type: object
             additionalProperties:
                 type: object
+                additionalProperties: false
                 properties:
                     activity: {type: number, default: 0.0}
                     atomic: {type: boolean, default: false}
                     atoms: {items: {type: string}, type: array}
+                    bondlist: {items: {type: object}, type: array}
                     compressible: {type: boolean}
+                    ensphere: {type: boolean}
+                    excluded_neighbours: {type: integer}
+                    exclusionlist:
+                        type: array
+                        items: {type: array, items: integer, minItems: 2, maxItems: 2}
                     insdir:
                         items: {type: number}
                         type: array
@@ -49,7 +92,139 @@ properties:
                         type: array
                         minItems: 3
                         maxItems: 3
+                    keeppos: {type: boolean}
+                    keepcharges: {type: boolean}
+                    rigid: {type: boolean}
+                    rotate: {type: boolean}
+                    structure:
+                        anyOf:
+                            - type: string
+                              pattern: "(.*?)\\.(pqr|aam|xyz)$"
+                            - type: array
+                              items: {type: object}
+                            - type: object
+                              properties:
+                                  fasta: {type: string}
+                                  k: {type: number}
+                                  req: {type: number}
+                              additionalProperties: false
+                    traj:
+                        type: string
+                        pattern: "(.*?)\\.(pqr)$"
+                    trajcenter: {type: boolean}
+                    trajweight: {type: string}
 
+    moves:
+        type: array
+        items:
+            type: object
+            properties:
+                moltransrot:
+                    description: "Molecular translation and rotation"
+                    properties:
+                        dp: {type: number}
+                        dprot: {type: number}
+                        molecule: {type: string}
+                        repeat: {type: [integer, string]}
+                        dir:
+                            items: {type: number}
+                            type: array
+                            minItems: 3
+                            maxItems: 3
+                        dirrot:
+                            items: {type: number}
+                            type: array
+                            minItems: 3
+                            maxItems: 3
+                    required: [dp, dprot, molecule]
+                    additionalProperties: false
+                    type: object
+
+                transrot:
+                    description: "Atomic translation and rotation"
+                    properties:
+                        dp: {type: number}
+                        dprot: {type: number}
+                        molecule: {type: string}
+                        repeat: {type: [integer, string]}
+                        dir:
+                            items: {type: number}
+                            type: array
+                            minItems: 3
+                            maxItems: 3
+                        dirrot:
+                            items: {type: number}
+                            type: array
+                            minItems: 3
+                            maxItems: 3
+                    required: [molecule]
+                    additionalProperties: false
+                    type: object
+
+                volume:
+                    properties:
+                        dV: {type: number}
+                        method:
+                            type: string
+                            enum: [xy, isotropic, isochoric]
+                        repeat: {type: integer}
+                    required: [dV]
+                    additionalProperties: false
+                    type: object
+
+                crankshaft:
+                    properties:
+                        dprot: {type: number}
+                        molecule: {type: string}
+                        joint_max: {type: integer}
+                        repeat: {type: integer}
+                    required: [dprot, molecule]
+                    additionalProperties: false
+                    type: object
+
+                cluster:
+                    properties:
+                        dir:
+                            items: {type: number}
+                            type: array
+                            minItems: 3
+                            maxItems: 3
+                        dirrot:
+                            items: {type: number}
+                            type: array
+                            minItems: 3
+                            maxItems: 3
+                        dp: {type: number}
+                        dprot: {type: number}
+                        molecules:
+                            items: {type: string}
+                            type: array
+                        satellites:
+                            items: {type: string}
+                            type: array
+                        spread: {type: boolean}
+                        threshold: {type: number}
+                        repeat: {type: integer}
+                    required: [dp, dprot, molecules, threshold]
+                    additionalProperties: false
+                    type: object
+         
+                pivot:
+                    properties:
+                        dprot: {type: [number]}
+                        molecule: {type: string}
+                        skiplarge: {type: boolean}
+                        repeat: {type: [integer, string]}
+                    required: [dprot, molecule]
+                    additionalProperties: false
+                    type: object
+
+                rcmc:
+                    properties:
+                        repeat: {type: integer}
+                    additionalProperties: false
+                    type: object
+         
     analysis:
         type: array
         items:

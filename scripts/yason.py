@@ -63,11 +63,13 @@ if pygments:
 def print_table(schema):
     ''' pretty print schema '''
     properties = schema.get("properties", "")
-    if (schema!=""):
+    if (properties!=""):
         print("{:15} | {:8} | {:20}".format("property", "type", "description"))
         print("{:15} | {:8} | {:20}".format(15*"-", 8*"-", 20*"-"))
-        for key, value in schema["properties"].items():
-            print("{:15} | {:8} | {}".format(key, value["type"], value.get("description", "")))
+        for key, value in properties.items():
+            required = key in schema.get("required", [""])
+            print("{:15} | {:8} | {}".format(key+str("*" if required else ""),
+                value["type"], value.get("description", "")))
 
 def validate_input(instance):
     '''

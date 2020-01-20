@@ -1,0 +1,142 @@
+$schema: http://json-schema.org/schema#
+properties:
+    atomlist:
+        type: array
+        items:
+            type: object
+            additionalProperties:
+                type: object
+                additionalProperties: false
+                properties:
+                    activity: {type: number, default: 0.0}
+                    alphax: {type: number, default: 0.0}
+                    dp: {type: number, default: 0.0}
+                    dprot: {type: number, default: 0.0, description: "Rotational displacement parameter"}
+                    eps: {type: number, default: 0.0}
+                    implicit: {type: boolean, default: false, description: "True if atom is implicit"}
+                    mu:
+                        items: {type: number}
+                        type: array
+                        minItems: 3
+                        maxItems: 3
+                    mulen: {type: number}
+                    mw: {type: number, default: 1.0}
+                    pactivity: {type: number, default: 0.0}
+                    q: {type: number, default: 0.0, description: "Valency (e)"}
+                    r: {type: number, default: 0.0}
+                    sigma: {type: number, default: 0.0, description: "Diameter (Å)"}
+                    tension: {type: number, default: 0.0}
+                    tfe: {type: number, default: 0.0}
+
+    moleculelist:
+        type: array
+        items:
+            type: object
+            additionalProperties:
+                type: object
+                properties:
+                    activity: {type: number, default: 0.0}
+                    atomic: {type: boolean, default: false}
+                    atoms: {items: {type: string}, type: array}
+                    compressible: {type: boolean}
+                    insdir:
+                        items: {type: number}
+                        type: array
+                        minItems: 3
+                        maxItems: 3
+                    insoffset:
+                        items: {type: number}
+                        type: array
+                        minItems: 3
+                        maxItems: 3
+
+    analysis:
+        type: array
+        items:
+            type: object
+            properties:
+
+                atomrdf:
+                    description: "Atom-atom radial distribution function"
+                    properties:
+                        dr: {type: number, description: "Binning resolution along r (Å)"}
+                        file: {type: string, description: "Output file"}
+                        name1: {type: string}
+                        name2: {type: string}
+                        dim: {type: integer, minimum: 1, maximum: 3, default: 3}
+                        nstep: {type: integer}
+                        nskip: {type: integer, default: 0}
+                    required: [dr, file, name1, name2, nstep]
+                    additionalProperties: false
+                    type: object
+
+                density:
+                    properties:
+                        nstep: {type: integer}
+                        nskip: {type: integer, default: 0}
+                        required: [nstep]
+                        additionalProperties: false
+                        type: object
+
+                polymershape:
+                    properties:
+                        molecules:
+                            items: {type: string}
+                            type: array
+                        nstep: {type: integer}
+                    required: [molecules, nstep]
+                    type: object
+
+                sanity:
+                    properties:
+                        nstep: {type: integer}
+                        nskip: {type: integer, default: 0}
+                    required: [nstep]
+                    additionalProperties: false
+                    type: object
+
+                savestate:
+                    description: "Save particle positions to file"
+                    properties:
+                        file: {type: string, pattern: "(.*?)\\.(aam|pqr|state|ubj|gro|xyz|json)$"}
+                    required: [file]
+                    additionalProperties: false
+                    type: object
+
+                sliceddensity:
+                    properties:
+                        atoms:
+                            items: {type: string}
+                            type: array
+                        dz: {type: number, default: 0.1}
+                        file: {type: string}
+                        nstep: {type: integer}
+                        nskip: {type: integer, default: 0}
+                        atomcom: {type: string}
+                    required: [atoms, file, nstep]
+                    additionalProperties: false
+                    type: object
+
+                systemenergy:
+                    properties:
+                        file: {type: string}
+                        nstep: {type: integer}
+                        nskip: {type: integer, default: 0}
+                    required: [file, nstep]
+                    additionalProperties: false
+                    type: object
+
+                xtcfile:
+                    description: "Write Gromacs XTC trajectory"
+                    properties:
+                        file: {type: string}
+                        nstep: {type: integer}
+                        nskip: {type: integer, default: 0}
+                        molecules:
+                            items: {type: string}
+                            type: array
+                    required: [file, nstep]
+                    additionalProperties: false
+                    type: object
+                    # yason.py cluster.yml | jq .analysis | genson | yason.py
+

@@ -10,6 +10,13 @@ import json, sys, argparse
 import warnings
 
 try:
+    jsonschema = True
+    from jsonschema import Draft7Validator
+    from jsonschema.exceptions import best_match
+except ImportError:
+    jsonschema = False
+
+try:
     import jinja2
 except ImportError:
     warnings.warn("warning: missing jinja2 module")
@@ -51,6 +58,35 @@ if pygments:
     else:
         formatter = NullFormatter
 
+# Open schema file
+
+def print_table(schema):
+    ''' pretty print schema '''
+    properties = schema.get("properties", "")
+    if (schema!=""):
+        print("{:15} | {:8} | {:20}".format("property", "type", "description"))
+        print("{:15} | {:8} | {:20}".format(15*"-", 8*"-", 20*"-"))
+        for key, value in schema["properties"].items():
+            print("{:15} | {:8} | {}".format(key, value["type"], value.get("description", "")))
+
+def validate_input(instance):
+    '''
+    JSON schema checker
+
+    Will look for schema in faunus/docs/
+    '''
+    if jsonschema:
+        pathname = os.path.dirname(sys.argv[0])
+        schemafile = os.path.abspath(pathname+"/../docs") + '/schema.yml'
+        if os.path.exists(schemafile):
+            with open(schemafile, "r") as f:
+                _schema = yaml.safe_load(f)
+                error = best_match(Draft7Validator(_schema).iter_errors(instance))
+                if error!=None:
+                    print( "{}: {}\n".format(error.path, error.message) )
+                    print_table(error.schema)
+                    sys.exit(1)
+
 try:  # ... to read json
     i = args.infile.read()
     if jinja2:
@@ -62,6 +98,7 @@ try:  # ... to read json
         # i = jinja2.Template(i).render() # render jinja2
 
     d = json.loads(i)
+    validate_input(d)
     if args.alwaysjson:
         if pygments:
             i = highlight(out, JsonLexer(), formatter())
@@ -74,6 +111,7 @@ try:  # ... to read json
 except json.decoder.JSONDecodeError:
     try:  # ... to read yaml
         d = yaml.safe_load(i)  # plain load was deprecated in PyYAML
+        validate_input(d)
         out = json.dumps(d, indent=args.indent)
         if pygments:
             out = highlight(out, JsonLexer(), formatter())

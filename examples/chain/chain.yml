@@ -3,7 +3,7 @@ comment: |
     36mer ideal chain with stiff harmonic bonds
 
 temperature: 300.0
-random: {seed: default}
+random: {seed: fixed}
 geometry:
   type: cuboid
   length: [500., 500., 500.]

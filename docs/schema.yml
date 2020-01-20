@@ -1,6 +1,26 @@
 $schema: http://json-schema.org/schema#
 properties:
 
+    temperature: {type: number}
+
+    mcloop:
+        type: object
+        properties:
+            macro: {type: integer}
+            micro: {type: integer}
+        required: [macro, micro]
+        additionalProperties: false
+
+    random:
+        type: object
+        properties:
+            seed:
+                anyOf:
+                    - {type: string, enum: [fixed, hardware]}
+                    - {type: array, items: {type: integer}}
+        required: [seed]
+        additionalProperties: false
+
     geometry:
         type: object
         properties:
@@ -113,6 +133,50 @@ properties:
                         pattern: "(.*?)\\.(pqr)$"
                     trajcenter: {type: boolean}
                     trajweight: {type: string}
+
+    energy:
+        type: array
+        items:
+            type: object
+            properties:
+                confine:
+                    description: "Geometrical confinement"
+                    type: object
+                    properties:
+                        com: {type: boolean}
+                        high:
+                            items: {type: number}
+                            type: array
+                        low:
+                            items: {type: number}
+                            type: array
+                        k: {type: [integer, string]}
+                        molecules:
+                            items: {type: string}
+                            type: array
+                        origo:
+                            items: {type: number}
+                            type: array
+                            minItems: 3
+                            maxItems: 3
+                        radius: {type: number}
+                        scale: {type: boolean}
+                        type: {type: string, enum: [sphere, cylinder, cuboid]}
+                    required: [k, molecules, type]
+                    additionalProperties: false
+                    allOf:
+                        - if:
+                              properties: {type: {const: "sphere"}}
+                          then:
+                              required: [radius]
+                        - if:
+                              properties: {type: {const: "cylinder"}}
+                          then:
+                              required: [radius]
+                        - if:
+                              properties: {type: {const: "cuboid"}}
+                          then:
+                              required: [high, low]
 
     moves:
         type: array

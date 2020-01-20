@@ -31,15 +31,16 @@ but should compile on most unix operating systems and possibly under Cygwin (Win
 ### Requirements
 
 - CMake 3.11+
-- C/C++17 compiler (Clang 4+, GCC 7+, etc.)
+- C/C++17 compiler (Clang 5+, GCC 7+, etc.)
 - Python 3.6+ with the following packages:
   - `jinja2`, `ruamel_yaml` or `yaml`
 
 The following are optional:
 
-- `pandoc`
-- `pypandoc`
-- `BeautifulSoup4`
+- `jsonschema` (for validating input)
+- `pandoc` (for building manual)
+- `pypandoc` (for building manual)
+- `BeautifulSoup4` (for building manual)
 - Message Passing Interface (MPI)
 
 **macOS tip:**

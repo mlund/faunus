@@ -74,20 +74,20 @@ def print_table(schema):
 def validate_input(instance):
     '''
     JSON schema checker
-
-    Will look for schema in faunus/docs/
     '''
     if jsonschema:
         pathname = os.path.dirname(sys.argv[0])
-        schemafile = os.path.abspath(pathname+"/../docs") + '/schema.yml'
-        if os.path.exists(schemafile):
-            with open(schemafile, "r") as f:
-                _schema = yaml.safe_load(f)
-                error = best_match(Draft7Validator(_schema).iter_errors(instance))
-                if error!=None:
-                    print( "{}: {}\n".format(error.path, error.message) )
-                    print_table(error.schema)
-                    sys.exit(1)
+        for subdir in ["/../docs", "/../share/faunus"]:
+            schemafile = os.path.abspath(pathname+subdir) + '/schema.yml'
+            if os.path.exists(schemafile):
+                with open(schemafile, "r") as f:
+                    _schema = yaml.safe_load(f)
+                    error = best_match(Draft7Validator(_schema).iter_errors(instance))
+                    if error!=None:
+                        print( "{}: {}\n".format(error.path, error.message) )
+                        print_table(error.schema)
+                        sys.exit(1)
+                break
 
 try:  # ... to read json
     i = args.infile.read()

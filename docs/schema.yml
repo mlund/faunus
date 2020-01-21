@@ -27,8 +27,9 @@ properties:
             type:
                 type: string
                 enum: [cuboid, slit, sphere, cylinder, hexagonal]
-            radius: {type: number}
+            radius: {type: number, description: Radius of sphere, cylinder, or hexagon}
             length:
+                description: Length(s) of cuboid, slit, cylinder, or hexagon
                 anyOf:
                     - {type: number}
                     - {type: array, items: {type: number}, minItems: 3, maxItems: 3}
@@ -75,14 +76,16 @@ properties:
                         type: array
                         minItems: 3
                         maxItems: 3
-                    mulen: {type: number}
-                    mw: {type: number, default: 1.0}
+                        default: [0,0,0]
+                        description: Dipole moment vector (eÅ)
+                    mulen: {type: number, description: "Dipole moment scalar (eÅ)"}
+                    mw: {type: number, default: 1.0, description: "Molecular weight (g/mol)"}
                     pactivity: {type: number, default: 0.0}
                     q: {type: number, default: 0.0, description: "Valency (e)"}
                     r: {type: number, default: 0.0}
                     sigma: {type: number, default: 0.0, description: "Diameter (Å)"}
-                    tension: {type: number, default: 0.0}
-                    tfe: {type: number, default: 0.0}
+                    tension: {type: number, default: 0.0, description: "Surface tension (kJ/mol/Å²)"}
+                    tfe: {type: number, default: 0.0, description: "Transfer free energy (kJ/mol/Å²/M)"}
 
     moleculelist:
         type: array
@@ -92,31 +95,50 @@ properties:
                 type: object
                 additionalProperties: false
                 properties:
-                    activity: {type: number, default: 0.0}
-                    atomic: {type: boolean, default: false}
-                    atoms: {items: {type: string}, type: array}
-                    bondlist: {items: {type: object}, type: array}
-                    compressible: {type: boolean}
-                    ensphere: {type: boolean}
-                    excluded_neighbours: {type: integer}
+                    activity: {type: number, default: 0.0, description: Chemical activity for grand canonical MC (mol/l)}
+                    atomic: {type: boolean, default: false, description: True if collection of atomic species, salt etc.}
+                    atoms: {items: {type: string}, type: array, description: Array of atom names; required if `atomic=true`}
+                    bondlist: {items: {type: object}, type: array, description: List of _internal_ bonds (harmonic, dihedrals etc.)}
+                    compressible:
+                        type: boolean,
+                        default: false,
+                        description: If true, molecular internal coordinates are scaled upon volume moves
+                    ensphere:
+                        type: boolean
+                        default: false
+                        description: >-
+                            Radial rescale of positions to sphere w. radius of average radial distance from
+                            COM (stored inn 1st atom which is a dummy)
+                    excluded_neighbours:
+                        type: integer
+                        default: 0
+                        description: >-
+                            Generate an `exclusionlist` from the bonded interaction: Add all atom pairs which are
+                            `excluded_neighbours` or less bonds apart
                     exclusionlist:
                         type: array
                         items: {type: array, items: integer, minItems: 2, maxItems: 2}
+                        description: List of _internal_ atom pairs which nonbonded interactions are excluded
                     insdir:
                         items: {type: number}
                         type: array
                         minItems: 3
                         maxItems: 3
+                        default: [1,1,1]
+                        description: Insert directions are scaled by this
                     insoffset:
                         items: {type: number}
                         type: array
                         minItems: 3
                         maxItems: 3
-                    keeppos: {type: boolean}
-                    keepcharges: {type: boolean}
-                    rigid: {type: boolean}
-                    rotate: {type: boolean}
+                        default: [0,0,0]
+                        description: Shifts mass center after insertion
+                    keeppos: {type: boolean, default: false, description: Keep original positions of `structure`}
+                    keepcharges: {type: boolean, default: true, description: Keep original charges of `structure` (aam/pqr files)}
+                    rigid: {type: boolean, default: false, description: Set to true for rigid molecules. Affects energy evaluation}
+                    rotate: {type: boolean, default: true, description: Rotate structure upon insertion?}
                     structure:
+                        description: Structure file or direct information; required if `atomic=false`
                         anyOf:
                             - type: string
                               pattern: "(.*?)\\.(pqr|aam|xyz)$"
@@ -128,11 +150,18 @@ properties:
                                   k: {type: number}
                                   req: {type: number}
                               additionalProperties: false
+                    to_disk:
+                        type: boolean
+                        default: false
+                        description: Save initial structure to `moleculename-initial.pqr`; for molecular groups only
                     traj:
                         type: string
                         pattern: "(.*?)\\.(pqr)$"
-                    trajcenter: {type: boolean}
-                    trajweight: {type: string}
+                        description: Read conformations from PQR trajectory (`structure` will be ignored)
+                    trajcenter: {type: boolean, default: false, description: Move CM of conformations to the origin assuming whole molecules}
+                    trajweight:
+                        type: string
+                        description: One-column file with relative weights for each conformation. Must match frames in `traj` file
 
     energy:
         type: array
@@ -325,6 +354,45 @@ properties:
                         nstep: {type: integer}
                     required: [molecules, nstep]
                     type: object
+
+                reactioncoordinate:
+                    type: object
+                    properties:
+                        index: {type: integer, description: Atom index, atom id or group index}
+                        resolution: {type: number, description: "Resolution along the coordinate (Å)", default: 0.5}
+                        file: {type: string, description: Output file as a function of steps}
+                        nstep: {type: integer}
+                        nskip: {type: integer}
+                        type: {type: string, enum: [atom, molecule, system], description: Reaction coordinate type}
+                    required: [file, nstep, type]
+                    allOf:
+                        - if:
+                              properties: {type: {const: "atom"}}
+                          then:
+                              properties:
+                                  property: {type: string, description: Atomic property to sample, enum: [x,y,z,q,R,N]}
+                              required: [property, index]
+                        - if:
+                              properties: {type: {const: "molecule"}}
+                          then:
+                              properties:
+                                  indexes: {type: array, items: {type: integer}}
+                                  property:
+                                      type: string
+                                      enum: [angle, com_x, com_y,com_z,confid,end2end,Rg,mu_x,mu_y,mu_z,mu,muangle,N,Q,
+                                      atomatom, cmcm, cmcm_z, mindist, "L/R", Rinner]
+                                      description: Molecular property to sample
+                              required: [property]
+                        - if:
+                              properties: {type: {const: "system"}}
+                          then:
+                              properties:
+                                  indexes: {type: array, items: {type: integer}}
+                                  property:
+                                      type: string
+                                      enum: [Q, V, Lx, Ly, Lz, height, radius, N]
+                                      description: System property to sample
+                              required: [property]
 
                 sanity:
                     properties:

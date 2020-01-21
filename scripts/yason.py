@@ -61,23 +61,29 @@ if pygments:
 # Open schema file
 
 def print_table(schema):
-    ''' pretty print schema '''
+    ''' pretty print schema as markdown table '''
     properties = schema.get("properties", "")
-    if (properties!=""):
-        print("{:15} | {:8} | {:20}".format("property", "type", "description"))
-        print("{:15} | {:8} | {:20}".format(15*"-", 8*"-", 20*"-"))
+    if isinstance(properties, dict):
+        print("{:25} | {:7} | {:20}".format("Property", "Type", "Description"))
+        print("{:25} | {:7} | {:40}".format(25*"-", 7*"-", 40*"-"))
         for key, value in properties.items():
             required = key in schema.get("required", [""])
-            print("{:15} | {:8} | {}".format(key+str("*" if required else ""),
-                value["type"], value.get("description", "")))
+            _property = key + str("*" if required else "")
+            _description = value.get("description", "")
+            if "type" in value:
+                _default = value.get("default", "")
+                if _default!="":
+                    _property = _property + '=' + str(_default)
+                print("{:25} | {:7} | {}".format('`'+_property+'`', value["type"], _description))
+            else:
+                print("{:25} | {:7} | {}".format('`'+_property+'`', 'n/a', _description))
+
 
 def validate_input(instance):
-    '''
-    JSON schema checker
-    '''
+    ''' JSON schema checker '''
     if jsonschema:
-        pathname = os.path.dirname(sys.argv[0])
-        for subdir in ["/../docs", "/../share/faunus"]:
+        pathname = os.path.dirname(sys.argv[0]) # location of yason.py
+        for subdir in ["/../docs", "/../share/faunus"]: # schema file can be in src or installed
             schemafile = os.path.abspath(pathname+subdir) + '/schema.yml'
             if os.path.exists(schemafile):
                 with open(schemafile, "r") as f:

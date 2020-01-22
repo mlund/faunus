@@ -508,7 +508,7 @@ class Polarizability : public Coulomb {
         if (fabs(a.charge) > 1e-9 or fabs(b.charge) > 1e-9)
             return (*m_charged)(a.id, b.id) * r4inv;
         else
-            return (*m_neutral)(a.id, b.id) / r2 * r4inv;
+            return 0; // (*m_neutral)(a.id, b.id) / r2 * r4inv;
     }
 
     inline Point force(const Particle &a, const Particle &b, double r2, const Point &p) const override {
@@ -516,7 +516,7 @@ class Polarizability : public Coulomb {
         if (fabs(a.charge) > 1e-9 or fabs(b.charge) > 1e-9)
             return 4 * m_charged->operator()(a.id, b.id) * r6inv * p;
         else
-            return 6 * m_neutral->operator()(a.id, b.id) / r2 * r6inv * p;
+            return Point(0,0,0); // 6 * m_neutral->operator()(a.id, b.id) / r2 * r6inv * p;
     }
 };
 

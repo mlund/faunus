@@ -24,7 +24,7 @@ class InteractionData {
 
 void to_json(json &j, const InteractionData &a);
 void from_json(const json &j, InteractionData &a);
-void from_json(SingleUseJSON &j, InteractionData &a);
+void from_single_use_json(SingleUseJSON &j, InteractionData &a);
 
 /**
  * @brief General properties for atoms

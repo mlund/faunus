@@ -14,6 +14,7 @@ insertmolecules:                     # create an initial system (random insertio
 moves:                               # define Monte Carlo moves
     - transrot: {molecule: salt}     # atomic translation (and rotation if anisotropic atoms)
 analysis:                            # define on the fly analysis
+    - qrfile: {file: qrtraj.dat, nstep: 100}
     - systemenergy: {file: energy.dat, nstep: 100} # save system energy
     - savestate: {file: confout.pqr} # save PQR file for visualization
     - savestate: {file: state.json } # save restart file

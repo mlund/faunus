@@ -94,7 +94,7 @@ set_target_properties(functionparser PROPERTIES
 # targer: libfaunus - main functionality of faunus
 add_library(libfaunus STATIC ${objs} ${hdrs})
 target_compile_definitions(libfaunus PRIVATE SPDLOG_COMPILED_LIB)
-target_link_libraries(libfaunus PRIVATE ${CMAKE_THREAD_LIBS_INIT} xdrfile spdlog functionparser)
+target_link_libraries(libfaunus PRIVATE ${CMAKE_THREAD_LIBS_INIT} xdrfile spdlog functionparser h5pp::h5pp)
 set_target_properties(libfaunus PROPERTIES
     POSITION_INDEPENDENT_CODE ON)
     #LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})

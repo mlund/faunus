@@ -267,6 +267,10 @@ if (GIT_LATEST_TAG)
     add_definitions("-DGIT_LATEST_TAG=${GIT_LATEST_TAG}")
 endif ()
 
+
+find_package(h5pp REQUIRED) # If h5pp is installed through conda the path may be $ENV{CONDA_PREFIX}
+
+
 # Add third-party headers to include path. Note this is done with SYSTEM
 # to disable potential compiler warnings
 include_directories(SYSTEM ${eigen_SOURCE_DIR} ${doctest_SOURCE_DIR} ${modernjson_SOURCE_DIR}/include ${rangev3_SOURCE_DIR}/include

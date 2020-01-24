@@ -1,3 +1,4 @@
+#include <h5pp/h5pp.h>
 #include "analysis.h"
 #include "move.h"
 #include "energy.h"
@@ -333,7 +334,8 @@ void VirtualVolume::_to_disk() {
 void QRtraj::_sample() { write_to_file(); }
 
 void QRtraj::_to_json(json &j) const { j = {{"file", file}}; }
-QRtraj::QRtraj(const json &j, Space &spc) {
+
+QRtraj::QRtraj(const json &j, Space &spc) : spc(spc) {
     from_json(j);
     name = "qrfile";
     file = j.value("file", "qrtraj.dat"s);
@@ -352,6 +354,10 @@ QRtraj::QRtraj(const json &j, Space &spc) {
         }
         f << "\n";               // newline for every frame
     };
+    h5file = std::make_unique<h5pp::File>("qrtraj.h5");
+    auto m = asEigenMatrix(spc.p.begin(), spc.p.end(), &Particle::pos);
+    FormatPQR::save("init.pqr", spc.p);
+    h5file->writeDataset(m, "coordinates");
 }
 void QRtraj::_to_disk() {
     if (f)

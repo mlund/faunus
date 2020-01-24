@@ -6,6 +6,9 @@
 #include "reactioncoordinate.h"
 #include "auxiliary.h"
 #include <set>
+namespace h5pp {
+class File;
+}
 
 namespace Faunus {
 
@@ -533,9 +536,12 @@ class PolymerShape : public Analysisbase {
  */
 class QRtraj : public Analysisbase {
   private:
+    Space &spc;
     std::string file;
     std::ofstream f;
     std::function<void()> write_to_file;
+    std::unique_ptr<h5pp::File> h5file;
+
     void _sample() override;
     void _to_json(json &j) const override;
     void _to_disk() override;

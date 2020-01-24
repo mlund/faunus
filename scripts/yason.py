@@ -69,14 +69,15 @@ def print_table(schema):
         for key, value in properties.items():
             required = key in schema.get("required", [""])
             _property = key + str("*" if required else "")
-            _description = value.get("description", "")
-            if "type" in value:
-                _default = value.get("default", "")
-                if _default!="":
-                    _property = _property + '=' + str(_default)
-                print("{:25} | {:7} | {}".format('`'+_property+'`', value["type"], _description))
-            else:
-                print("{:25} | {:7} | {}".format('`'+_property+'`', 'n/a', _description))
+            if isinstance(value, dict):
+                _description = value.get("description", "")
+                if "type" in value:
+                    _default = value.get("default", "")
+                    if _default!="":
+                        _property = _property + '=' + str(_default)
+                    print("{:25} | {:7} | {}".format('`'+_property+'`', value["type"], _description))
+                else:
+                    print("{:25} | {:7} | {}".format('`'+_property+'`', 'n/a', _description))
 
 
 def validate_input(instance):

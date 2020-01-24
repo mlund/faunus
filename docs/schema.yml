@@ -168,6 +168,65 @@ properties:
         items:
             type: object
             properties:
+
+                bonded:
+                    description: "Bonded interactions"
+                    type: object
+                    properties:
+                        bondlist:
+                            type: array
+                            items: {type: object}
+                    additionalProperties: false
+
+                sasa:
+                    description: "Manybody solvent accessible surface area"
+                    type: object
+                    properties:
+                        radius: {type: number, default: 1.4, description: Probe radius for SASA calculation (Å)}
+                        molarity: {type: number, description: Molar concentration of co-solute}
+                    required: [molarity]
+                    additionalProperties: false
+
+                penalty:
+                    description: Flat histogram sampling in one or two dimensions using penalty functions
+                    type: object
+                    properties:
+                        f0: {type: number, description: Penalty energy increment (kT)}
+                        update: {type: integer, description: Interval between scaling of f0}
+                        scale: {type: number, description: Scaling factor for f0}
+                        nodrift: {type: boolean, default: true, description: Suppress energy drift}
+                        quiet: {type: boolean, default: false, description: Set to true to get verbose output}
+                        file: {type: string, description: Name of saved/loaded penalty function}
+                        histogram: {type: string, description: Name of saved histogram (optional)}
+                        overwrite: {type: boolean, default: true, description: Name of saved histogram (optional)}
+                        coords: {type: array, items: {type: object}, minItems: 1, maxItems: 2}
+                    required: [f0, update, scale, file, coords]
+                    additionalProperties: false
+
+                customexternal:
+                    description: "External Custom Potential"
+                    type: object
+                    properties:
+                        com: {type: boolean, default: false, description: Operate on mass-center instead of individual atoms?}
+                        constants: {type: object, description: User-defined constants}
+                        function: {type: string, description: Mathematical expression for the potential (units of kT)}
+                        molecules: {type: array, items: {type: string}, description: Array of molecules to operate on}
+                    required: [function, molecules]
+                    additionalProperties: false
+
+                isobaric:
+                    description: "External pressure"
+                    type: object
+                    properties:
+                        P/mM: {type: number, description: Pressure in mmol/liter}
+                        P/Pa: {type: number, description: Pressure in Pascal}
+                        P/atm: {type: number, description: Pressure in atmospheres}
+                        type: object
+                    oneof:
+                        - required: [P/mM]
+                        - required: [P/Pa]
+                        - required: [P/atm]
+                    additionalProperties: false
                 confine:
                     description: "Geometrical confinement"
                     type: object
@@ -212,6 +271,16 @@ properties:
         items:
             type: object
             properties:
+
+                conformationswap:
+                    description: Swap molecular configurations from loaded library of structures
+                    type: object
+                    properties:
+                        molecule: {type: string, description: Molecule name to operate on}
+                        repeat: {type: [integer, string], description: Number of repeats per MC sweep}
+                        keeppos: {type: boolean, default: true, description: Keep original positions from trajectory}
+                    additionalProperties: false
+
                 moltransrot:
                     description: "Molecular translation and rotation"
                     properties:
@@ -326,6 +395,7 @@ properties:
 
                 atomrdf:
                     description: "Atom-atom radial distribution function"
+                    type: object
                     properties:
                         dr: {type: number, description: "Binning resolution along r (Å)"}
                         file: {type: string, description: "Output file"}
@@ -336,7 +406,35 @@ properties:
                         nskip: {type: integer, default: 0}
                     required: [dr, file, name1, name2, nstep]
                     additionalProperties: false
+
+                molrdf:
+                    description: "Molecule-molecule radial distribution function"
                     type: object
+                    properties:
+                        dr: {type: number, default: 0.1, description: "Binning resolution along r (Å)"}
+                        file: {type: string, description: "Output file"}
+                        name1: {type: string, description: Molecule name 1}
+                        name2: {type: string, description: Molecule name 2}
+                        dim: {type: integer, minimum: 1, maximum: 3, default: 3, description: Dimensions for volume element}
+                        nstep: {type: integer, description: Interval between samples}
+                        nskip: {type: integer, default: 0, description: Initial steps to skip}
+                    required: [file, name1, name2, nstep]
+                    additionalProperties: false
+
+                atomprofile:
+                    description: Summed density of atoms in spherical, cylindrical or planar shells
+                    type: object
+                    properties:
+                        nstep: {type: integer, description: Interval between samples}
+                        atoms: {type: array, items: {type: string}, description: "List of atom names to sample; [*] selects all"}
+                        charge: {type: boolean, default: false, description: Calc. charge density instead of density}
+                        file: {type: string, description: Output filename for profile}
+                        dr: {type: number, default: 0.1, description: Radial resolution (Å)}
+                        origo: {type: array, items: {type: number}, default: [0,0,0], minItems: 3, maxItems: 3, description: "Center of the profile (r=0)"}
+                        atomcom: {type: string, description: Atom name; use the mass center of these atoms as origin}
+                        dir: {type: array, items: {type: number}, default: [1,1,1], description: Direction along which the profile is calculated}
+                    required: [nstep, atoms, file]
+                    additionalProperties: false
 
                 density:
                     properties:
@@ -409,6 +507,27 @@ properties:
                     required: [file]
                     additionalProperties: false
                     type: object
+
+                scatter:
+                    description: Structure factor analysis
+                    type: object
+                    properties:
+                        nstep: {type: integer, description: Sample interval}
+                        nskip: {type: integer, default: 0, description: Number of initial samples to skip}
+                        molecules:
+                            description: "List of molecule names to sample (array); [*] selects all"
+                            items: {type: string}
+                            type: array
+                        qmin: {type: number, description: Minimum q value (1/Å)}
+                        qmax: {type: number, description: Maximum q value (1/Å)}
+                        dq: {type: number, description: q spacing (1/Å)}
+                        com: {type: boolean, default: true, description: Treat molecular mass centers as single point scatterers}
+                        pmax: {type: integer, default: 15, description: Multiples of (h,k,l) when using the explicit scheme}
+                        scheme:
+                            description: Scattering method
+                            enum: [debye, explicit]
+                        required: [nstep, molecules, scheme]
+                    additionalProperties: false
 
                 sliceddensity:
                     properties:

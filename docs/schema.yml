@@ -163,6 +163,58 @@ properties:
                         type: string
                         description: One-column file with relative weights for each conformation. Must match frames in `traj` file
 
+    pairpotential:
+        coulomb:
+            type: object
+            properties:
+                type:
+                    type: string
+                    enum: [plain, qpotential, ewald, fanourgakis, poisson, yukawa, fenell, zahn, zerodipole, wolf, reactionfield]
+                    description: "Coulomb schema"
+                epsr: {type: number, description: "Relative dielectric constant"}
+                cutoff: {type: number, description: "Spherical cutoff (Å)"}
+            required: [type, epsr]
+            allOf:
+                - if:
+                      properties: {type: {const: "qpotential"}}
+                  then:
+                      properties:
+                          order: {type: integer, description: "Order"}
+                      required: [cutoff, order]
+                - if:
+                      properties: {type: {const: "poisson"}}
+                  then:
+                      properties:
+                          C: {type: integer, default: 3}
+                          D: {type: integer, default: 3}
+                      required: [cutoff, C, D]
+                - if:
+                      properties: {type: {const: "fanourgakis"}}
+                  then:
+                      required: [cutoff]
+
+
+        lennardjones:
+            description: Lennard-Jones pair potential
+            properties:
+                mixing:
+                    type: string
+                    enum: [arithmetic, geometric, lorentz_berthelot, LB]
+                    description: "Mixing rule for epsilon and sigma"
+                eps: {type: string, default: "eps"}
+                sigma: {type: string, default: "sigma"}
+                custom:
+                    type: array
+                    items:
+                        type: object
+                        additionalProperties:
+                            type: object
+                            properties:
+                                eps: {type: number} # could these be made to depend on "eps" and "sigma" strings?
+                                sigma: {type: number} # needed to respect customization
+            required: [mixing]
+            additionalProperties: false
+ 
     reactioncoordinate:
         system:
             type: object
@@ -206,6 +258,18 @@ properties:
                         bondlist:
                             type: array
                             items: {type: object}
+                    additionalProperties: false
+
+                nonbonded_coulomblj:
+                    description: "Nonbonded interactions (Coulomb+LennardJones)"
+                    type: object
+                    properties:
+                        coulomb: {"$ref": "#/properties/pairpotential/coulomb"}
+                        lennardjones: {"$ref": "#/properties/pairpotential/lennardjones"}
+                        cutoff_g2g: {}
+                        openmp: {}
+                        timings: {}
+                    required: [coulomb, lennardjones]
                     additionalProperties: false
 
                 sasa:

@@ -163,6 +163,36 @@ properties:
                         type: string
                         description: One-column file with relative weights for each conformation. Must match frames in `traj` file
 
+    reactioncoordinate:
+        system:
+            type: object
+            properties:
+                indexes: {type: array, items: {type: integer}}
+                property:
+                    type: string
+                    enum: [V, Lx, Ly, Lz, radius, Q, N]
+            required: [property]
+        molecule:
+            type: object
+            properties:
+                index: {type: integer, description: Molecule index}
+                indexes: {type: array, items: {type: integer}}
+                property:
+                    description: Molecular property to sample
+                    type: string
+                    enum: [angle, com_x, com_y, com_z, confid, end2end, Rg, mu_x, mu_y, mu_z, mu, muangle, N, Q,
+                    atomatom, cmcm, cmcm_z, mindist, "L/R", Rinner]
+            required: [property, index]
+        atom:
+            type: object
+            properties:
+                index: {type: integer, description: Atom index}
+                property:
+                    description: Atomic property to sample
+                    type: string
+                    enum: [x, y, z, q, R, N]
+            required: [property, index]
+
     energy:
         type: array
         items:
@@ -190,6 +220,7 @@ properties:
                 penalty:
                     description: Flat histogram sampling in one or two dimensions using penalty functions
                     type: object
+                    required: [f0, update, scale, file, coords]
                     properties:
                         f0: {type: number, description: Penalty energy increment (kT)}
                         update: {type: integer, description: Interval between scaling of f0}
@@ -199,9 +230,35 @@ properties:
                         file: {type: string, description: Name of saved/loaded penalty function}
                         histogram: {type: string, description: Name of saved histogram (optional)}
                         overwrite: {type: boolean, default: true, description: Name of saved histogram (optional)}
-                        coords: {type: array, items: {type: object}, minItems: 1, maxItems: 2}
-                    required: [f0, update, scale, file, coords]
-                    additionalProperties: false
+                        coords:
+                            type: array
+                            minItems: 1
+                            maxItems: 2
+                            items:
+                                type: object
+                                additionalProperties: false
+                                properties:
+                                    atom:
+                                        allOf: ["$ref": "#/properties/reactioncoordinate/atom"]
+                                        properties:
+                                            range: {type: array, minItems: 2, maxItems: 2, items: {type: number}, description: "Allowed interval [min,max]"}
+                                            resolution: {type: number, description: "Resolution along the coordinate"}
+                                            additionalProperties: false
+                                        required: [range, resolution]
+                                    molecule:
+                                        allOf: ["$ref": "#/properties/reactioncoordinate/molecule"]
+                                        properties:
+                                            range: {type: array, minItems: 2, maxItems: 2, items: {type: number}, description: "Allowed interval [min,max]"}
+                                            resolution: {type: number, description: "Resolution along the coordinate"}
+                                            additionalProperties: false
+                                        required: [range, resolution]
+                                    system:
+                                        allOf: ["$ref": "#/properties/reactioncoordinate/system"]
+                                        properties:
+                                            range: {type: array, minItems: 2, maxItems: 2, items: {type: number}, description: "Allowed interval [min,max]"}
+                                            resolution: {type: number, description: "Resolution along the coordinate"}
+                                            additionalProperties: false
+                                        required: [range, resolution]
 
                 customexternal:
                     description: "External Custom Potential"
@@ -456,7 +513,6 @@ properties:
                 reactioncoordinate:
                     type: object
                     properties:
-                        index: {type: integer, description: Atom index, atom id or group index}
                         resolution: {type: number, description: "Resolution along the coordinate (Å)", default: 0.5}
                         file: {type: string, description: Output file as a function of steps}
                         nstep: {type: integer}
@@ -467,30 +523,15 @@ properties:
                         - if:
                               properties: {type: {const: "atom"}}
                           then:
-                              properties:
-                                  property: {type: string, description: Atomic property to sample, enum: [x,y,z,q,R,N]}
-                              required: [property, index]
+                              {"$ref": "#/properties/reactioncoordinate/atom"}
                         - if:
                               properties: {type: {const: "molecule"}}
                           then:
-                              properties:
-                                  indexes: {type: array, items: {type: integer}}
-                                  property:
-                                      type: string
-                                      enum: [angle, com_x, com_y,com_z,confid,end2end,Rg,mu_x,mu_y,mu_z,mu,muangle,N,Q,
-                                      atomatom, cmcm, cmcm_z, mindist, "L/R", Rinner]
-                                      description: Molecular property to sample
-                              required: [property]
+                              {"$ref": "#/properties/reactioncoordinate/molecule"}
                         - if:
                               properties: {type: {const: "system"}}
                           then:
-                              properties:
-                                  indexes: {type: array, items: {type: integer}}
-                                  property:
-                                      type: string
-                                      enum: [Q, V, Lx, Ly, Lz, height, radius, N]
-                                      description: System property to sample
-                              required: [property]
+                              {"$ref": "#/properties/reactioncoordinate/system"}
 
                 sanity:
                     properties:

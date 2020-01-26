@@ -58,7 +58,13 @@ if pygments:
     else:
         formatter = NullFormatter
 
-# Open schema file
+
+def human_readable_path(path):
+    out=str()
+    for i in path:
+        if not isinstance(i, int):
+            out += str(i)+' -> '
+    return out
 
 def print_table(schema):
     ''' pretty print schema as markdown table '''
@@ -79,7 +85,6 @@ def print_table(schema):
                 else:
                     print("{:25} | {:7} | {}".format('`'+_property+'`', 'n/a', _description))
 
-
 def validate_input(instance):
     ''' JSON schema checker '''
     if jsonschema:
@@ -91,7 +96,7 @@ def validate_input(instance):
                     _schema = yaml.safe_load(f)
                     error = best_match(Draft7Validator(_schema).iter_errors(instance))
                     if error!=None:
-                        print( "{}: {}\n".format(error.path, error.message) )
+                        print( "{}{}\n".format(human_readable_path(error.path), error.message) )
                         print_table(error.schema)
                         sys.exit(1)
                 break

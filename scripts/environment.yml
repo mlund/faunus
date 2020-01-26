@@ -22,3 +22,4 @@ dependencies:
     - notebook=5
     - nbconvert=5
     - sdl2=2
+    - jsonschema=3

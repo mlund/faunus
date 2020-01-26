@@ -1,4 +1,5 @@
 $schema: http://json-schema.org/schema#
+
 properties:
 
     temperature: {type: number}
@@ -193,9 +194,9 @@ properties:
                   then:
                       required: [cutoff]
 
-
-        lennardjones:
-            description: Lennard-Jones pair potential
+        mixing_rule:
+            description: Sigma and Epsilon Mixing rule
+            type: object
             properties:
                 mixing:
                     type: string
@@ -209,12 +210,30 @@ properties:
                         type: object
                         additionalProperties:
                             type: object
-                            properties:
-                                eps: {type: number} # could these be made to depend on "eps" and "sigma" strings?
-                                sigma: {type: number} # needed to respect customization
+                            minProperties: 2
+                            maxProperties: 2
+                            additionalProperties: {type: number, description: "Custom values for epsilon and sigma"}
             required: [mixing]
-            additionalProperties: false
- 
+
+        lennardjones:
+            description: Lennard-Jones pair potential
+            allOf: [{"$ref": "#/properties/pairpotential/mixing_rule"}]
+
+        wca:
+            description: Weeks-Chandler-Andersen pair potential
+            allOf: [{"$ref": "#/properties/pairpotential/mixing_rule"}]
+
+        all:
+            description: All possible pair-potentials
+            type: array
+            items:
+                type: object
+                properties:
+                    coulomb: {"$ref": "#/properties/pairpotential/coulomb"}
+                    lennardjones: {"$ref": "#/properties/pairpotential/lennardjones"}
+                    wca: {"$ref": "#/properties/pairpotential/wca"}
+                additionalProperties: true # change to `false` when all pair-potentials are here...
+
     reactioncoordinate:
         system:
             type: object
@@ -245,6 +264,19 @@ properties:
                     enum: [x, y, z, q, R, N]
             required: [property, index]
 
+    nonbonded_base:
+        properties:
+            cutoff_g2g:
+                anyOf:
+                    - {type: number, description: "Molecule-molecule cutoff (global)"}
+                    - {type: array, items: {type: object}}
+            openmp:
+                type: array
+                items:
+                    type: string
+                    enum: [g2g, i2all]
+            timings: {type: boolean}
+
     energy:
         type: array
         items:
@@ -260,17 +292,39 @@ properties:
                             items: {type: object}
                     additionalProperties: false
 
-                nonbonded_coulomblj:
-                    description: "Nonbonded interactions (Coulomb+LennardJones)"
+                nonbonded:
+                    description: "Nonbonded interactions"
                     type: object
                     properties:
-                        coulomb: {"$ref": "#/properties/pairpotential/coulomb"}
-                        lennardjones: {"$ref": "#/properties/pairpotential/lennardjones"}
-                        cutoff_g2g: {}
-                        openmp: {}
-                        timings: {}
+                        default: {"$ref": "#/properties/pairpotential/all"}
+                        cutoff_g2g: {type: [number, array]}
+                        timings: {type: boolean}
+                        openmp:
+                            type: array
+                            items:
+                                type: string
+                                enum: [g2g, i2all]
+                    required: [default]
+                    additionalProperties:
+                        allOf: [{"$ref": "#/properties/pairpotential/all"}]
+
+                nonbonded_coulomblj:
+                    description: "Nonbonded interactions (Coulomb+LennardJones)"
+                    allOf:
+                        - {"$ref": "#/properties/nonbonded_base"}
+                        - properties:
+                            coulomb: {"$ref": "#/properties/pairpotential/coulomb"}
+                            lennardjones: {"$ref": "#/properties/pairpotential/lennardjones"}
                     required: [coulomb, lennardjones]
-                    additionalProperties: false
+
+                nonbonded_coulombwca:
+                    description: "Nonbonded interactions (Coulomb+WCA)"
+                    allOf:
+                        - {"$ref": "#/properties/nonbonded_base"}
+                        - properties:
+                            coulomb: {"$ref": "#/properties/pairpotential/coulomb"}
+                            wca: {"$ref": "#/properties/pairpotential/wca"}
+                    required: [coulomb, wca]
 
                 sasa:
                     description: "Manybody solvent accessible surface area"

@@ -193,6 +193,15 @@ properties:
                       properties: {type: {const: "fanourgakis"}}
                   then:
                       required: [cutoff]
+                - if:
+                      properties: {type: {const: "ewald"}}
+                  then:
+                      properties:
+                          epss: {type: number}
+                          alpha: {type: number}
+                          kcutoff: {type: number}
+                          ipbc: {type: boolean, default: false}
+                      required: [cutoff, epss, alpha, kcutoff]
 
         mixing_rule:
             description: Sigma and Epsilon Mixing rule

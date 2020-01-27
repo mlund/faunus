@@ -10,6 +10,13 @@ import json, sys, argparse
 import warnings
 
 try:
+    jsonschema = True
+    from jsonschema import Draft7Validator
+    from jsonschema.exceptions import best_match
+except ImportError:
+    jsonschema = False
+
+try:
     import jinja2
 except ImportError:
     warnings.warn("warning: missing jinja2 module")
@@ -51,6 +58,49 @@ if pygments:
     else:
         formatter = NullFormatter
 
+
+def human_readable_path(path):
+    out=str()
+    for i in path:
+        if not isinstance(i, int):
+            out += str(i)+' -> '
+    return out
+
+def print_table(schema):
+    ''' pretty print schema as markdown table '''
+    properties = schema.get("properties", "")
+    if isinstance(properties, dict):
+        print("{:25} | {:7} | {:20}".format("Property", "Type", "Description"))
+        print("{:25} | {:7} | {:40}".format(25*"-", 7*"-", 40*"-"))
+        for key, value in properties.items():
+            required = key in schema.get("required", [""])
+            _property = key + str("*" if required else "")
+            if isinstance(value, dict):
+                _description = value.get("description", "")
+                if "type" in value:
+                    _default = value.get("default", "")
+                    if _default!="":
+                        _property = _property + '=' + str(_default)
+                    print("{:25} | {:7} | {}".format('`'+_property+'`', value["type"], _description))
+                else:
+                    print("{:25} | {:7} | {}".format('`'+_property+'`', 'n/a', _description))
+
+def validate_input(instance):
+    ''' JSON schema checker '''
+    if jsonschema:
+        pathname = os.path.dirname(sys.argv[0]) # location of yason.py
+        for subdir in ["/../docs", "/../share/faunus"]: # schema file can be in src or installed
+            schemafile = os.path.abspath(pathname+subdir) + '/schema.yml'
+            if os.path.exists(schemafile):
+                with open(schemafile, "r") as f:
+                    _schema = yaml.safe_load(f)
+                    error = best_match(Draft7Validator(_schema).iter_errors(instance))
+                    if error!=None:
+                        print( "{}{}\n".format(human_readable_path(error.path), error.message) )
+                        print_table(error.schema)
+                        sys.exit(1)
+                break
+
 try:  # ... to read json
     i = args.infile.read()
     if jinja2:
@@ -62,6 +112,7 @@ try:  # ... to read json
         # i = jinja2.Template(i).render() # render jinja2
 
     d = json.loads(i)
+    validate_input(d)
     if args.alwaysjson:
         if pygments:
             i = highlight(out, JsonLexer(), formatter())
@@ -74,6 +125,7 @@ try:  # ... to read json
 except json.decoder.JSONDecodeError:
     try:  # ... to read yaml
         d = yaml.safe_load(i)  # plain load was deprecated in PyYAML
+        validate_input(d)
         out = json.dumps(d, indent=args.indent)
         if pygments:
             out = highlight(out, JsonLexer(), formatter())

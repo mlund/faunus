@@ -319,6 +319,7 @@ if (TARGET pyfaunus)
 endif()
 
 install(FILES ${CMAKE_SOURCE_DIR}/LICENSE DESTINATION share/faunus)
+install(FILES ${CMAKE_SOURCE_DIR}/docs/schema.yml DESTINATION share/faunus)
 install(FILES ${CMAKE_BINARY_DIR}/tips.json DESTINATION share/faunus OPTIONAL)
 install(FILES ${CMAKE_BINARY_DIR}/manual.pdf DESTINATION share/faunus OPTIONAL)
 install(FILES ${CMAKE_BINARY_DIR}/manual.html DESTINATION share/faunus OPTIONAL)

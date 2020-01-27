@@ -656,7 +656,7 @@ Should one insist on conducting simulations far from equilibrium, a large displa
 `index`        | Array with _exactly two_ indices (relative to molecule)
 
 Finite extensible nonlinear elastic potential long range repulsive potential combined
-with the short ranged Weeks-Chandler-Anderson (wca) repulsive potential. This potential is particularly useful in combination with the `nonbonded_cached` energy.
+with the short ranged Weeks-Chandler-Andersen (wca) repulsive potential. This potential is particularly useful in combination with the `nonbonded_cached` energy.
 
 $$
      u(r) =

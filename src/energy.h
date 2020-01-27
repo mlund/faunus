@@ -552,35 +552,82 @@ template <typename Tpairpot, bool allow_anisotropic_pair_potential = true> class
         return u;
     }
 
-    /*
-     * Group-to-group energy. A subset of `g1` can be given with `index` which refers
-     * to the internal index (starting at zero) of the first group, `g1
-     * NOTE: the interpretation of this function is extended to also consider the mutual interactions
-     * of a subset of each group and in such case returns sub1 <-> 2 and !sub1<->sub2,
-     * hence excluding !sub1 <-> !sub2 in comparision to calling onconstrained g2g. In absence
-     * of sub1 any sub2 is ignored.
+    /**
+     * @brief Group-to-group energy.
      */
-    virtual double g2g(const Tgroup &g1, const Tgroup &g2, const std::vector<int> &index = std::vector<int>(),
-                       const std::vector<int> &jndex = std::vector<int>()) {
-        using namespace ranges;
+    virtual double g2g(const Tgroup &g1, const Tgroup &g2) {
         double u = 0;
-        if (not cut(g1, g2)) {
-            if (index.empty() && jndex.empty()) // if index is empty, assume all in g1 have changed
-                //#pragma omp parallel for reduction(+ : u) schedule(dynamic) if (omp_enable and omp_p2p)
-                for (size_t i = 0; i < g1.size(); i++)
-                    for (size_t j = 0; j < g2.size(); j++)
-                        u += i2i(g1[i], g2[j]);
-            else { // only a subset of g1
-                for (auto i : index)
-                    for (auto j = g2.begin(); j != g2.end(); ++j)
-                        u += i2i(g1[i], *j);
-                if (not jndex.empty()) {
-                    auto fixed = ranges::views::ints(0, int(g1.size())) | ranges::views::remove_if([&index](int i) {
-                                     return std::binary_search(index.begin(), index.end(), i);
-                                 });
-                    for (auto i : jndex)     // moved2        <-|
-                        for (auto j : fixed) // static1   <-|
-                            u += i2i(g2[i], g1[j]);
+        if (!cut(g1, g2)) {
+            const size_t G1 = g1.size();
+            const size_t G2 = g2.size();
+// https://gcc.gnu.org/gcc-9/porting_to.html#ompdatasharing
+// #pragma omp parallel for collapse(2) default(none) shared(G1, G2, g1, g2) reduction(+: u) schedule(dynamic, 100) if
+// (G1*G2 >= 200)
+#pragma omp parallel for collapse(2) default(shared) reduction(+ : u) schedule(dynamic, 100) if (G1 * G2 >= 200)
+            for (size_t i = 0; i < G1; ++i) {
+                for (size_t j = 0; j < G2; ++j) {
+                    u += i2i(*(g1.begin() + i), *(g2.begin() + j));
+                }
+            }
+        }
+        return u;
+    }
+
+    /**
+     * @brief Group-to-group energy including only a subset of the first group.
+     *
+     * @param index1 The internal index (starting at zero) of the first group, g1,
+     */
+    virtual double g2g(const Tgroup &g1, const Tgroup &g2, const std::vector<int> &index1) {
+        if (index1.empty()) { // FIXME Ugly backwards compatibility fallback
+            return g2g(g1, g2);
+        }
+
+        double u = 0;
+        if (!cut(g1, g2)) {
+            const size_t I1 = index1.size();
+            const size_t G2 = g2.size();
+// https://gcc.gnu.org/gcc-9/porting_to.html#ompdatasharing
+// #pragma omp parallel for collapse(2) default(none) shared(I1, G2, index1, g1, g2) reduction(+: u) schedule(dynamic,
+// 100) if (G1*G2 >= 200)
+#pragma omp parallel for collapse(2) default(shared) reduction(+ : u) schedule(dynamic, 100) if (I1 * G2 >= 200)
+            for (size_t i = 0; i < I1; ++i) {
+                for (size_t j = 0; j < G2; ++j) {
+                    u += i2i(*(g1.begin() + index1[i]), *(g2.begin() + j));
+                }
+            }
+        }
+        return u;
+    }
+
+    /**
+     * @brief Group-to-group energy.
+     *
+     * A subset of `g1` can be given with `index` which refers to the internal index (starting at zero) of the first
+     * group, `g1`.
+     * NOTE: The interpretation of this function is extended to also consider the mutual interactions of a subset
+     * of each group and in such case returns sub1 <-> sub2 and !sub1 <-> sub2, hence excluding !sub1 <-> !sub2
+     * in comparision to calling unconstrained g2g. In absence of sub1 any sub2 is ignored.
+     */
+    // FIXME I cannot understand the description.
+    virtual double g2g(const Tgroup &g1, const Tgroup &g2, const std::vector<int> &index1,
+                       const std::vector<int> &index2) {
+        if (index2.empty()) { // FIXME Ugly backwards compatibility fallback
+            return g2g(g1, g2, index1);
+        }
+
+        double u = 0;
+        if (!cut(g1, g2)) {
+            if (!index1.empty()) {
+                u += g2g(g1, g2, index1);
+            }
+            // FIXME this is copy-paste from the ugly original function
+            auto fixed = ranges::view::ints(0, int(g1.size())) | ranges::view::remove_if([&index1](int i) {
+                             return std::binary_search(index1.begin(), index1.end(), i);
+                         });
+            for (auto i : index2) {    // moved2    <-|
+                for (auto j : fixed) { // static1   <-|
+                    u += i2i(*(g2.begin() + i), *(g1.begin() + j));
                 }
             }
         }
@@ -817,14 +864,8 @@ template <typename Tpairpot> class NonbondedCached : public Nonbonded<Tpairpot> 
     typedef typename Space::Tgroup Tgroup;
     Eigen::MatrixXf cache;
     Space &spc;
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-    double g2g(const Tgroup &g1, const Tgroup &g2, const std::vector<int> &index = std::vector<int>(),
-               const std::vector<int> &jndex = std::vector<int>()) override {
-#pragma GCC diagnostic pop
-        //assert(index.empty() && "unimplemented");
-        //assert(jndex.empty() && "unimplemented");
 
+    double g2g(const Tgroup &g1, const Tgroup &g2) override {
         int i = &g1 - &base::spc.groups.front();
         int j = &g2 - &base::spc.groups.front();
         if (j < i)
@@ -832,13 +873,24 @@ template <typename Tpairpot> class NonbondedCached : public Nonbonded<Tpairpot> 
         if (base::key == Energybase::NEW) { // if this is from the trial system,
             double u = 0;
             if (not base::cut(g1, g2)) {
-                for (auto &i : g1)
-                    for (auto &j : g2)
-                        u += base::i2i(i, j);
+                for (auto &i1 : g1)
+                    for (auto &i2 : g2)
+                        u += base::i2i(i1, i2);
             }
             cache(i, j) = u;
         }
         return cache(i, j); // return (cached) value
+    }
+
+    double g2g(const Tgroup &g1, const Tgroup &g2, __attribute__((unused)) const std::vector<int> &index1) {
+        std::logic_error("g2g: not implemented");
+        return g2g(g1, g2);
+    }
+
+    double g2g(const Tgroup &g1, const Tgroup &g2, __attribute__((unused)) const std::vector<int> &index1,
+               __attribute__((unused)) const std::vector<int> &index2) {
+        std::logic_error("g2g: not implemented");
+        return g2g(g1, g2);
     }
 
   public:

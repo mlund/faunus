@@ -637,36 +637,39 @@ Hamiltonian::Hamiltonian(Space &spc, const json &j) {
     if (spc.geo.type not_eq Geometry::CUBOID)
         emplace_back<Energy::ContainerOverlap>(spc);
 
+#ifdef _OPENMP
+    // ready for OMP enabled policies
+    const bool parallel = false;
+#else
+    const bool parallel = false;
+#endif
+
     for (auto &m : j) { // loop over energy list
         size_t oldsize = vec.size();
         for (auto it : m.items()) {
             try {
-                if (it.key() == "nonbonded_coulomblj")
-                    emplace_back<Energy::Nonbonded<CoulombLJ, false>>(it.value(), spc, *this);
-
-                else if (it.key() == "nonbonded_newcoulomblj")
-                    emplace_back<Energy::Nonbonded<CoulombLJ, false>>(it.value(), spc, *this);
-
+                if (it.key() == "nonbonded_coulomblj" || it.key() == "nonbonded_newcoulomblj")
+                    emplace_back<Energy::Nonbonded<PairingPolicy<PairEnergy<CoulombLJ, false>, parallel>>>(it.value(), spc, *this);
                 else if (it.key() == "nonbonded_coulomblj_EM")
                     emplace_back<Energy::NonbondedCached<CoulombLJ>>(it.value(), spc, *this);
 
                 else if (it.key() == "nonbonded_splined")
-                    emplace_back<Energy::Nonbonded<TabulatedPotential, false>>(it.value(), spc, *this);
+                    emplace_back<Energy::Nonbonded<PairingPolicy<PairEnergy<TabulatedPotential, false>, parallel>>>(it.value(), spc, *this);
 
                 else if (it.key() == "nonbonded" or it.key() == "nonbonded_exact")
-                    emplace_back<Energy::Nonbonded<FunctorPotential>>(it.value(), spc, *this);
+                    emplace_back<Energy::Nonbonded<PairingPolicy<PairEnergy<FunctorPotential, true>, parallel>>>(it.value(), spc, *this);
 
                 else if (it.key() == "nonbonded_cached")
                     emplace_back<Energy::NonbondedCached<TabulatedPotential>>(it.value(), spc, *this);
 
                 else if (it.key() == "nonbonded_coulombwca")
-                    emplace_back<Energy::Nonbonded<CoulombWCA, false>>(it.value(), spc, *this);
+                    emplace_back<Energy::Nonbonded<PairingPolicy<PairEnergy<CoulombWCA, false>, parallel>>>(it.value(), spc, *this);
 
                 else if (it.key() == "nonbonded_pm" or it.key() == "nonbonded_coulombhs")
-                    emplace_back<Energy::Nonbonded<PrimitiveModel, false>>(it.value(), spc, *this);
+                    emplace_back<Energy::Nonbonded<PairingPolicy<PairEnergy<PrimitiveModel, false>, parallel>>>(it.value(), spc, *this);
 
                 else if (it.key() == "nonbonded_pmwca")
-                    emplace_back<Energy::Nonbonded<PrimitiveModelWCA, false>>(it.value(), spc, *this);
+                    emplace_back<Energy::Nonbonded<PairingPolicy<PairEnergy<PrimitiveModelWCA, false>, parallel>>>(it.value(), spc, *this);
 
                 // this should be moved into `Nonbonded` and added when appropriate
                 // Nonbonded now has access to Hamiltonian (*this) and can therefore

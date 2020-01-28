@@ -256,7 +256,13 @@ else()
             add_definitions("-DGIT_COMMIT_HASH=${GIT_COMMIT_HASH}")
         endif ()
         execute_process(
-            COMMAND ${GIT_EXECUTABLE} describe --abbrev=0 --tags
+            COMMAND ${GIT_EXECUTABLE} rev-list --tags --max-count=1
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+            OUTPUT_VARIABLE GIT_TAG_HASH
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            )
+        execute_process(
+            COMMAND ${GIT_EXECUTABLE} describe --tags ${GIT_TAG_HASH}
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
             OUTPUT_VARIABLE GIT_LATEST_TAG
             OUTPUT_STRIP_TRAILING_WHITESPACE

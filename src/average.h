@@ -36,7 +36,7 @@ namespace Faunus
       } //!< Add value to current set
 
       void clear() {
-          sum = 0;
+          sum = sqsum = 0;
           cnt = 0;
       } //!< Clear all data
 

@@ -852,5 +852,50 @@ void SASAEnergy::to_json(json &j) const {
     _roundjson(j, 5); // set json output precision
 }
 #endif
+
+void from_json(const json &j, Cutoff &c) {
+    // disable all group-to-group cutoffs by setting infinity
+    for (auto &i : Faunus::molecules)
+        for (auto &j : Faunus::molecules)
+            c.cutoff_squared.set(i.id(), j.id(), pc::infty);
+
+    auto it = j.find("cutoff_g2g");
+    if (it != j.end()) {
+        if (it->is_number()) {
+            // old style input w. only a single cutoff
+            c.default_cutoff_squared = std::pow(it->get<double>(), 2);
+            for (auto &i : Faunus::molecules)
+                for (auto &j : Faunus::molecules)
+                    c.cutoff_squared.set(i.id(), j.id(), c.default_cutoff_squared);
+        }
+        else if (it->is_object()) {
+            // new style input w. multiple cutoffs between molecules
+            // ensure that there is a default, fallback cutoff
+            c.default_cutoff_squared = std::pow(it->at("default").get<double>(), 2);
+            for (auto &i : Faunus::molecules)
+                for (auto &j : Faunus::molecules)
+                    c.cutoff_squared.set(i.id(), j.id(), c.default_cutoff_squared);
+            // loop for space separated molecule pairs in keys
+            for (auto &i : it->items()) {
+                auto v = words2vec<std::string>(i.key());
+                if (v.size() == 2) {
+                    int id1 = (*findName(Faunus::molecules, v[0])).id();
+                    int id2 = (*findName(Faunus::molecules, v[1])).id();
+                    c.cutoff_squared.set(id1, id2, std::pow(i.value().get<double>(), 2));
+                }
+            }
+        }
+    }
+}
+
+void to_json(json &j, const Cutoff &c) {
+    j["cutoff_g2g"] = json::object();
+    auto &_j = j["cutoff_g2g"];
+    for (auto &a : Faunus::molecules)
+        for (auto &b : Faunus::molecules)
+            if (a.id() >= b.id())
+                _j[a.name + " " + b.name] = std::sqrt(c.cutoff_squared(a.id(), b.id()));
+}
+
 } // end of namespace Energy
 } // end of namespace Faunus

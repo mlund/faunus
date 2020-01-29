@@ -242,22 +242,59 @@ class Bonded : public Energybase {
 };
 
 /**
+ * @brief Determine if two groups are separated beyond the cutoff distance.
+ *
+ * The cutoff distance can be specified independently for each group pair to override the default value.
+ *
+ * @see PairEnergy
+ */
+class Cutoff {
+    double default_cutoff_squared = pc::infty;
+    PairMatrix<double> cutoff_squared;  //!< matrix with group-to-group cutoff distances squared in angstrom squared
+    double total_cnt = 0, skip_cnt = 0; //!< statistics
+    Space &spc;
+    friend void from_json(const json &j, Cutoff &c);
+    friend void to_json(json &j, const Cutoff &c);
+
+  public:
+    /**
+     * @return true if group<->group interaction is beyond the cutoff distance, i.e., it can be skipped, false otherwise
+     */
+    template <typename T> inline bool cut(const T &group1, const T &group2) {
+        bool result = false;
+        ++total_cnt;
+        if (!group1.atomic && !group2.atomic // atomic groups have no meaningful cm
+            && spc.geo.sqdist(group1.cm, group2.cm) >= cutoff_squared(group1.id, group2.id)) {
+            result = true;
+            ++skip_cnt;
+        }
+        return result;
+    }
+
+    /**
+     * @brief Functor alias for @see cut
+     */
+    template <typename... Args> inline auto operator()(Args &&... args) { return cut(std::forward<Args>(args)...); }
+
+    Cutoff(Space &spc) : spc(spc) {}
+};
+
+void from_json(const json &j, Cutoff &c);
+void to_json(json &j, const Cutoff &c);
+
+/**
  * @brief Nonbonded energy using a pair-potential
  * @tparam Tpairpot Pair potential to inject
  * @tparam allow_anisotropic_pair_potential If true, a distance vector is passed to the pair potential
  */
 template <typename Tpairpot, bool allow_anisotropic_pair_potential = true> class Nonbonded : public Energybase {
   private:
-    double g2gcnt = 0, g2gskip = 0;
-    PairMatrix<double> cutoff2; // matrix w. group-to-group cutoff
     std::vector<const Particle *> i_interact_with_these;
 
     TimeRelativeOfTotal<> timer_g_internal;
 
   protected:
     typedef typename Space::Tgroup Tgroup;
-    double Rc2_g2g = pc::infty;
-
     // control of when OpenMP should be used
     bool omp_enable = false;
     bool omp_i2all = false;
@@ -276,25 +313,11 @@ template <typename Tpairpot, bool allow_anisotropic_pair_potential = true> class
                 _a.push_back("i2all");
             j["openmp"] = _a;
         }
-        j["cutoff_g2g"] = json::object();
-        auto &_j = j["cutoff_g2g"];
-        for (auto &a : Faunus::molecules)
-            for (auto &b : Faunus::molecules)
-                if (a.id() >= b.id())
-                    _j[a.name + " " + b.name] = sqrt(cutoff2(a.id(), b.id()));
-
         j["timings"] = {{"g_internal", timer_g_internal.result()}};
+        Energy::to_json(j, cut);
     }
 
-    template <typename T> inline bool cut(const T &g1, const T &g2) {
-        g2gcnt++;
-        if (g1.atomic || g2.atomic)
-            return false;
-        if (spc.geo.sqdist(g1.cm, g2.cm) < cutoff2(g1.id, g2.id))
-            return false;
-        g2gskip++;
-        return true;
-    } //!< true if group<->group interaction can be skipped
+    Cutoff cut;
 
     template <typename T> inline double i2i(const T &a, const T &b) {
         assert(&a != &b); // a and b cannot be the same particle
@@ -489,7 +512,7 @@ template <typename Tpairpot, bool allow_anisotropic_pair_potential = true> class
     BasePointerVector<Energybase> &pot;
     Tpairpot pairpot; //!< Pair potential
 
-    Nonbonded(const json &j, Space &spc, BasePointerVector<Energybase> &pot) : spc(spc), pot(pot) {
+    Nonbonded(const json &j, Space &spc, BasePointerVector<Energybase> &pot) : cut(spc), spc(spc), pot(pot) {
         name = "nonbonded";
         pairpot.from_json(j);
 
@@ -501,39 +524,7 @@ template <typename Tpairpot, bool allow_anisotropic_pair_potential = true> class
         addPairPotentialSelfEnergy();
 
         configureOpenMP(j);
-
-        // disable all group-to-group cutoffs by setting infinity
-        for (auto &i : Faunus::molecules)
-            for (auto &j : Faunus::molecules)
-                cutoff2.set(i.id(), j.id(), pc::infty);
-
-        auto it = j.find("cutoff_g2g");
-        if (it != j.end()) {
-            // old style input w. only a single cutoff
-            if (it->is_number()) {
-                Rc2_g2g = std::pow(it->get<double>(), 2);
-                for (auto &i : Faunus::molecules)
-                    for (auto &j : Faunus::molecules)
-                        cutoff2.set(i.id(), j.id(), Rc2_g2g);
-            }
-            // new style input w. multiple cutoffs between molecules
-            else if (it->is_object()) {
-                // ensure that there is a default, fallback cutoff
-                Rc2_g2g = std::pow(it->at("default").get<double>(), 2);
-                for (auto &i : Faunus::molecules)
-                    for (auto &j : Faunus::molecules)
-                        cutoff2.set(i.id(), j.id(), Rc2_g2g);
-                // loop for space separated molecule pairs in keys
-                for (auto &i : it->items()) {
-                    auto v = words2vec<std::string>(i.key());
-                    if (v.size() == 2) {
-                        int id1 = (*findName(Faunus::molecules, v[0])).id();
-                        int id2 = (*findName(Faunus::molecules, v[1])).id();
-                        cutoff2.set(id1, id2, std::pow(i.value().get<double>(), 2));
-                    }
-                }
-            }
-        }
+        from_json(j, cut);
     }
 
     /**

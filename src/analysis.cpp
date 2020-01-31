@@ -1395,7 +1395,7 @@ void VirtualTranslate::_from_json(const json &j) {
         output_file.open(file);
         if (!output_file)
             throw std::runtime_error(name + ": cannot open output file " + file);
-        output_file << "# steps dL/" + u8::angstrom + " du/kT <F>/kT/" + u8::angstrom + "\n"s;
+        output_file << "# steps dL/" + u8::angstrom + " du/kT <force>/kT/" + u8::angstrom + "\n"s;
         output_file.precision(14);
     }
 }
@@ -1418,8 +1418,8 @@ void VirtualTranslate::_sample() {
                 else {
                     average_exp_du += std::exp(-du); // widom / perturbation average
                     if (output_file)                 // write sample event to output file
-                        output_file << cnt << " " << dL << " " << du << " "
-                                    << " " << std::log(average_exp_du) / dL << "\n";
+                        output_file << fmt::format("{:d} {:.3f} {:.10f} {:.6f}\n", cnt, dL, du,
+                                                   std::log(average_exp_du) / dL);
                 }
             }
         }

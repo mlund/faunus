@@ -219,6 +219,13 @@ set_property(TEST penalty APPEND PROPERTY ENVIRONMENT FAUNUS_EXECUTABLE=$<TARGET
 set_property(TEST penalty APPEND PROPERTY ENVIRONMENT YASON_EXECUTABLE=${YASON})
 
 add_test(
+    NAME virial
+    COMMAND sh -c "jupyter nbconvert --execute virial.ipynb --ExecutePreprocessor.timeout=None"
+    WORKING_DIRECTORY ${EXAMPLES_DIR}/virial)
+set_property(TEST virial APPEND PROPERTY ENVIRONMENT FAUNUS_EXECUTABLE=$<TARGET_FILE:faunus>)
+set_property(TEST virial APPEND PROPERTY ENVIRONMENT YASON_EXECUTABLE=${YASON})
+
+add_test(
     NAME minimal
     COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} minimal.yml\
     | $<TARGET_FILE:faunus> --nobar --state minimal.state.json\
@@ -355,6 +362,8 @@ install(FILES
     ${EXAMPLES_DIR}/minimal/minimal.state.json
     ${EXAMPLES_DIR}/penalty/penalty.yml
     ${EXAMPLES_DIR}/penalty/penalty.ipynb
+    ${EXAMPLES_DIR}/virial/virial.yml
+    ${EXAMPLES_DIR}/virial/virial.ipynb
     ${EXAMPLES_DIR}/chain/chain.yml
     ${EXAMPLES_DIR}/chain/chain.xyz
     ${EXAMPLES_DIR}/chain/chain.state.json

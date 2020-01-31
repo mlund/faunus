@@ -2,7 +2,7 @@ $schema: http://json-schema.org/schema#
 
 properties:
 
-    temperature: {type: number}
+    temperature: {type: number, description: System temperature in Kelvin}
 
     mcloop:
         type: object
@@ -57,6 +57,20 @@ properties:
                   properties: {type: {const: "hexagonal"}}
               then:
                   required: [radius, length]
+
+    insertmolecules:
+        type: array
+        minItems: 1
+        items:
+            type: object
+            additionalProperties:
+                type: object
+                additionalProperties: false
+                properties:
+                    N: {type: integer, description: Number of molecules to insert}
+                    inactive: {type: boolean, default: false, description: Should molecules be inactive?}
+                    positions: {type: string, description: Load positions from file}
+                required: [N]
 
     atomlist:
         type: array
@@ -144,7 +158,13 @@ properties:
                             - type: string
                               pattern: "(.*?)\\.(pqr|aam|xyz)$"
                             - type: array
-                              items: {type: object}
+                              items:
+                                  type: object
+                                  additionalProperties:
+                                      type: array
+                                      items: {type: number}
+                                      minItems: 3
+                                      maxItems: 3
                             - type: object
                               properties:
                                   fasta: {type: string}
@@ -473,10 +493,11 @@ properties:
                         molecule: {type: string}
                         repeat: {type: [integer, string]}
                         dir:
-                            items: {type: number}
                             type: array
+                            items: {type: number}
                             minItems: 3
                             maxItems: 3
+                            default: [1,1,1]
                         dirrot:
                             items: {type: number}
                             type: array
@@ -498,6 +519,7 @@ properties:
                             type: array
                             minItems: 3
                             maxItems: 3
+                            default: [1,1,1]
                         dirrot:
                             items: {type: number}
                             type: array
@@ -587,7 +609,7 @@ properties:
                         name2: {type: string}
                         dim: {type: integer, minimum: 1, maximum: 3, default: 3}
                         nstep: {type: integer}
-                        nskip: {type: integer, default: 0}
+                        nskip: {type: integer, default: 0, description: Initial steps to skip}
                     required: [dr, file, name1, name2, nstep]
                     additionalProperties: false
 
@@ -623,7 +645,7 @@ properties:
                 density:
                     properties:
                         nstep: {type: integer}
-                        nskip: {type: integer, default: 0}
+                        nskip: {type: integer, default: 0, description: Initial steps to skip}
                         required: [nstep]
                         additionalProperties: false
                         type: object
@@ -631,6 +653,7 @@ properties:
                 polymershape:
                     properties:
                         molecules:
+                            minItems: 1
                             items: {type: string}
                             type: array
                         nstep: {type: integer}
@@ -643,7 +666,7 @@ properties:
                         resolution: {type: number, description: "Resolution along the coordinate (Å)", default: 0.5}
                         file: {type: string, description: Output file as a function of steps}
                         nstep: {type: integer}
-                        nskip: {type: integer}
+                        nskip: {type: integer, default: 0, description: Initial steps to skip}
                         type: {type: string, enum: [atom, molecule, system], description: Reaction coordinate type}
                     required: [file, nstep, type]
                     allOf:
@@ -663,7 +686,7 @@ properties:
                 sanity:
                     properties:
                         nstep: {type: integer}
-                        nskip: {type: integer, default: 0}
+                        nskip: {type: integer, default: 0, description: Initial steps to skip}
                     required: [nstep]
                     additionalProperties: false
                     type: object
@@ -698,39 +721,77 @@ properties:
                     additionalProperties: false
 
                 sliceddensity:
+                    type: object
                     properties:
                         atoms:
+                            minItems: 1
                             items: {type: string}
                             type: array
+                            description: Atoms to analyse
                         dz: {type: number, default: 0.1}
                         file: {type: string}
                         nstep: {type: integer}
-                        nskip: {type: integer, default: 0}
+                        nskip: {type: integer, default: 0, description: Initial steps to skip}
                         atomcom: {type: string}
                     required: [atoms, file, nstep]
                     additionalProperties: false
-                    type: object
 
                 systemenergy:
                     properties:
                         file: {type: string}
                         nstep: {type: integer}
-                        nskip: {type: integer, default: 0}
+                        nskip: {type: integer, default: 0, description: Initial steps to skip}
                     required: [file, nstep]
                     additionalProperties: false
                     type: object
 
+                virtualtranslate:
+                    description: "Virtual molecule translation"
+                    properties:
+                        molecule: {type: string, description: Molecule name to virtually translate (there can be only one}
+                        file: {type: string, description: Output filename w. data as a function of steps}
+                        dir:
+                            type: array
+                            items: {type: number}
+                            minItems: 3
+                            maxItems: 3
+                            default: [0,0,1]
+                            description: Translation directions (length unimportant)
+                        dL: {type: number, description: Displacement distance}
+                        nstep: {type: integer, description: Interval between samples}
+                        nskip: {type: integer, default: 0, description: Number of steps to initially skip}
+                    required: [dL, molecule, nstep]
+                    additionalProperties: false
+ 
+                widom:
+                    description: "Widom ghost particle insertion"
+                    properties:
+                        ninsert: {type: integer, description: Number of times to insert per sample event}
+                        nstep: {type: integer, description: Interval between samples}
+                        nskip: {type: integer, default: 0, description: Number of steps to initially skip}
+                        molecule: {type: string, description: inactive molecule to (virtually) insert}
+                        absz: {type: boolean, default: false}
+                        dir:
+                            type: array
+                            items: {type: number}
+                            minItems: 3
+                            maxItems: 3
+                            default: [1,1,1]
+                            description: Insertion positions are scaled by this
+                    required: [ninsert, molecule, nstep]
+                    additionalProperties: false
+
                 xtcfile:
                     description: "Write Gromacs XTC trajectory"
                     properties:
-                        file: {type: string}
+                        file: {type: string, pattern: "(.*?)\\.(xtc)$"}
                         nstep: {type: integer}
-                        nskip: {type: integer, default: 0}
+                        nskip: {type: integer, default: 0, description: Initial steps to skip}
                         molecules:
                             items: {type: string}
                             type: array
                     required: [file, nstep]
                     additionalProperties: false
                     type: object
-                    # yason.py cluster.yml | jq .analysis | genson | yason.py
+# yason.py cluster.yml | jq .analysis | genson | yason.py
 

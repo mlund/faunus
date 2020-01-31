@@ -66,12 +66,17 @@ def human_readable_path(path):
             out += str(i)+' -> '
     return out
 
+def eprint(*args, **kwargs):
+    ''' print to stderr '''
+    print(*args, file=sys.stderr, **kwargs)
+
+
 def print_table(schema):
     ''' pretty print schema as markdown table '''
     properties = schema.get("properties", "")
     if isinstance(properties, dict):
-        print("{:25} | {:7} | {:20}".format("Property", "Type", "Description"))
-        print("{:25} | {:7} | {:40}".format(25*"-", 7*"-", 40*"-"))
+        eprint("{:25} | {:7} | {:20}".format("Property", "Type", "Description"))
+        eprint("{:25} | {:7} | {:40}".format(25*"-", 7*"-", 40*"-"))
         for key, value in properties.items():
             required = key in schema.get("required", [""])
             _property = key + str("*" if required else "")
@@ -81,9 +86,12 @@ def print_table(schema):
                     _default = value.get("default", "")
                     if _default!="":
                         _property = _property + '=' + str(_default)
-                    print("{:25} | {:7} | {}".format('`'+_property+'`', value["type"], _description))
+                    _type = value["type"]
+                    if isinstance(_type, list):
+                        _type = '/'.join(_type)
+                    eprint("{:25} | {:7} | {}".format('`'+_property+'`', _type, _description))
                 else:
-                    print("{:25} | {:7} | {}".format('`'+_property+'`', 'n/a', _description))
+                    eprint("{:25} | {:7} | {}".format('`'+_property+'`', 'n/a', _description))
 
 def validate_input(instance):
     ''' JSON schema checker '''
@@ -96,7 +104,7 @@ def validate_input(instance):
                     _schema = yaml.safe_load(f)
                     error = best_match(Draft7Validator(_schema).iter_errors(instance))
                     if error!=None:
-                        print( "{}{}\n".format(human_readable_path(error.path), error.message) )
+                        eprint( "{}{}\n".format(human_readable_path(error.path), error.message) )
                         print_table(error.schema)
                         sys.exit(1)
                 break
@@ -112,7 +120,8 @@ try:  # ... to read json
         # i = jinja2.Template(i).render() # render jinja2
 
     d = json.loads(i)
-    validate_input(d)
+    if "mcloop" in d or "version" in d: 
+        validate_input(d)
     if args.alwaysjson:
         if pygments:
             i = highlight(out, JsonLexer(), formatter())
@@ -125,7 +134,8 @@ try:  # ... to read json
 except json.decoder.JSONDecodeError:
     try:  # ... to read yaml
         d = yaml.safe_load(i)  # plain load was deprecated in PyYAML
-        validate_input(d)
+        if "mcloop" in d or "version" in d: 
+            validate_input(d)
         out = json.dumps(d, indent=args.indent)
         if pygments:
             out = highlight(out, JsonLexer(), formatter())
@@ -133,3 +143,4 @@ except json.decoder.JSONDecodeError:
     except yaml.parser.ParserError as exception:
         print("input error: invalid json or yaml format", file=sys.stderr)
         print(exception, file=sys.stderr)
+        sys.exit(1)

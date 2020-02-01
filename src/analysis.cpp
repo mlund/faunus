@@ -340,14 +340,10 @@ QRtraj::QRtraj(const json &j, Space &spc) {
     f.open(MPI::prefix + file);
     if (not f)
         throw std::runtime_error("error opening "s + file);
-    f.precision(6);
     write_to_file = [&groups = spc.groups, &f = f]() {
         for (auto &g : groups) {
             for (auto it = g.begin(); it != g.trueend(); ++it) { // loop over *all* particles
-                if (it < g.end())
-                    f << it->charge << " " << atoms[it->id].sigma * 0.5 << " ";
-                else
-                    f << "0 0 "; // zero charge and radii for inactive particles
+                f << (it < g.end()) ? fmt::format("{.6f} {.6f} ", it->charge, atoms[it->id].sigma * 0.5) : "0 0 ";
             }
         }
         f << "\n";               // newline for every frame
@@ -436,7 +432,7 @@ CombinedAnalysis::CombinedAnalysis(const json &j, Space &spc, Energy::Hamiltonia
 }
 
 void FileReactionCoordinate::_to_json(json &j) const {
-    json rcjson = *rc; // envoke to_json(...)
+    json rcjson = *rc; // invoke to_json(...)
     if (rcjson.count(type) == 0)
         throw std::runtime_error("error writing json for reaction coordinate");
     j = rcjson[type];
@@ -452,7 +448,7 @@ void FileReactionCoordinate::_sample() {
     if (file) {
         double val = (*rc)();
         avg += val;
-        file << cnt * steps << " " << val << " " << avg.avg() << "\n";
+        file << fmt::format("{} {.6f} {.6f}\n", cnt * steps, val, avg.avg());
     }
 }
 

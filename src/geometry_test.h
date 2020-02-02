@@ -367,6 +367,28 @@ TEST_CASE("[Faunus] Chameleon") {
         compare_boundary(chameleon, geo, box);
         compare_vdist(chameleon, geo, box);
     }
+
+    SUBCASE("Cereal serialisation") {
+        double x = 2.0, y = 3.0, z = 4.0;
+        { // write
+            Cuboid geo(x, y, z);
+            // Chameleon chameleon(geo, CUBOID);
+            std::ofstream os("out.cereal", std::ios::binary);
+            cereal::BinaryOutputArchive archive(os);
+            archive(geo);
+        }
+
+        { // read
+            Cuboid geo(10, 20, 30);
+            // Chameleon chameleon(geo, CUBOID);
+            std::ifstream is("out.cereal", std::ios::binary);
+            cereal::BinaryInputArchive archive(is);
+            archive(geo);
+            CHECK(geo.getLength().x() == Approx(x));
+            CHECK(geo.getLength().y() == Approx(y));
+            CHECK(geo.getLength().z() == Approx(z));
+        }
+    }
 }
 
 TEST_CASE("[Faunus] anyCenter") {

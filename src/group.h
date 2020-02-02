@@ -187,4 +187,8 @@ namespace Faunus {
 void to_json(json&, const Group<Particle>&);
 void from_json(const json&, Group<Particle>&);
 
+template <class Archive, class T> void serialize(Archive &archive, Group<T> &g) {
+    archive(g.id, g.confid, g.cm, g.compressible, g.atomic);
+} //!< Cereal serialisation
+
 }//end of faunus namespace

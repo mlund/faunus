@@ -115,6 +115,16 @@ if(NOT modernjson_POPULATED)
 endif()
 add_compile_definitions("NLOHMANN_JSON_HPP") # older versions used this macro. Now it's suffixed with "_"
 
+# CEREAL
+FetchContent_Declare(
+    cereal
+    URL "https://github.com/USCiLab/cereal/archive/v1.3.0.tar.gz"
+    URL_HASH MD5=4342e811f245403646c4175258f413f1)
+FetchContent_GetProperties(cereal)
+if(NOT cereal_POPULATED)
+    FetchContent_Populate(cereal)
+endif()
+
 # RANGE-V3
 FetchContent_Declare(
     rangev3
@@ -277,7 +287,7 @@ endif ()
 # to disable potential compiler warnings
 include_directories(SYSTEM ${eigen_SOURCE_DIR} ${doctest_SOURCE_DIR} ${modernjson_SOURCE_DIR}/include ${rangev3_SOURCE_DIR}/include
     ${Pybind11IncludeDir} ${DocoptIncludeDir} ${CppsidIncludeDir} ${XdrfileIncludeDir} ${SpdlogIncludeDir}
-    ${ProgressTrackerIncludeDir} ${exprtk_SOURCE_DIR})
+    ${ProgressTrackerIncludeDir} ${exprtk_SOURCE_DIR} ${cereal_SOURCE_DIR}/include)
 
 #  Compiler specific flags
 ## GCC

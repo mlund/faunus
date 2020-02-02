@@ -6,6 +6,7 @@
 #include "tensor.h"
 #include <Eigen/Geometry>
 #include <iostream>
+#include <cereal/types/base_class.hpp>
 
 /** @brief Faunus main namespace */
 namespace Faunus {
@@ -52,6 +53,10 @@ struct BoundaryCondition {
     Coordinates coordinates;
     BoundaryXYZ direction;
 
+    template <class Archive> void serialize(Archive &archive) {
+        archive(coordinates, direction);
+    } //!< Cereal serialisation
+
     BoundaryCondition(Coordinates coordinates = ORTHOGONAL, BoundaryXYZ boundary = {FIXED, FIXED, FIXED})
         : coordinates(coordinates), direction(boundary){};
 };
@@ -95,8 +100,11 @@ class GeometryImplementation : public GeometryBase {
 
     virtual ~GeometryImplementation();
 
-    //! A unique pointer to a copy of self. To be used in copy constructors.
+    //!< A unique pointer to a copy of self. To be used in copy constructors.
     virtual std::unique_ptr<GeometryImplementation> clone() const = 0;
+
+    //!< Cereal serialisation
+    template <class Archive> void serialize(Archive &archive) { archive(boundary_conditions); }
 };
 
 /**
@@ -124,6 +132,11 @@ class Cuboid : public GeometryImplementation {
     std::unique_ptr<GeometryImplementation> clone() const override {
         return std::make_unique<Cuboid>(*this);
     }; //!< A unique pointer to a copy of self.
+
+    //!< Cereal serialisation
+    template <class Archive> void serialize(Archive &archive) {
+        archive(cereal::base_class<GeometryImplementation>(this), box, box_half, box_inv);
+    }
 };
 
 /**
@@ -166,6 +179,11 @@ class Sphere : public GeometryImplementation {
     std::unique_ptr<GeometryImplementation> clone() const override {
         return std::make_unique<Sphere>(*this);
     }; //!< A unique pointer to a copy of self.
+
+    //!< Cereal serialisation
+    template <class Archive> void serialize(Archive &archive) {
+        archive(cereal::base_class<GeometryImplementation>(this), radius);
+    }
 };
 
 class Hypersphere2d : public Sphere {
@@ -202,6 +220,11 @@ class Cylinder : public GeometryImplementation {
     std::unique_ptr<GeometryImplementation> clone() const override {
         return std::make_unique<Cylinder>(*this);
     }; //!< A unique pointer to a copy of self.
+
+    //!< Cereal serialisation
+    template <class Archive> void serialize(Archive &archive) {
+        archive(cereal::base_class<GeometryImplementation>(this), radius, height);
+    }
 };
 
 /**
@@ -236,6 +259,11 @@ class HexagonalPrism : public GeometryImplementation {
     std::unique_ptr<GeometryImplementation> clone() const override {
         return std::make_unique<HexagonalPrism>(*this);
     }; //!< A unique pointer to a copy of self.
+
+    //!< Cereal serialisation
+    template <class Archive> void serialize(Archive &archive) {
+        archive(cereal::base_class<GeometryImplementation>(this), rhombic2cartesian, cartesian2rhombic, box);
+    }
 };
 
 /**
@@ -259,6 +287,11 @@ class TruncatedOctahedron : public GeometryImplementation {
     std::unique_ptr<GeometryImplementation> clone() const override {
         return std::make_unique<TruncatedOctahedron>(*this);
     }; //!< A unique pointer to a copy of self.
+
+    //!< Cereal serialisation
+    template <class Archive> void serialize(Archive &archive) {
+        archive(cereal::base_class<GeometryImplementation>(this), side);
+    }
 };
 
 /**

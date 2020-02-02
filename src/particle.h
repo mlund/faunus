@@ -2,6 +2,7 @@
 #include "core.h"
 #include "atomdata.h"
 #include "tensor.h"
+#include <cereal/types/memory.hpp>
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
 #include "rotate.h"
@@ -23,6 +24,7 @@ struct ParticlePropertyBase {
     virtual void from_json(const json &j) = 0; //!< Convert from JSON object
     void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &); //!< Internal rotation
     virtual ~ParticlePropertyBase() = default;
+    template <class Archive> void serialize(Archive &) {} //!< Cereal serialisation
 };
 
 template <typename... Ts>
@@ -43,6 +45,7 @@ struct Radius : public ParticlePropertyBase {
     double radius = 0; //!< Particle radius
     void to_json(json &j) const override;
     void from_json(const json &j) override;
+    template <class Archive> void serialize(Archive &archive) { archive(radius); }
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 }; //!< Radius property
 
@@ -50,6 +53,7 @@ struct Charge : public ParticlePropertyBase {
     double charge = 0; //!< Particle radius
     void to_json(json &j) const override;
     void from_json(const json &j) override;
+    template <class Archive> void serialize(Archive &archive) { archive(charge); }
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 }; //!< Charge (monopole) property
 
@@ -67,6 +71,7 @@ struct Dipole : public ParticlePropertyBase {
     void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &); //!< Rotate dipole moment
     void to_json(json &j) const override;
     void from_json(const json &j) override;
+    template <class Archive> void serialize(Archive &archive) { archive(mu, mulen); }
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
 
@@ -77,6 +82,7 @@ struct Polarizable : public ParticlePropertyBase {
     void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &m); //!< Rotate polarizability tensor
     void to_json(json &j) const override;
     void from_json(const json &j) override;
+    template <class Archive> void serialize(Archive &archive) { archive(mui, muilen, alpha); }
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
 
@@ -85,6 +91,7 @@ struct Quadrupole : public ParticlePropertyBase {
     void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &m); //!< Rotate quadrupole moment
     void to_json(json &j) const override;
     void from_json(const json &j) override;
+    template <class Archive> void serialize(Archive &archive) { archive(Q); }
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 }; // Quadrupole property
 
@@ -94,6 +101,7 @@ struct Cigar : public ParticlePropertyBase {
     void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &); //!< Rotate sphero-cylinder
     void to_json(json &j) const override;
     void from_json(const json &j) override;
+    template <class Archive> void serialize(Archive &archive) { archive(scdir, sclen); }
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 }; //!< Sphero-cylinder properties
 
@@ -118,6 +126,16 @@ template <typename... Properties> class ParticleTemplate : public Properties... 
         _rotate<Ts...>(q, m, rest...);
     }
 
+    // Cereal serialisation
+
+    template <typename... Ts, class Archive>
+    auto _serialize(Archive &) -> typename std::enable_if<sizeof...(Ts) == 0>::type {}
+
+    template <typename T, typename... Ts, class Archive> void _serialize(Archive &archive, T &a, Ts &... rest) {
+        a.serialize(archive);
+        _serialize<Ts...>(archive, rest...);
+    }
+
   public:
     ParticleTemplate() : Properties()... {};
 
@@ -126,6 +144,10 @@ template <typename... Properties> class ParticleTemplate : public Properties... 
     void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &m) {
         _rotate<Properties...>(q, m, dynamic_cast<Properties &>(*this)...);
     } //!< Rotate all internal coordinates if needed
+
+    template <class Archive> void serialize(Archive &archive) {
+        _serialize<Properties...>(archive, dynamic_cast<Properties &>(*this)...);
+    }
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
@@ -163,6 +185,12 @@ class Particle {
     Particle(const Particle &);            //!< copy constructor
     Particle &operator=(const Particle &); //!< assignment operator
     void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &m);
+
+    template <class Archive> void serialize(Archive &archive) {
+        archive(ext, id, charge, pos);
+        // if (ext != nullptr)
+        //    ext->serialize(archive);
+    } //!< Cereal serialisation
 
     bool hasExtension() const; //!< check if particle has extensions (dipole etc.)
 

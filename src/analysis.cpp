@@ -343,7 +343,7 @@ QRtraj::QRtraj(const json &j, Space &spc) {
     write_to_file = [&groups = spc.groups, &f = f]() {
         for (auto &g : groups) {
             for (auto it = g.begin(); it != g.trueend(); ++it) { // loop over *all* particles
-                f << (it < g.end()) ? fmt::format("{.6f} {.6f} ", it->charge, atoms[it->id].sigma * 0.5) : "0 0 ";
+                f << (it < g.end()) ? fmt::format("{:.6f} {:.6f} ", it->charge, atoms[it->id].sigma * 0.5) : "0 0 ";
             }
         }
         f << "\n";               // newline for every frame
@@ -448,7 +448,7 @@ void FileReactionCoordinate::_sample() {
     if (file) {
         double val = (*rc)();
         avg += val;
-        file << fmt::format("{} {.6f} {.6f}\n", cnt * steps, val, avg.avg());
+        file << fmt::format("{} {:.6f} {:.6f}\n", cnt * steps, val, avg.avg());
     }
 }
 

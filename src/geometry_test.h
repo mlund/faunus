@@ -3,6 +3,7 @@
 #include <Eigen/Geometry>
 #include <range/v3/view/sample.hpp>
 #include <range/v3/view/bounded.hpp>
+#include <cereal/archives/binary.hpp>
 
 namespace Faunus {
 namespace Geometry {

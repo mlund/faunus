@@ -187,8 +187,30 @@ namespace Faunus {
 void to_json(json&, const Group<Particle>&);
 void from_json(const json&, Group<Particle>&);
 
-template <class Archive, class T> void serialize(Archive &archive, Group<T> &g) {
-    archive(g.id, g.confid, g.cm, g.compressible, g.atomic);
+/*
+ * The following two functions are used to perform a complete
+ * serialisation of a group to/from a Cereal archive. When loading,
+ * the group *must* match the capacity of the saved data or an exception
+ * is thrown.
+ */
+
+template <class Archive, class T> void save(Archive &archive, const Group<T> &g) {
+    archive(g.id, g.confid, g.cm, g.compressible, g.atomic, g.size(), g.capacity());
+    for (auto it = g.begin(); it != g.trueend(); it++)
+        archive(*it);
+} //!< Cereal serialisation
+
+template <class Archive, class T> void load(Archive &archive, Group<T> &g) {
+    size_t size = 0, capacity = 0;
+    archive(g.id, g.confid, g.cm, g.compressible, g.atomic, size, capacity);
+    assert(size <= capacity);
+    if (capacity != g.capacity())
+        throw std::runtime_error("capacity mismatch of archived group");
+    g.resize(size);
+    assert(g.capacity() == capacity);
+    assert(g.size() == size);
+    for (auto it = g.begin(); it != g.trueend(); it++)
+        archive(*it);
 } //!< Cereal serialisation
 
 }//end of faunus namespace

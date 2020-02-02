@@ -32,6 +32,7 @@ CTestTestfile.cmake
 *.slo
 *.lo
 *.o
+*.cereal
 
 *.dsym
 

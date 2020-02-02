@@ -5,7 +5,9 @@
 #include "multipole.h"
 #include "aux/iteratorsupport.h"
 #include "aux/eigensupport.h"
-#include "spdlog/spdlog.h"
+#include <spdlog/spdlog.h>
+#include <zstr.hpp>
+#include <cereal/archives/binary.hpp>
 
 #include <iomanip>
 #include <iostream>
@@ -417,6 +419,8 @@ CombinedAnalysis::CombinedAnalysis(const json &j, Space &spc, Energy::Hamiltonia
                             emplace_back<WidomInsertion>(it.value(), spc, pot);
                         else if (it.key() == "xtcfile")
                             emplace_back<XTCtraj>(it.value(), spc);
+                        else if (it.key() == "spacetraj")
+                            emplace_back<SpaceTrajectory>(it.value(), spc.groups);
                         // additional analysis go here...
 
                         if (this->vec.size() == oldsize)
@@ -1435,5 +1439,43 @@ void VirtualTranslate::_to_disk() {
         output_file.flush(); // empty buffer
 }
 
+SpaceTrajectory::SpaceTrajectory(const json &j, Space::Tgvec &groups) : groups(groups) {
+    from_json(j);
+    name = "space trajectory";
+    filename = j.at("file");
+    std::string suffix = filename.substr(filename.find_last_of(".") + 1);
+    if (suffix == "ztraj")
+        compression = true;
+    else if (suffix == "traj")
+        compression = false;
+    else
+        throw std::runtime_error("Trajectory file suffix must be `.traj` or `.ztraj`");
+
+    if (compression)
+        stream = std::make_unique<zstr::ofstream>(MPI::prefix + filename, std::ios::binary);
+    else
+        stream = std::make_unique<std::ofstream>(MPI::prefix + filename, std::ios::binary);
+
+    if (stream != nullptr)
+        if (*stream)
+            archive = std::make_unique<cereal::BinaryOutputArchive>(*stream);
+
+    if (not archive)
+        throw std::runtime_error("error creating "s + filename);
+}
+
+void SpaceTrajectory::_sample() {
+    assert(archive);
+    for (auto &group : groups) {
+        (*archive)(group);
+    }
+}
+
+void SpaceTrajectory::_to_json(json &j) const { j = {{"file", filename}, {"compress", compression}}; }
+
+void SpaceTrajectory::_to_disk() {
+    if (*stream)
+        stream->flush();
+}
 } // namespace Analysis
 } // namespace Faunus

@@ -20,6 +20,7 @@
 #include "geometry_test.h"
 #include "group_test.h"
 #include "molecule_test.h"
+#include "particle_test.h"
 #include "potentials_test.h"
 #include "space_test.h"
 #include "tensor_test.h"

@@ -567,10 +567,10 @@ class SpaceTrajectory : public Analysisbase {
     std::string filename;
     std::unique_ptr<std::ostream> stream;
     std::unique_ptr<cereal::BinaryOutputArchive> archive;
-    bool compression = true;
     void _sample() override;
     void _to_json(json &j) const override;
     void _to_disk() override;
+    bool useCompression() const; //!< decide from filename if zlib should be used
 
   public:
     SpaceTrajectory(const json &, Space::Tgvec &);

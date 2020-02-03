@@ -262,7 +262,7 @@ class HexagonalPrism : public GeometryImplementation {
 
     //!< Cereal serialisation
     template <class Archive> void serialize(Archive &archive) {
-        archive(cereal::base_class<GeometryImplementation>(this), rhombic2cartesian, cartesian2rhombic, box);
+        archive(cereal::base_class<GeometryImplementation>(this), box);
     }
 };
 

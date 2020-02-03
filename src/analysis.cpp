@@ -1443,25 +1443,27 @@ SpaceTrajectory::SpaceTrajectory(const json &j, Space::Tgvec &groups) : groups(g
     from_json(j);
     name = "space trajectory";
     filename = j.at("file");
-    std::string suffix = filename.substr(filename.find_last_of(".") + 1);
-    if (suffix == "ztraj")
-        compression = true;
-    else if (suffix == "traj")
-        compression = false;
-    else
-        throw std::runtime_error("Trajectory file suffix must be `.traj` or `.ztraj`");
-
-    if (compression)
+    if (useCompression())
         stream = std::make_unique<zstr::ofstream>(MPI::prefix + filename, std::ios::binary);
     else
         stream = std::make_unique<std::ofstream>(MPI::prefix + filename, std::ios::binary);
 
-    if (stream != nullptr)
-        if (*stream)
-            archive = std::make_unique<cereal::BinaryOutputArchive>(*stream);
+    if (stream != nullptr && *stream)
+        archive = std::make_unique<cereal::BinaryOutputArchive>(*stream);
 
     if (not archive)
         throw std::runtime_error("error creating "s + filename);
+}
+
+bool SpaceTrajectory::useCompression() const {
+    assert(!filename.empty());
+    std::string suffix = filename.substr(filename.find_last_of(".") + 1);
+    if (suffix == "ztraj")
+        return true;
+    else if (suffix == "traj")
+        return false;
+    else
+        throw std::runtime_error("Trajectory file suffix must be `.traj` or `.ztraj`");
 }
 
 void SpaceTrajectory::_sample() {
@@ -1471,11 +1473,11 @@ void SpaceTrajectory::_sample() {
     }
 }
 
-void SpaceTrajectory::_to_json(json &j) const { j = {{"file", filename}, {"compress", compression}}; }
+void SpaceTrajectory::_to_json(json &j) const { j = {{"file", filename}}; }
 
 void SpaceTrajectory::_to_disk() {
-    if (*stream)
-        stream->flush();
+    assert(*stream);
+    stream->flush();
 }
 } // namespace Analysis
 } // namespace Faunus

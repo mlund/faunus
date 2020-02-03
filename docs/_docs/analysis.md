@@ -493,7 +493,6 @@ generated. For use with rod-like particles on surfaces, the `absz`
 keyword may be used to ensure orientations on only one
 half-sphere.
 
-**Important:**
 Exactly _one inactive_ `molecule` must be added to the simulation using the `inactive`
 keyword when inserting the initial molecules in the [topology](topology).
 
@@ -525,6 +524,25 @@ with the following information:
 - particle and group properties incl. positions
 - geometry
 - state of random number generator (if `saverandom=true`)
+
+
+### Space Trajectory (experimental)
+
+Save all particle and group information to a compressed, binary trajectory format.
+The following properties are saved:
+
+ - all particle properties (id, position, charge, dipole etc.)
+ - all group properties (id, size, capacity etc.)
+ - todo: geometry, energy
+
+The file suffix must be either `.traj` (uncomressed) or `.ztraj` (compressed).
+For the latter, the file size is reduced by roughly a factor of two using zlib
+compression.
+
+`spacetraj`  | Description
+------------ | ---------------------------------------
+`file`       | Filename of output .traj/.ztraj file
+`nstep`      | Interval between samples.
 
 
 ### XTC trajectory

@@ -7,6 +7,10 @@
 #include "auxiliary.h"
 #include <set>
 
+namespace cereal {
+class BinaryOutputArchive;
+}
+
 namespace Faunus {
 
 namespace Energy {
@@ -542,6 +546,34 @@ class QRtraj : public Analysisbase {
 
   public:
     QRtraj(const json &j, Space &spc);
+};
+
+/**
+ * @brief Trajectory with full Space information
+ *
+ * The following are saved in (compressed) binary form:
+ *
+ * - all particle properties (id, position, charge, dipole etc.)
+ * - all group properties (id, size, capacity etc.)
+ *
+ * If zlib compression is enabled the file size
+ * is reduced by roughly a factor of two.
+ *
+ * @todo Geometry information
+ */
+class SpaceTrajectory : public Analysisbase {
+  private:
+    Space::Tgvec &groups; // reference to all groups
+    std::string filename;
+    std::unique_ptr<std::ostream> stream;
+    std::unique_ptr<cereal::BinaryOutputArchive> archive;
+    void _sample() override;
+    void _to_json(json &j) const override;
+    void _to_disk() override;
+    bool useCompression() const; //!< decide from filename if zlib should be used
+
+  public:
+    SpaceTrajectory(const json &, Space::Tgvec &);
 };
 
 struct CombinedAnalysis : public BasePointerVector<Analysisbase> {

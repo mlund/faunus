@@ -48,7 +48,7 @@ TEST_CASE("[Faunus] FormatPQR") {
         CHECK(spc.p[i].charge == double(i));
         d += 0.5;
     }
-};
+}
 
 #endif
 } // namespace Faunus

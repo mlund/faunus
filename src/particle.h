@@ -24,7 +24,7 @@ struct ParticlePropertyBase {
     virtual void from_json(const json &j) = 0; //!< Convert from JSON object
     void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &); //!< Internal rotation
     virtual ~ParticlePropertyBase() = default;
-    template <class Archive> void serialize(Archive &) {} //! Cereal serialisation
+    template <class Archive> void serialize(Archive &) {} //!< Cereal serialisation
 };
 
 template <typename... Ts>
@@ -190,7 +190,7 @@ class Particle {
         archive(ext, id, charge, pos);
         // if (ext != nullptr)
         //    ext->serialize(archive);
-    } //! Cereal serialisation
+    } //!< Cereal serialisation
 
     bool hasExtension() const; //!< check if particle has extensions (dipole etc.)
 

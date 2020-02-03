@@ -55,7 +55,7 @@ struct BoundaryCondition {
 
     template <class Archive> void serialize(Archive &archive) {
         archive(coordinates, direction);
-    } //! Cereal serialisation
+    } //!< Cereal serialisation
 
     BoundaryCondition(Coordinates coordinates = ORTHOGONAL, BoundaryXYZ boundary = {FIXED, FIXED, FIXED})
         : coordinates(coordinates), direction(boundary){};
@@ -100,7 +100,7 @@ class GeometryImplementation : public GeometryBase {
 
     virtual ~GeometryImplementation();
 
-    //!< A unique pointer to a copy of self. To be used in copy constructors.
+    //! A unique pointer to a copy of self. To be used in copy constructors.
     virtual std::unique_ptr<GeometryImplementation> clone() const = 0;
 
     //! Cereal serialisation

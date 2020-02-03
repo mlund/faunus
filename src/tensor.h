@@ -16,9 +16,9 @@ struct Tensor : public Eigen::Matrix3d {
      * @brief Constructor
      * @todo explain input
      */
-    Tensor(double xx, double xy, double xz, double yy, double yz, double zz); //!< Construct from input
+    Tensor(double, double, double, double, double, double); //!< Constructor
 
-    void rotate(const base &m); //!< Rotate using rotation matrix. Remove?
+    void rotate(const base &); //!< Rotate using rotation matrix
 
     void eye();
 
@@ -30,6 +30,6 @@ struct Tensor : public Eigen::Matrix3d {
     }
 }; //!< Tensor class
 
-void to_json(nlohmann::json &j, const Tensor &t);   //!< Tensor -> Json
-void from_json(const nlohmann::json &j, Tensor &t); //!< Json -> Tensor
+void to_json(nlohmann::json &, const Tensor &);   //!< Tensor -> Json
+void from_json(const nlohmann::json &, Tensor &); //!< Json -> Tensor
 } // namespace Faunus

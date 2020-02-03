@@ -194,23 +194,35 @@ void from_json(const json&, Group<Particle>&);
  * is thrown.
  */
 
-template <class Archive, class T> void save(Archive &archive, const Group<T> &g) {
-    archive(g.id, g.confid, g.cm, g.compressible, g.atomic, g.size(), g.capacity());
-    for (auto it = g.begin(); it != g.trueend(); it++)
-        archive(*it);
+template <class Archive, class T> void save(Archive &archive, const Group<T> &g, std::uint32_t const version) {
+    switch (version) {
+    case 0:
+        archive(g.id, g.confid, g.cm, g.compressible, g.atomic, g.size(), g.capacity());
+        for (auto it = g.begin(); it != g.trueend(); it++)
+            archive(*it);
+        break;
+    default:
+        throw std::runtime_error("unknown serialisation version");
+    };
 } //!< Cereal serialisation
 
-template <class Archive, class T> void load(Archive &archive, Group<T> &g) {
+template <class Archive, class T> void load(Archive &archive, Group<T> &g, std::uint32_t const version) {
     size_t size = 0, capacity = 0;
-    archive(g.id, g.confid, g.cm, g.compressible, g.atomic, size, capacity);
-    assert(size <= capacity);
-    if (capacity != g.capacity())
-        throw std::runtime_error("capacity mismatch of archived group");
-    g.resize(size);
-    assert(g.capacity() == capacity);
-    assert(g.size() == size);
-    for (auto it = g.begin(); it != g.trueend(); it++)
-        archive(*it);
+    switch (version) {
+    case 0:
+        archive(g.id, g.confid, g.cm, g.compressible, g.atomic, size, capacity);
+        assert(size <= capacity);
+        if (capacity != g.capacity())
+            throw std::runtime_error("capacity mismatch of archived group");
+        g.resize(size);
+        assert(g.capacity() == capacity);
+        assert(g.size() == size);
+        for (auto it = g.begin(); it != g.trueend(); it++)
+            archive(*it);
+        break;
+    default:
+        throw std::runtime_error("unknown serialisation version");
+    }
 } //!< Cereal serialisation
 
 }//end of faunus namespace

@@ -55,7 +55,7 @@ struct BoundaryCondition {
 
     template <class Archive> void serialize(Archive &archive) {
         archive(coordinates, direction);
-    } //!< Cereal serialisation
+    } //! Cereal serialisation
 
     BoundaryCondition(Coordinates coordinates = ORTHOGONAL, BoundaryXYZ boundary = {FIXED, FIXED, FIXED})
         : coordinates(coordinates), direction(boundary){};
@@ -103,7 +103,7 @@ class GeometryImplementation : public GeometryBase {
     //!< A unique pointer to a copy of self. To be used in copy constructors.
     virtual std::unique_ptr<GeometryImplementation> clone() const = 0;
 
-    //!< Cereal serialisation
+    //! Cereal serialisation
     template <class Archive> void serialize(Archive &archive) { archive(boundary_conditions); }
 };
 
@@ -133,9 +133,9 @@ class Cuboid : public GeometryImplementation {
         return std::make_unique<Cuboid>(*this);
     }; //!< A unique pointer to a copy of self.
 
-    //!< Cereal serialisation
+    //! Cereal serialisation
     template <class Archive> void serialize(Archive &archive) {
-        archive(cereal::base_class<GeometryImplementation>(this), box, box_half, box_inv);
+        archive(cereal::base_class<GeometryImplementation>(this), box);
     }
 };
 
@@ -180,7 +180,7 @@ class Sphere : public GeometryImplementation {
         return std::make_unique<Sphere>(*this);
     }; //!< A unique pointer to a copy of self.
 
-    //!< Cereal serialisation
+    //! Cereal serialisation
     template <class Archive> void serialize(Archive &archive) {
         archive(cereal::base_class<GeometryImplementation>(this), radius);
     }
@@ -221,7 +221,7 @@ class Cylinder : public GeometryImplementation {
         return std::make_unique<Cylinder>(*this);
     }; //!< A unique pointer to a copy of self.
 
-    //!< Cereal serialisation
+    //! Cereal serialisation
     template <class Archive> void serialize(Archive &archive) {
         archive(cereal::base_class<GeometryImplementation>(this), radius, height);
     }
@@ -260,7 +260,7 @@ class HexagonalPrism : public GeometryImplementation {
         return std::make_unique<HexagonalPrism>(*this);
     }; //!< A unique pointer to a copy of self.
 
-    //!< Cereal serialisation
+    //! Cereal serialisation
     template <class Archive> void serialize(Archive &archive) {
         archive(cereal::base_class<GeometryImplementation>(this), box);
     }
@@ -288,7 +288,7 @@ class TruncatedOctahedron : public GeometryImplementation {
         return std::make_unique<TruncatedOctahedron>(*this);
     }; //!< A unique pointer to a copy of self.
 
-    //!< Cereal serialisation
+    //! Cereal serialisation
     template <class Archive> void serialize(Archive &archive) {
         archive(cereal::base_class<GeometryImplementation>(this), side);
     }

@@ -15,6 +15,8 @@ namespace Faunus
       unsigned long long int cnt=0; //!< Number of values
       T sum=0;                      //!< Sum
 
+      template <class Archive> void serialize(Archive &archive) { archive(sum, sqsum, cnt); }
+
       double avg() const {
           return sum / static_cast<double>(cnt);
       } //!< Average

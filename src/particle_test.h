@@ -56,6 +56,44 @@ TEST_CASE("[Faunus] Particle") {
     CHECK(p1.getExt().Q(1, 1) == Approx(4));
     CHECK(p1.getExt().Q(1, 2) == Approx(-2));
     CHECK(p1.getExt().Q(2, 2) == Approx(1));
+
+    SUBCASE("Cereal serialisation") {
+        Particle p;
+        p.pos = {10, 20, 30};
+        p.charge = -1;
+        p.id = 8;
+        p.ext = std::make_shared<Particle::ParticleExtension>();
+        p.getExt().mu = {0.1, 0.2, 0.3};
+        p.getExt().mulen = 104;
+
+        { // write
+            std::ofstream os("out.cereal", std::ios::binary);
+            cereal::BinaryOutputArchive archive(os);
+            archive(p);
+        }
+
+        // set to zero
+        p.pos = {0, 0, 0};
+        p.charge = 0;
+        p.id = 0;
+        p.getExt().mu.setZero();
+        p.getExt().mulen = 0;
+
+        { // read
+            std::ifstream is("out.cereal", std::ios::binary);
+            cereal::BinaryInputArchive archive(is);
+            archive(p);
+            CHECK(p.id == 8);
+            CHECK(p.charge == -1);
+            CHECK(p.pos.x() == 10);
+            CHECK(p.pos.y() == 20);
+            CHECK(p.pos.z() == 30);
+            CHECK(p.getExt().mu.x() == 0.1);
+            CHECK(p.getExt().mu.y() == 0.2);
+            CHECK(p.getExt().mu.z() == 0.3);
+            CHECK(p.getExt().mulen == 104);
+        }
+    }
 }
 
 TEST_SUITE_END();

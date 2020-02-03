@@ -736,6 +736,18 @@ properties:
                     required: [atoms, file, nstep]
                     additionalProperties: false
 
+                spacetraj:
+                    properties:
+                        file:
+                            type: string
+                            pattern: "(.*?)\\.(traj|ztraj)$"
+                            description: "Output filename (.traj/.ztraj)"
+                        nstep: {type: integer}
+                        nskip: {type: integer, default: 0, description: Initial steps to skip}
+                    required: [file, nstep]
+                    additionalProperties: false
+                    type: object
+
                 systemenergy:
                     properties:
                         file: {type: string}

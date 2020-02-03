@@ -12,6 +12,7 @@ set(CMAKE_CXX_EXTENSIONS NO)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(PythonInterp 3 REQUIRED)
 find_package(Threads REQUIRED)
+find_package(zlib REQUIRED)
 enable_testing()
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -114,6 +115,26 @@ if(NOT modernjson_POPULATED)
     FetchContent_Populate(modernjson)
 endif()
 add_compile_definitions("NLOHMANN_JSON_HPP") # older versions used this macro. Now it's suffixed with "_"
+
+# CEREAL
+FetchContent_Declare(
+    cereal
+    URL "https://github.com/USCiLab/cereal/archive/v1.3.0.tar.gz"
+    URL_HASH MD5=4342e811f245403646c4175258f413f1)
+FetchContent_GetProperties(cereal)
+if(NOT cereal_POPULATED)
+    FetchContent_Populate(cereal)
+endif()
+
+# ZSTR
+FetchContent_Declare(
+    zstr
+    URL "https://github.com/mateidavid/zstr/archive/v1.0.1.tar.gz"
+    URL_HASH MD5=42de51b1c6adac0ec957a24088ef7523)
+FetchContent_GetProperties(zstr)
+if(NOT zstr_POPULATED)
+    FetchContent_Populate(zstr)
+endif()
 
 # RANGE-V3
 FetchContent_Declare(
@@ -277,7 +298,7 @@ endif ()
 # to disable potential compiler warnings
 include_directories(SYSTEM ${eigen_SOURCE_DIR} ${doctest_SOURCE_DIR} ${modernjson_SOURCE_DIR}/include ${rangev3_SOURCE_DIR}/include
     ${Pybind11IncludeDir} ${DocoptIncludeDir} ${CppsidIncludeDir} ${XdrfileIncludeDir} ${SpdlogIncludeDir}
-    ${ProgressTrackerIncludeDir} ${exprtk_SOURCE_DIR})
+    ${ProgressTrackerIncludeDir} ${exprtk_SOURCE_DIR} ${cereal_SOURCE_DIR}/include ${zstr_SOURCE_DIR}/src)
 
 #  Compiler specific flags
 ## GCC

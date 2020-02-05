@@ -398,11 +398,9 @@ template <typename TPairEnergy> class PairingBasePolicy {
   protected:
     Space &spc;              //!< space to operate on
     TPairEnergy pair_energy; //!< functor to compute non-bonded energy between two particles, @see PairEnergy template
+    Cutoff cut;              //!< cutoff functor that determines if energy between two groups can be ignored
 
   public:
-    // FIXME shall be protected after refactorisation of NonbondedCached
-    Cutoff cut; //!< cutoff functor to determine if energy computation between two given groups can be skipped
-
     /**
      * @param spc
      * @param potentials registered non-bonded potentials
@@ -973,25 +971,29 @@ template <typename TPairingPolicy> class Nonbonded : public Energybase {
 };
 
 
+/**
+ * @brief Compute non-bonded energy contribution from changed particles. Cache group2group energy once calculated,
+ * until a new trial configuration is provided. Not for general use as only partially implemented!
+ *
+ * Original implementation, only refurbished. Generally suboptimal as only pairing.group2group method may be called.
+ * No internal energy is ever computed. Cannot deal with particle count changes. And other unmentioned constrains.
+ *
+ * @tparam Tpairpot
+ */
 template <typename Tpairpot> class NonbondedCached : public Nonbonded<PairingPolicy<PairEnergy<Tpairpot>>> {
-  private:
     typedef Nonbonded<PairingPolicy<PairEnergy<Tpairpot>>> base;
     typedef typename Space::Tgroup Tgroup;
     Eigen::MatrixXf cache;
-    Space &spc;
+    using base::spc;
+
     double g2g(const Tgroup &g1, const Tgroup &g2) {
-        int i = &g1 - &base::spc.groups.front();
-        int j = &g2 - &base::spc.groups.front();
-        if (j < i)
+        int i = &g1 - spc.groups.data();
+        int j = &g2 - spc.groups.data();
+        if (j < i) {
             std::swap(i, j);
+        }
         if (base::key == Energybase::NEW) { // if this is from the trial system,
-            double u = 0;
-            if (not base::pairing.cut(g1, g2)) { // ugly
-                for (auto &i : g1)
-                    for (auto &j : g2)
-                        u += base::pairing.particle2particle(i, j);
-            }
-            cache(i, j) = u;
+            cache(i, j) = base::pairing.group2group(g1, g2); // update the cache
         }
         return cache(i, j); // return (cached) value
     }
@@ -1002,102 +1004,105 @@ template <typename Tpairpot> class NonbondedCached : public Nonbonded<PairingPol
     }
 
   public:
-    NonbondedCached(const json &j, Space &spc, BasePointerVector<Energybase> &pot) : base(j, spc, pot), spc(spc) {
+    NonbondedCached(const json &j, Space &spc, BasePointerVector<Energybase> &pot) : base(j, spc, pot) {
         base::name += "EM";
         init();
     }
 
+  /**
+   * @brief Cache pair interactions in matrix.
+   */
     void init() override {
-        cache.resize(spc.groups.size(), spc.groups.size());
+        const auto groups_size = spc.groups.size();
+        cache.resize(groups_size, groups_size);
         cache.setZero();
-        for (auto i = base::spc.groups.begin(); i < base::spc.groups.end(); ++i) {
-            for (auto j = std::next(i); j != base::spc.groups.end(); ++j) {
-                int k = &(*i) - &base::spc.groups.front();
-                int l = &(*j) - &base::spc.groups.front();
-                if (l < k)
-                    std::swap(k, l);
-                double u = 0;
-                if (!base::pairing.cut(*i, *j)) { // ugly
-                    for (auto &k : *i)
-                        for (auto &l : *j)
-                            u += base::pairing.particle2particle(k, l);
-                }
-                cache(k, l) = u;
+        for (auto i = 0; i < groups_size - 1; ++i) {
+            for (auto j = i + 1; j < groups_size; ++j) {
+                cache(i, j) = base::pairing.group2group(spc.groups[i], spc.groups[j]);
             }
         }
-    } //!< Cache pair interactions in matrix
+    }
 
     double energy(Change &change) override {
+        // Only g2g may be called there to compute (and cache) energy!
         double u = 0;
-
         if (change) {
-
             if (change.all || change.dV) {
-                for (auto i = base::spc.groups.begin(); i < base::spc.groups.end(); ++i) {
-                    for (auto j = i; ++j != base::spc.groups.end();)
+                for (auto i = spc.groups.begin(); i < spc.groups.end(); ++i) {
+                    for (auto j = std::next(i); j < base::spc.groups.end(); ++j) {
                         u += g2g(*i, *j);
+                    }
                 }
-                return u;
-            }
-
-            // if exactly ONE molecule is changed
-            if (change.groups.size() == 1) {
-                auto &d = change.groups[0];
-                auto &g1 = base::spc.groups.at(d.index);
-
-                for (size_t i = 0; i < spc.groups.size(); i++) {
-                    auto &g2 = spc.groups[i];
-                    if (&g1 != &g2)
-                        u += g2g(g1, g2, d.atoms);
+            } else {
+                if (change.groups.size() == 1) { // if exactly ONE molecule is changed
+                    auto &d = change.groups[0];
+                    auto &g1 = spc.groups.at(d.index);
+                    for (auto g2_it = spc.groups.begin(); g2_it < spc.groups.end(); ++g2_it) {
+                        if (&g1 != &(*g2_it)) {
+                            u += g2g(g1, *g2_it, d.atoms);
+                        }
+                    }
+                } else {                                     // many molecules are changed
+                    auto moved = change.touchedGroupIndex(); // index of moved groups
+                    // moved<->moved
+                    if (change.moved2moved) {
+                        for (auto i = moved.begin(); i < moved.end(); ++i) {
+                            for (auto j = std::next(i); j < moved.end(); ++j) {
+                                u += g2g(spc.groups[*i], spc.groups[*j]);
+                            }
+                        }
+                    }
+                    // moved<->static
+#if true
+                    // classic version
+                    auto fixed = indexComplement(spc.groups.size(), moved); // index of static groups
+                    for (auto i : moved) {
+                        for (auto j : fixed) {
+                            u += g2g(spc.groups[i], spc.groups[j]);
+                        }
+                    }
+#else
+                    // OMP-ready version
+                    auto fixed =
+                        indexComplement(spc.groups.size(), moved) | ranges::to<std::vector>; // index of static groups
+                    const size_t moved_size = moved.size();
+                    const size_t fixed_size = fixed.size();
+                    for (auto i = 0; i < moved_size; ++i) {
+                        for (auto j = 0; j < fixed_size; ++j) {
+                            u += g2g(spc.groups[moved[i]], spc.groups[fixed[j]]);
+                        }
+                    }
+#endif
                 }
-                return u;
             }
-
-            auto moved = change.touchedGroupIndex(); // index of moved groups
-            auto fixed =
-                ranges::views::ints(0, int(base::spc.groups.size())) | ranges::views::remove_if([&moved](int i) {
-                    return std::binary_search(moved.begin(), moved.end(), i);
-                }); // index of static groups
-
-            // moved<->moved
-            if (change.moved2moved)
-                for (auto i = moved.begin(); i != moved.end(); ++i)
-                    for (auto j = i; ++j != moved.end();)
-                        u += g2g(base::spc.groups[*i], base::spc.groups[*j]);
-            // moved<->static
-//            if (this->omp_enable and this->omp_g2g) {
-//                std::vector<std::pair<int, int>> pairs(size(moved) * rng_size(fixed));
-//                size_t cnt = 0;
-//                for (auto i : moved)
-//                    for (auto j : fixed)
-//                        pairs[cnt++] = {i, j};
-//                for (size_t i = 0; i < pairs.size(); i++)
-//                    u += g2g(spc.groups[pairs[i].first], spc.groups[pairs[i].second]);
-//            } else
-                for (auto i : moved)
-                    for (auto j : fixed)
-                        u += g2g(base::spc.groups[i], base::spc.groups[j]);
-
             // more todo!
         }
         return u;
     }
 
+    /**
+     * @brief Copy energy matrix from other
+     * @param basePtr
+     * @param change
+     */
     void sync(Energybase *basePtr, Change &change) override {
         auto other = dynamic_cast<decltype(this)>(basePtr);
         assert(other);
-        if (change.all || change.dV)
+        if (change.all || change.dV) {
             cache.triangularView<Eigen::StrictlyUpper>() =
                 (other->cache).template triangularView<Eigen::StrictlyUpper>();
-        else
+        } else {
             for (auto &d : change.groups) {
-                for (int i = 0; i < d.index; i++)
+                for (int i = 0; i < d.index; i++) {
                     cache(i, d.index) = other->cache(i, d.index);
-                for (size_t i = d.index + 1; i < base::spc.groups.size(); i++)
+                }
+                for (size_t i = d.index + 1; i < spc.groups.size(); i++) {
                     cache(d.index, i) = other->cache(d.index, i);
+                }
             }
-    } //!< Copy energy matrix from other
-};    //!< Nonbonded with cached energies (Energy Matrix)
+        }
+    }
+};
 
 #ifdef ENABLE_FREESASA
 /**

@@ -52,6 +52,9 @@ if pygments:
 
 args = parser.parse_args()
 
+red = "\033[91m"
+yellow = "\033[93m"
+ 
 if pygments:
     if args.color:
         formatter = Terminal256Formatter
@@ -75,8 +78,10 @@ def print_table(schema):
     ''' pretty print schema as markdown table '''
     properties = schema.get("properties", "")
     if isinstance(properties, dict):
-        eprint("{:25} | {:7} | {:20}".format("Property", "Type", "Description"))
-        eprint("{:25} | {:7} | {:40}".format(25*"-", 7*"-", 40*"-"))
+        eprint(yellow + "Need help, my young apprentice?\n" + red)
+        eprint("{:25} | {:7} | {:50}".format(25*"-", 7*"-", 50*"-"))
+        eprint("{:25} | {:7} | {:50}".format("Property", "Type", "Description"))
+        eprint("{:25} | {:7} | {:50}".format(25*"-", 7*"-", 50*"-"))
         for key, value in properties.items():
             required = key in schema.get("required", [""])
             _property = key + str("*" if required else "")

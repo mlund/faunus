@@ -115,8 +115,8 @@ properties:
                     atoms: {items: {type: string}, type: array, description: Array of atom names; required if `atomic=true`}
                     bondlist: {items: {type: object}, type: array, description: List of _internal_ bonds (harmonic, dihedrals etc.)}
                     compressible:
-                        type: boolean,
-                        default: false,
+                        type: boolean
+                        default: false
                         description: If true, molecular internal coordinates are scaled upon volume moves
                     ensphere:
                         type: boolean

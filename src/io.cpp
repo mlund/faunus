@@ -1,7 +1,9 @@
 #include "io.h"
 #include "units.h"
 #include "random.h"
-#include "spdlog/spdlog.h"
+#include <spdlog/spdlog.h>
+#include <zstr.hpp>
+#include <cereal/archives/binary.hpp>
 #include <fstream>
 #include <iostream>
 
@@ -486,6 +488,19 @@ std::vector<int> fastaToAtomIds(const std::string &fasta_sequence) {
             names.push_back(it->second);
     }
     return Faunus::names2ids(atoms, names);
+}
+
+std::unique_ptr<std::ostream> makeOutputStream(const std::string &filename, std::ios_base::openmode mode,
+                                               bool compression) {
+    if (compression)
+        return std::make_unique<zstr::ofstream>(filename, mode);
+    else
+        return std::make_unique<std::ofstream>(filename, mode);
+}
+
+std::unique_ptr<std::istream> makeInputStream(const std::string &filename, std::ios_base::openmode mode) {
+    // zstr auto-detectd zlib / Gzip compression
+    return std::make_unique<zstr::ifstream>(filename, mode);
 }
 
 } // namespace Faunus

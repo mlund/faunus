@@ -259,4 +259,49 @@ std::vector<Particle> fastaToParticles(const std::string &, double = 7, const Po
  */
 bool loadStructure(const std::string &, std::vector<Particle> &, bool, bool = true);
 
+/**
+ * @brief Create (compressed) output stream
+ * @param filename Output filename
+ * @param openmode Mode for opening file
+ * @param compression Set to true for zlib compression
+ * @return unique pointer to output stream
+ */
+std::unique_ptr<std::ostream> makeOutputStream(const std::string &, std::ios_base::openmode, bool);
+
+/**
+ * @brief Create (compressed) input stream from file
+ * @param filename Input filename
+ * @param openmode Mode for opening file
+ * @return unique pointer to input stream
+ * @note zlib compression is auto-detected
+ */
+std::unique_ptr<std::istream> makeInputStream(const std::string &, std::ios_base::openmode);
+
+/**
+ * @brief Placeholder for Space Trajectory
+ *
+ * The idea is that the format handles both input and
+ * output streams that may of may not be compressed.
+ */
+class FormatSpaceTrajectory {
+  private:
+    Space::Tgvec &groups; // reference to all groups
+    std::unique_ptr<cereal::BinaryOutputArchive> output_archive;
+    std::unique_ptr<cereal::BinaryInputArchive> input_archive;
+
+  public:
+    FormatSpaceTrajectory(std::ostream &ostream) {
+        if (ostream)
+            output_archive = std::make_unique<cereal::BinaryOutputArchive>(ostream);
+    }
+    FormatSpaceTrajectory(std::istream &istream) {
+        if (istream)
+            input_archive = std::make_unique<cereal::BinaryInputArchive>(istream);
+    }
+    template <Tspace> void load(Tspace &space) { assert(input_archive != nullptr); } //!< Load single frame from stream
+    template <Tspace> void save(const Tspace &space) {
+        assert(output_archive != nullptr);
+    } //!< Save single frame from stream
+};
+
 } // namespace Faunus

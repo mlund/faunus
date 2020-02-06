@@ -298,8 +298,8 @@ class FormatSpaceTrajectory {
         if (istream)
             input_archive = std::make_unique<cereal::BinaryInputArchive>(istream);
     }
-    template <Tspace> void load(Tspace &space) { assert(input_archive != nullptr); } //!< Load single frame from stream
-    template <Tspace> void save(const Tspace &space) {
+    template <class Tspace> void load(Tspace &space) { assert(input_archive != nullptr); } //!< Load single frame from stream
+    template <class Tspace> void save(const Tspace &space) {
         assert(output_archive != nullptr);
     } //!< Save single frame from stream
 };

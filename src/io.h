@@ -3,8 +3,9 @@
 #include "core.h"
 #include "particle.h"
 #include "spdlog/spdlog.h"
-#include <range/v3/distance.hpp>
+#include <cereal/archives/binary.hpp>
 #include <fstream>
+#include <range/v3/distance.hpp>
 
 namespace Faunus {
 
@@ -285,7 +286,6 @@ std::unique_ptr<std::istream> makeInputStream(const std::string &, std::ios_base
  */
 class FormatSpaceTrajectory {
   private:
-    Space::Tgvec &groups; // reference to all groups
     std::unique_ptr<cereal::BinaryOutputArchive> output_archive;
     std::unique_ptr<cereal::BinaryInputArchive> input_archive;
 
@@ -298,9 +298,11 @@ class FormatSpaceTrajectory {
         if (istream)
             input_archive = std::make_unique<cereal::BinaryInputArchive>(istream);
     }
-    template <class Tspace> void load(Tspace &space) { assert(input_archive != nullptr); } //!< Load single frame from stream
-    template <class Tspace> void save(const Tspace &space) {
-        assert(output_archive != nullptr);
+    template <class Tspace> void load(Tspace &) {
+      assert(input_archive != nullptr);
+    } //!< Load single frame from stream
+    template <class Tspace> void save(const Tspace &) {
+      assert(output_archive != nullptr);
     } //!< Save single frame from stream
 };
 

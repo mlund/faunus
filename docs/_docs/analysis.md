@@ -149,8 +149,8 @@ and as a function of separation, _r_. In addition, the radial distribution funct
 
 ### Structure Factor
 
-The isotropically averaged static structure factor between
-$N$ point scatterers is calculated using the [Debye formula](http://doi.org/dmb9wm),
+The isotropically averaged static structure factor between $N$ point scatterers is calculated using
+the [Debye formula](http://doi.org/dmb9wm),
 
 $$
     S(q) = 1 + \frac{2}{N} \left \langle
@@ -158,10 +158,12 @@ $$
            \right \rangle
 $$
 
-The selected `molecules` can be treated either as single
-point scatterers (`com=true`) or as a group of individual
-point scatterers of equal intensity, i.e. with a 
-form factor of unity.
+The selected `molecules` can be treated either as single point scatterers (`com=true`) or as a group of individual
+point scatterers of equal intensity, i.e., with a  form factor of unity.
+
+The computation of the structure factor is rather computationally intensive task, scaling quadratically with the number
+of particles and linearly with the number of scattering vector mesh points. If OpenMP is available, multiple threads
+may be utilized in parallel to speed it up the analysis.
 
 `scatter`   | Description
 ----------- | ------------------------------------------
@@ -174,10 +176,11 @@ form factor of unity.
 `com=true`  | Treat molecular mass centers as single point scatterers
 `pmax=15`   | Multiples of $(h,k,l)$ when using the `explicit` scheme
 `scheme=explicit` | The following schemes are available: `debye`, `explicit`
+`stepsave=false`  | Save every sample to disk
 
-The `explicit` scheme is recommended for cuboids with PBC and the calculation is performed by explicitly
-averaging the following equation over the 3+6+4 directions obtained by permuting
-the crystallographic index `[100]`, `[110]`, `[111]` to define the scattering vector
+The `explicit` scheme is recommended for cuboids with PBC and the calculation is performed by explicitly averaging
+the following equation over the 3+6+4 directions obtained by permuting the crystallographic index
+`[100]`, `[110]`, `[111]` to define the scattering vector
 $\mathbf{q} = 2\pi p/L(h,k,l)$ where $p=1,2,\dots,p\_{max}$.
 
 $$

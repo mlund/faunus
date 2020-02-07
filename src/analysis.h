@@ -420,10 +420,11 @@ class MultipoleDistribution : public Analysisbase {
  */
 class ScatteringFunction : public Analysisbase {
   private:
-    enum Schemes { DEBYE, EXPLICIT }; // two different schemes
+    enum Schemes { DEBYE, EXPLICIT_PBC, EXPLICIT_IPBC}; // three different schemes
     Schemes scheme = DEBYE;
     Space &spc;
-    bool usecom;                    // scatter from mass center, only?
+    bool use_com;                   // scatter from mass center, only?
+    bool save_after_sample = false; // if true, save average S(q) after each sample point
     std::string filename;           // output file name
     std::vector<Point> p;           // vector of scattering points
     std::vector<int> ids;           // Molecule ids
@@ -431,8 +432,8 @@ class ScatteringFunction : public Analysisbase {
     typedef Scatter::FormFactorUnity<double> Tformfactor;
 
     std::shared_ptr<Scatter::DebyeFormula<Tformfactor>> debye;
-    std::shared_ptr<Scatter::StructureFactor<double>> explicit_average;
-
+    std::shared_ptr<Scatter::StructureFactorPBC<>> explicit_average_pbc;
+    std::shared_ptr<Scatter::StructureFactorIPBC<>> explicit_average_ipbc;
     void _sample() override;
     void _to_disk() override;
     void _to_json(json &j) const override;

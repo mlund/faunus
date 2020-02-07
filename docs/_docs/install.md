@@ -177,4 +177,3 @@ Instead of uploading to anaconda.org, install a local copy directly after the bu
 ~~~ bash
 conda install -c USER faunus --use-local
 ~~~
-

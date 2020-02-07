@@ -50,8 +50,7 @@ void write(std::ostream &stream, const std::map<TKey, TValue> &data, const std::
  * @param filename
  * @param data
  */
-template<typename TKey, typename TValue>
-void write(const std::string &filename, const std::map<TKey, TValue>& data) {
+template <typename TKey, typename TValue> void write(const std::string &filename, const std::map<TKey, TValue> &data) {
     if (!data.empty()) {
         std::ofstream file(filename);
         write(file, data);

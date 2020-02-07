@@ -218,27 +218,48 @@ template <typename T = double> class StructureFactor {
         {1, 1, 1}, {-1, 1, 1}, {1, -1, 1}, {1, 1, -1}                          // 4 permutations
     };
 
-  public:
-    StructureFactor(int number_of_scalings) : pmax(number_of_scalings) {}
+    T precision = 10000.0; //!< Output precision used for better binning
 
-    int pmax; //!< Multiples of q to be sampled
+  public:
+    StructureFactor(int number_of_scalings, bool ipbc = false) : pmax(number_of_scalings), ipbc(ipbc) {
+        // due to symmetry in IPBC we need not consider permutations
+        if (ipbc)
+            directions = {{1, 0, 0}, {1, 1, 0}, {1, 1, 1}};
+    }
+
+    int pmax;  //!< Multiples of q to be sampled
+    bool ipbc; //!< True if using isotropic periodic boundaries
 
     template <class Tpvec> void sample(const Tpvec &positions, double boxlength) {
         auto func = [&](Point &dir) {
+            T f = (ipbc) ? std::pow(2, dir.count()) : 1.0;     // 2 ^ number of non-zero elements if IPBC
             for (int p = 1; p <= pmax; p++) {                  // loop over multiples of q
                 Point _q = (2 * pc::pi * p / boxlength) * dir; // scattering vector
                 double sum_sin = 0, sum_cos = 0;               // temporary sums
-                for (auto &r : positions) {                    // loop over positions
-                    double qr = _q.dot(r);                     // scalar product q*r
-                    sum_sin += sin(qr);
-                    sum_cos += cos(qr);
+                if (ipbc) {
+                    for (auto &r : positions) { // loop over positions
+                        double product = cos(_q[0] * r[0]);
+                        if (_q[1] > 0)
+                            product *= cos(_q[1] * r[1]);
+                        if (_q[2] > 0)
+                            product *= cos(_q[2] * r[2]);
+                        sum_cos += product;
+                        // sum_cos += cos(_q[0]*r[0]) * cos(_q[1]*r[1]) * cos(_q[2]*r[2]);
+                    }
+                } else {
+                    for (auto &r : positions) { // loop over positions
+                        T qr = _q.dot(r);       // scalar product q*r
+                        sum_sin += sin(qr);
+                        sum_cos += cos(qr);
+                    }
                 }
                 // collect average, `norm()` gives the scattering vector length
-                S[_q.norm()] += (sum_sin * sum_sin + sum_cos * sum_cos) / double(positions.size());
-                W[_q.norm()] += 1.0;
+                T qlen = std::round(_q.norm() * precision) / precision; // round |q| for better binning
+                S[qlen] += (sum_sin * sum_sin + sum_cos * sum_cos) / T(positions.size()) * f;
+                W[qlen] += 1.0;
             }
         };
-        std::for_each(directions.begin(), directions.end(), func); // add std::execution::par policy?
+        std::for_each(directions.begin(), directions.end(), func); // loop over 3+6+4=13 directions; add std::execution::par policy?
     }
 
     void save(const std::string &filename) {

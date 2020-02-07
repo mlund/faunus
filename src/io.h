@@ -27,6 +27,37 @@ bool writeFile(const std::string &file, const std::string &s,
 
 void strip(std::vector<std::string> &string_vector, const std::string &pattern); //!< Strip lines matching a pattern
 
+/**
+ * Write a map to an output stream as key-value pairs
+ * @tparam TKey
+ * @tparam TValue
+ * @param stream Output stream
+ * @param data
+ */
+template <typename TKey, typename TValue>
+void write(std::ostream &stream, const std::map<TKey, TValue> &data, const std::string &sep = " ", const std::string &end = "\n") {
+    if (stream) {
+        for (auto [key, value] : data) {
+            stream << key << sep << value << end;
+        }
+    }
+}
+
+/**
+ * Write a map to a file as key-value pairs
+ * @tparam TKey
+ * @tparam TValue
+ * @param filename
+ * @param data
+ */
+template<typename TKey, typename TValue>
+void write(const std::string &filename, const std::map<TKey, TValue>& data) {
+    if (!data.empty()) {
+        std::ofstream file(filename);
+        write(file, data);
+    }
+}
+
 } // namespace IO
 
 /**

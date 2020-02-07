@@ -12,7 +12,7 @@ set(CMAKE_CXX_EXTENSIONS NO)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(PythonInterp 3 REQUIRED)
 find_package(Threads REQUIRED)
-find_package(zlib REQUIRED)
+find_package(ZLIB REQUIRED)
 enable_testing()
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -187,6 +187,16 @@ FetchContent_Declare(
     URL https://github.com/pybind/pybind11/archive/v2.4.3.tar.gz
     URL_HASH MD5=62254c40f89925bb894be421fe4cdef2)
 
+# NANOBENCH
+FetchContent_Declare(
+    nanobench
+    URL "https://github.com/martinus/nanobench/archive/v3.1.0.tar.gz"
+    URL_HASH MD5=e646fb61164a60921c1a1834fbca24bc)
+FetchContent_GetProperties(nanobench)
+if(NOT nanobench_POPULATED)
+    FetchContent_Populate(nanobench)
+endif()
+
 # EIGEN
 FetchContent_Declare(
     eigen
@@ -297,6 +307,7 @@ endif ()
 # Add third-party headers to include path. Note this is done with SYSTEM
 # to disable potential compiler warnings
 include_directories(SYSTEM ${eigen_SOURCE_DIR} ${doctest_SOURCE_DIR} ${modernjson_SOURCE_DIR}/include ${rangev3_SOURCE_DIR}/include
+    ${nanobench_SOURCE_DIR}/src/include
     ${Pybind11IncludeDir} ${DocoptIncludeDir} ${CppsidIncludeDir} ${XdrfileIncludeDir} ${SpdlogIncludeDir}
     ${ProgressTrackerIncludeDir} ${exprtk_SOURCE_DIR} ${cereal_SOURCE_DIR}/include ${zstr_SOURCE_DIR}/src)
 

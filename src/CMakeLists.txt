@@ -84,6 +84,7 @@ set(tsts
     ${CMAKE_SOURCE_DIR}/src/molecule_test.h
     ${CMAKE_SOURCE_DIR}/src/particle_test.h
     ${CMAKE_SOURCE_DIR}/src/potentials_test.h
+    ${CMAKE_SOURCE_DIR}/src/scatter_test.h
     ${CMAKE_SOURCE_DIR}/src/space_test.h
     ${CMAKE_SOURCE_DIR}/src/tensor_test.h
     )

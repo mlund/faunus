@@ -14,6 +14,7 @@
 #include "random.h"
 
 #include "atomdata_test.h"
+#include "auxiliary_test.h"
 #include "bonds_test.h"
 #include "core_test.h"
 #include "energy_test.h"

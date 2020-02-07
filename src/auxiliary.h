@@ -25,6 +25,30 @@ namespace Faunus
         } //!< Round to int
 
     /**
+     * @brief Convert floating point number to integral number. Perform range check and rounding.
+     * @tparam TOut integral type
+     * @tparam TIn floating point type
+     * @param number (floating point type)
+     * @return number (integral type)
+     * @throw std::overflow_error
+     */
+    template <typename TOut, typename TIn> inline TOut numeric_cast(const TIn number) {
+        static_assert(std::is_floating_point<TIn>::value, "TIn must be floating point.");
+        static_assert(std::is_integral<TOut>::value, "TOut must be integer.");
+        if (std::isfinite(number)) {
+            // The number is finite ...
+            if (number < std::nextafter(static_cast<TIn>(std::numeric_limits<TOut>::max()), 0) &&
+                number > std::nextafter(static_cast<TIn>(std::numeric_limits<TOut>::min()), 0)) {
+                // ... and fits into the integral type range.
+                // The nextafter function is used to mitigate possible rounding up or down.
+                return static_cast<TOut>(number >= 0 ? number + 0.5 : number - 0.5); // round before cast
+            }
+        }
+        // not-a-number, infinite, or outside the representable range
+        throw std::overflow_error("numeric cast overflow");
+    }
+
+    /**
      * @brief Iterate over pairs in container, call a function on the elements, and sum results
      * @tparam T Floating point type. Default: `double)`
      * @param begin Begin iterator

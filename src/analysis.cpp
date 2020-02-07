@@ -1313,32 +1313,49 @@ void ScatteringFunction::_sample() {
     for (int id : ids) { // loop over molecule names
         auto groups = spc.findMolecules(id);
         for (auto &g : groups) // loop over groups
-            if (usecom && !g.atomic)
+            if (use_com && !g.atomic)
                 p.push_back(g.cm);
             else
                 for (auto &i : g) // loop over particle index in group
                     p.push_back(i.pos);
     }
+
+    // zero-padded suffix to use with `save_after_sample`
+    std::string suffix = fmt::format("{:07d}", cnt);
     switch (scheme) {
     case DEBYE:
         debye->sample(p, spc.geo.getVolume());
+        if (save_after_sample)
+            IO::write(filename + "." + suffix, debye->getIntensity());
         break;
-    case EXPLICIT:
-        explicit_average->sample(p, spc.geo.getLength().x());
+    case EXPLICIT_PBC:
+        explicit_average_pbc->sample(p, spc.geo.getLength().x());
+        if (save_after_sample)
+            IO::write(filename + "." + suffix, explicit_average_pbc->getSampling());
+        break;
+    case EXPLICIT_IPBC:
+        explicit_average_ipbc->sample(p, spc.geo.getLength().x());
+        if (save_after_sample)
+            IO::write(filename + "." + suffix, explicit_average_ipbc->getSampling());
         break;
     }
 }
 void ScatteringFunction::_to_json(json &j) const {
-    j = {{"molecules", names}, {"com", usecom}};
+    j = {{"molecules", names}, {"com", use_com}};
     switch (scheme) {
     case DEBYE:
         j["scheme"] = "debye";
-        j["qmin"] = debye->qmin;
-        j["qmax"] = debye->qmax;
+        std::tie(j["qmin"], j["qmax"], std::ignore) = debye->getQMeshParameters();
         break;
-    case EXPLICIT:
+    case EXPLICIT_PBC:
         j["scheme"] = "explicit";
-        j["pmax"] = explicit_average->pmax;
+        j["pmax"] = explicit_average_pbc->getQMultiplier();
+        j["ipbc"] = false;
+        break;
+    case EXPLICIT_IPBC:
+        j["scheme"] = "explicit";
+        j["pmax"] = explicit_average_ipbc->getQMultiplier();
+        j["ipbc"] = true;
         break;
     }
 }
@@ -1346,7 +1363,8 @@ void ScatteringFunction::_to_json(json &j) const {
 ScatteringFunction::ScatteringFunction(const json &j, Space &spc) try : spc(spc) {
     from_json(j);
     name = "scatter";
-    usecom = j.value("com", true);
+    use_com = j.value("com", true);
+    save_after_sample = j.value("stepsave", false);   // save to disk for each sample
     filename = j.at("file").get<std::string>();
     names = j.at("molecules").get<decltype(names)>(); // molecule names
     ids = names2ids(molecules, names);                // names --> molids
@@ -1360,9 +1378,15 @@ ScatteringFunction::ScatteringFunction(const json &j, Space &spc) try : spc(spc)
         //    faunus_logger->warn("{0}: '{1}' scheme used on PBC system; consider 'explicit' instead", name,
         //    scheme_str);
     } else if (scheme_str == "explicit") {
-        scheme = EXPLICIT;
+        bool ipbc = j.value("ipbc", false);
         int pmax = j.value("pmax", 15);
-        explicit_average = std::make_shared<Scatter::StructureFactor<double>>(pmax);
+        if (ipbc) {
+            scheme = EXPLICIT_IPBC;
+            explicit_average_ipbc = std::make_shared<Scatter::StructureFactorIPBC<>>(pmax);
+        } else {
+            scheme = EXPLICIT_PBC;
+            explicit_average_pbc = std::make_shared<Scatter::StructureFactorPBC<>>(pmax);
+        }
         // todo: add warning if used a non-cubic system
     } else
         throw std::runtime_error("unknown scheme");
@@ -1373,10 +1397,13 @@ ScatteringFunction::ScatteringFunction(const json &j, Space &spc) try : spc(spc)
 void ScatteringFunction::_to_disk() {
     switch (scheme) {
     case DEBYE:
-        debye->save(filename);
+        IO::write(filename, debye->getIntensity());
         break;
-    case EXPLICIT:
-        explicit_average->save(filename);
+    case EXPLICIT_PBC:
+        IO::write(filename, explicit_average_pbc->getSampling());
+        break;
+    case EXPLICIT_IPBC:
+        IO::write(filename, explicit_average_ipbc->getSampling());
         break;
     }
 }

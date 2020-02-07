@@ -127,7 +127,20 @@ Tip: Redirect the standard error output to a log file.
 faunus -v 5 -i in.json 2>> error.log
 ~~~
 
-## Message Passing Interface (MPI)
+## Parallelization
+
+### OpenMP
+
+Several routines in Faunus can run in parallel using multiple threads. The only prerequisite is that Faunus was
+compiled with OpenMP support (which is default). The number of threads is controlled with an environment variable.
+The following example demonstrates how to run Faunus using 4 threads:  
+
+~~~ bash
+export OMP_NUM_THREADS=4
+faunus -i in.json
+~~~
+
+### Message Passing Interface (MPI)
 
 Only few routines in Faunus are currently parallelisable using MPI, for example
 parallel tempering, and penalty function energies.

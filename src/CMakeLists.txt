@@ -73,6 +73,7 @@ set(hdrs
 # faunus header files
 set(tsts
     ${CMAKE_SOURCE_DIR}/src/atomdata_test.h
+    ${CMAKE_SOURCE_DIR}/src/auxiliary_test.h
     ${CMAKE_SOURCE_DIR}/src/bonds_test.h
     ${CMAKE_SOURCE_DIR}/src/core_test.h
     ${CMAKE_SOURCE_DIR}/src/energy_test.h
@@ -83,6 +84,7 @@ set(tsts
     ${CMAKE_SOURCE_DIR}/src/molecule_test.h
     ${CMAKE_SOURCE_DIR}/src/particle_test.h
     ${CMAKE_SOURCE_DIR}/src/potentials_test.h
+    ${CMAKE_SOURCE_DIR}/src/scatter_test.h
     ${CMAKE_SOURCE_DIR}/src/space_test.h
     ${CMAKE_SOURCE_DIR}/src/tensor_test.h
     )

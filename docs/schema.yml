@@ -717,6 +717,7 @@ properties:
                         scheme:
                             description: Scattering method
                             enum: [debye, explicit]
+                        stepsave: {type: boolean, default: false, description: Save every sample to disk}
                         required: [nstep, molecules, scheme]
                     additionalProperties: false
 

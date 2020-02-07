@@ -169,6 +169,7 @@ class Sphere : public GeometryImplementation {
     double getVolume(int dim = 3) const override;
     Point setVolume(double volume, VolumeMethod method = ISOTROPIC) override;
     Point vdist(const Point &a, const Point &b) const override;
+    double sqdist(const Point &a, const Point &b) const { return (a - b).squaredNorm(); };
     void boundary(Point &a) const override;
     bool collision(const Point &a) const override;
     void randompos(Point &m, Random &rand) const override;

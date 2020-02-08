@@ -1,0 +1,40 @@
+#!/usr/bin/env yason.py
+temperature: 300
+random: {seed: fixed}
+geometry: {type: cuboid, length: 18.6}
+mcloop: {macro: 5, micro: 10}
+
+atomlist:
+    - OW: {q: -0.8476, sigma: 3.166, eps: 0.650, mw: 15.999}
+    - HW: {q: 0.4238,  sigma: 2, eps: 0, mw: 1.007}
+
+moleculelist:
+    - water:
+        structure:
+            - OW: [2.30, 6.28, 1.13]
+            - HW: [ 1.37,6.26, 1.50]
+            - HW: [2.31, 5.89, 0.21]
+
+insertmolecules:
+    - water: {N: 256}
+
+energy:
+    - isobaric: {P/atm: 1}
+    - nonbonded_coulomblj:
+        lennardjones: {mixing: LB}
+        coulomb: {type: ewald, epsr: 1, cutoff: 9, kcutoff: 7.3, epss: 0, alpha: 0.2, ewaldscheme: IPBC}
+        cutoff_g2g: 10
+
+moves:
+    - moltransrot: {molecule: water, dp: 0.4, dprot: 0.4, repeat: N}
+    - volume: {dV: 0.03, method: isotropic}
+
+analysis:
+    - sanity: {nstep: 100}
+    - atomrdf: {file: rdf.dat, nstep: 5, dr: 0.15, name1: OW, name2: OW}
+    - systemenergy: {file: energy.dat, nstep: 50}
+    - xtcfile: {file: traj.xtc, nstep: 10}
+    - savestate: {file: confout.pqr}
+    - savestate: {file: state.ubj}
+    - density: {nstep: 50}
+

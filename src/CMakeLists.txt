@@ -258,6 +258,11 @@ add_test(
     WORKING_DIRECTORY ${EXAMPLES_DIR}/speciation)
 
 add_test(
+    NAME water-ewald-NOCHECKS
+    COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} ewald.yml | $<TARGET_FILE:faunus>"
+    WORKING_DIRECTORY ${EXAMPLES_DIR}/water)
+
+add_test(
     NAME phosphate
     COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} phosphate.yml\
     | $<TARGET_FILE:faunus> --quiet --state phosphate.state.json\

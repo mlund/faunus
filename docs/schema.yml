@@ -221,6 +221,7 @@ properties:
                           alpha: {type: number}
                           kcutoff: {type: number}
                           ipbc: {type: boolean, default: false}
+                          ewaldtype: {type: string, enum: [PBC, IPBC], default: PBC}
                       required: [cutoff, epss, alpha, kcutoff]
 
         mixing_rule:

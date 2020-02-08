@@ -6,9 +6,15 @@
 namespace Faunus {
 namespace Energy {
 
+/**
+ * Resize k-vectors according to current variables and box length
+ *
+ * @todo Split PBC and IPBC
+ */
 void EwaldData::update(const Point &box) {
+    bool ipbc = (policy ==IPBC or policy ==IPBCEigen);
     L = box;
-    int kcc = std::ceil(kc);
+    int kcc = std::ceil(kcutoff);
     check_k2_zero = 0.1 * std::pow(2 * pc::pi / L.maxCoeff(), 2);
     int kVectorsLength = (2 * kcc + 1) * (2 * kcc + 1) * (2 * kcc + 1) - 1;
     if (kVectorsLength == 0) {
@@ -16,14 +22,14 @@ void EwaldData::update(const Point &box) {
         Aks.resize(1);
         kVectors.col(0) = Point(1, 0, 0); // Just so it is not the zero-vector
         Aks[0] = 0;
-        kVectorsInUse = 1;
+        num_kvectors = 1;
         Qion.resize(1);
         Qdip.resize(1);
     } else {
-        double kc2 = kc * kc;
+        double kc2 = kcutoff * kcutoff;
         kVectors.resize(3, kVectorsLength);
         Aks.resize(kVectorsLength);
-        kVectorsInUse = 0;
+        num_kvectors = 0;
         kVectors.setZero();
         Aks.setZero();
         int startValue = 1 - int(ipbc);
@@ -47,43 +53,275 @@ void EwaldData::update(const Point &box) {
                     if (spherical_sum)
                         if ((dkx2 / kc2) + (dky2 / kc2) + (dkz2 / kc2) > 1)
                             continue;
-                    kVectors.col(kVectorsInUse) = kv;
-                    Aks[kVectorsInUse] = factor * std::exp(-k2 / (4 * alpha * alpha)) / k2;
-                    kVectorsInUse++;
+                    kVectors.col(num_kvectors) = kv;
+                    Aks[num_kvectors] = factor * std::exp(-k2 / (4 * alpha * alpha)) / k2;
+                    num_kvectors++;
                 }
             }
         }
-        Qion.resize(kVectorsInUse);
-        Qdip.resize(kVectorsInUse);
-        Aks.conservativeResize(kVectorsInUse);
-        kVectors.conservativeResize(3, kVectorsInUse);
+        Qion.resize(num_kvectors);
+        Qdip.resize(num_kvectors);
+        Aks.conservativeResize(num_kvectors);
+        kVectors.conservativeResize(3, num_kvectors);
     }
 }
 
 EwaldData::EwaldData(const json &j) {
     alpha = j.at("alpha"); // damping-parameter
-    rc = j.at("cutoff");   // real space cut-off
-    kc = j.at("kcutoff");  // reciprocal space cut-off
-    ipbc = j.value("ipbc", false); // using PBC or IPBC?
+    Rcutoff = j.at("cutoff");   // real space cut-off
+    kcutoff = j.at("kcutoff");  // reciprocal space cut-off
     spherical_sum = j.value("spherical_sum", true); // Using spherical summation of k-vectors in reciprocal space?
-    lB = pc::lB(j.at("epsr"));
-    eps_surf = j.value("epss", 0.0); // dielectric constant of surrounding medium
-    const_inf = (eps_surf < 1) ? 0 : 1; // if unphysical (<1) use epsr infinity for surrounding medium
+    bjerrum_length = pc::lB(j.at("epsr"));
+    surface_dielectric_constant = j.value("epss", 0.0); // dielectric constant of surrounding medium
+    const_inf = (surface_dielectric_constant < 1) ? 0 : 1; // if unphysical (<1) use epsr infinity for surrounding medium
     kappa = j.value("kappa", 0.0);
     kappa2 = kappa * kappa;
+
+    if (j.value("ipbc", false)) { // look for legacy bool `ipbc`
+        faunus_logger->warn("key `ipbc` is deprecated, use `ewaldscheme: ipbc` instead");
+        policy = EwaldData::IPBC;
+    } else {
+        std::string name = j.value("ewaldpolicy", "PBC");
+        if (name == "PBC")
+            policy = EwaldData::PBC;
+        else if (name == "IPBC")
+            policy = EwaldData::IPBC;
+        else
+            throw std::runtime_error("invalid `ewaldpolicy`");
+    }
 }
 
 void to_json(json &j, const EwaldData &d) {
-    j = {{"lB", d.lB},
-         {"ipbc", d.ipbc},
-         {"epss", d.eps_surf},
+    j = {{"lB", d.bjerrum_length},
+         {"epss", d.surface_dielectric_constant},
          {"alpha", d.alpha},
-         {"cutoff", d.rc},
-         {"kcutoff", d.kc},
+         {"cutoff", d.Rcutoff},
+         {"kcutoff", d.kcutoff},
          {"wavefunctions", d.kVectors.cols()},
          {"spherical_sum", d.spherical_sum},
          {"kappa", d.kappa}};
+
+    auto &j_type = j["ewaldscheme"];
+    switch (d.policy) {
+    case EwaldData::PBC:
+        j_type = "PBC";
+        break;
+    case EwaldData::PBCEigen:
+        j_type = "PBC";
+        break;
+    case EwaldData::IPBC:
+        j_type = "IPBC";
+        break;
+    case EwaldData::IPBCEigen:
+        j_type = "IPBC";
+        break;
+    }
 }
+
+//----------------- Ewald Policies -------------------
+
+EwaldPolicyBase::EwaldPolicyBase(Space &spc) : spc(&spc) {}
+PolicyIonIon::PolicyIonIon(Space &spc) : EwaldPolicyBase(spc) {}
+PolicyIonIonEigen::PolicyIonIonEigen(Space &spc) : PolicyIonIon(spc) {}
+PolicyIonIonIPBC::PolicyIonIonIPBC(Space &spc) : PolicyIonIon(spc) {}
+PolicyIonIonIPBCEigen::PolicyIonIonIPBCEigen(Space &spc) : PolicyIonIonIPBC(spc) {}
+
+void PolicyIonIon::updateComplex(EwaldData &data) const {
+    auto active = spc->activeParticles();
+    for (int k = 0; k < data.kVectors.cols(); k++) {
+        const Point &kv = data.kVectors.col(k);
+        EwaldData::Tcomplex Q(0, 0);
+        for (auto &i : active) {
+            double dot = kv.dot(i.pos);
+            Q += i.charge * EwaldData::Tcomplex(std::cos(dot), std::sin(dot)); // 'Q^q', see eq. 25 in ref.
+        }
+        data.Qion[k] = Q;
+    }
+}
+
+void PolicyIonIonEigen::updateComplex(EwaldData &data) const {
+    auto active = spc->activeParticles();
+    auto pos = asEigenMatrix(active.begin().base(), active.end().base(), &Space::Tparticle::pos);       //  N x 3
+    auto charge = asEigenVector(active.begin().base(), active.end().base(), &Space::Tparticle::charge); // N x 1
+    Eigen::MatrixXd kr = pos.matrix() * data.kVectors;                        // ( N x 3 ) * ( 3 x K ) = N x K
+    data.Qion.real() = (kr.array().cos().colwise() * charge).colwise().sum(); // real part of 'Q^q', see eq. 25 in ref.
+    data.Qion.imag() = kr.array().sin().colwise().sum(); // imaginary part of 'Q^q', see eq. 25 in ref.
+}
+
+
+void PolicyIonIon::updateComplex(EwaldData &data, Change &change) const {
+    assert(old != nullptr);
+    assert(spc->p.size() == old->p.size());
+    for (int k = 0; k < data.kVectors.cols(); k++) {
+        auto &Q = data.Qion[k];
+        Point q = data.kVectors.col(k);
+
+        for (auto cg : change.groups) {
+            auto g_new = spc->groups.at(cg.index);
+            auto g_old = old->groups.at(cg.index);
+            for (auto i : cg.atoms) {
+                if (i < g_new.size()) {
+                    double _new = q.dot((g_new.begin() + i)->pos);
+                    Q += (g_new.begin() + i)->charge * EwaldData::Tcomplex(std::cos(_new), std::sin(_new));
+                }
+                if (i < g_old.size()) {
+                    double _old = q.dot((g_old.begin() + i)->pos);
+                    Q -= (g_old.begin() + i)->charge * EwaldData::Tcomplex(std::cos(_old), std::sin(_old));
+                }
+            }
+        }
+    }
+}
+
+//----------------- IPBC Ewald -------------------
+
+void PolicyIonIonIPBC::updateComplex(EwaldData &data) const {
+    assert(data.policy ==EwaldData::IPBC or data.policy ==EwaldData::IPBCEigen);
+    auto active = spc->activeParticles();
+    for (int k = 0; k < data.kVectors.cols(); k++) {
+        const Point &kv = data.kVectors.col(k);
+        EwaldData::Tcomplex Q(0, 0);
+        for (auto &i : active)
+            Q += kv.cwiseProduct(i.pos).array().cos().prod() * i.charge; // see eq. 2 in doi:10/css8
+        data.Qion[k] = Q;
+    }
+}
+
+void PolicyIonIonIPBCEigen::updateComplex(EwaldData &data) const {
+    assert(data.policy ==EwaldData::IPBC or data.policy ==EwaldData::IPBCEigen);
+    auto active = spc->activeParticles();
+    auto pos = asEigenMatrix(active.begin().base(), active.end().base(), &Space::Tparticle::pos);       //  N x 3
+    auto charge = asEigenVector(active.begin().base(), active.end().base(), &Space::Tparticle::charge); // N x 1
+    data.Qion.real() = (data.kVectors.array().cwiseProduct(pos).array().cos().prod() * charge)
+        .colwise()
+        .sum(); // see eq. 2 in doi:10/css8
+}
+
+void PolicyIonIonIPBC::updateComplex(EwaldData &data, Change &change) const {
+    assert(data.policy ==EwaldData::IPBC or data.policy ==EwaldData::IPBCEigen);
+    assert(old != nullptr);
+    assert(spc->p.size() == old->p.size());
+
+    for (int k = 0; k < data.kVectors.cols(); k++) {
+        auto &Q = data.Qion[k];
+        Point q = data.kVectors.col(k);
+        for (auto cg : change.groups) {
+            auto g_new = spc->groups.at(cg.index);
+            auto g_old = old->groups.at(cg.index);
+            for (auto i : cg.atoms) {
+                if (i < g_new.size())
+                    Q += q.cwiseProduct((g_new.begin() + i)->pos).array().cos().prod() * (g_new.begin() + i)->charge;
+                if (i < g_old.size())
+                    Q -= q.cwiseProduct((g_old.begin() + i)->pos).array().cos().prod() * (g_old.begin() + i)->charge;
+            }
+        }
+    }
+}
+
+double PolicyIonIon::surfaceEnergy(const EwaldData &d, Change &change) {
+    if (d.const_inf < 0.5)
+        return 0;
+    Point qr(0, 0, 0);
+    if (change.all or change.dV)
+        for (auto g : spc->groups)
+            for (auto i : g)
+                qr += i.charge * i.pos;
+    else if (change.groups.size() > 0) {
+        for (auto cg : change.groups) {
+            auto g = spc->groups.at(cg.index);
+            for (auto i : cg.atoms)
+                if (i < g.size())
+                    qr += (g.begin() + i)->charge * (g.begin() + i)->pos;
+        }
+    }
+    return d.const_inf * 2 * pc::pi / ((2 * d.surface_dielectric_constant + 1) * spc->geo.getVolume()) * qr.dot(qr) *
+           d.bjerrum_length;
+}
+
+double PolicyIonIon::selfEnergy(const EwaldData &d, Change &change) {
+#ifndef NDEBUG
+    // std::cerr << "we should ideally not arrive here!\n";
+#endif
+    double Eq = 0;
+    if (change.dN) {
+        for (auto cg : change.groups) {
+            auto g = spc->groups.at(cg.index);
+            for (auto i : cg.atoms)
+                if (i < g.size())
+                    Eq += std::pow((g.begin() + i)->charge, 2);
+        }
+    } else if (change.all and not change.dV) {
+        for (auto g : spc->groups)
+            for (auto i : g)
+                Eq += i.charge * i.charge;
+    }
+    return -d.alpha * Eq / std::sqrt(pc::pi) * d.bjerrum_length;
+}
+
+/**
+ * Updates the reciprocal space terms 'Q^q' and 'A_k'.
+ * See eqs. 24 and 25 in ref. for PBC Ewald, and eq. 2 in doi:10/css8 for IPBC Ewald.
+ */
+double PolicyIonIon::reciprocalEnergy(const EwaldData &d) {
+    double E = 0;
+    for (int k = 0; k < d.Qion.size(); k++)
+        E += d.Aks[k] * std::norm(d.Qion[k]);
+    return 2 * pc::pi / spc->geo.getVolume() * E * d.bjerrum_length;
+}
+
+double PolicyIonIonEigen::reciprocalEnergy(const EwaldData &d) {
+    double E = d.Aks.cwiseProduct(d.Qion.cwiseAbs2()).sum();
+    return 2 * pc::pi / spc->geo.getVolume() * E * d.bjerrum_length;
+}
+
+Ewald::Ewald(const json &j, Space &spc) : data(j), spc(spc) {
+    name = "ewald";
+    if (data.policy ==EwaldData::IPBC or data.policy ==EwaldData::IPBCEigen) {
+        policy = std::make_shared<PolicyIonIonIPBC>(spc);
+        cite = "doi:10/css8";
+    }
+    else {
+        policy = std::make_shared<PolicyIonIon>(spc);
+        cite = "doi:10.1063/1.481216";
+    }
+    init();
+}
+
+void Ewald::init() {
+    data.update(spc.geo.getLength());
+    policy->updateComplex(data); // brute force. todo: be selective
+}
+
+double Ewald::energy(Change &change) {
+    double u = 0;
+    if (change) {
+        // If the state is NEW (trial state), then update all k-vectors
+        if (key == NEW) {
+            if (change.all or change.dV) { // everything changes
+                data.update(spc.geo.getLength());
+                policy->updateComplex(data); // update all (expensive!)
+            } else {
+                if (change.groups.size() > 0)
+                    policy->updateComplex(data, change);
+            }
+        }
+        // the selfEnergy() is omitted as this is added as a separate term in `Hamiltonian`
+        // (The pair-potential is responsible for this)
+        u = policy->surfaceEnergy(data, change) +
+            policy->reciprocalEnergy(data);
+    }
+    return u;
+}
+
+void Ewald::sync(Energybase *basePtr, Change &) {
+    auto other = dynamic_cast<decltype(this)>(basePtr);
+    assert(other);
+    if (other->key == OLD)
+        policy->old = &(other->spc); // give NEW access to OLD space for optimized updates
+    data = other->data;             // copy everything!
+}
+
+void Ewald::to_json(json &j) const { j = data; }
 
 double Example2D::energy(Change &) {
     double s = 1 + std::sin(2 * pc::pi * i.x()) + std::cos(2 * pc::pi * i.y());
@@ -301,7 +539,7 @@ void Hamiltonian::addEwald(const json &j, Space &spc) {
     if (_j.count("type")) {
         if (_j.at("type") == "ewald") {
             faunus_logger->debug("adding Ewald reciprocal and surface energy terms");
-            emplace_back<Energy::Ewald<>>(_j, spc);
+            emplace_back<Energy::Ewald>(_j, spc);
         }
     }
 }

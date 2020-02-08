@@ -242,7 +242,7 @@ self energies are automatically added to the Hamiltonian, activating additional 
 --------------------- | ---------------------------------------------------------------------
 `kcutoff`             | Reciprocal-space cutoff
 `epss=0`              | Dielectric constant of surroundings, $\varepsilon_{surf}$ (0=tinfoil)
-`ipbc=false`          | Use isotropic periodic boundary conditions, [IPBC](http://doi.org/css8). Holds also for Yukawa-type interactions.
+`ewaldscheme=PBC`     | Periodic (`PBC`) or isotropic periodic ([`IPBC`](http://doi.org/css8)) boundary conditions
 `spherical_sum=true`  | Spherical/ellipsoidal summation in reciprocal space; cubic if `false`.
 `debyelength=`$\infty$| Debye length (Å)
 
@@ -266,12 +266,12 @@ $$
 $$
 
 $$
-A_k = \frac{e^{-( k^2 + \kappa^2 )/4\alpha^2}}{k^2}
+A\_k = \frac{e^{-( k^2 + \kappa^2 )/4\alpha^2}}{k^2}
 \quad \quad Q^{q\mu} = Q^{q} + Q^{\mu}
 $$
 
 $$
-Q^{q} = \sum_{j}q_je^{i({\bf k}\cdot {\bf r}_j)} \quad Q^{\mu} = \sum_{j}i({\boldsymbol{\mu}}_j\cdot {\bf k})  e^{i({\bf k}\cdot {\bf r}_j)}
+Q^{q} = \sum_{j}q\_je^{i({\bf k}\cdot {\bf r}\_j)} \quad Q^{\mu} = \sum_{j}i({\boldsymbol{\mu}}\_j\cdot {\bf k})  e^{i({\bf k}\cdot {\bf r}\_j)}
 $$
 
 $$

@@ -59,19 +59,16 @@ struct EwaldData {
     double surface_dielectric_constant = 0; //!< Surface dielectric constant;
     double bjerrum_length = 0;              //!< Bjerrum length
     double kappa = 0;                       //!< Inverse Debye screening length
-    double kappa2 = 0;
+    double kappa2 = 0;                      //!< Squared inverse Debye screening length
     double alpha = 0;
     double const_inf = 0;
     double check_k2_zero = 0;
     bool spherical_sum = true;
     int num_kvectors = 0;
-    Point L = {0.0, 0.0, 0.0}; //!< Box dimensions
-
+    Point L = {0.0, 0.0, 0.0};                        //!< Box dimensions
     enum Policies { PBC, PBCEigen, IPBC, IPBCEigen }; //!< Possible k-space updating schemes
-    Policies policy = PBC;                              //!< Policy for updating k-space
-
-    EwaldData(const json &);    //!< Initialize from json
-    void update(const Point &); //!< Update k-vectors according to given box vector
+    Policies policy = PBC;                            //!< Policy for updating k-space
+    EwaldData(const json &);                          //!< Initialize from json
 };
 
 void to_json(json &, const EwaldData &);
@@ -85,11 +82,12 @@ struct EwaldPolicyBase {
     Space *spc;
     Space *old = nullptr; // set only if key==NEW at first call to `sync()`
     EwaldPolicyBase(Space &);
-    virtual void updateComplex(EwaldData &) const=0; //!< Update all k vectors
-    virtual void updateComplex(EwaldData &, Change &) const=0; //!< Update subset of k vectors. Requires access to old positions through `old` pointer
-    virtual double selfEnergy(const EwaldData &, Change &)=0; //!< Self energy contribution due to a change
-    virtual double surfaceEnergy(const EwaldData &, Change &)=0; //!< Surface energy contribution due to a change
-    virtual double reciprocalEnergy(const EwaldData &)=0; //!< Total reciprocal energy
+    virtual void updateBox(EwaldData &, const Point &) const = 0; //!< Prepare k-vectors according to given box vector
+    virtual void updateComplex(EwaldData &) const = 0;            //!< Update all k vectors
+    virtual void updateComplex(EwaldData &, Change &) const = 0;  //!< Update subset of k vectors. Require `old` pointer
+    virtual double selfEnergy(const EwaldData &, Change &) = 0;   //!< Self energy contribution due to a change
+    virtual double surfaceEnergy(const EwaldData &, Change &) = 0; //!< Surface energy contribution due to a change
+    virtual double reciprocalEnergy(const EwaldData &) = 0;        //!< Total reciprocal energy
 };
 
 /**
@@ -97,7 +95,8 @@ struct EwaldPolicyBase {
  */
 struct PolicyIonIon : public EwaldPolicyBase {
     PolicyIonIon(Space &);
-    void updateComplex(EwaldData &) const override; //!< Update all k vectors
+    void updateBox(EwaldData &, const Point &) const override;
+    void updateComplex(EwaldData &) const override;
     void updateComplex(EwaldData &, Change &) const override;
     double selfEnergy(const EwaldData &, Change &) override;
     double surfaceEnergy(const EwaldData &, Change &) override;
@@ -109,7 +108,7 @@ struct PolicyIonIon : public EwaldPolicyBase {
  */
 struct PolicyIonIonEigen : public PolicyIonIon {
     PolicyIonIonEigen(Space &);
-    void updateComplex(EwaldData &) const override; //!< Update all k vectors
+    void updateComplex(EwaldData &) const override;
     double reciprocalEnergy(const EwaldData &) override;
 };
 
@@ -118,17 +117,18 @@ struct PolicyIonIonEigen : public PolicyIonIon {
  */
 struct PolicyIonIonIPBC : public PolicyIonIon {
     PolicyIonIonIPBC(Space &);
-    void updateComplex(EwaldData &) const override; //!< Update all k vectors
-    void updateComplex(EwaldData &, Change &) const override; //!< Optimized update of k subset. Require access to old positions through `old` pointer
+    void updateBox(EwaldData &, const Point &) const override;
+    void updateComplex(EwaldData &) const override;
+    void updateComplex(EwaldData &, Change &) const override;
 };
 
 /**
  * @brief Ion-Ion Ewald with isotropic periodic boundary conditions (IPBC) using Eigen operations
- * @warning Under construction
+ * @warning Incomplete and under construction
  */
 struct PolicyIonIonIPBCEigen : public PolicyIonIonIPBC {
     PolicyIonIonIPBCEigen(Space &);
-    void updateComplex(EwaldData &) const override; //!< Update all k vectors
+    void updateComplex(EwaldData &) const override;
 };
 
 /** @brief Ewald summation reciprocal energy */

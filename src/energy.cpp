@@ -6,66 +6,6 @@
 namespace Faunus {
 namespace Energy {
 
-/**
- * Resize k-vectors according to current variables and box length
- *
- * @todo Split PBC and IPBC
- */
-void EwaldData::update(const Point &box) {
-    bool ipbc = (policy ==IPBC or policy ==IPBCEigen);
-    L = box;
-    int kcc = std::ceil(kcutoff);
-    check_k2_zero = 0.1 * std::pow(2 * pc::pi / L.maxCoeff(), 2);
-    int kVectorsLength = (2 * kcc + 1) * (2 * kcc + 1) * (2 * kcc + 1) - 1;
-    if (kVectorsLength == 0) {
-        kVectors.resize(3, 1);
-        Aks.resize(1);
-        kVectors.col(0) = Point(1, 0, 0); // Just so it is not the zero-vector
-        Aks[0] = 0;
-        num_kvectors = 1;
-        Qion.resize(1);
-        Qdip.resize(1);
-    } else {
-        double kc2 = kcutoff * kcutoff;
-        kVectors.resize(3, kVectorsLength);
-        Aks.resize(kVectorsLength);
-        num_kvectors = 0;
-        kVectors.setZero();
-        Aks.setZero();
-        int startValue = 1 - int(ipbc);
-        for (int kx = 0; kx <= kcc; kx++) {
-            double dkx2 = double(kx * kx);
-            for (int ky = -kcc * startValue; ky <= kcc; ky++) {
-                double dky2 = double(ky * ky);
-                for (int kz = -kcc * startValue; kz <= kcc; kz++) {
-                    double factor = 1.0;
-                    if (kx > 0) // optimization of PBC Ewald (and always the case for IPBC Ewald)
-                        factor *= 2;
-                    if (ky > 0 && ipbc) // only for IPBC Ewald
-                        factor *= 2;
-                    if (kz > 0 && ipbc) // only for IPBC Ewald
-                        factor *= 2;
-                    double dkz2 = double(kz * kz);
-                    Point kv = 2 * pc::pi * Point(kx / L.x(), ky / L.y(), kz / L.z());
-                    double k2 = kv.dot(kv) + kappa2; // last term is only for Yukawa-Ewald
-                    if (k2 < check_k2_zero) // Check if k2 != 0
-                        continue;
-                    if (spherical_sum)
-                        if ((dkx2 / kc2) + (dky2 / kc2) + (dkz2 / kc2) > 1)
-                            continue;
-                    kVectors.col(num_kvectors) = kv;
-                    Aks[num_kvectors] = factor * std::exp(-k2 / (4 * alpha * alpha)) / k2;
-                    num_kvectors++;
-                }
-            }
-        }
-        Qion.resize(num_kvectors);
-        Qdip.resize(num_kvectors);
-        Aks.conservativeResize(num_kvectors);
-        kVectors.conservativeResize(3, num_kvectors);
-    }
-}
-
 EwaldData::EwaldData(const json &j) {
     alpha = j.at("alpha"); // damping-parameter
     Rcutoff = j.at("cutoff");   // real space cut-off
@@ -126,6 +66,59 @@ PolicyIonIonEigen::PolicyIonIonEigen(Space &spc) : PolicyIonIon(spc) {}
 PolicyIonIonIPBC::PolicyIonIonIPBC(Space &spc) : PolicyIonIon(spc) {}
 PolicyIonIonIPBCEigen::PolicyIonIonIPBCEigen(Space &spc) : PolicyIonIonIPBC(spc) {}
 
+/**
+ * Resize k-vectors according to current variables and box length
+ */
+void PolicyIonIon::updateBox(EwaldData &data, const Point &box) const {
+    assert(data.policy == EwaldData::PBC or data.policy == EwaldData::PBCEigen);
+    data.L = box;
+    int kcc = ceil(data.kcutoff);
+    data.check_k2_zero = 0.1 * std::pow(2 * pc::pi / data.L.maxCoeff(), 2);
+    int kVectorsLength = (2 * kcc + 1) * (2 * kcc + 1) * (2 * kcc + 1) - 1;
+    if (kVectorsLength == 0) {
+        data.kVectors.resize(3, 1);
+        data.Aks.resize(1);
+        data.kVectors.col(0) = Point(1, 0, 0); // Just so it is not the zero-vector
+        data.Aks[0] = 0;
+        data.num_kvectors = 1;
+        data.Qion.resize(1);
+        data.Qdip.resize(1);
+    } else {
+        double kc2 = data.kcutoff * data.kcutoff;
+        data.kVectors.resize(3, kVectorsLength);
+        data.Aks.resize(kVectorsLength);
+        data.num_kvectors = 0;
+        data.kVectors.setZero();
+        data.Aks.setZero();
+        int startValue = 1;
+        for (int kx = 0; kx <= kcc; kx++) {
+            double dkx2 = double(kx * kx);
+            double factor = (kx>0) ? 2.0 : 1.0; // optimization of PBC Ewald (and always the case for IPBC Ewald)
+            for (int ky = -kcc * startValue; ky <= kcc; ky++) {
+                double dky2 = double(ky * ky);
+                for (int kz = -kcc * startValue; kz <= kcc; kz++) {
+                    Point kv = 2 * pc::pi * Point(kx, ky, kz).cwiseQuotient(data.L);
+                    double k2 = kv.squaredNorm() + data.kappa2; // last term is only for Yukawa-Ewald
+                    if (k2 < data.check_k2_zero) // Check if k2 != 0
+                        continue;
+                    if (data.spherical_sum) {
+                        double dkz2 = double(kz * kz);
+                        if ((dkx2 + dky2 + dkz2) / kc2 > 1)
+                            continue;
+                    }
+                    data.kVectors.col(data.num_kvectors) = kv;
+                    data.Aks[data.num_kvectors] = factor * exp(-k2 / (4 * data.alpha * data.alpha)) / k2;
+                    data.num_kvectors++;
+                }
+            }
+        }
+        data.Qion.resize(data.num_kvectors);
+        data.Qdip.resize(data.num_kvectors);
+        data.Aks.conservativeResize(data.num_kvectors);
+        data.kVectors.conservativeResize(3, data.num_kvectors);
+    }
+}
+
 void PolicyIonIon::updateComplex(EwaldData &data) const {
     auto active = spc->activeParticles();
     for (int k = 0; k < data.kVectors.cols(); k++) {
@@ -175,8 +168,65 @@ void PolicyIonIon::updateComplex(EwaldData &data, Change &change) const {
 
 //----------------- IPBC Ewald -------------------
 
+/**
+ * Resize k-vectors according to current variables and box length
+ */
+void PolicyIonIonIPBC::updateBox(EwaldData &data, const Point &box) const {
+    assert(data.policy == EwaldData::IPBC or data.policy == EwaldData::IPBCEigen);
+    data.L = box;
+    int kcc = ceil(data.kcutoff);
+    data.check_k2_zero = 0.1 * std::pow(2 * pc::pi / data.L.maxCoeff(), 2);
+    int kVectorsLength = (2 * kcc + 1) * (2 * kcc + 1) * (2 * kcc + 1) - 1;
+    if (kVectorsLength == 0) {
+        data.kVectors.resize(3, 1);
+        data.Aks.resize(1);
+        data.kVectors.col(0) = Point(1, 0, 0); // Just so it is not the zero-vector
+        data.Aks[0] = 0;
+        data.num_kvectors = 1;
+        data.Qion.resize(1);
+        data.Qdip.resize(1);
+    } else {
+        double kc2 = data.kcutoff * data.kcutoff;
+        data.kVectors.resize(3, kVectorsLength);
+        data.Aks.resize(kVectorsLength);
+        data.num_kvectors = 0;
+        data.kVectors.setZero();
+        data.Aks.setZero();
+        int startValue = 0;
+        for (int kx = 0; kx <= kcc; kx++) {
+            double dkx2 = double(kx * kx);
+            double xfactor = (kx>0) ? 2.0 : 1.0; // optimization of PBC Ewald
+            for (int ky = -kcc * startValue; ky <= kcc; ky++) {
+                double dky2 = double(ky * ky);
+                double yfactor = (ky>0) ? 2.0 : 1.0; // optimization of PBC Ewald
+                for (int kz = -kcc * startValue; kz <= kcc; kz++) {
+                    double factor = xfactor * yfactor;
+                    if (kz > 0)
+                        factor *= 2;
+                    Point kv = 2 * pc::pi * Point(kx, ky, kz).cwiseQuotient(data.L);
+                    double k2 = kv.squaredNorm() + data.kappa2; // last term is only for Yukawa-Ewald
+                    if (k2 < data.check_k2_zero)          // Check if k2 != 0
+                        continue;
+                    if (data.spherical_sum) {
+                        double dkz2 = double(kz * kz);
+                        if ((dkx2 + dky2 + dkz2) / kc2 > 1)
+                            continue;
+                    }
+                    data.kVectors.col(data.num_kvectors) = kv;
+                    data.Aks[data.num_kvectors] = factor * exp(-k2 / (4 * data.alpha * data.alpha)) / k2;
+                    data.num_kvectors++;
+                }
+            }
+        }
+        data.Qion.resize(data.num_kvectors);
+        data.Qdip.resize(data.num_kvectors);
+        data.Aks.conservativeResize(data.num_kvectors);
+        data.kVectors.conservativeResize(3, data.num_kvectors);
+    }
+}
+
 void PolicyIonIonIPBC::updateComplex(EwaldData &data) const {
-    assert(data.policy ==EwaldData::IPBC or data.policy ==EwaldData::IPBCEigen);
+    assert(data.policy == EwaldData::IPBC or data.policy == EwaldData::IPBCEigen);
     auto active = spc->activeParticles();
     for (int k = 0; k < data.kVectors.cols(); k++) {
         const Point &kv = data.kVectors.col(k);
@@ -188,17 +238,17 @@ void PolicyIonIonIPBC::updateComplex(EwaldData &data) const {
 }
 
 void PolicyIonIonIPBCEigen::updateComplex(EwaldData &data) const {
-    assert(data.policy ==EwaldData::IPBC or data.policy ==EwaldData::IPBCEigen);
+    assert(data.policy == EwaldData::IPBC or data.policy == EwaldData::IPBCEigen);
     auto active = spc->activeParticles();
     auto pos = asEigenMatrix(active.begin().base(), active.end().base(), &Space::Tparticle::pos);       //  N x 3
     auto charge = asEigenVector(active.begin().base(), active.end().base(), &Space::Tparticle::charge); // N x 1
     data.Qion.real() = (data.kVectors.array().cwiseProduct(pos).array().cos().prod() * charge)
-        .colwise()
-        .sum(); // see eq. 2 in doi:10/css8
+                           .colwise()
+                           .sum(); // see eq. 2 in doi:10/css8
 }
 
 void PolicyIonIonIPBC::updateComplex(EwaldData &data, Change &change) const {
-    assert(data.policy ==EwaldData::IPBC or data.policy ==EwaldData::IPBCEigen);
+    assert(data.policy == EwaldData::IPBC or data.policy == EwaldData::IPBCEigen);
     assert(old != nullptr);
     assert(spc->p.size() == old->p.size());
 
@@ -276,11 +326,10 @@ double PolicyIonIonEigen::reciprocalEnergy(const EwaldData &d) {
 
 Ewald::Ewald(const json &j, Space &spc) : data(j), spc(spc) {
     name = "ewald";
-    if (data.policy ==EwaldData::IPBC or data.policy ==EwaldData::IPBCEigen) {
+    if (data.policy == EwaldData::IPBC or data.policy == EwaldData::IPBCEigen) {
         policy = std::make_shared<PolicyIonIonIPBC>(spc);
         cite = "doi:10/css8";
-    }
-    else {
+    } else {
         policy = std::make_shared<PolicyIonIon>(spc);
         cite = "doi:10.1063/1.481216";
     }
@@ -288,7 +337,7 @@ Ewald::Ewald(const json &j, Space &spc) : data(j), spc(spc) {
 }
 
 void Ewald::init() {
-    data.update(spc.geo.getLength());
+    policy->updateBox(data, spc.geo.getLength());
     policy->updateComplex(data); // brute force. todo: be selective
 }
 
@@ -298,7 +347,7 @@ double Ewald::energy(Change &change) {
         // If the state is NEW (trial state), then update all k-vectors
         if (key == NEW) {
             if (change.all or change.dV) { // everything changes
-                data.update(spc.geo.getLength());
+                policy->updateBox(data, spc.geo.getLength());
                 policy->updateComplex(data); // update all (expensive!)
             } else {
                 if (change.groups.size() > 0)
@@ -307,8 +356,7 @@ double Ewald::energy(Change &change) {
         }
         // the selfEnergy() is omitted as this is added as a separate term in `Hamiltonian`
         // (The pair-potential is responsible for this)
-        u = policy->surfaceEnergy(data, change) +
-            policy->reciprocalEnergy(data);
+        u = policy->surfaceEnergy(data, change) + policy->reciprocalEnergy(data);
     }
     return u;
 }
@@ -318,7 +366,7 @@ void Ewald::sync(Energybase *basePtr, Change &) {
     assert(other);
     if (other->key == OLD)
         policy->old = &(other->spc); // give NEW access to OLD space for optimized updates
-    data = other->data;             // copy everything!
+    data = other->data;              // copy everything!
 }
 
 void Ewald::to_json(json &j) const { j = data; }

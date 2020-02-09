@@ -16,20 +16,25 @@ TEST_SUITE_BEGIN("Energy");
 TEST_CASE("[Faunus] Ewald - EwaldData") {
     using doctest::Approx;
 
+    Space spc;
     EwaldData data(R"({
                 "epsr": 1.0, "alpha": 0.894427190999916, "epss": 1.0,
                 "kcutoff": 11.0, "spherical_sum": true, "cutoff": 5.0})"_json);
 
-    data.update(Point(10, 10, 10));
-
     CHECK(data.policy == EwaldData::PBC);
     CHECK(data.const_inf == 1);
     CHECK(data.alpha == 0.894427190999916);
+
+    // Check number of wave-vectors using PBC
+    PolicyIonIon ionion(spc);
+    ionion.updateBox(data, Point(10, 10, 10));
     CHECK(data.kVectors.cols() == 2975);
     CHECK(data.Qion.size() == data.kVectors.cols());
 
+    // Check number of wave-vectors using IPBC
     data.policy = EwaldData::IPBC;
-    data.update(Point(10, 10, 10));
+    PolicyIonIonIPBC ionionIPBC(spc);
+    ionionIPBC.updateBox(data, Point(10, 10, 10));
     CHECK(data.kVectors.cols() == 846);
     CHECK(data.Qion.size() == data.kVectors.cols());
 }
@@ -53,7 +58,7 @@ TEST_CASE("[Faunus] Ewald - IonIonPolicy") {
 
     SUBCASE("PBC") {
         PolicyIonIon ionion(spc);
-        data.update(spc.geo.getLength());
+        ionion.updateBox(data, spc.geo.getLength());
         ionion.updateComplex(data);
         CHECK(ionion.selfEnergy(data, c) == Approx(-1.0092530088080642 * data.bjerrum_length));
         CHECK(ionion.surfaceEnergy(data, c) == Approx(0.0020943951023931952 * data.bjerrum_length));
@@ -62,7 +67,7 @@ TEST_CASE("[Faunus] Ewald - IonIonPolicy") {
 
     SUBCASE("PBCEigen") {
         PolicyIonIonEigen ionion(spc);
-        data.update(spc.geo.getLength());
+        ionion.updateBox(data, spc.geo.getLength());
         ionion.updateComplex(data);
         CHECK(ionion.selfEnergy(data, c) == Approx(-1.0092530088080642 * data.bjerrum_length));
         CHECK(ionion.surfaceEnergy(data, c) == Approx(0.0020943951023931952 * data.bjerrum_length));
@@ -72,7 +77,7 @@ TEST_CASE("[Faunus] Ewald - IonIonPolicy") {
     SUBCASE("IPBC") {
         PolicyIonIonIPBC ionion(spc);
         data.policy = EwaldData::IPBC;
-        data.update(spc.geo.getLength());
+        ionion.updateBox(data, spc.geo.getLength());
         ionion.updateComplex(data);
         CHECK(ionion.selfEnergy(data, c) == Approx(-1.0092530088080642 * data.bjerrum_length));
         CHECK(ionion.surfaceEnergy(data, c) == Approx(0.0020943951023931952 * data.bjerrum_length));
@@ -83,7 +88,7 @@ TEST_CASE("[Faunus] Ewald - IonIonPolicy") {
     /*SUBCASE("IPBCEigen") {
         PolicyIonIonIPBCEigen ionion(spc);
         data.type = EwaldData::IPBCEigen;
-        data.update(spc.geo.getLength());
+        ionion.updateBox(data, spc.geo.getLength());
         ionion.updateComplex(data);
         CHECK(ionion.selfEnergy(data, c) == Approx(-1.0092530088080642 * data.lB));
         CHECK(ionion.surfaceEnergy(data, c) == Approx(0.0020943951023931952 * data.lB));

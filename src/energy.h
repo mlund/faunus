@@ -75,40 +75,57 @@ void to_json(json &, const EwaldData &);
 
 /**
  * @brief Base class for Ewald k-space updates policies
- * @todo Refactor raw pointers
  */
 struct EwaldPolicyBase {
     typedef typename ParticleVector::iterator iter;
-    Space *spc;
-    Space *old = nullptr; // set only if key==NEW at first call to `sync()`
-    EwaldPolicyBase(Space &);
     virtual void updateBox(EwaldData &, const Point &) const = 0; //!< Prepare k-vectors according to given box vector
-    virtual void updateComplex(EwaldData &) const = 0;            //!< Update all k vectors
-    virtual void updateComplex(EwaldData &, Change &) const = 0;  //!< Update subset of k vectors. Require `old` pointer
-    virtual double selfEnergy(const EwaldData &, Change &) = 0;   //!< Self energy contribution due to a change
-    virtual double surfaceEnergy(const EwaldData &, Change &) = 0; //!< Surface energy contribution due to a change
-    virtual double reciprocalEnergy(const EwaldData &) = 0;        //!< Total reciprocal energy
+    virtual void updateComplex(EwaldData &, Space::Tgvec &) const = 0; //!< Update all k vectors
+    virtual void updateComplex(EwaldData &, Change &, Space::Tgvec &,
+                               Space::Tgvec &) const = 0; //!< Update subset of k vectors. Require `old` pointer
+    virtual double selfEnergy(const EwaldData &, Change &,
+                              Space::Tgvec &) = 0; //!< Self energy contribution due to a change
+    virtual double surfaceEnergy(const EwaldData &, Change &,
+                                 Space::Tgvec &) = 0;       //!< Surface energy contribution due to a change
+    virtual double reciprocalEnergy(const EwaldData &) = 0; //!< Total reciprocal energy
+
+    /**
+     * @brief Represent charges and positions using an Eigen facade (Map)
+     *
+     * Requires that all groups are fully active, i.e. does not work for GCMC.
+     *
+     * @param groups Vector of groups to represent
+     * @return tuple with positions, charges
+     */
+    auto mapGroupsToEigen(Space::Tgvec &groups) const {
+        for (auto &g : groups)
+            if (g.size() != g.capacity())
+                throw std::runtime_error("Eigen optimized Ewald not available with inactive groups");
+        auto begin = groups.front().begin();                                // first particle
+        auto end = groups.back().end();                                     // last particle
+        auto pos = asEigenMatrix(begin, end, &Space::Tparticle::pos);       // N x 3
+        auto charge = asEigenVector(begin, end, &Space::Tparticle::charge); // N x 1
+        return std::make_tuple(pos, charge);
+    }
 };
 
 /**
  * @brief Ion-Ion Ewald using periodic boundary conditions (PBC)
  */
 struct PolicyIonIon : public EwaldPolicyBase {
-    PolicyIonIon(Space &);
     void updateBox(EwaldData &, const Point &) const override;
-    void updateComplex(EwaldData &) const override;
-    void updateComplex(EwaldData &, Change &) const override;
-    double selfEnergy(const EwaldData &, Change &) override;
-    double surfaceEnergy(const EwaldData &, Change &) override;
+    void updateComplex(EwaldData &, Space::Tgvec &) const override;
+    void updateComplex(EwaldData &, Change &, Space::Tgvec &, Space::Tgvec &) const override;
+    double selfEnergy(const EwaldData &, Change &, Space::Tgvec &) override;
+    double surfaceEnergy(const EwaldData &, Change &, Space::Tgvec &) override;
     double reciprocalEnergy(const EwaldData &) override;
 };
 
 /**
  * @brief Ion-Ion Ewald with periodic boundary conditions (PBC) using Eigen operations
+ * @warning Will not work with Space with inactive particles (GCMC, for example)
  */
 struct PolicyIonIonEigen : public PolicyIonIon {
-    PolicyIonIonEigen(Space &);
-    void updateComplex(EwaldData &) const override;
+    void updateComplex(EwaldData &, Space::Tgvec &) const override;
     double reciprocalEnergy(const EwaldData &) override;
 };
 
@@ -116,10 +133,9 @@ struct PolicyIonIonEigen : public PolicyIonIon {
  * @brief Ion-Ion Ewald with isotropic periodic boundary conditions (IPBC)
  */
 struct PolicyIonIonIPBC : public PolicyIonIon {
-    PolicyIonIonIPBC(Space &);
     void updateBox(EwaldData &, const Point &) const override;
-    void updateComplex(EwaldData &) const override;
-    void updateComplex(EwaldData &, Change &) const override;
+    void updateComplex(EwaldData &, Space::Tgvec &) const override;
+    void updateComplex(EwaldData &, Change &, Space::Tgvec &, Space::Tgvec &) const override;
 };
 
 /**
@@ -127,8 +143,7 @@ struct PolicyIonIonIPBC : public PolicyIonIon {
  * @warning Incomplete and under construction
  */
 struct PolicyIonIonIPBCEigen : public PolicyIonIonIPBC {
-    PolicyIonIonIPBCEigen(Space &);
-    void updateComplex(EwaldData &) const override;
+    void updateComplex(EwaldData &, Space::Tgvec &) const override;
 };
 
 /** @brief Ewald summation reciprocal energy */
@@ -137,6 +152,7 @@ class Ewald : public Energybase {
     EwaldData data;
     std::shared_ptr<EwaldPolicyBase> policy; //!< Policy for updating k-space
     Space &spc;
+    Space::Tgvec* oldgroups = nullptr;
   public:
     Ewald(const json &, Space &);
     void init() override;

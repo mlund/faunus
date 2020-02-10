@@ -26,14 +26,14 @@ TEST_CASE("[Faunus] Ewald - EwaldData") {
     CHECK(data.alpha == 0.894427190999916);
 
     // Check number of wave-vectors using PBC
-    PolicyIonIon ionion(spc);
+    PolicyIonIon ionion;
     ionion.updateBox(data, Point(10, 10, 10));
     CHECK(data.kVectors.cols() == 2975);
     CHECK(data.Qion.size() == data.kVectors.cols());
 
     // Check number of wave-vectors using IPBC
     data.policy = EwaldData::IPBC;
-    PolicyIonIonIPBC ionionIPBC(spc);
+    PolicyIonIonIPBC ionionIPBC;
     ionionIPBC.updateBox(data, Point(10, 10, 10));
     CHECK(data.kVectors.cols() == 846);
     CHECK(data.Qion.size() == data.kVectors.cols());
@@ -57,41 +57,41 @@ TEST_CASE("[Faunus] Ewald - IonIonPolicy") {
     data.policy = EwaldData::PBC;
 
     SUBCASE("PBC") {
-        PolicyIonIon ionion(spc);
+        PolicyIonIon ionion;
         ionion.updateBox(data, spc.geo.getLength());
-        ionion.updateComplex(data);
-        CHECK(ionion.selfEnergy(data, c) == Approx(-1.0092530088080642 * data.bjerrum_length));
-        CHECK(ionion.surfaceEnergy(data, c) == Approx(0.0020943951023931952 * data.bjerrum_length));
+        ionion.updateComplex(data, spc.groups);
+        CHECK(ionion.selfEnergy(data, c, spc.groups) == Approx(-1.0092530088080642 * data.bjerrum_length));
+        CHECK(ionion.surfaceEnergy(data, c, spc.groups) == Approx(0.0020943951023931952 * data.bjerrum_length));
         CHECK(ionion.reciprocalEnergy(data) == Approx(0.21303063979675319 * data.bjerrum_length));
     }
 
     SUBCASE("PBCEigen") {
-        PolicyIonIonEigen ionion(spc);
+        PolicyIonIonEigen ionion;
         ionion.updateBox(data, spc.geo.getLength());
-        ionion.updateComplex(data);
-        CHECK(ionion.selfEnergy(data, c) == Approx(-1.0092530088080642 * data.bjerrum_length));
-        CHECK(ionion.surfaceEnergy(data, c) == Approx(0.0020943951023931952 * data.bjerrum_length));
+        ionion.updateComplex(data, spc.groups);
+        CHECK(ionion.selfEnergy(data, c, spc.groups) == Approx(-1.0092530088080642 * data.bjerrum_length));
+        CHECK(ionion.surfaceEnergy(data, c, spc.groups) == Approx(0.0020943951023931952 * data.bjerrum_length));
         CHECK(ionion.reciprocalEnergy(data) == Approx(0.21303063979675319 * data.bjerrum_length));
     }
 
     SUBCASE("IPBC") {
-        PolicyIonIonIPBC ionion(spc);
+        PolicyIonIonIPBC ionion;
         data.policy = EwaldData::IPBC;
         ionion.updateBox(data, spc.geo.getLength());
-        ionion.updateComplex(data);
-        CHECK(ionion.selfEnergy(data, c) == Approx(-1.0092530088080642 * data.bjerrum_length));
-        CHECK(ionion.surfaceEnergy(data, c) == Approx(0.0020943951023931952 * data.bjerrum_length));
+        ionion.updateComplex(data, spc.groups);
+        CHECK(ionion.selfEnergy(data, c, spc.groups) == Approx(-1.0092530088080642 * data.bjerrum_length));
+        CHECK(ionion.surfaceEnergy(data, c, spc.groups) == Approx(0.0020943951023931952 * data.bjerrum_length));
         CHECK(ionion.reciprocalEnergy(data) == Approx(0.0865107467 * data.bjerrum_length));
     }
 
     // IPBCEigen is under construction
     /*SUBCASE("IPBCEigen") {
-        PolicyIonIonIPBCEigen ionion(spc);
+        PolicyIonIonIPBCEigen ionion();
         data.type = EwaldData::IPBCEigen;
         ionion.updateBox(data, spc.geo.getLength());
-        ionion.updateComplex(data);
-        CHECK(ionion.selfEnergy(data, c) == Approx(-1.0092530088080642 * data.lB));
-        CHECK(ionion.surfaceEnergy(data, c) == Approx(0.0020943951023931952 * data.lB));
+        ionion.updateComplex(data, spc.groups);
+        CHECK(ionion.selfEnergy(data, c, spc.groups) == Approx(-1.0092530088080642 * data.lB));
+        CHECK(ionion.surfaceEnergy(data, c, spc.groups) == Approx(0.0020943951023931952 * data.lB));
         CHECK(ionion.reciprocalEnergy(data) == Approx(0.0865107467 * data.lB));
     }*/
 }

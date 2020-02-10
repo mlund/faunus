@@ -2,7 +2,7 @@
 temperature: 300
 random: {seed: fixed}
 geometry: {type: cuboid, length: 18.6}
-mcloop: {macro: 5, micro: 10}
+mcloop: {macro: 5, micro: 20}
 
 atomlist:
     - OW: {q: -0.8476, sigma: 3.166, eps: 0.650, mw: 15.999}

@@ -5,7 +5,9 @@
 #include "multipole.h"
 #include "aux/iteratorsupport.h"
 #include "aux/eigensupport.h"
-#include "spdlog/spdlog.h"
+#include <spdlog/spdlog.h>
+#include <zstr.hpp>
+#include <cereal/archives/binary.hpp>
 
 #include <iomanip>
 #include <iostream>
@@ -116,6 +118,7 @@ void SystemEnergy::_from_json(const json &j) {
     for (auto &n : names)
         f << sep << n;
     f << "\n";
+    f.precision(16);
 }
 SystemEnergy::SystemEnergy(const json &j, Energy::Hamiltonian &pot) {
     for (auto i : pot.vec)
@@ -135,12 +138,16 @@ SystemEnergy::SystemEnergy(const json &j, Energy::Hamiltonian &pot) {
     auto u = energyFunc();
     uinit = std::accumulate(u.begin(), u.end(), 0.0); // initial energy
 }
+void SystemEnergy::_to_disk() {
+    if (f)
+        f.flush(); // empty buffer
+}
 
 void SaveState::_to_json(json &j) const { j["file"] = file; }
 
 void SaveState::_sample() { writeFunc(file); }
 
-SaveState::~SaveState() {
+void SaveState::_to_disk() {
     if (steps == -1)
         _sample();
 }
@@ -204,26 +211,6 @@ SaveState::SaveState(const json &j, Space &spc) {
 
 PairFunctionBase::PairFunctionBase(const json &j) { from_json(j); }
 
-PairFunctionBase::~PairFunctionBase() {
-    std::ofstream f(MPI::prefix + file);
-    if (f) {
-        double Vr = 1, sum = hist.sumy();
-        hist.stream_decorator = [&](std::ostream &o, double r, double N) {
-            if (dim == 3)
-                Vr = 4 * pc::pi * std::pow(r, 2) * dr;
-            else if (dim == 2) {
-                Vr = 2 * pc::pi * r * dr;
-                if (Rhypersphere > 0)
-                    Vr = 2.0 * pc::pi * Rhypersphere * std::sin(r / Rhypersphere) * dr;
-            } else if (dim == 1)
-                Vr = dr;
-            if (Vr > 0)
-                o << r << " " << N * V / (Vr * sum) << "\n";
-        };
-        f << hist;
-    }
-}
-
 void PairFunctionBase::_to_json(json &j) const {
     j = {{"dr", dr / 1.0_angstrom}, {"name1", name1},        {"name2", name2}, {"file", file}, {"dim", dim},
          {"slicedir", slicedir},    {"thickness", thickness}};
@@ -243,10 +230,29 @@ void PairFunctionBase::_from_json(const json &j) {
     hist.setResolution(dr, 0);
     Rhypersphere = j.value("Rhyper", -1.0);
 }
+void PairFunctionBase::_to_disk() {
+    std::ofstream f(MPI::prefix + file);
+    if (f) {
+        double Vr = 1, sum = hist.sumy();
+        hist.stream_decorator = [&](std::ostream &o, double r, double N) {
+            if (dim == 3)
+                Vr = 4 * pc::pi * std::pow(r, 2) * dr;
+            else if (dim == 2) {
+                Vr = 2 * pc::pi * r * dr;
+                if (Rhypersphere > 0)
+                    Vr = 2.0 * pc::pi * Rhypersphere * std::sin(r / Rhypersphere) * dr;
+            } else if (dim == 1)
+                Vr = dr;
+            if (Vr > 0)
+                o << r << " " << N * V / (Vr * sum) << "\n";
+        };
+        f << hist;
+    }
+}
 
 PairAngleFunctionBase::PairAngleFunctionBase(const json &j) : PairFunctionBase(j) { from_json(j); }
 
-PairAngleFunctionBase::~PairAngleFunctionBase() {
+void PairAngleFunctionBase::_to_disk() {
     std::ofstream f(MPI::prefix + file);
     if (f) {
         hist2.stream_decorator = [&](std::ostream &o, double r, double N) {
@@ -262,34 +268,31 @@ void PairAngleFunctionBase::_from_json(const json &) { hist2.setResolution(dr, 0
 
 void VirtualVolume::_sample() {
     if (fabs(dV) > 1e-10) {
-        // store old volume and energy
-        double Vold = getVolume(), Uold = pot.energy(c);
-        // scale entire system to new volume
-        scaleVolume(Vold + dV);
-        double Unew = pot.energy(c);
-        // restore saved system
-        scaleVolume(Vold);
+        double Vold = getVolume(), Uold = pot.energy(c); // store old volume and energy
+        scaleVolume(Vold + dV);                          // scale entire system to new volume
+        double Unew = pot.energy(c);                     // energy after scaling
+        scaleVolume(Vold);                               // restore saved system
 
-        // check if energy change is too big for exp()
-        double x = pc::infty;
-        double du = Unew - Uold; // system energy change
-        if (-du < pc::max_exp_argument)
-            x = std::exp(-du);
-        if (std::isinf(x)) {
-            faunus_logger->warn("{0}: skipping sample event due to excessive energy likely due to overlaps.", name);
+        double du = Unew - Uold;          // system energy change
+        if (-du < pc::max_exp_argument) { // does minus energy change fit exp() function?
+            double exp_du = std::exp(-du);
+            assert(not std::isnan(exp_du));
+            duexp += exp_du; // collect average, <exp(-du)>
+            if (output_file) // write sample event to output file
+                output_file << cnt << " " << dV << " " << du << " " << exp_du << " " << std::log(duexp.avg()) / dV
+                            << "\n";
+
+            // Check if volume and particle positions are properly restored.
+            // Expensive and one would normally not perform this test and we trigger it
+            // only when using log-level "debug" or lower
+            if (faunus_logger->level() <= spdlog::level::debug and Uold != 0) {
+                double should_be_small = std::fabs((Uold - pot.energy(c)) / Uold); // expensive!
+                if (should_be_small > 1e-6)
+                    faunus_logger->error("{} failed to restore system", name);
+            }
+        } else {   // energy change too large (negative) to fit exp() function
             cnt--; // cnt is incremented by sample() so we need to decrease
-        } else {
-            assert(not std::isnan(x));
-            duexp += x;
-#ifndef NDEBUG
-            // check volume and particle positions are properly restored
-            double err = std::fabs((Uold - pot.energy(c)) / Uold); // must be ~zero!
-            if (std::isfinite(err))                                // catch if Uold==0
-                assert(err < 1e-4);
-#endif
-            // write excess pressure to output file
-            if (f)
-                f << cnt << " " << dV << " " << du << " " << x  << "\n";
+            faunus_logger->warn("{0}: skipping sample event due to excessive energy, dU/kT={1}", name, du);
         }
     }
 }
@@ -298,13 +301,15 @@ void VirtualVolume::_from_json(const json &j) {
     dV = j.at("dV");
     file = MPI::prefix + j.value("file", std::string());
     if (not file.empty()) { // if filename is given, create output file
-        if (f)
-            f.close();
-        f.open(file);
-        f << "# steps dV/"+ u8::angstrom + u8::cubed + " du/kT exp(-du/kT)" << "\n";
-        f.precision(14);
-        if (!f)
+        if (output_file)
+            output_file.close();
+        output_file.open(file);
+        if (!output_file)
             throw std::runtime_error(name + ": cannot open output file " + file);
+        output_file << "# steps dV/" + u8::angstrom + u8::cubed + " du/kT exp(-du/kT) <Pex>/kT/" + u8::angstrom +
+                           u8::cubed
+                    << "\n"; // file header
+        output_file.precision(14);
     }
 }
 
@@ -322,6 +327,10 @@ VirtualVolume::VirtualVolume(const json &j, Space &spc, Energy::Energybase &pot)
     getVolume = [&spc]() { return spc.geo.getVolume(); };
     scaleVolume = [&spc](double Vnew) { spc.scaleVolume(Vnew); };
 }
+void VirtualVolume::_to_disk() {
+    if (output_file)
+        output_file.flush(); // empty buffer
+}
 
 void QRtraj::_sample() { write_to_file(); }
 
@@ -333,18 +342,20 @@ QRtraj::QRtraj(const json &j, Space &spc) {
     f.open(MPI::prefix + file);
     if (not f)
         throw std::runtime_error("error opening "s + file);
-    f.precision(6);
     write_to_file = [&groups = spc.groups, &f = f]() {
         for (auto &g : groups) {
             for (auto it = g.begin(); it != g.trueend(); ++it) { // loop over *all* particles
-                if (it < g.end())
-                    f << it->charge << " " << atoms[it->id].sigma * 0.5 << " ";
-                else
-                    f << "0 0 "; // zero charge and radii for inactive particles
+              f << ((it < g.end()) ? fmt::format("{:.6f} {:.6f} ", it->charge,
+                                                 atoms[it->id].sigma * 0.5)
+                                   : "0 0 ");
             }
         }
         f << "\n";               // newline for every frame
     };
+}
+void QRtraj::_to_disk() {
+    if (f)
+        f.flush(); // empty buffer
 }
 
 void CombinedAnalysis::sample() {
@@ -352,8 +363,7 @@ void CombinedAnalysis::sample() {
         ptr->sample();
 }
 
-CombinedAnalysis::~CombinedAnalysis() {
-    // this is really a hack; the destructor should not be in charge of this
+void CombinedAnalysis::to_disk() {
     for (auto &ptr : this->vec)
         ptr->to_disk();
 }
@@ -405,10 +415,14 @@ CombinedAnalysis::CombinedAnalysis(const json &j, Space &spc, Energy::Hamiltonia
                             emplace_back<SystemEnergy>(it.value(), pot);
                         else if (it.key() == "virtualvolume")
                             emplace_back<VirtualVolume>(it.value(), spc, pot);
+                        else if (it.key() == "virtualtranslate")
+                            emplace_back<VirtualTranslate>(it.value(), spc, pot);
                         else if (it.key() == "widom")
                             emplace_back<WidomInsertion>(it.value(), spc, pot);
                         else if (it.key() == "xtcfile")
                             emplace_back<XTCtraj>(it.value(), spc);
+                        else if (it.key() == "spacetraj")
+                            emplace_back<SpaceTrajectory>(it.value(), spc.groups);
                         // additional analysis go here...
 
                         if (this->vec.size() == oldsize)
@@ -424,7 +438,7 @@ CombinedAnalysis::CombinedAnalysis(const json &j, Space &spc, Energy::Hamiltonia
 }
 
 void FileReactionCoordinate::_to_json(json &j) const {
-    json rcjson = *rc; // envoke to_json(...)
+    json rcjson = *rc; // invoke to_json(...)
     if (rcjson.count(type) == 0)
         throw std::runtime_error("error writing json for reaction coordinate");
     j = rcjson[type];
@@ -440,7 +454,7 @@ void FileReactionCoordinate::_sample() {
     if (file) {
         double val = (*rc)();
         avg += val;
-        file << cnt * steps << " " << val << " " << avg.avg() << "\n";
+        file << fmt::format("{} {:.6f} {:.6f}\n", cnt * steps, val, avg.avg());
     }
 }
 
@@ -451,6 +465,10 @@ FileReactionCoordinate::FileReactionCoordinate(const json &j, Space &spc) {
     file.open(filename); // output file
     type = j.at("type").get<std::string>();
     rc = ReactionCoordinate::createReactionCoordinate({{type, j}}, spc);
+}
+void FileReactionCoordinate::_to_disk() {
+    if (file)
+        file.flush(); // empty buffer
 }
 
 void WidomInsertion::_sample() {
@@ -499,7 +517,7 @@ void WidomInsertion::_from_json(const json &j) {
     if (it != molecules.end()) {
         molid = it->id();
         auto m = spc.findMolecules(molid, Space::INACTIVE);  // look for inactive molecules in space
-        if (size(m) > 0) {                                   // did we find any?
+        if (not ranges::cpp20::empty(m)) {                   // did we find any?
             if (m.begin()->size() == 0) {                    // pick the first and check if it's really inactive
                 if (m.begin()->capacity() > 0) {             // and it must have a non-zero capacity
                     change.clear();
@@ -562,11 +580,11 @@ void Density::_sample() {
         for (auto &rit : reactions) {
             for (auto pid : rit._prodid_a) {
                 auto atomlist = spc.findAtoms(pid.first);
-                swpdhist[pid.first](size(atomlist))++;
+                swpdhist[pid.first](rng_size(atomlist))++;
             }
             for (auto rid : rit._reagid_a) {
                 auto atomlist = spc.findAtoms(rid.first);
-                swpdhist[rid.first](size(atomlist))++;
+                swpdhist[rid.first](rng_size(atomlist))++;
             }
         }
     }
@@ -609,7 +627,7 @@ Density::Density(const json &j, Space &spc) : spc(spc) {
         }
     }
 }
-Density::~Density() {
+void Density::_to_disk() {
     for (auto &m : atmdhist) { // atomic molecules
         std::string file = "rho-"s + molecules.at(m.first).name + ".dat";
         std::ofstream f(MPI::prefix + file);
@@ -663,6 +681,7 @@ Density::~Density() {
         }
     }
 }
+
 void SanityCheck::_sample() {
     // loop over all groups
     for (auto &g : spc.groups) {
@@ -737,11 +756,16 @@ void MoleculeRDF::_sample() {
     V += spc.geo.getVolume(dim);
     auto mollist1 = spc.findMolecules(id1, Space::ACTIVE);
     auto mollist2 = spc.findMolecules(id2, Space::ACTIVE);
-    auto mollist = ranges::view::concat(mollist1, mollist2);
+    // auto mollist = ranges::views::concat(mollist1, mollist2);
+
+    std::vector<std::reference_wrapper<Tspace::Tgroup>> mollist;
+    mollist.insert(mollist.end(), mollist1.begin(), mollist1.end());
+    mollist.insert(mollist.end(), mollist2.begin(), mollist2.end());
+
     for (auto i = mollist.begin(); i != mollist.end(); ++i) {
         for (auto j = i; ++j != mollist.end();) {
-            if ((i->id == id1 && j->id == id2) || (i->id == id2 && j->id == id1)) {
-                double r = std::sqrt(spc.geo.sqdist(i->cm, j->cm));
+            if ((i->get().id == id1 && j->get().id == id2) || (i->get().id == id2 && j->get().id == id1)) {
+                double r = std::sqrt(spc.geo.sqdist(i->get().cm, j->get().cm));
                 hist(r)++;
             }
         }
@@ -840,13 +864,13 @@ void XTCtraj::_from_json(const json &j) {
 }
 
 void XTCtraj::_sample() {
-    xtc.setbox(spc.geo.getLength()); // set box dimensions for frame
+    xtc.setLength(spc.geo.getLength()); // set box dimensions for frame
 
     // On some gcc/clang and certain ubuntu/macos combinations,
     // the ranges::view::filter(rng,unaryp) clears the `filter` function.
     // Using the ranges piping seem to solve the issue.
     assert(filter);
-    auto particles = spc.p | ranges::view::filter(filter);
+    auto particles = spc.p | ranges::cpp20::views::filter(filter);
     assert(filter);
     bool rc = xtc.save(file, particles.begin(), particles.end());
     if (rc == false)
@@ -862,22 +886,21 @@ double MultipoleDistribution::g2g(const MultipoleDistribution::Tgroup &g1, const
             u += i.charge * j.charge / spc.geo.vdist(i.pos, j.pos).norm();
     return u;
 }
+
+/**
+ * @note `fmt` is currently included w. spdlog but has been accepted into c++20.
+ */
 void MultipoleDistribution::save() const {
-    using std::setw;
     if (cnt > 0) {
-        std::ofstream f(MPI::prefix + filename.c_str());
-        if (f) {
-            char w = 12;
-            f.precision(4);
-            f << "# Multipolar energies (kT/lB)\n"
-              << std::left << setw(w) << "# R/AA" << std::right << setw(w) << "exact" << setw(w) << "total" << setw(w)
-              << "ionion" << setw(w) << "iondip" << setw(w) << "dipdip" << setw(w) << "ionquad" << setw(w)
-              << "mucorr\n";
-            for (auto &i : m)
-                f << std::left << setw(w) << i.first * dr << std::right << setw(w) << i.second.tot << setw(w)
-                  << i.second.ii.avg() + i.second.id.avg() + i.second.dd.avg() + i.second.iq.avg() << setw(w)
-                  << i.second.ii << setw(w) << i.second.id << setw(w) << i.second.dd << setw(w) << i.second.iq
-                  << setw(w) << i.second.mucorr << "\n";
+        if (std::ofstream file(MPI::prefix + filename.c_str()); file) {
+            file << "# Multipolar energies (kT/lB)\n"
+                 << fmt::format("# {:>8}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}\n", "R", "exact", "tot", "ii", "id",
+                                "dd", "iq", "mucorr");
+            for (auto [r, u] : m) {
+                double u_tot = u.ii.avg() + u.id.avg() + u.dd.avg() + u.iq.avg();
+                file << fmt::format("{:10.4f}{:10.4f}{:10.4f}{:10.4f}{:10.4f}{:10.4f}{:10.4f}{:10.4f}\n", r * dr,
+                                    u.exact, u_tot, u.ii, u.id, u.dd, u.iq, u.mucorr);
+            }
         }
     }
 }
@@ -889,7 +912,7 @@ void MultipoleDistribution::_sample() {
                 auto b = Faunus::toMultipole(gj, spc.geo.getBoundaryFunc());
                 Point R = spc.geo.vdist(gi.cm, gj.cm);
                 auto &d = m[to_bin(R.norm(), dr)];
-                d.tot += g2g(gi, gj);
+                d.exact += g2g(gi, gj);
                 d.ii += a.charge * b.charge / R.norm();
                 d.id += q2mu(a.charge * b.getExt().mulen, b.getExt().mu, b.charge * a.getExt().mulen, a.getExt().mu, R);
                 d.dd += mu2mu(a.getExt().mu, b.getExt().mu, a.getExt().mulen * b.getExt().mulen, R);
@@ -911,7 +934,7 @@ MultipoleDistribution::MultipoleDistribution(const json &j, Space &spc) : spc(sp
         throw std::runtime_error("specify exactly two molecules");
 }
 
-MultipoleDistribution::~MultipoleDistribution() { save(); }
+void MultipoleDistribution::_to_disk() { save(); }
 
 // =============== AtomInertia ===============
 
@@ -935,6 +958,10 @@ AtomInertia::AtomInertia(const json &j, Space &spc) : spc(spc) {
     filename = MPI::prefix + j.at("file").get<std::string>();
     file.open(filename); // output file
     index = j.at("index").get<size_t>(); // atom id
+}
+void AtomInertia::_to_disk() {
+    if (file)
+        file.flush(); // empty buffer
 }
 
 // =============== InertiaTensor ===============
@@ -966,6 +993,10 @@ InertiaTensor::InertiaTensor(const json &j, Space &spc) : spc(spc) {
     file.open(filename); // output file
     index = j.at("index").get<size_t>(); // group index
     indexes = j.value("indexes", std::vector<size_t>({0, spc.groups[index].size()})); // whole molecule by default
+}
+void InertiaTensor::_to_disk() {
+    if (file)
+        file.flush(); // empty buffer
 }
 
 // =============== MultipoleMoments ===============
@@ -1016,6 +1047,10 @@ MultipoleMoments::MultipoleMoments(const json &j, Space &spc) : spc(spc) {
     index = j.at("index").get<size_t>(); // group index
     indexes = j.value("indexes", std::vector<size_t>({0, spc.groups[index].size()-1})); // whole molecule by default
     mol_cm = j.value("mol_cm", true); // use the mass center of the whole molecule
+}
+void MultipoleMoments::_to_disk() {
+    if (file)
+        file.flush(); // empty buffer
 }
 
 // =============== PolymerShape ===============
@@ -1174,7 +1209,7 @@ SlicedDensity::SlicedDensity(const json &j, Space &spc) : spc(spc) {
     name = "sliceddensity";
     from_json(j);
 }
-SlicedDensity::~SlicedDensity() {
+void SlicedDensity::_to_disk() {
     std::ofstream f(MPI::prefix + file);
     if (f and cnt > 0) {
         f << "# z rho/M\n";
@@ -1216,7 +1251,7 @@ void ChargeFluctuations::_to_json(json &j) const {
 void ChargeFluctuations::_to_disk() {
     if (not file.empty()) {
         auto molecules = spc.findMolecules(mol_iter->id(), Space::ALL);
-        if (Faunus::size(molecules) > 0) {
+        if (not ranges::cpp20::empty(molecules)) {
             auto &g = *molecules.begin();
             ParticleVector pvec;        // temporary particle vector
             pvec.reserve(g.capacity()); // allocate required memory already now
@@ -1278,28 +1313,200 @@ void ScatteringFunction::_sample() {
     for (int id : ids) { // loop over molecule names
         auto groups = spc.findMolecules(id);
         for (auto &g : groups) // loop over groups
-            if (usecom && !g.atomic)
+            if (use_com && !g.atomic)
                 p.push_back(g.cm);
             else
                 for (auto &i : g) // loop over particle index in group
                     p.push_back(i.pos);
     }
-    debye.sample(p, spc.geo.getVolume());
-}
-void ScatteringFunction::_to_json(json &j) const { j = {{"molecules", names}, {"com", usecom}}; }
 
-ScatteringFunction::ScatteringFunction(const json &j, Space &spc) try : spc(spc), debye(j) {
+    // zero-padded suffix to use with `save_after_sample`
+    std::string suffix = fmt::format("{:07d}", cnt);
+    switch (scheme) {
+    case DEBYE:
+        debye->sample(p, spc.geo.getVolume());
+        if (save_after_sample)
+            IO::write(filename + "." + suffix, debye->getIntensity());
+        break;
+    case EXPLICIT_PBC:
+        explicit_average_pbc->sample(p, spc.geo.getLength().x());
+        if (save_after_sample)
+            IO::write(filename + "." + suffix, explicit_average_pbc->getSampling());
+        break;
+    case EXPLICIT_IPBC:
+        explicit_average_ipbc->sample(p, spc.geo.getLength().x());
+        if (save_after_sample)
+            IO::write(filename + "." + suffix, explicit_average_ipbc->getSampling());
+        break;
+    }
+}
+void ScatteringFunction::_to_json(json &j) const {
+    j = {{"molecules", names}, {"com", use_com}};
+    switch (scheme) {
+    case DEBYE:
+        j["scheme"] = "debye";
+        std::tie(j["qmin"], j["qmax"], std::ignore) = debye->getQMeshParameters();
+        break;
+    case EXPLICIT_PBC:
+        j["scheme"] = "explicit";
+        j["pmax"] = explicit_average_pbc->getQMultiplier();
+        j["ipbc"] = false;
+        break;
+    case EXPLICIT_IPBC:
+        j["scheme"] = "explicit";
+        j["pmax"] = explicit_average_ipbc->getQMultiplier();
+        j["ipbc"] = true;
+        break;
+    }
+}
+
+ScatteringFunction::ScatteringFunction(const json &j, Space &spc) try : spc(spc) {
     from_json(j);
     name = "scatter";
-    usecom = j.value("com", true);
+    use_com = j.value("com", true);
+    save_after_sample = j.value("stepsave", false);   // save to disk for each sample
     filename = j.at("file").get<std::string>();
     names = j.at("molecules").get<decltype(names)>(); // molecule names
     ids = names2ids(molecules, names);                // names --> molids
+
+    std::string scheme_str = j.value("scheme", "explicit");
+    if (scheme_str == "debye") {
+        scheme = DEBYE;
+        debye = std::make_shared<Scatter::DebyeFormula<Tformfactor>>(j);
+        // todo: add warning if used on PBC system
+        // if (spc.geo.geometry->boundary_conditions.x() == Geometry::PERIODIC)
+        //    faunus_logger->warn("{0}: '{1}' scheme used on PBC system; consider 'explicit' instead", name,
+        //    scheme_str);
+    } else if (scheme_str == "explicit") {
+        bool ipbc = j.value("ipbc", false);
+        int pmax = j.value("pmax", 15);
+        if (ipbc) {
+            scheme = EXPLICIT_IPBC;
+            explicit_average_ipbc = std::make_shared<Scatter::StructureFactorIPBC<>>(pmax);
+        } else {
+            scheme = EXPLICIT_PBC;
+            explicit_average_pbc = std::make_shared<Scatter::StructureFactorPBC<>>(pmax);
+        }
+        // todo: add warning if used a non-cubic system
+    } else
+        throw std::runtime_error("unknown scheme");
 } catch (std::exception &e) {
-    throw std::runtime_error("debye formula: "s + e.what());
+    throw std::runtime_error("scatter: "s + e.what());
 }
 
-ScatteringFunction::~ScatteringFunction() { debye.save(filename); }
+void ScatteringFunction::_to_disk() {
+    switch (scheme) {
+    case DEBYE:
+        IO::write(filename, debye->getIntensity());
+        break;
+    case EXPLICIT_PBC:
+        IO::write(filename, explicit_average_pbc->getSampling());
+        break;
+    case EXPLICIT_IPBC:
+        IO::write(filename, explicit_average_ipbc->getSampling());
+        break;
+    }
+}
 
+void VirtualTranslate::_from_json(const json &j) {
+    std::string molname = j.at("molecule");
+    if (auto it = findName(Faunus::molecules, molname); it == molecules.end())
+        throw std::runtime_error("unknown molecule '" + molname + "'");
+    else
+        molid = it->id();
+    dL = j.at("dL").get<double>();
+    dir = j.value("dir", Point(0, 0, 1));
+    dir.normalize(); // -> unit vector
+
+    // if filename is given, open output stream and add header
+    if (file = j.value("file", ""s); not file.empty()) {
+        file = MPI::prefix + file;
+        output_file.open(file);
+        if (!output_file)
+            throw std::runtime_error(name + ": cannot open output file " + file);
+        output_file << "# steps dL/" + u8::angstrom + " du/kT <force>/kT/" + u8::angstrom + "\n"s;
+        output_file.precision(14);
+    }
+}
+void VirtualTranslate::_sample() {
+    if (fabs(dL) > 0) {
+        auto mollist = spc.findMolecules(molid, Space::ACTIVE); // list of molecules
+        if (ranges::distance(mollist.begin(), mollist.end()) > 1)
+            throw std::runtime_error(name + ": maximum ONE active molecule allowed");
+        if (not ranges::cpp20::empty(mollist)) {
+            if (auto it = random.sample(mollist.begin(), mollist.end()); not it->empty()) {
+                change.groups[0].index = &*it - &*spc.groups.begin(); // group index
+                double uold = pot.energy(change);              // old energy
+                Point dr = dL * dir;                           // translation vector
+                it->translate(dr, spc.geo.getBoundaryFunc());  // translate
+                double unew = pot.energy(change);              // new energy
+                it->translate(-dr, spc.geo.getBoundaryFunc()); // restore positions
+                double du = unew - uold;
+                if (-du > pc::max_exp_argument)
+                    faunus_logger->warn("{}: energy too negative to sample", name);
+                else {
+                    average_exp_du += std::exp(-du); // widom / perturbation average
+                    if (output_file)                 // write sample event to output file
+                        output_file << fmt::format("{:d} {:.3f} {:.10f} {:.6f}\n", cnt, dL, du,
+                                                   std::log(average_exp_du) / dL);
+                }
+            }
+        }
+    }
+}
+void VirtualTranslate::_to_json(json &j) const {
+    j = {{"dL", dL}, {"force", std::log(average_exp_du) / dL}, {"dir", dir}};
+}
+VirtualTranslate::VirtualTranslate(const json &j, Space &spc, Energy::Energybase &pot) : pot(pot), spc(spc) {
+    from_json(j);
+    name = "virtualtranslate";
+    data.internal = false;
+    change.groups.push_back(data);
+}
+void VirtualTranslate::_to_disk() {
+    if (output_file)
+        output_file.flush(); // empty buffer
+}
+
+SpaceTrajectory::SpaceTrajectory(const json &j, Space::Tgvec &groups) : groups(groups) {
+    from_json(j);
+    name = "space trajectory";
+    filename = j.at("file");
+    if (useCompression())
+        stream = std::make_unique<zstr::ofstream>(MPI::prefix + filename, std::ios::binary);
+    else
+        stream = std::make_unique<std::ofstream>(MPI::prefix + filename, std::ios::binary);
+
+    if (stream != nullptr && *stream)
+        archive = std::make_unique<cereal::BinaryOutputArchive>(*stream);
+
+    if (not archive)
+        throw std::runtime_error("error creating "s + filename);
+}
+
+bool SpaceTrajectory::useCompression() const {
+    assert(!filename.empty());
+    std::string suffix = filename.substr(filename.find_last_of(".") + 1);
+    if (suffix == "ztraj")
+        return true;
+    else if (suffix == "traj")
+        return false;
+    else
+        throw std::runtime_error("Trajectory file suffix must be `.traj` or `.ztraj`");
+}
+
+void SpaceTrajectory::_sample() {
+    assert(archive);
+    for (auto &group : groups) {
+        (*archive)(group);
+    }
+}
+
+void SpaceTrajectory::_to_json(json &j) const { j = {{"file", filename}}; }
+
+void SpaceTrajectory::_to_disk() {
+    assert(*stream);
+    stream->flush();
+}
 } // namespace Analysis
 } // namespace Faunus

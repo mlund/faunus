@@ -21,8 +21,9 @@ analysis:
     - ...
 ~~~
 
-**Note:** all analysis methods support the `nstep` keyword that defines the interval between
-sampling points and the `nskip` keyword that defines the number of initial steps that are excluded from the analysis. In addition all analysis provide output statistics of number of sample
+All analysis methods support the `nstep` keyword that defines the interval between
+sampling points and the `nskip` keyword that defines the number of initial steps that are excluded from the analysis.
+In addition all analysis provide output statistics of number of sample
 points, and the relative run-time spent on the analysis.
 
 ## Density
@@ -33,7 +34,7 @@ points, and the relative run-time spent on the analysis.
 ----------- |  -------------------------------------------
 `nstep=0`   |  Interval between samples
 
-This calculates the average density, $\langle N_i/V \rangle$ of molecules and atoms
+This calculates the average density, $\langle N\_i/V \rangle$ of molecules and atoms
 which may fluctuate in _e.g._ the isobaric ensemble or the Grand Canonical ensemble.
 For atomic groups, densities of individual atom types are reported.
 The analysis also files probability density distributions of atomic and polyatomic molecules
@@ -148,8 +149,8 @@ and as a function of separation, _r_. In addition, the radial distribution funct
 
 ### Structure Factor
 
-The isotropically averaged static structure factor between
-$N$ point scatterers is calculated using the [Debye formula](http://doi.org/dmb9wm),
+The isotropically averaged static structure factor between $N$ point scatterers is calculated using
+the [Debye formula](http://doi.org/dmb9wm),
 
 $$
     S(q) = 1 + \frac{2}{N} \left \langle
@@ -157,10 +158,12 @@ $$
            \right \rangle
 $$
 
-The selected `molecules` can be treated either as single
-point scatterers (`com=true`) or as a group of individual
-point scatterers of equal intensity, i.e. with a 
-form factor of unity.
+The selected `molecules` can be treated either as single point scatterers (`com=true`) or as a group of individual
+point scatterers of equal intensity, i.e., with a  form factor of unity.
+
+The computation of the structure factor is rather computationally intensive task, scaling quadratically with the number
+of particles and linearly with the number of scattering vector mesh points. If OpenMP is available, multiple threads
+may be utilized in parallel to speed it up the analysis.
 
 `scatter`   | Description
 ----------- | ------------------------------------------
@@ -171,6 +174,26 @@ form factor of unity.
 `qmax`      | Maximum _q_ value (1/Å)
 `dq`        | _q_ spacing (1/Å)
 `com=true`  | Treat molecular mass centers as single point scatterers
+`pmax=15`   | Multiples of $(h,k,l)$ when using the `explicit` scheme
+`scheme=explicit` | The following schemes are available: `debye`, `explicit`
+`stepsave=false`  | Save every sample to disk
+
+The `explicit` scheme is recommended for cuboids with PBC and the calculation is performed by explicitly averaging
+the following equation over the 3+6+4 directions obtained by permuting the crystallographic index
+`[100]`, `[110]`, `[111]` to define the scattering vector
+$\mathbf{q} = 2\pi p/L(h,k,l)$ where $p=1,2,\dots,p\_{max}$.
+
+$$
+S(q) = \frac{1}{N} \left <
+     \left ( \sum_i^N \sin(\mathbf{qr}\_i) \right )^2 +
+     \left ( \sum_j^N \cos(\mathbf{qr}\_j) \right )^2
+    \right >
+$$
+
+The sampled $q$-interval is always $\left [ 2\pi/L,\, 2\pi p\_{max} \sqrt{3} / L \right ]$,
+$L$ being the box side length. Currently only cubic boxes are supported.
+For more information, see [doi:10.1063/1.449987](http://dx.doi.org/10.1063/1.449987).
+
 
 ### Atomic Inertia Eigenvalues
 
@@ -178,14 +201,14 @@ This calculates the inertia eigenvalues for all particles having a given id.
 The inertia tensor is defined as
 
 $$
-I = \sum_{i=1}^N m_i ( \| \bf{t_i} \|^2 \mathrm{I} - \bf{t_i} \bf{t_i}^T ) 
+I = \sum\_{i=1}^N m\_i ( \| \bf{t\_i} \|^2 \mathrm{I} - \bf{t\_i} \bf{t\_i}^T ) 
 $$
 
 where $\bf{t_i} = \bf{r_i} - \bf{cm}$, $\bf{r_i}$ is the coordinate of the $i$th particle, $\bf{cm}$ is the
 position of the mass center of the whole group of atoms, $m_i$ is the molecular weight of the $i$th particle, 
 $\bf{I}$ is the identity matrix and $N$ is the number of atoms.
 
-`gyration`       | Description
+`atominertia`       | Description
 ---------------- | ----------------------------------------
 `nstep`          | Interval with which to sample
 `index`          | Particle id
@@ -206,7 +229,7 @@ where $\bf{t_i} = \bf{r_i} - \bf{cm}$, $\bf{r_i}$ is the coordinate of the $i$th
 position of the mass center of the whole group of atoms, $m_i$ is the molecular weight of the $i$th particle,
 $\bf{I}$ is the identity matrix and $N$ is the number of atoms.
 
-`atominertia`    | Description
+`inertia`    | Description
 ---------------- | ----------------------------------------
 `nstep`          | Interval with which to sample
 `indexes`        | Array defining a range of indexes within the molecule 
@@ -275,7 +298,7 @@ the following:
 
 The points 1-3 above will be done as a function of group-to-group
 mass center separation, $R$ and moments
-on molecule $a$ and $b$ with charges $q_i$ in position $\boldsymbol{r}_i$
+on molecule $a$ and $b$ with charges $q\_i$ in position $\boldsymbol{r}\_i$
 with respect to the mass center are calculated according to:
 
 $$
@@ -412,8 +435,9 @@ All units in $k_BT$.
 `file`           |  Output filename for energy vs. step output
 `nstep=0`        |  Interval between samples
 
+## Perturbations
 
-## Virtual Volume Move
+### Virtual Volume Move
 
 Performs a [virtual volume move](http://doi.org/cppxt6) by
 scaling the simulation volume to $V+\Delta V$ along with
@@ -429,12 +453,29 @@ surface tension etc., see [here](http://doi.org/ckfh).
 
 `virtualvolume` | Description
 --------------- | -------------------------------------
-`dV`            | Volume perturbation (angstrom cubed)
+`dV`            | Volume perturbation (Å³)
 `nstep`         | Interval between samples
-`file`          | Optional filename for excess pressure as a function of steps
+`file`          | Optional output filename for writing data as a function of steps
+
+### Virtual Translate Move
+
+Performs a virtual displacement, $dL$, of a single `molecule` in
+the direction `dir` and measure the force by perturbation,
+
+$$
+    f = \frac {k_BT \ln \langle \exp{\left (-dU/k_BT \right )} \rangle_0 }{ dL }
+$$
+
+`virtualtranslate` | Description
+------------------ | ---------------------------------------------------------------
+`molecule`         | Molecule name; only _one_ of these is allowed in the system
+`dL`               | Displacement (Å)
+`dir=[0,0,1]`      | Displacement direction (length ignored)
+`nstep`            | Interval between samples
+`file`             | Optional output filename for writing data as a function of steps
 
 
-## Widom Insertion
+### Widom Insertion
 
 This will insert a non-perturbing ghost molecule into
 the system and calculate a [Widom average](http://doi.org/dkv4s6)
@@ -455,7 +496,6 @@ generated. For use with rod-like particles on surfaces, the `absz`
 keyword may be used to ensure orientations on only one
 half-sphere.
 
-**Important:**
 Exactly _one inactive_ `molecule` must be added to the simulation using the `inactive`
 keyword when inserting the initial molecules in the [topology](topology).
 
@@ -487,6 +527,25 @@ with the following information:
 - particle and group properties incl. positions
 - geometry
 - state of random number generator (if `saverandom=true`)
+
+
+### Space Trajectory (experimental)
+
+Save all particle and group information to a compressed, binary trajectory format.
+The following properties are saved:
+
+ - all particle properties (id, position, charge, dipole etc.)
+ - all group properties (id, size, capacity etc.)
+ - todo: geometry, energy
+
+The file suffix must be either `.traj` (uncomressed) or `.ztraj` (compressed).
+For the latter, the file size is reduced by roughly a factor of two using zlib
+compression.
+
+`spacetraj`  | Description
+------------ | ---------------------------------------
+`file`       | Filename of output .traj/.ztraj file
+`nstep`      | Interval between samples.
 
 
 ### XTC trajectory

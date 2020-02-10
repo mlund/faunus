@@ -100,7 +100,8 @@ bool ChainRotationMove::box_big_enough() {
 }
 void CrankshaftMove::_from_json(const json &j) {
     Tbase::_from_json(j);
-    joint_max = j.value("joint_max", pc::infty); //!< maximum number of bonds between the joints of a crankshaft
+    // maximum number of bonds between the joints of a crankshaft
+    joint_max = j.value("joint_max", std::numeric_limits<decltype(joint_max)>::max());
     if (this->repeat < 0) {
         // set the number of repetitions to the length of the chain (minus 2) times the number of the chains
         auto moliter = this->spc.findMolecules(this->molid);
@@ -116,28 +117,27 @@ size_t CrankshaftMove::select_segment() {
         auto &molecule = *this->molecule_iter;
         if (molecule.size() > 2) { // must have at least three atoms
             auto joint0 = this->slump.sample(molecule.begin(), molecule.end());
-            int distance_begin = std::distance(molecule.begin(), joint0);
-            distance_begin = distance_begin < joint_max ? distance_begin : joint_max;
-            int distance_end = std::distance(joint0, molecule.end());
-            distance_end = distance_end < joint_max ? distance_end : joint_max;
-            auto joint1 = molecule.begin() + this->slump.range(-distance_begin,distance_end);
-            if (joint0 != molecule.end() && joint1 != molecule.end()) {
-                auto joint_distance = std::distance(joint0, joint1);
-                if (joint_distance < 0) {
-                    joint_distance *= -1;
-                    std::swap(joint0, joint1);
+            assert(joint0 >= molecule.begin() && joint0 < molecule.end());
+            size_t range_begin = std::min(static_cast<size_t>(std::distance(molecule.begin(), joint0)), joint_max);
+            size_t range_end = std::min(static_cast<size_t>(std::distance(joint0, molecule.end()) - 1), joint_max);
+            auto joint1 = joint0 + this->slump.range(-range_begin, range_end);
+            assert(joint1 >= molecule.begin() && joint1 < molecule.end());
+            auto joint_distance = std::distance(joint0, joint1);
+            if (joint_distance < 0) {
+                joint_distance *= -1;
+                std::swap(joint0, joint1);
+            }
+            if (joint_distance > 1) { // at least one atom between the joints
+                auto joint0_ndx = std::distance(this->spc.p.begin(), joint0);
+                auto joint1_ndx = std::distance(this->spc.p.begin(), joint1);
+                if (joint0_ndx < 0 || joint1_ndx < 0) {
+                    throw std::range_error("A negative index of the atom encountered.");
                 }
-                if (joint_distance > 1) { // at least one atom between the joints
-                    auto joint0_ndx = std::distance(this->spc.p.begin(), joint0);
-                    auto joint1_ndx = std::distance(this->spc.p.begin(), joint1);
-                    if (joint0_ndx < 0 || joint1_ndx < 0) {
-                        throw std::range_error("A negative index of the atom encountered.");
-                    }
-                    this->axis_ndx = {(size_t)joint0_ndx, (size_t)joint1_ndx}; // joints create the axis
-                    for (size_t i = joint0_ndx + 1; i < joint1_ndx; i++)
-                        this->segment_ndx.push_back(i); // add segment's atom indices
-                    segment_size = this->segment_ndx.size();
-                }
+                // joints create the axis
+                this->axis_ndx = {static_cast<size_t>(joint0_ndx), static_cast<size_t>(joint1_ndx)};
+                for (size_t i = joint0_ndx + 1; i < joint1_ndx; i++)
+                    this->segment_ndx.push_back(i); // add segment's atom indices
+                segment_size = this->segment_ndx.size();
             }
         }
     }

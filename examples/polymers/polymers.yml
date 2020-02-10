@@ -1,5 +1,5 @@
 #!/usr/bin/env yason.py
-random: {seed: default}
+random: {seed: fixed}
 temperature: 298
 geometry: {type: sphere, radius: 100}
 mcloop: {macro: 10, micro: 2500}

@@ -75,53 +75,50 @@ void to_json(json &j, const MoleculeData &a) {
     }
 }
 
-void MoleculeData::createMolecularConformations(const json &val) {
-    assert(val.is_object());
+void MoleculeData::createMolecularConformations(const json &j) {
+    assert(j.is_object());
 
-    std::string traj = val.value("traj", std::string());
-    if (traj.empty())
-        return;
+    if (auto trajfile = j.value("traj", ""s); not trajfile.empty()) {
+        conformations.clear();                                  // remove all previous conformations
+        FormatPQR::loadTrajectory(trajfile, conformations.vec); // read traj. from disk
+        if (not conformations.empty()) {
+            faunus_logger->debug("{} conformations loaded from {}", conformations.size(), trajfile);
 
-    conformations.clear(); // remove all previous conformations
-    // read tracjectory w. conformations from disk
-    FormatPQR::load(traj, conformations.vec);
-    if (not conformations.empty()) {
-        // create atom list
-        atoms.clear();
-        atoms.reserve(conformations.vec.front().size());
-        for (auto &p : conformations.vec.front()) // add atoms to atomlist
-            atoms.push_back(p.id);
+            // create atom list
+            atoms.clear();
+            atoms.reserve(conformations.vec.front().size());
+            for (auto &p : conformations.vec.front()) // add atoms to atomlist
+                atoms.push_back(p.id);
 
-        // center mass center for each frame to origo assuming whole molecules
-        if (val.value("trajcenter", false)) {
-            faunus_logger->debug("Centering conformations in trajectory file {}", traj);
-            for (auto &p : conformations.vec) // loop over conformations
-                Geometry::cm2origo(p.begin(), p.end());
-        }
+            // center mass center for each frame to origo assuming whole molecules
+            if (j.value("trajcenter", false)) {
+                faunus_logger->debug("Centering conformations from {}", trajfile);
+                for (auto &p : conformations.vec) // loop over conformations
+                    Geometry::cm2origo(p.begin(), p.end());
+            }
 
-        // set default uniform weight
-        std::vector<float> w(conformations.size(), 1);
-        conformations.setWeight(w);
+            std::vector<float> weights(conformations.size(), 1.0); // default uniform weight
+            conformations.setWeight(weights);
 
-        // look for weight file
-        std::string weightfile = val.value("trajweight", std::string());
-        if (not weightfile.empty()) {
-            std::ifstream f(weightfile.c_str());
-            if (f) {
-                w.clear();
-                w.reserve(conformations.size());
-                double _val;
-                while (f >> _val)
-                    w.push_back(_val);
-                if (w.size() == conformations.size())
-                    conformations.setWeight(w);
-                else
-                    throw std::runtime_error("Number of weights does not match conformations.");
-            } else
-                throw std::runtime_error("Weight file " + weightfile + " not found.");
-        }
-    } else
-        throw std::runtime_error("Trajectory " + traj + " not loaded or empty.");
+            // look for weight file
+            if (auto weightfile = j.value("trajweight", ""s); not weightfile.empty()) {
+                if (std::ifstream f(weightfile); bool(f)) {
+                    weights.clear();
+                    weights.reserve(conformations.size());
+                    float _val;
+                    while (f >> _val)
+                        weights.push_back(_val);
+                    if (weights.size() == conformations.size()) {
+                        faunus_logger->debug("{} weights loaded from {}", conformations.size(), weightfile);
+                        conformations.setWeight(weights);
+                    } else
+                        throw std::runtime_error("Number of weights does not match conformations.");
+                } else
+                    throw std::runtime_error(weightfile + " not found.");
+            }
+        } else
+            throw std::runtime_error(trajfile + " not loaded or empty.");
+    }
 } // done handling conformations
 
 // ============ NeighboursGenerator ============
@@ -259,11 +256,14 @@ void MoleculeBuilder::readCompoundValues(const json &j) {
 
 void MoleculeBuilder::readAtomic(const json &j_properties) {
     auto j_atoms = j_properties.value("atoms", json::array());
+    if (not j_atoms.is_array())
+        throw ConfigurationError("`atoms` must be an array");
     particles.reserve(j_atoms.size());
     for (auto atom_id : j_atoms) {
-        auto atom_it = findName(atoms, atom_id.get<std::string>());
+        std::string atom_name = atom_id.get<std::string>();
+        auto atom_it = findName(atoms, atom_name);
         if(atom_it == atoms.end()) {
-            faunus_logger->error("Unknown atom '{}' in molecule '{}'", atom_id, molecule_name);
+            faunus_logger->error("Unknown atom '{}' in molecule '{}'", atom_name, molecule_name);
             throw ConfigurationError("unknown atom in atomic molecule");
         }
         particles.emplace_back(*atom_it);
@@ -276,6 +276,10 @@ void MoleculeBuilder::readParticles(const json &j_properties) {
         bool read_charges = j_properties.value("keepcharges", true);
         MoleculeStructureReader structure_reader(read_charges);
         structure_reader.readJson(particles, *j_structure_it);
+        if (j_properties.value("ensphere", false))
+            particles = Geometry::mapParticlesOnSphere(particles);
+        if (j_properties.value("to_disk", false))
+            FormatPQR::save(molecule_name + "-initial.pqr", particles);
     } else {
         // allow virtual molecules :-/
         // shall we rather try to fallback on readAtomic()?
@@ -511,7 +515,7 @@ ParticleVector RandomInserter::operator()(Geometry::GeometryBase &geo, const Par
         throw std::runtime_error("geometry has zero volume");
 
     ParticleVector v = mol.conformations.get(); // get random, weighted conformation
-    conformation_ndx = mol.conformations.index; // lastest index
+    conformation_ndx = mol.conformations.getLastIndex(); // latest index
 
     do {
         if (cnt++ > max_trials)
@@ -581,22 +585,23 @@ void RandomInserter::to_json(json &j) const {
 }
 
 bool Conformation::empty() const {
-    if (positions.empty())
-        if (charges.empty())
-            return true;
-    return false;
+    return positions.empty() && charges.empty();
 }
 
 ParticleVector &Conformation::toParticleVector(ParticleVector &p) const {
     assert(not p.empty() and not empty());
     // copy positions
-    if (positions.size() == p.size())
-        for (int i = 0; i < p.size(); i++)
+    if (positions.size() == p.size()) {
+        for (size_t i = 0; i < p.size(); ++i) {
             p[i].pos = positions[i];
+        }
+    }
     // copy charges
-    if (charges.size() == p.size())
-        for (int i = 0; i < p.size(); i++)
+    if (charges.size() == p.size()) {
+        for (size_t i = 0; i < p.size(); ++i) {
             p[i].charge = charges[i];
+        }
+    }
     return p;
 }
 
@@ -616,12 +621,11 @@ std::vector<int> ReactionData::participatingMolecules() const {
         v.push_back(i.first);
     return v;
 }
+
 bool ReactionData::containsMolecule(int molid) const {
-    if (_reagid_m.count(molid) == 0)
-        if (_prodid_m.count(molid) == 0)
-            return false;
-    return true;
+    return _reagid_m.count(molid) > 0 || _prodid_m.count(molid) > 0;
 }
+
 const ReactionData::Tmap &ReactionData::Molecules2Add(bool forward) const { return (forward) ? _prodid_m : _reagid_m; }
 const ReactionData::Tmap &ReactionData::Atoms2Add(bool forward) const { return (forward) ? _prodid_a : _reagid_a; }
 
@@ -633,7 +637,7 @@ void from_json(const json &j, ReactionData &a) {
     for (auto &m : Faunus::molecules)
         for (auto &a : Faunus::atoms)
             if (m.name == a.name)
-                throw std::runtime_error("Molecules and atoms nust have different names");
+                throw std::runtime_error("Molecules and atoms must have different names");
 
     for (auto it = j.begin(); it != j.end(); ++it) {
         a.name = it.key();

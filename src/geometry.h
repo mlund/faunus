@@ -5,6 +5,8 @@
 #include "particle.h"
 #include "tensor.h"
 #include <Eigen/Geometry>
+#include <iostream>
+#include <cereal/types/base_class.hpp>
 
 /** @brief Faunus main namespace */
 namespace Faunus {
@@ -51,6 +53,10 @@ struct BoundaryCondition {
     Coordinates coordinates;
     BoundaryXYZ direction;
 
+    template <class Archive> void serialize(Archive &archive) {
+        archive(coordinates, direction);
+    } //!< Cereal serialisation
+
     BoundaryCondition(Coordinates coordinates = ORTHOGONAL, BoundaryXYZ boundary = {FIXED, FIXED, FIXED})
         : coordinates(coordinates), direction(boundary){};
 };
@@ -66,11 +72,6 @@ struct GeometryBase {
     virtual void randompos(Point &, Random &) const = 0;           //!< Generate random position
     virtual Point vdist(const Point &, const Point &) const = 0;   //!< (Minimum) distance between two points
     virtual Point getLength() const = 0;                           //!< Side lengths
-
-    inline double sqdist(const Point &a, const Point &b) const {
-        return vdist(a, b).squaredNorm();
-    } //!< Squared (minimum) distance between two points
-
     virtual ~GeometryBase();
     virtual void to_json(json &j) const = 0;
     virtual void from_json(const json &j) = 0;
@@ -101,6 +102,9 @@ class GeometryImplementation : public GeometryBase {
 
     //! A unique pointer to a copy of self. To be used in copy constructors.
     virtual std::unique_ptr<GeometryImplementation> clone() const = 0;
+
+    //! Cereal serialisation
+    template <class Archive> void serialize(Archive &archive) { archive(boundary_conditions); }
 };
 
 /**
@@ -128,6 +132,11 @@ class Cuboid : public GeometryImplementation {
     std::unique_ptr<GeometryImplementation> clone() const override {
         return std::make_unique<Cuboid>(*this);
     }; //!< A unique pointer to a copy of self.
+
+    //! Cereal serialisation
+    template <class Archive> void serialize(Archive &archive) {
+        archive(cereal::base_class<GeometryImplementation>(this), box);
+    }
 };
 
 /**
@@ -160,6 +169,7 @@ class Sphere : public GeometryImplementation {
     double getVolume(int dim = 3) const override;
     Point setVolume(double volume, VolumeMethod method = ISOTROPIC) override;
     Point vdist(const Point &a, const Point &b) const override;
+    double sqdist(const Point &a, const Point &b) const { return (a - b).squaredNorm(); };
     void boundary(Point &a) const override;
     bool collision(const Point &a) const override;
     void randompos(Point &m, Random &rand) const override;
@@ -170,6 +180,11 @@ class Sphere : public GeometryImplementation {
     std::unique_ptr<GeometryImplementation> clone() const override {
         return std::make_unique<Sphere>(*this);
     }; //!< A unique pointer to a copy of self.
+
+    //! Cereal serialisation
+    template <class Archive> void serialize(Archive &archive) {
+        archive(cereal::base_class<GeometryImplementation>(this), radius);
+    }
 };
 
 class Hypersphere2d : public Sphere {
@@ -206,6 +221,11 @@ class Cylinder : public GeometryImplementation {
     std::unique_ptr<GeometryImplementation> clone() const override {
         return std::make_unique<Cylinder>(*this);
     }; //!< A unique pointer to a copy of self.
+
+    //! Cereal serialisation
+    template <class Archive> void serialize(Archive &archive) {
+        archive(cereal::base_class<GeometryImplementation>(this), radius, height);
+    }
 };
 
 /**
@@ -240,6 +260,11 @@ class HexagonalPrism : public GeometryImplementation {
     std::unique_ptr<GeometryImplementation> clone() const override {
         return std::make_unique<HexagonalPrism>(*this);
     }; //!< A unique pointer to a copy of self.
+
+    //! Cereal serialisation
+    template <class Archive> void serialize(Archive &archive) {
+        archive(cereal::base_class<GeometryImplementation>(this), box);
+    }
 };
 
 /**
@@ -263,6 +288,11 @@ class TruncatedOctahedron : public GeometryImplementation {
     std::unique_ptr<GeometryImplementation> clone() const override {
         return std::make_unique<TruncatedOctahedron>(*this);
     }; //!< A unique pointer to a copy of self.
+
+    //! Cereal serialisation
+    template <class Archive> void serialize(Archive &archive) {
+        archive(cereal::base_class<GeometryImplementation>(this), side);
+    }
 };
 
 /**
@@ -284,6 +314,7 @@ class TruncatedOctahedron : public GeometryImplementation {
  */
 class Chameleon : public GeometryBase {
   private:
+    Point len_or_zero = {0, 0, 0}; //!< Box length (if PBC) or zero (if no PBC) in given direction
     Point len, len_half, len_inv; //!< Cached box dimensions, their half-values, and reciprocal values.
     std::unique_ptr<GeometryImplementation> geometry = nullptr; //!< A concrete geometry implementation.
     Variant _type;                                              //!< Type of concrete geometry.
@@ -295,16 +326,19 @@ class Chameleon : public GeometryBase {
     const Variant &type = _type;     //!< Type of concrete geometry, read-only.
     const std::string &name = _name; //!< Name of concrete geometry, e.g., for json, read-only.
     double getVolume(int dim = 3) const override;
-    Point setVolume(double V, VolumeMethod method = ISOTROPIC) override;
+    Point setVolume(double, VolumeMethod = ISOTROPIC) override;
     Point getLength() const override; //!< A minimal containing cubic box.
     // setLength() needed only for IO::FormatXTC::loadnextframe().
-    void setLength(const Point &l);                             //!< Sets the box dimensions.
-    void boundary(Point &a) const override;                     //!< Apply boundary conditions
-    Point vdist(const Point &a, const Point &b) const override; //!< (Minimum) distance between two points
-    void randompos(Point &m, Random &rand) const override;
-    bool collision(const Point &a) const override;
-    void from_json(const json &j) override;
+    void setLength(const Point &);                            //!< Sets the box dimensions.
+    void boundary(Point &) const override;                    //!< Apply boundary conditions
+    Point vdist(const Point &, const Point &) const override; //!< (Minimum) distance between two points
+    double sqdist(const Point &, const Point &) const;        //!< (Minimum) squared distance between two points
+    void randompos(Point &, Random &) const override;
+    bool collision(const Point &) const override;
+    void from_json(const json &) override;
     void to_json(json &j) const override;
+
+    const BoundaryCondition &boundaryConditions() const; //!< Get info on boundary conditions
 
     static const std::map<std::string, Variant> names; //!< Geometry names.
     typedef std::pair<std::string, Variant> VariantName;
@@ -317,32 +351,11 @@ class Chameleon : public GeometryBase {
     Chameleon(const GeometryImplementation &geo, const Variant type);
 
     //! Copy everything, but clone the geometry.
-    Chameleon(const Chameleon &geo)
-        : GeometryBase(geo), len(geo.len), len_half(geo.len_half), len_inv(geo.len_inv), _type(geo._type),
-          _name(geo._name) {
-        geometry = geo.geometry != nullptr ? geo.geometry->clone() : nullptr;
-    }
+    Chameleon(const Chameleon &geo);
 
     //! During the assignment copy everything, but clone the geometry.
     Chameleon &operator=(const Chameleon &geo);
 };
-
-inline void Chameleon::_setLength(const Point &l) {
-    len = l;
-    len_half = l * 0.5;
-    len_inv = l.cwiseInverse();
-}
-
-inline double Chameleon::getVolume(int dim) const {
-    assert(geometry);
-    return geometry->getVolume(dim);
-}
-
-inline Point Chameleon::setVolume(double V, VolumeMethod method) {
-    auto scale = geometry->setVolume(V, method);
-    _setLength(geometry->getLength());
-    return scale;
-}
 
 inline void Chameleon::randompos(Point &m, Random &rand) const {
     assert(geometry);
@@ -397,14 +410,30 @@ inline Point Chameleon::vdist(const Point &a, const Point &b) const {
             else if (distance.z() < -len_half.z())
                 distance.z() += len.z();
         }
-    } else if (boundary_conditions.coordinates == ORTHOHEXAGONAL ||
-               boundary_conditions.coordinates == TRUNC_OCTAHEDRAL) {
-        distance = a - b;
-        boundary(distance);
     } else {
         distance = geometry->vdist(a, b);
     }
     return distance;
+}
+
+/**
+ * More readable alternative, nearly same performance:
+ *
+ * ~~~ cpp
+ * Point d(a - b);
+ * for (size_t i = 0; i < 3; i++) {
+ *     d[i] = std::fabs(d[i]);
+ *     d[i] = d[i] - len_or_zero[i] * (d[i] > len_half[i]); // casting faster than branching
+ * }
+ * return d.squaredNorm();
+ * ~~~
+ */
+inline double Chameleon::sqdist(const Point &a, const Point &b) const {
+    if (geometry->boundary_conditions.coordinates == ORTHOGONAL) {
+        Point d((a - b).cwiseAbs());
+        return (d - (d.array() > len_half.array()).cast<double>().matrix().cwiseProduct(len_or_zero)).squaredNorm();
+    } else
+        return geometry->vdist(a, b).squaredNorm();
 }
 
 void to_json(json &, const Chameleon &);
@@ -554,6 +583,38 @@ Tensor inertia(iter begin, iter end, const Point origin = {0,0,0},
     }
     return I;
 }
+
+/**
+ * @brief Root-mean-square deviation of two data sets represented by iterators
+ *
+ * A binary function must be given that returns the difference between data points
+ * in the two sets, for example `[](int a, int b){return a-b;}`.
+ */
+template <typename InputIt1, typename InputIt2, typename BinaryOperation>
+double rootMeanSquareDeviation(InputIt1 begin, InputIt1 end, InputIt2 d_begin, BinaryOperation diff_squared_func) {
+    assert(std::distance(begin, end) > 0);
+    double sq_sum = 0;
+    for (InputIt1 i = begin; i != end; ++i) {
+        sq_sum += diff_squared_func(*i, *d_begin);
+        ++d_begin;
+    }
+    return std::sqrt(sq_sum / std::distance(begin, end));
+}
+
+/**
+ * @brief Scale particles to the surface of a sphere
+ * @param particles Vector of particles
+ *
+ * The sphere radius is taken as the average radial distance
+ * of all particles with respect to the mass center.
+ * The _first_ particle of the given particles is excluded
+ * from the COM calculation and re-positioned at the center
+ * of the sphere. Therefore, make sure to add a dummy particle
+ * to the beginning of the particle vector; its initial positions
+ * are ignored and will be overwritten.
+ * Similar to routine described in doi:10.1021/jp010360o
+ */
+ParticleVector mapParticlesOnSphere(const ParticleVector &);
 
 } // namespace Geometry
 } // namespace Faunus

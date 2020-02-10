@@ -2,6 +2,7 @@
 #include "core.h"
 #include "atomdata.h"
 #include "tensor.h"
+#include <cereal/types/memory.hpp>
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
 #include "rotate.h"
@@ -23,6 +24,7 @@ struct ParticlePropertyBase {
     virtual void from_json(const json &j) = 0; //!< Convert from JSON object
     void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &); //!< Internal rotation
     virtual ~ParticlePropertyBase() = default;
+    template <class Archive> void serialize(Archive &) {} //!< Cereal serialisation
 };
 
 template <typename... Ts>
@@ -43,6 +45,7 @@ struct Radius : public ParticlePropertyBase {
     double radius = 0; //!< Particle radius
     void to_json(json &j) const override;
     void from_json(const json &j) override;
+    template <class Archive> void serialize(Archive &archive) { archive(radius); }
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 }; //!< Radius property
 
@@ -50,6 +53,7 @@ struct Charge : public ParticlePropertyBase {
     double charge = 0; //!< Particle radius
     void to_json(json &j) const override;
     void from_json(const json &j) override;
+    template <class Archive> void serialize(Archive &archive) { archive(charge); }
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 }; //!< Charge (monopole) property
 
@@ -67,6 +71,7 @@ struct Dipole : public ParticlePropertyBase {
     void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &); //!< Rotate dipole moment
     void to_json(json &j) const override;
     void from_json(const json &j) override;
+    template <class Archive> void serialize(Archive &archive) { archive(mu, mulen); }
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
 
@@ -77,6 +82,7 @@ struct Polarizable : public ParticlePropertyBase {
     void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &m); //!< Rotate polarizability tensor
     void to_json(json &j) const override;
     void from_json(const json &j) override;
+    template <class Archive> void serialize(Archive &archive) { archive(mui, muilen, alpha); }
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
 
@@ -85,6 +91,7 @@ struct Quadrupole : public ParticlePropertyBase {
     void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &m); //!< Rotate quadrupole moment
     void to_json(json &j) const override;
     void from_json(const json &j) override;
+    template <class Archive> void serialize(Archive &archive) { archive(Q); }
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 }; // Quadrupole property
 
@@ -94,6 +101,7 @@ struct Cigar : public ParticlePropertyBase {
     void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &); //!< Rotate sphero-cylinder
     void to_json(json &j) const override;
     void from_json(const json &j) override;
+    template <class Archive> void serialize(Archive &archive) { archive(scdir, sclen); }
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 }; //!< Sphero-cylinder properties
 
@@ -118,6 +126,16 @@ template <typename... Properties> class ParticleTemplate : public Properties... 
         _rotate<Ts...>(q, m, rest...);
     }
 
+    // Cereal serialisation
+
+    template <typename... Ts, class Archive>
+    auto _serialize(Archive &) -> typename std::enable_if<sizeof...(Ts) == 0>::type {}
+
+    template <typename T, typename... Ts, class Archive> void _serialize(Archive &archive, T &a, Ts &... rest) {
+        a.serialize(archive);
+        _serialize<Ts...>(archive, rest...);
+    }
+
   public:
     ParticleTemplate() : Properties()... {};
 
@@ -126,6 +144,10 @@ template <typename... Properties> class ParticleTemplate : public Properties... 
     void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &m) {
         _rotate<Properties...>(q, m, dynamic_cast<Properties &>(*this)...);
     } //!< Rotate all internal coordinates if needed
+
+    template <class Archive> void serialize(Archive &archive) {
+        _serialize<Properties...>(archive, dynamic_cast<Properties &>(*this)...);
+    }
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
@@ -164,6 +186,12 @@ class Particle {
     Particle &operator=(const Particle &); //!< assignment operator
     void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &m);
 
+    template <class Archive> void serialize(Archive &archive) {
+        archive(ext, id, charge, pos);
+        // if (ext != nullptr)
+        //    ext->serialize(archive);
+    } //!< Cereal serialisation
+
     bool hasExtension() const; //!< check if particle has extensions (dipole etc.)
 
     ParticleExtension &createExtension(); //!< Create extension
@@ -180,61 +208,5 @@ typedef std::vector<Particle> ParticleVector;
 
 void from_json(const json &, Particle &);
 void to_json(json &, const Particle &);
-
-#ifdef DOCTEST_LIBRARY_INCLUDED
-// convert test to use `Particle::shape`
-TEST_CASE("[Faunus] Particle") {
-    using doctest::Approx;
-    Particle p1, p2;
-    p1.id = 100;
-    p1.pos = {1, 2, 3};
-    p1.charge = -0.8;
-
-    CHECK(p1.hasExtension() == false);
-
-    p1.createExtension();
-    CHECK(p1.hasExtension() == true);
-
-    p2.createExtension();
-    CHECK(p2.hasExtension() == true);
-
-    p1.getExt().mu = {0, 0, 1};
-    p1.getExt().mulen = 2.8;
-    p1.getExt().scdir = {-0.1, 0.3, 1.9};
-    p1.getExt().sclen = 0.5;
-    p1.getExt().Q = Tensor(1, 2, 3, 4, 5, 6);
-
-    p2 = json(p1); // p1 --> json --> p2
-    CHECK(p2.hasExtension() == true);
-
-    CHECK(json(p1) == json(p2)); // p1 --> json == json <-- p2 ?
-
-    CHECK(p2.id == 100);
-    CHECK(p2.pos == Point(1, 2, 3));
-    CHECK(p2.charge == -0.8);
-    CHECK(p2.getExt().mu == Point(0, 0, 1));
-    CHECK(p2.getExt().mulen == 2.8);
-    CHECK(p2.getExt().scdir == Point(-0.1, 0.3, 1.9));
-    CHECK(p2.getExt().sclen == 0.5);
-    CHECK(p2.getExt().Q == Tensor(1, 2, 3, 4, 5, 6));
-
-    // check of all properties are rotated
-    QuaternionRotate qrot(pc::pi / 2, {0, 1, 0});
-    p1.getExt().mu = p1.getExt().scdir = {1, 0, 0};
-    p1.rotate(qrot.first, qrot.second);
-
-    CHECK(p1.getExt().mu.x() == Approx(0));
-    CHECK(p1.getExt().mu.z() == Approx(-1));
-    CHECK(p1.getExt().scdir.x() == Approx(0));
-    CHECK(p1.getExt().scdir.z() == Approx(-1));
-
-    CHECK(p1.getExt().Q(0, 0) == Approx(6));
-    CHECK(p1.getExt().Q(0, 1) == Approx(5));
-    CHECK(p1.getExt().Q(0, 2) == Approx(-3));
-    CHECK(p1.getExt().Q(1, 1) == Approx(4));
-    CHECK(p1.getExt().Q(1, 2) == Approx(-2));
-    CHECK(p1.getExt().Q(2, 2) == Approx(1));
-}
-#endif
 
 } // namespace Faunus

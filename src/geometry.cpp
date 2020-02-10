@@ -1,7 +1,9 @@
 #include "geometry.h"
 #include "atomdata.h"
 #include "random.h"
+#include "auxiliary.h"
 #include "aux/eigensupport.h"
+#include "spdlog/spdlog.h"
 
 namespace Faunus {
 namespace Geometry {
@@ -581,7 +583,37 @@ void from_json(const json &j, Chameleon &g) {
 
 void to_json(json &j, const Chameleon &g) { g.to_json(j); }
 
-Chameleon::Chameleon(const Variant type) { makeGeometry(type); }
+ParticleVector mapParticlesOnSphere(const ParticleVector &source) {
+    assert(source.size() > 1);
+    Average<double> radius; // average radial distance
+    ParticleVector destination = source;
+    Point COM = massCenter(source.begin() + 1, source.end());
+    for (size_t i = 1; i < source.size(); i++) {
+        destination[i].pos = source[i].pos - COM; // make COM origin
+        double r = destination[i].pos.norm();     // radial distance
+        destination[i].pos /= r;                  // normalize to unit vector
+        radius += r;                         // radius is the average r
+    }
+    destination[0].pos.setZero();
+    for (auto &i : destination) // scale positions to surface of sphere
+        i.pos = i.pos * radius.avg() + COM;
+
+    // rmsd, skipping the first particle
+    double _rmsd =
+        rootMeanSquareDeviation(destination.begin() + 1, destination.end(), source.begin() + 1,
+                                [](const Particle &a, const Particle &b) { return (a.pos - b.pos).squaredNorm(); });
+
+    faunus_logger->info("{} particles mapped on sphere of radius {} with RMSD {} {}; the first particle ({}) is a "
+                        "dummy and COM placeholder",
+                        destination.size(), radius.avg(), _rmsd, u8::angstrom,
+                        Faunus::atoms.at(destination.at(0).id).name);
+    return destination;
+}
+
+Chameleon::Chameleon(const Variant type) {
+    makeGeometry(type);
+    _setLength(geometry->getLength());
+}
 
 Chameleon::Chameleon(const GeometryImplementation &geo, const Variant type) : geometry(geo.clone()), _type(type) {
     _setLength(geometry->getLength());
@@ -646,6 +678,31 @@ void Chameleon::to_json(json &j) const {
     j["type"] = name;
 }
 
+void Chameleon::_setLength(const Point &l) {
+    len = l;
+    len_half = l * 0.5;
+    len_inv = l.cwiseInverse();
+    len_or_zero.setZero();
+
+    // this is to speed up the `sqdist()` by avoiding branching when testing
+    // for PBC in each direction. The variable `len_or_zero` either equals
+    // `len` for PBC or zero if not.
+    if (geometry->boundary_conditions.coordinates == ORTHOGONAL)
+        for (size_t i = 0; i < 3; i++)
+            len_or_zero[i] = len[i] * (geometry->boundary_conditions.direction[i] == PERIODIC);
+}
+
+double Chameleon::getVolume(int dim) const {
+    assert(geometry);
+    return geometry->getVolume(dim);
+}
+
+Point Chameleon::setVolume(double V, VolumeMethod method) {
+    auto scale = geometry->setVolume(V, method);
+    _setLength(geometry->getLength());
+    return scale;
+}
+
 Chameleon::VariantName Chameleon::variantName(const std::string &name) {
     auto it = names.find(name);
     if (it == names.end()) {
@@ -662,12 +719,19 @@ Chameleon &Chameleon::operator=(const Chameleon &geo) {
         len = geo.len;
         len_half = geo.len_half;
         len_inv = geo.len_inv;
+        len_or_zero = geo.len_or_zero;
         _type = geo._type;
         _name = geo._name;
         geometry = geo.geometry != nullptr ? geo.geometry->clone() : nullptr;
     }
     return *this;
 }
+
+const BoundaryCondition &Chameleon::boundaryConditions() const { return geometry->boundary_conditions; }
+
+Chameleon::Chameleon(const Chameleon &geo)
+    : GeometryBase(geo), len(geo.len), len_half(geo.len_half), len_inv(geo.len_inv),
+      geometry(geo.geometry != nullptr ? geo.geometry->clone() : nullptr), _type(geo._type), _name(geo._name) {}
 
 } // namespace Geometry
 } // namespace Faunus

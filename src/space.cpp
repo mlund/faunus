@@ -27,6 +27,41 @@ bool Change::empty() const {
 }
 Change::operator bool() const { return not empty(); }
 
+std::vector<int> Change::touchedParticleIndex(const std::vector<Group<Particle>> &group_vector) {
+    std::vector<int> atom_indexes; // atom index rel. to first particle in system
+    auto begin = group_vector.front().begin();
+    for (auto &d : groups)     // loop over changes groups
+        for (auto i : d.atoms) // atom index rel. to group
+            atom_indexes.push_back(i + std::distance(begin, group_vector.at(d.index).begin()));
+    return atom_indexes;
+}
+
+bool Change::sanityCheck(Space &spc) const {
+    // make sure "atoms" belong to the "index"th group
+    bool rc = true;
+    for (auto &d : groups) {
+        auto &g = spc.groups.at(d.index);
+        for (size_t atom_index : d.atoms)     // all atoms must be within `g`
+            if (atom_index >= g.capacity()) { // atom_index is w. respect to group.begin()
+                size_t first = std::distance(spc.p.begin(), g.begin());
+                size_t last = std::distance(spc.p.begin(), g.trueend()) - 1;
+                faunus_logger->debug("atom {} is outside capacity of group '{}' ({}-{})", atom_index + first,
+                                     molecules.at(g.id).name, first, last);
+                rc = false;
+            }
+    }
+    return rc;
+}
+
+void to_json(json &j, const Change::data &d) {
+    j = {{"all", d.all},           {"internal", d.internal}, {"dNswap", d.dNswap},
+         {"dNatomic", d.dNatomic}, {"index", d.index},       {"atoms", d.atoms}};
+}
+
+void to_json(json &j, const Change &c) {
+    j = {{"dV", c.dV}, {"all", c.all}, {"dN", c.dN}, {"moved2moved", c.moved2moved}, {"groups", c.groups}};
+}
+
 void Space::clear() {
     p.clear();
     groups.clear();
@@ -182,7 +217,7 @@ json Space::info() {
 
 Space::Tgvec::iterator Space::randomMolecule(int molid, Random &rand, Space::Selection sel) {
     auto m = findMolecules(molid, sel);
-    if (size(m) > 0)
+    if (not ranges::cpp20::empty(m))
         return groups.begin() + (&*rand.sample(m.begin(), m.end()) - &*groups.begin());
     return groups.end();
 }
@@ -202,7 +237,7 @@ void insertMolecules(const json &j, Space &spc) {
             if (m.is_object() && m.size() == 1)
                 for (auto it = m.begin(); it != m.end(); ++it) {
                     auto mol = findName(molvec, it.key()); // is the molecule defined?
-                    if (mol != molvec.end()) {
+                    if (mol != molvec.end()) {             // yes it is
 
                         int N = it.value().at("N").get<int>(); // number of molecules to insert
                         int cnt = N;
@@ -341,4 +376,35 @@ size_t getActiveParticles::size() const {
                            [](size_t sum, const auto &g) { return sum + g.size(); });
 }
 getActiveParticles::getActiveParticles(const Space &spc) : spc(spc){}
+
+namespace SpaceFactory {
+
+/**
+ * @param space Space to insert into (will be overwritten)
+ * @param num_particles Number of salt pairs to insert
+ * @param geometry Geometry to use
+ *
+ * Create a system with two atom types, "Na" and "Cl", forming
+ * an atomic molecule, "salt". N salt pairs a randomly inserted
+ */
+void makeNaCl(Space &space, int num_particles, const Geometry::Chameleon &geometry) {
+    pc::temperature = 298.15_K;
+    space.geo = geometry;
+
+    Faunus::atoms = R"([
+             { "Na": { "sigma": 3.8, "eps": 0.1, "q": 1.0 } },
+             { "Cl": { "sigma": 4.0, "eps": 0.05, "q": -1.0 } }
+             ])"_json.get<decltype(atoms)>();
+
+    Faunus::molecules = R"([
+                { "salt": {"atomic": true, "atoms": ["Na", "Cl"] } }
+            ])"_json.get<decltype(molecules)>();
+
+    json j = json::array();
+    j.push_back({{"salt", {{"N", num_particles}}}});
+    Faunus::insertMolecules(j, space);
+}
+
+} // namespace SpaceFactory
+
 } // namespace Faunus

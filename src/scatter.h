@@ -1,377 +1,378 @@
 #pragma once
 
 #include <fstream>
+#include <algorithm>
+#include <cmath>
 
 namespace Faunus {
 
-    /** @brief Routines related to scattering */
-    namespace Scatter {
+/** @brief Routines related to scattering.
+ */
+namespace Scatter {
 
-        /** @brief Form factor, `F(q)`, for a hard sphere of radius `R`.
-        */
-        template<class T=float>
-            class FormFactorSphere {
-                private:
-                    T j1( T x ) const { // spherical Bessel function
-                        T xinv = 1 / x;
-                        return xinv * (sin(x) * xinv - cos(x));
+enum Algorithm { SIMD, EIGEN, GENERIC }; //!< Selections for math algorithms
+
+/** @brief Form factor, `F(q)`, for a hard sphere of radius `R`.
+ */
+template <class T = float> class FormFactorSphere {
+  private:
+    T j1(T x) const { // spherical Bessel function
+        T xinv = 1 / x;
+        return xinv * (sin(x) * xinv - cos(x));
+    }
+
+  public:
+    /**
+     * @param q q value in inverse angstroms
+     * @param a particle to take radius, \c R from
+     * @returns
+     * @f$I(q)=\left [\frac{3}{(qR)^3}\left (\sin{qR}-qR\cos{qR}\right )\right ]^2@f$
+     */
+    template <class Tparticle> T operator()(T q, const Tparticle &a) const {
+        assert(q > 0 && a.radius > 0 && "Particle radius and q must be positive");
+        T qR = q * a.radius;
+        qR = 3. / (qR * qR * qR) * (sin(qR) - qR * cos(qR));
+        return qR * qR;
+    }
+};
+
+/**
+ * @brief Unity form factor (q independent).
+ */
+template <class T = float> struct FormFactorUnity {
+    template <class Tparticle> T operator()(T, const Tparticle &) const { return 1; }
+};
+
+/**
+ * @brief Calculate scattering intensity, I(q), on a mesh using the Debye formula.
+ *
+ * It is important to note that distances should be calculated without periodicity and if molecules cross
+ * periodic boundaries, these must be made whole before performing the analysis.
+ *
+ * The JSON object is scanned for the following keywords:
+ *
+ * - `qmin` minimum q value (1/angstrom)
+ * - `qmax` maximum q value (1/angstrom)
+ * - `dq` q mesh spacing (1/angstrom)
+ * - `cutoff` cutoff distance (angstrom); *Experimental!*
+ *
+ * @see http://dx.doi.org/10.1016/S0022-2860(96)09302-7
+ */
+template <class Tformfactor, class T = float> class DebyeFormula {
+    static constexpr T r_cutoff_infty = 1e9; //<! a cutoff distance in angstrom considered to be infinity
+    T q_mesh_min, q_mesh_max, q_mesh_step; //<! q_mesh parameters in inverse angstrom; used for inline lambda-functions
+
+    /**
+     * @param m mesh point index
+     * @return the scattering vector magnitude q at the mesh point m
+     */
+    #pragma omp declare simd uniform(this) linear(m:1)
+    inline T q_mesh(int m) {
+        return q_mesh_min + m * q_mesh_step;
+    }
+
+    /**
+     * @brief Initialize mesh for intensity and sampling.
+     * @param q_min Minimum q-value to sample (1/A)
+     * @param q_max Maximum q-value to sample (1/A)
+     * @param q_step Spacing between mesh points (1/A)
+     */
+    void init_mesh(T q_min, T q_max, T q_step) {
+        if (q_step <= 0 || q_min <= 0 || q_max <= 0 || q_min > q_max ||
+            q_step / q_max < 4 * std::numeric_limits<T>::epsilon()) {
+            throw std::range_error("DebyeFormula: Invalid mesh parameters for q");
+        }
+        q_mesh_min = q_min < 1e-6 ? q_step : q_min; // ensure that q > 0
+        q_mesh_max = q_max;
+        q_mesh_step = q_step;
+        try {
+            // resolution of the 1D mesh approximation of the scattering vector magnitude q
+            const int q_resolution = numeric_cast<int>(1 + std::floor((q_max - q_min) / q_step));
+            intensity.resize(q_resolution, 0.0);
+            sampling.resize(q_resolution, 0.0);
+        } catch (std::overflow_error &e) {
+            throw std::range_error("DebyeFormula: Too many samples");
+        }
+    }
+
+    Geometry::Sphere geo = Geometry::Sphere(r_cutoff_infty / 2); //!< geometry to use for distance calculations
+    T r_cutoff;                   //!< cut-off distance for scattering contributions (angstrom)
+    Tformfactor form_factor;      //!< scattering from a single particle
+    std::vector<T> intensity;     //!< sampled average I(q)
+    std::vector<T> sampling;      //!< weighted number of samplings
+
+  public:
+    DebyeFormula(T q_min, T q_max, T q_step, T r_cutoff) : r_cutoff(r_cutoff) { init_mesh(q_min, q_max, q_step); };
+
+    DebyeFormula(T q_min, T q_max, T q_step) : DebyeFormula(r_cutoff_infty, q_min, q_max, q_step) {};
+
+    explicit DebyeFormula(const json &j)
+        : DebyeFormula(j.at("qmin").get<double>(), j.at("qmax").get<double>(), j.at("dq").get<double>(),
+                       j.value("cutoff", r_cutoff_infty)){};
+
+    /**
+     * @brief Sample I(q) and add to average.
+     * @param p particle vector
+     * @param weight weight of sampled configuration in biased simulations
+     * @param volume simulation volume (angstrom cubed) used only for cut-off correction
+     *
+     * An isotropic correction is added beyond a given cut-off distance. For physics details see for example
+     * @see https://debyer.readthedocs.org/en/latest/.
+     *
+     * O(N^2) * O(M) complexity where N is the number of particles and M the number of mesh points. The quadratic
+     * complexity in N comes from the fact that the radial distribution function has to be computed.
+     * The current implementation supports OpenMP parallelization. Roughly half of the execution time is spend
+     * on computing sin values, e.g., in sinf_avx2.
+     */
+    template <class Tpvec> void sample(const Tpvec &p, const T weight = 1, const T volume = -1) {
+        const int N = (int) p.size(); // number of particles
+        const int M = (int) intensity.size(); // number of mesh points
+        std::vector<T> intensity_sum(M, 0.0);
+
+        // Allow parallelization with a hand written reduction of intensity_sum at the end.
+        // https://gcc.gnu.org/gcc-9/porting_to.html#ompdatasharing
+        // #pragma omp parallel default(none) shared(N, M) shared(geo, r_cutoff, p) shared(intensity_sum)
+        #pragma omp parallel default(shared) shared(intensity_sum)
+        {
+            std::vector<T> intensity_sum_private(M, 0.0); // a temporal private intensity_sum
+            #pragma omp for schedule(dynamic)
+            for (int i = 0; i < N - 1; ++i) {
+                for (int j = i + 1; j < N; ++j) {
+                    T r = geo.sqdist(p[i], p[j]); // the square root follows
+                    if (r < r_cutoff * r_cutoff) {
+                        r = std::sqrt(r);
+                        // Black magic: The q_mesh function must be inlineable otherwise the loop cannot be unrolled
+                        // using advanced SIMD instructions leading to a huge performance penalty (a factor of 4).
+                        // The unrolled loop uses a different sin implementation, which may be spotted when profiling.
+                        // TODO: Optimize also for other compilers than GCC by using a vector math library, e.g.,
+                        // TODO: https://github.com/vectorclass/version2
+                        // #pragma GCC unroll 16 // for diagnostics, GCC issues warning when cannot unroll
+                        for (int m = 0; m < M; ++m) {
+                            const T q = q_mesh(m);
+                            intensity_sum_private[m] +=
+                                form_factor(q, p[i]) * form_factor(q, p[j]) * std::sin(q * r) / (q * r);
+                        }
                     }
+                }
+            }
+            // reduce intensity_sum_private into intensity_sum
+            #pragma omp critical
+            std::transform(intensity_sum.begin(), intensity_sum.end(), intensity_sum_private.begin(),
+                           intensity_sum.begin(), std::plus<T>());
+        }
 
-                public:
-                    /**
-                     * @param q q value in inverse angstroms
-                     * @param a particle to take radius, \c R from.
-                     * @returns
-                     * @f$I(q)=\left [\frac{3}{(qR)^3}\left (\sin{qR}-qR\cos{qR}\right )\right ]^2@f$
-                     */
-                    template<class Tparticle>
-                        T operator()( T q, const Tparticle &a ) const {
-                            assert(q > 0 && a.radius > 0 && "Particle radius and q must be positive");
-                            T qR = q * a.radius;
-                            qR = 3. / (qR * qR * qR) * (sin(qR) - qR * cos(qR));
-                            return qR * qR;
-                        }
-            };
+        // https://gcc.gnu.org/gcc-9/porting_to.html#ompdatasharing
+        // #pragma omp parallel for default(none) shared(N, M, weight, volume) shared(p, r_cutoff, intensity_sum) shared(sampling, intensity)
+        #pragma omp parallel for shared(sampling, intensity)
+        for (int m = 0; m < M; ++m) {
+            const T q = q_mesh(m);
+            T intensity_self_sum = 0;
+            for (int i = 0; i < N; ++i) {
+                intensity_self_sum += std::pow(form_factor(q, p[i]), 2);
+            }
+            T intensity_corr = 0;
+            if (r_cutoff < r_cutoff_infty && volume > 0) {
+                intensity_corr = 4 * pc::pi * N / (volume * std::pow(q, 3)) *
+                         (q * r_cutoff * std::cos(q * r_cutoff) - std::sin(q * r_cutoff));
+            }
+            sampling[m] += weight;
+            intensity[m] += ((2 * intensity_sum[m] + intensity_self_sum) / N + intensity_corr) * weight;
+        }
+    }
 
-        /**
-         * @brief Unity form factor (q independent)
-         */
-        template<class T=float>
-            struct FormFactorUnity {
-                template<class Tparticle>
-                    T operator()(T, const Tparticle& ) const {
-                        return 1;
+    /**
+     * @return a tuple of min, max, and step parameters of a q-mash
+     */
+    auto getQMeshParameters() {
+        return std::make_tuple(q_mesh_min, q_mesh_max, q_mesh_step);
+    }
+
+    /**
+     * @return a map containing q (key) and average intensity (value)
+     */
+    auto getIntensity() {
+        std::map<T, T> averaged_intensity;
+        for (size_t m = 0; m < intensity.size(); ++m) {
+            const T average = intensity[m] / (sampling[m] != 0.0 ? sampling[m] : 1.0);
+            averaged_intensity.emplace(q_mesh(m), average);
+        }
+        return averaged_intensity;
+    }
+};
+
+
+/**
+ * A policy for collecting samples. To be used together with StructureFactor class templates.
+ *
+ * @tparam T float or double
+ */
+template <typename T> class SamplingPolicy {
+  public:
+    struct sampled_value {
+        T value;
+        T weight;
+    };
+    typedef std::map<T, sampled_value> TSampledValueMap;
+  private:
+    TSampledValueMap samples;
+    const T precision = 10000.0; //!< precision of the key for better binning
+
+  public:
+    std::map<T, T> getSampling() const {
+        std::map<T, T> average;
+        for (auto [key, sample] : samples) {
+            average.emplace(key, sample.value / sample.weight);
+        }
+        return average;
+    }
+
+    /**
+     * @param key_approx is subject of rounding for better binning
+     * @param value
+     * @param weight
+     */
+    void addSampling(T key_approx, T value, T weight = 1.0) {
+        const T key = std::round(key_approx * precision) / precision; // round |q| for better binning
+        samples[key].value += value * weight;
+        samples[key].weight += weight;
+    }
+};
+
+
+/**
+ * @brief Calculate structure factor using explicit q averaging.
+ *
+ * This averages over the thirteen permutations of the Miller index [100], [110], [101] using:
+ *
+ * @f[ S(\mathbf{q}) = \frac{1}{N} \left <
+ *    \left ( \sum_i^N \sin(\mathbf{qr}_i) \right )^2 +
+ *    \left ( \sum_j^N \cos(\mathbf{qr}_j) \right )^2
+ *   \right >
+ * @f]
+ *
+ * For more information, see @see http://doi.org/d8zgw5 and @see http://doi.org/10.1063/1.449987.
+ */
+template <typename T = float, Algorithm method = SIMD, typename TSamplingPolicy = SamplingPolicy<T>>
+class StructureFactorPBC : private TSamplingPolicy {
+    //! sample directions (h,k,l)
+    const std::vector<Point> directions = {
+        {1, 0, 0}, {0, 1, 0},  {0, 0, 1},                                      // 3 permutations
+        {1, 1, 0}, {0, 1, 1},  {1, 0, 1},  {-1, 1, 0}, {-1, 0, 1}, {0, -1, 1}, // 6 permutations
+        {1, 1, 1}, {-1, 1, 1}, {1, -1, 1}, {1, 1, -1}                          // 4 permutations
+    };
+
+    const int p_max;  //!< multiples of q to be sampled
+    using TSamplingPolicy::addSampling;
+
+  public:
+    StructureFactorPBC(int q_multiplier) : p_max(q_multiplier){}
+
+    template <class Tpositions> void sample(const Tpositions &positions, const double boxlength) {
+        // https://gcc.gnu.org/gcc-9/porting_to.html#ompdatasharing
+        // #pragma omp parallel for collapse(2) default(none) shared(directions, p_max, boxlength) shared(positions)
+        #pragma omp parallel for collapse(2) default(shared)
+        for (int i = 0; i < directions.size(); ++i) {
+            for (int p = 1; p <= p_max; ++p) {                                // loop over multiples of q
+                const Point q = (2 * pc::pi * p / boxlength) * directions[i]; // scattering vector
+                T sum_sin = 0.0;
+                T sum_cos = 0.0;
+                if constexpr (method == SIMD) {
+                    // When sine and cosine is computed in separate loops, advanced sine and cosine implementation
+                    // utilizing SIMD instructions may be used to get at least 4 times performance boost.
+                    // As of January 2020, only GCC exploits this using libmvec library if --ffast-math is enabled.
+                    std::vector<T> qr_std(positions.size());
+                    std::transform(positions.begin(), positions.end(), qr_std.begin(),
+                                   [&q](auto &r) { return q.dot(r); });
+                    // as of January 2020 the std::transform_reduce is not implemented in libc++
+                    for (auto &qr : qr_std) {
+                        sum_sin += std::sin(qr);
                     }
-            };
-
-        /**
-         * @brief Calculates scattering intensity, I(q) using the Debye formula
-         *
-         * It is important to note that distances should be calculated without
-         * periodicity and if molecules cross periodic boundaries, these
-         * must be made whole before performing the analysis.
-         * The JSON object is scanned for the following keywords:
-         *
-         * - `qmin` Minimum q value (1/angstrom)
-         * - `qmax` Maximum q value (1/angstrom)
-         * - `dr` q spacing (1/angstrom)
-         * - `cutoff` Cutoff distance (angstrom). *Experimental!*
-         *
-         * See also <http://dx.doi.org/10.1016/S0022-2860(96)09302-7>
-         */
-        template<class Tformfactor, class Tgeometry=Geometry::Chameleon, class T=float>
-            class DebyeFormula {
-                private:
-                    T qmin, qmax, dq, rc;
-                protected:
-                    Tformfactor F; // scattering from a single particle
-                    Tgeometry geo; // geometry to use for distance calculations
-                public:
-                    std::map<T, T> I; //!< Sampled, average I(q)
-                    std::map<T, T> S; //!< Weighted number of samplings
-
-                    DebyeFormula(const json &j) {
-                        geo = R"( { "type": "sphere", "radius": 1e9 } )"_json;
-                        dq = j.at("dq").get<double>();
-                        qmin = j.at("qmin").get<double>();
-                        qmax = j.at("qmax").get<double>();
-                        rc = j.value("cutoff", 1.0e9);
-
-                        if (dq<=0 || qmin<=0 || qmax<=0 || qmin>qmax)
-                            throw std::runtime_error("DebyeFormula: invalid q parameters");
+                    // as of January 2020 the std::transform_reduce is not implemented in libc++
+                    for (auto &qr : qr_std) {
+                        sum_cos += std::cos(qr);
                     }
-
-                    /**
-                     * @brief Sample I(q) and add to average
-                     *
-                     * The q range is read from input as `qmin`, `qmax`, `dq` in units of
-                     * inverse angstrom.
-                     * It is also possible to specify an isotropic correction beyond
-                     * a given cut-off -- see for example
-                     * <https://debyer.readthedocs.org/en/latest/>.
-                     * The cut-off distance - which should be smaller than half the
-                     * box length for a cubic system is read specific by the
-                     * keyword `sofq_cutoff`.
-                     */
-                    template<class Tpvec>
-                        void sample( const Tpvec &p, T f = 1, T V = -1 ) {
-                            assert(qmin > 0 && qmax > 0 && dq > 0 && "q range invalid.");
-                            sample(p, qmin, qmax, dq, f, V);
-                        }
-
-                    /**
-                     * @brief Sample I(q) and add to average
-                     * @param p Particle vector
-                     * @param qmin Minimum q-value to sample (1/A)
-                     * @param qmax Maximum q-value to sample (1/A)
-                     * @param dq q spacing (1/A)
-                     * @param f weight of sampled configuration in biased simulations
-                     * @param V Simulation volume (angstrom^3) used only for cut-off correction
-                     */
-                    template<class Tpvec>
-                        void sample( const Tpvec &p, T qmin, T qmax, T dq, T f = 1, T V = -1 ) {
-                            if ( qmin < 1e-6 )
-                                qmin = dq;              // ensure that q>0
-
-                            // Temporary f(q) functions - initialized to
-                            // enable O(N) complexity iteration in inner loop.
-                            std::map<T, T> _I, _ff;
-                            for ( T q = qmin; q <= qmax; q += dq )
-                                _I[q] = _ff[q] = 0;
-
-                            int N = (int) p.size();
-                            for ( int i = 0; i < N - 1; ++i )
-                            {
-                                for ( int j = i + 1; j < N; ++j )
-                                {
-                                    T r = geo.sqdist(p[i], p[j]);
-                                    if ( r < rc * rc )
-                                    {
-                                        r = sqrt(r);
-                                        for ( auto &m : _I )
-                                        { // O(N) complexity
-                                            T q = m.first;
-                                            m.second += F(q, p[i]) * F(q, p[j]) * sin(q * r) / (q * r);
-                                        }
-                                    }
-                                }
-                            }
-                            for ( int i = 0; i < N; i++ )
-                                for ( T q = qmin; q <= qmax; q += dq )
-                                    _ff[q] += pow(F(q, p[i]), 2);
-
-                            for ( auto &i : _I )
-                            {
-                                T q = i.first, Icorr = 0;
-                                if ( rc < 1e9 && V > 0 )
-                                    Icorr = 4 * pc::pi * N / (V * pow(q, 3)) *
-                                        (q * rc * cos(q * rc) - sin(q * rc));
-                                S[q] += f;
-                                I[q] += ((2 * i.second + _ff[q]) / N + Icorr) * f; // add to average I(q)
-                            }
-                        }
-
-                    /**
-                     * @brief Sample between all groups
-                     *
-                     * Instead of looping over all particles, this will ignore all internal
-                     * group distances.
-                     *
-                     * @param p Particle vector
-                     * @param groupList Vector of group pointers - i.e. as returned from `Space::groupList()`.
-                     * @note Particle form factors are always set to unity, i.e. F(q) is ignored.
-                     *
-                     * @warning Untested
-                     */
-                    template<class Tpvec, class Tg>
-                        void sampleg2g( const Tpvec &p, Tg groupList )
-                        {
-                            assert(qmin > 0 && qmax > 0 && dq > 0 && "q range invalid.");
-                            sampleg2g(p, qmin, qmax, dq, groupList);
-                        }
-
-                    template<class Tpvec, class Tg>
-                        void
-                        sampleg2g( const Tpvec &p, T qmin, T qmax, T dq, Tg groupList )
-                        {
-                            std::vector<T> _I(int((qmax - qmin) / dq + 0.5));
-                            // loop over all pairs of groups, then over particles
-                            for ( int k = 0; k < (int) groupList.size() - 1; k++ )
-                                for ( int l = k + 1; l < (int) groupList.size(); l++ )
-                                    for ( auto i : *groupList.at(k))
-                                        for ( auto j : *groupList.at(l))
-                                        {
-                                            T r = geo.vdist(p[i].pos, p[j].pos).norm();
-                                            int cnt = 0;
-                                            for ( T q = qmin; q <= qmax; q += dq )
-                                                _I.at(cnt++) += sin(q * r) / (q * r);
-                                        }
-                            int cnt = 0, N = p.size();
-                            for ( T q = qmin; q <= qmax; q += dq )
-                                I[q] += 2. * _I.at(cnt++) / N + 1; // add to average I(q)
-                        }
-
-                    /**
-                     * @brief Save I(q) to disk
-                     */
-                    void
-                        save( const std::string &filename )
-                        {
-                            if ( !I.empty())
-                            {
-                                std::ofstream f(filename.c_str());
-                                if ( f )
-                                {
-                                    for ( auto &i : I )
-                                        f << i.first << " " << i.second / S[i.first] << "\n";
-                                }
-                            }
-                        }
-            };
-
-        /**
-         * @brief Structor factor calculation
-         *
-         * This will take a vector of points or particles and calculate
-         * the structure factor using different methods described below.
-         */
-        template<typename T=double>
-            class StructureFactor : public DebyeFormula<FormFactorSphere<T>> {
-                private:
-                    T qmin, qmax, dq;
-                    Point qdir={0,0,0};
-                public:
-                    typedef DebyeFormula<FormFactorSphere<T>> base;
-
-                    StructureFactor(const json &j) : base(j) {
-                        qmin = j.at("qmin").get<double>();
-                        qmax = j.at("qmax").get<double>();
-                        dq = j.at("dq").get<double>();
+                } else if constexpr (method == EIGEN) {
+                    // Map is a Nx3 matrix facade into original std::vector. Eigen does not accept `float`,
+                    // hence `double` must be used instead of the template parameter T here.
+                    auto qr = Eigen::Map<Eigen::MatrixXd, 0, Eigen::Stride<1, 3>>((double *)positions.data(),
+                        positions.size(), 3) * q;
+                    sum_sin = qr.array().cast<T>().sin().sum();
+                    sum_cos = qr.array().cast<T>().cos().sum();
+                } else if constexpr (method == GENERIC) {
+                    // TODO: Optimize also for other compilers than GCC by using a vector math library, e.g.,
+                    // TODO: https://github.com/vectorclass/version2
+                    for (auto &r : positions) { // loop over positions
+                        T qr = q.dot(r);        // scalar product q*r
+                        sum_sin += sin(qr);
+                        sum_cos += cos(qr);
                     }
+                };
+                // collect average, `norm()` gives the scattering vector length
+                const T sf = (sum_sin * sum_sin + sum_cos * sum_cos) / (T)(positions.size());
+                #pragma omp critical
+                // avoid race conditions when updating the map
+                addSampling(q.norm(), sf, 1.0);
+            }
+        }
+    }
 
-                    template<class Tpvec>
-                        void sample( const Tpvec &p ) {
-                            sample(p, qmin, qmax, dq);
-                        }
+    int getQMultiplier() {
+        return p_max;
+    }
 
-                    /**
-                     * @brief Sample S(q) using a double sum.
-                     *
-                     * This will directly sample
-                     *
-                     * @f[
-                     *   S(\mathbf{q})= \frac{1}{N}\left < \sum_i^N\sum_j^N
-                     *   \exp(-i\mathbf{qr}_{ij}) \right >
-                     *   =1+\frac{1}{N} \left <
-                     *   \sum_{i\neq j}\sum_{j\neq i}\cos(\mathbf{qr}_{ij})
-                     *   \right >
-                     * @f]
-                     *
-                     * The direction of the q vector is randomly generated on a unit
-                     * sphere, i.e. during a simulation there will be an angular
-                     * averaging, producing the same result as the Debye formula. The
-                     * number of directions for each sample event can be set using
-                     * the `Nq` parameter which defaults to 1. Averaging can be disabled
-                     * by specifically setting a q vector via the last argument.
-                     *
-                     * @param p Particle/point vector
-                     * @param qmin Minimum q-value to sample (1/A)
-                     * @param qmax Maximum q-value to sample (1/A)
-                     * @param dq q spacing (1/A)
-                     * @param Nq Number of random q direction (default: 1)
-                     * @param qdir Specific q vector - overrides averaging (default: 0,0,0)
-                     */
-                    template<class Tpvec>
-                        void
-                        sample( const Tpvec &p, T qmin, T qmax, T dq, int Nq = 10, Point qdir = Point(0, 0, 0))
-                        {
-                            if ( qmin < 1e-6 )
-                                qmin = dq;  // assure q>0
+    using TSamplingPolicy::getSampling;
+};
 
-                            int n = (int) p.size();
-                            for ( int k = 0; k < Nq; k++ )
-                            { // random q directions
-                                std::map<T, T> _I; // temp map for I(q) value
+/**
+ * @brief Calculate structure factor using explicit q averaging in isotropic periodic boundary conditions (IPBC).
+ *
+ * The sample directions reduce to 3 compared to 13 in regular periodic boundary conditions. Overall simplification
+ * shall yield roughly 10 times faster computation.
+ */
+template <typename T = float, typename TSamplingPolicy = SamplingPolicy<T>> class StructureFactorIPBC : private TSamplingPolicy {
+    //! Sample directions (h,k,l).
+    //! Due to the symmetry in IPBC we need not consider permutations of directions.
+    std::vector<Point> directions = {{1, 0, 0}, {1, 1, 0}, {1, 1, 1}};
 
-                                // Random q vector if none given in input
-                                if ( Nq == 0 && qdir.squaredNorm() > 1e-6 )
-                                    Nq = 1;
-                                else
-                                    qdir = ranunit(random);
+    int p_max;  //!< multiples of q to be sampled
+    using TSamplingPolicy::addSampling;
 
-                                // N^2 loop over all particles
-                                for ( int i = 0; i < n - 1; i++ )
-                                {
-                                    for ( int j = i + 1; j < n; j++ )
-                                    {
-                                        auto r = base::geo.vdist(p[i].pos, p[j].pos);
-                                        for ( T q = qmin; q <= qmax; q += dq )
-                                            _I[q] += cos((q * qdir).dot(r));
-                                    }
-                                }
+  public:
+    StructureFactorIPBC(int q_multiplier) : p_max(q_multiplier){}
 
-                                for ( auto &i : _I )
-                                    base::I[i.first] += 2 * i.second / n + 1; // add to average I(q)
+    template <class Tpositions> void sample(const Tpositions &positions, const double boxlength) {
+        // https://gcc.gnu.org/gcc-9/porting_to.html#ompdatasharing
+        // #pragma omp parallel for collapse(2) default(none) shared(directions, p_max, positions, boxlength)
+        #pragma omp parallel for collapse(2) default(shared)
+        for (size_t i = 0; i < directions.size(); ++i) {
+            for (int p = 1; p <= p_max; ++p) {                                // loop over multiples of q
+                const Point q = (2 * pc::pi * p / boxlength) * directions[i]; // scattering vector
+                T sum_cos = 0;
+                for (auto &r : positions) { // loop over positions
+                    // if q[i] == 0 then its cosine == 1 hence we can avoid cosine computation for performance reasons
+                    T product = cos(q[0] * r[0]);
+                    if (q[1] != 0)
+                        product *= cos(q[1] * r[1]);
+                    if (q[2] != 0)
+                        product *= cos(q[2] * r[2]);
+                    sum_cos += product;
+                }
+                // collect average, `norm()` gives the scattering vector length
+                const T ipbc_factor = std::pow(2, directions[i].count()); // 2 ^ number of non-zero elements
+                const T sf = (sum_cos * sum_cos) / (float)(positions.size()) * ipbc_factor;
+                #pragma omp critical
+                // avoid race conditions when updating the map
+                addSampling(q.norm(), sf, 1.0);
+            }
+        }
+    }
 
-                            } // end of q averaging
-                        }
+    int getQMultiplier() {
+        return p_max;
+    }
 
-                    /**
-                     * @brief Single sum evaluation of S(q)
-                     *
-                     * @f[ S(\mathbf{q}) = \frac{1}{N} \left <
-                     *    \left ( \sum_i^N \sin(\mathbf{qr}_i) \right )^2 +
-                     *    \left ( \sum_j^N \cos(\mathbf{qr}_j) \right )^2
-                     *   \right >
-                     * @f]
-                     *
-                     * Angulalar averaging is done as in `sample()` and is
-                     * in fact completely equivalent.
-                     * For more information, see <http://doi.org/d8zgw5>
-                     *
-                     * @todo Swap loop order
-                     */
-                    template<class Tpvec>
-                        void
-                        sample2( const Tpvec &p, T qmin, T qmax, T dq, int Nq = 1 )
-                        {
-                            if ( qmin < 1e-6 )
-                                qmin = dq;  // assure q>0
-                            int n = (int) p.size();
-                            for ( int k = 0; k < Nq; k++ )
-                            { // random q directions
-                                Point qdir(1, 0, 0);
-                                qdir = ranunit(random);
-                                std::map<T, T> _cos, _sin;
-                                for ( T q = qmin; q <= qmax; q += dq )
-                                {
-                                    double ssum = 0, csum = 0; // tmp to avoid map lookup
-                                    for ( auto &i : p )
-                                    {
-                                        T qr = (q * qdir).dot(i);
-                                        ssum += sin(qr);
-                                        csum += cos(qr);
-                                    }
-                                    _cos[q] = csum;
-                                    _sin[q] = ssum;
-                                }
-                                for ( T q = qmin; q <= qmax; q += dq )
-                                    base::I[q] += (pow(_sin[q], 2) + pow(_cos[q], 2)) / n;
-                            } // end of q averaging
-                        }
+    using TSamplingPolicy::getSampling;
+};
 
-                    template<class Tpvec>
-                        void
-                        sample3( const Tpvec &p, T qmin, T qmax, T dq, int Nq = 1 )
-                        {
-                            if ( qmin < 1e-6 )
-                                qmin = dq;  // assure q>0
-                            int n = (int) p.size();
-                            for ( int k = 0; k < Nq; k++ )
-                            { // random q directions
-                                Point qdir(1, 0, 0);
-                                //qdir.ranunit(slump);
-                                std::map<T, T> _cos, _sin;
-                                for ( T q = qmin; q <= qmax; q += dq )
-                                {
-                                    for ( int i = 0; i < n - 1; i++ )
-                                    {
-                                        for ( int j = i + 1; j < n; j++ )
-                                        {
-                                            T qr = (q * qdir).dot(p[i]);
-                                            _sin[q] += sin(qr);
-                                            _cos[q] += cos(qr);
-                                        }
-                                    }
-                                }
-                                for ( auto &i : _sin )
-                                {
-                                    T q = i.first;
-                                    base::I[q] += pow(_sin[q], 2) + pow(_cos[q], 2);
-                                }
-                            } // end of q averaging
-                        }
-            };
-
-    } // end of namespace
-} //end of namespace
+} // namespace Scatter
+} // namespace Faunus

@@ -10,7 +10,7 @@ MathJax.Hub.Config({
 The system energy, or Hamiltonian, consists of a sum of potential energy terms,
 
 $$
-\mathcal{H}_{sys} = U_1 + U_2 + ...
+\mathcal{H}\_{sys} = U\_1 + U\_2 + ...
 $$
 
 The energy terms are specified in `energy` at the top level input and evaluated in the order given.
@@ -36,7 +36,6 @@ The keyword `maxenergy` can be used to skip further energy evaluation if a term 
 energy change (in kT), which will likely lead to rejection.
 The default value is _infinity_.
 
-**Note:**
 _Energies_ in MC may contain implicit degrees of freedom, _i.e._ be temperature-dependent,
 effective potentials. This is inconsequential for sampling
 density of states, but care should be taken when interpreting derived functions such as
@@ -51,7 +50,6 @@ a set of conditions exists to evaluate the acceptance of the proposed move:
 - always accept if energy change is from NaN to finite energy
 - always accept if the energy _difference_ is NaN (i.e. from infinity to minus infinity)
 
-**Note:**
 These conditions should be carefully considered if equilibrating a system far from equilibrium.
 
 
@@ -75,7 +73,7 @@ where $N$ is the total number of molecules and atomic species.
 
 This term loops over pairs of atoms, $i$, and $j$, summing a given pair-wise additive potential, $u_{ij}$,
 
-$$ U = \sum_{i=0}^{N-1}\sum_{j=i+1}^N u_{ij}(\textbf{r}_j-\textbf{r}_i)$$
+$$ U = \sum_{i=0}^{N-1}\sum_{j=i+1}^N u_{ij}(\textbf{r}\_j-\textbf{r}\_i)$$
 
 Using `nonbonded`, potentials can be arbitrarily mixed and customized for specific particle
 combinations. `nonbonded_splined` internally _splines_ the combined potential in an interval [`rmin`,`rmax`] determined
@@ -90,7 +88,7 @@ Finally, the spline precision can be controlled with `utol=1e-5` kT.
 Below is a description of possible nonbonded methods. For simple potentials, the hard coded
 variants are often the fastest option. For better performance, it is recommended to use `nonbonded_splined` in place of the more robust `nonbonded` method. To check that the combined potential is splined correctly, set `to_disk=true` to print to `A-B_tabulated.dat` the exact and splined combined potentials between species A and B.
 
-`energy`               | $u_{ij}$
+`energy`               | $u\_{ij}$
 ---------------------- | ------------------------------------------------------
 `nonbonded`            | Any combination of pair potentials (slower, but exact)
 `nonbonded_exact`      | An alias for `nonbonded`
@@ -137,55 +135,47 @@ composition. Currently, parallelisation is disabled by default.
  `coulomb`             |  Description
  --------------------- |  -------------------------------------------------
  `type`                |  Coulomb type, see below
- `cutoff`              |  Spherical cutoff, $R_c$ (Å) after which the potential is zero
+ `cutoff`              |  Spherical cutoff, $R\_c$ (Å) after which the potential is zero
  `epsr`                |  Relative dielectric constant of the medium
- `utol=1e-5`           |  Error tolerence for splining
- `debyelength=`$\infty$|  Debye length (Å) if using `ewald`, `poisson`, or `yukawa`
+ `utol=0.005/lB`       |  Error tolerence for splining; default value depends on the Bjerrum length, lB
+ `debyelength=`$\infty$|  Debye length (Å) if using `ewald`, `poisson`, `yukawa`
 
 This is a multipurpose potential that handles several electrostatic methods.
-Beyond a spherical real-space cutoff, $R_c$, the potential is zero while otherwise
+Beyond a spherical real-space cutoff, $R\_c$, the potential is zero while if
+below,
 
 $$
-\tilde{u}^{(zz)}_{ij}(\bar{r}) = \frac{e^2 z_i z_j }{ 4\pi\epsilon_0\epsilon_r |\bar{r}| }\mathcal{S}(q)
+\tilde{u}^{(zz)}\_{ij}({\bf r}) = \frac{e^2 z\_i z\_j }{ 4\pi\epsilon\_0\epsilon\_r |{\bf r}| }\mathcal{S}(q)
 $$
 
-where $\bar{r} = \bar{r}_j - \bar{r}_i$, and tilde indicate that a short-range function $\mathcal{S}(q=|\bar{r}|/R_c)$ is used to trucate the interactions. The available short-range functions are:
+where ${\bf r} = {\bf r}\_j - {\bf r}\_i$, and tilde indicate that a short-range function $\mathcal{S}(q=|{\bf r}|/R\_c)$ is used to trucate the interactions. The available short-range functions are:
 
-coulomb types                            | Keywords                         | $\mathcal{S}(q)$
----------------------------------------- | -------------------------------- | ---------------------------------------------------
-[`plain`](http://doi.org/ctnnsj)         |                                  | 1
-[`ewald`](http://doi.org/dgpdmc)         | `alpha`, `debyelength=`$\infty$  | $\frac{1}{2}\text{erfc}\left(\alpha R_c q + \frac{\kappa}{2\alpha}\right)\text{exp}\left(2\kappa R_c q\right) + \frac{1}{2}\text{erfc}\left(\alpha R_c q - \frac{\kappa}{2\alpha}\right)$
-[`reactionfield`](http://doi.org/dbs99w) | `epsrf`, `shifted`               | $1+\frac{\epsilon_{RF}-\epsilon_r}{2\epsilon_{RF}+\epsilon_r}q^3-3\frac{\epsilon_{RF}}{2\epsilon_{RF}+\epsilon_r}q$
-[`poisson`](http://doi.org/10/c5fr)      | `C`, `D`, `debyelength=`$\infty$ | $(1-\check{q})^{D+1}\sum_{c=0}^{C-1}\frac{C-c}{C}{D-1+c\choose c}\check{q}^c$
-[`qpotential`](https://arxiv.org/abs/1904.10335) | `order`                  | $\prod_{n=1}^{\text{order}}(1-q^n)$
-[`fanourgakis`](http://doi.org/f639q5)   |                                  | $1-\frac{7}{4}q+\frac{21}{4}q^5-7q^6+\frac{5}{2}q^7$
-[`fennell`](http://doi.org/10/bqgmv2)    | `alpha`                          | $\text{erfc}(\alpha R_cq)-q\text{erfc}(\alpha R_c)+(q-1)q\left(\text{erfc}(\alpha R_c)+\frac{2\alpha R_c}{\sqrt{\pi}}\text{exp}(-\alpha^2R_c^2)\right)$
-[`zerodipole`](http://doi.org/10/fhcfn4) | `alpha`                          | $\text{erfc}(\alpha R_cq)-q\text{erfc}(\alpha R_c)+\frac{(q^2-1)}{2}q\left(\text{erfc}(\alpha R_c)+\frac{2\alpha R_c}{\sqrt{\pi}}\text{exp}(-\alpha^2R_c^2)\right)$
-[`zahn`](http://doi.org/10/cmx5vd)       | `alpha`                          | $\text{erfc}(\alpha R_c q)-(q-1)q\left(\text{erfc}(\alpha R_c)+\frac{2\alpha R_c}{\sqrt{\pi}}\text{exp}(-\alpha^2R_c^2)\right)$
-[`wolf`](http://doi.org/cfcxdk)          | `alpha`                          | $\text{erfc}(\alpha R_cq)-\text{erfc}(\alpha R_c)q$
-`yukawa`                                 | `debyelength`                    | Same as `poisson` with `C=1` and `D=-1`
+coulomb types                            | Keywords          | $\mathcal{S}(q)$
+---------------------------------------- | ----------------- | ---------------------------------------------------
+[`plain`](http://doi.org/ctnnsj)         |                   | 1
+[`ewald`](http://doi.org/dgpdmc)         | `alpha`           | $\frac{1}{2}\text{erfc}\left(\alpha R\_c q + \frac{\kappa}{2\alpha}\right)\text{exp}\left(2\kappa R\_c q\right) + \frac{1}{2}\text{erfc}\left(\alpha R\_c q - \frac{\kappa}{2\alpha}\right)$
+[`reactionfield`](http://doi.org/dbs99w) | `epsrf`           | $1+\frac{\epsilon_{RF}-\epsilon\_r}{2\epsilon_{RF}+\epsilon\_r}q^3-3\frac{\epsilon_{RF}}{2\epsilon_{RF}+\epsilon\_r}q$
+[`poisson`](http://doi.org/10/c5fr)      | `C=3`, `D=3`      | $(1-\acute{q})^{D+1}\sum_{c=0}^{C-1}\frac{C-c}{C}{D-1+c\choose c}\acute{q}^c$
+[`qpotential`](https://arxiv.org/abs/1904.10335) | `order`   | $\prod_{n=1}^{\text{order}}(1-q^n)$
+[`fanourgakis`](http://doi.org/f639q5)   |                   | $1-\frac{7}{4}q+\frac{21}{4}q^5-7q^6+\frac{5}{2}q^7$
+[`fennell`](http://doi.org/10/bqgmv2)    | `alpha`           | $\text{erfc}(\alpha R\_cq)-q\text{erfc}(\alpha R\_c)+(q-1)q\left(\text{erfc}(\alpha R\_c)+\frac{2\alpha R\_c}{\sqrt{\pi}}\text{exp}(-\alpha^2R\_c^2)\right)$
+[`zerodipole`](http://doi.org/10/fhcfn4) | `alpha`           | $\text{erfc}(\alpha R\_cq)-q\text{erfc}(\alpha R\_c)+\frac{(q^2-1)}{2}q\left(\text{erfc}(\alpha R\_c)+\frac{2\alpha R\_c}{\sqrt{\pi}}\text{exp}(-\alpha^2R\_c^2)\right)$
+[`zahn`](http://doi.org/10/cmx5vd)       | `alpha`           | $\text{erfc}(\alpha R\_c q)-(q-1)q\left(\text{erfc}(\alpha R\_c)+\frac{2\alpha R\_c}{\sqrt{\pi}}\text{exp}(-\alpha^2R\_c^2)\right)$
+[`wolf`](http://doi.org/cfcxdk)          | `alpha`           | $\text{erfc}(\alpha R\_cq)-\text{erfc}(\alpha R\_c)q$
+`yukawa`                                 | `debyelength`, `shift=true` | Same as `poisson` with `C=1` and `D=-1`
 
-**Note:**
-
- - Internally $\mathcal{S}(q)$ is _splined_ whereby all types evaluate at similar speed.
-
- - The `ewald` type here only referes to the real space Ewald potential. For more information on the full Ewald summation, see section ``Ewald Summation''.
-
- - The Debye length is described in units of Ångstrom.
-
- - The last term in using `reactionfield` is only included if `shifted=true`.
-
-For the Poisson potential
+Internally $\mathcal{S}(q)$ is _splined_ whereby all types evaluate at similar speed.
+For the `poisson` potential,
 
 $$
-\check{q} = \frac{1-\exp\left(2\kappa R_c q\right)}{1-\exp\left(2\kappa R_c\right)}
+\acute{q} = \frac{1-\exp\left(2\kappa R\_c q\right)}{1-\exp\left(2\kappa R\_c\right)}
 $$
 
-which as the inverse Debye length $\kappa\to 0$ gives $\check{q}=q$.
-The `poisson` scheme can generate a number of other truncated pair-potentials found in the litterature, depending on `C` and `D`.
-Thus, for an infinite Debye length:
+which as the inverse Debye length, $\kappa\to 0$ gives $\acute{q}=q$.
+The `poisson` scheme can generate a number of other truncated pair-potentials found in the litterature,
+depending on `C` and `D`. Thus, for an infinite Debye length, the following holds:
 
-`C` | `D` | Reference / Comment
+`C` | `D` | Equivalent to
 --- | --- | ----------------------
  1  | -1  | Plain Coulomb within cutoff, zero outside
  1  |  0  | [Undamped Wolf](http://doi.org/10.1063/1.478738)
@@ -198,30 +188,35 @@ Thus, for an infinite Debye length:
  4  |  3  | [Fanourgakis](http://doi.org/10.1063/1.3216520)
 
 
-
 ### Debye Screening Length
 
 A background screening due to implicit ions can be added by specifying the keyword `debyelength` to the schemes
-`ewald`, `poisson`, and `yukawa`. The latter is merely an alias for `poisson` with `C=1`, and `D=-1` which
-gives a plain and shifted Coulomb potential with exponential screening.
 
+- `yukawa`
+- `ewald`
+- `poisson`
+
+The former is an alias for `poisson` with `C=1`, and `D=-1` which
+gives a plain and shifted Coulomb potential with exponential screening.
+If `shift=false`, the potential is left unshifted and any given cutoff is ignored and instead set to infinity.
 
 ### Multipoles
 
 If `type=coulomb` is replaced with `type=multipole` then the electrostatic energy will in addition to
 monopole-monopole interactions include contributions from monopole-dipole, and dipole-dipole
-interactions. Multipolar properties of each particle are specified in the Topology.
+interactions. Multipolar properties of each particle is specified in the Topology.
+The `zahn` and `fennell` approaches have undefined dipolar self-energies and are therefore not recommended for such systems.
 
 The ion-dipole interaction is described by
 
 $$
-\tilde{u}^{(z\mu)}_{ij}(\bar{r}) = -\frac{ez_i\left(\bar{\mu}_j\cdot \hat{r}\right) }{|\bar{r}|^2} \left( \mathcal{S}(q) - q\mathcal{S}^{\prime}(q) \right)
+\tilde{u}^{(z\mu)}\_{ij}({\bf r}) = -\frac{ez\_i\left(\mu\_j\cdot \hat{\bf r}\right) }{|{\bf r}|^2} \left( \mathcal{S}(q) - q\mathcal{S}^{\prime}(q) \right)
 $$
 
 where $\hat{r} = \bar{r}/|\bar{r}|$, and the dipole-dipole interaction by
 
 $$
-\tilde{u}^{\mu\mu}_{ij}(\bar{r}) = -\left(\frac{3 ( \bar{\mu}_i \cdot \hat{r} ) \left(\bar{\mu}_j\cdot\hat{r}\right) - \bar{\mu}_i\cdot\bar{\mu}_j }{|\bar{r}|^3}\right) \left( \mathcal{S}(q) - q\mathcal{S}^{\prime}(q)  + \frac{q^2}{3}\mathcal{S}^{\prime\prime}(q) \right) - \frac{\left(\bar{\mu}_i\cdot\bar{\mu}_j\right)}{|\bar{r}|^3}\frac{q^2}{3}\mathcal{S}^{\prime\prime}(q).
+\tilde{u}^{\mu\mu}\_{ij}({\bf r}) = -\left ( \frac{3 ( \boldsymbol{\mu}\_i \cdot \hat{\bf r} ) \left(\boldsymbol{\mu}\_j\cdot\hat{\bf r}\right) - \boldsymbol{\mu}\_i\cdot\boldsymbol{\mu}\_j }{|{\bf r}|^3}\right) \left( \mathcal{S}(q) - q\mathcal{S}^{\prime}(q)  + \frac{q^2}{3}\mathcal{S}^{\prime\prime}(q) \right) - \frac{\left(\boldsymbol{\mu}\_i\cdot\boldsymbol{\mu}\_j\right)}{|{\bf r}|^3}\frac{q^2}{3}\mathcal{S}^{\prime\prime}(q).
 $$
 
 **Warning:**
@@ -232,13 +227,14 @@ $$
 ### Self-energies
 
 When using `coulomb` or `multipole`, an electrostatic self-energy term is automatically
-added to the Hamiltonian. The charge- and dipole-contributions are evaluated according to
+added to the Hamiltonian. The monopole and dipole contributions are evaluated according to
 
 $$
-U_{self} = -\frac{1}{2}\sum_i^N\sum_{*\in\{z,\mu\}} \lim_{|\bar{r}_{ii}|\to 0}\left( u^{(**)}_{ii}(\bar{r}_{ii}) - \tilde{u}^{(**)}_{ii}(\bar{r}_{ii}) \right)
+U\_{self} = -\frac{1}{2}\sum\_i^N\sum\_{\ast\in\{z,\mu\}} \lim\_{|{\bf r}\_{ii}|\to 0}\left( u^{(\ast\ast)}\_{ii}({\bf r}\_{ii})
+- \tilde{u}^{(\ast\ast)}\_{ii}({\bf r}\_{ii}) \right )
 $$
 
-where no tilde indicate that $\mathcal{S}(q)\equiv 1$ for any $q$.
+where no tilde indicates that $\mathcal{S}(q)\equiv 1$ for any $q$.
 
 
 ### Ewald Summation
@@ -255,13 +251,13 @@ If type is `ewald`, terms from reciprocal space and surface energies are automat
 The added energy terms are:
 
 $$
-U_{\text{reciprocal}} = \frac{1}{4\pi\varepsilon_0\varepsilon_r}\frac{2\pi}{V} \sum_{ \bar{k} \ne \bar{0}} A_k \vert Q^{q\mu} \vert^2 
+U_{\text{reciprocal}} = \frac{2\pi f}{V} \sum_{ {\bf k} \ne {\bf 0}} A\_k \vert Q^{q\mu} \vert^2 
 $$
 
 $$
 U_{\text{surface}} = \frac{1}{4\pi\varepsilon_0\varepsilon_r}\frac{ 2\pi }{ (2\varepsilon_{surf} + 1) V }
 \left(
-\left|\sum_{j}q_j\bar{r}_j\right|^2 + 2 \left(\sum_j q_i \bar{r}_j\right) \cdot \left(\sum_j \bar{\mu}_j\right) + \left| \sum_j \bar{\mu}_j \right|^2
+\left|\sum_{j}q\_j{\bf r}\_j\right|^2 + 2 \sum\_j q\_i {\bf r}\_j \cdot \sum\_j \boldsymbol{\mu}\_j + \left| \sum\_j \boldsymbol{\mu}\_j \right|^2
 \right )
 $$
 
@@ -280,14 +276,14 @@ $$
 \bar{k} = 2\pi\left( \frac{n_x}{L_x} , \frac{n_y}{L_y} ,\frac{n_z}{L_z} \right)\quad \bar{n} \in \mathbb{Z}^3
 $$
 
-Like the other electrostatic methods, the Ewald scheme also adds a self-energy term, please see separate Table.
+Like many other electrostatic methods, the Ewald scheme also adds a self-energy term as described above.
 In the case of isotropic periodic boundaries (`ipbc=true`), the orientational degeneracy of the
 periodic unit cell is exploited to mimic an isotropic environment, reducing the number
 of wave-vectors to one fourth compared with 3D PBC Ewald.
 For point charges, [IPBC](http://doi.org/css8) introduce the modification,
 
 $$
-Q^q = \sum_j q_j \prod\_{\alpha\in\{x,y,z\}} \cos \left( \frac{2\pi}{L\_{\alpha}} n\_{\alpha} \bar{r}\_{\alpha,j} \right)
+Q^q = \sum\_j q\_j \prod\_{\alpha\in\{x,y,z\}} \cos \left( \frac{2\pi}{L\_{\alpha}} n\_{\alpha} r\_{\alpha,j} \right)
 $$
 
 while for point dipoles (currently unavailable),
@@ -297,12 +293,6 @@ Q^{\mu} = \sum\_j \bar{\mu}\_j
 \cdot \nabla\_j
 \left( \prod\_{ \alpha \in \{ x,y,z \} } \cos \left ( \frac{2\pi}{L\_{\alpha}} n\_{\alpha} \bar{r}\_{\alpha,j} \right ) \right )
 $$
-
-**Limitations:**
-
- - Ewald summation requires a constant number of particles, i.e. $\mu V T$ ensembles
-and Widom insertion are currently unsupported.
-
 
 ### Mean-Field Correction
 
@@ -319,7 +309,7 @@ To enable the correction, use the `akesson` keyword at the top level of `energy`
 `molecules`       | Array of molecules to operate on
 `epsr`            | Relative dielectric constant
 `nstep`           | Number of energy evalutations between updating $\rho(z)$
-`dz=0.2`          | $z$ resolution (angstrom)
+`dz=0.2`          | $z$ resolution (Å)
 `nphi=10`         | Multiple of `nstep` in between updating $\varphi(z)$
 `file=mfcorr.dat` | File with $\rho(z)$ to either load or save
 `fixed=false`     | If true, assume that `file` is converged. No further updating and faster.
@@ -345,9 +335,9 @@ $$
     \beta u_{ij} = -\frac{\lambda_B z_i^2 \alpha_j}{2r_{ij}^4}
 $$
 
-where $a_j$ is the radius of the non-polar particle and $\alpha_j$ is set in
+where $a\_j$ is the radius of the non-polar particle and $\alpha\_j$ is set in
 the atom topology, `alphax`.
-For non-polar particles in a polar medium, $\alpha_i$ is a negative number.
+For non-polar particles in a polar medium, $\alpha\_i$ is a negative number.
 For more information, see
 [J. Israelachvili's book, Chapter 5.](https://www.sciencedirect.com/science/book/9780123751829)
 
@@ -355,7 +345,6 @@ For more information, see
 -------------------- | ---------------------------------------
 `epsr`               | Relative dielectric constant of medium
 
-**Limitations:**
 Charge-polarizability products for each pair of species is evaluated once during
 construction and based on the defined atom types.
 
@@ -373,13 +362,13 @@ while zero for $r>r\_c+w\_c$.
 `cos2` | Description
 ------ | --------------------------
 `eps`  | Depth, $\epsilon$ (kJ/mol)
-`rc`   | Width, $r_c$ (Å)
-`wc`   | Decay range, $w_c$ (Å)
+`rc`   | Width, $r\_c$ (Å)
+`wc`   | Decay range, $w\_c$ (Å)
 
 ### Assorted Short Ranged Potentials
 
 The potentials below are often used to keep particles apart and/or to introduce stickiness.
-The atomic interaction parameters, e.g., $\sigma_i$ and $\epsilon\_i$, are taken from the
+The atomic interaction parameters, e.g., $\sigma\_i$ and $\epsilon\_i$, are taken from the
 topology.
 
 Type             | Atomic parameters | $u(r)$ (non-zero part)
@@ -417,20 +406,18 @@ as shown in the example bellow.
 - lennardjones:
     mixing: LB
     custom:
-      Na Cl: {eps: 0.2, sigma: 2}
-      K Cl: { ... }
-
+      - Na Cl: {eps: 0.2, sigma: 2}
+      - K Cl: { ... }
 - hertz:
     mixing: LB
     eps: eps_hz
     custom:
-      Na Cl: {eps_hz: 0.2, sigma: 2}
-
+      - Na Cl: {eps_hz: 0.2, sigma: 2}
 - hardsphere:
     mixing: arithmetic
     sigma: sigma_hs
     custom:
-      Na Cl: {sigma_hs: 2}
+      - Na Cl: {sigma_hs: 2}
 ~~~
 
 ### SASA (pair potential)
@@ -440,7 +427,7 @@ to estimate an energy based on transfer-free-energies (TFE) and surface tension.
 The total surface area is calculated as
 
 $$
-    A = 4\pi \left ( R^2 + r^2 \right ) - 2\pi \left (  Rh_1 + rh_2  \right )
+    A = 4\pi \left ( R^2 + r^2 \right ) - 2\pi \left (  Rh\_1 + rh\_2  \right )
 $$
 
 where $h\_1$ and $h\_2$ are the heights of the spherical caps comprising the lens
@@ -449,21 +436,21 @@ full area of the bigger sphere or the sum of both spheres are returned.
 The pair-energy is calculated as:
 
 $$
-    u_{ij} = A \left ( \gamma_{ij} + c_s \varepsilon_{\text{tfe},ij} \right )
+    u_{ij} = A \left ( \gamma\_{ij} + c\_s \varepsilon\_{\text{tfe},ij} \right )
 $$
 
 where $\gamma\_{ij}$ and $\varepsilon\_{\text{tfe},ij}$ are the arithmetic means of
  `tension` and `tfe` provided in the atomlist.
 
 Note that SASA is strictly not additive and this pair-potential is merely
-a poor-mans way of approximately take into account ion-specificity and
+a poor-mans way of approximately taking into account ion-specificity and
 hydrophobic/hydrophilic interactions. Faunus offers also a full, albeit yet
 experimental implementation of [Solvent Accessible Surface Area] energy.
 
 `sasa`       | Description
 ------------ | ----------------------------------------------------------
-`molarity`   | Molar concentration of co-solute, $c_s$
-`radius=1.4` | Probe radius for SASA calculation (angstrom)
+`molarity`   | Molar concentration of co-solute, $c\_s$
+`radius=1.4` | Probe radius for SASA calculation (Å)
 `shift=true` | Shift to zero at large separations
 
 ### Custom
@@ -501,12 +488,12 @@ In addition to user-defined constants, the following symbols are defined:
 `inf`      | ∞ (infinity)
 `kB`       | Boltzmann constant [J/K]
 `kT`       | Boltzmann constant × temperature [J]
-`Nav`      | Avogadro constant [1/mol]
+`Nav`      | Avogadro's number [1/mol]
 `pi`       | π (pi)
 `q1`,`q2`  | Particle charges [e]
-`r`        | Particle-particle separation [angstrom]
-`Rc`       | Spherical cutoff [angstrom]
-`s1`,`s2`  | Particle sigma [angstrom]
+`r`        | Particle-particle separation [Å]
+`Rc`       | Spherical cut-off [Å]
+`s1`,`s2`  | Particle sigma [Å]
 `T`        | Temperature [K]
 
 ## Custom External Potential
@@ -530,11 +517,11 @@ In addition to user-defined `constants`, the following symbols are available:
 `inf`      | ∞ (infinity)
 `kB`       | Boltzmann constant [J/K]
 `kT`       | Boltzmann constant × temperature [J]
-`Nav`      | Avogadro constant [1/mol]
+`Nav`      | Avogadro's number [1/mol]
 `pi`       | π (pi)
 `q`        | Particle charge [e]
-`s`        | Particle sigma [angstrom]
-`x`,`y`,`z`| Particle positions [angstrom]
+`s`        | Particle sigma [Å]
+`x`,`y`,`z`| Particle positions [Å]
 `T`        | Temperature [K]
 
 If `com=true`, charge refers to the molecular net-charge, and `x,y,z` the mass-center coordinates.
@@ -556,18 +543,55 @@ customexternal:
            0;
 ~~~
 
+### Gouy Chapman
+
+By setting `function=gouychapman`, an electric potential from a uniformly, charged plane
+in a salt solution is added; see _e.g._ the book _Colloidal Domain_ by Evans and Wennerström, 1999.
+If a surface potential, $\varphi\_0$ is specified,
+
+$$
+\rho = \sqrt{\frac{2 c\_0}{\pi \lambda\_B} } \sinh ( \beta e \varphi\_0 / 2 )
+$$
+while if instead a surface charge density, $\rho$, is given,
+$$
+\beta e \varphi\_0 = 2\mbox{asinh} \left ( \rho \sqrt{\frac{\pi \lambda\_B} {2 c\_0}} \right )
+$$
+where $\lambda\_B$ is the Bjerrum length. With $\Gamma\_0 = \tanh{ \beta e \varphi\_0 / 4 }$
+the final, non-linearized external potential is:
+$$
+\phi\_i = \frac{2 k\_BT z\_i}{e}
+\ln \left ( \frac{1+\Gamma\_0e^{-\kappa r\_{z,i}}}{1-\Gamma\_0 e^{-\kappa r\_{z,i}}} \right )
+$$
+where
+$z\_i$ is the particle charge;
+$e$ is the electron unit charge;
+and $r\_{z,i}$ is the distance from the charged plane.
+
+`constants`        | Description
+-----------------  | --------------------------------------
+`ionicstrength`    | Ionic strength, $c\_0$ (mol/l)
+`epsr`             | Relative dielectric constant
+`phi0=0`           | Unitless surface potential ($\beta e \varphi\_0$) if `qarea` not given
+`qarea=f(phiq)`    | Charge per area (1/eÅ²) if `phi0` not given
+`area=1/qarea`     | Area per charge (eÅ²) if `qarea` not given
+`linearize=false`  | Use linearized Poisson-Boltzmann approximation?
+`zpos=-Lz/2`       | $z$-position of charged plane in the (slit) simulation box
+
+Notes and silly limitations:
+
+- this is experimental and subject to change
+- does not work with volume fluctuations in the $z$-direction
+- the salt concentration is assumed equal to the ionic strength, _i.e._ 1:1 salt only
+- temperature is hardcoded to 300 K.
+
 
 ## Bonded Interactions
 
 Bonds and angular potentials are added via the keyword `bondlist` either directly
-in a molecule definition (topology) or in energy/bonded where the latter can be
-used to add inter-molecular bonds:
+in a molecule definition (topology) for intra-molecular bonds, or in `energy->bonded`
+where the latter can be used to add inter-molecular bonds:
 
 ~~~ yaml
-energy:
-    - bonded:
-        bondlist: # absolute index
-           - harmonic: { index: [56,921], k: 10, req: 15 }
 moleculelist:
     - water: # TIP3P
         structure: "water.xyz"
@@ -575,12 +599,15 @@ moleculelist:
             - harmonic: { index: [0,1], k: 5024, req: 0.9572 }
             - harmonic: { index: [0,2], k: 5024, req: 0.9572 }
             - harmonic_torsion: { index: [1,0,2], k: 628, aeq: 104.52 }
+energy:
+    - bonded:
+        bondlist: # absolute index; can be between molecules
+           - harmonic: { index: [56,921], k: 10, req: 15 }
 ~~~
 
-Bonded potential types:
-
-**Note:**
 $\mu V T$ ensembles and Widom insertion are currently unsupported for molecules with bonds.
+
+The following shows the possible bonded potential types:
 
 ### Harmonic
 
@@ -591,7 +618,7 @@ $\mu V T$ ensembles and Widom insertion are currently unsupported for molecules 
 `index`        | Array with _exactly two_ indices (relative to molecule)
 
 $$
-u(r) = \frac{1}{2}k(r-r_{\mathrm{eq}})^2
+u(r) = \frac{1}{2}k(r-r\_{\mathrm{eq}})^2
 $$
 
 ### Finite Extensible Nonlinear Elastic
@@ -607,13 +634,12 @@ Finite extensible nonlinear elastic potential long range repulsive potential.
 $$
      u(r) =
   \begin{cases} 
-   -\frac{1}{2} k r_{\mathrm{max}}^2 \ln \left [ 1-(r/r_{\mathrm{max}})^2 \right ],       & \text{if } r < r_{\mathrm{max}} \\
-   \infty, & \text{if } r \geq r_{\mathrm{max}}
+   -\frac{1}{2} k r\_{\mathrm{max}}^2 \ln \left [ 1-(r/r\_{\mathrm{max}})^2 \right ],       & \text{if } r < r\_{\mathrm{max}} \\
+   \infty, & \text{if } r \geq r\_{\mathrm{max}}
   \end{cases}
 $$
 
-**Note:**
-It is recommend to only use the potential if the initial configuration is near equilibrium, which prevalently depends on the value of `rmax`.
+It is recommended to only use the potential if the initial configuration is near equilibrium, which prevalently depends on the value of `rmax`.
 Should one insist on conducting simulations far from equilibrium, a large displacement parameter is recommended to reach finite energies.
 
 ### Finite Extensible Nonlinear Elastic + WCA
@@ -627,7 +653,7 @@ Should one insist on conducting simulations far from equilibrium, a large displa
 `index`        | Array with _exactly two_ indices (relative to molecule)
 
 Finite extensible nonlinear elastic potential long range repulsive potential combined
-with the short ranged Weeks-Chandler-Anderson (wca) repulsive potential. This potential is particularly useful in combination with the `nonbonded_cached` non-bonded energy.
+with the short ranged Weeks-Chandler-Andersen (wca) repulsive potential. This potential is particularly useful in combination with the `nonbonded_cached` energy.
 
 $$
      u(r) =
@@ -638,8 +664,7 @@ $$
   \end{cases}
 $$
 
-**Note:**
-It is recommend to only use the potential if the initial configuration is near equilibrium, which prevalently depends on the value of `rmax`.
+It is recommended to only use this potential if the initial configuration is near equilibrium, which prevalently depends on the value of `rmax`.
 Should one insist on conducting simulations far from equilibrium, a large displacement parameter is recommended to reach finite energies.
 
 ### Harmonic torsion
@@ -690,18 +715,16 @@ $$
 `k`          | Harmonic spring constant in kJ/mol or `inf` for infinity
 
 Confines `molecules` in a given region of the simulation container by applying a harmonic potential on
-exterior atom positions, $\mathbf{r}_i$:
+exterior atom positions, $\mathbf{r}\_i$:
 
 $$
-U = \frac{1}{2} k \sum^{\text{exterior}} f_i
+U = \frac{1}{2} k \sum\_{i}^{\text{exterior}} f\_i
 $$
 
-where $f_i$ is a function that depends on the confinement `type`,
+where $f\_i$ is a function that depends on the confinement `type`,
 and $k$ is a spring constant. The latter
-may be _infinite_ which renders the exterior region strictly inaccessible and may evaluate faster than for finite values.
+may be _infinite_ which renders the exterior region strictly inaccessible.
 During equilibration it is advised to use a _finite_ spring constant to drive exterior particles inside the region.
-
-**Note:**
 Should you insist on equilibrating with $k=\infty$, ensure that displacement parameters are large enough to transport molecules inside the allowed region, or all moves may be rejected. Further, some analysis routines have undefined behavior for configurations with infinite energies.
 
 Available values for `type` and their additional keywords:
@@ -738,12 +761,12 @@ elements of `high`.
 ## Solvent Accessible Surface Area
 
 Note that the implementation of Solvent Accessible Surface Area potential is considered _experimental_.
-The code is untested, unoptimized and the configuration syntax below can change.
+The code is untested, unoptimized, and the configuration syntax below can change.
 The FreeSASA library option has to be enabled when [compiling].
 
 `sasa`       | SASA Transfer Free Energy
 ------------ | --------------------------------------------
-`radius=1.4` | Probe radius for SASA calculation (angstrom)
+`radius=1.4` | Probe radius for SASA calculation (Å)
 `molarity`   | Molar concentration of co-solute
 
 Calculates the free energy contribution due to
@@ -814,14 +837,14 @@ Options:
 
 `penalty`        |  Description
 ---------------- | --------------------
-`f0`             |  Penalty energy increment (_kT_)
+`f0`             |  Penalty energy increment (kT)
 `update`         |  Interval between scaling of `f0`
 `scale`          |  Scaling factor for `f0`
 `nodrift=true`   |  Suppress energy drift
 `quiet=false`    |  Set to true to get verbose output
 `file`           |  Name of saved/loaded penalty function
 `overwrite=true` |  If `false`, don't save final penalty function
-`histogram`      |  Name of saved histogram (not required)
+`histogram`      |  Name of saved histogram (optional)
 `coords`         |  Array of _one or two_ coordinates
 
 The coordinate, $\mathcal{X}$, can be freely composed by one or two
@@ -838,9 +861,9 @@ follow the order of insertion specified in `insertmolecules`.
 General keywords  | Description 
 ----------------- | -------------------------------------------------------------------
 `index`           | Atom index, atom id or group index
-`indexes`         | Array of atomic indexes
+`indexes`         | Array of atomic indexes (`[a,b]` or `[a,b,c,d]`)
 `range`           | Array w. [min:max] value
-`resolution`      | Resolution along the coordinate
+`resolution`      | Resolution along the coordinate (Å)
 `dir`             | Axes of the reaction coordinate, $e.g.$, `[1,1,0]` for the $xy$-plane  
 
 #### Atom Properties
@@ -867,7 +890,7 @@ General keywords  | Description
 `N`                         | Number of atoms in group
 `Q`                         | Monopole moment (net charge)
 `atomatom`                  | Distance along `dir` between 2 atoms specified by the `indexes` array
-`cmcm`                      | Absolute mass-center separation between groups `indexes[0:1]` or atomic `indexes[0:1]` and `indexes[2:3]`
+`cmcm`                      | Absolute mass-center separation between group indexes `a` and `b` or atomic indexes `a`–`b` and `c`–`d`
 `cmcm_z`                    | $z$-component of `cmcm`
 `mindist`                   | Minimum distance between particles of id `indexes[0]` and `indexes[1]`
 `L/R`                       | Ratio between height and radius of a cylindrical vesicle

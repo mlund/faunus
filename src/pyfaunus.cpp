@@ -74,23 +74,26 @@ PYBIND11_MODULE(pyfaunus, m)
         .export_values();
 
     py::class_<Geometry::GeometryBase>(m, "Geometrybase")
-        .def("getVolume", &Geometry::GeometryBase::getVolume, "Get container volume", "dim"_a=3)
+        .def("getVolume", &Geometry::GeometryBase::getVolume, "Get container volume", "dim"_a = 3)
         .def("setVolume", &Geometry::GeometryBase::setVolume, "Set container volume", "volume"_a,
-                "method"_a=Geometry::ISOTROPIC)
+             "method"_a = Geometry::ISOTROPIC)
         .def("collision", &Geometry::GeometryBase::collision, "pos"_a, "Checks if point is inside container")
         .def("getLength", &Geometry::GeometryBase::getLength, "Get cuboid sidelengths")
         .def("vdist", &Geometry::GeometryBase::vdist, "Minimum vector distance, a-b", "a"_a, "b"_a)
-        .def("sqdist", &Geometry::GeometryBase::sqdist, "Squared minimum distance, |a-b|^2", "a"_a, "b"_a)
-        .def("randompos", [](Geometry::GeometryBase &g, Random &rnd) { 
-                Point pos;
-                g.randompos(pos, rnd);
-                return pos;
-                })
-        .def("boundary", [](Geometry::GeometryBase &g, const Point &pos) {
+        .def("randompos",
+             [](Geometry::GeometryBase &g, Random &rnd) {
+                 Point pos;
+                 g.randompos(pos, rnd);
+                 return pos;
+             })
+        .def(
+            "boundary",
+            [](Geometry::GeometryBase &g, const Point &pos) {
                 Point a = pos; // we cannot modify `pos` directly
                 g.boundary(a); // as in c++
                 return a;
-                }, R"(
+            },
+            R"(
                     Apply periodic boundaries
 
                     If applicable for the geometry type, this will apply
@@ -105,11 +108,12 @@ PYBIND11_MODULE(pyfaunus, m)
 
     py::class_<Geometry::Chameleon, Geometry::GeometryBase>(m, "Chameleon")
         .def(py::init<>())
-        .def(py::init( [](py::dict dict) {
-                    auto ptr = std::make_unique<Geometry::Chameleon>();
-                    Faunus::Geometry::from_json( dict2json(dict), *ptr);
-                    return ptr;
-                    } ) );
+        .def(py::init([](py::dict dict) {
+            auto ptr = std::make_unique<Geometry::Chameleon>();
+            Faunus::Geometry::from_json(dict2json(dict), *ptr);
+            return ptr;
+        }))
+        .def("sqdist", &Geometry::Chameleon::sqdist, "Squared minimum distance, |a-b|^2", "a"_a, "b"_a);
 
     // Particle properties
     py::class_<Charge>(m, "Charge")
@@ -173,10 +177,10 @@ PYBIND11_MODULE(pyfaunus, m)
     // AtomData
     py::class_<AtomData>(m, "AtomData")
         .def(py::init<>())
-        .def_property("eps", [](const AtomData &a) { return a.getProperty("eps"); },
-                      [](AtomData &a, double val) { a.getProperty("eps") = val; })
-        .def_property("sigma", [](const AtomData &a) { return a.getProperty("sigma"); },
-                      [](AtomData &a, double val) { a.getProperty("sigma") = val; })
+        .def_property("eps", [](const AtomData &a) { return a.interaction.get("eps"); },
+                      [](AtomData &a, double val) { a.interaction.get("eps") = val; })
+        .def_property("sigma", [](const AtomData &a) { return a.interaction.get("sigma"); },
+                      [](AtomData &a, double val) { a.interaction.get("sigma") = val; })
         .def_readwrite("name", &AtomData::name)
         .def_readwrite("activity", &AtomData::activity, "Activity = chemical potential in log scale (mol/l)")
         .def("id", (const int& (AtomData::*)() const) &AtomData::id); // explicit signature due to overload in c++
@@ -201,9 +205,8 @@ PYBIND11_MODULE(pyfaunus, m)
         .def_readwrite("isotropic", &Potential::PairPotentialBase::isotropic)
         .def_readwrite("selfEnergy", &Potential::PairPotentialBase::selfEnergy)
         .def("force", &Potential::PairPotentialBase::force)
-        .def("energy", [](Potential::PairPotentialBase &pot, const Particle &a, const Particle &b, const Point &r) {
-            return pot(a, b, r);
-        });
+        .def("energy", [](Potential::PairPotentialBase &pot, const Particle &a, const Particle &b, double r2,
+                          const Point &r) { return pot(a, b, r2, r); });
 
     // Potentials::FunctorPotential
     py::class_<Potential::FunctorPotential, Potential::PairPotentialBase>(m, "FunctorPotential")

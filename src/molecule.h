@@ -194,13 +194,13 @@ class MoleculeData {
 
     std::vector<int> atoms;                    //!< Sequence of atoms in molecule (atom id's)
     BasePointerVector<Potential::BondData> bonds;
-    WeightedDistribution<ParticleVector> conformations; //!< Conformations of molecule
+    WeightedDistribution<ParticleVector, float> conformations; //!< Conformations of molecule
 
     MoleculeData();
     MoleculeData(const std::string &name, ParticleVector particles,
                  const BasePointerVector<Potential::BondData> &bonds);
 
-    bool isPairExcluded(int i, int j);
+    bool isPairExcluded(int i, int j) const;
 
     /** @brief Specify function to be used when inserting into space.
      *
@@ -227,7 +227,7 @@ class MoleculeData {
     friend void from_json(const json &j, MoleculeData &a);
 }; // end of class
 
-inline bool MoleculeData::isPairExcluded(int i, int j) { return exclusions.isExcluded(i, j); }
+inline bool MoleculeData::isPairExcluded(int i, int j) const { return exclusions.isExcluded(i, j); }
 
 void to_json(json &j, const MoleculeData &a);
 

@@ -12,6 +12,8 @@ struct reservoir {
     bool canonic;
 };
 
+struct Space;
+
 /**
  * @brief Specify change to a new state
  *
@@ -23,7 +25,7 @@ struct Change {
     bool all = false;        //!< Set to true if *everything* has changed
     bool dN = false;         //!< True if the number of atomic or molecular species has changed
     bool moved2moved = true; //!< If several groups are moved, should they interact with each other?
-    bool chargeMove = false;
+    // bool chargeMove = false; //!< Not in use...
 
     struct data {
         bool dNatomic = false;  //!< True if the number of atomic molecules has changed
@@ -39,14 +41,20 @@ struct Change {
     std::vector<data> groups; //!< Touched groups by index in group vector
 
     inline auto touchedGroupIndex() {
-        return ranges::view::transform(groups, [](data &i) -> int { return i.index; });
+        return ranges::cpp20::views::transform(groups, [](data &i) -> int { return i.index; });
     } //!< List of moved groups (index)
+
+    /** List of changed atom index relative to first particle in system) */
+    std::vector<int> touchedParticleIndex(const std::vector<Group<Particle>> &);
 
     void clear();       //!< Clear all change data
     bool empty() const; //!< Check if change object is empty
     explicit operator bool() const;
+    bool sanityCheck(Space &) const; //!< Performs a sanity check on contained object data
 };
 
+void to_json(json &, const Change::data &); //!< Serialize Change data to json
+void to_json(json &, const Change &);       //!< Serialise Change object to json
 
 /**
  * @brief Placeholder for atoms and molecules
@@ -78,7 +86,7 @@ struct Space {
     Tgeometry geo; //!< Container geometry // TODO as a dependency injection in the constructor
 
     auto positions() const {
-        return ranges::view::transform(p, [](auto &i) -> const Point & { return i.pos; });
+        return ranges::cpp20::views::transform(p, [](auto &i) -> const Point & { return i.pos; });
     } //!< Iterable range with positions
 
     //!< Keywords to select particles based on the their active/inactive state and charge neutrality
@@ -151,30 +159,31 @@ struct Space {
             break;
 
         }
-        return groups | ranges::view::filter(f);
+        return groups | ranges::cpp20::views::filter(f);
     }
 
     typename Tgvec::iterator randomMolecule(int molid, Random &rand,
                                             Selection sel = ACTIVE); //!< Random group; groups.end() if not found
 
-    // auto findAtoms(int atomid) const {
-    //    return p | ranges::view::filter( [atomid](auto &i){ return i.id==atomid; } );
-    // } //!< Range with all atoms of type `atomid` (complexity: order N)
-
     auto findAtoms(int atomid) {
-        auto f = [atomid, &groups = groups](Particle &i) {
-            if (i.id == atomid)
-                for (auto &g : groups)
-                    if (g.contains(i))
-                        return true;
-            return false;
-        };
-        return ranges::view::filter(p, f);
-    } //!< Range with all atoms of type `atomid` (complexity: order N)
+        return p | ranges::cpp20::views::filter([&, atomid](const Particle &i) {
+                   if (i.id == atomid)
+                       for (const auto &g : groups)
+                           if (g.contains(i, false))
+                               return true;
+                   return false;
+               });
+    } //!< Range with all active atoms of type `atomid` (complexity: order N)
 
     auto findGroupContaining(const Particle &i) {
         return std::find_if(groups.begin(), groups.end(), [&i](auto &g) { return g.contains(i); });
     } //!< Finds the groups containing the given atom
+
+    auto findGroupContaining(size_t index) {
+        assert(index < p.size());
+        return std::find_if(groups.begin(), groups.end(),
+                            [&](auto &g) { return index < std::distance(p.begin(), g.end()); });
+    } //!< Finds group containing given atom index
 
     auto activeParticles() {
         auto f = [&groups = groups](Particle &i) {
@@ -183,8 +192,20 @@ struct Space {
                     return true;
             return false;
         };
-        return p | ranges::view::filter(f);
+        return p | ranges::cpp20::views::filter(f);
     } //!< Returns range with all *active* particles in space
+
+    size_t numParticles(Selection sel = ACTIVE) const {
+        size_t n = 0;
+        if (sel == ALL)
+            n = p.size();
+        else if (sel == ACTIVE)
+            for (auto &g : groups)
+                n += g.size();
+        else
+            throw std::runtime_error("invalid selection");
+        return n;
+    } //!< Number of particles, all or active (default)
 
     void sync(Space &other, const Tchange &change); //!< Copy differing data from other (o) Space using Change object
 
@@ -250,4 +271,11 @@ struct getActiveParticles {
 
 // Make a global alias to easy transition to non-templated code
 using Tspace = Space;
+
+namespace SpaceFactory {
+
+void makeNaCl(Space &, int, const Geometry::Chameleon &); //!< Create a simple salt system
+
+} // namespace SpaceFactory
+
 } // namespace Faunus

@@ -33,10 +33,12 @@ double ExternalPotential::_energy(const Group<Particle> &g) const {
     double u = 0;
     if (molids.find(g.id) != molids.end()) {
         if (COM and g.atomic == false) { // apply only to center of mass
-            Particle cm;                 // temp. particle representing molecule
-            cm.charge = Faunus::monopoleMoment(g.begin(), g.end());
-            cm.pos = g.cm;
-            return func(cm);
+            if (g.size() == g.capacity()) { // only apply if group is active
+                Particle cm;                // temp. particle representing molecule
+                cm.charge = Faunus::monopoleMoment(g.begin(), g.end());
+                cm.pos = g.cm;
+                return func(cm);
+            }
         } else {
             for (auto &p : g) { // loop over active particles
                 u += func(p);
@@ -273,23 +275,25 @@ void ExternalAkesson::update_phi() {
 
 // ------------ createGouyChapman -------------
 
-std::function<double(const Particle &)> createGouyChapmanPotential(const json &j) {
+std::function<double(const Particle &)> createGouyChapmanPotential(const json &j, const Geometry::Chameleon &geo) {
+    if (geo.boundaryConditions().direction.z() != Geometry::FIXED)
+        throw std::runtime_error("Gouy-Chapman requires non-periodicity in z-direction");
+
     double rho;
     double c0 = j.at("ionicstrength").get<double>() * 1.0_molar; // assuming 1:1 salt, so c0=I
     double lB = pc::lB(j.at("epsr").get<double>());
     double k = 1 / (3.04 / sqrt(c0));   // hack!
     double phi0 = j.value("phi0", 0.0); // Unitless potential = beta*e*phi0
     if (std::fabs(phi0) > 1e-6)
-        rho = sqrt(2 * c0 / (pc::pi * lB)) * sinh(.5 * phi0); // Evans&Wennerstrom,Colloidal Domain p
-    // 138-140
+        rho = sqrt(2 * c0 / (pc::pi * lB)) * sinh(.5 * phi0); // Evans&Wennerstrom,Colloidal Domain p. 138-140
     else {
         rho = 1.0 / j.value("qarea", 0.0);
         if (rho > 1e9)
             rho = j.at("rho");
-        phi0 = 2. * std::asinh(rho * std::sqrt(0.5 * lB * pc::pi / c0)); //[Evans..]
+        phi0 = 2. * std::asinh(rho * std::sqrt(0.5 * lB * pc::pi / c0)); // [Evans..]
     }
-    double gamma0 = std::tanh(phi0 / 4); // assuming z=1  [Evans..]
-    double surface_z_pos = j.value("zpos", 0.0);
+    double gamma0 = std::tanh(phi0 / 4); // assuming z=1 [Evans..]
+    double surface_z_pos = j.value("zpos", -0.5 * geo.getLength().z());
     bool linearize = j.value("linearize", false);
 
     // return gamma function for calculation of GC potential on single particle.
@@ -323,10 +327,9 @@ CustomExternal::CustomExternal(const json &j, Tspace &spc) : ExternalPotential(j
     _j["T"] = pc::temperature;
     std::string name = jin.at("function");
 
-    // check of the custom potential match a name with a
-    // predefined meaning.
+    // check if the custom potential match a name with a predefined meaning.
     if (name == "gouychapman")
-        func = createGouyChapmanPotential(_j);
+        func = createGouyChapmanPotential(_j, spc.geo);
     else if (name == "something") {
         // add additional potential here
         // base::func = createSomeOtherPotential(_j);

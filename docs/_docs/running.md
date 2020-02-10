@@ -41,6 +41,26 @@ atomlist:
     - Na+: { q: 1.0, mw: 22.99 }
 ~~~
 
+Generating several input files for a parameter scan, it can be helpful to use
+an input _template file_,
+
+~~~ yaml
+# template.yml
+geometry: {type: cylinder, length: {{length}}, radius: {{radius}}}
+~~~
+
+which can be populated using python:
+
+~~~ python
+from jinja2 import Template
+with open('template.yml') as f:
+    output = Template(f.read()).render(
+            length = 200,
+            radius = 50 )
+    print(output)
+~~~
+
+
 ### Post-Processing
 
 JSON formatted output can conveniently be converted to
@@ -96,8 +116,8 @@ so far.
 0    | off
 1    | critical error
 2    | error
-3    | warning (default)
-4    | information
+3    | warning
+4    | information (default)
 5    | debug information
 6    | tracing information
 
@@ -107,7 +127,20 @@ Tip: Redirect the standard error output to a log file.
 faunus -v 5 -i in.json 2>> error.log
 ~~~
 
-## Message Passing Interface (MPI)
+## Parallelization
+
+### OpenMP
+
+Several routines in Faunus can run in parallel using multiple threads. The only prerequisite is that Faunus was
+compiled with OpenMP support (which is default). The number of threads is controlled with an environment variable.
+The following example demonstrates how to run Faunus using 4 threads:  
+
+~~~ bash
+export OMP_NUM_THREADS=4
+faunus -i in.json
+~~~
+
+### Message Passing Interface (MPI)
 
 Only few routines in Faunus are currently parallelisable using MPI, for example
 parallel tempering, and penalty function energies.

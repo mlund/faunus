@@ -4,12 +4,13 @@
             "systemenergy": {
                 "file": "energy.dat",
                 "final": [
-                    -2.435134976901417
+                    0.0,
+                    -14.848342519376358
                 ],
-                "init": -3.9501,
-                "mean": -2.95,
+                "init": -15.381,
+                "mean": -16.034,
                 "nstep": 100,
-                "samples": 100
+                "samples": 500
             }
         },
         {
@@ -23,34 +24,50 @@
             }
         }
     ],
-    "compiler": "4.2.1 Compatible Apple LLVM 10.0.0 (clang-1000.11.45.5)",
+    "compiler": "Clang 10.0.0 (/var/tmp/portage/sys-devel/clang-10.0.0.9999/work/x/y/clang-10.0.0.9999 65acf43270ea2894dffa0d0b292b92402f80c8cb)",
     "energy": [
         {
             "hamiltonian": [
+                {
+                    "particle-self-energy": {
+                        "com": false,
+                        "molecules": [
+                            "*"
+                        ],
+                        "relative time": 0.0001561297775201693
+                    }
+                },
                 {
                     "nonbonded": {
                         "cutoff_g2g": {
                             "salt salt": null
                         },
                         "pairpot": {
-                            "default": [
-                                {
-                                    "lennardjones": {
-                                        "mixing": "LB"
+                            "functor potential": {
+                                "default": [
+                                    {
+                                        "lennardjones": {
+                                            "mixing": "LB"
+                                        }
+                                    },
+                                    {
+                                        "coulomb": {
+                                            "cutoff": 1.3407807929942596e+154,
+                                            "doi": "Premier mémoire sur l’électricité et le magnétisme by Charles-Augustin de Coulomb",
+                                            "epsr": 80,
+                                            "lB": 6.9624955289780015,
+                                            "type": "plain"
+                                        }
                                     }
-                                },
-                                {
-                                    "coulomb": {
-                                        "cutoff": 100,
-                                        "debyelength": 7,
-                                        "epsr": 80,
-                                        "type": "yukawa"
-                                    }
+                                ],
+                                "selfenergy": {
+                                    "dipole": false,
+                                    "monopole": true
                                 }
-                            ]
-                        }
-                    },
-                    "relative time": 0.3175889157413659
+                            }
+                        },
+                        "relative time": 0.32163911708740606
+                    }
                 }
             ]
         }
@@ -63,10 +80,11 @@
         ],
         "type": "cuboid"
     },
-    "git revision": "083bdeba (2019-03-12)",
+    "git revision": "624237c9 (2020-01-15)",
     "groups": [
         {
             "salt": {
+                "compressible": false,
                 "index": [
                     0,
                     39
@@ -79,7 +97,7 @@
     "moves": [
         {
             "transrot": {
-                "acceptance": 0.717,
+                "acceptance": 0.651,
                 "dir": [
                     1.0,
                     1.0,
@@ -87,16 +105,17 @@
                 ],
                 "molecule": "salt",
                 "molid": 0,
-                "moves": 400000,
-                "relative time": 0.856,
+                "moves": 2000000,
+                "relative time": 0.906,
+                "relative time (without energy calc)": 0.0451,
                 "repeat": 40,
-                "√⟨r²⟩": 12.4
+                "√⟨r²⟩": 16.7
             }
         }
     ],
     "number of groups": 1,
     "number of particles": 40,
     "reactionlist": null,
-    "relative drift": 4.159684332635808e-15,
+    "relative drift": -6.92923785974366e-16,
     "temperature": 300.0
 }

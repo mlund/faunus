@@ -89,78 +89,79 @@ namespace Faunus {
      * Add elements with `push_back()`
      * where the default weight is _unity_.
      */
-    template<typename T>
-        class WeightedDistribution {
+    template <typename T, typename Tweight = float> class WeightedDistribution {
+      private:
+        std::discrete_distribution<> dist;
+        std::vector<Tweight> weights;
+        size_t index; //!< index from latest element access via push_back or get
+      public:
+        std::vector<T> vec; //!< raw vector of T
+        auto size() const { return vec.size(); }
+        bool empty() const { return vec.empty(); }
+        size_t getLastIndex() const { return index; } //!< index of last `get()` or `push_back()` call
 
-            private:
-                std::discrete_distribution<> dist;
-                std::vector<double> weights;
+        void clear() {
+            vec.clear();
+            weights.clear();
+        }
 
-            public:
-                std::vector<T> vec; //!< raw vector of T
-                size_t index; //!< index from latest element access via push_back or get
-                auto size() const { return vec.size(); }
-                bool empty() const { return vec.empty(); }
+        /**
+         * @brief Set weights for all data points in `vec`
+         * @tparam Tcontainer
+         * @param w Container w. weights that must match the size of the stored data
+         */
+        template <typename Tcontainer> void setWeight(const Tcontainer &w) {
+            if (w.size() not_eq vec.size())
+                throw std::runtime_error("number of weights must match data");
+            weights.resize(w.size());
+            std::copy(w.begin(), w.end(), weights.begin());
+            dist = std::discrete_distribution<>(weights.begin(), weights.end());
+            assert(size_t(dist.max()) == vec.size() - 1);
+        }
 
-                void clear() {
-                    vec.clear();
-                    weights.clear();
-                }
+        void push_back(const T &value, Tweight weight = 1.0) {
+            vec.push_back(value);
+            weights.push_back(weight);
+            setWeight(weights); // recalc. weight distribution
+            index = vec.size() - 1;
+        } //!< add data and it's weight (default = 1)
 
-                template<typename Tnumber>
-                    void setWeight(const std::vector<Tnumber> &w) {
-                        if (w.size() not_eq vec.size())
-                            throw std::runtime_error("number of weights must match data");
-                        weights.resize(w.size());
-                        std::copy(w.begin(), w.end(), weights.begin());
-                        dist = std::discrete_distribution<>(weights.begin(), weights.end());
-                        assert(size_t(dist.max()) == vec.size() - 1);
-                }
-
-                void push_back(const T &value, double weight=1) {
-                    vec.push_back(value);
-                    weights.push_back(weight);
-                    setWeight(weights);
-                    index = vec.size()-1;
-                } //!< add data and it's weight (default = 1)
-
-                const T& get() {
-                    assert( not empty() && "no data!");
-                    index = dist(random.engine);
-                    return vec.at(index);
-                } //!< retrieve data with given weight
-        };
+        const T &get() {
+            assert(not empty() && "no data!");
+            index = dist(random.engine);
+            return vec.at(index);
+        } //!< retrieve data with given weight
+    };
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
-    TEST_CASE("[Faunus] WeightedDistribution")
-    {
+    TEST_CASE("[Faunus] WeightedDistribution") {
         WeightedDistribution<double> v;
 
         v.push_back(0.5);
-        CHECK( v.index==0 );
-        CHECK( v.size()==1 );
+        CHECK(v.getLastIndex() == 0);
+        CHECK(v.size() == 1);
 
         v.push_back(0.1, 4);
-        CHECK( v.index==1 );
-        CHECK( v.size()==2 );
-        CHECK( not v.empty() );
+        CHECK(v.getLastIndex() == 1);
+        CHECK(v.size() == 2);
+        CHECK(not v.empty());
 
-        int N=1e4;
-        double sum=0;
-        for (int i=0; i<N; i++)
+        int N = 1e4;
+        double sum = 0;
+        for (int i = 0; i < N; i++)
             sum += v.get();
-        CHECK( sum/N == doctest::Approx( (0.5*1+0.1*4) / (1+4) ).epsilon(0.05) );
+        CHECK(sum / N == doctest::Approx((0.5 * 1 + 0.1 * 4) / (1 + 4)).epsilon(0.05));
 
-        v.setWeight<int>( {2,1} );
-        sum=0;
-        for (int i=0; i<N; i++)
+        v.setWeight<std::vector<int>>({2, 1});
+        sum = 0;
+        for (int i = 0; i < N; i++)
             sum += v.get();
-        CHECK( sum/N == doctest::Approx( (0.5*2+0.1*1) / (2+1) ).epsilon(0.05) );
+        CHECK(sum / N == doctest::Approx((0.5 * 2 + 0.1 * 1) / (2 + 1)).epsilon(0.05));
 
-        CHECK_THROWS(v.setWeight<float>({2,1,1}));
+        CHECK_THROWS(v.setWeight<std::vector<float>>({2.0, 1.0, 1.0}));
 
         v.clear();
-        CHECK( v.empty() );
+        CHECK(v.empty());
     }
 #endif
-}
+    } // namespace Faunus

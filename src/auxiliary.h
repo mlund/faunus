@@ -25,26 +25,56 @@ namespace Faunus
         } //!< Round to int
 
     /**
-     * @brief Iterate over pairs in container, call a function on the elements, and sum results
+     * @brief Convert floating point number to integral number. Perform range check and rounding.
+     * @tparam TOut integral type
+     * @tparam TIn floating point type
+     * @param number (floating point type)
+     * @return number (integral type)
+     * @throw std::overflow_error
      */
-    template<typename Tit, typename Tfunc, typename T=double, typename Top>
-        T for_each_pair( const Tit &begin, const Tit &end, Tfunc f, Top operation = std::plus<T>())
-        {
-            T x = T();
-            for ( auto i = begin; i != end; ++i )
-                for ( auto j = i; ++j != end; )
-                    x = operation(x, f(*i, *j));
-            return x;
+    template <typename TOut, typename TIn> inline TOut numeric_cast(const TIn number) {
+        static_assert(std::is_floating_point<TIn>::value, "TIn must be floating point.");
+        static_assert(std::is_integral<TOut>::value, "TOut must be integer.");
+        if (std::isfinite(number)) {
+            // The number is finite ...
+            if (number < std::nextafter(static_cast<TIn>(std::numeric_limits<TOut>::max()), 0) &&
+                number > std::nextafter(static_cast<TIn>(std::numeric_limits<TOut>::min()), 0)) {
+                // ... and fits into the integral type range.
+                // The nextafter function is used to mitigate possible rounding up or down.
+                return static_cast<TOut>(number >= 0 ? number + 0.5 : number - 0.5); // round before cast
+            }
         }
+        // not-a-number, infinite, or outside the representable range
+        throw std::overflow_error("numeric cast overflow");
+    }
+
+    /**
+     * @brief Iterate over pairs in container, call a function on the elements, and sum results
+     * @tparam T Floating point type. Default: `double)`
+     * @param begin Begin iterator
+     * @param end End iterator
+     * @param f Function to apply to the pair
+     * @param aggregator Function to aggregate the result from each pair. Default: `std::plus<T>`
+     */
+    template <typename Titer, typename Tfunction, typename T = double, typename Taggregate_function>
+    T for_each_unique_pair(Titer begin, Titer end, Tfunction f, Taggregate_function aggregator = std::plus<T>()) {
+        T x = T();
+        for (auto i = begin; i != end; ++i)
+            for (auto j = i; ++j != end;)
+                x = aggregator(x, f(*i, *j));
+        return x;
+    }
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] for_each_pair")
     {
         int x;
         std::vector<int> a = {1,2,3};
-        x = for_each_pair(a.begin(), a.end(), [](int i, int j){ return i*j;}, std::plus<int>());
+        x = for_each_unique_pair(
+            a.begin(), a.end(), [](int i, int j) { return i * j; }, std::plus<int>());
         CHECK(x==2+3+6);
         a.resize(1);
-        x = for_each_pair(a.begin(), a.end(), [](int i, int j){ return i*j;}, std::plus<int>());
+        x = for_each_unique_pair(
+            a.begin(), a.end(), [](int i, int j) { return i * j; }, std::plus<int>());
         CHECK(x==0);
     }
 #endif
@@ -111,70 +141,6 @@ namespace Faunus
 #endif
 
     /**
-     * @brief Store data for pairs
-     */
-    template<typename Tdata, typename T=int>
-        class pair_list
-        {
-            protected:
-                typedef opair<T> Tpair; // ordered pair
-                std::map<Tpair, Tdata> list;   // main pair list
-                std::multimap<T, T> mlist; // additional map for faster access
-            public:
-                /** @brief Associate data with a pair */
-                void add( T i, T j, Tdata d )
-                {
-                    list[Tpair(i, j)] = d;
-                    mlist.insert(std::pair<T, T>(i, j));
-                    mlist.insert(std::pair<T, T>(j, i));
-                }
-
-                /** @brief Access data of a pair */
-                Tdata &operator()( T i, T j )
-                {
-                    Tpair ij(i, j);
-                    assert(list[ij] != nullptr); //debug
-                    return list[ij];
-                }
-
-                /** @brief Clears all data */
-                void clear()
-                {
-                    list.clear();
-                    mlist.clear();
-                }
-
-                decltype(list) &getBondList() { return list; }
-        };
-
-    template<class Tdata, class T=int, class Tbase=std::map<opair<T>, Tdata> >
-        struct map_ij : private Tbase
-    {
-        using Tbase::begin;
-        using Tbase::end;
-
-        Tdata &operator()( T i, T j )
-        {
-            return Tbase::operator[](opair<T>(i, j));
-        }
-
-        Tdata &operator()( T i, T j ) const
-        {
-            return Tbase::operator[](opair<T>(i, j));
-        }
-
-        typename Tbase::const_iterator find( T i, T j ) const
-        {
-            return Tbase::find(opair<T>(i, j));
-        }
-
-        typename Tbase::iterator find( T i, T j )
-        {
-            return Tbase::find(opair<T>(i, j));
-        }
-    };
-
-    /**
      * @brief Approximation of erfc-function
      * @param x Value for which erfc should be calculated
      * @details Reference for this approximation is found in Abramowitz and Stegun,
@@ -230,21 +196,36 @@ namespace Faunus
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 
     /**
-     * @brief Quake inverse square root approximation
+     * @brief Fast inverse square-root approximation
+     *
+     * Modified to work with both double and float and with one (less precise) or
+     * two (more precise) iterations. Template conditionals should be optimized out
+     * at compile time.
+     *
+     * @note Code comments supposedly from the original Quake III Arena code
      */
-    template<class Tint=std::int32_t>
-        float invsqrtQuake( float number )
-        {
-            static_assert(sizeof(Tint) == 4, "Integer size must be 4 bytes for quake invsqrt.");
-            float y = number;
-            float x2 = y * 0.5F;
-            Tint i = *(Tint *) &y;
-            i = 0x5f3759df - (i >> 1);
-            y = *(float *) &i;
-            y = y * (1.5F - (x2 * y * y));   // 1st iteration
-            //      y  = y * ( 1.5F - ( x2 * y * y ) );   // 2nd iteration, this can be removed
-            return y;
-        }
+    template <typename T, char iterations = 2> inline T inv_sqrt(T x) {
+        static_assert(std::is_floating_point<T>::value, "T must be floating point");
+        static_assert(iterations == 1 or iterations == 2, "itarations must equal 1 or 2");
+        typedef typename std::conditional<sizeof(T) == 8, std::int64_t, std::int32_t>::type Tint;
+        T y = x;
+        T x2 = y * 0.5;
+        Tint i = *(Tint *)&y;                                              // evil floating point bit level hacking
+        i = (sizeof(T) == 8 ? 0x5fe6eb50c7b537a9 : 0x5f3759df) - (i >> 1); // what the fuck?
+        y = *(T *)&i;
+        y = y * (1.5 - (x2 * y * y)); // 1st iteration
+        if (iterations > 1)
+            y = y * (1.5 - (x2 * y * y)); // 2nd iteration, this can be removed
+        return y;
+    }
+
+#ifdef DOCTEST_LIBRARY_INCLUDED
+    TEST_CASE_TEMPLATE("inv_sqrt", T, double, float) {
+        std::vector<T> vals = {0.23, 3.3, 10.2, 100.45, 512.06};
+        for (auto x : vals)
+            CHECK(inv_sqrt<T>(x) == doctest::Approx(1.0 / std::sqrt(x)));
+    }
+#endif
 
     /**
      * @brief n'th integer power of float
@@ -276,7 +257,9 @@ namespace Faunus
         /**
          * @brief Approximate exp() function
          * @note see [Cawley 2000](http://dx.doi.org/10.1162/089976600300015033)
-         * @warning Does not work in big endian systems!
+         * @warning Does not work in big endian systems, nor on gcc
+         *
+         * Update 2019: http://www.federicoperini.info/wp-content/uploads/FastExp-Final.pdf
          */
         template <class Tint = std::int32_t> double exp_cawley(double y) {
             static_assert(2 * sizeof(Tint) == sizeof(double), "Approximate exp() requires 4-byte integer");
@@ -326,88 +309,58 @@ namespace Faunus
 
 #pragma GCC diagnostic pop
 
-    /**
-     * @brief Convert std::string to float, int, bool
-     *
-     * Examples:
-     *
-     *     double x = str2val("10.0");       // -> 10.0
-     *     double y = str2val("",0.5);       // -> 0.5 (fallback)
-     *     bool z   = str2val<bool>("true"); // -> true
-     *
-     * Boolean text can be "yes/true/on" - if not, the default
-     * fallback, `false` is returned. Matching is case insensitive.
-     */
-    template<class T>
-        T str2val( const std::string &s, T fallback = T())
-        {
-            return (!s.empty()) ? T(std::stod(s)) : fallback;
-        }
+        /**
+         * @brief Evaluate n'th degree Legendre polynomial
+         *
+         * Example:
+         * @code
+         * Legendre<float> l(10);
+         * auto P = l.eval(1.3)
+         * std::cout << P[3]; --> third order value
+         * @endcode
+         *
+         * @author Mikael Lund
+         * @date Canberra 2005-2006
+         * @note Since C++17 there's `std::legendre` but this seems more efficient
+         *       if a range of degrees are needed
+         */
+        template <typename T = double> class Legendre {
+          private:
+            size_t n;         //!< Maximum Legendre order
+            std::vector<T> P; //!< Legendre terms stored here
+            std::vector<T> y; //!< Lookup table for 1+1/i (overkill?)
+          public:
+            /** @brief Construct w. polynomial order>=0 */
+            Legendre(size_t max_order) : n(max_order) {
+                P.resize(n + 1);
+                P[0] = 1.0;
+                y.resize(n + 1);
+                for (size_t i = 1; i < n; i++)
+                    y[i] = 1.0 + 1.0 / T(i);
+            }
 
-    template<>
-        inline bool str2val<bool>( const std::string &s, bool fallback )
-        {
-            if ( std::regex_match(s, std::regex("yes|true|on|aye", std::regex_constants::icase)))
-                return true;
-            return fallback;
-        }
-
-    /**
-     * @brief Evaluate n'th degree Legendre polynomium
-     *
-     * Example:
-     * @code
-     * legendre<float> l(10);
-     * l.eval(1.3);
-     * cout << l.p[3]
-     * @endcode
-     *
-     * @author Mikael Lund
-     * @date Canberra 2005-2006
-     */
-    template<typename T=double>
-        class legendre
-        {
-            private:
-                int n;           //!< Legendre order
-                void resize( int order )
-                {
-                    n = order;
-                    assert(n >= 0);
-                    P.resize(n + 1);
-                    P[0] = 1.;
-                }
-
-            public:
-                /** @brief Construct w. polynomium order>=0 */
-                legendre( int order ) { resize(order); }
-
-                /** @brief Legendre terms stored here */
-                std::vector<T> P;
-
-                /** @brief Evaluate polynomium at x */
-                void eval( T x )
-                {
-                    if ( n > 0 )
-                    {
-                        P[1] = x;
-                        for ( int i = 1; i < n; ++i )
-                            P[i+1] = (2*i+1) * x / (i+1) * P[i] - i * P[i-1] / (i+1);
+            /** @brief Evaluate polynomials at x */
+            const std::vector<T> &eval(T x) {
+                if (n > 0) {
+                    P[1] = x;
+                    for (size_t i = 1; i < n; ++i) {
+                        P[i + 1] = ((y[i] + 1.0) * x * P[i] - P[i - 1]) / y[i];
                     }
                 }
+                return P;
+            }
         };
 #ifdef DOCTEST_LIBRARY_INCLUDED
-    TEST_CASE("[Faunus] legendre")
-    {
-        using doctest::Approx;
-        legendre<double> l(3);
-        double x=2.2;
-        l.eval(x);
-        CHECK( l.P[0] == Approx(1));
-        CHECK( l.P[1] == Approx(x));
-        CHECK( l.P[2] == Approx(0.5*(3*x*x-1)));
-        CHECK( l.P[3] == Approx(0.5*(5*x*x*x-3*x)));
-    }
+        TEST_CASE("[Faunus] Legendre") {
+            using doctest::Approx;
+            Legendre<double> l(3);
+            double x = 2.2;
+            auto P = l.eval(x);
+            CHECK(P[0] == Approx(1));
+            CHECK(P[1] == Approx(x));
+            CHECK(P[2] == Approx(0.5 * (3 * x * x - 1)));
+            CHECK(P[3] == Approx(0.5 * (5 * x * x * x - 3 * x)));
+        }
 #endif
 
     /**
@@ -608,7 +561,7 @@ namespace Faunus
 
                 auto size() const { return m.size(); }
 
-                const T& operator()(size_t i, size_t j) const {
+                inline const T &operator()(size_t i, size_t j) const {
                     if (triangular)
                         if (j>i)
                             std::swap(i,j);
@@ -1344,468 +1297,6 @@ namespace Faunus
             return c;
         }
 
-    template<typename Tx, typename Ty>
-        class Table3D
-        {
-            protected:
-                typedef std::map<std::pair<Tx, Tx>, Ty> Tmap;
-                Tx dx1, dx2;
-                Tmap map;
-                std::string name;
-
-                Ty count()
-                {
-                    Ty cnt = 0;
-                    for ( auto &m : map )
-                        cnt += m.second;
-                    return cnt;
-                }
-
-            private:
-                Tx round1( Tx x ) { return (x >= 0) ? int(x / dx1 + 0.5) * dx1 : int(x / dx1 - 0.5) * dx1; }
-
-                Tx round2( Tx x ) { return (x >= 0) ? int(x / dx2 + 0.5) * dx2 : int(x / dx2 - 0.5) * dx2; }
-
-                virtual double get( Tx x1, Tx x2 ) { return operator()(x1, x2); }
-
-            public:
-                enum type { HISTOGRAM, XYDATA };
-                type tabletype;
-
-                /**
-                 * @brief Constructor
-                 * @param resolution Resolution of the x axis
-                 * @param key Table type: HISTOGRAM or XYDATA
-                 */
-                Table3D( Tx resolution1 = 1, Tx resolution2 = 1, type key = XYDATA )
-                {
-                    tabletype = key;
-                    setResolution(resolution1, resolution2);
-                }
-
-                void clear() { map.clear(); }
-
-                void setResolution( Tx resolution1, Tx resolution2 )
-                {
-                    assert(resolution1 > 0 && resolution2 > 0);
-                    dx1 = resolution1;
-                    dx2 = resolution2;
-                    map.clear();
-                }
-
-                void setResolution( std::vector<Tx> &resolution )
-                {
-                    assert(resolution.at(0) > 0 && resolution.at(1) > 0);
-                    dx1 = resolution[0];
-                    dx2 = resolution[1];
-                    map.clear();
-                }
-
-                virtual ~Table3D() {}
-
-                /** @brief Access operator - returns reference to y(x) */
-                Ty &operator()( Tx x1, Tx x2 )
-                {
-                    return map[std::make_pair(round1(x1), round2(x2))];
-                }
-
-                Ty &operator()( std::vector<Tx> &x )
-                {
-                    return map[std::make_pair(round1(x[0]), round2(x[1]))];
-                }
-
-                /** @brief Find key and return corresponding value otherwise zero*/
-                Ty find( std::vector<Tx> &x )
-                {
-                    Ty value = 0;
-                    auto it = map.find(std::make_pair(round1(x[0]), round2(x[1])));
-                    if ( it != map.end())
-                        value = it->second;
-                    return value;
-                }
-
-                /** @brief Save table to disk */
-                void save( std::string filename, Ty scale = 1, Ty translate = 0 )
-                {
-                    if ( tabletype == HISTOGRAM )
-                    { // compensate for half bin width
-                        auto first = map.begin();
-                        auto last = map.rbegin();
-                        if ( !map.empty())
-                        {
-                            for ( auto it = first; it != map.end(); ++it )
-                            {
-                                if ( it->first.first == first->first.first )
-                                    it->second *= 2;
-                                else if ( it->first.second == first->first.second )
-                                    it->second *= 2;
-                            }
-                        }
-                        if ( map.size() > 1 )
-                        {
-                            for ( auto it = last; it != map.rend(); ++it )
-                            {
-                                if ( it->first.first == last->first.first )
-                                    it->second *= 2;
-                                else if ( it->first.second == last->first.second )
-                                    it->second *= 2;
-                            }
-                        }
-                    }
-
-                    if ( !map.empty())
-                    {
-                        std::ofstream f(filename.c_str());
-                        f.precision(10);
-                        if ( f )
-                        {
-                            for ( auto &m : map )
-                                f << m.first.first << " " << m.first.second
-                                    << " " << (m.second + translate) * scale << "\n";
-                        }
-                    }
-
-                    if ( tabletype == HISTOGRAM )
-                    { // restore half bin width
-                        auto first = map.begin();
-                        auto last = map.rbegin();
-                        if ( !map.empty())
-                        {
-                            for ( auto it = first; it != map.end(); ++it )
-                            {
-                                if ( it->first.first == first->first.first )
-                                    it->second /= 2;
-                                else if ( it->first.second == first->first.second )
-                                    it->second /= 2;
-                            }
-                        }
-                        if ( map.size() > 1 )
-                        {
-                            for ( auto it = last; it != map.rend(); ++it )
-                            {
-                                if ( it->first.first == last->first.first )
-                                    it->second /= 2;
-                                else if ( it->first.second == last->first.second )
-                                    it->second /= 2;
-                            }
-                        }
-                    }
-                }
-
-                /** @brief Save normalized table to disk */
-                void normSave( std::string filename )
-                {
-                    if ( tabletype == HISTOGRAM )
-                    { // compensate for half bin width
-                        auto first = map.begin();
-                        auto last = map.rbegin();
-                        if ( !map.empty())
-                        {
-                            for ( auto it = first; it != map.end(); ++it )
-                            {
-                                if ( it->first.first == first->first.first )
-                                    it->second *= 2;
-                                else if ( it->first.second == first->first.second )
-                                    it->second *= 2;
-                            }
-                        }
-                        if ( map.size() > 1 )
-                        {
-                            for ( auto it = last; it != map.rend(); ++it )
-                            {
-                                if ( it->first.first == last->first.first )
-                                    it->second *= 2;
-                                else if ( it->first.second == last->first.second )
-                                    it->second *= 2;
-                            }
-                        }
-                    }
-
-                    if ( !map.empty())
-                    {
-                        std::ofstream f(filename.c_str());
-                        f.precision(10);
-                        Ty cnt = count() * dx1 * dx2;
-                        if ( f )
-                        {
-                            for ( auto &m : map )
-                                f << m.first.first << " " << m.first.second
-                                    << " " << m.second / cnt << "\n";
-                        }
-                    }
-
-                    if ( tabletype == HISTOGRAM )
-                    { // restore half bin width
-                        auto first = map.begin();
-                        auto last = map.rbegin();
-                        if ( !map.empty())
-                        {
-                            for ( auto it = first; it != map.end(); ++it )
-                            {
-                                if ( it->first.first == first->first.first )
-                                    it->second /= 2;
-                                else if ( it->first.second == first->first.second )
-                                    it->second /= 2;
-                            }
-                        }
-                        if ( map.size() > 1 )
-                        {
-                            for ( auto it = last; it != map.rend(); ++it )
-                            {
-                                if ( it->first.first == last->first.first )
-                                    it->second /= 2;
-                                else if ( it->first.second == last->first.second )
-                                    it->second /= 2;
-                            }
-                        }
-                    }
-                }
-
-                Tmap getMap()
-                {
-                    return map;
-                }
-
-                std::pair<Tx, Tx> getResolution()
-                {
-                    return std::make_pair(dx1, dx2);
-                }
-
-                /*! Returns iterator of minumum y */
-                typename Tmap::const_iterator min()
-                {
-                    assert(!map.empty());
-                    Ty min = std::numeric_limits<Ty>::max();
-                    typename Tmap::const_iterator it;
-                    for ( auto m = map.begin(); m != map.end(); ++m )
-                        if ( m->second < min )
-                        {
-                            min = m->second;
-                            it = m;
-                        }
-                    return it;
-                }
-
-                /*! Returns iterator of maximum y */
-                typename Tmap::const_iterator max()
-                {
-                    assert(!map.empty());
-                    Ty max = std::numeric_limits<Ty>::min();
-                    typename Tmap::const_iterator it;
-                    for ( auto m = map.begin(); m != map.end(); ++m )
-                        if ( m->second > max )
-                        {
-                            max = m->second;
-                            it = m;
-                        }
-                    return it;
-                }
-
-                /*! Returns average in interval */
-                Ty avg( const std::vector<Tx> &limits )
-                {
-                    Ty avg = 0;
-                    int cnt = 0;
-                    assert(!map.empty());
-                    for ( auto &m : map )
-                    {
-                        if ( m.first.first >= limits[0] && m.first.first <= limits[1]
-                                && m.first.second >= limits[2] && m.first.second <= limits[3] )
-                        {
-                            avg += m.second;
-                            ++cnt;
-                        }
-                    }
-                    if ( cnt > 0 )
-                        avg /= cnt;
-                    return avg;
-                }
-
-                /**
-                 * @brief Convert table3D to vector of floats
-                 */
-                std::vector<double> hist2buf( int &size )
-                {
-                    std::vector<double> sendBuf;
-                    assert(!map.empty());
-                    for ( auto &m : map )
-                    {
-                        sendBuf.push_back(m.first.first);
-                        sendBuf.push_back(m.first.second);
-                        sendBuf.push_back(m.second);
-                    }
-                    sendBuf.resize(size, -1);
-                    return sendBuf;
-                }
-
-                /**
-                 * @brief Convert vector of floats to table3D
-                 */
-                void buf2hist( std::vector<double> &v )
-                {
-                    this->clear();
-                    assert(!v.empty());
-                    std::map<std::pair<double, double>, Average<double>> all;
-                    for ( int i = 0; i < int(v.size()) - 2; i += 3 )
-                        if ( v.at(i + 2) != -1 )
-                            all[std::make_pair(v.at(i), v.at(i + 1))] += v.at(i + 2);
-                    for ( auto &m : all )
-                        this->operator()(m.first.first, m.first.second) = m.second.avg();
-                }
-
-                /**
-                 * @brief Load table from disk
-                 */
-                bool load( const std::string &filename )
-                {
-                    std::ifstream f(filename.c_str());
-                    if ( f )
-                    {
-                        map.clear();
-                        while ( !f.eof())
-                        {
-                            Tx x1, x2;
-                            Ty y;
-                            f >> x1 >> x2 >> y;
-                            operator()(x1, x2) = y;
-                        }
-                        if ( tabletype == HISTOGRAM )
-                        { // restore half bin width
-                            if ( !map.empty())
-                            {
-                                auto first = map.begin();
-                                auto last = map.rbegin();
-                                for ( auto it = first; it != map.end(); ++it )
-                                {
-                                    if ( it->first.first == first->first.first )
-                                        it->second /= 2;
-                                    else if ( it->first.second == first->first.second )
-                                        it->second /= 2;
-                                }
-                                if ( map.size() > 1 )
-                                {
-                                    for ( auto it = last; it != map.rend(); ++it )
-                                    {
-                                        if ( it->first.first == last->first.first )
-                                            it->second /= 2;
-                                        else if ( it->first.second == last->first.second )
-                                            it->second /= 2;
-                                    }
-                                }
-                            }
-                        }
-                        return true;
-                    }
-                    return false;
-                }
-        };
-
-    /**
-     * @brief Subtract two tables
-     */
-    template<class Tx, class Ty>
-        Table3D<Tx, Ty> operator-( Table3D<Tx, Ty> &a, Table3D<Tx, Ty> &b )
-        {
-            assert(a.tabletype == b.tabletype && "Table a and b needs to be of same type");
-            Table3D<Tx, Ty> c(std::min(a.getResolution().first, b.getResolution().first),
-                    std::min(a.getResolution().second, b.getResolution().second), a.tabletype);
-            auto a_map = a.getMap();
-            auto b_map = b.getMap();
-
-            if ( a.tabletype == Table3D<Tx, Ty>::HISTOGRAM )
-            {
-                if ( !a_map.empty())
-                    a_map.begin()->second *= 2;   // compensate for half bin width
-                if ( a_map.size() > 1 )
-                    (--a_map.end())->second *= 2; // -//-
-                if ( !b_map.empty())
-                    b_map.begin()->second *= 2;   // compensate for half bin width
-                if ( b_map.size() > 1 )
-                    (--b_map.end())->second *= 2; // -//-
-            }
-
-            for ( auto &m1 : a_map )
-            {
-                for ( auto &m2 : b_map )
-                {
-                    c(m1.first.first, m1.first.second) = m1.second - m2.second;
-                    break;
-                }
-            }
-
-            if ( a.tabletype == Table3D<Tx, Ty>::HISTOGRAM )
-            {
-                if ( !a_map.empty())
-                    a_map.begin()->second /= 2;   // compensate for half bin width
-                if ( a_map.size() > 1 )
-                    (--a_map.end())->second /= 2; // -//-
-                if ( !b_map.empty())
-                    b_map.begin()->second /= 2;   // compensate for half bin width
-                if ( b_map.size() > 1 )
-                    (--b_map.end())->second /= 2; // -//-
-            }
-            return c;
-        }
-
-    /**
-     * @brief Addition two tables
-     */
-    template<class Tx, class Ty>
-        Table3D<Tx, Ty> operator+( Table3D<Tx, Ty> &a, Table3D<Tx, Ty> &b )
-        {
-            assert(a.tabletype == b.tabletype && "Table a and b needs to be of same type");
-            Table3D<Tx, Ty> c(std::min(a.getResolution().first, b.getResolution().first),
-                    std::min(a.getResolution().second, b.getResolution().second), a.tabletype);
-            auto a_map = a.getMap();
-            auto b_map = b.getMap();
-
-            if ( a.tabletype == Table3D<Tx, Ty>::HISTOGRAM )
-            {
-                if ( !a_map.empty())
-                    a_map.begin()->second *= 2;   // compensate for half bin width
-                if ( a_map.size() > 1 )
-                    (--a_map.end())->second *= 2; // -//-
-                if ( !b_map.empty())
-                    b_map.begin()->second *= 2;   // compensate for half bin width
-                if ( b_map.size() > 1 )
-                    (--b_map.end())->second *= 2; // -//-
-            }
-
-            for ( auto &m : a_map )
-            {
-                c(m.first.first, m.first.second) += m.second;
-            }
-            for ( auto &m : b_map )
-            {
-                c(m.first.first, m.first.second) += m.second;
-            }
-
-            if ( a.tabletype == Table3D<Tx, Ty>::HISTOGRAM )
-            {
-                if ( !a_map.empty())
-                    a_map.begin()->second /= 2;   // compensate for half bin width
-                if ( a_map.size() > 1 )
-                    (--a_map.end())->second /= 2; // -//-
-                if ( !b_map.empty())
-                    b_map.begin()->second /= 2;   // compensate for half bin width
-                if ( b_map.size() > 1 )
-                    (--b_map.end())->second /= 2; // -//-
-            }
-
-            return c;
-        }
-
-    template<typename Tx, typename Ty=unsigned long int>
-        class Histogram : public Table2D<Tx, Ty>
-    {
-        public:
-            Histogram( Tx resolution = 0.2 ) : Table2D<Tx, Ty>(resolution, Table2D<Tx, Ty>::HISTOGRAM)
-        {
-            static_assert(std::is_integral<Ty>::value, "Histogram must be of integral type");
-            static_assert(std::is_unsigned<Ty>::value, "Histogram must be unsigned");
-        }
-    };
-
     /*
      * @brief Table for storing XY data with random access
      *
@@ -1899,9 +1390,7 @@ namespace Faunus
                     return sum;
                 } //!< sum all y-values
 
-                const std::vector<Ty>& yvec() const { 
-                    return vec;
-                } //!< vector with y-values
+                const std::vector<Ty> &yvec() const { return vec; } //!< vector with y-values
 
                 std::vector<Tx> xvec() const {
                     std::vector<Tx> v;
@@ -2033,27 +1522,18 @@ namespace Faunus
                 Tunit delta;
                 std::chrono::steady_clock::time_point t0, tx;
             public:
-                TimeRelativeOfTotal() : delta(0) {
-                    t0 = std::chrono::steady_clock::now();
-                } 
+              TimeRelativeOfTotal() : delta(0) { t0 = std::chrono::steady_clock::now(); }
 
-                operator bool() const {
-                    return delta.count()!=0 ? true : false;
-                }
+              operator bool() const { return delta.count() != 0 ? true : false; }
 
-                void start() { tx = std::chrono::steady_clock::now(); }
+              void start() { tx = std::chrono::steady_clock::now(); }
 
-                void stop()
-                {
-                    delta += std::chrono::duration_cast<Tunit>
-                        (std::chrono::steady_clock::now() - tx);
-                }
+              void stop() { delta += std::chrono::duration_cast<Tunit>(std::chrono::steady_clock::now() - tx); }
 
-                double result() const
-                {
-                    auto now = std::chrono::steady_clock::now();
-                    auto total = std::chrono::duration_cast<Tunit>(now - t0);
-                    return delta.count() / double(total.count());
+              double result() const {
+                  auto now = std::chrono::steady_clock::now();
+                  auto total = std::chrono::duration_cast<Tunit>(now - t0);
+                  return delta.count() / double(total.count());
                 }
         };
 

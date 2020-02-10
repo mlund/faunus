@@ -11,6 +11,8 @@ urlcolor: Maroon
 # fontfamily: mathdesign
 # fontfamilyoptions: urw-garamond
 mainfont: EB Garamond       # https://github.com/octaviopardo/EBGaramond12
+mainfontoptions:
+- StylisticSet=6 # long-tailed Q
 mathfont: Garamond-Math     # https://github.com/YuanshengZhao/Garamond-Math
 # sansfont: Gill Sans Nova
 monofont: Fira Code         # https://github.com/tonsky/FiraCode

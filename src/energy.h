@@ -59,32 +59,25 @@ struct EwaldData {
     double surface_dielectric_constant = 0; //!< Surface dielectric constant;
     double bjerrum_length = 0;              //!< Bjerrum length
     double kappa = 0;                       //!< Inverse Debye screening length
-    double kappa_squared = 0; //!< Squared inverse Debye screening length
+    double kappa_squared = 0;               //!< Squared inverse Debye screening length
     double alpha = 0;
     double const_inf = 0;
     double check_k2_zero = 0;
     bool spherical_sum = true;
     int num_kvectors = 0;
-    Point box_length = {0.0, 0.0, 0.0}; //!< Box dimensions
-    enum Policies {
-      PBC,
-      PBCEigen,
-      IPBC,
-      IPBCEigen,
-      INVALID
-    };                       //!< Possible k-space updating schemes
-    Policies policy = PBC;   //!< Policy for updating k-space
-    EwaldData(const json &); //!< Initialize from json
+    Point box_length = {0.0, 0.0, 0.0};                        //!< Box dimensions
+    enum Policies { PBC, PBCEigen, IPBC, IPBCEigen, INVALID }; //!< Possible k-space updating schemes
+    Policies policy = PBC;                                     //!< Policy for updating k-space
+    EwaldData(const json &);                                   //!< Initialize from json
 };
 
-NLOHMANN_JSON_SERIALIZE_ENUM(EwaldData::Policies,
-                             {
-                                 {EwaldData::INVALID, nullptr},
-                                 {EwaldData::PBC, "PBC"},
-                                 {EwaldData::PBCEigen, "PBCEigen"},
-                                 {EwaldData::IPBC, "IPBC"},
-                                 {EwaldData::IPBCEigen, "IPBCEigen"},
-                             })
+NLOHMANN_JSON_SERIALIZE_ENUM(EwaldData::Policies, {
+                                                      {EwaldData::INVALID, nullptr},
+                                                      {EwaldData::PBC, "PBC"},
+                                                      {EwaldData::PBCEigen, "PBCEigen"},
+                                                      {EwaldData::IPBC, "IPBC"},
+                                                      {EwaldData::IPBCEigen, "IPBCEigen"},
+                                                  })
 
 void to_json(json &, const EwaldData &);
 
@@ -92,66 +85,56 @@ void to_json(json &, const EwaldData &);
  * @brief Base class for Ewald k-space updates policies
  */
 class EwaldPolicyBase {
-public:
-  typedef typename ParticleVector::iterator iter;
-  std::string
-      cite; //!< Optional reference, preferably DOI, to further information
-  virtual ~EwaldPolicyBase() = default;
-  virtual void updateBox(EwaldData &, const Point &)
-      const = 0; //!< Prepare k-vectors according to given box vector
-  virtual void
-  updateComplex(EwaldData &,
-                Space::Tgvec &) const = 0; //!< Update all k vectors
-  virtual void updateComplex(EwaldData &, Change &, Space::Tgvec &,
-                             Space::Tgvec &)
-      const = 0; //!< Update subset of k vectors. Require `old` pointer
-  virtual double
-  selfEnergy(const EwaldData &, Change &,
-             Space::Tgvec &) = 0; //!< Self energy contribution due to a change
-  virtual double surfaceEnergy(
-      const EwaldData &, Change &,
-      Space::Tgvec &) = 0; //!< Surface energy contribution due to a change
-  virtual double
-  reciprocalEnergy(const EwaldData &) = 0; //!< Total reciprocal energy
+  public:
+    typedef typename ParticleVector::iterator iter;
+    std::string cite; //!< Optional reference, preferably DOI, to further information
+    virtual ~EwaldPolicyBase() = default;
+    virtual void updateBox(EwaldData &, const Point &) const = 0; //!< Prepare k-vectors according to given box vector
+    virtual void updateComplex(EwaldData &,
+                               Space::Tgvec &) const = 0; //!< Update all k vectors
+    virtual void updateComplex(EwaldData &, Change &, Space::Tgvec &,
+                               Space::Tgvec &) const = 0; //!< Update subset of k vectors. Require `old` pointer
+    virtual double selfEnergy(const EwaldData &, Change &,
+                              Space::Tgvec &) = 0; //!< Self energy contribution due to a change
+    virtual double surfaceEnergy(const EwaldData &, Change &,
+                                 Space::Tgvec &) = 0;       //!< Surface energy contribution due to a change
+    virtual double reciprocalEnergy(const EwaldData &) = 0; //!< Total reciprocal energy
 
-  /**
-   * @brief Represent charges and positions using an Eigen facade (Map)
-   *
-   * Requires that all groups are fully active, i.e. does not work for GCMC.
-   *
-   * @param groups Vector of groups to represent
-   * @return tuple with positions, charges
-   */
-  auto mapGroupsToEigen(Space::Tgvec &groups) const {
-    for (auto &g : groups)
-      if (g.size() != g.capacity())
-        throw std::runtime_error(
-            "Eigen optimized Ewald not available with inactive groups");
-    auto first_particle = groups.front().begin();
-    auto last_particle = groups.back().end();
-    auto pos = asEigenMatrix(first_particle, last_particle,
-                             &Space::Tparticle::pos); // N x 3
-    auto charge = asEigenVector(first_particle, last_particle,
-                                &Space::Tparticle::charge); // N x 1
-    return std::make_tuple(pos, charge);
-  }
+    /**
+     * @brief Represent charges and positions using an Eigen facade (Map)
+     *
+     * Requires that all groups are fully active, i.e. does not work for GCMC.
+     *
+     * @param groups Vector of groups to represent
+     * @return tuple with positions, charges
+     */
+    auto mapGroupsToEigen(Space::Tgvec &groups) const {
+        for (auto &g : groups)
+            if (g.size() != g.capacity())
+                throw std::runtime_error("Eigen optimized Ewald not available with inactive groups");
+        auto first_particle = groups.front().begin();
+        auto last_particle = groups.back().end();
+        auto pos = asEigenMatrix(first_particle, last_particle,
+                                 &Space::Tparticle::pos); // N x 3
+        auto charge = asEigenVector(first_particle, last_particle,
+                                    &Space::Tparticle::charge); // N x 1
+        return std::make_tuple(pos, charge);
+    }
 
-  static std::shared_ptr<EwaldPolicyBase>
-      makePolicy(EwaldData::Policies); //!< Policy factory
+    static std::shared_ptr<EwaldPolicyBase> makePolicy(EwaldData::Policies); //!< Policy factory
 };
 
 /**
  * @brief Ion-Ion Ewald using periodic boundary conditions (PBC)
  */
 struct PolicyIonIon : public EwaldPolicyBase {
-  PolicyIonIon();
-  void updateBox(EwaldData &, const Point &) const override;
-  void updateComplex(EwaldData &, Space::Tgvec &) const override;
-  void updateComplex(EwaldData &, Change &, Space::Tgvec &,
-                     Space::Tgvec &) const override;
-  double selfEnergy(const EwaldData &, Change &, Space::Tgvec &) override;
-  double surfaceEnergy(const EwaldData &, Change &, Space::Tgvec &) override;
-  double reciprocalEnergy(const EwaldData &) override;
+    PolicyIonIon();
+    void updateBox(EwaldData &, const Point &) const override;
+    void updateComplex(EwaldData &, Space::Tgvec &) const override;
+    void updateComplex(EwaldData &, Change &, Space::Tgvec &, Space::Tgvec &) const override;
+    double selfEnergy(const EwaldData &, Change &, Space::Tgvec &) override;
+    double surfaceEnergy(const EwaldData &, Change &, Space::Tgvec &) override;
+    double reciprocalEnergy(const EwaldData &) override;
 };
 
 /**
@@ -174,11 +157,10 @@ struct PolicyIonIonEigen : public PolicyIonIon {
  * @brief Ion-Ion Ewald with isotropic periodic boundary conditions (IPBC)
  */
 struct PolicyIonIonIPBC : public PolicyIonIon {
-  PolicyIonIonIPBC();
-  void updateBox(EwaldData &, const Point &) const override;
-  void updateComplex(EwaldData &, Space::Tgvec &) const override;
-  void updateComplex(EwaldData &, Change &, Space::Tgvec &,
-                     Space::Tgvec &) const override;
+    PolicyIonIonIPBC();
+    void updateBox(EwaldData &, const Point &) const override;
+    void updateComplex(EwaldData &, Space::Tgvec &) const override;
+    void updateComplex(EwaldData &, Change &, Space::Tgvec &, Space::Tgvec &) const override;
 };
 
 /**
@@ -203,7 +185,7 @@ class Ewald : public Energybase {
     double energy(Change &) override;
     void sync(Energybase *,
               Change &) override; //!< Called after a move is rejected/accepted
-                                  //!as well as before simulation
+                                  //! as well as before simulation
     void to_json(json &) const override;
 };
 

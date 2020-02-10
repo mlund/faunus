@@ -3,6 +3,9 @@
 #include "core.h"
 #include "units.h"
 
+#define ANKERL_NANOBENCH_IMPLEMENT
+#include <nanobench.h>
+
 namespace Faunus {
 namespace Energy {
 
@@ -28,15 +31,15 @@ TEST_CASE("[Faunus] Ewald - EwaldData") {
     // Check number of wave-vectors using PBC
     PolicyIonIon ionion;
     ionion.updateBox(data, Point(10, 10, 10));
-    CHECK(data.kVectors.cols() == 2975);
-    CHECK(data.Qion.size() == data.kVectors.cols());
+    CHECK(data.k_vectors.cols() == 2975);
+    CHECK(data.Q_ion.size() == data.k_vectors.cols());
 
     // Check number of wave-vectors using IPBC
     data.policy = EwaldData::IPBC;
     PolicyIonIonIPBC ionionIPBC;
     ionionIPBC.updateBox(data, Point(10, 10, 10));
-    CHECK(data.kVectors.cols() == 846);
-    CHECK(data.Qion.size() == data.kVectors.cols());
+    CHECK(data.k_vectors.cols() == 846);
+    CHECK(data.Q_ion.size() == data.k_vectors.cols());
 }
 
 TEST_CASE("[Faunus] Ewald - IonIonPolicy") {
@@ -94,6 +97,39 @@ TEST_CASE("[Faunus] Ewald - IonIonPolicy") {
         CHECK(ionion.surfaceEnergy(data, c, spc.groups) == Approx(0.0020943951023931952 * data.lB));
         CHECK(ionion.reciprocalEnergy(data) == Approx(0.0865107467 * data.lB));
     }*/
+}
+
+TEST_CASE("[Faunus] Ewald - IonIonPolicy Benchmarks") {
+  Space spc;
+  spc.geo = R"( {"type": "cuboid", "length": 80} )"_json;
+  spc.p.resize(200);
+  for (auto &p : spc.p) {
+    p.charge = 1.0;
+    p.pos = (random() - 0.5) * spc.geo.getLength();
+  }
+  Group<Particle> g(spc.p.begin(), spc.p.end());
+  spc.groups.push_back(g);
+
+  EwaldData data(R"({
+                "epsr": 1.0, "alpha": 0.894427190999916, "epss": 1.0,
+                "kcutoff": 11.0, "spherical_sum": true, "cutoff": 9.0})"_json);
+  Change c;
+  c.all = true;
+  data.policy = EwaldData::PBC;
+
+  {
+    PolicyIonIon pbc;
+    PolicyIonIonEigen pbc_eigen;
+    pbc.updateBox(data, spc.geo.getLength());
+    pbc_eigen.updateBox(data, spc.geo.getLength());
+
+    ankerl::nanobench::Config bench;
+    bench.minEpochIterations(20);
+    bench.run("PBC", [&] { pbc.updateComplex(data, spc.groups); })
+        .doNotOptimizeAway();
+    bench.run("PBCEigen", [&] { pbc_eigen.updateComplex(data, spc.groups); })
+        .doNotOptimizeAway();
+  }
 }
 
 #ifdef ENABLE_FREESASA

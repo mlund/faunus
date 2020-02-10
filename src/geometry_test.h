@@ -3,6 +3,7 @@
 #include <Eigen/Geometry>
 #include <range/v3/view/sample.hpp>
 #include <range/v3/view/bounded.hpp>
+#include <cereal/archives/binary.hpp>
 
 namespace Faunus {
 namespace Geometry {
@@ -302,6 +303,7 @@ TEST_CASE("[Faunus] Chameleon") {
             CHECK(d_cham.x() == Approx(d_geo.x()));
             CHECK(d_cham.y() == Approx(d_geo.y()));
             CHECK(d_cham.z() == Approx(d_geo.z()));
+            CHECK(chameleon.sqdist(a, b) == Approx(d_cham.squaredNorm()));
         }
     };
 
@@ -366,6 +368,26 @@ TEST_CASE("[Faunus] Chameleon") {
         compare_boundary(chameleon, geo, box);
         compare_vdist(chameleon, geo, box);
     }
+
+    SUBCASE("Cereal serialisation") {
+        double x = 2.0, y = 3.0, z = 4.0;
+        std::ostringstream os(std::stringstream::binary);
+        { // write
+            Cuboid geo(x, y, z);
+            cereal::BinaryOutputArchive archive(os);
+            archive(geo);
+        }
+
+        { // read
+            Cuboid geo(10, 20, 30);
+            std::istringstream in(os.str());
+            cereal::BinaryInputArchive archive(in);
+            archive(geo);
+            CHECK(geo.getLength().x() == Approx(x));
+            CHECK(geo.getLength().y() == Approx(y));
+            CHECK(geo.getLength().z() == Approx(z));
+        }
+    }
 }
 
 TEST_CASE("[Faunus] anyCenter") {
@@ -383,6 +405,14 @@ TEST_CASE("[Faunus] anyCenter") {
     CHECK(cm.x() == doctest::Approx(12.5));
     CHECK(cm.y() == doctest::Approx(0));
     CHECK(cm.z() == doctest::Approx(0));
+}
+
+TEST_CASE("[Faunus] rootMeanSquareDeviation") {
+    std::vector<double> v1 = {1.3, 4.4, -1.1};
+    std::vector<double> v2 = {1.1, 4.6, -1.0};
+    auto f = [](double a, double b) { return std::pow(a - b, 2); };
+    double rmsd = Geometry::rootMeanSquareDeviation(v1.begin(), v1.end(), v2.begin(), f);
+    CHECK(rmsd == doctest::Approx(0.17320508075688745));
 }
 
 } // namespace Geometry

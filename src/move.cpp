@@ -156,7 +156,7 @@ AtomicTranslateRotate::AtomicTranslateRotate(Space &spc) : spc(spc) {
 std::vector<Particle>::iterator AtomicTranslateRotate::randomAtom() {
     assert(molid >= 0);
     auto mollist = spc.findMolecules(molid, Space::ALL); // all `molid` groups
-    if (size(mollist) > 0) {
+    if (not ranges::cpp20::empty(mollist)) {
         auto git = slump.sample(mollist.begin(), mollist.end()); // random molecule iterator
         if (not git->empty()) {
             auto p = slump.sample(git->begin(), git->end());         // random particle iterator
@@ -487,15 +487,15 @@ void ChargeTransfer::_move(Change &change) {
 
     auto mollist1 = spc.findMolecules(mol1.id, Space::ACTIVE);
     auto mollist2 = spc.findMolecules(mol2.id, Space::ACTIVE);
-    if (size(mollist1) > 0 && size(mollist2) > 0) {
+    if ((not ranges::cpp20::empty(mollist1)) and (not ranges::cpp20::empty(mollist2))) {
         auto git1 = slump.sample(mollist1.begin(), mollist1.end()); // selecting a random molecule of type molecule1
         auto git2 = slump.sample(mollist2.begin(), mollist2.end()); // selecting a random molecule of type molecule2
 
         if (!git1->empty() && !git2->empty()) { // check that both molecule1 and molecule 2 exist
 
             if (dq > 0) {
-                change.chargeMove =
-                    true; // setting to true makes the self-energy being computed and added to the total energy
+                // change.chargeMove =
+                //    true; // setting to true makes the self-energy being computed and added to the total energy
                 mol1.numOfAtoms = Faunus::distance(git1->begin(), git1->end());
                 mol2.numOfAtoms = Faunus::distance(git2->begin(), git2->end());
 
@@ -668,10 +668,12 @@ void QuadrantJump::_move(Change &change) {
     assert(!spc.groups.empty());
     assert(spc.geo.getVolume() > 0);
 
+    _sqd = 0.0;
+
     // pick random group from the system matching molecule type
     // TODO: This can be slow -- implement look-up-table in Space
     auto mollist = spc.findMolecules(molid, Space::ACTIVE); // list of molecules w. 'molid'
-    if (size(mollist) > 0) {
+    if (not ranges::cpp20::empty(mollist)) {
         auto it = slump.sample(mollist.begin(), mollist.end());
         if (not it->empty()) {
             assert(it->id == molid);
@@ -731,7 +733,7 @@ void AtomicSwapCharge::_from_json(const json &j) {
 typename Space::Tpvec::iterator AtomicSwapCharge::randomAtom() {
     assert(molid >= 0);
     auto mollist = spc.findMolecules(molid); // all `molid` groups
-    if (size(mollist) > 0) {
+    if (not ranges::cpp20::empty(mollist)) {
         auto git = slump.sample(mollist.begin(), mollist.end()); // random molecule iterator
         if (!git->empty()) {
             auto p = slump.sample(git->begin(), git->end());         // random particle iterator
@@ -743,6 +745,7 @@ typename Space::Tpvec::iterator AtomicSwapCharge::randomAtom() {
     return spc.p.end();
 }
 void AtomicSwapCharge::_move(Change &change) {
+    _sqd = 0.0;
     auto p = randomAtom();
     if (p != spc.p.end()) {
         // auto &g = spc.groups[cdata.index];
@@ -766,6 +769,7 @@ void TranslateRotate::_to_json(json &j) const {
     j = {{"dir", dir},
          {"dp", dptrans},
          {"dprot", dprot},
+         {"dirrot", dirrot},
          {"molid", molid},
          {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(msqd.avg())},
          {"molecule", molecules[molid].name}};
@@ -781,6 +785,7 @@ void TranslateRotate::_from_json(const json &j) {
         molid = it->id();
         dir = j.value("dir", Point(1, 1, 1));
         dprot = j.at("dprot");
+        dirrot = j.value("dirrot", Point(0, 0, 0)); // predefined axis of rotation
         dptrans = j.at("dp");
         if (repeat < 0) {
             auto v = spc.findMolecules(molid);
@@ -795,10 +800,12 @@ void TranslateRotate::_move(Change &change) {
     assert(!spc.groups.empty());
     assert(spc.geo.getVolume() > 0);
 
+    _sqd = 0;
+
     // pick random group from the system matching molecule type
     // TODO: This can be slow -- implement look-up-table in Space
     auto mollist = spc.findMolecules(molid, Space::ACTIVE); // list of molecules w. 'molid'
-    if (size(mollist) > 0) {
+    if (not ranges::cpp20::empty(mollist)) {
         auto it = slump.sample(mollist.begin(), mollist.end());
         if (not it->empty()) {
             assert(it->id == molid);
@@ -813,6 +820,8 @@ void TranslateRotate::_move(Change &change) {
 
             if (dprot > 0) { // rotate
                 Point u = ranunit(slump);
+                if (dirrot.count() > 0)
+                    u = dirrot;
                 double angle = dprot * (slump() - 0.5);
                 Eigen::Quaterniond Q(Eigen::AngleAxisd(angle, u));
                 it->rotate(Q, spc.geo.getBoundaryFunc());
@@ -824,8 +833,18 @@ void TranslateRotate::_move(Change &change) {
                 d.all = true;                                       // *all* atoms in group were moved
                 change.groups.push_back(d);                         // add to list of moved groups
             }
-            assert(spc.geo.sqdist(it->cm, Geometry::massCenter(it->begin(), it->end(), spc.geo.getBoundaryFunc(),
-                                                               -it->cm)) < 1e-6);
+#ifndef NDEBUG
+            // check if mass center is correctly moved and can be re-calculated
+            Point cm_recalculated = Geometry::massCenter(it->begin(), it->end(), spc.geo.getBoundaryFunc(), -it->cm);
+            double should_be_small = spc.geo.sqdist(it->cm, cm_recalculated);
+            if (should_be_small > 1e-6) {
+                std::cerr << "cm recalculated: " << cm_recalculated.transpose() << "\n";
+                std::cerr << "cm in group:     " << it->cm.transpose() << "\n";
+                assert(false);
+            }
+//            assert(spc.geo.sqdist(it->cm, Geometry::massCenter(it->begin(), it->end(), spc.geo.getBoundaryFunc(),
+//                                                               -it->cm)) < 1e-6);////////////////
+#endif
         }
     }
 }
@@ -894,13 +913,14 @@ void SmartTranslateRotate::_move(Change &change) {
     assert(!spc.groups.empty());
     assert(spc.geo.getVolume() > 0);
     _bias = 0.0;
+    _sqd = 0.0;
 
     // pick random group from the system matching molecule type
     // TODO: This can be slow -- implement look-up-table in Space
     auto mollist = spc.findMolecules(molid, Space::ACTIVE); // list of molecules w. 'molid'
     auto reflist1 = spc.findAtoms(refid1);                  // list of atoms w. 'refid1'
     auto reflist2 = spc.findAtoms(refid2);                  // list of atoms w. 'refid2'
-    if (size(mollist) > 0) {
+    if (not ranges::cpp20::empty(mollist)) {
         auto it = slump.sample(mollist.begin(), mollist.end()); // chosing random molecule in group of type molname
         auto ref1 = slump.sample(reflist1.begin(), reflist1.end());
         auto ref2 = slump.sample(reflist2.begin(), reflist2.end());
@@ -1050,7 +1070,7 @@ void ConformationSwap::_from_json(const json &j) {
     assert(!molecules.empty());
     try {
         std::string molname = j.at("molecule");
-        keeppos = j.value("keeppos", false);
+        inserter.keep_positions = j.value("keeppos", false);
         auto it = findName(molecules, molname);
         if (it == molecules.end())
             throw std::runtime_error("unknown molecule '" + molname + "'");
@@ -1070,7 +1090,7 @@ void ConformationSwap::_move(Change &change) {
     assert(change.empty());
 
     auto mollist = spc.findMolecules(molid, Space::ACTIVE); // list of molecules w. 'molid'
-    if (size(mollist) > 0) {
+    if (not ranges::cpp20::empty(mollist)) {
         auto g = slump.sample(mollist.begin(), mollist.end());
         if (not g->empty()) {
             inserter.offset = g->cm;
@@ -1081,7 +1101,7 @@ void ConformationSwap::_move(Change &change) {
             if (p.size() not_eq g->size())
                 throw std::runtime_error(name + ": conformation atom count mismatch");
 
-            newconfid = molecules[molid].conformations.index;
+            newconfid = molecules[molid].conformations.getLastIndex();
 
             std::copy(p.begin(), p.end(), g->begin()); // override w. new conformation
 #ifndef NDEBUG
@@ -1107,7 +1127,6 @@ ConformationSwap::ConformationSwap(Space &spc) : spc(spc) {
     repeat = -1; // meaning repeat n times
     inserter.dir = {0, 0, 0};
     inserter.rotate = true;
-    inserter.keep_positions = keeppos;
     inserter.allow_overlap = true;
 }
 

@@ -1,0 +1,810 @@
+$schema: http://json-schema.org/schema#
+
+properties:
+
+    temperature: {type: number, description: System temperature in Kelvin}
+
+    mcloop:
+        type: object
+        properties:
+            macro: {type: integer}
+            micro: {type: integer}
+        required: [macro, micro]
+        additionalProperties: false
+
+    random:
+        type: object
+        properties:
+            seed:
+                anyOf:
+                    - {type: string, enum: [fixed, hardware]}
+                    - {type: array, items: {type: integer}}
+        required: [seed]
+        additionalProperties: false
+
+    geometry:
+        type: object
+        properties:
+            type:
+                type: string
+                enum: [cuboid, slit, sphere, cylinder, hexagonal]
+            radius: {type: number, description: Radius of sphere, cylinder, or hexagon}
+            length:
+                description: Length(s) of cuboid, slit, cylinder, or hexagon
+                anyOf:
+                    - {type: number}
+                    - {type: array, items: {type: number}, minItems: 3, maxItems: 3}
+        required: [type]
+        additionalProperties: false
+        allOf:
+            - if:
+                  properties: {type: {const: "cuboid"}}
+              then:
+                  required: [length]
+            - if:
+                  properties: {type: {const: "slit"}}
+              then:
+                  required: [length]
+            - if:
+                  properties: {type: {const: "sphere"}}
+              then:
+                  required: [radius]
+            - if:
+                  properties: {type: {const: "cylinder"}}
+              then:
+                  required: [radius, length]
+            - if:
+                  properties: {type: {const: "hexagonal"}}
+              then:
+                  required: [radius, length]
+
+    insertmolecules:
+        type: array
+        minItems: 1
+        items:
+            type: object
+            additionalProperties:
+                type: object
+                additionalProperties: false
+                properties:
+                    N: {type: integer, description: Number of molecules to insert}
+                    inactive: {type: boolean, default: false, description: Should molecules be inactive?}
+                    positions: {type: string, description: Load positions from file}
+                required: [N]
+
+    atomlist:
+        type: array
+        items:
+            type: object
+            additionalProperties:
+                type: object
+                additionalProperties: false
+                properties:
+                    activity: {type: number, default: 0.0}
+                    alphax: {type: number, default: 0.0}
+                    dp: {type: number, default: 0.0}
+                    dprot: {type: number, default: 0.0, description: "Rotational displacement parameter"}
+                    eps: {type: number, default: 0.0}
+                    implicit: {type: boolean, default: false, description: "True if atom is implicit"}
+                    mu:
+                        items: {type: number}
+                        type: array
+                        minItems: 3
+                        maxItems: 3
+                        default: [0,0,0]
+                        description: Dipole moment vector (eÅ)
+                    mulen: {type: number, description: "Dipole moment scalar (eÅ)"}
+                    mw: {type: number, default: 1.0, description: "Molecular weight (g/mol)"}
+                    pactivity: {type: number, default: 0.0}
+                    q: {type: number, default: 0.0, description: "Valency (e)"}
+                    r: {type: number, default: 0.0}
+                    sigma: {type: number, default: 0.0, description: "Diameter (Å)"}
+                    tension: {type: number, default: 0.0, description: "Surface tension (kJ/mol/Å²)"}
+                    tfe: {type: number, default: 0.0, description: "Transfer free energy (kJ/mol/Å²/M)"}
+
+    moleculelist:
+        type: array
+        items:
+            type: object
+            additionalProperties:
+                type: object
+                additionalProperties: false
+                properties:
+                    activity: {type: number, default: 0.0, description: Chemical activity for grand canonical MC (mol/l)}
+                    atomic: {type: boolean, default: false, description: True if collection of atomic species, salt etc.}
+                    atoms: {items: {type: string}, type: array, description: Array of atom names; required if `atomic=true`}
+                    bondlist: {items: {type: object}, type: array, description: List of _internal_ bonds (harmonic, dihedrals etc.)}
+                    compressible:
+                        type: boolean
+                        default: false
+                        description: If true, molecular internal coordinates are scaled upon volume moves
+                    ensphere:
+                        type: boolean
+                        default: false
+                        description: >-
+                            Radial rescale of positions to sphere w. radius of average radial distance from
+                            COM (stored inn 1st atom which is a dummy)
+                    excluded_neighbours:
+                        type: integer
+                        default: 0
+                        description: >-
+                            Generate an `exclusionlist` from the bonded interaction: Add all atom pairs which are
+                            `excluded_neighbours` or less bonds apart
+                    exclusionlist:
+                        type: array
+                        items: {type: array, items: integer, minItems: 2, maxItems: 2}
+                        description: List of _internal_ atom pairs which nonbonded interactions are excluded
+                    insdir:
+                        items: {type: number}
+                        type: array
+                        minItems: 3
+                        maxItems: 3
+                        default: [1,1,1]
+                        description: Insert directions are scaled by this
+                    insoffset:
+                        items: {type: number}
+                        type: array
+                        minItems: 3
+                        maxItems: 3
+                        default: [0,0,0]
+                        description: Shifts mass center after insertion
+                    keeppos: {type: boolean, default: false, description: Keep original positions of `structure`}
+                    keepcharges: {type: boolean, default: true, description: Keep original charges of `structure` (aam/pqr files)}
+                    rigid: {type: boolean, default: false, description: Set to true for rigid molecules. Affects energy evaluation}
+                    rotate: {type: boolean, default: true, description: Rotate structure upon insertion?}
+                    structure:
+                        description: Structure file or direct information; required if `atomic=false`
+                        anyOf:
+                            - type: string
+                              pattern: "(.*?)\\.(pqr|aam|xyz)$"
+                            - type: array
+                              items:
+                                  type: object
+                                  additionalProperties:
+                                      type: array
+                                      items: {type: number}
+                                      minItems: 3
+                                      maxItems: 3
+                            - type: object
+                              properties:
+                                  fasta: {type: string}
+                                  k: {type: number}
+                                  req: {type: number}
+                              additionalProperties: false
+                    to_disk:
+                        type: boolean
+                        default: false
+                        description: Save initial structure to `moleculename-initial.pqr`; for molecular groups only
+                    traj:
+                        type: string
+                        pattern: "(.*?)\\.(pqr)$"
+                        description: Read conformations from PQR trajectory (`structure` will be ignored)
+                    trajcenter: {type: boolean, default: false, description: Move CM of conformations to the origin assuming whole molecules}
+                    trajweight:
+                        type: string
+                        description: One-column file with relative weights for each conformation. Must match frames in `traj` file
+
+    pairpotential:
+        coulomb:
+            type: object
+            properties:
+                type:
+                    type: string
+                    enum: [plain, qpotential, ewald, fanourgakis, poisson, yukawa, fenell, zahn, zerodipole, wolf, reactionfield]
+                    description: "Coulomb schema"
+                epsr: {type: number, description: "Relative dielectric constant"}
+                cutoff: {type: number, description: "Spherical cutoff (Å)"}
+            required: [type, epsr]
+            allOf:
+                - if:
+                      properties: {type: {const: "qpotential"}}
+                  then:
+                      properties:
+                          order: {type: integer, description: "Order"}
+                      required: [cutoff, order]
+                - if:
+                      properties: {type: {const: "poisson"}}
+                  then:
+                      properties:
+                          C: {type: integer, default: 3}
+                          D: {type: integer, default: 3}
+                      required: [cutoff, C, D]
+                - if:
+                      properties: {type: {const: "fanourgakis"}}
+                  then:
+                      required: [cutoff]
+                - if:
+                      properties: {type: {const: "ewald"}}
+                  then:
+                      properties:
+                          epss: {type: number}
+                          alpha: {type: number}
+                          kcutoff: {type: number}
+                          ipbc: {type: boolean, default: false}
+                      required: [cutoff, epss, alpha, kcutoff]
+
+        mixing_rule:
+            description: Sigma and Epsilon Mixing rule
+            type: object
+            properties:
+                mixing:
+                    type: string
+                    enum: [arithmetic, geometric, lorentz_berthelot, LB]
+                    description: "Mixing rule for epsilon and sigma"
+                eps: {type: string, default: "eps"}
+                sigma: {type: string, default: "sigma"}
+                custom:
+                    type: array
+                    items:
+                        type: object
+                        additionalProperties:
+                            type: object
+                            minProperties: 2
+                            maxProperties: 2
+                            additionalProperties: {type: number, description: "Custom values for epsilon and sigma"}
+            required: [mixing]
+
+        lennardjones:
+            description: Lennard-Jones pair potential
+            allOf: [{"$ref": "#/properties/pairpotential/mixing_rule"}]
+
+        wca:
+            description: Weeks-Chandler-Andersen pair potential
+            allOf: [{"$ref": "#/properties/pairpotential/mixing_rule"}]
+
+        all:
+            description: All possible pair-potentials
+            type: array
+            items:
+                type: object
+                properties:
+                    coulomb: {"$ref": "#/properties/pairpotential/coulomb"}
+                    lennardjones: {"$ref": "#/properties/pairpotential/lennardjones"}
+                    wca: {"$ref": "#/properties/pairpotential/wca"}
+                additionalProperties: true # change to `false` when all pair-potentials are here...
+
+    reactioncoordinate:
+        system:
+            type: object
+            properties:
+                indexes: {type: array, items: {type: integer}}
+                property:
+                    type: string
+                    enum: [V, Lx, Ly, Lz, radius, Q, N]
+            required: [property]
+        molecule:
+            type: object
+            properties:
+                index: {type: integer, description: Molecule index}
+                indexes: {type: array, items: {type: integer}}
+                property:
+                    description: Molecular property to sample
+                    type: string
+                    enum: [angle, com_x, com_y, com_z, confid, end2end, Rg, mu_x, mu_y, mu_z, mu, muangle, N, Q,
+                    atomatom, cmcm, cmcm_z, mindist, "L/R", Rinner]
+            required: [property, index]
+        atom:
+            type: object
+            properties:
+                index: {type: integer, description: Atom index}
+                property:
+                    description: Atomic property to sample
+                    type: string
+                    enum: [x, y, z, q, R, N]
+            required: [property, index]
+
+    nonbonded_base:
+        properties:
+            cutoff_g2g:
+                anyOf:
+                    - {type: number, description: "Molecule-molecule cutoff (global)"}
+                    - {type: array, items: {type: object}}
+            openmp:
+                type: array
+                items:
+                    type: string
+                    enum: [g2g, i2all]
+            timings: {type: boolean}
+
+    energy:
+        type: array
+        items:
+            type: object
+            properties:
+
+                bonded:
+                    description: "Bonded interactions"
+                    type: object
+                    properties:
+                        bondlist:
+                            type: array
+                            items: {type: object}
+                    additionalProperties: false
+
+                nonbonded:
+                    description: "Nonbonded interactions"
+                    type: object
+                    properties:
+                        default: {"$ref": "#/properties/pairpotential/all"}
+                        cutoff_g2g: {type: [number, array]}
+                        timings: {type: boolean}
+                        openmp:
+                            type: array
+                            items:
+                                type: string
+                                enum: [g2g, i2all]
+                    required: [default]
+                    additionalProperties:
+                        allOf: [{"$ref": "#/properties/pairpotential/all"}]
+
+                nonbonded_coulomblj:
+                    description: "Nonbonded interactions (Coulomb+LennardJones)"
+                    allOf:
+                        - {"$ref": "#/properties/nonbonded_base"}
+                        - properties:
+                            coulomb: {"$ref": "#/properties/pairpotential/coulomb"}
+                            lennardjones: {"$ref": "#/properties/pairpotential/lennardjones"}
+                    required: [coulomb, lennardjones]
+
+                nonbonded_coulombwca:
+                    description: "Nonbonded interactions (Coulomb+WCA)"
+                    allOf:
+                        - {"$ref": "#/properties/nonbonded_base"}
+                        - properties:
+                            coulomb: {"$ref": "#/properties/pairpotential/coulomb"}
+                            wca: {"$ref": "#/properties/pairpotential/wca"}
+                    required: [coulomb, wca]
+
+                sasa:
+                    description: "Manybody solvent accessible surface area"
+                    type: object
+                    properties:
+                        radius: {type: number, default: 1.4, description: Probe radius for SASA calculation (Å)}
+                        molarity: {type: number, description: Molar concentration of co-solute}
+                    required: [molarity]
+                    additionalProperties: false
+
+                penalty:
+                    description: Flat histogram sampling in one or two dimensions using penalty functions
+                    type: object
+                    required: [f0, update, scale, file, coords]
+                    properties:
+                        f0: {type: number, description: Penalty energy increment (kT)}
+                        update: {type: integer, description: Interval between scaling of f0}
+                        scale: {type: number, description: Scaling factor for f0}
+                        nodrift: {type: boolean, default: true, description: Suppress energy drift}
+                        quiet: {type: boolean, default: false, description: Set to true to get verbose output}
+                        file: {type: string, description: Name of saved/loaded penalty function}
+                        histogram: {type: string, description: Name of saved histogram (optional)}
+                        overwrite: {type: boolean, default: true, description: Name of saved histogram (optional)}
+                        coords:
+                            type: array
+                            minItems: 1
+                            maxItems: 2
+                            items:
+                                type: object
+                                additionalProperties: false
+                                properties:
+                                    atom:
+                                        allOf: ["$ref": "#/properties/reactioncoordinate/atom"]
+                                        properties:
+                                            range: {type: array, minItems: 2, maxItems: 2, items: {type: number}, description: "Allowed interval [min,max]"}
+                                            resolution: {type: number, description: "Resolution along the coordinate"}
+                                            additionalProperties: false
+                                        required: [range, resolution]
+                                    molecule:
+                                        allOf: ["$ref": "#/properties/reactioncoordinate/molecule"]
+                                        properties:
+                                            range: {type: array, minItems: 2, maxItems: 2, items: {type: number}, description: "Allowed interval [min,max]"}
+                                            resolution: {type: number, description: "Resolution along the coordinate"}
+                                            additionalProperties: false
+                                        required: [range, resolution]
+                                    system:
+                                        allOf: ["$ref": "#/properties/reactioncoordinate/system"]
+                                        properties:
+                                            range: {type: array, minItems: 2, maxItems: 2, items: {type: number}, description: "Allowed interval [min,max]"}
+                                            resolution: {type: number, description: "Resolution along the coordinate"}
+                                            additionalProperties: false
+                                        required: [range, resolution]
+
+                customexternal:
+                    description: "External Custom Potential"
+                    type: object
+                    properties:
+                        com: {type: boolean, default: false, description: Operate on mass-center instead of individual atoms?}
+                        constants: {type: object, description: User-defined constants}
+                        function: {type: string, description: Mathematical expression for the potential (units of kT)}
+                        molecules: {type: array, items: {type: string}, description: Array of molecules to operate on}
+                    required: [function, molecules]
+                    additionalProperties: false
+
+                isobaric:
+                    description: "External pressure"
+                    type: object
+                    properties:
+                        P/mM: {type: number, description: Pressure in mmol/liter}
+                        P/Pa: {type: number, description: Pressure in Pascal}
+                        P/atm: {type: number, description: Pressure in atmospheres}
+                        type: object
+                    oneof:
+                        - required: [P/mM]
+                        - required: [P/Pa]
+                        - required: [P/atm]
+                    additionalProperties: false
+                confine:
+                    description: "Geometrical confinement"
+                    type: object
+                    properties:
+                        com: {type: boolean}
+                        high:
+                            items: {type: number}
+                            type: array
+                        low:
+                            items: {type: number}
+                            type: array
+                        k: {type: [integer, string]}
+                        molecules:
+                            items: {type: string}
+                            type: array
+                        origo:
+                            items: {type: number}
+                            type: array
+                            minItems: 3
+                            maxItems: 3
+                        radius: {type: number}
+                        scale: {type: boolean}
+                        type: {type: string, enum: [sphere, cylinder, cuboid]}
+                    required: [k, molecules, type]
+                    additionalProperties: false
+                    allOf:
+                        - if:
+                              properties: {type: {const: "sphere"}}
+                          then:
+                              required: [radius]
+                        - if:
+                              properties: {type: {const: "cylinder"}}
+                          then:
+                              required: [radius]
+                        - if:
+                              properties: {type: {const: "cuboid"}}
+                          then:
+                              required: [high, low]
+
+    moves:
+        type: array
+        items:
+            type: object
+            properties:
+
+                conformationswap:
+                    description: Swap molecular configurations from loaded library of structures
+                    type: object
+                    properties:
+                        molecule: {type: string, description: Molecule name to operate on}
+                        repeat: {type: [integer, string], description: Number of repeats per MC sweep}
+                        keeppos: {type: boolean, default: true, description: Keep original positions from trajectory}
+                    additionalProperties: false
+
+                moltransrot:
+                    description: "Molecular translation and rotation"
+                    properties:
+                        dp: {type: number}
+                        dprot: {type: number}
+                        molecule: {type: string}
+                        repeat: {type: [integer, string]}
+                        dir:
+                            type: array
+                            items: {type: number}
+                            minItems: 3
+                            maxItems: 3
+                            default: [1,1,1]
+                        dirrot:
+                            items: {type: number}
+                            type: array
+                            minItems: 3
+                            maxItems: 3
+                    required: [dp, dprot, molecule]
+                    additionalProperties: false
+                    type: object
+
+                transrot:
+                    description: "Atomic translation and rotation"
+                    properties:
+                        dp: {type: number}
+                        dprot: {type: number}
+                        molecule: {type: string}
+                        repeat: {type: [integer, string]}
+                        dir:
+                            items: {type: number}
+                            type: array
+                            minItems: 3
+                            maxItems: 3
+                            default: [1,1,1]
+                        dirrot:
+                            items: {type: number}
+                            type: array
+                            minItems: 3
+                            maxItems: 3
+                    required: [molecule]
+                    additionalProperties: false
+                    type: object
+
+                volume:
+                    properties:
+                        dV: {type: number}
+                        method:
+                            type: string
+                            enum: [xy, isotropic, isochoric]
+                        repeat: {type: integer}
+                    required: [dV]
+                    additionalProperties: false
+                    type: object
+
+                crankshaft:
+                    properties:
+                        dprot: {type: number}
+                        molecule: {type: string}
+                        joint_max: {type: integer}
+                        repeat: {type: integer}
+                    required: [dprot, molecule]
+                    additionalProperties: false
+                    type: object
+
+                cluster:
+                    properties:
+                        dir:
+                            items: {type: number}
+                            type: array
+                            minItems: 3
+                            maxItems: 3
+                        dirrot:
+                            items: {type: number}
+                            type: array
+                            minItems: 3
+                            maxItems: 3
+                        dp: {type: number}
+                        dprot: {type: number}
+                        molecules:
+                            items: {type: string}
+                            type: array
+                        satellites:
+                            items: {type: string}
+                            type: array
+                        spread: {type: boolean}
+                        threshold: {type: number}
+                        repeat: {type: integer}
+                    required: [dp, dprot, molecules, threshold]
+                    additionalProperties: false
+                    type: object
+         
+                pivot:
+                    properties:
+                        dprot: {type: [number]}
+                        molecule: {type: string}
+                        skiplarge: {type: boolean}
+                        repeat: {type: [integer, string]}
+                    required: [dprot, molecule]
+                    additionalProperties: false
+                    type: object
+
+                rcmc:
+                    properties:
+                        repeat: {type: integer}
+                    additionalProperties: false
+                    type: object
+         
+    analysis:
+        type: array
+        items:
+            type: object
+            properties:
+
+                atomrdf:
+                    description: "Atom-atom radial distribution function"
+                    type: object
+                    properties:
+                        dr: {type: number, description: "Binning resolution along r (Å)"}
+                        file: {type: string, description: "Output file"}
+                        name1: {type: string}
+                        name2: {type: string}
+                        dim: {type: integer, minimum: 1, maximum: 3, default: 3}
+                        nstep: {type: integer}
+                        nskip: {type: integer, default: 0, description: Initial steps to skip}
+                    required: [dr, file, name1, name2, nstep]
+                    additionalProperties: false
+
+                molrdf:
+                    description: "Molecule-molecule radial distribution function"
+                    type: object
+                    properties:
+                        dr: {type: number, default: 0.1, description: "Binning resolution along r (Å)"}
+                        file: {type: string, description: "Output file"}
+                        name1: {type: string, description: Molecule name 1}
+                        name2: {type: string, description: Molecule name 2}
+                        dim: {type: integer, minimum: 1, maximum: 3, default: 3, description: Dimensions for volume element}
+                        nstep: {type: integer, description: Interval between samples}
+                        nskip: {type: integer, default: 0, description: Initial steps to skip}
+                    required: [file, name1, name2, nstep]
+                    additionalProperties: false
+
+                atomprofile:
+                    description: Summed density of atoms in spherical, cylindrical or planar shells
+                    type: object
+                    properties:
+                        nstep: {type: integer, description: Interval between samples}
+                        atoms: {type: array, items: {type: string}, description: "List of atom names to sample; [*] selects all"}
+                        charge: {type: boolean, default: false, description: Calc. charge density instead of density}
+                        file: {type: string, description: Output filename for profile}
+                        dr: {type: number, default: 0.1, description: Radial resolution (Å)}
+                        origo: {type: array, items: {type: number}, default: [0,0,0], minItems: 3, maxItems: 3, description: "Center of the profile (r=0)"}
+                        atomcom: {type: string, description: Atom name; use the mass center of these atoms as origin}
+                        dir: {type: array, items: {type: number}, default: [1,1,1], description: Direction along which the profile is calculated}
+                    required: [nstep, atoms, file]
+                    additionalProperties: false
+
+                density:
+                    properties:
+                        nstep: {type: integer}
+                        nskip: {type: integer, default: 0, description: Initial steps to skip}
+                        required: [nstep]
+                        additionalProperties: false
+                        type: object
+
+                polymershape:
+                    properties:
+                        molecules:
+                            minItems: 1
+                            items: {type: string}
+                            type: array
+                        nstep: {type: integer}
+                    required: [molecules, nstep]
+                    type: object
+
+                reactioncoordinate:
+                    type: object
+                    properties:
+                        resolution: {type: number, description: "Resolution along the coordinate (Å)", default: 0.5}
+                        file: {type: string, description: Output file as a function of steps}
+                        nstep: {type: integer}
+                        nskip: {type: integer, default: 0, description: Initial steps to skip}
+                        type: {type: string, enum: [atom, molecule, system], description: Reaction coordinate type}
+                    required: [file, nstep, type]
+                    allOf:
+                        - if:
+                              properties: {type: {const: "atom"}}
+                          then:
+                              {"$ref": "#/properties/reactioncoordinate/atom"}
+                        - if:
+                              properties: {type: {const: "molecule"}}
+                          then:
+                              {"$ref": "#/properties/reactioncoordinate/molecule"}
+                        - if:
+                              properties: {type: {const: "system"}}
+                          then:
+                              {"$ref": "#/properties/reactioncoordinate/system"}
+
+                sanity:
+                    properties:
+                        nstep: {type: integer}
+                        nskip: {type: integer, default: 0, description: Initial steps to skip}
+                    required: [nstep]
+                    additionalProperties: false
+                    type: object
+
+                savestate:
+                    description: "Save particle positions to file"
+                    properties:
+                        file: {type: string, pattern: "(.*?)\\.(aam|pqr|state|ubj|gro|xyz|json)$"}
+                    required: [file]
+                    additionalProperties: false
+                    type: object
+
+                scatter:
+                    description: Structure factor analysis
+                    type: object
+                    properties:
+                        nstep: {type: integer, description: Sample interval}
+                        nskip: {type: integer, default: 0, description: Number of initial samples to skip}
+                        molecules:
+                            description: "List of molecule names to sample (array); [*] selects all"
+                            items: {type: string}
+                            type: array
+                        qmin: {type: number, description: Minimum q value (1/Å)}
+                        qmax: {type: number, description: Maximum q value (1/Å)}
+                        dq: {type: number, description: q spacing (1/Å)}
+                        com: {type: boolean, default: true, description: Treat molecular mass centers as single point scatterers}
+                        pmax: {type: integer, default: 15, description: Multiples of (h,k,l) when using the explicit scheme}
+                        scheme:
+                            description: Scattering method
+                            enum: [debye, explicit]
+                        stepsave: {type: boolean, default: false, description: Save every sample to disk}
+                        required: [nstep, molecules, scheme]
+                    additionalProperties: false
+
+                sliceddensity:
+                    type: object
+                    properties:
+                        atoms:
+                            minItems: 1
+                            items: {type: string}
+                            type: array
+                            description: Atoms to analyse
+                        dz: {type: number, default: 0.1}
+                        file: {type: string}
+                        nstep: {type: integer}
+                        nskip: {type: integer, default: 0, description: Initial steps to skip}
+                        atomcom: {type: string}
+                    required: [atoms, file, nstep]
+                    additionalProperties: false
+
+                spacetraj:
+                    properties:
+                        file:
+                            type: string
+                            pattern: "(.*?)\\.(traj|ztraj)$"
+                            description: "Output filename (.traj/.ztraj)"
+                        nstep: {type: integer}
+                        nskip: {type: integer, default: 0, description: Initial steps to skip}
+                    required: [file, nstep]
+                    additionalProperties: false
+                    type: object
+
+                systemenergy:
+                    properties:
+                        file: {type: string}
+                        nstep: {type: integer}
+                        nskip: {type: integer, default: 0, description: Initial steps to skip}
+                    required: [file, nstep]
+                    additionalProperties: false
+                    type: object
+
+                virtualtranslate:
+                    description: "Virtual molecule translation"
+                    properties:
+                        molecule: {type: string, description: Molecule name to virtually translate (there can be only one}
+                        file: {type: string, description: Output filename w. data as a function of steps}
+                        dir:
+                            type: array
+                            items: {type: number}
+                            minItems: 3
+                            maxItems: 3
+                            default: [0,0,1]
+                            description: Translation directions (length unimportant)
+                        dL: {type: number, description: Displacement distance}
+                        nstep: {type: integer, description: Interval between samples}
+                        nskip: {type: integer, default: 0, description: Number of steps to initially skip}
+                    required: [dL, molecule, nstep]
+                    additionalProperties: false
+ 
+                widom:
+                    description: "Widom ghost particle insertion"
+                    properties:
+                        ninsert: {type: integer, description: Number of times to insert per sample event}
+                        nstep: {type: integer, description: Interval between samples}
+                        nskip: {type: integer, default: 0, description: Number of steps to initially skip}
+                        molecule: {type: string, description: inactive molecule to (virtually) insert}
+                        absz: {type: boolean, default: false}
+                        dir:
+                            type: array
+                            items: {type: number}
+                            minItems: 3
+                            maxItems: 3
+                            default: [1,1,1]
+                            description: Insertion positions are scaled by this
+                    required: [ninsert, molecule, nstep]
+                    additionalProperties: false
+
+                xtcfile:
+                    description: "Write Gromacs XTC trajectory"
+                    properties:
+                        file: {type: string, pattern: "(.*?)\\.(xtc)$"}
+                        nstep: {type: integer}
+                        nskip: {type: integer, default: 0, description: Initial steps to skip}
+                        molecules:
+                            items: {type: string}
+                            type: array
+                    required: [file, nstep]
+                    additionalProperties: false
+                    type: object
+# yason.py cluster.yml | jq .analysis | genson | yason.py
+

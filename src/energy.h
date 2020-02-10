@@ -374,12 +374,16 @@ class Bonded : public Energybase {
 
 /**
  * @brief Nonbonded energy using a pair-potential
+ * @tparam Tpairpot Pair potential to inject
+ * @tparam allow_anisotropic_pair_potential If true, a distance vector is passed to the pair potential
  */
-template <typename Tpairpot> class Nonbonded : public Energybase {
+template <typename Tpairpot, bool allow_anisotropic_pair_potential = true> class Nonbonded : public Energybase {
   private:
     double g2gcnt = 0, g2gskip = 0;
     PairMatrix<double> cutoff2; // matrix w. group-to-group cutoff
     std::vector<const Particle *> i_interact_with_these;
+
+    TimeRelativeOfTotal<> timer_g_internal;
 
   protected:
     typedef typename Space::Tgroup Tgroup;
@@ -409,6 +413,8 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
             for (auto &b : Faunus::molecules)
                 if (a.id() >= b.id())
                     _j[a.name + " " + b.name] = sqrt(cutoff2(a.id(), b.id()));
+
+        j["timings"] = {{"g_internal", timer_g_internal.result()}};
     }
 
     template <typename T> inline bool cut(const T &g1, const T &g2) {
@@ -422,48 +428,68 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
     } //!< true if group<->group interaction can be skipped
 
     template <typename T> inline double i2i(const T &a, const T &b) {
-        assert(&a != &b && "a and b cannot be the same particle");
-        return pairpot(a, b, spc.geo.vdist(a.pos, b.pos));
+        assert(&a != &b); // a and b cannot be the same particle
+        if constexpr (allow_anisotropic_pair_potential) {
+            Point r = spc.geo.vdist(a.pos, b.pos);
+            return pairpot(a, b, r.squaredNorm(), r);
+        } else {
+            return pairpot(a, b, spc.geo.sqdist(a.pos, b.pos), {0, 0, 0});
+        }
     }
 
-    /*
+    /**
      * Internal energy in group, calculating all with all or, if `index`
      * is given, only a subset. Index specifies the internal index (starting
      * from zero) of changed particles within the group.
+     *
+     * @todo investigate overhead of `fixed_index` filtering
      */
-    double g_internal(const Tgroup &g, const std::vector<int> &index = std::vector<int>()) {
+    double g_internal(const Tgroup &g, const std::vector<int> &moved_index = std::vector<int>()) {
+        timer_g_internal.start(); // measure time spent in this subroutine
         using namespace ranges;
         double u = 0;
-        auto &molecule = molecules.at(g.id);
-        if (index.empty() && !molecule.rigid) { // assume that all atoms have changed
-            for (auto particle_i = g.begin(); particle_i != g.end(); ++particle_i) {
-                int i = std::distance(g.begin(), particle_i);
-                for (auto particle_j = std::next(particle_i); particle_j != g.end(); ++particle_j) {
-                    int j = std::distance(g.begin(), particle_j);
-                    if (!molecule.isPairExcluded(i, j)) {
-                        u += i2i(*particle_i, *particle_j);
-                    }
-                }
+        auto &moldata = g.traits();
+        if (moldata.rigid)
+            return u;
+
+        switch (moved_index.size()) {
+
+        // if zero, assume all particles have changed
+        case 0:
+            for (int i = 0; i < (int)g.size() - 1; i++)
+                for (int j = i + 1; j < (int)g.size(); j++)
+                    if (not moldata.isPairExcluded(i, j))
+                        u += i2i(g[i], g[j]);
+            break; // exit switch
+
+        // a single particle has changed in an atomic group; no exclusion check
+        case 1:
+            if (g.atomic) {
+                size_t i = moved_index[0];
+                for (size_t j = 0; j < i; j++)
+                    u += i2i(g[i], g[j]);
+                for (size_t j = i + 1; j < g.size(); j++)
+                    u += i2i(g[i], g[j]);
+                break; // exit switch only if atomic group, otherwise continue to default:
             }
-        } else { // only a subset has changed
-            auto fixed = view::ints(0, int(g.size())) |
-                         view::remove_if([&index](int i) { return std::binary_search(index.begin(), index.end(), i); });
-            for (int i : index) {
-                for (int j : fixed) { // moved<->static
-                    if (!molecule.isPairExcluded(i, j)) {
-                        u += i2i(*(g.begin() + i), *(g.begin() + j));
-                    }
-                }
-                for (int j : index) { // moved<->moved
-                    if (j <= i) {
-                        continue;
-                    }
-                    if (!molecule.isPairExcluded(i, j)) {
-                        u += i2i(*(g.begin() + i), *(g.begin() + j));
-                    }
-                }
+            [[fallthrough]];
+
+        // one or more particle(s) have changed
+        default:
+            auto fixed_index = ranges::views::ints(0, int(g.size())) | ranges::views::remove_if([&moved_index](int i) {
+                                   return std::binary_search(moved_index.begin(), moved_index.end(), i);
+                               }); // index of all static particles
+            for (int i : moved_index) {
+                for (int j : fixed_index) // moved <-> static
+                    if (not moldata.isPairExcluded(i, j))
+                        u += i2i(g[i], g[j]);
+                for (int j : moved_index) // moved <-> moved
+                    if (j > i)
+                        if (not moldata.isPairExcluded(i, j))
+                            u += i2i(g[i], g[j]);
             }
         }
+        timer_g_internal.stop();
         return u;
     }
 
@@ -498,28 +524,32 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
         return u;
     }
 
-    double i2all_parallel(const typename Space::Tparticle &i) {
-        i_interact_with_these.clear();
+    double i2all_parallel(const Particle &p_i) {
+        using ranges::cpp20::views::filter;
+        using ranges::cpp20::views::transform;
+
+        i_interact_with_these.clear(); // vector of particle pointers to interact with
         double u = 0;
-        auto it = spc.findGroupContaining(i); // iterator to group
-        if (it != spc.groups.end()) {         // check if i belongs to group in space
-            for (size_t ig = 0; ig < spc.groups.size(); ig++) {
-                auto &g = spc.groups[ig];
-                if (&g != &(*it))                                // avoid self-interaction
-                    if (not cut(g, *it))                         // check g2g cut-off
-                        for (auto &j : g)                        // loop over particles in other group
-                            i_interact_with_these.push_back(&j); // u += i2i(i, j);
+        auto own_group = spc.findGroupContaining(p_i); // iterator to group containing p_i
+        if (own_group != spc.groups.end()) {           // check if p_i belongs to group in space
+            for (auto &g : spc.groups) {
+                if (&g != &(*own_group))        // avoid self-interaction
+                    if (not cut(g, *own_group)) // check g2g cut-off
+                        std::transform(g.begin(), g.end(), std::back_inserter(i_interact_with_these),
+                                       [](auto &p) { return &p; });
             }
-            for (auto &j : *it) // i with all particles in own group
-                if (&j != &i)
-                    i_interact_with_these.push_back(&j); // u += i2i(i, j);
-        } else                                           // particle does not belong to any group
+            // p_i with all particles in own group - avoid self interaction
+            auto f = *own_group | filter([&](auto &j) { return &j != &p_i; }) | transform([](auto &j) { return &j; });
+            i_interact_with_these.insert(i_interact_with_these.end(), f.begin(), f.end());
+        } else {                                         // particle does not belong to any group
             for (auto &g : spc.groups)                   // i with all other *active* particles
                 for (auto &j : g)                        // (this will include only active particles)
                     i_interact_with_these.push_back(&j); // u += i2i(i, j);
+        }
+
 #pragma omp parallel for reduction(+ : u) if (omp_enable and omp_i2all)
         for (size_t k = 0; k < i_interact_with_these.size(); k++)
-            u += i2i(i, *i_interact_with_these[k]);
+            u += i2i(p_i, *i_interact_with_these[k]);
         return u;
     }
 
@@ -540,18 +570,18 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
 #pragma omp parallel for reduction(+ : u) schedule(dynamic) if (omp_enable and omp_p2p)
                 for (size_t i = 0; i < g1.size(); i++)
                     for (size_t j = 0; j < g2.size(); j++)
-                        u += i2i(*(g1.begin() + i), *(g2.begin() + j));
+                        u += i2i(g1[i], g2[j]);
             else { // only a subset of g1
                 for (auto i : index)
                     for (auto j = g2.begin(); j != g2.end(); ++j)
-                        u += i2i(*(g1.begin() + i), *j);
+                        u += i2i(g1[i], *j);
                 if (not jndex.empty()) {
-                    auto fixed = view::ints(0, int(g1.size())) | view::remove_if([&index](int i) {
+                    auto fixed = ranges::views::ints(0, int(g1.size())) | ranges::views::remove_if([&index](int i) {
                                      return std::binary_search(index.begin(), index.end(), i);
                                  });
                     for (auto i : jndex)     // moved2        <-|
                         for (auto j : fixed) // static1   <-|
-                            u += i2i(*(g2.begin() + i), *(g1.begin() + j));
+                            u += i2i(g2[i], g1[j]);
                 }
             }
         }
@@ -593,6 +623,9 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
     Nonbonded(const json &j, Space &spc, BasePointerVector<Energybase> &pot) : spc(spc), pot(pot) {
         name = "nonbonded";
         pairpot.from_json(j);
+
+        if (!pairpot.isotropic and !allow_anisotropic_pair_potential)
+            throw std::runtime_error("Only isotropic pair potentials are allowed");
 
         // some pair-potentials give rise to self-energies (Wolf etc.)
         // which are added here if needed
@@ -652,7 +685,6 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
     }
 
     double energy(Change &change) override {
-        using namespace ranges;
         double u = 0;
 
         if (change) {
@@ -685,7 +717,7 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
                 auto &d = change.groups[0];
                 auto gindex = spc.groups.at(d.index).to_index(spc.p.begin()).first;
 
-                // exactly one atom has move
+                // exactly one atom has moved
                 if (d.atoms.size() == 1)
                     return i2all(spc.p.at(gindex + d.atoms[0]));
 
@@ -704,7 +736,7 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
             }
 
             auto moved = change.touchedGroupIndex(); // index of moved groups
-            auto fixed = view::ints(0, int(spc.groups.size())) | view::remove_if([&moved](int i) {
+            auto fixed = ranges::views::ints(0, int(spc.groups.size())) | ranges::views::remove_if([&moved](int i) {
                              return std::binary_search(moved.begin(), moved.end(), i);
                          }); // index of static groups
 
@@ -715,7 +747,7 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
                     Moved.push_back(i);
                 }
                 std::sort( Moved.begin(), Moved.end() );
-                auto fixed = view::ints( 0, int(spc.groups.size()) )
+                auto fixed = ranges::views::ints( 0, int(spc.groups.size()) )
                     | view::remove_if(
                             [&Moved](int i){return std::binary_search(Moved.begin(), Moved.end(), i);}
                             ); // index of static groups*/
@@ -760,7 +792,7 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
 
             // moved<->static
             if (omp_enable and omp_g2g) {
-                std::vector<std::pair<int, int>> pairs(size(moved) * size(fixed));
+                std::vector<std::pair<int, int>> pairs(size(moved) * rng_size(fixed));
                 size_t cnt = 0;
                 for (auto i : moved)
                     for (auto j : fixed)
@@ -837,7 +869,6 @@ template <typename Tpairpot> class NonbondedCached : public Nonbonded<Tpairpot> 
     } //!< Cache pair interactions in matrix
 
     double energy(Change &change) override {
-        using namespace ranges;
         double u = 0;
 
         if (change) {
@@ -866,9 +897,10 @@ template <typename Tpairpot> class NonbondedCached : public Nonbonded<Tpairpot> 
             }
 
             auto moved = change.touchedGroupIndex(); // index of moved groups
-            auto fixed = view::ints(0, int(base::spc.groups.size())) | view::remove_if([&moved](int i) {
-                             return std::binary_search(moved.begin(), moved.end(), i);
-                         }); // index of static groups
+            auto fixed =
+                ranges::views::ints(0, int(base::spc.groups.size())) | ranges::views::remove_if([&moved](int i) {
+                    return std::binary_search(moved.begin(), moved.end(), i);
+                }); // index of static groups
 
             // moved<->moved
             if (change.moved2moved)
@@ -877,7 +909,7 @@ template <typename Tpairpot> class NonbondedCached : public Nonbonded<Tpairpot> 
                         u += g2g(base::spc.groups[*i], base::spc.groups[*j]);
             // moved<->static
             if (this->omp_enable and this->omp_g2g) {
-                std::vector<std::pair<int, int>> pairs(size(moved) * size(fixed));
+                std::vector<std::pair<int, int>> pairs(size(moved) * rng_size(fixed));
                 size_t cnt = 0;
                 for (auto i : moved)
                     for (auto j : fixed)

@@ -6,12 +6,13 @@ include(CheckIPOSupported)
 include(ExternalProject)
 include(FetchContent)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
 set(CMAKE_CXX_EXTENSIONS NO)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(PythonInterp 3 REQUIRED)
 find_package(Threads REQUIRED)
+find_package(ZLIB REQUIRED)
 enable_testing()
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -107,18 +108,40 @@ add_dependencies(spdlog project_spdlog)
 # MODERN JSON
 FetchContent_Declare(
     modernjson
-    URL "https://github.com/nlohmann/json/releases/download/v3.5.0/include.zip"
-    URL_HASH SHA256=3564da9c5b0cf2e032f97c69baedf10ddbc98030c337d0327a215ea72259ea21)
+    URL "https://github.com/nlohmann/json/releases/download/v3.7.3/include.zip"
+    URL_HASH SHA256=87b5884741427220d3a33df1363ae0e8b898099fbc59f1c451113f6732891014)
 FetchContent_GetProperties(modernjson)
 if(NOT modernjson_POPULATED)
     FetchContent_Populate(modernjson)
+endif()
+add_compile_definitions("NLOHMANN_JSON_HPP") # older versions used this macro. Now it's suffixed with "_"
+
+# CEREAL
+FetchContent_Declare(
+    cereal
+    URL "https://github.com/USCiLab/cereal/archive/v1.3.0.tar.gz"
+    URL_HASH MD5=4342e811f245403646c4175258f413f1)
+FetchContent_GetProperties(cereal)
+if(NOT cereal_POPULATED)
+    FetchContent_Populate(cereal)
+endif()
+
+# ZSTR
+FetchContent_Declare(
+    zstr
+    URL "https://github.com/mateidavid/zstr/archive/v1.0.1.tar.gz"
+    URL_HASH MD5=42de51b1c6adac0ec957a24088ef7523)
+FetchContent_GetProperties(zstr)
+if(NOT zstr_POPULATED)
+    FetchContent_Populate(zstr)
 endif()
 
 # RANGE-V3
 FetchContent_Declare(
     rangev3
-    URL "https://github.com/ericniebler/range-v3/archive/0.5.0.tar.gz"
-    URL_HASH MD5=42f932808ef51df9f1732a3d5b0ae06c)
+    URL "https://github.com/ericniebler/range-v3/archive/0.10.0.tar.gz"
+    URL_HASH MD5=2a68ca385f70d62398365cc2923d0573)
+
 FetchContent_GetProperties(rangev3)
 if(NOT rangev3_POPULATED)
     FetchContent_Populate(rangev3)
@@ -161,8 +184,18 @@ set_property(TARGET cppsid PROPERTY IMPORTED_LOCATION ${binary_dir}/libcppsid.a)
 # PYBIND11
 FetchContent_Declare(
     pybind11
-    URL https://github.com/pybind/pybind11/archive/v2.2.4.tar.gz
-    URL_HASH MD5=c533a107bc95bd0c5525ff650b11bfa1)
+    URL https://github.com/pybind/pybind11/archive/v2.4.3.tar.gz
+    URL_HASH MD5=62254c40f89925bb894be421fe4cdef2)
+
+# NANOBENCH
+FetchContent_Declare(
+    nanobench
+    URL "https://github.com/martinus/nanobench/archive/v3.1.0.tar.gz"
+    URL_HASH MD5=e646fb61164a60921c1a1834fbca24bc)
+FetchContent_GetProperties(nanobench)
+if(NOT nanobench_POPULATED)
+    FetchContent_Populate(nanobench)
+endif()
 
 # EIGEN
 FetchContent_Declare(
@@ -197,8 +230,8 @@ set_target_properties(xdrfile PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 # DOCTEST
 FetchContent_Declare(
     doctest
-    URL "https://github.com/onqtam/doctest/archive/2.2.0.tar.gz"
-    URL_MD5 3f91262877b792e545f971e54afb7602)
+    URL "https://github.com/onqtam/doctest/archive/2.3.6.tar.gz"
+    URL_MD5 298e5773f3eb9825f6e3015e8f9511ca)
 FetchContent_GetProperties(doctest)
 if(NOT doctest_POPULATED)
     FetchContent_Populate(doctest)
@@ -227,15 +260,16 @@ if (ENABLE_FREESASA)
     add_dependencies(freesasa project_freesasa)
 endif ()
 
-# Download CoulombGalore header
-foreach (file coulombgalore.h LICENSE)
-    if (NOT EXISTS "${CMAKE_BINARY_DIR}/_deps/coulombgalore/${file}")
-        file(DOWNLOAD
-            "https://raw.githubusercontent.com/mlund/coulombgalore/f55b4df/${file}"
-            "${CMAKE_BINARY_DIR}/_deps/coulombgalore/${file}" STATUS status)
-    endif ()
-endforeach ()
-include_directories(SYSTEM "${CMAKE_BINARY_DIR}/_deps/coulombgalore")
+# COULOMBGALORE
+FetchContent_Declare(
+    coulombgalore
+    URL https://github.com/mlund/coulombgalore/archive/4055f58538d781acccb2937ab4580855fcba31f8.tar.gz
+    URL_HASH MD5=922f0c5988c0f70c887d65b7cf2762ac)
+FetchContent_GetProperties(coulombgalore)
+if(NOT coulombgalore_POPULATED)
+    FetchContent_Populate(coulombgalore)
+endif()
+include_directories(${coulombgalore_SOURCE_DIR})
 
 # GIT
 if (VERSION_STRING)
@@ -253,7 +287,13 @@ else()
             add_definitions("-DGIT_COMMIT_HASH=${GIT_COMMIT_HASH}")
         endif ()
         execute_process(
-            COMMAND ${GIT_EXECUTABLE} describe --abbrev=0 --tags
+            COMMAND ${GIT_EXECUTABLE} rev-list --tags --max-count=1
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+            OUTPUT_VARIABLE GIT_TAG_HASH
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            )
+        execute_process(
+            COMMAND ${GIT_EXECUTABLE} describe --tags ${GIT_TAG_HASH}
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
             OUTPUT_VARIABLE GIT_LATEST_TAG
             OUTPUT_STRIP_TRAILING_WHITESPACE
@@ -266,9 +306,10 @@ endif ()
 
 # Add third-party headers to include path. Note this is done with SYSTEM
 # to disable potential compiler warnings
-include_directories(SYSTEM ${eigen_SOURCE_DIR} ${doctest_SOURCE_DIR} ${modernjson_SOURCE_DIR} ${rangev3_SOURCE_DIR}/include
+include_directories(SYSTEM ${eigen_SOURCE_DIR} ${doctest_SOURCE_DIR} ${modernjson_SOURCE_DIR}/include ${rangev3_SOURCE_DIR}/include
+    ${nanobench_SOURCE_DIR}/src/include
     ${Pybind11IncludeDir} ${DocoptIncludeDir} ${CppsidIncludeDir} ${XdrfileIncludeDir} ${SpdlogIncludeDir}
-    ${ProgressTrackerIncludeDir} ${exprtk_SOURCE_DIR})
+    ${ProgressTrackerIncludeDir} ${exprtk_SOURCE_DIR} ${cereal_SOURCE_DIR}/include ${zstr_SOURCE_DIR}/src)
 
 #  Compiler specific flags
 ## GCC
@@ -284,6 +325,10 @@ endif()
 # in Debug mode, all warnings are treated as errors and we want no optimisations
 add_compile_options($<$<CONFIG:Debug>:-Werror>)
 add_compile_options($<$<CONFIG:Debug>:-O0>)
+
+# in Release mode, add aggressive optimizations
+add_compile_options($<$<CONFIG:Release>:-march=native>)
+add_compile_options($<$<CONFIG:Release>:-Ofast>)
 
 add_subdirectory(src)
 add_subdirectory(docs)

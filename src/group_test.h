@@ -87,7 +87,7 @@ TEST_CASE("[Faunus] Group") {
         CHECK( std::distance(slice1.begin(), slice1.end()) == 2 );
 
         // find *one* random value with id=1
-        auto slice2 = slice1 | ranges::view::sample(1, rand.engine) | ranges::view::bounded;
+        auto slice2 = slice1 | ranges::views::sample(1, rand.engine) | ranges::views::common;
         CHECK( std::distance(slice2.begin(), slice2.end()) == 1 );
 
         // check rotation
@@ -178,7 +178,45 @@ TEST_CASE("[Faunus] Group") {
             auto gvec3 = gvec1;
             CHECK((*gvec1[0].begin()).id == (*gvec3[0].begin()).id);
         }
-    }
+
+        SUBCASE("cerial serialisation") {
+            std::ostringstream out(std::stringstream::binary);
+            { // serialize g2
+                std::vector<Particle> p2(5);
+                Group<Particle> g2(p2.begin(), p2.end());
+                p2.front().id = 8;
+                p2.back().pos.x() = -10;
+                g2.id = 100;
+                g2.atomic = true;
+                g2.compressible = true;
+                g2.cm = {1, 0, 0};
+                g2.confid = 20;
+                g2.resize(4);
+                cereal::BinaryOutputArchive archive(out);
+                archive(g2);
+            }
+
+            {                                     // deserialize into g1
+                std::istringstream in(out.str()); // not pretty...
+                cereal::BinaryInputArchive archive(in);
+                std::vector<Particle> p1(5);
+                Group<Particle> g1(p1.begin(), p1.end());
+                archive(g1);
+
+                CHECK(g1.id == 100);
+                CHECK(g1.atomic == true);
+                CHECK(g1.compressible == true);
+                CHECK(g1.cm.x() == 1);
+                CHECK(g1.confid == 20);
+                CHECK(g1.size() == 4);
+                CHECK(g1.capacity() == 5);
+                CHECK(g1.begin()->id == 8);
+                CHECK(p1.front().id == 8);
+                CHECK(p1.back().pos.x() == -10);
+                CHECK(p1.back().ext == nullptr);
+            }
+        }
+}
 
 TEST_SUITE_END();
 } // namespace Faunus

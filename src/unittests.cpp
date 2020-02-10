@@ -14,16 +14,19 @@
 #include "random.h"
 
 #include "atomdata_test.h"
+#include "auxiliary_test.h"
 #include "bonds_test.h"
 #include "core_test.h"
 #include "energy_test.h"
 #include "geometry_test.h"
 #include "group_test.h"
 #include "molecule_test.h"
+#include "particle_test.h"
 #include "potentials_test.h"
 #include "space_test.h"
 #include "tensor_test.h"
 #include "externalpotential_test.h"
+#include "scatter_test.h"
 
 #include "mpicontroller.h"
 #include "auxiliary.h"
@@ -36,6 +39,7 @@
 #include "celllist.h"
 #include "functionparser.h"
 #include "multipole.h"
+#include "io_test.h"
 
 int main(int argc, char** argv) {
     Faunus::faunus_logger = spdlog::basic_logger_mt("faunus", "unittests.log", true);

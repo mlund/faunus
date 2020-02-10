@@ -63,7 +63,7 @@ class TestCoulomb(unittest.TestCase):
             ] }
         pot = FunctorPotential( d )
         r = np.linspace(1,10,5)
-        u = np.array( [pot.energy( spc.p[0], spc.p[1], [0,0,i] ) for i in r] )
+        u = np.array( [pot.energy( spc.p[0], spc.p[1], i*i, [0,0,i] ) for i in r] )
         pot.selfEnergy(spc.p[0])
 
 # Test SASA calculations
@@ -75,7 +75,7 @@ class TestSASA(unittest.TestCase):
             ] }
         pot = FunctorPotential( d )
         r = np.linspace(0,10,5)
-        u = np.array( [pot.energy( spc.p[0], spc.p[1], [0,0,i] ) for i in r] )
+        u = np.array( [pot.energy( spc.p[0], spc.p[1], i*i, [0,0,i] ) for i in r] )
         np.testing.assert_almost_equal(np.divide(u, [87.3576,100.4613,127.3487,138.4422,138.4422]), 1., 4)
 
     def test_freesasa_hamiltonian(self):

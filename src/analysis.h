@@ -7,6 +7,10 @@
 #include "auxiliary.h"
 #include <set>
 
+namespace cereal {
+class BinaryOutputArchive;
+}
+
 namespace Faunus {
 
 namespace Energy {
@@ -65,6 +69,7 @@ class FileReactionCoordinate : public Analysisbase {
 
     void _to_json(json &j) const override;
     void _sample() override;
+    void _to_disk() override;
 
   public:
     FileReactionCoordinate(const json &j, Space &spc);
@@ -136,10 +141,10 @@ class SlicedDensity : public Analysisbase {
     void _from_json(const json &j) override;
     void _to_json(json &j) const override;
     void _sample() override;
+    void _to_disk() override;
 
   public:
     SlicedDensity(const json &j, Space &spc);
-    ~SlicedDensity();
 };
 
 /**
@@ -160,10 +165,10 @@ class Density : public Analysisbase {
 
     void _sample() override;
     void _to_json(json &) const override;
+    void _to_disk() override;
 
   public:
     Density(const json &, Space &);
-    virtual ~Density();
 };
 
 class ChargeFluctuations : public Analysisbase {
@@ -216,6 +221,7 @@ class SystemEnergy : public Analysisbase {
     void _sample() override;
     void _to_json(json &) const override;
     void _from_json(const json &) override;
+    void _to_disk() override;
 
   public:
     SystemEnergy(const json &, Energy::Hamiltonian &);
@@ -239,11 +245,11 @@ class SaveState : public Analysisbase {
     std::string file;
     bool saverandom;
     void _to_json(json &) const override;
+    void _to_disk() override;
     void _sample() override;
 
   public:
     SaveState(const json &, Space &);
-    ~SaveState();
 };
 
 /**
@@ -265,10 +271,10 @@ class PairFunctionBase : public Analysisbase {
   private:
     void _from_json(const json &) override;
     void _to_json(json &) const override;
+    void _to_disk() override;
 
   public:
     PairFunctionBase(const json &);
-    virtual ~PairFunctionBase();
 };
 
 class PairAngleFunctionBase : public PairFunctionBase {
@@ -276,11 +282,11 @@ class PairAngleFunctionBase : public PairFunctionBase {
     Equidistant2DTable<double, Average<double>> hist2;
 
   private:
-    void _from_json(const json &);
+    void _from_json(const json &) override;
+    void _to_disk() override;
 
   public:
     PairAngleFunctionBase(const json &);
-    virtual ~PairAngleFunctionBase();
 };
 
 /** @brief Atomic radial distribution function, g(r) */
@@ -333,7 +339,7 @@ class XTCtraj : public Analysisbase {
  */
 class VirtualVolume : public Analysisbase {
     std::string file; // output filename
-    std::ofstream f;  // output filestream
+    std::ofstream output_file; // output filestream
     double dV; // volume perturbation
     Change c;
     Energy::Energybase &pot;
@@ -344,9 +350,38 @@ class VirtualVolume : public Analysisbase {
     void _sample() override;
     void _from_json(const json &j) override;
     void _to_json(json &j) const override;
+    void _to_disk() override;
 
   public:
-    VirtualVolume(const json &j, Space &spc, Energy::Energybase &pot);
+    VirtualVolume(const json &, Space &, Energy::Energybase &);
+};
+
+/**
+ * @brief Virtual translation move to calculate force
+ *
+ * Displace a single molecule of `molid` with `dL` in the
+ * direction `dir` and measure the free energy of the process
+ * using dA=-kT*ln<exp(-dU)> and the resulting force, -dA/dL
+ */
+class VirtualTranslate : public Analysisbase {
+    Change change;         //!< Change object for energy calc.
+    Change::data data;     //!< Change data for molecule
+    std::string file;      //!< output filename
+    int molid;             //!< molid to operate on
+    Point dir = {0, 0, 1}; //!< direction to move
+    double dL = 0;         //!< distance perturbation
+    Energy::Energybase &pot;
+    Space &spc;
+    Average<double> average_exp_du; //!< <exp(-du/kT)>
+    std::ofstream output_file;      // output filestream
+
+    void _sample() override;
+    void _from_json(const json &) override;
+    void _to_json(json &) const override;
+    void _to_disk() override;
+
+  public:
+    VirtualTranslate(const json &, Space &, Energy::Energybase &);
 };
 
 /**
@@ -358,7 +393,7 @@ class MultipoleDistribution : public Analysisbase {
     typedef typename Space::Tgroup Tgroup;
 
     struct data {
-        Average<double> tot, ii, id, iq, dd, mucorr;
+        Average<double> exact, ii, id, iq, dd, mucorr;
     };
 
     std::vector<std::string> names; //!< Molecule names (len=2)
@@ -373,30 +408,38 @@ class MultipoleDistribution : public Analysisbase {
     void save() const;                              //!< save to disk
     void _sample() override;
     void _to_json(json &j) const override;
+    void _to_disk() override;
 
   public:
     MultipoleDistribution(const json &j, Space &spc);
-    ~MultipoleDistribution();
 
 }; // end of multipole distribution
 
-/** @brief Sample scattering intensity */
+/**
+ * @brief Sample scattering intensity
+ */
 class ScatteringFunction : public Analysisbase {
+  private:
+    enum Schemes { DEBYE, EXPLICIT_PBC, EXPLICIT_IPBC}; // three different schemes
+    Schemes scheme = DEBYE;
     Space &spc;
-    bool usecom;                    // scatter from mass center, only?
+    bool use_com;                   // scatter from mass center, only?
+    bool save_after_sample = false; // if true, save average S(q) after each sample point
     std::string filename;           // output file name
     std::vector<Point> p;           // vector of scattering points
     std::vector<int> ids;           // Molecule ids
     std::vector<std::string> names; // Molecule names
     typedef Scatter::FormFactorUnity<double> Tformfactor;
-    Scatter::DebyeFormula<Tformfactor> debye;
 
+    std::shared_ptr<Scatter::DebyeFormula<Tformfactor>> debye;
+    std::shared_ptr<Scatter::StructureFactorPBC<>> explicit_average_pbc;
+    std::shared_ptr<Scatter::StructureFactorIPBC<>> explicit_average_ipbc;
     void _sample() override;
+    void _to_disk() override;
     void _to_json(json &j) const override;
 
   public:
     ScatteringFunction(const json &j, Space &spc);
-    ~ScatteringFunction();
 };
 
 /*
@@ -412,6 +455,7 @@ class AtomInertia : public Analysisbase {
     Point compute();
     void _to_json(json &j) const override;
     void _sample() override;
+    void _to_disk() override;
 
   public:
     AtomInertia(const json &j, Space &spc);
@@ -434,6 +478,7 @@ class InertiaTensor : public Analysisbase {
     Data compute();
     void _to_json(json &j) const override;
     void _sample() override;
+    void _to_disk() override;
 
   public:
     InertiaTensor(const json &j, Space &spc);
@@ -459,6 +504,7 @@ class MultipoleMoments : public Analysisbase {
     Data compute();
     void _to_json(json &j) const override;
     void _sample() override;
+    void _to_disk() override;
 
   public:
     MultipoleMoments(const json &j, Space &spc);
@@ -497,15 +543,44 @@ class QRtraj : public Analysisbase {
     std::function<void()> write_to_file;
     void _sample() override;
     void _to_json(json &j) const override;
+    void _to_disk() override;
 
   public:
     QRtraj(const json &j, Space &spc);
 };
 
+/**
+ * @brief Trajectory with full Space information
+ *
+ * The following are saved in (compressed) binary form:
+ *
+ * - all particle properties (id, position, charge, dipole etc.)
+ * - all group properties (id, size, capacity etc.)
+ *
+ * If zlib compression is enabled the file size
+ * is reduced by roughly a factor of two.
+ *
+ * @todo Geometry information
+ */
+class SpaceTrajectory : public Analysisbase {
+  private:
+    Space::Tgvec &groups; // reference to all groups
+    std::string filename;
+    std::unique_ptr<std::ostream> stream;
+    std::unique_ptr<cereal::BinaryOutputArchive> archive;
+    void _sample() override;
+    void _to_json(json &j) const override;
+    void _to_disk() override;
+    bool useCompression() const; //!< decide from filename if zlib should be used
+
+  public:
+    SpaceTrajectory(const json &, Space::Tgvec &);
+};
+
 struct CombinedAnalysis : public BasePointerVector<Analysisbase> {
     CombinedAnalysis(const json &j, Space &spc, Energy::Hamiltonian &pot);
     void sample();
-    ~CombinedAnalysis();
+    void to_disk(); // prompt all analysis to safe to disk if appropriate
 }; //!< Aggregates analysis
 
 /** @brief Example analysis */

@@ -298,9 +298,12 @@ void Hamiltonian::addEwald(const json &j, Space &spc) {
     else
         return;
 
-    if (_j.count("type"))
-        if (_j.at("type") == "ewald")
+    if (_j.count("type")) {
+        if (_j.at("type") == "ewald") {
+            faunus_logger->debug("adding Ewald reciprocal and surface energy terms");
             emplace_back<Energy::Ewald<>>(_j, spc);
+        }
+    }
 }
 
 Hamiltonian::Hamiltonian(Space &spc, const json &j) {
@@ -326,16 +329,16 @@ Hamiltonian::Hamiltonian(Space &spc, const json &j) {
         for (auto it : m.items()) {
             try {
                 if (it.key() == "nonbonded_coulomblj")
-                    emplace_back<Energy::Nonbonded<CoulombLJ>>(it.value(), spc, *this);
+                    emplace_back<Energy::Nonbonded<CoulombLJ, false>>(it.value(), spc, *this);
 
                 else if (it.key() == "nonbonded_newcoulomblj")
-                    emplace_back<Energy::Nonbonded<CoulombLJ>>(it.value(), spc, *this);
+                    emplace_back<Energy::Nonbonded<CoulombLJ, false>>(it.value(), spc, *this);
 
                 else if (it.key() == "nonbonded_coulomblj_EM")
                     emplace_back<Energy::NonbondedCached<CoulombLJ>>(it.value(), spc, *this);
 
                 else if (it.key() == "nonbonded_splined")
-                    emplace_back<Energy::Nonbonded<TabulatedPotential>>(it.value(), spc, *this);
+                    emplace_back<Energy::Nonbonded<TabulatedPotential, false>>(it.value(), spc, *this);
 
                 else if (it.key() == "nonbonded" or it.key() == "nonbonded_exact")
                     emplace_back<Energy::Nonbonded<FunctorPotential>>(it.value(), spc, *this);
@@ -344,13 +347,13 @@ Hamiltonian::Hamiltonian(Space &spc, const json &j) {
                     emplace_back<Energy::NonbondedCached<TabulatedPotential>>(it.value(), spc, *this);
 
                 else if (it.key() == "nonbonded_coulombwca")
-                    emplace_back<Energy::Nonbonded<CoulombWCA>>(it.value(), spc, *this);
+                    emplace_back<Energy::Nonbonded<CoulombWCA, false>>(it.value(), spc, *this);
 
                 else if (it.key() == "nonbonded_pm" or it.key() == "nonbonded_coulombhs")
-                    emplace_back<Energy::Nonbonded<PrimitiveModel>>(it.value(), spc, *this);
+                    emplace_back<Energy::Nonbonded<PrimitiveModel, false>>(it.value(), spc, *this);
 
                 else if (it.key() == "nonbonded_pmwca")
-                    emplace_back<Energy::Nonbonded<PrimitiveModelWCA>>(it.value(), spc, *this);
+                    emplace_back<Energy::Nonbonded<PrimitiveModelWCA, false>>(it.value(), spc, *this);
 
                 // this should be moved into `Nonbonded` and added when appropriate
                 // Nonbonded now has access to Hamiltonian (*this) and can therefore

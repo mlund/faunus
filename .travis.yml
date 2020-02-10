@@ -1,5 +1,5 @@
 language: cpp
-dist: xenial
+dist: bionic
 sudo: required
 group: edge
 compiler: clang
@@ -23,8 +23,10 @@ matrix:
   include:
   - os: linux
     compiler: clang
+  - os: linux
+    compiler: gcc
   - os: osx
-    osx_image: xcode11
+    osx_image: xcode11.2
     compiler: clang
 
 script:
@@ -35,9 +37,10 @@ script:
     make pyfaunus || travis_terminate 1
     make unittests || travis_terminate 1
     ctest --output-on-failure -R unittests || travis_terminate 1
-
+    if [[ "$TRAVIS_COMPILER" == "clang" ]]; then
     # check with SID and MPI enabled
     cmake . -DENABLE_OPENMP=off -DCMAKE_BUILD_TYPE=Debug -DENABLE_SID=on -DENABLE_MPI=on
     make faunus || travis_terminate 1
     ./faunus --version || travis_terminate 1
+    fi
 

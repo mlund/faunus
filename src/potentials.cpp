@@ -49,9 +49,9 @@ TPairMatrixPtr PairMixer::createPairMatrix(const std::vector<AtomData> &atoms) {
                 (*matrix)(i.id(), j.id()) = combUndefined();
             } else if (i.id() == j.id()) {
                 // if the combinator is "undefined" the homogeneous interaction is still well defined
-                (*matrix)(i.id(), j.id()) = modifier(extractor(i));
+                (*matrix)(i.id(), j.id()) = modifier(extractor(i.interaction));
             } else {
-                (*matrix)(i.id(), j.id()) = modifier(combinator(extractor(i), extractor(j)));
+                (*matrix)(i.id(), j.id()) = modifier(combinator(extractor(i.interaction), extractor(j.interaction)));
             }
         }
     }
@@ -59,7 +59,7 @@ TPairMatrixPtr PairMixer::createPairMatrix(const std::vector<AtomData> &atoms) {
 }
 
 TPairMatrixPtr PairMixer::createPairMatrix(const std::vector<AtomData> &atoms,
-                                           const std::vector<InteractionData> &interactions) {
+                                           const std::vector<CustomInteractionData> &interactions) {
     TPairMatrixPtr matrix = PairMixer::createPairMatrix(atoms);
     auto dimension = std::min(matrix->rows(), matrix->cols());
     for (auto &i : interactions) {
@@ -68,41 +68,52 @@ TPairMatrixPtr PairMixer::createPairMatrix(const std::vector<AtomData> &atoms,
             (*matrix)(i.atom_id[0], i.atom_id[1]) = (*matrix)(i.atom_id[1], i.atom_id[0]) =
                 modifier(extractor(i.interaction));
         } else {
-            throw std::runtime_error("atomtype index out of range");
+            throw std::range_error("atomtype index out of range");
         }
     }
     return matrix;
 }
 
-void from_json(const json &j, std::vector<InteractionData> &interactions) {
-    auto &custom_list = j.at("custom");
-    if (!custom_list.is_object() && !custom_list.is_array()) {
-        throw PairPotentialException("custom parameters syntax error");
+void from_json(const json &j, CustomInteractionData &c) {
+    if (!j.is_object() || j.size() != 1) {
+        throw ConfigurationError("invalid JSON for custom interaction parameters");
     }
-
-    for (auto custom_pair = custom_list.begin(); custom_pair != custom_list.end(); ++custom_pair) {
-        // atomdata is an array with items ecapsulated as objects hence we emulate here
-        AtomData a = custom_list.is_object() ? json::object({{custom_pair.key(), *custom_pair}}) : (*custom_pair);
-        auto atoms_name = words2vec<std::string>(a.name);
-        if (atoms_name.size() == 2) {
-            auto atom0 = findName(atoms, atoms_name[0]);
-            auto atom1 = findName(atoms, atoms_name[1]);
-            if (atom0 == atoms.end() or atom1 == atoms.end()) {
-                throw PairPotentialException(("unknown atom(s): ["s + atoms_name[0] + " " + atoms_name[1] + "]"));
-            }
-            interactions.push_back({{atom0->id(), atom1->id()}, a});
-        } else {
-            throw PairPotentialException("custom parameters require exactly two space-separated atoms");
+    auto j_item = j.items().begin();
+    try {
+        const auto atom_names = words2vec<std::string>(j_item.key());
+        const auto atom_ids = names2ids(atoms, atom_names);
+        if (atom_ids.size() != c.atom_id.size()) {
+            faunus_logger->error("Custom interaction parameters require exactly {} space-separated atoms: {}.",
+                                 c.atom_id.size(), vec2words(atom_names));
+            throw ConfigurationError("wrong number of atoms in custom interaction parameters");
         }
+        std::copy(atom_ids.begin(), atom_ids.end(), c.atom_id.begin());
+    } catch (std::out_of_range &e) {
+        faunus_logger->error("Unknown atom pair [{}] in custom interaction parameters.", j_item.key());
+        throw ConfigurationError("unknown atom pair in custom interaction parameters");
     }
+    c.interaction = j_item.value();
 }
 
-void to_json(json &j, const std::vector<InteractionData> &interactions) {
-    if (!interactions.empty()) {
-        j = json::array();
-        for (auto &i : interactions) {
-            j.push_back(i.interaction);
+void to_json(json &j, const CustomInteractionData &interaction) {
+    std::vector<std::string> atom_names;
+    for(auto atom_id : interaction.atom_id) {
+        atom_names.push_back(atoms[atom_id].name);
+    }
+    j = {{vec2words(atom_names), interaction.interaction}};
+}
+
+void from_json(const json &j, std::vector<CustomInteractionData> &interactions) {
+    if(j.is_array()) {
+        for (const auto j_pair: j) {
+            interactions.push_back(j_pair);
         }
+    } else if(j.is_object()) {
+        for (const auto j_kv: j.items()) {
+            interactions.push_back(json {{j_kv.key(), j_kv.value()}});
+        }
+    } else {
+        throw ConfigurationError("invalid JSON for custom interaction parameters");
     }
 }
 
@@ -120,7 +131,8 @@ Point PairPotentialBase::force(const Particle &, const Particle &, double, const
 
 void MixerPairPotentialBase::init() {
     json j_combination_rule = combination_rule;
-    faunus_logger->debug("Combination rule {} in effect for the {} potential.", j_combination_rule, name);
+    faunus_logger->debug("Combination rule {} in effect for the {} potential.", j_combination_rule.get<std::string>(),
+                         name);
     initPairMatrices();
 }
 
@@ -135,11 +147,12 @@ void MixerPairPotentialBase::from_json(const json &j) {
             }
         }
         if (j.count("custom") == 1) {
-            *custom_pairs = j;
+            // *custom_pairs = j["custom"]; // does not work, perhaps as from_json is also a method (a namespace conflict)
+            Potential::from_json(j["custom"], *custom_pairs);
         }
-    } catch (const PairPotentialException &e) {
+    } catch (const ConfigurationError &e) {
         faunus_logger->error(std::string(e.what()) + " in potential " + name);
-        throw std::runtime_error("error deserialising potential " + name + " from json");
+        throw std::runtime_error("error reading potential " + name + " from json");
     }
     extractorsFromJson(j);
     init();
@@ -265,6 +278,8 @@ void CustomPairPotential::to_json(json &j) const {
     if (std::isfinite(Rc2))
         j["cutoff"] = std::sqrt(Rc2);
 }
+CustomPairPotential::CustomPairPotential(const std::string &name)
+    : PairPotentialBase(name), d(std::make_shared<Data>()) {}
 
 // =============== Dummy ===============
 
@@ -291,10 +306,10 @@ void LennardJones::initPairMatrices() {
 void LennardJones::extractorsFromJson(const json &j) {
     auto sigma_name = j.value("sigma", "sigma");
     json_extra_params["sigma"] = sigma_name;
-    extract_sigma = [sigma_name](const AtomData &a) -> double { return a.getProperty(sigma_name) * 1.0_angstrom; };
+    extract_sigma = [sigma_name](const InteractionData &a) -> double { return a.get(sigma_name) * 1.0_angstrom; };
     auto epsilon_name = j.value("eps", "eps");
     json_extra_params["eps"] = epsilon_name;
-    extract_epsilon = [epsilon_name](const AtomData &a) -> double { return a.getProperty(epsilon_name) * 1.0_kJmol; };
+    extract_epsilon = [epsilon_name](const InteractionData &a) -> double { return a.get(epsilon_name) * 1.0_kJmol; };
 }
 
 // =============== HardSphere ===============
@@ -309,7 +324,7 @@ void HardSphere::initPairMatrices() {
 void HardSphere::extractorsFromJson(const json &j) {
     auto sigma_name = j.value("sigma", "sigma");
     json_extra_params["sigma"] = sigma_name;
-    extract_sigma = [sigma_name](const AtomData &a) -> double { return a.getProperty(sigma_name) * 1.0_angstrom; };
+    extract_sigma = [sigma_name](const InteractionData &a) -> double { return a.get(sigma_name) * 1.0_angstrom; };
 }
 
 // =============== Hertz ===============
@@ -330,10 +345,10 @@ void Hertz::initPairMatrices() {
 void Hertz::extractorsFromJson(const json &j) {
     auto sigma_name = j.value("sigma", "sigma");
     json_extra_params["sigma"] = sigma_name;
-    extract_sigma = [sigma_name](const AtomData &a) -> double { return a.getProperty(sigma_name) * 1.0_angstrom; };
+    extract_sigma = [sigma_name](const InteractionData &a) -> double { return a.get(sigma_name) * 1.0_angstrom; };
     auto epsilon_name = j.value("eps", "eps");
     json_extra_params["eps"] = epsilon_name;
-    extract_epsilon = [epsilon_name](const AtomData &a) -> double { return a.getProperty(epsilon_name) * 1.0_kJmol; };
+    extract_epsilon = [epsilon_name](const InteractionData &a) -> double { return a.get(epsilon_name) * 1.0_kJmol; };
 }
 
 // =============== SquareWell ===============
@@ -354,10 +369,10 @@ void SquareWell::initPairMatrices() {
 void SquareWell::extractorsFromJson(const json &j) {
     auto sigma_name = j.value("sigma", "sigma");
     json_extra_params["sigma"] = sigma_name;
-    extract_sigma = [sigma_name](const AtomData &a) -> double { return a.getProperty(sigma_name) * 1.0_angstrom; };
+    extract_sigma = [sigma_name](const InteractionData &a) -> double { return a.get(sigma_name) * 1.0_angstrom; };
     auto epsilon_name = j.value("eps", "eps");
     json_extra_params["eps"] = epsilon_name;
-    extract_epsilon = [epsilon_name](const AtomData &a) -> double { return a.getProperty(epsilon_name) * 1.0_kJmol; };
+    extract_epsilon = [epsilon_name](const InteractionData &a) -> double { return a.get(epsilon_name) * 1.0_kJmol; };
 }
 
 // =============== Polarizability ===============
@@ -392,7 +407,7 @@ void FunctorPotential::registerSelfEnergy(PairPotentialBase *pot) {
 }
 
 FunctorPotential::uFunc FunctorPotential::combineFunc(json &j) {
-    uFunc u = [](const Particle &, const Particle &, const Point &) { return 0.0; };
+    uFunc u = [](const Particle &, const Particle &, double, const Point &) { return 0.0; };
     if (j.is_array()) {
         for (auto &i : j) { // loop over all defined potentials in array
             if (i.is_object() and (i.size() == 1)) {
@@ -455,8 +470,8 @@ FunctorPotential::uFunc FunctorPotential::combineFunc(json &j) {
                     }
 
                     if (_u != nullptr) // if found, sum them into new function object
-                        u = [u, _u](const Particle &a, const Particle &b, const Point &r) {
-                            return u(a, b, r) + _u(a, b, r);
+                        u = [u, _u](const Particle &a, const Particle &b, double r2, const Point &r) {
+                            return u(a, b, r2, r) + _u(a, b, r2, r);
                         };
                     else
                         throw std::runtime_error("unknown potential: " + it.key());
@@ -475,6 +490,8 @@ void FunctorPotential::to_json(json &j) const {
 }
 
 void FunctorPotential::from_json(const json &j) {
+    have_monopole_self_energy = false;
+    have_dipole_self_energy = false;
     _j = j;
     umatrix = decltype(umatrix)(atoms.size(), combineFunc(_j.at("default")));
     for (auto it = _j.begin(); it != _j.end(); ++it) {
@@ -486,6 +503,8 @@ void FunctorPotential::from_json(const json &j) {
     }
 }
 
+FunctorPotential::FunctorPotential(const std::string &name) : PairPotentialBase(name) {}
+
 //---------------- TabulatedPotential ---------------------
 
 void TabulatedPotential::from_json(const json &j) {
@@ -495,7 +514,7 @@ void TabulatedPotential::from_json(const json &j) {
     if (not isotropic)
         throw std::runtime_error("cannot spline anisotropic potentials");
 
-    tblt.setTolerance(j.value("utol", 1e-5), j.value("ftol", 1e-2));
+    spline.setTolerance(j.value("utol", 1e-5), j.value("ftol", 1e-2));
     double u_at_rmin = j.value("u_at_rmin", 20);
     double u_at_rmax = j.value("u_at_rmax", 1e-6);
     hardsphere = j.value("hardsphere", false);
@@ -505,8 +524,8 @@ void TabulatedPotential::from_json(const json &j) {
     for (size_t i = 0; i < atoms.size(); ++i) {
         for (size_t k = 0; k <= i; ++k) {
             if (atoms[i].implicit == false and atoms[k].implicit == false) {
-                Particle a = atoms.at(i);
-                Particle b = atoms.at(k);
+                Particle a = atoms[i];
+                Particle b = atoms[k];
                 double rmin2 = .5 * (atoms[i].sigma + atoms[k].sigma);
                 rmin2 = rmin2 * rmin2;
                 double rmax2 = rmin2 * 100;
@@ -524,7 +543,7 @@ void TabulatedPotential::from_json(const json &j) {
                 // the given energy threshold (u_at_min2)
                 double dr = 1e-2;
                 while (rmin2 >= dr) {
-                    double u = std::fabs(this->umatrix(i, k)(a, b, {0, 0, sqrt(rmin2)}));
+                    double u = std::fabs(this->umatrix(i, k)(a, b, rmin2, {0, 0, sqrt(rmin2)}));
                     if (u > u_at_rmin * 1.1)
                         rmin2 = rmin2 + dr;
                     else if (u < u_at_rmin / 1.1)
@@ -536,7 +555,7 @@ void TabulatedPotential::from_json(const json &j) {
                 assert(rmin2 >= 0);
 
                 while (rmax2 >= dr) {
-                    double u = std::fabs(this->umatrix(i, k)(a, b, {0, 0, sqrt(rmax2)}));
+                    double u = std::fabs(this->umatrix(i, k)(a, b, rmax2, {0, 0, sqrt(rmax2)}));
                     if (u > u_at_rmax)
                         rmax2 = rmax2 + dr;
                     else
@@ -545,34 +564,42 @@ void TabulatedPotential::from_json(const json &j) {
 
                 assert(rmin2 < rmax2);
 
-                Ttable knotdata = tblt.generate(
+                KnotData knotdata = spline.generate(
                     [&](double r2) {
-                        return this->umatrix(i, k)(a, b, {0, 0, sqrt(r2)});
+                        return this->umatrix(i, k)(a, b, r2, {0, 0, 0});
                     },
                     rmin2, rmax2);
 
                 // assert if potential is negative for r<rmin
-                if (tblt.eval(knotdata, knotdata.rmin2 + dr) < 0)
+                if (spline.eval(knotdata, knotdata.rmin2 + dr) < 0) {
+                    assert(hardsphere == false && "`hardsphere` is set, but potential is negative for r<rmin");
                     knotdata.isNegativeBelowRmin = true;
+                } else
+                    matrix_of_knots.set(i, k, knotdata);
 
-                tmatrix.set(i, k, knotdata);
+                faunus_logger->debug("Potential for {}-{} splined with {} knot(s)", atoms[i].name, atoms[k].name,
+                                     knotdata.numKnots());
+
                 if (j.value("to_disk", false)) {
                     std::ofstream f(atoms[i].name + "-" + atoms[k].name + "_tabulated.dat"); // output file
                     f << "# r splined exact\n";
                     Point r = {dr, 0, 0}; // variable distance vector between particle a and b
                     for (; r.x() < sqrt(rmax2); r.x() += dr)
-                        f << r.x() << " " << operator()(a, b, r) << " " << this->umatrix(i, k)(a, b, r) << "\n";
+                        f << r.x() << " " << operator()(a, b, r.x() * r.x(), r) << " "
+                          << this->umatrix(i, k)(a, b, r.x() * r.x(), r) << "\n";
                 }
             }
         }
     }
 }
 
-NewCoulombGalore::NewCoulombGalore(const std::string &name) : PairPotentialBase(name) {
-    selfEnergy = [&lB = lB, &pot = pot](const Particle &p) {
-        return lB * pot.self_energy({p.charge * p.charge, 0.0});
+void NewCoulombGalore::setSelfEnergy() {
+    selfEnergy = [lB = lB, self_energy = pot.selfEnergyFunctor](const Particle &p) {
+        return lB * self_energy({p.charge * p.charge, 0.0});
     }; // expose self-energy as a functor in potential base class
 }
+
+NewCoulombGalore::NewCoulombGalore(const std::string &name) : PairPotentialBase(name) { setSelfEnergy(); }
 
 Point NewCoulombGalore::force(const Particle &a, const Particle &b, double, const Point &r) const {
     return lB * pot.ion_ion_force(a.charge, b.charge, r);
@@ -583,16 +610,24 @@ void NewCoulombGalore::from_json(const json &j) {
     double epsr = j.at("epsr");
     lB = pc::lB(epsr); // Bjerrum length
     std::string type = j.at("type");
+    pot.setTolerance(j.value("utol", 0.005 / lB));
     if (type == "yukawa") {
-        faunus_logger->debug("'yukawa' is using the 'poisson' scheme with C=1 and D=-1");
         json _j = j;
-        _j["C"] = 1;
-        _j["D"] = -1;
-        _j["type"] = "poisson";
-        pot.spline<::CoulombGalore::Poisson>(_j);
+        if (_j.value("shift", true)) {
+            faunus_logger->debug("shifted yukawa uses the 'poisson' scheme with C=1 and D=-1");
+            _j["type"] = "poisson";
+            _j["C"] = 1;
+            _j["D"] = -1;
+            pot.spline<::CoulombGalore::Poisson>(_j);
+        } else {
+            if (_j.count("cutoff") > 0)
+                faunus_logger->warn("cutoff ignored for non-shifted yukawa; it's always infinity", type);
+            _j["type"] = "plain";
+            pot.spline<::CoulombGalore::Plain>(_j);
+        }
     } else if (type == "plain") {
         if (j.count("cutoff") > 0)
-            faunus_logger->warn("Given cutoff for {} is ignored and always infinity", type);
+            faunus_logger->warn("cutoff ignored for '{}' and always infinity", type);
         pot.spline<::CoulombGalore::Plain>(j);
     } else if (type == "qpotential")
         pot.spline<::CoulombGalore::qPotential>(j);
@@ -614,6 +649,10 @@ void NewCoulombGalore::from_json(const json &j) {
         pot.spline<::CoulombGalore::ReactionField>(j);
     else
         throw std::runtime_error("unknown coulomb scheme");
+
+    faunus_logger->info("{} splined with {} knots", type, pot.numKnots().at(0));
+
+    setSelfEnergy();
 }
 
 void NewCoulombGalore::to_json(json &j) const {
@@ -623,11 +662,15 @@ void NewCoulombGalore::to_json(json &j) const {
 
 Multipole::Multipole(const std::string &name) : NewCoulombGalore(name) {
     isotropic = false; // this potential is angular dependent
-    selfEnergy = [&lB = lB, &pot = pot](const Particle &p) {
+    setSelfEnergy();
+}
+
+void Multipole::setSelfEnergy() {
+    selfEnergy = [lB = lB, self_energy = pot.selfEnergyFunctor](const Particle &p) {
         double mu_x_mu = 0;   // dipole-dipole product
         if (p.hasExtension()) // only access dipole of the particle has extended properties
             mu_x_mu = p.getExt().mulen * p.getExt().mulen;
-        return lB * pot.self_energy({p.charge * p.charge, mu_x_mu});
+        return lB * self_energy({p.charge * p.charge, mu_x_mu});
     }; // expose self-energy as a functor in potential base class
 }
 

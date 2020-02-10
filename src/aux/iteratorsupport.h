@@ -9,9 +9,8 @@ int distance(T1 first, T2 last) {
     return std::distance( &(*first), &(*last) );
 } //!< Distance between two arbitrary contiguous iterators
 
-template<class T /** Range */>
-int size(T &rng) {
-    return ranges::distance(rng.begin(), rng.end());
-} //!< Size of arbitrary range
+template <class Trange> size_t rng_size(Trange &rng) {
+    return ranges::cpp20::distance(rng.begin(), rng.end());
+} //!< Size of a Ranges object using the `cpp20::distance()`
 
 }//end of namespace

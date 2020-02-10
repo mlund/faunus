@@ -36,6 +36,7 @@ set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 
 # faunus header files
 set(hdrs
+    ${CMAKE_SOURCE_DIR}/src/aux/eigen_cerealisation.hpp
     ${CMAKE_SOURCE_DIR}/src/aux/eigensupport.h
     ${CMAKE_SOURCE_DIR}/src/aux/iteratorsupport.h
     ${CMAKE_SOURCE_DIR}/src/aux/multimatrix.h
@@ -72,14 +73,18 @@ set(hdrs
 # faunus header files
 set(tsts
     ${CMAKE_SOURCE_DIR}/src/atomdata_test.h
+    ${CMAKE_SOURCE_DIR}/src/auxiliary_test.h
     ${CMAKE_SOURCE_DIR}/src/bonds_test.h
     ${CMAKE_SOURCE_DIR}/src/core_test.h
     ${CMAKE_SOURCE_DIR}/src/energy_test.h
     ${CMAKE_SOURCE_DIR}/src/geometry_test.h
     ${CMAKE_SOURCE_DIR}/src/externalpotential_test.h
     ${CMAKE_SOURCE_DIR}/src/group_test.h
+    ${CMAKE_SOURCE_DIR}/src/io_test.h
     ${CMAKE_SOURCE_DIR}/src/molecule_test.h
+    ${CMAKE_SOURCE_DIR}/src/particle_test.h
     ${CMAKE_SOURCE_DIR}/src/potentials_test.h
+    ${CMAKE_SOURCE_DIR}/src/scatter_test.h
     ${CMAKE_SOURCE_DIR}/src/space_test.h
     ${CMAKE_SOURCE_DIR}/src/tensor_test.h
     )
@@ -93,7 +98,7 @@ set_target_properties(functionparser PROPERTIES
 # targer: libfaunus - main functionality of faunus
 add_library(libfaunus STATIC ${objs} ${hdrs})
 target_compile_definitions(libfaunus PRIVATE SPDLOG_COMPILED_LIB)
-target_link_libraries(libfaunus PRIVATE ${CMAKE_THREAD_LIBS_INIT} xdrfile spdlog functionparser)
+target_link_libraries(libfaunus PRIVATE ${CMAKE_THREAD_LIBS_INIT} xdrfile spdlog functionparser ZLIB::ZLIB)
 set_target_properties(libfaunus PROPERTIES
     POSITION_INDEPENDENT_CODE ON)
     #LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
@@ -218,6 +223,13 @@ set_property(TEST penalty APPEND PROPERTY ENVIRONMENT FAUNUS_EXECUTABLE=$<TARGET
 set_property(TEST penalty APPEND PROPERTY ENVIRONMENT YASON_EXECUTABLE=${YASON})
 
 add_test(
+    NAME virial
+    COMMAND sh -c "jupyter nbconvert --execute virial.ipynb --ExecutePreprocessor.timeout=None"
+    WORKING_DIRECTORY ${EXAMPLES_DIR}/virial)
+set_property(TEST virial APPEND PROPERTY ENVIRONMENT FAUNUS_EXECUTABLE=$<TARGET_FILE:faunus>)
+set_property(TEST virial APPEND PROPERTY ENVIRONMENT YASON_EXECUTABLE=${YASON})
+
+add_test(
     NAME minimal
     COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} minimal.yml\
     | $<TARGET_FILE:faunus> --nobar --state minimal.state.json\
@@ -267,6 +279,13 @@ add_test(
     WORKING_DIRECTORY ${EXAMPLES_DIR}/cluster)
 
 add_test(
+    NAME cluster-ideal
+    COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} cluster-ideal.yml\
+    | $<TARGET_FILE:faunus> --quiet\
+    && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} cluster-ideal.out.json out.json --tol 0.01"
+    WORKING_DIRECTORY ${EXAMPLES_DIR}/cluster)
+
+add_test(
     NAME bulk
     COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} bulk.yml\
     | $<TARGET_FILE:faunus> --quiet --state bulk.state.json\
@@ -311,6 +330,7 @@ if (TARGET pyfaunus)
 endif()
 
 install(FILES ${CMAKE_SOURCE_DIR}/LICENSE DESTINATION share/faunus)
+install(FILES ${CMAKE_SOURCE_DIR}/docs/schema.yml DESTINATION share/faunus)
 install(FILES ${CMAKE_BINARY_DIR}/tips.json DESTINATION share/faunus OPTIONAL)
 install(FILES ${CMAKE_BINARY_DIR}/manual.pdf DESTINATION share/faunus OPTIONAL)
 install(FILES ${CMAKE_BINARY_DIR}/manual.html DESTINATION share/faunus OPTIONAL)
@@ -346,6 +366,8 @@ install(FILES
     ${EXAMPLES_DIR}/minimal/minimal.state.json
     ${EXAMPLES_DIR}/penalty/penalty.yml
     ${EXAMPLES_DIR}/penalty/penalty.ipynb
+    ${EXAMPLES_DIR}/virial/virial.yml
+    ${EXAMPLES_DIR}/virial/virial.ipynb
     ${EXAMPLES_DIR}/chain/chain.yml
     ${EXAMPLES_DIR}/chain/chain.xyz
     ${EXAMPLES_DIR}/chain/chain.state.json

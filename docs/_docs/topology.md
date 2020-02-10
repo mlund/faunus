@@ -99,6 +99,7 @@ Properties of molecules and their default values:
 `atoms=[]`              | Array of atom names; required if `atomic=true`
 `bondlist`              | List of _internal_ bonds (harmonic, dihedrals etc.)
 `compressible=false`    | If true, molecular internal coordinates are scaled upon volume moves
+`ensphere=false`        | Radial rescale of positions to sphere w. radius of average radial distance from COM (stored in 1st atom which is a dummy)
 `excluded_neighbours=0` | Generate an `exclusionlist` from the bonded interaction: Add all atom pairs which are `excluded_neighbours` or less bonds apart
 `exclusionlist`         | List of _internal_ atom pairs which nonbonded interactions are excluded
 `implicit=false`        | If this species is implicit in GCMC schemes
@@ -109,6 +110,7 @@ Properties of molecules and their default values:
 `rigid=false`           | Set to true for rigid molecules. Affects energy evaluation.
 `rotate=true`           | If false, the original structure will not be rotated upon insertion
 `structure`             | Structure file or direct information; required if `atomic=false`
+`to_disk=false`         | Save initial structure to `{name}-initial.pqr`; for molecular groups only
 `traj`                  | Read conformations from PQR trajectory (`structure` will be ignored)
 `trajweight`            | One-column file with relative weights for each conformation. Must match frames in `traj` file.
 `trajcenter=false`      | Move CM of conformations to the origin assuming whole molecules

@@ -135,8 +135,17 @@ namespace Faunus {
 
             auto find_id(int id) const {
                 //return Faunus::filter(begin(), end(), [id](T &i){return (i.id==id);} );
-                return *this | ranges::view::filter( [id](T &i){ return (i.id==id); } );
+                return *this | ranges::cpp20::views::filter([id](T &i) { return (i.id == id); });
             } //!< Range of all (active) elements with matching particle id
+
+            /**
+             * @brief Returns i'th element in group
+             * @param i index starting at zero
+             * @return reference to value at i'th element
+             * @note No range-checking and i must be in interval `[0:size[`
+             */
+            inline auto &operator[](size_t i) { return *(this->first + i); }
+            inline const auto &operator[](size_t i) const { return *(this->first + i); }
 
             /*
              * @brief Reference to subset of given index, where 0 is the start of the group
@@ -149,7 +158,8 @@ namespace Faunus {
                     if (not index.empty()) 
                         assert( *std::max_element(index.begin(), index.end()) < size() );
 #endif
-                    return index | ranges::view::transform([this](Tint i) -> T& { return *(this->begin()+i); });
+                    return index |
+                           ranges::cpp20::views::transform([this](Tint i) -> T & { return *(this->begin() + i); });
                 }
 
             double mass() const; //!< Sum of all active masses
@@ -176,5 +186,43 @@ namespace Faunus {
 
 void to_json(json&, const Group<Particle>&);
 void from_json(const json&, Group<Particle>&);
+
+/*
+ * The following two functions are used to perform a complete
+ * serialisation of a group to/from a Cereal archive. When loading,
+ * the group *must* match the capacity of the saved data or an exception
+ * is thrown.
+ */
+
+template <class Archive, class T> void save(Archive &archive, const Group<T> &g, std::uint32_t const version) {
+    switch (version) {
+    case 0:
+        archive(g.id, g.confid, g.cm, g.compressible, g.atomic, g.size(), g.capacity());
+        for (auto it = g.begin(); it != g.trueend(); it++)
+            archive(*it);
+        break;
+    default:
+        throw std::runtime_error("unknown serialisation version");
+    };
+} //!< Cereal serialisation
+
+template <class Archive, class T> void load(Archive &archive, Group<T> &g, std::uint32_t const version) {
+    size_t size = 0, capacity = 0;
+    switch (version) {
+    case 0:
+        archive(g.id, g.confid, g.cm, g.compressible, g.atomic, size, capacity);
+        assert(size <= capacity);
+        if (capacity != g.capacity())
+            throw std::runtime_error("capacity mismatch of archived group");
+        g.resize(size);
+        assert(g.capacity() == capacity);
+        assert(g.size() == size);
+        for (auto it = g.begin(); it != g.trueend(); it++)
+            archive(*it);
+        break;
+    default:
+        throw std::runtime_error("unknown serialisation version");
+    }
+} //!< Cereal serialisation
 
 }//end of faunus namespace

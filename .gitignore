@@ -10,6 +10,9 @@ examples/
 _deps/
 sids/
 
+unittests.log
+a.out
+
 # CMake
 CMakeCache.txt
 CMakeFiles
@@ -21,6 +24,9 @@ Testing
 CTestTestfile.cmake
 .ipynb_checkpoints/
 .swp
+*.swp
+
+*.cbp
 
 # Compiled Object files
 *.slo

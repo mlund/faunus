@@ -24,7 +24,7 @@ random: { seed: hardware }
 The pseudo-random number engine used for MC moves can be seeded in three ways,
 
 `seed`       | Description
------------  | ----------------------------------------------
+------------ | ----------------------------------------------
 `fixed`      | Deterministic (default if `random` is absent)
 `hardware`   | [Non-deterministric seed](http://en.cppreference.com/w/cpp/numeric/random/random_device)
 engine state | [A previously saved stae](http://en.cppreference.com/w/cpp/numeric/random/mersenne_twister_engine/operator_ltltgtgt)
@@ -50,6 +50,7 @@ and if `dir=[0,0,1]` on a line (here $z$).
 ---------------- |  ---------------------------------
 `molecule`       |  Molecule name to operate on
 `dir=[1,1,1]`    |  Translational directions
+`dirrot=[0,0,0]` |  Predefined axis of rotation
 `dp`             |  Translational displacement parameter
 `dprot`          |  Rotational displacement parameter (radians)
 `repeat=N`       |  Number of repeats per MC sweep. `N` equals $N\_{molid}$ times.
@@ -64,8 +65,9 @@ where $\mbox{Rot}$ rotates `dprot`$\cdot \left (\zeta-\frac{1}{2} \right )$ radi
 emanating from the mass center,
 $\zeta$ is a random number in the interval $[0,1[$, and
 $\delta$ is a random unit vector scaled by a random number in the interval `[0,dp]`.
-Upon MC movement, the mean squared displacement
-will be tracked.
+A predefined axis of rotation can be specified as `dirrot`. For example, setting `dirrot` to [1,0,0], [0,1,0] or [0,0,1] 
+results in rotations about the $x-$, $y-$, and $z-$axis, respectively.
+Upon MC movement, the mean squared displacement will be tracked.
 
 
 ### Atomic
@@ -79,28 +81,29 @@ As `moltransrot` but instead of operating on the molecular mass center, this tra
 and rotates individual atoms in the group. The repeat is set to the number of atoms in the specified group and the
 displacement parameters `dp` and `dprot` for the individual atoms are taken from
 the atom properties defined in the [topology](topology).
-
-**note:**
-atomic _rotation_ affects only anisotropic particles such as dipoles, spherocylinders, quadrupoles etc.
+Atomic _rotation_ affects only anisotropic particles such as dipoles, spherocylinders, quadrupoles etc.
 
 ### Cluster Move
 
-`cluster`      | Description
--------------- | -----------------------
-`molecules`    | Array of molecule names; `[*]` selects all
-`threshold`    | Mass-center threshold for forming a cluster
-`dir=[1,1,1]`  | Directions to translate
-`dprot`        | Rotational displacement (radians)
-`dp`           | Translational displacement
-`spread`       | If false, stops cluster-growth after one layer around centered molecule. Untested!
-`satellites`   | Subset of `molecules` that cannot be cluster centers
+`cluster`       | Description
+--------------- | --------------------------------------------
+`molecules`     | Array of molecule names; `[*]` selects all
+`threshold`     | Mass-center threshold for forming a cluster (number or object)
+`dir=[1,1,1]`   | Directions to translate
+`dirrot=[0,0,0]`| Predefined axis of rotation. If zero, a random unit vector is generated for each move event
+`dprot`         | Rotational displacement (radians)
+`dp`            | Translational displacement (Å)
+`spread=true`   | If `false`, stops cluster-growth after one layer around centered molecule (experimental)
+`satellites`    | Subset of `molecules` that cannot be cluster centers
 
 This will attempt to rotate and translate clusters of molecular `molecules` defined by a distance `threshold`
 between mass centers.
 The `threshold` can be specified as a single number or as a complete list of combinations.
-For simulations where small molecules cluster around a large macro-molecules it can be useful to use the `satellites`
+For simulations where small molecules cluster around large macro-molecules, it can be useful to use the `satellites`
 keyword which denotes a list of molecules that can be part of a cluster, but cannot be the cluster nucleus or
 starting point. All molecules listed in `satellites` must be part of `molecules`.
+A predefined axis of rotation can be specified as `dirrot`. For example, setting `dirrot` to [1,0,0], [0,1,0] or [0,0,1] 
+results in rotations about the $x-$, $y-$, or $z-$axis, respectively.
 
 The move is associated with [bias](http://dx.doi.org/10/cj9gnn), such that
 the cluster size and composition remain unaltered.
@@ -119,10 +122,6 @@ cluster:
    dp: 3
    dprot: 1
 ```
-
-**Restrictions:**
-Currently, the number of `molecules` must be constant throughout simulation, i.e.
-grand canonical schemes are unsupported.
 
 ## Internal Degrees of Freedom
 

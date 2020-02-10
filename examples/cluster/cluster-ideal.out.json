@@ -1,0 +1,28 @@
+{
+    "moves": [
+        {
+            "moltransrot": {
+                "acceptance": 1.0,
+                "√⟨r²⟩": 11.5
+            }
+        },
+        {
+            "moltransrot": {
+                "acceptance": 1.0,
+                "√⟨r²⟩": 11.5
+            }
+        },
+        {
+            "cluster": {
+                "acceptance": 0.85,
+                "bias rejection rate": 0.15,
+                "satellites": [
+                    "other"
+                ],
+                "√⟨r²⟩": 10.4,
+                "√⟨θ²⟩/°": 45.7,
+                "⟨N⟩": 1.22
+            }
+        }
+    ]
+}

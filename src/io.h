@@ -2,6 +2,9 @@
 
 #include "core.h"
 #include "particle.h"
+#include "spdlog/spdlog.h"
+#include <cereal/archives/binary.hpp>
+#include <fstream>
 #include <range/v3/distance.hpp>
 
 namespace Faunus {
@@ -17,29 +20,47 @@ namespace Faunus {
 
 namespace IO {
 
-/* @brief Read lines from file into vector */
-bool readFile(const std::string &file, std::vector<std::string> &v);
+bool readFile(const std::string &, std::vector<std::string> &); //!< Read lines from file into vector
+
+bool writeFile(const std::string &file, const std::string &s,
+               std::ios_base::openmode mode = std::ios_base::out); //!< Write string to file
+
+void strip(std::vector<std::string> &string_vector, const std::string &pattern); //!< Strip lines matching a pattern
 
 /**
- * @brief Write std::string to file
- * @param file Filename
- * @param s String to write
- * @param mode `std::ios_base::out` (new, default) or `std::ios_base::app` (append)
+ * Write a map to an output stream as key-value pairs
+ * @tparam TKey
+ * @tparam TValue
+ * @param stream Output stream
+ * @param data
  */
-bool writeFile(const std::string &file, const std::string &s, std::ios_base::openmode mode = std::ios_base::out);
+template <typename TKey, typename TValue>
+void write(std::ostream &stream, const std::map<TKey, TValue> &data, const std::string &sep = " ", const std::string &end = "\n") {
+    if (stream) {
+        for (auto [key, value] : data) {
+            stream << key << sep << value << end;
+        }
+    }
+}
 
 /**
- * @brief Strip lines matching a pattern
- * @param v vector of std::string
- * @param pat Pattern to search for
+ * Write a map to a file as key-value pairs
+ * @tparam TKey
+ * @tparam TValue
+ * @param filename
+ * @param data
  */
-void strip(std::vector<std::string> &v, const std::string &pat);
+template <typename TKey, typename TValue> void write(const std::string &filename, const std::map<TKey, TValue> &data) {
+    if (!data.empty()) {
+        std::ofstream file(filename);
+        write(file, data);
+    }
+}
 
 } // namespace IO
 
 /**
  * @brief Read/write AAM file format
- * @todo Make "p" vector private.
  *
  * The AAM format is a simple format for loading particle positions
  * charges, radii and molecular weights. The structure is as follows:
@@ -63,74 +84,30 @@ void strip(std::vector<std::string> &v, const std::string &pat);
 class FormatAAM {
   private:
     static bool keepcharges; // true of we prefer charges from AAM file over AtomData
-
-    static std::string p2s(const Particle &a, int i) {
-        std::ostringstream o;
-        o.precision(5);
-        auto &atom = Faunus::atoms.at(a.id);
-        o << atom.name << " " << i + 1 << " " << a.pos.transpose() << " " << a.charge << " " << atom.mw << " "
-          << atom.sigma / 2 << std::endl;
-        return o.str();
-    }
-
-    // convert string line to particle
-    static Particle &s2p(const std::string &s, Particle &a);
+    static std::string p2s(const Particle &, int);
+    static Particle &s2p(const std::string &, Particle &); // convert string line to particle
 
   public:
-    typedef std::vector<Particle> Tpvec;
-    static bool load(const std::string &file, Tpvec &target, bool _keepcharges = true);
-
-    static bool save(const std::string &file, const Tpvec &pv);
+    static bool load(const std::string &, ParticleVector &, bool = true);
+    static bool save(const std::string &, const ParticleVector &);
 };
 
 /**
- * @brief PQR format
+ * @brief Create and read PQR files
  * @date December 2007
- *
- * Saves particles as a PQR file. This format is very similar
- * to PDB but also contains charges and radii
  */
 class FormatPQR {
   private:
-    // Write box dimensions (standard PDB format)
-    static std::string writeCryst1(const Point &len, const Point &angle = {90, 90, 90});
+    static std::string writeCryst1(const Point &, const Point & = {90, 90, 90}); //!< Write CRYST1 record
+    static bool readCrystalRecord(const std::string &, Point &);                 //!< Read CRYST1 record
+    static bool readAtomRecord(const std::string &, Particle &, double &);       //!< Read ATOM or HETATOM record
 
   public:
-    typedef std::vector<Particle> Tpvec;
-
-    /**
-     * @brief Simple loader for PQR files
-     *
-     * This will load coordinates from a PQR file into
-     * a particle vector. Atoms are identified by the
-     * `ATOM` and `HETATM` keywords and the PQR atom
-     * name is used to identify the particle from `AtomMap`.
-     * If the unit cell dimension, given by `CRYST1`, is
-     * found a non-zero vector is returned.
-     *
-     * @param file PQR file to load
-     * @param p Target particle vector to *append* to
-     * @return Vector with unit cell dimensions. Zero length if not found.
-     * @note This is a lazy and unsafe loader that doesn't properly
-     *       respect the PQR fixed column format. Has been tested to
-     *       work with files from VMD, pdb2pqr, and Faunus.
-     */
-    static Point load(const std::string &file, Tpvec &p, bool keep_charges);
-
-    /**
-     * @brief Read trajectory. Each frame must be separated by the "END" keyword.
-     * @param file File name
-     * @param v Vector of particle vectors
-     */
-    static void load(const std::string &file, std::vector<Tpvec> &v);
-
-    /**
-     * @param file Filename
-     * @param p Particle vector
-     * @param len Unit cell dimensions (optional)
-     * @param n Number of atoms in each residue (default: 1e9)
-     */
-    static bool save(const std::string &file, const Tpvec &p, Point len = Point(0, 0, 0), int n = 1e9);
+    static Point load(std::istream &, ParticleVector &, bool);                      //!< Load PQR from stream
+    static Point load(const std::string &, ParticleVector &, bool);                 //!< Load PQR from file
+    static void loadTrajectory(const std::string &, std::vector<ParticleVector> &); //!< Load trajectory
+    static bool save(std::ostream &, const ParticleVector &, Point = Point(0, 0, 0), int = 1e9);      //!< Save PQR file
+    static bool save(const std::string &, const ParticleVector &, Point = Point(0, 0, 0), int = 1e9); //!< Save PQR file
 };
 
 /**
@@ -142,45 +119,8 @@ class FormatPQR {
  * particles xyz position on each line
  */
 struct FormatXYZ {
-    typedef std::vector<Particle> Tpvec;
-    static bool save(const std::string &file, const Tpvec &p, const Point &box = {0, 0, 0});
-
-    /*
-     * @brief Load XYZ file with atom positions
-     *
-     * Loads coordinates from XYZ file into particle vector. Remaining atom properties
-     * are taken from the defined atom list; a warning is issued of the atom name
-     * is unknown.
-     *
-     * @param file Filename
-     * @param p Destination particle vector
-     * @param append True means append to `p` (default). If `false`,`p` is first cleared.
-     */
-    static bool load(const std::string &file, Tpvec &p, bool append = true);
-};
-
-/**
- * @brief MXYZ format
- * @date June 2013
- *
- * Saves particles as a modifiedXYZ file. This format has number of particles at the first line
- * comment on second line, which we use to have a box information, and this is followed by positions,
- * direction and patch direction on each line
- *
- * @todo Under construction
- */
-class FormatMXYZ {
-  private:
-    static std::string p2s(const Particle &a, int);
-
-    static Particle &s2p(const std::string &s, Particle &a);
-
-  public:
-    typedef std::vector<Particle> Tpvec;
-    static bool save(const std::string &file, const Tpvec &p, const Point &len, int time);
-
-  public:
-    static bool load(const std::string &file, Tpvec &p, Point &len);
+    static bool save(const std::string &, const ParticleVector &, const Point & = {0, 0, 0});           //!< Save XYZ
+    static bool load(const std::string &filename, ParticleVector &particle_vector, bool append = true); //!< Load XYZ
 };
 
 /**
@@ -191,41 +131,36 @@ class FormatMXYZ {
 class FormatGRO {
   private:
     std::vector<std::string> v;
-
-    void s2p(const std::string &s, Particle &dst);
+    void s2p(const std::string &, Particle &);
 
   public:
-    typedef std::vector<Particle> Tpvec;
-    double len; //!< Box side length (cubic so far)
+    double boxlength; //!< Box side length (cubic so far)
 
     /**
      * @brief Load GRO file into particle vector
      * @param file Filename
      * @param p Destination particle vector
      */
-    bool load(const std::string &file, Tpvec &p);
+    bool load(const std::string &, ParticleVector &);
 
-    bool save(const std::string &file, Tpvec &p, std::string mode = "");
-
-    template <class Tspace> bool static save(const std::string &file, Tspace &spc) {
-        typedef typename Tspace::Tparticle Tparticle;
-        int nres = 1, natom = 1;
-        char buf[79];
-        Point halflen = spc.geo.getLength() * 0.5;
-        std::ostringstream o;
-        o << "Generated by Faunus -- http://faunus.sourceforge.net\n" << spc.p.size() << "\n";
-        for (auto &g : spc.groups) {
-            for (auto &i : g) {
-                Point a = (i.pos + halflen) / 10; // angstron->nm
-                std::string &name = atoms.at(i.id).name;
-                sprintf(buf, "%5d%5s%5s%5d%8.3f%8.3f%8.3f\n", nres, name.c_str(), name.c_str(), natom++, a.x(), a.y(),
-                        a.z());
-                o << buf;
+    template <class Tspace> bool static save(const std::string &filename, const Tspace &spc) {
+        if (std::ofstream file(filename); bool(file)) {
+            int nres = 1, natom = 1;
+            Point boxlength = spc.geo.getLength();
+            file << "Generated by Faunus -- https://github.com/mlund/faunus\n" << spc.numParticles() << "\n";
+            for (auto &group : spc.groups) { // loop over groups
+                for (auto &i : group) {      // loop over active particles
+                    auto &name = Faunus::atoms.at(i.id).name;
+                    Point pos = 0.1 * (i.pos + 0.5 * boxlength); // shift origin and convert to nm
+                    file << fmt::format("{:5d}{:5}{:5}{:5d}{:8.3f}{:8.3f}{:8.3f}\n", nres, name, name, natom++, pos.x(),
+                                        pos.y(), pos.z());
+                }
+                nres++;
             }
-            nres++;
+            file << 0.1 * boxlength.transpose() << "\n";
+            return true;
         }
-        o << spc.geo.getLength().transpose() / 10 << "\n";
-        return IO::writeFile(file, o.str());
+        return false;
     }
 };
 
@@ -268,7 +203,7 @@ class FormatXTC {
      *       You may want to transfer the new box size to the pair potential if
      *       periodic boundaries are used.
      */
-    template <class Tspace> bool loadnextframe(Tspace &c, bool setbox = true, bool applypbc = false) {
+    template <class Tspace> bool loadNextFrame(Tspace &c, bool setbox = true, bool applypbc = false) {
         if (xd != nullptr) {
             if (natoms_xtc == (int)c.p.size()) {
                 int rc = read_xtc(xd, natoms_xtc, &step_xtc, &time_xtc, xdbox, x_xtc, &prec_xtc);
@@ -332,76 +267,73 @@ class FormatXTC {
      * This will open an xtc file for reading. The number of atoms in each frame
      * is saved and memory for the coordinate array is allocated.
      */
-    bool open(std::string s);
-    void close();
 
-    FormatXTC(double len);
+    FormatXTC(double);
     ~FormatXTC();
-
-    void setbox(double x, double y, double z);
-    void setbox(double len);
-    void setbox(const Point &p);
+    bool open(std::string);
+    void close();
+    void setLength(double);
+    void setLength(const Point &);
 };
 
-/**
- * @brief Convert FASTA sequence to atom id sequence
- * @param fasta FASTA sequence, capital letters.
- * @return vector of verified and existing atom id's
- */
-inline auto fastaToAtomIds(const std::string &fasta) {
-    std::map<char, std::string> map = {{'A', "ALA"},
-                                       {'R', "ARG"},
-                                       {'N', "ASN"},
-                                       {'D', "ASP"},
-                                       {'C', "CYS"},
-                                       {'E', "GLU"},
-                                       {'Q', "GLN"},
-                                       {'G', "GLY"},
-                                       {'H', "HIS"},
-                                       {'I', "ILE"},
-                                       {'L', "LEU"},
-                                       {'K', "LYS"},
-                                       {'M', "MET"},
-                                       {'F', "PHE"},
-                                       {'P', "PRO"},
-                                       {'S', "SER"},
-                                       {'T', "THR"},
-                                       {'W', "TRP"},
-                                       {'Y', "TYR"},
-                                       {'V', "VAL"},
-                                       // faunus specific codes
-                                       {'n', "NTR"},
-                                       {'c', "CTR"},
-                                       {'a', "ANK"}};
-
-    std::vector<std::string> names;
-    names.reserve(fasta.size());
-
-    for (auto c : fasta) {     // loop over letters
-        auto it = map.find(c); // is it in map?
-        if (it == map.end())
-            throw std::runtime_error("Invalid FASTA letter '" + std::string(1, c) + "'");
-        else
-            names.push_back(it->second);
-    }
-    return Faunus::names2ids(atoms, names);
-}
+std::vector<int> fastaToAtomIds(const std::string &); //!< Convert FASTA sequence to atom id sequence
 
 /**
  * @brief Create particle vector from FASTA sequence with equally spaced atoms
  *
  * Particle positions is generated as a random walk
  */
-std::vector<Particle> fastaToParticles(const std::string &fasta, double spacing = 7, const Point &origin = {0, 0, 0});
+std::vector<Particle> fastaToParticles(const std::string &, double = 7, const Point & = {0, 0, 0});
 
 /**
  * @brief Load structure file into particle vector
- * @param file filename to load (aam, pqr, xyz, ...)
- * @param dst destination particle vector
- * @param append if true, expand dst vector
- * @param keep_charges if true, ignore AtomData charges
- * @return true if successfully loaded
  */
-bool loadStructure(const std::string &file, std::vector<Particle> &dst, bool append, bool keep_charges = true);
+bool loadStructure(const std::string &, std::vector<Particle> &, bool, bool = true);
+
+/**
+ * @brief Create (compressed) output stream
+ * @param filename Output filename
+ * @param openmode Mode for opening file
+ * @param compression Set to true for zlib compression
+ * @return unique pointer to output stream
+ */
+std::unique_ptr<std::ostream> makeOutputStream(const std::string &, std::ios_base::openmode, bool);
+
+/**
+ * @brief Create (compressed) input stream from file
+ * @param filename Input filename
+ * @param openmode Mode for opening file
+ * @return unique pointer to input stream
+ * @note zlib compression is auto-detected
+ */
+std::unique_ptr<std::istream> makeInputStream(const std::string &, std::ios_base::openmode);
+
+/**
+ * @brief Placeholder for Space Trajectory
+ *
+ * The idea is that the format handles both input and
+ * output streams that may of may not be compressed.
+ */
+class FormatSpaceTrajectory {
+  private:
+    std::unique_ptr<cereal::BinaryOutputArchive> output_archive;
+    std::unique_ptr<cereal::BinaryInputArchive> input_archive;
+
+  public:
+    FormatSpaceTrajectory(std::ostream &ostream) {
+        if (ostream)
+            output_archive = std::make_unique<cereal::BinaryOutputArchive>(ostream);
+    }
+    FormatSpaceTrajectory(std::istream &istream) {
+        if (istream)
+            input_archive = std::make_unique<cereal::BinaryInputArchive>(istream);
+    }
+    template <class Tspace> void load(Tspace &) {
+      assert(input_archive != nullptr);
+    } //!< Load single frame from stream
+    template <class Tspace> void save(const Tspace &) {
+      assert(output_archive != nullptr);
+    } //!< Save single frame from stream
+};
 
 } // namespace Faunus

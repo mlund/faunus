@@ -63,7 +63,7 @@ struct EwaldData {
     double alpha = 0;
     double const_inf = 0;
     double check_k2_zero = 0;
-    bool spherical_sum = true;
+    bool use_spherical_sum = true;
     int num_kvectors = 0;
     Point box_length = {0.0, 0.0, 0.0};                        //!< Box dimensions
     enum Policies { PBC, PBCEigen, IPBC, IPBCEigen, INVALID }; //!< Possible k-space updating schemes
@@ -86,7 +86,6 @@ void to_json(json &, const EwaldData &);
  */
 class EwaldPolicyBase {
   public:
-    typedef typename ParticleVector::iterator iter;
     std::string cite; //!< Optional reference, preferably DOI, to further information
     virtual ~EwaldPolicyBase() = default;
     virtual void updateBox(EwaldData &, const Point &) const = 0; //!< Prepare k-vectors according to given box vector

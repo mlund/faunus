@@ -10,7 +10,7 @@ EwaldData::EwaldData(const json &j) {
     alpha = j.at("alpha");                          // damping-parameter
     r_cutoff = j.at("cutoff");                      // real space cut-off
     k_cutoff = j.at("kcutoff");                     // reciprocal space cut-off
-    spherical_sum = j.value("spherical_sum", true); // Using spherical summation of k-vectors in reciprocal space?
+    use_spherical_sum = j.value("spherical_sum", true); // Using spherical summation of k-vectors in reciprocal space?
     bjerrum_length = pc::lB(j.at("epsr"));
     surface_dielectric_constant = j.value("epss", 0.0); // dielectric constant of surrounding medium
     const_inf =
@@ -22,7 +22,7 @@ EwaldData::EwaldData(const json &j) {
         faunus_logger->warn("key `ipbc` is deprecated, use `ewaldscheme: ipbc` instead");
         policy = EwaldData::IPBC;
     } else {
-        policy = j.value("ewaldpolicy", EwaldData::PBC);
+        policy = j.value("ewaldscheme", EwaldData::PBC);
         if (policy == EwaldData::INVALID)
             throw std::runtime_error("invalid `ewaldpolicy`");
     }
@@ -35,7 +35,7 @@ void to_json(json &j, const EwaldData &d) {
          {"cutoff", d.r_cutoff},
          {"kcutoff", d.k_cutoff},
          {"wavefunctions", d.k_vectors.cols()},
-         {"spherical_sum", d.spherical_sum},
+         {"spherical_sum", d.use_spherical_sum},
          {"kappa", d.kappa},
          {"ewaldscheme", d.policy}};
 }
@@ -85,19 +85,19 @@ void PolicyIonIon::updateBox(EwaldData &d, const Point &box) const {
         d.num_kvectors = 0;
         d.k_vectors.setZero();
         d.Aks.setZero();
-        int startValue = 1;
+        int start_value = 1;
         for (int kx = 0; kx <= k_cutoff_ceil; kx++) {
             double dkx2 = double(kx * kx);
             double factor = (kx > 0) ? 2.0 : 1.0; // optimization of PBC Ewald (and
                                                   // always the case for IPBC Ewald)
-            for (int ky = -k_cutoff_ceil * startValue; ky <= k_cutoff_ceil; ky++) {
+            for (int ky = -k_cutoff_ceil * start_value; ky <= k_cutoff_ceil; ky++) {
                 double dky2 = double(ky * ky);
-                for (int kz = -k_cutoff_ceil * startValue; kz <= k_cutoff_ceil; kz++) {
+                for (int kz = -k_cutoff_ceil * start_value; kz <= k_cutoff_ceil; kz++) {
                     Point kv = 2 * pc::pi * Point(kx, ky, kz).cwiseQuotient(d.box_length);
                     double k2 = kv.squaredNorm() + d.kappa_squared; // last term is only for Yukawa-Ewald
                     if (k2 < d.check_k2_zero)                       // Check if k2 != 0
                         continue;
-                    if (d.spherical_sum) {
+                    if (d.use_spherical_sum) {
                         double dkz2 = double(kz * kz);
                         if ((dkx2 + dky2 + dkz2) / kc2 > 1)
                             continue;
@@ -115,15 +115,18 @@ void PolicyIonIon::updateBox(EwaldData &d, const Point &box) const {
     }
 }
 
+/**
+ * @todo Add OpenMP pragma to first loop
+ */
 void PolicyIonIon::updateComplex(EwaldData &data, Space::Tgvec &groups) const {
     for (int k = 0; k < data.k_vectors.cols(); k++) {
-        const Point &kv = data.k_vectors.col(k);
+        const Point &q = data.k_vectors.col(k);
         EwaldData::Tcomplex Q(0, 0);
         for (auto &g : groups) {       // loop over molecules
             for (auto &particle : g) { // loop over active particles
-                double dot = kv.dot(particle.pos);
-                Q += particle.charge * EwaldData::Tcomplex(std::cos(dot),
-                                                           std::sin(dot)); // 'Q^q', see eq. 25 in ref.
+                double qr = q.dot(particle.pos);
+                Q += particle.charge * EwaldData::Tcomplex(std::cos(qr),
+                                                           std::sin(qr)); // 'Q^q', see eq. 25 in ref.
             }
             data.Q_ion[k] = Q;
         }
@@ -170,8 +173,8 @@ void PolicyIonIonIPBC::updateBox(EwaldData &data, const Point &box) const {
     data.box_length = box;
     int kcc = std::ceil(data.k_cutoff);
     data.check_k2_zero = 0.1 * std::pow(2 * pc::pi / data.box_length.maxCoeff(), 2);
-    int kVectorsLength = (2 * kcc + 1) * (2 * kcc + 1) * (2 * kcc + 1) - 1;
-    if (kVectorsLength == 0) {
+    int k_vector_size = (2 * kcc + 1) * (2 * kcc + 1) * (2 * kcc + 1) - 1;
+    if (k_vector_size == 0) {
         data.k_vectors.resize(3, 1);
         data.Aks.resize(1);
         data.k_vectors.col(0) = Point(1, 0, 0); // Just so it is not the zero-vector
@@ -181,19 +184,19 @@ void PolicyIonIonIPBC::updateBox(EwaldData &data, const Point &box) const {
         data.Q_dipole.resize(1);
     } else {
         double kc2 = data.k_cutoff * data.k_cutoff;
-        data.k_vectors.resize(3, kVectorsLength);
-        data.Aks.resize(kVectorsLength);
+        data.k_vectors.resize(3, k_vector_size);
+        data.Aks.resize(k_vector_size);
         data.num_kvectors = 0;
         data.k_vectors.setZero();
         data.Aks.setZero();
-        int startValue = 0;
+        int start_value = 0;
         for (int kx = 0; kx <= kcc; kx++) {
             double dkx2 = double(kx * kx);
             double xfactor = (kx > 0) ? 2.0 : 1.0; // optimization of PBC Ewald
-            for (int ky = -kcc * startValue; ky <= kcc; ky++) {
+            for (int ky = -kcc * start_value; ky <= kcc; ky++) {
                 double dky2 = double(ky * ky);
                 double yfactor = (ky > 0) ? 2.0 : 1.0; // optimization of PBC Ewald
-                for (int kz = -kcc * startValue; kz <= kcc; kz++) {
+                for (int kz = -kcc * start_value; kz <= kcc; kz++) {
                     double factor = xfactor * yfactor;
                     if (kz > 0)
                         factor *= 2;
@@ -201,7 +204,7 @@ void PolicyIonIonIPBC::updateBox(EwaldData &data, const Point &box) const {
                     double k2 = kv.squaredNorm() + data.kappa_squared; // last term is only for Yukawa-Ewald
                     if (k2 < data.check_k2_zero)                       // Check if k2 != 0
                         continue;
-                    if (data.spherical_sum) {
+                    if (data.use_spherical_sum) {
                         double dkz2 = double(kz * kz);
                         if ((dkx2 + dky2 + dkz2) / kc2 > 1)
                             continue;
@@ -219,37 +222,36 @@ void PolicyIonIonIPBC::updateBox(EwaldData &data, const Point &box) const {
     }
 }
 
-void PolicyIonIonIPBC::updateComplex(EwaldData &data, Space::Tgvec &groups) const {
-    assert(data.policy == EwaldData::IPBC or data.policy == EwaldData::IPBCEigen);
-    for (int k = 0; k < data.k_vectors.cols(); k++) {
-        const Point &kv = data.k_vectors.col(k);
+void PolicyIonIonIPBC::updateComplex(EwaldData &d, Space::Tgvec &groups) const {
+    assert(d.policy == EwaldData::IPBC or d.policy == EwaldData::IPBCEigen);
+    for (int k = 0; k < d.k_vectors.cols(); k++) {
+        const Point &q = d.k_vectors.col(k);
         EwaldData::Tcomplex Q(0, 0);
         for (auto &g : groups) {
             for (auto &particle : g) {
-                Q += kv.cwiseProduct(particle.pos).array().cos().prod() * particle.charge; // see eq. 2 in doi:10/css8
+                Q += q.cwiseProduct(particle.pos).array().cos().prod() * particle.charge; // see eq. 2 in doi:10/css8
             }
         }
-        data.Q_ion[k] = Q;
+        d.Q_ion[k] = Q;
     }
 }
 
-void PolicyIonIonIPBCEigen::updateComplex(EwaldData &data, Space::Tgvec &groups) const {
-    assert(data.policy == EwaldData::IPBC or data.policy == EwaldData::IPBCEigen);
-    auto [pos, charge] = mapGroupsToEigen(groups);
-    data.Q_ion.real() =
-        (data.k_vectors.array().cwiseProduct(pos).array().cos().prod() * charge)
-            .colwise()
-            .sum(); // see eq. 2 in doi:10/css8
+void PolicyIonIonIPBCEigen::updateComplex(EwaldData &d, Space::Tgvec &groups) const {
+    assert(d.policy == EwaldData::IPBC or d.policy == EwaldData::IPBCEigen);
+    auto [pos, charge] = mapGroupsToEigen(groups); // throws if inactive particles
+    d.Q_ion.real() = (d.k_vectors.array().cwiseProduct(pos).array().cos().prod() * charge)
+                         .colwise()
+                         .sum(); // see eq. 2 in doi:10/css8
 }
 
-void PolicyIonIonIPBC::updateComplex(EwaldData &data, Change &change, Space::Tgvec &groups,
+void PolicyIonIonIPBC::updateComplex(EwaldData &d, Change &change, Space::Tgvec &groups,
                                      Space::Tgvec &oldgroups) const {
-    assert(data.policy == EwaldData::IPBC or data.policy == EwaldData::IPBCEigen);
+    assert(d.policy == EwaldData::IPBC or d.policy == EwaldData::IPBCEigen);
     assert(groups.size() == oldgroups.size());
 
-    for (int k = 0; k < data.k_vectors.cols(); k++) {
-        auto &Q = data.Q_ion[k];
-        const Point &q = data.k_vectors.col(k);
+    for (int k = 0; k < d.k_vectors.cols(); k++) {
+        auto &Q = d.Q_ion[k];
+        const Point &q = d.k_vectors.col(k);
         for (auto &changed_group : change.groups) {
             auto &g_new = groups.at(changed_group.index);
             auto &g_old = oldgroups.at(changed_group.index);
@@ -295,7 +297,7 @@ double PolicyIonIon::selfEnergy(const EwaldData &d, Change &change, Space::Tgvec
             auto &g = groups.at(changed_group.index);
             for (auto i : changed_group.atoms) {
                 if (i < g.size()) {
-                    energy += std::pow((g.begin() + i)->charge, 2);
+                    energy += std::pow(g[i].charge, 2);
                 }
             }
         }
@@ -360,15 +362,25 @@ double Ewald::energy(Change &change) {
     return u;
 }
 
-void Ewald::sync(Energybase *basePtr, Change &) {
-    auto other = dynamic_cast<decltype(this)>(basePtr);
+/**
+ * @todo Implement a sync() function in EwaldData to selectively copy information
+ */
+void Ewald::sync(Energybase *energybase_pointer, Change &change) {
+    auto other = dynamic_cast<decltype(this)>(energybase_pointer);
     assert(other);
     if (other->key == OLD) {
       old_groups =
           &(other->spc
                 .groups); // give NEW access to OLD space for optimized updates
     }
-    data = other->data;              // copy everything!
+
+    // hard-coded sync; should be expanded when dipolar ewald is supported
+    if (change.all or change.dV) {
+        other->data.Q_dipole.resize(0); // dipoles are currently unsupported
+        data = other->data;
+    } else {
+        data.Q_ion = other->data.Q_ion;
+    }
 }
 
 void Ewald::to_json(json &j) const { j = data; }

@@ -14,6 +14,8 @@ namespace Move {
  * X can be implicit, meaning that it enters only with its chemical potential
  * (activity). The reacting species, the equilibrium constant,
  * and the activities are read from the JSON input file.
+ *
+ * @todo Messy code requires substantial cleanup and documentation
  */
 class SpeciationMove : public Movebase {
   private:

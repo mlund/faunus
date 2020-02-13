@@ -208,6 +208,7 @@ properties:
                       properties:
                           C: {type: integer, default: 3}
                           D: {type: integer, default: 3}
+                          debyelength: {type: number, description: Debye screening length (Å)}
                       required: [cutoff, C, D]
                 - if:
                       properties: {type: {const: "fanourgakis"}}
@@ -222,7 +223,14 @@ properties:
                           kcutoff: {type: number}
                           ipbc: {type: boolean, default: false}
                           ewaldscheme: {type: string, enum: [PBC, PBCEigen, IPBC], default: PBCEigen}
+                          debyelength: {type: number, description: Debye screening length (Å)}
                       required: [cutoff, epss, alpha, kcutoff]
+                - if:
+                      properties: {type: {const: "yukawa"}}
+                  then:
+                      properties:
+                          debyelength: {type: number, description: Debye screening length (Å)}
+                      required: [cutoff, debyelength]
 
         mixing_rule:
             description: Sigma and Epsilon Mixing rule
@@ -415,7 +423,11 @@ properties:
                         com: {type: boolean, default: false, description: Operate on mass-center instead of individual atoms?}
                         constants: {type: object, description: User-defined constants}
                         function: {type: string, description: Mathematical expression for the potential (units of kT)}
-                        molecules: {type: array, items: {type: string}, description: Array of molecules to operate on}
+                        molecules:
+                            type: array
+                            items: {type: string}
+                            minItems: 1
+                            description: Array of molecules to operate on
                     required: [function, molecules]
                     additionalProperties: false
 
@@ -445,8 +457,10 @@ properties:
                             type: array
                         k: {type: [integer, string]}
                         molecules:
-                            items: {type: string}
                             type: array
+                            items: {type: string}
+                            minItems: 1
+                            description: Array of molecules to operate on
                         origo:
                             items: {type: number}
                             type: array
@@ -568,6 +582,7 @@ properties:
                         molecules:
                             items: {type: string}
                             type: array
+                            minItems: 1
                         satellites:
                             items: {type: string}
                             type: array
@@ -709,6 +724,7 @@ properties:
                         molecules:
                             description: "List of molecule names to sample (array); [*] selects all"
                             items: {type: string}
+                            minItems: 1
                             type: array
                         qmin: {type: number, description: Minimum q value (1/Å)}
                         qmax: {type: number, description: Maximum q value (1/Å)}
@@ -718,6 +734,7 @@ properties:
                         scheme:
                             description: Scattering method
                             enum: [debye, explicit]
+                        file: {type: string, description: Output file for S(q)}
                         stepsave: {type: boolean, default: false, description: Save every sample to disk}
                         required: [nstep, molecules, scheme]
                     additionalProperties: false
@@ -799,7 +816,7 @@ properties:
                     description: "Write Gromacs XTC trajectory"
                     properties:
                         file: {type: string, pattern: "(.*?)\\.(xtc)$"}
-                        nstep: {type: integer}
+                        nstep: {type: integer, description: Interval between samples}
                         nskip: {type: integer, default: 0, description: Initial steps to skip}
                         molecules:
                             items: {type: string}

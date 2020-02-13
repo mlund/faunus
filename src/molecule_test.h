@@ -230,7 +230,7 @@ TEST_CASE("[Faunus] ReactionData") {
     r = j["reactionlist"].get<decltype(reactions)>();
 
     CHECK(r.size() == 1);
-    CHECK(r.front().name == "A = B");
+    CHECK(r.front().reaction == "A = B");
     CHECK(r.front().lnK == Approx(-10.051 - std::log(0.2)));
 }
 

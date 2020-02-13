@@ -578,11 +578,11 @@ void Density::_sample() {
 
     if (Faunus::reactions.size() > 0) { // in case of reactions involving atoms (swap moves)
         for (auto &rit : reactions) {
-            for (auto pid : rit._prodid_a) {
+            for (auto pid : rit.atomic_products) {
                 auto atomlist = spc.findAtoms(pid.first);
                 swpdhist[pid.first](rng_size(atomlist))++;
             }
-            for (auto rid : rit._reagid_a) {
+            for (auto rid : rit.atomic_reactants) {
                 auto atomlist = spc.findAtoms(rid.first);
                 swpdhist[rid.first](rng_size(atomlist))++;
             }
@@ -618,10 +618,10 @@ Density::Density(const json &j, Space &spc) : spc(spc) {
     }
     if (Faunus::reactions.size() > 0) { // in case of reactions involving atoms (swap moves)
         for (auto &rit : reactions) {
-            for (auto pid : rit._prodid_a) {
+            for (auto pid : rit.atomic_products) {
                 swpdhist[pid.first].setResolution(1, 0);
             }
-            for (auto rid : rit._reagid_a) {
+            for (auto rid : rit.atomic_reactants) {
                 swpdhist[rid.first].setResolution(1, 0);
             }
         }
@@ -654,7 +654,7 @@ void Density::_to_disk() {
     }
     if (Faunus::reactions.size() > 0) { // in case of reactions involving atoms (swap moves)
         for (auto &rit : reactions) {
-            for (auto pid : rit._prodid_a) {
+            for (auto pid : rit.atomic_products) {
                 std::string file = "rho-"s + atoms.at(pid.first).name + ".dat";
                 std::ofstream f(MPI::prefix + file);
                 if (f) {
@@ -666,7 +666,7 @@ void Density::_to_disk() {
                     f << "# N samplings P\n" << swpdhist.at(pid.first);
                 }
             }
-            for (auto rid : rit._reagid_a) {
+            for (auto rid : rit.atomic_reactants) {
                 std::string file = "rho-"s + atoms.at(rid.first).name + ".dat";
                 std::ofstream f(MPI::prefix + file);
                 if (f) {

@@ -321,13 +321,12 @@ class ReactionData {
   public:
     typedef std::map<int, int> Tmap;
 
-    std::vector<std::string> _reag, _prod;
+    std::vector<std::string> reactant_names, product_names;
 
-    Tmap _reagid_m; // Molecular change, groups. Atomic as Groupwise
-    Tmap _reagid_a; // Atomic change, equivalent of swap/titration
-    Tmap _prodid_m;
-    Tmap _prodid_a;
-    // Tmap _Reac, _Prod;
+    Tmap molecular_reactants; // Molecular change, groups. Atomic as Groupwise
+    Tmap molecular_products;
+    Tmap atomic_reactants; // Atomic change, equivalent of swap/titration
+    Tmap atomic_products;
 
     bool canonic = false; //!< Finite reservoir
     bool swap = false;    //!< True if swap move
@@ -335,8 +334,7 @@ class ReactionData {
     double lnK = 0;       //!< Natural logarithm of molar eq. const.
     double pK = 0;        //!< -log10 of molar eq. const.
     bool neutral = false; //!< True if only neutral molecules are involved in the reaction
-    std::string name;     //!< Name of reaction
-    std::string formula;  //!< Chemical formula
+    std::string reaction; //!< Name of reaction
     double weight;        //!< Statistical weight to be given to reaction in speciation
 
     bool empty(bool forward) const;
@@ -345,17 +343,17 @@ class ReactionData {
 
     bool containsMolecule(int molid) const; //!< True of molecule id is part of process
 
-    const Tmap &Molecules2Add(bool forward) const; //!< Map for addition depending on direction
+    const Tmap &moleculesToAdd(bool forward) const; //!< Map for addition depending on direction
 
-    const Tmap &Atoms2Add(bool forward) const; //!< Map for addition depending on direction
+    const Tmap &atomsToAdd(bool forward) const; //!< Map for addition depending on direction
 
     auto findAtomOrMolecule(const std::string &name) const {
-        auto it_a = findName(Faunus::atoms, name);
-        auto it_m = findName(Faunus::molecules, name);
-        if (it_m == Faunus::molecules.end())
-            if (it_a == Faunus::atoms.end())
+        auto atom_iter = findName(Faunus::atoms, name);
+        auto molecule_iter = findName(Faunus::molecules, name);
+        if (molecule_iter == Faunus::molecules.end())
+            if (atom_iter == Faunus::atoms.end())
                 throw std::runtime_error("unknown species '" + name + "'");
-        return std::make_pair(it_a, it_m);
+        return std::make_tuple(atom_iter, molecule_iter);
     } //!< Returns pair of iterators to atomlist and moleculelist. One of them points to end().
 
 }; //!< End of class
@@ -371,7 +369,7 @@ inline auto parseProcess(const std::string &process) {
     auto it = std::find(v.begin(), v.end(), "=");
     if (it == v.end())
         throw std::runtime_error("products and reactants must be separated by '='");
-    return std::make_pair(Tvec(v.begin(), it), Tvec(it + 1, v.end()));
+    return std::make_tuple(Tvec(v.begin(), it), Tvec(it + 1, v.end()));
 } //!< Parse process string to pair of vectors containing reactant/product species
 
 void from_json(const json &j, ReactionData &a);

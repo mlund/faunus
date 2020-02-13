@@ -22,10 +22,10 @@ class SpeciationMove : public Movebase {
     Space &spc;
     Space *otherspc;
     ReactionData *trialprocess;
-    std::map<std::string, Average<double>> accmap;
+    std::map<std::string, Average<double>> acceptance_map;
 
     double lnK;
-    double bondenergy = 0;
+    double bond_energy = 0;
     bool forward = true;  // reaction moving forwards or backwards? (or left or right)
     bool neutral = false; // true if only neutral molecules are involved in the reaction
 

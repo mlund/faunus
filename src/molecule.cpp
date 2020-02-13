@@ -614,20 +614,25 @@ bool ReactionData::empty(bool forward) const {
 }
 std::vector<int> ReactionData::participatingMolecules() const {
     std::vector<int> v;
-    v.reserve(_reagid_m.size() + _prodid_m.size());
-    for (auto i : _reagid_m)
+    v.reserve(molecular_reactants.size() + molecular_products.size());
+    for (auto i : molecular_reactants)
         v.push_back(i.first);
-    for (auto i : _prodid_m)
+    for (auto i : molecular_products)
         v.push_back(i.first);
     return v;
 }
 
 bool ReactionData::containsMolecule(int molid) const {
-    return _reagid_m.count(molid) > 0 || _prodid_m.count(molid) > 0;
+    return molecular_reactants.count(molid) > 0 || molecular_products.count(molid) > 0;
 }
 
-const ReactionData::Tmap &ReactionData::Molecules2Add(bool forward) const { return (forward) ? _prodid_m : _reagid_m; }
-const ReactionData::Tmap &ReactionData::Atoms2Add(bool forward) const { return (forward) ? _prodid_a : _reagid_a; }
+const ReactionData::Tmap &ReactionData::moleculesToAdd(bool forward) const {
+    return (forward) ? molecular_products : molecular_reactants;
+}
+
+const ReactionData::Tmap &ReactionData::atomsToAdd(bool forward) const {
+    return (forward) ? atomic_products : atomic_reactants;
+}
 
 void from_json(const json &j, ReactionData &a) {
 
@@ -640,7 +645,7 @@ void from_json(const json &j, ReactionData &a) {
                 throw std::runtime_error("Molecules and atoms must have different names");
 
     for (auto it = j.begin(); it != j.end(); ++it) {
-        a.name = it.key();
+        a.reaction = it.key();
         auto &val = it.value();
         a.canonic = val.value("canonic", false);
         a.neutral = val.value("neutral", false);
@@ -652,55 +657,53 @@ void from_json(const json &j, ReactionData &a) {
         a.N_reservoir = val.value("N_reservoir", a.N_reservoir);
 
         // get pair of vectors containing reactant and product species
-        auto process = parseProcess(a.name);
-        a._reag = process.first;
-        a._prod = process.second;
+        std::tie(a.reactant_names, a.product_names) = parseProcess(a.reaction);
 
-        for (auto &name : a._reag) {                // loop over reactants
-            auto pair = a.findAtomOrMolecule(name); // {iterator to atom, iterator to mol.}
-            if (pair.first != atoms.end()) {
+        for (auto &name : a.reactant_names) {                  // loop over reactants
+            auto [atomid, molid] = a.findAtomOrMolecule(name); // {iterator to atom, iterator to mol.}
+            if (atomid != atoms.end()) {
                 a.swap = true; // if the reaction involves atoms, identify it as swap move
             }
         }
 
-        for (auto &name : a._reag) {                // loop over reactants
-            auto pair = a.findAtomOrMolecule(name); // {iterator to atom, iterator to mol.}
-            if (pair.first != atoms.end()) {
-                if (pair.first->implicit) {
+        for (auto &name : a.reactant_names) {                             // loop over reactants
+            auto [atom_data, molecule_data] = a.findAtomOrMolecule(name); // {iterator to atom, iterator to mol.}
+            if (atom_data != atoms.end()) {
+                if (atom_data->implicit) {
                     // implicit reagent? K is multiplied by its activity
-                    a.lnK += std::log(pair.first->activity / 1.0_molar);
+                    a.lnK += std::log(atom_data->activity / 1.0_molar);
                 } else {
-                    a._reagid_a[pair.first->id()]++;
+                    a.atomic_reactants[atom_data->id()]++;
                 }
             }
-            if (pair.second != molecules.end()) {
-                a._reagid_m[pair.second->id()]++;
-                if (pair.second->activity > 0) {
+            if (molecule_data != molecules.end()) {
+                a.molecular_reactants[molecule_data->id()]++;
+                if (molecule_data->activity > 0) {
                     // explicit reagent?
                     // its activity is not part of K?
                     // K is divided by its activity
-                    a.lnK -= std::log(pair.second->activity / 1.0_molar);
+                    a.lnK -= std::log(molecule_data->activity / 1.0_molar);
                 }
             }
         }
 
-        for (auto &name : a._prod) { // loop over products
-            auto pair = a.findAtomOrMolecule(name);
-            if (pair.first != atoms.end()) {
-                if (pair.first->implicit) {
+        for (auto &name : a.product_names) { // loop over products
+            auto [atom_data, molecule_data] = a.findAtomOrMolecule(name);
+            if (atom_data != atoms.end()) {
+                if (atom_data->implicit) {
                     // implicit product? K is divided by its activity
-                    a.lnK -= std::log(pair.first->activity / 1.0_molar);
+                    a.lnK -= std::log(atom_data->activity / 1.0_molar);
                 } else {
-                    a._prodid_a[pair.first->id()]++;
+                    a.atomic_products[atom_data->id()]++;
                 }
             }
-            if (pair.second != molecules.end()) {
-                a._prodid_m[pair.second->id()]++;
-                if (pair.second->activity > 0) {
+            if (molecule_data != molecules.end()) {
+                a.molecular_products[molecule_data->id()]++;
+                if (molecule_data->activity > 0) {
                     // explicit product?
                     // its activity is not part of K?
                     // K is multiplied by its activity
-                    a.lnK += std::log(pair.second->activity / 1.0_molar);
+                    a.lnK += std::log(molecule_data->activity / 1.0_molar);
                 }
             }
         }
@@ -708,12 +711,12 @@ void from_json(const json &j, ReactionData &a) {
 }
 
 void to_json(json &j, const ReactionData &a) {
-    j[a.name] = {{"pK", a.pK},
-                 {"pK'", -a.lnK / std::log(10)},
-                 //{"canonic", a.canonic }, {"N_reservoir", a.N_reservoir },
-                 {"neutral", a.neutral},
-                 {"products", a._prod},
-                 {"reactants", a._reag}};
+    j[a.reaction] = {{"pK", a.pK},
+                     {"pK'", -a.lnK / std::log(10)},
+                     //{"canonic", a.canonic }, {"N_reservoir", a.N_reservoir },
+                     {"neutral", a.neutral},
+                     {"products", a.product_names},
+                     {"reactants", a.reactant_names}};
 } //!< Serialize to JSON object
 
 } // namespace Faunus

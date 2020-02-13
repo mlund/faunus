@@ -81,6 +81,14 @@ void SpeciationMove::deactivateReactants(Change &change, std::vector<ReactionDat
 
         if (molecules[molid].atomic) {
             auto git = mollist.begin();
+
+            // bail out in case the group is empty and nothing can be removed
+            if (git->empty()) {
+                faunus_logger->trace("attempting to remove atom(s) from empty group ({})",
+                                     Faunus::atoms.at(molid).name);
+                return;
+            }
+
             auto othermollist = otherspc->findMolecules(molid, Tspace::ALL); // implies that new and old are in sync
             auto othergit = othermollist.begin();
             Change::data d;

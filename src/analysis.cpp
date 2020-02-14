@@ -580,11 +580,11 @@ void Density::_sample() {
         for (auto &rit : reactions) {
             for (auto pid : rit.right_atoms) {
                 auto atomlist = spc.findAtoms(pid.first);
-                swpdhist[pid.first](rng_size(atomlist))++;
+                swpdhist[pid.first](range_size(atomlist))++;
             }
             for (auto rid : rit.left_atoms) {
                 auto atomlist = spc.findAtoms(rid.first);
-                swpdhist[rid.first](rng_size(atomlist))++;
+                swpdhist[rid.first](range_size(atomlist))++;
             }
         }
     }

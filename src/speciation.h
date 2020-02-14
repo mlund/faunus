@@ -35,8 +35,10 @@ class SpeciationMove : public Movebase {
     bool checkInsertProducts(ReactionData &);
     bool swapReaction(Change &, ReactionData &);
 
-    Change::data expandAtomicGroup(Space::Tgroup &, int); //!< Expand atomic molecule
-    Change::data activateMolecularGroup(Space::Tgroup &); //!< Expand molecular molecule
+    Change::data contractAtomicGroup(Space::Tgroup &, Tspace::Tgroup &, int); //!< Contract atomic group
+    Change::data expandAtomicGroup(Space::Tgroup &, int);                     //!< Expand atomic group
+    Change::data activateMolecularGroup(Space::Tgroup &);                     //!< Activate molecular group
+    Change::data deactivateMolecularGroup(Space::Tgroup &);                   //!< Deactivate molecular group
 
     void activateProducts(Change &, std::vector<Faunus::ReactionData>::iterator);
     void deactivateReactants(Change &, std::vector<ReactionData>::iterator);

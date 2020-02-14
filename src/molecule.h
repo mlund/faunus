@@ -316,17 +316,35 @@ class NeighboursGenerator {
 
 /*
  * @brief General properties of reactions
+ *
+ * @todo
+ * - [x] Rename "products" and "reactants" to "left" and "right"
+ * - [ ] make all data private
+ * - [x] add `setDirection()` / `getDirection()` functions
+ * - [x] add `getProducts()`.
+ *       Would point to "left" if direction == RIGHT
+ *       Would point to "right" if direction == LEFT
+ * - [x] add `getReactants()` like above
+ * - [ ] remove awkward `bool forward`
+ * - [ ] reversing direction would also change sign of pK
  */
 class ReactionData {
   public:
     typedef std::map<int, int> Tmap;
 
-    std::vector<std::string> reactant_names, product_names;
+    std::vector<std::string> left_names, right_names;
+    Tmap left_molecules; // Molecular change, groups. Atomic as Groupwise
+    Tmap left_atoms;     // Atomic change, equivalent of swap/titration
+    Tmap right_molecules;
+    Tmap right_atoms;
+    enum class Direction : char { LEFT = 0, RIGHT = 1 };
+    Direction direction = Direction::RIGHT;
 
-    Tmap molecular_reactants; // Molecular change, groups. Atomic as Groupwise
-    Tmap molecular_products;
-    Tmap atomic_reactants; // Atomic change, equivalent of swap/titration
-    Tmap atomic_products;
+    void setDirection(Direction);
+    Direction getDirection() const;
+    void reverseDirection(); //!< reverse direction of reaction
+    std::pair<const Tmap &, const Tmap &> getProducts() const;
+    std::pair<const Tmap &, const Tmap &> getReactants() const;
 
     bool canonic = false; //!< Finite reservoir
     bool swap = false;    //!< True if swap move

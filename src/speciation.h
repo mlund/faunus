@@ -21,7 +21,7 @@ class SpeciationMove : public Movebase {
   private:
     Space &spc;
     Space *otherspc;
-    ReactionData *trialprocess;
+    ReactionData *trialprocess; // todo: eliminate raw pointer
     std::map<std::string, Average<double>> acceptance_map;
 
     double lnK;
@@ -32,8 +32,11 @@ class SpeciationMove : public Movebase {
     void _to_json(json &) const override;
     void _from_json(const json &) override;
 
-    bool checkInsertProducts(std::vector<ReactionData>::iterator);
-    bool swapReaction(Change &, std::vector<ReactionData>::iterator);
+    bool checkInsertProducts(ReactionData &);
+    bool swapReaction(Change &, ReactionData &);
+
+    Change::data expandAtomicGroup(Space::Tgroup &, int); //!< Expand atomic molecule
+    Change::data activateMolecularGroup(Space::Tgroup &); //!< Expand molecular molecule
 
     void activateProducts(Change &, std::vector<Faunus::ReactionData>::iterator);
     void deactivateReactants(Change &, std::vector<ReactionData>::iterator);

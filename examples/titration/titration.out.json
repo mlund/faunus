@@ -1,0 +1,544 @@
+{
+    "analysis": [
+        {
+            "savestate": {
+                "file": "confout.pqr"
+            }
+        },
+        {
+            "sanity": {
+                "nstep": 10,
+                "samples": 6000
+            }
+        },
+        {
+            "chargefluctuations": {
+                "<q>": [
+                    -0.99925,
+                    0.54475,
+                    -0.016916666666666667
+                ],
+                "dominant atoms": [
+                    "GLU",
+                    "HHIS",
+                    "HCYS"
+                ],
+                "molecule": "protein",
+                "nstep": 5,
+                "pqrfile": "avgcharge.pqr",
+                "samples": 12000,
+                "std": [
+                    0.027376996882964025,
+                    0.4980141621234008,
+                    0.12896464261756402
+                ]
+            }
+        },
+        {
+            "multipole": {
+                "molecules": {
+                    "protein": {
+                        "C": 0.25934965972222224,
+                        "Z": -0.47141666666666665,
+                        "Z2": 0.4815833333333333,
+                        "μ": 2.7736743024404134,
+                        "μ²": 14.041666666666666
+                    }
+                },
+                "nstep": 5,
+                "samples": 12000
+            }
+        },
+        {
+            "systemenergy": {
+                "file": "energy.dat",
+                "final": [
+                    0.0,
+                    0.0,
+                    -4.138024529560427
+                ],
+                "init": -2.4966,
+                "mean": -4.6894,
+                "nstep": 10,
+                "samples": 6000
+            }
+        },
+        {
+            "density": {
+                "atomic": {
+                    "cl": {
+                        "c/M": 0.03369207219455181
+                    },
+                    "na": {
+                        "c/M": 0.03518666068748336
+                    }
+                },
+                "molecular": {
+                    "protein": {
+                        "c/M": 0.003171397988957358
+                    }
+                },
+                "nskip": 1000,
+                "nstep": 5,
+                "samples": 11800,
+                "∛⟨V⟩": 80.6,
+                "⟨1/V⟩": 1.91e-06,
+                "⟨V⟩": 523600.0,
+                "⟨∛V⟩": 80.6
+            }
+        },
+        {
+            "savestate": {
+                "file": "state.json"
+            }
+        }
+    ],
+    "compiler": "4.2.1 Compatible Apple LLVM 11.0.0 (clang-1100.0.33.12)",
+    "energy": [
+        {
+            "hamiltonian": [
+                {
+                    "ContainerOverlap": {
+                        "relative time": 0.00012650271304643422
+                    }
+                },
+                {
+                    "particle-self-energy": {
+                        "com": false,
+                        "molecules": [
+                            "*"
+                        ],
+                        "relative time": 0.032856068980020324
+                    }
+                },
+                {
+                    "nonbonded": {
+                        "cutoff_g2g": {
+                            "Cl- Cl-": null,
+                            "Cl- Na+": null,
+                            "Na+ Na+": null,
+                            "protein Cl-": null,
+                            "protein Na+": null,
+                            "protein protein": null
+                        },
+                        "pairpot": {
+                            "functor potential": {
+                                "default": [
+                                    {
+                                        "coulomb": {
+                                            "cutoff": 1.3407807929942596e+154,
+                                            "doi": "Premier mémoire sur l’électricité et le magnétisme by Charles-Augustin de Coulomb",
+                                            "epsr": 80,
+                                            "lB": 7.009223686890607,
+                                            "type": "plain"
+                                        }
+                                    },
+                                    {
+                                        "lennardjones": {
+                                            "mixing": "lorentz_berthelot"
+                                        }
+                                    }
+                                ],
+                                "selfenergy": {
+                                    "dipole": false,
+                                    "monopole": true
+                                }
+                            }
+                        }
+                    }
+                }
+            ]
+        }
+    ],
+    "geometry": {
+        "radius": 50.0,
+        "type": "sphere"
+    },
+    "git revision": "3cb35df9 (2020-02-13)",
+    "groups": [
+        {
+            "protein": {
+                "compressible": false,
+                "index": [
+                    0,
+                    2
+                ],
+                "size": 3
+            }
+        },
+        {
+            "Na+": {
+                "capacity": 22,
+                "compressible": false,
+                "index": [
+                    3,
+                    11
+                ],
+                "size": 9
+            }
+        },
+        {
+            "Cl-": {
+                "capacity": 20,
+                "compressible": false,
+                "index": [
+                    25,
+                    33
+                ],
+                "size": 9
+            }
+        }
+    ],
+    "last move": "rcmc",
+    "moves": [
+        {
+            "rcmc": {
+                "acceptance": 0.0794,
+                "cite": "doi:10/fqcpg3",
+                "moves": 2999546,
+                "reactions": {
+                    "= Na+ + Cl-": {
+                        "attempts": 158412
+                    },
+                    "HCYS + Cl- = CYS + H+": {
+                        "attempts": 79063
+                    },
+                    "HCYS = Na+ + CYS + H+": {
+                        "attempts": 78928
+                    },
+                    "HGLU + Cl- = GLU + H+": {
+                        "attempts": 78909
+                    },
+                    "HGLU = Na+ + GLU + H+": {
+                        "attempts": 78856
+                    },
+                    "HHIS + Cl- = HIS + H+": {
+                        "attempts": 78396
+                    },
+                    "HHIS = Na+ + HIS + H+": {
+                        "attempts": 78838
+                    }
+                },
+                "repeat": 50
+            }
+        },
+        {
+            "transrot": {
+                "acceptance": 0.551,
+                "dir": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "molecule": "Na+",
+                "molid": 0,
+                "moves": 60261,
+                "repeat": 1,
+                "√⟨r²⟩": 17.8
+            }
+        },
+        {
+            "transrot": {
+                "acceptance": 0.549,
+                "dir": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "molecule": "Cl-",
+                "molid": 1,
+                "moves": 60193,
+                "repeat": 1,
+                "√⟨r²⟩": 17.7
+            }
+        }
+    ],
+    "number of groups": 3,
+    "number of particles": 45,
+    "reactionlist": [
+        {
+            "HCTR + Cl- = CTR + H+": {
+                "neutral": false,
+                "pK": 3.67,
+                "pK'": -4.852878745280337,
+                "products": [
+                    "CTR",
+                    "H+"
+                ],
+                "reactants": [
+                    "HCTR",
+                    "Cl-"
+                ]
+            }
+        },
+        {
+            "HASP + Cl- = ASP + H+": {
+                "neutral": false,
+                "pK": 3.67,
+                "pK'": -4.852878745280337,
+                "products": [
+                    "ASP",
+                    "H+"
+                ],
+                "reactants": [
+                    "HASP",
+                    "Cl-"
+                ]
+            }
+        },
+        {
+            "HGLU + Cl- = GLU + H+": {
+                "neutral": false,
+                "pK": 4.24,
+                "pK'": -4.282878745280336,
+                "products": [
+                    "GLU",
+                    "H+"
+                ],
+                "reactants": [
+                    "HGLU",
+                    "Cl-"
+                ]
+            }
+        },
+        {
+            "HHIS + Cl- = HIS + H+": {
+                "neutral": false,
+                "pK": 6.54,
+                "pK'": -1.9828787452803363,
+                "products": [
+                    "HIS",
+                    "H+"
+                ],
+                "reactants": [
+                    "HHIS",
+                    "Cl-"
+                ]
+            }
+        },
+        {
+            "HCYS + Cl- = CYS + H+": {
+                "neutral": false,
+                "pK": 8.55,
+                "pK'": 0.027121254719663496,
+                "products": [
+                    "CYS",
+                    "H+"
+                ],
+                "reactants": [
+                    "HCYS",
+                    "Cl-"
+                ]
+            }
+        },
+        {
+            "HNTR + Cl- = NTR + H+": {
+                "neutral": false,
+                "pK": 8.0,
+                "pK'": -0.5228787452803365,
+                "products": [
+                    "NTR",
+                    "H+"
+                ],
+                "reactants": [
+                    "HNTR",
+                    "Cl-"
+                ]
+            }
+        },
+        {
+            "HTYR + Cl- = TYR + H+": {
+                "neutral": false,
+                "pK": 9.84,
+                "pK'": 1.3171212547196627,
+                "products": [
+                    "TYR",
+                    "H+"
+                ],
+                "reactants": [
+                    "HTYR",
+                    "Cl-"
+                ]
+            }
+        },
+        {
+            "HLYS + Cl- = LYS + H+": {
+                "neutral": false,
+                "pK": 10.4,
+                "pK'": 1.8771212547196636,
+                "products": [
+                    "LYS",
+                    "H+"
+                ],
+                "reactants": [
+                    "HLYS",
+                    "Cl-"
+                ]
+            }
+        },
+        {
+            "HARG + Cl- = ARG + H+": {
+                "neutral": false,
+                "pK": 12.0,
+                "pK'": 3.4771212547196626,
+                "products": [
+                    "ARG",
+                    "H+"
+                ],
+                "reactants": [
+                    "HARG",
+                    "Cl-"
+                ]
+            }
+        },
+        {
+            "HCTR = Na+ + CTR + H+": {
+                "neutral": false,
+                "pK": 3.67,
+                "pK'": -1.8071212547196622,
+                "products": [
+                    "Na+",
+                    "CTR",
+                    "H+"
+                ],
+                "reactants": [
+                    "HCTR"
+                ]
+            }
+        },
+        {
+            "HASP = Na+ + ASP + H+": {
+                "neutral": false,
+                "pK": 3.67,
+                "pK'": -1.8071212547196622,
+                "products": [
+                    "Na+",
+                    "ASP",
+                    "H+"
+                ],
+                "reactants": [
+                    "HASP"
+                ]
+            }
+        },
+        {
+            "HGLU = Na+ + GLU + H+": {
+                "neutral": false,
+                "pK": 4.25,
+                "pK'": -1.2271212547196626,
+                "products": [
+                    "Na+",
+                    "GLU",
+                    "H+"
+                ],
+                "reactants": [
+                    "HGLU"
+                ]
+            }
+        },
+        {
+            "HHIS = Na+ + HIS + H+": {
+                "neutral": false,
+                "pK": 6.54,
+                "pK'": 1.0628787452803385,
+                "products": [
+                    "Na+",
+                    "HIS",
+                    "H+"
+                ],
+                "reactants": [
+                    "HHIS"
+                ]
+            }
+        },
+        {
+            "HCYS = Na+ + CYS + H+": {
+                "neutral": false,
+                "pK": 8.55,
+                "pK'": 3.0728787452803394,
+                "products": [
+                    "Na+",
+                    "CYS",
+                    "H+"
+                ],
+                "reactants": [
+                    "HCYS"
+                ]
+            }
+        },
+        {
+            "HNTR = Na+ + NTR + H+": {
+                "neutral": false,
+                "pK": 8.0,
+                "pK'": 2.5228787452803387,
+                "products": [
+                    "Na+",
+                    "NTR",
+                    "H+"
+                ],
+                "reactants": [
+                    "HNTR"
+                ]
+            }
+        },
+        {
+            "HTYR = Na+ + TYR + H+": {
+                "neutral": false,
+                "pK": 9.84,
+                "pK'": 4.362878745280338,
+                "products": [
+                    "Na+",
+                    "TYR",
+                    "H+"
+                ],
+                "reactants": [
+                    "HTYR"
+                ]
+            }
+        },
+        {
+            "HLYS = Na+ + LYS + H+": {
+                "neutral": false,
+                "pK": 10.4,
+                "pK'": 4.922878745280339,
+                "products": [
+                    "Na+",
+                    "LYS",
+                    "H+"
+                ],
+                "reactants": [
+                    "HLYS"
+                ]
+            }
+        },
+        {
+            "HARG = Na+ + ARG + H+": {
+                "neutral": false,
+                "pK": 12.0,
+                "pK'": 6.522878745280338,
+                "products": [
+                    "Na+",
+                    "ARG",
+                    "H+"
+                ],
+                "reactants": [
+                    "HARG"
+                ]
+            }
+        },
+        {
+            "= Na+ + Cl-": {
+                "neutral": false,
+                "pK": -0.0,
+                "pK'": 3.045757490560675,
+                "products": [
+                    "Na+",
+                    "Cl-"
+                ],
+                "reactants": []
+            }
+        }
+    ],
+    "relative drift": -1.362536117650753e-13,
+    "temperature": 298.0
+}

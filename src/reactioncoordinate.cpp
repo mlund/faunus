@@ -161,6 +161,8 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordina
     auto b = spc.geo.getBoundaryFunc();
     property = j.at("property").get<std::string>();
 
+    if (property == "active") // if molecule is active (1) or not (0)
+        f = [&g = spc.groups, i = index]() { return (double)(!g[i].empty()); };
     if (property == "confid")
         f = [&g = spc.groups, i = index]() { return g[i].confid; };
     else if (property == "com_x")

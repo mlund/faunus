@@ -40,8 +40,8 @@ class SpeciationMove : public Movebase {
     Change::data activateMolecularGroup(Space::Tgroup &);                     //!< Activate molecular group
     Change::data deactivateMolecularGroup(Space::Tgroup &);                   //!< Deactivate molecular group
 
-    void activateProducts(Change &, std::vector<Faunus::ReactionData>::iterator);
-    void deactivateReactants(Change &, std::vector<ReactionData>::iterator);
+    void activateProducts(Change &, ReactionData &);
+    void deactivateReactants(Change &, ReactionData &);
 
   public:
     SpeciationMove(Space &);

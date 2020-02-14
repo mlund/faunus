@@ -318,7 +318,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
         -Wno-sign-compare -Wno-unused-local-typedefs -Wno-unknown-pragmas)
 ## Clang
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    add_compile_options(-Wall -Wextra -Wpedantic -Wunreachable-code
+    add_compile_options(-Wall -Wextra -Wpedantic -Wunreachable-code -fsized-deallocation
         -Wstrict-aliasing -Wno-sign-compare -Wno-unused-local-typedef -Wno-unknown-pragmas)
 endif()
 

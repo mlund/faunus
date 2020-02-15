@@ -882,6 +882,7 @@ General keywords  | Description
 
 `coords=[molecule]`         | Property
 --------------------------- | ---------------------------------------------------------------------------
+`active`                    | If molecule is active (1) or inactive (0); for GCMC ensembles
 `angle`                     | Angle between instantaneous principal axis and given `dir` vector
 `com_x`, `com_y` or `com_z` | Mass-center coordinates
 `confid`                    | Conformation id corresponding to frame in `traj` (see molecular topology).

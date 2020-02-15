@@ -1,0 +1,119 @@
+{
+    "analysis": [
+        {
+            "systemenergy": {
+                "file": "energy.dat",
+                "final": [
+                    -0.037916450210638476
+                ],
+                "init": -0.0052923,
+                "mean": -0.1683,
+                "nstep": 100,
+                "samples": 10000
+            }
+        },
+        {
+            "savestate": {
+                "file": "state.json"
+            }
+        },
+        {
+            "density": {
+                "atomic": null,
+                "molecular": {
+                    "A": {
+                        "c/M": 0.20108886965245404
+                    }
+                },
+                "nstep": 10,
+                "samples": 100000,
+                "∛⟨V⟩": 60.0,
+                "⟨1/V⟩": 4.63e-06,
+                "⟨V⟩": 216000.0,
+                "⟨∛V⟩": 60.0
+            }
+        },
+        {
+            "sanity": {
+                "nstep": 100,
+                "samples": 10000
+            }
+        },
+        {
+            "savestate": {
+                "file": "confout.pqr"
+            }
+        }
+    ],
+    "compiler": "4.2.1 Compatible Apple LLVM 11.0.0 (clang-1100.0.33.12)",
+    "energy": [
+        {
+            "hamiltonian": [
+                {
+                    "nonbonded": {
+                        "cutoff_g2g": {
+                            "A A": null
+                        },
+                        "pairpot": {
+                            "functor potential": {
+                                "default": [
+                                    {
+                                        "lennardjones": {
+                                            "mixing": "LB"
+                                        }
+                                    }
+                                ],
+                                "selfenergy": {
+                                    "dipole": false,
+                                    "monopole": false
+                                }
+                            }
+                        }
+                    }
+                }
+            ]
+        }
+    ],
+    "geometry": {
+        "length": [
+            60.0,
+            60.0,
+            60.0
+        ],
+        "type": "cuboid"
+    },
+    "git revision": "3cb35df9 (2020-02-13)",
+    "moves": [
+        {
+            "rcmc": {
+                "acceptance": 0.918,
+                "cite": "doi:10/fqcpg3",
+                "moves": 1000000,
+                "reactions": {
+                    " = A": {
+                        "acceptance": 0.91817,
+                        "attempts": 1000000
+                    }
+                },
+                "repeat": 1
+            }
+        }
+    ],
+    "number of groups": 100,
+    "number of particles": 100,
+    "reactionlist": [
+        {
+            " = A": {
+                "neutral": false,
+                "pK": -0.0,
+                "pK'": 0.6989700043360187,
+                "products": [
+                    "A"
+                ],
+                "reactants": []
+            }
+        }
+    ],
+    "relative drift": -1.3753831303885101e-12,
+    "temperature": 300.0
+}

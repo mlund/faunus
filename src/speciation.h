@@ -20,13 +20,12 @@ namespace Move {
 class SpeciationMove : public Movebase {
   private:
     Space &spc;
-    Space *otherspc;
-    ReactionData *reaction; // todo: eliminate raw pointer
+    Space *other_spc;
+    ReactionData *reaction = nullptr; //!< Randomly selected reaction
     std::map<std::string, Average<double>> acceptance_map;
 
-    double bond_energy = 0;
-    bool neutral = false; // true if only neutral molecules are involved in the reaction
-    ReactionData::Direction direction;
+    double bond_energy = 0;              //!< Accumulated bond energy if inserted/deleted molecule
+    bool only_neutral_molecules = false; // true if only neutral molecules are involved in the reaction
 
     void _to_json(json &) const override;
     void _from_json(const json &) override;

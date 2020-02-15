@@ -657,8 +657,11 @@ void Density::_to_disk() {
         }
     }
     if (Faunus::reactions.size() > 0) { // in case of reactions involving atoms (swap moves)
-        for (auto &rit : reactions) {
-            for (auto pid : rit.right_atoms) {
+        // todo: merge reactions and products into single map; loop over that once
+        for (auto &reaction : Faunus::reactions) {
+
+            auto [atomic_products, molecular_products] = reaction.getProducts();
+            for (auto pid : atomic_products) {
                 std::string file = "rho-"s + atoms.at(pid.first).name + ".dat";
                 std::ofstream f(MPI::prefix + file);
                 if (f) {
@@ -670,7 +673,9 @@ void Density::_to_disk() {
                     f << "# N samplings P\n" << swpdhist.at(pid.first);
                 }
             }
-            for (auto rid : rit.left_atoms) {
+
+            auto [atomic_reactants, molecular_reactants] = reaction.getReactants();
+            for (auto rid : atomic_reactants) {
                 std::string file = "rho-"s + atoms.at(rid.first).name + ".dat";
                 std::ofstream f(MPI::prefix + file);
                 if (f) {

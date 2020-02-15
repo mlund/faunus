@@ -645,12 +645,28 @@ void ReactionData::setDirection(ReactionData::Direction dir) {
         pK = -pK;
     }
 }
+
+std::pair<ReactionData::Tmap &, ReactionData::Tmap &> ReactionData::getProducts() {
+    if (direction == Direction::RIGHT)
+        return {right_atoms, right_molecules};
+    else
+        return {left_atoms, left_molecules};
+}
+
 std::pair<const ReactionData::Tmap &, const ReactionData::Tmap &> ReactionData::getProducts() const {
     if (direction == Direction::RIGHT)
         return {right_atoms, right_molecules};
     else
         return {left_atoms, left_molecules};
 }
+
+std::pair<ReactionData::Tmap &, ReactionData::Tmap &> ReactionData::getReactants() {
+    if (direction == Direction::RIGHT)
+        return {left_atoms, left_molecules};
+    else
+        return {right_atoms, right_molecules};
+}
+
 std::pair<const ReactionData::Tmap &, const ReactionData::Tmap &> ReactionData::getReactants() const {
     if (direction == Direction::RIGHT)
         return {left_atoms, left_molecules};

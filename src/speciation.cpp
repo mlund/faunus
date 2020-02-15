@@ -13,7 +13,7 @@ void SpeciationMove::_to_json(json &j) const {
     Faunus::_roundjson(_j, 3);
 }
 
-void SpeciationMove::setOther(Tspace &ospc) { otherspc = &ospc; }
+void SpeciationMove::setOther(Tspace &ospc) { other_spc = &ospc; }
 
 /**
  * This function is only performing checks
@@ -33,7 +33,7 @@ bool SpeciationMove::checkInsertProducts(ReactionData &reaction) {
                 return false; // Slip out the back door
             }
         } else {
-            if (neutral) // Only neutral molecules react
+            if (only_neutral_molecules) // Only neutral molecules react
                 molecule_list = spc.findMolecules(molid, Tspace::INACTIVE_NEUTRAL);
             else
                 molecule_list = spc.findMolecules(molid, Tspace::INACTIVE);
@@ -47,34 +47,39 @@ bool SpeciationMove::checkInsertProducts(ReactionData &reaction) {
 }
 
 /**
- * Performs a swap reaction, e.g., the (de)protonation of an atomic species
+ * Convert from one atom type to another in any group (atomic/molecular).
+ * The reaction require that the `swap` is true and there must be *exactly*
+ * one atomic reactant and one atomic product in the reaction.
  */
 bool SpeciationMove::swapReaction(Change &change, ReactionData &reaction) {
     if (reaction.swap) {
         auto [atomic_products, molecular_products] = reaction.getProducts();
         auto [atomic_reactants, molecular_reactants] = reaction.getReactants();
 
+        // Swap reactions must involve exactly one atomic reactant and one atomic product
         assert(atomic_products.size() == 1 and atomic_reactants.size() == 1);
+        // assert(molecular_products.size() == 0 and molecular_reactants.size() == 0);
 
+        // Search in all active molecules (atomic and molecular)
         auto atomlist = spc.findAtoms(atomic_reactants.begin()->first);
-        if (ranges::cpp20::empty(atomlist))                        // Make sure that there are any active atoms to swap
-            return false;                                          // Slip out the back door
-        auto ait = slump.sample(atomlist.begin(), atomlist.end()); // Random particle iterator
-        auto git = spc.findGroupContaining(*ait);
+        if (ranges::cpp20::empty(atomlist)) { // Make sure that there are any active atoms to swap
+            return false;                     // Slip out the back door
+        }
+        auto random_particle = slump.sample(atomlist.begin(), atomlist.end());
+        auto group = spc.findGroupContaining(*random_particle);
 
         Change::data d;
-        d.atoms.push_back(Faunus::distance(git->begin(), ait)); // Index of particle rel. to group
-        d.index = Faunus::distance(spc.groups.begin(), git);
+        d.atoms.push_back(Faunus::distance(group->begin(), random_particle)); // Index of particle rel. to group
+        d.index = Faunus::distance(spc.groups.begin(), group);
         d.internal = true;
         d.dNswap = true;
         change.groups.push_back(d); // Add to list of moved groups
 
-        // AtomData --> json --> Particle (performance warning!)
+        // Lazy AtomData --> json --> Particle
         Particle p = atoms.at(atomic_products.begin()->first);
-
-        p.pos = ait->pos;
-        *ait = p;
-        assert(ait->id == atomic_products.begin()->first);
+        p.pos = random_particle->pos;
+        *random_particle = p;
+        assert(random_particle->id == atomic_products.begin()->first);
     }
     return true;
 }
@@ -228,7 +233,7 @@ void SpeciationMove::activateProducts(Change &change, ReactionData &reaction) {
             if (not d.atoms.empty())
                 change.groups.push_back(d);
         } else { // The product is a molecule
-            auto selection = (neutral) ? Tspace::INACTIVE_NEUTRAL : Tspace::INACTIVE;
+            auto selection = (only_neutral_molecules) ? Tspace::INACTIVE_NEUTRAL : Tspace::INACTIVE;
             auto mollist = spc.findMolecules(molid, selection);
             if (range_size(mollist) >= number_to_insert) {
                 for (int i = 0; i < number_to_insert; i++) {
@@ -254,13 +259,13 @@ void SpeciationMove::deactivateReactants(Change &change, ReactionData &reaction)
     for (auto [molid, number_to_delete] : molecular_reactants) { // Delete
         if (molecules[molid].atomic) {                           // The reagents is an atomic group
             auto target = spc.findMolecules(molid, Tspace::ALL).begin();
-            auto other_target = otherspc->findMolecules(molid, Tspace::ALL).begin();
+            auto other_target = other_spc->findMolecules(molid, Tspace::ALL).begin();
             auto change_data = contractAtomicGroup(*target, *other_target, number_to_delete);
             if (not change_data.atoms.empty()) {
                 change.groups.push_back(change_data);
             }
         } else { // The reactant is a molecule
-            auto selection = (neutral) ? Tspace::ACTIVE_NEUTRAL : Tspace::ACTIVE;
+            auto selection = (only_neutral_molecules) ? Tspace::ACTIVE_NEUTRAL : Tspace::ACTIVE;
             auto mol_list = spc.findMolecules(molid, selection);
             if (range_size(mol_list) >= number_to_delete) {
                 for (int i = 0; i < number_to_delete; i++) {
@@ -278,11 +283,10 @@ void SpeciationMove::deactivateReactants(Change &change, ReactionData &reaction)
 
 void SpeciationMove::_move(Change &change) {
     if (not Faunus::reactions.empty()) {
-        reaction = &(*slump.sample(Faunus::reactions.begin(), Faunus::reactions.end())); // select random reaction
-        neutral = reaction->neutral;       // If true, only neutral molecules participate in the reaction
+        reaction = &(*slump.sample(Faunus::reactions.begin(), Faunus::reactions.end())); // random reaction
         auto direction = static_cast<ReactionData::Direction>((char)slump.range(0, 1));
         reaction->setDirection(direction);
-        // reaction = &(*__reaction);
+        only_neutral_molecules = reaction->neutral; // If true, only neutral molecules participate in the reaction
 
         if (reaction->empty())   // Enforce canonic constraint if invoked
             return;              // Out of material, slip out the back door
@@ -296,7 +300,6 @@ void SpeciationMove::_move(Change &change) {
 
         deactivateReactants(change, *reaction);
         activateProducts(change, *reaction);
-
         std::sort(change.groups.begin(), change.groups.end()); // why?
     } else
         throw std::runtime_error("No reactions in list, disable rcmc or add reactions");

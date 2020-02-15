@@ -325,29 +325,32 @@ class NeighboursGenerator {
  *       Would point to "left" if direction == RIGHT
  *       Would point to "right" if direction == LEFT
  * - [x] add `getReactants()` like above
- * - [ ] remove awkward `bool forward`
- * - [ ] reversing direction would also change sign of pK
+ * - [x] remove awkward `bool forward`
+ * - [x] reversing direction would also change sign of pK
  */
 class ReactionData {
   public:
     typedef std::map<int, int> Tmap;
     enum class Direction : char { LEFT = 0, RIGHT = 1 };
-    std::vector<std::string> left_names, right_names;
-
-    Tmap left_molecules; // Molecular change, groups. Atomic as Groupwise
-    Tmap left_atoms;     // Atomic change, equivalent of swap/titration
-    Tmap right_molecules;
-    Tmap right_atoms;
 
   private:
-    Direction direction = Direction::RIGHT;
+    friend void from_json(const json &, ReactionData &);
+    friend void to_json(json &, const ReactionData &);
+    Direction direction = Direction::RIGHT; //!< Direction of reaction
+    std::vector<std::string> left_names, right_names;
+    Tmap left_molecules; // Molecular change, groups. Atomic as Groupwise
+    Tmap right_molecules;
+    Tmap right_atoms;
+    Tmap left_atoms; // Atomic change, equivalent of swap/titration
 
   public:
-    void setDirection(Direction);
-    Direction getDirection() const;
-    void reverseDirection(); //!< reverse direction of reaction
-    std::pair<const Tmap &, const Tmap &> getProducts() const;
-    std::pair<const Tmap &, const Tmap &> getReactants() const;
+    void setDirection(Direction);                               //!< Set directions of the process
+    Direction getDirection() const;                             //!< Get direction of the process
+    void reverseDirection();                                    //!< Reverse direction of reaction
+    std::pair<Tmap &, Tmap &> getProducts();                    //!< Pair with atomic and molecular products
+    std::pair<const Tmap &, const Tmap &> getProducts() const;  //!< Pair with atomic and molecular products
+    std::pair<Tmap &, Tmap &> getReactants();                   //!< Pair with atomic and molecular reactants
+    std::pair<const Tmap &, const Tmap &> getReactants() const; //!< Pair with atomic and molecular reactants
 
     bool canonic = false; //!< Finite reservoir
     bool swap = false;    //!< True if swap move

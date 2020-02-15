@@ -578,13 +578,15 @@ void Density::_sample() {
 
     if (Faunus::reactions.size() > 0) { // in case of reactions involving atoms (swap moves)
         for (auto &rit : reactions) {
-            for (auto pid : rit.right_atoms) {
-                auto atomlist = spc.findAtoms(pid.first);
-                swpdhist[pid.first](range_size(atomlist))++;
+            auto [atomic_products, molecule_products] = rit.getProducts();
+            for (auto [atomid, N] : atomic_products) {
+                auto atomlist = spc.findAtoms(atomid);
+                swpdhist[atomid](range_size(atomlist))++;
             }
-            for (auto rid : rit.left_atoms) {
-                auto atomlist = spc.findAtoms(rid.first);
-                swpdhist[rid.first](range_size(atomlist))++;
+            auto [atomic_reactants, molecule_reactants] = rit.getProducts();
+            for (auto [atomid, N] : atomic_reactants) {
+                auto atomlist = spc.findAtoms(atomid);
+                swpdhist[atomid](range_size(atomlist))++;
             }
         }
     }
@@ -618,11 +620,13 @@ Density::Density(const json &j, Space &spc) : spc(spc) {
     }
     if (Faunus::reactions.size() > 0) { // in case of reactions involving atoms (swap moves)
         for (auto &rit : reactions) {
-            for (auto pid : rit.right_atoms) {
-                swpdhist[pid.first].setResolution(1, 0);
+            auto [atomic_reactants, molecule_reactants] = rit.getReactants();
+            auto [atomic_products, molecule_products] = rit.getProducts();
+            for (auto [atomid, N] : atomic_products) {
+                swpdhist[atomid].setResolution(1, 0);
             }
-            for (auto rid : rit.left_atoms) {
-                swpdhist[rid.first].setResolution(1, 0);
+            for (auto [atomid, N] : atomic_reactants) {
+                swpdhist[atomid].setResolution(1, 0);
             }
         }
     }

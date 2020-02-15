@@ -331,15 +331,18 @@ class NeighboursGenerator {
 class ReactionData {
   public:
     typedef std::map<int, int> Tmap;
-
+    enum class Direction : char { LEFT = 0, RIGHT = 1 };
     std::vector<std::string> left_names, right_names;
+
     Tmap left_molecules; // Molecular change, groups. Atomic as Groupwise
     Tmap left_atoms;     // Atomic change, equivalent of swap/titration
     Tmap right_molecules;
     Tmap right_atoms;
-    enum class Direction : char { LEFT = 0, RIGHT = 1 };
+
+  private:
     Direction direction = Direction::RIGHT;
 
+  public:
     void setDirection(Direction);
     Direction getDirection() const;
     void reverseDirection(); //!< reverse direction of reaction
@@ -355,15 +358,10 @@ class ReactionData {
     std::string reaction; //!< Name of reaction
     double weight;        //!< Statistical weight to be given to reaction in speciation
 
-    bool empty(bool forward) const;
+    bool empty() const;
 
     std::vector<int> participatingMolecules() const; //!< Returns molids of participating molecules
-
     bool containsMolecule(int molid) const; //!< True of molecule id is part of process
-
-    const Tmap &moleculesToAdd(bool forward) const; //!< Map for addition depending on direction
-
-    const Tmap &atomsToAdd(bool forward) const; //!< Map for addition depending on direction
 
     auto findAtomOrMolecule(const std::string &name) const {
         auto atom_iter = findName(Faunus::atoms, name);

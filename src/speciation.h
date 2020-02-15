@@ -21,16 +21,18 @@ class SpeciationMove : public Movebase {
   private:
     Space &spc;
     Space *otherspc;
-    ReactionData *trialprocess; // todo: eliminate raw pointer
+    ReactionData *reaction; // todo: eliminate raw pointer
     std::map<std::string, Average<double>> acceptance_map;
 
-    double lnK;
     double bond_energy = 0;
-    bool forward = true;  // reaction moving forwards or backwards? (or left or right)
     bool neutral = false; // true if only neutral molecules are involved in the reaction
+    ReactionData::Direction direction;
 
     void _to_json(json &) const override;
     void _from_json(const json &) override;
+    void _move(Change &) override;
+    void _accept(Change &) override;
+    void _reject(Change &) override;
 
     bool checkInsertProducts(ReactionData &);
     bool swapReaction(Change &, ReactionData &);
@@ -46,10 +48,7 @@ class SpeciationMove : public Movebase {
   public:
     SpeciationMove(Space &);
     void setOther(Space &);
-    void _move(Change &) override;
     double bias(Change &, double, double) override; //!< adds extra energy change not captured by the Hamiltonian
-    void _accept(Change &) override;
-    void _reject(Change &) override;
 
 }; // End of class SpeciationMove
 

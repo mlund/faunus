@@ -15,19 +15,14 @@ void SpeciationMove::_to_json(json &j) const {
 
 void SpeciationMove::setOther(Tspace &ospc) { otherspc = &ospc; }
 
-/*
+/**
  * This function is only performing checks
+ * Check whether it is possible to insert products (are there any inactive ones?)
+ * @todo Redundant?
  */
 bool SpeciationMove::checkInsertProducts(ReactionData &reaction) {
-    // Check whether it is possible to insert products (are there any inactive ones?)
-
-    // rewrite to refactored ReactionData
-    // auto [atomic_products, molecular_products] = reaction.getProducts();
-    // std::cout << atomic_products.size() << " " << molecular_products.size() << std::endl;
-    // for (auto [molid, number_to_insert] : molecular_products) {
-    // }
-
-    for (auto [molid, number_to_insert] : reaction.moleculesToAdd(forward)) { // Additional checks
+    auto [atomic_products, molecular_products] = reaction.getProducts();
+    for (auto [molid, number_to_insert] : molecular_products) {
         auto molecule_list = spc.findMolecules(molid, Tspace::ALL);
         if (molecules[molid].atomic) {
             if (range_size(molecule_list) != 1) // There can be only one
@@ -35,7 +30,7 @@ bool SpeciationMove::checkInsertProducts(ReactionData &reaction) {
             auto git = molecule_list.begin();
             if ((git->size() + number_to_insert) > git->capacity()) { // Assure that there are atoms enough in the group
                 faunus_logger->warn("molecule {} has reached its maximum capacity", Faunus::molecules[molid].name);
-                return false;                                 // Slip out the back door
+                return false; // Slip out the back door
             }
         } else {
             if (neutral) // Only neutral molecules react
@@ -58,15 +53,10 @@ bool SpeciationMove::swapReaction(Change &change, ReactionData &reaction) {
     if (reaction.swap) {
         auto [atomic_products, molecular_products] = reaction.getProducts();
         auto [atomic_reactants, molecular_reactants] = reaction.getReactants();
-        assert(atomic_products.size() == 1 and atomic_reactants.size() == 1);
-    }
 
-    if (reaction.swap == true) {
-        auto m1 = reaction.atomsToAdd(not forward); // Swap checks
-        auto m2 = reaction.atomsToAdd(forward);
-        assert((m1.size() == 1) and (m2.size() == 1) &&
-               "Bad definition: Only 2 explicit atoms per reaction!"); // Swap A = B
-        auto atomlist = spc.findAtoms(m1.begin()->first);
+        assert(atomic_products.size() == 1 and atomic_reactants.size() == 1);
+
+        auto atomlist = spc.findAtoms(atomic_reactants.begin()->first);
         if (ranges::cpp20::empty(atomlist))                        // Make sure that there are any active atoms to swap
             return false;                                          // Slip out the back door
         auto ait = slump.sample(atomlist.begin(), atomlist.end()); // Random particle iterator
@@ -80,11 +70,11 @@ bool SpeciationMove::swapReaction(Change &change, ReactionData &reaction) {
         change.groups.push_back(d); // Add to list of moved groups
 
         // AtomData --> json --> Particle (performance warning!)
-        Particle p = atoms.at(m2.begin()->first);
+        Particle p = atoms.at(atomic_products.begin()->first);
 
         p.pos = ait->pos;
         *ait = p;
-        assert(ait->id == m2.begin()->first);
+        assert(ait->id == atomic_products.begin()->first);
     }
     return true;
 }
@@ -230,7 +220,8 @@ Change::data SpeciationMove::activateMolecularGroup(Space::Tgroup &target) {
 }
 
 void SpeciationMove::activateProducts(Change &change, ReactionData &reaction) {
-    for (auto [molid, number_to_insert] : reaction.moleculesToAdd(forward)) {
+    auto [atomic_products, molecular_products] = reaction.getProducts();
+    for (auto [molid, number_to_insert] : molecular_products) {
         if (Faunus::molecules[molid].atomic) { // The product is an atom
             auto mollist = spc.findMolecules(molid, Tspace::ALL);
             Change::data d = expandAtomicGroup(*mollist.begin(), number_to_insert);
@@ -257,9 +248,11 @@ void SpeciationMove::activateProducts(Change &change, ReactionData &reaction) {
  * Deactivate all atomic and molecular reactants
  */
 void SpeciationMove::deactivateReactants(Change &change, ReactionData &reaction) {
-    for (auto [molid, number_to_delete] : reaction.moleculesToAdd(not forward)) { // Delete
 
-        if (molecules[molid].atomic) { // The reagents is an atom
+    auto [atomic_reactants, molecular_reactants] = reaction.getReactants();
+
+    for (auto [molid, number_to_delete] : molecular_reactants) { // Delete
+        if (molecules[molid].atomic) {                           // The reagents is an atomic group
             auto target = spc.findMolecules(molid, Tspace::ALL).begin();
             auto other_target = otherspc->findMolecules(molid, Tspace::ALL).begin();
             auto change_data = contractAtomicGroup(*target, *other_target, number_to_delete);
@@ -285,15 +278,13 @@ void SpeciationMove::deactivateReactants(Change &change, ReactionData &reaction)
 
 void SpeciationMove::_move(Change &change) {
     if (not Faunus::reactions.empty()) {
-        auto reaction = slump.sample(Faunus::reactions.begin(), Faunus::reactions.end()); // select random reaction
-        lnK = reaction->lnK;
+        reaction = &(*slump.sample(Faunus::reactions.begin(), Faunus::reactions.end())); // select random reaction
         neutral = reaction->neutral;       // If true, only neutral molecules participate in the reaction
-        forward = (bool)slump.range(0, 1); // Random boolean
-        // auto reaction_direction = static_cast<ReactionData::Direction>((char)slump.range(0, 1));
-        // reaction->setDirection(reaction_direction);
-        trialprocess = &(*reaction);
+        auto direction = static_cast<ReactionData::Direction>((char)slump.range(0, 1));
+        reaction->setDirection(direction);
+        // reaction = &(*__reaction);
 
-        if (reaction->empty(forward)) // Enforce canonic constraint if invoked
+        if (reaction->empty())   // Enforce canonic constraint if invoked
             return;              // Out of material, slip out the back door
         if (checkInsertProducts(*reaction) == false)
             return;
@@ -314,19 +305,21 @@ void SpeciationMove::_move(Change &change) {
 double SpeciationMove::bias(Change &, double, double) {
     // The acceptance/rejection of the move is affected by the equilibrium constant
     // but unaffected by the change in bonded energy
-    if (forward)
-        return -lnK + bond_energy;
-    return lnK + bond_energy;
+    return -reaction->lnK + bond_energy;
 }
 
 void SpeciationMove::_accept(Change &) {
-    acceptance_map[trialprocess->reaction] += 1;
-    trialprocess->N_reservoir += (forward == true) ? -1 : 1;
-    if (trialprocess->N_reservoir < 0 && trialprocess->canonic)
+    acceptance_map[reaction->reaction] += 1;
+    if (reaction->getDirection() == ReactionData::Direction::RIGHT) {
+        reaction->N_reservoir -= 1;
+    } else {
+        reaction->N_reservoir += 1;
+    }
+    if (reaction->N_reservoir < 0 && reaction->canonic)
         throw std::runtime_error("There are no negative number of molecules");
 }
 
-void SpeciationMove::_reject(Change &) { acceptance_map[trialprocess->reaction] += 0; }
+void SpeciationMove::_reject(Change &) { acceptance_map[reaction->reaction] += 0; }
 
 SpeciationMove::SpeciationMove(Tspace &spc) : spc(spc) {
     name = "rcmc";

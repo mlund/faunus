@@ -605,13 +605,14 @@ ParticleVector &Conformation::toParticleVector(ParticleVector &p) const {
     return p;
 }
 
-bool ReactionData::empty(bool forward) const {
+bool ReactionData::empty() const {
+    /*
     if (forward)
         if (canonic)
             if (N_reservoir <= 0)
                 return true;
     return false;
-
+*/
     if (direction == Direction::RIGHT) {
         if (canonic) {
             if (N_reservoir <= 0) {
@@ -635,37 +636,26 @@ bool ReactionData::containsMolecule(int molid) const {
     return left_molecules.count(molid) > 0 || right_molecules.count(molid) > 0;
 }
 
-const ReactionData::Tmap &ReactionData::moleculesToAdd(bool forward) const {
-    return (forward) ? right_molecules : left_molecules;
-}
-
-const ReactionData::Tmap &ReactionData::atomsToAdd(bool forward) const { return (forward) ? right_atoms : left_atoms; }
-
 ReactionData::Direction ReactionData::getDirection() const { return direction; }
 
 void ReactionData::setDirection(ReactionData::Direction dir) {
     if (dir != direction) {
-        // swap contents of left/right; no data copying involved
-        // this is a bad idea as getProducts return a reference which
-        // would change with direction
-        // std::swap(left_names, right_names);
-        // std::swap(left_atoms, right_atoms);
-        // std::swap(left_molecules, right_molecules);
         direction = dir;
         lnK = -lnK;
+        pK = -pK;
     }
 }
 std::pair<const ReactionData::Tmap &, const ReactionData::Tmap &> ReactionData::getProducts() const {
     if (direction == Direction::RIGHT)
-        return std::make_pair(right_atoms, right_molecules);
+        return {right_atoms, right_molecules};
     else
-        return std::make_pair(left_atoms, left_molecules);
+        return {left_atoms, left_molecules};
 }
 std::pair<const ReactionData::Tmap &, const ReactionData::Tmap &> ReactionData::getReactants() const {
     if (direction == Direction::RIGHT)
-        return std::make_pair(left_atoms, left_molecules);
+        return {left_atoms, left_molecules};
     else
-        return std::make_pair(right_atoms, right_molecules);
+        return {right_atoms, right_molecules};
 }
 void ReactionData::reverseDirection() {
     if (direction == Direction::RIGHT)
@@ -749,7 +739,10 @@ void from_json(const json &j, ReactionData &a) {
     }
 }
 
-void to_json(json &j, const ReactionData &a) {
+void to_json(json &j, const ReactionData &reaction) {
+    ReactionData a = reaction;
+    // we want pK etc. to show for LEFT-->RIGHT direction
+    a.setDirection(ReactionData::Direction::RIGHT);
     j[a.reaction] = {{"pK", a.pK},
                      {"pK'", -a.lnK / std::log(10)},
                      //{"canonic", a.canonic }, {"N_reservoir", a.N_reservoir },

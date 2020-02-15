@@ -622,19 +622,6 @@ bool ReactionData::empty() const {
     }
     return false;
 }
-std::vector<int> ReactionData::participatingMolecules() const {
-    std::vector<int> molid_vec;
-    molid_vec.reserve(left_molecules.size() + right_molecules.size());
-    for (auto [molid, N] : left_molecules)
-        molid_vec.push_back(molid);
-    for (auto [molid, N] : right_molecules)
-        molid_vec.push_back(molid);
-    return molid_vec;
-}
-
-bool ReactionData::containsMolecule(int molid) const {
-    return left_molecules.count(molid) > 0 || right_molecules.count(molid) > 0;
-}
 
 ReactionData::Direction ReactionData::getDirection() const { return direction; }
 
@@ -646,12 +633,12 @@ void ReactionData::setDirection(ReactionData::Direction dir) {
     }
 }
 
-std::pair<ReactionData::Tmap &, ReactionData::Tmap &> ReactionData::getProducts() {
-    if (direction == Direction::RIGHT)
-        return {right_atoms, right_molecules};
-    else
-        return {left_atoms, left_molecules};
-}
+// std::pair<ReactionData::Tmap &, ReactionData::Tmap &> ReactionData::getProducts() {
+//    if (direction == Direction::RIGHT)
+//        return {right_atoms, right_molecules};
+//    else
+//        return {left_atoms, left_molecules};
+//}
 
 std::pair<const ReactionData::Tmap &, const ReactionData::Tmap &> ReactionData::getProducts() const {
     if (direction == Direction::RIGHT)
@@ -660,12 +647,12 @@ std::pair<const ReactionData::Tmap &, const ReactionData::Tmap &> ReactionData::
         return {left_atoms, left_molecules};
 }
 
-std::pair<ReactionData::Tmap &, ReactionData::Tmap &> ReactionData::getReactants() {
-    if (direction == Direction::RIGHT)
-        return {left_atoms, left_molecules};
-    else
-        return {right_atoms, right_molecules};
-}
+// std::pair<ReactionData::Tmap &, ReactionData::Tmap &> ReactionData::getReactants() {
+//    if (direction == Direction::RIGHT)
+//        return {left_atoms, left_molecules};
+//    else
+//        return {right_atoms, right_molecules};
+//}
 
 std::pair<const ReactionData::Tmap &, const ReactionData::Tmap &> ReactionData::getReactants() const {
     if (direction == Direction::RIGHT)

@@ -314,42 +314,45 @@ class NeighboursGenerator {
     void generatePairs(AtomPairList &pairs, int bond_distance);
 };
 
-/*
+/**
  * @brief General properties of reactions
  *
- * @todo
- * - [x] Rename "products" and "reactants" to "left" and "right"
- * - [ ] make all data private
- * - [x] add `setDirection()` / `getDirection()` functions
- * - [x] add `getProducts()`.
- *       Would point to "left" if direction == RIGHT
- *       Would point to "right" if direction == LEFT
- * - [x] add `getReactants()` like above
- * - [x] remove awkward `bool forward`
- * - [x] reversing direction would also change sign of pK
+ * Placeholder for chemical reactions used in the RCMC move.
+ * A reaction has two sides, left and right, each contained one or more
+ * atomic / molecular reactants and products. The reaction is associated with
+ * an equilibrium constant, `lnK` or `pK`.
+ * If the direction is `RIGHT`, the right-hand side species are products and
+ * the left-hand side are reactants. Vice versa if the direction is `LEFT`.
+ * The direction can be changed with `setDirection()` which also handles
+ * sign changes of `lnK` and `pK`.
+ * The functions `getProducts()` and `getReactants()` returns a pair with
+ * atomic and molecular reactants/products, always reflecting the current
+ * direction.
  */
 class ReactionData {
   public:
-    typedef std::map<int, int> Tmap;
+    typedef std::map<int, int> Tmap; // key = molid; value = stoichiometic number
     enum class Direction : char { LEFT = 0, RIGHT = 1 };
 
   private:
     friend void from_json(const json &, ReactionData &);
     friend void to_json(json &, const ReactionData &);
-    Direction direction = Direction::RIGHT; //!< Direction of reaction
-    std::vector<std::string> left_names, right_names;
-    Tmap left_molecules; // Molecular change, groups. Atomic as Groupwise
-    Tmap right_molecules;
-    Tmap right_atoms;
-    Tmap left_atoms; // Atomic change, equivalent of swap/titration
+
+    Direction direction = Direction::RIGHT;           //!< Direction of reaction
+    std::vector<std::string> left_names, right_names; //!< Names of reactants and products
+
+    Tmap left_molecules;  //!< Initial reactants (molecules)
+    Tmap right_molecules; //!< Initial products (molecules)
+    Tmap left_atoms;      //!< Initial reactants (atoms)
+    Tmap right_atoms;     //!< Initial products (atoms)
 
   public:
     void setDirection(Direction);                               //!< Set directions of the process
     Direction getDirection() const;                             //!< Get direction of the process
     void reverseDirection();                                    //!< Reverse direction of reaction
-    std::pair<Tmap &, Tmap &> getProducts();                    //!< Pair with atomic and molecular products
+    // std::pair<Tmap &, Tmap &> getProducts();                    //!< Pair with atomic and molecular products
+    // std::pair<Tmap &, Tmap &> getReactants();                   //!< Pair with atomic and molecular reactants
     std::pair<const Tmap &, const Tmap &> getProducts() const;  //!< Pair with atomic and molecular products
-    std::pair<Tmap &, Tmap &> getReactants();                   //!< Pair with atomic and molecular reactants
     std::pair<const Tmap &, const Tmap &> getReactants() const; //!< Pair with atomic and molecular reactants
 
     bool canonic = false; //!< Finite reservoir
@@ -363,9 +366,7 @@ class ReactionData {
 
     bool empty() const;
 
-    std::vector<int> participatingMolecules() const; //!< Returns molids of participating molecules
-    bool containsMolecule(int molid) const; //!< True of molecule id is part of process
-
+    //! Returns pair of iterators to atomlist and moleculelist; one of them points to end().
     auto findAtomOrMolecule(const std::string &name) const {
         auto atom_iter = findName(Faunus::atoms, name);
         auto molecule_iter = findName(Faunus::molecules, name);
@@ -373,7 +374,7 @@ class ReactionData {
             if (atom_iter == Faunus::atoms.end())
                 throw std::runtime_error("unknown species '" + name + "'");
         return std::make_tuple(atom_iter, molecule_iter);
-    } //!< Returns pair of iterators to atomlist and moleculelist. One of them points to end().
+    }
 
 }; //!< End of class
 

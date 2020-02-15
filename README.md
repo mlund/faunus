@@ -1,5 +1,5 @@
 [![Documentation](https://readthedocs.org/projects/faunus/badge/?version=latest)](https://faunus.readthedocs.io/en/latest/?badge=latest)
-[![Build Status](https://travis-ci.org/mlund/faunus.svg?branch=master)](https://travis-ci.org/mlund/faunus)
+[![Build Status](https://travis-ci.com/mlund/faunus.svg?branch=master)](https://travis-ci.com/mlund/faunus)
 [![License: MIT](https://img.shields.io/badge/License-MIT-brightgreen.svg)](https://opensource.org/licenses/MIT)
 [![Anaconda-Server Badge](https://anaconda.org/conda-forge/faunus/badges/installer/conda.svg)](https://anaconda.org/conda-forge/faunus)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/2ac7217d373a4f34a2dae2d912c9d1a1)](https://www.codacy.com/app/mlund/faunus?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=mlund/faunus&amp;utm_campaign=Badge_Grade)
@@ -37,7 +37,7 @@ Documentation
 Licence
 =======
 
-Copyright 2002-2019 Mikael Lund
+Copyright 2002-2020 Mikael Lund
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software
 and associated documentation files (the "Software"), to deal in the Software without restriction,

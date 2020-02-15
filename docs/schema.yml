@@ -289,7 +289,7 @@ properties:
                 property:
                     description: Molecular property to sample
                     type: string
-                    enum: [angle, com_x, com_y, com_z, confid, end2end, Rg, mu_x, mu_y, mu_z, mu, muangle, N, Q,
+                    enum: [angle, active, com_x, com_y, com_z, confid, end2end, Rg, mu_x, mu_y, mu_z, mu, muangle, N, Q,
                     atomatom, cmcm, cmcm_z, mindist, "L/R", Rinner]
             required: [property, index]
         atom:

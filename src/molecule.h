@@ -350,8 +350,6 @@ class ReactionData {
     void setDirection(Direction);                               //!< Set directions of the process
     Direction getDirection() const;                             //!< Get direction of the process
     void reverseDirection();                                    //!< Reverse direction of reaction
-    // std::pair<Tmap &, Tmap &> getProducts();                    //!< Pair with atomic and molecular products
-    // std::pair<Tmap &, Tmap &> getReactants();                   //!< Pair with atomic and molecular reactants
     std::pair<const Tmap &, const Tmap &> getProducts() const;  //!< Pair with atomic and molecular products
     std::pair<const Tmap &, const Tmap &> getReactants() const; //!< Pair with atomic and molecular reactants
 
@@ -366,31 +364,46 @@ class ReactionData {
 
     bool empty() const;
 
-    //! Returns pair of iterators to atomlist and moleculelist; one of them points to end().
-    auto findAtomOrMolecule(const std::string &name) const {
-        auto atom_iter = findName(Faunus::atoms, name);
-        auto molecule_iter = findName(Faunus::molecules, name);
-        if (molecule_iter == Faunus::molecules.end())
-            if (atom_iter == Faunus::atoms.end())
-                throw std::runtime_error("unknown species '" + name + "'");
-        return std::make_tuple(atom_iter, molecule_iter);
+    /**
+     * @brief Find atom name or molecule name
+     * @returns pair of iterators to atomlist and moleculelist; one of them points to end().
+     *
+     * Note that molecules and atoms *cannot* have the same name
+     */
+    auto findAtomOrMolecule(const std::string &atom_or_molecule_name) const {
+        auto atom_iter = findName(Faunus::atoms, atom_or_molecule_name);
+        auto molecule_iter = findName(Faunus::molecules, atom_or_molecule_name);
+        if (molecule_iter == Faunus::molecules.end() and atom_iter == Faunus::atoms.end()) {
+            throw std::runtime_error("unknown species '" + atom_or_molecule_name + "'");
+        }
+        return std::make_pair(atom_iter, molecule_iter);
     }
 
 }; //!< End of class
 
-inline auto parseProcess(const std::string &process) {
+/**
+ * This parses a string containing a reaction, e.g. "A = B + B" and returns
+ * a pair with (1) a vector of reactant names and (2) a vector of product names.
+ * Reactants and products are split by a `=` sign. All elements in the string
+ * must be separated by a white-space.
+ */
+inline auto parseReactionString(const std::string &process_string) {
     typedef std::vector<std::string> Tvec;
-    Tvec v;
+    Tvec vec; // vector of atom/molecule names
     std::string tmp;
-    std::istringstream iss(process);
-    while (iss >> tmp)
-        v.push_back(tmp);
-    v.erase(std::remove(v.begin(), v.end(), "+"), v.end());
-    auto it = std::find(v.begin(), v.end(), "=");
-    if (it == v.end())
+    std::istringstream iss(process_string);
+    while (iss >> tmp) { // stream all words into vector
+        vec.push_back(tmp);
+    }
+
+    vec.erase(std::remove(vec.begin(), vec.end(), "+"), vec.end());
+
+    if (auto it = std::find(vec.begin(), vec.end(), "="); it == vec.end()) {
         throw std::runtime_error("products and reactants must be separated by '='");
-    return std::make_tuple(Tvec(v.begin(), it), Tvec(it + 1, v.end()));
-} //!< Parse process string to pair of vectors containing reactant/product species
+    } else {
+        return std::make_pair(Tvec(vec.begin(), it), Tvec(it + 1, vec.end()));
+    }
+}
 
 void from_json(const json &j, ReactionData &a);
 

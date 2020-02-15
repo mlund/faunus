@@ -219,8 +219,9 @@ Change::data SpeciationMove::activateMolecularGroup(Space::Tgroup &target) {
     d.internal = true;
     d.atoms.reserve(target.capacity());
 
-    for (size_t i = 0; i < target.capacity(); i++)
+    for (size_t i = 0; i < target.capacity(); i++) {
         d.atoms.push_back(i);
+    }
     return d;
 }
 
@@ -230,8 +231,9 @@ void SpeciationMove::activateProducts(Change &change, ReactionData &reaction) {
         if (Faunus::molecules[molid].atomic) { // The product is an atom
             auto mollist = spc.findMolecules(molid, Tspace::ALL);
             Change::data d = expandAtomicGroup(*mollist.begin(), number_to_insert);
-            if (not d.atoms.empty())
+            if (not d.atoms.empty()) {
                 change.groups.push_back(d);
+            }
         } else { // The product is a molecule
             auto selection = (only_neutral_molecules) ? Tspace::INACTIVE_NEUTRAL : Tspace::INACTIVE;
             auto mollist = spc.findMolecules(molid, selection);
@@ -301,8 +303,9 @@ void SpeciationMove::_move(Change &change) {
         deactivateReactants(change, *reaction);
         activateProducts(change, *reaction);
         std::sort(change.groups.begin(), change.groups.end()); // why?
-    } else
+    } else {
         throw std::runtime_error("No reactions in list, disable rcmc or add reactions");
+    }
 }
 
 double SpeciationMove::bias(Change &, double, double) {
@@ -318,8 +321,9 @@ void SpeciationMove::_accept(Change &) {
     } else {
         reaction->N_reservoir += 1;
     }
-    if (reaction->N_reservoir < 0 && reaction->canonic)
+    if (reaction->N_reservoir < 0 && reaction->canonic) {
         throw std::runtime_error("There are no negative number of molecules");
+    }
 }
 
 void SpeciationMove::_reject(Change &) { acceptance_map[reaction->reaction] += 0; }

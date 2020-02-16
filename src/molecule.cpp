@@ -661,7 +661,7 @@ void from_json(const json &j, ReactionData &a) {
         }
     }
 
-    for (auto &[key, val] : j.items()) {
+    for (auto [key, val] : j.items()) {
         a.reaction_str = key; // reaction string, e.g. "A + B = C"
         a.canonic = val.value("canonic", false);
         a.only_neutral_molecules = val.value("neutral", false);
@@ -669,63 +669,40 @@ void from_json(const json &j, ReactionData &a) {
             a.lnK = val.at("lnK").get<double>();
         } else if (val.count("pK") == 1) {
             a.lnK = -std::log(10) * val.at("pK").get<double>();
+        } else {
+            a.lnK = 0.0;
         }
         a.pK = -a.lnK / std::log(10);
         a.N_reservoir = val.value("N_reservoir", a.N_reservoir);
 
-        // get pair of vectors containing reactant and product species
-        std::tie(a.left_names, a.right_names) = parseReactionString(a.reaction_str);
-
-        // Loop over reactants (left-hand side)
-        for (auto &atom_or_molecule_name : a.left_names) { // loop over species on reactant side (left)
-            auto [atom_iter, molecule_iter] = a.findAtomOrMolecule(atom_or_molecule_name);
-            if (atom_iter != atoms.end()) { // atomic reactants
-                a.swap = true;              // if the reaction involves atoms, identify it as swap move
-                if (atom_iter->implicit) {  // if atom is implicit, multiply K by its activity
-                    if (atom_iter->activity > 0) {
-                        a.lnK += std::log(atom_iter->activity / 1.0_molar); // CHECK SIGN!
+        // helper function used to parse and register atom and molecule names; updates lnK
+        auto registerNames = [&](auto &names, auto &&atom_map, auto &mol_map, double sign) {
+            for (auto &atom_or_molecule_name : names) { // loop over species on reactant side (left)
+                auto [atom_iter, molecule_iter] = a.findAtomOrMolecule(atom_or_molecule_name);
+                if (atom_iter != Faunus::atoms.end()) { // atomic reactants
+                    a.swap = true;                      // if the reaction involves atoms, identify it as swap move
+                    if (atom_iter->implicit) {          // if atom is implicit, multiply K by its activity
+                        if (atom_iter->activity > 0) {
+                            a.lnK += sign * std::log(atom_iter->activity / 1.0_molar);
+                        }
+                    } else {
+                        assert(std::fabs(atom_iter->activity) <= pc::epsilon_dbl);
+                        atom_map[atom_iter->id()]++; // increment stoichiometric number
+                    }
+                } else if (molecule_iter != Faunus::molecules.end()) { // molecular reactants (incl. "atomic" groups)
+                    mol_map[molecule_iter->id()]++;                    // increment stoichiometric number
+                    if (molecule_iter->activity > 0) { // assume activity not part of K -> divide by activity
+                        a.lnK -= sign * std::log(molecule_iter->activity / 1.0_molar);
                     }
                 } else {
-                    a.left_atoms[atom_iter->id()]++; // increment stoichiometric number
-                    // why not multiply K with activity?
+                    assert(false); // we should never reach here
                 }
-            } else if (molecule_iter != molecules.end()) { // molecular reactants (incl. "atomic" groups)
-                a.left_molecules[molecule_iter->id()]++;   // increment stoichiometric number
-                if (molecule_iter->activity > 0) {
-                    // explicit reagent?
-                    // its activity is not part of K?
-                    // K is divided by its activity
-                    a.lnK -= std::log(molecule_iter->activity / 1.0_molar); // CHECK SIGN!
-                }
-            } else {
-                assert(false); // we should never reach here
             }
-        }
+        }; // end of lambda function
 
-        // todo: the code above ↑ and below ↓ must be identical; split to helper function
-
-        // Loop over products (right-hand side)
-        for (auto &atom_or_molecule_name : a.right_names) {
-            auto [atom_iter, molecule_iter] = a.findAtomOrMolecule(atom_or_molecule_name);
-            if (atom_iter != atoms.end()) {
-                if (atom_iter->implicit) {
-                    // implicit product? K is divided by its activity
-                    a.lnK -= std::log(atom_iter->activity / 1.0_molar); // CHECK SIGN!
-                } else {
-                    a.right_atoms[atom_iter->id()]++; // increment stoichiometric number
-                }
-            } else if (molecule_iter != molecules.end()) {
-                a.right_molecules[molecule_iter->id()]++; // increment stoichiometric number
-                if (molecule_iter->activity > 0) {
-                    // explicit product?
-                    // its activity is not part of K?
-                    // K is multiplied by its activity
-                    a.lnK += std::log(molecule_iter->activity / 1.0_molar); // CHECK SIGN!
-                }
-            } else {
-                assert(false); // we should never reach here
-            }
-        }
+        std::tie(a.left_names, a.right_names) = parseReactionString(a.reaction_str); // lists of species
+        registerNames(a.left_names, a.left_atoms, a.left_molecules, 1.0);            // reactants
+        registerNames(a.right_names, a.right_atoms, a.right_molecules, -1.0);        // products
     }
 }
 

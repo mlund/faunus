@@ -21,7 +21,7 @@ void SpeciationMove::setOther(Tspace &ospc) { other_spc = &ospc; }
  * @todo Redundant as most (all?) of these checks are checkes in later functions
  */
 bool SpeciationMove::checkInsertProducts() {
-    auto [atomic_products, molecular_products] = reaction->getProducts();
+    [[maybe_unused]] auto [atomic_products, molecular_products] = reaction->getProducts();
 
     for (auto [molid, number_to_insert] : molecular_products) {
         auto molecule_list = spc.findMolecules(molid, Tspace::ALL);
@@ -54,8 +54,8 @@ bool SpeciationMove::checkInsertProducts() {
  */
 bool SpeciationMove::atomicSwap(Change &change) {
     if (reaction->swap) {
-        auto [atomic_products, molecular_products] = reaction->getProducts();
-        auto [atomic_reactants, molecular_reactants] = reaction->getReactants();
+        [[maybe_unused]] auto [atomic_products, molecular_products] = reaction->getProducts();
+        [[maybe_unused]] auto [atomic_reactants, molecular_reactants] = reaction->getReactants();
 
         assert(atomic_products.size() == 1 and atomic_reactants.size() == 1);
 

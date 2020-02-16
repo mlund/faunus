@@ -134,7 +134,7 @@ cluster:
 
 This performs a fractional charge move on a specific atom.
 
-**Limitations:**
+Limitations:
 This move changes the particle charge and therefore cannot be used with
 splined pair-potentials where the initial charges from are read from `atomlist`.
 Instead, use a hard-coded variant like `nonbonded_coulomblj` etc.
@@ -183,7 +183,7 @@ unphysical so make sure the skipped fraction is small.
 The default value of `repeat` is the number of harmonic bonds in the `molecule`
 (multiplied by the number of molecules).
 
-*Known limitations:* Chain bonds have to be ordered sequentially in the topology.
+Limitations: Chain bonds have to be ordered sequentially in the topology.
 
 
 ### Crankshaft
@@ -232,7 +232,6 @@ of replicas, _n_, exactly matches the number of processes. Each
 replica prefixes input and output files with `mpi0.`, `mpi1.`,
 etc. and only exchange between neighboring processes is performed.
 
-**Note:**
 Parallel tempering is currently limited to systems with
 constant number of particles, $N$.
 
@@ -269,8 +268,7 @@ The table below explains the scaling behavior in different geometries:
 `xy`         |  `cuboid`    | Scales xy, z untouched.
 `isochoric`  |  `cuboid`    | Scales xy/z, const. volume
 
-**Warning:**
-Untested for cylinders, slits.
+_Warning:_ Untested for cylinders, slits.
 
 
 ## Reactive Canonical Monte Carlo
@@ -291,14 +289,14 @@ and all its properties, except its position, are replaced with those of an atom 
 Such ID transormations can also involve the addition/deletion of molecules or _implicit_ atoms.<br>
 For a reaction
 $$
-\sum_i \nu_i M_i = 0
+\sum\_i \nu\_i M\_i = 0
 $$
-where $M_i$ is the chemical symbol and $\nu_i$ is the stoichiometric coefficient of species $i$ (positive for products and negative for reagents),
+where $M\_i$ is the chemical symbol and $\nu\_i$ is the stoichiometric coefficient of species $i$ (positive for products and negative for reagents),
 the contribution of a speciation move to the energy change is
 $$
-\beta \Delta U = - \sum_i \ln{ \left ( \frac{ N_i! }{(N_i+\nu_i)!} V^{\nu_i} \right ) } - \ln{ \prod_i a_i^{\nu_i} },
+\beta \Delta U = - \sum\_i \ln{ \left ( \frac{ N\_i! }{(N\_i+\nu\_i)!} V^{\nu\_i} \right ) } - \ln{ \prod\_i a\_i^{\nu\_i} },
 $$
-where $N_i$ is the number of particles of species $i$ in the current state and $a_i$ is the activity of species $i$.
+where $N\_i$ is the number of particles of species $i$ in the current state and $a\_i$ is the activity of species $i$.
 
 For more information, see the Topology section and [doi:10/fqcpg3](https://doi.org/10/fqcpg3).
 
@@ -306,5 +304,3 @@ For more information, see the Topology section and [doi:10/fqcpg3](https://doi.o
 --------------- | ----------------------------------
 `repeat=1`      |  Average number of moves per sweep
 
-**Warning:**
-The speciation move is under construction and subject to change.

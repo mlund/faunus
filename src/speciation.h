@@ -5,44 +5,42 @@
 namespace Faunus {
 namespace Move {
 
-/*
- * @brief Establishes equilibrium of matter
- * Establishes equilibrium of matter between all species
+/**
+ * @brief Generalised Grand Canonical Monte Carlo Move
  *
- * Consider the dissociation process AX=A+X. This class will locate
- * all species of type AX and A and make a MC swap move between them.
- * X can be implicit, meaning that it enters only with its chemical potential
- * (activity). The reacting species, the equilibrium constant,
- * and the activities are read from the JSON input file.
+ * This move handles insertion and deletion of atomic and
+ * molecular groups, including swap moves and implicit atomic
+ * species. Flow of events:
  *
- * @todo Messy code requires substantial cleanup and documentation
+ * 1. pick random `Faunus::ReactionData` object
+ * 2. pick random direction (left or right)
+ * 3. perform appropriate action:
+ *    - atomic swap
+ *    - deactivate reactants
+ *    - activate products
  */
 class SpeciationMove : public Movebase {
   private:
-    Space &spc;
-    Space *other_spc;
+    Space &spc;                       //!< Trial space (particles, groups)
+    Space *other_spc;                 //!< Old space (particles, groups)
+    double bond_energy = 0;           //!< Accumulated bond energy if inserted/deleted molecule
     ReactionData *reaction = nullptr; //!< Randomly selected reaction
     std::map<std::string, Average<double>> acceptance_map;
 
-    double bond_energy = 0;              //!< Accumulated bond energy if inserted/deleted molecule
-    bool only_neutral_molecules = false; // true if only neutral molecules are involved in the reaction
-
     void _to_json(json &) const override;
     void _from_json(const json &) override;
-    void _move(Change &) override;
-    void _accept(Change &) override;
-    void _reject(Change &) override;
+    void _move(Change &) override;         //!< Perform move
+    void _accept(Change &) override;       //!< Called when acceepted
+    void _reject(Change &) override;       //!< Called when rejected
+    bool checkInsertProducts();            //!< Performs checks before move
+    bool atomicSwap(Change &);             //!< Swap atom type
+    void deactivateAllReactants(Change &); //!< Delete reactant species
+    void activateAllProducts(Change &);    //!< Insert product species
 
-    bool checkInsertProducts(ReactionData &);
-    bool swapReaction(Change &, ReactionData &);
-
-    Change::data contractAtomicGroup(Space::Tgroup &, Tspace::Tgroup &, int); //!< Contract atomic group
+    Change::data contractAtomicGroup(Space::Tgroup &, Space::Tgroup &, int);  //!< Contract atomic group
     Change::data expandAtomicGroup(Space::Tgroup &, int);                     //!< Expand atomic group
     Change::data activateMolecularGroup(Space::Tgroup &);                     //!< Activate molecular group
     Change::data deactivateMolecularGroup(Space::Tgroup &);                   //!< Deactivate molecular group
-
-    void activateProducts(Change &, ReactionData &);
-    void deactivateReactants(Change &, ReactionData &);
 
   public:
     SpeciationMove(Space &);

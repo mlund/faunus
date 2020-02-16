@@ -662,9 +662,9 @@ void from_json(const json &j, ReactionData &a) {
     }
 
     for (auto &[key, val] : j.items()) {
-        a.reaction = key; // reaction string, e.g. "A + B = C"
+        a.reaction_str = key; // reaction string, e.g. "A + B = C"
         a.canonic = val.value("canonic", false);
-        a.neutral = val.value("neutral", false);
+        a.only_neutral_molecules = val.value("neutral", false);
         if (val.count("lnK") == 1) {
             a.lnK = val.at("lnK").get<double>();
         } else if (val.count("pK") == 1) {
@@ -674,7 +674,7 @@ void from_json(const json &j, ReactionData &a) {
         a.N_reservoir = val.value("N_reservoir", a.N_reservoir);
 
         // get pair of vectors containing reactant and product species
-        std::tie(a.left_names, a.right_names) = parseReactionString(a.reaction);
+        std::tie(a.left_names, a.right_names) = parseReactionString(a.reaction_str);
 
         // Loop over reactants (left-hand side)
         for (auto &atom_or_molecule_name : a.left_names) { // loop over species on reactant side (left)
@@ -733,12 +733,12 @@ void to_json(json &j, const ReactionData &reaction) {
     ReactionData a = reaction;
     // we want pK etc. to show for LEFT-->RIGHT direction
     a.setDirection(ReactionData::Direction::RIGHT);
-    j[a.reaction] = {{"pK", a.pK},
-                     {"pK'", -a.lnK / std::log(10)},
-                     //{"canonic", a.canonic }, {"N_reservoir", a.N_reservoir },
-                     {"neutral", a.neutral},
-                     {"products", a.right_names},
-                     {"reactants", a.left_names}};
+    j[a.reaction_str] = {{"pK", a.pK},
+                         {"pK'", -a.lnK / std::log(10)},
+                         //{"canonic", a.canonic }, {"N_reservoir", a.N_reservoir },
+                         {"neutral", a.only_neutral_molecules},
+                         {"products", a.right_names},
+                         {"reactants", a.left_names}};
 } //!< Serialize to JSON object
 
 } // namespace Faunus

@@ -353,14 +353,14 @@ class ReactionData {
     std::pair<const Tmap &, const Tmap &> getProducts() const;  //!< Pair with atomic and molecular products
     std::pair<const Tmap &, const Tmap &> getReactants() const; //!< Pair with atomic and molecular reactants
 
-    bool canonic = false; //!< Finite reservoir
-    bool swap = false;    //!< True if swap move
-    int N_reservoir;      //!< Number of molecules in finite reservoir
-    double lnK = 0;       //!< Natural logarithm of molar eq. const.
-    double pK = 0;        //!< -log10 of molar eq. const.
-    bool neutral = false; //!< True if only neutral molecules are involved in the reaction
-    std::string reaction; //!< Name of reaction
-    double weight;        //!< Statistical weight to be given to reaction in speciation
+    bool canonic = false;                //!< Finite reservoir
+    bool swap = false;                   //!< True if swap move
+    int N_reservoir;                     //!< Number of molecules in finite reservoir
+    double lnK = 0;                      //!< Natural logarithm of molar eq. const.
+    double pK = 0;                       //!< -log10 of molar eq. const.
+    bool only_neutral_molecules = false; //!< Only neutral molecules are involved in the reaction
+    std::string reaction_str;            //!< Name of reaction
+    double weight;                       //!< Statistical weight to be given to reaction in speciation
 
     bool empty() const;
 

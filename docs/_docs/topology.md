@@ -215,67 +215,119 @@ i.e. hard-sphere potentials the initial energy may be infinite.
 Faunus supports density fluctuations, coupled to chemical equilibria with
 explicit and/or implicit particles via their chemical potentials as
 defined in the `reactionlist` detailed below, as well as in `atomlist` and
-`moleculelist`.
+`moleculelist`. The level of flexibility is very high and reactions can be
+freely composed.
+
+The move involves deletion and insertion of reactants and products and it is
+therefore important that simulations are started with a sufficiently high number of
+initial molecules in `insertmolecules`.
+If not, the `rcmc` move will attempt to issue warnings with suggestions how to fix it.
+
+### Reaction format:
+
 The initial key describes a transformation of reactants (left of `=`)
 into products (right of `=`) that may be a mix of atomic and molecular species.
 
-An implicit reactant or product is an atom which is included in the equilibrium constant but it is not represented
-explicitly in the simulation cell.
-A common example is the acid-base equilibrium of the aspartic acid (treated here as atomic particle):
-
-~~~ yaml
-reactionlist:
-  - "HASP = ASP + H": { pK: 4.0 }
-~~~
-
-where H is defined as _implicit_ in the `atomlist`:
-
-~~~ yaml
-  - H: { implicit: true, activity: 1e-7 }
-~~~
-
-and we set `pK` equal to the `pKa`, i.e.,
-$$
-K_a = \frac{ a_{\mathrm{ASP}} a_{\mathrm{H}} }{ a_{\mathrm{HASP}} }.
-$$
-To simulate at a given constant pH, H is specified as an implicit atom of activity $10^{-\mathrm{pH}}$ and the equilibrium 
-is modified accordingly (in this case K is divided by $a_{\mathrm{H}}$). 
-An acid-base equilibrium, or any other single-atom ID transformation (see the Move section), can also be coupled with the insertion/deletion
-of a molecule. For example, 
-
-~~~ yaml
-reactionlist:
-  - "HASP + Cl = ASP + H": { pK: 4.0 }
-  - "= Na + Cl": { }
-~~~
-
-where Na and Cl are included in the `moleculelist` as
-
-~~~ yaml
-  - Cl: {atoms: [cl], atomic: true, activity: 0.1 } 
-  - Na: {atoms: [na], atomic: true, activity: 0.1 } 
-~~~
-
-In this case K is both divided by $a_{\mathrm{H}}$ and $a_{\mathrm{Cl}}$, so that the actual equilibrium constant used by the speciation move is
-
-$$
-K' = \frac{K_a}{a_{ \mathrm{H} } a_{ \mathrm{Cl} } } = \frac{ a_{\mathrm{ASP}} }{ a_{\mathrm{HASP}} a_{\mathrm{Cl}} }.
-$$
-
-In an ideal system, the involvement of Cl in the acid-base reaction does not affect the equilibrium since the grand canonical ensemble
-ensures that the activity of Cl matches its concentration in the simulation cell.
-
-Reaction format:
-
 - all species, `+`, and `=` must be surrounded by white-space
 - atom and molecule names cannot overlap
-- you may repeat species to match the desired stoichiometry
+- species can be repeated to match the desired stoichiometry, e.g. `A + A = C`
 
 Available keywords:
 
 `reactionlist`  | Description
 --------------- | ---------------------------------------------------------------
-`lnK`/`pK`      | Molar equilibrium constant either as $\ln K$ or $-\log_{10}(K)$
+`lnK`/`pK`      | Molar equilibrium constant either as $\ln K$ or $-\log\_{10}(K)$
 `neutral=false` | If true, only neutral molecules participate in the reaction
 
-The `neutral` keyword is needed for molecular groups containing titratable atoms. If `neutral` is set to true, the activity of the neutral molecule should be specified in `moleculelist`.
+The `neutral` keyword is needed for molecular groups containing titratable atoms. If `neutral` is set to true,
+the activity of the neutral molecule should be specified in `moleculelist`.
+
+
+### Example: Grand Canonical Salt Particles
+
+This illustrates how to maintain constant chemical potential of salt ions:
+
+~~~ yaml
+atomlist:
+  - na: {q: 1.0, ...}  # note that atom names must differ
+  - cl: {q: -1.0, ...} # from molecule names
+moleculelist:
+  - Na+: {atoms: [na], atomic: true, activity: 0.1}
+  - Cl-: {atoms: [cl], atomic: true, activity: 0.1}
+reactionlist:
+  - = Na+ + Cl+: {} # note: molecules, not atoms
+moves:
+  - rcmc: {} # activate speciation move
+~~~
+
+The same setup can be used also for molecular molecules, _i.e._ molecules with `atomic: false`.
+
+
+### Example: Acid/base titration with _implicit_ protons
+
+An implicit reactant or product is an atom which is included in the reaction but it is not represented
+explicitly in the simulation cell.
+Common use-cases are acid-base equilibria where the proton concentration is often very low:
+
+~~~ yaml
+atomlist:
+  - H+: {implicit: true, activity: 0.00001} # pH 5
+  - COO-: {q: -1.0, ...}
+  - COOH: {q: 0.0, ...}
+reactionlist:
+  - "COOH = COO- + H+": {pK: 4.8} # not electroneutral!
+~~~
+
+where we set `pK` equal to the `pKa`:
+$$
+K\_a = \frac{ a_{\mathrm{COO^-}} a_{\mathrm{H^+}} }{ a_{\mathrm{COOH}} }.
+$$
+To simulate at a given constant pH, H+ is specified as an implicit atom of activity $10^{-\mathrm{pH}}$ and the equilibrium 
+is modified accordingly (in this case $K$ is divided by $a_{\mathrm{H^+}}$). 
+It is important to note that this reaction violates _electroneutrality_ and should be used
+only with Hamiltonians where this is allowed. This could for example be in systems with salt screened
+Yukawa interactions. 
+
+
+### Example: Acid/base titration coupled with Grand Canonical Salt
+
+To respect electroneutrality when swapping species, we can associate the titration move with
+an artificial insertion or deletion of salt ions. These ions should be present under constant
+chemical potential and we therefore couple to a grand canonical salt bath:
+
+~~~ yaml
+atomlist:
+  - H+: {implicit: true, activity: 0.00001} # pH 5
+  - COO-: {q: -1.0, ...}
+  - COOH: {q: 0.0, ...}
+  - na: {q: 1.0, ...}
+  - cl: {q: -1.0, ...}
+moleculelist:
+  - Na+: {atoms: [na], atomic: true, activity: 0.1}
+  - Cl-: {atoms: [cl], atomic: true, activity: 0.1}
+reactionlist:
+  - COOH + Cl- = COO- + H+: {pK: 4.8} # electroneutral!
+  - COOH = Na+ + COO- + H+: {pK: 4.8} # electroneutral!
+  - = Na+ + Cl-: {} # grand canonical salt
+~~~
+
+For the first reaction, $K$ is divided by both $a_{\mathrm{H^+}}$ and $a_{\mathrm{Cl^-}}$, so that the final equilibrium constant
+used by the speciation move is
+$$
+K' = \frac{K\_a}{a_{ \mathrm{H^+} } a_{ \mathrm{Cl^-} } } = \frac{ a_{\mathrm{COO^-}} }{ a_{\mathrm{COOH}} a_{\mathrm{Cl^-}} }.
+$$
+In an ideal system, the involvement of Na or Cl in the acid-base reaction is inconsequential for the equilibrium,
+since the Grand Canonical ensemble ensures constant salt activity.
+
+
+### Example: Swapping between molecular conformations
+
+The following can be used to alternate between different molecular conformations
+
+~~~ yaml
+moleculelist:
+  - A: {atomic: false, structure: ...}
+  - B: {atomic: false, structure: ...}
+reactionlist:
+  - A = B: {lnK: 0.69} # K=2, "B" twice as likely as "A"
+~~~

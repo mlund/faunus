@@ -608,7 +608,7 @@ ParticleVector &Conformation::toParticleVector(ParticleVector &p) const {
 bool ReactionData::empty() const {
     if (direction == Direction::RIGHT) {
         if (canonic) {
-            if (N_reservoir <= 0) {
+            if (reservoir_size <= 0) {
                 return true;
             }
         }
@@ -622,18 +622,19 @@ void ReactionData::setDirection(ReactionData::Direction dir) {
     if (dir != direction) {
         direction = dir;
         lnK = -lnK;
-        pK = -pK;
     }
 }
 
-std::pair<const ReactionData::Tmap &, const ReactionData::Tmap &> ReactionData::getProducts() const {
+std::pair<const ReactionData::TStoichiometryMap &, const ReactionData::TStoichiometryMap &>
+ReactionData::getProducts() const {
     if (direction == Direction::RIGHT)
         return {right_atoms, right_molecules};
     else
         return {left_atoms, left_molecules};
 }
 
-std::pair<const ReactionData::Tmap &, const ReactionData::Tmap &> ReactionData::getReactants() const {
+std::pair<const ReactionData::TStoichiometryMap &, const ReactionData::TStoichiometryMap &>
+ReactionData::getReactants() const {
     if (direction == Direction::RIGHT)
         return {left_atoms, left_molecules};
     else
@@ -672,8 +673,7 @@ void from_json(const json &j, ReactionData &a) {
         } else {
             a.lnK = 0.0;
         }
-        a.pK = -a.lnK / std::log(10);
-        a.N_reservoir = val.value("N_reservoir", a.N_reservoir);
+        a.reservoir_size = val.value("N_reservoir", a.reservoir_size);
 
         // helper function used to parse and register atom and molecule names; updates lnK
         auto registerNames = [&](auto &names, auto &&atom_map, auto &mol_map, double sign) {
@@ -708,10 +708,9 @@ void from_json(const json &j, ReactionData &a) {
 
 void to_json(json &j, const ReactionData &reaction) {
     ReactionData a = reaction;
-    // we want pK etc. to show for LEFT-->RIGHT direction
+    // we want lnK to show for LEFT-->RIGHT direction
     a.setDirection(ReactionData::Direction::RIGHT);
-    j[a.reaction_str] = {{"pK", a.pK},
-                         {"pK'", -a.lnK / std::log(10)},
+    j[a.reaction_str] = {{"pK'", -a.lnK / std::log(10)},
                          //{"canonic", a.canonic }, {"N_reservoir", a.N_reservoir },
                          {"neutral", a.only_neutral_molecules},
                          {"products", a.right_names},

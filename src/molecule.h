@@ -328,10 +328,12 @@ class NeighboursGenerator {
  * The functions `getProducts()` and `getReactants()` returns a pair with
  * atomic and molecular reactants/products, always reflecting the current
  * direction.
+ *
+ * @todo Enable `canonic` and `reservoir_size`
  */
 class ReactionData {
   public:
-    typedef std::map<int, int> Tmap; // key = molid; value = stoichiometic number
+    typedef std::map<int, int> TStoichiometryMap; // key = molid; value = stoichiometic coefficient
     enum class Direction : char { LEFT = 0, RIGHT = 1 };
 
   private:
@@ -341,28 +343,28 @@ class ReactionData {
     Direction direction = Direction::RIGHT;           //!< Direction of reaction
     std::vector<std::string> left_names, right_names; //!< Names of reactants and products
 
-    Tmap left_molecules;  //!< Initial reactants (molecules)
-    Tmap right_molecules; //!< Initial products (molecules)
-    Tmap left_atoms;      //!< Initial reactants (atoms)
-    Tmap right_atoms;     //!< Initial products (atoms)
+    TStoichiometryMap left_molecules;  //!< Initial reactants (molecules)
+    TStoichiometryMap right_molecules; //!< Initial products (molecules)
+    TStoichiometryMap left_atoms;      //!< Initial reactants (atoms)
+    TStoichiometryMap right_atoms;     //!< Initial products (atoms)
 
   public:
     void setDirection(Direction);                               //!< Set directions of the process
     Direction getDirection() const;                             //!< Get direction of the process
     void reverseDirection();                                    //!< Reverse direction of reaction
-    std::pair<const Tmap &, const Tmap &> getProducts() const;  //!< Pair with atomic and molecular products
-    std::pair<const Tmap &, const Tmap &> getReactants() const; //!< Pair with atomic and molecular reactants
+    std::pair<const TStoichiometryMap &, const TStoichiometryMap &>
+    getProducts() const; //!< Pair with atomic and molecular products
+    std::pair<const TStoichiometryMap &, const TStoichiometryMap &>
+    getReactants() const; //!< Pair with atomic and molecular reactants
 
-    bool canonic = false;                //!< Finite reservoir
+    bool canonic = false;                //!< Finite reservoir (incomplete feature)
     bool swap = false;                   //!< True if swap move
-    int N_reservoir;                     //!< Number of molecules in finite reservoir
+    int reservoir_size = 0;              //!< Number of molecules in finite reservoir (incomplete feature!)
     double lnK = 0;                      //!< Natural logarithm of molar eq. const.
-    double pK = 0;                       //!< -log10 of molar eq. const.
     bool only_neutral_molecules = false; //!< Only neutral molecules are involved in the reaction
     std::string reaction_str;            //!< Name of reaction
     double weight;                       //!< Statistical weight to be given to reaction in speciation
-
-    bool empty() const;
+    bool empty() const;                  //!< The (finite) reservoir of the RHS particles is empty.
 
     /**
      * @brief Find atom name or molecule name
@@ -389,25 +391,25 @@ class ReactionData {
  */
 inline auto parseReactionString(const std::string &process_string) {
     typedef std::vector<std::string> Tvec;
-    Tvec vec; // vector of atom/molecule names
-    std::string tmp;
+    Tvec names; // vector of atom/molecule names
+    std::string atom_or_molecule_name;
     std::istringstream iss(process_string);
-    while (iss >> tmp) { // stream all words into vector
-        vec.push_back(tmp);
+    while (iss >> atom_or_molecule_name) { // stream all words into vector
+        names.push_back(atom_or_molecule_name);
     }
 
-    vec.erase(std::remove(vec.begin(), vec.end(), "+"), vec.end());
+    names.erase(std::remove(names.begin(), names.end(), "+"), names.end());
 
-    if (auto it = std::find(vec.begin(), vec.end(), "="); it == vec.end()) {
-        throw std::runtime_error("products and reactants must be separated by '='");
+    if (auto it = std::find(names.begin(), names.end(), "="); it == names.end()) {
+        throw std::runtime_error("products and reactants must be separated by ' = '");
     } else {
-        return std::make_pair(Tvec(vec.begin(), it), Tvec(it + 1, vec.end()));
+        return std::make_pair(Tvec(names.begin(), it), Tvec(it + 1, names.end()));
     }
 }
 
-void from_json(const json &j, ReactionData &a);
+void from_json(const json &, ReactionData &);
 
-void to_json(json &j, const ReactionData &a);
+void to_json(json &, const ReactionData &);
 
 extern std::vector<ReactionData> reactions; // global instance
 

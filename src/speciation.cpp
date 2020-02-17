@@ -20,7 +20,7 @@ void SpeciationMove::setOther(Tspace &ospc) { other_spc = &ospc; }
  * Check whether it is possible to insert products (are there any inactive ones?)
  * @todo Redundant as most (all?) of these checks are checkes in later functions
  */
-bool SpeciationMove::checkInsertProducts() {
+bool SpeciationMove::checkBeforeInsert() {
     [[maybe_unused]] auto [atomic_products, molecular_products] = reaction->getProducts();
 
     for (auto [molid, number_to_insert] : molecular_products) {
@@ -148,9 +148,9 @@ Change::data SpeciationMove::deactivateMolecularGroup(Space::Tgroup &target) {
     change_data.internal = true;
     change_data.index = &target - &spc.groups.front(); // index of moved group
     change_data.all = true;                            // all atoms in group were moved
-    for (int i = 0; i < target.capacity(); i++) {      // list of all changed atom index
-        change_data.atoms.push_back(i);
-    }
+    change_data.atoms.resize(target.capacity());       // list of changed atom index
+    std::iota(change_data.atoms.begin(), change_data.atoms.end(), 0);
+
     return change_data;
 }
 
@@ -215,11 +215,9 @@ Change::data SpeciationMove::activateMolecularGroup(Space::Tgroup &target) {
     d.index = &target - &spc.groups.front(); // index* of moved group
     d.all = true;                            // all atoms in group were moved
     d.internal = true;
-    d.atoms.reserve(target.capacity());
+    d.atoms.resize(target.capacity()); // list of changed atom index
+    std::iota(d.atoms.begin(), d.atoms.end(), 0);
 
-    for (size_t i = 0; i < target.capacity(); i++) { // list of changed atom index
-        d.atoms.push_back(i);
-    }
     return d;
 }
 
@@ -297,7 +295,7 @@ void SpeciationMove::_move(Change &change) {
         if (reaction->empty()) { // Enforce canonic constraint if invoked
             return;              // Out of material, slip out the back door
         }
-        if (checkInsertProducts() == false) {
+        if (checkBeforeInsert() == false) {
             return;
         }
         if (atomicSwap(change) == false) {
@@ -324,11 +322,11 @@ double SpeciationMove::bias(Change &, double, double) {
 void SpeciationMove::_accept(Change &) {
     acceptance_map[reaction->reaction_str] += 1;
     if (reaction->getDirection() == ReactionData::Direction::RIGHT) {
-        reaction->N_reservoir -= 1;
+        reaction->reservoir_size -= 1;
     } else {
-        reaction->N_reservoir += 1;
+        reaction->reservoir_size += 1;
     }
-    if (reaction->N_reservoir < 0 && reaction->canonic) {
+    if (reaction->reservoir_size < 0 && reaction->canonic) {
         throw std::runtime_error("negative number of molecules");
     }
 }

@@ -30,9 +30,9 @@ class SpeciationMove : public Movebase {
     void _to_json(json &) const override;
     void _from_json(const json &) override;
     void _move(Change &) override;         //!< Perform move
-    void _accept(Change &) override;       //!< Called when acceepted
+    void _accept(Change &) override;       //!< Called when accepted
     void _reject(Change &) override;       //!< Called when rejected
-    bool checkInsertProducts();            //!< Performs checks before move
+    bool checkBeforeInsert();              //!< Performs checks before move
     bool atomicSwap(Change &);             //!< Swap atom type
     void deactivateAllReactants(Change &); //!< Delete reactant species
     void activateAllProducts(Change &);    //!< Insert product species

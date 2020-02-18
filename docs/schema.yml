@@ -184,6 +184,18 @@ properties:
                         type: string
                         description: One-column file with relative weights for each conformation. Must match frames in `traj` file
 
+    reactionlist:
+        type: array
+        items:
+            type: object
+            additionalProperties:
+                type: object
+                additionalProperties: false
+                properties:
+                    lnK: {type: number, default: 0.0, description: Natural logarithm of equilibrium constant (molar scale)}
+                    pK: {type: number, default: 0.0, description: Minus log10 of equilibrium constant (molar scale)}
+                    neutral: {type: boolean, default: false, description: Set to true if only neutral molecules should be involved}
+
     pairpotential:
         coulomb:
             type: object

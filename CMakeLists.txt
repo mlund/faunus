@@ -323,7 +323,7 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 # in Debug mode, all warnings are treated as errors and we want no optimisations
-add_compile_options($<$<CONFIG:Debug>:-Werror>)
+#add_compile_options($<$<CONFIG:Debug>:-Werror>)
 add_compile_options($<$<CONFIG:Debug>:-O0>)
 
 # in Release mode, add aggressive optimizations

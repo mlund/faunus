@@ -314,69 +314,102 @@ class NeighboursGenerator {
     void generatePairs(AtomPairList &pairs, int bond_distance);
 };
 
-/*
+/**
  * @brief General properties of reactions
+ *
+ * Placeholder for chemical reactions used in the RCMC move.
+ * A reaction has two sides, left and right, each contained one or more
+ * atomic / molecular reactants and products. The reaction is associated with
+ * an equilibrium constant, `lnK` or `pK`.
+ * If the direction is `RIGHT`, the right-hand side species are products and
+ * the left-hand side are reactants. Vice versa if the direction is `LEFT`.
+ * The direction can be changed with `setDirection()` which also handles
+ * sign changes of `lnK` and `pK`.
+ * The functions `getProducts()` and `getReactants()` returns a pair with
+ * atomic and molecular reactants/products, always reflecting the current
+ * direction.
+ *
+ * @todo Enable `canonic` and `reservoir_size`
  */
 class ReactionData {
   public:
-    typedef std::map<int, int> Tmap;
+    typedef std::map<int, int> TStoichiometryMap; // key = molid; value = stoichiometic coefficient
+    enum class Direction : char { LEFT = 0, RIGHT = 1 };
 
-    std::vector<std::string> _reag, _prod;
+  private:
+    friend void from_json(const json &, ReactionData &);
+    friend void to_json(json &, const ReactionData &);
 
-    Tmap _reagid_m; // Molecular change, groups. Atomic as Groupwise
-    Tmap _reagid_a; // Atomic change, equivalent of swap/titration
-    Tmap _prodid_m;
-    Tmap _prodid_a;
-    // Tmap _Reac, _Prod;
+    Direction direction = Direction::RIGHT;           //!< Direction of reaction
+    std::vector<std::string> left_names, right_names; //!< Names of reactants and products
 
-    bool canonic = false; //!< Finite reservoir
-    bool swap = false;    //!< True if swap move
-    int N_reservoir;      //!< Number of molecules in finite reservoir
-    double lnK = 0;       //!< Natural logarithm of molar eq. const.
-    double pK = 0;        //!< -log10 of molar eq. const.
-    bool neutral = false; //!< True if only neutral molecules are involved in the reaction
-    std::string name;     //!< Name of reaction
-    std::string formula;  //!< Chemical formula
-    double weight;        //!< Statistical weight to be given to reaction in speciation
+    TStoichiometryMap left_molecules;  //!< Initial reactants (molecules)
+    TStoichiometryMap right_molecules; //!< Initial products (molecules)
+    TStoichiometryMap left_atoms;      //!< Initial reactants (atoms)
+    TStoichiometryMap right_atoms;     //!< Initial products (atoms)
 
-    bool empty(bool forward) const;
+  public:
+    void setDirection(Direction);                               //!< Set directions of the process
+    Direction getDirection() const;                             //!< Get direction of the process
+    void reverseDirection();                                    //!< Reverse direction of reaction
+    std::pair<const TStoichiometryMap &, const TStoichiometryMap &>
+    getProducts() const; //!< Pair with atomic and molecular products
+    std::pair<const TStoichiometryMap &, const TStoichiometryMap &>
+    getReactants() const; //!< Pair with atomic and molecular reactants
 
-    std::vector<int> participatingMolecules() const; //!< Returns molids of participating molecules
+    bool canonic = false;                //!< Finite reservoir (incomplete feature)
+    bool swap = false;                   //!< True if swap move
+    int reservoir_size = 0;              //!< Number of molecules in finite reservoir (incomplete feature!)
+    double lnK = 0;                      //!< Natural logarithm of molar eq. const.
+    bool only_neutral_molecules = false; //!< Only neutral molecules are involved in the reaction
+    std::string reaction_str;            //!< Name of reaction
+    double weight;                       //!< Statistical weight to be given to reaction in speciation
+    bool empty() const;                  //!< The (finite) reservoir of the RHS particles is empty.
 
-    bool containsMolecule(int molid) const; //!< True of molecule id is part of process
-
-    const Tmap &Molecules2Add(bool forward) const; //!< Map for addition depending on direction
-
-    const Tmap &Atoms2Add(bool forward) const; //!< Map for addition depending on direction
-
-    auto findAtomOrMolecule(const std::string &name) const {
-        auto it_a = findName(Faunus::atoms, name);
-        auto it_m = findName(Faunus::molecules, name);
-        if (it_m == Faunus::molecules.end())
-            if (it_a == Faunus::atoms.end())
-                throw std::runtime_error("unknown species '" + name + "'");
-        return std::make_pair(it_a, it_m);
-    } //!< Returns pair of iterators to atomlist and moleculelist. One of them points to end().
+    /**
+     * @brief Find atom name or molecule name
+     * @returns pair of iterators to atomlist and moleculelist; one of them points to end().
+     *
+     * Note that molecules and atoms *cannot* have the same name
+     */
+    auto findAtomOrMolecule(const std::string &atom_or_molecule_name) const {
+        auto atom_iter = findName(Faunus::atoms, atom_or_molecule_name);
+        auto molecule_iter = findName(Faunus::molecules, atom_or_molecule_name);
+        if (molecule_iter == Faunus::molecules.end() and atom_iter == Faunus::atoms.end()) {
+            throw std::runtime_error("unknown species '" + atom_or_molecule_name + "'");
+        }
+        return std::make_pair(atom_iter, molecule_iter);
+    }
 
 }; //!< End of class
 
-inline auto parseProcess(const std::string &process) {
+/**
+ * This parses a string containing a reaction, e.g. "A = B + B" and returns
+ * a pair with (1) a vector of reactant names and (2) a vector of product names.
+ * Reactants and products are split by a `=` sign. All elements in the string
+ * must be separated by a white-space.
+ */
+inline auto parseReactionString(const std::string &process_string) {
     typedef std::vector<std::string> Tvec;
-    Tvec v;
-    std::string tmp;
-    std::istringstream iss(process);
-    while (iss >> tmp)
-        v.push_back(tmp);
-    v.erase(std::remove(v.begin(), v.end(), "+"), v.end());
-    auto it = std::find(v.begin(), v.end(), "=");
-    if (it == v.end())
-        throw std::runtime_error("products and reactants must be separated by '='");
-    return std::make_pair(Tvec(v.begin(), it), Tvec(it + 1, v.end()));
-} //!< Parse process string to pair of vectors containing reactant/product species
+    Tvec names; // vector of atom/molecule names
+    std::string atom_or_molecule_name;
+    std::istringstream iss(process_string);
+    while (iss >> atom_or_molecule_name) { // stream all words into vector
+        names.push_back(atom_or_molecule_name);
+    }
 
-void from_json(const json &j, ReactionData &a);
+    names.erase(std::remove(names.begin(), names.end(), "+"), names.end());
 
-void to_json(json &j, const ReactionData &a);
+    if (auto it = std::find(names.begin(), names.end(), "="); it == names.end()) {
+        throw std::runtime_error("products and reactants must be separated by ' = '");
+    } else {
+        return std::make_pair(Tvec(names.begin(), it), Tvec(it + 1, names.end()));
+    }
+}
+
+void from_json(const json &, ReactionData &);
+
+void to_json(json &, const ReactionData &);
 
 extern std::vector<ReactionData> reactions; // global instance
 

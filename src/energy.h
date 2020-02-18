@@ -661,7 +661,7 @@ template <typename Tpairpot, bool allow_anisotropic_pair_potential = true> class
 
             // moved<->static
             if (omp_enable and omp_g2g) {
-                std::vector<std::pair<int, int>> pairs(size(moved) * rng_size(fixed));
+                std::vector<std::pair<int, int>> pairs(size(moved) * range_size(fixed));
                 size_t cnt = 0;
                 for (auto i : moved)
                     for (auto j : fixed)
@@ -778,7 +778,7 @@ template <typename Tpairpot> class NonbondedCached : public Nonbonded<Tpairpot> 
                         u += g2g(base::spc.groups[*i], base::spc.groups[*j]);
             // moved<->static
             if (this->omp_enable and this->omp_g2g) {
-                std::vector<std::pair<int, int>> pairs(size(moved) * rng_size(fixed));
+                std::vector<std::pair<int, int>> pairs(size(moved) * range_size(fixed));
                 size_t cnt = 0;
                 for (auto i : moved)
                     for (auto j : fixed)

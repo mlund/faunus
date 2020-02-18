@@ -605,115 +605,116 @@ ParticleVector &Conformation::toParticleVector(ParticleVector &p) const {
     return p;
 }
 
-bool ReactionData::empty(bool forward) const {
-    if (forward)
-        if (canonic)
-            if (N_reservoir <= 0)
+bool ReactionData::empty() const {
+    if (direction == Direction::RIGHT) {
+        if (canonic) {
+            if (reservoir_size <= 0) {
                 return true;
-    return false;
-}
-std::vector<int> ReactionData::participatingMolecules() const {
-    std::vector<int> v;
-    v.reserve(_reagid_m.size() + _prodid_m.size());
-    for (auto i : _reagid_m)
-        v.push_back(i.first);
-    for (auto i : _prodid_m)
-        v.push_back(i.first);
-    return v;
-}
-
-bool ReactionData::containsMolecule(int molid) const {
-    return _reagid_m.count(molid) > 0 || _prodid_m.count(molid) > 0;
-}
-
-const ReactionData::Tmap &ReactionData::Molecules2Add(bool forward) const { return (forward) ? _prodid_m : _reagid_m; }
-const ReactionData::Tmap &ReactionData::Atoms2Add(bool forward) const { return (forward) ? _prodid_a : _reagid_a; }
-
-void from_json(const json &j, ReactionData &a) {
-
-    if (j.is_object() == false || j.size() != 1)
-        throw std::runtime_error("Invalid JSON data for ReactionData");
-
-    for (auto &m : Faunus::molecules)
-        for (auto &a : Faunus::atoms)
-            if (m.name == a.name)
-                throw std::runtime_error("Molecules and atoms must have different names");
-
-    for (auto it = j.begin(); it != j.end(); ++it) {
-        a.name = it.key();
-        auto &val = it.value();
-        a.canonic = val.value("canonic", false);
-        a.neutral = val.value("neutral", false);
-        if (val.count("lnK") == 1)
-            a.lnK = val.at("lnK").get<double>();
-        else if (val.count("pK") == 1)
-            a.lnK = -std::log(10) * val.at("pK").get<double>();
-        a.pK = -a.lnK / std::log(10);
-        a.N_reservoir = val.value("N_reservoir", a.N_reservoir);
-
-        // get pair of vectors containing reactant and product species
-        auto process = parseProcess(a.name);
-        a._reag = process.first;
-        a._prod = process.second;
-
-        for (auto &name : a._reag) {                // loop over reactants
-            auto pair = a.findAtomOrMolecule(name); // {iterator to atom, iterator to mol.}
-            if (pair.first != atoms.end()) {
-                a.swap = true; // if the reaction involves atoms, identify it as swap move
-            }
-        }
-
-        for (auto &name : a._reag) {                // loop over reactants
-            auto pair = a.findAtomOrMolecule(name); // {iterator to atom, iterator to mol.}
-            if (pair.first != atoms.end()) {
-                if (pair.first->implicit) {
-                    // implicit reagent? K is multiplied by its activity
-                    a.lnK += std::log(pair.first->activity / 1.0_molar);
-                } else {
-                    a._reagid_a[pair.first->id()]++;
-                }
-            }
-            if (pair.second != molecules.end()) {
-                a._reagid_m[pair.second->id()]++;
-                if (pair.second->activity > 0) {
-                    // explicit reagent?
-                    // its activity is not part of K?
-                    // K is divided by its activity
-                    a.lnK -= std::log(pair.second->activity / 1.0_molar);
-                }
-            }
-        }
-
-        for (auto &name : a._prod) { // loop over products
-            auto pair = a.findAtomOrMolecule(name);
-            if (pair.first != atoms.end()) {
-                if (pair.first->implicit) {
-                    // implicit product? K is divided by its activity
-                    a.lnK -= std::log(pair.first->activity / 1.0_molar);
-                } else {
-                    a._prodid_a[pair.first->id()]++;
-                }
-            }
-            if (pair.second != molecules.end()) {
-                a._prodid_m[pair.second->id()]++;
-                if (pair.second->activity > 0) {
-                    // explicit product?
-                    // its activity is not part of K?
-                    // K is multiplied by its activity
-                    a.lnK += std::log(pair.second->activity / 1.0_molar);
-                }
             }
         }
     }
+    return false;
 }
 
-void to_json(json &j, const ReactionData &a) {
-    j[a.name] = {{"pK", a.pK},
-                 {"pK'", -a.lnK / std::log(10)},
-                 //{"canonic", a.canonic }, {"N_reservoir", a.N_reservoir },
-                 {"neutral", a.neutral},
-                 {"products", a._prod},
-                 {"reactants", a._reag}};
+ReactionData::Direction ReactionData::getDirection() const { return direction; }
+
+void ReactionData::setDirection(ReactionData::Direction dir) {
+    if (dir != direction) {
+        direction = dir;
+        lnK = -lnK;
+    }
+}
+
+std::pair<const ReactionData::TStoichiometryMap &, const ReactionData::TStoichiometryMap &>
+ReactionData::getProducts() const {
+    if (direction == Direction::RIGHT)
+        return {right_atoms, right_molecules};
+    else
+        return {left_atoms, left_molecules};
+}
+
+std::pair<const ReactionData::TStoichiometryMap &, const ReactionData::TStoichiometryMap &>
+ReactionData::getReactants() const {
+    if (direction == Direction::RIGHT)
+        return {left_atoms, left_molecules};
+    else
+        return {right_atoms, right_molecules};
+}
+void ReactionData::reverseDirection() {
+    if (direction == Direction::RIGHT)
+        setDirection(Direction::LEFT);
+    else
+        setDirection(Direction::RIGHT);
+}
+
+void from_json(const json &j, ReactionData &a) {
+    if (j.is_object() == false || j.size() != 1) {
+        throw std::runtime_error("Invalid JSON data for ReactionData");
+    }
+
+    a.direction = ReactionData::Direction::RIGHT;
+
+    for (auto &molecule : Faunus::molecules) {
+        for (auto &atom : Faunus::atoms) {
+            if (molecule.name == atom.name) {
+                throw std::runtime_error("Molecules and atoms must have different names");
+            }
+        }
+    }
+
+    for (auto [key, val] : j.items()) {
+        a.reaction_str = key; // reaction string, e.g. "A + B = C"
+        a.canonic = val.value("canonic", false);
+        a.only_neutral_molecules = val.value("neutral", false);
+        if (val.count("lnK") == 1) {
+            a.lnK = val.at("lnK").get<double>();
+        } else if (val.count("pK") == 1) {
+            a.lnK = -std::log(10) * val.at("pK").get<double>();
+        } else {
+            a.lnK = 0.0;
+        }
+        a.reservoir_size = val.value("N_reservoir", a.reservoir_size);
+
+        // helper function used to parse and register atom and molecule names; updates lnK
+        auto registerNames = [&](auto &names, auto &&atom_map, auto &mol_map, double sign) {
+            for (auto &atom_or_molecule_name : names) { // loop over species on reactant side (left)
+                auto [atom_iter, molecule_iter] = a.findAtomOrMolecule(atom_or_molecule_name);
+                if (atom_iter != Faunus::atoms.end()) { // atomic reactants
+                    a.swap = true;                      // if the reaction involves atoms, identify it as swap move
+                    if (atom_iter->implicit) {          // if atom is implicit, multiply K by its activity
+                        if (atom_iter->activity > 0) {
+                            a.lnK += sign * std::log(atom_iter->activity / 1.0_molar);
+                        }
+                    } else {
+                        assert(std::fabs(atom_iter->activity) <= pc::epsilon_dbl);
+                        atom_map[atom_iter->id()]++; // increment stoichiometric number
+                    }
+                } else if (molecule_iter != Faunus::molecules.end()) { // molecular reactants (incl. "atomic" groups)
+                    mol_map[molecule_iter->id()]++;                    // increment stoichiometric number
+                    if (molecule_iter->activity > 0) { // assume activity not part of K -> divide by activity
+                        a.lnK -= sign * std::log(molecule_iter->activity / 1.0_molar);
+                    }
+                } else {
+                    assert(false); // we should never reach here
+                }
+            }
+        }; // end of lambda function
+
+        std::tie(a.left_names, a.right_names) = parseReactionString(a.reaction_str); // lists of species
+        registerNames(a.left_names, a.left_atoms, a.left_molecules, 1.0);            // reactants
+        registerNames(a.right_names, a.right_atoms, a.right_molecules, -1.0);        // products
+    }
+}
+
+void to_json(json &j, const ReactionData &reaction) {
+    ReactionData a = reaction;
+    // we want lnK to show for LEFT-->RIGHT direction
+    a.setDirection(ReactionData::Direction::RIGHT);
+    j[a.reaction_str] = {{"pK'", -a.lnK / std::log(10)},
+                         //{"canonic", a.canonic }, {"N_reservoir", a.N_reservoir },
+                         {"neutral", a.only_neutral_molecules},
+                         {"products", a.right_names},
+                         {"reactants", a.left_names}};
 } //!< Serialize to JSON object
 
 } // namespace Faunus

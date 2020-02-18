@@ -49,6 +49,7 @@ if (PANDOC)
         analysis.md |
         grep -v ".notice--" |
         grep -v "Github-Improve_this_page" |
+        sed 's.\\\\_._.g' | # this allows us to use \_ in markdown math
         ${PANDOC} --template ../GitHub.html5 -s --mathjax
         -M title:The\ Faunus\ User\ Guide
         -V date:${GIT_LATEST_TAG}""

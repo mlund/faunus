@@ -297,13 +297,57 @@ properties:
             type: object
             properties:
                 index: {type: integer, description: Molecule index}
-                indexes: {type: array, items: {type: integer}}
+                indexes: {type: array, items: {type: integer}, minItems: 2, maxItems: 4}
+                dir: {type: array, items: {type: number}, minItems: 3, maxItems: 3}
                 property:
                     description: Molecular property to sample
                     type: string
                     enum: [angle, active, com_x, com_y, com_z, confid, end2end, Rg, mu_x, mu_y, mu_z, mu, muangle, N, Q,
                     atomatom, cmcm, cmcm_z, mindist, "L/R", Rinner]
-            required: [property, index]
+            required: [property]
+            allOf:
+                - if: {properties: {property: {const: "angle"}}}
+                  then: {required: [index,dir]}
+                - if: {properties: {property: {const: "active"}}}
+                  then: {required: [index]}
+                - if: {properties: {property: {const: "com_x"}}}
+                  then: {required: [index]}
+                - if: {properties: {property: {const: "com_y"}}}
+                  then: {required: [index]}
+                - if: {properties: {property: {const: "com_z"}}}
+                  then: {required: [index]}
+                - if: {properties: {property: {const: "confid"}}}
+                  then: {required: [index]}
+                - if: {properties: {property: {const: "end2end"}}}
+                  then: {required: [index]}
+                - if: {properties: {property: {const: "Rg"}}}
+                  then: {required: [index]}
+                - if: {properties: {property: {const: "mu_x"}}}
+                  then: {required: [index]}
+                - if: {properties: {property: {const: "mu_y"}}}
+                  then: {required: [index]}
+                - if: {properties: {property: {const: "mu_z"}}}
+                  then: {required: [index]}
+                - if: {properties: {property: {const: "mu"}}}
+                  then: {required: [index]}
+                - if: {properties: {property: {const: "muangle"}}}
+                  then: {required: [index,dir]}
+                - if: {properties: {property: {const: "N"}}}
+                  then: {required: [index]}
+                - if: {properties: {property: {const: "Q"}}}
+                  then: {required: [index]}
+                - if: {properties: {property: {const: "atomatom"}}}
+                  then: {required: [indexes,dir]}
+                - if: {properties: {property: {const: "cmcm"}}}
+                  then: {required: [indexes,dir]}
+                - if: {properties: {property: {const: "cmcm_z"}}}
+                  then: {required: [indexes,dir]}
+                - if: {properties: {property: {const: "mindist"}}}
+                  then: {required: [indexes]}
+                - if: {properties: {property: {const: "L/R"}}}
+                  then: {required: [indexes,dir]}
+                - if: {properties: {property: {const: "Rinner"}}}
+                  then: {required: [indexes,dir]}
         atom:
             type: object
             properties:

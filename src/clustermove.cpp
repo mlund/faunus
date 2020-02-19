@@ -6,7 +6,7 @@ namespace Faunus {
 namespace Move {
 
 double Cluster::clusterProbability(const Cluster::Tgroup &g1, const Cluster::Tgroup &g2) const {
-    if (spc.geo.sqdist(g1.cm, g2.cm) <= thresholdsq(g1.id, g2.id))
+    if (spc.geo.sqdist(g1.cm, g2.cm) <= group_thresholds(g1.id, g2.id))
         return probability;
     return 0.0;
 }

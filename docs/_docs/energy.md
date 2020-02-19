@@ -145,10 +145,10 @@ Beyond a spherical real-space cutoff, $R\_c$, the potential is zero while if
 below,
 
 $$
-\tilde{u}^{(zz)}\_{ij}({\bf r}) = \frac{e^2 z\_i z\_j }{ 4\pi\epsilon\_0\epsilon\_r |{\bf r}| }\mathcal{S}(q)
+\tilde{u}^{(zz)}\_{ij}(\bar{r}) = \frac{e^2 z\_i z\_j }{ 4\pi\epsilon\_0\epsilon\_r |\bar{r}| }\mathcal{S}(q)
 $$
 
-where ${\bf r} = {\bf r}\_j - {\bf r}\_i$, and tilde indicate that a short-range function $\mathcal{S}(q=|{\bf r}|/R\_c)$ is used to trucate the interactions. The available short-range functions are:
+where $\bar{r} = \bar{r}\_j - \bar{r}\_i$, and tilde indicate that a short-range function $\mathcal{S}(q=|\bar{r}|/R\_c)$ is used to trucate the interactions. The available short-range functions are:
 
 coulomb types                            | Keywords          | $\mathcal{S}(q)$
 ---------------------------------------- | ----------------- | ---------------------------------------------------
@@ -210,13 +210,13 @@ The `zahn` and `fennell` approaches have undefined dipolar self-energies and are
 The ion-dipole interaction is described by
 
 $$
-\tilde{u}^{(z\mu)}\_{ij}({\bf r}) = -\frac{ez\_i\left(\mu\_j\cdot \hat{\bf r}\right) }{|{\bf r}|^2} \left( \mathcal{S}(q) - q\mathcal{S}^{\prime}(q) \right)
+\tilde{u}^{(z\mu)}\_{ij}(\bar{r}) = -\frac{ez\_i\left(\mu\_j\cdot \hat{r}\right) }{|\bar{r}|^2} \left( \mathcal{S}(q) - q\mathcal{S}^{\prime}(q) \right)
 $$
 
 where $\hat{r} = \bar{r}/|\bar{r}|$, and the dipole-dipole interaction by
 
 $$
-\tilde{u}^{\mu\mu}\_{ij}({\bf r}) = -\left ( \frac{3 ( \boldsymbol{\mu}\_i \cdot \hat{\bf r} ) \left(\boldsymbol{\mu}\_j\cdot\hat{\bf r}\right) - \boldsymbol{\mu}\_i\cdot\boldsymbol{\mu}\_j }{|{\bf r}|^3}\right) \left( \mathcal{S}(q) - q\mathcal{S}^{\prime}(q)  + \frac{q^2}{3}\mathcal{S}^{\prime\prime}(q) \right) - \frac{\left(\boldsymbol{\mu}\_i\cdot\boldsymbol{\mu}\_j\right)}{|{\bf r}|^3}\frac{q^2}{3}\mathcal{S}^{\prime\prime}(q).
+\tilde{u}^{\mu\mu}\_{ij}(\bar{r}) = -\left ( \frac{3 ( \boldsymbol{\mu}\_i \cdot \hat{r} ) \left(\boldsymbol{\mu}\_j\cdot\hat{r}\right) - \boldsymbol{\mu}\_i\cdot\boldsymbol{\mu}\_j }{|\bar{r}|^3}\right) \left( \mathcal{S}(q) - q\mathcal{S}^{\prime}(q)  + \frac{q^2}{3}\mathcal{S}^{\prime\prime}(q) \right) - \frac{\left(\boldsymbol{\mu}\_i\cdot\boldsymbol{\mu}\_j\right)}{|\bar{r}|^3}\frac{q^2}{3}\mathcal{S}^{\prime\prime}(q).
 $$
 
 **Warning:**
@@ -230,8 +230,8 @@ When using `coulomb` or `multipole`, an electrostatic self-energy term is automa
 added to the Hamiltonian. The monopole and dipole contributions are evaluated according to
 
 $$
-U\_{self} = -\frac{1}{2}\sum\_i^N\sum\_{\ast\in\{z,\mu\}} \lim\_{|{\bf r}\_{ii}|\to 0}\left( u^{(\ast\ast)}\_{ii}({\bf r}\_{ii})
-- \tilde{u}^{(\ast\ast)}\_{ii}({\bf r}\_{ii}) \right )
+U\_{self} = -\frac{1}{2}\sum\_i^N\sum\_{\ast\in\{z,\mu\}} \lim\_{|\bar{r}\_{ii}|\to 0}\left( u^{(\ast\ast)}\_{ii}(\bar{r}\_{ii})
+- \tilde{u}^{(\ast\ast)}\_{ii}(\bar{r}\_{ii}) \right )
 $$
 
 where no tilde indicates that $\mathcal{S}(q)\equiv 1$ for any $q$.
@@ -257,7 +257,7 @@ $$
 $$
 U_{\text{surface}} = \frac{1}{4\pi\varepsilon_0\varepsilon_r}\frac{ 2\pi }{ (2\varepsilon_{surf} + 1) V }
 \left(
-\left|\sum_{j}q\_j{\bf r}\_j\right|^2 + 2 \sum\_j q\_i {\bf r}\_j \cdot \sum\_j \boldsymbol{\mu}\_j + \left| \sum\_j \boldsymbol{\mu}\_j \right|^2
+\left|\sum_{j}q\_j\bar{r}\_j\right|^2 + 2 \sum\_j q\_i \bar{r}\_j \cdot \sum\_j \boldsymbol{\mu}\_j + \left| \sum\_j \boldsymbol{\mu}\_j \right|^2
 \right )
 $$
 

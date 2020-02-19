@@ -177,19 +177,29 @@ template <bool eigenopt = false /** use Eigen matrix ops where possible */> stru
         // std::cerr << "we should ideally not arrive here!\n";
 #endif
         double Eq = 0;
+	double qs = 0;
         if (change.dN) {
             for (auto cg : change.groups) {
                 auto g = spc->groups.at(cg.index);
                 for (auto i : cg.atoms)
-                    if (i < g.size())
+                    if (i < g.size()) {
                         Eq += std::pow((g.begin() + i)->charge, 2);
+			qs += (g.begin() + i)->charge;
+		    }
             }
         } else if (change.all and not change.dV) {
             for (auto g : spc->groups)
-                for (auto i : g)
+                for (auto i : g) {
                     Eq += i.charge * i.charge;
+		    qs += i.charge;
+		}
         }
-        return -d.alpha * Eq / std::sqrt(pc::pi) * d.lB;
+	double Vcc = -pc::pi / 2.0 / d.alpha / d.alpha / ( d.L[0] * d.L[1] * d.L[2] ) * qs * qs; // compensate with neutralizing background (if non-zero total charge in system)
+	double beta = d.kappa / (2.0 * d.alpha);
+	if( beta > 1e-6 )
+	    Vcc *= ( 1.0 - exp( -beta * beta ) ) / beta / beta; // same as above but for Yukawa-systems
+	return ( -d.alpha * Eq / std::sqrt(pc::pi) * (std::exp(-beta*beta) + std::sqrt(pc::pi) * beta * std::erf(beta)) + Vcc) * d.lB;
+	//return -d.alpha * Eq / std::sqrt(pc::pi) * d.lB;
     }
 
     double surfaceEnergy(const EwaldData &d, Change &change) {

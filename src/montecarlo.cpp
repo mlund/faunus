@@ -183,8 +183,8 @@ double IdealTerm(Space &spc_n, Space &spc_o, const Change &change) {
             for (int atom_id : {id1, id2}) {
                 auto mollist_n = spc_n.findAtoms(atom_id);
                 auto mollist_o = spc_o.findAtoms(atom_id);
-                N_n = rng_size(mollist_n);
-                N_o = rng_size(mollist_o);
+                N_n = range_size(mollist_n);
+                N_o = range_size(mollist_o);
                 int dN = N_n - N_o;
                 double V_n = spc_n.geo.getVolume();
                 double V_o = spc_o.geo.getVolume();
@@ -199,7 +199,7 @@ double IdealTerm(Space &spc_n, Space &spc_o, const Change &change) {
             if (m.dNatomic) { // the number of atomic molecules has changed
                 auto mollist_n = spc_n.findMolecules(spc_n.groups[m.index].id, Space::ALL); // why not "ACTIVE"?
                 auto mollist_o = spc_o.findMolecules(spc_o.groups[m.index].id, Space::ALL);
-                if (rng_size(mollist_n) > 1 || rng_size(mollist_o) > 1)
+                if (range_size(mollist_n) > 1 || range_size(mollist_o) > 1)
                     throw std::runtime_error("Bad definition: One group per atomic molecule!");
                 if (not molecules[spc_n.groups[m.index].id].atomic)
                     throw std::runtime_error("Only atomic molecules!");
@@ -211,8 +211,8 @@ double IdealTerm(Space &spc_n, Space &spc_o, const Change &change) {
             } else {
                 auto mollist_n = spc_n.findMolecules(spc_n.groups[m.index].id, Space::ACTIVE);
                 auto mollist_o = spc_o.findMolecules(spc_o.groups[m.index].id, Space::ACTIVE);
-                N_n = rng_size(mollist_n);
-                N_o = rng_size(mollist_o);
+                N_n = range_size(mollist_n);
+                N_o = range_size(mollist_o);
             }
             int dN = N_n - N_o;
             if (dN != 0) {

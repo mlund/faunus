@@ -258,6 +258,32 @@ add_test(
     WORKING_DIRECTORY ${EXAMPLES_DIR}/speciation)
 
 add_test(
+    NAME speciation_group
+    COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} speciation_group.yml\
+    | $<TARGET_FILE:faunus> --quiet --state speciation_group.state.json\
+    && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} speciation_group.out.json out.json --tol 0.03"
+    WORKING_DIRECTORY ${EXAMPLES_DIR}/speciation_group)
+
+add_test(
+    NAME speciation_swapconf
+    COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} speciation_swapconf.yml\
+    | $<TARGET_FILE:faunus> --quiet --state speciation_swapconf.state.json\
+    && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} speciation_swapconf.out.json out.json --tol 0.015"
+    WORKING_DIRECTORY ${EXAMPLES_DIR}/speciation_swapconf)
+
+add_test(
+    NAME titration
+    COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} titration.yml\
+    | $<TARGET_FILE:faunus> --quiet --state titration.state.json\
+    && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} titration.out.json out.json --tol 0.05"
+    WORKING_DIRECTORY ${EXAMPLES_DIR}/titration)
+
+add_test(
+    NAME water-ewald-NOCHECKS
+    COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} ewald.yml | $<TARGET_FILE:faunus>"
+    WORKING_DIRECTORY ${EXAMPLES_DIR}/water)
+
+add_test(
     NAME phosphate
     COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} phosphate.yml\
     | $<TARGET_FILE:faunus> --quiet --state phosphate.state.json\
@@ -382,6 +408,12 @@ install(FILES
     ${EXAMPLES_DIR}/speciation/speciation.yml
     ${EXAMPLES_DIR}/speciation/speciation.out.json
     ${EXAMPLES_DIR}/speciation/speciation.state.json
+    ${EXAMPLES_DIR}/speciation_group/speciation_group.yml
+    ${EXAMPLES_DIR}/speciation_group/speciation_group.out.json
+    ${EXAMPLES_DIR}/speciation_group/speciation_group.state.json
+    ${EXAMPLES_DIR}/speciation_swapconf/speciation_swapconf.yml
+    ${EXAMPLES_DIR}/speciation_swapconf/speciation_swapconf.out.json
+    ${EXAMPLES_DIR}/speciation_swapconf/speciation_swapconf.state.json
     ${EXAMPLES_DIR}/stockmayer/stockmayer.yml
     ${EXAMPLES_DIR}/stockmayer/stockmayer.out.json
     ${EXAMPLES_DIR}/stockmayer/stockmayer.state.json
@@ -390,8 +422,10 @@ install(FILES
     ${EXAMPLES_DIR}/swapconf/swapconf.state.json
     ${EXAMPLES_DIR}/swapconf/swapconf.conformations.pqr
     ${EXAMPLES_DIR}/swapconf/swapconf.weights.dat
-    ${EXAMPLES_DIR}/water.yml
-    ${EXAMPLES_DIR}/water.xyz
+    ${EXAMPLES_DIR}/titration/titration.yml
+    ${EXAMPLES_DIR}/titration/titration.out.json
+    ${EXAMPLES_DIR}/titration/titration.state.json
+    ${EXAMPLES_DIR}/water/ewald.yml
     DESTINATION share/faunus/examples)
 
 

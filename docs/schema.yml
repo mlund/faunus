@@ -184,6 +184,18 @@ properties:
                         type: string
                         description: One-column file with relative weights for each conformation. Must match frames in `traj` file
 
+    reactionlist:
+        type: array
+        items:
+            type: object
+            additionalProperties:
+                type: object
+                additionalProperties: false
+                properties:
+                    lnK: {type: number, default: 0.0, description: Natural logarithm of equilibrium constant (molar scale)}
+                    pK: {type: number, default: 0.0, description: Minus log10 of equilibrium constant (molar scale)}
+                    neutral: {type: boolean, default: false, description: Set to true if only neutral molecules should be involved}
+
     pairpotential:
         coulomb:
             type: object
@@ -208,6 +220,7 @@ properties:
                       properties:
                           C: {type: integer, default: 3}
                           D: {type: integer, default: 3}
+                          debyelength: {type: number, description: Debye screening length (Å)}
                       required: [cutoff, C, D]
                 - if:
                       properties: {type: {const: "fanourgakis"}}
@@ -221,7 +234,15 @@ properties:
                           alpha: {type: number}
                           kcutoff: {type: number}
                           ipbc: {type: boolean, default: false}
+                          ewaldscheme: {type: string, enum: [PBC, PBCEigen, IPBC], default: PBCEigen}
+                          debyelength: {type: number, description: Debye screening length (Å)}
                       required: [cutoff, epss, alpha, kcutoff]
+                - if:
+                      properties: {type: {const: "yukawa"}}
+                  then:
+                      properties:
+                          debyelength: {type: number, description: Debye screening length (Å)}
+                      required: [cutoff, debyelength]
 
         mixing_rule:
             description: Sigma and Epsilon Mixing rule
@@ -276,13 +297,57 @@ properties:
             type: object
             properties:
                 index: {type: integer, description: Molecule index}
-                indexes: {type: array, items: {type: integer}}
+                indexes: {type: array, items: {type: integer}, minItems: 2, maxItems: 4}
+                dir: {type: array, items: {type: number}, minItems: 3, maxItems: 3}
                 property:
                     description: Molecular property to sample
                     type: string
-                    enum: [angle, com_x, com_y, com_z, confid, end2end, Rg, mu_x, mu_y, mu_z, mu, muangle, N, Q,
+                    enum: [angle, active, com_x, com_y, com_z, confid, end2end, Rg, mu_x, mu_y, mu_z, mu, muangle, N, Q,
                     atomatom, cmcm, cmcm_z, mindist, "L/R", Rinner]
-            required: [property, index]
+            required: [property]
+            allOf:
+                - if: {properties: {property: {const: "angle"}}}
+                  then: {required: [index,dir]}
+                - if: {properties: {property: {const: "active"}}}
+                  then: {required: [index]}
+                - if: {properties: {property: {const: "com_x"}}}
+                  then: {required: [index]}
+                - if: {properties: {property: {const: "com_y"}}}
+                  then: {required: [index]}
+                - if: {properties: {property: {const: "com_z"}}}
+                  then: {required: [index]}
+                - if: {properties: {property: {const: "confid"}}}
+                  then: {required: [index]}
+                - if: {properties: {property: {const: "end2end"}}}
+                  then: {required: [index]}
+                - if: {properties: {property: {const: "Rg"}}}
+                  then: {required: [index]}
+                - if: {properties: {property: {const: "mu_x"}}}
+                  then: {required: [index]}
+                - if: {properties: {property: {const: "mu_y"}}}
+                  then: {required: [index]}
+                - if: {properties: {property: {const: "mu_z"}}}
+                  then: {required: [index]}
+                - if: {properties: {property: {const: "mu"}}}
+                  then: {required: [index]}
+                - if: {properties: {property: {const: "muangle"}}}
+                  then: {required: [index,dir]}
+                - if: {properties: {property: {const: "N"}}}
+                  then: {required: [index]}
+                - if: {properties: {property: {const: "Q"}}}
+                  then: {required: [index]}
+                - if: {properties: {property: {const: "atomatom"}}}
+                  then: {required: [indexes,dir]}
+                - if: {properties: {property: {const: "cmcm"}}}
+                  then: {required: [indexes,dir]}
+                - if: {properties: {property: {const: "cmcm_z"}}}
+                  then: {required: [indexes,dir]}
+                - if: {properties: {property: {const: "mindist"}}}
+                  then: {required: [indexes]}
+                - if: {properties: {property: {const: "L/R"}}}
+                  then: {required: [indexes,dir]}
+                - if: {properties: {property: {const: "Rinner"}}}
+                  then: {required: [indexes,dir]}
         atom:
             type: object
             properties:
@@ -414,7 +479,11 @@ properties:
                         com: {type: boolean, default: false, description: Operate on mass-center instead of individual atoms?}
                         constants: {type: object, description: User-defined constants}
                         function: {type: string, description: Mathematical expression for the potential (units of kT)}
-                        molecules: {type: array, items: {type: string}, description: Array of molecules to operate on}
+                        molecules:
+                            type: array
+                            items: {type: string}
+                            minItems: 1
+                            description: Array of molecules to operate on
                     required: [function, molecules]
                     additionalProperties: false
 
@@ -444,8 +513,10 @@ properties:
                             type: array
                         k: {type: [integer, string]}
                         molecules:
-                            items: {type: string}
                             type: array
+                            items: {type: string}
+                            minItems: 1
+                            description: Array of molecules to operate on
                         origo:
                             items: {type: number}
                             type: array
@@ -567,6 +638,7 @@ properties:
                         molecules:
                             items: {type: string}
                             type: array
+                            minItems: 1
                         satellites:
                             items: {type: string}
                             type: array
@@ -708,6 +780,7 @@ properties:
                         molecules:
                             description: "List of molecule names to sample (array); [*] selects all"
                             items: {type: string}
+                            minItems: 1
                             type: array
                         qmin: {type: number, description: Minimum q value (1/Å)}
                         qmax: {type: number, description: Maximum q value (1/Å)}
@@ -717,6 +790,7 @@ properties:
                         scheme:
                             description: Scattering method
                             enum: [debye, explicit]
+                        file: {type: string, description: Output file for S(q)}
                         stepsave: {type: boolean, default: false, description: Save every sample to disk}
                         required: [nstep, molecules, scheme]
                     additionalProperties: false
@@ -798,7 +872,7 @@ properties:
                     description: "Write Gromacs XTC trajectory"
                     properties:
                         file: {type: string, pattern: "(.*?)\\.(xtc)$"}
-                        nstep: {type: integer}
+                        nstep: {type: integer, description: Interval between samples}
                         nskip: {type: integer, default: 0, description: Initial steps to skip}
                         molecules:
                             items: {type: string}

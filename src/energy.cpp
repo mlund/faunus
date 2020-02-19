@@ -291,24 +291,31 @@ double PolicyIonIon::surfaceEnergy(const EwaldData &d, Change &change, Space::Tg
 }
 
 double PolicyIonIon::selfEnergy(const EwaldData &d, Change &change, Space::Tgvec &groups) {
-    double energy = 0;
+    double Eq = 0;
+    double qs = 0;
     if (change.dN) {
         for (auto &changed_group : change.groups) {
             auto &g = groups.at(changed_group.index);
             for (auto i : changed_group.atoms) {
                 if (i < g.size()) {
-                    energy += std::pow(g[i].charge, 2);
+                    Eq += std::pow(g[i].charge, 2);
+		    qs += g[i].charge;
                 }
             }
         }
     } else if (change.all and not change.dV) {
         for (auto &g : groups) {
             for (auto &particle : g) {
-                energy += particle.charge * particle.charge;
+                Eq += particle.charge * particle.charge;
+		qs += particle.charge;
             }
         }
     }
-    return -d.alpha * energy * d.bjerrum_length / std::sqrt(pc::pi);
+    double Vcc = -pc::pi / 2.0 / d.alpha / d.alpha / ( d.box_length[0] * d.box_length[1] * d.box_length[2] ) * qs * qs; // compensate with neutralizing background (if non-zero total charge in system)
+    double beta = d.kappa / (2.0 * d.alpha);
+    if( beta > 1e-6 )
+	Vcc *= ( 1.0 - exp( -beta * beta ) ) / beta / beta; // same as above but for Yukawa-systems
+    return ( -d.alpha * Eq / std::sqrt(pc::pi) * (std::exp(-beta*beta) + std::sqrt(pc::pi) * beta * std::erf(beta)) + Vcc) * d.bjerrum_length;
 }
 
 /**

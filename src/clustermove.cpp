@@ -258,5 +258,56 @@ void Cluster::updateMoleculeIndex() {
                     molecule_index.push_back(&g - &spc.groups.front());
     }
 }
+
+// --------------------------------
+
+ClusterTranslateNR::ClusterTranslateNR(Space &spc, json &j) : spc(spc) {
+    name = "Rejection Free Cluster Translation";
+    cite = "doi:10/fthw8k";
+    translational_displacement = j.at("dp").get<double>();
+}
+
+void ClusterTranslateNR::_to_json(json &j) const {
+    j = {{"dp", translational_displacement}, {"move fraction", move_fraction.avg()}};
+}
+
+void ClusterTranslateNR::_move(Change &change) {
+    moved.clear();
+    remaining.resize(spc.groups.size());                                  // index of all groups
+    std::iota(remaining.begin(), remaining.end(), 0);                     // fill with [0:N]
+    auto random_index = slump.sample(remaining.begin(), remaining.end()); // iterator
+    moved.push_back(*random_index);                                       // add to moved
+    remaining.erase(random_index);                                        // remove from remaining
+
+    Point displacement = ranunit(slump, dir) * translational_displacement * slump();
+
+    for (int i : moved) { // loop over moved particles (could be expanding!)
+        spc.groups[i].translate(displacement, spc.geo.getBoundaryFunc());
+        for (auto it = remaining.begin(); it < remaining.end(); it++) {
+            // here we need to calculate the energy change of the i'th particle by
+            // looping over all other groups. The outcome determines if the other
+            // group should be moved as well (part of cluster)
+            // double old_energy = pot->g2g(otherspc.groups[i], otherspc.groups[*it]);
+            // double new_energy = pot->g2g(spc.groups[i], spc.groups[*it]);
+            double energy_change = 0;
+            if (slump() < (1.0 - std::exp(-energy_change))) {
+                moved.push_back(*it); // schedule to be translated
+                remaining.erase(it);
+            }
+        }
+    }
+
+    // todo: copy all moved particles to "otherspc"
+
+    move_fraction += double(moved.size()) / (moved.size() + remaining.size());
+
+    assert(spc.groups.size() == moved.size() + remaining.size());
+
+    change.clear(); // always accept. Warning, this will cause drift.
+}
+
+void ClusterTranslateNR::_accept(Change &) {}
+void ClusterTranslateNR::_reject(Change &) {}
+
 } // namespace Move
 } // namespace Faunus

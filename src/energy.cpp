@@ -486,7 +486,7 @@ double ContainerOverlap::energy(Change &change) {
 Isobaric::Isobaric(const json &j, Space &spc) : spc(spc) {
     name = "isobaric";
     citation_information = "Frenkel & Smith 2nd Ed (Eq. 5.4.13)";
-    P = j.value("P/mM", 0.0) * 1.0_mM;
+    P = j.value("P/mM", 0.0) * 1.0_millimolar;
     if (P < 1e-10) {
         P = j.value("P/Pa", 0.0) * 1.0_Pa;
         if (P < 1e-10)
@@ -512,7 +512,7 @@ double Isobaric::energy(Change &change) {
 }
 void Isobaric::to_json(json &j) const {
     j["P/atm"] = P / 1.0_atm;
-    j["P/mM"] = P / 1.0_mM;
+    j["P/mM"] = P / 1.0_millimolar;
     j["P/Pa"] = P / 1.0_Pa;
     _roundjson(j, 5);
 }

@@ -366,7 +366,7 @@ void VirtualVolume::_to_json(json &j) const {
         j = {{"dV", dV},
              {"scaling", volume_scaling_method},
              {"-ln\u27e8exp(-dU)\u27e9", -std::log(mean_exponentiated_energy_change.avg())},
-             {"Pex/mM", excess_pressure / 1.0_mM},
+             {"Pex/mM", excess_pressure / 1.0_millimolar},
              {"Pex/Pa", excess_pressure / 1.0_Pa},
              {"Pex/kT/" + u8::angstrom + u8::cubed, excess_pressure}};
         _roundjson(j, 5);

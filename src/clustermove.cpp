@@ -7,7 +7,7 @@ namespace Move {
 
 double Cluster::clusterProbability(const Cluster::Tgroup &g1, const Cluster::Tgroup &g2) const {
     if (spc.geo.sqdist(g1.cm, g2.cm) <= group_thresholds(g1.id, g2.id))
-        return probability;
+        return 1.0;
     return 0.0;
 }
 void Cluster::_to_json(json &j) const {
@@ -21,7 +21,6 @@ void Cluster::_to_json(json &j) const {
          {rootof + bracket(theta + squared) + "/" + degrees, std::sqrt(msqd_angle.avg()) / 1.0_deg},
          {bracket("N"), N.avg()},
          {"bias rejection rate", double(bias_rejected) / cnt},
-         {"probability", probability},
          {"clusterdistribution", clusterSizeDistribution}};
     _roundjson(j, 3);
 
@@ -44,14 +43,13 @@ void Cluster::_to_json(json &j) const {
     }
 }
 void Cluster::_from_json(const json &j) {
-    assertKeys(j, {"dp", "dprot", "dir", "threshold", "molecules", "repeat", "satellites", "probability", "spread", "dirrot"});
+    assertKeys(j, {"dp", "dprot", "dir", "threshold", "molecules", "repeat", "satellites", "spread", "dirrot"});
     dptrans = j.at("dp");
     dir = j.value("dir", Point(1, 1, 1));
     dirrot = j.value("dirrot", Point(0, 0, 0)); // predefined axis of rotation
     dirrot.normalize();                         // make sure dirrot is a unit-vector
     dprot = j.at("dprot");
     spread = j.value("spread", true);
-    probability = j.value("probability",1.0);
     molecule_names = j.at("molecules").get<decltype(molecule_names)>(); // molecule names
     molids = names2ids(molecules, molecule_names);                      // names --> molids
 

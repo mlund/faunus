@@ -279,42 +279,50 @@ std::function<double(const Particle &)> createGouyChapmanPotential(const json &j
     if (geo.boundaryConditions().direction.z() != Geometry::FIXED)
         throw std::runtime_error("Gouy-Chapman requires non-periodicity in z-direction");
 
-    double rho;
-    double c0 = j.at("ionicstrength").get<double>() * 1.0_molar; // assuming 1:1 salt, so c0=I
-    double lB = pc::lB(j.at("epsr").get<double>());
-    double k = 1 / (3.04 / sqrt(c0));   // hack!
+    double rho = 0; // surface charge density (charge per area)
+    double bjerrum_length = pc::lB(j.at("epsr").get<double>());
+    auto &electrolyte = j.at("electrolyte");
+    double salt_conc = electrolyte.at("molarity").get<double>() * 1.0_molar;
+    auto valencies = electrolyte.value("valency", std::array<unsigned char, 2>({1, 1}));
+    double kappa = 1.0 / Faunus::debyeLength(salt_conc, valencies, bjerrum_length);
+
     double phi0 = j.value("phi0", 0.0); // Unitless potential = beta*e*phi0
-    if (std::fabs(phi0) > 1e-6)
-        rho = sqrt(2 * c0 / (pc::pi * lB)) * sinh(.5 * phi0); // Evans&Wennerstrom,Colloidal Domain p. 138-140
-    else {
-        rho = 1.0 / j.value("qarea", 0.0);
-        if (rho > 1e9)
-            rho = j.at("rho");
-        phi0 = 2. * std::asinh(rho * std::sqrt(0.5 * lB * pc::pi / c0)); // [Evans..]
+    if (std::fabs(phi0) > 0) {
+        rho = std::sqrt(2.0 * salt_conc / (pc::pi * bjerrum_length)) *
+              std::sinh(0.5 * phi0); // Evans&Wennerstrom,Colloidal Domain p. 138-140
+    } else {                         // phi0 was not provided
+        double area_per_charge = j.value("qarea", 0.0);
+        if (std::fabs(area_per_charge) > 0) {
+            rho = 1.0 / area_per_charge;
+        } else {
+            rho = j.at("rho").get<double>();
+        }
+        phi0 = 2.0 * std::asinh(rho * std::sqrt(0.5 * bjerrum_length * pc::pi / salt_conc)); // [Evans..]
     }
-    double gamma0 = std::tanh(phi0 / 4); // assuming z=1 [Evans..]
+    double gamma0 = std::tanh(phi0 / 4.0); // assuming z=1 [Evans..]
     double surface_z_pos = j.value("zpos", -0.5 * geo.getLength().z());
-    bool linearize = j.value("linearize", false);
+    bool linearise = j.value("linearise", false);
+
+    faunus_logger->trace("Generated Gouy-Chapman potential with {} A^3/charge ", 1 / rho);
 
     // return gamma function for calculation of GC potential on single particle.
-    return [=](const Particle &p) {
-        if (p.charge != 0) {
-            double x = std::exp(-k * std::fabs(surface_z_pos - p.pos.z()));
-            if (linearize)
-                return p.charge * phi0 * x;
-            else {
-                x = gamma0 * x;
-                return 2 * p.charge * std::log((1 + x) / (1 - x));
-            }
-        }
-        return 0.0;
-    };
+    if (linearise) {
+        return [=](const Particle &p) {
+            double x = std::exp(-kappa * std::fabs(surface_z_pos - p.pos.z()));
+            return p.charge * phi0 * x;
+        };
+    } else {
+        return [=](const Particle &p) {
+            double x = std::exp(-kappa * std::fabs(surface_z_pos - p.pos.z()));
+            x = gamma0 * x;
+            return 2.0 * p.charge * std::log((1.0 + x) / (1.0 - x));
+        };
+    }
 }
 
 // ------------ CustomExternal -------------
 
 CustomExternal::CustomExternal(const json &j, Tspace &spc) : ExternalPotential(j, spc) {
-    expr = std::make_unique<ExprFunction<double>>();
     name = "customexternal";
     jin = j;
     auto &_j = jin["constants"];
@@ -328,14 +336,15 @@ CustomExternal::CustomExternal(const json &j, Tspace &spc) : ExternalPotential(j
     std::string name = jin.at("function");
 
     // check if the custom potential match a name with a predefined meaning.
-    if (name == "gouychapman")
+    if (name == "gouychapman") {
         func = createGouyChapmanPotential(_j, spc.geo);
-    else if (name == "something") {
+    } else if (name == "something") {
         // add additional potential here
         // base::func = createSomeOtherPotential(_j);
     } else {
         // if nothing found above, it is assumed that `function`
         // is a valid expression.
+        expr = std::make_unique<ExprFunction<double>>();
         expr->set(jin, {{"q", &d.q}, {"x", &d.x}, {"y", &d.y}, {"z", &d.z}});
         func = [&](const Particle &a) {
             d.x = a.pos.x();

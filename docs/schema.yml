@@ -233,6 +233,7 @@ properties:
                           epss: {type: number}
                           alpha: {type: number}
                           ncutoff: {type: number}
+                          kcutoff: {type: number}
                           ipbc: {type: boolean, default: false}
                           spherical_sum: {type: boolean, default: false}
                           ewaldscheme: {type: string, enum: [PBC, PBCEigen, IPBC], default: PBCEigen}

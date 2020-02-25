@@ -18,6 +18,12 @@ EwaldData::EwaldData(const json &j) {
     kappa = j.value("kappa", 0.0);
     kappa_squared = kappa * kappa;
 
+    if (j.count("kcutoff") {
+        faunus_logger->warn("`kcutoff` is deprecated, use `ncutoff` instead");
+        n_cutoff = j.at("kcutoff");
+    } else {
+        n_cutoff = j.at("ncutoff");
+    }
     if (j.value("ipbc", false)) { // look for legacy bool `ipbc`
         faunus_logger->warn("key `ipbc` is deprecated, use `ewaldscheme: ipbc` instead");
         policy = EwaldData::IPBC;

@@ -22,6 +22,25 @@ namespace Potential {
 struct PairPotentialBase;
 }
 
+/**
+ *  @par Non-bonded energy
+ *
+ *  Several classes (class templates) are used together to allow computation in change of the non-bonded energy upon
+ *  a MC move.
+ *
+ *  The energy change is calculated by the Nonbonded class. It internally uses one of the pairing policies
+ *  to efficiently get all pair interactions affected by the MC move (as described by the Change object).
+ *
+ *  Pairing policies allow efficient summation of pair energies over the whole system, between groups, inside a group,
+ *  etc. The pairing policy is optimized for performance in a different execution environment, e.g., sequential or
+ *  OMP parallelism.
+ *
+ *  Policies have direct access to the pair interaction energy functor represented by a simple PairEnergy template.
+ *  Furthermore, the GroupCutoff object is provided to limit free energy computation using a cutoff distance between
+ *  respective groups.
+ *
+ *  @see Nonbonded, PairingBasePolicy, PairEnergy, GroupCutoff
+ */
 namespace Energy {
 
 class Hamiltonian;
@@ -242,33 +261,18 @@ class Bonded : public Energybase {
 };
 
 /**
- *  @section Non-bonded energy
+ * @brief Provides a complementary set of ints with respect to the iota set of a given size.
+ * @remark It is used as a helper function for pair interactions.
  *
- *  Several classes (class templates are) used together to allow computation in change of the non-bonded energy upon
- *  a MC move.
- *
- *  The energy change is calculated by the @see Nonbonded class. It internally uses one of the pairing policies
- *  to efficiently get all pair interactions affected by the MC move (as described by the Change object).
- *
- *  Pairing policies @see PairingBasePolicy allow efficient summation of pair energies of a whole system,
- *  between groups, inside a group, etc. The pairing policy are optimized for performance in a different execution
- *  environment, e.g. sequential or OMP parallelism.
- *
- *  Policies have direct access to the pair interaction energy functor represented by a simple @see PairEnergy
- *  template. Furthermore, the @see Cutoff object is provided to limit free energy computation using a cutoff distance
- *  between respective groups.
+ * @tparam TSize  a number castable to int
+ * @tparam TSet  a finite iterable container on ints
+ * @param size  the iota superset contains all integers in the range [0, size)
+ * @param set  an original set of integers
+ * @return a set of ints complementary to the original set
  */
-
-/**
- * @brief Provide a complementary set with respect to the iota set of a given size.
- *
- * @param size the iota superset contains all integers in the range [0, size)
- * @param set an original set of integers
- * @return a set of integers complementary to the original set
- */
-template <typename T, typename TSet> inline auto indexComplement(const T size, const TSet &set) {
+template <typename TSize, typename TSet> inline auto indexComplement(const TSize size, const TSet &set) {
     assert(size <= std::numeric_limits<int>::max());
-    return ranges::views::ints(0, static_cast<int>(size)) | ranges::views::remove_if([&set](T i) {
+    return ranges::views::ints(0, static_cast<int>(size)) | ranges::views::remove_if([&set](TSize i) {
       return std::binary_search(set.begin(), set.end(), i);
     });
 }
@@ -322,35 +326,37 @@ void from_json(const json&, GroupCutoff &);
 void to_json(json&, const GroupCutoff &);
 
 /**
- * @brief Provide a fast inlineable interface for non-bonded pair potential energy computation.
- * @tparam TPairPotential a pair potential to compute with
- * @tparam allow_anisotropic_pair_potential pass also a distance vector to the pair potential, slower
+ * @brief Provides a fast inlineable interface for non-bonded pair potential energy computation.
+ *
+ * @tparam TPairPotential  a pair potential to compute with
+ * @tparam allow_anisotropic_pair_potential  pass also a distance vector to the pair potential, slower
  */
 template <typename TPairPotential, bool allow_anisotropic_pair_potential = true> class PairEnergy {
-    Space &spc;                                //!< space to operate on; only its geometry is used
-    BasePointerVector<Energybase> &potentials; //!< registered non-bonded potentials; @see addPairPotentialSelfEnergy
+    Space::Tgeometry &geometry;                //!< geometry to operate with
     TPairPotential pair_potential;             //!< pair potential function/functor
-
+    Space &spc;                                //!< space to init ParticleSelfEnergy with @see addPairPotentialSelfEnergy
+    BasePointerVector<Energybase> &potentials; //!< registered non-bonded potentials @see addPairPotentialSelfEnergy
   public:
     /**
      * @param spc
-     * @param potentials registered non-bonded potentials
+     * @param potentials  registered non-bonded potentials
      */
-    PairEnergy(Space &spc, BasePointerVector<Energybase> &potentials) : spc(spc), potentials(potentials) {}
+    PairEnergy(Space &spc, BasePointerVector<Energybase> &potentials) : geometry(spc.geo), spc(spc), potentials(potentials) {}
 
     /**
-     * @brief Compute pair potential energy.
-     * @param a
-     * @param b
+     * @brief Computes pair potential energy.
+     *
+     * @param a  particle
+     * @param b  particle
      * @return pair potential energy between particles a and b
      */
     template <typename T> inline double potential(const T &a, const T &b) const {
         assert(&a != &b); // a and b cannot be the same particle
         if constexpr (allow_anisotropic_pair_potential) {
-            Point r = spc.geo.vdist(a.pos, b.pos);
+            Point r = geometry.vdist(a.pos, b.pos);
             return pair_potential(a, b, r.squaredNorm(), r);
         } else {
-            return pair_potential(a, b, spc.geo.sqdist(a.pos, b.pos), {0, 0, 0});
+            return pair_potential(a, b, geometry.sqdist(a.pos, b.pos), {0, 0, 0});
         }
     }
 
@@ -358,22 +364,24 @@ template <typename TPairPotential, bool allow_anisotropic_pair_potential = true>
     template <typename T> inline Point force(const T &a, const T &b) const {
         assert(&a != &b); // a and b cannot be the same particle
         if constexpr (allow_anisotropic_pair_potential) {
-            Point r = spc.geo.vdist(a.pos, b.pos);
+            Point r = geometry.vdist(a.pos, b.pos);
             return pair_potential.force(a, b, r.squaredNorm(), r);
         } else {
-            return pair_potential.force(a, b, spc.geo.sqdist(a.pos, b.pos), {0, 0, 0});
+            return pair_potential.force(a, b, geometry.sqdist(a.pos, b.pos), {0, 0, 0});
         }
     }
 
     /**
-     * @brief Functor alias for @see potential.
+     * @brief A functor alias for potential().
+     * @see potential()
      */
     template <typename... Args> inline auto operator()(Args &&... args) {
         return potential(std::forward<Args>(args)...);
     }
 
     /**
-     * @brief Register the potential self-energy to @see Hamiltonian::Hamiltonian if needed.
+     * @brief Registers the potential self-energy to hamiltonian if needed.
+     * @see Hamiltonian::Hamiltonian
      */
     void addPairPotentialSelfEnergy() {
         if (pair_potential.selfEnergy) { // only add if self energy is defined
@@ -401,20 +409,20 @@ template <typename TPairPotential, bool allow_anisotropic_pair_potential = true>
  *
  * @remark Method arguments are generally not checked for correctness because of performance reasons.
  *
+ * @tparam TPairEnergy  a functor to compute non-bonded energy between two particles
+ * @tparam TCutoff  a cutoff scheme between groups
  * @see PairEnergy, PairingPolicy
- * @tparam TPairEnergy a functor to compute non-bonded energy between two particles
- * @tparam TCutoff a cutoff scheme between groups
  */
 template <typename TPairEnergy, typename TCutoff> class PairingBasePolicy {
   protected:
-    Space &spc;              //!< space to operate on
-    TPairEnergy pair_energy; //!< functor to compute non-bonded energy between two particles @see PairEnergy
-    GroupCutoff cut;         //!< cutoff functor that determines if energy between two groups can be ignored
+    Space &spc;              //!< a space to operate on
+    TPairEnergy pair_energy; //!< a functor to compute non-bonded energy between two particles @see PairEnergy
+    GroupCutoff cut;         //!< a cutoff functor that determines if energy between two groups can be ignored
 
   public:
     /**
      * @param spc
-     * @param potentials registered non-bonded potentials
+     * @param potentials  registered non-bonded potentials
      */
     PairingBasePolicy(Space &spc, BasePointerVector<Energybase> &potentials)
         : spc(spc), pair_energy(spc, potentials), cut(spc.geo) {}
@@ -449,6 +457,8 @@ template <typename TPairEnergy, typename TCutoff> class PairingBasePolicy {
             const int group_size = group.size();
             for (int i = 0; i < group_size - 1; ++i) {
                 for (int j = i + 1; j < group_size; ++j) {
+                    // This compound condition is faster than an outer atomic condition;
+                    // tested on bulk example in GCC 9.2.
                     if (group.atomic || !moldata.isPairExcluded(i, j)) {
                         u += particle2particle(group[i], group[j]);
                     }
@@ -464,7 +474,7 @@ template <typename TPairEnergy, typename TCutoff> class PairingBasePolicy {
      * The pair exclusions defined in the molecule topology are honoured.
      *
      * @param group
-     * @param index internal index of the selected particle within the group
+     * @param index  internal index of the selected particle within the group
      * @return energy sum between particle pairs
      */
     template <typename TGroup> double groupInternal(const TGroup &group, const int index) {
@@ -473,19 +483,20 @@ template <typename TPairEnergy, typename TCutoff> class PairingBasePolicy {
         if (!moldata.rigid) {
             if (group.atomic) {
                 // speed optimization: non-bonded interaction exclusions do not need to be checked for atomic groups
-                for (size_t i = 0; i < index; ++i) {
+                for (int i = 0; i < index; ++i) {
                     u += particle2particle(group[index], group[i]);
                 }
-                for (size_t i = index + 1; i < group.size(); ++i) {
+                for (int i = index + 1; i < group.size(); ++i) {
                     u += particle2particle(group[index], group[i]);
                 }
             } else {
-                for (size_t i = 0; i < index; ++i) {
+                // molecular group
+                for (int i = 0; i < index; ++i) {
                     if (!moldata.isPairExcluded(index, i)) {
                         u += particle2particle(group[index], group[i]);
                     }
                 }
-                for (size_t i = index + 1; i < group.size(); ++i) {
+                for (int i = index + 1; i < group.size(); ++i) {
                     if (!moldata.isPairExcluded(index, i)) {
                         u += particle2particle(group[index], group[i]);
                     }
@@ -502,7 +513,7 @@ template <typename TPairEnergy, typename TCutoff> class PairingBasePolicy {
      * in the index. The pair exclusions defined in the molecule topology are honoured.
      *
      * @param group
-     * @param index internal indices of particles within the group
+     * @param index  internal indices of particles within the group
      * @return energy sum between particle pairs
      */
     template <typename TGroup, typename TIndex> double groupInternal(const TGroup &group, const TIndex &index) {
@@ -574,8 +585,8 @@ template <typename TPairEnergy, typename TCutoff> class PairingBasePolicy {
 
      * @param group1
      * @param group2
-     * @param index1 list of particle indices in group1 relative to the group beginning
-     * @return Energy sum between particle pairs
+     * @param index1  list of particle indices in group1 relative to the group beginning
+     * @return energy sum between particle pairs
      */
     template <typename TGroup>
     double group2group(const TGroup &group1, const TGroup &group2, const std::vector<int> &index1) {
@@ -605,8 +616,8 @@ template <typename TPairEnergy, typename TCutoff> class PairingBasePolicy {
      *
      * @param group1
      * @param group2
-     * @param index1 list of particle indices in group1 relative to the group beginning
-     * @param index2 list of particle indices in group2 relative to the group beginning
+     * @param index1  list of particle indices in group1 relative to the group beginning
+     * @param index2  list of particle indices in group2 relative to the group beginning
      * @return energy sum between particle pairs
      */
     template <typename TGroup>
@@ -670,8 +681,8 @@ template <typename TPairEnergy, typename TCutoff> class PairingBasePolicy {
      * in the union of groups.
      *
      * @param group
-     * @param group_index groups as indices in Space::groups
-     * @param index list of particle indices in the group relative to the group beginning
+     * @param group_index  groups as indices in Space::groups
+     * @param index  list of particle indices in the group relative to the group beginning
      * @return energy sum between particle pairs
      */
     template <typename TGroup, typename TGroups>
@@ -716,7 +727,7 @@ template <typename TPairEnergy, typename TCutoff> class PairingBasePolicy {
      * between them is skipped. This method is performance-optimized version of the multiple indices method.
      *
      * @param group
-     * @param index a particle index relative to the group beginning
+     * @param index  a particle index relative to the group beginning
      * @return energy sum between particle pairs
      */
     template <typename TGroup> double group2all(const TGroup &group, const int index) {
@@ -743,7 +754,7 @@ template <typename TPairEnergy, typename TCutoff> class PairingBasePolicy {
      * between them is skipped.
      *
      * @param group
-     * @param index list of particle indices in the group relative to the group beginning
+     * @param index  list of particle indices in the group relative to the group beginning
      * @return energy sum between particle pairs
      */
     template <typename Tgroup> double group2all(const Tgroup &group, const std::vector<int> &index) {
@@ -766,7 +777,7 @@ template <typename TPairEnergy, typename TCutoff> class PairingBasePolicy {
      * If the distance between any two groups is greater or equal to the group cutoff distance, the particle pairing
      * between them is skipped.
      *
-     * @param group_index list of groups
+     * @param group_index  list of groups
      * @return energy sum between particle pairs
      */
     template <typename T> double groups2self(const T &group_index) {
@@ -786,7 +797,7 @@ template <typename TPairEnergy, typename TCutoff> class PairingBasePolicy {
      * If the distance between any two groups is greater or equal to the group cutoff distance, the particle pairing
      * between them is skipped.
      *
-     * @param group_index list of groups
+     * @param group_index  list of groups
      * @return energy sum between particle pairs
      */
     template <typename T> double groups2all(const T &group_index) {
@@ -826,7 +837,8 @@ template <typename TPairEnergy, typename TCutoff> class PairingBasePolicy {
      * If the distance between particles' groups is greater or equal to the group cutoff distance, no calculation is
      * performed.
      *
-     * @param condition a group filter if internal energy of the group shall be add
+     * @tparam TCondition  a function returning bool and having a group as an argument
+     * @param condition  a group filter if internal energy of the group shall be added
      * @return energy sum between particle pairs
      */
     template <typename TCondition> double all(TCondition condition) {
@@ -862,8 +874,9 @@ class PairingPolicy : public PairingBasePolicy<TPairEnergy, TCutoff> {
 };
 
 /**
- * @brief Compute change in the non-bonded energy, assuming pair-wise additive energy terms.
- * @tparam TPairingPolicy pairing policy to effectively sum up the pair-wise additive non-bonded energy
+ * @brief Computes change in the non-bonded energy, assuming pair-wise additive energy terms.
+ *
+ * @tparam TPairingPolicy  pairing policy to effectively sum up the pair-wise additive non-bonded energy
  */
 template <typename TPairingPolicy> class Nonbonded : public Energybase {
   protected:
@@ -871,7 +884,8 @@ template <typename TPairingPolicy> class Nonbonded : public Energybase {
     TPairingPolicy pairing; //!< pairing policy to effectively sum up the pair-wise additive non-bonded energy
 
     /**
-     * @brief Compute non-bonded energy contribution if only a single group has changed.
+     * @brief Computes non-bonded energy contribution if only a single group has changed.
+     *
      * @param change
      * @return energy sum between particle pairs
      */
@@ -896,7 +910,7 @@ template <typename TPairingPolicy> class Nonbonded : public Energybase {
     }
 
     /**
-     * @brief Compute non-bonded energy difference if the number of particles have changed.
+     * @brief Computes non-bonded energy difference if the number of particles have changed.
      *
      * Particles have to be explicitly enumerated in the atom indices of the changed group. Implicit addition of atoms
      * with a group is not supported yet. Note that we do not have to care about missing (removed) particles at all.
@@ -906,6 +920,7 @@ template <typename TPairingPolicy> class Nonbonded : public Energybase {
      * @return energy sum between particle pairs
      */
     double energySpeciation(Change &change) {
+        assert(change.dN);
         double u = 0;
         const auto &moved = change.touchedGroupIndex(); // index of moved groups
         const auto &fixed = indexComplement(int(spc.groups.size()), moved) | ranges::to<std::vector>; // index of static groups
@@ -944,14 +959,14 @@ template <typename TPairingPolicy> class Nonbonded : public Energybase {
     }
 
     /**
-     * @brief Calculate the force on all particles.
+     * @brief Calculates the force on all particles.
      *
      * @todo A stub. Change to reflect only active particle, see Space::activeParticles().
      */
     void force(std::vector<Point> &forces) override { pairing.force(forces); }
 
     /**
-     * @brief Compute non-bonded energy contribution from changed particles.
+     * @brief Computes non-bonded energy contribution from changed particles.
      *
      * The internal energy contribution, i.e., the contribution from the intra group interactions, is added
      * only if a single group is changed or if all changed.
@@ -984,10 +999,11 @@ template <typename TPairingPolicy> class Nonbonded : public Energybase {
 
 
 /**
- * @brief Compute non-bonded energy contribution from changed particles. Cache group2group energy once calculated,
+ * @brief Computes non-bonded energy contribution from changed particles. Cache group2group energy once calculated,
  * until a new trial configuration is provided. Not for general use as only partially implemented!
  *
- * Original implementation, only refurbished. Generally suboptimal as only pairing.group2group method may be called.
+ * Original implementation, only refurbished. Generally suboptimal as only PairingPolicy::group2group method
+ * may be called.
  * No internal energy is ever computed. Cannot deal with particle count changes. And other unmentioned constrains.
  *
  * @tparam Tpairpot
@@ -1094,11 +1110,11 @@ template <typename Tpairpot> class NonbondedCached : public Nonbonded<PairingPol
 
     /**
      * @brief Copy energy matrix from other
-     * @param basePtr
+     * @param base_ptr
      * @param change
      */
-    void sync(Energybase *basePtr, Change &change) override {
-        auto other = dynamic_cast<decltype(this)>(basePtr);
+    void sync(Energybase *base_ptr, Change &change) override {
+        auto other = dynamic_cast<decltype(this)>(base_ptr);
         assert(other);
         if (change.all || change.dV) {
             cache.triangularView<Eigen::StrictlyUpper>() =

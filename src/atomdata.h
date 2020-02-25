@@ -75,23 +75,25 @@ void from_json(const json &j, std::vector<AtomData> &v);
 extern std::vector<AtomData> atoms; //!< Global instance of atom list
 
 /**
- * @brief Find the first element with a member `name` matching the input.
+ * @brief Finds the first element with a member attribute `name` matching the input.
+ *
+ * @param rng  a range of elements
+ * @param name  a name to look for
+ * @return an iterator to the first element, or `last` if not found
  * @see obtainName()
- * @param rng a range
- * @param name a name to look for
- * @return an iterator to the first element or `last` if not found
  */
 template <class Trange> auto findName(Trange &rng, const std::string &name) {
     return std::find_if(rng.begin(), rng.end(), [&name](auto &i) { return i.name == name; });
 }
 
 /**
- * @brief Find the first element with a member `name` matching the input. Throw an exception if not found.
- * @see findName()
- * @throw std::range_error if such an element not found
- * @param rng a range
- * @param name a name to look for
+ * @brief Finds the first element with a member attribute `name` matching the input. Throws an exception if not found.
+ *
+ * @param rng  a range of elements
+ * @param name  a name to look for
  * @return an iterator to the first element
+ * @throw std::range_error if such an element not found
+ * @see findName()
  */
 template <class Trange> auto obtainName(Trange &rng, const std::string &name) {
     const auto result = findName(rng, name);

@@ -55,7 +55,7 @@ struct EwaldData {
     Eigen::VectorXd Aks;                    //!< 1xK for update optimization (see Eq.24, DOI:10.1063/1.481216)
     Eigen::VectorXcd Q_ion, Q_dipole;       //!< Complex 1xK vectors
     double r_cutoff = 0;                    //!< Real-space cutoff
-    double k_cutoff = 0;                    //!< Inverse space cutoff
+    double n_cutoff = 0;                    //!< Inverse space cutoff
     double surface_dielectric_constant = 0; //!< Surface dielectric constant;
     double bjerrum_length = 0;              //!< Bjerrum length
     double kappa = 0;                       //!< Inverse Debye screening length
@@ -135,6 +135,7 @@ struct PolicyIonIon : public EwaldPolicyBase {
     double surfaceEnergy(const EwaldData &, Change &, Space::Tgvec &) override;
     double reciprocalEnergy(const EwaldData &) override;
 };
+
 /**
  * @brief Ion-Ion Ewald with periodic boundary conditions (PBC) using Eigen
  * operations

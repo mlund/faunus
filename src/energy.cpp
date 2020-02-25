@@ -637,39 +637,40 @@ Hamiltonian::Hamiltonian(Space &spc, const json &j) {
     if (spc.geo.type not_eq Geometry::CUBOID)
         emplace_back<Energy::ContainerOverlap>(spc);
 
+    // only a single cutoff scheme so far
+    typedef GroupCutoff TCutoff;
 #ifdef _OPENMP
     // ready for OMP enabled policies
-    const bool parallel = false;
+    constexpr bool parallel = false;
 #else
-    const bool parallel = false;
+    constexpr bool parallel = false;
 #endif
-
     for (auto &m : j) { // loop over energy list
         size_t oldsize = vec.size();
         for (auto it : m.items()) {
             try {
                 if (it.key() == "nonbonded_coulomblj" || it.key() == "nonbonded_newcoulomblj")
-                    emplace_back<Energy::Nonbonded<PairingPolicy<PairEnergy<CoulombLJ, false>, parallel>>>(it.value(), spc, *this);
+                    emplace_back<Energy::Nonbonded<PairingPolicy<PairEnergy<CoulombLJ, false>, TCutoff, parallel>>>(it.value(), spc, *this);
                 else if (it.key() == "nonbonded_coulomblj_EM")
                     emplace_back<Energy::NonbondedCached<CoulombLJ>>(it.value(), spc, *this);
 
                 else if (it.key() == "nonbonded_splined")
-                    emplace_back<Energy::Nonbonded<PairingPolicy<PairEnergy<TabulatedPotential, false>, parallel>>>(it.value(), spc, *this);
+                    emplace_back<Energy::Nonbonded<PairingPolicy<PairEnergy<TabulatedPotential, false>, TCutoff, parallel>>>(it.value(), spc, *this);
 
                 else if (it.key() == "nonbonded" or it.key() == "nonbonded_exact")
-                    emplace_back<Energy::Nonbonded<PairingPolicy<PairEnergy<FunctorPotential, true>, parallel>>>(it.value(), spc, *this);
+                    emplace_back<Energy::Nonbonded<PairingPolicy<PairEnergy<FunctorPotential, true>, TCutoff, parallel>>>(it.value(), spc, *this);
 
                 else if (it.key() == "nonbonded_cached")
                     emplace_back<Energy::NonbondedCached<TabulatedPotential>>(it.value(), spc, *this);
 
                 else if (it.key() == "nonbonded_coulombwca")
-                    emplace_back<Energy::Nonbonded<PairingPolicy<PairEnergy<CoulombWCA, false>, parallel>>>(it.value(), spc, *this);
+                    emplace_back<Energy::Nonbonded<PairingPolicy<PairEnergy<CoulombWCA, false>, TCutoff, parallel>>>(it.value(), spc, *this);
 
                 else if (it.key() == "nonbonded_pm" or it.key() == "nonbonded_coulombhs")
-                    emplace_back<Energy::Nonbonded<PairingPolicy<PairEnergy<PrimitiveModel, false>, parallel>>>(it.value(), spc, *this);
+                    emplace_back<Energy::Nonbonded<PairingPolicy<PairEnergy<PrimitiveModel, false>, TCutoff, parallel>>>(it.value(), spc, *this);
 
                 else if (it.key() == "nonbonded_pmwca")
-                    emplace_back<Energy::Nonbonded<PairingPolicy<PairEnergy<PrimitiveModelWCA, false>, parallel>>>(it.value(), spc, *this);
+                    emplace_back<Energy::Nonbonded<PairingPolicy<PairEnergy<PrimitiveModelWCA, false>, TCutoff, parallel>>>(it.value(), spc, *this);
 
                 // this should be moved into `Nonbonded` and added when appropriate
                 // Nonbonded now has access to Hamiltonian (*this) and can therefore
@@ -856,48 +857,66 @@ void SASAEnergy::to_json(json &j) const {
 }
 #endif
 
-void from_json(const json &j, Cutoff &c) {
+//==================== GroupCutoff ====================
+
+GroupCutoff::GroupCutoff(Space::Tgeometry &geometry) : geometry(geometry) {}
+
+void from_json(const json &j, GroupCutoff &cutoff) {
     // disable all group-to-group cutoffs by setting infinity
-    for (auto &i : Faunus::molecules)
-        for (auto &j : Faunus::molecules)
-            c.cutoff_squared.set(i.id(), j.id(), pc::infty);
+    for (auto &i : Faunus::molecules) {
+        for (auto &j : Faunus::molecules) {
+            cutoff.cutoff_squared.set(i.id(), j.id(), pc::max_value);
+        }
+    }
 
     auto it = j.find("cutoff_g2g");
     if (it != j.end()) {
         if (it->is_number()) {
             // old style input w. only a single cutoff
-            c.default_cutoff_squared = std::pow(it->get<double>(), 2);
-            for (auto &i : Faunus::molecules)
-                for (auto &j : Faunus::molecules)
-                    c.cutoff_squared.set(i.id(), j.id(), c.default_cutoff_squared);
+            cutoff.default_cutoff_squared = std::pow(it->get<double>(), 2);
+            for (auto &i : Faunus::molecules) {
+                for (auto &j : Faunus::molecules) {
+                    cutoff.cutoff_squared.set(i.id(), j.id(), cutoff.default_cutoff_squared);
+                }
+            }
         }
         else if (it->is_object()) {
             // new style input w. multiple cutoffs between molecules
             // ensure that there is a default, fallback cutoff
-            c.default_cutoff_squared = std::pow(it->at("default").get<double>(), 2);
-            for (auto &i : Faunus::molecules)
-                for (auto &j : Faunus::molecules)
-                    c.cutoff_squared.set(i.id(), j.id(), c.default_cutoff_squared);
+            cutoff.default_cutoff_squared = std::pow(it->at("default").get<double>(), 2);
+            for (auto &i : Faunus::molecules) {
+                for (auto &j : Faunus::molecules) {
+                    cutoff.cutoff_squared.set(i.id(), j.id(), cutoff.default_cutoff_squared);
+                }
+            }
             // loop for space separated molecule pairs in keys
             for (auto &i : it->items()) {
-                auto v = words2vec<std::string>(i.key());
-                if (v.size() == 2) {
-                    int id1 = (*findName(Faunus::molecules, v[0])).id();
-                    int id2 = (*findName(Faunus::molecules, v[1])).id();
-                    c.cutoff_squared.set(id1, id2, std::pow(i.value().get<double>(), 2));
+                try {
+                    auto molecules_names = words2vec<std::string>(i.key());
+                    if (molecules_names.size() != 2) {
+                        throw std::runtime_error("invalid molecules names");
+                    }
+                    int molid1 = (*obtainName(Faunus::molecules, molecules_names[0])).id();
+                    int molid2 = (*obtainName(Faunus::molecules, molecules_names[1])).id();
+                    cutoff.cutoff_squared.set(molid1, molid2, std::pow(i.value().get<double>(), 2));
+                } catch(const std::exception &e) {
+                    faunus_logger->warn("Unable to set a custom cutoff “{}” for “{}”.", i.value().dump(), i.key());
                 }
             }
         }
     }
 }
 
-void to_json(json &j, const Cutoff &c) {
+void to_json(json &j, const GroupCutoff &cutoff) {
     j["cutoff_g2g"] = json::object();
     auto &_j = j["cutoff_g2g"];
-    for (auto &a : Faunus::molecules)
-        for (auto &b : Faunus::molecules)
-            if (a.id() >= b.id())
-                _j[a.name + " " + b.name] = std::sqrt(c.cutoff_squared(a.id(), b.id()));
+    for (auto &a : Faunus::molecules) {
+        for (auto &b : Faunus::molecules) {
+            if (a.id() >= b.id()) {
+                _j[a.name + " " + b.name] = std::sqrt(cutoff.cutoff_squared(a.id(), b.id()));
+            }
+        }
+    }
 }
 
 } // end of namespace Energy

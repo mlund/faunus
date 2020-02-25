@@ -274,29 +274,31 @@ template <typename T, typename TSet> inline auto indexComplement(const T size, c
 }
 
 /**
- * @brief Determine if two groups are separated beyond the cutoff distance.
+ * @brief Determines if two groups are separated beyond the cutoff distance.
  *
- * The cutoff distance can be specified independently for each group pair to override the default value.
+ * The distance between centers of mass is considered. The cutoff distance can be specified independently for each
+ * group pair to override the default value.
  *
  * @see PairEnergy
  */
-class Cutoff {
-    double default_cutoff_squared = pc::infty;
+class GroupCutoff {
+    double default_cutoff_squared = pc::max_value;
     PairMatrix<double> cutoff_squared;  //!< matrix with group-to-group cutoff distances squared in angstrom squared
     double total_cnt = 0, skip_cnt = 0; //!< statistics
-    Space &spc;
-    friend void from_json(const json &j, Cutoff &c);
-    friend void to_json(json &j, const Cutoff &c);
+    Space::Tgeometry &geometry;         //!< geometry to compute the inter group distance with
+    friend void from_json(const json&, GroupCutoff &);
+    friend void to_json(json&, const GroupCutoff &);
 
   public:
     /**
-     * @return true if group<->group interaction is beyond the cutoff distance, i.e., it can be skipped, false otherwise
+     * @brief Determines if two groups are separated beyond the cutoff distance.
+     * @return true if the group-to-group distance is beyond the cutoff distance, false otherwise
      */
-    template <typename T> inline bool cut(const T &group1, const T &group2) {
+    template <typename TGroup> inline bool cut(const TGroup &group1, const TGroup &group2) {
         bool result = false;
         ++total_cnt;
         if (!group1.atomic && !group2.atomic // atomic groups have no meaningful cm
-            && spc.geo.sqdist(group1.cm, group2.cm) >= cutoff_squared(group1.id, group2.id)) {
+            && geometry.sqdist(group1.cm, group2.cm) >= cutoff_squared(group1.id, group2.id)) {
             result = true;
             ++skip_cnt;
         }
@@ -304,15 +306,20 @@ class Cutoff {
     }
 
     /**
-     * @brief Functor alias for @see cut.
+     * @brief A functor alias for cut().
+     * @see cut()
      */
     template <typename... Args> inline auto operator()(Args &&... args) { return cut(std::forward<Args>(args)...); }
 
-    Cutoff(Space &spc) : spc(spc) {}
+    /**
+     * @brief Sets the geometry.
+     * @param geometry  geometry to compute the inter group distance with
+     */
+    GroupCutoff(Space::Tgeometry &geometry);
 };
 
-void from_json(const json &j, Cutoff &c);
-void to_json(json &j, const Cutoff &c);
+void from_json(const json&, GroupCutoff &);
+void to_json(json&, const GroupCutoff &);
 
 /**
  * @brief Provide a fast inlineable interface for non-bonded pair potential energy computation.
@@ -390,15 +397,19 @@ template <typename TPairPotential, bool allow_anisotropic_pair_potential = true>
  * @brief Particle pairing to calculate non-bonded pair potential energies.
  *
  * A complete basic (serial) implementation of particle-particle pairing. The class shall not be used directly.
- * The derived template class @see PairingPolicy shall be used instead.
+ * The derived template class PairingPolicy shall be used instead.
  *
- * Method arguments are generally not checked for correctness because of performance reasons.
+ * @remark Method arguments are generally not checked for correctness because of performance reasons.
+ *
+ * @see PairEnergy, PairingPolicy
+ * @tparam TPairEnergy a functor to compute non-bonded energy between two particles
+ * @tparam TCutoff a cutoff scheme between groups
  */
-template <typename TPairEnergy> class PairingBasePolicy {
+template <typename TPairEnergy, typename TCutoff> class PairingBasePolicy {
   protected:
     Space &spc;              //!< space to operate on
-    TPairEnergy pair_energy; //!< functor to compute non-bonded energy between two particles, @see PairEnergy template
-    Cutoff cut;              //!< cutoff functor that determines if energy between two groups can be ignored
+    TPairEnergy pair_energy; //!< functor to compute non-bonded energy between two particles @see PairEnergy
+    GroupCutoff cut;         //!< cutoff functor that determines if energy between two groups can be ignored
 
   public:
     /**
@@ -406,7 +417,7 @@ template <typename TPairEnergy> class PairingBasePolicy {
      * @param potentials registered non-bonded potentials
      */
     PairingBasePolicy(Space &spc, BasePointerVector<Energybase> &potentials)
-        : spc(spc), pair_energy(spc, potentials), cut(spc) {}
+        : spc(spc), pair_energy(spc, potentials), cut(spc.geo) {}
 
     void from_json(const json &j) {
         Energy::from_json(j, cut);
@@ -530,7 +541,7 @@ template <typename TPairEnergy> class PairingBasePolicy {
      *
      * group1 × group2
      *
-     * If the distance between the groups is greater or equal to the cutoff distance, no calculation is performed.
+     * If the distance between the groups is greater or equal to the group cutoff distance, no calculation is performed.
      * The group intersection must be an empty set, i.e., no particle is included in both groups. This is not verified
      * for performance reason.
      *
@@ -557,7 +568,7 @@ template <typename TPairEnergy> class PairingBasePolicy {
      *
      * ⊕group1 × group2, where ⊕ denotes a filter by an index
      *
-     * If the distance between the groups is greater or equal to the cutoff distance, no calculation is performed.
+     * If the distance between the groups is greater or equal to the group cutoff distance, no calculation is performed.
      * The group intersection must be an empty set, i.e., no particle is included in both groups. This is not verified
      * for performance reason.
 
@@ -588,7 +599,7 @@ template <typename TPairEnergy> class PairingBasePolicy {
      * (⊕group1 × ∁⊕group2) + (∁⊕group1 × ⊕group2) + (⊕group1 × ⊕group2) =
      * = group1 × group2 − (∁⊕group2 × ∁⊕group2), where ⊕ denotes a filter by an index and ∁ a complement
      *
-     * If the distance between the groups is greater or equal to the cutoff distance, no calculation is performed.
+     * If the distance between the groups is greater or equal to the group cutoff distance, no calculation is performed.
      * The group intersection must be an empty set, i.e., no particle is included in both groups. This is not verified
      * for performance reason.
      *
@@ -629,7 +640,7 @@ template <typename TPairEnergy> class PairingBasePolicy {
      *
      * group × (∪ groups)
      *
-     * If the distance between the groups is greater or equal to the cutoff distance, the particle pairing between them
+     * If the distance between the groups is greater or equal to the group cutoff distance, the particle pairing between them
      * is skipped. The internal energy of the group is not computed even if the group is also present in the union
      * of groups.
      *
@@ -654,9 +665,9 @@ template <typename TPairEnergy> class PairingBasePolicy {
      *
      * ⊕group × (∪ groups), where ⊕ denotes a filter by an index
      *
-     * If the distance between the groups is greater or equal to the cutoff distance, the particle pairing between them
-     * is skipped. The internal energy of the group is not computed even if the group is also present in the union
-     * of groups.
+     * If the distance between the groups is greater or equal to the group cutoff distance, the particle pairing
+     * between them is skipped. The internal energy of the group is not computed even if the group is also present
+     * in the union of groups.
      *
      * @param group
      * @param group_index groups as indices in Space::groups
@@ -680,8 +691,8 @@ template <typename TPairEnergy> class PairingBasePolicy {
      *
      * group × (space ∖ group)
      *
-     * If the distance between the groups is greater or equal to the cutoff distance, the particle pairing between them
-     * is skipped.
+     * If the distance between the groups is greater or equal to the group cutoff distance, the particle pairing
+     * between them is skipped.
      *
      * @param group
      * @return energy sum between particle pairs
@@ -701,8 +712,8 @@ template <typename TPairEnergy> class PairingBasePolicy {
      *
      * ⊕group × (space ∖ group), where ⊕ denotes a filter by an index (here a single particle)
      *
-     * If the distance between the groups is greater or equal to the cutoff distance, the particle pairing between them
-     * is skipped. This method is performance-optimized version of the multiple indices method.
+     * If the distance between the groups is greater or equal to the group cutoff distance, the particle pairing
+     * between them is skipped. This method is performance-optimized version of the multiple indices method.
      *
      * @param group
      * @param index a particle index relative to the group beginning
@@ -728,8 +739,8 @@ template <typename TPairEnergy> class PairingBasePolicy {
      *
      * ⊕group × (space ∖ group), where ⊕ denotes a filter by an index
      *
-     * If the distance between the groups is greater or equal to the cutoff distance, the particle pairing between them
-     * is skipped.
+     * If the distance between the groups is greater or equal to the group cutoff distance, the particle pairing
+     * between them is skipped.
      *
      * @param group
      * @param index list of particle indices in the group relative to the group beginning
@@ -752,8 +763,8 @@ template <typename TPairEnergy> class PairingBasePolicy {
     /**
      * @brief Cross pairing of particles among a union of groups. No internal pairs within any group are considered.
      *
-     * If the distance between any two groups is greater or equal to the cutoff distance, the particle pairing between
-     * them is skipped.
+     * If the distance between any two groups is greater or equal to the group cutoff distance, the particle pairing
+     * between them is skipped.
      *
      * @param group_index list of groups
      * @return energy sum between particle pairs
@@ -772,8 +783,8 @@ template <typename TPairEnergy> class PairingBasePolicy {
     /**
      * @brief Cross pairing of particles between a union of groups and its complement in space.
      *
-     * If the distance between any two groups is greater or equal to the cutoff distance, the particle pairing between
-     * them is skipped.
+     * If the distance between any two groups is greater or equal to the group cutoff distance, the particle pairing
+     * between them is skipped.
      *
      * @param group_index list of groups
      * @return energy sum between particle pairs
@@ -793,7 +804,7 @@ template <typename TPairEnergy> class PairingBasePolicy {
     /**
      * @brief Cross pairing between all particles in the space.
      *
-     * If the distance between particles' groups is greater or equal to the cutoff distance, no calculation is
+     * If the distance between particles' groups is greater or equal to the group cutoff distance, no calculation is
      * performed.
      *
      * @return energy sum between particle pairs
@@ -812,7 +823,7 @@ template <typename TPairEnergy> class PairingBasePolicy {
     /**
      * @brief Cross pairing between all particles in the space.
      *
-     * If the distance between particles' groups is greater or equal to the cutoff distance, no calculation is
+     * If the distance between particles' groups is greater or equal to the group cutoff distance, no calculation is
      * performed.
      *
      * @param condition a group filter if internal energy of the group shall be add
@@ -844,9 +855,10 @@ template <typename TPairEnergy> class PairingBasePolicy {
     }
 };
 
-template <typename TPairEnergy, bool parallel = false> class PairingPolicy : public PairingBasePolicy<TPairEnergy> {
+template <typename TPairEnergy, typename TCutoff, bool parallel = false>
+class PairingPolicy : public PairingBasePolicy<TPairEnergy, TCutoff> {
   public:
-    using PairingBasePolicy<TPairEnergy>::PairingBasePolicy;
+    using PairingBasePolicy<TPairEnergy, TCutoff>::PairingBasePolicy;
 };
 
 /**
@@ -980,8 +992,8 @@ template <typename TPairingPolicy> class Nonbonded : public Energybase {
  *
  * @tparam Tpairpot
  */
-template <typename Tpairpot> class NonbondedCached : public Nonbonded<PairingPolicy<PairEnergy<Tpairpot>>> {
-    typedef Nonbonded<PairingPolicy<PairEnergy<Tpairpot>>> base;
+template <typename Tpairpot> class NonbondedCached : public Nonbonded<PairingPolicy<PairEnergy<Tpairpot>, GroupCutoff>> {
+    typedef Nonbonded<PairingPolicy<PairEnergy<Tpairpot>, GroupCutoff>> base;
     typedef typename Space::Tgroup Tgroup;
     Eigen::MatrixXf cache;
     using base::spc;

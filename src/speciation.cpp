@@ -37,7 +37,7 @@ bool SpeciationMove::checkBeforeInsert() {
             auto selection = (reaction->only_neutral_molecules) ? Tspace::INACTIVE_NEUTRAL : Tspace::INACTIVE;
             molecule_list = spc.findMolecules(molid, selection);
             if (range_size(molecule_list) < number_to_insert) {
-                faunus_logger->warn("molecule {} has reached its maximum capacity", Faunus::molecules[molid].name);
+                faunus_logger->trace("molecule {} has reached its maximum capacity", Faunus::molecules[molid].name);
                 return false; // Not possible to perform change, escape through the back door
             }
         }
@@ -245,8 +245,8 @@ void SpeciationMove::activateAllProducts(Change &change) {
                     change.groups.push_back(change_data); // Add to list of moved groups
                 }
             } else {
-                faunus_logger->warn("maximum number of {} molecules reached; increase capacity?",
-                                    Faunus::molecules[molid].name);
+                faunus_logger->trace("maximum number of {} molecules reached; increase capacity?",
+                                     Faunus::molecules[molid].name);
             }
         }
     }

@@ -192,6 +192,8 @@ properties:
                 type: object
                 additionalProperties: false
                 properties:
+                    N_reservoir: {type: integer, default: 0}
+                    canonic: {type: boolean, default: false}
                     lnK: {type: number, default: 0.0, description: Natural logarithm of equilibrium constant (molar scale)}
                     pK: {type: number, default: 0.0, description: Minus log10 of equilibrium constant (molar scale)}
                     neutral: {type: boolean, default: false, description: Set to true if only neutral molecules should be involved}

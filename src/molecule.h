@@ -360,7 +360,8 @@ class ReactionData {
     bool canonic = false;                //!< Finite reservoir (incomplete feature)
     bool swap = false;                   //!< True if swap move
     int reservoir_size = 0;              //!< Number of molecules in finite reservoir (incomplete feature!)
-    double lnK = 0;                      //!< Natural logarithm of molar eq. const.
+    double lnK = 0;                      //!< Effective, natural logarithm of molar eq. const.
+    double lnK_unmodified = 0;           //!< Natural logarithm of molar eq. const. (unmodified as in input)
     bool only_neutral_molecules = false; //!< Only neutral molecules are involved in the reaction
     std::string reaction_str;            //!< Name of reaction
     double weight;                       //!< Statistical weight to be given to reaction in speciation

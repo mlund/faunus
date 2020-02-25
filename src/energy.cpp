@@ -18,7 +18,7 @@ EwaldData::EwaldData(const json &j) {
     kappa = j.value("kappa", 0.0);
     kappa_squared = kappa * kappa;
 
-    if (j.count("kcutoff") {
+    if (j.count("kcutoff")) {
         faunus_logger->warn("`kcutoff` is deprecated, use `ncutoff` instead");
         n_cutoff = j.at("kcutoff");
     } else {

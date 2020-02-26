@@ -99,11 +99,11 @@ variants are often the fastest option. For better performance, it is recommended
 `nonbonded_pm`         | `coulomb`+`hardsphere` (fixed `type=plain`, `cutoff`$=\infty$)
 `nonbonded_pmwca`      | `coulomb`+`wca` (fixed `type=plain`, `cutoff`$=\infty$)
 
-### Mass Center Cut-offs
+### Mass Center Cutoffs
 
-For cut-off based pair-potentials working between large molecules, it can be efficient to
-use mass center cut-offs between molecular groups, thus skipping all pair-interactions.
-A single cut-off can be used between all molecules (`default`), or specified for specific
+For cutoff based pair-potentials working between large molecules, it can be efficient to
+use mass center cutoffs between molecular groups, thus skipping all pair-interactions.
+A single cutoff can be used between all molecules (`default`), or specified for specific
 combinations:
 
 ~~~ yaml
@@ -145,10 +145,10 @@ Beyond a spherical real-space cutoff, $R\_c$, the potential is zero while if
 below,
 
 $$
-\tilde{u}^{(zz)}\_{ij}({\bf r}) = \frac{e^2 z\_i z\_j }{ 4\pi\epsilon\_0\epsilon\_r |{\bf r}| }\mathcal{S}(q)
+\tilde{u}^{(zz)}\_{ij}(\bar{r}) = \frac{e^2 z\_i z\_j }{ 4\pi\epsilon\_0\epsilon\_r |\bar{r}| }\mathcal{S}(q)
 $$
 
-where ${\bf r} = {\bf r}\_j - {\bf r}\_i$, and tilde indicate that a short-range function $\mathcal{S}(q=|{\bf r}|/R\_c)$ is used to trucate the interactions. The available short-range functions are:
+where $\bar{r} = \bar{r}\_j - \bar{r}\_i$, and tilde indicate that a short-range function $\mathcal{S}(q=|\bar{r}|/R\_c)$ is used to trucate the interactions. The available short-range functions are:
 
 coulomb types                            | Keywords          | $\mathcal{S}(q)$
 ---------------------------------------- | ----------------- | ---------------------------------------------------
@@ -177,7 +177,7 @@ depending on `C` and `D`. Thus, for an infinite Debye length, the following hold
 
 `C` | `D` | Equivalent to
 --- | --- | ----------------------
- 1  | -1  | Plain Coulomb
+ 1  | -1  | Plain Coulomb within cutoff, zero outside
  1  |  0  | [Undamped Wolf](http://doi.org/10.1063/1.478738)
  1  |  1  | [Levitt](http://doi.org/10/fp959p) / [Undamped Fenell](http://doi.org/10/bqgmv2)
  1  |  2  | [Kale](http://doi.org/10/csh8bg)
@@ -202,7 +202,7 @@ If `shift=false`, the potential is left unshifted and any given cutoff is ignore
 
 ### Multipoles
 
-If `type=coulomb` is replaced with `type=multipole` the electrostatic energy will in addition to
+If `type=coulomb` is replaced with `type=multipole` then the electrostatic energy will in addition to
 monopole-monopole interactions include contributions from monopole-dipole, and dipole-dipole
 interactions. Multipolar properties of each particle is specified in the Topology.
 The `zahn` and `fennell` approaches have undefined dipolar self-energies and are therefore not recommended for such systems.
@@ -210,14 +210,18 @@ The `zahn` and `fennell` approaches have undefined dipolar self-energies and are
 The ion-dipole interaction is described by
 
 $$
-\tilde{u}^{(z\mu)}\_{ij}({\bf r}) = -\frac{ez\_i\left(\mu\_j\cdot \hat{\bf r}\right) }{|{\bf r}|^2} \left( \mathcal{S}(q) - q\mathcal{S}^{\prime}(q) \right)
+\tilde{u}^{(z\mu)}\_{ij}(\bar{r}) = -\frac{ez\_i\left(\mu\_j\cdot \hat{r}\right) }{|\bar{r}|^2} \left( \mathcal{S}(q) - q\mathcal{S}^{\prime}(q) \right)
 $$
 
-where $\hat{\bf r} = {\bf r}/|{\bf r}|$, and the dipole-dipole interaction by
+where $\hat{r} = \bar{r}/|\bar{r}|$, and the dipole-dipole interaction by
 
 $$
-\tilde{u}^{\mu\mu}\_{ij}({\bf r}) = -\left ( \frac{3 ( \boldsymbol{\mu}\_i \cdot \hat{\bf r} ) \left(\boldsymbol{\mu}\_j\cdot\hat{\bf r}\right) - \boldsymbol{\mu}\_i\cdot\boldsymbol{\mu}\_j }{|{\bf r}|^3}\right) \left( \mathcal{S}(q) - q\mathcal{S}^{\prime}(q)  + \frac{q^2}{3}\mathcal{S}^{\prime\prime}(q) \right) - \frac{\left(\boldsymbol{\mu}\_i\cdot\boldsymbol{\mu}\_j\right)}{|{\bf r}|^3}\frac{q^2}{3}\mathcal{S}^{\prime\prime}(q).
+\tilde{u}^{\mu\mu}\_{ij}(\bar{r}) = -\left ( \frac{3 ( \boldsymbol{\mu}\_i \cdot \hat{r} ) \left(\boldsymbol{\mu}\_j\cdot\hat{r}\right) - \boldsymbol{\mu}\_i\cdot\boldsymbol{\mu}\_j }{|\bar{r}|^3}\right) \left( \mathcal{S}(q) - q\mathcal{S}^{\prime}(q)  + \frac{q^2}{3}\mathcal{S}^{\prime\prime}(q) \right) - \frac{\left(\boldsymbol{\mu}\_i\cdot\boldsymbol{\mu}\_j\right)}{|\bar{r}|^3}\frac{q^2}{3}\mathcal{S}^{\prime\prime}(q).
 $$
+
+**Warning:**
+
+ - The `zahn` and `fennell` approaches have undefined dipolar self-energies (see next section) and are therefore not recommended for dipolar systems. 
 
 
 ### Self-energies
@@ -226,8 +230,8 @@ When using `coulomb` or `multipole`, an electrostatic self-energy term is automa
 added to the Hamiltonian. The monopole and dipole contributions are evaluated according to
 
 $$
-U\_{self} = -\frac{1}{2}\sum\_i^N\sum\_{\ast\in\{z,\mu\}} \lim\_{|{\bf r}\_{ii}|\to 0}\left( u^{(\ast\ast)}\_{ii}({\bf r}\_{ii})
-- \tilde{u}^{(\ast\ast)}\_{ii}({\bf r}\_{ii}) \right )
+U\_{self} = -\frac{1}{2}\sum\_i^N\sum\_{\ast\in\{z,\mu\}} \lim\_{|\bar{r}\_{ii}|\to 0}\left( u^{(\ast\ast)}\_{ii}(\bar{r}\_{ii})
+- \tilde{u}^{(\ast\ast)}\_{ii}(\bar{r}\_{ii}) \right )
 $$
 
 where no tilde indicates that $\mathcal{S}(q)\equiv 1$ for any $q$.
@@ -235,12 +239,11 @@ where no tilde indicates that $\mathcal{S}(q)\equiv 1$ for any $q$.
 
 ### Ewald Summation
 
-If type is `ewald`, terms from reciprocal space; surface energies; and
-self energies are automatically added to the Hamiltonian, activating additional keywords:
+If type is `ewald`, terms from reciprocal space and surface energies are automatically added (in addition to the previously mentioned self- and real space-energy) to the Hamiltonian which activates the additional keywords:
 
 `type=ewald`          | Description
 --------------------- | ---------------------------------------------------------------------
-`kcutoff`             | Reciprocal-space cutoff
+`ncutoff`             | Reciprocal-space cutoff (unitless)
 `epss=0`              | Dielectric constant of surroundings, $\varepsilon_{surf}$ (0=tinfoil)
 `ewaldscheme=PBC`     | Periodic (`PBC`) or isotropic periodic ([`IPBC`](http://doi.org/css8)) boundary conditions
 `spherical_sum=true`  | Spherical/ellipsoidal summation in reciprocal space; cubic if `false`.
@@ -253,9 +256,9 @@ U_{\text{reciprocal}} = \frac{2\pi f}{V} \sum_{ {\bf k} \ne {\bf 0}} A\_k \vert 
 $$
 
 $$
-U_{\text{surface}} = \frac{ 2\pi f }{ (2\varepsilon_{surf} + 1) V }
+U_{\text{surface}} = \frac{1}{4\pi\varepsilon_0\varepsilon_r}\frac{ 2\pi }{ (2\varepsilon_{surf} + 1) V }
 \left(
-\left|\sum_{j}q\_j{\bf r}\_j\right|^2 + 2 \sum\_j q\_i {\bf r}\_j \cdot \sum\_j \boldsymbol{\mu}\_j + \left| \sum\_j \boldsymbol{\mu}\_j \right|^2
+\left|\sum_{j}q\_j\bar{r}\_j\right|^2 + 2 \sum\_j q\_i \bar{r}\_j \cdot \sum\_j \boldsymbol{\mu}\_j + \left| \sum\_j \boldsymbol{\mu}\_j \right|^2
 \right )
 $$
 
@@ -275,13 +278,13 @@ Q^{q} = \sum_{j}q\_je^{i({\bf k}\cdot {\bf r}\_j)} \quad Q^{\mu} = \sum_{j}i({\b
 $$
 
 $$
-{\bf k} = 2\pi\left( \frac{n_x}{L_x} , \frac{n_y}{L_y} ,\frac{n_z}{L_z} \right), {\bf n} \in \mathbb{Z}^3
+\bar{k} = 2\pi\left( \frac{n_x}{L_x} , \frac{n_y}{L_y} ,\frac{n_z}{L_z} \right)\quad \bar{n} \in \mathbb{Z}^3
 $$
 
 Like many other electrostatic methods, the Ewald scheme also adds a self-energy term as described above.
 In the case of isotropic periodic boundaries (`ipbc=true`), the orientational degeneracy of the
 periodic unit cell is exploited to mimic an isotropic environment, reducing the number
-of wave-vectors to one fourth compared with PBC Ewald.
+of wave-vectors to one fourth compared with 3D PBC Ewald.
 For point charges, [IPBC](http://doi.org/css8) introduce the modification,
 
 $$
@@ -291,11 +294,10 @@ $$
 while for point dipoles (currently unavailable),
 
 $$
-Q^{\mu} = \sum\_j \boldsymbol{\mu}\_j
+Q^{\mu} = \sum\_j \bar{\mu}\_j
 \cdot \nabla\_j
-\left( \prod\_{ \alpha \in \{ x,y,z \} } \cos \left ( \frac{2\pi}{L\_{\alpha}} n\_{\alpha} r\_{\alpha,j} \right ) \right )
+\left( \prod\_{ \alpha \in \{ x,y,z \} } \cos \left ( \frac{2\pi}{L\_{\alpha}} n\_{\alpha} \bar{r}\_{\alpha,j} \right ) \right )
 $$
-
 
 ### Mean-Field Correction
 
@@ -468,7 +470,7 @@ there is no overhead since all potentials are splined.
 ------------ | --------------------------------------------------------
 `function`   | Mathematical expression for the potential (units of kT)
 `constants`  | User-defined constants
-`cutoff`     | Spherical cut-off distance
+`cutoff`     | Spherical cutoff distance
 
 The following illustrates how to define a Yukawa potential:
 

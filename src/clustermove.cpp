@@ -43,7 +43,6 @@ void Cluster::_to_json(json &j) const {
     }
 }
 void Cluster::_from_json(const json &j) {
-    assertKeys(j, {"dp", "dprot", "dir", "threshold", "molecules", "repeat", "satellites", "dirrot"});
     dptrans = j.at("dp");
     dir = j.value("dir", Point(1, 1, 1));
     dirrot = j.value("dirrot", Point(0, 0, 0)); // predefined axis of rotation

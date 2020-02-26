@@ -334,6 +334,7 @@ class NeighboursGenerator {
  * - [x] Enable `canonic` and `reservoir_size`
  * - [ ] Enable reservoir size to be given as _molarity_ and _number_
  * - [ ] Merge products and reactant structures using signed stoichiometric numbers
+ * - [ ] `reservoir_size` should ideally be associated with an implicit molecule
  */
 class ReactionData {
   public:

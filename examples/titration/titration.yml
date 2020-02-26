@@ -62,8 +62,8 @@ moleculelist:
 
 insertmolecules:
     - protein: {N: 1}
-    - Na+: {N: 22}
-    - Cl-: {N: 20}
+    - Na+: {N: 122}
+    - Cl-: {N: 120}
 
 reactionlist:
     # H+ is implicit and to maintain electroneutrality

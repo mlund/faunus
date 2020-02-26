@@ -8,8 +8,12 @@ namespace Move {
 void SpeciationMove::_to_json(json &j) const {
     json &_j = j["reactions"];
     _j = json::object();
-    for (auto [reaction, acceptance] : acceptance_map)
+    for (auto [reaction, acceptance] : acceptance_map) {
         _j[reaction] = {{"attempts", acceptance.cnt}, {"acceptance", acceptance.avg()}};
+    }
+    for (auto [reaction, reservoir_size] : average_reservoir_size) {
+        _j[reaction]["reservoir_size"] = reservoir_size.avg();
+    }
     Faunus::_roundjson(_j, 3);
 }
 
@@ -114,7 +118,7 @@ Change::data SpeciationMove::contractAtomicGroup(Space::Tgroup &target, Space::T
             change_data.atoms.push_back(std::distance(target.begin(), last_atom));
             target.deactivate(last_atom, target.end()); // deactivate a single atom at the time
         }
-        assert(std::is_sorted(change_data.atoms.begin(), change_data.atoms.end())); // redundant
+        std::sort(change_data.atoms.begin(), change_data.atoms.end());
     } else {
         faunus_logger->warn("atomic group {} is depleted; increase simulation volume?",
                             Faunus::molecules[target.id].name);
@@ -285,9 +289,8 @@ void SpeciationMove::deactivateAllReactants(Change &change) {
 }
 
 void SpeciationMove::_move(Change &change) {
-    assert(other_spc != nullptr);
-
-    if (not Faunus::reactions.empty()) {                                                 // global list of reactions
+    if (not Faunus::reactions.empty()) { // global list of reactions
+        assert(other_spc != nullptr);    // knowledge of other space should be provided by now
         reaction = &(*slump.sample(Faunus::reactions.begin(), Faunus::reactions.end())); // random reaction
         auto direction = static_cast<ReactionData::Direction>((char)slump.range(0, 1));  // random direction
         reaction->setDirection(direction);
@@ -308,8 +311,6 @@ void SpeciationMove::_move(Change &change) {
         deactivateAllReactants(change);
         activateAllProducts(change);
         std::sort(change.groups.begin(), change.groups.end()); // why?
-    } else {
-        throw std::runtime_error("no reactions in list; add some or disable the `rcmc` move");
     }
 }
 
@@ -329,9 +330,17 @@ void SpeciationMove::_accept(Change &) {
     if (reaction->reservoir_size < 0 && reaction->canonic) {
         throw std::runtime_error("negative number of molecules");
     }
+    if (reaction->canonic) {
+        average_reservoir_size[reaction->reaction_str] += reaction->reservoir_size;
+    }
 }
 
-void SpeciationMove::_reject(Change &) { acceptance_map[reaction->reaction_str] += 0; }
+void SpeciationMove::_reject(Change &) {
+    acceptance_map[reaction->reaction_str] += 0;
+    if (reaction->canonic) {
+        average_reservoir_size[reaction->reaction_str] += reaction->reservoir_size;
+    }
+}
 
 SpeciationMove::SpeciationMove(Tspace &spc) : spc(spc) {
     name = "rcmc";

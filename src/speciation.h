@@ -26,6 +26,7 @@ class SpeciationMove : public Movebase {
     double bond_energy = 0;           //!< Accumulated bond energy if inserted/deleted molecule
     ReactionData *reaction = nullptr; //!< Randomly selected reaction
     std::map<std::string, Average<double>> acceptance_map;
+    std::map<std::string, Average<double>> average_reservoir_size;
 
     void _to_json(json &) const override;
     void _from_json(const json &) override;

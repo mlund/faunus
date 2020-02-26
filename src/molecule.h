@@ -329,7 +329,11 @@ class NeighboursGenerator {
  * atomic and molecular reactants/products, always reflecting the current
  * direction.
  *
- * @todo Enable `canonic` and `reservoir_size`
+ * @todo
+ *
+ * - [x] Enable `canonic` and `reservoir_size`
+ * - [ ] Enable reservoir size to be given as _molarity_ and _number_
+ * - [ ] Merge products and reactant structures using signed stoichiometric numbers
  */
 class ReactionData {
   public:

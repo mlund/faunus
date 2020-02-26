@@ -57,7 +57,7 @@
                     0.0,
                     -4.138024529560427
                 ],
-                "init": -2.4966,
+                "init": -4.4103,
                 "mean": -4.6894,
                 "nstep": 10,
                 "samples": 6000
@@ -254,7 +254,7 @@
         }
     ],
     "number of groups": 3,
-    "number of particles": 45,
+    "number of particles": 245,
     "reactionlist": [
         {
             "HCTR + Cl- = CTR + H+": {

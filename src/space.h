@@ -12,7 +12,7 @@ struct reservoir {
     bool canonic;
 };
 
-struct Space;
+class Space;
 
 /**
  * @brief Specify change to a new state
@@ -65,7 +65,17 @@ void to_json(json &, const Change &);       //!< Serialise Change object to json
  * an instance of `Space<Tparticle>` where `Tparticle` has
  * been defined as `typedef Particle<Charge> Tparticle`.
  */
-struct Space {
+class Space {
+  private:
+    /**
+     * Storage for the reservoir size (map value) of each implicit
+     * molecule in the system, identified by the molecular id (map key)
+     * The reservoir is used to emulate a canonical system where a finite
+     * number of implicit molecules can participate in equilibrium reactions.
+     */
+    std::map<int, int> implicit_reservoir;
+
+  public:
     typedef Geometry::Chameleon Tgeometry;
     typedef Particle Tparticle; // remove
     typedef Faunus::ParticleVector Tpvec;
@@ -84,6 +94,9 @@ struct Space {
     Tpvec p;       //!< Particle vector
     Tgvec groups;  //!< Group vector
     Tgeometry geo; //!< Container geometry // TODO as a dependency injection in the constructor
+
+    const std::map<int, int> &getImplicitReservoir() const; //!< Map of implicit molecule reservoirs
+    std::map<int, int> &getImplicitReservoir();             //!< Map of implicit molecule reservoirs
 
     auto positions() const {
         return ranges::cpp20::views::transform(p, [](auto &i) -> const Point & { return i.pos; });

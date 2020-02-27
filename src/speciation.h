@@ -26,13 +26,14 @@ class SpeciationMove : public Movebase {
     double bond_energy = 0;           //!< Accumulated bond energy if inserted/deleted molecule
     ReactionData *reaction = nullptr; //!< Randomly selected reaction
     std::map<std::string, Average<double>> acceptance_map;
-    std::map<std::string, Average<double>> average_reservoir_size;
+    std::map<int, Average<double>> average_reservoir_size;
 
     void _to_json(json &) const override;
     void _from_json(const json &) override;
     void _move(Change &) override;         //!< Perform move
     void _accept(Change &) override;       //!< Called when accepted
     void _reject(Change &) override;       //!< Called when rejected
+    bool enoughReservoir() const;          //!< Check if we have enough implicit matter for reaction
     bool checkBeforeInsert();              //!< Performs checks before move
     bool atomicSwap(Change &);             //!< Swap atom type
     void deactivateAllReactants(Change &); //!< Delete reactant species

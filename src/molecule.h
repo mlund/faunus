@@ -175,6 +175,7 @@ void to_json(json &j, const ExclusionsVicinity &exclusions);
 class MoleculeData {
     json json_cfg; //!< data useful only for to_json
     int _id = -1;
+    bool implicit = false; //!< Is molecule implicit and explicitly absent from simulation cell?
 
   protected:
     ExclusionsVicinity exclusions; //!< Implementation of isPairExcluded;
@@ -199,6 +200,8 @@ class MoleculeData {
     MoleculeData();
     MoleculeData(const std::string &name, ParticleVector particles,
                  const BasePointerVector<Potential::BondData> &bonds);
+
+    bool isImplicit() const { return implicit; } //!< Is molecule implicit and explicitly absent from simulation cell?
 
     bool isPairExcluded(int i, int j) const;
 
@@ -334,7 +337,7 @@ class NeighboursGenerator {
  * - [x] Enable `canonic` and `reservoir_size`
  * - [ ] Enable reservoir size to be given as _molarity_ and _number_
  * - [ ] Merge products and reactant structures using signed stoichiometric numbers
- * - [ ] `reservoir_size` should ideally be associated with an implicit molecule
+ * - [x] `reservoir_size` should ideally be associated with an implicit molecule
  */
 class ReactionData {
   public:
@@ -362,15 +365,12 @@ class ReactionData {
     std::pair<const TStoichiometryMap &, const TStoichiometryMap &>
     getReactants() const; //!< Pair with atomic and molecular reactants
 
-    bool canonic = false;                //!< Finite reservoir (incomplete feature)
     bool swap = false;                   //!< True if swap move
-    int reservoir_size = 0;              //!< Number of molecules in finite reservoir (incomplete feature!)
     double lnK = 0;                      //!< Effective, natural logarithm of molar eq. const.
     double lnK_unmodified = 0;           //!< Natural logarithm of molar eq. const. (unmodified as in input)
     bool only_neutral_molecules = false; //!< Only neutral molecules are involved in the reaction
     std::string reaction_str;            //!< Name of reaction
     double weight;                       //!< Statistical weight to be given to reaction in speciation
-    bool empty() const;                  //!< The (finite) reservoir of the RHS particles is empty.
 
     /**
      * @brief Find atom name or molecule name
@@ -414,7 +414,6 @@ inline auto parseReactionString(const std::string &process_string) {
 }
 
 void from_json(const json &, ReactionData &);
-
 void to_json(json &, const ReactionData &);
 
 extern std::vector<ReactionData> reactions; // global instance

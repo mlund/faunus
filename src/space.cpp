@@ -107,6 +107,7 @@ void Space::sync(Space &other, const Change &change) {
         p = other.p; // copy all positions
         assert(p.begin() != other.p.begin() && "deep copy problem");
         groups = other.groups;
+        implicit_reservoir = other.implicit_reservoir;
 
         if (not groups.empty())
             if (groups.front().begin() == other.p.begin())
@@ -221,6 +222,8 @@ Space::Tgvec::iterator Space::randomMolecule(int molid, Random &rand, Space::Sel
         return groups.begin() + (&*rand.sample(m.begin(), m.end()) - &*groups.begin());
     return groups.end();
 }
+const std::map<int, int> &Space::getImplicitReservoir() const { return implicit_reservoir; }
+std::map<int, int> &Space::getImplicitReservoir() { return implicit_reservoir; }
 
 /**
  * This takes a json array of objects where each item corresponds
@@ -243,8 +246,13 @@ void insertMolecules(const json &j, Space &spc) {
                         int cnt = N;
                         bool inactive = it.value().value("inactive", false); // active or not?
 
-                        faunus_logger->info("inserting {0} ({1}) {2} molecules", cnt, inactive ? "inactive" : "active",
-                                            it.key());
+                        {
+                            std::string state = (inactive) ? "inactive" : "active";
+                            if (mol->isImplicit()) {
+                                state = "implicit";
+                            }
+                            faunus_logger->info("inserting {0} ({1}) {2} molecules", cnt, state, it.key());
+                        }
 
                         if (mol->atomic) {
                             typename Space::Tpvec p;
@@ -258,6 +266,10 @@ void insertMolecules(const json &j, Space &spc) {
                             // add_to_log("Added {0} {1} molecules", N, mol->name)
                             if (inactive)
                                 spc.groups.back().resize(0);
+                        } else if (mol->isImplicit()) {
+                            // implicit molecules are registered outside the
+                            // main molecule list
+                            spc.getImplicitReservoir()[mol->id()] = N;
                         } else {
                             while (cnt-- > 0) { // insert molecules
                                 spc.push_back(mol->id(), mol->getRandomConformation(spc.geo, spc.p));
@@ -310,6 +322,7 @@ void to_json(json &j, Space &spc) {
     j["groups"] = spc.groups;
     j["particles"] = spc.p;
     j["reactionlist"] = reactions;
+    j["implicit_reservoir"] = spc.getImplicitReservoir();
 }
 void from_json(const json &j, Space &spc) {
     typedef typename Space::Tpvec Tpvec;
@@ -344,6 +357,16 @@ void from_json(const json &j, Space &spc) {
                     throw std::runtime_error("load error");
             }
         }
+
+        if (auto it = j.find("implicit_reservoir"); it != j.end()) {
+            assert(it->is_array());
+            for (auto vec : *it) {
+                assert(vec.is_array() && vec.size() == 2);
+                spc.getImplicitReservoir()[vec[0]] = vec[1];
+            }
+            faunus_logger->trace("{} implicit molecules loaded from json", it->size());
+        }
+
         // check correctness of molecular mass centers
         for (auto &i : spc.groups)
             if (not i.empty() and not i.atomic)

@@ -57,6 +57,7 @@ void to_json(json &j, const MoleculeData &a) {
         {"atomic", a.atomic},
         {"rigid", a.rigid},
         {"compressible", a.compressible},
+        {"implicit", a.isImplicit()},
         {"activity", a.activity / 1.0_molar},
     };
     j[a.name].update(a.json_cfg);
@@ -202,6 +203,10 @@ void MoleculeBuilder::from_json(const json &j, MoleculeData &molecule) {
         molecule.rigid = j_properties.value("rigid", molecule.rigid);
         molecule.compressible = j_properties.value("compressible", molecule.compressible);
         molecule.activity = j_properties.value("activity", molecule.activity / 1.0_molar) * 1.0_molar;
+        molecule.implicit = j_properties.value("implicit", false);
+        if (molecule.implicit and molecule.atomic) {
+            throw std::runtime_error("atomic molecules cannot be implicit");
+        }
 
         readCompoundValues(j_properties);
         for (auto particle : particles) {
@@ -605,17 +610,6 @@ ParticleVector &Conformation::toParticleVector(ParticleVector &p) const {
     return p;
 }
 
-bool ReactionData::empty() const {
-    if (direction == Direction::RIGHT) {
-        if (canonic) {
-            if (reservoir_size <= 0) {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
 ReactionData::Direction ReactionData::getDirection() const { return direction; }
 
 void ReactionData::setDirection(ReactionData::Direction dir) {
@@ -664,7 +658,6 @@ void from_json(const json &j, ReactionData &a) {
 
     for (auto [key, val] : j.items()) {
         a.reaction_str = key; // reaction string, e.g. "A + B = C"
-        a.canonic = val.value("canonic", false);
         a.only_neutral_molecules = val.value("neutral", false);
         if (val.count("lnK") == 1) {
             a.lnK_unmodified = val.at("lnK").get<double>();
@@ -674,7 +667,6 @@ void from_json(const json &j, ReactionData &a) {
             a.lnK_unmodified = 0.0;
         }
         a.lnK = a.lnK_unmodified;
-        a.reservoir_size = val.value("N_reservoir", a.reservoir_size);
 
         // helper function used to parse and register atom and molecule names; updates lnK
         auto registerNames = [&](auto &names, auto &&atom_map, auto &mol_map, double sign) {
@@ -715,9 +707,10 @@ void to_json(json &j, const ReactionData &reaction) {
     ReactionData a = reaction;
     // we want lnK to show for LEFT-->RIGHT direction
     a.setDirection(ReactionData::Direction::RIGHT);
-    j[a.reaction_str] = {{"lnK", a.lnK_unmodified},     {"pK", -a.lnK_unmodified / std::log(10)},
-                         {"canonic", a.canonic},        {"N_reservoir", a.reservoir_size},
-                         {"swap_move", a.swap},         {"neutral", a.only_neutral_molecules},
+    j[a.reaction_str] = {{"lnK", a.lnK_unmodified},
+                         {"pK", -a.lnK_unmodified / std::log(10)},
+                         {"swap_move", a.swap},
+                         {"neutral", a.only_neutral_molecules},
                          {"pK'", -a.lnK / std::log(10)}};
 } //!< Serialize to JSON object
 

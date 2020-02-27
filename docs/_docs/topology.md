@@ -102,7 +102,7 @@ Properties of molecules and their default values:
 `ensphere=false`        | Radial rescale of positions to sphere w. radius of average radial distance from COM (stored in 1st atom which is a dummy)
 `excluded_neighbours=0` | Generate an `exclusionlist` from the bonded interaction: Add all atom pairs which are `excluded_neighbours` or less bonds apart
 `exclusionlist`         | List of _internal_ atom pairs which nonbonded interactions are excluded
-`implicit=false`        | If this species is implicit in GCMC schemes
+`implicit=false`        | Mark as implicit for reactive Monte Carlo schemes
 `insdir=[1,1,1]`        | Insert directions are scaled by this
 `insoffset=[0,0,0]`     | Shifts mass center after insertion
 `keeppos=false`         | Keep original positions of `structure`
@@ -202,6 +202,9 @@ A filename with positions for the `N` molecules can be given with `positions`.
 The file must contain exactly `N`-times molecular
 positions that must all fit within the simulation box. Only _positions_ from
 the file are copied; all other information is ignored.
+
+For `implicit` molecules, only `N` should be given and the molecules are never
+inserted into the simulation box.
 
 ### Overlap Check
 
@@ -319,6 +322,33 @@ $$
 In an ideal system, the involvement of Na or Cl in the acid-base reaction is inconsequential for the equilibrium,
 since the Grand Canonical ensemble ensures constant salt activity.
 
+### Example: Precipitation of Calcium Hydroxide using _implicit_ molecules
+
+Here we introduce an implicit, solid phase of Ca(OH)2 and the solubility product
+to predict the amount of dissolved calcium and hydroxide ions. Note that
+we start from an empty simulation box (both ions are inactive) and the solid
+phase is treated only implicitly.
+Additional reactions can naturally introduced to study complex equilibrium
+systems under influence of intermolecular interactions.
+
+~~~ yaml
+atomlist:
+    - ca++: {}
+    - oh-: {}
+
+moleculelist:
+    - Ca++: {atoms: [ca++], atomic: true}
+    - OH-: {atoms: [oh-], atomic: true}
+    - Ca(OH)2: {implicit: true}
+
+insertmolecules:
+    - Ca++: {N: 800, inactive: true}
+    - OH-: {N: 800, inactive: true}
+    - Ca(OH)2: {N: 200}
+
+reactionlist:
+    - "Ca(OH)2 = Ca++ + OH- + OH-": {pK: 5.19}
+~~~
 
 ### Example: Swapping between molecular conformations
 

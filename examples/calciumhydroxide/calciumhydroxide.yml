@@ -1,0 +1,66 @@
+#!/usr/bin/env yason.py
+#
+# This simulates the precipitation of Ca(OH)2 when mixing
+# sodiumhydroxide (NaOH) and calcium chloride (CaCl2). All
+# solids are treated implicitly and we start the simulation
+# with an empty box (all ions are initially inactive).
+#
+# Eventually all solid CaCl2 and NaOH have dissolved, while
+# solid Ca(OH)2 is formed. You may check the amount of solid
+# substances by looking for "reservoir_sizes" in the output file.
+# Dissolved substance concentration can be found under "density"
+#
+# Learning task: This system can be easily solved using
+# pen-and-paper. Verify that the obtained equilibrium is correct
+# by comparing with e.g. solubility products
+#
+
+temperature: 298
+random: {seed: hardware}
+mcloop: {macro: 10, micro: 100000}
+geometry: {type: cuboid, length: 300}
+
+atomlist:
+    - ca++: {}
+    - na+: {}
+    - oh-: {}
+    - cl-: {}
+
+moleculelist:
+    - Ca++: {atoms: [ca++], atomic: true}
+    - Na+: {atoms: [na+], atomic: true}
+    - OH-: {atoms: [oh-], atomic: true}
+    - Cl-: {atoms: [cl-], atomic: true}
+    - CaCl2: {implicit: true}
+    - Ca(OH)2: {implicit: true}
+    - NaOH: {implicit: true}
+
+insertmolecules:
+    - Ca++: {N: 800, inactive: true}
+    - Na+: {N: 800, inactive: true}
+    - OH-: {N: 800, inactive: true}
+    - Cl-: {N: 800, inactive: true}
+    - CaCl2: {N: 400}
+    - Ca(OH)2: {N: 0}
+    - NaOH: {N: 400}
+
+reactionlist:
+    - "CaCl2 = Ca++ + Cl- + Cl-": {pK: -3.083}
+    - "Ca(OH)2 = Ca++ + OH- + OH-": {pK: 5.19}
+    - "NaOH = Na+ + OH-": {pK: -2.03}
+
+energy:
+    - bonded: {} # dummy energy as the list cannot be empty
+
+moves:
+    - rcmc: {repeat: 1}
+
+analysis:
+    - reactioncoordinate: {file: calcium.dat, nstep: 5, type: molecule, property: N, index: 0}
+    - reactioncoordinate: {file: sodium.dat, nstep: 5, type: molecule, property: N, index: 1}
+    - reactioncoordinate: {file: hydroxide.dat, nstep: 5, type: molecule, property: N, index: 2}
+    - reactioncoordinate: {file: chloride.dat, nstep: 5, type: molecule, property: N, index: 3}
+    - sanity: {nstep: 100}
+    - density: {nstep: 5}
+    - savestate: {file: state.json}
+

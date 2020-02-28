@@ -153,7 +153,6 @@
             "rcmc": {
                 "acceptance": 0.316,
                 "cite": "doi:10/fqcpg3",
-                "implicit_reservoir": {},
                 "moves": 1000000,
                 "reactions": {
                     "Ca(OH)2 = Ca++ + OH- + OH-": {
@@ -170,7 +169,7 @@
                     }
                 },
                 "repeat": 1,
-                "reservoir_sizes": {
+                "implicit_reservoir": {
                     "Ca(OH)2": 59.031134965183924,
                     "CaCl2": 0.0,
                     "NaOH": 0.0

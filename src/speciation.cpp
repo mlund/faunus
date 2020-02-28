@@ -11,9 +11,8 @@ void SpeciationMove::_to_json(json &j) const {
     for (auto [reaction, acceptance] : acceptance_map) {
         _j[reaction] = {{"attempts", acceptance.cnt}, {"acceptance", acceptance.avg()}};
     }
-    j["implicit_reservoir"] = json::object();
     for (auto [molid, size] : average_reservoir_size) {
-        j["reservoir_sizes"][molecules[molid].name] = size.avg();
+        j["implicit_reservoir"][molecules[molid].name] = size.avg();
     }
 }
 
@@ -22,7 +21,7 @@ void SpeciationMove::setOther(Tspace &ospc) { other_spc = &ospc; }
 /**
  * This function is only performing checks
  * Check whether it is possible to insert products (are there any inactive ones?)
- * @todo Redundant as most (all?) of these checks are checkes in later functions
+ * @todo Redundant? Most (all?) of these checks are in later functions
  */
 bool SpeciationMove::checkBeforeInsert() {
     [[maybe_unused]] auto [atomic_products, molecular_products] = reaction->getProducts();
@@ -295,6 +294,9 @@ void SpeciationMove::deactivateAllReactants(Change &change) {
     }
 }
 
+/**
+ * Checks if there is enough implicit molecules to carry the reaction
+ */
 bool SpeciationMove::enoughReservoir() const {
     auto tooSmall = [&](auto &i) {                                // check if species has enough implicit
         auto [molid, nu] = i;                                     // molid and stoichiometric coefficient

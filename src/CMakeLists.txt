@@ -114,8 +114,9 @@ endif()
 add_executable(unittests unittests.cpp ${tsts})
 target_link_libraries(unittests libfaunus)
 target_compile_definitions(unittests PRIVATE SPDLOG_COMPILED_LIB)
-#set_target_properties(unittests PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
-add_test(NAME unittests COMMAND unittests)
+add_test(
+    NAME unittests
+    COMMAND sh -c "$<TARGET_FILE:unittests> --test-case-exclude=*Benchmark*")
 
 # target: faunus
 add_executable(faunus faunus.cpp)

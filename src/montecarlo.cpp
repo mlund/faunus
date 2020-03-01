@@ -189,10 +189,8 @@ double IdealTerm(Space &spc_new, Space &spc_old, const Change &change) {
             int N_old = 0;  // number of molecules/atoms before change
             if (m.dNswap) { // the number of atoms has changed as a result of a swap move
                 assert(m.atoms.size() == 1);
-                auto &new_group = spc_new.groups.at(m.index);
-                auto &old_group = spc_old.groups.at(m.index);
-                int id1 = (new_group.begin() + m.atoms.front())->id;
-                int id2 = (old_group.begin() + m.atoms.front())->id;
+                int id1 = spc_new.groups[m.index][m.atoms.front()].id;
+                int id2 = spc_old.groups[m.index][m.atoms.front()].id;
                 for (int atom_id : {id1, id2}) {
                     auto mollist_new = spc_new.findAtoms(atom_id);
                     auto mollist_old = spc_old.findAtoms(atom_id);
@@ -203,16 +201,16 @@ double IdealTerm(Space &spc_new, Space &spc_old, const Change &change) {
             } else { // it is not a swap move
                 int molid = spc_new.groups.at(m.index).id;
                 assert(molid == spc_old.groups.at(m.index).id);
-                if (m.dNatomic and Faunus::molecules[molid].atomic) {          // changes a atomic molecule
-                    auto mollist_n = spc_new.findMolecules(molid, Space::ALL); // "ALL" because "ACTIVE"
-                    auto mollist_o = spc_old.findMolecules(molid, Space::ALL); // ...returns only full groups
+                if (m.dNatomic and Faunus::molecules[molid].atomic) {            // changes a atomic molecule
+                    auto mollist_new = spc_new.findMolecules(molid, Space::ALL); // "ALL" because "ACTIVE"
+                    auto mollist_old = spc_old.findMolecules(molid, Space::ALL); // ...returns only full groups
 #ifndef NDEBUG
-                    if (range_size(mollist_n) > 1 || range_size(mollist_o) > 1) {
+                    if (range_size(mollist_new) > 1 || range_size(mollist_old) > 1) {
                         throw std::runtime_error("only one group per atomic groups");
                     }
 #endif
-                    N_new = mollist_n.begin()->size(); // safe due to the
-                    N_old = mollist_o.begin()->size(); // ...catches above
+                    N_new = mollist_new.begin()->size(); // safe due to the
+                    N_old = mollist_old.begin()->size(); // ...catches above
                     accumulate(N_new, N_old);
                 } else { // a molecule has been inserted
                     if (already_processed.count(molid) == 0) {

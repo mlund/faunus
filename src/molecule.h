@@ -333,11 +333,11 @@ class NeighboursGenerator {
  * direction.
  *
  * @todo
- *
  * - [x] Enable `canonic` and `reservoir_size`
  * - [ ] Enable reservoir size to be given as _molarity_ and _number_
  * - [ ] Merge products and reactant structures using signed stoichiometric numbers
  * - [x] `reservoir_size` should ideally be associated with an implicit molecule
+ * - [ ] `direction` should be a member of ReactionData due to possible data races
  */
 class ReactionData {
   public:

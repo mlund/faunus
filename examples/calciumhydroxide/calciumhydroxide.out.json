@@ -2,73 +2,76 @@
     "analysis": [
         {
             "reactioncoordinate": {
-                "average": 340.97505,
-                "file": "calcium.dat",
+                "average": 341.213275,
+                "file": "_calcium.dat",
                 "index": 0,
                 "nstep": 5,
                 "property": "N",
-                "samples": 200000,
+                "relative time": 0.0282,
+                "samples": 40000,
                 "type": "molecule"
             }
         },
         {
             "reactioncoordinate": {
                 "average": 400.0,
-                "file": "sodium.dat",
+                "file": "_sodium.dat",
                 "index": 1,
                 "nstep": 5,
                 "property": "N",
-                "samples": 200000,
+                "samples": 40000,
                 "type": "molecule"
             }
         },
         {
             "reactioncoordinate": {
-                "average": 285.9501,
-                "file": "hydroxide.dat",
+                "average": 286.42655,
+                "file": "_hydroxide.dat",
                 "index": 2,
                 "nstep": 5,
                 "property": "N",
-                "samples": 200000,
+                "samples": 40000,
                 "type": "molecule"
             }
         },
         {
             "reactioncoordinate": {
                 "average": 800.0,
-                "file": "chloride.dat",
+                "file": "_chloride.dat",
                 "index": 3,
                 "nstep": 5,
                 "property": "N",
-                "samples": 200000,
+                "samples": 40000,
                 "type": "molecule"
             }
         },
         {
             "sanity": {
                 "nstep": 100,
-                "samples": 10000
+                "relative time": 0.0132,
+                "samples": 2000
             }
         },
         {
             "density": {
                 "atomic": {
                     "ca++": {
-                        "c/M": 0.02097047203601492
+                        "c/M": 0.020985123227358918
                     },
                     "cl-": {
-                        "c/M": 0.04920118826548169
+                        "c/M": 0.04920118826526076
                     },
                     "na+": {
-                        "c/M": 0.024600594132740846
+                        "c/M": 0.02460059413263038
                     },
                     "oh-": {
-                        "c/M": 0.01758635588071453
+                        "c/M": 0.017615658263405446
                     }
                 },
                 "molecular": null,
                 "nstep": 5,
-                "samples": 200000,
+                "relative time": 0.32,
+                "samples": 40000,
                 "∛⟨V⟩": 300.0,
                 "⟨1/V⟩": 3.704e-08,
                 "⟨V⟩": 27000000.0,
@@ -87,7 +90,8 @@
             "hamiltonian": [
                 {
                     "bonded": {
-                        "bondlist-intramolecular": []
+                        "bondlist-intramolecular": [],
+                        "relative time": 0.0013779866992197451
                     }
                 }
             ]
@@ -101,7 +105,7 @@
         ],
         "type": "cuboid"
     },
-    "git revision": "ea94220a (2020-02-26)",
+    "git revision": "d34251d0 (2020-02-28)",
     "groups": [
         {
             "Ca++": {
@@ -109,9 +113,9 @@
                 "compressible": false,
                 "index": [
                     0,
-                    341
+                    340
                 ],
-                "size": 342
+                "size": 341
             }
         },
         {
@@ -131,9 +135,9 @@
                 "compressible": false,
                 "index": [
                     1600,
-                    1887
+                    1885
                 ],
-                "size": 288
+                "size": 286
             }
         },
         {
@@ -151,29 +155,34 @@
     "moves": [
         {
             "rcmc": {
-                "acceptance": 0.316,
+                "acceptance": 0.318,
                 "cite": "doi:10/fqcpg3",
-                "moves": 1000000,
-                "reactions": {
-                    "Ca(OH)2 = Ca++ + OH- + OH-": {
-                        "acceptance": 0.9481163916081399,
-                        "attempts": 333323
-                    },
-                    "CaCl2 = Ca++ + Cl- + Cl-": {
-                        "acceptance": 0.0,
-                        "attempts": 166566
-                    },
-                    "NaOH = Na+ + OH-": {
-                        "acceptance": 0.0,
-                        "attempts": 167202
-                    }
-                },
-                "repeat": 1,
                 "implicit_reservoir": {
-                    "Ca(OH)2": 59.031134965183924,
+                    "Ca(OH)2": 58.805413618961076,
                     "CaCl2": 0.0,
                     "NaOH": 0.0
-                }
+                },
+                "moves": 200000,
+                "reactions": {
+                    "Ca(OH)2 = Ca++ + OH- + OH-": {
+                        "acceptance -->": 0.9421259959126855,
+                        "acceptance <--": 0.9536326579546817,
+                        "attempts": 67127
+                    },
+                    "CaCl2 = Ca++ + Cl- + Cl-": {
+                        "acceptance -->": null,
+                        "acceptance <--": 0.0,
+                        "attempts": 33424
+                    },
+                    "NaOH = Na+ + OH-": {
+                        "acceptance -->": null,
+                        "acceptance <--": 0.0,
+                        "attempts": 33261
+                    }
+                },
+                "relative time": 0.204,
+                "relative time (without energy calc)": 0.114,
+                "repeat": 1
             }
         }
     ],

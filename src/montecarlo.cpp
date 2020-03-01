@@ -164,70 +164,64 @@ void MCSimulation::State::sync(MCSimulation::State &other, Change &change) {
 void to_json(json &j, MCSimulation &mc) { mc.to_json(j); }
 
 double IdealTerm(Space &spc_new, Space &spc_old, const Change &change) {
-    if (not change.dN) {
-        return 0.0;
-    }
-    double NoverO = 0;
-    for (const Change::data &m : change.groups) { // loop over each change group
-        assert(not change.empty());
-        int N_old = 0;                            // number of molecules/atoms before change
-        int N_new = 0;                            // number of molecules/atoms after change
-        if (m.dNswap) {                           // the number of atoms has changed as a result of a swap move
-            assert(m.atoms.size() == 1);
-            auto &new_group = spc_new.groups.at(m.index);
-            auto &old_group = spc_old.groups.at(m.index);
-            int id1 = (new_group.begin() + m.atoms.front())->id;
-            int id2 = (old_group.begin() + m.atoms.front())->id;
-            for (int atom_id : {id1, id2}) {
-                auto mollist_new = spc_new.findAtoms(atom_id);
-                auto mollist_old = spc_old.findAtoms(atom_id);
-                N_new = range_size(mollist_new);
-                N_old = range_size(mollist_old);
-                int dN = N_new - N_old;
-                double V_new = spc_new.geo.getVolume();
-                double V_old = spc_old.geo.getVolume();
+    double NoverO = 0.0;
+    if (change.dN) {
+        std::set<int> already_processed;                    // ignore future encounters of these molecules
+        auto accumulate = [&](double N_new, double N_old) { // helper function used
+            if (int dN = N_new - N_old; dN != 0) {          // ...to accumulate changes
                 if (dN > 0) {
+                    double V_new = spc_new.geo.getVolume();
                     for (int n = 0; n < dN; n++) {
                         NoverO += std::log((N_old + 1 + n) / (V_new * 1.0_molar));
                     }
                 } else {
-                    for (int n = 0; n < (-dN); n++)
+                    double V_old = spc_old.geo.getVolume();
+                    for (int n = 0; n < (-dN); n++) {
                         NoverO -= std::log((N_old - n) / (V_old * 1.0_molar));
+                    }
                 }
             }
-        } else {              // it is not a swap move
-            int molid = spc_new.groups.at(m.index).id;
-            assert(molid == spc_old.groups.at(m.index).id);
-            if (m.dNatomic) { // the number of atomic molecules has changed
-                auto mollist_n = spc_new.findMolecules(molid, Space::ALL); // why not "ACTIVE"?
-                auto mollist_o = spc_old.findMolecules(molid, Space::ALL);
+        };
 
-                if (range_size(mollist_n) > 1 || range_size(mollist_o) > 1)
-                    throw std::runtime_error("Bad definition: One group per atomic molecule!");
-                if (not molecules[molid].atomic)
-                    throw std::runtime_error("Only atomic molecules!");
-
-                // Below is safe due to the catches above
-                // add consistency criteria with m.atoms.size() == N
-                N_new = mollist_n.begin()->size();
-                N_old = mollist_o.begin()->size();
-            } else {
-                assert(spc_new.groups[m.index].empty() != spc_old.groups[m.index].empty());
-                auto mollist_n = spc_new.findMolecules(molid, Space::ACTIVE);
-                auto mollist_o = spc_old.findMolecules(molid, Space::ACTIVE);
-                N_new = range_size(mollist_n);
-                N_old = range_size(mollist_o);
-            }
-            int dN = N_new - N_old;
-            if (dN != 0) {
-                double V = spc_new.geo.getVolume() * 1.0_molar;
-                if (dN > 0) {
-                    for (int n = 0; n < dN; n++) {
-                        NoverO += std::log((N_old + 1 + n) / V);
+        for (const Change::data &m : change.groups) { // loop over each change group
+            assert(not change.empty());
+            int N_new = 0;  // number of molecules/atoms after change
+            int N_old = 0;  // number of molecules/atoms before change
+            if (m.dNswap) { // the number of atoms has changed as a result of a swap move
+                assert(m.atoms.size() == 1);
+                auto &new_group = spc_new.groups.at(m.index);
+                auto &old_group = spc_old.groups.at(m.index);
+                int id1 = (new_group.begin() + m.atoms.front())->id;
+                int id2 = (old_group.begin() + m.atoms.front())->id;
+                for (int atom_id : {id1, id2}) {
+                    auto mollist_new = spc_new.findAtoms(atom_id);
+                    auto mollist_old = spc_old.findAtoms(atom_id);
+                    N_new = range_size(mollist_new);
+                    N_old = range_size(mollist_old);
+                    accumulate(N_new, N_old);
+                }
+            } else { // it is not a swap move
+                int molid = spc_new.groups.at(m.index).id;
+                assert(molid == spc_old.groups.at(m.index).id);
+                if (m.dNatomic and Faunus::molecules[molid].atomic) {          // changes a atomic molecule
+                    auto mollist_n = spc_new.findMolecules(molid, Space::ALL); // "ALL" because "ACTIVE"
+                    auto mollist_o = spc_old.findMolecules(molid, Space::ALL); // ...returns only full groups
+#ifndef NDEBUG
+                    if (range_size(mollist_n) > 1 || range_size(mollist_o) > 1) {
+                        throw std::runtime_error("only one group per atomic groups");
                     }
-                } else {
-                    for (int n = 0; n < (-dN); n++) {
-                        NoverO -= std::log((N_old - n) / V);
+#endif
+                    N_new = mollist_n.begin()->size(); // safe due to the
+                    N_old = mollist_o.begin()->size(); // ...catches above
+                    accumulate(N_new, N_old);
+                } else { // a molecule has been inserted
+                    if (already_processed.count(molid) == 0) {
+                        already_processed.insert(molid); // ignore future encounters of molid
+                        auto mollist_new = spc_new.findMolecules(molid, Space::ACTIVE);
+                        auto mollist_old = spc_old.findMolecules(molid, Space::ACTIVE);
+                        N_new = range_size(mollist_new);
+                        N_old = range_size(mollist_old);
+                        accumulate(N_new, N_old);
                     }
                 }
             }

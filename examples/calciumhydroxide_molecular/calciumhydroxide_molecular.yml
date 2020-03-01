@@ -15,6 +15,9 @@
 # Verify that the obtained equilibrium is correct by comparing with e.g.
 # solubility products
 #
+# NOTE: This is identical to the "calciumhydroxide" example, but instead
+# handled using one molecular group per atomic species
+#
 
 temperature: 298
 random: {seed: hardware}
@@ -28,10 +31,10 @@ atomlist:
     - cl-: {}
 
 moleculelist:
-    - Ca++: {atoms: [ca++], atomic: true}
-    - Na+: {atoms: [na+], atomic: true}
-    - OH-: {atoms: [oh-], atomic: true}
-    - Cl-: {atoms: [cl-], atomic: true}
+    - Ca++: {atoms: [ca++], structure: [{"ca++": [0,0,0]}]}
+    - Na+: {atoms: [na+], structure: [{"na+": [0,0,0]}]}
+    - OH-: {atoms: [oh-], structure: [{"oh-": [0,0,0]}]}
+    - Cl-: {atoms: [cl-], structure: [{"cl-": [0,0,0]}]}
     - CaCl2: {implicit: true}
     - Ca(OH)2: {implicit: true}
     - NaOH: {implicit: true}
@@ -57,11 +60,11 @@ moves:
     - rcmc: {repeat: 1}
 
 analysis:
-    - reactioncoordinate: {file: _calcium.dat, nstep: 5, type: molecule, property: N, index: 0}
-    - reactioncoordinate: {file: _sodium.dat, nstep: 5, type: molecule, property: N, index: 1}
-    - reactioncoordinate: {file: _hydroxide.dat, nstep: 5, type: molecule, property: N, index: 2}
-    - reactioncoordinate: {file: _chloride.dat, nstep: 5, type: molecule, property: N, index: 3}
-    - sanity: {nstep: 100}
+    - reactioncoordinate: {file: _calcium.dat, nstep: 5, type: atom, property: N, index: 0}
+    - reactioncoordinate: {file: _sodium.dat, nstep: 5, type: atom, property: N, index: 1}
+    - reactioncoordinate: {file: _hydroxide.dat, nstep: 5, type: atom, property: N, index: 2}
+    - reactioncoordinate: {file: _chloride.dat, nstep: 5, type: atom, property: N, index: 3}
+    - sanity: {nstep: 5000}
     - density: {nstep: 5}
     - savestate: {file: state.json}
 

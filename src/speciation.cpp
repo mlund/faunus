@@ -260,7 +260,7 @@ bool SpeciationMove::deactivateAllReactants(Change &change) {
     for (auto [molid, N_delete] : molecular_reactants) { // Delete
         if (N_delete <= 0 or Faunus::molecules[molid].isImplicit()) {
             continue;                         // implicit molecules are added/deleted after move
-        } else if (molecules[molid].atomic) { // The reagents is an atomic group
+        } else if (molecules[molid].atomic) { // reactant is an atomic group
             auto mollist = spc.findMolecules(molid, Tspace::ALL);
             assert(range_size(mollist) == 1);
             auto target = spc.findMolecules(molid, Tspace::ALL).begin();
@@ -271,7 +271,7 @@ bool SpeciationMove::deactivateAllReactants(Change &change) {
             } else {
                 return false;
             }
-        } else { // The reactant is a molecule
+        } else { // molecular reactant (non-atomic)
             auto selection = (reaction->only_neutral_molecules) ? Tspace::ACTIVE_NEUTRAL : Tspace::ACTIVE;
             auto active = spc.findMolecules(molid, selection);
             std::vector<std::reference_wrapper<Tspace::Tgroup>> molecules_to_deactivate;

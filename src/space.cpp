@@ -243,7 +243,11 @@ void insertMolecules(const json &j, Space &spc) {
                     if (mol != molvec.end()) {             // yes it is
 
                         int N = it.value().at("N").get<int>(); // number of molecules to insert
+                        if (not mol->isImplicit() and N < 1) {
+                            throw std::runtime_error("One or more molecules must be inserted");
+                        }
                         int cnt = N;
+
                         bool inactive = it.value().value("inactive", false); // active or not?
 
                         {

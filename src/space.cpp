@@ -118,6 +118,12 @@ void Space::sync(Space &other, const Change &change) {
 
             auto &g = groups.at(m.index);            // old group
             auto &gother = other.groups.at(m.index); // new group
+            assert(gother.id == g.id);
+
+            if (Faunus::molecules[gother.id].isImplicit()) {
+                assert(other.implicit_reservoir.count(gother.id));
+                implicit_reservoir[g.id] = other.implicit_reservoir[gother.id];
+            }
 
             g.shallowcopy(gother); // copy group data but *not* particles
 

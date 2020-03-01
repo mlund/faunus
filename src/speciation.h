@@ -47,7 +47,6 @@ class SpeciationMove : public Movebase {
     void _accept(Change &) override;       //!< Called when accepted
     void _reject(Change &) override;       //!< Called when rejected
     bool enoughImplicitMolecules() const;  //!< Check if we have enough implicit matter for reaction
-    bool checkBeforeInsert();              //!< Performs checks before move
     bool atomicSwap(Change &);             //!< Swap atom type
     bool deactivateAllReactants(Change &); //!< Delete reactant species
     bool activateAllProducts(Change &);    //!< Insert product species

@@ -101,11 +101,10 @@ namespace Faunus {
             trueend() = neworigin + std::distance(oldorigin, trueend());
         }
 
-    template<class T /** Particle type */>
-        struct Group : public ElasticRange<T> {
+        template <class T /** Particle type */> class Group : public ElasticRange<T> {
+          public:
             typedef ElasticRange<T> base;
             typedef typename base::Titer iter;
-            typedef typename std::vector<T> Tpvec;
             using base::begin;
             using base::empty;
             using base::end;
@@ -130,7 +129,9 @@ namespace Faunus {
             //! Determines if given `Selectors` bitmask matches group
             bool match(unsigned int) const;
 
-            const auto &traits() const { return molecules.at(id); } //!< Convenient access to molecule properties
+            inline const MoleculeData &traits() const {
+                return Faunus::molecules[id];
+            } //!< Convenient access to molecule properties
 
             template<class Trange>
                 Group(Trange &rng) : base(rng.begin(), rng.end()) {
@@ -194,10 +195,10 @@ namespace Faunus {
 
             void rotate(const Eigen::Quaterniond&, Geometry::BoundaryFunction); //!< Rotate all particles in group incl. internal coordinates (dipole moment etc.)
 
-        }; //!< End of Group struct
+        }; //!< End of Group class
 
         // Group<Particle> is instantiated elsewhere (group.cpp)
-    extern template struct Group<Particle>;
+    extern template class Group<Particle>;
 
 void to_json(json&, const Group<Particle>&);
 void from_json(const json&, Group<Particle>&);

@@ -107,13 +107,28 @@ namespace Faunus {
             typedef typename base::Titer iter;
             typedef typename std::vector<T> Tpvec;
             using base::begin;
+            using base::empty;
             using base::end;
             using base::size;
+            using base::trueend;
             int id=-1;           //!< Molecule id
             int confid=0;        //!< Conformation index / id
             Point cm={0,0,0};    //!< Mass center
             bool compressible=false;   //!< Is it a compressible group?
             bool atomic=false;   //!< Is it an atomic group?
+
+            //! Selections to filter groups using `getSelectionFilter()`
+            enum Selectors : unsigned int {
+                ACTIVE = (1u << 1),    //!< Only active groups (non-zero size)
+                INACTIVE = (1u << 2),  //!< Only inactive groups (zero size)
+                NEUTRAL = (1u << 3),   //!< Only groups with zero net charge
+                ATOMIC = (1u << 4),    //!< Only atomic groups
+                MOLECULAR = (1u << 5), //!< Only molecular groups (atomic=false)
+                FULL = (1u << 6)       //!< Only groups where size equals capacity
+            };
+
+            //! Determines if given `Selectors` bitmask matches group
+            bool match(unsigned int) const;
 
             const auto &traits() const { return molecules.at(id); } //!< Convenient access to molecule properties
 
@@ -186,6 +201,9 @@ namespace Faunus {
 
 void to_json(json&, const Group<Particle>&);
 void from_json(const json&, Group<Particle>&);
+
+//! Get lambda function matching given enum Select mask
+std::function<bool(const Group<Particle> &)> getGroupFilter(unsigned int);
 
 /*
  * The following two functions are used to perform a complete

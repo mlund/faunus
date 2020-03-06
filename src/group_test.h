@@ -84,23 +84,23 @@ TEST_CASE("[Faunus] Group") {
 
         SUBCASE("getGroupFilter(): complete group") {
             typedef Group<Particle> T;
-            auto filter = getGroupFilter(T::Selectors::ACTIVE);
+            auto filter = getGroupFilter<T::Selectors::ACTIVE>();
             CHECK(filter(g) == true);
-            filter = getGroupFilter(T::Selectors::FULL);
+            filter = getGroupFilter<T::Selectors::FULL>();
             CHECK(filter(g) == true);
-            filter = getGroupFilter(T::Selectors::INACTIVE);
+            filter = getGroupFilter<T::Selectors::INACTIVE>();
             CHECK(filter(g) == false);
-            filter = getGroupFilter(T::Selectors::ACTIVE | T::Selectors::NEUTRAL);
+            filter = getGroupFilter<T::Selectors::ACTIVE | T::Selectors::NEUTRAL>();
             CHECK(filter(g) == true);
-            filter = getGroupFilter(T::Selectors::ACTIVE | T::Selectors::MOLECULAR);
+            filter = getGroupFilter<T::Selectors::ACTIVE | T::Selectors::MOLECULAR>();
             CHECK(filter(g) == true);
-            filter = getGroupFilter(T::Selectors::INACTIVE | T::Selectors::MOLECULAR);
+            filter = getGroupFilter<T::Selectors::INACTIVE | T::Selectors::MOLECULAR>();
             CHECK(filter(g) == false);
-            filter = getGroupFilter(T::Selectors::ACTIVE | T::Selectors::ATOMIC);
+            filter = getGroupFilter<T::Selectors::ACTIVE | T::Selectors::ATOMIC>();
             CHECK(filter(g) == false);
 
             g.begin()->charge = 0.1;
-            filter = getGroupFilter(T::Selectors::ACTIVE | T::Selectors::NEUTRAL);
+            filter = getGroupFilter<T::Selectors::ACTIVE | T::Selectors::NEUTRAL>();
             CHECK(filter(g) == false);
             g.begin()->charge = 0.0;
         }
@@ -185,16 +185,16 @@ TEST_CASE("[Faunus] Group") {
             CHECK(p1.front().id == 10);
 
             SUBCASE("getGroupFilter(): incomplete group") {
-                typedef Group<Particle> T;
-                auto filter = getGroupFilter(T::Selectors::FULL);
+                typedef Group<Particle> Tgroup;
+                auto filter = getGroupFilter<Tgroup::FULL>();
                 CHECK(filter(g1) == false);
-                filter = getGroupFilter(T::Selectors::INACTIVE);
+                filter = getGroupFilter<Tgroup::INACTIVE>();
                 CHECK(filter(g1) == false);
-                filter = getGroupFilter(T::Selectors::ACTIVE);
+                filter = getGroupFilter<Tgroup::ACTIVE>();
                 CHECK(filter(g1) == true);
-                filter = getGroupFilter(T::Selectors::ACTIVE | T::Selectors::ATOMIC);
+                filter = getGroupFilter<Tgroup::ACTIVE | Tgroup::ATOMIC>();
                 CHECK(filter(g1) == true);
-                filter = getGroupFilter(T::Selectors::ACTIVE | T::Selectors::MOLECULAR);
+                filter = getGroupFilter<Tgroup::ACTIVE | Tgroup::MOLECULAR>();
                 CHECK(filter(g1) == false);
             }
 

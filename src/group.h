@@ -118,16 +118,58 @@ namespace Faunus {
 
             //! Selections to filter groups using `getSelectionFilter()`
             enum Selectors : unsigned int {
-                ACTIVE = (1u << 1),    //!< Only active groups (non-zero size)
-                INACTIVE = (1u << 2),  //!< Only inactive groups (zero size)
-                NEUTRAL = (1u << 3),   //!< Only groups with zero net charge
-                ATOMIC = (1u << 4),    //!< Only atomic groups
-                MOLECULAR = (1u << 5), //!< Only molecular groups (atomic=false)
-                FULL = (1u << 6)       //!< Only groups where size equals capacity
+                ANY = (1u << 1),       //!< Match any group (disregards all other flags)
+                ACTIVE = (1u << 2),    //!< Only active groups (non-zero size)
+                INACTIVE = (1u << 3),  //!< Only inactive groups (zero size)
+                NEUTRAL = (1u << 4),   //!< Only groups with zero net charge
+                ATOMIC = (1u << 5),    //!< Only atomic groups
+                MOLECULAR = (1u << 6), //!< Only molecular groups (atomic=false)
+                FULL = (1u << 7)       //!< Only groups where size equals capacity
             };
 
-            //! Determines if given `Selectors` bitmask matches group
-            bool match(unsigned int) const;
+            /**
+             * @brief Determines if given `Selectors` bitmask matches group
+             * @tparam mask Bitmask build from enum `Group::Selectors`
+             * @return true if ALL enabled bits in the mask are satisfied
+             *
+             * Note that for `INACTIVE | NEUTRAL`, the criterion is applied
+             * to all (inactive) particles, i.e. until `trueend()`.
+             */
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wc++11-narrowing"
+            template <unsigned int mask> bool match() const {
+                if constexpr (mask & ANY) {
+                    assert(mask == ANY && "Don't mix ANY with other flags");
+                    return true;
+                }
+                if constexpr (mask & ACTIVE) {
+                    if (size() == 0)
+                        return false;
+                } else if constexpr (mask & INACTIVE) {
+                    if (!empty())
+                        return false;
+                }
+                if constexpr (mask & FULL) {
+                    if (end() != trueend())
+                        return false;
+                }
+                if constexpr (mask & ATOMIC) {
+                    if (!atomic)
+                        return false;
+                } else if constexpr (mask & MOLECULAR) {
+                    if (atomic)
+                        return false;
+                }
+                if constexpr (mask & NEUTRAL) {
+                    auto _end = (mask & INACTIVE) ? trueend() : end();
+                    double _charge =
+                        std::accumulate(begin(), _end, 0.0, [](double sum, auto &i) { return sum + i.charge; });
+                    if (std::fabs(_charge) > pc::epsilon_dbl)
+                        return false;
+                }
+                return true;
+            }
+#pragma clang diagnostic pop
 
             inline const MoleculeData &traits() const {
                 return Faunus::molecules[id];
@@ -204,7 +246,9 @@ void to_json(json&, const Group<Particle>&);
 void from_json(const json&, Group<Particle>&);
 
 //! Get lambda function matching given enum Select mask
-std::function<bool(const Group<Particle> &)> getGroupFilter(unsigned int);
+template <unsigned int mask> std::function<bool(const Group<Particle> &)> getGroupFilter() {
+    return [](const Group<Particle> &g) { return g.match<mask>(); };
+}
 
 /*
  * The following two functions are used to perform a complete

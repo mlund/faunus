@@ -78,11 +78,18 @@ TEST_CASE("[Faunus] Space") {
         spc.push_back(0, pvec);
         spc.push_back(0, pvec);
 
+        spc.groups.at(0).id = 0;
+        spc.groups.at(1).id = 1;
+        spc.groups.at(2).id = 0;
+
         for (size_t i = 0; i < spc.p.size(); i++)
             spc.p[i].charge = double(i);
 
         CHECK(spc.p.size() == 9);
         CHECK(spc.groups.size() == 3);
+
+        CHECK(spc.numMolecules<Space::Tgroup::ANY>(0) == 2);
+        CHECK(spc.numMolecules<Space::Tgroup::ANY>(1) == 1);
 
         spc.groups[0].deactivate(spc.p.begin(), spc.p.begin() + 1);
         spc.groups[1].deactivate(spc.groups[1].begin(), spc.groups[1].end());
@@ -90,6 +97,12 @@ TEST_CASE("[Faunus] Space") {
         CHECK(spc.groups[0].size() == 2);
         CHECK(spc.groups[1].size() == 0);
         CHECK(spc.groups[2].size() == 3);
+
+        CHECK(spc.numMolecules<Space::Tgroup::ACTIVE>(0) == 2);
+        CHECK(spc.numMolecules<Space::Tgroup::ACTIVE | Space::Tgroup::NEUTRAL>(0) == 0);
+        CHECK(spc.numMolecules<Space::Tgroup::ACTIVE>(1) == 0);
+        CHECK(spc.numMolecules<Space::Tgroup::INACTIVE>(1) == 1);
+        CHECK(spc.numMolecules<Space::Tgroup::INACTIVE | Space::Tgroup::NEUTRAL>(1) == 0);
 
         auto p = getActiveParticles(spc);
         size_t size = 0;

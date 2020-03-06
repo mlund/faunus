@@ -73,42 +73,6 @@ template <class T> void Group<T>::translate(const Point &d, Geometry::BoundaryFu
 }
 
 /**
- * @param mask Bitmask build from enum `Group::Selectors`
- * @return true if ALL enabled bits in the mask are satisfied
- *
- * Note that for `INACTIVE | NEUTRAL`, the criterion is applied
- * to all (inactive) particles, i.e. until `trueend()`.
- */
-template <class T> bool Group<T>::match(unsigned int mask) const {
-    assert(mask != 0);
-    if (mask & Selectors::ACTIVE) {
-        if (size() == 0)
-            return false;
-    } else if (mask & Selectors::INACTIVE) {
-        if (!empty())
-            return false;
-    }
-    if (mask & Selectors::FULL) {
-        if (end() != trueend())
-            return false;
-    }
-    if (mask & Selectors::ATOMIC) {
-        if (!atomic)
-            return false;
-    } else if (mask & Selectors::MOLECULAR) {
-        if (atomic)
-            return false;
-    }
-    if (mask & Selectors::NEUTRAL) {
-        auto _end = (mask & Selectors::INACTIVE) ? trueend() : end();
-        double charge = std::accumulate(begin(), _end, 0.0, [](double sum, auto &i) { return sum + i.charge; });
-        if (std::fabs(charge) > pc::epsilon_dbl)
-            return false;
-    }
-    return true;
-}
-
-/**
  * @param mask Bitmask based on enum `Group::Selectors`
  * @return Lambda function that returns true if group matches mask
  *
@@ -117,9 +81,9 @@ template <class T> bool Group<T>::match(unsigned int mask) const {
  * bool b = filter(mygroup); // true if mygroup is active and uncharged
  * ~~~
  */
-std::function<bool(const Group<Particle> &)> getGroupFilter(unsigned int mask) {
-    return [mask = mask](const Group<Particle> &g) { return g.match(mask); };
-}
+// constexpr std::function<bool(const Group<Particle> &)> getGroupFilter(unsigned int mask) {
+//    return [mask = mask](const Group<Particle> &g) { return g.match<mask>(); };
+//}
 
 template class Group<Particle>;
 

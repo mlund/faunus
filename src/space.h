@@ -207,6 +207,17 @@ struct Space {
         return n;
     } //!< Number of particles, all or active (default)
 
+    /**
+     * @brief Count number of molecules matching criteria
+     * @param molid Molecule id to match
+     * @tparam mask Selection mask based on `Group::Selectors`
+     * @return Number of molecules matching molid and mask
+     */
+    template <unsigned int mask> auto numMolecules(int molid) const {
+        auto filter = [&](const Tgroup &g) { return (g.id == molid) ? g.template match<mask>() : false; };
+        return std::count_if(groups.begin(), groups.end(), filter);
+    }
+
     void sync(Space &other, const Tchange &change); //!< Copy differing data from other (o) Space using Change object
 
     /*

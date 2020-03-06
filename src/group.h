@@ -101,21 +101,88 @@ namespace Faunus {
             trueend() = neworigin + std::distance(oldorigin, trueend());
         }
 
-    template<class T /** Particle type */>
-        struct Group : public ElasticRange<T> {
+        template <class T /** Particle type */> class Group : public ElasticRange<T> {
+          public:
             typedef ElasticRange<T> base;
             typedef typename base::Titer iter;
-            typedef typename std::vector<T> Tpvec;
             using base::begin;
+            using base::empty;
             using base::end;
             using base::size;
+            using base::trueend;
             int id=-1;           //!< Molecule id
             int confid=0;        //!< Conformation index / id
             Point cm={0,0,0};    //!< Mass center
             bool compressible=false;   //!< Is it a compressible group?
             bool atomic=false;   //!< Is it an atomic group?
 
-            const auto &traits() const { return molecules.at(id); } //!< Convenient access to molecule properties
+            //! Selections to filter groups using `getSelectionFilter()`
+            enum Selectors : unsigned int {
+                ANY = (1u << 1),       //!< Match any group (disregards all other flags)
+                ACTIVE = (1u << 2),    //!< Only active groups (non-zero size)
+                INACTIVE = (1u << 3),  //!< Only inactive groups (zero size)
+                NEUTRAL = (1u << 4),   //!< Only groups with zero net charge
+                ATOMIC = (1u << 5),    //!< Only atomic groups
+                MOLECULAR = (1u << 6), //!< Only molecular groups (atomic=false)
+                FULL = (1u << 7)       //!< Only groups where size equals capacity
+            };
+
+            /**
+             * @brief Determines if given `Selectors` bitmask matches group
+             * @tparam mask Bitmask build from enum `Group::Selectors`
+             * @return true if ALL enabled bits in the mask are satisfied
+             *
+             * Note that for `INACTIVE | NEUTRAL`, the criterion is applied
+             * to all active and inactive particles, i.e. until `trueend()`.
+             */
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wc++11-narrowing"
+            template <unsigned int mask> bool match() const {
+                static_assert(mask >= ANY && mask <= FULL);
+                if constexpr (mask & ANY) {
+                    static_assert(mask == ANY, "don't mix ANY with other flags");
+                    return true;
+                }
+                if constexpr (mask & ACTIVE) {
+                    static_assert(!(mask & INACTIVE), "don't mix ACTIVE and INACTIVE");
+                    if (size() == 0) {
+                        return false;
+                    }
+                } else if constexpr (mask & INACTIVE) {
+                    if (!empty()) {
+                        return false;
+                    }
+                }
+                if constexpr (mask & FULL) {
+                    if (end() != trueend()) {
+                        return false;
+                    }
+                }
+                if constexpr (mask & ATOMIC) {
+                    static_assert(!(mask & MOLECULAR), "don't mix ATOMIC and MOLECULAR");
+                    if (!atomic) {
+                        return false;
+                    }
+                } else if constexpr (mask & MOLECULAR) {
+                    if (atomic) {
+                        return false;
+                    }
+                }
+                if constexpr (mask & NEUTRAL) {
+                    auto _end = (mask & INACTIVE) ? trueend() : end();
+                    double _charge =
+                        std::accumulate(begin(), _end, 0.0, [](double sum, const T &i) { return sum + i.charge; });
+                    if (std::fabs(_charge) > pc::epsilon_dbl) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+#pragma clang diagnostic pop
+
+            inline const MoleculeData &traits() const {
+                return Faunus::molecules[id];
+            } //!< Convenient access to molecule properties
 
             template<class Trange>
                 Group(Trange &rng) : base(rng.begin(), rng.end()) {
@@ -134,7 +201,6 @@ namespace Faunus {
             bool contains(const T &a, bool include_inactive=false) const; //!< Determines if particle belongs to group (complexity: constant)
 
             auto find_id(int id) const {
-                //return Faunus::filter(begin(), end(), [id](T &i){return (i.id==id);} );
                 return *this | ranges::cpp20::views::filter([id](T &i) { return (i.id == id); });
             } //!< Range of all (active) elements with matching particle id
 
@@ -179,13 +245,18 @@ namespace Faunus {
 
             void rotate(const Eigen::Quaterniond&, Geometry::BoundaryFunction); //!< Rotate all particles in group incl. internal coordinates (dipole moment etc.)
 
-        }; //!< End of Group struct
+        }; //!< End of Group class
 
         // Group<Particle> is instantiated elsewhere (group.cpp)
-    extern template struct Group<Particle>;
+    extern template class Group<Particle>;
 
 void to_json(json&, const Group<Particle>&);
 void from_json(const json&, Group<Particle>&);
+
+//! Get lambda function matching given enum Select mask
+template <unsigned int mask> std::function<bool(const Group<Particle> &)> getGroupFilter() {
+    return [](const Group<Particle> &g) { return g.match<mask>(); };
+}
 
 /*
  * The following two functions are used to perform a complete

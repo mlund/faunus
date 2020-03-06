@@ -82,6 +82,29 @@ TEST_CASE("[Faunus] Group") {
             CHECK( g.contains(p[3]) == false );
         }
 
+        SUBCASE("getGroupFilter(): complete group") {
+            typedef Group<Particle> T;
+            auto filter = getGroupFilter<T::Selectors::ACTIVE>();
+            CHECK(filter(g) == true);
+            filter = getGroupFilter<T::Selectors::FULL>();
+            CHECK(filter(g) == true);
+            filter = getGroupFilter<T::Selectors::INACTIVE>();
+            CHECK(filter(g) == false);
+            filter = getGroupFilter<T::Selectors::ACTIVE | T::Selectors::NEUTRAL>();
+            CHECK(filter(g) == true);
+            filter = getGroupFilter<T::Selectors::ACTIVE | T::Selectors::MOLECULAR>();
+            CHECK(filter(g) == true);
+            filter = getGroupFilter<T::Selectors::INACTIVE | T::Selectors::MOLECULAR>();
+            CHECK(filter(g) == false);
+            filter = getGroupFilter<T::Selectors::ACTIVE | T::Selectors::ATOMIC>();
+            CHECK(filter(g) == false);
+
+            g.begin()->charge = 0.1;
+            filter = getGroupFilter<T::Selectors::ACTIVE | T::Selectors::NEUTRAL>();
+            CHECK(filter(g) == false);
+            g.begin()->charge = 0.0;
+        }
+
         // find all elements with id=1
         auto slice1 = g.find_id(1);
         CHECK( std::distance(slice1.begin(), slice1.end()) == 2 );
@@ -160,6 +183,20 @@ TEST_CASE("[Faunus] Group") {
             CHECK(g1.size() == 4);
             CHECK(g1.capacity() == 5);
             CHECK(p1.front().id == 10);
+
+            SUBCASE("getGroupFilter(): incomplete group") {
+                typedef Group<Particle> Tgroup;
+                auto filter = getGroupFilter<Tgroup::FULL>();
+                CHECK(filter(g1) == false);
+                filter = getGroupFilter<Tgroup::INACTIVE>();
+                CHECK(filter(g1) == false);
+                filter = getGroupFilter<Tgroup::ACTIVE>();
+                CHECK(filter(g1) == true);
+                filter = getGroupFilter<Tgroup::ACTIVE | Tgroup::ATOMIC>();
+                CHECK(filter(g1) == true);
+                filter = getGroupFilter<Tgroup::ACTIVE | Tgroup::MOLECULAR>();
+                CHECK(filter(g1) == false);
+            }
 
             std::vector<Group<Particle>> gvec1, gvec2;
             gvec1.push_back(g1);

@@ -45,10 +45,7 @@ template <class T> bool Group<T>::contains(const T &a, bool include_inactive) co
 }
 
 template <class T> double Group<T>::mass() const {
-    double m=0;
-    for (auto &i : *this)
-        m += atoms[i.id].mw;
-    return m;
+    return std::accumulate(begin(), end(), 0.0, [](double sum, auto &i) { return sum + i.traits().mw; });
 }
 
 template <class T> std::vector<std::reference_wrapper<Point>> Group<T>::positions() const {
@@ -75,7 +72,20 @@ template <class T> void Group<T>::translate(const Point &d, Geometry::BoundaryFu
     }
 }
 
-template struct Group<Particle>;
+/**
+ * @param mask Bitmask based on enum `Group::Selectors`
+ * @return Lambda function that returns true if group matches mask
+ *
+ * ~~~ cpp
+ * auto filter = Group::getSelectionFilter(Select::ACTIVE | Select::NEUTRAL);
+ * bool b = filter(mygroup); // true if mygroup is active and uncharged
+ * ~~~
+ */
+// constexpr std::function<bool(const Group<Particle> &)> getGroupFilter(unsigned int mask) {
+//    return [mask = mask](const Group<Particle> &g) { return g.match<mask>(); };
+//}
+
+template class Group<Particle>;
 
 void to_json(json &j, const Group<Particle> &g) {
     j = {

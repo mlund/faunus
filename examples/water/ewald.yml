@@ -22,7 +22,7 @@ energy:
     - isobaric: {P/atm: 1}
     - nonbonded_coulomblj:
         lennardjones: {mixing: LB}
-        coulomb: {type: ewald, epsr: 1, cutoff: 9, kcutoff: 7.3, epss: 0, alpha: 0.2, ewaldscheme: PBCEigen}
+        coulomb: {type: ewald, epsr: 1, cutoff: 9, ncutoff: 7.3, epss: 0, alpha: 0.2, ewaldscheme: PBCEigen}
         cutoff_g2g: 10
 
 moves:

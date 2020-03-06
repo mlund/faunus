@@ -133,39 +133,48 @@ namespace Faunus {
              * @return true if ALL enabled bits in the mask are satisfied
              *
              * Note that for `INACTIVE | NEUTRAL`, the criterion is applied
-             * to all (inactive) particles, i.e. until `trueend()`.
+             * to all active and inactive particles, i.e. until `trueend()`.
              */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wc++11-narrowing"
             template <unsigned int mask> bool match() const {
+                static_assert(mask >= ANY && mask <= FULL);
                 if constexpr (mask & ANY) {
-                    assert(mask == ANY && "Don't mix ANY with other flags");
+                    static_assert(mask == ANY, "don't mix ANY with other flags");
                     return true;
                 }
                 if constexpr (mask & ACTIVE) {
-                    if (size() == 0)
+                    static_assert(!(mask & INACTIVE), "don't mix ACTIVE and INACTIVE");
+                    if (size() == 0) {
                         return false;
+                    }
                 } else if constexpr (mask & INACTIVE) {
-                    if (!empty())
+                    if (!empty()) {
                         return false;
+                    }
                 }
                 if constexpr (mask & FULL) {
-                    if (end() != trueend())
+                    if (end() != trueend()) {
                         return false;
+                    }
                 }
                 if constexpr (mask & ATOMIC) {
-                    if (!atomic)
+                    static_assert(!(mask & MOLECULAR), "don't mix ATOMIC and MOLECULAR");
+                    if (!atomic) {
                         return false;
+                    }
                 } else if constexpr (mask & MOLECULAR) {
-                    if (atomic)
+                    if (atomic) {
                         return false;
+                    }
                 }
                 if constexpr (mask & NEUTRAL) {
                     auto _end = (mask & INACTIVE) ? trueend() : end();
                     double _charge =
-                        std::accumulate(begin(), _end, 0.0, [](double sum, auto &i) { return sum + i.charge; });
-                    if (std::fabs(_charge) > pc::epsilon_dbl)
+                        std::accumulate(begin(), _end, 0.0, [](double sum, const T &i) { return sum + i.charge; });
+                    if (std::fabs(_charge) > pc::epsilon_dbl) {
                         return false;
+                    }
                 }
                 return true;
             }
@@ -192,7 +201,6 @@ namespace Faunus {
             bool contains(const T &a, bool include_inactive=false) const; //!< Determines if particle belongs to group (complexity: constant)
 
             auto find_id(int id) const {
-                //return Faunus::filter(begin(), end(), [id](T &i){return (i.id==id);} );
                 return *this | ranges::cpp20::views::filter([id](T &i) { return (i.id == id); });
             } //!< Range of all (active) elements with matching particle id
 

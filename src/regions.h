@@ -13,7 +13,7 @@ regions:
 */
 
 namespace Faunus {
-struct Space; // forward declare Space
+class Space; // forward declare Space
 namespace Region {
 
 /**

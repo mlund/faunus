@@ -280,6 +280,20 @@ add_test(
     WORKING_DIRECTORY ${EXAMPLES_DIR}/titration)
 
 add_test(
+    NAME calciumhydroxide
+    COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} calciumhydroxide.yml\
+    | $<TARGET_FILE:faunus> --quiet --state calciumhydroxide.state.json\
+    && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} calciumhydroxide.out.json out.json --tol 0.02"
+    WORKING_DIRECTORY ${EXAMPLES_DIR}/calciumhydroxide)
+
+add_test(
+    NAME calciumhydroxide_molecular
+    COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} calciumhydroxide_molecular.yml\
+    | $<TARGET_FILE:faunus> --quiet --state calciumhydroxide_molecular.state.json\
+    && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} calciumhydroxide_molecular.out.json out.json --tol 0.02"
+    WORKING_DIRECTORY ${EXAMPLES_DIR}/calciumhydroxide_molecular)
+
+add_test(
     NAME water-ewald-NOCHECKS
     COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} ewald.yml | $<TARGET_FILE:faunus>"
     WORKING_DIRECTORY ${EXAMPLES_DIR}/water)
@@ -426,6 +440,12 @@ install(FILES
     ${EXAMPLES_DIR}/titration/titration.yml
     ${EXAMPLES_DIR}/titration/titration.out.json
     ${EXAMPLES_DIR}/titration/titration.state.json
+    ${EXAMPLES_DIR}/calciumhydroxide/calciumhydroxide.yml
+    ${EXAMPLES_DIR}/calciumhydroxide/calciumhydroxide.out.json
+    ${EXAMPLES_DIR}/calciumhydroxide/calciumhydroxide.state.json
+    ${EXAMPLES_DIR}/calciumhydroxide/calciumhydroxide_molecular.yml
+    ${EXAMPLES_DIR}/calciumhydroxide/calciumhydroxide_molecular.out.json
+    ${EXAMPLES_DIR}/calciumhydroxide/calciumhydroxide_molecular.state.json
     ${EXAMPLES_DIR}/water/ewald.yml
     DESTINATION share/faunus/examples)
 

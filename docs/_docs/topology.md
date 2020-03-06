@@ -102,7 +102,7 @@ Properties of molecules and their default values:
 `ensphere=false`        | Radial rescale of positions to sphere w. radius of average radial distance from COM (stored in 1st atom which is a dummy)
 `excluded_neighbours=0` | Generate an `exclusionlist` from the bonded interaction: Add all atom pairs which are `excluded_neighbours` or less bonds apart
 `exclusionlist`         | List of _internal_ atom pairs which nonbonded interactions are excluded
-`implicit=false`        | If this species is implicit in GCMC schemes
+`implicit=false`        | Mark as implicit for reactive Monte Carlo schemes
 `insdir=[1,1,1]`        | Insert directions are scaled by this
 `insoffset=[0,0,0]`     | Shifts mass center after insertion
 `keeppos=false`         | Keep original positions of `structure`
@@ -203,6 +203,9 @@ The file must contain exactly `N`-times molecular
 positions that must all fit within the simulation box. Only _positions_ from
 the file are copied; all other information is ignored.
 
+For `implicit` molecules, only `N` should be given and the molecules are never
+inserted into the simulation box.
+
 ### Overlap Check
 
 Random insertion is repeated until there is no overlap with the simulation
@@ -223,7 +226,7 @@ therefore important that simulations are started with a sufficiently high number
 initial molecules in `insertmolecules`.
 If not, the `rcmc` move will attempt to issue warnings with suggestions how to fix it.
 
-### Reaction format:
+### Reaction format
 
 The initial key describes a transformation of reactants (left of `=`)
 into products (right of `=`) that may be a mix of atomic and molecular species.
@@ -265,7 +268,7 @@ The same setup can be used also for molecular molecules, _i.e._ molecules with `
 
 ### Example: Acid/base titration with _implicit_ protons
 
-An implicit reactant or product is an atom which is included in the reaction but it is not represented
+An _implicit_ atomic reactant or product is included in the reaction but not 
 explicitly in the simulation cell.
 Common use-cases are acid-base equilibria where the proton concentration is often very low:
 
@@ -318,6 +321,29 @@ K' = \frac{K\_a}{a_{ \mathrm{H^+} } a_{ \mathrm{Cl^-} } } = \frac{ a_{\mathrm{CO
 $$
 In an ideal system, the involvement of Na or Cl in the acid-base reaction is inconsequential for the equilibrium,
 since the Grand Canonical ensemble ensures constant salt activity.
+
+
+### Example: Precipitation of Calcium Hydroxide using _implicit_ molecules
+
+Here we introduce a solid phase of Ca(OH)2 and its solubility product
+to predict the amount of dissolved calcium and hydroxide ions. Note that
+we start from an empty simulation box (both ions are inactive) and the solid
+phase is treated _implicitly_, i.e. it never inters the simulation box.
+Additional coupled reactions can naturally be introduced in order to study complex
+equilibrium systems under influence of intermolecular interactions.
+
+~~~ yaml
+moleculelist:
+    - Ca(OH)2: {implicit: true} # this molecule is implicit
+    - Ca++: {atoms: [ca++], atomic: true}
+    - OH-: {atoms: [oh-], atomic: true}
+insertmolecules:
+    - Ca++: {N: 200, inactive: true}
+    - OH-: {N: 400, inactive: true}
+    - Ca(OH)2: {N: 200} # not actually inserted!
+reactionlist:
+    - "Ca(OH)2 = Ca++ + OH- + OH-": {pK: 5.19}
+~~~
 
 
 ### Example: Swapping between molecular conformations

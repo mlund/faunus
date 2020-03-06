@@ -9,7 +9,7 @@ template<typename T> class ExprFunction;
 namespace Faunus {
 
 struct Change;
-struct Space;
+class Space;
 
 namespace Energy {
 

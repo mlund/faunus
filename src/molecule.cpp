@@ -57,6 +57,7 @@ void to_json(json &j, const MoleculeData &a) {
         {"atomic", a.atomic},
         {"rigid", a.rigid},
         {"compressible", a.compressible},
+        {"implicit", a.isImplicit()},
         {"activity", a.activity / 1.0_molar},
     };
     j[a.name].update(a.json_cfg);
@@ -202,6 +203,10 @@ void MoleculeBuilder::from_json(const json &j, MoleculeData &molecule) {
         molecule.rigid = j_properties.value("rigid", molecule.rigid);
         molecule.compressible = j_properties.value("compressible", molecule.compressible);
         molecule.activity = j_properties.value("activity", molecule.activity / 1.0_molar) * 1.0_molar;
+        molecule.implicit = j_properties.value("implicit", false);
+        if (molecule.implicit and molecule.atomic) {
+            throw std::runtime_error("atomic molecules cannot be implicit");
+        }
 
         readCompoundValues(j_properties);
         for (auto particle : particles) {
@@ -605,17 +610,6 @@ ParticleVector &Conformation::toParticleVector(ParticleVector &p) const {
     return p;
 }
 
-bool ReactionData::empty() const {
-    if (direction == Direction::RIGHT) {
-        if (canonic) {
-            if (reservoir_size <= 0) {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
 ReactionData::Direction ReactionData::getDirection() const { return direction; }
 
 void ReactionData::setDirection(ReactionData::Direction dir) {
@@ -664,23 +658,21 @@ void from_json(const json &j, ReactionData &a) {
 
     for (auto [key, val] : j.items()) {
         a.reaction_str = key; // reaction string, e.g. "A + B = C"
-        a.canonic = val.value("canonic", false);
         a.only_neutral_molecules = val.value("neutral", false);
         if (val.count("lnK") == 1) {
-            a.lnK = val.at("lnK").get<double>();
+            a.lnK_unmodified = val.at("lnK").get<double>();
         } else if (val.count("pK") == 1) {
-            a.lnK = -std::log(10) * val.at("pK").get<double>();
+            a.lnK_unmodified = -std::log(10) * val.at("pK").get<double>();
         } else {
-            a.lnK = 0.0;
+            a.lnK_unmodified = 0.0;
         }
-        a.reservoir_size = val.value("N_reservoir", a.reservoir_size);
+        a.lnK = a.lnK_unmodified;
 
         // helper function used to parse and register atom and molecule names; updates lnK
         auto registerNames = [&](auto &names, auto &&atom_map, auto &mol_map, double sign) {
             for (auto &atom_or_molecule_name : names) { // loop over species on reactant side (left)
                 auto [atom_iter, molecule_iter] = a.findAtomOrMolecule(atom_or_molecule_name);
                 if (atom_iter != Faunus::atoms.end()) { // atomic reactants
-                    a.swap = true;                      // if the reaction involves atoms, identify it as swap move
                     if (atom_iter->implicit) {          // if atom is implicit, multiply K by its activity
                         if (atom_iter->activity > 0) {
                             a.lnK += sign * std::log(atom_iter->activity / 1.0_molar);
@@ -703,6 +695,11 @@ void from_json(const json &j, ReactionData &a) {
         std::tie(a.left_names, a.right_names) = parseReactionString(a.reaction_str); // lists of species
         registerNames(a.left_names, a.left_atoms, a.left_molecules, 1.0);            // reactants
         registerNames(a.right_names, a.right_atoms, a.right_molecules, -1.0);        // products
+
+        // If exactly one atomic reactant and one atomic products, it's a swap move!
+        if (a.left_atoms.size() == 1 and a.right_atoms.size() == 1) {
+            a.swap = true;
+        }
     }
 }
 
@@ -710,11 +707,11 @@ void to_json(json &j, const ReactionData &reaction) {
     ReactionData a = reaction;
     // we want lnK to show for LEFT-->RIGHT direction
     a.setDirection(ReactionData::Direction::RIGHT);
-    j[a.reaction_str] = {{"pK'", -a.lnK / std::log(10)},
-                         //{"canonic", a.canonic }, {"N_reservoir", a.N_reservoir },
+    j[a.reaction_str] = {{"lnK", a.lnK_unmodified},
+                         {"pK", -a.lnK_unmodified / std::log(10)},
+                         {"swap_move", a.swap},
                          {"neutral", a.only_neutral_molecules},
-                         {"products", a.right_names},
-                         {"reactants", a.left_names}};
+                         {"pK'", -a.lnK / std::log(10)}};
 } //!< Serialize to JSON object
 
 } // namespace Faunus

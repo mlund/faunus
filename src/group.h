@@ -26,7 +26,7 @@ namespace Faunus {
             void resize(size_t n) { end() += n-size(); assert(size()==n); }
             bool empty() const { return this->first==this->second; }
             void clear() { this->second = this->first; assert(empty()); }
-            std::pair<int,int> to_index(T reference) {
+            std::pair<int,int> to_index(T reference) const {
                 return {std::distance(reference, begin()), std::distance(reference, end()-1)};
             } //!< Returns index pair relative to reference
         }; //!< Turns a pair of iterators into a range

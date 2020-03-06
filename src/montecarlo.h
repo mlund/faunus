@@ -60,20 +60,24 @@ void to_json(json &j, MCSimulation &mc);
 
 /**
  * @brief Ideal energy contribution of a speciation move
- * This funciton calculates the contribution to the energy change arising from the
- * change in concentration of reactant and products in the current and in the trial state.
+ *
+ * Entropic, contribution to the change associated with a density fluctuation.
+ * This far tested with particle fluctuations, only.
  *
  * @f[
  *     \beta \Delta U = - \sum \ln ( N_o!/N_n! V^{N_n - N_o} )
  * @f]
  *
- * where the sum runs over all products and reactants.
+ * where the sum runs over all products and reactants for the old (o) and
+ * new (n) configuration.
  *
  * @todo
- * - use exception message to suggest how to fix the problem
- * - seems out of place; move to another file?
- * - find a better name
+ * - [ ] Rename to something more meaningful
+ * - [ ] Split into a function object with private functions for different change types
+ * - [ ] `findMolecules` has O(N) complexity for non-atomic molecules; otherwise constant
+ * - [ ] Move to energy.h?
  */
-double IdealTerm(Space &spc_n, Space &spc_o, const Change &change);
-} // end of Faunus namespace
+
+double IdealTerm(Space &, Space &, const Change &);
+} // namespace Faunus
 #endif // FAUNUS_MONTECARLO_H

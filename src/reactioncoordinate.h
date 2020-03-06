@@ -5,7 +5,7 @@
 
 namespace Faunus {
 
-struct Space;
+class Space;
 
 namespace ReactionCoordinate {
 

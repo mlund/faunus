@@ -114,6 +114,10 @@ properties:
                     atomic: {type: boolean, default: false, description: True if collection of atomic species, salt etc.}
                     atoms: {items: {type: string}, type: array, description: Array of atom names; required if `atomic=true`}
                     bondlist: {items: {type: object}, type: array, description: List of _internal_ bonds (harmonic, dihedrals etc.)}
+                    implicit:
+                        type: boolean
+                        default: false
+                        description: "True if molecule is implicit and absent from the simulation cell"
                     compressible:
                         type: boolean
                         default: false
@@ -232,11 +236,13 @@ properties:
                       properties:
                           epss: {type: number}
                           alpha: {type: number}
+                          ncutoff: {type: number}
                           kcutoff: {type: number}
                           ipbc: {type: boolean, default: false}
+                          spherical_sum: {type: boolean, default: false}
                           ewaldscheme: {type: string, enum: [PBC, PBCEigen, IPBC], default: PBCEigen}
                           debyelength: {type: number, description: Debye screening length (Å)}
-                      required: [cutoff, epss, alpha, kcutoff]
+                      required: [cutoff, epss, alpha, ncutoff]
                 - if:
                       properties: {type: {const: "yukawa"}}
                   then:

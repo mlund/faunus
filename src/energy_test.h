@@ -22,7 +22,7 @@ TEST_CASE("[Faunus] Ewald - EwaldData") {
     Space spc;
     EwaldData data(R"({
                 "epsr": 1.0, "alpha": 0.894427190999916, "epss": 1.0,
-                "kcutoff": 11.0, "spherical_sum": true, "cutoff": 5.0})"_json);
+                "ncutoff": 11.0, "spherical_sum": true, "cutoff": 5.0})"_json);
 
     CHECK(data.policy == EwaldData::PBC);
     CHECK(data.const_inf == 1);
@@ -54,7 +54,7 @@ TEST_CASE("[Faunus] Ewald - IonIonPolicy") {
 
     EwaldData data = R"({
                 "epsr": 1.0, "alpha": 0.894427190999916, "epss": 1.0,
-                "kcutoff": 11.0, "spherical_sum": true, "cutoff": 5.0})"_json;
+                "ncutoff": 11.0, "spherical_sum": true, "cutoff": 5.0})"_json;
     Change c;
     c.all = true;
     data.policy = EwaldData::PBC;
@@ -112,7 +112,7 @@ TEST_CASE("[Faunus] Ewald - IonIonPolicy Benchmarks") {
 
   EwaldData data(R"({
                 "epsr": 1.0, "alpha": 0.894427190999916, "epss": 1.0,
-                "kcutoff": 11.0, "spherical_sum": true, "cutoff": 9.0})"_json);
+                "ncutoff": 11.0, "spherical_sum": true, "cutoff": 9.0})"_json);
   Change c;
   c.all = true;
   data.policy = EwaldData::PBC;

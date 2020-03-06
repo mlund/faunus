@@ -21,21 +21,35 @@ namespace Move {
  */
 class SpeciationMove : public Movebase {
   private:
-    Space &spc;                       //!< Trial space (particles, groups)
-    Space *other_spc;                 //!< Old space (particles, groups)
-    double bond_energy = 0;           //!< Accumulated bond energy if inserted/deleted molecule
-    ReactionData *reaction = nullptr; //!< Randomly selected reaction
-    std::map<std::string, Average<double>> acceptance_map;
+    typedef decltype(Faunus::reactions)::iterator reaction_iterator;
+    Space &spc;                 //!< Trial space (particles, groups)
+    Space *other_spc;           //!< Old space (particles, groups)
+    double bond_energy = 0;     //!< Accumulated bond energy if inserted/deleted molecule
+    reaction_iterator reaction; //!< Randomly selected reaction
+
+    class AcceptanceData {
+      public:
+        Average<double> right, left;
+        inline void update(ReactionData::Direction direction, bool accept) {
+            if (direction == ReactionData::Direction::RIGHT) {
+                right += double(accept);
+            } else {
+                left += double(accept);
+            }
+        }
+    };
+    std::map<reaction_iterator, AcceptanceData> acceptance;
+    std::map<int, Average<double>> average_reservoir_size; //!< Average number of implicit molecules
 
     void _to_json(json &) const override;
     void _from_json(const json &) override;
     void _move(Change &) override;         //!< Perform move
     void _accept(Change &) override;       //!< Called when accepted
     void _reject(Change &) override;       //!< Called when rejected
-    bool checkBeforeInsert();              //!< Performs checks before move
+    bool enoughImplicitMolecules() const;  //!< Check if we have enough implicit matter for reaction
     bool atomicSwap(Change &);             //!< Swap atom type
-    void deactivateAllReactants(Change &); //!< Delete reactant species
-    void activateAllProducts(Change &);    //!< Insert product species
+    bool deactivateAllReactants(Change &); //!< Delete reactant species
+    bool activateAllProducts(Change &);    //!< Insert product species
 
     Change::data contractAtomicGroup(Space::Tgroup &, Space::Tgroup &, int);  //!< Contract atomic group
     Change::data expandAtomicGroup(Space::Tgroup &, int);                     //!< Expand atomic group

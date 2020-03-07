@@ -37,10 +37,10 @@ namespace Faunus {
     namespace pc = PhysicalConstants;
 
     //! Calculate the ionic strength of a binary salt
-    double ionicStrength(double, const std::array<unsigned char, 2> &);
+    double ionicStrength(double, const std::array<int, 2> &);
 
     //! Calculate the Debye screening length for a binary salt
-    double debyeLength(double, const std::array<unsigned char, 2> &, double);
+    double debyeLength(double, const std::array<int, 2> &, double);
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] ionicStrength") {

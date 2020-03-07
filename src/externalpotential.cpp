@@ -283,7 +283,7 @@ std::function<double(const Particle &)> createGouyChapmanPotential(const json &j
     double bjerrum_length = pc::lB(j.at("epsr").get<double>());
     auto &electrolyte = j.at("electrolyte");
     double salt_conc = electrolyte.at("molarity").get<double>() * 1.0_molar;
-    auto valencies = electrolyte.value("valency", std::array<unsigned char, 2>({1, 1}));
+    auto valencies = electrolyte.value("valency", std::array<int, 2>({1, 1}));
     double kappa = 1.0 / Faunus::debyeLength(salt_conc, valencies, bjerrum_length);
 
     double phi0 = j.value("phi0", 0.0); // Unitless potential = beta*e*phi0

@@ -178,13 +178,13 @@ making a union.
 Upon starting a simulation, an initial configuration is required and must be
 specified in the section `insertmolecules` as a list of valid molecule names.
 Molecules are inserted in the given order and may be `inactive`.
-If a group is marked `atomic`, its `atoms` is inserted `N` times.
+If a group is marked `atomic`, its `atoms` are inserted `N` times.
 
 Example:
 
 ~~~ yaml
 insertmolecules:
-  - salt:  { N: 10 }
+  - salt:  { molarity: 0.1 }
   - water: { N: 256 }
   - water: { N: 1, inactive: true }
 ~~~
@@ -194,6 +194,7 @@ The following keywords for each molecule type are available:
 `insertmolecules`    | Description
 -------------------- | ---------------------------------------
 `N`                  | Number of molecules to insert
+`molarity`           | Insert molecules to reach molarity
 `inactive=false`     | Deactivates inserted molecules
 `positions`          | Load positions from file (`aam`, `pqr`, `xyz`)
 `translate=[0,0,0]`  | Displace loaded `positions` with vector
@@ -205,6 +206,10 @@ the file are copied; all other information is ignored.
 
 For `implicit` molecules, only `N` should be given and the molecules are never
 inserted into the simulation box.
+
+The `molarity` keyword is an alternative to `N` and uses the initial
+volume to calculate the number of molecules to insert.
+
 
 ### Overlap Check
 

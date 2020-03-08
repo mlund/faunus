@@ -260,7 +260,31 @@ void from_json(const json &j, Space &spc); //!< Deserialize json object to Space
  *     - water: { N: 1, inactive: true }
  * ~~~
  */
-void insertMolecules(const json &j, Space &spc); //!< Insert `N` molecules into space as defined in `insert`
+
+/**
+ * This takes a json array of objects where each item corresponds
+ * to a molecule. An `N` number of molecules is inserted according
+ * to user-defined rules
+ */
+class InsertMoleculesInSpace {
+  private:
+    static bool insertAtomicGroups(MoleculeData &moldata, Space &spc, int N, bool inactive = false);
+    static void insertMolecularGroups(MoleculeData &moldata, Space &spc, int N, bool inactive);
+
+    /**
+     * @brief Set positions for N last groups in Space
+     * @param int N Number of groups set affect
+     * @param positions Position vector for all particles in the N groups
+     * @param offset Translate positions by this offset
+     */
+    static bool setPositionsForTrailingGroups(int N, Space &spc, const Space::Tpvec &positions,
+                                              const Point &offset = {0, 0, 0});
+
+    static void insertImplicitGroups(const MoleculeData &mol, Space &spc, int N);
+
+  public:
+    static void insertMolecules(const json &j, Space &spc);
+}; // end of insertMolecules class
 
 /**
  * @brief Helper class for range-based for-loops over *active* particles

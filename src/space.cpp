@@ -231,101 +231,6 @@ Space::Tgvec::iterator Space::randomMolecule(int molid, Random &rand, Space::Sel
 const std::map<int, int> &Space::getImplicitReservoir() const { return implicit_reservoir; }
 std::map<int, int> &Space::getImplicitReservoir() { return implicit_reservoir; }
 
-/**
- * This takes a json array of objects where each item corresponds
- * to a molecule. An `N` number of molecules is inserted according
- * to user-defined rules
- */
-void insertMolecules(const json &j, Space &spc) {
-    typedef typename Space::Tpvec Tpvec;
-    spc.clear();
-    assert(spc.geo.getVolume() > 0);
-    auto &molvec = molecules;
-    if (j.is_array()) {
-        for (auto &m : j) { // loop over array of molecules
-            if (m.is_object() && m.size() == 1)
-                for (auto it = m.begin(); it != m.end(); ++it) {
-                    auto mol = findName(molvec, it.key()); // is the molecule defined?
-                    if (mol != molvec.end()) {             // yes it is
-
-                        int N = it.value().at("N").get<int>(); // number of molecules to insert
-                        if (not mol->isImplicit() and N < 1) {
-                            throw std::runtime_error("One or more molecules must be inserted");
-                        }
-                        int cnt = N;
-
-                        bool inactive = it.value().value("inactive", false); // active or not?
-
-                        {
-                            std::string state = (inactive) ? "inactive" : "active";
-                            if (mol->isImplicit()) {
-                                state = "implicit";
-                            }
-                            faunus_logger->info("inserting {0} ({1}) {2} molecules", cnt, state, it.key());
-                        }
-
-                        if (mol->atomic) {
-                            typename Space::Tpvec p;
-                            p.reserve(N * mol->atoms.size());
-                            while (cnt-- > 0) {
-                                auto _t = mol->getRandomConformation(spc.geo, spc.p);
-                                p.insert(p.end(), _t.begin(), _t.end());
-                            }
-                            assert(!p.empty());
-                            spc.push_back(mol->id(), p);
-                            // add_to_log("Added {0} {1} molecules", N, mol->name)
-                            if (inactive)
-                                spc.groups.back().resize(0);
-                        } else if (mol->isImplicit()) {
-                            // implicit molecules are registered outside the
-                            // main molecule list
-                            spc.getImplicitReservoir()[mol->id()] = N;
-                        } else {
-                            while (cnt-- > 0) { // insert molecules
-                                spc.push_back(mol->id(), mol->getRandomConformation(spc.geo, spc.p));
-                                if (inactive) {
-                                    spc.groups.back().unwrap(spc.geo.getDistanceFunc());
-                                    spc.groups.back().resize(0);
-                                }
-                            }
-                            // load specific positions for the N added molecules
-                            std::string file = it.value().value("positions", "");
-                            if (!file.empty()) {
-                                bool success = false;
-                                Tpvec p;
-                                if (loadStructure(file, p, false)) {
-                                    if (p.size() == N * mol->atoms.size()) {
-                                        faunus_logger->info("valid position file {0} found", file);
-                                        Point offset = it.value().value("translate", Point(0, 0, 0));
-                                        size_t j = spc.p.size() - p.size();
-                                        for (auto &i : p) {
-                                            i.pos = i.pos + offset;
-                                            if (spc.geo.collision(i.pos) == false)
-                                                spc.p.at(j++).pos = i.pos;
-                                            else
-                                                faunus_logger->warn("position outside box");
-                                        }
-                                        if (j == p.size()) {
-                                            success = true;
-                                            for (auto g = spc.groups.end() - N; g != spc.groups.end(); ++g)
-                                                g->cm = Geometry::massCenter(
-                                                    g->begin(), g->end(), spc.geo.getBoundaryFunc(), -g->begin()->pos);
-                                        }
-                                    } else
-                                        faunus_logger->error("wrong number of atoms in {0}", file);
-                                } else
-                                    faunus_logger->error("cannot open {0}", file);
-                                if (success == false)
-                                    throw std::runtime_error("error loading positions from '" + file + "'");
-                            }
-                        }
-                    } else
-                        throw std::runtime_error("cannot insert undefined molecule '" + it.key() + "'");
-                }
-        }
-    } else
-        throw std::runtime_error("'insertmolecules' json entry must be of array type" + usageTip["insertmolecule"]);
-}
 void to_json(json &j, Space &spc) {
     typedef typename Space::Tpvec Tpvec;
     j["geometry"] = spc.geo;
@@ -351,7 +256,7 @@ void from_json(const json &j, Space &spc) {
         spc.geo = j.at("geometry");
 
         if (j.count("groups") == 0) {
-            insertMolecules(j.at("insertmolecules"), spc);
+            InsertMoleculesInSpace::insertMolecules(j.at("insertmolecules"), spc);
         } else {
             spc.p = j.at("particles").get<Tpvec>();
             if (!spc.p.empty()) {
@@ -435,9 +340,125 @@ void makeNaCl(Space &space, int num_particles, const Geometry::Chameleon &geomet
 
     json j = json::array();
     j.push_back({{"salt", {{"N", num_particles}}}});
-    Faunus::insertMolecules(j, space);
+    InsertMoleculesInSpace::insertMolecules(j, space);
 }
 
 } // namespace SpaceFactory
+
+bool InsertMoleculesInSpace::insertAtomicGroups(MoleculeData &moldata, Space &spc, int N, bool inactive) {
+    assert(moldata.atomic == true);
+    typename Space::Tpvec p;
+    p.reserve(N * moldata.atoms.size());
+    while (N-- > 0) {
+        auto particles = moldata.getRandomConformation(spc.geo, spc.p);
+        p.insert(p.end(), particles.begin(), particles.end());
+    }
+    spc.push_back(moldata.id(), p);
+    if (inactive) {
+        spc.groups.back().resize(0);
+    }
+    return true;
+}
+void InsertMoleculesInSpace::insertMolecularGroups(MoleculeData &moldata, Space &spc, int N, bool inactive) {
+    assert(moldata.atomic == false);
+    while (N-- > 0) { // insert molecules
+        spc.push_back(moldata.id(), moldata.getRandomConformation(spc.geo, spc.p));
+        if (inactive) {
+            spc.groups.back().unwrap(spc.geo.getDistanceFunc());
+            spc.groups.back().resize(0);
+        }
+    }
+}
+bool InsertMoleculesInSpace::setPositionsForTrailingGroups(int N, Space &spc, const Faunus::ParticleVector &positions,
+                                                           const Point &offset) {
+    assert(spc.groups.size() >= N);
+    if (positions.size() == N * (spc.groups.end() - N)->traits().atoms.size()) {
+        size_t j = spc.p.size() - positions.size();
+        for (auto i : positions) {
+            i.pos = i.pos + offset;
+            if (spc.geo.collision(i.pos) == false) {
+                spc.p.at(j++).pos = i.pos;
+            } else {
+                faunus_logger->warn("position outside box");
+                return false;
+            }
+        }
+        if (j == positions.size()) {
+            for (auto g = spc.groups.end() - N; g != spc.groups.end(); ++g) {
+                g->cm = Geometry::massCenter(g->begin(), g->end(), spc.geo.getBoundaryFunc(), -g->begin()->pos);
+            }
+        }
+    } else {
+        faunus_logger->error("wrong number of atoms");
+        return false;
+    }
+    return true;
+}
+void InsertMoleculesInSpace::insertImplicitGroups(const MoleculeData &mol, Space &spc, int N) {
+    assert(mol.isImplicit());
+    spc.getImplicitReservoir()[mol.id()] = N;
+}
+void InsertMoleculesInSpace::insertMolecules(const json &j, Space &spc) {
+    spc.clear();
+    assert(spc.geo.getVolume() > 0);
+    if (!j.is_array()) {
+        throw std::runtime_error("syntax error in insertmolecule");
+    }
+    for (auto &m : j) { // loop over array of molecules
+        if (!m.is_object() || m.size() != 1) {
+            throw std::runtime_error("syntax error in insertmolecule");
+        }
+        for (auto &[molname, value] : m.items()) {
+            if (auto moldata = findName(Faunus::molecules, molname); moldata != Faunus::molecules.end()) {
+                int N = 0; // number of groups to insert
+                if (auto it = value.find("N"); it != value.end()) {
+                    N = it->get<int>();
+                } else {
+                    double concentration = value.at("molarity").get<double>() * 1.0_molar;
+                    N = std::round(concentration * spc.geo.getVolume());
+                    if (concentration > pc::epsilon_dbl) {
+                        double rel_error = (concentration - N / spc.geo.getVolume()) / concentration;
+                        if (rel_error > 0.01) {
+                            faunus_logger->warn("initial concentration of '{}' differs by {}% from input", molname,
+                                                rel_error * 100);
+                        }
+                    }
+                }
+                if (not moldata->isImplicit() and N < 1) {
+                    throw std::runtime_error("One or more molecules must be inserted");
+                }
+                bool inactive = value.value("inactive", false); // active or not?
+                {
+                    std::string state = (inactive) ? "inactive" : "active";
+                    if (moldata->isImplicit()) {
+                        state = "implicit";
+                    }
+                    faunus_logger->info("inserting {0} ({1}) {2} molecules", N, state, molname);
+                }
+                if (moldata->atomic) {
+                    insertAtomicGroups(*moldata, spc, N);
+                } else if (moldata->isImplicit()) {
+                    insertImplicitGroups(*moldata, spc, N);
+                } else {
+                    insertMolecularGroups(*moldata, spc, N, inactive);
+                    if (auto filename = value.value("positions", ""s); !filename.empty()) {
+                        bool error = true;
+                        Space::Tpvec p;
+                        if (loadStructure(filename, p, false)) {
+                            faunus_logger->info("position file {0} found", filename);
+                            Point offset = value.value("translate", Point(0, 0, 0));
+                            error = setPositionsForTrailingGroups(N, spc, p, offset);
+                        }
+                        if (error) {
+                            throw std::runtime_error("error loading positions from '" + filename + "'");
+                        }
+                    }
+                }
+            } else {
+                throw std::runtime_error("cannot insert undefined molecule '" + molname + "'");
+            }
+        }
+    }
+}
 
 } // namespace Faunus

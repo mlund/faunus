@@ -68,9 +68,12 @@ properties:
                 additionalProperties: false
                 properties:
                     N: {type: integer, description: Number of molecules to insert}
+                    molarity: {type: number, description: Insert molecules to reach this molarity}
                     inactive: {type: boolean, default: false, description: Should molecules be inactive?}
                     positions: {type: string, description: Load positions from file}
-                required: [N]
+                oneOf:
+                    - required: [N]
+                    - required: [molarity]
 
     atomlist:
         type: array

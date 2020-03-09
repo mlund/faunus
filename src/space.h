@@ -262,14 +262,13 @@ void from_json(const json &j, Space &spc); //!< Deserialize json object to Space
  */
 
 /**
- * This takes a json array of objects where each item corresponds
- * to a molecule. An `N` number of molecules is inserted according
- * to user-defined rules
+ * This class helps inserting molecules into Space, based on user
+ * JSON input.
  */
 class InsertMoleculesInSpace {
   private:
     static bool insertAtomicGroups(MoleculeData &moldata, Space &spc, int N, bool inactive = false);
-    static void insertMolecularGroups(MoleculeData &moldata, Space &spc, int N, bool inactive);
+    static void insertMolecularGroups(MoleculeData &moldata, Space &spc, int num_molecules, bool inactive);
 
     /**
      * @brief Set positions for N last groups in Space
@@ -277,13 +276,18 @@ class InsertMoleculesInSpace {
      * @param positions Position vector for all particles in the N groups
      * @param offset Translate positions by this offset
      */
-    static bool setPositionsForTrailingGroups(int N, Space &spc, const Space::Tpvec &positions,
-                                              const Point &offset = {0, 0, 0});
+    static bool setPositionsForTrailingGroups(Space &spc, int num_molecules, const Faunus::ParticleVector &positions,
+                                              const Point &offset);
 
-    static void insertImplicitGroups(const MoleculeData &mol, Space &spc, int N);
+    static void insertImplicitGroups(const MoleculeData &mol, Space &spc, int num_molecules);
 
   public:
-    static void insertMolecules(const json &j, Space &spc);
+    /**
+     * @brief Insert molecules into Space based on JSON input
+     * @param json_array JSON array
+     * @param spc Space to insert into
+     */
+    static void insertMolecules(const json &json_array, Space &spc);
 }; // end of insertMolecules class
 
 /**

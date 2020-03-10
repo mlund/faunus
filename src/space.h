@@ -273,10 +273,10 @@ class InsertMoleculesInSpace {
     /**
      * @brief Set positions for N last groups in Space
      * @param int N Number of groups set affect
-     * @param positions Position vector for all particles in the N groups
+     * @param particles Position vector for all particles in the N groups
      * @param offset Translate positions by this offset
      */
-    static bool setPositionsForTrailingGroups(Space &spc, int num_molecules, const Faunus::ParticleVector &positions,
+    static bool setPositionsForTrailingGroups(Space &spc, int num_molecules, const Faunus::ParticleVector &particles,
                                               const Point &offset);
 
     static void insertImplicitGroups(const MoleculeData &mol, Space &spc, int num_molecules);

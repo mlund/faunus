@@ -1,0 +1,92 @@
+{
+    "analysis": [
+        {
+            "systemenergy": {
+                "file": "energy.dat",
+                "final": [
+                    0.0,
+                    -0.0652130864424775
+                ],
+                "init": -0.032774,
+                "mean": -0.090658,
+                "nstep": 10,
+                "samples": 20000
+            }
+        },
+        {
+            "savestate": {
+                "file": "state.json"
+            }
+        }
+    ],
+    "compiler": "4.2.1 Compatible Apple LLVM 11.0.0 (clang-1100.0.33.12)",
+    "energy": [
+        {
+            "hamiltonian": [
+                {
+                    "ContainerOverlap": {
+                    }
+                },
+                {
+                    "customexternal": {
+                        "com": false,
+                        "constants": {
+                            "epsr": 80,
+                            "linearise": false,
+                            "molarity": 0.1,
+                            "rho": 0.01
+                        },
+                        "function": "gouychapman",
+                        "molecules": [
+                            "A"
+                        ]
+                    }
+                }
+            ]
+        }
+    ],
+    "geometry": {
+        "length": [
+            20.0,
+            20.0,
+            20.0
+        ],
+        "type": "slit"
+    },
+    "git revision": "ab02a80c (2020-03-06)",
+    "groups": [
+        {
+            "A": {
+                "compressible": false,
+                "index": [
+                    0,
+                    0
+                ],
+                "size": 1
+            }
+        }
+    ],
+    "last move": "transrot",
+    "moves": [
+        {
+            "transrot": {
+                "acceptance": 0.866,
+                "dir": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "molecule": "A",
+                "molid": 0,
+                "moves": 200000,
+                "repeat": 1,
+                "√⟨r²⟩": 5.16
+            }
+        }
+    ],
+    "number of groups": 1,
+    "number of particles": 1,
+    "reactionlist": null,
+    "relative drift": 1.6937613119506176e-15,
+    "temperature": 300.0
+}

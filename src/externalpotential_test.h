@@ -29,5 +29,31 @@ TEST_CASE("[Faunus] ExternalPotential") {
         CHECK(pot.energy(change) == Approx(0.5 + 0.5));
     }
 }
+
+TEST_CASE("[Faunus] Gouy-Chapman") {
+    Geometry::Slit slit(50, 50, 50);
+    Geometry::Chameleon geometry(slit, Geometry::SLIT);
+    json j = {{"molarity", 0.1}, {"epsr", 80}, {"linearise", false}, {"rhoinv", 100.0}};
+    auto phi = Energy::createGouyChapmanPotential(j, geometry);
+    Particle p;
+    p.charge = 1.0;
+    p.pos = {0, 0, -25};                            // potential at charged surface
+    CHECK(phi(p) == doctest::Approx(0.2087776151)); // = phi_0
+
+    p.pos = {0, 0, 0}; // potential at mid-plane
+    CHECK(phi(p) == doctest::Approx(0.0160227029));
+
+    j = {{"molarity", 0.1}, {"epsr", 80}, {"linearise", false}, {"phi0", 0.2087776151}};
+    phi = Energy::createGouyChapmanPotential(j, geometry);
+    CHECK(phi(p) == doctest::Approx(0.0160227029));
+
+    j = {{"molarity", 0.1}, {"epsr", 80}, {"linearise", false}, {"rho", 0.01}};
+    phi = Energy::createGouyChapmanPotential(j, geometry);
+    CHECK(phi(p) == doctest::Approx(0.0160227029));
+
+    j = {{"molarity", 0.1}, {"epsr", 80}, {"linearise", true}, {"rho", 0.01}};
+    phi = Energy::createGouyChapmanPotential(j, geometry);
+    CHECK(phi(p) == doctest::Approx(0.0160371645));
+}
 } // namespace Energy
 } // namespace Faunus

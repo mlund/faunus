@@ -11,7 +11,7 @@ EwaldData::EwaldData(const json &j) {
     r_cutoff = j.at("cutoff");                      // real space cut-off
     n_cutoff = j.at("ncutoff");                     // reciprocal space cut-off
     use_spherical_sum = j.value("spherical_sum", true); // Using spherical summation of k-vectors in reciprocal space?
-    bjerrum_length = pc::lB(j.at("epsr"));
+    bjerrum_length = pc::bjerrumLength(j.at("epsr"));
     surface_dielectric_constant = j.value("epss", 0.0); // dielectric constant of surrounding medium
     const_inf =
         (surface_dielectric_constant < 1) ? 0 : 1; // if unphysical (<1) use epsr infinity for surrounding medium

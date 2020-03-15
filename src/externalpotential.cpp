@@ -165,7 +165,7 @@ ExternalAkesson::ExternalAkesson(const json &j, Tspace &spc) : ExternalPotential
     nphi = _j.value("nphi", 10);
 
     halfz = 0.5 * spc.geo.getLength().z();
-    lB = pc::lB(epsr);
+    lB = pc::bjerrumLength(epsr);
 
     dz = _j.value("dz", 0.2); // read z resolution
     Q.setResolution(dz, -halfz, halfz);
@@ -276,45 +276,39 @@ void ExternalAkesson::update_phi() {
 // ------------ createGouyChapman -------------
 
 std::function<double(const Particle &)> createGouyChapmanPotential(const json &j, const Geometry::Chameleon &geo) {
-    if (geo.boundaryConditions().direction.z() != Geometry::FIXED)
+    if (geo.boundaryConditions().direction.z() != Geometry::FIXED) {
         throw std::runtime_error("Gouy-Chapman requires non-periodicity in z-direction");
-
+    }
     double rho = 0; // surface charge density (charge per area)
-    double bjerrum_length = pc::lB(j.at("epsr").get<double>());
-    auto &electrolyte = j.at("electrolyte");
-    double salt_conc = electrolyte.at("molarity").get<double>() * 1.0_molar;
-    auto valencies = electrolyte.value("valency", std::array<int, 2>({1, 1}));
-    double kappa = 1.0 / Faunus::debyeLength(salt_conc, valencies, bjerrum_length);
-
+    double bjerrum_length = pc::bjerrumLength(j.at("epsr").get<double>());
+    double molarity = j.at("molarity").get<double>();
+    double kappa = 1.0 / Faunus::debyeLength(molarity, {1, 1}, bjerrum_length);
     double phi0 = j.value("phi0", 0.0); // Unitless potential = beta*e*phi0
     if (std::fabs(phi0) > 0) {
-        rho = std::sqrt(2.0 * salt_conc / (pc::pi * bjerrum_length)) *
+        rho = std::sqrt(2.0 * molarity / (pc::pi * bjerrum_length)) *
               std::sinh(0.5 * phi0); // Evans&Wennerstrom,Colloidal Domain p. 138-140
     } else {                         // phi0 was not provided
-        double area_per_charge = j.value("qarea", 0.0);
+        double area_per_charge = j.value("rhoinv", 0.0);
         if (std::fabs(area_per_charge) > 0) {
             rho = 1.0 / area_per_charge;
         } else {
             rho = j.at("rho").get<double>();
         }
-        phi0 = 2.0 * std::asinh(rho * std::sqrt(0.5 * bjerrum_length * pc::pi / salt_conc)); // [Evans..]
+        phi0 = 2.0 * std::asinh(rho * std::sqrt(0.5 * bjerrum_length * pc::pi / molarity)); // [Evans..]
     }
     double gamma0 = std::tanh(phi0 / 4.0); // assuming z=1 [Evans..]
-    double surface_z_pos = j.value("zpos", -0.5 * geo.getLength().z());
-    bool linearise = j.value("linearise", false);
 
-    faunus_logger->trace("Generated Gouy-Chapman potential with {} A^3/charge ", 1 / rho);
+    faunus_logger->trace("generated Gouy-Chapman potential with {} A^2/charge ", 1.0 / rho);
 
-    // return gamma function for calculation of GC potential on single particle.
-    if (linearise) {
-        return [=](const Particle &p) {
-            double x = std::exp(-kappa * std::fabs(surface_z_pos - p.pos.z()));
-            return p.charge * phi0 * x;
+    if (j.value("linearise", false)) {
+        return [=, &geo](const Particle &p) {
+            double surface_z_pos = -0.5 * geo.getLength().z();
+            return p.charge * phi0 * std::exp(-kappa * std::fabs(surface_z_pos - p.pos.z()));
         };
     } else {
-        return [=](const Particle &p) {
-            double x = std::exp(-kappa * std::fabs(surface_z_pos - p.pos.z()));
-            x = gamma0 * x;
+        return [=, &geo](const Particle &p) {
+            double surface_z_pos = -0.5 * geo.getLength().z();
+            double x = gamma0 * std::exp(-kappa * std::fabs(surface_z_pos - p.pos.z()));
             return 2.0 * p.charge * std::log((1.0 + x) / (1.0 - x));
         };
     }
@@ -322,41 +316,42 @@ std::function<double(const Particle &)> createGouyChapmanPotential(const json &j
 
 // ------------ CustomExternal -------------
 
-CustomExternal::CustomExternal(const json &j, Tspace &spc) : ExternalPotential(j, spc) {
+CustomExternal::CustomExternal(const json &j, Space &spc) : ExternalPotential(j, spc) {
     name = "customexternal";
-    jin = j;
-    auto &_j = jin["constants"];
-    if (_j == nullptr)
-        _j = json::object();
-    _j["e0"] = pc::e0;
-    _j["kB"] = pc::kB;
-    _j["kT"] = pc::kT();
-    _j["Nav"] = pc::Nav;
-    _j["T"] = pc::temperature;
-    std::string name = jin.at("function");
-
+    json_input_backup = j;
+    auto &constants = json_input_backup["constants"];
+    std::string function = j.at("function");
     // check if the custom potential match a name with a predefined meaning.
-    if (name == "gouychapman") {
-        func = createGouyChapmanPotential(_j, spc.geo);
-    } else if (name == "something") {
+    if (function == "gouychapman") {
+        func = createGouyChapmanPotential(constants, spc.geo);
+    } else if (function == "something") {
         // add additional potential here
-        // base::func = createSomeOtherPotential(_j);
+        // base::func = createSomeOtherPotential(constants);
     } else {
-        // if nothing found above, it is assumed that `function`
-        // is a valid expression.
+        // nothing found above; assume `function` is an expression
+        if (constants == nullptr) {
+            constants = json::object();
+        }
+        constants["e0"] = pc::e0;
+        constants["kB"] = pc::kB;
+        constants["kT"] = pc::kT();
+        constants["Nav"] = pc::Nav;
+        constants["T"] = pc::temperature;
         expr = std::make_unique<ExprFunction<double>>();
-        expr->set(jin, {{"q", &d.q}, {"x", &d.x}, {"y", &d.y}, {"z", &d.z}});
+        expr->set(
+            j,
+            {{"q", &particle_data.charge}, {"x", &particle_data.x}, {"y", &particle_data.y}, {"z", &particle_data.z}});
         func = [&](const Particle &a) {
-            d.x = a.pos.x();
-            d.y = a.pos.y();
-            d.z = a.pos.z();
-            d.q = a.charge;
+            particle_data.x = a.pos.x();
+            particle_data.y = a.pos.y();
+            particle_data.z = a.pos.z();
+            particle_data.charge = a.charge;
             return expr->operator()();
         };
     }
 }
 void CustomExternal::to_json(json &j) const {
-    j = jin;
+    j = json_input_backup;
     ExternalPotential::to_json(j);
 }
 

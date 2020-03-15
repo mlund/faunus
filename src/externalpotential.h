@@ -82,11 +82,11 @@ std::function<double(const Particle &)> createGouyChapmanPotential(const json &j
 class CustomExternal : public ExternalPotential {
   private:
     std::unique_ptr<ExprFunction<double>> expr;
-    struct Data { // variables
-        double q = 0, x = 0, y = 0, z = 0;
+    struct ParticleData { // storage for particle properties
+        double charge = 0, x = 0, y = 0, z = 0;
     };
-    Data d;
-    json jin; // initial json input
+    ParticleData particle_data;
+    json json_input_backup; // initial json input
 
   public:
     CustomExternal(const json &, Space &);

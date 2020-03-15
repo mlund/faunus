@@ -7,7 +7,7 @@ std::string Faunus::u8::bracket(const std::string &s) {
 }
 
 /**
- * @param molarity Salt concentration (arbitrary units)
+ * @param concentration Salt concentration (arbitrary units)
  * @param valency Absolute valencies, i.e. 1:1, 2:1, 2:2 salt
  * @return Ionic strength (same unit as `conc`)
  * @note For STL gcd algorithm for >=2 numbers,

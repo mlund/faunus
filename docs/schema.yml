@@ -249,6 +249,20 @@ properties:
                       properties:
                           debyelength: {type: number, description: Debye screening length (Å)}
                       required: [cutoff, debyelength]
+                      
+        electrolyte:
+            type: object
+            properties:
+                molarity: {type: number, description: "Molar salt concentreation (mol/l)"}
+                valency:
+                    type: array
+                    items: {type: integer}
+                    minItems: 2
+                    maxItems: 2
+                    default: [1,1]
+                    description: "Salt valencies (1:1, 2:1, 2:2 etc.)"
+                required: [molarity]
+                additionalProperties: false
 
         mixing_rule:
             description: Sigma and Epsilon Mixing rule
@@ -496,29 +510,23 @@ properties:
                         - if:
                               properties: {function: {const: "gouychapman"}}
                           then:
-                              required: [electrolyte]
                               properties:
-                                  rho: {type: number, description: "Surface charge density (Å⁻²)"}
-                                  qrho: {type: number, description: "Area per charge (Å²)"}
-                                  phi0: {type: number, description: "Surface potential"}
-                                  electrolyte:
+                                  constants:
                                       type: object
+                                      description: User-defined constants
                                       properties:
-                                          molarity: {type: number, description: "Molar salt concentreation (mol/l)"}
-                                          valency:
-                                              type: array
-                                              items: {type: integer}
-                                              minItems: 2
-                                              maxItems: 2
-                                              default: [1,1]
-                                              description: "Salt valencies (1:1, 2:1, 2:2 etc.)"
-                                      required: [molarity]
+                                          rho: {type: number, description: "Surface charge density (Å⁻²)"}
+                                          rhoinv: {type: number, description: "Area per charge (Å²)"}
+                                          phi0: {type: number, description: "Surface potential"}
+                                          epsr: {type: number, description: "Relative dielectric constant"}
+                                          molarity: {type: number, description: "1:1 salt concentration (mol/l)"}
+                                          linearise: {type: boolean, description: "Use linearised Poisson-Boltzmann?", default: False}
+                                      required: [molarity, epsr]
+                                      oneOf:
+                                          - required: [rho]
+                                          - required: [rhoinv]
+                                          - required: [phi0]
                                       additionalProperties: false
-                                  zpos:
-                                      type: number
-                                      description: "Position of surface plane along z-axis"
-                                      default: -Lz/2
-                                  linearise: {type: boolean, description: "Use linearised Poisson-Boltzmann?", default: False}
  
                 isobaric:
                     description: "External pressure"

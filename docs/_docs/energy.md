@@ -534,13 +534,13 @@ customexternal:
 ### Gouy Chapman
 
 By setting `function=gouychapman`, an electric potential from a uniformly, charged plane
-in a salt solution is added; see _e.g._ the book _Colloidal Domain_ by Evans and Wennerström, 1999.
+in a 1:1 salt solution is added; see _e.g._ the book _Colloidal Domain_ by Evans and Wennerström, 1999.
 If a surface potential, $\varphi\_0$ is specified,
 
 $$
 \rho = \sqrt{\frac{2 c\_0}{\pi \lambda\_B} } \sinh ( \beta e \varphi\_0 / 2 )
 $$
-while if instead a surface charge density, $\rho$, is given,
+while if instead an (inverse) surface charge density, $\rho$, is given,
 $$
 \beta e \varphi\_0 = 2\mbox{asinh} \left ( \rho \sqrt{\frac{\pi \lambda\_B} {2 c\_0}} \right )
 $$
@@ -553,24 +553,17 @@ $$
 where
 $z\_i$ is the particle charge;
 $e$ is the electron unit charge;
-and $r\_{z,i}$ is the distance from the charged plane.
+and $r\_{z,i}$ is the distance from the charged $xy$-plane which is always place at the minimum
+$z$-value of the simulation container (normally a slit geometry).
 
 `constants`        | Description
------------------  | --------------------------------------
-`ionicstrength`    | Ionic strength, $c\_0$ (mol/l)
+-----------------  | ----------------------------------------------------------------------
+`molarity`         | Molar 1:1 salt concentration, $c\_0$ (mol/l)
 `epsr`             | Relative dielectric constant
-`phi0=0`           | Unitless surface potential ($\beta e \varphi\_0$) if `qarea` not given
-`qarea=f(phiq)`    | Charge per area (1/eÅ²) if `phi0` not given
-`area=1/qarea`     | Area per charge (eÅ²) if `qarea` not given
-`linearize=false`  | Use linearized Poisson-Boltzmann approximation?
-`zpos=-Lz/2`       | $z$-position of charged plane in the (slit) simulation box
-
-Notes and silly limitations:
-
-- this is experimental and subject to change
-- does not work with volume fluctuations in the $z$-direction
-- the salt concentration is assumed equal to the ionic strength, _i.e._ 1:1 salt only
-- temperature is hardcoded to 300 K.
+`rho          `    | Charge per area (1/eÅ²)
+`rhoinv            | Area per charge (eÅ²) `rho` nor `phi0` are given
+`phi0`             | Unitless surface potential ($\beta e \varphi\_0$) if `rho` or `rhoinv` not given
+`linearise=false`  | Use linearized Poisson-Boltzmann approximation?
 
 
 ## Bonded Interactions

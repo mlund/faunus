@@ -25,12 +25,12 @@ namespace Faunus {
             R = kB * Nav;            //!< Molar gas constant [J/(K*mol)]
         extern T temperature;        //!< Temperature (Kelvin)
         static inline T kT() { return temperature*kB; } //!< Thermal energy (Joule)
-        static inline T lB( T epsilon_r ) {
+        static inline T bjerrumLength(T epsilon_r) {
             return e*e/(4*pi*e0*epsilon_r*1e-10*kT());
         } //!< Bjerrum length (angstrom)
 
-        static inline T lB2epsr( T bjerrumlength ) {
-            return lB(bjerrumlength);
+        static inline T relativeDielectricFromBjerrumLength(T bjerrumlength) {
+            return bjerrumLength(bjerrumlength);
         } //!< lB --> relative dielectric constant
     }
 

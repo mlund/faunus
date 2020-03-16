@@ -649,7 +649,10 @@ properties:
                             items: {type: string}
                             type: array
                         spread: {type: boolean}
-                        threshold: {type: number}
+                        threshold:
+                            anyOf:
+                                - {type: number}
+                                - {type: object}
                         repeat: {type: integer}
                     required: [dp, dprot, molecules, threshold]
                     additionalProperties: false

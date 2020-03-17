@@ -316,19 +316,14 @@ std::function<double(const Particle &)> createGouyChapmanPotential(const json &j
 
 // ------------ CustomExternal -------------
 
-CustomExternal::CustomExternal(const json &j, Space &spc) : ExternalPotential(j, spc) {
+CustomExternal::CustomExternal(const json &j, Space &spc) : ExternalPotential(j, spc), json_input_backup(j) {
     name = "customexternal";
-    json_input_backup = j;
     auto &constants = json_input_backup["constants"];
-    std::string function = j.at("function");
-    // check if the custom potential match a name with a predefined meaning.
-    if (function == "gouychapman") {
+    if (std::string function = j.at("function"); function == "gouychapman") {
         func = createGouyChapmanPotential(constants, spc.geo);
-    } else if (function == "something") {
-        // add additional potential here
-        // base::func = createSomeOtherPotential(constants);
-    } else {
-        // nothing found above; assume `function` is an expression
+    } else if (function == "some-new-potential") { // add new potentials here
+        // func = createSomeNewPotential(...);
+    } else { // nothing found above; assume `function` is an expression
         if (constants == nullptr) {
             constants = json::object();
         }

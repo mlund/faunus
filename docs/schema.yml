@@ -776,6 +776,8 @@ properties:
                     description: "Save particle positions to file"
                     properties:
                         file: {type: string, pattern: "(.*?)\\.(aam|pqr|state|ubj|gro|xyz|json)$"}
+                        nstep: {type: integer, description: Sample interval}
+                        nskip: {type: integer, default: 0, description: Initial steps to skip}
                     required: [file]
                     additionalProperties: false
                     type: object

@@ -1,0 +1,48 @@
+#!/usr/bin/env yason.py
+temperature: 300
+random: {seed: hardware}
+geometry: {type: sphere, radius: 10}
+mcloop: {macro: 10, micro: 100000}
+atomlist:
+    - pos1: {q: 1.0, sigma: 4}
+    - pos2: {q: 2.0, sigma: 4}
+    - pos3: {q: 3.0, sigma: 4}
+    - neg1: {q: -1.0, sigma: 4}
+    - neg2: {q: -2.0, sigma: 4}
+    - neg3: {q: -3.0, sigma: 4}
+moleculelist:
+    - monopole:
+        rigid: true
+        insdir: [0,0,0]
+        structure:
+            - neg2: [0,0,0]
+
+    - dipole:
+        rigid: true
+        insdir: [0,0,1]
+        structure:
+            - neg3: [-1, 0, 0]
+            - pos3: [0, 0, 0]
+    - quadrupole:
+        rigid: true
+        insdir: [0,0,1]
+        structure:
+            - pos1: [1.0, 1.0, 0.0]
+            - pos2: [-1.0, -1.0, 0.0]
+            - neg1: [1.0, -1.0, 0.0]
+            - neg1: [-1.0, 1.0, 0.0]
+insertmolecules:
+    - monopole: {N: 1}
+    - dipole: {N: 1}
+energy:
+    - nonbonded_pm:
+        coulomb: {type: plain, epsr: 80}
+moves:
+    - moltransrot: {molecule: monopole, dp: 0, dprot: 2, repeat: 1}
+    - moltransrot: {molecule: dipole, dp: 5, dprot: 2, repeat: 1, dir: [0,0,1]}
+analysis:
+    - sanity: {nstep: 10000}
+    - multipoledist: {file: multipole.dat, nstep: 1, molecules: [monopole, dipole], dr: 0.25}
+    - savestate: {file: confout.pqr}
+    - savestate: {file: state.ubj}
+

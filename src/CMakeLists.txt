@@ -224,6 +224,13 @@ set_property(TEST penalty APPEND PROPERTY ENVIRONMENT FAUNUS_EXECUTABLE=$<TARGET
 set_property(TEST penalty APPEND PROPERTY ENVIRONMENT YASON_EXECUTABLE=${YASON})
 
 add_test(
+    NAME multipole
+    COMMAND sh -c "jupyter nbconvert --execute multipole.ipynb --ExecutePreprocessor.timeout=None"
+    WORKING_DIRECTORY ${EXAMPLES_DIR}/multipole)
+set_property(TEST multipole APPEND PROPERTY ENVIRONMENT FAUNUS_EXECUTABLE=$<TARGET_FILE:faunus>)
+set_property(TEST multipole APPEND PROPERTY ENVIRONMENT YASON_EXECUTABLE=${YASON})
+
+add_test(
     NAME virial
     COMMAND sh -c "jupyter nbconvert --execute virial.ipynb --ExecutePreprocessor.timeout=None"
     WORKING_DIRECTORY ${EXAMPLES_DIR}/virial)
@@ -407,6 +414,9 @@ install(FILES
     ${EXAMPLES_DIR}/minimal/minimal.state.json
     ${EXAMPLES_DIR}/penalty/penalty.yml
     ${EXAMPLES_DIR}/penalty/penalty.ipynb
+    ${EXAMPLES_DIR}/multipole/multipole.yml
+    ${EXAMPLES_DIR}/multipole/multipole.ipynb
+    ${EXAMPLES_DIR}/multipole/multipole.state.ubj
     ${EXAMPLES_DIR}/virial/virial.yml
     ${EXAMPLES_DIR}/virial/virial.ipynb
     ${EXAMPLES_DIR}/chain/chain.yml

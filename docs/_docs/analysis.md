@@ -346,7 +346,7 @@ The input keywords are:
 `nstep`          | Interval between samples
 `file`           | Output file name
 `molecules`      | Array with exactly two molecule names, $a$ and $b$
-`dr=0.2`         | Distance resolution (Å) along _R_.
+`dr`             | Distance resolution (Å) along _R_.
 
 ### Charge Fluctuations
 

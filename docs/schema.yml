@@ -741,6 +741,20 @@ properties:
                     required: [molecules, nstep]
                     type: object
 
+                multipoledist:
+                    type: object
+                    properties:
+                        molecules:
+                            minItems: 2
+                            maxItems: 2
+                            items: {type: string}
+                            type: array
+                            description: "Array with exactly two molecule names"
+                        nstep: {type: integer, description: "Sample interval"}
+                        nskip: {type: integer, default: 0, description: "Initial steps to skip"}
+                        dr: {type: number, description: "Distance resolution along R (Å)"}
+                    required: [molecules, nstep, dr]
+
                 reactioncoordinate:
                     type: object
                     properties:

@@ -935,7 +935,7 @@ void MultipoleDistribution::_to_json(json &j) const { j = {{"molecules", names},
 MultipoleDistribution::MultipoleDistribution(const json &j, Space &spc) : spc(spc) {
     from_json(j);
     name = "Multipole Distribution";
-    dr = j.value("dr", 0.2);
+    dr = j.at("dr").get<double>();
     filename = j.at("file").get<std::string>();
     names = j.at("molecules").get<decltype(names)>(); // molecule names
     ids = names2ids(molecules, names);                // names --> molids

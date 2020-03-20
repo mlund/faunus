@@ -208,10 +208,11 @@ Tensor quadrupoleMoment(Titer begin, Titer end, BoundaryFunction boundary = [](c
     Tensor theta;
     theta.setZero();
     for (auto it = begin; it != end; ++it) {
-        Point t = it->pos - begin->pos - origin;
+        Point t = it->pos - origin;
         boundary(t);
-        if (t.squaredNorm() < cutoff * cutoff)
+        if (t.squaredNorm() < cutoff * cutoff) {
             theta += t * t.transpose() * it->charge;
+        }
     }
     return 0.5 * theta;
 } //!< Calculates quadrupole moment tensor (with trace)

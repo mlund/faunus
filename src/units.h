@@ -3,6 +3,8 @@
 #include <string>
 #include <cmath>
 #include <memory>
+#include <numeric>
+#include <array>
 
 namespace Faunus {
 
@@ -23,15 +25,38 @@ namespace Faunus {
             R = kB * Nav;            //!< Molar gas constant [J/(K*mol)]
         extern T temperature;        //!< Temperature (Kelvin)
         static inline T kT() { return temperature*kB; } //!< Thermal energy (Joule)
-        static inline T lB( T epsilon_r ) {
+        static inline T bjerrumLength(T epsilon_r) {
             return e*e/(4*pi*e0*epsilon_r*1e-10*kT());
         } //!< Bjerrum length (angstrom)
-        static inline T lB2epsr( T bjerrumlength ) {
-            return lB(bjerrumlength);
+
+        static inline T relativeDielectricFromBjerrumLength(T bjerrumlength) {
+            return bjerrumLength(bjerrumlength);
         } //!< lB --> relative dielectric constant
     }
 
     namespace pc = PhysicalConstants;
+
+    //! Calculate the ionic strength of a binary salt
+    double ionicStrength(double, const std::array<int, 2> &);
+
+    //! Calculate the Debye screening length for a binary salt
+    double debyeLength(double, const std::array<int, 2> &, double);
+
+#ifdef DOCTEST_LIBRARY_INCLUDED
+    TEST_CASE("[Faunus] ionicStrength") {
+        using doctest::Approx;
+        CHECK(ionicStrength(0.1, {1, 1}) == Approx(0.1));
+        CHECK(ionicStrength(0.1, {2, 2}) == Approx(0.5 * (0.1 * 4 + 0.1 * 4)));
+        CHECK(ionicStrength(0.1, {2, 1}) == Approx(0.5 * (0.1 * 4 + 0.2)));
+        CHECK(ionicStrength(0.1, {1, 2}) == Approx(0.5 * (0.2 + 0.1 * 4)));
+        CHECK(ionicStrength(0.1, {1, 3}) == Approx(0.5 * (0.3 + 0.1 * 9)));
+        CHECK(ionicStrength(0.1, {3, 1}) == Approx(0.5 * (0.3 + 0.1 * 9)));
+        CHECK(ionicStrength(0.1, {1, 3}) == Approx(0.5 * (0.3 + 0.1 * 9)));
+        CHECK(ionicStrength(0.1, {2, 3}) == Approx(0.5 * (0.3 * 4 + 0.2 * 9)));
+
+        SUBCASE("debyeLength") { CHECK(debyeLength(0.03, {1, 1}, 7) == Approx(17.7376102214)); }
+    }
+#endif
 
     /**
      * @brief Chemistry units

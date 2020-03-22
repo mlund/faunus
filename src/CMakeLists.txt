@@ -301,6 +301,13 @@ add_test(
     WORKING_DIRECTORY ${EXAMPLES_DIR}/calciumhydroxide_molecular)
 
 add_test(
+    NAME gouychapman
+    COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} gouychapman.yml\
+    | $<TARGET_FILE:faunus> --quiet --state gouychapman.state.json\
+    && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} gouychapman.out.json out.json --tol 0.015"
+    WORKING_DIRECTORY ${EXAMPLES_DIR}/gouychapman)
+
+add_test(
     NAME water-ewald-NOCHECKS
     COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} ewald.yml | $<TARGET_FILE:faunus>"
     WORKING_DIRECTORY ${EXAMPLES_DIR}/water)
@@ -403,6 +410,9 @@ install(FILES
     ${EXAMPLES_DIR}/doublelayer/doublelayer.out.json
     ${EXAMPLES_DIR}/doublelayer/doublelayer.state.json
     ${EXAMPLES_DIR}/doublelayer/doublelayer.mfcorr.dat
+    ${EXAMPLES_DIR}/gouychapman/gouychapman.yml
+    ${EXAMPLES_DIR}/gouychapman/gouychapman.out.json
+    ${EXAMPLES_DIR}/gouychapman/gouychapman.state.json
     ${EXAMPLES_DIR}/isochoric.yml
     ${EXAMPLES_DIR}/isochoric.xyz
     ${EXAMPLES_DIR}/membrane/membrane.yml

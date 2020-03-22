@@ -188,18 +188,18 @@ void CosAttract::from_json(const json &j) {
 }
 
 void Coulomb::to_json(json &j) const {
-    j["epsr"] = pc::lB2epsr(lB);
+    j["epsr"] = pc::relativeDielectricFromBjerrumLength(lB);
     j["lB"] = lB;
 }
 
-void Coulomb::from_json(const json &j) { lB = pc::lB(j.at("epsr")); }
+void Coulomb::from_json(const json &j) { lB = pc::bjerrumLength(j.at("epsr")); }
 
 void DipoleDipole::to_json(json &j) const {
-    j["epsr"] = pc::lB2epsr(lB);
+    j["epsr"] = pc::relativeDielectricFromBjerrumLength(lB);
     j["lB"] = lB;
 }
 
-void DipoleDipole::from_json(const json &j) { lB = pc::lB(j.at("epsr")); }
+void DipoleDipole::from_json(const json &j) { lB = pc::bjerrumLength(j.at("epsr")); }
 
 void FENE::from_json(const json &j) {
     k = j.at("stiffness");
@@ -379,7 +379,7 @@ void SquareWell::extractorsFromJson(const json &j) {
 
 void Polarizability::from_json(const json &j) {
     epsr = j.at("epsr").get<double>();
-    double lB = pc::lB(epsr);
+    double lB = pc::bjerrumLength(epsr);
     for (auto &i : atoms) {
         for (auto &j : atoms) {
             m_neutral->set(i.id(), j.id(), -3 * i.alphax * pow(0.5 * i.sigma, 3) * j.alphax * pow(0.5 * j.sigma, 3));
@@ -608,7 +608,7 @@ Point NewCoulombGalore::force(const Particle &a, const Particle &b, double, cons
 void NewCoulombGalore::from_json(const json &j) {
     using namespace ::CoulombGalore; // namespace for external CoulombGalore library
     double epsr = j.at("epsr");
-    lB = pc::lB(epsr); // Bjerrum length
+    lB = pc::bjerrumLength(epsr); // Bjerrum length
     std::string type = j.at("type");
     pot.setTolerance(j.value("utol", 0.005 / lB));
     if (type == "yukawa") {

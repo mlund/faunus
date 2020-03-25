@@ -540,30 +540,34 @@ If a surface potential, $\varphi\_0$ is specified,
 $$
 \rho = \sqrt{\frac{2 c\_0}{\pi \lambda\_B} } \sinh ( \beta e \varphi\_0 / 2 )
 $$
-while if instead an (inverse) surface charge density, $\rho$, is given,
+while if instead a surface charge density, $\rho$, is given,
 $$
 \beta e \varphi\_0 = 2\mbox{asinh} \left ( \rho \sqrt{\frac{\pi \lambda\_B} {2 c\_0}} \right )
 $$
 where $\lambda\_B$ is the Bjerrum length. With $\Gamma\_0 = \tanh{ \beta e \varphi\_0 / 4 }$
 the final, non-linearized external potential is:
 $$
-\phi\_i = \frac{2 k\_BT z\_i}{e}
-\ln \left ( \frac{1+\Gamma\_0e^{-\kappa r\_{z,i}}}{1-\Gamma\_0 e^{-\kappa r\_{z,i}}} \right )
+\beta e \phi\_i = 2 \ln \left ( \frac{1+\Gamma\_0e^{-\kappa r\_{z,i}}}{1-\Gamma\_0 e^{-\kappa r\_{z,i}}} \right )
 $$
 where
 $z\_i$ is the particle charge;
 $e$ is the electron unit charge;
-and $r\_{z,i}$ is the distance from the charged $xy$-plane which is always place at the minimum
+$\kappa$ is the inverse Debye length;
+and $r\_{z,i}$ is the distance from the charged $xy$-plane which is always placed at the minimum
 $z$-value of the simulation container (normally a slit geometry).
+Fluctuations of the simulation cell dimensions are respected.
+
+The following parameters should be given under `constants`;
+the keywords `rho`, `rhoinv`, and `phi0` are mutually exclusive.
 
 `constants`        | Description
 -----------------  | ----------------------------------------------------------------------
-`molarity`         | Molar 1:1 salt concentration, $c\_0$ (mol/l)
+`molarity`         | Molar 1:1 salt concentration (mol/l)
 `epsr`             | Relative dielectric constant
-`rho          `    | Charge per area (1/eÅ²)
-`rhoinv            | Area per charge (eÅ²) `rho` nor `phi0` are given
-`phi0`             | Unitless surface potential ($\beta e \varphi\_0$) if `rho` or `rhoinv` not given
-`linearise=false`  | Use linearized Poisson-Boltzmann approximation?
+`rho`              | Charge per area (1/eÅ²)
+`rhoinv`           | Area per charge (eÅ²) if `rho` nor `phi0` are given
+`phi0`             | Unitless surface potential, $\beta e \varphi\_0$, if `rho` or `rhoinv` not given
+`linearise=false`  | Use linearised Poisson-Boltzmann approximation?
 
 
 ## Bonded Interactions

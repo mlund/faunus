@@ -379,7 +379,7 @@ inline void Chameleon::boundary(Point &a) const {
                 a.y() -= len.y() * anint(a.y() * len_inv.y());
         }
         if (boundary_conditions.direction.z() == PERIODIC) {
-            if (std::fabs(a.z()) > len_half.y())
+            if (std::fabs(a.z()) > len_half.z())
                 a.z() -= len.z() * anint(a.z() * len_inv.z());
         }
     } else {

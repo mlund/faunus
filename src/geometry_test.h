@@ -37,12 +37,13 @@ TEST_CASE("[Faunus] Geometry") {
         CHECK(geo.collision(a) == true);
         geo.getBoundaryFunc()(a);
         CHECK(geo.collision(a) == false);
-        CHECK(a.x() == Approx(-0.9));
-        CHECK(a.y() == Approx(1.5));
-        CHECK(a.z() == Approx(1.999));
-        Point b = a;
-        geo.boundary(b);
-        CHECK(a == b);
+        CHECK(a.x() == Approx(-0.9));  // x has been wrapped
+        CHECK(a.y() == Approx(1.5));   // y is unchanged
+        CHECK(a.z() == Approx(1.999)); // z has been wrapped
+        a.y() = 1.51;                  // move y out of box
+        geo.getBoundaryFunc()(a);      // wrap around boundary
+        CHECK(a.y() == Approx(-1.49)); // check y-boundary
+        a.y() = 1.5;                   // restore
 
         // check distances
         Point distance = geo.vdist({0.1, 0.5, -1.001}, a);
@@ -51,7 +52,7 @@ TEST_CASE("[Faunus] Geometry") {
         CHECK(distance.z() == Approx(1.0));
         CHECK(geo.vdist({1, 2, 3}, a) == geo.getDistanceFunc()({1, 2, 3}, a));
 
-        // check that geometry is properly enscribed in a cuboid
+        // check that geometry is properly inscribed in a cuboid
         Point box = geo.getLength();
         CHECK(box.x() == Approx(x));
         CHECK(box.y() == Approx(y));

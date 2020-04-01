@@ -147,30 +147,31 @@ class Space {
             };
             break;
         case (INACTIVE_NEUTRAL):
-            f = [molid](Tgroup &i) {
-                if ((i.id != molid) && (i.size() == i.capacity()))
+            f = [molid](Tgroup &group) {
+                if ((group.id == molid) && (group.size() != group.capacity())) {
+                    double charge = 0.0;
+                    for (auto it = group.begin(); it != group.trueend(); ++it) {
+                        charge += it->charge;
+                    }
+                    return (std::fabs(charge) <= pc::epsilon_dbl);
+                } else {
                     return false;
-                else {
-                    int charge = 0;
-                    for (auto p = i.begin(); p != i.trueend(); ++p)
-                        charge += p->charge;
-                    return (charge == 0);
                 }
             };
             break;
         case (ACTIVE_NEUTRAL):
-            f = [molid](Tgroup &i) {
-                if ((i.id != molid) && (i.size() != i.capacity()))
+            f = [molid](Tgroup &group) {
+                if ((group.id == molid) && (group.size() == group.capacity())) {
+                    double charge = 0.0;
+                    for (auto it = group.begin(); it != group.end(); ++it) {
+                        charge += it->charge;
+                    }
+                    return (std::fabs(charge) <= pc::epsilon_dbl);
+                } else {
                     return false;
-                else {
-                    int charge = 0;
-                    for (auto p = i.begin(); p != i.trueend(); ++p)
-                        charge += p->charge;
-                    return (charge == 0);
                 }
             };
             break;
-
         }
         return groups | ranges::cpp20::views::filter(f);
     }

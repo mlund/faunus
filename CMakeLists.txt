@@ -309,7 +309,7 @@ endif ()
 include_directories(SYSTEM ${eigen_SOURCE_DIR} ${doctest_SOURCE_DIR} ${modernjson_SOURCE_DIR}/include ${rangev3_SOURCE_DIR}/include
     ${nanobench_SOURCE_DIR}/src/include
     ${Pybind11IncludeDir} ${DocoptIncludeDir} ${CppsidIncludeDir} ${XdrfileIncludeDir} ${SpdlogIncludeDir}
-    ${ProgressTrackerIncludeDir} ${exprtk_SOURCE_DIR} ${cereal_SOURCE_DIR}/include ${zstr_SOURCE_DIR}/src)
+    ${ProgressTrackerIncludeDir} ${exprtk_SOURCE_DIR} ${cereal_SOURCE_DIR}/include ${zstr_SOURCE_DIR}/src "/usr/local/Cellar/tbb/2020_U1_1/include")
 
 #  Compiler specific flags
 ## GCC

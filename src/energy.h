@@ -10,7 +10,10 @@
 
 #ifdef ENABLE_FREESASA
 #include <freesasa.h>
+#include <pstl/execution_defs.h>
 #endif
+
+#include <execution>
 
 namespace Faunus {
 
@@ -563,9 +566,17 @@ template <typename TPairEnergy, typename TCutoff> class PairingBasePolicy {
     template <typename TGroup> double group2group(const TGroup &group1, const TGroup &group2) {
         double u = 0;
         if (!cut(group1, group2)) {
-            for (auto &particle1 : group1) {
-                for (auto &particle2 : group2) {
-                    u += particle2particle(particle1, particle2);
+            if constexpr (true) {
+                auto pairs = cartesian_product(group1.begin(), group1.end(), group2.begin(), group2.end());
+                u = std::reduce(std::execution::seq, pairs.begin(), pairs.end(), 0.0,
+                                [&](double sum, const auto &_pair) {
+                                    return sum + particle2particle(std::get<0>(_pair), std::get<1>(_pair));
+                                });
+            } else {
+                for (auto &particle1 : group1) {
+                    for (auto &particle2 : group2) {
+                        u += particle2particle(particle1, particle2);
+                    }
                 }
             }
         }
@@ -592,9 +603,19 @@ template <typename TPairEnergy, typename TCutoff> class PairingBasePolicy {
     double group2group(const TGroup &group1, const TGroup &group2, const std::vector<int> &index1) {
         double u = 0;
         if (!cut(group1, group2)) {
-            for (auto particle1_ndx : index1) {
-                for (auto &particle2 : group2) {
-                    u += particle2particle(*(group1.begin() + particle1_ndx), particle2);
+            if constexpr (true) {
+                auto group1_filtered = index1 | ranges::cpp20::views::transform([&](int i) { return group1[i]; });
+                auto pairs =
+                    cartesian_product(group1_filtered.begin(), group1_filtered.end(), group2.begin(), group2.end());
+                u = std::reduce(std::execution::seq, pairs.begin(), pairs.end(), 0.0,
+                                [&](double sum, const auto &pair) {
+                                    return sum + particle2particle(std::get<0>(pair), std::get<1>(pair));
+                                });
+            } else {
+                for (auto particle1_ndx : index1) {
+                    for (auto &particle2 : group2) {
+                        u += particle2particle(*(group1.begin() + particle1_ndx), particle2);
+                    }
                 }
             }
         }
@@ -660,13 +681,20 @@ template <typename TPairEnergy, typename TCutoff> class PairingBasePolicy {
      * @return energy sum between particle pairs
      */
     template <typename TGroup, typename TGroups> double group2groups(const TGroup &group, const TGroups &groups) {
-        double u = 0;
-        for (auto &other_group : groups) {
-            if (&other_group != &group) {
-                u += group2group(group, other_group);
+        double energy = 0;
+        if constexpr (true) {
+            energy = std::reduce(std::execution::seq, groups.begin(), groups.end(), 0.0,
+                                 [&](double sum, const auto &other_group) {
+                                     return (&other_group == &group) ? sum : sum + group2group(group, other_group);
+                                 });
+        } else {
+            for (auto &other_group : groups) {
+                if (&other_group != &group) {
+                    energy += group2group(group, other_group);
+                }
             }
         }
-        return u;
+        return energy;
     }
 
     /**
@@ -687,14 +715,22 @@ template <typename TPairEnergy, typename TCutoff> class PairingBasePolicy {
      */
     template <typename TGroup, typename TGroups>
     double group2groups(const TGroup &group, const TGroups &group_index, const std::vector<int> &index) {
-        double u = 0;
-        for (auto other_group_ndx : group_index) {
-            const auto &other_group = spc.groups[other_group_ndx];
-            if (&other_group != &group) {
-                u += group2group(group, other_group, index);
+        double energy = 0.0;
+        if constexpr (true) {
+            auto groups = group_index | ranges::cpp20::views::transform([&](int i) { return spc.groups.at(i); });
+            energy = std::reduce(
+                std::execution::seq, groups.begin(), groups.end(), 0.0, [&](double sum, const auto &other_group) {
+                    return (&other_group == &group) ? sum : sum + group2group(group, other_group, index);
+                });
+        } else {
+            for (auto other_group_ndx : group_index) {
+                const auto &other_group = spc.groups[other_group_ndx];
+                if (&other_group != &group) {
+                    energy += group2group(group, other_group, index);
+                }
             }
         }
-        return u;
+        return energy;
     }
 
     /**
@@ -709,13 +745,20 @@ template <typename TPairEnergy, typename TCutoff> class PairingBasePolicy {
      * @return energy sum between particle pairs
      */
     template <typename Tgroup> double group2all(const Tgroup &group) {
-        double u = 0;
-        for (auto &other_group : spc.groups) {
-            if (&other_group != &group) {
-                u += group2group(group, other_group);
+        double energy = 0.0;
+        if constexpr (true) {
+            energy = std::reduce(std::execution::seq, spc.groups.begin(), spc.groups.end(), 0.0,
+                                 [&](double sum, auto &other_group) {
+                                     return (&other_group == &group) ? sum : sum + group2group(group, other_group);
+                                 });
+        } else {
+            for (auto &other_group : spc.groups) {
+                if (&other_group != &group) {
+                    energy += group2group(group, other_group);
+                }
             }
         }
-        return u;
+        return energy;
     }
 
     /**

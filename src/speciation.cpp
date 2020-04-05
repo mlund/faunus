@@ -47,6 +47,13 @@ bool SpeciationMove::atomicSwap(Change &change) {
                 return false;
             }
         }
+        if (!molecular_products.empty()) {          // ensure that we have inactive molecular products
+            assert(molecular_products.size() == 1); // only one allowed this far
+            auto mollist = spc.findMolecules(molecular_products.begin()->first, Tspace::INACTIVE);
+            if (ranges::cpp20::empty(mollist)) {
+                return false;
+            }
+        }
         auto random_particle = slump.sample(atomlist.begin(), atomlist.end()); // target particle to swap
         auto group = spc.findGroupContaining(*random_particle);                // find enclosing group
 

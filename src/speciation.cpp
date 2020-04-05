@@ -40,6 +40,13 @@ bool SpeciationMove::atomicSwap(Change &change) {
         if (ranges::cpp20::empty(atomlist)) { // Make sure that there are any active atoms to swap
             return false;                     // Slip out the back door
         }
+        if (!molecular_reactants.empty()) {          // ensure that we have molecular reactants
+            assert(molecular_reactants.size() == 1); // only one allowed this far
+            auto mollist = spc.findMolecules(molecular_reactants.begin()->first);
+            if (ranges::cpp20::empty(mollist)) {
+                return false;
+            }
+        }
         auto random_particle = slump.sample(atomlist.begin(), atomlist.end()); // target particle to swap
         auto group = spc.findGroupContaining(*random_particle);                // find enclosing group
 

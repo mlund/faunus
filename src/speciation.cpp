@@ -21,11 +21,14 @@ void SpeciationMove::_to_json(json &j) const {
 
 void SpeciationMove::setOther(Tspace &ospc) { other_spc = &ospc; }
 
-
 /**
  * Convert from one atom type to another in any group (atomic/molecular).
- * The reaction require that the `swap` is true and there must be *exactly*
+ * The reaction requires that `swap` is true and there must be *exactly*
  * one atomic reactant and one atomic product in the reaction.
+ *
+ * The function checks if there are sufficient atomic and molecular
+ * reactants and products to perform the move. If not, false is returned
+ * and the system is left untouched.
  *
  * @todo If particle has extended properties, make sure to copy the state of those
  */
@@ -40,18 +43,38 @@ bool SpeciationMove::atomicSwap(Change &change) {
         if (ranges::cpp20::empty(atomlist)) { // Make sure that there are any active atoms to swap
             return false;                     // Slip out the back door
         }
-        if (!molecular_reactants.empty()) {          // ensure that we have molecular reactants
+
+        if (!molecular_reactants.empty()) {          // enough molecular reactants?
             assert(molecular_reactants.size() == 1); // only one allowed this far
-            auto mollist = spc.findMolecules(molecular_reactants.begin()->first);
-            if (ranges::cpp20::empty(mollist)) {
-                return false;
+            auto [molid, N] = *molecular_reactants.begin();
+            if (Faunus::molecules[molid].atomic) {
+                auto mollist = spc.findMolecules(molid, Tspace::ALL); // look for a single atomic group
+                assert(range_size(mollist) == 1);
+                if (mollist.begin()->empty()) {
+                    return false;
+                }
+            } else { // reactant is a molecular group
+                auto mollist = spc.findMolecules(molid, Tspace::ACTIVE);
+                if (range_size(mollist) < N) {
+                    return false;
+                }
             }
         }
-        if (!molecular_products.empty()) {          // ensure that we have inactive molecular products
+
+        if (!molecular_products.empty()) {          // enough inactive molecular products?
             assert(molecular_products.size() == 1); // only one allowed this far
-            auto mollist = spc.findMolecules(molecular_products.begin()->first, Tspace::INACTIVE);
-            if (ranges::cpp20::empty(mollist)) {
-                return false;
+            auto [molid, N] = *molecular_products.begin();
+            if (Faunus::molecules[molid].atomic) { // product is an atomic group
+                auto mollist = spc.findMolecules(molid, Tspace::ALL);
+                assert(range_size(mollist) == 1);
+                if (mollist.begin()->capacity() - mollist.begin()->size() < N) {
+                    return false;
+                }
+            } else { // we're producing a molecular group
+                auto mollist = spc.findMolecules(molid, Tspace::INACTIVE);
+                if (range_size(mollist) < N) {
+                    return false;
+                }
             }
         }
         auto random_particle = slump.sample(atomlist.begin(), atomlist.end()); // target particle to swap

@@ -568,11 +568,11 @@ template <typename TPairEnergy, typename TCutoff> class PairingBasePolicy {
         double u = 0;
         if (!cut(group1, group2)) {
             if constexpr (true) {
-                auto pairs = cartesian_product(group1.begin(), group1.end(), group2.begin(), group2.end());
-                u = std::reduce(std::execution::seq, pairs.begin(), pairs.end(), 0.0,
-                                [&](double sum, const auto &_pair) {
-                                    return sum + particle2particle(std::get<0>(_pair), std::get<1>(_pair));
-                                });
+                auto vec = ranges::views::cartesian_product(group1, group2) |
+                           ranges::cpp20::views::transform([&](const auto &pair) {
+                               return particle2particle(std::get<0>(pair), std::get<1>(pair));
+                           });
+                u = std::reduce(std::execution::seq, vec.begin(), vec.end(), 0.0);
             } else {
                 for (auto &particle1 : group1) {
                     for (auto &particle2 : group2) {
@@ -606,12 +606,11 @@ template <typename TPairEnergy, typename TCutoff> class PairingBasePolicy {
         if (!cut(group1, group2)) {
             if constexpr (true) {
                 auto group1_filtered = index1 | ranges::cpp20::views::transform([&](int i) { return group1[i]; });
-                auto pairs =
-                    cartesian_product(group1_filtered.begin(), group1_filtered.end(), group2.begin(), group2.end());
-                u = std::reduce(std::execution::seq, pairs.begin(), pairs.end(), 0.0,
-                                [&](double sum, const auto &pair) {
-                                    return sum + particle2particle(std::get<0>(pair), std::get<1>(pair));
-                                });
+                auto vec = ranges::views::cartesian_product(group1_filtered, group2) |
+                           ranges::cpp20::views::transform([&](const auto &pair) {
+                               return particle2particle(std::get<0>(pair), std::get<1>(pair));
+                           });
+                u = std::reduce(std::execution::seq, vec.begin(), vec.end(), 0.0);
             } else {
                 for (auto particle1_ndx : index1) {
                     for (auto &particle2 : group2) {
@@ -748,10 +747,10 @@ template <typename TPairEnergy, typename TCutoff> class PairingBasePolicy {
     template <typename Tgroup> double group2all(const Tgroup &group) {
         double energy = 0.0;
         if constexpr (true) {
-            energy = std::reduce(std::execution::seq, spc.groups.begin(), spc.groups.end(), 0.0,
-                                 [&](double sum, const Tgroup &other_group) {
-                                     return (&other_group == &group) ? sum : sum + group2group(group, other_group);
-                                 });
+            auto vec = spc.groups | ranges::cpp20::views::transform([&](const auto &other_group) {
+                           return (other_group == group) ? 0 : group2group(group, other_group);
+                       });
+            energy = std::reduce(std::execution::par, vec.begin(), vec.end(), 0.0);
         } else {
             for (auto &other_group : spc.groups) {
                 if (&other_group != &group) {
@@ -818,6 +817,7 @@ template <typename TPairEnergy, typename TCutoff> class PairingBasePolicy {
         if (index.size() == 1) {
             energy = group2all(group, index[0]);
         } else if constexpr (true) {
+
             energy =
                 std::reduce(std::execution::seq, spc.groups.begin(), spc.groups.end(), 0.0,
                             [&](double sum, const Tgroup &other_group) {
@@ -886,7 +886,6 @@ template <typename TPairEnergy, typename TCutoff> class PairingBasePolicy {
         using namespace ranges::cpp20;
         double energy = 0.0;
         if constexpr (true) {
-
             auto pairs = internal_pairs(spc.groups); // iterable object over all unique group pairs
 
             auto particle_pairs = ranges::make_pipeable(pairs) | views::transform([&](const auto &pair) {

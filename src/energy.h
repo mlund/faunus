@@ -291,7 +291,6 @@ template <typename TSize, typename TSet> inline auto indexComplement(const TSize
 class GroupCutoff {
     double default_cutoff_squared = pc::max_value;
     PairMatrix<double> cutoff_squared;  //!< matrix with group-to-group cutoff distances squared in angstrom squared
-    double total_cnt = 0, skip_cnt = 0; //!< statistics
     Space::Tgeometry &geometry;         //!< geometry to compute the inter group distance with
     friend void from_json(const json&, GroupCutoff &);
     friend void to_json(json&, const GroupCutoff &);
@@ -303,11 +302,9 @@ class GroupCutoff {
      */
     template <typename TGroup> inline bool cut(const TGroup &group1, const TGroup &group2) {
         bool result = false;
-        ++total_cnt;
         if (!group1.atomic && !group2.atomic // atomic groups have no meaningful cm
             && geometry.sqdist(group1.cm, group2.cm) >= cutoff_squared(group1.id, group2.id)) {
             result = true;
-            ++skip_cnt;
         }
         return result;
     }
@@ -440,6 +437,25 @@ template <typename TPairEnergy, typename TCutoff> class PairingBasePolicy {
         pair_energy.to_json(j);
     }
 
+    /**
+     * @brief Find neighboring, active groups within cut-off distance
+     * @param i index of central group
+     * @return index of neighboring groups
+     */
+    std::vector<int> neighboringGroups(const Space::Tgroup &group) {
+        std::vector<int> neighbor_index;
+        for (const auto &g : spc.groups) {
+            if (&g != &group) {
+                if (!g.empty()) {
+                    if (!cut(g, group)) {
+                        neighbor_index.push_back(&g - &spc.groups.front()); // index
+                    }
+                }
+            }
+        }
+        return neighbor_index;
+    }
+
     template <typename T> inline double particle2particle(const T &a, const T &b) const {
         return pair_energy.potential(a, b);
     }
@@ -567,7 +583,7 @@ template <typename TPairEnergy, typename TCutoff> class PairingBasePolicy {
         assert(&group1 != &group2);
         double u = 0;
         if (!cut(group1, group2)) {
-            if constexpr (true) {
+            if constexpr (false) {
                 auto vec = ranges::views::cartesian_product(group1, group2) |
                            ranges::cpp20::views::transform([&](const auto &pair) {
                                return particle2particle(std::get<0>(pair), std::get<1>(pair));
@@ -604,7 +620,7 @@ template <typename TPairEnergy, typename TCutoff> class PairingBasePolicy {
     double group2group(const TGroup &group1, const TGroup &group2, const std::vector<int> &index1) {
         double u = 0;
         if (!cut(group1, group2)) {
-            if constexpr (true) {
+            if constexpr (false) {
                 auto group1_filtered = index1 | ranges::cpp20::views::transform([&](int i) { return group1[i]; });
                 auto vec = ranges::views::cartesian_product(group1_filtered, group2) |
                            ranges::cpp20::views::transform([&](const auto &pair) {
@@ -682,7 +698,7 @@ template <typename TPairEnergy, typename TCutoff> class PairingBasePolicy {
      */
     template <typename TGroup, typename TGroups> double group2groups(const TGroup &group, const TGroups &groups) {
         double energy = 0;
-        if constexpr (true) {
+        if constexpr (false) {
             energy = std::reduce(std::execution::seq, groups.begin(), groups.end(), 0.0,
                                  [&](double sum, const auto &other_group) {
                                      return (&other_group == &group) ? sum : sum + group2group(group, other_group);
@@ -716,7 +732,7 @@ template <typename TPairEnergy, typename TCutoff> class PairingBasePolicy {
     template <typename TGroup, typename TGroups>
     double group2groups(const TGroup &group, const TGroups &group_index, const std::vector<int> &index) {
         double energy = 0.0;
-        if constexpr (true) {
+        if constexpr (false) {
             auto groups = group_index | ranges::cpp20::views::transform([&](int i) { return spc.groups.at(i); });
             energy = std::reduce(
                 std::execution::seq, groups.begin(), groups.end(), 0.0, [&](double sum, const auto &other_group) {
@@ -747,9 +763,9 @@ template <typename TPairEnergy, typename TCutoff> class PairingBasePolicy {
     template <typename Tgroup> double group2all(const Tgroup &group) {
         double energy = 0.0;
         if constexpr (true) {
-            auto vec = spc.groups | ranges::cpp20::views::transform([&](const auto &other_group) {
-                           return (other_group == group) ? 0 : group2group(group, other_group);
-                       });
+            auto neighbors = neighboringGroups(group); // index of neighboring groups within cutoff
+            auto vec =
+                neighbors | ranges::cpp20::views::transform([&](int i) { return group2group(group, spc.groups[i]); });
             energy = std::reduce(std::execution::par, vec.begin(), vec.end(), 0.0);
         } else {
             for (auto &other_group : spc.groups) {
@@ -777,7 +793,7 @@ template <typename TPairEnergy, typename TCutoff> class PairingBasePolicy {
         using namespace ranges::cpp20;
         double energy = 0.0;
         const auto &particle = group[index];
-        if constexpr (true) {
+        if constexpr (false) {
             // flattened view into active particles in all other groups inside the group cutoff
             auto particles = spc.groups |
                              views::filter([&](const auto &g) { return (&g != &group) && (!cut(g, group)); }) |
@@ -816,7 +832,7 @@ template <typename TPairEnergy, typename TCutoff> class PairingBasePolicy {
         double energy = 0;
         if (index.size() == 1) {
             energy = group2all(group, index[0]);
-        } else if constexpr (true) {
+        } else if constexpr (false) {
 
             energy =
                 std::reduce(std::execution::seq, spc.groups.begin(), spc.groups.end(), 0.0,
@@ -885,7 +901,7 @@ template <typename TPairEnergy, typename TCutoff> class PairingBasePolicy {
     double all() {
         using namespace ranges::cpp20;
         double energy = 0.0;
-        if constexpr (true) {
+        if constexpr (false) {
             auto pairs = internal_pairs(spc.groups); // iterable object over all unique group pairs
 
             auto particle_pairs = ranges::make_pipeable(pairs) | views::transform([&](const auto &pair) {

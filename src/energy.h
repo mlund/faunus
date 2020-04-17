@@ -563,7 +563,8 @@ template <typename Tpairpot, bool allow_anisotropic_pair_potential = true> class
 // https://gcc.gnu.org/gcc-9/porting_to.html#ompdatasharing
 // #pragma omp parallel for collapse(2) default(none) shared(G1, G2, g1, g2) reduction(+: u) schedule(dynamic, 100) if
 // (G1*G2 >= 200)
-#pragma omp parallel for collapse(2) default(shared) reduction(+ : u) schedule(dynamic, 100) if (G1 * G2 >= 200)
+// #pragma omp parallel for collapse(2) default(shared) reduction(+ : u) schedule(dynamic, 100) if (G1 * G2 >= 200)
+#pragma omp parallel for collapse(2) default(shared) reduction(+ : u) schedule(static) if (G1 * G2 >= 200)
             for (size_t i = 0; i < G1; ++i) {
                 for (size_t j = 0; j < G2; ++j) {
                     u += i2i(*(g1.begin() + i), *(g2.begin() + j));
@@ -873,9 +874,15 @@ template <typename Tpairpot> class NonbondedCached : public Nonbonded<Tpairpot> 
         if (base::key == Energybase::NEW) { // if this is from the trial system,
             double u = 0;
             if (not base::cut(g1, g2)) {
-                for (auto &i1 : g1)
-                    for (auto &i2 : g2)
-                        u += base::i2i(i1, i2);
+                const size_t G1 = g1.size();
+                const size_t G2 = g2.size();
+// #pragma omp parallel for collapse(2) default(shared) reduction(+ : u) schedule(dynamic, 100) if (G1 * G2 >= 200)
+#pragma omp parallel for collapse(2) default(shared) reduction(+ : u) schedule(static) if (G1 * G2 >= 200)
+                for(int i1 = 0; i1 < G1; ++i1) {
+                    for(int i2 = 0; i2 < G2; ++i2) {
+                        u += base::i2i(g1[i1], g2[i2]);
+                    }
+                }
             }
             cache(i, j) = u;
         }
@@ -923,7 +930,6 @@ template <typename Tpairpot> class NonbondedCached : public Nonbonded<Tpairpot> 
         double u = 0;
 
         if (change) {
-
             if (change.all || change.dV) {
                 //#pragma omp parallel for reduction(+ : u) schedule(dynamic) if (this->omp_enable)
                 for (auto i = base::spc.groups.begin(); i < base::spc.groups.end(); ++i) {

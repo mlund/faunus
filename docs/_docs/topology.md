@@ -208,7 +208,8 @@ For `implicit` molecules, only `N` should be given and the molecules are never
 inserted into the simulation box.
 
 The `molarity` keyword is an alternative to `N` and uses the initial
-volume to calculate the number of molecules to insert.
+volume to calculate the number of molecules to insert. `N` and
+`molarity` are mutually exclusive.
 
 
 ### Overlap Check

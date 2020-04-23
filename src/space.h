@@ -267,27 +267,13 @@ void from_json(const json &j, Space &spc); //!< Deserialize json object to Space
  */
 class InsertMoleculesInSpace {
   private:
-    static bool insertAtomicGroups(MoleculeData &moldata, Space &spc, int N, bool inactive = false);
-    static void insertMolecularGroups(MoleculeData &moldata, Space &spc, int num_molecules, bool inactive);
-
-    /**
-     * @brief Set positions for N last groups in Space
-     * @param int N Number of groups set affect
-     * @param particles Position vector for all particles in the N groups
-     * @param offset Translate positions by this offset
-     */
-    static bool setPositionsForTrailingGroups(Space &spc, int num_molecules, const Faunus::ParticleVector &particles,
-                                              const Point &offset);
-
-    static void insertImplicitGroups(const MoleculeData &mol, Space &spc, int num_molecules);
+    static void insertAtomicGroups(MoleculeData &, Space &, int, bool = false);
+    static void insertMolecularGroups(MoleculeData &, Space &, int num_molecules, bool);
+    static void setPositionsForTrailingGroups(Space &, int, const Faunus::ParticleVector &, const Point &);
+    static void insertImplicitGroups(const MoleculeData &, Space &, int);
 
   public:
-    /**
-     * @brief Insert molecules into Space based on JSON input
-     * @param json_array JSON array
-     * @param spc Space to insert into
-     */
-    static void insertMolecules(const json &json_array, Space &spc);
+    static void insertMolecules(const json &, Space &);
 }; // end of insertMolecules class
 
 /**

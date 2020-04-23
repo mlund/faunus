@@ -70,7 +70,7 @@ The following options are available:
 
 CMake Option                         | Description
 ------------------------------------ | ---------------------------------------
-`-DENABLE_MPI=OFF`                   | Enable MPI
+`-DENABLE_MPI=ON`                    | Enable MPI
 `-DENABLE_OPENMP=ON`                 | Enable OpenMP support
 `-DENABLE_PYTHON=ON`                 | Build python bindings (experimental)
 `-DENABLE_FREESASA=ON`               | Enable SASA routines (external download)

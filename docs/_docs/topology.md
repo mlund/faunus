@@ -31,6 +31,8 @@ random:              # seed for pseudo random number generator
 Below is a list of possible geometries, specified by `type`, for the simulation container,
 indicating if and in which directions periodic boundary conditions (PBC) are applied.
 Origin ($0,0,0$) is always placed in the geometric _center_ of the simulation container.
+In Faunus, particles are always kept inside the simulation container with an external
+potential that is zero if inside; infinity if outside.
 
 `geometry` | PBC      | Required keywords
 ---------- | -------- | --------------------------------------
@@ -40,6 +42,15 @@ Origin ($0,0,0$) is always placed in the geometric _center_ of the simulation co
 `hexagonal`| $x,y$    | `radius` (inscribed/inner), `length` (along _z_)
 `cylinder` | $z$      | `radius`, `length` (along _z_)
 `sphere`   | none     | `radius`
+
+### Number of Steps
+
+The variables `macro` and `micro` are positive integers and the product
+defines the total number steps. In each step a random Monte Carlo move is
+attempted.
+For each `macro` step, all analysis methods are instructed to flush buffered data
+to disk (if appropriate) and `macro` is therefore typically set lower than
+`micro`.
 
 ## Atom Properties
 

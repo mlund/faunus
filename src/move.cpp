@@ -94,6 +94,9 @@ void AtomicTranslateRotate::_from_json(const json &j) {
         if (it == molecules.end())
             throw std::runtime_error("unknown molecule '" + molname + "'");
         molid = it->id();
+        if (Faunus::molecules[molid].rigid) {
+            faunus_logger->warn("structure of rigid molecule {} may be disturbed by {}", molname, name);
+        }
         dir = j.value("dir", Point(1, 1, 1));
         if (repeat < 0) {
             auto v = spc.findMolecules(molid, Space::ALL);

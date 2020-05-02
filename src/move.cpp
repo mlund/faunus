@@ -93,10 +93,10 @@ void AtomicTranslateRotate::_from_json(const json &j) {
         auto it = findName(molecules, molname);
         if (it == molecules.end())
             throw std::runtime_error("unknown molecule '" + molname + "'");
-        molid = it->id();
-        if (Faunus::molecules[molid].rigid) {
+        if (it->rigid) {
             faunus_logger->warn("structure of rigid molecule {} may be disturbed by {}", molname, name);
         }
+        molid = it->id();
         dir = j.value("dir", Point(1, 1, 1));
         if (repeat < 0) {
             auto v = spc.findMolecules(molid, Space::ALL);
@@ -129,8 +129,7 @@ void AtomicTranslateRotate::translateParticle(Space::Tpvec::iterator p, double d
     }
 }
 void AtomicTranslateRotate::_move(Change &change) {
-    auto p = randomAtom();
-    if (p not_eq spc.p.end()) {
+    if (auto p = randomAtom(); p != spc.p.end()) {
         double dp = atoms.at(p->id).dp;
         double dprot = atoms.at(p->id).dprot;
 
@@ -157,24 +156,28 @@ AtomicTranslateRotate::AtomicTranslateRotate(Space &spc) : spc(spc) {
     cdata.internal = true;
 }
 
+/**
+ * For atomic groups, select `ALL` since these may be partially filled and thereby
+ * appear inactive. Note also that only one instance of atomic molecules can exist.
+ * For molecular groups, select only active ones.
+ *
+ * @return Iterator to particle to move; `end()` if nothing selected
+ */
 ParticleVector::iterator AtomicTranslateRotate::randomAtom() {
     assert(molid >= 0);
-
-    // For atomic groups, select `ALL` since these may be partially filled and thereby
-    // appear inactive. For molecular groups, select only active ones.
+    auto particle = spc.p.end(); // particle iterator
     auto selection = (Faunus::molecules[molid].atomic) ? Space::ALL : Space::ACTIVE;
     auto mollist = spc.findMolecules(molid, selection);
-
-    if (auto group = slump.sample(mollist.begin(), mollist.end()); group != mollist.end()) {
+    if (auto group = slump.sample(mollist.begin(), mollist.end()); group != mollist.end()) { // random molecule
         if (not group->empty()) {
-            auto particle = slump.sample(group->begin(), group->end()); // random particle iterator
-            cdata.index = Faunus::distance(spc.groups.begin(), group);  // integer *index* of moved group
-            cdata.atoms[0] = std::distance(group->begin(), particle);   // index of particle rel. to group
-            return particle;
+            particle = slump.sample(group->begin(), group->end());     // random particle
+            cdata.index = Faunus::distance(spc.groups.begin(), group); // index of touched group
+            cdata.atoms[0] = std::distance(group->begin(), particle);  // index of moved particle relative to group
         }
     }
-    return spc.p.end();
+    return particle;
 }
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 Propagator::Propagator(const json &j, Space &spc, MPI::MPIController &mpi) {

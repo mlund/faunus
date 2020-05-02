@@ -43,14 +43,14 @@ potential that is zero if inside; infinity if outside.
 `cylinder` | $z$      | `radius`, `length` (along _z_)
 `sphere`   | none     | `radius`
 
-### Number of Steps
+### Simulation Steps
 
 The variables `macro` and `micro` are positive integers and their product
-defines the total number steps. In each step a random Monte Carlo move is
-attempted.
-For each `macro` step, all analysis methods are, if appropriate, instructed to
-flush buffered data and may also trigger terminal output.
-For this reason `macro` is set lower than `micro`.
+defines the total number simulations steps.
+In each step a random Monte Carlo move is drawn from a weighted distribution.
+For each `macro` step, all analysis methods are, if befitting, instructed to
+flush buffered data to disk and may also trigger terminal output.
+For this reason `macro` is typically set lower than `micro`.
 
 ## Atom Properties
 

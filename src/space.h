@@ -261,7 +261,21 @@ void from_json(const json &j, Space &spc); //!< Deserialize json object to Space
  *     - water: { N: 1, inactive: true }
  * ~~~
  */
-void insertMolecules(const json &j, Space &spc); //!< Insert `N` molecules into space as defined in `insert`
+
+/**
+ * This class helps inserting molecules into Space, based on user
+ * JSON input.
+ */
+class InsertMoleculesInSpace {
+  private:
+    static void insertAtomicGroups(MoleculeData &, Space &, int, bool = false);
+    static void insertMolecularGroups(MoleculeData &, Space &, int num_molecules, bool);
+    static void setPositionsForTrailingGroups(Space &, int, const Faunus::ParticleVector &, const Point &);
+    static void insertImplicitGroups(const MoleculeData &, Space &, int);
+
+  public:
+    static void insertMolecules(const json &, Space &);
+}; // end of insertMolecules class
 
 /**
  * @brief Helper class for range-based for-loops over *active* particles

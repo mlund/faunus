@@ -35,11 +35,12 @@ template <class T> Group<T> &Group<T>::shallowcopy(const Group<T> &o) {
 }
 
 template <class T> bool Group<T>::contains(const T &a, bool include_inactive) const {
-    if (not this->empty()) {
-        int size = (include_inactive ? this->capacity() : this->size());
+    int size = (include_inactive ? this->capacity() : this->size());
+    if (size > 0) {
         int d = &a - &(*(this->begin()));
-        if (d>=0 and d<size)
+        if (d >= 0 and d < size) {
             return true;
+        }
     }
     return false;
 }

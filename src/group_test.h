@@ -76,10 +76,16 @@ TEST_CASE("[Faunus] Group") {
         Group<Particle> g(p.begin(), p.end());
 
         SUBCASE("contains()") {
-            CHECK( g.contains(p[0]) );
-            CHECK( g.contains(p[1]) );
-            CHECK( g.contains(p[2]) );
-            CHECK( g.contains(p[3]) == false );
+            CHECK(g.contains(p[0]));
+            CHECK(g.contains(p[1]));
+            CHECK(g.contains(p[2]));
+            CHECK(g.size() == 3);
+            g.deactivate(g.end() - 1, g.end());
+            CHECK(g.size() == 2);
+            CHECK(g.contains(p[2]) == false);
+            CHECK(g.contains(p[2], true) == true);
+            g.activate(g.end(), g.end() + 1);
+            CHECK(g.size() == 3);
         }
 
         SUBCASE("getGroupFilter(): complete group") {

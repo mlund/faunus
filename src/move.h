@@ -85,7 +85,7 @@ class AtomicTranslateRotate : public Movebase {
 
     void _to_json(json &j) const override;
     void _from_json(const json &j) override; //!< Configure via json object
-    std::vector<Particle>::iterator randomAtom();
+    ParticleVector::iterator randomAtom();
 
     /**
      * @brief translates a single particle.

@@ -156,16 +156,21 @@ AtomicTranslateRotate::AtomicTranslateRotate(Space &spc) : spc(spc) {
     cdata.atoms.resize(1);
     cdata.internal = true;
 }
-std::vector<Particle>::iterator AtomicTranslateRotate::randomAtom() {
+
+ParticleVector::iterator AtomicTranslateRotate::randomAtom() {
     assert(molid >= 0);
-    auto mollist = spc.findMolecules(molid, Space::ALL); // all `molid` groups
-    if (not ranges::cpp20::empty(mollist)) {
-        auto git = slump.sample(mollist.begin(), mollist.end()); // random molecule iterator
-        if (not git->empty()) {
-            auto p = slump.sample(git->begin(), git->end());         // random particle iterator
-            cdata.index = Faunus::distance(spc.groups.begin(), git); // integer *index* of moved group
-            cdata.atoms[0] = std::distance(git->begin(), p);         // index of particle rel. to group
-            return p;
+
+    // For atomic groups, select `ALL` since these may be partially filled and thereby
+    // appear inactive. For molecular groups, select only active ones.
+    auto selection = (Faunus::molecules[molid].atomic) ? Space::ALL : Space::ACTIVE;
+    auto mollist = spc.findMolecules(molid, selection);
+
+    if (auto group = slump.sample(mollist.begin(), mollist.end()); group != mollist.end()) {
+        if (not group->empty()) {
+            auto particle = slump.sample(group->begin(), group->end()); // random particle iterator
+            cdata.index = Faunus::distance(spc.groups.begin(), group);  // integer *index* of moved group
+            cdata.atoms[0] = std::distance(group->begin(), particle);   // index of particle rel. to group
+            return particle;
         }
     }
     return spc.p.end();

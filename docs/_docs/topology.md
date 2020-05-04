@@ -31,6 +31,8 @@ random:              # seed for pseudo random number generator
 Below is a list of possible geometries, specified by `type`, for the simulation container,
 indicating if and in which directions periodic boundary conditions (PBC) are applied.
 Origin ($0,0,0$) is always placed in the geometric _center_ of the simulation container.
+Particles are always kept inside the simulation container with an external
+potential that is zero if inside; infinity if outside.
 
 `geometry` | PBC      | Required keywords
 ---------- | -------- | --------------------------------------
@@ -40,6 +42,15 @@ Origin ($0,0,0$) is always placed in the geometric _center_ of the simulation co
 `hexagonal`| $x,y$    | `radius` (inscribed/inner), `length` (along _z_)
 `cylinder` | $z$      | `radius`, `length` (along _z_)
 `sphere`   | none     | `radius`
+
+### Simulation Steps
+
+The variables `macro` and `micro` are positive integers and their product
+defines the total number simulations steps.
+In each step a random Monte Carlo move is drawn from a weighted distribution.
+For each `macro` step, all analysis methods are, if befitting, instructed to
+flush buffered data to disk and may also trigger terminal output.
+For this reason `macro` is typically set lower than `micro`.
 
 ## Atom Properties
 

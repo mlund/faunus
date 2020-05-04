@@ -129,9 +129,16 @@ faunus -v 5 -i in.json 2>> error.log
 
 ## Parallelization
 
+By default, Monte Carlo moves and energy evaluations run in _serial_ and are
+not sped up by OpenMP/MPI as described below. Pragmas for non-bonded interactions
+can relatively easily be added, but this currently requires source modifications.
+We are working to make this user-controllable and in the meantime consider using
+an [embarrassingly parallel](https://en.wikipedia.org/wiki/Embarrassingly_parallel)
+scheme via different random seeds (provided that your system equilibrates quickly).
+
 ### OpenMP
 
-Several routines in Faunus can run in parallel using multiple threads. The only prerequisite is that Faunus was
+Some routines in Faunus can run in parallel using multiple threads. The only prerequisite is that Faunus was
 compiled with OpenMP support (which is default). The number of threads is controlled with an environment variable.
 The following example demonstrates how to run Faunus using 4 threads:  
 

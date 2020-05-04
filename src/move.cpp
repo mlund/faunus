@@ -79,76 +79,89 @@ void to_json(json &j, const Movebase &m) {
 }
 
 void AtomicTranslateRotate::_to_json(json &j) const {
-    j = {{"dir", dir},
+    j = {{"dir", directions},
          {"molid", molid},
-         {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(msqd.avg())},
-         {"molecule", molname}};
+         {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(mean_square_displacement.avg())},
+         {"molecule", molecule_name}};
     _roundjson(j, 3);
 }
+
 void AtomicTranslateRotate::_from_json(const json &j) {
     assert(!molecules.empty());
     try {
-        assertKeys(j, {"molecule", "dir", "repeat"});
-        molname = j.at("molecule");
-        auto it = findName(molecules, molname);
-        if (it == molecules.end())
-            throw std::runtime_error("unknown molecule '" + molname + "'");
-        if (it->rigid) {
-            faunus_logger->warn("structure of rigid molecule {} may be disturbed by {}", molname, name);
-        }
-        molid = it->id();
-        dir = j.value("dir", Point(1, 1, 1));
-        if (repeat < 0) {
-            auto v = spc.findMolecules(molid, Space::ALL);
-            repeat = std::distance(v.begin(), v.end()); // repeat for each molecule...
-            if (repeat > 0)
-                repeat = repeat * v.front().size(); // ...and for each atom
+        molecule_name = j.at("molecule");
+        if (auto it = findName(molecules, molecule_name); it != molecules.end()) {
+            if (it->rigid) {
+                faunus_logger->warn("structure of rigid molecule {} may be disturbed by {}", molecule_name, name);
+            }
+            molid = it->id();
+            directions = j.value("dir", Point(1, 1, 1));
+            if (repeat < 0) {
+                auto mollist = spc.findMolecules(molid, Space::ALL);
+                repeat = std::distance(mollist.begin(), mollist.end()); // repeat for each molecule...
+                if (repeat > 0) {
+                    repeat = repeat * mollist.front().size(); // ...and for each atom
+                }
+            }
+        } else {
+            throw std::runtime_error("unknown molecule '" + molecule_name + "'");
         }
     } catch (std::exception &e) {
         throw std::runtime_error(name + ": " + e.what());
     }
 }
-void AtomicTranslateRotate::translateParticle(Space::Tpvec::iterator p, double dp) {
-    auto &g = spc.groups[cdata.index];
-    Point oldpos = p->pos;
-    p->pos += ranunit(slump, dir) * dp * slump();
 
-    spc.geo.boundary(p->pos);
-    _sqd = spc.geo.sqdist(oldpos, p->pos); // squared displacement
-    if (not g.atomic) {                    // recalc mass-center for non-molecular groups
-        g.cm = Geometry::massCenter(g.begin(), g.end(), spc.geo.getBoundaryFunc(), -g.cm);
+void AtomicTranslateRotate::translateParticle(ParticleVector::iterator particle, double displacement) {
+    auto old_position = particle->pos; // backup old position
+    particle->pos += ranunit(slump, directions) * displacement * slump();
+    spc.geo.boundary(particle->pos);
+    _sqd = spc.geo.sqdist(old_position, particle->pos); // square displacement
+
+    if (auto &group = spc.groups[cdata.index]; group.atomic == false) { // update COM for molecular groups
+        group.cm = Geometry::massCenter(group.begin(), group.end(), spc.geo.getBoundaryFunc(), -group.cm);
 #ifndef NDEBUG
-        Point cmbak = g.cm;                             // backup mass center
-        g.translate(-cmbak, spc.geo.getBoundaryFunc()); // translate to {0,0,0}
-        double should_be_zero = spc.geo.sqdist({0, 0, 0}, Geometry::massCenter(g.begin(), g.end()));
-        if (should_be_zero > 1e-6)
+        // Perform test to see if the move violates PBC
+        auto old_mass_center = group.cm;                              // backup mass center
+        group.translate(-old_mass_center, spc.geo.getBoundaryFunc()); // translate to {0,0,0}
+        double should_be_zero = spc.geo.sqdist({0, 0, 0}, Geometry::massCenter(group.begin(), group.end()));
+        if (should_be_zero > 1e-6) {
             throw std::runtime_error("atomic move too large");
-        else
-            g.translate(cmbak, spc.geo.getBoundaryFunc());
+        } else {
+            group.translate(old_mass_center, spc.geo.getBoundaryFunc());
+        }
 #endif
     }
 }
+
 void AtomicTranslateRotate::_move(Change &change) {
-    if (auto p = randomAtom(); p != spc.p.end()) {
-        double dp = atoms.at(p->id).dp;
-        double dprot = atoms.at(p->id).dprot;
+    if (auto particle = randomAtom(); particle != spc.p.end()) {
+        double translational_displacement = atoms.at(particle->id).dp;
+        double rotational_displacement = atoms.at(particle->id).dprot;
 
-        if (dp > 0) // translate
-            translateParticle(p, dp);
+        assert(translational_displacement >= 0.0);
 
-        if (dprot > 0) { // rotate
-            Point u = ranunit(slump);
-            double angle = dprot * (slump() - 0.5);
-            Eigen::Quaterniond Q(Eigen::AngleAxisd(angle, u));
-            p->rotate(Q, Q.toRotationMatrix());
+        if (translational_displacement > 0.0) { // translate
+            translateParticle(particle, translational_displacement);
         }
 
-        if (dp > 0 or dprot > 0)
+        if (rotational_displacement > 0.0) { // rotate
+            Point u = ranunit(slump);
+            double angle = rotational_displacement * (slump() - 0.5);
+            Eigen::Quaterniond Q(Eigen::AngleAxisd(angle, u));
+            particle->rotate(Q, Q.toRotationMatrix());
+        }
+
+        if (translational_displacement > 0.0 or rotational_displacement > 0.0) {
             change.groups.push_back(cdata); // add to list of moved groups
+        }
+    } else {
+        _sqd = 0.0; // no particle found --> no movement
     }
 }
-void AtomicTranslateRotate::_accept(Change &) { msqd += _sqd; }
-void AtomicTranslateRotate::_reject(Change &) { msqd += 0; }
+
+void AtomicTranslateRotate::_accept(Change &) { mean_square_displacement += _sqd; }
+void AtomicTranslateRotate::_reject(Change &) { mean_square_displacement += 0; }
+
 AtomicTranslateRotate::AtomicTranslateRotate(Space &spc) : spc(spc) {
     name = "transrot";
     repeat = -1; // meaning repeat N times

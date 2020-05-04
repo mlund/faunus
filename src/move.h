@@ -74,23 +74,21 @@ class AtomicSwapCharge : public Movebase {
  * @brief Translate and rotate a molecular group
  */
 class AtomicTranslateRotate : public Movebase {
+  private:
+    double _sqd; //!< temporary squared displacement
   protected:
-    Space &spc;            //!< Space to operate on
-    int molid = -1;        //!< Molecule id to move
-    Point dir = {1, 1, 1}; //!< displacement directions
-    Average<double> msqd;  //!< mean squared displacement
-    double _sqd;           //!< temporary squared displacement
-    std::string molname;   //!< name of molecule to operate on
-    Change::data cdata;    //!< Data for change object
+    Space &spc;                               //!< Space to operate on
+    int molid = -1;                           //!< Molecule id to move
+    Point directions = {1, 1, 1};             //!< displacement directions
+    Average<double> mean_square_displacement; //!< mean squared displacement
+    std::string molecule_name;                //!< name of molecule to operate on
+    Change::data cdata;                       //!< Data for change object
 
     void _to_json(json &) const override;
     void _from_json(const json &) override; //!< Configure via json object
     ParticleVector::iterator randomAtom();  //!< Select random particle to move
 
-    /**
-     * @brief translates a single particle.
-     */
-    virtual void translateParticle(typename ParticleVector::iterator, double);
+    virtual void translateParticle(ParticleVector::iterator, double); //!< translate single particle
     void _move(Change &) override;
     void _accept(Change &) override;
     void _reject(Change &) override;

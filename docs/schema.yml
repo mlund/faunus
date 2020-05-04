@@ -85,7 +85,7 @@ properties:
                 properties:
                     activity: {type: number, default: 0.0}
                     alphax: {type: number, default: 0.0}
-                    dp: {type: number, default: 0.0}
+                    dp: {type: number, default: 0.0, minimum: 0.0}
                     dprot: {type: number, default: 0.0, description: "Rotational displacement parameter"}
                     eps: {type: number, default: 0.0}
                     implicit: {type: boolean, default: false, description: "True if atom is implicit"}
@@ -625,8 +625,6 @@ properties:
                 transrot:
                     description: "Atomic translation and rotation"
                     properties:
-                        dp: {type: number}
-                        dprot: {type: number}
                         molecule: {type: string}
                         repeat: {type: [integer, string]}
                         dir:
@@ -635,11 +633,6 @@ properties:
                             minItems: 3
                             maxItems: 3
                             default: [1,1,1]
-                        dirrot:
-                            items: {type: number}
-                            type: array
-                            minItems: 3
-                            maxItems: 3
                     required: [molecule]
                     additionalProperties: false
                     type: object

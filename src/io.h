@@ -9,6 +9,8 @@
 
 namespace Faunus {
 
+template <typename T = Particle> class Group;
+
 #ifndef __cplusplus
 #define __cplusplus
 #endif
@@ -103,11 +105,15 @@ class FormatPQR {
     static bool readAtomRecord(const std::string &, Particle &, double &);       //!< Read ATOM or HETATOM record
 
   public:
+    typedef std::vector<Group<Particle>> Tgroup_vector;
     static Point load(std::istream &, ParticleVector &, bool);                      //!< Load PQR from stream
     static Point load(const std::string &, ParticleVector &, bool);                 //!< Load PQR from file
     static void loadTrajectory(const std::string &, std::vector<ParticleVector> &); //!< Load trajectory
     static bool save(std::ostream &, const ParticleVector &, Point = Point(0, 0, 0), int = 1e9);      //!< Save PQR file
     static bool save(const std::string &, const ParticleVector &, Point = Point(0, 0, 0), int = 1e9); //!< Save PQR file
+
+    static bool save(std::ostream &, const Tgroup_vector &, Point = Point(0, 0, 0));      //!< Save PQR file
+    static bool save(const std::string &, const Tgroup_vector &, Point = Point(0, 0, 0)); //!< Save PQR file
 };
 
 /**

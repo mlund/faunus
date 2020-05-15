@@ -335,7 +335,7 @@ $$
 
 
 During simulation, the above terms are thermally averaged over angles, co-solute degrees of freedom etc.
-Note also that the moments are defined with respect to the *mass* center, not *charge* center.
+Note also that the moments are defined with respect to the _mass_ center, not _charge_ center.
 While for globular macromolecules the difference between the two is often small,
 the latter is more appropriate and is planned for a future update.
 
@@ -517,7 +517,9 @@ keyword when inserting the initial molecules in the [topology](topology).
 `saverandom=false` |  Save the state of the random number generator
 `nstep=-1`         |  Interval between samples. If -1, save at end of simulation
 
-Saves the current configuration or the system state to file.
+Saves the current configuration or the system state to file. For grand canonical
+simulations, the PQR file format sets charges and radii of inactive particles to zero
+and positions them in one corner of the box.
 
 If the suffix is `json` (text) or `ubj` ([binary](http://ubjson.org)), a single 
 state file that can be used to restart the simulation is saved

@@ -169,8 +169,8 @@ SaveState::SaveState(const json &j, Space &spc) {
         writeFunc = std::bind([](std::string file, Space &s) { FormatGRO::save(file, s); }, _1, std::ref(spc));
 
     else if (suffix == "pqr")
-        writeFunc = std::bind([](std::string file, Space &s) { FormatPQR::save(file, s.p, s.geo.getLength()); }, _1,
-                              std::ref(spc));
+        writeFunc = std::bind([](std::string file, Space &s) { FormatPQR::save(file, s.groups, s.geo.getLength()); },
+                              _1, std::ref(spc));
 
     else if (suffix == "xyz")
         writeFunc = std::bind([](std::string file, Space &s) { FormatXYZ::save(file, s.p, s.geo.getLength()); }, _1,

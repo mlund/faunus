@@ -366,13 +366,16 @@ atomic species can be saved.
 
 ## Reaction Coordinate
 
-This saves a given reaction coordinate (see Penalty Function in Energy) as a function of steps.
-The output `file` has three columns: steps; the value of the reaction coordinate; and
-the cummulative average of all preceding values. Optional [gzip compression](https://en.wikipedia.org/wiki/Gzip)
-can be enabled by suffixing the filename with `.gz`, thereby reducing the output file size significantly.
+This saves a given [reaction coordinate](energy.html#reaction-coordinates)
+as a function of steps. The generated output `file` has three columns:
 
-The folowing example prints the mass center $z$ coordinate of the first molecule
-to disk every 100th steps:
+1. step number
+2. the value of the reaction coordinate
+3. the cummulative average of all preceding values.
+
+Optional [gzip compression](https://en.wikipedia.org/wiki/Gzip)
+can be enabled by suffixing the filename with `.gz`, thereby reducing the output file size significantly.
+The folowing example reports the mass center $z$ coordinate of the first molecule every 100th steps:
 
 ~~~ yaml
 - reactioncoordinate:
@@ -389,7 +392,7 @@ is reported by diagonalising the gyration tensor to find the principal moments:
 
 ### Processing
 
-In the above examples we saved two properties as a function of steps. To join the two
+In the above examples we stored two properties as a function of steps. To join the two
 files and calculate the _average angle_ as a function of the mass center coordinate, _z_,
 the following python code may be used:
 

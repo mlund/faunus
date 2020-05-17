@@ -15,7 +15,7 @@
 # sys.path.insert(0, os.path.abspath('.'))
 
 project = 'Faunus'
-copyright = '2019, Mikael Lund'
+copyright = '2020, Mikael Lund'
 author = 'Mikael Lund'
 source_suffix = ['.rst', '.md']
 master_doc = 'index'

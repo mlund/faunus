@@ -367,15 +367,16 @@ atomic species can be saved.
 ## Reaction Coordinate
 
 This saves a given reaction coordinate (see Penalty Function in Energy) as a function of steps.
-The output file has three columns with steps; the value of the reaction coordinate; and
-the cummulative average of all preceding values.
+The output `file` has three columns with steps; the value of the reaction coordinate; and
+the cummulative average of all preceding values. Optional GZip compression can be activated by
+ending the filename with `.gz`.
 
 The folowing example prints the mass center $z$ coordinate of the first molecule
 to disk every 100th steps:
 
 ~~~ yaml
 - reactioncoordinate:
-    {nstep: 100, file: cmz.dat, type: molecule, index: 0, property: com_z}
+    {nstep: 100, file: cmz.dat.gz, type: molecule, index: 0, property: com_z}
 ~~~ 
 
 In the next example, the Angle between the principal molecular axis and the $xy$-plane
@@ -383,7 +384,7 @@ is reported by diagonalising the gyration tensor to find the principal moments:
 
 ~~~ yaml
 - reactioncoordinate:
-    {nstep: 100, file: angle.dat, type: molecule, index: 0, property: angle, dir: [0,0,1]}
+    {nstep: 100, file: angle.dat.gz, type: molecule, index: 0, property: angle, dir: [0,0,1]}
 ~~~ 
 
 ### Processing
@@ -402,7 +403,7 @@ def joinRC(xfile, yfile, bins):
     means, edges, bins = binned_statistic(x,y,'mean',bins)
     return (edges[:-1] + edges[1:]) / 2, means
 
-cmz, angle = joinRC('cmz.dat', 'angle.dat', 100)
+cmz, angle = joinRC('cmz.dat.gz', 'angle.dat.gz', 100)
 np.diff(cmz) # --> cmz resolution; control w. `bins`
 ~~~
 

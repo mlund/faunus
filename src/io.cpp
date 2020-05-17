@@ -1,6 +1,7 @@
 #include "io.h"
 #include "units.h"
 #include "random.h"
+#include "group.h"
 #include <spdlog/spdlog.h>
 #include <zstr.hpp>
 #include <cereal/archives/binary.hpp>
@@ -309,10 +310,43 @@ bool FormatPQR::save(std::ostream &stream, const ParticleVector &particles, Poin
             Point pos = i.pos + 0.5 * box_length; // move origin to corner of box (faunus used the middle)
             stream << fmt::format("ATOM  {:5d} {:4} {:4}{:5d}    {:8.3f} {:8.3f} {:8.3f} {:.3f} {:.3f}\n", atom_cnt++,
                                   d.name, d.name, residue_cnt, pos.x(), pos.y(), pos.z(), i.charge, 0.5 * d.sigma);
-            if (d.name == "CTR")
+            if (d.name == "CTR" or d.name == "HCTR") {
                 residue_cnt++;
-            else if (atom_cnt % n == 0)
+            } else if (atom_cnt % n == 0) {
                 residue_cnt++;
+            }
+        }
+        stream << "END\n";
+        return true;
+    }
+    return false;
+}
+
+/**
+ * @brief Write vector of groups to output stream
+ * @param stream Output stream
+ * @param groups Vector of groups
+ * @param box_length Box dimensions
+ *
+ * The residue number follows the group index and inactive particles will
+ * have zero charge; zero radius; and positioned in the corner of the box.
+ */
+bool FormatPQR::save(std::ostream &stream, const Tgroup_vector &groups, Point box_length) {
+    if (stream) {
+        if (box_length.norm() > pc::epsilon_dbl) {
+            stream << writeCryst1(box_length);
+        }
+        int residue_cnt = 1, atom_cnt = 1;
+        for (auto &group : groups) {                                                       // loop over all molecules
+            for (auto particle = group.begin(); particle != group.trueend(); particle++) { // loop over particles
+                double scale = (particle < group.end()) ? 1.0 : 0.0;                       // zero if inactive particle
+                auto pos = scale * (particle->pos + 0.5 * box_length);                     // origin to corner of box
+                stream << fmt::format("ATOM  {:5d} {:4} {:4}{:5d}    {:8.3f} {:8.3f} {:8.3f} {:.3f} {:.3f}\n", atom_cnt,
+                                      particle->traits().name, particle->traits().name, residue_cnt, pos.x(), pos.y(),
+                                      pos.z(), scale * particle->charge, scale * particle->traits().sigma / 2.0);
+                atom_cnt++;
+            }
+            residue_cnt++;
         }
         stream << "END\n";
         return true;
@@ -330,6 +364,20 @@ bool FormatPQR::save(const std::string &filename, const ParticleVector &particle
     if (not particles.empty()) {
         std::ofstream file(filename);
         return save(file, particles, box_length, n);
+    }
+    return false;
+}
+
+/**
+ * @param filename Output PQR filename
+ * @param particles Particle vector
+ * @param box_length Unit cell dimensions (default: [0,0,0], not printed)
+ * @param n Number of atoms in each residue (default: automatic)
+ */
+bool FormatPQR::save(const std::string &filename, const Tgroup_vector &groups, Point box_length) {
+    if (not groups.empty()) {
+        std::ofstream file(filename);
+        return save(file, groups, box_length);
     }
     return false;
 }

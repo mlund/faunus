@@ -366,45 +366,53 @@ atomic species can be saved.
 
 ## Reaction Coordinate
 
-This saves a given reaction coordinate (see Penalty Function in Energy) as a function of steps.
-The output file has three columns with steps; the value of the reaction coordinate; and
-the cummulative average of all preceding values.
+This saves a given [reaction coordinate](energy.html#reaction-coordinates)
+as a function of steps. The generated output `file` has three columns:
 
-The folowing example prints the mass center $z$ coordinate of the first molecule
-to disk every 100th steps:
+1. step number
+2. the value of the reaction coordinate
+3. the cummulative average of all preceding values.
+
+Optional [gzip compression](https://en.wikipedia.org/wiki/Gzip)
+can be enabled by suffixing the filename with `.gz`, thereby reducing the output file size significantly.
+The folowing example reports the mass center $z$ coordinate of the first molecule every 100th steps:
 
 ~~~ yaml
 - reactioncoordinate:
-    {nstep: 100, file: cmz.dat, type: molecule, index: 0, property: com_z}
+    {nstep: 100, file: cmz.dat.gz, type: molecule, index: 0, property: com_z}
 ~~~ 
 
-In the next example, the Angle between the principal molecular axis and the $xy$-plane
+In the next example, the angle between the principal molecular axis and the $xy$-plane
 is reported by diagonalising the gyration tensor to find the principal moments:
 
 ~~~ yaml
 - reactioncoordinate:
-    {nstep: 100, file: angle.dat, type: molecule, index: 0, property: angle, dir: [0,0,1]}
+    {nstep: 100, file: angle.dat.gz, type: molecule, index: 0, property: angle, dir: [0,0,1]}
 ~~~ 
 
 ### Processing
 
-In the example above we saved two properties as a function of steps. To join the two
-files and generate the average angle as a function of _z_, the following python code
-may be used:
+In the above examples we stored two properties as a function of steps. To join the two
+files and calculate the _average angle_ as a function of the mass center coordinate, _z_,
+the following python code may be used:
 
 ~~~ python
 import numpy as np
 from scipy.stats import binned_statistic
 
-def joinRC(xfile, yfile, bins):
-    x = np.loadtxt(xfile, usecols=[1])
-    y = np.loadtxt(yfile, usecols=[1])
-    means, edges, bins = binned_statistic(x,y,'mean',bins)
+def joinRC(filename1, filename2, bins):
+    x = np.loadtxt(filename1, usecols=[1])
+    y = np.loadtxt(filename2, usecols=[1])
+    means, edges, bins = binned_statistic(x, y, 'mean', bins)
     return (edges[:-1] + edges[1:]) / 2, means
 
-cmz, angle = joinRC('cmz.dat', 'angle.dat', 100)
+cmz, angle = joinRC('cmz.dat.gz', 'angle.dat.gz', 100)
 np.diff(cmz) # --> cmz resolution; control w. `bins`
 ~~~
+
+Note that Numpy automatically detects and decompresses `.gz` files.
+Further, the command line tools `zcat`, `zless` etc. are useful for handling
+compressed files.
 
 
 ## System Sanity

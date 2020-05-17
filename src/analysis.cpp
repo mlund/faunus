@@ -451,10 +451,10 @@ void FileReactionCoordinate::_to_json(json &j) const {
 }
 
 void FileReactionCoordinate::_sample() {
-    if (file) {
+    if (*stream) {
         double val = (*rc)();
         avg += val;
-        file << fmt::format("{} {:.6f} {:.6f}\n", cnt * steps, val, avg.avg());
+        (*stream) << fmt::format("{} {:.6f} {:.6f}\n", cnt * steps, val, avg.avg());
     }
 }
 
@@ -462,13 +462,23 @@ FileReactionCoordinate::FileReactionCoordinate(const json &j, Space &spc) {
     from_json(j);
     name = "reactioncoordinate";
     filename = MPI::prefix + j.at("file").get<std::string>();
-    file.open(filename); // output file
+    if (auto suffix = filename.substr(filename.find_last_of(".") + 1); suffix == "gz") {
+        faunus_logger->trace("{}: GZip compression enabled for {}", name, filename);
+        stream = std::make_unique<zstr::ofstream>(filename);
+    } else {
+        stream = std::make_unique<std::ofstream>(filename);
+    }
+    if (not*stream) {
+        throw std::runtime_error("could not open create "s + filename);
+    }
     type = j.at("type").get<std::string>();
     rc = ReactionCoordinate::createReactionCoordinate({{type, j}}, spc);
 }
+
 void FileReactionCoordinate::_to_disk() {
-    if (file)
-        file.flush(); // empty buffer
+    if (*stream) {
+        stream->flush(); // empty buffer
+    }
 }
 
 void WidomInsertion::_sample() {

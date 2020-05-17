@@ -64,7 +64,7 @@ class FileReactionCoordinate : public Analysisbase {
   private:
     Average<double> avg;
     std::string type, filename;
-    std::ofstream file;
+    std::unique_ptr<std::ostream> stream = nullptr;
     std::shared_ptr<ReactionCoordinate::ReactionCoordinateBase> rc = nullptr;
 
     void _to_json(json &j) const override;
@@ -72,7 +72,7 @@ class FileReactionCoordinate : public Analysisbase {
     void _to_disk() override;
 
   public:
-    FileReactionCoordinate(const json &j, Space &spc);
+    FileReactionCoordinate(const json &, Space &);
 };
 
 /**

@@ -111,7 +111,7 @@ if(ENABLE_FREESASA)
 endif()
 
 # target: unittests
-add_executable(unittests unittests.cpp ${tsts})
+add_executable(unittests EXCLUDE_FROM_ALL unittests.cpp ${tsts})
 target_link_libraries(unittests libfaunus)
 target_compile_definitions(unittests PRIVATE SPDLOG_COMPILED_LIB)
 add_test(
@@ -463,10 +463,8 @@ install(FILES
     ${EXAMPLES_DIR}/calciumhydroxide/calciumhydroxide.yml
     ${EXAMPLES_DIR}/calciumhydroxide/calciumhydroxide.out.json
     ${EXAMPLES_DIR}/calciumhydroxide/calciumhydroxide.state.json
-    ${EXAMPLES_DIR}/calciumhydroxide/calciumhydroxide_molecular.yml
-    ${EXAMPLES_DIR}/calciumhydroxide/calciumhydroxide_molecular.out.json
-    ${EXAMPLES_DIR}/calciumhydroxide/calciumhydroxide_molecular.state.json
+    ${EXAMPLES_DIR}/calciumhydroxide_molecular/calciumhydroxide_molecular.yml
+    ${EXAMPLES_DIR}/calciumhydroxide_molecular/calciumhydroxide_molecular.out.json
+    ${EXAMPLES_DIR}/calciumhydroxide_molecular/calciumhydroxide_molecular.state.json
     ${EXAMPLES_DIR}/water/ewald.yml
     DESTINATION share/faunus/examples)
-
-

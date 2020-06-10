@@ -6,8 +6,11 @@ namespace Faunus {
 namespace Move {
 
 double Cluster::clusterProbability(const Cluster::Tgroup &g1, const Cluster::Tgroup &g2) const {
-    if (spc.geo.sqdist(g1.cm, g2.cm) <= group_thresholds(g1.id, g2.id))
-        return 1.0;
+    if (!g1.empty() and !g2.empty()) {
+        if (spc.geo.sqdist(g1.cm, g2.cm) <= group_thresholds(g1.id, g2.id)) {
+            return 1.0;
+        }
+    }
     return 0.0;
 }
 void Cluster::_to_json(json &j) const {
@@ -15,7 +18,7 @@ void Cluster::_to_json(json &j) const {
     j = {{"dir", dir},
          {"dp", dptrans},
          {"dprot", dprot},
-         {"spread", spread},
+         {"single_layer", single_layer},
          {"dirrot", dirrot},
          {rootof + bracket("r" + squared), std::sqrt(msqd.avg())},
          {rootof + bracket(theta + squared) + "/" + degrees, std::sqrt(msqd_angle.avg()) / 1.0_deg},
@@ -42,13 +45,17 @@ void Cluster::_to_json(json &j) const {
             _j.push_back(Faunus::molecules[id].name);
     }
 }
+
 void Cluster::_from_json(const json &j) {
     dptrans = j.at("dp");
     dir = j.value("dir", Point(1, 1, 1));
     dirrot = j.value("dirrot", Point(0, 0, 0)); // predefined axis of rotation
     dirrot.normalize();                         // make sure dirrot is a unit-vector
     dprot = j.at("dprot");
-    spread = j.value("spread", true);
+    single_layer = j.value("single_layer", false);
+    if (j.count("spread")) {
+        faunus_logger->warn("{name}: 'spread' is deprecated, use 'single_layer' instead");
+    }
     molecule_names = j.at("molecules").get<decltype(molecule_names)>(); // molecule names
     molids = names2ids(molecules, molecule_names);                      // names --> molids
 
@@ -68,19 +75,17 @@ void Cluster::_from_json(const json &j) {
 
     // read cluster thresholds
     if (j.count("threshold") == 1) {
-        auto &_j = j.at("threshold");
-        // threshold is given as a single number
-        if (_j.is_number()) {
-            for (auto i : molids)
-                for (auto j : molids)
-                    if (i >= j)
+        if (auto &_j = j.at("threshold"); _j.is_number()) { // threshold is given as a single number
+            for (auto i : molids) {
+                for (auto j : molids) {
+                    if (i >= j) {
                         group_thresholds.set(i, j, std::pow(_j.get<double>(), 2));
-        }
-        // threshold is given as pairs of clustering molecules
-        else if (_j.is_object()) {
+                    }
+                }
+            }
+        } else if (_j.is_object()) { // threshold is given as pairs of clustering molecules
             for (auto it = _j.begin(); it != _j.end(); ++it) {
-                auto v = words2vec<std::string>(it.key());
-                if (v.size() == 2) {
+                if (auto v = words2vec<std::string>(it.key()); v.size() == 2) {
                     auto it1 = findName(Faunus::molecules, v[0]);
                     auto it2 = findName(Faunus::molecules, v[1]);
                     if (it1 == Faunus::molecules.end() or it2 == Faunus::molecules.end())
@@ -93,49 +98,60 @@ void Cluster::_from_json(const json &j) {
             throw std::runtime_error("threshold must be a number or object");
     }
 }
-void Cluster::findCluster(Space &spc, size_t first, std::set<size_t> &cluster) {
-    assert(first < spc.p.size());
+
+/**
+ * Find cluster
+ *
+ * @param spc Space to operate on
+ * @param seed_index Index of seed_index group to evaluate the cluster around
+ * @param cluster Destination vector for group indices of the found cluster
+ */
+void Cluster::findCluster(Space &spc, size_t seed_index, std::vector<size_t> &cluster) {
+    assert(seed_index < spc.p.size());
     std::set<size_t> pool(molecule_index.begin(), molecule_index.end());
-    assert(pool.count(first) > 0);
+    assert(pool.count(seed_index) == 1);
 
     cluster.clear();
-    cluster.insert(first);
-    pool.erase(first);
+    cluster.reserve(molecule_index.size()); // ensures safe resizing without invalidating iterators
+    cluster.push_back(seed_index);          // 'seed_index' is the index of the seed molecule
+    pool.erase(seed_index);                 // ...which is already in the cluster and not part of pool
 
-    size_t n;
-    do { // find cluster (not very clever...)
-    start:
-        n = cluster.size();
-        for (size_t i : cluster)
-            if (not spc.groups.at(i).empty()) // check if group is inactive
-                for (size_t j : pool)
-                    if (i != j)
-                        if (not spc.groups.at(j).empty()) { // check if group is inactive
-                            // probability to cluster
-                            double P = clusterProbability(spc.groups.at(i), spc.groups.at(j));
-                            if (Movebase::slump() <= P) {
-                                cluster.insert(j);
-                                pool.erase(j);
-				if(spread)
-				  goto start; // wow, first goto ever!
-                            }
-                        }
-    } while (cluster.size() != n);
+    // cluster search algorithm
+    for (auto it1 = cluster.begin(); it1 != cluster.end(); it1++) {
+        for (auto it2 = pool.begin(); it2 != pool.end();) {
+            double P = clusterProbability(spc.groups.at(*it1), spc.groups.at(*it2)); // probability to cluster
+            if (Movebase::slump() <= P) {
+                cluster.push_back(*it2); // add to cluster
+                it2 = pool.erase(it2);   // erase and advance (c++11)
+            } else {
+                ++it2;
+            }
+        }
+        if (single_layer) { // stop after one iteration around 'seed_index'
+            break;
+        }
+    }
 
     // check if cluster is too large
+    rotate = true;
     double max = spc.geo.getLength().minCoeff() / 2;
-    for (auto i : cluster)
-        for (auto j : cluster)
-            if (j > i)
-                if (spc.geo.sqdist(spc.groups.at(i).cm, spc.groups.at(j).cm) >= max * max)
+    for (auto i : cluster) {
+        for (auto j : cluster) {
+            if (j > i) {
+                if (spc.geo.sqdist(spc.groups.at(i).cm, spc.groups.at(j).cm) >= max * max) {
                     rotate = false; // skip rotation if cluster larger than half the box length
+                }
+            }
+        }
+    }
 }
+
 void Cluster::_move(Change &change) {
     _bias = 0;
     rotate = true;
     updateMoleculeIndex();
     if (not molecule_index.empty()) {
-        std::set<size_t> cluster; // all group index in cluster
+        std::vector<size_t> cluster; // all group index in cluster
 
         // find "nuclei" or cluster center and exclude any molecule id listed as "satellite".
         size_t index_of_nuclei;
@@ -204,7 +220,7 @@ void Cluster::_move(Change &change) {
         // Note: this only works for the binary 0/1 probability function
         // currently implemented in `findCluster()`.
 
-        std::set<size_t> aftercluster;         // all group index in cluster _after_move
+        std::vector<size_t> aftercluster;                // all group index in cluster _after_move
         findCluster(spc, index_of_nuclei, aftercluster); // find cluster around first
         if (aftercluster == cluster)
             _bias = 0;
@@ -250,12 +266,16 @@ Cluster::Cluster(Space &spc) : spc(spc) {
 void Cluster::updateMoleculeIndex() {
     assert(not molids.empty());
     molecule_index.clear();
-    for (auto &g : spc.groups) {          // loop over all groups
-        if (not g.atomic)                 // only molecular groups
-            if (g.size() == g.capacity()) // only active particles
-                if (std::find(molids.begin(), molids.end(), g.id) != molids.end())
+    for (auto &g : spc.groups) {            // loop over all groups
+        if (not g.atomic) {                 // only molecular groups
+            if (g.size() == g.capacity()) { // only active particles
+                if (std::find(molids.begin(), molids.end(), g.id) != molids.end()) {
                     molecule_index.push_back(&g - &spc.groups.front());
+                }
+            }
+        }
     }
 }
+
 } // namespace Move
 } // namespace Faunus

@@ -680,6 +680,9 @@ properties:
                             items: {type: string}
                             type: array
                         spread: {type: boolean}
+                        single_layer:
+                            type: boolean
+                            default: false
                         threshold:
                             anyOf:
                                 - {type: number}

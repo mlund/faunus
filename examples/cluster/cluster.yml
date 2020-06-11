@@ -1,6 +1,6 @@
 #!/usr/bin/env yason.py
 temperature: 300
-random: {seed: fixed}
+random: {seed: hardware}
 geometry: {type: cuboid, length: 40}
 mcloop: {macro: 10, micro: 15000}
 
@@ -22,7 +22,12 @@ energy:
 
 moves:
     - moltransrot: {molecule: water, dp: 20, dprot: 1, repeat: N}
-    - cluster: {molecules: [water], dp: 20, dprot: 3, threshold: 3.166}
+    - cluster:
+        molecules: [water]
+        dp: 20
+        dprot: 3
+        threshold:
+            water water: 3.166
 
 analysis:
     - atomrdf: {file: rdf.dat, nstep: 10, dr: 0.2, name1: OW, name2: OW}

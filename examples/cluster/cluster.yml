@@ -23,7 +23,6 @@ energy:
 moves:
     - moltransrot: {molecule: water, dp: 20, dprot: 1, repeat: N}
     - cluster:
-        spread: false
         molecules: [water]
         dp: 20
         dprot: 3

@@ -21,7 +21,7 @@ class Cluster : public Movebase {
     Point dir = {1, 1, 1}, dp;
     Point dirrot = {0, 0, 0}; // predefined axis of rotation
     std::vector<std::string> molecule_names; // names of molecules to be considered
-    std::vector<int> molids;                 // molecule id's of molecules to be considered
+    std::vector<int> molids;                 // molecule id's of molecules to be considered (must be sorted!)
     std::set<int> satellites;           // subset of molecule id's to cluster, but NOT act as nuclei (cluster centers)
     std::vector<size_t> molecule_index; // index of all possible molecules to be considered
     std::map<size_t, size_t> clusterSizeDistribution; // distribution of cluster sizes

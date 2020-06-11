@@ -57,8 +57,7 @@ void Cluster::_from_json(const json &j) {
         faunus_logger->warn("{name}: 'spread' is deprecated, use 'single_layer' instead");
     }
     molecule_names = j.at("molecules").get<decltype(molecule_names)>(); // molecule names
-    molids = names2ids(molecules, molecule_names);                      // names --> molids
-
+    molids = Faunus::names2ids(Faunus::molecules, molecule_names);      // names --> molids (sorted)
     updateMoleculeIndex();
 
     repeat = std::max<size_t>(1, molecule_index.size());
@@ -131,6 +130,11 @@ void Cluster::findCluster(Space &spc, size_t seed_index, std::vector<size_t> &cl
             break;
         }
     }
+
+    for (auto i : cluster) {
+        std::cout << i << " ";
+    }
+    std::cout << std::endl;
 
     // check if cluster is too large
     rotate = true;
@@ -258,10 +262,12 @@ Cluster::Cluster(Space &spc) : spc(spc) {
 }
 
 /**
- * search for molecules participating in the cluster
- * move. This is called for every move event as a
+ * Search for molecules participating in the cluster move.
+ * This should be called for every move event as a
  * grand canonical move may have changed the number
  * of particles.
+ *
+ * Atomic groups and inactive groups are ignored.
  */
 void Cluster::updateMoleculeIndex() {
     assert(not molids.empty());
@@ -269,7 +275,7 @@ void Cluster::updateMoleculeIndex() {
     for (auto &g : spc.groups) {            // loop over all groups
         if (not g.atomic) {                 // only molecular groups
             if (g.size() == g.capacity()) { // only active particles
-                if (std::find(molids.begin(), molids.end(), g.id) != molids.end()) {
+                if (std::binary_search(molids.begin(), molids.end(), g.id)) {
                     molecule_index.push_back(&g - &spc.groups.front());
                 }
             }

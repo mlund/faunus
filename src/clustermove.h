@@ -31,7 +31,7 @@ class Cluster : public Movebase {
     std::set<int> satellites;           //!< subset of molecule id's to cluster, but NOT act as nuclei (cluster centers)
     std::vector<size_t> molecule_index; //!< index of all possible molecules to be considered
     std::map<size_t, size_t> cluster_size_distribution; //!< distribution of cluster sizes
-    PairMatrix<double, true> group_thresholds;          //!< Cluster thresholds
+    PairMatrix<double, true> thresholds_squared;        //!< Cluster thresholds for pairs of groups
 
     void updateMoleculeIndex(); //!< update `molecule_index`
 

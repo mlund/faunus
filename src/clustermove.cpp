@@ -7,7 +7,7 @@ namespace Move {
 
 double Cluster::clusterProbability(const Cluster::Tgroup &group1, const Cluster::Tgroup &group2) const {
     if (!group1.empty() and !group2.empty()) {
-        if (spc.geo.sqdist(group1.cm, group2.cm) <= group_thresholds(group1.id, group2.id)) {
+        if (spc.geo.sqdist(group1.cm, group2.cm) <= thresholds_squared(group1.id, group2.id)) {
             return 1.0;
         }
     }
@@ -34,7 +34,7 @@ void Cluster::_to_json(json &j) const {
         for (auto j : molids)
             if (i >= j) {
                 std::string key = Faunus::molecules[i].name + " " + Faunus::molecules[j].name;
-                _j[key] = std::sqrt(group_thresholds(i, j));
+                _j[key] = std::sqrt(thresholds_squared(i, j));
                 _roundjson(_j[key], 3);
             }
 
@@ -55,7 +55,7 @@ void Cluster::_from_json(const json &j) {
     rotation_displacement_factor = j.at("dprot");
     single_layer = j.value("single_layer", false);
     if (j.count("spread")) {
-        faunus_logger->warn("{name}: 'spread' is deprecated, use 'single_layer' instead");
+        faunus_logger->warn("{}: 'spread' is deprecated, use 'single_layer' instead", name);
     }
     molecule_names = j.at("molecules").get<decltype(molecule_names)>(); // molecule names
     molids = Faunus::names2ids(Faunus::molecules, molecule_names);      // names --> molids
@@ -77,31 +77,37 @@ void Cluster::_from_json(const json &j) {
     }
 
     // read cluster thresholds
-    if (j.count("threshold") == 1) {
-        if (auto &_j = j.at("threshold"); _j.is_number()) { // threshold is given as a single number
-            for (auto i : molids) {
-                for (auto j : molids) {
-                    if (i >= j) {
-                        group_thresholds.set(i, j, std::pow(_j.get<double>(), 2));
-                    }
+    if (auto &threshold = j.at("threshold"); threshold.is_number()) { // threshold is given as a single number
+        for (auto i : molids) {
+            for (auto j : molids) {
+                if (i >= j) {
+                    thresholds_squared.set(i, j, std::pow(threshold.get<double>(), 2));
                 }
             }
-        } else if (_j.is_object()) { // threshold is given as pairs of clustering molecules
-            for (auto it = _j.begin(); it != _j.end(); ++it) {
-                if (auto v = words2vec<std::string>(it.key()); v.size() == 2) {
-                    auto it1 = findName(Faunus::molecules, v[0]);
-                    auto it2 = findName(Faunus::molecules, v[1]);
+        }
+    } else if (threshold.is_object()) { // threshold is given as pairs of clustering molecules
+        int threshold_combinations = molids.size() * (molids.size() + 1) / 2; // N*(N+1)/2
+        if (threshold.size() == threshold_combinations) {
+            for (auto [key, value] : threshold.items()) {
+                if (auto name_pair = words2vec<std::string>(key); name_pair.size() == 2) {
+                    auto it1 = findName(Faunus::molecules, name_pair[0]);
+                    auto it2 = findName(Faunus::molecules, name_pair[1]);
                     if (it1 == Faunus::molecules.end() or it2 == Faunus::molecules.end()) {
-                        throw std::runtime_error("unknown molecule(s): ["s + v[0] + " " + v[1] + "]");
+                        throw std::runtime_error("unknown molecule(s): ["s + name_pair[0] + " " + name_pair[1] + "]");
                     }
-                    group_thresholds.set(it1->id(), it2->id(), std::pow(it.value().get<double>(), 2));
+                    thresholds_squared.set(it1->id(), it2->id(), std::pow(value.get<double>(), 2));
                 } else {
                     throw std::runtime_error("threshold requires exactly two space-separated molecules");
                 }
             }
         } else {
-            throw std::runtime_error("threshold must be a number or object");
+            faunus_logger->error(
+                "exactly {} molecule pairs must be given in threshold matrix to cover all combinations",
+                threshold_combinations);
+            throw std::runtime_error("input error");
         }
+    } else {
+        throw std::runtime_error("cluster threshold must be a number or object");
     }
 }
 

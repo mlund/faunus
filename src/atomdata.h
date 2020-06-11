@@ -108,7 +108,7 @@ template <class Trange> auto obtainName(Trange &rng, const std::string &name) {
  * @tparam Trange Container of object having `.name` and `.id()` data members
  * @param database Iterable range having `.name` and `.id()` members
  * @param names Container with names to convert to id
- * @return Sorted vector of ids matching `names`
+ * @return Vector of ids matching `names`
  *
  * This is typically used with `Faunus::atoms` or `Faunus::molecules`
  * to lookup atom or molecule names and return them as id numbers.
@@ -130,7 +130,6 @@ template <class Trange> std::vector<int> names2ids(Trange &database, const std::
         else
             throw std::out_of_range("name '" + name + "' not found");
     }
-    std::sort(index.begin(), index.end());
     return index;
 }
 

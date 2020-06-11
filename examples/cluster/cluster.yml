@@ -1,6 +1,6 @@
 #!/usr/bin/env yason.py
 temperature: 300
-random: {seed: fixed}
+random: {seed: hardware}
 geometry: {type: cuboid, length: 40}
 mcloop: {macro: 10, micro: 15000}
 

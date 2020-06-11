@@ -975,6 +975,7 @@ template <typename TPairingPolicy> class Nonbonded : public Energybase {
      * @return energy sum between particle pairs
      */
     double energy(Change &change) override {
+        assert(std::is_sorted(change.groups.begin(), change.groups.end()));
         double u = 0;
         if (change.all) {
             u = pairing.all();

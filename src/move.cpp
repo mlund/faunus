@@ -806,6 +806,9 @@ void TranslateRotate::_from_json(const json &j) {
         auto it = findName(molecules, molname);
         if (it == molecules.end())
             throw std::runtime_error("unknown molecule '" + molname + "'");
+        else if (it->atomic) { // Molecular translation doesn't work with atomic groups
+            throw std::runtime_error("molecule '" + molname + "' cannot be atomic");
+        }
         molid = it->id();
         dir = j.value("dir", Point(1, 1, 1));
         dprot = j.at("dprot");

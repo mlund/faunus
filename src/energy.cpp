@@ -908,14 +908,21 @@ void from_json(const json &j, GroupCutoff &cutoff) {
 }
 
 void to_json(json &j, const GroupCutoff &cutoff) {
-    j["cutoff_g2g"] = json::object();
-    auto &_j = j["cutoff_g2g"];
+    auto _j = json::object();
     for (auto &a : Faunus::molecules) {
         for (auto &b : Faunus::molecules) {
             if (a.id() >= b.id()) {
-                _j[a.name + " " + b.name] = std::sqrt(cutoff.cutoff_squared(a.id(), b.id()));
+                if (not a.atomic && not b.atomic) {
+                    auto cutoff_squared = cutoff.cutoff_squared(a.id(), b.id());
+                    if (cutoff_squared < pc::max_value) {
+                        _j[a.name + " " + b.name] = std::sqrt(cutoff_squared);
+                    }
+                }
             }
         }
+    }
+    if (not _j.empty()) {
+        j["cutoff_g2g"] = _j;
     }
 }
 

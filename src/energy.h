@@ -398,7 +398,7 @@ template <typename TPairPotential, bool allow_anisotropic_pair_potential = true>
         addPairPotentialSelfEnergy();
     }
 
-    void to_json(json &j) { pair_potential.to_json(j); }
+    void to_json(json &j) const { pair_potential.to_json(j); }
 };
 
 /**
@@ -432,9 +432,9 @@ template <typename TPairEnergy, typename TCutoff> class PairingBasePolicy {
         pair_energy.from_json(j);
     }
 
-    void to_json(json &j) {
-        Energy::to_json(j, cut);
+    void to_json(json &j) const {
         pair_energy.to_json(j);
+        Energy::to_json(j, cut);
     }
 
     template <typename T> inline double particle2particle(const T &a, const T &b) const {
@@ -957,6 +957,8 @@ template <typename TPairingPolicy> class Nonbonded : public Energybase {
         name = "nonbonded";
         pairing.from_json(j);
     }
+
+    void to_json(json &j) const override { pairing.to_json(j); }
 
     /**
      * @brief Calculates the force on all particles.

@@ -179,19 +179,26 @@ template <class T1, class T2> struct CombinedPairPotential : public PairPotentia
     void from_json(const json &j) override {
         Faunus::Potential::from_json(j, first);
         Faunus::Potential::from_json(j, second);
-        // combine self-energies
-        if (first.selfEnergy or second.selfEnergy) {
+        name = first.name + "/" + second.name;
+        if (first.selfEnergy or second.selfEnergy) { // combine self-energies
             selfEnergy = [u1 = first.selfEnergy, u2 = second.selfEnergy](const Particle &p) {
-                if (u1 and u2)
+                if (u1 and u2) {
                     return u1(p) + u2(p);
-                if (u1)
+                } else if (u1) {
                     return u1(p);
+                }
                 return u2(p);
             };
-        } else
+        } else {
             selfEnergy = nullptr;
+        }
     }
-    void to_json(json &j) const override { j = {first, second}; }
+    void to_json(json &j) const override {
+        assert(j.is_object());
+        auto &_j = j["default"] = json::array();
+        _j.push_back(first);
+        _j.push_back(second);
+    }
 };
 
 template <class T1, class T2, class = typename std::enable_if<std::is_base_of<PairPotentialBase, T1>::value>::type,

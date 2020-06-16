@@ -621,7 +621,7 @@ void NewCoulombGalore::from_json(const json &j) {
             pot.spline<::CoulombGalore::Poisson>(_j);
         } else {
             if (_j.count("cutoff") > 0)
-                faunus_logger->warn("cutoff ignored for non-shifted yukawa; it's always infinity", type);
+                faunus_logger->warn("cutoff ignored for non-shifted yukawa; it's *always* infinity", type);
             _j["type"] = "plain";
             pot.spline<::CoulombGalore::Plain>(_j);
         }
@@ -650,7 +650,7 @@ void NewCoulombGalore::from_json(const json &j) {
     else
         throw std::runtime_error("unknown coulomb scheme");
 
-    faunus_logger->info("{} splined with {} knots", type, pot.numKnots().at(0));
+    faunus_logger->info("{} pair-potential splined with {} knots", type, pot.numKnots().at(0));
 
     setSelfEnergy();
 }

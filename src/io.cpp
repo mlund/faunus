@@ -50,6 +50,16 @@ void IO::strip(std::vector<std::string> &string_vector, const std::string &patte
             ++iter;
 }
 
+std::unique_ptr<std::ostream> IO::openCompressedOutputStream(const std::string &filename) {
+    if (auto suffix = filename.substr(filename.find_last_of(".") + 1); suffix == "gz") {
+        faunus_logger->trace("GZip compression enabled for {}", filename);
+        return std::make_unique<zstr::ofstream>(filename);
+    } else {
+        return std::make_unique<std::ofstream>(filename);
+    }
+    return nullptr;
+}
+
 int FormatXTC::getNumAtoms() { return natoms_xtc; }
 
 bool FormatAAM::keepcharges = true;

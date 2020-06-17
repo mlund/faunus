@@ -68,31 +68,32 @@ void Analysisbase::_from_json(const json &) {}
 
 void SystemEnergy::normalize() {
     // assert(V.cnt>0);
-    double sum = ehist.sumy();
-    for (auto &i : ehist.getMap()) {
+    double sum = energy_histogram.sumy();
+    for (auto &i : energy_histogram.getMap()) {
         i.second = i.second / sum;
     }
 }
 
 void SystemEnergy::_sample() {
-    auto ulist = energyFunc();
-    double tot = std::accumulate(ulist.begin(), ulist.end(), 0.0);
-    if (not std::isinf(tot)) {
-        uavg += tot;
-        u2avg += tot * tot;
+    auto energies = energyFunc(); // current energy from all terms in Hamiltonian
+    double total_energy = std::accumulate(energies.begin(), energies.end(), 0.0);
+    if (std::isfinite(total_energy)) {
+        mean_energy += total_energy;
+        mean_squared_energy += total_energy * total_energy;
     }
-    f << cnt * steps << sep << tot;
-    for (auto u : ulist)
-        f << sep << u;
-    f << "\n";
+    *output_stream << cnt * steps << separator << total_energy;
+    for (auto energy : energies) {
+        *output_stream << separator << energy;
+    }
+    *output_stream << "\n";
     // ehist(tot)++;
 }
 
 void SystemEnergy::_to_json(json &j) const {
-    j = {{"file", file}, {"init", uinit}, {"final", energyFunc()}};
+    j = {{"file", file_name}, {"init", initial_energy}, {"final", energyFunc()}};
     if (cnt > 0) {
-        j["mean"] = uavg.avg();
-        j["Cv/kB"] = u2avg.avg() - std::pow(uavg.avg(), 2);
+        j["mean"] = mean_energy.avg();
+        j["Cv/kB"] = mean_squared_energy.avg() - std::pow(mean_energy.avg(), 2);
     }
     _roundjson(j, 5);
     // normalize();
@@ -100,47 +101,49 @@ void SystemEnergy::_to_json(json &j) const {
 }
 
 void SystemEnergy::_from_json(const json &j) {
-    file = MPI::prefix + j.at("file").get<std::string>();
-    if (f)
-        f.close();
-    f.open(file);
-    if (!f)
-        throw std::runtime_error(name + ": cannot open output file " + file);
-    assert(!names.empty());
-    std::string suffix = file.substr(file.find_last_of(".") + 1);
-    if (suffix == "csv")
-        sep = ",";
-    else {
-        sep = " ";
-        f << "#";
+    file_name = MPI::prefix + j.at("file").get<std::string>();
+    if (output_stream = IO::openCompressedOutputStream(file_name); output_stream == nullptr) {
+        throw std::runtime_error(name + ": cannot open output file " + file_name);
+    } else {
+        if (auto suffix = file_name.substr(file_name.find_last_of(".") + 1); suffix == "csv") {
+            separator = ",";
+        } else {
+            separator = " ";
+            *output_stream << "#";
+        }
+        *output_stream << "total";
+        for (auto &name : names_of_energy_terms) {
+            *output_stream << separator << name;
+        }
+        *output_stream << "\n";
+        output_stream->precision(16);
     }
-    f << "total";
-    for (auto &n : names)
-        f << sep << n;
-    f << "\n";
-    f.precision(16);
 }
+
 SystemEnergy::SystemEnergy(const json &j, Energy::Hamiltonian &pot) {
-    for (auto i : pot.vec)
-        names.push_back(i->name);
+    assert(!pot.vec.empty());
     name = "systemenergy";
+    for (auto i : pot.vec) {
+        names_of_energy_terms.push_back(i->name);
+    }
     from_json(j);
     energyFunc = [&pot]() {
         Change change;
         change.all = true;
-        std::vector<double> u;
-        u.reserve(pot.vec.size());
-        for (auto i : pot.vec)
-            u.push_back(i->energy(change));
-        return u;
+        std::vector<double> energies;
+        std::transform(pot.vec.begin(), pot.vec.end(), std::back_inserter(energies),
+                       [&](auto i) { return i->energy(change); });
+        return energies;
     };
-    ehist.setResolution(0.25);
-    auto u = energyFunc();
-    uinit = std::accumulate(u.begin(), u.end(), 0.0); // initial energy
+    energy_histogram.setResolution(0.25);
+    auto energies = energyFunc();
+    initial_energy = std::accumulate(energies.begin(), energies.end(), 0.0); // initial energy
 }
+
 void SystemEnergy::_to_disk() {
-    if (f)
-        f.flush(); // empty buffer
+    if (*output_stream) {
+        output_stream->flush(); // empty buffer
+    }
 }
 
 void SaveState::_to_json(json &j) const { j["file"] = file; }

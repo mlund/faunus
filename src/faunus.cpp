@@ -12,6 +12,7 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <iomanip>
 #include <unistd.h>
+#include <chrono>
 
 #ifdef ENABLE_SID
 #include "cppsid.h"
@@ -37,7 +38,7 @@ using namespace std;
 static const char USAGE[] =
     R"(Faunus - the Monte Carlo code you're looking for!
 
-    http://github.com/mlund/faunus
+    https://faunus.readthedocs.io
 
     Usage:
       faunus [-q] [--verbosity <N>] [--nobar] [--nopfx] [--notips] [--nofun] [--state=<file>] [--input=<file>] [--output=<file>]
@@ -73,6 +74,9 @@ int main(int argc, char **argv) {
     using namespace Faunus::MPI;
     bool quiet = false, nofun = true; // conservative defaults
     try {
+
+        auto starting_time = std::chrono::steady_clock::now(); // used to time the simulation
+
         std::string version = "Faunus";
 #ifdef GIT_LATEST_TAG
         version += " "s + QUOTE(GIT_LATEST_TAG);
@@ -131,8 +135,7 @@ int main(int argc, char **argv) {
 
         // --input
         json json_in;
-        auto input = args["--input"].asString();
-        if (input == "/dev/stdin") {
+        if (auto input = args["--input"].asString(); input == "/dev/stdin") {
             std::cin >> json_in;
         } else {
             if (prefix) {
@@ -152,22 +155,23 @@ int main(int argc, char **argv) {
                 std::string suffix = state.substr(state.find_last_of(".") + 1);
                 bool binary = (suffix == "ubj");
                 auto mode = std::ios::in;
-                if (binary)
+                if (binary) {
                     mode = std::ifstream::ate | std::ios::binary; // ate = open at end
+                }
                 f.open(state, mode);
                 if (f) {
-                    json json_state;
+                    json j;
                     faunus_logger->info("loading state file {}", state);
                     if (binary) {
                         size_t size = f.tellg(); // get file size
                         std::vector<std::uint8_t> v(size / sizeof(std::uint8_t));
                         f.seekg(0, f.beg); // go back to start
                         f.read((char *)v.data(), size);
-                        json_state = json::from_ubjson(v);
+                        j = json::from_ubjson(v);
                     } else {
-                        f >> json_state;
+                        f >> j;
                     }
-                    sim.restore(json_state);
+                    sim.restore(j);
                 } else {
                     throw std::runtime_error("state file error: " + state);
                 }
@@ -176,9 +180,9 @@ int main(int argc, char **argv) {
             // warn if initial system has a net charge
             {
                 auto p = sim.space().activeParticles();
-                double system_charge = Faunus::monopoleMoment(p.begin(), p.end());
-                if (std::fabs(system_charge) > 0)
+                if (double system_charge = Faunus::monopoleMoment(p.begin(), p.end()); std::fabs(system_charge) > 0) {
                     faunus_logger->warn("non-zero system charge of {}e", system_charge);
+                }
             }
 
             Analysis::CombinedAnalysis analysis(json_in.at("analysis"), sim.space(), sim.pot());
@@ -205,25 +209,32 @@ int main(int argc, char **argv) {
             }
 
             faunus_logger->log((sim.drift() < 1E-9) ? spdlog::level::info : spdlog::level::warn,
-                               "relative drift = {}", sim.drift());
+                               "relative energy drift = {}", sim.drift());
 
             // --output
-            std::ofstream f(Faunus::MPI::prefix + args["--output"].asString());
-            if (f) {
-                json json_out;
-                Faunus::to_json(json_out, sim);
-                json_out["relative drift"] = sim.drift();
-                json_out["analysis"] = analysis;
+            if (std::ofstream file(Faunus::MPI::prefix + args["--output"].asString()); file) {
+                json j;
+                Faunus::to_json(j, sim);
+                j["relative drift"] = sim.drift();
+                j["analysis"] = analysis;
                 if (mpi.nproc() > 1) {
-                    json_out["mpi"] = mpi;
+                    j["mpi"] = mpi;
                 }
 #ifdef GIT_COMMIT_HASH
-                json_out["git revision"] = GIT_COMMIT_HASH;
+                j["git revision"] = GIT_COMMIT_HASH;
 #endif
 #ifdef __VERSION__
-                json_out["compiler"] = __VERSION__;
+                j["compiler"] = __VERSION__;
 #endif
-                f << std::setw(4) << json_out << endl;
+
+                { // report on total simulation time
+                    using namespace std::chrono;
+                    auto ending_time = steady_clock::now();
+                    auto secs = duration_cast<seconds>(ending_time - starting_time).count();
+                    j["simulation time"] = {{"in minutes", secs / 60.0}, {"in seconds", secs}};
+                }
+
+                file << std::setw(4) << j << std::endl;
             }
         }
 

@@ -13,7 +13,7 @@ at the top level input:
 
 ~~~ yaml
 analysis:
-    - systemenergy: {file: energy.dat, nstep: 500, nskip: 2000}
+    - systemenergy: {file: energy.dat.gz, nstep: 500, nskip: 2000}
     - xtcfile: {file: traj.xtc, nstep: 1000}
     - widom:  {molecule: water, ninsert: 20, nstep: 50}
     - molrdf: {name1: water, name2: water, nstep: 100,
@@ -95,7 +95,7 @@ $$
     g_{ij}(r) = \frac{ N_{ij}(r) }{ \sum_{r=0}^{\infty} N_{ij}(r) } \cdot \frac{ \langle V \rangle }{ V(r) }
 $$
 
-where $N_{ij}(r)$ is the number of observed pairs, accumulated over the
+where $N\_{ij}(r)$ is the number of observed pairs, accumulated over the
 entire ensemble, in the separation
 interval $[r, r+dr]$ and $V(r)$ is the corresponding volume element
 which depends on dimensionality, `dim`.
@@ -436,12 +436,14 @@ Calculates the energy contributions from all terms in the Hamiltonian and
 outputs to a file as a function of steps.
 If filename ends with `.csv`, a comma separated value file will be saved,
 otherwise a simple space separated file with a single hash commented header line.
-All units in $k_BT$.
+To enable GZip compression, suffix the filename with `.gz`.
+All units in $k\_BT$.
 
-`systemenergy`   |  Description
----------------- |  -------------------------------------------
-`file`           |  Output filename for energy vs. step output
-`nstep=0`        |  Interval between samples
+`systemenergy` | Description
+-------------- | -------------------------------------------
+`file`         | Output filename (`.dat`, `.csv`, `.dat.gz`)
+`nstep`        | Interval between samples
+
 
 ## Perturbations
 

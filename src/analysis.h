@@ -208,14 +208,18 @@ class Multipole : public Analysisbase {
     Multipole(const json &, const Space &);
 }; // Molecular multipoles and their fluctuations
 
+/**
+ * @brief Save system energy to disk
+ */
 class SystemEnergy : public Analysisbase {
-    std::string file, sep = " ";
-    std::ofstream f;
+  private:
+    std::string file_name, separator = " ";
+    std::unique_ptr<std::ostream> output_stream = nullptr;
     std::function<std::vector<double>()> energyFunc;
-    Average<double> uavg, u2avg; //!< mean energy and mean squared energy
-    std::vector<std::string> names;
-    Table2D<double, double> ehist; // Density histograms
-    double uinit;
+    Average<double> mean_energy, mean_squared_energy;
+    std::vector<std::string> names_of_energy_terms;
+    Table2D<double, double> energy_histogram; // Density histograms
+    double initial_energy = 0.0;
 
     void normalize();
     void _sample() override;
@@ -225,7 +229,7 @@ class SystemEnergy : public Analysisbase {
 
   public:
     SystemEnergy(const json &, Energy::Hamiltonian &);
-}; //!< Save system energy to disk. Keywords: `nstep`, `file`.
+};
 
 /**
  * @brief Checks if system is sane. If not, abort program.

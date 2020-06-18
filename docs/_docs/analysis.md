@@ -465,10 +465,13 @@ If `file` is given, the pressure as a function of steps is written to a (compres
 `dV`                | Volume perturbation (Å³)
 `nstep`             | Interval between samples
 `file`              | Optional output filename (`.dat`, `.dat.gz`)
-`scaling=isotropic` | Volume scaling method, see the MC _Volume Move_
+`scaling=isotropic` | Volume scaling method (`isotropic`, `xy`, `z`)
 
-By default, the volume is scaled isotropically, but for more advanced applications of
+By default, the volume is isotropically scaled, but for more advanced applications of
 volume perturbations - pressure tensors, surface tension etc., see [here](http://doi.org/ckfh).
+If a non-isotropic scaling is used, an extra column will be added to the output
+`file` containing the change in area (`xy`) or length (`z`).
+See also the documentation for the Monte Carlo _Volume move_.
 
 
 ### Virtual Translate Move

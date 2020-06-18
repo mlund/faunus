@@ -343,14 +343,12 @@ class XTCtraj : public Analysisbase {
  */
 class VirtualVolume : public Analysisbase {
     Space spc;
-    Geometry::VolumeMethod volume_scaling_method = Geometry::VolumeMethod::ISOTROPIC;
+    Geometry::VolumeMethod volume_scaling_method = Geometry::ISOTROPIC;
     std::string filename;                                  // output filename (optional)
     std::unique_ptr<std::ostream> output_stream = nullptr; // output file stream
-    double dV; // volume perturbation
+    double dV;                                             // volume perturbation
     Change change;
     Energy::Energybase &pot;
-    std::function<double()> getVolume;
-    std::function<void(double)> scaleVolume;
     Average<double> mean_exponentiated_energy_change; // < exp(-du/kT) >
 
     void _sample() override;

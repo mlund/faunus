@@ -234,13 +234,11 @@ class Space {
 
     void sync(Space &other, const Tchange &change); //!< Copy differing data from other (o) Space using Change object
 
-    /*
-     * Scales:
-     * - positions of free atoms
-     * - positions of molecular masscenters
-     * - simulation container
+    /**
+     * @brief Scales atoms, molecules, and simulation container
+     * @returns Scaling factors in each dimension
      */
-    void scaleVolume(double Vnew, Geometry::VolumeMethod method = Geometry::ISOTROPIC); //!< scale space to new volume
+    Point scaleVolume(double, Geometry::VolumeMethod = Geometry::ISOTROPIC);
 
     json info();
 

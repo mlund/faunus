@@ -271,20 +271,34 @@ void PairAngleFunctionBase::_from_json(const json &) { hist2.setResolution(dr, 0
 
 void VirtualVolume::_sample() {
     if (fabs(dV) > 1e-10) {
-        double old_volume = spc.geo.getVolume();                 // store old volume
-        double old_energy = pot.energy(change);                  // ...and energy
-        spc.scaleVolume(old_volume + dV, volume_scaling_method); // scale entire system to new volume
-        double new_energy = pot.energy(change);                  // energy after scaling
-        spc.scaleVolume(old_volume, volume_scaling_method);      // restore saved system
+        double old_volume = spc.geo.getVolume();                              // store old volume
+        double old_energy = pot.energy(change);                               // ...and energy
+        auto scale = spc.scaleVolume(old_volume + dV, volume_scaling_method); // scale entire system to new volume
+        double new_energy = pot.energy(change);                               // energy after scaling
+        spc.scaleVolume(old_volume, volume_scaling_method);                   // restore saved system
 
         double du = new_energy - old_energy; // system energy change
         if (-du < pc::max_exp_argument) {    // does minus energy change fit exp() function?
             double exp_du = std::exp(-du);
             assert(std::isfinite(exp_du));
             mean_exponentiated_energy_change += exp_du; // collect average, <exp(-du)>
-            if (output_stream) {
-                *output_stream << cnt << " " << dV << " " << du << " " << exp_du << " "
-                               << std::log(mean_exponentiated_energy_change.avg()) / dV << "\n";
+
+            if (output_stream) { // write to output file if appropriate
+                *output_stream << cnt * steps << " " << dV << " " << du << " " << exp_du << " "
+                               << std::log(mean_exponentiated_energy_change.avg()) / dV;
+
+                // if anisotropic scaling, add an extra column with area or length perturbation
+                if (volume_scaling_method == Geometry::XY) {
+                    auto l = spc.geo.getLength();
+                    double area_change = l.x() * l.y() * (scale.x() * scale.y() - 1.0);
+                    *output_stream << " " << area_change;
+                } else if (volume_scaling_method == Geometry::Z) {
+                    auto l = spc.geo.getLength();
+                    double length_change = l.z() * (scale.z() - 1.0);
+                    *output_stream << " " << length_change;
+                }
+
+                *output_stream << "\n"; // trailing newline
             }
 
             // Check if volume and particle positions are properly restored.
@@ -305,20 +319,32 @@ void VirtualVolume::_sample() {
 
 void VirtualVolume::_from_json(const json &j) {
     dV = j.at("dV");
-    volume_scaling_method = j.value("scaling", Geometry::VolumeMethod::ISOTROPIC);
-    if (volume_scaling_method == Geometry::VolumeMethod::ISOCHORIC) {
+    volume_scaling_method = j.value("scaling", Geometry::ISOTROPIC);
+    if (volume_scaling_method == Geometry::ISOCHORIC) {
         throw std::runtime_error(name + ": isochoric volume scaling not allowed");
     }
-    filename = j.value("file", std::string());
-    if (not filename.empty()) { // if filename is given, create output file
-        filename = MPI::prefix + filename;
-        if (output_stream = IO::openCompressedOutputStream(filename); output_stream) {
-            *output_stream << "# steps dV/" + u8::angstrom + u8::cubed + " du/kT exp(-du/kT) <Pex>/kT/" + u8::angstrom +
-                                  u8::cubed
-                           << "\n"; // file header
-            output_stream->precision(14);
-        } else {
-            throw std::runtime_error(name + ": cannot open output file " + filename);
+
+    if (auto it = j.find("file"); it != j.end()) {
+        filename = *it;
+        if (not filename.empty()) { // if filename is given, create output file
+            filename = MPI::prefix + filename;
+            output_stream = IO::openCompressedOutputStream(filename);
+            if (output_stream) {
+                *output_stream << "# steps dV/" + u8::angstrom + u8::cubed + " du/kT exp(-du/kT) <Pex>/kT/" +
+                                      u8::angstrom + u8::cubed;
+
+                // if non-isotropic scaling, add another column with dA or dL
+                if (volume_scaling_method == Geometry::XY) {
+                    *output_stream << " dA/" + u8::angstrom + u8::squared;
+                } else if (volume_scaling_method == Geometry::Z) {
+                    *output_stream << " dL/" + u8::angstrom;
+                }
+
+                *output_stream << "\n"; // trailing newline
+                output_stream->precision(14);
+            } else {
+                throw std::runtime_error(name + ": cannot open output file " + filename);
+            }
         }
     }
 }

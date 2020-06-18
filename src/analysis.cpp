@@ -271,11 +271,11 @@ void PairAngleFunctionBase::_from_json(const json &) { hist2.setResolution(dr, 0
 
 void VirtualVolume::_sample() {
     if (fabs(dV) > 1e-10) {
-        double old_volume = getVolume();        // store old volume
-        double old_energy = pot.energy(change); // ...and energy
-        scaleVolume(old_volume + dV);           // scale entire system to new volume
-        double new_energy = pot.energy(change); // energy after scaling
-        scaleVolume(old_volume);                // restore saved system
+        double old_volume = spc.geo.getVolume();                 // store old volume
+        double old_energy = pot.energy(change);                  // ...and energy
+        spc.scaleVolume(old_volume + dV, volume_scaling_method); // scale entire system to new volume
+        double new_energy = pot.energy(change);                  // energy after scaling
+        spc.scaleVolume(old_volume, volume_scaling_method);      // restore saved system
 
         double du = new_energy - old_energy; // system energy change
         if (-du < pc::max_exp_argument) {    // does minus energy change fit exp() function?
@@ -305,6 +305,10 @@ void VirtualVolume::_sample() {
 
 void VirtualVolume::_from_json(const json &j) {
     dV = j.at("dV");
+    volume_scaling_method = j.value("scaling", Geometry::VolumeMethod::ISOTROPIC);
+    if (volume_scaling_method == Geometry::VolumeMethod::ISOCHORIC) {
+        throw std::runtime_error(name + ": isochoric volume scaling not allowed");
+    }
     filename = j.value("file", std::string());
     if (not filename.empty()) { // if filename is given, create output file
         filename = MPI::prefix + filename;
@@ -323,20 +327,21 @@ void VirtualVolume::_to_json(json &j) const {
     if (cnt > 0) {
         double excess_pressure = log(mean_exponentiated_energy_change.avg()) / dV;
         j = {{"dV", dV},
+             {"scaling", volume_scaling_method},
+             {"-ln\u27e8exp(-dU)\u27e9", -std::log(mean_exponentiated_energy_change.avg())},
              {"Pex/mM", excess_pressure / 1.0_mM},
              {"Pex/Pa", excess_pressure / 1.0_Pa},
              {"Pex/kT/" + u8::angstrom + u8::cubed, excess_pressure}};
         _roundjson(j, 5);
     }
 }
-VirtualVolume::VirtualVolume(const json &j, Space &spc, Energy::Energybase &pot) : pot(pot) {
+
+VirtualVolume::VirtualVolume(const json &j, Space &spc, Energy::Energybase &pot) : spc(spc), pot(pot) {
     from_json(j);
     change.dV = true;
     change.all = true;
     name = "virtualvolume";
     cite = "doi:10.1063/1.472721";
-    getVolume = [&spc]() { return spc.geo.getVolume(); };
-    scaleVolume = [&spc](double new_volume) { spc.scaleVolume(new_volume); };
 }
 void VirtualVolume::_to_disk() {
     if (output_stream) {

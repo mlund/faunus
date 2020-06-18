@@ -214,17 +214,17 @@ sub-systems or replicas, each in a distinct thermodynamic state (different
 Hamiltonians) and with the total energy
 
 $$
-U = \sum_i^n\mathcal{H}_i(\mathcal{R}_i)
+U = \sum\_i^n\mathcal{H}\_i(\mathcal{R}\_i)
 $$
 
 The parallel tempering move performs a swap move where coordinate
 spaces (positions, volume) between random, neighboring sub-systems, _i_ and _j_, are exchanged,
 
 $$
-\mathcal{R}_i^{\prime} = \mathcal{R}_j \quad \text{and} \quad \mathcal{R}_j^{\prime} = \mathcal{R}_i
+\mathcal{R}\_i^{\prime} = \mathcal{R}\_j \quad \text{and} \quad \mathcal{R}\_j^{\prime} = \mathcal{R}\_i
 $$
 
-and the energy change of the _extended ensemble_, $\Delta U_{i\leftrightarrow j}$, is used in the
+and the energy change of the _extended ensemble_, $\Delta U\_{i\leftrightarrow j}$, is used in the
 Metropolis acceptance criteria.
 
 Parallel tempering requires compilation with MPI and the number
@@ -242,7 +242,7 @@ constant number of particles, $N$.
 ----------------- |  ----------------------------------------------
 `dV`              |  Volume displacement parameter
 `repeat=1`        |  Number of repeats per MC sweep.
-`method=isotropic`|  Scaling method: `xy`, `isotropic`, `isochoric`
+`method=isotropic`|  Scaling method: `z`, `xy`, `isotropic`, `isochoric`
 
 Performs a random walk in logarithmic volume,
 
@@ -257,7 +257,8 @@ and scales:
 
 by $(V^{\prime}/V)^{1/3}$.
 This is typically used for the $NPT$ ensemble, and for this an additional pressure term should be added to the Hamiltonian.
-In the case of `isochoric` scaling, the total volume is kept constant and `dV` refers to an area change and reported output statistics on _volume_ should be regarded as _area_.
+In the case of `isochoric` scaling, the total volume is kept constant and `dV` refers to an area change and reported output
+statistics on _volume_ should be regarded as _area_.
 The table below explains the scaling behavior in different geometries:
 
 `method`     |  Geometry    | Description
@@ -265,8 +266,12 @@ The table below explains the scaling behavior in different geometries:
 `isotropic`  |  `cuboid`    | Scales x, y, z
 `isotropic`  |  `cylinder`  | Scales radius
 `isotropic`  |  `sphere`    | Scales radius
+`z`          |  `cuboid`    | Scales z, xy untouched.
 `xy`         |  `cuboid`    | Scales xy, z untouched.
 `isochoric`  |  `cuboid`    | Scales xy/z, const. volume
+
+For cuboidal geometries, the scaling in each of the specified dimensions is $(V^{\prime}/V)^{1/d}$,
+where $d=3$ for `isotropic`, $d=2$ for `xy`, and $d=1$ for `z`.
 
 _Warning:_ Untested for cylinders, slits.
 

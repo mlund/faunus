@@ -342,6 +342,8 @@ class XTCtraj : public Analysisbase {
  * @brief Excess pressure using virtual volume move
  */
 class VirtualVolume : public Analysisbase {
+    Space spc;
+    Geometry::VolumeMethod volume_scaling_method = Geometry::VolumeMethod::ISOTROPIC;
     std::string filename;                                  // output filename (optional)
     std::unique_ptr<std::ostream> output_stream = nullptr; // output file stream
     double dV; // volume perturbation

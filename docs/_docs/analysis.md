@@ -460,12 +460,14 @@ $$
 
 For more advanced applications of volume perturbations - pressure tensors,
 surface tension etc., see [here](http://doi.org/ckfh).
+If `file` is given, the pressure as a function of steps is written to
+the (compressed) file.
 
 `virtualvolume` | Description
 --------------- | -------------------------------------
 `dV`            | Volume perturbation (Å³)
 `nstep`         | Interval between samples
-`file`          | Optional output filename for writing data as a function of steps
+`file`          | Optional output filename (`.dat`, `.dat.gz`)
 
 ### Virtual Translate Move
 

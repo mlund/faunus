@@ -29,7 +29,10 @@ bool writeFile(const std::string &file, const std::string &s,
 
 void strip(std::vector<std::string> &string_vector, const std::string &pattern); //!< Strip lines matching a pattern
 
-std::unique_ptr<std::ostream> openCompressedOutputStream(const std::string &); //!< Open (gzip compressed) output stream
+/**
+ * @brief Open (gzip compressed) output stream
+ */
+std::unique_ptr<std::ostream> openCompressedOutputStream(const std::string &);
 
 /**
  * Write a map to an output stream as key-value pairs

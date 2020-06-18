@@ -342,18 +342,18 @@ class XTCtraj : public Analysisbase {
  * @brief Excess pressure using virtual volume move
  */
 class VirtualVolume : public Analysisbase {
-    std::string file; // output filename
-    std::ofstream output_file; // output filestream
-    double dV; // volume perturbation
-    Change c;
+    Space spc;
+    Geometry::VolumeMethod volume_scaling_method = Geometry::ISOTROPIC;
+    std::string filename;                                  // output filename (optional)
+    std::unique_ptr<std::ostream> output_stream = nullptr; // output file stream
+    double dV;                                             // volume perturbation
+    Change change;
     Energy::Energybase &pot;
-    std::function<double()> getVolume;
-    std::function<void(double)> scaleVolume;
-    Average<double> duexp; // < exp(-du/kT) >
+    Average<double> mean_exponentiated_energy_change; // < exp(-du/kT) >
 
     void _sample() override;
-    void _from_json(const json &j) override;
-    void _to_json(json &j) const override;
+    void _from_json(const json &) override;
+    void _to_json(json &) const override;
     void _to_disk() override;
 
   public:

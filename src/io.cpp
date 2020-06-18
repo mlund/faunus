@@ -50,9 +50,16 @@ void IO::strip(std::vector<std::string> &string_vector, const std::string &patte
             ++iter;
 }
 
+/**
+ * Create an output file stream. If the filename extension is `.gz`, gzip
+ * compression is enabled, otherwise a standard `std::ostream` is created.
+ *
+ * @param filename Name of output file
+ * @return pointer to stream; nullptr if it could not be created
+ */
 std::unique_ptr<std::ostream> IO::openCompressedOutputStream(const std::string &filename) {
-    if (auto suffix = filename.substr(filename.find_last_of(".") + 1); suffix == "gz") {
-        faunus_logger->trace("GZip compression enabled for {}", filename);
+    if (filename.substr(filename.find_last_of(".") + 1) == "gz") {
+        faunus_logger->trace("enabling gzip compression for {}", filename);
         return std::make_unique<zstr::ofstream>(filename);
     } else {
         return std::make_unique<std::ofstream>(filename);

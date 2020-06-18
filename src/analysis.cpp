@@ -271,27 +271,44 @@ void PairAngleFunctionBase::_from_json(const json &) { hist2.setResolution(dr, 0
 
 void VirtualVolume::_sample() {
     if (fabs(dV) > 1e-10) {
-        double Vold = getVolume(), Uold = pot.energy(c); // store old volume and energy
-        scaleVolume(Vold + dV);                          // scale entire system to new volume
-        double Unew = pot.energy(c);                     // energy after scaling
-        scaleVolume(Vold);                               // restore saved system
+        double old_volume = spc.geo.getVolume();                              // store old volume
+        double old_energy = pot.energy(change);                               // ...and energy
+        auto scale = spc.scaleVolume(old_volume + dV, volume_scaling_method); // scale entire system to new volume
+        double new_energy = pot.energy(change);                               // energy after scaling
+        spc.scaleVolume(old_volume, volume_scaling_method);                   // restore saved system
 
-        double du = Unew - Uold;          // system energy change
-        if (-du < pc::max_exp_argument) { // does minus energy change fit exp() function?
+        double du = new_energy - old_energy; // system energy change
+        if (-du < pc::max_exp_argument) {    // does minus energy change fit exp() function?
             double exp_du = std::exp(-du);
-            assert(not std::isnan(exp_du));
-            duexp += exp_du; // collect average, <exp(-du)>
-            if (output_file) // write sample event to output file
-                output_file << cnt << " " << dV << " " << du << " " << exp_du << " " << std::log(duexp.avg()) / dV
-                            << "\n";
+            assert(std::isfinite(exp_du));
+            mean_exponentiated_energy_change += exp_du; // collect average, <exp(-du)>
+
+            if (output_stream) { // write to output file if appropriate
+                *output_stream << cnt * steps << " " << dV << " " << du << " " << exp_du << " "
+                               << std::log(mean_exponentiated_energy_change.avg()) / dV;
+
+                // if anisotropic scaling, add an extra column with area or length perturbation
+                if (volume_scaling_method == Geometry::XY) {
+                    auto l = spc.geo.getLength();
+                    double area_change = l.x() * l.y() * (scale.x() * scale.y() - 1.0);
+                    *output_stream << " " << area_change;
+                } else if (volume_scaling_method == Geometry::Z) {
+                    auto l = spc.geo.getLength();
+                    double length_change = l.z() * (scale.z() - 1.0);
+                    *output_stream << " " << length_change;
+                }
+
+                *output_stream << "\n"; // trailing newline
+            }
 
             // Check if volume and particle positions are properly restored.
             // Expensive and one would normally not perform this test and we trigger it
             // only when using log-level "debug" or lower
-            if (faunus_logger->level() <= spdlog::level::debug and Uold != 0) {
-                double should_be_small = std::fabs((Uold - pot.energy(c)) / Uold); // expensive!
-                if (should_be_small > 1e-6)
+            if (faunus_logger->level() <= spdlog::level::debug and old_energy != 0) {
+                double should_be_small = std::fabs((old_energy - pot.energy(change)) / old_energy); // expensive!
+                if (should_be_small > 1e-6) {
                     faunus_logger->error("{} failed to restore system", name);
+                }
             }
         } else {   // energy change too large (negative) to fit exp() function
             cnt--; // cnt is incremented by sample() so we need to decrease
@@ -302,37 +319,60 @@ void VirtualVolume::_sample() {
 
 void VirtualVolume::_from_json(const json &j) {
     dV = j.at("dV");
-    file = MPI::prefix + j.value("file", std::string());
-    if (not file.empty()) { // if filename is given, create output file
-        if (output_file)
-            output_file.close();
-        output_file.open(file);
-        if (!output_file)
-            throw std::runtime_error(name + ": cannot open output file " + file);
-        output_file << "# steps dV/" + u8::angstrom + u8::cubed + " du/kT exp(-du/kT) <Pex>/kT/" + u8::angstrom +
-                           u8::cubed
-                    << "\n"; // file header
-        output_file.precision(14);
+    volume_scaling_method = j.value("scaling", Geometry::ISOTROPIC);
+    if (volume_scaling_method == Geometry::ISOCHORIC) {
+        throw std::runtime_error(name + ": isochoric volume scaling not allowed");
+    }
+
+    if (auto it = j.find("file"); it != j.end()) {
+        filename = *it;
+        if (not filename.empty()) { // if filename is given, create output file
+            filename = MPI::prefix + filename;
+            output_stream = IO::openCompressedOutputStream(filename);
+            if (output_stream) {
+                *output_stream << "# steps dV/" + u8::angstrom + u8::cubed + " du/kT exp(-du/kT) <Pex>/kT/" +
+                                      u8::angstrom + u8::cubed;
+
+                // if non-isotropic scaling, add another column with dA or dL
+                if (volume_scaling_method == Geometry::XY) {
+                    *output_stream << " dA/" + u8::angstrom + u8::squared;
+                } else if (volume_scaling_method == Geometry::Z) {
+                    *output_stream << " dL/" + u8::angstrom;
+                }
+
+                *output_stream << "\n"; // trailing newline
+                output_stream->precision(14);
+            } else {
+                throw std::runtime_error(name + ": cannot open output file " + filename);
+            }
+        }
     }
 }
 
 void VirtualVolume::_to_json(json &j) const {
-    double pex = log(duexp.avg()) / dV; // excess pressure
-    j = {{"dV", dV}, {"Pex/mM", pex / 1.0_mM}, {"Pex/Pa", pex / 1.0_Pa}, {"Pex/kT/" + u8::angstrom + u8::cubed, pex}};
-    _roundjson(j, 5);
+    if (cnt > 0) {
+        double excess_pressure = log(mean_exponentiated_energy_change.avg()) / dV;
+        j = {{"dV", dV},
+             {"scaling", volume_scaling_method},
+             {"-ln\u27e8exp(-dU)\u27e9", -std::log(mean_exponentiated_energy_change.avg())},
+             {"Pex/mM", excess_pressure / 1.0_mM},
+             {"Pex/Pa", excess_pressure / 1.0_Pa},
+             {"Pex/kT/" + u8::angstrom + u8::cubed, excess_pressure}};
+        _roundjson(j, 5);
+    }
 }
-VirtualVolume::VirtualVolume(const json &j, Space &spc, Energy::Energybase &pot) : pot(pot) {
+
+VirtualVolume::VirtualVolume(const json &j, Space &spc, Energy::Energybase &pot) : spc(spc), pot(pot) {
     from_json(j);
-    c.dV = true;
-    c.all = true;
+    change.dV = true;
+    change.all = true;
     name = "virtualvolume";
     cite = "doi:10.1063/1.472721";
-    getVolume = [&spc]() { return spc.geo.getVolume(); };
-    scaleVolume = [&spc](double Vnew) { spc.scaleVolume(Vnew); };
 }
 void VirtualVolume::_to_disk() {
-    if (output_file)
-        output_file.flush(); // empty buffer
+    if (output_stream) {
+        output_stream->flush(); // empty buffer
+    }
 }
 
 void QRtraj::_sample() { write_to_file(); }

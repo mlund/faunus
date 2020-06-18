@@ -891,6 +891,20 @@ properties:
                     additionalProperties: false
                     type: object
 
+                virtualvolume:
+                    description: "Virtual volume move"
+                    properties:
+                        file: {type: string, description: Output filename (.dat, .dat.gz)}
+                        dV: {type: number, description: Displacement volume}
+                        nstep: {type: integer, description: Interval between samples}
+                        nskip: {type: integer, default: 0, description: Number of steps to initially skip}
+                        scaling:
+                            type: string
+                            enum: [z, xy, isotropic]
+                            default: isotropic
+                    required: [dV, nstep]
+                    additionalProperties: false
+ 
                 virtualtranslate:
                     description: "Virtual molecule translation"
                     properties:

@@ -458,14 +458,21 @@ $$
     p^{ex} = \frac{k_BT}{\Delta V} \ln \left\langle e^{-\delta u / k_BT} \right\rangle_{NVT}
 $$
 
-For more advanced applications of volume perturbations - pressure tensors,
-surface tension etc., see [here](http://doi.org/ckfh).
+If `file` is given, the pressure as a function of steps is written to a (compressed) file.
 
-`virtualvolume` | Description
---------------- | -------------------------------------
-`dV`            | Volume perturbation (Å³)
-`nstep`         | Interval between samples
-`file`          | Optional output filename for writing data as a function of steps
+`virtualvolume`     | Description
+------------------- | -------------------------------------
+`dV`                | Volume perturbation (Å³)
+`nstep`             | Interval between samples
+`file`              | Optional output filename (`.dat`, `.dat.gz`)
+`scaling=isotropic` | Volume scaling method (`isotropic`, `xy`, `z`)
+
+By default, the volume is isotropically scaled, but for more advanced applications of
+volume perturbations - pressure tensors, surface tension etc., see [here](http://doi.org/ckfh).
+If a non-isotropic scaling is used, an extra column will be added to the output
+`file` containing the change in area (`xy`) or length (`z`).
+See also the documentation for the Monte Carlo _Volume move_.
+
 
 ### Virtual Translate Move
 

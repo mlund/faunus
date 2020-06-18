@@ -138,7 +138,7 @@ void Space::sync(Space &other, const Change &change) {
     assert(p.begin() != other.p.begin());
 }
 
-void Space::scaleVolume(double Vnew, Geometry::VolumeMethod method) {
+Point Space::scaleVolume(double Vnew, Geometry::VolumeMethod method) {
     for (auto &g : groups) // remove periodic boundaries
         if (not g.atomic)
             g.unwrap(geo.getDistanceFunc());
@@ -196,6 +196,8 @@ void Space::scaleVolume(double Vnew, Geometry::VolumeMethod method) {
 
     for (auto f : scaleVolumeTriggers)
         f(*this, Vold, Vnew);
+
+    return scale;
 }
 
 json Space::info() {

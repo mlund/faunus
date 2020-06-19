@@ -18,21 +18,30 @@ namespace Analysis {
 
 void to_json(json &j, const Analysisbase &base) { base.to_json(j); }
 
-/*
- * This is always called by the destructor, but may be called
- * any number of times earlier.
+/**
+ * This is virtual and can be overridden in derived classes
  */
 void Analysisbase::_to_disk() {}
 
+/**
+ * Wrapper function used for non-intrusive future padding around _to_disk().
+ */
 void Analysisbase::to_disk() { _to_disk(); }
 
+/**
+ * For each call:
+ *
+ * 1. increment step count
+ * 2. check if interval and skipped steps matches
+ * 3. if so, call `_sample()` and increment number of samples
+ *
+ * The call to the sampling function is timed.
+ */
 void Analysisbase::sample() {
-    totstepcnt++;
-    stepcnt++;
-    if (stepcnt == steps) {
-        stepcnt = 0;
-        if (totstepcnt > nskip) {
-            cnt++;
+    number_of_steps++;
+    if (sample_interval > 0 && number_of_steps > number_of_skipped_steps) {
+        if ((number_of_steps % sample_interval) == 0) {
+            number_of_samples++;
             timer.start();
             _sample();
             timer.stop();
@@ -41,33 +50,37 @@ void Analysisbase::sample() {
 }
 
 void Analysisbase::from_json(const json &j) {
-    steps = j.value("nstep", 0);
-    nskip = j.value("nskip", 0);
+    number_of_skipped_steps = j.value("nskip", 0);
+    sample_interval = j.value("nstep", 0);
     _from_json(j);
 }
 
-void Analysisbase::to_json(json &j) const {
+void Analysisbase::to_json(json &json_output) const {
     assert(not name.empty());
-    auto &_j = j[name];
-    _to_json(_j);
-    if (cnt > 0) {
-        if (timer.result() > 0.01) // only print if more than 1% of the time
-            _j["relative time"] = _round(timer.result());
-        _j["nstep"] = steps;
-        _j["samples"] = cnt;
-        if (nskip > 0)
-            _j["nskip"] = nskip;
+    auto &j = json_output[name];
+    _to_json(j); // fill in info from derived classes
+    if (number_of_samples > 0) {
+        j["nstep"] = sample_interval;
+        j["samples"] = number_of_samples;
+        if (number_of_skipped_steps > 0) {
+            j["nskip"] = number_of_skipped_steps;
+        }
+        if (timer.result() > 0.01) { // only print if more than 1% of the time
+            j["relative time"] = _round(timer.result());
+        }
     }
-    if (not cite.empty())
-        _j["reference"] = cite;
+    if (not cite.empty()) {
+        j["reference"] = cite;
+    }
 }
 
 void Analysisbase::_to_json(json &) const {}
 
 void Analysisbase::_from_json(const json &) {}
 
+int Analysisbase::getNumberOfSteps() const { return number_of_steps; }
+
 void SystemEnergy::normalize() {
-    // assert(V.cnt>0);
     double sum = energy_histogram.sumy();
     for (auto &i : energy_histogram.getMap()) {
         i.second = i.second / sum;
@@ -81,7 +94,7 @@ void SystemEnergy::_sample() {
         mean_energy += total_energy;
         mean_squared_energy += total_energy * total_energy;
     }
-    *output_stream << cnt * steps << separator << total_energy;
+    *output_stream << getNumberOfSteps() << separator << total_energy;
     for (auto energy : energies) {
         *output_stream << separator << energy;
     }
@@ -91,7 +104,7 @@ void SystemEnergy::_sample() {
 
 void SystemEnergy::_to_json(json &j) const {
     j = {{"file", file_name}, {"init", initial_energy}, {"final", energyFunc()}};
-    if (cnt > 0) {
+    if (number_of_samples > 0) {
         j["mean"] = mean_energy.avg();
         j["Cv/kB"] = mean_squared_energy.avg() - std::pow(mean_energy.avg(), 2);
     }
@@ -146,60 +159,59 @@ void SystemEnergy::_to_disk() {
     }
 }
 
-void SaveState::_to_json(json &j) const { j["file"] = file; }
+void SaveState::_to_json(json &j) const { j["file"] = filename; }
 
-void SaveState::_sample() { writeFunc(file); }
-
-void SaveState::_to_disk() {
-    if (steps == -1)
-        _sample();
+void SaveState::_sample() {
+    assert(sample_interval >= 0);
+    // tag filename with step number:
+    auto numbered_filename = filename;
+    numbered_filename.insert(filename.find_last_of("."), "_"s + std::to_string(getNumberOfSteps()));
+    writeFunc(numbered_filename);
 }
-SaveState::SaveState(const json &j, Space &spc) {
-    using std::ref;
-    using std::placeholders::_1;
-    from_json(j);
+
+SaveState::~SaveState() {
+    if (sample_interval == -1) { // writes data just before destruction
+        writeFunc(filename);
+    }
+}
+
+SaveState::SaveState(json j, Space &spc) {
     name = "savestate";
-    steps = j.value("nstep", -1);
-    saverandom = j.value("saverandom", false);
-    file = j.at("file");
-    std::string suffix = file.substr(file.find_last_of(".") + 1);
-    file = MPI::prefix + file;
 
-    if (suffix == "aam")
-        writeFunc = std::bind([](std::string file, Space &s) { FormatAAM::save(file, s.p); }, _1, std::ref(spc));
+    if (j.count("nstep") == 0) { // by default, disable _sample() and
+        j["nstep"] = -1;         // store only when _to_disk() is called
+    }
+    from_json(j);
 
-    else if (suffix == "gro")
-        writeFunc = std::bind([](std::string file, Space &s) { FormatGRO::save(file, s); }, _1, std::ref(spc));
+    save_random_number_generator_state = j.value("saverandom", false);
+    filename = MPI::prefix + j.at("file").get<std::string>();
 
-    else if (suffix == "pqr")
-        writeFunc = std::bind([](std::string file, Space &s) { FormatPQR::save(file, s.groups, s.geo.getLength()); },
-                              _1, std::ref(spc));
-
-    else if (suffix == "xyz")
-        writeFunc = std::bind([](std::string file, Space &s) { FormatXYZ::save(file, s.p, s.geo.getLength()); }, _1,
-                              std::ref(spc));
-
-    else if (suffix == "json") // JSON state file
-        writeFunc = [&spc, this](const std::string &file) {
-            std::ofstream f(file);
-            if (f) {
+    if (auto suffix = filename.substr(filename.find_last_of(".") + 1); suffix == "aam") {
+        writeFunc = [&](auto &file) { FormatAAM::save(file, spc.p); };
+    } else if (suffix == "gro") {
+        writeFunc = [&](auto &file) { FormatGRO::save(file, spc); };
+    } else if (suffix == "pqr") {
+        writeFunc = [&](auto &file) { FormatPQR::save(file, spc.groups, spc.geo.getLength()); };
+    } else if (suffix == "xyz") {
+        writeFunc = [&](auto &file) { FormatXYZ::save(file, spc.p, spc.geo.getLength()); };
+    } else if (suffix == "json") { // JSON state file
+        writeFunc = [&](auto &file) {
+            if (std::ofstream f(file); f) {
                 json j;
                 Faunus::to_json(j, spc);
-                if (this->saverandom) {
+                if (save_random_number_generator_state) {
                     j["random-move"] = Move::Movebase::slump;
                     j["random-global"] = Faunus::random;
                 }
                 f << std::setw(2) << j;
             }
         };
-
-    else if (suffix == "ubj") // Universal Binary JSON state file
-        writeFunc = [&spc, this](const std::string &file) {
-            std::ofstream f(file, std::ios::binary);
-            if (f) {
+    } else if (suffix == "ubj") { // Universal Binary JSON state file
+        writeFunc = [&](auto &file) {
+            if (std::ofstream f(file, std::ios::binary); f) {
                 json j;
                 Faunus::to_json(j, spc);
-                if (this->saverandom) {
+                if (save_random_number_generator_state) {
                     j["random-move"] = Move::Movebase::slump;
                     j["random-global"] = Faunus::random;
                 }
@@ -207,9 +219,9 @@ SaveState::SaveState(const json &j, Space &spc) {
                 f.write((const char *)v.data(), v.size() * sizeof(decltype(v)::value_type));
             }
         };
-
-    if (writeFunc == nullptr)
-        throw std::runtime_error("unknown file extension for '" + file + "'");
+    } else {
+        throw std::runtime_error("unknown file extension for '" + filename + "'");
+    }
 }
 
 PairFunctionBase::PairFunctionBase(const json &j) { from_json(j); }
@@ -222,7 +234,6 @@ void PairFunctionBase::_to_json(json &j) const {
 }
 
 void PairFunctionBase::_from_json(const json &j) {
-    assertKeys(j, {"file", "name1", "name2", "dim", "dr", "Rhyper", "nstep", "nskip", "slicedir", "thickness"});
     file = j.at("file");
     name1 = j.at("name1");
     name2 = j.at("name2");
@@ -284,7 +295,7 @@ void VirtualVolume::_sample() {
             mean_exponentiated_energy_change += exp_du; // collect average, <exp(-du)>
 
             if (output_stream) { // write to output file if appropriate
-                *output_stream << cnt * steps << " " << dV << " " << du << " " << exp_du << " "
+                *output_stream << getNumberOfSteps() << " " << dV << " " << du << " " << exp_du << " "
                                << std::log(mean_exponentiated_energy_change.avg()) / dV;
 
                 // if anisotropic scaling, add an extra column with area or length perturbation
@@ -311,7 +322,7 @@ void VirtualVolume::_sample() {
                 }
             }
         } else {   // energy change too large (negative) to fit exp() function
-            cnt--; // cnt is incremented by sample() so we need to decrease
+            number_of_samples--; // cnt is incremented by sample() so we need to decrease
             faunus_logger->warn("{0}: skipping sample event due to excessive energy, dU/kT={1}", name, du);
         }
     }
@@ -350,7 +361,7 @@ void VirtualVolume::_from_json(const json &j) {
 }
 
 void VirtualVolume::_to_json(json &j) const {
-    if (cnt > 0) {
+    if (number_of_samples > 0) {
         double excess_pressure = log(mean_exponentiated_energy_change.avg()) / dV;
         j = {{"dV", dV},
              {"scaling", volume_scaling_method},
@@ -489,7 +500,7 @@ void FileReactionCoordinate::_to_json(json &j) const {
     j["file"] = filename;
     j.erase("range");      // these are for penalty function
     j.erase("resolution"); // use only, so no need to show
-    if (cnt > 0)
+    if (number_of_samples > 0)
         j["average"] = avg.avg();
 }
 
@@ -497,7 +508,7 @@ void FileReactionCoordinate::_sample() {
     if (*stream) {
         double val = (*rc)();
         avg += val;
-        (*stream) << fmt::format("{} {:.6f} {:.6f}\n", cnt * steps, val, avg.avg());
+        (*stream) << fmt::format("{} {:.6f} {:.6f}\n", getNumberOfSteps(), val, avg.avg());
     }
 }
 
@@ -566,8 +577,7 @@ void WidomInsertion::_from_json(const json &j) {
     absolute_z = j.value("absz", false);
     rins.dir = j.value("dir", Point({1, 1, 1}));
 
-    auto it = findName(molecules, molname); // loop for molecule in topology
-    if (it != molecules.end()) {
+    if (auto it = findName(molecules, molname); it != molecules.end()) { // loop for molecule in topology
         molid = it->id();
         auto m = spc.findMolecules(molid, Space::INACTIVE);  // look for inactive molecules in space
         if (not ranges::cpp20::empty(m)) {                   // did we find any?
@@ -750,7 +760,7 @@ void SanityCheck::_sample() {
         // check if particles are inside container
         for (auto &i : g) // loop over active particles
             if (spc.geo.collision(i.pos))
-                throw std::runtime_error("step "s + std::to_string(cnt) + ": index " +
+                throw std::runtime_error("step "s + std::to_string(number_of_samples) + ": index " +
                                          std::to_string(&i - &(*g.begin())) + " of group " +
                                          std::to_string(std::distance(spc.groups.begin(), spc.findGroupContaining(i))) +
                                          " outside container");
@@ -769,12 +779,13 @@ void SanityCheck::_sample() {
                 Point cm = Geometry::massCenter(g.begin(), g.end(), spc.geo.getBoundaryFunc(), -g.cm);
                 double sqd = spc.geo.sqdist(g.cm, cm);
                 if (sqd > 1e-6) {
-                    std::cerr << "step:      " << cnt << std::endl
+                    std::cerr << "step:      " << number_of_samples << std::endl
                               << "molecule:  " << &g - &*spc.groups.begin() << std::endl
                               << "dist:      " << sqrt(sqd) << std::endl
                               << "g.cm:      " << g.cm.transpose() << std::endl
                               << "actual cm: " << cm.transpose() << std::endl;
-                    FormatPQR::save(MPI::prefix + "sanity-" + std::to_string(cnt) + ".pqr", spc.p, spc.geo.getLength());
+                    FormatPQR::save(MPI::prefix + "sanity-" + std::to_string(number_of_samples) + ".pqr", spc.p,
+                                    spc.geo.getLength());
                     throw std::runtime_error("mass center-out-of-sync");
                 }
             }
@@ -783,7 +794,7 @@ void SanityCheck::_sample() {
 SanityCheck::SanityCheck(const json &j, Space &spc) : spc(spc) {
     from_json(j);
     name = "sanity";
-    steps = j.value("nstep", -1);
+    sample_interval = j.value("nstep", -1);
 }
 void AtomRDF::_sample() {
     V += spc.geo.getVolume(dim);
@@ -953,7 +964,7 @@ double MultipoleDistribution::g2g(const MultipoleDistribution::Tgroup &g1, const
  * @note `fmt` is currently included w. spdlog but has been accepted into c++20.
  */
 void MultipoleDistribution::save() const {
-    if (cnt > 0) {
+    if (number_of_samples > 0) {
         if (std::ofstream file(MPI::prefix + filename.c_str()); file) {
             file << "# Multipolar energies (kT/lB)\n"
                  << fmt::format("# {:>8}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}\n", "R", "exact", "tot", "ii", "id",
@@ -1012,7 +1023,7 @@ Point AtomInertia::compute() {
 }
 void AtomInertia::_sample() {
     if (file)
-        file << cnt * steps << " " << compute().transpose() << "\n";
+        file << getNumberOfSteps() << " " << compute().transpose() << "\n";
 }
 AtomInertia::AtomInertia(const json &j, Space &spc) : spc(spc) {
     from_json(j);
@@ -1046,7 +1057,7 @@ InertiaTensor::Data InertiaTensor::compute() {
 void InertiaTensor::_sample() {
     InertiaTensor::Data d = compute();
     if (file)
-        file << cnt * steps << " " << d.eivals.transpose() << " " << d.eivec.transpose() << "\n";
+        file << getNumberOfSteps() << " " << d.eivals.transpose() << " " << d.eivec.transpose() << "\n";
 }
 InertiaTensor::InertiaTensor(const json &j, Space &spc) : spc(spc) {
     from_json(j);
@@ -1097,8 +1108,8 @@ MultipoleMoments::Data MultipoleMoments::compute() {
 }
 void MultipoleMoments::_sample() {
     MultipoleMoments::Data d = compute();
-    if (file) 
-        file << cnt * steps << " " << d.q << " " << d.mu.transpose() << " " << d.center.transpose() << " "
+    if (file)
+        file << getNumberOfSteps() << " " << d.q << " " << d.mu.transpose() << " " << d.center.transpose() << " "
              << d.eivals.transpose() << " " << d.eivec.transpose() << "\n";
 }
 MultipoleMoments::MultipoleMoments(const json &j, Space &spc) : spc(spc) {
@@ -1233,7 +1244,7 @@ void AtomProfile::_to_disk() {
             if (Vr < dr) // take care of the case where Vr=0
                 Vr = dr; // then the volume element is simply dr
 
-            N = N / double(cnt);                                          // average number of particles/charges
+            N = N / double(number_of_samples);                            // average number of particles/charges
             o << r << " " << N << " " << N / Vr * 1e27 / pc::Nav << "\n"; // ... and molar concentration
         };
         f << "# r N rho/M\n" << tbl;
@@ -1272,14 +1283,13 @@ SlicedDensity::SlicedDensity(const json &j, Space &spc) : spc(spc) {
     from_json(j);
 }
 void SlicedDensity::_to_disk() {
-    std::ofstream f(MPI::prefix + file);
-    if (f and cnt > 0) {
+    if (std::ofstream f(MPI::prefix + file); f and number_of_samples > 0) {
         f << "# z rho/M\n";
         Point L = spc.geo.getLength();
         double halfz = 0.5 * L.z();
         double volume = L.x() * L.y() * dz;
         for (double z = -halfz; z <= halfz; z += dz)
-            f << z << " " << N(z) / volume / cnt * 1e27 / pc::Nav << "\n";
+            f << z << " " << N(z) / volume / number_of_samples * 1e27 / pc::Nav << "\n";
     }
 }
 void ChargeFluctuations::_sample() {
@@ -1383,7 +1393,7 @@ void ScatteringFunction::_sample() {
     }
 
     // zero-padded suffix to use with `save_after_sample`
-    std::string suffix = fmt::format("{:07d}", cnt);
+    std::string suffix = fmt::format("{:07d}", number_of_samples);
     switch (scheme) {
     case DEBYE:
         debye->sample(p, spc.geo.getVolume());
@@ -1431,8 +1441,7 @@ ScatteringFunction::ScatteringFunction(const json &j, Space &spc) try : spc(spc)
     names = j.at("molecules").get<decltype(names)>(); // molecule names
     ids = names2ids(molecules, names);                // names --> molids
 
-    std::string scheme_str = j.value("scheme", "explicit");
-    if (scheme_str == "debye") {
+    if (std::string scheme_str = j.value("scheme", "explicit"); scheme_str == "debye") {
         scheme = DEBYE;
         debye = std::make_shared<Scatter::DebyeFormula<Tformfactor>>(j);
         // todo: add warning if used on PBC system
@@ -1509,7 +1518,7 @@ void VirtualTranslate::_sample() {
                 else {
                     average_exp_du += std::exp(-du); // widom / perturbation average
                     if (output_file)                 // write sample event to output file
-                        output_file << fmt::format("{:d} {:.3f} {:.10f} {:.6f}\n", cnt, dL, du,
+                        output_file << fmt::format("{:d} {:.3f} {:.10f} {:.6f}\n", number_of_samples, dL, du,
                                                    std::log(average_exp_du) / dL);
                 }
             }

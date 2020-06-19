@@ -532,13 +532,13 @@ keyword when inserting the initial molecules in the [topology](topology).
 ------------------ | ------------------------------------------------------------------------------------------
 `file`             |  File to save; format detected by file extension: `pqr`, `aam`, `gro`, `xyz`, `json`/`ubj`
 `saverandom=false` |  Save the state of the random number generator
-`nstep=-1`         |  Interval between samples. If -1, save at end of simulation
+`nstep=-1`         |  Interval between samples; if -1 save at end of simulation
 
 Saves the current configuration or the system state to file. For grand canonical
 simulations, the PQR file format sets charges and radii of inactive particles to zero
 and positions them in one corner of the box.
 
-If the suffix is `json` (text) or `ubj` ([binary](http://ubjson.org)), a single 
+If the suffix is `json` or `ubj` ([binary](http://ubjson.org)), a single 
 state file that can be used to restart the simulation is saved
 with the following information:
 
@@ -546,6 +546,9 @@ with the following information:
 - particle and group properties incl. positions
 - geometry
 - state of random number generator (if `saverandom=true`)
+
+If `nstep` is greater than zero, the output filename will be tagged
+with the current step count.
 
 
 ### Space Trajectory (experimental)

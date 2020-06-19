@@ -16,7 +16,7 @@ namespace Faunus {
 namespace Energy {
 class Hamiltonian;
 class Energybase;
-}
+} // namespace Energy
 
 namespace Analysis {
 
@@ -31,31 +31,30 @@ namespace Analysis {
  */
 class Analysisbase {
   private:
-    virtual void _to_json(json &) const;
-    virtual void _from_json(const json &);
-    virtual void _sample() = 0;
-    virtual void _to_disk(); //!< save data to disk
-    int stepcnt = 0;
-    int totstepcnt = 0;
-    TimeRelativeOfTotal<std::chrono::microseconds> timer;
+    virtual void _to_json(json &) const;                  //!< provide json information
+    virtual void _from_json(const json &);                //!< setup from json
+    virtual void _sample() = 0;                           //!< perform sample event
+    virtual void _to_disk();                              //!< save sampled data to disk
+    int number_of_steps = 0;                              //!< counter for total number of steps
+    int number_of_skipped_steps = 0;                      //!< steps to skip before sampling (do not modify)
+    TimeRelativeOfTotal<std::chrono::microseconds> timer; //!< time to benchmark `_sample()`
 
   protected:
-    int steps = 0; //!< Sample interval (do not modify)
-    int nskip = 0; //!< MC steps to skip before sampling
-    int cnt = 0;   //!< number of samples
+    int sample_interval = 0;   //!< Steps in between each sample point (do not modify)
+    int number_of_samples = 0; //!< counter for number of samples
+    std::string name;          //!< descriptive name
+    std::string cite;          //!< url, doi etc. describing the analysis
 
   public:
-    std::string name; //!< descriptive name
-    std::string cite; //!< url, doi etc. describing the analysis
-
-    void to_json(json &) const;    //!< JSON report w. statistics, output etc.
-    void from_json(const json &);  //!< configure from json object
-    void to_disk();                //!< Save data to disk (if defined)
-    virtual void sample();
+    void to_json(json &) const;   //!< JSON report w. statistics, output etc.
+    void from_json(const json &); //!< configure from json object
+    void to_disk();               //!< Save data to disk (if defined)
+    void sample();                //!< Increase step count and sample
+    int getNumberOfSteps() const; //!< Number of steps
     virtual ~Analysisbase() = default;
 };
 
-void to_json(json &j, const Analysisbase &base);
+void to_json(json &, const Analysisbase &);
 
 /*
  * @brief Sample and save reaction coordinates to a file
@@ -243,17 +242,30 @@ class SanityCheck : public Analysisbase {
     SanityCheck(const json &, Space &);
 };
 
+/**
+ * @brief Save simulation state and particle coordinates to disk
+ *
+ * Using a variety of formats (pqr, gro, xyz, aam, state) this
+ * stores the simulation state to disk. The most complete format
+ * is `.state` which stores information about groups, particle
+ * positions, random number state etc.
+ *
+ * If the sample interval is set to the special value -1, the
+ * analysis is called exclusively at the very end of the simulation.
+ * If sample interval >= 0 the analysis is performed as per usual and
+ * each saved configuration file is named with the step count.
+ */
 class SaveState : public Analysisbase {
   private:
-    std::function<void(std::string)> writeFunc = nullptr;
-    std::string file;
-    bool saverandom;
+    std::function<void(const std::string &)> writeFunc = nullptr;
+    bool save_random_number_generator_state = false;
+    std::string filename;
     void _to_json(json &) const override;
-    void _to_disk() override;
     void _sample() override;
 
   public:
-    SaveState(const json &, Space &);
+    SaveState(json, Space &);
+    ~SaveState();
 };
 
 /**

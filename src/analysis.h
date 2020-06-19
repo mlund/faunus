@@ -42,10 +42,10 @@ class Analysisbase {
   protected:
     int sample_interval = 0;   //!< Steps in between each sample point (do not modify)
     int number_of_samples = 0; //!< counter for number of samples
-    std::string name;          //!< descriptive name
-    std::string cite;          //!< url, doi etc. describing the analysis
 
   public:
+    std::string name;             //!< descriptive name
+    std::string cite;             //!< url, doi etc. describing the analysis
     void to_json(json &) const;   //!< JSON report w. statistics, output etc.
     void from_json(const json &); //!< configure from json object
     void to_disk();               //!< Save data to disk (if defined)

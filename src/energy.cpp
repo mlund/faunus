@@ -417,7 +417,9 @@ void Ewald::sync(Energybase *energybase_pointer, Change &change) {
     auto other = dynamic_cast<decltype(this)>(energybase_pointer);
     assert(other);
     if (other->key == OLD) {
-        old_groups = &(other->spc.groups); // give NEW access to OLD space for optimized updates
+      old_groups =
+          &(other->spc
+                .groups); // give NEW access to OLD space for optimized updates
     }
 
     // hard-coded sync; should be expanded when dipolar ewald is supported
@@ -807,15 +809,16 @@ SASAEnergy::SASAEnergy(const json &j, Space &spc)
 void SASAEnergy::updatePositions([[gnu::unused]] const ParticleVector &p) {
     assert(p.size() == spc.positions().size());
     positions.clear();
-    for (auto pos : spc.positions()) {
+    for(auto pos: spc.positions()) {
         auto xyz = pos.data();
-        positions.insert(positions.end(), xyz, xyz + 3);
+        positions.insert(positions.end(), xyz, xyz+3);
     }
 }
 
 void SASAEnergy::updateRadii(const ParticleVector &p) {
     radii.resize(p.size());
-    std::transform(p.begin(), p.end(), radii.begin(), [](auto &a) { return atoms[a.id].sigma * 0.5; });
+    std::transform(p.begin(), p.end(), radii.begin(),
+                   [](auto &a) { return atoms[a.id].sigma * 0.5; });
 }
 
 void SASAEnergy::updateSASA(const ParticleVector &p, const Change &) {

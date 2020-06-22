@@ -375,6 +375,37 @@ double Ewald::energy(Change &change) {
     return u;
 }
 
+void Ewald::force(std::vector<Point> &force) {
+    assert(force.size() == spc.p.size());
+    double volume = spc.geo.getVolume();
+    auto force_iter = force.begin();
+    *force_iter = {0.0, 0.0, 0.0};
+
+    // Surface force contribution
+    Point total_dipole_moment = {0.0, 0.0, 0.0};
+    for (auto &p :  spc.p) {
+        total_dipole_moment += p.pos * p.charge;// + dipoles[i];
+    }
+
+    for (auto &p :  spc.p) {
+        for (size_t k = 0; k < data.k_vectors.cols(); k++) {
+            std::complex<double> Q = data.Q_ion[k] + data.Q_dipole[k];
+            double kDotR = data.k_vectors.col(k).dot(p.pos);
+            double coskDotR = std::cos(kDotR);
+            double sinkDotR = std::sin(kDotR);
+            std::complex<double> expKri(coskDotR,sinkDotR);
+            std::complex<double> qmu(0.0, p.charge);
+            std::complex<double> repart = expKri * qmu * std::conj(Q);
+            (*force_iter) += std::real(repart) * data.k_vectors.col(k) * data.Aks[k];
+        }
+        (*force_iter) += (total_dipole_moment * p.charge) / (2.0*data.surface_dielectric_constant + 1.0);
+        (*force_iter) *= -4.0 * pc::pi / volume;
+
+
+        force_iter++;
+    }
+}
+
 /**
  * @todo Implement a sync() function in EwaldData to selectively copy information
  */
@@ -382,9 +413,9 @@ void Ewald::sync(Energybase *energybase_pointer, Change &change) {
     auto other = dynamic_cast<decltype(this)>(energybase_pointer);
     assert(other);
     if (other->key == OLD) {
-      old_groups =
-          &(other->spc
-                .groups); // give NEW access to OLD space for optimized updates
+        old_groups =
+            &(other->spc
+                    .groups); // give NEW access to OLD space for optimized updates
     }
 
     // hard-coded sync; should be expanded when dipolar ewald is supported
@@ -579,7 +610,7 @@ double Bonded::energy(Change &change) {
                         int offset = std::distance(spc.p.begin(), spc.groups[group.index].begin());
                         // add an offset to the group atom indices to get the absolute indices
                         std::transform(group.atoms.begin(), group.atoms.end(), std::back_inserter(atoms_ndx),
-                                       [offset](int i) { return i + offset; });
+                                [offset](int i) { return i + offset; });
                         energy += sum_energy(intra_group, atoms_ndx);
                     }
                 }
@@ -702,7 +733,7 @@ Hamiltonian::Hamiltonian(Space &spc, const json &j) {
 #ifdef ENABLE_MPI
                     emplace_back<Energy::PenaltyMPI>(it.value(), spc);
 #else
-                    emplace_back<Energy::Penalty>(it.value(), spc);
+                emplace_back<Energy::Penalty>(it.value(), spc);
 #endif
 #if defined ENABLE_FREESASA
                 else if (it.key() == "sasa")
@@ -771,19 +802,19 @@ SASAEnergy::SASAEnergy(Space &spc, double cosolute_concentration, double probe_r
 SASAEnergy::SASAEnergy(const json &j, Space &spc)
     : SASAEnergy(spc, j.value("molarity", 0.0) * 1.0_molar, j.value("radius", 1.4) * 1.0_angstrom) {}
 
-void SASAEnergy::updatePositions([[gnu::unused]] const ParticleVector &p) {
-    assert(p.size() == spc.positions().size());
-    positions.clear();
-    for(auto pos: spc.positions()) {
-        auto xyz = pos.data();
-        positions.insert(positions.end(), xyz, xyz+3);
+    void SASAEnergy::updatePositions([[gnu::unused]] const ParticleVector &p) {
+        assert(p.size() == spc.positions().size());
+        positions.clear();
+        for(auto pos: spc.positions()) {
+            auto xyz = pos.data();
+            positions.insert(positions.end(), xyz, xyz+3);
+        }
     }
-}
 
 void SASAEnergy::updateRadii(const ParticleVector &p) {
     radii.resize(p.size());
     std::transform(p.begin(), p.end(), radii.begin(),
-                   [](auto &a) { return atoms[a.id].sigma * 0.5; });
+            [](auto &a) { return atoms[a.id].sigma * 0.5; });
 }
 
 void SASAEnergy::updateSASA(const ParticleVector &p, const Change &) {

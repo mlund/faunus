@@ -375,34 +375,38 @@ double Ewald::energy(Change &change) {
     return u;
 }
 
-void Ewald::force(std::vector<Point> &force) {
-    assert(force.size() == spc.p.size());
-    double volume = spc.geo.getVolume();
-    auto force_iter = force.begin();
-    *force_iter = {0.0, 0.0, 0.0};
+/**
+ * @param forces Destination force vector
+ *
+ * Calculate forces from reciprocal space. Note that
+ * the destination force vector will *not* be zeroed
+ * before addition.
+ *
+ * @todo Dipole contribution incomplete
+ */
+void Ewald::force(std::vector<Point> &forces) {
+    assert(forces.size() == spc.p.size());
+    const double volume = spc.geo.getVolume();
+    auto force = forces.begin();
 
-    // Surface force contribution
+    // Surface contribution
     Point total_dipole_moment = {0.0, 0.0, 0.0};
-    for (auto &p :  spc.p) {
-        total_dipole_moment += p.pos * p.charge;// + dipoles[i];
+    for (auto &particle : spc.p) {
+        total_dipole_moment += particle.pos * particle.charge; // + dipoles[i];
     }
 
-    for (auto &p :  spc.p) {
-        for (size_t k = 0; k < data.k_vectors.cols(); k++) {
-            std::complex<double> Q = data.Q_ion[k] + data.Q_dipole[k];
-            double kDotR = data.k_vectors.col(k).dot(p.pos);
-            double coskDotR = std::cos(kDotR);
-            double sinkDotR = std::sin(kDotR);
-            std::complex<double> expKri(coskDotR,sinkDotR);
-            std::complex<double> qmu(0.0, p.charge);
+    for (auto &particle : spc.p) { // loop over particles
+        (*force) = total_dipole_moment * particle.charge / (2.0 * data.surface_dielectric_constant + 1.0);
+        for (size_t i = 0; i < data.k_vectors.cols(); i++) { // loop over k vectors
+            std::complex<double> Q = data.Q_ion[i] + data.Q_dipole[i];
+            double k_dot_r = data.k_vectors.col(i).dot(particle.pos);
+            std::complex<double> expKri(std::cos(k_dot_r), std::sin(k_dot_r));
+            std::complex<double> qmu(0.0, particle.charge);
             std::complex<double> repart = expKri * qmu * std::conj(Q);
-            (*force_iter) += std::real(repart) * data.k_vectors.col(k) * data.Aks[k];
+            (*force) += std::real(repart) * data.k_vectors.col(i) * data.Aks[i];
         }
-        (*force_iter) += (total_dipole_moment * p.charge) / (2.0*data.surface_dielectric_constant + 1.0);
-        (*force_iter) *= -4.0 * pc::pi / volume;
-
-
-        force_iter++;
+        (*force) *= -4.0 * pc::pi / volume;
+        force++;
     }
 }
 

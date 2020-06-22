@@ -381,32 +381,33 @@ double Ewald::energy(Change &change) {
  * Calculate forces from reciprocal space. Note that
  * the destination force vector will *not* be zeroed
  * before addition.
- *
- * @todo Dipole contribution incomplete
  */
 void Ewald::force(std::vector<Point> &forces) {
     assert(forces.size() == spc.p.size());
     const double volume = spc.geo.getVolume();
-    auto force = forces.begin();
 
     // Surface contribution
     Point total_dipole_moment = {0.0, 0.0, 0.0};
     for (auto &particle : spc.p) {
-        total_dipole_moment += particle.pos * particle.charge; // + dipoles[i];
+        auto mu = particle.hasExtension() ? particle.getExt().mu * particle.getExt().mulen : Point(0, 0, 0);
+        total_dipole_moment += particle.pos * particle.charge + mu;
     }
+
+    auto force = forces.begin(); // iterator to force vector on first particle
 
     for (auto &particle : spc.p) { // loop over particles
         (*force) = total_dipole_moment * particle.charge / (2.0 * data.surface_dielectric_constant + 1.0);
+        double mu_scalar = particle.hasExtension() ? particle.getExt().mulen : 0.0;
+        std::complex<double> qmu(mu_scalar, particle.charge);
         for (size_t i = 0; i < data.k_vectors.cols(); i++) { // loop over k vectors
             std::complex<double> Q = data.Q_ion[i] + data.Q_dipole[i];
             double k_dot_r = data.k_vectors.col(i).dot(particle.pos);
             std::complex<double> expKri(std::cos(k_dot_r), std::sin(k_dot_r));
-            std::complex<double> qmu(0.0, particle.charge);
             std::complex<double> repart = expKri * qmu * std::conj(Q);
             (*force) += std::real(repart) * data.k_vectors.col(i) * data.Aks[i];
         }
-        (*force) *= -4.0 * pc::pi / volume;
-        force++;
+        (*force) *= -4.0 * pc::pi / volume * data.bjerrum_length; // to units of kT/Angstrom^2
+        force++;                                                  // advance to next force vector
     }
 }
 

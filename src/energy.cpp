@@ -417,9 +417,7 @@ void Ewald::sync(Energybase *energybase_pointer, Change &change) {
     auto other = dynamic_cast<decltype(this)>(energybase_pointer);
     assert(other);
     if (other->key == OLD) {
-        old_groups =
-            &(other->spc
-                    .groups); // give NEW access to OLD space for optimized updates
+        old_groups = &(other->spc.groups); // give NEW access to OLD space for optimized updates
     }
 
     // hard-coded sync; should be expanded when dipolar ewald is supported
@@ -614,7 +612,7 @@ double Bonded::energy(Change &change) {
                         int offset = std::distance(spc.p.begin(), spc.groups[group.index].begin());
                         // add an offset to the group atom indices to get the absolute indices
                         std::transform(group.atoms.begin(), group.atoms.end(), std::back_inserter(atoms_ndx),
-                                [offset](int i) { return i + offset; });
+                                       [offset](int i) { return i + offset; });
                         energy += sum_energy(intra_group, atoms_ndx);
                     }
                 }
@@ -737,7 +735,7 @@ Hamiltonian::Hamiltonian(Space &spc, const json &j) {
 #ifdef ENABLE_MPI
                     emplace_back<Energy::PenaltyMPI>(it.value(), spc);
 #else
-                emplace_back<Energy::Penalty>(it.value(), spc);
+                    emplace_back<Energy::Penalty>(it.value(), spc);
 #endif
 #if defined ENABLE_FREESASA
                 else if (it.key() == "sasa")
@@ -806,19 +804,18 @@ SASAEnergy::SASAEnergy(Space &spc, double cosolute_concentration, double probe_r
 SASAEnergy::SASAEnergy(const json &j, Space &spc)
     : SASAEnergy(spc, j.value("molarity", 0.0) * 1.0_molar, j.value("radius", 1.4) * 1.0_angstrom) {}
 
-    void SASAEnergy::updatePositions([[gnu::unused]] const ParticleVector &p) {
-        assert(p.size() == spc.positions().size());
-        positions.clear();
-        for(auto pos: spc.positions()) {
-            auto xyz = pos.data();
-            positions.insert(positions.end(), xyz, xyz+3);
-        }
+void SASAEnergy::updatePositions([[gnu::unused]] const ParticleVector &p) {
+    assert(p.size() == spc.positions().size());
+    positions.clear();
+    for (auto pos : spc.positions()) {
+        auto xyz = pos.data();
+        positions.insert(positions.end(), xyz, xyz + 3);
     }
+}
 
 void SASAEnergy::updateRadii(const ParticleVector &p) {
     radii.resize(p.size());
-    std::transform(p.begin(), p.end(), radii.begin(),
-            [](auto &a) { return atoms[a.id].sigma * 0.5; });
+    std::transform(p.begin(), p.end(), radii.begin(), [](auto &a) { return atoms[a.id].sigma * 0.5; });
 }
 
 void SASAEnergy::updateSASA(const ParticleVector &p, const Change &) {

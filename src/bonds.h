@@ -35,7 +35,7 @@ struct BondData {
     virtual std::string name() const = 0;                //!< Name/key of bond type used in for json I/O
     virtual std::shared_ptr<BondData> clone() const = 0; //!< Make shared pointer *copy* of data
     bool hasEnergyFunction() const;                      //!< test if energy function has been set
-    void shift(int offset);                              //!< Shift indices
+    void shift(int offset);                              //!< Add offset to index
     BondData() = default;
     BondData(const std::vector<int> &index);
     virtual ~BondData() = default;

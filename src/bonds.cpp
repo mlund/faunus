@@ -96,7 +96,7 @@ BondData::Variant HarmonicBond::type() const { return BondData::HARMONIC; }
 /**
  * @param particle Particle vector to all particles in the system
  *
- * This sets both the `energy` and `force` function objects
+ * This sets both the `energyFunc` and `forceFunc` function objects
  * for calculating the potential energy and the forces on the
  * participating atoms
  */

@@ -246,7 +246,7 @@ class Bonded : public Energybase {
     Space &spc;
     typedef BasePointerVector<Potential::BondData> BondVector;
     BondVector inter;                // inter-molecular bonds
-    std::map<int, BondVector> intra; // intra-molecular bonds; key is molecule id
+    std::map<int, BondVector> intra; // intra-molecular bonds; key is group index
 
   private:
     void update_intra();                              // finds and adds all intra-molecular bonds of active molecules

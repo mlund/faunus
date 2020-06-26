@@ -599,13 +599,15 @@ double Bonded::energy(Change &change) {
  * - loop over inter-molecular bonds and _add_ force
  *
  * Force unit: kT/Å
+ *
+ * @warning Untested
  */
 void Bonded::force(std::vector<Point> &forces) {
     auto distance_function = spc.geo.getDistanceFunc();
-    for (auto [molid, bonds] : intra) {                        // loop over all intra-molecular bonds
-        auto &group = spc.groups[molid];                       // this is the group we're currently working on
-        for (auto bond : bonds) {                              // loop over all bonds in group
-            assert(bond->forceFunc != nullptr);                // the force function must be implemented
+    for (auto [group_index, bonds] : intra) {                      // loop over all intra-molecular bonds
+        auto &group = spc.groups[group_index];                     // this is the group we're currently working on
+        for (auto bond : bonds) {                                  // loop over all bonds in group
+            assert(bond->forceFunc != nullptr);                    // the force function must be implemented
             auto bond_forces = bond->forceFunc(distance_function); // get forces on each atom in bond
             assert(bond->index.size() == bond_forces.size());
             for (int index : bond->index) { // loop over atom index in bond (relative to group begin)

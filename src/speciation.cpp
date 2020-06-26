@@ -154,7 +154,7 @@ Change::data SpeciationMove::deactivateMolecularGroup(Space::Tgroup &target) {
         auto bond_clone = bond->clone();
         bond_clone->shift(std::distance(spc.p.begin(), target.begin()));
         Potential::setBondEnergyFunction(bond_clone, spc.p);
-        bond_energy += bond_clone->energy(spc.geo.getDistanceFunc());
+        bond_energy += bond_clone->energyFunc(spc.geo.getDistanceFunc());
     }
 
     target.deactivate(target.begin(), target.end()); // deactivate whole group
@@ -225,7 +225,7 @@ Change::data SpeciationMove::activateMolecularGroup(Space::Tgroup &target) {
         auto bondclone = bond->clone();
         bondclone->shift(std::distance(spc.p.begin(), target.begin()));
         Potential::setBondEnergyFunction(bondclone, spc.p);
-        bond_energy -= bondclone->energy(spc.geo.getDistanceFunc());
+        bond_energy -= bondclone->energyFunc(spc.geo.getDistanceFunc());
     }
 
     Change::data d;                          // describes the changed - used for energy evaluation

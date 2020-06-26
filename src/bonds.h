@@ -17,16 +17,16 @@ namespace Potential {
  * @brief Base class for bonded potentials
  *
  * This stores data on the bond type; atom indices; json keywords;
- * and potentially also the energy function (nullptr per default).
+ * and potentially also the `energyFunc` functor (nullptr per default).
  *
- * The `force` functor returns a vector of forces acting on the
+ * The `forceFunc` functor returns a vector of forces acting on the
  * participating atoms
  */
 struct BondData {
     enum Variant { HARMONIC = 0, FENE, FENEWCA, HARMONIC_TORSION, GROMOS_TORSION, PERIODIC_DIHEDRAL, NONE };
     std::vector<int> index;
-    std::function<double(Geometry::DistanceFunction)> energy = nullptr;            //!< potential energy (kT)
-    std::function<std::vector<Point>(Geometry::DistanceFunction)> force = nullptr; //!< forces (kT/Å)
+    std::function<double(Geometry::DistanceFunction)> energyFunc = nullptr;            //!< potential energy (kT)
+    std::function<std::vector<Point>(Geometry::DistanceFunction)> forceFunc = nullptr; //!< forces (kT/Å)
 
     virtual void from_json(const json &) = 0;
     virtual void to_json(json &) const = 0;

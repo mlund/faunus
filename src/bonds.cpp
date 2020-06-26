@@ -93,10 +93,23 @@ std::shared_ptr<BondData> HarmonicBond::clone() const { return std::make_shared<
 
 BondData::Variant HarmonicBond::type() const { return BondData::HARMONIC; }
 
-void HarmonicBond::setEnergyFunction(const ParticleVector &p) {
-    energy = [&](Geometry::DistanceFunction dist) {
-        double d = req - dist(p[index[0]].pos, p[index[1]].pos).norm();
-        return k_half * d * d;
+/**
+ * @param particle Particle vector to all particles in the system
+ *
+ * This sets both the `energy` and `force` function objects
+ * for calculating the potential energy and the forces on the
+ * participating atoms
+ */
+void HarmonicBond::setEnergyFunction(const ParticleVector &particle) {
+    energy = [&](Geometry::DistanceFunction dist) { // potential energy functor
+        double d = req - dist(particle[index[0]].pos, particle[index[1]].pos).norm();
+        return k_half * d * d; // kT/Å
+    };
+    force = [&](Geometry::DistanceFunction dist) -> std::vector<Point> {  // force functor
+        auto rvec = dist(particle[index[0]].pos, particle[index[1]].pos); // vector between points
+        double r = rvec.norm();                                           // distance between particles
+        auto force = 2.0 * k_half * (req - r) * rvec / r;                 // force on first particle
+        return {force, -force};                                           // force on both particles (kT/Å)
     };
 }
 
@@ -252,5 +265,10 @@ void PeriodicDihedral::setEnergyFunction(const ParticleVector &p) {
     };
 }
 
+StretchData::StretchData(const std::vector<int> &index) : BondData(index) {}
+int StretchData::numindex() const { return 2; }
+
+TorsionData::TorsionData(const std::vector<int> &index) : BondData(index) {}
+int TorsionData::numindex() const { return 3; }
 } // namespace Potential
 } // namespace Faunus

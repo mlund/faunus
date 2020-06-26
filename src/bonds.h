@@ -18,11 +18,15 @@ namespace Potential {
  *
  * This stores data on the bond type; atom indices; json keywords;
  * and potentially also the energy function (nullptr per default).
+ *
+ * The `force` functor returns a vector of forces acting on the
+ * participating atoms
  */
 struct BondData {
     enum Variant { HARMONIC = 0, FENE, FENEWCA, HARMONIC_TORSION, GROMOS_TORSION, PERIODIC_DIHEDRAL, NONE };
     std::vector<int> index;
-    std::function<double(Geometry::DistanceFunction)> energy = nullptr; //!< potential energy (kT)
+    std::function<double(Geometry::DistanceFunction)> energy = nullptr;            //!< potential energy (kT)
+    std::function<std::vector<Point>(Geometry::DistanceFunction)> force = nullptr; //!< forces (kT/Å)
 
     virtual void from_json(const json &) = 0;
     virtual void to_json(json &) const = 0;
@@ -38,15 +42,15 @@ struct BondData {
 };
 
 struct StretchData : public BondData {
-    int numindex() const override { return 2; }
+    int numindex() const override;
     StretchData() = default;
-    StretchData(const std::vector<int> &index) : BondData(index) {};
+    StretchData(const std::vector<int> &index);
 };
 
 struct TorsionData : public BondData {
-    int numindex() const override { return 3; }
+    int numindex() const override;
     TorsionData() = default;
-    TorsionData(const std::vector<int> &index) : BondData(index) {};
+    TorsionData(const std::vector<int> &index);
 };
 
 /**
@@ -61,7 +65,7 @@ struct HarmonicBond : public StretchData {
     void from_json(const json &j) override;
     void to_json(json &j) const override;
     std::string name() const override;
-    void setEnergyFunction(const ParticleVector &p);
+    void setEnergyFunction(const ParticleVector &); //!< Set energy and force functors
     HarmonicBond() = default;
     HarmonicBond(double k, double req, const std::vector<int> &index);
 };

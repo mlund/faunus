@@ -589,6 +589,44 @@ double Bonded::energy(Change &change) {
     return energy;
 }
 
+/**
+ * @param forces Target force vector for *all* particles in the system
+ *
+ * Each element in `force` represent the force on a particle and this
+ * updates (add) the bonded force.
+ *
+ * - loop over groups and their internal bonds and _add_ force
+ * - loop over inter-molecular bonds and _add_ force
+ *
+ * Force unit: kT/Å
+ */
+void Bonded::force(std::vector<Point> &forces) {
+    auto distance_function = spc.geo.getDistanceFunc();
+    for (auto [molid, bonds] : intra) {                        // loop over all intra-molecular bonds
+        auto &group = spc.groups[molid];                       // this is the group we're currently working on
+        for (auto bond : bonds) {                              // loop over all bonds in group
+            assert(bond->force != nullptr);                    // the force function must be implemented
+            auto bond_forces = bond->force(distance_function); // get forces on each atom in bond
+            assert(bond->index.size() == bond_forces.size());
+            for (int index : bond->index) { // loop over atom index in bond (relative to group begin)
+                auto absolute_index = std::distance(spc.p.begin(), group.begin()) + index;
+                assert(absolute_index < forces.size());
+                forces[absolute_index] += bond_forces[index]; // add to overall force
+            }
+        }
+    }
+
+    for (auto bond : inter) {                              // loop over inter-molecular bonds
+        assert(bond->force != nullptr);                    // the force function must be implemented
+        auto bond_forces = bond->force(distance_function); // get forces on each atom in bond
+        assert(bond_forces.size() == bond->index.size());
+        int j = 0;
+        for (int absolute_index : bond->index) {        // loop over atom index in bond (absolute index)
+            forces[absolute_index] += bond_forces[j++]; // add to overall force
+        }
+    }
+}
+
 //---------- Hamiltonian ------------
 
 void Hamiltonian::to_json(json &j) const {

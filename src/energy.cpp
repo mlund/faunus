@@ -610,10 +610,11 @@ void Bonded::force(std::vector<Point> &forces) {
             assert(bond->forceFunc != nullptr);                    // the force function must be implemented
             auto bond_forces = bond->forceFunc(distance_function); // get forces on each atom in bond
             assert(bond->index.size() == bond_forces.size());
+            int j = 0;
             for (int index : bond->index) { // loop over atom index in bond (relative to group begin)
                 auto absolute_index = std::distance(spc.p.begin(), group.begin()) + index;
                 assert(absolute_index < forces.size());
-                forces[absolute_index] += bond_forces[index]; // add to overall force
+                forces[absolute_index] += bond_forces[j++]; // add to overall force
             }
         }
     }

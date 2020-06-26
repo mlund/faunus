@@ -344,7 +344,7 @@ double PolicyIonIonEigen::reciprocalEnergy(const EwaldData &d) {
 Ewald::Ewald(const json &j, Space &spc) : data(j), spc(spc) {
     name = "ewald";
     policy = EwaldPolicyBase::makePolicy(data.policy);
-    cite = policy->cite;
+    citation_information = policy->cite;
     init();
 }
 
@@ -449,7 +449,7 @@ double ContainerOverlap::energy(Change &change) {
 
 Isobaric::Isobaric(const json &j, Space &spc) : spc(spc) {
     name = "isobaric";
-    cite = "Frenkel & Smith 2nd Ed (Eq. 5.4.13)";
+    citation_information = "Frenkel & Smith 2nd Ed (Eq. 5.4.13)";
     P = j.value("P/mM", 0.0) * 1.0_mM;
     if (P < 1e-10) {
         P = j.value("P/Pa", 0.0) * 1.0_Pa;
@@ -762,7 +762,7 @@ SASAEnergy::SASAEnergy(Space &spc, double cosolute_concentration, double probe_r
     : spc(spc), cosolute_concentration(cosolute_concentration)
 {
     name = "sasa"; // todo predecessor constructor
-    cite = "doi:10.12688/f1000research.7931.1"; // todo predecessor constructor
+    citation_information = "doi:10.12688/f1000research.7931.1"; // todo predecessor constructor
     parameters = freesasa_default_parameters;
     parameters.probe_radius = probe_radius;
     init();

@@ -21,14 +21,14 @@ class Energybase {
     enum keys { OLD, NEW, NONE };
     keys key = NONE;
     std::string name;                                     //!< Meaningful name
-    std::string cite;                                     //!< Possible reference. May be left empty
+    std::string citation_information;                     //!< Possible reference. May be left empty
     TimeRelativeOfTotal<std::chrono::microseconds> timer; //!< Timer for measure speed of each term
     virtual double energy(Change &) = 0;                  //!< energy due to change
     virtual void to_json(json &j) const;                  //!< json output
     virtual void sync(Energybase *, Change &);
     virtual void init();                               //!< reset and initialize
     virtual inline void force(std::vector<Point> &){}; // update forces on all particles
-    inline virtual ~Energybase(){};
+    inline virtual ~Energybase() = default;
 };
 
 void to_json(json &j, const Energybase &base); //!< Converts any energy class to json object
@@ -36,32 +36,26 @@ void to_json(json &j, const Energybase &base); //!< Converts any energy class to
 /**
  * @brief Base class for external potentials
  *
- * This will apply an external energy to a defined
- * list of molecules, either acting on individual
- * atoms or the mass-center. The specific energy
- * function, `func` is injected in derived classes.
+ * Apply an external energy to a defined list of molecules, either acting on individual
+ * atoms or the mass-center. The specific energy function, `externalPotentialFunc`
+ * is defined in derived classes.
+ *
+ * @todo The `dN` check is inefficient as it calculates the external potential on *all* particles.
  */
 class ExternalPotential : public Energybase {
+  private:
+    bool act_on_mass_center = false;                   //!< apply only on center-of-mass
+    std::set<int> molecule_ids;                        //!< ids of molecules to act on
+    std::vector<std::string> molecule_names;           //!< corresponding names of molecules to act on
+    double groupEnergy(const Group<Particle> &) const; //!< external potential on a single group
   protected:
-    typedef typename Faunus::ParticleVector Tpvec;
-    bool COM = false; // apply on center-of-mass
-    Space &spc;
-    std::set<int> molids;                                   // molecules to act upon
-    std::function<double(const Particle &)> func = nullptr; // energy of single particle
-    std::vector<std::string> _names;
-
-    double _energy(const Group<Particle> &) const; //!< External potential on a single particle
+    Space &space;                                                            //!< reference to simulation space
+    std::function<double(const Particle &)> externalPotentialFunc = nullptr; //!< energy of single particle
   public:
     ExternalPotential(const json &, Space &);
-
-    /*
-     * @todo The `dN` check is very inefficient
-     * as it calculates the external potential on *all*
-     * particles.
-     */
     double energy(Change &) override;
     void to_json(json &) const override;
-}; //!< Base class for external potentials, acting on particles
+};
 
 /**
  * @brief Returns a functor for a Gouy-Chapman electric potential

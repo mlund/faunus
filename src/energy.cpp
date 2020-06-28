@@ -356,8 +356,8 @@ void Ewald::init() {
 double Ewald::energy(Change &change) {
     double u = 0;
     if (change) {
-        // If the state is NEW (trial state), then update all k-vectors
-        if (key == NEW) {
+        // If the state is NEW_MONTE_CARLO_STATE (trial state), then update all k-vectors
+        if (key == NEW_MONTE_CARLO_STATE) {
             if (change.all or change.dV) { // everything changes
                 policy->updateBox(data, spc.geo.getLength());
                 policy->updateComplex(data, spc.groups); // update all (expensive!)
@@ -381,10 +381,10 @@ double Ewald::energy(Change &change) {
 void Ewald::sync(Energybase *energybase_pointer, Change &change) {
     auto other = dynamic_cast<decltype(this)>(energybase_pointer);
     assert(other);
-    if (other->key == OLD) {
-      old_groups =
-          &(other->spc
-                .groups); // give NEW access to OLD space for optimized updates
+    if (other->key == OLD_MONTE_CARLO_STATE) {
+        old_groups =
+            &(other->spc
+                  .groups); // give NEW_MONTE_CARLO_STATE access to OLD_MONTE_CARLO_STATE space for optimized updates
     }
 
     // hard-coded sync; should be expanded when dipolar ewald is supported

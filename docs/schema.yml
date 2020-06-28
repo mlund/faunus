@@ -530,7 +530,24 @@ properties:
                                           - required: [rhoinv]
                                           - required: [phi0]
                                       additionalProperties: false
- 
+                akesson:
+                    description: "Electric potential correction from outside cuboidal slit"
+                    type: object
+                    properties:
+                        dz: {type: number, default: 0.2, description: "resolution along z (Å)"}
+                        epsr: {type: number, description: "Relative dielectric constant"}
+                        file: {type: string, description: "Input/output file for charge density profile"}
+                        nphi: {type: integer, default: 10, description: "Multiple of `nstep` in between updating charge density profile"}
+                        fixed: {type: boolean, default: false, description: "If true, do not update loaded charge density"}
+                        nstep: {type: integer, description: "Number of energy evalutations between updating charge density"}
+                        molecules:
+                            type: array
+                            items: {type: string}
+                            minItems: 1
+                            description: "Array of molecules to operate on"
+                    required: [epsr, molecules, nstep]
+                    additionalProperties: false
+
                 isobaric:
                     description: "External pressure"
                     type: object

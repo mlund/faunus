@@ -18,7 +18,7 @@ namespace Energy {
  */
 class Energybase {
   public:
-    enum keys { OLD, NEW, NONE };
+    enum keys { OLD_MONTE_CARLO_STATE, NEW_MONTE_CARLO_STATE, NONE };
     keys key = NONE;
     std::string name;                                     //!< Meaningful name
     std::string citation_information;                     //!< Possible reference. May be left empty
@@ -100,39 +100,27 @@ class CustomExternal : public ExternalPotential {
  */
 class ExternalAkesson : public ExternalPotential {
   private:
-    std::string filename; //!< File name for average charge
-    bool fixed;
-    unsigned int nstep = 0;       //!< Internal between samples
-    unsigned int nphi = 0;        //!< Distance between phi updating
-    unsigned int updatecnt = 0;   //!< Number of time rho has been updated
-    double epsr;                  //!< Relative dielectric constant
-    double dz;                    //!< z spacing between slits (A)
-    double lB;                    //!< Bjerrum length (A)
-    double halfz;                 //!< Half box length in z direction
-    Equidistant2DTable<double> Q; //!< instantaneous net charge
-
-  public:
-    unsigned int cnt = 0;                            //!< Number of charge density updates
+    std::string filename;                            //!< input/output filename to charge density profile
+    bool fixed_potential = false;                    //!< If true, the potential is never updated
+    unsigned int nstep = 0;                          //!< Internal between samples
+    unsigned int phi_update_interval = 0;            //!< Distance between phi updating
+    unsigned int num_rho_updates = 0;                //!< Number of time rho has been updated
+    unsigned int num_density_updates = 0;            //!< Number of charge density updates
+    double dielectric_constant;                      //!< Relative dielectric constant
+    double dz;                                       //!< z spacing between slits (A)
+    double bjerrum_length;                           //!< Bjerrum length (A)
+    double half_box_length_z;                        //!< Half box length in z direction
+    Equidistant2DTable<double> charge_profile;       //!< instantaneous charge as func. of z
     Equidistant2DTable<double, Average<double>> rho; //!< Charge density at z (unit A^-2)
     Equidistant2DTable<double> phi;                  //!< External potential at z (unit: beta*e)
 
-  private:
+    double phi_ext(double, double) const; //!< Calculate external potential
+    void update_rho();                    //!< update average charge density
+    void update_phi();                    //!< update average external potential
+    void save_rho();                      //!< save charge density profile to disk
+    void load_rho();                      //!< load charge density profile from disk
     void to_json(json &) const override;
-    void save();
-    void load();
-
-    /*
-     * This is Eq. 15 of the mol. phys. 1996 paper by Greberg et al.
-     * (sign typo in manuscript: phi^infty(z) should be "-2*pi*z" on page 413, middle)
-     */
-    double phi_ext(double, double) const;
     void sync(Energybase *, Change &) override;
-
-    // update average charge density
-    void update_rho();
-
-    // update average external potential
-    void update_phi();
 
   public:
     ExternalAkesson(const json &, Space &);

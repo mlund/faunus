@@ -168,77 +168,75 @@ void Confine::to_json(json &j) const {
 ExternalAkesson::ExternalAkesson(const json &j, Tspace &spc) : ExternalPotential(j, spc) {
     name = "akesson";
     citation_information = "doi:10/dhb9mj";
+    nstep = j.at("nstep").get<unsigned int>();
+    dielectric_constant = j.at("epsr").get<double>();
+    fixed_potential = j.value("fixed", false);
+    phi_update_interval = j.value("nphi", 10);
 
-    SingleUseJSON _j = j; // json variant where items are deleted after access
-    _j.erase("com");
-    _j.erase("molecules");
+    half_box_length_z = 0.5 * spc.geo.getLength().z();
+    bjerrum_length = pc::bjerrumLength(dielectric_constant);
 
-    nstep = _j.at("nstep").get<unsigned int>();
-    epsr = _j.at("epsr").get<double>();
-    fixed = _j.value("fixed", false);
-    nphi = _j.value("nphi", 10);
+    dz = j.value("dz", 0.2); // read z resolution
+    charge_profile.setResolution(dz, -half_box_length_z, half_box_length_z);
+    rho.setResolution(dz, -half_box_length_z, half_box_length_z);
+    phi.setResolution(dz, -half_box_length_z, half_box_length_z);
 
-    halfz = 0.5 * spc.geo.getLength().z();
-    lB = pc::bjerrumLength(epsr);
-
-    dz = _j.value("dz", 0.2); // read z resolution
-    Q.setResolution(dz, -halfz, halfz);
-    rho.setResolution(dz, -halfz, halfz);
-    phi.setResolution(dz, -halfz, halfz);
-
-    filename = _j.value("file", "mfcorr.dat"s);
-    load();
-
+    filename = j.value("file", "mfcorr.dat"s);
+    load_rho();
     externalPotentialFunc = [&phi = phi](const typename Tspace::Tparticle &p) { return p.charge * phi(p.pos.z()); };
-
-    if (not _j.empty()) // throw exception of unused/unknown keys are passed
-        throw std::runtime_error("unused key(s) for '"s + name + "':\n" + _j.dump());
 }
 
 double ExternalAkesson::energy(Change &change) {
-    if (not fixed)                    // pho(z) unconverged, keep sampling
-        if (key == Energybase::OLD) { // only sample on accepted configs
-            cnt++;
-            if (cnt % nstep == 0)
+    if (not fixed_potential) {              // phi(z) unconverged, keep sampling
+        if (key == OLD_MONTE_CARLO_STATE) { // only sample on accepted configs
+            num_density_updates++;
+            if (num_density_updates % nstep == 0) {
                 update_rho();
-            if (cnt % nstep * nphi == 0)
+            }
+            if (num_density_updates % nstep * phi_update_interval == 0) {
                 update_phi();
+            }
         }
+    }
     return ExternalPotential::energy(change);
 }
 
 ExternalAkesson::~ExternalAkesson() {
-    // save only if still updating and if energy type is "OLD",
+    // save only if still updating and if energy type is "OLD_MONTE_CARLO_STATE",
     // that is, accepted configurations (not trial)
-    if (not fixed and key == Energybase::OLD)
-        save();
+    if (not fixed_potential and key == OLD_MONTE_CARLO_STATE) {
+        save_rho();
+    }
 }
 
 void ExternalAkesson::to_json(json &j) const {
-    j = {{"lB", lB},         {"dz", dz},       {"nphi", nphi},          {"epsr", epsr},
-         {"file", filename}, {"nstep", nstep}, {"Nupdates", updatecnt}, {"fixed", fixed}};
+    j = {{"lB", bjerrum_length}, {"dz", dz},       {"nphi", phi_update_interval}, {"epsr", dielectric_constant},
+         {"file", filename},     {"nstep", nstep}, {"Nupdates", num_rho_updates}, {"fixed", fixed_potential}};
     ExternalPotential::to_json(j);
     _roundjson(j, 5);
 }
 
-void ExternalAkesson::save() {
-    std::ofstream f(filename);
-    if (f) {
-        f.precision(16);
-        f << rho;
+void ExternalAkesson::save_rho() {
+    if (auto stream = std::ofstream(filename); stream) {
+        stream.precision(16);
+        stream << rho;
     } else
         throw std::runtime_error("cannot save file '"s + filename + "'");
 }
 
-void ExternalAkesson::load() {
-    std::ifstream f(filename);
-    if (f) {
-        rho << f;
+void ExternalAkesson::load_rho() {
+    if (auto stream = std::ifstream(filename); stream) {
+        rho << stream;
         update_phi();
-    } else
+    } else {
         faunus_logger->warn("density file {} not loaded", filename);
+    }
 }
 
+/**
+ * This is Eq. 15 of the mol. phys. 1996 paper by Greberg et al.
+ * (sign typo in manuscript: phi^infty(z) should be "-2*pi*z" on page 413, middle)
+ */
 double ExternalAkesson::phi_ext(double z, double a) const {
     double a2 = a * a, z2 = z * z;
     return -2 * pc::pi * z - 8 * a * std::log((std::sqrt(2 * a2 + z2) + a) / std::sqrt(a2 + z2)) +
@@ -246,44 +244,49 @@ double ExternalAkesson::phi_ext(double z, double a) const {
 }
 
 void ExternalAkesson::sync(Energybase *basePtr, Change &) {
-    if (not fixed) {
-        auto other = dynamic_cast<decltype(this)>(basePtr);
+    if (not fixed_potential) {
+        auto other = dynamic_cast<ExternalAkesson *>(basePtr);
         assert(other);
-        // only trial energy (new) require sync
-        if (other->key == Energybase::OLD)
-            if (cnt != other->cnt) {
-                assert(cnt < other->cnt && "trial cnt's must be smaller");
-                cnt = other->cnt;
+        if (other->key == OLD_MONTE_CARLO_STATE) { // only trial energy (new) requires sync
+            if (num_density_updates != other->num_density_updates) {
+                assert(num_density_updates < other->num_density_updates);
+                num_density_updates = other->num_density_updates;
                 rho = other->rho;
                 phi = other->phi;
             }
+        }
     }
 }
 
 void ExternalAkesson::update_rho() {
-    updatecnt++;
+    num_rho_updates++;
     Point L = space.geo.getLength();
-    double area = L.x() * L.y();
-    if (L.x() not_eq L.y() or 0.5 * L.z() != halfz)
+    if (L.x() not_eq L.y() or 0.5 * L.z() != half_box_length_z) {
         throw std::runtime_error("Requires box Lx=Ly and Lz=const.");
-
-    Q.clear();
-    for (auto &g : space.groups) // loop over all groups
-        for (auto &p : g)      // ...and their active particles
-            Q(p.pos.z()) += p.charge;
-    for (double z = -halfz; z <= halfz; z += dz)
-        rho(z) += Q(z) / area;
+    }
+    charge_profile.clear();
+    for (auto &group : space.groups) { // loop over all groups
+        for (auto &particle : group) { // ...and their active particles
+            charge_profile(particle.pos.z()) += particle.charge;
+        }
+    }
+    double area = L.x() * L.y();
+    for (double z = -half_box_length_z; z <= half_box_length_z; z += dz) {
+        rho(z) += charge_profile(z) / area;
+    }
 }
 
 void ExternalAkesson::update_phi() {
-    Point L = space.geo.getLength();
+    auto L = space.geo.getLength();
     double a = 0.5 * L.x();
-    for (double z = -halfz; z <= halfz; z += dz) {
+    for (double z = -half_box_length_z; z <= half_box_length_z; z += dz) {
         double s = 0;
-        for (double zn = -halfz; zn <= halfz; zn += dz)
-            if (rho(zn).cnt > 0)
-                s += rho(zn).avg() * phi_ext(std::fabs(z - zn), a); // Eq. 14 in Greberg paper
-        phi(z) = lB * s;
+        for (double zn = -half_box_length_z; zn <= half_box_length_z; zn += dz) {
+            if (rho(zn).cnt > 0) {
+                s += rho(zn).avg() * phi_ext(std::fabs(z - zn), a); // Eq. 14 in Greberg's paper
+            }
+        }
+        phi(z) = bjerrum_length * s;
     }
 }
 

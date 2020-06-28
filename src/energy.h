@@ -205,6 +205,7 @@ class Ewald : public Energybase {
               Change &) override; //!< Called after a move is rejected/accepted
                                   //! as well as before simulation
     void to_json(json &) const override;
+    void force(std::vector<Point> &) override; // update forces on all particles
 };
 
 class Isobaric : public Energybase {

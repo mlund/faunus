@@ -18,17 +18,17 @@ namespace Energy {
  */
 class Energybase {
   public:
-    enum keys { OLD, NEW, NONE };
+    enum keys { OLD_MONTE_CARLO_STATE, NEW_MONTE_CARLO_STATE, NONE };
     keys key = NONE;
     std::string name;                                     //!< Meaningful name
-    std::string cite;                                     //!< Possible reference. May be left empty
+    std::string citation_information;                     //!< Possible reference. May be left empty
     TimeRelativeOfTotal<std::chrono::microseconds> timer; //!< Timer for measure speed of each term
     virtual double energy(Change &) = 0;                  //!< energy due to change
     virtual void to_json(json &j) const;                  //!< json output
     virtual void sync(Energybase *, Change &);
     virtual void init();                               //!< reset and initialize
     virtual inline void force(std::vector<Point> &){}; // update forces on all particles
-    inline virtual ~Energybase(){};
+    inline virtual ~Energybase() = default;
 };
 
 void to_json(json &j, const Energybase &base); //!< Converts any energy class to json object
@@ -36,32 +36,26 @@ void to_json(json &j, const Energybase &base); //!< Converts any energy class to
 /**
  * @brief Base class for external potentials
  *
- * This will apply an external energy to a defined
- * list of molecules, either acting on individual
- * atoms or the mass-center. The specific energy
- * function, `func` is injected in derived classes.
+ * Apply an external energy to a defined list of molecules, either acting on individual
+ * atoms or the mass-center. The specific energy function, `externalPotentialFunc`
+ * is defined in derived classes.
+ *
+ * @todo The `dN` check is inefficient as it calculates the external potential on *all* particles.
  */
 class ExternalPotential : public Energybase {
+  private:
+    bool act_on_mass_center = false;                   //!< apply only on center-of-mass
+    std::set<int> molecule_ids;                        //!< ids of molecules to act on
+    std::vector<std::string> molecule_names;           //!< corresponding names of molecules to act on
+    double groupEnergy(const Group<Particle> &) const; //!< external potential on a single group
   protected:
-    typedef typename Faunus::ParticleVector Tpvec;
-    bool COM = false; // apply on center-of-mass
-    Space &spc;
-    std::set<int> molids;                                   // molecules to act upon
-    std::function<double(const Particle &)> func = nullptr; // energy of single particle
-    std::vector<std::string> _names;
-
-    double _energy(const Group<Particle> &) const; //!< External potential on a single particle
+    Space &space;                                                            //!< reference to simulation space
+    std::function<double(const Particle &)> externalPotentialFunc = nullptr; //!< energy of single particle
   public:
     ExternalPotential(const json &, Space &);
-
-    /*
-     * @todo The `dN` check is very inefficient
-     * as it calculates the external potential on *all*
-     * particles.
-     */
     double energy(Change &) override;
     void to_json(json &) const override;
-}; //!< Base class for external potentials, acting on particles
+};
 
 /**
  * @brief Returns a functor for a Gouy-Chapman electric potential
@@ -106,39 +100,27 @@ class CustomExternal : public ExternalPotential {
  */
 class ExternalAkesson : public ExternalPotential {
   private:
-    std::string filename; //!< File name for average charge
-    bool fixed;
-    unsigned int nstep = 0;       //!< Internal between samples
-    unsigned int nphi = 0;        //!< Distance between phi updating
-    unsigned int updatecnt = 0;   //!< Number of time rho has been updated
-    double epsr;                  //!< Relative dielectric constant
-    double dz;                    //!< z spacing between slits (A)
-    double lB;                    //!< Bjerrum length (A)
-    double halfz;                 //!< Half box length in z direction
-    Equidistant2DTable<double> Q; //!< instantaneous net charge
-
-  public:
-    unsigned int cnt = 0;                            //!< Number of charge density updates
+    std::string filename;                            //!< input/output filename to charge density profile
+    bool fixed_potential = false;                    //!< If true, the potential is never updated
+    unsigned int nstep = 0;                          //!< Internal between samples
+    unsigned int phi_update_interval = 0;            //!< Distance between phi updating
+    unsigned int num_rho_updates = 0;                //!< Number of time rho has been updated
+    unsigned int num_density_updates = 0;            //!< Number of charge density updates
+    double dielectric_constant;                      //!< Relative dielectric constant
+    double dz;                                       //!< z spacing between slits (A)
+    double bjerrum_length;                           //!< Bjerrum length (A)
+    double half_box_length_z;                        //!< Half box length in z direction
+    Equidistant2DTable<double> charge_profile;       //!< instantaneous charge as func. of z
     Equidistant2DTable<double, Average<double>> rho; //!< Charge density at z (unit A^-2)
     Equidistant2DTable<double> phi;                  //!< External potential at z (unit: beta*e)
 
-  private:
+    double phi_ext(double, double) const; //!< Calculate external potential
+    void update_rho();                    //!< update average charge density
+    void update_phi();                    //!< update average external potential
+    void save_rho();                      //!< save charge density profile to disk
+    void load_rho();                      //!< load charge density profile from disk
     void to_json(json &) const override;
-    void save();
-    void load();
-
-    /*
-     * This is Eq. 15 of the mol. phys. 1996 paper by Greberg et al.
-     * (sign typo in manuscript: phi^infty(z) should be "-2*pi*z" on page 413, middle)
-     */
-    double phi_ext(double, double) const;
     void sync(Energybase *, Change &) override;
-
-    // update average charge density
-    void update_rho();
-
-    // update average external potential
-    void update_phi();
 
   public:
     ExternalAkesson(const json &, Space &);

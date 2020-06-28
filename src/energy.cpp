@@ -344,7 +344,7 @@ double PolicyIonIonEigen::reciprocalEnergy(const EwaldData &d) {
 Ewald::Ewald(const json &j, Space &spc) : data(j), spc(spc) {
     name = "ewald";
     policy = EwaldPolicyBase::makePolicy(data.policy);
-    cite = policy->cite;
+    citation_information = policy->cite;
     init();
 }
 
@@ -356,8 +356,8 @@ void Ewald::init() {
 double Ewald::energy(Change &change) {
     double u = 0;
     if (change) {
-        // If the state is NEW (trial state), then update all k-vectors
-        if (key == NEW) {
+        // If the state is NEW_MONTE_CARLO_STATE (trial state), then update all k-vectors
+        if (key == NEW_MONTE_CARLO_STATE) {
             if (change.all or change.dV) { // everything changes
                 policy->updateBox(data, spc.geo.getLength());
                 policy->updateComplex(data, spc.groups); // update all (expensive!)
@@ -381,10 +381,10 @@ double Ewald::energy(Change &change) {
 void Ewald::sync(Energybase *energybase_pointer, Change &change) {
     auto other = dynamic_cast<decltype(this)>(energybase_pointer);
     assert(other);
-    if (other->key == OLD) {
-      old_groups =
-          &(other->spc
-                .groups); // give NEW access to OLD space for optimized updates
+    if (other->key == OLD_MONTE_CARLO_STATE) {
+        old_groups =
+            &(other->spc
+                  .groups); // give NEW_MONTE_CARLO_STATE access to OLD_MONTE_CARLO_STATE space for optimized updates
     }
 
     // hard-coded sync; should be expanded when dipolar ewald is supported
@@ -449,7 +449,7 @@ double ContainerOverlap::energy(Change &change) {
 
 Isobaric::Isobaric(const json &j, Space &spc) : spc(spc) {
     name = "isobaric";
-    cite = "Frenkel & Smith 2nd Ed (Eq. 5.4.13)";
+    citation_information = "Frenkel & Smith 2nd Ed (Eq. 5.4.13)";
     P = j.value("P/mM", 0.0) * 1.0_mM;
     if (P < 1e-10) {
         P = j.value("P/Pa", 0.0) * 1.0_Pa;
@@ -762,7 +762,7 @@ SASAEnergy::SASAEnergy(Space &spc, double cosolute_concentration, double probe_r
     : spc(spc), cosolute_concentration(cosolute_concentration)
 {
     name = "sasa"; // todo predecessor constructor
-    cite = "doi:10.12688/f1000research.7931.1"; // todo predecessor constructor
+    citation_information = "doi:10.12688/f1000research.7931.1"; // todo predecessor constructor
     parameters = freesasa_default_parameters;
     parameters.probe_radius = probe_radius;
     init();

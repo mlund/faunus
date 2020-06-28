@@ -19,8 +19,8 @@ void MCSimulation::init() {
     Change c;
     c.all = true;
 
-    state1.pot.key = Energy::Energybase::OLD; // this is the old energy (current, accepted)
-    state2.pot.key = Energy::Energybase::NEW; // this is the new energy (trial)
+    state1.pot.key = Energy::Energybase::OLD_MONTE_CARLO_STATE; // this is the old energy (current, accepted)
+    state2.pot.key = Energy::Energybase::NEW_MONTE_CARLO_STATE; // this is the new energy (trial)
 
     state1.pot.init();
     double u1 = state1.pot.energy(c);

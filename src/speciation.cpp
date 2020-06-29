@@ -382,9 +382,18 @@ void SpeciationMove::_move(Change &change) {
     change.clear();
 }
 
-double SpeciationMove::bias(Change &, double, double) {
+double SpeciationMove::bias(Change &change, double, double) {
     // The acceptance/rejection of the move is affected by the equilibrium constant
     // but unaffected by the change in bonded energy
+    for (auto change_data : change.groups) {         // loop over changed groups/molecules
+        auto &group = spc.groups[change_data.index]; // current group
+        for (int i : change_data.atoms) {            // loop over changed particles in group
+            double z = group[i].pos.z();             // i'th particle z-position (Å)
+            if (z > -15.0 and z < 15.0) {            // is it inside membrane? (hard-coded!)
+                return pc::infty;                    // if yes, reject using infinite energy
+            }
+        }
+    }
     return -reaction->lnK + bond_energy;
 }
 

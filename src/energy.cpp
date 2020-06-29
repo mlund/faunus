@@ -610,22 +610,20 @@ void Bonded::force(std::vector<Point> &forces) {
             assert(bond->forceFunc != nullptr);                    // the force function must be implemented
             auto bond_forces = bond->forceFunc(distance_function); // get forces on each atom in bond
             assert(bond->index.size() == bond_forces.size());
-            int j = 0;
-            for (int index : bond->index) { // loop over atom index in bond (relative to group begin)
-                auto absolute_index = std::distance(spc.p.begin(), group.begin()) + index;
+            for (int i = 0; i < bond->index.size(); i++) { // loop over atom index in bond (relative to group begin)
+                auto absolute_index = std::distance(spc.p.begin(), group.begin()) + bond->index[i];
                 assert(absolute_index < forces.size());
-                forces[absolute_index] += bond_forces[j++]; // add to overall force
+                forces[absolute_index] += bond_forces[i]; // add to overall force
             }
         }
     }
 
-    for (auto bond : inter) {                              // loop over inter-molecular bonds
-        assert(bond->forceFunc != nullptr);                // the force function must be implemented
+    for (auto bond : inter) {                                  // loop over inter-molecular bonds
+        assert(bond->forceFunc != nullptr);                    // the force function must be implemented
         auto bond_forces = bond->forceFunc(distance_function); // get forces on each atom in bond
         assert(bond_forces.size() == bond->index.size());
-        int j = 0;
-        for (int absolute_index : bond->index) {        // loop over atom index in bond (absolute index)
-            forces[absolute_index] += bond_forces[j++]; // add to overall force
+        for (int i = 0; i < bond->index.size(); i++) { // loop over atom index in bond (absolute index)
+            forces[bond->index[i]] += bond_forces[i];  // add to overall force
         }
     }
 }

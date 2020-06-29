@@ -24,9 +24,11 @@ namespace Potential {
  */
 struct BondData {
     enum Variant { HARMONIC = 0, FENE, FENEWCA, HARMONIC_TORSION, GROMOS_TORSION, PERIODIC_DIHEDRAL, NONE };
-    std::vector<int> index;
-    std::function<double(Geometry::DistanceFunction)> energyFunc = nullptr;            //!< potential energy (kT)
-    std::function<std::vector<Point>(Geometry::DistanceFunction)> forceFunc = nullptr; //!< forces (kT/Å)
+    std::vector<int> index; //!< Index of participating atoms
+    std::function<double(Geometry::DistanceFunction)> energyFunc =
+        nullptr; //!< calculate potential energy of bonded atoms(kT)
+    std::function<std::vector<Point>(Geometry::DistanceFunction)> forceFunc =
+        nullptr; //!< calculate forces on bonded atoms (kT/Å)
 
     virtual void from_json(const json &) = 0;
     virtual void to_json(json &) const = 0;

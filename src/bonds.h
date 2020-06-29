@@ -17,12 +17,18 @@ namespace Potential {
  * @brief Base class for bonded potentials
  *
  * This stores data on the bond type; atom indices; json keywords;
- * and potentially also the energy function (nullptr per default).
+ * and potentially also the `energyFunc` functor (nullptr per default).
+ *
+ * The `forceFunc` functor returns a vector of forces acting on the
+ * participating atoms
  */
 struct BondData {
     enum Variant { HARMONIC = 0, FENE, FENEWCA, HARMONIC_TORSION, GROMOS_TORSION, PERIODIC_DIHEDRAL, NONE };
-    std::vector<int> index;
-    std::function<double(Geometry::DistanceFunction)> energy = nullptr; //!< potential energy (kT)
+    std::vector<int> index; //!< Index of participating atoms
+    std::function<double(Geometry::DistanceFunction)> energyFunc =
+        nullptr; //!< calculate potential energy of bonded atoms(kT)
+    std::function<std::vector<Point>(Geometry::DistanceFunction)> forceFunc =
+        nullptr; //!< calculate forces on bonded atoms (kT/Å)
 
     virtual void from_json(const json &) = 0;
     virtual void to_json(json &) const = 0;
@@ -31,22 +37,22 @@ struct BondData {
     virtual std::string name() const = 0;                //!< Name/key of bond type used in for json I/O
     virtual std::shared_ptr<BondData> clone() const = 0; //!< Make shared pointer *copy* of data
     bool hasEnergyFunction() const;                      //!< test if energy function has been set
-    void shift(int offset);                              //!< Shift indices
+    void shift(int offset);                              //!< Add offset to index
     BondData() = default;
     BondData(const std::vector<int> &index);
     virtual ~BondData() = default;
 };
 
 struct StretchData : public BondData {
-    int numindex() const override { return 2; }
+    int numindex() const override;
     StretchData() = default;
-    StretchData(const std::vector<int> &index) : BondData(index) {};
+    StretchData(const std::vector<int> &index);
 };
 
 struct TorsionData : public BondData {
-    int numindex() const override { return 3; }
+    int numindex() const override;
     TorsionData() = default;
-    TorsionData(const std::vector<int> &index) : BondData(index) {};
+    TorsionData(const std::vector<int> &index);
 };
 
 /**
@@ -61,7 +67,7 @@ struct HarmonicBond : public StretchData {
     void from_json(const json &j) override;
     void to_json(json &j) const override;
     std::string name() const override;
-    void setEnergyFunction(const ParticleVector &p);
+    void setEnergyFunction(const ParticleVector &); //!< Set energy and force functors
     HarmonicBond() = default;
     HarmonicBond(double k, double req, const std::vector<int> &index);
 };

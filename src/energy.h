@@ -247,7 +247,7 @@ class Bonded : public Energybase {
     Space &spc;
     typedef BasePointerVector<Potential::BondData> BondVector;
     BondVector inter;                // inter-molecular bonds
-    std::map<int, BondVector> intra; // intra-molecular bonds
+    std::map<int, BondVector> intra; // intra-molecular bonds; key is group index
 
   private:
     void update_intra();                              // finds and adds all intra-molecular bonds of active molecules
@@ -258,7 +258,8 @@ class Bonded : public Energybase {
   public:
     Bonded(const json &, Space &);
     void to_json(json &) const override;
-    double energy(Change &) override; // brute force -- refine this!
+    double energy(Change &) override;          //!< brute force -- refine this!
+    void force(std::vector<Point> &) override; //!< Calculates the forces on all particles
 };
 
 /**

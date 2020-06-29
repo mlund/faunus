@@ -553,7 +553,7 @@ double Bonded::sum_energy(const Bonded::BondVector &bonds) const {
     double energy = 0;
     for (auto &bond : bonds) {
         assert(bond->hasEnergyFunction());
-        energy += bond->energy(spc.geo.getDistanceFunc());
+        energy += bond->energyFunc(spc.geo.getDistanceFunc());
     }
     return energy;
 }
@@ -564,7 +564,7 @@ double Bonded::sum_energy(const Bonded::BondVector &bonds, const std::vector<int
         for (auto particle_ndx : particles_ndx) {
             if (std::find(bond->index.begin(), bond->index.end(), particle_ndx) != bond->index.end()) {
                 assert(bond->hasEnergyFunction());
-                energy += bond->energy(spc.geo.getDistanceFunc());
+                energy += bond->energyFunc(spc.geo.getDistanceFunc());
                 break; // count each interaction at most once
             }
         }
@@ -623,6 +623,45 @@ double Bonded::energy(Change &change) {
         } // for-loop over groups
     }
     return energy;
+}
+
+/**
+ * @param forces Target force vector for *all* particles in the system
+ *
+ * Each element in `force` represent the force on a particle and this
+ * updates (add) the bonded force.
+ *
+ * - loop over groups and their internal bonds and _add_ force
+ * - loop over inter-molecular bonds and _add_ force
+ *
+ * Force unit: kT/Å
+ *
+ * @warning Untested
+ */
+void Bonded::force(std::vector<Point> &forces) {
+    auto distance_function = spc.geo.getDistanceFunc();
+    for (auto [group_index, bonds] : intra) {                      // loop over all intra-molecular bonds
+        auto &group = spc.groups[group_index];                     // this is the group we're currently working on
+        for (auto bond : bonds) {                                  // loop over all bonds in group
+            assert(bond->forceFunc != nullptr);                    // the force function must be implemented
+            auto bond_forces = bond->forceFunc(distance_function); // get forces on each atom in bond
+            assert(bond->index.size() == bond_forces.size());
+            for (int i = 0; i < bond->index.size(); i++) { // loop over atom index in bond (relative to group begin)
+                auto absolute_index = std::distance(spc.p.begin(), group.begin()) + bond->index[i];
+                assert(absolute_index < forces.size());
+                forces[absolute_index] += bond_forces[i]; // add to overall force
+            }
+        }
+    }
+
+    for (auto bond : inter) {                                  // loop over inter-molecular bonds
+        assert(bond->forceFunc != nullptr);                    // the force function must be implemented
+        auto bond_forces = bond->forceFunc(distance_function); // get forces on each atom in bond
+        assert(bond_forces.size() == bond->index.size());
+        for (int i = 0; i < bond->index.size(); i++) { // loop over atom index in bond (absolute index)
+            forces[bond->index[i]] += bond_forces[i];  // add to overall force
+        }
+    }
 }
 
 //---------- Hamiltonian ------------

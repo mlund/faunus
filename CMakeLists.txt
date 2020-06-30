@@ -92,8 +92,8 @@ ExternalProject_Add(
     project_spdlog
     PREFIX "${CMAKE_CURRENT_BINARY_DIR}/_deps"
     LOG_DOWNLOAD ON
-    URL https://github.com/gabime/spdlog/archive/bb0f3839c1e52948f2ecb66e4e0aa79740a30205.zip
-    URL_HASH SHA256=dece1767c33da47dbfdf60673af40b04a1557f22b6f4db4e1de8f99c2fb0a609
+    URL https://github.com/gabime/spdlog/archive/v1.6.1.tar.gz
+    URL_HASH SHA256=378a040d91f787aec96d269b0c39189f58a6b852e4cbf9150ccfacbe85ebbbfc
     CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DSPDLOG_INSTALL=off -DCMAKE_POSITION_INDEPENDENT_CODE=on
     BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} spdlog
     INSTALL_COMMAND ""
@@ -108,8 +108,8 @@ add_dependencies(spdlog project_spdlog)
 # MODERN JSON
 FetchContent_Declare(
     modernjson
-    URL "https://github.com/nlohmann/json/releases/download/v3.7.3/include.zip"
-    URL_HASH SHA256=87b5884741427220d3a33df1363ae0e8b898099fbc59f1c451113f6732891014)
+    URL "https://github.com/nlohmann/json/releases/download/v3.8.0/include.zip"
+    URL_HASH SHA256=8590fbcc2346a3eefc341935765dd57598022ada1081b425678f0da9a939a3c0)
 FetchContent_GetProperties(modernjson)
 if(NOT modernjson_POPULATED)
     FetchContent_Populate(modernjson)
@@ -184,8 +184,8 @@ set_property(TARGET cppsid PROPERTY IMPORTED_LOCATION ${binary_dir}/libcppsid.a)
 # PYBIND11
 FetchContent_Declare(
     pybind11
-    URL https://github.com/pybind/pybind11/archive/v2.4.3.tar.gz
-    URL_HASH MD5=62254c40f89925bb894be421fe4cdef2)
+    URL https://github.com/pybind/pybind11/archive/v2.5.0.tar.gz
+    URL_HASH MD5=1ad2c611378fb440e8550a7eb6b31b89)
 
 # NANOBENCH
 FetchContent_Declare(
@@ -230,8 +230,8 @@ set_target_properties(xdrfile PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 # DOCTEST
 FetchContent_Declare(
     doctest
-    URL "https://github.com/onqtam/doctest/archive/2.3.6.tar.gz"
-    URL_MD5 298e5773f3eb9825f6e3015e8f9511ca)
+    URL "https://github.com/onqtam/doctest/archive/2.4.0.tar.gz"
+    URL_MD5 0b679d6294f97be4fb11cb26e801fda6)
 FetchContent_GetProperties(doctest)
 if(NOT doctest_POPULATED)
     FetchContent_Populate(doctest)

@@ -81,20 +81,20 @@ void MoleculeData::createMolecularConformations(const json &j) {
 
     if (auto trajfile = j.value("traj", ""s); not trajfile.empty()) {
         conformations.clear();                                  // remove all previous conformations
-        FormatPQR::loadTrajectory(trajfile, conformations.vec); // read traj. from disk
+        FormatPQR::loadTrajectory(trajfile, conformations.data); // read traj. from disk
         if (not conformations.empty()) {
             faunus_logger->debug("{} conformations loaded from {}", conformations.size(), trajfile);
 
             // create atom list
             atoms.clear();
-            atoms.reserve(conformations.vec.front().size());
-            for (auto &p : conformations.vec.front()) // add atoms to atomlist
+            atoms.reserve(conformations.data.front().size());
+            for (auto &p : conformations.data.front()) // add atoms to atomlist
                 atoms.push_back(p.id);
 
             // center mass center for each frame to origo assuming whole molecules
             if (j.value("trajcenter", false)) {
                 faunus_logger->debug("Centering conformations from {}", trajfile);
-                for (auto &p : conformations.vec) // loop over conformations
+                for (auto &p : conformations.data) // loop over conformations
                     Geometry::cm2origo(p.begin(), p.end());
             }
 

@@ -38,12 +38,5 @@ Random::Random() : dist01(0, 1) {}
 
 double Random::operator()() { return dist01(engine); }
 
-/**
- * @param min minimum value
- * @param max maximum value
- * @return random value in [min:max] range
- */
-int Random::range(int min, int max) { return std::uniform_int_distribution<int>(min, max)(engine); }
-
 Random random; // Global instance
 } // namespace Faunus

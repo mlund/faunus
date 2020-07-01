@@ -26,7 +26,17 @@ class Random {
     Random();            //!< Constructor with deterministic seed
     void seed();         //!< Set a non-deterministic ("hardware") seed
     double operator()(); //!< Random double in uniform range [0,1)
-    int range(int, int); //!< Integer in uniform range [min:max]
+
+    /**
+     * @brief Integer in uniform range [min:max]
+     * @param min minimum value
+     * @param max maximum value
+     * @return random integer in [min:max] range
+     */
+    template <typename IntType = int> IntType range(IntType min, IntType max) {
+        static_assert(std::is_integral<IntType>::value, "Integral required");
+        return std::uniform_int_distribution<IntType>(min, max)(engine);
+    }
 
     /**
      * @brief Pick random element in iterable range
@@ -35,7 +45,7 @@ class Random {
      * @return Iterator to random element
      */
     template <typename Iterator> Iterator sample(Iterator begin, Iterator end) {
-        std::advance(begin, range(0, std::distance(begin, end) - 1));
+        std::advance(begin, range<size_t>(0, std::distance(begin, end) - 1));
         return begin;
     }
 };
@@ -89,20 +99,25 @@ TEST_CASE("[Faunus] Random") {
  * randomly pick from the weighted distribution.
  * Add elements with `push_back()`
  * where the default weight is _unity_.
+ *
+ * @tparam T Data type to store
  */
 template <typename T> class WeightedDistribution {
   private:
-    std::discrete_distribution<> dist;
-    std::vector<double> weights;
-    size_t index; //!< index from latest element access via push_back or get
+    std::discrete_distribution<> distribution;
+    std::vector<double> weights; //!< weights for each data point
+    size_t latest_index;         //!< index from latest element access via push_back or get
   public:
-    std::vector<T> vec;                           //!< raw vector of T
-    auto size() const { return vec.size(); }      //!< Number of data points
-    bool empty() const { return vec.empty(); }    //!< True if no data points
-    size_t getLastIndex() const { return index; } //!< index of last `get()` or `push_back()` call
+    std::vector<T> data;                        //!< raw vector of T
+    auto size() const { return data.size(); }   //!< Number of data points
+    bool empty() const { return data.empty(); } //!< True if no data points
+    size_t getLastIndex() const {
+        assert(!data.empty());
+        return latest_index;
+    } //!< index of last `get()` or `push_back()` element
 
     void clear() {
-        vec.clear();
+        data.clear();
         weights.clear();
     } //!< Clear all data
 
@@ -115,11 +130,11 @@ template <typename T> class WeightedDistribution {
      * otherwise an exception is thrown.
      */
     template <typename Iterator> void setWeight(Iterator begin, Iterator end) {
-        if (auto size = std::distance(begin, end); size == vec.size()) {
+        if (auto size = std::distance(begin, end); size == data.size()) {
             weights.resize(size);
             std::copy(begin, end, weights.begin());
-            dist = std::discrete_distribution(weights.begin(), weights.end());
-            assert(size_t(dist.max()) == vec.size() - 1);
+            distribution = std::discrete_distribution(weights.begin(), weights.end());
+            assert(size_t(distribution.max()) == data.size() - 1);
         } else {
             throw std::runtime_error("number of weights must match data");
         }
@@ -131,10 +146,10 @@ template <typename T> class WeightedDistribution {
      * @param weight weight (default: 1.0)
      */
     void push_back(const T &value, double weight = 1.0) {
-        vec.push_back(value);
+        data.push_back(value);
         weights.push_back(weight);
-        setWeight(weights.begin(), weights.end()); // recalc. weight distribution
-        index = vec.size() - 1;
+        setWeight(weights.begin(), weights.end());
+        latest_index = data.size() - 1;
     }
 
     /**
@@ -144,8 +159,8 @@ template <typename T> class WeightedDistribution {
      */
     template <typename RandomGenerator> const T &sample(RandomGenerator &engine) {
         assert(not empty());
-        index = dist(engine);
-        return vec.at(index);
+        latest_index = distribution(engine);
+        return data.at(latest_index);
     }
 };
 

@@ -99,7 +99,7 @@ void MoleculeData::createMolecularConformations(const json &j) {
             }
 
             std::vector<float> weights(conformations.size(), 1.0); // default uniform weight
-            conformations.setWeight(weights);
+            conformations.setWeight(weights.begin(), weights.end());
 
             // look for weight file
             if (auto weightfile = j.value("trajweight", ""s); not weightfile.empty()) {
@@ -111,7 +111,7 @@ void MoleculeData::createMolecularConformations(const json &j) {
                         weights.push_back(_val);
                     if (weights.size() == conformations.size()) {
                         faunus_logger->debug("{} weights loaded from {}", conformations.size(), weightfile);
-                        conformations.setWeight(weights);
+                        conformations.setWeight(weights.begin(), weights.end());
                     } else
                         throw std::runtime_error("Number of weights does not match conformations.");
                 } else
@@ -519,8 +519,8 @@ ParticleVector RandomInserter::operator()(Geometry::GeometryBase &geo, const Par
     if (std::fabs(geo.getVolume()) < 1e-20)
         throw std::runtime_error("geometry has zero volume");
 
-    ParticleVector v = mol.conformations.get(); // get random, weighted conformation
-    conformation_ndx = mol.conformations.getLastIndex(); // latest index
+    ParticleVector v = mol.conformations.sample(random.engine); // get random, weighted conformation
+    conformation_ndx = mol.conformations.getLastIndex();        // latest index
 
     do {
         if (cnt++ > max_trials)

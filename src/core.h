@@ -16,7 +16,7 @@ namespace Faunus {
 
     typedef Eigen::Vector3d Point; //!< 3d vector
     typedef nlohmann::json json;  //!< Json object
-    struct Random;
+    class Random;
 
     using std::fabs;
     using std::exp;
@@ -27,14 +27,6 @@ namespace Faunus {
 
     json merge( const json &a, const json &b ); //!< Merge two json objects
     json openjson( const std::string &file, bool=true); //!< Read json file into json object (w. syntax check)
-
-    /**
-     * @brief Check for unknown keys in JSON object
-     * @param j JSON object to check
-     * @param okkeys Valid keys
-     * @param exception If true a runtime error will be thrown if unknown key is found
-     */
-    bool assertKeys(const json&, const std::vector<std::string>&, bool=true);
 
     /**
      * @brief Like json, but delete entries after access

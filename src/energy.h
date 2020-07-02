@@ -355,7 +355,7 @@ template <typename TPairPotential, bool allow_anisotropic_pair_potential = true>
     template <typename T> inline double potential(const T &a, const T &b) const {
         assert(&a != &b); // a and b cannot be the same particle
         if constexpr (allow_anisotropic_pair_potential) {
-            Point r = geometry.vdist(a.pos, b.pos);
+            const Point r = geometry.vdist(a.pos, b.pos);
             return pair_potential(a, b, r.squaredNorm(), r);
         } else {
             return pair_potential(a, b, geometry.sqdist(a.pos, b.pos), {0, 0, 0});
@@ -365,12 +365,8 @@ template <typename TPairPotential, bool allow_anisotropic_pair_potential = true>
     // just a temporary placement until PairForce class template will be implemented
     template <typename T> inline Point force(const T &a, const T &b) const {
         assert(&a != &b); // a and b cannot be the same particle
-        if constexpr (allow_anisotropic_pair_potential) {
-            Point r = geometry.vdist(a.pos, b.pos);
-            return pair_potential.force(a, b, r.squaredNorm(), r);
-        } else {
-            return pair_potential.force(a, b, geometry.sqdist(a.pos, b.pos), {0, 0, 0});
-        }
+        const Point r = geometry.vdist(a.pos, b.pos);
+        return pair_potential.force(a, b, r.squaredNorm(), r);
     }
 
     /**

@@ -60,18 +60,6 @@ namespace Faunus {
         return js;
     }
 
-    bool assertKeys(const json &j, const std::vector<std::string> &okkeys, bool exception) {
-        assert(j.is_object());
-        for (auto it : j.items()) {
-            if (std::find(okkeys.begin(), okkeys.end(), it.key()) == okkeys.end() ) {
-                if (exception)
-                    throw std::runtime_error("unknown key: "s + it.key());
-                else return false;
-            }
-        }
-        return true;
-    }
-
     TipFromTheManual::TipFromTheManual() {
         random = std::make_shared<Random>();
         random->seed();

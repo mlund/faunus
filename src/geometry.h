@@ -11,7 +11,7 @@
 /** @brief Faunus main namespace */
 namespace Faunus {
 
-struct Random;
+class Random;
 
 /**
  * @brief Simulation geometries and related operations.

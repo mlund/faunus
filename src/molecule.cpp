@@ -81,25 +81,25 @@ void MoleculeData::createMolecularConformations(const json &j) {
 
     if (auto trajfile = j.value("traj", ""s); not trajfile.empty()) {
         conformations.clear();                                  // remove all previous conformations
-        FormatPQR::loadTrajectory(trajfile, conformations.vec); // read traj. from disk
+        FormatPQR::loadTrajectory(trajfile, conformations.data); // read traj. from disk
         if (not conformations.empty()) {
             faunus_logger->debug("{} conformations loaded from {}", conformations.size(), trajfile);
 
             // create atom list
             atoms.clear();
-            atoms.reserve(conformations.vec.front().size());
-            for (auto &p : conformations.vec.front()) // add atoms to atomlist
+            atoms.reserve(conformations.data.front().size());
+            for (auto &p : conformations.data.front()) // add atoms to atomlist
                 atoms.push_back(p.id);
 
             // center mass center for each frame to origo assuming whole molecules
             if (j.value("trajcenter", false)) {
                 faunus_logger->debug("Centering conformations from {}", trajfile);
-                for (auto &p : conformations.vec) // loop over conformations
+                for (auto &p : conformations.data) // loop over conformations
                     Geometry::cm2origo(p.begin(), p.end());
             }
 
             std::vector<float> weights(conformations.size(), 1.0); // default uniform weight
-            conformations.setWeight(weights);
+            conformations.setWeight(weights.begin(), weights.end());
 
             // look for weight file
             if (auto weightfile = j.value("trajweight", ""s); not weightfile.empty()) {
@@ -111,7 +111,7 @@ void MoleculeData::createMolecularConformations(const json &j) {
                         weights.push_back(_val);
                     if (weights.size() == conformations.size()) {
                         faunus_logger->debug("{} weights loaded from {}", conformations.size(), weightfile);
-                        conformations.setWeight(weights);
+                        conformations.setWeight(weights.begin(), weights.end());
                     } else
                         throw std::runtime_error("Number of weights does not match conformations.");
                 } else
@@ -519,8 +519,8 @@ ParticleVector RandomInserter::operator()(Geometry::GeometryBase &geo, const Par
     if (std::fabs(geo.getVolume()) < 1e-20)
         throw std::runtime_error("geometry has zero volume");
 
-    ParticleVector v = mol.conformations.get(); // get random, weighted conformation
-    conformation_ndx = mol.conformations.getLastIndex(); // latest index
+    ParticleVector v = mol.conformations.sample(random.engine); // get random, weighted conformation
+    conformation_ndx = mol.conformations.getLastIndex();        // latest index
 
     do {
         if (cnt++ > max_trials)

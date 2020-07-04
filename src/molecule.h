@@ -193,9 +193,9 @@ class MoleculeData {
     bool rigid = false;          //!< True if particle should be considered as rigid
     double activity = 0.0;       //!< Chemical activity (mol/l)
 
-    std::vector<int> atoms;                    //!< Sequence of atoms in molecule (atom id's)
+    std::vector<int> atoms; //!< Sequence of atoms in molecule (atom id's)
     BasePointerVector<Potential::BondData> bonds;
-    WeightedDistribution<ParticleVector, float> conformations; //!< Conformations of molecule
+    WeightedDistribution<ParticleVector> conformations; //!< Conformations of molecule
 
     MoleculeData();
     MoleculeData(const std::string &name, ParticleVector particles,

@@ -91,6 +91,7 @@ bool SpeciationMove::atomicSwap(Change &change) {
         Particle p = Faunus::atoms[atomid];          // temporary particle of new type
         p.pos = random_particle->pos;                // get position from old particle
         // todo: extended properties, dipole etc?
+        assert(!p.hasExtension() && "extended properties not yet implemented");
         *random_particle = p; // copy new particle onto old particle
         assert(random_particle->id == atomid);
     }
@@ -241,6 +242,38 @@ Change::data SpeciationMove::activateMolecularGroup(Space::Tgroup &target) {
 bool SpeciationMove::activateAllProducts(Change &change) {
     auto [atomic_products, molecular_products] = reaction->getProducts();
 
+    // First we need to check if there are enough inactive products
+    // for *all* participating molecules. Check only, *no* actual activation.
+    for (auto [molid, number_to_insert] : molecular_products) {
+        if (number_to_insert == 0 or Faunus::molecules[molid].isImplicit()) {
+            continue;                                 // implicit molecules are added/removed after the move
+        } else if (Faunus::molecules[molid].atomic) { // The product is an atom
+            auto mollist = spc.findMolecules(molid, Tspace::ALL);
+            if (range_size(mollist) > 0) {
+                if (mollist.begin()->size() + number_to_insert > mollist.begin()->capacity()) {
+                    faunus_logger->warn("atomic molecule {} is full; increase capacity?",
+                                        Faunus::molecules[molid].name);
+                    return false;
+                }
+            } else {
+                assert(false); // we should never reach here
+            }
+        } else { // The product is a molecule
+            auto selection = (reaction->only_neutral_molecules) ? Tspace::INACTIVE_NEUTRAL : Tspace::INACTIVE;
+            auto inactive = spc.findMolecules(molid, selection); // all inactive molecules
+            std::vector<std::reference_wrapper<Tspace::Tgroup>> molecules_to_activate;
+            std::sample(inactive.begin(), inactive.end(), std::back_inserter(molecules_to_activate), number_to_insert,
+                        slump.engine);
+            if (molecules_to_activate.size() != number_to_insert) {
+                faunus_logger->warn("maximum number of {} molecules reached; increase capacity?",
+                                    Faunus::molecules[molid].name);
+                return false;
+            }
+        }
+    }
+
+    // Actually activate the products. This could be optimized as it also checks
+    // the availability of products which is also done above
     for (auto [molid, number_to_insert] : molecular_products) {
         if (number_to_insert == 0 or Faunus::molecules[molid].isImplicit()) {
             continue;                                 // implicit molecules are added/removed after the move
@@ -251,7 +284,7 @@ bool SpeciationMove::activateAllProducts(Change &change) {
                 if (not change_data.atoms.empty()) {
                     change.groups.push_back(change_data);
                 } else {
-                    return false;
+                    assert(false); // we should never reach here
                 }
             } else {
                 assert(false); // we should never reach here
@@ -267,13 +300,11 @@ bool SpeciationMove::activateAllProducts(Change &change) {
                     if (auto change_data = activateMolecularGroup(target); not change_data.atoms.empty()) {
                         change.groups.push_back(change_data); // Add to list of moved groups
                     } else {
-                        return false;
+                        assert(false); // we should never reach here
                     }
                 }
             } else {
-                faunus_logger->warn("maximum number of {} molecules reached; increase capacity?",
-                                    Faunus::molecules[molid].name);
-                return false;
+                assert(false); // we should never reach here
             }
         }
     }
@@ -294,6 +325,32 @@ bool SpeciationMove::deactivateAllReactants(Change &change) {
 
     auto [atomic_reactants, molecular_reactants] = reaction->getReactants();
 
+    // check (only!) if there are anything to deactivate
+    for (auto [molid, N_delete] : molecular_reactants) { // Delete
+        if (N_delete <= 0 or Faunus::molecules[molid].isImplicit()) {
+            continue;                         // implicit molecules are added/deleted after move
+        } else if (molecules[molid].atomic) { // reactant is an atomic group
+            auto mollist = spc.findMolecules(molid, Tspace::ALL);
+            assert(range_size(mollist) == 1);
+            auto target = spc.findMolecules(molid, Tspace::ALL).begin();
+            if ((int)target->size() - N_delete < 0) {
+                faunus_logger->warn("atomic group {} is depleted; increase simulation volume?",
+                                    Faunus::molecules[molid].name);
+                return false;
+            }
+        } else { // molecular reactant (non-atomic)
+            auto selection = (reaction->only_neutral_molecules) ? Tspace::ACTIVE_NEUTRAL : Tspace::ACTIVE;
+            auto active = spc.findMolecules(molid, selection);
+            std::vector<std::reference_wrapper<Tspace::Tgroup>> molecules_to_deactivate;
+            std::sample(active.begin(), active.end(), std::back_inserter(molecules_to_deactivate), N_delete,
+                        slump.engine); // pick random molecules to delete
+            if (molecules_to_deactivate.size() != N_delete) {
+                return false;
+            }
+        }
+    }
+
+    // perform actual deactivation
     for (auto [molid, N_delete] : molecular_reactants) { // Delete
         if (N_delete <= 0 or Faunus::molecules[molid].isImplicit()) {
             continue;                         // implicit molecules are added/deleted after move
@@ -306,7 +363,7 @@ bool SpeciationMove::deactivateAllReactants(Change &change) {
             if (not change_data.atoms.empty()) {
                 change.groups.push_back(change_data);
             } else {
-                return false;
+                assert(false); // we should never reach here
             }
         } else { // molecular reactant (non-atomic)
             auto selection = (reaction->only_neutral_molecules) ? Tspace::ACTIVE_NEUTRAL : Tspace::ACTIVE;
@@ -319,7 +376,7 @@ bool SpeciationMove::deactivateAllReactants(Change &change) {
                     if (auto change_data = deactivateMolecularGroup(target); not change_data.atoms.empty()) {
                         change.groups.push_back(change_data); // add to list of moved groups
                     } else {
-                        return false;
+                        assert(false); // we should never reach here
                     }
                 }
             } else {

@@ -620,7 +620,6 @@ void TabulatedPotential::from_json(const json &js) {
             }
             rmin = findLowerDistance(i, j, energy_at_rmin, rmin);
             rmax = findUpperDistance(i, j, energy_at_rmax, rmax);
-            faunus_logger->trace("Spline interval: [{} : {}]", rmin + dr, rmax - dr);
             assert(rmin < rmax);
             createKnots(i, j, rmin, rmax);
         }
@@ -667,8 +666,9 @@ void TabulatedPotential::createKnots(int i, int j, double rmin, double rmax) {
             max_error = error;
         }
     }
-    faunus_logger->debug("Splined {}-{} interaction using {} knot(s) w. maximum absolute error of {:.1E} kT",
-                         Faunus::atoms[i].name, Faunus::atoms[j].name, knotdata.numKnots(), max_error);
+    faunus_logger->debug(
+        "{}-{} interaction splined between [{:6.2f}:{:6.2f}] {} using {} knots w. maximum absolute error of {:.1E} kT",
+        Faunus::atoms[i].name, Faunus::atoms[j].name, rmin, rmax, u8::angstrom, knotdata.numKnots(), max_error);
 }
 
 void NewCoulombGalore::setSelfEnergy() {

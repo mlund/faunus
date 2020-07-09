@@ -129,10 +129,13 @@ interval [`rmin`,`rmax`] determined by the following policies:
 
 If above the interval, zero is returned.
 If below the interval, the exact energy (or infinity) is returned.
+For details about the splines for each pair, use
+`to_disk` and/or maximize the verbosity level (`--verbosity`) when
+running faunus.
 
 Keyword            | Description
 ------------------ | ------------------------------------------------
-`utol=1e-5`        | Spline precision (_kT_)
+`utol=1e-3`        | Spline precision
 `u_at_rmin=20`     | Energy threshold at short separations (_kT_)
 `u_at_rmax=1e-6`   | Energy threshold at long separations (_kT_)
 `to_disk=False`    | Create datafiles w. exact and splined potentials

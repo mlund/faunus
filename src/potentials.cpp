@@ -597,7 +597,7 @@ void TabulatedPotential::from_json(const json &js) {
     if (!isotropic) {
         throw std::runtime_error("Cannot spline anisotropic potentials");
     }
-    spline.setTolerance(js.value("utol", 1e-5), js.value("ftol", 1e-2));
+    spline.setTolerance(js.value("utol", 1e-3), js.value("ftol", 1e-2));
     hardsphere_repulsion = js.value("hardsphere", false);
     double energy_at_rmin = js.value("u_at_rmin", 20);
     double energy_at_rmax = js.value("u_at_rmax", 1e-6);

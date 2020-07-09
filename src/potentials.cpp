@@ -507,26 +507,37 @@ FunctorPotential::FunctorPotential(const std::string &name) : PairPotentialBase(
 SplinedPotential::KnotData::KnotData(const base &b) : base(b) {}
 
 /**
+ * @param stream output stream
+ * @param i fist atom index
+ * @param j second atom index
+ *
+ * Stream splined and exact energy as a function of particle-particle separation to output stream
+ */
+void SplinedPotential::stream_pair_potential(std::ostream &stream, int i, int j) {
+    if (stream) {
+        if (!atoms.at(i).implicit && !atoms.at(j).implicit) {
+            Particle particle1 = Faunus::atoms.at(i);
+            Particle particle2 = Faunus::atoms.at(j);
+            stream << "# r u_splined/kT u_exact/kT\n";
+            double rmax = sqrt(matrix_of_knots(i, j).rmax2);
+            for (double r = dr; r < rmax; r += dr) {
+                stream << fmt::format("{:.6E} {:.6E} {:.6E}\n", r, operator()(particle1, particle2, r *r, {r, 0, 0}),
+                                      FunctorPotential::operator()(particle1, particle2, r *r, {r, 0, 0}));
+            }
+        }
+    }
+}
+
+/**
  * For each pair of atom types a file is created containing
  * the exact and splined pair potential as a function of distance
  */
 void SplinedPotential::save_potentials() {
     for (size_t i = 0; i < Faunus::atoms.size(); ++i) { // loop over atom types
         for (size_t j = 0; j <= i; ++j) {               // and build matrix of spline data (knots) for each pair
-            if (atoms[i].implicit || atoms[j].implicit) {
-                continue;
-            }
-            Particle particle1 = Faunus::atoms.at(i);
-            Particle particle2 = Faunus::atoms.at(j);
-            auto filename = fmt::format("{}-{}_tabulated.dat", Faunus::atoms[i].name, Faunus::atoms[j].name);
-            if (std::ofstream stream(filename); stream) {
-                stream << "# r u_splined/kT u_exact/kT\n";
-                double rmax = sqrt(matrix_of_knots(i, j).rmax2);
-                for (double r = dr; r < rmax; r += dr) {
-                    stream << fmt::format("{:.6E} {:.6E} {:.6E}\n",
-                                          r, operator()(particle1, particle2, r *r, {r, 0, 0}),
-                                          FunctorPotential::operator()(particle1, particle2, r *r, {r, 0, 0}));
-                }
+            auto filename = fmt::format("{}-{}_tabulated.dat", Faunus::atoms.at(i).name, Faunus::atoms.at(j).name);
+            if (auto stream = std::ofstream(filename); stream) {
+                stream_pair_potential(stream, i, j);
             }
         }
     }
@@ -659,7 +670,7 @@ void SplinedPotential::createKnots(int i, int j, double rmin, double rmax) {
     }
     matrix_of_knots.set(i, j, knotdata); // register knots for the pair
 
-    double max_error = -pc::infty; // maximum absolute error of the spline along r
+    double max_error = 0.0; // maximum absolute error of the spline along r
     for (double r = rmin + dr; r < rmax; r += dr) {
         double error = std::fabs(operator()(particle1, particle2, r *r, {r, 0, 0}) -
                                  FunctorPotential::operator()(particle1, particle2, r *r, {r, 0, 0}));

@@ -715,15 +715,16 @@ class SplinedPotential : public FunctorPotential {
         KnotData(const base &);
     };
 
-    PairMatrix<KnotData> matrix_of_knots;               //!< Matrix with tabulated potential for each atom pair
-    Tabulate::Andrea<double> spline;                    //!< Spline method
-    bool hardsphere_repulsion = false;                  //!< Use hardsphere repulsion for r smaller than rmin
-    const int max_iterations = 1e6;                     //!< Max number of iterations when determining spline interval
-    void save_potentials();                             //!< Save splined and exact pair potentials to disk
-    double findLowerDistance(int, int, double, double); //!< Find lower distance for splining (rmin)
-    double findUpperDistance(int, int, double, double); //!< Find upper distance for splining (rmax)
-    double dr = 1e-2;                                   //!< Distance interval when searching for rmin and rmax
-    void createKnots(int, int, double, double);         //!< Create spline knots for pair of particles in [rmin:rmax]
+    PairMatrix<KnotData> matrix_of_knots;                 //!< Matrix with tabulated potential for each atom pair
+    Tabulate::Andrea<double> spline;                      //!< Spline method
+    bool hardsphere_repulsion = false;                    //!< Use hardsphere repulsion for r smaller than rmin
+    const int max_iterations = 1e6;                       //!< Max number of iterations when determining spline interval
+    void stream_pair_potential(std::ostream &, int, int); //!< Stream pair potential to output stream
+    void save_potentials();                               //!< Save splined and exact pair potentials to disk
+    double findLowerDistance(int, int, double, double);   //!< Find lower distance for splining (rmin)
+    double findUpperDistance(int, int, double, double);   //!< Find upper distance for splining (rmax)
+    double dr = 1e-2;                                     //!< Distance interval when searching for rmin and rmax
+    void createKnots(int, int, double, double);           //!< Create spline knots for pair of particles in [rmin:rmax]
 
   public:
     explicit SplinedPotential(const std::string &name = "splined");

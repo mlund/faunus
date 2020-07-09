@@ -504,11 +504,13 @@ void FunctorPotential::from_json(const json &j) {
 
 FunctorPotential::FunctorPotential(const std::string &name) : PairPotentialBase(name) {}
 
+SplinedPotential::KnotData::KnotData(const base &b) : base(b) {}
+
 /**
  * For each pair of atom types a file is created containing
  * the exact and splined pair potential as a function of distance
  */
-void TabulatedPotential::save_potentials() {
+void SplinedPotential::save_potentials() {
     for (size_t i = 0; i < Faunus::atoms.size(); ++i) { // loop over atom types
         for (size_t j = 0; j <= i; ++j) {               // and build matrix of spline data (knots) for each pair
             if (atoms[i].implicit || atoms[j].implicit) {
@@ -523,7 +525,7 @@ void TabulatedPotential::save_potentials() {
                 for (double r = dr; r < rmax; r += dr) {
                     stream << fmt::format("{:.6E} {:.6E} {:.6E}\n",
                                           r, operator()(particle1, particle2, r *r, {r, 0, 0}),
-                                          TabulatedPotential::operator()(particle1, particle2, r *r, {r, 0, 0}));
+                                          FunctorPotential::operator()(particle1, particle2, r *r, {r, 0, 0}));
                 }
             }
         }
@@ -540,7 +542,7 @@ void TabulatedPotential::save_potentials() {
  * For repulsive potentials (at short sep.), the threshold is the maximum energy splined
  * For attactive potentials (at short sep.), the threshold is the minimum energy splined
  */
-double TabulatedPotential::findLowerDistance(int i, int j, double energy_threshold, double rmin) {
+double SplinedPotential::findLowerDistance(int i, int j, double energy_threshold, double rmin) {
     assert(rmin > 0);
     Particle particle1 = Faunus::atoms.at(i);
     Particle particle2 = Faunus::atoms.at(j);
@@ -573,7 +575,7 @@ double TabulatedPotential::findLowerDistance(int i, int j, double energy_thresho
  * This function increases `rmin` until the absolute energy is lower than
  * `energy_threshold`.
  */
-double TabulatedPotential::findUpperDistance(int i, int j, double energy_threshold, double rmax) {
+double SplinedPotential::findUpperDistance(int i, int j, double energy_threshold, double rmax) {
     assert(rmax > 0);
     Particle particle1 = Faunus::atoms.at(i);
     Particle particle2 = Faunus::atoms.at(j);
@@ -592,7 +594,7 @@ double TabulatedPotential::findUpperDistance(int i, int j, double energy_thresho
     return rmax;
 }
 
-void TabulatedPotential::from_json(const json &js) {
+void SplinedPotential::from_json(const json &js) {
     FunctorPotential::from_json(js);
     if (!isotropic) {
         throw std::runtime_error("Cannot spline anisotropic potentials");
@@ -629,7 +631,7 @@ void TabulatedPotential::from_json(const json &js) {
     }
 }
 
-TabulatedPotential::TabulatedPotential(const std::string &name) : FunctorPotential(name) {}
+SplinedPotential::SplinedPotential(const std::string &name) : FunctorPotential(name) {}
 
 /**
  * @param i Atom index
@@ -637,7 +639,7 @@ TabulatedPotential::TabulatedPotential(const std::string &name) : FunctorPotenti
  * @param rmin Minimum splining distance
  * @param rmax Maximum splining distance
  */
-void TabulatedPotential::createKnots(int i, int j, double rmin, double rmax) {
+void SplinedPotential::createKnots(int i, int j, double rmin, double rmax) {
     Particle particle1 = Faunus::atoms.at(i);
     Particle particle2 = Faunus::atoms.at(j);
     KnotData knotdata = spline.generate(
@@ -646,8 +648,7 @@ void TabulatedPotential::createKnots(int i, int j, double rmin, double rmax) {
         },
         rmin * rmin, rmax * rmax); // spline along r^2
 
-    // if set, hard-sphere repulsion (infinity) is used IF the
-    // potential is repulsive below rmin
+    // if set, hard-sphere repulsion (infinity) is used IF the potential is repulsive below rmin
     knotdata.hardsphere_repulsion = hardsphere_repulsion;
     if (spline.eval(knotdata, knotdata.rmin2 + dr) < 0) { // disable hard sphere
         knotdata.hardsphere_repulsion = false;            // repulsion for attractive potentials
@@ -662,9 +663,7 @@ void TabulatedPotential::createKnots(int i, int j, double rmin, double rmax) {
     for (double r = rmin + dr; r < rmax; r += dr) {
         double error = std::fabs(operator()(particle1, particle2, r *r, {r, 0, 0}) -
                                  FunctorPotential::operator()(particle1, particle2, r *r, {r, 0, 0}));
-        if (error > max_error) {
-            max_error = error;
-        }
+        max_error = std::max(error, max_error);
     }
     faunus_logger->debug(
         "{}-{} interaction splined between [{:6.2f}:{:6.2f}] {} using {} knots w. maximum absolute error of {:.1E} kT",
@@ -760,8 +759,6 @@ Point Multipole::force(const Faunus::Particle &a, const Faunus::Particle &b, dou
     Point dipdip = pot.dipole_dipole_force(mua, mub, r);
     return lB * (ionion + iondip + dipdip);
 }
-
-TabulatedPotential::KnotData::KnotData(const TabulatedPotential::KnotData::base &b) : base(b) {}
 
 } // namespace Potential
 } // namespace Faunus

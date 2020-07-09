@@ -695,20 +695,21 @@ class FunctorPotential : public PairPotentialBase {
 };
 
 /**
- * @brief Tabulated arbitrary potentials for specific atom types
+ * @brief Splined pair potentials
  *
- * This maintains a species x species matrix as in FunctorPotential
- * but with tabulated pair potentials to improve performance.
+ * This maintains a species x species matrix as in `FunctorPotential`
+ * but with splined pair potentials. This avoids the functor lookup
+ * and renders all potentials roughly the same speed.
  *
+ * The spline range is automatically detected based on user-defined
+ * energy thresholds. If below the range, the default behavior is to return
+ * the EXACT energy, while if above ZERO is returned.
  */
-class TabulatedPotential : public FunctorPotential {
-
-    /**
-     * @brief Expand spline data class to hold information about the sign of values for r<rmin
-     */
+class SplinedPotential : public FunctorPotential {
+    /** @brief Expand spline data class to hold information about the sign of values for r<rmin */
     class KnotData : public Tabulate::TabulatorBase<double>::data {
       public:
-        typedef Tabulate::TabulatorBase<double>::data base;
+        using base = Tabulate::TabulatorBase<double>::data;
         bool hardsphere_repulsion = false; //!< Use hardsphere repulsion for r smaller than rmin
         KnotData() = default;
         KnotData(const base &);
@@ -725,28 +726,28 @@ class TabulatedPotential : public FunctorPotential {
     void createKnots(int, int, double, double);         //!< Create spline knots for pair of particles in [rmin:rmax]
 
   public:
-    TabulatedPotential(const std::string &name = "splined");
+    explicit SplinedPotential(const std::string &name = "splined");
 
     /**
      * Policies:
      *
      * 1. return splined potential if rmin>r<rmax
      * 2. return zero if r>=rmax
-     * 3. return infinity if r<=rmin AND `hardsphere_for_small_r` has been set to true
+     * 3. return infinity if r<=rmin AND `hardsphere_repulsion` has been set to true
      * 4. return exact energy if r<=rmin
      */
     inline double operator()(const Particle &p1, const Particle &p2, double r2, const Point &) const override {
-        const auto &knots = matrix_of_knots(p1.id, p2.id);
+        auto &knots = matrix_of_knots(p1.id, p2.id);
         if (r2 >= knots.rmax2) {
             return 0.0;
         }
-        if (r2 <= knots.rmin2) {
-            if (knots.hardsphere_repulsion) {
-                return pc::infty;
-            }
-            return FunctorPotential::operator()(p1, p2, r2, {0, 0, 0}); // exact energy
+        if (r2 > knots.rmin2) {
+            return spline.eval(knots, r2); // spline energy
         }
-        return spline.eval(knots, r2); // splined energy
+        if (knots.hardsphere_repulsion) {
+            return pc::infty;
+        }
+        return FunctorPotential::operator()(p1, p2, r2, {0, 0, 0}); // exact energy
     }
 
     void from_json(const json &) override;

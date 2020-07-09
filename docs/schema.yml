@@ -433,11 +433,11 @@ properties:
                         default: {"$ref": "#/properties/pairpotential/all"}
                         cutoff_g2g: {type: [number, array]}
                         timings: {type: boolean}
-                        utol: {type: number, description: "Energy tolerance for spline (kT)", default: 1e-5}
-                        ftol: {type: number, description: "Force tolerance for spline (experimental!)", default: 1e-5}
+                        utol: {type: number, description: "Energy tolerance for spline (kT)"}
+                        ftol: {type: number, description: "Force tolerance for spline (experimental!)"}
                         hardsphere: {type: boolean, description: "Assume hardsphere potential for low separations", default: false}
                         to_disk: {type: boolean, description: "Save splined potentials to disk}", default: false}
-                        u_at_rmin: {type: number, description: "Absolute energy threshold at min. separation (kT)", default: 10}
+                        u_at_rmin: {type: number, description: "Absolute energy threshold at min. separation (kT)", default: 20}
                         u_at_rmax: {type: number, description: "Absolute energy threshold at max. separation (kT)", default: 1e-6}
                         rmin: {type: number, description: "Hard coded minimum splining distance (Å)"}
                         rmax: {type: number, description: "Hard coded maximum splining distance (Å)"}

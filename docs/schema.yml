@@ -251,6 +251,7 @@ properties:
                   then:
                       properties:
                           debyelength: {type: number, description: Debye screening length (Å)}
+                          shift: {type: boolean, description: Shift to zero at cutoff, default: true}
                       required: [cutoff, debyelength]
                       
         electrolyte:
@@ -416,6 +417,30 @@ properties:
                         default: {"$ref": "#/properties/pairpotential/all"}
                         cutoff_g2g: {type: [number, array]}
                         timings: {type: boolean}
+                        openmp:
+                            type: array
+                            items:
+                                type: string
+                                enum: [g2g, i2all]
+                    required: [default]
+                    additionalProperties:
+                        allOf: [{"$ref": "#/properties/pairpotential/all"}]
+
+                nonbonded_splined:
+                    description: "Nonbonded interactions (splined pair potentials)"
+                    type: object
+                    properties:
+                        default: {"$ref": "#/properties/pairpotential/all"}
+                        cutoff_g2g: {type: [number, array]}
+                        timings: {type: boolean}
+                        utol: {type: number, description: "Energy tolerance for spline (kT)", default: 1e-5}
+                        ftol: {type: number, description: "Force tolerance for spline (experimental!)", default: 1e-5}
+                        hardsphere: {type: boolean, description: "Assume hardsphere potential for low separations", default: false}
+                        to_disk: {type: boolean, description: "Save splined potentials to disk}", default: false}
+                        u_at_rmin: {type: number, description: "Absolute energy threshold at min. separation (kT)", default: 10}
+                        u_at_rmax: {type: number, description: "Absolute energy threshold at max. separation (kT)", default: 1e-6}
+                        rmin: {type: number, description: "Hard coded minimum splining distance (Å)"}
+                        rmax: {type: number, description: "Hard coded maximum splining distance (Å)"}
                         openmp:
                             type: array
                             items:

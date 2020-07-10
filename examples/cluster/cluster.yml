@@ -15,9 +15,11 @@ insertmolecules:
     - water: {N: 10}
 
 energy:
-    - nonbonded_coulomblj:
-        lennardjones: {mixing: LB}
-        coulomb: {type: fanourgakis, epsr: 1.2, cutoff: 9}
+    - nonbonded_splined:
+        to_disk: true
+        default:
+            - lennardjones: {mixing: LB}
+            - coulomb: {type: fanourgakis, epsr: 1.2, cutoff: 9}
         cutoff_g2g: 10
 
 moves:

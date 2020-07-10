@@ -75,18 +75,23 @@ This term loops over pairs of atoms, $i$, and $j$, summing a given pair-wise add
 
 $$ U = \sum_{i=0}^{N-1}\sum_{j=i+1}^N u_{ij}(\textbf{r}\_j-\textbf{r}\_i)$$
 
-Using `nonbonded`, potentials can be arbitrarily mixed and customized for specific particle
-combinations. `nonbonded_splined` internally _splines_ the combined potential in an interval [`rmin`,`rmax`] determined
-by the following policies:
+The most general method is `nonbonded` where potentials can be arbitrarily mixed and customized
+for specific particle combinations.
 
-- `rmin` is decreased towards zero until the potential reaches `u_at_rmin=20` kT
-- `rmax` is increased until the potential reaches `u_at_rmax=1e-6` kT
+Example:
 
-If outside the interval, infinity or zero is returned, respectively.
-Finally, the spline precision can be controlled with `utol=1e-5` kT.
+~~~ yaml
+- nonbonded:
+    default: # default pair potential
+        - lennardjones: {mixing: LB}
+        - coulomb: {type: fanourgakis, epsr: 1.0, cutoff: 12}
+    Ow Ca: # custom potential for atom type "Ow" and atom type "Ca"
+        - wca: {mixing: LB}
+~~~
 
 Below is a description of possible nonbonded methods. For simple potentials, the hard coded
-variants are often the fastest option. For better performance, it is recommended to use `nonbonded_splined` in place of the more robust `nonbonded` method. To check that the combined potential is splined correctly, set `to_disk=true` to print to `A-B_tabulated.dat` the exact and splined combined potentials between species A and B.
+variants are often the fastest option.
+For better performance, it is recommended to use `nonbonded_splined` in place of the more robust `nonbonded` method.
 
 `energy`               | $u\_{ij}$
 ---------------------- | ------------------------------------------------------
@@ -98,6 +103,7 @@ variants are often the fastest option. For better performance, it is recommended
 `nonbonded_coulombwca` | `coulomb`+`wca` (hard coded)
 `nonbonded_pm`         | `coulomb`+`hardsphere` (fixed `type=plain`, `cutoff`$=\infty$)
 `nonbonded_pmwca`      | `coulomb`+`wca` (fixed `type=plain`, `cutoff`$=\infty$)
+
 
 ### Mass Center Cutoffs
 
@@ -112,6 +118,31 @@ combinations:
       default: 40
       protein water: 60
 ~~~
+
+### Spline Options
+
+The `nonbonded_splined` method internally _splines_ the potential in an automatically determined
+interval [`rmin`,`rmax`] determined by the following policies:
+
+- `rmin` is decreased towards zero until the potential reaches `u_at_rmin`.
+- `rmax` is increased until the potential reaches `u_at_rmax`.
+
+If above the interval, zero is returned.
+If below the interval, the exact energy (or infinity) is returned.
+For details about the splines for each pair, use
+`to_disk` and/or maximize the verbosity level (`--verbosity`) when
+running faunus.
+
+Keyword            | Description
+------------------ | ------------------------------------------------
+`utol=1e-3`        | Spline precision
+`u_at_rmin=20`     | Energy threshold at short separations (_kT_)
+`u_at_rmax=1e-6`   | Energy threshold at long separations (_kT_)
+`to_disk=False`    | Create datafiles w. exact and splined potentials
+`hardsphere=False` | Use hardsphere repulsion below rmin
+
+Note: Anisotropic pair-potentials cannot be splined.
+
 
 ## Electrostatics
 

@@ -737,13 +737,15 @@ Hamiltonian::Hamiltonian(Space &spc, const json &j) {
                     emplace_back<Energy::NonbondedCached<CoulombLJ>>(it.value(), spc, *this);
 
                 else if (it.key() == "nonbonded_splined")
-                    emplace_back<Energy::Nonbonded<PairingPolicy<PairEnergy<TabulatedPotential, false>, TCutoff, parallel>>>(it.value(), spc, *this);
+                    emplace_back<
+                        Energy::Nonbonded<PairingPolicy<PairEnergy<SplinedPotential, false>, TCutoff, parallel>>>(
+                        it.value(), spc, *this);
 
                 else if (it.key() == "nonbonded" or it.key() == "nonbonded_exact")
                     emplace_back<Energy::Nonbonded<PairingPolicy<PairEnergy<FunctorPotential, true>, TCutoff, parallel>>>(it.value(), spc, *this);
 
                 else if (it.key() == "nonbonded_cached")
-                    emplace_back<Energy::NonbondedCached<TabulatedPotential>>(it.value(), spc, *this);
+                    emplace_back<Energy::NonbondedCached<SplinedPotential>>(it.value(), spc, *this);
 
                 else if (it.key() == "nonbonded_coulombwca")
                     emplace_back<Energy::Nonbonded<PairingPolicy<PairEnergy<CoulombWCA, false>, TCutoff, parallel>>>(it.value(), spc, *this);

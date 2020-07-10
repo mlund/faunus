@@ -680,6 +680,14 @@ class FunctorPotential : public PairPotentialBase {
     void to_json(json &j) const override;
     void from_json(const json &j) override;
 
+    /**
+     * @brief Potential energy between two particles
+     * @param a First particle
+     * @param b Second particle
+     * @param r2 Squared distance
+     * @param r Distance vector
+     * @return Energy in kT
+     */
     inline double operator()(const Particle &a, const Particle &b, double r2,
                              const Point &r = {0, 0, 0}) const override {
         return umatrix(a.id, b.id)(a, b, r2, r);
@@ -687,46 +695,63 @@ class FunctorPotential : public PairPotentialBase {
 };
 
 /**
- * @brief Tabulated arbitrary potentials for specific atom types
+ * @brief Splined pair potentials
  *
- * This maintains a species x species matrix as in FunctorPotential
- * but with tabulated pair potentials to improve performance.
+ * This maintains a species x species matrix as in `FunctorPotential`
+ * but with splined pair potentials. This avoids the functor lookup
+ * and renders all potentials roughly the same speed.
  *
+ * The spline range is automatically detected based on user-defined
+ * energy thresholds. If below the range, the default behavior is to return
+ * the EXACT energy, while if above ZERO is returned.
  */
-class TabulatedPotential : public FunctorPotential {
-
-    // expand spline data class to hold information about
-    // the sign of values for r<rmin
-    struct KnotData : public Tabulate::TabulatorBase<double>::data {
-        typedef Tabulate::TabulatorBase<double>::data base;
-        bool isNegativeBelowRmin = false;
+class SplinedPotential : public FunctorPotential {
+    /** @brief Expand spline data class to hold information about the sign of values for r<rmin */
+    class KnotData : public Tabulate::TabulatorBase<double>::data {
+      public:
+        using base = Tabulate::TabulatorBase<double>::data;
+        bool hardsphere_repulsion = false; //!< Use hardsphere repulsion for r smaller than rmin
         KnotData() = default;
-        inline KnotData(const base &b) : base(b) {}
+        KnotData(const base &);
     };
-    PairMatrix<KnotData> matrix_of_knots; // matrix with tabulated potential for each atom pair; cannot be Eigen Matrix
-    Tabulate::Andrea<double> spline;      // spline class
-    bool hardsphere = false;          // use hardsphere for r<rmin?
+
+    PairMatrix<KnotData> matrix_of_knots;                 //!< Matrix with tabulated potential for each atom pair
+    Tabulate::Andrea<double> spline;                      //!< Spline method
+    bool hardsphere_repulsion = false;                    //!< Use hardsphere repulsion for r smaller than rmin
+    const int max_iterations = 1e6;                       //!< Max number of iterations when determining spline interval
+    void stream_pair_potential(std::ostream &, int, int); //!< Stream pair potential to output stream
+    void save_potentials();                               //!< Save splined and exact pair potentials to disk
+    double findLowerDistance(int, int, double, double);   //!< Find lower distance for splining (rmin)
+    double findUpperDistance(int, int, double, double);   //!< Find upper distance for splining (rmax)
+    double dr = 1e-2;                                     //!< Distance interval when searching for rmin and rmax
+    void createKnots(int, int, double, double);           //!< Create spline knots for pair of particles in [rmin:rmax]
 
   public:
-    TabulatedPotential(const std::string &name = "splined") : FunctorPotential(name) {};
+    explicit SplinedPotential(const std::string &name = "splined");
 
     /**
-     * @todo Simply return exact energy if `r2<=knots.rmin2`?
+     * Policies:
+     *
+     * 1. return splined potential if rmin>r<rmax
+     * 2. return zero if r>=rmax
+     * 3. return infinity if r<=rmin AND `hardsphere_repulsion` has been set to true
+     * 4. return exact energy if r<=rmin
      */
-    inline double operator()(const Particle &a, const Particle &b, double r2, const Point &) const override {
-        const KnotData &knots = matrix_of_knots(a.id, b.id);
-        if (r2 >= knots.rmax2)
+    inline double operator()(const Particle &p1, const Particle &p2, double r2, const Point &) const override {
+        auto &knots = matrix_of_knots(p1.id, p2.id);
+        if (r2 >= knots.rmax2) {
             return 0.0;
-        if (r2 <= knots.rmin2) {
-            if (knots.isNegativeBelowRmin or (not hardsphere))
-                return this->umatrix(a.id, b.id)(a, b, r2, {0, 0, 0}); // exact energy
-            else
-                return pc::infty; // assume extreme repulsion
         }
-        return spline.eval(knots, r2); // we are in splined interval
+        if (r2 > knots.rmin2) {
+            return spline.eval(knots, r2); // spline energy
+        }
+        if (knots.hardsphere_repulsion) {
+            return pc::infty;
+        }
+        return FunctorPotential::operator()(p1, p2, r2, {0, 0, 0}); // exact energy
     }
 
-    void from_json(const json &j) override;
+    void from_json(const json &) override;
 };
 
 } // end of namespace Potential

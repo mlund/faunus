@@ -18,7 +18,7 @@ TEST_CASE("[Faunus] Integrator") {
 
     auto ld = LangevinVelocityVerlet(spc, energy, R"({"friction": 8.0, "time_step": 2.0 })"_json);
     json j_ld = ld;
-    CHECK_EQ(j_ld["friction_coefficient"], 8.0);
+    CHECK_EQ(j_ld["friction"], 8.0);
     CHECK_EQ(j_ld["time_step"], 2.0);
 }
 

@@ -146,7 +146,7 @@ int main(int argc, char **argv) {
 
         {
             pc::temperature = json_in.at("temperature").get<double>() * 1.0_K;
-            MCSimulation sim(json_in, mpi);
+            MetropolisMonteCarlo sim(json_in, mpi);
 
             // --state
             if (args["--state"]) {
@@ -208,14 +208,14 @@ int main(int argc, char **argv) {
                 progress_tracker->done();
             }
 
-            faunus_logger->log((sim.drift() < 1E-9) ? spdlog::level::info : spdlog::level::warn,
-                               "relative energy drift = {}", sim.drift());
+            faunus_logger->log((sim.relativeEnergyDrift() < 1E-9) ? spdlog::level::info : spdlog::level::warn,
+                               "relative energy drift = {}", sim.relativeEnergyDrift());
 
             // --output
             if (std::ofstream file(Faunus::MPI::prefix + args["--output"].asString()); file) {
                 json j;
                 Faunus::to_json(j, sim);
-                j["relative drift"] = sim.drift();
+                j["relative drift"] = sim.relativeEnergyDrift();
                 j["analysis"] = analysis;
                 if (mpi.nproc() > 1) {
                     j["mpi"] = mpi;

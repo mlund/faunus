@@ -19,7 +19,7 @@ using namespace Faunus;
 typedef typename Space::Tpvec Tpvec;
 typedef typename Space::Tgroup Tgroup;
 typedef Energy::Hamiltonian Thamiltonian;
-typedef MCSimulation Tmcsimulation;
+typedef MetropolisMonteCarlo Tmcsimulation;
 
 inline json dict2json(py::dict dict) {
     py::object dumps = py::module::import("json").attr("dumps");
@@ -251,19 +251,21 @@ PYBIND11_MODULE(pyfaunus, m)
         .def("init", &Thamiltonian::init)
         .def("energy", &Thamiltonian::energy);
 
-    // IdealTerm
-    m.def("IdealTerm", &IdealTerm);
+    // TranslationalEntropy
+    py::class_<TranslationalEntropy>(m, "TranslationalEntropy")
+        .def(py::init<Space &, Space &>())
+        .def("energy", &TranslationalEntropy::energy);
 
     // MCSimulation
-    py::class_<Tmcsimulation>(m, "MCSimulation")
+    py::class_<Tmcsimulation>(m, "MetropolisMonteCarlo")
         .def(py::init([](py::dict dict) {
-                    json j = dict2json(dict);
-                    return std::unique_ptr<Tmcsimulation>(new Tmcsimulation(j,Faunus::MPI::mpi));
-                    }))
+            json j = dict2json(dict);
+            return std::unique_ptr<Tmcsimulation>(new Tmcsimulation(j, Faunus::MPI::mpi));
+        }))
         .def(py::init([](py::dict dict, Faunus::MPI::MPIController &mpi) {
-                    json j = dict2json(dict);
-                    return std::unique_ptr<Tmcsimulation>(new Tmcsimulation(j,mpi));
-                    }));
+            json j = dict2json(dict);
+            return std::unique_ptr<Tmcsimulation>(new Tmcsimulation(j, mpi));
+        }));
 
     // Analysisbase
     py::class_<Analysis::Analysisbase>(m, "Analysisbase")

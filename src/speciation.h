@@ -23,7 +23,7 @@ class SpeciationMove : public Movebase {
   private:
     typedef decltype(Faunus::reactions)::iterator reaction_iterator;
     Space &spc;                 //!< Trial space (particles, groups)
-    Space *other_spc;           //!< Old space (particles, groups)
+    Space *other_spc = nullptr; //!< Old space (particles, groups)
     double bond_energy = 0;     //!< Accumulated bond energy if inserted/deleted molecule
     reaction_iterator reaction; //!< Randomly selected reaction
 

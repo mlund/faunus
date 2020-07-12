@@ -19,7 +19,10 @@ void SpeciationMove::_to_json(json &j) const {
     }
 }
 
-void SpeciationMove::setOther(Tspace &ospc) { other_spc = &ospc; }
+/**
+ * @param other Space representing the "old" state in a MC move
+ */
+void SpeciationMove::setOther(Tspace &other) { other_spc = &other; }
 
 /**
  * Convert from one atom type to another in any group (atomic/molecular).

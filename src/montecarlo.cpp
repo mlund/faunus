@@ -128,7 +128,7 @@ void MetropolisMonteCarlo::move() {
                 double ideal = TranslationalEntropy(new_state.spc, old_state.spc).energy(change);
                 if (std::isnan(du + bias)) {
                     faunus_logger->error("NaN energy du + bias in {} move.", (*move)->name);
-                    // throw here?
+                    // throw exception here?
                 }
                 if (metropolis(du + bias + ideal)) { // accept move
                     old_state.sync(new_state, change);
@@ -138,7 +138,8 @@ void MetropolisMonteCarlo::move() {
                     (*move)->reject(change);
                     du = 0.0;
                 }
-                sum_of_energy_changes += du; // sum of all energy changes
+                sum_of_energy_changes += du;                              // sum of all energy changes
+                average_energy += initial_energy + sum_of_energy_changes; // update average potential energy
             }
         }
     }
@@ -150,14 +151,13 @@ void MetropolisMonteCarlo::to_json(json &j) {
     j["moves"] = moves;
     j["energy"].push_back(old_state.pot);
     j["last move"] = latest_move->name;
+    j["average potential energy (kT)"] = average_energy.avg();
 }
-Energy::Hamiltonian &MetropolisMonteCarlo::pot() { return old_state.pot; }
-const Energy::Hamiltonian &MetropolisMonteCarlo::pot() const { return old_state.pot; }
+Energy::Hamiltonian &MetropolisMonteCarlo::getHamiltonian() { return old_state.pot; }
+const Energy::Hamiltonian &MetropolisMonteCarlo::getHamiltonian() const { return old_state.pot; }
 
-Space &MetropolisMonteCarlo::space() { return old_state.spc; }
-const Space &MetropolisMonteCarlo::space() const { return old_state.spc; }
-
-const Space::Tgeometry &MetropolisMonteCarlo::getGeometry() const { return old_state.spc.geo; }
+Space &MetropolisMonteCarlo::getSpace() { return old_state.spc; }
+const Space &MetropolisMonteCarlo::getSpace() const { return old_state.spc; }
 
 MetropolisMonteCarlo::State::State(const json &j) : spc(j), pot(spc, j.at("energy")) {}
 

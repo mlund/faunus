@@ -46,15 +46,14 @@ class MetropolisMonteCarlo {
 
   public:
     MetropolisMonteCarlo(const json &, MPI::MPIController &);
-    Energy::Hamiltonian &pot();                  //!< Get Hamiltonian of accepted (old) state
-    const Energy::Hamiltonian &pot() const;      //!< Get Hamiltonian of accepted (old) state
-    Space &space();                              //!< Access to space in accepted (old) state
-    const Space &space() const;                  //!< Access to space in accepted (old) state
-    double relativeEnergyDrift();                //!< Calculates the relative energy drift from initial configuration
-    void move();                                 //!< Perform random Monte Carlo move
-    const Space::Tgeometry &getGeometry() const; //!< Access to geometry in accepted (old) state
-    void restore(const json &);                  //!< restore system from previously store json object
-    void to_json(json &);                        //!< Write information to JSON object
+    Energy::Hamiltonian &getHamiltonian();             //!< Get Hamiltonian of accepted (old) state
+    const Energy::Hamiltonian &getHamiltonian() const; //!< Get Hamiltonian of accepted (old) state
+    Space &getSpace();                                 //!< Access to space in accepted (old) state
+    const Space &getSpace() const;                     //!< Access to space in accepted (old) state
+    double relativeEnergyDrift();                      //!< Relative energy drift from initial configuration
+    void move();                                       //!< Perform random Monte Carlo move
+    void restore(const json &);                        //!< restore system from previously store json object
+    void to_json(json &);                              //!< Write information to JSON object
 };
 
 void to_json(json &, MetropolisMonteCarlo &);

@@ -179,13 +179,13 @@ int main(int argc, char **argv) {
 
             // warn if initial system has a net charge
             {
-                auto p = sim.space().activeParticles();
+                auto p = sim.getSpace().activeParticles();
                 if (double system_charge = Faunus::monopoleMoment(p.begin(), p.end()); std::fabs(system_charge) > 0) {
                     faunus_logger->warn("non-zero system charge of {}e", system_charge);
                 }
             }
 
-            Analysis::CombinedAnalysis analysis(json_in.at("analysis"), sim.space(), sim.pot());
+            Analysis::CombinedAnalysis analysis(json_in.at("analysis"), sim.getSpace(), sim.getHamiltonian());
 
             auto &loop = json_in.at("mcloop");
             int macro = loop.at("macro");

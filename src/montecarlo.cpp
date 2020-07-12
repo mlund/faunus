@@ -176,7 +176,7 @@ TranslationalEntropy::TranslationalEntropy(Space &new_space, Space &old_space)
  * @param N_old Number of atoms or molecular before move
  * @return Energy contribution (kT) to be added to MC trial energy
  */
-double TranslationalEntropy::accumulate(int N_new, int N_old) const {
+double TranslationalEntropy::bias(int N_new, int N_old) const {
     double energy = 0.0;
     if (int dN = N_new - N_old; dN > 0) { // atoms or molecules were added
         double V_new = spc_new.geo.getVolume();
@@ -203,7 +203,7 @@ double TranslationalEntropy::atomSwapEnergy(const Change::data &data) {
         auto atoms_old = spc_old.findAtoms(atomid);
         int N_new = range_size(atoms_new); // number of atoms after change
         int N_old = range_size(atoms_old); // number of atoms before change
-        energy += accumulate(N_new, N_old);
+        energy += bias(N_new, N_old);
     }
     return energy; // kT
 }
@@ -216,7 +216,7 @@ double TranslationalEntropy::atomChangeEnergy(int molid) {
     }
     int N_new = mollist_new.begin()->size(); // number of atoms after move
     int N_old = mollist_old.begin()->size(); // number of atoms before move
-    return accumulate(N_new, N_old);
+    return bias(N_new, N_old);
 }
 
 double TranslationalEntropy::moleculeChangeEnergy(int molid) {
@@ -224,7 +224,7 @@ double TranslationalEntropy::moleculeChangeEnergy(int molid) {
     auto mollist_old = spc_old.findMolecules(molid, Space::ACTIVE);
     int N_new = range_size(mollist_new); // number of molecules after move
     int N_old = range_size(mollist_old); // number of molecules before move
-    return accumulate(N_new, N_old);
+    return bias(N_new, N_old);
 }
 
 /**

@@ -81,12 +81,12 @@ void to_json(json &, MetropolisMonteCarlo &);
  */
 class TranslationalEntropy {
   private:
-    Space &spc_new;                                //!< Space after proposed MC move ("new" or "trial")
-    Space &spc_old;                                //!< Space before MC move ("old")
-    double accumulate(int N_new, int N_old) const; //!< Bias due to change in atom/molecule numbers
-    double atomSwapEnergy(const Change::data &);   //!< Contribution from atomic swap move
-    double atomChangeEnergy(int molid);            //!< Contribution from size-change of atomic group
-    double moleculeChangeEnergy(int molid);        //!< Contribution frin change in number of molecular groups
+    Space &spc_new;                              //!< Space after proposed MC move ("new" or "trial")
+    Space &spc_old;                              //!< Space before MC move ("old")
+    double bias(int N_new, int N_old) const;     //!< Bias due to change in atom/molecule numbers
+    double atomSwapEnergy(const Change::data &); //!< Contribution from atomic swap move
+    double atomChangeEnergy(int molid);          //!< Contribution from size-change of atomic group
+    double moleculeChangeEnergy(int molid);      //!< Contribution frin change in number of molecular groups
 
   public:
     TranslationalEntropy(Space &new_space, Space &old_space);

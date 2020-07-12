@@ -2,10 +2,13 @@
 #ifndef FAUNUS_MONTECARLO_H
 #define FAUNUS_MONTECARLO_H
 
-#include "energy.h"
 #include "move.h"
 
 namespace Faunus {
+
+namespace Energy {
+class Hamiltonian;
+}
 
 /**
  * @brief Class to handle Monte Carlo moves
@@ -22,13 +25,13 @@ namespace Faunus {
  *
  * @todo
  * The class has too many responsibilities, particularly in setting up the
- * system. It for example takes care of setting the global temperature(!).
+ * system.
  */
 class MetropolisMonteCarlo {
   private:
     struct State {
-        Space spc;
-        Energy::Hamiltonian pot;
+        std::shared_ptr<Space> spc;
+        std::shared_ptr<Energy::Hamiltonian> pot;
         State(const json &);
         void sync(State &other, Change &change);
     }; //!< Class to describe a "state" incl. Space and Hamiltonian
@@ -37,8 +40,8 @@ class MetropolisMonteCarlo {
     State old_state;                              //!< Old state representing the accepted MC state
     State new_state;                              //!< New state representing the MC trial state
     std::shared_ptr<Move::Movebase> latest_move;  //!< Pointer to latest MC move
-    double initial_energy = 0;                    //!< Initial potential energy
-    double sum_of_energy_changes = 0;             //!< Sum of all potential energy changes
+    double initial_energy = 0.0;                  //!< Initial potential energy
+    double sum_of_energy_changes = 0.0;           //!< Sum of all potential energy changes
     Average<double> average_energy;               //!< Average system energy
     void init();                                  //!< Reset state
     Move::Propagator moves;                       //!< Storage for all registered MC moves
@@ -70,9 +73,9 @@ void to_json(json &, MetropolisMonteCarlo &);
  * @f]
  *
  * The sum runs over all products and reactants for the old (o) and
- * new (n) configurations. The "energy" is not really an energy but merely the
- * logarithm of the bias to be included in the Metropolis criterion, i.e. added
- * to the potential energy.
+ * new (n) configurations. The "energy" is not a real energy but merely the
+ * logarithm of the bias to be included in the Metropolis criterion, so that it
+ * can be *added* to the potential energy.
  *
  * @note `Space::findMolecules` has O(N) complexity for non-atomic molecules; otherwise constant
  * @todo

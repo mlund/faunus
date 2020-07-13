@@ -95,7 +95,7 @@ void Space::push_back(int molid, const Space::Tpvec &in) {
     }
 }
 
-void Space::sync(Space &other, const Change &change) {
+void Space::sync(const Space &other, const Change &change) {
     assert(&other != this);
     assert(p.begin() != other.p.begin());
 
@@ -122,7 +122,7 @@ void Space::sync(Space &other, const Change &change) {
 
             if (Faunus::molecules[gother.id].isImplicit()) {
                 assert(other.implicit_reservoir.count(gother.id));
-                implicit_reservoir[g.id] = other.implicit_reservoir[gother.id];
+                implicit_reservoir[g.id] = other.implicit_reservoir.at(gother.id);
             }
 
             g.shallowcopy(gother); // copy group data but *not* particles

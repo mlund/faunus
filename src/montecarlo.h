@@ -2,12 +2,22 @@
 #ifndef FAUNUS_MONTECARLO_H
 #define FAUNUS_MONTECARLO_H
 
-#include "move.h"
+#include "space.h"
+#include <memory>
 
 namespace Faunus {
 
 namespace Energy {
 class Hamiltonian;
+}
+
+namespace Move {
+class Movebase;
+class Propagator;
+} // namespace Move
+
+namespace MPI {
+class MPIController;
 }
 
 /**
@@ -28,38 +38,52 @@ class Hamiltonian;
  * system.
  */
 class MetropolisMonteCarlo {
-  private:
+  public:
+    /**
+     * @brief Class to describe a system state
+     *
+     * The state stores:
+     * - per particle properties (positions, charges, etc.)
+     * - per molecule properties (mass center, conformations)
+     * - the simulation geometry (dimensions)
+     * - state of the Hamiltonian (wave-vectors for Ewald etc.)
+     *
+     * A MC simulation consists of two states, the "old" and the
+     * "trial" state where moves operate directly on the latter.
+     * After the move, the two states can be synchronized using the
+     * `sync()` function.
+     */
     struct State {
-        std::shared_ptr<Space> spc;
-        std::shared_ptr<Energy::Hamiltonian> pot;
-        State(const json &);
-        void sync(State &other, Change &change);
-    }; //!< Class to describe a "state" incl. Space and Hamiltonian
-
+        std::shared_ptr<Space> spc;               //!< Simulation space (positions, geometry, molecules)
+        std::shared_ptr<Energy::Hamiltonian> pot; //!< Hamiltonian for calc. potential energy
+        void sync(State &, Change &);             //!< Sync with another state (the other state is not modified)
+    };                                            //!< Class to describe a "state" incl. Space and Hamiltonian
+  private:
     spdlog::level::level_enum original_log_level; //!< Storage for original loglevel
     State old_state;                              //!< Old state representing the accepted MC state
     State new_state;                              //!< New state representing the MC trial state
     std::shared_ptr<Move::Movebase> latest_move;  //!< Pointer to latest MC move
     double initial_energy = 0.0;                  //!< Initial potential energy
     double sum_of_energy_changes = 0.0;           //!< Sum of all potential energy changes
-    Average<double> average_energy;               //!< Average system energy
+    Average<double> average_energy;               //!< Average potential energy of the system
     void init();                                  //!< Reset state
-    Move::Propagator moves;                       //!< Storage for all registered MC moves
+    std::unique_ptr<Move::Propagator> moves;      //!< Storage for all registered MC moves
     bool metropolis(double du) const;             //!< Metropolis criterion
 
   public:
     MetropolisMonteCarlo(const json &, MPI::MPIController &);
-    Energy::Hamiltonian &getHamiltonian();             //!< Get Hamiltonian of accepted (old) state
-    const Energy::Hamiltonian &getHamiltonian() const; //!< Get Hamiltonian of accepted (old) state
-    Space &getSpace();                                 //!< Access to space in accepted (old) state
-    const Space &getSpace() const;                     //!< Access to space in accepted (old) state
-    double relativeEnergyDrift();                      //!< Relative energy drift from initial configuration
-    void move();                                       //!< Perform random Monte Carlo move
-    void restore(const json &);                        //!< restore system from previously store json object
-    void to_json(json &);                              //!< Write information to JSON object
+    Energy::Hamiltonian &getHamiltonian();                     //!< Get Hamiltonian of accepted (old) state
+    const Energy::Hamiltonian &getHamiltonian() const;         //!< Get Hamiltonian of accepted (old) state
+    Space &getSpace();                                         //!< Access to space in accepted (old) state
+    const Space &getSpace() const;                             //!< Access to space in accepted (old) state
+    double relativeEnergyDrift();                              //!< Relative energy drift from initial configuration
+    void move();                                               //!< Perform random Monte Carlo move
+    void restore(const json &);                                //!< restore system from previously store json object
+    friend void to_json(json &, const MetropolisMonteCarlo &); //!< Write information to JSON object
 };
 
-void to_json(json &, MetropolisMonteCarlo &);
+void from_json(const json &, MetropolisMonteCarlo::State &); //!< Build state from json object
+void to_json(json &, const MetropolisMonteCarlo &);
 
 /**
  * @brief Entropy change due to particle fluctuations

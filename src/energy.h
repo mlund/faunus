@@ -1021,7 +1021,7 @@ template <typename Tpairpot> class NonbondedCached : public Nonbonded<PairingPol
         if (j < i) {
             std::swap(i, j);
         }
-        if (base::key == Energybase::NEW_MONTE_CARLO_STATE) { // if this is from the trial system,
+        if (base::key == Energybase::TRIAL_MONTE_CARLO_STATE) { // if this is from the trial system,
             cache(i, j) = base::pairing.group2group(g1, g2); // update the cache
         }
         return cache(i, j); // return (cached) value

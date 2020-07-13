@@ -60,22 +60,20 @@ class MetropolisMonteCarlo {
     };                                            //!< Class to describe a "state" incl. Space and Hamiltonian
   private:
     spdlog::level::level_enum original_log_level; //!< Storage for original loglevel
-    State old_state;                              //!< Old state representing the accepted MC state
-    State new_state;                              //!< New state representing the MC trial state
+    std::shared_ptr<State> old_state;             //!< Old state representing the accepted MC state
+    std::shared_ptr<State> new_state;             //!< New state representing the MC trial state
+    std::shared_ptr<Move::Propagator> moves;      //!< Storage for all registered MC moves
     std::shared_ptr<Move::Movebase> latest_move;  //!< Pointer to latest MC move
-    double initial_energy = 0.0;                  //!< Initial potential energy
     double sum_of_energy_changes = 0.0;           //!< Sum of all potential energy changes
+    double initial_energy = 0.0;                  //!< Initial potential energy
     Average<double> average_energy;               //!< Average potential energy of the system
-    void init();                                  //!< Reset state
-    std::unique_ptr<Move::Propagator> moves;      //!< Storage for all registered MC moves
     bool metropolis(double du) const;             //!< Metropolis criterion
+    void init();                                  //!< Reset state
 
   public:
     MetropolisMonteCarlo(const json &, MPI::MPIController &);
     Energy::Hamiltonian &getHamiltonian();                     //!< Get Hamiltonian of accepted (old) state
-    const Energy::Hamiltonian &getHamiltonian() const;         //!< Get Hamiltonian of accepted (old) state
     Space &getSpace();                                         //!< Access to space in accepted (old) state
-    const Space &getSpace() const;                             //!< Access to space in accepted (old) state
     double relativeEnergyDrift();                              //!< Relative energy drift from initial configuration
     void move();                                               //!< Perform random Monte Carlo move
     void restore(const json &);                                //!< restore system from previously store json object

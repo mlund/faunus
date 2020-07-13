@@ -33,16 +33,16 @@ void MetropolisMonteCarlo::init() {
     Change c;
     c.all = true;
 
-    old_state.pot->key = Energy::Energybase::OLD_MONTE_CARLO_STATE; // this is the old energy (current, accepted)
-    new_state.pot->key = Energy::Energybase::NEW_MONTE_CARLO_STATE; // this is the new energy (trial)
+    old_state->pot->key = Energy::Energybase::OLD_MONTE_CARLO_STATE; // this is the old energy (current, accepted)
+    new_state->pot->key = Energy::Energybase::NEW_MONTE_CARLO_STATE; // this is the new energy (trial)
 
-    old_state.pot->init();
-    double u1 = old_state.pot->energy(c);
+    old_state->pot->init();
+    double u1 = old_state->pot->energy(c);
     initial_energy = u1;
 
-    new_state.sync(old_state, c); // copy all information from old into new
-    new_state.pot->init();
-    double u2 = new_state.pot->energy(c);
+    new_state->sync(*old_state, c); // copy all information from old into new
+    new_state->pot->init();
+    double u2 = new_state->pot->energy(c);
 
     // check that the energies in the two states are *identical*
     if (std::isfinite(u1) and std::isfinite(u2)) {
@@ -55,14 +55,14 @@ void MetropolisMonteCarlo::init() {
     // inject reference to old space in SpeciationMove (needed to calc. *differences*
     // in ideal excess chem. potentials)
     for (auto speciation_move : moves->moves().find<Move::SpeciationMove>()) {
-        speciation_move->setOther(*old_state.spc);
+        speciation_move->setOther(*old_state->spc);
     }
 }
 
 double MetropolisMonteCarlo::relativeEnergyDrift() {
     Change c;
     c.all = true;
-    double final_energy = old_state.pot->energy(c);
+    double final_energy = old_state->pot->energy(c);
     double du = final_energy - initial_energy;
     if (std::isfinite(du)) {
         if (std::fabs(du) <= pc::epsilon_dbl) {
@@ -75,17 +75,13 @@ double MetropolisMonteCarlo::relativeEnergyDrift() {
     return std::numeric_limits<double>::quiet_NaN();
 }
 
-/*
- * We need to construct two identical State objects and to avoid duplicate logs, we
- * temporarily disable the logger for the second object by the arcane _comma operator_
- */
 MetropolisMonteCarlo::MetropolisMonteCarlo(const json &j, MPI::MPIController &mpi)
     : original_log_level(faunus_logger->level()) {
-    old_state = j;
+    old_state = std::make_shared<State>(j);
     faunus_logger->set_level(spdlog::level::off); // do not duplicate log info
-    new_state = j;                                // ...for the second state
+    new_state = std::make_shared<State>(j);       // ...for the second state
     faunus_logger->set_level(original_log_level); // restore original log level
-    moves = std::make_unique<Move::Propagator>(j, *new_state.spc, *new_state.pot, mpi);
+    moves = std::make_shared<Move::Propagator>(j, *new_state->spc, *new_state->pot, mpi);
     init();
 }
 
@@ -94,8 +90,8 @@ MetropolisMonteCarlo::MetropolisMonteCarlo(const json &j, MPI::MPIController &mp
  */
 void MetropolisMonteCarlo::restore(const json &j) {
     try {
-        *old_state.spc = j; // old/accepted state
-        *new_state.spc = j; // trial state
+        *old_state->spc = j; // old/accepted state
+        *new_state->spc = j; // trial state
         if (j.count("random-move") == 1) {
             Move::Movebase::slump = j["random-move"]; // restore move random number generator
         }
@@ -117,14 +113,14 @@ void MetropolisMonteCarlo::move() {
             (**move).move(change);
 #ifndef NDEBUG
             // check if atom index indeed belong to the group (index)
-            if (not change.sanityCheck(*old_state.spc)) {
+            if (not change.sanityCheck(*old_state->spc)) {
                 throw std::runtime_error("insane change object\n" + json(change).dump(4));
             }
 #endif
             if (change) {
                 latest_move = *move;
-                double unew = new_state.pot->energy(change);     // old potential energy (kT)
-                double uold = old_state.pot->energy(change);     // new potential energy (kT)
+                double unew = new_state->pot->energy(change);    // old potential energy (kT)
+                double uold = old_state->pot->energy(change);    // new potential energy (kT)
                 double du = unew - uold;                         // potential energy change (kT)
                 if (std::isnan(uold) and not std::isnan(unew)) { // if NaN --> finite energy change
                     du = pc::neg_infty;                          // ...always accept
@@ -134,16 +130,16 @@ void MetropolisMonteCarlo::move() {
                     du = 0.0;                                    // ...always accept
                 }
                 double bias = (*move)->bias(change, uold, unew); // moves *may* add bias (kT)
-                double ideal = TranslationalEntropy(*new_state.spc, *old_state.spc).energy(change);
+                double ideal = TranslationalEntropy(*new_state->spc, *old_state->spc).energy(change);
                 if (std::isnan(du + bias)) {
                     faunus_logger->error("NaN energy du + bias in {} move.", (*move)->name);
                     // throw exception here?
                 }
                 if (metropolis(du + bias + ideal)) { // accept move
-                    old_state.sync(new_state, change);
+                    old_state->sync(*new_state, change);
                     (*move)->accept(change);
                 } else { // reject move
-                    new_state.sync(old_state, change);
+                    new_state->sync(*old_state, change);
                     (*move)->reject(change);
                     du = 0.0;
                 }
@@ -154,13 +150,9 @@ void MetropolisMonteCarlo::move() {
     }
 }
 
-Energy::Hamiltonian &MetropolisMonteCarlo::getHamiltonian() { return *old_state.pot; }
+Energy::Hamiltonian &MetropolisMonteCarlo::getHamiltonian() { return *old_state->pot; }
 
-const Energy::Hamiltonian &MetropolisMonteCarlo::getHamiltonian() const { return *old_state.pot; }
-
-Space &MetropolisMonteCarlo::getSpace() { return *old_state.spc; }
-
-const Space &MetropolisMonteCarlo::getSpace() const { return *old_state.spc; }
+Space &MetropolisMonteCarlo::getSpace() { return *old_state->spc; }
 
 void from_json(const json &j, MetropolisMonteCarlo::State &state) {
     state.spc = std::make_shared<Space>(j);
@@ -173,12 +165,11 @@ void MetropolisMonteCarlo::State::sync(MetropolisMonteCarlo::State &other, Chang
 }
 
 void to_json(json &j, const MetropolisMonteCarlo &mc) {
-    j = mc.old_state.spc->info();
+    j = mc.old_state->spc->info();
     j["temperature"] = pc::temperature / 1.0_K;
     j["moves"] = *mc.moves;
-    j["energy"].push_back(*mc.old_state.pot);
-    j["last move"] = mc.latest_move->name;
-    j["average potential energy (kT)"] = mc.average_energy.avg();
+    j["energy"].push_back(*mc.old_state->pot);
+    j["montecarlo"] = {{"average potential energy (kT)", mc.average_energy.avg()}, {"last move", mc.latest_move->name}};
 }
 
 TranslationalEntropy::TranslationalEntropy(Space &new_space, Space &old_space)

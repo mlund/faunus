@@ -232,7 +232,8 @@ class Space {
         return std::count_if(groups.begin(), groups.end(), filter);
     }
 
-    void sync(Space &other, const Tchange &change); //!< Copy differing data from other (o) Space using Change object
+    void sync(const Space &other,
+              const Tchange &change); //!< Copy differing data from other (o) Space using Change object
 
     /**
      * @brief Scales atoms, molecules, and simulation container

@@ -44,7 +44,9 @@ namespace Faunus {
     template<class T>
         class ElasticRange : public IterRange<typename std::vector<T>::iterator> {
             public:
-                typedef typename std::vector<T>::iterator Titer;
+              using Titer = typename std::vector<T>::iterator;
+              using const_iterator = typename std::vector<T>::const_iterator;
+
             private:
                 Titer _trueend;
             public:
@@ -62,7 +64,7 @@ namespace Faunus {
                 Titer &trueend();
                 const Titer &trueend() const;
                 void relocate(
-                    Titer oldorigin,
+                    const_iterator oldorigin,
                     Titer neworigin); //!< Shift all iterators to new underlying container; useful when resizing vectors
         };
 
@@ -95,10 +97,10 @@ namespace Faunus {
         template <class T> const typename ElasticRange<T>::Titer &ElasticRange<T>::trueend() const { return _trueend; }
 
         template <class T>
-        void ElasticRange<T>::relocate(ElasticRange::Titer oldorigin, ElasticRange::Titer neworigin) {
-            begin() = neworigin + std::distance(oldorigin, begin());
-            end() = neworigin + std::distance(oldorigin, end());
-            trueend() = neworigin + std::distance(oldorigin, trueend());
+        void ElasticRange<T>::relocate(ElasticRange::const_iterator oldorigin, ElasticRange::Titer neworigin) {
+            begin() = neworigin + std::distance(oldorigin, const_iterator(begin()));
+            end() = neworigin + std::distance(oldorigin, const_iterator(end()));
+            trueend() = neworigin + std::distance(oldorigin, const_iterator(trueend()));
         }
 
         template <class T /** Particle type */> class Group : public ElasticRange<T> {

@@ -18,7 +18,7 @@ namespace Energy {
  */
 class Energybase {
   public:
-    enum keys { OLD_MONTE_CARLO_STATE, NEW_MONTE_CARLO_STATE, NONE };
+    enum keys { ACCEPTED_MONTE_CARLO_STATE, TRIAL_MONTE_CARLO_STATE, NONE };
     keys key = NONE;
     std::string name;                                     //!< Meaningful name
     std::string citation_information;                     //!< Possible reference. May be left empty

@@ -472,7 +472,7 @@ properties:
                     description: "Manybody solvent accessible surface area"
                     type: object
                     properties:
-                        radius: {type: number, default: 1.4, description: Probe radius for SASA calculation (Å)}
+                        radius: {type: number, default: 1.4, description: Probe radius for SASA calculation (Å)}
                         molarity: {type: number, description: Molar concentration of co-solute}
                     required: [molarity]
                     additionalProperties: false
@@ -695,7 +695,7 @@ properties:
                         dprot: {type: number}
                         molecule: {type: string}
                         joint_max: {type: integer}
-                        repeat: {type: integer}
+                        repeat: {type: [integer, string]}
                     required: [dprot, molecule]
                     additionalProperties: false
                     type: object
@@ -884,8 +884,8 @@ properties:
                             items: {type: string}
                             minItems: 1
                             type: array
-                        qmin: {type: number, description: Minimum q value (1/Å)}
-                        qmax: {type: number, description: Maximum q value (1/Å)}
+                        qmin: {type: number, description: Minimum q value (1/Å)}
+                        qmax: {type: number, description: Maximum q value (1/Å)}
                         dq: {type: number, description: q spacing (1/Å)}
                         com: {type: boolean, default: true, description: Treat molecular mass centers as single point scatterers}
                         pmax: {type: integer, default: 15, description: Multiples of (h,k,l) when using the explicit scheme}

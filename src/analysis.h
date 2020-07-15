@@ -548,21 +548,23 @@ class PolymerShape : public Analysisbase {
 };
 
 /**
- * @brief "Trajectory" with charge and radius, only, for all (active, inactive) particles
+ * @brief Trajectory with charge and radius, only, for all (active, inactive) particles
  *
- * For use w. VMD to visualize charge fluctuations and grand canonical ensembles
+ * For use with VMD to visualize charge fluctuations and grand canonical ensembles. Inactive
+ * particles have zero charge and radius. If the `filename` ends with `.gz` a GZip compressed
+ * file is created.
  */
 class QRtraj : public Analysisbase {
   private:
-    std::string file;
-    std::ofstream f;
-    std::function<void()> write_to_file;
-    void _sample() override;
+    std::string filename;                           //!< Output filename
+    std::unique_ptr<std::ostream> stream = nullptr; //!< Output stream
+    std::function<void()> write_to_file;            //!< Write a single frame to stream
+    void _sample() override;                        //!< Samples one frame and outputs to stream
     void _to_json(json &j) const override;
     void _to_disk() override;
 
   public:
-    QRtraj(const json &j, Space &spc);
+    QRtraj(const json &, Space &spc);
 };
 
 /**

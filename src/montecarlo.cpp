@@ -174,7 +174,9 @@ void MetropolisMonteCarlo::move() {
                     du = 0.0;
                 }
                 sum_of_energy_changes += du;                              // sum of all energy changes
-                average_energy += initial_energy + sum_of_energy_changes; // update average potential energy
+                if (std::isfinite(initial_energy)) {
+                    average_energy += initial_energy + sum_of_energy_changes; // update average potential energy
+                }
             }
         }
     }
@@ -199,7 +201,10 @@ void to_json(json &j, const MetropolisMonteCarlo &mc) {
     j["temperature"] = pc::temperature / 1.0_K;
     j["moves"] = *mc.moves;
     j["energy"].push_back(*mc.state->pot);
-    j["montecarlo"] = {{"average potential energy (kT)", mc.average_energy.avg()}, {"last move", mc.latest_move->name}};
+    if (mc.average_energy.cnt > 0) {
+        j["montecarlo"] = {{"average potential energy (kT)", mc.average_energy.avg()},
+                           {"last move", mc.latest_move->name}};
+    }
 }
 
 TranslationalEntropy::TranslationalEntropy(Space &trial_space, Space &space) : trial_spc(trial_space), spc(space) {}

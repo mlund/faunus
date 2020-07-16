@@ -869,6 +869,7 @@ properties:
                         nstep: {type: integer, default: -1, description: "Sample interval; -1 = end of simulation only"}
                         nskip: {type: integer, default: 0, description: Initial steps to skip}
                         savestate: {type: boolean, default: false, description: Include random number state}
+                        overwrite: {type: boolean, default: false, description: "Remove numbering of file every nstep"}
                     required: [file]
                     additionalProperties: false
                     type: object

@@ -253,12 +253,14 @@ class SanityCheck : public Analysisbase {
  * If the sample interval is set to the special value -1, the
  * analysis is called exclusively at the very end of the simulation.
  * If sample interval >= 0 the analysis is performed as per usual and
- * each saved configuration file is named with the step count.
+ * each saved configuration file is named with the step count. This can
+ * be disbled by setting `use_numbered_files` to false.
  */
 class SaveState : public Analysisbase {
   private:
     std::function<void(const std::string &)> writeFunc = nullptr;
     bool save_random_number_generator_state = false;
+    bool use_numbered_files = true;
     std::string filename;
     void _to_json(json &) const override;
     void _sample() override;

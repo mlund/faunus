@@ -164,9 +164,13 @@ void SaveState::_to_json(json &j) const { j["file"] = filename; }
 void SaveState::_sample() {
     assert(sample_interval >= 0);
     // tag filename with step number:
-    auto numbered_filename = filename;
-    numbered_filename.insert(filename.find_last_of("."), "_"s + std::to_string(getNumberOfSteps()));
-    writeFunc(numbered_filename);
+    if (use_numbered_files) {
+        auto numbered_filename = filename;
+        numbered_filename.insert(filename.find_last_of("."), "_"s + std::to_string(getNumberOfSteps()));
+        writeFunc(numbered_filename);
+    } else {
+        writeFunc(filename);
+    }
 }
 
 SaveState::~SaveState() {
@@ -185,6 +189,7 @@ SaveState::SaveState(json j, Space &spc) {
 
     save_random_number_generator_state = j.value("saverandom", false);
     filename = MPI::prefix + j.at("file").get<std::string>();
+    use_numbered_files = !j.value("overwrite", false);
 
     if (auto suffix = filename.substr(filename.find_last_of(".") + 1); suffix == "aam") {
         writeFunc = [&](auto &file) { FormatAAM::save(file, spc.p); };

@@ -11,6 +11,7 @@
 
 #include <iomanip>
 #include <iostream>
+#include <memory>
 
 namespace Faunus {
 
@@ -538,72 +539,79 @@ void FileReactionCoordinate::_to_disk() {
     }
 }
 
-void WidomInsertion::_sample() {
-    if (!change.empty()) {
-        ParticleVector pin;
-        auto &g = spc.groups.at(change.groups.at(0).index);
-        assert(g.empty() && g.capacity() > 0);
-        g.resize(g.capacity()); // active group
-        for (int i = 0; i < ninsert; ++i) {
-            pin = rins(spc.geo, spc.p, molecules.at(molid));
-            if (not pin.empty()) {
-                if (absolute_z) {
-                    for (auto &p : pin)
-                        p.pos.z() = std::fabs(p.pos.z());
-                }
-
-                assert(pin.size() == g.size());
-
-                std::copy(pin.begin(), pin.end(), g.begin()); // copy into ghost group
-                if (not g.atomic)                             // update molecular mass-center
-                    g.cm = Geometry::massCenter(g.begin(), g.end(), spc.geo.getBoundaryFunc(), -g.begin()->pos);
-
-                expu += exp(-pot->energy(change)); // widom average
+/**
+ * This searches for an inactive group of type `molid`
+ * and prepares the `change` object for energy evaluation
+ */
+void WidomInsertion::selectGhostGroup() {
+    change.clear();
+    auto mollist = space.findMolecules(molid, Space::INACTIVE); // list of inactive molecules
+    if (!ranges::cpp20::empty(mollist)) {                       // did we find any?
+        if (mollist.begin()->size() == 0) {                     // pick first and check if it's fully inactive
+            if (mollist.begin()->capacity() > 0) {              // and it must have a non-zero capacity
+                Change::data d;                                 // construct change object
+                d.index = Faunus::distance(space.groups.begin(), mollist.begin()); // group index
+                d.all = true;
+                d.internal = mollist.begin()->atomic; // calculate internal energy of non-molecular groups only
+                change.groups.push_back(d);           // add to change object
+                return;
             }
         }
-        g.resize(0); // deactive molecule
     }
+    std::runtime_error(fmt::format("{}: no inactive {} groups available", name, Faunus::molecules.at(molid).name));
+}
+
+void WidomInsertion::_sample() {
+    selectGhostGroup();
+    auto &group = space.groups.at(change.groups.at(0).index); // inactive "ghost" group
+    group.resize(group.capacity());                           // activate ghost
+    ParticleVector particles;                                 // particles to insert
+    for (int cnt = 0; cnt < number_of_insertions; ++cnt) {
+        particles = inserter->operator()(space.geo, space.p, Faunus::molecules[molid]);
+        assert(particles.size() == group.size());
+        std::copy(particles.begin(), particles.end(), group.begin()); // copy to ghost group
+        if (absolute_z_coords) {
+            std::for_each(group.begin(), group.end(), [](Particle &i) { i.pos.z() = std::fabs(i.pos.z()); });
+        }
+        if (!group.atomic) { // update molecular mass-center for molecular groups
+            group.cm =
+                Geometry::massCenter(group.begin(), group.end(), space.geo.getBoundaryFunc(), -group.begin()->pos);
+        }
+        double energy_change = hamiltonian.energy(change); // in kT units
+        exponential_average += std::exp(-energy_change);   // widom average
+    }
+    group.resize(0); // de-activate group
 }
 
 void WidomInsertion::_to_json(json &j) const {
-    double excess = -std::log(expu.avg());
-    j = {{"dir", rins.dir},
-         {"molecule", molname},
-         {"insertions", expu.cnt},
-         {"absz", absolute_z},
+    double excess = -std::log(exponential_average.avg());
+    j = {{"molecule", Faunus::molecules[molid].name},
+         {"insertions", exponential_average.cnt},
+         {"absz", absolute_z_coords},
+         {"insertscheme", *inserter},
          {u8::mu + "/kT", {{"excess", excess}}}};
 }
 
 void WidomInsertion::_from_json(const json &j) {
-    ninsert = j.at("ninsert");
-    molname = j.at("molecule");
-    absolute_z = j.value("absz", false);
-    rins.dir = j.value("dir", Point({1, 1, 1}));
+    number_of_insertions = j.at("ninsert").get<int>();
+    absolute_z_coords = j.value("absz", false);
+    if (auto ptr = std::dynamic_pointer_cast<RandomInserter>(inserter); ptr) {
+        ptr->dir = j.value("dir", Point({1, 1, 1}));
+    } // set insert directions for RandomInserter
 
-    if (auto it = findName(molecules, molname); it != molecules.end()) { // loop for molecule in topology
+    auto molecule_name = j.at("molecule").get<std::string>();
+    if (auto it = findName(Faunus::molecules, molecule_name); it != Faunus::molecules.end()) {
         molid = it->id();
-        auto m = spc.findMolecules(molid, Space::INACTIVE);  // look for inactive molecules in space
-        if (not ranges::cpp20::empty(m)) {                   // did we find any?
-            if (m.begin()->size() == 0) {                    // pick the first and check if it's really inactive
-                if (m.begin()->capacity() > 0) {             // and it must have a non-zero capacity
-                    change.clear();
-                    Change::data d;                                    // construct change object
-                    d.index = Faunus::distance(spc.groups.begin(), m.begin()); // group index
-                    d.all = true;
-                    d.internal = m.begin()->atomic; // calculate internal energy of non-molecular groups only
-                    change.groups.push_back(d);     // add to change object
-                    return;
-                }
-            }
-        }
+    } else {
+        throw ConfigurationError("unknown molecule: "s + molecule_name);
     }
-    throw std::runtime_error(name + ": no inactive '" + molname + "' groups found");
 }
 
-WidomInsertion::WidomInsertion(const json &j, Space &spc, Energy::Hamiltonian &pot) : spc(spc), pot(&pot) {
-    from_json(j);
+WidomInsertion::WidomInsertion(const json &j, Space &spc, Energy::Hamiltonian &pot) : space(spc), hamiltonian(pot) {
     name = "widom";
     cite = "doi:10/dkv4s6";
+    inserter = std::make_shared<RandomInserter>();
+    from_json(j);
 }
 
 void Density::_sample() {
@@ -613,11 +621,13 @@ void Density::_sample() {
 
     // make sure all atom counts are initially zero
     for (auto &g : spc.groups) {
-        if (g.atomic)
-            for (auto p = g.begin(); p < g.trueend(); ++p)
+        if (g.atomic) {
+            for (auto p = g.begin(); p < g.trueend(); ++p) {
                 Natom[p->id] = 0;
-        else
+            }
+        } else {
             Nmol[g.id] = 0;
+        }
     }
 
     double V = spc.geo.getVolume();

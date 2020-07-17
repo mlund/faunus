@@ -995,6 +995,16 @@ properties:
                     required: [ninsert, molecule, nstep]
                     additionalProperties: false
 
+                qrfile:
+                    description: "Write trajectory with charges and radii"
+                    properties:
+                        file: {type: string, pattern: "(.*?)\\.(dat|gz)$", default: "qrtraj.dat", description: "Output file (.dat, .gz)"}
+                        nstep: {type: integer, description: "Interval between samples"}
+                        nskip: {type: integer, default: 0, description: "Initial steps to skip"}
+                    required: [nstep]
+                    additionalProperties: false
+                    type: object
+
                 xtcfile:
                     description: "Write Gromacs XTC trajectory"
                     properties:

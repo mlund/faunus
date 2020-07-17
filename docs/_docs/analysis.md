@@ -600,7 +600,6 @@ vmd confout.pqr traj.xtc -e scripts/vmd-qrtraj.tcl
 ~~~
 
 `qrfile`          |  Description
------------------ | ---------------------------------------------------------
-`file=qrtraj.dat` |  Filename of output file
-`nstep`           |  Interval between samples.
-
+----------------- | -----------------------------------
+`file=qrtraj.dat` |  Output filename (.dat, .gz)
+`nstep`           |  Interval between samples

@@ -393,28 +393,32 @@ void VirtualVolume::_to_disk() {
 
 void QRtraj::_sample() { write_to_file(); }
 
-void QRtraj::_to_json(json &j) const { j = {{"file", file}}; }
+void QRtraj::_to_json(json &j) const { j = {{"file", filename}}; }
+
 QRtraj::QRtraj(const json &j, Space &spc) {
     from_json(j);
     name = "qrfile";
-    file = j.value("file", "qrtraj.dat"s);
-    f.open(MPI::prefix + file);
-    if (not f)
-        throw std::runtime_error("error opening "s + file);
-    write_to_file = [&groups = spc.groups, &f = f]() {
+    filename = MPI::prefix + j.value("file", "qrtraj.dat"s);
+    if (stream = IO::openCompressedOutputStream(filename); !*stream) { // may be gzip compressed
+        throw std::runtime_error("could not open create "s + filename);
+    }
+    write_to_file = [&groups = spc.groups, &stream = stream]() {
         for (auto &g : groups) {
             for (auto it = g.begin(); it != g.trueend(); ++it) { // loop over *all* particles
-              f << ((it < g.end()) ? fmt::format("{:.6f} {:.6f} ", it->charge,
-                                                 atoms[it->id].sigma * 0.5)
-                                   : "0 0 ");
+                if (it < g.end()) {                              // active particles...
+                    *stream << fmt::format("{} {} ", it->charge, atoms[it->id].sigma * 0.5);
+                } else {               // inactive particles...
+                    *stream << "0 0 "; // ... have zero charge and size
+                }
             }
         }
-        f << "\n";               // newline for every frame
+        *stream << "\n"; // newline for every frame
     };
 }
 void QRtraj::_to_disk() {
-    if (f)
-        f.flush(); // empty buffer
+    if (*stream) {
+        stream->flush(); // empty buffer
+    }
 }
 
 void CombinedAnalysis::sample() {
@@ -521,13 +525,7 @@ FileReactionCoordinate::FileReactionCoordinate(const json &j, Space &spc) {
     from_json(j);
     name = "reactioncoordinate";
     filename = MPI::prefix + j.at("file").get<std::string>();
-    if (auto suffix = filename.substr(filename.find_last_of(".") + 1); suffix == "gz") {
-        faunus_logger->trace("{}: GZip compression enabled for {}", name, filename);
-        stream = std::make_unique<zstr::ofstream>(filename);
-    } else {
-        stream = std::make_unique<std::ofstream>(filename);
-    }
-    if (not*stream) {
+    if (stream = IO::openCompressedOutputStream(filename); not*stream) {
         throw std::runtime_error("could not open create "s + filename);
     }
     type = j.at("type").get<std::string>();

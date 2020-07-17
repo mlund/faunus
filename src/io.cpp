@@ -62,9 +62,8 @@ std::unique_ptr<std::ostream> IO::openCompressedOutputStream(const std::string &
     if (filename.substr(filename.find_last_of(".") + 1) == "gz") {
         faunus_logger->trace("enabling gzip compression for {}", filename);
         return std::make_unique<zstr::ofstream>(filename);
-    } else {
-        return std::make_unique<std::ofstream>(filename);
     }
+    return std::make_unique<std::ofstream>(filename);
 }
 
 int FormatXTC::getNumAtoms() { return number_of_atoms; }

@@ -836,8 +836,8 @@ properties:
                     properties:
                         nstep: {type: integer, description: "Interval between samples"}
                         nskip: {type: integer, default: 0, description: "Number of initial steps excluded from the analysis"}
-                        molecule: {type: string, description: "Name of molecular group"}
-                        pqrfile: {type: string, description: "Output PQR file (optional)"}
+                        molecule: {type: string, description: "Name of molecular group to sample"}
+                        pqrfile: {type: string, description: "Output PQR file"}
                         verbose: {type: boolean, default: true, description: "If True, add results to general output"}
                     required: [nstep, molecule]
 

@@ -14,17 +14,21 @@ namespace Move {
 Random Movebase::slump; // static instance of Random (shared for all moves)
 
 void Movebase::from_json(const json &j) {
-    auto it = j.find("repeat");
-    if (it != j.end()) {
-        if (it->is_number())
-            repeat = it->get<double>();
-        else if (it->is_string())
-            if (it->get<std::string>() == "N")
+    if (auto it = j.find("repeat"); it != j.end()) {
+        if (it->is_number()) {
+            repeat = it->get<int>();
+        } else if (it->is_string()) {
+            if (it->get<std::string>() == "N") {
                 repeat = -1;
+            } else {
+                throw std::runtime_error("Unknown string value for 'repeat'");
+            }
+        }
     }
     _from_json(j);
-    if (repeat < 0)
+    if (repeat < 0) {
         repeat = 0;
+    }
 }
 
 void Movebase::to_json(json &j) const {

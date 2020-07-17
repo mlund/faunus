@@ -250,11 +250,9 @@ class SanityCheck : public Analysisbase {
  * is `.state` which stores information about groups, particle
  * positions, random number state etc.
  *
- * If the sample interval is set to the special value -1, the
- * analysis is called exclusively at the very end of the simulation.
- * If sample interval >= 0 the analysis is performed as per usual and
- * each saved configuration file is named with the step count. This can
- * be disbled by setting `use_numbered_files` to false.
+ * - if sample interval = -1, analysis is run only once at the simulation end.
+ * - if sample interval >= 0, analysis is performed as every nstep.
+ * - if `use_numbered_files` = true (default) files are labelled with the step count
  */
 class SaveState : public Analysisbase {
   private:

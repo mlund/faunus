@@ -865,10 +865,11 @@ properties:
                 savestate:
                     description: "Save particle positions to file"
                     properties:
-                        file: {type: string, pattern: "(.*?)\\.(aam|pqr|state|ubj|gro|xyz|json)$"}
+                        file: {type: string, description: "Output filename", pattern: "(.*?)\\.(aam|pqr|state|ubj|gro|xyz|json)$"}
                         nstep: {type: integer, default: -1, description: "Sample interval; -1 = end of simulation only"}
-                        nskip: {type: integer, default: 0, description: Initial steps to skip}
-                        savestate: {type: boolean, default: false, description: Include random number state}
+                        nskip: {type: integer, default: 0, description: "Initial steps to skip"}
+                        saverandom: {type: boolean, default: false, description: "Include random number state"}
+                        overwrite: {type: boolean, default: false, description: "Overwrite file for step, i.e. no file numbering"}
                     required: [file]
                     additionalProperties: false
                     type: object

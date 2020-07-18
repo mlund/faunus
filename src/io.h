@@ -179,13 +179,13 @@ class FormatGRO {
  */
 class FormatXTC {
   private:
-    XDRfile::matrix box;                        //!< box dimensions
-    XDRfile::XDRFILE *xdrfile = nullptr;        //!< file handle
-    std::shared_ptr<XDRfile::rvec> coordinates; //!< vector of particle coordinates
-    int step_counter = 0;                       //!< Current number of time steps
-    float timestamp = 0.0;                      //!< Current time (unit?)
-    int number_of_atoms = 0;                    //!< Atoms in trajectory
-    float precision = 1000.0;                   //!< Output precision
+    XDRfile::matrix box;                          //!< box dimensions
+    XDRfile::XDRFILE *xdrfile = nullptr;          //!< file handle
+    std::shared_ptr<XDRfile::rvec[]> coordinates; //!< vector of particle coordinates
+    int step_counter = 0;                         //!< Current number of time steps
+    float timestamp = 0.0;                        //!< Current time (unit?)
+    int number_of_atoms = 0;                      //!< Atoms in trajectory
+    float precision = 1000.0;                     //!< Output precision
 
   public:
     int getNumAtoms();
@@ -222,8 +222,7 @@ class FormatXTC {
                 xdrfile = XDRfile::xdrfile_open(&file[0], "w");
             }
             if (xdrfile) {
-                std::shared_ptr<XDRfile::rvec> coords(new XDRfile::rvec[ranges::distance(begin, end)],
-                                                      std::default_delete<XDRfile::rvec[]>());
+                std::shared_ptr<XDRfile::rvec[]> coords(new XDRfile::rvec[ranges::distance(begin, end)]);
                 size_t N = 0;
                 for (auto particle = begin; particle != end; ++particle) {
                     coords.get()[N][0] = particle->pos.x() / 1.0_nm + box[0][0] * 0.5;

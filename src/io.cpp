@@ -140,7 +140,7 @@ bool FormatXTC::open(std::string filename) {
     if (xdrfile = XDRfile::xdrfile_open(&filename[0], "r"); xdrfile != nullptr) {
         if (XDRfile::read_xtc_natoms(&filename[0], &number_of_atoms) == XDRfile::exdrOK) {
             // allocate memory for atom positions
-            std::shared_ptr<XDRfile::rvec[]> coordinates(new XDRfile::rvec[number_of_atoms]);
+            std::unique_ptr<XDRfile::rvec[]> coordinates(new XDRfile::rvec[number_of_atoms]);
             return true;
         }
     } else {

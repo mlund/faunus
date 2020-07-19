@@ -266,10 +266,10 @@ TEST_CASE("[Faunus] FunctorPotential") {
     FunctorPotential u = R"(
                 {
                   "default": [
-                    { "coulomb" : {"epsr": 80.0, "type": "plain", "cutoff":20} }
+                    { "coulomb" : {"epsr": 80.0, "type": "plain"} }
                   ],
                   "A B" : [
-                    { "coulomb" : {"epsr": 80.0, "type": "plain", "cutoff":20} },
+                    { "coulomb" : {"epsr": 80.0, "type": "plain"} },
                     { "wca" : {"mixing": "LB"} }
                   ],
                   "C C" : [
@@ -324,12 +324,12 @@ TEST_CASE("[Faunus] Dipole-dipole interactions") {
     FunctorPotential u = R"(
                 {
                   "default": [
-                    { "multipole" : {"epsr": 1.0, "type": "plain", "cutoff":20} }
+                    { "multipole" : {"epsr": 1.0, "type": "plain"} }
                   ]
                  }
                 )"_json;
 
-    Multipole dipoledipole = R"({"epsr": 1.0, "type": "plain", "cutoff":20})"_json;
+    Multipole dipoledipole = R"({"epsr": 1.0, "type": "plain"})"_json;
 
     Particle a = atoms[0];
     Particle b = atoms[1];

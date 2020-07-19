@@ -251,8 +251,8 @@ properties:
                   then:
                       properties:
                           debyelength: {type: number, description: Debye screening length (Å)}
-                          shift: {type: boolean, description: Shift to zero at cutoff, default: true}
-                      required: [cutoff, debyelength]
+                          shift: {type: boolean, description: Zero potential and force at cutoff, default: false}
+                      required: [debyelength]
                       
         electrolyte:
             type: object

@@ -267,7 +267,7 @@ void from_json(const json &j, Space &spc); //!< Deserialize json object to Space
  */
 class InsertMoleculesInSpace {
   private:
-    static void insertAtomicGroups(MoleculeData &, Space &, int, bool = false);
+    static void insertAtomicGroups(MoleculeData &, Space &, int, bool);
     static void insertMolecularGroups(MoleculeData &, Space &, int num_molecules, bool);
     static void setPositionsForTrailingGroups(Space &, int, const Faunus::ParticleVector &, const Point &);
     static void insertImplicitGroups(const MoleculeData &, Space &, int);

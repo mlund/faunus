@@ -905,7 +905,7 @@ AtomDipDipCorr::AtomDipDipCorr(const json &j, Space &spc) : PairAngleFunctionBas
 
 // =============== XTCtraj ===============
 
-XTCtraj::XTCtraj(const json &j, Space &s) : filter([](Particle &) { return true; }), xtc(1e6), spc(s) {
+XTCtraj::XTCtraj(const json &j, Space &s) : filter([](Particle &) { return true; }), spc(s) {
     from_json(j);
     name = "xtcfile";
     assert(filter); // filter must be callable
@@ -941,16 +941,13 @@ void XTCtraj::_from_json(const json &j) {
 
 void XTCtraj::_sample() {
     xtc.setLength(spc.geo.getLength()); // set box dimensions for frame
-
     // On some gcc/clang and certain ubuntu/macos combinations,
     // the ranges::view::filter(rng,unaryp) clears the `filter` function.
     // Using the ranges piping seem to solve the issue.
     assert(filter);
     auto particles = spc.p | ranges::cpp20::views::filter(filter);
     assert(filter);
-    bool rc = xtc.save(file, particles.begin(), particles.end());
-    if (rc == false)
-        faunus_logger->warn("error saving xtc");
+    xtc.save(file, particles.begin(), particles.end());
 }
 
 // =============== MultipoleDistribution ===============

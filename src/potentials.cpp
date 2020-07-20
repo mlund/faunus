@@ -682,7 +682,7 @@ void SplinedPotential::createKnots(int i, int j, double rmin, double rmax) {
 }
 
 void NewCoulombGalore::setSelfEnergy() {
-    selfEnergy = [lB = lB, self_energy = pot.selfEnergyFunctor](const Particle &p) {
+    selfEnergy = [lB = bjerrum_length, self_energy = pot.selfEnergyFunctor](const Particle &p) {
         return lB * self_energy({p.charge * p.charge, 0.0});
     }; // expose self-energy as a functor in potential base class
 }
@@ -690,68 +690,62 @@ void NewCoulombGalore::setSelfEnergy() {
 NewCoulombGalore::NewCoulombGalore(const std::string &name) : PairPotentialBase(name) { setSelfEnergy(); }
 
 Point NewCoulombGalore::force(const Particle &a, const Particle &b, double, const Point &r) const {
-    return lB * pot.ion_ion_force(a.charge, b.charge, r);
+    return bjerrum_length * pot.ion_ion_force(a.charge, b.charge, r);
 }
 
 void NewCoulombGalore::from_json(const json &j) {
     using namespace ::CoulombGalore; // namespace for external CoulombGalore library
-    double epsr = j.at("epsr");
-    lB = pc::bjerrumLength(epsr); // Bjerrum length
-    std::string type = j.at("type");
-    pot.setTolerance(j.value("utol", 0.005 / lB));
-    if (type == "yukawa") {
-        if (json _j(j); _j.value("shift", false)) { // zero force at cutoff
-            if (!_j.contains("cutoff")) {
-                throw ConfigurationError("cutoff required for shifted yukawa");
-            } else {
-                faunus_logger->debug("force shifted yukawa uses the 'poisson' scheme with C=1 and D=1");
-                _j["type"] = "poisson";
-                _j["C"] = 1;
-                _j["D"] = 1;
-                pot.spline<::CoulombGalore::Poisson>(_j);
-            }
-        } else {
+    double relative_dielectric_constant = j.at("epsr");
+    bjerrum_length = pc::bjerrumLength(relative_dielectric_constant);
+    pot.setTolerance(j.value("utol", 0.005 / bjerrum_length));
+    std::string method = j.at("type");
+    if (method == "yukawa") {
+        if (json _j(j); _j.value("shift", false)) { // zero energy and force at cutoff
+            faunus_logger->debug("energy and force shifted yukawa uses the 'poisson' scheme with C=1 and D=1");
+            _j["type"] = "poisson";
+            _j["C"] = 1;
+            _j["D"] = 1;
+            pot.spline<::CoulombGalore::Poisson>(_j);
+        } else { // non-shifted yukawa equals `plain` with exponential screening
             if (_j.contains("cutoff")) {
-                throw ConfigurationError("unexpected cutoff for non-shifted yukawa: it's *always* infinity");
-            } else {
-                _j["type"] = "plain";
-                pot.spline<::CoulombGalore::Plain>(_j);
+                throw ConfigurationError("unexpected 'cutoff' for non-shifted yukawa which is always infinity");
             }
+            _j["type"] = "plain";
+            pot.spline<::CoulombGalore::Plain>(_j);
         }
-    } else if (type == "plain") {
+    } else if (method == "plain") {
         if (j.contains("cutoff")) {
             throw ConfigurationError("unexpected cutoff for plain: it's *always* infinity");
         }
         pot.spline<::CoulombGalore::Plain>(j);
-    } else if (type == "qpotential")
+    } else if (method == "qpotential") {
         pot.spline<::CoulombGalore::qPotential>(j);
-    else if (type == "wolf")
+    } else if (method == "wolf") {
         pot.spline<::CoulombGalore::Wolf>(j);
-    else if (type == "poisson")
+    } else if (method == "poisson") {
         pot.spline<::CoulombGalore::Poisson>(j);
-    else if (type == "fanourgakis")
+    } else if (method == "fanourgakis") {
         pot.spline<::CoulombGalore::Fanourgakis>(j);
-    else if (type == "zahn")
+    } else if (method == "zahn") {
         pot.spline<::CoulombGalore::Zahn>(j);
-    else if (type == "fennell")
+    } else if (method == "fennell") {
         pot.spline<::CoulombGalore::Fennell>(j);
-    else if (type == "zerodipole")
+    } else if (method == "zerodipole") {
         pot.spline<::CoulombGalore::ZeroDipole>(j);
-    else if (type == "ewald")
+    } else if (method == "ewald") {
         pot.spline<::CoulombGalore::Ewald>(j);
-    else if (type == "reactionfield")
+    } else if (method == "reactionfield") {
         pot.spline<::CoulombGalore::ReactionField>(j);
-    else
-        throw std::runtime_error("unknown coulomb scheme");
-
-    faunus_logger->info("{} pair-potential splined with {} knots", type, pot.numKnots().at(0));
-
+    } else {
+        throw ConfigurationError("unknown type '{}'", method);
+    }
+    faunus_logger->info("splitting function for '{}' splined with {} knots", method, pot.numKnots().at(0));
     setSelfEnergy();
 }
 
 void NewCoulombGalore::to_json(json &j) const {
     pot.to_json(j);
-    j["lB"] = lB;
+    j["lB"] = bjerrum_length;
 }
 
 Multipole::Multipole(const std::string &name) : NewCoulombGalore(name) {
@@ -760,9 +754,9 @@ Multipole::Multipole(const std::string &name) : NewCoulombGalore(name) {
 }
 
 void Multipole::setSelfEnergy() {
-    selfEnergy = [lB = lB, self_energy = pot.selfEnergyFunctor](const Particle &p) {
+    selfEnergy = [lB = bjerrum_length, self_energy = pot.selfEnergyFunctor](const Particle &p) {
         double mu_x_mu = 0;   // dipole-dipole product
-        if (p.hasExtension()) // only access dipole of the particle has extended properties
+        if (p.hasExtension()) // only access dipole if the particle has extended properties
             mu_x_mu = p.getExt().mulen * p.getExt().mulen;
         return lB * self_energy({p.charge * p.charge, mu_x_mu});
     }; // expose self-energy as a functor in potential base class
@@ -774,7 +768,7 @@ Point Multipole::force(const Faunus::Particle &a, const Faunus::Particle &b, dou
     Point ionion = pot.ion_ion_force(a.charge, b.charge, r);
     Point iondip = pot.ion_dipole_force(a.charge, mub, r) + pot.ion_dipole_force(b.charge, mua, r);
     Point dipdip = pot.dipole_dipole_force(mua, mub, r);
-    return lB * (ionion + iondip + dipdip);
+    return bjerrum_length * (ionion + iondip + dipdip);
 }
 
 } // namespace Potential

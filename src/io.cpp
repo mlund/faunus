@@ -11,44 +11,42 @@
 
 namespace Faunus {
 
-bool IO::readFile(const std::string &filename, std::vector<std::string> &destination) {
-    if (std::ifstream stream(filename); stream) {
+std::vector<std::string> IO::loadLinesFromFile(const std::string &filename) {
+    if (std::ifstream stream(filename); !stream) {
+        throw std::runtime_error("load error: "s + filename);
+    } else {
         std::string single_line;
-        while (getline(stream, single_line)) {
+        std::vector<std::string> destination;
+        while (std::getline(stream, single_line)) {
             destination.push_back(single_line);
         }
-        return true;
+        return destination;
     }
-    faunus_logger->warn("cannot read file: {}", filename);
-    return false;
 }
 
 /**
  * @param filename Filename
- * @param s String to write
+ * @param contents String to write
  * @param mode `std::ios_base::out` (new, default) or `std::ios_base::app` (append)
  */
-bool IO::writeFile(const std::string &filename, const std::string &s, std::ios_base::openmode mode) {
+void IO::writeFile(const std::string &filename, const std::string &contents, std::ios_base::openmode mode) {
     if (std::ofstream stream(filename, mode); stream) {
-        stream << s;
-        return true;
+        stream << contents;
+    } else {
+        throw std::runtime_error("cannot open file for writing: "s + filename);
     }
-    return false;
 }
 
 /**
- * @param string_vector vector of std::string
+ * @param strings vector of std::string
  * @param pattern Pattern to search for
+ *
+ * All lines with matching `pattern` will be remove regardless
+ * of where in the string it it found
  */
-void IO::strip(std::vector<std::string> &string_vector, const std::string &pattern) {
-    auto iter = string_vector.begin();
-    while (iter < string_vector.end()) {
-        if ((*iter).find(pattern) != std::string::npos) {
-            string_vector.erase(iter);
-        } else {
-            ++iter;
-        }
-    }
+void IO::strip(std::vector<std::string> &strings, const std::string &pattern) {
+    auto unary_predicate = [&](auto &s) { return s.find(pattern) != std::string::npos; };
+    strings.erase(std::remove_if(strings.begin(), strings.end(), unary_predicate), strings.end());
 }
 
 /**
@@ -70,59 +68,61 @@ int FormatXTC::getNumAtoms() { return number_of_atoms; }
 
 bool FormatAAM::prefer_charges_from_file = true;
 
-Particle &FormatAAM::s2p(const std::string &record, Particle &particle) {
+Particle FormatAAM::recordToParticle(const std::string &record) {
     std::stringstream o;
     std::string name;
-    double radius, molecular_weight;
-    int atom_number;
     o << record;
     o >> name;
-    auto it = findName(atoms, name);
-    if (it == atoms.end())
+    if (auto it = findName(atoms, name); it == atoms.end()) {
         throw std::runtime_error("AAM load error: unknown atom name '" + name + "'.");
+    } else {
+        Particle particle = *it;
+        double radius;
+        double molecular_weight;
+        int atom_number;
+        o >> atom_number >> particle.pos.x() >> particle.pos.y() >> particle.pos.z() >> particle.charge >>
+            molecular_weight >> radius;
 
-    particle = *it;
-    o >> atom_number >> particle.pos.x() >> particle.pos.y() >> particle.pos.z() >> particle.charge >>
-        molecular_weight >> radius;
-
-    // does charge match AtomData?
-    if (std::fabs(it->charge - particle.charge) > pc::epsilon_dbl) {
-        faunus_logger->warn("charge mismatch on atom {0} {1}: {2} atomlist value", atom_number, name,
-                            (prefer_charges_from_file) ? "ignoring" : "using");
-        if (not prefer_charges_from_file) {
-            particle.charge = it->charge; // let's use atomdata charge
+        // does charge match AtomData?
+        if (std::fabs(it->charge - particle.charge) > pc::epsilon_dbl) {
+            faunus_logger->warn("charge mismatch on atom {0} {1}: {2} atomlist value", atom_number, name,
+                                (prefer_charges_from_file) ? "ignoring" : "using");
+            if (not prefer_charges_from_file) {
+                particle.charge = it->charge; // let's use atomdata charge
+            }
         }
+        // does radius match AtomData?
+        if (std::fabs(it->sigma - 2 * radius) > pc::epsilon_dbl) {
+            faunus_logger->warn("radius mismatch on atom {0} {1}: using atomlist value", atom_number, name);
+        }
+        return particle;
     }
-
-    // does radius match AtomData?
-    if (std::fabs(it->sigma - 2 * radius) > pc::epsilon_dbl) {
-        faunus_logger->warn("radius mismatch on atom {0} {1}: using atomlist value", atom_number, name);
-    }
-    return particle;
 }
-bool FormatAAM::load(const std::string &filename, ParticleVector &target, bool _keepcharges) {
+ParticleVector FormatAAM::load(const std::string &filename, bool _keepcharges) {
     prefer_charges_from_file = _keepcharges;
-    std::vector<std::string> v;
-    target.clear();
-    if (IO::readFile(filename, v)) {
-        IO::strip(v, "#");
-        int n = std::stoi(v[0]);
-        target.resize(n);
-        for (int i = 1; i <= n; i++) {
-            assert(i < v.size());
-            s2p(v.at(i), target.at(i - 1));
+    if (auto lines = IO::loadLinesFromFile(filename); lines.empty()) {
+        throw std::runtime_error("empty aam file: "s + filename);
+    } else {
+        IO::strip(lines, "#"); // all lines beginning w. # are comments
+        size_t number_of_atoms = std::stoul(lines[0]);
+        if (lines.size() < number_of_atoms + 1) {
+            throw std::runtime_error("mismatch in number of atoms in "s + filename);
         }
-        return true;
+        ParticleVector positions; // positions are loaded here
+        positions.reserve(number_of_atoms);
+        std::transform(lines.begin(), lines.begin() + number_of_atoms, std::back_inserter(positions),
+                       [](auto &i) { return recordToParticle(i); });
+        return positions;
     }
-    return false;
 }
-bool FormatAAM::save(const std::string &file, const ParticleVector &particle_vector) {
+
+void FormatAAM::save(const std::string &file, const ParticleVector &particles) {
     std::ostringstream o;
-    o << particle_vector.size() << "\n";
-    for (size_t i = 0; i < particle_vector.size(); i++) {
-        o << p2s(particle_vector[i], i);
+    o << particles.size() << "\n";
+    for (size_t i = 0; i < particles.size(); i++) {
+        o << p2s(particles[i], i);
     }
-    return IO::writeFile(file, o.str());
+    IO::writeFile(file, o.str());
 }
 std::string FormatAAM::p2s(const Particle &particle, int zero_based_index) {
     std::ostringstream o;
@@ -155,29 +155,27 @@ void FormatXTC::close() {
     }
 }
 
-FormatXTC::FormatXTC(double length) { setLength({length, length, length}); }
-
 FormatXTC::~FormatXTC() { close(); }
 
 void FormatXTC::setLength(const Point &box_length) {
-    assert(box_length.x() > 0 && box_length.y() > 0 && box_length.z() > 0);
-    for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++) {
-            box[i][j] = 0;
-        }
-    }
-    box[0][0] = box_length.x() / 1.0_nm; // corners of the
-    box[1][1] = box_length.y() / 1.0_nm; // rectangular box
-    box[2][2] = box_length.z() / 1.0_nm; // in nanometers!
+    assert(box_length.minCoeff() > 0.0);
+    std::fill(&box[0][0], &box[0][0] + 3 * 3, 0.0); // fill 3x3 matrix w. zero
+    box[0][0] = box_length.x() / 1.0_nm;            // corners of the
+    box[1][1] = box_length.y() / 1.0_nm;            // rectangular box
+    box[2][2] = box_length.z() / 1.0_nm;            // in nanometers!
 }
 
-bool FormatXTC::loadNextFrame(Space &spc, bool setbox, bool apply_periodic_boundaries) {
-    if (xdrfile) {
-        if (number_of_atoms == (int)spc.p.size()) {
+void FormatXTC::loadNextFrame(Space &spc, bool setbox, bool apply_periodic_boundaries) {
+    if (!xdrfile) {
+        throw std::runtime_error("xtc file cannot be read");
+    } else {
+        if (number_of_atoms != (int)spc.p.size()) {
+            throw std::runtime_error("xtcfile<->container particle mismatch");
+        } else {
             assert(coordinates);
-            int rc = XDRfile::read_xtc(xdrfile, number_of_atoms, &step_counter, &timestamp, box, coordinates.get(),
-                                       &precision);
-            if (rc == 0) {
+            int return_code = XDRfile::read_xtc(xdrfile, number_of_atoms, &step_counter, &timestamp, box,
+                                                coordinates.get(), &precision);
+            if (return_code == 0) {
                 // Geometry::Chameleon *geo = dynamic_cast<Geometry::Chameleon *>(&c.geo);
                 // if (geo == nullptr or geo->type not_eq Geometry::CUBOID)
                 //    throw std::runtime_error("Cuboid-like geometry required");
@@ -197,15 +195,9 @@ bool FormatXTC::loadNextFrame(Space &spc, bool setbox, bool apply_periodic_bound
                         throw std::runtime_error("particle-container collision");
                     }
                 }
-                return true;
             }
-        } else {
-            throw std::runtime_error("xtcfile<->container particle mismatch");
         }
-    } else {
-        throw std::runtime_error("xtc file cannot be read");
     }
-    return false; // end of file or not opened
 }
 
 std::string FormatPQR::writeCryst1(const Point &box_length, const Point &angle) {
@@ -275,7 +267,6 @@ Point FormatPQR::load(std::istream &stream, ParticleVector &destination, bool ke
             if (readAtomRecord(record, particle, radius)) { // read ATOM or HETATOM record
                 atom_index++;
                 AtomData &atom_data = Faunus::atoms.at(particle.id);
-
                 // does charge match AtomData?
                 if (std::fabs(atom_data.charge - particle.charge) > pc::epsilon_dbl) {
                     if (log_charge) {
@@ -313,12 +304,15 @@ Point FormatPQR::load(std::istream &stream, ParticleVector &destination, bool ke
 
 /**
  * @param filename PQR filename to load from
- * @param destination Target particle vector to *append* to
+ * @param particles Target particle vector to *append* to
  * @return Vector with unit cell dimensions. Zero length if not found.
  */
-Point FormatPQR::load(const std::string &filename, ParticleVector &destination, bool keep_charges) {
-    std::ifstream f(filename);
-    return load(f, destination, keep_charges);
+Point FormatPQR::load(const std::string &filename, ParticleVector &particles, bool keep_charges) {
+    if (std::ifstream stream(filename); !stream) {
+        throw std::runtime_error("load error: "s + filename);
+    } else {
+        return load(stream, particles, keep_charges);
+    }
 }
 
 /**
@@ -329,13 +323,15 @@ Point FormatPQR::load(const std::string &filename, ParticleVector &destination, 
  * ignored.
  */
 void FormatPQR::loadTrajectory(const std::string &filename, std::vector<ParticleVector> &traj) {
-    if (std::ifstream file(filename); bool(file)) {
-        std::string record;
+    if (std::ifstream stream(filename); !stream) {
+        throw std::runtime_error("load error: "s + filename);
+    } else {
         traj.clear();
         traj.resize(1); // prepare first frame
-        while (std::getline(file, record)) {
+        std::string record;
+        while (std::getline(stream, record)) {
             Particle particle;
-            double radius = 0;
+            double radius = 0.0;
             if (readAtomRecord(record, particle, radius)) {
                 traj.back().push_back(particle);
             } else if (record.find("END") == 0) {         // if END record, advance to next frame
@@ -350,8 +346,6 @@ void FormatPQR::loadTrajectory(const std::string &filename, std::vector<Particle
         if (traj.empty()) {
             faunus_logger->warn("pqr trajectory {} is empty", filename);
         }
-    } else {
-        throw std::runtime_error("pqr file not found: " + filename);
     }
 }
 
@@ -359,52 +353,52 @@ void FormatPQR::loadTrajectory(const std::string &filename, std::vector<Particle
  * @param stream Output stream
  * @param particles Particle vector
  * @param box_length Unit cell dimensions (default: [0,0,0], not printed)
- * @param n Number of atoms in each residue (default: automatic)
+ * @param atoms_per_residue Number of atoms in each residue (default: automatic)
  */
-bool FormatPQR::save(std::ostream &stream, const ParticleVector &particles, const Point &box_length, int n) {
+void FormatPQR::save(std::ostream &stream, const ParticleVector &particles, const Point &box_length,
+                     int atoms_per_residue) {
     if (stream and !particles.empty()) {
-        int residue_cnt = 1;
-        int atom_cnt = 1;
         if (box_length.norm() > pc::epsilon_dbl) {
             stream << writeCryst1(box_length);
         }
-        for (const auto &i : particles) {
-            AtomData &d = atoms.at(i.id);         // atom properties as defined in topology
-            Point pos = i.pos + 0.5 * box_length; // move origin to corner of box (faunus used the middle)
+        int residue_cnt = 1;
+        int atom_cnt = 1;
+        for (const auto &particle : particles) {
+            AtomData &d = atoms.at(particle.id);        // atom properties as defined in topology
+            auto pos = particle.pos + 0.5 * box_length; // move origin to corner of box (faunus used the middle)
             stream << fmt::format("ATOM  {:5d} {:4} {:4}{:5d}    {:8.3f} {:8.3f} {:8.3f} {:.3f} {:.3f}\n", atom_cnt++,
-                                  d.name, d.name, residue_cnt, pos.x(), pos.y(), pos.z(), i.charge, 0.5 * d.sigma);
+                                  d.name, d.name, residue_cnt, pos.x(), pos.y(), pos.z(), particle.charge,
+                                  0.5 * d.sigma);
             if (d.name == "CTR" or d.name == "HCTR") {
                 residue_cnt++;
-            } else if (atom_cnt % n == 0) {
+            } else if (atom_cnt % atoms_per_residue == 0) {
                 residue_cnt++;
             }
         }
         stream << "END\n";
-        return true;
     }
-    return false;
 }
 
 /**
  * @brief Write vector of groups to output stream
  * @param stream Output stream
  * @param groups Vector of groups
- * @param box_length Box dimensions
+ * @param box_dimensions Box dimensions
  *
  * The residue number follows the group index and inactive particles will
  * have zero charge; zero radius; and positioned in the corner of the box.
  */
-bool FormatPQR::save(std::ostream &stream, const Tgroup_vector &groups, const Point &box_length) {
+void FormatPQR::save(std::ostream &stream, const Tgroup_vector &groups, const Point &box_dimensions) {
     if (stream) {
-        if (box_length.norm() > pc::epsilon_dbl) {
-            stream << writeCryst1(box_length);
+        if (box_dimensions.norm() > pc::epsilon_dbl) {
+            stream << writeCryst1(box_dimensions);
         }
         int residue_cnt = 1;
         int atom_cnt = 1;
         for (const auto &group : groups) {                                                 // loop over all molecules
             for (auto particle = group.begin(); particle != group.trueend(); particle++) { // loop over particles
                 double scale = (particle < group.end()) ? 1.0 : 0.0;                       // zero if inactive particle
-                auto pos = scale * (particle->pos + 0.5 * box_length);                     // origin to corner of box
+                auto pos = scale * (particle->pos + 0.5 * box_dimensions);                 // origin to corner of box
                 stream << fmt::format("ATOM  {:5d} {:4} {:4}{:5d}    {:8.3f} {:8.3f} {:8.3f} {:.3f} {:.3f}\n", atom_cnt,
                                       particle->traits().name, particle->traits().name, residue_cnt, pos.x(), pos.y(),
                                       pos.z(), scale * particle->charge, scale * particle->traits().sigma / 2.0);
@@ -413,9 +407,25 @@ bool FormatPQR::save(std::ostream &stream, const Tgroup_vector &groups, const Po
             residue_cnt++;
         }
         stream << "END\n";
-        return true;
     }
-    return false;
+}
+
+/**
+ * @param filename Output PQR filename
+ * @param particles Particle vector
+ * @param box_length Unit cell dimensions (default: [0,0,0], not printed)
+ * @param atoms_per_residue Number of atoms in each residue (default: automatic)
+ * @exception std::runtime_error if file cannot be opened.
+ */
+void FormatPQR::save(const std::string &filename, const ParticleVector &particles, const Point &box_length,
+                     int atoms_per_residue) {
+    if (!particles.empty()) {
+        if (std::ofstream stream(filename); stream) {
+            save(stream, particles, box_length, atoms_per_residue);
+        } else {
+            throw std::runtime_error("output error: "s + filename);
+        }
+    }
 }
 
 /**
@@ -423,127 +433,109 @@ bool FormatPQR::save(std::ostream &stream, const Tgroup_vector &groups, const Po
  * @param particles Particle vector
  * @param box_length Unit cell dimensions (default: [0,0,0], not printed)
  * @param n Number of atoms in each residue (default: automatic)
+ * @exception std::runtime_error if file cannot be opened.
  */
-bool FormatPQR::save(const std::string &filename, const ParticleVector &particles, const Point &box_length, int n) {
-    if (not particles.empty()) {
-        std::ofstream file(filename);
-        return save(file, particles, box_length, n);
-    }
-    return false;
-}
-
-/**
- * @param filename Output PQR filename
- * @param particles Particle vector
- * @param box_length Unit cell dimensions (default: [0,0,0], not printed)
- * @param n Number of atoms in each residue (default: automatic)
- */
-bool FormatPQR::save(const std::string &filename, const Tgroup_vector &groups, const Point &box_length) {
+void FormatPQR::save(const std::string &filename, const Tgroup_vector &groups, const Point &box_length) {
     if (not groups.empty()) {
-        std::ofstream file(filename);
-        return save(file, groups, box_length);
+        if (std::ofstream stream(filename); stream) {
+            save(stream, groups, box_length);
+        } else {
+            throw std::runtime_error("write error: "s + filename);
+        }
     }
-    return false;
 }
 
-bool FormatXYZ::save(const std::string &file, const ParticleVector &particles, const Point &box_length) {
+void FormatXYZ::save(const std::string &file, const ParticleVector &particles, const Point &box) {
     std::ostringstream o;
-    o << particles.size() << "\n" << box_length.transpose() << "\n";
-    for (const auto &i : particles) {
-        o << atoms.at(i.id).name << " " << i.pos.transpose() << "\n";
+    o << particles.size() << "\n" << box.transpose() << "\n";
+    for (const auto &particle : particles) {
+        o << atoms.at(particle.id).name << " " << particle.pos.transpose() << "\n";
     }
-    return IO::writeFile(file, o.str());
+    IO::writeFile(file, o.str());
 }
 
 /**
  * Loads coordinates from XYZ file into particle vector. Remaining atom properties
- * are taken from the defined atom list; a warning is issued of the atom name
- * is unknown.
+ * are taken from the defined atom list; error if the atom name is unknown.
  *
  * @param filename Filename
- * @param particle_vector Destination particle vector
- * @param append True means append to `p` (default). If `false`,`p` is first cleared.
+ * @param particles Destination particle vector
+ * @param append True means append to `particles` (default). If `false`,`particles` is first cleared.
  */
 
-bool FormatXYZ::load(const std::string &filename, ParticleVector &particle_vector, bool append) {
-    std::ifstream f(filename);
-    if (f) {
-        if (append == false) {
-            particle_vector.clear();
-        }
-        Particle particle;
+void FormatXYZ::load(const std::string &filename, ParticleVector &particles, bool append) {
+    if (std::ifstream stream(filename); !stream) {
+        throw std::runtime_error("cannot open file: "s + filename);
+    } else {
         std::string comment;
         std::string atom_name;
         size_t number_of_atoms;
-        f >> number_of_atoms;
-        particle_vector.reserve(particle_vector.size() + number_of_atoms);
-        std::getline(f, comment); // ">>" token doesn't gobble new line
-        std::getline(f, comment); // read comment line
+        stream >> number_of_atoms;     // first line is number of atoms
+        std::getline(stream, comment); // ">>" token doesn't gobble new line
+        std::getline(stream, comment); // read comment line
+        if (append == false) {
+            particles.clear();
+        }
+        particles.reserve(particles.size() + number_of_atoms);
         for (size_t i = 0; i < number_of_atoms; i++) {
-            f >> atom_name;
+            stream >> atom_name;
             if (auto it = findName(Faunus::atoms, atom_name); it != Faunus::atoms.end()) {
-                particle = *it;
-                f >> particle.pos.x() >> particle.pos.y() >> particle.pos.z();
-                particle_vector.push_back(particle);
+                Particle particle = *it;
+                stream >> particle.pos.x() >> particle.pos.y() >> particle.pos.z();
+                particles.push_back(particle);
             } else {
                 throw std::runtime_error("XYZ load error: unknown atom name '" + atom_name + "'.");
             }
         }
-        if (!particle_vector.empty()) {
-            return true;
-        }
+        assert(particles.size() == number_of_atoms);
     }
-    return false;
 }
 
 Particle FormatGRO::recordToParticle(const std::string &record) {
-    Particle particle;
     std::stringstream o;
     std::string atom_name;
     o << record.substr(10, 5) << record.substr(20, 8) << record.substr(28, 8) << record.substr(36, 8);
     o >> atom_name;
     if (auto it = findName(Faunus::atoms, atom_name); it != Faunus::atoms.end()) {
-        particle = *it; // copy all atom properties, except positions
+        Particle particle = *it; // copy all atom properties, except positions
         o >> particle.pos.x() >> particle.pos.y() >> particle.pos.z();
         particle.pos *= 1.0_nm; // GRO files use nanometers
+        return particle;
     } else {
         throw std::runtime_error("GRO file: unknown atom name: " + atom_name);
     }
-    return particle;
 }
 
 /**
- * @param file Filename
- * @param destination Destination particle vector
+ * @param filename Filename
+ * @returns Particle vector
  *
  * The first line in a GRO file is a comment; the
  * second the number of atoms; and the last the
  * box dimensions. All lengths in nanometers.
  */
-ParticleVector FormatGRO::load(const std::string &file) {
-    constexpr size_t header_size = 2;  // two lines before positions
-    std::vector<Particle> destination; // positions are loaded here
-    std::vector<std::string> records;  // entire gro file, line-by-line
-    if (IO::readFile(file, records)) {
-        if (records.size() > header_size) {
-            size_t number_of_atoms = std::stoul(records[1]);
-            if (records.size() >= header_size + number_of_atoms) {
-                std::transform(records.begin(), records.begin() + number_of_atoms, std::back_inserter(destination),
-                               [](auto &i) { return recordToParticle(i); });
-            } else {
-                throw std::runtime_error("Mismatch in number of atoms in GRO file");
-            }
-        } else {
-            throw std::runtime_error("Loaded GRO file seems empty");
-        }
+ParticleVector FormatGRO::load(const std::string &filename) {
+    constexpr size_t header_size = 2; // two lines before positions
+    if (auto lines = IO::loadLinesFromFile(filename); lines.size() <= header_size) {
+        throw std::runtime_error("GRO file seems empty: " + filename);
     } else {
-        throw std::runtime_error("Unknown GRO file: " + file);
+        size_t number_of_atoms = std::stoul(lines[1]); // second line = number of atoms
+        if (lines.size() < header_size + number_of_atoms) {
+            throw std::runtime_error("Mismatch in number of atoms in GRO file");
+        } else {
+            ParticleVector positions; // positions are loaded here
+            positions.reserve(number_of_atoms);
+            std::transform(lines.begin(), lines.begin() + number_of_atoms, std::back_inserter(positions),
+                           [](auto &i) { return recordToParticle(i); });
+            return positions;
+        }
     }
-    return destination;
 }
 
-bool FormatGRO::save(const std::string &filename, const Space &spc) {
-    if (std::ofstream stream(filename); stream) {
+void FormatGRO::save(const std::string &filename, const Space &spc) {
+    if (std::ofstream stream(filename); !stream) {
+        std::runtime_error("write error: "s + filename);
+    } else {
         int number_of_residues = 1;
         int number_of_atoms = 1;
         Point boxlength = spc.geo.getLength();
@@ -558,9 +550,7 @@ bool FormatGRO::save(const std::string &filename, const Space &spc) {
             number_of_residues++;
         }
         stream << boxlength.transpose() / 1.0_nm << "\n";
-        return true;
     }
-    return false;
 }
 
 ParticleVector fastaToParticles(const std::string &fasta_sequence, double bond_length, const Point &origin) {
@@ -586,7 +576,7 @@ bool loadStructure(const std::string &file, ParticleVector &particle_vector, boo
         particle_vector.clear();
     }
     if (std::string suffix = file.substr(file.find_last_of(".") + 1); suffix == "aam") {
-        FormatAAM::load(file, particle_vector, keep_charges);
+        particle_vector = FormatAAM::load(file, keep_charges);
     } else if (suffix == "pqr") {
         FormatPQR::load(file, particle_vector, keep_charges);
     } else if (suffix == "xyz") {

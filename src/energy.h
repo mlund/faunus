@@ -4,9 +4,10 @@
 #include "externalpotential.h" // Energybase implemented here
 #include "space.h"
 #include "aux/iteratorsupport.h"
+#include "aux/pairmatrix.h"
 #include <range/v3/view.hpp>
 #include <Eigen/Dense>
-#include "spdlog/spdlog.h"
+#include <spdlog/spdlog.h>
 
 #ifdef ENABLE_FREESASA
 #include <freesasa.h>

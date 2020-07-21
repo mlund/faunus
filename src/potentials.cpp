@@ -1,6 +1,7 @@
 #include "potentials.h"
 #include "multipole.h"
 #include "units.h"
+#include "auxiliary.h"
 #include "spdlog/spdlog.h"
 #include <coulombgalore.h>
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "move.h"
+#include "aux/pairmatrix.h"
 #include <set>
 
 namespace Faunus {

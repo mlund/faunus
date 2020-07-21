@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.11.4 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 
 project(faunus)
 include(cmake/StandardProjectSettings.cmake)
@@ -22,7 +22,7 @@ find_package(ZLIB REQUIRED)
 enable_testing()
 
 # Very basic PCH example
-option(ENABLE_PCH "Enable Precompiled Headers" OFF)
+option(ENABLE_PCH "Enable Precompiled Headers" ON)
 if(ENABLE_PCH)
   # This sets a global PCH parameter, each project will build its own PCH, which is a good idea if any #define's change
   #
@@ -34,7 +34,12 @@ if(ENABLE_PCH)
     <string>
     <map>
     <algorithm>
-    <utility>)
+    <utility>
+    <Eigen/Core>
+    <Eigen/Geometry>
+    <range/v3/view/filter.hpp>
+    <range/v3/view/transform.hpp>
+    <nlohmann/json.hpp>)
 endif()
 
 option(BUILD_STATIC "Build statically linked binaries" off)

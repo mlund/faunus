@@ -700,22 +700,28 @@ void NewCoulombGalore::from_json(const json &j) {
     std::string type = j.at("type");
     pot.setTolerance(j.value("utol", 0.005 / lB));
     if (type == "yukawa") {
-        json _j = j;
-        if (_j.value("shift", true)) {
-            faunus_logger->debug("shifted yukawa uses the 'poisson' scheme with C=1 and D=-1");
-            _j["type"] = "poisson";
-            _j["C"] = 1;
-            _j["D"] = -1;
-            pot.spline<::CoulombGalore::Poisson>(_j);
+        if (json _j(j); _j.value("shift", false)) { // zero force at cutoff
+            if (!_j.contains("cutoff")) {
+                throw ConfigurationError("cutoff required for shifted yukawa");
+            } else {
+                faunus_logger->debug("force shifted yukawa uses the 'poisson' scheme with C=1 and D=1");
+                _j["type"] = "poisson";
+                _j["C"] = 1;
+                _j["D"] = 1;
+                pot.spline<::CoulombGalore::Poisson>(_j);
+            }
         } else {
-            if (_j.count("cutoff") > 0)
-                faunus_logger->warn("cutoff ignored for non-shifted yukawa; it's *always* infinity", type);
-            _j["type"] = "plain";
-            pot.spline<::CoulombGalore::Plain>(_j);
+            if (_j.contains("cutoff")) {
+                throw ConfigurationError("unexpected cutoff for non-shifted yukawa: it's *always* infinity");
+            } else {
+                _j["type"] = "plain";
+                pot.spline<::CoulombGalore::Plain>(_j);
+            }
         }
     } else if (type == "plain") {
-        if (j.count("cutoff") > 0)
-            faunus_logger->warn("cutoff ignored for '{}' and always infinity", type);
+        if (j.contains("cutoff")) {
+            throw ConfigurationError("unexpected cutoff for plain: it's *always* infinity");
+        }
         pot.spline<::CoulombGalore::Plain>(j);
     } else if (type == "qpotential")
         pot.spline<::CoulombGalore::qPotential>(j);

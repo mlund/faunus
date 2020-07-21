@@ -1,3 +1,6 @@
+include(ExternalProject)
+include(FetchContent)
+
 #########
 # EXPRTK 
 #########
@@ -265,6 +268,12 @@ FetchContent_GetProperties(coulombgalore)
 if(NOT coulombgalore_POPULATED)
     FetchContent_Populate(coulombgalore)
 endif()
-include_directories(${coulombgalore_SOURCE_DIR})
+include_directories(SYSTEM ${coulombgalore_SOURCE_DIR})
 
+# Add third-party headers to include path. Note this is done with SYSTEM
+# to disable potential compiler warnings
 
+include_directories(SYSTEM ${eigen_SOURCE_DIR} ${doctest_SOURCE_DIR} ${modernjson_SOURCE_DIR}/include ${rangev3_SOURCE_DIR}/include
+    ${nanobench_SOURCE_DIR}/src/include
+    ${Pybind11IncludeDir} ${DocoptIncludeDir} ${CppsidIncludeDir} ${XdrfileIncludeDir} ${SpdlogIncludeDir}
+    ${ProgressTrackerIncludeDir} ${exprtk_SOURCE_DIR} ${cereal_SOURCE_DIR}/include ${zstr_SOURCE_DIR}/src)

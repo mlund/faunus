@@ -1,34 +1,41 @@
 cmake_minimum_required(VERSION 3.11.4 FATAL_ERROR)
 
 project(faunus)
-
-include(CheckIPOSupported)
-include(ExternalProject)
-include(FetchContent)
+include(cmake/StandardProjectSettings.cmake)
+include(cmake/PreventInSourceBuilds.cmake)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
-set(CMAKE_CXX_EXTENSIONS NO)
+set(CMAKE_CXX_EXTENSIONS YES)
+
+# Link this 'library' to use the warnings specified in CompilerWarnings.cmake
+add_library(project_options INTERFACE)
+target_compile_features(project_options INTERFACE cxx_std_17)
+add_library(project_warnings INTERFACE)
+include(cmake/CompilerWarnings.cmake)
+set_project_warnings(project_warnings)
+
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(PythonInterp 3 REQUIRED)
 find_package(Threads REQUIRED)
 find_package(ZLIB REQUIRED)
 enable_testing()
 
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-
-# Default build is "RelWithDebInfo"
-if (NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE RelWithDebInfo
-        CACHE STRING "Build type: None Debug Release RelWithDebInfo MinSizeRel." FORCE)
-endif ()
-
-if (CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")
-    string(REPLACE "NDEBUG" "_ndebug" CMAKE_CXX_FLAGS_RELWITHDEBINFO ${CMAKE_CXX_FLAGS_RELWITHDEBINFO})
-    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}"
-        CACHE STRING "Flags used by the compiler during Release with Debug Info builds" FORCE)
+# Very basic PCH example
+option(ENABLE_PCH "Enable Precompiled Headers" OFF)
+if(ENABLE_PCH)
+  # This sets a global PCH parameter, each project will build its own PCH, which is a good idea if any #define's change
+  #
+  # consider breaking this out per project as necessary
+  target_precompile_headers(
+    project_options
+    INTERFACE
+    <vector>
+    <string>
+    <map>
+    <algorithm>
+    <utility>)
 endif()
-
 
 option(BUILD_STATIC "Build statically linked binaries" off)
 option(ENABLE_FREESASA "Fetch 3rd-party SASA calculation software" on)
@@ -48,17 +55,10 @@ if (ENABLE_MPI)
     find_package(MPI REQUIRED)
 endif()
 
-include("cmake/externaltools.cmake")
-include("cmake/gitversion.cmake")
-include("cmake/compilerflags.cmake")
+include(cmake/compilerflags.cmake)
+include(cmake/externaltools.cmake)
+include(cmake/gitversion.cmake)
  
-# Add third-party headers to include path. Note this is done with SYSTEM
-# to disable potential compiler warnings
-include_directories(SYSTEM ${eigen_SOURCE_DIR} ${doctest_SOURCE_DIR} ${modernjson_SOURCE_DIR}/include ${rangev3_SOURCE_DIR}/include
-    ${nanobench_SOURCE_DIR}/src/include
-    ${Pybind11IncludeDir} ${DocoptIncludeDir} ${CppsidIncludeDir} ${XdrfileIncludeDir} ${SpdlogIncludeDir}
-    ${ProgressTrackerIncludeDir} ${exprtk_SOURCE_DIR} ${cereal_SOURCE_DIR}/include ${zstr_SOURCE_DIR}/src)
-
 add_subdirectory(src)
 add_subdirectory(docs)
 

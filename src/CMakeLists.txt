@@ -93,6 +93,7 @@ set(tsts
 
 # target: functionparser - exprtk very slow, so split out to separate target
 add_library(functionparser STATIC ${CMAKE_SOURCE_DIR}/src/functionparser.cpp ${CMAKE_SOURCE_DIR}/src/functionparser.h)
+target_compile_definitions(functionparser PRIVATE project_options project_warnings)
 set_target_properties(functionparser PROPERTIES
     POSITION_INDEPENDENT_CODE ON)
     #LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
@@ -100,7 +101,13 @@ set_target_properties(functionparser PROPERTIES
 # targer: libfaunus - main functionality of faunus
 add_library(libfaunus STATIC ${objs} ${hdrs})
 target_compile_definitions(libfaunus PRIVATE SPDLOG_COMPILED_LIB)
-target_link_libraries(libfaunus PRIVATE ${CMAKE_THREAD_LIBS_INIT} xdrfile spdlog functionparser ZLIB::ZLIB)
+target_link_libraries(libfaunus
+    PRIVATE ${CMAKE_THREAD_LIBS_INIT}
+    project_options
+    project_warnings
+    xdrfile spdlog
+    functionparser
+    ZLIB::ZLIB)
 set_target_properties(libfaunus PROPERTIES
     POSITION_INDEPENDENT_CODE ON)
     #LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})

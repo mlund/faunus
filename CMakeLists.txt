@@ -33,12 +33,16 @@ if(ENABLE_PCH)
     <vector>
     <string>
     <map>
+    <set>
     <algorithm>
     <utility>
     <Eigen/Core>
     <Eigen/Geometry>
     <range/v3/view/filter.hpp>
     <range/v3/view/transform.hpp>
+    <cereal/cereal.hpp>
+    <cereal/types/base_class.hpp>
+    <cereal/types/memory.hpp>
     <nlohmann/json.hpp>)
 endif()
 

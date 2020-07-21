@@ -469,7 +469,7 @@ void InsertMoleculesInSpace::insertMolecules(const json &json_array, Space &spc)
                 }
 
                 if (moldata->atomic) {
-                    insertAtomicGroups(*moldata, spc, num_molecules);
+                    insertAtomicGroups(*moldata, spc, num_molecules, inactive);
                 } else if (moldata->isImplicit()) {
                     insertImplicitGroups(*moldata, spc, num_molecules);
                 } else {

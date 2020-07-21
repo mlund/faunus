@@ -163,7 +163,7 @@ properties:
                         description: Structure file or direct information; required if `atomic=false`
                         anyOf:
                             - type: string
-                              pattern: "(.*?)\\.(pqr|aam|xyz)$"
+                              pattern: "(.*?)\\.(pqr|aam|xyz|gro)$"
                             - type: array
                               items:
                                   type: object

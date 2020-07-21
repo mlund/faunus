@@ -32,8 +32,8 @@ class MoleculeData;
  */
 struct MoleculeInserter {
     virtual ParticleVector operator()(Geometry::GeometryBase &geo, const ParticleVector &, MoleculeData &mol) = 0;
-    virtual void from_json(const json&) {};
-    virtual void to_json(json&) const {};
+    virtual void from_json(const json &);
+    virtual void to_json(json &) const;
     virtual ~MoleculeInserter() = default;
 };
 

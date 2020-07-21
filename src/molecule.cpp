@@ -587,6 +587,7 @@ void RandomInserter::to_json(json &j) const {
     j["insoffset"] = offset;
     j["rotate"] = rotate;
     j["keeppos"] = keep_positions;
+    j["allow overlap"] = allow_overlap;
 }
 
 bool Conformation::empty() const {
@@ -714,4 +715,6 @@ void to_json(json &j, const ReactionData &reaction) {
                          {"pK'", -a.lnK / std::log(10)}};
 } //!< Serialize to JSON object
 
+void MoleculeInserter::from_json(const json &) {}
+void MoleculeInserter::to_json(json &) const {}
 } // namespace Faunus

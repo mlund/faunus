@@ -196,7 +196,10 @@ namespace Faunus {
 
     Point ranunit_polar(Random &rand) { return rtp2xyz({1, 2 * pc::pi * rand(), std::acos(2 * rand() - 1)}); }
 
-} // end of Faunus namespace
+    ConfigurationError::ConfigurationError(const std::string &msg) : std::runtime_error(msg) {}
+    ConfigurationError::ConfigurationError(const char *msg) : std::runtime_error(msg) {}
+
+    } // namespace Faunus
 
 template class nlohmann::basic_json<>;
 

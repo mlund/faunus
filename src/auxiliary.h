@@ -50,9 +50,11 @@ template <typename TOut, typename TIn> inline TOut numeric_cast(const TIn number
 template <typename Titer, typename Tfunction, typename T = double, typename Taggregate_function>
 T for_each_unique_pair(Titer begin, Titer end, Tfunction f, Taggregate_function aggregator = std::plus<T>()) {
     T x = T();
-    for (auto i = begin; i != end; ++i)
-        for (auto j = i; ++j != end;)
+    for (auto i = begin; i != end; ++i) {
+        for (auto j = i; ++j != end;) {
             x = aggregator(x, f(*i, *j));
+        }
+    }
     return x;
 }
 #ifdef DOCTEST_LIBRARY_INCLUDED
@@ -86,26 +88,15 @@ template <typename T> T erase_range(T a, const T &b) {
  * @todo Add std::pair copy operator
  */
 template <class T> struct ordered_pair : public std::pair<T, T> {
-    typedef std::pair<T, T> base;
-
-    ordered_pair() {}
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-overflow"
-
-    ordered_pair(const T &a, const T &b) : base(a, b) {
-        if (a > b)
-            std::swap(base::first, base::second);
-    }
-
-#pragma GCC diagnostic pop
-
-    bool find(const T &i) const {
-        assert(base::first <= base::second);
-        if (i != base::first)
-            if (i != base::second)
-                return false;
-        return true;
+    using base = std::pair<T, T>;
+    ordered_pair() = default;
+    ordered_pair(const T &a, const T &b) : base(std::minmax(a, b)) {}
+    bool contains(const T &value) const {
+        if (value != base::first && value != base::second) {
+            return false;
+        } else {
+            return true;
+        }
     }
 };
 
@@ -115,15 +106,11 @@ TEST_CASE("[Faunus] ordered_pair") {
     CHECK((a.first == 1 && a.second == 2));
     CHECK((b.first == 1 && b.second == 2));
     CHECK(a == b);
-    CHECK(a.find(1));
-    CHECK(a.find(2));
-    CHECK(a.find(3) == false);
+    CHECK(a.contains(1));
+    CHECK(a.contains(2));
+    CHECK(!a.contains(3));
 }
 #endif
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#pragma GCC diagnostic pop
 
 /**
  * @brief Round a floating point to integer for use with histogram binning.
@@ -183,10 +170,11 @@ template <class Tfloat = double> class Quantize {
     /** @brief Assigment operator */
     Quantize &operator=(Tfloat val) {
         assert(val >= xmin);
-        if (val >= 0)
+        if (val >= 0) {
             x = int(val / dx + 0.5) * dx;
-        else
+        } else {
             x = int(val / dx - 0.5) * dx;
+        }
         assert(x >= xmin);
         return *this;
     }
@@ -204,17 +192,12 @@ template <class Tfloat = double> class Quantize {
 
     /** @brief Implicit convertion to integral (bin) or float (rounded) */
     template <typename T> operator T() {
-        if (std::is_integral<T>::value)
+        if (std::is_integral<T>::value) {
             return T((x - xmin) / dx + 0.5);
+        }
         return x;
     }
 };
-
-/** @brief Count number of white-space separated words in a string */
-inline size_t numWords(const std::string &s) {
-    return std::distance(std::istream_iterator<std::string>(std::istringstream(s) >> std::ws),
-                         std::istream_iterator<std::string>());
-}
 
 /**
  * @brief Convert whitespace separated words into vector of given type
@@ -227,46 +210,34 @@ inline size_t numWords(const std::string &s) {
  *   cout << 2*i << " "; // -> 0.4 2 200
  * ~~~~
  */
-template <class T> std::vector<T> words2vec(const std::string &w) {
-    std::vector<T> v(numWords(w));
-    std::stringstream s(w);
+template <class T> std::vector<T> words2vec(const std::string &string_of_words) {
+    auto number_of_words =
+        std::distance(std::istream_iterator<std::string>(std::istringstream(string_of_words) >> std::ws),
+                      std::istream_iterator<std::string>());
+    std::vector<T> vector_of_T(number_of_words);
+    std::stringstream stream(string_of_words);
     size_t i = 0;
-    while (i < v.size()) {
-        s >> v[i++];
+    while (i < vector_of_T.size()) {
+        stream >> vector_of_T[i++];
     }
-    return v;
+    return vector_of_T;
 } // space separated string to vector
 
 template <class T> std::string vec2words(const std::vector<T> &v) {
     std::ostringstream o;
     if (!v.empty()) {
         o << v.front();
-        for (size_t i = 1; i < v.size(); i++)
+        for (size_t i = 1; i < v.size(); i++) {
             o << " " << v[i];
+        }
     }
     return o.str();
 } // vector to space separated string w values
 
-/** @brief Convert string to lower case */
-inline std::string lowercase(std::string s) {
-    std::transform(s.begin(), s.end(), s.begin(), ::tolower);
-    return s;
-}
-
-/** @brief Uppercase first letter in string */
-inline std::string toupper_first(std::string s) {
-    if (!s.empty())
-        s[0] = std::toupper(s[0]);
-    return s;
-}
-
 #ifdef DOCTEST_LIBRARY_INCLUDED
 TEST_CASE("[Faunus] Text manipulation") {
-    CHECK(numWords("a b c") == 3);
     CHECK(vec2words<double>({1.0, -1.2, 0}) == "1 -1.2 0");
     CHECK(words2vec<double>("1 -1.2 0") == std::vector<double>({1.0, -1.2, 0}));
-    CHECK(lowercase("aBc") == "abc");
-    CHECK(toupper_first("abc") == "Abc");
 }
 #endif
 
@@ -310,9 +281,9 @@ template <typename T> struct BasePointerVector {
     template <typename Tderived, class = std::enable_if_t<std::is_base_of<T, Tderived>::value>> auto find() const {
         BasePointerVector<Tderived> _v;
         for (auto base : vec) {
-            auto derived = std::dynamic_pointer_cast<Tderived>(base);
-            if (derived)
+            if (auto derived = std::dynamic_pointer_cast<Tderived>(base); derived) {
                 _v.template push_back<Tderived>(derived);
+            }
         }
         return _v;
     } //!< Pointer list to all matching type

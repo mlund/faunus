@@ -74,13 +74,13 @@ set(hdrs
     ${CMAKE_SOURCE_DIR}/src/aux/eigensupport.h
     ${CMAKE_SOURCE_DIR}/src/aux/equidistant_table.h
     ${CMAKE_SOURCE_DIR}/src/aux/error_function.h
-    ${CMAKE_SOURCE_DIR}/src/aux/exponential_function.h
+    ${CMAKE_SOURCE_DIR}/src/aux/exp_function.h
+    ${CMAKE_SOURCE_DIR}/src/aux/invsqrt_function.h
     ${CMAKE_SOURCE_DIR}/src/aux/iteratorsupport.h
     ${CMAKE_SOURCE_DIR}/src/aux/legendre.h
     ${CMAKE_SOURCE_DIR}/src/aux/multimatrix.h
     ${CMAKE_SOURCE_DIR}/src/aux/pairmatrix.h
     ${CMAKE_SOURCE_DIR}/src/aux/pow_function.h
-    ${CMAKE_SOURCE_DIR}/src/aux/square_root.h
     ${CMAKE_SOURCE_DIR}/src/aux/table_1d.h
     ${CMAKE_SOURCE_DIR}/src/aux/table_2d.h
     ${CMAKE_SOURCE_DIR}/src/aux/timers.h)

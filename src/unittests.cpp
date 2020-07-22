@@ -12,7 +12,7 @@
 #include "core.h"
 #include "aux/table_1d.h"
 #include "aux/error_function.h"
-#include "aux/exponential_function.h"
+#include "aux/exp_function.h"
 #include "aux/legendre.h"
 #include "aux/pow_function.h"
 #include "aux/table_2d.h"

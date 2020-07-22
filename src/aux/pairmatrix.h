@@ -16,27 +16,29 @@ namespace Faunus {
  *     cout << m(i,j);         // -> 12.0
  *     cout << m(i,j)==m(j,i); // -> true
  * ~~~
+ *
+ * @note Vector of vector does not allocate contiguous memory
  */
 template <class T, bool triangular = false> class PairMatrix {
   private:
     T default_value; // default value when resizing
-    std::vector<std::vector<T>> m;
+    std::vector<std::vector<T>> matrix;
 
   public:
     void resize(size_t n) {
-        m.resize(n);
-        for (size_t i = 0; i < m.size(); i++) {
+        matrix.resize(n);
+        for (size_t i = 0; i < matrix.size(); i++) {
             if constexpr (triangular) {
-                m[i].resize(i + 1, default_value);
+                matrix[i].resize(i + 1, default_value);
             } else {
-                m[i].resize(n, default_value);
+                matrix[i].resize(n, default_value);
             }
         }
     }
 
     PairMatrix(size_t n = 0, T val = T()) : default_value(val) { resize(n); }
 
-    auto size() const { return m.size(); }
+    auto size() const { return matrix.size(); }
 
     inline const T &operator()(size_t i, size_t j) const {
         if constexpr (triangular) {
@@ -44,22 +46,22 @@ template <class T, bool triangular = false> class PairMatrix {
                 std::swap(i, j);
             }
         }
-        assert(i < m.size());
-        assert(j < m[i].size());
-        return m[i][j];
+        assert(i < matrix.size());
+        assert(j < matrix[i].size());
+        return matrix[i][j];
     }
 
     void set(size_t i, size_t j, T val) {
         if (j > i) {
             std::swap(i, j);
         }
-        if (i >= m.size()) {
+        if (i >= matrix.size()) {
             resize(i + 1);
         }
         if constexpr (!triangular) {
-            m[j][i] = val;
+            matrix[j][i] = val;
         }
-        m[i][j] = val;
+        matrix[i][j] = val;
     }
 };
 #ifdef DOCTEST_LIBRARY_INCLUDED

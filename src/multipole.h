@@ -1,7 +1,7 @@
 #pragma once
 
 #include "units.h"
-#include "auxiliary.h"
+#include "aux/pow_function.h"
 
 namespace Faunus {
 /**

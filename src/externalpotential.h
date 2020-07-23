@@ -1,7 +1,8 @@
 #pragma once
 
 #include "group.h"
-#include "auxiliary.h"
+#include "aux/timers.h"
+#include "aux/equidistant_table.h"
 #include <set>
 
 template<typename T> class ExprFunction;

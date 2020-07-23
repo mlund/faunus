@@ -3,6 +3,7 @@
 #include "mpicontroller.h"
 #include "externalpotential.h"
 #include "reactioncoordinate.h"
+#include "aux/table_1d.h"
 
 namespace Faunus {
 namespace Energy {

@@ -475,14 +475,10 @@ void InsertMoleculesInSpace::insertMolecules(const json &json_array, Space &spc)
                 } else {
                     insertMolecularGroups(*moldata, spc, num_molecules, inactive);
                     if (auto filename = properties.value("positions", ""s); !filename.empty()) {
-                        Space::Tpvec particles; // positions loaded from file
-                        if (loadStructure(filename, particles, false)) {
-                            faunus_logger->info("{}: loaded position file {}", molname, filename);
-                            Point offset = properties.value("translate", Point(0, 0, 0));
-                            setPositionsForTrailingGroups(spc, num_molecules, particles, offset);
-                        } else {
-                            throw ConfigurationError("error loading positions from '" + filename + "'");
-                        }
+                        auto particles = loadStructure(filename); // throws if not loaded
+                        faunus_logger->info("{}: loaded position file {}", molname, filename);
+                        Point offset = properties.value("translate", Point(0, 0, 0));
+                        setPositionsForTrailingGroups(spc, num_molecules, particles, offset);
                     }
                 }
             } else {

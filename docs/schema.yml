@@ -69,7 +69,7 @@ properties:
                 properties:
                     N: {type: integer, description: Number of molecules to insert}
                     molarity: {type: number, description: Insert molecules to reach this molarity}
-                    inactive: {type: [boolean, integer], description: Deactive (all) inserted molecules}
+                    inactive: {type: [boolean, integer], description: Number of inserted molecules to deactivate}
                     positions: {type: string, description: Load positions from file}
                 oneOf:
                     - required: [N]

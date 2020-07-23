@@ -198,8 +198,7 @@ Example:
 ~~~ yaml
 insertmolecules:
   - salt:  { molarity: 0.1 }
-  - water: { N: 256 }
-  - water: { N: 1, inactive: true }
+  - water: { N: 256, inactive: 2 }
 ~~~
 
 The following keywords for each molecule type are available:
@@ -208,7 +207,7 @@ The following keywords for each molecule type are available:
 -------------------- | ---------------------------------------
 `N`                  | Number of molecules to insert
 `molarity`           | Insert molecules to reach molarity
-`inactive=false`     | Set to true if the particles should be inactive
+`inactive`           | Number of inserted molecules to deactivate; set to `true` for all
 `positions`          | Load positions from file (`aam`, `pqr`, `xyz`)
 `translate=[0,0,0]`  | Displace loaded `positions` with vector
 

@@ -472,7 +472,7 @@ struct Coulomb : public PairPotentialBase {
     Coulomb(const std::string &name = "coulomb") : PairPotentialBase(name) {};
     double lB; //!< Bjerrum length
     inline double operator()(const Particle &a, const Particle &b, double r2, const Point &) const override {
-        return lB * a.charge * b.charge / sqrt(r2);
+        return -2420.0/(r2*r2*r2) + lB * a.charge * b.charge / sqrt(r2);
     }
     void to_json(json &j) const override;
     void from_json(const json &j) override;

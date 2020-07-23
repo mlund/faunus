@@ -190,6 +190,7 @@ void CosAttract::from_json(const json &j) {
 void Coulomb::to_json(json &j) const {
     j["epsr"] = pc::relativeDielectricFromBjerrumLength(lB);
     j["lB"] = lB;
+    j["note"] = "with hardcoded 1/r6 attraction";
 }
 
 void Coulomb::from_json(const json &j) { lB = pc::bjerrumLength(j.at("epsr")); }

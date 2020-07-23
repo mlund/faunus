@@ -3,6 +3,7 @@
 #include <vector>
 #include <Eigen/Core>
 #include <nlohmann/json.hpp>
+#include <spdlog/fmt/fmt.h>
 
 // forward declare logger
 namespace spdlog {
@@ -179,8 +180,11 @@ auto filter(iter begin, iter end, std::function<bool(T&)> unarypredicate) {
 
     /** Exception to be thrown when parsing json configuration */
     struct ConfigurationError : public std::runtime_error {
-        explicit ConfigurationError(const std::string &what_arg) : std::runtime_error(what_arg){};
-        explicit ConfigurationError(const char *what_arg) : std::runtime_error(what_arg){};
+        explicit ConfigurationError(const std::string &msg);
+        explicit ConfigurationError(const char *msg);
+        template <class... Args>
+        explicit ConfigurationError(std::string_view fmt, const Args &... args)
+            : std::runtime_error(fmt::format(fmt, args...)){};
     };
 
     }//end of faunus namespace

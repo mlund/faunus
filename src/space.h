@@ -267,10 +267,24 @@ void from_json(const json &j, Space &spc); //!< Deserialize json object to Space
  */
 class InsertMoleculesInSpace {
   private:
-    static void insertAtomicGroups(MoleculeData &, Space &, int, bool = false);
-    static void insertMolecularGroups(MoleculeData &, Space &, int num_molecules, bool);
+    static void insertAtomicGroups(MoleculeData &, Space &, int number, int num_inactive);
+    static void insertMolecularGroups(MoleculeData &, Space &, int num_molecules, int num_inactive);
     static void setPositionsForTrailingGroups(Space &, int, const Faunus::ParticleVector &, const Point &);
     static void insertImplicitGroups(const MoleculeData &, Space &, int);
+
+    /**
+     * @brief Get number of inactive molecules from json objest
+     * @param j Input json object
+     * @param number_of_molecules Total number of molecules
+     * @return Number of molecules to be inactive (always smaller than `number_of_molecules`)
+     * @throws If Inactive molecules is higher than `number_of_molecules`
+     *
+     * Looks for key "inactive" and if:
+     * - boolean true: all molecules are inactive
+     * - number: number of molecules to declare inactive
+     * - no `inactive` key found, return zero
+     */
+    static int getNumberOfInactiveParticles(const json &j, int number_of_molecules);
 
   public:
     static void insertMolecules(const json &, Space &);

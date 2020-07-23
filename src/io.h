@@ -1,5 +1,6 @@
 #pragma once
 
+#include "units.h"
 #include "core.h"
 #include "particle.h"
 #include "spdlog/spdlog.h"
@@ -9,6 +10,8 @@
 
 namespace Faunus {
 
+class Space;
+
 template <typename T = Particle> class Group;
 
 #ifndef __cplusplus
@@ -17,17 +20,26 @@ template <typename T = Particle> class Group;
 #ifndef CPLUSPLUS
 #define CPLUSPLUS
 #endif
+
+namespace XDRfile {
 #include "xdrfile_trr.h"
 #include "xdrfile_xtc.h"
+} // namespace XDRfile
 
 namespace IO {
 
-bool readFile(const std::string &, std::vector<std::string> &); //!< Read lines from file into vector
+/**
+ * @brief Read lines from file into vector
+ * @param filename Filename to read
+ * @param destination Reference to vector to load into
+ * @return True if file was opened
+ */
+std::vector<std::string> loadLinesFromFile(const std::string &filename); //!< Read lines from file into vector
 
-bool writeFile(const std::string &file, const std::string &s,
+void writeFile(const std::string &filename, const std::string &contents,
                std::ios_base::openmode mode = std::ios_base::out); //!< Write string to file
 
-void strip(std::vector<std::string> &string_vector, const std::string &pattern); //!< Strip lines matching a pattern
+void strip(std::vector<std::string> &strings, const std::string &pattern); //!< Strip lines matching a pattern
 
 /**
  * @brief Open (gzip compressed) output stream
@@ -42,7 +54,8 @@ std::unique_ptr<std::ostream> openCompressedOutputStream(const std::string &);
  * @param data
  */
 template <typename TKey, typename TValue>
-void write(std::ostream &stream, const std::map<TKey, TValue> &data, const std::string &sep = " ", const std::string &end = "\n") {
+void write(std::ostream &stream, const std::map<TKey, TValue> &data, const std::string &sep = " ",
+           const std::string &end = "\n") {
     if (stream) {
         for (auto [key, value] : data) {
             stream << key << sep << value << end;
@@ -90,13 +103,13 @@ template <typename TKey, typename TValue> void write(const std::string &filename
  */
 class FormatAAM {
   private:
-    static bool keepcharges; // true of we prefer charges from AAM file over AtomData
+    static bool prefer_charges_from_file; // true of we prefer charges from AAM file over AtomData
     static std::string p2s(const Particle &, int);
-    static Particle &s2p(const std::string &, Particle &); // convert string line to particle
+    static Particle recordToParticle(const std::string &); // convert string line to particle
 
   public:
-    static bool load(const std::string &, ParticleVector &, bool = true);
-    static bool save(const std::string &, const ParticleVector &);
+    static ParticleVector load(const std::string &, bool = true);
+    static void save(const std::string &, const ParticleVector &);
 };
 
 /**
@@ -114,11 +127,13 @@ class FormatPQR {
     static Point load(std::istream &, ParticleVector &, bool);                      //!< Load PQR from stream
     static Point load(const std::string &, ParticleVector &, bool);                 //!< Load PQR from file
     static void loadTrajectory(const std::string &, std::vector<ParticleVector> &); //!< Load trajectory
-    static bool save(std::ostream &, const ParticleVector &, Point = Point(0, 0, 0), int = 1e9);      //!< Save PQR file
-    static bool save(const std::string &, const ParticleVector &, Point = Point(0, 0, 0), int = 1e9); //!< Save PQR file
+    static void save(std::ostream &, const ParticleVector &, const Point & = Point(0, 0, 0),
+                     int = 1e9); //!< Save PQR file
+    static void save(const std::string &, const ParticleVector &, const Point & = Point(0, 0, 0),
+                     int = 1e9); //!< Save PQR file
 
-    static bool save(std::ostream &, const Tgroup_vector &, Point = Point(0, 0, 0));      //!< Save PQR file
-    static bool save(const std::string &, const Tgroup_vector &, Point = Point(0, 0, 0)); //!< Save PQR file
+    static void save(std::ostream &, const Tgroup_vector &, const Point & = Point(0, 0, 0));      //!< Save PQR file
+    static void save(const std::string &, const Tgroup_vector &, const Point & = Point(0, 0, 0)); //!< Save PQR file
 };
 
 /**
@@ -130,71 +145,49 @@ class FormatPQR {
  * particles xyz position on each line
  */
 struct FormatXYZ {
-    static bool save(const std::string &, const ParticleVector &, const Point & = {0, 0, 0});           //!< Save XYZ
-    static bool load(const std::string &filename, ParticleVector &particle_vector, bool append = true); //!< Load XYZ
+    static void save(const std::string &, const ParticleVector &, const Point & = {0, 0, 0});     //!< Save XYZ
+    static void load(const std::string &filename, ParticleVector &particles, bool append = true); //!< Load XYZ
 };
 
 /**
  * @brief Gromacs GRO format
  * @date December 2007
- * @todo Non cubic dimensions
  */
 class FormatGRO {
   private:
-    std::vector<std::string> v;
-    void s2p(const std::string &, Particle &);
+    static Particle recordToParticle(const std::string &); //!< Parse record to particle
 
   public:
-    double boxlength; //!< Box side length (cubic so far)
-
     /**
      * @brief Load GRO file into particle vector
      * @param file Filename
-     * @param p Destination particle vector
+     * @returns Destination particle vector
      */
-    bool load(const std::string &, ParticleVector &);
-
-    template <class Tspace> bool static save(const std::string &filename, const Tspace &spc) {
-        if (std::ofstream file(filename); bool(file)) {
-            int nres = 1, natom = 1;
-            Point boxlength = spc.geo.getLength();
-            file << "Generated by Faunus -- https://github.com/mlund/faunus\n" << spc.numParticles() << "\n";
-            for (auto &group : spc.groups) { // loop over groups
-                for (auto &i : group) {      // loop over active particles
-                    auto &name = Faunus::atoms.at(i.id).name;
-                    Point pos = 0.1 * (i.pos + 0.5 * boxlength); // shift origin and convert to nm
-                    file << fmt::format("{:5d}{:5}{:5}{:5d}{:8.3f}{:8.3f}{:8.3f}\n", nres, name, name, natom++, pos.x(),
-                                        pos.y(), pos.z());
-                }
-                nres++;
-            }
-            file << 0.1 * boxlength.transpose() << "\n";
-            return true;
-        }
-        return false;
-    }
+    static ParticleVector load(const std::string &);
+    static void save(const std::string &filename, const Space &spc);
 };
 
 /**
  * @brief GROMACS xtc compressed trajectory file format
  *
  * Saves simulation frames to a Gromacs xtc trajectory file including
- * box information if applicable. Molecules with periodic boundaries
- * can be saved as "whole" by adding their groups to the public g-vector.
+ * box information if applicable.
  *
  * @date June 2007-2011, Prague / Malmo
- * @note Alternative pure C++ version(?):
- * http://loos.sourceforge.net/xtc_8hpp_source.html
+ * @todo
+ * 1. Refactor to two classes for reading and writing, respectively.
+ * 2. The code is arcane and the interface needs to be brought to order
+ * 3. Properly handle time and time steps, also for Langevin dynamics
  */
 class FormatXTC {
   private:
-    XDRFILE *xd = nullptr; //!< file handle
-    matrix xdbox;          //!< box dimensions
-    rvec *x_xtc;           //!< vector of particle coordinates
-    float time_xtc, prec_xtc = 1000;
-    int natoms_xtc, step_xtc;
-
-  public:
+    XDRfile::matrix box;                          //!< box dimensions
+    XDRfile::XDRFILE *xdrfile = nullptr;          //!< file handle
+    std::unique_ptr<XDRfile::rvec[]> coordinates; //!< vector of particle coordinates
+    int step_counter = 0;                         //!< Current number of time steps
+    float timestamp = 0.0;                        //!< Current time (unit?)
+    int number_of_atoms = 0;                      //!< Atoms in trajectory
+    float precision = 1000.0;                     //!< Output precision
     int getNumAtoms();
 
     /**
@@ -208,83 +201,49 @@ class FormatXTC {
      * measure we do a container collision check to see if all particles are within
      * the Cuboid boundaries.
      *
-     * @note The container particle vector *must* match the number of particles
-     *       in the xtc file. If not
-     *       an error message will be issued and the function will abort.
-     *       You may want to transfer the new box size to the pair potential if
-     *       periodic boundaries are used.
+     * @note The container particle vector *must* match the number of particles in the xtc file.
      */
-    template <class Tspace> bool loadNextFrame(Tspace &c, bool setbox = true, bool applypbc = false) {
-        if (xd != nullptr) {
-            if (natoms_xtc == (int)c.p.size()) {
-                int rc = read_xtc(xd, natoms_xtc, &step_xtc, &time_xtc, xdbox, x_xtc, &prec_xtc);
-                if (rc == 0) {
-                    // Geometry::Chameleon *geo = dynamic_cast<Geometry::Chameleon *>(&c.geo);
-                    // if (geo == nullptr or geo->type not_eq Geometry::CUBOID)
-                    //    throw std::runtime_error("Cuboid-like geometry required");
-                    Point len_half = 0.5 * c.geo.getLength();
-                    if (setbox)
-                        c.geo.setLength(Point(10.0 * xdbox[0][0], 10.0 * xdbox[1][1], 10.0 * xdbox[2][2]));
-                    for (size_t i = 0; i < c.p.size(); i++) {
-                        c.p[i].pos.x() = 10.0 * x_xtc[i][0];
-                        c.p[i].pos.y() = 10.0 * x_xtc[i][1];
-                        c.p[i].pos.z() = 10.0 * x_xtc[i][2];
-                        c.p[i].pos -= len_half;
-                        if (applypbc)
-                            c.geo.boundary(c.p[i].pos);
-                        if (c.geo.collision(c.p[i].pos, 0))
-                            throw std::runtime_error("particle-container collision");
-                    }
-                    return true;
-                }
-            } else
-                throw std::runtime_error("xtcfile<->container particle mismatch");
-        } else
-            throw std::runtime_error("xtc file cannot be read");
-        return false; // end of file or not opened
-    }
+    void loadNextFrame(Space &spc, bool setbox = true, bool apply_periodic_boundaries = false);
+    bool open(std::string);
+    void close();
+
+  public:
+    void setLength(const Point &); //!< Set box dimensions (Å)
+    ~FormatXTC();
 
     /**
+     * @brief Save frame to XTC file
+     *
      * This will take an arbitrary particle vector and add it
      * to an xtc file. If the file is already open, coordinates will
      * be added, while a new file is created if not.
      * Coordinates are shifted and converted to nanometers.
      * Box dimensions for the frame must be manually
-     * set by the `setbox()` function before calling this.
+     * set by the `setLength()` function before calling this.
+     *
+     * @todo refactor to `write(begin, end, time, box)`
      */
-    template <class Titer1, class Titer2 /** particle vector iterator */>
-    bool save(const std::string &file, Titer1 begin, Titer2 end) {
+    template <class begin_iterator, class end_iterator /** particle vector iterator */>
+    void save(const std::string &file, begin_iterator begin, end_iterator end) {
         if (begin != end) {
-            if (xd == nullptr)
-                xd = xdrfile_open(&file[0], "w");
-            if (xd != nullptr) {
-                rvec *x = new rvec[ranges::distance(begin, end)];
+            if (!xdrfile) {
+                xdrfile = XDRfile::xdrfile_open(&file[0], "w");
+            }
+            if (xdrfile) {
+                std::unique_ptr<XDRfile::rvec[]> coords(new XDRfile::rvec[ranges::distance(begin, end)]);
                 size_t N = 0;
-                for (auto j = begin; j != end; ++j) {
-                    x[N][0] = j->pos.x() * 0.1 + xdbox[0][0] * 0.5; // AA->nm
-                    x[N][1] = j->pos.y() * 0.1 + xdbox[1][1] * 0.5; // move inside sim. box
-                    x[N][2] = j->pos.z() * 0.1 + xdbox[2][2] * 0.5; //
+                for (auto particle = begin; particle != end; ++particle) {
+                    coords.get()[N][0] = particle->pos.x() / 1.0_nm + box[0][0] * 0.5;
+                    coords.get()[N][1] = particle->pos.y() / 1.0_nm + box[1][1] * 0.5;
+                    coords.get()[N][2] = particle->pos.z() / 1.0_nm + box[2][2] * 0.5;
                     N++;
                 }
-                write_xtc(xd, N, step_xtc++, time_xtc++, xdbox, x, prec_xtc);
-                delete[] x;
-                return true;
+                XDRfile::write_xtc(xdrfile, N, step_counter++, timestamp++, box, coords.get(), precision);
+            } else {
+                std::runtime_error("xtc write error:"s + file);
             }
         }
-        return false;
     }
-
-    /**
-     * This will open an xtc file for reading. The number of atoms in each frame
-     * is saved and memory for the coordinate array is allocated.
-     */
-
-    FormatXTC(double);
-    ~FormatXTC();
-    bool open(std::string);
-    void close();
-    void setLength(double);
-    void setLength(const Point &);
 };
 
 std::vector<int> fastaToAtomIds(const std::string &); //!< Convert FASTA sequence to atom id sequence
@@ -292,32 +251,16 @@ std::vector<int> fastaToAtomIds(const std::string &); //!< Convert FASTA sequenc
 /**
  * @brief Create particle vector from FASTA sequence with equally spaced atoms
  *
- * Particle positions is generated as a random walk
+ * Particle positions are generated as a random walk, starting at `origin`,
+ * propagating in `bond_length` steps.
  */
-std::vector<Particle> fastaToParticles(const std::string &, double = 7, const Point & = {0, 0, 0});
+ParticleVector fastaToParticles(const std::string &fasta_sequence, double bond_length = 7.0,
+                                const Point &origin = {0, 0, 0});
 
 /**
  * @brief Load structure file into particle vector
  */
-bool loadStructure(const std::string &, std::vector<Particle> &, bool, bool = true);
-
-/**
- * @brief Create (compressed) output stream
- * @param filename Output filename
- * @param openmode Mode for opening file
- * @param compression Set to true for zlib compression
- * @return unique pointer to output stream
- */
-std::unique_ptr<std::ostream> makeOutputStream(const std::string &, std::ios_base::openmode, bool);
-
-/**
- * @brief Create (compressed) input stream from file
- * @param filename Input filename
- * @param openmode Mode for opening file
- * @return unique pointer to input stream
- * @note zlib compression is auto-detected
- */
-std::unique_ptr<std::istream> makeInputStream(const std::string &, std::ios_base::openmode);
+bool loadStructure(const std::string &, ParticleVector &, bool, bool = true);
 
 /**
  * @brief Placeholder for Space Trajectory
@@ -331,20 +274,10 @@ class FormatSpaceTrajectory {
     std::unique_ptr<cereal::BinaryInputArchive> input_archive;
 
   public:
-    FormatSpaceTrajectory(std::ostream &ostream) {
-        if (ostream)
-            output_archive = std::make_unique<cereal::BinaryOutputArchive>(ostream);
-    }
-    FormatSpaceTrajectory(std::istream &istream) {
-        if (istream)
-            input_archive = std::make_unique<cereal::BinaryInputArchive>(istream);
-    }
-    template <class Tspace> void load(Tspace &) {
-      assert(input_archive != nullptr);
-    } //!< Load single frame from stream
-    template <class Tspace> void save(const Tspace &) {
-      assert(output_archive != nullptr);
-    } //!< Save single frame from stream
+    FormatSpaceTrajectory(std::ostream &ostream);
+    FormatSpaceTrajectory(std::istream &istream);
+    void load(Space &);       //!< Load single frame from stream
+    void save(const Space &); //!< Save single frame from stream
 };
 
 } // namespace Faunus

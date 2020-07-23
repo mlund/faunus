@@ -141,7 +141,8 @@ Keyword            | Description
 `to_disk=False`    | Create datafiles w. exact and splined potentials
 `hardsphere=False` | Use hardsphere repulsion below rmin
 
-Note: Anisotropic pair-potentials cannot be splined.
+Note: Anisotropic pair-potentials cannot be splined. This also applies
+to non-shifted electrostatic potentials such as `plain` and un-shifted `yukawa`.
 
 
 ## Electrostatics
@@ -176,7 +177,7 @@ coulomb types                            | Keywords          | $\mathcal{S}(q)$
 [`zerodipole`](http://doi.org/10/fhcfn4) | `alpha`           | $\text{erfc}(\alpha R\_cq)-q\text{erfc}(\alpha R\_c)+\frac{(q^2-1)}{2}q\left(\text{erfc}(\alpha R\_c)+\frac{2\alpha R\_c}{\sqrt{\pi}}\text{exp}(-\alpha^2R\_c^2)\right)$
 [`zahn`](http://doi.org/10/cmx5vd)       | `alpha`           | $\text{erfc}(\alpha R\_c q)-(q-1)q\left(\text{erfc}(\alpha R\_c)+\frac{2\alpha R\_c}{\sqrt{\pi}}\text{exp}(-\alpha^2R\_c^2)\right)$
 [`wolf`](http://doi.org/cfcxdk)          | `alpha`           | $\text{erfc}(\alpha R\_cq)-\text{erfc}(\alpha R\_c)q$
-`yukawa`                                 | `debyelength`, `shift=true` | Same as `poisson` with `C=1` and `D=-1`
+`yukawa`                                 | `debyelength`, `shift=false` | As `plain` with screening or, if shifted, `poisson` with `C=1` and `D=1`
 
 Internally $\mathcal{S}(q)$ is _splined_ whereby all types evaluate at similar speed.
 For the `poisson` potential,
@@ -210,13 +211,14 @@ A background screening due to implicit ions can be added by specifying the keywo
 - `ewald`
 - `poisson`
 
-The former is an alias for `poisson` with `C=1`, and `D=-1` which
-gives a plain and shifted Coulomb potential with exponential screening.
-If `shift=false`, the potential is left unshifted and any given cutoff is ignored and instead set to infinity.
+The `yukawa` scheme has simple exponential screening, $\exp{-\kappa r}$ and, like `plain`, an infinite cutoff.
+If `shift: true` is passed to the yukawa scheme, the potential is shifted to give zero potential and force 
+at the now finite `cutoff` distance (simply an alias for `poisson` with C=1 and D=1).
+
 
 ### Multipoles
 
-If `type=coulomb` is replaced with `type=multipole` then the electrostatic energy will in addition to
+If the type `coulomb` is replaced with `multipole` then the electrostatic energy will in addition to
 monopole-monopole interactions include contributions from monopole-dipole, and dipole-dipole
 interactions. Multipolar properties of each particle is specified in the Topology.
 The `zahn` and `fennell` approaches have undefined dipolar self-energies and are therefore not recommended for such systems.

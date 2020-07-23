@@ -1,3 +1,5 @@
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "llvmlibc-callee-namespace"
 #include "space.h"
 #include "io.h"
 #include "aux/iteratorsupport.h"
@@ -351,31 +353,43 @@ void makeNaCl(Space &space, int num_particles, const Geometry::Chameleon &geomet
  * @param moldata Molecule type to insert. Must be `atomic`.
  * @param spc Space to insert into (at the end)
  * @param num_molecules Number of molecules to insert into the *same* group
- * @param inactive Set to true if the molecule should be *inactive*
+ * @param num_inactive Number of molecules to declare inactive
+ * @throws If number if inactive is higher than number of active molecules
  */
-void InsertMoleculesInSpace::insertAtomicGroups(MoleculeData &moldata, Space &spc, int num_molecules, bool inactive) {
+void InsertMoleculesInSpace::insertAtomicGroups(MoleculeData &moldata, Space &spc, int num_molecules,
+                                                int num_inactive) {
     assert(moldata.atomic == true);
-    typename Space::Tpvec p;
+    ParticleVector p;
     p.reserve(num_molecules * moldata.atoms.size()); // prepare memory
-    while (num_molecules-- > 0) {                    // repeat insertion into the same atomic group
+    for (size_t i = 0; i < num_molecules; i++) {     // repeat insertion into the same atomic group
         auto particles = moldata.getRandomConformation(spc.geo, spc.p);
         p.insert(p.end(), particles.begin(), particles.end());
     }
     spc.push_back(moldata.id(), p);
-    if (inactive) {
-        spc.groups.back().resize(0);
+
+    if (num_inactive > 0) {
+        if (num_inactive > num_molecules) {
+            throw std::runtime_error("too many inactive molecules requested");
+        } else {
+            int num_active_atoms = (num_molecules - num_inactive) * moldata.atoms.size();
+            spc.groups.back().resize(num_active_atoms);
+        }
     }
 }
 
 void InsertMoleculesInSpace::insertMolecularGroups(MoleculeData &moldata, Space &spc, int num_molecules,
-                                                   bool inactive) {
+                                                   int num_inactive) {
     assert(moldata.atomic == false);
-    while (num_molecules-- > 0) { // insert molecules
+    for (size_t i = 0; i < num_molecules; i++) { // insert molecules
         spc.push_back(moldata.id(), moldata.getRandomConformation(spc.geo, spc.p));
-        if (inactive) {
-            spc.groups.back().unwrap(spc.geo.getDistanceFunc());
-            spc.groups.back().resize(0);
-        }
+    }
+    if (num_inactive > num_molecules) {
+        throw std::runtime_error("too many inactive molecules requested");
+    } else { // deactivate groups, starting from the end
+        std::for_each(spc.groups.rbegin(), spc.groups.rbegin() + num_inactive, [&](auto &group) {
+            group.unwrap(spc.geo.getDistanceFunc()); // make molecules whole
+            group.resize(0);                         // deactivate
+        });
     }
 }
 
@@ -455,25 +469,23 @@ void InsertMoleculesInSpace::insertMolecules(const json &json_array, Space &spc)
                 if (not moldata->isImplicit() and num_molecules < 1) {
                     throw ConfigurationError(molname + ": at least one molecule required. Concentration too low?");
                 }
-                bool inactive = properties.value("inactive", false); // active or not?
+                int num_inactive = getNumberOfInactiveParticles(properties, num_molecules);
 
-                {
-                    std::string state;
-                    if (moldata->isImplicit()) {
-                        state = "implicit";
-                    } else {
-                        state = (inactive) ? "inactive" : "active";
-                    }
-                    faunus_logger->info("adding {} {} {} molecules --> {} mol/l", num_molecules, state, molname,
-                                        num_molecules / spc.geo.getVolume() / 1.0_molar);
+                double molar_concentration = (num_molecules - num_inactive) / spc.geo.getVolume() / 1.0_molar;
+                if (moldata->isImplicit()) {
+                    faunus_logger->info("adding {} implicit {} molecules --> {} mol/l", num_molecules, molname,
+                                        molar_concentration);
+                } else {
+                    faunus_logger->info("adding {} {} molecules --> {} mol/l ({} inactive)", num_molecules, molname,
+                                        molar_concentration, num_inactive);
                 }
 
                 if (moldata->atomic) {
-                    insertAtomicGroups(*moldata, spc, num_molecules, inactive);
+                    insertAtomicGroups(*moldata, spc, num_molecules, num_inactive);
                 } else if (moldata->isImplicit()) {
                     insertImplicitGroups(*moldata, spc, num_molecules);
                 } else {
-                    insertMolecularGroups(*moldata, spc, num_molecules, inactive);
+                    insertMolecularGroups(*moldata, spc, num_molecules, num_inactive);
                     if (auto filename = properties.value("positions", ""s); !filename.empty()) {
                         Space::Tpvec particles; // positions loaded from file
                         if (loadStructure(filename, particles, false)) {
@@ -491,5 +503,23 @@ void InsertMoleculesInSpace::insertMolecules(const json &json_array, Space &spc)
         }
     }
 }
+int InsertMoleculesInSpace::getNumberOfInactiveParticles(const json &j, int number_of_molecules) {
+    int number_of_inactive_molecules = 0; // number of inactive atoms or molecules
+    if (auto it = j.find("inactive"); it != j.end()) {
+        if (it->is_boolean()) {
+            if (*it) {
+                number_of_inactive_molecules = number_of_molecules; // all molecules are inactive
+            }
+        } else if (it->is_number_integer()) {
+            number_of_inactive_molecules = *it; // a subset are inactive
+            if (number_of_inactive_molecules > number_of_molecules) {
+                throw ConfigurationError("too many inactive particles requested");
+            }
+        }
+    }
+    return number_of_inactive_molecules;
+}
 
 } // namespace Faunus
+
+#pragma clang diagnostic pop

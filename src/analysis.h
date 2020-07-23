@@ -4,7 +4,9 @@
 #include "io.h"
 #include "scatter.h"
 #include "reactioncoordinate.h"
-#include "auxiliary.h"
+#include "aux/timers.h"
+#include "aux/table_2d.h"
+#include "aux/equidistant_table.h"
 #include <set>
 
 namespace cereal {

@@ -10,9 +10,17 @@
 
 #include "aux/eigensupport.h"
 #include "core.h"
+#include "aux/table_1d.h"
+#include "aux/error_function.h"
+#include "aux/exp_function.h"
+#include "aux/legendre.h"
+#include "aux/pow_function.h"
+#include "aux/table_2d.h"
+#include "aux/timers.h"
+#include "aux/multimatrix.h"
+#include "aux/pairmatrix.h"
 #include "units.h"
 #include "random.h"
-
 #include "atomdata_test.h"
 #include "auxiliary_test.h"
 #include "bonds_test.h"
@@ -28,9 +36,7 @@
 #include "tensor_test.h"
 #include "externalpotential_test.h"
 #include "scatter_test.h"
-
 #include "mpicontroller.h"
-#include "auxiliary.h"
 #include "molecule.h"
 #include "regions.h"
 #include "average.h"

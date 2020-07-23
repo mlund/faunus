@@ -3,7 +3,7 @@
 #include "core.h"
 #include "units.h"
 #include "particle.h"
-#include "auxiliary.h"
+#include "aux/pairmatrix.h"
 #include "tabulate.h"
 #include "functionparser.h"
 #include "multipole.h"

@@ -111,48 +111,52 @@ void Space::push_back(int molid, const ParticleVector &particles) {
     }
 }
 
+/**
+ * @param other Space to copy from
+ * @param change Change object describing the changes beteeen the two Space objects
+ *
+ * Copy data from another Space according to Change object. The other space *must* be populated
+ * in the exact same way, i.e. must have the same molecules and particles. In DEBUG mode, several
+ * assertions are included to ensure this is true. Copied data includes:
+ *
+ * - geometry
+ * - groups
+ * - particles
+ * - implicit molecules
+ */
 void Space::sync(const Space &other, const Change &change) {
-    assert(&other != this);
-    assert(p.begin() != other.p.begin());
-
-    if (change.dV or change.all)
-        geo = other.geo;
-
-    // deep copy *everything*
-    if (change.all) {
-        p = other.p; // copy all positions
-        assert(p.begin() != other.p.begin() && "deep copy problem");
-        groups = other.groups;
-        implicit_reservoir = other.implicit_reservoir;
-
-        if (not groups.empty())
-            if (groups.front().begin() == other.p.begin())
-                for (auto &i : groups)
-                    i.relocate(other.p.begin(), p.begin());
-    } else {
-        for (auto &changed_in_group : change.groups) {
-            auto &group = groups.at(changed_in_group.index);             // old group
-            auto &other_group = other.groups.at(changed_in_group.index); // new group
-            assert(other_group.id == group.id);
-
-            if (Faunus::molecules[other_group.id].isImplicit()) {
-                assert(other.implicit_reservoir.count(other_group.id));
-                implicit_reservoir[group.id] = other.implicit_reservoir.at(other_group.id);
-            }
-
-            group.shallowcopy(other_group); // copy group data but *not* particles
-
-            if (changed_in_group.all) { // copy all particles
-                std::copy(other_group.begin(), other_group.trueend(), group.begin());
-            } else {                                        // copy only a subset
-                for (auto index : changed_in_group.atoms) { // loop over atom index (rel. to group)
-                    group[index] = other_group[index];
+    if (&other != this && !change.empty()) {
+        assert(!groups.empty());
+        assert(p.size() == other.p.size());
+        assert(groups.size() == other.groups.size());
+        assert(implicit_reservoir.size() == other.implicit_reservoir.size());
+        if (change.dV or change.all) {
+            geo = other.geo; // copy simulation geometry
+        }
+        if (change.all) {                                                   // deep copy *everything*
+            implicit_reservoir = other.implicit_reservoir;                  // copy all implicit molecules
+            p = other.p;                                                    // copy all positions
+            groups = other.groups;                                          // copy all groups
+            assert(p.begin() != other.p.begin());                           // check deep copy problem
+            assert(groups.front().begin() != other.groups.front().begin()); // check deep copy problem
+        } else {
+            for (const auto &changed : change.groups) {             // look over changed groups
+                auto &group = groups.at(changed.index);             // old group
+                auto &other_group = other.groups.at(changed.index); // new group
+                assert(group.id == other_group.id);
+                if (group.traits().isImplicit()) { // the molecule is implicit
+                    implicit_reservoir[group.id] = other.implicit_reservoir.at(group.id);
+                } else if (changed.all) {
+                    group = other_group;            // copy everything
+                } else {                            // copy only a subset
+                    group.shallowcopy(other_group); // copy group data but *not* particles
+                    for (auto i : changed.atoms) {  // loop over atom index (rel. to group)
+                        group[i] = other_group[i];  // deep copy select particles
+                    }
                 }
             }
         }
     }
-    assert(p.size() == other.p.size());
-    assert(p.begin() != other.p.begin());
 }
 
 Point Space::scaleVolume(double Vnew, Geometry::VolumeMethod method) {

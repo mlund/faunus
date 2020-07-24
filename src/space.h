@@ -6,12 +6,6 @@
 
 namespace Faunus {
 
-struct reservoir {
-    std::string name;
-    int N_reservoir;
-    bool canonic;
-};
-
 class Space;
 
 /**
@@ -25,7 +19,6 @@ struct Change {
     bool all = false;        //!< Set to true if *everything* has changed
     bool dN = false;         //!< True if the number of atomic or molecular species has changed
     bool moved2moved = true; //!< If several groups are moved, should they interact with each other?
-    // bool chargeMove = false; //!< Not in use...
 
     struct data {
         bool dNatomic = false;  //!< True if the number of atomic molecules has changed
@@ -58,17 +51,13 @@ void to_json(json &, const Change &);       //!< Serialise Change object to json
 
 /**
  * @brief Placeholder for atoms and molecules
- * @tparam Tparticletype Particle type for the space
- *
- * @todo
- * Split definitions into cpp file and forward instatiate
- * an instance of `Space<Tparticle>` where `Tparticle` has
- * been defined as `typedef Particle<Charge> Tparticle`.
  */
 class Space {
   private:
     /**
-     * Storage for the reservoir size (map value) of each implicit
+     * @brief Stores implicit molecules
+     *
+     * This stores the number (map value) of each implicit
      * molecule in the system, identified by the molecular id (map key)
      * The reservoir is used to emulate a canonical system where a finite
      * number of implicit molecules can participate in equilibrium reactions.
@@ -91,9 +80,9 @@ class Space {
     std::vector<ChangeTrigger> changeTriggers;           //!< Call when a Change object is applied
     std::vector<SyncTrigger> onSyncTriggers;             //!< Call when two Space objects are synched
 
-    Tpvec p;       //!< Particle vector
-    Tgvec groups;  //!< Group vector
-    Tgeometry geo; //!< Container geometry // TODO as a dependency injection in the constructor
+    ParticleVector p; //!< Particle vector
+    Tgvec groups;     //!< Group vector
+    Tgeometry geo;    //!< Container geometry // TODO as a dependency injection in the constructor
 
     const std::map<int, int> &getImplicitReservoir() const; //!< Map of implicit molecule reservoirs
     std::map<int, int> &getImplicitReservoir();             //!< Map of implicit molecule reservoirs
@@ -186,10 +175,10 @@ class Space {
         return std::find_if(groups.begin(), groups.end(), [&i](auto &g) { return g.contains(i); });
     } //!< Finds the groups containing the given atom
 
-    auto findGroupContaining(size_t index) {
-        assert(index < p.size());
+    auto findGroupContaining(size_t atom_index) {
+        assert(atom_index < p.size());
         return std::find_if(groups.begin(), groups.end(),
-                            [&](auto &g) { return index < std::distance(p.begin(), g.end()); });
+                            [&](auto &g) { return atom_index < std::distance(p.begin(), g.end()); });
     } //!< Finds group containing given atom index
 
     auto activeParticles() {

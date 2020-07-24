@@ -18,21 +18,25 @@ void Change::clear() {
     assert(empty());
 }
 bool Change::empty() const {
-    if (dV == false)
-        if (all == false)
-            if (groups.empty())
-                if (dN == false)
-                    return true;
-    return false;
+    if (dV || all || dN || !groups.empty()) {
+        return false;
+    } else {
+        return true;
+    }
 }
 Change::operator bool() const { return not empty(); }
 
 std::vector<int> Change::touchedParticleIndex(const std::vector<Group<Particle>> &group_vector) {
-    std::vector<int> atom_indexes; // atom index rel. to first particle in system
-    auto begin = group_vector.front().begin();
-    for (auto &d : groups)     // loop over changes groups
-        for (auto i : d.atoms) // atom index rel. to group
-            atom_indexes.push_back(i + std::distance(begin, group_vector.at(d.index).begin()));
+    std::vector<int> atom_indexes;                                   // atom index rel. to first particle in system
+    for (const auto &changed : groups) {                             // loop over changed groups
+        auto begin_first = group_vector.front().begin();             // first particle, first group
+        auto begin_current = group_vector.at(changed.index).begin(); // first particle, current group
+        auto offset = std::distance(begin_first, begin_current);     // abs. distance from first particle
+        atom_indexes.reserve(atom_indexes.size() + changed.atoms.size());
+        for (auto index : changed.atoms) {          // atom index relative to group
+            atom_indexes.push_back(index + offset); // atom index relative to first
+        }
+    }
     return atom_indexes;
 }
 

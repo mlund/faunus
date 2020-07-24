@@ -358,22 +358,20 @@ void makeNaCl(Space &space, int num_particles, const Geometry::Chameleon &geomet
  */
 void InsertMoleculesInSpace::insertAtomicGroups(MoleculeData &moldata, Space &spc, int num_molecules,
                                                 int num_inactive) {
-    assert(moldata.atomic == true);
-    ParticleVector p;
-    p.reserve(num_molecules * moldata.atoms.size()); // prepare memory
-    for (size_t i = 0; i < num_molecules; i++) {     // repeat insertion into the same atomic group
+    assert(moldata.atomic);
+    ParticleVector repeated_particles;
+    repeated_particles.reserve(num_molecules * moldata.atoms.size()); // prepare memory
+    for (size_t i = 0; i < num_molecules; i++) {                      // repeat insertion into the same atomic group
         auto particles = moldata.getRandomConformation(spc.geo, spc.p);
-        p.insert(p.end(), particles.begin(), particles.end());
+        repeated_particles.insert(repeated_particles.end(), particles.begin(), particles.end());
     }
-    spc.push_back(moldata.id(), p);
+    spc.push_back(moldata.id(), repeated_particles); // create new group in Space
 
-    if (num_inactive > 0) {
-        if (num_inactive > num_molecules) {
-            throw std::runtime_error("too many inactive molecules requested");
-        } else {
-            int num_active_atoms = (num_molecules - num_inactive) * moldata.atoms.size();
-            spc.groups.back().resize(num_active_atoms);
-        }
+    if (num_inactive > num_molecules) {
+        throw std::runtime_error("too many inactive molecules requested");
+    } else if (num_inactive > 0) {
+        int num_active_atoms = (num_molecules - num_inactive) * moldata.atoms.size();
+        spc.groups.back().resize(num_active_atoms); // deactive molecules
     }
 }
 
@@ -385,10 +383,10 @@ void InsertMoleculesInSpace::insertMolecularGroups(MoleculeData &moldata, Space 
     }
     if (num_inactive > num_molecules) {
         throw std::runtime_error("too many inactive molecules requested");
-    } else { // deactivate groups, starting from the end
+    } else { // deactivate groups, starting from the back
         std::for_each(spc.groups.rbegin(), spc.groups.rbegin() + num_inactive, [&](auto &group) {
-            group.unwrap(spc.geo.getDistanceFunc()); // make molecules whole
-            group.resize(0);                         // deactivate
+            group.unwrap(spc.geo.getDistanceFunc()); // make molecules whole (remove PBC) ...
+            group.resize(0);                         // ... and then deactivate
         });
     }
 }
@@ -399,28 +397,32 @@ void InsertMoleculesInSpace::insertMolecularGroups(MoleculeData &moldata, Space 
  * @param int num_molecules Number of groups set affect
  * @param particles Position vector for all particles in the N groups
  * @param offset Translate positions by this offset
+ * @throws if num_molecules doesn't match, or if positions are outside simulation cell
+ *
+ * Sets particle positions in space using a given input
+ * particle vector. The vector can span several *identical* groups.
+ * The number of groups affected must be given in order to update their mass-centers.
+ * Only *positions* are affected.
  */
 void InsertMoleculesInSpace::setPositionsForTrailingGroups(Space &spc, int num_molecules,
                                                            const Faunus::ParticleVector &particles,
                                                            const Point &offset) {
     assert(spc.groups.size() >= num_molecules);
-    if (particles.size() == num_molecules * (spc.groups.end() - num_molecules)->traits().atoms.size()) {
-        auto target = spc.p.end() - particles.size(); // iterator to first particle to modify
-        assert(target >= spc.p.begin());
-        for (auto &i : particles) {       // loop over particles
-            Point pos = i.pos + offset;   // shift by offset
-            if (spc.geo.collision(pos)) { // check if position is inside simulation volume
-                throw std::runtime_error("group positions outside box");
-            }
-            target->pos = pos; // copy position to space
-            target++;          // advance to next target particle in space
-        }
-        // update mass-centers on modified groups
-        for (auto it = spc.groups.end() - num_molecules; it != spc.groups.end(); ++it) {
-            it->cm = Geometry::massCenter(it->begin(), it->end(), spc.geo.getBoundaryFunc(), -it->begin()->pos);
-        }
+    if (particles.size() != num_molecules * (spc.groups.rbegin())->traits().atoms.size()) {
+        throw std::runtime_error("number of particles doesn't match groups");
     } else {
-        throw std::runtime_error("mismatch in number of atoms");
+        // update positions in space, starting from the back
+        std::transform(particles.rbegin(), particles.rend(), spc.p.rbegin(), spc.p.rbegin(), [&](auto &src, auto &dst) {
+            dst.pos = src.pos + offset;       // shift by offset
+            if (spc.geo.collision(dst.pos)) { // check if position is inside simulation volume
+                throw std::runtime_error("positions outside box");
+            }
+            return dst;
+        });
+        // update mass-centers on modified groups
+        std::for_each(spc.groups.rbegin(), spc.groups.rbegin() + num_molecules, [&](auto &g) {
+            g.cm = Geometry::massCenter(g.begin(), g.end(), spc.geo.getBoundaryFunc(), -g.begin()->pos);
+        });
     }
 }
 
@@ -469,7 +471,7 @@ void InsertMoleculesInSpace::insertMolecules(const json &json_array, Space &spc)
                 if (not moldata->isImplicit() and num_molecules < 1) {
                     throw ConfigurationError(molname + ": at least one molecule required. Concentration too low?");
                 }
-                int num_inactive = getNumberOfInactiveParticles(properties, num_molecules);
+                int num_inactive = getNumberOfInactiveMolecules(properties, num_molecules);
 
                 double molar_concentration = (num_molecules - num_inactive) / spc.geo.getVolume() / 1.0_molar;
                 if (moldata->isImplicit()) {
@@ -503,8 +505,19 @@ void InsertMoleculesInSpace::insertMolecules(const json &json_array, Space &spc)
         }
     }
 }
-int InsertMoleculesInSpace::getNumberOfInactiveParticles(const json &j, int number_of_molecules) {
-    int number_of_inactive_molecules = 0; // number of inactive atoms or molecules
+/**
+ * @param j Input json object
+ * @param number_of_molecules Total number of molecules
+ * @return Number of molecules to be inactive (always smaller than `number_of_molecules`)
+ * @throws If Inactive molecules is higher than `number_of_molecules`
+ *
+ * Looks for key "inactive" and if:
+ * - boolean true: all molecules are inactive
+ * - number: number of molecules to declare inactive
+ * - no `inactive` key found, return zero
+ */
+int InsertMoleculesInSpace::getNumberOfInactiveMolecules(const json &j, int number_of_molecules) {
+    int number_of_inactive_molecules = 0; // number of inactive molecules
     if (auto it = j.find("inactive"); it != j.end()) {
         if (it->is_boolean()) {
             if (*it) {

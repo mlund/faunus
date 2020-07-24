@@ -14,24 +14,29 @@ TEST_CASE("[Faunus] Change") {
 }
 
 TEST_CASE("[Faunus] Space") {
-    Tspace spc1;
+    Space spc1;
     spc1.geo = R"( {"type": "sphere", "radius": 1e9} )"_json;
 
     // check molecule insertion
-    molecules.at(0).atomic = false;
-    REQUIRE_EQ(molecules.at(0).atomic, false);
-    atoms.resize(2);
-    CHECK(atoms.at(0).mw == 1);
+    Faunus::molecules.at(0).atomic = false;
+    REQUIRE_EQ(Faunus::molecules.at(0).atomic, false);
+    Faunus::molecules.at(0).atoms.resize(2);
+    CHECK(Faunus::molecules.at(0).atoms.size() == 2);
+
+    Faunus::atoms.resize(2);
+    CHECK(Faunus::atoms.at(0).mw == 1);
+
     Particle a;
     a.id = 0;
     a.pos.setZero();
-    Tspace::Tpvec p(2, a);
+    ParticleVector p(2, a);
     CHECK(p[0].traits().mw == 1);
     p[0].pos.x() = 2;
     p[1].pos.x() = 3;
-    spc1.push_back(0, p);
+    spc1.push_back(0, p); // insert molecular group
     CHECK(spc1.p.size() == 2);
     CHECK(spc1.groups.size() == 1);
+    CHECK(spc1.groups.back().isMolecular());
     CHECK(spc1.groups.front().id == 0);
     CHECK(spc1.groups.front().cm.x() == doctest::Approx(2.5));
 
@@ -67,12 +72,14 @@ TEST_CASE("[Faunus] Space") {
 
     SUBCASE("getActiveParticles") {
         // add three groups to space
-        Tspace spc;
+        Space spc;
         spc.geo = R"( {"type": "sphere", "radius": 1e9} )"_json;
         Particle a;
         a.pos.setZero();
         a.id = 0;
-        typename Tspace::Tpvec pvec({a, a, a});
+        ParticleVector pvec({a, a, a});
+
+        Faunus::molecules.at(0).atoms.resize(3);
 
         spc.push_back(0, pvec);
         spc.push_back(0, pvec);

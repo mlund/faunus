@@ -107,14 +107,7 @@ class Space {
 
     void clear(); //!< Clears particle and molecule list
 
-    /*
-     * The following is considered:
-     *
-     * - `groups` vector is expanded with a new group at the end
-     * - if the particle vector is relocated, all existing group
-     *   iterators are updated to reflect the new memory positions
-     */
-    void push_back(int molid, const Tpvec &in); //!< Safely add particles and corresponding group to back
+    void push_back(int, const ParticleVector &); //!< Safely add particles and corresponding group to back
 
     /**
      * @brief Find all groups of type `molid` (complexity: order N)
@@ -267,7 +260,7 @@ void from_json(const json &j, Space &spc); //!< Deserialize json object to Space
  */
 class InsertMoleculesInSpace {
   private:
-    static void insertAtomicGroups(MoleculeData &, Space &, int number, int num_inactive);
+    static void insertAtomicGroups(MoleculeData &, Space &, int num_molecules, int num_inactive_molecules);
     static void insertMolecularGroups(MoleculeData &, Space &, int num_molecules, int num_inactive);
     static void setPositionsForTrailingGroups(Space &, int, const Faunus::ParticleVector &, const Point &);
     static void insertImplicitGroups(const MoleculeData &, Space &, int);

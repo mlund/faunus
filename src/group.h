@@ -118,6 +118,10 @@ namespace Faunus {
             bool compressible=false;   //!< Is it a compressible group?
             bool atomic=false;   //!< Is it an atomic group?
 
+            inline bool isAtomic() const { return traits().atomic; } //!< Is it an atomic group?
+
+            inline bool isMolecular() const { return !traits().atomic; } //!< is it a molecular group?
+
             //! Selections to filter groups using `getSelectionFilter()`
             enum Selectors : unsigned int {
                 ANY = (1u << 1),       //!< Match any group (disregards all other flags)
@@ -183,6 +187,7 @@ namespace Faunus {
 #pragma clang diagnostic pop
 
             inline const MoleculeData &traits() const {
+                assert(id >= 0 && id < Faunus::molecules.size());
                 return Faunus::molecules[id];
             } //!< Convenient access to molecule properties
 

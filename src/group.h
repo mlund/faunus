@@ -239,12 +239,20 @@ namespace Faunus {
 
             std::vector<std::reference_wrapper<Point>> positions() const; //!< Iterable range with positions of active particles
 
-            // warning! this should be tested -- do not use yet.
-            template<typename TdistanceFunc>
-                void unwrap(const TdistanceFunc &vdist) {
-                    for (auto &i : *this)
-                        i.pos = cm + vdist( i.pos, cm );
-                } //!< Remove periodic boundaries with respect to mass center (Order N complexity).
+            /**
+             * @brief Remove PBC for molecular groups w. respect to mass center
+             * @tparam TdistanceFunc
+             * @param vdist Distance calculation function
+             * @remarks Atomic groups are not touched
+             * @warning Is this fit for use?
+             */
+            template <typename TdistanceFunc> void unwrap(const TdistanceFunc &vdist) {
+                if (isMolecular()) {
+                    for (auto &i : *this) {
+                        i.pos = cm + vdist(i.pos, cm);
+                    }
+                }
+            } //!<
 
             void wrap(Geometry::BoundaryFunction); //!< Apply periodic boundaries (Order N complexity).
 

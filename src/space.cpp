@@ -115,9 +115,12 @@ void Space::push_back(int molid, const ParticleVector &particles) {
  * @param other Space to copy from
  * @param change Change object describing the changes beteeen the two Space objects
  *
- * Copy data from another Space according to Change object. The other space *must* be populated
- * in the exact same way, i.e. must have the same molecules and particles. In DEBUG mode, several
- * assertions are included to ensure this is true. Copied data includes:
+ * Copy data from another Space according to Change object. This is typically done
+ * after a Monte Carlo move has either been accepted or rejected.
+ * The `other` space *must* be populated in the exact same way, i.e. must have the same
+ * molecules and particles. In DEBUG mode, several assertions are included to ensure this is true.
+ *
+ * Copied data includes:
  *
  * - geometry
  * - groups
@@ -159,65 +162,70 @@ void Space::sync(const Space &other, const Change &change) {
     }
 }
 
+/**
+ * @param Vnew New volume
+ * @param method Scaling policy
+ * @returns Scaling factors in each dimension
+ * @warning Check Vnew/Vold for ISOCHORIC in case of external triggers (see end of function)
+ */
 Point Space::scaleVolume(double Vnew, Geometry::VolumeMethod method) {
-    for (auto &g : groups) // remove periodic boundaries
-        if (not g.atomic)
-            g.unwrap(geo.getDistanceFunc());
+    for (auto &group : groups) {             // remove PBC on molecular groups ...
+        group.unwrap(geo.getDistanceFunc()); // ... before scaling the volume
+    }
+    double Vold = geo.getVolume();             // volume before scaling
+    Point scale = geo.setVolume(Vnew, method); // scale volume of simulation container
 
-    Point scale = geo.setVolume(Vnew, method);
+    auto scale_position = [&](auto &particle) {
+        particle.pos = particle.pos.cwiseProduct(scale);
+        geo.boundary(particle.pos);
+    }; //!< unary helper function to scale position and apply PBC
 
-    for (auto &g : groups) {
-        if (not g.empty()) {
-            if (g.isAtomic()) { // scale all atoms
-                for (auto &i : g) {
-                    i.pos = i.pos.cwiseProduct(scale);
-                    geo.boundary(i.pos);
-                }
-            } else { // scale mass center and translate
-                Point oldcm = g.cm;
-                if (g.compressible) {
-                    for (auto &i : g) {
-                        i.pos = i.pos.cwiseProduct(scale);
-                        geo.boundary(i.pos);
-                    }
-                    g.cm = Geometry::massCenter(g.begin(), g.end(), geo.getBoundaryFunc(), -oldcm);
-                    geo.boundary(g.cm);
-                } else {
-                    g.cm = g.cm.cwiseProduct(scale);
-                    geo.boundary(g.cm);
-                    Point delta = g.cm - oldcm;
-                    for (auto &i : g) {
-                        i.pos += delta;
-                        geo.boundary(i.pos);
-                    }
+    for (auto &group : groups) { // loop over all molecules in system
+        if (group.empty()) {
+            continue;
+        }
+        if (group.isAtomic()) { // scale all particle positions
+            std::for_each(group.begin(), group.end(), scale_position);
+        } else {
+            auto original_mass_center = group.cm;
+            if (group.traits().compressible) { // scale positions; recalculate mass center
+                std::for_each(group.begin(), group.end(), scale_position);
+                group.cm =
+                    Geometry::massCenter(group.begin(), group.end(), geo.getBoundaryFunc(), -original_mass_center);
+            } else { // scale mass center; translate positions
+                group.cm = group.cm.cwiseProduct(scale);
+                geo.boundary(group.cm);
+                auto mass_center_displacement = group.cm - original_mass_center;
+                std::for_each(group.begin(), group.end(), [&](auto &particle) {
+                    particle.pos += mass_center_displacement; // translate internal coordinates
+                    geo.boundary(particle.pos);               // apply PBC
+                });
 #ifndef NDEBUG
-                    Point recalc_cm = Geometry::massCenter(g.begin(), g.end(), geo.getBoundaryFunc(), -g.cm);
-                    double cm_error = std::fabs(geo.sqdist(g.cm, recalc_cm));
-                    if (cm_error > 1e-6) {
-                        std::ostringstream o;
-                               o  << "error: " << cm_error << std::endl
-                                  << "scale: " << scale.transpose() << std::endl
-                                  << "delta: " << delta.transpose() << " norm = " << delta.norm() << std::endl
-                                  << "|o-n|: " << geo.vdist(oldcm, g.cm).norm() << std::endl
-                                  << "oldcm: " << oldcm.transpose() << std::endl
-                                  << "newcm: " << g.cm.transpose() << std::endl
-                                  << "actual cm: " << recalc_cm.transpose() << std::endl;
-                        faunus_logger->error(o.str());
-                        assert(false);
-                    }
-#endif
+                auto recalc_cm = Geometry::massCenter(group.begin(), group.end(), geo.getBoundaryFunc(), -group.cm);
+                double cm_error = std::fabs(geo.sqdist(group.cm, recalc_cm));
+                if (cm_error > 1e-6) {
+                    std::ostringstream o;
+                    o << "error: " << cm_error << std::endl
+                      << "scale: " << scale.transpose() << std::endl
+                      << "delta: " << mass_center_displacement.transpose()
+                      << " norm = " << mass_center_displacement.norm() << std::endl
+                      << "|o-n|: " << geo.vdist(original_mass_center, group.cm).norm() << std::endl
+                      << "oldcm: " << original_mass_center.transpose() << std::endl
+                      << "newcm: " << group.cm.transpose() << std::endl
+                      << "actual cm: " << recalc_cm.transpose() << std::endl;
+                    faunus_logger->error(o.str());
+                    assert(false);
                 }
+#endif
             }
         }
     }
-    double Vold = geo.getVolume();
-    // if isochoric, the volume is constant
-    if (method == Geometry::ISOCHORIC)
-        Vold = std::pow(Vold, 1. / 3.);
-
-    for (auto f : scaleVolumeTriggers)
-        f(*this, Vold, Vnew);
-
+    if (method == Geometry::ISOCHORIC) { // if isochoric, the volume is constant
+        Vold = std::pow(Vold, 1. / 3.);  // ?
+    }
+    for (auto trigger_function : scaleVolumeTriggers) { // external clients may have added function
+        trigger_function(*this, Vold, Vnew);            // to be triggered upon each volume change
+    }
     return scale;
 }
 

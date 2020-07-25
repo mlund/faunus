@@ -188,7 +188,9 @@ making a union.
 
 Upon starting a simulation, an initial configuration is required and must be
 specified in the section `insertmolecules` as a list of valid molecule names.
-Molecules are inserted in the given order and may be `inactive`.
+Molecules are inserted in the given order and may be `inactive`, meaning that
+they are not present in the simulation cell, but available as a reservoir for
+e.g. grand canonical moves.
 If a group is marked `atomic`, its `atoms` are inserted `N` times.
 
 Example:
@@ -196,8 +198,7 @@ Example:
 ~~~ yaml
 insertmolecules:
   - salt:  { molarity: 0.1 }
-  - water: { N: 256 }
-  - water: { N: 1, inactive: true }
+  - water: { N: 256, inactive: 2 }
 ~~~
 
 The following keywords for each molecule type are available:
@@ -206,7 +207,7 @@ The following keywords for each molecule type are available:
 -------------------- | ---------------------------------------
 `N`                  | Number of molecules to insert
 `molarity`           | Insert molecules to reach molarity
-`inactive=false`     | Deactivates inserted molecules
+`inactive`           | Number of inserted molecules to deactivate; set to `true` for all
 `positions`          | Load positions from file (`aam`, `pqr`, `xyz`)
 `translate=[0,0,0]`  | Displace loaded `positions` with vector
 

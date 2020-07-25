@@ -1,7 +1,6 @@
 #pragma once
 #include <array>
 #include <vector>
-#include <Eigen/Core>
 
 namespace Faunus {
 /**
@@ -21,8 +20,9 @@ template <int dim, typename Tindices = std::array<int, dim>> struct RowMajorOffs
         int offset = 0;
         for (int i = 0; i < dim; i++) {
             int prod = 1;
-            for (int j = i + 1; j < dim; j++)
+            for (int j = i + 1; j < dim; j++) {
                 prod *= N[j];
+            }
             offset += prod * n[i];
         }
         return offset;
@@ -58,26 +58,30 @@ template <typename T, typename Tindices = std::array<int, 3>> class DynamicArray
 };
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
+#include <Eigen/Core>
 TEST_CASE("[Faunus] RowMajor3DMatrix") {
-    DynamicArray3D<double, Eigen::Vector3i> m;
+    DynamicArray3D<double, Eigen::Vector3i> matrix;
     Eigen::Vector3i dim = {4, 10, 2};
     Eigen::Vector3i one = {1, 1, 1};
-    m.resize(dim);
-    m({2, 3, 1}) = 0.1;
-    CHECK(m.data[m.index({2, 3, 1})] == 0.1); // access element via index
-    CHECK(&m({0, 0, 0}) == &m.data.front());  // access first element
-    CHECK(&m(dim - one) == &m.data.back());   // access last element
+    matrix.resize(dim);
+    matrix({2, 3, 1}) = 0.1;
+    CHECK(matrix.data[matrix.index({2, 3, 1})] == 0.1); // access element via index
+    CHECK(&matrix({0, 0, 0}) == &matrix.data.front());  // access first element
+    CHECK(&matrix(dim - one) == &matrix.data.back());   // access last element
 
     RowMajorOffset<3, Eigen::Vector3i> offset;
-    CHECK(m.index(dim - one) == m.data.size() - 1);      // index of last element
-    CHECK(m.index(dim - one) == offset(dim, dim - one)); // index of last element
-    CHECK(m.index(dim) == offset(dim, dim));             // index beyond last element
+    CHECK(matrix.index(dim - one) == matrix.data.size() - 1); // index of last element
+    CHECK(matrix.index(dim - one) == offset(dim, dim - one)); // index of last element
+    CHECK(matrix.index(dim) == offset(dim, dim));             // index beyond last element
     int cnt = 0;
-    for (int k = 0; k < dim[0]; k++)
-        for (int l = 0; l < dim[1]; l++)
-            for (int m = 0; m < dim[2]; m++)
+    for (int k = 0; k < dim[0]; k++) {
+        for (int l = 0; l < dim[1]; l++) {
+            for (int m = 0; m < dim[2]; m++) {
                 cnt++;
-    CHECK(cnt == m.data.size()); // count number of elements
+            }
+        }
+    }
+    CHECK(cnt == matrix.data.size()); // count number of elements
 }
 #endif
 } // namespace Faunus

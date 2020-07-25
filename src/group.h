@@ -28,7 +28,7 @@ namespace Faunus {
             void clear() { this->second = this->first; assert(empty()); }
             std::pair<int,int> to_index(T reference) const {
                 return {std::distance(reference, begin()), std::distance(reference, end()-1)};
-            } //!< Returns index pair relative to reference
+            } //!< Returns particle index pair relative to given reference
         }; //!< Turns a pair of iterators into a range
 
     /**
@@ -118,6 +118,10 @@ namespace Faunus {
             bool compressible=false;   //!< Is it a compressible group?
             bool atomic=false;   //!< Is it an atomic group?
 
+            inline bool isAtomic() const { return traits().atomic; } //!< Is it an atomic group?
+
+            inline bool isMolecular() const { return !traits().atomic; } //!< is it a molecular group?
+
             //! Selections to filter groups using `getSelectionFilter()`
             enum Selectors : unsigned int {
                 ANY = (1u << 1),       //!< Match any group (disregards all other flags)
@@ -183,6 +187,7 @@ namespace Faunus {
 #pragma clang diagnostic pop
 
             inline const MoleculeData &traits() const {
+                assert(id >= 0 && id < Faunus::molecules.size());
                 return Faunus::molecules[id];
             } //!< Convenient access to molecule properties
 
@@ -234,12 +239,20 @@ namespace Faunus {
 
             std::vector<std::reference_wrapper<Point>> positions() const; //!< Iterable range with positions of active particles
 
-            // warning! this should be tested -- do not use yet.
-            template<typename TdistanceFunc>
-                void unwrap(const TdistanceFunc &vdist) {
-                    for (auto &i : *this)
-                        i.pos = cm + vdist( i.pos, cm );
-                } //!< Remove periodic boundaries with respect to mass center (Order N complexity).
+            /**
+             * @brief Remove PBC for molecular groups w. respect to mass center
+             * @tparam TdistanceFunc
+             * @param vdist Distance calculation function
+             * @remarks Atomic groups are not touched
+             * @warning Is this fit for use?
+             */
+            template <typename TdistanceFunc> void unwrap(const TdistanceFunc &vdist) {
+                if (isMolecular()) {
+                    for (auto &i : *this) {
+                        i.pos = cm + vdist(i.pos, cm);
+                    }
+                }
+            } //!<
 
             void wrap(Geometry::BoundaryFunction); //!< Apply periodic boundaries (Order N complexity).
 

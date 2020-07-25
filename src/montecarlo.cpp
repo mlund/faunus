@@ -142,9 +142,10 @@ void MetropolisMonteCarlo::move() {
             auto move = *move_it;                                      // more readable like this
             move->move(change);
 #ifndef NDEBUG
-            // check if atom index indeed belong to the group (index)
-            if (not change.sanityCheck(*state->spc)) {
-                throw std::runtime_error("insane change object\n" + json(change).dump(4));
+            try {
+                change.sanityCheck(state->spc->groups);
+            } catch (std::exception &e) {
+                throw std::runtime_error(e.what());
             }
 #endif
             if (change) {

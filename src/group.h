@@ -28,7 +28,7 @@ namespace Faunus {
             void clear() { this->second = this->first; assert(empty()); }
             std::pair<int,int> to_index(T reference) const {
                 return {std::distance(reference, begin()), std::distance(reference, end()-1)};
-            } //!< Returns index pair relative to reference
+            } //!< Returns particle index pair relative to given reference
         }; //!< Turns a pair of iterators into a range
 
     /**

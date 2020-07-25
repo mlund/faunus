@@ -11,6 +11,8 @@ TEST_CASE("[Faunus] Change") {
     change.dV = true;
     CHECK(not change.empty());
     CHECK(change);
+    change.clear();
+    CHECK(change.empty());
 }
 
 TEST_CASE("[Faunus] Space") {
@@ -42,33 +44,6 @@ TEST_CASE("[Faunus] Space") {
 
     // check `positions()`
     CHECK(&spc1.positions()[0] == &spc1.p[0].pos);
-
-    // sync groups
-    Change c;
-    c.all = true;
-    c.dV = true;
-    c.groups.resize(1);
-    c.groups[0].index = 0;
-    c.groups[0].all = true;
-    Tspace spc2;
-    spc2.sync(spc1, c);
-    CHECK(spc2.p.size() == 2);
-    CHECK(spc2.groups.size() == 1);
-    CHECK(spc2.groups.front().id == 0);
-    CHECK(spc2.groups.front().begin() != spc1.groups.front().begin());
-    CHECK(spc2.p.front().pos.x() == doctest::Approx(2));
-
-    // nothing should be synched (all==false)
-    spc2.p.back().pos.z() = -0.1;
-    c.all = false;
-    c.groups[0].all = false;
-    spc1.sync(spc2, c);
-    CHECK(spc1.p.back().pos.z() != -0.1);
-
-    // everything should be synched (all==true)
-    c.groups[0].all = true;
-    spc1.sync(spc2, c);
-    CHECK(spc1.p.back().pos.z() == doctest::Approx(-0.1));
 
     SUBCASE("getActiveParticles") {
         // add three groups to space

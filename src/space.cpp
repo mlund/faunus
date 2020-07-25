@@ -530,17 +530,16 @@ void InsertMoleculesInSpace::insertItem(const std::string &molname, const json &
 /**
  * Look for 'positions' in json object and load structure if found.
  *
+ * @param j json object to search for key `positions`
+ * @param molname name of molecule to affect; used for logging, only.
  * @returns Particle vector; empty if no external positions are requested
  * @throws If the 'positions' key is there, but could not be loaded
  */
 ParticleVector InsertMoleculesInSpace::getExternalPositions(const json &j, const std::string &molname) {
     ParticleVector particles;
     if (auto filename = j.value("positions", ""s); !filename.empty()) {
-        if (loadStructure(filename, particles, false)) {
-            faunus_logger->info("{}: loaded position file {}", molname, filename);
-        } else {
-            throw ConfigurationError("error loading positions from {}", filename);
-        }
+        particles = loadStructure(filename, false); // throws on error
+        faunus_logger->info("{}: loaded position file {}", molname, filename);
     }
     return particles;
 }

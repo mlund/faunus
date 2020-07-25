@@ -104,6 +104,12 @@ void ForceMoveBase::_move(Change &change) {
     for (unsigned int step = 0; step < nsteps; ++step) {
         integrator->step(velocities, forces);
     }
+    // at the end of the langevin move, we need to update mass centers
+    for (auto &g : spc.groups) {
+        if (g.isMolecular()) {
+            g.cm = Geometry::massCenter(g.begin(), g.end(), spc.geo.getBoundaryFunc(), g.cm);
+        }
+    }
 }
 
 void ForceMoveBase::_to_json(json &j) const {

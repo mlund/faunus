@@ -452,31 +452,42 @@ void from_json(const json &, Chameleon &);
  */
 enum class weight { MASS, CHARGE, GEOMETRIC };
 
-template <typename Titer, typename Tparticle = typename Titer::value_type, typename weightFunc>
-Point anyCenter(Titer begin, Titer end, BoundaryFunction boundary, const weightFunc &weight,
-                const Point &shift = {0, 0, 0}) {
-    double sum = 0;
-    Point c(0, 0, 0), t;
-    for (auto &i = begin; i != end; ++i) {
-        t = i->pos + shift; // translate to origo
-        boundary(t);
-        double w = weight(*i);
-        c += w * t;
-        sum += w;
-    }
-    if (sum <= pc::epsilon_dbl)
-        return {0, 0, 0};
-    else
-        c = c / sum - shift;
-    boundary(c);
-    return c;
-} //!< Mass, charge, or geometric center of a collection of particles
+/**
+ * @brief Mass, charge, or geometric center of a collection of particles
+ * @tparam iterator Particle iterator type
+ * @param begin Iterator to first particle
+ * @param end Iterator to last particle
+ * @param boundary Function to apply periodic boundaries
+ * @param get_weight Function to extract weight from particle
+ * @param shift Shift position by this vector, then apply the boundary function (default: 0,0,0)
+ * @return Center position
+ *
+ * The `shift` vector can be used by get rid of periodic boundaries by shifting
+ * the positions towards the middle of the cell.
+ */
+template <typename iterator>
+Point anyCenter(iterator begin, iterator end, BoundaryFunction boundary,
+                std::function<double(const Particle &)> get_weight, const Point &shift = {0, 0, 0}) {
+    double weight_sum = 0.0;
+    Point center(0, 0, 0);
+    std::for_each(begin, end, [&](auto &particle) {
+        auto weight = get_weight(particle);
+        weight_sum += weight;
+        Point pos = particle.pos + shift;
+        boundary(pos);
+        center += weight * pos;
+    });
+    assert(std::fabs(weight_sum) > pc::epsilon_dbl);
+    center = center / weight_sum - shift;
+    boundary(center);
+    return center;
+}
 
 template <typename Titer, typename Tparticle = typename Titer::value_type>
 Point massCenter(
     Titer begin, Titer end, BoundaryFunction boundary = [](Point &) {}, const Point &shift = {0, 0, 0}) {
     return anyCenter(
-        begin, end, boundary, [](const Tparticle &p) { return atoms.at(p.id).mw; }, shift);
+        begin, end, boundary, [](auto &particle) { return atoms.at(particle.id).mw; }, shift);
 } // Mass center
 
 template <class Titer = typename std::vector<T>::iterator>

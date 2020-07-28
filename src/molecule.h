@@ -198,11 +198,10 @@ class MoleculeData {
     WeightedDistribution<ParticleVector> conformations; //!< Conformations of molecule
 
     MoleculeData();
-    MoleculeData(const std::string &name, ParticleVector particles,
+    MoleculeData(const std::string &name, const ParticleVector &particles,
                  const BasePointerVector<Potential::BondData> &bonds);
 
-    bool isImplicit() const { return implicit; } //!< Is molecule implicit and explicitly absent from simulation cell?
-
+    bool isImplicit() const; //!< Is molecule implicit and explicitly absent from simulation cell?
     bool isPairExcluded(int i, int j) const;
 
     /** @brief Specify function to be used when inserting into space.
@@ -220,9 +219,7 @@ class MoleculeData {
      * no container overlap using the `RandomInserter` class. This behavior can
      * be changed by specifying another inserter using `setInserter()`.
      */
-    ParticleVector getRandomConformation(Geometry::GeometryBase &geo,
-                                         ParticleVector otherparticles = ParticleVector());
-
+    ParticleVector getRandomConformation(Geometry::GeometryBase &, const ParticleVector & = ParticleVector());
     void loadConformation(const std::string &file, bool keep_positions, bool keep_charges);
 
     friend class MoleculeBuilder;
@@ -277,7 +274,7 @@ class MoleculeStructureReader {
     //! reads a FASTA sequence with harmonic bond parameters
     void readFasta(ParticleVector &particles, const json &j_fasta);
   public:
-    MoleculeStructureReader(bool read_charges = true) : read_charges(read_charges) {};
+    MoleculeStructureReader(bool read_charges = true);
     //! reads atom types, positions and optionally charges from a file
     void readFile(ParticleVector &particles, const std::string &filename);
     //! a director determining the executive method based on JSON content
@@ -341,7 +338,7 @@ class NeighboursGenerator {
  */
 class ReactionData {
   public:
-    typedef std::map<int, int> TStoichiometryMap; // key = molid; value = stoichiometic coefficient
+    typedef std::map<int, int> StoichiometryMap; // key = molid; value = stoichiometic coefficient
     enum class Direction : char { LEFT = 0, RIGHT = 1 };
 
   private:
@@ -351,18 +348,18 @@ class ReactionData {
     Direction direction = Direction::RIGHT;           //!< Direction of reaction
     std::vector<std::string> left_names, right_names; //!< Names of reactants and products
 
-    TStoichiometryMap left_molecules;  //!< Initial reactants (molecules)
-    TStoichiometryMap right_molecules; //!< Initial products (molecules)
-    TStoichiometryMap left_atoms;      //!< Initial reactants (atoms)
-    TStoichiometryMap right_atoms;     //!< Initial products (atoms)
+    StoichiometryMap left_molecules;  //!< Initial reactants (molecules)
+    StoichiometryMap right_molecules; //!< Initial products (molecules)
+    StoichiometryMap left_atoms;      //!< Initial reactants (atoms)
+    StoichiometryMap right_atoms;     //!< Initial products (atoms)
 
   public:
     void setDirection(Direction);                               //!< Set directions of the process
     Direction getDirection() const;                             //!< Get direction of the process
     void reverseDirection();                                    //!< Reverse direction of reaction
-    std::pair<const TStoichiometryMap &, const TStoichiometryMap &>
+    std::pair<const StoichiometryMap &, const StoichiometryMap &>
     getProducts() const; //!< Pair with atomic and molecular products
-    std::pair<const TStoichiometryMap &, const TStoichiometryMap &>
+    std::pair<const StoichiometryMap &, const StoichiometryMap &>
     getReactants() const; //!< Pair with atomic and molecular reactants
 
     bool swap = false;                   //!< True if swap move

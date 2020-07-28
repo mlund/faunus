@@ -259,8 +259,12 @@ ParticleVector fastaToParticles(const std::string &fasta_sequence, double bond_l
 
 /**
  * @brief Load structure file into particle vector
+ * @param file filename to load (aam, pqr, xyz, gro)
+ * @param keep_charges if true, ignore AtomData charges
+ * @throws Throws exception if nothing was loaded or if unknown suffix
+ * @returns particles destination particle vector (will be overwritten)
  */
-bool loadStructure(const std::string &, ParticleVector &, bool, bool = true);
+ParticleVector loadStructure(const std::string &file, bool keep_charges = true);
 
 /**
  * @brief Placeholder for Space Trajectory

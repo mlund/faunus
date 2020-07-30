@@ -69,7 +69,7 @@ properties:
                 properties:
                     N: {type: integer, description: Number of molecules to insert}
                     molarity: {type: number, description: Insert molecules to reach this molarity}
-                    inactive: {type: boolean, default: false, description: Should molecules be inactive?}
+                    inactive: {type: [boolean, integer], description: Number of inserted molecules to deactivate}
                     positions: {type: string, description: Load positions from file}
                 oneOf:
                     - required: [N]
@@ -163,7 +163,7 @@ properties:
                         description: Structure file or direct information; required if `atomic=false`
                         anyOf:
                             - type: string
-                              pattern: "(.*?)\\.(pqr|aam|xyz)$"
+                              pattern: "(.*?)\\.(pqr|aam|xyz|gro)$"
                             - type: array
                               items:
                                   type: object
@@ -251,8 +251,8 @@ properties:
                   then:
                       properties:
                           debyelength: {type: number, description: Debye screening length (Å)}
-                          shift: {type: boolean, description: Shift to zero at cutoff, default: true}
-                      required: [cutoff, debyelength]
+                          shift: {type: boolean, description: Zero potential and force at cutoff, default: false}
+                      required: [debyelength]
                       
         electrolyte:
             type: object

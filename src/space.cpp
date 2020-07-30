@@ -7,50 +7,53 @@
 
 namespace Faunus {
 
-bool Change::data::operator<(const Faunus::Change::data &a) const { return index < a.index; }
+bool Change::data::operator<(const Faunus::Change::data &other) const { return index < other.index; }
 
 void Change::clear() {
-    dV = false;
-    all = false;
-    dN = false;
-    moved2moved = true;
-    groups.clear();
+    *this = Change();
     assert(empty());
 }
 bool Change::empty() const {
-    if (dV == false)
-        if (all == false)
-            if (groups.empty())
-                if (dN == false)
-                    return true;
-    return false;
+    if (dV || all || dN || !groups.empty()) {
+        return false;
+    } else {
+        return true;
+    }
 }
-Change::operator bool() const { return not empty(); }
+Change::operator bool() const { return !empty(); }
 
 std::vector<int> Change::touchedParticleIndex(const std::vector<Group<Particle>> &group_vector) {
-    std::vector<int> atom_indexes; // atom index rel. to first particle in system
-    auto begin = group_vector.front().begin();
-    for (auto &d : groups)     // loop over changes groups
-        for (auto i : d.atoms) // atom index rel. to group
-            atom_indexes.push_back(i + std::distance(begin, group_vector.at(d.index).begin()));
+    std::vector<int> atom_indexes;                                   // atom index rel. to first particle in system
+    for (const auto &changed : groups) {                             // loop over changed groups
+        auto begin_first = group_vector.front().begin();             // first particle, first group
+        auto begin_current = group_vector.at(changed.index).begin(); // first particle, current group
+        auto offset = std::distance(begin_first, begin_current);     // abs. distance from first particle
+        atom_indexes.reserve(atom_indexes.size() + changed.atoms.size());
+        for (auto index : changed.atoms) {          // atom index relative to group
+            atom_indexes.push_back(index + offset); // atom index relative to first
+        }
+    }
     return atom_indexes;
 }
 
-bool Change::sanityCheck(Space &spc) const {
-    // make sure "atoms" belong to the "index"th group
-    bool rc = true;
-    for (auto &d : groups) {
-        auto &g = spc.groups.at(d.index);
-        for (size_t atom_index : d.atoms)     // all atoms must be within `g`
-            if (atom_index >= g.capacity()) { // atom_index is w. respect to group.begin()
-                size_t first = std::distance(spc.p.begin(), g.begin());
-                size_t last = std::distance(spc.p.begin(), g.trueend()) - 1;
-                faunus_logger->debug("atom {} is outside capacity of group '{}' ({}-{})", atom_index + first,
-                                     molecules.at(g.id).name, first, last);
-                rc = false;
+/**
+ * @param group_vector Vector of group connected to the change; typically `Space::groups`.
+ * @throws If the atoms in the change object is outside range of given group index.
+ */
+void Change::sanityCheck(const std::vector<Group<Particle>> &group_vector) const {
+    for (auto &changed : groups) {
+        auto first_particle = group_vector.at(0).begin(); // first particle in first group
+        auto &group = group_vector.at(changed.index);     // current group
+        for (auto i : changed.atoms) {                    // all atoms must be within `group`
+            if (i >= group.capacity()) {
+                auto first = std::distance(first_particle, group.begin());
+                auto last = std::distance(first_particle, group.trueend()) - 1;
+                faunus_logger->error("atom {} outside group capacity: '{}' ({}-{})", i + first,
+                                     molecules.at(group.id).name, first, last);
+                throw std::runtime_error("insane change object: atom outside group capacity");
             }
+        }
     }
-    return rc;
 }
 
 void to_json(json &j, const Change::data &d) {
@@ -65,161 +68,174 @@ void to_json(json &j, const Change &c) {
 void Space::clear() {
     p.clear();
     groups.clear();
+    implicit_reservoir.clear();
 }
 
-void Space::push_back(int molid, const Space::Tpvec &in) {
-    if (!in.empty()) {
-        auto oldbegin = p.begin();
-        p.insert(p.end(), in.begin(), in.end());
-        if (p.begin() != oldbegin) { // update group iterators if `p` is relocated
-            for (auto &g : groups) {
-                g.relocate(oldbegin, p.begin());
+/**
+ * The following is considered:
+ *
+ * - `groups` vector is expanded with a new group at the end
+ * - if the space particle vector is relocated, all existing group
+ *   iterators are updated to reflect the new memory positions
+ * - for molecular groups, the mass center is calculated and set
+ *
+ * @param molid Molecule id of inserted data
+ * @param particles Particles to generate group from
+ */
+void Space::push_back(int molid, const ParticleVector &particles) {
+    if (!particles.empty()) {
+        auto original_begin = p.begin();                       // used to detect if `p` is relocated
+        p.insert(p.end(), particles.begin(), particles.end()); // insert particle into space
+        if (p.begin() != original_begin) {                     // update group iterators if `p` is relocated
+            std::for_each(groups.begin(), groups.end(),
+                          [&](auto &group) { group.relocate(original_begin, p.begin()); });
+        }
+        Tgroup group(p.end() - particles.size(), p.end()); // create a group
+        const auto &moldata = Faunus::molecules.at(molid);
+        group.id = molid;
+        group.compressible = moldata.compressible;
+        group.atomic = moldata.atomic;
+        if (group.isMolecular()) {
+            if (particles.size() != moldata.atoms.size()) {
+                faunus_logger->error("{} requires {} atoms but {} were provided", moldata.name, moldata.atoms.size(),
+                                     particles.size());
+                throw std::runtime_error("particle size mismatch");
+            }
+            group.cm = Geometry::massCenter(group.begin(), group.end(), geo.getBoundaryFunc(), -particles.begin()->pos);
+        } else {
+            if (particles.size() % moldata.atoms.size() != 0) {
+                throw std::runtime_error("indivisible by atomic group size: "s + moldata.name);
             }
         }
-        Tgroup g(p.end() - in.size(), p.end());
-        g.id = molid;
-        g.compressible = molecules.at(molid).compressible;
-        g.atomic = molecules.at(molid).atomic;
-
-        if (g.atomic == false) {
-            g.cm = Geometry::massCenter(in.begin(), in.end(), geo.getBoundaryFunc(), -in.begin()->pos);
-            Point cm = Geometry::massCenter(g.begin(), g.end(), geo.getBoundaryFunc(), -g.cm);
-            if (geo.sqdist(g.cm, cm) > 1e-6)
-                throw std::runtime_error("space: mass center error upon insertion. "s + molecules.at(molid).name +
-                                         " molecule too large?\n");
-        }
-
-        groups.push_back(g);
-        assert(groups.back().begin() == g.begin());
-        assert(in.size() == groups.back().capacity());
+        groups.push_back(group);
     }
 }
 
+/**
+ * @param other Space to copy from
+ * @param change Change object describing the changes beteeen the two Space objects
+ *
+ * Copy data from another Space according to Change object. This is typically done
+ * after a Monte Carlo move has either been accepted or rejected.
+ * The `other` space *must* be populated in the exact same way, i.e. must have the same
+ * molecules and particles. In DEBUG mode, several assertions are included to ensure this is true.
+ *
+ * Copied data includes:
+ *
+ * - geometry
+ * - groups
+ * - particles
+ * - implicit molecules
+ */
 void Space::sync(const Space &other, const Change &change) {
-    assert(&other != this);
-    assert(p.begin() != other.p.begin());
-
-    if (change.dV or change.all)
-        geo = other.geo;
-
-    // deep copy *everything*
-    if (change.all) {
-        p = other.p; // copy all positions
-        assert(p.begin() != other.p.begin() && "deep copy problem");
-        groups = other.groups;
-        implicit_reservoir = other.implicit_reservoir;
-
-        if (not groups.empty())
-            if (groups.front().begin() == other.p.begin())
-                for (auto &i : groups)
-                    i.relocate(other.p.begin(), p.begin());
-    } else {
-        for (auto &m : change.groups) {
-
-            auto &g = groups.at(m.index);            // old group
-            auto &gother = other.groups.at(m.index); // new group
-            assert(gother.id == g.id);
-
-            if (Faunus::molecules[gother.id].isImplicit()) {
-                assert(other.implicit_reservoir.count(gother.id));
-                implicit_reservoir[g.id] = other.implicit_reservoir.at(gother.id);
+    if (&other != this && !change.empty()) {
+        assert(!groups.empty());
+        assert(p.size() == other.p.size());
+        assert(groups.size() == other.groups.size());
+        assert(implicit_reservoir.size() == other.implicit_reservoir.size());
+        if (change.dV or change.all) {
+            geo = other.geo; // copy simulation geometry
+        }
+        if (change.all) {                                                   // deep copy *everything*
+            implicit_reservoir = other.implicit_reservoir;                  // copy all implicit molecules
+            p = other.p;                                                    // copy all positions
+            groups = other.groups;                                          // copy all groups
+            assert(p.begin() != other.p.begin());                           // check deep copy problem
+            assert(groups.front().begin() != other.groups.front().begin()); // check deep copy problem
+        } else {
+            for (const auto &changed : change.groups) {             // look over changed groups
+                auto &group = groups.at(changed.index);             // old group
+                auto &other_group = other.groups.at(changed.index); // new group
+                assert(group.id == other_group.id);
+                if (group.traits().isImplicit()) { // the molecule is implicit
+                    implicit_reservoir[group.id] = other.implicit_reservoir.at(group.id);
+                } else if (changed.all) {
+                    group = other_group;            // copy everything
+                } else {                            // copy only a subset
+                    group.shallowcopy(other_group); // copy group data but *not* particles
+                    for (auto i : changed.atoms) {  // loop over atom index (rel. to group)
+                        group[i] = other_group[i];  // deep copy select particles
+                    }
+                }
             }
-
-            g.shallowcopy(gother); // copy group data but *not* particles
-
-            if (m.all) // copy all particles
-                std::copy(gother.begin(), gother.trueend(), g.begin());
-            else // copy only a subset
-                for (auto i : m.atoms)
-                    *(g.begin() + i) = *(gother.begin() + i);
         }
     }
-    assert(p.size() == other.p.size());
-    assert(p.begin() != other.p.begin());
 }
 
+/**
+ * @param Vnew New volume
+ * @param method Scaling policy
+ * @returns Scaling factors in each dimension
+ * @warning Check Vnew/Vold for ISOCHORIC in case of external triggers (see end of function)
+ */
 Point Space::scaleVolume(double Vnew, Geometry::VolumeMethod method) {
-    for (auto &g : groups) // remove periodic boundaries
-        if (not g.atomic)
-            g.unwrap(geo.getDistanceFunc());
+    for (auto &group : groups) {             // remove PBC on molecular groups ...
+        group.unwrap(geo.getDistanceFunc()); // ... before scaling the volume
+    }
+    double Vold = geo.getVolume();             // simulation volume before move
+    Point scale = geo.setVolume(Vnew, method); // scale volume of simulation container
 
-    Point scale = geo.setVolume(Vnew, method);
+    auto scale_position = [&](auto &particle) {
+        particle.pos = particle.pos.cwiseProduct(scale);
+        geo.boundary(particle.pos);
+    }; //!< unary helper function to scale position and apply PBC
 
-    for (auto &g : groups) {
-        if (not g.empty()) {
-            if (g.atomic) { // scale all atoms
-                for (auto &i : g) {
-                    i.pos = i.pos.cwiseProduct(scale);
-                    geo.boundary(i.pos);
-                }
-            } else { // scale mass center and translate
-                Point oldcm = g.cm;
-                if (g.compressible) {
-                    for (auto &i : g) {
-                        i.pos = i.pos.cwiseProduct(scale);
-                        geo.boundary(i.pos);
-                    }
-                    g.cm = Geometry::massCenter(g.begin(), g.end(), geo.getBoundaryFunc(), -oldcm);
-                    geo.boundary(g.cm);
-                } else {
-                    g.cm = g.cm.cwiseProduct(scale);
-                    geo.boundary(g.cm);
-                    Point delta = g.cm - oldcm;
-                    for (auto &i : g) {
-                        i.pos += delta;
-                        geo.boundary(i.pos);
-                    }
+    for (auto &group : groups) { // loop over all molecules in system
+        if (group.empty()) {
+            continue;
+        } else if (group.isAtomic()) { // scale all particle positions
+            std::for_each(group.begin(), group.end(), scale_position);
+        } else {
+            auto original_mass_center = group.cm;
+            if (group.traits().compressible) { // scale positions; recalculate mass center
+                std::for_each(group.begin(), group.end(), scale_position);
+                group.cm =
+                    Geometry::massCenter(group.begin(), group.end(), geo.getBoundaryFunc(), -original_mass_center);
+            } else { // scale mass center; translate positions
+                group.cm = group.cm.cwiseProduct(scale);
+                geo.boundary(group.cm);
+                auto mass_center_displacement = group.cm - original_mass_center;
+                std::for_each(group.begin(), group.end(), [&](auto &particle) {
+                    particle.pos += mass_center_displacement; // translate internal coordinates
+                    geo.boundary(particle.pos);               // apply PBC
+                });
 #ifndef NDEBUG
-                    Point recalc_cm = Geometry::massCenter(g.begin(), g.end(), geo.getBoundaryFunc(), -g.cm);
-                    double cm_error = std::fabs(geo.sqdist(g.cm, recalc_cm));
-                    if (cm_error > 1e-6) {
-                        std::ostringstream o;
-                               o  << "error: " << cm_error << std::endl
-                                  << "scale: " << scale.transpose() << std::endl
-                                  << "delta: " << delta.transpose() << " norm = " << delta.norm() << std::endl
-                                  << "|o-n|: " << geo.vdist(oldcm, g.cm).norm() << std::endl
-                                  << "oldcm: " << oldcm.transpose() << std::endl
-                                  << "newcm: " << g.cm.transpose() << std::endl
-                                  << "actual cm: " << recalc_cm.transpose() << std::endl;
-                        faunus_logger->error(o.str());
-                        assert(false);
-                    }
-#endif
+                auto recalc_cm = Geometry::massCenter(group.begin(), group.end(), geo.getBoundaryFunc(), -group.cm);
+                if (double error = geo.sqdist(group.cm, recalc_cm); error > 1e-6) {
+                    assert(false); // mass center mismatch
                 }
+#endif
             }
         }
     }
-    double Vold = geo.getVolume();
-    // if isochoric, the volume is constant
-    if (method == Geometry::ISOCHORIC)
-        Vold = std::pow(Vold, 1. / 3.);
-
-    for (auto f : scaleVolumeTriggers)
-        f(*this, Vold, Vnew);
-
+    if (method == Geometry::ISOCHORIC) { // ? not used for anything...
+        Vold = std::pow(Vold, 1. / 3.);  // ?
+    }
+    for (auto trigger_function : scaleVolumeTriggers) { // external clients may have added function
+        trigger_function(*this, Vold, Vnew);            // to be triggered upon each volume change
+    }
     return scale;
 }
 
 json Space::info() {
     json j = {{"number of particles", p.size()}, {"number of groups", groups.size()}, {"geometry", geo}};
-    auto &_j = j["groups"];
-    for (auto &i : groups) {
-        auto &name = molecules.at(i.id).name;
-        json tmp, d = i;
+    auto &j_groups = j["groups"];
+    for (auto &group : groups) {
+        auto &molname = Faunus::molecules.at(group.id).name;
+        json tmp, d = group;
         d.erase("cm");
         d.erase("id");
         d.erase("atomic");
-        auto ndx = i.to_index(p.begin());
-        if (not i.empty())
+        auto ndx = group.to_index(p.begin()); // absolute index
+        if (not group.empty()) {
             d["index"] = {ndx.first, ndx.second};
-        // d["index"] = std::to_string(ndx.first)+"-"+std::to_string(ndx.second);
-        tmp[name] = d;
-        _j.push_back(tmp);
+        }
+        tmp[molname] = d;
+        j_groups.push_back(tmp);
     }
-    auto &_j2 = j["reactionlist"];
-    for (auto &i : Faunus::reactions) {
-        json tmp, d = i;
-        _j2.push_back(i);
+    auto &j_reactionlist = j["reactionlist"];
+    for (auto &reaction : Faunus::reactions) {
+        j_reactionlist.push_back(reaction);
     }
     return j;
 }
@@ -231,7 +247,30 @@ Space::Tgvec::iterator Space::randomMolecule(int molid, Random &rand, Space::Sel
     return groups.end();
 }
 const std::map<int, int> &Space::getImplicitReservoir() const { return implicit_reservoir; }
+
 std::map<int, int> &Space::getImplicitReservoir() { return implicit_reservoir; }
+
+std::vector<Space::Tgroup, std::allocator<Space::Tgroup>>::iterator Space::findGroupContaining(const Particle &i) {
+    return std::find_if(groups.begin(), groups.end(), [&i](auto &g) { return g.contains(i); });
+}
+
+std::vector<Space::Tgroup, std::allocator<Space::Tgroup>>::iterator Space::findGroupContaining(size_t atom_index) {
+    assert(atom_index < p.size());
+    return std::find_if(groups.begin(), groups.end(),
+                        [&](auto &g) { return atom_index < std::distance(p.begin(), g.end()); });
+}
+
+size_t Space::numParticles(Space::Selection sel) const {
+    size_t n = 0;
+    if (sel == ALL)
+        n = p.size();
+    else if (sel == ACTIVE)
+        for (auto &g : groups)
+            n += g.size();
+    else
+        throw std::runtime_error("invalid selection");
+    return n;
+}
 
 void to_json(json &j, Space &spc) {
     typedef typename Space::Tpvec Tpvec;
@@ -246,13 +285,17 @@ void from_json(const json &j, Space &spc) {
     using namespace std::string_literals;
 
     try {
-        if (atoms.empty())
+        if (atoms.empty()) {
             atoms = j.at("atomlist").get<decltype(atoms)>();
-        if (molecules.empty())
+        }
+        if (molecules.empty()) {
             molecules = j.at("moleculelist").get<decltype(molecules)>();
-        if (reactions.empty())
-            if (j.count("reactionlist") > 0)
+        }
+        if (reactions.empty()) {
+            if (j.count("reactionlist") > 0) {
                 reactions = j.at("reactionlist").get<decltype(reactions)>();
+            }
+        }
 
         spc.clear();
         spc.geo = j.at("geometry");
@@ -263,15 +306,16 @@ void from_json(const json &j, Space &spc) {
             spc.p = j.at("particles").get<Tpvec>();
             if (!spc.p.empty()) {
                 auto begin = spc.p.begin();
-                Space::Tgroup g(begin, begin);
+                Space::Tgroup g(begin, begin); // create new grou[
                 for (auto &i : j.at("groups")) {
                     g.begin() = begin;
                     from_json(i, g);
                     spc.groups.push_back(g);
                     begin = g.trueend();
                 }
-                if (begin != spc.p.end())
-                    throw std::runtime_error("load error");
+                if (begin != spc.p.end()) {
+                    throw ConfigurationError("load error");
+                }
             }
         }
 
@@ -281,17 +325,20 @@ void from_json(const json &j, Space &spc) {
                 assert(vec.is_array() && vec.size() == 2);
                 spc.getImplicitReservoir()[vec[0]] = vec[1];
             }
-            faunus_logger->trace("{} implicit molecules loaded from json", it->size());
+            faunus_logger->trace("{} implicit molecules loaded", it->size());
         }
 
         // check correctness of molecular mass centers
-        for (auto &i : spc.groups)
-            if (not i.empty() and not i.atomic)
-                if (spc.geo.sqdist(i.cm, Geometry::massCenter(i.begin(), i.end(), spc.geo.getBoundaryFunc(), -i.cm)) >
-                    1e-9)
+        for (auto &group : spc.groups) {
+            if (!group.empty() && group.isMolecular()) {
+                if (spc.geo.sqdist(group.cm, Geometry::massCenter(group.begin(), group.end(), spc.geo.getBoundaryFunc(),
+                                                                  -group.cm)) > 1e-9) {
                     throw std::runtime_error("mass center mismatch");
+                }
+            }
+        }
     } catch (std::exception &e) {
-        throw std::runtime_error("error while constructing Space from JSON: "s + e.what());
+        throw std::runtime_error("error building space: "s + e.what());
     }
 }
 getActiveParticles::const_iterator::const_iterator(const Space &spc,
@@ -302,20 +349,23 @@ getActiveParticles::const_iterator::const_iterator(const Space &spc,
 getActiveParticles::const_iterator getActiveParticles::const_iterator::operator++() { // advance particles and groups
     if (++particle_iter == groups_iter->end()) {
         do {
-            if (++groups_iter == spc.groups.end())
+            if (++groups_iter == spc.groups.end()) {
                 return *this;
+            }
         } while (groups_iter->empty());
         particle_iter = groups_iter->begin();
     }
     return *this;
 }
 getActiveParticles::const_iterator getActiveParticles::begin() const { return const_iterator(spc, spc.p.begin()); }
-getActiveParticles::const_iterator getActiveParticles::end() const { return spc.groups.empty() ? begin() : const_iterator(spc, spc.groups.back().end()); }
+getActiveParticles::const_iterator getActiveParticles::end() const {
+    return spc.groups.empty() ? begin() : const_iterator(spc, spc.groups.back().end());
+}
 size_t getActiveParticles::size() const {
     return std::accumulate(spc.groups.begin(), spc.groups.end(), 0,
                            [](size_t sum, const auto &g) { return sum + g.size(); });
 }
-getActiveParticles::getActiveParticles(const Space &spc) : spc(spc){}
+getActiveParticles::getActiveParticles(const Space &spc) : spc(spc) {}
 
 namespace SpaceFactory {
 
@@ -351,31 +401,45 @@ void makeNaCl(Space &space, int num_particles, const Geometry::Chameleon &geomet
  * @param moldata Molecule type to insert. Must be `atomic`.
  * @param spc Space to insert into (at the end)
  * @param num_molecules Number of molecules to insert into the *same* group
- * @param inactive Set to true if the molecule should be *inactive*
+ * @param num_inactive_molecules Number of molecules to declare inactive
+ * @throws If number if inactive is higher than number of active molecules
+ *
+ * The atoms in the atomic groups are repeated `num_molecules` times, then inserted
+ * into Space.
  */
-void InsertMoleculesInSpace::insertAtomicGroups(MoleculeData &moldata, Space &spc, int num_molecules, bool inactive) {
-    assert(moldata.atomic == true);
-    typename Space::Tpvec p;
-    p.reserve(num_molecules * moldata.atoms.size()); // prepare memory
-    while (num_molecules-- > 0) {                    // repeat insertion into the same atomic group
+void InsertMoleculesInSpace::insertAtomicGroups(MoleculeData &moldata, Space &spc, int num_molecules,
+                                                int num_inactive_molecules) {
+    assert(moldata.atomic);
+    ParticleVector repeated_particles;
+    repeated_particles.reserve(num_molecules * moldata.atoms.size()); // prepare memory
+    for (size_t i = 0; i < num_molecules; i++) {                      // repeat insertion into the same atomic group
         auto particles = moldata.getRandomConformation(spc.geo, spc.p);
-        p.insert(p.end(), particles.begin(), particles.end());
+        repeated_particles.insert(repeated_particles.end(), particles.begin(), particles.end());
     }
-    spc.push_back(moldata.id(), p);
-    if (inactive) {
-        spc.groups.back().resize(0);
+
+    spc.push_back(moldata.id(), repeated_particles); // create new group in Space
+
+    if (num_inactive_molecules > num_molecules) {
+        throw std::runtime_error("too many inactive molecules requested");
+    } else if (num_inactive_molecules > 0) {
+        int num_active_atoms = (num_molecules - num_inactive_molecules) * moldata.atoms.size();
+        spc.groups.back().resize(num_active_atoms); // deactivate atoms in molecule
     }
 }
 
 void InsertMoleculesInSpace::insertMolecularGroups(MoleculeData &moldata, Space &spc, int num_molecules,
-                                                   bool inactive) {
+                                                   int num_inactive) {
     assert(moldata.atomic == false);
-    while (num_molecules-- > 0) { // insert molecules
+    for (size_t i = 0; i < num_molecules; i++) { // insert molecules
         spc.push_back(moldata.id(), moldata.getRandomConformation(spc.geo, spc.p));
-        if (inactive) {
-            spc.groups.back().unwrap(spc.geo.getDistanceFunc());
-            spc.groups.back().resize(0);
-        }
+    }
+    if (num_inactive > num_molecules) {
+        throw std::runtime_error("too many inactive molecules requested");
+    } else { // deactivate groups, starting from the back
+        std::for_each(spc.groups.rbegin(), spc.groups.rbegin() + num_inactive, [&](auto &group) {
+            group.unwrap(spc.geo.getDistanceFunc()); // make molecules whole (remove PBC) ...
+            group.resize(0);                         // ... and then deactivate
+        });
     }
 }
 
@@ -385,28 +449,32 @@ void InsertMoleculesInSpace::insertMolecularGroups(MoleculeData &moldata, Space 
  * @param int num_molecules Number of groups set affect
  * @param particles Position vector for all particles in the N groups
  * @param offset Translate positions by this offset
+ * @throws if num_molecules doesn't match, or if positions are outside simulation cell
+ *
+ * Sets particle positions in space using a given input
+ * particle vector. The vector can span several *identical* groups.
+ * The number of groups affected must be given in order to update their mass-centers.
+ * Only *positions* are affected.
  */
 void InsertMoleculesInSpace::setPositionsForTrailingGroups(Space &spc, int num_molecules,
                                                            const Faunus::ParticleVector &particles,
                                                            const Point &offset) {
     assert(spc.groups.size() >= num_molecules);
-    if (particles.size() == num_molecules * (spc.groups.end() - num_molecules)->traits().atoms.size()) {
-        auto target = spc.p.end() - particles.size(); // iterator to first particle to modify
-        assert(target >= spc.p.begin());
-        for (auto &i : particles) {       // loop over particles
-            Point pos = i.pos + offset;   // shift by offset
-            if (spc.geo.collision(pos)) { // check if position is inside simulation volume
-                throw std::runtime_error("group positions outside box");
-            }
-            target->pos = pos; // copy position to space
-            target++;          // advance to next target particle in space
-        }
-        // update mass-centers on modified groups
-        for (auto it = spc.groups.end() - num_molecules; it != spc.groups.end(); ++it) {
-            it->cm = Geometry::massCenter(it->begin(), it->end(), spc.geo.getBoundaryFunc(), -it->begin()->pos);
-        }
+    if (particles.size() != num_molecules * (spc.groups.rbegin())->traits().atoms.size()) {
+        throw std::runtime_error("number of particles doesn't match groups");
     } else {
-        throw std::runtime_error("mismatch in number of atoms");
+        // update positions in space, starting from the back
+        std::transform(particles.rbegin(), particles.rend(), spc.p.rbegin(), spc.p.rbegin(), [&](auto &src, auto &dst) {
+            dst.pos = src.pos + offset;       // shift by offset
+            if (spc.geo.collision(dst.pos)) { // check if position is inside simulation volume
+                throw std::runtime_error("positions outside box");
+            }
+            return dst;
+        });
+        // update mass-centers on modified groups; start from the back
+        std::for_each(spc.groups.rbegin(), spc.groups.rbegin() + num_molecules, [&](auto &g) {
+            g.cm = Geometry::massCenter(g.begin(), g.end(), spc.geo.getBoundaryFunc(), -g.begin()->pos);
+        });
     }
 }
 
@@ -422,74 +490,136 @@ void InsertMoleculesInSpace::insertImplicitGroups(const MoleculeData &moldata, S
 }
 
 /**
- * @brief Insert molecules into Space based on JSON input
- * @param json_array JSON array
+ * @param molname Molecule name
+ * @param properties json object with insertion properties ('N', 'molarity', 'inactive' etc)
  * @param spc Space to insert into
  */
-void InsertMoleculesInSpace::insertMolecules(const json &json_array, Space &spc) {
-    spc.clear();
-    assert(spc.geo.getVolume() > 0);
-    if (!json_array.is_array()) {
-        throw ConfigurationError("syntax error in insertmolecule");
-    }
-    for (auto &obj : json_array) { // loop over array of molecules
-        if (!obj.is_object() || obj.size() != 1) {
-            throw ConfigurationError("syntax error in insertmolecule");
-        }
-        for (auto &[molname, properties] : obj.items()) {
-            if (auto moldata = findName(Faunus::molecules, molname); moldata != Faunus::molecules.end()) {
-                int num_molecules = 0; // number of groups to insert
-                if (auto it = properties.find("N"); it != properties.end()) {
-                    num_molecules = it->get<int>();
-                } else {
-                    double concentration = properties.at("molarity").get<double>() * 1.0_molar;
-                    num_molecules = std::round(concentration * spc.geo.getVolume());
-                    if (concentration > pc::epsilon_dbl) {
-                        double rel_error = (concentration - num_molecules / spc.geo.getVolume()) / concentration;
-                        if (rel_error > 0.01) {
-                            faunus_logger->warn("{}: initial molarity differs by {}% from target value", molname,
-                                                rel_error * 100);
-                        }
-                    }
-                }
-                if (not moldata->isImplicit() and num_molecules < 1) {
-                    throw ConfigurationError(molname + ": at least one molecule required. Concentration too low?");
-                }
-                bool inactive = properties.value("inactive", false); // active or not?
-
-                {
-                    std::string state;
-                    if (moldata->isImplicit()) {
-                        state = "implicit";
-                    } else {
-                        state = (inactive) ? "inactive" : "active";
-                    }
-                    faunus_logger->info("adding {} {} {} molecules --> {} mol/l", num_molecules, state, molname,
-                                        num_molecules / spc.geo.getVolume() / 1.0_molar);
-                }
-
-                if (moldata->atomic) {
-                    insertAtomicGroups(*moldata, spc, num_molecules);
-                } else if (moldata->isImplicit()) {
-                    insertImplicitGroups(*moldata, spc, num_molecules);
-                } else {
-                    insertMolecularGroups(*moldata, spc, num_molecules, inactive);
-                    if (auto filename = properties.value("positions", ""s); !filename.empty()) {
-                        Space::Tpvec particles; // positions loaded from file
-                        if (loadStructure(filename, particles, false)) {
-                            faunus_logger->info("{}: loaded position file {}", molname, filename);
-                            Point offset = properties.value("translate", Point(0, 0, 0));
-                            setPositionsForTrailingGroups(spc, num_molecules, particles, offset);
-                        } else {
-                            throw ConfigurationError("error loading positions from '" + filename + "'");
-                        }
-                    }
-                }
+void InsertMoleculesInSpace::insertItem(const std::string &molname, const json &properties, Space &spc) {
+    if (auto moldata = findName(Faunus::molecules, molname); moldata == Faunus::molecules.end()) {
+        throw ConfigurationError("unknown molecule: {}", molname);
+    } else {
+        int num_molecules = getNumberOfMolecules(properties, spc.geo.getVolume(), molname);
+        if (num_molecules == 0) {
+            if (!moldata->isImplicit()) {
+                throw ConfigurationError("one or more {} molecule(s) required; concentration too low?", molname);
+            }
+        } else {
+            int num_inactive = getNumberOfInactiveMolecules(properties, num_molecules);
+            double molarity = (num_molecules - num_inactive) / spc.geo.getVolume() / 1.0_molar;
+            if (moldata->isImplicit()) {
+                faunus_logger->info("adding {} implicit {} molecules --> {} mol/l", num_molecules, molname, molarity);
             } else {
-                throw ConfigurationError("cannot insert undefined molecule '" + molname + "'");
+                faunus_logger->info("adding {} {} molecules --> {} mol/l ({} inactive)", num_molecules, molname,
+                                    molarity, num_inactive);
+            }
+            if (moldata->isImplicit()) {
+                insertImplicitGroups(*moldata, spc, num_molecules);
+            } else if (moldata->atomic) {
+                insertAtomicGroups(*moldata, spc, num_molecules, num_inactive);
+            } else {
+                insertMolecularGroups(*moldata, spc, num_molecules, num_inactive);
+                if (auto particles = getExternalPositions(properties, molname); !particles.empty()) {
+                    auto offset = properties.value("translate", Point(0, 0, 0));
+                    setPositionsForTrailingGroups(spc, num_molecules, particles, offset);
+                }
             }
         }
     }
+}
+
+/**
+ * Look for 'positions' in json object and load structure if found.
+ *
+ * @param j json object to search for key `positions`
+ * @param molname name of molecule to affect; used for logging, only.
+ * @returns Particle vector; empty if no external positions are requested
+ * @throws If the 'positions' key is there, but could not be loaded
+ */
+ParticleVector InsertMoleculesInSpace::getExternalPositions(const json &j, const std::string &molname) {
+    ParticleVector particles;
+    if (auto filename = j.value("positions", ""s); !filename.empty()) {
+        particles = loadStructure(filename, false); // throws on error
+        faunus_logger->info("{}: loaded position file {}", molname, filename);
+    }
+    return particles;
+}
+
+/**
+ * @brief Insert molecules into Space based on JSON input
+ * @param j JSON array
+ * @param spc Space to insert into
+ */
+void InsertMoleculesInSpace::insertMolecules(const json &j, Space &spc) {
+    spc.clear();
+    if (!j.is_array()) {
+        throw ConfigurationError("molecules to insert must be an array");
+    } else {
+        for (const auto &item : j) { // loop over array of molecules
+            if (item.is_object() && item.size() == 1) {
+                for (auto &[molecule_name, properties] : item.items()) {
+                    try {
+                        insertItem(molecule_name, properties, spc);
+                    } catch (std::exception &e) {
+                        throw ConfigurationError("error inserting {}: {}", molecule_name, e.what());
+                    }
+                }
+            } else {
+                throw ConfigurationError("syntax error inserting molecules");
+            }
+        }
+    }
+}
+
+/**
+ * @param j Input json object
+ * @param volume Volume of simulation container needed to calculate concentration
+ * @param molecule_name Name of molecule needed for logging
+ * @return Number of molecules to insert
+ *
+ * Looks for json key `N` or `molarity`. For the latter, the nearest corresponding
+ * number of particles is calculated based on the given system volume.
+ */
+int InsertMoleculesInSpace::getNumberOfMolecules(const json &j, double volume, const std::string &molecule_name) {
+    const double error_limit = 0.01; // warn if relative density error is above this
+    int num_molecules = 0;
+    if (j.contains("N")) {
+        num_molecules = j.at("N").get<int>();
+    } else {
+        auto density = j.at("molarity").get<double>() * 1.0_molar;
+        num_molecules = std::round(density * volume);
+        if (double error = (density - num_molecules / volume) / density; error > error_limit) {
+            faunus_logger->warn("{}: initial molarity differs by {}% from target value", molecule_name, error * 100);
+        }
+    }
+    return num_molecules;
+}
+
+/**
+ * @param j Input json object
+ * @param number_of_molecules Total number of molecules
+ * @return Number of molecules to be inactive (always smaller than `number_of_molecules`)
+ * @throws If Inactive molecules is higher than `number_of_molecules`
+ *
+ * Looks for key "inactive" and if:
+ * - boolean true: all molecules are inactive
+ * - number: number of molecules to declare inactive
+ * - no `inactive` key found, return zero
+ */
+int InsertMoleculesInSpace::getNumberOfInactiveMolecules(const json &j, int number_of_molecules) {
+    int number_of_inactive_molecules = 0; // number of inactive molecules
+    if (auto it = j.find("inactive"); it != j.end()) {
+        if (it->is_boolean()) {
+            if (*it) {
+                number_of_inactive_molecules = number_of_molecules; // all molecules are inactive
+            }
+        } else if (it->is_number_integer()) {
+            number_of_inactive_molecules = *it; // a subset are inactive
+            if (number_of_inactive_molecules > number_of_molecules) {
+                throw ConfigurationError("too many inactive particles requested");
+            }
+        }
+    }
+    return number_of_inactive_molecules;
 }
 
 } // namespace Faunus

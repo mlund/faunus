@@ -4,7 +4,9 @@
 #include "io.h"
 #include "scatter.h"
 #include "reactioncoordinate.h"
-#include "auxiliary.h"
+#include "aux/timers.h"
+#include "aux/table_2d.h"
+#include "aux/equidistant_table.h"
 #include <set>
 
 namespace cereal {
@@ -76,24 +78,28 @@ class FileReactionCoordinate : public Analysisbase {
 
 /**
  * @brief Excess chemical potential of molecules
+ *
+ * @todo While `inserter` is currently limited to random
+ * insertion, the code is designed for arbitrary insertion
+ * schemes inheriting from `MoleculeInserter`.
  */
 class WidomInsertion : public Analysisbase {
-    Space &spc;
-    Energy::Hamiltonian *pot;
-    RandomInserter rins;
-    std::string molname; // molecule name
-    int ninsert;
-    int molid; // molecule id
-    bool absolute_z = false;
-    Average<double> expu;
+    Space &space;
+    Energy::Hamiltonian &hamiltonian;           //!< Potential energy method
+    std::shared_ptr<MoleculeInserter> inserter; //!< Insertion method
+    int number_of_insertions;                   //!< Number of insertions per sample event
+    int molid;                                  //!< Molecule id
+    bool absolute_z_coords = false;             //!< Apply abs() on all inserted z coordinates?
+    Average<double> exponential_average;        //!< Widom average, <exp(-dU/kT)>
     Change change;
 
-    void _sample() override;
-    void _to_json(json &j) const override;
-    void _from_json(const json &j) override;
+    void selectGhostGroup(); //!< Select inactive group to act as group particle
+    void _sample() override; //!< Called for each sample event
+    void _to_json(json &) const override;
+    void _from_json(const json &) override;
 
   public:
-    WidomInsertion(const json &j, Space &spc, Energy::Hamiltonian &pot);
+    WidomInsertion(const json &, Space &, Energy::Hamiltonian &);
 };
 
 /**

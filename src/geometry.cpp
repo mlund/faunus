@@ -1,7 +1,7 @@
 #include "geometry.h"
 #include "atomdata.h"
 #include "random.h"
-#include "auxiliary.h"
+#include "average.h"
 #include "aux/eigensupport.h"
 #include "spdlog/spdlog.h"
 

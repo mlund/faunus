@@ -3,18 +3,16 @@
 #include "geometry.h"
 #include "rotate.h"
 #include "bonds.h"
-#include <fstream>
-#include <iostream>
 #include "spdlog/spdlog.h"
 #include "aux/eigensupport.h"
 
 namespace Faunus {
 
 // global instances available throughout Faunus.
-std::vector<MoleculeData> molecules;
-std::vector<ReactionData> reactions;
+std::vector<MoleculeData> molecules; //!< List of molecule types
+std::vector<ReactionData> reactions; //!< List of reactions
 
-MoleculeData::MoleculeData(const std::string &name, ParticleVector particles,
+MoleculeData::MoleculeData(const std::string &name, const ParticleVector &particles,
                            const BasePointerVector<Potential::BondData> &bonds)
     : name(name), bonds(bonds) {
     for (auto particle : particles) {
@@ -29,22 +27,22 @@ int &MoleculeData::id() { return _id; }
 
 const int &MoleculeData::id() const { return _id; }
 
-ParticleVector MoleculeData::getRandomConformation(Geometry::GeometryBase &geo, ParticleVector otherparticles) {
+bool MoleculeData::isImplicit() const { return implicit; }
+
+ParticleVector MoleculeData::getRandomConformation(Geometry::GeometryBase &geo, const ParticleVector &otherparticles) {
     assert(inserter != nullptr);
     return (*inserter)(geo, otherparticles, *this);
 }
 
 void MoleculeData::loadConformation(const std::string &file, bool keep_positions, bool keep_charges) {
-    ParticleVector v;
-    if (loadStructure(file, v, false, keep_charges)) {
-        if (keep_positions == false)
-            Geometry::cm2origo(v.begin(), v.end()); // move to origo
-        conformations.push_back(v);
-        for (auto &p : v) // add atoms to atomlist
-            atoms.push_back(p.id);
+    auto particles = loadStructure(file, keep_charges); // throws if nothing is loaded!
+    if (keep_positions == false) {
+        Geometry::cm2origo(particles.begin(), particles.end()); // move to origin
     }
-    if (v.empty())
-        throw std::runtime_error("Structure " + file + " not loaded. Filetype must be .aam/.pqr/.xyz");
+    conformations.push_back(particles);
+    for (auto &p : particles) { // add atoms to atomlist
+        atoms.push_back(p.id);
+    }
 }
 
 void MoleculeData::setInserter(std::shared_ptr<MoleculeInserter> ins) { inserter = ins; }
@@ -221,12 +219,11 @@ void MoleculeBuilder::from_json(const json &j, MoleculeData &molecule) {
         molecule.exclusions = ExclusionsVicinity::create(particles.size(), exclusion_pairs);
 
         // todo better if these values have to be stored at all
-        try {
-            auto structure = j_properties.at("structure");
-            if (structure.is_string()) {
-                molecule.json_cfg["structure"] = structure;
+        if (auto it = j_properties.find("structure"); it != j_properties.end()) {
+            if (it->is_string()) {
+                molecule.json_cfg["structure"] = it->get<std::string>();
             }
-        } catch (json::out_of_range &) {}
+        }
         molecule.json_cfg["keepcharges"] = j_properties.value("keepcharges", true);
 
         // at this stage all given keys should have been accessed or "spend". If any are
@@ -352,10 +349,7 @@ void MoleculeStructureReader::readJson(ParticleVector &particles, const json &j)
 
 void MoleculeStructureReader::readFile(ParticleVector &particles, const std::string &filename) {
     faunus_logger->info("Reading molecule configuration from file: {}", filename);
-    auto success = Faunus::loadStructure(filename, particles, false, read_charges);
-    if (!success) {
-        throw ConfigurationError("unable to open structure file");
-    }
+    particles = Faunus::loadStructure(filename, read_charges); // throws if nothing is loaded!
 }
 
 void MoleculeStructureReader::readArray(ParticleVector &particles, const json &j_particles) {
@@ -375,15 +369,17 @@ void MoleculeStructureReader::readArray(ParticleVector &particles, const json &j
     }
 }
 
-void MoleculeStructureReader::readFasta(ParticleVector &particles, const json &j_fasta) {
-    if (j_fasta.find("fasta") == j_fasta.end()) {
+void MoleculeStructureReader::readFasta(ParticleVector &particles, const json &input) {
+    if (auto it = input.find("fasta"); it == input.end()) {
         throw ConfigurationError("invalid FASTA format");
+    } else {
+        std::string fasta = it->get<std::string>();
+        Potential::HarmonicBond bond; // harmonic bond
+        bond.from_json(input);        // read 'k' and 'req' from json
+        particles = Faunus::fastaToParticles(fasta, bond.req);
     }
-    std::string fasta = j_fasta.at("fasta").get<std::string>();
-    Potential::HarmonicBond bond; // harmonic bond
-    bond.from_json(j_fasta);      // read 'k' and 'req' from json
-    particles = Faunus::fastaToParticles(fasta, bond.req);
 }
+MoleculeStructureReader::MoleculeStructureReader(bool read_charges) : read_charges(read_charges) {}
 
 void from_json(const json &j, MoleculeData &a) {
     MoleculeBuilder builder;
@@ -587,6 +583,7 @@ void RandomInserter::to_json(json &j) const {
     j["insoffset"] = offset;
     j["rotate"] = rotate;
     j["keeppos"] = keep_positions;
+    j["allow overlap"] = allow_overlap;
 }
 
 bool Conformation::empty() const {
@@ -619,7 +616,7 @@ void ReactionData::setDirection(ReactionData::Direction dir) {
     }
 }
 
-std::pair<const ReactionData::TStoichiometryMap &, const ReactionData::TStoichiometryMap &>
+std::pair<const ReactionData::StoichiometryMap &, const ReactionData::StoichiometryMap &>
 ReactionData::getProducts() const {
     if (direction == Direction::RIGHT)
         return {right_atoms, right_molecules};
@@ -627,7 +624,7 @@ ReactionData::getProducts() const {
         return {left_atoms, left_molecules};
 }
 
-std::pair<const ReactionData::TStoichiometryMap &, const ReactionData::TStoichiometryMap &>
+std::pair<const ReactionData::StoichiometryMap &, const ReactionData::StoichiometryMap &>
 ReactionData::getReactants() const {
     if (direction == Direction::RIGHT)
         return {left_atoms, left_molecules};
@@ -714,4 +711,6 @@ void to_json(json &j, const ReactionData &reaction) {
                          {"pK'", -a.lnK / std::log(10)}};
 } //!< Serialize to JSON object
 
+void MoleculeInserter::from_json(const json &) {}
+void MoleculeInserter::to_json(json &) const {}
 } // namespace Faunus

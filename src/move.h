@@ -4,8 +4,8 @@
 #include "mpicontroller.h"
 #include "molecule.h"
 #include "geometry.h"
-#include "auxiliary.h"
 #include "space.h"
+#include "aux/timers.h"
 
 namespace Faunus {
 

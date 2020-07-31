@@ -240,7 +240,7 @@ class FormatXTC {
                 }
                 XDRfile::write_xtc(xdrfile, N, step_counter++, timestamp++, box, coords.get(), precision);
             } else {
-                std::runtime_error("xtc write error:"s + file);
+                throw std::runtime_error("xtc write error:"s + file);
             }
         }
     }

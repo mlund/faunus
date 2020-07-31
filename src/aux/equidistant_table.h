@@ -140,8 +140,7 @@ template <typename Tx = double, typename Ty = Tx, bool centerbin = false> class 
     } // pair with x,y& value
 
     std::pair<Tx, const Ty &> operator[](size_t index) const {
-        assert(index >= 0);
-        assert(index < size());
+        assert(size() > index);
         return {from_bin(index), vec[index]};
     } // const pair with x,y& value
 

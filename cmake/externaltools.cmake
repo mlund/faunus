@@ -124,8 +124,8 @@ ExternalProject_Add(project_docopt
     INSTALL_COMMAND ""
     LOG_DOWNLOAD ON
     UPDATE_DISCONNECTED ON
-    URL_MD5 79cfe2f0f057d8e2231ce6969e42d760
-    URL "https://github.com/docopt/docopt.cpp/archive/v0.6.2.tar.gz")
+    URL_MD5 c6290672c8dae49a01774297a51046fe
+    URL "https://github.com/docopt/docopt.cpp/archive/v0.6.3.tar.gz")
 
 ExternalProject_Get_Property(project_docopt binary_dir)
 ExternalProject_Get_Property(project_docopt source_dir)

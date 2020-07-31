@@ -705,7 +705,6 @@ Hamiltonian::Hamiltonian(Space &spc, const json &j) {
     using namespace Potential;
 
     typedef CombinedPairPotential<NewCoulombGalore, LennardJones> CoulombLJ; // temporary name
-    typedef CombinedPairPotential<NewCoulombGalore, HardSphere> CoulombHS;
     typedef CombinedPairPotential<NewCoulombGalore, WeeksChandlerAndersen> CoulombWCA;
     typedef CombinedPairPotential<Coulomb, WeeksChandlerAndersen> PrimitiveModelWCA;
     typedef CombinedPairPotential<Coulomb, HardSphere> PrimitiveModel;

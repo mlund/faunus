@@ -168,6 +168,7 @@ struct PolicyIonIon : public EwaldPolicyBase {
  * - GCC9: Eigen is 4-5 times faster on x86 linux; ~1.5 times *lower on macos.
  */
 struct PolicyIonIonEigen : public PolicyIonIon {
+    using PolicyIonIon::updateComplex;
     void updateComplex(EwaldData &, Space::Tgvec &) const override;
     double reciprocalEnergy(const EwaldData &) override;
 };
@@ -176,6 +177,7 @@ struct PolicyIonIonEigen : public PolicyIonIon {
  * @brief Ion-Ion Ewald with isotropic periodic boundary conditions (IPBC)
  */
 struct PolicyIonIonIPBC : public PolicyIonIon {
+    using PolicyIonIon::updateComplex;
     PolicyIonIonIPBC();
     void updateBox(EwaldData &, const Point &) const override;
     void updateComplex(EwaldData &, Space::Tgvec &) const override;
@@ -187,6 +189,7 @@ struct PolicyIonIonIPBC : public PolicyIonIon {
  * @warning Incomplete and under construction
  */
 struct PolicyIonIonIPBCEigen : public PolicyIonIonIPBC {
+    using PolicyIonIonIPBC::updateComplex;
     void updateComplex(EwaldData &, Space::Tgvec &) const override;
 };
 

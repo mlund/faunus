@@ -26,7 +26,8 @@ namespace Faunus
       } //!< Root-mean-square
 
       double stdev() const {
-          return std::sqrt( (sqsum + cnt*avg()*avg() - 2*sum*avg()) / static_cast<double>(cnt-1) );
+          return std::sqrt((sqsum + static_cast<T>(cnt) * avg() * avg() - 2 * sum * avg()) /
+                           static_cast<double>(cnt - 1));
       } //!< Standard deviation
 
       void add(T x) {

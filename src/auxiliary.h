@@ -32,7 +32,7 @@ template <typename TOut, typename TIn> inline TOut numeric_cast(const TIn number
             number > std::nextafter(static_cast<TIn>(std::numeric_limits<TOut>::min()), 0)) {
             // ... and fits into the integral type range.
             // The nextafter function is used to mitigate possible rounding up or down.
-            return static_cast<TOut>(number >= 0 ? number + 0.5 : number - 0.5); // round before cast
+            return static_cast<TOut>(number >= 0 ? number + TIn(0.5) : number - TIn(0.5)); // round before cast
         }
     }
     // not-a-number, infinite, or outside the representable range

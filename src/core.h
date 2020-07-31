@@ -184,7 +184,7 @@ auto filter(iter begin, iter end, std::function<bool(T&)> unarypredicate) {
         explicit ConfigurationError(const char *msg);
         template <class... Args>
         explicit ConfigurationError(std::string_view fmt, const Args &... args)
-            : std::runtime_error(fmt::format(fmt, args...)){};
+            : std::runtime_error(fmt::format(fmt, args...)) {}
     };
 
     }//end of faunus namespace

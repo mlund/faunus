@@ -58,6 +58,9 @@ template <class T = float> struct FormFactorUnity {
  *
  * @see http://dx.doi.org/10.1016/S0022-2860(96)09302-7
  */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdouble-promotion"
+
 template <class Tformfactor, class T = float> class DebyeFormula {
     static constexpr T r_cutoff_infty = 1e9; //<! a cutoff distance in angstrom considered to be infinity
     T q_mesh_min, q_mesh_max, q_mesh_step; //<! q_mesh parameters in inverse angstrom; used for inline lambda-functions
@@ -82,12 +85,12 @@ template <class Tformfactor, class T = float> class DebyeFormula {
             q_step / q_max < 4 * std::numeric_limits<T>::epsilon()) {
             throw std::range_error("DebyeFormula: Invalid mesh parameters for q");
         }
-        q_mesh_min = q_min < 1e-6 ? q_step : q_min; // ensure that q > 0
+        q_mesh_min = q_min < T(1e-6) ? q_step : q_min; // ensure that q > 0
         q_mesh_max = q_max;
         q_mesh_step = q_step;
         try {
             // resolution of the 1D mesh approximation of the scattering vector magnitude q
-            const int q_resolution = numeric_cast<int>(1 + std::floor((q_max - q_min) / q_step));
+            const int q_resolution = numeric_cast<int>(1.0 + std::floor((q_max - q_min) / q_step));
             intensity.resize(q_resolution, 0.0);
             sampling.resize(q_resolution, 0.0);
         } catch (std::overflow_error &e) {
@@ -138,7 +141,7 @@ template <class Tformfactor, class T = float> class DebyeFormula {
             #pragma omp for schedule(dynamic)
             for (int i = 0; i < N - 1; ++i) {
                 for (int j = i + 1; j < N; ++j) {
-                    T r = geo.sqdist(p[i], p[j]); // the square root follows
+                    T r = T(geo.sqdist(p[i], p[j])); // the square root follows
                     if (r < r_cutoff * r_cutoff) {
                         r = std::sqrt(r);
                         // Black magic: The q_mesh function must be inlineable otherwise the loop cannot be unrolled
@@ -193,13 +196,13 @@ template <class Tformfactor, class T = float> class DebyeFormula {
     auto getIntensity() {
         std::map<T, T> averaged_intensity;
         for (size_t m = 0; m < intensity.size(); ++m) {
-            const T average = intensity[m] / (sampling[m] != 0.0 ? sampling[m] : 1.0);
+            const T average = intensity[m] / (sampling[m] != T(0.0) ? sampling[m] : T(1.0));
             averaged_intensity.emplace(q_mesh(m), average);
         }
         return averaged_intensity;
     }
 };
-
+#pragma GCC diagnostic pop
 
 /**
  * A policy for collecting samples. To be used together with StructureFactor class templates.
@@ -252,7 +255,7 @@ template <typename T> class SamplingPolicy {
  *
  * For more information, see @see http://doi.org/d8zgw5 and @see http://doi.org/10.1063/1.449987.
  */
-template <typename T = float, Algorithm method = SIMD, typename TSamplingPolicy = SamplingPolicy<T>>
+template <typename T = double, Algorithm method = SIMD, typename TSamplingPolicy = SamplingPolicy<T>>
 class StructureFactorPBC : private TSamplingPolicy {
     //! sample directions (h,k,l)
     const std::vector<Point> directions = {
@@ -338,7 +341,7 @@ template <typename T = float, typename TSamplingPolicy = SamplingPolicy<T>> clas
     using TSamplingPolicy::addSampling;
 
   public:
-    StructureFactorIPBC(int q_multiplier) : p_max(q_multiplier){}
+    explicit StructureFactorIPBC(int q_multiplier) : p_max(q_multiplier) {}
 
     template <class Tpositions> void sample(const Tpositions &positions, const double boxlength) {
         // https://gcc.gnu.org/gcc-9/porting_to.html#ompdatasharing
@@ -350,11 +353,11 @@ template <typename T = float, typename TSamplingPolicy = SamplingPolicy<T>> clas
                 T sum_cos = 0;
                 for (auto &r : positions) { // loop over positions
                     // if q[i] == 0 then its cosine == 1 hence we can avoid cosine computation for performance reasons
-                    T product = cos(q[0] * r[0]);
+                    T product = std::cos(T(q[0] * r[0]));
                     if (q[1] != 0)
-                        product *= cos(q[1] * r[1]);
+                        product *= std::cos(T(q[1] * r[1]));
                     if (q[2] != 0)
-                        product *= cos(q[2] * r[2]);
+                        product *= std::cos(T(q[2] * r[2]));
                     sum_cos += product;
                 }
                 // collect average, `norm()` gives the scattering vector length

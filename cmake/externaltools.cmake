@@ -1,3 +1,5 @@
+option(ENABLE_FREESASA "Fetch 3rd-party SASA calculation software" on)
+
 include(ExternalProject)
 include(FetchContent)
 

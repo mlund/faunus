@@ -10,7 +10,7 @@ channels:
 dependencies:
     - clangdev
     - libcxx
-    - cmake>=3.11.4
+    - cmake>=3.16
     - python=3
     - pandoc=2
     - pypandoc=1

@@ -84,7 +84,7 @@ namespace Faunus {
     namespace ChemistryUnits {
 
     typedef long double T;                                                  //!< floating point size
-    constexpr T operator"" _rad(long double a) { return a; }                //!< angle in radians
+    constexpr T operator"" _rad(long double a) { return a; };               //!< angle in radians
     constexpr T operator"" _deg(long double a) { return a * pc::pi / 180; } //!< angle in degrees (to radians)
     constexpr T operator"" _K(long double temp) { return temp; }            //!< temperature in kelvins
     constexpr T operator"" _C(long double temp) {

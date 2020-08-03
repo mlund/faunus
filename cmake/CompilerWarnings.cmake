@@ -47,7 +47,7 @@ function(set_project_warnings project_name)
             -Wno-sign-compare
             -Wno-unknown-pragmas
             -Wnull-dereference # warn if a null dereference is detected
-            -Wdouble-promotion # warn if float is implicit promoted to double
+            #-Wdouble-promotion # warn if float is implicit promoted to double
             -Wformat=2 # warn on security issues around functions that format output (ie printf)
             )
 

@@ -199,19 +199,24 @@ class ChargeFluctuations : public Analysisbase {
     ChargeFluctuations(const json &j, Space &spc);
 }; // Fluctuations of atomic charges
 
+/**
+ * @brief Molecular multipole moments and their fluctuations
+ */
 class Multipole : public Analysisbase {
     const Space &spc;
-    struct data {
-        Average<double> Z, Z2, mu, mu2;
-    };
-    std::map<int, data> _map; //!< Molecular moments and their fluctuations
-
+    struct Data {
+        Average<double> charge;
+        Average<double> charge_squared;
+        Average<double> dipole_moment;
+        Average<double> dipole_moment_squared;
+    };                                   // Average sample moment for a molecule
+    std::map<int, Data> average_moments; //!< Molecular moments and their fluctuations. Key = molid.
     void _sample() override;
     void _to_json(json &) const override;
 
   public:
     Multipole(const json &, const Space &);
-}; // Molecular multipoles and their fluctuations
+};
 
 /**
  * @brief Save system energy to disk

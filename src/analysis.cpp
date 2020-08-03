@@ -1367,24 +1367,27 @@ ChargeFluctuations::ChargeFluctuations(const json &j, Space &spc) : spc(spc) {
     charge.resize(mol_iter->atoms.size());
 }
 void Multipole::_sample() {
-    for (auto &g : spc.groups)
-        if (!g.atomic) {
-            auto &d = _map[g.id];
-            Particle p = Faunus::toMultipole(g, spc.geo.getBoundaryFunc());
-            d.Z += p.charge;
-            d.mu += p.getExt().mulen;
-            d.Z2 += p.charge * p.charge;
-            d.mu2 += p.getExt().mulen * p.getExt().mulen;
+    for (const auto &group : spc.groups) {            // loop over all groups molecules
+        if (group.isMolecular() and !group.empty()) { // only active, molecular groups
+            auto particle = Faunus::toMultipole(group, spc.geo.getBoundaryFunc());
+            auto &average = average_moments[group.id];
+            average.charge += particle.charge;
+            average.dipole_moment += particle.getExt().mulen;
+            average.charge_squared += particle.charge * particle.charge;
+            average.dipole_moment_squared += particle.getExt().mulen * particle.getExt().mulen;
         }
+    }
 }
 void Multipole::_to_json(json &j) const {
-    json &k = j["molecules"];
-    for (auto &d : _map)
-        k[molecules[d.first].name] = {{"Z", d.second.Z.avg()},
-                                      {"Z2", d.second.Z2.avg()},
-                                      {"C", d.second.Z2.avg() - std::pow(d.second.Z.avg(), 2)},
-                                      {u8::mu, d.second.mu.avg()},
-                                      {u8::mu + u8::squared, d.second.mu2.avg()}};
+    auto &molecules_json = j["molecules"];
+    for (auto &[molid, average] : average_moments) {
+        auto &molecule_name = Faunus::molecules[molid].name;
+        molecules_json[molecule_name] = {{"Z", average.charge.avg()},
+                                         {"Z2", average.charge_squared.avg()},
+                                         {"C", average.charge_squared.avg() - std::pow(average.charge.avg(), 2)},
+                                         {u8::mu, average.dipole_moment.avg()},
+                                         {u8::mu + u8::squared, average.dipole_moment_squared.avg()}};
+    }
 }
 Multipole::Multipole(const json &j, const Space &spc) : spc(spc) {
     from_json(j);

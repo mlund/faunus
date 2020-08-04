@@ -43,3 +43,4 @@ include(cmake/gitversion.cmake)
 add_subdirectory(src)
 add_subdirectory(docs)
 add_subdirectory(examples)
+

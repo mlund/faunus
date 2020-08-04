@@ -93,7 +93,7 @@ if(ENABLE_SID)
     if (SDL2_FOUND)
         # fix buggy sdl2: https://stackoverflow.com/questions/45730098/cmake-leading-or-trailing-whitespace-policy-cmp0004
         string(STRIP ${SDL2_LIBRARIES} SDL2_LIBRARIES)
-        include_directories(${SDL2_INCLUDE_DIRS})
+	include_directories(SYSTEM ${SDL2_INCLUDE_DIRS})
         target_link_libraries(faunus PRIVATE ${SDL2_LIBRARIES} cppsid)
         target_compile_definitions(faunus PRIVATE ENABLE_SID)
         if (PYTHONINTERP_FOUND)

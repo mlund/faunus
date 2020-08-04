@@ -34,8 +34,8 @@ set(hdrs analysis.h average.h atomdata.h auxiliary.h bonds.h chainmove.h cluster
         forcemove.h energy.h externalpotential.h geometry.h group.h io.h molecule.h montecarlo.h
         move.h mpicontroller.h particle.h penalty.h potentials.h reactioncoordinate.h rotate.h
         space.h speciation.h random.h regions.h tensor.h units.h
-        aux/eigen_cerealisation.hpp aux/eigensupport.h aux/iteratorsupport.h aux/multimatrix.h
-        aux/eigen_cerealisation.hpp aux/eigensupport.h aux/equidistant_table.h aux/error_function.h
+        aux/eigen_cerealisation.h aux/eigensupport.h aux/iteratorsupport.h aux/multimatrix.h
+        aux/eigen_cerealisation.h aux/eigensupport.h aux/equidistant_table.h aux/error_function.h
         aux/exp_function.h aux/invsqrt_function.h aux/iteratorsupport.h aux/legendre.h aux/multimatrix.h
         aux/pairmatrix.h aux/pow_function.h aux/table_1d.h aux/table_2d.h aux/timers.h)
 

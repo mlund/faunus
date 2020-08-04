@@ -564,27 +564,27 @@ ParticleVector fastaToParticles(const std::string &fasta_sequence, double bond_l
     return particles;
 }
 
-/**
- * @param file filename to load (aam, pqr, xyz, ...)
- * @param particle_vector destination particle vector
- * @param append if true, expand dst vector
- * @param keep_charges if true, ignore AtomData charges
- * @return true if successfully loaded
- */
-bool loadStructure(const std::string &file, ParticleVector &particle_vector, bool append, bool keep_charges) {
-    if (!append) {
-        particle_vector.clear();
+ParticleVector loadStructure(const std::string &file, bool keep_charges) {
+    try {
+        ParticleVector particles;
+        if (std::string suffix = file.substr(file.find_last_of(".") + 1); suffix == "aam") {
+            particles = FormatAAM::load(file, keep_charges);
+        } else if (suffix == "pqr") {
+            FormatPQR::load(file, particles, keep_charges);
+        } else if (suffix == "xyz") {
+            FormatXYZ::load(file, particles);
+        } else if (suffix == "gro") {
+            particles = FormatGRO::load(file);
+        } else {
+            throw std::runtime_error("unknown format");
+        }
+        if (particles.empty()) {
+            throw std::runtime_error("empty structure");
+        }
+        return particles;
+    } catch (std::exception &e) {
+        throw std::runtime_error("structure load error: "s + e.what());
     }
-    if (std::string suffix = file.substr(file.find_last_of(".") + 1); suffix == "aam") {
-        particle_vector = FormatAAM::load(file, keep_charges);
-    } else if (suffix == "pqr") {
-        FormatPQR::load(file, particle_vector, keep_charges);
-    } else if (suffix == "xyz") {
-        FormatXYZ::load(file, particle_vector);
-    } else if (suffix == "gro") {
-        particle_vector = FormatGRO::load(file);
-    }
-    return !particle_vector.empty();
 }
 
 /**
@@ -592,39 +592,39 @@ bool loadStructure(const std::string &file, ParticleVector &particle_vector, boo
  * @return vector of verified and existing atom id's
  */
 std::vector<int> fastaToAtomIds(const std::string &fasta_sequence) {
-    std::map<char, std::string> map = {{'A', "ALA"},
-                                       {'R', "ARG"},
-                                       {'N', "ASN"},
-                                       {'D', "ASP"},
-                                       {'C', "CYS"},
-                                       {'E', "GLU"},
-                                       {'Q', "GLN"},
-                                       {'G', "GLY"},
-                                       {'H', "HIS"},
-                                       {'I', "ILE"},
-                                       {'L', "LEU"},
-                                       {'K', "LYS"},
-                                       {'M', "MET"},
-                                       {'F', "PHE"},
-                                       {'P', "PRO"},
-                                       {'S', "SER"},
-                                       {'T', "THR"},
-                                       {'W', "TRP"},
-                                       {'Y', "TYR"},
-                                       {'V', "VAL"},
-                                       // faunus specific codes
-                                       {'n', "NTR"},
-                                       {'c', "CTR"},
-                                       {'a', "ANK"}};
+    const std::map<char, std::string> map = {{'A', "ALA"},
+                                             {'R', "ARG"},
+                                             {'N', "ASN"},
+                                             {'D', "ASP"},
+                                             {'C', "CYS"},
+                                             {'E', "GLU"},
+                                             {'Q', "GLN"},
+                                             {'G', "GLY"},
+                                             {'H', "HIS"},
+                                             {'I', "ILE"},
+                                             {'L', "LEU"},
+                                             {'K', "LYS"},
+                                             {'M', "MET"},
+                                             {'F', "PHE"},
+                                             {'P', "PRO"},
+                                             {'S', "SER"},
+                                             {'T', "THR"},
+                                             {'W', "TRP"},
+                                             {'Y', "TYR"},
+                                             {'V', "VAL"},
+                                             // faunus specific codes
+                                             {'n', "NTR"},
+                                             {'c', "CTR"},
+                                             {'a', "ANK"}};
 
     std::vector<std::string> names;
     names.reserve(fasta_sequence.size());
 
-    for (auto c : fasta_sequence) {                 // loop over letters
-        if (auto it = map.find(c); it != map.end()) // is it in map?
+    for (auto letter : fasta_sequence) {                   // loop over letters
+        if (auto it = map.find(letter); it != map.end()) { // is it in map?
             names.push_back(it->second);
-        else {
-            throw std::runtime_error("Invalid FASTA letter '" + std::string(1, c) + "'");
+        } else {
+            throw std::runtime_error("invalid FASTA letter '" + std::string(1, letter) + "'");
         }
     }
     return Faunus::names2ids(atoms, names);

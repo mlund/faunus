@@ -421,20 +421,18 @@ bool SpeciationMove::enoughImplicitMolecules() const {
 void SpeciationMove::_move(Change &change) {
     assert(other_spc != nullptr);        // knowledge of other space should be provided by now
     if (not Faunus::reactions.empty()) { // global list of reactions
-        reaction = slump.sample(Faunus::reactions.begin(), Faunus::reactions.end()); // random reaction
-        assert(reaction != Faunus::reactions.end());
+        reaction = slump.sample(Faunus::reactions.begin(), Faunus::reactions.end());    // random reaction
         auto direction = static_cast<ReactionData::Direction>((char)slump.range(0, 1)); // random direction
         reaction->setDirection(direction);
-
-        bond_energy = 0;
-
+        bond_energy = 0.0;
         if (atomicSwap(change)) {
             if (deactivateAllReactants(change)) {
                 if (activateAllProducts(change)) {
-                    assert(not change.empty());
-                    change.dN = true; // Attempting to change the number of atoms / molecules
-                    std::sort(change.groups.begin(), change.groups.end()); // why?
-                    return;
+                    if (!change.empty()) {
+                        change.dN = true; // Attempting to change the number of atoms / molecules
+                        std::sort(change.groups.begin(), change.groups.end()); // change groups *must* be sorted!
+                        return;
+                    }
                 }
             }
         }

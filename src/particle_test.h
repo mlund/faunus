@@ -43,7 +43,7 @@ TEST_CASE("[Faunus] Particle") {
     // check of all properties are rotated
     QuaternionRotate qrot(pc::pi / 2, {0, 1, 0});
     p1.getExt().mu = p1.getExt().scdir = {1, 0, 0};
-    p1.rotate(qrot.first, qrot.second);
+    p1.rotate(qrot.getQuaternion(), qrot.getRotationMatrix());
 
     CHECK(p1.getExt().mu.x() == Approx(0));
     CHECK(p1.getExt().mu.z() == Approx(-1));

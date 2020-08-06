@@ -1,27 +1,52 @@
 #include "rotate.h"
 
 namespace Faunus {
-QuaternionRotate::QuaternionRotate(double angle, Point u) { set(angle, u); }
 
-void QuaternionRotate::set(double angle, Point u) {
+/**
+ * @param angle rotation angle (radians)
+ * @param axis rotation axis
+ */
+QuaternionRotate::QuaternionRotate(double angle, Point axis) { set(angle, axis); }
+
+/**
+ * @param angle rotation angle (radians)
+ * @param axis rotation axis
+ */
+void QuaternionRotate::set(double angle, Point axis) {
     this->angle = angle;
-    u.normalize();
-    first = Eigen::AngleAxisd(angle, u);
-    second << 0, -u.z(), u.y(), u.z(), 0, -u.x(), -u.y(), u.x(), 0;
-    second = Eigen::Matrix3d::Identity() + second * std::sin(angle) + second * second * (1 - std::cos(angle));
-
+    axis.normalize(); // make unit vector
+    quaternion = Eigen::AngleAxisd(angle, axis);
+    rotation_matrix << 0.0, -axis.z(), axis.y(), axis.z(), 0.0, -axis.x(), -axis.y(), axis.x(), 0.0;
+    rotation_matrix = Eigen::Matrix3d::Identity() + rotation_matrix * std::sin(angle) +
+                      rotation_matrix * rotation_matrix * (1.0 - std::cos(angle));
     // Quaternion can be converted to rotation matrix:
     // second = first.toRotationMatrix()
 }
 
-QuaternionRotate::Point QuaternionRotate::operator()(Point a, std::function<void(Point &)> boundary, const Point &shift) const {
-    a = a - shift;
-    boundary(a);
-    a = first * a + shift;
-    boundary(a);
-    return a;
+/**
+ * @param vector Point to rotate
+ * @param boundary Boundary function to handle PBC
+ * @param shift Shift used to aid in boundary removal
+ * @return Rotated vector
+ */
+QuaternionRotate::Point QuaternionRotate::operator()(Point vector, std::function<void(Point &)> boundary,
+                                                     const Point &shift) const {
+    vector = vector - shift;
+    boundary(vector);
+    vector = quaternion * vector + shift;
+    boundary(vector);
+    return vector;
     // https://www.cc.gatech.edu/classes/AY2015/cs4496_spring/Eigen.html
 }
 
-auto QuaternionRotate::operator()(const Eigen::Matrix3d &a) const { return second * a * second.transpose(); }
+/**
+ * @param matrix Matrix or tensor to rotate
+ * @return Rotated matrix or tensor
+ */
+auto QuaternionRotate::operator()(const Eigen::Matrix3d &matrix) const {
+    return rotation_matrix * matrix * rotation_matrix.transpose();
+}
+
+const Eigen::Quaterniond &QuaternionRotate::getQuaternion() const { return quaternion; }
+const Eigen::Matrix3d &QuaternionRotate::getRotationMatrix() const { return rotation_matrix; }
 } // namespace Faunus

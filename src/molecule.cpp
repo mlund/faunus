@@ -455,13 +455,10 @@ void to_json(json &j, const ExclusionsSimple &exclusions) {
 // ============ ExclusionsVicinity ============
 
 ExclusionsVicinity ExclusionsVicinity::create(int atoms_cnt, const std::vector<std::pair<int, int>> &pairs) {
-    auto distance = [](int i, int j) -> int { return j > i ? j - i : i - j; };
-    int max_neighbours_distance = 0;
-    for (auto pair : pairs) {
-        auto neighbours_distance = distance(pair.first, pair.second);
-        if (neighbours_distance > max_neighbours_distance) {
-            max_neighbours_distance = neighbours_distance;
-        }
+    auto max_neighbours_distance = 0;
+    auto compare = [](auto &a, auto &b) { return std::abs(a.first - a.second) < std::abs(b.first - b.second); };
+    if (auto it = std::max_element(pairs.begin(), pairs.end(), compare); it != pairs.end()) {
+        max_neighbours_distance = std::abs(it->first - it->second);
     }
     ExclusionsVicinity exclusions(atoms_cnt, max_neighbours_distance);
     exclusions.add(pairs);

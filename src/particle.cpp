@@ -10,15 +10,10 @@ namespace Faunus {
  * quaternions?
  */
 void ParticlePropertyBase::rotate(const Eigen::Quaterniond &, const Eigen::Matrix3d &) {}
-
 void Radius::to_json(json &j) const { j["r"] = radius; }
-
 void Radius::from_json(const json &j) { radius = j.value("r", 0.0); }
-
 void Charge::to_json(json &j) const { j["q"] = charge; }
-
 void Charge::from_json(const json &j) { charge = j.value("q", 0.0); }
-
 void Dipole::rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &) { mu = q * mu; }
 
 void Dipole::to_json(json &j) const {
@@ -65,44 +60,49 @@ void Cigar::from_json(const json &j) {
     sclen = j.value("sclen", sclen);
 }
 
-const AtomData &Particle::traits() {
-    assert(id >= 0 and id < atoms.size());
-    return atoms.at(id);
-}
+const AtomData &Particle::traits() { return atoms.at(id); }
 
 /**
  * @warning Performance is sub-optimal as conversion is done through a json object
  */
 Particle::Particle(const AtomData &a) { *this = json(a).front(); }
-
 Particle::Particle(const AtomData &a, const Point &pos) : Particle(a) { this->pos = pos; }
-
-// copy constructor
-Particle::Particle(const Particle &p) : id(p.id), charge(p.charge), pos(p.pos) {
-    if (p.ext != nullptr)
-        ext = std::make_shared<Particle::ParticleExtension>(*p.ext); // deep copy
+Particle::Particle(const Particle &other) : id(other.id), charge(other.charge), pos(other.pos) {
+    if (other.ext) {
+        ext = std::make_shared<Particle::ParticleExtension>(*other.ext); // deep copy
+    }
 }
 
-// assignment operator
-Particle &Particle::operator=(const Particle &p) {
-    if (&p != this) {
-        charge = p.charge;
-        pos = p.pos;
-        id = p.id;
-        if (p.ext != nullptr) { // if particle has
-            if (ext != nullptr) // extension, then
-                *ext = *p.ext;  // deep copy
-            else                // else if *this is empty, create new based on p
-                ext = std::make_shared<Particle::ParticleExtension>(*p.ext); // create new
-        } else                                                               // p doesn't have extended properties
+Particle &Particle::operator=(const Particle &other) {
+    if (&other != this) {
+        charge = other.charge;
+        pos = other.pos;
+        id = other.id;
+        if (other.ext) {           // if particle has
+            if (ext) {             // extension, then
+                *ext = *other.ext; // deep copy
+            } else {               // else if *this is empty, create new based on p
+                ext = std::make_shared<Particle::ParticleExtension>(*other.ext); // create new
+            }
+        } else { // other doesn't have extended properties
             ext = nullptr;
+        }
     }
     return *this;
 }
 
-void Particle::rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &m) {
-    if (ext != nullptr)
-        ext->rotate(q, m);
+/**
+ * @param quaternion Quaternion used to rotate points
+ * @param rotation_matrix Rotation matrix used to rotate tensors
+ * @todo Only one of the above should be enough
+ *
+ * This has effect only on anisotropic particles and does no
+ * positional rotation, only internal rotation
+ */
+void Particle::rotate(const Eigen::Quaterniond &quaternion, const Eigen::Matrix3d &rotation_matrix) {
+    if (hasExtension()) {
+        ext->rotate(quaternion, rotation_matrix);
+    }
 }
 
 bool Particle::hasExtension() const { return ext != nullptr; }
@@ -127,8 +127,9 @@ void from_json(const json &j, Particle &p) {
         p.ext = nullptr; // no extended features found in json
 }
 void to_json(json &j, const Particle &p) {
-    if (p.ext != nullptr)
+    if (p.ext) {
         to_json(j, *p.ext);
+    }
     j["id"] = p.id;
     j["pos"] = p.pos;
     j["q"] = p.charge;

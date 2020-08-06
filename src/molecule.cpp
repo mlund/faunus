@@ -523,7 +523,7 @@ ParticleVector RandomInserter::operator()(Geometry::GeometryBase &geo, const Par
             for (auto &i : v) { // for each atom type id
                 if (rotate) {
                     rot.set(2 * pc::pi * random(), ranunit(random));
-                    i.rotate(rot.first, rot.second);
+                    i.rotate(rot.getQuaternion(), rot.getRotationMatrix());
                 }
                 geo.randompos(i.pos, random);
                 i.pos = i.pos.cwiseProduct(dir) + offset;
@@ -541,7 +541,7 @@ ParticleVector RandomInserter::operator()(Geometry::GeometryBase &geo, const Par
                 Geometry::cm2origo(v.begin(), v.end());          // translate to origin
                 rot.set(random() * 2 * pc::pi, ranunit(random)); // random rot around random vector
                 if (rotate) {
-                    Geometry::rotate(v.begin(), v.end(), rot.first);
+                    Geometry::rotate(v.begin(), v.end(), rot.getQuaternion());
                     assert(Geometry::massCenter(v.begin(), v.end()).norm() < 1e-6); // cm shouldn't move
                 }
                 for (auto &i : v) {

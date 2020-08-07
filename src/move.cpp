@@ -1133,7 +1133,7 @@ void ConformationSwap::_move(Change &change) {
 
             // Get a new conformation that should be properly wrapped around the boundaries
             // (if applicable) and have the same mass-center as "g->cm".
-            Tpvec p = inserter(spc.geo, spc.p, molecules[molid]);
+            auto p = inserter(spc.geo, molecules[molid], spc.p);
             if (p.size() not_eq g->size())
                 throw std::runtime_error(name + ": conformation atom count mismatch");
 

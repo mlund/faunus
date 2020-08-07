@@ -31,7 +31,8 @@ class MoleculeData;
  * and molecule data.
  */
 struct MoleculeInserter {
-    virtual ParticleVector operator()(Geometry::GeometryBase &geo, const ParticleVector &, MoleculeData &mol) = 0;
+    virtual ParticleVector operator()(Geometry::GeometryBase &geo, MoleculeData &mol,
+                                      const ParticleVector &other_particles) = 0;
     virtual void from_json(const json &);
     virtual void to_json(json &) const;
     virtual ~MoleculeInserter() = default;
@@ -40,16 +41,20 @@ struct MoleculeInserter {
 void from_json(const json &j, MoleculeInserter &inserter);
 void to_json(json &j, const MoleculeInserter &inserter);
 
+/**
+ * @brief Inserts molecules into random positions in the container
+ */
 struct RandomInserter : public MoleculeInserter {
-    Point dir = {1, 1, 1};     //!< Scalars for random mass center position. Default (1,1,1)
-    Point offset = {0, 0, 0};  //!< Added to random position. Default (0,0,0)
-    bool rotate = true;           //!< Set to true to randomly rotate molecule when inserted. Default: true
-    bool keep_positions = false;  //!< Set to true to keep original positions (default: false)
-    bool allow_overlap = false;   //!< Set to true to skip container overlap check
-    int max_trials = 20'000;      //!< Maximum number of container overlap checks
-    int conformation_ndx = -1;    //!< Index of last used conformation
+    Point dir = {1, 1, 1};       //!< Scalars for random mass center position. Default (1,1,1)
+    Point offset = {0, 0, 0};    //!< Added to random position. Default (0,0,0)
+    bool rotate = true;          //!< Set to true to randomly rotate molecule when inserted. Default: true
+    bool keep_positions = false; //!< Set to true to keep original positions (default: false)
+    bool allow_overlap = false;  //!< Set to true to skip container overlap check
+    int max_trials = 20'000;     //!< Maximum number of container overlap checks
+    int conformation_ndx = -1;   //!< Index of last used conformation
 
-    ParticleVector operator()(Geometry::GeometryBase &geo, const ParticleVector &, MoleculeData &mol) override;
+    ParticleVector operator()(Geometry::GeometryBase &geo, MoleculeData &molecule,
+                              const ParticleVector &ignored_other_particles = ParticleVector()) override;
     void from_json(const json &j) override;
     void to_json(json &j) const override;
 };

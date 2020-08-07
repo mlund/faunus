@@ -31,7 +31,7 @@ bool MoleculeData::isImplicit() const { return implicit; }
 
 ParticleVector MoleculeData::getRandomConformation(Geometry::GeometryBase &geo, const ParticleVector &otherparticles) {
     assert(inserter != nullptr);
-    return (*inserter)(geo, otherparticles, *this);
+    return (*inserter)(geo, *this, otherparticles);
 }
 
 void MoleculeData::loadConformation(const std::string &file, bool keep_positions, bool keep_charges) {
@@ -257,18 +257,19 @@ void MoleculeBuilder::readCompoundValues(const json &j) {
 }
 
 void MoleculeBuilder::readAtomic(const json &j_properties) {
-    auto j_atoms = j_properties.value("atoms", json::array());
-    if (not j_atoms.is_array())
-        throw ConfigurationError("`atoms` must be an array");
-    particles.reserve(j_atoms.size());
-    for (auto atom_id : j_atoms) {
-        std::string atom_name = atom_id.get<std::string>();
-        auto atom_it = findName(atoms, atom_name);
-        if(atom_it == atoms.end()) {
-            faunus_logger->error("Unknown atom '{}' in molecule '{}'", atom_name, molecule_name);
-            throw ConfigurationError("unknown atom in atomic molecule");
+    if (const auto it = j_properties.find("atoms"); it != j_properties.end()) {
+        if (not it->is_array()) {
+            throw ConfigurationError("`atoms` must be an array");
         }
-        particles.emplace_back(*atom_it);
+        particles.reserve(it->size());
+        for (auto atom_id : *it) {
+            const auto atom_name = atom_id.get<std::string>();
+            if (auto atom_it = findName(Faunus::atoms, atom_name); atom_it == atoms.end()) {
+                throw ConfigurationError("Unknown atom '{}' in molecule '{}'", atom_name, molecule_name);
+            } else {
+                particles.emplace_back(*atom_it);
+            }
+        }
     }
 }
 
@@ -291,14 +292,12 @@ void MoleculeBuilder::readParticles(const json &j_properties) {
 
 void MoleculeBuilder::readBonds(const json &j_properties) {
     bonds = j_properties.value("bondlist", bonds);
-
-    // assert that all bonds are *internal*
-    for (auto &bond : bonds) {
-        for (int i : bond->index) {
-            if (i >= particles.size() || i < 0) {
-                throw ConfigurationError("bonded atom index " + std::to_string(i) + " out of range");
-            }
-        }
+    auto bond_index_are_external = [&](const auto bond) {
+        return std::any_of(bond->index.begin(), bond->index.end(),
+                           [&](auto &index) { return (index >= particles.size() || index < 0); });
+    };
+    if (std::any_of(bonds.begin(), bonds.end(), bond_index_are_external)) {
+        throw ConfigurationError("bonded index out of range");
     }
 }
 
@@ -327,9 +326,11 @@ void MoleculeBuilder::readExclusions(const json &j_properties) {
 }
 
 bool MoleculeBuilder::isFasta(const json &j_properties) {
-    auto j_structure_it = j_properties.find("structure");
-    bool is_fasta = (j_structure_it != j_properties.end() && j_structure_it->find("fasta") != j_structure_it->end());
-    return is_fasta;
+    if (auto it = j_properties.find("structure"); it != j_properties.end()) {
+        return it->find("fasta") != it->end();
+    } else {
+        return false;
+    }
 }
 
 // ============ MoleculeStructureReader ============
@@ -361,8 +362,7 @@ void MoleculeStructureReader::readArray(ParticleVector &particles, const json &j
         auto j_particle_it = j_particle_wrap.items().begin(); // a persistent copy of iterator needed in clang
         auto atom_it = findName(atoms, (*j_particle_it).key());
         if (atom_it == atoms.end()) {
-            faunus_logger->error("An unknown atom '{}' in the molecule.", (*j_particle_it).key());
-            throw ConfigurationError("unknown atom in molecule");
+            throw ConfigurationError("unknown atom '{}' in the molecule.", (*j_particle_it).key());
         }
         Point pos = (*j_particle_it).value();
         particles.emplace_back(*atom_it, pos);
@@ -410,7 +410,7 @@ ExclusionsSimple::ExclusionsSimple(int size)
 }
 
 void ExclusionsSimple::add(const std::vector<std::pair<int, int>> &exclusions) {
-    for(auto pair : exclusions) {
+    for (const auto &pair : exclusions) {
         add(pair.first, pair.second);
     }
 }
@@ -504,64 +504,61 @@ void to_json(json &j, const ExclusionsVicinity &exclusions) {
 void from_json(const json &j, MoleculeInserter &inserter) { inserter.from_json(j); }
 void to_json(json &j, const MoleculeInserter &inserter) { inserter.to_json(j); }
 
-ParticleVector RandomInserter::operator()(Geometry::GeometryBase &geo, const ParticleVector &, MoleculeData &mol) {
-    int cnt = 0;
-    QuaternionRotate rot;
-    bool containerOverlap; // true if container overlap detected
-
-    if (std::fabs(geo.getVolume()) < 1e-20)
-        throw std::runtime_error("geometry has zero volume");
-
-    ParticleVector v = mol.conformations.sample(random.engine); // get random, weighted conformation
-    conformation_ndx = mol.conformations.getLastIndex();        // latest index
-
-    do {
-        if (cnt++ > max_trials)
+/**
+ * @param geo Geometry to use for PBC and container overlap check
+ * @param molecule Molecular type to insert
+ * @param ignored_other_particles Other particles in the system (ignored for this inserter!)
+ * @return Inserted particle vector
+ */
+ParticleVector RandomInserter::operator()(Geometry::GeometryBase &geo, MoleculeData &molecule,
+                                          [[maybe_unused]] const ParticleVector &ignored_other_particles) {
+    QuaternionRotate rotator;
+    auto container_overlap = [&geo](auto &particle) { return geo.collision(particle.pos); };
+    auto particles = molecule.conformations.sample(random.engine); // random, weighted conformation
+    conformation_ndx = molecule.conformations.getLastIndex();      // latest index
+    if (particles.empty()) {
+        throw std::runtime_error("nothing to insert for molecule '"s + molecule.name + "'");
+    }
+    int number_of_insertion_attempts = 0;
+    while (true) { // keep looping until we manage to insert or max attempts is reached
+        if (number_of_insertion_attempts++ > max_trials) {
             throw std::runtime_error("Max. # of overlap checks reached upon insertion.");
-
-        if (mol.atomic) {       // insert atomic species
-            for (auto &i : v) { // for each atom type id
-                if (rotate) {
-                    rot.set(2 * pc::pi * random(), ranunit(random));
-                    i.rotate(rot.getQuaternion(), rot.getRotationMatrix());
+        }
+        if (molecule.atomic) {                 // insert atomic species
+            for (auto &particle : particles) { // for each atom type id
+                if (rotate) {                  // internal rotation of atomic particles
+                    rotator.set(2.0 * pc::pi * random(), ranunit(random));
+                    particle.rotate(rotator.getQuaternion(), rotator.getRotationMatrix());
                 }
-                geo.randompos(i.pos, random);
-                i.pos = i.pos.cwiseProduct(dir) + offset;
-                geo.boundary(i.pos);
+                geo.randompos(particle.pos, random);
+                particle.pos = particle.pos.cwiseProduct(dir) + offset;
+                geo.boundary(particle.pos);
             }
         } else {                  // insert molecule
-            if (keep_positions) {        // keep original positions (no rotation/trans)
-                for (auto &i : v) // ...but let's make sure it fits
-                    if (geo.collision(i.pos))
-                        throw std::runtime_error("Error: Inserted molecule does not fit in container");
+            if (keep_positions) { // keep original positions (no rotation/trans)
+                if (std::any_of(particles.begin(), particles.end(), container_overlap)) {
+                    throw std::runtime_error("inserted molecule does not fit in container");
+                }
             } else {
                 Geometry::translateToOrigin(particles.begin(), particles.end()); // translate to origin
                 if (rotate) {
-                    Geometry::rotate(v.begin(), v.end(), rot.getQuaternion());
-                    assert(Geometry::massCenter(v.begin(), v.end()).norm() < 1e-6); // cm shouldn't move
+                    rotator.set(2.0 * pc::pi * random(), ranunit(random)); // random rot around random vector
+                    Geometry::rotate(particles.begin(), particles.end(), rotator.getQuaternion());
+                    assert(Geometry::massCenter(particles.begin(), particles.end()).norm() < 1e-6); // cm shouldn't move
                 }
-                for (auto &i : v) {
-                    i.pos += cm + offset;
-                    geo.boundary(i.pos);
-                }
+                Point new_mass_center;
+                geo.randompos(new_mass_center, random);                       // random point in container
+                new_mass_center = new_mass_center.cwiseProduct(dir) + offset; // add defined dirs (default: 1,1,1)
+                Geometry::translate(particles.begin(), particles.end(), new_mass_center, geo.getBoundaryFunc());
             }
         }
-
-        if (v.empty())
-            throw std::runtime_error("Nothing to load/insert for molecule '"s + mol.name + "'");
-
-        // check if molecules / atoms fit inside simulation container
-        containerOverlap = false;
-        if (allow_overlap == false) {
-            for (auto &i : v) {
-                if (geo.collision(i.pos)) {
-                    containerOverlap = true;
-                    break;
-                }
-            }
+        if (allow_overlap) { // allow overlap with container walls?
+            break;           // ...yes? then let's stop here.
+        } else if (!std::any_of(particles.begin(), particles.end(), container_overlap)) {
+            break;
         }
-    } while (containerOverlap);
-    return v;
+    };
+    return particles;
 }
 
 void RandomInserter::from_json(const json &j) {

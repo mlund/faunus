@@ -19,6 +19,9 @@ addons:
             - libsdl2-dev
             - mpich
             - libmpich-dev
+    snaps:
+        - name: cmake
+          confinement: classic
 
 matrix:
   include:
@@ -32,6 +35,7 @@ matrix:
 
 script:
   - |
+    export PATH=/snap/bin:$PATH
     cmake . -DENABLE_OPENMP=off -DCMAKE_BUILD_TYPE=Debug
     make faunus || travis_terminate 1
     ./faunus --version || travis_terminate 1

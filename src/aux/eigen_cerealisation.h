@@ -77,7 +77,7 @@ load(Archive &ar, Eigen::Matrix<_Scalar, _Rows, _Cols, _Options, _MaxRows, _MaxC
 
     matrix.resize(rows, cols);
 
-    ar(binary_data(matrix.data(), static_cast<std::size_t>(rows * cols * sizeof(_Scalar))));
+    ar(binary_data(matrix.data(), rows * cols * sizeof(_Scalar)));
 }
 
 } /* namespace cereal */

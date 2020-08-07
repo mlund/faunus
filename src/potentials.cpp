@@ -106,11 +106,11 @@ void to_json(json &j, const CustomInteractionData &interaction) {
 
 void from_json(const json &j, std::vector<CustomInteractionData> &interactions) {
     if(j.is_array()) {
-        for (const auto j_pair: j) {
+        for (const auto &j_pair: j) {
             interactions.push_back(j_pair);
         }
     } else if(j.is_object()) {
-        for (const auto j_kv: j.items()) {
+        for (const auto &j_kv: j.items()) {
             interactions.push_back(json {{j_kv.key(), j_kv.value()}});
         }
     } else {

@@ -233,14 +233,14 @@ class FormatXTC {
                 std::unique_ptr<XDRfile::rvec[]> coords(new XDRfile::rvec[ranges::distance(begin, end)]);
                 size_t N = 0;
                 for (auto particle = begin; particle != end; ++particle) {
-                    coords.get()[N][0] = particle->pos.x() / 1.0_nm + box[0][0] * 0.5;
-                    coords.get()[N][1] = particle->pos.y() / 1.0_nm + box[1][1] * 0.5;
-                    coords.get()[N][2] = particle->pos.z() / 1.0_nm + box[2][2] * 0.5;
+                    coords.get()[N][0] = static_cast<float>(particle->pos.x() / 1.0_nm) + box[0][0] * 0.5f;
+                    coords.get()[N][1] = static_cast<float>(particle->pos.y() / 1.0_nm) + box[1][1] * 0.5f;
+                    coords.get()[N][2] = static_cast<float>(particle->pos.z() / 1.0_nm) + box[2][2] * 0.5f;
                     N++;
                 }
                 XDRfile::write_xtc(xdrfile, N, step_counter++, timestamp++, box, coords.get(), precision);
             } else {
-                std::runtime_error("xtc write error:"s + file);
+                throw std::runtime_error("xtc write error:"s + file);
             }
         }
     }

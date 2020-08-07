@@ -273,7 +273,6 @@ size_t Space::numParticles(Space::Selection sel) const {
 }
 
 void to_json(json &j, Space &spc) {
-    typedef typename Space::Tpvec Tpvec;
     j["geometry"] = spc.geo;
     j["groups"] = spc.groups;
     j["particles"] = spc.p;

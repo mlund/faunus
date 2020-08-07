@@ -37,7 +37,7 @@ ParticleVector MoleculeData::getRandomConformation(Geometry::GeometryBase &geo, 
 void MoleculeData::loadConformation(const std::string &file, bool keep_positions, bool keep_charges) {
     auto particles = loadStructure(file, keep_charges); // throws if nothing is loaded!
     if (keep_positions == false) {
-        Geometry::cm2origo(particles.begin(), particles.end()); // move to origin
+        Geometry::translateToOrigin(particles.begin(), particles.end()); // move to origin
     }
     conformations.push_back(particles);
     for (auto &p : particles) { // add atoms to atomlist
@@ -93,7 +93,7 @@ void MoleculeData::createMolecularConformations(const json &j) {
             if (j.value("trajcenter", false)) {
                 faunus_logger->debug("Centering conformations from {}", trajfile);
                 for (auto &p : conformations.data) // loop over conformations
-                    Geometry::cm2origo(p.begin(), p.end());
+                    Geometry::translateToOrigin(p.begin(), p.end());
             }
 
             std::vector<float> weights(conformations.size(), 1.0); // default uniform weight
@@ -535,11 +535,7 @@ ParticleVector RandomInserter::operator()(Geometry::GeometryBase &geo, const Par
                     if (geo.collision(i.pos))
                         throw std::runtime_error("Error: Inserted molecule does not fit in container");
             } else {
-                Point cm;                                        // new mass center position
-                geo.randompos(cm, random);                       // random point in container
-                cm = cm.cwiseProduct(dir);                       // apply user defined directions (default: 1,1,1)
-                Geometry::cm2origo(v.begin(), v.end());          // translate to origin
-                rot.set(random() * 2 * pc::pi, ranunit(random)); // random rot around random vector
+                Geometry::translateToOrigin(particles.begin(), particles.end()); // translate to origin
                 if (rotate) {
                     Geometry::rotate(v.begin(), v.end(), rot.getQuaternion());
                     assert(Geometry::massCenter(v.begin(), v.end()).norm() < 1e-6); // cm shouldn't move

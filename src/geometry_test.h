@@ -29,7 +29,7 @@ TEST_CASE("[Faunus] Geometry") {
 
     SUBCASE("cuboid") {
         double x = 2, y = 3, z = 4;
-        Cuboid geo(x, y, z);
+        Cuboid geo({x, y, z});
         CHECK(geo.getVolume() == doctest::Approx(x * y * z));
 
         // check boundaries and pbc
@@ -312,7 +312,7 @@ TEST_CASE("[Faunus] Chameleon") {
         double x = 2.0, y = 3.0, z = 4.0;
         Point box_size = std::cbrt(2.0) * Point(x, y, z);
         Cuboid box(box_size);
-        Cuboid geo(x, y, z);
+        Cuboid geo({x, y, z});
         Chameleon chameleon(geo, CUBOID);
         compare_boundary(chameleon, geo, box);
         compare_vdist(chameleon, geo, box);
@@ -374,13 +374,13 @@ TEST_CASE("[Faunus] Chameleon") {
         double x = 2.0, y = 3.0, z = 4.0;
         std::ostringstream os(std::stringstream::binary);
         { // write
-            Cuboid geo(x, y, z);
+            Cuboid geo({x, y, z});
             cereal::BinaryOutputArchive archive(os);
             archive(geo);
         }
 
         { // read
-            Cuboid geo(10, 20, 30);
+            Cuboid geo({10, 20, 30});
             std::istringstream in(os.str());
             cereal::BinaryInputArchive archive(in);
             archive(geo);

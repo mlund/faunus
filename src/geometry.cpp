@@ -5,27 +5,18 @@
 #include "aux/eigensupport.h"
 #include "spdlog/spdlog.h"
 
-namespace Faunus {
-namespace Geometry {
-
-// =============== GeometryBase ===============
+namespace Faunus::Geometry {
 
 GeometryBase::~GeometryBase() = default;
 
-// =============== GeometryImplementation ===============
-
 GeometryImplementation::~GeometryImplementation() = default;
 
-// =============== Cuboid ===============
-
-Cuboid::Cuboid(const Point &p) {
+Cuboid::Cuboid(const Point &side_length) {
     boundary_conditions = BoundaryCondition(ORTHOGONAL, {PERIODIC, PERIODIC, PERIODIC});
-    setLength(p);
+    setLength(side_length);
 }
 
-Cuboid::Cuboid(double x, double y, double z) : Cuboid(Point(x, y, z)) {}
-
-Cuboid::Cuboid(double x) : Cuboid(x, x, x) {}
+Cuboid::Cuboid() : Cuboid(Point::Zero()) {}
 
 Point Cuboid::getLength() const { return box; }
 
@@ -114,27 +105,22 @@ void Cuboid::randompos(Point &m, Random &rand) const {
 }
 
 bool Cuboid::collision(const Point &a) const {
-    bool collision =
-        std::fabs(a.x()) > box_half.x() || std::fabs(a.y()) > box_half.y() || std::fabs(a.z()) > box_half.z();
-    return collision;
+    return (std::fabs(a.x()) > box_half.x() || std::fabs(a.y()) > box_half.y() || std::fabs(a.z()) > box_half.z());
 }
 
 void Cuboid::from_json(const json &j) {
     box.setZero();
-
-    auto m = j.at("length");
-    if (m.is_number()) {
-        double l = m.get<double>();
+    if (auto length_ = j.at("length"); length_.is_number()) {
+        auto l = length_.get<double>();
         setLength({l, l, l});
-    } else if (m.is_array()) {
-        if (m.size() == 3) {
-            setLength(m.get<Point>());
-        } else {
-            // TODO warning
+        return;
+    } else if (length_.is_array()) {
+        if (length_.size() == 3) {
+            setLength(length_.get<Point>());
+            return;
         }
-    } else {
-        // TODO warning
     }
+    throw ConfigurationError("sidelength syntax error");
 }
 
 void Cuboid::to_json(json &j) const { j = {{"length", box}}; }
@@ -146,7 +132,6 @@ Slit::Slit(const Point &p) : Tbase(p) {
 }
 
 Slit::Slit(double x, double y, double z) : Slit(Point(x, y, z)) {}
-
 Slit::Slit(double x) : Slit(x, x, x) {}
 
 // =============== Sphere ===============
@@ -155,7 +140,7 @@ Sphere::Sphere(double radius) : radius(radius) {
     boundary_conditions = BoundaryCondition(ORTHOGONAL, {FIXED, FIXED, FIXED});
 }
 
-Point Sphere::getLength() const { return {2 * radius, 2 * radius, 2 * radius}; }
+Point Sphere::getLength() const { return {2.0 * radius, 2.0 * radius, 2.0 * radius}; }
 
 double Sphere::getVolume(int dim) const {
     double result;
@@ -167,7 +152,7 @@ double Sphere::getVolume(int dim) const {
         result = 4.0 * pc::pi * radius * radius; // surface area
         break;
     case 1:
-        result = 2 * radius; // diameter
+        result = 2.0 * radius; // diameter
         break;
     default:
         throw std::invalid_argument("unsupported volume dimension for the sphere: " + std::to_string(dim));
@@ -188,14 +173,9 @@ Point Sphere::setVolume(double volume, const VolumeMethod method) {
     return box_scaling;
 }
 
-void Sphere::boundary(Point &) const {
-    // no pbc
-}
+void Sphere::boundary(Point &) const {} // no PBC
 
-bool Sphere::collision(const Point &a) const {
-    bool collision = a.squaredNorm() > radius * radius;
-    return collision;
-}
+bool Sphere::collision(const Point &point) const { return point.squaredNorm() > radius * radius; }
 
 Point Sphere::vdist(const Point &a, const Point &b) const {
     // no pbc; shall we check points coordinates?
@@ -223,7 +203,7 @@ Hypersphere2d::Hypersphere2d(double radius) : Sphere(radius) { boundary_conditio
 Point Hypersphere2d::vdist(const Point &a, const Point &b) const {
     // ugly but works, needs fixing though...
     Point distance3d(a - b);
-    double angle = std::acos(a.dot(b) / radius / radius);
+    double angle = std::acos(a.dot(b) / (radius * radius));
     double distance = radius * angle;
     return distance3d / distance3d.norm() * distance;
 }
@@ -241,7 +221,8 @@ bool Hypersphere2d::collision(const Point &a) const {
 // =============== Hexagonal Prism ===============
 
 const Eigen::Matrix3d HexagonalPrism::rhombic2cartesian =
-    (Eigen::Matrix3d() << std::cos(-pc::pi / 6), 0.0, 0.0, std::sin(-pc::pi / 6), 1.0, 0.0, 0.0, 0.0, 1.0).finished();
+    (Eigen::Matrix3d() << std::cos(-pc::pi / 6.0), 0.0, 0.0, std::sin(-pc::pi / 6.0), 1.0, 0.0, 0.0, 0.0, 1.0)
+        .finished();
 
 const Eigen::Matrix3d HexagonalPrism::cartesian2rhombic = rhombic2cartesian.inverse();
 
@@ -254,10 +235,10 @@ HexagonalPrism::HexagonalPrism(double side, double height) {
 Point HexagonalPrism::getLength() const { return box; }
 
 double HexagonalPrism::getVolume(int) const {
-    return 3. / 4. * box.x() * box.y() * box.z(); // 3 * inner_radius * outer_radius * height
+    return 3.0 / 4.0 * box.x() * box.y() * box.z(); // 3 * inner_radius * outer_radius * height
 }
 
-void HexagonalPrism::set_box(double side, double height) { box = {std::sqrt(3.) * side, 2 * side, height}; }
+void HexagonalPrism::set_box(double side, double height) { box = {std::sqrt(3.0) * side, 2.0 * side, height}; }
 
 Point HexagonalPrism::setVolume(double volume, const VolumeMethod method) {
     const double old_volume = getVolume();
@@ -280,7 +261,7 @@ Point HexagonalPrism::setVolume(double volume, const VolumeMethod method) {
     case ISOCHORIC:
         // radius is scaled by alpha, z is scaled by 1/alpha/alpha
         alpha = std::cbrt(volume / old_volume);
-        box_scaling = {alpha, alpha, 1 / (alpha * alpha)};
+        box_scaling = {alpha, alpha, 1.0 / (alpha * alpha)};
         volume = old_volume;
         break;
     default:
@@ -364,7 +345,7 @@ Cylinder::Cylinder(double radius, double height) : radius(radius), height(height
     boundary_conditions = BoundaryCondition(ORTHOGONAL, {FIXED, FIXED, PERIODIC});
 }
 
-Point Cylinder::getLength() const { return {2 * radius, 2 * radius, height}; }
+Point Cylinder::getLength() const { return {2.0 * radius, 2.0 * radius, height}; }
 
 double Cylinder::getVolume(int) const { return pc::pi * radius * radius * height; }
 
@@ -412,8 +393,7 @@ void Cylinder::boundary(Point &a) const {
 }
 
 bool Cylinder::collision(const Point &a) const {
-    bool collision = std::fabs(a.z()) > 0.5 * height || a.x() * a.x() + a.y() * a.y() > radius * radius;
-    return collision;
+    return std::fabs(a.z()) > 0.5 * height || a.x() * a.x() + a.y() * a.y() > radius * radius;
 }
 
 Point Cylinder::vdist(const Point &a, const Point &b) const {
@@ -426,10 +406,10 @@ Point Cylinder::vdist(const Point &a, const Point &b) const {
 }
 
 void Cylinder::randompos(Point &m, Random &rand) const {
-    double r2 = radius * radius, d = 2 * radius;
+    double r2 = radius * radius, d = 2.0 * radius;
     m.z() = (rand() - 0.5) * height;
     do {
-        // x,y shall be always generated as a pair; 78.5% chance to hit
+        // x,y shall always generated as a pair; 78.5% chance to hit
         m.x() = (rand() - 0.5) * d;
         m.y() = (rand() - 0.5) * d;
     } while (m.x() * m.x() + m.y() * m.y() > r2);
@@ -451,17 +431,17 @@ TruncatedOctahedron::TruncatedOctahedron(double side) : side(side) {
 
 Point TruncatedOctahedron::getLength() const {
     // todo check orientation in xyz
-    return Point::Constant(2. * std::sqrt(2.) * side); // distance between opposite square faces
+    return Point::Constant(2.0 * std::sqrt(2.0) * side); // distance between opposite square faces
 }
 
-double TruncatedOctahedron::getVolume(int) const { return std::sqrt(128.) * side * side * side; }
+double TruncatedOctahedron::getVolume(int) const { return std::sqrt(128.0) * side * side * side; }
 
 Point TruncatedOctahedron::setVolume(double volume, const VolumeMethod method) {
     const double old_side = side;
     Point box_scaling;
 
     if (method == ISOTROPIC) {
-        side = std::cbrt(volume / std::sqrt(128.));
+        side = std::cbrt(volume / std::sqrt(128.0));
         assert(std::fabs(getVolume() - volume) < 1e-6 && "error setting sphere volume");
     } else {
         throw std::invalid_argument("unsupported volume scaling method for the truncated-octahedral geometry");
@@ -479,7 +459,7 @@ Point TruncatedOctahedron::vdist(const Point &a, const Point &b) const {
 
 bool TruncatedOctahedron::collision(const Point &a) const {
     const double sqrtThreeI = 1.0 / std::sqrt(3.0);
-    const double origin_to_square_face = std::sqrt(2.) * side;
+    const double origin_to_square_face = std::sqrt(2.0) * side;
     const double origin_to_hexagonal_face = std::sqrt(1.5) * side;
 
     // ugly
@@ -502,8 +482,8 @@ bool TruncatedOctahedron::collision(const Point &a) const {
 
 void TruncatedOctahedron::boundary(Point &a) const {
     const double sqrtThreeI = 1.0 / std::sqrt(3.0);
-    const double square_face_distance = std::sqrt(8.) * side;
-    const double hexagonal_face_distance = std::sqrt(6.) * side;
+    const double square_face_distance = std::sqrt(8.0) * side;
+    const double hexagonal_face_distance = std::sqrt(6.0) * side;
     const Point unitvXYZ = Point(1, 1, 1) * sqrtThreeI;
     const Point unitvXiYZ = Point(1, 1, -1) * sqrtThreeI;
     const Point unitvXYiZ = Point(1, -1, -1) * sqrtThreeI;
@@ -514,47 +494,47 @@ void TruncatedOctahedron::boundary(Point &a) const {
     do {
         outside = false;
         double tmp = a.dot(unitvXYZ);
-        if (std::fabs(tmp) > hexagonal_face_distance / 2) {
+        if (std::fabs(tmp) > hexagonal_face_distance * 0.5) {
             a -= hexagonal_face_distance * anint(tmp / hexagonal_face_distance) * unitvXYZ;
             outside = true;
         }
         tmp = a.dot(unitvXiYZ);
-        if (std::fabs(tmp) > hexagonal_face_distance / 2) {
+        if (std::fabs(tmp) > hexagonal_face_distance * 0.5) {
             a -= hexagonal_face_distance * anint(tmp / hexagonal_face_distance) * unitvXiYZ;
             outside = true;
         }
         tmp = a.dot(unitvXYiZ);
-        if (std::fabs(tmp) > hexagonal_face_distance / 2) {
+        if (std::fabs(tmp) > hexagonal_face_distance * 0.5) {
             a -= hexagonal_face_distance * anint(tmp / hexagonal_face_distance) * unitvXYiZ;
             outside = true;
         }
         tmp = a.dot(unitvXYZi);
-        if (std::fabs(tmp) > hexagonal_face_distance / 2) {
+        if (std::fabs(tmp) > hexagonal_face_distance * 0.5) {
             a -= hexagonal_face_distance * anint(tmp / hexagonal_face_distance) * unitvXYZi;
             outside = true;
         }
     } while (outside);
 
-    if (std::fabs(a.x()) > square_face_distance / 2)
+    if (std::fabs(a.x()) > square_face_distance * 0.5)
         a.x() -= square_face_distance * anint(a.x() / square_face_distance);
 
-    if (std::fabs(a.y()) > square_face_distance / 2)
+    if (std::fabs(a.y()) > square_face_distance * 0.5)
         a.y() -= square_face_distance * anint(a.y() / square_face_distance);
 
-    if (std::fabs(a.z()) > square_face_distance / 2)
+    if (std::fabs(a.z()) > square_face_distance * 0.5)
         a.z() -= square_face_distance * anint(a.z() / square_face_distance);
 }
 
-void TruncatedOctahedron::randompos(Point &m, Random &rand) const {
-    const double d = std::sqrt(10) * side; // use circumdiameter
-    const double r2 = d * d / 4.;
+void TruncatedOctahedron::randompos(Point &pos, Random &rand) const {
+    const double d = std::sqrt(10.0) * side; // use circumdiameter
+    const double r2 = d * d / 4.0;
     do {
         do {
-            m.x() = (rand() - 0.5) * d;
-            m.y() = (rand() - 0.5) * d;
-            m.z() = (rand() - 0.5) * d;
-        } while (m.squaredNorm() > r2);
-    } while (collision(m));
+            pos.x() = (rand() - 0.5) * d;
+            pos.y() = (rand() - 0.5) * d;
+            pos.z() = (rand() - 0.5) * d;
+        } while (pos.squaredNorm() > r2);
+    } while (collision(pos));
 }
 
 void TruncatedOctahedron::from_json(const json &j) { side = j.at("radius").get<double>(); }
@@ -704,11 +684,11 @@ Point Chameleon::setVolume(double V, VolumeMethod method) {
 }
 
 Chameleon::VariantName Chameleon::variantName(const std::string &name) {
-    auto it = names.find(name);
-    if (it == names.end()) {
+    if (auto it = names.find(name); it == names.end()) {
         throw std::runtime_error("unknown geometry: " + name);
+    } else {
+        return *it;
     }
-    return *it;
 }
 
 Chameleon::VariantName Chameleon::variantName(const json &j) { return variantName(j.at("type").get<std::string>()); }
@@ -733,5 +713,4 @@ Chameleon::Chameleon(const Chameleon &geo)
     : GeometryBase(geo), len(geo.len), len_half(geo.len_half), len_inv(geo.len_inv),
       geometry(geo.geometry != nullptr ? geo.geometry->clone() : nullptr), _type(geo._type), _name(geo._name) {}
 
-} // namespace Geometry
-} // namespace Faunus
+} // namespace Faunus::Geometry

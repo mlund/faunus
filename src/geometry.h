@@ -28,10 +28,14 @@ class Random;
  *
  */
 namespace Geometry {
+
+//! Function to apply PBC to a position, i.e. wrap around the borders if applicable for the given container geometry
 typedef std::function<void(Point &)> BoundaryFunction;
+
+//! Function to calculate the (minimum) distance between two points depending on contained geometry
 typedef std::function<Point(const Point &, const Point &)> DistanceFunction;
 
-//! Geometry variant used for Chameleon.
+//! Geometry variant used for Chameleon
 enum Variant { CUBOID = 0, SPHERE, CYLINDER, SLIT, HEXAGONAL, OCTAHEDRON, HYPERSPHERE2D };
 
 //! Various methods of volume scaling, @see GeometryBase::setVolume.
@@ -52,7 +56,7 @@ enum Boundary { FIXED, PERIODIC };
  * A stub. It can be extended to fully json-configurable boundary conditions.
  */
 struct BoundaryCondition {
-    typedef Eigen::Matrix<Boundary, 3, 1> BoundaryXYZ;
+    using BoundaryXYZ = Eigen::Matrix<Boundary, 3, 1>;
     // typedef std::pair<std::string, BoundaryXYZ> BoundaryName;
     // static const std::map<std::string, BoundaryXYZ> names; //!< boundary names
 
@@ -84,11 +88,11 @@ struct GeometryBase {
 
     inline BoundaryFunction getBoundaryFunc() const {
         return [this](Point &i) { boundary(i); };
-    } //!< returns lambda to boundary()
+    } //!< Lambda for applying boundary conditions on a point
 
     inline DistanceFunction getDistanceFunc() const {
         return [this](const Point &i, const Point &j) { return vdist(i, j); };
-    } //!< returns lambda to vdist()
+    } //!< Lambda for calculating the (minimum) distance vector between two positions
 
   protected:
     template <typename T = double> inline int anint(T x) const {
@@ -131,9 +135,8 @@ class Cuboid : public GeometryImplementation {
     void randompos(Point &m, Random &rand) const override;
     void from_json(const json &j) override;
     void to_json(json &j) const override;
-    Cuboid(const Point &p);
-    Cuboid(double x, double y, double z);
-    Cuboid(double x = 0.0);
+    Cuboid(const Point &side_length);
+    Cuboid();
 
     std::unique_ptr<GeometryImplementation> clone() const override {
         return std::make_unique<Cuboid>(*this);
@@ -177,7 +180,7 @@ class Sphere : public GeometryImplementation {
     Point vdist(const Point &a, const Point &b) const override;
     double sqdist(const Point &a, const Point &b) const { return (a - b).squaredNorm(); };
     void boundary(Point &a) const override;
-    bool collision(const Point &a) const override;
+    bool collision(const Point &point) const override;
     void randompos(Point &m, Random &rand) const override;
     void from_json(const json &j) override;
     void to_json(json &j) const override;
@@ -286,7 +289,7 @@ class TruncatedOctahedron : public GeometryImplementation {
     Point vdist(const Point &a, const Point &b) const override;
     void boundary(Point &a) const override;
     bool collision(const Point &a) const override;
-    void randompos(Point &m, Random &rand) const override;
+    void randompos(Point &pos, Random &rand) const override;
     void from_json(const json &j) override;
     void to_json(json &j) const override;
     TruncatedOctahedron(double side = 0.0);
@@ -422,93 +425,128 @@ inline Point Chameleon::vdist(const Point &a, const Point &b) const {
     return distance;
 }
 
-/**
- * More readable alternative, nearly same performance:
- *
- * ~~~ cpp
- * Point d(a - b);
- * for (size_t i = 0; i < 3; i++) {
- *     d[i] = std::fabs(d[i]);
- *     d[i] = d[i] - len_or_zero[i] * (d[i] > len_half[i]); // casting faster than branching
- * }
- * return d.squaredNorm();
- * ~~~
- */
 inline double Chameleon::sqdist(const Point &a, const Point &b) const {
     if (geometry->boundary_conditions.coordinates == ORTHOGONAL) {
-        Point d((a - b).cwiseAbs());
-        return (d - (d.array() > len_half.array()).cast<double>().matrix().cwiseProduct(len_or_zero)).squaredNorm();
-    } else
+        if constexpr (true) {
+            Point d((a - b).cwiseAbs());
+            return (d - (d.array() > len_half.array()).cast<double>().matrix().cwiseProduct(len_or_zero)).squaredNorm();
+        } else { // more readable alternative(?), nearly same speed
+            Point d(a - b);
+            for (int i = 0; i < 3; ++i) {
+                d[i] = std::fabs(d[i]);
+                d[i] = d[i] - len_or_zero[i] * static_cast<double>(d[i] > len_half[i]); // casting faster than branching
+            }
+            return d[0] * d[0] + d[1] * d[1] + d[2] * d[2];
+        }
+    } else {
         return geometry->vdist(a, b).squaredNorm();
+    }
 }
 
 void to_json(json &, const Chameleon &);
 void from_json(const json &, Chameleon &);
 
-/*
-   void unwrap( Point &a, const Point &ref ) const {
-   a = vdist(a, ref) + ref;
-   } //!< Remove PBC with respect to a reference point
- */
 enum class weight { MASS, CHARGE, GEOMETRIC };
 
-template <typename Titer, typename Tparticle = typename Titer::value_type, typename weightFunc>
-Point anyCenter(Titer begin, Titer end, BoundaryFunction boundary, const weightFunc &weight,
+/**
+ * @brief Calculate Center of particle range using arbitrary weight functions applied to each particle
+ * @param begin Begin particle iterator
+ * @param end End parti cle iterator
+ * @param apply_boundary Boundary function to apply PBC (default: no PBC)
+ * @param weight_function Functor return weight for a given particle
+ * @param shift Shift by this vector before calculating center, then add again. For PBC removal; default: 0,0,0
+ * @return Center position
+ * @throws if the sum of weights is zero, thereby hampering normalization
+ */
+template <typename iterator, typename weightFunc>
+Point anyCenter(iterator begin, iterator end, BoundaryFunction apply_boundary, const weightFunc &weight_function,
                 const Point &shift = {0, 0, 0}) {
-    double sum = 0;
-    Point c(0, 0, 0), t;
-    for (auto &i = begin; i != end; ++i) {
-        t = i->pos + shift; // translate to origo
-        boundary(t);
-        double w = weight(*i);
-        c += w * t;
-        sum += w;
+    double weight_sum = 0.0;
+    Point center(0.0, 0.0, 0.0);
+    std::for_each(begin, end, [&](const auto &particle) {
+        const auto weight = weight_function(particle);
+        Point pos = particle.pos + shift; // translate
+        apply_boundary(pos);
+        center += weight * pos;
+        weight_sum += weight;
+    });
+    if (weight_sum > pc::epsilon_dbl) {
+        center = center / weight_sum - shift; // translate back
+        apply_boundary(center);
+        return center;
+    } else {
+        throw std::runtime_error("cannot calculate center with zero weights");
     }
-    if (sum <= pc::epsilon_dbl)
-        return {0, 0, 0};
-    else
-        c = c / sum - shift;
-    boundary(c);
-    return c;
 } //!< Mass, charge, or geometric center of a collection of particles
 
-template <typename Titer, typename Tparticle = typename Titer::value_type>
+/**
+ * @brief Calculates mass center of range of particles
+ * @param begin Begin particle iterator
+ * @param end End particle iterator
+ * @param apply_boundary Boundary function to apply PBC (default: no PBC)
+ * @param shift Shift by this vector before calculating center, then add again. For PBC removal; default: 0,0,0
+ * @return Mass center position
+ * @throws if the sum of masses is zero, thereby hampering normalization
+ */
+template <typename iterator>
 Point massCenter(
-    Titer begin, Titer end, BoundaryFunction boundary = [](Point &) {}, const Point &shift = {0, 0, 0}) {
-    return anyCenter(
-        begin, end, boundary, [](const Tparticle &p) { return atoms.at(p.id).mw; }, shift);
-} // Mass center
+    iterator begin, iterator end, BoundaryFunction apply_boundary = [](Point &) {},
+    const Point &shift = {0.0, 0.0, 0.0}) {
+    auto particle_mass = [](const auto &particle) { return particle.traits().mw; };
+    return anyCenter(begin, end, apply_boundary, particle_mass, shift);
+}
 
-template <class Titer = typename std::vector<T>::iterator>
+/**
+ * @param begin Begin iterator
+ * @param end End iterator
+ * @param displacement Displacement vector
+ * @param apply_boundary Boundary function to apply PBC (default: no PBC)
+ */
+template <typename iterator>
 void translate(
-    Titer begin, Titer end, const Point &d, BoundaryFunction boundary = [](Point &) {}) {
-    for (auto i = begin; i != end; ++i) {
-        i->pos += d;
-        boundary(i->pos);
-    }
-} //!< Vector displacement of a range of particles
+    iterator begin, iterator end, const Point &displacement, BoundaryFunction apply_boundary = [](Point &) {}) {
+    std::for_each(begin, end, [&](auto &particle) {
+        particle.pos += displacement;
+        apply_boundary(particle.pos);
+    });
+}
 
-template <typename Titer>
-void cm2origo(
-    Titer begin, Titer end, BoundaryFunction boundary = [](Point &) {}) {
-    Point cm = massCenter(begin, end, boundary);
-    translate(begin, end, -cm, boundary);
-} //!< Translate to that mass center is in (0,0,0)
+/**
+ * @brief Move the mass center of the particle range to origin (0,0,0) and wrap to PBC
+ * @param begin Begin iterator
+ * @param end End iterator
+ * @param apply_boundary Boundary function to apply PBC (default: none)
+ */
+template <typename iterator>
+void translateToOrigin(
+    iterator begin, iterator end, BoundaryFunction apply_boundary = [](Point &) {}) {
+    Point cm = massCenter(begin, end, apply_boundary);
+    translate(begin, end, -cm, apply_boundary);
+}
 
-template <typename Titer>
+/**
+ * @brief Rotate range of particles using a Quaternion
+ * @param begin Begin iterator
+ * @param end End iterator
+ * @param quaternion Quaternion used for rotation
+ * @param apply_boundary Boundary function to apply PBC (default: none)
+ * @param shift This value is added before rotation to aid PBC remove (default: 0,0,0)
+ * @todo Currently both quaternion and rotation matrix are passed, but one of them should be enough
+ *
+ * This will rotate both positions and internal coordinates in the particle (dipole moments, tensors etc.)
+ */
+template <typename iterator>
 void rotate(
-    Titer begin, Titer end, const Eigen::Quaterniond &q, BoundaryFunction boundary = [](Point &) {},
-    const Point &shift = Point(0, 0, 0)) {
-    auto m = q.toRotationMatrix(); // rotation matrix
-    for (auto i = begin; i != end; ++i) {
-        i->rotate(q, m); // rotate internal coordinates
-        i->pos += shift;
-        boundary(i->pos);
-        i->pos = q * i->pos;
-        boundary(i->pos);
-        i->pos -= shift;
-        boundary(i->pos);
-    }
+    iterator begin, iterator end, const Eigen::Quaterniond &quaternion,
+    BoundaryFunction apply_boundary = [](Point &) {}, const Point &shift = Point(0.0, 0.0, 0.0)) {
+    const auto rotation_matrix = quaternion.toRotationMatrix(); // rotation matrix
+    std::for_each(begin, end, [&](auto &particle) {
+        particle.rotate(quaternion, rotation_matrix); // rotate internal coordinates
+        particle.pos += shift;
+        apply_boundary(particle.pos);
+        particle.pos = (quaternion * particle.pos) - shift; // rotate positions
+        apply_boundary(particle.pos);
+    });
 } //!< Rotate particle pos and internal coordinates
 
 /*

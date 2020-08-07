@@ -184,7 +184,7 @@ class Particle {
     Particle(const AtomData &a);           //!< construct from AtomData
     Particle(const Particle &);            //!< copy constructor
     Particle &operator=(const Particle &); //!< assignment operator
-    const AtomData &traits();              //!< get properties from AtomData
+    const AtomData &traits() const;        //!< get properties from AtomData
     void rotate(const Eigen::Quaterniond &quaternion, const Eigen::Matrix3d &rotation_matrix); //!< internal rotation
     bool hasExtension() const;            //!< check if particle has extensions (dipole etc.)
     ParticleExtension &createExtension(); //!< Create extension

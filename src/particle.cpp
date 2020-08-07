@@ -60,7 +60,7 @@ void Cigar::from_json(const json &j) {
     sclen = j.value("sclen", sclen);
 }
 
-const AtomData &Particle::traits() { return atoms.at(id); }
+const AtomData &Particle::traits() const { return atoms.at(id); }
 
 /**
  * @warning Performance is sub-optimal as conversion is done through a json object

@@ -1,5 +1,4 @@
 #pragma once
-#include "doctest.h"
 #include <limits>
 #include <string>
 #include <cmath>

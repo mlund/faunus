@@ -1,3 +1,4 @@
+#include <doctest/doctest.h>
 #include "units.h"
 
 double Faunus::PhysicalConstants::temperature = 298.15;

@@ -1,5 +1,4 @@
-#include <spdlog/spdlog.h>
-#include <cmath>
+#include <doctest/doctest.h>
 #include "atomdata.h"
 #include "units.h"
 #include "aux/eigensupport.h"

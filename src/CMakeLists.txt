@@ -49,7 +49,7 @@ endif ()
 # ========== target: functionparser - exprtk very slow, so split out to separate target ==========
 
 add_library(functionparser STATIC ${CMAKE_SOURCE_DIR}/src/functionparser.cpp ${CMAKE_SOURCE_DIR}/src/functionparser.h)
-target_compile_definitions(functionparser PRIVATE project_options project_warnings)
+set_target_properties(functionparser PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_definitions(functionparser PRIVATE DOCTEST_CONFIG_DISABLE)
 
 # ========== faunus cpp and header files ==========
@@ -143,7 +143,6 @@ if (ENABLE_PYTHON)
             pybind11_add_module(pyfaunus pyfaunus.cpp ${objs})
             target_link_libraries(pyfaunus PRIVATE
                     project_options
-                    project_warnings
                     xdrfile
                     spdlog
                     functionparser)

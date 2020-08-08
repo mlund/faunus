@@ -235,6 +235,7 @@ endif()
 # FREESASA
 ###########
 
+option(ENABLE_FREESASA "Fetch 3rd-party SASA calculation software" on)
 if (ENABLE_FREESASA)
     ExternalProject_Add(
             project_freesasa

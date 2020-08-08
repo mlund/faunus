@@ -35,7 +35,6 @@ endif()
 
 # ========== support for free SASA ==========
 
-option(ENABLE_FREESASA "Fetch 3rd-party SASA calculation software" on)
 if(ENABLE_FREESASA)
     target_link_libraries(project_options INTERFACE freesasa)
 endif()

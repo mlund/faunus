@@ -175,27 +175,6 @@ class TranslateRotate : public Movebase {
     TranslateRotate(Space &spc);
 };
 
-#ifdef DOCTEST_LIBRARY_INCLUDED
-TEST_CASE("[Faunus] TranslateRotate") {
-    typedef typename Space::Tpvec Tpvec;
-
-    CHECK(!atoms.empty());     // set in a previous test
-    CHECK(!molecules.empty()); // set in a previous test
-
-    Space spc;
-    TranslateRotate mv(spc);
-    json j = R"( {"molecule":"A", "dp":1.0, "dprot":0.5, "dir":[0,1,0], "repeat":2 })"_json;
-    mv.from_json(j);
-
-    j = json(mv).at(mv.name);
-    CHECK(j.at("molecule") == "A");
-    CHECK(j.at("dir") == Point(0, 1, 0));
-    CHECK(j.at("dp") == 1.0);
-    CHECK(j.at("repeat") == 2);
-    CHECK(j.at("dprot") == 0.5);
-}
-#endif
-
 /**
  * @brief Move that preferentially displaces molecules within a specified region around a specified atom type
  * Idea based on the chapter 'Smarter Monte Carlo' in 'Computer Simulation of Liquids' by Allen & Tildesley (p. 317)

@@ -1,5 +1,4 @@
 #pragma once
-
 #include "core.h"
 #include "units.h"
 #include "particle.h"
@@ -274,8 +273,7 @@ class WeeksChandlerAndersen : public LennardJones {
 
   public:
     WeeksChandlerAndersen(const std::string &name = "wca", const std::string &cite = "doi:ct4kh9",
-                          CombinationRuleType combination_rule = COMB_LORENTZ_BERTHELOT)
-        : LennardJones(name, cite, combination_rule) {};
+                          CombinationRuleType combination_rule = COMB_LORENTZ_BERTHELOT);
 
     inline double operator()(const Particle &a, const Particle &b, double r2, const Point &) const override {
         return operator()(a, b, r2);

@@ -11,4 +11,10 @@ if (ENABLE_APPROXMATH)
     add_definitions(-DFAU_APPROXMATH)
 endif ()
 
-
+option(ENABLE_OPENMP "Try to use OpenMP parallisation" on)
+if (ENABLE_OPENMP)
+    find_package(OpenMP)
+    if (OPENMP_FOUND)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+    endif ()
+endif ()

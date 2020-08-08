@@ -1,3 +1,4 @@
+#include <doctest/doctest.h>
 #include "functionparser.h"
 #include <exprtk.hpp> // https://github.com/ArashPartow/exprtk
 #include <nlohmann/json.hpp>
@@ -36,3 +37,13 @@ T ExprFunction<T>::operator()() const {
 }
 
 template class ExprFunction<double>;
+
+TEST_CASE("[Faunus] ExprFunction") {
+    double x = 0, y = 0;
+    ExprFunction<double> expr;
+    nlohmann::json j = R"({ "function": "x*x+kappa", "constants": {"kappa": 0.4, "f": 2} })"_json;
+    expr.set(j, {{"x", &x}, {"y", &y}});
+    std::function<double()> f = expr;
+    x = 4;
+    CHECK(f() == doctest::Approx(4 * 4 + 0.4));
+}

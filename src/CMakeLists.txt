@@ -1,35 +1,66 @@
-option(BUILD_STATIC "Build statically linked binaries" off)
-option(ENABLE_OPENMP "Try to use OpenMP parallisation" on)
-option(ENABLE_MPI "Enable MPI code" off)
+# ========== place libraries and executables in outermost dir ==========
 
-if (ENABLE_OPENMP)
-    find_package(OpenMP)
-    if (OPENMP_FOUND)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-    endif()
-endif()
-
-if (ENABLE_MPI)
-    find_package(MPI REQUIRED)
-endif()
-
-# place libraries and executables in outermost dir
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
-# target: functionparser - exprtk very slow, so split out to separate target
+# ========== add to interface library (common to all faunus targets) ==========
+
+target_link_libraries(project_options INTERFACE ZLIB::ZLIB)
+target_link_libraries(project_options INTERFACE ${CMAKE_THREAD_LIBS_INIT})
+
+# ========== pre-compiler system headers ==========
+
+option(ENABLE_PCH "Enable Precompiled Headers" ON)
+if (ENABLE_PCH)
+    target_precompile_headers(
+            project_options INTERFACE <vector> <string> <map> <set> <algorithm> <utility> <random> <iostream>
+            <limits> <memory>
+            <Eigen/Core> <Eigen/Geometry>
+            <range/v3/view/filter.hpp> <range/v3/view/transform.hpp>
+            <cereal/cereal.hpp> <cereal/types/base_class.hpp> <cereal/types/memory.hpp>
+            <nlohmann/json.hpp> <nlohmann/json_fwd.hpp>
+            <spdlog/fmt/fmt.h> <spdlog/spdlog.h>)
+endif()
+
+# ========== message parsing protocol ==========
+
+option(ENABLE_MPI "Enable MPI code" off)
+if (ENABLE_MPI)
+    find_package(MPI REQUIRED)
+    if (MPI_CXX_FOUND)
+        target_link_libraries(project_options INTERFACE MPI::MPI_CXX)
+        target_compile_definitions(project_options INTERFACE ENABLE_MPI)
+    endif()
+endif()
+
+# ========== support for free SASA ==========
+
+option(ENABLE_FREESASA "Fetch 3rd-party SASA calculation software" on)
+if(ENABLE_FREESASA)
+    target_link_libraries(project_options INTERFACE freesasa)
+endif()
+
+# ========== option to disable all test code ==========
+
+option(ENABLE_TESTS "Build with unittests" on)
+if (NOT ENABLE_TESTS)
+    add_definitions(-DDOCTEST_CONFIG_DISABLE)
+endif ()
+
+# ========== target: functionparser - exprtk very slow, so split out to separate target ==========
+
 add_library(functionparser STATIC ${CMAKE_SOURCE_DIR}/src/functionparser.cpp ${CMAKE_SOURCE_DIR}/src/functionparser.h)
 target_compile_definitions(functionparser PRIVATE project_options project_warnings)
-set_target_properties(functionparser PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_compile_definitions(functionparser PRIVATE DOCTEST_CONFIG_DISABLE)
 
-# faunus cpp files
-set(objs analysis.cpp atomdata.cpp bonds.cpp chainmove.cpp clustermove.cpp core.cpp
+# ========== faunus cpp and header files ==========
+
+set(objs analysis.cpp atomdata.cpp auxiliary.cpp bonds.cpp chainmove.cpp clustermove.cpp core.cpp
         forcemove.cpp units.cpp energy.cpp externalpotential.cpp geometry.cpp group.cpp
         io.cpp molecule.cpp montecarlo.cpp move.cpp mpicontroller.cpp particle.cpp
         penalty.cpp potentials.cpp random.cpp reactioncoordinate.cpp regions.cpp rotate.cpp
-        space.cpp speciation.cpp tensor.cpp)
+        scatter.cpp space.cpp speciation.cpp tensor.cpp)
 
-# faunus header files
 set(hdrs analysis.h average.h atomdata.h auxiliary.h bonds.h chainmove.h clustermove.h core.h
         forcemove.h energy.h externalpotential.h geometry.h group.h io.h molecule.h montecarlo.h
         move.h mpicontroller.h particle.h penalty.h potentials.h reactioncoordinate.h rotate.h
@@ -39,71 +70,43 @@ set(hdrs analysis.h average.h atomdata.h auxiliary.h bonds.h chainmove.h cluster
         aux/exp_function.h aux/invsqrt_function.h aux/iteratorsupport.h aux/legendre.h aux/multimatrix.h
         aux/pairmatrix.h aux/pow_function.h aux/table_1d.h aux/table_2d.h aux/timers.h)
 
-# faunus test header files
-set(tsts atomdata_test.h auxiliary_test.h bonds_test.h core_test.h energy_test.h geometry_test.h
-        externalpotential_test.h group_test.h io_test.h molecule_test.h particle_test.h potentials_test.h
-        scatter_test.h space_test.h tensor_test.h forcemove_test.h)
-
-#
-# target: libfaunus - main functionality of faunus
-#
 set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
-add_library(libfaunus STATIC ${objs} ${hdrs})
+
+# ========== target: libfaunus - main functionality of faunus ==========
+
+add_library(libfaunus OBJECT ${objs} ${hdrs})
 target_compile_definitions(libfaunus PRIVATE SPDLOG_COMPILED_LIB)
-target_link_libraries(libfaunus
-    PRIVATE ${CMAKE_THREAD_LIBS_INIT} project_options project_warnings xdrfile spdlog functionparser ZLIB::ZLIB)
-set_target_properties(libfaunus PROPERTIES POSITION_INDEPENDENT_CODE ON)
-if (MPI_CXX_FOUND)
-    target_link_libraries(libfaunus PRIVATE MPI::MPI_CXX)
-    target_compile_definitions(libfaunus PRIVATE ENABLE_MPI)
-endif()
-if(ENABLE_FREESASA)
-    target_link_libraries(libfaunus PRIVATE freesasa)
-endif()
+target_link_libraries(libfaunus PRIVATE
+        project_options
+        project_warnings
+        xdrfile spdlog
+        functionparser)
 
-#
-# target: unittests
-#
-add_executable(unittests EXCLUDE_FROM_ALL unittests.cpp ${tsts})
-target_link_libraries(unittests libfaunus)
-target_compile_definitions(unittests PRIVATE SPDLOG_COMPILED_LIB)
-add_test(
-    NAME unittests
-    COMMAND sh -c "$<TARGET_FILE:unittests> --test-case-exclude=*Benchmark*")
+# ========== faunus (main executable) ==========
 
-#
-# target: faunus (main executable)
-#
 add_executable(faunus faunus.cpp)
 target_link_libraries(faunus PRIVATE libfaunus docopt progresstracker)
 target_compile_definitions(faunus PRIVATE SPDLOG_COMPILED_LIB)
-set_target_properties(faunus PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
-if (MPI_CXX_FOUND)
-    target_link_libraries(faunus PRIVATE MPI::MPI_CXX)
-    target_compile_definitions(faunus PRIVATE ENABLE_MPI)
-endif()
-if (ENABLE_LTO)
-    check_ipo_supported(RESULT result)
-    if(result)
-        set_property(TARGET faunus PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
-    endif()
-endif()
+set_target_properties(faunus PROPERTIES
+        POSITION_INDEPENDENT_CODE ON
+        LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
-if(ENABLE_SID)
+if (ENABLE_SID)
     if (SDL2_FOUND)
         # fix buggy sdl2: https://stackoverflow.com/questions/45730098/cmake-leading-or-trailing-whitespace-policy-cmp0004
         string(STRIP ${SDL2_LIBRARIES} SDL2_LIBRARIES)
-	include_directories(SYSTEM ${SDL2_INCLUDE_DIRS})
+        include_directories(SYSTEM ${SDL2_INCLUDE_DIRS})
         target_link_libraries(faunus PRIVATE ${SDL2_LIBRARIES} cppsid)
         target_compile_definitions(faunus PRIVATE ENABLE_SID)
         if (PYTHONINTERP_FOUND)
             execute_process(
-                COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/extractsids.py ${CMAKE_SOURCE_DIR}/scripts/music.yml
-                WORKING_DIRECTORY ${CMAKE_BINARY_DIR} ERROR_QUIET OUTPUT_QUIET)
-        endif()
-    endif()
-endif()
+                    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/extractsids.py ${CMAKE_SOURCE_DIR}/scripts/music.yml
+                    WORKING_DIRECTORY ${CMAKE_BINARY_DIR} ERROR_QUIET OUTPUT_QUIET)
+        endif ()
+    endif ()
+endif ()
 
+option(BUILD_STATIC "Build statically linked binaries" off)
 if(BUILD_STATIC)
     target_link_libraries(faunus PRIVATE -static-libgcc -static-libstdc++ -static)
 endif()
@@ -114,9 +117,9 @@ target_compile_definitions(faunus PRIVATE FAUNUS_INSTALL_PREFIX=\"${CMAKE_INSTAL
 target_compile_definitions(faunus PRIVATE FAUNUS_BINARY_DIR=\"${CMAKE_BINARY_DIR}\")
 install(TARGETS faunus DESTINATION bin)
 
-#
-# python bindings
-#
+# ========== python bindings ==========
+
+option(ENABLE_PYTHON "Try to compile python bindings (experimental!)" on)
 if (ENABLE_PYTHON)
     INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include)
     INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
@@ -138,10 +141,15 @@ if (ENABLE_PYTHON)
         if(NOT pybind11_POPULATED)
             FetchContent_Populate(pybind11)
             add_subdirectory(${pybind11_SOURCE_DIR} ${pybind11_BINARY_DIR})
-            pybind11_add_module(pyfaunus pyfaunus.cpp)
-            #target_link_libraries(pyfaunus PUBLIC ${CMAKE_THREAD_LIBS_INIT} xdrfile spdlog functionparser libfaunus)
-            target_link_libraries(pyfaunus PRIVATE libfaunus)
-            #set_target_properties(pyfaunus PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+            pybind11_add_module(pyfaunus pyfaunus.cpp ${objs})
+            target_link_libraries(pyfaunus PRIVATE
+                    project_options
+                    project_warnings
+                    xdrfile
+                    spdlog
+                    functionparser)
+            target_compile_definitions(pyfaunus PUBLIC SPDLOG_COMPILED_LIB)
+            target_compile_definitions(pyfaunus PRIVATE DOCTEST_CONFIG_DISABLE)
         endif()
     endif ()
 endif ()
@@ -158,6 +166,8 @@ if (TARGET pyfaunus)
         OUTPUT_STRIP_TRAILING_WHITESPACE)
     install(TARGETS pyfaunus DESTINATION ${PYTHON_SITE} OPTIONAL)
 endif()
+
+# ========== assorted installation targets ==========
 
 install(FILES ${CMAKE_SOURCE_DIR}/LICENSE DESTINATION share/faunus)
 install(FILES ${CMAKE_BINARY_DIR}/tips.json DESTINATION share/faunus OPTIONAL)

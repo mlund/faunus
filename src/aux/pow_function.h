@@ -1,4 +1,5 @@
 #pragma once
+#include <doctest/doctest.h>
 
 namespace Faunus {
 /**
@@ -17,7 +18,7 @@ template <class T> inline constexpr T powi(T x, unsigned int n) {
     return n > 0 ? x * powi(x, n - 1) : 1;
 #endif
 }
-#ifdef DOCTEST_LIBRARY_INCLUDED
+
 TEST_CASE("[Faunus] powi") {
     using doctest::Approx;
     double x = 3.1;
@@ -26,5 +27,4 @@ TEST_CASE("[Faunus] powi") {
     CHECK(powi(x, 2) == Approx(x * x));
     CHECK(powi(x, 4) == Approx(x * x * x * x));
 }
-#endif
 } // namespace Faunus

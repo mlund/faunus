@@ -1,3 +1,5 @@
+#define DOCTEST_CONFIG_IMPLEMENT
+#include <doctest/doctest.h>
 #include "core.h"
 #include "mpicontroller.h"
 #include "move.h"
@@ -10,6 +12,7 @@
 #include "spdlog/spdlog.h"
 #include <spdlog/sinks/null_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
+#include <spdlog/sinks/basic_file_sink.h>
 #include <iomanip>
 #include <unistd.h>
 #include <chrono>
@@ -44,6 +47,7 @@ static const char USAGE[] =
       faunus [-q] [--verbosity <N>] [--nobar] [--nopfx] [--notips] [--nofun] [--state=<file>] [--input=<file>] [--output=<file>]
       faunus (-h | --help)
       faunus --version
+      faunus test <doctest-options>...
 
     Options:
       -i <file> --input <file>   Input file [default: /dev/stdin].
@@ -70,7 +74,21 @@ using ProgressIndicator::ProgressTracker;
 // forward declarations
 std::shared_ptr<ProgressTracker> createProgressTracker(bool, unsigned int);
 
-int main(int argc, char **argv) {
+int main(int argc, const char **argv) {
+    if (argc > 1) { // run unittests if the first argument equals "test"
+        if (std::string(argv[1]) == "test") {
+#ifdef DOCTEST_CONFIG_DISABLE
+            std::cout << "error: this version of faunus does not include unittests\n";
+            return EXIT_FAILURE;
+#else
+            faunus_logger = spdlog::basic_logger_mt("faunus", "unittests.log", true);
+            faunus_logger->set_pattern("%L: %v");
+            faunus_logger->set_level(spdlog::level::debug);
+            return doctest::Context(argc, argv).run();
+#endif
+        }
+    }
+
     using namespace Faunus::MPI;
     bool quiet = false, nofun = true; // conservative defaults
     try {

@@ -1,5 +1,5 @@
 #pragma once
-
+#include <doctest/doctest.h>
 #include <limits>
 #include <ostream>
 #include <istream>
@@ -85,9 +85,11 @@ namespace Faunus
       } // de-serialize from stream
   };
 
+  } // namespace Faunus
+
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] Average") {
-        Average<double> a;
+        Faunus::Average<double> a;
         a+=1.0;
         a+=2.0;
         CHECK( a.cnt == 2 );
@@ -111,4 +113,3 @@ namespace Faunus
     }
 #endif
 
-}//namespace

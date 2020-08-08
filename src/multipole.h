@@ -1,5 +1,5 @@
 #pragma once
-
+#include "doctest.h"
 #include "units.h"
 #include "aux/pow_function.h"
 
@@ -71,7 +71,7 @@ namespace Potential {
  * @note Calculated at compile time and thus have no run-time overhead.
  */
 constexpr unsigned int factorial(unsigned int n) { return n <= 1 ? 1 : n * factorial(n - 1); }
-#ifdef DOCTEST_LIBRARY_INCLUDED
+#ifdef DOCTEST_LIBRARY_INCLUDED__
 TEST_CASE("[Faunus] Factorial") {
     CHECK(factorial(0) == 1);
     CHECK(factorial(1) == 1);
@@ -149,7 +149,7 @@ inline double qPochhammerSymbol(double q, int k = 1, int P = 300) {
     }
     return value;
 }
-#ifdef DOCTEST_LIBRARY_INCLUDED
+#ifdef DOCTEST_LIBRARY_INCLUDED__
 TEST_CASE("[Faunus] qPochhammerSymbol") {
     double q = 0.5;
     CHECK(qPochhammerSymbol(q, 0, 0) == 1);

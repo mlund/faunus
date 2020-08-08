@@ -1,3 +1,4 @@
+#include <doctest/doctest.h>
 #include "space.h"
 #include "reactioncoordinate.h"
 #include "average.h"
@@ -6,8 +7,7 @@
 #include "aux/eigensupport.h"
 #include "spdlog/spdlog.h"
 
-namespace Faunus {
-namespace ReactionCoordinate {
+namespace Faunus::ReactionCoordinate {
 
 ReactionCoordinateBase::ReactionCoordinateBase(const json &j) {
     binwidth = j.value("resolution", 0.5);
@@ -39,6 +39,24 @@ void to_json(json &j, const ReactionCoordinateBase &rc) {
     _j = {{"range", {rc.min, rc.max}}, {"resolution", rc.binwidth}};
     rc._to_json(_j);
 }
+
+} // namespace
+
+#ifdef DOCTEST_LIBRARY_INCLUDED
+TEST_CASE("[Faunus] ReactionCoordinateBase") {
+    using doctest::Approx;
+    Faunus::ReactionCoordinate::ReactionCoordinateBase c(R"({"range":[-1.5, 2.1], "resolution":0.2})"_json);
+    CHECK(c.min == Approx(-1.5));
+    CHECK(c.max == Approx(2.1));
+    CHECK(c.binwidth == Approx(0.2));
+    CHECK(c.inRange(-1.5) == true);
+    CHECK(c.inRange(-1.51) == false);
+    CHECK(c.inRange(2.11) == false);
+    CHECK(c.inRange(2.1) == true);
+}
+#endif
+
+namespace Faunus::ReactionCoordinate {
 
 /**
  * Factory function for all known penalty functions. The json instance
@@ -346,5 +364,4 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordina
         throw std::runtime_error(name + ": unknown or impossible property '" + property + "'" +
                                  usageTip["coords=[molecule]"]);
 }
-} // namespace ReactionCoordinate
-} // namespace Faunus
+} // namespace

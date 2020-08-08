@@ -38,14 +38,13 @@ script:
     export PATH=/snap/bin:$PATH
     cmake . -DENABLE_OPENMP=off -DCMAKE_BUILD_TYPE=Debug
     make faunus || travis_terminate 1
-    ./faunus --version || travis_terminate 1
+    ./faunus --version
+    ctest --output-on-failure -R unittests
     make pyfaunus || travis_terminate 1
-    make unittests || travis_terminate 1
-    ctest --output-on-failure -R unittests || travis_terminate 1
     if [[ "$TRAVIS_COMPILER" == "clang" ]]; then
     # check with SID and MPI enabled
     cmake . -DENABLE_OPENMP=off -DCMAKE_BUILD_TYPE=Debug -DENABLE_SID=on -DENABLE_MPI=on
     make faunus || travis_terminate 1
-    ./faunus --version || travis_terminate 1
+    ./faunus --version
     fi
 

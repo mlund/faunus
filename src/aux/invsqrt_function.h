@@ -1,4 +1,6 @@
 #pragma once
+#include <doctest/doctest.h>
+#include <vector>
 #include <type_traits>
 #include <cmath>
 #include <cstdint>
@@ -35,13 +37,11 @@ template <typename float_t = double, char iterations = 1> inline float_t inv_sqr
     }
     return y;
 }
+} // namespace Faunus
 
-#ifdef DOCTEST_LIBRARY_INCLUDED
 TEST_CASE_TEMPLATE("inv_sqrt", T, double, float) {
     std::vector<T> vals = {0.23, 3.3, 10.2, 100.45, 512.06};
     for (auto x : vals) {
-        CHECK(inv_sqrt<T, 2>(x) == doctest::Approx(1.0 / std::sqrt(x)));
+        CHECK(Faunus::inv_sqrt<T, 2>(x) == doctest::Approx(1.0 / std::sqrt(x)));
     }
 }
-#endif
-} // namespace Faunus

@@ -30,24 +30,23 @@ but should compile on most unix operating systems and possibly under Cygwin (Win
 
 ### Requirements
 
-- CMake 3.11+
+- CMake 3.16+
 - C/C++17 compiler (Clang 5+, GCC 7+, etc.)
 - Python 3.6+ with the following packages:
   - `jinja2`, `ruamel_yaml` or `yaml`
 
 The following are optional:
 
-- `jsonschema` (for validating input)
+- `jsonschema` (for validating input - highly recommended)
 - `pandoc` (for building manual)
 - `pypandoc` (for building manual)
 - `BeautifulSoup4` (for building manual)
 - Message Passing Interface (MPI)
 
 **macOS tip:**
-Apple's developer tools, Xcode, include clang and
+Apple's developer tools, Xcode, include clang;
 CMake can be installed with an
 [Installer package](https://cmake.org/download) from Kitware, or using
-[MacPorts](http://www.macports.org),
 [Homebrew](https://brew.sh), or
 [(mini)conda](https://conda.io/docs/user-guide/install/index.html)
 
@@ -72,6 +71,7 @@ CMake Option                         | Description
 ------------------------------------ | ---------------------------------------
 `-DENABLE_MPI=OFF`                   | Enable MPI
 `-DENABLE_OPENMP=ON`                 | Enable OpenMP support
+`-DENABLE_TESTS=ON`                  | Enable unittesting
 `-DENABLE_PYTHON=ON`                 | Build python bindings (experimental)
 `-DENABLE_FREESASA=ON`               | Enable SASA routines (external download)
 `-DBUILD_STATIC=OFF`                 | Build statically linked binaries
@@ -133,6 +133,11 @@ rm -fR CMakeCache.txt CMakeFiles _deps
 ~~~
 
 # Development
+
+The development of Faunus is done mainly in Jetbrain's [CLion](https://www.jetbrains.com/clion)
+(free academic license) but any other IDE or merely a text editor can be used.
+We do recommend to use tools that respect the provided `.clang-format` which will easy merging
+changes into the code base, see below.
 
 ## Code Style
 

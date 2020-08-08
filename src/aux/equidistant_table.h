@@ -1,4 +1,5 @@
 #pragma once
+#include <doctest/doctest.h>
 #include <vector>
 #include <cmath>
 #include <string>
@@ -185,7 +186,6 @@ template <typename Tx = double, typename Ty = Tx, bool centerbin = false> class 
     } // load from stream
 };
 
-#ifdef DOCTEST_LIBRARY_INCLUDED
 TEST_CASE("[Faunus] Equidistant2DTable") {
     using doctest::Approx;
 
@@ -219,6 +219,5 @@ TEST_CASE("[Faunus] Equidistant2DTable") {
         CHECK(y.xmax() == Approx(1.0));
     }
 }
-#endif
 
 } // namespace Faunus

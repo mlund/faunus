@@ -16,7 +16,7 @@ if (ENABLE_PCH)
             project_options INTERFACE <vector> <string> <map> <set> <algorithm> <utility> <random> <iostream>
             <limits> <memory>
             <Eigen/Core> <Eigen/Geometry>
-            <range/v3/view/filter.hpp> <range/v3/view/transform.hpp>
+            <range/v3/view/filter.hpp> <range/v3/view/transform.hpp> <range/v3/view/join.hpp>
             <cereal/cereal.hpp> <cereal/types/base_class.hpp> <cereal/types/memory.hpp>
             <nlohmann/json.hpp> <nlohmann/json_fwd.hpp>
             <spdlog/fmt/fmt.h> <spdlog/spdlog.h>)

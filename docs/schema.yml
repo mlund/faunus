@@ -784,6 +784,21 @@ properties:
                     required: [file, name1, name2, nstep]
                     additionalProperties: false
 
+                langevin_dynamics:
+                    description: "Run Langevin Dynamics (LD) with BAOAB splitting"
+                    type: object
+                    properties:
+                        nsteps: {type: integer, description: "Number of LD steps to perform"}
+                        integrator:
+                            type: object
+                            properties:
+                                time_step: {type: number, description: "Time interval between steps (ps)"}
+                                friction: {type: number, description: "Friction coefficient"}
+                            required: [time_step, friction]
+                            additionalProperties: false
+                    required: [nsteps, integrator]
+                    additionalProperties: false
+
                 atomprofile:
                     description: Summed density of atoms in spherical, cylindrical or planar shells
                     type: object

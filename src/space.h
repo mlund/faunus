@@ -3,6 +3,7 @@
 #include "geometry.h"
 #include "group.h"
 #include "molecule.h"
+#include <range/v3/view/join.hpp>
 
 namespace Faunus {
 
@@ -173,13 +174,7 @@ class Space {
     } //!< Range with all active atoms of type `atomid` (complexity: order N)
 
     auto activeParticles() {
-        auto f = [&groups = groups](Particle &i) {
-            for (auto &g : groups)
-                if (g.contains(i)) // true if particle is within active part
-                    return true;
-            return false;
-        };
-        return p | ranges::cpp20::views::filter(f);
+        return groups | ranges::cpp20::views::join;
     } //!< Returns range with all *active* particles in space
 
     /**

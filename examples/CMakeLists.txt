@@ -5,6 +5,10 @@ set(EXAMPLES_DIR ${CMAKE_SOURCE_DIR}/examples)
 set(YASON ${CMAKE_SOURCE_DIR}/scripts/yason.py)
 set(JSON_COMPARE ${CMAKE_SOURCE_DIR}/scripts/jsoncompare.py)
 
+add_test(
+        NAME unittests
+        COMMAND sh -c "$<TARGET_FILE:faunus> test --test-case-exclude=*Benchmark*")
+
 if (TARGET pyfaunus)
     add_test(
             NAME pythontest

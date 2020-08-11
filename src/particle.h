@@ -4,11 +4,6 @@
 #include "tensor.h"
 #include <cereal/types/memory.hpp>
 
-#ifdef DOCTEST_LIBRARY_INCLUDED
-#include "rotate.h"
-#include "units.h"
-#endif
-
 namespace Eigen {
 using Matrix3d = Matrix<double, 3, 3>;
 using Quaterniond = Quaternion<double>;

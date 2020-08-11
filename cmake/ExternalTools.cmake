@@ -1,5 +1,3 @@
-option(ENABLE_FREESASA "Fetch 3rd-party SASA calculation software" on)
-
 include(ExternalProject)
 include(FetchContent)
 
@@ -230,13 +228,14 @@ FetchContent_Declare(
 FetchContent_GetProperties(doctest)
 if(NOT doctest_POPULATED)
     FetchContent_Populate(doctest)
-    add_definitions(-DDOCTEST_CONFIG_DISABLE)
+    #add_definitions(-DDOCTEST_CONFIG_DISABLE)
 endif()
 
 ###########
 # FREESASA
 ###########
 
+option(ENABLE_FREESASA "Fetch 3rd-party SASA calculation software" on)
 if (ENABLE_FREESASA)
     ExternalProject_Add(
             project_freesasa

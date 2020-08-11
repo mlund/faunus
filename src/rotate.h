@@ -1,5 +1,4 @@
 #pragma once
-
 #include <Eigen/Geometry>
 
 namespace Faunus {
@@ -28,29 +27,5 @@ class QuaternionRotate {
         Point vector, std::function<void(Point &)> boundary = [](Point &) {},
         const Point &shift = {0, 0, 0}) const; //!< Rotate point w. optional PBC boundaries
 };
-
-#ifdef DOCTEST_LIBRARY_INCLUDED
-TEST_CASE("[Faunus] QuaternionRotate") {
-    using doctest::Approx;
-    QuaternionRotate qrot;
-    Point a = {1, 0, 0};
-    qrot.set(pc::pi / 2, {0, 1, 0}); // rotate around y-axis
-    CHECK(qrot.angle == Approx(pc::pi / 2));
-
-    SUBCASE("rotate using quaternion") {
-        a = qrot(a); // rot. 90 deg.
-        CHECK(a.x() == Approx(0));
-        a = qrot(a); // rot. 90 deg.
-        CHECK(a.x() == Approx(-1));
-    }
-
-    SUBCASE("rotate using rotation matrix") {
-        a = qrot.getRotationMatrix() * a;
-        CHECK(a.x() == Approx(0));
-        a = qrot.getRotationMatrix() * a;
-        CHECK(a.x() == Approx(-1));
-    }
-}
-#endif
 
 } // namespace Faunus

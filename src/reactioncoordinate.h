@@ -37,20 +37,6 @@ void to_json(json &j, const ReactionCoordinateBase &r); //!< Serialize any react
 std::shared_ptr<ReactionCoordinateBase>
 createReactionCoordinate(const json &, Space &); //!< Factory function to create all known penalty functions
 
-#ifdef DOCTEST_LIBRARY_INCLUDED
-TEST_CASE("[Faunus] ReactionCoordinateBase") {
-    using doctest::Approx;
-    ReactionCoordinateBase c(R"({"range":[-1.5, 2.1], "resolution":0.2})"_json);
-    CHECK(c.min == Approx(-1.5));
-    CHECK(c.max == Approx(2.1));
-    CHECK(c.binwidth == Approx(0.2));
-    CHECK(c.inRange(-1.5) == true);
-    CHECK(c.inRange(-1.51) == false);
-    CHECK(c.inRange(2.11) == false);
-    CHECK(c.inRange(2.1) == true);
-}
-#endif
-
 class SystemProperty : public ReactionCoordinateBase {
   protected:
     std::string property;

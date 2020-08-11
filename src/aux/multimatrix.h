@@ -1,6 +1,8 @@
 #pragma once
+#include <doctest/doctest.h>
 #include <array>
 #include <vector>
+#include <Eigen/Core>
 
 namespace Faunus {
 /**
@@ -57,8 +59,6 @@ template <typename T, typename Tindices = std::array<int, 3>> class DynamicArray
     inline const T &operator()(const Tindices &i) const { return data[i[2] + dim[2] * (i[1] + dim[1] * i[0])]; }
 };
 
-#ifdef DOCTEST_LIBRARY_INCLUDED
-#include <Eigen/Core>
 TEST_CASE("[Faunus] RowMajor3DMatrix") {
     DynamicArray3D<double, Eigen::Vector3i> matrix;
     Eigen::Vector3i dim = {4, 10, 2};
@@ -83,5 +83,4 @@ TEST_CASE("[Faunus] RowMajor3DMatrix") {
     }
     CHECK(cnt == matrix.data.size()); // count number of elements
 }
-#endif
 } // namespace Faunus

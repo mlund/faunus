@@ -1,8 +1,9 @@
 #include "forcemove.h"
 #include "random.h"
-namespace Faunus {
 
-namespace Move {
+namespace Faunus::Move {
+
+TEST_SUITE_BEGIN("ForceMove");
 
 /**
  * @brief Compute a single dimension contribution to the mean square thermal speed of a particle, i.e., compute 〈v²_x〉.
@@ -89,6 +90,19 @@ void LangevinVelocityVerlet::to_json(json &j) const {
     j = {{"time_step", time_step / 1.0_ps}, {"friction", friction_coefficient * 1.0_ps}};
 }
 
+TEST_CASE("[Faunus] Integrator") {
+    class DummyEnergy : public Energy::Energybase {
+        double energy(Change &) override { return 0.0; }
+    };
+    Space spc;
+    DummyEnergy energy;
+
+    auto ld = LangevinVelocityVerlet(spc, energy, R"({"friction": 8.0, "time_step": 2.0 })"_json);
+    json j_ld = ld;
+    CHECK_EQ(j_ld["friction"], 8.0);
+    CHECK_EQ(j_ld["time_step"], 2.0);
+}
+
 // =============== ForceMoveBase ===============
 
 ForceMoveBase::ForceMoveBase(Space &spc, std::shared_ptr<IntegratorBase> integrator, unsigned int nsteps)
@@ -157,5 +171,22 @@ void LangevinDynamics::_from_json(const json &j) {
     ForceMoveBase::_from_json(j);
 }
 
-} // end of namespace Move
-} // end of namespace Faunus
+TEST_CASE("[Faunus] LangevinDynamics") {
+    class DummyEnergy : public Energy::Energybase {
+        double energy(Change &) override { return 0.0; }
+    };
+    Space spc;
+    DummyEnergy energy;
+
+    SUBCASE("[Faunus] JSON init") {
+        json j_in = R"({"nsteps": 100, "integrator": {"time_step": 0.001, "friction": 2.0}})"_json;
+        LangevinDynamics ld(spc, energy);
+        ld.from_json(j_in);
+        json j_out = ld;
+        // CHECK_EQ(j_out, j_in);
+    }
+}
+
+TEST_SUITE_END();
+
+} // end of namespace

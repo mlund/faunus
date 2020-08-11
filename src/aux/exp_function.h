@@ -1,4 +1,6 @@
 #pragma once
+#include <doctest/doctest.h>
+#include <limits>
 #include <cstdint>
 
 namespace Faunus {
@@ -32,7 +34,6 @@ inline double exp_untested(double y) {
     return d;
 }
 
-#ifdef DOCTEST_LIBRARY_INCLUDED
 TEST_CASE("[Faunus] exp_cawley") {
     double infty = std::numeric_limits<double>::infinity();
     using doctest::Approx;
@@ -50,6 +51,5 @@ TEST_CASE("[Faunus] exp_untested") {
     CHECK(exp_untested(2) == Approx(7.3096199036));
     CHECK(exp_untested(-2) == Approx(0.13207829));
 }
-#endif
 
 } // namespace Faunus

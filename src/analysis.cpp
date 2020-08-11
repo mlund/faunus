@@ -1143,20 +1143,16 @@ void MultipoleMoments::_to_disk() {
 // =============== PolymerShape ===============
 
 void PolymerShape::_to_json(json &j) const {
-    j["length unit"] = "Å";
-    j["molecules"] = json::object();
-    for (const auto &[molid, mean] : map_of_averages) {
-        j["molecules"][Faunus::molecules[molid].name] = {
-            {"⟨s⟩", mean.gyration_radius.avg()},
-            {"⟨r⟩", mean.end_to_end.avg()},
-            {"⟨s²⟩", mean.gyration_radius_squared.avg()},
-            {"⟨s²⟩-⟨s⟩²", mean.gyration_radius_squared.avg() - std::pow(mean.gyration_radius.avg(), 2)},
-            {"⟨r²⟩/⟨s²⟩", mean.end_to_end_squared.avg() / mean.gyration_radius_squared.avg()},
-            {"Rg = √⟨s²⟩", std::sqrt(mean.gyration_radius_squared.avg())},
-            {"√⟨r²⟩", std::sqrt(mean.end_to_end_squared.avg())},
-            {"√⟨𝐬_x²⟩ √⟨𝐬_y²⟩ √⟨𝐬_z²⟩",
-             {std::sqrt(mean.gyration_radius_squared_x.avg()), std::sqrt(mean.gyration_radius_squared_y.avg()),
-              std::sqrt(mean.gyration_radius_squared_z.avg())}}};
+    if (mean.gyration_radius.cnt > 0) {
+        j = {{"molecule", Faunus::molecules[molid].name},
+             {"⟨s²⟩", mean.gyration_radius_squared.avg()},
+             {"⟨s²⟩-⟨s⟩²", mean.gyration_radius_squared.avg() - std::pow(mean.gyration_radius.avg(), 2)},
+             {"⟨r²⟩/⟨s²⟩", mean.end_to_end_squared.avg() / mean.gyration_radius_squared.avg()},
+             {"Rg/Å = √⟨s²⟩", std::sqrt(mean.gyration_radius_squared.avg())},
+             {"Re/Å = √⟨r²⟩", std::sqrt(mean.end_to_end_squared.avg())},
+             {"asphericity (b)", mean.aspherity.avg()},
+             {"acylindricity (c)", mean.acylindricity.avg()},
+             {"relative shape anisotropy (𝜅²)", mean.relative_shape_anisotropy.avg()}};
     }
 }
 
@@ -1186,34 +1182,66 @@ Point PolymerShape::vectorgyrationRadiusSquared(const Space::Tgroup &group) cons
 }
 
 void PolymerShape::_sample() {
-    for (const auto molid : molids) { // loop over molecule types
-        for (const auto &group : spc.findMolecules(molid, Space::ACTIVE)) {
-            if (group.size() >= 2) { // two or more particles required to form a polymer
-                auto &mean = map_of_averages[molid];
-                const auto gyration_radius_squared_vector = vectorgyrationRadiusSquared(group);
-                const auto gyration_radius_squared = gyration_radius_squared_vector.sum();
-                const auto end_to_end_squared = spc.geo.sqdist(group.begin()->pos, std::prev(group.end())->pos);
-                mean.end_to_end += std::sqrt(end_to_end_squared);
-                mean.end_to_end_squared += end_to_end_squared;
-                mean.gyration_radius += std::sqrt(gyration_radius_squared);
-                mean.gyration_radius_squared += gyration_radius_squared;
-                mean.gyration_radius_squared_x += gyration_radius_squared_vector.x();
-                mean.gyration_radius_squared_y += gyration_radius_squared_vector.y();
-                mean.gyration_radius_squared_z += gyration_radius_squared_vector.z();
-                const auto shape_factor = mean.end_to_end_squared.avg() / mean.gyration_radius_squared.avg();
-                mean.shape_factor += shape_factor;
-                mean.shape_factor_squared += shape_factor * shape_factor;
-            }
+    for (const auto &group : spc.findMolecules(molid, Space::ACTIVE)) {
+        if (group.size() >= 2) { // two or more particles required to form a polymer
+            auto gyration_tensor = Geometry::gyration(group.begin(), group.end(), group.cm, spc.geo.getBoundaryFunc());
+            Point principal_moment = Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d>(gyration_tensor).eigenvalues();
+            const auto gyration_radius_squared_vector = gyration_tensor.diagonal();
+            const auto gyration_radius_squared = gyration_radius_squared_vector.sum();
+            const auto end_to_end_squared = spc.geo.sqdist(group.begin()->pos, std::prev(group.end())->pos);
+            mean.end_to_end += std::sqrt(end_to_end_squared);
+            mean.end_to_end_squared += end_to_end_squared;
+            mean.gyration_radius += std::sqrt(gyration_radius_squared);
+            mean.gyration_radius_squared += gyration_radius_squared;
+            gyration_radius_histogram(std::sqrt(gyration_radius_squared))++;
+
+            const auto shape_factor = mean.end_to_end_squared.avg() / mean.gyration_radius_squared.avg();
+            mean.shape_factor += shape_factor;
+            mean.shape_factor_squared += shape_factor * shape_factor;
+
+            const double asphericity = 3.0 / 2.0 * principal_moment.z() - gyration_radius_squared / 2.0;
+            const double acylindricity = principal_moment.y() - principal_moment.x();
+            const double relative_shape_anisotropy =
+                (std::pow(asphericity, 2) + 3.0 / 4.0 * std::pow(acylindricity, 2)) /
+                std::pow(gyration_radius_squared, 2);
+            mean.aspherity += asphericity;
+            mean.acylindricity += acylindricity;
+            mean.relative_shape_anisotropy += relative_shape_anisotropy;
         }
     }
 }
+
+void PolymerShape::_to_disk() {
+    const std::string filename = fmt::format("{}gyration_{}.dat", MPI::prefix, Faunus::molecules[molid].name);
+    if (auto stream = std::ofstream(filename); stream) {
+        gyration_radius_histogram.stream_decorator = [](auto &stream, auto Rg, auto observations) {
+            if (observations > 0) {
+                stream << fmt::format("{} {}\n", Rg, observations);
+            }
+        };
+        stream << "# Rg N\n" << gyration_radius_histogram;
+    }
+}
+
 PolymerShape::PolymerShape(const json &j, Space &spc) : spc(spc) {
     from_json(j);
     name = "Polymer Shape";
     cite = "https://dx.doi.org/10/d6ff";
-    auto names = j.at("molecules").get<std::vector<std::string>>(); // molecule names
-    molids = Faunus::names2ids(Faunus::molecules, names);           // names --> molids
+    if (j.count("molecules") > 0) {
+        throw ConfigurationError("{}: 'molecules' is deprecated, use a single 'molecule' instead.");
+    }
+    auto molname = j.at("molecule").get<std::string>();
+    if (auto it = findName(Faunus::molecules, molname); it == Faunus::molecules.end()) {
+        throw ConfigurationError("{}: unknown molecule '{}'", name, molname);
+    } else {
+        molid = it->id();
+    }
+    if (Faunus::molecules[molid].atomic) {
+        faunus_logger->warn("polymer shape analysis on an atomic group is unadvisable");
+    }
+    gyration_radius_histogram.setResolution(j.value("histogram_resolution", 0.2), 0.0);
 }
+
 void AtomProfile::_from_json(const json &j) {
     ref = j.value("origo", Point(0, 0, 0));
     dir = j.value("dir", dir);

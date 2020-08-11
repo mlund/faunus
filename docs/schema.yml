@@ -803,18 +803,17 @@ properties:
                     properties:
                         nstep: {type: integer}
                         nskip: {type: integer, default: 0, description: Initial steps to skip}
-                        required: [nstep]
-                        additionalProperties: false
-                        type: object
+                    required: [nstep]
+                    type: object
+                    additionalProperties: false
 
                 polymershape:
                     properties:
-                        molecules:
-                            minItems: 1
-                            items: {type: string}
-                            type: array
                         nstep: {type: integer}
-                    required: [molecules, nstep]
+                        nskip: {type: integer, default: 0, description: Initial steps to skip}
+                        molecule: {type: string}
+                        histogram_resolution: {type: number, default: 0.2, description: "Distance spacing for Rg histogram (Å)"}
+                    required: [molecule, nstep]
                     type: object
 
                 multipoledist:

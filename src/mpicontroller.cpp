@@ -110,7 +110,7 @@ namespace Faunus {
 #endif
 
         // global instances
-        std::string prefix;
+        std::string prefix; //!< Filename prefix in case of MPI runs (default: empty)
         MPIController mpi;
 
     } // namespace

@@ -589,7 +589,7 @@ Point trigoCom(const Tspace &spc, const GroupIndex &groups, const std::vector<in
  * @tparam iterator Iterator to `Particle` range
  * @param begin Iterator to first particle
  * @param end Iterator to end
- * @param mass_center Vector to subtract to make the molecule whole (typically the mass center)
+ * @param mass_center The mass center used as reference and to remove PBC
  * @param boundary Function to apply periodic boundary functions (default: none)
  * @return gyration tensor; or zero tensor if empty particle range
  * @throws If total mass is non-positive
@@ -597,9 +597,9 @@ Point trigoCom(const Tspace &spc, const GroupIndex &groups, const std::vector<in
 template <typename iterator>
 Tensor gyration(
     iterator begin, iterator end, const Point &mass_center, const BoundaryFunction boundary = [](auto &) {}) {
-    auto S = Tensor::Zero();
+    Tensor S = Tensor::Zero();
     double total_mass = 0.0;
-    std::for_each(begin, end, [&](const auto &particle) {
+    std::for_each(begin, end, [&](auto &particle) {
         const auto mass = particle.traits().mw;
         Point r = particle.pos - mass_center; // get rid...
         boundary(r);                          // ...of PBC (if any)

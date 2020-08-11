@@ -238,7 +238,8 @@ $\bf{I}$ is the identity matrix and $N$ is the number of atoms.
 ### Polymer Shape
 
 This calculates the radius of gyration, end-to-end distance, and related
-fluctuations for all groups defined in `molecules`.
+fluctuations for all groups defined in `molecules`. The output nomenclature
+follows [IUPAC's recommendations](https://dx.doi.org/10/d6ff).
 
 `polymershape`   | Description
 ---------------- | ----------------------------------------

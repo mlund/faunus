@@ -34,23 +34,20 @@ class Cluster : public Movebase {
     std::map<size_t, size_t> cluster_size_distribution; //!< distribution of cluster sizes
     PairMatrix<double, true> thresholds_squared;        //!< Cluster thresholds for pairs of groups
 
-    void updateMoleculeIndex(); //!< update `molecule_index`
-
-    virtual double clusterProbability(const Tgroup &group1, const Tgroup &group2) const;
-
-    void _to_json(json &j) const override;
-    void _from_json(const json &j) override;
-
-    /**
-     * @param spc Space
-     * @param seed_index Index of initial molecule (randomly selected)
-     * @param index w. all molecules clustered around seed_index (seed_index included)
-     */
-    void findCluster(Space &spc, size_t seed_index, std::vector<size_t> &cluster);
-    void _move(Change &change) override;
+    void registerSatellites(const std::vector<std::string> &);      //!< Register satellites
+    void parseThresholds(const json &j);                            //!< Read thresholds from json input
+    Point clusterMassCenter(const std::vector<size_t> &) const;     //!< Calculates cluster mass center
+    void updateMoleculeIndex();                                     //!< update `molecule_index`
+    Eigen::Quaterniond setRandomRotation();                         //!< Sets random rotation angle and axis
+    std::size_t findSeed();                                         //!< Find first particle; exclude satellites
+    std::vector<size_t> findCluster(Space &spc, size_t seed_index); //!< Find cluster
+    void _move(Change &change) override;                            //!< Performs the move
     double bias(Change &, double, double) override; //!< adds extra energy change not captured by the Hamiltonian
     void _reject(Change &) override;
     void _accept(Change &) override;
+    void _to_json(json &j) const override;
+    void _from_json(const json &molid) override;
+    virtual double clusterProbability(const Tgroup &group1, const Tgroup &group2) const;
 
   public:
     Cluster(Space &spc);

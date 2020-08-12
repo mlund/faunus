@@ -1,4 +1,5 @@
 #pragma once
+#include <doctest/doctest.h>
 #include <vector>
 namespace Faunus {
 /**
@@ -64,7 +65,7 @@ template <class T, bool triangular = false> class PairMatrix {
         matrix[i][j] = val;
     }
 };
-#ifdef DOCTEST_LIBRARY_INCLUDED
+
 TEST_CASE("[Faunus] PairMatrix") {
     int i = 2, j = 3; // particle type, for example
 
@@ -102,6 +103,5 @@ TEST_CASE("[Faunus] PairMatrix") {
         CHECK(m(2, 0) == 0);
     }
 }
-#endif
 
 } // namespace Faunus

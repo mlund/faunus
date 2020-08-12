@@ -1,22 +1,22 @@
+#include <doctest/doctest.h>
 #include "analysis.h"
 #include "io.h"
 
-#define ANKERL_NANOBENCH_IMPLEMENT
+//#define ANKERL_NANOBENCH_IMPLEMENT
 #include "nanobench.h"
 
-namespace Faunus {
-namespace Scatter {
+namespace Faunus::Scatter {
 
 using doctest::Approx;
 
-double box = 80;
-const std::vector<Point> positions = {
-    {10, 20, 30},  {-32, 19, 1},  {34, -2, 23}, {0, 0, 1},     {25, 0, -12},
-    {-6, -4, -29}, {-12, 23, -3}, {3, 1, -4},   {-31, 29, -20}}; // random position vector
-
-TEST_CASE_TEMPLATE("[Faunus] StructureFactorPBC", T, StructureFactorPBC<float, SIMD>,
-                   StructureFactorPBC<float, EIGEN>, StructureFactorPBC<float, GENERIC>) {
+TEST_CASE_TEMPLATE("[Faunus] StructureFactorPBC", T, StructureFactorPBC<float, SIMD>, StructureFactorPBC<float, EIGEN>,
+                   StructureFactorPBC<float, GENERIC>) {
     size_t cnt = 0;
+    double box = 80;
+    const std::vector<Point> positions = {
+        {10, 20, 30},  {-32, 19, 1},  {34, -2, 23}, {0, 0, 1},     {25, 0, -12},
+        {-6, -4, -29}, {-12, 23, -3}, {3, 1, -4},   {-31, 29, -20}}; // random position vector
+
     std::vector<float> result = {0.0785, 1.48621,  0.1111, 0.567279, 0.136,  1.39515,
                                  0.1571, 0.730579, 0.2221, 0.701547, 0.2721, 0.692064};
     T scatter(2);
@@ -30,6 +30,7 @@ TEST_CASE_TEMPLATE("[Faunus] StructureFactorPBC", T, StructureFactorPBC<float, S
 
 #ifdef ANKERL_NANOBENCH_H_INCLUDED
 TEST_CASE("Benchmark") {
+    double box = 80;
     std::vector<Point> pos(1000);
     for (auto &p : pos)
         p = Eigen::Vector3d::Random() * box;
@@ -43,6 +44,10 @@ TEST_CASE("Benchmark") {
 
 TEST_CASE("[Faunus] StructureFactorIPBC") {
     size_t cnt = 0;
+    double box = 80;
+    const std::vector<Point> positions = {
+        {10, 20, 30},  {-32, 19, 1},  {34, -2, 23}, {0, 0, 1},     {25, 0, -12},
+        {-6, -4, -29}, {-12, 23, -3}, {3, 1, -4},   {-31, 29, -20}}; // random position vector
     std::vector<double> result = {0.0785, 0.384363, 0.1111, 1.51652, 0.136,  1.18027,
                                   0.1571, 1.40662,  0.2221, 2.06042, 0.2721, 1.53482};
     StructureFactorIPBC scatter(2);
@@ -54,5 +59,4 @@ TEST_CASE("[Faunus] StructureFactorIPBC") {
     CHECK(cnt == result.size());
 }
 
-} // namespace Scatter
-} // namespace Faunus
+} // namespace

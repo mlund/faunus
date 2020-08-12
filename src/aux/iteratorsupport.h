@@ -4,8 +4,7 @@
 
 namespace Faunus {
 
-template<class T1, class T2>
-int distance(T1 first, T2 last) {
+template <class T1, class T2> auto distance(T1 first, T2 last) {
     return std::distance( &(*first), &(*last) );
 } //!< Distance between two arbitrary contiguous iterators
 

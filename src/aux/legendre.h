@@ -49,7 +49,7 @@ template <typename T, std::size_t max_order, bool use_table = false> class Legen
         return P;
     }
 };
-#ifdef DOCTEST_LIBRARY_INCLUDED
+#ifdef DOCTEST_LIBRARY_INCLUDED__
 TEST_CASE_TEMPLATE("[Faunus] Legendre", LegendreType, Legendre<double, 3, false>, Legendre<double, 3, true>) {
     using doctest::Approx;
     LegendreType l;

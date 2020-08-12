@@ -1,6 +1,7 @@
 #include "clustermove.h"
 #include "aux/eigensupport.h"
 #include <algorithm>
+#include <range/v3/view/cartesian_product.hpp>
 
 namespace Faunus {
 namespace Move {
@@ -47,6 +48,56 @@ void Cluster::_to_json(json &j) const {
     }
 }
 
+void Cluster::registerSatellites(const std::vector<std::string> &satellite_names) {
+    const auto ids = Faunus::names2ids(Faunus::molecules, satellite_names); // names --> molids
+    satellites = std::set<int>(ids.begin(), ids.end());
+
+    auto invalid_satellite = [&](auto molid) { return std::find(molids.begin(), molids.end(), molid) == molids.end(); };
+    if (std::any_of(satellites.begin(), satellites.end(), invalid_satellite)) {
+        throw std::runtime_error("satellite molecules must be defined in `molecules`");
+    }
+
+    if (satellites.size() >= molids.size()) {
+        throw std::runtime_error("all molecules cannot be satellites");
+    }
+}
+
+/**
+ * @param j json object corresponding to "threshold" key in user input
+ * @throws If invalid input
+ *
+ * This reads the cluster threshold(s) either as a single number, or
+ * as a matrix of molecule-molecule thresholds.
+ */
+void Cluster::parseThresholds(const json &j) {
+    if (j.is_number()) { // threshold is given as a single number
+        for (auto [id1, id2] : ranges::views::cartesian_product(molids, molids)) {
+            thresholds_squared.set(id1, id2, std::pow(j.get<double>(), 2));
+        }
+    } else if (j.is_object()) { // threshold is given as pairs of clustering molecules
+        const int threshold_combinations = molids.size() * (molids.size() + 1) / 2; // N*(N+1)/2
+        if (j.size() != threshold_combinations) {
+            throw ConfigurationError(
+                "exactly {} molecule pairs must be given in threshold matrix to cover all combinations",
+                threshold_combinations);
+        }
+        for (const auto &[key, value] : j.items()) {
+            if (auto name_pair = Faunus::words2vec<std::string>(key); name_pair.size() == 2) {
+                auto it1 = Faunus::findName(Faunus::molecules, name_pair[0]);
+                auto it2 = Faunus::findName(Faunus::molecules, name_pair[1]);
+                if (it1 == Faunus::molecules.end() or it2 == Faunus::molecules.end()) {
+                    throw ConfigurationError("unknown threshold molecule(s): [{} {}]", name_pair[0], name_pair[1]);
+                }
+                thresholds_squared.set(it1->id(), it2->id(), std::pow(value.get<double>(), 2));
+            } else {
+                throw ConfigurationError("threshold requires exactly two space-separated molecules");
+            }
+        }
+    } else {
+        throw ConfigurationError("cluster threshold must be a number or object");
+    }
+}
+
 void Cluster::_from_json(const json &j) {
     translation_displacement_factor = j.at("dp");
     translation_direction = j.value("dir", Point(1, 1, 1));
@@ -65,50 +116,25 @@ void Cluster::_from_json(const json &j) {
     repeat = std::max<size_t>(1, molecule_index.size());
 
     // read satellite ids (molecules NOT to be considered as cluster centers)
-    auto satnames = j.value("satellites", std::vector<std::string>()); // molecule names
-    auto vec = names2ids(Faunus::molecules, satnames);                 // names --> molids
-    satellites = std::set<int>(vec.begin(), vec.end());
+    registerSatellites(j.value("satellites", std::vector<std::string>()));
+    parseThresholds(j.at("threshold"));
+}
 
-    // make sure the satellites are in `molids`
-    for (auto id : satellites) {
-        if (std::find(molids.begin(), molids.end(), id) == molids.end()) {
-            throw std::runtime_error("satellite molecules must be defined in `molecules`");
-        }
+/**
+ * @return Index of random seed molecule
+ * @throws if no seed can be found (no molecules)
+ *
+ * Satellites are molecules that cannot be used to seed a cluster but can be
+ * part of it, i.e. rotated and translated. Here we therefore filter out any
+ * satellite molecules, and pick a random molecule index of what remains.
+ */
+std::size_t Cluster::findSeed() {
+    auto avoid_satellites = [&](auto index) { return (satellites.count(spc.groups[index].id) == 0); };
+    auto not_satellites = molecule_index | ranges::cpp20::views::filter(avoid_satellites);
+    if (ranges::cpp20::empty(not_satellites)) {
+        throw std::runtime_error("cannot find cluster seed: out of molecules");
     }
-
-    // read cluster thresholds
-    if (auto &threshold = j.at("threshold"); threshold.is_number()) { // threshold is given as a single number
-        for (auto i : molids) {
-            for (auto j : molids) {
-                if (i >= j) {
-                    thresholds_squared.set(i, j, std::pow(threshold.get<double>(), 2));
-                }
-            }
-        }
-    } else if (threshold.is_object()) { // threshold is given as pairs of clustering molecules
-        int threshold_combinations = molids.size() * (molids.size() + 1) / 2; // N*(N+1)/2
-        if (threshold.size() == threshold_combinations) {
-            for (auto [key, value] : threshold.items()) {
-                if (auto name_pair = words2vec<std::string>(key); name_pair.size() == 2) {
-                    auto it1 = findName(Faunus::molecules, name_pair[0]);
-                    auto it2 = findName(Faunus::molecules, name_pair[1]);
-                    if (it1 == Faunus::molecules.end() or it2 == Faunus::molecules.end()) {
-                        throw std::runtime_error("unknown molecule(s): ["s + name_pair[0] + " " + name_pair[1] + "]");
-                    }
-                    thresholds_squared.set(it1->id(), it2->id(), std::pow(value.get<double>(), 2));
-                } else {
-                    throw std::runtime_error("threshold requires exactly two space-separated molecules");
-                }
-            }
-        } else {
-            faunus_logger->error(
-                "exactly {} molecule pairs must be given in threshold matrix to cover all combinations",
-                threshold_combinations);
-            throw std::runtime_error("input error");
-        }
-    } else {
-        throw std::runtime_error("cluster threshold must be a number or object");
-    }
+    return *slump.sample(not_satellites.begin(), not_satellites.end());
 }
 
 /**
@@ -116,14 +142,14 @@ void Cluster::_from_json(const json &j) {
  *
  * @param spc Space to operate on
  * @param seed_index Index of seed_index group to evaluate the cluster around
- * @param cluster Destination vector for group indices of the found cluster
+ * @returns Destination vector for group indices of the found cluster
  */
-void Cluster::findCluster(Space &spc, size_t seed_index, std::vector<size_t> &cluster) {
+std::vector<size_t> Cluster::findCluster(Space &spc, size_t seed_index) {
     assert(seed_index < spc.p.size());
     std::set<size_t> pool(molecule_index.begin(), molecule_index.end());
     assert(pool.count(seed_index) == 1);
 
-    cluster.clear();
+    std::vector<size_t> cluster;
     cluster.reserve(molecule_index.size()); // ensures safe resizing without invalidating iterators
     cluster.push_back(seed_index);          // 'seed_index' is the index of the seed molecule
     pool.erase(seed_index);                 // ...which is already in the cluster and not part of pool
@@ -157,99 +183,100 @@ void Cluster::findCluster(Space &spc, size_t seed_index, std::vector<size_t> &cl
             }
         }
     }
+    assert(std::adjacent_find(cluster.begin(), cluster.end()) == cluster.end()); // check for duplicates
+    return cluster;
+}
+
+Point Cluster::clusterMassCenter(const std::vector<size_t> &cluster_index) const {
+    auto boundary = spc.geo.getBoundaryFunc();
+    double mass_sum = 0.0;
+    Point mass_center(0, 0, 0);
+    Point origin = spc.groups[*cluster_index.begin()].cm;
+    for (auto i : cluster_index) { // loop over clustered molecules (index)
+        Point r = spc.groups[i].cm - origin;
+        boundary(r);
+        double mass = spc.groups[i].mass();
+        mass_center += mass * r;
+        mass_sum += mass;
+    }
+    mass_center = mass_center / mass_sum + origin;
+    boundary(mass_center);
+    return mass_center;
+}
+
+Eigen::Quaterniond Cluster::setRandomRotation() {
+    Eigen::Quaterniond quaternion;
+    if (perform_rotation) {
+        Point axis = (rotation_axis.count() > 0) ? rotation_axis : ranunit(slump);
+        rotation_angle = rotation_displacement_factor * (slump() - 0.5);
+        quaternion = Eigen::AngleAxisd(rotation_angle, axis); // quaternion
+    } else {
+        rotation_angle = 0.0;
+    }
+    return quaternion;
 }
 
 void Cluster::_move(Change &change) {
+    using namespace ranges::cpp20;
+    auto boundary = spc.geo.getBoundaryFunc();
     _bias = 0;
     perform_rotation = true;
     updateMoleculeIndex();
     if (not molecule_index.empty()) {
-        std::vector<size_t> cluster; // all group index in cluster
+        auto seed_index = findSeed();                // find "nuclei" or cluster center
+        auto cluster = findCluster(spc, seed_index); // find cluster
+        Point COM = clusterMassCenter(cluster);      // cluster mass center
+        auto quaternion = setRandomRotation();       // set rotation
 
-        size_t seed_index; // find "nuclei" or cluster center; exclude molecule ids in "satellite".
-        do {
-            seed_index = *slump.sample(molecule_index.begin(), molecule_index.end()); // random molecule
-        } while (satellites.count(spc.groups[seed_index].id) != 0);
-
-        findCluster(spc, seed_index, cluster);                                       // find cluster around first
-        assert(std::adjacent_find(cluster.begin(), cluster.end()) == cluster.end()); // check for duplicates
-
-        average_cluster_size += cluster.size();      // average cluster size
-        cluster_size_distribution[cluster.size()]++; // update cluster size distribution
-
-        auto boundary = spc.geo.getBoundaryFunc();
-
-        auto clusterCOM = [&]() { // lambda function to calculate cluster COM
-            double mass_sum = 0.0;
-            Point mass_center(0, 0, 0);
-            Point origin = spc.groups[*cluster.begin()].cm;
-            for (auto i : cluster) { // loop over clustered molecules (index)
-                Point r = spc.groups[i].cm - origin;
-                boundary(r);
-                double mass = spc.groups[i].mass();
-                mass_center += mass * r;
-                mass_sum += mass;
-            }
-            mass_center = mass_center / mass_sum + origin;
-            boundary(mass_center);
-            return mass_center;
+        auto rotate_group = [&](auto &group) {
+            Geometry::rotate(group.begin(), group.end(), quaternion, boundary, -COM);
+            group.cm = group.cm - COM;
+            boundary(group.cm);
+            group.cm = quaternion * group.cm + COM;
+            boundary(group.cm);
         };
-
-        Point COM = clusterCOM(); // org. cluster center
-        Eigen::Quaterniond Q;
-        if (perform_rotation) {
-            Point axis = (rotation_axis.count() > 0) ? rotation_axis : ranunit(slump);
-            rotation_angle = rotation_displacement_factor * (slump() - 0.5);
-            Q = Eigen::AngleAxisd(rotation_angle, axis); // quaternion
-        } else {
-            rotation_angle = 0.0;
-        }
 
         // translate cluster
         translation_displacement = ranunit(slump, translation_direction) * translation_displacement_factor * slump();
-        Change::data d;
-        d.all = true;
-        for (auto i : cluster) { // loop over molecules in cluster
-            auto &group = spc.groups[i];
+        auto cluster_groups =
+            cluster | views::transform([&](size_t index) -> Space::Tgroup & { return spc.groups.at(index); });
+        for (auto &group : cluster_groups) {
             if (perform_rotation) {
-                Geometry::rotate(group.begin(), group.end(), Q, boundary, -COM);
-                group.cm = group.cm - COM;
-                boundary(group.cm);
-                group.cm = Q * group.cm + COM;
-                boundary(group.cm);
+                rotate_group(group);
             }
             group.translate(translation_displacement, boundary);
-            d.index = i;
+            Change::data d;
+            d.all = true;
+            d.index = std::distance(&spc.groups.front(), &group);
             change.groups.push_back(d);
         }
-
         change.moved2moved = false; // do not calc. internal cluster energy
 
         /*
          * Reject if cluster composition changes during move
-         * Note: this only works for the binary 0/1 probability function
-         * currently implemented in `findCluster()`.
+         * Note: this only works for the binary 0/1 probability function currently implemented in `findCluster()`.
          */
-        std::vector<size_t> aftercluster;                // all group index in cluster _after_move
-        findCluster(spc, seed_index, aftercluster);      // find cluster around first
-        if (aftercluster == cluster) {
+        if (auto aftercluster = findCluster(spc, seed_index); aftercluster == cluster) {
             _bias = 0;
         } else {
             _bias = pc::infty; // bias is infinite --> reject
             bias_rejected++;   // count how many time we reject due to bias
         }
-#ifndef NDEBUG
-        // check if cluster mass center movement matches displacement
-        if (_bias == 0) {
-            Point newCOM = clusterCOM();                          // org. cluster center
-            Point d = spc.geo.vdist(COM, newCOM);                 // distance between new and old COM
-            double _zero = (d + translation_displacement).norm(); // |d+dp| should ideally be zero...
-            if (std::fabs(_zero) > 1e-9) {
-                _bias = pc::infty; // by setting bias=oo the move is rejected
-                faunus_logger->warn("Skipping too large cluster: COM difference = {}", _zero);
+
+        average_cluster_size += cluster.size();      // average cluster size
+        cluster_size_distribution[cluster.size()]++; // update cluster size distribution
+
+        if constexpr (false) { // debug code: check if cluster mass center movement matches displacement
+            if (_bias == 0) {
+                auto newCOM = clusterMassCenter(cluster);             // org. cluster center
+                Point d = spc.geo.vdist(COM, newCOM);                 // distance between new and old COM
+                double _zero = (d + translation_displacement).norm(); // |d+dp| should ideally be zero...
+                if (std::fabs(_zero) > 1e-9) {
+                    _bias = pc::infty; // by setting bias=oo the move is rejected
+                    faunus_logger->warn("Skipping too large cluster: COM difference = {}", _zero);
+                }
             }
         }
-#endif
     }
 }
 double Cluster::bias(Change &, double, double) { return _bias; }

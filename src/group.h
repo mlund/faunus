@@ -78,7 +78,6 @@ namespace Faunus {
 
         template <class T> void ElasticRange<T>::deactivate(ElasticRange::Titer first, ElasticRange::Titer last) {
             size_t n = std::distance(first, last);
-            assert(n >= 0);
             assert(first >= begin() && last <= end());
             std::rotate(begin(), last, end());
             end() -= n;

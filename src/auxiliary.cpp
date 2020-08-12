@@ -1,4 +1,6 @@
+#include <doctest/doctest.h>
 #include "auxiliary.h"
+#include <string>
 #include <cmath>
 
 namespace Faunus {
@@ -6,6 +8,33 @@ namespace Faunus {
 using doctest::Approx;
 
 TEST_SUITE_BEGIN("Auxiliary");
+
+TEST_CASE("[Faunus] for_each_pair") {
+    int x;
+    std::vector<int> a = {1, 2, 3};
+    x = for_each_unique_pair(
+        a.begin(), a.end(), [](int i, int j) { return i * j; }, std::plus<int>());
+    CHECK(x == 2 + 3 + 6);
+    a.resize(1);
+    x = for_each_unique_pair(
+        a.begin(), a.end(), [](int i, int j) { return i * j; }, std::plus<int>());
+    CHECK(x == 0);
+}
+
+TEST_CASE("[Faunus] ordered_pair") {
+    ordered_pair<int> a = {1, 2}, b = {2, 1};
+    CHECK((a.first == 1 && a.second == 2));
+    CHECK((b.first == 1 && b.second == 2));
+    CHECK(a == b);
+    CHECK(a.contains(1));
+    CHECK(a.contains(2));
+    CHECK(!a.contains(3));
+}
+
+TEST_CASE("[Faunus] Text manipulation") {
+    CHECK(vec2words<double>({1.0, -1.2, 0}) == "1 -1.2 0");
+    CHECK(words2vec<double>("1 -1.2 0") == std::vector<double>({1.0, -1.2, 0}));
+}
 
 TEST_CASE("numeric_cast") {
     CHECK_EQ(numeric_cast<int>(2.2), 2);

@@ -299,10 +299,13 @@ template <typename T = double> class Andrea : public TabulatorBase<T> {
 #endif
     }
 };
+} // namespace Tabulate
+} // namespace Faunus
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
 TEST_CASE("[Faunus] Andrea") {
     using doctest::Approx;
+    using namespace Faunus::Tabulate;
 
     auto f = [](double x) { return 0.5 * x * std::sin(x) + 2; };
     Andrea<double> spline;
@@ -337,5 +340,3 @@ TEST_CASE("[Faunus] Andrea") {
 }
 #endif
 
-} // namespace Tabulate
-} // namespace Faunus

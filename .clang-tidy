@@ -1,7 +1,11 @@
 ---
-Checks:          '*,-fuchsia-*,-google-*,-zircon-*,-abseil-*,-modernize-use-trailing-return-type,-llvm-*'
+Checks:          '*,-fuchsia-*,-google-*,-zircon-*,-abseil-*,-modernize-use-trailing-return-type,-llvm-*,-modernize-use-nodiscard,-llvmlibc-callee-namespace,-cppcoreguidelines-avoid-magic-numbers,-readability-magic-numbers'
 WarningsAsErrors: '*'
 HeaderFilterRegex: ''
 FormatStyle:     none
 
-
+CheckOptions:
+  - { key: readability-identifier-naming.NamespaceCase, value: CamelCase }
+  - { key: readability-identifier-naming.ClassCase,     value: CamelCase }
+  - { key: readability-identifier-naming.StructCase,    value: CamelCase }
+  - { key: readability-identifier-naming.VariableCase,  value: lower_case}

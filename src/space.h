@@ -122,14 +122,13 @@ class Space {
             f = [molid](Tgroup &i) { return (i.id == molid) && (i.size() == i.capacity()); };
             break;
         case (ALL_NEUTRAL):
-            f = [molid](Tgroup &i) {
-                if (i.id != molid)
+            f = [molid](Tgroup &group) {
+                if (group.id != molid)
                     return false;
                 else {
-                    int charge = 0;
-                    for (auto p = i.begin(); p != i.trueend(); ++p)
-                        charge += p->charge;
-                    return (charge == 0);
+                    double charge = std::accumulate(group.begin(), group.trueend(), 0.0,
+                                                    [](double sum, auto &particle) { return sum + particle.charge; });
+                    return (std::fabs(charge) < 1e-6);
                 }
             };
             break;

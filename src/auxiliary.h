@@ -1,6 +1,6 @@
 #pragma once
-
 #include "average.h"
+#include <nlohmann/json_fwd.hpp>
 #include <functional>
 #include <fstream>
 #include <vector>
@@ -32,7 +32,7 @@ template <typename TOut, typename TIn> inline TOut numeric_cast(const TIn number
             number > std::nextafter(static_cast<TIn>(std::numeric_limits<TOut>::min()), 0)) {
             // ... and fits into the integral type range.
             // The nextafter function is used to mitigate possible rounding up or down.
-            return static_cast<TOut>(number >= 0 ? number + 0.5 : number - 0.5); // round before cast
+            return static_cast<TOut>(number >= 0 ? number + TIn(0.5) : number - TIn(0.5)); // round before cast
         }
     }
     // not-a-number, infinite, or outside the representable range
@@ -57,19 +57,6 @@ T for_each_unique_pair(Titer begin, Titer end, Tfunction f, Taggregate_function 
     }
     return x;
 }
-#ifdef DOCTEST_LIBRARY_INCLUDED
-TEST_CASE("[Faunus] for_each_pair") {
-    int x;
-    std::vector<int> a = {1, 2, 3};
-    x = for_each_unique_pair(
-        a.begin(), a.end(), [](int i, int j) { return i * j; }, std::plus<int>());
-    CHECK(x == 2 + 3 + 6);
-    a.resize(1);
-    x = for_each_unique_pair(
-        a.begin(), a.end(), [](int i, int j) { return i * j; }, std::plus<int>());
-    CHECK(x == 0);
-}
-#endif
 
 /** @brief Erase from container `a` all values found in container `b` */
 template <typename T> T erase_range(T a, const T &b) {
@@ -99,18 +86,6 @@ template <class T> struct ordered_pair : public std::pair<T, T> {
         }
     }
 };
-
-#ifdef DOCTEST_LIBRARY_INCLUDED
-TEST_CASE("[Faunus] ordered_pair") {
-    ordered_pair<int> a = {1, 2}, b = {2, 1};
-    CHECK((a.first == 1 && a.second == 2));
-    CHECK((b.first == 1 && b.second == 2));
-    CHECK(a == b);
-    CHECK(a.contains(1));
-    CHECK(a.contains(2));
-    CHECK(!a.contains(3));
-}
-#endif
 
 /**
  * @brief Round a floating point to integer for use with histogram binning.
@@ -234,13 +209,6 @@ template <class T> std::string vec2words(const std::vector<T> &v) {
     return o.str();
 } // vector to space separated string w values
 
-#ifdef DOCTEST_LIBRARY_INCLUDED
-TEST_CASE("[Faunus] Text manipulation") {
-    CHECK(vec2words<double>({1.0, -1.2, 0}) == "1 -1.2 0");
-    CHECK(words2vec<double>("1 -1.2 0") == std::vector<double>({1.0, -1.2, 0}));
-}
-#endif
-
 template <typename T> struct BasePointerVector {
     std::vector<std::shared_ptr<T>> vec; //!< Vector of shared pointers to base class
 
@@ -288,10 +256,12 @@ template <typename T> struct BasePointerVector {
         return _v;
     } //!< Pointer list to all matching type
 
-    template <typename U> friend void to_json(json &, const BasePointerVector<U> &); //!< Allow serialization to JSON
+    template <typename U>
+    friend void to_json(nlohmann::json &, const BasePointerVector<U> &); //!< Allow serialization to JSON
 }; //!< Helper class for storing vectors of base pointers
 
-template <typename T> void to_json(json &j, const BasePointerVector<T> &b) {
+template <typename T> void to_json(nlohmann::json &j, const BasePointerVector<T> &b) {
+    using namespace std::string_literals;
     try {
         for (auto shared_ptr : b.vec) {
             j.push_back(*shared_ptr);
@@ -301,7 +271,8 @@ template <typename T> void to_json(json &j, const BasePointerVector<T> &b) {
     }
 }
 
-template <typename T> void from_json(const json &j, BasePointerVector<T> &b) {
+template <typename T> void from_json(const nlohmann::json &j, BasePointerVector<T> &b) {
+    using namespace std::string_literals;
     try {
         for (auto it : j) {
             std::shared_ptr<T> ptr = it;

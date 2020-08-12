@@ -3,6 +3,9 @@
 #include "potentials.h"
 #include "externalpotential.h"
 
+#define ANKERL_NANOBENCH_IMPLEMENT
+#include <nanobench.h>
+
 namespace Faunus {
 namespace Energy {
 
@@ -44,6 +47,32 @@ void to_json(json &j, const EwaldData &d) {
          {"spherical_sum", d.use_spherical_sum},
          {"kappa", d.kappa},
          {"ewaldscheme", d.policy}};
+}
+
+TEST_CASE("[Faunus] Ewald - EwaldData") {
+    using doctest::Approx;
+
+    Space spc;
+    EwaldData data(R"({
+                "epsr": 1.0, "alpha": 0.894427190999916, "epss": 1.0,
+                "ncutoff": 11.0, "spherical_sum": true, "cutoff": 5.0})"_json);
+
+    CHECK(data.policy == EwaldData::PBC);
+    CHECK(data.const_inf == 1);
+    CHECK(data.alpha == 0.894427190999916);
+
+    // Check number of wave-vectors using PBC
+    PolicyIonIon ionion;
+    ionion.updateBox(data, Point(10, 10, 10));
+    CHECK(data.k_vectors.cols() == 2975);
+    CHECK(data.Q_ion.size() == data.k_vectors.cols());
+
+    // Check number of wave-vectors using IPBC
+    data.policy = EwaldData::IPBC;
+    PolicyIonIonIPBC ionionIPBC;
+    ionionIPBC.updateBox(data, Point(10, 10, 10));
+    CHECK(data.k_vectors.cols() == 846);
+    CHECK(data.Q_ion.size() == data.k_vectors.cols());
 }
 
 //----------------- Ewald Policies -------------------
@@ -166,6 +195,94 @@ void PolicyIonIon::updateComplex(EwaldData &d, Change &change, Space::Tgvec &gro
                 }
             }
         }
+    }
+}
+
+TEST_CASE("[Faunus] Ewald - IonIonPolicy") {
+    using doctest::Approx;
+    Space spc;
+    spc.p.resize(2);
+    spc.geo = R"( {"type": "cuboid", "length": 10} )"_json;
+    spc.p[0] = R"( {"pos": [0,0,0], "q": 1.0} )"_json;
+    spc.p[1] = R"( {"pos": [1,0,0], "q": -1.0} )"_json;
+    Group<Particle> g(spc.p.begin(), spc.p.end());
+    spc.groups.push_back(g);
+
+    EwaldData data = R"({
+                "epsr": 1.0, "alpha": 0.894427190999916, "epss": 1.0,
+                "ncutoff": 11.0, "spherical_sum": true, "cutoff": 5.0})"_json;
+    Change c;
+    c.all = true;
+    data.policy = EwaldData::PBC;
+
+    SUBCASE("PBC") {
+        PolicyIonIon ionion;
+        ionion.updateBox(data, spc.geo.getLength());
+        ionion.updateComplex(data, spc.groups);
+        CHECK(ionion.selfEnergy(data, c, spc.groups) == Approx(-1.0092530088080642 * data.bjerrum_length));
+        CHECK(ionion.surfaceEnergy(data, c, spc.groups) == Approx(0.0020943951023931952 * data.bjerrum_length));
+        CHECK(ionion.reciprocalEnergy(data) == Approx(0.21303063979675319 * data.bjerrum_length));
+    }
+
+    SUBCASE("PBCEigen") {
+        PolicyIonIonEigen ionion;
+        ionion.updateBox(data, spc.geo.getLength());
+        ionion.updateComplex(data, spc.groups);
+        CHECK(ionion.selfEnergy(data, c, spc.groups) == Approx(-1.0092530088080642 * data.bjerrum_length));
+        CHECK(ionion.surfaceEnergy(data, c, spc.groups) == Approx(0.0020943951023931952 * data.bjerrum_length));
+        CHECK(ionion.reciprocalEnergy(data) == Approx(0.21303063979675319 * data.bjerrum_length));
+    }
+
+    SUBCASE("IPBC") {
+        PolicyIonIonIPBC ionion;
+        data.policy = EwaldData::IPBC;
+        ionion.updateBox(data, spc.geo.getLength());
+        ionion.updateComplex(data, spc.groups);
+        CHECK(ionion.selfEnergy(data, c, spc.groups) == Approx(-1.0092530088080642 * data.bjerrum_length));
+        CHECK(ionion.surfaceEnergy(data, c, spc.groups) == Approx(0.0020943951023931952 * data.bjerrum_length));
+        CHECK(ionion.reciprocalEnergy(data) == Approx(0.0865107467 * data.bjerrum_length));
+    }
+
+    // IPBCEigen is under construction
+    /*SUBCASE("IPBCEigen") {
+        PolicyIonIonIPBCEigen ionion();
+        data.type = EwaldData::IPBCEigen;
+        ionion.updateBox(data, spc.geo.getLength());
+        ionion.updateComplex(data, spc.groups);
+        CHECK(ionion.selfEnergy(data, c, spc.groups) == Approx(-1.0092530088080642 * data.lB));
+        CHECK(ionion.surfaceEnergy(data, c, spc.groups) == Approx(0.0020943951023931952 * data.lB));
+        CHECK(ionion.reciprocalEnergy(data) == Approx(0.0865107467 * data.lB));
+    }*/
+}
+
+TEST_CASE("[Faunus] Ewald - IonIonPolicy Benchmarks") {
+    Space spc;
+    spc.geo = R"( {"type": "cuboid", "length": 80} )"_json;
+    spc.p.resize(200);
+    for (auto &p : spc.p) {
+        p.charge = 1.0;
+        p.pos = (random() - 0.5) * spc.geo.getLength();
+    }
+    Group<Particle> g(spc.p.begin(), spc.p.end());
+    spc.groups.push_back(g);
+
+    EwaldData data(R"({
+                "epsr": 1.0, "alpha": 0.894427190999916, "epss": 1.0,
+                "ncutoff": 11.0, "spherical_sum": true, "cutoff": 9.0})"_json);
+    Change c;
+    c.all = true;
+    data.policy = EwaldData::PBC;
+
+    {
+        PolicyIonIon pbc;
+        PolicyIonIonEigen pbc_eigen;
+        pbc.updateBox(data, spc.geo.getLength());
+        pbc_eigen.updateBox(data, spc.geo.getLength());
+
+        ankerl::nanobench::Config bench;
+        bench.minEpochIterations(20);
+        bench.run("PBC", [&] { pbc.updateComplex(data, spc.groups); }).doNotOptimizeAway();
+        bench.run("PBCEigen", [&] { pbc_eigen.updateComplex(data, spc.groups); }).doNotOptimizeAway();
     }
 }
 
@@ -541,8 +658,8 @@ void Bonded::update_intra() {
     using namespace Potential;
     intra.clear();
     for (size_t i = 0; i < spc.groups.size(); i++) {
-        auto &group = spc.groups.at(i);
-        for (auto &bond : molecules.at(group.id).bonds) {
+        const auto &group = spc.groups[i];
+        for (const auto &bond : Faunus::molecules.at(group.id).bonds) {
             intra[i].push_back<BondData>(bond->clone()); // deep copy BondData from MoleculeData
             intra[i].back()->shift(std::distance(spc.p.begin(), group.begin()));
             Potential::setBondEnergyFunction(intra[i].back(), spc.p);
@@ -551,7 +668,7 @@ void Bonded::update_intra() {
 }
 double Bonded::sum_energy(const Bonded::BondVector &bonds) const {
     double energy = 0;
-    for (auto &bond : bonds) {
+    for (const auto &bond : bonds) {
         assert(bond->hasEnergyFunction());
         energy += bond->energyFunc(spc.geo.getDistanceFunc());
     }
@@ -560,8 +677,8 @@ double Bonded::sum_energy(const Bonded::BondVector &bonds) const {
 double Bonded::sum_energy(const Bonded::BondVector &bonds, const std::vector<int> &particles_ndx) const {
     double energy = 0;
     // outer loop over bonds to ensure that each bond is counted at most once
-    for (auto &bond : bonds) {
-        for (auto particle_ndx : particles_ndx) {
+    for (const auto &bond : bonds) {
+        for (const auto particle_ndx : particles_ndx) {
             if (std::find(bond->index.begin(), bond->index.end(), particle_ndx) != bond->index.end()) {
                 assert(bond->hasEnergyFunction());
                 energy += bond->energyFunc(spc.geo.getDistanceFunc());
@@ -597,24 +714,24 @@ double Bonded::energy(Change &change) {
         energy += sum_energy(inter); // energy of inter-molecular bonds
 
         if (change.all || change.dV) {              // compute all active groups
-            for (auto &i : intra) {                 // energies of intra-molecular bonds
+            for (const auto &i : intra) {           // energies of intra-molecular bonds
                 if (!spc.groups[i.first].empty()) { // add only if group is active
                     energy += sum_energy(i.second);
                 }
             }
         } else { // compute only the affected groups
-            for (auto &group : change.groups) {
-                auto &intra_group = intra[group.index];
-                if (group.internal) {
-                    if (group.all) { // all internal positions updated
-                        if (not spc.groups[group.index].empty())
+            for (const auto &changed : change.groups) {
+                const auto &intra_group = intra[changed.index];
+                if (changed.internal) {
+                    if (changed.all) { // all internal positions updated
+                        if (not spc.groups[changed.index].empty())
                             energy += sum_energy(intra_group);
                     } else { // only partial update of affected atoms
                         std::vector<int> atoms_ndx;
                         // an offset is the index of the first particle in the group
-                        int offset = std::distance(spc.p.begin(), spc.groups[group.index].begin());
+                        const int offset = std::distance(spc.p.begin(), spc.groups[changed.index].begin());
                         // add an offset to the group atom indices to get the absolute indices
-                        std::transform(group.atoms.begin(), group.atoms.end(), std::back_inserter(atoms_ndx),
+                        std::transform(changed.atoms.begin(), changed.atoms.end(), std::back_inserter(atoms_ndx),
                                        [offset](int i) { return i + offset; });
                         energy += sum_energy(intra_group, atoms_ndx);
                     }
@@ -640,26 +757,26 @@ double Bonded::energy(Change &change) {
  */
 void Bonded::force(std::vector<Point> &forces) {
     auto distance_function = spc.geo.getDistanceFunc();
-    for (auto [group_index, bonds] : intra) {                      // loop over all intra-molecular bonds
-        auto &group = spc.groups[group_index];                     // this is the group we're currently working on
-        for (auto bond : bonds) {                                  // loop over all bonds in group
-            assert(bond->forceFunc != nullptr);                    // the force function must be implemented
-            auto bond_forces = bond->forceFunc(distance_function); // get forces on each atom in bond
+    for (const auto &[group_index, bonds] : intra) {                     // loop over all intra-molecular bonds
+        const auto &group = spc.groups[group_index];                     // this is the group we're currently working on
+        for (const auto &bond : bonds) {                                 // loop over all bonds in group
+            assert(bond->forceFunc != nullptr);                          // the force function must be implemented
+            const auto bond_forces = bond->forceFunc(distance_function); // get forces on each atom in bond
             assert(bond->index.size() == bond_forces.size());
-            for (int i = 0; i < bond->index.size(); i++) { // loop over atom index in bond (relative to group begin)
-                auto absolute_index = std::distance(spc.p.begin(), group.begin()) + bond->index[i];
+            for (size_t i = 0; i < bond->index.size(); i++) { // loop over atom index in bond (relative to group begin)
+                const auto absolute_index = std::distance(spc.p.begin(), group.begin()) + bond->index[i];
                 assert(absolute_index < forces.size());
                 forces[absolute_index] += bond_forces[i]; // add to overall force
             }
         }
     }
 
-    for (auto bond : inter) {                                  // loop over inter-molecular bonds
-        assert(bond->forceFunc != nullptr);                    // the force function must be implemented
-        auto bond_forces = bond->forceFunc(distance_function); // get forces on each atom in bond
+    for (const auto &bond : inter) {                                 // loop over inter-molecular bonds
+        assert(bond->forceFunc != nullptr);                          // the force function must be implemented
+        const auto bond_forces = bond->forceFunc(distance_function); // get forces on each atom in bond
         assert(bond_forces.size() == bond->index.size());
-        for (int i = 0; i < bond->index.size(); i++) { // loop over atom index in bond (absolute index)
-            forces[bond->index[i]] += bond_forces[i];  // add to overall force
+        for (size_t i = 0; i < bond->index.size(); i++) { // loop over atom index in bond (absolute index)
+            forces[bond->index[i]] += bond_forces[i];     // add to overall force
         }
     }
 }
@@ -705,7 +822,6 @@ Hamiltonian::Hamiltonian(Space &spc, const json &j) {
     using namespace Potential;
 
     typedef CombinedPairPotential<NewCoulombGalore, LennardJones> CoulombLJ; // temporary name
-    typedef CombinedPairPotential<NewCoulombGalore, HardSphere> CoulombHS;
     typedef CombinedPairPotential<NewCoulombGalore, WeeksChandlerAndersen> CoulombWCA;
     typedef CombinedPairPotential<Coulomb, WeeksChandlerAndersen> PrimitiveModelWCA;
     typedef CombinedPairPotential<Coulomb, HardSphere> PrimitiveModel;
@@ -938,6 +1054,44 @@ void SASAEnergy::to_json(json &j) const {
     j["radius"] = parameters.probe_radius / 1.0_angstrom;
     j[bracket("SASA") + "/" + angstrom + squared] = avgArea.avg() / 1.0_angstrom;
     _roundjson(j, 5); // set json output precision
+}
+
+TEST_CASE("[Faunus] FreeSASA") {
+    using doctest::Approx;
+    Change change; // change object telling that a full energy calculation
+    change.all = true;
+    pc::temperature = 300.0_K;
+    atoms = R"([
+        { "A": { "sigma": 4.0, "tfe": 1.0 } },
+        { "B": { "sigma": 2.4, "tfe": 1.0 } }
+    ])"_json.get<decltype(atoms)>();
+    molecules = R"([
+        { "M": { "atoms": ["A", "B"], "atomic": true } }
+    ])"_json.get<decltype(molecules)>();
+    json j = R"({
+        "geometry": {"type": "sphere", "radius": 100 },
+        "insertmolecules": [ { "M": { "N": 1 } } ]
+    })"_json;
+    Space spc = j;
+    spc.p[0].pos = {0.0, 0.0, 0.0};
+    spc.p[1].pos = {0.0, 0.0, 20.0};
+
+    SUBCASE("Separated atoms") {
+        SASAEnergy sasa(spc, 1.5_molar, 1.4_angstrom);
+        CHECK(sasa.energy(change) == Approx(4 * pc::pi * (3.4 * 3.4 + 2.6 * 2.6) * 1.5 * 1.0_kJmol));
+    }
+
+    SUBCASE("Intersecting atoms") {
+        SASAEnergy sasa(spc, 1.5_molar, 1.4_angstrom);
+        std::vector<double> distance = {0.0, 2.5, 5.0, 7.5, 10.0};
+        std::vector<double> sasa_energy = {87.3576, 100.4612, 127.3487, 138.4422, 138.4422};
+        for (size_t i = 0; i < distance.size(); ++i) {
+            spc.p[1].pos = {0.0, 0.0, distance[i]};
+            CHECK(sasa.energy(change) == Approx(sasa_energy[i]).epsilon(0.02));
+        }
+    }
+
+    SUBCASE("PBC") {}
 }
 #endif
 

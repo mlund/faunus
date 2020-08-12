@@ -1,4 +1,5 @@
 #pragma once
+#include <doctest/doctest.h>
 #include <type_traits>
 #include <cmath>
 
@@ -24,7 +25,6 @@ namespace Faunus {
  */
 template <typename T> inline T erfc_x(T x) {
     static_assert(std::is_floating_point<T>::value);
-    assert(x >= 0 && "x cannot be negative");
     T t = 1.0 / (1.0 + 0.3275911 * x);
     const T a1 = 0.254829592;
     const T a2 = -0.284496736;
@@ -34,7 +34,6 @@ template <typename T> inline T erfc_x(T x) {
     return t * (a1 + t * (a2 + t * (a3 + t * (a4 + t * a5)))) * std::exp(-x * x);
 }
 
-#ifdef DOCTEST_LIBRARY_INCLUDED
 TEST_CASE("[Faunus] erfc_x") {
     double infty = std::numeric_limits<double>::infinity();
     using doctest::Approx;
@@ -44,7 +43,6 @@ TEST_CASE("[Faunus] erfc_x") {
     CHECK(2 - erfc_x(0.2) == Approx(std::erfc(-0.2)));
     CHECK(erfc_x(0.2) == Approx(std::erfc(0.2)));
 }
-#endif
 
 /**
  * @brief Approximate 1 - erfc_x

@@ -69,4 +69,8 @@ if (PANDOC)
     endif()
 endif()
 
-
+install(FILES
+        ${CMAKE_BINARY_DIR}/manual.pdf
+        ${CMAKE_BINARY_DIR}/manual.html
+        ${CMAKE_SOURCE_DIR}/docs/schema.yml
+        DESTINATION share/faunus OPTIONAL)

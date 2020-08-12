@@ -567,7 +567,7 @@ void WidomInsertion::_sample() {
     group.resize(group.capacity());                           // activate ghost
     ParticleVector particles;                                 // particles to insert
     for (int cnt = 0; cnt < number_of_insertions; ++cnt) {
-        particles = inserter->operator()(space.geo, space.p, Faunus::molecules[molid]);
+        particles = inserter->operator()(space.geo, Faunus::molecules[molid], space.p);
         assert(particles.size() == group.size());
         std::copy(particles.begin(), particles.end(), group.begin()); // copy to ghost group
         if (absolute_z_coords) {

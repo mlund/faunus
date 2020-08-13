@@ -259,6 +259,7 @@ namespace Faunus {
 
             void rotate(const Eigen::Quaterniond&, Geometry::BoundaryFunction); //!< Rotate all particles in group incl. internal coordinates (dipole moment etc.)
 
+            void updateMassCenter(Geometry::BoundaryFunction); //!< Calculates mass center
         }; //!< End of Group class
 
         // Group<Particle> is instantiated elsewhere (group.cpp)

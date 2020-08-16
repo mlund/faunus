@@ -78,7 +78,7 @@ inline Point LangevinVelocityVerlet::velocityFluctuationDissipation(const Point 
  */
 void LangevinVelocityVerlet::step(PointVector &velocities, PointVector &forces) {
     assert(spc.numParticles(Space::ACTIVE) == forces.size());
-    assert(spc.numParticles(Space::ACTIVE) == velocities.size());
+    assert(forces.size() == velocities.size());
 
     auto zipped = ranges::views::zip(spc.activeParticles(), forces, velocities);
 

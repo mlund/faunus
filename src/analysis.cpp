@@ -1143,70 +1143,44 @@ void MultipoleMoments::_to_disk() {
 // =============== PolymerShape ===============
 
 void PolymerShape::_to_json(json &j) const {
-    if (mean.gyration_radius.cnt > 0) {
+    if (data.gyration_radius.cnt > 0) {
         j = {{"molecule", Faunus::molecules[molid].name},
-             {"⟨s²⟩", mean.gyration_radius_squared.avg()},
-             {"⟨s²⟩-⟨s⟩²", mean.gyration_radius_squared.avg() - std::pow(mean.gyration_radius.avg(), 2)},
-             {"⟨r²⟩/⟨s²⟩", mean.end_to_end_squared.avg() / mean.gyration_radius_squared.avg()},
-             {"Rg/Å = √⟨s²⟩", std::sqrt(mean.gyration_radius_squared.avg())},
-             {"Re/Å = √⟨r²⟩", std::sqrt(mean.end_to_end_squared.avg())},
-             {"asphericity (b)", mean.aspherity.avg()},
-             {"acylindricity (c)", mean.acylindricity.avg()},
-             {"relative shape anisotropy (𝜅²)", mean.relative_shape_anisotropy.avg()}};
-    }
-}
-
-/**
- * @param group Group to analyze
- * @return Gyration radius squared vector
- * @throws If total mass is less than or equal to zero
- * @todo Redundant; identical to `Geometry::gyration().diagonal()`.
- */
-Point PolymerShape::vectorgyrationRadiusSquared(const Space::Tgroup &group) const {
-    double total_mass = 0.0;
-    Point Rg2 = Point::Zero();
-    for (const auto &particle : group) {
-        const auto &mass = particle.traits().mw;
-        Point r = particle.pos - group.cm; // get rid of...
-        spc.geo.boundary(r);               // ...PBC if any
-        Rg2.x() += mass * r.x() * r.x();
-        Rg2.y() += mass * r.y() * r.y();
-        Rg2.z() += mass * r.z() * r.z();
-        total_mass += mass;
-    }
-    if (std::fabs(total_mass) > 0.0) {
-        return Rg2 / total_mass;
-    } else {
-        throw std::runtime_error("illegal zero molecular weight");
+             {"⟨s²⟩", data.gyration_radius_squared.avg()},
+             {"⟨s²⟩-⟨s⟩²", data.gyration_radius_squared.avg() - std::pow(data.gyration_radius.avg(), 2)},
+             {"⟨r²⟩/⟨s²⟩", data.end_to_end_squared.avg() / data.gyration_radius_squared.avg()},
+             {"Rg = √⟨s²⟩", std::sqrt(data.gyration_radius_squared.avg())},
+             {"Re = √⟨r²⟩", std::sqrt(data.end_to_end_squared.avg())},
+             {"asphericity (b)", data.aspherity.avg()},
+             {"acylindricity (c)", data.acylindricity.avg()},
+             {"relative shape anisotropy (𝜅²)", data.relative_shape_anisotropy.avg()}};
     }
 }
 
 void PolymerShape::_sample() {
     for (const auto &group : spc.findMolecules(molid, Space::ACTIVE)) {
         if (group.size() >= 2) { // two or more particles required to form a polymer
-            auto gyration_tensor = Geometry::gyration(group.begin(), group.end(), group.cm, spc.geo.getBoundaryFunc());
-            Point principal_moment = Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d>(gyration_tensor).eigenvalues();
-            const auto gyration_radius_squared_vector = gyration_tensor.diagonal();
-            const auto gyration_radius_squared = gyration_radius_squared_vector.sum();
+            const auto gyration_tensor =
+                Geometry::gyration(group.begin(), group.end(), group.cm, spc.geo.getBoundaryFunc());
+            const auto principal_moment = Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d>(gyration_tensor).eigenvalues();
+            const auto gyration_radius_squared = gyration_tensor.trace();
             const auto end_to_end_squared = spc.geo.sqdist(group.begin()->pos, std::prev(group.end())->pos);
-            mean.end_to_end += std::sqrt(end_to_end_squared);
-            mean.end_to_end_squared += end_to_end_squared;
-            mean.gyration_radius += std::sqrt(gyration_radius_squared);
-            mean.gyration_radius_squared += gyration_radius_squared;
+            data.end_to_end_squared += end_to_end_squared;
+            data.gyration_radius += std::sqrt(gyration_radius_squared);
+            data.gyration_radius_squared += gyration_radius_squared;
             gyration_radius_histogram(std::sqrt(gyration_radius_squared))++;
 
-            const auto shape_factor = mean.end_to_end_squared.avg() / mean.gyration_radius_squared.avg();
-            mean.shape_factor += shape_factor;
-            mean.shape_factor_squared += shape_factor * shape_factor;
+            const auto shape_factor = data.end_to_end_squared.avg() / data.gyration_radius_squared.avg();
+            data.shape_factor += shape_factor;
+            data.shape_factor_squared += shape_factor * shape_factor;
 
             const double asphericity = 3.0 / 2.0 * principal_moment.z() - gyration_radius_squared / 2.0;
             const double acylindricity = principal_moment.y() - principal_moment.x();
             const double relative_shape_anisotropy =
-                (std::pow(asphericity, 2) + 3.0 / 4.0 * std::pow(acylindricity, 2)) /
-                std::pow(gyration_radius_squared, 2);
-            mean.aspherity += asphericity;
-            mean.acylindricity += acylindricity;
-            mean.relative_shape_anisotropy += relative_shape_anisotropy;
+                (asphericity * asphericity + 3.0 / 4.0 * acylindricity * acylindricity) /
+                (gyration_radius_squared * gyration_radius_squared);
+            data.aspherity += asphericity;
+            data.acylindricity += acylindricity;
+            data.relative_shape_anisotropy += relative_shape_anisotropy;
         }
     }
 }
@@ -1230,7 +1204,7 @@ PolymerShape::PolymerShape(const json &j, Space &spc) : spc(spc) {
     if (j.count("molecules") > 0) {
         throw ConfigurationError("{}: 'molecules' is deprecated, use a single 'molecule' instead.");
     }
-    auto molname = j.at("molecule").get<std::string>();
+    const auto molname = j.at("molecule").get<std::string>();
     if (auto it = findName(Faunus::molecules, molname); it == Faunus::molecules.end()) {
         throw ConfigurationError("{}: unknown molecule '{}'", name, molname);
     } else {

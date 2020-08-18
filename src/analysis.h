@@ -546,20 +546,18 @@ class PolymerShape : public Analysisbase {
         average_type gyration_radius_squared;
         average_type gyration_radius;
         average_type end_to_end_squared;
-        average_type end_to_end;
         average_type shape_factor;
         average_type shape_factor_squared;
         average_type aspherity;
         average_type acylindricity;
         average_type relative_shape_anisotropy;
-    };
-    AverageData mean; //!< Stores all averages
+    };                //!< Placeholder class for average polymer properties
+    AverageData data; //!< Stores all averages
     Equidistant2DTable<double, unsigned int> gyration_radius_histogram;
-    int molid;
+    int molid; //!< Molecule id to analyse
     Space &spc;
 
     void _to_json(json &j) const override;
-    Point vectorgyrationRadiusSquared(const Space::Tgroup &group) const;
     void _sample() override;
     void _to_disk() override;
 

@@ -13,6 +13,10 @@
 #include <freesasa.h>
 #endif
 
+#ifdef __cpp_lib_parallel_algorithm
+#include <execution>
+#endif
+
 namespace Faunus {
 
 namespace ReactionCoordinate {

@@ -74,6 +74,7 @@ CMake Option                         | Description
 `-DENABLE_TESTS=ON`                  | Enable unittesting
 `-DENABLE_PYTHON=ON`                 | Build python bindings (experimental)
 `-DENABLE_FREESASA=ON`               | Enable SASA routines (external download)
+`-DENABLE_TBB=OFF`                   | Build with Intel Threading Building Blocks (experimental)
 `-DBUILD_STATIC=OFF`                 | Build statically linked binaries
 `-DCMAKE_BUILD_TYPE=RelWithDebInfo`  | Alternatives: `Debug` or `Release` (faster, adventurous)
 `-DCMAKE_CXX_FLAGS_RELEASE="..."`    | Compiler options for Release mode
@@ -82,6 +83,7 @@ CMake Option                         | Description
 `-DPYTHON_EXECUTABLE="..."`          | Full path to Python executable
 `-DPYTHON_INCLUDE_DIR="..."`         | Full path to python headers
 `-DPYTHON_LIBRARY="..."`             | Full path to python library, i.e. libpythonX.dylib/so
+
 
 ### Compiling the Manual
 

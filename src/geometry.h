@@ -576,34 +576,41 @@ Point trigoCom(const Tspace &spc, const GroupIndex &groups, const std::vector<in
 }
 
 /**
- * @brief Calculates a gyration tensor of a molecular group
+ * @brief Calculates a gyration tensor of a range of particles
  *
  * The gyration tensor is computed from the atomic position vectors with respect to the reference point
  * which is always a center of mass,
  * \f$ t_{i} = r_{i} - r_\mathrm{cm} \f$:
  * \f$ S = (1 / \sum_{i=1}^{N} m_{i}) \sum_{i=1}^{N} m_{i} t_{i} t_{i}^{T} \f$
  *
- * @param origin center of mass of the molecular group
- * @return gyration tensor (a zero tensor for an empty group)
+ * Before the calculation, the molecule is made whole to moving it to the center or the
+ * simulation box (0,0,0), then apply the given boundary function.
+ *
+ * @tparam iterator Iterator to `Particle` range
+ * @param begin Iterator to first particle
+ * @param end Iterator to end
+ * @param mass_center The mass center used as reference and to remove PBC
+ * @param boundary Function to apply periodic boundary functions (default: none)
+ * @return gyration tensor; or zero tensor if empty particle range
+ * @throws If total mass is non-positive
  */
-template <typename iter>
-Tensor gyration(iter begin, iter end, const Point origin = {0,0,0},
-        const BoundaryFunction boundary = [](const Point &) {}) {
+template <typename iterator>
+Tensor gyration(
+    iterator begin, iterator end, const Point &mass_center, const BoundaryFunction boundary = [](auto &) {}) {
     Tensor S = Tensor::Zero();
-    double mw_sum = 0;
-    for (auto it = begin; it != end; ++it) {
-        const auto mw = atoms.at(it->id).mw;
-        Point t = it->pos - origin;
-        boundary(t);
-        mw_sum += mw;
-        S += mw * t * t.transpose();
-    }
-    if (mw_sum != 0) {
-        S /= mw_sum;
+    double total_mass = 0.0;
+    std::for_each(begin, end, [&](auto &particle) {
+        const auto mass = particle.traits().mw;
+        Point r = particle.pos - mass_center; // get rid...
+        boundary(r);                          // ...of PBC (if any)
+        S += mass * r * r.transpose();
+        total_mass += mass;
+    });
+    if (total_mass > 0.0) {
+        return S / total_mass;
     } else {
-        assert(S == Tensor::Zero()); // otherwise we have negative atom weights
+        throw std::runtime_error("gyration tensor: total mass must be positive");
     }
-    return S;
 }
 
 /**

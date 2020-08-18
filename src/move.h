@@ -40,8 +40,8 @@ class Movebase {
     void move(Change &);        //!< Perform move and modify given change object
     void accept(Change &);
     void reject(Change &);
-    virtual double bias(Change &, double,
-                        double); //!< adds extra energy change not captured by the Hamiltonian
+    virtual double bias(Change &, double old_energy,
+                        double new_energy); //!< adds extra energy change not captured by the Hamiltonian
     inline virtual ~Movebase() = default;
 };
 

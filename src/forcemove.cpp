@@ -1,5 +1,6 @@
 #include "forcemove.h"
 #include "random.h"
+#include "energy.h"
 
 namespace Faunus::Move {
 
@@ -50,34 +51,50 @@ inline Point LangevinVelocityVerlet::velocityIncrement(const Point& force, const
     return 0.5 * time_step * force * meanSquareSpeedComponent(mass);
 }
 
-inline Point LangevinVelocityVerlet::velocityFluctuationDissipation(const Point& velocity, const double mass) {
-    const double prefactor = exp(-friction_coefficient * time_step); // Ornstein-Uhlenbeck process prefactor
+/**
+ * @param velocity Initial velocity
+ * @param mass Particle Mass in g/mol
+ * @return Updated velocity
+ */
+inline Point LangevinVelocityVerlet::velocityFluctuationDissipation(const Point &velocity, const double mass) {
+    const double prefactor = std::exp(-friction_coefficient * time_step); // Ornstein-Uhlenbeck process prefactor
     return (prefactor * velocity) +
-                    std::sqrt((1 - std::pow(prefactor, 2)) * meanSquareSpeedComponent(mass)) * noise();
+           random_vector(random.engine) * std::sqrt((1.0 - prefactor * prefactor) * meanSquareSpeedComponent(mass));
 }
 
+/**
+ * @param velocities Vector of velocities
+ * @param forces Vector of forces
+ * @note
+ * Using rangesv3, raw loops can be avoided and allow for future c++17 execution policies:
+ *
+ *     auto rng = zip(spc.p, velocities, forces);
+ *     for (auto&& [particle, velicity, force] : rng) { ... };
+ *     std::for_each(rng.begin(), rng.end(), [](auto &&tuple){
+ *         auto&& [particle, velicity, force] = tuple;
+ *         ...
+ *     }};
+ * @todo Splitting scheme still hard-coded to 'BAOAB'
+ */
 void LangevinVelocityVerlet::step(PointVector &velocities, PointVector &forces) {
-    assert(spc.p.size() == forces.size());     // Check that the position and force vectors are of the same size.
-    assert(spc.p.size() == velocities.size()); // Check that the position and velocity vectors are of the same size.
+    assert(spc.numParticles(Space::ACTIVE) == forces.size());
+    assert(forces.size() == velocities.size());
 
-    for (std::size_t i = 0; i < spc.p.size(); ++i) {
-        const auto mass = atoms[spc.p[i].id].mw;
-        auto &position = spc.p[i].pos;
-        auto &velocity = velocities[i];
-        velocity += velocityIncrement(forces[i], mass);            // B step
-        position += positionIncrement(velocity);                   // A step
+    auto zipped = ranges::views::zip(spc.activeParticles(), forces, velocities);
+
+    for (auto &&[particle, force, velocity] : zipped) {
+        const auto mass = particle.traits().mw;
+        velocity += velocityIncrement(force, mass);                // B step
+        particle.pos += positionIncrement(velocity);               // A step
         velocity = velocityFluctuationDissipation(velocity, mass); // O step
-        position += positionIncrement(velocity);                   // A step
-        spc.geo.boundary(position);
+        particle.pos += positionIncrement(velocity);               // A step
+        spc.geo.boundary(particle.pos);
     }
-    // Update forces. The force vector must be initialized with zeros as the resulting force is computed
-    // additively (+=).
-    std::fill(forces.begin(), forces.end(), Point(0.0, 0.0, 0.0));
-    energy.force(forces);
+    std::fill(forces.begin(), forces.end(), Point::Zero()); // forces must be updated ...
+    energy.force(forces);                                   // ... before each B step
 
-    for (std::size_t i = 0; i < spc.p.size(); ++i) {
-        const auto mass = atoms[spc.p[i].id].mw;
-        velocities[i] += velocityIncrement(forces[i], mass);       // B step
+    for (auto &&[particle, force, velocity] : zipped) {
+        velocity += velocityIncrement(force, particle.traits().mw); // B step
     }
 }
 
@@ -106,16 +123,30 @@ TEST_CASE("[Faunus] Integrator") {
 // =============== ForceMoveBase ===============
 
 ForceMoveBase::ForceMoveBase(Space &spc, std::shared_ptr<IntegratorBase> integrator, unsigned int nsteps)
-    : nsteps(nsteps), spc(spc), integrator(integrator) {
-    forces.resize(spc.p.size());
-    velocities.resize(spc.p.size());
+    : integrator(integrator), number_of_steps(nsteps), spc(spc) {
+    forces.reserve(spc.p.size());
+    velocities.reserve(spc.p.size());
+    resizeForcesAndVelocities();
     repeat = 1;
+}
+
+/**
+ * @return Number of activate particles
+ *
+ * Upon resizing, new elements in `forces` and `velocities` are zeroed.
+ */
+size_t ForceMoveBase::resizeForcesAndVelocities() {
+    const auto num_active_particles = spc.numParticles(Space::ACTIVE);
+    forces.resize(num_active_particles, Point::Zero());
+    velocities.resize(num_active_particles, Point::Zero());
+    return num_active_particles;
 }
 
 void ForceMoveBase::_move(Change &change) {
     change.clear();
     change.all = true;
-    for (unsigned int step = 0; step < nsteps; ++step) {
+    resizeForcesAndVelocities();
+    for (unsigned int step = 0; step < number_of_steps; ++step) {
         integrator->step(velocities, forces);
     }
     for (auto &group : spc.groups) { // update mass centers before returning to Monte Carlo
@@ -124,12 +155,12 @@ void ForceMoveBase::_move(Change &change) {
 }
 
 void ForceMoveBase::_to_json(json &j) const {
-    j = {{"nsteps", nsteps}};
+    j = {{"nsteps", number_of_steps}};
     j["integrator"] = *integrator;
 }
 
 void ForceMoveBase::_from_json(const json &j) {
-    nsteps = j.at("nsteps").get<unsigned int>();
+    number_of_steps = j.at("nsteps").get<unsigned int>();
     integrator->from_json(j["integrator"]);
     generateVelocities();
 }
@@ -138,18 +169,18 @@ double ForceMoveBase::bias(Change &, double, double) {
     return pc::neg_infty; // always accept the move
 }
 
-void ForceMoveBase::setVelocities(const PointVector &velocities) {
-    assert(spc.p.size() == velocities.size()); // Check that the position and velocity vectors are of the same size.
-    this->velocities = velocities;
+void ForceMoveBase::generateVelocities() {
+    NormalRandomVector random_vector; // generator of random 3d vector from a normal distribution
+    const auto particles = spc.activeParticles();
+    resizeForcesAndVelocities();
+    std::transform(particles.begin(), particles.end(), velocities.begin(), [&](auto &particle) {
+        return random_vector(random.engine) * std::sqrt(meanSquareSpeedComponent(particle.traits().mw));
+    });
+    std::fill(forces.begin(), forces.end(), Point::Zero());
 }
 
-void ForceMoveBase::generateVelocities() {
-    for (std::size_t i = 0; i < spc.p.size(); ++i) {
-        const auto mass = atoms[spc.p[i].id].mw;
-        velocities[i] = random_vector() * std::sqrt(meanSquareSpeedComponent(mass));
-        forces[i] = {0, 0, 0};
-    }
-}
+const PointVector &ForceMoveBase::getForces() const { return forces; }
+const PointVector &ForceMoveBase::getVelocities() const { return velocities; }
 
 // =============== LangevinMove ===============
 
@@ -181,7 +212,17 @@ TEST_CASE("[Faunus] LangevinDynamics") {
     Space spc;
     DummyEnergy energy;
 
-    SUBCASE("[Faunus] JSON init") {
+    SUBCASE("Velocity and force initialization") {
+        spc.p.resize(10);                                        // 10 particles in total
+        spc.groups.emplace_back(spc.p.begin(), spc.p.end() - 1); // 9 active particles
+        LangevinDynamics ld(spc, energy);
+        CHECK(ld.getForces().capacity() >= 10);
+        CHECK(ld.getVelocities().capacity() >= 10);
+        CHECK_EQ(ld.getForces().size(), 9);
+        CHECK_EQ(ld.getVelocities().size(), 9);
+    }
+
+    SUBCASE("JSON init") {
         json j_in = R"({"nsteps": 100, "integrator": {"time_step": 0.001, "friction": 2.0}})"_json;
         LangevinDynamics ld(spc, energy);
         ld.from_json(j_in);

@@ -20,22 +20,28 @@ moves:
 
 `langevin`      | Description
 --------------- | --------------------------------------------
-`splitting`     | Method for numerically solving the Langevin equation
-`nstep`         | Number of random MC steps to be conducted before continuing Langevin dynamics
-`mdsteps`       | Number of iterations for each Langevin dynamics event
+`nsteps`        | Number of time iterations for each Langevin dynamics event
+`integrator`    | Object with the following two keywords:
 `time_step`     | Time step for integration <!--∆𝑡--> $\Delta t$ (ps)
 `friction`      | Friction coefficient <!--𝛾--> $\gamma$ (1/ps)
 
 This move will solve the Langevin equation for the particles in the system on the form
-\begin{equation*}
-d\begin{bmatrix} \mathbf{q} \\ \mathbf{p} \end{bmatrix} = \underbrace{\begin{bmatrix} M^{-1}\mathbf{q} \\ 0 \end{bmatrix} \mathrm{d}t}_{\text{A}} + \underbrace{\begin{bmatrix} 0 \\ -\nabla U(\mathbf{q}) \end{bmatrix}\mathrm{d}t}_{\text{B}} + \underbrace{\begin{bmatrix} 0 \\-\gamma \mathbf{p} + \sqrt{2k\text{k}_{\mathrm{b}}T\gamma} \sqrt{M} ~\mathrm{d}\mathbf{W} \end{bmatrix}}_{\text{O}}
-\end{equation*}
-Where A, B, and O makes up the individual terms for solving the Langevin equation, which can individually be solved exactly to obtain a trajectory given by
-\begin{align*}
-\varphi^{\mathrm{A}}(\mathbf{q}, \mathbf{p}) &= \left(\mathbf{q} + \Delta t \sqrt{M}~ \mathbf{p}, \mathbf{p}\right) \\
-\varphi^{\mathrm{B}}(\mathbf{q}, \mathbf{p}) &= \left(\mathbf{q}, \mathbf{p} - \Delta t \nabla U(\mathbf{q})\right) \\
-\varphi^{\mathrm{O}}(\mathbf{q}, \mathbf{p}) &= \left(\mathbf{q}, e^{-\gamma \Delta t}\mathbf{p} + \sqrt{\mathrm{k}_{\mathrm{B}}T (1 - e^{-2\gamma \Delta t})} \sqrt{M} \mathbf{R} \right)
-\end{align*}
+$$
+d\begin{bmatrix} \mathbf{q} \\ \mathbf{p} \end{bmatrix} = \underbrace{\begin{bmatrix} M^{-1}\mathbf{q} \\ 0 \end{bmatrix} \mathrm{d}t}\_{\text{A}} + \underbrace{\begin{bmatrix} 0 \\ -\nabla U(\mathbf{q}) \end{bmatrix}\mathrm{d}t}\_{\text{B}} + \underbrace{\begin{bmatrix} 0 \\-\gamma \mathbf{p} + \sqrt{2k\text{k}\_{\mathrm{b}}T\gamma} \sqrt{M} ~\mathrm{d}\mathbf{W} \end{bmatrix}}\_{\text{O}}
+$$
+
+Where A, B, and O makes up the terms for solving the Langevin equation, which can be individually solved to obtain a trajectory given by
+$$
+\varphi^{\mathrm{A}}(\mathbf{q}, \mathbf{p}) = \left(\mathbf{q} + \Delta t \sqrt{M}~ \mathbf{p}, \mathbf{p}\right) \\
+\varphi^{\mathrm{B}}(\mathbf{q}, \mathbf{p}) = \left(\mathbf{q}, \mathbf{p} - \Delta t \nabla U(\mathbf{q})\right) \\
+\varphi^{\mathrm{O}}(\mathbf{q}, \mathbf{p}) = \left(\mathbf{q}, e^{-\gamma \Delta t}\mathbf{p} + \sqrt{\mathrm{k}\_{\mathrm{B}}T (1 - e^{-2\gamma \Delta t})} \sqrt{M} \mathbf{R} \right)
+$$
+
+We currently use the splitting scheme "BAOAB" ([Symmetric Langevin Velocity-Verlet](http://doi.org/ggrnfs)) since it is less errorprone with increasing timestep [Leimkuhler & Matthews, pp. 279-281](http://doi.org/dx7v).
+
+
+<!--
+
 The keyword `splitting` thus refers to the string constructed from the labels A, B and O. In the current implementation a selection of splitting schemes are available
 
 `splitting`     | Description
@@ -49,7 +55,6 @@ OBABO           | [Bussi-Parrinello Langevin Velocity-Verlet](http://doi.org/cjp
 
 We recommend the usage of the splitting scheme "BAOAB" (Symmetric Langevin Velocity-Verlet) due to it being less errorprone with increasing timestep [Leimkuhler & Matthews, pp. 279-281](http://doi.org/dx7v).
 
-<!--
 ## Molecular dynamics
 To be implemented. It is currently possible to sample the NVE ensemble using the Langevin move by setting `friction = 0`.
 

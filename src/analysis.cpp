@@ -1145,9 +1145,8 @@ void MultipoleMoments::_to_disk() {
 void PolymerShape::_to_json(json &j) const {
     if (data.gyration_radius.cnt > 0) {
         j = {{"molecule", Faunus::molecules[molid].name},
-             {"⟨s²⟩", data.gyration_radius_squared.avg()},
              {"⟨s²⟩-⟨s⟩²", data.gyration_radius_squared.avg() - std::pow(data.gyration_radius.avg(), 2)},
-             {"⟨r²⟩/⟨s²⟩", data.end_to_end_squared.avg() / data.gyration_radius_squared.avg()},
+             {"⟨r²⟩∕⟨s²⟩", data.end_to_end_squared.avg() / data.gyration_radius_squared.avg()},
              {"Rg = √⟨s²⟩", std::sqrt(data.gyration_radius_squared.avg())},
              {"Re = √⟨r²⟩", std::sqrt(data.end_to_end_squared.avg())},
              {"asphericity (b)", data.aspherity.avg()},

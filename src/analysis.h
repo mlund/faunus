@@ -541,13 +541,25 @@ class MultipoleMoments : public Analysisbase {
  * *name* and sampled individually.
  */
 class PolymerShape : public Analysisbase {
+    struct AverageData {
+        using average_type = Average<double>;
+        average_type gyration_radius_squared;
+        average_type gyration_radius;
+        average_type end_to_end_squared;
+        average_type shape_factor;
+        average_type shape_factor_squared;
+        average_type aspherity;
+        average_type acylindricity;
+        average_type relative_shape_anisotropy;
+    };                //!< Placeholder class for average polymer properties
+    AverageData data; //!< Stores all averages
+    Equidistant2DTable<double, unsigned int> gyration_radius_histogram;
+    int molid; //!< Molecule id to analyse
     Space &spc;
-    std::map<int, Average<double>> Rg2, Rg, Re2, Re, Rs, Rs2, Rg2x, Rg2y, Rg2z;
-    std::vector<int> ids; // molecule id's to analyse
 
     void _to_json(json &j) const override;
-    Point vectorgyrationRadiusSquared(typename Space::Tgroup &g) const;
     void _sample() override;
+    void _to_disk() override;
 
   public:
     PolymerShape(const json &j, Space &spc);

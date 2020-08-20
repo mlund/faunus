@@ -64,5 +64,5 @@ moves:
     - pivot: {molecule: POL, dprot: 0.5, repeat: 10}
 
 analysis:
-    - polymershape: {nstep: 10, molecules: [POL]}
+    - polymershape: {nstep: 10, molecule: POL}
     - savestate: {file: state.json}

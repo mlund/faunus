@@ -43,7 +43,7 @@ analysis:
     - sanity: {nstep: 10}
     - reactioncoordinate: {file: radius.dat, nstep: 10, type: system, property: radius}
     - molrdf: {file: rdf.dat, nstep: 100, dr: 0.1, name1: polymer, name2: polymer}
-    - polymershape: {nstep: 10, molecules: [polymer]}
+    - polymershape: {nstep: 10, molecule: polymer}
     - systemenergy: {file: energy.dat, nstep: 100}
     - xtcfile: {file: traj.xtc, nstep: 100}
     - savestate: {file: confout.pqr}

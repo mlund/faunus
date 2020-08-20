@@ -1,11 +1,9 @@
 #pragma once
 #include "move.h"
 #include "energy.h"
-#include "units.h"
 
-namespace Faunus {
+namespace Faunus::Move {
 
-namespace Move {
 /** @section Force moves
  *
  * Force moves are pseudo-Monte-Carlo moves that run a short trajectory of Langevin or similar dynamics.
@@ -27,12 +25,10 @@ class NormalRandomVector {
 
   public:
     NormalRandomVector(double mean = 0.0, double stddev = 1.0) : normal_distribution(mean, stddev){};
-    inline Point operator()() {
-        return {normal_distribution(random.engine), normal_distribution(random.engine),
-                normal_distribution(random.engine)};
+    template <typename random_engine> Point operator()(random_engine &engine) {
+        return {normal_distribution(engine), normal_distribution(engine), normal_distribution(engine)};
     };
 };
-
 
 /**
  * @brief Base class for dynamics integrators
@@ -67,19 +63,18 @@ void to_json(json &j, const IntegratorBase &i);
  * The integrator can conduct normal velocity-Verlet, when friction_coefficient = 0.
  */
 class LangevinVelocityVerlet : public IntegratorBase {
-    double time_step;            //!< integration time step (picoseconds)
-    double friction_coefficient; //!< friction coefficient (inverse picoseconds)
-    NormalRandomVector noise;    //!< generator of random 3d vectors from the normal distribution
-
-    //! increment particle's position in an A semi-step
-    inline Point positionIncrement(const Point& velocity);
-    //! increment particle's velocity in a B semi-step
-    inline Point velocityIncrement(const Point& force, const double mass);
+    double time_step;                 //!< integration time step (picoseconds)
+    double friction_coefficient;      //!< friction coefficient (inverse picoseconds)
+    NormalRandomVector random_vector; //!< generator of random 3d vectors from the normal distribution
+    inline Point positionIncrement(const Point &velocity); //!< increment particle's position in an A semi-step
+    inline Point velocityIncrement(const Point &force,
+                                   const double mass); //!< increment particle's velocity in a B semi-step
     //! apply fluctuation-dissipation to particle's velocity by solving of Ornstein-Uhlenbeck process in an O-step
-    inline Point velocityFluctuationDissipation(const Point& velocity, const double mass);
+    inline Point velocityFluctuationDissipation(const Point &velocity, const double mass);
+
   public:
     LangevinVelocityVerlet(Space &spc, Energy::Energybase &energy);
-    LangevinVelocityVerlet(Space &spc, Energy::Energybase &energy, double time_step, double friction_coefficient = 0.0);
+    LangevinVelocityVerlet(Space &spc, Energy::Energybase &energy, double time_step, double friction_coefficient);
     LangevinVelocityVerlet(Space &spc, Energy::Energybase &energy, const json &j);
     void step(PointVector &velocities, PointVector &forces) override;
     void from_json(const json &j) override;
@@ -97,22 +92,24 @@ void to_json(json &j, const IntegratorBase &i);
  */
 class ForceMoveBase : public Movebase {
   protected:
-    unsigned int nsteps; //!< number of integration steps to perform during a single MC move
-    Space &spc;          //!< space with particles and their positions
     std::shared_ptr<IntegratorBase> integrator;
-    NormalRandomVector random_vector; //!< generator of random 3d vectors from the normal distribution
-    PointVector velocities, forces;   //!< velocities and forces; the vector index corresponds to the particle index
+    unsigned int number_of_steps;     //!< number of integration steps to perform during a single MC move
+    Space &spc;                       //!< space with particles and their positions
+    PointVector velocities;           //!< Vector of velocities matching each active particle in Space
+    PointVector forces;               //!< Vector of forces matching each active particle in Space
 
+    size_t resizeForcesAndVelocities(); //!< Resize velocities and forces to match number of active particles
+    void generateVelocities();          //!< Generate initial velocities and zero forces
     void _to_json(json &j) const override;
     void _from_json(const json &j) override;
     void _move(Change &change) override;
-    void setVelocities(const PointVector &velocities); //!< set velocities
-    void generateVelocities(); //!< set the initial conditions for the dynamics: generate velocities and zero forces
     ForceMoveBase(Space &, std::shared_ptr<IntegratorBase> integrator, unsigned int nsteps);
     virtual ~ForceMoveBase() = default;
 
   public:
     double bias(Change &, double, double) override;
+    const PointVector& getForces() const;
+    const PointVector& getVelocities() const;
 };
 
 /**
@@ -127,5 +124,4 @@ class LangevinDynamics : public ForceMoveBase {
     void _from_json(const json &j) override;
 };
 
-} // end of namespace Move
-} // end of namespace Faunus
+} // end of namespace

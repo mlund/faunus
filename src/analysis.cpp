@@ -1156,7 +1156,12 @@ void PolymerShape::_to_json(json &j) const {
 }
 
 void PolymerShape::_sample() {
-    for (const auto &group : spc.findMolecules(molid, Space::ACTIVE)) {
+    auto molecules = spc.findMolecules(molid, Space::ACTIVE);
+    const auto num_molecules = std::distance(molecules.begin(), molecules.end());
+    if (num_molecules > 1 && tensor_output_stream) {
+        throw std::runtime_error(name + ": tensor output `file` cannot be used with multiple molecules");
+    }
+    for (const auto &group : molecules) {
         if (group.size() >= 2) { // two or more particles required to form a polymer
             const auto gyration_tensor =
                 Geometry::gyration(group.begin(), group.end(), group.cm, spc.geo.getBoundaryFunc());
@@ -1167,11 +1172,6 @@ void PolymerShape::_sample() {
             data.gyration_radius += std::sqrt(gyration_radius_squared);
             data.gyration_radius_squared += gyration_radius_squared;
             gyration_radius_histogram(std::sqrt(gyration_radius_squared))++;
-
-            const auto shape_factor = data.end_to_end_squared.avg() / data.gyration_radius_squared.avg();
-            data.shape_factor += shape_factor;
-            data.shape_factor_squared += shape_factor * shape_factor;
-
             const double asphericity = 3.0 / 2.0 * principal_moment.z() - gyration_radius_squared / 2.0;
             const double acylindricity = principal_moment.y() - principal_moment.x();
             const double relative_shape_anisotropy =
@@ -1180,6 +1180,13 @@ void PolymerShape::_sample() {
             data.aspherity += asphericity;
             data.acylindricity += acylindricity;
             data.relative_shape_anisotropy += relative_shape_anisotropy;
+
+            if (tensor_output_stream) {
+                const auto &t = gyration_tensor;
+                *tensor_output_stream << fmt::format("{} {:.2f} {:5e} {:5e} {:5e} {:5e} {:5e} {:5e}\n",
+                                                     this->getNumberOfSteps(), std::sqrt(gyration_radius_squared),
+                                                     t(0, 0), t(0, 1), t(0, 2), t(1, 1), t(1, 2), t(2, 2));
+            }
         }
     }
 }
@@ -1193,6 +1200,9 @@ void PolymerShape::_to_disk() {
             }
         };
         stream << "# Rg N\n" << gyration_radius_histogram;
+    }
+    if (tensor_output_stream) {
+        *tensor_output_stream << std::flush;
     }
 }
 
@@ -1213,6 +1223,11 @@ PolymerShape::PolymerShape(const json &j, Space &spc) : spc(spc) {
         faunus_logger->warn("polymer shape analysis on an atomic group is unadvisable");
     }
     gyration_radius_histogram.setResolution(j.value("histogram_resolution", 0.2), 0.0);
+
+    if (auto filename = j.value("file", ""s); !filename.empty()) {
+        tensor_output_stream = IO::openCompressedOutputStream(MPI::prefix + filename);
+        *tensor_output_stream << "# step Rg xx xy xz xy yy yz xz yz zz\n";
+    }
 }
 
 void AtomProfile::_from_json(const json &j) {

@@ -238,7 +238,7 @@ $\bf{I}$ is the identity matrix and $N$ is the number of atoms.
 ### Polymer Shape
 
 This calculates the radius of gyration; end-to-end distance; and related
-fluctuations for a molecular group. A histogram of the gyration radius will
+fluctuations for a molecular group. A histogram of the radius of gyration will
 be saved to disk with the name `gyration_{molecule}.dat`.
 The output nomenclature follows [IUPAC's recommendations](https://dx.doi.org/10/d6ff).
 For further reading regarding gyration tensor analysis and shape, see:
@@ -251,6 +251,7 @@ For further reading regarding gyration tensor analysis and shape, see:
 `nstep`                    | Interval with which to sample
 `molecule`                 | Molecule to sample
 `histogram_resolution=0.2` | Rg resolution of histogram (Å)
+`file`                     | Optionally save gyration tensor for each sample (.dat|.dat.gz)
 
 Note: The ability to select several molecules (`molecules` keyword) was
 removed in version 2.5. Instead, add multiple instances of `polymershape`.

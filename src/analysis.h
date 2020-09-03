@@ -533,12 +533,14 @@ class MultipoleMoments : public Analysisbase {
 };
 
 /**
- * @brief Analysis of polymer shape - radius of gyration, shape factor etc.
+ * @brief Analysis of polymer shape - radius of gyration, shape etc.
  * @date November, 2011
  *
- * This will analyse polymer groups and calculate Rg, Re and the shape factor. If
- * sample() is called with different groups these will be distinguished by their
- * *name* and sampled individually.
+ * The analysis includes:
+ * - gyration tensor and radius of gyration
+ * - histogram of Rg
+ * - end-to-end distance
+ * - shape anisotropy
  */
 class PolymerShape : public Analysisbase {
     struct AverageData {
@@ -546,7 +548,6 @@ class PolymerShape : public Analysisbase {
         average_type gyration_radius_squared;
         average_type gyration_radius;
         average_type end_to_end_squared;
-        average_type shape_factor;
         average_type shape_factor_squared;
         average_type aspherity;
         average_type acylindricity;
@@ -556,6 +557,7 @@ class PolymerShape : public Analysisbase {
     Equidistant2DTable<double, unsigned int> gyration_radius_histogram;
     int molid; //!< Molecule id to analyse
     Space &spc;
+    std::unique_ptr<std::ostream> tensor_output_stream = nullptr; //!< Output file for tensor
 
     void _to_json(json &j) const override;
     void _sample() override;

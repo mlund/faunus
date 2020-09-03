@@ -828,7 +828,9 @@ properties:
                         nskip: {type: integer, default: 0, description: Initial steps to skip}
                         molecule: {type: string}
                         histogram_resolution: {type: number, default: 0.2, description: "Distance spacing for Rg histogram (Å)"}
+                        file: {type: string, description: "Name of file with gyration tensor for each sample (.dat|.dat.gz)"}
                     required: [molecule, nstep]
+                    additionalProperties: false
                     type: object
 
                 multipoledist:

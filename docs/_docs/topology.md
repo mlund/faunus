@@ -118,6 +118,7 @@ Properties of molecules and their default values:
 `insoffset=[0,0,0]`     | Shifts mass center after insertion
 `keeppos=false`         | Keep original positions of `structure`
 `keepcharges=true`      | Keep original charges of `structure` (aam/pqr files)
+`pure=false`            | If true, the molecule is a pure substance with an activity of unity; requires `implicit=true`
 `rigid=false`           | Set to true for rigid molecules. Affects energy evaluation.
 `rotate=true`           | If false, the original structure will not be rotated upon insertion
 `structure`             | Structure file or direct information; required if `atomic=false`

@@ -180,7 +180,8 @@ void to_json(json &j, const ExclusionsVicinity &exclusions);
 class MoleculeData {
     json json_cfg; //!< data useful only for to_json
     int _id = -1;
-    bool implicit = false; //!< Is molecule implicit and explicitly absent from simulation cell?
+    bool implicit = false;       //!< Is molecule implicit and explicitly absent from simulation cell?
+    bool pure_substance = false; //! Set to true if this is a pure substance
 
   protected:
     ExclusionsVicinity exclusions; //!< Implementation of isPairExcluded;
@@ -206,6 +207,7 @@ class MoleculeData {
     MoleculeData(const std::string &name, const ParticleVector &particles,
                  const BasePointerVector<Potential::BondData> &bonds);
 
+    bool isPureSubstance() const; //!< Is molecule implicit and a pure substance? Implies isImplicit() == true
     bool isImplicit() const; //!< Is molecule implicit and explicitly absent from simulation cell?
     bool isPairExcluded(int i, int j) const;
 

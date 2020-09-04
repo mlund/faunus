@@ -58,6 +58,7 @@ void to_json(json &j, const MoleculeData &a) {
         {"rigid", a.rigid},
         {"compressible", a.compressible},
         {"implicit", a.isImplicit()},
+        {"pure", a.isPureSubstance()},
         {"activity", a.activity / 1.0_molar},
     };
     j[a.name].update(a.json_cfg);
@@ -330,12 +331,25 @@ void MoleculeBuilder::from_json(const json &j, MoleculeData &molecule) {
         molecule.compressible = j_properties.value("compressible", molecule.compressible);
         molecule.activity = j_properties.value("activity", molecule.activity / 1.0_molar) * 1.0_molar;
         molecule.implicit = j_properties.value("implicit", false);
-        if (molecule.implicit and molecule.atomic) {
+
+        molecule.pure_substance = j_properties.value("pure", false);
+        if (molecule.isPureSubstance()) {
+            if (!molecule.isImplicit()) {
+                throw ConfigurationError("Pure substance '{}' must be marked 'implicit'", molecule.name);
+            } else if (std::fabs(molecule.activity) > pc::epsilon_dbl) {
+                throw ConfigurationError("Pure substance '{}' cannot have custom activity; it's always unity",
+                                         molecule.name);
+            } else {
+                molecule.activity = 1.0_molar;
+            }
+        };
+
+        if (molecule.isImplicit() and molecule.atomic) {
             throw std::runtime_error("atomic molecules cannot be implicit");
         }
 
         readCompoundValues(j_properties);
-        for (auto particle : particles) {
+        for (const auto &particle : particles) {
             molecule.atoms.push_back(particle.id);
         }
         if (!particles.empty()) {
@@ -537,6 +551,7 @@ void from_json(const json &j, MoleculeData &a) {
     MoleculeBuilder builder;
     builder.from_json(j, a);
 }
+bool MoleculeData::isPureSubstance() const { return pure_substance; }
 
 void from_json(const json &j, std::vector<MoleculeData> &v) {
     v.reserve(v.size() + j.size());

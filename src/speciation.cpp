@@ -248,8 +248,11 @@ bool SpeciationMove::activateAllProducts(Change &change) {
     // First we need to check if there are enough inactive products
     // for *all* participating molecules. Check only, *no* actual activation.
     for (auto [molid, number_to_insert] : molecular_products) {
-        if (number_to_insert == 0 or Faunus::molecules[molid].isImplicit()) {
-            continue;                                 // implicit molecules are added/removed after the move
+        assert(number_to_insert >= 0);
+        if (number_to_insert == 0) {
+            continue; // nothing to insert
+        } else if (Faunus::molecules[molid].isImplicit()) {
+            continue; // we can always insert implicit molecules (only limited by memory)
         } else if (Faunus::molecules[molid].atomic) { // The product is an atom
             auto mollist = spc.findMolecules(molid, Tspace::ALL);
             if (range_size(mollist) > 0) {
@@ -278,8 +281,12 @@ bool SpeciationMove::activateAllProducts(Change &change) {
     // Actually activate the products. This could be optimized as it also checks
     // the availability of products which is also done above
     for (auto [molid, number_to_insert] : molecular_products) {
-        if (number_to_insert == 0 or Faunus::molecules[molid].isImplicit()) {
-            continue;                                 // implicit molecules are added/removed after the move
+        assert(number_to_insert >= 0);
+        if (number_to_insert == 0) {
+            continue;
+        } else if (Faunus::molecules[molid].isImplicit()) {
+            spc.getImplicitReservoir()[molid] += number_to_insert;
+            change.dN_implicit_molecules[molid] += number_to_insert;
         } else if (Faunus::molecules[molid].atomic) { // The product is an atom
             auto mollist = spc.findMolecules(molid, Tspace::ALL);
             if (range_size(mollist) > 0) {
@@ -292,7 +299,7 @@ bool SpeciationMove::activateAllProducts(Change &change) {
             } else {
                 assert(false); // we should never reach here
             }
-        } else { // The product is a molecule
+        } else { // The product is an explicit molecule
             auto selection = (reaction->only_neutral_molecules) ? Tspace::INACTIVE_NEUTRAL : Tspace::INACTIVE;
             auto inactive = spc.findMolecules(molid, selection); // all inactive molecules
             std::vector<std::reference_wrapper<Tspace::Tgroup>> molecules_to_activate;
@@ -330,8 +337,11 @@ bool SpeciationMove::deactivateAllReactants(Change &change) {
 
     // check (only!) if there are anything to deactivate
     for (auto [molid, N_delete] : molecular_reactants) { // Delete
-        if (N_delete <= 0 or Faunus::molecules[molid].isImplicit()) {
-            continue;                         // implicit molecules are added/deleted after move
+        assert(N_delete >= 0);
+        if (N_delete == 0) {
+            continue;
+        } else if (Faunus::molecules[molid].isImplicit()) {
+            continue;                         // we already checked above!
         } else if (molecules[molid].atomic) { // reactant is an atomic group
             auto mollist = spc.findMolecules(molid, Tspace::ALL);
             assert(range_size(mollist) == 1);
@@ -355,8 +365,12 @@ bool SpeciationMove::deactivateAllReactants(Change &change) {
 
     // perform actual deactivation
     for (auto [molid, N_delete] : molecular_reactants) { // Delete
-        if (N_delete <= 0 or Faunus::molecules[molid].isImplicit()) {
-            continue;                         // implicit molecules are added/deleted after move
+        assert(N_delete >= 0);
+        if (N_delete == 0) { // no molecules to delete
+            continue;
+        } else if (Faunus::molecules[molid].isImplicit()) {
+            change.dN_implicit_molecules[molid] -= N_delete;
+            spc.getImplicitReservoir()[molid] -= N_delete;
         } else if (molecules[molid].atomic) { // reactant is an atomic group
             auto mollist = spc.findMolecules(molid, Tspace::ALL);
             assert(range_size(mollist) == 1);
@@ -368,7 +382,7 @@ bool SpeciationMove::deactivateAllReactants(Change &change) {
             } else {
                 assert(false); // we should never reach here
             }
-        } else { // molecular reactant (non-atomic)
+        } else { // explicit molecular reactant (non-atomic)
             auto selection = (reaction->only_neutral_molecules) ? Tspace::ACTIVE_NEUTRAL : Tspace::ACTIVE;
             auto active = spc.findMolecules(molid, selection);
             std::vector<std::reference_wrapper<Tspace::Tgroup>> molecules_to_deactivate;
@@ -455,21 +469,17 @@ void SpeciationMove::_accept(Change &) {
     // adjust amount of implicit matter
     for (auto [molid, nu] : molecular_reactants) {
         if (Faunus::molecules[molid].isImplicit()) {
-            spc.getImplicitReservoir()[molid] -= nu;
-            other_spc->getImplicitReservoir()[molid] -= nu;
+            other_spc->getImplicitReservoir()[molid] = spc.getImplicitReservoir()[molid];
             average_reservoir_size[molid] += spc.getImplicitReservoir()[molid];
-            assert(spc.getImplicitReservoir()[molid] >= 0);
-            assert(spc.getImplicitReservoir()[molid] == other_spc->getImplicitReservoir()[molid]);
         }
     }
     for (auto [molid, nu] : molecular_products) {
         if (Faunus::molecules[molid].isImplicit()) {
-            spc.getImplicitReservoir()[molid] += nu;
-            other_spc->getImplicitReservoir()[molid] += nu;
+            other_spc->getImplicitReservoir()[molid] = spc.getImplicitReservoir()[molid];
             average_reservoir_size[molid] += spc.getImplicitReservoir()[molid];
-            assert(spc.getImplicitReservoir()[molid] == other_spc->getImplicitReservoir()[molid]);
         }
     }
+    assert(spc.getImplicitReservoir() == other_spc->getImplicitReservoir());
 }
 
 void SpeciationMove::_reject(Change &) {
@@ -481,14 +491,17 @@ void SpeciationMove::_reject(Change &) {
     // average number of implicit molecules
     for (auto [molid, nu] : molecular_reactants) {
         if (Faunus::molecules[molid].isImplicit()) {
+            spc.getImplicitReservoir()[molid] = other_spc->getImplicitReservoir()[molid];
             average_reservoir_size[molid] += spc.getImplicitReservoir()[molid];
         }
     }
     for (auto [molid, nu] : molecular_products) {
         if (Faunus::molecules[molid].isImplicit()) {
+            spc.getImplicitReservoir()[molid] = other_spc->getImplicitReservoir()[molid];
             average_reservoir_size[molid] += spc.getImplicitReservoir()[molid];
         }
     }
+    assert(spc.getImplicitReservoir() == other_spc->getImplicitReservoir());
 }
 
 SpeciationMove::SpeciationMove(Tspace &spc) : spc(spc) {

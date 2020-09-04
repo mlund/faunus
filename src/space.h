@@ -32,6 +32,8 @@ struct Change {
         bool operator<(const data &other) const;
     }; //!< Properties of changed groups
 
+    std::map<int, int> dN_implicit_molecules; //!< dN (value) of implicit molecules (key=molid)
+
     std::vector<data> groups; //!< Touched groups by index in group vector
 
     //! List of moved groups (index)

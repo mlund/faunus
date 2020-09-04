@@ -13,7 +13,7 @@ void Change::clear() {
     assert(empty());
 }
 bool Change::empty() const {
-    if (dV || all || dN || !groups.empty()) {
+    if (dV || all || dN || !groups.empty() || !dN_implicit_molecules.empty()) {
         return false;
     } else {
         return true;

@@ -111,7 +111,8 @@ class TranslationalEntropy {
     double bias(int trial_count, int count) const; //!< Bias due to change in atom/molecule numbers
     double atomSwapEnergy(const Change::data &);   //!< Contribution from atomic swap move
     double atomChangeEnergy(int molid);            //!< Contribution from size-change of atomic group
-    double moleculeChangeEnergy(int molid);        //!< Contribution frin change in number of molecular groups
+    double moleculeChangeEnergy(int molid);        //!< Contribution from change in number of molecular groups
+    double implicitMoleculeEnergy(int molid);      //!< Contribution from change in number of implicit groups
 
   public:
     TranslationalEntropy(Space &trial_space, Space &space);

@@ -267,8 +267,28 @@ double TranslationalEntropy::moleculeChangeEnergy(int molid) {
 }
 
 /**
+ * Translational entropy from implicit molecules.
+ * - if the implicit molecule is a pure substance, return 0
+ * - if the implicit molecule has a non-zero activity, return 0 (handled else-where)
+ */
+double TranslationalEntropy::implicitMoleculeEnergy(int molid) {
+    const auto &molecule = Faunus::molecules.at(molid);
+    assert(molecule.isImplicit());
+    if (molecule.isPureSubstance() or molecule.activity > pc::epsilon_dbl) {
+        return 0.0;
+    } else {
+        const int N_new = trial_spc.getImplicitReservoir()[molid];
+        const int N_old = spc.getImplicitReservoir()[molid];
+        return bias(N_new, N_old);
+    }
+}
+
+/**
  * @param change Change due to latest Monte Carlo move
  * @return Logarithm of the bias for the Metropolis criterion (units of kT)
+ *
+ * In addition to explicit particles, this will also add contributions from
+ * non-pure, implicit substances with zero activities
  */
 double TranslationalEntropy::energy(const Change &change) {
     double energy_change = 0.0;
@@ -287,6 +307,9 @@ double TranslationalEntropy::energy(const Change &change) {
                     already_processed.insert(molid); // ignore future encounters of molid
                 }
             }
+        }
+        for (const auto [molid, N] : spc.getImplicitReservoir()) { // include implicit molecules
+            energy_change += implicitMoleculeEnergy(molid);
         }
     }
     return energy_change; // kT

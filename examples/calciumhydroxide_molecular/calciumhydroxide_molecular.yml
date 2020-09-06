@@ -35,9 +35,9 @@ moleculelist:
     - Na+: {atoms: [na+], structure: [{"na+": [0,0,0]}]}
     - OH-: {atoms: [oh-], structure: [{"oh-": [0,0,0]}]}
     - Cl-: {atoms: [cl-], structure: [{"cl-": [0,0,0]}]}
-    - CaCl2: {implicit: true}
-    - Ca(OH)2: {implicit: true}
-    - NaOH: {implicit: true}
+    - CaCl2: {implicit: true, pure: true}
+    - Ca(OH)2: {implicit: true, pure: true}
+    - NaOH: {implicit: true, pure: true}
 
 insertmolecules:
     - Ca++: {N: 800, inactive: true}

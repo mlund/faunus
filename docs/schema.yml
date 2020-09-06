@@ -121,6 +121,10 @@ properties:
                         type: boolean
                         default: false
                         description: "True if molecule is implicit and absent from the simulation cell"
+                    pure:
+                        type: boolean
+                        default: false
+                        description: "True if molecule is a pure substance; requires inplicit to be true"
                     compressible:
                         type: boolean
                         default: false

@@ -32,9 +32,9 @@ moleculelist:
     - Na+: {atoms: [na+], atomic: true}
     - OH-: {atoms: [oh-], atomic: true}
     - Cl-: {atoms: [cl-], atomic: true}
-    - CaCl2: {implicit: true}
-    - Ca(OH)2: {implicit: true}
-    - NaOH: {implicit: true}
+    - CaCl2: {implicit: true, pure: true}
+    - Ca(OH)2: {implicit: true, pure: true}
+    - NaOH: {implicit: true, pure: true}
 
 insertmolecules:
     - Ca++: {N: 800, inactive: true}

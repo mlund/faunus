@@ -344,7 +344,7 @@ since the Grand Canonical ensemble ensures constant salt activity.
 
 ### Example: Precipitation of Calcium Hydroxide using _implicit_ molecules
 
-Here we introduce a solid phase of Ca(OH)2 and its solubility product
+Here we introduce a solid phase of Ca(OH)2, i.e. a pure substance, and its solubility product
 to predict the amount of dissolved calcium and hydroxide ions. Note that
 we start from an empty simulation box (both ions are inactive) and the solid
 phase is treated _implicitly_, i.e. it never inters the simulation box.
@@ -353,13 +353,13 @@ equilibrium systems under influence of intermolecular interactions.
 
 ~~~ yaml
 moleculelist:
-    - Ca(OH)2: {implicit: true} # this molecule is implicit
+    - Ca(OH)2: {implicit: true, pure: true} # this molecule is implicit
     - Ca++: {atoms: [ca++], atomic: true}
     - OH-: {atoms: [oh-], atomic: true}
 insertmolecules:
     - Ca++: {N: 200, inactive: true}
     - OH-: {N: 400, inactive: true}
-    - Ca(OH)2: {N: 200} # not actually inserted!
+    - Ca(OH)2: {N: 200} # only as implicit molecule!
 reactionlist:
     - "Ca(OH)2 = Ca++ + OH- + OH-": {pK: 5.19}
 ~~~

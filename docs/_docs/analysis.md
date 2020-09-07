@@ -242,6 +242,17 @@ fluctuations for all groups defined in `molecules`.
 `nstep`          | Interval with which to sample
 `molecules`      | List of molecule names to sample (array); `[*]` selects all
 
+### Molecular Conformation
+
+For molecules that can have multiple conformations (using conformational swap moves), this
+creates a histogram of observed conformations for a given molecule type.
+
+`moleculeconformation` |  Description
+---------------------- | -----------------
+`nstep`                | Interval with which to sample
+`molecule`             | Molecule name to sample
+
+
 ## Charge Properties
 
 ### Molecular Multipoles

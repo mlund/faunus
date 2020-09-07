@@ -330,6 +330,25 @@ void VirtualVolume::_to_disk() {
         output_file.flush(); // empty buffer
 }
 
+void MolecularConformationID::_sample() {
+    auto molecules = spc.findMolecules(molid, Space::ACTIVE);
+    for (auto &group : molecules) {
+        histogram[group.confid]++;
+    }
+}
+void MolecularConformationID::_to_json(json &j) const { j["histogram"] = histogram; }
+
+MolecularConformationID::MolecularConformationID(const json &j, Space &spc) : spc(spc) {
+    from_json(j);
+    name = "moleculeconformation";
+    const std::string molname = j.at("molecule");
+    if (auto it = findName(Faunus::molecules, molname); it == molecules.end()) {
+        throw std::runtime_error("unknown molecule '" + molname + "'");
+    } else {
+        molid = it->id();
+    }
+}
+
 void QRtraj::_sample() { write_to_file(); }
 
 void QRtraj::_to_json(json &j) const { j = {{"file", file}}; }
@@ -393,6 +412,8 @@ CombinedAnalysis::CombinedAnalysis(const json &j, Space &spc, Energy::Hamiltonia
                             emplace_back<AtomInertia>(it.value(), spc);
                         else if (it.key() == "inertia")
                             emplace_back<InertiaTensor>(it.value(), spc);
+                        else if (it.key() == "moleculeconformation")
+                            emplace_back<MolecularConformationID>(it.value(), spc);
                         else if (it.key() == "multipolemoments")
                             emplace_back<MultipoleMoments>(it.value(), spc);
                         else if (it.key() == "multipoledist")

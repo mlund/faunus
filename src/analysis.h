@@ -353,6 +353,20 @@ class VirtualVolume : public Analysisbase {
 };
 
 /**
+ * @brief Create histogram of molecule conformation id
+ */
+class MolecularConformationID : public Analysisbase {
+    Space &spc;
+    int molid;                             //!< molecule id to sample
+    std::map<int, unsigned int> histogram; //!< key is conformation id; value is count
+    void _sample() override;
+    void _to_json(json &j) const override;
+
+  public:
+    MolecularConformationID(const json &j, Space &spc);
+};
+
+/**
  * @brief Virtual translation move to calculate force
  *
  * Displace a single molecule of `molid` with `dL` in the

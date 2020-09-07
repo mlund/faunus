@@ -962,6 +962,15 @@ properties:
                     additionalProperties: false
                     type: object
 
+                moleculeconformation:
+                    description: "Conformation ID histogram"
+                    properties:
+                        molecule: {type: string, description: "Molecule name to sample"}
+                        nstep: {type: integer, description: Interval between samples}
+                        nskip: {type: integer, default: 0, description: Number of steps to initially skip}
+                    required: [molecule]
+                    additionalProperties: false
+
                 virtualvolume:
                     description: "Virtual volume move"
                     properties:

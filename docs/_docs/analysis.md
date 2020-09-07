@@ -257,6 +257,17 @@ Note: The ability to select several molecules (`molecules` keyword) was
 removed in version 2.5. Instead, add multiple instances of `polymershape`.
 
 
+### Molecular Conformation
+
+For molecules that can have multiple conformations (using conformational swap moves), this
+creates a histogram of observed conformations for a given molecule type.
+
+`moleculeconformation` |  Description
+---------------------- | -----------------
+`nstep`                | Interval with which to sample
+`molecule`             | Molecule name to sample
+
+
 ## Charge Properties
 
 ### Molecular Multipoles

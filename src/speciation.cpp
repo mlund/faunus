@@ -56,6 +56,11 @@ bool SpeciationMove::atomicSwap(Change &change) {
                 if (mollist.begin()->empty()) {
                     return false;
                 }
+            }
+            if (Faunus::molecules[molid].isImplicit()) { // reactant is an implicit molecule
+                if (spc.getImplicitReservoir()[molid] < N) {
+                    return false;
+                }
             } else { // reactant is a molecular group
                 auto mollist = spc.findMolecules(molid, Tspace::ACTIVE);
                 if (range_size(mollist) < N) {
@@ -73,6 +78,8 @@ bool SpeciationMove::atomicSwap(Change &change) {
                 if (mollist.begin()->capacity() - mollist.begin()->size() < N) {
                     return false;
                 }
+            } else if (Faunus::molecules[molid].isImplicit()) { // reactant is an implicit molecule
+                // we can always insert another implicit molecule!
             } else { // we're producing a molecular group
                 auto mollist = spc.findMolecules(molid, Tspace::INACTIVE);
                 if (range_size(mollist) < N) {

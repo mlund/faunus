@@ -169,8 +169,8 @@ FetchContent_Declare(
 # EIGEN
 FetchContent_Declare(
     eigen
-    URL "http://bitbucket.org/eigen/eigen/get/3.3.7.tar.gz"
-    URL_HASH MD5=f2a417d083fe8ca4b8ed2bc613d20f07)
+    URL "https://gitlab.com/libeigen/eigen/-/archive/3.3.7/eigen-3.3.7.tar.bz2"
+    URL_HASH SHA256=685adf14bd8e9c015b78097c1dc22f2f01343756f196acdc76a678e1ae352e11)
 FetchContent_GetProperties(eigen)
 if(NOT eigen_POPULATED)
     FetchContent_Populate(eigen)

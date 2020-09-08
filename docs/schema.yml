@@ -919,6 +919,7 @@ properties:
                         scheme:
                             description: Scattering method
                             enum: [debye, explicit]
+                        ipbc: {type: boolean, default: false}
                         file: {type: string, description: Output file for S(q)}
                         stepsave: {type: boolean, default: false, description: Save every sample to disk}
                         required: [nstep, molecules, scheme]
@@ -960,6 +961,15 @@ properties:
                     required: [file, nstep]
                     additionalProperties: false
                     type: object
+
+                moleculeconformation:
+                    description: "Conformation ID histogram"
+                    properties:
+                        molecule: {type: string, description: "Molecule name to sample"}
+                        nstep: {type: integer, description: Interval between samples}
+                        nskip: {type: integer, default: 0, description: Number of steps to initially skip}
+                    required: [molecule]
+                    additionalProperties: false
 
                 virtualvolume:
                     description: "Virtual volume move"

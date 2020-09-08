@@ -919,6 +919,7 @@ properties:
                         scheme:
                             description: Scattering method
                             enum: [debye, explicit]
+                        ipbc: {type: boolean, default: false}
                         file: {type: string, description: Output file for S(q)}
                         stepsave: {type: boolean, default: false, description: Save every sample to disk}
                         required: [nstep, molecules, scheme]

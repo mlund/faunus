@@ -191,7 +191,7 @@ S(q) = \frac{1}{N} \left <
 $$
 
 The sampled $q$-interval is always $\left [ 2\pi/L,\, 2\pi p\_{max} \sqrt{3} / L \right ]$,
-$L$ being the box side length. Currently only cubic boxes are supported.
+$L$ being the box side length. Only cubic boxes have been tested, but the implementation respects cuboidal systems (untested).
 For more information, see [doi:10.1063/1.449987](http://dx.doi.org/10.1063/1.449987).
 
 

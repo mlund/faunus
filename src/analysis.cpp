@@ -1448,12 +1448,12 @@ void ScatteringFunction::_sample() {
             IO::write(filename + "." + suffix, debye->getIntensity());
         break;
     case EXPLICIT_PBC:
-        explicit_average_pbc->sample(p, spc.geo.getLength().x());
+        explicit_average_pbc->sample(p, spc.geo.getLength());
         if (save_after_sample)
             IO::write(filename + "." + suffix, explicit_average_pbc->getSampling());
         break;
     case EXPLICIT_IPBC:
-        explicit_average_ipbc->sample(p, spc.geo.getLength().x());
+        explicit_average_ipbc->sample(p, spc.geo.getLength());
         if (save_after_sample)
             IO::write(filename + "." + suffix, explicit_average_ipbc->getSampling());
         break;

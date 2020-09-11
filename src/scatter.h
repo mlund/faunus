@@ -270,13 +270,13 @@ class StructureFactorPBC : private TSamplingPolicy {
   public:
     StructureFactorPBC(int q_multiplier) : p_max(q_multiplier){}
 
-    template <class Tpositions> void sample(const Tpositions &positions, const double boxlength) {
+    template <class Tpositions> void sample(const Tpositions &positions, const Point &boxlength) {
         // https://gcc.gnu.org/gcc-9/porting_to.html#ompdatasharing
         // #pragma omp parallel for collapse(2) default(none) shared(directions, p_max, boxlength) shared(positions)
         #pragma omp parallel for collapse(2) default(shared)
         for (int i = 0; i < directions.size(); ++i) {
-            for (int p = 1; p <= p_max; ++p) {                                // loop over multiples of q
-                const Point q = (2 * pc::pi * p / boxlength) * directions[i]; // scattering vector
+            for (int p = 1; p <= p_max; ++p) {                                         // loop over multiples of q
+                const Point q = 2.0 * pc::pi * directions[i].cwiseQuotient(boxlength); // scattering vector
                 T sum_sin = 0.0;
                 T sum_cos = 0.0;
                 if constexpr (method == SIMD) {
@@ -343,13 +343,13 @@ template <typename T = float, typename TSamplingPolicy = SamplingPolicy<T>> clas
   public:
     explicit StructureFactorIPBC(int q_multiplier) : p_max(q_multiplier) {}
 
-    template <class Tpositions> void sample(const Tpositions &positions, const double boxlength) {
+    template <class Tpositions> void sample(const Tpositions &positions, const Point &boxlength) {
         // https://gcc.gnu.org/gcc-9/porting_to.html#ompdatasharing
         // #pragma omp parallel for collapse(2) default(none) shared(directions, p_max, positions, boxlength)
         #pragma omp parallel for collapse(2) default(shared)
         for (size_t i = 0; i < directions.size(); ++i) {
-            for (int p = 1; p <= p_max; ++p) {                                // loop over multiples of q
-                const Point q = (2 * pc::pi * p / boxlength) * directions[i]; // scattering vector
+            for (int p = 1; p <= p_max; ++p) {                                             // loop over multiples of q
+                const Point q = 2.0 * pc::pi * p * directions[i].cwiseQuotient(boxlength); // scattering vector
                 T sum_cos = 0;
                 for (auto &r : positions) { // loop over positions
                     // if q[i] == 0 then its cosine == 1 hence we can avoid cosine computation for performance reasons

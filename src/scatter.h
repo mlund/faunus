@@ -276,7 +276,7 @@ class StructureFactorPBC : private TSamplingPolicy {
         #pragma omp parallel for collapse(2) default(shared)
         for (int i = 0; i < directions.size(); ++i) {
             for (int p = 1; p <= p_max; ++p) {                                         // loop over multiples of q
-                const Point q = 2.0 * pc::pi * directions[i].cwiseQuotient(boxlength); // scattering vector
+                const Point q = 2.0 * pc::pi * p * directions[i].cwiseQuotient(boxlength); // scattering vector
                 T sum_sin = 0.0;
                 T sum_cos = 0.0;
                 if constexpr (method == SIMD) {

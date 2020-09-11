@@ -348,14 +348,14 @@ void from_json(const json &j, Space &spc) {
         }
 
         // check correctness of molecular mass centers
-        for (auto &group : spc.groups) {
-            if (!group.empty() && group.isMolecular()) {
-                if (spc.geo.sqdist(group.cm, Geometry::massCenter(group.begin(), group.end(), spc.geo.getBoundaryFunc(),
-                                                                  -group.cm)) > 1e-9) {
-                    throw std::runtime_error("mass center mismatch");
-                }
-            }
-        }
+//        for (auto &group : spc.groups) {
+//            if (!group.empty() && group.isMolecular()) {
+//                if (spc.geo.sqdist(group.cm, Geometry::massCenter(group.begin(), group.end(), spc.geo.getBoundaryFunc(),
+//                                                                  -group.cm)) > 1e-9) {
+//                    throw std::runtime_error("mass center mismatch");
+//                }
+//            }
+//        }
     } catch (std::exception &e) {
         throw std::runtime_error("error building space: "s + e.what());
     }

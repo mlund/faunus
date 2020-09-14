@@ -512,6 +512,9 @@ void Ewald::force(std::vector<Point> &forces) {
 
     auto force = forces.begin(); // iterator to force vector on first particle
 
+    assert(data.k_vectors.cols() == data.Q_ion.size());
+    data.Q_dipole.resize(data.Q_ion.size());
+
     for (auto &particle : spc.p) { // loop over particles
         (*force) = total_dipole_moment * particle.charge / (2.0 * data.surface_dielectric_constant + 1.0);
         double mu_scalar = particle.hasExtension() ? particle.getExt().mulen : 0.0;

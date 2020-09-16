@@ -827,6 +827,7 @@ Hamiltonian::Hamiltonian(Space &spc, const json &j) {
     typedef CombinedPairPotential<NewCoulombGalore, LennardJones> CoulombLJ; // temporary name
     typedef CombinedPairPotential<NewCoulombGalore, WeeksChandlerAndersen> CoulombWCA;
     typedef CombinedPairPotential<Coulomb, WeeksChandlerAndersen> PrimitiveModelWCA;
+    typedef CombinedPairPotential<Coulomb, StickySphere> PrimitiveModelStickySphere;
     typedef CombinedPairPotential<Coulomb, HardSphere> PrimitiveModel;
 
     if (not j.is_array())
@@ -874,6 +875,9 @@ Hamiltonian::Hamiltonian(Space &spc, const json &j) {
 
                 else if (it.key() == "nonbonded_pmwca")
                     emplace_back<Energy::Nonbonded<PairingPolicy<PairEnergy<PrimitiveModelWCA, false>, TCutoff, parallel>>>(it.value(), spc, *this);
+
+                else if (it.key() == "nonbonded_pmsticky")
+                    emplace_back<Energy::Nonbonded<PairingPolicy<PairEnergy<PrimitiveModelStickySphere, false>, TCutoff, parallel>>>(it.value(), spc, *this);
 
                 // this should be moved into `Nonbonded` and added when appropriate
                 // Nonbonded now has access to Hamiltonian (*this) and can therefore

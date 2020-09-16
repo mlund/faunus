@@ -520,6 +520,31 @@ TEST_CASE("[Faunus] HardSphere") {
     }
 }
 
+// =============== StickySphere ===============
+
+void StickySphere::initPairMatrices() {
+    sigma_squared = PairMixer(extract_sigma, PairMixer::getCombinator(combination_rule), &PairMixer::modSquared)
+        .createPairMatrix(atoms, *custom_pairs);
+    faunus_logger->trace("Pair matrix for {} sigma ({}×{}) created using {} custom pairs.", name, sigma_squared->rows(),
+                         sigma_squared->cols(), custom_pairs->size());
+}
+
+void StickySphere::extractorsFromJson(const json &j) {
+    auto sigma_name = j.value("sigma", "sigma");
+    json_extra_params["sigma"] = sigma_name;
+    extract_sigma = [sigma_name](const InteractionData &a) -> double { return a.get(sigma_name) * 1.0_angstrom; };
+}
+
+void StickySphere::to_json(json &j) const {
+    MixerPairPotentialBase::to_json(j);
+    j["eps"] = epsilon / 1.0_kJmol / std::pow(1.0_angstrom, 6);
+}
+
+void StickySphere::from_json(const json &j) {
+    MixerPairPotentialBase::from_json(j);
+    epsilon = j.value("eps", 0.0) * 1.0_kJmol * std::pow(1.0_angstrom, 6);
+}
+
 // =============== Hertz ===============
 
 void Hertz::initPairMatrices() {
@@ -704,7 +729,8 @@ FunctorPotential::uFunc FunctorPotential::combineFunc(json &j) {
                                 registerSelfEnergy(&std::get<12>(potlist));
                                 have_dipole_self_energy = true;
                             }
-                        }
+                        } else if (it.key() == "stickysphere")
+                            _u = std::get<13>(potlist) = i;
                         // place additional potentials here...
                     } catch (std::exception &e) {
                         throw std::runtime_error(it.key() + ": " + e.what() + usageTip[it.key()]);

@@ -367,6 +367,33 @@ class SquareWell : public MixerPairPotentialBase {
     }
 };
 
+/**
+ * @brief Sticky-sphere potential
+ *
+ * @detail Hard sphere of diameter sigma with an additional attractive potential U = -eps / r^6, where eps is
+ * a parameter of the potential. Combination rules applies for sigma.
+ */
+class StickySphere : public MixerPairPotentialBase {
+    TExtractorFunc extract_sigma;
+    double epsilon = 0.0;
+
+  protected:
+    TPairMatrixPtr sigma_squared; // sigma_ij * sigma_ij
+    void extractorsFromJson(const json &j) override;
+    void initPairMatrices() override;
+
+  public:
+    StickySphere(const std::string &name = "stickysphere")
+        : MixerPairPotentialBase(name) {};
+    inline double operator()(const Particle &a, const Particle &b, double r2, const Point &) const override {
+        return (r2 < (*sigma_squared)(a.id, b.id)) ? pc::infty : -epsilon / (r2 * r2 * r2);
+    }
+
+    void to_json(json &j) const override;
+    void from_json(const json &j) override;
+};
+
+
 struct RepulsionR3 : public PairPotentialBase {
     double f = 0, s = 0, e = 0;
 
@@ -665,7 +692,8 @@ class FunctorPotential : public PairPotentialBase {
                PrimitiveModelWCA,     // 9
                Hertz,                 // 10
                SquareWell,            // 11
-               Multipole              // 12
+               Multipole,             // 12
+               StickySphere           // 13
                >
         potlist;
 

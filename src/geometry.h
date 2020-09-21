@@ -274,6 +274,10 @@ class HexagonalPrism : public GeometryImplementation {
     template <class Archive> void serialize(Archive &archive) {
         archive(cereal::base_class<GeometryImplementation>(this), box);
     }
+
+    double innerRadius() const; //!< Inner hexagonal radius
+    double outerRadius() const; //!< Outer radius / side-length
+    double height() const;      //!< Prism height
 };
 
 /**
@@ -671,7 +675,7 @@ ParticleVector mapParticlesOnSphere(const ParticleVector &);
 
 /**
  * @brief Convert particles in hexagonal prism to space-filled cuboid
- * @param hexagonal_prism Input hexagonal prism
+ * @param hexagon Input hexagonal prism
  * @param particles Particles in hexagonal prism
  * @return Cuboid and particle vector w. positions in cuboidal space
  *
@@ -679,7 +683,7 @@ ParticleVector mapParticlesOnSphere(const ParticleVector &);
  * side-lengths [2 * inner_radius, 3 * outer_radius, height] and also twice
  * the number of particles
  */
-std::pair<Cuboid, ParticleVector> HexagonalPrismToCuboid(const HexagonalPrism &hexagonal_prism,
+std::pair<Cuboid, ParticleVector> HexagonalPrismToCuboid(const HexagonalPrism &hexagon,
                                                          const ParticleVector &particles);
 
 } // namespace Geometry

@@ -340,6 +340,10 @@ void HexagonalPrism::from_json(const json &j) {
 
 void HexagonalPrism::to_json(json &j) const { j = {{"radius", 0.5 * box.x()}, {"length", box.z()}}; }
 
+double HexagonalPrism::innerRadius() const { return 0.5 * box.x(); }
+double HexagonalPrism::outerRadius() const { return 0.5 * box.y(); }
+double HexagonalPrism::height() const { return box.z(); }
+
 // =============== Cylinder ===============
 
 Cylinder::Cylinder(double radius, double height) : radius(radius), height(height) {
@@ -591,25 +595,19 @@ ParticleVector mapParticlesOnSphere(const ParticleVector &source) {
     return destination;
 }
 
-std::pair<Cuboid, ParticleVector> HexagonalPrismToCuboid(const HexagonalPrism &hexagonal_prism,
+std::pair<Cuboid, ParticleVector> HexagonalPrismToCuboid(const HexagonalPrism &hexagon,
                                                          const ParticleVector &particles) {
-    const auto box = hexagonal_prism.getLength();
-    const auto [inner_radius, outer_radius, height] = std::make_tuple(0.5 * box.x(), 0.5 * box.y(), box.z());
-
-    const Cuboid cuboid({2.0 * inner_radius, 3.0 * outer_radius, height});
-    assert(std::fabs(cuboid.getVolume() - 2 * hexagonal_prism.getVolume()) <= pc::epsilon_dbl);
-
+    const Cuboid cuboid({2.0 * hexagon.innerRadius(), 3.0 * hexagon.outerRadius(), hexagon.height()});
     ParticleVector cuboid_particles;
     cuboid_particles.reserve(2 * particles.size());
     std::copy(particles.begin(), particles.end(), std::back_inserter(cuboid_particles)); // central hexagon
 
-    for (const auto &particle : particles) { // add the four cornes to fill up the cuboid, i.e. one more hexagon
-        auto &last_particle = cuboid_particles.emplace_back(particle);
-        last_particle.pos += Point(inner_radius * (particle.pos.x() > 0.0 ? -1.0 : 1.0),
-                                   1.5 * outer_radius * (particle.pos.y() > 0.0 ? -1.0 : 1.0), 0.0);
-        cuboid.boundary(last_particle.pos);
-        assert(cuboid.collision(last_particle.pos) == false);
-    }
+    std::transform(particles.begin(), particles.end(), std::back_inserter(cuboid_particles), [&](auto particle) {
+        particle.pos += Point(hexagon.innerRadius() * (particle.pos.x() > 0.0 ? -1.0 : 1.0),
+                              1.5 * hexagon.outerRadius() * (particle.pos.y() > 0.0 ? -1.0 : 1.0), 0.0);
+        return particle;
+    }); // the four corners; i.e. one extra, split hexagon
+    assert(std::fabs(cuboid.getVolume() - 2 * hexagon.getVolume()) <= pc::epsilon_dbl);
     return {cuboid, cuboid_particles};
 }
 

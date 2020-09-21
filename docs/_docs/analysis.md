@@ -556,6 +556,7 @@ keyword when inserting the initial molecules in the [topology](topology).
 `file`             |  File to save; format detected by file extension: `pqr`, `aam`, `gro`, `xyz`, `json`/`ubj`
 `saverandom=false` |  Save the state of the random number generator
 `nstep=-1`         |  Interval between samples; if -1 save at end of simulation
+`convert_hexagon`  |  Convert hexagonal prism to space-filling cuboid; `pqr` only (default: false)
 
 Saves the current configuration or the system state to file. For grand canonical
 simulations, the PQR file format sets charges and radii of inactive particles to zero

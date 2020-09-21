@@ -591,6 +591,28 @@ ParticleVector mapParticlesOnSphere(const ParticleVector &source) {
     return destination;
 }
 
+std::pair<Cuboid, ParticleVector> HexagonalPrismToCuboid(const HexagonalPrism &hexagonal_prism,
+                                                         const ParticleVector &particles) {
+    const auto box = hexagonal_prism.getLength();
+    const auto [inner_radius, outer_radius, height] = std::make_tuple(0.5 * box.x(), 0.5 * box.y(), box.z());
+
+    const Cuboid cuboid({2.0 * inner_radius, 3.0 * outer_radius, height});
+    assert(std::fabs(cuboid.getVolume() - 2 * hexagonal_prism.getVolume()) <= pc::epsilon_dbl);
+
+    ParticleVector cuboid_particles;
+    cuboid_particles.reserve(2 * particles.size());
+    std::copy(particles.begin(), particles.end(), std::back_inserter(cuboid_particles)); // central hexagon
+
+    for (const auto &particle : particles) { // add the four cornes to fill up the cuboid, i.e. one more hexagon
+        auto &last_particle = cuboid_particles.emplace_back(particle);
+        last_particle.pos += Point(inner_radius * (particle.pos.x() > 0.0 ? -1.0 : 1.0),
+                                   1.5 * outer_radius * (particle.pos.y() > 0.0 ? -1.0 : 1.0), 0.0);
+        cuboid.boundary(last_particle.pos);
+        assert(cuboid.collision(last_particle.pos) == false);
+    }
+    return {cuboid, cuboid_particles};
+}
+
 Chameleon::Chameleon(const Variant type) {
     makeGeometry(type);
     _setLength(geometry->getLength());
@@ -713,6 +735,8 @@ const BoundaryCondition &Chameleon::boundaryConditions() const { return geometry
 Chameleon::Chameleon(const Chameleon &geo)
     : GeometryBase(geo), len(geo.len), len_half(geo.len_half), len_inv(geo.len_inv),
       geometry(geo.geometry != nullptr ? geo.geometry->clone() : nullptr), _type(geo._type), _name(geo._name) {}
+
+std::unique_ptr<GeometryImplementation> &Chameleon::getGeometryImplementation() { return geometry; }
 
 TEST_CASE("[Faunus] spherical coordinates") {
     using doctest::Approx;

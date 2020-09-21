@@ -195,13 +195,28 @@ SaveState::SaveState(json j, Space &spc) {
     save_random_number_generator_state = j.value("saverandom", false);
     filename = MPI::prefix + j.at("file").get<std::string>();
     use_numbered_files = !j.value("overwrite", false);
+    convert_hexagonal_prism_to_cuboid = j.value("convert_hexagon", false);
 
     if (auto suffix = filename.substr(filename.find_last_of(".") + 1); suffix == "aam") {
         writeFunc = [&](auto &file) { FormatAAM::save(file, spc.p); };
     } else if (suffix == "gro") {
         writeFunc = [&](auto &file) { FormatGRO::save(file, spc); };
     } else if (suffix == "pqr") {
-        writeFunc = [&](auto &file) { FormatPQR::save(file, spc.groups, spc.geo.getLength()); };
+        writeFunc = [&](auto &file) {
+            if (convert_hexagonal_prism_to_cuboid) {
+                auto hexagonal_prism =
+                    dynamic_cast<Geometry::HexagonalPrism *>(spc.geo.getGeometryImplementation().get());
+                if (hexagonal_prism) {
+                    faunus_logger->debug("creating cuboidal PQR from hexagonal prism");
+                    const auto &[cuboid, particles] = Geometry::HexagonalPrismToCuboid(*hexagonal_prism, spc.p);
+                    FormatPQR::save(file, particles, cuboid.getLength());
+                } else {
+                    throw std::runtime_error("hexagonal prism required for `convert_to_hexagon`");
+                }
+            } else {
+                FormatPQR::save(file, spc.groups, spc.geo.getLength());
+            }
+        };
     } else if (suffix == "xyz") {
         writeFunc = [&](auto &file) { FormatXYZ::save(file, spc.p, spc.geo.getLength()); };
     } else if (suffix == "json") { // JSON state file

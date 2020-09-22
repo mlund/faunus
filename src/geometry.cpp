@@ -603,11 +603,12 @@ std::pair<Cuboid, ParticleVector> HexagonalPrismToCuboid(const HexagonalPrism &h
     std::copy(particles.begin(), particles.end(), std::back_inserter(cuboid_particles)); // add central hexagon
 
     std::transform(particles.begin(), particles.end(), std::back_inserter(cuboid_particles), [&](auto particle) {
-        particle.pos += Point(hexagon.innerRadius() * (particle.pos.x() > 0.0 ? -1.0 : 1.0),
-                              1.5 * hexagon.outerRadius() * (particle.pos.y() > 0.0 ? -1.0 : 1.0), 0.0);
+        particle.pos.x() += hexagon.innerRadius() * (particle.pos.x() > 0.0 ? -1.0 : 1.0);
+        particle.pos.y() += hexagon.outerRadius() * (particle.pos.y() > 0.0 ? -1.0 : 1.0) * 1.5;
+        assert(cuboid.collision(particle.pos) == false);
         return particle;
     }); // add the four corners; i.e. one extra, split hexagon
-    assert(std::fabs(cuboid.getVolume() - 2 * hexagon.getVolume()) <= pc::epsilon_dbl);
+    assert(std::fabs(cuboid.getVolume() - 2.0 * hexagon.getVolume()) <= pc::epsilon_dbl);
     return {cuboid, cuboid_particles};
 }
 

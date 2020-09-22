@@ -597,16 +597,16 @@ ParticleVector mapParticlesOnSphere(const ParticleVector &source) {
 
 std::pair<Cuboid, ParticleVector> HexagonalPrismToCuboid(const HexagonalPrism &hexagon,
                                                          const ParticleVector &particles) {
-    const Cuboid cuboid({2.0 * hexagon.innerRadius(), 3.0 * hexagon.outerRadius(), hexagon.height()});
+    Cuboid cuboid({2.0 * hexagon.innerRadius(), 3.0 * hexagon.outerRadius(), hexagon.height()});
     ParticleVector cuboid_particles;
     cuboid_particles.reserve(2 * particles.size());
-    std::copy(particles.begin(), particles.end(), std::back_inserter(cuboid_particles)); // central hexagon
+    std::copy(particles.begin(), particles.end(), std::back_inserter(cuboid_particles)); // add central hexagon
 
     std::transform(particles.begin(), particles.end(), std::back_inserter(cuboid_particles), [&](auto particle) {
         particle.pos += Point(hexagon.innerRadius() * (particle.pos.x() > 0.0 ? -1.0 : 1.0),
                               1.5 * hexagon.outerRadius() * (particle.pos.y() > 0.0 ? -1.0 : 1.0), 0.0);
         return particle;
-    }); // the four corners; i.e. one extra, split hexagon
+    }); // add the four corners; i.e. one extra, split hexagon
     assert(std::fabs(cuboid.getVolume() - 2 * hexagon.getVolume()) <= pc::epsilon_dbl);
     return {cuboid, cuboid_particles};
 }

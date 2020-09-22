@@ -12,7 +12,7 @@ using doctest::Approx;
 TEST_CASE_TEMPLATE("[Faunus] StructureFactorPBC", T, StructureFactorPBC<float, SIMD>, StructureFactorPBC<float, EIGEN>,
                    StructureFactorPBC<float, GENERIC>) {
     size_t cnt = 0;
-    double box = 80;
+    Point box = {80.0, 80.0, 80.0};
     const std::vector<Point> positions = {
         {10, 20, 30},  {-32, 19, 1},  {34, -2, 23}, {0, 0, 1},     {25, 0, -12},
         {-6, -4, -29}, {-12, 23, -3}, {3, 1, -4},   {-31, 29, -20}}; // random position vector
@@ -30,10 +30,10 @@ TEST_CASE_TEMPLATE("[Faunus] StructureFactorPBC", T, StructureFactorPBC<float, S
 
 #ifdef ANKERL_NANOBENCH_H_INCLUDED
 TEST_CASE("Benchmark") {
-    double box = 80;
+    Point box = {80.0, 80.0, 80.0};
     std::vector<Point> pos(1000);
     for (auto &p : pos)
-        p = Eigen::Vector3d::Random() * box;
+        p = Eigen::Vector3d::Random() * box.x();
     ankerl::nanobench::Config bench;
     bench.minEpochIterations(100);
     bench.run("SIMD", [&] { StructureFactorPBC<double, SIMD>(10).sample(pos, box); }).doNotOptimizeAway();
@@ -44,7 +44,7 @@ TEST_CASE("Benchmark") {
 
 TEST_CASE("[Faunus] StructureFactorIPBC") {
     size_t cnt = 0;
-    double box = 80;
+    Point box = {80.0, 80.0, 80.0};
     const std::vector<Point> positions = {
         {10, 20, 30},  {-32, 19, 1},  {34, -2, 23}, {0, 0, 1},     {25, 0, -12},
         {-6, -4, -29}, {-12, 23, -3}, {3, 1, -4},   {-31, 29, -20}}; // random position vector

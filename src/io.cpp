@@ -8,6 +8,7 @@
 #include <cereal/archives/binary.hpp>
 #include <fstream>
 #include <iostream>
+#include <range/v3/view.hpp>
 
 namespace Faunus {
 
@@ -110,8 +111,10 @@ ParticleVector FormatAAM::load(const std::string &filename, bool _keepcharges) {
         }
         ParticleVector positions; // positions are loaded here
         positions.reserve(number_of_atoms);
-        std::transform(lines.begin(), lines.begin() + number_of_atoms, std::back_inserter(positions),
+        auto lines_atoms = lines | ranges::views::slice(1uL, 1uL + number_of_atoms);
+        std::transform(lines_atoms.begin(), lines_atoms.end(), std::back_inserter(positions),
                        [](auto &i) { return recordToParticle(i); });
+        assert(positions.size() == number_of_atoms);
         return positions;
     }
 }

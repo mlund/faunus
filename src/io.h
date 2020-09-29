@@ -167,83 +167,365 @@ class FormatGRO {
     static void save(const std::string &filename, const Space &spc);
 };
 
+struct TrajectoryFrame;
+
 /**
- * @brief GROMACS xtc compressed trajectory file format
+ * @brief Base data structure for native XTC format as used in Gromacs and supported by the C library. Import methods
+ * do the data conversion from the Faunus native format to the XTC format, and export methods do the oposite.
  *
- * Saves simulation frames to a Gromacs xtc trajectory file including
- * box information if applicable.
+ * By convention, XTC has coordinates' origin in a corner (main box's coordinates are always positive), while Faunus
+ * has coordinates' origin in the center of the simulation box. During conversion the corresponding offset is
+ * subtracted, or added, respectively.
  *
- * @date June 2007-2011, Prague / Malmo
- * @todo
- * 1. Refactor to two classes for reading and writing, respectively.
- * 2. The code is arcane and the interface needs to be brought to order
- * 3. Properly handle time and time steps, also for Langevin dynamics
+ * XTC format uses floats (Faunus doubles) and dimensions are in nanometers (Faunus ångströms). XTC library requires
+ * raw 2D C-style arrays for coordinates in row-major format. XTC tensor of the simulation box is converted
+ * to an XYZ point pressuming orthogonal geometry bacause of current limitation of Faunus. XTC format does not support
+ * variable number of coordinates (atoms) between frames.
  */
-class FormatXTC {
-  private:
-    XDRfile::matrix box;                          //!< box dimensions
-    XDRfile::XDRFILE *xdrfile = nullptr;          //!< file handle
-    std::unique_ptr<XDRfile::rvec[]> coordinates; //!< vector of particle coordinates
-    int step_counter = 0;                         //!< Current number of time steps
-    float timestamp = 0.0;                        //!< Current time (unit?)
-    int number_of_atoms = 0;                      //!< Atoms in trajectory
-    float precision = 1000.0;                     //!< Output precision
-    int getNumAtoms();
-
+struct XTCTrajectoryFrame {
+    XDRfile::matrix xtc_box;                          //!< box tensor; only diagonal elements are used
+    std::unique_ptr<XDRfile::rvec[]> xtc_coordinates; //!< C-style array of particle coordinates
+    int xtc_step = 0;                                 //!< current frame number
+    float xtc_time = 0.0;                             //!< current time (unit?)
+    int number_of_atoms = 0;                          //!< number of coordinates (atoms) in each frame
+    float precision = 1000.0;                         //!< output precision
     /**
-     * @brief Load a single frame into cuboid
-     *
-     * This will read a single frame from the xtc file (must be open) into
-     * a Cuboid container. The box dimensions are retrieved for the frame and transfered
-     * to the container. Coordinates are copied into both the particle vector "p" and the
-     * "trial" vector. In doing so, positions are converted from nm to angstroms and the
-     * coordinate system is shifted so that origin is on the middle of the box. As a safefy
-     * measure we do a container collision check to see if all particles are within
-     * the Cuboid boundaries.
-     *
-     * @note The container particle vector *must* match the number of particles in the xtc file.
+     * @brief Creates an empty XTC trajectory frame for given number of coordinates (atoms).
+     * @param number_of_atoms  number of coordinates (atoms)
      */
-    void loadNextFrame(Space &spc, bool setbox = true, bool apply_periodic_boundaries = false);
-    bool open(std::string);
-    void close();
-
-  public:
-    void setLength(const Point &); //!< Set box dimensions (Å)
-    ~FormatXTC();
-
+    XTCTrajectoryFrame(int number_of_atoms);
     /**
-     * @brief Save frame to XTC file
-     *
-     * This will take an arbitrary particle vector and add it
-     * to an xtc file. If the file is already open, coordinates will
-     * be added, while a new file is created if not.
-     * Coordinates are shifted and converted to nanometers.
-     * Box dimensions for the frame must be manually
-     * set by the `setLength()` function before calling this.
-     *
-     * @todo refactor to `write(begin, end, time, box)`
+     * @brief Creates an XTC trajectory frame from TrajectoryFrame and converts data accordingly.
+     * @param frame  source trajectory frame
      */
-    template <class begin_iterator, class end_iterator /** particle vector iterator */>
-    void save(const std::string &file, begin_iterator begin, end_iterator end) {
-        if (begin != end) {
-            if (!xdrfile) {
-                xdrfile = XDRfile::xdrfile_open(&file[0], "w");
+    XTCTrajectoryFrame(const TrajectoryFrame &frame);
+    /**
+     * @brief Creates an XTC trajectory frame from scalar parameters and input iterator and converts data accordingly.
+     * @tparam begin_iterator
+     * @tparam end_iterator
+     * @param[in] step  frame step
+     * @param[in] time  timestamp in picoseconds
+     * @param[in] box  box dimensions (xyz) in nanometers
+     * @param[in] coordinates_begin  input iterator with coordinates in nanometers
+     * @param[in] coordinates_end  input iterator's end
+     */
+    template <class begin_iterator, class end_iterator>
+    XTCTrajectoryFrame(const int step, const float time, const Point box, begin_iterator coordinates_begin,
+                       end_iterator coordinates_end) {
+        initNumberOfAtoms(std::distance(coordinates_begin, coordinates_end));
+        importFrame(step, time, box, coordinates_begin, coordinates_end);
+    }
+    /**
+     * @brief Copies TrajectoryFrame and converts data. Calls importFrame.
+     *
+     * The number of coordinates is immutable to prevent mistakes.
+     * @param frame  source frame
+     * @throw std::runtime_error  when the number of coordinates does not match
+     */
+    void operator=(const TrajectoryFrame &frame);
+    /**
+     * @brief Imports data from a TrajectoryFrame.
+     * @param frame  source frame
+     * @throw std::runtime_error  when the number of coordinates does not match
+     */
+    void importFrame(const TrajectoryFrame &frame);
+    /**
+     * @brief Imports data from scalar parameters and an input iterator over coordinates.
+     * @tparam begin_iterator
+     * @tparam end_iterator
+     * @param[in] step  frame step
+     * @param[in] time  frame timestamp
+     * @param[in] box  box dimensions (xyz) in nanometers
+     * @param[in] coordinates_begin  input iterator with coordinates in nanometers
+     * @param[in] coordinates_end  input iterator's end
+     * @throw std::runtime_error  when the number of coordinates does not match
+     */
+    template <class begin_iterator, class end_iterator>
+    void importFrame(const int step, const float time, const Point box, begin_iterator coordinates_begin,
+                     end_iterator coordinates_end) {
+        importTimestamp(step, time);
+        importBox(box);
+        importCoordinates(coordinates_begin, coordinates_end, 0.5 * box);
+    }
+    /**
+     * @brief Exports data from a TrajectoryFrame.
+     * @param frame  target frame
+     * @throw std::runtime_error  when the number of coordinates does not match
+     */
+    void exportFrame(TrajectoryFrame &frame) const;
+    /**
+     * @brief Exports data to scalar paramers and output iterator over atomic coordinates.
+     * @tparam begin_iterator
+     * @tparam end_iterator
+     * @param[out] step  frame step
+     * @param[out] time  frame timestamp
+     * @param[out] box  box dimensions (xyz) in nanometers
+     * @param[out] coordinates_begin  output iterator with coordinates in nanometers
+     * @param[out] coordinates_end  output iterator's end
+     * @throw std::runtime_error  when the number of coordinates does not match
+     */
+    template <class begin_iterator, class end_iterator>
+    void exportFrame(int &step, float &time, Point &box, begin_iterator coordinates_begin,
+                     end_iterator coordinates_end) const {
+        exportTimestamp(step, time);
+        exportBox(box);
+        exportCoordinates(coordinates_begin, coordinates_end, 0.5 * box);
+    }
+
+  protected:
+    typedef float XTCFloat;
+    typedef Eigen::Matrix<XTCFloat, DIM, DIM, Eigen::RowMajor> XTCMatrix; //<! eigen equivalent of the box tensor
+    typedef Eigen::Matrix<XTCFloat, DIM, 1> XTCVector; //<! eigen equivalent of the single set of coordinates
+    /**
+     * @brief Imports and converts step and timestamp.
+     * @param[in] step  frame step
+     * @param[in] time  frame timestamp
+     */
+    void importTimestamp(const int step, const float time);
+    /**
+     * @brief Imports and converts simulation box dimensions.
+     * @param[in] box  simulation box dimensions in nanometers (xyz)
+     */
+    void importBox(const Point &box);
+    /**
+     * @brief Imports and converts atomic coordinates. Offset is added to all coordinates to account different
+     * coordinates' origin.
+     * @param[in] coordinates  atomic coordinates in nanometers
+     * @param[in] offset  offset in nanometers to add to all coordinates upon conversion
+     */
+    void importCoordinates(const PointVector &coordinates, const Point &offset);
+    /**
+     * @brief Imports and converts atomic coordinates. Offset is added to all coordinates to account different
+     * coordinates' origin.
+     * @tparam begin_iterator
+     * @tparam end_iterator
+     * @param[in] begin  input iterator with coordinates in nanometers
+     * @param[in] end  input iterator's end
+     * @param[in] offset  offset in nanometers to add to all coordinates upon conversion
+     */
+    template <class begin_iterator, class end_iterator>
+    void importCoordinates(begin_iterator begin, end_iterator end, const Point &offset) const {
+        // comparison of i is probably faster than prior call of std::distance
+        int i = 0;
+        for (auto coordinates_it = begin; coordinates_it != end; ++coordinates_it) {
+            if (i >= number_of_atoms) {
+                throw std::runtime_error("number of particles too high to be saved in the XTC frame");
             }
-            if (xdrfile) {
-                std::unique_ptr<XDRfile::rvec[]> coords(new XDRfile::rvec[ranges::distance(begin, end)]);
-                size_t N = 0;
-                for (auto particle = begin; particle != end; ++particle) {
-                    coords.get()[N][0] = static_cast<float>(particle->pos.x() / 1.0_nm) + box[0][0] * 0.5f;
-                    coords.get()[N][1] = static_cast<float>(particle->pos.y() / 1.0_nm) + box[1][1] * 0.5f;
-                    coords.get()[N][2] = static_cast<float>(particle->pos.z() / 1.0_nm) + box[2][2] * 0.5f;
-                    N++;
-                }
-                XDRfile::write_xtc(xdrfile, N, step_counter++, timestamp++, box, coords.get(), precision);
-            } else {
-                throw std::runtime_error("xtc write error:"s + file);
-            }
+            const Point pos = (*coordinates_it + offset) / 1.0_nm;
+            const XTCVector xtc_pos = pos.cast<XTCFloat>();
+            std::copy(xtc_pos.data(), xtc_pos.data() + DIM, xtc_coordinates.get()[i++]);
+        }
+        if (i < number_of_atoms) {
+            throw std::runtime_error("number of particles too low to be saved in the XTC frame");
         }
     }
+    /**
+     * @brief Exports and converts step and timestamp.
+     * @param[out] step  frame step
+     * @param[out] time  frame timestamp
+     */
+    void exportTimestamp(int &step, float &time) const;
+    /**
+     * @brief Exports and converts simulation box dimensions.
+     * @param[out] box  simulation box dimensions in nanometers (xyz)
+     */
+    void exportBox(Point &box) const;
+    /**
+     * @brief Exports and converts atomic coordinates. Offset is subtracted from all coordinates to account different
+     * coordinates' origin.
+     * @param[out] coordinates  atomic coordinates in nanometers
+     * @param[in] offset  offset in nanometers to subtract from all coordinates upon conversion
+     * @throw std::runtime_error  when the source box is not orthogonal
+     */
+    void exportCoordinates(PointVector &coordinates, const Point &offset) const;
+    /**
+     * @brief Exports and converts atomic coordinates. Offset is subtracted to all coordinates to account different
+     * coordinates' origin.
+     * @tparam begin_iterator
+     * @tparam end_iterator
+     * @param[out] begin  output iterator with coordinates in nanometers
+     * @param[out] end  output iterator's end
+     * @param[in] offset  offset in nanometers to subtract from all coordinates upon conversion
+     */
+    template <class begin_iterator, class end_iterator>
+    void exportCoordinates(begin_iterator begin, end_iterator end, const Point &offset) const {
+        // comparison of i is probably faster than prior call of std::distance
+        int i = 0;
+        for (auto coordinates_it = begin; coordinates_it != end; ++coordinates_it) {
+            if (i >= number_of_atoms) {
+                throw std::runtime_error("number of particles in the loaded XTC frame too low");
+            }
+            XTCVector xtc_atom_coordinates(xtc_coordinates.get()[i++]);
+            *coordinates_it = Point(xtc_atom_coordinates.cast<double>() * 1.0_nm) - offset;
+        }
+        if (i < number_of_atoms) {
+            throw std::runtime_error("number of particles in the loaded XTC frame too high");
+        }
+    }
+
+  private:
+    /**
+     * @brief Set number of coordinates (atoms) and allocate memory for them.
+     */
+    void initNumberOfAtoms(int);
+};
+
+/**
+ * @brief Simple data structure to store a trajectory frame in native Faunus format.
+ *
+ * All coordinates are in ånström, origin is placed into the geometric center of the simulation box and timestamps are
+ * in picoseconds.
+ */
+struct TrajectoryFrame {
+    Point box;               //!< simulation box
+    PointVector coordinates; //!< coordinates of particles
+    int step = 0;            //!< frame number
+    float timestamp = 0.0;   //!< frame timestamp
+
+    TrajectoryFrame() = default;
+    TrajectoryFrame(const Point &box, const PointVector &coordinates, int step, float timestamp);
+    /**
+     * @brief Creates a new trajectory frame based on an XTC frame. Data are converted as necessary. Convenient wrapper
+     * around XTCTrajectoryFrame::exportFrame.
+     * @param xtc_frame  source XTC trajectory frame
+     */
+    TrajectoryFrame(const XTCTrajectoryFrame &xtc_frame);
+    /**
+     * @brief Assignes an XTC frame. Data are converted as necessary. However, the number of coordinates has to be
+     * the same in both (source and target) frames. Convinient wrapper around XTCTrajectoryFrame::exportFrame.
+     * @param xtc_frame  source XTC trajectory frame
+     */
+    void operator=(const XTCTrajectoryFrame &xtc_frame);
+};
+
+/**
+ * @brief Reads frames from an XTC file (GROMACS compressed trajectory file format). It is a wrapper around
+ * C function calls.
+ *
+ * Frames are stored into a TrajectoryFrame structure or as a list of positions in an output iterator. The class
+ * is responsible for I/O operations, not data conversion. For details about data conversion XTCTrajectoryFrame.
+ */
+class XTCReader {
+    int return_code = XDRfile::exdrOK;   //!< last return code of a C function
+    XDRfile::XDRFILE *xdrfile = nullptr; //!< file handle
+    //! data structure for C functions; the number of coordinates is immutable
+    std::shared_ptr<XTCTrajectoryFrame> xtc_frame;
+
+  public:
+    std::string filename;                //!< name of the trajectory file, mainly for error reporting
+    /**
+     * @param filename  a name of the XTC file to open
+     */
+    XTCReader(const std::string &filename);
+    ~XTCReader();
+    /**
+     * @brief Returns number of coordinates (atoms) in each frame. Immutable during object lifetime.
+     * @return number of coordinates (atoms)
+     */
+    int getNumberOfCoordinates();
+    /**
+     * @brief Reads the next frame in the trajectory from a file
+     * @param[out] frame   target frame
+     * @return true on success, false at the end of file
+     * @throw std::runtime_error  when other I/O error occures
+     */
+    bool read(TrajectoryFrame &frame);
+    /**
+     * @brief Reads the next frame in the trajectory.
+     * @tparam begin_iterator
+     * @tparam end_iterator
+     * @param[out] step  frame step
+     * @param[out] time  frame timestamp in picoseconds
+     * @param[out] box  box dimensions (xyz) in nanometers
+     * @param[out] coordinates_begin  output iterator to store coordinates
+     * @param[out] coordinates_end  output iterator's end
+     * @return true on success, false at the end of file
+     * @throw std::runtime_error  when other I/O error occures
+     */
+    template <class begin_iterator, class end_iterator>
+    bool read(int &step, float &time, Point &box, begin_iterator coordinates_begin, end_iterator coordinates_end) {
+        bool is_ok = readFrame();
+        if (is_ok) {
+            xtc_frame->exportFrame(step, time, box, coordinates_begin, coordinates_end);
+        }
+        return is_ok;
+    }
+
+  protected:
+    /**
+     * @brief Actual wrapper around C function that reads the next frame into xtc_frame.
+     * @return true on success, false at the end of file
+     * @throw std::runtime_error  when other I/O error occures
+     */
+    bool readFrame();
+};
+
+/**
+ * @brief Writes frames into an XTC file (GROMACS compressed trajectory file format). It is a wrapper around
+ * C function calls.
+ *
+ * The frames can be provided as a TrajectoryFrame structure or as a list of positions in an input iterator. The class
+ * is responsible for I/O operations, not data conversion.
+ */
+class XTCWriter {
+    int return_code = XDRfile::exdrOK;   //!< last return code of a C function
+    XDRfile::XDRFILE *xdrfile = nullptr; //!< file handle
+    std::shared_ptr<XTCTrajectoryFrame> xtc_frame; //!< data structure for C functions;
+                                                   //!< the number of coordinates is immutable
+    int step_counter = 0;      //!< frame counter for automatic increments
+    float time_delta = 1.0_ps; //!< timestamp of a frame is computed as step * time_delta
+
+  public:
+    std::string filename;      //!< name of the trajectory file, mainly for error reporting
+    /**
+     * @param filename  a name of the XTC file to open
+     */
+    XTCWriter(const std::string &filename);
+    ~XTCWriter();
+    /**
+     * @brief Writes a frame into the file.
+     * @param[in] frame  frame to be written
+     * @throw std::runtime_error  when other I/O error occures
+     */
+    void write(const TrajectoryFrame &frame);
+    /**
+     * @brief Writes a next frame into the file using own automatic counter for step and timestamp.
+     * The corresponding values in the frame are ignored.
+     * @param[in] frame  frame to be written
+     * @throw std::runtime_error  when other I/O error occures
+     */
+    void writeNext(const TrajectoryFrame &frame);
+    /**
+     * @brief Writes a next frame into the file using own automatic counter for step and timestamp.
+     * @tparam begin_iterator
+     * @tparam end_iterator
+     * @param[in] box  dimensions of the cubic box (xyz)
+     * @param[in] coordinates_begin  input iterator with coordinates (not particles)
+     * @param[in] coordinates_end  input iterator's end
+     */
+    template <class begin_iterator, class end_iterator>
+    void writeNext(const Point &box, begin_iterator coordinates_begin, end_iterator coordinates_end) {
+        if (!xtc_frame) {
+            auto number_of_atoms = std::distance(coordinates_begin, coordinates_end);
+            xtc_frame = std::make_shared<XTCTrajectoryFrame>(number_of_atoms);
+        }
+        xtc_frame->importFrame(step_counter, step_counter * time_delta, box, coordinates_begin, coordinates_end);
+        writeFrame();
+        ++step_counter;
+    }
+
+  protected:
+    /**
+     * @brief Actual wrapper around C function that writes the current frame into xtc_frame.
+     * @throw std::runtime_error  when other I/O error occures
+     */
+    void writeFrame();
+    /**
+     * @brief Actual wrapper around C function that writes the current frame into xtc_frame overriding step
+     * and timestamp.
+     * @throw std::runtime_error  when other I/O error occures
+     */
+    void writeFrameAt(int step, float time);
 };
 
 std::vector<int> fastaToAtomIds(const std::string &); //!< Convert FASTA sequence to atom id sequence

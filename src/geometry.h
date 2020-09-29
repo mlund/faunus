@@ -341,7 +341,7 @@ class Chameleon : public GeometryBase {
     double getVolume(int dim = 3) const override;
     Point setVolume(double, VolumeMethod = ISOTROPIC) override;
     Point getLength() const override; //!< A minimal containing cubic box.
-    // setLength() needed only for IO::FormatXTC::loadnextframe().
+    // setLength() needed only for Move::ReplayMove (stems from IO::XTCReader).
     void setLength(const Point &);                            //!< Sets the box dimensions.
     void boundary(Point &) const override;                    //!< Apply boundary conditions
     Point vdist(const Point &, const Point &) const override; //!< (Minimum) distance between two points

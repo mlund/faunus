@@ -5,6 +5,7 @@
 #include "molecule.h"
 #include "geometry.h"
 #include "space.h"
+#include "io.h"
 #include "aux/timers.h"
 
 namespace Faunus {
@@ -47,6 +48,29 @@ class Movebase {
 
 void from_json(const json &, Movebase &); //!< Configure any move via json
 void to_json(json &, const Movebase &);
+
+/**
+ * @brief Replay simulation from a trajectory
+ *
+ * Particles' positions are updated in every step based on coordinates read from the trajectory. Currently only
+ * XTCReader is supported.
+ */
+class ReplayMove : public Movebase {
+    Space &spc;                                  //!< space to operate on
+    std::shared_ptr<XTCReader> reader = nullptr; //!< trajectory reader
+    TrajectoryFrame frame;                       //!< recently read frame (w/o coordinates)
+    bool end_of_trajectory = false;              //!< flag raised when end of trajectory was reached
+    // FIXME resolve always accept / always reject on the Faunus level
+    const double force_accept = -1e12;           //!< a very negative value of energy difference to force-accept the move
+
+    void _move(Change &change) override;
+    void _to_json(json &) const override;
+    void _from_json(const json &) override;
+    double bias(Change &, double, double) override;
+
+  public:
+    ReplayMove(Space &spc);
+};
 
 /**
  * @brief Swap the charge of a single atom

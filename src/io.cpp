@@ -65,8 +65,6 @@ std::unique_ptr<std::ostream> IO::openCompressedOutputStream(const std::string &
     return std::make_unique<std::ofstream>(filename);
 }
 
-int FormatXTC::getNumAtoms() { return number_of_atoms; }
-
 bool FormatAAM::prefer_charges_from_file = true;
 
 Particle FormatAAM::recordToParticle(const std::string &record) {
@@ -134,73 +132,6 @@ std::string FormatAAM::p2s(const Particle &particle, int zero_based_index) {
     o << atom.name << " " << zero_based_index + 1 << " " << particle.pos.transpose() << " " << particle.charge << " "
       << atom.mw << " " << atom.sigma / 2 << "\n";
     return o.str();
-}
-
-bool FormatXTC::open(std::string filename) {
-    if (xdrfile) {
-        close();
-    }
-    if (xdrfile = XDRfile::xdrfile_open(&filename[0], "r"); xdrfile != nullptr) {
-        if (XDRfile::read_xtc_natoms(&filename[0], &number_of_atoms) == XDRfile::exdrOK) {
-            // allocate memory for atom positions
-            std::unique_ptr<XDRfile::rvec[]> coordinates(new XDRfile::rvec[number_of_atoms]);
-            return true;
-        }
-    } else {
-        faunus_logger->warn("xtc file could not be opened");
-    }
-    return false;
-}
-
-void FormatXTC::close() {
-    if (xdrfile) {
-        xdrfile_close(xdrfile);
-    }
-}
-
-FormatXTC::~FormatXTC() { close(); }
-
-void FormatXTC::setLength(const Point &box_length) {
-    assert(box_length.minCoeff() > 0.0);
-    std::fill(&box[0][0], &box[0][0] + 3 * 3, 0.0); // fill 3x3 matrix w. zero
-    box[0][0] = box_length.x() / 1.0_nm;            // corners of the
-    box[1][1] = box_length.y() / 1.0_nm;            // rectangular box
-    box[2][2] = box_length.z() / 1.0_nm;            // in nanometers!
-}
-
-void FormatXTC::loadNextFrame(Space &spc, bool setbox, bool apply_periodic_boundaries) {
-    if (!xdrfile) {
-        throw std::runtime_error("xtc file cannot be read");
-    } else {
-        if (number_of_atoms != (int)spc.p.size()) {
-            throw std::runtime_error("xtcfile<->container particle mismatch");
-        } else {
-            assert(coordinates);
-            int return_code = XDRfile::read_xtc(xdrfile, number_of_atoms, &step_counter, &timestamp, box,
-                                                coordinates.get(), &precision);
-            if (return_code == 0) {
-                // Geometry::Chameleon *geo = dynamic_cast<Geometry::Chameleon *>(&c.geo);
-                // if (geo == nullptr or geo->type not_eq Geometry::CUBOID)
-                //    throw std::runtime_error("Cuboid-like geometry required");
-                Point len_half = 0.5 * spc.geo.getLength();
-                if (setbox) {
-                    spc.geo.setLength(Point(box[0][0], box[1][1], box[2][2]) * 1.0_nm);
-                }
-                for (size_t i = 0; i < spc.p.size(); i++) {
-                    spc.p[i].pos.x() = coordinates.get()[i][0] * 1.0_nm;
-                    spc.p[i].pos.y() = coordinates.get()[i][1] * 1.0_nm;
-                    spc.p[i].pos.z() = coordinates.get()[i][2] * 1.0_nm;
-                    spc.p[i].pos -= len_half; // in Faunus, origin is the middle of the cell
-                    if (apply_periodic_boundaries) {
-                        spc.geo.boundary(spc.p[i].pos);
-                    }
-                    if (spc.geo.collision(spc.p[i].pos)) {
-                        throw std::runtime_error("particle-container collision");
-                    }
-                }
-            }
-        }
-    }
 }
 
 std::string FormatPQR::writeCryst1(const Point &box_length, const Point &angle) {
@@ -593,6 +524,229 @@ void FormatGRO::save(const std::string &filename, const Space &spc) {
         }
         stream << boxlength.transpose() / 1.0_nm << "\n";
     }
+}
+
+// ========== XTCTrajectoryFrame ==========
+
+XTCTrajectoryFrame::XTCTrajectoryFrame(int number_of_atoms) { initNumberOfAtoms(number_of_atoms); }
+
+XTCTrajectoryFrame::XTCTrajectoryFrame(const TrajectoryFrame &frame) {
+    initNumberOfAtoms(frame.coordinates.size());
+    importFrame(frame);
+}
+
+void XTCTrajectoryFrame::operator=(const TrajectoryFrame &frame) {
+    if (frame.coordinates.size() != number_of_atoms) {
+        throw std::runtime_error("wrong number of particles to be assign into the XTC frame");
+    }
+    importFrame(frame);
+}
+
+void XTCTrajectoryFrame::importFrame(const TrajectoryFrame &frame) {
+    importTimestamp(frame.step, frame.timestamp);
+    importBox(frame.box);
+    importCoordinates(frame.coordinates, 0.5 * frame.box);
+}
+
+void XTCTrajectoryFrame::importTimestamp(const int step, const float time) {
+    xtc_step = step;
+    xtc_time = time / 1.0_ps;
+}
+
+void XTCTrajectoryFrame::importBox(const Point &box) {
+    // empty box tensor
+    XTCMatrix xtc_box_matrix = XTCMatrix::Zero();
+    // only XYZ dimensions in nanometers on diagonal, as floats
+    xtc_box_matrix.diagonal() = (box / 1.0_nm).cast<XTCFloat>();
+    // copy underlaying eigen structure (1D array, row-major) to the C-style 2D array
+    std::copy(xtc_box_matrix.data(), xtc_box_matrix.data() + DIM * DIM, &(xtc_box[0][0]));
+}
+
+void XTCTrajectoryFrame::importCoordinates(const PointVector &coordinates, const Point &offset) {
+    // setNumberOfAtoms(coordinates.size());
+    if (coordinates.size() != number_of_atoms) {
+        // to avoid mistakes, the number_of_atoms is immutable
+        throw std::runtime_error("wrong number of particles to be saved in the XTC frame");
+    }
+    for (int i = 0; i < number_of_atoms; ++i) {
+        // coordinates shifted by an offset (i.e., box / 2), in nanometers, as floats
+        const XTCVector xtc_pos = ((coordinates[i] + offset) / 1.0_nm).cast<XTCFloat>();
+        // copy underlaying eigen structure (1D array) to the correct place in C-style 2D array
+        std::copy(xtc_pos.data(), xtc_pos.data() + DIM, xtc_coordinates.get()[i]);
+    }
+}
+
+void XTCTrajectoryFrame::exportFrame(TrajectoryFrame &frame) const {
+    exportTimestamp(frame.step, frame.timestamp);
+    exportBox(frame.box);
+    exportCoordinates(frame.coordinates, 0.5 * frame.box);
+}
+
+void XTCTrajectoryFrame::exportTimestamp(int &step, float &time) const {
+    step = xtc_step;
+    time = xtc_time * 1.0_ps;
+}
+
+void XTCTrajectoryFrame::exportBox(Point &box) const {
+    XTCMatrix xtc_box_matrix = Eigen::Map<const XTCTrajectoryFrame::XTCMatrix>(&(xtc_box[0][0]));
+    if (xtc_box_matrix.diagonal().asDiagonal().toDenseMatrix() != xtc_box_matrix) {
+        throw std::runtime_error("cannot load non-orthogonal box");
+    }
+    box = Point(xtc_box_matrix.diagonal().cast<double>() * 1.0_nm);
+}
+
+void XTCTrajectoryFrame::exportCoordinates(PointVector &coordinates, const Point &offset) const {
+    if (coordinates.size() != number_of_atoms) {
+        throw std::runtime_error("wrong number of particles in the loaded XTC frame");
+    }
+    for (size_t i = 0; i < number_of_atoms; ++i) {
+        XTCVector xtc_atom_coordinates(xtc_coordinates.get()[i]);
+        coordinates[i] = Point(xtc_atom_coordinates.cast<double>() * 1.0_nm) - offset;
+    }
+}
+
+void XTCTrajectoryFrame::initNumberOfAtoms(int new_number_of_atoms) {
+    assert(new_number_of_atoms >= 0);
+    if (number_of_atoms != new_number_of_atoms) {
+        number_of_atoms = new_number_of_atoms;
+        xtc_coordinates = std::unique_ptr<XDRfile::rvec[]>(new XDRfile::rvec[number_of_atoms]);
+    }
+}
+
+// ========== TrajectoryFrame ==========
+
+TrajectoryFrame::TrajectoryFrame(const Point &box, const PointVector &coordinates, int step, float timestamp)
+    : box(box), coordinates(coordinates), step(step), timestamp(timestamp) {}
+
+TrajectoryFrame::TrajectoryFrame(const XTCTrajectoryFrame &xtc_frame) {
+    coordinates.resize(xtc_frame.number_of_atoms);
+    xtc_frame.exportFrame(*this);
+}
+
+void TrajectoryFrame::operator=(const XTCTrajectoryFrame &xtc_frame) { xtc_frame.exportFrame(*this); }
+
+TEST_CASE("XTCFrame") {
+    using doctest::Approx;
+    TrajectoryFrame frame({10.0, 12.0, 8.0}, {{1.0, 2.0, -1.0}, {-4.0, 4.0, 2.0}}, 10, 0.2);
+
+    SUBCASE("To XTCFrame") {
+        XTCTrajectoryFrame xtc_frame(frame);
+        CHECK_EQ(xtc_frame.xtc_step, 10);
+        CHECK_EQ(xtc_frame.xtc_time, Approx(0.2 / 1._ps));
+        CHECK_EQ(xtc_frame.xtc_box[1][1], Approx(12. / 1._nm));
+        CHECK_EQ(xtc_frame.xtc_box[0][1], 0);
+        REQUIRE_EQ(xtc_frame.number_of_atoms, 2);
+        CHECK_EQ(xtc_frame.xtc_coordinates.get()[1][2], Approx((2.0 + 4.0) / 1._nm));
+
+        SUBCASE("From XTCFrame") {
+            TrajectoryFrame new_frame(xtc_frame);
+            CHECK_EQ(new_frame.step, frame.step);
+            CHECK_EQ(new_frame.timestamp, Approx(frame.timestamp));
+            CHECK(new_frame.box.isApprox(frame.box, 1e-6));
+            CHECK(new_frame.coordinates[0].isApprox(frame.coordinates[0], 1e-6));
+            CHECK(new_frame.coordinates[1].isApprox(frame.coordinates[1], 1e-6));
+        }
+
+        SUBCASE("From XTCFrame Iterator") {
+            TrajectoryFrame new_frame;
+            PointVector coordinates{2};
+            REQUIRE_EQ(coordinates.size(), 2);
+            xtc_frame.exportFrame(new_frame.step, new_frame.timestamp, new_frame.box, coordinates.begin(),
+                                  coordinates.end());
+            CHECK(coordinates[0].isApprox(frame.coordinates[0], 1e-6));
+            CHECK(coordinates[1].isApprox(frame.coordinates[1], 1e-6));
+            PointVector coordinates_too_small{1}, coordinates_too_big{3};
+            REQUIRE_LT(coordinates_too_small.size(), 2);
+            REQUIRE_GT(coordinates_too_big.size(), 2);
+            CHECK_THROWS_AS(xtc_frame.exportFrame(new_frame.step, new_frame.timestamp, new_frame.box,
+                                                  coordinates_too_small.begin(), coordinates_too_small.end()),
+                            std::runtime_error);
+            CHECK_THROWS_AS(xtc_frame.exportFrame(new_frame.step, new_frame.timestamp, new_frame.box,
+                                                  coordinates_too_big.begin(), coordinates_too_big.end()),
+                            std::runtime_error);
+        }
+    }
+}
+
+// ========== XTCReader ==========
+
+XTCReader::XTCReader(const std::string &filename) : filename(filename) {
+    int number_of_atoms;
+    if (XDRfile::read_xtc_natoms(filename.c_str(), &number_of_atoms) == XDRfile::exdrOK) {
+        xtc_frame = std::make_shared<XTCTrajectoryFrame>(number_of_atoms);
+        xdrfile = XDRfile::xdrfile_open(filename.c_str(), "r");
+    }
+    if (!xtc_frame || !xdrfile) {
+        throw std::runtime_error(fmt::format("xtc file {} could not be opened", filename));
+    }
+}
+
+XTCReader::~XTCReader() { XDRfile::xdrfile_close(xdrfile); }
+
+int XTCReader::getNumberOfCoordinates() { return xtc_frame->number_of_atoms; }
+
+bool XTCReader::readFrame() {
+    return_code = XDRfile::read_xtc(xdrfile, xtc_frame->number_of_atoms, &xtc_frame->xtc_step, &xtc_frame->xtc_time,
+                                    xtc_frame->xtc_box, xtc_frame->xtc_coordinates.get(), &xtc_frame->precision);
+    if (return_code != XDRfile::exdrENDOFFILE && return_code != XDRfile::exdrOK) {
+        throw std::runtime_error(fmt::format("xtc file {} could not be read (error code {})", filename, return_code));
+    }
+    return return_code == XDRfile::exdrOK;
+}
+
+bool XTCReader::read(TrajectoryFrame &frame) {
+    bool is_ok = readFrame();
+    if (is_ok) {
+        frame = *xtc_frame;
+    }
+    return is_ok;
+}
+
+// ========== XTCWriter ==========
+
+XTCWriter::XTCWriter(const std::string &filename) : filename(filename) {
+    xdrfile = XDRfile::xdrfile_open(filename.c_str(), "w");
+    if (!xdrfile) {
+        throw std::runtime_error(fmt::format("xtc file {} could not be opened", filename));
+    }
+}
+
+XTCWriter::~XTCWriter() { XDRfile::xdrfile_close(xdrfile); }
+
+void XTCWriter::writeFrameAt(int step, float time) {
+    return_code = XDRfile::write_xtc(xdrfile, xtc_frame->number_of_atoms, step, time, xtc_frame->xtc_box,
+                                     xtc_frame->xtc_coordinates.get(), xtc_frame->precision);
+    if (return_code != XDRfile::exdrOK) {
+        throw std::runtime_error(
+            fmt::format("xtc file {} could not be written (error code {})", filename, return_code));
+    }
+}
+
+void XTCWriter::writeFrame() {
+    return_code = XDRfile::write_xtc(xdrfile, xtc_frame->number_of_atoms, xtc_frame->xtc_step, xtc_frame->xtc_time,
+                                     xtc_frame->xtc_box, xtc_frame->xtc_coordinates.get(), xtc_frame->precision);
+    if (return_code != XDRfile::exdrOK) {
+        throw std::runtime_error(
+            fmt::format("xtc file {} could not be written (error code {})", filename, return_code));
+    }
+}
+
+void XTCWriter::write(const TrajectoryFrame &frame) {
+    if (!xtc_frame) {
+        xtc_frame = std::make_shared<XTCTrajectoryFrame>(frame.coordinates.size());
+    }
+    *xtc_frame = frame;
+    writeFrame();
+    step_counter = frame.step + 1;
+}
+
+void XTCWriter::writeNext(const TrajectoryFrame &frame) {
+    if (!xtc_frame) {
+        xtc_frame = std::make_shared<XTCTrajectoryFrame>(frame.coordinates.size());
+    }
+    *xtc_frame = frame;
+    writeFrameAt(step_counter, step_counter * time_delta);
+    ++step_counter;
 }
 
 ParticleVector fastaToParticles(const std::string &fasta_sequence, double bond_length, const Point &origin) {

@@ -4,6 +4,7 @@
 set(EXAMPLES_DIR ${CMAKE_SOURCE_DIR}/examples)
 set(YASON ${CMAKE_SOURCE_DIR}/scripts/yason.py)
 set(JSON_COMPARE ${CMAKE_SOURCE_DIR}/scripts/jsoncompare.py)
+set(CSV_COMPARE ${CMAKE_SOURCE_DIR}/scripts/csvcompare.py)
 
 add_test(
         NAME unittests
@@ -161,6 +162,16 @@ add_test(
     | $<TARGET_FILE:faunus> --quiet --state bulk.state.json\
     ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} bulk.out.json out.json --tol 0.05"
         WORKING_DIRECTORY ${EXAMPLES_DIR}/bulk)
+set_property(TEST bulk PROPERTY FIXTURES_SETUP bulk)
+
+add_test(
+        NAME bulk-replay
+        COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} bulk-replay.yml\
+    | $<TARGET_FILE:faunus> --quiet \
+    ; diff -q ../bulk/traj.xtc traj.xtc \
+    && ${CSV_COMPARE} -q --tol 0.04 --small 0.1 ../bulk/rdf.dat rdf.dat"
+        WORKING_DIRECTORY ${EXAMPLES_DIR}/bulk-replay)
+set_property(TEST bulk-replay PROPERTY FIXTURES_REQUIRED bulk)
 
 add_test(
         NAME seawater
@@ -185,6 +196,7 @@ add_test(
 install(FILES
         ${EXAMPLES_DIR}/README.md
         ${EXAMPLES_DIR}/bulk/bulk.yml
+        ${EXAMPLES_DIR}/bulk-replay/bulk-replay.yml
         ${EXAMPLES_DIR}/cluster/cluster.yml
         ${EXAMPLES_DIR}/cluster/cluster.agr
         ${EXAMPLES_DIR}/cluster/cluster.out.json

@@ -177,23 +177,45 @@ template <class Titer> double monopoleMoment(Titer begin, Titer end) {
  * @param begin First particle
  * @param end Last particle
  * @param boundary Function to use for boundary
+ * @param origin Origin, default (0,0,0)
  * @param cutoff Cut-off for included particles with regard to origin, default value is infinite
  */
 template <class Titer, class BoundaryFunction>
-Point dipoleMoment(Titer begin, Titer end, BoundaryFunction boundary = [](const Point &) {},
-                   double cutoff = pc::infty) {
+Point dipoleMoment(
+    Titer begin, Titer end, BoundaryFunction boundary = [](const Point &) {}, const Point origin = {0, 0, 0},
+    double cutoff = pc::infty) {
     Point mu(0, 0, 0);
-    for (auto it = begin; it != end; ++it) {
-        Point t = it->pos - begin->pos;
-        boundary(t);
-        if (t.squaredNorm() < cutoff * cutoff)
-            mu += t * it->charge;
-    }
+    std::for_each(begin, end, [&](const auto &particle) {
+        Point r = particle.pos - origin;
+        boundary(r);
+        if (r.squaredNorm() < cutoff * cutoff) {
+            mu += r * particle.charge;
+        }
+    });
     return mu;
 } //!< Calculates dipole moment vector
 
+TEST_CASE("[Faunus]_dipoleMoment") {
+    using doctest::Approx;
+    ParticleVector p(2);
+    p[0].pos = {10, 20, 30};
+    p[1].pos = {-10, 0, -30};
+    p[0].charge = -0.5;
+    p[1].charge = 0.5;
+    auto mu = dipoleMoment(p.begin(), p.end(), [](auto &) {}, {2, 3, 4});
+    CHECK(mu.x() == Approx(-10));
+    CHECK(mu.y() == Approx(-10));
+    CHECK(mu.z() == Approx(-30));
+
+    p[0].charge *= -1.0;
+    mu = dipoleMoment(p.begin(), p.end(), [](auto &) {}, {2, 3, 4});
+    CHECK(mu.x() == Approx(-2));
+    CHECK(mu.y() == Approx(7));
+    CHECK(mu.z() == Approx(-4));
+}
+
 /**
- * @brief Returns the total quadrupole-moment for a set of particles, note with trace!
+ * @brief Returns the total quadrupole-momxxxxxxxx      ent for a set of particles, note with trace!
  * @param begin First particle
  * @param end Last particle
  * @param boundary Function to use for boundary
@@ -225,8 +247,8 @@ template <class Tgroup, class BoundaryFunction>
 auto toMultipole(const Tgroup &g, BoundaryFunction boundary = [](const Point &) {}, double cutoff = pc::infty) {
     Particle m;
     m.pos = g.cm;
-    m.charge = Faunus::monopoleMoment(g.begin(), g.end());                // monopole
-    m.getExt().mu = Faunus::dipoleMoment(g.begin(), g.end(), boundary, cutoff);    // dipole
+    m.charge = Faunus::monopoleMoment(g.begin(), g.end());                                // monopole
+    m.getExt().mu = Faunus::dipoleMoment(g.begin(), g.end(), boundary, m.pos, cutoff);    // dipole
     m.getExt().Q = Faunus::quadrupoleMoment(g.begin(), g.end(), boundary, m.pos, cutoff); // quadrupole
     m.getExt().mulen = m.getExt().mu.norm();
     if (m.getExt().mulen > 1e-9)

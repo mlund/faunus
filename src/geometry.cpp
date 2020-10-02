@@ -629,7 +629,7 @@ TEST_CASE("[Faunus] HexagonalPrismToCuboid") {
     CHECK(cuboid.getLength().x() == Approx(radius * 2.0));
     CHECK(cuboid.getLength().y() == Approx(side * 3.0));
     CHECK(cuboid.getLength().z() == Approx(height));
-    CHECK(2.0 * cuboid.getVolume() == Approx(hexagonal_prism.getVolume()));
+    CHECK(cuboid.getVolume() == Approx(2.0 * hexagonal_prism.getVolume()));
 
     std::vector<Point> positions = {{0, 1, 0},           {0.866, 0.5, 0},  {0.866, -0.5, 0},   {0, -1, 0},
                                     {-0.866, -0.5, 0},   {-0.866, 0.5, 0}, {2, -2.4641, 0},    {-1.134, -2.9641, 0},

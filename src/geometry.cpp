@@ -614,9 +614,9 @@ std::pair<Cuboid, ParticleVector> HexagonalPrismToCuboid(const HexagonalPrism &h
 
 TEST_CASE("[Faunus] HexagonalPrismToCuboid") {
     using doctest::Approx;
-    double radius = 2.0;
+    double radius = 2.0, height = 20.0;
     double side = 2.0 / std::sqrt(3.0) * radius;
-    HexagonalPrism hexagonal_prism(side, 20);
+    HexagonalPrism hexagonal_prism(side, height);
     ParticleVector p(6); // corners of a hexagon
     p[0].pos = {0, 1, 0};
     p[1].pos = {0.866, 0.5, 0};
@@ -626,9 +626,10 @@ TEST_CASE("[Faunus] HexagonalPrismToCuboid") {
     p[5].pos = {-0.866, 0.5, 0};
     auto [cuboid, p_new] = HexagonalPrismToCuboid(hexagonal_prism, p);
     CHECK(p_new.size() == 12);
-    CHECK(cuboid.getLength().x() == Approx(4.0));
+    CHECK(cuboid.getLength().x() == Approx(radius * 2.0));
     CHECK(cuboid.getLength().y() == Approx(side * 3.0));
-    CHECK(cuboid.getLength().z() == Approx(20.0));
+    CHECK(cuboid.getLength().z() == Approx(height));
+    CHECK(2.0 * cuboid.getVolume() == Approx(hexagonal_prism.getVolume()));
 
     std::vector<Point> positions = {{0, 1, 0},           {0.866, 0.5, 0},  {0.866, -0.5, 0},   {0, -1, 0},
                                     {-0.866, -0.5, 0},   {-0.866, 0.5, 0}, {2, -2.4641, 0},    {-1.134, -2.9641, 0},

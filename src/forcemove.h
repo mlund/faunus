@@ -27,7 +27,7 @@ class NormalRandomVector {
     NormalRandomVector(double mean = 0.0, double stddev = 1.0) : normal_distribution(mean, stddev){};
     template <typename random_engine> Point operator()(random_engine &engine) {
         return {normal_distribution(engine), normal_distribution(engine), normal_distribution(engine)};
-    };
+    }
 };
 
 /**

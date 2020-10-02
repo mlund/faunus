@@ -274,6 +274,10 @@ class HexagonalPrism : public GeometryImplementation {
     template <class Archive> void serialize(Archive &archive) {
         archive(cereal::base_class<GeometryImplementation>(this), box);
     }
+
+    double innerRadius() const; //!< Inner hexagonal radius
+    double outerRadius() const; //!< Outer radius / side-length
+    double height() const;      //!< Prism height
 };
 
 /**
@@ -364,6 +368,8 @@ class Chameleon : public GeometryBase {
 
     //! During the assignment copy everything, but clone the geometry.
     Chameleon &operator=(const Chameleon &geo);
+
+    std::shared_ptr<GeometryImplementation> asSimpleGeometry();
 };
 
 inline void Chameleon::randompos(Point &m, Random &rand) const {
@@ -666,6 +672,19 @@ double rootMeanSquareDeviation(InputIt1 begin, InputIt1 end, InputIt2 d_begin, B
  * Similar to routine described in doi:10.1021/jp010360o
  */
 ParticleVector mapParticlesOnSphere(const ParticleVector &);
+
+/**
+ * @brief Convert particles in hexagonal prism to space-filled cuboid
+ * @param hexagon Input hexagonal prism
+ * @param particles Particles in hexagonal prism
+ * @return Cuboid and particle vector w. positions in cuboidal space
+ *
+ * The generated Cuboid has twice the volume of the hexagonal prism with
+ * side-lengths [2 * inner_radius, 3 * outer_radius, height] and also twice
+ * the number of particles
+ */
+std::pair<Cuboid, ParticleVector> HexagonalPrismToCuboid(const HexagonalPrism &hexagon,
+                                                         const ParticleVector &particles);
 
 } // namespace Geometry
 } // namespace Faunus

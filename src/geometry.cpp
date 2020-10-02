@@ -340,6 +340,10 @@ void HexagonalPrism::from_json(const json &j) {
 
 void HexagonalPrism::to_json(json &j) const { j = {{"radius", 0.5 * box.x()}, {"length", box.z()}}; }
 
+double HexagonalPrism::innerRadius() const { return 0.5 * box.x(); }
+double HexagonalPrism::outerRadius() const { return 0.5 * box.y(); }
+double HexagonalPrism::height() const { return box.z(); }
+
 // =============== Cylinder ===============
 
 Cylinder::Cylinder(double radius, double height) : radius(radius), height(height) {
@@ -591,6 +595,54 @@ ParticleVector mapParticlesOnSphere(const ParticleVector &source) {
     return destination;
 }
 
+std::pair<Cuboid, ParticleVector> HexagonalPrismToCuboid(const HexagonalPrism &hexagon,
+                                                         const ParticleVector &particles) {
+    Cuboid cuboid({2.0 * hexagon.innerRadius(), 3.0 * hexagon.outerRadius(), hexagon.height()});
+    ParticleVector cuboid_particles;
+    cuboid_particles.reserve(2 * particles.size());
+    std::copy(particles.begin(), particles.end(), std::back_inserter(cuboid_particles)); // add central hexagon
+
+    std::transform(particles.begin(), particles.end(), std::back_inserter(cuboid_particles), [&](auto particle) {
+        particle.pos.x() += hexagon.innerRadius() * (particle.pos.x() > 0.0 ? -1.0 : 1.0);
+        particle.pos.y() += hexagon.outerRadius() * (particle.pos.y() > 0.0 ? -1.5 : 1.5);
+        assert(cuboid.collision(particle.pos) == false);
+        return particle;
+    }); // add the four corners; i.e. one extra, split hexagon
+    assert(std::fabs(cuboid.getVolume() - 2.0 * hexagon.getVolume()) <= pc::epsilon_dbl);
+    return {cuboid, cuboid_particles};
+}
+
+TEST_CASE("[Faunus] HexagonalPrismToCuboid") {
+    using doctest::Approx;
+    double radius = 2.0, height = 20.0;
+    double side = 2.0 / std::sqrt(3.0) * radius;
+    HexagonalPrism hexagonal_prism(side, height);
+    ParticleVector p(6); // corners of a hexagon
+    p[0].pos = {0, 1, 0};
+    p[1].pos = {0.866, 0.5, 0};
+    p[2].pos = {0.866, -0.5, 0};
+    p[3].pos = {0, -1, 0};
+    p[4].pos = {-0.866, -0.5, 0};
+    p[5].pos = {-0.866, 0.5, 0};
+    auto [cuboid, p_new] = HexagonalPrismToCuboid(hexagonal_prism, p);
+    CHECK(p_new.size() == 12);
+    CHECK(cuboid.getLength().x() == Approx(radius * 2.0));
+    CHECK(cuboid.getLength().y() == Approx(side * 3.0));
+    CHECK(cuboid.getLength().z() == Approx(height));
+    CHECK(cuboid.getVolume() == Approx(2.0 * hexagonal_prism.getVolume()));
+
+    std::vector<Point> positions = {{0, 1, 0},           {0.866, 0.5, 0},  {0.866, -0.5, 0},   {0, -1, 0},
+                                    {-0.866, -0.5, 0},   {-0.866, 0.5, 0}, {2, -2.4641, 0},    {-1.134, -2.9641, 0},
+                                    {-1.134, 2.9641, 0}, {2, 2.4641, 0},   {1.134, 2.9641, 0}, {1.134, -2.9641, 0}};
+    size_t i = 0;
+    for (auto &particle : p_new) { // compared actual positions w. expected positions
+        CHECK(particle.pos.x() == Approx(positions[i].x()));
+        CHECK(particle.pos.y() == Approx(positions[i].y()));
+        CHECK(particle.pos.z() == Approx(positions[i].z()));
+        i++;
+    }
+}
+
 Chameleon::Chameleon(const Variant type) {
     makeGeometry(type);
     _setLength(geometry->getLength());
@@ -713,6 +765,8 @@ const BoundaryCondition &Chameleon::boundaryConditions() const { return geometry
 Chameleon::Chameleon(const Chameleon &geo)
     : GeometryBase(geo), len(geo.len), len_half(geo.len_half), len_inv(geo.len_inv),
       geometry(geo.geometry != nullptr ? geo.geometry->clone() : nullptr), _type(geo._type), _name(geo._name) {}
+
+std::shared_ptr<GeometryImplementation> Chameleon::asSimpleGeometry() { return geometry->clone(); }
 
 TEST_CASE("[Faunus] spherical coordinates") {
     using doctest::Approx;

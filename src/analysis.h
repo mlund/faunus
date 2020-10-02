@@ -270,6 +270,7 @@ class SaveState : public Analysisbase {
     std::function<void(const std::string &)> writeFunc = nullptr;
     bool save_random_number_generator_state = false;
     bool use_numbered_files = true;
+    bool convert_hexagonal_prism_to_cuboid = false;
     std::string filename;
     void _to_json(json &) const override;
     void _sample() override;

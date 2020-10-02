@@ -369,7 +369,7 @@ class Chameleon : public GeometryBase {
     //! During the assignment copy everything, but clone the geometry.
     Chameleon &operator=(const Chameleon &geo);
 
-    std::unique_ptr<GeometryImplementation> &getGeometryImplementation();
+    std::shared_ptr<GeometryImplementation> asSimpleGeometry();
 };
 
 inline void Chameleon::randompos(Point &m, Random &rand) const {

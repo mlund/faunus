@@ -205,7 +205,7 @@ SaveState::SaveState(json j, Space &spc) {
         writeFunc = [&](auto &file) {
             if (convert_hexagonal_prism_to_cuboid) {
                 auto hexagonal_prism =
-                    dynamic_cast<Geometry::HexagonalPrism *>(spc.geo.getGeometryImplementation().get());
+                    std::dynamic_pointer_cast<Geometry::HexagonalPrism>(spc.geo.asSimpleGeometry());
                 if (hexagonal_prism) {
                     faunus_logger->debug("creating cuboidal PQR from hexagonal prism");
                     const auto &[cuboid, particles] = Geometry::HexagonalPrismToCuboid(*hexagonal_prism, spc.p);

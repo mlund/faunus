@@ -612,6 +612,36 @@ std::pair<Cuboid, ParticleVector> HexagonalPrismToCuboid(const HexagonalPrism &h
     return {cuboid, cuboid_particles};
 }
 
+TEST_CASE("[Faunus] HexagonalPrismToCuboid") {
+    using doctest::Approx;
+    double radius = 2.0;
+    double side = 2.0 / std::sqrt(3.0) * radius;
+    HexagonalPrism hexagonal_prism(side, 20);
+    ParticleVector p(6); // corners of a hexagon
+    p[0].pos = {0, 1, 0};
+    p[1].pos = {0.866, 0.5, 0};
+    p[2].pos = {0.866, -0.5, 0};
+    p[3].pos = {0, -1, 0};
+    p[4].pos = {-0.866, -0.5, 0};
+    p[5].pos = {-0.866, 0.5, 0};
+    auto [cuboid, p_new] = HexagonalPrismToCuboid(hexagonal_prism, p);
+    CHECK(p_new.size() == 12);
+    CHECK(cuboid.getLength().x() == Approx(4.0));
+    CHECK(cuboid.getLength().y() == Approx(side * 3.0));
+    CHECK(cuboid.getLength().z() == Approx(20.0));
+
+    std::vector<Point> positions = {{0, 1, 0},           {0.866, 0.5, 0},  {0.866, -0.5, 0},   {0, -1, 0},
+                                    {-0.866, -0.5, 0},   {-0.866, 0.5, 0}, {2, -2.4641, 0},    {-1.134, -2.9641, 0},
+                                    {-1.134, 2.9641, 0}, {2, 2.4641, 0},   {1.134, 2.9641, 0}, {1.134, -2.9641, 0}};
+    size_t i = 0;
+    for (auto &particle : p_new) { // compared actual positions w. expected positions
+        CHECK(particle.pos.x() == Approx(positions[i].x()));
+        CHECK(particle.pos.y() == Approx(positions[i].y()));
+        CHECK(particle.pos.z() == Approx(positions[i].z()));
+        i++;
+    }
+}
+
 Chameleon::Chameleon(const Variant type) {
     makeGeometry(type);
     _setLength(geometry->getLength());
@@ -735,7 +765,7 @@ Chameleon::Chameleon(const Chameleon &geo)
     : GeometryBase(geo), len(geo.len), len_half(geo.len_half), len_inv(geo.len_inv),
       geometry(geo.geometry != nullptr ? geo.geometry->clone() : nullptr), _type(geo._type), _name(geo._name) {}
 
-std::unique_ptr<GeometryImplementation> &Chameleon::getGeometryImplementation() { return geometry; }
+std::shared_ptr<GeometryImplementation> Chameleon::asSimpleGeometry() { return geometry->clone(); }
 
 TEST_CASE("[Faunus] spherical coordinates") {
     using doctest::Approx;

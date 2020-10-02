@@ -237,6 +237,25 @@ Tensor quadrupoleMoment(Titer begin, Titer end, BoundaryFunction boundary = [](c
     return 0.5 * theta;
 } //!< Calculates quadrupole moment tensor (with trace)
 
+TEST_CASE("[Faunus]_quadrupoleMoment") {
+    using doctest::Approx;
+    ParticleVector p(2);
+    p[0].pos = {10, 20, 30};
+    p[1].pos = {-10, 0, -30};
+    p[0].charge = -0.5;
+    p[1].charge = 0.3;
+    auto mu = quadrupoleMoment(p.begin(), p.end(), [](auto &) {}, {2, 3, 4});
+    CHECK(mu.x() == Approx(-10));
+    CHECK(mu.y() == Approx(-10));
+    CHECK(mu.z() == Approx(-30));
+
+    p[0].charge *= -1.0;
+    mu = quadrupoleMoment(p.begin(), p.end(), [](auto &) {}, {2, 3, 4});
+    CHECK(mu.x() == Approx(-2));
+    CHECK(mu.y() == Approx(7));
+    CHECK(mu.z() == Approx(-4));
+}
+
 /**
  * @brief Converts a group to a multipole-particle
  * @param g Group

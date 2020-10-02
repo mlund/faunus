@@ -604,7 +604,7 @@ std::pair<Cuboid, ParticleVector> HexagonalPrismToCuboid(const HexagonalPrism &h
 
     std::transform(particles.begin(), particles.end(), std::back_inserter(cuboid_particles), [&](auto particle) {
         particle.pos.x() += hexagon.innerRadius() * (particle.pos.x() > 0.0 ? -1.0 : 1.0);
-        particle.pos.y() += hexagon.outerRadius() * (particle.pos.y() > 0.0 ? -1.0 : 1.0) * 1.5;
+        particle.pos.y() += hexagon.outerRadius() * (particle.pos.y() > 0.0 ? -1.5 : 1.5);
         assert(cuboid.collision(particle.pos) == false);
         return particle;
     }); // add the four corners; i.e. one extra, split hexagon

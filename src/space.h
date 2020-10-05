@@ -35,8 +35,8 @@ struct Change {
     std::vector<data> groups; //!< Touched groups by index in group vector
 
     //! List of moved groups (index)
-    inline auto touchedGroupIndex() {
-        return ranges::cpp20::views::transform(groups, [](data &i) -> int { return i.index; });
+    inline auto touchedGroupIndex() const {
+        return ranges::cpp20::views::transform(groups, [](const data &i) -> int { return i.index; });
     }
 
     //! List of changed atom index relative to first particle in system

@@ -595,23 +595,6 @@ ParticleVector mapParticlesOnSphere(const ParticleVector &source) {
     return destination;
 }
 
-std::pair<Cuboid, ParticleVector> HexagonalPrismToCuboid(const HexagonalPrism &hexagon,
-                                                         const ParticleVector &particles) {
-    Cuboid cuboid({2.0 * hexagon.innerRadius(), 3.0 * hexagon.outerRadius(), hexagon.height()});
-    ParticleVector cuboid_particles;
-    cuboid_particles.reserve(2 * particles.size());
-    std::copy(particles.begin(), particles.end(), std::back_inserter(cuboid_particles)); // add central hexagon
-
-    std::transform(particles.begin(), particles.end(), std::back_inserter(cuboid_particles), [&](auto particle) {
-        particle.pos.x() += hexagon.innerRadius() * (particle.pos.x() > 0.0 ? -1.0 : 1.0);
-        particle.pos.y() += hexagon.outerRadius() * (particle.pos.y() > 0.0 ? -1.5 : 1.5);
-        assert(cuboid.collision(particle.pos) == false);
-        return particle;
-    }); // add the four corners; i.e. one extra, split hexagon
-    assert(std::fabs(cuboid.getVolume() - 2.0 * hexagon.getVolume()) <= pc::epsilon_dbl);
-    return {cuboid, cuboid_particles};
-}
-
 TEST_CASE("[Faunus] HexagonalPrismToCuboid") {
     using doctest::Approx;
     double radius = 2.0, height = 20.0;

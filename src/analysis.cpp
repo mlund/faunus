@@ -208,7 +208,8 @@ SaveState::SaveState(json j, Space &spc) {
                     std::dynamic_pointer_cast<Geometry::HexagonalPrism>(spc.geo.asSimpleGeometry());
                 if (hexagonal_prism) {
                     faunus_logger->debug("creating cuboidal PQR from hexagonal prism");
-                    const auto &[cuboid, particles] = Geometry::HexagonalPrismToCuboid(*hexagonal_prism, spc.p);
+                    const auto &[cuboid, particles] =
+                        Geometry::HexagonalPrismToCuboid(*hexagonal_prism, spc.activeParticles());
                     FormatPQR::save(file, particles, cuboid.getLength());
                 } else {
                     throw std::runtime_error("hexagonal prism required for `convert_to_hexagon`");

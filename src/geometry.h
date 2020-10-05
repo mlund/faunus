@@ -683,8 +683,22 @@ ParticleVector mapParticlesOnSphere(const ParticleVector &);
  * side-lengths [2 * inner_radius, 3 * outer_radius, height] and also twice
  * the number of particles
  */
-std::pair<Cuboid, ParticleVector> HexagonalPrismToCuboid(const HexagonalPrism &hexagon,
-                                                         const ParticleVector &particles);
+template <typename Particles>
+std::pair<Cuboid, ParticleVector> HexagonalPrismToCuboid(const HexagonalPrism &hexagon, const Particles &particles) {
+    Cuboid cuboid({2.0 * hexagon.innerRadius(), 3.0 * hexagon.outerRadius(), hexagon.height()});
+    ParticleVector cuboid_particles;
+    cuboid_particles.reserve(2 * std::distance(particles.begin(), particles.end()));
+    std::copy(particles.begin(), particles.end(), std::back_inserter(cuboid_particles)); // add central hexagon
+
+    std::transform(particles.begin(), particles.end(), std::back_inserter(cuboid_particles), [&](auto particle) {
+        particle.pos.x() += hexagon.innerRadius() * (particle.pos.x() > 0.0 ? -1.0 : 1.0);
+        particle.pos.y() += hexagon.outerRadius() * (particle.pos.y() > 0.0 ? -1.5 : 1.5);
+        assert(cuboid.collision(particle.pos) == false);
+        return particle;
+    }); // add the four corners; i.e. one extra, split hexagon
+    assert(std::fabs(cuboid.getVolume() - 2.0 * hexagon.getVolume()) <= pc::epsilon_dbl);
+    return {cuboid, cuboid_particles};
+}
 
 } // namespace Geometry
 } // namespace Faunus

@@ -83,6 +83,30 @@ void to_json(json &j, const Movebase &m) {
     m.to_json(j[m.name]);
 }
 
+ReplayMove::ReplayMove(Space &spc) : spc(spc) { name = "replay"; }
+
+void ReplayMove::_to_json(json &j) const { j["file"] = reader->filename; }
+
+void ReplayMove::_from_json(const json &j) { reader = std::make_shared<XTCReader>(j.at("file")); }
+
+void ReplayMove::_move(Change &change) {
+    assert(reader != nullptr);
+    if (!end_of_trajectory) {
+        if (reader->read(frame.step, frame.timestamp, frame.box, spc.positions().begin(), spc.positions().end())) {
+            spc.geo.setLength(frame.box);
+            change.all = true;
+        } else {
+            // nothing to do, simulation shall stop
+            end_of_trajectory = true;
+            mcloop_logger->warn("No more frames to read from {}. Running on empty.", reader->filename);
+        }
+    }
+}
+
+double ReplayMove::bias(Change &, double, double) {
+    return force_accept; // always accept
+}
+
 void AtomicTranslateRotate::_to_json(json &j) const {
     j = {{"dir", directions},
          {"molid", molid},
@@ -234,6 +258,8 @@ Propagator::Propagator(const json &j, Space &spc, Energy::Hamiltonian &pot, MPI:
                     _moves.emplace_back<Move::QuadrantJump>(spc);
                 else if (it.key() == "cluster")
                     _moves.emplace_back<Move::Cluster>(spc);
+                else if (it.key() == "replay")
+                    _moves.emplace_back<Move::ReplayMove>(spc);
                 else if (it.key() == "langevin_dynamics") {
                     auto move_ptr = std::make_shared<Move::LangevinDynamics>(spc, pot);
                     _moves.push_back<Move::LangevinDynamics>(move_ptr);

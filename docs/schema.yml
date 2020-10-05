@@ -749,6 +749,17 @@ properties:
                         repeat: {type: integer}
                     additionalProperties: false
                     type: object
+
+                replay:
+                    properties:
+                        file:
+                            type: string
+                            pattern: "(.*?)\\.(xtc)$"
+                            description: An XTC file with the trajectory to replay
+                    required: [file]
+                    additionalProperties: false
+                    type: object
+
          
     analysis:
         type: array

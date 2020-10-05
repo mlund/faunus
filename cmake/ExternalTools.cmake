@@ -220,9 +220,9 @@ endif()
 ExternalProject_Add(
     project_xdrfile
     PREFIX "${CMAKE_CURRENT_BINARY_DIR}/_deps"
-    URL "https://github.com/wesbarnett/libxdrfile/archive/2.1.2.tar.gz"
-    URL_MD5 ee114404b4a01613b2f0167a2ad92536
-    PATCH_COMMAND echo "add_library(xdrfile-static STATIC \${SRCS})" >> CMakeLists.txt
+    URL "https://github.com/chemfiles/xdrfile/archive/8935d749e1f43a87221089588d1cc3f37a0354b0.tar.gz"
+    URL_HASH SHA256=a5530703fd07a5baadc9ba75d806fe0844d7b3da0e16f5adbb966660a1cd6828
+    PATCH_COMMAND patch -p1 < ${CMAKE_SOURCE_DIR}/cmake/patches/xdrfile-01.patch
     BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} xdrfile-static
     UPDATE_DISCONNECTED ON
     CMAKE_ARGS -Wno-dev -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER} -DCMAKE_POSITION_INDEPENDENT_CODE=on

@@ -104,6 +104,11 @@ class Space {
         return ranges::cpp20::views::transform(p, [](auto &i) -> const Point & { return i.pos; });
     }
 
+    //! Mutable iterable range of all particle positions
+    auto positions() {
+        return ranges::cpp20::views::transform(p, [](auto &i) -> Point & { return i.pos; });
+    }
+
     /**
      * @brief Finds all groups of type `molid` (complexity: order N)
      * @param molid Molecular id to look for

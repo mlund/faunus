@@ -348,16 +348,12 @@ class XTCtraj : public Analysisbase {
     std::vector<int> molids;        // molecule ids to save to disk
     std::vector<std::string> names; // molecule names of above
     std::function<bool(Particle &)> filter; // function to filter molecule ids
+    Space &spc;
+    std::shared_ptr<XTCWriter> writer;
 
     void _to_json(json &) const override;
     void _from_json(const json &) override;
-
-    FormatXTC xtc;
-    Space &spc;
-    std::string file;
-
     void _sample() override;
-
   public:
     XTCtraj(const json &j, Space &s);
 };

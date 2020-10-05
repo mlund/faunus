@@ -963,13 +963,14 @@ XTCtraj::XTCtraj(const json &j, Space &s) : filter([](Particle &) { return true;
 }
 
 void XTCtraj::_to_json(json &j) const {
-    j["file"] = file;
+    j["file"] = writer->filename;
     if (not names.empty())
         j["molecules"] = names;
 }
 
 void XTCtraj::_from_json(const json &j) {
-    file = MPI::prefix + j.at("file").get<std::string>();
+    auto file = MPI::prefix + j.at("file").get<std::string>();
+    writer = std::make_shared<XTCWriter>(file);
 
     // By default, *all* active and inactive groups are saved,
     // but here allow for a user defined list of molecule ids
@@ -991,14 +992,14 @@ void XTCtraj::_from_json(const json &j) {
 }
 
 void XTCtraj::_sample() {
-    xtc.setLength(spc.geo.getLength()); // set box dimensions for frame
     // On some gcc/clang and certain ubuntu/macos combinations,
     // the ranges::view::filter(rng,unaryp) clears the `filter` function.
     // Using the ranges piping seem to solve the issue.
     assert(filter);
-    auto particles = spc.p | ranges::cpp20::views::filter(filter);
+    auto coordinates = spc.p | ranges::cpp20::views::filter(filter) |
+                       ranges::cpp20::views::transform([](auto &particle) -> Point & { return particle.pos; });
     assert(filter);
-    xtc.save(file, particles.begin(), particles.end());
+    writer->writeNext(spc.geo.getLength(), coordinates.begin(), coordinates.end());
 }
 
 // =============== MultipoleDistribution ===============

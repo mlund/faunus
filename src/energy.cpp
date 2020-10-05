@@ -835,83 +835,77 @@ Hamiltonian::Hamiltonian(Space &spc, const json &j) {
     if (spc.geo.type not_eq Geometry::CUBOID)
         emplace_back<Energy::ContainerOverlap>(spc);
 
-    // only a single cutoff scheme so far
-    typedef GroupCutoff TCutoff;
-#ifdef _OPENMP
-    // ready for OMP enabled policies
-    constexpr bool parallel = false;
-#else
-    constexpr bool parallel = false;
-#endif
-    for (auto &m : j) { // loop over energy list
+    // only a single pairing policy and cutoff scheme so far
+    typedef GroupPairing<GroupPairingPolicy<GroupCutoff>> PairingPolicy;
+
+    for (auto& j_energy : j) { // loop over energy list
         size_t oldsize = vec.size();
-        for (auto it : m.items()) {
+        for (auto& [name, j_val] : j_energy.items()) {
             try {
-                if (it.key() == "nonbonded_coulomblj" || it.key() == "nonbonded_newcoulomblj")
-                    emplace_back<Energy::Nonbonded<PairingPolicy<PairEnergy<CoulombLJ, false>, TCutoff, parallel>>>(it.value(), spc, *this);
-                else if (it.key() == "nonbonded_coulomblj_EM")
-                    emplace_back<Energy::NonbondedCached<CoulombLJ>>(it.value(), spc, *this);
+                if (name == "nonbonded_coulomblj" or name == "nonbonded_newcoulomblj")
+                    emplace_back<Nonbonded<PairEnergy<CoulombLJ, false>, PairingPolicy>>(j_val, spc, *this);
 
-                else if (it.key() == "nonbonded_splined")
-                    emplace_back<
-                        Energy::Nonbonded<PairingPolicy<PairEnergy<SplinedPotential, false>, TCutoff, parallel>>>(
-                        it.value(), spc, *this);
+                else if (name == "nonbonded_coulomblj_EM")
+                    emplace_back<NonbondedCached<PairEnergy<CoulombLJ, false>, PairingPolicy>>(j_val, spc, *this);
 
-                else if (it.key() == "nonbonded" or it.key() == "nonbonded_exact")
-                    emplace_back<Energy::Nonbonded<PairingPolicy<PairEnergy<FunctorPotential, true>, TCutoff, parallel>>>(it.value(), spc, *this);
+                else if (name == "nonbonded_splined")
+                    emplace_back<Nonbonded<PairEnergy<SplinedPotential, false>, PairingPolicy>>(j_val, spc, *this);
 
-                else if (it.key() == "nonbonded_cached")
-                    emplace_back<Energy::NonbondedCached<SplinedPotential>>(it.value(), spc, *this);
+                else if (name == "nonbonded" or name == "nonbonded_exact")
+                    emplace_back<Nonbonded<PairEnergy<FunctorPotential, true>, PairingPolicy>>(j_val, spc, *this);
 
-                else if (it.key() == "nonbonded_coulombwca")
-                    emplace_back<Energy::Nonbonded<PairingPolicy<PairEnergy<CoulombWCA, false>, TCutoff, parallel>>>(it.value(), spc, *this);
+                else if (name == "nonbonded_cached")
+                    emplace_back<NonbondedCached<PairEnergy<SplinedPotential>, PairingPolicy>>(j_val, spc, *this);
 
-                else if (it.key() == "nonbonded_pm" or it.key() == "nonbonded_coulombhs")
-                    emplace_back<Energy::Nonbonded<PairingPolicy<PairEnergy<PrimitiveModel, false>, TCutoff, parallel>>>(it.value(), spc, *this);
+                else if (name == "nonbonded_coulombwca")
+                    emplace_back<Nonbonded<PairEnergy<CoulombWCA, false>, PairingPolicy>>(j_val, spc, *this);
 
-                else if (it.key() == "nonbonded_pmwca")
-                    emplace_back<Energy::Nonbonded<PairingPolicy<PairEnergy<PrimitiveModelWCA, false>, TCutoff, parallel>>>(it.value(), spc, *this);
+                else if (name == "nonbonded_pm" or name == "nonbonded_coulombhs")
+                    emplace_back<Nonbonded<PairEnergy<PrimitiveModel, false>, PairingPolicy>>(j_val, spc, *this);
+
+                else if (name == "nonbonded_pmwca")
+                    emplace_back<Nonbonded<PairEnergy<PrimitiveModelWCA, false>, PairingPolicy>>(j_val, spc, *this);
 
                 // this should be moved into `Nonbonded` and added when appropriate
                 // Nonbonded now has access to Hamiltonian (*this) and can therefore
                 // add energy terms
-                addEwald(it.value(), spc); // add reciprocal Ewald terms if appropriate
+                addEwald(j_val, spc); // add reciprocal Ewald terms if appropriate
 
-                if (it.key() == "bonded")
-                    emplace_back<Energy::Bonded>(it.value(), spc);
+                if (name == "bonded")
+                    emplace_back<Bonded>(j_val, spc);
 
-                else if (it.key() == "customexternal")
-                    emplace_back<Energy::CustomExternal>(it.value(), spc);
+                else if (name == "customexternal")
+                    emplace_back<CustomExternal>(j_val, spc);
 
-                else if (it.key() == "akesson")
-                    emplace_back<Energy::ExternalAkesson>(it.value(), spc);
+                else if (name == "akesson")
+                    emplace_back<ExternalAkesson>(j_val, spc);
 
-                else if (it.key() == "confine")
-                    emplace_back<Energy::Confine>(it.value(), spc);
+                else if (name == "confine")
+                    emplace_back<Confine>(j_val, spc);
 
-                else if (it.key() == "constrain")
-                    emplace_back<Energy::Constrain>(it.value(), spc);
+                else if (name == "constrain")
+                    emplace_back<Energy::Constrain>(j_val, spc);
 
-                else if (it.key() == "example2d")
-                    emplace_back<Energy::Example2D>(it.value(), spc);
+                else if (name == "example2d")
+                    emplace_back<Energy::Example2D>(j_val, spc);
 
-                else if (it.key() == "isobaric")
-                    emplace_back<Energy::Isobaric>(it.value(), spc);
+                else if (name == "isobaric")
+                    emplace_back<Energy::Isobaric>(j_val, spc);
 
-                else if (it.key() == "penalty")
+                else if (name == "penalty")
 #ifdef ENABLE_MPI
-                    emplace_back<Energy::PenaltyMPI>(it.value(), spc);
+                    emplace_back<PenaltyMPI>(j_val, spc);
 #else
-                    emplace_back<Energy::Penalty>(it.value(), spc);
+                    emplace_back<Penalty>(j_val, spc);
 #endif
 #if defined ENABLE_FREESASA
-                else if (it.key() == "sasa")
-                    emplace_back<Energy::SASAEnergy>(it.value(), spc);
+                else if (name == "sasa")
+                    emplace_back<SASAEnergy>(j_val, spc);
 #endif
                 // additional energies go here...
 
-                else if (it.key() == "maxenergy") {
-                    maxenergy = it.value().get<double>();
+                else if (name == "maxenergy") {
+                    maxenergy = j_val.get<double>();
                     continue;
                 }
 
@@ -919,7 +913,7 @@ Hamiltonian::Hamiltonian(Space &spc, const json &j) {
                     throw std::runtime_error("unknown term");
 
             } catch (std::exception &e) {
-                throw std::runtime_error("energy '" + it.key() + "': " + e.what() + usageTip[it.key()]);
+                throw std::runtime_error("energy '" + name + "': " + e.what() + usageTip[name]);
             }
         } // end of loop over energy input terms
     }

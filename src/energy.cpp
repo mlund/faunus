@@ -555,20 +555,26 @@ void Ewald::sync(Energybase *energybase_pointer, Change &change) {
 void Ewald::to_json(json &j) const { j = data; }
 
 double Example2D::energy(Change &) {
-    double s = 1 + std::sin(2 * pc::pi * i.x()) + std::cos(2 * pc::pi * i.y());
-    if (i.x() >= -2.00 && i.x() <= -1.25)
+    double s = 1 + std::sin(2.0 * pc::pi * particle.x()) + std::cos(2.0 * pc::pi * particle.y());
+    s *= scale_energy;
+    if (particle.x() >= -2.00 && particle.x() <= -1.25)
         return 1 * s;
-    if (i.x() >= -1.25 && i.x() <= -0.25)
+    if (particle.x() >= -1.25 && particle.x() <= -0.25)
         return 2 * s;
-    if (i.x() >= -0.25 && i.x() <= 0.75)
+    if (particle.x() >= -0.25 && particle.x() <= 0.75)
         return 3 * s;
-    if (i.x() >= 0.75 && i.x() <= 1.75)
+    if (particle.x() >= 0.75 && particle.x() <= 1.75)
         return 4 * s;
-    if (i.x() >= 1.75 && i.x() <= 2.00)
+    if (particle.x() >= 1.75 && particle.x() <= 2.00)
         return 5 * s;
     return 1e10;
 }
-Example2D::Example2D(const json &, Space &spc) : i(spc.p.at(0).pos) { name = "Example2D"; }
+
+Example2D::Example2D(const json &j, Space &spc) : particle(spc.p.at(0).pos) {
+    scale_energy = j.value("scale", 1.0);
+    name = "Example2D";
+}
+void Example2D::to_json(json &j) const { j["scale"] = scale_energy; }
 
 double ContainerOverlap::energy(Change &change) {
     // if (spc.geo.type not_eq Geometry::CUBOID) // cuboid have PBC in all directions

@@ -1186,6 +1186,7 @@ class SASAEnergy : public Energybase {
  */
 class Example2D : public Energybase {
   private:
+    bool use_2d = true;        // Set to false to apply energy only along x (as by the book)
     double scale_energy = 1.0; // effective temperature
     const Point &particle;     // reference to 1st particle in the system
     void to_json(json &j) const override;

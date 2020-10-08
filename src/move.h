@@ -7,6 +7,7 @@
 #include "space.h"
 #include "io.h"
 #include "aux/timers.h"
+#include <range/v3/view/filter.hpp>
 
 namespace Faunus {
 
@@ -388,6 +389,7 @@ class QuadrantJump : public Movebase {
 };
 
 #ifdef ENABLE_MPI
+
 /**
  * @brief Class for parallel tempering (aka replica exchange) using MPI
  *
@@ -401,32 +403,35 @@ class QuadrantJump : public Movebase {
  */
 class ParallelTempering : public Movebase {
   private:
-    typedef typename Tspace::Tpvec Tpvec;
-
-    Tspace &spc; // Space to operate on
+    double small_volume = 1e-9;
+    Space &spc; // Space to operate on
     MPI::MPIController &mpi;
-
-    int partner;                   //!< Exchange replica (partner)
+    std::shared_ptr<ParticleVector> partner_particles;
+    Random random;
+    int partner = -1;              //!< Exchange replica (partner)
     enum extradata { VOLUME = 0 }; //!< Structure of extra data to send
-    std::map<std::string, Average<double>> accmap;
+    std::map<std::string, Average<double>> acceptance_map;
 
-    MPI::FloatTransmitter ft;           //!< Class for transmitting floats over MPI
-    MPI::ParticleTransmitter<Tpvec> pt; //!< Class for transmitting particles over MPI
+    MPI::FloatTransmitter float_transmitter;                       //!< Class for transmitting floats over MPI
+    MPI::ParticleTransmitter<ParticleVector> particle_transmitter; //!< Class for transmitting particles over MPI
 
     void findPartner(); //!< Find replica to exchange with
     bool goodPartner(); //!< Is partner valid?
     void _to_json(json &j) const override;
     void _move(Change &change) override;
-    double exchangeEnergy(double mydu); //!< Exchange energy with partner
-    double bias(Change &, double uold, double unew) override;
-    std::string id(); //!< Unique string to identify set of partners
+    double exchangeEnergy(double energy_change);              //!< Exchange energy with partner
+    void exchangeState(Change &change);                       //!< Exchange positions, charges, volume etc.
+    double bias(Change &, double uold, double unew) override; //!< Energy change in partner replica
+    std::string id() const;                                   //!< Unique string to identify set of partners
     void _accept(Change &) override;
     void _reject(Change &) override;
     void _from_json(const json &j) override;
 
   public:
-    ParallelTempering(Tspace &spc, MPI::MPIController &mpi);
+    ParallelTempering(Space &spc, MPI::MPIController &mpi);
+    ~ParallelTempering();
 };
+
 #endif
 
 /**
@@ -447,23 +452,33 @@ class Propagator {
     auto repeat() const -> decltype(_repeat) { return _repeat; }
     auto moves() const -> const decltype(_moves) & { return _moves; };
     auto sample() {
-        int d;
         if (!_moves.empty()) {
             assert(_weights.size() == _moves.size());
 #ifdef ENABLE_MPI
             //!< Avoid parallel processes to get out of sync
             //!< Needed for replica exchange or parallel tempering
-            d = distribution(MPI::mpi.random.engine);
+            int offset = distribution(MPI::mpi.random.engine);
 #else
-            d = distribution(Move::Movebase::slump.engine);
+            int offset = distribution(Move::Movebase::slump.engine);
 #endif
-            return _moves.begin() + d;
+            return _moves.begin() + offset;
         }
         return _moves.end();
     } //!< Pick move from a weighted, random distribution
     auto end() { return _moves.end(); }
 
     friend void to_json(json &j, const Propagator &propagator);
+
+    /**
+     * @brief Range of moves excluded from the `sample()` algorithm above due to ZERO weight
+     *
+     * Moves added with zero weight are excluded from the `sample()` function but can be
+     * accessed through this function. This is used to run these _hidden_ moves exactly
+     * once per Monte Carlo sweep.
+     */
+    auto defusedMoves() {
+        return _moves | ranges::cpp20::views::filter([&](auto move) { return move->repeat == 0; });
+    }
 };
 
 void to_json(json &j, const Propagator &propagator);

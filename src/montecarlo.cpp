@@ -7,20 +7,23 @@
 namespace Faunus {
 
 /**
- * @param du Energy change in units of kT
+ * @param energy_change Energy change in units of kT
  * @return True if accepted, false of rejected
+ * @note Regardless of outcome the random number generator should be incremented. This is important
+ *       when using some MPI schemes where the simulations must be in sync.
  */
-bool MetropolisMonteCarlo::metropolis(double du) const {
-    if (std::isnan(du)) {
+bool MetropolisMonteCarlo::metropolis(double energy_change) {
+    const auto random_number_between_zero_and_one = Move::Movebase::slump();
+    if (std::isnan(energy_change)) {
         throw std::runtime_error("Metropolis error: energy cannot be NaN");
     }
-    if (du < 0) {
+    if (energy_change < 0.0) {
         return true;
     } else {
-        if (-du > pc::max_exp_argument) {
+        if (-energy_change > pc::max_exp_argument) {
             mcloop_logger->warn("large negative metropolis energy");
         }
-        return Move::Movebase::slump() <= std::exp(-du);
+        return random_number_between_zero_and_one <= std::exp(-energy_change);
     }
 }
 
@@ -120,6 +123,53 @@ void MetropolisMonteCarlo::restore(const json &j) {
     }
 }
 
+void MetropolisMonteCarlo::perform_move(std::shared_ptr<Move::Movebase> move) {
+    Change change;
+    move->move(change);
+#ifndef NDEBUG
+    try {
+        change.sanityCheck(state->spc->groups);
+    } catch (std::exception &e) {
+        throw std::runtime_error(e.what());
+    }
+#endif
+    if (change) {
+        latest_move = move;
+        double trial_energy = trial_state->pot->energy(change);    // trial potential energy (kT)
+        double energy = state->pot->energy(change);                // potential energy before move (kT)
+        double du = trial_energy - energy;                         // potential energy change (kT)
+        if (std::isnan(energy) and not std::isnan(trial_energy)) { // if NaN --> finite energy change
+            du = pc::neg_infty;                                    // ...always accept
+        } else if (std::isnan(trial_energy)) {                     // if moving to NaN, e.g. division by zero,
+            du = pc::infty;                                        // ...always reject
+        } else if (std::isnan(du)) {                               // if difference is NaN, e.g. infinity - infinity,
+            du = 0.0;                                              // ...always accept
+        }
+        double move_bias = move->bias(change, energy, trial_energy); // moves *may* add bias (kT)
+        double density_bias = TranslationalEntropy(*trial_state->spc, *state->spc).energy(change);
+        if (std::isnan(du + move_bias)) {
+            faunus_logger->error("NaN energy change in {} move.", move->name);
+            // throw exception here?
+        }
+        if (metropolis(du + move_bias + density_bias)) { // accept move
+            state->sync(*trial_state, change);
+            move->accept(change);
+        } else { // reject move
+            trial_state->sync(*state, change);
+            move->reject(change);
+            du = 0.0;
+        }
+        sum_of_energy_changes += du; // sum of all energy changes
+        if (std::isfinite(initial_energy)) {
+            average_energy += initial_energy + sum_of_energy_changes; // update average potential energy
+        }
+    } else {
+        // The `metropolis()` function propagates the engine and we need to stay in sync
+        // Alternatively, we could use `engine.discard()`
+        Move::Movebase::slump();
+    }
+}
+
 /**
  * This propagates the system using a random MC move.
  * Flow:
@@ -138,48 +188,12 @@ void MetropolisMonteCarlo::move() {
     assert(moves);
     for (int i = 0; i < moves->repeat(); i++) {
         if (auto move_it = moves->sample(); move_it != moves->end()) { // pick random move
-            Change change;                                             // stores proposed changes due to move
-            auto move = *move_it;                                      // more readable like this
-            move->move(change);
-#ifndef NDEBUG
-            try {
-                change.sanityCheck(state->spc->groups);
-            } catch (std::exception &e) {
-                throw std::runtime_error(e.what());
-            }
-#endif
-            if (change) {
-                latest_move = move;
-                double trial_energy = trial_state->pot->energy(change);    // trial potential energy (kT)
-                double energy = state->pot->energy(change);                // potential energy before move (kT)
-                double du = trial_energy - energy;                         // potential energy change (kT)
-                if (std::isnan(energy) and not std::isnan(trial_energy)) { // if NaN --> finite energy change
-                    du = pc::neg_infty;                                    // ...always accept
-                } else if (std::isnan(trial_energy)) {                     // if moving to NaN, e.g. division by zero,
-                    du = pc::infty;                                        // ...always reject
-                } else if (std::isnan(du)) { // if difference is NaN, e.g. infinity - infinity,
-                    du = 0.0;                // ...always accept
-                }
-                double move_bias = move->bias(change, energy, trial_energy); // moves *may* add bias (kT)
-                double density_bias = TranslationalEntropy(*trial_state->spc, *state->spc).energy(change);
-                if (std::isnan(du + move_bias)) {
-                    faunus_logger->error("NaN energy change in {} move.", move->name);
-                    // throw exception here?
-                }
-                if (metropolis(du + move_bias + density_bias)) { // accept move
-                    state->sync(*trial_state, change);
-                    move->accept(change);
-                } else { // reject move
-                    trial_state->sync(*state, change);
-                    move->reject(change);
-                    du = 0.0;
-                }
-                sum_of_energy_changes += du;                              // sum of all energy changes
-                if (std::isfinite(initial_energy)) {
-                    average_energy += initial_energy + sum_of_energy_changes; // update average potential energy
-                }
-            }
+            perform_move(*move_it);
         }
+    }
+    // run _hidden_ moves (weight=0) exactly once per MC sweep
+    for (auto move : moves->defusedMoves()) {
+        perform_move(move);
     }
 }
 

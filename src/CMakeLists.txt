@@ -84,7 +84,7 @@ target_link_libraries(libfaunus PRIVATE
 # ========== faunus (main executable) ==========
 
 add_executable(faunus faunus.cpp)
-target_link_libraries(faunus PRIVATE libfaunus docopt progresstracker)
+target_link_libraries(faunus PRIVATE libfaunus docopt progresstracker project_options)
 target_compile_definitions(faunus PRIVATE SPDLOG_COMPILED_LIB)
 set_target_properties(faunus PROPERTIES
         POSITION_INDEPENDENT_CODE ON

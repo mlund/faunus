@@ -60,6 +60,7 @@ namespace Faunus {
         int rank() const;       //!< Rank of process
         int rankMaster() const; //!< Rank number of the master
         bool isMaster() const;  //!< Test if current process is master
+        void barrier() const;   //!< Set up a MPI Barrier to sync. all ranks
         std::ostream &cout();
         Random random;  //!< Random number generator for MPI calls
         std::string id; //!< Unique name associated with current rank
@@ -209,6 +210,7 @@ namespace Faunus {
         template<typename Tpvec>
             void ParticleTransmitter<Tpvec>::pvec2buf(const Tpvec &src) {
                 sendBuf.clear();
+                sendBuf.reserve(src.size() * 5 + sendExtra.size());
                 for (auto &p : src) {
                     sendBuf.push_back(p.pos.x());
                     sendBuf.push_back(p.pos.y());

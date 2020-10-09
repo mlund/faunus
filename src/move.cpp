@@ -342,6 +342,12 @@ void ParallelTempering::exchangeState(Change &change) {
         MPI_Abort(mpi.comm, 1);
     } else {
         spc.p = *partner_particles;
+        for (auto &group : spc.groups) {
+            if (!group.empty()) {
+                group.cm = group.begin()->pos;
+                group.updateMassCenter(spc.geo.getBoundaryFunc());
+            }
+        }
         if (std::fabs(Vnew - Vold) > pc::epsilon_dbl) {
             change.dV = true;
             spc.geo.setVolume(Vnew);

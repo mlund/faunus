@@ -178,7 +178,7 @@ add_test(
         COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} bulk-replay.yml\
     | $<TARGET_FILE:faunus> --quiet \
     ; diff -q ../bulk/traj.xtc traj.xtc \
-    && ${CSV_COMPARE} -q --tol 0.04 --small 0.1 ../bulk/rdf.dat rdf.dat"
+    && ${CSV_COMPARE} -q --tol 0.05 --small 0.1 ../bulk/rdf.dat rdf.dat"
         WORKING_DIRECTORY ${EXAMPLES_DIR}/bulk-replay)
 set_property(TEST bulk-replay PROPERTY FIXTURES_REQUIRED bulk)
 

@@ -329,25 +329,23 @@ bool ParallelTempering::goodPartner() {
  */
 void ParallelTempering::exchangeState(Change &change) {
     assert(partner != -1);
+
     double Vold = spc.geo.getVolume();
-    partner_particles->resize(spc.p.size()); // temparary storage
-    change.all = true;
-    particle_transmitter.sendExtra.at(VOLUME) = Vold;            // copy current volume for sending
+    particle_transmitter.sendExtra.at(VOLUME) = Vold; // copy current volume for sending
+
+    partner_particles->resize(spc.p.size());                     // temparary storage
     particle_transmitter.recv(mpi, partner, *partner_particles); // receive particles
     particle_transmitter.send(mpi, spc.p, partner);              // send everything
     particle_transmitter.waitrecv();
     particle_transmitter.waitsend();
-    if (double Vnew = particle_transmitter.recvExtra.at(VOLUME);
-        Vnew < small_volume || spc.p.size() != partner_particles->size()) {
+
+    double Vnew = particle_transmitter.recvExtra.at(VOLUME);
+    if (Vnew <= small_volume || spc.p.size() != partner_particles->size()) {
         MPI_Abort(mpi.comm, 1);
     } else {
-        spc.p = *partner_particles;
-        for (auto &group : spc.groups) {
-            if (!group.empty()) {
-                group.cm = group.begin()->pos;
-                group.updateMassCenter(spc.geo.getBoundaryFunc());
-            }
-        }
+        change.all = true;
+        spc.updateParticles(partner_particles->begin(), partner_particles->end(), spc.p.begin());
+
         if (std::fabs(Vnew - Vold) > pc::epsilon_dbl) {
             change.dV = true;
             spc.geo.setVolume(Vnew);

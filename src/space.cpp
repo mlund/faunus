@@ -292,6 +292,25 @@ TEST_CASE("Space::numParticles") {
     CHECK(spc.numParticles(Space::ACTIVE) == 2);
 }
 
+TEST_CASE("[Faunus] Space::updateParticles") {
+    Space spc;
+    spc.p.resize(2);
+
+    ParticleVector p(2);
+    p[0].pos = {0, 0, 0};
+    p[1].pos = {2, 0, 0};
+
+    spc.updateParticles(p.begin(), p.end(), spc.p.begin());
+    CHECK(spc.p[0].pos.x() == p[0].pos.x());
+    CHECK(spc.p[1].pos.x() == p[1].pos.x());
+
+    std::vector<Point> positions = {{2.1, 0, 0}, {0.9, 0, 0}};
+    spc.updateParticles(positions.begin(), positions.end(), spc.p.begin(),
+                        [](const auto &pos, auto &particle) { particle.pos = pos; });
+    CHECK(spc.p[0].pos.x() == 2.1);
+    CHECK(spc.p[1].pos.x() == 0.9);
+}
+
 void to_json(json &j, Space &spc) {
     j["geometry"] = spc.geo;
     j["groups"] = spc.groups;

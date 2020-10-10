@@ -99,6 +99,51 @@ class Space {
     Tgvec::iterator randomMolecule(int, Random &, Selection = ACTIVE);       //!< Random group matching molid
     json info();
 
+    /**
+     * @brief Update particles in Space from a continuous source range
+     *
+     * @tparam iterator Iterator for source range
+     * @tparam copy_operation Functor used to copy data from an element in the source range to element in `Space:p`
+     * @param begin Begin of source particle range
+     * @param end End of source particle range
+     * @param destination Iterator to target particle vector (should be in `Space::p`)
+     * @param copy_function Function used to copy from source range to destination particle
+     *
+     * By default a source range of particles is expected and all content is copied.
+     * This can be customised to e.g. a position range by giving a `copy_function` such
+     * as `[](const auto &pos, auto &particle){particle.pos = pos;}`.
+     *
+     * The following are updated:
+     *
+     * - particles
+     * - molecular mass centers of affected groups
+     * - future: update cell list?
+     */
+    template <class iterator, class copy_operation = std::function<void(const Particle &, Particle &)>>
+    void updateParticles(
+        iterator begin, iterator end, ParticleVector::iterator destination,
+        copy_operation copy_function = [](const Particle &src, Particle &dst) { dst = src; }) {
+
+        const auto size = std::distance(begin, end); // number of affected particles
+
+        assert(destination >= p.begin() && destination < p.end());
+        assert(size <= std::distance(destination, p.end()));
+        assert(&*begin - &*end == size);
+
+        // copy data from source range
+        std::for_each(begin, end, [&](const auto &source) { copy_function(source, *destination++); });
+
+        auto affected_groups = groups | ranges::cpp20::views::filter([&](auto &group) {
+                                   return (group.begin() < destination + size) && (group.end() > destination);
+                               });
+
+        for (auto &group : affected_groups) { // update mass centers
+            if (!group.empty()) {
+                group.updateMassCenter(geo.getBoundaryFunc(), group.begin()->pos);
+            }
+        };
+    }
+
     //! Iterable range of all particle positions
     auto positions() const {
         return ranges::cpp20::views::transform(p, [](auto &i) -> const Point & { return i.pos; });

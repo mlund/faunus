@@ -150,7 +150,7 @@ void ForceMoveBase::_move(Change &change) {
         integrator->step(velocities, forces);
     }
     for (auto &group : spc.groups) { // update mass centers before returning to Monte Carlo
-        group.updateMassCenter(spc.geo.getBoundaryFunc());
+        group.updateMassCenter(spc.geo.getBoundaryFunc(), group.cm);
     }
 }
 

@@ -139,17 +139,18 @@ namespace Faunus {
          *     int dst_rank = 1;
          *     floatp extra1 = 2.34, extra2 = -1.23
          *     Tpvec myparticles(200); // we have 200 particles
-         *    
+         *
          *     Faunus::MPI::MPIController mpi;
          *     Faunus::MPI::ParticleTransmitter pt;
-         *    
+         *
          *     pt.sendExtra.push_back(extra1);
          *     pt.sendExtra.push_back(extra2);
-         *    
+         *
          *     pt.send(mpi, myparticles, dst_rank);
          *     pt.waitsend();
          *
          * @date Lund 2012
+         * @todo This class needs refactoring for clarity and better safety
          *
          */
         template<typename Tpvec>

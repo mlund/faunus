@@ -100,7 +100,7 @@ class Space {
     json info();
 
     /**
-     * @brief Update particles in Space from a continuous source range
+     * @brief Update particles in Space from a source range
      *
      * @tparam iterator Iterator for source range
      * @tparam copy_operation Functor used to copy data from an element in the source range to element in `Space:p`
@@ -113,11 +113,13 @@ class Space {
      * This can be customised to e.g. a position range by giving a `copy_function` such
      * as `[](const auto &pos, auto &particle){particle.pos = pos;}`.
      *
-     * The following are updated:
+     * The following is updated:
      *
      * - particles
      * - molecular mass centers of affected groups
      * - future: update cell list?
+     *
+     * @todo Since Space::groups is ordered, binary search could be used to filter
      */
     template <class iterator, class copy_operation = std::function<void(const Particle &, Particle &)>>
     void updateParticles(
@@ -128,13 +130,12 @@ class Space {
 
         assert(destination >= p.begin() && destination < p.end());
         assert(size <= std::distance(destination, p.end()));
-        assert(&*begin - &*end == size);
 
         auto affected_groups = groups | ranges::cpp20::views::filter([=](auto &group) {
                                    return (group.begin() < destination + size) && (group.end() > destination);
-                               }); // lambda to filter affected groups
+                               }); // filtered group with affected groups only. Note we copy in org. `destination`
 
-        // copy data from source range
+        // copy data from source range (this modifies `destination`)
         std::for_each(begin, end, [&](const auto &source) { copy_function(source, *destination++); });
 
         for (auto &group : affected_groups) { // update affected mass centers

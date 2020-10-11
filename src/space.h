@@ -121,7 +121,7 @@ class Space {
      */
     template <class iterator, class copy_operation = std::function<void(const Particle &, Particle &)>>
     void updateParticles(
-        iterator begin, iterator end, ParticleVector::iterator destination,
+        const iterator begin, const iterator end, ParticleVector::iterator destination,
         copy_operation copy_function = [](const Particle &src, Particle &dst) { dst = src; }) {
 
         const auto size = std::distance(begin, end); // number of affected particles
@@ -130,14 +130,14 @@ class Space {
         assert(size <= std::distance(destination, p.end()));
         assert(&*begin - &*end == size);
 
+        auto affected_groups = groups | ranges::cpp20::views::filter([=](auto &group) {
+                                   return (group.begin() < destination + size) && (group.end() > destination);
+                               }); // lambda to filter affected groups
+
         // copy data from source range
         std::for_each(begin, end, [&](const auto &source) { copy_function(source, *destination++); });
 
-        auto affected_groups = groups | ranges::cpp20::views::filter([&](auto &group) {
-                                   return (group.begin() < destination + size) && (group.end() > destination);
-                               });
-
-        for (auto &group : affected_groups) { // update mass centers
+        for (auto &group : affected_groups) { // update affected mass centers
             if (!group.empty()) {
                 group.updateMassCenter(geo.getBoundaryFunc(), group.begin()->pos);
             }
@@ -318,6 +318,7 @@ using Tspace = Space;
 namespace SpaceFactory {
 
 void makeNaCl(Space &, int, const Geometry::Chameleon &); //!< Create a simple salt system
+void makeWater(Space &space, int num_particles, const Geometry::Chameleon &geometry);
 
 } // namespace SpaceFactory
 

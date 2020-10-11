@@ -293,7 +293,11 @@ TEST_CASE("Space::numParticles") {
 }
 
 TEST_CASE("[Faunus] Space::updateParticles") {
+    using doctest::Approx;
     Space spc;
+    Geometry::Cuboid geo({100, 100, 100});
+    spc.geo = Geometry::Chameleon(geo, Geometry::CUBOID);
+
     spc.p.resize(2);
 
     ParticleVector p(2);
@@ -309,6 +313,35 @@ TEST_CASE("[Faunus] Space::updateParticles") {
                         [](const auto &pos, auto &particle) { particle.pos = pos; });
     CHECK(spc.p[0].pos.x() == 2.1);
     CHECK(spc.p[1].pos.x() == 0.9);
+
+    SUBCASE("Group update") {
+        Space spc;
+        SpaceFactory::makeWater(spc, 2, R"( {"type": "cuboid", "length": 20} )"_json);
+        CHECK(spc.groups.size() == 2);
+
+        auto copy_function = [](const auto &pos, auto &particle) { particle.pos = pos; };
+        std::vector<Point> positions = {{0, 0, 0}, {3, 3, 3}, {6, 6, 6}};
+
+        // first group affected
+        spc.groups[0].cm.x() = -1;
+        spc.groups[1].cm.x() = -1;
+        spc.updateParticles(positions.begin(), positions.end(), spc.groups[1].begin(), copy_function);
+        CHECK(spc.groups[0].cm.x() == Approx(-1));
+        CHECK(spc.groups[1].cm.x() == Approx(0.5031366235));
+
+        // second group affected
+        spc.groups[1].cm.x() = -1;
+        spc.updateParticles(positions.begin(), positions.end(), spc.groups[0].begin(), copy_function);
+        CHECK(spc.groups[0].cm.x() == Approx(0.5031366235));
+        CHECK(spc.groups[1].cm.x() == Approx(-1));
+
+        // both groups affected
+        spc.groups[0].cm.x() = -1;
+        spc.groups[1].cm.x() = -1;
+        spc.updateParticles(positions.begin(), positions.end(), spc.groups[0].begin() + 1, copy_function);
+        CHECK(spc.groups[0].cm.x() == Approx(0.1677122078));
+        CHECK(spc.groups[1].cm.x() == Approx(5.8322877922));
+    }
 }
 
 void to_json(json &j, Space &spc) {
@@ -530,12 +563,47 @@ void makeNaCl(Space &space, int num_particles, const Geometry::Chameleon &geomet
     j.push_back({{"salt", {{"N", num_particles}}}});
     InsertMoleculesInSpace::insertMolecules(j, space);
 }
+
+/**
+ * @param space Space to insert into (will be overwritten)
+ * @param num_particles Number of salt pairs to insert
+ * @param geometry Geometry to use
+ */
+void makeWater(Space &space, int num_particles, const Geometry::Chameleon &geometry) {
+    pc::temperature = 298.15_K;
+    space.geo = geometry;
+
+    Faunus::atoms = R"([
+             { "OW": { "sigma": 3.166, "eps": 0.65, "q": -0.8476, "mw": 15.999 } },
+             { "HW": { "sigma": 2.0, "eps": 0.0, "q": 0.4238, "mw": 1.007 } }
+             ])"_json.get<decltype(atoms)>();
+
+    Faunus::molecules = R"([{
+             "water": {
+                 "structure": [
+                     {"OW": [2.3, 6.28, 1.13]},
+                     {"HW": [1.37, 6.26, 1.5]},
+                     {"HW": [2.31, 5.89, 0.21]}
+                 ]
+            }}])"_json.get<decltype(molecules)>();
+
+    json j = json::array();
+    j.push_back({{"water", {{"N", num_particles}}}});
+    InsertMoleculesInSpace::insertMolecules(j, space);
+}
+
 } // namespace SpaceFactory
 
 TEST_CASE("SpaceFactory") {
     Space spc;
     SpaceFactory::makeNaCl(spc, 10, R"( {"type": "cuboid", "length": 20} )"_json);
     CHECK(spc.numParticles() == 20);
+
+    SUBCASE("makeWater") {
+        Space spc;
+        SpaceFactory::makeWater(spc, 2, R"( {"type": "cuboid", "length": 20} )"_json);
+        CHECK(spc.numParticles() == 6);
+    }
 }
 
 /**

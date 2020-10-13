@@ -315,13 +315,12 @@ void ParallelTempering::findPartner() {
 }
 
 bool ParallelTempering::goodPartner() {
-    assert(partner != mpi.rank() && "Selfpartner! This is not supposed to happen.");
-    if (partner >= 0)
-        if (partner < mpi.nproc())
-            if (partner != mpi.rank())
-                return true;
-    partner = -1;
-    return false;
+    if (partner >= 0 && partner < mpi.nproc() && partner != mpi.rank()) {
+        return true;
+    } else {
+        partner = -1;
+        return false;
+    }
 }
 
 /**
@@ -329,40 +328,31 @@ bool ParallelTempering::goodPartner() {
  */
 void ParallelTempering::exchangeState(Change &change) {
     assert(partner != -1);
-
-    double Vold = spc.geo.getVolume();
-    particle_transmitter.sendExtra.at(VOLUME) = Vold; // copy current volume for sending
-
+    auto old_volume = spc.geo.getVolume();
+    particle_transmitter.sendExtra.at(VOLUME) = old_volume;      // copy current volume for sending
     partner_particles->resize(spc.p.size());                     // temparary storage
     particle_transmitter.recv(mpi, partner, *partner_particles); // receive particles
     particle_transmitter.send(mpi, spc.p, partner);              // send everything
     particle_transmitter.waitrecv();
     particle_transmitter.waitsend();
 
-    double Vnew = particle_transmitter.recvExtra.at(VOLUME);
-    if (Vnew <= small_volume || spc.p.size() != partner_particles->size()) {
+    auto new_volume = particle_transmitter.recvExtra.at(VOLUME);
+    if (new_volume < very_small_volume || spc.p.size() != partner_particles->size()) {
         MPI_Abort(mpi.comm, 1);
     } else {
         change.all = true;
-        spc.updateParticles(partner_particles->begin(), partner_particles->end(), spc.p.begin());
-
-        if (std::fabs(Vnew - Vold) > pc::epsilon_dbl) {
+        if (std::fabs(new_volume - old_volume) > pc::epsilon_dbl) {
             change.dV = true;
-            spc.geo.setVolume(Vnew);
+            spc.geo.setVolume(new_volume);
         }
+        spc.updateParticles(partner_particles->begin(), partner_particles->end(), spc.p.begin());
     }
 }
 
 void ParallelTempering::_move(Change &change) {
     mpi.barrier(); // wait until all ranks reach here
-    partner = -1;
-    if (mpi.nproc() > 1) {
-
-        findPartner();
-        if (!goodPartner()) {
-            partner = -1;
-            return;
-        }
+    findPartner();
+    if (goodPartner()) {
         exchangeState(change);
     }
 }
@@ -394,7 +384,7 @@ double ParallelTempering::exchangeEnergy(double energy_change) {
  * problematic with grand canonical moves.
  */
 double ParallelTempering::bias(Change &, double uold, double unew) {
-    assert(goodPartner());
+    assert(partner != -1);
     if constexpr (false) {
         // todo: add sanity check for random number generator state in partnering replicas.
         return exchangeEnergy(unew - uold); // exchange change with partner (MPI)
@@ -410,18 +400,16 @@ double ParallelTempering::bias(Change &, double uold, double unew) {
 }
 
 std::string ParallelTempering::id() const {
-    // `std::minmax(a,b)` takes _references_ while the initializer list (used here) takes a copy.
-    assert(partner >= 0);
+    assert(partner != -1);
+    // note `std::minmax(a,b)` takes _references_; the initializer list (used here) takes a _copy_
     const auto pair = std::minmax({mpi.rank(), partner});
     return fmt::format("{} <-> {}", pair.first, pair.second);
 }
 
 void ParallelTempering::_accept(Change &) {
-    assert(partner >= 0);
     acceptance_map[id()] += 1;
 }
 void ParallelTempering::_reject(Change &) {
-    assert(partner >= 0);
     acceptance_map[id()] += 0;
 }
 
@@ -431,6 +419,9 @@ void ParallelTempering::_from_json(const json &j) {
 
 ParallelTempering::ParallelTempering(Space &spc, MPI::MPIController &mpi) : spc(spc), mpi(mpi) {
     name = "temper";
+    if (mpi.nproc() < 2) {
+        throw std::runtime_error(name + " requires two or more MPI processes");
+    }
     partner_particles = std::make_shared<ParticleVector>();
     partner_particles->reserve(spc.p.size());
     particle_transmitter.recvExtra.resize(1);
@@ -442,9 +433,11 @@ ParallelTempering::ParallelTempering(Space &spc, MPI::MPIController &mpi) : spc(
  * must be the same on all ranks. Run with verbose logging (trace) and observe output!
  */
 ParallelTempering::~ParallelTempering() {
+#ifndef NDEBUG
     faunus_logger->trace("mpi{}: last random number (Movebase) = {}", mpi.rank(), slump());
     faunus_logger->trace("mpi{}: last random number (Temper) = {}", mpi.rank(), random());
     faunus_logger->trace("mpi{}: last random number (MPI) = {}", mpi.rank(), mpi.random());
+#endif
 }
 
 #endif

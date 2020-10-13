@@ -403,7 +403,7 @@ class QuadrantJump : public Movebase {
  */
 class ParallelTempering : public Movebase {
   private:
-    double small_volume = 1e-9;
+    double very_small_volume = 1e-9;
     Space &spc; // Space to operate on
     MPI::MPIController &mpi;
     std::shared_ptr<ParticleVector> partner_particles;

@@ -195,27 +195,32 @@ Point dipoleMoment(
     return mu;
 } //!< Calculates dipole moment vector
 
-TEST_CASE("[Faunus]_dipoleMoment") {
+TEST_CASE("[Faunus] dipoleMoment") {
     using doctest::Approx;
     ParticleVector p(2);
     p[0].pos = {10, 20, 30};
     p[1].pos = {-10, 0, -30};
     p[0].charge = -0.5;
     p[1].charge = 0.5;
-    auto mu = dipoleMoment(p.begin(), p.end(), [](auto &) {}, {2, 3, 4});
-    CHECK(mu.x() == Approx(-10));
-    CHECK(mu.y() == Approx(-10));
-    CHECK(mu.z() == Approx(-30));
 
-    p[0].charge *= -1.0;
-    mu = dipoleMoment(p.begin(), p.end(), [](auto &) {}, {2, 3, 4});
-    CHECK(mu.x() == Approx(-2));
-    CHECK(mu.y() == Approx(7));
-    CHECK(mu.z() == Approx(-4));
+    SUBCASE("Neutral molecule") {
+        auto mu = dipoleMoment(p.begin(), p.end(), [](auto &) {}, {2, 3, 4}); // some origin
+        CHECK(mu.squaredNorm() == Approx(10 * 10 + 10 * 10 + 30 * 30));
+        mu = dipoleMoment(p.begin(), p.end(), [](auto &) {}, {20, 30, 40}); // another origin
+        CHECK(mu.squaredNorm() == Approx(10 * 10 + 10 * 10 + 30 * 30));
+    }
+
+    SUBCASE("Charged molecule") {
+        p[0].charge *= -1.0; // give molecule a net charge
+        auto mu = dipoleMoment(p.begin(), p.end(), [](auto &) {}, {2, 3, 4});
+        CHECK(mu.x() == Approx(-2));
+        CHECK(mu.y() == Approx(7));
+        CHECK(mu.z() == Approx(-4));
+    }
 }
 
 /**
- * @brief Returns the total quadrupole-momxxxxxxxx      ent for a set of particles, note with trace!
+ * @brief Returns the total quadrupole-moment for a set of particles, note with trace!
  * @param begin First particle
  * @param end Last particle
  * @param boundary Function to use for boundary
@@ -237,7 +242,7 @@ Tensor quadrupoleMoment(Titer begin, Titer end, BoundaryFunction boundary = [](c
     return 0.5 * theta;
 } //!< Calculates quadrupole moment tensor (with trace)
 
-TEST_CASE("[Faunus]_quadrupoleMoment") {
+TEST_CASE("[Faunus] quadrupoleMoment") {
     using doctest::Approx;
     ParticleVector p(2);
     p[0].pos = {10, 20, 30};
@@ -245,15 +250,10 @@ TEST_CASE("[Faunus]_quadrupoleMoment") {
     p[0].charge = -0.5;
     p[1].charge = 0.3;
     auto mu = quadrupoleMoment(p.begin(), p.end(), [](auto &) {}, {2, 3, 4});
-    CHECK(mu.x() == Approx(-10));
-    CHECK(mu.y() == Approx(-10));
-    CHECK(mu.z() == Approx(-30));
-
+    CHECK(mu.trace() == Approx(-60.9));
     p[0].charge *= -1.0;
     mu = quadrupoleMoment(p.begin(), p.end(), [](auto &) {}, {2, 3, 4});
-    CHECK(mu.x() == Approx(-2));
-    CHECK(mu.y() == Approx(7));
-    CHECK(mu.z() == Approx(-4));
+    CHECK(mu.trace() == Approx(453.6));
 }
 
 /**

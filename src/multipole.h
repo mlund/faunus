@@ -176,21 +176,54 @@ template <class Titer> double monopoleMoment(Titer begin, Titer end) {
  * @brief Returns the total dipole-moment for a set of particles
  * @param begin First particle
  * @param end Last particle
- * @param boundary Function to use for boundary
+ * @param boundary Function to use for applying periodic boundaries. Default: do nothing.
+ * @param origin Origin of dipole moment, default (0,0,0).
  * @param cutoff Cut-off for included particles with regard to origin, default value is infinite
+ *
+ * If the particle has extended properties, point dipole moments will be added as well
  */
 template <class Titer, class BoundaryFunction>
-Point dipoleMoment(Titer begin, Titer end, BoundaryFunction boundary = [](const Point &) {},
-                   double cutoff = pc::infty) {
-    Point mu(0, 0, 0);
-    for (auto it = begin; it != end; ++it) {
-        Point t = it->pos - begin->pos;
-        boundary(t);
-        if (t.squaredNorm() < cutoff * cutoff)
-            mu += t * it->charge;
-    }
-    return mu;
+Point dipoleMoment(
+    Titer begin, Titer end, BoundaryFunction boundary = [](const Point &) {}, const Point origin = {0, 0, 0},
+    double cutoff = pc::infty) {
+    Point dipole_moment(0, 0, 0);
+    std::for_each(begin, end, [&](const Particle &particle) {
+        Point position = particle.pos - origin;
+        boundary(position); // at this stage, positions should be unwrapped
+        if (position.squaredNorm() < cutoff * cutoff) {
+            dipole_moment += position * particle.charge;
+            if (particle.hasExtension()) {
+                const auto &extended_properties = particle.getExt();
+                dipole_moment += extended_properties.mu * extended_properties.mulen;
+            }
+        }
+    });
+    return dipole_moment;
 } //!< Calculates dipole moment vector
+
+TEST_CASE("[Faunus] dipoleMoment") {
+    using doctest::Approx;
+    ParticleVector p(2);
+    p[0].pos = {10, 20, 30};
+    p[1].pos = {-10, 0, -30};
+    p[0].charge = -0.5;
+    p[1].charge = 0.5;
+
+    SUBCASE("Neutral molecule") {
+        auto mu = dipoleMoment(p.begin(), p.end(), [](auto &) {}, {2, 3, 4}); // some origin
+        CHECK(mu.squaredNorm() == Approx(10 * 10 + 10 * 10 + 30 * 30));
+        mu = dipoleMoment(p.begin(), p.end(), [](auto &) {}, {20, 30, 40}); // another origin
+        CHECK(mu.squaredNorm() == Approx(10 * 10 + 10 * 10 + 30 * 30));
+    }
+
+    SUBCASE("Charged molecule") {
+        p[0].charge *= -1.0; // give molecule a net charge
+        auto mu = dipoleMoment(p.begin(), p.end(), [](auto &) {}, {2, 3, 4});
+        CHECK(mu.x() == Approx(-2));
+        CHECK(mu.y() == Approx(7));
+        CHECK(mu.z() == Approx(-4));
+    }
+}
 
 /**
  * @brief Returns the total quadrupole-moment for a set of particles, note with trace!
@@ -215,6 +248,20 @@ Tensor quadrupoleMoment(Titer begin, Titer end, BoundaryFunction boundary = [](c
     return 0.5 * theta;
 } //!< Calculates quadrupole moment tensor (with trace)
 
+TEST_CASE("[Faunus] quadrupoleMoment") {
+    using doctest::Approx;
+    ParticleVector p(2);
+    p[0].pos = {10, 20, 30};
+    p[1].pos = {-10, 0, -30};
+    p[0].charge = -0.5;
+    p[1].charge = 0.3;
+    auto mu = quadrupoleMoment(p.begin(), p.end(), [](auto &) {}, {2, 3, 4});
+    CHECK(mu.trace() == Approx(-60.9));
+    p[0].charge *= -1.0;
+    mu = quadrupoleMoment(p.begin(), p.end(), [](auto &) {}, {2, 3, 4});
+    CHECK(mu.trace() == Approx(453.6));
+}
+
 /**
  * @brief Converts a group to a multipole-particle
  * @param g Group
@@ -225,8 +272,8 @@ template <class Tgroup, class BoundaryFunction>
 auto toMultipole(const Tgroup &g, BoundaryFunction boundary = [](const Point &) {}, double cutoff = pc::infty) {
     Particle m;
     m.pos = g.cm;
-    m.charge = Faunus::monopoleMoment(g.begin(), g.end());                // monopole
-    m.getExt().mu = Faunus::dipoleMoment(g.begin(), g.end(), boundary, cutoff);    // dipole
+    m.charge = Faunus::monopoleMoment(g.begin(), g.end());                                // monopole
+    m.getExt().mu = Faunus::dipoleMoment(g.begin(), g.end(), boundary, m.pos, cutoff);    // dipole
     m.getExt().Q = Faunus::quadrupoleMoment(g.begin(), g.end(), boundary, m.pos, cutoff); // quadrupole
     m.getExt().mulen = m.getExt().mu.norm();
     if (m.getExt().mulen > 1e-9)

@@ -176,23 +176,29 @@ template <class Titer> double monopoleMoment(Titer begin, Titer end) {
  * @brief Returns the total dipole-moment for a set of particles
  * @param begin First particle
  * @param end Last particle
- * @param boundary Function to use for boundary
- * @param origin Origin, default (0,0,0)
+ * @param boundary Function to use for applying periodic boundaries. Default: do nothing.
+ * @param origin Origin of dipole moment, default (0,0,0).
  * @param cutoff Cut-off for included particles with regard to origin, default value is infinite
+ *
+ * If the particle has extended properties, point dipole moments will be added as well
  */
 template <class Titer, class BoundaryFunction>
 Point dipoleMoment(
     Titer begin, Titer end, BoundaryFunction boundary = [](const Point &) {}, const Point origin = {0, 0, 0},
     double cutoff = pc::infty) {
-    Point mu(0, 0, 0);
-    std::for_each(begin, end, [&](const auto &particle) {
-        Point r = particle.pos - origin;
-        boundary(r);
-        if (r.squaredNorm() < cutoff * cutoff) {
-            mu += r * particle.charge;
+    Point dipole_moment(0, 0, 0);
+    std::for_each(begin, end, [&](const Particle &particle) {
+        Point position = particle.pos - origin;
+        boundary(position); // at this stage, positions should be unwrapped
+        if (position.squaredNorm() < cutoff * cutoff) {
+            dipole_moment += position * particle.charge;
+            if (particle.hasExtension()) {
+                const auto &extended_properties = particle.getExt();
+                dipole_moment += extended_properties.mu * extended_properties.mulen;
+            }
         }
     });
-    return mu;
+    return dipole_moment;
 } //!< Calculates dipole moment vector
 
 TEST_CASE("[Faunus] dipoleMoment") {

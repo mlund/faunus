@@ -270,11 +270,18 @@ void CosAttract::from_json(const json &j) {
 // =============== Coulomb (old) ===============
 
 void Coulomb::to_json(json &j) const {
-    j["epsr"] = pc::relativeDielectricFromBjerrumLength(lB);
-    j["lB"] = lB;
+    j["epsr"] = pc::relativeDielectricFromBjerrumLength(bjerrum_length);
+    j["lB"] = bjerrum_length;
 }
 
-void Coulomb::from_json(const json &j) { lB = pc::bjerrumLength(j.at("epsr")); }
+void Coulomb::from_json(const json &j) {
+    if (j.size() == 1 && j.is_object()) {
+        bjerrum_length = pc::bjerrumLength(j.at("epsr").get<double>());
+    } else {
+        throw ConfigurationError("Plain Coulomb potential expects 'epsr' key (only)");
+    }
+}
+Coulomb::Coulomb(const std::string &name) : PairPotentialBase(name) {}
 
 // =============== DipoleDipole (old) ===============
 
@@ -764,7 +771,7 @@ TEST_CASE("[Faunus] FunctorPotential") {
                   ],
                   "C C" : [ { "hardsphere" : {} } ] })"_json;
 
-    Coulomb coulomb = R"({ "coulomb": {"epsr": 80.0, "type": "plain", "cutoff":20} } )"_json;
+    Coulomb coulomb = R"({ "coulomb": {"epsr": 80.0} } )"_json;
     WeeksChandlerAndersen wca = R"({ "wca" : {"mixing": "LB"} })"_json;
 
     Particle a = atoms[0];

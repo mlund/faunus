@@ -29,7 +29,7 @@ energy:
     - isobaric: {P/mM: 113.2}
     - bonded: {}
     - nonbonded_pm:
-        coulomb: {type: plain, epsr: 78.7}
+        coulomb: {epsr: 78.7}
 
 moves:
     - moltransrot: {molecule: polymer, dp: 10, dprot: 1, repeat: N}

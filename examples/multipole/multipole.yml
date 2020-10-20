@@ -35,7 +35,7 @@ insertmolecules:
     - quadrupole: {N: 1}
 energy:
     - nonbonded_pm:
-        coulomb: {type: plain, epsr: 80}
+        coulomb: {epsr: 80}
 moves:
     - moltransrot: {molecule: dipole, dp: 0, dprot: 2, repeat: 1}
     - moltransrot: {molecule: quadrupole, dp: 5, dprot: 2, repeat: 1, dir: [0,0,1]}

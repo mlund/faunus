@@ -187,7 +187,7 @@ class Particle {
     inline const ParticleExtension &getExt() const {
         assert(ext);
         return *ext;
-    } //!< get extension
+    } //!< Get extended particle properties;
 
     /**
      * @brief Cereal serialisation

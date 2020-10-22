@@ -8,6 +8,7 @@
 #include <range/v3/view.hpp>
 #include <Eigen/Dense>
 #include <spdlog/spdlog.h>
+#include <numeric>
 
 #ifdef ENABLE_FREESASA
 #include <freesasa.h>

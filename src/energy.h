@@ -274,7 +274,7 @@ class Bonded : public Energybase {
      */
     template <class RangeOfIndex>
     double sum_energy(const Bonded::BondVector &bonds, const RangeOfIndex &indices_of_particles) const {
-        assert(std::is_sorted(indices_of_particles));
+        assert(std::is_sorted(indices_of_particles.begin(), indices_of_particles.end()));
 
         auto bond_filter = [&](const auto &bond_ptr) { // determine if bond is part of indices of particles
             for (auto index : bond_ptr->index) {

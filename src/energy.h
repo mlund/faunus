@@ -284,10 +284,11 @@ class Bonded : public Energybase {
         };
         auto affected_bonds = bonds | ranges::cpp20::views::filter(bond_filter);
 
-        return std::accumulate(affected_bonds.begin(), affected_bonds.end(), 0.0, [&](auto energy_sum, auto bond_ptr) {
-            assert(bond_ptr->hasEnergyFunction());
-            return energy_sum += bond_ptr->energyFunc(spc.geo.getDistanceFunc());
-        });
+        return std::transform_reduce(affected_bonds.begin(), affected_bonds.end(), 0.0, std::plus<>(),
+                                     [&](auto bond_ptr) -> double {
+                                         assert(bond_ptr->hasEnergyFunction());
+                                         return bond_ptr->energyFunc(spc.geo.getDistanceFunc());
+                                     });
     }
 
   public:

@@ -260,8 +260,35 @@ class Bonded : public Energybase {
   private:
     void update_intra();                              // finds and adds all intra-molecular bonds of active molecules
     double sum_energy(const BondVector &) const;      // sum energy in vector of BondData
-    double sum_energy(const BondVector &,
-                      const std::vector<int> &) const; // sum energy in vector of BondData for matching particle indices
+
+    /**
+     * @brief Sum energy in vector of BondData for matching particle indices
+     * @param bonds List of bonds
+     * @param indices_of_particles Particle index
+     *
+     * To speed up the bond search, the given indices must be ordered which allows
+     * for binary search which on large systems provides superior performance compared
+     * to simplistic search which scales with number of bonds as O(N^2).
+     */
+    template <class RangeOfIndex>
+    double sum_energy(const Bonded::BondVector &bonds, const RangeOfIndex &indices_of_particles) const {
+        assert(std::is_sorted(indices_of_particles));
+
+        auto bond_filter = [&](const auto bond_ptr) { // determine if bond is part of indices of particles
+            for (auto index : bond_ptr->index) {
+                if (std::binary_search(indices_of_particles.begin(), indices_of_particles.end(), index)) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        auto affected_bonds = bonds | ranges::cpp20::views::filter(bond_filter);
+
+        return std::accumulate(affected_bonds.begin(), affected_bonds.end(), 0.0, [&](auto energy_sum, auto bond_ptr) {
+            assert(bond_ptr->hasEnergyFunction());
+            return energy_sum += bond_ptr->energyFunc(spc.geo.getDistanceFunc());
+        });
+    }
 
   public:
     Bonded(const json &, Space &);

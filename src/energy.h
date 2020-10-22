@@ -9,6 +9,7 @@
 #include <Eigen/Dense>
 #include <spdlog/spdlog.h>
 #include <numeric>
+#include <algorithm>
 
 #ifdef ENABLE_FREESASA
 #include <freesasa.h>

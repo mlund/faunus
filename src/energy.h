@@ -277,7 +277,6 @@ class Bonded : public Energybase {
         assert(std::is_sorted(indices_of_particles.begin(), indices_of_particles.end()));
 
         auto bond_filter = [&](const auto &bond_ptr) { // determine if bond is part of indices of particles
-            return false;
             for (auto index : bond_ptr->index) {
                 if (std::binary_search(indices_of_particles.begin(), indices_of_particles.end(), index)) {
                     return true;
@@ -289,7 +288,7 @@ class Bonded : public Energybase {
 
         auto bond_energy = [&](const auto &bond_ptr) { return bond_ptr->energyFunc(spc.geo.getDistanceFunc()); };
 
-#if (defined(__clang__) && __clang_major__ >= 10) || (defined(__GNUC__) && __GNUC__ >= 9 && __GNUC_MINOR__ >= 3)
+#if (defined(__clang__) && __clang_major__ >= 10) || (defined(__GNUC__) && __GNUC__ >= 10)
         return std::transform_reduce(affected_bonds.begin(), affected_bonds.end(), 0.0, std::plus<>(), bond_energy);
 #else
         double energy = 0.0;

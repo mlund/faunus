@@ -270,7 +270,7 @@ class Bonded : public Energybase {
      *
      * To speed up the bond search, the given indices must be ordered which allows
      * for binary search which on large systems provides superior performance compared
-     * to simplistic search which scales with number of bonds as O(N^2).
+     * to simplistic search which scales as number_of_bonds x number_of_moved_particles
      */
     template <class RangeOfIndex>
     double sum_energy(const Bonded::BondVector &bonds, const RangeOfIndex &indices_of_particles) const {

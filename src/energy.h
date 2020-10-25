@@ -15,7 +15,7 @@
 #include <freesasa.h>
 #endif
 
-#ifdef __cpp_lib_parallel_algorithm
+#if defined(__cpp_lib_parallel_algorithm) && __has_include(<tbb/tbb.h>)
 #include <execution>
 #endif
 
@@ -277,6 +277,7 @@ class Bonded : public Energybase {
         assert(std::is_sorted(indices_of_particles.begin(), indices_of_particles.end()));
 
         auto bond_filter = [&](const auto &bond_ptr) { // determine if bond is part of indices of particles
+            return false;
             for (auto index : bond_ptr->index) {
                 if (std::binary_search(indices_of_particles.begin(), indices_of_particles.end(), index)) {
                     return true;
@@ -286,17 +287,14 @@ class Bonded : public Energybase {
         };
         auto affected_bonds = bonds | ranges::cpp20::views::filter(bond_filter);
 
+        auto bond_energy = [&](const auto &bond_ptr) { return bond_ptr->energyFunc(spc.geo.getDistanceFunc()); };
+
 #if (defined(__clang__) && __clang_major__ >= 10) || (defined(__GNUC__) && __GNUC__ >= 9 && __GNUC_MINOR__ >= 3)
-        return std::transform_reduce(affected_bonds.begin(), affected_bonds.end(), 0.0, std::plus<>(),
-                                     [&](const auto &bond_ptr) {
-                                         assert(bond_ptr->hasEnergyFunction());
-                                         return bond_ptr->energyFunc(spc.geo.getDistanceFunc());
-                                     });
+        return std::transform_reduce(affected_bonds.begin(), affected_bonds.end(), 0.0, std::plus<>(), bond_energy);
 #else
         double energy = 0.0;
         for (const auto &bond_ptr : affected_bonds) {
-            assert(bond_ptr->hasEnergyFunction());
-            energy += bond_ptr->energyFunc(spc.geo.getDistanceFunc());
+            energy += bond_energy(bond_ptr);
         }
         return energy;
 #endif

@@ -1094,7 +1094,7 @@ TEST_CASE("[Faunus] Chameleon") {
         double edge = 5.0, height = 20.0;
         Point box_size = std::cbrt(2.0) * Point(2 * edge, 2 * edge, height); // a bit larger in x-direction
         Cuboid box(box_size);
-        HexagonalPrism geo(edge);
+        HexagonalPrism geo(edge, height);
         Chameleon chameleon(geo, HEXAGONAL);
         compare_boundary(chameleon, geo, box);
         compare_vdist(chameleon, geo, box);

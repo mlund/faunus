@@ -39,6 +39,15 @@ add_test(
 set_property(TEST penalty APPEND PROPERTY ENVIRONMENT FAUNUS_EXECUTABLE=$<TARGET_FILE:faunus>)
 set_property(TEST penalty APPEND PROPERTY ENVIRONMENT YASON_EXECUTABLE=${YASON})
 
+if (ENABLE_MPI)
+    add_test(
+        NAME temper
+        COMMAND sh -c "jupyter nbconvert --execute temper.ipynb --ExecutePreprocessor.timeout=None"
+        WORKING_DIRECTORY ${EXAMPLES_DIR}/temper)
+    set_property(TEST temper APPEND PROPERTY ENVIRONMENT FAUNUS_EXECUTABLE=$<TARGET_FILE:faunus>)
+    set_property(TEST temper APPEND PROPERTY ENVIRONMENT MPIEXEC=${MPIEXEC_EXECUTABLE})
+endif()
+
 add_test(
         NAME multipole
         COMMAND sh -c "jupyter nbconvert --execute multipole.ipynb --ExecutePreprocessor.timeout=None"
@@ -254,6 +263,8 @@ install(FILES
         ${EXAMPLES_DIR}/swapconf/swapconf.state.json
         ${EXAMPLES_DIR}/swapconf/swapconf.conformations.pqr
         ${EXAMPLES_DIR}/swapconf/swapconf.weights.dat
+        ${EXAMPLES_DIR}/temper/temper.yml
+        ${EXAMPLES_DIR}/temper/temper.ipynb
         ${EXAMPLES_DIR}/titration/titration.yml
         ${EXAMPLES_DIR}/titration/titration.out.json
         ${EXAMPLES_DIR}/titration/titration.state.json

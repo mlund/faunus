@@ -3,7 +3,7 @@
 #   $ yason.py penalty.yml | mpirun --np 4 --stdin all faunus
 #
 temperature: 300
-#random: { seed: fixed }
+random: { seed: fixed }
 mcloop: { macro: 10, micro: {{micro}} }
 geometry: {type: cuboid, length: [4,4,4]}
 atomlist:

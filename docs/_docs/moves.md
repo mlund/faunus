@@ -233,7 +233,8 @@ replica prefixes input and output files with `mpi0.`, `mpi1.`,
 etc. and only exchange between neighboring processes is performed.
 
 Parallel tempering is currently limited to systems with
-constant number of particles, $N$.
+constant number of particles, $N$, and the move is performed exactly
+once per Monte Carlo cycle.
 
 
 ## Volume Move

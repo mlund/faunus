@@ -1213,9 +1213,22 @@ class SASAEnergy : public Energybase {
 }; //!< SASA energy from transfer free energies
 #endif
 
-struct Example2D : public Energybase {
-    Point &i; // reference to 1st particle in the system
-    Example2D(const json &, Space &spc);
+/**
+ * @brief Oscillating energy on a single particle
+ *
+ * This is 2D version of the oscillating potential used
+ * to illustrate parallel tempering in the book
+ * "Understanding Molecular Simulation" by D. Frenkel.
+ */
+class Example2D : public Energybase {
+  private:
+    bool use_2d = true;        // Set to false to apply energy only along x (as by the book)
+    double scale_energy = 1.0; // effective temperature
+    const Point &particle;     // reference to 1st particle in the system
+    void to_json(json &j) const override;
+
+  public:
+    Example2D(const json &j, Space &spc);
     double energy(Change &change) override;
 };
 

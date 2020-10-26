@@ -67,8 +67,8 @@ class MetropolisMonteCarlo {
     double sum_of_energy_changes = 0.0;           //!< Sum of all potential energy changes
     double initial_energy = 0.0;                  //!< Initial potential energy
     Average<double> average_energy;               //!< Average potential energy of the system
-    bool metropolis(double du) const;             //!< Metropolis criterion
     void init();                                  //!< Reset state
+    void perform_move(std::shared_ptr<Move::Movebase>); //!< Perform move using given move implementation
 
   public:
     MetropolisMonteCarlo(const json &, MPI::MPIController &);
@@ -78,6 +78,7 @@ class MetropolisMonteCarlo {
     void move();                                               //!< Perform random Monte Carlo move
     void restore(const json &);                                //!< Restores system from previously store json object
     friend void to_json(json &, const MetropolisMonteCarlo &); //!< Write information to JSON object
+    static bool metropolis(double energy_change);              //!< Metropolis criterion
 };
 
 void from_json(const json &, MetropolisMonteCarlo::State &); //!< Build state from json object

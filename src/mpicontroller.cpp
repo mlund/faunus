@@ -51,6 +51,11 @@ namespace Faunus {
         int MPIController::rank() const { return _rank; }
         int MPIController::rankMaster() const { return _master; }
         bool MPIController::isMaster() const { return (_rank==_master); }
+        void MPIController::barrier() const {
+#ifdef ENABLE_MPI
+            MPI_Barrier(mpi.comm);
+#endif
+        }
 
         void to_json(json &j, const MPIController &m) {
             j = {

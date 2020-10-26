@@ -74,6 +74,7 @@ out.cereal
 .idea/**/usage.statistics.xml
 .idea/**/dictionaries
 .idea/**/shelf
+.idea/deployment.xml
 
 # Generated files
 .idea/**/contentModel.xml

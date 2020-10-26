@@ -5,6 +5,7 @@
 #include "clustermove.h"
 #include "chainmove.h"
 #include "forcemove.h"
+#include "montecarlo.h"
 #include "aux/iteratorsupport.h"
 #include "aux/eigensupport.h"
 #include "spdlog/spdlog.h"
@@ -266,9 +267,11 @@ Propagator::Propagator(const json &j, Space &spc, Energy::Hamiltonian &pot, MPI:
                 }
                 // new moves go here...
 #ifdef ENABLE_MPI
-                else if (it.key() == "temper")
+                else if (it.key() == "temper") {
                     _moves.emplace_back<Move::ParallelTempering>(spc, mpi);
-                    // new moves requiring MPI go here...
+                    _moves.back()->repeat = 0; // this gives the move ZERO weight
+                }
+                // new moves requiring MPI go here...
 #endif
                 if (_moves.size() == oldsize + 1) {
                     _moves.back()->from_json(it.value());
@@ -292,98 +295,151 @@ void to_json(json &j, const Propagator &propagator) { j = propagator._moves; }
 
 #ifdef ENABLE_MPI
 
-void ParallelTempering::findPartner() {
-    int dr = 0;
-    partner = mpi.rank();
-    (mpi.random() > 0.5) ? dr++ : dr--;
-    (mpi.rank() % 2 == 0) ? partner += dr : partner -= dr;
-}
-bool ParallelTempering::goodPartner() {
-    assert(partner != mpi.rank() && "Selfpartner! This is not supposed to happen.");
-    if (partner >= 0)
-        if (partner < mpi.nproc())
-            if (partner != mpi.rank())
-                return true;
-    return false;
-}
 void ParallelTempering::_to_json(json &j) const {
-    j = {{"replicas", mpi.nproc()}, {"datasize", pt.getFormat()}};
+    j = {{"replicas", mpi.nproc()}, {"datasize", particle_transmitter.getFormat()}};
     json &_j = j["exchange"];
     _j = json::object();
-    for (auto &m : accmap)
-        _j[m.first] = {{"attempts", m.second.cnt}, {"acceptance", m.second.avg()}};
+    for (const auto &[id, acceptance] : acceptance_map) {
+        _j[id] = {{"attempts", acceptance.cnt}, {"acceptance", acceptance.avg()}};
+    }
 }
-void ParallelTempering::_move(Change &change) {
-    double Vold = spc.geo.getVolume();
-    findPartner();
-    Tpvec p; // temperary storage
-    p.resize(spc.p.size());
-    if (goodPartner()) {
+
+void ParallelTempering::findPartner() {
+    auto true_or_false = static_cast<bool>(mpi.random.range(0, 1));
+    int rank_increment = true_or_false ? 1 : -1;
+    if (mpi.rank() % 2 == 0) { // even replica
+        partner = mpi.rank() + rank_increment;
+    } else { // odd replica
+        partner = mpi.rank() - rank_increment;
+    }
+}
+
+bool ParallelTempering::goodPartner() {
+    if (partner >= 0 && partner < mpi.nproc() && partner != mpi.rank()) {
+        return true;
+    } else {
+        partner = -1;
+        return false;
+    }
+}
+
+/**
+ * This will exchange the states between two partner replicas and set the change object accordingy
+ */
+void ParallelTempering::exchangeState(Change &change) {
+    assert(partner != -1);
+    auto old_volume = spc.geo.getVolume();
+    particle_transmitter.sendExtra.at(VOLUME) = old_volume;      // copy current volume for sending
+    partner_particles->resize(spc.p.size());                     // temparary storage
+    particle_transmitter.recv(mpi, partner, *partner_particles); // receive particles
+    particle_transmitter.send(mpi, spc.p, partner);              // send everything
+    particle_transmitter.waitrecv();
+    particle_transmitter.waitsend();
+
+    auto new_volume = particle_transmitter.recvExtra.at(VOLUME);
+    if (new_volume < very_small_volume || spc.p.size() != partner_particles->size()) {
+        MPI_Abort(mpi.comm, 1);
+    } else {
         change.all = true;
-        pt.sendExtra[VOLUME] = Vold; // copy current volume for sending
-        // store group sizes
-        for (auto &g : spc.groups) {
-            pt.sendExtra.push_back((float)g.size());
-        }
-        pt.recv(mpi, partner, p);     // receive particles
-        pt.send(mpi, spc.p, partner); // send everything
-        pt.waitrecv();
-        pt.waitsend();
-
-        double Vnew = pt.recvExtra[VOLUME];
-        if (Vnew < 1e-9 || spc.p.size() != p.size())
-            MPI_Abort(mpi.comm, 1);
-
-        if (std::fabs(Vnew - Vold) > 1e-9)
+        if (std::fabs(new_volume - old_volume) > pc::epsilon_dbl) {
             change.dV = true;
+            spc.geo.setVolume(new_volume);
+        }
+        spc.updateParticles(partner_particles->begin(), partner_particles->end(), spc.p.begin());
+    }
+}
 
-        spc.p = p;
-        spc.geo.setVolume(Vnew);
+void ParallelTempering::_move(Change &change) {
+    mpi.barrier(); // wait until all ranks reach here
+    findPartner();
+    if (goodPartner()) {
+        exchangeState(change);
+    }
+}
 
-        size_t i = 0;
-        for (auto &g : spc.groups) {
-            // assign correct sizes to the groups
-            g.resize((int)pt.recvExtra[i + 1]);
-            if (g.atomic == false) {
-                // update mass center of molecular groups
-                g.cm = Geometry::massCenter(g.begin(), g.end(), spc.geo.getBoundaryFunc(), -g.begin()->pos);
-            }
-            ++i;
+/**
+ * @param energy_change Energy change of current replica
+ * @return Energy change in partner replica
+ *
+ * In the MC move, the energy of the current replica and
+ * the bias (== energy change of the partner) are added together
+ * to form the final trial energy for the tempering move.
+ */
+double ParallelTempering::exchangeEnergy(double energy_change) {
+    assert(partner >= 0);
+    std::vector<MPI::FloatTransmitter::floatp> energy_change_vector = {energy_change};
+    auto energy_change_partner = float_transmitter.swapf(mpi, energy_change_vector, partner);
+    return energy_change_partner.at(0); // return partner energy change
+}
+
+/**
+ * The bias() function takes the current old and new energy and exchanges
+ * the resulting energy change with the partner replica. The change in the
+ * replica is returned.
+ *
+ * @todo Here we could run a custom Metropolis criterion and return +/- infinity
+ * to trigger accept/reject. This would remedy the dangerous expectation that
+ * the states of the random number generators (Movebase) are aligned on all nodes.
+ * This would however ignore other bias contributions, particularly it would prove
+ * problematic with grand canonical moves.
+ */
+double ParallelTempering::bias(Change &, double uold, double unew) {
+    assert(partner != -1);
+    if constexpr (false) {
+        // todo: add sanity check for random number generator state in partnering replicas.
+        return exchangeEnergy(unew - uold); // exchange change with partner (MPI)
+    } else {
+        double energy_change = unew - uold;
+        double partner_energy_change = exchangeEnergy(energy_change);
+        if (MetropolisMonteCarlo::metropolis(energy_change + partner_energy_change)) {
+            return pc::neg_infty; // accept!
+        } else {
+            return pc::infty; // reject!
         }
     }
 }
-double ParallelTempering::exchangeEnergy(double mydu) {
-    std::vector<MPI::FloatTransmitter::floatp> duSelf(1), duPartner;
-    duSelf[0] = mydu;
-    duPartner = ft.swapf(mpi, duSelf, partner);
-    return duPartner.at(0); // return partner energy change
+
+std::string ParallelTempering::id() const {
+    assert(partner != -1);
+    // note `std::minmax(a,b)` takes _references_; the initializer list (used here) takes a _copy_
+    const auto pair = std::minmax({mpi.rank(), partner});
+    return fmt::format("{} <-> {}", pair.first, pair.second);
 }
-double ParallelTempering::bias(Change &, double uold, double unew) {
-    return exchangeEnergy(unew - uold); // Exchange dU with partner (MPI)
-}
-std::string ParallelTempering::id() {
-    std::ostringstream o;
-    if (mpi.rank() < partner)
-        o << mpi.rank() << " <-> " << partner;
-    else
-        o << partner << " <-> " << mpi.rank();
-    return o.str();
-}
+
 void ParallelTempering::_accept(Change &) {
-    if (goodPartner())
-        accmap[id()] += 1;
+    acceptance_map[id()] += 1;
 }
 void ParallelTempering::_reject(Change &) {
-    if (goodPartner())
-        accmap[id()] += 0;
+    acceptance_map[id()] += 0;
 }
-void ParallelTempering::_from_json(const json &j) { pt.setFormat(j.value("format", std::string("XYZQI"))); }
+
+void ParallelTempering::_from_json(const json &j) {
+    particle_transmitter.setFormat(j.value("format", std::string("XYZQI")));
+}
+
 ParallelTempering::ParallelTempering(Space &spc, MPI::MPIController &mpi) : spc(spc), mpi(mpi) {
     name = "temper";
-    partner = -1;
-    pt.recvExtra.resize(1);
-    pt.sendExtra.resize(1);
+    if (mpi.nproc() < 2) {
+        throw std::runtime_error(name + " requires two or more MPI processes");
+    }
+    partner_particles = std::make_shared<ParticleVector>();
+    partner_particles->reserve(spc.p.size());
+    particle_transmitter.recvExtra.resize(1);
+    particle_transmitter.sendExtra.resize(1);
 }
+
+/**
+ * At the end of the simulation, the state of the random number generators
+ * must be the same on all ranks. Run with verbose logging (trace) and observe output!
+ */
+ParallelTempering::~ParallelTempering() {
+#ifndef NDEBUG
+    faunus_logger->trace("mpi{}: last random number (Movebase) = {}", mpi.rank(), slump());
+    faunus_logger->trace("mpi{}: last random number (Temper) = {}", mpi.rank(), random());
+    faunus_logger->trace("mpi{}: last random number (MPI) = {}", mpi.rank(), mpi.random());
+#endif
+}
+
 #endif
 
 void VolumeMove::_to_json(json &j) const {

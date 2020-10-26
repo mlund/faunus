@@ -677,20 +677,7 @@ double Bonded::sum_energy(const Bonded::BondVector &bonds) const {
     }
     return energy;
 }
-double Bonded::sum_energy(const Bonded::BondVector &bonds, const std::vector<int> &particles_ndx) const {
-    double energy = 0;
-    // outer loop over bonds to ensure that each bond is counted at most once
-    for (const auto &bond : bonds) {
-        for (const auto particle_ndx : particles_ndx) {
-            if (std::find(bond->index.begin(), bond->index.end(), particle_ndx) != bond->index.end()) {
-                assert(bond->hasEnergyFunction());
-                energy += bond->energyFunc(spc.geo.getDistanceFunc());
-                break; // count each interaction at most once
-            }
-        }
-    }
-    return energy;
-}
+
 Bonded::Bonded(const json &j, Space &spc) : spc(spc) {
     name = "bonded";
     update_intra();
@@ -730,13 +717,12 @@ double Bonded::energy(Change &change) {
                         if (not spc.groups[changed.index].empty())
                             energy += sum_energy(intra_group);
                     } else { // only partial update of affected atoms
-                        std::vector<int> atoms_ndx;
                         // an offset is the index of the first particle in the group
                         const int offset = std::distance(spc.p.begin(), spc.groups[changed.index].begin());
                         // add an offset to the group atom indices to get the absolute indices
-                        std::transform(changed.atoms.begin(), changed.atoms.end(), std::back_inserter(atoms_ndx),
-                                       [offset](int i) { return i + offset; });
-                        energy += sum_energy(intra_group, atoms_ndx);
+                        auto particle_indices =
+                            changed.atoms | ranges::cpp20::views::transform([offset](auto i) { return i + offset; });
+                        energy += sum_energy(intra_group, particle_indices);
                     }
                 }
             }

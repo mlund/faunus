@@ -310,13 +310,14 @@ For more information, see the Topology section and [doi:10/fqcpg3](https://doi.o
 --------------- | ----------------------------------
 `repeat=1`      |  Average number of moves per sweep
 
-### Replay
+
+## Replay
 
 `replay`         | Description
 ---------------- | ----------------------------
-`file`           | Trajectory to read (xtc)
+`file`           | Trajectory file to read (xtc)
 
-Use a next frame of the recorded trajectory as a move. The move is always unconditionally accepted,
+Use next frame of the recorded trajectory as a move. The move is always unconditionally accepted,
 hence it may be used to replay a simulation, e.g., for analysis. Currently only Gromacs compressed
 trajectory file format (XTC) is supported. Note that total number of steps (macro × micro) should
 correspond to the number of frames in the trajectory.

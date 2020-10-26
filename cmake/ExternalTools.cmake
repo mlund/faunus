@@ -105,8 +105,8 @@ endif()
 
 FetchContent_Declare(
     rangev3
-    URL "https://github.com/ericniebler/range-v3/archive/0.10.0.tar.gz"
-    URL_HASH MD5=2a68ca385f70d62398365cc2923d0573)
+    URL "https://github.com/ericniebler/range-v3/archive/0.11.0.tar.gz"
+    URL_HASH MD5=97ab1653f3aa5f9e3d8200ee2a4911d3)
 
 FetchContent_GetProperties(rangev3)
 if(NOT rangev3_POPULATED)

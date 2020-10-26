@@ -1,10 +1,30 @@
 #include <doctest/doctest.h>
 #include "units.h"
+#include <cmath>
 
 double Faunus::PhysicalConstants::temperature = 298.15;
 
 std::string Faunus::u8::bracket(const std::string &s) {
     return "\u27e8" + s + "\u27e9";
+}
+
+TEST_CASE("[Faunus] infinite math") {
+    using namespace Faunus;
+    CHECK(std::isfinite(1.0 + pc::infty) == false);
+    CHECK(std::isinf(1.0 + pc::infty));
+    CHECK(std::isinf(1.0 + pc::neg_infty));
+    CHECK(std::isinf(1.0 / 0.0));
+    CHECK(std::isnan(pc::infty / pc::infty));
+    CHECK(1.0 / pc::infty == doctest::Approx(0.0));
+    CHECK(std::isfinite(0.0 / 0.0) == false);
+    CHECK(std::isnan(0.0 / 0.0));
+    CHECK(std::isinf(std::exp(pc::infty)));
+    CHECK(std::exp(pc::neg_infty) == doctest::Approx(0.0));
+    CHECK(std::isinf(std::log(pc::infty)));
+    CHECK(std::log(0.0) == pc::neg_infty);
+    CHECK(std::log(-0.0) == pc::neg_infty);
+    CHECK(std::isnan(std::log(-1.0)));
+    CHECK(std::isnan(std::sqrt(-1.0))); // is this needed?
 }
 
 /**

@@ -3,6 +3,7 @@
 #include "aux/iteratorsupport.h"
 #include "spdlog/spdlog.h"
 #include "aux/eigensupport.h"
+#include <memory>
 
 namespace Faunus {
 
@@ -277,6 +278,16 @@ size_t Space::numParticles(Space::Selection selection) const {
     } else {
         throw std::runtime_error("invalid selection");
     }
+}
+
+int Space::getGroupIndex(const Space::Tgroup &group) {
+    assert(!groups.empty());
+    auto index = std::addressof(group) - std::addressof(groups.front()); // std::ptrdiff_t
+    assert(std::abs(index) <= std::numeric_limits<int>::max());
+    if (index < 0 or index >= groups.size()) {
+        throw std::runtime_error("invalid group index");
+    }
+    return static_cast<int>(index);
 }
 
 TEST_CASE("Space::numParticles") {

@@ -532,7 +532,6 @@ ChargeMove::ChargeMove(Space &spc, std::string name, std::string cite) : MoveBas
 
 ChargeMove::ChargeMove(Space &spc) : ChargeMove(spc, "charge", "") {}
 
-
 void ChargeTransfer::_to_json(json &j) const {
     using namespace u8;
     j = {{"dq", dq},
@@ -898,90 +897,129 @@ AtomicSwapCharge::AtomicSwapCharge(Space &spc, std::string name, std::string cit
 AtomicSwapCharge::AtomicSwapCharge(Space &spc) : AtomicSwapCharge(spc, "swapcharge", "") {}
 
 void TranslateRotate::_to_json(json &j) const {
-    j = {{"dir", dir},
-         {"dp", dptrans},
-         {"dprot", dprot},
-         {"dirrot", dirrot},
+    j = {{"dir", translational_direction},
+         {"dp", translational_displacement},
+         {"dprot", rotational_displacement},
+         {"dirrot", fixed_rotation_axis},
          {"molid", molid},
-         {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(msqd.avg())},
-         {"molecule", molecules[molid].name}};
+         {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(mean_squared_displacement.avg())},
+         {"√⟨θ²⟩/°", std::sqrt(mean_squared_rotation_angle.avg()) / 1.0_deg},
+         {"molecule", Faunus::molecules[molid].name}};
     _roundjson(j, 3);
 }
 void TranslateRotate::_from_json(const json &j) {
-    assert(!molecules.empty());
     try {
-        std::string molname = j.at("molecule");
-        auto it = findName(molecules, molname);
-        if (it == molecules.end())
-            throw std::runtime_error("unknown molecule '" + molname + "'");
-        else if (it->atomic) { // Molecular translation doesn't work with atomic groups
-            throw std::runtime_error("molecule '" + molname + "' cannot be atomic");
-        }
-        molid = it->id();
-        dir = j.value("dir", Point(1, 1, 1));
-        dprot = j.at("dprot");
-        dirrot = j.value("dirrot", Point(0, 0, 0)); // predefined axis of rotation
-        dptrans = j.at("dp");
-        if (repeat < 0) {
-            auto v = spc.findMolecules(molid);
-            repeat = std::distance(v.begin(), v.end());
+        const auto molname = j.at("molecule").get<std::string>();
+        if (auto it = Faunus::findName(Faunus::molecules, molname); it == Faunus::molecules.end()) {
+            throw ConfigurationError("unknown molecule '{}'", molname);
+        } else if (it->atomic) {
+            throw ConfigurationError("molecule '{}' cannot be atomic", molname);
+        } else {
+            molid = it->id();
+            translational_direction = j.value("dir", Point(1, 1, 1));
+            translational_displacement = j.at("dp").get<double>();
+            rotational_displacement = j.at("dprot").get<double>();
+            fixed_rotation_axis = j.value("dirrot", Point(0, 0, 0)); // predefined axis of rotation
+            if (repeat < 0) {
+                repeat = spc.numMolecules<Space::Tgroup::ACTIVE>(molid);
+                if (repeat == 0) {
+                    faunus_logger->warn("no initial '{}' molecules found; setting repeat to 1", molname);
+                    repeat = 1;
+                } else {
+                    faunus_logger->debug("repeat = {} for molecule '{}'", repeat, molname);
+                }
+            }
         }
     } catch (std::exception &e) {
-        throw std::runtime_error(name + ": " + e.what());
+        throw ConfigurationError("{}: {}", name, e.what());
     }
 }
-void TranslateRotate::_move(Change &change) {
-    assert(molid >= 0);
-    assert(!spc.groups.empty());
-    assert(spc.geo.getVolume() > 0);
 
-    _sqd = 0;
-
-    // pick random group from the system matching molecule type
-    // TODO: This can be slow -- implement look-up-table in Space
-    auto mollist = spc.findMolecules(molid, Space::ACTIVE); // list of molecules w. 'molid'
-    if (not ranges::cpp20::empty(mollist)) {
-        auto it = slump.sample(mollist.begin(), mollist.end());
-        if (not it->empty()) {
-            assert(it->id == molid);
-
-            if (dptrans > 0) { // translate
-                Point oldcm = it->cm;
-                Point dp = ranunit(slump, dir) * dptrans * slump();
-
-                it->translate(dp, spc.geo.getBoundaryFunc());
-                _sqd = spc.geo.sqdist(oldcm, it->cm); // squared displacement
-            }
-
-            if (dprot > 0) { // rotate
-                Point u = ranunit(slump);
-                if (dirrot.count() > 0)
-                    u = dirrot;
-                double angle = dprot * (slump() - 0.5);
-                Eigen::Quaterniond Q(Eigen::AngleAxisd(angle, u));
-                it->rotate(Q, spc.geo.getBoundaryFunc());
-            }
-
-            if (dptrans > 0 || dprot > 0) { // define changes
-                Change::data d;
-                d.index = Faunus::distance(spc.groups.begin(), it); // integer *index* of moved group
-                d.all = true;                                       // *all* atoms in group were moved
-                change.groups.push_back(d);                         // add to list of moved groups
-            }
-#ifndef NDEBUG
-            // check if mass center is correctly moved and can be re-calculated
-            Point cm_recalculated = Geometry::massCenter(it->begin(), it->end(), spc.geo.getBoundaryFunc(), -it->cm);
-            double should_be_small = spc.geo.sqdist(it->cm, cm_recalculated);
-            if (should_be_small > 1e-6) {
-                std::cerr << "cm recalculated: " << cm_recalculated.transpose() << "\n";
-                std::cerr << "cm in group:     " << it->cm.transpose() << "\n";
-                assert(false);
-            }
-//            assert(spc.geo.sqdist(it->cm, Geometry::massCenter(it->begin(), it->end(), spc.geo.getBoundaryFunc(),
-//                                                               -it->cm)) < 1e-6);////////////////
-#endif
+/**
+ * @todo `mollist` scales linearly w. system size -- implement look-up-table in Space?
+ */
+std::optional<std::reference_wrapper<Space::Tgroup>> TranslateRotate::findRandomMolecule() const {
+    if (auto mollist = spc.findMolecules(molid, Space::ACTIVE); not ranges::cpp20::empty(mollist)) {
+        if (auto group_it = slump.sample(mollist.begin(), mollist.end()); not group_it->empty()) {
+            return *group_it;
         }
     }
+    return std::nullopt;
+}
+
+/**
+ * @param group Group to translate
+ * @return Squared translation distance of mass center
+ */
+double TranslateRotate::translateMolecule(Space::Tgroup &group) {
+    if (translational_displacement > 0.0) { // translate
+        const auto old_mass_center = group.cm;
+        const auto displacement_vector =
+            Faunus::ranunit(slump, translational_direction) * translational_displacement * slump();
+
+        group.translate(displacement_vector, spc.geo.getBoundaryFunc());
+        return spc.geo.sqdist(old_mass_center, group.cm);
+    } else {
+        return 0.0;
+    }
+}
+
+/**
+ * @param group Group to rotate
+ * @return Squared rotation angle around mass-center
+ */
+double TranslateRotate::rotateMolecule(Space::Tgroup &group) {
+    if (rotational_displacement > 0.0) {         // rotate
+        Point rotation_axis = Faunus::ranunit(slump); // rotate around random unit vector
+        if (fixed_rotation_axis.count() > 0.0) { // OR a fixed, user-defined vector
+            rotation_axis = fixed_rotation_axis;
+        }
+        const auto angle = rotational_displacement * (slump() - 0.5); // random rotation angle
+        const Eigen::Quaterniond quaternion(Eigen::AngleAxisd(angle, rotation_axis));
+        group.rotate(quaternion, spc.geo.getBoundaryFunc());
+        return angle * angle;
+    } else {
+        return 0.0;
+    }
+}
+
+void TranslateRotate::_move(Change &change) {
+    if (auto group = findRandomMolecule()) { // note that group is of type std::optional
+        latest_displacement_squared = translateMolecule(group->get());
+        latest_rotation_angle_squared = rotateMolecule(group->get());
+        if (latest_displacement_squared > 0.0 || latest_rotation_angle_squared > 0.0) { // report changes
+            auto &change_data = change.groups.emplace_back();
+            change_data.index = spc.getGroupIndex(group->get());     // integer *index* of moved group
+            change_data.all = true;                                  // *all* atoms in group were moved
+            change_data.internal = false;                            // internal energy is unchanged
+        }
+#ifndef NDEBUG
+        sanityCheck(group->get());
+#endif
+    } else {
+        latest_displacement_squared = 0.0;   // these are used to track mean squared
+        latest_rotation_angle_squared = 0.0; // translational and rotational displacements
+    }
+}
+
+void TranslateRotate::sanityCheck(const Space::Tgroup &group) const {
+    Point cm_recalculated = Geometry::massCenter(group.begin(), group.end(), spc.geo.getBoundaryFunc(), -group.cm);
+    double should_be_small = spc.geo.sqdist(group.cm, cm_recalculated);
+    if (should_be_small > 1e-6) {
+        std::cerr << "cm recalculated: " << cm_recalculated.transpose() << "\n";
+        std::cerr << "cm in group:     " << group.cm.transpose() << "\n";
+        assert(false);
+    }
+}
+
+void TranslateRotate::_accept(Change &) {
+    mean_squared_displacement += latest_displacement_squared;
+    mean_squared_rotation_angle += latest_rotation_angle_squared;
+}
+
+void TranslateRotate::_reject(Change &) {
+    mean_squared_displacement += 0.0;
+    mean_squared_rotation_angle += 0.0;
 }
 
 TranslateRotate::TranslateRotate(Space &spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {

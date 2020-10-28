@@ -100,6 +100,12 @@ class Space {
     json info();
 
     /**
+     * @brief Get index of given group in the group vector
+     * @throw If group is not part of space
+     */
+    int getGroupIndex(const Tgroup &group);
+
+    /**
      * @brief Update particles in Space from a source range
      *
      * @tparam iterator Iterator for source range

@@ -35,7 +35,7 @@ class MoveBase {
   public:
     static Random slump; //!< Shared for all moves
     std::string name;    //!< Name of move
-    std::string cite;    //!< Reference
+    std::string cite;    //!< Reference, preferable a short-doi, e.g. "doi:10/b9jq"
     int repeat = 1;      //!< How many times the move should be repeated per sweep
 
     void from_json(const json &);
@@ -69,9 +69,11 @@ class ReplayMove : public MoveBase {
     void _to_json(json &) const override;
     void _from_json(const json &) override;
     double bias(Change &, double, double) override;
+
   protected:
     using MoveBase::spc;
     ReplayMove(Space &spc, std::string name, std::string cite);
+
   public:
     explicit ReplayMove(Space &spc);
 };
@@ -99,6 +101,7 @@ class AtomicSwapCharge : public MoveBase {
   protected:
     using MoveBase::spc;
     AtomicSwapCharge(Space &spc, std::string name, std::string cite);
+
   public:
     explicit AtomicSwapCharge(Space &spc);
 };
@@ -126,6 +129,7 @@ class AtomicTranslateRotate : public MoveBase {
     void _reject(Change &) override;
 
     AtomicTranslateRotate(Space &spc, std::string name, std::string cite);
+
   public:
     explicit AtomicTranslateRotate(Space &spc);
 };
@@ -183,23 +187,30 @@ spc.geo.getBoundaryFunc()); #endif
  */
 class TranslateRotate : public MoveBase {
   protected:
-    typedef typename Space::Tpvec Tpvec;
-    using MoveBase::spc;
-    int molid = -1;
-    double dptrans = 0;
-    double dprot = 0;
-    Point dir = {1, 1, 1};
-    Point dirrot = {0, 0, 0}; // predefined axis of rotation
-    double _sqd;          // squared displacement
-    Average<double> msqd; // mean squared displacement
+    int molid = -1; //!< Molecule ID of the molecule(s) to move
+    Average<double> mean_squared_displacement;
+    Average<double> mean_squared_rotation_angle;
+
+    double latest_displacement_squared = 0.0;
+    double latest_rotation_angle_squared = 0.0;
+    double translational_displacement = 0.0;   //!< User defined displacement parameter
+    double rotational_displacement = 0.0;      //!< User defined rotational displacement parameter
+    Point translational_direction = {1, 1, 1}; //!< User defined directions along x, y, z
+    Point fixed_rotation_axis = {0, 0, 0};     //!< Axis of rotation. 0,0,0 == random.
+
+    std::optional<std::reference_wrapper<Space::Tgroup>> findRandomMolecule() const;
+    double translateMolecule(Space::Tgroup &group);
+    double rotateMolecule(Space::Tgroup &group);
+    void sanityCheck(const Space::Tgroup &group) const; // sanity check of move
 
     void _to_json(json &j) const override;
-    void _from_json(const json &j) override; //!< Configure via json object
+    void _from_json(const json &j) override;
     void _move(Change &change) override;
-    void _accept(Change &) override { msqd += _sqd; }
-    void _reject(Change &) override { msqd += 0; }
+    void _accept(Change &) override;
+    void _reject(Change &) override;
 
     TranslateRotate(Space &spc, std::string name, std::string cite);
+
   public:
     explicit TranslateRotate(Space &spc);
 };
@@ -249,6 +260,7 @@ class SmartTranslateRotate : public MoveBase {
     void _reject(Change &) override { msqd += 0; }
 
     SmartTranslateRotate(Space &spc, std::string name, std::string cite);
+
   public:
     explicit SmartTranslateRotate(Space &spc);
 };
@@ -281,9 +293,11 @@ class ConformationSwap : public MoveBase {
     void _from_json(const json &j) override; //!< Configure via json object
     void _move(Change &change) override;
     void _accept(Change &change) override;
+
   protected:
     using MoveBase::spc;
     ConformationSwap(Space &spc, std::string name, std::string cite);
+
   public:
     explicit ConformationSwap(Space &spc);
 
@@ -307,6 +321,7 @@ class VolumeMove : public MoveBase {
 
   protected:
     VolumeMove(Space &spc, std::string name, std::string cite);
+
   public:
     explicit VolumeMove(Space &spc);
 }; // end of VolumeMove
@@ -331,7 +346,8 @@ class ChargeMove : public MoveBase {
   protected:
     using MoveBase::spc;
     ChargeMove(Space &spc, std::string name, std::string cite);
-        public:
+
+  public:
     ChargeMove(Space &spc);
 };
 
@@ -399,6 +415,7 @@ class QuadrantJump : public MoveBase {
   protected:
     using MoveBase::spc;
     QuadrantJump(Space &spc, std::string name, std::string cite);
+
   public:
     explicit QuadrantJump(Space &spc);
 };

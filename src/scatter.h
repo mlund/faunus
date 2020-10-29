@@ -270,7 +270,7 @@ class StructureFactorPBC : private TSamplingPolicy {
   public:
     StructureFactorPBC(int q_multiplier) : p_max(q_multiplier){}
 
-    template <class Tpositions> void sample(Tpositions &positions, const Point &boxlength) {
+    template <class Tpositions> void sample(const Tpositions &positions, const Point &boxlength) {
         // https://gcc.gnu.org/gcc-9/porting_to.html#ompdatasharing
         // #pragma omp parallel for collapse(2) default(none) shared(directions, p_max, boxlength) shared(positions)
         #pragma omp parallel for collapse(2) default(shared)

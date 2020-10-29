@@ -128,9 +128,9 @@ void FormatAAM::save(const std::string &file, const ParticleVector &particles) {
 std::string FormatAAM::p2s(const Particle &particle, int zero_based_index) {
     std::ostringstream o;
     o.precision(5);
-    auto &atom = Faunus::atoms.at(particle.id);
-    o << atom.name << " " << zero_based_index + 1 << " " << particle.pos.transpose() << " " << particle.charge << " "
-      << atom.mw << " " << atom.sigma / 2 << "\n";
+    const auto &atom_data = particle.traits();
+    o << atom_data.name << " " << zero_based_index + 1 << " " << particle.pos.transpose() << " " << particle.charge
+      << " " << atom_data.mw << " " << atom_data.sigma / 2 << "\n";
     return o.str();
 }
 
@@ -200,7 +200,7 @@ Point FormatPQR::load(std::istream &stream, ParticleVector &destination, bool ke
             Particle particle;
             if (readAtomRecord(record, particle, radius)) { // read ATOM or HETATOM record
                 atom_index++;
-                AtomData &atom_data = Faunus::atoms.at(particle.id);
+                const AtomData &atom_data = particle.traits();
                 // does charge match AtomData?
                 if (std::fabs(atom_data.charge - particle.charge) > pc::epsilon_dbl) {
                     if (log_charge) {
@@ -219,13 +219,13 @@ Point FormatPQR::load(std::istream &stream, ParticleVector &destination, bool ke
                 }
 
                 // does radius match AtomData?
-                if (std::fabs(atom_data.sigma - 2 * radius) > pc::epsilon_dbl) {
+                if (std::fabs(atom_data.sigma - 2.0 * radius) > pc::epsilon_dbl) {
                     if (log_radius) {
                         faunus_logger->warn("radius mismatches in PQR file: using atomlist values");
                         log_radius = false;
                     }
-                    faunus_logger->info("radius mismatch on atom {0} {1}: using {2} (atomlist) over {3} (PQR)",
-                                        atom_data.name, atom_index, atom_data.sigma / 2, radius);
+                    faunus_logger->debug("radius mismatch on atom {0} {1}: using {2} (atomlist) over {3} (PQR)",
+                                         atom_data.name, atom_index, atom_data.sigma / 2, radius);
                 }
                 destination.push_back(particle);
             } else { // is it a CRYST1 record? (unit cell information)

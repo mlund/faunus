@@ -103,7 +103,7 @@ int main(int argc, const char **argv) {
         Scatter::StructureFactorPBC scatter(multiplications);
         ParticleVector particles;
         for (const auto filename : args["<files>"].asStringList()) {
-            faunus_logger->info("analysing {s}", filename);
+            faunus_logger->info("analysing {}", filename);
             particles.clear();
             auto box_dimensions = FormatPQR::load(filename, particles, true);
             auto positions = particles | ranges::cpp20::views::transform([&](const auto &p) { return p.pos; });

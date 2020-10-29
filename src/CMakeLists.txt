@@ -90,6 +90,13 @@ set_target_properties(faunus PROPERTIES
         POSITION_INDEPENDENT_CODE ON
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
+add_executable(pdb_scatter pdb_scatter.cpp)
+target_link_libraries(pdb_scatter PRIVATE libfaunus docopt progresstracker project_options)
+target_compile_definitions(pdb_scatter PRIVATE SPDLOG_COMPILED_LIB)
+set_target_properties(pdb_scatter PROPERTIES
+        POSITION_INDEPENDENT_CODE ON
+        LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+
 if (ENABLE_SID)
     if (SDL2_FOUND)
         # fix buggy sdl2: https://stackoverflow.com/questions/45730098/cmake-leading-or-trailing-whitespace-policy-cmp0004

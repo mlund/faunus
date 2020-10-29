@@ -270,7 +270,7 @@ class StructureFactorPBC : private TSamplingPolicy {
   public:
     StructureFactorPBC(int q_multiplier) : p_max(q_multiplier){}
 
-    template <class Tpositions> void sample(const Tpositions &positions, const Point &boxlength) {
+    template <class Tpositions> void sample(Tpositions &positions, const Point &boxlength) {
         // https://gcc.gnu.org/gcc-9/porting_to.html#ompdatasharing
         // #pragma omp parallel for collapse(2) default(none) shared(directions, p_max, boxlength) shared(positions)
         #pragma omp parallel for collapse(2) default(shared)
@@ -285,13 +285,13 @@ class StructureFactorPBC : private TSamplingPolicy {
                     // As of January 2020, only GCC exploits this using libmvec library if --ffast-math is enabled.
                     std::vector<T> qr_std(positions.size());
                     std::transform(positions.begin(), positions.end(), qr_std.begin(),
-                                   [&q](auto &r) { return q.dot(r); });
+                                   [&q](const auto &r) { return q.dot(r); });
                     // as of January 2020 the std::transform_reduce is not implemented in libc++
-                    for (auto &qr : qr_std) {
+                    for (const auto &qr : qr_std) {
                         sum_sin += std::sin(qr);
                     }
                     // as of January 2020 the std::transform_reduce is not implemented in libc++
-                    for (auto &qr : qr_std) {
+                    for (const auto &qr : qr_std) {
                         sum_cos += std::cos(qr);
                     }
                 } else if constexpr (method == EIGEN) {
@@ -304,7 +304,7 @@ class StructureFactorPBC : private TSamplingPolicy {
                 } else if constexpr (method == GENERIC) {
                     // TODO: Optimize also for other compilers than GCC by using a vector math library, e.g.,
                     // TODO: https://github.com/vectorclass/version2
-                    for (auto &r : positions) { // loop over positions
+                    for (const auto &r : positions) { // loop over positions
                         T qr = q.dot(r);        // scalar product q*r
                         sum_sin += sin(qr);
                         sum_cos += cos(qr);
@@ -351,7 +351,7 @@ template <typename T = float, typename TSamplingPolicy = SamplingPolicy<T>> clas
             for (int p = 1; p <= p_max; ++p) {                                             // loop over multiples of q
                 const Point q = 2.0 * pc::pi * p * directions[i].cwiseQuotient(boxlength); // scattering vector
                 T sum_cos = 0;
-                for (auto &r : positions) { // loop over positions
+                for (const auto &r : positions) { // loop over positions
                     // if q[i] == 0 then its cosine == 1 hence we can avoid cosine computation for performance reasons
                     T product = std::cos(T(q[0] * r[0]));
                     if (q[1] != 0)

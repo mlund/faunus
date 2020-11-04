@@ -27,7 +27,7 @@ class Movebase {
     TimeRelativeOfTotal<std::chrono::microseconds> timer;      //!< Timer for whole move
     TimeRelativeOfTotal<std::chrono::microseconds> timer_move; //!< Timer for _move() only
   protected:
-    unsigned long cnt = 0;
+    unsigned long cnt = 0; //!< Counter for total number of move attempts
     unsigned long accepted = 0;
     unsigned long rejected = 0;
 

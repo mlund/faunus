@@ -722,6 +722,15 @@ properties:
                             items: {type: string}
                             type: array
                         spread: {type: boolean}
+                        analysis:
+                            type: object
+                            description: "Shape analysis"
+                            additionalProperties: false
+                            properties:
+                                com: {type: boolean, default: true, description: "Use group COM positions or particle positions"}
+                                save_pqr: {type: boolean, default: false, description: "Save PQR files of clusters"}
+                                file: {type: string, description: "Output file for per-move analysis"}
+                                interval: {type: integer, default: 10, description: "Interval between samples"}
                         single_layer:
                             type: boolean
                             default: false

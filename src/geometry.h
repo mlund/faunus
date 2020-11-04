@@ -328,7 +328,7 @@ class TruncatedOctahedron : public GeometryImplementation {
 class Chameleon : public GeometryBase {
   private:
     Point len_or_zero = {0, 0, 0}; //!< Box length (if PBC) or zero (if no PBC) in given direction
-    Point len, len_half, len_inv; //!< Cached box dimensions, their half-values, and reciprocal values.
+    Point len, len_half, len_inv;  //!< Cached box dimensions, their half-values, and reciprocal values.
     std::unique_ptr<GeometryImplementation> geometry = nullptr; //!< A concrete geometry implementation.
     Variant _type;                                              //!< Type of concrete geometry.
     std::string _name;                                          //!< Name of concrete geometry, e.g., for json.
@@ -605,7 +605,7 @@ Tensor gyration(
     iterator begin, iterator end, const Point &mass_center, const BoundaryFunction boundary = [](auto &) {}) {
     Tensor S = Tensor::Zero();
     double total_mass = 0.0;
-    std::for_each(begin, end, [&](auto &particle) {
+    std::for_each(begin, end, [&](const auto &particle) {
         const auto mass = particle.traits().mw;
         Point r = particle.pos - mass_center; // get rid...
         boundary(r);                          // ...of PBC (if any)
@@ -620,6 +620,64 @@ Tensor gyration(
 }
 
 /**
+ * @brief Calculates a gyration tensor of a range of particles
+ *
+ * The gyration tensor is computed from the atomic position vectors with respect to the reference point
+ * which is always a center of mass,
+ * \f$ t_{i} = r_{i} - r_\mathrm{cm} \f$:
+ * \f$ S = (1 / \sum_{i=1}^{N} m_{i}) \sum_{i=1}^{N} m_{i} t_{i} t_{i}^{T} \f$
+ *
+ * Before the calculation, the molecule is made whole to moving it to the center or the
+ * simulation box (0,0,0), then apply the given boundary function.
+ *
+ * @param begin Iterator to first position
+ * @param end Iterator to past last position
+ * @param mass Iterator to first mass
+ * @param mass_center The mass center used as reference and to remove PBC
+ * @param boundary Function to apply periodic boundary functions (default: none)
+ * @return gyration tensor; or zero tensor if empty particle range
+ * @throws If total mass is non-positive
+ */
+template <typename position_iterator, typename mass_iterator>
+Tensor gyration(
+    position_iterator begin, position_iterator end, mass_iterator mass, const Point &mass_center,
+    const BoundaryFunction boundary = [](auto &) {}) {
+    Tensor S = Tensor::Zero();
+    double total_mass = 0.0;
+    std::for_each(begin, end, [&](const auto &position) {
+        Point r = position - mass_center; // get rid...
+        boundary(r);                      // ...of PBC (if any)
+        S += (*mass) * r * r.transpose();
+        total_mass += (*mass);
+        std::advance(mass, 1);
+    });
+    if (total_mass > 0.0) {
+        return S / total_mass;
+    } else {
+        throw std::runtime_error("gyration tensor: total mass must be positive");
+    }
+}
+
+/**
+ * @brief Shape descriptors derived from gyration tensor
+ *
+ * The class is prepared with operator overloads to work with `AverageObj`
+ * for averaging over multiple tensors
+ */
+struct ShapeDescriptors {
+    double gyration_radius_squared = 0.0;
+    double asphericity = 0.0;
+    double acylindricity = 0.0;
+    double relative_shape_anisotropy = 0.0; //!< relative shape anisotropy, kappa^2 (0=rod, 1=spherical)
+    ShapeDescriptors() = default;
+    ShapeDescriptors(const Tensor &gyration_tensor);             //!< Construct using an initial gyration tensor
+    ShapeDescriptors &operator+=(const ShapeDescriptors &other); //!< Add another gyration tensor; req. for averaging
+    ShapeDescriptors operator*(const double scale) const;        //!< Scale data; req. for averaging
+};
+
+void to_json(json &j, const ShapeDescriptors &shape); //!< Store Shape as json object
+
+/**
  * @brief Calculates an inertia tensor of a molecular group
  *
  * The inertia tensor is computed from the atomic position vectors with respect to a reference point,
@@ -630,8 +688,8 @@ Tensor gyration(
  * @return inertia tensor (a zero tensor for an empty group)
  */
 template <typename iter>
-Tensor inertia(iter begin, iter end, const Point origin = {0,0,0},
-        const BoundaryFunction boundary = [](const Point &) {}) {
+Tensor inertia(
+    iter begin, iter end, const Point origin = {0, 0, 0}, const BoundaryFunction boundary = [](const Point &) {}) {
     Tensor I = Tensor::Zero();
     for (auto it = begin; it != end; ++it) {
         Point t = it->pos - origin;

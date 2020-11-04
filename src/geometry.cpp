@@ -5,6 +5,7 @@
 #include "aux/eigensupport.h"
 #include <spdlog/spdlog.h>
 #include <cereal/archives/binary.hpp>
+#include <Eigen/Eigenvalues>
 
 namespace Faunus::Geometry {
 
@@ -593,6 +594,57 @@ ParticleVector mapParticlesOnSphere(const ParticleVector &source) {
                         destination.size(), radius.avg(), _rmsd, u8::angstrom,
                         Faunus::atoms.at(destination.at(0).id).name);
     return destination;
+}
+
+ShapeDescriptors::ShapeDescriptors(const Tensor &gyration_tensor) {
+    const auto principal_moment = Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d>(gyration_tensor).eigenvalues();
+    gyration_radius_squared = gyration_tensor.trace();
+    asphericity = 3.0 / 2.0 * principal_moment.z() - gyration_radius_squared / 2.0;
+    acylindricity = principal_moment.y() - principal_moment.x();
+    relative_shape_anisotropy = (asphericity * asphericity + 3.0 / 4.0 * acylindricity * acylindricity) /
+                                (gyration_radius_squared * gyration_radius_squared);
+}
+
+ShapeDescriptors &ShapeDescriptors::operator+=(const ShapeDescriptors &other) {
+    gyration_radius_squared += other.gyration_radius_squared;
+    asphericity += other.asphericity;
+    acylindricity += other.acylindricity;
+    relative_shape_anisotropy += other.relative_shape_anisotropy;
+    return *this;
+}
+
+ShapeDescriptors ShapeDescriptors::operator*(const double scale) const {
+    auto scaled = *this;
+    scaled.gyration_radius_squared *= scale;
+    scaled.asphericity *= scale;
+    scaled.acylindricity *= scale;
+    scaled.relative_shape_anisotropy *= scale;
+    return scaled;
+}
+
+void to_json(json &j, const ShapeDescriptors &shape) {
+    j = {{"Rg = √⟨s²⟩", std::sqrt(shape.gyration_radius_squared)},
+         {"asphericity (b)", shape.asphericity},
+         {"acylindricity (c)", shape.acylindricity},
+         {"relative shape anisotropy (𝜅²)", shape.relative_shape_anisotropy}};
+}
+
+TEST_CASE("[Faunus] ShapeDescriptors") {
+    using doctest::Approx;
+    std::vector<Point> positions = {{0, 0, 0}, {1, 0, 0}};
+    std::vector<double> masses = {1, 1};
+    Point origin = {0, 0, 0};
+    auto gyration_tensor = gyration(positions.begin(), positions.end(), masses.begin(), origin);
+    CHECK(gyration_tensor(0, 0) == Approx(0.5));
+
+    auto shape = ShapeDescriptors(gyration_tensor);
+    CHECK(shape.relative_shape_anisotropy == Approx(1.0));
+
+    positions = {{0, 1, 0}, {1, 0, 0}, {-1, 0, 0}, {0, -1, 0}, {0, 1, 1}, {1, 0, 1}, {-1, 0, 1}, {0, -1, 1}};
+    masses = {1, 1, 1, 1, 1, 1, 1, 1};
+    gyration_tensor = gyration(positions.begin(), positions.end(), masses.begin(), origin);
+    shape = ShapeDescriptors(gyration_tensor);
+    CHECK(shape.relative_shape_anisotropy == Approx(0.0));
 }
 
 TEST_CASE("[Faunus] HexagonalPrismToCuboid") {

@@ -245,6 +245,15 @@ For further reading regarding gyration tensor analysis and shape, see:
 
 - [doi:10.1021/ma00148a028](https://doi.org/10.1021/ma00148a028)
 - [doi:10.1063/1.1730022](https://doi.org/10.1063/1.1730022)
+- [wikipedia](https://en.wikipedia.org/wiki/Gyration_tensor)
+
+From the principal moments, $\lambda$, the following shape descriptors are calculated:
+
+- asphericity, $b = \lambda \_{{z}}^{{2}}-{\frac{1}{2}}\left(\lambda\_{{x}}^{{2}}+\lambda \_{{y}}^{{2}}\right)$.
+- acylindricity, $c = \lambda \_{{y}}^{{2}}-\lambda \_{{x}}^{{2}}$
+- relative shape anisotropy, $\kappa^2 ={\frac{3}{2}}{\frac  {\lambda\_{{x}}^{{4}}+\lambda\_{{y}}^{{4}}+\lambda\_{{z}}^{{4}}}{(\lambda \_{{x}}^{{2}}+\lambda \_{{y}}^{{2}}+\lambda \_{{z}}^{{2}})^{{2}}}}-{\frac{1}{2}}$
+
+
 
 `polymershape`             | Description
 -------------------------- | ----------------------------------------

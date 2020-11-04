@@ -95,6 +95,8 @@ Atomic _rotation_ affects only anisotropic particles such as dipoles, spherocyli
 `dp`            | Translational displacement (Å)
 `single_layer=false` | If `true`, stop cluster-growth after one layer around centered molecule (experimental)
 `satellites`    | Subset of `molecules` that cannot be cluster centers
+`com_shape=true`| Use mass centers for shape analysis instead of particle positions (affects analysis only)
+`analysis`      | See below
 
 This will attempt to rotate and translate clusters of molecular `molecules` defined by a distance `threshold`
 between mass centers.
@@ -121,7 +123,21 @@ cluster:
       cations cations: 0
    dp: 3
    dprot: 1
+   analysis: {file: cluster_shape.dat.gz}
 ```
+
+Using `analysis` the move also reports on the average cluster size; cluster size distribution; and
+relative shape anisotropy, $\kappa^2$ as a function of cluster size. If all particles in the cluster
+are distributed on a sphere then $\kappa^2=0$, while if on a straight line, $\kappa^2=1$. See the
+`polymershape` analysis for more information.
+
+`analysis`    | Description
+------------- | ----------------------------------------------------------------------------
+`com=true`    | Use molecule mass center instead of particle positions for shape anisotropy
+`file`        | If given save shape properties for each sample event
+`save_pqr`    | If set to true, save PQR files of cluster, one for each size 
+`interval=10` | Interval between samples
+
 
 ## Internal Degrees of Freedom
 

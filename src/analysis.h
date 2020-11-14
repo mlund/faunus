@@ -7,6 +7,8 @@
 #include "aux/timers.h"
 #include "aux/table_2d.h"
 #include "aux/equidistant_table.h"
+#include "aux/pairwise_iterator.h"
+#include <range/v3/to_container.hpp>
 #include <set>
 
 namespace cereal {
@@ -378,6 +380,99 @@ class VirtualVolume : public Analysisbase {
 
   public:
     VirtualVolume(const json &, Space &, Energy::Energybase &);
+};
+
+/**
+ * @brief Pressure analysis using the virial theorem
+ *
+ * This calculates the excess pressure tensor defined as
+ * @f[
+ * \mathcal{P} = \frac{1}{3V}\left <
+ * \sum_{i}^{N-1} \sum_{j=i+1}^N \mathbf{r}_{ij} \otimes \mathbf{f}_{ij}
+ * \right >_{NVT}
+ * @f]
+ *
+ * @todo Under construction. Was in Faunus v1 but later abandoned
+ */
+template <typename forcefunctor> class VirialPressure : public Analysisbase {
+    using Tgroup = Space::Tgroup;
+    Space &spc;
+    Tensor pressure_tensor;
+    std::vector<int> user_excluded_molids;          //!< User defined molids excluded from internal pressure
+    std::vector<int> groups_with_internal_pressure; //!< Index to `spc.groups[]`
+
+    void _from_json(const json &) override;
+
+    void _to_json(json &j) const override {
+        j["no_internal"] =
+            user_excluded_molids |
+            ranges::cpp20::views::transform([](auto molid) { return Faunus::molecules.at(molid).name; }) |
+            ranges::to<std::vector<std::string>>();
+    }
+    void _to_disk() override;
+
+    Tensor distance_x_force(const Particle &particle1, const Particle &particle2) const {
+        const Point distance = spc.geo.vdist(particle1.pos, particle2.pos);
+        const Point force = forcefunctor(particle1, particle2);
+        return distance * force.transpose();
+    }; // todo: get this from Hamiltonian...
+
+    Tensor group_to_group(const Tgroup &group1, const Tgroup &group2) const {
+        Tensor pressure_tensor;
+        pressure_tensor.setZero();
+        for (const auto &particle_i : group1) {
+            for (const auto &particle_j : group2) {
+                pressure_tensor += distance_x_force(particle_i, particle_j);
+            }
+        }
+        return pressure_tensor;
+    }
+
+    Tensor group_internal(const Tgroup &group) const {
+        Tensor pressure_tensor;
+        pressure_tensor.setZero();
+        for (auto particle1 = group.begin(); particle1 != group.end(); ++particle1) {
+            for (auto particle2 = particle1; ++particle2 != group.end();) {
+                pressure_tensor += distance_x_force(*particle1, *particle2);
+            }
+        }
+        return pressure_tensor;
+    }
+
+    void _sample() override {
+        // contributions from internal pressure
+        for (const auto index : groups_with_internal_pressure) {
+            pressure_tensor += group_internal(spc.groups.at(index));
+        }
+        // contributions from group-group interactions
+        for (const auto [group_i, group_j] : PairwiseIterator::internal_pairs(spc.groups)) {
+            pressure_tensor += group_to_group(group_i, group_j);
+        }
+    }
+
+  public:
+    VirialPressure(const json &j, Space &spc, Energy::Energybase &pot) {
+        pressure_tensor.setZero();
+        const auto excluded_molecules = j.value("no_internal", std::vector<std::string>());
+        user_excluded_molids = Faunus::names2ids(Faunus::molecules, excluded_molecules);
+        std::sort(user_excluded_molids.begin(), user_excluded_molids.end());
+
+        // Find groups with internal pressure (not user excluded ⋀ not rigid ⋁ marked compressible)
+        auto excluded = [&](const auto &group) {
+            return std::binary_search(user_excluded_molids.begin(), user_excluded_molids.end(), group.id);
+        };
+        int index = 0;
+        for (const Space::Tgroup &group : spc.groups) {
+            if (excluded(group)) {
+                faunus_logger->debug("{}: excluding {} ({}) from internal pressure", name, group.traits().name, index);
+            } else {
+                if (not group.traits().rigid or group.traits().compressible) {
+                    groups_with_internal_pressure.push_back(index);
+                }
+            }
+            index++;
+        }
+    }
 };
 
 /**

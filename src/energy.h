@@ -414,6 +414,16 @@ template <typename TPairPotential, bool allow_anisotropic_pair_potential = true>
     }
 
     /**
+     * @brief Contribution to pressure tensor, r x f.transpose()
+     */
+    template <typename T> inline Tensor force_x_distance(const T &a, const T &b) const {
+        assert(&a != &b); // a and b cannot be the same particle
+        const Point r = geometry.vdist(a.pos, b.pos);
+        const Point force = pair_potential.force(a, b, r.squaredNorm(), r);
+        return r * force.transpose();
+    }
+
+    /**
      * @brief A functor alias for potential().
      * @see potential()
      */

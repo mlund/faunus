@@ -116,19 +116,19 @@ template <class Trange> auto obtainName(Trange &rng, const std::string &name) {
  * a sequence containing all id's of the database, i.e.
  * `0, ..., database.size()-1`.
  */
-template <class Trange> std::vector<int> names2ids(Trange &database, const std::vector<std::string> &names) {
-    std::vector<AtomData::Tid> index;
+template <class Trange> std::vector<int> names2ids(const Trange &database, const std::vector<std::string> &names) {
+    std::vector<int> index;
     index.reserve(names.size());
-    for (auto &name : names) {
+    for (const auto &name : names) {
         if (name == "*") { // wildcard selecting all id's
             index.resize(database.size());
             std::iota(index.begin(), index.end(), 0);
             return index;
-        }
-        if (auto it = findName(database, name); it != database.end())
+        } else if (auto it = findName(database, name); it != database.end())
             index.push_back(it->id());
-        else
+        else {
             throw std::out_of_range("name '" + name + "' not found");
+        }
     }
     return index;
 }

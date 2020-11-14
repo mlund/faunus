@@ -46,6 +46,8 @@ namespace Faunus {
             public:
               using Titer = typename std::vector<T>::iterator;
               using const_iterator = typename std::vector<T>::const_iterator;
+              using reference = typename std::vector<T>::reference;
+              using const_reference = typename std::vector<T>::const_reference;
 
             private:
                 Titer _trueend;
@@ -105,7 +107,7 @@ namespace Faunus {
         template <class T /** Particle type */> class Group : public ElasticRange<T> {
           public:
             typedef ElasticRange<T> base;
-            typedef typename base::Titer iter;
+            using iterator = typename base::Titer;
             using base::begin;
             using base::empty;
             using base::end;
@@ -198,7 +200,7 @@ namespace Faunus {
 
             Group(Group &o);
             Group(const Group &o);
-            Group(iter begin, iter end); //!< Constructor
+            Group(iterator begin, iterator end); //!< Constructor
 
             Group& operator=(const Group &o); //!< Deep copy contents from another Group
 

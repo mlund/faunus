@@ -21,7 +21,7 @@ bool Change::empty() const {
 }
 Change::operator bool() const { return !empty(); }
 
-std::vector<int> Change::touchedParticleIndex(const std::vector<Group<Particle>> &group_vector) {
+std::vector<int> Change::touchedParticleIndex(const std::vector<Group<Particle>> &group_vector) const {
     std::vector<int> atom_indexes;                                   // atom index rel. to first particle in system
     for (const auto &changed : groups) {                             // loop over changed groups
         auto begin_first = group_vector.front().begin();             // first particle, first group
@@ -360,12 +360,12 @@ void from_json(const json &j, Space &spc) {
         throw std::runtime_error("error building space: "s + e.what());
     }
 }
-getActiveParticles::const_iterator::const_iterator(const Space &spc,
-                                                   getActiveParticles::const_iterator::Tparticle_iter it)
+ActiveParticles::const_iterator::const_iterator(const Space &spc, ActiveParticles::const_iterator::Tparticle_iter it)
     : spc(spc), particle_iter(it) {
     groups_iter = spc.groups.begin();
 }
-getActiveParticles::const_iterator getActiveParticles::const_iterator::operator++() { // advance particles and groups
+
+ActiveParticles::const_iterator ActiveParticles::const_iterator::operator++() { // advance particles and groups
     if (++particle_iter == groups_iter->end()) {
         do {
             if (++groups_iter == spc.groups.end()) {
@@ -376,15 +376,20 @@ getActiveParticles::const_iterator getActiveParticles::const_iterator::operator+
     }
     return *this;
 }
-getActiveParticles::const_iterator getActiveParticles::begin() const { return const_iterator(spc, spc.p.begin()); }
-getActiveParticles::const_iterator getActiveParticles::end() const {
+ActiveParticles::const_iterator ActiveParticles::begin() const {
+    return const_iterator(spc, spc.p.begin());
+}
+
+ActiveParticles::const_iterator ActiveParticles::end() const {
     return spc.groups.empty() ? begin() : const_iterator(spc, spc.groups.back().end());
 }
-size_t getActiveParticles::size() const {
+
+size_t ActiveParticles::size() const {
     return std::accumulate(spc.groups.begin(), spc.groups.end(), 0,
                            [](size_t sum, const auto &g) { return sum + g.size(); });
 }
-getActiveParticles::getActiveParticles(const Space &spc) : spc(spc) {}
+
+ActiveParticles::ActiveParticles(const Space &spc) : spc(spc) {}
 
 TEST_SUITE_BEGIN("Space");
 
@@ -419,7 +424,7 @@ TEST_CASE("[Faunus] Space") {
     // check `positions()`
     CHECK(&spc1.positions()[0] == &spc1.p[0].pos);
 
-    SUBCASE("getActiveParticles") {
+    SUBCASE("ActiveParticles") {
         // add three groups to space
         Space spc;
         spc.geo = R"( {"type": "sphere", "radius": 1e9} )"_json;
@@ -460,7 +465,7 @@ TEST_CASE("[Faunus] Space") {
         CHECK(spc.numMolecules<Space::Tgroup::INACTIVE>(1) == 1);
         CHECK(spc.numMolecules<Space::Tgroup::INACTIVE | Space::Tgroup::NEUTRAL>(1) == 0);
 
-        auto p = getActiveParticles(spc);
+        auto p = ActiveParticles(spc);
         size_t size = 0;
         std::vector<int> vals;
         for (const auto &i : p) {

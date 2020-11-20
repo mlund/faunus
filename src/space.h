@@ -40,7 +40,7 @@ struct Change {
     }
 
     //! List of changed atom index relative to first particle in system
-    std::vector<int> touchedParticleIndex(const std::vector<Group<Particle>> &);
+    std::vector<int> touchedParticleIndex(const std::vector<Group<Particle>> &) const;
 
     void clear();                                                 //!< Clear all change data
     bool empty() const;                                           //!< Check if change object is empty
@@ -290,7 +290,7 @@ class InsertMoleculesInSpace {
  * more efficient and is left here as an example of implementing a custom,
  * non-linear iterator.
  */
-struct getActiveParticles {
+struct ActiveParticles {
     const Space &spc;
     class const_iterator {
       private:
@@ -303,14 +303,15 @@ struct getActiveParticles {
       public:
         const_iterator(const Space &spc, Tparticle_iter it);
         const_iterator operator++();
-        bool operator!=(const const_iterator &other) const { return particle_iter != other.particle_iter; }
+        auto get() const { return std::pair{std::distance(particle_iter, spc.p.begin()), *particle_iter}; }
         auto operator*() const { return *particle_iter; }
+        bool operator!=(const const_iterator &other) const { return particle_iter != other.particle_iter; }
     }; // enable range-based for loops
 
     const_iterator begin() const;
     const_iterator end() const;
     size_t size() const;
-    getActiveParticles(const Space &spc);
+    ActiveParticles(const Space &spc);
 };
 
 // Make a global alias to easy transition to non-templated code

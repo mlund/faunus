@@ -12,7 +12,7 @@ class Hamiltonian;
 }
 
 namespace Move {
-class Movebase;
+class MoveBase;
 class Propagator;
 } // namespace Move
 
@@ -63,12 +63,12 @@ class MetropolisMonteCarlo {
     std::shared_ptr<State> state;                 //!< The accepted MC state
     std::shared_ptr<State> trial_state;           //!< Proposed or trial MC state
     std::shared_ptr<Move::Propagator> moves;      //!< Storage for all registered MC moves
-    std::shared_ptr<Move::Movebase> latest_move;  //!< Pointer to latest MC move
+    std::shared_ptr<Move::MoveBase> latest_move;  //!< Pointer to latest MC move
     double sum_of_energy_changes = 0.0;           //!< Sum of all potential energy changes
     double initial_energy = 0.0;                  //!< Initial potential energy
     Average<double> average_energy;               //!< Average potential energy of the system
     void init();                                  //!< Reset state
-    void perform_move(std::shared_ptr<Move::Movebase>); //!< Perform move using given move implementation
+    void perform_move(std::shared_ptr<Move::MoveBase>); //!< Perform move using given move implementation
 
   public:
     MetropolisMonteCarlo(const json &, MPI::MPIController &);

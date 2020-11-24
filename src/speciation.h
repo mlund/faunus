@@ -19,10 +19,10 @@ namespace Move {
  *    - deactivate reactants
  *    - activate products
  */
-class SpeciationMove : public Movebase {
+class SpeciationMove : public MoveBase {
   private:
     typedef decltype(Faunus::reactions)::iterator reaction_iterator;
-    Space &spc;                 //!< Trial space (particles, groups)
+    using MoveBase::spc;        //!< Trial space (particles, groups)
     Space *other_spc = nullptr; //!< Old space (particles, groups)
     double bond_energy = 0;     //!< Accumulated bond energy if inserted/deleted molecule
     reaction_iterator reaction; //!< Randomly selected reaction
@@ -56,6 +56,7 @@ class SpeciationMove : public Movebase {
     Change::data activateMolecularGroup(Space::Tgroup &);                     //!< Activate molecular group
     Change::data deactivateMolecularGroup(Space::Tgroup &);                   //!< Deactivate molecular group
 
+    SpeciationMove(Space &, std::string, std::string);
   public:
     SpeciationMove(Space &);
     void setOther(Space &);

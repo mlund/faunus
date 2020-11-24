@@ -332,7 +332,7 @@ bool SpeciationMove::deactivateAllReactants(Change &change) {
     for (auto [molid, N_delete] : molecular_reactants) { // Delete
         if (N_delete <= 0 or Faunus::molecules[molid].isImplicit()) {
             continue;                         // implicit molecules are added/deleted after move
-        } else if (molecules[molid].atomic) { // reactant is an atomic group
+        } else if (Faunus::molecules[molid].atomic) { // reactant is an atomic group
             auto mollist = spc.findMolecules(molid, Tspace::ALL);
             assert(range_size(mollist) == 1);
             auto target = spc.findMolecules(molid, Tspace::ALL).begin();
@@ -491,10 +491,12 @@ void SpeciationMove::_reject(Change &) {
     }
 }
 
-SpeciationMove::SpeciationMove(Tspace &spc) : spc(spc) {
-    name = "rcmc";
-    cite = "doi:10/fqcpg3";
+SpeciationMove::SpeciationMove(Space &spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {
+    std::cout << "setting specmpve" << std::endl;
 }
+
+SpeciationMove::SpeciationMove(Space &spc) : SpeciationMove(spc, "rcmc", "doi:10/fqcpg3") {}
+
 void SpeciationMove::_from_json(const json &) {}
 
 } // end of namespace Move

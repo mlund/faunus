@@ -17,7 +17,7 @@ class Hamiltonian;
 
 namespace Move {
 
-class Movebase {
+class MoveBase {
   private:
     virtual void _move(Change &) = 0;                          //!< Perform move and modify change object
     virtual void _accept(Change &);                            //!< Call after move is accepted
@@ -27,6 +27,7 @@ class Movebase {
     TimeRelativeOfTotal<std::chrono::microseconds> timer;      //!< Timer for whole move
     TimeRelativeOfTotal<std::chrono::microseconds> timer_move; //!< Timer for _move() only
   protected:
+    Space &spc;            //!< Space to operate on
     unsigned long cnt = 0; //!< Counter for total number of move attempts
     unsigned long accepted = 0;
     unsigned long rejected = 0;
@@ -44,11 +45,12 @@ class Movebase {
     void reject(Change &);
     virtual double bias(Change &, double old_energy,
                         double new_energy); //!< adds extra energy change not captured by the Hamiltonian
-    inline virtual ~Movebase() = default;
+    MoveBase(Space &spc, std::string name, std::string cite) : spc(spc), name(name), cite(cite) {};
+    inline virtual ~MoveBase() = default;
 };
 
-void from_json(const json &, Movebase &); //!< Configure any move via json
-void to_json(json &, const Movebase &);
+void from_json(const json &, MoveBase &); //!< Configure any move via json
+void to_json(json &, const MoveBase &);
 
 /**
  * @brief Replay simulation from a trajectory
@@ -56,8 +58,7 @@ void to_json(json &, const Movebase &);
  * Particles' positions are updated in every step based on coordinates read from the trajectory. Currently only
  * XTCReader is supported.
  */
-class ReplayMove : public Movebase {
-    Space &spc;                                  //!< space to operate on
+class ReplayMove : public MoveBase {
     std::shared_ptr<XTCReader> reader = nullptr; //!< trajectory reader
     TrajectoryFrame frame;                       //!< recently read frame (w/o coordinates)
     bool end_of_trajectory = false;              //!< flag raised when end of trajectory was reached
@@ -68,17 +69,17 @@ class ReplayMove : public Movebase {
     void _to_json(json &) const override;
     void _from_json(const json &) override;
     double bias(Change &, double, double) override;
-
+  protected:
+    using MoveBase::spc;
+    ReplayMove(Space &spc, std::string name, std::string cite);
   public:
-    ReplayMove(Space &spc);
+    explicit ReplayMove(Space &spc);
 };
 
 /**
  * @brief Swap the charge of a single atom
  */
-class AtomicSwapCharge : public Movebase {
-  private:
-    Space &spc; // Space to operate on
+class AtomicSwapCharge : public MoveBase {
     int molid = -1;
     double ln10 = log(10);
     double pKa, pH;
@@ -95,18 +96,20 @@ class AtomicSwapCharge : public Movebase {
     void _accept(Change &) override;
     void _reject(Change &) override;
 
+  protected:
+    using MoveBase::spc;
+    AtomicSwapCharge(Space &spc, std::string name, std::string cite);
   public:
-    AtomicSwapCharge(Space &);
+    explicit AtomicSwapCharge(Space &spc);
 };
 
 /**
  * @brief Translate and rotate a molecular group
  */
-class AtomicTranslateRotate : public Movebase {
-  private:
+class AtomicTranslateRotate : public MoveBase {
     double _sqd; //!< temporary squared displacement
   protected:
-    Space &spc;                               //!< Space to operate on
+    using MoveBase::spc;
     int molid = -1;                           //!< Molecule id to move
     Point directions = {1, 1, 1};             //!< displacement directions
     Average<double> mean_square_displacement; //!< mean squared displacement
@@ -122,8 +125,9 @@ class AtomicTranslateRotate : public Movebase {
     void _accept(Change &) override;
     void _reject(Change &) override;
 
+    AtomicTranslateRotate(Space &spc, std::string name, std::string cite);
   public:
-    AtomicTranslateRotate(Space &);
+    explicit AtomicTranslateRotate(Space &spc);
 };
 
 /**
@@ -170,18 +174,17 @@ spc.geo.getBoundaryFunc()); #endif
            }
 
        public:
-           Atomic2dTranslateRotate(Tspace &spc) : base(spc) {
-               base::name = "transrot 2d";
-           }
+           Atomic2dTranslateRotate(Tspace &spc, std::string name, std::string cite) : base(spc, name, cite) {}
+           explicit Atomic2dTranslateRotate(Tspace &spc) : Atomic2dTranslateRotate(spc, "transrot 2d", "") {}
    };*/
 
 /**
  * @brief Translate and rotate a molecular group
  */
-class TranslateRotate : public Movebase {
+class TranslateRotate : public MoveBase {
   protected:
     typedef typename Space::Tpvec Tpvec;
-    Space &spc; // Space to operate on
+    using MoveBase::spc;
     int molid = -1;
     double dptrans = 0;
     double dprot = 0;
@@ -196,8 +199,9 @@ class TranslateRotate : public Movebase {
     void _accept(Change &) override { msqd += _sqd; }
     void _reject(Change &) override { msqd += 0; }
 
+    TranslateRotate(Space &spc, std::string name, std::string cite);
   public:
-    TranslateRotate(Space &spc);
+    explicit TranslateRotate(Space &spc);
 };
 
 /**
@@ -207,10 +211,10 @@ class TranslateRotate : public Movebase {
  *
  */
 
-class SmartTranslateRotate : public Movebase {
+class SmartTranslateRotate : public MoveBase {
   protected:
     typedef typename Space::Tpvec Tpvec;
-    Space &spc;
+    using MoveBase::spc;
 
     int molid = -1, refid1 = -1, refid2 = -1; // molecule to displace, reference atoms 1 and 2 defining geometry
     unsigned long cnt;
@@ -244,8 +248,9 @@ class SmartTranslateRotate : public Movebase {
     void _accept(Change &) override { msqd += _sqd; }
     void _reject(Change &) override { msqd += 0; }
 
+    SmartTranslateRotate(Space &spc, std::string name, std::string cite);
   public:
-    SmartTranslateRotate(Space &spc);
+    explicit SmartTranslateRotate(Space &spc);
 };
 
 /**
@@ -264,12 +269,11 @@ class SmartTranslateRotate : public Movebase {
  * @warning Weighted distributions untested and not verified for correctness
  * @date Malmo, November 2016
  */
-class ConformationSwap : public Movebase {
+class ConformationSwap : public MoveBase {
   private:
     typedef typename Space::Tpvec Tpvec;
     typedef MoleculeData Tmoldata;
     RandomInserter inserter;
-    Space &spc; // Space to operate on
     int molid = -1;
     int newconfid = -1;
 
@@ -277,19 +281,20 @@ class ConformationSwap : public Movebase {
     void _from_json(const json &j) override; //!< Configure via json object
     void _move(Change &change) override;
     void _accept(Change &change) override;
-
+  protected:
+    using MoveBase::spc;
+    ConformationSwap(Space &spc, std::string name, std::string cite);
   public:
-    ConformationSwap(Space &spc);
+    explicit ConformationSwap(Space &spc);
 
 }; // end of conformation swap move
 
-class VolumeMove : public Movebase {
+class VolumeMove : public MoveBase {
   private:
     const std::map<std::string, Geometry::VolumeMethod> methods = {
         {"z", Geometry::Z}, {"xy", Geometry::XY}, {"isotropic", Geometry::ISOTROPIC}, {"isochoric", Geometry::ISOCHORIC}};
     typename decltype(methods)::const_iterator method;
     typedef typename Space::Tpvec Tpvec;
-    Space &spc;
     Average<double> msqd, Vavg; // mean squared displacement
     double dV = 0, deltaV = 0, Vnew = 0, Vold = 0;
 
@@ -299,17 +304,19 @@ class VolumeMove : public Movebase {
     void _accept(Change &) override;
     void _reject(Change &) override;
 
+  protected:
+    using MoveBase::spc;
+    VolumeMove(Space &spc, std::string name, std::string cite);
   public:
-    VolumeMove(Space &spc);
+    explicit VolumeMove(Space &spc);
 }; // end of VolumeMove
 
 /**
  * @brief Displaces charge on a single atom
  */
-class ChargeMove : public Movebase {
+class ChargeMove : public MoveBase {
   private:
     typedef typename Space::Tpvec Tpvec;
-    Space &spc;           // Space to operate on
     Average<double> msqd; // mean squared displacement
     double dq = 0, deltaq = 0;
     int atomIndex;
@@ -321,17 +328,19 @@ class ChargeMove : public Movebase {
     void _accept(Change &) override;
     void _reject(Change &) override;
 
-  public:
+  protected:
+    using MoveBase::spc;
+    ChargeMove(Space &spc, std::string name, std::string cite);
+        public:
     ChargeMove(Space &spc);
 };
 
 /**
  * @brief Transfers charge between two molecules
  */
-class ChargeTransfer : public Movebase {
+class ChargeTransfer : public MoveBase {
   private:
     typedef typename Space::Tpvec Tpvec;
-    Space &spc;           // Space to operate on
     Average<double> msqd; // mean squared displacement
     double dq = 0, deltaq = 0;
 
@@ -359,8 +368,12 @@ class ChargeTransfer : public Movebase {
     void _accept(Change &) override;
     void _reject(Change &) override;
 
+  protected:
+    using MoveBase::spc;
+    ChargeTransfer(Space &spc, std::string name, std::string cite);
+
   public:
-    ChargeTransfer(Space &spc);
+    explicit ChargeTransfer(Space &spc);
 };
 
 /**
@@ -368,10 +381,9 @@ class ChargeTransfer : public Movebase {
  * considering as the origin the center of the box or the center of mass
  * of a range of atomic indexes specified by "index": [start:stop].
  */
-class QuadrantJump : public Movebase {
+class QuadrantJump : public MoveBase {
   private:
     typedef typename Space::Tpvec Tpvec;
-    Space &spc; // Space to operate on
     int molid = -1;
     Point dir = {1, 1, 1};
     std::vector<size_t> index;
@@ -384,8 +396,11 @@ class QuadrantJump : public Movebase {
     void _accept(Change &) override { msqd += _sqd; }
     void _reject(Change &) override { msqd += 0; }
 
+  protected:
+    using MoveBase::spc;
+    QuadrantJump(Space &spc, std::string name, std::string cite);
   public:
-    QuadrantJump(Space &spc);
+    explicit QuadrantJump(Space &spc);
 };
 
 #ifdef ENABLE_MPI
@@ -401,7 +416,7 @@ class QuadrantJump : public Movebase {
  *
  * @date Lund 2012, 2018
  */
-class ParallelTempering : public Movebase {
+class ParallelTempering : public MoveBase {
   private:
     double very_small_volume = 1e-9;
     Space &spc; // Space to operate on
@@ -442,7 +457,7 @@ class Propagator {
   private:
     int _repeat;
     std::discrete_distribution<> distribution;
-    BasePointerVector<Movebase> _moves; //!< list of moves
+    BasePointerVector<MoveBase> _moves; //!< list of moves
     std::vector<double> _weights;       //!< list of weights for each move
     void addWeight(double weight = 1);
 
@@ -459,7 +474,7 @@ class Propagator {
             //!< Needed for replica exchange or parallel tempering
             int offset = distribution(MPI::mpi.random.engine);
 #else
-            int offset = distribution(Move::Movebase::slump.engine);
+            int offset = distribution(Move::MoveBase::slump.engine);
 #endif
             return _moves.begin() + offset;
         }

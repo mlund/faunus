@@ -12,9 +12,9 @@
 
 namespace Faunus::Move {
 
-Random Movebase::slump; // static instance of Random (shared for all moves)
+Random MoveBase::slump; // static instance of Random (shared for all moves)
 
-void Movebase::from_json(const json &j) {
+void MoveBase::from_json(const json &j) {
     if (auto it = j.find("repeat"); it != j.end()) {
         if (it->is_number()) {
             repeat = it->get<int>();
@@ -32,7 +32,7 @@ void Movebase::from_json(const json &j) {
     }
 }
 
-void Movebase::to_json(json &j) const {
+void MoveBase::to_json(json &j) const {
     _to_json(j);
     if (timer_move.result() > 0.01) // only print if more than 1% of the time
         j["relative time (without energy calc)"] = timer_move.result();
@@ -46,7 +46,7 @@ void Movebase::to_json(json &j) const {
     _roundjson(j, 3);
 }
 
-void Movebase::move(Change &change) {
+void MoveBase::move(Change &change) {
     timer.start();
     timer_move.start();
     cnt++;
@@ -57,34 +57,36 @@ void Movebase::move(Change &change) {
     timer_move.stop();
 }
 
-void Movebase::accept(Change &c) {
+void MoveBase::accept(Change &c) {
     accepted++;
     _accept(c);
     timer.stop();
 }
 
-void Movebase::reject(Change &c) {
+void MoveBase::reject(Change &c) {
     rejected++;
     _reject(c);
     timer.stop();
 }
 
-double Movebase::bias(Change &, double, double) {
+double MoveBase::bias(Change &, double, double) {
     return 0; // du
 }
 
-void Movebase::_accept(Change &) {}
+void MoveBase::_accept(Change &) {}
 
-void Movebase::_reject(Change &) {}
+void MoveBase::_reject(Change &) {}
 
-void from_json(const json &j, Movebase &m) { m.from_json(j); }
+void from_json(const json &j, MoveBase &m) { m.from_json(j); }
 
-void to_json(json &j, const Movebase &m) {
+void to_json(json &j, const MoveBase &m) {
     assert(!m.name.empty());
     m.to_json(j[m.name]);
 }
 
-ReplayMove::ReplayMove(Space &spc) : spc(spc) { name = "replay"; }
+ReplayMove::ReplayMove(Space &spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {}
+
+ReplayMove::ReplayMove(Space &spc) : ReplayMove(spc, "replay", "") {}
 
 void ReplayMove::_to_json(json &j) const { j["file"] = reader->filename; }
 
@@ -192,12 +194,14 @@ void AtomicTranslateRotate::_move(Change &change) {
 void AtomicTranslateRotate::_accept(Change &) { mean_square_displacement += _sqd; }
 void AtomicTranslateRotate::_reject(Change &) { mean_square_displacement += 0; }
 
-AtomicTranslateRotate::AtomicTranslateRotate(Space &spc) : spc(spc) {
-    name = "transrot";
+AtomicTranslateRotate::AtomicTranslateRotate(Space &spc, std::string name, std::string cite)
+    : MoveBase(spc, name, cite) {
     repeat = -1; // meaning repeat N times
     cdata.atoms.resize(1);
     cdata.internal = true;
 }
+
+AtomicTranslateRotate::AtomicTranslateRotate(Space &spc) : AtomicTranslateRotate(spc, "transrot", "") {}
 
 /**
  * For atomic groups, select `ALL` since these may be partially filled and thereby
@@ -227,7 +231,7 @@ Propagator::Propagator(const json &j, Space &spc, Energy::Hamiltonian &pot, MPI:
 #pragma GCC diagnostic pop
 
     if (j.count("random") == 1) {
-        Movebase::slump = j["random"]; // slump is static --> shared for all moves
+        MoveBase::slump = j["random"]; // slump is static --> shared for all moves
         Faunus::random = j["random"];
     }
 
@@ -478,10 +482,11 @@ void VolumeMove::_accept(Change &) {
     msqd += deltaV * deltaV;
     Vavg += spc.geo.getVolume();
 }
-VolumeMove::VolumeMove(Space &spc) : spc(spc) {
-    name = "volume";
-    repeat = 1;
-}
+
+VolumeMove::VolumeMove(Space &spc, std::string name, std::string cite) : MoveBase(spc, name, cite) { repeat = 1; }
+
+VolumeMove::VolumeMove(Space &spc) : VolumeMove(spc, "volume", "") {}
+
 void VolumeMove::_reject(Change &) {
     msqd += 0;
     Vavg += spc.geo.getVolume();
@@ -514,12 +519,15 @@ void ChargeMove::_move(Change &change) {
 }
 void ChargeMove::_accept(Change &) { msqd += deltaq * deltaq; }
 void ChargeMove::_reject(Change &) { msqd += 0; }
-ChargeMove::ChargeMove(Space &spc) : spc(spc) {
-    name = "charge";
+
+ChargeMove::ChargeMove(Space &spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {
     repeat = 1;
     cdata.internal = true; // the group is internally changed
     cdata.atoms.resize(1); // we change exactly one atom
 }
+
+ChargeMove::ChargeMove(Space &spc) : ChargeMove(spc, "charge", "") {}
+
 
 void ChargeTransfer::_to_json(json &j) const {
     using namespace u8;
@@ -741,15 +749,16 @@ void ChargeTransfer::_move(Change &change) {
 
 void ChargeTransfer::_accept(Change &) { msqd += deltaq * deltaq; }
 void ChargeTransfer::_reject(Change &) { msqd += 0; }
-ChargeTransfer::ChargeTransfer(Space &spc) : spc(spc) {
 
-    name = "chargetransfer";
+ChargeTransfer::ChargeTransfer(Space &spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {
     repeat = -1; // meaning repeat N times
     mol1.cdata.internal = true;
     mol2.cdata.internal = true;
     // cdata1.atoms.resize(numOfAtoms1);
     // cdata2.atoms.resize(numOfAtoms2);
 }
+
+ChargeTransfer::ChargeTransfer(Space &spc) : ChargeTransfer(spc, "chargetransfer", "") {}
 
 void QuadrantJump::_to_json(json &j) const {
     j = {{"dir", dir},
@@ -811,10 +820,13 @@ void QuadrantJump::_move(Change &change) {
     } else
         faunus_logger->warn("{0}: no molecules found", name);
 }
-QuadrantJump::QuadrantJump(Space &spc) : spc(spc) {
-    name = "quadrantjump";
+
+QuadrantJump::QuadrantJump(Space &spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {
     repeat = -1; // meaning repeat N times
 }
+
+QuadrantJump::QuadrantJump(Space &spc) : QuadrantJump(spc, "quadrantjump", "") {}
+
 void AtomicSwapCharge::_to_json(json &j) const {
     j = {{"pH", pH},
          {"pka", pKa},
@@ -872,12 +884,15 @@ void AtomicSwapCharge::_move(Change &change) {
 double AtomicSwapCharge::bias(Change &, double, double) { return _bias; }
 void AtomicSwapCharge::_accept(Change &) { msqd += _sqd; }
 void AtomicSwapCharge::_reject(Change &) { msqd += 0; }
-AtomicSwapCharge::AtomicSwapCharge(Space &spc) : spc(spc) {
-    name = "swapcharge";
+
+AtomicSwapCharge::AtomicSwapCharge(Space &spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {
     repeat = -1; // meaning repeat N times
     cdata.atoms.resize(1);
     cdata.internal = true;
 }
+
+AtomicSwapCharge::AtomicSwapCharge(Space &spc) : AtomicSwapCharge(spc, "swapcharge", "") {}
+
 void TranslateRotate::_to_json(json &j) const {
     j = {{"dir", dir},
          {"dp", dptrans},
@@ -964,10 +979,12 @@ void TranslateRotate::_move(Change &change) {
         }
     }
 }
-TranslateRotate::TranslateRotate(Space &spc) : spc(spc) {
-    name = "moltransrot";
+
+TranslateRotate::TranslateRotate(Space &spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {
     repeat = -1; // meaning repeat N times
 }
+
+TranslateRotate::TranslateRotate(Space &spc) : TranslateRotate(spc, "moltransrot", "") {}
 } // namespace Faunus::Move
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
@@ -1196,10 +1213,11 @@ void SmartTranslateRotate::_move(Change &change) {
 
 double SmartTranslateRotate::bias(Change &, double, double) { return _bias; }
 
-SmartTranslateRotate::SmartTranslateRotate(Space &spc) : spc(spc) {
-    name = "smartmoltransrot";
+SmartTranslateRotate::SmartTranslateRotate(Space &spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {
     repeat = -1; // meaning repeat N times
 }
+
+SmartTranslateRotate::SmartTranslateRotate(Space &spc) : SmartTranslateRotate(spc, "smartmoltransrot", "") {}
 
 void ConformationSwap::_to_json(json &j) const {
     j = {{"molid", molid}, {"molecule", molecules[molid].name}, {"keeppos", inserter.keep_positions}};
@@ -1261,8 +1279,10 @@ void ConformationSwap::_accept(Change &change) {
     assert(change.groups.size() == 1);
     spc.groups[change.groups.front().index].confid = newconfid;
 }
-ConformationSwap::ConformationSwap(Space &spc) : spc(spc) {
-    name = "conformationswap";
+
+ConformationSwap::ConformationSwap(Space &spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {}
+
+ConformationSwap::ConformationSwap(Space &spc) : ConformationSwap(spc, "conformationswap", "") {
     repeat = -1; // meaning repeat n times
     inserter.dir = {0, 0, 0};
     inserter.rotate = true;

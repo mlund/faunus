@@ -7,7 +7,8 @@ namespace Faunus::Move {
 TEST_SUITE_BEGIN("ForceMove");
 
 /**
- * @brief Compute a single dimension contribution to the mean square thermal speed of a particle, i.e., compute 〈v²_x〉.
+ * @brief Compute a single dimension contribution to the mean square thermal speed of a particle, i.e.,
+ * compute 〈v²_x〉.
  *
  * This is equivalent to a one third of a total mean square thermal speed of a particle in three dimensions,
  * i.e., 〈v²〉 = 3 × 〈v²_x〉.
@@ -28,8 +29,7 @@ void to_json(json &j, const IntegratorBase &i) { i.to_json(j); }
 
 // =============== LangevinVelocityVerlet ===============
 
-LangevinVelocityVerlet::LangevinVelocityVerlet(Space &spc, Energy::Energybase &energy)
-    : IntegratorBase(spc, energy) {}
+LangevinVelocityVerlet::LangevinVelocityVerlet(Space &spc, Energy::Energybase &energy) : IntegratorBase(spc, energy) {}
 
 LangevinVelocityVerlet::LangevinVelocityVerlet(Space &spc, Energy::Energybase &energy, double time_step,
                                                double friction_coefficient)
@@ -40,11 +40,9 @@ LangevinVelocityVerlet::LangevinVelocityVerlet(Space &spc, Energy::Energybase &e
     from_json(j);
 }
 
-inline Point LangevinVelocityVerlet::positionIncrement(const Point& velocity) {
-    return 0.5 * time_step * velocity;
-}
+inline Point LangevinVelocityVerlet::positionIncrement(const Point &velocity) { return 0.5 * time_step * velocity; }
 
-inline Point LangevinVelocityVerlet::velocityIncrement(const Point& force, const double mass) {
+inline Point LangevinVelocityVerlet::velocityIncrement(const Point &force, const double mass) {
     // As forces are in kT per ångström units (a hybrid between reduced energy units and absolute units), we use
     // the mean square speed to compute acceleration from the force and as a conversion factor.
     // Dimension analysis: (ps * 1 / Å) * (Å^2 / ps^2) = Å / ps.
@@ -122,8 +120,9 @@ TEST_CASE("[Faunus] Integrator") {
 
 // =============== ForceMoveBase ===============
 
-ForceMoveBase::ForceMoveBase(Space &spc, std::shared_ptr<IntegratorBase> integrator, unsigned int nsteps)
-    : integrator(integrator), number_of_steps(nsteps), spc(spc) {
+ForceMoveBase::ForceMoveBase(Space &spc, std::string name, std::string cite,
+                             std::shared_ptr<IntegratorBase> integrator, unsigned int nsteps)
+    : MoveBase(spc, name, cite), integrator(integrator), number_of_steps(nsteps) {
     forces.reserve(spc.p.size());
     velocities.reserve(spc.p.size());
     resizeForcesAndVelocities();
@@ -184,10 +183,12 @@ const PointVector &ForceMoveBase::getVelocities() const { return velocities; }
 
 // =============== LangevinMove ===============
 
+LangevinDynamics::LangevinDynamics(Space &spc, std::string name, std::string cite,
+                                   std::shared_ptr<IntegratorBase> integrator, unsigned int nsteps)
+    : ForceMoveBase(spc, name, cite, integrator, nsteps) {}
+
 LangevinDynamics::LangevinDynamics(Space &spc, std::shared_ptr<IntegratorBase> integrator, unsigned int nsteps)
-    : ForceMoveBase::ForceMoveBase(spc, integrator, nsteps) {
-    name = "langevin_dynamics";
-}
+    : LangevinDynamics(spc, "langevin_dynamics", "", integrator, nsteps) {}
 
 LangevinDynamics::LangevinDynamics(Space &spc, Energy::Energybase &energy)
     : LangevinDynamics::LangevinDynamics(spc, std::make_shared<LangevinVelocityVerlet>(spc, energy), 0) {}
@@ -197,13 +198,8 @@ LangevinDynamics::LangevinDynamics(Space &spc, Energy::Energybase &energy, const
     from_json(j);
 }
 
-void LangevinDynamics::_to_json(json &j) const {
-    ForceMoveBase::_to_json(j);
-
-}
-void LangevinDynamics::_from_json(const json &j) {
-    ForceMoveBase::_from_json(j);
-}
+void LangevinDynamics::_to_json(json &j) const { ForceMoveBase::_to_json(j); }
+void LangevinDynamics::_from_json(const json &j) { ForceMoveBase::_from_json(j); }
 
 TEST_CASE("[Faunus] LangevinDynamics") {
     class DummyEnergy : public Energy::Energybase {
@@ -233,4 +229,4 @@ TEST_CASE("[Faunus] LangevinDynamics") {
 
 TEST_SUITE_END();
 
-} // end of namespace
+} // namespace Faunus::Move

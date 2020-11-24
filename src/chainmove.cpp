@@ -5,13 +5,13 @@
 namespace Faunus {
 namespace Move {
 
-void ChainRotationMovebase::_from_json(const json &j) {
+void ChainRotationMoveBase::_from_json(const json &j) {
     molname = j.at("molecule");
     dprot = j.at("dprot");
     allow_small_box = j.value("skiplarge", true); // todo rename the json attribute and make false default
 }
 
-void ChainRotationMovebase::_to_json(json &j) const {
+void ChainRotationMoveBase::_to_json(json &j) const {
     using namespace u8;
     j = {{"molecule", molname},
          {"dprot", dprot},
@@ -22,7 +22,7 @@ void ChainRotationMovebase::_to_json(json &j) const {
     _roundjson(j, 3);
 }
 
-void ChainRotationMovebase::_move(Change &change) {
+void ChainRotationMoveBase::_move(Change &change) {
     permit_move = true;
     sqdispl = 0;
     if (std::fabs(dprot) > 1e-9) {
@@ -34,18 +34,26 @@ void ChainRotationMovebase::_move(Change &change) {
     }
 }
 
-void ChainRotationMovebase::_accept(Change &) { msqdispl += sqdispl; }
-void ChainRotationMovebase::_reject(Change &) { msqdispl += 0; }
-double ChainRotationMovebase::bias(Change &, double, double) { return permit_move ? 0 : pc::infty; }
+void ChainRotationMoveBase::_accept(Change &) { msqdispl += sqdispl; }
+void ChainRotationMoveBase::_reject(Change &) { msqdispl += 0; }
+double ChainRotationMoveBase::bias(Change &, double, double) { return permit_move ? 0 : pc::infty; }
 
-ChainRotationMove::ChainRotationMove(Space &spc) : spc(spc) { repeat = -1; }
+ChainRotationMoveBase::ChainRotationMoveBase(Space &spc, std::string name, std::string cite)
+    : MoveBase(spc, name, cite) {}
+
+ChainRotationMove::ChainRotationMove(Space &spc, std::string name, std::string cite)
+    : ChainRotationMoveBase(spc, name, cite) {
+    repeat = -1;
+}
+
 void ChainRotationMove::_from_json(const json &j) {
-    Tbase::_from_json(j);
+    TBase::_from_json(j);
     auto moliter = findName(molecules, molname);
     if (moliter == molecules.end())
         throw std::runtime_error("unknown molecule '" + molname + "'");
     molid = moliter->id();
 }
+
 void ChainRotationMove::rotate_segment(double angle) {
     if (!segment_ndx.empty()) {
         auto &chain = *molecule_iter;
@@ -98,8 +106,13 @@ bool ChainRotationMove::box_big_enough() {
     }
     return true;
 }
+
+CrankshaftMove::CrankshaftMove(Space &spc, std::string name, std::string cite) : ChainRotationMove(spc, name, cite) {}
+
+CrankshaftMove::CrankshaftMove(Space &spc) : CrankshaftMove(spc, "crankshaft", "") {}
+
 void CrankshaftMove::_from_json(const json &j) {
-    Tbase::_from_json(j);
+    TBase::_from_json(j);
     // maximum number of bonds between the joints of a crankshaft
     joint_max = j.value("joint_max", std::numeric_limits<decltype(joint_max)>::max());
     if (this->repeat < 0) {
@@ -143,9 +156,13 @@ size_t CrankshaftMove::select_segment() {
     }
     return segment_size;
 }
-PivotMove::PivotMove(Space &spc) : ChainRotationMove(spc) { this->name = "pivot"; }
+
+PivotMove::PivotMove(Space &spc, std::string name, std::string cite) : ChainRotationMove(spc, name, cite) {}
+
+PivotMove::PivotMove(Space &spc) : PivotMove(spc, "pivot", "") {}
+
 void PivotMove::_from_json(const json &j) {
-    Tbase::_from_json(j);
+    TBase::_from_json(j);
     bonds = molecules[this->molid].bonds.find<Potential::HarmonicBond>();
 
     if (this->repeat < 0) {

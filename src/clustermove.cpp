@@ -170,7 +170,7 @@ std::pair<std::vector<size_t>, bool> FindCluster::findCluster(size_t seed_index)
     for (auto it1 = cluster.begin(); it1 != cluster.end(); it1++) {
         for (auto it2 = pool.begin(); it2 != pool.end();) {
             double P = clusterProbability(spc.groups.at(*it1), spc.groups.at(*it2)); // probability to cluster
-            if (Movebase::slump() <= P) {
+            if (MoveBase::slump() <= P) {
                 cluster.push_back(*it2); // add to cluster
                 it2 = pool.erase(it2);   // erase and advance (c++11)
             } else {
@@ -368,11 +368,10 @@ void Cluster::_accept(Change &) {
     translational_mean_square_displacement += translation_displacement.squaredNorm();
     rotational_mean_square_displacement += rotation_angle * rotation_angle;
 }
-Cluster::Cluster(Space &spc) : spc(spc) {
-    cite = "doi:10/cj9gnn";
-    name = "cluster";
-    repeat = -1;
-}
+
+Cluster::Cluster(Space &spc, std::string name, std::string cite) : MoveBase(spc, name, cite) { repeat = -1; }
+
+Cluster::Cluster(Space &spc) : Cluster(spc, "cluster", "doi:10/cj9gnn") {}
 
 } // namespace Move
 } // namespace Faunus

@@ -226,7 +226,7 @@ SaveState::SaveState(json j, Space &spc) {
                 json j;
                 Faunus::to_json(j, spc);
                 if (save_random_number_generator_state) {
-                    j["random-move"] = Move::Movebase::slump;
+                    j["random-move"] = Move::MoveBase::slump;
                     j["random-global"] = Faunus::random;
                 }
                 f << std::setw(2) << j;
@@ -238,7 +238,7 @@ SaveState::SaveState(json j, Space &spc) {
                 json j;
                 Faunus::to_json(j, spc);
                 if (save_random_number_generator_state) {
-                    j["random-move"] = Move::Movebase::slump;
+                    j["random-move"] = Move::MoveBase::slump;
                     j["random-global"] = Faunus::random;
                 }
                 auto v = json::to_ubjson(j); // json --> binary

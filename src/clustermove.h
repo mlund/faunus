@@ -113,10 +113,9 @@ void to_json(json &j, const FindCluster &cluster); //!< Serialize to json
 /**
  * @brief Molecular cluster move
  */
-class Cluster : public Movebase {
+class Cluster : public MoveBase {
   private:
     typedef typename Space::Tgroup Tgroup;
-    Tspace &spc;
     std::shared_ptr<FindCluster> find_cluster;
     std::shared_ptr<ClusterShapeAnalysis> shape_analysis;
     Average<double> average_cluster_size;
@@ -143,8 +142,12 @@ class Cluster : public Movebase {
     Change createChangeObject(const std::vector<size_t> &cluster_index) const;
     void biasRejectOrAccept(const size_t seed_index, const std::vector<size_t> &cluster_index);
 
+  protected:
+    using MoveBase::spc;
+    Cluster(Space &spc, std::string name, std::string cite);
+
   public:
-    Cluster(Space &spc);
+    explicit Cluster(Space &spc);
 };
 
 } // namespace Move

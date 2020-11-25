@@ -47,9 +47,9 @@ class SpeciationMove : public MoveBase {
     void _accept(Change &) override;       //!< Called when accepted
     void _reject(Change &) override;       //!< Called when rejected
     bool enoughImplicitMolecules() const;  //!< Check if we have enough implicit matter for reaction
-    bool atomicSwap(Change &);             //!< Swap atom type
-    bool deactivateAllReactants(Change &); //!< Delete reactant species
-    bool activateAllProducts(Change &);    //!< Insert product species
+    void atomicSwap(Change &);             //!< Swap atom type
+    void deactivateAllReactants(Change &); //!< Delete reactant species
+    void activateAllProducts(Change &);    //!< Insert product species
 
     Change::data contractAtomicGroup(Space::Tgroup &, Space::Tgroup &, int);  //!< Contract atomic group
     Change::data expandAtomicGroup(Space::Tgroup &, int);                     //!< Expand atomic group

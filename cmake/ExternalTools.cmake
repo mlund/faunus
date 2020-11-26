@@ -243,11 +243,24 @@ set_target_properties(xdrfile PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 FetchContent_Declare(
     doctest
     URL "https://github.com/onqtam/doctest/archive/2.4.0.tar.gz"
-    URL_MD5 0b679d6294f97be4fb11cb26e801fda6)
+    URL_HASH SHA256=f689f48e92c088928d88d8481e769c8e804f0a608b484ab8ef3d6ab6045b5444)
 FetchContent_GetProperties(doctest)
 if(NOT doctest_POPULATED)
     FetchContent_Populate(doctest)
     #add_definitions(-DDOCTEST_CONFIG_DISABLE)
+endif()
+
+##############
+# TROMPELOEIL
+##############
+
+FetchContent_Declare(
+    trompeloeil
+    URL "https://github.com/rollbear/trompeloeil/archive/v39.tar.gz"
+    URL_HASH SHA256=10506e48abd605740bc9ed43e34059f5068bc80af14476bd129a3ed3b54d522f)
+FetchContent_GetProperties(trompeloeil)
+if(NOT trompeloeil_POPULATED)
+    FetchContent_Populate(trompeloeil)
 endif()
 
 ###########
@@ -293,7 +306,7 @@ include_directories(SYSTEM ${coulombgalore_SOURCE_DIR})
 # Add third-party headers to include path. Note this is done with SYSTEM
 # to disable potential compiler warnings
 
-include_directories(SYSTEM ${eigen_SOURCE_DIR} ${doctest_SOURCE_DIR} ${modernjson_SOURCE_DIR}/include ${rangev3_SOURCE_DIR}/include
-    ${nanobench_SOURCE_DIR}/src/include
+include_directories(SYSTEM ${eigen_SOURCE_DIR} ${modernjson_SOURCE_DIR}/include ${rangev3_SOURCE_DIR}/include
+    ${doctest_SOURCE_DIR} ${trompeloeil_SOURCE_DIR}/include ${nanobench_SOURCE_DIR}/src/include
     ${Pybind11IncludeDir} ${DocoptIncludeDir} ${CppsidIncludeDir} ${XdrfileIncludeDir} ${SpdlogIncludeDir}
     ${ProgressTrackerIncludeDir} ${exprtk_SOURCE_DIR} ${cereal_SOURCE_DIR}/include ${zstr_SOURCE_DIR}/src)

@@ -1,5 +1,6 @@
 #define DOCTEST_CONFIG_IMPLEMENT
 #include <doctest/doctest.h>
+#include <doctest/trompeloeil.hpp>
 #include "core.h"
 #include "mpicontroller.h"
 #include "move.h"

@@ -27,4 +27,34 @@ TEST_CASE("[Faunus] Average") {
     CHECK(b.size() == 1);
 }
 
+TEST_CASE("[Faunus] AverageObj") {
+    using doctest::Approx;
+    Faunus::AverageObj<double> a;
+    a += 1.0;
+    a += 2.0;
+    CHECK(a.avg() == Approx(1.5));
+    CHECK(a == Approx(1.5)); // implicit conversion to double
+
+    struct MyClass {
+        double x;
+        MyClass &operator+=(const MyClass &other) {
+            x += other.x;
+            return *this;
+        } // required
+        MyClass operator*(double value) const {
+            MyClass scaled;
+            scaled.x = x * value;
+            return scaled;
+        } // required
+    };
+
+    Faunus::AverageObj<MyClass> b;
+    MyClass k1, k2;
+    k1.x = 10.0;
+    k2.x = 20.0;
+    b += k1;
+    b += k2;
+    CHECK(b.avg().x == Approx(15.0));
+}
+
 } // namespace Faunus

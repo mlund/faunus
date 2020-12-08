@@ -123,6 +123,7 @@ class FormatPQR {
     static bool readAtomRecord(const std::string &, Particle &, double &);       //!< Read ATOM or HETATOM record
 
   public:
+    enum Style { PQR_LEGACY, PDB, PQR }; //!< PQR style (for ATOM records)
     typedef std::vector<Group<Particle>> Tgroup_vector;
     static Point load(std::istream &, ParticleVector &, bool);                      //!< Load PQR from stream
     static Point load(const std::string &, ParticleVector &, bool);                 //!< Load PQR from file
@@ -132,7 +133,67 @@ class FormatPQR {
     static void save(const std::string &, const ParticleVector &, const Point & = Point(0, 0, 0),
                      int = 1e9); //!< Save PQR file
 
-    static void save(std::ostream &, const Tgroup_vector &, const Point & = Point(0, 0, 0));      //!< Save PQR file
+    /**
+     * @brief Write vector of groups to output stream
+     * @param stream Output stream
+     * @param groups Vector of groups
+     * @param box_dimensions Box dimensions
+     *
+     * The residue number follows the group index and inactive particles will
+     * have zero charge; zero radius; and positioned in the corner of the box.
+     */
+    template <typename Range>
+    static void save(std::ostream &stream, const Range &groups, const Point &box_dimensions, Style style = PQR_LEGACY) {
+        if (stream) {
+            if (box_dimensions.norm() > pc::epsilon_dbl) {
+                stream << writeCryst1(box_dimensions);
+            }
+            int residue_cnt = 1;
+            int atom_cnt = 1;
+            for (const auto &group : groups) { // loop over all molecules
+                for (auto particle = group.begin(); particle != group.trueend(); particle++) { // loop over particles
+                    double scale = (particle < group.end()) ? 1.0 : 0.0;             // zero if inactive particle
+                    const auto pos = scale * (particle->pos + 0.5 * box_dimensions); // origin to corner of box
+                    std::string atomname = particle->traits().name;
+                    if (atomname.size() > 4) {
+                        atomname.erase(4);
+                    }
+                    std::string resname = group.traits().name;
+                    if (resname.size() > 3) {
+                        resname.erase(3);
+                    }
+                    const std::string chain = "A";
+                    if (style == PQR) {
+                        stream << fmt::format("{:6s}{:5d} {:^4s}{:1s}{:3s} {:1s}{:4d}{:1s}   "
+                                              "{:8.3f}{:8.3f}{:8.3f}{:6.2f}{:6.2f}\n",
+                                              "ATOM", atom_cnt, atomname, "A", resname, chain, residue_cnt, "0",
+                                              pos.x(), pos.y(), pos.z(), scale * particle->charge,
+                                              scale * particle->traits().sigma * 0.5);
+
+                    } else if (style == PDB) { // see https://cupnet.net/pdb-format
+                        const double occupancy = 0.0;
+                        const double temperature_factor = 1.0;
+                        const std::string element_symbol = particle->traits().name;
+                        const std::string charge = "0";
+                        stream << fmt::format("{:6s}{:5d} {:^4s}{:1s}{:3s} {:1s}{:4d}{:1s}   "
+                                              "{:8.3f}{:8.3f}{:8.3f}{:6.2f}{:6.2f}          {:>2s}{:2s}\n",
+                                              "ATOM", atom_cnt, atomname, "A", resname, chain, residue_cnt, "0",
+                                              pos.x(), pos.y(), pos.z(), occupancy, temperature_factor, element_symbol,
+                                              charge);
+                    } else { // legacy PQR
+                        stream << fmt::format("ATOM  {:5d} {:4} {:4}{:5d}    {:8.3f} {:8.3f} {:8.3f} {:.3f} {:.3f}\n",
+
+                                              atom_cnt, atomname, resname, residue_cnt, pos.x(), pos.y(), pos.z(),
+                                              scale * particle->charge, scale * particle->traits().sigma * 0.5);
+                    }
+                    atom_cnt++;
+                }
+                residue_cnt++;
+            }
+            stream << "END\n";
+        }
+    }
+
     static void save(const std::string &, const Tgroup_vector &, const Point & = Point(0, 0, 0)); //!< Save PQR file
 };
 

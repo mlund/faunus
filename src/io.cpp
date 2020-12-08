@@ -314,37 +314,6 @@ void FormatPQR::save(std::ostream &stream, const ParticleVector &particles, cons
 }
 
 /**
- * @brief Write vector of groups to output stream
- * @param stream Output stream
- * @param groups Vector of groups
- * @param box_dimensions Box dimensions
- *
- * The residue number follows the group index and inactive particles will
- * have zero charge; zero radius; and positioned in the corner of the box.
- */
-void FormatPQR::save(std::ostream &stream, const Tgroup_vector &groups, const Point &box_dimensions) {
-    if (stream) {
-        if (box_dimensions.norm() > pc::epsilon_dbl) {
-            stream << writeCryst1(box_dimensions);
-        }
-        int residue_cnt = 1;
-        int atom_cnt = 1;
-        for (const auto &group : groups) {                                                 // loop over all molecules
-            for (auto particle = group.begin(); particle != group.trueend(); particle++) { // loop over particles
-                double scale = (particle < group.end()) ? 1.0 : 0.0;                       // zero if inactive particle
-                auto pos = scale * (particle->pos + 0.5 * box_dimensions);                 // origin to corner of box
-                stream << fmt::format("ATOM  {:5d} {:4} {:4}{:5d}    {:8.3f} {:8.3f} {:8.3f} {:.3f} {:.3f}\n", atom_cnt,
-                                      particle->traits().name, particle->traits().name, residue_cnt, pos.x(), pos.y(),
-                                      pos.z(), scale * particle->charge, scale * particle->traits().sigma / 2.0);
-                atom_cnt++;
-            }
-            residue_cnt++;
-        }
-        stream << "END\n";
-    }
-}
-
-/**
  * @param filename Output PQR filename
  * @param particles Particle vector
  * @param box_length Unit cell dimensions (default: [0,0,0], not printed)

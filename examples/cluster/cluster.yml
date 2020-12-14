@@ -26,7 +26,7 @@ moves:
     - moltransrot: {molecule: water, dp: 20, dprot: 1, repeat: N}
     - cluster:
         molecules: [water]
-        analysis: {com: true, file: cluster.dat.gz, interval: 20}
+        analysis: {com: true, file: cluster.dat.gz, interval: 10}
         dp: 20
         dprot: 3
         threshold:

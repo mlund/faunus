@@ -175,7 +175,7 @@ void Space::sync(const Space &other, const Change &change) {
  * @param Vnew New volume
  * @param method Scaling policy
  * @returns Scaling factors in each dimension
- * @warning Check Vnew/Vold for ISOCHORIC in case of external triggers (see end of function)
+ * @warning Check new_volume/old_volume for ISOCHORIC in case of external triggers (see end of function)
  */
 Point Space::scaleVolume(double Vnew, Geometry::VolumeMethod method) {
     for (auto &group : groups) {             // remove PBC on molecular groups ...

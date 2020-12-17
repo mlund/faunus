@@ -291,12 +291,13 @@ class ConformationSwap : public MoveBase {
 
 class VolumeMove : public MoveBase {
   private:
-    const std::map<std::string, Geometry::VolumeMethod> methods = {
-        {"z", Geometry::Z}, {"xy", Geometry::XY}, {"isotropic", Geometry::ISOTROPIC}, {"isochoric", Geometry::ISOCHORIC}};
+    const std::map<std::string, Geometry::VolumeMethod> methods = {{"z", Geometry::Z},
+                                                                   {"xy", Geometry::XY},
+                                                                   {"isotropic", Geometry::ISOTROPIC},
+                                                                   {"isochoric", Geometry::ISOCHORIC}};
     typename decltype(methods)::const_iterator method;
-    typedef typename Space::Tpvec Tpvec;
-    Average<double> msqd, Vavg; // mean squared displacement
-    double dV = 0, deltaV = 0, Vnew = 0, Vold = 0;
+    Average<double> mean_square_volume_change, mean_volume;
+    double volume_displacement_factor = 0.0, volume_change = 0.0, new_volume = 0.0, old_volume = 0.0;
 
     void _to_json(json &j) const override;
     void _from_json(const json &j) override;
@@ -305,7 +306,6 @@ class VolumeMove : public MoveBase {
     void _reject(Change &) override;
 
   protected:
-    using MoveBase::spc;
     VolumeMove(Space &spc, std::string name, std::string cite);
   public:
     explicit VolumeMove(Space &spc);
@@ -419,7 +419,6 @@ class QuadrantJump : public MoveBase {
 class ParallelTempering : public MoveBase {
   private:
     double very_small_volume = 1e-9;
-    Space &spc; // Space to operate on
     MPI::MPIController &mpi;
     std::shared_ptr<ParticleVector> partner_particles;
     Random random;

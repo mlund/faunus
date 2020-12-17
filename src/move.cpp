@@ -421,8 +421,8 @@ void ParallelTempering::_from_json(const json &j) {
     particle_transmitter.setFormat(j.value("format", std::string("XYZQI")));
 }
 
-ParallelTempering::ParallelTempering(Space &spc, MPI::MPIController &mpi) : spc(spc), mpi(mpi) {
-    name = "temper";
+ParallelTempering::ParallelTempering(Space &spc, MPI::MPIController &mpi)
+    : MoveBase(spc, "temper", "doi:10/b3vcw7"), mpi(mpi) {
     if (mpi.nproc() < 2) {
         throw std::runtime_error(name + " requires two or more MPI processes");
     }
@@ -449,38 +449,41 @@ ParallelTempering::~ParallelTempering() {
 void VolumeMove::_to_json(json &j) const {
     using namespace u8;
     if (cnt > 0) {
-        j = {{"dV", dV},
+        j = {{"dV", volume_displacement_factor},
              {"method", method->first},
-             {bracket("V"), Vavg.avg()},
-             {rootof + bracket(Delta + "V" + squared), std::sqrt(msqd.avg())},
-             {cuberoot + rootof + bracket(Delta + "V" + squared), std::cbrt(std::sqrt(msqd.avg()))}};
+             {bracket("V"), mean_volume.avg()},
+             {rootof + bracket(Delta + "V" + squared), std::sqrt(mean_square_volume_change.avg())},
+             {cuberoot + rootof + bracket(Delta + "V" + squared),
+              std::cbrt(std::sqrt(mean_square_volume_change.avg()))}};
         _roundjson(j, 3);
     }
 }
 void VolumeMove::_from_json(const json &j) {
     try {
         method = methods.find(j.value("method", "isotropic"));
-        if (method == methods.end())
-            std::runtime_error("unknown volume change method");
-        dV = j.at("dV");
+        if (method == methods.end()) {
+            throw ConfigurationError("unknown volume change method");
+        }
+        volume_displacement_factor = j.at("dV").get<double>();
     } catch (std::exception &e) {
-        throw std::runtime_error(e.what());
+        throw ConfigurationError("{}: {}", name, e.what());
     }
 }
 void VolumeMove::_move(Change &change) {
-    if (dV > 0) {
+    if (volume_displacement_factor > 0.0) {
         change.dV = true;
         change.all = true;
-        Vold = spc.geo.getVolume();
-        Vnew = std::exp(std::log(Vold) + (slump() - 0.5) * dV);
-        deltaV = Vnew - Vold;
-        spc.scaleVolume(Vnew, method->second);
+        old_volume = spc.geo.getVolume();
+        new_volume = std::exp(std::log(old_volume) + (slump() - 0.5) * volume_displacement_factor);
+        volume_change = new_volume - old_volume;
+        spc.scaleVolume(new_volume, method->second);
     } else
-        deltaV = 0;
+        volume_change = 0.0;
 }
 void VolumeMove::_accept(Change &) {
-    msqd += deltaV * deltaV;
-    Vavg += spc.geo.getVolume();
+    mean_square_volume_change += volume_change * volume_change;
+    mean_volume += new_volume;
+    assert(std::fabs(spc.geo.getVolume() - new_volume) < 1.0e-9);
 }
 
 VolumeMove::VolumeMove(Space &spc, std::string name, std::string cite) : MoveBase(spc, name, cite) { repeat = 1; }
@@ -488,8 +491,9 @@ VolumeMove::VolumeMove(Space &spc, std::string name, std::string cite) : MoveBas
 VolumeMove::VolumeMove(Space &spc) : VolumeMove(spc, "volume", "") {}
 
 void VolumeMove::_reject(Change &) {
-    msqd += 0;
-    Vavg += spc.geo.getVolume();
+    mean_square_volume_change += 0.0;
+    mean_volume += old_volume;
+    assert(std::fabs(spc.geo.getVolume() - old_volume) < 1.0e-9);
 }
 
 void ChargeMove::_to_json(json &j) const {

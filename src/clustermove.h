@@ -48,9 +48,6 @@ class ClusterShapeAnalysis {
   public:
     template <typename Range> void sample(const Range &groups, const Point &mass_center_of_groups, const Space &spc) {
         const auto cluster_size = std::distance(groups.begin(), groups.end());
-        if (cluster_size < 2) {
-            return;
-        }
         Tensor gyration_tensor;
         if (shape_anisotropy_use_com) {
             gyration_tensor = gyrationFromMassCenterPositions(groups, mass_center_of_groups, spc.geo.getBoundaryFunc());

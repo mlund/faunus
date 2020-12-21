@@ -656,154 +656,134 @@ WidomInsertion::WidomInsertion(const json &j, Space &spc, Energy::Hamiltonian &p
 }
 
 void Density::_sample() {
-    // count atom and groups of individual id's
-    Nmol.clear();
-    Natom.clear();
+    auto volume = updateVolumeStatistics();
+    auto [atom_count, molecular_group_count] = countAtomsAndMolecules();
 
+    for (auto [atomid, N] : atom_count) {
+        mean_atom_density[atomid] += N / volume;
+    }
+
+    for (auto [molid, N] : molecular_group_count) {
+        mean_molecule_density[molid] += N / volume;
+        molecular_group_probability_density[molid](N)++;
+    }
+
+    for (const auto &reaction : reactions) { // in case of reactions involving atoms (swap moves)
+        const auto reactive_atomic_species = reaction.getReactantsAndProducts().first;
+        for ([[maybe_unused]] auto [atomid, _] : reactive_atomic_species) {
+            auto atomlist = spc.findAtoms(atomid);
+            atomswap_probability_density[atomid](range_size(atomlist))++;
+        }
+    }
+}
+
+/**
+ * @brief Counts all molecular groups and all atoms in atomic groups
+ * @returns Pair of maps; first = atom count in atomic groups; second = count of molecular groups (keys=molid)
+ */
+std::pair<std::map<int, int>, std::map<int, int>> Density::countAtomsAndMolecules() {
+    std::map<int, int> atom_count;
+    std::map<int, int> molecular_group_count;
     // make sure all atom counts are initially zero
-    for (auto &g : spc.groups) {
-        if (g.atomic) {
-            for (auto p = g.begin(); p < g.trueend(); ++p) {
-                Natom[p->id] = 0;
+    for (const auto &group : spc.groups) {
+        if (group.atomic) {
+            for (auto particle = group.begin(); particle < group.trueend(); ++particle) {
+                atom_count[particle->id] = 0;
             }
         } else {
-            Nmol[g.id] = 0;
+            molecular_group_count[group.id] = 0;
         }
     }
 
-    double V = spc.geo.getVolume();
-    Vavg += V;
-    Lavg += std::cbrt(V);
-    invVavg += 1 / V;
-
-    for (auto &g : spc.groups) {
-        if (g.atomic) {
-            for (auto &p : g)
-                Natom[p.id]++;
-            atmdhist[g.id](g.size())++;
-        } else if (not g.empty())
-            Nmol[g.id]++;
-    }
-
-    for (auto &i : Nmol) {
-        rho_mol[i.first] += i.second / V;
-        moldhist[i.first](i.second)++;
-    }
-
-    for (auto &i : Natom)
-        rho_atom[i.first] += i.second / V;
-
-    if (Faunus::reactions.size() > 0) { // in case of reactions involving atoms (swap moves)
-        for (auto &rit : reactions) {
-            [[maybe_unused]] auto [atomic_products, molecule_products] = rit.getProducts();
-            for ([[maybe_unused]] auto [atomid, N] : atomic_products) {
-                auto atomlist = spc.findAtoms(atomid);
-                swpdhist[atomid](range_size(atomlist))++;
+    for (const auto &group : spc.groups) {
+        if (group.atomic) {
+            for (const auto &particle : group) {
+                atom_count[particle.id]++;
             }
-            [[maybe_unused]] auto [atomic_reactants, molecule_reactants] = rit.getProducts();
-            for ([[maybe_unused]] auto [atomid, N] : atomic_reactants) {
-                auto atomlist = spc.findAtoms(atomid);
-                swpdhist[atomid](range_size(atomlist))++;
-            }
+            atomic_group_probability_density[group.id](group.size())++;
+        } else if (not group.empty()) {
+            molecular_group_count[group.id]++;
         }
     }
+    return {atom_count, molecular_group_count};
 }
+
+double Density::updateVolumeStatistics() {
+    const auto volume = spc.geo.getVolume();
+    mean_volume += volume;
+    mean_cubic_root_of_volume += cbrt(volume);
+    mean_inverse_volume += 1.0 / volume;
+    return volume;
+}
+
 void Density::_to_json(json &j) const {
-    using namespace u8;
-    j[bracket("V")] = Vavg.avg();
-    j[bracket("1/V")] = invVavg.avg();
-    j[bracket(cuberoot + "V")] = Lavg.avg();
-    j[cuberoot + bracket("V")] = std::cbrt(Vavg.avg());
+    j["<V>"] = mean_volume.avg();
+    j["<∛V>"] = mean_cubic_root_of_volume.avg();
+    j["∛<V>"] = std::cbrt(mean_volume.avg());
+    j["<1/V>"] = mean_inverse_volume.avg();
 
-    auto &_j = j["atomic"];
-    for (auto &i : rho_atom)
-        if (i.second.cnt > 0)
-            _j[atoms.at(i.first).name] = json({{"c/M", i.second.avg() / 1.0_molar}});
+    auto &j_atomic = j["atomic"] = json::object();
+    auto &j_molecular = j["molecular"] = json::object();
 
-    auto &_jj = j["molecular"];
-    for (auto &i : rho_mol)
-        if (i.second.cnt > 0)
-            _jj[molecules.at(i.first).name] = json({{"c/M", i.second.avg() / 1.0_molar}});
+    for (auto [atomid, density] : mean_atom_density) {
+        if (!density.empty()) {
+            j_atomic[Faunus::atoms[atomid].name] = json({{"c/M", density.avg() / 1.0_molar}});
+        }
+    }
+    for (auto [molid, density] : mean_molecule_density) {
+        if (!density.empty()) {
+            j_molecular[Faunus::molecules[molid].name] = json({{"c/M", density.avg() / 1.0_molar}});
+        }
+    }
     _roundjson(j, 4);
 }
+
 Density::Density(const json &j, Space &spc) : spc(spc) {
     from_json(j);
     name = "density";
-    for (auto &m : molecules) {
-        if (m.atomic)
-            atmdhist[m.id()].setResolution(1, 0);
-        else
-            moldhist[m.id()].setResolution(1, 0);
+    for (const auto &molecule : Faunus::molecules) {
+        if (molecule.atomic) {
+            atomic_group_probability_density[molecule.id()].setResolution(1, 0);
+        } else {
+            molecular_group_probability_density[molecule.id()].setResolution(1, 0);
+        }
     }
-    if (Faunus::reactions.size() > 0) { // in case of reactions involving atoms (swap moves)
-        for (auto &rit : reactions) {
-            [[maybe_unused]] auto [atomic_reactants, molecule_reactants] = rit.getReactants();
-            [[maybe_unused]] auto [atomic_products, molecule_products] = rit.getProducts();
-            for ([[maybe_unused]] auto [atomid, N] : atomic_products) {
-                swpdhist[atomid].setResolution(1, 0);
-            }
-            for ([[maybe_unused]] auto [atomid, N] : atomic_reactants) {
-                swpdhist[atomid].setResolution(1, 0);
-            }
+    for (const auto &reaction : Faunus::reactions) { // in case of reactions involving atoms (swap moves)
+        const auto reactive_atomic_species = reaction.getReactantsAndProducts().first;
+        for ([[maybe_unused]] auto [atomid, _] : reactive_atomic_species) {
+            atomswap_probability_density[atomid].setResolution(1, 0);
         }
     }
 }
+
+/**
+ * Write histograms to disk
+ */
+void Density::writeTable(const std::string &atom_or_molecule_name, Ttable &table) {
+    table.stream_decorator = [&table](std::ostream &stream, int N, double counts) {
+        if (counts > 0) {
+            stream << fmt::format("{} {} {:.3f}\n", N, counts, counts / table.sumy());
+        }
+    };
+    const auto filename = fmt::format("{}rho-{}.dat", MPI::prefix, atom_or_molecule_name);
+    if (std::ofstream file(filename); file) {
+        file << "# N counts probability\n" << table;
+    } else {
+        throw std::runtime_error("could not write "s + filename);
+    }
+}
+
 void Density::_to_disk() {
-    for (auto &m : atmdhist) { // atomic molecules
-        std::string file = "rho-"s + molecules.at(m.first).name + ".dat";
-        std::ofstream f(MPI::prefix + file);
-        if (f) {
-            m.second.stream_decorator = [&](std::ostream &o, int N, double samplings) {
-                double sum = m.second.sumy();
-                if (samplings > 0)
-                    o << N << " " << samplings << " " << samplings / sum << "\n";
-            };
-            f << "# N samplings P\n" << m.second;
-        }
+    for (auto [molid, table] : atomic_group_probability_density) { // atomic molecules
+        writeTable(Faunus::molecules[molid].name, table);
     }
-    for (auto &m : moldhist) { // polyatomic molecules
-        std::string file = "rho-"s + molecules.at(m.first).name + ".dat";
-        std::ofstream f(MPI::prefix + file);
-        if (f) {
-            m.second.stream_decorator = [&](std::ostream &o, int N, double samplings) {
-                double sum = m.second.sumy();
-                if (samplings > 0)
-                    o << N << " " << samplings << " " << samplings / sum << "\n";
-            };
-            f << "# N samplings P\n" << m.second;
-        }
+    for (auto [molid, table] : molecular_group_probability_density) { // polyatomic molecules
+        writeTable(Faunus::molecules[molid].name, table);
     }
-    if (Faunus::reactions.size() > 0) { // in case of reactions involving atoms (swap moves)
-        // todo: merge reactions and products into single map; loop over that once
-        for (auto &reaction : Faunus::reactions) {
-
-            [[maybe_unused]] auto [atomic_products, molecular_products] = reaction.getProducts();
-            for (auto pid : atomic_products) {
-                std::string file = "rho-"s + atoms.at(pid.first).name + ".dat";
-                std::ofstream f(MPI::prefix + file);
-                if (f) {
-                    swpdhist.at(pid.first).stream_decorator = [&](std::ostream &o, int N, double samplings) {
-                        double sum = swpdhist.at(pid.first).sumy();
-                        if (samplings > 0)
-                            o << N << " " << samplings << " " << samplings / sum << "\n";
-                    };
-                    f << "# N samplings P\n" << swpdhist.at(pid.first);
-                }
-            }
-
-            [[maybe_unused]] auto [atomic_reactants, molecular_reactants] = reaction.getReactants();
-            for (auto rid : atomic_reactants) {
-                std::string file = "rho-"s + atoms.at(rid.first).name + ".dat";
-                std::ofstream f(MPI::prefix + file);
-                if (f) {
-                    swpdhist.at(rid.first).stream_decorator = [&](std::ostream &o, int N, double samplings) {
-                        double sum = swpdhist.at(rid.first).sumy();
-                        if (samplings > 0)
-                            o << N << " " << samplings << " " << samplings / sum << "\n";
-                    };
-                    f << "# N samplings P\n" << swpdhist.at(rid.first);
-                }
-            }
+    for (auto &reaction : Faunus::reactions) {
+        const auto reactive_atomic_species = reaction.getReactantsAndProducts().first;
+        for ([[maybe_unused]] auto [atomid, _] : reactive_atomic_species) {
+            writeTable(Faunus::atoms[atomid].name, atomswap_probability_density[atomid]);
         }
     }
 }

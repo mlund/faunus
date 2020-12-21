@@ -156,18 +156,19 @@ class SlicedDensity : public Analysisbase {
  * @brief Analysis of particle densities
  */
 class Density : public Analysisbase {
+  private:
     Space &spc;
-    typedef Equidistant2DTable<unsigned int, double> Ttable; // why double?
+    typedef Equidistant2DTable<unsigned int, double> Ttable;
 
-    std::map<int, Ttable> swpdhist; // Probability density of swapping atoms
-    std::map<int, Ttable> atmdhist; // Probability density of atomic molecules
-    std::map<int, Ttable> moldhist; // Probability density of polyatomic molecules
-    std::map<int, Average<double>> rho_mol, rho_atom;
-    std::map<int, int> Nmol, Natom;
-    Average<double> Lavg, Vavg, invVavg;
+    std::map<int, Ttable> atomswap_probability_density;
+    std::map<int, Ttable> atomic_group_probability_density;
+    std::map<int, Ttable> molecular_group_probability_density;
+    std::map<int, Average<double>> mean_molecule_density, mean_atom_density;
+    Average<double> mean_cubic_root_of_volume, mean_volume, mean_inverse_volume;
 
-    // int capacity_limit = 10; // issue warning if capacity get lower than this
-
+    double updateVolumeStatistics();
+    std::pair<std::map<int, int>, std::map<int, int>> countAtomsAndMolecules();
+    void writeTable(const std::string &atom_or_molecule_name, Ttable &table);
     void _sample() override;
     void _to_json(json &) const override;
     void _to_disk() override;

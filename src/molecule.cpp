@@ -810,6 +810,16 @@ ReactionData::getReactants() const {
     else
         return {right_atoms, right_molecules};
 }
+
+std::pair<ReactionData::StoichiometryMap, ReactionData::StoichiometryMap>
+ReactionData::getReactantsAndProducts() const {
+    StoichiometryMap atomic = getReactants().first;
+    StoichiometryMap molecular = getReactants().second;
+    atomic.merge(StoichiometryMap(getProducts().first));
+    molecular.merge(StoichiometryMap(getProducts().second));
+    return {atomic, molecular};
+}
+
 void ReactionData::reverseDirection() {
     if (direction == Direction::RIGHT)
         setDirection(Direction::LEFT);
@@ -888,7 +898,8 @@ void to_json(json &j, const ReactionData &reaction) {
                          {"swap_move", a.swap},
                          {"neutral", a.only_neutral_molecules},
                          {"pK'", -a.lnK / std::log(10)}};
-} //!< Serialize to JSON object
+}
+//!< Serialize to JSON object
 
 TEST_CASE("[Faunus] Conformation") {
     ParticleVector p(1);

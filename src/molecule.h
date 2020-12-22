@@ -367,7 +367,7 @@ class ReactionData {
     std::pair<const StoichiometryMap &, const StoichiometryMap &>
     getReactants() const; //!< Pair with atomic and molecular reactants
 
-    std::pair<ReactionData::StoichiometryMap, ReactionData::StoichiometryMap> getReactantsAndProducts() const;
+    std::pair<std::set<int>, std::set<int>> getReactantsAndProducts() const;
 
     bool swap = false;                   //!< True if swap move
     double lnK = 0;                      //!< Effective, natural logarithm of molar eq. const.

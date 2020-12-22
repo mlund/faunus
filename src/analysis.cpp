@@ -670,7 +670,7 @@ void Density::_sample() {
 
     for (const auto &reaction : reactions) { // in case of reactions involving atoms (swap moves)
         const auto reactive_atomic_species = reaction.getReactantsAndProducts().first;
-        for ([[maybe_unused]] auto [atomid, _] : reactive_atomic_species) {
+        for (auto atomid : reactive_atomic_species) {
             auto atomlist = spc.findAtoms(atomid);
             atomswap_probability_density[atomid](range_size(atomlist))++;
         }
@@ -750,7 +750,7 @@ Density::Density(const json &j, Space &spc) : spc(spc) {
     }
     for (const auto &reaction : Faunus::reactions) { // in case of reactions involving atoms (swap moves)
         const auto reactive_atomic_species = reaction.getReactantsAndProducts().first;
-        for ([[maybe_unused]] auto [atomid, _] : reactive_atomic_species) {
+        for (auto atomid : reactive_atomic_species) {
             atomswap_probability_density[atomid].setResolution(1, 0);
         }
     }
@@ -782,7 +782,7 @@ void Density::_to_disk() {
     }
     for (auto &reaction : Faunus::reactions) {
         const auto reactive_atomic_species = reaction.getReactantsAndProducts().first;
-        for ([[maybe_unused]] auto [atomid, _] : reactive_atomic_species) {
+        for (auto atomid : reactive_atomic_species) {
             writeTable(Faunus::atoms[atomid].name, atomswap_probability_density[atomid]);
         }
     }

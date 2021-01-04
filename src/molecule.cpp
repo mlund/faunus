@@ -831,6 +831,24 @@ ReactionData::getReactants() const {
     else
         return {right_atoms, right_molecules};
 }
+
+/**
+ * @return Pair of sets with id's for atoms and molecules participating in the reaction (i.e. reactants & products)
+ */
+std::pair<std::set<int>, std::set<int>> ReactionData::getReactantsAndProducts() const {
+    auto extract_keys = [](const auto &map, std::set<int> &keys) { // map keys --> set
+        std::transform(map.begin(), map.end(), std::inserter(keys, keys.end()), [](auto &pair) { return pair.first; });
+    };
+    std::set<int> atomic, molecular;
+    auto reactants = getReactants();
+    auto products = getProducts();
+    extract_keys(reactants.first, atomic);     // copy atomic reactants to `atomic`.
+    extract_keys(reactants.second, molecular); // copy molecular reactants to `molecular`
+    extract_keys(products.first, atomic);      // same for products, merge into same set
+    extract_keys(products.second, molecular);  // same for products, merge into same set
+    return {atomic, molecular};
+}
+
 void ReactionData::reverseDirection() {
     if (direction == Direction::RIGHT)
         setDirection(Direction::LEFT);
@@ -909,7 +927,8 @@ void to_json(json &j, const ReactionData &reaction) {
                          {"swap_move", a.swap},
                          {"neutral", a.only_neutral_molecules},
                          {"pK'", -a.lnK / std::log(10)}};
-} //!< Serialize to JSON object
+}
+//!< Serialize to JSON object
 
 TEST_CASE("[Faunus] ReactionData") {
     using doctest::Approx;

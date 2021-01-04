@@ -65,10 +65,8 @@ struct RandomInserter : public MoleculeInserter {
 struct Conformation {
     std::vector<Point> positions;
     std::vector<double> charges;
-
     bool empty() const;
-
-    ParticleVector &toParticleVector(ParticleVector &p) const; // copy conformation into particle vector
+    void copyTo(ParticleVector &particles) const; //!< Copy conformation into particle vector
 };
 
 /**

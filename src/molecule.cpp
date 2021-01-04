@@ -5,6 +5,7 @@
 #include "bonds.h"
 #include "spdlog/spdlog.h"
 #include "aux/eigensupport.h"
+#include <functional>
 
 namespace Faunus {
 
@@ -769,21 +770,41 @@ bool Conformation::empty() const {
     return positions.empty() && charges.empty();
 }
 
-ParticleVector &Conformation::toParticleVector(ParticleVector &p) const {
-    assert(not p.empty() and not empty());
-    // copy positions
-    if (positions.size() == p.size()) {
-        for (size_t i = 0; i < p.size(); ++i) {
-            p[i].pos = positions[i];
-        }
+/**
+ * @param particles Destination particle vector
+ * @throw If there's a size mismatch with destination
+ *
+ * Overwrites positions and charges; remaining properties are untouched
+ */
+void Conformation::copyTo(ParticleVector &particles) const {
+    if (positions.size() != particles.size() or charges.size() != particles.size()) {
+        throw std::runtime_error("conformation size mismatch for positions and/or charges");
     }
-    // copy charges
-    if (charges.size() == p.size()) {
-        for (size_t i = 0; i < p.size(); ++i) {
-            p[i].charge = charges[i];
-        }
-    }
-    return p;
+    /*
+     * Note how `std::ranges::transform` accepts data member pointers like `&Particle::pos`
+     * which are internally accessed using `std::invoke`.
+     */
+    auto particle_positions = particles | ranges::cpp20::views::transform(&Particle::pos);
+    std::copy(positions.begin(), positions.end(), particle_positions.begin());
+
+    auto particle_charges = particles | ranges::cpp20::views::transform(&Particle::charge);
+    std::copy(charges.begin(), charges.end(), particle_charges.begin());
+}
+
+TEST_CASE("[Faunus] Conformation") {
+    Conformation conformation;
+    CHECK(conformation.empty());
+
+    conformation.positions.push_back({1, 2, 3});
+    conformation.charges.push_back(0.5);
+    CHECK(not conformation.empty());
+
+    ParticleVector particles;
+    CHECK_THROWS(conformation.copyTo(particles));
+    particles.resize(1);
+    conformation.copyTo(particles);
+    CHECK(particles[0].pos == Point(1, 2, 3));
+    CHECK(particles[0].charge == 0.5);
 }
 
 ReactionData::Direction ReactionData::getDirection() const { return direction; }
@@ -889,21 +910,6 @@ void to_json(json &j, const ReactionData &reaction) {
                          {"neutral", a.only_neutral_molecules},
                          {"pK'", -a.lnK / std::log(10)}};
 } //!< Serialize to JSON object
-
-TEST_CASE("[Faunus] Conformation") {
-    ParticleVector p(1);
-    Conformation c;
-    CHECK(c.empty());
-
-    c.positions.push_back({1, 2, 3});
-    c.charges.push_back(0.5);
-    CHECK(not c.empty());
-
-    c.toParticleVector(p);
-
-    CHECK(p[0].pos == Point(1, 2, 3));
-    CHECK(p[0].charge == 0.5);
-}
 
 TEST_CASE("[Faunus] ReactionData") {
     using doctest::Approx;

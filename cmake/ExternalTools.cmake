@@ -1,21 +1,6 @@
 include(ExternalProject)
 include(FetchContent)
 
-#########
-# EXPRTK 
-#########
-
-FetchContent_Declare(
-    exprtk
-    URL https://github.com/ArashPartow/exprtk/archive/e0e880c3797ea363d24782ba63fe362f7d94f89c.zip
-    URL_HASH MD5=772293e80f8353961fcc8a2b337e8dec)
-FetchContent_GetProperties(exprtk)
-if(NOT exprtk_POPULATED)
-    FetchContent_Populate(exprtk)
-endif()
-add_definitions("-Dexprtk_disable_string_capabilities")
-add_definitions("-Dexprtk_disable_rtl_io_file")
-
 ###################
 # PROGRESS TRACKER
 ###################
@@ -37,41 +22,6 @@ add_library(progresstracker STATIC IMPORTED GLOBAL)
 add_dependencies(progresstracker project_progresstracker)
 set_property(TARGET progresstracker PROPERTY IMPORTED_LOCATION ${binary_dir}/libprogresstracker.a)
 
-
-#########
-# SPDLOG
-#########
-
-ExternalProject_Add(
-    project_spdlog
-    PREFIX "${CMAKE_CURRENT_BINARY_DIR}/_deps"
-    LOG_DOWNLOAD ON
-    URL https://github.com/gabime/spdlog/archive/v1.6.1.tar.gz
-    URL_HASH SHA256=378a040d91f787aec96d269b0c39189f58a6b852e4cbf9150ccfacbe85ebbbfc
-    CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DSPDLOG_INSTALL=off -DCMAKE_POSITION_INDEPENDENT_CODE=on
-    BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} spdlog
-    INSTALL_COMMAND ""
-)
-ExternalProject_Get_Property(project_spdlog source_dir)
-ExternalProject_Get_Property(project_spdlog binary_dir)
-set(SpdlogIncludeDir ${source_dir}/include)
-add_library(spdlog STATIC IMPORTED)
-set_property(TARGET spdlog PROPERTY IMPORTED_LOCATION ${binary_dir}/libspdlog.a)
-add_dependencies(spdlog project_spdlog)
-
-##############
-# MODERN JSON
-##############
-
-FetchContent_Declare(
-    modernjson
-    URL "https://github.com/nlohmann/json/releases/download/v3.8.0/include.zip"
-    URL_HASH SHA256=8590fbcc2346a3eefc341935765dd57598022ada1081b425678f0da9a939a3c0)
-FetchContent_GetProperties(modernjson)
-if(NOT modernjson_POPULATED)
-    FetchContent_Populate(modernjson)
-endif()
-add_compile_definitions("NLOHMANN_JSON_HPP") # older versions used this macro. Now it's suffixed with "_"
 
 #########
 # CEREAL
@@ -99,41 +49,6 @@ if(NOT zstr_POPULATED)
     FetchContent_Populate(zstr)
 endif()
 
-###########
-# RANGE-V3
-###########
-
-FetchContent_Declare(
-    rangev3
-    URL "https://github.com/ericniebler/range-v3/archive/0.11.0.tar.gz"
-    URL_HASH MD5=97ab1653f3aa5f9e3d8200ee2a4911d3)
-
-FetchContent_GetProperties(rangev3)
-if(NOT rangev3_POPULATED)
-    FetchContent_Populate(rangev3)
-endif()
-
-#############
-# DOCOPT.CPP
-#############
-
-ExternalProject_Add(project_docopt
-    PREFIX "${CMAKE_CURRENT_BINARY_DIR}/_deps"
-    CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DCMAKE_POSITION_INDEPENDENT_CODE=on
-    BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} docopt_s
-    INSTALL_COMMAND ""
-    LOG_DOWNLOAD ON
-    UPDATE_DISCONNECTED ON
-    URL_MD5 c6290672c8dae49a01774297a51046fe
-    URL "https://github.com/docopt/docopt.cpp/archive/v0.6.3.tar.gz")
-
-ExternalProject_Get_Property(project_docopt binary_dir)
-ExternalProject_Get_Property(project_docopt source_dir)
-set(DocoptIncludeDir ${source_dir})
-add_library(docopt STATIC IMPORTED GLOBAL)
-add_dependencies(docopt project_docopt)
-set_property(TARGET docopt PROPERTY IMPORTED_LOCATION ${binary_dir}/libdocopt.a)
-
 #########
 # CPPSID
 #########
@@ -158,15 +73,6 @@ if(ENABLE_SID)
     find_package(SDL2 CONFIG)
 endif()
 
-
-###########
-# PYBIND11
-###########
-
-FetchContent_Declare(
-    pybind11
-    URL https://github.com/pybind/pybind11/archive/v2.5.0.tar.gz
-    URL_HASH MD5=1ad2c611378fb440e8550a7eb6b31b89)
 
 ############
 # INTEL TBB
@@ -200,19 +106,7 @@ if(NOT nanobench_POPULATED)
     FetchContent_Populate(nanobench)
 endif()
 
-########
-# EIGEN
-########
 
-FetchContent_Declare(
-    eigen
-    URL "https://gitlab.com/libeigen/eigen/-/archive/3.3.7/eigen-3.3.7.tar.gz"
-    URL_HASH MD5=9e30f67e8531477de4117506fe44669b)
-FetchContent_GetProperties(eigen)
-if(NOT eigen_POPULATED)
-    FetchContent_Populate(eigen)
-endif()
- 
 ##########
 # XRDFILE
 ##########
@@ -235,33 +129,6 @@ add_library(xdrfile STATIC IMPORTED)
 set_property(TARGET xdrfile PROPERTY IMPORTED_LOCATION ${binary_dir}/libxdrfile-static.a)
 add_dependencies(xdrfile project_xdrfile)
 set_target_properties(xdrfile PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
-
-##########
-# DOCTEST
-##########
-
-FetchContent_Declare(
-    doctest
-    URL "https://github.com/onqtam/doctest/archive/2.4.0.tar.gz"
-    URL_HASH SHA256=f689f48e92c088928d88d8481e769c8e804f0a608b484ab8ef3d6ab6045b5444)
-FetchContent_GetProperties(doctest)
-if(NOT doctest_POPULATED)
-    FetchContent_Populate(doctest)
-    #add_definitions(-DDOCTEST_CONFIG_DISABLE)
-endif()
-
-##############
-# TROMPELOEIL
-##############
-
-FetchContent_Declare(
-    trompeloeil
-    URL "https://github.com/rollbear/trompeloeil/archive/v39.tar.gz"
-    URL_HASH SHA256=10506e48abd605740bc9ed43e34059f5068bc80af14476bd129a3ed3b54d522f)
-FetchContent_GetProperties(trompeloeil)
-if(NOT trompeloeil_POPULATED)
-    FetchContent_Populate(trompeloeil)
-endif()
 
 ###########
 # FREESASA
@@ -306,7 +173,5 @@ include_directories(SYSTEM ${coulombgalore_SOURCE_DIR})
 # Add third-party headers to include path. Note this is done with SYSTEM
 # to disable potential compiler warnings
 
-include_directories(SYSTEM ${eigen_SOURCE_DIR} ${modernjson_SOURCE_DIR}/include ${rangev3_SOURCE_DIR}/include
-    ${doctest_SOURCE_DIR} ${trompeloeil_SOURCE_DIR}/include ${nanobench_SOURCE_DIR}/src/include
-    ${Pybind11IncludeDir} ${DocoptIncludeDir} ${CppsidIncludeDir} ${XdrfileIncludeDir} ${SpdlogIncludeDir}
-    ${ProgressTrackerIncludeDir} ${exprtk_SOURCE_DIR} ${cereal_SOURCE_DIR}/include ${zstr_SOURCE_DIR}/src)
+include_directories(SYSTEM ${nanobench_SOURCE_DIR}/src/include
+    ${CppsidIncludeDir} ${XdrfileIncludeDir} ${ProgressTrackerIncludeDir} ${cereal_SOURCE_DIR}/include ${zstr_SOURCE_DIR}/src)

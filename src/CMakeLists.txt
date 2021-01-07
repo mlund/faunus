@@ -8,6 +8,8 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 target_link_libraries(project_options INTERFACE ZLIB::ZLIB)
 target_link_libraries(project_options INTERFACE ${CMAKE_THREAD_LIBS_INIT})
 
+add_compile_definitions("NLOHMANN_JSON_HPP") # older versions used this macro. Now it's suffixed with "_"
+
 # ========== pre-compiler system headers ==========
 
 option(ENABLE_PCH "Enable Precompiled Headers" ON)
@@ -51,6 +53,7 @@ endif ()
 add_library(functionparser STATIC ${CMAKE_SOURCE_DIR}/src/functionparser.cpp ${CMAKE_SOURCE_DIR}/src/functionparser.h)
 set_target_properties(functionparser PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_definitions(functionparser PRIVATE DOCTEST_CONFIG_DISABLE)
+target_link_libraries(functionparser CONAN_PKG::exprtk CONAN_PKG::doctest CONAN_PKG::nlohmann_json)
 
 # ========== faunus cpp and header files ==========
 
@@ -78,13 +81,13 @@ target_compile_definitions(libfaunus PRIVATE SPDLOG_COMPILED_LIB)
 target_link_libraries(libfaunus PRIVATE
         project_options
         project_warnings
-        xdrfile spdlog
+        xdrfile
         functionparser)
 
 # ========== faunus (main executable) ==========
 
 add_executable(faunus faunus.cpp)
-target_link_libraries(faunus PRIVATE libfaunus docopt progresstracker project_options)
+target_link_libraries(faunus PRIVATE libfaunus progresstracker project_options CONAN_PKG::docopt.cpp)
 target_compile_definitions(faunus PRIVATE SPDLOG_COMPILED_LIB)
 set_target_properties(faunus PROPERTIES
         POSITION_INDEPENDENT_CODE ON
@@ -136,20 +139,11 @@ if (ENABLE_PYTHON)
     endif()
 
     if (PYTHONLIBS_FOUND)
-        FetchContent_GetProperties(pybind11)
-        if(NOT pybind11_POPULATED)
-            FetchContent_Populate(pybind11)
-            add_subdirectory(${pybind11_SOURCE_DIR} ${pybind11_BINARY_DIR})
-            pybind11_add_module(pyfaunus pyfaunus.cpp ${objs})
-            target_link_libraries(pyfaunus PRIVATE
-                    project_options
-                    xdrfile
-                    spdlog
-                    functionparser)
-            target_compile_definitions(pyfaunus PUBLIC SPDLOG_COMPILED_LIB)
-            target_compile_definitions(pyfaunus PRIVATE DOCTEST_CONFIG_DISABLE)
-        endif()
-    endif ()
+        pybind11_add_module(pyfaunus pyfaunus.cpp ${objs})
+        target_link_libraries(pyfaunus PRIVATE project_options xdrfile functionparser)
+        target_compile_definitions(pyfaunus PUBLIC SPDLOG_COMPILED_LIB)
+        target_compile_definitions(pyfaunus PRIVATE DOCTEST_CONFIG_DISABLE)
+    endif()
 endif ()
 
 if (TARGET pyfaunus)

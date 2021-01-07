@@ -3,6 +3,7 @@
 #include "units.h"
 #include "auxiliary.h"
 #include "spdlog/spdlog.h"
+#include <nlohmann/json.hpp>
 #include <coulombgalore.h>
 
 namespace Faunus {

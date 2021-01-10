@@ -18,3 +18,4 @@ trompeloeil/39
 
 [options]
 nlohmann_json:multiple_headers=True
+tbb:shared=False

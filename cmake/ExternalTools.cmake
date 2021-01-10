@@ -160,4 +160,4 @@ include_directories(SYSTEM ${coulombgalore_SOURCE_DIR})
 # to disable potential compiler warnings
 
 include_directories(SYSTEM ${nanobench_SOURCE_DIR}/src/include
-    ${CppsidIncludeDir} ${XdrfileIncludeDir} ${ProgressTrackerIncludeDir} ${cereal_SOURCE_DIR}/include ${zstr_SOURCE_DIR}/src)
+    ${CppsidIncludeDir} ${XdrfileIncludeDir} ${ProgressTrackerIncludeDir} ${zstr_SOURCE_DIR}/src)

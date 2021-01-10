@@ -59,12 +59,14 @@ and build using cmake:
 
 ~~~ bash
 cd faunus
-conan install --build missing .
+export CXX=clang++ CC=clang     # in case of Clang compiler
+conan install . --build missing # see below if using GCC
 cmake . [OPTIONS]
 make faunus
 make usagetips # requires `pandoc`, `pypandoc`, `BeautifulSoup4`
 ~~~
 
+For GCC append `-s compiler.libcxx=libstdc++11` to the above `conan install` command.
 Use `make help` to see all build targets.
 
 The following options are available:

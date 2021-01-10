@@ -125,7 +125,7 @@ option(ENABLE_PYTHON "Try to compile python bindings (experimental!)" on)
 if (ENABLE_PYTHON)
     INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include)
     INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
-    find_package(PythonLibs 3 REQUIRED)
+    find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
 
     if (PYTHONINTERP_FOUND)
         execute_process(

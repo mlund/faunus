@@ -22,20 +22,6 @@ add_library(progresstracker STATIC IMPORTED GLOBAL)
 add_dependencies(progresstracker project_progresstracker)
 set_property(TARGET progresstracker PROPERTY IMPORTED_LOCATION ${binary_dir}/libprogresstracker.a)
 
-
-#########
-# CEREAL
-#########
-
-FetchContent_Declare(
-    cereal
-    URL "https://github.com/USCiLab/cereal/archive/v1.3.0.tar.gz"
-    URL_HASH MD5=4342e811f245403646c4175258f413f1)
-FetchContent_GetProperties(cereal)
-if(NOT cereal_POPULATED)
-    FetchContent_Populate(cereal)
-endif()
-
 #######
 # ZSTR
 #######

@@ -18,6 +18,7 @@ endif()
 add_library(project_options INTERFACE)
 target_compile_features(project_options INTERFACE cxx_std_17)
 target_link_libraries(project_options INTERFACE
+    CONAN_PKG::cereal
     CONAN_PKG::doctest
     CONAN_PKG::eigen
     CONAN_PKG::exprtk

@@ -5,8 +5,18 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
 # ========== add to interface library (common to all faunus targets) ==========
 
-target_link_libraries(project_options INTERFACE ZLIB::ZLIB)
-target_link_libraries(project_options INTERFACE ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(project_options INTERFACE
+    ${CMAKE_THREAD_LIBS_INIT}
+    ZLIB::ZLIB
+    CONAN_PKG::cereal
+    CONAN_PKG::doctest
+    CONAN_PKG::eigen
+    CONAN_PKG::exprtk
+    CONAN_PKG::fmt
+    CONAN_PKG::nlohmann_json
+    CONAN_PKG::range-v3
+    CONAN_PKG::spdlog
+    CONAN_PKG::trompeloeil)
 
 add_compile_definitions("NLOHMANN_JSON_HPP") # older versions used this macro. Now it's suffixed with "_"
 

@@ -7,6 +7,13 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
 set(CMAKE_CXX_EXTENSIONS YES)
 
+if(EXISTS ${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+   include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+   conan_basic_setup(TARGETS)
+else()
+    message(WARNING "First run `conan install -b missing -if ${CMAKE_BINARY_DIR}`")
+endif()
+
 # Interface library for all Faunus targets
 add_library(project_options INTERFACE)
 target_compile_features(project_options INTERFACE cxx_std_17)

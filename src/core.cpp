@@ -8,6 +8,7 @@
 #include <fstream>
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/null_sink.h>
+#include <range/v3/view/filter.hpp>
 
 namespace Faunus {
 

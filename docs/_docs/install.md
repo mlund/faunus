@@ -34,6 +34,7 @@ but should compile on most unix operating systems and possibly under Cygwin (Win
 - C/C++17 compiler (Clang 5+, GCC 7+, etc.)
 - Python 3.6+ with the following packages:
   - `jinja2`, `ruamel_yaml` or `yaml`
+- Conan C++ package manager (typical install with `pip install conan`)
 
 The following are optional:
 
@@ -58,11 +59,14 @@ and build using cmake:
 
 ~~~ bash
 cd faunus
+export CXX=clang++ CC=clang     # in case of Clang compiler
+conan install . --build missing # see below if using GCC
 cmake . [OPTIONS]
 make faunus
 make usagetips # requires `pandoc`, `pypandoc`, `BeautifulSoup4`
 ~~~
 
+For GCC append `-s compiler.libcxx=libstdc++11` to the above `conan install` command.
 Use `make help` to see all build targets.
 
 The following options are available:

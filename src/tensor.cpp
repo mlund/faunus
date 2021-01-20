@@ -2,6 +2,7 @@
 #include "tensor.h"
 #include "units.h"
 #include "core.h"
+#include <Eigen/Geometry>
 #include <nlohmann/json.hpp>
 
 namespace Faunus {

@@ -1,10 +1,11 @@
 #pragma once
 #include "average.h"
-#include <nlohmann/json_fwd.hpp>
+#include <nlohmann/json.hpp>
 #include <functional>
 #include <fstream>
 #include <vector>
 #include <string>
+#include <sstream>
 
 /**
  * @file auxiliary.h

@@ -6,6 +6,7 @@
 #include "spdlog/spdlog.h"
 #include "aux/eigensupport.h"
 #include <functional>
+#include <range/v3/view/transform.hpp>
 
 namespace Faunus {
 

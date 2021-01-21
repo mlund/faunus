@@ -242,8 +242,8 @@ set_target_properties(xdrfile PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 
 FetchContent_Declare(
     doctest
-    URL "https://github.com/onqtam/doctest/archive/2.4.0.tar.gz"
-    URL_HASH SHA256=f689f48e92c088928d88d8481e769c8e804f0a608b484ab8ef3d6ab6045b5444)
+    URL "https://github.com/onqtam/doctest/archive/2.4.4.tar.gz"
+    URL_HASH SHA256=3bcb62ad316bf4230873a336fcc6eb6292116568a6e19ab8cdd37a1610773d70)
 FetchContent_GetProperties(doctest)
 if(NOT doctest_POPULATED)
     FetchContent_Populate(doctest)

@@ -162,7 +162,7 @@ Instead, use a hard-coded variant like `nonbonded_coulomblj` etc.
 ------------------ | ---------------------------------
 `molecule`         |  Molecule name to operate on
 `repeat=N`         |  Number of repeats per MC sweep
-`keeppos=True`     |  Keep original positions of `traj`
+`keeppos=False`    |  Keep original positions of `traj`
 
 This will swap between different molecular conformations
 as defined in the [Molecule Properties](topology.html#molecule-properties) with `traj` and `trajweight`
@@ -171,6 +171,8 @@ distribution is respected, otherwise all conformations
 have equal intrinsic weight. Upon insertion, the new conformation
 is randomly oriented and placed on top of the mass-center of
 an exising molecule. That is, there is no mass center movement.
+If `keeppos` is activated, the raw coordinates from the conformation
+is used, i.e. no rotation and no mass-center overlay.
 
 ### Pivot
 

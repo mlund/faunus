@@ -277,30 +277,21 @@ class SmartTranslateRotate : public MoveBase {
  * an exising molecule. That is, there is no mass center movement.
  *
  * @todo Add feature to align molecule on top of an exiting one
- * @todo Expand `_info()` to show number of conformations
- * @warning Weighted distributions untested and not verified for correctness
- * @date Malmo, November 2016
  */
 class ConformationSwap : public MoveBase {
   private:
-    typedef typename Space::Tpvec Tpvec;
-    typedef MoleculeData Tmoldata;
     RandomInserter inserter;
-    int molid = -1;
-    int newconfid = -1;
-
+    int molid = -1; //!< Molecule ID to operate on
     void _to_json(json &j) const override;
-    void _from_json(const json &j) override; //!< Configure via json object
+    void _from_json(const json &j) override;
     void _move(Change &change) override;
-    void _accept(Change &change) override;
-
-  protected:
-    using MoveBase::spc;
-    ConformationSwap(Space &spc, std::string name, std::string cite);
+    void setRepeat(); //!< Set move repeat
+    void checkMassCenterDrift(const Point &old_mass_center, const ParticleVector &particles); //!< Check for CM drift
+    void registerChanges(Change &change, const Space::Tgroup &group) const;                   //!< Update change object
+    ConformationSwap(Space &spc, const std::string &name, const std::string &cite);
 
   public:
     explicit ConformationSwap(Space &spc);
-
 }; // end of conformation swap move
 
 class VolumeMove : public MoveBase {

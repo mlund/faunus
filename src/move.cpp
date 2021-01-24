@@ -1262,67 +1262,75 @@ SmartTranslateRotate::SmartTranslateRotate(Space &spc, std::string name, std::st
 SmartTranslateRotate::SmartTranslateRotate(Space &spc) : SmartTranslateRotate(spc, "smartmoltransrot", "") {}
 
 void ConformationSwap::_to_json(json &j) const {
-    j = {{"molid", molid}, {"molecule", molecules[molid].name}, {"keeppos", inserter.keep_positions}};
+    j = {{"molid", molid}, {"molecule", Faunus::molecules.at(molid).name}, {"keeppos", inserter.keep_positions}};
     _roundjson(j, 3);
 }
 void ConformationSwap::_from_json(const json &j) {
-    assert(!molecules.empty());
     try {
-        std::string molname = j.at("molecule");
-        inserter.keep_positions = j.value("keeppos", false);
-        auto it = findName(molecules, molname);
-        if (it == molecules.end())
-            throw std::runtime_error("unknown molecule '" + molname + "'");
-        molid = it->id();
-        if (molecules[molid].conformations.size() < 2)
-            throw std::runtime_error("minimum two conformations required");
-        if (repeat < 0) {
-            auto v = spc.findMolecules(molid);
-            repeat = std::distance(v.begin(), v.end());
+        const auto molecule_name = j.at("molecule").get<std::string>();
+        if (auto molecule = Faunus::findName(Faunus::molecules, molecule_name); molecule != Faunus::molecules.end()) {
+            if (molecule->conformations.size() >= 2) {
+                molid = molecule->id();
+                inserter.keep_positions = j.value("keeppos", false);
+                setRepeat();
+            } else {
+                throw ConfigurationError("minimum two conformations required");
+            }
+        } else {
+            throw ConfigurationError("unknown molecule '{}'", molecule_name);
         }
     } catch (std::exception &e) {
-        throw std::runtime_error(name + ": " + e.what());
+        throw ConfigurationError("{}: {}", name, e.what());
+    }
+}
+void ConformationSwap::setRepeat() {
+    assert(molid >= 0);
+    if (repeat < 0) { // negative value signals repeat = N number of molecules
+        auto groups = spc.findMolecules(molid, Space::ALL);
+        repeat = std::distance(groups.begin(), groups.end());
+        if (repeat == 0) {
+            faunus_logger->warn("{}: no molecules found; repeat set to ZERO", name, repeat);
+        }
     }
 }
 void ConformationSwap::_move(Change &change) {
-    assert(molid >= 0);
-    assert(change.empty());
-
-    auto mollist = spc.findMolecules(molid, Space::ACTIVE); // list of molecules w. 'molid'
-    if (not ranges::cpp20::empty(mollist)) {
-        auto g = slump.sample(mollist.begin(), mollist.end());
-        if (not g->empty()) {
-            inserter.offset = g->cm;
-
-            // Get a new conformation that should be properly wrapped around the boundaries
-            // (if applicable) and have the same mass-center as "g->cm".
-            auto p = inserter(spc.geo, molecules[molid], spc.p);
-            if (p.size() not_eq g->size())
+    if (auto groups = spc.findMolecules(molid, Space::ACTIVE); !ranges::cpp20::empty(groups)) {
+        if (auto &group = *slump.sample(groups.begin(), groups.end()); !group.empty()) { // pick random molecule
+            inserter.offset = group.cm;                                                  // insert on top of mass center
+            const auto particles = inserter(spc.geo, Faunus::molecules[molid], spc.p);   // new conformation
+            if (particles.size() == group.size()) {
+                checkMassCenterDrift(group.cm, particles);                            // throws if not OK
+                std::copy(particles.begin(), particles.end(), group.begin());         // override w. new conformation
+                group.confid = Faunus::molecules[molid].conformations.getLastIndex(); // store conformation id
+                registerChanges(change, group);                                       // update change object
+            } else {
                 throw std::runtime_error(name + ": conformation atom count mismatch");
-
-            newconfid = molecules[molid].conformations.getLastIndex();
-
-            std::copy(p.begin(), p.end(), g->begin()); // override w. new conformation
-#ifndef NDEBUG
-            // this move shouldn't move mass centers, so let's check if this is true:
-            Point newcm = Geometry::massCenter(p.begin(), p.end(), spc.geo.getBoundaryFunc(), -g->cm);
-            if ((newcm - g->cm).norm() > 1e-6)
-                throw std::runtime_error(name + ": unexpected mass center movement");
-#endif
-            Change::data d;
-            d.index = Faunus::distance(spc.groups.begin(), g); // integer *index* of moved group
-            d.all = true;                                      // *all* atoms in group were moved
-            d.internal = false;                                // we *don't* want to calculate the internal energy
-            change.groups.push_back(d);                        // add to list of moved groups
+            }
         }
     }
 }
-void ConformationSwap::_accept(Change &change) {
-    assert(change.groups.size() == 1);
-    spc.groups[change.groups.front().index].confid = newconfid;
+void ConformationSwap::registerChanges(Change &change, const Space::Tgroup &group) const {
+    auto &group_change = change.groups.emplace_back();
+    group_change.index = spc.getGroupIndex(group); // index of moved group
+    group_change.all = true;                       // all atoms in group were moved
+    group_change.internal = false;                 // skip internal energy calculation
+}
+/**
+ * @throw if there's a mass-center drift
+ *
+ * Move shouldn't move mass centers, so let's check if this is true
+ */
+void ConformationSwap::checkMassCenterDrift(const Point &old_mass_center, const ParticleVector &particles) {
+    const auto max_allowed_distance = 1.0e-6;
+    const auto new_mass_center =
+        Geometry::massCenter(particles.begin(), particles.end(), spc.geo.getBoundaryFunc(), -old_mass_center);
+    if ((new_mass_center - old_mass_center).norm() > max_allowed_distance) {
+        throw std::runtime_error(name + ": unexpected mass center movement");
+    }
 }
 
-ConformationSwap::ConformationSwap(Space &spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {}
+ConformationSwap::ConformationSwap(Space &spc, const std::string &name, const std::string &cite)
+    : MoveBase(spc, name, cite) {}
 
 ConformationSwap::ConformationSwap(Space &spc) : ConformationSwap(spc, "conformationswap", "") {
     repeat = -1; // meaning repeat n times

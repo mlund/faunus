@@ -158,7 +158,7 @@ properties:
                     keeppos: {type: boolean, default: false, description: Keep original positions of `structure`}
                     keepcharges: {type: boolean, default: true, description: Keep original charges of `structure` (aam/pqr files)}
                     rigid: {type: boolean, default: false, description: Set to true for rigid molecules. Affects energy evaluation}
-                    rotate: {type: boolean, default: true, description: Rotate structure upon insertion?}
+                    rotate: {type: boolean, default: true, description: "Rotate structure upon insertion?"}
                     structure:
                         description: Structure file or direct information; required if `atomic=false`
                         anyOf:
@@ -524,7 +524,7 @@ properties:
                     description: "External Custom Potential"
                     type: object
                     properties:
-                        com: {type: boolean, default: false, description: Operate on mass-center instead of individual atoms?}
+                        com: {type: boolean, default: false, description: "Operate on mass-center instead of individual atoms?"}
                         constants: {type: object, description: User-defined constants}
                         function: {type: string, description: Mathematical expression for the potential (units of kT)}
                         molecules:

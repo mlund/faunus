@@ -154,13 +154,18 @@ int main(int argc, const char **argv) {
 
         // --input
         json json_in;
-        if (auto input = args["--input"].asString(); input == "/dev/stdin") {
-            std::cin >> json_in;
-        } else {
-            if (prefix) {
-                input = Faunus::MPI::prefix + input;
+        try {
+            if (auto input = args["--input"].asString(); input == "/dev/stdin") {
+                    std::cin >> json_in;
+            } else {
+                if (prefix) {
+                    input = Faunus::MPI::prefix + input;
+                }
+                json_in = openjson(input);
             }
-            json_in = openjson(input);
+        } catch(json::parse_error& e) {
+            faunus_logger->debug(e.what());
+            throw ConfigurationError("empty or invalid input JSON");
         }
 
         {

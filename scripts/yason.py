@@ -52,8 +52,9 @@ if pygments:
 
 args = parser.parse_args()
 
-red = "\033[91m"
-yellow = "\033[93m"
+terminal_red = "\033[91m"
+terminal_yellow = "\033[93m"
+terminal_default = "\033[39m"
  
 if pygments:
     if args.color:
@@ -78,7 +79,7 @@ def print_table(schema):
     ''' pretty print schema as markdown table '''
     properties = schema.get("properties", "")
     if isinstance(properties, dict):
-        eprint(yellow + "Need help, my young apprentice?\n" + red)
+        eprint(terminal_yellow + "Need help, my young apprentice?\n" + terminal_red)
         eprint("{:25} | {:7} | {:50}".format(25*"-", 7*"-", 50*"-"))
         eprint("{:25} | {:7} | {:50}".format("Property", "Type", "Description"))
         eprint("{:25} | {:7} | {:50}".format(25*"-", 7*"-", 50*"-"))
@@ -97,6 +98,7 @@ def print_table(schema):
                     eprint("{:25} | {:7} | {}".format('`'+_property+'`', _type, _description))
                 else:
                     eprint("{:25} | {:7} | {}".format('`'+_property+'`', 'n/a', _description))
+        eprint(terminal_default) # restore terminal color
 
 def validate_input(instance):
     ''' JSON schema checker '''

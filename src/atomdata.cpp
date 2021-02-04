@@ -133,8 +133,8 @@ void from_json(const json &j, AtomData &a) {
 
         from_single_use_json(val, a.interaction);
         if (!val.empty()) {
-            throw std::runtime_error("unused key(s) for atom '"s + a.name + "':\n" + val.items().begin().key() +
-                                     usageTip["atomlist"]);
+            usageTip.pick("atomlist");
+            throw ConfigurationError("unused key(s) for atom '{}':\n{}", a.name, val.items().begin().key());
         }
 
         if (std::isnan(a.interaction.get("sigma")))
@@ -216,5 +216,16 @@ TEST_CASE("[Faunus] AtomData") {
     CHECK_EQ(it, v.end());
 }
 TEST_SUITE_END();
+
+UnknownAtomError::UnknownAtomError(const std::string& atom_name)
+    : std::runtime_error(fmt::format("unknown atom: '{}'", atom_name)) {}
+
+AtomData& findAtomByName(const std::string& name) {
+    const auto result = findName(Faunus::atoms, name);
+    if (result == Faunus::atoms.end()) {
+        throw UnknownAtomError(name);
+    }
+    return *result;
+}
 
 } // namespace Faunus

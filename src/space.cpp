@@ -721,29 +721,25 @@ void InsertMoleculesInSpace::insertImplicitGroups(const MoleculeData &moldata, S
  * @param spc Space to insert into
  */
 void InsertMoleculesInSpace::insertItem(const std::string &molname, const json &properties, Space &spc) {
-    if (auto moldata = findName(Faunus::molecules, molname); moldata == Faunus::molecules.end()) {
-        throw ConfigurationError("unknown molecule: {}", molname);
+    auto moldata = findMoleculeByName(molname);
+    int num_molecules = getNumberOfMolecules(properties, spc.geo.getVolume(), molname);
+    if (num_molecules == 0) {
+        if (!moldata.isImplicit()) {
+            throw ConfigurationError("one or more {} molecule(s) required; concentration too low?", molname);
+        }
     } else {
-        int num_molecules = getNumberOfMolecules(properties, spc.geo.getVolume(), molname);
-        if (num_molecules == 0) {
-            if (!moldata->isImplicit()) {
-                throw ConfigurationError("one or more {} molecule(s) required; concentration too low?", molname);
-            }
+        int num_inactive = getNumberOfInactiveMolecules(properties, num_molecules);
+        double molarity = (num_molecules - num_inactive) / spc.geo.getVolume() / 1.0_molar;
+        if (moldata.isImplicit()) {
+            faunus_logger->info("adding {} implicit {} molecules --> {} mol/l", num_molecules, molname, molarity);
+            insertImplicitGroups(moldata, spc, num_molecules);
         } else {
-            int num_inactive = getNumberOfInactiveMolecules(properties, num_molecules);
-            double molarity = (num_molecules - num_inactive) / spc.geo.getVolume() / 1.0_molar;
-            if (moldata->isImplicit()) {
-                faunus_logger->info("adding {} implicit {} molecules --> {} mol/l", num_molecules, molname, molarity);
+            faunus_logger->info("adding {} {} molecules --> {} mol/l ({} inactive)", num_molecules, molname,
+                                molarity, num_inactive);
+            if (moldata.atomic) {
+                insertAtomicGroups(moldata, spc, num_molecules, num_inactive);
             } else {
-                faunus_logger->info("adding {} {} molecules --> {} mol/l ({} inactive)", num_molecules, molname,
-                                    molarity, num_inactive);
-            }
-            if (moldata->isImplicit()) {
-                insertImplicitGroups(*moldata, spc, num_molecules);
-            } else if (moldata->atomic) {
-                insertAtomicGroups(*moldata, spc, num_molecules, num_inactive);
-            } else {
-                insertMolecularGroups(*moldata, spc, num_molecules, num_inactive);
+                insertMolecularGroups(moldata, spc, num_molecules, num_inactive);
                 if (auto particles = getExternalPositions(properties, molname); !particles.empty()) {
                     auto offset = properties.value("translate", Point(0, 0, 0));
                     setPositionsForTrailingGroups(spc, num_molecules, particles, offset);

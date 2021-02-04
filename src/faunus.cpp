@@ -267,8 +267,18 @@ int main(int argc, const char **argv) {
     } catch (std::exception &e) {
         faunus_logger->error(e.what());
 
+        // ConfigurationError can carry a JSON snippet which should be shown for debugging.
+        if (auto config_error = dynamic_cast<ConfigurationError*>(&e);
+            config_error != nullptr && !config_error->attachedJson().empty()) {
+            faunus_logger->debug("JSON snippet:\n{}", config_error->attachedJson().dump(4));
+        }
+
         if (!usageTip.buffer.empty()) {
-            faunus_logger->error(usageTip.buffer);
+            // Use the srderr stream directly for more elaborated output of usage tip, optionally containing an ASCII
+            // art. Level info seems appropriate.
+            if (faunus_logger->should_log(spdlog::level::info)) {
+                std::cerr << usageTip.buffer << std::endl;
+            }
         }
 #ifdef ENABLE_SID
         // easter egg...

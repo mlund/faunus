@@ -48,10 +48,7 @@ ChainRotationMove::ChainRotationMove(Space &spc, std::string name, std::string c
 
 void ChainRotationMove::_from_json(const json &j) {
     TBase::_from_json(j);
-    auto moliter = findName(molecules, molname);
-    if (moliter == molecules.end())
-        throw std::runtime_error("unknown molecule '" + molname + "'");
-    molid = moliter->id();
+    molid = findMoleculeByName(molname).id();
 }
 
 void ChainRotationMove::rotate_segment(double angle) {

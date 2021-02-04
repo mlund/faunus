@@ -64,28 +64,28 @@ namespace Faunus::ReactionCoordinate {
  *
  *     atom: {resolution: 0.1, ... }
  */
-std::shared_ptr<ReactionCoordinateBase> createReactionCoordinate(const json &j, Space &spc) {
-    assert(j.is_object());
-    assert(j.size() == 1);
-
-    std::shared_ptr<ReactionCoordinateBase> rc;
-
-    for (auto it : j.items()) {
+std::shared_ptr<ReactionCoordinateBase> createReactionCoordinate(const json& j, Space& spc) {
+    std::shared_ptr<ReactionCoordinateBase> reaction_coordinate;
+    try {
+        const auto& [key, j_params] = jsonSingleItem(j);
         try {
-            if (it.key() == "atom")
-                rc = std::make_shared<AtomProperty>(it.value(), spc);
-            else if (it.key() == "molecule")
-                rc = std::make_shared<MoleculeProperty>(it.value(), spc);
-            else if (it.key() == "system")
-                rc = std::make_shared<SystemProperty>(it.value(), spc);
-            else
-                throw std::runtime_error("unknown type");
-        } catch (std::exception &e) {
-            throw std::runtime_error("error creating reaction coordinate '" + it.key() + "': " + e.what() +
-                                     usageTip["coords=[" + it.key() + "]"]);
+            if (key == "atom") {
+                reaction_coordinate = std::make_shared<AtomProperty>(j_params, spc);
+            } else if (key == "molecule") {
+                reaction_coordinate = std::make_shared<MoleculeProperty>(j_params, spc);
+            } else if (key == "system") {
+                reaction_coordinate = std::make_shared<SystemProperty>(j_params, spc);
+            } else {
+                throw ConfigurationError("unknown reaction coordinate");
+            }
+        } catch (std::exception& e) {
+            usageTip.pick(fmt::format("coords=[{}]", key));
+            throw ConfigurationError("'{}': {}", key, e.what());
         }
+    } catch (std::exception& e) {
+        throw ConfigurationError("reaction coordinate: {}", e.what()).attachJson(j);
     }
-    return rc;
+    return reaction_coordinate;
 }
 
 void SystemProperty::_to_json(json &j) const { j["property"] = property; }
@@ -121,8 +121,10 @@ SystemProperty::SystemProperty(const json &j, Space &spc) : ReactionCoordinateBa
                 N_sum += g.size();
             return N_sum;
         };
-    if (f == nullptr)
-        throw std::runtime_error(name + ": unknown property '" + property + "'" + usageTip["coords=[system]"]);
+    if (f == nullptr) {
+        usageTip.pick("coords=[system]");
+        throw ConfigurationError("{}: unknown property '{}'", name, property);
+    }
 }
 
 void AtomProperty::_to_json(json &j) const {
@@ -136,7 +138,7 @@ AtomProperty::AtomProperty(const json &j, Space &spc) : ReactionCoordinateBase(j
     name = "atom";
     index = j.at("index");
     if (index >= spc.p.size())
-        throw std::runtime_error("invalid index");
+        throw ConfigurationError("invalid index");
     property = j.at("property").get<std::string>();
     if (property == "x")
         f = [&p = spc.p, i = index]() { return p[i].pos.x(); };
@@ -158,8 +160,10 @@ AtomProperty::AtomProperty(const json &j, Space &spc) : ReactionCoordinateBase(j
             return N_sum;
         };
 
-    if (f == nullptr)
-        throw std::runtime_error(name + ": unknown property '" + property + "'" + usageTip["coords=[atom]"]);
+    if (f == nullptr) {
+        usageTip.pick("coords=[atom]");
+        throw ConfigurationError("{}: unknown property '{}'", name, property);
+    }
 }
 
 void MoleculeProperty::_to_json(json &j) const {
@@ -175,7 +179,7 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordina
     name = "molecule";
     index = j.value("index", 0);
     if (index >= spc.groups.size())
-        throw std::runtime_error("invalid index");
+        throw ConfigurationError("invalid index");
     auto b = spc.geo.getBoundaryFunc();
     property = j.at("property").get<std::string>();
 
@@ -359,9 +363,9 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordina
             };
         }
     }
-
-    if (f == nullptr)
-        throw std::runtime_error(name + ": unknown or impossible property '" + property + "'" +
-                                 usageTip["coords=[molecule]"]);
+    if (f == nullptr) {
+        usageTip.pick("coords=[molecule]");
+        throw ConfigurationError("{}: unknown or impossible property property '{}'", name, property);
+    }
 }
-} // namespace
+} // namespace Faunus::ReactionCoordinate

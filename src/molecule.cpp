@@ -79,10 +79,13 @@ void to_json(json &j, const MoleculeData &a) {
 
 void MoleculeData::createMolecularConformations(const json &j) {
     assert(j.is_object());
-
     if (auto trajfile = j.value("traj", ""s); not trajfile.empty()) {
         conformations.clear();                                  // remove all previous conformations
-        FormatPQR::loadTrajectory(trajfile, conformations.data); // read traj. from disk
+        try {
+            FormatPQR::loadTrajectory(trajfile, conformations.data); // read traj. from disk
+        } catch (std::exception& e) {
+            throw std::runtime_error(fmt::format("error loading structure from file '{}': {}", trajfile, e.what()));
+        }
         if (not conformations.empty()) {
             faunus_logger->debug("{} conformations loaded from {}", conformations.size(), trajfile);
 
@@ -319,12 +322,8 @@ void MoleculeBuilder::from_json(const json &j, MoleculeData &molecule) {
     }
     is_used = true;
     try {
-        if (j.is_object() == false || j.size() != 1) {
-            throw ConfigurationError("invalid json");
-        }
-        auto j_molecule_it = j.items().begin(); // a persistent copy of iterator needed in clang
-        molecule.name = molecule_name = (*j_molecule_it).key();
-        auto &j_properties = (*j_molecule_it).value();
+        const auto& [key, j_properties] = jsonSingleItem(j);
+        molecule.name = molecule_name = key;
         molecule.id() = j_properties.value("id", molecule.id());
         molecule.atomic = j_properties.value("atomic", molecule.atomic);
         molecule.rigid = j_properties.value("rigid", molecule.rigid);
@@ -361,7 +360,8 @@ void MoleculeBuilder::from_json(const json &j, MoleculeData &molecule) {
         //            throw std::runtime_error("unused key(s):\n"s + val.dump() + usageTip["moleculelist"]);
         //        }
     } catch (std::exception &e) {
-        throw std::runtime_error("JSON->molecule " + molecule_name + ": " + e.what());
+        usageTip.pick("moleculelist");
+        throw ConfigurationError("molecule '{}': {}", molecule_name, e.what());
     }
 }
 
@@ -390,14 +390,15 @@ void MoleculeBuilder::readAtomic(const json &j_properties) {
         if (not it->is_array()) {
             throw ConfigurationError("`atoms` must be an array");
         }
-        particles.reserve(it->size());
-        for (auto atom_id : *it) {
-            const auto atom_name = atom_id.get<std::string>();
-            if (auto atom_it = findName(Faunus::atoms, atom_name); atom_it == atoms.end()) {
-                throw ConfigurationError("Unknown atom '{}' in molecule '{}'", atom_name, molecule_name);
-            } else {
-                particles.emplace_back(*atom_it);
+        try {
+            particles.reserve(it->size());
+            for (auto atom_id : *it) {
+                const auto atom_name = atom_id.get<std::string>();
+                const auto atom = findAtomByName(atom_name);
+                particles.emplace_back(atom);
             }
+        } catch (std::exception& e) {
+            throw ConfigurationError("molecule '{}': {}", molecule_name, e.what());
         }
     }
 }
@@ -508,28 +509,21 @@ void MoleculeStructureReader::readFile(ParticleVector &particles, const std::str
 
 void MoleculeStructureReader::readArray(ParticleVector &particles, const json &j_particles) {
     particles.reserve(j_particles.size());
-    for (auto &j_particle_wrap : j_particles) {
-        if (!j_particle_wrap.is_object() || j_particle_wrap.size() != 1) {
-            throw ConfigurationError("unrecognized molecule's atom format");
-        }
-        auto j_particle_it = j_particle_wrap.items().begin(); // a persistent copy of iterator needed in clang
-        auto atom_it = findName(atoms, (*j_particle_it).key());
-        if (atom_it == atoms.end()) {
-            throw ConfigurationError("unknown atom '{}' in the molecule.", (*j_particle_it).key());
-        }
-        Point pos = (*j_particle_it).value();
-        particles.emplace_back(*atom_it, pos);
+    for (auto& j_particle : j_particles) {
+        const auto& [key, j_params] = jsonSingleItem(j_particle);
+        const Point pos = j_params;
+        particles.emplace_back(findAtomByName(key), pos);
     }
 }
 
 void MoleculeStructureReader::readFasta(ParticleVector &particles, const json &input) {
-    if (auto it = input.find("fasta"); it == input.end()) {
-        throw ConfigurationError("invalid FASTA format");
-    } else {
+    if (auto it = input.find("fasta"); it != input.end()) {
         std::string fasta = it->get<std::string>();
         Potential::HarmonicBond bond; // harmonic bond
         bond.from_json(input);        // read 'k' and 'req' from json
         particles = Faunus::fastaToParticles(fasta, bond.req);
+    } else {
+        throw ConfigurationError("invalid FASTA format");
     }
 }
 MoleculeStructureReader::MoleculeStructureReader(bool read_charges) : read_charges(read_charges) {}
@@ -960,5 +954,16 @@ void MoleculeInserter::from_json(const json &) {}
 void MoleculeInserter::to_json(json &) const {}
 
 TEST_SUITE_END();
+
+UnknownMoleculeError::UnknownMoleculeError(const std::string& molecule_name)
+        : std::runtime_error(fmt::format("unknown molecule: '{}'", molecule_name)) {}
+
+MoleculeData& findMoleculeByName(const std::string& name) {
+    const auto result = findName(Faunus::molecules, name);
+    if (result == Faunus::molecules.end()) {
+        throw UnknownMoleculeError(name);
+    }
+    return *result;
+}
 
 } // namespace Faunus

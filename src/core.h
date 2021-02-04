@@ -61,6 +61,19 @@ namespace Faunus {
     double value_inf(const json &, const std::string &); //!< Extract floating point from json and allow for 'inf' and '-inf'
 
     /**
+     * @brief Returns a key-value pair from a JSON object which contains a single key.
+     *
+     * JSON objects having a single key-value pair are a common pattern in JSON configuration used in Faunus. This
+     * function provides a convenient way to handle it.
+     *
+     * @param j  JSON object
+     * @return  tuple [key as a string, value as a JSON]
+     * @throw std::runtime_error  when not a JSON object or the object is empty or the object contains more than a
+     *   single value
+     */
+    std::tuple<const std::string&, const json&> jsonSingleItem(const json& j);
+
+    /**
      * @brief Class for showing help based on input errors
      *
      * If no valid database files are found using `load()`,
@@ -69,18 +82,19 @@ namespace Faunus {
      * functionality is completely optional.
      */
     class TipFromTheManual {
-        private:
-            json db; // database
-            std::shared_ptr<Random> random;
+      private:
+        json db; // database
+        std::shared_ptr<Random> random;
+        bool tip_already_given = false;
 
-          public:
-            std::string buffer; // accumulate output here
-            bool quiet = true;  // if operator[] returns empty string
-            TipFromTheManual();
-            bool asciiart = true;
-            bool tip_already_given=false;
-            void load(const std::vector<std::string>&);
-            std::string operator[](const std::string&);
+      public:
+        std::string buffer; // accumulate output here
+        bool quiet = true;  // if operator[] returns empty string
+        bool asciiart = true;
+        TipFromTheManual();
+        void load(const std::vector<std::string> &);
+        std::string operator[](const std::string &);
+        void pick(const std::string &);
     };
 
     extern TipFromTheManual usageTip; // global instance
@@ -180,11 +194,16 @@ auto filter(iter begin, iter end, std::function<bool(T&)> unarypredicate) {
 
     /** Exception to be thrown when parsing json configuration */
     struct ConfigurationError : public std::runtime_error {
+        explicit ConfigurationError(const std::exception &e);
+        explicit ConfigurationError(const std::runtime_error &e);
         explicit ConfigurationError(const std::string &msg);
         explicit ConfigurationError(const char *msg);
         template <class... Args>
         explicit ConfigurationError(std::string_view fmt, const Args &... args)
             : std::runtime_error(fmt::format(fmt, args...)) {}
+        json& attachedJson();
+        ConfigurationError& attachJson(const json j);
+      private:
+        json attached_json;
     };
-
-    }//end of faunus namespace
+} // namespace Faunus

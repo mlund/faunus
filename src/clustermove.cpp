@@ -118,12 +118,9 @@ void FindCluster::parseThresholds(const json &j) {
         }
         for (const auto &[key, value] : j.items()) {
             if (auto name_pair = Faunus::words2vec<std::string>(key); name_pair.size() == 2) {
-                auto it1 = Faunus::findName(Faunus::molecules, name_pair[0]);
-                auto it2 = Faunus::findName(Faunus::molecules, name_pair[1]);
-                if (it1 == Faunus::molecules.end() or it2 == Faunus::molecules.end()) {
-                    throw ConfigurationError("unknown threshold molecule(s): [{} {}]", name_pair[0], name_pair[1]);
-                }
-                thresholds_squared.set(it1->id(), it2->id(), std::pow(value.get<double>(), 2));
+                const auto molecule1 = findMoleculeByName(name_pair[0]);
+                const auto molecule2 = findMoleculeByName(name_pair[1]);
+                thresholds_squared.set(molecule1.id(), molecule2.id(), std::pow(value.get<double>(), 2));
             } else {
                 throw ConfigurationError("threshold requires exactly two space-separated molecules");
             }

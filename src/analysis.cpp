@@ -13,9 +13,7 @@
 #include <iostream>
 #include <memory>
 
-namespace Faunus {
-
-namespace Analysis {
+namespace Faunus::Analysis {
 
 void to_json(json &j, const Analysisbase &base) { base.to_json(j); }
 
@@ -246,7 +244,7 @@ SaveState::SaveState(json j, Space &spc) {
             }
         };
     } else {
-        throw std::runtime_error("unknown file extension for '" + filename + "'");
+        throw ConfigurationError("unknown file extension for '{}'", filename);
     }
 }
 
@@ -424,11 +422,7 @@ MolecularConformationID::MolecularConformationID(const json &j, Space &spc) : sp
     from_json(j);
     name = "moleculeconformation";
     const std::string molname = j.at("molecule");
-    if (auto it = findName(Faunus::molecules, molname); it == molecules.end()) {
-        throw std::runtime_error("unknown molecule '" + molname + "'");
-    } else {
-        molid = it->id();
-    }
+    molid = findMoleculeByName(molname).id();
 }
 
 void QRtraj::_sample() { write_to_file(); }
@@ -471,73 +465,74 @@ void CombinedAnalysis::to_disk() {
         ptr->to_disk();
 }
 
-CombinedAnalysis::CombinedAnalysis(const json &j, Space &spc, Energy::Hamiltonian &pot) {
-    if (j.is_array()) {
-        for (auto &m : j) {
-            for (auto it = m.begin(); it != m.end(); ++it) {
-                if (it->is_object()) {
-                    try {
-                        size_t oldsize = this->vec.size();
-                        if (it.key() == "atomprofile")
-                            emplace_back<AtomProfile>(it.value(), spc);
-                        else if (it.key() == "atomrdf")
-                            emplace_back<AtomRDF>(it.value(), spc);
-                        else if (it.key() == "atomdipdipcorr")
-                            emplace_back<AtomDipDipCorr>(it.value(), spc);
-                        else if (it.key() == "density")
-                            emplace_back<Density>(it.value(), spc);
-                        else if (it.key() == "chargefluctuations")
-                            emplace_back<ChargeFluctuations>(it.value(), spc);
-                        else if (it.key() == "molrdf")
-                            emplace_back<MoleculeRDF>(it.value(), spc);
-                        else if (it.key() == "multipole")
-                            emplace_back<Multipole>(it.value(), spc);
-                        else if (it.key() == "atominertia")
-                            emplace_back<AtomInertia>(it.value(), spc);
-                        else if (it.key() == "inertia")
-                            emplace_back<InertiaTensor>(it.value(), spc);
-                        else if (it.key() == "moleculeconformation")
-                            emplace_back<MolecularConformationID>(it.value(), spc);
-                        else if (it.key() == "multipolemoments")
-                            emplace_back<MultipoleMoments>(it.value(), spc);
-                        else if (it.key() == "multipoledist")
-                            emplace_back<MultipoleDistribution>(it.value(), spc);
-                        else if (it.key() == "polymershape")
-                            emplace_back<PolymerShape>(it.value(), spc);
-                        else if (it.key() == "qrfile")
-                            emplace_back<QRtraj>(it.value(), spc);
-                        else if (it.key() == "reactioncoordinate")
-                            emplace_back<FileReactionCoordinate>(it.value(), spc);
-                        else if (it.key() == "sanity")
-                            emplace_back<SanityCheck>(it.value(), spc);
-                        else if (it.key() == "savestate")
-                            emplace_back<SaveState>(it.value(), spc);
-                        else if (it.key() == "scatter")
-                            emplace_back<ScatteringFunction>(it.value(), spc);
-                        else if (it.key() == "sliceddensity")
-                            emplace_back<SlicedDensity>(it.value(), spc);
-                        else if (it.key() == "systemenergy")
-                            emplace_back<SystemEnergy>(it.value(), pot);
-                        else if (it.key() == "virtualvolume")
-                            emplace_back<VirtualVolume>(it.value(), spc, pot);
-                        else if (it.key() == "virtualtranslate")
-                            emplace_back<VirtualTranslate>(it.value(), spc, pot);
-                        else if (it.key() == "widom")
-                            emplace_back<WidomInsertion>(it.value(), spc, pot);
-                        else if (it.key() == "xtcfile")
-                            emplace_back<XTCtraj>(it.value(), spc);
-                        else if (it.key() == "spacetraj")
-                            emplace_back<SpaceTrajectory>(it.value(), spc.groups);
-                        // additional analysis go here...
-
-                        if (this->vec.size() == oldsize)
-                            throw std::runtime_error("unknown analysis: "s + it.key());
-
-                    } catch (std::exception &e) {
-                        throw std::runtime_error(e.what() + usageTip[it.key()]);
-                    }
+CombinedAnalysis::CombinedAnalysis(const json& j, Space& spc, Energy::Hamiltonian& pot) {
+    if (!j.is_array()) {
+        throw ConfigurationError("analysis: json array expected");
+    }
+    for (auto& j_analysis : j) {
+        try {
+            const auto& [key, j_params] = jsonSingleItem(j_analysis);
+            try {
+                if (key == "atomprofile") {
+                    emplace_back<AtomProfile>(j_params, spc);
+                } else if (key == "atomrdf") {
+                    emplace_back<AtomRDF>(j_params, spc);
+                } else if (key == "atomdipdipcorr") {
+                    emplace_back<AtomDipDipCorr>(j_params, spc);
+                } else if (key == "density") {
+                    emplace_back<Density>(j_params, spc);
+                } else if (key == "chargefluctuations") {
+                    emplace_back<ChargeFluctuations>(j_params, spc);
+                } else if (key == "molrdf") {
+                    emplace_back<MoleculeRDF>(j_params, spc);
+                } else if (key == "multipole") {
+                    emplace_back<Multipole>(j_params, spc);
+                } else if (key == "atominertia") {
+                    emplace_back<AtomInertia>(j_params, spc);
+                } else if (key == "inertia") {
+                    emplace_back<InertiaTensor>(j_params, spc);
+                } else if (key == "moleculeconformation") {
+                    emplace_back<MolecularConformationID>(j_params, spc);
+                } else if (key == "multipolemoments") {
+                    emplace_back<MultipoleMoments>(j_params, spc);
+                } else if (key == "multipoledist") {
+                    emplace_back<MultipoleDistribution>(j_params, spc);
+                } else if (key == "polymershape") {
+                    emplace_back<PolymerShape>(j_params, spc);
+                } else if (key == "qrfile") {
+                    emplace_back<QRtraj>(j_params, spc);
+                } else if (key == "reactioncoordinate") {
+                    emplace_back<FileReactionCoordinate>(j_params, spc);
+                } else if (key == "sanity") {
+                    emplace_back<SanityCheck>(j_params, spc);
+                } else if (key == "savestate") {
+                    emplace_back<SaveState>(j_params, spc);
+                } else if (key == "scatter") {
+                    emplace_back<ScatteringFunction>(j_params, spc);
+                } else if (key == "sliceddensity") {
+                    emplace_back<SlicedDensity>(j_params, spc);
+                } else if (key == "systemenergy") {
+                    emplace_back<SystemEnergy>(j_params, pot);
+                } else if (key == "virtualvolume") {
+                    emplace_back<VirtualVolume>(j_params, spc, pot);
+                } else if (key == "virtualtranslate") {
+                    emplace_back<VirtualTranslate>(j_params, spc, pot);
+                } else if (key == "widom") {
+                    emplace_back<WidomInsertion>(j_params, spc, pot);
+                } else if (key == "xtcfile") {
+                    emplace_back<XTCtraj>(j_params, spc);
+                } else if (key == "spacetraj") {
+                    emplace_back<SpaceTrajectory>(j_params, spc.groups);
+                } else {
+                    throw ConfigurationError("unknown analysis");
                 }
+                // append additional analysis to the if-chain
+            } catch (std::exception& e) {
+                usageTip.pick(key);
+                throw ConfigurationError("'{}': {}", key, e.what());
             }
+        } catch (std::exception& e) {
+            throw ConfigurationError("analysis: {}", e.what()).attachJson(j_analysis);
         }
     }
 }
@@ -640,12 +635,8 @@ void WidomInsertion::_from_json(const json &j) {
         ptr->dir = j.value("dir", Point({1, 1, 1}));
     } // set insert directions for RandomInserter
 
-    auto molecule_name = j.at("molecule").get<std::string>();
-    if (auto it = findName(Faunus::molecules, molecule_name); it != Faunus::molecules.end()) {
-        molid = it->id();
-    } else {
-        throw ConfigurationError("unknown molecule: "s + molecule_name);
-    }
+    const std::string molecule_name = j.at("molecule");
+    molid = findMoleculeByName(molecule_name).id();
 }
 
 WidomInsertion::WidomInsertion(const json &j, Space &spc, Energy::Hamiltonian &pot) : space(spc), hamiltonian(pot) {
@@ -849,15 +840,8 @@ void AtomRDF::_sample() {
 }
 AtomRDF::AtomRDF(const json &j, Space &spc) : PairFunctionBase(j), spc(spc) {
     name = "atomrdf";
-    auto it = findName(atoms, name1);
-    if (it == atoms.end())
-        throw std::runtime_error("unknown atom '" + name1 + "'");
-    id1 = it->id();
-
-    it = findName(atoms, name2);
-    if (it == atoms.end())
-        throw std::runtime_error("unknown atom '" + name2 + "'");
-    id2 = it->id();
+    id1 = findAtomByName(name1).id();
+    id2 = findAtomByName(name2).id();
 }
 void MoleculeRDF::_sample() {
     V += spc.geo.getVolume(dim);
@@ -880,16 +864,8 @@ void MoleculeRDF::_sample() {
 }
 MoleculeRDF::MoleculeRDF(const json &j, Space &spc) : PairFunctionBase(j), spc(spc) {
     name = "molrdf";
-
-    auto it = findName(molecules, name1);
-    if (it == molecules.end())
-        throw std::runtime_error(name + ": unknown molecule '" + name1 + "'\n");
-    id1 = it->id();
-
-    it = findName(molecules, name2);
-    if (it == molecules.end())
-        throw std::runtime_error(name + ": unknown molecule '" + name2 + "'\n");
-    id2 = it->id();
+    id1 = findMoleculeByName(name1).id();
+    id2 = findMoleculeByName(name2).id();
     assert(id1 >= 0 && id2 >= 0);
 }
 
@@ -923,15 +899,8 @@ void AtomDipDipCorr::_sample() {
 }
 AtomDipDipCorr::AtomDipDipCorr(const json &j, Space &spc) : PairAngleFunctionBase(j), spc(spc) {
     name = "atomdipdipcorr";
-    auto it = findName(atoms, name1);
-    if (it == atoms.end())
-        throw std::runtime_error("unknown atom '" + name1 + "'");
-    id1 = it->id();
-
-    it = findName(atoms, name2);
-    if (it == atoms.end())
-        throw std::runtime_error("unknown atom '" + name2 + "'");
-    id2 = it->id();
+    id1 = findAtomByName(name1).id();
+    id2 = findAtomByName(name2).id();
 }
 
 // =============== XTCtraj ===============
@@ -1229,14 +1198,10 @@ PolymerShape::PolymerShape(const json &j, Space &spc) : spc(spc) {
     name = "Polymer Shape";
     cite = "https://dx.doi.org/10/d6ff";
     if (j.count("molecules") > 0) {
-        throw ConfigurationError("{}: 'molecules' is deprecated, use a single 'molecule' instead.");
+        throw ConfigurationError("{}: 'molecules' is deprecated, use a single 'molecule' instead.", name);
     }
-    const auto molname = j.at("molecule").get<std::string>();
-    if (auto it = findName(Faunus::molecules, molname); it == Faunus::molecules.end()) {
-        throw ConfigurationError("{}: unknown molecule '{}'", name, molname);
-    } else {
-        molid = it->id();
-    }
+    const std::string molname = j.at("molecule");
+    molid = findMoleculeByName(molname).id();
     if (Faunus::molecules[molid].atomic) {
         faunus_logger->warn("polymer shape analysis on an atomic group is unadvisable");
     }
@@ -1260,7 +1225,7 @@ void AtomProfile::_from_json(const json &j) {
     count_charge = j.value("charge", false);
     if (j.count("atomcom") == 1) {
         atom_com = j.at("atomcom");
-        id_com = findName(atoms, atom_com)->id();
+        id_com = findAtomByName(atom_com).id();
     }
 }
 void AtomProfile::_to_json(json &j) const {
@@ -1322,7 +1287,7 @@ void SlicedDensity::_from_json(const json &j) {
     dz = j.value("dz", 0.1);
     if (j.count("atomcom") == 1) {
         atom_com = j.at("atomcom");
-        id_com = findName(atoms, atom_com)->id();
+        id_com = findAtomByName(atom_com).id();
     }
     N.setResolution(dz);
 }
@@ -1412,14 +1377,13 @@ ChargeFluctuations::ChargeFluctuations(const json &j, Space &spc) : spc(spc) {
     name = "chargefluctuations";
     file = j.value("pqrfile", ""s);
     verbose = j.value("verbose", true);
-    auto molname = j.at("molecule").get<std::string>(); // molecule name
-    mol_iter = findName(Faunus::molecules, molname);
-    if (mol_iter == Faunus::molecules.end())
-        throw std::runtime_error("unknown species '" + molname + "'");
-    if (mol_iter->atomic)
-        throw std::runtime_error("only molecular groups allowed");
-    idcnt.resize(mol_iter->atoms.size());
-    charge.resize(mol_iter->atoms.size());
+    const std::string molname = j.at("molecule"); // molecule name
+    auto molecule = findMoleculeByName(molname);
+    if (molecule.atomic) {
+        throw ConfigurationError("only molecular groups allowed");
+    }
+    idcnt.resize(molecule.atoms.size());
+    charge.resize(molecule.atoms.size());
 }
 void Multipole::_sample() {
     for (const auto &group : spc.groups) {            // loop over all groups molecules
@@ -1548,11 +1512,8 @@ void ScatteringFunction::_to_disk() {
 }
 
 void VirtualTranslate::_from_json(const json &j) {
-    std::string molname = j.at("molecule");
-    if (auto it = findName(Faunus::molecules, molname); it == molecules.end())
-        throw std::runtime_error("unknown molecule '" + molname + "'");
-    else
-        molid = it->id();
+    const std::string molname = j.at("molecule");
+    molid = findMoleculeByName(molname).id();
     dL = j.at("dL").get<double>();
     dir = j.value("dir", Point(0, 0, 1));
     dir.normalize(); // -> unit vector
@@ -1647,5 +1608,4 @@ void SpaceTrajectory::_to_disk() {
     assert(*stream);
     stream->flush();
 }
-} // namespace Analysis
-} // namespace Faunus
+} // namespace Faunus::Analysis

@@ -161,9 +161,9 @@ struct PeriodicDihedral : public BondData {
  * Serialize to/from json
  */
 
-void from_json(const json &j, std::shared_ptr<BondData> &b);
-void to_json(json &j, const std::shared_ptr<const BondData> &b);
-void to_json(Faunus::json &j, const BondData &b);
+void from_json(const json& j, std::shared_ptr<BondData>& bond);
+void to_json(json& j, const std::shared_ptr<const BondData>& bond);
+void to_json(json& j, const BondData& bond);
 
 void setBondEnergyFunction(std::shared_ptr<BondData> &b,
                            const ParticleVector &p); //!< Set the bond energy function of `BondData` which

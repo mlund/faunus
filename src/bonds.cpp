@@ -5,48 +5,49 @@
 
 namespace Faunus::Potential {
 
-void to_json(Faunus::json &j, const std::shared_ptr<const BondData> &b) {
-    to_json(j, *b);
+void to_json(Faunus::json& j, const std::shared_ptr<const BondData>& bond) {
+    to_json(j, *bond);
 }
 
-void to_json(Faunus::json &j, const BondData &b) {
+void to_json(Faunus::json& j, const BondData& bond) {
     json val;
-    b.to_json(val);
-    val["index"] = b.index;
-    j = {{b.name(), val}};
+    bond.to_json(val);
+    val["index"] = bond.index;
+    j = {{bond.name(), val}};
 }
 
-void from_json(const Faunus::json &j, std::shared_ptr<BondData> &b) {
-    if (j.is_object())
-        if (j.size() == 1) {
-            const auto &key = j.begin().key();
-            const auto &val = j.begin().value();
-            if (key == HarmonicBond().name())
-                b = std::make_shared<HarmonicBond>();
-            else if (key == FENEBond().name())
-                b = std::make_shared<FENEBond>();
-            else if (key == FENEWCABond().name())
-                b = std::make_shared<FENEWCABond>();
-            else if (key == HarmonicTorsion().name())
-                b = std::make_shared<HarmonicTorsion>();
-            else if (key == GromosTorsion().name())
-                b = std::make_shared<GromosTorsion>();
-            else if (key == PeriodicDihedral().name())
-                b = std::make_shared<PeriodicDihedral>();
-            else
-                throw std::runtime_error("unknown bond type: " + key);
-            try {
-                b->from_json(val);
-                b->index = val.at("index").get<decltype(b->index)>();
-                if (b->index.size() != b->numindex())
-                    throw std::runtime_error("exactly " + std::to_string(b->numindex()) + " indices required for " +
-                                             b->name());
-            } catch (std::exception &e) {
-                throw std::runtime_error(e.what() + usageTip[key]);
-            }
-            return;
+void from_json(const json& j, std::shared_ptr<BondData>& bond) {
+    try {
+        const auto& [key, j_params] = jsonSingleItem(j);
+        if (key == HarmonicBond().name()) {
+            bond = std::make_shared<HarmonicBond>();
+        } else if (key == FENEBond().name()) {
+            bond = std::make_shared<FENEBond>();
+        } else if (key == FENEWCABond().name()) {
+            bond = std::make_shared<FENEWCABond>();
+        } else if (key == HarmonicTorsion().name()) {
+            bond = std::make_shared<HarmonicTorsion>();
+        } else if (key == GromosTorsion().name()) {
+            bond = std::make_shared<GromosTorsion>();
+        } else if (key == PeriodicDihedral().name()) {
+            bond = std::make_shared<PeriodicDihedral>();
+        } else {
+            throw ConfigurationError("'{}': unknown bond", key);
         }
-    throw std::runtime_error("invalid bond data");
+
+        try {
+            bond->from_json(j_params);
+            bond->index = j_params.at("index").get<decltype(bond->index)>();
+            if (bond->index.size() != bond->numindex()) {
+                usageTip.pick(key);
+                throw ConfigurationError("exactly {} indices required", bond->numindex());
+            }
+        } catch (std::exception& e) {
+            throw ConfigurationError("'{}': {}", key, e.what());
+        }
+    } catch (std::exception& e) {
+        throw ConfigurationError("bond: {}", e.what()).attachJson(j);
+    }
 }
 
 void setBondEnergyFunction(std::shared_ptr<BondData> &b, const ParticleVector &p) {
@@ -476,4 +477,4 @@ TEST_CASE("[Faunus] BondData") {
 }
 TEST_SUITE_END();
 
-} // namespace
+} // namespace Faunus::Potential

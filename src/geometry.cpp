@@ -562,8 +562,10 @@ const std::map<std::string, Variant> Chameleon::names = {{
 void from_json(const json &j, Chameleon &g) {
     try {
         g.from_json(j);
-    } catch (std::exception &e) {
-        throw std::runtime_error("geometry construction error: "s + e.what() + usageTip["geometry"]);
+    }
+    catch (std::exception &e) {
+        usageTip.pick("geometry");
+        throw ConfigurationError("geometry construction error: {}", e.what());
     }
 }
 

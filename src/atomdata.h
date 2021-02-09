@@ -13,17 +13,18 @@ namespace Faunus {
 class InteractionData {
     typedef std::string Tkey;
     std::map<Tkey, double> data; //!< arbitrary additional properties
-    friend void to_json(json &, const InteractionData &);
+    friend void to_json(json&, const InteractionData&);
+
   public:
     bool has(const Tkey name) const;               // like C++20 map::contains
     double get(const Tkey name) const;             // like map::at()
-    double &get(const Tkey name);                  // like map::at()
+    double& get(const Tkey name);                  // like map::at()
     void set(const Tkey name, const double value); // like C++17 map::insert_or_assign
 };
 
-void to_json(json &j, const InteractionData &a);
-void from_json(const json &j, InteractionData &a);
-void from_single_use_json(SingleUseJSON &j, InteractionData &a);
+void to_json(json& j, const InteractionData& a);
+void from_json(const json& j, InteractionData& a);
+void from_single_use_json(SingleUseJSON& j, InteractionData& a);
 
 /**
  * @brief General properties for atoms
@@ -34,35 +35,35 @@ class AtomData { // has to be a class when a constant reference is used
 
   private:
     Tid _id = -1;
-    friend void to_json(json &, const AtomData &);
-    friend void from_json(const json &, AtomData &);
+    friend void to_json(json&, const AtomData&);
+    friend void from_json(const json&, AtomData&);
 
   public:
-    std::string name;         //!< Name
-    double charge = 0;        //!< Particle charge [e]
-    double mw = 1;            //!< Weight
-    double sigma = 0;         //!< Diameter for e.g Lennard-Jones etc. [angstrom]
-                              //!< Do not set! Only a temporal class member during the refactorization
-    double activity = 0;      //!< Chemical activity [mol/l]
-    double alphax = 0;        //!< Excess polarisability (unit-less)
-    double dp = 0;            //!< Translational displacement parameter [angstrom]
-    double dprot = 0;         //!< Rotational displacement parameter [degrees]
-    double mulen = 0;         //!< Dipole moment scalar [eÃ]
-    double sclen = 0;         //!< Sphere-cylinder length [angstrom]
-    double tension = 0;       //!< Surface tension [kT/Å^2]
-    double tfe = 0;           //!< Transfer free energy [J/mol/angstrom^2/M]
-    Point mu = {0, 0, 0};     //!< Dipole moment unit vector
-    Point scdir = {1, 0, 0};  //!< Sphero-cylinder direction
-    bool hydrophobic = false; //!< Is the particle hydrophobic?
-    bool implicit = false;    //!< Is the particle implicit (e.g. proton)?
+    std::string name;            //!< Name
+    double charge = 0;           //!< Particle charge [e]
+    double mw = 1;               //!< Weight
+    double sigma = 0;            //!< Diameter for e.g Lennard-Jones etc. [angstrom]
+                                 //!< Do not set! Only a temporal class member during the refactorization
+    double activity = 0;         //!< Chemical activity [mol/l]
+    double alphax = 0;           //!< Excess polarisability (unit-less)
+    double dp = 0;               //!< Translational displacement parameter [angstrom]
+    double dprot = 0;            //!< Rotational displacement parameter [degrees]
+    double mulen = 0;            //!< Dipole moment scalar [eÃ]
+    double sclen = 0;            //!< Sphere-cylinder length [angstrom]
+    double tension = 0;          //!< Surface tension [kT/Å^2]
+    double tfe = 0;              //!< Transfer free energy [J/mol/angstrom^2/M]
+    Point mu = {0, 0, 0};        //!< Dipole moment unit vector
+    Point scdir = {1, 0, 0};     //!< Sphero-cylinder direction
+    bool hydrophobic = false;    //!< Is the particle hydrophobic?
+    bool implicit = false;       //!< Is the particle implicit (e.g. proton)?
     InteractionData interaction; //!< Arbitrary interaction parameters, e.g., epsilons in various potentials
 
-    Tid &id();                //!< Type id
-    const Tid &id() const;    //!< Type id
+    Tid& id();             //!< Type id
+    const Tid& id() const; //!< Type id
 };
 
-void to_json(json &j, const AtomData &a);
-void from_json(const json &j, AtomData &a);
+void to_json(json& j, const AtomData& a);
+void from_json(const json& j, AtomData& a);
 
 /**
  * @brief Construct vector of atoms from json array
@@ -82,8 +83,8 @@ extern std::vector<AtomData> atoms; //!< Global instance of atom list
  * @return an iterator to the first element, or `last` if not found
  * @see findAtomByName(), findMoleculeByName()
  */
-template <class Trange> auto findName(Trange &rng, const std::string &name) {
-    return std::find_if(rng.begin(), rng.end(), [&name](auto &i) { return i.name == name; });
+template <class Trange> auto findName(Trange& rng, const std::string& name) {
+    return std::find_if(rng.begin(), rng.end(), [&name](auto& i) { return i.name == name; });
 }
 
 /**
@@ -117,10 +118,10 @@ AtomData& findAtomByName(const std::string& name);
  * a sequence containing all id's of the database, i.e.
  * `0, ..., database.size()-1`.
  */
-template <class Trange> std::vector<int> names2ids(Trange &database, const std::vector<std::string> &names) {
+template <class Trange> std::vector<int> names2ids(Trange& database, const std::vector<std::string>& names) {
     std::vector<AtomData::Tid> index;
     index.reserve(names.size());
-    for (auto &name : names) {
+    for (auto& name : names) {
         if (name == "*") { // wildcard selecting all id's
             index.resize(database.size());
             std::iota(index.begin(), index.end(), 0);

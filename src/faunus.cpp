@@ -75,7 +75,7 @@ using ProgressIndicator::ProgressTracker;
 // forward declarations
 std::shared_ptr<ProgressTracker> createProgressTracker(bool, unsigned int);
 
-int main(int argc, const char **argv) {
+int main(int argc, const char** argv) {
     if (argc > 1) { // run unittests if the first argument equals "test"
         if (std::string(argv[1]) == "test") {
 #ifdef DOCTEST_CONFIG_DISABLE
@@ -156,14 +156,14 @@ int main(int argc, const char **argv) {
         json json_in;
         try {
             if (auto input = args["--input"].asString(); input == "/dev/stdin") {
-                    std::cin >> json_in;
+                std::cin >> json_in;
             } else {
                 if (prefix) {
                     input = Faunus::MPI::prefix + input;
                 }
                 json_in = openjson(input);
             }
-        } catch(json::parse_error& e) {
+        } catch (json::parse_error& e) {
             faunus_logger->debug(e.what());
             throw ConfigurationError("empty or invalid input JSON");
         }
@@ -190,7 +190,7 @@ int main(int argc, const char **argv) {
                         size_t size = f.tellg(); // get file size
                         std::vector<std::uint8_t> v(size / sizeof(std::uint8_t));
                         f.seekg(0, f.beg); // go back to start
-                        f.read((char *)v.data(), size);
+                        f.read((char*)v.data(), size);
                         j = json::from_ubjson(v);
                     } else {
                         f >> j;
@@ -211,7 +211,7 @@ int main(int argc, const char **argv) {
 
             Analysis::CombinedAnalysis analysis(json_in.at("analysis"), sim.getSpace(), sim.getHamiltonian());
 
-            auto &loop = json_in.at("mcloop");
+            auto& loop = json_in.at("mcloop");
             int macro = loop.at("macro");
             int micro = loop.at("micro");
 
@@ -219,7 +219,7 @@ int main(int argc, const char **argv) {
             for (int i = 0; i < macro; i++) {
                 for (int j = 0; j < micro; j++) {
                     if (progress_tracker && mpi.isMaster()) {
-                        if(++(*progress_tracker) % 10 == 0) {
+                        if (++(*progress_tracker) % 10 == 0) {
                             progress_tracker->display();
                         }
                     }
@@ -264,7 +264,7 @@ int main(int argc, const char **argv) {
 
         mpi.finalize();
 
-    } catch (std::exception &e) {
+    } catch (std::exception& e) {
         displayError(*faunus_logger, e);
 
         if (!usageTip.buffer.empty()) {
@@ -364,7 +364,7 @@ std::shared_ptr<ProgressTracker> createProgressTracker(bool show_progress, unsig
     using namespace ProgressIndicator;
     using namespace std::chrono;
     std::shared_ptr<ProgressTracker> tracker = nullptr;
-    if(show_progress) {
+    if (show_progress) {
         if (isatty(fileno(stdout))) {
             // show a progress bar on the console
             tracker = std::make_shared<ProgressBar>(steps);

@@ -41,26 +41,21 @@ double value_inf(const json &j, const std::string &key) {
     return double(*it);
 }
 
-json merge(const json &a, const json &b) {
-    json result = a.flatten();
-    json tmp = b.flatten();
-    for (auto it = tmp.begin(); it != tmp.end(); ++it)
-        result[it.key()] = it.value();
-    return result.unflatten();
-}
-
-json openjson(const std::string &file, bool throw_if_file_not_found) {
-    json js;
-    std::ifstream f(file);
-    if (f) {
-        try {
-            f >> js;
-        } catch (std::exception &e) {
-            throw std::runtime_error("Syntax error in JSON file " + file + ": " + e.what());
-        }
-    } else if (throw_if_file_not_found)
-        throw std::runtime_error("Cannot find or read JSON file " + file);
-    return js;
+/**
+ * @brief Reads content of a JSON file into a JSON object
+ * @param filename
+ * @return json object from the file
+ * @throw IOError when file cannot be read
+ * @throw json::parse_error when json ill-formatted
+ */
+json openjson(const std::string& filename) {
+    json j;
+    if (std::ifstream stream(filename); stream) {
+        stream >> j;
+    } else {
+        throw IOError("cannot open file '{}'", filename);
+    }
+    return j;
 }
 
 TipFromTheManual::TipFromTheManual() {
@@ -76,12 +71,17 @@ TipFromTheManual::TipFromTheManual() {
  * file must consist of objects with `key`s and markdown formatted
  * tips. If no file can be opened, the database is left empty.
  */
-void TipFromTheManual::load(const std::vector<std::string> &files) {
+void TipFromTheManual::load(const std::vector<std::string>& files) {
     // try loading `files`; stop of not empty
-    for (auto &i : files) {
-        db = openjson(i, false); // allow for file not found
-        if (not db.empty())
-            break;
+    for (auto& file : files) {
+        try {
+            db = openjson(file); // allow for file not found
+            if (!db.empty()) {
+                break;
+            }
+        } catch (...) {
+            // ignore
+        }
     }
 }
 

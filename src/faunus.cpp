@@ -314,20 +314,25 @@ std::pair<std::string, int> findSIDsong() {
         // look for json file with hvsc sid tune names
         std::string pfx;
         json json_music;
-        for (std::string dir :
-             {FAUNUS_BINARY_DIR, FAUNUS_INSTALL_PREFIX "/share/faunus/"}) { // installed and uninstalled cmake builds
-            json_music = Faunus::openjson(dir + "/sids/music.json", false);
-            if (!json_music.empty()) {
-                pfx = dir + "/";
-                break;
+        for (std::string dir : {FAUNUS_BINARY_DIR, FAUNUS_INSTALL_PREFIX "/share/faunus/"}) {
+            try {
+                // look at installed and uninstalled cmake builds
+                json_music = Faunus::openjson(dir + "/sids/music.json");
+                if (!json_music.empty()) {
+                    pfx = dir + "/";
+                    break;
+                }
+            } catch (...) {
+                // ignore any error
             }
         }
         if (not json_music.empty()) {
             json_music = json_music.at("songs"); // load playlist
 
             std::vector<size_t> weight; // weight for each tune (= number of subsongs)
-            for (auto &i : json_music)
-                weight.push_back(i.at("subsongs").size());
+            for (auto& json_song : json_music) {
+                weight.push_back(json_song.at("subsongs").size());
+            }
             std::discrete_distribution<size_t> dist(weight.begin(), weight.end());
 
             Faunus::random.seed();                                        // give global random a hardware seed

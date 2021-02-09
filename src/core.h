@@ -27,8 +27,7 @@ namespace Faunus {
 
     using namespace std::string_literals;
 
-    json merge( const json &a, const json &b ); //!< Merge two json objects
-    json openjson( const std::string &file, bool=true); //!< Read json file into json object (w. syntax check)
+    json openjson(const std::string& filename); //!< Read json filename into json object (w. syntax check)
 
     /**
      * @brief Like json, but delete entries after access

@@ -70,7 +70,7 @@ void from_json(const json &j, AtomData &a);
  * Items are added to existing items while if an item
  * already exists, it will be overwritten.
  */
-void from_json(const json &j, std::vector<AtomData> &v);
+void from_json(const json& j, std::vector<AtomData>& atom_vector);
 
 extern std::vector<AtomData> atoms; //!< Global instance of atom list
 

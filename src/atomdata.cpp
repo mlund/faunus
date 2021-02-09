@@ -218,7 +218,7 @@ TEST_CASE("[Faunus] AtomData") {
 TEST_SUITE_END();
 
 UnknownAtomError::UnknownAtomError(const std::string& atom_name)
-    : std::runtime_error(fmt::format("unknown atom: '{}'", atom_name)) {}
+    : GenericError("unknown atom: '{}'", atom_name) {}
 
 AtomData& findAtomByName(const std::string& name) {
     const auto result = findName(Faunus::atoms, name);

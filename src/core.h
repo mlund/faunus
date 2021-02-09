@@ -192,18 +192,37 @@ auto filter(iter begin, iter end, std::function<bool(T&)> unarypredicate) {
                   const Point &dir = {1, 1, 1}); //!< Random unit vector using Neuman's method ("sphere picking")
     Point ranunit_polar(Random &);               //!< Random unit vector using polar coordinates ("sphere picking")
 
-    /** Exception to be thrown when parsing json configuration */
-    struct ConfigurationError : public std::runtime_error {
-        explicit ConfigurationError(const std::exception &e);
-        explicit ConfigurationError(const std::runtime_error &e);
-        explicit ConfigurationError(const std::string &msg);
-        explicit ConfigurationError(const char *msg);
+    //! Common ancestor of Faunus specific runtime errors
+    struct GenericError : public std::runtime_error {
+        explicit GenericError(const std::exception &e);
+        explicit GenericError(const std::runtime_error &e);
+        explicit GenericError(const std::string &msg);
+        explicit GenericError(const char *msg);
         template <class... Args>
-        explicit ConfigurationError(std::string_view fmt, const Args &... args)
+        explicit GenericError(std::string_view fmt, const Args &... args)
             : std::runtime_error(fmt::format(fmt, args...)) {}
-        json& attachedJson();
+    };
+
+    //! Exception to be thrown when parsing json configuration
+    struct ConfigurationError : public GenericError {
+        using GenericError::GenericError;
+        const json& attachedJson() const;
         ConfigurationError& attachJson(const json j);
       private:
         json attached_json;
     };
+
+    //! Exception to be thrown on IO errors
+    struct IOError : public GenericError {
+        using GenericError::GenericError;
+    };
+
+    /**
+     * @brief Nicely displays nested exceptions using a logger
+     *
+     * @param logger  logger to display the exception with
+     * @param e  exception to display (possibly nested)
+     * @param level  internal counter for recursion
+     */
+    void displayError(spdlog::logger& logger, const std::exception& e, int level = 0);
 } // namespace Faunus

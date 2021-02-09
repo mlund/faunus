@@ -245,7 +245,7 @@ extern std::vector<MoleculeData> molecules;
 /**
  * @brief An exception to indicate an unknown molecule name in the input.
  */
-struct UnknownMoleculeError: public std::runtime_error {
+struct UnknownMoleculeError: public GenericError {
     explicit UnknownMoleculeError(const std::string &molecule_name);
 };
 

@@ -4,6 +4,7 @@
 #include "random.h"
 #include "units.h"
 #include "particle.h"
+#include <stdexcept>
 #include <iomanip>
 #include <fstream>
 #include <spdlog/spdlog.h>
@@ -236,15 +237,35 @@ TEST_CASE("[Faunus] ranunit_polar") {
     CHECK(rtp.z() == doctest::Approx(pc::pi / 2).epsilon(0.005)); // phi [0:pi] --> <phi>=pi/2
 }
 
-ConfigurationError::ConfigurationError(const std::exception& e) : ConfigurationError(e.what()) {}
-ConfigurationError::ConfigurationError(const std::runtime_error& e) : std::runtime_error(e) {}
-ConfigurationError::ConfigurationError(const std::string& msg) : std::runtime_error(msg) {}
-ConfigurationError::ConfigurationError(const char* msg) : std::runtime_error(msg) {}
-json& ConfigurationError::attachedJson() { return attached_json; }
+GenericError::GenericError(const std::exception& e) : GenericError(e.what()) {}
+GenericError::GenericError(const std::runtime_error& e) : std::runtime_error(e) {}
+GenericError::GenericError(const std::string& msg) : std::runtime_error(msg) {}
+GenericError::GenericError(const char* msg) : std::runtime_error(msg) {}
+
+const json& ConfigurationError::attachedJson() const { return attached_json; }
 
 ConfigurationError& ConfigurationError::attachJson(const json j) {
     attached_json = j;
     return *this;
+}
+
+void displayError(spdlog::logger& logger, const std::exception& e, int level) {
+    const std::string padding = level > 0 ? "... " : "";
+
+    logger.error(padding + e.what());
+
+    // ConfigurationError can carry a JSON snippet which should be shown for debugging.
+    if (auto config_error = dynamic_cast<const ConfigurationError*>(&e);
+        config_error != nullptr && !config_error->attachedJson().empty()) {
+        logger.debug(padding + "JSON snippet:\n{}", config_error->attachedJson().dump(4));
+    }
+
+    // Process nested exceptions in a tail recursion.
+    try {
+        std::rethrow_if_nested(e);
+    } catch (const std::exception& e) {
+        displayError(logger, e, level + 1);
+    }
 }
 
 TEST_SUITE_BEGIN("Core");

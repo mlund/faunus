@@ -89,8 +89,8 @@ template <class Trange> auto findName(Trange &rng, const std::string &name) {
 /**
  * @brief An exception to indicate an unknown atom name in the input.
  */
-struct UnknownAtomError: public std::runtime_error {
-    explicit UnknownAtomError(const std::string & atom_name);
+struct UnknownAtomError : public GenericError {
+    explicit UnknownAtomError(const std::string& atom_name);
 };
 
 /**

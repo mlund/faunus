@@ -265,13 +265,7 @@ int main(int argc, const char **argv) {
         mpi.finalize();
 
     } catch (std::exception &e) {
-        faunus_logger->error(e.what());
-
-        // ConfigurationError can carry a JSON snippet which should be shown for debugging.
-        if (auto config_error = dynamic_cast<ConfigurationError*>(&e);
-            config_error != nullptr && !config_error->attachedJson().empty()) {
-            faunus_logger->debug("JSON snippet:\n{}", config_error->attachedJson().dump(4));
-        }
+        displayError(*faunus_logger, e);
 
         if (!usageTip.buffer.empty()) {
             // Use the srderr stream directly for more elaborated output of usage tip, optionally containing an ASCII
@@ -342,7 +336,7 @@ std::pair<std::string, int> findSIDsong() {
             subsong = *(Faunus::random.sample(subsongs.begin(), subsongs.end())) - 1; // random subsong
             filename = pfx + it->at("file").get<std::string>();
         }
-    } catch (const std::exception &) {
+    } catch (...) {
         // silently ignore if something fails; it's just for fun!
     }
     return {filename, subsong};

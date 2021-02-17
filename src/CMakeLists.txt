@@ -10,7 +10,7 @@ target_link_libraries(project_options INTERFACE ${CMAKE_THREAD_LIBS_INIT})
 
 # ========== pre-compiler system headers ==========
 
-option(ENABLE_PCH "Enable Precompiled Headers" ON)
+option(ENABLE_PCH "Enable Precompiled Headers" OFF)
 if (ENABLE_PCH)
     target_precompile_headers(
             project_options INTERFACE <vector> <string> <map> <set> <algorithm> <utility> <random> <iostream>

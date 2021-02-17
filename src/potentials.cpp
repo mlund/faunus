@@ -941,7 +941,7 @@ void SplinedPotential::from_json(const json &js) {
             createKnots(i, j, rmin, rmax);
         }
     }
-    if (js.value("to_disk", false)) {
+    if (js.value("savePenaltyFunction", false)) {
         save_potentials();
     }
 }

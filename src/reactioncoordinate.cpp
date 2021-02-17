@@ -10,12 +10,12 @@
 namespace Faunus::ReactionCoordinate {
 
 ReactionCoordinateBase::ReactionCoordinateBase(const json &j) {
-    binwidth = j.value("resolution", 0.5);
+    resolution = j.value("resolution", 0.5);
     auto range = j.value("range", std::vector<double>({0, 0}));
     if (range.size() == 2) {
         if (range[0] <= range[1]) {
-            min = range[0];
-            max = range[1];
+            minimum_value = range[0];
+            maximum_value = range[1];
             return;
         }
     }
@@ -27,16 +27,16 @@ void ReactionCoordinateBase::_to_json(json &) const {}
 double ReactionCoordinateBase::normalize(double) const { return 1.; }
 
 double ReactionCoordinateBase::operator()() {
-    assert(f != nullptr);
-    return f();
+    assert(function != nullptr);
+    return function();
 }
 
-bool ReactionCoordinateBase::inRange(double coord) const { return (coord >= min && coord <= max); }
+bool ReactionCoordinateBase::inRange(double coord) const { return (coord >= minimum_value && coord <= maximum_value); }
 
 void to_json(json &j, const ReactionCoordinateBase &rc) {
     assert(!rc.name.empty());
     auto &_j = j[rc.name];
-    _j = {{"range", {rc.min, rc.max}}, {"resolution", rc.binwidth}};
+    _j = {{"range", {rc.minimum_value, rc.maximum_value}}, {"resolution", rc.resolution}};
     rc._to_json(_j);
 }
 
@@ -46,9 +46,9 @@ void to_json(json &j, const ReactionCoordinateBase &rc) {
 TEST_CASE("[Faunus] ReactionCoordinateBase") {
     using doctest::Approx;
     Faunus::ReactionCoordinate::ReactionCoordinateBase c(R"({"range":[-1.5, 2.1], "resolution":0.2})"_json);
-    CHECK(c.min == Approx(-1.5));
-    CHECK(c.max == Approx(2.1));
-    CHECK(c.binwidth == Approx(0.2));
+    CHECK(c.minimum_value == Approx(-1.5));
+    CHECK(c.maximum_value == Approx(2.1));
+    CHECK(c.resolution == Approx(0.2));
     CHECK(c.inRange(-1.5) == true);
     CHECK(c.inRange(-1.51) == false);
     CHECK(c.inRange(2.11) == false);
@@ -94,20 +94,20 @@ SystemProperty::SystemProperty(const json &j, Space &spc) : ReactionCoordinateBa
     name = "system";
     property = j.at("property").get<std::string>();
     if (property == "V")
-        f = [&g = spc.geo]() { return g.getVolume(); };
+        function = [&g = spc.geo]() { return g.getVolume(); };
     else if (property == "Lx")
-        f = [&g = spc.geo]() { return g.getLength().x(); };
+        function = [&g = spc.geo]() { return g.getLength().x(); };
     else if (property == "Ly")
-        f = [&g = spc.geo]() { return g.getLength().y(); };
+        function = [&g = spc.geo]() { return g.getLength().y(); };
     else if (property == "Lz" or property == "height")
-        f = [&g = spc.geo]() { return g.getLength().z(); };
+        function = [&g = spc.geo]() { return g.getLength().z(); };
     else if (property == "radius") {
         if (spc.geo.type == Geometry::CUBOID or spc.geo.type == Geometry::SLIT)
             faunus_logger->warn("`radius` coordinate unavailable for geometry");
         else
-            f = [&g = spc.geo]() { return 0.5 * g.getLength().x(); };
+            function = [&g = spc.geo]() { return 0.5 * g.getLength().x(); };
     } else if (property == "Q") // system net charge
-        f = [&groups = spc.groups]() {
+        function = [&groups = spc.groups]() {
             double charge_sum = 0;
             for (auto &g : groups) // loops over groups
                 for (auto &p : g)  // loop over particles
@@ -115,13 +115,13 @@ SystemProperty::SystemProperty(const json &j, Space &spc) : ReactionCoordinateBa
             return charge_sum;
         };
     else if (property == "N") // number of particles
-        f = [&groups = spc.groups]() {
+        function = [&groups = spc.groups]() {
             int N_sum = 0;
             for (auto &g : groups) // loops over groups
                 N_sum += g.size();
             return N_sum;
         };
-    if (f == nullptr) {
+    if (function == nullptr) {
         usageTip.pick("coords=[system]");
         throw ConfigurationError("{}: unknown property '{}'", name, property);
     }
@@ -141,17 +141,17 @@ AtomProperty::AtomProperty(const json &j, Space &spc) : ReactionCoordinateBase(j
         throw ConfigurationError("invalid index");
     property = j.at("property").get<std::string>();
     if (property == "x")
-        f = [&p = spc.p, i = index]() { return p[i].pos.x(); };
+        function = [&p = spc.p, i = index]() { return p[i].pos.x(); };
     else if (property == "y")
-        f = [&p = spc.p, i = index]() { return p[i].pos.y(); };
+        function = [&p = spc.p, i = index]() { return p[i].pos.y(); };
     else if (property == "z")
-        f = [&p = spc.p, i = index]() { return p[i].pos.z(); };
+        function = [&p = spc.p, i = index]() { return p[i].pos.z(); };
     else if (property == "R")
-        f = [&p = spc.p, i = index]() { return p[i].pos.norm(); };
+        function = [&p = spc.p, i = index]() { return p[i].pos.norm(); };
     else if (property == "q")
-        f = [&p = spc.p, i = index]() { return p[i].charge; };
+        function = [&p = spc.p, i = index]() { return p[i].charge; };
     else if (property == "N") // number of atom of id=index
-        f = [&groups = spc.groups, i = index]() {
+        function = [&groups = spc.groups, i = index]() {
             int N_sum = 0;
             for (auto &g : groups) // loops over groups
                 for (auto &p : g)  // loops over particles
@@ -160,7 +160,7 @@ AtomProperty::AtomProperty(const json &j, Space &spc) : ReactionCoordinateBase(j
             return N_sum;
         };
 
-    if (f == nullptr) {
+    if (function == nullptr) {
         usageTip.pick("coords=[atom]");
         throw ConfigurationError("{}: unknown property '{}'", name, property);
     }
@@ -184,40 +184,40 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordina
     property = j.at("property").get<std::string>();
 
     if (property == "active") // if molecule is active (1) or not (0)
-        f = [&g = spc.groups, i = index]() { return (double)(!g[i].empty()); };
+        function = [&g = spc.groups, i = index]() { return (double)(!g[i].empty()); };
     if (property == "confid")
-        f = [&g = spc.groups, i = index]() { return g[i].confid; };
+        function = [&g = spc.groups, i = index]() { return g[i].confid; };
     else if (property == "com_x")
-        f = [&g = spc.groups, i = index]() { return g[i].cm.x(); };
+        function = [&g = spc.groups, i = index]() { return g[i].cm.x(); };
     else if (property == "com_y")
-        f = [&g = spc.groups, i = index]() { return g[i].cm.y(); };
+        function = [&g = spc.groups, i = index]() { return g[i].cm.y(); };
     else if (property == "com_z")
-        f = [&g = spc.groups, i = index]() { return g[i].cm.z(); };
+        function = [&g = spc.groups, i = index]() { return g[i].cm.z(); };
     else if (property == "N")
-        f = [&g = spc.groups, i = index]() { return g[i].size(); };
+        function = [&g = spc.groups, i = index]() { return g[i].size(); };
     else if (property == "Q")
-        f = [&g = spc.groups, i = index]() { return monopoleMoment(g[i].begin(), g[i].end()); };
+        function = [&g = spc.groups, i = index]() { return monopoleMoment(g[i].begin(), g[i].end()); };
 
     else if (property == "mu_x")
-        f = [&g = spc.groups, i = index, b]() { return dipoleMoment(g[i].begin(), g[i].end(), b).x(); };
+        function = [&g = spc.groups, i = index, b]() { return dipoleMoment(g[i].begin(), g[i].end(), b).x(); };
 
     else if (property == "mu_y")
-        f = [&g = spc.groups, i = index, b]() { return dipoleMoment(g[i].begin(), g[i].end(), b).y(); };
+        function = [&g = spc.groups, i = index, b]() { return dipoleMoment(g[i].begin(), g[i].end(), b).y(); };
 
     else if (property == "mu_z")
-        f = [&g = spc.groups, i = index, b]() { return dipoleMoment(g[i].begin(), g[i].end(), b).z(); };
+        function = [&g = spc.groups, i = index, b]() { return dipoleMoment(g[i].begin(), g[i].end(), b).z(); };
 
     else if (property == "mu")
-        f = [&g = spc.groups, i = index, b]() { return dipoleMoment(g[i].begin(), g[i].end(), b).norm(); };
+        function = [&g = spc.groups, i = index, b]() { return dipoleMoment(g[i].begin(), g[i].end(), b).norm(); };
 
     else if (property == "end2end")
-        f = [&spc, i = index]() {
+        function = [&spc, i = index]() {
             assert(spc.groups[i].size() > 1);
             return std::sqrt(spc.geo.sqdist(spc.groups[i].begin()->pos, (spc.groups[i].end() - 1)->pos));
         };
 
     else if (property == "Rg")
-        f = [&spc, i = index]() {
+        function = [&spc, i = index]() {
             assert(spc.groups[i].size() > 1);
             auto S = Geometry::gyration(spc.groups[i].begin(), spc.groups[i].end(), spc.groups[i].cm, spc.geo.getBoundaryFunc());
             return std::sqrt(S.trace()); // S.trace() == S.eigenvalues().sum() but faster
@@ -226,7 +226,7 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordina
     else if (property == "muangle") {
         dir = j.at("dir").get<Point>().normalized();
         if (not spc.groups.at(index).atomic) {
-            f = [&g = spc.groups, i = index, b, &dir = dir]() {
+            function = [&g = spc.groups, i = index, b, &dir = dir]() {
                 Point mu = dipoleMoment(g[i].begin(), g[i].end(), b);
                 return std::acos(mu.dot(dir)) * 180 / pc::pi;
             };
@@ -238,7 +238,7 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordina
         indexes = j.at("indexes").get<decltype(indexes)>();
         if (indexes.size() != 2)
             throw std::runtime_error("exactly two indices expected");
-        f = [&spc, &dir = dir, i = indexes[0], j = indexes[1]]() {
+        function = [&spc, &dir = dir, i = indexes[0], j = indexes[1]]() {
             auto &pos1 = spc.p.at(i).pos;
             auto &pos2 = spc.p.at(j).pos;
             return spc.geo.vdist(pos1, pos2).cwiseProduct(dir.cast<double>()).norm();
@@ -249,14 +249,14 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordina
         indexes = j.value("indexes", decltype(indexes)());
         assert(indexes.size() > 1 && "An array of 2 or 4 indexes should be specified.");
         if (indexes.size() == 4) {
-            f = [&spc, dir = dir, i = indexes[0], j = indexes[1] + 1, k = indexes[2], l = indexes[3] + 1]() {
+            function = [&spc, dir = dir, i = indexes[0], j = indexes[1] + 1, k = indexes[2], l = indexes[3] + 1]() {
                 auto cm1 = Geometry::massCenter(spc.p.begin() + i, spc.p.begin() + j, spc.geo.getBoundaryFunc());
                 auto cm2 = Geometry::massCenter(spc.p.begin() + k, spc.p.begin() + l, spc.geo.getBoundaryFunc());
                 return spc.geo.vdist(cm1, cm2).z();
             };
         }
         if (indexes.size() == 2) {
-            f = [&spc, dir = dir, i = indexes[0], j = indexes[1]]() {
+            function = [&spc, dir = dir, i = indexes[0], j = indexes[1]]() {
                 auto cm1 = spc.groups[i].cm;
                 auto cm2 = spc.groups[j].cm;
                 return spc.geo.vdist(cm1, cm2).z();
@@ -269,14 +269,14 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordina
         indexes = j.value("indexes", decltype(indexes)());
         assert(indexes.size() > 1 && "An array of 2 or 4 indexes should be specified.");
         if (indexes.size() == 4) {
-            f = [&spc, dir = dir, i = indexes[0], j = indexes[1] + 1, k = indexes[2], l = indexes[3] + 1]() {
+            function = [&spc, dir = dir, i = indexes[0], j = indexes[1] + 1, k = indexes[2], l = indexes[3] + 1]() {
                 auto cm1 = Geometry::massCenter(spc.p.begin() + i, spc.p.begin() + j, spc.geo.getBoundaryFunc());
                 auto cm2 = Geometry::massCenter(spc.p.begin() + k, spc.p.begin() + l, spc.geo.getBoundaryFunc());
                 return spc.geo.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).norm();
             };
         }
         if (indexes.size() == 2) {
-            f = [&spc, dir = dir, i = indexes[0], j = indexes[1]]() {
+            function = [&spc, dir = dir, i = indexes[0], j = indexes[1]]() {
                 auto cm1 = spc.groups[i].cm;
                 auto cm2 = spc.groups[j].cm;
                 return spc.geo.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).norm();
@@ -288,7 +288,7 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordina
         dir = j.at("dir");
         indexes = j.value("indexes", decltype(indexes)());
         assert(indexes.size() == 2 && "An array of 2 indexes should be specified.");
-        f = [&spc, &dir = dir, i = indexes[0], j = indexes[1]]() {
+        function = [&spc, &dir = dir, i = indexes[0], j = indexes[1]]() {
             Average<double> Rj, Rin, Rout;
             auto slicei = spc.findAtoms(i);
             auto cm = Geometry::massCenter(slicei.begin(), slicei.end(), spc.geo.getBoundaryFunc());
@@ -310,7 +310,7 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordina
     else if (property == "mindist") {
         indexes = j.value("indexes", decltype(indexes)());
         assert(indexes.size() == 2 && "An array of 2 indexes should be specified.");
-        f = [&spc, i = indexes[0], j = indexes[1]]() {
+        function = [&spc, i = indexes[0], j = indexes[1]]() {
             auto slicei = spc.findAtoms(i);
             auto slicej = spc.findAtoms(j);
             double dmin = spc.geo.getLength().norm();
@@ -329,7 +329,7 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordina
         dir = j.at("dir");
         indexes = j.value("indexes", decltype(indexes)());
         assert(indexes.size() == 2 && "An array of 2 indexes should be specified.");
-        f = [&spc, &dir = dir, i = indexes[0], j = indexes[1]]() {
+        function = [&spc, &dir = dir, i = indexes[0], j = indexes[1]]() {
             Average<double> Rj, Ri;
             auto slicei = spc.findAtoms(i);
             auto cm = Geometry::massCenter(slicei.begin(), slicei.end(), spc.geo.getBoundaryFunc());
@@ -349,7 +349,7 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordina
     else if (property == "angle") {
         dir = j.at("dir").get<Point>().normalized();
         if (not spc.groups.at(index).atomic) {
-            f = [&spc, &dir = dir, i = index]() {
+            function = [&spc, &dir = dir, i = index]() {
                 auto &cm = spc.groups[i].cm;
                 auto S = Geometry::gyration(spc.groups[i].begin(), spc.groups[i].end(), cm, spc.geo.getBoundaryFunc());
                 Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(S);
@@ -363,7 +363,7 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordina
             };
         }
     }
-    if (f == nullptr) {
+    if (function == nullptr) {
         usageTip.pick("coords=[molecule]");
         throw ConfigurationError("{}: unknown or impossible property property '{}'", name, property);
     }

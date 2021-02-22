@@ -272,7 +272,7 @@ PYBIND11_MODULE(pyfaunus, m)
     py::class_<Analysis::Analysisbase>(m, "Analysisbase")
         .def_readwrite("name", &Analysis::Analysisbase::name)
         .def_readwrite("cite", &Analysis::Analysisbase::cite)
-        .def("savePenaltyFunction", &Analysis::Analysisbase::to_disk)
+        .def("to_disk", &Analysis::Analysisbase::to_disk)
         .def("sample", &Analysis::Analysisbase::sample)
         .def("to_dict", [](Analysis::Analysisbase &self) {
             json j;

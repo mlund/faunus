@@ -22,7 +22,7 @@
 namespace Faunus {
 
 namespace ReactionCoordinate {
-struct ReactionCoordinateBase;
+class ReactionCoordinateBase;
 }
 
 namespace Potential {

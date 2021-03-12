@@ -346,7 +346,7 @@ void VirtualVolume::_sample() {
                 }
             }
         } else {   // energy change too large (negative) to fit exp() function
-            number_of_samples--; // cnt is incremented by sample() so we need to decrease
+            number_of_samples--; // update_counter is incremented by sample() so we need to decrease
             faunus_logger->warn("{0}: skipping sample event due to excessive energy, dU/kT={1}", name, du);
         }
     }

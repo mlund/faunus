@@ -401,26 +401,29 @@ class MolecularConformationID : public Analysisbase {
  * Displace a single molecule of `molid` with `dL` in the
  * direction `dir` and measure the free energy of the process
  * using dA=-kT*ln<exp(-dU)> and the resulting force, -dA/dL
+ *
+ * @todo Does this work with Ewald summation? k-vectors must be refreshed.
  */
 class VirtualTranslate : public Analysisbase {
-    Change change;         //!< Change object for energy calc.
-    Change::data data;     //!< Change data for molecule
-    std::string file;      //!< output filename
-    int molid;             //!< molid to operate on
-    Point dir = {0, 0, 1}; //!< direction to move
-    double dL = 0;         //!< distance perturbation
-    Energy::Energybase &pot;
-    Space &spc;
-    Average<double> average_exp_du; //!< <exp(-du/kT)>
-    std::ofstream output_file;      // output filestream
+    Energy::Energybase& pot;
+    Space& spc;
+    Change change;        //!< Change object for energy calc.
+    std::string filename; //!< output filename
+    int molid;            //!< molid to operate on
+    Average<double> mean_exponentiated_energy_change; //!< <exp(-du/kT)>
+    Point perturbation_direction = {0.0, 0.0, 1.0};
+    double perturbation_distance = 0.0;
+    std::unique_ptr<std::ostream> output_stream;
 
     void _sample() override;
-    void _from_json(const json &) override;
-    void _to_json(json &) const override;
+    void _from_json(const json& j) override;
+    void _to_json(json& j) const override;
     void _to_disk() override;
+    void collectWidomAverage(const double energy_change);
+    double momentarilyPerturb(Space::Tgroup& group);
 
   public:
-    VirtualTranslate(const json &, Space &, Energy::Energybase &);
+    VirtualTranslate(const json& j, Space& spc, Energy::Energybase& pot);
 };
 
 /**

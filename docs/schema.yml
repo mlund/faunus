@@ -1010,15 +1010,15 @@ properties:
                     description: "Virtual molecule translation"
                     properties:
                         molecule: {type: string, description: Molecule name to virtually translate (there can be only one}
-                        file: {type: string, description: Output filename w. data as a function of steps}
+                        file: {type: string, description: "Output filename w. data as a function of steps (.dat, .dat.gz)", pattern: "(.*?)\\.(dat|dat.gz)$"}
                         dir:
                             type: array
                             items: {type: number}
                             minItems: 3
                             maxItems: 3
                             default: [0,0,1]
-                            description: Translation directions (length unimportant)
-                        dL: {type: number, description: Displacement distance}
+                            description: Translation directions (will be scaled to unit-vector)
+                        dL: {type: number, description: Displacement distance along `dir`}
                         nstep: {type: integer, description: Interval between samples}
                         nskip: {type: integer, default: 0, description: Number of steps to initially skip}
                     required: [dL, molecule, nstep]

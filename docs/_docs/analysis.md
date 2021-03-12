@@ -521,7 +521,7 @@ $$
 `dL`               | Displacement (Å)
 `dir=[0,0,1]`      | Displacement direction (length ignored)
 `nstep`            | Interval between samples
-`file`             | Optional output filename for writing data as a function of steps
+`file`             | Optional output filename for writing data as a function of steps (`.dat|.dat.gz`)
 
 
 ### Widom Insertion

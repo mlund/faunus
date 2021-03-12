@@ -55,14 +55,31 @@ void IO::strip(std::vector<std::string> &strings, const std::string &pattern) {
  * compression is enabled, otherwise a standard `std::ostream` is created.
  *
  * @param filename Name of output file
+ * @param throw_on_error Throw exception if file cannot be opened (default: false)
  * @return pointer to stream; nullptr if it could not be created
  */
-std::unique_ptr<std::ostream> IO::openCompressedOutputStream(const std::string &filename) {
-    if (filename.substr(filename.find_last_of(".") + 1) == "gz") {
+std::unique_ptr<std::ostream> IO::openCompressedOutputStream(const std::string& filename, bool throw_on_error) {
+    if (throw_on_error) {
+        try { // any neater way to check if path is writable?
+            std::ofstream f;
+            f.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+            f.open(filename);
+        } catch (std::exception &e) {
+            throw std::runtime_error("could not write to file "s + filename);
+        }
+    }
+    if (filename.substr(filename.find_last_of('.') + 1) == "gz") {
         faunus_logger->trace("enabling gzip compression for {}", filename);
         return std::make_unique<zstr::ofstream>(filename);
+    } else {
+        return std::make_unique<std::ofstream>(filename);
     }
-    return std::make_unique<std::ofstream>(filename);
+}
+
+TEST_CASE("[Faunus] openCompressedOutputStream") {
+    using doctest::Approx;
+    CHECK_THROWS(IO::openCompressedOutputStream("/../file", true));
+    CHECK_NOTHROW(IO::openCompressedOutputStream("/../file"));
 }
 
 bool FormatAAM::prefer_charges_from_file = true;

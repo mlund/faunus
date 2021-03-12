@@ -44,7 +44,7 @@ void strip(std::vector<std::string> &strings, const std::string &pattern); //!< 
 /**
  * @brief Open (gzip compressed) output stream
  */
-std::unique_ptr<std::ostream> openCompressedOutputStream(const std::string &);
+std::unique_ptr<std::ostream> openCompressedOutputStream(const std::string &, bool throw_on_error = false);
 
 /**
  * Write a map to an output stream as key-value pairs

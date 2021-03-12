@@ -1524,13 +1524,11 @@ void VirtualTranslate::_from_json(const json& j) {
 
         if (filename = j.value("file", ""s); !filename.empty()) {
             filename = MPI::prefix + filename;
-            if (output_stream = IO::openCompressedOutputStream(filename); output_stream == nullptr) {
-                throw ConfigurationError("cannot open output file '{}'", filename);
-            }
+            output_stream = IO::openCompressedOutputStream(filename, true); // throws if error
             *output_stream << "# steps dL/Å du/kT <force>/kT/Å\n"s;
         }
     } catch (std::exception& e) {
-        throw ConfigurationError("{}: {}", name, e.what());
+        throw ConfigurationError("{}", e.what());
     }
 }
 void VirtualTranslate::_sample() {
@@ -1584,10 +1582,10 @@ void VirtualTranslate::_to_json(json& j) const {
     }
 }
 VirtualTranslate::VirtualTranslate(const json& j, Space& spc, Energy::Energybase& pot) : pot(pot), spc(spc) {
-    from_json(j);
     name = "virtualtranslate";
     change.groups.resize(1);
     change.groups.front().internal = false;
+    from_json(j);
 }
 void VirtualTranslate::_to_disk() {
     if (output_stream) {

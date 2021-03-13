@@ -34,7 +34,7 @@ add_test(
 
 add_test(
         NAME penalty
-        COMMAND sh -c "jupyter nbconvert --execute penalty.ipynb --ExecutePreprocessor.timeout=None"
+        COMMAND sh -c "jupyter nbconvert --to html --execute penalty.ipynb --ExecutePreprocessor.timeout=None"
         WORKING_DIRECTORY ${EXAMPLES_DIR}/penalty)
 set_property(TEST penalty APPEND PROPERTY ENVIRONMENT FAUNUS_EXECUTABLE=$<TARGET_FILE:faunus>)
 set_property(TEST penalty APPEND PROPERTY ENVIRONMENT YASON_EXECUTABLE=${YASON})
@@ -42,7 +42,7 @@ set_property(TEST penalty APPEND PROPERTY ENVIRONMENT YASON_EXECUTABLE=${YASON})
 if (ENABLE_MPI)
     add_test(
         NAME temper
-        COMMAND sh -c "jupyter nbconvert --execute temper.ipynb --ExecutePreprocessor.timeout=None"
+        COMMAND sh -c "jupyter nbconvert --to html --execute temper.ipynb --ExecutePreprocessor.timeout=None"
         WORKING_DIRECTORY ${EXAMPLES_DIR}/temper)
     set_property(TEST temper APPEND PROPERTY ENVIRONMENT FAUNUS_EXECUTABLE=$<TARGET_FILE:faunus>)
     set_property(TEST temper APPEND PROPERTY ENVIRONMENT MPIEXEC=${MPIEXEC_EXECUTABLE})
@@ -50,14 +50,14 @@ endif()
 
 add_test(
         NAME multipole
-        COMMAND sh -c "jupyter nbconvert --execute multipole.ipynb --ExecutePreprocessor.timeout=None"
+        COMMAND sh -c "jupyter nbconvert --to html --execute multipole.ipynb --ExecutePreprocessor.timeout=None"
         WORKING_DIRECTORY ${EXAMPLES_DIR}/multipole)
 set_property(TEST multipole APPEND PROPERTY ENVIRONMENT FAUNUS_EXECUTABLE=$<TARGET_FILE:faunus>)
 set_property(TEST multipole APPEND PROPERTY ENVIRONMENT YASON_EXECUTABLE=${YASON})
 
 add_test(
         NAME virial
-        COMMAND sh -c "jupyter nbconvert --execute virial.ipynb --ExecutePreprocessor.timeout=None"
+        COMMAND sh -c "jupyter nbconvert --to html --execute virial.ipynb --ExecutePreprocessor.timeout=None"
         WORKING_DIRECTORY ${EXAMPLES_DIR}/virial)
 set_property(TEST virial APPEND PROPERTY ENVIRONMENT FAUNUS_EXECUTABLE=$<TARGET_FILE:faunus>)
 set_property(TEST virial APPEND PROPERTY ENVIRONMENT YASON_EXECUTABLE=${YASON})

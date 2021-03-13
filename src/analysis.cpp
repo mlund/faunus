@@ -1372,16 +1372,21 @@ void ChargeFluctuations::_to_disk() {
         }
     }
 }
+
+/**
+ * @todo replace `mol_iter` with simple molid integer
+ */
 ChargeFluctuations::ChargeFluctuations(const json &j, Space &spc) : spc(spc) {
     from_json(j);
     name = "chargefluctuations";
     file = j.value("pqrfile", ""s);
     verbose = j.value("verbose", true);
     const std::string molname = j.at("molecule"); // molecule name
-    auto molecule = findMoleculeByName(molname);
+    auto molecule = findMoleculeByName(molname); // throws if not found
     if (molecule.atomic) {
         throw ConfigurationError("only molecular groups allowed");
     }
+    mol_iter = Faunus::findName(Faunus::molecules, molname);
     idcnt.resize(molecule.atoms.size());
     charge.resize(molecule.atoms.size());
 }

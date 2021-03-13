@@ -59,20 +59,21 @@ void IO::strip(std::vector<std::string> &strings, const std::string &pattern) {
  * @return pointer to stream; nullptr if it could not be created
  */
 std::unique_ptr<std::ostream> IO::openCompressedOutputStream(const std::string& filename, bool throw_on_error) {
-    if (throw_on_error) {
-        try { // any neater way to check if path is writable?
-            std::ofstream f;
-            f.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-            f.open(filename);
-        } catch (std::exception &e) {
+    try { // any neater way to check if path is writable?
+        std::ofstream f;
+        f.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+        f.open(filename);
+    } catch (std::exception& e) { // reaching here, file cannot be created
+        if (throw_on_error) {
             throw std::runtime_error("could not write to file "s + filename);
         }
+        return std::make_unique<std::ofstream>(); // empty object
     }
     if (filename.substr(filename.find_last_of('.') + 1) == "gz") {
         faunus_logger->trace("enabling gzip compression for {}", filename);
-        return std::make_unique<zstr::ofstream>(filename);
+        return std::make_unique<zstr::ofstream>(filename); // compressed
     } else {
-        return std::make_unique<std::ofstream>(filename);
+        return std::make_unique<std::ofstream>(filename); // uncompressed
     }
 }
 

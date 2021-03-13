@@ -1516,61 +1516,86 @@ void ScatteringFunction::_to_disk() {
     }
 }
 
-void VirtualTranslate::_from_json(const json &j) {
-    const std::string molname = j.at("molecule");
-    molid = findMoleculeByName(molname).id();
-    dL = j.at("dL").get<double>();
-    dir = j.value("dir", Point(0, 0, 1));
-    dir.normalize(); // -> unit vector
+void VirtualTranslate::_from_json(const json& j) {
+    try {
+        const auto molname = j.at("molecule").get<std::string>();
+        molid = Faunus::findMoleculeByName(molname).id(); // throws if not found
+        if (Faunus::molecules[molid].atomic) {
+            throw ConfigurationError("atomic molecule {} not allowed", Faunus::molecules[molid].name);
+        }
+        perturbation_distance = j.at("dL").get<double>() * 1.0_angstrom;
+        perturbation_direction = j.value("dir", Point(0.0, 0.0, 1.0));
+        perturbation_direction.normalize(); // -> unit vector
 
-    // if filename is given, open output stream and add header
-    if (file = j.value("file", ""s); not file.empty()) {
-        file = MPI::prefix + file;
-        output_file.open(file);
-        if (!output_file)
-            throw std::runtime_error(name + ": cannot open output file " + file);
-        output_file << "# steps dL/" + u8::angstrom + " du/kT <force>/kT/" + u8::angstrom + "\n"s;
-        output_file.precision(14);
+        if (filename = j.value("file", ""s); !filename.empty()) {
+            filename = MPI::prefix + filename;
+            output_stream = IO::openCompressedOutputStream(filename, true); // throws if error
+            *output_stream << "# steps dL/Å du/kT <force>/kT/Å\n"s;
+        }
+    } catch (std::exception& e) {
+        throw ConfigurationError("{}", e.what());
     }
 }
 void VirtualTranslate::_sample() {
-    if (fabs(dL) > 0) {
-        auto mollist = spc.findMolecules(molid, Space::ACTIVE); // list of molecules
-        if (ranges::distance(mollist.begin(), mollist.end()) > 1)
-            throw std::runtime_error(name + ": maximum ONE active molecule allowed");
-        if (not ranges::cpp20::empty(mollist)) {
-            if (auto it = random.sample(mollist.begin(), mollist.end()); not it->empty()) {
-                change.groups[0].index = &*it - &*spc.groups.begin(); // group index
-                double uold = pot.energy(change);              // old energy
-                Point dr = dL * dir;                           // translation vector
-                it->translate(dr, spc.geo.getBoundaryFunc());  // translate
-                double unew = pot.energy(change);              // new energy
-                it->translate(-dr, spc.geo.getBoundaryFunc()); // restore positions
-                double du = unew - uold;
-                if (-du > pc::max_exp_argument)
-                    faunus_logger->warn("{}: energy too negative to sample", name);
-                else {
-                    average_exp_du += std::exp(-du); // widom / perturbation average
-                    if (output_file)                 // write sample event to output file
-                        output_file << fmt::format("{:d} {:.3f} {:.10f} {:.6f}\n", number_of_samples, dL, du,
-                                                   std::log(average_exp_du) / dL);
-                }
+    if (std::fabs(perturbation_distance) > 0.0) {
+        if (auto mollist = spc.findMolecules(molid, Space::ACTIVE); !ranges::cpp20::empty(mollist)) {
+            if (ranges::distance(mollist.begin(), mollist.end()) > 1) {
+                throw std::runtime_error(name + ": exactly ONE active molecule expected");
+            }
+            if (auto group_it = random.sample(mollist.begin(), mollist.end()); not group_it->empty()) {
+                const auto energy_change = momentarilyPerturb(*group_it);
+                collectWidomAverage(energy_change);
             }
         }
     }
 }
-void VirtualTranslate::_to_json(json &j) const {
-    j = {{"dL", dL}, {"force", std::log(average_exp_du) / dL}, {"dir", dir}};
+
+/**
+ * @param group Group to temporarily displace
+ * @return Energy change of perturbation (kT)
+ *
+ * Calculates the energy change of displacing a group and
+ * then restore it to it's original position, leaving Space untouched.
+ */
+double VirtualTranslate::momentarilyPerturb(Space::Tgroup& group) {
+    change.groups.at(0).index = spc.getGroupIndex(group);
+    const auto old_energy = pot.energy(change);
+    const Point displacement_vector = perturbation_distance * perturbation_direction;
+    group.translate(displacement_vector, spc.geo.getBoundaryFunc()); // temporarily translate group
+    const auto new_energy = pot.energy(change);
+    group.translate(-displacement_vector, spc.geo.getBoundaryFunc()); // restore original position
+    return new_energy - old_energy;
 }
-VirtualTranslate::VirtualTranslate(const json &j, Space &spc, Energy::Energybase &pot) : pot(pot), spc(spc) {
-    from_json(j);
+
+void VirtualTranslate::collectWidomAverage(const double energy_change) {
+    if (-energy_change > pc::max_exp_argument) {
+        faunus_logger->warn("{}: energy too negative to sample; consider lowering `dL`", name);
+    } else {
+        mean_exponentiated_energy_change += std::exp(-energy_change);
+        if (output_stream) {
+            *output_stream << fmt::format("{:d} {:.3f} {:.10f} {:.6f}\n", number_of_samples, perturbation_distance,
+                                          energy_change,
+                                          std::log(mean_exponentiated_energy_change) / perturbation_distance);
+        }
+    }
+}
+void VirtualTranslate::_to_json(json& j) const {
+    if (number_of_samples > 0 && std::fabs(perturbation_distance) > 0.0) {
+        j = {{"dL", perturbation_distance},
+             {"force", std::log(mean_exponentiated_energy_change) / perturbation_distance},
+             {"dir", perturbation_direction}};
+    }
+}
+VirtualTranslate::VirtualTranslate(const json& j, Space& spc, Energy::Energybase& pot) : pot(pot), spc(spc) {
     name = "virtualtranslate";
-    data.internal = false;
-    change.groups.push_back(data);
+    change.groups.resize(1);
+    change.groups.front().internal = false;
+    from_json(j);
 }
 void VirtualTranslate::_to_disk() {
-    if (output_file)
-        output_file.flush(); // empty buffer
+    if (output_stream) {
+        output_stream->flush(); // empty buffer
+    }
 }
 
 SpaceTrajectory::SpaceTrajectory(const json &j, Space::Tgvec &groups) : groups(groups) {

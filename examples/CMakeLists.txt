@@ -202,6 +202,14 @@ add_test(
     && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} membrane.out.json out.json --tol 0.065"
         WORKING_DIRECTORY ${EXAMPLES_DIR}/membrane)
 
+add_test(
+        NAME widom
+        COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} widom.yml\
+    | $<TARGET_FILE:faunus> --nobar \
+    && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} widom.out.json out.json --tol 0.01"
+        WORKING_DIRECTORY ${EXAMPLES_DIR}/widom)
+
+
 install(FILES
         ${EXAMPLES_DIR}/README.md
         ${EXAMPLES_DIR}/bulk/bulk.yml
@@ -275,4 +283,6 @@ install(FILES
         ${EXAMPLES_DIR}/calciumhydroxide_molecular/calciumhydroxide_molecular.out.json
         ${EXAMPLES_DIR}/calciumhydroxide_molecular/calciumhydroxide_molecular.state.json
         ${EXAMPLES_DIR}/water/ewald.yml
+        ${EXAMPLES_DIR}/widom/widom.yml
+        ${EXAMPLES_DIR}/widom/widom.out.json
         DESTINATION share/faunus/examples)

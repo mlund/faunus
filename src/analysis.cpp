@@ -304,92 +304,95 @@ void PairAngleFunctionBase::_to_disk() {
 
 void PairAngleFunctionBase::_from_json(const json &) { hist2.setResolution(dr, 0); }
 
-void VirtualVolume::_sample() {
-    if (fabs(dV) > 1e-10) {
-        double old_volume = spc.geo.getVolume();                              // store old volume
-        double old_energy = pot.energy(change);                               // ...and energy
-        auto scale = spc.scaleVolume(old_volume + dV, volume_scaling_method); // scale entire system to new volume
-        double new_energy = pot.energy(change);                               // energy after scaling
-        spc.scaleVolume(old_volume, volume_scaling_method);                   // restore saved system
+void PerturbationAnalysisBase::_to_disk() {
+    if (output_stream) {
+        output_stream->flush(); // empty buffer
+    }
+}
+PerturbationAnalysisBase::PerturbationAnalysisBase(Energy::Energybase& pot, Space& spc, const std::string& filename)
+    : spc(spc), pot(pot), filename(filename) {
+    if (!filename.empty()) {
+        this->filename = MPI::prefix + filename;
+        output_stream = IO::openCompressedOutputStream(this->filename, true); // throws if error
+    }
+}
 
-        double du = new_energy - old_energy; // system energy change
-        if (-du < pc::max_exp_argument) {    // does minus energy change fit exp() function?
-            double exp_du = std::exp(-du);
-            assert(std::isfinite(exp_du));
-            mean_exponentiated_energy_change += exp_du; // collect average, <exp(-du)>
+bool PerturbationAnalysisBase::collectWidomAverage(const double energy_change) {
+    if (-energy_change > pc::max_exp_argument) {
+        faunus_logger->warn(
+            "{}: skipping sample event due to too negative energy; consider decreasing the perturbation", name);
+        number_of_samples--; // update_counter is incremented by sample() so we need to decrease
+        return false;
+    }
+    mean_exponentiated_energy_change += std::exp(-energy_change);
+    return true;
+}
+double PerturbationAnalysisBase::meanFreeEnergy() const { return -std::log(mean_exponentiated_energy_change.avg()); }
 
-            if (output_stream) { // write to output file if appropriate
-                *output_stream << getNumberOfSteps() << " " << dV << " " << du << " " << exp_du << " "
-                               << std::log(mean_exponentiated_energy_change.avg()) / dV;
+void VirtualVolumeMove::_sample() {
+    if (std::fabs(volume_displacement) > 0.0) {
+        const auto old_volume = spc.geo.getVolume(); // store old volume
+        const auto old_energy = pot.energy(change);  // ...and energy
+        const auto scale = spc.scaleVolume(old_volume + volume_displacement,
+                                           volume_scaling_method); // scale entire system to new volume
+        const auto new_energy = pot.energy(change);                // energy after scaling
+        spc.scaleVolume(old_volume, volume_scaling_method);        // restore saved system
 
-                // if anisotropic scaling, add an extra column with area or length perturbation
-                if (volume_scaling_method == Geometry::XY) {
-                    auto l = spc.geo.getLength();
-                    double area_change = l.x() * l.y() * (scale.x() * scale.y() - 1.0);
-                    *output_stream << " " << area_change;
-                } else if (volume_scaling_method == Geometry::Z) {
-                    auto l = spc.geo.getLength();
-                    double length_change = l.z() * (scale.z() - 1.0);
-                    *output_stream << " " << length_change;
-                }
-
-                *output_stream << "\n"; // trailing newline
-            }
-
-            // Check if volume and particle positions are properly restored.
-            // Expensive and one would normally not perform this test and we trigger it
-            // only when using log-level "debug" or lower
-            if (faunus_logger->level() <= spdlog::level::debug and old_energy != 0) {
-                double should_be_small = std::fabs((old_energy - pot.energy(change)) / old_energy); // expensive!
-                if (should_be_small > 1e-6) {
-                    faunus_logger->error("{} failed to restore system", name);
-                }
-            }
-        } else {   // energy change too large (negative) to fit exp() function
-            number_of_samples--; // update_counter is incremented by sample() so we need to decrease
-            faunus_logger->warn("{0}: skipping sample event due to excessive energy, dU/kT={1}", name, du);
+        const auto energy_change = new_energy - old_energy; // system energy change
+        if (collectWidomAverage(energy_change)) {
+            writeToFileStream(scale, energy_change);
+            sanityCheck(old_energy);
         }
     }
 }
 
-void VirtualVolume::_from_json(const json &j) {
-    dV = j.at("dV");
+/**
+ * Check if volume and particle positions are properly restored.
+ * Expensive and one would normally not perform this test and we trigger it
+ * only when using log-level "debug" or lower
+ */
+void VirtualVolumeMove::sanityCheck(const double old_energy) {
+    if (faunus_logger->level() <= spdlog::level::debug and old_energy != 0.0) {
+        const auto should_be_small = 1.0 - pot.energy(change) / old_energy;
+        if (std::fabs(should_be_small) > 1e-6) {
+            faunus_logger->error("{} failed to restore system", name);
+        }
+    }
+}
+void VirtualVolumeMove::writeToFileStream(const Point& scale, const double energy_change) const {
+    if (output_stream) { // write to output file if open
+        *output_stream << fmt::format("{:d} {:.3f} {:.10f} {:.6f} {:.6f}", getNumberOfSteps(), volume_displacement,
+                                      energy_change, exp(-energy_change),
+                                      -meanFreeEnergy() / volume_displacement);
+
+        // if anisotropic scaling, add an extra column with area or length perturbation
+        if (volume_scaling_method == Geometry::XY) {
+            const auto box_length = spc.geo.getLength();
+            const auto area_change = box_length.x() * box_length.y() * (scale.x() * scale.y() - 1.0);
+            *output_stream << fmt::format(" {:.6f}", area_change);
+        } else if (volume_scaling_method == Geometry::Z) {
+            const auto box_length = spc.geo.getLength();
+            const auto length_change = box_length.z() * (scale.z() - 1.0);
+            *output_stream << fmt::format(" {:.6f}", length_change);
+        }
+        *output_stream << "\n"; // trailing newline
+    }
+}
+
+void VirtualVolumeMove::_from_json(const json& j) {
+    volume_displacement = j.at("dV").get<double>();
     volume_scaling_method = j.value("scaling", Geometry::ISOTROPIC);
     if (volume_scaling_method == Geometry::ISOCHORIC) {
         throw std::runtime_error(name + ": isochoric volume scaling not allowed");
     }
-
-    if (auto it = j.find("file"); it != j.end()) {
-        filename = *it;
-        if (not filename.empty()) { // if filename is given, create output file
-            filename = MPI::prefix + filename;
-            output_stream = IO::openCompressedOutputStream(filename);
-            if (output_stream) {
-                *output_stream << "# steps dV/" + u8::angstrom + u8::cubed + " du/kT exp(-du/kT) <Pex>/kT/" +
-                                      u8::angstrom + u8::cubed;
-
-                // if non-isotropic scaling, add another column with dA or dL
-                if (volume_scaling_method == Geometry::XY) {
-                    *output_stream << " dA/" + u8::angstrom + u8::squared;
-                } else if (volume_scaling_method == Geometry::Z) {
-                    *output_stream << " dL/" + u8::angstrom;
-                }
-
-                *output_stream << "\n"; // trailing newline
-                output_stream->precision(14);
-            } else {
-                throw std::runtime_error(name + ": cannot open output file " + filename);
-            }
-        }
-    }
 }
 
-void VirtualVolume::_to_json(json &j) const {
+void VirtualVolumeMove::_to_json(json &j) const {
     if (number_of_samples > 0) {
-        double excess_pressure = log(mean_exponentiated_energy_change.avg()) / dV;
-        j = {{"dV", dV},
+        const auto excess_pressure = -meanFreeEnergy() / volume_displacement;
+        j = {{"dV", volume_displacement},
              {"scaling", volume_scaling_method},
-             {"-ln\u27e8exp(-dU)\u27e9", -std::log(mean_exponentiated_energy_change.avg())},
+             {"-ln\u27e8exp(-dU)\u27e9", meanFreeEnergy()},
              {"Pex/mM", excess_pressure / 1.0_millimolar},
              {"Pex/Pa", excess_pressure / 1.0_Pa},
              {"Pex/kT/" + u8::angstrom + u8::cubed, excess_pressure}};
@@ -397,16 +400,23 @@ void VirtualVolume::_to_json(json &j) const {
     }
 }
 
-VirtualVolume::VirtualVolume(const json &j, Space &spc, Energy::Energybase &pot) : spc(spc), pot(pot) {
+VirtualVolumeMove::VirtualVolumeMove(const json& j, Space& spc, Energy::Energybase& pot)
+    : PerturbationAnalysisBase(pot, spc, j.value("file", ""s)) {
+    name = "virtualvolume";
+    cite = "doi:10.1063/1.472721";
     from_json(j);
     change.dV = true;
     change.all = true;
-    name = "virtualvolume";
-    cite = "doi:10.1063/1.472721";
-}
-void VirtualVolume::_to_disk() {
     if (output_stream) {
-        output_stream->flush(); // empty buffer
+        *output_stream << "# steps dV/" + u8::angstrom + u8::cubed + " du/kT exp(-du/kT) <Pex>/kT/" + u8::angstrom +
+                          u8::cubed;
+        // if non-isotropic scaling, add another column with dA or dL
+        if (volume_scaling_method == Geometry::XY) {
+            *output_stream << " dA/" + u8::angstrom + u8::squared;
+        } else if (volume_scaling_method == Geometry::Z) {
+            *output_stream << " dL/" + u8::angstrom;
+        }
+        *output_stream << "\n"; // trailing newline
     }
 }
 
@@ -514,7 +524,7 @@ CombinedAnalysis::CombinedAnalysis(const json& j, Space& spc, Energy::Hamiltonia
                 } else if (key == "systemenergy") {
                     emplace_back<SystemEnergy>(j_params, pot);
                 } else if (key == "virtualvolume") {
-                    emplace_back<VirtualVolume>(j_params, spc, pot);
+                    emplace_back<VirtualVolumeMove>(j_params, spc, pot);
                 } else if (key == "virtualtranslate") {
                     emplace_back<VirtualTranslate>(j_params, spc, pot);
                 } else if (key == "widom") {
@@ -581,17 +591,15 @@ void FileReactionCoordinate::_to_disk() {
  */
 void WidomInsertion::selectGhostGroup() {
     change.clear();
-    auto mollist = space.findMolecules(molid, Space::INACTIVE); // list of inactive molecules
-    if (!ranges::cpp20::empty(mollist)) {                       // did we find any?
-        if (mollist.begin()->size() == 0) {                     // pick first and check if it's fully inactive
-            if (mollist.begin()->capacity() > 0) {              // and it must have a non-zero capacity
-                Change::data d;                                 // construct change object
-                d.index = Faunus::distance(space.groups.begin(), mollist.begin()); // group index
-                d.all = true;
-                d.internal = mollist.begin()->atomic; // calculate internal energy of non-molecular groups only
-                change.groups.push_back(d);           // add to change object
-                return;
-            }
+    auto inactive_groups = spc.findMolecules(molid, Space::INACTIVE); // list of inactive molecules
+    if (!ranges::cpp20::empty(inactive_groups)) {                     // did we find any?
+        const auto& group = *inactive_groups.begin();                 // select first group
+        if (group.empty() && group.capacity() > 0) {                  // must be inactive and have a non-zero capacity
+            auto& group_changes = change.groups.emplace_back();
+            group_changes.index = spc.getGroupIndex(group); // group index in space
+            group_changes.all = true;
+            group_changes.internal = group.isAtomic(); // internal energy only if non-molecular
+            return;
         }
     }
     std::runtime_error(fmt::format("{}: no inactive {} groups available", name, Faunus::molecules.at(molid).name));
@@ -599,33 +607,39 @@ void WidomInsertion::selectGhostGroup() {
 
 void WidomInsertion::_sample() {
     selectGhostGroup();
-    auto &group = space.groups.at(change.groups.at(0).index); // inactive "ghost" group
-    group.resize(group.capacity());                           // activate ghost
-    ParticleVector particles;                                 // particles to insert
+    auto& group = spc.groups.at(change.groups.at(0).index); // inactive "ghost" group
+    group.resize(group.capacity());                         // activate ghost
+    ParticleVector particles;                               // particles to insert
     for (int cnt = 0; cnt < number_of_insertions; ++cnt) {
-        particles = inserter->operator()(space.geo, Faunus::molecules[molid], space.p);
-        assert(particles.size() == group.size());
-        std::copy(particles.begin(), particles.end(), group.begin()); // copy to ghost group
-        if (absolute_z_coords) {
-            std::for_each(group.begin(), group.end(), [](Particle &i) { i.pos.z() = std::fabs(i.pos.z()); });
-        }
-        if (!group.atomic) { // update molecular mass-center for molecular groups
-            group.cm =
-                Geometry::massCenter(group.begin(), group.end(), space.geo.getBoundaryFunc(), -group.begin()->pos);
-        }
-        double energy_change = hamiltonian.energy(change); // in kT units
-        exponential_average += std::exp(-energy_change);   // widom average
+        particles = inserter->operator()(spc.geo, Faunus::molecules[molid], spc.p); // random pos&orientation
+        updateGroup(group, particles);
+        const auto energy_change = pot.energy(change); // in kT
+        collectWidomAverage(energy_change);
     }
     group.resize(0); // de-activate group
 }
 
+void WidomInsertion::updateGroup(Space::Tgroup& group, const ParticleVector& particles) {
+    assert(particles.size() == group.size());
+    std::copy(particles.begin(), particles.end(), group.begin()); // copy to ghost group
+    if (absolute_z_coords) {
+        std::for_each(group.begin(), group.end(), [](Particle& i) { i.pos.z() = std::fabs(i.pos.z()); });
+    }
+    if (group.isMolecular()) { // update molecular mass-center for molecular groups
+        group.cm = Geometry::massCenter(group.begin(), group.end(), this->spc.geo.getBoundaryFunc(), -group.begin()->pos);
+    }
+}
+
 void WidomInsertion::_to_json(json &j) const {
-    double excess = -std::log(exponential_average.avg());
-    j = {{"molecule", Faunus::molecules[molid].name},
-         {"insertions", exponential_average.cnt},
-         {"absz", absolute_z_coords},
-         {"insertscheme", *inserter},
-         {u8::mu + "/kT", {{"excess", excess}}}};
+    const auto number_of_insertions = mean_exponentiated_energy_change.cnt;
+    if (number_of_insertions > 0) {
+        const double excess_chemical_potential = meanFreeEnergy();
+        j = {{"molecule", Faunus::molecules[molid].name},
+             {"insertions", number_of_insertions},
+             {"absz", absolute_z_coords},
+             {"insertscheme", *inserter},
+             {u8::mu + "/kT", {{"excess", excess_chemical_potential}}}};
+    }
 }
 
 void WidomInsertion::_from_json(const json &j) {
@@ -635,11 +649,12 @@ void WidomInsertion::_from_json(const json &j) {
         ptr->dir = j.value("dir", Point({1, 1, 1}));
     } // set insert directions for RandomInserter
 
-    const std::string molecule_name = j.at("molecule");
+    const auto molecule_name = j.at("molecule").get<std::string>();
     molid = findMoleculeByName(molecule_name).id();
 }
 
-WidomInsertion::WidomInsertion(const json &j, Space &spc, Energy::Hamiltonian &pot) : space(spc), hamiltonian(pot) {
+WidomInsertion::WidomInsertion(const json& j, Space& spc, Energy::Hamiltonian& pot)
+    : PerturbationAnalysisBase(pot, spc) {
     name = "widom";
     cite = "doi:10/dkv4s6";
     inserter = std::make_shared<RandomInserter>();
@@ -1544,9 +1559,18 @@ void VirtualTranslate::_sample() {
             }
             if (auto group_it = random.sample(mollist.begin(), mollist.end()); not group_it->empty()) {
                 const auto energy_change = momentarilyPerturb(*group_it);
-                collectWidomAverage(energy_change);
+                if (collectWidomAverage(energy_change)) { // collect average (with sanity check)
+                    writeToFileStream(energy_change);
+                }
             }
         }
+    }
+}
+void VirtualTranslate::writeToFileStream(const double energy_change) const {
+    if (output_stream) { // file to disk?
+        const auto mean_force = -meanFreeEnergy() / perturbation_distance;
+        *output_stream << fmt::format("{:d} {:.3f} {:.10f} {:.6f}\n", getNumberOfSteps(), perturbation_distance,
+                                      energy_change, mean_force);
     }
 }
 
@@ -1567,18 +1591,6 @@ double VirtualTranslate::momentarilyPerturb(Space::Tgroup& group) {
     return new_energy - old_energy;
 }
 
-void VirtualTranslate::collectWidomAverage(const double energy_change) {
-    if (-energy_change > pc::max_exp_argument) {
-        faunus_logger->warn("{}: energy too negative to sample; consider lowering `dL`", name);
-    } else {
-        mean_exponentiated_energy_change += std::exp(-energy_change);
-        if (output_stream) {
-            *output_stream << fmt::format("{:d} {:.3f} {:.10f} {:.6f}\n", number_of_samples, perturbation_distance,
-                                          energy_change,
-                                          std::log(mean_exponentiated_energy_change) / perturbation_distance);
-        }
-    }
-}
 void VirtualTranslate::_to_json(json& j) const {
     if (number_of_samples > 0 && std::fabs(perturbation_distance) > 0.0) {
         j = {{"dL", perturbation_distance},
@@ -1586,16 +1598,12 @@ void VirtualTranslate::_to_json(json& j) const {
              {"dir", perturbation_direction}};
     }
 }
-VirtualTranslate::VirtualTranslate(const json& j, Space& spc, Energy::Energybase& pot) : pot(pot), spc(spc) {
+VirtualTranslate::VirtualTranslate(const json& j, Space& spc, Energy::Energybase& pot)
+    : PerturbationAnalysisBase(pot, spc, j.value("file", ""s)) {
     name = "virtualtranslate";
     change.groups.resize(1);
     change.groups.front().internal = false;
     from_json(j);
-}
-void VirtualTranslate::_to_disk() {
-    if (output_stream) {
-        output_stream->flush(); // empty buffer
-    }
 }
 
 SpaceTrajectory::SpaceTrajectory(const json &j, Space::Tgvec &groups) : groups(groups) {

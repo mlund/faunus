@@ -58,6 +58,30 @@ class Analysisbase {
 
 void to_json(json &, const Analysisbase &);
 
+/**
+ * @brief Base class for perturbation analysis
+ *
+ * This class provides basic data and functions to support Widom Particle Insertion, Virtual Volume Move
+ * etc. If a non-empty `filename` is given, a (compressed) output file used for streaming will be opened.
+ *
+ * @note Constructor throws if non-empty filename cannot to opened for writing
+ */
+class PerturbationAnalysisBase : public Analysisbase {
+  private:
+    void _to_disk() override;
+
+  protected:
+    Space& spc;
+    Energy::Energybase& pot;
+    std::string filename;                                  //!< output filename (optional)
+    std::unique_ptr<std::ostream> output_stream = nullptr; //!< output file stream if filename given
+    Change change;                                         //!< Change object to describe perturbation
+    Average<double> mean_exponentiated_energy_change;      //!< < exp(-du/kT) >
+    bool collectWidomAverage(const double energy_change);  //!< add to exp(-du/kT) incl. safety checks
+    PerturbationAnalysisBase(Energy::Energybase& pot, Space& spc, const std::string& filename = ""s);
+    double meanFreeEnergy() const; //!< Average perturbation free energy, `-ln(<exp(-du/kT)>)`
+};
+
 /*
  * @brief Sample and save reaction coordinates to a file
  */
@@ -83,23 +107,20 @@ class FileReactionCoordinate : public Analysisbase {
  * insertion, the code is designed for arbitrary insertion
  * schemes inheriting from `MoleculeInserter`.
  */
-class WidomInsertion : public Analysisbase {
-    Space &space;
-    Energy::Hamiltonian &hamiltonian;           //!< Potential energy method
+class WidomInsertion : public PerturbationAnalysisBase {
     std::shared_ptr<MoleculeInserter> inserter; //!< Insertion method
     int number_of_insertions;                   //!< Number of insertions per sample event
     int molid;                                  //!< Molecule id
     bool absolute_z_coords = false;             //!< Apply abs() on all inserted z coordinates?
-    Average<double> exponential_average;        //!< Widom average, <exp(-dU/kT)>
-    Change change;
 
     void selectGhostGroup(); //!< Select inactive group to act as group particle
+    void updateGroup(Space::Tgroup& group, const ParticleVector& particles);
     void _sample() override; //!< Called for each sample event
-    void _to_json(json &) const override;
-    void _from_json(const json &) override;
+    void _to_json(json&) const override;
+    void _from_json(const json&) override;
 
   public:
-    WidomInsertion(const json &, Space &, Energy::Hamiltonian &);
+    WidomInsertion(const json &j, Space &spc, Energy::Hamiltonian &pot);
 };
 
 /**
@@ -362,23 +383,17 @@ class XTCtraj : public Analysisbase {
 /**
  * @brief Excess pressure using virtual volume move
  */
-class VirtualVolume : public Analysisbase {
-    Space &spc;
+class VirtualVolumeMove : public PerturbationAnalysisBase {
     Geometry::VolumeMethod volume_scaling_method = Geometry::ISOTROPIC;
-    std::string filename;                                  // output filename (optional)
-    std::unique_ptr<std::ostream> output_stream = nullptr; // output file stream
-    double dV;                                             // volume perturbation
-    Change change;
-    Energy::Energybase &pot;
-    Average<double> mean_exponentiated_energy_change; // < exp(-du/kT) >
-
+    double volume_displacement = 0.0;
     void _sample() override;
-    void _from_json(const json &) override;
-    void _to_json(json &) const override;
-    void _to_disk() override;
+    void _from_json(const json &j) override;
+    void _to_json(json &j) const override;
+    void sanityCheck(const double old_energy);
+    void writeToFileStream(const Point& scale, const double energy_change) const;
 
   public:
-    VirtualVolume(const json &, Space &, Energy::Energybase &);
+    VirtualVolumeMove(const json &j, Space &spc, Energy::Energybase &pot);
 };
 
 /**
@@ -404,23 +419,16 @@ class MolecularConformationID : public Analysisbase {
  *
  * @todo Does this work with Ewald summation? k-vectors must be refreshed.
  */
-class VirtualTranslate : public Analysisbase {
-    Energy::Energybase& pot;
-    Space& spc;
-    Change change;        //!< Change object for energy calc.
-    std::string filename; //!< output filename
+class VirtualTranslate : public PerturbationAnalysisBase {
     int molid;            //!< molid to operate on
-    Average<double> mean_exponentiated_energy_change; //!< <exp(-du/kT)>
     Point perturbation_direction = {0.0, 0.0, 1.0};
     double perturbation_distance = 0.0;
-    std::unique_ptr<std::ostream> output_stream;
 
     void _sample() override;
     void _from_json(const json& j) override;
     void _to_json(json& j) const override;
-    void _to_disk() override;
-    void collectWidomAverage(const double energy_change);
     double momentarilyPerturb(Space::Tgroup& group);
+    void writeToFileStream(const double energy_change) const;
 
   public:
     VirtualTranslate(const json& j, Space& spc, Energy::Energybase& pot);

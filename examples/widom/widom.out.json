@@ -1,0 +1,62 @@
+{
+    "analysis": [
+        {
+            "widom": {
+                "absz": false,
+                "insertions": 3000000,
+                "insertscheme": {
+                    "allow overlap": false,
+                    "insdir": [
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "insoffset": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "keeppos": false,
+                    "rotate": true
+                },
+                "molecule": "ideal",
+                "nstep": 1,
+                "reference": "doi:10/dkv4s6",
+                "relative time": 0.757,
+                "samples": 300000,
+                "μ/kT": {
+                    "excess": 0.13353139262452263
+                }
+            }
+        }
+    ],
+    "compiler": "Apple LLVM 12.0.0 (clang-1200.0.32.29)",
+    "geometry": {
+        "radius": 4.0,
+        "type": "sphere"
+    },
+    "git revision": "28ddc6a9 (2021-03-13)",
+    "groups": [
+        {
+            "colloid": {
+                "compressible": false,
+                "index": [
+                    0,
+                    0
+                ],
+                "size": 1
+            }
+        },
+        {
+            "ideal": {
+                "capacity": 1,
+                "compressible": false,
+                "size": 0
+            }
+        }
+    ],
+    "number of groups": 2,
+    "number of particles": 2,
+    "relative drift": 0.0,
+    "temperature": 300.0
+}

@@ -17,7 +17,7 @@
 /**
  * @todo:
  *
- * This is legacy code that works but would benefit from a bit of polishing.
+ * This is legacy code that works but would benefit from a lot of polishing.
  * In particular:
  * - add exceptions
  * - update documentation
@@ -30,39 +30,40 @@ namespace Faunus {
      */
     namespace MPI {
 
-        extern std::string prefix;
+    extern std::string prefix; //!< Filneme prefix for MPI related input and output (empty if no MPI)
 
-        /**
-         * @brief Main controller for MPI calls
-         *
-         * This is the MPI controller required for all MPI programs.
-         *
-         *     MPIController mpi;
-         *     mpi.init();
-         *     std::cout << "I'm rank " << mpi.rank << " out of " << mpi.nproc;
-         *     mpi.cout << "This will go to a file called mpi%r.stdout where %r is my rank"
-         *     if (mpi.isMaster())
-         *       cout << "I'm the master!";
-         *
-         * When MPIController is instantiated the textio::prefix variable is automatically
-         * set to `mpi%j`. Which can be used to prefix input and output files. For example:
-         *
-         *     InputMap mcp(textio::prefix+"input"); // tries to load "mpi%r.input" where %r is the rank
-         *
-         * @date Lund 2012
-         */
-        class MPIController {
-            public:
-                void init();            //!< Initialize MPI and file IO
-                void finalize();        //!< Finalize MPI
-                ~MPIController();       //!< End of all MPI calls!
-                int nproc() const;      //!< Number of processors in communicator
-                int rank() const;       //!< Rank of process
-                int rankMaster() const; //!< Rank number of the master
-                bool isMaster() const;  //!< Test if current process is master
-                std::ostream& cout();
-                Random random;          //!< Random number generator for MPI calls
-                std::string id;         //!< Unique name associated with current rank
+    /**
+     * @brief Main controller for MPI calls
+     *
+     * This is the MPI controller required for all MPI programs.
+     *
+     *     MPIController mpi;
+     *     mpi.init();
+     *     std::cout << "I'm rank " << mpi.rank << " out of " << mpi.nproc;
+     *     mpi.cout << "This will go to a file called mpi%r.stdout where %r is my rank"
+     *     if (mpi.isMaster())
+     *       cout << "I'm the master!";
+     *
+     * When MPIController is instantiated the textio::prefix variable is automatically
+     * set to `mpi%j`. Which can be used to prefix input and output files. For example:
+     *
+     *     InputMap mcp(textio::prefix+"input"); // tries to load "mpi%r.input" where %r is the rank
+     *
+     * @date Lund 2012
+     */
+    class MPIController {
+      public:
+        void init();            //!< Initialize MPI and file IO
+        void finalize();        //!< Finalize MPI
+        ~MPIController();       //!< End of all MPI calls!
+        int nproc() const;      //!< Number of processors in communicator
+        int rank() const;       //!< Rank of process
+        int rankMaster() const; //!< Rank number of the master
+        bool isMaster() const;  //!< Test if current process is master
+        void barrier() const;   //!< Set up a MPI Barrier to sync. all ranks
+        std::ostream &cout();
+        Random random;  //!< Random number generator for MPI calls
+        std::string id; //!< Unique name associated with current rank
 #ifdef ENABLE_MPI
                 MPI_Comm comm=MPI_COMM_WORLD;    //!< Communicator (Default: MPI_COMM_WORLD)
 #endif
@@ -72,7 +73,7 @@ namespace Faunus {
                 int _rank=0;       //!< Rank of process
                 int _master=0;     //!< Rank number of the master
                 bool mpi_initialized=false;
-        };
+    };
 
         void to_json(json&, const MPIController&);
 
@@ -138,17 +139,18 @@ namespace Faunus {
          *     int dst_rank = 1;
          *     floatp extra1 = 2.34, extra2 = -1.23
          *     Tpvec myparticles(200); // we have 200 particles
-         *    
+         *
          *     Faunus::MPI::MPIController mpi;
          *     Faunus::MPI::ParticleTransmitter pt;
-         *    
+         *
          *     pt.sendExtra.push_back(extra1);
          *     pt.sendExtra.push_back(extra2);
-         *    
+         *
          *     pt.send(mpi, myparticles, dst_rank);
          *     pt.waitsend();
          *
          * @date Lund 2012
+         * @todo This class needs refactoring for clarity and better safety
          *
          */
         template<typename Tpvec>
@@ -209,6 +211,7 @@ namespace Faunus {
         template<typename Tpvec>
             void ParticleTransmitter<Tpvec>::pvec2buf(const Tpvec &src) {
                 sendBuf.clear();
+                sendBuf.reserve(src.size() * 5 + sendExtra.size());
                 for (auto &p : src) {
                     sendBuf.push_back(p.pos.x());
                     sendBuf.push_back(p.pos.y());

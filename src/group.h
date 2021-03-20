@@ -26,9 +26,9 @@ namespace Faunus {
             void resize(size_t n) { end() += n-size(); assert(size()==n); }
             bool empty() const { return this->first==this->second; }
             void clear() { this->second = this->first; assert(empty()); }
-            std::pair<int,int> to_index(T reference) {
+            std::pair<int,int> to_index(T reference) const {
                 return {std::distance(reference, begin()), std::distance(reference, end()-1)};
-            } //!< Returns index pair relative to reference
+            } //!< Returns particle index pair relative to given reference
         }; //!< Turns a pair of iterators into a range
 
     /**
@@ -44,7 +44,9 @@ namespace Faunus {
     template<class T>
         class ElasticRange : public IterRange<typename std::vector<T>::iterator> {
             public:
-                typedef typename std::vector<T>::iterator Titer;
+              using Titer = typename std::vector<T>::iterator;
+              using const_iterator = typename std::vector<T>::const_iterator;
+
             private:
                 Titer _trueend;
             public:
@@ -62,7 +64,7 @@ namespace Faunus {
                 Titer &trueend();
                 const Titer &trueend() const;
                 void relocate(
-                    Titer oldorigin,
+                    const_iterator oldorigin,
                     Titer neworigin); //!< Shift all iterators to new underlying container; useful when resizing vectors
         };
 
@@ -76,7 +78,6 @@ namespace Faunus {
 
         template <class T> void ElasticRange<T>::deactivate(ElasticRange::Titer first, ElasticRange::Titer last) {
             size_t n = std::distance(first, last);
-            assert(n >= 0);
             assert(first >= begin() && last <= end());
             std::rotate(begin(), last, end());
             end() -= n;
@@ -95,27 +96,99 @@ namespace Faunus {
         template <class T> const typename ElasticRange<T>::Titer &ElasticRange<T>::trueend() const { return _trueend; }
 
         template <class T>
-        void ElasticRange<T>::relocate(ElasticRange::Titer oldorigin, ElasticRange::Titer neworigin) {
-            begin() = neworigin + std::distance(oldorigin, begin());
-            end() = neworigin + std::distance(oldorigin, end());
-            trueend() = neworigin + std::distance(oldorigin, trueend());
+        void ElasticRange<T>::relocate(ElasticRange::const_iterator oldorigin, ElasticRange::Titer neworigin) {
+            begin() = neworigin + std::distance(oldorigin, const_iterator(begin()));
+            end() = neworigin + std::distance(oldorigin, const_iterator(end()));
+            trueend() = neworigin + std::distance(oldorigin, const_iterator(trueend()));
         }
 
-    template<class T /** Particle type */>
-        struct Group : public ElasticRange<T> {
+        template <class T /** Particle type */> class Group : public ElasticRange<T> {
+          public:
             typedef ElasticRange<T> base;
             typedef typename base::Titer iter;
-            typedef typename std::vector<T> Tpvec;
             using base::begin;
+            using base::empty;
             using base::end;
             using base::size;
+            using base::trueend;
             int id=-1;           //!< Molecule id
             int confid=0;        //!< Conformation index / id
             Point cm={0,0,0};    //!< Mass center
             bool compressible=false;   //!< Is it a compressible group?
             bool atomic=false;   //!< Is it an atomic group?
 
-            const auto &traits() const { return molecules.at(id); } //!< Convenient access to molecule properties
+            inline bool isAtomic() const { return traits().atomic; } //!< Is it an atomic group?
+
+            inline bool isMolecular() const { return !traits().atomic; } //!< is it a molecular group?
+
+            //! Selections to filter groups using `getSelectionFilter()`
+            enum Selectors : unsigned int {
+                ANY = (1u << 1),       //!< Match any group (disregards all other flags)
+                ACTIVE = (1u << 2),    //!< Only active groups (non-zero size)
+                INACTIVE = (1u << 3),  //!< Only inactive groups (zero size)
+                NEUTRAL = (1u << 4),   //!< Only groups with zero net charge
+                ATOMIC = (1u << 5),    //!< Only atomic groups
+                MOLECULAR = (1u << 6), //!< Only molecular groups (atomic=false)
+                FULL = (1u << 7)       //!< Only groups where size equals capacity
+            };
+
+            /**
+             * @brief Determines if given `Selectors` bitmask matches group
+             * @tparam mask Bitmask build from enum `Group::Selectors`
+             * @return true if ALL enabled bits in the mask are satisfied
+             *
+             * Note that for `INACTIVE | NEUTRAL`, the criterion is applied
+             * to all active and inactive particles, i.e. until `trueend()`.
+             */
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wc++11-narrowing"
+            template <unsigned int mask> bool match() const {
+                static_assert(mask >= ANY && mask <= FULL);
+                if constexpr (mask & ANY) {
+                    static_assert(mask == ANY, "don't mix ANY with other flags");
+                    return true;
+                }
+                if constexpr (mask & ACTIVE) {
+                    static_assert(!(mask & INACTIVE), "don't mix ACTIVE and INACTIVE");
+                    if (size() == 0) {
+                        return false;
+                    }
+                } else if constexpr (mask & INACTIVE) {
+                    if (!empty()) {
+                        return false;
+                    }
+                }
+                if constexpr (mask & FULL) {
+                    if (end() != trueend()) {
+                        return false;
+                    }
+                }
+                if constexpr (mask & ATOMIC) {
+                    static_assert(!(mask & MOLECULAR), "don't mix ATOMIC and MOLECULAR");
+                    if (!atomic) {
+                        return false;
+                    }
+                } else if constexpr (mask & MOLECULAR) {
+                    if (atomic) {
+                        return false;
+                    }
+                }
+                if constexpr (mask & NEUTRAL) {
+                    auto _end = (mask & INACTIVE) ? trueend() : end();
+                    double _charge =
+                        std::accumulate(begin(), _end, 0.0, [](double sum, const T &i) { return sum + i.charge; });
+                    if (std::fabs(_charge) > pc::epsilon_dbl) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+#pragma clang diagnostic pop
+
+            inline const MoleculeData &traits() const {
+                assert(id >= 0 && id < Faunus::molecules.size());
+                return Faunus::molecules[id];
+            } //!< Convenient access to molecule properties
 
             template<class Trange>
                 Group(Trange &rng) : base(rng.begin(), rng.end()) {
@@ -134,9 +207,17 @@ namespace Faunus {
             bool contains(const T &a, bool include_inactive=false) const; //!< Determines if particle belongs to group (complexity: constant)
 
             auto find_id(int id) const {
-                //return Faunus::filter(begin(), end(), [id](T &i){return (i.id==id);} );
-                return *this | ranges::view::filter( [id](T &i){ return (i.id==id); } );
+                return *this | ranges::cpp20::views::filter([id](T &i) { return (i.id == id); });
             } //!< Range of all (active) elements with matching particle id
+
+            /**
+             * @brief Returns i'th element in group
+             * @param i index starting at zero
+             * @return reference to value at i'th element
+             * @note No range-checking and i must be in interval `[0:size[`
+             */
+            inline auto &operator[](size_t i) { return *(this->first + i); }
+            inline const auto &operator[](size_t i) const { return *(this->first + i); }
 
             /*
              * @brief Reference to subset of given index, where 0 is the start of the group
@@ -149,19 +230,28 @@ namespace Faunus {
                     if (not index.empty()) 
                         assert( *std::max_element(index.begin(), index.end()) < size() );
 #endif
-                    return index | ranges::view::transform([this](Tint i) -> T& { return *(this->begin()+i); });
+                    return index |
+                           ranges::cpp20::views::transform([this](Tint i) -> T & { return *(this->begin() + i); });
                 }
 
             double mass() const; //!< Sum of all active masses
 
             std::vector<std::reference_wrapper<Point>> positions() const; //!< Iterable range with positions of active particles
 
-            // warning! this should be tested -- do not use yet.
-            template<typename TdistanceFunc>
-                void unwrap(const TdistanceFunc &vdist) {
-                    for (auto &i : *this)
-                        i.pos = cm + vdist( i.pos, cm );
-                } //!< Remove periodic boundaries with respect to mass center (Order N complexity).
+            /**
+             * @brief Remove PBC for molecular groups w. respect to mass center
+             * @tparam TdistanceFunc
+             * @param vdist Distance calculation function
+             * @remarks Atomic groups are not touched
+             * @warning Is this fit for use?
+             */
+            template <typename TdistanceFunc> void unwrap(const TdistanceFunc &vdist) {
+                if (isMolecular()) {
+                    for (auto &i : *this) {
+                        i.pos = cm + vdist(i.pos, cm);
+                    }
+                }
+            } //!<
 
             void wrap(Geometry::BoundaryFunction); //!< Apply periodic boundaries (Order N complexity).
 
@@ -169,12 +259,57 @@ namespace Faunus {
 
             void rotate(const Eigen::Quaterniond&, Geometry::BoundaryFunction); //!< Rotate all particles in group incl. internal coordinates (dipole moment etc.)
 
-        }; //!< End of Group struct
+            void updateMassCenter(Geometry::BoundaryFunction,
+                                  const Point &original_mass_center); //!< Calculates mass center
+        }; //!< End of Group class
 
         // Group<Particle> is instantiated elsewhere (group.cpp)
-    extern template struct Group<Particle>;
+    extern template class Group<Particle>;
 
 void to_json(json&, const Group<Particle>&);
 void from_json(const json&, Group<Particle>&);
+
+//! Get lambda function matching given enum Select mask
+template <unsigned int mask> std::function<bool(const Group<Particle> &)> getGroupFilter() {
+    return [](const Group<Particle> &g) { return g.match<mask>(); };
+}
+
+/*
+ * The following two functions are used to perform a complete
+ * serialisation of a group to/from a Cereal archive. When loading,
+ * the group *must* match the capacity of the saved data or an exception
+ * is thrown.
+ */
+
+template <class Archive, class T> void save(Archive &archive, const Group<T> &g, std::uint32_t const version) {
+    switch (version) {
+    case 0:
+        archive(g.id, g.confid, g.cm, g.compressible, g.atomic, g.size(), g.capacity());
+        for (auto it = g.begin(); it != g.trueend(); it++)
+            archive(*it);
+        break;
+    default:
+        throw std::runtime_error("unknown serialisation version");
+    };
+} //!< Cereal serialisation
+
+template <class Archive, class T> void load(Archive &archive, Group<T> &g, std::uint32_t const version) {
+    size_t size = 0, capacity = 0;
+    switch (version) {
+    case 0:
+        archive(g.id, g.confid, g.cm, g.compressible, g.atomic, size, capacity);
+        assert(size <= capacity);
+        if (capacity != g.capacity())
+            throw std::runtime_error("capacity mismatch of archived group");
+        g.resize(size);
+        assert(g.capacity() == capacity);
+        assert(g.size() == size);
+        for (auto it = g.begin(); it != g.trueend(); it++)
+            archive(*it);
+        break;
+    default:
+        throw std::runtime_error("unknown serialisation version");
+    }
+} //!< Cereal serialisation
 
 }//end of faunus namespace

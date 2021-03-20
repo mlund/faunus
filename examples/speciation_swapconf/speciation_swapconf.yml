@@ -1,0 +1,53 @@
+#!/usr/bin/env yason.py
+#
+# This example is similar to "swapconf" in that
+# we use the rcmc move to alternate between two
+# molecular groups, A and B. The equilibrium constant
+# between the two is set to K=2.
+#
+temperature: 300
+random: {seed: hardware}
+geometry: {type: cuboid, length: 20}
+mcloop: {macro: 10, micro: 200000}
+
+atomlist:
+    - OW: {q: -0.8476, sigma: 3.166, eps: 0.650, mw: 15.999}
+    - HW: {q: 0.4238,  sigma: 2, eps: 0, mw: 1.007}
+
+moleculelist:
+    - A:
+        rigid: true
+        structure:
+            - OW: [1.000, 0.000, 0.000]
+            - HW: [2.000, 0.000, 0.000]
+            - HW: [3.000, 0.000, 0.000]
+    - B:
+        rigid: true
+        structure:
+            - OW: [1.000, 1.000, 0.000]
+            - HW: [2.000, 0.000, 0.000]
+            - HW: [3.000, 0.000, 0.000]
+
+reactionlist:
+    - "A = B": {lnK: -0.6931471805599453} # K=2/1
+
+insertmolecules:
+    - A: {N: 1}
+    - B: {N: 1, inactive: True}
+
+energy:
+    - nonbonded: 
+        default:
+            - lennardjones: {mixing: LB} # we just want a simple non-bonded potential
+
+moves:
+    - rcmc: {}
+
+analysis:
+    - reactioncoordinate: {type: molecule, property: active, file: active0.dat, nstep: 10, index: 0}
+    - reactioncoordinate: {type: molecule, property: active, file: active1.dat, nstep: 10, index: 1}
+    - sanity: {nstep: 10} # for testing purposes, let's check sanity for every step
+    - systemenergy: {file: energy.dat, nstep: 100}
+    - savestate: {file: confout.pqr}
+    - savestate: {file: state.json}
+

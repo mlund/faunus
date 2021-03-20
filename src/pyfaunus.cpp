@@ -12,6 +12,7 @@
 #include <potentials.h>
 #include <regions.h>
 #include <montecarlo.h>
+#include <energy.h>
 
 namespace py = pybind11;
 using namespace Faunus;
@@ -19,7 +20,7 @@ using namespace Faunus;
 typedef typename Space::Tpvec Tpvec;
 typedef typename Space::Tgroup Tgroup;
 typedef Energy::Hamiltonian Thamiltonian;
-typedef MCSimulation Tmcsimulation;
+typedef MetropolisMonteCarlo Tmcsimulation;
 
 inline json dict2json(py::dict dict) {
     py::object dumps = py::module::import("json").attr("dumps");
@@ -74,23 +75,26 @@ PYBIND11_MODULE(pyfaunus, m)
         .export_values();
 
     py::class_<Geometry::GeometryBase>(m, "Geometrybase")
-        .def("getVolume", &Geometry::GeometryBase::getVolume, "Get container volume", "dim"_a=3)
+        .def("getVolume", &Geometry::GeometryBase::getVolume, "Get container volume", "dim"_a = 3)
         .def("setVolume", &Geometry::GeometryBase::setVolume, "Set container volume", "volume"_a,
-                "method"_a=Geometry::ISOTROPIC)
+             "method"_a = Geometry::ISOTROPIC)
         .def("collision", &Geometry::GeometryBase::collision, "pos"_a, "Checks if point is inside container")
         .def("getLength", &Geometry::GeometryBase::getLength, "Get cuboid sidelengths")
         .def("vdist", &Geometry::GeometryBase::vdist, "Minimum vector distance, a-b", "a"_a, "b"_a)
-        .def("sqdist", &Geometry::GeometryBase::sqdist, "Squared minimum distance, |a-b|^2", "a"_a, "b"_a)
-        .def("randompos", [](Geometry::GeometryBase &g, Random &rnd) { 
-                Point pos;
-                g.randompos(pos, rnd);
-                return pos;
-                })
-        .def("boundary", [](Geometry::GeometryBase &g, const Point &pos) {
+        .def("randompos",
+             [](Geometry::GeometryBase &g, Random &rnd) {
+                 Point pos;
+                 g.randompos(pos, rnd);
+                 return pos;
+             })
+        .def(
+            "boundary",
+            [](Geometry::GeometryBase &g, const Point &pos) {
                 Point a = pos; // we cannot modify `pos` directly
                 g.boundary(a); // as in c++
                 return a;
-                }, R"(
+            },
+            R"(
                     Apply periodic boundaries
 
                     If applicable for the geometry type, this will apply
@@ -105,11 +109,12 @@ PYBIND11_MODULE(pyfaunus, m)
 
     py::class_<Geometry::Chameleon, Geometry::GeometryBase>(m, "Chameleon")
         .def(py::init<>())
-        .def(py::init( [](py::dict dict) {
-                    auto ptr = std::make_unique<Geometry::Chameleon>();
-                    Faunus::Geometry::from_json( dict2json(dict), *ptr);
-                    return ptr;
-                    } ) );
+        .def(py::init([](py::dict dict) {
+            auto ptr = std::make_unique<Geometry::Chameleon>();
+            Faunus::Geometry::from_json(dict2json(dict), *ptr);
+            return ptr;
+        }))
+        .def("sqdist", &Geometry::Chameleon::sqdist, "Squared minimum distance, |a-b|^2", "a"_a, "b"_a);
 
     // Particle properties
     py::class_<Charge>(m, "Charge")
@@ -201,9 +206,8 @@ PYBIND11_MODULE(pyfaunus, m)
         .def_readwrite("isotropic", &Potential::PairPotentialBase::isotropic)
         .def_readwrite("selfEnergy", &Potential::PairPotentialBase::selfEnergy)
         .def("force", &Potential::PairPotentialBase::force)
-        .def("energy", [](Potential::PairPotentialBase &pot, const Particle &a, const Particle &b, const Point &r) {
-            return pot(a, b, r);
-        });
+        .def("energy", [](Potential::PairPotentialBase &pot, const Particle &a, const Particle &b, double r2,
+                          const Point &r) { return pot(a, b, r2, r); });
 
     // Potentials::FunctorPotential
     py::class_<Potential::FunctorPotential, Potential::PairPotentialBase>(m, "FunctorPotential")
@@ -248,19 +252,21 @@ PYBIND11_MODULE(pyfaunus, m)
         .def("init", &Thamiltonian::init)
         .def("energy", &Thamiltonian::energy);
 
-    // IdealTerm
-    m.def("IdealTerm", &IdealTerm);
+    // TranslationalEntropy
+    py::class_<TranslationalEntropy>(m, "TranslationalEntropy")
+        .def(py::init<Space &, Space &>())
+        .def("energy", &TranslationalEntropy::energy);
 
     // MCSimulation
-    py::class_<Tmcsimulation>(m, "MCSimulation")
+    py::class_<Tmcsimulation>(m, "MetropolisMonteCarlo")
         .def(py::init([](py::dict dict) {
-                    json j = dict2json(dict);
-                    return std::unique_ptr<Tmcsimulation>(new Tmcsimulation(j,Faunus::MPI::mpi));
-                    }))
+            json j = dict2json(dict);
+            return std::unique_ptr<Tmcsimulation>(new Tmcsimulation(j, Faunus::MPI::mpi));
+        }))
         .def(py::init([](py::dict dict, Faunus::MPI::MPIController &mpi) {
-                    json j = dict2json(dict);
-                    return std::unique_ptr<Tmcsimulation>(new Tmcsimulation(j,mpi));
-                    }));
+            json j = dict2json(dict);
+            return std::unique_ptr<Tmcsimulation>(new Tmcsimulation(j, mpi));
+        }));
 
     // Analysisbase
     py::class_<Analysis::Analysisbase>(m, "Analysisbase")

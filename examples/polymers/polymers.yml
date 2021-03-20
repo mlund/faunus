@@ -1,5 +1,5 @@
 #!/usr/bin/env yason.py
-random: {seed: default}
+random: {seed: fixed}
 temperature: 298
 geometry: {type: sphere, radius: 100}
 mcloop: {macro: 10, micro: 2500}
@@ -29,7 +29,7 @@ energy:
     - isobaric: {P/mM: 113.2}
     - bonded: {}
     - nonbonded_pm:
-        coulomb: {type: plain, epsr: 78.7}
+        coulomb: {epsr: 78.7}
 
 moves:
     - moltransrot: {molecule: polymer, dp: 10, dprot: 1, repeat: N}
@@ -43,7 +43,7 @@ analysis:
     - sanity: {nstep: 10}
     - reactioncoordinate: {file: radius.dat, nstep: 10, type: system, property: radius}
     - molrdf: {file: rdf.dat, nstep: 100, dr: 0.1, name1: polymer, name2: polymer}
-    - polymershape: {nstep: 10, molecules: [polymer]}
+    - polymershape: {nstep: 10, molecule: polymer}
     - systemenergy: {file: energy.dat, nstep: 100}
     - xtcfile: {file: traj.xtc, nstep: 100}
     - savestate: {file: confout.pqr}

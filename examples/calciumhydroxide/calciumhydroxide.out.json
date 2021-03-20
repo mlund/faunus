@@ -1,0 +1,222 @@
+{
+    "analysis": [
+        {
+            "reactioncoordinate": {
+                "average": 341.213275,
+                "file": "_calcium.dat",
+                "index": 0,
+                "nstep": 5,
+                "property": "N",
+                "relative time": 0.0282,
+                "samples": 40000,
+                "type": "molecule"
+            }
+        },
+        {
+            "reactioncoordinate": {
+                "average": 400.0,
+                "file": "_sodium.dat",
+                "index": 1,
+                "nstep": 5,
+                "property": "N",
+                "samples": 40000,
+                "type": "molecule"
+            }
+        },
+        {
+            "reactioncoordinate": {
+                "average": 286.42655,
+                "file": "_hydroxide.dat",
+                "index": 2,
+                "nstep": 5,
+                "property": "N",
+                "samples": 40000,
+                "type": "molecule"
+            }
+        },
+        {
+            "reactioncoordinate": {
+                "average": 800.0,
+                "file": "_chloride.dat",
+                "index": 3,
+                "nstep": 5,
+                "property": "N",
+                "samples": 40000,
+                "type": "molecule"
+            }
+        },
+        {
+            "sanity": {
+                "nstep": 100,
+                "relative time": 0.0132,
+                "samples": 2000
+            }
+        },
+        {
+            "density": {
+                "atomic": {
+                    "ca++": {
+                        "c/M": 0.020985123227358918
+                    },
+                    "cl-": {
+                        "c/M": 0.04920118826526076
+                    },
+                    "na+": {
+                        "c/M": 0.02460059413263038
+                    },
+                    "oh-": {
+                        "c/M": 0.017615658263405446
+                    }
+                },
+                "molecular": null,
+                "nstep": 5,
+                "relative time": 0.32,
+                "samples": 40000,
+                "∛⟨V⟩": 300.0,
+                "⟨1/V⟩": 3.704e-08,
+                "⟨V⟩": 27000000.0,
+                "⟨∛V⟩": 300.0
+            }
+        },
+        {
+            "savestate": {
+                "file": "state.json"
+            }
+        }
+    ],
+    "compiler": "4.2.1 Compatible Apple LLVM 11.0.0 (clang-1100.0.33.12)",
+    "energy": [
+        {
+            "hamiltonian": [
+                {
+                    "bonded": {
+                        "bondlist-intramolecular": [],
+                        "relative time": 0.0013779866992197451
+                    }
+                }
+            ]
+        }
+    ],
+    "geometry": {
+        "length": [
+            300.0,
+            300.0,
+            300.0
+        ],
+        "type": "cuboid"
+    },
+    "git revision": "d34251d0 (2020-02-28)",
+    "groups": [
+        {
+            "Ca++": {
+                "capacity": 800,
+                "compressible": false,
+                "index": [
+                    0,
+                    340
+                ],
+                "size": 341
+            }
+        },
+        {
+            "Na+": {
+                "capacity": 800,
+                "compressible": false,
+                "index": [
+                    800,
+                    1199
+                ],
+                "size": 400
+            }
+        },
+        {
+            "OH-": {
+                "capacity": 800,
+                "compressible": false,
+                "index": [
+                    1600,
+                    1885
+                ],
+                "size": 286
+            }
+        },
+        {
+            "Cl-": {
+                "compressible": false,
+                "index": [
+                    2400,
+                    3199
+                ],
+                "size": 800
+            }
+        }
+    ],
+    "last move": "rcmc",
+    "moves": [
+        {
+            "rcmc": {
+                "acceptance": 0.318,
+                "cite": "doi:10/fqcpg3",
+                "implicit_reservoir": {
+                    "Ca(OH)2": 58.805413618961076,
+                    "CaCl2": 0.0,
+                    "NaOH": 0.0
+                },
+                "moves": 200000,
+                "reactions": {
+                    "Ca(OH)2 = Ca++ + OH- + OH-": {
+                        "acceptance -->": 0.9421259959126855,
+                        "acceptance <--": 0.9536326579546817,
+                        "attempts": 67127
+                    },
+                    "CaCl2 = Ca++ + Cl- + Cl-": {
+                        "acceptance -->": null,
+                        "acceptance <--": 0.0,
+                        "attempts": 33424
+                    },
+                    "NaOH = Na+ + OH-": {
+                        "acceptance -->": null,
+                        "acceptance <--": 0.0,
+                        "attempts": 33261
+                    }
+                },
+                "relative time": 0.204,
+                "relative time (without energy calc)": 0.114,
+                "repeat": 1
+            }
+        }
+    ],
+    "number of groups": 4,
+    "number of particles": 3200,
+    "reactionlist": [
+        {
+            "CaCl2 = Ca++ + Cl- + Cl-": {
+                "lnK": 7.098869841700644,
+                "neutral": false,
+                "pK": -3.083,
+                "pK'": -3.083,
+                "swap_move": false
+            }
+        },
+        {
+            "Ca(OH)2 = Ca++ + OH- + OH-": {
+                "lnK": -11.950416632639099,
+                "neutral": false,
+                "pK": 5.19,
+                "pK'": 5.19,
+                "swap_move": false
+            }
+        },
+        {
+            "NaOH = Na+ + OH-": {
+                "lnK": 4.674247738777913,
+                "neutral": false,
+                "pK": -2.03,
+                "pK'": -2.03,
+                "swap_move": false
+            }
+        }
+    ],
+    "relative drift": 0.0,
+    "temperature": 298.0
+}

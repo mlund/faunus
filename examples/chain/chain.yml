@@ -1,16 +1,16 @@
 #!/usr/bin/env yason.py
 comment: |
-    36mer chain with harmonic bonds connecting the hard spheres
+    36mer ideal chain with stiff harmonic bonds
 
 temperature: 300.0
-random: {seed: default}
+random: {seed: fixed}
 geometry:
   type: cuboid
   length: [500., 500., 500.]
-mcloop: {macro: 400, micro: 100}
+mcloop: {macro: 1000, micro: 100}
 
 atomlist:
-   - MER: {sigma: 4.0, dp: 2.0 }
+   - MER: {sigma: 0.0, dp: 2.0 }
 
 moleculelist:
     - POL:
@@ -57,15 +57,12 @@ insertmolecules:
 
 energy:
     - bonded: {}
-    - nonbonded_exact:
-        default:
-        - hardsphere: {}
 
 moves:
-    - transrot: {molecule: POL, repeat: 10}
+#    - transrot: {molecule: POL, repeat: 100}
     - crankshaft: {molecule: POL, dprot: 0.5, repeat: 10}
     - pivot: {molecule: POL, dprot: 0.5, repeat: 10}
 
 analysis:
-    - polymershape: {nstep: 10, molecules: [POL]}
+    - polymershape: {nstep: 10, molecule: POL}
     - savestate: {file: state.json}

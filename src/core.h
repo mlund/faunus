@@ -3,6 +3,7 @@
 #include <vector>
 #include <Eigen/Core>
 #include <nlohmann/json.hpp>
+#include <spdlog/fmt/fmt.h>
 
 // forward declare logger
 namespace spdlog {
@@ -15,8 +16,9 @@ extern template class nlohmann::basic_json<>;
 namespace Faunus {
 
     typedef Eigen::Vector3d Point; //!< 3d vector
+    typedef std::vector<Point> PointVector; //!< list (c++ vector) of 3d vectors
     typedef nlohmann::json json;  //!< Json object
-    struct Random;
+    class Random;
 
     using std::fabs;
     using std::exp;
@@ -27,14 +29,6 @@ namespace Faunus {
 
     json merge( const json &a, const json &b ); //!< Merge two json objects
     json openjson( const std::string &file, bool=true); //!< Read json file into json object (w. syntax check)
-
-    /**
-     * @brief Check for unknown keys in JSON object
-     * @param j JSON object to check
-     * @param okkeys Valid keys
-     * @param exception If true a runtime error will be thrown if unknown key is found
-     */
-    bool assertKeys(const json&, const std::vector<std::string>&, bool=true);
 
     /**
      * @brief Like json, but delete entries after access
@@ -67,6 +61,19 @@ namespace Faunus {
     double value_inf(const json &, const std::string &); //!< Extract floating point from json and allow for 'inf' and '-inf'
 
     /**
+     * @brief Returns a key-value pair from a JSON object which contains a single key.
+     *
+     * JSON objects having a single key-value pair are a common pattern in JSON configuration used in Faunus. This
+     * function provides a convenient way to handle it.
+     *
+     * @param j  JSON object
+     * @return  tuple [key as a string, value as a JSON]
+     * @throw std::runtime_error  when not a JSON object or the object is empty or the object contains more than a
+     *   single value
+     */
+    std::tuple<const std::string&, const json&> jsonSingleItem(const json& j);
+
+    /**
      * @brief Class for showing help based on input errors
      *
      * If no valid database files are found using `load()`,
@@ -75,18 +82,19 @@ namespace Faunus {
      * functionality is completely optional.
      */
     class TipFromTheManual {
-        private:
-            json db; // database
-            std::shared_ptr<Random> random;
+      private:
+        json db; // database
+        std::shared_ptr<Random> random;
+        bool tip_already_given = false;
 
-          public:
-            std::string buffer; // accumulate output here
-            bool quiet = true;  // if operator[] returns empty string
-            TipFromTheManual();
-            bool asciiart = true;
-            bool tip_already_given=false;
-            void load(const std::vector<std::string>&);
-            std::string operator[](const std::string&);
+      public:
+        std::string buffer; // accumulate output here
+        bool quiet = true;  // if operator[] returns empty string
+        bool asciiart = true;
+        TipFromTheManual();
+        void load(const std::vector<std::string> &);
+        std::string operator[](const std::string &);
+        void pick(const std::string &);
     };
 
     extern TipFromTheManual usageTip; // global instance
@@ -112,35 +120,35 @@ namespace Faunus {
             return v;
         }
 
-    /**
-     * @brief Eigen::Map facade to data members in STL container
-     *
-     * No data is copied and modifications of the Eigen object
-     * modifies the original container and vice versa.
-     *
-     * Example:
-     *
-     *    std::vector<Tparticle> v(10);
-     *    auto m1 = asEigenVector(v.begin, v.end(), &Tparticle::pos);    --> 10x3 maxtix view
-     *    auto m2 = asEigenMatrix(v.begin, v.end(), &Tparticle::charge); --> 10x1 vector view
-     *
-     * @warning Be careful that objects are properly aligned and divisible with `sizeof<double>`
-     */
-    template<typename dbl=double, class iter, class memberptr>
+        /**
+         * @brief Eigen::Map facade to data members in STL container
+         *
+         * No data is copied and modifications of the Eigen object
+         * modifies the original container and vice versa.
+         *
+         * Example:
+         *
+         *    std::vector<Tparticle> v(10);
+         *    auto m1 = asEigenVector(v.begin, v.end(), &Tparticle::pos);    --> 10x3 maxtrix view
+         *    auto m2 = asEigenMatrix(v.begin, v.end(), &Tparticle::charge); --> 10x1 vector view
+         *
+         * @warning Be careful that objects are properly aligned and divisible with `sizeof<double>`
+         */
+        template <typename dbl = double, class iter, class memberptr>
         auto asEigenMatrix(iter begin, iter end, memberptr m) {
-            typedef typename std::iterator_traits<iter>::value_type T;
+            using T = typename std::iterator_traits<iter>::value_type;
             static_assert( sizeof(T) % sizeof(dbl) == 0, "value_type size must multiples of double");
-            const size_t s = sizeof(T) / sizeof(dbl);
-            const size_t cols = sizeof(((T *) 0)->*m) / sizeof(dbl);
-            typedef Eigen::Matrix<dbl, Eigen::Dynamic, cols> Tmatrix;
+            constexpr size_t s = sizeof(T) / sizeof(dbl);
+            constexpr size_t cols = sizeof((static_cast<T *>(0))->*m) / sizeof(dbl);
+            using Tmatrix = Eigen::Matrix<dbl, Eigen::Dynamic, cols>;
             return Eigen::Map<Tmatrix, 0, Eigen::Stride<1,s>>((dbl*)&(*begin.*m), end-begin, cols).array();
         }
 
     template<typename dbl=double, class iter, class memberptr>
         auto asEigenVector(iter begin, iter end, memberptr m) {
-            typedef typename std::iterator_traits<iter>::value_type T;
-            static_assert( std::is_same<dbl&, decltype(((T *) 0)->*m)>::value, "member must be a scalar");
-            return asEigenMatrix<dbl>(begin, end, m).col(0);
+        using T = typename std::iterator_traits<iter>::value_type;
+        static_assert(std::is_same<dbl &, decltype((static_cast<T *>(0))->*m)>::value, "member must be a scalar");
+        return asEigenMatrix<dbl>(begin, end, m).col(0);
         }
 /**
  * @brief Returns filtered *view* of iterator range
@@ -186,8 +194,16 @@ auto filter(iter begin, iter end, std::function<bool(T&)> unarypredicate) {
 
     /** Exception to be thrown when parsing json configuration */
     struct ConfigurationError : public std::runtime_error {
-        explicit ConfigurationError(const std::string &what_arg) : std::runtime_error(what_arg){};
-        explicit ConfigurationError(const char *what_arg) : std::runtime_error(what_arg){};
+        explicit ConfigurationError(const std::exception &e);
+        explicit ConfigurationError(const std::runtime_error &e);
+        explicit ConfigurationError(const std::string &msg);
+        explicit ConfigurationError(const char *msg);
+        template <class... Args>
+        explicit ConfigurationError(std::string_view fmt, const Args &... args)
+            : std::runtime_error(fmt::format(fmt, args...)) {}
+        json& attachedJson();
+        ConfigurationError& attachJson(const json j);
+      private:
+        json attached_json;
     };
-
-    }//end of faunus namespace
+} // namespace Faunus

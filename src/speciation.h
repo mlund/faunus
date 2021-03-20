@@ -5,51 +5,62 @@
 namespace Faunus {
 namespace Move {
 
-/*
- * @brief Establishes equilibrium of matter
- * Establishes equilibrium of matter between all species
+/**
+ * @brief Generalised Grand Canonical Monte Carlo Move
  *
- * Consider the dissociation process AX=A+X. This class will locate
- * all species of type AX and A and make a MC swap move between them.
- * X can be implicit, meaning that it enters only with its chemical potential
- * (activity). The reacting species, the equilibrium constant,
- * and the activities are read from the JSON input file.
+ * This move handles insertion and deletion of atomic and
+ * molecular groups, including swap moves and implicit atomic
+ * species. Flow of events:
  *
+ * 1. pick random `Faunus::ReactionData` object
+ * 2. pick random direction (left or right)
+ * 3. perform appropriate action:
+ *    - atomic swap
+ *    - deactivate reactants
+ *    - activate products
  */
-class SpeciationMove : public Movebase {
+class SpeciationMove : public MoveBase {
   private:
-    Space &spc;
-    Space *otherspc;
-    ReactionData *trialprocess;
-    std::map<std::string, Average<double>> accmap;
+    typedef decltype(Faunus::reactions)::iterator reaction_iterator;
+    using MoveBase::spc;        //!< Trial space (particles, groups)
+    Space *other_spc = nullptr; //!< Old space (particles, groups)
+    double bond_energy = 0;     //!< Accumulated bond energy if inserted/deleted molecule
+    reaction_iterator reaction; //!< Randomly selected reaction
 
-    double lnK;
-    double bondenergy;
-    bool forward;
-    bool neutral; // true if only neutral molecules are involved in the reaction
-    std::vector<int> molDel;  // index of groups to delete
-    std::vector<int> atomDel; // atom index to delete
-    std::map<int, int> molcnt_ins, atomcnt_ins, molcnt_del, atomcnt_del, molcnt,
-        atomcnt;                    // id's and number of inserted/deleted mols and atoms
-    std::multimap<int, ParticleVector> pmap; // coordinates of mols and atoms to be inserted
-    // unsigned int Ndeleted, Ninserted; // number of accepted deletions and insertions
+    class AcceptanceData {
+      public:
+        Average<double> right, left;
+        inline void update(ReactionData::Direction direction, bool accept) {
+            if (direction == ReactionData::Direction::RIGHT) {
+                right += double(accept);
+            } else {
+                left += double(accept);
+            }
+        }
+    };
+    std::map<reaction_iterator, AcceptanceData> acceptance;
+    std::map<int, Average<double>> average_reservoir_size; //!< Average number of implicit molecules
 
-    void _to_json(json &j) const override;
+    void _to_json(json &) const override;
+    void _from_json(const json &) override;
+    void _move(Change &) override;         //!< Perform move
+    void _accept(Change &) override;       //!< Called when accepted
+    void _reject(Change &) override;       //!< Called when rejected
+    bool enoughImplicitMolecules() const;  //!< Check if we have enough implicit matter for reaction
+    void atomicSwap(Change &);             //!< Swap atom type
+    void deactivateAllReactants(Change &); //!< Delete reactant species
+    void activateAllProducts(Change &);    //!< Insert product species
 
-    void _from_json(const json &) override{};
+    Change::data contractAtomicGroup(Space::Tgroup &, Space::Tgroup &, int);  //!< Contract atomic group
+    Change::data expandAtomicGroup(Space::Tgroup &, int);                     //!< Expand atomic group
+    Change::data activateMolecularGroup(Space::Tgroup &);                     //!< Activate molecular group
+    Change::data deactivateMolecularGroup(Space::Tgroup &);                   //!< Deactivate molecular group
 
+    SpeciationMove(Space &, std::string, std::string);
   public:
-    SpeciationMove(Space &spc);
-
-    void setOther(Space &ospc);
-
-    void _move(Change &change) override;
-
+    SpeciationMove(Space &);
+    void setOther(Space &);
     double bias(Change &, double, double) override; //!< adds extra energy change not captured by the Hamiltonian
-
-    void _accept(Change &) override;
-
-    void _reject(Change &) override;
 
 }; // End of class SpeciationMove
 

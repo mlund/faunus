@@ -10,15 +10,20 @@ channels:
 dependencies:
     - clangdev
     - libcxx
-    - cmake>=3.11.4
+    - cmake>=3.16
     - python=3
     - pandoc=2
     - pypandoc=1
     - beautifulsoup4=4.7
     - ruamel_yaml=0.15
+    - scipy=1.2
     - pygments=2.4
     - jinja2=2.10
     - numpy=1.16
     - notebook=5
     - nbconvert=5
+    - jupyter_contrib_nbextensions=0.5
     - sdl2=2
+    - jsonschema=3
+    - ruamel_yaml
+

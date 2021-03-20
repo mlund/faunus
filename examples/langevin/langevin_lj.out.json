@@ -1,0 +1,109 @@
+{
+    "analysis": [
+        {
+            "atomrdf": {
+                "dim": 3,
+                "dr": 0.05,
+                "file": "rdf_ld.dat",
+                "name1": "LJP",
+                "name2": "LJP",
+                "nskip": 200,
+                "nstep": 25,
+                "samples": 1992,
+                "slicedir": [
+                    0,
+                    0,
+                    0
+                ],
+                "thickness": 0.0
+            }
+        }
+    ],
+    "compiler": "4.2.1 Compatible Apple LLVM 11.0.3 (clang-1103.0.32.62)",
+    "energy": [
+        {
+            "hamiltonian": [
+                {
+                    "particle-self-energy": {
+                        "com": false,
+                        "molecules": [
+                            "*"
+                        ],
+                        "relative time": 0.0007437138829066717
+                    }
+                },
+                {
+                    "nonbonded": {
+                        "cutoff_g2g": {
+                            "LJM LJM": null
+                        },
+                        "pairpot": [
+                            {
+                                "coulomb": {
+                                    "cutoff": 1.3407807929942596e+154,
+                                    "doi": "Premier mémoire sur l’électricité et le magnétisme by Charles-Augustin de Coulomb",
+                                    "lB": 7.005697329174579,
+                                    "type": "plain"
+                                }
+                            },
+                            {
+                                "lennardjones": {
+                                    "eps": "eps",
+                                    "mixing": "lorentz_berthelot",
+                                    "sigma": "sigma"
+                                }
+                            }
+                        ],
+                        "relative time": 0.018427665375677922,
+                        "timings": {
+                            "g_internal": 0.018416561013971156
+                        }
+                    }
+                }
+            ]
+        }
+    ],
+    "geometry": {
+        "length": [
+            18.6,
+            18.6,
+            18.6
+        ],
+        "type": "cuboid"
+    },
+    "git revision": "423c1469 (2020-06-08)",
+    "groups": [
+        {
+            "LJM": {
+                "compressible": false,
+                "index": [
+                    0,
+                    99
+                ],
+                "size": 100
+            }
+        }
+    ],
+    "last move": "ld",
+    "moves": [
+        {
+            "ld": {
+                "acceptance": 1.0,
+                "integrator": {
+                    "dt": 0.004999999888241291,
+                    "gamma": 5.0
+                },
+                "moves": 50000,
+                "nsteps": 25,
+                "relative time": 0.999,
+                "relative time (without energy calc)": 0.959,
+                "repeat": 1
+            }
+        }
+    ],
+    "number of groups": 1,
+    "number of particles": 100,
+    "reactionlist": null,
+    "relative drift": -0.0,
+    "temperature": 298.15
+}

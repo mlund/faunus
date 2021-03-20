@@ -1,9 +1,8 @@
 #pragma once
-
 #include "core.h"
 #include "units.h"
 #include "particle.h"
-#include "auxiliary.h"
+#include "aux/pairmatrix.h"
 #include "tabulate.h"
 #include "functionparser.h"
 #include "multipole.h"
@@ -123,7 +122,7 @@ struct PairPotentialBase {
     virtual void from_json(const json &) = 0;
     virtual ~PairPotentialBase() = default;
     virtual Point force(const Particle &, const Particle &, double, const Point &) const;
-    virtual double operator()(const Particle &a, const Particle &b, const Point &r) const = 0;
+    virtual double operator()(const Particle &, const Particle &, double, const Point &) const = 0;
 
   protected:
     PairPotentialBase(const std::string &name = std::string(), const std::string &cite = std::string(),
@@ -167,8 +166,9 @@ template <class T1, class T2> struct CombinedPairPotential : public PairPotentia
     T1 first;  //!< First pair potential of type T1
     T2 second; //!< Second pair potential of type T2
     CombinedPairPotential(const std::string &name = "") : PairPotentialBase(name){};
-    inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
-        return first(a, b, r) + second(a, b, r);
+    inline double operator()(const Particle &a, const Particle &b, double r2,
+                             const Point &r = {0, 0, 0}) const override {
+        return first(a, b, r2, r) + second(a, b, r2, r);
     } //!< Combine pair energy
 
     inline Point force(const Particle &a, const Particle &b, double r2, const Point &p) const override {
@@ -178,19 +178,26 @@ template <class T1, class T2> struct CombinedPairPotential : public PairPotentia
     void from_json(const json &j) override {
         Faunus::Potential::from_json(j, first);
         Faunus::Potential::from_json(j, second);
-        // combine self-energies
-        if (first.selfEnergy or second.selfEnergy) {
+        name = first.name + "/" + second.name;
+        if (first.selfEnergy or second.selfEnergy) { // combine self-energies
             selfEnergy = [u1 = first.selfEnergy, u2 = second.selfEnergy](const Particle &p) {
-                if (u1 and u2)
+                if (u1 and u2) {
                     return u1(p) + u2(p);
-                if (u1)
+                } else if (u1) {
                     return u1(p);
+                }
                 return u2(p);
             };
-        } else
+        } else {
             selfEnergy = nullptr;
+        }
     }
-    void to_json(json &j) const override { j = {first, second}; }
+    void to_json(json &j) const override {
+        assert(j.is_object());
+        auto &_j = j["default"] = json::array();
+        _j.push_back(first);
+        _j.push_back(second);
+    }
 };
 
 template <class T1, class T2, class = typename std::enable_if<std::is_base_of<PairPotentialBase, T1>::value>::type,
@@ -202,7 +209,7 @@ CombinedPairPotential<T1, T2> &operator+(const T1 &pot1, const T2 &) {
 
 struct Dummy : public PairPotentialBase {
     Dummy();
-    inline double operator()(const Particle &, const Particle &, const Point &) const override { return 0.0; }
+    inline double operator()(const Particle &, const Particle &, double, const Point &) const override { return 0.0; }
     void from_json(const json &) override;
     void to_json(json &) const override;
 }; //!< A dummy pair potential that always returns zero
@@ -232,8 +239,8 @@ class LennardJones : public MixerPairPotentialBase {
         return 6. * (*epsilon_quadruple)(a.id, b.id) * s6 * (2 * s6 - r6) / r14 * p;
     }
 
-    inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
-        double x = (*sigma_squared)(a.id, b.id) / r.squaredNorm(); // s2/r2
+    inline double operator()(const Particle &a, const Particle &b, double r2, const Point &) const override {
+        double x = (*sigma_squared)(a.id, b.id) / r2;              // s2/r2
         x = x * x * x;                                             // s6/r6
         return (*epsilon_quadruple)(a.id, b.id) * (x * x - x);
     }
@@ -266,11 +273,10 @@ class WeeksChandlerAndersen : public LennardJones {
 
   public:
     WeeksChandlerAndersen(const std::string &name = "wca", const std::string &cite = "doi:ct4kh9",
-                          CombinationRuleType combination_rule = COMB_LORENTZ_BERTHELOT)
-        : LennardJones(name, cite, combination_rule) {};
+                          CombinationRuleType combination_rule = COMB_LORENTZ_BERTHELOT);
 
-    inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
-        return operator()(a, b, r.squaredNorm());
+    inline double operator()(const Particle &a, const Particle &b, double r2, const Point &) const override {
+        return operator()(a, b, r2);
     }
 
     inline Point force(const Particle &a, const Particle &b, double r2, const Point &p) const override {
@@ -301,8 +307,8 @@ class HardSphere : public MixerPairPotentialBase {
     HardSphere(const std::string &name = "hardsphere")
         : MixerPairPotentialBase(name, std::string(), COMB_ARITHMETIC) {};
 
-    inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
-        return r.squaredNorm() < (*sigma_squared)(a.id, b.id) ? pc::infty : 0.0;
+    inline double operator()(const Particle &a, const Particle &b, double r2, const Point &) const override {
+        return r2 < (*sigma_squared)(a.id, b.id) ? pc::infty : 0.0;
     }
 };
 
@@ -329,8 +335,7 @@ class Hertz : public MixerPairPotentialBase {
   public:
     Hertz(const std::string &name = "hertz")
         : MixerPairPotentialBase(name) {};
-    inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
-        double r2 = r.squaredNorm();
+    inline double operator()(const Particle &a, const Particle &b, double r2, const Point &) const override {
         if (r2 <= (*sigma_squared)(a.id, b.id))
             return (*epsilon)(a.id, b.id) * pow((1 - (sqrt(r2 / (*sigma_squared)(a.id, b.id)))), 2.5);
         return 0.0;
@@ -357,8 +362,8 @@ class SquareWell : public MixerPairPotentialBase {
   public:
     SquareWell(const std::string &name = "squarewell")
         : MixerPairPotentialBase(name) {};
-    inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
-        return (r.squaredNorm() < (*sigma_squared)(a.id, b.id)) ? -(*epsilon)(a.id, b.id) : 0.0;
+    inline double operator()(const Particle &a, const Particle &b, double r2, const Point &) const override {
+        return (r2 < (*sigma_squared)(a.id, b.id)) ? -(*epsilon)(a.id, b.id) : 0.0;
     }
 };
 
@@ -369,8 +374,8 @@ struct RepulsionR3 : public PairPotentialBase {
     void from_json(const json &j) override;
     void to_json(json &j) const override;
 
-    inline double operator()(const Particle &, const Particle &, const Point &_r) const override {
-        double r2 = _r.squaredNorm(), r = sqrt(r2);
+    inline double operator()(const Particle &, const Particle &, double r2, const Point &) const override {
+        double r = sqrt(r2);
         return f / (r * r2) + e * std::pow(s / r, 12);
     }
 };
@@ -414,8 +419,7 @@ class CosAttract : public PairPotentialBase {
      * C(%, resultname = "x")
      * ~~~
      */
-    inline double operator()(const Particle &, const Particle &, const Point &r) const override {
-        double r2 = r.squaredNorm();
+    inline double operator()(const Particle &, const Particle &, double r2, const Point &) const override {
         if (r2 < rc2)
             return -eps;
         if (r2 > rcwc2)
@@ -449,11 +453,11 @@ class SASApotential : public PairPotentialBase {
     const; //!< Total surface area of two intersecting spheres or radii R and r as a function of separation
 
   public:
-    inline double operator()(const Particle &a, const Particle &b, const Point &r_ab) const override {
+    inline double operator()(const Particle &a, const Particle &b, double r2, const Point &) const override {
         double tfe = 0.5 * (atoms[a.id].tfe + atoms[b.id].tfe);
         double tension = 0.5 * (atoms[a.id].tension + atoms[b.id].tension);
         if (fabs(tfe) > 1e-6 or fabs(tension) > 1e-6)
-            return (tension + conc * tfe) * area(0.5 * atoms[a.id].sigma, 0.5 * atoms[b.id].sigma, r_ab.squaredNorm());
+            return (tension + conc * tfe) * area(0.5 * atoms[a.id].sigma, 0.5 * atoms[b.id].sigma, r2);
         return 0;
     }
     SASApotential(const std::string &name = "sasa", const std::string &cite = std::string()) :
@@ -462,11 +466,14 @@ class SASApotential : public PairPotentialBase {
     void from_json(const json &j) override;
 };
 
+/**
+ * @brief Plain Coulomb potential
+ */
 struct Coulomb : public PairPotentialBase {
-    Coulomb(const std::string &name = "coulomb") : PairPotentialBase(name) {};
-    double lB; //!< Bjerrum length
-    inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
-        return lB * a.charge * b.charge / r.norm();
+    Coulomb(const std::string &name = "coulomb");
+    double bjerrum_length = 0.0; //!< Bjerrum length
+    inline double operator()(const Particle &a, const Particle &b, double r2, const Point &) const override {
+        return bjerrum_length * a.charge * b.charge / std::sqrt(r2);
     }
     void to_json(json &j) const override;
     void from_json(const json &j) override;
@@ -476,7 +483,7 @@ struct DipoleDipole : public PairPotentialBase {
     DipoleDipole(const std::string &name = "dipoledipole", const std::string &cite = std::string()) :
         PairPotentialBase(name, cite, false) {};
     double lB; //!< Bjerrum length
-    inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
+    inline double operator()(const Particle &a, const Particle &b, double, const Point &r) const override {
         return lB*mu2mu(a.getExt().mu, b.getExt().mu, a.getExt().mulen*b.getExt().mulen, r,1.0,0.0);
     }
     void to_json(json &j) const override;
@@ -502,8 +509,7 @@ class Polarizability : public Coulomb {
 
     void to_json(json &j) const override { j = {{"epsr", epsr}}; }
 
-    inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
-        double r2 = r.squaredNorm();
+    inline double operator()(const Particle &a, const Particle &b, double r2, const Point &) const override {
         double r4inv = 1 / (r2 * r2);
 	if (fabs(a.charge) > 1e-9 and fabs(b.charge) > 1e-9)
             return (*m_neutral)(a.id, b.id) / r2 * r4inv;
@@ -547,8 +553,7 @@ class FENE : public PairPotentialBase {
     void to_json(json &j) const override;
 
     /** @brief Energy in kT between two particles, r2 = squared distance */
-    inline double operator()(const Particle &, const Particle &, const Point &r) const override {
-        double r2 = r.squaredNorm();
+    inline double operator()(const Particle &, const Particle &, double r2, const Point &) const override {
         return (r2 > r02) ? pc::infty : -0.5 * k * r02 * std::log(1 - r2 * r02inv);
     }
 
@@ -563,17 +568,19 @@ class FENE : public PairPotentialBase {
 class NewCoulombGalore : public PairPotentialBase {
   protected:
     ::CoulombGalore::Splined pot;
+    virtual void setSelfEnergy();
 
   public:
     NewCoulombGalore(const std::string & = "coulomb");
-    inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
-        return lB * pot.ion_ion_energy(a.charge, b.charge, r.norm());
+    inline double operator()(const Particle &a, const Particle &b, double r2, const Point &) const override {
+        return bjerrum_length *
+               pot.ion_ion_energy(a.charge, b.charge, sqrt(r2) + std::numeric_limits<double>::epsilon());
     }
     Point force(const Particle &, const Particle &, double, const Point &) const override;
     void from_json(const json &) override;
     void to_json(json &) const override;
     double dielectric_constant(double M2V) { return pot.calc_dielectric(M2V); }
-    double lB; // Bjerrum length (angstrom)
+    double bjerrum_length; // Bjerrum length (angstrom)
 };
 
 /**
@@ -581,14 +588,17 @@ class NewCoulombGalore : public PairPotentialBase {
  * @note Only dipole-dipole interactions are currently enabled
  */
 class Multipole : public NewCoulombGalore {
+  private:
+    void setSelfEnergy() override;
+
   public:
     Multipole(const std::string & = "multipole");
-    inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
+    inline double operator()(const Particle &a, const Particle &b, double, const Point &r) const override {
         // Only dipole-dipole for now!
         Point mua = a.getExt().mu * a.getExt().mulen;
         Point mub = b.getExt().mu * b.getExt().mulen;
         double dipdip = pot.dipole_dipole_energy(mua, mub, r);
-        return lB * (dipdip);
+        return bjerrum_length * (dipdip);
     }
 
     Point force(const Particle &, const Particle &, double, const Point &) const override;
@@ -609,8 +619,7 @@ class CustomPairPotential : public PairPotentialBase {
     std::shared_ptr<Data> d;
     json jin; // initial json input
   public:
-    inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
-        double r2 = r.squaredNorm();
+    inline double operator()(const Particle &a, const Particle &b, double r2, const Point &) const override {
         if (r2 > Rc2)
             return 0;
         d->r = sqrt(r2);
@@ -620,7 +629,7 @@ class CustomPairPotential : public PairPotentialBase {
         d->s2 = atoms[b.id].sigma;
         return expr();
     }
-    CustomPairPotential(const std::string &name = "custom") : PairPotentialBase(name), d(std::make_shared<Data>()) {};
+    CustomPairPotential(const std::string & = "custom");
 
     void from_json(const json &) override;
     void to_json(json &) const override;
@@ -638,7 +647,7 @@ class CustomPairPotential : public PairPotentialBase {
  *          problematic if these have large memory requirements.
  */
 class FunctorPotential : public PairPotentialBase {
-    typedef std::function<double(const Particle &, const Particle &, const Point &)> uFunc;
+    typedef std::function<double(const Particle &, const Particle &, double, const Point &)> uFunc;
     json _j; // storage for input json
     typedef CombinedPairPotential<Coulomb, HardSphere> PrimitiveModel;
     typedef CombinedPairPotential<Coulomb, WeeksChandlerAndersen> PrimitiveModelWCA;
@@ -673,54 +682,82 @@ class FunctorPotential : public PairPotentialBase {
     PairMatrix<uFunc, true> umatrix; // matrix with potential for each atom pair; cannot be Eigen matrix
 
   public:
-    inline FunctorPotential(const std::string &name = "functor potential") : PairPotentialBase(name){};
+    FunctorPotential(const std::string &name = "functor potential");
     void to_json(json &j) const override;
     void from_json(const json &j) override;
 
-    inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
-        return umatrix(a.id, b.id)(a, b, r); // pc::infty;
+    /**
+     * @brief Potential energy between two particles
+     * @param a First particle
+     * @param b Second particle
+     * @param r2 Squared distance
+     * @param r Distance vector
+     * @return Energy in kT
+     */
+    inline double operator()(const Particle &a, const Particle &b, double r2,
+                             const Point &r = {0, 0, 0}) const override {
+        return umatrix(a.id, b.id)(a, b, r2, r);
     }
 };
 
 /**
- * @brief Tabulated arbitrary potentials for specific atom types
+ * @brief Splined pair potentials
  *
- * This maintains a species x species matrix as in FunctorPotential
- * but with tabulated pair potentials to improve performance.
+ * This maintains a species x species matrix as in `FunctorPotential`
+ * but with splined pair potentials. This avoids the functor lookup
+ * and renders all potentials roughly the same speed.
  *
+ * The spline range is automatically detected based on user-defined
+ * energy thresholds. If below the range, the default behavior is to return
+ * the EXACT energy, while if above ZERO is returned.
  */
-class TabulatedPotential : public FunctorPotential {
-
-    // expand spline data class to hold information about
-    // the sign of values for r<rmin
-    struct Ttable : public Tabulate::TabulatorBase<double>::data {
-        typedef Tabulate::TabulatorBase<double>::data base;
-        bool isNegativeBelowRmin = false;
-        Ttable(){};
-        Ttable(const base &b) : base(b) {}
+class SplinedPotential : public FunctorPotential {
+    /** @brief Expand spline data class to hold information about the sign of values for r<rmin */
+    class KnotData : public Tabulate::TabulatorBase<double>::data {
+      public:
+        using base = Tabulate::TabulatorBase<double>::data;
+        bool hardsphere_repulsion = false; //!< Use hardsphere repulsion for r smaller than rmin
+        KnotData() = default;
+        KnotData(const base &);
     };
-    PairMatrix<Ttable, true> tmatrix; // matrix with tabulated potential for each atom pair; cannot be Eigen Matrix
-    Tabulate::Andrea<double> tblt;    // spline class
-    bool hardsphere = false;          // use hardsphere for r<rmin?
+
+    PairMatrix<KnotData> matrix_of_knots;                 //!< Matrix with tabulated potential for each atom pair
+    Tabulate::Andrea<double> spline;                      //!< Spline method
+    bool hardsphere_repulsion = false;                    //!< Use hardsphere repulsion for r smaller than rmin
+    const int max_iterations = 1e6;                       //!< Max number of iterations when determining spline interval
+    void stream_pair_potential(std::ostream &, int, int); //!< Stream pair potential to output stream
+    void save_potentials();                               //!< Save splined and exact pair potentials to disk
+    double findLowerDistance(int, int, double, double);   //!< Find lower distance for splining (rmin)
+    double findUpperDistance(int, int, double, double);   //!< Find upper distance for splining (rmax)
+    double dr = 1e-2;                                     //!< Distance interval when searching for rmin and rmax
+    void createKnots(int, int, double, double);           //!< Create spline knots for pair of particles in [rmin:rmax]
 
   public:
-    TabulatedPotential(const std::string &name = "splined") : FunctorPotential(name) {};
+    explicit SplinedPotential(const std::string &name = "splined");
 
-    inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
-        double r2 = r.squaredNorm();
-        const Ttable &knots = tmatrix(a.id, b.id);
-        if (r2 >= knots.rmax2)
+    /**
+     * Policies:
+     *
+     * 1. return splined potential if rmin>r<rmax
+     * 2. return zero if r>=rmax
+     * 3. return infinity if r<=rmin AND `hardsphere_repulsion` has been set to true
+     * 4. return exact energy if r<=rmin
+     */
+    inline double operator()(const Particle &p1, const Particle &p2, double r2, const Point &) const override {
+        auto &knots = matrix_of_knots(p1.id, p2.id);
+        if (r2 >= knots.rmax2) {
             return 0.0;
-        else if (r2 <= knots.rmin2) {
-            if (knots.isNegativeBelowRmin or (not hardsphere))
-                return this->umatrix(a.id, b.id)(a, b, r); // exact energy
-            else
-                return pc::infty; // assume extreme repulsion
         }
-        return tblt.eval(knots, r2); // we are in splined interval
+        if (r2 > knots.rmin2) {
+            return spline.eval(knots, r2); // spline energy
+        }
+        if (knots.hardsphere_repulsion) {
+            return pc::infty;
+        }
+        return FunctorPotential::operator()(p1, p2, r2, {0, 0, 0}); // exact energy
     }
 
-    void from_json(const json &j) override;
+    void from_json(const json &) override;
 };
 
 } // end of namespace Potential

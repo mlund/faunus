@@ -1,3 +1,6 @@
+#define DOCTEST_CONFIG_IMPLEMENT
+#include <doctest/doctest.h>
+#include <doctest/trompeloeil.hpp>
 #include "core.h"
 #include "mpicontroller.h"
 #include "move.h"
@@ -10,8 +13,10 @@
 #include "spdlog/spdlog.h"
 #include <spdlog/sinks/null_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
+#include <spdlog/sinks/basic_file_sink.h>
 #include <iomanip>
 #include <unistd.h>
+#include <chrono>
 
 #ifdef ENABLE_SID
 #include "cppsid.h"
@@ -37,12 +42,13 @@ using namespace std;
 static const char USAGE[] =
     R"(Faunus - the Monte Carlo code you're looking for!
 
-    http://github.com/mlund/faunus
+    https://faunus.readthedocs.io
 
     Usage:
       faunus [-q] [--verbosity <N>] [--nobar] [--nopfx] [--notips] [--nofun] [--state=<file>] [--input=<file>] [--output=<file>]
       faunus (-h | --help)
       faunus --version
+      faunus test <doctest-options>...
 
     Options:
       -i <file> --input <file>   Input file [default: /dev/stdin].
@@ -69,10 +75,27 @@ using ProgressIndicator::ProgressTracker;
 // forward declarations
 std::shared_ptr<ProgressTracker> createProgressTracker(bool, unsigned int);
 
-int main(int argc, char **argv) {
+int main(int argc, const char **argv) {
+    if (argc > 1) { // run unittests if the first argument equals "test"
+        if (std::string(argv[1]) == "test") {
+#ifdef DOCTEST_CONFIG_DISABLE
+            std::cout << "error: this version of faunus does not include unittests\n";
+            return EXIT_FAILURE;
+#else
+            faunus_logger = spdlog::basic_logger_mt("faunus", "unittests.log", true);
+            faunus_logger->set_pattern("%L: %v");
+            faunus_logger->set_level(spdlog::level::debug);
+            return doctest::Context(argc, argv).run();
+#endif
+        }
+    }
+
     using namespace Faunus::MPI;
     bool quiet = false, nofun = true; // conservative defaults
     try {
+
+        auto starting_time = std::chrono::steady_clock::now(); // used to time the simulation
+
         std::string version = "Faunus";
 #ifdef GIT_LATEST_TAG
         version += " "s + QUOTE(GIT_LATEST_TAG);
@@ -131,19 +154,23 @@ int main(int argc, char **argv) {
 
         // --input
         json json_in;
-        auto input = args["--input"].asString();
-        if (input == "/dev/stdin") {
-            std::cin >> json_in;
-        } else {
-            if (prefix) {
-                input = Faunus::MPI::prefix + input;
+        try {
+            if (auto input = args["--input"].asString(); input == "/dev/stdin") {
+                    std::cin >> json_in;
+            } else {
+                if (prefix) {
+                    input = Faunus::MPI::prefix + input;
+                }
+                json_in = openjson(input);
             }
-            json_in = openjson(input);
+        } catch(json::parse_error& e) {
+            faunus_logger->debug(e.what());
+            throw ConfigurationError("empty or invalid input JSON");
         }
 
         {
             pc::temperature = json_in.at("temperature").get<double>() * 1.0_K;
-            MCSimulation sim(json_in, mpi);
+            MetropolisMonteCarlo sim(json_in, mpi);
 
             // --state
             if (args["--state"]) {
@@ -152,22 +179,23 @@ int main(int argc, char **argv) {
                 std::string suffix = state.substr(state.find_last_of(".") + 1);
                 bool binary = (suffix == "ubj");
                 auto mode = std::ios::in;
-                if (binary)
+                if (binary) {
                     mode = std::ifstream::ate | std::ios::binary; // ate = open at end
+                }
                 f.open(state, mode);
                 if (f) {
-                    json json_state;
+                    json j;
                     faunus_logger->info("loading state file {}", state);
                     if (binary) {
                         size_t size = f.tellg(); // get file size
                         std::vector<std::uint8_t> v(size / sizeof(std::uint8_t));
                         f.seekg(0, f.beg); // go back to start
                         f.read((char *)v.data(), size);
-                        json_state = json::from_ubjson(v);
+                        j = json::from_ubjson(v);
                     } else {
-                        f >> json_state;
+                        f >> j;
                     }
-                    sim.restore(json_state);
+                    sim.restore(j);
                 } else {
                     throw std::runtime_error("state file error: " + state);
                 }
@@ -175,13 +203,13 @@ int main(int argc, char **argv) {
 
             // warn if initial system has a net charge
             {
-                auto p = sim.space().activeParticles();
-                double system_charge = Faunus::monopoleMoment(p.begin(), p.end());
-                if (std::fabs(system_charge) > 0)
+                auto p = sim.getSpace().activeParticles();
+                if (double system_charge = Faunus::monopoleMoment(p.begin(), p.end()); std::fabs(system_charge) > 0) {
                     faunus_logger->warn("non-zero system charge of {}e", system_charge);
+                }
             }
 
-            Analysis::CombinedAnalysis analysis(json_in.at("analysis"), sim.space(), sim.pot());
+            Analysis::CombinedAnalysis analysis(json_in.at("analysis"), sim.getSpace(), sim.getHamiltonian());
 
             auto &loop = json_in.at("mcloop");
             int macro = loop.at("macro");
@@ -197,32 +225,40 @@ int main(int argc, char **argv) {
                     }
                     sim.move();
                     analysis.sample();
-                }
-            }
+                }                   // end of micro steps
+                analysis.to_disk(); // save analysis to disk
+            }                       // end of macro steps
             if (progress_tracker && mpi.isMaster()) {
                 progress_tracker->done();
             }
 
-            faunus_logger->log((sim.drift() < 1E-9) ? spdlog::level::info : spdlog::level::warn,
-                               "relative drift = {}", sim.drift());
+            faunus_logger->log((sim.relativeEnergyDrift() < 1E-9) ? spdlog::level::info : spdlog::level::warn,
+                               "relative energy drift = {}", sim.relativeEnergyDrift());
 
             // --output
-            std::ofstream f(Faunus::MPI::prefix + args["--output"].asString());
-            if (f) {
-                json json_out;
-                Faunus::to_json(json_out, sim);
-                json_out["relative drift"] = sim.drift();
-                json_out["analysis"] = analysis;
+            if (std::ofstream file(Faunus::MPI::prefix + args["--output"].asString()); file) {
+                json j;
+                Faunus::to_json(j, sim);
+                j["relative drift"] = sim.relativeEnergyDrift();
+                j["analysis"] = analysis;
                 if (mpi.nproc() > 1) {
-                    json_out["mpi"] = mpi;
+                    j["mpi"] = mpi;
                 }
 #ifdef GIT_COMMIT_HASH
-                json_out["git revision"] = GIT_COMMIT_HASH;
+                j["git revision"] = GIT_COMMIT_HASH;
 #endif
 #ifdef __VERSION__
-                json_out["compiler"] = __VERSION__;
+                j["compiler"] = __VERSION__;
 #endif
-                f << std::setw(4) << json_out << endl;
+
+                { // report on total simulation time
+                    using namespace std::chrono;
+                    auto ending_time = steady_clock::now();
+                    auto secs = duration_cast<seconds>(ending_time - starting_time).count();
+                    j["simulation time"] = {{"in minutes", secs / 60.0}, {"in seconds", secs}};
+                }
+
+                file << std::setw(4) << j << std::endl;
             }
         }
 
@@ -231,8 +267,18 @@ int main(int argc, char **argv) {
     } catch (std::exception &e) {
         faunus_logger->error(e.what());
 
+        // ConfigurationError can carry a JSON snippet which should be shown for debugging.
+        if (auto config_error = dynamic_cast<ConfigurationError*>(&e);
+            config_error != nullptr && !config_error->attachedJson().empty()) {
+            faunus_logger->debug("JSON snippet:\n{}", config_error->attachedJson().dump(4));
+        }
+
         if (!usageTip.buffer.empty()) {
-            faunus_logger->error(usageTip.buffer);
+            // Use the srderr stream directly for more elaborated output of usage tip, optionally containing an ASCII
+            // art. Level info seems appropriate.
+            if (faunus_logger->should_log(spdlog::level::info)) {
+                std::cerr << usageTip.buffer << std::endl;
+            }
         }
 #ifdef ENABLE_SID
         // easter egg...

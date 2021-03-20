@@ -14,7 +14,6 @@ class InteractionData {
     typedef std::string Tkey;
     std::map<Tkey, double> data; //!< arbitrary additional properties
     friend void to_json(json &, const InteractionData &);
-    friend void from_json(const json &, InteractionData &);
   public:
     bool has(const Tkey name) const;               // like C++20 map::contains
     double get(const Tkey name) const;             // like map::at()
@@ -75,27 +74,64 @@ void from_json(const json &j, std::vector<AtomData> &v);
 
 extern std::vector<AtomData> atoms; //!< Global instance of atom list
 
+/**
+ * @brief Finds the first element with a member attribute `name` matching the input.
+ *
+ * @param rng  a range of elements
+ * @param name  a name to look for
+ * @return an iterator to the first element, or `last` if not found
+ * @see findAtomByName(), findMoleculeByName()
+ */
 template <class Trange> auto findName(Trange &rng, const std::string &name) {
     return std::find_if(rng.begin(), rng.end(), [&name](auto &i) { return i.name == name; });
-} //!< Returns iterator to first element with member `name` matching input
+}
 
-template <class Trange> std::vector<int> names2ids(Trange &rng, const std::vector<std::string> &names) {
+/**
+ * @brief An exception to indicate an unknown atom name in the input.
+ */
+struct UnknownAtomError: public std::runtime_error {
+    explicit UnknownAtomError(const std::string & atom_name);
+};
+
+/**
+ * @brief Finds an atom by its name in the global Faunus atoms lexicon.
+ *
+ * The first matching atom is returned, or an UnknownAtomError is thrown when not found.
+ *
+ * @param name  an atom name to look for
+ * @return an atom found
+ * @throw UnknownAtomError  when no atom found
+ */
+AtomData& findAtomByName(const std::string& name);
+
+/**
+ * @brief Search for `name` in `database` and return `id()`
+ * @tparam Trange Container of object having `.name` and `.id()` data members
+ * @param database Iterable range having `.name` and `.id()` members
+ * @param names Container with names to convert to id
+ * @return Vector of ids matching `names`
+ *
+ * This is typically used with `Faunus::atoms` or `Faunus::molecules`
+ * to lookup atom or molecule names and return them as id numbers.
+ * If the string `*` occurs in `names`, the returned vector will be
+ * a sequence containing all id's of the database, i.e.
+ * `0, ..., database.size()-1`.
+ */
+template <class Trange> std::vector<int> names2ids(Trange &database, const std::vector<std::string> &names) {
     std::vector<AtomData::Tid> index;
     index.reserve(names.size());
-    for (auto &n : names) {
-        // wildcard selecting all id's
-        if (n == "*") {
-            index.resize(rng.size());
+    for (auto &name : names) {
+        if (name == "*") { // wildcard selecting all id's
+            index.resize(database.size());
             std::iota(index.begin(), index.end(), 0);
             return index;
         }
-        auto it = findName(rng, n);
-        if (it != rng.end())
+        if (auto it = findName(database, name); it != database.end())
             index.push_back(it->id());
         else
-            throw std::out_of_range("name '" + n + "' not found");
+            throw std::out_of_range("name '" + name + "' not found");
     }
     return index;
-} //!< Convert vector of names into vector of id's from Trange (exception if not found)
+}
 
 } // namespace Faunus

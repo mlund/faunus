@@ -1,0 +1,118 @@
+#!/usr/bin/env yason.py
+#
+# This sets up a small, rigid molecule with titratable sites.
+# Titration is performed with implicit protons, coupled to
+# a grand canonical bath of 1:1 salt
+#
+{% set aNaCl = 0.030 %}
+{% set pH = 7.0 %}
+{% set eps = 0.05*2.5 %}
+
+temperature: 298        # in Kelvin
+random:   {seed: hardware} # seed for random number generator
+mcloop:   {macro: 10, micro: 6000} # number of steps in MC simulation
+geometry: {type: sphere, radius: 50}
+atomlist:
+    # properties for all interaction sites, here single amino acids
+    - ASP:  { q: -1, sigma: 3.6, mw: 110, dp: 2, eps: {{ eps }} }
+    - HASP: { q:  0, sigma: 3.6, mw: 110, dp: 2, eps: {{ eps }} }
+    - CTR:  { q: -1, sigma: 2.0, mw: 16,  dp: 2, eps: {{ eps }} }
+    - HCTR: { q:  0, sigma: 2.0, mw: 16,  dp: 2, eps: {{ eps }} }
+    - GLU:  { q: -1, sigma: 3.8, mw: 122, dp: 2, eps: {{ eps }} }
+    - HGLU: { q:  0, sigma: 3.8, mw: 122, dp: 2, eps: {{ eps }} }
+    - TYR:  { q: -1, sigma: 4.1, mw: 154, dp: 2, eps: {{ eps }} }
+    - HTYR: { q: 0,  sigma: 4.1, mw: 154, dp: 2, eps: {{ eps }} }
+    - CYS:  { q: -1, sigma: 3.6, mw: 103, dp: 2, eps: {{ eps }} }
+    - HCYS: { q: 0,  sigma: 3.6, mw: 103, dp: 2, eps: {{ eps }} }
+    - CYb:  { q: 0,  sigma: 3.6, mw: 103, dp: 2, eps: {{ eps }} }
+    - HIS:  { q: 0,  sigma: 3.9, mw: 130, dp: 2, eps: {{ eps }} }
+    - HHIS: { q: 1,  sigma: 3.9, mw: 130, dp: 2, eps: {{ eps }} }
+    - NTR:  { q: 0,  sigma: 2.0, mw: 14,  dp: 2, eps: {{ eps }} }
+    - HNTR: { q: 1,  sigma: 2.0, mw: 14,  dp: 2, eps: {{ eps }} }
+    - LYS:  { q: 0,  sigma: 3.7, mw: 116, dp: 2, eps: {{ eps }} }
+    - HLYS: { q: 1,  sigma: 3.7, mw: 116, dp: 2, eps: {{ eps }} }
+    - ARG:  { q: 0,  sigma: 4.0, mw: 144, dp: 2, eps: {{ eps }} }
+    - HARG: { q: 1,  sigma: 4.0, mw: 144, dp: 2, eps: {{ eps }} }
+    - ALA:  { q: 0,  sigma: 3.1, mw: 66,  dp: 2, eps: {{ eps }} }
+    - ILE:  { q: 0,  sigma: 3.6, mw: 102, dp: 2, eps: {{ eps }} }
+    - LEU:  { q: 0,  sigma: 3.6, mw: 102, dp: 2, eps: {{ eps }} }
+    - MET:  { q: 0,  sigma: 3.8, mw: 122, dp: 2, eps: {{ eps }} }
+    - PHE:  { q: 0,  sigma: 3.9, mw: 138, dp: 2, eps: {{ eps }} }
+    - PRO:  { q: 0,  sigma: 3.4, mw: 90,  dp: 2, eps: {{ eps }} }
+    - TRP:  { q: 0,  sigma: 4.3, mw: 176, dp: 2, eps: {{ eps }} }
+    - VAL:  { q: 0,  sigma: 3.4, mw: 90,  dp: 2, eps: {{ eps }} }
+    - SER:  { q: 0,  sigma: 3.3, mw: 82,  dp: 2, eps: {{ eps }} }
+    - THR:  { q: 0,  sigma: 3.5, mw: 94,  dp: 2, eps: {{ eps }} }
+    - ASN:  { q: 0,  sigma: 3.6, mw: 108, dp: 2, eps: {{ eps }} }
+    - GLN:  { q: 0,  sigma: 3.8, mw: 120, dp: 2, eps: {{ eps }} }
+    - GLY:  { q: 0,  sigma: 2.9, mw: 54,  dp: 2, eps: {{ eps }} }
+    - na:   { q: 1.0, sigma: 4.6, mw: 1, dp: 50, eps: {{ eps }}}
+    - cl:   { q: -1.0, sigma: 4.6, mw: 1, dp: 50, eps: {{ eps }}}
+    - H+:   { implicit: True, activity: {{ 10**(-pH) }} }
+
+moleculelist:
+    - Na+: {atoms: [na], atomic: true, activity: {{ aNaCl }} }
+    - Cl-: {atoms: [cl], atomic: true, activity: {{ aNaCl }} }
+    - protein:
+        insdir: [0,0,0]
+        structure:
+            - GLU: [0.0, 0.0, 0.0]
+            - HIS: [0.0, 0.0, 5.0]
+            - CYS: [0.0, 5.0, 0.0]
+
+insertmolecules:
+    - protein: {N: 1}
+    - Na+: {N: 122}
+    - Cl-: {N: 120}
+
+reactionlist:
+    # H+ is implicit and to maintain electroneutrality
+    # we accompany swap moves with insertion/deletion
+    # of either a chloride or a sodium ion.
+    # Effectively this means that we can interconvert
+    # H+ <-> Na+ <-> Cl-. Excess salt pairs are removed
+    # by the final NaCl GC reaction.
+    #
+    # pKa values from dx.doi.org/10.1110/ps.051840806
+    #
+    - HCTR + Cl- = CTR + H+:  {pK: 3.67}
+    - HASP + Cl- = ASP + H+:  {pK: 3.67}
+    - HGLU + Cl- = GLU + H+:  {pK: 4.24}
+    - HHIS + Cl- = HIS + H+:  {pK: 6.54}
+    - HCYS + Cl- = CYS + H+:  {pK: 8.55}
+    - HNTR + Cl- = NTR + H+:  {pK: 8.0}
+    - HTYR + Cl- = TYR + H+:  {pK: 9.84}
+    - HLYS + Cl- = LYS + H+:  {pK: 10.4}
+    - HARG + Cl- = ARG + H+:  {pK: 12.0}
+    - HCTR = Na+ + CTR + H+:  {pK: 3.67}
+    - HASP = Na+ + ASP + H+:  {pK: 3.67}
+    - HGLU = Na+ + GLU + H+:  {pK: 4.25}
+    - HHIS = Na+ + HIS + H+:  {pK: 6.54}
+    - HCYS = Na+ + CYS + H+:  {pK: 8.55}
+    - HNTR = Na+ + NTR + H+:  {pK: 8.0}
+    - HTYR = Na+ + TYR + H+:  {pK: 9.84}
+    - HLYS = Na+ + LYS + H+:  {pK: 10.4}
+    - HARG = Na+ + ARG + H+:  {pK: 12.0}
+    - = Na+ + Cl-: {} # activates grand canonical salt
+
+energy:
+    - nonbonded:
+        default:
+            - coulomb: {epsr: 80, type: plain}
+            - lennardjones:
+                mixing: lorentz_berthelot
+
+moves:
+    - rcmc:     {repeat: 50}                            # reactive ensemble for proton titration
+    - transrot: {molecule: Na+, repeat: 1}              # move individual salt beads
+    - transrot: {molecule: Cl-, repeat: 1}              # move individual salt beads
+
+analysis:
+    - savestate: {file: confout.pqr}
+    - sanity: {nstep: 10}                           # is the simulation OK?
+    - chargefluctuations: {nstep: 5, molecule: protein, pqrfile: avgcharge.pqr} # charge analysis of all sites
+    - multipole: {nstep: 5}                         # molecular charge, capacitance and dipole moment
+    - systemenergy: {file: energy.dat, nstep: 10} # track total system energy
+    - density: {nstep: 5, nskip: 1000}             # monitors salt density
+    - savestate: {file: state.json}
+

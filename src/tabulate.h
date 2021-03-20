@@ -56,6 +56,7 @@ template <typename T = double> class TabulatorBase {
         std::vector<T> c;       // c for coefficents
         T rmin2 = 0, rmax2 = 0; // useful to save these with table
         bool empty() const { return r2.empty() && c.empty(); }
+        inline size_t numKnots() const { return r2.size(); }
     };
 
     void setTolerance(T _utol, T _ftol = -1, T _umaxtol = -1, T _fmaxtol = -1) {
@@ -157,14 +158,23 @@ template <typename T = double> class Andrea : public TabulatorBase<T> {
      * @brief Get tabulated value at f(x)
      * @param d Table data
      * @param r2 value
+     * @note Auto-vectorization in Clang: https://llvm.org/docs/Vectorizers.html
      */
     inline T eval(const typename base::data &d, T r2) const {
         size_t pos = std::lower_bound(d.r2.begin(), d.r2.end(), r2) - d.r2.begin() - 1;
         size_t pos6 = 6 * pos;
+        assert((pos6 + 5) < d.c.size());
         T dz = r2 - d.r2[pos];
-        return d.c[pos6] +
-               dz * (d.c[pos6 + 1] +
-                     dz * (d.c[pos6 + 2] + dz * (d.c[pos6 + 3] + dz * (d.c[pos6 + 4] + dz * (d.c[pos6 + 5])))));
+        if constexpr (true) { // loop version
+            T sum = 0;
+#pragma clang loop vectorize(enable) interleave(enable)
+            for (size_t i = 5; i > 0; i--)
+                sum = dz * (sum + d.c[pos6 + i]);
+            return sum + d.c[pos6];
+        } else // manually unrolled version
+            return d.c[pos6] +
+                   dz * (d.c[pos6 + 1] +
+                         dz * (d.c[pos6 + 2] + dz * (d.c[pos6 + 3] + dz * (d.c[pos6 + 4] + dz * (d.c[pos6 + 5])))));
     }
 
     /**
@@ -289,10 +299,13 @@ template <typename T = double> class Andrea : public TabulatorBase<T> {
 #endif
     }
 };
+} // namespace Tabulate
+} // namespace Faunus
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
 TEST_CASE("[Faunus] Andrea") {
     using doctest::Approx;
+    using namespace Faunus::Tabulate;
 
     auto f = [](double x) { return 0.5 * x * std::sin(x) + 2; };
     Andrea<double> spline;
@@ -302,7 +315,6 @@ TEST_CASE("[Faunus] Andrea") {
     CHECK(spline.eval(d, 1e-9) == Approx(f(1e-9)));
     CHECK(spline.eval(d, 5) == Approx(f(5)));
     CHECK(spline.eval(d, 10) == Approx(f(10)));
-    CHECK(spline.eval(d, 10 + 1e-9) != Approx(10 + 1e-9));
 
     // Check if numerical derivation of *splined* function
     // matches the analytical solution in `evalDer()`.
@@ -328,5 +340,3 @@ TEST_CASE("[Faunus] Andrea") {
 }
 #endif
 
-} // namespace Tabulate
-} // namespace Faunus

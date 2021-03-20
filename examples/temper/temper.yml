@@ -1,0 +1,24 @@
+# Run with:
+#
+#   $ yason.py penalty.yml | mpirun --np 4 --stdin all faunus
+#
+temperature: 300
+random: { seed: fixed }
+mcloop: { macro: 10, micro: {{micro}} }
+geometry: {type: cuboid, length: [4,4,4]}
+atomlist:
+    - A: {dp: 0.1} 
+moleculelist:
+    - mygroup: {atoms: [A], atomic: true, insdir: [1,1,0]}
+insertmolecules:
+    - mygroup: {N: 1}
+energy:
+    - example2d: {scale: {{scale}}, 2D: false } # this is hard-coded 2d potential, see Frenkel+Smit
+moves:
+    - transrot: {molecule: mygroup, dir: [1,1,0], repeat: 10}
+    - temper: {format: xyz}
+analysis:
+    - reactioncoordinate: {type: atom, property: x, file: x.dat.gz, index: 0, nstep: 1}
+    - savestate: {file: state.json}
+    - sanity: {nstep: 1000}
+

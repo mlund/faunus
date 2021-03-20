@@ -1,0 +1,36 @@
+#!/usr/bin/env yason.py
+#
+# In an ideal system the average cluster size equals
+#
+#     N_c = 1 + 4 * pi * Rc**3 * N / (3 * L**3) = 1.22 in this case
+#
+temperature: 300
+random: {seed: fixed}
+geometry: {type: cuboid, length: 40}
+mcloop: {macro: 10, micro: 20000}
+
+atomlist:
+    - OW: {q: -0.8476, sigma: 3.166, eps: 0.650, mw: 15.999}
+    - HW: {q: 0.4238,  sigma: 2, eps: 0, mw: 1.007}
+
+moleculelist:
+    - water: {structure: water.xyz, rigid: true}
+    - other: {structure: water.xyz, rigid: true}
+
+insertmolecules:
+    - water: {N: 5}
+    - other: {N: 5}
+
+energy:
+    - bonded: {} # just a dummy energy
+
+moves:
+    - moltransrot: {molecule: water, dp: 20, dprot: 1, repeat: 1}
+    - moltransrot: {molecule: other, dp: 20, dprot: 1, repeat: 1}
+    - cluster: {molecules: [water, other], dp: 20, dprot: 3, threshold: 7, satellites: [other]}
+
+analysis:
+    - savestate: {file: confout.pqr}
+    - savestate: {file: state.json}
+    - sanity: {nstep: 100}
+

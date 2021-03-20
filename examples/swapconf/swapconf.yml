@@ -1,6 +1,6 @@
 #!/usr/bin/env yason.py
 temperature: 300
-random: {seed: default}
+random: {seed: fixed}
 geometry: {type: cuboid, length: 20}
 mcloop: {macro: 10, micro: 20000}
 
@@ -32,6 +32,7 @@ analysis:
     # found by inspecting the two .dat files 
     - reactioncoordinate: {type: molecule, property: confid, file: confid_mol0.dat, nstep: 5, index: 0}
     - reactioncoordinate: {type: molecule, property: confid, file: confid_mol1.dat, nstep: 5, index: 1}
+    - moleculeconformation: {molecule: water, nstep: 1}
     - sanity: {nstep: 1} # for testing purposes, let's check sanity for every step
     - systemenergy: {file: energy.dat, nstep: 5}
     - savestate: {file: confout.pqr}

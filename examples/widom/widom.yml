@@ -1,0 +1,41 @@
+#!/usr/bin/env yason.py
+#
+# A spherical simulation cell of radius R and
+# a static central colloid of raidus r. An ideal
+# test particle if used to measure the excess chemical
+# potential which is exactly given by
+#
+#    mu_excess = (r/R)**3 - 1 = 0.133 kT
+#
+# for a hardsphere potential and R=4, r=2
+#
+temperature: 300
+mcloop: {macro: 10, micro: 30000}
+geometry: {type: sphere, radius: 4.0}
+random: {seed: fixed}
+
+atomlist:
+  - point: {sigma: 0.0}
+  - sphere: {sigma: 4.0}
+
+moleculelist:
+  - ideal: {atoms: [point], atomic: true}
+  - colloid:
+      insdir: [0,0,0] # insert in center of simulation sphere
+      structure:
+        - sphere: [0,0,0]
+
+insertmolecules:
+  - colloid: {N: 1}
+  - ideal: {N: 1, inactive: true} # note that `widom` requires an inactive molecule
+
+energy:
+  - nonbonded:
+      default:
+        - hardsphere: {}
+
+moves: []
+
+analysis:
+  - widom: {molecule: ideal, ninsert: 10, nstep: 1}
+

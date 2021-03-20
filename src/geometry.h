@@ -5,11 +5,13 @@
 #include "particle.h"
 #include "tensor.h"
 #include <Eigen/Geometry>
+#include <iostream>
+#include <cereal/types/base_class.hpp>
 
 /** @brief Faunus main namespace */
 namespace Faunus {
 
-struct Random;
+class Random;
 
 /**
  * @brief Simulation geometries and related operations.
@@ -26,14 +28,24 @@ struct Random;
  *
  */
 namespace Geometry {
+
+//! Function to apply PBC to a position, i.e. wrap around the borders if applicable for the given container geometry
 typedef std::function<void(Point &)> BoundaryFunction;
+
+//! Function to calculate the (minimum) distance between two points depending on contained geometry
 typedef std::function<Point(const Point &, const Point &)> DistanceFunction;
 
-//! Geometry variant used for Chameleon.
+//! Geometry variant used for Chameleon
 enum Variant { CUBOID = 0, SPHERE, CYLINDER, SLIT, HEXAGONAL, OCTAHEDRON, HYPERSPHERE2D };
 
 //! Various methods of volume scaling, @see GeometryBase::setVolume.
-enum VolumeMethod { ISOTROPIC, ISOCHORIC, XY, Z };
+enum VolumeMethod { ISOTROPIC, ISOCHORIC, XY, Z, INVALID };
+
+NLOHMANN_JSON_SERIALIZE_ENUM(VolumeMethod, {{VolumeMethod::INVALID, nullptr},
+                                            {VolumeMethod::ISOTROPIC, "isotropic"},
+                                            {VolumeMethod::ISOCHORIC, "isochoric"},
+                                            {VolumeMethod::XY, "xy"},
+                                            {VolumeMethod::Z, "z"}})
 
 enum Coordinates { ORTHOGONAL, ORTHOHEXAGONAL, TRUNC_OCTAHEDRAL, NON3D };
 enum Boundary { FIXED, PERIODIC };
@@ -44,12 +56,16 @@ enum Boundary { FIXED, PERIODIC };
  * A stub. It can be extended to fully json-configurable boundary conditions.
  */
 struct BoundaryCondition {
-    typedef Eigen::Matrix<Boundary, 3, 1> BoundaryXYZ;
+    using BoundaryXYZ = Eigen::Matrix<Boundary, 3, 1>;
     // typedef std::pair<std::string, BoundaryXYZ> BoundaryName;
     // static const std::map<std::string, BoundaryXYZ> names; //!< boundary names
 
     Coordinates coordinates;
     BoundaryXYZ direction;
+
+    template <class Archive> void serialize(Archive &archive) {
+        archive(coordinates, direction);
+    } //!< Cereal serialisation
 
     BoundaryCondition(Coordinates coordinates = ORTHOGONAL, BoundaryXYZ boundary = {FIXED, FIXED, FIXED})
         : coordinates(coordinates), direction(boundary){};
@@ -66,22 +82,17 @@ struct GeometryBase {
     virtual void randompos(Point &, Random &) const = 0;           //!< Generate random position
     virtual Point vdist(const Point &, const Point &) const = 0;   //!< (Minimum) distance between two points
     virtual Point getLength() const = 0;                           //!< Side lengths
-
-    inline double sqdist(const Point &a, const Point &b) const {
-        return vdist(a, b).squaredNorm();
-    } //!< Squared (minimum) distance between two points
-
     virtual ~GeometryBase();
     virtual void to_json(json &j) const = 0;
     virtual void from_json(const json &j) = 0;
 
     inline BoundaryFunction getBoundaryFunc() const {
         return [this](Point &i) { boundary(i); };
-    } //!< returns lambda to boundary()
+    } //!< Lambda for applying boundary conditions on a point
 
     inline DistanceFunction getDistanceFunc() const {
         return [this](const Point &i, const Point &j) { return vdist(i, j); };
-    } //!< returns lambda to vdist()
+    } //!< Lambda for calculating the (minimum) distance vector between two positions
 
   protected:
     template <typename T = double> inline int anint(T x) const {
@@ -101,6 +112,9 @@ class GeometryImplementation : public GeometryBase {
 
     //! A unique pointer to a copy of self. To be used in copy constructors.
     virtual std::unique_ptr<GeometryImplementation> clone() const = 0;
+
+    //! Cereal serialisation
+    template <class Archive> void serialize(Archive &archive) { archive(boundary_conditions); }
 };
 
 /**
@@ -121,13 +135,17 @@ class Cuboid : public GeometryImplementation {
     void randompos(Point &m, Random &rand) const override;
     void from_json(const json &j) override;
     void to_json(json &j) const override;
-    Cuboid(const Point &p);
-    Cuboid(double x, double y, double z);
-    Cuboid(double x = 0.0);
+    Cuboid(const Point &side_length);
+    Cuboid();
 
     std::unique_ptr<GeometryImplementation> clone() const override {
         return std::make_unique<Cuboid>(*this);
     }; //!< A unique pointer to a copy of self.
+
+    //! Cereal serialisation
+    template <class Archive> void serialize(Archive &archive) {
+        archive(cereal::base_class<GeometryImplementation>(this), box);
+    }
 };
 
 /**
@@ -160,8 +178,9 @@ class Sphere : public GeometryImplementation {
     double getVolume(int dim = 3) const override;
     Point setVolume(double volume, VolumeMethod method = ISOTROPIC) override;
     Point vdist(const Point &a, const Point &b) const override;
+    double sqdist(const Point &a, const Point &b) const { return (a - b).squaredNorm(); };
     void boundary(Point &a) const override;
-    bool collision(const Point &a) const override;
+    bool collision(const Point &point) const override;
     void randompos(Point &m, Random &rand) const override;
     void from_json(const json &j) override;
     void to_json(json &j) const override;
@@ -170,6 +189,11 @@ class Sphere : public GeometryImplementation {
     std::unique_ptr<GeometryImplementation> clone() const override {
         return std::make_unique<Sphere>(*this);
     }; //!< A unique pointer to a copy of self.
+
+    //! Cereal serialisation
+    template <class Archive> void serialize(Archive &archive) {
+        archive(cereal::base_class<GeometryImplementation>(this), radius);
+    }
 };
 
 class Hypersphere2d : public Sphere {
@@ -206,6 +230,11 @@ class Cylinder : public GeometryImplementation {
     std::unique_ptr<GeometryImplementation> clone() const override {
         return std::make_unique<Cylinder>(*this);
     }; //!< A unique pointer to a copy of self.
+
+    //! Cereal serialisation
+    template <class Archive> void serialize(Archive &archive) {
+        archive(cereal::base_class<GeometryImplementation>(this), radius, height);
+    }
 };
 
 /**
@@ -240,6 +269,15 @@ class HexagonalPrism : public GeometryImplementation {
     std::unique_ptr<GeometryImplementation> clone() const override {
         return std::make_unique<HexagonalPrism>(*this);
     }; //!< A unique pointer to a copy of self.
+
+    //! Cereal serialisation
+    template <class Archive> void serialize(Archive &archive) {
+        archive(cereal::base_class<GeometryImplementation>(this), box);
+    }
+
+    double innerRadius() const; //!< Inner hexagonal radius
+    double outerRadius() const; //!< Outer radius / side-length
+    double height() const;      //!< Prism height
 };
 
 /**
@@ -255,7 +293,7 @@ class TruncatedOctahedron : public GeometryImplementation {
     Point vdist(const Point &a, const Point &b) const override;
     void boundary(Point &a) const override;
     bool collision(const Point &a) const override;
-    void randompos(Point &m, Random &rand) const override;
+    void randompos(Point &pos, Random &rand) const override;
     void from_json(const json &j) override;
     void to_json(json &j) const override;
     TruncatedOctahedron(double side = 0.0);
@@ -263,6 +301,11 @@ class TruncatedOctahedron : public GeometryImplementation {
     std::unique_ptr<GeometryImplementation> clone() const override {
         return std::make_unique<TruncatedOctahedron>(*this);
     }; //!< A unique pointer to a copy of self.
+
+    //! Cereal serialisation
+    template <class Archive> void serialize(Archive &archive) {
+        archive(cereal::base_class<GeometryImplementation>(this), side);
+    }
 };
 
 /**
@@ -284,7 +327,8 @@ class TruncatedOctahedron : public GeometryImplementation {
  */
 class Chameleon : public GeometryBase {
   private:
-    Point len, len_half, len_inv; //!< Cached box dimensions, their half-values, and reciprocal values.
+    Point len_or_zero = {0, 0, 0}; //!< Box length (if PBC) or zero (if no PBC) in given direction
+    Point len, len_half, len_inv;  //!< Cached box dimensions, their half-values, and reciprocal values.
     std::unique_ptr<GeometryImplementation> geometry = nullptr; //!< A concrete geometry implementation.
     Variant _type;                                              //!< Type of concrete geometry.
     std::string _name;                                          //!< Name of concrete geometry, e.g., for json.
@@ -295,16 +339,19 @@ class Chameleon : public GeometryBase {
     const Variant &type = _type;     //!< Type of concrete geometry, read-only.
     const std::string &name = _name; //!< Name of concrete geometry, e.g., for json, read-only.
     double getVolume(int dim = 3) const override;
-    Point setVolume(double V, VolumeMethod method = ISOTROPIC) override;
+    Point setVolume(double, VolumeMethod = ISOTROPIC) override;
     Point getLength() const override; //!< A minimal containing cubic box.
-    // setLength() needed only for IO::FormatXTC::loadnextframe().
-    void setLength(const Point &l);                             //!< Sets the box dimensions.
-    void boundary(Point &a) const override;                     //!< Apply boundary conditions
-    Point vdist(const Point &a, const Point &b) const override; //!< (Minimum) distance between two points
-    void randompos(Point &m, Random &rand) const override;
-    bool collision(const Point &a) const override;
-    void from_json(const json &j) override;
+    // setLength() needed only for Move::ReplayMove (stems from IO::XTCReader).
+    void setLength(const Point &);                            //!< Sets the box dimensions.
+    void boundary(Point &) const override;                    //!< Apply boundary conditions
+    Point vdist(const Point &, const Point &) const override; //!< (Minimum) distance between two points
+    double sqdist(const Point &, const Point &) const;        //!< (Minimum) squared distance between two points
+    void randompos(Point &, Random &) const override;
+    bool collision(const Point &) const override;
+    void from_json(const json &) override;
     void to_json(json &j) const override;
+
+    const BoundaryCondition &boundaryConditions() const; //!< Get info on boundary conditions
 
     static const std::map<std::string, Variant> names; //!< Geometry names.
     typedef std::pair<std::string, Variant> VariantName;
@@ -317,32 +364,13 @@ class Chameleon : public GeometryBase {
     Chameleon(const GeometryImplementation &geo, const Variant type);
 
     //! Copy everything, but clone the geometry.
-    Chameleon(const Chameleon &geo)
-        : GeometryBase(geo), len(geo.len), len_half(geo.len_half), len_inv(geo.len_inv), _type(geo._type),
-          _name(geo._name) {
-        geometry = geo.geometry != nullptr ? geo.geometry->clone() : nullptr;
-    }
+    Chameleon(const Chameleon &geo);
 
     //! During the assignment copy everything, but clone the geometry.
     Chameleon &operator=(const Chameleon &geo);
+
+    std::shared_ptr<GeometryImplementation> asSimpleGeometry();
 };
-
-inline void Chameleon::_setLength(const Point &l) {
-    len = l;
-    len_half = l * 0.5;
-    len_inv = l.cwiseInverse();
-}
-
-inline double Chameleon::getVolume(int dim) const {
-    assert(geometry);
-    return geometry->getVolume(dim);
-}
-
-inline Point Chameleon::setVolume(double V, VolumeMethod method) {
-    auto scale = geometry->setVolume(V, method);
-    _setLength(geometry->getLength());
-    return scale;
-}
 
 inline void Chameleon::randompos(Point &m, Random &rand) const {
     assert(geometry);
@@ -366,7 +394,7 @@ inline void Chameleon::boundary(Point &a) const {
                 a.y() -= len.y() * anint(a.y() * len_inv.y());
         }
         if (boundary_conditions.direction.z() == PERIODIC) {
-            if (std::fabs(a.z()) > len_half.y())
+            if (std::fabs(a.z()) > len_half.z())
                 a.z() -= len.z() * anint(a.z() * len_inv.z());
         }
     } else {
@@ -403,73 +431,128 @@ inline Point Chameleon::vdist(const Point &a, const Point &b) const {
     return distance;
 }
 
+inline double Chameleon::sqdist(const Point &a, const Point &b) const {
+    if (geometry->boundary_conditions.coordinates == ORTHOGONAL) {
+        if constexpr (true) {
+            Point d((a - b).cwiseAbs());
+            return (d - (d.array() > len_half.array()).cast<double>().matrix().cwiseProduct(len_or_zero)).squaredNorm();
+        } else { // more readable alternative(?), nearly same speed
+            Point d(a - b);
+            for (int i = 0; i < 3; ++i) {
+                d[i] = std::fabs(d[i]);
+                d[i] = d[i] - len_or_zero[i] * static_cast<double>(d[i] > len_half[i]); // casting faster than branching
+            }
+            return d[0] * d[0] + d[1] * d[1] + d[2] * d[2];
+        }
+    } else {
+        return geometry->vdist(a, b).squaredNorm();
+    }
+}
+
 void to_json(json &, const Chameleon &);
 void from_json(const json &, Chameleon &);
 
-/*
-   void unwrap( Point &a, const Point &ref ) const {
-   a = vdist(a, ref) + ref;
-   } //!< Remove PBC with respect to a reference point
- */
 enum class weight { MASS, CHARGE, GEOMETRIC };
 
-template <typename Titer, typename Tparticle = typename Titer::value_type, typename weightFunc>
-Point anyCenter(Titer begin, Titer end, BoundaryFunction boundary, const weightFunc &weight,
+/**
+ * @brief Calculate Center of particle range using arbitrary weight functions applied to each particle
+ * @param begin Begin particle iterator
+ * @param end End parti cle iterator
+ * @param apply_boundary Boundary function to apply PBC (default: no PBC)
+ * @param weight_function Functor return weight for a given particle
+ * @param shift Shift by this vector before calculating center, then add again. For PBC removal; default: 0,0,0
+ * @return Center position
+ * @throws if the sum of weights is zero, thereby hampering normalization
+ */
+template <typename iterator, typename weightFunc>
+Point anyCenter(iterator begin, iterator end, BoundaryFunction apply_boundary, const weightFunc &weight_function,
                 const Point &shift = {0, 0, 0}) {
-    double sum = 0;
-    Point c(0, 0, 0), t;
-    for (auto &i = begin; i != end; ++i) {
-        t = i->pos + shift; // translate to origo
-        boundary(t);
-        double w = weight(*i);
-        c += w * t;
-        sum += w;
+    double weight_sum = 0.0;
+    Point center(0.0, 0.0, 0.0);
+    std::for_each(begin, end, [&](const auto &particle) {
+        const auto weight = weight_function(particle);
+        Point pos = particle.pos + shift; // translate
+        apply_boundary(pos);
+        center += weight * pos;
+        weight_sum += weight;
+    });
+    if (weight_sum > pc::epsilon_dbl) {
+        center = center / weight_sum - shift; // translate back
+        apply_boundary(center);
+        return center;
+    } else {
+        throw std::runtime_error("cannot calculate center with zero weights");
     }
-    if (sum <= pc::epsilon_dbl)
-        return {0, 0, 0};
-    else
-        c = c / sum - shift;
-    boundary(c);
-    return c;
 } //!< Mass, charge, or geometric center of a collection of particles
 
-template <typename Titer, typename Tparticle = typename Titer::value_type>
+/**
+ * @brief Calculates mass center of range of particles
+ * @param begin Begin particle iterator
+ * @param end End particle iterator
+ * @param apply_boundary Boundary function to apply PBC (default: no PBC)
+ * @param shift Shift by this vector before calculating center, then add again. For PBC removal; default: 0,0,0
+ * @return Mass center position
+ * @throws if the sum of masses is zero, thereby hampering normalization
+ */
+template <typename iterator>
 Point massCenter(
-    Titer begin, Titer end, BoundaryFunction boundary = [](Point &) {}, const Point &shift = {0, 0, 0}) {
-    return anyCenter(
-        begin, end, boundary, [](const Tparticle &p) { return atoms.at(p.id).mw; }, shift);
-} // Mass center
+    iterator begin, iterator end, BoundaryFunction apply_boundary = [](Point &) {},
+    const Point &shift = {0.0, 0.0, 0.0}) {
+    auto particle_mass = [](const auto &particle) { return particle.traits().mw; };
+    return anyCenter(begin, end, apply_boundary, particle_mass, shift);
+}
 
-template <class Titer = typename std::vector<T>::iterator>
+/**
+ * @param begin Begin iterator
+ * @param end End iterator
+ * @param displacement Displacement vector
+ * @param apply_boundary Boundary function to apply PBC (default: no PBC)
+ */
+template <typename iterator>
 void translate(
-    Titer begin, Titer end, const Point &d, BoundaryFunction boundary = [](Point &) {}) {
-    for (auto i = begin; i != end; ++i) {
-        i->pos += d;
-        boundary(i->pos);
-    }
-} //!< Vector displacement of a range of particles
+    iterator begin, iterator end, const Point &displacement, BoundaryFunction apply_boundary = [](Point &) {}) {
+    std::for_each(begin, end, [&](auto &particle) {
+        particle.pos += displacement;
+        apply_boundary(particle.pos);
+    });
+}
 
-template <typename Titer>
-void cm2origo(
-    Titer begin, Titer end, BoundaryFunction boundary = [](Point &) {}) {
-    Point cm = massCenter(begin, end, boundary);
-    translate(begin, end, -cm, boundary);
-} //!< Translate to that mass center is in (0,0,0)
+/**
+ * @brief Move the mass center of the particle range to origin (0,0,0) and wrap to PBC
+ * @param begin Begin iterator
+ * @param end End iterator
+ * @param apply_boundary Boundary function to apply PBC (default: none)
+ */
+template <typename iterator>
+void translateToOrigin(
+    iterator begin, iterator end, BoundaryFunction apply_boundary = [](Point &) {}) {
+    Point cm = massCenter(begin, end, apply_boundary);
+    translate(begin, end, -cm, apply_boundary);
+}
 
-template <typename Titer>
+/**
+ * @brief Rotate range of particles using a Quaternion
+ * @param begin Begin iterator
+ * @param end End iterator
+ * @param quaternion Quaternion used for rotation
+ * @param apply_boundary Boundary function to apply PBC (default: none)
+ * @param shift This value is added before rotation to aid PBC remove (default: 0,0,0)
+ * @todo Currently both quaternion and rotation matrix are passed, but one of them should be enough
+ *
+ * This will rotate both positions and internal coordinates in the particle (dipole moments, tensors etc.)
+ */
+template <typename iterator>
 void rotate(
-    Titer begin, Titer end, const Eigen::Quaterniond &q, BoundaryFunction boundary = [](Point &) {},
-    const Point &shift = Point(0, 0, 0)) {
-    auto m = q.toRotationMatrix(); // rotation matrix
-    for (auto i = begin; i != end; ++i) {
-        i->rotate(q, m); // rotate internal coordinates
-        i->pos += shift;
-        boundary(i->pos);
-        i->pos = q * i->pos;
-        boundary(i->pos);
-        i->pos -= shift;
-        boundary(i->pos);
-    }
+    iterator begin, iterator end, const Eigen::Quaterniond &quaternion,
+    BoundaryFunction apply_boundary = [](Point &) {}, const Point &shift = Point(0.0, 0.0, 0.0)) {
+    const auto rotation_matrix = quaternion.toRotationMatrix(); // rotation matrix
+    std::for_each(begin, end, [&](auto &particle) {
+        particle.rotate(quaternion, rotation_matrix); // rotate internal coordinates
+        particle.pos += shift;
+        apply_boundary(particle.pos);
+        particle.pos = (quaternion * particle.pos) - shift; // rotate positions
+        apply_boundary(particle.pos);
+    });
 } //!< Rotate particle pos and internal coordinates
 
 /*
@@ -499,35 +582,100 @@ Point trigoCom(const Tspace &spc, const GroupIndex &groups, const std::vector<in
 }
 
 /**
- * @brief Calculates a gyration tensor of a molecular group
+ * @brief Calculates a gyration tensor of a range of particles
  *
  * The gyration tensor is computed from the atomic position vectors with respect to the reference point
  * which is always a center of mass,
  * \f$ t_{i} = r_{i} - r_\mathrm{cm} \f$:
  * \f$ S = (1 / \sum_{i=1}^{N} m_{i}) \sum_{i=1}^{N} m_{i} t_{i} t_{i}^{T} \f$
  *
- * @param origin center of mass of the molecular group
- * @return gyration tensor (a zero tensor for an empty group)
+ * Before the calculation, the molecule is made whole to moving it to the center or the
+ * simulation box (0,0,0), then apply the given boundary function.
+ *
+ * @tparam iterator Iterator to `Particle` range
+ * @param begin Iterator to first particle
+ * @param end Iterator to end
+ * @param mass_center The mass center used as reference and to remove PBC
+ * @param boundary Function to apply periodic boundary functions (default: none)
+ * @return gyration tensor; or zero tensor if empty particle range
+ * @throws If total mass is non-positive
  */
-template <typename iter>
-Tensor gyration(iter begin, iter end, const Point origin = {0,0,0},
-        const BoundaryFunction boundary = [](const Point &) {}) {
+template <typename iterator>
+Tensor gyration(
+    iterator begin, iterator end, const Point &mass_center, const BoundaryFunction boundary = [](auto &) {}) {
     Tensor S = Tensor::Zero();
-    double mw_sum = 0;
-    for (auto it = begin; it != end; ++it) {
-        const auto mw = atoms.at(it->id).mw;
-        Point t = it->pos - origin;
-        boundary(t);
-        mw_sum += mw;
-        S += mw * t * t.transpose();
-    }
-    if (mw_sum != 0) {
-        S /= mw_sum;
+    double total_mass = 0.0;
+    std::for_each(begin, end, [&](const auto &particle) {
+        const auto mass = particle.traits().mw;
+        Point r = particle.pos - mass_center; // get rid...
+        boundary(r);                          // ...of PBC (if any)
+        S += mass * r * r.transpose();
+        total_mass += mass;
+    });
+    if (total_mass > 0.0) {
+        return S / total_mass;
     } else {
-        assert(S == Tensor::Zero()); // otherwise we have negative atom weights
+        throw std::runtime_error("gyration tensor: total mass must be positive");
     }
-    return S;
 }
+
+/**
+ * @brief Calculates a gyration tensor of a range of particles
+ *
+ * The gyration tensor is computed from the atomic position vectors with respect to the reference point
+ * which is always a center of mass,
+ * \f$ t_{i} = r_{i} - r_\mathrm{cm} \f$:
+ * \f$ S = (1 / \sum_{i=1}^{N} m_{i}) \sum_{i=1}^{N} m_{i} t_{i} t_{i}^{T} \f$
+ *
+ * Before the calculation, the molecule is made whole to moving it to the center or the
+ * simulation box (0,0,0), then apply the given boundary function.
+ *
+ * @param begin Iterator to first position
+ * @param end Iterator to past last position
+ * @param mass Iterator to first mass
+ * @param mass_center The mass center used as reference and to remove PBC
+ * @param boundary Function to apply periodic boundary functions (default: none)
+ * @return gyration tensor; or zero tensor if empty particle range
+ * @throws If total mass is non-positive
+ */
+template <typename position_iterator, typename mass_iterator>
+Tensor gyration(
+    position_iterator begin, position_iterator end, mass_iterator mass, const Point &mass_center,
+    const BoundaryFunction boundary = [](auto &) {}) {
+    Tensor S = Tensor::Zero();
+    double total_mass = 0.0;
+    std::for_each(begin, end, [&](const auto &position) {
+        Point r = position - mass_center; // get rid...
+        boundary(r);                      // ...of PBC (if any)
+        S += (*mass) * r * r.transpose();
+        total_mass += (*mass);
+        std::advance(mass, 1);
+    });
+    if (total_mass > 0.0) {
+        return S / total_mass;
+    } else {
+        throw std::runtime_error("gyration tensor: total mass must be positive");
+    }
+}
+
+/**
+ * @brief Shape descriptors derived from gyration tensor
+ *
+ * The class is prepared with operator overloads to work with `AverageObj`
+ * for averaging over multiple tensors
+ */
+struct ShapeDescriptors {
+    double gyration_radius_squared = 0.0;
+    double asphericity = 0.0;
+    double acylindricity = 0.0;
+    double relative_shape_anisotropy = 0.0; //!< relative shape anisotropy, kappa^2 (0=rod, 1=spherical)
+    ShapeDescriptors() = default;
+    ShapeDescriptors(const Tensor &gyration_tensor);             //!< Construct using an initial gyration tensor
+    ShapeDescriptors &operator+=(const ShapeDescriptors &other); //!< Add another gyration tensor; req. for averaging
+    ShapeDescriptors operator*(const double scale) const;        //!< Scale data; req. for averaging
+};
+
+void to_json(json &j, const ShapeDescriptors &shape); //!< Store Shape as json object
 
 /**
  * @brief Calculates an inertia tensor of a molecular group
@@ -540,8 +688,8 @@ Tensor gyration(iter begin, iter end, const Point origin = {0,0,0},
  * @return inertia tensor (a zero tensor for an empty group)
  */
 template <typename iter>
-Tensor inertia(iter begin, iter end, const Point origin = {0,0,0},
-        const BoundaryFunction boundary = [](const Point &) {}) {
+Tensor inertia(
+    iter begin, iter end, const Point origin = {0, 0, 0}, const BoundaryFunction boundary = [](const Point &) {}) {
     Tensor I = Tensor::Zero();
     for (auto it = begin; it != end; ++it) {
         Point t = it->pos - origin;
@@ -549,6 +697,65 @@ Tensor inertia(iter begin, iter end, const Point origin = {0,0,0},
         I += atoms.at(it->id).mw * (t.squaredNorm() * Tensor::Identity() - t * t.transpose());
     }
     return I;
+}
+
+/**
+ * @brief Root-mean-square deviation of two data sets represented by iterators
+ *
+ * A binary function must be given that returns the difference between data points
+ * in the two sets, for example `[](int a, int b){return a-b;}`.
+ */
+template <typename InputIt1, typename InputIt2, typename BinaryOperation>
+double rootMeanSquareDeviation(InputIt1 begin, InputIt1 end, InputIt2 d_begin, BinaryOperation diff_squared_func) {
+    assert(std::distance(begin, end) > 0);
+    double sq_sum = 0;
+    for (InputIt1 i = begin; i != end; ++i) {
+        sq_sum += diff_squared_func(*i, *d_begin);
+        ++d_begin;
+    }
+    return std::sqrt(sq_sum / std::distance(begin, end));
+}
+
+/**
+ * @brief Scale particles to the surface of a sphere
+ * @param particles Vector of particles
+ *
+ * The sphere radius is taken as the average radial distance
+ * of all particles with respect to the mass center.
+ * The _first_ particle of the given particles is excluded
+ * from the COM calculation and re-positioned at the center
+ * of the sphere. Therefore, make sure to add a dummy particle
+ * to the beginning of the particle vector; its initial positions
+ * are ignored and will be overwritten.
+ * Similar to routine described in doi:10.1021/jp010360o
+ */
+ParticleVector mapParticlesOnSphere(const ParticleVector &);
+
+/**
+ * @brief Convert particles in hexagonal prism to space-filled cuboid
+ * @param hexagon Input hexagonal prism
+ * @param particles Particles in hexagonal prism
+ * @return Cuboid and particle vector w. positions in cuboidal space
+ *
+ * The generated Cuboid has twice the volume of the hexagonal prism with
+ * side-lengths [2 * inner_radius, 3 * outer_radius, height] and also twice
+ * the number of particles
+ */
+template <typename Particles>
+std::pair<Cuboid, ParticleVector> HexagonalPrismToCuboid(const HexagonalPrism &hexagon, const Particles &particles) {
+    Cuboid cuboid({2.0 * hexagon.innerRadius(), 3.0 * hexagon.outerRadius(), hexagon.height()});
+    ParticleVector cuboid_particles;
+    cuboid_particles.reserve(2 * std::distance(particles.begin(), particles.end()));
+    std::copy(particles.begin(), particles.end(), std::back_inserter(cuboid_particles)); // add central hexagon
+
+    std::transform(particles.begin(), particles.end(), std::back_inserter(cuboid_particles), [&](auto particle) {
+        particle.pos.x() += hexagon.innerRadius() * (particle.pos.x() > 0.0 ? -1.0 : 1.0);
+        particle.pos.y() += hexagon.outerRadius() * (particle.pos.y() > 0.0 ? -1.5 : 1.5);
+        assert(cuboid.collision(particle.pos) == false);
+        return particle;
+    }); // add the four corners; i.e. one extra, split hexagon
+    assert(std::fabs(cuboid.getVolume() - 2.0 * hexagon.getVolume()) <= pc::epsilon_dbl);
+    return {cuboid, cuboid_particles};
 }
 
 } // namespace Geometry

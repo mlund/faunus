@@ -1,6 +1,6 @@
 #!/usr/bin/env yason.py
 temperature: 300
-random: {seed: fixed}
+random: {seed: hardware}
 geometry: {type: cuboid, length: 40}
 mcloop: {macro: 10, micro: 15000}
 
@@ -15,14 +15,22 @@ insertmolecules:
     - water: {N: 10}
 
 energy:
-    - nonbonded_coulomblj:
-        lennardjones: {mixing: LB}
-        coulomb: {type: fanourgakis, epsr: 1.2, cutoff: 9}
+    - nonbonded_splined:
+        to_disk: true
+        default:
+            - lennardjones: {mixing: LB}
+            - coulomb: {type: fanourgakis, epsr: 1.2, cutoff: 9}
         cutoff_g2g: 10
 
 moves:
     - moltransrot: {molecule: water, dp: 20, dprot: 1, repeat: N}
-    - cluster: {molecules: [water], dp: 20, dprot: 3, threshold: 3.166}
+    - cluster:
+        molecules: [water]
+        analysis: {com: true, file: cluster.dat.gz, interval: 10}
+        dp: 20
+        dprot: 3
+        threshold:
+            water water: 3.166
 
 analysis:
     - atomrdf: {file: rdf.dat, nstep: 10, dr: 0.2, name1: OW, name2: OW}

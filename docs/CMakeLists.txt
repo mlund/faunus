@@ -24,11 +24,12 @@ if (PANDOC)
         topology.md
         energy.md
         moves.md
+        langevin.md
         analysis.md |
         grep -v ".notice--" |
         grep -v "Github-Improve_this_page" |
         sed 's.\\\\_._.g' | # this allows us to use \_ in markdown math
-        ${PANDOC} --self-contained --highlight-style=tango --template ../pandoc.tex
+        ${PANDOC} --self-contained --highlight-style=pygments --template ../pandoc.tex
         -V date:${GIT_LATEST_TAG}""
         -N --toc ${TEX_ENGINE_OPTION}=${TEX_ENGINE} -o ${CMAKE_BINARY_DIR}/manual.pdf
         )
@@ -46,9 +47,11 @@ if (PANDOC)
         topology.md
         energy.md
         moves.md
+        langevin.md
         analysis.md |
         grep -v ".notice--" |
         grep -v "Github-Improve_this_page" |
+        sed 's.\\\\_._.g' | # this allows us to use \_ in markdown math
         ${PANDOC} --template ../GitHub.html5 -s --mathjax
         -M title:The\ Faunus\ User\ Guide
         -V date:${GIT_LATEST_TAG}""
@@ -66,4 +69,8 @@ if (PANDOC)
     endif()
 endif()
 
-
+install(FILES
+        ${CMAKE_BINARY_DIR}/manual.pdf
+        ${CMAKE_BINARY_DIR}/manual.html
+        ${CMAKE_SOURCE_DIR}/docs/schema.yml
+        DESTINATION share/faunus OPTIONAL)

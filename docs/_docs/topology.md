@@ -31,6 +31,8 @@ random:              # seed for pseudo random number generator
 Below is a list of possible geometries, specified by `type`, for the simulation container,
 indicating if and in which directions periodic boundary conditions (PBC) are applied.
 Origin ($0,0,0$) is always placed in the geometric _center_ of the simulation container.
+Particles are always kept inside the simulation container with an external
+potential that is zero if inside; infinity if outside.
 
 `geometry` | PBC      | Required keywords
 ---------- | -------- | --------------------------------------
@@ -40,6 +42,15 @@ Origin ($0,0,0$) is always placed in the geometric _center_ of the simulation co
 `hexagonal`| $x,y$    | `radius` (inscribed/inner), `length` (along _z_)
 `cylinder` | $z$      | `radius`, `length` (along _z_)
 `sphere`   | none     | `radius`
+
+### Simulation Steps
+
+The variables `macro` and `micro` are positive integers and their product
+defines the total number simulations steps.
+In each step a random Monte Carlo move is drawn from a weighted distribution.
+For each `macro` step, all analysis methods are, if befitting, instructed to
+flush buffered data to disk and may also trigger terminal output.
+For this reason `macro` is typically set lower than `micro`.
 
 ## Atom Properties
 
@@ -99,9 +110,10 @@ Properties of molecules and their default values:
 `atoms=[]`              | Array of atom names; required if `atomic=true`
 `bondlist`              | List of _internal_ bonds (harmonic, dihedrals etc.)
 `compressible=false`    | If true, molecular internal coordinates are scaled upon volume moves
+`ensphere=false`        | Radial rescale of positions to sphere w. radius of average radial distance from COM (stored in 1st atom which is a dummy)
 `excluded_neighbours=0` | Generate an `exclusionlist` from the bonded interaction: Add all atom pairs which are `excluded_neighbours` or less bonds apart
 `exclusionlist`         | List of _internal_ atom pairs which nonbonded interactions are excluded
-`implicit=false`        | If this species is implicit in GCMC schemes
+`implicit=false`        | Mark as implicit for reactive Monte Carlo schemes
 `insdir=[1,1,1]`        | Insert directions are scaled by this
 `insoffset=[0,0,0]`     | Shifts mass center after insertion
 `keeppos=false`         | Keep original positions of `structure`
@@ -109,6 +121,7 @@ Properties of molecules and their default values:
 `rigid=false`           | Set to true for rigid molecules. Affects energy evaluation.
 `rotate=true`           | If false, the original structure will not be rotated upon insertion
 `structure`             | Structure file or direct information; required if `atomic=false`
+`to_disk=false`         | Save initial structure to `{name}-initial.pqr`; for molecular groups only
 `traj`                  | Read conformations from PQR trajectory (`structure` will be ignored)
 `trajweight`            | One-column file with relative weights for each conformation. Must match frames in `traj` file.
 `trajcenter=false`      | Move CM of conformations to the origin assuming whole molecules
@@ -175,16 +188,17 @@ making a union.
 
 Upon starting a simulation, an initial configuration is required and must be
 specified in the section `insertmolecules` as a list of valid molecule names.
-Molecules are inserted in the given order and may be `inactive`.
-If a group is marked `atomic`, its `atoms` is inserted `N` times.
+Molecules are inserted in the given order and may be `inactive`, meaning that
+they are not present in the simulation cell, but available as a reservoir for
+e.g. grand canonical moves.
+If a group is marked `atomic`, its `atoms` are inserted `N` times.
 
 Example:
 
 ~~~ yaml
 insertmolecules:
-  - salt:  { N: 10 }
-  - water: { N: 256 }
-  - water: { N: 1, inactive: true }
+  - salt:  { molarity: 0.1 }
+  - water: { N: 256, inactive: 2 }
 ~~~
 
 The following keywords for each molecule type are available:
@@ -192,7 +206,8 @@ The following keywords for each molecule type are available:
 `insertmolecules`    | Description
 -------------------- | ---------------------------------------
 `N`                  | Number of molecules to insert
-`inactive=false`     | Deactivates inserted molecules
+`molarity`           | Insert molecules to reach molarity
+`inactive`           | Number of inserted molecules to deactivate; set to `true` for all
 `positions`          | Load positions from file (`aam`, `pqr`, `xyz`)
 `translate=[0,0,0]`  | Displace loaded `positions` with vector
 
@@ -200,6 +215,14 @@ A filename with positions for the `N` molecules can be given with `positions`.
 The file must contain exactly `N`-times molecular
 positions that must all fit within the simulation box. Only _positions_ from
 the file are copied; all other information is ignored.
+
+For `implicit` molecules, only `N` should be given and the molecules are never
+inserted into the simulation box.
+
+The `molarity` keyword is an alternative to `N` and uses the initial
+volume to calculate the number of molecules to insert. `N` and
+`molarity` are mutually exclusive.
+
 
 ### Overlap Check
 
@@ -213,67 +236,142 @@ i.e. hard-sphere potentials the initial energy may be infinite.
 Faunus supports density fluctuations, coupled to chemical equilibria with
 explicit and/or implicit particles via their chemical potentials as
 defined in the `reactionlist` detailed below, as well as in `atomlist` and
-`moleculelist`.
+`moleculelist`. The level of flexibility is very high and reactions can be
+freely composed.
+
+The move involves deletion and insertion of reactants and products and it is
+therefore important that simulations are started with a sufficiently high number of
+initial molecules in `insertmolecules`.
+If not, the `rcmc` move will attempt to issue warnings with suggestions how to fix it.
+
+### Reaction format
+
 The initial key describes a transformation of reactants (left of `=`)
 into products (right of `=`) that may be a mix of atomic and molecular species.
 
-An implicit reactant or product is an atom which is included in the equilibrium constant but it is not represented
-explicitly in the simulation cell.
-A common example is the acid-base equilibrium of the aspartic acid (treated here as atomic particle):
-
-~~~ yaml
-reactionlist:
-  - "HASP = ASP + H": { pK: 4.0 }
-~~~
-
-where H is defined as _implicit_ in the `atomlist`:
-
-~~~ yaml
-  - H: { implicit: true, activity: 1e-7 }
-~~~
-
-and we set `pK` equal to the `pKa`, i.e.,
-$$
-K_a = \frac{ a_{\mathrm{ASP}} a_{\mathrm{H}} }{ a_{\mathrm{HASP}} }.
-$$
-To simulate at a given constant pH, H is specified as an implicit atom of activity $10^{-\mathrm{pH}}$ and the equilibrium 
-is modified accordingly (in this case K is divided by $a_{\mathrm{H}}$). 
-An acid-base equilibrium, or any other single-atom ID transformation (see the Move section), can also be coupled with the insertion/deletion
-of a molecule. For example, 
-
-~~~ yaml
-reactionlist:
-  - "HASP + Cl = ASP + H": { pK: 4.0 }
-  - "= Na + Cl": { }
-~~~
-
-where Na and Cl are included in the `moleculelist` as
-
-~~~ yaml
-  - Cl: {atoms: [cl], atomic: true, activity: 0.1 } 
-  - Na: {atoms: [na], atomic: true, activity: 0.1 } 
-~~~
-
-In this case K is both divided by $a_{\mathrm{H}}$ and $a_{\mathrm{Cl}}$, so that the actual equilibrium constant used by the speciation move is
-
-$$
-K' = \frac{K_a}{a_{ \mathrm{H} } a_{ \mathrm{Cl} } } = \frac{ a_{\mathrm{ASP}} }{ a_{\mathrm{HASP}} a_{\mathrm{Cl}} }.
-$$
-
-In an ideal system, the involvement of Cl in the acid-base reaction does not affect the equilibrium since the grand canonical ensemble
-ensures that the activity of Cl matches its concentration in the simulation cell.
-
-Reaction format:
-
 - all species, `+`, and `=` must be surrounded by white-space
 - atom and molecule names cannot overlap
-- you may repeat species to match the desired stoichiometry
+- species can be repeated to match the desired stoichiometry, e.g. `A + A = C`
 
 Available keywords:
 
 `reactionlist`  | Description
 --------------- | ---------------------------------------------------------------
-`lnK`/`pK`      | Molar equilibrium constant either as $\ln K$ or $-\log_{10}(K)$
+`lnK`/`pK`      | Molar equilibrium constant either as $\ln K$ or $-\log\_{10}(K)$
 `neutral=false` | If true, only neutral molecules participate in the reaction
 
-The `neutral` keyword is needed for molecular groups containing titratable atoms. If `neutral` is set to true, the activity of the neutral molecule should be specified in `moleculelist`.
+The `neutral` keyword is needed for molecular groups containing titratable atoms. If `neutral` is set to true,
+the activity of the neutral molecule should be specified in `moleculelist`.
+
+
+### Example: Grand Canonical Salt Particles
+
+This illustrates how to maintain constant chemical potential of salt ions:
+
+~~~ yaml
+atomlist:
+  - na: {q: 1.0, ...}  # note that atom names must differ
+  - cl: {q: -1.0, ...} # from molecule names
+moleculelist:
+  - Na+: {atoms: [na], atomic: true, activity: 0.1}
+  - Cl-: {atoms: [cl], atomic: true, activity: 0.1}
+reactionlist:
+  - = Na+ + Cl+: {} # note: molecules, not atoms
+moves:
+  - rcmc: {} # activate speciation move
+~~~
+
+The same setup can be used also for molecular molecules, _i.e._ molecules with `atomic: false`.
+
+
+### Example: Acid/base titration with _implicit_ protons
+
+An _implicit_ atomic reactant or product is included in the reaction but not 
+explicitly in the simulation cell.
+Common use-cases are acid-base equilibria where the proton concentration is often very low:
+
+~~~ yaml
+atomlist:
+  - H+: {implicit: true, activity: 0.00001} # pH 5
+  - COO-: {q: -1.0, ...}
+  - COOH: {q: 0.0, ...}
+reactionlist:
+  - "COOH = COO- + H+": {pK: 4.8} # not electroneutral!
+~~~
+
+where we set `pK` equal to the `pKa`:
+$$
+K\_a = \frac{ a_{\mathrm{COO^-}} a_{\mathrm{H^+}} }{ a_{\mathrm{COOH}} }.
+$$
+To simulate at a given constant pH, H+ is specified as an implicit atom of activity $10^{-\mathrm{pH}}$ and the equilibrium 
+is modified accordingly (in this case $K$ is divided by $a_{\mathrm{H^+}}$). 
+It is important to note that this reaction violates _electroneutrality_ and should be used
+only with Hamiltonians where this is allowed. This could for example be in systems with salt screened
+Yukawa interactions. 
+
+
+### Example: Acid/base titration coupled with Grand Canonical Salt
+
+To respect electroneutrality when swapping species, we can associate the titration move with
+an artificial insertion or deletion of salt ions. These ions should be present under constant
+chemical potential and we therefore couple to a grand canonical salt bath:
+
+~~~ yaml
+atomlist:
+  - H+: {implicit: true, activity: 0.00001} # pH 5
+  - COO-: {q: -1.0, ...}
+  - COOH: {q: 0.0, ...}
+  - na: {q: 1.0, ...}
+  - cl: {q: -1.0, ...}
+moleculelist:
+  - Na+: {atoms: [na], atomic: true, activity: 0.1}
+  - Cl-: {atoms: [cl], atomic: true, activity: 0.1}
+reactionlist:
+  - COOH + Cl- = COO- + H+: {pK: 4.8} # electroneutral!
+  - COOH = Na+ + COO- + H+: {pK: 4.8} # electroneutral!
+  - = Na+ + Cl-: {} # grand canonical salt
+~~~
+
+For the first reaction, $K$ is divided by both $a_{\mathrm{H^+}}$ and $a_{\mathrm{Cl^-}}$, so that the final equilibrium constant
+used by the speciation move is
+$$
+K' = \frac{K\_a}{a_{ \mathrm{H^+} } a_{ \mathrm{Cl^-} } } = \frac{ a_{\mathrm{COO^-}} }{ a_{\mathrm{COOH}} a_{\mathrm{Cl^-}} }.
+$$
+In an ideal system, the involvement of Na or Cl in the acid-base reaction is inconsequential for the equilibrium,
+since the Grand Canonical ensemble ensures constant salt activity.
+
+
+### Example: Precipitation of Calcium Hydroxide using _implicit_ molecules
+
+Here we introduce a solid phase of Ca(OH)2 and its solubility product
+to predict the amount of dissolved calcium and hydroxide ions. Note that
+we start from an empty simulation box (both ions are inactive) and the solid
+phase is treated _implicitly_, i.e. it never inters the simulation box.
+Additional coupled reactions can naturally be introduced in order to study complex
+equilibrium systems under influence of intermolecular interactions.
+
+~~~ yaml
+moleculelist:
+    - Ca(OH)2: {implicit: true} # this molecule is implicit
+    - Ca++: {atoms: [ca++], atomic: true}
+    - OH-: {atoms: [oh-], atomic: true}
+insertmolecules:
+    - Ca++: {N: 200, inactive: true}
+    - OH-: {N: 400, inactive: true}
+    - Ca(OH)2: {N: 200} # not actually inserted!
+reactionlist:
+    - "Ca(OH)2 = Ca++ + OH- + OH-": {pK: 5.19}
+~~~
+
+
+### Example: Swapping between molecular conformations
+
+The following can be used to alternate between different molecular conformations
+
+~~~ yaml
+moleculelist:
+  - A: {atomic: false, structure: ...}
+  - B: {atomic: false, structure: ...}
+reactionlist:
+  - A = B: {lnK: 0.69} # K=2, "B" twice as likely as "A"
+~~~

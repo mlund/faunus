@@ -15,4 +15,5 @@ Welcome to Faunus!
    _docs/topology
    _docs/energy
    _docs/moves
+   _docs/langevin
    _docs/analysis

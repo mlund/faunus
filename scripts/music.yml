@@ -1,5 +1,5 @@
 # C64 SID playlist for the High Voltage SID Collection (HVSC)
-server: "https://www.prg.dtu.dk/HVSC/C64Music.old/"
+server: "https://www.prg.dtu.dk/HVSC/C64Music/"
 songs:
     - {subsongs: [1], file: DEMOS/UNKNOWN/Dexion.sid}
     - {subsongs: [1], file: MUSICIANS/J/JO/Better_Weird.sid}

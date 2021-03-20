@@ -8,8 +8,9 @@ namespace Move {
 /**
  * @brief An abstract base class for rotational movements of a polymer chain
  */
-class ChainRotationMovebase : public Movebase {
+class ChainRotationMoveBase : public MoveBase {
   protected:
+    using MoveBase::spc;
     std::string molname;
     size_t molid;
     double dprot;             //!< maximal angle of rotation, ±0.5*dprot
@@ -27,6 +28,7 @@ class ChainRotationMovebase : public Movebase {
     void _reject(Change &change) override;
 
   protected:
+    ChainRotationMoveBase(Space &spc, std::string name, std::string cite);
     void _from_json(const json &j) override;
     void _to_json(json &j) const override;
 
@@ -37,21 +39,19 @@ class ChainRotationMovebase : public Movebase {
 /**
  * @brief An abstract class that rotates a selected segment of a polymer chain in the given simulation box.
  */
-class ChainRotationMove : public ChainRotationMovebase {
-    using Tbase = ChainRotationMovebase;
+class ChainRotationMove : public ChainRotationMoveBase {
+    using TBase = ChainRotationMoveBase;
 
   protected:
-    Space &spc;
+    using TBase::spc;
     typename Space::Tgvec::iterator molecule_iter;
     //! Indices of atoms in the spc.p vector that mark the origin and the direction of the axis of rotation.
     std::array<size_t, 2> axis_ndx;
     //! Indices of atoms in the spc.p vector that shall be rotated.
     std::vector<size_t> segment_ndx;
 
-  public:
-    explicit ChainRotationMove(Space &spc);
+    ChainRotationMove(Space &spc, std::string name, std::string cite);
 
-  protected:
     void _from_json(const json &j) override;
 
   private:
@@ -82,12 +82,13 @@ class ChainRotationMove : public ChainRotationMovebase {
  * determined by the joints. The extend of the angle is limited by dprot.
  */
 class CrankshaftMove : public ChainRotationMove {
-    using Tbase = ChainRotationMove;
+    using TBase = ChainRotationMove;
 
   public:
-    explicit CrankshaftMove(Space &spc) : ChainRotationMove(spc) { this->name = "crankshaft"; }
+    explicit CrankshaftMove(Space &spc);
 
   protected:
+    CrankshaftMove(Space &spc, std::string name, std::string cite);
     void _from_json(const json &j) override;
 
   private:
@@ -109,7 +110,7 @@ class CrankshaftMove : public ChainRotationMove {
  * then constitutes a segment which is rotated by a random angle. The extend of the angle is limited by dprot.
  */
 class PivotMove : public ChainRotationMove {
-    using Tbase = ChainRotationMove;
+    using TBase = ChainRotationMove;
 
   private:
     BasePointerVector<Potential::HarmonicBond> bonds;
@@ -118,6 +119,8 @@ class PivotMove : public ChainRotationMove {
     explicit PivotMove(Space &spc);
 
   protected:
+    PivotMove(Space &spc, std::string name, std::string cite);
+
     void _from_json(const json &j) override;
 
     /** Selects a random harmonic bond of a random polymer chain which atoms then create an axis of rotation.

@@ -1,0 +1,33 @@
+diff -ur a/CMakeLists.txt b/CMakeLists.txt
+--- a/CMakeLists.txt	2019-10-08 15:25:04.000000000 +0200
++++ b/CMakeLists.txt	2020-10-02 11:40:54.497805838 +0200
+@@ -27,6 +27,9 @@
+ add_library(xdrfile OBJECT ${SOURCES})
+ target_include_directories(xdrfile PUBLIC include)
+ 
++add_library(xdrfile-static STATIC ${SOURCES})
++target_include_directories(xdrfile-static PUBLIC include)
++
+ if (${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
+     enable_testing()
+ 
+diff -ur a/src/xdrfile.c b/src/xdrfile.c
+--- a/src/xdrfile.c	2019-10-08 15:25:04.000000000 +0200
++++ b/src/xdrfile.c	2020-10-02 12:15:30.569318639 +0200
+@@ -2012,6 +2012,8 @@
+ /*
+  * Ops vector for stdio type XDR
+  */
++#pragma GCC diagnostic push
++#pragma GCC diagnostic ignored "-Wincompatible-pointer-types"
+ static const struct xdr_ops xdrstdio_ops = {
+     xdrstdio_getlong,  /* deserialize a long int */
+     xdrstdio_putlong,  /* serialize a long int */
+@@ -2021,6 +2023,7 @@
+     xdrstdio_setpos,   /* set offset in the stream */
+     xdrstdio_destroy,  /* destroy stream */
+ };
++#pragma GCC diagnostic pop
+ 
+ /*
+  * Initialize a stdio xdr stream.

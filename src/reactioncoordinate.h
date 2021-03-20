@@ -5,7 +5,7 @@
 
 namespace Faunus {
 
-struct Space;
+class Space;
 
 namespace ReactionCoordinate {
 
@@ -18,16 +18,19 @@ namespace ReactionCoordinate {
  * the penalty's energy function and can also be used to probe the system
  * during analysis.
  */
-struct ReactionCoordinateBase {
-    ReactionCoordinateBase(const json &);   //!< constructor reads binwidth, min, max
-    std::function<double()> f = nullptr;    //!< returns reaction coordinate
-    virtual void _to_json(json &j) const;   //!< json serialization
+class ReactionCoordinateBase {
+  protected:
+    std::function<double()> function = nullptr;    //!< returns reaction coordinate
     virtual double normalize(double) const; //!< Default 1.0; currently unused
-    double binwidth = 0, min = 0, max = 0;
-    std::string name; //!< Meaningful, short name. Don't use spaces or weird characters
+  public:
+    ReactionCoordinateBase(const json &);   //!< constructor reads resolution, min, max
+    double resolution = 0.0;                //!< Resolution used when binning (histograms etc.)
+    double minimum_value = 0.0;             //!< Minimum allowed value
+    double maximum_value = 0.0;             //!< Maximum allowed value
+    std::string name;                       //!< Meaningful, short name. Don't use spaces or weird characters
 
     double operator()(); //!< Calculates reaction coordinate
-
+    virtual void _to_json(json &j) const;   //!< json serialization
     bool inRange(double coord) const; //!< Determines if coordinate is within [min,max]
     virtual ~ReactionCoordinateBase() = default;
 };
@@ -36,20 +39,6 @@ void to_json(json &j, const ReactionCoordinateBase &r); //!< Serialize any react
 
 std::shared_ptr<ReactionCoordinateBase>
 createReactionCoordinate(const json &, Space &); //!< Factory function to create all known penalty functions
-
-#ifdef DOCTEST_LIBRARY_INCLUDED
-TEST_CASE("[Faunus] ReactionCoordinateBase") {
-    using doctest::Approx;
-    ReactionCoordinateBase c(R"({"range":[-1.5, 2.1], "resolution":0.2})"_json);
-    CHECK(c.min == Approx(-1.5));
-    CHECK(c.max == Approx(2.1));
-    CHECK(c.binwidth == Approx(0.2));
-    CHECK(c.inRange(-1.5) == true);
-    CHECK(c.inRange(-1.51) == false);
-    CHECK(c.inRange(2.11) == false);
-    CHECK(c.inRange(2.1) == true);
-}
-#endif
 
 class SystemProperty : public ReactionCoordinateBase {
   protected:

@@ -31,25 +31,30 @@ class MoleculeData;
  * and molecule data.
  */
 struct MoleculeInserter {
-    virtual ParticleVector operator()(Geometry::GeometryBase &geo, const ParticleVector &, MoleculeData &mol) = 0;
-    virtual void from_json(const json&) {};
-    virtual void to_json(json&) const {};
+    virtual ParticleVector operator()(Geometry::GeometryBase &geo, MoleculeData &mol,
+                                      const ParticleVector &other_particles) = 0;
+    virtual void from_json(const json &);
+    virtual void to_json(json &) const;
     virtual ~MoleculeInserter() = default;
 };
 
 void from_json(const json &j, MoleculeInserter &inserter);
 void to_json(json &j, const MoleculeInserter &inserter);
 
+/**
+ * @brief Inserts molecules into random positions in the container
+ */
 struct RandomInserter : public MoleculeInserter {
-    Point dir = {1, 1, 1};     //!< Scalars for random mass center position. Default (1,1,1)
-    Point offset = {0, 0, 0};  //!< Added to random position. Default (0,0,0)
-    bool rotate = true;           //!< Set to true to randomly rotate molecule when inserted. Default: true
-    bool keep_positions = false;  //!< Set to true to keep original positions (default: false)
-    bool allow_overlap = false;   //!< Set to true to skip container overlap check
-    int max_trials = 20'000;      //!< Maximum number of container overlap checks
-    int conformation_ndx = -1;    //!< Index of last used conformation
+    Point dir = {1, 1, 1};       //!< Scalars for random mass center position. Default (1,1,1)
+    Point offset = {0, 0, 0};    //!< Added to random position. Default (0,0,0)
+    bool rotate = true;          //!< Set to true to randomly rotate molecule when inserted. Default: true
+    bool keep_positions = false; //!< Set to true to keep original positions (default: false)
+    bool allow_overlap = false;  //!< Set to true to skip container overlap check
+    int max_trials = 20'000;     //!< Maximum number of container overlap checks
+    int conformation_ndx = -1;   //!< Index of last used conformation
 
-    ParticleVector operator()(Geometry::GeometryBase &geo, const ParticleVector &, MoleculeData &mol) override;
+    ParticleVector operator()(Geometry::GeometryBase &geo, MoleculeData &molecule,
+                              const ParticleVector &ignored_other_particles = ParticleVector()) override;
     void from_json(const json &j) override;
     void to_json(json &j) const override;
 };
@@ -60,10 +65,8 @@ struct RandomInserter : public MoleculeInserter {
 struct Conformation {
     std::vector<Point> positions;
     std::vector<double> charges;
-
     bool empty() const;
-
-    ParticleVector &toParticleVector(ParticleVector &p) const; // copy conformation into particle vector
+    void copyTo(ParticleVector &particles) const; //!< Copy conformation into particle vector
 };
 
 /**
@@ -175,6 +178,7 @@ void to_json(json &j, const ExclusionsVicinity &exclusions);
 class MoleculeData {
     json json_cfg; //!< data useful only for to_json
     int _id = -1;
+    bool implicit = false; //!< Is molecule implicit and explicitly absent from simulation cell?
 
   protected:
     ExclusionsVicinity exclusions; //!< Implementation of isPairExcluded;
@@ -192,15 +196,16 @@ class MoleculeData {
     bool rigid = false;          //!< True if particle should be considered as rigid
     double activity = 0.0;       //!< Chemical activity (mol/l)
 
-    std::vector<int> atoms;                    //!< Sequence of atoms in molecule (atom id's)
+    std::vector<int> atoms; //!< Sequence of atoms in molecule (atom id's)
     BasePointerVector<Potential::BondData> bonds;
     WeightedDistribution<ParticleVector> conformations; //!< Conformations of molecule
 
     MoleculeData();
-    MoleculeData(const std::string &name, ParticleVector particles,
+    MoleculeData(const std::string &name, const ParticleVector &particles,
                  const BasePointerVector<Potential::BondData> &bonds);
 
-    bool isPairExcluded(int i, int j);
+    bool isImplicit() const; //!< Is molecule implicit and explicitly absent from simulation cell?
+    bool isPairExcluded(int i, int j) const;
 
     /** @brief Specify function to be used when inserting into space.
      *
@@ -217,9 +222,7 @@ class MoleculeData {
      * no container overlap using the `RandomInserter` class. This behavior can
      * be changed by specifying another inserter using `setInserter()`.
      */
-    ParticleVector getRandomConformation(Geometry::GeometryBase &geo,
-                                         ParticleVector otherparticles = ParticleVector());
-
+    ParticleVector getRandomConformation(Geometry::GeometryBase &, const ParticleVector & = ParticleVector());
     void loadConformation(const std::string &file, bool keep_positions, bool keep_charges);
 
     friend class MoleculeBuilder;
@@ -227,7 +230,7 @@ class MoleculeData {
     friend void from_json(const json &j, MoleculeData &a);
 }; // end of class
 
-inline bool MoleculeData::isPairExcluded(int i, int j) { return exclusions.isExcluded(i, j); }
+inline bool MoleculeData::isPairExcluded(int i, int j) const { return exclusions.isExcluded(i, j); }
 
 void to_json(json &j, const MoleculeData &a);
 
@@ -237,6 +240,25 @@ void from_json(const json &j, std::vector<MoleculeData> &v);
 
 // global instance of molecule vector
 extern std::vector<MoleculeData> molecules;
+
+
+/**
+ * @brief An exception to indicate an unknown molecule name in the input.
+ */
+struct UnknownMoleculeError: public std::runtime_error {
+    explicit UnknownMoleculeError(const std::string &molecule_name);
+};
+
+/**
+ * @brief Finds a molecule by its name in the global Faunus molecules lexicon.
+ *
+ * The first matching molecule is returned, or an UnknownMoleculeError is thrown when not found.
+ *
+ * @param name  a molecule name to look for
+ * @return a molecule found
+ * @throw UnknownMoleculeError  when no molecule found
+ */
+MoleculeData& findMoleculeByName(const std::string& name);
 
 /**
  * @brief Constructs MoleculeData from JSON.
@@ -274,7 +296,7 @@ class MoleculeStructureReader {
     //! reads a FASTA sequence with harmonic bond parameters
     void readFasta(ParticleVector &particles, const json &j_fasta);
   public:
-    MoleculeStructureReader(bool read_charges = true) : read_charges(read_charges) {};
+    MoleculeStructureReader(bool read_charges = true);
     //! reads atom types, positions and optionally charges from a file
     void readFile(ParticleVector &particles, const std::string &filename);
     //! a director determining the executive method based on JSON content
@@ -314,69 +336,106 @@ class NeighboursGenerator {
     void generatePairs(AtomPairList &pairs, int bond_distance);
 };
 
-/*
+/**
  * @brief General properties of reactions
+ *
+ * Placeholder for chemical reactions used in the RCMC move.
+ * A reaction has two sides, left and right, each contained one or more
+ * atomic / molecular reactants and products. The reaction is associated with
+ * an equilibrium constant, `lnK` or `pK`.
+ * If the direction is `RIGHT`, the right-hand side species are products and
+ * the left-hand side are reactants. Vice versa if the direction is `LEFT`.
+ * The direction can be changed with `setDirection()` which also handles
+ * sign changes of `lnK` and `pK`.
+ * The functions `getProducts()` and `getReactants()` returns a pair with
+ * atomic and molecular reactants/products, always reflecting the current
+ * direction.
+ *
+ * @todo
+ * - [x] Enable `canonic` and `reservoir_size`
+ * - [ ] Enable reservoir size to be given as _molarity_ and _number_
+ * - [ ] Merge products and reactant structures using signed stoichiometric numbers
+ * - [x] `reservoir_size` should ideally be associated with an implicit molecule
+ * - [ ] `direction` should be a member of ReactionData due to possible data races
  */
 class ReactionData {
   public:
-    typedef std::map<int, int> Tmap;
+    typedef std::map<int, int> StoichiometryMap; // key = molid; value = stoichiometic coefficient
+    enum class Direction : char { LEFT = 0, RIGHT = 1 };
 
-    std::vector<std::string> _reag, _prod;
+  private:
+    friend void from_json(const json &, ReactionData &);
+    friend void to_json(json &, const ReactionData &);
 
-    Tmap _reagid_m; // Molecular change, groups. Atomic as Groupwise
-    Tmap _reagid_a; // Atomic change, equivalent of swap/titration
-    Tmap _prodid_m;
-    Tmap _prodid_a;
-    // Tmap _Reac, _Prod;
+    Direction direction = Direction::RIGHT;           //!< Direction of reaction
+    std::vector<std::string> left_names, right_names; //!< Names of reactants and products
 
-    bool canonic = false; //!< Finite reservoir
-    bool swap = false;    //!< True if swap move
-    int N_reservoir;      //!< Number of molecules in finite reservoir
-    double lnK = 0;       //!< Natural logarithm of molar eq. const.
-    double pK = 0;        //!< -log10 of molar eq. const.
-    bool neutral = false; //!< True if only neutral molecules are involved in the reaction
-    std::string name;     //!< Name of reaction
-    std::string formula;  //!< Chemical formula
-    double weight;        //!< Statistical weight to be given to reaction in speciation
+    StoichiometryMap left_molecules;  //!< Initial reactants (molecules)
+    StoichiometryMap right_molecules; //!< Initial products (molecules)
+    StoichiometryMap left_atoms;      //!< Initial reactants (atoms)
+    StoichiometryMap right_atoms;     //!< Initial products (atoms)
 
-    bool empty(bool forward) const;
+  public:
+    void setDirection(Direction);                               //!< Set directions of the process
+    Direction getDirection() const;                             //!< Get direction of the process
+    void reverseDirection();                                    //!< Reverse direction of reaction
+    std::pair<const StoichiometryMap &, const StoichiometryMap &>
+    getProducts() const; //!< Pair with atomic and molecular products
+    std::pair<const StoichiometryMap &, const StoichiometryMap &>
+    getReactants() const; //!< Pair with atomic and molecular reactants
 
-    std::vector<int> participatingMolecules() const; //!< Returns molids of participating molecules
+    std::pair<std::set<int>, std::set<int>> getReactantsAndProducts() const;
 
-    bool containsMolecule(int molid) const; //!< True of molecule id is part of process
+    bool swap = false;                   //!< True if swap move
+    double lnK = 0;                      //!< Effective, natural logarithm of molar eq. const.
+    double lnK_unmodified = 0;           //!< Natural logarithm of molar eq. const. (unmodified as in input)
+    bool only_neutral_molecules = false; //!< Only neutral molecules are involved in the reaction
+    std::string reaction_str;            //!< Name of reaction
+    double weight;                       //!< Statistical weight to be given to reaction in speciation
 
-    const Tmap &Molecules2Add(bool forward) const; //!< Map for addition depending on direction
-
-    const Tmap &Atoms2Add(bool forward) const; //!< Map for addition depending on direction
-
-    auto findAtomOrMolecule(const std::string &name) const {
-        auto it_a = findName(Faunus::atoms, name);
-        auto it_m = findName(Faunus::molecules, name);
-        if (it_m == Faunus::molecules.end())
-            if (it_a == Faunus::atoms.end())
-                throw std::runtime_error("unknown species '" + name + "'");
-        return std::make_pair(it_a, it_m);
-    } //!< Returns pair of iterators to atomlist and moleculelist. One of them points to end().
+    /**
+     * @brief Find atom name or molecule name
+     * @returns pair of iterators to atomlist and moleculelist; one of them points to end().
+     *
+     * Note that molecules and atoms *cannot* have the same name
+     */
+    auto findAtomOrMolecule(const std::string &atom_or_molecule_name) const {
+        auto atom_iter = findName(Faunus::atoms, atom_or_molecule_name);
+        auto molecule_iter = findName(Faunus::molecules, atom_or_molecule_name);
+        if (molecule_iter == Faunus::molecules.end() and atom_iter == Faunus::atoms.end()) {
+            throw std::runtime_error("unknown species '" + atom_or_molecule_name + "'");
+        }
+        return std::make_pair(atom_iter, molecule_iter);
+    }
 
 }; //!< End of class
 
-inline auto parseProcess(const std::string &process) {
+/**
+ * This parses a string containing a reaction, e.g. "A = B + B" and returns
+ * a pair with (1) a vector of reactant names and (2) a vector of product names.
+ * Reactants and products are split by a `=` sign. All elements in the string
+ * must be separated by a white-space.
+ */
+inline auto parseReactionString(const std::string &process_string) {
     typedef std::vector<std::string> Tvec;
-    Tvec v;
-    std::string tmp;
-    std::istringstream iss(process);
-    while (iss >> tmp)
-        v.push_back(tmp);
-    v.erase(std::remove(v.begin(), v.end(), "+"), v.end());
-    auto it = std::find(v.begin(), v.end(), "=");
-    if (it == v.end())
-        throw std::runtime_error("products and reactants must be separated by '='");
-    return std::make_pair(Tvec(v.begin(), it), Tvec(it + 1, v.end()));
-} //!< Parse process string to pair of vectors containing reactant/product species
+    Tvec names; // vector of atom/molecule names
+    std::string atom_or_molecule_name;
+    std::istringstream iss(process_string);
+    while (iss >> atom_or_molecule_name) { // stream all words into vector
+        names.push_back(atom_or_molecule_name);
+    }
 
-void from_json(const json &j, ReactionData &a);
+    names.erase(std::remove(names.begin(), names.end(), "+"), names.end());
 
-void to_json(json &j, const ReactionData &a);
+    if (auto it = std::find(names.begin(), names.end(), "="); it == names.end()) {
+        throw std::runtime_error("products and reactants must be separated by ' = '");
+    } else {
+        return std::make_pair(Tvec(names.begin(), it), Tvec(it + 1, names.end()));
+    }
+}
+
+void from_json(const json &, ReactionData &);
+void to_json(json &, const ReactionData &);
 
 extern std::vector<ReactionData> reactions; // global instance
 

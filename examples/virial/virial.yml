@@ -1,0 +1,41 @@
+#!/usr/bin/env yason.py
+energy:                              # define system energy
+    - nonbonded:                     # nonbonded interactions can be arbitrarily
+        default:                     # mixed and splined
+            - lennardjones: {mixing: LB}
+
+atomlist:                             # define atom types
+    - Na: {eps: 1, sigma: 5.0, dp: 4}
+
+moleculelist:                        # define molecule types
+    - A:
+        atoms: [Na]
+        insdir: [0,0,0]
+        structure:
+            - "Na": [0,0,0]
+    - B:
+        atoms: [Na]
+        insdir: [0,0,0]
+        insoffset: [0,0,10]
+        structure:
+            - "Na": [0,0,0]
+
+insertmolecules:                     # create an initial system (random insertion)
+    - A: {N: 1}
+    - B: {N: 1}
+
+moves:                               # define Monte Carlo moves
+    - transrot: {molecule: B, dir: [0,0,1]}
+
+analysis:                            # define on the fly analysis
+    - virtualtranslate: {file: vt.dat.gz, dL: 0.1, molecule: B, nstep: 10, dir: [0,0,1]}
+    - reactioncoordinate: {file: R.dat, nstep: 10, type: molecule, property: com_z, index: 1}
+    - molrdf: {file: rdf.dat, nstep: 1, dr: 0.2, name1: A, name2: B, dim: 1}
+      #- systemenergy: {file: energy.dat, nstep: 100} # save system energy
+    - savestate: {file: confout.pqr} # save PQR file for visualization
+    - savestate: {file: state.json } # save restart file
+
+mcloop: {macro: 100, micro: 20000}     # number of MC steps
+geometry: {type: sphere, radius: 30} # sidelength(s): number OR array
+temperature: 300                     # in K
+random: {seed: fixed}                # seed for pseudo random number generator

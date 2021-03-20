@@ -328,8 +328,8 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordina
     else if (property == "Rinner") {
         dir = j.at("dir");
         indexes = j.value("indexes", decltype(indexes)());
-        assert(indexes.size() == 2 && "An array of 2 indexes should be specified.");
-        function = [&spc, &dir = dir, i = indexes[0], j = indexes[1]]() {
+        assert(indexes.size() >= 3 && "An array of at least 3 indexes should be specified.");
+        f = [&spc, &dir = dir, i = indexes[0], j = indexes[1], k = indexes[2], l = indexes[3]]() {
             Average<double> Rj, Ri;
             auto slicei = spc.findAtoms(i);
             auto cm = Geometry::massCenter(slicei.begin(), slicei.end(), spc.geo.getBoundaryFunc());
@@ -337,10 +337,12 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordina
             for (auto p : slicej)
                 Rj += spc.geo.vdist(p.pos, cm).cwiseProduct(dir.cast<double>()).norm();
             double Rjavg = Rj.avg();
-            for (auto p : slicei) {
-                double d = spc.geo.vdist(p.pos, cm).cwiseProduct(dir.cast<double>()).norm();
-                if (d < Rjavg)
-                    Ri += d;
+            for (auto p : spc.p) {
+                if ((p.id==k) or (p.id==l)) {
+                    double d = spc.geo.vdist(p.pos, cm).cwiseProduct(dir.cast<double>()).norm();
+                    if (d < Rjavg)
+                        Ri += d;
+                }
             }
             return Ri.avg();
         };

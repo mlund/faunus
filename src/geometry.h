@@ -461,8 +461,8 @@ enum class weight { MASS, CHARGE, GEOMETRIC };
  * @param apply_boundary Boundary function to apply PBC (default: no PBC)
  * @param weight_function Functor return weight for a given particle
  * @param shift Shift by this vector before calculating center, then add again. For PBC removal; default: 0,0,0
- * @return Center position
- * @throws if the sum of weights is zero, thereby hampering normalization
+ * @return Center position; (0,0,0) if the sum of weights is zero
+ * @throw warning if the sum of weights is zero, thereby hampering normalization
  */
 template <typename iterator, typename weightFunc>
 Point anyCenter(iterator begin, iterator end, BoundaryFunction apply_boundary, const weightFunc &weight_function,
@@ -481,7 +481,8 @@ Point anyCenter(iterator begin, iterator end, BoundaryFunction apply_boundary, c
         apply_boundary(center);
         return center;
     } else {
-        throw std::runtime_error("cannot calculate center with zero weights");
+        std::cerr << "warning: sum of weights is 0! setting center to (0,0,0)" << std::endl;
+        return Point(0,0,0);
     }
 } //!< Mass, charge, or geometric center of a collection of particles
 

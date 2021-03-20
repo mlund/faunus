@@ -207,7 +207,7 @@ SaveState::SaveState(json j, Space &spc) {
                 if (hexagonal_prism) {
                     faunus_logger->debug("creating cuboidal PQR from hexagonal prism");
                     const auto &[cuboid, particles] =
-                        Geometry::HexagonalPrismToCuboid(*hexagonal_prism, spc.activeParticles());
+                        Geometry::HexagonalPrismToCuboid(*hexagonal_prism, spc.activeParticles() | ranges::to_vector);
                     FormatPQR::save(file, particles, cuboid.getLength());
                 } else {
                     throw std::runtime_error("hexagonal prism required for `convert_to_hexagon`");
@@ -844,9 +844,8 @@ void AtomRDF::_sample() {
             if ((i->id == id1 && j->id == id2) || (i->id == id2 && j->id == id1)) {
                 Point rvec = spc.geo.vdist(i->pos, j->pos);
                 if (slicedir.sum() > 0) {
-                    if (rvec.cwiseProduct(slicedir.cast<double>()).norm() < thickness) {
-                        // rvec = rvec.cwiseProduct( Point(1.,1.,1.) - slice.cast<double>() );
-                        hist(rvec.norm())++;
+                    if (rvec.cwiseProduct((Point(1.0,1.0,1.0)-slicedir.cast<double>()).cwiseAbs()).norm() < thickness) {
+                        hist(rvec.cwiseProduct(slicedir.cast<double>()).norm())++;
                     }
                 } else {
                     hist(rvec.norm())++;

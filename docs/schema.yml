@@ -786,6 +786,8 @@ properties:
                         name2: {type: string}
                         dim: {type: integer, minimum: 1, maximum: 3, default: 3}
                         nstep: {type: integer}
+                        slicedir: {type: array, items: {type: number}, default: [1,1,1], description: Direction along which the 3D, quasi-2D or quasi-1D RDF is calculated}
+                        thickness: {type: number, description: Thickness of the slab or radius of the cylinder orthogonal to dir in the calculation of quasi-2D or quasi-1D RDFs}
                         nskip: {type: integer, default: 0, description: Initial steps to skip}
                     required: [dr, file, name1, name2, nstep]
                     additionalProperties: false

@@ -53,6 +53,7 @@ class Analysisbase {
     void to_disk();               //!< Save data to disk (if defined)
     void sample();                //!< Increase step count and sample
     int getNumberOfSteps() const; //!< Number of steps
+    Analysisbase(const std::string &name);
     virtual ~Analysisbase() = default;
 };
 
@@ -78,7 +79,7 @@ class PerturbationAnalysisBase : public Analysisbase {
     Change change;                                         //!< Change object to describe perturbation
     Average<double> mean_exponentiated_energy_change;      //!< < exp(-du/kT) >
     bool collectWidomAverage(const double energy_change);  //!< add to exp(-du/kT) incl. safety checks
-    PerturbationAnalysisBase(Energy::Energybase& pot, Space& spc, const std::string& filename = ""s);
+    PerturbationAnalysisBase(const std::string &name, Energy::Energybase& pot, Space& spc, const std::string& filename = ""s);
     double meanFreeEnergy() const; //!< Average perturbation free energy, `-ln(<exp(-du/kT)>)`
 };
 
@@ -209,12 +210,7 @@ class ChargeFluctuations : public Analysisbase {
     bool verbose;                          // set to true for more output
 
     void _sample() override;
-
     void _to_json(json &) const override;
-
-    /**
-     * @brief Saves average PQR file to disk if `pqrfile` input is given
-     */
     void _to_disk() override;
 
   public:
@@ -247,7 +243,7 @@ class SystemEnergy : public Analysisbase {
   private:
     std::string file_name, separator = " ";
     std::unique_ptr<std::ostream> output_stream = nullptr;
-    std::function<std::vector<double>()> energyFunc;
+    std::function<std::vector<double>()> calculateAllEnergies;
     Average<double> mean_energy, mean_squared_energy;
     std::vector<std::string> names_of_energy_terms;
     Table2D<double, double> energy_histogram; // Density histograms
@@ -298,7 +294,7 @@ class SaveState : public Analysisbase {
     void _sample() override;
 
   public:
-    SaveState(json, Space &);
+    SaveState(json j, Space &spc);
     ~SaveState();
 };
 
@@ -324,7 +320,7 @@ class PairFunctionBase : public Analysisbase {
     void _to_disk() override;
 
   public:
-    PairFunctionBase(const json &);
+    PairFunctionBase(const json &, const std::string &name);
 };
 
 class PairAngleFunctionBase : public PairFunctionBase {
@@ -336,7 +332,7 @@ class PairAngleFunctionBase : public PairFunctionBase {
     void _to_disk() override;
 
   public:
-    PairAngleFunctionBase(const json &);
+    PairAngleFunctionBase(const json &j, const std::string &name);
 };
 
 /** @brief Atomic radial distribution function, g(r) */
@@ -539,19 +535,19 @@ class InertiaTensor : public Analysisbase {
  */
 class MultipoleMoments : public Analysisbase {
   private:
-    Space &spc;
+    Space& spc;
     std::string filename;
-    std::vector<size_t> indexes; // range of indexes within the group
-    size_t index; // group index
-    bool mol_cm;
+    std::vector<size_t> particle_range; // range of indexes within the group
+    size_t group_index;
+    bool use_molecular_mass_center = true; //!< Moments w.r.t. the COM of the whole molecule (instead of the subgroup)
     std::ofstream file;
     struct Data {
-        int q = 0; // total charge
-        Point mu {0,0,0}; // dipole vector
-        Point eivals, eivec, center; // quadrupole eigenvalues and major axis
+        double charge = 0.0;                // total charge
+        Point dipole_moment{0.0, 0.0, 0.0}; // dipole vector
+        Point eivals, eivec, center;        // quadrupole eigenvalues and major axis
     };
 
-    Data compute();
+    Data calculateMultipoleMoment() const;
     void _to_json(json &j) const override;
     void _sample() override;
     void _to_disk() override;

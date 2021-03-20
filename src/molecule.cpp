@@ -959,6 +959,10 @@ TEST_SUITE_END();
 UnknownMoleculeError::UnknownMoleculeError(const std::string& molecule_name)
         : std::runtime_error(fmt::format("unknown molecule: '{}'", molecule_name)) {}
 
+
+/**
+ * @throw if molecule not found
+ */
 MoleculeData& findMoleculeByName(const std::string& name) {
     const auto result = findName(Faunus::molecules, name);
     if (result == Faunus::molecules.end()) {

@@ -1407,38 +1407,48 @@ void ChargeFluctuations::_sample() {
     for (const auto& group : spc.findMolecules(mol_iter->id(), Space::ACTIVE)) {
         size_t particle_index = 0;
         for (const auto& particle : group) {
-            idcnt[particle_index][particle.id]++;
-            charge[particle_index] += particle.charge;
+            atom_histograms[particle_index][particle.id]++;
+            atom_mean_charges[particle_index] += particle.charge;
             particle_index++;
         }
     }
 }
+
 void ChargeFluctuations::_to_json(json& j) const {
-    std::vector<std::string> predominant_atom_names; // main name of atom with fluctuating charge
-    std::vector<double> qavg;                        // average charge
-    std::vector<double> qstdev;                      // standard deviation of the charge
-    for (size_t i = 0; i < idcnt.size(); ++i) {
-        qavg.push_back(charge.at(i).avg());
-        qstdev.push_back(charge.at(i).stdev());
-        // we look for the id that was sampled most often
-        auto id_max = std::max_element(std::begin(idcnt.at(i)), std::end(idcnt.at(i)),
-                                       [](auto& p1, auto& p2) { return p1.second < p2.second; });
-        predominant_atom_names.push_back(atoms.at(id_max->first).name);
-    }
-    if (verbose) {
-        j = {{"dominant atoms", predominant_atom_names}, {"<q>", qavg}, {"std", qstdev}};
-    }
     j["molecule"] = mol_iter->name;
-    if (not file.empty()) {
-        j["pqrfile"] = file;
+    if (not filename.empty()) {
+        j["pqrfile"] = filename;
+    }
+    if (verbose && number_of_samples > 0) {
+        std::vector<double> mean_charges;                // average charge
+        std::vector<double> qstdev;                      // standard deviation of the charge
+        std::vector<std::string> predominant_atom_names; // main name of atom with fluctuating charge
+
+        std::transform(atom_mean_charges.begin(), atom_mean_charges.end(), std::back_inserter(mean_charges),
+                       [](const auto& charge) { return charge.avg(); });
+
+        std::transform(atom_mean_charges.begin(), atom_mean_charges.end(), std::back_inserter(qstdev),
+                       [](const auto& charge) { return charge.stdev(); });
+
+        auto most_frequent_atom_name = [](const AtomHistogram& histogram) {
+            const auto [atomid, count] = *std::max_element(histogram.begin(), histogram.end(),
+                                                           [](auto& a, auto& b) { return a.second < b.second; });
+            return Faunus::atoms[atomid].name;
+        };
+
+        std::transform(atom_histograms.begin(), atom_histograms.end(), std::back_inserter(predominant_atom_names),
+                       most_frequent_atom_name);
+
+        j = {{"dominant atoms", predominant_atom_names}, {"<q>", mean_charges}, {"std", qstdev}};
     }
 }
+
 void ChargeFluctuations::_to_disk() {
-    if (not file.empty()) {
+    if (not filename.empty()) {
         auto molecules = spc.findMolecules(mol_iter->id(), Space::ALL);
         if (not ranges::cpp20::empty(molecules)) {
             const auto particles_with_avg_charges = averageChargeParticles(*molecules.begin());
-            FormatPQR::save(MPI::prefix + file, particles_with_avg_charges, spc.geo.getLength());
+            FormatPQR::save(MPI::prefix + filename, particles_with_avg_charges, spc.geo.getLength());
         }
     }
 }
@@ -1450,10 +1460,11 @@ ParticleVector ChargeFluctuations::averageChargeParticles(const Space::Tgroup& g
 
     for (auto it = group.begin(); it < group.trueend(); ++it) {
         // we look for the id that was sampled most often
-        auto id_max = std::max_element(std::begin(idcnt.at(particle_index)), std::end(idcnt.at(particle_index)),
+        auto id_max = std::max_element(std::begin(atom_histograms.at(particle_index)),
+                                       std::end(atom_histograms.at(particle_index)),
                                        [](auto& p1, auto& p2) { return p1.second < p2.second; });
-        auto& added_particle = particles.emplace_back(atoms.at(id_max->first));
-        added_particle.charge = charge.at(particle_index).avg();
+        auto& added_particle = particles.emplace_back(Faunus::atoms.at(id_max->first));
+        added_particle.charge = atom_mean_charges.at(particle_index).avg();
         added_particle.pos = it->pos - group.cm;
         spc.geo.boundary(added_particle.pos);
         particle_index++;
@@ -1466,7 +1477,7 @@ ParticleVector ChargeFluctuations::averageChargeParticles(const Space::Tgroup& g
  */
 ChargeFluctuations::ChargeFluctuations(const json& j, Space& spc) : Analysisbase(spc, "chargefluctuations") {
     from_json(j);
-    file = j.value("pqrfile", ""s);
+    filename = j.value("pqrfile", ""s);
     verbose = j.value("verbose", true);
 
     const auto molname = j.at("molecule").get<std::string>();  // molecule name
@@ -1476,8 +1487,8 @@ ChargeFluctuations::ChargeFluctuations(const json& j, Space& spc) : Analysisbase
     }
 
     mol_iter = Faunus::findName(Faunus::molecules, molname);
-    idcnt.resize(molecule.atoms.size());
-    charge.resize(molecule.atoms.size());
+    atom_histograms.resize(molecule.atoms.size());
+    atom_mean_charges.resize(molecule.atoms.size());
 }
 void Multipole::_sample() {
     for (const auto& group : spc.groups) {            // loop over all groups molecules
@@ -1688,7 +1699,7 @@ SpaceTrajectory::SpaceTrajectory(const json& j, Space& spc)
     : Analysisbase(spc, "space trajectory"), groups(spc.groups) {
     from_json(j);
     filename = j.at("file").get<std::string>();
-    
+
     if (useCompression()) {
         stream = std::make_unique<zstr::ofstream>(MPI::prefix + filename, std::ios::binary);
     } else {

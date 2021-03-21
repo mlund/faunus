@@ -198,12 +198,12 @@ class Density : public Analysisbase {
 
 class ChargeFluctuations : public Analysisbase {
   private:
-    typename decltype(Faunus::molecules)::const_iterator mol_iter; // selected molecule type
-
-    std::vector<std::map<int, int>> idcnt; // populations of types of atomic indexes
-    std::vector<Average<double>> charge;   // average charges of atomic indexes
-    std::string file;                      // name of PQR file with average charges
-    bool verbose;                          // set to true for more output
+    typename decltype(Faunus::molecules)::const_iterator mol_iter; //!< selected molecule type
+    using AtomHistogram = std::map<int, int>;                      //!< key = atom id; value = counts
+    std::vector<AtomHistogram> atom_histograms;                    //!< one element for each atom in molecule
+    std::vector<Average<double>> atom_mean_charges;                //!< average charges of atomic indexes
+    std::string filename;                                          //!< name of PQR file with average charges
+    bool verbose = true;                                           //!< set to true for more output
 
     ParticleVector averageChargeParticles(const Space::Tgroup& group);
     void _sample() override;

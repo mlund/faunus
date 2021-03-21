@@ -1431,14 +1431,14 @@ void ChargeFluctuations::_to_disk() {
             ParticleVector particles;            // temporary particle vector
             particles.reserve(group.capacity()); // allocate required memory already now
             size_t particle_index = 0;
-            for (auto p = group.begin(); p < group.trueend(); ++p) {
+            for (auto it = group.begin(); it < group.trueend(); ++it) {
                 // we look for the id that was sampled most often
                 auto id_max = std::max_element(std::begin(idcnt.at(particle_index)), std::end(idcnt.at(particle_index)),
                                                [](auto& p1, auto& p2) { return p1.second < p2.second; });
-                particles.push_back(Faunus::atoms.at(id_max->first));
-                particles.back().charge = charge.at(particle_index).avg();
-                particles.back().pos = p->pos - group.cm;
-                spc.geo.boundary(particles.back().pos);
+                auto added_particle = particles.emplace_back(Faunus::atoms.at(id_max->first));
+                added_particle.charge = charge.at(particle_index).avg();
+                added_particle.pos = it->pos - group.cm;
+                spc.geo.boundary(added_particle.pos);
                 particle_index++;
             }
             FormatPQR::save(MPI::prefix + file, particles, spc.geo.getLength());

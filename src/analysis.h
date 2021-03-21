@@ -204,6 +204,7 @@ class ChargeFluctuations : public Analysisbase {
     std::string file;                      // name of PQR file with average charges
     bool verbose;                          // set to true for more output
 
+    ParticleVector averageChargeParticles(const Space::Tgroup& group);
     void _sample() override;
     void _to_json(json& j) const override;
     void _to_disk() override;

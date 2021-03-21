@@ -1296,6 +1296,9 @@ void AtomProfile::_from_json(const json& j) {
 }
 void AtomProfile::_to_json(json& j) const {
     j = {{"origo", origin}, {"dir", dir}, {"atoms", names}, {"file", file}, {"dr", dr}, {"charge", count_charge}};
+    if (center_of_mass_atom_id >= 0) {
+        j["atomcom"] = Faunus::atoms.at(center_of_mass_atom_id).name;
+    }
 }
 
 void AtomProfile::_sample() {
@@ -1359,7 +1362,10 @@ void SlicedDensity::_from_json(const json& j) {
     histogram.setResolution(dz);
 }
 void SlicedDensity::_to_json(json& j) const {
-    j = {{"atoms", atom_names}, {"file", file}, {"dz", dz}, {"atomcom", Faunus::atoms[center_of_mass_atom_id].name}};
+    j = {{"atoms", atom_names}, {"file", file}, {"dz", dz}};
+    if (center_of_mass_atom_id >= 0) {
+        j["atomcom"] = Faunus::atoms.at(center_of_mass_atom_id).name;
+    }
 }
 
 void SlicedDensity::_sample() {
@@ -1427,23 +1433,28 @@ void ChargeFluctuations::_to_disk() {
     if (not file.empty()) {
         auto molecules = spc.findMolecules(mol_iter->id(), Space::ALL);
         if (not ranges::cpp20::empty(molecules)) {
-            const auto& group = *molecules.begin();
-            ParticleVector particles;            // temporary particle vector
-            particles.reserve(group.capacity()); // allocate required memory already now
-            size_t particle_index = 0;
-            for (auto it = group.begin(); it < group.trueend(); ++it) {
-                // we look for the id that was sampled most often
-                auto id_max = std::max_element(std::begin(idcnt.at(particle_index)), std::end(idcnt.at(particle_index)),
-                                               [](auto& p1, auto& p2) { return p1.second < p2.second; });
-                auto added_particle = particles.emplace_back(Faunus::atoms.at(id_max->first));
-                added_particle.charge = charge.at(particle_index).avg();
-                added_particle.pos = it->pos - group.cm;
-                spc.geo.boundary(added_particle.pos);
-                particle_index++;
-            }
-            FormatPQR::save(MPI::prefix + file, particles, spc.geo.getLength());
+            const auto particles_with_avg_charges = averageChargeParticles(*molecules.begin());
+            FormatPQR::save(MPI::prefix + file, particles_with_avg_charges, spc.geo.getLength());
         }
     }
+}
+
+ParticleVector ChargeFluctuations::averageChargeParticles(const Space::Tgroup& group) {
+    ParticleVector particles;            // temporary particle vector
+    particles.reserve(group.capacity()); // allocate required memory already now
+    size_t particle_index = 0;
+
+    for (auto it = group.begin(); it < group.trueend(); ++it) {
+        // we look for the id that was sampled most often
+        auto id_max = std::max_element(std::begin(idcnt.at(particle_index)), std::end(idcnt.at(particle_index)),
+                                       [](auto& p1, auto& p2) { return p1.second < p2.second; });
+        auto& added_particle = particles.emplace_back(atoms.at(id_max->first));
+        added_particle.charge = charge.at(particle_index).avg();
+        added_particle.pos = it->pos - group.cm;
+        spc.geo.boundary(added_particle.pos);
+        particle_index++;
+    }
+    return particles;
 }
 
 /**

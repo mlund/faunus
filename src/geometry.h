@@ -185,6 +185,7 @@ class Sphere : public GeometryImplementation {
     void from_json(const json &j) override;
     void to_json(json &j) const override;
     Sphere(double radius = 0.0);
+    double getRadius() const;
 
     std::unique_ptr<GeometryImplementation> clone() const override {
         return std::make_unique<Sphere>(*this);

@@ -1313,10 +1313,14 @@ void AtomProfile::_sample() {
                               });
 
     for (const auto& particle : selected_particles) {
-        const auto r_vec = spc.geo.vdist(particle.pos, origin);
-        const auto r = r_vec.cwiseProduct(dir.cast<double>()).norm();
-        table(r) += count_charge ? particle.charge : 1.0;
+        const auto distance = distanceToOrigin(particle.pos);
+        table(distance) += count_charge ? particle.charge : 1.0;
     }
+}
+
+double AtomProfile::distanceToOrigin(const Point& position) const {
+    const Point distance = spc.geo.vdist(position, origin);
+    return distance.cwiseProduct(dir.cast<double>()).norm();
 }
 
 AtomProfile::AtomProfile(const json& j, Space& spc) : Analysisbase(spc, "atomprofile") { from_json(j); }

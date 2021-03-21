@@ -142,6 +142,7 @@ class AtomProfile : public Analysisbase {
     bool count_charge = false;
     int center_of_mass_atom_id = -1; // center at COM of id_com atoms?
 
+    double distanceToOrigin(const Point& position) const;
     void _from_json(const json& j) override;
     void _to_json(json& j) const override;
     void _to_disk() override;

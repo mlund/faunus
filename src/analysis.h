@@ -138,7 +138,7 @@ class AtomProfile : public Analysisbase {
     std::set<int> atom_id_selection;          //!< atom ids to analyse
     std::string file;                         //!< output filename
     Point origin = {0.0, 0.0, 0.0};
-    Eigen::Vector3i dir = {1.0, 1.0, 1.0};
+    Eigen::Vector3i dir = {1, 1, 1};
     bool count_charge = false;
     int center_of_mass_atom_id = -1; // center at COM of id_com atoms?
 

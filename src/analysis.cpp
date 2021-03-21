@@ -1330,8 +1330,8 @@ void AtomProfile::_to_disk() {
     if (f) {
         table.stream_decorator = [&](std::ostream& o, double r, double N) {
             double Vr = 1.0;
-            int dim = dir.sum();
-            switch (dim) {
+            auto dimensions = dir.sum();
+            switch (dimensions) {
             case 3:
                 Vr = 4.0 * pc::pi * std::pow(r, 2) * dr;
                 break;
@@ -1342,14 +1342,14 @@ void AtomProfile::_to_disk() {
                 Vr = dr;
                 break;
             default:
-                throw std::runtime_error("bad dimension");
+                throw std::runtime_error("bad dimension; sum of `dir` components must be one, two, or three");
             }
             if (Vr < dr) { // take care of the case where Vr=0
                 Vr = dr;   // then the volume element is simply dr
             }
 
-            N = N / double(number_of_samples);                            // average number of particles/charges
-            o << r << " " << N << " " << N / Vr * 1e27 / pc::Nav << "\n"; // ... and molar concentration
+            N = N / double(number_of_samples); // average number of particles/charges
+            o << fmt::format("{:.6E} {:.6E} {:.6E}\n", r, N, N / Vr * 1e27 / pc::Nav); // ... and molar concentration
         };
         f << "# r N rho/M\n" << table;
     }
@@ -1399,7 +1399,7 @@ void SlicedDensity::_to_disk() {
         const auto half_z_length = 0.5 * box_length.z();
         const auto volume = box_length.x() * box_length.y() * dz;
         for (double z = -half_z_length; z <= half_z_length; z += dz) {
-            f << fmt::format("{} {}\n", z, histogram(z) / volume / number_of_samples * 1e27 / pc::Nav);
+            f << fmt::format("{:.6E} {:.6E}\n", z, histogram(z) / volume / number_of_samples * 1e27 / pc::Nav);
         }
     }
 }

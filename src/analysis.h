@@ -269,10 +269,14 @@ class SystemEnergy : public Analysisbase {
  */
 class SanityCheck : public Analysisbase {
   private:
+    const double mass_center_tolerance = 1.0e-6;
     void _sample() override;
+    void checkGroupsCoverParticles();                      //!< Groups must exactly contain all particles in `p`
+    void checkMassCenter(const Space::Tgroup& group);      //!< check if molecular mass centers are correct
+    void checkWithinContainer(const Space::Tgroup& group); //!< check if particles are inside container
 
   public:
-    SanityCheck(const json&, Space&);
+    SanityCheck(const json &j, Space &spc);
 };
 
 /**
@@ -365,9 +369,9 @@ class AtomDipDipCorr : public PairAngleFunctionBase {
 
 /** @brief Write XTC trajectory file */
 class XTCtraj : public Analysisbase {
-    std::vector<int> molecule_ids;               //!< molecule ids to save to disk
-    std::vector<std::string> names;              //!< molecule names of above
-    std::function<bool(const Particle&)> filter; //!< function to filter atoms
+    std::vector<int> molecule_ids;                    //!< molecule ids to save to disk
+    std::vector<std::string> names;                   //!< molecule names of above
+    std::function<bool(const Particle&)> atom_filter; //!< function to filter atoms
     std::shared_ptr<XTCWriter> writer;
 
     void _to_json(json& j) const override;

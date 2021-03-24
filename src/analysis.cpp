@@ -803,7 +803,19 @@ void Density::_to_disk() {
 }
 
 void SanityCheck::_sample() {
-    // The groups must exactly contain all particles in `p`
+    try {
+        checkGroupsCoverParticles();
+        for (const auto& group : spc.groups) {
+            checkWithinContainer(group);
+            checkMassCenter(group);
+        }
+    } catch (std::exception& e) {
+        FormatPQR::save(fmt::format("{}step{}-error.pqr", MPI::prefix, getNumberOfSteps()), spc.groups,
+                        spc.geo.getLength());
+        throw std::runtime_error(e.what());
+    }
+}
+void SanityCheck::checkGroupsCoverParticles() {
     size_t i = 0;
     for (const auto& group : spc.groups) {
         for (auto it = group.begin(); it != group.trueend(); ++it) {
@@ -816,34 +828,26 @@ void SanityCheck::_sample() {
     if (i != spc.p.size()) {
         throw std::runtime_error("particle <-> group mismatch");
     }
-
-    // loop over all groups
-    for (const auto& group : spc.groups) {
-        // check if particles are inside container
-        for (const auto& particle : group) { // loop over active particles
-            if (spc.geo.collision(particle.pos)) {
-                throw std::runtime_error(
-                    "step "s + std::to_string(number_of_samples) + ": index " +
-                    std::to_string(&particle - &(*group.begin())) + " of group " +
-                    std::to_string(std::distance(spc.groups.begin(), spc.findGroupContaining(particle))) +
-                    " outside container");
-            }
+}
+void SanityCheck::checkWithinContainer(const Space::Tgroup& group) {
+    for (const auto& particle : group) { // loop over active particles
+        if (spc.geo.collision(particle.pos)) {
+            const auto atom_index = &particle - &(*group.begin()); // yak!
+            const auto group_index = spc.getGroupIndex(group);
+            throw std::runtime_error(fmt::format("step {}: particle {}{} of {}{} outside simulation cell",
+                                                 getNumberOfSteps(), particle.traits().name, atom_index,
+                                                 group.traits().name, group_index));
         }
-
-        // check if molecular mass centers are correct
-        if (group.isMolecular() && !group.empty()) {
-            const Point cm = Geometry::massCenter(group.begin(), group.end(), spc.geo.getBoundaryFunc(), -group.cm);
-            const double sqd = spc.geo.sqdist(group.cm, cm);
-            if (sqd > 1e-6) {
-                std::cerr << "step:      " << number_of_samples << std::endl
-                          << "molecule:  " << &group - &*spc.groups.begin() << std::endl
-                          << "dist:      " << sqrt(sqd) << std::endl
-                          << "g.cm:      " << group.cm.transpose() << std::endl
-                          << "actual cm: " << cm.transpose() << std::endl;
-                FormatPQR::save(MPI::prefix + "sanity-" + std::to_string(number_of_samples) + ".pqr", spc.p,
-                                spc.geo.getLength());
-                throw std::runtime_error("mass center-out-of-sync");
-            }
+    }
+}
+void SanityCheck::checkMassCenter(const Space::Tgroup& group) {
+    if (group.isMolecular() && !group.empty()) {
+        const auto mass_center = Geometry::massCenter(group.begin(), group.end(), spc.geo.getBoundaryFunc(), -group.cm);
+        const auto distance = spc.geo.vdist(group.cm, mass_center).norm();
+        if (distance > mass_center_tolerance) {
+            throw std::runtime_error(fmt::format("step {}: {}{} mass center out of sync by {:.3f} Å",
+                                                 getNumberOfSteps(), group.traits().name, spc.getGroupIndex(group),
+                                                 distance));
         }
     }
 }
@@ -934,9 +938,9 @@ AtomDipDipCorr::AtomDipDipCorr(const json& j, Space& spc) : PairAngleFunctionBas
 // =============== XTCtraj ===============
 
 XTCtraj::XTCtraj(const json& j, Space& spc)
-    : Analysisbase(spc, "xtcfile"), filter([](const Particle&) { return true; }) {
+    : Analysisbase(spc, "xtcfile"), atom_filter([](const Particle&) { return true; }) {
     from_json(j);
-    assert(filter);
+    assert(atom_filter);
 }
 
 void XTCtraj::_to_json(json& j) const {
@@ -950,13 +954,13 @@ void XTCtraj::_from_json(const json& j) {
     const auto file = MPI::prefix + j.at("file").get<std::string>();
     writer = std::make_shared<XTCWriter>(file);
 
-    filter = [](const Particle&) { return true; }; // default: save all particles
+    atom_filter = [](const Particle&) { return true; }; // default: save all particles
     names = j.value("molecules", std::vector<std::string>());
     if (!names.empty()) {
         molecule_ids = Faunus::names2ids(Faunus::molecules, names); // molecule types to save
         if (!molecule_ids.empty()) {
             std::sort(molecule_ids.begin(), molecule_ids.end()); // needed for binary_search
-            filter = [&](const Particle& particle) {
+            atom_filter = [&](const Particle& particle) {
                 for (const auto& group : spc.groups) {
                     if (group.contains(particle, true)) {
                         return std::binary_search(molecule_ids.begin(), molecule_ids.end(), group.id);
@@ -969,11 +973,9 @@ void XTCtraj::_from_json(const json& j) {
 }
 
 void XTCtraj::_sample() {
-    // On some gcc/clang and certain ubuntu/macos combinations,
-    // the ranges::view::filter(rng,unaryp) clears the `filter` function.
-    // Using the ranges piping seem to solve the issue.
-    assert(filter);
-    auto positions = spc.p | ranges::cpp20::views::filter(filter) | ranges::cpp20::views::transform(&Particle::pos);
+    assert(atom_filter); // some gcc/clang/ubuntu/macos combinations wronly clear the `filter` function
+    auto positions =
+        spc.p | ranges::cpp20::views::filter(atom_filter) | ranges::cpp20::views::transform(&Particle::pos);
     writer->writeNext(spc.geo.getLength(), positions.begin(), positions.end());
 }
 
@@ -994,15 +996,15 @@ double MultipoleDistribution::g2g(const Space::Tgroup& group1, const Space::Tgro
  */
 void MultipoleDistribution::save() const {
     if (number_of_samples > 0) {
-        if (std::ofstream file(MPI::prefix + filename.c_str()); file) {
-            file << "# Multipolar energies (kT/lB)\n"
+        if (std::ofstream stream(MPI::prefix + filename.c_str()); stream) {
+            stream << "# Multipolar energies (kT/lB)\n"
                  << fmt::format("# {:>8}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}\n", "R", "exact", "tot", "ii", "id",
                                 "dd", "iq", "mucorr");
             for (auto [r_bin, energy] : mean_energy) {
                 const auto distance = r_bin * dr;
                 const auto u_tot = energy.ion_ion.avg() + energy.ion_dipole.avg() + energy.dipole_dipole.avg() +
                                    energy.ion_quadrupole.avg();
-                file << fmt::format("{:10.4f}{:10.4f}{:10.4f}{:10.4f}{:10.4f}{:10.4f}{:10.4f}{:10.4f}\n", distance,
+                stream << fmt::format("{:10.4f}{:10.4f}{:10.4f}{:10.4f}{:10.4f}{:10.4f}{:10.4f}{:10.4f}\n", distance,
                                     energy.exact, u_tot, energy.ion_ion, energy.ion_dipole, energy.dipole_dipole,
                                     energy.ion_quadrupole, energy.dipole_dipole_correlation);
             }

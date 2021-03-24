@@ -75,7 +75,7 @@ class PerturbationAnalysisBase : public Analysisbase {
   protected:
     Energy::Energybase& pot;
     std::string filename;                                  //!< output filename (optional)
-    std::unique_ptr<std::ostream> output_stream = nullptr; //!< output file stream if filename given
+    std::unique_ptr<std::ostream> stream = nullptr; //!< output file stream if filename given
     Change change;                                         //!< Change object to describe perturbation
     Average<double> mean_exponentiated_energy_change;      //!< < exp(-du/kT) >
     bool collectWidomAverage(const double energy_change);  //!< add to exp(-du/kT) incl. safety checks
@@ -89,10 +89,11 @@ class PerturbationAnalysisBase : public Analysisbase {
  */
 class FileReactionCoordinate : public Analysisbase {
   private:
-    Average<double> avg;
-    std::string type, filename;
+    Average<double> mean_reaction_coordinate;
+    std::string reaction_coordinate_type;
+    std::string filename;
     std::unique_ptr<std::ostream> stream = nullptr;
-    std::shared_ptr<ReactionCoordinate::ReactionCoordinateBase> rc = nullptr;
+    std::shared_ptr<ReactionCoordinate::ReactionCoordinateBase> reaction_coordinate = nullptr;
 
     void _to_json(json& j) const override;
     void _sample() override;
@@ -196,6 +197,9 @@ class Density : public Analysisbase {
     Density(const json&, Space&);
 };
 
+/**
+ * @todo `atom_mean_charges` could be calculated from `atom_histograms`
+ */
 class ChargeFluctuations : public Analysisbase {
   private:
     typename decltype(Faunus::molecules)::const_iterator mol_iter; //!< selected molecule type
@@ -361,9 +365,9 @@ class AtomDipDipCorr : public PairAngleFunctionBase {
 
 /** @brief Write XTC trajectory file */
 class XTCtraj : public Analysisbase {
-    std::vector<int> molids;               // molecule ids to save to disk
-    std::vector<std::string> names;        // molecule names of above
-    std::function<bool(Particle&)> filter; // function to filter molecule ids
+    std::vector<int> molecule_ids;               //!< molecule ids to save to disk
+    std::vector<std::string> names;              //!< molecule names of above
+    std::function<bool(const Particle&)> filter; //!< function to filter atoms
     std::shared_ptr<XTCWriter> writer;
 
     void _to_json(json& j) const override;
@@ -395,7 +399,7 @@ class VirtualVolumeMove : public PerturbationAnalysisBase {
  */
 class MolecularConformationID : public Analysisbase {
     int molid;                             //!< molecule id to sample
-    std::map<int, unsigned int> histogram; //!< key is conformation id; value is count
+    std::map<int, unsigned int> histogram; //!< key = conformation id; value = count
     void _sample() override;
     void _to_json(json& j) const override;
 
@@ -492,7 +496,7 @@ class AtomInertia : public Analysisbase {
   private:
     std::string filename;
     int atom_id;
-    std::ofstream file;
+    std::ofstream output_stream;
 
     Point compute();
     void _to_json(json& j) const override;
@@ -511,10 +515,10 @@ class InertiaTensor : public Analysisbase {
     std::string filename;
     std::vector<size_t> particle_range; // range of indexes within the group
     int group_index;                    // group indes
-    std::ofstream file;
+    std::ofstream output_stream;
     struct Data {
         Point eivals, eivec; // eigenvalues and principal axis
-    } __attribute__((aligned(64)));
+    };
 
     Data compute();
     void _to_json(json& j) const override;
@@ -534,7 +538,7 @@ class MultipoleMoments : public Analysisbase {
     std::vector<size_t> particle_range; //!< range of indexes within the group
     size_t group_index;
     bool use_molecular_mass_center = true; //!< Moments w.r.t. the COM of the whole molecule (instead of the subgroup)
-    std::ofstream file;
+    std::ofstream output_stream;
 
     struct Data {
         double charge = 0.0;                // total charge

@@ -148,7 +148,7 @@ SystemEnergy::SystemEnergy(const json& j, Space& spc, Energy::Hamiltonian& pot) 
     }
     calculateAllEnergies = [&pot]() {
         Change change;
-        change.all = true;
+        change.all = true; // trigger full energy calculation
         std::vector<double> energies;
         std::transform(pot.vec.begin(), pot.vec.end(), std::back_inserter(energies),
                        [&](auto i) { return i->energy(change); });
@@ -314,8 +314,8 @@ void PairAngleFunctionBase::_to_disk() {
 void PairAngleFunctionBase::_from_json(const json&) { hist2.setResolution(dr, 0); }
 
 void PerturbationAnalysisBase::_to_disk() {
-    if (output_stream) {
-        output_stream->flush(); // empty buffer
+    if (stream) {
+        stream->flush(); // empty buffer
     }
 }
 PerturbationAnalysisBase::PerturbationAnalysisBase(const std::string& name, Energy::Energybase& pot, Space& spc,
@@ -323,7 +323,7 @@ PerturbationAnalysisBase::PerturbationAnalysisBase(const std::string& name, Ener
     : Analysisbase(spc, name), pot(pot), filename(filename) {
     if (!filename.empty()) {
         this->filename = MPI::prefix + filename;
-        output_stream = IO::openCompressedOutputStream(this->filename, true); // throws if error
+        stream = IO::openCompressedOutputStream(this->filename, true); // throws if error
     }
 }
 
@@ -370,21 +370,21 @@ void VirtualVolumeMove::sanityCheck(const double old_energy) {
     }
 }
 void VirtualVolumeMove::writeToFileStream(const Point& scale, const double energy_change) const {
-    if (output_stream) { // write to output file if open
-        *output_stream << fmt::format("{:d} {:.3f} {:.10f} {:.6f} {:.6f}", getNumberOfSteps(), volume_displacement,
-                                      energy_change, exp(-energy_change), -meanFreeEnergy() / volume_displacement);
+    if (stream) { // write to output file if open
+        *stream << fmt::format("{:d} {:.3f} {:.10f} {:.6f} {:.6f}", getNumberOfSteps(), volume_displacement,
+                               energy_change, exp(-energy_change), -meanFreeEnergy() / volume_displacement);
 
         // if anisotropic scaling, add an extra column with area or length perturbation
         if (volume_scaling_method == Geometry::XY) {
             const auto box_length = spc.geo.getLength();
             const auto area_change = box_length.x() * box_length.y() * (scale.x() * scale.y() - 1.0);
-            *output_stream << fmt::format(" {:.6f}", area_change);
+            *stream << fmt::format(" {:.6f}", area_change);
         } else if (volume_scaling_method == Geometry::Z) {
             const auto box_length = spc.geo.getLength();
             const auto length_change = box_length.z() * (scale.z() - 1.0);
-            *output_stream << fmt::format(" {:.6f}", length_change);
+            *stream << fmt::format(" {:.6f}", length_change);
         }
-        *output_stream << "\n"; // trailing newline
+        *stream << "\n"; // trailing newline
     }
 }
 
@@ -415,16 +415,15 @@ VirtualVolumeMove::VirtualVolumeMove(const json& j, Space& spc, Energy::Energyba
     from_json(j);
     change.dV = true;
     change.all = true;
-    if (output_stream) {
-        *output_stream << "# steps dV/" + u8::angstrom + u8::cubed + " du/kT exp(-du/kT) <Pex>/kT/" + u8::angstrom +
-                              u8::cubed;
+    if (stream) {
+        *stream << "# steps dV/" + u8::angstrom + u8::cubed + " du/kT exp(-du/kT) <Pex>/kT/" + u8::angstrom + u8::cubed;
         // if non-isotropic scaling, add another column with dA or dL
         if (volume_scaling_method == Geometry::XY) {
-            *output_stream << " dA/" + u8::angstrom + u8::squared;
+            *stream << " dA/" + u8::angstrom + u8::squared;
         } else if (volume_scaling_method == Geometry::Z) {
-            *output_stream << " dL/" + u8::angstrom;
+            *stream << " dL/" + u8::angstrom;
         }
-        *output_stream << "\n"; // trailing newline
+        *stream << "\n"; // trailing newline
     }
 }
 
@@ -464,6 +463,7 @@ QRtraj::QRtraj(const json& j, Space& spc) : Analysisbase(spc, "qrfile") {
         *stream << "\n"; // newline for every frame
     };
 }
+
 void QRtraj::_to_disk() {
     if (*stream) {
         stream->flush(); // empty buffer
@@ -555,25 +555,26 @@ CombinedAnalysis::CombinedAnalysis(const json& j, Space& spc, Energy::Hamiltonia
 }
 
 void FileReactionCoordinate::_to_json(json& j) const {
-    json rcjson = *rc; // invoke to_json(...)
-    if (rcjson.count(type) == 0) {
+    json rcjson = *reaction_coordinate; // invoke to_json(...)
+    if (rcjson.count(reaction_coordinate_type) == 0) {
         throw std::runtime_error("error writing json for reaction coordinate");
     }
-    j = rcjson[type];
-    j["type"] = type;
+    j = rcjson[reaction_coordinate_type];
+    j["type"] = reaction_coordinate_type;
     j["file"] = filename;
     j.erase("range");      // these are for penalty function
     j.erase("resolution"); // use only, so no need to show
     if (number_of_samples > 0) {
-        j["average"] = avg.avg();
+        j["average"] = mean_reaction_coordinate.avg();
     }
 }
 
 void FileReactionCoordinate::_sample() {
     if (*stream) {
-        double reaction_coordinate_value = (*rc)();
-        avg += reaction_coordinate_value;
-        (*stream) << fmt::format("{} {:.6f} {:.6f}\n", getNumberOfSteps(), reaction_coordinate_value, avg.avg());
+        const auto reaction_coordinate_value = reaction_coordinate->operator()();
+        mean_reaction_coordinate += reaction_coordinate_value;
+        (*stream) << fmt::format("{} {:.6f} {:.6f}\n", getNumberOfSteps(), reaction_coordinate_value,
+                                 mean_reaction_coordinate.avg());
     }
 }
 
@@ -583,8 +584,8 @@ FileReactionCoordinate::FileReactionCoordinate(const json& j, Space& spc) : Anal
     if (stream = IO::openCompressedOutputStream(filename); not *stream) {
         throw std::runtime_error("could not open create "s + filename);
     }
-    type = j.at("type").get<std::string>();
-    rc = ReactionCoordinate::createReactionCoordinate({{type, j}}, spc);
+    reaction_coordinate_type = j.at("type").get<std::string>();
+    reaction_coordinate = ReactionCoordinate::createReactionCoordinate({{reaction_coordinate_type, j}}, spc);
 }
 
 void FileReactionCoordinate::_to_disk() {
@@ -600,10 +601,10 @@ void FileReactionCoordinate::_to_disk() {
  */
 void WidomInsertion::selectGhostGroup() {
     change.clear();
-    auto inactive_groups = spc.findMolecules(molid, Space::INACTIVE); // list of inactive molecules
-    if (!ranges::cpp20::empty(inactive_groups)) {                     // did we find any?
-        const auto& group = *inactive_groups.begin();                 // select first group
-        if (group.empty() && group.capacity() > 0) {                  // must be inactive and have a non-zero capacity
+    auto inactive_groups = spc.findMolecules(molid, Space::INACTIVE);
+    if (!ranges::cpp20::empty(inactive_groups)) {
+        const auto& group = *inactive_groups.begin(); // select first group
+        if (group.empty() && group.capacity() > 0) {  // must be inactive and have a non-zero capacity
             auto& group_changes = change.groups.emplace_back();
             group_changes.index = spc.getGroupIndex(group); // group index in space
             group_changes.all = true;
@@ -725,7 +726,7 @@ std::pair<std::map<int, int>, std::map<int, int>> Density::countAtomsAndMolecule
 double Density::updateVolumeStatistics() {
     const auto volume = spc.geo.getVolume();
     mean_volume += volume;
-    mean_cubic_root_of_volume += cbrt(volume);
+    mean_cubic_root_of_volume += std::cbrt(volume);
     mean_inverse_volume += 1.0 / volume;
     return volume;
 }
@@ -895,14 +896,13 @@ void MoleculeRDF::_sample() {
 MoleculeRDF::MoleculeRDF(const json& j, Space& spc) : PairFunctionBase(spc, j, "molrdf") {
     id1 = findMoleculeByName(name1).id();
     id2 = findMoleculeByName(name2).id();
-    assert(id1 >= 0 && id2 >= 0);
 }
 
 void AtomDipDipCorr::_sample() {
     mean_volume += spc.geo.getVolume(dimensions);
-    auto active = spc.activeParticles();
-    for (auto i = active.begin(); i != active.end(); ++i) {
-        for (auto j = i; ++j != active.end();) {
+    const auto particles = spc.activeParticles();
+    for (auto i = particles.begin(); i != particles.end(); ++i) {
+        for (auto j = i; ++j != particles.end();) {
             if ((i->id == id1 && j->id == id2) || (i->id == id2 && j->id == id1)) {
                 Point rvec = spc.geo.vdist(i->pos, j->pos);
                 if (slicedir.sum() > 0) {
@@ -933,9 +933,10 @@ AtomDipDipCorr::AtomDipDipCorr(const json& j, Space& spc) : PairAngleFunctionBas
 
 // =============== XTCtraj ===============
 
-XTCtraj::XTCtraj(const json& j, Space& spc) : Analysisbase(spc, "xtcfile"), filter([](Particle&) { return true; }) {
+XTCtraj::XTCtraj(const json& j, Space& spc)
+    : Analysisbase(spc, "xtcfile"), filter([](const Particle&) { return true; }) {
     from_json(j);
-    assert(filter); // filter must be callable
+    assert(filter);
 }
 
 void XTCtraj::_to_json(json& j) const {
@@ -949,16 +950,16 @@ void XTCtraj::_from_json(const json& j) {
     const auto file = MPI::prefix + j.at("file").get<std::string>();
     writer = std::make_shared<XTCWriter>(file);
 
-    // By default, *all* active and inactive groups are saved,
-    // but here allow for a user defined list of molecule ids
+    filter = [](const Particle&) { return true; }; // default: save all particles
     names = j.value("molecules", std::vector<std::string>());
-    if (not names.empty()) {
-        molids = Faunus::names2ids(Faunus::molecules, names); // molecule types to save
-        if (not molids.empty()) {
+    if (!names.empty()) {
+        molecule_ids = Faunus::names2ids(Faunus::molecules, names); // molecule types to save
+        if (!molecule_ids.empty()) {
+            std::sort(molecule_ids.begin(), molecule_ids.end()); // needed for binary_search
             filter = [&](const Particle& particle) {
-                for (const auto& group : spc.groups) {    // loop over all active and inactive groups
-                    if (group.contains(particle, true)) { // does group contain particle?
-                        return std::find(molids.begin(), molids.end(), group.id) != molids.end();
+                for (const auto& group : spc.groups) {
+                    if (group.contains(particle, true)) {
+                        return std::binary_search(molecule_ids.begin(), molecule_ids.end(), group.id);
                     }
                 }
                 return false;
@@ -972,10 +973,8 @@ void XTCtraj::_sample() {
     // the ranges::view::filter(rng,unaryp) clears the `filter` function.
     // Using the ranges piping seem to solve the issue.
     assert(filter);
-    auto coordinates = spc.p | ranges::cpp20::views::filter(filter) |
-                       ranges::cpp20::views::transform([](auto& particle) -> Point& { return particle.pos; });
-    assert(filter);
-    writer->writeNext(spc.geo.getLength(), coordinates.begin(), coordinates.end());
+    auto positions = spc.p | ranges::cpp20::views::filter(filter) | ranges::cpp20::views::transform(&Particle::pos);
+    writer->writeNext(spc.geo.getLength(), positions.begin(), positions.end());
 }
 
 // =============== MultipoleDistribution ===============
@@ -1038,8 +1037,8 @@ MultipoleDistribution::MultipoleDistribution(const json& j, Space& spc) : Analys
     from_json(j);
     dr = j.at("dr").get<double>();
     filename = j.at("file").get<std::string>();
-    names = j.at("molecules").get<decltype(names)>(); // molecule names
-    ids = names2ids(molecules, names);                // names --> molids
+    names = j.at("molecules").get<decltype(names)>();
+    ids = Faunus::names2ids(molecules, names);
     if (ids.size() != 2) {
         throw std::runtime_error("specify exactly two molecules");
     }
@@ -1060,19 +1059,19 @@ Point AtomInertia::compute() {
     return esf.eigenvalues();
 }
 void AtomInertia::_sample() {
-    if (file) {
-        file << getNumberOfSteps() << " " << compute().transpose() << "\n";
+    if (output_stream) {
+        output_stream << getNumberOfSteps() << " " << compute().transpose() << "\n";
     }
 }
 AtomInertia::AtomInertia(const json& j, Space& spc) : Analysisbase(spc, "Atomic Inertia Eigenvalues") {
     from_json(j);
     filename = MPI::prefix + j.at("file").get<std::string>();
-    file.open(filename);                   // output file
-    atom_id = j.at("index").get<size_t>(); // atom id
+    output_stream.open(filename);
+    atom_id = j.at("index").get<size_t>();
 }
 void AtomInertia::_to_disk() {
-    if (file) {
-        file.flush(); // empty buffer
+    if (output_stream) {
+        output_stream.flush(); // empty buffer
     }
 }
 
@@ -1096,21 +1095,21 @@ InertiaTensor::Data InertiaTensor::compute() {
 }
 void InertiaTensor::_sample() {
     InertiaTensor::Data d = compute();
-    if (file) {
-        file << getNumberOfSteps() << " " << d.eivals.transpose() << " " << d.eivec.transpose() << "\n";
+    if (output_stream) {
+        output_stream << getNumberOfSteps() << " " << d.eivals.transpose() << " " << d.eivec.transpose() << "\n";
     }
 }
 InertiaTensor::InertiaTensor(const json& j, Space& spc) : Analysisbase(spc, "Inertia Tensor") {
     from_json(j);
     filename = MPI::prefix + j.at("file").get<std::string>();
-    file.open(filename);                       // output file
-    group_index = j.at("index").get<size_t>(); // group index
+    output_stream.open(filename);
+    group_index = j.at("index").get<size_t>();
     particle_range =
         j.value("indexes", std::vector<size_t>({0, spc.groups[group_index].size()})); // whole molecule by default
 }
 void InertiaTensor::_to_disk() {
-    if (file) {
-        file.flush(); // empty buffer
+    if (output_stream) {
+        output_stream.flush(); // empty buffer
     }
 }
 
@@ -1152,11 +1151,11 @@ MultipoleMoments::Data MultipoleMoments::calculateMultipoleMoment() const {
     return multipole;
 }
 void MultipoleMoments::_sample() {
-    if (file) {
+    if (output_stream) {
         const auto multipole = calculateMultipoleMoment();
-        file << getNumberOfSteps() << " " << multipole.charge << " " << multipole.dipole_moment.transpose() << " "
-             << multipole.center.transpose() << " " << multipole.eivals.transpose() << " "
-             << multipole.eivec.transpose() << "\n";
+        output_stream << getNumberOfSteps() << " " << multipole.charge << " " << multipole.dipole_moment.transpose()
+                      << " " << multipole.center.transpose() << " " << multipole.eivals.transpose() << " "
+                      << multipole.eivec.transpose() << "\n";
     }
 }
 MultipoleMoments::MultipoleMoments(const json& j, Space& spc) : Analysisbase(spc, "Multipole Moments") {
@@ -1164,7 +1163,7 @@ MultipoleMoments::MultipoleMoments(const json& j, Space& spc) : Analysisbase(spc
     try {
         use_molecular_mass_center = j.value("mol_cm", true); // use the mass center of the whole molecule
         filename = MPI::prefix + j.at("file").get<std::string>();
-        file.open(filename); // output file
+        output_stream.open(filename); // output file
 
         group_index = j.at("index").get<int>();
         const auto& group = spc.groups.at(group_index);
@@ -1183,8 +1182,8 @@ MultipoleMoments::MultipoleMoments(const json& j, Space& spc) : Analysisbase(spc
     }
 }
 void MultipoleMoments::_to_disk() {
-    if (file) {
-        file.flush(); // empty buffer
+    if (output_stream) {
+        output_stream.flush(); // empty buffer
     }
 }
 
@@ -1484,13 +1483,13 @@ ChargeFluctuations::ChargeFluctuations(const json& j, Space& spc) : Analysisbase
     filename = j.value("pqrfile", ""s);
     verbose = j.value("verbose", true);
 
-    const auto molname = j.at("molecule").get<std::string>();  // molecule name
-    const auto molecule = Faunus::findMoleculeByName(molname); // throws if not found
+    const auto molname = j.at("molecule").get<std::string>();   // molecule name
+    const auto& molecule = Faunus::findMoleculeByName(molname); // throws if not found
     if (molecule.atomic) {
         throw ConfigurationError("only molecular groups allowed");
     }
 
-    mol_iter = Faunus::findName(Faunus::molecules, molname);
+    mol_iter = Faunus::findName(Faunus::molecules, molname); // reference -> iterator
     atom_histograms.resize(molecule.atoms.size());
     atom_mean_charges.resize(molecule.atoms.size());
 }
@@ -1641,8 +1640,8 @@ void VirtualTranslate::_from_json(const json& j) {
 
     if (filename = j.value("file", ""s); !filename.empty()) {
         filename = MPI::prefix + filename;
-        output_stream = IO::openCompressedOutputStream(filename, true); // throws if error
-        *output_stream << "# steps dL/Å du/kT <force>/kT/Å\n"s;
+        stream = IO::openCompressedOutputStream(filename, true); // throws if error
+        *stream << "# steps dL/Å du/kT <force>/kT/Å\n"s;
     }
 }
 void VirtualTranslate::_sample() {
@@ -1661,10 +1660,10 @@ void VirtualTranslate::_sample() {
     }
 }
 void VirtualTranslate::writeToFileStream(const double energy_change) const {
-    if (output_stream) { // file to disk?
+    if (stream) { // file to disk?
         const auto mean_force = -meanFreeEnergy() / perturbation_distance;
-        *output_stream << fmt::format("{:d} {:.3f} {:.10f} {:.6f}\n", getNumberOfSteps(), perturbation_distance,
-                                      energy_change, mean_force);
+        *stream << fmt::format("{:d} {:.3f} {:.10f} {:.6f}\n", getNumberOfSteps(), perturbation_distance, energy_change,
+                               mean_force);
     }
 }
 

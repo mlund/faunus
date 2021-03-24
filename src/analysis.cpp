@@ -1404,7 +1404,8 @@ void SlicedDensity::_to_disk() {
     }
 }
 void ChargeFluctuations::_sample() {
-    for (const auto& group : spc.findMolecules(mol_iter->id(), Space::ACTIVE)) {
+    auto filtered_molecules = spc.findMolecules(mol_iter->id(), Space::ACTIVE);
+    for (const auto& group : filtered_molecules) {
         size_t particle_index = 0;
         for (const auto& particle : group) {
             atom_histograms[particle_index][particle.id]++;
@@ -1420,27 +1421,30 @@ void ChargeFluctuations::_to_json(json& j) const {
         j["pqrfile"] = filename;
     }
     if (verbose && number_of_samples > 0) {
-        std::vector<double> mean_charges;                // average charge
-        std::vector<double> qstdev;                      // standard deviation of the charge
-        std::vector<std::string> predominant_atom_names; // main name of atom with fluctuating charge
-
-        std::transform(atom_mean_charges.begin(), atom_mean_charges.end(), std::back_inserter(mean_charges),
-                       [](const auto& charge) { return charge.avg(); });
-
-        std::transform(atom_mean_charges.begin(), atom_mean_charges.end(), std::back_inserter(qstdev),
-                       [](const auto& charge) { return charge.stdev(); });
-
-        auto most_frequent_atom_name = [](const AtomHistogram& histogram) {
-            const auto [atomid, count] = *std::max_element(histogram.begin(), histogram.end(),
-                                                           [](auto& a, auto& b) { return a.second < b.second; });
-            return Faunus::atoms[atomid].name;
-        };
-
-        std::transform(atom_histograms.begin(), atom_histograms.end(), std::back_inserter(predominant_atom_names),
-                       most_frequent_atom_name);
-
-        j = {{"dominant atoms", predominant_atom_names}, {"<q>", mean_charges}, {"std", qstdev}};
+        j = {{"dominant atoms", getPredominantParticleNames()},
+             {"<q>", getMeanCharges()},
+             {"std", getChargeStandardDeviation()}};
     }
+}
+
+std::vector<std::string> ChargeFluctuations::getPredominantParticleNames() const {
+    auto most_frequent_name = [](const AtomHistogram& histogram) {
+        const auto [atomid, count] =
+            *std::max_element(histogram.begin(), histogram.end(), [](auto& a, auto& b) { return a.second < b.second; });
+        return Faunus::atoms[atomid].name;
+    }; // in a histogram, find the atom name with most counts
+
+    auto atom_names = atom_histograms | ranges::cpp20::views::transform(most_frequent_name);
+    return std::vector<std::string>(ranges::cpp20::begin(atom_names), ranges::cpp20::end(atom_names));
+}
+
+std::vector<double> ChargeFluctuations::getChargeStandardDeviation() const {
+    auto stdev = atom_mean_charges | ranges::cpp20::views::transform([](auto& i) { return i.stdev(); });
+    return std::vector<double>(ranges::cpp20::begin(stdev), ranges::cpp20::end(stdev));
+}
+
+std::vector<double> ChargeFluctuations::getMeanCharges() const {
+    return std::vector<double>(ranges::cpp20::begin(atom_mean_charges), ranges::cpp20::end(atom_mean_charges));
 }
 
 void ChargeFluctuations::_to_disk() {

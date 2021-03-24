@@ -206,6 +206,10 @@ class ChargeFluctuations : public Analysisbase {
     bool verbose = true;                                           //!< set to true for more output
 
     ParticleVector averageChargeParticles(const Space::Tgroup& group);
+    std::vector<double> getMeanCharges() const;
+    std::vector<double> getChargeStandardDeviation() const;
+    std::vector<std::string> getPredominantParticleNames() const;
+
     void _sample() override;
     void _to_json(json& j) const override;
     void _to_disk() override;

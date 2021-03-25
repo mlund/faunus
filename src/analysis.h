@@ -641,11 +641,15 @@ class SpaceTrajectory : public Analysisbase {
     SpaceTrajectory(const json& j, Space& spc);
 };
 
-struct CombinedAnalysis : public BasePointerVector<Analysisbase> {
-    CombinedAnalysis(const json& j, Space& spc, Energy::Hamiltonian& pot);
+class CombinedAnalysis : public BasePointerVector<Analysisbase> {
+  public:
+    CombinedAnalysis(const json& json_array, Space& spc, Energy::Hamiltonian& pot);
     void sample();
-    void to_disk(); // prompt all analysis to safe to disk if appropriate
-};                  //!< Aggregates analysis
+    void to_disk(); //!< prompt all analysis to safe to disk if appropriate
+};
+
+std::shared_ptr<Analysisbase> createAnalysis(const std::string& name, const json& j, Space& spc,
+                                             Energy::Hamiltonian& pot);
 
 /** @brief Example analysis */
 template <class T, class Enable = void> struct _analyse {

@@ -143,9 +143,9 @@ void SystemEnergy::_from_json(const json& j) {
 
 SystemEnergy::SystemEnergy(const json& j, Space& spc, Energy::Hamiltonian& pot) : Analysisbase(spc, "systemenergy") {
     from_json(j);
-    for (auto energy : pot.vec) {
-        names_of_energy_terms.push_back(energy->name);
-    }
+    std::transform(pot.vec.begin(), pot.vec.end(), std::back_inserter(names_of_energy_terms),
+                   [](auto& i) { return i->name; });
+
     calculateAllEnergies = [&pot]() {
         Change change;
         change.all = true; // trigger full energy calculation
@@ -482,75 +482,87 @@ void CombinedAnalysis::to_disk() {
     }
 }
 
-CombinedAnalysis::CombinedAnalysis(const json& j, Space& spc, Energy::Hamiltonian& pot) {
-    if (!j.is_array()) {
-        throw ConfigurationError("analysis: json array expected");
+CombinedAnalysis::CombinedAnalysis(const json& json_array, Space& spc, Energy::Hamiltonian& pot) {
+    if (!json_array.is_array()) {
+        throw ConfigurationError("json array expected");
     }
-    for (const auto& j_analysis : j) {
+    for (const auto& j : json_array) {
         try {
-            const auto& [key, j_params] = jsonSingleItem(j_analysis);
-            try {
-                if (key == "atomprofile") {
-                    emplace_back<AtomProfile>(j_params, spc);
-                } else if (key == "atomrdf") {
-                    emplace_back<AtomRDF>(j_params, spc);
-                } else if (key == "atomdipdipcorr") {
-                    emplace_back<AtomDipDipCorr>(j_params, spc);
-                } else if (key == "density") {
-                    emplace_back<Density>(j_params, spc);
-                } else if (key == "chargefluctuations") {
-                    emplace_back<ChargeFluctuations>(j_params, spc);
-                } else if (key == "molrdf") {
-                    emplace_back<MoleculeRDF>(j_params, spc);
-                } else if (key == "multipole") {
-                    emplace_back<Multipole>(j_params, spc);
-                } else if (key == "atominertia") {
-                    emplace_back<AtomInertia>(j_params, spc);
-                } else if (key == "inertia") {
-                    emplace_back<InertiaTensor>(j_params, spc);
-                } else if (key == "moleculeconformation") {
-                    emplace_back<MolecularConformationID>(j_params, spc);
-                } else if (key == "multipolemoments") {
-                    emplace_back<MultipoleMoments>(j_params, spc);
-                } else if (key == "multipoledist") {
-                    emplace_back<MultipoleDistribution>(j_params, spc);
-                } else if (key == "polymershape") {
-                    emplace_back<PolymerShape>(j_params, spc);
-                } else if (key == "qrfile") {
-                    emplace_back<QRtraj>(j_params, spc);
-                } else if (key == "reactioncoordinate") {
-                    emplace_back<FileReactionCoordinate>(j_params, spc);
-                } else if (key == "sanity") {
-                    emplace_back<SanityCheck>(j_params, spc);
-                } else if (key == "savestate") {
-                    emplace_back<SaveState>(j_params, spc);
-                } else if (key == "scatter") {
-                    emplace_back<ScatteringFunction>(j_params, spc);
-                } else if (key == "sliceddensity") {
-                    emplace_back<SlicedDensity>(j_params, spc);
-                } else if (key == "systemenergy") {
-                    emplace_back<SystemEnergy>(j_params, spc, pot);
-                } else if (key == "virtualvolume") {
-                    emplace_back<VirtualVolumeMove>(j_params, spc, pot);
-                } else if (key == "virtualtranslate") {
-                    emplace_back<VirtualTranslate>(j_params, spc, pot);
-                } else if (key == "widom") {
-                    emplace_back<WidomInsertion>(j_params, spc, pot);
-                } else if (key == "xtcfile") {
-                    emplace_back<XTCtraj>(j_params, spc);
-                } else if (key == "spacetraj") {
-                    emplace_back<SpaceTrajectory>(j_params, spc);
-                } else {
-                    throw ConfigurationError("unknown analysis");
-                }
-                // append additional analysis to the if-chain
-            } catch (std::exception& e) {
-                usageTip.pick(key);
-                throw ConfigurationError("'{}': {}", key, e.what());
-            }
+            const auto& [key, j_params] = jsonSingleItem(j);
+            auto analysis = createAnalysis(key, j_params, spc, pot);
+            vec.push_back(analysis);
         } catch (std::exception& e) {
-            throw ConfigurationError("analysis: {}", e.what()).attachJson(j_analysis);
+            throw ConfigurationError("analysis: {}", e.what()).attachJson(j);
         }
+    }
+}
+
+/**
+ * @brief Factory function for generating analysis based on name
+ * @param name name of analysis to create
+ * @param j configuration for analysis
+ * @param spc space to operate on
+ * @param pot Hamiltonian
+ * @return shared pointer to created analysis base class
+ */
+std::shared_ptr<Analysisbase> createAnalysis(const std::string& name, const json& j, Space& spc,
+                                             Energy::Hamiltonian& pot) {
+    try {
+        if (name == "atomprofile") {
+            return std::make_shared<AtomProfile>(j, spc);
+        } else if (name == "atomrdf") {
+            return std::make_shared<AtomRDF>(j, spc);
+        } else if (name == "atomdipdipcorr") {
+            return std::make_shared<AtomDipDipCorr>(j, spc);
+        } else if (name == "density") {
+            return std::make_shared<Density>(j, spc);
+        } else if (name == "chargefluctuations") {
+            return std::make_shared<ChargeFluctuations>(j, spc);
+        } else if (name == "molrdf") {
+            return std::make_shared<MoleculeRDF>(j, spc);
+        } else if (name == "multipole") {
+            return std::make_shared<Multipole>(j, spc);
+        } else if (name == "atominertia") {
+            return std::make_shared<AtomInertia>(j, spc);
+        } else if (name == "inertia") {
+            return std::make_shared<InertiaTensor>(j, spc);
+        } else if (name == "moleculeconformation") {
+            return std::make_shared<MolecularConformationID>(j, spc);
+        } else if (name == "multipolemoments") {
+            return std::make_shared<MultipoleMoments>(j, spc);
+        } else if (name == "multipoledist") {
+            return std::make_shared<MultipoleDistribution>(j, spc);
+        } else if (name == "polymershape") {
+            return std::make_shared<PolymerShape>(j, spc);
+        } else if (name == "qrfile") {
+            return std::make_shared<QRtraj>(j, spc);
+        } else if (name == "reactioncoordinate") {
+            return std::make_shared<FileReactionCoordinate>(j, spc);
+        } else if (name == "sanity") {
+            return std::make_shared<SanityCheck>(j, spc);
+        } else if (name == "savestate") {
+            return std::make_shared<SaveState>(j, spc);
+        } else if (name == "scatter") {
+            return std::make_shared<ScatteringFunction>(j, spc);
+        } else if (name == "sliceddensity") {
+            return std::make_shared<SlicedDensity>(j, spc);
+        } else if (name == "systemenergy") {
+            return std::make_shared<SystemEnergy>(j, spc, pot);
+        } else if (name == "virtualvolume") {
+            return std::make_shared<VirtualVolumeMove>(j, spc, pot);
+        } else if (name == "virtualtranslate") {
+            return std::make_shared<VirtualTranslate>(j, spc, pot);
+        } else if (name == "widom") {
+            return std::make_shared<WidomInsertion>(j, spc, pot);
+        } else if (name == "xtcfile") {
+            return std::make_shared<XTCtraj>(j, spc);
+        } else if (name == "spacetraj") {
+            return std::make_shared<SpaceTrajectory>(j, spc);
+        }
+        throw ConfigurationError("unknown analysis");
+    } catch (std::exception& e) {
+        usageTip.pick(name);
+        throw ConfigurationError("{}: {}", name, e.what());
     }
 }
 
@@ -998,8 +1010,8 @@ void MultipoleDistribution::save() const {
     if (number_of_samples > 0) {
         if (std::ofstream stream(MPI::prefix + filename.c_str()); stream) {
             stream << "# Multipolar energies (kT/lB)\n"
-                 << fmt::format("# {:>8}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}\n", "R", "exact", "tot", "ii", "id",
-                                "dd", "iq", "mucorr");
+                   << fmt::format("# {:>8}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}\n", "R", "exact", "tot", "ii",
+                                  "id", "dd", "iq", "mucorr");
             for (auto [r_bin, energy] : mean_energy) {
                 const auto distance = r_bin * dr;
                 const auto u_tot = energy.ion_ion.avg() + energy.ion_dipole.avg() + energy.dipole_dipole.avg() +

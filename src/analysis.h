@@ -39,7 +39,7 @@ class Analysisbase {
     virtual void _to_disk();                              //!< save sampled data to disk
     int number_of_steps = 0;                              //!< counter for total number of steps
     int number_of_skipped_steps = 0;                      //!< steps to skip before sampling (do not modify)
-    TimeRelativeOfTotal<std::chrono::microseconds> timer; //!< time to benchmark `_sample()`
+    TimeRelativeOfTotal<std::chrono::microseconds> timer; //!< timer to benchmark `_sample()`
 
   protected:
     Space& spc;                //!< Instance of Space to analyse
@@ -47,18 +47,18 @@ class Analysisbase {
     int number_of_samples = 0; //!< counter for number of samples
 
   public:
-    std::string name;             //!< descriptive name
-    std::string cite;             //!< url, doi etc. describing the analysis
-    void to_json(json&) const;    //!< JSON report w. statistics, output etc.
-    void from_json(const json&);  //!< configure from json object
-    void to_disk();               //!< Save data to disk (if defined)
-    void sample();                //!< Increase step count and sample
-    int getNumberOfSteps() const; //!< Number of steps
+    std::string name;              //!< descriptive name
+    std::string cite;              //!< url, doi etc. describing the analysis
+    void to_json(json& j) const;   //!< JSON report w. statistics, output etc.
+    void from_json(const json& j); //!< configure from json object
+    void to_disk();                //!< Save data to disk (if defined)
+    void sample();                 //!< Increase step count and sample
+    int getNumberOfSteps() const;  //!< Number of steps
     Analysisbase(Space& spc, const std::string& name);
     virtual ~Analysisbase() = default;
 };
 
-void to_json(json&, const Analysisbase&);
+void to_json(json& j, const Analysisbase& base);
 
 /**
  * @brief Base class for perturbation analysis
@@ -74,11 +74,11 @@ class PerturbationAnalysisBase : public Analysisbase {
 
   protected:
     Energy::Energybase& pot;
-    std::string filename;                                  //!< output filename (optional)
-    std::unique_ptr<std::ostream> stream = nullptr; //!< output file stream if filename given
-    Change change;                                         //!< Change object to describe perturbation
-    Average<double> mean_exponentiated_energy_change;      //!< < exp(-du/kT) >
-    bool collectWidomAverage(const double energy_change);  //!< add to exp(-du/kT) incl. safety checks
+    std::string filename;                                 //!< output filename (optional)
+    std::unique_ptr<std::ostream> stream = nullptr;       //!< output file stream if filename given
+    Change change;                                        //!< Change object to describe perturbation
+    Average<double> mean_exponentiated_energy_change;     //!< < exp(-du/kT) >
+    bool collectWidomAverage(const double energy_change); //!< add to exp(-du/kT) incl. safety checks
     PerturbationAnalysisBase(const std::string& name, Energy::Energybase& pot, Space& spc,
                              const std::string& filename = ""s);
     double meanFreeEnergy() const; //!< Average perturbation free energy, `-ln(<exp(-du/kT)>)`
@@ -276,7 +276,7 @@ class SanityCheck : public Analysisbase {
     void checkWithinContainer(const Space::Tgroup& group); //!< check if particles are inside container
 
   public:
-    SanityCheck(const json &j, Space &spc);
+    SanityCheck(const json& j, Space& spc);
 };
 
 /**
@@ -311,15 +311,17 @@ class SaveState : public Analysisbase {
  */
 class PairFunctionBase : public Analysisbase {
   protected:
-    int dimensions = 3;     // dimentions to use when normalizing
-    int id1 = -1, id2 = -1; // particle id (mol or atom)
-    double dr = 0;          // distance resolution
+    int dimensions = 3;                           //!< dimensions to use when normalizing
+    int id1 = -1;                                 //!< molecule or atom id
+    int id2 = -1;                                 //!< molecule or atom id
+    double dr = 0;                                //!< distance resolution
+    std::string name1;                            //!< atom or molecule
+    std::string name2;                            //!< atom or molecule name
+    std::string file;                             //!< output filename
+    Equidistant2DTable<double, double> histogram; //!< distance histogram
+    Average<double> mean_volume;                  //!< average volume (angstrom^3)
     Eigen::Vector3i slicedir = {0, 0, 0};
     double thickness = 0;
-    Equidistant2DTable<double, double> histogram;
-    std::string name1, name2;    // atom/molecule names
-    std::string file;            // output filename
-    Average<double> mean_volume; // average volume (angstrom^3)
 
   private:
     void _from_json(const json& j) override;
@@ -346,6 +348,7 @@ class PairAngleFunctionBase : public PairFunctionBase {
 /** @brief Atomic radial distribution function, g(r) */
 class AtomRDF : public PairFunctionBase {
     void _sample() override;
+    void sampleDistance(const Point& position1, const Point& position2);
 
   public:
     AtomRDF(const json&, Space&);
@@ -517,11 +520,12 @@ class AtomInertia : public Analysisbase {
 class InertiaTensor : public Analysisbase {
   private:
     std::string filename;
-    std::vector<size_t> particle_range; // range of indexes within the group
-    int group_index;                    // group indes
+    std::vector<size_t> particle_range; //!< range of indexes within the group
+    int group_index;
     std::ofstream output_stream;
     struct Data {
-        Point eivals, eivec; // eigenvalues and principal axis
+        Point eigen_values;
+        Point principle_axis;
     };
 
     Data compute();
@@ -579,11 +583,12 @@ class PolymerShape : public Analysisbase {
         average_type aspherity;
         average_type acylindricity;
         average_type relative_shape_anisotropy;
-    } __attribute__((aligned(128))); //!< Placeholder class for average polymer properties
-    AverageData data;                //!< Stores all averages
+    }; //!< Placeholder class for average properties
+
+    AverageData data; //!< Stores all averages
+    int molid;        //!< Molecule id to analyse
+    std::unique_ptr<std::ostream> tensor_output_stream = nullptr;
     Equidistant2DTable<double, unsigned int> gyration_radius_histogram;
-    int molid;                                                    //!< Molecule id to analyse
-    std::unique_ptr<std::ostream> tensor_output_stream = nullptr; //!< Output file for tensor
 
     void _to_json(json& j) const override;
     void _sample() override;
@@ -624,7 +629,7 @@ class QRtraj : public Analysisbase {
  * If zlib compression is enabled the file size
  * is reduced by roughly a factor of two.
  *
- * @todo Geometry information
+ * @todo Geometry information; update z-compression detection
  */
 class SpaceTrajectory : public Analysisbase {
   private:

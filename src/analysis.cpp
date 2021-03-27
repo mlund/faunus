@@ -867,25 +867,26 @@ SanityCheck::SanityCheck(const json& j, Space& spc) : Analysisbase(spc, "sanity"
     from_json(j);
     sample_interval = j.value("nstep", -1);
 }
-void AtomRDF::_sample() {
-    mean_volume += spc.geo.getVolume(dimensions);
 
-    auto sample_distance = [&](auto& position1, auto& position2) {
-        const auto distance = spc.geo.vdist(position1, position2);
-        if (slicedir.sum() > 0) {
-            if (distance.cwiseProduct(slicedir.cast<double>()).norm() < thickness) {
-                histogram(distance.norm())++;
-            }
-        } else {
+void AtomRDF::sampleDistance(const Point& position1, const Point& position2) {
+    const auto distance = spc.geo.vdist(position1, position2);
+    if (slicedir.sum() > 0) {
+        if (distance.cwiseProduct(slicedir.cast<double>()).norm() < thickness) {
             histogram(distance.norm())++;
         }
-    };
+    } else {
+        histogram(distance.norm())++;
+    }
+}
+
+void AtomRDF::_sample() {
+    mean_volume += spc.geo.getVolume(dimensions);
 
     auto active_particles = spc.activeParticles();
     for (auto i = active_particles.begin(); i != active_particles.end(); ++i) {
         for (auto j = i; ++j != active_particles.end();) {
             if ((i->id == id1 && j->id == id2) || (i->id == id2 && j->id == id1)) {
-                sample_distance(i->pos, j->pos);
+                sampleDistance(i->pos, j->pos);
             }
         }
     }
@@ -917,26 +918,26 @@ MoleculeRDF::MoleculeRDF(const json& j, Space& spc) : PairFunctionBase(spc, j, "
 void AtomDipDipCorr::_sample() {
     mean_volume += spc.geo.getVolume(dimensions);
     const auto particles = spc.activeParticles();
+
+    auto sample_distance = [&](const auto& particle1, const auto& particle2, const Point& distance) {
+        if (particle1.hasExtension() && particle2.hasExtension()) {
+            const auto cosine_angle = particle1.getExt().mu.dot(particle2.getExt().mu);
+            const auto r = distance.norm();
+            hist2(r) += cosine_angle;
+            histogram(r)++; // get g(r) for free
+        }
+    };
+
     for (auto i = particles.begin(); i != particles.end(); ++i) {
         for (auto j = i; ++j != particles.end();) {
             if ((i->id == id1 && j->id == id2) || (i->id == id2 && j->id == id1)) {
-                Point rvec = spc.geo.vdist(i->pos, j->pos);
+                const Point distance = spc.geo.vdist(i->pos, j->pos);
                 if (slicedir.sum() > 0) {
-                    if (rvec.cwiseProduct(slicedir.cast<double>()).norm() < thickness) {
-                        if (i->hasExtension() && j->hasExtension()) {
-                            const double dipdip = i->getExt().mu.dot(j->getExt().mu);
-                            const double r1 = rvec.norm();
-                            hist2(r1) += dipdip;
-                            histogram(r1)++; // get g(r) for free
-                        }
+                    if (distance.cwiseProduct(slicedir.cast<double>()).norm() < thickness) {
+                        sample_distance(*i, *j, distance);
                     }
                 } else {
-                    if (i->hasExtension() && j->hasExtension()) {
-                        const double dipdip = i->getExt().mu.dot(j->getExt().mu);
-                        const double r1 = rvec.norm();
-                        hist2(r1) += dipdip;
-                        histogram(r1)++; // get g(r) for free
-                    }
+                    sample_distance(*i, *j, distance);
                 }
             }
         }
@@ -1017,8 +1018,8 @@ void MultipoleDistribution::save() const {
                 const auto u_tot = energy.ion_ion.avg() + energy.ion_dipole.avg() + energy.dipole_dipole.avg() +
                                    energy.ion_quadrupole.avg();
                 stream << fmt::format("{:10.4f}{:10.4f}{:10.4f}{:10.4f}{:10.4f}{:10.4f}{:10.4f}{:10.4f}\n", distance,
-                                    energy.exact, u_tot, energy.ion_ion, energy.ion_dipole, energy.dipole_dipole,
-                                    energy.ion_quadrupole, energy.dipole_dipole_correlation);
+                                      energy.exact, u_tot, energy.ion_ion, energy.ion_dipole, energy.dipole_dipole,
+                                      energy.ion_quadrupole, energy.dipole_dipole_correlation);
             }
         }
     }
@@ -1101,16 +1102,17 @@ InertiaTensor::Data InertiaTensor::compute() {
     InertiaTensor::Data d;
     auto I = Geometry::inertia(subgroup.begin(), subgroup.end(), group.cm, spc.geo.getBoundaryFunc());
     Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(I);
-    d.eivals = esf.eigenvalues();
+    d.eigen_values = esf.eigenvalues();
     std::ptrdiff_t i_eival;
-    d.eivals.minCoeff(&i_eival);
-    d.eivec = esf.eigenvectors().col(i_eival).real(); // eigenvector corresponding to the smallest eigenvalue
+    d.eigen_values.minCoeff(&i_eival);
+    d.principle_axis = esf.eigenvectors().col(i_eival).real(); // eigenvector corresponding to the smallest eigenvalue
     return d;
 }
 void InertiaTensor::_sample() {
     InertiaTensor::Data d = compute();
     if (output_stream) {
-        output_stream << getNumberOfSteps() << " " << d.eivals.transpose() << " " << d.eivec.transpose() << "\n";
+        output_stream << getNumberOfSteps() << " " << d.eigen_values.transpose() << " " << d.principle_axis.transpose()
+                      << "\n";
     }
 }
 InertiaTensor::InertiaTensor(const json& j, Space& spc) : Analysisbase(spc, "Inertia Tensor") {

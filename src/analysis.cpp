@@ -92,6 +92,103 @@ int Analysisbase::getNumberOfSteps() const { return number_of_steps; }
 
 Analysisbase::Analysisbase(Space& spc, const std::string& name) : spc(spc), name(name) { assert(!name.empty()); }
 
+/**
+ * @brief Factory function for generating analysis based on name
+ * @param name name of analysis to create
+ * @param j configuration for analysis
+ * @param spc space to operate on
+ * @param pot Hamiltonian
+ * @return shared pointer to created analysis base class
+ */
+std::shared_ptr<Analysisbase> createAnalysis(const std::string& name, const json& j, Space& spc,
+                                             Energy::Hamiltonian& pot) {
+    try {
+        if (name == "atomprofile") {
+            return std::make_shared<AtomProfile>(j, spc);
+        } else if (name == "atomrdf") {
+            return std::make_shared<AtomRDF>(j, spc);
+        } else if (name == "atomdipdipcorr") {
+            return std::make_shared<AtomDipDipCorr>(j, spc);
+        } else if (name == "density") {
+            return std::make_shared<Density>(j, spc);
+        } else if (name == "chargefluctuations") {
+            return std::make_shared<ChargeFluctuations>(j, spc);
+        } else if (name == "molrdf") {
+            return std::make_shared<MoleculeRDF>(j, spc);
+        } else if (name == "multipole") {
+            return std::make_shared<Multipole>(j, spc);
+        } else if (name == "atominertia") {
+            return std::make_shared<AtomInertia>(j, spc);
+        } else if (name == "inertia") {
+            return std::make_shared<InertiaTensor>(j, spc);
+        } else if (name == "moleculeconformation") {
+            return std::make_shared<MolecularConformationID>(j, spc);
+        } else if (name == "multipolemoments") {
+            return std::make_shared<MultipoleMoments>(j, spc);
+        } else if (name == "multipoledist") {
+            return std::make_shared<MultipoleDistribution>(j, spc);
+        } else if (name == "polymershape") {
+            return std::make_shared<PolymerShape>(j, spc);
+        } else if (name == "qrfile") {
+            return std::make_shared<QRtraj>(j, spc);
+        } else if (name == "reactioncoordinate") {
+            return std::make_shared<FileReactionCoordinate>(j, spc);
+        } else if (name == "sanity") {
+            return std::make_shared<SanityCheck>(j, spc);
+        } else if (name == "savestate") {
+            return std::make_shared<SaveState>(j, spc);
+        } else if (name == "scatter") {
+            return std::make_shared<ScatteringFunction>(j, spc);
+        } else if (name == "sliceddensity") {
+            return std::make_shared<SlicedDensity>(j, spc);
+        } else if (name == "systemenergy") {
+            return std::make_shared<SystemEnergy>(j, spc, pot);
+        } else if (name == "virtualvolume") {
+            return std::make_shared<VirtualVolumeMove>(j, spc, pot);
+        } else if (name == "virtualtranslate") {
+            return std::make_shared<VirtualTranslate>(j, spc, pot);
+        } else if (name == "widom") {
+            return std::make_shared<WidomInsertion>(j, spc, pot);
+        } else if (name == "xtcfile") {
+            return std::make_shared<XTCtraj>(j, spc);
+        } else if (name == "spacetraj") {
+            return std::make_shared<SpaceTrajectory>(j, spc);
+        }
+        // append more analysis here...
+        throw ConfigurationError("unknown analysis");
+    } catch (std::exception& e) {
+        usageTip.pick(name);
+        throw ConfigurationError("{}: {}", name, e.what());
+    }
+}
+
+void CombinedAnalysis::sample() {
+    for (auto& analysis : this->vec) {
+        analysis->sample();
+    }
+}
+
+void CombinedAnalysis::to_disk() {
+    for (auto& analysis : this->vec) {
+        analysis->to_disk();
+    }
+}
+
+CombinedAnalysis::CombinedAnalysis(const json& json_array, Space& spc, Energy::Hamiltonian& pot) {
+    if (!json_array.is_array()) {
+        throw ConfigurationError("json array expected");
+    }
+    for (const auto& j : json_array) {
+        try {
+            const auto& [key, j_params] = jsonSingleItem(j);
+            auto analysis = createAnalysis(key, j_params, spc, pot);
+            vec.push_back(analysis);
+        } catch (std::exception& e) {
+            throw ConfigurationError("analysis: {}", e.what()).attachJson(j);
+        }
+    }
+}
+
 void SystemEnergy::normalize() {
     const auto sum = energy_histogram.sumy();
     for (auto& i : energy_histogram.getMap()) {
@@ -467,102 +564,6 @@ QRtraj::QRtraj(const json& j, Space& spc) : Analysisbase(spc, "qrfile") {
 void QRtraj::_to_disk() {
     if (*stream) {
         stream->flush(); // empty buffer
-    }
-}
-
-void CombinedAnalysis::sample() {
-    for (auto& analysis : this->vec) {
-        analysis->sample();
-    }
-}
-
-void CombinedAnalysis::to_disk() {
-    for (auto& analysis : this->vec) {
-        analysis->to_disk();
-    }
-}
-
-CombinedAnalysis::CombinedAnalysis(const json& json_array, Space& spc, Energy::Hamiltonian& pot) {
-    if (!json_array.is_array()) {
-        throw ConfigurationError("json array expected");
-    }
-    for (const auto& j : json_array) {
-        try {
-            const auto& [key, j_params] = jsonSingleItem(j);
-            auto analysis = createAnalysis(key, j_params, spc, pot);
-            vec.push_back(analysis);
-        } catch (std::exception& e) {
-            throw ConfigurationError("analysis: {}", e.what()).attachJson(j);
-        }
-    }
-}
-
-/**
- * @brief Factory function for generating analysis based on name
- * @param name name of analysis to create
- * @param j configuration for analysis
- * @param spc space to operate on
- * @param pot Hamiltonian
- * @return shared pointer to created analysis base class
- */
-std::shared_ptr<Analysisbase> createAnalysis(const std::string& name, const json& j, Space& spc,
-                                             Energy::Hamiltonian& pot) {
-    try {
-        if (name == "atomprofile") {
-            return std::make_shared<AtomProfile>(j, spc);
-        } else if (name == "atomrdf") {
-            return std::make_shared<AtomRDF>(j, spc);
-        } else if (name == "atomdipdipcorr") {
-            return std::make_shared<AtomDipDipCorr>(j, spc);
-        } else if (name == "density") {
-            return std::make_shared<Density>(j, spc);
-        } else if (name == "chargefluctuations") {
-            return std::make_shared<ChargeFluctuations>(j, spc);
-        } else if (name == "molrdf") {
-            return std::make_shared<MoleculeRDF>(j, spc);
-        } else if (name == "multipole") {
-            return std::make_shared<Multipole>(j, spc);
-        } else if (name == "atominertia") {
-            return std::make_shared<AtomInertia>(j, spc);
-        } else if (name == "inertia") {
-            return std::make_shared<InertiaTensor>(j, spc);
-        } else if (name == "moleculeconformation") {
-            return std::make_shared<MolecularConformationID>(j, spc);
-        } else if (name == "multipolemoments") {
-            return std::make_shared<MultipoleMoments>(j, spc);
-        } else if (name == "multipoledist") {
-            return std::make_shared<MultipoleDistribution>(j, spc);
-        } else if (name == "polymershape") {
-            return std::make_shared<PolymerShape>(j, spc);
-        } else if (name == "qrfile") {
-            return std::make_shared<QRtraj>(j, spc);
-        } else if (name == "reactioncoordinate") {
-            return std::make_shared<FileReactionCoordinate>(j, spc);
-        } else if (name == "sanity") {
-            return std::make_shared<SanityCheck>(j, spc);
-        } else if (name == "savestate") {
-            return std::make_shared<SaveState>(j, spc);
-        } else if (name == "scatter") {
-            return std::make_shared<ScatteringFunction>(j, spc);
-        } else if (name == "sliceddensity") {
-            return std::make_shared<SlicedDensity>(j, spc);
-        } else if (name == "systemenergy") {
-            return std::make_shared<SystemEnergy>(j, spc, pot);
-        } else if (name == "virtualvolume") {
-            return std::make_shared<VirtualVolumeMove>(j, spc, pot);
-        } else if (name == "virtualtranslate") {
-            return std::make_shared<VirtualTranslate>(j, spc, pot);
-        } else if (name == "widom") {
-            return std::make_shared<WidomInsertion>(j, spc, pot);
-        } else if (name == "xtcfile") {
-            return std::make_shared<XTCtraj>(j, spc);
-        } else if (name == "spacetraj") {
-            return std::make_shared<SpaceTrajectory>(j, spc);
-        }
-        throw ConfigurationError("unknown analysis");
-    } catch (std::exception& e) {
-        usageTip.pick(name);
-        throw ConfigurationError("{}: {}", name, e.what());
     }
 }
 

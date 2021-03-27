@@ -20,6 +20,14 @@ class Hamiltonian;
 class Energybase;
 } // namespace Energy
 
+/**
+ * Adding a new analysis requires the following steps:
+ *
+ * 1. Write an analysis class derived from `Analysis::Analysisbase`
+ * 2. Add the new class to the factory function `Analysis::createAnalysis()`, see below
+ * 3. Recommended: add the required json input format to `docs/schema.yml`
+ * 4. Recommended: add documentation to `docs/_docs/analysis.md`
+ */
 namespace Analysis {
 
 /**
@@ -59,6 +67,27 @@ class Analysisbase {
 };
 
 void to_json(json& j, const Analysisbase& base);
+
+/**
+ * @brief Function to create an instance of an analysis based on it's `name`
+ * @param name Name of analysis to create
+ * @param j JSON input for analysis
+ * @param spc Space the analysis should operate on
+ * @param pot Hamiltonian representing the system
+ * @return Shared pointer to analysis
+ *
+ * After writing a new analysis, it must be added to this function in
+ * order to be controlled from the main faunus input.
+ */
+std::shared_ptr<Analysisbase> createAnalysis(const std::string& name, const json& j, Space& spc,
+                                             Energy::Hamiltonian& pot);
+
+class CombinedAnalysis : public BasePointerVector<Analysisbase> {
+  public:
+    CombinedAnalysis(const json& json_array, Space& spc, Energy::Hamiltonian& pot);
+    void sample();
+    void to_disk(); //!< prompt all analysis to safe to disk if appropriate
+};
 
 /**
  * @brief Base class for perturbation analysis
@@ -645,16 +674,6 @@ class SpaceTrajectory : public Analysisbase {
   public:
     SpaceTrajectory(const json& j, Space& spc);
 };
-
-class CombinedAnalysis : public BasePointerVector<Analysisbase> {
-  public:
-    CombinedAnalysis(const json& json_array, Space& spc, Energy::Hamiltonian& pot);
-    void sample();
-    void to_disk(); //!< prompt all analysis to safe to disk if appropriate
-};
-
-std::shared_ptr<Analysisbase> createAnalysis(const std::string& name, const json& j, Space& spc,
-                                             Energy::Hamiltonian& pot);
 
 /** @brief Example analysis */
 template <class T, class Enable = void> struct _analyse {

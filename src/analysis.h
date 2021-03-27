@@ -82,6 +82,13 @@ void to_json(json& j, const Analysisbase& base);
 std::shared_ptr<Analysisbase> createAnalysis(const std::string& name, const json& j, Space& spc,
                                              Energy::Hamiltonian& pot);
 
+/**
+ * @brief Aggregator class for storing and selecting multiple analysis instances
+ *
+ * Holds an arbitrary number of analysis instances and selects them at
+ * random, based on user input. This is typically called from the
+ * main simulation loop.
+ */
 class CombinedAnalysis : public BasePointerVector<Analysisbase> {
   public:
     CombinedAnalysis(const json& json_array, Space& spc, Energy::Hamiltonian& pot);

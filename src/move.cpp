@@ -1209,6 +1209,7 @@ void ConformationSwap::_from_json(const json &j) {
     }
     molid = molecule.id();
     inserter.keep_positions = j.value("keeppos", false);
+    copy_positions_only = j.value("only_positions", false);
     setRepeat();
 }
 
@@ -1226,10 +1227,10 @@ void ConformationSwap::_move(Change &change) {
     if (auto groups = spc.findMolecules(molid, Space::ACTIVE); !ranges::cpp20::empty(groups)) {
         if (auto &group = *slump.sample(groups.begin(), groups.end()); !group.empty()) { // pick random molecule
             inserter.offset = group.cm;                                                  // insert on top of mass center
-            const auto particles = inserter(spc.geo, Faunus::molecules[molid], spc.p);   // new conformation
+            auto particles = inserter(spc.geo, Faunus::molecules[molid], spc.p);         // new conformation
             if (particles.size() == group.size()) {
-                checkMassCenterDrift(group.cm, particles);                            // throws if not OK
-                std::copy(particles.begin(), particles.end(), group.begin());         // override w. new conformation
+                checkMassCenterDrift(group.cm, particles); // throws if not OK
+                copyConformation(particles, group.begin());
                 group.confid = Faunus::molecules[molid].conformations.getLastIndex(); // store conformation id
                 registerChanges(change, group);                                       // update change object
             } else {
@@ -1238,6 +1239,25 @@ void ConformationSwap::_move(Change &change) {
         }
     }
 }
+
+/**
+ * This will copy the new conformation onto the destination group. By default
+ * all information is copied, but can be limited to positions, only
+ *
+ * @param particles Source particles
+ * @param destination Iterator to first particle in destination group
+ */
+void ConformationSwap::copyConformation(ParticleVector& particles, ParticleVector::iterator destination) const {
+    if (copy_positions_only) {
+        std::for_each(particles.begin(), particles.end(), [&](const auto& particle) {
+            destination->pos = particle.pos;
+            std::next(destination);
+        });
+    } else {
+        std::copy(particles.begin(), particles.end(), destination);
+    }
+}
+
 void ConformationSwap::registerChanges(Change &change, const Space::Tgroup &group) const {
     auto &group_change = change.groups.emplace_back();
     group_change.index = spc.getGroupIndex(group); // index of moved group

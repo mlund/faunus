@@ -282,6 +282,8 @@ class ConformationSwap : public MoveBase {
   private:
     RandomInserter inserter;
     int molid = -1; //!< Molecule ID to operate on
+    bool copy_positions_only = false;
+    void copyConformation(ParticleVector& particles, ParticleVector::iterator destination) const;
     void _to_json(json &j) const override;
     void _from_json(const json &j) override;
     void _move(Change &change) override;

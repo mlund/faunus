@@ -872,7 +872,7 @@ SanityCheck::SanityCheck(const json& j, Space& spc) : Analysisbase(spc, "sanity"
 void AtomRDF::sampleDistance(const Point& position1, const Point& position2) {
     const auto distance = spc.geo.vdist(position1, position2);
     if (slicedir.sum() > 0) {
-        if (distance.cwiseProduct((Point(1.0,1.0,1.0)-slicedir.cast<double>()).cwiseAbs()).norm() < thickness) {
+        if (distance.cwiseProduct((Point::Ones() - slicedir.cast<double>()).cwiseAbs()).norm() < thickness) {
             histogram(distance.cwiseProduct(slicedir.cast<double>()).norm())++;
         }
     } else {

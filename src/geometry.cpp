@@ -198,6 +198,8 @@ void Sphere::from_json(const json &j) { radius = j.at("radius").get<double>(); }
 
 void Sphere::to_json(json &j) const { j = {{"radius", radius}}; }
 
+double Sphere::getRadius() const { return radius; }
+
 // =============== Hypersphere 2D ===============
 
 Hypersphere2d::Hypersphere2d(double radius) : Sphere(radius) { boundary_conditions = BoundaryCondition(NON3D); }

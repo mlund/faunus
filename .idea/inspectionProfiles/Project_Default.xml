@@ -6,26 +6,57 @@
     <inspection_tool class="CallDealloc" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="CheckDtdRefs" enabled="false" level="ERROR" enabled_by_default="false" />
     <inspection_tool class="CheckEmptyScriptTag" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="CheckNodeTest" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="CheckTagEmptyBody" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="CheckValidXmlInScriptTagBody" enabled="false" level="ERROR" enabled_by_default="false" />
     <inspection_tool class="CheckXmlFileWithXercesValidator" enabled="false" level="ERROR" enabled_by_default="false" />
     <inspection_tool class="DuplicateAttribute" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="HardwiredNamespacePrefix" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="HidesClassScope" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="HtmlExtraClosingTag" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="HtmlMissingClosingTag" enabled="false" level="INFORMATION" enabled_by_default="false" />
     <inspection_tool class="HtmlUnknownAnchorTarget" enabled="false" level="WARNING" enabled_by_default="false" />
-    <inspection_tool class="HtmlUnknownAttribute" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="HtmlUnknownAttribute" enabled="false" level="WARNING" enabled_by_default="false">
+      <option name="myValues">
+        <value>
+          <list size="0" />
+        </value>
+      </option>
+      <option name="myCustomValuesEnabled" value="true" />
+    </inspection_tool>
     <inspection_tool class="HtmlUnknownBooleanAttribute" enabled="false" level="WARNING" enabled_by_default="false" />
-    <inspection_tool class="HtmlUnknownTag" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="HtmlUnknownTag" enabled="false" level="WARNING" enabled_by_default="false">
+      <option name="myValues">
+        <value>
+          <list size="6">
+            <item index="0" class="java.lang.String" itemvalue="nobr" />
+            <item index="1" class="java.lang.String" itemvalue="noembed" />
+            <item index="2" class="java.lang.String" itemvalue="comment" />
+            <item index="3" class="java.lang.String" itemvalue="noscript" />
+            <item index="4" class="java.lang.String" itemvalue="embed" />
+            <item index="5" class="java.lang.String" itemvalue="script" />
+          </list>
+        </value>
+      </option>
+      <option name="myCustomValuesEnabled" value="true" />
+    </inspection_tool>
     <inspection_tool class="HtmlUnknownTarget" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="HttpRequestPlaceholder" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="ImplementationHasNoInterface" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="ImplicitTypeConversion" enabled="false" level="WARNING" enabled_by_default="false">
+      <option name="BITS" value="1720" />
+      <option name="FLAG_EXPLICIT_CONVERSION" value="true" />
+      <option name="IGNORE_NODESET_TO_BOOLEAN_VIA_STRING" value="true" />
+    </inspection_tool>
+    <inspection_tool class="IndexZeroUsage" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="InterfaceHasNoImplementation" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="KeyValueCoding" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="LastArgumentMustBeNull" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="LossyEncoding" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="MethodIsLaterInTheScope" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="MongoJSDeprecationInspection" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="MongoJSResolveInspection" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="MongoJSSideEffectsInspection" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="MsBuiltinInspection" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="MsOrderByInspection" enabled="false" level="ERROR" enabled_by_default="false" />
     <inspection_tool class="MysqlLoadDataPathInspection" enabled="false" level="WARNING" enabled_by_default="false" />
@@ -47,13 +78,21 @@
     <inspection_tool class="OCUnusedMethod" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="OCUnusedProperty" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="OraDeprecateTypeInspection" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="OraMissingBodyInspection" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="OraOverloadInspection" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="OraUnmatchedForwardDeclarationInspection" enabled="false" level="ERROR" enabled_by_default="false" />
     <inspection_tool class="OverriddenAttributeMismatch" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="OverriddenTypeMismatch" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="PgSelectFromProcedureInspection" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="PrivateCategoryShouldBeNearImplementation" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="PropertyAndIvarTypeMismatch" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="RedundantTypeConversion" enabled="false" level="WARNING" enabled_by_default="false">
+      <option name="CHECK_ANY" value="false" />
+    </inspection_tool>
     <inspection_tool class="ReleasingOfAssignProperties" enabled="false" level="WARNING" enabled_by_default="false" />
-    <inspection_tool class="RequiredAttributes" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="RequiredAttributes" enabled="false" level="WARNING" enabled_by_default="false">
+      <option name="myAdditionalRequiredHtmlAttributes" value="" />
+    </inspection_tool>
     <inspection_tool class="SetterForReadonlyProperty" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="ShellCheck" enabled="false" level="ERROR" enabled_by_default="false" />
     <inspection_tool class="SpellCheckingInspection" enabled="false" level="TYPO" enabled_by_default="false">
@@ -65,11 +104,13 @@
     <inspection_tool class="SqlAggregatesInspection" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="SqlAmbiguousColumnInspection" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="SqlAutoIncrementDuplicateInspection" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="SqlCallNotationInspection" enabled="false" level="ERROR" enabled_by_default="false" />
     <inspection_tool class="SqlCaseVsCoalesceInspection" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="SqlCaseVsIfInspection" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="SqlCheckUsingColumnsInspection" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="SqlConstantConditionInspection" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="SqlCurrentSchemaInspection" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="SqlDeprecateTypeInspection" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="SqlDerivedTableAliasInspection" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="SqlDialectInspection" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="SqlDropIndexedColumnInspection" enabled="false" level="WARNING" enabled_by_default="false" />
@@ -94,6 +135,7 @@
     <inspection_tool class="SqlRedundantLimitInspection" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="SqlRedundantOrderingDirectionInspection" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="SqlResolveInspection" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="SqlShadowingAliasInspection" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="SqlShouldBeInGroupByInspection" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="SqlSideEffectsInspection" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="SqlSignatureInspection" enabled="false" level="WARNING" enabled_by_default="false" />
@@ -125,5 +167,9 @@
     <inspection_tool class="XmlUnboundNsPrefix" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="XmlUnusedNamespaceDeclaration" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="XmlWrongRootElement" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="XsltDeclarations" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="XsltTemplateInvocation" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="XsltUnusedDeclaration" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="XsltVariableShadowing" enabled="false" level="WARNING" enabled_by_default="false" />
   </profile>
 </component>

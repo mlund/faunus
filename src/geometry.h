@@ -483,7 +483,7 @@ Point anyCenter(iterator begin, iterator end, BoundaryFunction apply_boundary, c
         return center;
     } else {
         std::cerr << "warning: sum of weights is 0! setting center to (0,0,0)" << std::endl;
-        return Point(0,0,0);
+        return Point::Zero();
     }
 } //!< Mass, charge, or geometric center of a collection of particles
 
@@ -546,7 +546,7 @@ void translateToOrigin(
 template <typename iterator>
 void rotate(
     iterator begin, iterator end, const Eigen::Quaterniond &quaternion,
-    BoundaryFunction apply_boundary = [](Point &) {}, const Point &shift = Point(0.0, 0.0, 0.0)) {
+    BoundaryFunction apply_boundary = [](Point &) {}, const Point &shift = Point::Zero()) {
     const auto rotation_matrix = quaternion.toRotationMatrix(); // rotation matrix
     std::for_each(begin, end, [&](auto &particle) {
         particle.rotate(quaternion, rotation_matrix); // rotate internal coordinates

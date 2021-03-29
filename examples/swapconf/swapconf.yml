@@ -22,7 +22,7 @@ energy:
             - lennardjones: {mixing: LB} # we just want a simple non-bonded potential
 
 moves:
-    - conformationswap: {molecule: water} # attemps a conformational swap move
+    - conformationswap: {molecule: water, copy_policy: all} # attemps a conformational swap move
     - moltransrot: {molecule: water, dp: 5, dprot: 1, repeat: N} # rotate/translate
 
 analysis:

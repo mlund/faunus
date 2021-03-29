@@ -158,12 +158,12 @@ Instead, use a hard-coded variant like `nonbonded_coulomblj` etc.
 
 ### Conformational Swap
 
-`conformationswap`     | Description
----------------------- | ---------------------------------
-`molecule`             |  Molecule name to operate on
-`repeat=N`             |  Number of repeats per MC sweep
-`keeppos=False`        |  Keep original positions of `traj`
-`only_positions=False` |  If true, only positions from conformation will be used
+`conformationswap`  | Description
+------------------- | ---------------------------------
+`molecule`          | Molecule name to operate on
+`repeat=N`          | Number of repeats per MC sweep
+`keeppos=False`     | Keep original positions of `traj`
+`copy_policy=all`   | What to copy from library: `all`, `positions`, `charges`
 
 This will swap between different molecular conformations
 as defined in the [Molecule Properties](topology.html#molecule-properties) with `traj` and `trajweight`
@@ -175,9 +175,8 @@ an exising molecule. That is, there is no mass center movement.
 If `keeppos` is activated, the raw coordinates from the conformation
 is used, i.e. no rotation and no mass-center overlay.
 
-By default all information from the conformation is copied in, including charges and particle type.
-To copy only positions, use the `only_positions` flags, useful if the molecule is used with
-speciation moves.
+By default all information from the conformation is copied (`copy_policy=all`), including charges and particle type.
+To for example copy only positions, use `copy_policy=positions`. This can be useful when using speciation moves.
 
 
 ### Pivot

@@ -1197,8 +1197,11 @@ SmartTranslateRotate::SmartTranslateRotate(Space &spc, std::string name, std::st
 
 SmartTranslateRotate::SmartTranslateRotate(Space &spc) : SmartTranslateRotate(spc, "smartmoltransrot", "") {}
 
-void ConformationSwap::_to_json(json &j) const {
-    j = {{"molid", molid}, {"molecule", Faunus::molecules.at(molid).name}, {"keeppos", inserter.keep_positions}};
+void ConformationSwap::_to_json(json& j) const {
+    j = {{"molid", molid},
+         {"molecule", Faunus::molecules.at(molid).name},
+         {"keeppos", inserter.keep_positions},
+         {"copy_policy", copy_policy}};
     _roundjson(j, 3);
 }
 void ConformationSwap::_from_json(const json &j) {
@@ -1209,7 +1212,10 @@ void ConformationSwap::_from_json(const json &j) {
     }
     molid = molecule.id();
     inserter.keep_positions = j.value("keeppos", false);
-    copy_positions_only = j.value("only_positions", false);
+    copy_policy = j.value("copy_policy", CopyPolicy::ALL);
+    if (copy_policy == CopyPolicy::INVALID) {
+        throw ConfigurationError("invalid scheme");
+    }
     setRepeat();
 }
 
@@ -1223,9 +1229,9 @@ void ConformationSwap::setRepeat() {
         }
     }
 }
-void ConformationSwap::_move(Change &change) {
+void ConformationSwap::_move(Change& change) {
     if (auto groups = spc.findMolecules(molid, Space::ACTIVE); !ranges::cpp20::empty(groups)) {
-        if (auto &group = *slump.sample(groups.begin(), groups.end()); !group.empty()) { // pick random molecule
+        if (auto& group = *slump.sample(groups.begin(), groups.end()); !group.empty()) { // pick random molecule
             inserter.offset = group.cm;                                                  // insert on top of mass center
             auto particles = inserter(spc.geo, Faunus::molecules[molid], spc.p);         // new conformation
             if (particles.size() == group.size()) {
@@ -1245,17 +1251,29 @@ void ConformationSwap::_move(Change &change) {
  * all information is copied, but can be limited to positions, only
  *
  * @param particles Source particles
- * @param destination Iterator to first particle in destination group
+ * @param destination Iterator to first particle in destination
  */
 void ConformationSwap::copyConformation(ParticleVector& particles, ParticleVector::iterator destination) const {
-    if (copy_positions_only) {
-        std::for_each(particles.begin(), particles.end(), [&](const auto& particle) {
-            destination->pos = particle.pos;
-            std::next(destination);
-        });
-    } else {
-        std::copy(particles.begin(), particles.end(), destination);
+    std::function<void(const Particle&, Particle&)> copy_function; // how to copy particle information
+    switch (copy_policy) {
+    case ALL:
+        copy_function = [](const Particle& src, Particle& dst) { dst = src; };
+        break;
+    case POSITIONS:
+        copy_function = [](const Particle& src, Particle& dst) { dst.pos = src.pos; };
+        break;
+    case CHARGES:
+        copy_function = [](const Particle& src, Particle& dst) { dst.charge = src.charge; };
+        break;
+    default:
+        throw std::runtime_error("invalid copy policy");
     }
+
+    // copy particle data from library to destination group
+    std::for_each(particles.begin(), particles.end(), [&](const Particle& source) {
+        copy_function(source, *destination);
+        std::next(destination);
+    });
 }
 
 void ConformationSwap::registerChanges(Change &change, const Space::Tgroup &group) const {
@@ -1269,12 +1287,17 @@ void ConformationSwap::registerChanges(Change &change, const Space::Tgroup &grou
  *
  * Move shouldn't move mass centers, so let's check if this is true
  */
-void ConformationSwap::checkMassCenterDrift(const Point &old_mass_center, const ParticleVector &particles) {
-    const auto max_allowed_distance = 1.0e-6;
-    const auto new_mass_center =
-        Geometry::massCenter(particles.begin(), particles.end(), spc.geo.getBoundaryFunc(), -old_mass_center);
-    if ((new_mass_center - old_mass_center).norm() > max_allowed_distance) {
-        throw std::runtime_error(name + ": unexpected mass center movement");
+void ConformationSwap::checkMassCenterDrift(const Point& old_mass_center, const ParticleVector& particles) {
+    switch (copy_policy) {
+    case CHARGES: // positions untouched; no check needed
+        return;
+    default:
+        const auto max_allowed_distance = 1.0e-6;
+        const auto new_mass_center =
+            Geometry::massCenter(particles.begin(), particles.end(), spc.geo.getBoundaryFunc(), -old_mass_center);
+        if ((new_mass_center - old_mass_center).norm() > max_allowed_distance) {
+            throw std::runtime_error(name + ": unexpected mass center movement");
+        }
     }
 }
 

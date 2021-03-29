@@ -640,7 +640,11 @@ properties:
                         molecule: {type: string, description: Molecule name to operate on}
                         repeat: {type: [integer, string], description: Number of repeats per MC sweep}
                         keeppos: {type: boolean, default: true, description: Keep original positions from trajectory}
-                        only_positions:  {type: boolean, default: false, description: Copy only positions from library}
+                        copy_policy:
+                            type: string
+                            default: all
+                            enum: [all, positions, charges]
+                            description: "Data to copy from library: all, positions, charges"
                     additionalProperties: false
 
                 moltransrot:

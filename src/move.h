@@ -279,11 +279,13 @@ class SmartTranslateRotate : public MoveBase {
  * @todo Add feature to align molecule on top of an exiting one
  */
 class ConformationSwap : public MoveBase {
+  public:
+    enum CopyPolicy { ALL, POSITIONS, CHARGES, INVALID }; //!< What to copy from conformation library
   private:
+    CopyPolicy copy_policy;
     RandomInserter inserter;
     int molid = -1; //!< Molecule ID to operate on
-    bool copy_positions_only = false;
-    void copyConformation(ParticleVector& particles, ParticleVector::iterator destination) const;
+    void copyConformation(ParticleVector& source_particle, ParticleVector::iterator destination) const;
     void _to_json(json &j) const override;
     void _from_json(const json &j) override;
     void _move(Change &change) override;
@@ -295,6 +297,11 @@ class ConformationSwap : public MoveBase {
   public:
     explicit ConformationSwap(Space &spc);
 }; // end of conformation swap move
+
+NLOHMANN_JSON_SERIALIZE_ENUM(ConformationSwap::CopyPolicy, {{ConformationSwap::INVALID, nullptr},
+                                                            {ConformationSwap::ALL, "all"},
+                                                            {ConformationSwap::POSITIONS, "positions"},
+                                                            {ConformationSwap::CHARGES, "charges"}})
 
 class VolumeMove : public MoveBase {
   private:

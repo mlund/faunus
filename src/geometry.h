@@ -7,6 +7,7 @@
 #include <Eigen/Geometry>
 #include <iostream>
 #include <cereal/types/base_class.hpp>
+#include <spdlog/spdlog.h>
 
 /** @brief Faunus main namespace */
 namespace Faunus {

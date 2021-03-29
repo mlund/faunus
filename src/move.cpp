@@ -1272,7 +1272,7 @@ void ConformationSwap::copyConformation(ParticleVector& particles, ParticleVecto
     // copy particle data from library to destination group
     std::for_each(particles.begin(), particles.end(), [&](const Particle& source) {
         copy_function(source, *destination);
-        std::next(destination);
+        destination++;
     });
 }
 

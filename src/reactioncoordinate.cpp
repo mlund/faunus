@@ -328,20 +328,21 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordina
     else if (property == "Rinner") {
         dir = j.at("dir");
         indexes = j.value("indexes", decltype(indexes)());
-        assert(indexes.size() >= 3 && "An array of at least 3 indexes should be specified.");
+        if (indexes.size() != 3)
+            throw ConfigurationError("An array of at least 3 indexes should be specified.");
         function = [&spc, &dir = dir, i = indexes[0], j = indexes[1], k = indexes[2], l = indexes[3]]() {
             Average<double> Rj, Ri;
             auto slicei = spc.findAtoms(i);
-            auto cm = Geometry::massCenter(slicei.begin(), slicei.end(), spc.geo.getBoundaryFunc());
+            const auto mass_center = Geometry::massCenter(slicei.begin(), slicei.end(), spc.geo.getBoundaryFunc());
             auto slicej = spc.findAtoms(j);
             for (auto p : slicej)
-                Rj += spc.geo.vdist(p.pos, cm).cwiseProduct(dir.cast<double>()).norm();
-            double Rjavg = Rj.avg();
-            for (auto p : spc.p) {
-                if ((p.id==k) or (p.id==l)) {
-                    double d = spc.geo.vdist(p.pos, cm).cwiseProduct(dir.cast<double>()).norm();
-                    if (d < Rjavg)
-                        Ri += d;
+                Rj += spc.geo.vdist(p.pos, mass_center).cwiseProduct(dir.cast<double>()).norm();
+            const auto mean_radius = Rj.avg();
+            for (const auto &particle : spc.activeParticles()) {
+                if ((particle.id==k) or (particle.id==l)) {
+                    const auto distance  = spc.geo.vdist(particle.pos, mass_center).cwiseProduct(dir.cast<double>()).norm();
+                    if (distance < mean_radius)
+                        Ri += distance;
                 }
             }
             return Ri.avg();

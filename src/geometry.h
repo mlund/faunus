@@ -482,7 +482,7 @@ Point anyCenter(iterator begin, iterator end, BoundaryFunction apply_boundary, c
         apply_boundary(center);
         return center;
     } else {
-        std::cerr << "warning: sum of weights is 0! setting center to (0,0,0)" << std::endl;
+        faunus_logger->warn("warning: sum of weights is 0! setting center to (0,0,0)");
         return Point::Zero();
     }
 } //!< Mass, charge, or geometric center of a collection of particles

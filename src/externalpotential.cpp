@@ -268,10 +268,11 @@ double ExternalAkesson::phi_ext(double z, double a) const {
            2 * z * (0.5 * pc::pi + std::asin((a2 * a2 - z2 * z2 - 2 * a2 * z2) / std::pow(a2 + z2, 2)));
 }
 
-void ExternalAkesson::sync(Energybase *basePtr, Change &) {
-    if (not fixed_potential) {
-        auto other = dynamic_cast<ExternalAkesson *>(basePtr);
-        assert(other);
+void ExternalAkesson::sync(Energybase* energybase, Change&) {
+    if (fixed_potential) {
+        return;
+    }
+    if (auto* other = dynamic_cast<ExternalAkesson*>(energybase)) {
         if (other->key == ACCEPTED_MONTE_CARLO_STATE) { // only trial energy (new) requires sync
             if (num_density_updates != other->num_density_updates) {
                 assert(num_density_updates < other->num_density_updates);
@@ -280,6 +281,8 @@ void ExternalAkesson::sync(Energybase *basePtr, Change &) {
                 phi = other->phi;
             }
         }
+    } else {
+        throw std::runtime_error("akesson sync error");
     }
 }
 

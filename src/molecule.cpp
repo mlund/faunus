@@ -82,10 +82,21 @@ void MoleculeData::createMolecularConformations(const json &j) {
     assert(j.is_object());
     if (auto trajfile = j.value("traj", ""s); not trajfile.empty()) {
         conformations.clear();                                  // remove all previous conformations
+        if (j.count("structure") != 0) {
+            throw ConfigurationError("`structure` and `traj` are mutually exclusive");
+        }
         try {
             FormatPQR::loadTrajectory(trajfile, conformations.data); // read traj. from disk
+            if (bool read_charges = j.value("keepcharges", true); read_charges) {
+                faunus_logger->debug("charges in {} preferred over `atomlist` values", trajfile);
+            } else {
+                faunus_logger->debug("ignoring all charges in {}", trajfile);
+                for (ParticleVector& particles : conformations.data) {
+                    FormatPQR::fixCharges(particles); // for each conformation.
+                }
+            }
         } catch (std::exception& e) {
-            throw std::runtime_error(fmt::format("error loading structure from file '{}': {}", trajfile, e.what()));
+            throw ConfigurationError("error loading structure from file '{}': {}", trajfile, e.what());
         }
         if (not conformations.empty()) {
             faunus_logger->debug("{} conformations loaded from {}", conformations.size(), trajfile);
@@ -117,13 +128,16 @@ void MoleculeData::createMolecularConformations(const json &j) {
                     if (weights.size() == conformations.size()) {
                         faunus_logger->debug("{} weights loaded from {}", conformations.size(), weightfile);
                         conformations.setWeight(weights.begin(), weights.end());
-                    } else
-                        throw std::runtime_error("Number of weights does not match conformations.");
-                } else
-                    throw std::runtime_error(weightfile + " not found.");
+                    } else {
+                        throw ConfigurationError("number of weights does not match conformations");
+                    }
+                } else {
+                    throw ConfigurationError("{} not found", weightfile);
+                }
             }
-        } else
-            throw std::runtime_error(trajfile + " not loaded or empty.");
+        } else {
+            throw ConfigurationError("{} not loaded or empty", trajfile);
+        }
     }
 } // done handling conformations
 

@@ -180,11 +180,6 @@ bool FormatPQR::readAtomRecord(const std::string &record, Particle &particle, do
         particle = atom;
         o >> res_name >> res_index >> particle.pos.x() >> particle.pos.y() >> particle.pos.z() >> particle.charge >>
             radius;
-        // @warning THIS IS A HACK FOR MARCO - DO NOT MERGE INTO MASTER
-        if (std::fabs(atom.charge - particle.charge) > 1e-9) {
-            faunus_logger->warn("charge mismatch on {}{} - using atomlist value", atom_name, atom_index);
-            particle.charge = atom.charge;
-        }
         return true;
     }
     return false;
@@ -362,6 +357,21 @@ void FormatPQR::save(const std::string &filename, const Tgroup_vector &groups, c
         } else {
             throw std::runtime_error("write error: "s + filename);
         }
+    }
+}
+
+void FormatPQR::fixCharges(ParticleVector& particles) {
+    const auto max_charge_difference = 1e-9;
+    size_t mismatch_counter = 0;
+    std::for_each(particles.begin(), particles.end(), [&](Particle& particle) {
+        const auto topology_charge = Faunus::atoms.at(particle.id).charge;
+        if (std::fabs(topology_charge - particle.charge) > max_charge_difference) {
+            particle.charge = topology_charge;
+            mismatch_counter++;
+        }
+    });
+    if (mismatch_counter > 0) {
+        faunus_logger->trace("{} charge(s) reset with topology values (from atomlist)", mismatch_counter);
     }
 }
 

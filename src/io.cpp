@@ -180,6 +180,11 @@ bool FormatPQR::readAtomRecord(const std::string &record, Particle &particle, do
         particle = atom;
         o >> res_name >> res_index >> particle.pos.x() >> particle.pos.y() >> particle.pos.z() >> particle.charge >>
             radius;
+        // @warning THIS IS A HACK FOR MARCO - DO NOT MERGE INTO MASTER
+        if (std::fabs(atom.charge - particle.charge) > 1e-9) {
+            faunus_logger->warn("charge mismatch on {}{} - using atomlist value", atom_name, atom_index);
+            particle.charge = atom.charge;
+        }
         return true;
     }
     return false;

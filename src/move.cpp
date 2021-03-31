@@ -1204,17 +1204,18 @@ void ConformationSwap::_to_json(json& j) const {
          {"copy_policy", copy_policy}};
     _roundjson(j, 3);
 }
+
 void ConformationSwap::_from_json(const json &j) {
-    const std::string molecule_name = j.at("molecule");
-    const auto molecule = findMoleculeByName(molecule_name);
+    const auto molecule_name = j.at("molecule").get<std::string>();
+    const auto molecule = Faunus::findMoleculeByName(molecule_name);
     if (molecule.conformations.size() < 2) {
-        throw ConfigurationError("molecule '{}': minimum two conformations required", molecule_name);
+        throw ConfigurationError("minimum two conformations required for {}", molecule_name);
     }
     molid = molecule.id();
     inserter.keep_positions = j.value("keeppos", false);
     copy_policy = j.value("copy_policy", CopyPolicy::ALL);
     if (copy_policy == CopyPolicy::INVALID) {
-        throw ConfigurationError("invalid scheme");
+        throw ConfigurationError("invalid copy policy");
     }
     setRepeat();
 }
@@ -1260,7 +1261,10 @@ void ConformationSwap::copyConformation(ParticleVector& particles, ParticleVecto
         copy_function = [](const Particle& src, Particle& dst) { dst = src; };
         break;
     case POSITIONS:
-        copy_function = [](const Particle& src, Particle& dst) { dst.pos = src.pos; };
+        copy_function = [](const Particle& src, Particle& dst) {
+            faunus_logger->info("copy positions");
+            dst.pos = src.pos;
+        };
         break;
     case CHARGES:
         copy_function = [](const Particle& src, Particle& dst) { dst.charge = src.charge; };
@@ -1270,7 +1274,7 @@ void ConformationSwap::copyConformation(ParticleVector& particles, ParticleVecto
     }
 
     // copy particle data from library to destination group
-    std::for_each(particles.begin(), particles.end(), [&](const Particle& source) {
+    std::for_each(particles.cbegin(), particles.cend(), [&](const Particle& source) {
         copy_function(source, *destination);
         destination++;
     });
@@ -1304,9 +1308,9 @@ void ConformationSwap::checkMassCenterDrift(const Point& old_mass_center, const 
 ConformationSwap::ConformationSwap(Space &spc, const std::string &name, const std::string &cite)
     : MoveBase(spc, name, cite) {}
 
-ConformationSwap::ConformationSwap(Space &spc) : ConformationSwap(spc, "conformationswap", "") {
+ConformationSwap::ConformationSwap(Space& spc) : ConformationSwap(spc, "conformationswap", "doi:10/dmc3") {
     repeat = -1; // meaning repeat n times
-    inserter.dir = {0, 0, 0};
+    inserter.dir = Point::Zero();
     inserter.rotate = true;
     inserter.allow_overlap = true;
 }

@@ -1237,7 +1237,7 @@ void ConformationSwap::_move(Change& change) {
             auto particles = inserter(spc.geo, Faunus::molecules[molid], spc.p);         // new conformation
             if (particles.size() == group.size()) {
                 checkMassCenterDrift(group.cm, particles); // throws if not OK
-                copyConformation(particles, group.begin());
+                // copyConformation(particles, group.begin());
                 group.confid = Faunus::molecules[molid].conformations.getLastIndex(); // store conformation id
                 registerChanges(change, group);                                       // update change object
             } else {
@@ -1261,10 +1261,7 @@ void ConformationSwap::copyConformation(ParticleVector& particles, ParticleVecto
         copy_function = [](const Particle& src, Particle& dst) { dst = src; };
         break;
     case POSITIONS:
-        copy_function = [](const Particle& src, Particle& dst) {
-            faunus_logger->info("copy positions");
-            dst.pos = src.pos;
-        };
+        copy_function = [](const Particle& src, Particle& dst) { dst.pos = src.pos; };
         break;
     case CHARGES:
         copy_function = [](const Particle& src, Particle& dst) { dst.charge = src.charge; };

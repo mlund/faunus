@@ -1231,6 +1231,7 @@ void ConformationSwap::setRepeat() {
     }
 }
 void ConformationSwap::_move(Change& change) {
+    return;
     if (auto groups = spc.findMolecules(molid, Space::ACTIVE); !ranges::cpp20::empty(groups)) {
         if (auto& group = *slump.sample(groups.begin(), groups.end()); !group.empty()) { // pick random molecule
             inserter.offset = group.cm;                                                  // insert on top of mass center

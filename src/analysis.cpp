@@ -843,14 +843,18 @@ void SanityCheck::checkGroupsCoverParticles() {
     }
 }
 void SanityCheck::checkWithinContainer(const Space::Tgroup& group) {
+    bool error = false;
     for (const auto& particle : group) { // loop over active particles
         if (spc.geo.collision(particle.pos)) {
             const auto atom_index = &particle - &(*group.begin()); // yak!
             const auto group_index = spc.getGroupIndex(group);
             faunus_logger->error("step {}: {}{} of {}{}, conformation {}", getNumberOfSteps(), particle.traits().name,
                                  atom_index, group.traits().name, group_index, group.confid);
-            throw std::runtime_error("particle outside simulation cell");
+            error = true;
         }
+    }
+    if (error) {
+        throw std::runtime_error("particle(s) outside simulation cell");
     }
 }
 void SanityCheck::checkMassCenter(const Space::Tgroup& group) {

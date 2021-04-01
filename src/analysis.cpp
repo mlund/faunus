@@ -847,9 +847,9 @@ void SanityCheck::checkWithinContainer(const Space::Tgroup& group) {
         if (spc.geo.collision(particle.pos)) {
             const auto atom_index = &particle - &(*group.begin()); // yak!
             const auto group_index = spc.getGroupIndex(group);
-            throw std::runtime_error(fmt::format("step {}: particle {}{} of {}{} outside simulation cell",
-                                                 getNumberOfSteps(), particle.traits().name, atom_index,
-                                                 group.traits().name, group_index));
+            faunus_logger->error("step {}: {}{} of {}{}, conformation {}", getNumberOfSteps(), particle.traits().name,
+                                 atom_index, group.traits().name, group_index, group.confid);
+            throw std::runtime_error("particle outside simulation cell");
         }
     }
 }

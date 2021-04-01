@@ -91,12 +91,14 @@ void MoleculeData::createMolecularConformations(const json &j) {
             if (bool read_charges = j.value("keepcharges", true); read_charges) {
                 faunus_logger->debug("charges in {} preferred over `atomlist` values", trajfile);
             } else {
-                faunus_logger->debug("ignoring all charges in {}", trajfile);
+                faunus_logger->debug("replacing all charges from {} with atomlist values", trajfile);
                 auto all_particles = conformations.data | ranges::cpp20::views::join;
                 Faunus::applyAtomDataCharges(all_particles.begin(), all_particles.end());
             }
-            for (ParticleVector& particles : conformations.data) {
-                Geometry::translateToOrigin(particles.begin(), particles.end()); // move to origin
+            // make sure all conformations are initially placed in the center of the box which
+            // in order to reduce PBC problems when inserting later on
+            for (ParticleVector& conformation : conformations.data) {
+                Geometry::translateToOrigin(conformation.begin(), conformation.end());
             }
         } catch (std::exception& e) {
             throw ConfigurationError("error loading {}: {}", trajfile, e.what());

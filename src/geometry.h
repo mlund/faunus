@@ -7,6 +7,7 @@
 #include <Eigen/Geometry>
 #include <iostream>
 #include <cereal/types/base_class.hpp>
+#include <spdlog/spdlog.h>
 
 /** @brief Faunus main namespace */
 namespace Faunus {
@@ -462,8 +463,8 @@ enum class weight { MASS, CHARGE, GEOMETRIC };
  * @param apply_boundary Boundary function to apply PBC (default: no PBC)
  * @param weight_function Functor return weight for a given particle
  * @param shift Shift by this vector before calculating center, then add again. For PBC removal; default: 0,0,0
- * @return Center position
- * @throws if the sum of weights is zero, thereby hampering normalization
+ * @return Center position; (0,0,0) if the sum of weights is zero
+ * @throw warning if the sum of weights is zero, thereby hampering normalization
  */
 template <typename iterator, typename weightFunc>
 Point anyCenter(iterator begin, iterator end, BoundaryFunction apply_boundary, const weightFunc &weight_function,
@@ -482,7 +483,8 @@ Point anyCenter(iterator begin, iterator end, BoundaryFunction apply_boundary, c
         apply_boundary(center);
         return center;
     } else {
-        throw std::runtime_error("cannot calculate center with zero weights");
+        faunus_logger->warn("warning: sum of weights is 0! setting center to (0,0,0)");
+        return Point::Zero();
     }
 } //!< Mass, charge, or geometric center of a collection of particles
 
@@ -545,7 +547,7 @@ void translateToOrigin(
 template <typename iterator>
 void rotate(
     iterator begin, iterator end, const Eigen::Quaterniond &quaternion,
-    BoundaryFunction apply_boundary = [](Point &) {}, const Point &shift = Point(0.0, 0.0, 0.0)) {
+    BoundaryFunction apply_boundary = [](Point &) {}, const Point &shift = Point::Zero()) {
     const auto rotation_matrix = quaternion.toRotationMatrix(); // rotation matrix
     std::for_each(begin, end, [&](auto &particle) {
         particle.rotate(quaternion, rotation_matrix); // rotate internal coordinates

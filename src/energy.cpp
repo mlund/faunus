@@ -533,21 +533,23 @@ void Ewald::force(std::vector<Point> &forces) {
 /**
  * @todo Implement a sync() function in EwaldData to selectively copy information
  */
-void Ewald::sync(Energybase *energybase_pointer, Change &change) {
-    auto other = dynamic_cast<decltype(this)>(energybase_pointer);
-    assert(other);
-    if (other->key == ACCEPTED_MONTE_CARLO_STATE) {
-        old_groups =
-            &(other->spc
-                  .groups); // give NEW_MONTE_CARLO_STATE access to OLD_MONTE_CARLO_STATE space for optimized updates
-    }
+void Ewald::sync(Energybase* energybase, Change& change) {
+    if (auto* other = dynamic_cast<Ewald*>(energybase)) {
+        if (other->key == ACCEPTED_MONTE_CARLO_STATE) {
+            old_groups = &(
+                other->spc
+                    .groups); // give NEW_MONTE_CARLO_STATE access to OLD_MONTE_CARLO_STATE space for optimized updates
+        }
 
-    // hard-coded sync; should be expanded when dipolar ewald is supported
-    if (change.all or change.dV) {
-        other->data.Q_dipole.resize(0); // dipoles are currently unsupported
-        data = other->data;
+        // hard-coded sync; should be expanded when dipolar ewald is supported
+        if (change.all or change.dV) {
+            other->data.Q_dipole.resize(0); // dipoles are currently unsupported
+            data = other->data;
+        } else {
+            data.Q_ion = other->data.Q_ion;
+        }
     } else {
-        data.Q_ion = other->data.Q_ion;
+        throw std::runtime_error("sync error");
     }
 }
 

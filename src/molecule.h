@@ -188,7 +188,8 @@ class MoleculeData {
 
     int &id();             //!< Type id
     const int &id() const; //!< Type id
-    void createMolecularConformations(const json&); //!< Add conformations if appropriate
+    void createMolecularConformations(const json& j); //!< Add conformations if appropriate
+    void setConformationWeights(const json& j);       //!< Add weights for conformations
 
     std::string name;            //!< Molecule name
     bool atomic = false;         //!< True if atomic group (salt etc.)

@@ -95,8 +95,11 @@ void MoleculeData::createMolecularConformations(const json &j) {
                     FormatPQR::fixCharges(particles); // for each conformation.
                 }
             }
+            for (ParticleVector& particles : conformations.data) {
+                Geometry::translateToOrigin(particles.begin(), particles.end()); // move to origin
+            }
         } catch (std::exception& e) {
-            throw ConfigurationError("error loading structure from file '{}': {}", trajfile, e.what());
+            throw ConfigurationError("error loading {}: {}", trajfile, e.what());
         }
         if (not conformations.empty()) {
             faunus_logger->debug("{} conformations loaded from {}", conformations.size(), trajfile);
@@ -104,42 +107,47 @@ void MoleculeData::createMolecularConformations(const json &j) {
             // create atom list
             atoms.clear();
             atoms.reserve(conformations.data.front().size());
-            for (auto &p : conformations.data.front()) // add atoms to atomlist
-                atoms.push_back(p.id);
+            for (const Particle& particle : conformations.data.front()) { // add atoms to atomlist
+                atoms.push_back(particle.id);
+            }
 
             // center mass center for each frame to origo assuming whole molecules
             if (j.value("trajcenter", false)) {
-                faunus_logger->debug("Centering conformations from {}", trajfile);
-                for (auto &p : conformations.data) // loop over conformations
-                    Geometry::translateToOrigin(p.begin(), p.end());
-            }
-
-            std::vector<float> weights(conformations.size(), 1.0); // default uniform weight
-            conformations.setWeight(weights.begin(), weights.end());
-
-            // look for weight file
-            if (auto weightfile = j.value("trajweight", ""s); not weightfile.empty()) {
-                if (std::ifstream f(weightfile); bool(f)) {
-                    weights.clear();
-                    weights.reserve(conformations.size());
-                    float _val;
-                    while (f >> _val)
-                        weights.push_back(_val);
-                    if (weights.size() == conformations.size()) {
-                        faunus_logger->debug("{} weights loaded from {}", conformations.size(), weightfile);
-                        conformations.setWeight(weights.begin(), weights.end());
-                    } else {
-                        throw ConfigurationError("number of weights does not match conformations");
-                    }
-                } else {
-                    throw ConfigurationError("{} not found", weightfile);
+                faunus_logger->info("centering conformations in {}", trajfile);
+                for (auto& particles : conformations.data) { // loop over conformations
+                    Geometry::translateToOrigin(particles.begin(), particles.end());
                 }
             }
+
+            setConformationWeights(j);
+
         } else {
             throw ConfigurationError("{} not loaded or empty", trajfile);
         }
     }
-} // done handling conformations
+}
+void MoleculeData::setConformationWeights(const json& j) {
+    std::vector<float> weights(conformations.size(), 1.0); // default uniform weight
+
+    if (auto filename = j.value("trajweight", ""s); !filename.empty()) {
+        if (std::ifstream stream(filename); stream) {
+            weights.clear();
+            weights.reserve(conformations.size());
+            float weight = 1.0;
+            while (stream >> weight) {
+                weights.push_back(weight);
+            }
+            if (weights.size() != conformations.size()) {
+                throw ConfigurationError("{} conformation weights found while expecting {}", weights.size(),
+                                         conformations.size());
+            }
+            faunus_logger->info("{} weights loaded from {}", weights.size(), filename);
+        } else {
+            throw ConfigurationError("{} not found", filename);
+        }
+    }
+    conformations.setWeight(weights.begin(), weights.end());
+}
 
 TEST_CASE("[Faunus] MoleculeData") {
     //    json j = R"(

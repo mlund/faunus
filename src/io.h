@@ -132,7 +132,7 @@ class FormatPQR {
                      int = 1e9); //!< Save PQR file
     static void save(const std::string &, const ParticleVector &, const Point & = Point(0, 0, 0),
                      int = 1e9); //!< Save PQR file
-    static void fixCharges(ParticleVector& particles); //!< Sync charges from Faunus::atoms (topology)
+    //!< Sync charges from Faunus::atoms (topology)
 
     /**
      * @brief Write vector of groups to output stream

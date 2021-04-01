@@ -360,21 +360,6 @@ void FormatPQR::save(const std::string &filename, const Tgroup_vector &groups, c
     }
 }
 
-void FormatPQR::fixCharges(ParticleVector& particles) {
-    const auto max_charge_difference = 1e-9;
-    size_t mismatch_counter = 0;
-    std::for_each(particles.begin(), particles.end(), [&](Particle& particle) {
-        const auto topology_charge = Faunus::atoms.at(particle.id).charge;
-        if (std::fabs(topology_charge - particle.charge) > max_charge_difference) {
-            particle.charge = topology_charge;
-            mismatch_counter++;
-        }
-    });
-    if (mismatch_counter > 0) {
-        faunus_logger->trace("{} charge(s) reset with topology values (from atomlist)", mismatch_counter);
-    }
-}
-
 void FormatXYZ::save(const std::string &file, const ParticleVector &particles, const Point &box) {
     std::ostringstream o;
     o << particles.size() << "\n" << box.transpose() << "\n";

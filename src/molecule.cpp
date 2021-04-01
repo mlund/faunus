@@ -7,6 +7,7 @@
 #include "aux/eigensupport.h"
 #include <functional>
 #include <range/v3/view/transform.hpp>
+#include <range/v3/view/join.hpp>
 
 namespace Faunus {
 
@@ -91,9 +92,8 @@ void MoleculeData::createMolecularConformations(const json &j) {
                 faunus_logger->debug("charges in {} preferred over `atomlist` values", trajfile);
             } else {
                 faunus_logger->debug("ignoring all charges in {}", trajfile);
-                for (ParticleVector& particles : conformations.data) {
-                    FormatPQR::fixCharges(particles); // for each conformation.
-                }
+                auto all_particles = conformations.data | ranges::cpp20::views::join;
+                Faunus::applyAtomDataCharges(all_particles.begin(), all_particles.end());
             }
             for (ParticleVector& particles : conformations.data) {
                 Geometry::translateToOrigin(particles.begin(), particles.end()); // move to origin

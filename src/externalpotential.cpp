@@ -321,7 +321,7 @@ void ExternalAkesson::update_phi() {
 // ------------ createGouyChapman -------------
 
 std::function<double(const Particle &)> createGouyChapmanPotential(const json &j, const Geometry::Chameleon &geo) {
-    if (geo.boundaryConditions().direction.z() != Geometry::FIXED) {
+    if (geo.boundaryConditions().direction.z() != Geometry::Boundary::FIXED) {
         throw std::runtime_error("Gouy-Chapman requires non-periodicity in z-direction");
     }
     double rho = 0; // surface charge density (charge per area)

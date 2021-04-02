@@ -49,14 +49,15 @@ NLOHMANN_JSON_SERIALIZE_ENUM(VolumeMethod, {{VolumeMethod::INVALID, nullptr},
                                             {VolumeMethod::Z, "z"}})
 
 enum Coordinates { ORTHOGONAL, ORTHOHEXAGONAL, TRUNC_OCTAHEDRAL, NON3D };
-enum Boundary { FIXED, PERIODIC };
+enum class Boundary : int { FIXED = 0, PERIODIC = 1 };
 
 /**
  * @brief A structure containing a type of boundary condition in each direction.
  *
  * A stub. It can be extended to fully json-configurable boundary conditions.
  */
-struct BoundaryCondition {
+class BoundaryCondition {
+  public:
     using BoundaryXYZ = Eigen::Matrix<Boundary, 3, 1>;
     // typedef std::pair<std::string, BoundaryXYZ> BoundaryName;
     // static const std::map<std::string, BoundaryXYZ> names; //!< boundary names
@@ -64,11 +65,14 @@ struct BoundaryCondition {
     Coordinates coordinates;
     BoundaryXYZ direction;
 
-    template <class Archive> void serialize(Archive &archive) {
+    template <class Archive> void serialize(Archive& archive) {
         archive(coordinates, direction);
     } //!< Cereal serialisation
 
-    BoundaryCondition(Coordinates coordinates = ORTHOGONAL, BoundaryXYZ boundary = {FIXED, FIXED, FIXED})
+    Eigen::Matrix<bool, 3, 1> isPeriodic() const;
+
+    BoundaryCondition(Coordinates coordinates = ORTHOGONAL,
+                      BoundaryXYZ boundary = {Boundary::FIXED, Boundary::FIXED, Boundary::FIXED})
         : coordinates(coordinates), direction(boundary){};
 };
 
@@ -387,15 +391,15 @@ inline bool Chameleon::collision(const Point &a) const {
 inline void Chameleon::boundary(Point &a) const {
     const auto &boundary_conditions = geometry->boundary_conditions;
     if (boundary_conditions.coordinates == ORTHOGONAL) {
-        if (boundary_conditions.direction.x() == PERIODIC) {
+        if (boundary_conditions.direction.x() == Boundary::PERIODIC) {
             if (std::fabs(a.x()) > len_half.x())
                 a.x() -= len.x() * anint(a.x() * len_inv.x());
         }
-        if (boundary_conditions.direction.y() == PERIODIC) {
+        if (boundary_conditions.direction.y() == Boundary::PERIODIC) {
             if (std::fabs(a.y()) > len_half.y())
                 a.y() -= len.y() * anint(a.y() * len_inv.y());
         }
-        if (boundary_conditions.direction.z() == PERIODIC) {
+        if (boundary_conditions.direction.z() == Boundary::PERIODIC) {
             if (std::fabs(a.z()) > len_half.z())
                 a.z() -= len.z() * anint(a.z() * len_inv.z());
         }
@@ -409,19 +413,19 @@ inline Point Chameleon::vdist(const Point &a, const Point &b) const {
     const auto &boundary_conditions = geometry->boundary_conditions;
     if (boundary_conditions.coordinates == ORTHOGONAL) {
         distance = a - b;
-        if (boundary_conditions.direction.x() == PERIODIC) {
+        if (boundary_conditions.direction.x() == Boundary::PERIODIC) {
             if (distance.x() > len_half.x())
                 distance.x() -= len.x();
             else if (distance.x() < -len_half.x())
                 distance.x() += len.x();
         }
-        if (boundary_conditions.direction.y() == PERIODIC) {
+        if (boundary_conditions.direction.y() == Boundary::PERIODIC) {
             if (distance.y() > len_half.y())
                 distance.y() -= len.y();
             else if (distance.y() < -len_half.y())
                 distance.y() += len.y();
         }
-        if (boundary_conditions.direction.z() == PERIODIC) {
+        if (boundary_conditions.direction.z() == Boundary::PERIODIC) {
             if (distance.z() > len_half.z())
                 distance.z() -= len.z();
             else if (distance.z() < -len_half.z())

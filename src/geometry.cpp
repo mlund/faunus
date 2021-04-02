@@ -11,10 +11,18 @@ namespace Faunus::Geometry {
 
 GeometryBase::~GeometryBase() = default;
 
+/**
+ * @return Boolean matrix with true for each periodic direction
+ */
+Eigen::Matrix<bool, 3, 1> BoundaryCondition::isPeriodic() const {
+    return direction.cwiseEqual(
+        BoundaryXYZ(Boundary::PERIODIC, Boundary::PERIODIC, Boundary::PERIODIC));
+}
+
 GeometryImplementation::~GeometryImplementation() = default;
 
 Cuboid::Cuboid(const Point &side_length) {
-    boundary_conditions = BoundaryCondition(ORTHOGONAL, {PERIODIC, PERIODIC, PERIODIC});
+    boundary_conditions = BoundaryCondition(ORTHOGONAL, {Boundary::PERIODIC, Boundary::PERIODIC, Boundary::PERIODIC});
     setLength(side_length);
 }
 
@@ -63,15 +71,15 @@ Point Cuboid::setVolume(double volume, const VolumeMethod method) {
 }
 
 void Cuboid::boundary(Point &a) const {
-    if (boundary_conditions.direction.x() == PERIODIC) {
+    if (boundary_conditions.direction.x() == Boundary::PERIODIC) {
         if (std::fabs(a.x()) > box_half.x())
             a.x() -= box.x() * anint(a.x() * box_inv.x());
     }
-    if (boundary_conditions.direction.y() == PERIODIC) {
+    if (boundary_conditions.direction.y() == Boundary::PERIODIC) {
         if (std::fabs(a.y()) > box_half.y())
             a.y() -= box.y() * anint(a.y() * box_inv.y());
     }
-    if (boundary_conditions.direction.z() == PERIODIC) {
+    if (boundary_conditions.direction.z() == Boundary::PERIODIC) {
         if (std::fabs(a.z()) > box_half.z())
             a.z() -= box.z() * anint(a.z() * box_inv.z());
     }
@@ -79,19 +87,19 @@ void Cuboid::boundary(Point &a) const {
 
 Point Cuboid::vdist(const Point &a, const Point &b) const {
     Point distance(a - b);
-    if (boundary_conditions.direction.x() == PERIODIC) {
+    if (boundary_conditions.direction.x() == Boundary::PERIODIC) {
         if (distance.x() > box_half.x())
             distance.x() -= box.x();
         else if (distance.x() < -box_half.x())
             distance.x() += box.x();
     }
-    if (boundary_conditions.direction.y() == PERIODIC) {
+    if (boundary_conditions.direction.y() == Boundary::PERIODIC) {
         if (distance.y() > box_half.y())
             distance.y() -= box.y();
         else if (distance.y() < -box_half.y())
             distance.y() += box.y();
     }
-    if (boundary_conditions.direction.z() == PERIODIC) {
+    if (boundary_conditions.direction.z() == Boundary::PERIODIC) {
         if (distance.z() > box_half.z())
             distance.z() -= box.z();
         else if (distance.z() < -box_half.z())
@@ -130,7 +138,7 @@ void Cuboid::to_json(json &j) const { j = {{"length", box}}; }
 // =============== Slit ===============
 
 Slit::Slit(const Point &p) : Tbase(p) {
-    boundary_conditions = BoundaryCondition(ORTHOGONAL, {PERIODIC, PERIODIC, FIXED});
+    boundary_conditions = BoundaryCondition(ORTHOGONAL, {Boundary::PERIODIC, Boundary::PERIODIC, Boundary::FIXED});
 }
 
 Slit::Slit(double x, double y, double z) : Slit(Point(x, y, z)) {}
@@ -139,7 +147,7 @@ Slit::Slit(double x) : Slit(x, x, x) {}
 // =============== Sphere ===============
 
 Sphere::Sphere(double radius) : radius(radius) {
-    boundary_conditions = BoundaryCondition(ORTHOGONAL, {FIXED, FIXED, FIXED});
+    boundary_conditions = BoundaryCondition(ORTHOGONAL, {Boundary::FIXED, Boundary::FIXED, Boundary::FIXED});
 }
 
 Point Sphere::getLength() const { return {2.0 * radius, 2.0 * radius, 2.0 * radius}; }
@@ -232,7 +240,7 @@ const Eigen::Matrix3d HexagonalPrism::cartesian2rhombic = rhombic2cartesian.inve
 
 HexagonalPrism::HexagonalPrism(double side, double height) {
     // the current implementation is hardcoded as bellow and ignores other periodic_directions settings
-    boundary_conditions = BoundaryCondition(ORTHOHEXAGONAL, {PERIODIC, PERIODIC, FIXED});
+    boundary_conditions = BoundaryCondition(ORTHOHEXAGONAL, {Boundary::PERIODIC, Boundary::PERIODIC, Boundary::FIXED});
     set_box(side, height);
 }
 
@@ -350,7 +358,7 @@ double HexagonalPrism::height() const { return box.z(); }
 // =============== Cylinder ===============
 
 Cylinder::Cylinder(double radius, double height) : radius(radius), height(height) {
-    boundary_conditions = BoundaryCondition(ORTHOGONAL, {FIXED, FIXED, PERIODIC});
+    boundary_conditions = BoundaryCondition(ORTHOGONAL, {Boundary::FIXED, Boundary::FIXED, Boundary::PERIODIC});
 }
 
 Point Cylinder::getLength() const { return {2.0 * radius, 2.0 * radius, height}; }
@@ -434,7 +442,7 @@ void Cylinder::to_json(json &j) const { j = {{"radius", radius}, {"length", heig
 
 TruncatedOctahedron::TruncatedOctahedron(double side) : side(side) {
     // the current implementation is hardcoded as bellow and ignores other periodic_directions settings
-    boundary_conditions = BoundaryCondition(TRUNC_OCTAHEDRAL, {PERIODIC, PERIODIC, PERIODIC});
+    boundary_conditions = BoundaryCondition(TRUNC_OCTAHEDRAL, {Boundary::PERIODIC, Boundary::PERIODIC, Boundary::PERIODIC});
 }
 
 Point TruncatedOctahedron::getLength() const {
@@ -761,7 +769,7 @@ void Chameleon::_setLength(const Point &l) {
     // `len` for PBC or zero if not.
     if (geometry->boundary_conditions.coordinates == ORTHOGONAL)
         for (size_t i = 0; i < 3; i++)
-            len_or_zero[i] = len[i] * (geometry->boundary_conditions.direction[i] == PERIODIC);
+            len_or_zero[i] = len[i] * (geometry->boundary_conditions.direction[i] == Boundary::PERIODIC);
 }
 
 double Chameleon::getVolume(int dim) const {
@@ -1113,6 +1121,9 @@ TEST_CASE("[Faunus] Chameleon") {
         Chameleon chameleon(geo, CUBOID);
         compare_boundary(chameleon, geo, box);
         compare_vdist(chameleon, geo, box);
+        CHECK(geo.boundary_conditions.isPeriodic()[0] == true);
+        CHECK(geo.boundary_conditions.isPeriodic()[1] == true);
+        CHECK(geo.boundary_conditions.isPeriodic()[2] == true);
     }
 
     SUBCASE("slit") {
@@ -1123,6 +1134,9 @@ TEST_CASE("[Faunus] Chameleon") {
         Chameleon chameleon(geo, SLIT);
         compare_boundary(chameleon, geo, box);
         compare_vdist(chameleon, geo, box);
+        CHECK(geo.boundary_conditions.isPeriodic()[0] == true);
+        CHECK(geo.boundary_conditions.isPeriodic()[1] == true);
+        CHECK(geo.boundary_conditions.isPeriodic()[2] == false);
     }
 
     SUBCASE("sphere") {
@@ -1134,6 +1148,9 @@ TEST_CASE("[Faunus] Chameleon") {
         Chameleon chameleon(geo, SPHERE);
         compare_boundary(chameleon, geo, box);
         compare_vdist(chameleon, geo, box);
+        CHECK(geo.boundary_conditions.isPeriodic()[0] == false);
+        CHECK(geo.boundary_conditions.isPeriodic()[1] == false);
+        CHECK(geo.boundary_conditions.isPeriodic()[2] == false);
     }
 
     SUBCASE("cylinder") {
@@ -1144,6 +1161,9 @@ TEST_CASE("[Faunus] Chameleon") {
         Chameleon chameleon(geo, CYLINDER);
         compare_boundary(chameleon, geo, box);
         compare_vdist(chameleon, geo, box);
+        CHECK(geo.boundary_conditions.isPeriodic()[0] == false);
+        CHECK(geo.boundary_conditions.isPeriodic()[1] == false);
+        CHECK(geo.boundary_conditions.isPeriodic()[2] == true);
     }
 
     SUBCASE("hexagonal prism") {

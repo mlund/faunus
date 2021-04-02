@@ -1208,10 +1208,11 @@ void ConformationSwap::_to_json(json& j) const {
 void ConformationSwap::_from_json(const json &j) {
     const auto molecule_name = j.at("molecule").get<std::string>();
     const auto molecule = Faunus::findMoleculeByName(molecule_name);
+    molid = molecule.id();
     if (molecule.conformations.size() < 2) {
         throw ConfigurationError("minimum two conformations required for {}", molecule_name);
     }
-    molid = molecule.id();
+    checkConformationSize(); // do conformations fit periodic boundaries?
     inserter.keep_positions = j.value("keeppos", false);
     copy_policy = j.value("copy_policy", CopyPolicy::ALL);
     if (copy_policy == CopyPolicy::INVALID) {
@@ -1310,6 +1311,44 @@ ConformationSwap::ConformationSwap(Space& spc) : ConformationSwap(spc, "conforma
     inserter.dir = Point::Zero();
     inserter.rotate = true;
     inserter.allow_overlap = true;
+}
+
+/**
+ * Checks if any two particles in any conformation is father away than half the shortest cell length
+ */
+void ConformationSwap::checkConformationSize() const {
+    assert(molid >= 0);
+
+    auto is_periodic = spc.geo.boundaryConditions().isPeriodic();
+    if (is_periodic.cast<int>().sum() == 0) { // if cell has no periodicity ...
+        return;                               // ... then no need to check further
+    }
+
+    // find internal maximum distance in a set of positions
+    auto find_max_distance = [&geometry = spc.geo](const auto& positions) {
+        double max_squared_distance = 0.0;
+        for (auto i = positions.begin(); i != positions.end(); ++i) {
+            for (auto j = i; ++j != positions.end();) {
+                max_squared_distance = std::max(max_squared_distance, geometry.sqdist(*i, *j));
+            }
+        }
+        return std::sqrt(max_squared_distance);
+    };
+
+    size_t conformation_id = 0;
+    const auto infinity = Point::Constant(pc::infty);
+    const auto max_allowed_separation =
+        (is_periodic.array() == true).select(spc.geo.getLength(), infinity).minCoeff() * 0.5;
+
+    for (const auto& conformation : Faunus::molecules.at(molid).conformations.data) {
+        auto positions = conformation | ranges::cpp20::views::transform(&Particle::pos);
+        const auto max_separation = find_max_distance(positions);
+        if (max_separation > max_allowed_separation) {
+            faunus_logger->warn("particles in conformation {} separated by {} Å may break periodic boundaries",
+                                conformation_id, max_separation);
+        }
+        conformation_id++;
+    }
 }
 
 } // namespace Faunus::Move

@@ -289,10 +289,11 @@ class ConformationSwap : public MoveBase {
     void _to_json(json &j) const override;
     void _from_json(const json &j) override;
     void _move(Change &change) override;
-    void setRepeat(); //!< Set move repeat
-    void checkMassCenterDrift(const Point &old_mass_center, const ParticleVector &particles); //!< Check for CM drift
-    void registerChanges(Change &change, const Space::Tgroup &group) const;                   //!< Update change object
-    ConformationSwap(Space &spc, const std::string &name, const std::string &cite);
+    void setRepeat();                   //!< Set move repeat
+    void checkConformationSize() const; //!< Do conformations fit simulation cell?
+    void checkMassCenterDrift(const Point& old_mass_center, const ParticleVector& particles); //!< Check for CM drift
+    void registerChanges(Change& change, const Space::Tgroup& group) const;                   //!< Update change object
+    ConformationSwap(Space& spc, const std::string& name, const std::string& cite);
 
   public:
     explicit ConformationSwap(Space &spc);

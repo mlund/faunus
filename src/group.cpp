@@ -48,6 +48,18 @@ template <class T> bool Group<T>::contains(const T &a, bool include_inactive) co
     return false;
 }
 
+template <class T> int Group<T>::getParticleIndex(const T& particle, bool include_inactive) const {
+    if (!this->empty()) {
+        const auto index = std::addressof(particle) - std::addressof(*this->begin()); // std::ptrdiff_t
+        const auto group_size = (include_inactive ? this->capacity() : this->size());
+        assert(std::abs(index) <= std::numeric_limits<int>::max());
+        if (index >= 0 && index < group_size) {
+            return static_cast<int>(index);
+        }
+    }
+    throw std::out_of_range("invalid particle index or group is empty");
+}
+
 template <class T> double Group<T>::mass() const {
     return std::accumulate(begin(), end(), 0.0, [](double sum, auto &i) { return sum + i.traits().mw; });
 }
@@ -207,6 +219,19 @@ TEST_CASE("[Faunus] Group") {
         CHECK(g.contains(p[2], true) == true);
         g.activate(g.end(), g.end() + 1);
         CHECK(g.size() == 3);
+    }
+
+    SUBCASE("getParticleIndex()") {
+        Group<Particle> gg(p.begin(), p.end());
+        CHECK(gg.getParticleIndex(p[0]) == 0);
+        CHECK(gg.getParticleIndex(p[1]) == 1);
+        CHECK(gg.getParticleIndex(p[2]) == 2);
+        CHECK(gg.size() == 3);
+        gg.deactivate(gg.end() - 1, gg.end());
+        CHECK(gg.size() == 2);
+        CHECK_THROWS(gg.getParticleIndex(p[2]));
+        gg.resize(0);
+        CHECK_THROWS(gg.getParticleIndex(p[0]));
     }
 
     SUBCASE("getGroupFilter(): complete group") {

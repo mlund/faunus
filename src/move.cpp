@@ -1335,7 +1335,7 @@ void ConformationSwap::checkConformationSize() const {
         return std::sqrt(max_squared_distance);
     };
 
-    // find smallest side-length with periodic boundaries
+    // find smallest periodic side-length
     const auto infinity = Point::Constant(pc::infty);
     const auto max_allowed_separation =
         (is_periodic.array() == true).select(spc.geo.getLength(), infinity).minCoeff() * 0.5;
@@ -1346,7 +1346,7 @@ void ConformationSwap::checkConformationSize() const {
         auto positions = conformation | ranges::cpp20::views::transform(&Particle::pos);
         const auto max_separation = find_max_distance(positions);
         if (max_separation > max_allowed_separation) {
-            faunus_logger->warn("particles in conformation {} separated by {} Å may break periodic boundaries",
+            faunus_logger->warn("particles in conformation {} separated by {:.3f} Å may break periodic boundaries",
                                 conformation_id, max_separation);
         }
         conformation_id++;

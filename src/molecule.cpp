@@ -558,6 +558,8 @@ void from_json(const json &j, MoleculeData &a) {
     builder.from_json(j, a);
 }
 
+size_t MoleculeData::numConformations() const { return conformations.data.size(); }
+
 void from_json(const json &j, std::vector<MoleculeData> &v) {
     v.reserve(v.size() + j.size());
     for (auto &i : j) {

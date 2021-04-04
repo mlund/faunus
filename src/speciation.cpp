@@ -493,9 +493,7 @@ void SpeciationMove::_reject(Change &) {
     }
 }
 
-SpeciationMove::SpeciationMove(Space &spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {
-    std::cout << "setting specmove" << std::endl;
-}
+SpeciationMove::SpeciationMove(Space& spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {}
 
 SpeciationMove::SpeciationMove(Space &spc) : SpeciationMove(spc, "rcmc", "doi:10/fqcpg3") {}
 

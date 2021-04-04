@@ -1335,10 +1335,12 @@ void ConformationSwap::checkConformationSize() const {
         return std::sqrt(max_squared_distance);
     };
 
-    size_t conformation_id = 0;
+    // find smallest side-length with periodic boundaries
     const auto infinity = Point::Constant(pc::infty);
     const auto max_allowed_separation =
         (is_periodic.array() == true).select(spc.geo.getLength(), infinity).minCoeff() * 0.5;
+
+    size_t conformation_id = 0;
 
     for (const auto& conformation : Faunus::molecules.at(molid).conformations.data) {
         auto positions = conformation | ranges::cpp20::views::transform(&Particle::pos);

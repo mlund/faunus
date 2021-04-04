@@ -905,6 +905,12 @@ TEST_CASE("[Faunus] Geometry") {
         Point b = a;
         geo.boundary(b);
         CHECK(a == b);
+
+        Point outsize_z = {1.1, -2.001, 1.5001};
+        CHECK(geo.collision(outsize_z) == true);
+        geo.boundary(outsize_z);
+        CHECK(geo.collision(outsize_z) == true);
+
         Point c(0, 0, -0.51 * z);
 
         // check distances

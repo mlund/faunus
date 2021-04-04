@@ -200,6 +200,7 @@ class MoleculeData {
     std::vector<int> atoms; //!< Sequence of atoms in molecule (atom id's)
     BasePointerVector<Potential::BondData> bonds;
     WeightedDistribution<ParticleVector> conformations; //!< Conformations of molecule
+    size_t numConformations() const;                     //!< Number of conformations
 
     MoleculeData();
     MoleculeData(const std::string &name, const ParticleVector &particles,

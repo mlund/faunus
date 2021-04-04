@@ -846,11 +846,19 @@ void SanityCheck::checkWithinContainer(const Space::Tgroup& group) {
     bool error = false;
     for (const auto& particle : group) { // loop over active particles
         if (spc.geo.collision(particle.pos)) {
+            error = true;
             const auto atom_index = &particle - &(*group.begin()); // yak!
             const auto group_index = spc.getGroupIndex(group);
-            faunus_logger->error("step {}: {}{} of {}{}, conformation {}", getNumberOfSteps(), particle.traits().name,
-                                 atom_index, group.traits().name, group_index, group.confid);
-            error = true;
+            if (group.traits().numConformations() > 1) {
+                faunus_logger->error("step {}: {}{} of {}{}, conformation {}", getNumberOfSteps(),
+                                     particle.traits().name, atom_index, group.traits().name, group_index,
+                                     group.confid);
+            } else {
+                faunus_logger->error("step {}: {}{} of {}{}", getNumberOfSteps(), particle.traits().name, atom_index,
+                                     group.traits().name, group_index);
+            }
+            faunus_logger->error("  (x,y,z) = {:.3f} {:.3f} {:.3f}", particle.pos.x(), particle.pos.y(),
+                                 particle.pos.z());
         }
     }
     if (error) {

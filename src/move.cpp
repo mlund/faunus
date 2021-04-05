@@ -1270,7 +1270,6 @@ void ConformationSwap::copyConformation(ParticleVector& particles, ParticleVecto
         throw std::runtime_error("invalid copy policy");
     }
 
-    // copy particle data from library to destination group
     std::for_each(particles.cbegin(), particles.cend(), [&](const Particle& source) {
         copy_function(source, *destination);
         destination++;
@@ -1318,12 +1317,16 @@ ConformationSwap::ConformationSwap(Space& spc) : ConformationSwap(spc, "conforma
 void ConformationSwap::checkConformationSize() const {
     assert(molid >= 0);
 
-    auto is_periodic = spc.geo.boundaryConditions().isPeriodic();
+    const auto is_periodic = spc.geo.boundaryConditions().isPeriodic();
     if (is_periodic.cast<int>().sum() == 0) { // if cell has no periodicity ...
         return;                               // ... then no need to check further
     }
 
-    // find internal maximum distance in a set of positions
+    // find smallest periodic side-length
+    const auto infinity = Point::Constant(pc::infty);
+    const auto max_allowed_separation =
+        (is_periodic.array() == true).select(spc.geo.getLength(), infinity).minCoeff() * 0.5;
+
     auto find_max_distance = [&geometry = spc.geo](const auto& positions) {
         double max_squared_distance = 0.0;
         for (auto i = positions.begin(); i != positions.end(); ++i) {
@@ -1332,20 +1335,15 @@ void ConformationSwap::checkConformationSize() const {
             }
         }
         return std::sqrt(max_squared_distance);
-    };
-
-    // find smallest periodic side-length
-    const auto infinity = Point::Constant(pc::infty);
-    const auto max_allowed_separation =
-        (is_periodic.array() == true).select(spc.geo.getLength(), infinity).minCoeff() * 0.5;
+    }; // find internal maximum distance in a set of positions
 
     size_t conformation_id = 0;
-
     for (const auto& conformation : Faunus::molecules.at(molid).conformations.data) {
-        auto positions = conformation | ranges::cpp20::views::transform(&Particle::pos);
+        const auto positions = conformation | ranges::cpp20::views::transform(&Particle::pos);
         const auto max_separation = find_max_distance(positions);
         if (max_separation > max_allowed_separation) {
-            faunus_logger->warn("particles in conformation {} separated by {:.3f} Å may break periodic boundaries",
+            faunus_logger->warn("particles in conformation {} separated by {:.3f} Å which *may* break periodic "
+                                "boundaries. If so, you'll know.",
                                 conformation_id, max_separation);
         }
         conformation_id++;

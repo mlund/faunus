@@ -832,8 +832,8 @@ void SanityCheck::checkGroupsCoverParticles() {
     size_t particle_index = 0;
     for (const auto& group : spc.groups) {
         for (auto it = group.begin(); it != group.trueend(); ++it) {
-            const auto address_of_particle = &(*it);
-            if (address_of_particle != &(spc.p.at(particle_index++))) {
+            const auto address_of_particle = std::addressof(*it);
+            if (address_of_particle != std::addressof(spc.p.at(particle_index++))) {
                 throw std::runtime_error("group vector out of sync");
             }
         }

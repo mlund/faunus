@@ -829,30 +829,47 @@ void SanityCheck::_sample() {
     }
 }
 void SanityCheck::checkGroupsCoverParticles() {
-    size_t i = 0;
+    size_t particle_index = 0;
     for (const auto& group : spc.groups) {
         for (auto it = group.begin(); it != group.trueend(); ++it) {
-            const auto address_of_particle = &(*it);
-            if (address_of_particle != &(spc.p.at(i++))) {
+            const auto address_of_particle = std::addressof(*it);
+            if (address_of_particle != std::addressof(spc.p.at(particle_index++))) {
                 throw std::runtime_error("group vector out of sync");
             }
         }
     }
-    if (i != spc.p.size()) {
+    if (particle_index != spc.p.size()) {
         throw std::runtime_error("particle <-> group mismatch");
     }
 }
+
+/**
+ * Reports all particles that lies outside the simulation cell boundaries.
+ *
+ * @param group Group to check
+ * @throw if any particle is outside simulation cell
+ */
 void SanityCheck::checkWithinContainer(const Space::Tgroup& group) {
-    for (const auto& particle : group) { // loop over active particles
-        if (spc.geo.collision(particle.pos)) {
-            const auto atom_index = &particle - &(*group.begin()); // yak!
-            const auto group_index = spc.getGroupIndex(group);
-            throw std::runtime_error(fmt::format("step {}: particle {}{} of {}{} outside simulation cell",
-                                                 getNumberOfSteps(), particle.traits().name, atom_index,
-                                                 group.traits().name, group_index));
+    bool outside_simulation_cell = false;
+    auto outside_particles =
+        group | ranges::cpp20::views::filter([&](const Particle& particle) { return spc.geo.collision(particle.pos); });
+
+    std::for_each(outside_particles.begin(), outside_particles.end(), [&](const auto& particle) {
+        outside_simulation_cell = true;
+        auto group_str = fmt::format("{}{}", group.traits().name, spc.getGroupIndex(group));
+        if (group.traits().numConformations() > 1) {
+            group_str += fmt::format(" (conformation {})", group.confid);
         }
+        faunus_logger->error("step {}: atom {}{} in molecule {}", getNumberOfSteps(), particle.traits().name,
+                             group.getParticleIndex(particle), group_str);
+        faunus_logger->error("  (x,y,z) = {:.3f} {:.3f} {:.3f}", particle.pos.x(), particle.pos.y(), particle.pos.z());
+    });
+
+    if (outside_simulation_cell) {
+        throw std::runtime_error("particle(s) outside simulation cell");
     }
 }
+
 void SanityCheck::checkMassCenter(const Space::Tgroup& group) {
     if (group.isMolecular() && !group.empty()) {
         const auto mass_center = Geometry::massCenter(group.begin(), group.end(), spc.geo.getBoundaryFunc(), -group.cm);

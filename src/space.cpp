@@ -280,12 +280,14 @@ size_t Space::numParticles(Space::Selection selection) const {
     }
 }
 
+/**
+ * @throw If group is not part of space
+ */
 int Space::getGroupIndex(const Space::Tgroup &group) {
-    assert(!groups.empty());
     auto index = std::addressof(group) - std::addressof(groups.front()); // std::ptrdiff_t
     assert(std::abs(index) <= std::numeric_limits<int>::max());
     if (index < 0 or index >= groups.size()) {
-        throw std::runtime_error("invalid group index");
+        throw std::out_of_range("invalid group index");
     }
     return static_cast<int>(index);
 }

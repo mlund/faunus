@@ -206,6 +206,10 @@ namespace Faunus {
 
             bool contains(const T &a, bool include_inactive=false) const; //!< Determines if particle belongs to group (complexity: constant)
 
+            int getParticleIndex(const T& particle,
+                                 bool include_inactive = false)
+                const; //!< Finds index of particle within group. Throws if not part of group
+
             auto find_id(int id) const {
                 return *this | ranges::cpp20::views::filter([id](T &i) { return (i.id == id); });
             } //!< Range of all (active) elements with matching particle id

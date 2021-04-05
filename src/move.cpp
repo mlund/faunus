@@ -1197,18 +1197,27 @@ SmartTranslateRotate::SmartTranslateRotate(Space &spc, std::string name, std::st
 
 SmartTranslateRotate::SmartTranslateRotate(Space &spc) : SmartTranslateRotate(spc, "smartmoltransrot", "") {}
 
-void ConformationSwap::_to_json(json &j) const {
-    j = {{"molid", molid}, {"molecule", Faunus::molecules.at(molid).name}, {"keeppos", inserter.keep_positions}};
+void ConformationSwap::_to_json(json& j) const {
+    j = {{"molid", molid},
+         {"molecule", Faunus::molecules.at(molid).name},
+         {"keeppos", inserter.keep_positions},
+         {"copy_policy", copy_policy}};
     _roundjson(j, 3);
 }
+
 void ConformationSwap::_from_json(const json &j) {
-    const std::string molecule_name = j.at("molecule");
-    const auto molecule = findMoleculeByName(molecule_name);
-    if (molecule.conformations.size() < 2) {
-        throw ConfigurationError("molecule '{}': minimum two conformations required", molecule_name);
-    }
+    const auto molecule_name = j.at("molecule").get<std::string>();
+    const auto molecule = Faunus::findMoleculeByName(molecule_name);
     molid = molecule.id();
+    if (molecule.conformations.size() < 2) {
+        throw ConfigurationError("minimum two conformations required for {}", molecule_name);
+    }
+    checkConformationSize(); // do conformations fit periodic boundaries?
     inserter.keep_positions = j.value("keeppos", false);
+    copy_policy = j.value("copy_policy", CopyPolicy::ALL);
+    if (copy_policy == CopyPolicy::INVALID) {
+        throw ConfigurationError("invalid copy policy");
+    }
     setRepeat();
 }
 
@@ -1222,22 +1231,51 @@ void ConformationSwap::setRepeat() {
         }
     }
 }
-void ConformationSwap::_move(Change &change) {
-    if (auto groups = spc.findMolecules(molid, Space::ACTIVE); !ranges::cpp20::empty(groups)) {
-        if (auto &group = *slump.sample(groups.begin(), groups.end()); !group.empty()) { // pick random molecule
-            inserter.offset = group.cm;                                                  // insert on top of mass center
-            const auto particles = inserter(spc.geo, Faunus::molecules[molid], spc.p);   // new conformation
-            if (particles.size() == group.size()) {
-                checkMassCenterDrift(group.cm, particles);                            // throws if not OK
-                std::copy(particles.begin(), particles.end(), group.begin());         // override w. new conformation
-                group.confid = Faunus::molecules[molid].conformations.getLastIndex(); // store conformation id
-                registerChanges(change, group);                                       // update change object
-            } else {
-                throw std::runtime_error(name + ": conformation atom count mismatch");
-            }
+void ConformationSwap::_move(Change& change) {
+    auto groups = spc.findMolecules(molid, Space::ACTIVE);
+    if (auto group = slump.sample(groups.begin(), groups.end()); group != groups.end()) {
+        inserter.offset = group->cm;                                         // insert on top of mass center
+        auto particles = inserter(spc.geo, Faunus::molecules[molid], spc.p); // new conformation
+        if (particles.size() == group->size()) {
+            checkMassCenterDrift(group->cm, particles); // throws if not OK
+            copyConformation(particles, group->begin());
+            group->confid = Faunus::molecules[molid].conformations.getLastIndex(); // store conformation id
+            registerChanges(change, *group);                                       // update change object
+        } else {
+            throw std::out_of_range(name + ": conformation atom count mismatch");
         }
     }
 }
+
+/**
+ * This will copy the new conformation onto the destination group. By default
+ * all information is copied, but can be limited to positions, only
+ *
+ * @param particles Source particles
+ * @param destination Iterator to first particle in destination
+ */
+void ConformationSwap::copyConformation(ParticleVector& particles, ParticleVector::iterator destination) const {
+    std::function<void(const Particle&, Particle&)> copy_function; // how to copy particle information
+    switch (copy_policy) {
+    case ALL:
+        copy_function = [](const Particle& src, Particle& dst) { dst = src; };
+        break;
+    case POSITIONS:
+        copy_function = [](const Particle& src, Particle& dst) { dst.pos = src.pos; };
+        break;
+    case CHARGES:
+        copy_function = [](const Particle& src, Particle& dst) { dst.charge = src.charge; };
+        break;
+    default:
+        throw std::runtime_error("invalid copy policy");
+    }
+
+    std::for_each(particles.cbegin(), particles.cend(), [&](const Particle& source) {
+        copy_function(source, *destination);
+        destination++;
+    });
+}
+
 void ConformationSwap::registerChanges(Change &change, const Space::Tgroup &group) const {
     auto &group_change = change.groups.emplace_back();
     group_change.index = spc.getGroupIndex(group); // index of moved group
@@ -1249,23 +1287,67 @@ void ConformationSwap::registerChanges(Change &change, const Space::Tgroup &grou
  *
  * Move shouldn't move mass centers, so let's check if this is true
  */
-void ConformationSwap::checkMassCenterDrift(const Point &old_mass_center, const ParticleVector &particles) {
-    const auto max_allowed_distance = 1.0e-6;
-    const auto new_mass_center =
-        Geometry::massCenter(particles.begin(), particles.end(), spc.geo.getBoundaryFunc(), -old_mass_center);
-    if ((new_mass_center - old_mass_center).norm() > max_allowed_distance) {
-        throw std::runtime_error(name + ": unexpected mass center movement");
+void ConformationSwap::checkMassCenterDrift(const Point& old_mass_center, const ParticleVector& particles) {
+    switch (copy_policy) {
+    case CHARGES: // positions untouched; no check needed
+        return;
+    default:
+        const auto max_allowed_distance = 1.0e-6;
+        const auto new_mass_center =
+            Geometry::massCenter(particles.begin(), particles.end(), spc.geo.getBoundaryFunc(), -old_mass_center);
+        if ((new_mass_center - old_mass_center).norm() > max_allowed_distance) {
+            throw std::runtime_error(name + ": unexpected mass center movement");
+        }
     }
 }
 
 ConformationSwap::ConformationSwap(Space &spc, const std::string &name, const std::string &cite)
     : MoveBase(spc, name, cite) {}
 
-ConformationSwap::ConformationSwap(Space &spc) : ConformationSwap(spc, "conformationswap", "") {
+ConformationSwap::ConformationSwap(Space& spc) : ConformationSwap(spc, "conformationswap", "doi:10/dmc3") {
     repeat = -1; // meaning repeat n times
-    inserter.dir = {0, 0, 0};
+    inserter.dir = Point::Zero();
     inserter.rotate = true;
     inserter.allow_overlap = true;
+}
+
+/**
+ * Checks if any two particles in any conformation is father away than half the shortest cell length
+ */
+void ConformationSwap::checkConformationSize() const {
+    assert(molid >= 0);
+
+    const auto is_periodic = spc.geo.boundaryConditions().isPeriodic();
+    if (is_periodic.cast<int>().sum() == 0) { // if cell has no periodicity ...
+        return;                               // ... then no need to check further
+    }
+
+    // find smallest periodic side-length
+    const auto infinity = Point::Constant(pc::infty);
+    const auto max_allowed_separation =
+        (is_periodic.array() == true).select(spc.geo.getLength(), infinity).minCoeff() * 0.5;
+
+    auto find_max_distance = [&geometry = spc.geo](const auto& positions) {
+        double max_squared_distance = 0.0;
+        for (auto i = positions.begin(); i != positions.end(); ++i) {
+            for (auto j = i; ++j != positions.end();) {
+                max_squared_distance = std::max(max_squared_distance, geometry.sqdist(*i, *j));
+            }
+        }
+        return std::sqrt(max_squared_distance);
+    }; // find internal maximum distance in a set of positions
+
+    size_t conformation_id = 0;
+    for (const auto& conformation : Faunus::molecules.at(molid).conformations.data) {
+        const auto positions = conformation | ranges::cpp20::views::transform(&Particle::pos);
+        const auto max_separation = find_max_distance(positions);
+        if (max_separation > max_allowed_separation) {
+            faunus_logger->warn("particles in conformation {} separated by {:.3f} Å which *may* break periodic "
+                                "boundaries. If so, you'll know.",
+                                conformation_id, max_separation);
+        }
+        conformation_id++;
+    }
 }
 
 } // namespace Faunus::Move

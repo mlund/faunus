@@ -279,20 +279,30 @@ class SmartTranslateRotate : public MoveBase {
  * @todo Add feature to align molecule on top of an exiting one
  */
 class ConformationSwap : public MoveBase {
+  public:
+    enum CopyPolicy { ALL, POSITIONS, CHARGES, INVALID }; //!< What to copy from conformation library
   private:
+    CopyPolicy copy_policy;
     RandomInserter inserter;
     int molid = -1; //!< Molecule ID to operate on
+    void copyConformation(ParticleVector& source_particle, ParticleVector::iterator destination) const;
     void _to_json(json &j) const override;
     void _from_json(const json &j) override;
     void _move(Change &change) override;
-    void setRepeat(); //!< Set move repeat
-    void checkMassCenterDrift(const Point &old_mass_center, const ParticleVector &particles); //!< Check for CM drift
-    void registerChanges(Change &change, const Space::Tgroup &group) const;                   //!< Update change object
-    ConformationSwap(Space &spc, const std::string &name, const std::string &cite);
+    void setRepeat();                   //!< Set move repeat
+    void checkConformationSize() const; //!< Do conformations fit simulation cell?
+    void checkMassCenterDrift(const Point& old_mass_center, const ParticleVector& particles); //!< Check for CM drift
+    void registerChanges(Change& change, const Space::Tgroup& group) const;                   //!< Update change object
+    ConformationSwap(Space& spc, const std::string& name, const std::string& cite);
 
   public:
     explicit ConformationSwap(Space &spc);
 }; // end of conformation swap move
+
+NLOHMANN_JSON_SERIALIZE_ENUM(ConformationSwap::CopyPolicy, {{ConformationSwap::INVALID, nullptr},
+                                                            {ConformationSwap::ALL, "all"},
+                                                            {ConformationSwap::POSITIONS, "positions"},
+                                                            {ConformationSwap::CHARGES, "charges"}})
 
 class VolumeMove : public MoveBase {
   private:

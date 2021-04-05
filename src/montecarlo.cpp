@@ -142,6 +142,8 @@ void MetropolisMonteCarlo::perform_move(std::shared_ptr<Move::MoveBase> move) {
             du = pc::neg_infty;                                    // ...always accept
         } else if (std::isnan(trial_energy)) {                     // if moving to NaN, e.g. division by zero,
             du = pc::infty;                                        // ...always reject
+        } else if (trial_energy > 0.0 && std::isinf(trial_energy)) { // if positive infinity
+            du = pc::infty;                                          //...always reject
         } else if (std::isnan(du)) {                               // if difference is NaN, e.g. infinity - infinity,
             du = 0.0;                                              // ...always accept
         }

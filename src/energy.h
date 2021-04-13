@@ -53,15 +53,20 @@ namespace Energy {
 class Hamiltonian;
 
 /**
- * @brief Check for overlap between atoms and the simulation container
+ * @brief Check if particles are outside the simulation container
  *
- * If found infinite energy is returned. Not needed for cuboidal geometry
- * as there's nover any overlap due to PBC.
+ * If any particles is ouside, infinite energy is returned; zero otherwirse.
+ * This is not needed for cuboidal geometry as particles are always wrapped using PBC.
  */
-struct ContainerOverlap : public Energybase {
-    const Space &spc;
-    ContainerOverlap(const Space &spc) : spc(spc) { name = "ContainerOverlap"; }
-    double energy(Change &change) override;
+class ContainerOverlap : public Energybase {
+  private:
+    const Space& spc;
+    bool groupIsOutsideContainer(const Change::data& group_change) const;
+    double energyOfAllGroups() const;
+
+  public:
+    explicit ContainerOverlap(const Space& spc);
+    double energy(Change& change) override;
 };
 
 /**

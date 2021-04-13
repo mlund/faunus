@@ -582,36 +582,54 @@ void Example2D::to_json(json &j) const {
     j["2D"] = use_2d;
 }
 
-double ContainerOverlap::energy(Change &change) {
-    // if (spc.geo.type not_eq Geometry::CUBOID) // cuboid have PBC in all directions
-    if (change) {
-        // all groups have been updated
+double ContainerOverlap::energy(Change& change) {
+    if (change && spc.geo.type != Geometry::CUBOID) { // no need to check in PBC systems
+        // *all* groups
         if (change.dV or change.all) {
-            for (auto &g : spc.groups) // loop over *all* groups in system
-                for (auto &p : g)      // loop over *all* active particles in group
-                    if (spc.geo.collision(p.pos))
-                        return pc::infty;
-            return 0;
+            return energyOfAllGroups();
         }
-
-        // only a subset of groups have been updated
-        for (auto &d : change.groups) {
-            auto &g = spc.groups[d.index];
-            // all atoms were updated
-            if (d.all) {
-                for (auto &p : g) // loop over *all* active particles in group
-                    if (spc.geo.collision(p.pos))
-                        return pc::infty;
-            } else
-                // only a subset of atoms were updated
-                for (int i : d.atoms) // loop over specific atoms
-                    if (i < g.size())
-                        if (spc.geo.collision((g.begin() + i)->pos))
-                            return pc::infty;
+        // *subset* of groups
+        for (const auto& group_change : change.groups) {
+            if (groupIsOutsideContainer(group_change)) {
+                return pc::infty;
+            }
         }
     }
-    return 0;
+    return 0.0; // all particle insie simulation container
 }
+
+/**
+ * @return infinity if any active particle is outside; zero otherwise
+ */
+double ContainerOverlap::energyOfAllGroups() const {
+    auto positions = spc.groups | ranges::cpp20::views::join | ranges::cpp20::views::transform(&Particle::pos);
+    bool outside = std::any_of(positions.begin(), positions.end(),
+                               [&](const auto& position) { return spc.geo.collision(position); });
+    return outside ? pc::infty : 0.0;
+}
+
+/**
+ * @brief Check a single group based on change object
+ * @return true is any particle in group is outside; false otherwise
+ */
+bool ContainerOverlap::groupIsOutsideContainer(const Change::data& group_change) const {
+    const auto& group = spc.groups.at(group_change.index);
+    // *all* atoms
+    if (group_change.all) {
+        return std::any_of(group.begin(), group.end(),
+                           [&](auto const& particle) { return spc.geo.collision(particle.pos); });
+    }
+    // *subset* of atoms
+    for (const auto particle_index : group_change.atoms) {
+        if (particle_index < group.size()) { // condition due to speciation move?
+            if (spc.geo.collision((group.begin() + particle_index)->pos)) {
+                return true;
+            }
+        }
+    }
+    return false; // no overlap
+}
+ContainerOverlap::ContainerOverlap(const Space& spc) : spc(spc) { name = "ContainerOverlap"; }
 
 // ------------- Isobaric ---------------
 

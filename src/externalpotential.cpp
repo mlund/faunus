@@ -12,7 +12,11 @@ namespace Energy {
 
 void Energybase::to_json(json &) const {}
 
-void Energybase::sync(Energybase *, Change &) {}
+/**
+ * @param other_energy Other energy instance to copy data from
+ * @param change Describes the difference with the other energy term
+ */
+void Energybase::sync([[maybe_unused]] Energybase* other_energy, [[maybe_unused]] Change& change) {}
 
 void Energybase::init() {}
 

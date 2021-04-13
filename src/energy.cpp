@@ -785,119 +785,65 @@ void Bonded::force(std::vector<Point> &forces) {
 //---------- Hamiltonian ------------
 
 void Hamiltonian::to_json(json &j) const {
-    for (auto i : this->vec)
-        j.push_back(*i);
+    std::for_each(energies.cbegin(), energies.cend(), [&](auto energy) { j.push_back(*energy); });
 }
 
-void Hamiltonian::addEwald(const json &j, Space &spc) {
+void Hamiltonian::addEwald(const json& j, Space& spc) {
     // note this will currently not detect multipolar energies ore
     // deeply nested "coulomb" pair-potentials
     json _j;
     if (j.count("default") == 1) { // try to detect FunctorPotential
-        for (auto &i : j["default"]) {
+        for (const auto& i : j["default"]) {
             if (i.count("coulomb") == 1) {
                 _j = i["coulomb"];
                 break;
             }
         }
-    } else if (j.count("coulomb") == 1)
+    } else if (j.count("coulomb") == 1) {
         _j = j["coulomb"];
-    else
+    } else {
         return;
+    }
 
-    if (_j.count("type")) {
+    if (_j.count("type") == 1) {
         if (_j.at("type") == "ewald") {
-            faunus_logger->debug("adding Ewald reciprocal and surface energy terms");
             emplace_back<Energy::Ewald>(_j, spc);
+            faunus_logger->debug("hamiltonian expanded with {}", energies.back()->name);
         }
     }
 }
 
-void Hamiltonian::force(PointVector &forces) {
-    for (auto energy_ptr : this->vec) { // loop over terms in Hamiltonian
-        energy_ptr->force(forces);      // and update forces
-    }
+void Hamiltonian::force(PointVector& forces) {
+    std::for_each(energies.begin(), energies.end(), [&](auto energy) { energy->force(forces); });
 }
 
-Hamiltonian::Hamiltonian(Space& spc, const json& j) {
-    using namespace Potential;
-
-    typedef CombinedPairPotential<NewCoulombGalore, LennardJones> CoulombLJ; // temporary name
-    typedef CombinedPairPotential<NewCoulombGalore, WeeksChandlerAndersen> CoulombWCA;
-    typedef CombinedPairPotential<Coulomb, WeeksChandlerAndersen> PrimitiveModelWCA;
-    typedef CombinedPairPotential<Coulomb, HardSphere> PrimitiveModel;
-
+/**
+ * @todo Move addEwald to Nonbonded as it now has access to Hamiltonian and can add
+ */
+Hamiltonian::Hamiltonian(Space& spc, const json& j) : energies(this->vec) {
     name = "hamiltonian";
+    if (!j.is_array()) {
+        throw ConfigurationError("energy: json array expected");
+    }
 
     // add container overlap energy for non-cuboidal geometries
     if (spc.geo.type != Geometry::CUBOID) {
         emplace_back<Energy::ContainerOverlap>(spc);
+        faunus_logger->debug("hamiltonian expanded with {}", energies.back()->name);
     }
 
-    // only a single pairing policy and cutoff scheme so far
-    typedef GroupPairing<GroupPairingPolicy<GroupCutoff>> PairingPolicy;
-
-    if (!j.is_array()) {
-        throw ConfigurationError("energy: json array expected");
-    }
-    for (auto& j_energy : j) { // loop over energy list
+    for (const auto& j_energy : j) { // loop over energy list
         try {
-            const auto& [key, j_params] = jsonSingleItem(j_energy);
+            const auto& [key, value] = Faunus::jsonSingleItem(j_energy);
             try {
-                if (key == "nonbonded_coulomblj" || key == "nonbonded_newcoulomblj") {
-                    emplace_back<Nonbonded<PairEnergy<CoulombLJ, false>, PairingPolicy>>(j_params, spc, *this);
-                } else if (key == "nonbonded_coulomblj_EM") {
-                    emplace_back<NonbondedCached<PairEnergy<CoulombLJ, false>, PairingPolicy>>(j_params, spc, *this);
-                } else if (key == "nonbonded_splined") {
-                    emplace_back<Nonbonded<PairEnergy<SplinedPotential, false>, PairingPolicy>>(j_params, spc, *this);
-                } else if (key == "nonbonded" || key == "nonbonded_exact") {
-                    emplace_back<Nonbonded<PairEnergy<FunctorPotential, true>, PairingPolicy>>(j_params, spc, *this);
-                } else if (key == "nonbonded_cached") {
-                    emplace_back<NonbondedCached<PairEnergy<SplinedPotential>, PairingPolicy>>(j_params, spc, *this);
-                } else if (key == "nonbonded_coulombwca") {
-                    emplace_back<Nonbonded<PairEnergy<CoulombWCA, false>, PairingPolicy>>(j_params, spc, *this);
-                } else if (key == "nonbonded_pm" or key == "nonbonded_coulombhs") {
-                    emplace_back<Nonbonded<PairEnergy<PrimitiveModel, false>, PairingPolicy>>(j_params, spc, *this);
-                } else if (key == "nonbonded_pmwca") {
-                    emplace_back<Nonbonded<PairEnergy<PrimitiveModelWCA, false>, PairingPolicy>>(j_params, spc, *this);
-                } else if (key == "bonded") {
-                    emplace_back<Bonded>(j_params, spc);
-                } else if (key == "customexternal") {
-                    emplace_back<CustomExternal>(j_params, spc);
-                } else if (key == "akesson") {
-                    emplace_back<ExternalAkesson>(j_params, spc);
-                } else if (key == "confine") {
-                    emplace_back<Confine>(j_params, spc);
-                } else if (key == "constrain") {
-                    emplace_back<Constrain>(j_params, spc);
-                } else if (key == "example2d") {
-                    emplace_back<Example2D>(j_params, spc);
-                } else if (key == "isobaric") {
-                    emplace_back<Isobaric>(j_params, spc);
-                } else if (key == "penalty") {
-#ifdef ENABLE_MPI
-                    emplace_back<PenaltyMPI>(j_params, spc);
-#else
-                    emplace_back<Penalty>(j_params, spc);
-#endif
-                } else if (key == "sasa") {
-#if defined ENABLE_FREESASA
-                    emplace_back<SASAEnergy>(j_params, spc);
-#else
-                    throw ConfigurationError("not included - recompile Faunus with FreeSASA support");
-#endif
-                } else if (key == "maxenergy") {
+                if (key == "maxenergy") {
                     // looks like an unfortumate json scheme decision that requires special handling here
-                    maxenergy = j_params.get<double>();
+                    maximum_allowed_energy = value.get<double>();
                 } else {
-                    throw ConfigurationError("unknown energy");
+                    energies.push_back(createEnergy(spc, key, value));
+                    faunus_logger->debug("hamiltonian expanded with {}", key);
+                    addEwald(value, spc); // add reciprocal Ewald terms if appropriate
                 }
-                // append additional energies to the if-chain
-
-                // this should be moved into `Nonbonded` and added when appropriate
-                // Nonbonded now has access to Hamiltonian (*this) and can therefore
-                // add energy terms
-                addEwald(j_params, spc); // add reciprocal Ewald terms if appropriate
             } catch (std::exception& e) {
                 usageTip.pick(key);
                 throw ConfigurationError("'{}': {}", key, e.what());
@@ -906,40 +852,138 @@ Hamiltonian::Hamiltonian(Space& spc, const json& j) {
             throw ConfigurationError("energy: {}", e.what()).attachJson(j_energy);
         }
     }
+    checkBondedMolecules();
+}
 
-    // Check if there are molecules with bonds and warn if "bonded" has not been added
-    for (auto& molecule : Faunus::molecules) {
-        if (!molecule.bonds.empty() && find<Energy::Bonded>().empty()) {
+void Hamiltonian::checkBondedMolecules() const {
+    if (find<Energy::Bonded>().empty()) { // no bond potential added? issue warning if molecules w. bonds
+        auto molecules_with_bonds = Faunus::molecules | ranges::cpp20::views::filter([](const auto& molecule) {
+                                        return !molecule.bonds.empty();
+                                    });
+        for (const auto& molecule : molecules_with_bonds) {
             faunus_logger->warn("{} bonds specified in topology but missing in energy", molecule.name);
         }
     }
 }
 
-double Hamiltonian::energy(Change &change) {
-    double du = 0;
-    for (auto i : this->vec) { // loop over terms in Hamiltonian
-        i->key = key;
-        i->timer.start(); // time each term
-        du += i->energy(change);
-        i->timer.stop();
-        if (du >= maxenergy)
+double Hamiltonian::energy(Change& change) {
+    double summed_energy = 0.0;
+    for (auto& energy : energies) {
+        energy->key = key;
+        energy->timer.start();
+        summed_energy += energy->energy(change);
+        energy->timer.stop();
+        if (summed_energy >= maximum_allowed_energy || std::isnan(summed_energy)) {
             break; // stop summing energies
+        }
     }
-    return du;
+    return summed_energy;
 }
 void Hamiltonian::init() {
-    for (auto i : this->vec)
-        i->init();
+    std::for_each(energies.begin(), energies.end(), [&](auto& energy) { energy->init(); });
 }
-void Hamiltonian::sync(Energybase *basePtr, Change &change) {
-    auto other = dynamic_cast<decltype(this)>(basePtr);
-    if (other)
+
+void Hamiltonian::sync(Energybase* other_hamiltonian, Change& change) {
+    if (auto* other = dynamic_cast<Hamiltonian*>(other_hamiltonian)) {
         if (other->size() == size()) {
-            for (size_t i = 0; i < size(); i++)
-                this->vec[i]->sync(other->vec[i].get(), change);
+            auto other_energy_term = other->energies.cbegin();
+            std::for_each(energies.begin(), energies.end(), [&](auto& energy_term) {
+                energy_term->sync(other_energy_term->get(), change);
+                other_energy_term++;
+            });
             return;
         }
+    }
     throw std::runtime_error("hamiltonian mismatch");
+}
+
+/**
+ * @brief Factory function to generate energy instances based on their name and json input
+ * @param spc Space to use
+ * @param name Name of energy
+ * @param j Configuration for energy
+ * @return shared pointer to energy base class
+ * @throw if unknown name or configuration error
+ *
+ * New energy terms should be added to the if-else chain in the function
+ */
+std::shared_ptr<Energybase> Hamiltonian::createEnergy(Space& spc, const std::string& name, const json& j) {
+    using namespace Potential;
+    using CoulombLJ = CombinedPairPotential<NewCoulombGalore, LennardJones>;
+    using CoulombWCA = CombinedPairPotential<NewCoulombGalore, WeeksChandlerAndersen>;
+    using PrimitiveModelWCA = CombinedPairPotential<Coulomb, WeeksChandlerAndersen>;
+    using PrimitiveModel = CombinedPairPotential<Coulomb, HardSphere>;
+
+    // only a single pairing policy and cutoff scheme so far
+    using PairingPolicy = GroupPairing<GroupPairingPolicy<GroupCutoff>>;
+
+    try {
+        if (name == "nonbonded_coulomblj" || name == "nonbonded_newcoulomblj") {
+            return std::make_shared<Nonbonded<PairEnergy<CoulombLJ, false>, PairingPolicy>>(j, spc, *this);
+        }
+        if (name == "nonbonded_coulomblj_EM") {
+            return std::make_shared<NonbondedCached<PairEnergy<CoulombLJ, false>, PairingPolicy>>(j, spc, *this);
+        }
+        if (name == "nonbonded_splined") {
+            return std::make_shared<Nonbonded<PairEnergy<Potential::SplinedPotential, false>, PairingPolicy>>(j, spc,
+                                                                                                              *this);
+        }
+        if (name == "nonbonded" || name == "nonbonded_exact") {
+            return std::make_shared<Nonbonded<PairEnergy<Potential::FunctorPotential, true>, PairingPolicy>>(j, spc,
+                                                                                                             *this);
+        }
+        if (name == "nonbonded_cached") {
+            return std::make_shared<NonbondedCached<PairEnergy<Potential::SplinedPotential>, PairingPolicy>>(j, spc,
+                                                                                                             *this);
+        }
+        if (name == "nonbonded_coulombwca") {
+            return std::make_shared<Nonbonded<PairEnergy<CoulombWCA, false>, PairingPolicy>>(j, spc, *this);
+        }
+        if (name == "nonbonded_pm" || name == "nonbonded_coulombhs") {
+            return std::make_shared<Nonbonded<PairEnergy<PrimitiveModel, false>, PairingPolicy>>(j, spc, *this);
+        }
+        if (name == "nonbonded_pmwca") {
+            return std::make_shared<Nonbonded<PairEnergy<PrimitiveModelWCA, false>, PairingPolicy>>(j, spc, *this);
+        }
+        if (name == "bonded") {
+            return std::make_shared<Bonded>(j, spc);
+        }
+        if (name == "customexternal") {
+            return std::make_shared<CustomExternal>(j, spc);
+        }
+        if (name == "akesson") {
+            return std::make_shared<ExternalAkesson>(j, spc);
+        }
+        if (name == "confine") {
+            return std::make_shared<Confine>(j, spc);
+        }
+        if (name == "constrain") {
+            return std::make_shared<Constrain>(j, spc);
+        }
+        if (name == "example2d") {
+            return std::make_shared<Example2D>(j, spc);
+        }
+        if (name == "isobaric") {
+            return std::make_shared<Isobaric>(j, spc);
+        }
+        if (name == "penalty") {
+#ifdef ENABLE_MPI
+            return std::make_shared<PenaltyMPI>(j, spc);
+#else
+            return std::make_shared<Penalty>(j, spc);
+#endif
+        }
+        if (name == "sasa") {
+#if defined ENABLE_FREESASA
+            return std::make_shared<SASAEnergy>(j, spc);
+#else
+            throw ConfigurationError("faunus not compiled with sasa support");
+#endif
+        }
+        throw ConfigurationError("'{}' unknown", name);
+    } catch (std::exception& e) {
+        throw ConfigurationError("error creating energy:", e.what());
+    }
 }
 
 #ifdef ENABLE_FREESASA

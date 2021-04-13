@@ -1383,18 +1383,24 @@ class Example2D : public Energybase {
     double energy(Change &change) override;
 };
 
+/**
+ * @brief Aggregate and sum energy terms
+ */
 class Hamiltonian : public Energybase, public BasePointerVector<Energybase> {
-  protected:
-    double maxenergy = pc::infty; //!< Maximum allowed energy change
-    void to_json(json &) const override;
-    void addEwald(const json &, Space &); //!< Adds an instance of reciprocal space Ewald energies (if appropriate)
-    void force(PointVector &) override;
-  public:
-    Hamiltonian(Space &spc, const json &j);
-    double energy(Change &change) override; //!< Energy due to changes
-    void init() override;
-    void sync(Energybase *basePtr, Change &change) override;
-}; //!< Aggregates and sum energy terms
+  private:
+    double maximum_allowed_energy = pc::infty; //!< Maximum allowed energy change
+    decltype(vec)& energies;                   //!< Alias for `vec`
+    void addEwald(const json& j, Space& spc);  //!< Adds an instance of reciprocal space Ewald energies (if appropriate)
+    void checkBondedMolecules() const;         //!< Warn if bonded molecules and no bonded energy term
+    void to_json(json& j) const override;
+    void force(PointVector& forces) override;
+    std::shared_ptr<Energybase> createEnergy(Space& spc, const std::string& name, const json& j);
 
+  public:
+    Hamiltonian(Space& spc, const json& j);
+    double energy(Change& change) override; //!< Energy due to changes
+    void init() override;
+    void sync(Energybase* other_hamiltonian, Change& change) override;
+};
 } // namespace Energy
 } // namespace Faunus

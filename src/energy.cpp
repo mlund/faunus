@@ -633,38 +633,71 @@ ContainerOverlap::ContainerOverlap(const Space& spc) : spc(spc) { name = "Contai
 
 // ------------- Isobaric ---------------
 
-Isobaric::Isobaric(const json &j, Space &spc) : spc(spc) {
+Isobaric::Isobaric(const json& j, const Space& spc) : spc(spc) {
     name = "isobaric";
     citation_information = "Frenkel & Smith 2nd Ed (Eq. 5.4.13)";
-    P = j.value("P/mM", 0.0) * 1.0_millimolar;
-    if (P < 1e-10) {
-        P = j.value("P/Pa", 0.0) * 1.0_Pa;
-        if (P < 1e-10)
-            P = j.at("P/atm").get<double>() * 1.0_atm;
+
+    for (const auto& [key, conversion_factor] : pressure_units) {
+        if (auto it = j.find(key); it != j.end()) {
+            pressure = it->get<double>() * conversion_factor; // convert to internal units
+            return;
+        }
     }
+    throw ConfigurationError("specify pressure");
 }
 
-double Isobaric::energy(Change &change) {
-    if (change.dV || change.all || change.dN) {
-        size_t N = 0;
-        for (auto &g : spc.groups) {
-            if (!g.empty()) {
-                if (g.atomic)
-                    N += g.size();
-                else
-                    N++;
-            }
-        }
-        double V = spc.geo.getVolume();
-        return P * V - (N+1)*std::log(V);
-    } else
-        return 0;
-}
-void Isobaric::to_json(json &j) const {
-    j["P/atm"] = P / 1.0_atm;
-    j["P/mM"] = P / 1.0_millimolar;
-    j["P/Pa"] = P / 1.0_Pa;
+void Isobaric::to_json(json& j) const {
+    for (const auto& [key, conversion_factor] : pressure_units) {
+        j[key] = pressure / conversion_factor;
+    }
     _roundjson(j, 5);
+}
+
+/**
+ * @brief Calculates the energy contribution p × V / kT - (N + 1) × ln(V)
+ * @return energy in kT
+ */
+double Isobaric::energy(Change& change) {
+    if (change.dV || change.all || change.dN) {
+        auto group_is_active = [](const auto& group) { return !group.empty(); };
+        auto count_particles = [](const auto& group) { return group.isAtomic() ? group.size() : 1; };
+        auto particles_per_group = spc.groups | ranges::cpp20::views::filter(group_is_active) |
+                                   ranges::cpp20::views::transform(count_particles);
+        auto number_of_particles = std::accumulate(particles_per_group.begin(), particles_per_group.end(), 0);
+        const auto volume = spc.geo.getVolume();
+        return pressure * volume - static_cast<double>(number_of_particles + 1) * std::log(volume);
+    }
+    return 0.0;
+}
+
+const std::map<std::string, double> Isobaric::pressure_units = {{"P/atm", 1.0_atm},
+                                                                {"P/bar", 1.0_bar},
+                                                                {"P/kT", 1.0_kT},
+                                                                {"P/mM", 1.0_millimolar},
+                                                                {"P/Pa", 1.0_Pa}}; // add more if you fancy...
+
+TEST_CASE("Energy::Isobaric") {
+    Space spc;
+    CHECK_NOTHROW(Isobaric(json({{"P/atm", 0.0}}), spc));
+    CHECK_NOTHROW(Isobaric(json({{"P/bar", 0.0}}), spc));
+    CHECK_NOTHROW(Isobaric(json({{"P/kT", 0.0}}), spc));
+    CHECK_NOTHROW(Isobaric(json({{"P/mM", 0.0}}), spc));
+    CHECK_NOTHROW(Isobaric(json({{"P/Pa", 0.0}}), spc));
+    CHECK_THROWS(Isobaric(json({{"P/unknown_unit", 0.0}}), spc));
+
+    SUBCASE("to_json") {
+        json j;
+        Isobaric(json({{"P/atm", 0.5}}), spc).to_json(j);
+        CHECK(j.at("P/atm").get<double>() == doctest::Approx(0.5));
+        Isobaric(json({{"P/bar", 0.4}}), spc).to_json(j);
+        CHECK(j.at("P/bar").get<double>() == doctest::Approx(0.4));
+        Isobaric(json({{"P/kT", 0.3}}), spc).to_json(j);
+        CHECK(j.at("P/kT").get<double>() == doctest::Approx(0.3));
+        Isobaric(json({{"P/mM", 0.2}}), spc).to_json(j);
+        CHECK(j.at("P/mM").get<double>() == doctest::Approx(0.2));
+        Isobaric(json({{"P/Pa", 0.1}}), spc).to_json(j);
+        CHECK(j.at("P/Pa").get<double>() == doctest::Approx(0.1));
+    }
 }
 
 Constrain::Constrain(const json &j, Space &spc) {

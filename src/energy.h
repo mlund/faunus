@@ -223,14 +223,18 @@ class Ewald : public Energybase {
     void force(std::vector<Point> &) override; // update forces on all particles
 };
 
+/**
+ * @brief Pressure term for NPT ensemble
+ */
 class Isobaric : public Energybase {
   private:
-    Space &spc;
-    double P; // P/kT
+    const Space& spc;
+    double pressure = 0.0;                                     //!< Applied pressure
+    static const std::map<std::string, double> pressure_units; //!< Possible ways pressure can be given
   public:
-    Isobaric(const json &, Space &);
-    double energy(Change &) override;
-    void to_json(json &) const override;
+    Isobaric(const json& j, const Space& spc);
+    double energy(Change& change) override;
+    void to_json(json& j) const override;
 };
 
 /**

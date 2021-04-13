@@ -582,9 +582,11 @@ properties:
                         P/atm: {type: number, description: Pressure in atmospheres}
                         type: object
                     oneof:
+                        - required: [P/atm]
+                        - required: [P/bar]
+                        - required: [P/kT]
                         - required: [P/mM]
                         - required: [P/Pa]
-                        - required: [P/atm]
                     additionalProperties: false
                 confine:
                     description: "Geometrical confinement"

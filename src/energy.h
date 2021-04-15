@@ -1398,7 +1398,8 @@ class Example2D : public Energybase {
 class Hamiltonian : public Energybase, public BasePointerVector<Energybase> {
   private:
     double maximum_allowed_energy = pc::infty; //!< Maximum allowed energy change
-    decltype(vec)& energies;                   //!< Alias for `vec`
+    std::vector<double> latest_energies;       //!< Placeholder for the lastest energies for each energy term
+    decltype(vec)& energy_terms;               //!< Alias for `vec`
     void addEwald(const json& j, Space& spc);  //!< Adds an instance of reciprocal space Ewald energies (if appropriate)
     void checkBondedMolecules() const;         //!< Warn if bonded molecules and no bonded energy term
     void to_json(json& j) const override;
@@ -1407,9 +1408,10 @@ class Hamiltonian : public Energybase, public BasePointerVector<Energybase> {
 
   public:
     Hamiltonian(Space& spc, const json& j);
-    double energy(Change& change) override; //!< Energy due to changes
     void init() override;
     void sync(Energybase* other_hamiltonian, Change& change) override;
+    double energy(Change& change) override;            //!< Energy due to changes
+    const std::vector<double>& latestEnergies() const; //!< Energies for each term from the latest call to `energy()`
 };
 } // namespace Energy
 } // namespace Faunus

@@ -836,7 +836,7 @@ void Bonded::force(std::vector<Point> &forces) {
 //---------- Hamiltonian ------------
 
 void Hamiltonian::to_json(json &j) const {
-    std::for_each(energies.cbegin(), energies.cend(), [&](auto energy) { j.push_back(*energy); });
+    std::for_each(energy_terms.cbegin(), energy_terms.cend(), [&](auto energy) { j.push_back(*energy); });
 }
 
 void Hamiltonian::addEwald(const json& j, Space& spc) {
@@ -859,19 +859,19 @@ void Hamiltonian::addEwald(const json& j, Space& spc) {
     if (_j.count("type") == 1) {
         if (_j.at("type") == "ewald") {
             emplace_back<Energy::Ewald>(_j, spc);
-            faunus_logger->debug("hamiltonian expanded with {}", energies.back()->name);
+            faunus_logger->debug("hamiltonian expanded with {}", energy_terms.back()->name);
         }
     }
 }
 
 void Hamiltonian::force(PointVector& forces) {
-    std::for_each(energies.begin(), energies.end(), [&](auto energy) { energy->force(forces); });
+    std::for_each(energy_terms.begin(), energy_terms.end(), [&](auto energy) { energy->force(forces); });
 }
 
 /**
  * @todo Move addEwald to Nonbonded as it now has access to Hamiltonian and can add
  */
-Hamiltonian::Hamiltonian(Space& spc, const json& j) : energies(this->vec) {
+Hamiltonian::Hamiltonian(Space& spc, const json& j) : energy_terms(this->vec) {
     name = "hamiltonian";
     if (!j.is_array()) {
         throw ConfigurationError("energy: json array expected");
@@ -880,7 +880,7 @@ Hamiltonian::Hamiltonian(Space& spc, const json& j) : energies(this->vec) {
     // add container overlap energy for non-cuboidal geometries
     if (spc.geo.type != Geometry::CUBOID) {
         emplace_back<Energy::ContainerOverlap>(spc);
-        faunus_logger->debug("hamiltonian expanded with {}", energies.back()->name);
+        faunus_logger->debug("hamiltonian expanded with {}", energy_terms.back()->name);
     }
 
     for (const auto& j_energy : j) { // loop over energy list
@@ -891,7 +891,7 @@ Hamiltonian::Hamiltonian(Space& spc, const json& j) : energies(this->vec) {
                     // looks like an unfortumate json scheme decision that requires special handling here
                     maximum_allowed_energy = value.get<double>();
                 } else {
-                    energies.push_back(createEnergy(spc, key, value));
+                    energy_terms.push_back(createEnergy(spc, key, value));
                     faunus_logger->debug("hamiltonian expanded with {}", key);
                     addEwald(value, spc); // add reciprocal Ewald terms if appropriate
                 }
@@ -903,6 +903,7 @@ Hamiltonian::Hamiltonian(Space& spc, const json& j) : energies(this->vec) {
             throw ConfigurationError("energy: {}", e.what()).attachJson(j_energy);
         }
     }
+    latest_energies.reserve(energy_terms.size());
     checkBondedMolecules();
 }
 
@@ -918,29 +919,31 @@ void Hamiltonian::checkBondedMolecules() const {
 }
 
 double Hamiltonian::energy(Change& change) {
-    double summed_energy = 0.0;
-    for (auto& energy : energies) {
-        energy->key = key;
-        energy->timer.start();
-        summed_energy += energy->energy(change);
-        energy->timer.stop();
-        if (summed_energy >= maximum_allowed_energy || std::isnan(summed_energy)) {
+    latest_energies.clear();
+    for (auto& energy_ptr : energy_terms) {
+        energy_ptr->key = key; // is this needed?
+        energy_ptr->timer.start();
+        const auto energy = energy_ptr->energy(change);
+        latest_energies.push_back(energy);
+        energy_ptr->timer.stop();
+        if (energy >= maximum_allowed_energy || std::isnan(energy)) {
             break; // stop summing energies
         }
     }
-    return summed_energy;
+    return std::accumulate(latest_energies.begin(), latest_energies.end(), 0.0);
 }
 void Hamiltonian::init() {
-    std::for_each(energies.begin(), energies.end(), [&](auto& energy) { energy->init(); });
+    std::for_each(energy_terms.begin(), energy_terms.end(), [&](auto& energy) { energy->init(); });
 }
 
 void Hamiltonian::sync(Energybase* other_hamiltonian, Change& change) {
     if (auto* other = dynamic_cast<Hamiltonian*>(other_hamiltonian)) {
         if (other->size() == size()) {
-            auto other_energy_term = other->energies.cbegin();
-            std::for_each(energies.begin(), energies.end(), [&](auto& energy_term) {
+            latest_energies = other->latestEnergies();
+            auto other_energy_term = other->energy_terms.cbegin();
+            std::for_each(energy_terms.begin(), energy_terms.end(), [&](auto& energy_term) {
                 energy_term->sync(other_energy_term->get(), change);
-                other_energy_term++;
+                std::advance(other_energy_term, 1);
             });
             return;
         }
@@ -1036,6 +1039,8 @@ std::shared_ptr<Energybase> Hamiltonian::createEnergy(Space& spc, const std::str
         throw ConfigurationError("error creating energy:", e.what());
     }
 }
+
+const std::vector<double>& Hamiltonian::latestEnergies() const { return latest_energies; }
 
 #ifdef ENABLE_FREESASA
 

@@ -65,8 +65,8 @@ $$
 where $N$ is the total number of molecules and atomic species.
 
 `isobaric`   | Description
--------------|-------------------------------------------------------
-`P/unit`     | External pressure where unit can be `mM`, `atm`, or `Pa`.
+-------------|-------------------------------------------------------------------
+`P/unit`     | External pressure where unit can be `mM`, `atm`, `Pa`, `bar`, `kT`
 
 
 ## Nonbonded Interactions

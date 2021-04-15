@@ -26,7 +26,7 @@ class Energybase {
     TimeRelativeOfTotal<std::chrono::microseconds> timer; //!< Timer for measure speed of each term
     virtual double energy(Change &) = 0;                  //!< energy due to change
     virtual void to_json(json &) const;                   //!< json output
-    virtual void sync(Energybase *, Change &);
+    virtual void sync(Energybase *other_energy, Change &change); //!< Sync (copy from) another energy instance
     virtual void init();                                  //!< reset and initialize
     virtual inline void force(PointVector &){};           //!< update forces on all particles
     inline virtual ~Energybase() = default;

@@ -53,15 +53,20 @@ namespace Energy {
 class Hamiltonian;
 
 /**
- * @brief Check for overlap between atoms and the simulation container
+ * @brief Check if particles are outside the simulation container
  *
- * If found infinite energy is returned. Not needed for cuboidal geometry
- * as there's nover any overlap due to PBC.
+ * If any particles is ouside, infinite energy is returned; zero otherwirse.
+ * This is not needed for cuboidal geometry as particles are always wrapped using PBC.
  */
-struct ContainerOverlap : public Energybase {
-    const Space &spc;
-    ContainerOverlap(const Space &spc) : spc(spc) { name = "ContainerOverlap"; }
-    double energy(Change &change) override;
+class ContainerOverlap : public Energybase {
+  private:
+    const Space& spc;
+    bool groupIsOutsideContainer(const Change::data& group_change) const;
+    double energyOfAllGroups() const;
+
+  public:
+    explicit ContainerOverlap(const Space& spc);
+    double energy(Change& change) override;
 };
 
 /**
@@ -218,14 +223,18 @@ class Ewald : public Energybase {
     void force(std::vector<Point> &) override; // update forces on all particles
 };
 
+/**
+ * @brief Pressure term for NPT ensemble
+ */
 class Isobaric : public Energybase {
   private:
-    Space &spc;
-    double P; // P/kT
+    const Space& spc;
+    double pressure = 0.0;                                     //!< Applied pressure
+    static const std::map<std::string, double> pressure_units; //!< Possible ways pressure can be given
   public:
-    Isobaric(const json &, Space &);
-    double energy(Change &) override;
-    void to_json(json &) const override;
+    Isobaric(const json& j, const Space& spc);
+    double energy(Change& change) override;
+    void to_json(json& j) const override;
 };
 
 /**
@@ -1383,18 +1392,26 @@ class Example2D : public Energybase {
     double energy(Change &change) override;
 };
 
+/**
+ * @brief Aggregate and sum energy terms
+ */
 class Hamiltonian : public Energybase, public BasePointerVector<Energybase> {
-  protected:
-    double maxenergy = pc::infty; //!< Maximum allowed energy change
-    void to_json(json &) const override;
-    void addEwald(const json &, Space &); //!< Adds an instance of reciprocal space Ewald energies (if appropriate)
-    void force(PointVector &) override;
-  public:
-    Hamiltonian(Space &spc, const json &j);
-    double energy(Change &change) override; //!< Energy due to changes
-    void init() override;
-    void sync(Energybase *basePtr, Change &change) override;
-}; //!< Aggregates and sum energy terms
+  private:
+    double maximum_allowed_energy = pc::infty; //!< Maximum allowed energy change
+    std::vector<double> latest_energies;       //!< Placeholder for the lastest energies for each energy term
+    decltype(vec)& energy_terms;               //!< Alias for `vec`
+    void addEwald(const json& j, Space& spc);  //!< Adds an instance of reciprocal space Ewald energies (if appropriate)
+    void checkBondedMolecules() const;         //!< Warn if bonded molecules and no bonded energy term
+    void to_json(json& j) const override;
+    void force(PointVector& forces) override;
+    std::shared_ptr<Energybase> createEnergy(Space& spc, const std::string& name, const json& j);
 
+  public:
+    Hamiltonian(Space& spc, const json& j);
+    void init() override;
+    void sync(Energybase* other_hamiltonian, Change& change) override;
+    double energy(Change& change) override;            //!< Energy due to changes
+    const std::vector<double>& latestEnergies() const; //!< Energies for each term from the latest call to `energy()`
+};
 } // namespace Energy
 } // namespace Faunus

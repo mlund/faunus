@@ -107,12 +107,45 @@ class AtomicSwapCharge : public MoveBase {
 };
 
 /**
+ * @brief Histogram for an arbitrary set of values using a sparse memory layout (map)
+ *
+ * Builds a histogram by binning given values to a specified resolution. Values are stored
+ * in a memory efficient map-structure with log(N) lookup complexity.
+ */
+template <typename T = double> class SparseHistogram {
+    T resolution;
+    std::map<int, unsigned int> data;
+
+  public:
+    explicit SparseHistogram(T resolution) : resolution(resolution) {}
+    void add(const T value) {
+        if (std::isfinite(value)) {
+            data[static_cast<int>(std::round(value / resolution))]++;
+        } else {
+            faunus_logger->warn("histogram: skipping inf/nan number");
+        }
+    }
+    friend auto& operator<<(std::ostream& stream, const SparseHistogram& histogram) {
+        std::for_each(histogram.data.begin(), histogram.data.end(), [&](const auto& sample) {
+            stream << fmt::format("{:.6E} {}\n", T(sample.first) * histogram.resolution, sample.second);
+        });
+        return stream;
+    }
+};
+
+/**
  * @brief Translate and rotate a molecular group
  */
 class AtomicTranslateRotate : public MoveBase {
-    double _sqd; //!< temporary squared displacement
+    Space::Tpvec::const_iterator latest_particle;      //!< Iterator to last moved particle
+    const Energy::Hamiltonian& hamiltonian;            //!< Reference to Hamiltonian
+    std::map<int, SparseHistogram<>> energy_histogram; //!< Energy histogram (value) for each particle type (key)
+    double energy_resolution = 0.0;                    //!< Resolution of sampled energy histogram
+    double latest_displacement_squared;                //!< temporary squared displacement
+    void sampleEnergyHistogram();                      //!< Update energy histogram based on latest move
+    void saveHistograms();                             //!< Write histograms for file
+
   protected:
-    using MoveBase::spc;
     int molid = -1;                           //!< Molecule id to move
     Point directions = {1, 1, 1};             //!< displacement directions
     Average<double> mean_square_displacement; //!< mean squared displacement
@@ -128,10 +161,11 @@ class AtomicTranslateRotate : public MoveBase {
     void _accept(Change &) override;
     void _reject(Change &) override;
 
-    AtomicTranslateRotate(Space &spc, std::string name, std::string cite);
+    AtomicTranslateRotate(Space& spc, const Energy::Hamiltonian& hamiltonian, std::string name, std::string cite);
 
   public:
-    explicit AtomicTranslateRotate(Space &spc);
+    AtomicTranslateRotate(Space& spc, const Energy::Hamiltonian& hamiltonian);
+    ~AtomicTranslateRotate();
 };
 
 /**

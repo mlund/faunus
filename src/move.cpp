@@ -134,13 +134,14 @@ void AtomicTranslateRotate::_from_json(const json& j) {
             repeat = repeat * mollist.front().size(); // ...and for each atom
         }
     }
+    energy_resolution = j.value("energy_resolution", 0.0);
 }
 
 void AtomicTranslateRotate::translateParticle(ParticleVector::iterator particle, double displacement) {
     auto old_position = particle->pos; // backup old position
     particle->pos += ranunit(slump, directions) * displacement * slump();
     spc.geo.boundary(particle->pos);
-    _sqd = spc.geo.sqdist(old_position, particle->pos); // square displacement
+    latest_displacement_squared = spc.geo.sqdist(old_position, particle->pos); // square displacement
 
     if (auto &group = spc.groups[cdata.index]; group.atomic == false) { // update COM for molecular groups
         group.cm = Geometry::massCenter(group.begin(), group.end(), spc.geo.getBoundaryFunc(), -group.cm);
@@ -160,6 +161,7 @@ void AtomicTranslateRotate::translateParticle(ParticleVector::iterator particle,
 
 void AtomicTranslateRotate::_move(Change &change) {
     if (auto particle = randomAtom(); particle != spc.p.end()) {
+        latest_particle = particle;
         double translational_displacement = atoms.at(particle->id).dp;
         double rotational_displacement = atoms.at(particle->id).dprot;
 
@@ -180,21 +182,28 @@ void AtomicTranslateRotate::_move(Change &change) {
             change.groups.push_back(cdata); // add to list of moved groups
         }
     } else {
-        _sqd = 0.0; // no particle found --> no movement
+        latest_particle = spc.p.end();
+        latest_displacement_squared = 0.0; // no particle found --> no movement
     }
 }
 
-void AtomicTranslateRotate::_accept(Change &) { mean_square_displacement += _sqd; }
+void AtomicTranslateRotate::_accept(Change&) {
+    mean_square_displacement += latest_displacement_squared;
+    sampleEnergyHistogram();
+}
+
 void AtomicTranslateRotate::_reject(Change &) { mean_square_displacement += 0; }
 
-AtomicTranslateRotate::AtomicTranslateRotate(Space &spc, std::string name, std::string cite)
-    : MoveBase(spc, name, cite) {
+AtomicTranslateRotate::AtomicTranslateRotate(Space& spc, const Energy::Hamiltonian& hamiltonian, std::string name,
+                                             std::string cite)
+    : MoveBase(spc, name, cite), hamiltonian(hamiltonian) {
     repeat = -1; // meaning repeat N times
     cdata.atoms.resize(1);
     cdata.internal = true;
 }
 
-AtomicTranslateRotate::AtomicTranslateRotate(Space &spc) : AtomicTranslateRotate(spc, "transrot", "") {}
+AtomicTranslateRotate::AtomicTranslateRotate(Space& spc, const Energy::Hamiltonian& hamiltonian)
+    : AtomicTranslateRotate(spc, hamiltonian, "transrot", "") {}
 
 /**
  * For atomic groups, select `ALL` since these may be partially filled and thereby
@@ -218,6 +227,34 @@ ParticleVector::iterator AtomicTranslateRotate::randomAtom() {
     return particle;
 }
 
+/**
+ * Here we access the Hamiltonian and sum all energy terms from the just performed MC move.
+ * This is used to updated the histogram of energies, sampled for each individual particle type.
+ */
+void AtomicTranslateRotate::sampleEnergyHistogram() {
+    if (energy_resolution > 0.0) {
+        assert(latest_particle != spc.p.end());
+        const auto particle_energy =
+            std::accumulate(hamiltonian.latestEnergies().begin(), hamiltonian.latestEnergies().end(), 0.0);
+        auto& particle_histogram =
+            energy_histogram.try_emplace(latest_particle->id, SparseHistogram(energy_resolution)).first->second;
+        particle_histogram.add(particle_energy);
+    }
+}
+
+void AtomicTranslateRotate::saveHistograms() {
+    if (energy_resolution) {
+        for (const auto& [atom_id, histogram] : energy_histogram) {
+            const auto filename = fmt::format("energy-histogram-{}.dat", Faunus::atoms[atom_id].name);
+            if (auto stream = std::ofstream(filename); stream) {
+                stream << "# energy/kT observations\n" << histogram;
+            }
+        }
+    }
+}
+
+AtomicTranslateRotate::~AtomicTranslateRotate() { saveHistograms(); }
+
 Propagator::Propagator(const json& j, Space& spc, Energy::Hamiltonian& pot, [[maybe_unused]] MPI::MPIController& mpi) {
     if (j.count("random") == 1) {
         MoveBase::slump = j["random"]; // slump is static --> shared for all moves
@@ -234,7 +271,7 @@ Propagator::Propagator(const json& j, Space& spc, Energy::Hamiltonian& pot, [[ma
             } else if (key == "conformationswap") {
                 _moves.emplace_back<Move::ConformationSwap>(spc);
             } else if (key == "transrot") {
-                _moves.emplace_back<Move::AtomicTranslateRotate>(spc);
+                _moves.emplace_back<Move::AtomicTranslateRotate>(spc, pot);
             } else if (key == "pivot") {
                 _moves.emplace_back<Move::PivotMove>(spc);
             } else if (key == "crankshaft") {

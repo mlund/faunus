@@ -22,7 +22,7 @@ Giulio Tesei, Alexei Abrikossov,
 João Henriques, Björn Stenqvist,
 Axel Thuresson, Robert Vácha,
 Magnus Ullner, Chris Evers,
-Anıl Kurut, André Teixeira,
+Anıl Kurut, Fernando Luís Barroso da Silva, André Teixeira,
 Christophe Labbez, Ondrej Marsalek,
 Martin Trulsson, Björn Persson,
 [Mikael Lund](http://www.teokem.lu.se/~mikael)_

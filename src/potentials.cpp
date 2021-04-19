@@ -715,7 +715,7 @@ FunctorPotential::uFunc FunctorPotential::combineFunc(json &j) {
                         // place additional potentials here...
                     } catch (std::exception &e) {
                         usageTip.pick(key);
-                        throw ConfigurationError("potential '{}': {}", key, e.what());
+                        throw ConfigurationError("{} -> {}", key, e.what());
                     }
 
                     if (_u != nullptr) // if found, sum them into new function object

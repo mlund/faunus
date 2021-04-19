@@ -897,10 +897,10 @@ Hamiltonian::Hamiltonian(Space& spc, const json& j) : energy_terms(this->vec) {
                 }
             } catch (std::exception& e) {
                 usageTip.pick(key);
-                throw ConfigurationError("'{}': {}", key, e.what());
+                throw ConfigurationError("{} -> {}", key, e.what());
             }
         } catch (std::exception& e) {
-            throw ConfigurationError("energy: {}", e.what()).attachJson(j_energy);
+            throw ConfigurationError("energy -> {}", e.what()).attachJson(j_energy);
         }
     }
     latest_energies.reserve(energy_terms.size());
@@ -1036,7 +1036,9 @@ std::shared_ptr<Energybase> Hamiltonian::createEnergy(Space& spc, const std::str
         }
         throw ConfigurationError("'{}' unknown", name);
     } catch (std::exception& e) {
-        throw ConfigurationError("error creating energy:", e.what());
+        // @todo For unknown reasons, ConfigurationError displays an *empty*
+        //       what() message, which is why std::runtime_error is used instead.
+        throw std::runtime_error("error creating energy -> "s + e.what());
     }
 }
 

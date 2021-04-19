@@ -20,7 +20,6 @@ conda search faunus   # show (new) revisions
 conda upgrade faunus
 ~~~
 
-For the adventurous, sporadically updated development versions can be installed with `conda install -c teokem faunus`. 
 Starting from version 2.1, we adhere to [semantic versioning](https://semver.org).
 
 ## Building from source code
@@ -72,11 +71,11 @@ CMake Option                         | Description
 `-DENABLE_MPI=OFF`                   | Enable MPI
 `-DENABLE_OPENMP=ON`                 | Enable OpenMP support
 `-DENABLE_TESTS=ON`                  | Enable unittesting
-`-DENABLE_PYTHON=ON`                 | Build python bindings (experimental)
+`-DENABLE_PYTHON=OFF`                | Build python bindings (experimental)
 `-DENABLE_FREESASA=ON`               | Enable SASA routines (external download)
 `-DENABLE_TBB=OFF`                   | Build with Intel Threading Building Blocks (experimental)
 `-DBUILD_STATIC=OFF`                 | Build statically linked binaries
-`-DCMAKE_BUILD_TYPE=RelWithDebInfo`  | Alternatives: `Debug` or `Release` (faster, adventurous)
+`-DCMAKE_BUILD_TYPE=Release`         | Alternatives: `Debug` or `RelWithDebInfo`
 `-DCMAKE_CXX_FLAGS_RELEASE="..."`    | Compiler options for Release mode
 `-DCMAKE_CXX_FLAGS_DEBUG="..."`      | Compiler options for Debug mode
 `-DCMAKE_INSTALL_PREFIX:PATH="..."`  | Install location (default: `/usr/local`)

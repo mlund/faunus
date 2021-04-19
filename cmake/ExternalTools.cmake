@@ -138,26 +138,24 @@ set_property(TARGET docopt PROPERTY IMPORTED_LOCATION ${binary_dir}/libdocopt.a)
 # CPPSID
 #########
 
-ExternalProject_Add(project_cppsid
-    PREFIX "${CMAKE_CURRENT_BINARY_DIR}/_deps"
-    CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DCMAKE_POSITION_INDEPENDENT_CODE=on
-    BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} "cppsid"
-    INSTALL_COMMAND "" LOG_DOWNLOAD ON
-    UPDATE_DISCONNECTED ON
-    URL_MD5 b420c4c114e00a147c2c9a974249f0d4
-    URL "https://github.com/mlund/cppsid/archive/v0.2.1.tar.gz")
-ExternalProject_Get_Property(project_cppsid binary_dir)
-ExternalProject_Get_Property(project_cppsid source_dir)
-set(CppsidIncludeDir ${source_dir}/include)
-add_library(cppsid STATIC IMPORTED GLOBAL)
-add_dependencies(cppsid project_cppsid)
-set_property(TARGET cppsid PROPERTY IMPORTED_LOCATION ${binary_dir}/libcppsid.a)
-
 option(ENABLE_SID "Enable SID emulation" off)
 if(ENABLE_SID)
-    find_package(SDL2 CONFIG)
+    find_package(SDL2 CONFIG REQUIRED)
+    ExternalProject_Add(project_cppsid
+        PREFIX "${CMAKE_CURRENT_BINARY_DIR}/_deps"
+        CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DCMAKE_POSITION_INDEPENDENT_CODE=on
+        BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} "cppsid"
+        INSTALL_COMMAND "" LOG_DOWNLOAD ON
+        UPDATE_DISCONNECTED ON
+        URL_MD5 b420c4c114e00a147c2c9a974249f0d4
+        URL "https://github.com/mlund/cppsid/archive/v0.2.1.tar.gz")
+    ExternalProject_Get_Property(project_cppsid binary_dir)
+    ExternalProject_Get_Property(project_cppsid source_dir)
+    set(CppsidIncludeDir ${source_dir}/include)
+    add_library(cppsid STATIC IMPORTED GLOBAL)
+    add_dependencies(cppsid project_cppsid)
+    set_property(TARGET cppsid PROPERTY IMPORTED_LOCATION ${binary_dir}/libcppsid.a)
 endif()
-
 
 ###########
 # PYBIND11

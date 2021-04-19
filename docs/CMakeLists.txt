@@ -1,5 +1,25 @@
 # MANUAL
 
+# Check for python packages required to build manual and parse yaml files
+if (PYTHONINTERP_FOUND)
+    # optional packages
+    execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "from bs4 import BeautifulSoup" RESULT_VARIABLE HAS_BS OUTPUT_QUIET)
+    execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import pypandoc" RESULT_VARIABLE HAS_PYPANDOC OUTPUT_QUIET)
+
+    # required packages
+    execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "from jsonschema import Draft7Validator" RESULT_VARIABLE HAS_JSONSCHEMA ERROR_QUIET)
+    if (HAS_JSONSCHEMA EQUAL 1)
+        message(FATAL_ERROR "python: jsonschema package required")
+    endif()
+
+    execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import ruamel_yaml as yaml" RESULT_VARIABLE HAS_YAML1 ERROR_QUIET)
+    execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import ruamel.yaml as yaml" RESULT_VARIABLE HAS_YAML2 ERROR_QUIET)
+    execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import yaml" RESULT_VARIABLE HAS_YAML3 ERROR_QUIET)
+    if ((HAS_YAML1 EQUAL 1) AND (HAS_YAML2 EQUAL 1) AND (HAS_YAML3 EQUAL 1))
+        message(FATAL_ERROR "python: ruamel_yaml (preferred) or yaml packages required")
+    endif()
+endif()
+
 find_program(PANDOC pandoc)
 if (PANDOC)
     if(NOT TEX_ENGINE)
@@ -59,13 +79,17 @@ if (PANDOC)
         )
 
     if (PYTHONINTERP_FOUND)
-        add_custom_target(
-            usagetips
-            ALL
-            COMMENT "extracting tips from manual"
-            WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-            COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/extracttips.py)
-        add_dependencies(usagetips manual_html)
+        if (HAS_BS EQUAL 0)
+            if (HAS_PYPANDOC EQUAL 0)
+                add_custom_target(
+                    usagetips
+                    ALL
+                    COMMENT "extracting tips from manual"
+                    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+                    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/extracttips.py)
+                add_dependencies(usagetips manual_html)
+            endif()
+        endif()
     endif()
 endif()
 

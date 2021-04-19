@@ -75,7 +75,7 @@ using ProgressIndicator::ProgressTracker;
 // forward declarations
 std::shared_ptr<ProgressTracker> createProgressTracker(bool, unsigned int);
 
-int main(int argc, const char **argv) {
+int main(int argc, const char** argv) {
     if (argc > 1) { // run unittests if the first argument equals "test"
         if (std::string(argv[1]) == "test") {
 #ifdef DOCTEST_CONFIG_DISABLE
@@ -156,14 +156,14 @@ int main(int argc, const char **argv) {
         json json_in;
         try {
             if (auto input = args["--input"].asString(); input == "/dev/stdin") {
-                    std::cin >> json_in;
+                std::cin >> json_in;
             } else {
                 if (prefix) {
                     input = Faunus::MPI::prefix + input;
                 }
                 json_in = openjson(input);
             }
-        } catch(json::parse_error& e) {
+        } catch (json::parse_error& e) {
             faunus_logger->debug(e.what());
             throw ConfigurationError("empty or invalid input JSON");
         }
@@ -190,7 +190,7 @@ int main(int argc, const char **argv) {
                         size_t size = f.tellg(); // get file size
                         std::vector<std::uint8_t> v(size / sizeof(std::uint8_t));
                         f.seekg(0, f.beg); // go back to start
-                        f.read((char *)v.data(), size);
+                        f.read((char*)v.data(), size);
                         j = json::from_ubjson(v);
                     } else {
                         f >> j;
@@ -211,7 +211,7 @@ int main(int argc, const char **argv) {
 
             Analysis::CombinedAnalysis analysis(json_in.at("analysis"), sim.getSpace(), sim.getHamiltonian());
 
-            auto &loop = json_in.at("mcloop");
+            auto& loop = json_in.at("mcloop");
             int macro = loop.at("macro");
             int micro = loop.at("micro");
 
@@ -219,7 +219,7 @@ int main(int argc, const char **argv) {
             for (int i = 0; i < macro; i++) {
                 for (int j = 0; j < micro; j++) {
                     if (progress_tracker && mpi.isMaster()) {
-                        if(++(*progress_tracker) % 10 == 0) {
+                        if (++(*progress_tracker) % 10 == 0) {
                             progress_tracker->display();
                         }
                     }
@@ -264,14 +264,8 @@ int main(int argc, const char **argv) {
 
         mpi.finalize();
 
-    } catch (std::exception &e) {
-        faunus_logger->error(e.what());
-
-        // ConfigurationError can carry a JSON snippet which should be shown for debugging.
-        if (auto config_error = dynamic_cast<ConfigurationError*>(&e);
-            config_error != nullptr && !config_error->attachedJson().empty()) {
-            faunus_logger->debug("JSON snippet:\n{}", config_error->attachedJson().dump(4));
-        }
+    } catch (std::exception& e) {
+        displayError(*faunus_logger, e);
 
         if (!usageTip.buffer.empty()) {
             // Use the srderr stream directly for more elaborated output of usage tip, optionally containing an ASCII
@@ -320,20 +314,25 @@ std::pair<std::string, int> findSIDsong() {
         // look for json file with hvsc sid tune names
         std::string pfx;
         json json_music;
-        for (std::string dir :
-             {FAUNUS_BINARY_DIR, FAUNUS_INSTALL_PREFIX "/share/faunus/"}) { // installed and uninstalled cmake builds
-            json_music = Faunus::openjson(dir + "/sids/music.json", false);
-            if (!json_music.empty()) {
-                pfx = dir + "/";
-                break;
+        for (std::string dir : {FAUNUS_BINARY_DIR, FAUNUS_INSTALL_PREFIX "/share/faunus/"}) {
+            try {
+                // look at installed and uninstalled cmake builds
+                json_music = Faunus::openjson(dir + "/sids/music.json");
+                if (!json_music.empty()) {
+                    pfx = dir + "/";
+                    break;
+                }
+            } catch (...) {
+                // ignore any error
             }
         }
         if (not json_music.empty()) {
             json_music = json_music.at("songs"); // load playlist
 
             std::vector<size_t> weight; // weight for each tune (= number of subsongs)
-            for (auto &i : json_music)
-                weight.push_back(i.at("subsongs").size());
+            for (auto& json_song : json_music) {
+                weight.push_back(json_song.at("subsongs").size());
+            }
             std::discrete_distribution<size_t> dist(weight.begin(), weight.end());
 
             Faunus::random.seed();                                        // give global random a hardware seed
@@ -342,7 +341,7 @@ std::pair<std::string, int> findSIDsong() {
             subsong = *(Faunus::random.sample(subsongs.begin(), subsongs.end())) - 1; // random subsong
             filename = pfx + it->at("file").get<std::string>();
         }
-    } catch (const std::exception &) {
+    } catch (...) {
         // silently ignore if something fails; it's just for fun!
     }
     return {filename, subsong};
@@ -365,7 +364,7 @@ std::shared_ptr<ProgressTracker> createProgressTracker(bool show_progress, unsig
     using namespace ProgressIndicator;
     using namespace std::chrono;
     std::shared_ptr<ProgressTracker> tracker = nullptr;
-    if(show_progress) {
+    if (show_progress) {
         if (isatty(fileno(stdout))) {
             // show a progress bar on the console
             tracker = std::make_shared<ProgressBar>(steps);

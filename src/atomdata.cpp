@@ -1,4 +1,5 @@
 #include <doctest/doctest.h>
+#include <stdexcept>
 #include "atomdata.h"
 #include "units.h"
 #include "aux/eigensupport.h"
@@ -14,7 +15,7 @@ bool InteractionData::has(const Tkey name) const {
 double InteractionData::get(const Tkey name) const {
     try {
         return data.at(name);
-    } catch (const std::out_of_range &e) {
+    } catch (const std::out_of_range& e) {
         // cannot throw until non-used atomic pairs are eliminated from the potential matrices
         faunus_logger->error("Unknown/unset atom property {} required.", name);
         return std::numeric_limits<double>::signaling_NaN();
@@ -22,7 +23,7 @@ double InteractionData::get(const Tkey name) const {
 }
 
 double& InteractionData::get(const Tkey name) {
-    if(data.find(name) == data.end()) {
+    if (data.find(name) == data.end()) {
         set(name, std::numeric_limits<double>::signaling_NaN());
     }
     return data.at(name);
@@ -30,24 +31,24 @@ double& InteractionData::get(const Tkey name) {
 
 void InteractionData::set(const Tkey name, const double value) {
     auto it = data.find(name);
-    if(it != data.end()) {
+    if (it != data.end()) {
         it->second = value;
     } else {
         data.insert({name, value});
     }
 }
 
-void from_json(const json &j, InteractionData &a) {
-    for (const auto &j_it : j.items()) {
+void from_json(const json& j, InteractionData& a) {
+    for (const auto& j_it : j.items()) {
         if (j_it.value().is_number()) {
             a.set(j_it.key(), j_it.value());
         }
     }
 }
 
-void from_single_use_json(SingleUseJSON &j, InteractionData &a) {
+void from_single_use_json(SingleUseJSON& j, InteractionData& a) {
     auto j_copy = j;
-    for (const auto &j_it : j_copy.items()) {
+    for (const auto& j_it : j_copy.items()) {
         if (j_it.value().is_number()) {
             a.set(j_it.key(), j_it.value());
             j.erase(j_it.key());
@@ -55,18 +56,18 @@ void from_single_use_json(SingleUseJSON &j, InteractionData &a) {
     }
 }
 
-void to_json(json &j, const InteractionData &a) {
-    for (const auto &kv : a.data) {
+void to_json(json& j, const InteractionData& a) {
+    for (const auto& kv : a.data) {
         j[kv.first] = kv.second;
     }
 }
 
-AtomData::Tid &AtomData::id() { return _id; }
+AtomData::Tid& AtomData::id() { return _id; }
 
-const AtomData::Tid &AtomData::id() const { return _id; }
+const AtomData::Tid& AtomData::id() const { return _id; }
 
-void to_json(json &j, const AtomData &a) {
-    auto &_j = j[a.name];
+void to_json(json& j, const AtomData& a) {
+    auto& _j = j[a.name];
     _j = {{"activity", a.activity / 1.0_molar},
           {"pactivity", -std::log10(a.activity / 1.0_molar)},
           {"alphax", a.alphax},
@@ -88,7 +89,7 @@ void to_json(json &j, const AtomData &a) {
         _j["implicit"] = a.implicit;
 }
 
-void from_json(const json &j, AtomData &a) {
+void from_json(const json& j, AtomData& a) {
     if (j.is_object() == false || j.size() != 1)
         throw std::runtime_error("Invalid JSON data for AtomData");
     for (auto atom_iter : j.items()) {
@@ -143,34 +144,45 @@ void from_json(const json &j, AtomData &a) {
     }
 }
 
-void from_json(const json &j, std::vector<AtomData> &v) {
-    auto j_list_iter = j.find("atomlist");
-    auto j_list = (j_list_iter == j.end()) ? j : *j_list_iter;
+void from_json(const json& j, std::vector<Faunus::AtomData>& atom_vector) {
+    // List of atoms can be provided as an array or wrapped in an object containing an array – {"atomlist": […], …}.
+    // Here we attempt to unwrap the object envelope.
+    auto j_atomlist = j.find("atomlist");
+    const auto& new_atoms = (j_atomlist == j.end()) ? j : *j_atomlist;
+    if (!new_atoms.is_array()) {
+        throw ConfigurationError("`atomlist` must be an array");
+    }
 
-    v.reserve(v.size() + j_list.size());
-    for (auto &j_atom : j_list) {
-        if (j_atom.is_string()) // treat ax external file to load
-            from_json(openjson(j_atom.get<std::string>()), v);
-        else if (j_atom.is_object()) {
-            AtomData a = j_atom;
-            auto atom_iter = findName(v, a.name);
-            if (atom_iter == v.end()) {
-                v.push_back(a); // add new atom
+    atom_vector.reserve(atom_vector.size() + new_atoms.size()); // reserve memory
+    try {
+        for (const auto& element : new_atoms) { // loop over elements in json array
+            if (element.is_object()) {
+                const auto atomdata = Faunus::AtomData(element);
+                if (auto it = Faunus::findName(atom_vector, atomdata.name); it != atom_vector.end()) {
+                    faunus_logger->warn("overwriting existing properties of {}", it->name);
+                    *it = atomdata;
+                } else { // add new atom
+                    atom_vector.push_back(atomdata);
+                }
+            } else if (element.is_string()) { // treat element as filename
+                const auto filename = element.get<std::string>();
+                faunus_logger->info("reading atoms from external file '{}'", filename);
+                from_json(Faunus::openjson(filename), atom_vector);
             } else {
-                faunus_logger->warn("Redefining atomic properties of atom {}.", atom_iter->name);
-                *atom_iter = a;
+                throw ConfigurationError("atom entry must be string or object").attachJson(element);
             }
         }
-    }
-    for (size_t i = 0; i < v.size(); i++) {
-        if (std::numeric_limits<AtomData::Tid>::max() < i) {
-            throw std::overflow_error("Number of atoms to high.");
+        assert(std::numeric_limits<Faunus::AtomData::Tid>::max() < atom_vector.size());
+        // the id exactly matches it's position (index) in the atom vector
+        for (size_t i = 0; i < atom_vector.size(); ++i) {
+            atom_vector[i].id() = i;
         }
-        v[i].id() = i; // id must match position in vector
+    } catch (std::exception& e) {
+        std::throw_with_nested(ConfigurationError("error in atoms definition").attachJson(new_atoms));
     }
 }
 
-std::vector<AtomData> atoms;
+std::vector<Faunus::AtomData> atoms;
 
 TEST_SUITE_BEGIN("AtomData");
 
@@ -184,7 +196,7 @@ TEST_CASE("[Faunus] AtomData") {
 
     pc::temperature = 298.15_K;
     atoms = j["atomlist"].get<decltype(atoms)>();
-    auto &v = atoms; // alias to global atom list
+    auto& v = atoms; // alias to global atom list
 
     CHECK_EQ(v.size(), 2);
     CHECK_EQ(v.front().id(), 0);
@@ -219,7 +231,7 @@ TEST_CASE("[Faunus] AtomData") {
 TEST_SUITE_END();
 
 UnknownAtomError::UnknownAtomError(const std::string& atom_name)
-    : std::runtime_error(fmt::format("unknown atom: '{}'", atom_name)) {}
+    : GenericError("unknown atom: '{}'", atom_name) {}
 
 AtomData& findAtomByName(const std::string& name) {
     const auto result = findName(Faunus::atoms, name);

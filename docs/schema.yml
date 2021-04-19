@@ -78,32 +78,34 @@ properties:
     atomlist:
         type: array
         items:
-            type: object
-            additionalProperties:
-                type: object
-                additionalProperties: false
-                properties:
-                    activity: {type: number, default: 0.0}
-                    alphax: {type: number, default: 0.0}
-                    dp: {type: number, default: 0.0, minimum: 0.0}
-                    dprot: {type: number, default: 0.0, description: "Rotational displacement parameter"}
-                    eps: {type: number, default: 0.0}
-                    implicit: {type: boolean, default: false, description: "True if atom is implicit"}
-                    mu:
-                        items: {type: number}
-                        type: array
-                        minItems: 3
-                        maxItems: 3
-                        default: [0,0,0]
-                        description: Dipole moment vector (eÅ)
-                    mulen: {type: number, description: "Dipole moment scalar (eÅ)"}
-                    mw: {type: number, default: 1.0, description: "Molecular weight (g/mol)"}
-                    pactivity: {type: number, default: 0.0}
-                    q: {type: number, default: 0.0, description: "Valency (e)"}
-                    r: {type: number, default: 0.0}
-                    sigma: {type: number, default: 0.0, description: "Diameter (Å)"}
-                    tension: {type: number, default: 0.0, description: "Surface tension (kJ/mol/Å²)"}
-                    tfe: {type: number, default: 0.0, description: "Transfer free energy (kJ/mol/Å²/M)"}
+            anyOf:
+                - type: object
+                  additionalProperties:
+                      type: object
+                      additionalProperties: false
+                      properties:
+                          activity: {type: number, default: 0.0}
+                          alphax: {type: number, default: 0.0}
+                          dp: {type: number, default: 0.0, minimum: 0.0}
+                          dprot: {type: number, default: 0.0, description: "Rotational displacement parameter"}
+                          eps: {type: number, default: 0.0}
+                          implicit: {type: boolean, default: false, description: "True if atom is implicit"}
+                          mu:
+                              items: {type: number}
+                              type: array
+                              minItems: 3
+                              maxItems: 3
+                              default: [0,0,0]
+                              description: Dipole moment vector (eÅ)
+                          mulen: {type: number, description: "Dipole moment scalar (eÅ)"}
+                          mw: {type: number, default: 1.0, description: "Molecular weight (g/mol)"}
+                          pactivity: {type: number, default: 0.0}
+                          q: {type: number, default: 0.0, description: "Valency (e)"}
+                          r: {type: number, default: 0.0}
+                          sigma: {type: number, default: 0.0, description: "Diameter (Å)"}
+                          tension: {type: number, default: 0.0, description: "Surface tension (kJ/mol/Å²)"}
+                          tfe: {type: number, default: 0.0, description: "Transfer free energy (kJ/mol/Å²/M)"}
+                - type: string
 
     moleculelist:
         type: array

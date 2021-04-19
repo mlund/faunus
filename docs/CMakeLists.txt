@@ -6,17 +6,16 @@ if (PYTHONINTERP_FOUND)
     execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "from bs4 import BeautifulSoup" RESULT_VARIABLE HAS_BS OUTPUT_QUIET)
     execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import pypandoc" RESULT_VARIABLE HAS_PYPANDOC OUTPUT_QUIET)
 
-    # required packages
     execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "from jsonschema import Draft7Validator" RESULT_VARIABLE HAS_JSONSCHEMA ERROR_QUIET)
     if (HAS_JSONSCHEMA EQUAL 1)
-        message(FATAL_ERROR "python: jsonschema package required")
+        message("python: missing `jsonschema` package is highly recommended")
     endif()
 
     execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import ruamel_yaml as yaml" RESULT_VARIABLE HAS_YAML1 ERROR_QUIET)
     execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import ruamel.yaml as yaml" RESULT_VARIABLE HAS_YAML2 ERROR_QUIET)
     execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import yaml" RESULT_VARIABLE HAS_YAML3 ERROR_QUIET)
     if ((HAS_YAML1 EQUAL 1) AND (HAS_YAML2 EQUAL 1) AND (HAS_YAML3 EQUAL 1))
-        message(FATAL_ERROR "python: ruamel_yaml (preferred) or yaml packages required")
+        message("python: missing `ruamel_yaml` (preferred) or `yaml` packages are highly recommended")
     endif()
 endif()
 

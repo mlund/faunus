@@ -134,67 +134,86 @@ void AtomicTranslateRotate::_from_json(const json& j) {
             repeat = repeat * mollist.front().size(); // ...and for each atom
         }
     }
+    energy_resolution = j.value("energy_resolution", 0.0);
 }
 
 void AtomicTranslateRotate::translateParticle(ParticleVector::iterator particle, double displacement) {
-    auto old_position = particle->pos; // backup old position
+    const auto old_position = particle->pos; // backup old position
     particle->pos += ranunit(slump, directions) * displacement * slump();
     spc.geo.boundary(particle->pos);
-    _sqd = spc.geo.sqdist(old_position, particle->pos); // square displacement
+    latest_displacement_squared = spc.geo.sqdist(old_position, particle->pos); // square displacement
 
-    if (auto &group = spc.groups[cdata.index]; group.atomic == false) { // update COM for molecular groups
+    auto& group = spc.groups.at(cdata.index);
+    if (group.isMolecular()) {
         group.cm = Geometry::massCenter(group.begin(), group.end(), spc.geo.getBoundaryFunc(), -group.cm);
-#ifndef NDEBUG
-        // Perform test to see if the move violates PBC
-        auto old_mass_center = group.cm;                              // backup mass center
-        group.translate(-old_mass_center, spc.geo.getBoundaryFunc()); // translate to {0,0,0}
-        double should_be_zero = spc.geo.sqdist({0, 0, 0}, Geometry::massCenter(group.begin(), group.end()));
-        if (should_be_zero > 1e-6) {
-            throw std::runtime_error("atomic move too large");
-        } else {
-            group.translate(old_mass_center, spc.geo.getBoundaryFunc());
-        }
-#endif
+        checkMassCenter(group);
+    }
+}
+
+void AtomicTranslateRotate::checkMassCenter(Space::Tgroup& group) const {
+    const auto allowed_threshold = 1e-6;
+    const auto old_mass_center = group.cm;
+    group.translate(-old_mass_center, spc.geo.getBoundaryFunc()); // translate to origin
+    const auto should_be_zero = spc.geo.sqdist({0, 0, 0}, Geometry::massCenter(group.begin(), group.end()));
+    if (should_be_zero > allowed_threshold) {
+        faunus_logger->error("{}: error calculating mass center for {}", name, group.traits().name);
+        groupToDisk(group);
+        throw std::runtime_error("molecule likely too large for periodic boundaries; increase box size?");
+    }
+    group.translate(old_mass_center, spc.geo.getBoundaryFunc());
+}
+
+void AtomicTranslateRotate::groupToDisk(const Space::Tgroup& group) const {
+    if (auto stream = std::ofstream("mass-center-failure.pqr"); stream) {
+        const auto group_iter = spc.groups.cbegin() + spc.getGroupIndex(group);
+        auto groups = ranges::cpp20::views::counted(group_iter, 1); // slice out single group
+        FormatPQR::save(stream, groups, spc.geo.getLength());
     }
 }
 
 void AtomicTranslateRotate::_move(Change &change) {
     if (auto particle = randomAtom(); particle != spc.p.end()) {
-        double translational_displacement = atoms.at(particle->id).dp;
-        double rotational_displacement = atoms.at(particle->id).dprot;
-
-        assert(translational_displacement >= 0.0);
+        latest_particle = particle;
+        const auto translational_displacement = particle->traits().dp;
+        const auto rotational_displacement = particle->traits().dprot;
 
         if (translational_displacement > 0.0) { // translate
             translateParticle(particle, translational_displacement);
         }
 
         if (rotational_displacement > 0.0) { // rotate
-            Point u = ranunit(slump);
-            double angle = rotational_displacement * (slump() - 0.5);
-            Eigen::Quaterniond Q(Eigen::AngleAxisd(angle, u));
-            particle->rotate(Q, Q.toRotationMatrix());
+            const auto random_unit_vector = Faunus::ranunit(slump);
+            const auto angle = rotational_displacement * (slump() - 0.5);
+            Eigen::Quaterniond quaternion(Eigen::AngleAxisd(angle, random_unit_vector));
+            particle->rotate(quaternion, quaternion.toRotationMatrix());
         }
 
         if (translational_displacement > 0.0 or rotational_displacement > 0.0) {
             change.groups.push_back(cdata); // add to list of moved groups
         }
     } else {
-        _sqd = 0.0; // no particle found --> no movement
+        latest_particle = spc.p.end();
+        latest_displacement_squared = 0.0; // no particle found --> no movement
     }
 }
 
-void AtomicTranslateRotate::_accept(Change &) { mean_square_displacement += _sqd; }
+void AtomicTranslateRotate::_accept(Change&) {
+    mean_square_displacement += latest_displacement_squared;
+    sampleEnergyHistogram();
+}
+
 void AtomicTranslateRotate::_reject(Change &) { mean_square_displacement += 0; }
 
-AtomicTranslateRotate::AtomicTranslateRotate(Space &spc, std::string name, std::string cite)
-    : MoveBase(spc, name, cite) {
+AtomicTranslateRotate::AtomicTranslateRotate(Space& spc, const Energy::Hamiltonian& hamiltonian, std::string name,
+                                             std::string cite)
+    : MoveBase(spc, name, cite), hamiltonian(hamiltonian) {
     repeat = -1; // meaning repeat N times
     cdata.atoms.resize(1);
     cdata.internal = true;
 }
 
-AtomicTranslateRotate::AtomicTranslateRotate(Space &spc) : AtomicTranslateRotate(spc, "transrot", "") {}
+AtomicTranslateRotate::AtomicTranslateRotate(Space& spc, const Energy::Hamiltonian& hamiltonian)
+    : AtomicTranslateRotate(spc, hamiltonian, "transrot", "") {}
 
 /**
  * For atomic groups, select `ALL` since these may be partially filled and thereby
@@ -218,6 +237,34 @@ ParticleVector::iterator AtomicTranslateRotate::randomAtom() {
     return particle;
 }
 
+/**
+ * Here we access the Hamiltonian and sum all energy terms from the just performed MC move.
+ * This is used to updated the histogram of energies, sampled for each individual particle type.
+ */
+void AtomicTranslateRotate::sampleEnergyHistogram() {
+    if (energy_resolution > 0.0) {
+        assert(latest_particle != spc.p.end());
+        const auto particle_energy =
+            std::accumulate(hamiltonian.latestEnergies().begin(), hamiltonian.latestEnergies().end(), 0.0);
+        auto& particle_histogram =
+            energy_histogram.try_emplace(latest_particle->id, SparseHistogram(energy_resolution)).first->second;
+        particle_histogram.add(particle_energy);
+    }
+}
+
+void AtomicTranslateRotate::saveHistograms() {
+    if (energy_resolution) {
+        for (const auto& [atom_id, histogram] : energy_histogram) {
+            const auto filename = fmt::format("energy-histogram-{}.dat", Faunus::atoms[atom_id].name);
+            if (auto stream = std::ofstream(filename); stream) {
+                stream << "# energy/kT observations\n" << histogram;
+            }
+        }
+    }
+}
+
+AtomicTranslateRotate::~AtomicTranslateRotate() { saveHistograms(); }
+
 Propagator::Propagator(const json& j, Space& spc, Energy::Hamiltonian& pot, [[maybe_unused]] MPI::MPIController& mpi) {
     if (j.count("random") == 1) {
         MoveBase::slump = j["random"]; // slump is static --> shared for all moves
@@ -234,7 +281,7 @@ Propagator::Propagator(const json& j, Space& spc, Energy::Hamiltonian& pot, [[ma
             } else if (key == "conformationswap") {
                 _moves.emplace_back<Move::ConformationSwap>(spc);
             } else if (key == "transrot") {
-                _moves.emplace_back<Move::AtomicTranslateRotate>(spc);
+                _moves.emplace_back<Move::AtomicTranslateRotate>(spc, pot);
             } else if (key == "pivot") {
                 _moves.emplace_back<Move::PivotMove>(spc);
             } else if (key == "crankshaft") {
@@ -947,22 +994,21 @@ void TranslateRotate::_move(Change &change) {
             change_data.all = true;                                  // *all* atoms in group were moved
             change_data.internal = false;                            // internal energy is unchanged
         }
-#ifndef NDEBUG
-        sanityCheck(group->get());
-#endif
+        checkMassCenter(group->get());
     } else {
         latest_displacement_squared = 0.0;   // these are used to track mean squared
         latest_rotation_angle_squared = 0.0; // translational and rotational displacements
     }
 }
 
-void TranslateRotate::sanityCheck(const Space::Tgroup &group) const {
-    Point cm_recalculated = Geometry::massCenter(group.begin(), group.end(), spc.geo.getBoundaryFunc(), -group.cm);
-    double should_be_small = spc.geo.sqdist(group.cm, cm_recalculated);
-    if (should_be_small > 1e-6) {
-        std::cerr << "cm recalculated: " << cm_recalculated.transpose() << "\n";
-        std::cerr << "cm in group:     " << group.cm.transpose() << "\n";
-        assert(false);
+void TranslateRotate::checkMassCenter(const Space::Tgroup& group) const {
+    const auto allowed_threshold = 1e-6;
+    const auto cm_recalculated = Geometry::massCenter(group.begin(), group.end(), spc.geo.getBoundaryFunc(), -group.cm);
+    const auto should_be_small = spc.geo.sqdist(group.cm, cm_recalculated);
+    if (should_be_small > allowed_threshold) {
+        faunus_logger->error("{}: error calculating mass center for {}", name, group.traits().name);
+        FormatPQR::save("mass-center-failure.pqr", spc.groups, spc.geo.getLength());
+        throw std::runtime_error("molecule likely too large for periodic boundaries; increase box size?");
     }
 }
 

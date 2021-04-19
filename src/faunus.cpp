@@ -266,6 +266,7 @@ int main(int argc, const char **argv) {
 
     } catch (std::exception &e) {
         faunus_logger->error(e.what());
+        std::cerr << e.what() << std::endl;
 
         // ConfigurationError can carry a JSON snippet which should be shown for debugging.
         if (auto config_error = dynamic_cast<ConfigurationError*>(&e);

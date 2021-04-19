@@ -144,6 +144,7 @@ class AtomicTranslateRotate : public MoveBase {
     double latest_displacement_squared;                //!< temporary squared displacement
     void sampleEnergyHistogram();                      //!< Update energy histogram based on latest move
     void saveHistograms();                             //!< Write histograms for file
+    void checkMassCenter(Space::Tgroup& group) const;  //!< Perform test to see if the move violates PBC
 
   protected:
     int molid = -1;                           //!< Molecule id to move
@@ -235,7 +236,7 @@ class TranslateRotate : public MoveBase {
     std::optional<std::reference_wrapper<Space::Tgroup>> findRandomMolecule() const;
     double translateMolecule(Space::Tgroup &group);
     double rotateMolecule(Space::Tgroup &group);
-    void sanityCheck(const Space::Tgroup &group) const; // sanity check of move
+    void checkMassCenter(const Space::Tgroup& group) const; // sanity check of move
 
     void _to_json(json &j) const override;
     void _from_json(const json &j) override;

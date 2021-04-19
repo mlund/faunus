@@ -361,16 +361,17 @@ void from_json(const json &j, Space &spc) {
         }
 
         // check correctness of molecular mass centers
-        for (auto &group : spc.groups) {
-            if (!group.empty() && group.isMolecular()) {
-                if (spc.geo.sqdist(group.cm, Geometry::massCenter(group.begin(), group.end(), spc.geo.getBoundaryFunc(),
-                                                                  -group.cm)) > 1e-9) {
-                    throw std::runtime_error("mass center mismatch");
-                }
+        auto active_and_molecular = [](const auto& group) { return (!group.empty() && group.isMolecular()); };
+        for (const auto& group : spc.groups | ranges::cpp20::views::filter(active_and_molecular)) {
+            const auto should_be_small = spc.geo.sqdist(
+                group.cm, Geometry::massCenter(group.begin(), group.end(), spc.geo.getBoundaryFunc(), -group.cm));
+            if (should_be_small > 1e-9) {
+                throw std::runtime_error(fmt::format(
+                    "couldn't calculate mass center for {}; increase periodic box size?", group.traits().name));
             }
         }
-    } catch (std::exception &e) {
-        throw std::runtime_error("error building space: "s + e.what());
+    } catch (std::exception& e) {
+        throw std::runtime_error("space construction: "s + e.what());
     }
 }
 ActiveParticles::const_iterator::const_iterator(const Space &spc, ActiveParticles::const_iterator::Tparticle_iter it)

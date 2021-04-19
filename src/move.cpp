@@ -138,12 +138,13 @@ void AtomicTranslateRotate::_from_json(const json& j) {
 }
 
 void AtomicTranslateRotate::translateParticle(ParticleVector::iterator particle, double displacement) {
-    auto old_position = particle->pos; // backup old position
+    const auto old_position = particle->pos; // backup old position
     particle->pos += ranunit(slump, directions) * displacement * slump();
     spc.geo.boundary(particle->pos);
     latest_displacement_squared = spc.geo.sqdist(old_position, particle->pos); // square displacement
 
-    if (auto &group = spc.groups[cdata.index]; group.atomic == false) { // update COM for molecular groups
+    auto& group = spc.groups.at(cdata.index);
+    if (group.isMolecular()) {
         group.cm = Geometry::massCenter(group.begin(), group.end(), spc.geo.getBoundaryFunc(), -group.cm);
         checkMassCenter(group);
     }
@@ -155,29 +156,36 @@ void AtomicTranslateRotate::checkMassCenter(Space::Tgroup& group) const {
     group.translate(-old_mass_center, spc.geo.getBoundaryFunc()); // translate to origin
     const auto should_be_zero = spc.geo.sqdist({0, 0, 0}, Geometry::massCenter(group.begin(), group.end()));
     if (should_be_zero > allowed_threshold) {
-        faunus_logger->error("{}: PBC error calculating mass center for {}", name, group.traits().name);
+        faunus_logger->error("{}: error calculating mass center for {}", name, group.traits().name);
+        groupToDisk(group);
         throw std::runtime_error("molecule likely too large for periodic boundaries; increase box size?");
     }
     group.translate(old_mass_center, spc.geo.getBoundaryFunc());
 }
 
+void AtomicTranslateRotate::groupToDisk(const Space::Tgroup& group) const {
+    if (auto stream = std::ofstream("mass-center-failure.pqr"); stream) {
+        const auto group_iter = spc.groups.cbegin() + spc.getGroupIndex(group);
+        auto groups = ranges::cpp20::views::counted(group_iter, 1); // slice out single group
+        FormatPQR::save(stream, groups, spc.geo.getLength());
+    }
+}
+
 void AtomicTranslateRotate::_move(Change &change) {
     if (auto particle = randomAtom(); particle != spc.p.end()) {
         latest_particle = particle;
-        double translational_displacement = atoms.at(particle->id).dp;
-        double rotational_displacement = atoms.at(particle->id).dprot;
-
-        assert(translational_displacement >= 0.0);
+        const auto translational_displacement = particle->traits().dp;
+        const auto rotational_displacement = particle->traits().dprot;
 
         if (translational_displacement > 0.0) { // translate
             translateParticle(particle, translational_displacement);
         }
 
         if (rotational_displacement > 0.0) { // rotate
-            Point u = ranunit(slump);
-            double angle = rotational_displacement * (slump() - 0.5);
-            Eigen::Quaterniond Q(Eigen::AngleAxisd(angle, u));
-            particle->rotate(Q, Q.toRotationMatrix());
+            const auto random_unit_vector = Faunus::ranunit(slump);
+            const auto angle = rotational_displacement * (slump() - 0.5);
+            Eigen::Quaterniond quaternion(Eigen::AngleAxisd(angle, random_unit_vector));
+            particle->rotate(quaternion, quaternion.toRotationMatrix());
         }
 
         if (translational_displacement > 0.0 or rotational_displacement > 0.0) {
@@ -999,6 +1007,7 @@ void TranslateRotate::checkMassCenter(const Space::Tgroup& group) const {
     const auto should_be_small = spc.geo.sqdist(group.cm, cm_recalculated);
     if (should_be_small > allowed_threshold) {
         faunus_logger->error("{}: error calculating mass center for {}", name, group.traits().name);
+        FormatPQR::save("mass-center-failure.pqr", spc.groups, spc.geo.getLength());
         throw std::runtime_error("molecule likely too large for periodic boundaries; increase box size?");
     }
 }

@@ -145,6 +145,7 @@ class AtomicTranslateRotate : public MoveBase {
     void sampleEnergyHistogram();                      //!< Update energy histogram based on latest move
     void saveHistograms();                             //!< Write histograms for file
     void checkMassCenter(Space::Tgroup& group) const;  //!< Perform test to see if the move violates PBC
+    void groupToDisk(const Space::Tgroup& group) const; //!< Save structure to disk in case of failure
 
   protected:
     int molid = -1;                           //!< Molecule id to move

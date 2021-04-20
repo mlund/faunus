@@ -676,6 +676,7 @@ properties:
                     properties:
                         molecule: {type: string}
                         repeat: {type: [integer, string]}
+                        energy_resolution: {type: number, minimum: 0, description: "resolution of energy histogram"}
                         dir:
                             items: {type: number}
                             type: array

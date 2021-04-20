@@ -116,12 +116,13 @@ target_compile_definitions(faunus PRIVATE FAUNUS_INSTALL_PREFIX=\"${CMAKE_INSTAL
 target_compile_definitions(faunus PRIVATE FAUNUS_BINARY_DIR=\"${CMAKE_BINARY_DIR}\")
 install(TARGETS faunus DESTINATION bin)
 
+INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include)
+INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
+
 # ========== python bindings ==========
 
-option(ENABLE_PYTHON "Try to compile python bindings (experimental!)" on)
+option(ENABLE_PYTHON "Try to compile python bindings (experimental!)" off)
 if (ENABLE_PYTHON)
-    INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include)
-    INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
     find_package(PythonLibs 3 REQUIRED)
 
     if (PYTHONINTERP_FOUND)
@@ -152,7 +153,7 @@ if (ENABLE_PYTHON)
     endif ()
 endif ()
 
-if (TARGET pyfaunus)
+if (PYTHONINTERP_FOUND)
     # find _relative_ path of python library and thus respect CMAKE_INSTALL_PREFIX.
     # could be replaced by FindPython() but req. cmake 3.12
     # https://stackoverflow.com/questions/1242904/finding-python-site-packages-directory-with-cmake
@@ -162,6 +163,9 @@ if (TARGET pyfaunus)
         print(sc.get_python_lib(prefix='', plat_specific=True))"
         OUTPUT_VARIABLE PYTHON_SITE
         OUTPUT_STRIP_TRAILING_WHITESPACE)
+endif()
+
+if (TARGET pyfaunus)
     install(TARGETS pyfaunus DESTINATION ${PYTHON_SITE} OPTIONAL)
 endif()
 

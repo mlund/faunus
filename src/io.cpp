@@ -353,6 +353,7 @@ void FormatPQR::save(const std::string &filename, const ParticleVector &particle
 void FormatPQR::save(const std::string &filename, const Tgroup_vector &groups, const Point &box_length) {
     if (not groups.empty()) {
         if (std::ofstream stream(filename); stream) {
+            faunus_logger->debug("writing to {}", filename);
             save(stream, groups, box_length);
         } else {
             throw std::runtime_error("write error: "s + filename);

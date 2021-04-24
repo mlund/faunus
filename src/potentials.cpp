@@ -1011,12 +1011,14 @@ void NewCoulombGalore::from_json(const json &j) {
             _j["type"] = "poisson";
             _j["C"] = 1;
             _j["D"] = 1;
+            _j["debyelength"] = Faunus::getDebyeLength(_j, bjerrum_length);
             pot.spline<::CoulombGalore::Poisson>(_j);
         } else { // non-shifted yukawa equals `plain` with exponential screening
             if (_j.contains("cutoff")) {
                 throw ConfigurationError("unexpected 'cutoff' for non-shifted yukawa which is always infinity");
             }
             _j["type"] = "plain";
+            _j["debyelength"] = Faunus::getDebyeLength(_j, bjerrum_length);
             pot.spline<::CoulombGalore::Plain>(_j);
         }
     } else if (method == "plain") {

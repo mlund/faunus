@@ -25,6 +25,20 @@ TEST_CASE("[Faunus] Average") {
 
     b = 1.0; // assign from double
     CHECK(b.size() == 1);
+
+    SUBCASE("overflow") {
+        Average<double> a;
+        CHECK_NOTHROW(a += 0.0);
+        CHECK_NOTHROW(a + a);
+        CHECK_THROWS(a += std::numeric_limits<double>::max());
+        CHECK_THROWS(a += -std::numeric_limits<double>::max());
+        CHECK_NOTHROW(a += std::sqrt(std::numeric_limits<double>::max()));
+
+        Average<double> b;
+        b.cnt = std::numeric_limits<decltype(b.cnt)>::max();
+        CHECK_THROWS(b += 0.0);
+        CHECK_THROWS(a + b);
+    }
 }
 
 TEST_CASE("[Faunus] AverageObj") {
@@ -37,7 +51,7 @@ TEST_CASE("[Faunus] AverageObj") {
 
     struct MyClass {
         double x;
-        MyClass &operator+=(const MyClass &other) {
+        MyClass& operator+=(const MyClass& other) {
             x += other.x;
             return *this;
         } // required

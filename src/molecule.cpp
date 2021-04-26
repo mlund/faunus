@@ -546,7 +546,7 @@ void MoleculeStructureReader::readFasta(ParticleVector &particles, const json &i
         std::string fasta = it->get<std::string>();
         Potential::HarmonicBond bond; // harmonic bond
         bond.from_json(input);        // read 'k' and 'req' from json
-        particles = Faunus::fastaToParticles(fasta, bond.req);
+        particles = Faunus::fastaToParticles(fasta, bond.equilibrium_distance);
     } else {
         throw ConfigurationError("invalid FASTA format");
     }

@@ -9,7 +9,7 @@ namespace Faunus {
 namespace Geometry {
 // this typedef is re-defined here so as not to have geometry.h as a dependency.
 // consider another fix for this.
-typedef std::function<Point(const Point &, const Point &)> DistanceFunction;
+typedef std::function<Point(const Point&, const Point&)> DistanceFunction;
 } // namespace Geometry
 
 namespace Potential {
@@ -23,36 +23,43 @@ namespace Potential {
  * participating atoms
  */
 struct BondData {
-    enum Variant { HARMONIC = 0, FENE, FENEWCA, HARMONIC_TORSION, GROMOS_TORSION, PERIODIC_DIHEDRAL, NONE };
+    enum Variant { HARMONIC = 0, FENE, FENEWCA, HARMONIC_TORSION, GROMOS_TORSION, PERIODIC_DIHEDRAL, INVALID };
     std::vector<int> index; //!< Index of participating atoms
     std::function<double(Geometry::DistanceFunction)> energyFunc =
         nullptr; //!< calculate potential energy of bonded atoms(kT)
     std::function<std::vector<Point>(Geometry::DistanceFunction)> forceFunc =
         nullptr; //!< calculate forces on bonded atoms (kT/Å)
 
-    virtual void from_json(const json &) = 0;
-    virtual void to_json(json &) const = 0;
+    virtual void from_json(const json&) = 0;
+    virtual void to_json(json&) const = 0;
     virtual int numindex() const = 0;                    //!< Required number of atom indices for bond
     virtual Variant type() const = 0;                    //!< Returns bond type (sett `Variant` enum)
-    virtual std::string name() const = 0;                //!< Name/key of bond type used in for json I/O
     virtual std::shared_ptr<BondData> clone() const = 0; //!< Make shared pointer *copy* of data
     bool hasEnergyFunction() const;                      //!< test if energy function has been set
     void shift(int offset);                              //!< Add offset to index
     BondData() = default;
-    BondData(const std::vector<int> &index);
+    BondData(const std::vector<int>& index);
     virtual ~BondData() = default;
 };
+
+NLOHMANN_JSON_SERIALIZE_ENUM(BondData::Variant, {{BondData::Variant::INVALID, nullptr},
+                                                 {BondData::Variant::HARMONIC, "harmonic"},
+                                                 {BondData::Variant::FENE, "fene"},
+                                                 {BondData::Variant::FENEWCA, "fene+wca"},
+                                                 {BondData::Variant::HARMONIC_TORSION, "harmonic_torsion"},
+                                                 {BondData::Variant::GROMOS_TORSION, "gromos_torsion"},
+                                                 {BondData::Variant::PERIODIC_DIHEDRAL, "periodic_dihedral"}})
 
 struct StretchData : public BondData {
     int numindex() const override;
     StretchData() = default;
-    StretchData(const std::vector<int> &index);
+    StretchData(const std::vector<int>& index);
 };
 
 struct TorsionData : public BondData {
     int numindex() const override;
     TorsionData() = default;
-    TorsionData(const std::vector<int> &index);
+    TorsionData(const std::vector<int>& index);
 };
 
 /**
@@ -61,15 +68,15 @@ struct TorsionData : public BondData {
  * U(r) = k/2 * (r - r_eq)^2
  */
 struct HarmonicBond : public StretchData {
-    double k_half = 0, req = 0;
+    double half_force_constant = 0.0;
+    double equilibrium_distance = 0.0;
     Variant type() const override;
     std::shared_ptr<BondData> clone() const override;
-    void from_json(const json &j) override;
-    void to_json(json &j) const override;
-    std::string name() const override;
-    void setEnergyFunction(const ParticleVector &); //!< Set energy and force functors
+    void from_json(const json& j) override;
+    void to_json(json& j) const override;
+    void setEnergyFunction(const ParticleVector& particles); //!< Set energy and force functors
     HarmonicBond() = default;
-    HarmonicBond(double k, double req, const std::vector<int> &index);
+    HarmonicBond(double k, double req, const std::vector<int>& index);
 };
 
 /**
@@ -78,31 +85,33 @@ struct HarmonicBond : public StretchData {
  * U(r) = -k/2 * r_max^2 * ln(1 - r^2 / r_max^2) if r < r_max, ∞ otherwise
  */
 struct FENEBond : public StretchData {
-    double k_half = 0, rmax_squared = 0;
+    double half_force_constant = 0.0;
+    double max_squared_distance = 0.0;
     Variant type() const override;
     std::shared_ptr<BondData> clone() const override;
-    void from_json(const json &j) override;
-    void to_json(json &j) const override;
-    std::string name() const override;
-    void setEnergyFunction(const ParticleVector &p);
+    void from_json(const json& j) override;
+    void to_json(json& j) const override;
+    void setEnergyFunction(const ParticleVector& particles);
     FENEBond() = default;
-    FENEBond(double k, double rmax, const std::vector<int> &index);
+    FENEBond(double k, double rmax, const std::vector<int>& index);
 };
 
 /**
  * @brief FENE+WCA bond
  */
 struct FENEWCABond : public StretchData {
-    double k_half = 0, rmax_squared = 0, epsilon = 0, sigma_squared = 0;
-    std::array<double, 4> k = {{0, 0, 0, 0}};
+    double half_force_constant = 0.0;
+    double max_distance_squared = 0.0;
+    double epsilon = 0.0;
+    double sigma_squared = 0.0;
+    std::array<double, 4> k = {{0.0, 0.0, 0.0, 0.0}};
     Variant type() const override;
     std::shared_ptr<BondData> clone() const override;
-    void from_json(const json &j) override;
-    void to_json(json &j) const override;
-    std::string name() const override;
-    void setEnergyFunction(const ParticleVector &p);
+    void from_json(const json& j) override;
+    void to_json(json& j) const override;
+    void setEnergyFunction(const ParticleVector& calculateDistance);
     FENEWCABond() = default;
-    FENEWCABond(double k, double rmax, double epsilon, double sigma, const std::vector<int> &index);
+    FENEWCABond(double k, double rmax, double epsilon, double sigma, const std::vector<int>& index);
 };
 
 /**
@@ -111,15 +120,15 @@ struct FENEWCABond : public StretchData {
  * U(a) = k/2 * (a - a_eq)^2
  */
 struct HarmonicTorsion : public TorsionData {
-    double k_half = 0, aeq = 0;
+    double half_force_constant = 0.0;
+    double equilibrium_angle = 0.0;
     std::shared_ptr<BondData> clone() const override;
-    void from_json(const json &j) override;
-    void to_json(json &j) const override;
+    void from_json(const json& j) override;
+    void to_json(json& j) const override;
     Variant type() const override;
-    std::string name() const override;
-    void setEnergyFunction(const ParticleVector &p);
+    void setEnergyFunction(const ParticleVector& particles);
     HarmonicTorsion() = default;
-    HarmonicTorsion(double k, double aeq, const std::vector<int> &index);
+    HarmonicTorsion(double k, double aeq, const std::vector<int>& index);
 };
 
 /**
@@ -128,15 +137,15 @@ struct HarmonicTorsion : public TorsionData {
  * U(a) = k/2 * (cos(a) - cos(a_eq))^2
  */
 struct GromosTorsion : public TorsionData {
-    double k_half = 0, cos_aeq = 0;
+    double half_force_constant = 0.0;
+    double cosine_equilibrium_angle = 0.0;
     std::shared_ptr<BondData> clone() const override;
-    void from_json(const json &j) override;
-    void to_json(json &j) const override;
+    void from_json(const json& j) override;
+    void to_json(json& j) const override;
     Variant type() const override;
-    std::string name() const override;
-    void setEnergyFunction(const ParticleVector &p);
+    void setEnergyFunction(const ParticleVector& calculateDistance);
     GromosTorsion() = default;
-    GromosTorsion(double k, double cos_aeq, const std::vector<int> &index);
+    GromosTorsion(double k, double cos_aeq, const std::vector<int>& index);
 };
 
 /**
@@ -145,16 +154,17 @@ struct GromosTorsion : public TorsionData {
  * U(a) = k * (1 + cos(n * a - phi))
  */
 struct PeriodicDihedral : public BondData {
-    double k = 0, phi = 0, n = 1;
+    double force_constant = 0.0;
+    double dihedral_angle = 0.0;
+    double periodicity = 1.0;
     int numindex() const override;
     std::shared_ptr<BondData> clone() const override;
-    void from_json(const json &j) override;
-    void to_json(json &j) const override;
+    void from_json(const json& j) override;
+    void to_json(json& j) const override;
     Variant type() const override;
-    std::string name() const override;
-    void setEnergyFunction(const ParticleVector &p);
+    void setEnergyFunction(const ParticleVector& particles);
     PeriodicDihedral() = default;
-    PeriodicDihedral(double k, double phi, double n, const std::vector<int> &index);
+    PeriodicDihedral(double k, double phi, double n, const std::vector<int>& index);
 };
 
 /*
@@ -165,16 +175,16 @@ void from_json(const json& j, std::shared_ptr<BondData>& bond);
 void to_json(json& j, const std::shared_ptr<const BondData>& bond);
 void to_json(json& j, const BondData& bond);
 
-void setBondEnergyFunction(std::shared_ptr<BondData> &b,
-                           const ParticleVector &p); //!< Set the bond energy function of `BondData` which
-                                                     //!< require a reference to the particle vector
+void setBondEnergyFunction(std::shared_ptr<BondData>& bond,
+                           const ParticleVector& particles); //!< Set the bond energy function of `BondData` which
+                                                             //!< require a reference to the particle vector
 
-[[deprecated("Use bonds.find<TClass>() method instead.")]]
-inline auto filterBonds(const std::vector<std::shared_ptr<BondData>> &bonds, BondData::Variant bondtype) {
+[[deprecated("Use bonds.find<TClass>() method instead.")]] inline auto
+filterBonds(const std::vector<std::shared_ptr<BondData>>& bonds, BondData::Variant bondtype) {
     std::vector<std::shared_ptr<BondData>> filt;
     filt.reserve(bonds.size());
     std::copy_if(bonds.begin(), bonds.end(), std::back_inserter(filt),
-                 [bondtype](const auto &d) { return d->type() == bondtype; });
+                 [bondtype](const auto& d) { return d->type() == bondtype; });
     return filt;
 } //!< Filter bond container for matching bond type and return _reference_ to original
 

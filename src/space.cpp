@@ -283,13 +283,16 @@ size_t Space::numParticles(Space::Selection selection) const {
 /**
  * @throw If group is not part of space
  */
-int Space::getGroupIndex(const Space::Tgroup &group) {
+int Space::getGroupIndex(const Space::Tgroup& group) const {
     auto index = std::addressof(group) - std::addressof(groups.front()); // std::ptrdiff_t
     assert(std::abs(index) <= std::numeric_limits<int>::max());
     if (index < 0 or index >= groups.size()) {
         throw std::out_of_range("invalid group index");
     }
     return static_cast<int>(index);
+}
+int Space::getFirstParticleIndex(const Tgroup& group) const {
+    return std::distance<ParticleVector::const_iterator>(p.cbegin(), group.begin());
 }
 
 TEST_CASE("Space::numParticles") {

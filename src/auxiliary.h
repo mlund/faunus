@@ -237,9 +237,10 @@ template <typename T> struct BasePointerVector {
     } //!< Create an (derived) instance and append a pointer to it to the vector
 
     template <typename Tderived, class Arg, class = std::enable_if_t<std::is_base_of<T, Tderived>::value>>
-    void push_back(std::shared_ptr<Arg> arg) {
+    auto& push_back(std::shared_ptr<Arg> arg) {
         vec.push_back(arg);
-    } //!< Append a pointer to a (derived) instance to the vector
+        return vec.back(); // reference to element just added
+    }                      //!< Append a pointer to a (derived) instance to the vector
 
     template <typename Tderived, class = std::enable_if_t<std::is_base_of<T, Tderived>::value>>
     auto &operator=(const BasePointerVector<Tderived> &d) {

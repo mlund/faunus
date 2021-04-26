@@ -55,37 +55,15 @@ void from_json(const json& j, std::shared_ptr<BondData>& bond) {
     }
 }
 
-void setBondEnergyFunction(std::shared_ptr<BondData>& bond, const ParticleVector& particles) {
-    switch (bond->type()) {
-    case BondData::HARMONIC:
-        std::dynamic_pointer_cast<HarmonicBond>(bond)->setEnergyFunction(particles);
-        break;
-    case BondData::FENE:
-        std::dynamic_pointer_cast<FENEBond>(bond)->setEnergyFunction(particles);
-        break;
-    case BondData::FENEWCA:
-        std::dynamic_pointer_cast<FENEWCABond>(bond)->setEnergyFunction(particles);
-        break;
-    case BondData::HARMONIC_TORSION:
-        std::dynamic_pointer_cast<HarmonicTorsion>(bond)->setEnergyFunction(particles);
-        break;
-    case BondData::GROMOS_TORSION:
-        std::dynamic_pointer_cast<GromosTorsion>(bond)->setEnergyFunction(particles);
-        break;
-    case BondData::PERIODIC_DIHEDRAL:
-        std::dynamic_pointer_cast<PeriodicDihedral>(bond)->setEnergyFunction(particles);
-        break;
-    default:
-        throw std::runtime_error("unknown bond energy");
+void BondData::shift(const int offset) {
+    for (auto& i : index) {
+        i += offset;
     }
 }
 
-void BondData::shift(int offset) {
-    for (auto& i : index)
-        i += offset;
-}
-
 bool BondData::hasEnergyFunction() const { return energyFunc != nullptr; }
+
+bool BondData::hasForceFunction() const { return forceFunc != nullptr; }
 
 BondData::BondData(const std::vector<int>& index) : index(index) {}
 
@@ -120,14 +98,13 @@ void HarmonicBond::setEnergyFunction(const ParticleVector& particles) {
         const auto distance = equilibrium_distance - calculateDistance(particle1.pos, particle2.pos).norm();
         return half_force_constant * distance * distance; // kT/Å
     };
-    forceFunc = [&](Geometry::DistanceFunction calculateDistance) -> std::vector<Point> { // force functor
+    forceFunc = [&](Geometry::DistanceFunction calculateDistance) { // force functor
         const auto& particle1 = particles[index[0]];
         const auto& particle2 = particles[index[1]];
         const auto distance_vec = calculateDistance(particle1.pos, particle2.pos);
         const auto distance = distance_vec.norm(); // distance between particles
-        auto force = 2.0 * half_force_constant * (equilibrium_distance - distance) * distance_vec /
-                     distance;  // force on first particle
-        return {force, -force}; // force on both particles (kT/Å)
+        auto force = 2.0 * half_force_constant * (equilibrium_distance - distance) * distance_vec / distance;
+        return std::vector<ParticleForce>({{index[0], force}, {index[1], -force}}); // force on both particles
     };
 }
 
@@ -320,10 +297,10 @@ TEST_CASE("[Faunus] BondData") {
             bond.setEnergyFunction(p_4a);
             auto forces = bond.forceFunc(distance_3a);
             CHECK(forces.size() == 2);
-            CHECK(forces[0].x() == Approx(0));
-            CHECK(forces[0].y() == Approx(100));
-            CHECK(forces[0].y() == Approx(-forces[1].y()));
-            CHECK(forces[0].z() == Approx(0));
+            CHECK(forces[0].second.x() == Approx(0));
+            CHECK(forces[0].second.y() == Approx(100));
+            CHECK(forces[0].second.y() == Approx(-forces[1].second.y()));
+            CHECK(forces[0].second.z() == Approx(0));
         }
         SUBCASE("HarmonicBond JSON") {
             json j = R"({"harmonic": {"index":[1,2], "k":10.0, "req":2.0}})"_json;

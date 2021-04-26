@@ -263,14 +263,13 @@ class Constrain : public Energybase {
  */
 class Bonded : public Energybase {
   private:
-    Space &spc;
     typedef BasePointerVector<Potential::BondData> BondVector;
-    BondVector inter;                // inter-molecular bonds
-    std::map<int, BondVector> intra; // intra-molecular bonds; key is group index
-
-  private:
-    void update_intra();                              // finds and adds all intra-molecular bonds of active molecules
-    double sum_energy(const BondVector &) const;      // sum energy in vector of BondData
+    const Space& spc;
+    BondVector external_bonds;                  //!< inter-molecular bonds
+    std::map<int, BondVector> internal_bonds;   //!< intra-molecular bonds; key is group index
+    void updateInternalBonds();                 //!< finds and adds all intra-molecular bonds of active molecules
+    double sum_energy(const BondVector&) const; //!< sum energy in vector of BondData
+    double internalGroupEnergy(const Change::data& changed); //!< Energy from internal bonds
 
     /**
      * @brief Sum energy in vector of BondData for matching particle indices
@@ -309,10 +308,11 @@ class Bonded : public Energybase {
     }
 
   public:
-    Bonded(const json &, Space &);
-    void to_json(json &) const override;
-    double energy(Change &) override;          //!< brute force -- refine this!
-    void force(std::vector<Point> &) override; //!< Calculates the forces on all particles
+    Bonded(const Space& spc, const BondVector& external_bonds);
+    Bonded(const json& j, const Space& spc);
+    void to_json(json& j) const override;
+    double energy(Change& change) override;          //!< brute force -- refine this!
+    void force(std::vector<Point>& forces) override; //!< Calculates the forces on all particles
 };
 
 /**

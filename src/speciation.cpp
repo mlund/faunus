@@ -163,7 +163,7 @@ Change::data SpeciationMove::deactivateMolecularGroup(Space::Tgroup &target) {
     for (auto &bond : Faunus::molecules.at(target.id).bonds) {
         auto bond_clone = bond->clone();
         bond_clone->shift(std::distance(spc.p.begin(), target.begin()));
-        Potential::setBondEnergyFunction(bond_clone, spc.p);
+        bond_clone->setEnergyFunction(spc.p);
         bond_energy += bond_clone->energyFunc(spc.geo.getDistanceFunc());
     }
 
@@ -234,7 +234,7 @@ Change::data SpeciationMove::activateMolecularGroup(Space::Tgroup &target) {
     for (auto &bond : Faunus::molecules[target.id].bonds) {
         auto bondclone = bond->clone();
         bondclone->shift(std::distance(spc.p.begin(), target.begin()));
-        Potential::setBondEnergyFunction(bondclone, spc.p);
+        bondclone->setEnergyFunction(spc.p);
         bond_energy -= bondclone->energyFunc(spc.geo.getDistanceFunc());
     }
 

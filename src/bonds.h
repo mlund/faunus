@@ -25,20 +25,26 @@ namespace Potential {
 struct BondData {
     enum Variant { HARMONIC = 0, FENE, FENEWCA, HARMONIC_TORSION, GROMOS_TORSION, PERIODIC_DIHEDRAL, INVALID };
     std::vector<int> index; //!< Index of participating atoms
-    std::function<double(Geometry::DistanceFunction)> energyFunc =
-        nullptr; //!< calculate potential energy of bonded atoms(kT)
-    std::function<std::vector<Point>(Geometry::DistanceFunction)> forceFunc =
-        nullptr; //!< calculate forces on bonded atoms (kT/Å)
+
+    /** Calculates potential energy of bonded atoms(kT) */
+    std::function<double(Geometry::DistanceFunction)> energyFunc = nullptr;
+
+    using ParticleForce = std::pair<int, Point>; //!< Force (second) on particle w. absolute index (first)
+
+    /** Calculates forces on bonded atoms (kT/Å) */
+    std::function<std::vector<ParticleForce>(Geometry::DistanceFunction)> forceFunc = nullptr;
 
     virtual void from_json(const json&) = 0;
     virtual void to_json(json&) const = 0;
-    virtual int numindex() const = 0;                    //!< Required number of atom indices for bond
-    virtual Variant type() const = 0;                    //!< Returns bond type (sett `Variant` enum)
-    virtual std::shared_ptr<BondData> clone() const = 0; //!< Make shared pointer *copy* of data
-    bool hasEnergyFunction() const;                      //!< test if energy function has been set
-    void shift(int offset);                              //!< Add offset to index
+    virtual int numindex() const = 0;                                    //!< Required number of atom indices for bond
+    virtual Variant type() const = 0;                                    //!< Returns bond type (sett `Variant` enum)
+    virtual std::shared_ptr<BondData> clone() const = 0;                 //!< Make shared pointer *copy* of data
+    virtual void setEnergyFunction(const ParticleVector& particles) = 0; //!< Set energy function; store particles ref.
+    bool hasEnergyFunction() const;                                      //!< test if energy function has been set
+    bool hasForceFunction() const;                                       //!< test if force function has been set
+    void shift(const int offset);                                        //!< Add offset to index
     BondData() = default;
-    BondData(const std::vector<int>& index);
+    explicit BondData(const std::vector<int>& index);
     virtual ~BondData() = default;
 };
 
@@ -74,7 +80,7 @@ struct HarmonicBond : public StretchData {
     std::shared_ptr<BondData> clone() const override;
     void from_json(const json& j) override;
     void to_json(json& j) const override;
-    void setEnergyFunction(const ParticleVector& particles); //!< Set energy and force functors
+    void setEnergyFunction(const ParticleVector& particles) override; //!< Set energy and force functors
     HarmonicBond() = default;
     HarmonicBond(double k, double req, const std::vector<int>& index);
 };
@@ -91,7 +97,7 @@ struct FENEBond : public StretchData {
     std::shared_ptr<BondData> clone() const override;
     void from_json(const json& j) override;
     void to_json(json& j) const override;
-    void setEnergyFunction(const ParticleVector& particles);
+    void setEnergyFunction(const ParticleVector& particles) override;
     FENEBond() = default;
     FENEBond(double k, double rmax, const std::vector<int>& index);
 };
@@ -109,7 +115,7 @@ struct FENEWCABond : public StretchData {
     std::shared_ptr<BondData> clone() const override;
     void from_json(const json& j) override;
     void to_json(json& j) const override;
-    void setEnergyFunction(const ParticleVector& calculateDistance);
+    void setEnergyFunction(const ParticleVector& calculateDistance) override;
     FENEWCABond() = default;
     FENEWCABond(double k, double rmax, double epsilon, double sigma, const std::vector<int>& index);
 };
@@ -126,7 +132,7 @@ struct HarmonicTorsion : public TorsionData {
     void from_json(const json& j) override;
     void to_json(json& j) const override;
     Variant type() const override;
-    void setEnergyFunction(const ParticleVector& particles);
+    void setEnergyFunction(const ParticleVector& particles) override;
     HarmonicTorsion() = default;
     HarmonicTorsion(double k, double aeq, const std::vector<int>& index);
 };
@@ -143,7 +149,7 @@ struct GromosTorsion : public TorsionData {
     void from_json(const json& j) override;
     void to_json(json& j) const override;
     Variant type() const override;
-    void setEnergyFunction(const ParticleVector& calculateDistance);
+    void setEnergyFunction(const ParticleVector& calculateDistance) override;
     GromosTorsion() = default;
     GromosTorsion(double k, double cos_aeq, const std::vector<int>& index);
 };
@@ -162,7 +168,7 @@ struct PeriodicDihedral : public BondData {
     void from_json(const json& j) override;
     void to_json(json& j) const override;
     Variant type() const override;
-    void setEnergyFunction(const ParticleVector& particles);
+    void setEnergyFunction(const ParticleVector& particles) override;
     PeriodicDihedral() = default;
     PeriodicDihedral(double k, double phi, double n, const std::vector<int>& index);
 };
@@ -174,10 +180,6 @@ struct PeriodicDihedral : public BondData {
 void from_json(const json& j, std::shared_ptr<BondData>& bond);
 void to_json(json& j, const std::shared_ptr<const BondData>& bond);
 void to_json(json& j, const BondData& bond);
-
-void setBondEnergyFunction(std::shared_ptr<BondData>& bond,
-                           const ParticleVector& particles); //!< Set the bond energy function of `BondData` which
-                                                             //!< require a reference to the particle vector
 
 [[deprecated("Use bonds.find<TClass>() method instead.")]] inline auto
 filterBonds(const std::vector<std::shared_ptr<BondData>>& bonds, BondData::Variant bondtype) {

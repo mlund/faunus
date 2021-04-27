@@ -2,6 +2,7 @@
 #include "penalty.h"
 #include "potentials.h"
 #include "externalpotential.h"
+#include <functional>
 
 #define ANKERL_NANOBENCH_IMPLEMENT
 #include <nanobench.h>
@@ -721,30 +722,36 @@ void Constrain::to_json(json &j) const {
     j["type"] = type;
 }
 
+void Bonded::updateGroupBonds(const Space::Tgroup& group) {
+    const auto first_particle_index = spc.getFirstParticleIndex(group);
+    const auto group_index = spc.getGroupIndex(group);
+    auto& bonds = internal_bonds[group_index];              // access or insert
+    for (const auto& generic_bond : group.traits().bonds) { // generic bonds defined in topology
+        const auto& bond = bonds.template push_back<Potential::BondData>(generic_bond->clone());
+        bond->shiftIndices(first_particle_index); // shift to absolute particle index
+        bond->setEnergyFunction(spc.p);
+    }
+}
+
 /**
- * Ensures that all internal bonds are updated according to bonds defined in the
- * topology.
+ * Ensures that all internal bonds are updated according to bonds defined in the topology.
  */
 void Bonded::updateInternalBonds() {
     internal_bonds.clear();
-    std::for_each(spc.groups.begin(), spc.groups.end(), [&](const auto& group) {
-        const auto first_particle_index = spc.getFirstParticleIndex(group);
-        const auto group_index = spc.getGroupIndex(group);
-        auto& group_bonds = internal_bonds[group_index];        // access or insert
-        for (const auto& generic_bond : group.traits().bonds) { // generic bonds defined in topology
-            const auto& bond = group_bonds.template push_back<Potential::BondData>(generic_bond->clone());
-            bond->shift(first_particle_index); // shift to absolute particle index
-            bond->setEnergyFunction(spc.p);
-        }
-    });
+    std::for_each(spc.groups.begin(), spc.groups.end(), [&](auto& group) { updateGroupBonds(group); });
 }
 
-double Bonded::sum_energy(const Bonded::BondVector &bonds) const {
+double Bonded::sumBondEnergy(const Bonded::BondVector& bonds) const {
+#if (defined(__clang__) && __clang_major__ >= 10) || (defined(__GNUC__) && __GNUC__ >= 10)
+    auto bond_energy = [&](const auto& bond) { return bond->energyFunc(spc.geo.getDistanceFunc()); };
+    return std::transform_reduce(bonds.begin(), bonds.end(), 0.0, std::plus<>(), bond_energy);
+#else
     double energy = 0.0;
-    for (const auto &bond : bonds) {
+    for (const auto& bond : bonds) {
         energy += bond->energyFunc(spc.geo.getDistanceFunc());
     }
     return energy;
+#endif
 }
 
 Bonded::Bonded(const Space& spc, const BondVector& external_bonds = BondVector())
@@ -773,11 +780,11 @@ void Bonded::to_json(json& j) const {
 double Bonded::energy(Change &change) {
     double energy = 0.0;
     if (change) {
-        energy += sum_energy(external_bonds);
+        energy += sumBondEnergy(external_bonds);
         if (change.all || change.dV) { // calc. for everything!
             for (const auto& [group_index, bonds] : internal_bonds) {
                 if (!spc.groups[group_index].empty()) {
-                    energy += sum_energy(bonds);
+                    energy += sumBondEnergy(bonds);
                 }
             }
         } else { // calc. for a subset of groups
@@ -796,7 +803,7 @@ double Bonded::internalGroupEnergy(const Change::data& changed) {
     if (changed.internal && !group.empty()) {
         const auto& bonds = internal_bonds.at(changed.index);
         if (changed.all) { // all internal positions updated
-            energy += sum_energy(bonds);
+            energy += sumBondEnergy(bonds);
         } else { // only partial update of affected atoms
             const auto first_particle_index = spc.getFirstParticleIndex(group);
             auto particle_indices =

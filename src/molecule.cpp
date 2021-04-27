@@ -201,8 +201,8 @@ NeighboursGenerator::NeighboursGenerator(const BondVector &bonds) {
 void NeighboursGenerator::createBondMap(const BondVector &bonds) {
     for (auto &bond : bonds.find<Potential::StretchData>()) {
         auto add_bond = [this, &bond](int i, int j) -> void {
-            auto atom_emplaced = bond_map.emplace(bond->index[i], AtomList{}); // find or create empty vector
-            atom_emplaced.first->second.push_back(bond->index[j]); // atom_emplaced.<iterator>-><vector>.push_back()
+            auto atom_emplaced = bond_map.emplace(bond->indices[i], AtomList{}); // find or create empty vector
+            atom_emplaced.first->second.push_back(bond->indices[j]); // atom_emplaced.<iterator>-><vector>.push_back()
         };
         const int head_ndx = 0, tail_ndx = 1;
         add_bond(head_ndx, tail_ndx); // add the bond to the map in both head-tail
@@ -448,8 +448,8 @@ void MoleculeBuilder::readParticles(const json &j_properties) {
 void MoleculeBuilder::readBonds(const json &j_properties) {
     bonds = j_properties.value("bondlist", bonds);
     auto bond_index_are_external = [&](const auto bond) {
-        return std::any_of(bond->index.begin(), bond->index.end(),
-                           [&](auto &index) { return (index >= particles.size() || index < 0); });
+        return std::any_of(bond->indices.begin(), bond->indices.end(),
+                           [&](auto& index) { return (index >= particles.size() || index < 0); });
     };
     if (std::any_of(bonds.begin(), bonds.end(), bond_index_are_external)) {
         throw ConfigurationError("bonded index out of range");
@@ -461,7 +461,7 @@ void MoleculeBuilder::readFastaBonds(const json &j_properties) {
     Potential::HarmonicBond bond; // harmonic bond
     bond.from_json(j_structure);  // read 'k' and 'req' from json
     for (int i = 1; i < particles.size(); ++i) {
-        bond.index = {i - 1, i};
+        bond.indices = {i - 1, i};
         bonds.push_back<Potential::HarmonicBond>(bond.clone());
     }
 }

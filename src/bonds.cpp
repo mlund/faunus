@@ -10,7 +10,7 @@ void to_json(Faunus::json& j, const std::shared_ptr<const BondData>& bond) { to_
 void to_json(Faunus::json& j, const BondData& bond) {
     json val;
     bond.to_json(val);
-    val["index"] = bond.index;
+    val["index"] = bond.indices;
     j = {{bond.type(), val}};
 }
 
@@ -42,8 +42,8 @@ void from_json(const json& j, std::shared_ptr<BondData>& bond) {
         }
         try {
             bond->from_json(parameters);
-            bond->index = parameters.at("index").get<decltype(bond->index)>();
-            if (bond->index.size() != bond->numindex()) {
+            bond->indices = parameters.at("index").get<decltype(bond->indices)>();
+            if (bond->indices.size() != bond->numindex()) {
                 usageTip.pick(bondtype);
                 throw ConfigurationError("exactly {} indices required", bond->numindex());
             }
@@ -55,8 +55,8 @@ void from_json(const json& j, std::shared_ptr<BondData>& bond) {
     }
 }
 
-void BondData::shift(const int offset) {
-    for (auto& i : index) {
+void BondData::shiftIndices(const int offset) {
+    for (auto& i : indices) {
         i += offset;
     }
 }
@@ -65,10 +65,10 @@ bool BondData::hasEnergyFunction() const { return energyFunc != nullptr; }
 
 bool BondData::hasForceFunction() const { return forceFunc != nullptr; }
 
-BondData::BondData(const std::vector<int>& index) : index(index) {}
+BondData::BondData(const std::vector<int>& indices) : indices(indices) {}
 
-HarmonicBond::HarmonicBond(double k, double req, const std::vector<int>& index)
-    : StretchData(index), half_force_constant(k / 2.0), equilibrium_distance(req) {}
+HarmonicBond::HarmonicBond(double k, double req, const std::vector<int>& indices)
+    : StretchData(indices), half_force_constant(k / 2.0), equilibrium_distance(req) {}
 
 void HarmonicBond::from_json(const Faunus::json& j) {
     half_force_constant = j.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2) / 2.0; // k
@@ -93,23 +93,23 @@ BondData::Variant HarmonicBond::type() const { return BondData::HARMONIC; }
  */
 void HarmonicBond::setEnergyFunction(const ParticleVector& particles) {
     energyFunc = [&](Geometry::DistanceFunction calculateDistance) { // potential energy functor
-        const auto& particle1 = particles[index[0]];
-        const auto& particle2 = particles[index[1]];
+        const auto& particle1 = particles[indices[0]];
+        const auto& particle2 = particles[indices[1]];
         const auto distance = equilibrium_distance - calculateDistance(particle1.pos, particle2.pos).norm();
         return half_force_constant * distance * distance; // kT/Å
     };
     forceFunc = [&](Geometry::DistanceFunction calculateDistance) { // force functor
-        const auto& particle1 = particles[index[0]];
-        const auto& particle2 = particles[index[1]];
+        const auto& particle1 = particles[indices[0]];
+        const auto& particle2 = particles[indices[1]];
         const auto distance_vec = calculateDistance(particle1.pos, particle2.pos);
         const auto distance = distance_vec.norm(); // distance between particles
         auto force = 2.0 * half_force_constant * (equilibrium_distance - distance) * distance_vec / distance;
-        return std::vector<ParticleForce>({{index[0], force}, {index[1], -force}}); // force on both particles
+        return std::vector<ParticleForce>({{indices[0], force}, {indices[1], -force}}); // force on both particles
     };
 }
 
-FENEBond::FENEBond(double k, double rmax, const std::vector<int>& index)
-    : StretchData(index), half_force_constant(k / 2), max_squared_distance(rmax * rmax) {}
+FENEBond::FENEBond(double k, double rmax, const std::vector<int>& indices)
+    : StretchData(indices), half_force_constant(k / 2), max_squared_distance(rmax * rmax) {}
 
 std::shared_ptr<BondData> FENEBond::clone() const { return std::make_shared<FENEBond>(*this); }
 
@@ -127,7 +127,7 @@ void FENEBond::to_json(Faunus::json& j) const {
 
 void FENEBond::setEnergyFunction(const ParticleVector& particles) {
     energyFunc = [&](Geometry::DistanceFunction calcDistance) {
-        const auto squared_distance = calcDistance(particles[index[0]].pos, particles[index[1]].pos).squaredNorm();
+        const auto squared_distance = calcDistance(particles[indices[0]].pos, particles[indices[1]].pos).squaredNorm();
         if (squared_distance >= max_squared_distance) {
             return pc::infty;
         }
@@ -135,8 +135,8 @@ void FENEBond::setEnergyFunction(const ParticleVector& particles) {
     };
 }
 
-FENEWCABond::FENEWCABond(double k, double rmax, double epsilon, double sigma, const std::vector<int>& index)
-    : StretchData(index), half_force_constant(k / 2.0), max_distance_squared(rmax * rmax), epsilon(epsilon),
+FENEWCABond::FENEWCABond(double k, double rmax, double epsilon, double sigma, const std::vector<int>& indices)
+    : StretchData(indices), half_force_constant(k / 2.0), max_distance_squared(rmax * rmax), epsilon(epsilon),
       sigma_squared(sigma * sigma) {}
 
 std::shared_ptr<BondData> FENEWCABond::clone() const { return std::make_shared<FENEWCABond>(*this); }
@@ -161,7 +161,8 @@ void FENEWCABond::setEnergyFunction(const ParticleVector& particles) {
     energyFunc = [&](Geometry::DistanceFunction calculateDistance) {
         double wca = 0.0;
         constexpr auto two_to_the_power_of_two_sixths = 1.2599210498948732; // 2^((1/6)^2)
-        const auto squared_distance = calculateDistance(particles[index[0]].pos, particles[index[1]].pos).squaredNorm();
+        const auto squared_distance =
+            calculateDistance(particles[indices[0]].pos, particles[indices[1]].pos).squaredNorm();
         if (squared_distance <= sigma_squared * two_to_the_power_of_two_sixths) {
             double sigma6 = sigma_squared / squared_distance;
             sigma6 = sigma6 * sigma6 * sigma6;
@@ -185,8 +186,8 @@ void HarmonicTorsion::to_json(Faunus::json& j) const {
     _roundjson(j, 6);
 }
 
-HarmonicTorsion::HarmonicTorsion(double k, double aeq, const std::vector<int>& index)
-    : TorsionData(index), half_force_constant(k / 2.0), equilibrium_angle(aeq) {}
+HarmonicTorsion::HarmonicTorsion(double k, double aeq, const std::vector<int>& indices)
+    : TorsionData(indices), half_force_constant(k / 2.0), equilibrium_angle(aeq) {}
 
 BondData::Variant HarmonicTorsion::type() const { return BondData::HARMONIC_TORSION; }
 
@@ -194,8 +195,8 @@ std::shared_ptr<BondData> HarmonicTorsion::clone() const { return std::make_shar
 
 void HarmonicTorsion::setEnergyFunction(const ParticleVector& particles) {
     energyFunc = [&](Geometry::DistanceFunction calculateDistance) {
-        const auto ray1 = calculateDistance(particles[index[0]].pos, particles[index[1]].pos);
-        const auto ray2 = calculateDistance(particles[index[2]].pos, particles[index[1]].pos);
+        const auto ray1 = calculateDistance(particles[indices[0]].pos, particles[indices[1]].pos);
+        const auto ray2 = calculateDistance(particles[indices[2]].pos, particles[indices[1]].pos);
         const auto angle = std::acos(ray1.dot(ray2) / (ray1.norm() * ray2.norm()));
         return half_force_constant * (angle - equilibrium_angle) * (angle - equilibrium_angle);
     };
@@ -210,8 +211,8 @@ void GromosTorsion::to_json(Faunus::json& j) const {
     j = {{"k", 2.0 * half_force_constant / 1.0_kJmol}, {"aeq", std::acos(cosine_equilibrium_angle) / 1.0_deg}};
 }
 
-GromosTorsion::GromosTorsion(double k, double cos_aeq, const std::vector<int>& index)
-    : TorsionData(index), half_force_constant(k / 2.0), cosine_equilibrium_angle(cos_aeq) {}
+GromosTorsion::GromosTorsion(double k, double cos_aeq, const std::vector<int>& indices)
+    : TorsionData(indices), half_force_constant(k / 2.0), cosine_equilibrium_angle(cos_aeq) {}
 
 BondData::Variant GromosTorsion::type() const { return BondData::GROMOS_TORSION; }
 
@@ -219,8 +220,8 @@ std::shared_ptr<BondData> GromosTorsion::clone() const { return std::make_shared
 
 void GromosTorsion::setEnergyFunction(const ParticleVector& particles) {
     energyFunc = [&](Geometry::DistanceFunction calculateDistance) {
-        auto ray1 = calculateDistance(particles[index[0]].pos, particles[index[1]].pos);
-        auto ray2 = calculateDistance(particles[index[2]].pos, particles[index[1]].pos);
+        auto ray1 = calculateDistance(particles[indices[0]].pos, particles[indices[1]].pos);
+        auto ray2 = calculateDistance(particles[indices[2]].pos, particles[indices[1]].pos);
         const auto x = cosine_equilibrium_angle - ray1.dot(ray2) / (ray1.norm() * ray2.norm());
         return half_force_constant * x * x;
     };
@@ -240,16 +241,16 @@ void PeriodicDihedral::to_json(Faunus::json& j) const {
     j = {{"k", force_constant / 1.0_kJmol}, {"n", periodicity}, {"phi", dihedral_angle / 1.0_deg}};
 }
 
-PeriodicDihedral::PeriodicDihedral(double k, double phi, double n, const std::vector<int>& index)
-    : BondData(index), force_constant(k), dihedral_angle(phi), periodicity(n) {}
+PeriodicDihedral::PeriodicDihedral(double k, double phi, double n, const std::vector<int>& indices)
+    : BondData(indices), force_constant(k), dihedral_angle(phi), periodicity(n) {}
 
 BondData::Variant PeriodicDihedral::type() const { return BondData::PERIODIC_DIHEDRAL; }
 
 void PeriodicDihedral::setEnergyFunction(const ParticleVector& particles) {
     energyFunc = [&](Geometry::DistanceFunction dist) {
-        auto v1 = dist(particles[index[1]].pos, particles[index[0]].pos);
-        auto v2 = dist(particles[index[2]].pos, particles[index[1]].pos);
-        auto v3 = dist(particles[index[3]].pos, particles[index[2]].pos);
+        auto v1 = dist(particles[indices[1]].pos, particles[indices[0]].pos);
+        auto v2 = dist(particles[indices[2]].pos, particles[indices[1]].pos);
+        auto v3 = dist(particles[indices[3]].pos, particles[indices[2]].pos);
         auto norm1 = v1.cross(v2);
         auto norm2 = v2.cross(v3);
         // atan2( [v1×v2]×[v2×v3]⋅[v2/|v2|], [v1×v2]⋅[v2×v3] )
@@ -258,10 +259,10 @@ void PeriodicDihedral::setEnergyFunction(const ParticleVector& particles) {
     };
 }
 
-StretchData::StretchData(const std::vector<int>& index) : BondData(index) {}
+StretchData::StretchData(const std::vector<int>& indices) : BondData(indices) {}
 int StretchData::numindex() const { return 2; }
 
-TorsionData::TorsionData(const std::vector<int>& index) : BondData(index) {}
+TorsionData::TorsionData(const std::vector<int>& indices) : BondData(indices) {}
 int TorsionData::numindex() const { return 3; }
 
 TEST_SUITE_BEGIN("Bonds");

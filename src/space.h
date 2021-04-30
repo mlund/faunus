@@ -99,7 +99,8 @@ class Space {
     Tgvec::iterator randomMolecule(int, Random &, Selection = ACTIVE);       //!< Random group matching molid
     json info();
 
-    int getGroupIndex(const Tgroup& group); //!< Get index of given group in the group vector
+    int getGroupIndex(const Tgroup& group) const;         //!< Get index of given group in the group vector
+    int getFirstParticleIndex(const Tgroup& group) const; //!< Index of first particle in group
 
     /**
      * @brief Update particles in Space from a source range

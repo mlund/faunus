@@ -207,14 +207,16 @@ void mainLoop(bool show_progress, const json& json_in, MetropolisMonteCarlo& sim
     if (progress_tracker && MPI::mpi.isMaster()) {
         progress_tracker->done();
     }
-    faunus_logger->log((simulation.relativeEnergyDrift() < 1E-9) ? spdlog::level::info : spdlog::level::warn,
-                       "relative energy drift = {}", simulation.relativeEnergyDrift());
+    const double drift_tolerance = 1e-9;
+    const auto level = simulation.relativeEnergyDrift() < drift_tolerance ? spdlog::level::info : spdlog::level::warn;
+    faunus_logger->log(level, "relative energy drift = {:.3E}", simulation.relativeEnergyDrift());
 }
 
 void checkElectroNeutrality(MetropolisMonteCarlo& simulation) {
     auto particles = simulation.getSpace().activeParticles();
     const auto system_charge = Faunus::monopoleMoment(particles.begin(), particles.end());
-    if (std::fabs(system_charge) > 1e-9) {
+    const double max_allowed_charge = 1e-6;
+    if (std::fabs(system_charge) > max_allowed_charge) {
         faunus_logger->warn("non-zero system charge of {:.3E}e", system_charge);
     }
 }

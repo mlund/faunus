@@ -10,15 +10,12 @@
 #include <spdlog/sinks/null_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
-#include <unistd.h>
-#include <chrono>
 
 #ifdef ENABLE_SID
 #include "cppsid.h"
 #include <thread>
-using namespace std::this_thread;     // sleep_for, sleep_until
-using namespace std::chrono_literals; // ns, us, ms, s, h, etc.
-using std::chrono::system_clock;
+#include <unistd.h>
+#include <chrono>
 std::pair<std::string, int> findSIDsong();
 std::shared_ptr<CPPSID::Player> createLoadedSIDplayer();
 #endif
@@ -39,11 +36,12 @@ void setInformationLevelAndLoggers(bool quiet, docopt::Options& args);
 json getUserInput(docopt::Options& args);
 void loadState(docopt::Options& args, MetropolisMonteCarlo& simulation);
 void checkElectroNeutrality(MetropolisMonteCarlo& simulation);
-void showErrorMessage(std::exception& e);
+void showErrorMessage(std::exception& exception);
 void playRetroMusic();
 template <typename TimePoint>
 void saveOutput(TimePoint& starting_time, docopt::Options& args, MetropolisMonteCarlo& simulation,
                 const Analysis::CombinedAnalysis& analysis);
+
 void mainLoop(bool show_progress, const json& json_in, MetropolisMonteCarlo& simulation,
               Analysis::CombinedAnalysis& analysis);
 
@@ -84,14 +82,14 @@ int main(int argc, const char** argv) {
             return runUnittests(argc, argv);
         }
     }
-    bool nofun = true;
-    bool quiet = false;
+    bool fun = false;   //!< enable utterly unnecessarily stuff?
+    bool quiet = false; //!< hold kaje?
     try {
         Faunus::MPI::mpi.init(); // initialize MPI, if available
         const auto starting_time = std::chrono::steady_clock::now();
         const auto version = versionString();
         auto args = docopt::docopt(USAGE, {argv + 1, argv + argc}, true, version);
-        nofun = args["--nofun"].asBool();
+        fun = !args["--nofun"].asBool();
         quiet = args["--quiet"].asBool();
         setInformationLevelAndLoggers(quiet, args);
 
@@ -110,19 +108,19 @@ int main(int argc, const char** argv) {
 
     } catch (std::exception& e) {
         showErrorMessage(e);
-        if (!quiet && !nofun) {
+        if (!quiet && fun) {
             playRetroMusic();
         }
         return EXIT_FAILURE;
     }
 }
 
-void showErrorMessage(std::exception& e) {
-    faunus_logger->error(e.what());
-    std::cerr << e.what() << std::endl;
+void showErrorMessage(std::exception& exception) {
+    faunus_logger->error(exception.what());
+    std::cerr << exception.what() << std::endl;
 
     // ConfigurationError can carry a JSON snippet which should be shown for debugging.
-    if (auto config_error = dynamic_cast<ConfigurationError*>(&e);
+    if (auto* config_error = dynamic_cast<ConfigurationError*>(&exception);
         config_error != nullptr && !config_error->attachedJson().empty()) {
         faunus_logger->debug("json snippet:\n{}", config_error->attachedJson().dump(4));
     }
@@ -137,16 +135,16 @@ void showErrorMessage(std::exception& e) {
 
 void playRetroMusic() {
 #ifdef ENABLE_SID
-    // easter egg...
+    using std::chrono_literals::operator""s;
+    using std::chrono_literals::operator""ns;
     if (MPI::mpi.isMaster()) {
-        auto player = createLoadedSIDplayer(); // create C64 SID emulation and load a random tune
-        if (player) {
+        if (auto player = createLoadedSIDplayer()) { // create C64 SID emulation and load a random tune
             faunus_logger->info("error message music '{}' by {}, {} (6502/SID emulation)", player->title(),
                                 player->author(), player->info());
             faunus_logger->info("\033[1mpress ctrl-c to quit\033[0m");
-            player->start();                         // start music
-            sleep_for(10ns);                         // short delay
-            sleep_until(system_clock::now() + 240s); // play for 4 minutes, then exit
+            player->start();                                                        // start music
+            std::this_thread::sleep_for(10ns);                                      // short delay
+            std::this_thread::sleep_until(std::chrono::system_clock::now() + 240s); // play for 4 minutes, then exit
             player->stop();
             std::cout << std::endl;
         }
@@ -222,7 +220,7 @@ void checkElectroNeutrality(MetropolisMonteCarlo& simulation) {
 }
 
 void setInformationLevelAndLoggers(bool quiet, docopt::Options& args) {
-    // @todo refactor to a standalone function and use cmd line options for different sinks, etc.
+    // @todo refactor to use cmd line options for different sinks, etc.
     faunus_logger = spdlog::stderr_color_mt("faunus");
     faunus_logger->set_pattern("[%n %P] %^%L: %v%$");
     mcloop_logger = spdlog::stderr_color_mt("mcloop");
@@ -231,13 +229,13 @@ void setInformationLevelAndLoggers(bool quiet, docopt::Options& args) {
     const long log_level = spdlog::level::off - (quiet ? 0 : args["--verbosity"].asLong()); // reverse: 0 → 6 to 6 → 0
     spdlog::set_level(static_cast<spdlog::level::level_enum>(log_level));
     if (quiet) {
-        std::cout.setstate(std::ios_base::failbit); // hold kæft
+        std::cout.setstate(std::ios_base::failbit); // muffle stdout
     }
     if (!quiet && !args["--notips"].asBool()) {
         usageTip.load({FAUNUS_TIPSFILE});
     }
-    const bool nofun = args["--nofun"].asBool();
-    usageTip.asciiart = !quiet && !nofun;
+    const bool fun = !args["--nofun"].asBool();
+    usageTip.asciiart = !quiet && fun;
 #ifdef ENABLE_SID
     usageTip.asciiart = false; // if SID is enabled, disable ascii
 #endif
@@ -276,10 +274,10 @@ std::pair<std::string, int> findSIDsong() {
             }
             std::discrete_distribution<size_t> dist(weight.begin(), weight.end());
             Faunus::random.seed(); // give global random a hardware seed
-            auto random_song =
+            const auto random_song =
                 json_music.begin() + dist(Faunus::random.engine); // pick random tune weighted by subsongs
-            auto subsongs = random_song->at("subsongs").get<std::vector<int>>();      // all subsongs
-            subsong = *(Faunus::random.sample(subsongs.begin(), subsongs.end())) - 1; // random subsong
+            const auto subsongs = random_song->at("subsongs").get<std::vector<int>>(); // all subsongs
+            subsong = *(Faunus::random.sample(subsongs.begin(), subsongs.end())) - 1;  // random subsong
             filename = pfx + random_song->at("file").get<std::string>();
         }
     } catch (const std::exception&) {
@@ -290,11 +288,11 @@ std::pair<std::string, int> findSIDsong() {
 
 std::shared_ptr<CPPSID::Player> createLoadedSIDplayer() {
     std::shared_ptr<CPPSID::Player> player;
-    if (isatty(fileno(stdout))) {                        // only play music if on console
-        if (not std::getenv("SSH_CLIENT")) {             // and not through a ssh connection
-            player = std::make_shared<CPPSID::Player>(); // let's emulate a Commodore 64...
-            const auto tune = findSIDsong();             // pick a song from our pre-defined library
-            player->load(tune.first, tune.second);
+    if (static_cast<bool>(isatty(fileno(stdout)))) {         // only play music if on console
+        if (!static_cast<bool>(std::getenv("SSH_CLIENT"))) { // and not through a ssh connection
+            player = std::make_shared<CPPSID::Player>();     // let's emulate a Commodore 64...
+            const auto [filename, subsong] = findSIDsong();  // pick a song from our pre-defined library
+            player->load(filename, subsong);
         }
     }
     return player;
@@ -302,18 +300,18 @@ std::shared_ptr<CPPSID::Player> createLoadedSIDplayer() {
 #endif
 
 std::shared_ptr<ProgressIndicator::ProgressTracker> createProgressTracker(bool show_progress, unsigned int steps) {
-    using namespace ProgressIndicator;
-    using namespace std::chrono;
-    std::shared_ptr<ProgressTracker> tracker = nullptr;
+    using std::chrono::milliseconds;
+    using std::chrono::minutes;
+    std::shared_ptr<ProgressIndicator::ProgressTracker> tracker = nullptr;
     if (show_progress) {
-        if (bool(isatty(fileno(stdout)))) { // show a progress bar on the console
-            tracker = std::make_shared<ProgressBar>(steps);
+        if (static_cast<bool>(isatty(fileno(stdout)))) { // show a progress bar on the console
+            tracker = std::make_shared<ProgressIndicator::ProgressBar>(steps);
         } else { // not in a console
-            tracker = std::make_shared<TaciturnDecorator>(
+            tracker = std::make_shared<ProgressIndicator::TaciturnDecorator>(
                 // hence print a new line
-                std::make_shared<ProgressLog>(steps),
+                std::make_shared<ProgressIndicator::ProgressLog>(steps),
                 // at most every 10 minutes or after 0.5% of progress, whatever comes first
-                duration_cast<milliseconds>(minutes(10)), 0.005);
+                std::chrono::duration_cast<milliseconds>(minutes(10)), 0.005);
         }
     }
     return tracker;
@@ -325,8 +323,7 @@ json getUserInput(docopt::Options& args) {
         if (auto filename = args["--input"].asString(); filename == "/dev/stdin") {
             std::cin >> j;
         } else {
-            const auto prefix = !args["--nopfx"].asBool();
-            if (prefix) {
+            if (!args["--nopfx"].asBool()) {
                 filename = MPI::prefix + filename;
             }
             j = openjson(filename);
@@ -348,15 +345,15 @@ void loadState(docopt::Options& args, MetropolisMonteCarlo& simulation) {
         if (binary) {
             mode = std::ios_base::ate | std::ios_base::binary; // ate = open at end
         }
-        if (auto stream = std::ifstream(statefile, mode); (stream)) {
+        if (auto stream = std::ifstream(statefile, mode)) {
             json j;
             faunus_logger->info("loading state file {}", statefile);
             if (binary) {
                 const auto size = stream.tellg(); // get file size
-                std::vector<uint8_t> v(size / sizeof(uint8_t));
-                stream.seekg(0, stream.beg); // go back to start
-                stream.read((char*)v.data(), size);
-                j = json::from_ubjson(v);
+                std::vector<std::uint8_t> buffer(size / sizeof(std::uint8_t));
+                stream.seekg(0, stream.beg);             // go back to start...
+                stream.read((char*)buffer.data(), size); // ...and read into buffer
+                j = json::from_ubjson(buffer);
             } else {
                 stream >> j;
             }
@@ -387,10 +384,10 @@ void saveOutput(TimePoint& starting_time, docopt::Options& args, MetropolisMonte
 #endif
 
         { // report on total simulation time
-            using namespace std::chrono;
-            const auto ending_time = steady_clock::now();
-            const auto secs = duration_cast<seconds>(ending_time - starting_time).count();
-            j["simulation time"] = {{"in minutes", secs / 60.0}, {"in seconds", secs}};
+            const auto ending_time = std::chrono::steady_clock::now();
+            const auto elapsed_seconds =
+                std::chrono::duration_cast<std::chrono::seconds>(ending_time - starting_time).count();
+            j["simulation time"] = {{"in minutes", elapsed_seconds / 60.0}, {"in seconds", elapsed_seconds}};
         }
 
         stream << std::setw(2) << j << std::endl;

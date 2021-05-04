@@ -244,6 +244,9 @@ install(FILES
         ${EXAMPLES_DIR}/minimal/minimal.yml
         ${EXAMPLES_DIR}/minimal/minimal.out.json
         ${EXAMPLES_DIR}/minimal/minimal.state.json
+        ${EXAMPLES_DIR}/bend/bend.yml
+        ${EXAMPLES_DIR}/bend/bend.out.json
+        ${EXAMPLES_DIR}/bend/mc_vs_md.agr
         ${EXAMPLES_DIR}/penalty/penalty.yml
         ${EXAMPLES_DIR}/penalty/penalty.ipynb
         ${EXAMPLES_DIR}/multipole/multipole.yml

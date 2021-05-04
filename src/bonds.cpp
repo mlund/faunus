@@ -200,6 +200,29 @@ void HarmonicTorsion::setEnergyFunction(const ParticleVector& particles) {
         const auto angle = std::acos(ray1.dot(ray2) / (ray1.norm() * ray2.norm()));
         return half_force_constant * (angle - equilibrium_angle) * (angle - equilibrium_angle);
     };
+    forceFunc = [&](Geometry::DistanceFunction calculateDistance) {
+        // from https://github.com/OpenMD/OpenMD/blob/master/src/primitives/Bend.cpp
+        const auto r01 = calculateDistance(particles[indices[0]].pos, particles[indices[1]].pos);
+        const auto r21 = calculateDistance(particles[indices[2]].pos, particles[indices[1]].pos);
+        const auto d01_inv = 1.0 / r01.norm();
+        const auto d21_inv = 1.0 / r21.norm();
+        auto cosine_angle = r01.dot(r21) * d01_inv * d21_inv;
+        if (cosine_angle > 1.0) { // is this needed?
+            cosine_angle = 1.0;
+        } else if (cosine_angle < -1.0) {
+            cosine_angle = -1.0;
+        }
+        auto sine_angle = std::sqrt(1.0 - cosine_angle * cosine_angle);
+        if (std::fabs(sine_angle) < 1e-6) {
+            sine_angle = std::numeric_limits<double>::epsilon();
+        }
+        const auto angle = std::acos(cosine_angle);
+        const auto du_dangle = 2.0 * half_force_constant * (angle - equilibrium_angle);
+        auto force0 = du_dangle / sine_angle * d01_inv * (r21 * d21_inv - r01 * d01_inv * cosine_angle);
+        auto force2 = du_dangle / sine_angle * d21_inv * (r01 * d01_inv - r21 * d21_inv * cosine_angle);
+        auto force1 = -(force0 + force2); // zero net force
+        return std::vector<ParticleForce>({{indices[0], force0}, {indices[1], force1}, {indices[2], force2}});
+    };
 }
 
 void GromosTorsion::from_json(const Faunus::json& j) {

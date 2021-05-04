@@ -104,7 +104,7 @@ void HarmonicBond::setEnergyFunction(const ParticleVector& particles) {
         const auto distance_vec = calculateDistance(particle1.pos, particle2.pos);
         const auto distance = distance_vec.norm(); // distance between particles
         auto force = 2.0 * half_force_constant * (equilibrium_distance - distance) * distance_vec / distance;
-        return std::vector<ParticleForce>({{indices[0], force}, {indices[1], -force}}); // force on both particles
+        return std::vector<IndexAndForce>({{indices[0], force}, {indices[1], -force}}); // force on both particles
     };
 }
 
@@ -200,28 +200,22 @@ void HarmonicTorsion::setEnergyFunction(const ParticleVector& particles) {
         const auto angle = std::acos(ray1.dot(ray2) / (ray1.norm() * ray2.norm()));
         return half_force_constant * (angle - equilibrium_angle) * (angle - equilibrium_angle);
     };
-    forceFunc = [&](Geometry::DistanceFunction calculateDistance) {
+    forceFunc = [&](Geometry::DistanceFunction calculateDistance) -> std::vector<IndexAndForce> {
         // from https://github.com/OpenMD/OpenMD/blob/master/src/primitives/Bend.cpp
-        const auto vec1 = calculateDistance(particles[indices[0]].pos, particles[indices[1]].pos);
-        const auto vec2 = calculateDistance(particles[indices[2]].pos, particles[indices[1]].pos);
-        const auto len1_inv = 1.0 / vec1.norm();
-        const auto len2_inv = 1.0 / vec2.norm();
-        auto cosine_angle = vec1.dot(vec2) * len1_inv * len2_inv;
-        if (cosine_angle > 1.0) { // is this needed?
-            cosine_angle = 1.0;
-        } else if (cosine_angle < -1.0) {
-            cosine_angle = -1.0;
-        }
-        auto sine_angle = std::sqrt(1.0 - cosine_angle * cosine_angle);
-        if (std::fabs(sine_angle) < 1e-6) { // is this needed?
-            sine_angle = std::numeric_limits<double>::epsilon();
-        }
+        auto vec1 = calculateDistance(particles[indices[0]].pos, particles[indices[1]].pos);
+        auto vec2 = calculateDistance(particles[indices[2]].pos, particles[indices[1]].pos);
+        const auto inverse_norm1 = 1.0 / vec1.norm();
+        const auto inverse_norm2 = 1.0 / vec2.norm();
+        vec1 *= inverse_norm1;
+        vec2 *= inverse_norm2;
+        const auto cosine_angle = vec1.dot(vec2);
+        const auto sine_angle = std::sqrt(std::fabs(1.0 - cosine_angle * cosine_angle));
         const auto angle = std::acos(cosine_angle);
-        const auto du_dangle = 2.0 * half_force_constant * (angle - equilibrium_angle);
-        auto force0 = du_dangle / sine_angle * len1_inv * (vec2 * len2_inv - vec1 * len1_inv * cosine_angle);
-        auto force2 = du_dangle / sine_angle * len2_inv * (vec1 * len1_inv - vec2 * len2_inv * cosine_angle);
-        auto force1 = -(force0 + force2); // zero net force
-        return std::vector<ParticleForce>({{indices[0], force0}, {indices[1], force1}, {indices[2], force2}});
+        const auto prefactor = 2.0 * half_force_constant * (angle - equilibrium_angle) / sine_angle;
+        auto force0 = prefactor * inverse_norm1 * (vec2 - vec1 * cosine_angle);
+        auto force2 = prefactor * inverse_norm2 * (vec1 - vec2 * cosine_angle);
+        auto force1 = -(force0 + force2); // no net force
+        return {{indices[0], force0}, {indices[1], force1}, {indices[2], force2}};
     };
 }
 

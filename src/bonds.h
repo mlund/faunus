@@ -27,10 +27,10 @@ struct BondData {
     /** Calculates potential energy of bonded atoms(kT) */
     std::function<double(Geometry::DistanceFunction)> energyFunc = nullptr;
 
-    using ParticleForce = std::pair<int, Point>; //!< Force (second) on particle w. absolute index (first)
+    using IndexAndForce = std::pair<int, Point>; //!< Force (second) on particle w. absolute index (first)
 
     /** Calculates forces on bonded atoms (kT/Å) */
-    std::function<std::vector<ParticleForce>(Geometry::DistanceFunction)> forceFunc = nullptr;
+    std::function<std::vector<IndexAndForce>(Geometry::DistanceFunction)> forceFunc = nullptr;
 
     virtual void from_json(const json&) = 0;
     virtual void to_json(json&) const = 0;

@@ -92,7 +92,7 @@ BondData::Variant HarmonicBond::type() const { return BondData::HARMONIC; }
  * participating atoms
  */
 void HarmonicBond::setEnergyFunction(const ParticleVector& particles) {
-    energyFunc = [&](Geometry::DistanceFunction calculateDistance) {
+    energyFunc = [&](Geometry::DistanceFunction calculateDistance) -> double {
         const auto& particle1 = particles[indices[0]];
         const auto& particle2 = particles[indices[1]];
         const auto distance = equilibrium_distance - calculateDistance(particle1.pos, particle2.pos).norm();
@@ -194,7 +194,7 @@ BondData::Variant HarmonicTorsion::type() const { return BondData::HARMONIC_TORS
 std::shared_ptr<BondData> HarmonicTorsion::clone() const { return std::make_shared<HarmonicTorsion>(*this); }
 
 void HarmonicTorsion::setEnergyFunction(const ParticleVector& particles) {
-    energyFunc = [&](Geometry::DistanceFunction calculateDistance) {
+    energyFunc = [&](Geometry::DistanceFunction calculateDistance) -> double {
         const auto vec1 = calculateDistance(particles[indices[0]].pos, particles[indices[1]].pos).normalized();
         const auto vec2 = calculateDistance(particles[indices[2]].pos, particles[indices[1]].pos).normalized();
         const auto delta_angle = equilibrium_angle - std::acos(vec1.dot(vec2));
@@ -237,9 +237,9 @@ std::shared_ptr<BondData> GromosTorsion::clone() const { return std::make_shared
 
 void GromosTorsion::setEnergyFunction(const ParticleVector& particles) {
     energyFunc = [&](Geometry::DistanceFunction calculateDistance) {
-        auto ray1 = calculateDistance(particles[indices[0]].pos, particles[indices[1]].pos);
-        auto ray2 = calculateDistance(particles[indices[2]].pos, particles[indices[1]].pos);
-        const auto x = cosine_equilibrium_angle - ray1.dot(ray2) / (ray1.norm() * ray2.norm());
+        auto vec1 = calculateDistance(particles[indices[0]].pos, particles[indices[1]].pos).normalized();
+        auto vec2 = calculateDistance(particles[indices[2]].pos, particles[indices[1]].pos).normalized();
+        const auto x = cosine_equilibrium_angle - vec1.dot(vec2);
         return half_force_constant * x * x;
     };
 }
@@ -249,9 +249,9 @@ int PeriodicDihedral::numindex() const { return 4; }
 std::shared_ptr<BondData> PeriodicDihedral::clone() const { return std::make_shared<PeriodicDihedral>(*this); }
 
 void PeriodicDihedral::from_json(const Faunus::json& j) {
-    force_constant = j.at("k").get<double>() * 1.0_kJmol; // k
-    periodicity = j.at("n").get<double>();                // multiplicity/periodicity n
-    dihedral_angle = j.at("phi").get<double>() * 1.0_deg; // angle
+    force_constant = j.at("k").get<double>() * 1.0_kJmol;
+    periodicity = j.at("n").get<double>();
+    dihedral_angle = j.at("phi").get<double>() * 1.0_deg;
 }
 
 void PeriodicDihedral::to_json(Faunus::json& j) const {

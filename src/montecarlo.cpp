@@ -54,6 +54,8 @@ void MetropolisMonteCarlo::init() {
         faunus_logger->warn("initial energy is nan");
     } else if (std::isnan(initial_energy)) {
         faunus_logger->warn("initial energy is infinite");
+    } else {
+        faunus_logger->debug("initial energy = {:.6E}", initial_energy);
     }
 
     trial_state->sync(*state, change); // copy all information into trial state

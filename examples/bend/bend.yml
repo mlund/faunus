@@ -18,9 +18,9 @@ moleculelist:
         atomic: false
         atoms: [bead, middle_bead, bead]
         structure:
-          - bead: [0,1,0]
-          - middle_bead: [0,0,0]
-          - bead: [1,0,0]
+          - bead: [-1.14, -4.98, 8.99]
+          - middle_bead: [0.039, -6.39, 9.10]
+          - bead: [-0.82, -7.13, 9.42]
         bondlist:
           - harmonic: {k: 10, req: 1, index: [0,1]}
           - harmonic: {k: 10, req: 1, index: [1,2]}
@@ -39,6 +39,7 @@ moves:
 analysis:
     - systemenergy: {file: energy.dat, nstep: 100, nskip: 1}
     - atomrdf: {file: rdf.dat, nstep: 1, dr: 0.1, name1: bead, name2: bead, nskip: 1, dim: 1}
+    - savestate: {file: state.json}
 
 geometry: {type: cuboid, length: 20}
 mcloop: {macro: 1, micro: 200000}

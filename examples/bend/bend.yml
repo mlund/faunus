@@ -1,0 +1,47 @@
+#!/usr/bin/env yason.py
+#
+# Combined MC and MD moves on a three-bead molecule
+# with two harmonic bonds and a harmonic bond angle
+#
+# You may disable either MD or MC to verify that they
+# individually give the same bead<->bead distribution
+#
+energy:
+    - bonded: {}
+
+atomlist:
+    - middle_bead: {mw: 1, dp: 5}
+    - bead: {mw: 1, dp: 5}
+
+moleculelist:
+    - threebody:
+        atomic: false
+        atoms: [bead, middle_bead, bead]
+        structure:
+          - bead: [0,1,0]
+          - middle_bead: [0,0,0]
+          - bead: [1,0,0]
+        bondlist:
+          - harmonic: {k: 10, req: 1, index: [0,1]}
+          - harmonic: {k: 10, req: 1, index: [1,2]}
+          - harmonic_torsion: {k: 10, aeq: 90, index: [0,1,2]}
+
+insertmolecules:
+    - threebody: {N: 1}
+
+moves:
+    - langevin_dynamics: # Langevin dynamics
+        nsteps: 10
+        integrator: {time_step: 0.005, friction: 5}
+    - transrot: # Monte Carlo
+        molecule: threebody
+
+analysis:
+    - systemenergy: {file: energy.dat, nstep: 100, nskip: 1}
+    - atomrdf: {file: rdf.dat, nstep: 1, dr: 0.1, name1: bead, name2: bead, nskip: 1, dim: 1}
+
+geometry: {type: cuboid, length: 20}
+mcloop: {macro: 1, micro: 200000}
+temperature: 298.15
+random: { seed: fixed }
+

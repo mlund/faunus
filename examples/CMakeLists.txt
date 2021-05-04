@@ -70,6 +70,14 @@ add_test(
         WORKING_DIRECTORY ${EXAMPLES_DIR}/minimal)
 
 add_test(
+        NAME bend
+        COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} bend.yml\
+    | $<TARGET_FILE:faunus> --nobar\
+    && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} bend.out.json out.json --tol 0.02"
+        WORKING_DIRECTORY ${EXAMPLES_DIR}/bend)
+
+
+add_test(
         NAME chain
         COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} chain.yml\
     | $<TARGET_FILE:faunus> --nobar --state chain.state.json\

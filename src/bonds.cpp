@@ -195,13 +195,13 @@ std::shared_ptr<BondData> HarmonicTorsion::clone() const { return std::make_shar
 
 void HarmonicTorsion::setEnergyFunction(const ParticleVector& particles) {
     energyFunc = [&](Geometry::DistanceFunction calculateDistance) {
-        const auto ray1 = calculateDistance(particles[indices[0]].pos, particles[indices[1]].pos);
-        const auto ray2 = calculateDistance(particles[indices[2]].pos, particles[indices[1]].pos);
-        const auto angle = std::acos(ray1.dot(ray2) / (ray1.norm() * ray2.norm()));
-        return half_force_constant * (angle - equilibrium_angle) * (angle - equilibrium_angle);
+        const auto vec1 = calculateDistance(particles[indices[0]].pos, particles[indices[1]].pos).normalized();
+        const auto vec2 = calculateDistance(particles[indices[2]].pos, particles[indices[1]].pos).normalized();
+        const auto delta_angle = equilibrium_angle - std::acos(vec1.dot(vec2));
+        return half_force_constant * delta_angle * delta_angle;
     };
     forceFunc = [&](Geometry::DistanceFunction calculateDistance) -> std::vector<IndexAndForce> {
-        // from https://github.com/OpenMD/OpenMD/blob/master/src/primitives/Bend.cpp
+        // see https://github.com/OpenMD/OpenMD/blob/master/src/primitives/Bend.cpp
         auto vec1 = calculateDistance(particles[indices[0]].pos, particles[indices[1]].pos);
         auto vec2 = calculateDistance(particles[indices[2]].pos, particles[indices[1]].pos);
         const auto inverse_norm1 = 1.0 / vec1.norm();

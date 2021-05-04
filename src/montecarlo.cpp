@@ -13,10 +13,14 @@ namespace Faunus {
  *       when using some MPI schemes where the simulations must be in sync.
  */
 bool MetropolisMonteCarlo::metropolis(double energy_change) {
-    const auto random_number_between_zero_and_one = Move::MoveBase::slump();
+    static_assert(std::numeric_limits<double>::is_iec559, "IEEE 754 required");
+    if (std::isinf(energy_change) && energy_change < 0.0) {
+        return true;
+    }
     if (std::isnan(energy_change)) {
         throw std::runtime_error("Metropolis error: energy cannot be NaN");
     }
+    const auto random_number_between_zero_and_one = Move::MoveBase::slump();
     if (energy_change < 0.0) {
         return true;
     } else {
@@ -45,6 +49,12 @@ void MetropolisMonteCarlo::init() {
     state->pot->init();
     double energy = state->pot->energy(change);
     initial_energy = energy;
+
+    if (std::isnan(initial_energy)) {
+        faunus_logger->warn("initial energy is nan");
+    } else if (std::isnan(initial_energy)) {
+        faunus_logger->warn("initial energy is infinite");
+    }
 
     trial_state->sync(*state, change); // copy all information into trial state
     trial_state->pot->init();

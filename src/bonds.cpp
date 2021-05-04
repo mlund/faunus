@@ -92,32 +92,32 @@ BondData::Variant HarmonicBond::type() const { return BondData::HARMONIC; }
  * participating atoms
  */
 void HarmonicBond::setEnergyFunction(const ParticleVector& particles) {
-    energyFunc = [&](Geometry::DistanceFunction calculateDistance) { // potential energy functor
+    energyFunc = [&](Geometry::DistanceFunction calculateDistance) {
         const auto& particle1 = particles[indices[0]];
         const auto& particle2 = particles[indices[1]];
         const auto distance = equilibrium_distance - calculateDistance(particle1.pos, particle2.pos).norm();
         return half_force_constant * distance * distance; // kT/Å
     };
-    forceFunc = [&](Geometry::DistanceFunction calculateDistance) { // force functor
+    forceFunc = [&](Geometry::DistanceFunction calculateDistance) -> std::vector<IndexAndForce> {
         const auto& particle1 = particles[indices[0]];
         const auto& particle2 = particles[indices[1]];
         const auto distance_vec = calculateDistance(particle1.pos, particle2.pos);
         const auto distance = distance_vec.norm(); // distance between particles
         auto force = 2.0 * half_force_constant * (equilibrium_distance - distance) * distance_vec / distance;
-        return std::vector<IndexAndForce>({{indices[0], force}, {indices[1], -force}}); // force on both particles
+        return {{indices[0], force}, {indices[1], -force}};
     };
 }
 
 FENEBond::FENEBond(double k, double rmax, const std::vector<int>& indices)
-    : StretchData(indices), half_force_constant(k / 2), max_squared_distance(rmax * rmax) {}
+    : StretchData(indices), half_force_constant(0.5 * k), max_squared_distance(rmax * rmax) {}
 
 std::shared_ptr<BondData> FENEBond::clone() const { return std::make_shared<FENEBond>(*this); }
 
 BondData::Variant FENEBond::type() const { return BondData::FENE; }
 
 void FENEBond::from_json(const Faunus::json& j) {
-    half_force_constant = j.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2) / 2; // k
-    max_squared_distance = std::pow(j.at("rmax").get<double>() * 1.0_angstrom, 2);             // rmax
+    half_force_constant = 0.5 * j.at("k").get<double>() * 1.0_kJmol / (1.0_angstrom * 1.0_angstrom);
+    max_squared_distance = std::pow(j.at("rmax").get<double>() * 1.0_angstrom, 2);
 }
 
 void FENEBond::to_json(Faunus::json& j) const {
@@ -220,8 +220,8 @@ void HarmonicTorsion::setEnergyFunction(const ParticleVector& particles) {
 }
 
 void GromosTorsion::from_json(const Faunus::json& j) {
-    half_force_constant = j.at("k").get<double>() * 1.0_kJmol / 2.0;     // k
-    cosine_equilibrium_angle = cos(j.at("aeq").get<double>() * 1.0_deg); // cos(angle)
+    half_force_constant = 0.5 * j.at("k").get<double>() * 1.0_kJmol;
+    cosine_equilibrium_angle = std::cos(j.at("aeq").get<double>() * 1.0_deg);
 }
 
 void GromosTorsion::to_json(Faunus::json& j) const {
@@ -229,7 +229,7 @@ void GromosTorsion::to_json(Faunus::json& j) const {
 }
 
 GromosTorsion::GromosTorsion(double k, double cos_aeq, const std::vector<int>& indices)
-    : TorsionData(indices), half_force_constant(k / 2.0), cosine_equilibrium_angle(cos_aeq) {}
+    : TorsionData(indices), half_force_constant(0.5 * k), cosine_equilibrium_angle(cos_aeq) {}
 
 BondData::Variant GromosTorsion::type() const { return BondData::GROMOS_TORSION; }
 
@@ -395,6 +395,25 @@ TEST_CASE("[Faunus] BondData") {
             HarmonicTorsion bond(100.0, 45.0_deg, {0, 1, 2});
             bond.setEnergyFunction(p_60deg_4a);
             CHECK_EQ(bond.energyFunc(distance), Approx(100.0 / 2 * std::pow(15.0_deg, 2)));
+        }
+        SUBCASE("HarmonicTorsion Force") {
+            HarmonicTorsion bond(100.0, 45.0_deg, {0, 1, 2});
+            bond.setEnergyFunction(p_60deg_4a);
+            auto forces = bond.forceFunc(distance);
+            CHECK(forces.size() == 3);
+            CHECK(forces[0].first == 0);
+            CHECK(forces[1].first == 1);
+            CHECK(forces[2].first == 2);
+            // @todo values below verifies consistency only, not correctness
+            CHECK(forces[0].second.x() == Approx(0.0));
+            CHECK(forces[0].second.y() == Approx(-6.544984695));
+            CHECK(forces[0].second.z() == Approx(3.7787486755));
+            CHECK(forces[1].second.x() == Approx(0.0));
+            CHECK(forces[1].second.y() == Approx(6.544984695));
+            CHECK(forces[1].second.z() == Approx(2.7662360195));
+            CHECK(forces[2].second.x() == Approx(0.0));
+            CHECK(forces[2].second.y() == Approx(0.0));
+            CHECK(forces[2].second.z() == Approx(-6.544984695));
         }
         SUBCASE("HarmonicTorsion JSON") {
             json j = R"({"harmonic_torsion": {"index":[0,1,2], "k":0.5, "aeq":65}})"_json;

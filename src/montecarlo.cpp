@@ -39,7 +39,7 @@ bool MetropolisMonteCarlo::metropolis(double energy_change) {
  * - recalculates the initial energy
  */
 void MetropolisMonteCarlo::init() {
-    sum_of_energy_changes = 0;
+    sum_of_energy_changes = 0.0;
     Change change;
     change.all = true;
 
@@ -47,16 +47,10 @@ void MetropolisMonteCarlo::init() {
     trial_state->pot->key = Energy::Energybase::TRIAL_MONTE_CARLO_STATE; // this is the new energy (trial)
 
     state->pot->init();
-    double energy = state->pot->energy(change);
+    auto energy = state->pot->energy(change);
     initial_energy = energy;
-
-    if (std::isnan(initial_energy)) {
-        faunus_logger->warn("initial energy is nan");
-    } else if (std::isinf(initial_energy)) {
-        faunus_logger->warn("initial energy is infinite");
-    } else {
-        faunus_logger->debug("initial system energy = {:.6E} kT", initial_energy);
-    }
+    faunus_logger->log(std::isfinite(initial_energy) ? spdlog::level::info : spdlog::level::warn,
+                       "initial energy = {} kT", initial_energy);
 
     trial_state->sync(*state, change); // copy all information into trial state
     trial_state->pot->init();

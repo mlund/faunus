@@ -209,9 +209,9 @@ void HarmonicTorsion::setEnergyFunction(const ParticleVector& particles) {
         vec1 *= inverse_norm1;
         vec2 *= inverse_norm2;
         const auto cosine_angle = vec1.dot(vec2);
-        const auto sine_angle = std::sqrt(std::fabs(1.0 - cosine_angle * cosine_angle));
+        const auto inverse_sine_angle = 1.0 / std::sqrt(std::fabs(1.0 - cosine_angle * cosine_angle));
         const auto angle = std::acos(cosine_angle);
-        const auto prefactor = 2.0 * half_force_constant * (angle - equilibrium_angle) / sine_angle;
+        const auto prefactor = 2.0 * half_force_constant * (angle - equilibrium_angle) * inverse_sine_angle;
         auto force0 = prefactor * inverse_norm1 * (vec2 - vec1 * cosine_angle);
         auto force2 = prefactor * inverse_norm2 * (vec1 - vec2 * cosine_angle);
         auto force1 = -(force0 + force2); // no net force

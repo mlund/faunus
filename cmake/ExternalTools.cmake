@@ -204,8 +204,8 @@ endif()
 
 FetchContent_Declare(
     eigen
-    URL "https://gitlab.com/libeigen/eigen/-/archive/3.3.7/eigen-3.3.7.tar.gz"
-    URL_HASH MD5=9e30f67e8531477de4117506fe44669b)
+    URL "https://gitlab.com/libeigen/eigen/-/archive/3.3.9/eigen-3.3.9.tar.gz"
+    URL_HASH MD5=609286804b0f79be622ccf7f9ff2b660)
 FetchContent_GetProperties(eigen)
 if(NOT eigen_POPULATED)
     FetchContent_Populate(eigen)

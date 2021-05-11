@@ -2,12 +2,12 @@
   "analysis": [
     {
       "systemenergy": {
-        "Cv/kB": 1.9938,
+        "Cv/kB": 2.0,
         "file": "energy.dat",
         "final": [
           1.773122609062241
         ],
-        "init": 7.1103e-30,
+        "init": 1.4933,
         "nskip": 1,
         "nstep": 100,
         "samples": 2000

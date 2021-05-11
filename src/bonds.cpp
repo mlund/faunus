@@ -201,7 +201,7 @@ void HarmonicTorsion::setEnergyFunction(const ParticleVector& particles) {
         return half_force_constant * delta_angle * delta_angle;
     };
     forceFunc = [&](Geometry::DistanceFunction calculateDistance) -> std::vector<IndexAndForce> {
-        if constexpr (true) {
+        if constexpr (false) {
             // see https://github.com/OpenMD/OpenMD/blob/master/src/primitives/Bend.cpp
             auto vec1 = calculateDistance(particles[indices[0]].pos, particles[indices[1]].pos);
             auto vec2 = calculateDistance(particles[indices[2]].pos, particles[indices[1]].pos);
@@ -217,16 +217,16 @@ void HarmonicTorsion::setEnergyFunction(const ParticleVector& particles) {
             auto force2 = prefactor * inverse_norm2 * (vec1 - vec2 * cosine_angle);
             auto force1 = -(force0 + force2); // no net force
             return {{indices[0], force0}, {indices[1], force1}, {indices[2], force2}};
-        } else { // @todo Test pass in Debug mode, but gives NaN forces in RelWithDebInfo in GCC/Clang
+        } else { // @todo which one of these two are fastest?
             auto ba = calculateDistance(particles[indices[0]].pos, particles[indices[1]].pos);
             auto bc = calculateDistance(particles[indices[2]].pos, particles[indices[1]].pos);
             const auto inverse_norm_ba = 1.0 / ba.norm();
             const auto inverse_norm_bc = 1.0 / bc.norm();
             const auto angle = std::acos(ba.dot(bc) * inverse_norm_ba * inverse_norm_bc);
             const auto forcemagnitude = -2.0 * half_force_constant * (angle - equilibrium_angle);
-            auto plane_babc = ba.cross(bc);
-            auto force0 = forcemagnitude * inverse_norm_ba * ba.cross(plane_babc).normalized();
-            auto force2 = forcemagnitude * inverse_norm_bc * -bc.cross(plane_babc).normalized();
+            auto plane_babc = ba.cross(bc).eval();
+            auto force0 = (forcemagnitude * inverse_norm_ba * ba.cross(plane_babc).normalized()).eval();
+            auto force2 = (forcemagnitude * inverse_norm_bc * -bc.cross(plane_babc).normalized()).eval();
             auto force1 = -(force0 + force2); // Newton's third law
             return {{indices[0], force0}, {indices[1], force1}, {indices[2], force2}};
         }

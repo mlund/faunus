@@ -117,19 +117,19 @@ AtomData& findAtomByName(const std::string& name);
  * a sequence containing all id's of the database, i.e.
  * `0, ..., database.size()-1`.
  */
-template <class Trange> std::vector<int> names2ids(const Trange &database, const std::vector<std::string> &names) {
-    std::vector<int> index;
+template <class Trange> std::vector<int> names2ids(Trange& database, const std::vector<std::string>& names) {
+    std::vector<AtomData::Tid> index;
     index.reserve(names.size());
-    for (const auto &name : names) {
+    for (auto& name : names) {
         if (name == "*") { // wildcard selecting all id's
             index.resize(database.size());
             std::iota(index.begin(), index.end(), 0);
             return index;
-        } else if (auto it = findName(database, name); it != database.end())
-            index.push_back(it->id());
-        else {
-            throw std::out_of_range("name '" + name + "' not found");
         }
+        if (auto it = findName(database, name); it != database.end())
+            index.push_back(it->id());
+        else
+            throw std::out_of_range("name '" + name + "' not found");
     }
     return index;
 }

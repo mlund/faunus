@@ -12,7 +12,7 @@ template <class T> Group<T>::Group(Group<T> &o) : base(o.begin(), o.trueend()) {
 
 template <class T> Group<T>::Group(const Group<T> &o) : base(o.begin(), o.trueend()) { *this = operator=(o); }
 
-template <class T> Group<T>::Group(Group<T>::iterator begin, Group<T>::iterator end) : base(begin, end) {}
+template <class T> Group<T>::Group(Group<T>::iter begin, Group<T>::iter end) : base(begin, end) {}
 
 template <class T> Group<T> &Group<T>::operator=(const Group<T> &o) {
     if (&o == this)

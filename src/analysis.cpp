@@ -143,6 +143,8 @@ std::shared_ptr<Analysisbase> createAnalysis(const std::string& name, const json
             return std::make_shared<SlicedDensity>(j, spc);
         } else if (name == "systemenergy") {
             return std::make_shared<SystemEnergy>(j, spc, pot);
+        } else if (name == "virialpressure") {
+            return std::make_shared<VirialPressure>(j, spc, pot);
         } else if (name == "virtualvolume") {
             return std::make_shared<VirtualVolumeMove>(j, spc, pot);
         } else if (name == "virtualtranslate") {
@@ -1774,4 +1776,70 @@ void SpaceTrajectory::_sample() {
 void SpaceTrajectory::_to_json(json& j) const { j = {{"file", filename}}; }
 
 void SpaceTrajectory::_to_disk() { stream->flush(); }
+
+VirialPressure::VirialPressure(const json& j, Space& spc, Energy::Energybase& pot) : Analysisbase(spc, "virial") {
+    pressure_tensor.setZero();
+    const auto excluded_molecules = j.value("no_internal", std::vector<std::string>());
+    user_excluded_molids = Faunus::names2ids(Faunus::molecules, excluded_molecules);
+    std::sort(user_excluded_molids.begin(), user_excluded_molids.end());
+
+    // Find groups to be included, i.e. !user excluded, not rigid, or marked compressible)
+    auto include_group = [&](const auto& group) {
+        if (group.traits().rigid) {
+            return false;
+        }
+        if (std::binary_search(user_excluded_molids.begin(), user_excluded_molids.end(), group.id)) {
+            faunus_logger->debug("{}: excluding {} ({}) from internal pressure", name, group.traits().name,
+                                 spc.getGroupIndex(group));
+            return false;
+        }
+        return group.traits().compressible;
+    };
+    for (const auto& group : spc.groups | ranges::cpp20::views::filter(include_group)) {
+        groups_with_internal_pressure.push_back(spc.getGroupIndex(group));
+    }
+}
+
+void VirialPressure::_sample() {
+    // contributions from internal pressure
+    for (const auto index : groups_with_internal_pressure) {
+        pressure_tensor += group_internal(spc.groups.at(index));
+    }
+    // contributions from group-group interactions
+    for (auto i = spc.groups.cbegin(); i != spc.groups.cend(); ++i) {
+        for (auto j = i; ++j != spc.groups.cend();) {
+            pressure_tensor += group_to_group(*i, *j);
+        }
+    }
+}
+Tensor VirialPressure::group_internal(const Space::Tgroup& group) const {
+    Tensor pressure_tensor = Tensor::Zero();
+    for (auto particle1 = group.begin(); particle1 != group.end(); ++particle1) {
+        for (auto particle2 = particle1; ++particle2 != group.end();) {
+            pressure_tensor += distance_x_force(*particle1, *particle2);
+        }
+    }
+    return pressure_tensor;
+}
+Tensor VirialPressure::group_to_group(const Space::Tgroup& group1, const Space::Tgroup& group2) const {
+    Tensor pressure_tensor = Tensor::Zero();
+    for (const auto& particle_i : group1) {
+        for (const auto& particle_j : group2) {
+            pressure_tensor += distance_x_force(particle_i, particle_j);
+        }
+    }
+    return pressure_tensor;
+}
+Tensor VirialPressure::distance_x_force(const Particle& particle1, const Particle& particle2) const {
+    const Point distance = spc.geo.vdist(particle1.pos, particle2.pos);
+    const Point force = forcefunctor(particle1, particle2);
+    return distance * force.transpose();
+}
+void VirialPressure::_to_json(json& j) const {
+    j["no_internal"] = user_excluded_molids |
+                       ranges::cpp20::views::transform([](auto molid) { return Faunus::molecules.at(molid).name; }) |
+                       ranges::to<std::vector<std::string>>();
+}
+void VirialPressure::_from_json(const json&) {}
+void VirialPressure::_to_disk() {}
 } // namespace Faunus::Analysis

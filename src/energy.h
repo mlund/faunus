@@ -1159,7 +1159,7 @@ template <typename TPairEnergy, typename TPairingPolicy>
 class Nonbonded : public Energybase {
   protected:
     typedef BasicEnergyAccumulator<TPairEnergy> TAccumulator;
-    const Space &spc;              //!< space to operate on
+    Space& spc;              //!< space to operate on
     TPairEnergy pair_energy; //!< a functor to compute non-bonded energy between two particles, see PairEnergy
     TPairingPolicy pairing;  //!< pairing policy to effectively sum up the pairwise additive non-bonded energy
 
@@ -1192,13 +1192,47 @@ class Nonbonded : public Energybase {
      * @todo A stub. Change to reflect only active particle, see Space::activeParticles().
      */
     void force(std::vector<Point> &forces) override {
-        // just a temporary hack; perhaps better to allow PairForce instead of the PairEnergy template
-        assert(forces.size() == spc.p.size() && "the forces size must match the particle size");
-        for (size_t i = 0; i < spc.p.size() - 1; ++i) {
-            for (size_t j = i + 1; j < spc.p.size(); ++j) {
-                const Point f = pair_energy.force(spc.p[i], spc.p[j]);
-                forces[i] += f;
-                forces[j] -= f;
+        auto has_internal_force = [](const auto& group) {
+            if (group.traits().rigid || !group.traits().compressible) {
+                return false;
+            }
+            return true;
+        };
+        auto update_force = [&](const Particle& particle1, const Particle& particle2) {
+            auto force = pair_energy.force(particle1, particle2);
+            const auto first_particle_addesss = std::addressof(spc.p.front());
+            const auto index1 = std::addressof(particle1) - first_particle_addesss;
+            const auto index2 = std::addressof(particle2) - first_particle_addesss;
+            forces[index1] += force;
+            forces[index2] -= force;
+        };
+        // intra-molecular forces
+        for (const Space::Tgroup& group : spc.groups | ranges::cpp20::views::filter(has_internal_force)) {
+            for (auto particle1 = group.begin(); particle1 != group.end(); ++particle1) {
+                for (auto particle2 = particle1; ++particle2 != group.end();) {
+                    update_force(*particle1, *particle2);
+                }
+            }
+        }
+        // inter-molecular forces
+        for (auto group_i = spc.groups.cbegin(); group_i != spc.groups.cend(); ++group_i) {
+            for (auto group_j = group_i; ++group_j != spc.groups.cend();) {
+                for (const auto& particle1 : *group_i) {
+                    for (const auto& particle2 : *group_j) {
+                        update_force(particle1, particle2);
+                    }
+                }
+            }
+        }
+        if constexpr (false) { // this code is disabled!
+            // just a temporary hack; perhaps better to allow PairForce instead of the PairEnergy template
+            assert(forces.size() == spc.p.size() && "the forces size must match the particle size");
+            for (int i = 0; i < (int)spc.p.size() - 1; ++i) {
+                for (int j = i + 1; j < (int)spc.p.size(); ++j) {
+                    const Point f = pair_energy.force(spc.p[i], spc.p[j]);
+                    forces[i] += f;
+                    forces[j] -= f;
+                }
             }
         }
     }

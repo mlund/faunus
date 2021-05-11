@@ -1777,8 +1777,10 @@ void SpaceTrajectory::_to_json(json& j) const { j = {{"file", filename}}; }
 
 void SpaceTrajectory::_to_disk() { stream->flush(); }
 
-VirialPressure::VirialPressure(const json& j, Space& spc, Energy::Energybase& pot) : Analysisbase(spc, "virial") {
+VirialPressure::VirialPressure(const json& j, Space& spc, Energy::Energybase& pot)
+    : Analysisbase(spc, "virial"), pot(pot) {
     pressure_tensor.setZero();
+    forces.resize(spc.p.size(), Point::Zero());
     const auto excluded_molecules = j.value("no_internal", std::vector<std::string>());
     user_excluded_molids = Faunus::names2ids(Faunus::molecules, excluded_molecules);
     std::sort(user_excluded_molids.begin(), user_excluded_molids.end());
@@ -1801,8 +1803,15 @@ VirialPressure::VirialPressure(const json& j, Space& spc, Energy::Energybase& po
 }
 
 void VirialPressure::_sample() {
+    std::fill(forces.begin(), forces.end(), Point::Zero());
+    pot.force(forces);
+
     // contributions from internal pressure
     for (const auto index : groups_with_internal_pressure) {
+        auto [beg, end] = spc.groups[index].to_index(spc.p.begin());
+        for (auto i = beg; beg < end; beg++) {
+            pressure_tensor += spc.p[i].pos * forces[i].transpose();
+        }
         pressure_tensor += group_internal(spc.groups.at(index));
     }
     // contributions from group-group interactions

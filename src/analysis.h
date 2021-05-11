@@ -450,6 +450,9 @@ class VirtualVolumeMove : public PerturbationAnalysisBase {
  * @todo Under construction. Was in Faunus v1 but later abandoned
  */
 class VirialPressure : public Analysisbase {
+  private:
+    PointVector forces;
+    Energy::Energybase& pot;
     Tensor pressure_tensor;
     std::function<Point(const Particle&, const Particle&)> forcefunctor;
     std::vector<int> user_excluded_molids;          //!< User defined molids excluded from internal pressure

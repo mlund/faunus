@@ -5,6 +5,9 @@
 #include "bonds.h"
 #include "spdlog/spdlog.h"
 #include "aux/eigensupport.h"
+#include <functional>
+#include <range/v3/view/transform.hpp>
+#include <range/v3/view/join.hpp>
 
 namespace Faunus {
 
@@ -78,49 +81,75 @@ void to_json(json &j, const MoleculeData &a) {
 
 void MoleculeData::createMolecularConformations(const json &j) {
     assert(j.is_object());
-
     if (auto trajfile = j.value("traj", ""s); not trajfile.empty()) {
         conformations.clear();                                  // remove all previous conformations
-        FormatPQR::loadTrajectory(trajfile, conformations.data); // read traj. from disk
+        if (j.count("structure") != 0) {
+            throw ConfigurationError("`structure` and `traj` are mutually exclusive");
+        }
+        try {
+            FormatPQR::loadTrajectory(trajfile, conformations.data); // read traj. from disk
+            if (bool read_charges = j.value("keepcharges", true); read_charges) {
+                faunus_logger->debug("charges in {} preferred over `atomlist` values", trajfile);
+            } else {
+                faunus_logger->debug("replacing all charges from {} with atomlist values", trajfile);
+                auto all_particles = conformations.data | ranges::cpp20::views::join;
+                Faunus::applyAtomDataCharges(all_particles.begin(), all_particles.end());
+            }
+            // make sure all conformations are initially placed in the center of the box which
+            // in order to reduce PBC problems when inserting later on
+            for (ParticleVector& conformation : conformations.data) {
+                Geometry::translateToOrigin(conformation.begin(), conformation.end());
+            }
+        } catch (std::exception& e) {
+            throw ConfigurationError("error loading {}: {}", trajfile, e.what());
+        }
         if (not conformations.empty()) {
             faunus_logger->debug("{} conformations loaded from {}", conformations.size(), trajfile);
 
             // create atom list
             atoms.clear();
             atoms.reserve(conformations.data.front().size());
-            for (auto &p : conformations.data.front()) // add atoms to atomlist
-                atoms.push_back(p.id);
+            for (const Particle& particle : conformations.data.front()) { // add atoms to atomlist
+                atoms.push_back(particle.id);
+            }
 
             // center mass center for each frame to origo assuming whole molecules
             if (j.value("trajcenter", false)) {
-                faunus_logger->debug("Centering conformations from {}", trajfile);
-                for (auto &p : conformations.data) // loop over conformations
-                    Geometry::translateToOrigin(p.begin(), p.end());
+                faunus_logger->info("centering conformations in {}", trajfile);
+                for (auto& particles : conformations.data) { // loop over conformations
+                    Geometry::translateToOrigin(particles.begin(), particles.end());
+                }
             }
 
-            std::vector<float> weights(conformations.size(), 1.0); // default uniform weight
-            conformations.setWeight(weights.begin(), weights.end());
+            setConformationWeights(j);
 
-            // look for weight file
-            if (auto weightfile = j.value("trajweight", ""s); not weightfile.empty()) {
-                if (std::ifstream f(weightfile); bool(f)) {
-                    weights.clear();
-                    weights.reserve(conformations.size());
-                    float _val;
-                    while (f >> _val)
-                        weights.push_back(_val);
-                    if (weights.size() == conformations.size()) {
-                        faunus_logger->debug("{} weights loaded from {}", conformations.size(), weightfile);
-                        conformations.setWeight(weights.begin(), weights.end());
-                    } else
-                        throw std::runtime_error("Number of weights does not match conformations.");
-                } else
-                    throw std::runtime_error(weightfile + " not found.");
-            }
-        } else
-            throw std::runtime_error(trajfile + " not loaded or empty.");
+        } else {
+            throw ConfigurationError("{} not loaded or empty", trajfile);
+        }
     }
-} // done handling conformations
+}
+void MoleculeData::setConformationWeights(const json& j) {
+    std::vector<float> weights(conformations.size(), 1.0); // default uniform weight
+
+    if (auto filename = j.value("trajweight", ""s); !filename.empty()) {
+        if (std::ifstream stream(filename); stream) {
+            weights.clear();
+            weights.reserve(conformations.size());
+            float weight = 1.0;
+            while (stream >> weight) {
+                weights.push_back(weight);
+            }
+            if (weights.size() != conformations.size()) {
+                throw ConfigurationError("{} conformation weights found while expecting {}", weights.size(),
+                                         conformations.size());
+            }
+            faunus_logger->info("{} weights loaded from {}", weights.size(), filename);
+        } else {
+            throw ConfigurationError("{} not found", filename);
+        }
+    }
+    conformations.setWeight(weights.begin(), weights.end());
+}
 
 TEST_CASE("[Faunus] MoleculeData") {
     //    json j = R"(
@@ -172,8 +201,8 @@ NeighboursGenerator::NeighboursGenerator(const BondVector &bonds) {
 void NeighboursGenerator::createBondMap(const BondVector &bonds) {
     for (auto &bond : bonds.find<Potential::StretchData>()) {
         auto add_bond = [this, &bond](int i, int j) -> void {
-            auto atom_emplaced = bond_map.emplace(bond->index[i], AtomList{}); // find or create empty vector
-            atom_emplaced.first->second.push_back(bond->index[j]); // atom_emplaced.<iterator>-><vector>.push_back()
+            auto atom_emplaced = bond_map.emplace(bond->indices[i], AtomList{}); // find or create empty vector
+            atom_emplaced.first->second.push_back(bond->indices[j]); // atom_emplaced.<iterator>-><vector>.push_back()
         };
         const int head_ndx = 0, tail_ndx = 1;
         add_bond(head_ndx, tail_ndx); // add the bond to the map in both head-tail
@@ -318,12 +347,8 @@ void MoleculeBuilder::from_json(const json &j, MoleculeData &molecule) {
     }
     is_used = true;
     try {
-        if (j.is_object() == false || j.size() != 1) {
-            throw ConfigurationError("invalid json");
-        }
-        auto j_molecule_it = j.items().begin(); // a persistent copy of iterator needed in clang
-        molecule.name = molecule_name = (*j_molecule_it).key();
-        auto &j_properties = (*j_molecule_it).value();
+        const auto& [key, j_properties] = jsonSingleItem(j);
+        molecule.name = molecule_name = key;
         molecule.id() = j_properties.value("id", molecule.id());
         molecule.atomic = j_properties.value("atomic", molecule.atomic);
         molecule.rigid = j_properties.value("rigid", molecule.rigid);
@@ -360,7 +385,8 @@ void MoleculeBuilder::from_json(const json &j, MoleculeData &molecule) {
         //            throw std::runtime_error("unused key(s):\n"s + val.dump() + usageTip["moleculelist"]);
         //        }
     } catch (std::exception &e) {
-        throw std::runtime_error("JSON->molecule " + molecule_name + ": " + e.what());
+        usageTip.pick("moleculelist");
+        throw ConfigurationError("molecule '{}': {}", molecule_name, e.what());
     }
 }
 
@@ -389,14 +415,15 @@ void MoleculeBuilder::readAtomic(const json &j_properties) {
         if (not it->is_array()) {
             throw ConfigurationError("`atoms` must be an array");
         }
-        particles.reserve(it->size());
-        for (auto atom_id : *it) {
-            const auto atom_name = atom_id.get<std::string>();
-            if (auto atom_it = findName(Faunus::atoms, atom_name); atom_it == atoms.end()) {
-                throw ConfigurationError("Unknown atom '{}' in molecule '{}'", atom_name, molecule_name);
-            } else {
-                particles.emplace_back(*atom_it);
+        try {
+            particles.reserve(it->size());
+            for (auto atom_id : *it) {
+                const auto atom_name = atom_id.get<std::string>();
+                const auto atom = findAtomByName(atom_name);
+                particles.emplace_back(atom);
             }
+        } catch (std::exception& e) {
+            throw ConfigurationError("molecule '{}': {}", molecule_name, e.what());
         }
     }
 }
@@ -421,8 +448,8 @@ void MoleculeBuilder::readParticles(const json &j_properties) {
 void MoleculeBuilder::readBonds(const json &j_properties) {
     bonds = j_properties.value("bondlist", bonds);
     auto bond_index_are_external = [&](const auto bond) {
-        return std::any_of(bond->index.begin(), bond->index.end(),
-                           [&](auto &index) { return (index >= particles.size() || index < 0); });
+        return std::any_of(bond->indices.begin(), bond->indices.end(),
+                           [&](auto& index) { return (index >= particles.size() || index < 0); });
     };
     if (std::any_of(bonds.begin(), bonds.end(), bond_index_are_external)) {
         throw ConfigurationError("bonded index out of range");
@@ -434,7 +461,7 @@ void MoleculeBuilder::readFastaBonds(const json &j_properties) {
     Potential::HarmonicBond bond; // harmonic bond
     bond.from_json(j_structure);  // read 'k' and 'req' from json
     for (int i = 1; i < particles.size(); ++i) {
-        bond.index = {i - 1, i};
+        bond.indices = {i - 1, i};
         bonds.push_back<Potential::HarmonicBond>(bond.clone());
     }
 }
@@ -507,28 +534,21 @@ void MoleculeStructureReader::readFile(ParticleVector &particles, const std::str
 
 void MoleculeStructureReader::readArray(ParticleVector &particles, const json &j_particles) {
     particles.reserve(j_particles.size());
-    for (auto &j_particle_wrap : j_particles) {
-        if (!j_particle_wrap.is_object() || j_particle_wrap.size() != 1) {
-            throw ConfigurationError("unrecognized molecule's atom format");
-        }
-        auto j_particle_it = j_particle_wrap.items().begin(); // a persistent copy of iterator needed in clang
-        auto atom_it = findName(atoms, (*j_particle_it).key());
-        if (atom_it == atoms.end()) {
-            throw ConfigurationError("unknown atom '{}' in the molecule.", (*j_particle_it).key());
-        }
-        Point pos = (*j_particle_it).value();
-        particles.emplace_back(*atom_it, pos);
+    for (auto& j_particle : j_particles) {
+        const auto& [key, j_params] = jsonSingleItem(j_particle);
+        const Point pos = j_params;
+        particles.emplace_back(findAtomByName(key), pos);
     }
 }
 
 void MoleculeStructureReader::readFasta(ParticleVector &particles, const json &input) {
-    if (auto it = input.find("fasta"); it == input.end()) {
-        throw ConfigurationError("invalid FASTA format");
-    } else {
+    if (auto it = input.find("fasta"); it != input.end()) {
         std::string fasta = it->get<std::string>();
         Potential::HarmonicBond bond; // harmonic bond
         bond.from_json(input);        // read 'k' and 'req' from json
-        particles = Faunus::fastaToParticles(fasta, bond.req);
+        particles = Faunus::fastaToParticles(fasta, bond.equilibrium_distance);
+    } else {
+        throw ConfigurationError("invalid FASTA format");
     }
 }
 MoleculeStructureReader::MoleculeStructureReader(bool read_charges) : read_charges(read_charges) {}
@@ -537,6 +557,8 @@ void from_json(const json &j, MoleculeData &a) {
     MoleculeBuilder builder;
     builder.from_json(j, a);
 }
+
+size_t MoleculeData::numConformations() const { return conformations.data.size(); }
 
 void from_json(const json &j, std::vector<MoleculeData> &v) {
     v.reserve(v.size() + j.size());
@@ -769,21 +791,41 @@ bool Conformation::empty() const {
     return positions.empty() && charges.empty();
 }
 
-ParticleVector &Conformation::toParticleVector(ParticleVector &p) const {
-    assert(not p.empty() and not empty());
-    // copy positions
-    if (positions.size() == p.size()) {
-        for (size_t i = 0; i < p.size(); ++i) {
-            p[i].pos = positions[i];
-        }
+/**
+ * @param particles Destination particle vector
+ * @throw If there's a size mismatch with destination
+ *
+ * Overwrites positions and charges; remaining properties are untouched
+ */
+void Conformation::copyTo(ParticleVector &particles) const {
+    if (positions.size() != particles.size() or charges.size() != particles.size()) {
+        throw std::runtime_error("conformation size mismatch for positions and/or charges");
     }
-    // copy charges
-    if (charges.size() == p.size()) {
-        for (size_t i = 0; i < p.size(); ++i) {
-            p[i].charge = charges[i];
-        }
-    }
-    return p;
+    /*
+     * Note how `std::ranges::transform` accepts data member pointers like `&Particle::pos`
+     * which are internally accessed using `std::invoke`.
+     */
+    auto particle_positions = particles | ranges::cpp20::views::transform(&Particle::pos);
+    std::copy(positions.begin(), positions.end(), particle_positions.begin());
+
+    auto particle_charges = particles | ranges::cpp20::views::transform(&Particle::charge);
+    std::copy(charges.begin(), charges.end(), particle_charges.begin());
+}
+
+TEST_CASE("[Faunus] Conformation") {
+    Conformation conformation;
+    CHECK(conformation.empty());
+
+    conformation.positions.push_back({1, 2, 3});
+    conformation.charges.push_back(0.5);
+    CHECK(not conformation.empty());
+
+    ParticleVector particles;
+    CHECK_THROWS(conformation.copyTo(particles));
+    particles.resize(1);
+    conformation.copyTo(particles);
+    CHECK(particles[0].pos == Point(1, 2, 3));
+    CHECK(particles[0].charge == 0.5);
 }
 
 ReactionData::Direction ReactionData::getDirection() const { return direction; }
@@ -810,6 +852,24 @@ ReactionData::getReactants() const {
     else
         return {right_atoms, right_molecules};
 }
+
+/**
+ * @return Pair of sets with id's for atoms and molecules participating in the reaction (i.e. reactants & products)
+ */
+std::pair<std::set<int>, std::set<int>> ReactionData::getReactantsAndProducts() const {
+    auto extract_keys = [](const auto &map, std::set<int> &keys) { // map keys --> set
+        std::transform(map.begin(), map.end(), std::inserter(keys, keys.end()), [](auto &pair) { return pair.first; });
+    };
+    std::set<int> atomic, molecular;
+    auto reactants = getReactants();
+    auto products = getProducts();
+    extract_keys(reactants.first, atomic);     // copy atomic reactants to `atomic`.
+    extract_keys(reactants.second, molecular); // copy molecular reactants to `molecular`
+    extract_keys(products.first, atomic);      // same for products, merge into same set
+    extract_keys(products.second, molecular);  // same for products, merge into same set
+    return {atomic, molecular};
+}
+
 void ReactionData::reverseDirection() {
     if (direction == Direction::RIGHT)
         setDirection(Direction::LEFT);
@@ -888,22 +948,8 @@ void to_json(json &j, const ReactionData &reaction) {
                          {"swap_move", a.swap},
                          {"neutral", a.only_neutral_molecules},
                          {"pK'", -a.lnK / std::log(10)}};
-} //!< Serialize to JSON object
-
-TEST_CASE("[Faunus] Conformation") {
-    ParticleVector p(1);
-    Conformation c;
-    CHECK(c.empty());
-
-    c.positions.push_back({1, 2, 3});
-    c.charges.push_back(0.5);
-    CHECK(not c.empty());
-
-    c.toParticleVector(p);
-
-    CHECK(p[0].pos == Point(1, 2, 3));
-    CHECK(p[0].charge == 0.5);
 }
+//!< Serialize to JSON object
 
 TEST_CASE("[Faunus] ReactionData") {
     using doctest::Approx;
@@ -935,5 +981,20 @@ void MoleculeInserter::from_json(const json &) {}
 void MoleculeInserter::to_json(json &) const {}
 
 TEST_SUITE_END();
+
+UnknownMoleculeError::UnknownMoleculeError(const std::string& molecule_name)
+        : std::runtime_error(fmt::format("unknown molecule: '{}'", molecule_name)) {}
+
+
+/**
+ * @throw if molecule not found
+ */
+MoleculeData& findMoleculeByName(const std::string& name) {
+    const auto result = findName(Faunus::molecules, name);
+    if (result == Faunus::molecules.end()) {
+        throw UnknownMoleculeError(name);
+    }
+    return *result;
+}
 
 } // namespace Faunus

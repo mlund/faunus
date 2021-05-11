@@ -6,6 +6,11 @@
 namespace Faunus {
 namespace Move {
 
+/**
+ * @brief Internal exception to carry errors preventing the speciation move.
+ */
+struct SpeciationMoveException : public std::exception {};
+
 void SpeciationMove::_to_json(json &j) const {
     json &_j = j["reactions"];
     _j = json::object();
@@ -30,12 +35,14 @@ void SpeciationMove::setOther(Tspace &other) { other_spc = &other; }
  * one atomic reactant and one atomic product in the reaction.
  *
  * The function checks if there are sufficient atomic and molecular
- * reactants and products to perform the move. If not, false is returned
- * and the system is left untouched.
+ * reactants and products to perform the move. If not, an exception is
+ * thrown and the system is left untouched.
+ *
+ * @throw SpeciationMoveException  when atomic swap cannot be performed
  *
  * @todo If particle has extended properties, make sure to copy the state of those
  */
-bool SpeciationMove::atomicSwap(Change &change) {
+void SpeciationMove::atomicSwap(Change &change) {
     if (reaction->swap) {
         [[maybe_unused]] auto [atomic_products, molecular_products] = reaction->getProducts();
         [[maybe_unused]] auto [atomic_reactants, molecular_reactants] = reaction->getReactants();
@@ -44,7 +51,7 @@ bool SpeciationMove::atomicSwap(Change &change) {
 
         auto atomlist = spc.findAtoms(atomic_reactants.begin()->first); // search all active molecules
         if (ranges::cpp20::empty(atomlist)) { // Make sure that there are any active atoms to swap
-            return false;                     // Slip out the back door
+            throw SpeciationMoveException();
         }
 
         if (!molecular_reactants.empty()) {          // enough molecular reactants?
@@ -54,12 +61,12 @@ bool SpeciationMove::atomicSwap(Change &change) {
                 auto mollist = spc.findMolecules(molid, Tspace::ALL); // look for a single atomic group
                 assert(range_size(mollist) == 1);
                 if (mollist.begin()->empty()) {
-                    return false;
+                    throw SpeciationMoveException();
                 }
             } else { // reactant is a molecular group
                 auto mollist = spc.findMolecules(molid, Tspace::ACTIVE);
                 if (range_size(mollist) < N) {
-                    return false;
+                    throw SpeciationMoveException();
                 }
             }
         }
@@ -71,12 +78,12 @@ bool SpeciationMove::atomicSwap(Change &change) {
                 auto mollist = spc.findMolecules(molid, Tspace::ALL);
                 assert(range_size(mollist) == 1);
                 if (mollist.begin()->capacity() - mollist.begin()->size() < N) {
-                    return false;
+                    throw SpeciationMoveException();
                 }
             } else { // we're producing a molecular group
                 auto mollist = spc.findMolecules(molid, Tspace::INACTIVE);
                 if (range_size(mollist) < N) {
-                    return false;
+                    throw SpeciationMoveException();
                 }
             }
         }
@@ -98,7 +105,6 @@ bool SpeciationMove::atomicSwap(Change &change) {
         *random_particle = p; // copy new particle onto old particle
         assert(random_particle->id == atomid);
     }
-    return true;
 }
 
 /**
@@ -156,8 +162,8 @@ Change::data SpeciationMove::deactivateMolecularGroup(Space::Tgroup &target) {
     // Store internal bond energy of the deactivated molecule
     for (auto &bond : Faunus::molecules.at(target.id).bonds) {
         auto bond_clone = bond->clone();
-        bond_clone->shift(std::distance(spc.p.begin(), target.begin()));
-        Potential::setBondEnergyFunction(bond_clone, spc.p);
+        bond_clone->shiftIndices(std::distance(spc.p.begin(), target.begin()));
+        bond_clone->setEnergyFunction(spc.p);
         bond_energy += bond_clone->energyFunc(spc.geo.getDistanceFunc());
     }
 
@@ -227,8 +233,8 @@ Change::data SpeciationMove::activateMolecularGroup(Space::Tgroup &target) {
     // Store internal bond energy of activated molecule
     for (auto &bond : Faunus::molecules[target.id].bonds) {
         auto bondclone = bond->clone();
-        bondclone->shift(std::distance(spc.p.begin(), target.begin()));
-        Potential::setBondEnergyFunction(bondclone, spc.p);
+        bondclone->shiftIndices(std::distance(spc.p.begin(), target.begin()));
+        bondclone->setEnergyFunction(spc.p);
         bond_energy -= bondclone->energyFunc(spc.geo.getDistanceFunc());
     }
 
@@ -242,7 +248,12 @@ Change::data SpeciationMove::activateMolecularGroup(Space::Tgroup &target) {
     return d;
 }
 
-bool SpeciationMove::activateAllProducts(Change &change) {
+/**
+ * @brief Activate all atomic and molecular products.
+ *
+ * @throw SpeciationMoveException  when maximal capacity for products is exceeded
+ */
+void SpeciationMove::activateAllProducts(Change &change) {
     auto [atomic_products, molecular_products] = reaction->getProducts();
 
     // First we need to check if there are enough inactive products
@@ -256,7 +267,7 @@ bool SpeciationMove::activateAllProducts(Change &change) {
                 if (mollist.begin()->size() + number_to_insert > mollist.begin()->capacity()) {
                     faunus_logger->warn("atomic molecule {} is full; increase capacity?",
                                         Faunus::molecules[molid].name);
-                    return false;
+                    throw SpeciationMoveException();
                 }
             } else {
                 assert(false); // we should never reach here
@@ -270,7 +281,7 @@ bool SpeciationMove::activateAllProducts(Change &change) {
             if (molecules_to_activate.size() != number_to_insert) {
                 faunus_logger->warn("maximum number of {} molecules reached; increase capacity?",
                                     Faunus::molecules[molid].name);
-                return false;
+                throw SpeciationMoveException();
             }
         }
     }
@@ -311,35 +322,31 @@ bool SpeciationMove::activateAllProducts(Change &change) {
             }
         }
     }
-    return true;
 }
 
 /**
- * If possible, deactivate all atomic and molecular reactants.
+ * @brief Deactivate all atomic and molecular reactants.
  *
- * If impossible due to lack of reactant - either
- * implicit or explicit - the function returns `false`.
+ * @throw SpeciationMoveException  when impossible due to the lack of reactant – either implicit or explicit
  */
-bool SpeciationMove::deactivateAllReactants(Change &change) {
-
+void SpeciationMove::deactivateAllReactants(Change &change) {
     if (not enoughImplicitMolecules()) {
-        return false;
+        throw SpeciationMoveException();
     }
 
     auto [atomic_reactants, molecular_reactants] = reaction->getReactants();
-
     // check (only!) if there are anything to deactivate
     for (auto [molid, N_delete] : molecular_reactants) { // Delete
         if (N_delete <= 0 or Faunus::molecules[molid].isImplicit()) {
             continue;                         // implicit molecules are added/deleted after move
-        } else if (molecules[molid].atomic) { // reactant is an atomic group
+        } else if (Faunus::molecules[molid].atomic) { // reactant is an atomic group
             auto mollist = spc.findMolecules(molid, Tspace::ALL);
             assert(range_size(mollist) == 1);
             auto target = spc.findMolecules(molid, Tspace::ALL).begin();
             if ((int)target->size() - N_delete < 0) {
                 faunus_logger->warn("atomic group {} is depleted; increase simulation volume?",
                                     Faunus::molecules[molid].name);
-                return false;
+                throw SpeciationMoveException();
             }
         } else { // molecular reactant (non-atomic)
             auto selection = (reaction->only_neutral_molecules) ? Tspace::ACTIVE_NEUTRAL : Tspace::ACTIVE;
@@ -348,7 +355,7 @@ bool SpeciationMove::deactivateAllReactants(Change &change) {
             std::sample(active.begin(), active.end(), std::back_inserter(molecules_to_deactivate), N_delete,
                         slump.engine); // pick random molecules to delete
             if (molecules_to_deactivate.size() != N_delete) {
-                return false;
+                throw SpeciationMoveException();
             }
         }
     }
@@ -387,57 +394,52 @@ bool SpeciationMove::deactivateAllReactants(Change &change) {
                     faunus_logger->warn("all {} molecules have been deleted; increase system volume?",
                                         Faunus::molecules[molid].name);
                 }
-                return false;
+                throw SpeciationMoveException();
             }
         }
     }
-    return true;
 }
 
 /**
  * Checks if there is enough implicit molecules to carry out the reaction
  */
 bool SpeciationMove::enoughImplicitMolecules() const {
-    auto tooSmall = [&](auto &i) {                                // check if species has enough implicit
+    auto isExhausted = [&](auto &i) {                             // check if species has enough implicit
         auto [molid, nu] = i;                                     // molid and stoichiometric coefficient
         if (Faunus::molecules[molid].isImplicit()) {              // matter to perform process
             assert(spc.getImplicitReservoir().count(molid) == 1); // must be registered in space!
-            if (spc.getImplicitReservoir()[molid] - nu < 0) {
-                return true; // nope, no more material
-            }
+            return nu > spc.getImplicitReservoir()[molid];        // not enough material?
+        } else {
+            return false;                                         // non-implicit molecules cannot be exhausted
         }
-        return false;
     };
 
     [[maybe_unused]] auto [atomic_reactants, molecular_reactants] = reaction->getReactants();
 
-    if (std::count_if(molecular_reactants.begin(), molecular_reactants.end(), tooSmall) > 0) {
-        return false;
-    } else {
-        return true;
-    }
+    return std::find_if(molecular_reactants.begin(), molecular_reactants.end(), isExhausted) ==
+           molecular_reactants.end(); // no molecule exhausted?
 }
 
 void SpeciationMove::_move(Change &change) {
     assert(other_spc != nullptr);        // knowledge of other space should be provided by now
-    if (not Faunus::reactions.empty()) { // global list of reactions
+    try {
+        if (Faunus::reactions.empty()) {     // global list of reactions
+            throw SpeciationMoveException();
+        }
         reaction = slump.sample(Faunus::reactions.begin(), Faunus::reactions.end());    // random reaction
         auto direction = static_cast<ReactionData::Direction>((char)slump.range(0, 1)); // random direction
         reaction->setDirection(direction);
         bond_energy = 0.0;
-        if (atomicSwap(change)) {
-            if (deactivateAllReactants(change)) {
-                if (activateAllProducts(change)) {
-                    if (!change.empty()) {
-                        change.dN = true; // Attempting to change the number of atoms / molecules
-                        std::sort(change.groups.begin(), change.groups.end()); // change groups *must* be sorted!
-                        return;
-                    }
-                }
-            }
+        atomicSwap(change);
+        deactivateAllReactants(change);
+        activateAllProducts(change);
+        if (!change.empty()) {
+            change.dN = true; // Attempting to change the number of atoms / molecules
+            std::sort(change.groups.begin(), change.groups.end()); // change groups *must* be sorted!
         }
+    } catch(SpeciationMoveException &) {
+        change.clear();
     }
-    change.clear();
 }
 
 double SpeciationMove::bias(Change &, double, double) {
@@ -491,10 +493,10 @@ void SpeciationMove::_reject(Change &) {
     }
 }
 
-SpeciationMove::SpeciationMove(Tspace &spc) : spc(spc) {
-    name = "rcmc";
-    cite = "doi:10/fqcpg3";
-}
+SpeciationMove::SpeciationMove(Space& spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {}
+
+SpeciationMove::SpeciationMove(Space &spc) : SpeciationMove(spc, "rcmc", "doi:10/fqcpg3") {}
+
 void SpeciationMove::_from_json(const json &) {}
 
 } // end of namespace Move

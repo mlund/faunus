@@ -7,6 +7,7 @@
 #include <Eigen/Geometry>
 #include <iostream>
 #include <cereal/types/base_class.hpp>
+#include <spdlog/spdlog.h>
 
 /** @brief Faunus main namespace */
 namespace Faunus {
@@ -48,14 +49,15 @@ NLOHMANN_JSON_SERIALIZE_ENUM(VolumeMethod, {{VolumeMethod::INVALID, nullptr},
                                             {VolumeMethod::Z, "z"}})
 
 enum Coordinates { ORTHOGONAL, ORTHOHEXAGONAL, TRUNC_OCTAHEDRAL, NON3D };
-enum Boundary { FIXED, PERIODIC };
+enum class Boundary : int { FIXED = 0, PERIODIC = 1 };
 
 /**
  * @brief A structure containing a type of boundary condition in each direction.
  *
  * A stub. It can be extended to fully json-configurable boundary conditions.
  */
-struct BoundaryCondition {
+class BoundaryCondition {
+  public:
     using BoundaryXYZ = Eigen::Matrix<Boundary, 3, 1>;
     // typedef std::pair<std::string, BoundaryXYZ> BoundaryName;
     // static const std::map<std::string, BoundaryXYZ> names; //!< boundary names
@@ -63,11 +65,14 @@ struct BoundaryCondition {
     Coordinates coordinates;
     BoundaryXYZ direction;
 
-    template <class Archive> void serialize(Archive &archive) {
+    template <class Archive> void serialize(Archive& archive) {
         archive(coordinates, direction);
     } //!< Cereal serialisation
 
-    BoundaryCondition(Coordinates coordinates = ORTHOGONAL, BoundaryXYZ boundary = {FIXED, FIXED, FIXED})
+    Eigen::Matrix<bool, 3, 1> isPeriodic() const;
+
+    BoundaryCondition(Coordinates coordinates = ORTHOGONAL,
+                      BoundaryXYZ boundary = {Boundary::FIXED, Boundary::FIXED, Boundary::FIXED})
         : coordinates(coordinates), direction(boundary){};
 };
 
@@ -185,6 +190,7 @@ class Sphere : public GeometryImplementation {
     void from_json(const json &j) override;
     void to_json(json &j) const override;
     Sphere(double radius = 0.0);
+    double getRadius() const;
 
     std::unique_ptr<GeometryImplementation> clone() const override {
         return std::make_unique<Sphere>(*this);
@@ -328,7 +334,7 @@ class TruncatedOctahedron : public GeometryImplementation {
 class Chameleon : public GeometryBase {
   private:
     Point len_or_zero = {0, 0, 0}; //!< Box length (if PBC) or zero (if no PBC) in given direction
-    Point len, len_half, len_inv; //!< Cached box dimensions, their half-values, and reciprocal values.
+    Point len, len_half, len_inv;  //!< Cached box dimensions, their half-values, and reciprocal values.
     std::unique_ptr<GeometryImplementation> geometry = nullptr; //!< A concrete geometry implementation.
     Variant _type;                                              //!< Type of concrete geometry.
     std::string _name;                                          //!< Name of concrete geometry, e.g., for json.
@@ -385,15 +391,15 @@ inline bool Chameleon::collision(const Point &a) const {
 inline void Chameleon::boundary(Point &a) const {
     const auto &boundary_conditions = geometry->boundary_conditions;
     if (boundary_conditions.coordinates == ORTHOGONAL) {
-        if (boundary_conditions.direction.x() == PERIODIC) {
+        if (boundary_conditions.direction.x() == Boundary::PERIODIC) {
             if (std::fabs(a.x()) > len_half.x())
                 a.x() -= len.x() * anint(a.x() * len_inv.x());
         }
-        if (boundary_conditions.direction.y() == PERIODIC) {
+        if (boundary_conditions.direction.y() == Boundary::PERIODIC) {
             if (std::fabs(a.y()) > len_half.y())
                 a.y() -= len.y() * anint(a.y() * len_inv.y());
         }
-        if (boundary_conditions.direction.z() == PERIODIC) {
+        if (boundary_conditions.direction.z() == Boundary::PERIODIC) {
             if (std::fabs(a.z()) > len_half.z())
                 a.z() -= len.z() * anint(a.z() * len_inv.z());
         }
@@ -407,19 +413,19 @@ inline Point Chameleon::vdist(const Point &a, const Point &b) const {
     const auto &boundary_conditions = geometry->boundary_conditions;
     if (boundary_conditions.coordinates == ORTHOGONAL) {
         distance = a - b;
-        if (boundary_conditions.direction.x() == PERIODIC) {
+        if (boundary_conditions.direction.x() == Boundary::PERIODIC) {
             if (distance.x() > len_half.x())
                 distance.x() -= len.x();
             else if (distance.x() < -len_half.x())
                 distance.x() += len.x();
         }
-        if (boundary_conditions.direction.y() == PERIODIC) {
+        if (boundary_conditions.direction.y() == Boundary::PERIODIC) {
             if (distance.y() > len_half.y())
                 distance.y() -= len.y();
             else if (distance.y() < -len_half.y())
                 distance.y() += len.y();
         }
-        if (boundary_conditions.direction.z() == PERIODIC) {
+        if (boundary_conditions.direction.z() == Boundary::PERIODIC) {
             if (distance.z() > len_half.z())
                 distance.z() -= len.z();
             else if (distance.z() < -len_half.z())
@@ -461,8 +467,8 @@ enum class weight { MASS, CHARGE, GEOMETRIC };
  * @param apply_boundary Boundary function to apply PBC (default: no PBC)
  * @param weight_function Functor return weight for a given particle
  * @param shift Shift by this vector before calculating center, then add again. For PBC removal; default: 0,0,0
- * @return Center position
- * @throws if the sum of weights is zero, thereby hampering normalization
+ * @return Center position; (0,0,0) if the sum of weights is zero
+ * @throw warning if the sum of weights is zero, thereby hampering normalization
  */
 template <typename iterator, typename weightFunc>
 Point anyCenter(iterator begin, iterator end, BoundaryFunction apply_boundary, const weightFunc &weight_function,
@@ -481,7 +487,8 @@ Point anyCenter(iterator begin, iterator end, BoundaryFunction apply_boundary, c
         apply_boundary(center);
         return center;
     } else {
-        throw std::runtime_error("cannot calculate center with zero weights");
+        faunus_logger->warn("warning: sum of weights is 0! setting center to (0,0,0)");
+        return Point::Zero();
     }
 } //!< Mass, charge, or geometric center of a collection of particles
 
@@ -544,7 +551,7 @@ void translateToOrigin(
 template <typename iterator>
 void rotate(
     iterator begin, iterator end, const Eigen::Quaterniond &quaternion,
-    BoundaryFunction apply_boundary = [](Point &) {}, const Point &shift = Point(0.0, 0.0, 0.0)) {
+    BoundaryFunction apply_boundary = [](Point &) {}, const Point &shift = Point::Zero()) {
     const auto rotation_matrix = quaternion.toRotationMatrix(); // rotation matrix
     std::for_each(begin, end, [&](auto &particle) {
         particle.rotate(quaternion, rotation_matrix); // rotate internal coordinates
@@ -605,7 +612,7 @@ Tensor gyration(
     iterator begin, iterator end, const Point &mass_center, const BoundaryFunction boundary = [](auto &) {}) {
     Tensor S = Tensor::Zero();
     double total_mass = 0.0;
-    std::for_each(begin, end, [&](auto &particle) {
+    std::for_each(begin, end, [&](const auto &particle) {
         const auto mass = particle.traits().mw;
         Point r = particle.pos - mass_center; // get rid...
         boundary(r);                          // ...of PBC (if any)
@@ -620,6 +627,64 @@ Tensor gyration(
 }
 
 /**
+ * @brief Calculates a gyration tensor of a range of particles
+ *
+ * The gyration tensor is computed from the atomic position vectors with respect to the reference point
+ * which is always a center of mass,
+ * \f$ t_{i} = r_{i} - r_\mathrm{cm} \f$:
+ * \f$ S = (1 / \sum_{i=1}^{N} m_{i}) \sum_{i=1}^{N} m_{i} t_{i} t_{i}^{T} \f$
+ *
+ * Before the calculation, the molecule is made whole to moving it to the center or the
+ * simulation box (0,0,0), then apply the given boundary function.
+ *
+ * @param begin Iterator to first position
+ * @param end Iterator to past last position
+ * @param mass Iterator to first mass
+ * @param mass_center The mass center used as reference and to remove PBC
+ * @param boundary Function to apply periodic boundary functions (default: none)
+ * @return gyration tensor; or zero tensor if empty particle range
+ * @throws If total mass is non-positive
+ */
+template <typename position_iterator, typename mass_iterator>
+Tensor gyration(
+    position_iterator begin, position_iterator end, mass_iterator mass, const Point &mass_center,
+    const BoundaryFunction boundary = [](auto &) {}) {
+    Tensor S = Tensor::Zero();
+    double total_mass = 0.0;
+    std::for_each(begin, end, [&](const auto &position) {
+        Point r = position - mass_center; // get rid...
+        boundary(r);                      // ...of PBC (if any)
+        S += (*mass) * r * r.transpose();
+        total_mass += (*mass);
+        std::advance(mass, 1);
+    });
+    if (total_mass > 0.0) {
+        return S / total_mass;
+    } else {
+        throw std::runtime_error("gyration tensor: total mass must be positive");
+    }
+}
+
+/**
+ * @brief Shape descriptors derived from gyration tensor
+ *
+ * The class is prepared with operator overloads to work with `AverageObj`
+ * for averaging over multiple tensors
+ */
+struct ShapeDescriptors {
+    double gyration_radius_squared = 0.0;
+    double asphericity = 0.0;
+    double acylindricity = 0.0;
+    double relative_shape_anisotropy = 0.0; //!< relative shape anisotropy, kappa^2 (0=rod, 1=spherical)
+    ShapeDescriptors() = default;
+    ShapeDescriptors(const Tensor &gyration_tensor);             //!< Construct using an initial gyration tensor
+    ShapeDescriptors &operator+=(const ShapeDescriptors &other); //!< Add another gyration tensor; req. for averaging
+    ShapeDescriptors operator*(const double scale) const;        //!< Scale data; req. for averaging
+};
+
+void to_json(json &j, const ShapeDescriptors &shape); //!< Store Shape as json object
+
+/**
  * @brief Calculates an inertia tensor of a molecular group
  *
  * The inertia tensor is computed from the atomic position vectors with respect to a reference point,
@@ -630,8 +695,8 @@ Tensor gyration(
  * @return inertia tensor (a zero tensor for an empty group)
  */
 template <typename iter>
-Tensor inertia(iter begin, iter end, const Point origin = {0,0,0},
-        const BoundaryFunction boundary = [](const Point &) {}) {
+Tensor inertia(
+    iter begin, iter end, const Point origin = {0, 0, 0}, const BoundaryFunction boundary = [](const Point &) {}) {
     Tensor I = Tensor::Zero();
     for (auto it = begin; it != end; ++it) {
         Point t = it->pos - origin;

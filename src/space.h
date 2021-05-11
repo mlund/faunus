@@ -35,12 +35,12 @@ struct Change {
     std::vector<data> groups; //!< Touched groups by index in group vector
 
     //! List of moved groups (index)
-    inline auto touchedGroupIndex() {
-        return ranges::cpp20::views::transform(groups, [](data &i) -> int { return i.index; });
+    inline auto touchedGroupIndex() const {
+        return ranges::cpp20::views::transform(groups, [](const data &i) -> int { return i.index; });
     }
 
     //! List of changed atom index relative to first particle in system
-    std::vector<int> touchedParticleIndex(const std::vector<Group<Particle>> &);
+    std::vector<int> touchedParticleIndex(const std::vector<Group<Particle>> &) const;
 
     void clear();                                                 //!< Clear all change data
     bool empty() const;                                           //!< Check if change object is empty
@@ -98,6 +98,9 @@ class Space {
     Point scaleVolume(double, Geometry::VolumeMethod = Geometry::ISOTROPIC); //!< Scales atoms, molecules, container
     Tgvec::iterator randomMolecule(int, Random &, Selection = ACTIVE);       //!< Random group matching molid
     json info();
+
+    int getGroupIndex(const Tgroup& group) const;         //!< Get index of given group in the group vector
+    int getFirstParticleIndex(const Tgroup& group) const; //!< Index of first particle in group
 
     /**
      * @brief Update particles in Space from a source range
@@ -214,19 +217,19 @@ class Space {
         return groups | ranges::cpp20::views::filter(f);
     }
 
-    auto findAtoms(int atomid) {
-        return p | ranges::cpp20::views::filter([&, atomid](const Particle &i) {
-                   if (i.id == atomid)
-                       for (const auto &g : groups)
-                           if (g.contains(i, false))
-                               return true;
-                   return false;
-               });
-    } //!< Range with all active atoms of type `atomid` (complexity: order N)
-
     auto activeParticles() {
         return groups | ranges::cpp20::views::join;
     } //!< Returns range with all *active* particles in space
+
+    /**
+     * @brief Find active atoms of type `atomid` (complexity: order N)
+     * @param atomid Atom id to look for
+     * @return Range of filtered particles
+     */
+    auto findAtoms(const int atomid) {
+        return activeParticles() |
+               ranges::cpp20::views::filter([atomid](const Particle& particle) { return particle.id == atomid; });
+    }
 
     /**
      * @brief Count number of molecules matching criteria
@@ -290,7 +293,7 @@ class InsertMoleculesInSpace {
  * more efficient and is left here as an example of implementing a custom,
  * non-linear iterator.
  */
-struct getActiveParticles {
+struct ActiveParticles {
     const Space &spc;
     class const_iterator {
       private:
@@ -303,14 +306,15 @@ struct getActiveParticles {
       public:
         const_iterator(const Space &spc, Tparticle_iter it);
         const_iterator operator++();
-        bool operator!=(const const_iterator &other) const { return particle_iter != other.particle_iter; }
+        auto get() const { return std::pair{std::distance(particle_iter, spc.p.begin()), *particle_iter}; }
         auto operator*() const { return *particle_iter; }
+        bool operator!=(const const_iterator &other) const { return particle_iter != other.particle_iter; }
     }; // enable range-based for loops
 
     const_iterator begin() const;
     const_iterator end() const;
     size_t size() const;
-    getActiveParticles(const Space &spc);
+    ActiveParticles(const Space &spc);
 };
 
 // Make a global alias to easy transition to non-templated code

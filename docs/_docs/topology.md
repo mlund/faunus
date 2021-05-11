@@ -117,12 +117,12 @@ Properties of molecules and their default values:
 `insdir=[1,1,1]`        | Insert directions are scaled by this
 `insoffset=[0,0,0]`     | Shifts mass center after insertion
 `keeppos=false`         | Keep original positions of `structure`
-`keepcharges=true`      | Keep original charges of `structure` (aam/pqr files)
+`keepcharges=true`      | Keep charges of `structure` (aam/pqr files) and `traj` even if mismatch with those in `atomlist`
 `rigid=false`           | Set to true for rigid molecules. Affects energy evaluation.
 `rotate=true`           | If false, the original structure will not be rotated upon insertion
 `structure`             | Structure file or direct information; required if `atomic=false`
 `to_disk=false`         | Save initial structure to `{name}-initial.pqr`; for molecular groups only
-`traj`                  | Read conformations from PQR trajectory (`structure` will be ignored)
+`traj`                  | Read conformations from PQR trajectory. Cannot be used w. `structure`; see also `keepcharges`
 `trajweight`            | One-column file with relative weights for each conformation. Must match frames in `traj` file.
 `trajcenter=false`      | Move CM of conformations to the origin assuming whole molecules
 

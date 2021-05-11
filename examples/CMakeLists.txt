@@ -34,7 +34,7 @@ add_test(
 
 add_test(
         NAME penalty
-        COMMAND sh -c "jupyter nbconvert --execute penalty.ipynb --ExecutePreprocessor.timeout=None"
+        COMMAND sh -c "jupyter nbconvert --to html --execute penalty.ipynb --ExecutePreprocessor.timeout=None"
         WORKING_DIRECTORY ${EXAMPLES_DIR}/penalty)
 set_property(TEST penalty APPEND PROPERTY ENVIRONMENT FAUNUS_EXECUTABLE=$<TARGET_FILE:faunus>)
 set_property(TEST penalty APPEND PROPERTY ENVIRONMENT YASON_EXECUTABLE=${YASON})
@@ -42,7 +42,7 @@ set_property(TEST penalty APPEND PROPERTY ENVIRONMENT YASON_EXECUTABLE=${YASON})
 if (ENABLE_MPI)
     add_test(
         NAME temper
-        COMMAND sh -c "jupyter nbconvert --execute temper.ipynb --ExecutePreprocessor.timeout=None"
+        COMMAND sh -c "jupyter nbconvert --to html --execute temper.ipynb --ExecutePreprocessor.timeout=None"
         WORKING_DIRECTORY ${EXAMPLES_DIR}/temper)
     set_property(TEST temper APPEND PROPERTY ENVIRONMENT FAUNUS_EXECUTABLE=$<TARGET_FILE:faunus>)
     set_property(TEST temper APPEND PROPERTY ENVIRONMENT MPIEXEC=${MPIEXEC_EXECUTABLE})
@@ -50,14 +50,14 @@ endif()
 
 add_test(
         NAME multipole
-        COMMAND sh -c "jupyter nbconvert --execute multipole.ipynb --ExecutePreprocessor.timeout=None"
+        COMMAND sh -c "jupyter nbconvert --to html --execute multipole.ipynb --ExecutePreprocessor.timeout=None"
         WORKING_DIRECTORY ${EXAMPLES_DIR}/multipole)
 set_property(TEST multipole APPEND PROPERTY ENVIRONMENT FAUNUS_EXECUTABLE=$<TARGET_FILE:faunus>)
 set_property(TEST multipole APPEND PROPERTY ENVIRONMENT YASON_EXECUTABLE=${YASON})
 
 add_test(
         NAME virial
-        COMMAND sh -c "jupyter nbconvert --execute virial.ipynb --ExecutePreprocessor.timeout=None"
+        COMMAND sh -c "jupyter nbconvert --to html --execute virial.ipynb --ExecutePreprocessor.timeout=None"
         WORKING_DIRECTORY ${EXAMPLES_DIR}/virial)
 set_property(TEST virial APPEND PROPERTY ENVIRONMENT FAUNUS_EXECUTABLE=$<TARGET_FILE:faunus>)
 set_property(TEST virial APPEND PROPERTY ENVIRONMENT YASON_EXECUTABLE=${YASON})
@@ -163,7 +163,7 @@ add_test(
         COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} cluster-ideal.yml\
     | $<TARGET_FILE:faunus> --quiet\
     && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} cluster-ideal.out.json out.json --tol 0.01"
-        WORKING_DIRECTORY ${EXAMPLES_DIR}/cluster)
+        WORKING_DIRECTORY ${EXAMPLES_DIR}/cluster-ideal)
 
 add_test(
         NAME bulk
@@ -178,7 +178,7 @@ add_test(
         COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} bulk-replay.yml\
     | $<TARGET_FILE:faunus> --quiet \
     ; diff -q ../bulk/traj.xtc traj.xtc \
-    && ${CSV_COMPARE} -q --tol 0.04 --small 0.1 ../bulk/rdf.dat rdf.dat"
+    && ${CSV_COMPARE} -q --tol 0.05 --small 0.1 ../bulk/rdf.dat rdf.dat"
         WORKING_DIRECTORY ${EXAMPLES_DIR}/bulk-replay)
 set_property(TEST bulk-replay PROPERTY FIXTURES_REQUIRED bulk)
 
@@ -201,6 +201,14 @@ add_test(
     | $<TARGET_FILE:faunus> --quiet --state membrane.state.json\
     && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} membrane.out.json out.json --tol 0.065"
         WORKING_DIRECTORY ${EXAMPLES_DIR}/membrane)
+
+add_test(
+        NAME widom
+        COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} widom.yml\
+    | $<TARGET_FILE:faunus> --nobar \
+    && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} widom.out.json out.json --tol 0.01"
+        WORKING_DIRECTORY ${EXAMPLES_DIR}/widom)
+
 
 install(FILES
         ${EXAMPLES_DIR}/README.md
@@ -275,4 +283,6 @@ install(FILES
         ${EXAMPLES_DIR}/calciumhydroxide_molecular/calciumhydroxide_molecular.out.json
         ${EXAMPLES_DIR}/calciumhydroxide_molecular/calciumhydroxide_molecular.state.json
         ${EXAMPLES_DIR}/water/ewald.yml
+        ${EXAMPLES_DIR}/widom/widom.yml
+        ${EXAMPLES_DIR}/widom/widom.out.json
         DESTINATION share/faunus/examples)

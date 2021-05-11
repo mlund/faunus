@@ -158,7 +158,7 @@ properties:
                     keeppos: {type: boolean, default: false, description: Keep original positions of `structure`}
                     keepcharges: {type: boolean, default: true, description: Keep original charges of `structure` (aam/pqr files)}
                     rigid: {type: boolean, default: false, description: Set to true for rigid molecules. Affects energy evaluation}
-                    rotate: {type: boolean, default: true, description: Rotate structure upon insertion?}
+                    rotate: {type: boolean, default: true, description: "Rotate structure upon insertion?"}
                     structure:
                         description: Structure file or direct information; required if `atomic=false`
                         anyOf:
@@ -524,7 +524,7 @@ properties:
                     description: "External Custom Potential"
                     type: object
                     properties:
-                        com: {type: boolean, default: false, description: Operate on mass-center instead of individual atoms?}
+                        com: {type: boolean, default: false, description: "Operate on mass-center instead of individual atoms?"}
                         constants: {type: object, description: User-defined constants}
                         function: {type: string, description: Mathematical expression for the potential (units of kT)}
                         molecules:
@@ -582,9 +582,11 @@ properties:
                         P/atm: {type: number, description: Pressure in atmospheres}
                         type: object
                     oneof:
+                        - required: [P/atm]
+                        - required: [P/bar]
+                        - required: [P/kT]
                         - required: [P/mM]
                         - required: [P/Pa]
-                        - required: [P/atm]
                     additionalProperties: false
                 confine:
                     description: "Geometrical confinement"
@@ -640,6 +642,11 @@ properties:
                         molecule: {type: string, description: Molecule name to operate on}
                         repeat: {type: [integer, string], description: Number of repeats per MC sweep}
                         keeppos: {type: boolean, default: true, description: Keep original positions from trajectory}
+                        copy_policy:
+                            type: string
+                            default: all
+                            enum: [all, positions, charges]
+                            description: "Data to copy from library: all, positions, charges"
                     additionalProperties: false
 
                 moltransrot:
@@ -669,6 +676,7 @@ properties:
                     properties:
                         molecule: {type: string}
                         repeat: {type: [integer, string]}
+                        energy_resolution: {type: number, minimum: 0, description: "resolution of energy histogram"}
                         dir:
                             items: {type: number}
                             type: array
@@ -722,6 +730,15 @@ properties:
                             items: {type: string}
                             type: array
                         spread: {type: boolean}
+                        analysis:
+                            type: object
+                            description: "Shape analysis"
+                            additionalProperties: false
+                            properties:
+                                com: {type: boolean, default: true, description: "Use group COM positions or particle positions"}
+                                save_pqr: {type: boolean, default: false, description: "Save PQR files of clusters"}
+                                file: {type: string, description: "Output file for per-move analysis"}
+                                interval: {type: integer, default: 10, description: "Interval between samples"}
                         single_layer:
                             type: boolean
                             default: false
@@ -777,6 +794,8 @@ properties:
                         name2: {type: string}
                         dim: {type: integer, minimum: 1, maximum: 3, default: 3}
                         nstep: {type: integer}
+                        slicedir: {type: array, items: {type: number}, default: [1,1,1], description: Direction along which the 3D, quasi-2D or quasi-1D RDF is calculated, minItems: 3, maxItems: 3}
+                        thickness: {type: number, description: Thickness of the slab or radius of the cylinder orthogonal to dir in the calculation of quasi-2D or quasi-1D RDFs}
                         nskip: {type: integer, default: 0, description: Initial steps to skip}
                     required: [dr, file, name1, name2, nstep]
                     additionalProperties: false
@@ -1001,15 +1020,15 @@ properties:
                     description: "Virtual molecule translation"
                     properties:
                         molecule: {type: string, description: Molecule name to virtually translate (there can be only one}
-                        file: {type: string, description: Output filename w. data as a function of steps}
+                        file: {type: string, description: "Output filename w. data as a function of steps (.dat, .dat.gz)", pattern: "(.*?)\\.(dat|dat.gz)$"}
                         dir:
                             type: array
                             items: {type: number}
                             minItems: 3
                             maxItems: 3
                             default: [0,0,1]
-                            description: Translation directions (length unimportant)
-                        dL: {type: number, description: Displacement distance}
+                            description: Translation directions (will be scaled to unit-vector)
+                        dL: {type: number, description: Displacement distance along `dir`}
                         nstep: {type: integer, description: Interval between samples}
                         nskip: {type: integer, default: 0, description: Number of steps to initially skip}
                     required: [dL, molecule, nstep]

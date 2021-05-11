@@ -72,16 +72,22 @@ Upon MC movement, the mean squared displacement will be tracked.
 
 ### Atomic
 
-`transrot`       |  Description
----------------- |  ---------------------------------
-`molecule`       |  Molecule name to operate on
-`dir=[1,1,1]`    |  Translational directions
+`transrot`          |  Description
+------------------- |  ---------------------------------
+`molecule`          |  Molecule name to operate on
+`dir=[1,1,1]`       |  Translational directions
+`energy_resolution` |  If set to a non-zero value (kT), an energy histogram will be generated.
 
 As `moltransrot` but instead of operating on the molecular mass center, this translates
 and rotates individual atoms in the group. The repeat is set to the number of atoms in the specified group and the
 displacement parameters `dp` and `dprot` for the individual atoms are taken from
 the atom properties defined in the [topology](topology).
 Atomic _rotation_ affects only anisotropic particles such as dipoles, spherocylinders, quadrupoles etc.
+
+An energy histogram of each participating species will be written to disk if the `energy_resolution`
+keyword is set. The value (in kT) specifies the resolution of the histogram binning. The analysis is
+essentially for free as the energies are already known from the move.
+
 
 ### Cluster Move
 
@@ -95,6 +101,8 @@ Atomic _rotation_ affects only anisotropic particles such as dipoles, spherocyli
 `dp`            | Translational displacement (Å)
 `single_layer=false` | If `true`, stop cluster-growth after one layer around centered molecule (experimental)
 `satellites`    | Subset of `molecules` that cannot be cluster centers
+`com_shape=true`| Use mass centers for shape analysis instead of particle positions (affects analysis only)
+`analysis`      | See below
 
 This will attempt to rotate and translate clusters of molecular `molecules` defined by a distance `threshold`
 between mass centers.
@@ -121,7 +129,21 @@ cluster:
       cations cations: 0
    dp: 3
    dprot: 1
+   analysis: {file: cluster_shape.dat.gz}
 ```
+
+Using `analysis` the move also reports on the average cluster size; cluster size distribution; and
+relative shape anisotropy, $\kappa^2$ as a function of cluster size. If all particles in the cluster
+are distributed on a sphere then $\kappa^2=0$, while if on a straight line, $\kappa^2=1$. See the
+`polymershape` analysis for more information.
+
+`analysis`    | Description
+------------- | ----------------------------------------------------------------------------
+`com=true`    | Use molecule mass center instead of particle positions for shape anisotropy
+`file`        | If given save shape properties for each sample event
+`save_pqr`    | If set to true, save PQR files of cluster, one for each size 
+`interval=10` | Interval between samples
+
 
 ## Internal Degrees of Freedom
 
@@ -142,11 +164,12 @@ Instead, use a hard-coded variant like `nonbonded_coulomblj` etc.
 
 ### Conformational Swap
 
-`conformationswap` | Description
------------------- | ---------------------------------
-`molecule`         |  Molecule name to operate on
-`repeat=N`         |  Number of repeats per MC sweep
-`keeppos=True`     |  Keep original positions of `traj`
+`conformationswap`  | Description
+------------------- | ---------------------------------
+`molecule`          | Molecule name to operate on
+`repeat=N`          | Number of repeats per MC sweep
+`keeppos=False`     | Keep original positions of `traj`
+`copy_policy=all`   | What to copy from library: `all`, `positions`, `charges`
 
 This will swap between different molecular conformations
 as defined in the [Molecule Properties](topology.html#molecule-properties) with `traj` and `trajweight`
@@ -155,6 +178,12 @@ distribution is respected, otherwise all conformations
 have equal intrinsic weight. Upon insertion, the new conformation
 is randomly oriented and placed on top of the mass-center of
 an exising molecule. That is, there is no mass center movement.
+If `keeppos` is activated, the raw coordinates from the conformation
+is used, i.e. no rotation and no mass-center overlay.
+
+By default all information from the conformation is copied (`copy_policy=all`), including charges and particle type.
+To for example copy only positions, use `copy_policy=positions`. This can be useful when using speciation moves.
+
 
 ### Pivot
 

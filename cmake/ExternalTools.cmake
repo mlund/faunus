@@ -138,26 +138,24 @@ set_property(TARGET docopt PROPERTY IMPORTED_LOCATION ${binary_dir}/libdocopt.a)
 # CPPSID
 #########
 
-ExternalProject_Add(project_cppsid
-    PREFIX "${CMAKE_CURRENT_BINARY_DIR}/_deps"
-    CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DCMAKE_POSITION_INDEPENDENT_CODE=on
-    BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} "cppsid"
-    INSTALL_COMMAND "" LOG_DOWNLOAD ON
-    UPDATE_DISCONNECTED ON
-    URL_MD5 b420c4c114e00a147c2c9a974249f0d4
-    URL "https://github.com/mlund/cppsid/archive/v0.2.1.tar.gz")
-ExternalProject_Get_Property(project_cppsid binary_dir)
-ExternalProject_Get_Property(project_cppsid source_dir)
-set(CppsidIncludeDir ${source_dir}/include)
-add_library(cppsid STATIC IMPORTED GLOBAL)
-add_dependencies(cppsid project_cppsid)
-set_property(TARGET cppsid PROPERTY IMPORTED_LOCATION ${binary_dir}/libcppsid.a)
-
 option(ENABLE_SID "Enable SID emulation" off)
 if(ENABLE_SID)
-    find_package(SDL2 CONFIG)
+    find_package(SDL2 CONFIG REQUIRED)
+    ExternalProject_Add(project_cppsid
+        PREFIX "${CMAKE_CURRENT_BINARY_DIR}/_deps"
+        CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DCMAKE_POSITION_INDEPENDENT_CODE=on
+        BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} "cppsid"
+        INSTALL_COMMAND "" LOG_DOWNLOAD ON
+        UPDATE_DISCONNECTED ON
+        URL_MD5 b420c4c114e00a147c2c9a974249f0d4
+        URL "https://github.com/mlund/cppsid/archive/v0.2.1.tar.gz")
+    ExternalProject_Get_Property(project_cppsid binary_dir)
+    ExternalProject_Get_Property(project_cppsid source_dir)
+    set(CppsidIncludeDir ${source_dir}/include)
+    add_library(cppsid STATIC IMPORTED GLOBAL)
+    add_dependencies(cppsid project_cppsid)
+    set_property(TARGET cppsid PROPERTY IMPORTED_LOCATION ${binary_dir}/libcppsid.a)
 endif()
-
 
 ###########
 # PYBIND11
@@ -242,12 +240,25 @@ set_target_properties(xdrfile PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 
 FetchContent_Declare(
     doctest
-    URL "https://github.com/onqtam/doctest/archive/2.4.0.tar.gz"
-    URL_MD5 0b679d6294f97be4fb11cb26e801fda6)
+    URL "https://github.com/onqtam/doctest/archive/2.4.4.tar.gz"
+    URL_HASH SHA256=3bcb62ad316bf4230873a336fcc6eb6292116568a6e19ab8cdd37a1610773d70)
 FetchContent_GetProperties(doctest)
 if(NOT doctest_POPULATED)
     FetchContent_Populate(doctest)
     #add_definitions(-DDOCTEST_CONFIG_DISABLE)
+endif()
+
+##############
+# TROMPELOEIL
+##############
+
+FetchContent_Declare(
+    trompeloeil
+    URL "https://github.com/rollbear/trompeloeil/archive/v39.tar.gz"
+    URL_HASH SHA256=10506e48abd605740bc9ed43e34059f5068bc80af14476bd129a3ed3b54d522f)
+FetchContent_GetProperties(trompeloeil)
+if(NOT trompeloeil_POPULATED)
+    FetchContent_Populate(trompeloeil)
 endif()
 
 ###########
@@ -293,7 +304,7 @@ include_directories(SYSTEM ${coulombgalore_SOURCE_DIR})
 # Add third-party headers to include path. Note this is done with SYSTEM
 # to disable potential compiler warnings
 
-include_directories(SYSTEM ${eigen_SOURCE_DIR} ${doctest_SOURCE_DIR} ${modernjson_SOURCE_DIR}/include ${rangev3_SOURCE_DIR}/include
-    ${nanobench_SOURCE_DIR}/src/include
+include_directories(SYSTEM ${eigen_SOURCE_DIR} ${modernjson_SOURCE_DIR}/include ${rangev3_SOURCE_DIR}/include
+    ${doctest_SOURCE_DIR} ${trompeloeil_SOURCE_DIR}/include ${nanobench_SOURCE_DIR}/src/include
     ${Pybind11IncludeDir} ${DocoptIncludeDir} ${CppsidIncludeDir} ${XdrfileIncludeDir} ${SpdlogIncludeDir}
     ${ProgressTrackerIncludeDir} ${exprtk_SOURCE_DIR} ${cereal_SOURCE_DIR}/include ${zstr_SOURCE_DIR}/src)

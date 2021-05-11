@@ -10,7 +10,7 @@ target_link_libraries(project_options INTERFACE ${CMAKE_THREAD_LIBS_INIT})
 
 # ========== pre-compiler system headers ==========
 
-option(ENABLE_PCH "Enable Precompiled Headers" ON)
+option(ENABLE_PCH "Enable Precompiled Headers" OFF)
 if (ENABLE_PCH)
     target_precompile_headers(
             project_options INTERFACE <vector> <string> <map> <set> <algorithm> <utility> <random> <iostream>
@@ -67,7 +67,7 @@ set(hdrs analysis.h average.h atomdata.h auxiliary.h bonds.h chainmove.h cluster
         aux/eigen_cerealisation.h aux/eigensupport.h aux/iteratorsupport.h aux/multimatrix.h
         aux/eigen_cerealisation.h aux/eigensupport.h aux/equidistant_table.h aux/error_function.h
         aux/exp_function.h aux/invsqrt_function.h aux/iteratorsupport.h aux/legendre.h aux/multimatrix.h
-        aux/pairmatrix.h aux/pow_function.h aux/table_1d.h aux/table_2d.h aux/timers.h)
+        aux/pairmatrix.h aux/pow_function.h aux/table_1d.h aux/table_2d.h aux/timers.h aux/typeerasure.h)
 
 set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 
@@ -116,12 +116,13 @@ target_compile_definitions(faunus PRIVATE FAUNUS_INSTALL_PREFIX=\"${CMAKE_INSTAL
 target_compile_definitions(faunus PRIVATE FAUNUS_BINARY_DIR=\"${CMAKE_BINARY_DIR}\")
 install(TARGETS faunus DESTINATION bin)
 
+INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include)
+INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
+
 # ========== python bindings ==========
 
-option(ENABLE_PYTHON "Try to compile python bindings (experimental!)" on)
+option(ENABLE_PYTHON "Try to compile python bindings (experimental!)" off)
 if (ENABLE_PYTHON)
-    INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include)
-    INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
     find_package(PythonLibs 3 REQUIRED)
 
     if (PYTHONINTERP_FOUND)
@@ -152,7 +153,7 @@ if (ENABLE_PYTHON)
     endif ()
 endif ()
 
-if (TARGET pyfaunus)
+if (PYTHONINTERP_FOUND)
     # find _relative_ path of python library and thus respect CMAKE_INSTALL_PREFIX.
     # could be replaced by FindPython() but req. cmake 3.12
     # https://stackoverflow.com/questions/1242904/finding-python-site-packages-directory-with-cmake
@@ -162,6 +163,9 @@ if (TARGET pyfaunus)
         print(sc.get_python_lib(prefix='', plat_specific=True))"
         OUTPUT_VARIABLE PYTHON_SITE
         OUTPUT_STRIP_TRAILING_WHITESPACE)
+endif()
+
+if (TARGET pyfaunus)
     install(TARGETS pyfaunus DESTINATION ${PYTHON_SITE} OPTIONAL)
 endif()
 
@@ -176,3 +180,5 @@ install(FILES
     ${CMAKE_SOURCE_DIR}/scripts/faunus-manual
     DESTINATION bin
     PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/scripts/faunustools DESTINATION ${PYTHON_SITE} OPTIONAL
+    PATTERN ${CMAKE_SOURCE_DIR}/scripts/faunustool/__pycache__ EXCLUDE)

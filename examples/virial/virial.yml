@@ -28,7 +28,7 @@ moves:                               # define Monte Carlo moves
     - transrot: {molecule: B, dir: [0,0,1]}
 
 analysis:                            # define on the fly analysis
-    - virtualtranslate: {file: vt.dat, dL: 0.1, molecule: B, nstep: 10, dir: [0,0,1]}
+    - virtualtranslate: {file: vt.dat.gz, dL: 0.1, molecule: B, nstep: 10, dir: [0,0,1]}
     - reactioncoordinate: {file: R.dat, nstep: 10, type: molecule, property: com_z, index: 1}
     - molrdf: {file: rdf.dat, nstep: 1, dr: 0.2, name1: A, name2: B, dim: 1}
       #- systemenergy: {file: energy.dat, nstep: 100} # save system energy

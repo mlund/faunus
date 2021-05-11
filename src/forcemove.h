@@ -15,7 +15,6 @@ namespace Faunus::Move {
  * of the simulation in time steps. The integrators update positions and velocities of particles as needed.
  */
 
-
 /**
  * @brief Generate a random 3d vector from the normal distribution
  * @note A helper class only to be used within this module.
@@ -90,32 +89,37 @@ void to_json(json &j, const IntegratorBase &i);
  * Orchestrate execution of integrators, thermostats, etc. Store vectors for velocities and forces, which are not part
  * of the particle vector in the space.
  */
-class ForceMoveBase : public Movebase {
+class ForceMoveBase : public MoveBase {
   protected:
     std::shared_ptr<IntegratorBase> integrator;
-    unsigned int number_of_steps;     //!< number of integration steps to perform during a single MC move
-    Space &spc;                       //!< space with particles and their positions
-    PointVector velocities;           //!< Vector of velocities matching each active particle in Space
-    PointVector forces;               //!< Vector of forces matching each active particle in Space
+    unsigned int number_of_steps; //!< number of integration steps to perform during a single MC move
+    using MoveBase::spc;          //!< space with particles and their positions
+    PointVector velocities;       //!< Vector of velocities matching each active particle in Space
+    PointVector forces;           //!< Vector of forces matching each active particle in Space
 
     size_t resizeForcesAndVelocities(); //!< Resize velocities and forces to match number of active particles
     void generateVelocities();          //!< Generate initial velocities and zero forces
     void _to_json(json &j) const override;
     void _from_json(const json &j) override;
     void _move(Change &change) override;
-    ForceMoveBase(Space &, std::shared_ptr<IntegratorBase> integrator, unsigned int nsteps);
+    ForceMoveBase(Space &, std::string name, std::string cite,
+                  std::shared_ptr<IntegratorBase> integrator, unsigned int nsteps);
     virtual ~ForceMoveBase() = default;
 
   public:
     double bias(Change &, double, double) override;
-    const PointVector& getForces() const;
-    const PointVector& getVelocities() const;
+    const PointVector &getForces() const;
+    const PointVector &getVelocities() const;
 };
 
 /**
  * @brief Langevin dynamics move using Langevin equation of motion
  */
 class LangevinDynamics : public ForceMoveBase {
+  protected:
+    LangevinDynamics(Space &, std::string name, std::string cite,
+                     std::shared_ptr<IntegratorBase> integrator, unsigned int nsteps);
+
   public:
     LangevinDynamics(Space &, std::shared_ptr<IntegratorBase> integrator, unsigned int nsteps);
     LangevinDynamics(Space &, Energy::Energybase &, const json &);
@@ -124,4 +128,4 @@ class LangevinDynamics : public ForceMoveBase {
     void _from_json(const json &j) override;
 };
 
-} // end of namespace
+} // namespace Faunus::Move

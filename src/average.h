@@ -85,5 +85,118 @@ namespace Faunus
       } // de-serialize from stream
   };
 
-  } // namespace Faunus
+#if __cplusplus > 201703L
+  /** Requirements for types used with `AverageObj` */
+  template <class T> concept Averageable = requires(T a) {
+      a * 1.0; // please implement `T operator*(double) const`
+      a *a;    // please implement `T operator*(const T&) const`
+      a += a;  // please implement `T& operator+=(const T&)`
+  };
+#endif
+      /**
+       * @brief Simple class to average data contained in objects
+       * @tparam T Type to average
+       * @tparam int_t Unsigned interger type
+       *
+       * It is required that `T` has the following operator overloads:
+       * - `T operator*(double) const`
+       * - `T operator*(const T&) const`
+       * - `T& operator+=(const &T)`
+       */
+#if __cplusplus > 201703L
+  template <Averageable T, typename int_t = unsigned long int> class AverageObj {
+#else
+  template <typename T, typename int_t = unsigned long int> class AverageObj {
+#endif
+    protected:
+      int_t number_of_samples = 0;
+      T sum; // make sure constructors zero this!
+    public:
+      AverageObj() : sum(T()){}; //!< Construct from empty object
 
+      AverageObj(const T &value) : number_of_samples(1), sum(value){};
+
+      //! Add to average
+      AverageObj &operator+=(const T &value) {
+          if (number_of_samples == std::numeric_limits<int_t>::max()) {
+              throw std::overflow_error("maximum samples reached");
+          } else {
+              sum += value;
+              ++number_of_samples;
+          }
+          return *this;
+      }
+      //! Calculate average
+      T avg() const {
+          if (number_of_samples > 0) {
+              return sum * (1.0 / static_cast<double>(number_of_samples));
+          } else {
+              return sum;
+          }
+      }
+
+      //! Convert to T
+      operator T() const { return avg(); }
+
+      //! Compare operator
+      bool operator<(const AverageObj &other) const { return avg() < other.avg(); }
+
+      //! True if empty
+      bool empty() const { return number_of_samples == 0; }
+
+      //!< Clear all data
+      void clear() { *this = AverageObj<T>(); }
+
+      //! Number of samples
+      int_t size() const { return number_of_samples; }
+  };
+
+  /*
+   * Experimental extension of AverageObj that includes stdev() and rms(). This
+   * requires a pow(T, double) function for squaring and taking the square-root.
+   * How could this best be implemented and maintain compatibility when T=double?
+   */
+  template <typename T, typename int_t = unsigned long int> class AverageObjStdev : public AverageObj<T> {
+    private:
+      T sum_squared; // make sure constructors zero this!
+      using AverageObj<T>::avg;
+      using AverageObj<T>::sum;
+      using AverageObj<T>::number_of_samples;
+
+    public:
+      AverageObjStdev() : sum_squared(T()){}; //!< Construct from empty object
+
+      AverageObjStdev(const T &value) : AverageObj<T>(value), sum_squared(value * value){};
+
+      //! Add to average
+      AverageObjStdev &operator+=(const T &value) {
+          AverageObj<T>::operator+=()(value);
+          sum_squared += std::pow(value, 2);
+          return *this;
+      }
+
+      //! Root-mean-square
+      T rms() const {
+          if (number_of_samples == 0) {
+              return T();
+          } else {
+              return std::pow(sum_squared * (1.0 / static_cast<double>(number_of_samples)), 0.5);
+          }
+      }
+
+      //! Standard deviation
+      T stdev() const {
+          if (number_of_samples == 0) {
+              return T();
+          } else {
+              const auto N = static_cast<double>(number_of_samples);
+              const auto mean = avg();
+              return std::pow((sum_squared + N * mean * mean - 2.0 * sum * mean) * (1.0 / (N - 1.0)), 0.5);
+          }
+      }
+
+      //!< Clear all data
+      void clear() { *this = AverageObjStdev<T>(); }
+  };
+
+  } // namespace Faunus

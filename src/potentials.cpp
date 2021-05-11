@@ -199,7 +199,8 @@ void from_json(const json &j, PairPotentialBase &base) {
         }
         base.from_json(j);
     } catch (std::exception &e) {
-        throw std::runtime_error(e.what() + usageTip[base.name]);
+        usageTip.pick(base.name);
+        throw ConfigurationError(e);
     }
 }
 
@@ -659,52 +660,51 @@ FunctorPotential::uFunc FunctorPotential::combineFunc(json &j) {
     if (j.is_array()) {
         for (auto &i : j) { // loop over all defined potentials in array
             if (i.is_object() and (i.size() == 1)) {
-                for (auto it : i.items()) {
+                for (const auto& [key, j_val] : i.items()) {
                     uFunc _u = nullptr;
                     try {
-                        if (it.key() == "custom")
-                            _u = CustomPairPotential() = it.value();
+                        if (key == "custom")
+                            _u = CustomPairPotential() = j_val;
 
                         // add Coulomb potential and self-energy
                         // terms if not already added
-                        else if (it.key() == "coulomb") { // temporary name
-                            std::get<0>(potlist).from_json(it.value()); // initialize w. json object
-                            std::get<0>(potlist).to_json(it.value());   // write back to json object with added values
+                        else if (key == "coulomb") { // temporary key
+                            std::get<0>(potlist).from_json(j_val); // initialize w. json object
+                            std::get<0>(potlist).to_json(j_val);   // write back to json object with added values
                             _u = std::get<0>(potlist);
                             if (not have_monopole_self_energy) {
                                 registerSelfEnergy(&std::get<0>(potlist));
                                 have_monopole_self_energy = true;
                             }
-                        } else if (it.key() == "cos2")
+                        } else if (key == "cos2")
                             _u = std::get<1>(potlist) = i;
-                        else if (it.key() == "polar")
+                        else if (key == "polar")
                             _u = std::get<2>(potlist) = i;
-                        else if (it.key() == "hardsphere")
+                        else if (key == "hardsphere")
                             _u = std::get<3>(potlist) = i;
-                        else if (it.key() == "lennardjones")
+                        else if (key == "lennardjones")
                             _u = std::get<4>(potlist) = i;
-                        else if (it.key() == "repulsionr3")
+                        else if (key == "repulsionr3")
                             _u = std::get<5>(potlist) = i;
-                        else if (it.key() == "sasa")
+                        else if (key == "sasa")
                             _u = std::get<6>(potlist) = i;
-                        else if (it.key() == "wca")
+                        else if (key == "wca")
                             _u = std::get<7>(potlist) = i;
-                        else if (it.key() == "pm")
-                            _u = std::get<8>(potlist) = it.value();
-                        else if (it.key() == "pmwca")
-                            _u = std::get<9>(potlist) = it.value();
-                        else if (it.key() == "hertz")
+                        else if (key == "pm")
+                            _u = std::get<8>(potlist) = j_val;
+                        else if (key == "pmwca")
+                            _u = std::get<9>(potlist) = j_val;
+                        else if (key == "hertz")
                             _u = std::get<10>(potlist) = i;
-                        else if (it.key() == "squarewell")
+                        else if (key == "squarewell")
                             _u = std::get<11>(potlist) = i;
-                        else if (it.key() == "dipoledipole") {
-                            faunus_logger->error("'{}' is deprecated, use 'multipole' instead", it.key());
-                        } else if (it.key() == "stockmayer") {
-                            faunus_logger->error("'{}' is deprecated, use 'lennardjones'+'multipole' instead",
-                                                 it.key());
-                        } else if (it.key() == "multipole") {
-                            std::get<12>(potlist).from_json(it.value()); // init from json
-                            std::get<12>(potlist).to_json(it.value());   // write back added info to json
+                        else if (key == "dipoledipole") {
+                            faunus_logger->error("'{}' is deprecated, use 'multipole' instead", key);
+                        } else if (key == "stockmayer") {
+                            faunus_logger->error("'{}' is deprecated, use 'lennardjones'+'multipole' instead", key);
+                        } else if (key == "multipole") {
+                            std::get<12>(potlist).from_json(j_val); // init from json
+                            std::get<12>(potlist).to_json(j_val);   // write back added info to json
                             _u = std::get<12>(potlist);
                             isotropic = false;                         // potential is now angular dependent
                             if (not have_dipole_self_energy) {
@@ -714,7 +714,8 @@ FunctorPotential::uFunc FunctorPotential::combineFunc(json &j) {
                         }
                         // place additional potentials here...
                     } catch (std::exception &e) {
-                        throw std::runtime_error(it.key() + ": " + e.what() + usageTip[it.key()]);
+                        usageTip.pick(key);
+                        throw ConfigurationError("{} -> {}", key, e.what());
                     }
 
                     if (_u != nullptr) // if found, sum them into new function object
@@ -722,7 +723,7 @@ FunctorPotential::uFunc FunctorPotential::combineFunc(json &j) {
                             return u(a, b, r2, r) + _u(a, b, r2, r);
                         };
                     else
-                        throw std::runtime_error("unknown potential: " + it.key());
+                        throw ConfigurationError("potential '{}': unknown potential", key);
                 }
             }
         }

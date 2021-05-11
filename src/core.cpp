@@ -8,6 +8,7 @@
 #include <fstream>
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/null_sink.h>
+#include <range/v3/view/filter.hpp>
 
 namespace Faunus {
 
@@ -118,6 +119,10 @@ std::string TipFromTheManual::operator[](const std::string &key) {
     return (quiet) ? std::string() : t;
 }
 
+void TipFromTheManual::pick(const std::string &key) {
+    operator[](key);
+}
+
 TipFromTheManual usageTip; // Global instance
 
 // global loggers as a dummy instance
@@ -139,6 +144,15 @@ std::string addGrowingSuffix(const std::string &file) {
     } while (not exists());
     return newfile;
 }
+
+std::tuple<const std::string&, const json&> jsonSingleItem(const json& j) {
+    if (!j.is_object() || j.size() != 1) {
+        throw std::runtime_error("invalid data: single key expected");
+    }
+    const auto j_it = j.cbegin();
+    return {j_it.key(), j_it.value()};
+}
+
 
 json::size_type SingleUseJSON::count(const std::string &key) const { return json::count(key); }
 
@@ -223,8 +237,16 @@ TEST_CASE("[Faunus] ranunit_polar") {
     CHECK(rtp.z() == doctest::Approx(pc::pi / 2).epsilon(0.005)); // phi [0:pi] --> <phi>=pi/2
 }
 
-ConfigurationError::ConfigurationError(const std::string &msg) : std::runtime_error(msg) {}
-ConfigurationError::ConfigurationError(const char *msg) : std::runtime_error(msg) {}
+ConfigurationError::ConfigurationError(const std::exception& e) : ConfigurationError(e.what()) {}
+ConfigurationError::ConfigurationError(const std::runtime_error& e) : std::runtime_error(e) {}
+ConfigurationError::ConfigurationError(const std::string& msg) : std::runtime_error(msg) {}
+ConfigurationError::ConfigurationError(const char* msg) : std::runtime_error(msg) {}
+json& ConfigurationError::attachedJson() { return attached_json; }
+
+ConfigurationError& ConfigurationError::attachJson(const json j) {
+    attached_json = j;
+    return *this;
+}
 
 TEST_SUITE_BEGIN("Core");
 

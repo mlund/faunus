@@ -13,7 +13,7 @@ namespace Faunus {
  *       when using some MPI schemes where the simulations must be in sync.
  */
 bool MetropolisMonteCarlo::metropolis(double energy_change) {
-    const auto random_number_between_zero_and_one = Move::Movebase::slump();
+    const auto random_number_between_zero_and_one = Move::MoveBase::slump();
     if (std::isnan(energy_change)) {
         throw std::runtime_error("Metropolis error: energy cannot be NaN");
     }
@@ -111,7 +111,7 @@ void MetropolisMonteCarlo::restore(const json &j) {
         *state->spc = j;       // default, accepted state
         *trial_state->spc = j; // trial state
         if (j.count("random-move") == 1) {
-            Move::Movebase::slump = j["random-move"]; // restore move random number generator
+            Move::MoveBase::slump = j["random-move"]; // restore move random number generator
         }
         if (j.count("random-global") == 1) {
             Faunus::random = j["random-global"]; // restore global random number generator
@@ -123,7 +123,7 @@ void MetropolisMonteCarlo::restore(const json &j) {
     }
 }
 
-void MetropolisMonteCarlo::perform_move(std::shared_ptr<Move::Movebase> move) {
+void MetropolisMonteCarlo::perform_move(std::shared_ptr<Move::MoveBase> move) {
     Change change;
     move->move(change);
 #ifndef NDEBUG
@@ -142,6 +142,8 @@ void MetropolisMonteCarlo::perform_move(std::shared_ptr<Move::Movebase> move) {
             du = pc::neg_infty;                                    // ...always accept
         } else if (std::isnan(trial_energy)) {                     // if moving to NaN, e.g. division by zero,
             du = pc::infty;                                        // ...always reject
+        } else if (trial_energy > 0.0 && std::isinf(trial_energy)) { // if positive infinity
+            du = pc::infty;                                          //...always reject
         } else if (std::isnan(du)) {                               // if difference is NaN, e.g. infinity - infinity,
             du = 0.0;                                              // ...always accept
         }
@@ -166,7 +168,7 @@ void MetropolisMonteCarlo::perform_move(std::shared_ptr<Move::Movebase> move) {
     } else {
         // The `metropolis()` function propagates the engine and we need to stay in sync
         // Alternatively, we could use `engine.discard()`
-        Move::Movebase::slump();
+        Move::MoveBase::slump();
     }
 }
 

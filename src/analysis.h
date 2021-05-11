@@ -22,6 +22,14 @@ class Hamiltonian;
 class Energybase;
 } // namespace Energy
 
+/**
+ * Adding a new analysis requires the following steps:
+ *
+ * 1. Write an analysis class derived from `Analysis::Analysisbase`
+ * 2. Add the new class to the factory function `Analysis::createAnalysis()`, see below
+ * 3. Recommended: add the required json input format to `docs/schema.yml`
+ * 4. Recommended: add documentation to `docs/_docs/analysis.md`
+ */
 namespace Analysis {
 
 /**
@@ -35,47 +43,102 @@ namespace Analysis {
  */
 class Analysisbase {
   private:
-    virtual void _to_json(json &) const;                  //!< provide json information
-    virtual void _from_json(const json &);                //!< setup from json
+    virtual void _to_json(json&) const;                   //!< provide json information
+    virtual void _from_json(const json&);                 //!< setup from json
     virtual void _sample() = 0;                           //!< perform sample event
     virtual void _to_disk();                              //!< save sampled data to disk
     int number_of_steps = 0;                              //!< counter for total number of steps
     int number_of_skipped_steps = 0;                      //!< steps to skip before sampling (do not modify)
-    TimeRelativeOfTotal<std::chrono::microseconds> timer; //!< time to benchmark `_sample()`
+    TimeRelativeOfTotal<std::chrono::microseconds> timer; //!< timer to benchmark `_sample()`
 
   protected:
+    Space& spc;                //!< Instance of Space to analyse
     int sample_interval = 0;   //!< Steps in between each sample point (do not modify)
     int number_of_samples = 0; //!< counter for number of samples
 
   public:
-    std::string name;             //!< descriptive name
-    std::string cite;             //!< url, doi etc. describing the analysis
-    void to_json(json &) const;   //!< JSON report w. statistics, output etc.
-    void from_json(const json &); //!< configure from json object
-    void to_disk();               //!< Save data to disk (if defined)
-    void sample();                //!< Increase step count and sample
-    int getNumberOfSteps() const; //!< Number of steps
+    std::string name;              //!< descriptive name
+    std::string cite;              //!< url, doi etc. describing the analysis
+    void to_json(json& j) const;   //!< JSON report w. statistics, output etc.
+    void from_json(const json& j); //!< configure from json object
+    void to_disk();                //!< Save data to disk (if defined)
+    void sample();                 //!< Increase step count and sample
+    int getNumberOfSteps() const;  //!< Number of steps
+    Analysisbase(Space& spc, const std::string& name);
     virtual ~Analysisbase() = default;
 };
 
-void to_json(json &, const Analysisbase &);
+void to_json(json& j, const Analysisbase& base);
+
+/**
+ * @brief Function to create an instance of an analysis based on it's `name`
+ * @param name Name of analysis to create
+ * @param j JSON input for analysis
+ * @param spc Space the analysis should operate on
+ * @param pot Hamiltonian representing the system
+ * @return Shared pointer to analysis
+ *
+ * After writing a new analysis, it must be added to this function in
+ * order to be controlled from the main faunus input.
+ */
+std::shared_ptr<Analysisbase> createAnalysis(const std::string& name, const json& j, Space& spc,
+                                             Energy::Hamiltonian& pot);
+
+/**
+ * @brief Aggregator class for storing and selecting multiple analysis instances
+ *
+ * Holds an arbitrary number of analysis instances and selects them at
+ * random, based on user input. This is typically called from the
+ * main simulation loop.
+ */
+class CombinedAnalysis : public BasePointerVector<Analysisbase> {
+  public:
+    CombinedAnalysis(const json& json_array, Space& spc, Energy::Hamiltonian& pot);
+    void sample();
+    void to_disk(); //!< prompt all analysis to safe to disk if appropriate
+};
+
+/**
+ * @brief Base class for perturbation analysis
+ *
+ * This class provides basic data and functions to support Widom Particle Insertion, Virtual Volume Move
+ * etc. If a non-empty `filename` is given, a (compressed) output file used for streaming will be opened.
+ *
+ * @note Constructor throws if non-empty filename cannot to opened for writing
+ */
+class PerturbationAnalysisBase : public Analysisbase {
+  private:
+    void _to_disk() override;
+
+  protected:
+    Energy::Energybase& pot;
+    std::string filename;                                 //!< output filename (optional)
+    std::unique_ptr<std::ostream> stream = nullptr;       //!< output file stream if filename given
+    Change change;                                        //!< Change object to describe perturbation
+    Average<double> mean_exponentiated_energy_change;     //!< < exp(-du/kT) >
+    bool collectWidomAverage(const double energy_change); //!< add to exp(-du/kT) incl. safety checks
+    PerturbationAnalysisBase(const std::string& name, Energy::Energybase& pot, Space& spc,
+                             const std::string& filename = ""s);
+    double meanFreeEnergy() const; //!< Average perturbation free energy, `-ln(<exp(-du/kT)>)`
+};
 
 /*
  * @brief Sample and save reaction coordinates to a file
  */
 class FileReactionCoordinate : public Analysisbase {
   private:
-    Average<double> avg;
-    std::string type, filename;
+    Average<double> mean_reaction_coordinate;
+    std::string reaction_coordinate_type;
+    std::string filename;
     std::unique_ptr<std::ostream> stream = nullptr;
-    std::shared_ptr<ReactionCoordinate::ReactionCoordinateBase> rc = nullptr;
+    std::shared_ptr<ReactionCoordinate::ReactionCoordinateBase> reaction_coordinate = nullptr;
 
-    void _to_json(json &j) const override;
+    void _to_json(json& j) const override;
     void _sample() override;
     void _to_disk() override;
 
   public:
-    FileReactionCoordinate(const json &, Space &);
+    FileReactionCoordinate(const json& j, Space& spc);
 };
 
 /**
@@ -85,23 +148,20 @@ class FileReactionCoordinate : public Analysisbase {
  * insertion, the code is designed for arbitrary insertion
  * schemes inheriting from `MoleculeInserter`.
  */
-class WidomInsertion : public Analysisbase {
-    Space &space;
-    Energy::Hamiltonian &hamiltonian;           //!< Potential energy method
+class WidomInsertion : public PerturbationAnalysisBase {
     std::shared_ptr<MoleculeInserter> inserter; //!< Insertion method
     int number_of_insertions;                   //!< Number of insertions per sample event
     int molid;                                  //!< Molecule id
     bool absolute_z_coords = false;             //!< Apply abs() on all inserted z coordinates?
-    Average<double> exponential_average;        //!< Widom average, <exp(-dU/kT)>
-    Change change;
 
     void selectGhostGroup(); //!< Select inactive group to act as group particle
+    void updateGroup(Space::Tgroup& group, const ParticleVector& particles);
     void _sample() override; //!< Called for each sample event
-    void _to_json(json &) const override;
-    void _from_json(const json &) override;
+    void _to_json(json& j) const override;
+    void _from_json(const json& j) override;
 
   public:
-    WidomInsertion(const json &, Space &, Energy::Hamiltonian &);
+    WidomInsertion(const json& j, Space& spc, Energy::Hamiltonian& pot);
 };
 
 /**
@@ -111,101 +171,99 @@ class WidomInsertion : public Analysisbase {
  * `origo` which by default is the center of the simulation box
  */
 class AtomProfile : public Analysisbase {
-    Space &spc;
-    Equidistant2DTable<double, double> tbl;
-    std::vector<std::string> names; // atom names to analyse
-    std::set<int> ids;              // atom ids to analyse
-    std::string file;               // output filename
-    Point ref = {0, 0, 0};
+    Equidistant2DTable<double, double> table; //!< x = distance; y = count or charge
+    double dr;                                //!< resolution for `table`
+    std::vector<std::string> names;           //!< atom names to analyse
+    std::set<int> atom_id_selection;          //!< atom ids to analyse
+    std::string file;                         //!< output filename
+    Point origin = {0.0, 0.0, 0.0};
     Eigen::Vector3i dir = {1, 1, 1};
-    double dr; // radial resolution
     bool count_charge = false;
-    std::string atom_com;
-    int id_com = -1; // center at COM of id_com atoms?
+    int center_of_mass_atom_id = -1; // center at COM of id_com atoms?
 
-    void _from_json(const json &j) override;
-    void _to_json(json &j) const override;
+    double distanceToOrigin(const Point& position) const;
+    void _from_json(const json& j) override;
+    void _to_json(json& j) const override;
     void _to_disk() override;
     void _sample() override;
 
   public:
-    AtomProfile(const json &j, Space &spc);
+    AtomProfile(const json& j, Space& spc);
 };
 
 /**
  * @brief Measures the density of atoms along z axis
  */
 class SlicedDensity : public Analysisbase {
-    Space &spc;
-    Table2D<double, unsigned int> N; // N(z)
-    std::vector<std::string> names;
-    std::vector<int> ids;
+    double dz;                               //!< Resolution of `histogram` along z
+    Table2D<double, unsigned int> histogram; // N(z)
+    std::vector<std::string> atom_names;
+    std::vector<int> atom_ids; //!< atom id's to analyse
     std::string file;
-    double dz;
-    std::string atom_com;
-    int id_com = -1; // center at COM of id_com atoms?
+    int center_of_mass_atom_id = -1; // center at COM of id_com atoms?
 
-    void _from_json(const json &j) override;
-    void _to_json(json &j) const override;
+    void _from_json(const json& j) override;
+    void _to_json(json& j) const override;
     void _sample() override;
     void _to_disk() override;
 
   public:
-    SlicedDensity(const json &j, Space &spc);
+    SlicedDensity(const json& j, Space& spc);
 };
 
 /**
  * @brief Analysis of particle densities
  */
 class Density : public Analysisbase {
-    Space &spc;
-    typedef Equidistant2DTable<unsigned int, double> Ttable; // why double?
+  private:
+    using Ttable = Equidistant2DTable<unsigned int, double>;
 
-    std::map<int, Ttable> swpdhist; // Probability density of swapping atoms
-    std::map<int, Ttable> atmdhist; // Probability density of atomic molecules
-    std::map<int, Ttable> moldhist; // Probability density of polyatomic molecules
-    std::map<int, Average<double>> rho_mol, rho_atom;
-    std::map<int, int> Nmol, Natom;
-    Average<double> Lavg, Vavg, invVavg;
+    std::map<int, Ttable> atomswap_probability_density;
+    std::map<int, Ttable> atomic_group_probability_density;
+    std::map<int, Ttable> molecular_group_probability_density;
+    std::map<int, Average<double>> mean_molecule_density, mean_atom_density;
+    Average<double> mean_cubic_root_of_volume, mean_volume, mean_inverse_volume;
 
-    // int capacity_limit = 10; // issue warning if capacity get lower than this
-
+    double updateVolumeStatistics();
+    std::pair<std::map<int, int>, std::map<int, int>> countAtomsAndMolecules();
+    void writeTable(const std::string& atom_or_molecule_name, Ttable& table);
     void _sample() override;
-    void _to_json(json &) const override;
+    void _to_json(json& j) const override;
     void _to_disk() override;
 
   public:
-    Density(const json &, Space &);
+    Density(const json&, Space&);
 };
 
+/**
+ * @todo `atom_mean_charges` could be calculated from `atom_histograms`
+ */
 class ChargeFluctuations : public Analysisbase {
   private:
-    Space &spc;
-    typename decltype(Faunus::molecules)::const_iterator mol_iter; // selected molecule type
+    typename decltype(Faunus::molecules)::const_iterator mol_iter; //!< selected molecule type
+    using AtomHistogram = std::map<int, int>;                      //!< key = atom id; value = counts
+    std::vector<AtomHistogram> atom_histograms;                    //!< one element for each atom in molecule
+    std::vector<Average<double>> atom_mean_charges;                //!< average charges of atomic indexes
+    std::string filename;                                          //!< name of PQR file with average charges
+    bool verbose = true;                                           //!< set to true for more output
 
-    std::vector<std::map<int, int>> idcnt; // populations of types of atomic indexes
-    std::vector<Average<double>> charge;   // average charges of atomic indexes
-    std::string file;                      // name of PQR file with average charges
-    bool verbose;                          // set to true for more output
+    ParticleVector averageChargeParticles(const Space::Tgroup& group);
+    std::vector<double> getMeanCharges() const;
+    std::vector<double> getChargeStandardDeviation() const;
+    std::vector<std::string> getPredominantParticleNames() const;
 
     void _sample() override;
-
-    void _to_json(json &) const override;
-
-    /**
-     * @brief Saves average PQR file to disk if `pqrfile` input is given
-     */
+    void _to_json(json& j) const override;
     void _to_disk() override;
 
   public:
-    ChargeFluctuations(const json &j, Space &spc);
+    ChargeFluctuations(const json& j, Space& spc);
 }; // Fluctuations of atomic charges
 
 /**
  * @brief Molecular multipole moments and their fluctuations
  */
 class Multipole : public Analysisbase {
-    const Space &spc;
     struct Data {
         Average<double> charge;
         Average<double> charge_squared;
@@ -214,10 +272,10 @@ class Multipole : public Analysisbase {
     };                                   // Average sample moment for a molecule
     std::map<int, Data> average_moments; //!< Molecular moments and their fluctuations. Key = molid.
     void _sample() override;
-    void _to_json(json &) const override;
+    void _to_json(json& j) const override;
 
   public:
-    Multipole(const json &, const Space &);
+    Multipole(const json&, Space&);
 };
 
 /**
@@ -227,20 +285,21 @@ class SystemEnergy : public Analysisbase {
   private:
     std::string file_name, separator = " ";
     std::unique_ptr<std::ostream> output_stream = nullptr;
-    std::function<std::vector<double>()> energyFunc;
-    Average<double> mean_energy, mean_squared_energy;
+    std::function<std::vector<double>()> calculateAllEnergies;
+    Average<double> mean_energy;
+    Average<double> mean_squared_energy;
     std::vector<std::string> names_of_energy_terms;
     Table2D<double, double> energy_histogram; // Density histograms
     double initial_energy = 0.0;
 
     void normalize();
     void _sample() override;
-    void _to_json(json &) const override;
-    void _from_json(const json &) override;
+    void _to_json(json& j) const override;
+    void _from_json(const json& j) override;
     void _to_disk() override;
 
   public:
-    SystemEnergy(const json &, Energy::Hamiltonian &);
+    SystemEnergy(const json&, Space& spc, Energy::Hamiltonian&);
 };
 
 /**
@@ -248,11 +307,14 @@ class SystemEnergy : public Analysisbase {
  */
 class SanityCheck : public Analysisbase {
   private:
-    Space &spc;
+    const double mass_center_tolerance = 1.0e-6;
     void _sample() override;
+    void checkGroupsCoverParticles();                      //!< Groups must exactly contain all particles in `p`
+    void checkMassCenter(const Space::Tgroup& group);      //!< check if molecular mass centers are correct
+    void checkWithinContainer(const Space::Tgroup& group); //!< check if particles are inside container
 
   public:
-    SanityCheck(const json &, Space &);
+    SanityCheck(const json& j, Space& spc);
 };
 
 /**
@@ -269,17 +331,17 @@ class SanityCheck : public Analysisbase {
  */
 class SaveState : public Analysisbase {
   private:
-    std::function<void(const std::string &)> writeFunc = nullptr;
+    std::function<void(const std::string&)> writeFunc = nullptr;
     bool save_random_number_generator_state = false;
     bool use_numbered_files = true;
     bool convert_hexagonal_prism_to_cuboid = false;
     std::string filename;
-    void _to_json(json &) const override;
+    void _to_json(json& j) const override;
     void _sample() override;
 
   public:
-    SaveState(json, Space &);
-    ~SaveState();
+    SaveState(json j, Space& spc);
+    ~SaveState() override;
 };
 
 /**
@@ -287,24 +349,26 @@ class SaveState : public Analysisbase {
  */
 class PairFunctionBase : public Analysisbase {
   protected:
-    int dim = 3;            // dimentions to use when normalizing
-    int id1 = -1, id2 = -1; // particle id (mol or atom)
-    double dr = 0;          // distance resolution
+    int dimensions = 3;                           //!< dimensions to use when normalizing
+    int id1 = -1;                                 //!< molecule or atom id
+    int id2 = -1;                                 //!< molecule or atom id
+    double dr = 0;                                //!< distance resolution
+    std::string name1;                            //!< atom or molecule
+    std::string name2;                            //!< atom or molecule name
+    std::string file;                             //!< output filename
+    Equidistant2DTable<double, double> histogram; //!< distance histogram
+    Average<double> mean_volume;                  //!< average volume (angstrom^3)
     Eigen::Vector3i slicedir = {0, 0, 0};
     double thickness = 0;
-    Equidistant2DTable<double, double> hist;
-    std::string name1, name2; // atom/molecule names
-    std::string file;         // output filename
-    double Rhypersphere = -1; // Radius of 2D hypersphere
-    Average<double> V;        // average volume (angstrom^3)
 
   private:
-    void _from_json(const json &) override;
-    void _to_json(json &) const override;
+    void _from_json(const json& j) override;
+    void _to_json(json& j) const override;
     void _to_disk() override;
+    double volumeElement(double r) const;
 
   public:
-    PairFunctionBase(const json &);
+    PairFunctionBase(Space& spc, const json&, const std::string& name);
 };
 
 class PairAngleFunctionBase : public PairFunctionBase {
@@ -312,74 +376,67 @@ class PairAngleFunctionBase : public PairFunctionBase {
     Equidistant2DTable<double, Average<double>> hist2;
 
   private:
-    void _from_json(const json &) override;
+    void _from_json(const json& j) override;
     void _to_disk() override;
 
   public:
-    PairAngleFunctionBase(const json &);
+    PairAngleFunctionBase(Space& spc, const json& j, const std::string& name);
 };
 
 /** @brief Atomic radial distribution function, g(r) */
 class AtomRDF : public PairFunctionBase {
-    Space &spc;
-
     void _sample() override;
+    void sampleDistance(const Point& position1, const Point& position2);
 
   public:
-    AtomRDF(const json &, Space &);
+    AtomRDF(const json&, Space&);
 };
 
 /** @brief Same as `AtomRDF` but for molecules. Identical input. */
 class MoleculeRDF : public PairFunctionBase {
-    Space &spc;
     void _sample() override;
+
   public:
-    MoleculeRDF(const json &, Space &);
+    MoleculeRDF(const json&, Space&);
 };
 
 /** @brief Dipole-dipole correlation function, <\boldsymbol{\mu}(0)\cdot\boldsymbol{\mu}(r)> */
 class AtomDipDipCorr : public PairAngleFunctionBase {
-    Space &spc;
     void _sample() override;
+
   public:
-    AtomDipDipCorr(const json &, Space &);
+    AtomDipDipCorr(const json&, Space&);
 };
 
 /** @brief Write XTC trajectory file */
 class XTCtraj : public Analysisbase {
-    std::vector<int> molids;        // molecule ids to save to disk
-    std::vector<std::string> names; // molecule names of above
-    std::function<bool(Particle &)> filter; // function to filter molecule ids
-    Space &spc;
+    std::vector<int> molecule_ids;                    //!< molecule ids to save to disk
+    std::vector<std::string> names;                   //!< molecule names of above
+    std::function<bool(const Particle&)> atom_filter; //!< function to filter atoms
     std::shared_ptr<XTCWriter> writer;
 
-    void _to_json(json &) const override;
-    void _from_json(const json &) override;
+    void _to_json(json& j) const override;
+    void _from_json(const json& j) override;
     void _sample() override;
+
   public:
-    XTCtraj(const json &j, Space &s);
+    XTCtraj(const json& j, Space& spc);
 };
 
 /**
  * @brief Excess pressure using virtual volume move
  */
-class VirtualVolume : public Analysisbase {
-    Space &spc;
+class VirtualVolumeMove : public PerturbationAnalysisBase {
     Geometry::VolumeMethod volume_scaling_method = Geometry::ISOTROPIC;
-    std::string filename;                                  // output filename (optional)
-    std::unique_ptr<std::ostream> output_stream = nullptr; // output file stream
-    double dV;                                             // volume perturbation
-    Change change;
-    Energy::Energybase &pot;
-    Average<double> mean_exponentiated_energy_change; // < exp(-du/kT) >
-
+    double volume_displacement = 0.0;
     void _sample() override;
-    void _from_json(const json &) override;
-    void _to_json(json &) const override;
-    void _to_disk() override;
+    void _from_json(const json& j) override;
+    void _to_json(json& j) const override;
+    void sanityCheck(double old_energy);
+    void writeToFileStream(const Point& scale, double energy_change) const;
 
   public:
-    VirtualVolume(const json &, Space &, Energy::Energybase &);
+    VirtualVolumeMove(const json& j, Space& spc, Energy::Energybase& pot);
 };
 
 /**
@@ -479,14 +536,13 @@ template <typename forcefunctor> class VirialPressure : public Analysisbase {
  * @brief Create histogram of molecule conformation id
  */
 class MolecularConformationID : public Analysisbase {
-    Space &spc;
     int molid;                             //!< molecule id to sample
-    std::map<int, unsigned int> histogram; //!< key is conformation id; value is count
+    std::map<int, unsigned int> histogram; //!< key = conformation id; value = count
     void _sample() override;
-    void _to_json(json &j) const override;
+    void _to_json(json& j) const override;
 
   public:
-    MolecularConformationID(const json &j, Space &spc);
+    MolecularConformationID(const json& j, Space& spc);
 };
 
 /**
@@ -495,26 +551,22 @@ class MolecularConformationID : public Analysisbase {
  * Displace a single molecule of `molid` with `dL` in the
  * direction `dir` and measure the free energy of the process
  * using dA=-kT*ln<exp(-dU)> and the resulting force, -dA/dL
+ *
+ * @todo Does this work with Ewald summation? k-vectors must be refreshed.
  */
-class VirtualTranslate : public Analysisbase {
-    Change change;         //!< Change object for energy calc.
-    Change::data data;     //!< Change data for molecule
-    std::string file;      //!< output filename
-    int molid;             //!< molid to operate on
-    Point dir = {0, 0, 1}; //!< direction to move
-    double dL = 0;         //!< distance perturbation
-    Energy::Energybase &pot;
-    Space &spc;
-    Average<double> average_exp_du; //!< <exp(-du/kT)>
-    std::ofstream output_file;      // output filestream
+class VirtualTranslate : public PerturbationAnalysisBase {
+    int molid; //!< molid to operate on
+    Point perturbation_direction = {0.0, 0.0, 1.0};
+    double perturbation_distance = 0.0;
 
     void _sample() override;
-    void _from_json(const json &) override;
-    void _to_json(json &) const override;
-    void _to_disk() override;
+    void _from_json(const json& j) override;
+    void _to_json(json& j) const override;
+    double momentarilyPerturb(Space::Tgroup& group);
+    void writeToFileStream(double energy_change) const;
 
   public:
-    VirtualTranslate(const json &, Space &, Energy::Energybase &);
+    VirtualTranslate(const json& j, Space& spc, Energy::Energybase& pot);
 };
 
 /**
@@ -523,28 +575,29 @@ class VirtualTranslate : public Analysisbase {
  * @todo Add option to use charge center instead of mass center
  */
 class MultipoleDistribution : public Analysisbase {
-    typedef typename Space::Tgroup Tgroup;
-
-    struct data {
-        Average<double> exact, ii, id, iq, dd, mucorr;
+    struct Data {
+        using average_type = Average<double>;
+        average_type exact;
+        average_type ion_ion;
+        average_type ion_dipole;
+        average_type ion_quadrupole;
+        average_type dipole_dipole;
+        average_type dipole_dipole_correlation;
     };
+    std::map<int, Data> mean_energy; //!< Energy distributions
+    std::vector<std::string> names;  //!< Molecule names (len=2)
+    std::vector<int> ids;            //!< Molecule ids (len=2)
+    std::string filename;            //!< output file name
+    double dr;                       //!< distance resolution
 
-    std::vector<std::string> names; //!< Molecule names (len=2)
-    std::vector<int> ids;           //!< Molecule ids (len=2)
-    std::string filename;           //!< output file name
-    // int id1, id2;                   //!< pair of molecular id's to analyse
-    double dr;             //!< distance resolution
-    std::map<int, data> m; //!< Energy distributions
-    Space &spc;
-
-    double g2g(const Tgroup &g1, const Tgroup &g2); //<! exact ion-ion energy between particles
-    void save() const;                              //!< save to disk
+    double g2g(const Space::Tgroup& group1, const Space::Tgroup& group2); //<! exact ion-ion energy between particles
+    void save() const;                                                    //!< save to disk
     void _sample() override;
-    void _to_json(json &j) const override;
+    void _to_json(json& j) const override;
     void _to_disk() override;
 
   public:
-    MultipoleDistribution(const json &j, Space &spc);
+    MultipoleDistribution(const json& j, Space& spc);
 
 }; // end of multipole distribution
 
@@ -553,26 +606,25 @@ class MultipoleDistribution : public Analysisbase {
  */
 class ScatteringFunction : public Analysisbase {
   private:
-    enum Schemes { DEBYE, EXPLICIT_PBC, EXPLICIT_IPBC}; // three different schemes
+    enum Schemes { DEBYE, EXPLICIT_PBC, EXPLICIT_IPBC }; // three different schemes
     Schemes scheme = DEBYE;
-    Space &spc;
-    bool use_com;                   // scatter from mass center, only?
-    bool save_after_sample = false; // if true, save average S(q) after each sample point
-    std::string filename;           // output file name
-    std::vector<Point> p;           // vector of scattering points
-    std::vector<int> ids;           // Molecule ids
-    std::vector<std::string> names; // Molecule names
-    typedef Scatter::FormFactorUnity<double> Tformfactor;
+    bool mass_center_scattering;             //!< scatter from mass center, only?
+    bool save_after_sample = false;          //!< if true, save average S(q) after each sample point
+    std::string filename;                    //!< output file name
+    std::vector<Point> scatter_positions;    //!< vector of scattering points
+    std::vector<int> molecule_ids;           //!< Molecule ids
+    std::vector<std::string> molecule_names; //!< Molecule names corresponding to `molecule_ids`
+    using Tformfactor = Scatter::FormFactorUnity<double>;
 
     std::shared_ptr<Scatter::DebyeFormula<Tformfactor>> debye;
     std::shared_ptr<Scatter::StructureFactorPBC<>> explicit_average_pbc;
     std::shared_ptr<Scatter::StructureFactorIPBC<>> explicit_average_ipbc;
     void _sample() override;
     void _to_disk() override;
-    void _to_json(json &j) const override;
+    void _to_json(json& j) const override;
 
   public:
-    ScatteringFunction(const json &j, Space &spc);
+    ScatteringFunction(const json& j, Space& spc);
 };
 
 /*
@@ -580,67 +632,66 @@ class ScatteringFunction : public Analysisbase {
  */
 class AtomInertia : public Analysisbase {
   private:
-    Space &spc;
     std::string filename;
-    int index; // atom id
-    std::ofstream file;
+    int atom_id;
+    std::ofstream output_stream;
 
     Point compute();
-    void _to_json(json &j) const override;
+    void _to_json(json& j) const override;
     void _sample() override;
     void _to_disk() override;
 
   public:
-    AtomInertia(const json &j, Space &spc);
+    AtomInertia(const json& j, Space& spc);
 };
 
-/*
+/**
  * @brief Sample and save the eigenvalues of the inertia tensor for a range of indexes within a molecule
  */
 class InertiaTensor : public Analysisbase {
   private:
-    Space &spc;
     std::string filename;
-    std::vector<size_t> indexes; // range of indexes within the group
-    int index; // group indes
-    std::ofstream file;
+    std::vector<size_t> particle_range; //!< range of indexes within the group
+    int group_index;
+    std::ofstream output_stream;
     struct Data {
-        Point eivals, eivec; // eigenvalues and principal axis
+        Point eigen_values;
+        Point principle_axis;
     };
 
     Data compute();
-    void _to_json(json &j) const override;
+    void _to_json(json& j) const override;
     void _sample() override;
     void _to_disk() override;
 
   public:
-    InertiaTensor(const json &j, Space &spc);
+    InertiaTensor(const json& j, Space& spc);
 };
 
 /*
- * @brief Sample and save charge, dipole and quadrupole moments for a range of indexes within a molecule
+ * @brief Sample and save charge, dipole, and quadrupole moments for a range of indexes within a molecule
  */
 class MultipoleMoments : public Analysisbase {
   private:
-    Space &spc;
     std::string filename;
-    std::vector<size_t> indexes; // range of indexes within the group
-    size_t index; // group index
-    bool mol_cm;
-    std::ofstream file;
-    struct Data {
-        int q = 0; // total charge
-        Point mu {0,0,0}; // dipole vector
-        Point eivals, eivec, center; // quadrupole eigenvalues and major axis
-    };
+    std::vector<size_t> particle_range; //!< range of indexes within the group
+    size_t group_index;
+    bool use_molecular_mass_center = true; //!< Moments w.r.t. the COM of the whole molecule (instead of the subgroup)
+    std::ofstream output_stream;
 
-    Data compute();
-    void _to_json(json &j) const override;
+    struct Data {
+        double charge = 0.0;                // total charge
+        Point dipole_moment{0.0, 0.0, 0.0}; // dipole vector
+        Point eivals, eivec, center;        // quadrupole eigenvalues and major axis
+    } __attribute__((aligned(128)));
+
+    Data calculateMultipoleMoment() const;
+    void _to_json(json& j) const override;
     void _sample() override;
     void _to_disk() override;
 
   public:
-    MultipoleMoments(const json &j, Space &spc);
+    MultipoleMoments(const json& j, Space& spc);
 };
 
 /**
@@ -663,19 +714,19 @@ class PolymerShape : public Analysisbase {
         average_type aspherity;
         average_type acylindricity;
         average_type relative_shape_anisotropy;
-    };                //!< Placeholder class for average polymer properties
-    AverageData data; //!< Stores all averages
-    Equidistant2DTable<double, unsigned int> gyration_radius_histogram;
-    int molid; //!< Molecule id to analyse
-    Space &spc;
-    std::unique_ptr<std::ostream> tensor_output_stream = nullptr; //!< Output file for tensor
+    }; //!< Placeholder class for average properties
 
-    void _to_json(json &j) const override;
+    AverageData data; //!< Stores all averages
+    int molid;        //!< Molecule id to analyse
+    std::unique_ptr<std::ostream> tensor_output_stream = nullptr;
+    Equidistant2DTable<double, unsigned int> gyration_radius_histogram;
+
+    void _to_json(json& j) const override;
     void _sample() override;
     void _to_disk() override;
 
   public:
-    PolymerShape(const json &j, Space &spc);
+    PolymerShape(const json& j, Space& spc);
 };
 
 /**
@@ -691,11 +742,11 @@ class QRtraj : public Analysisbase {
     std::unique_ptr<std::ostream> stream = nullptr; //!< Output stream
     std::function<void()> write_to_file;            //!< Write a single frame to stream
     void _sample() override;                        //!< Samples one frame and outputs to stream
-    void _to_json(json &j) const override;
+    void _to_json(json& j) const override;
     void _to_disk() override;
 
   public:
-    QRtraj(const json &, Space &spc);
+    QRtraj(const json&, Space& spc);
 };
 
 /**
@@ -709,38 +760,32 @@ class QRtraj : public Analysisbase {
  * If zlib compression is enabled the file size
  * is reduced by roughly a factor of two.
  *
- * @todo Geometry information
+ * @todo Geometry information; update z-compression detection
  */
 class SpaceTrajectory : public Analysisbase {
   private:
-    Space::Tgvec &groups; // reference to all groups
+    Space::Tgvec& groups; // reference to all groups
     std::string filename;
     std::unique_ptr<std::ostream> stream;
     std::unique_ptr<cereal::BinaryOutputArchive> archive;
     void _sample() override;
-    void _to_json(json &j) const override;
+    void _to_json(json& j) const override;
     void _to_disk() override;
     bool useCompression() const; //!< decide from filename if zlib should be used
 
   public:
-    SpaceTrajectory(const json &, Space::Tgvec &);
+    SpaceTrajectory(const json& j, Space& spc);
 };
-
-struct CombinedAnalysis : public BasePointerVector<Analysisbase> {
-    CombinedAnalysis(const json &j, Space &spc, Energy::Hamiltonian &pot);
-    void sample();
-    void to_disk(); // prompt all analysis to safe to disk if appropriate
-}; //!< Aggregates analysis
 
 /** @brief Example analysis */
 template <class T, class Enable = void> struct _analyse {
-    void sample(T &) { std::cout << "not a dipole!" << std::endl; } //!< Sample
-};                                                                  // primary template
+    void sample(T&) { std::cout << "not a dipole!" << std::endl; } //!< Sample
+};                                                                 // primary template
 
 /** @brief Example analysis */
 template <class T> struct _analyse<T, typename std::enable_if<std::is_base_of<Dipole, T>::value>::type> {
-    void sample(T &) { std::cout << "dipole!" << std::endl; } //!< Sample
-};                                                            // specialized template
+    void sample(T&) { std::cout << "dipole!" << std::endl; } //!< Sample
+};                                                           // specialized template
 
 } // namespace Analysis
 

@@ -201,35 +201,35 @@ void HarmonicTorsion::setEnergyFunction(const ParticleVector& particles) {
         return half_force_constant * delta_angle * delta_angle;
     };
     forceFunc = [&](Geometry::DistanceFunction calculateDistance) -> std::vector<IndexAndForce> {
-        if constexpr (true) {
-            // see https://github.com/OpenMD/OpenMD/blob/master/src/primitives/Bend.cpp
-            Point vec1 = calculateDistance(particles[indices[0]].pos, particles[indices[1]].pos);
-            Point vec2 = calculateDistance(particles[indices[2]].pos, particles[indices[1]].pos);
-            const auto inverse_norm1 = 1.0 / vec1.norm();
-            const auto inverse_norm2 = 1.0 / vec2.norm();
-            vec1 *= inverse_norm1;
-            vec2 *= inverse_norm2;
-            const auto cosine_angle = vec1.dot(vec2);
-            const auto inverse_sine_angle = 1.0 / std::sqrt(std::fabs(1.0 - cosine_angle * cosine_angle));
-            const auto angle = std::acos(cosine_angle);
-            const auto prefactor = 2.0 * half_force_constant * (angle - equilibrium_angle) * inverse_sine_angle;
-            const Point force0 = prefactor * inverse_norm1 * (vec2 - vec1 * cosine_angle);
-            const Point force2 = prefactor * inverse_norm2 * (vec1 - vec2 * cosine_angle);
-            const Point force1 = -(force0 + force2); // no net force
-            return {{indices[0], force0}, {indices[1], force1}, {indices[2], force2}};
-        } else { // @todo which one of these two are fastest?
-            const Point ba = calculateDistance(particles[indices[0]].pos, particles[indices[1]].pos);
-            const Point bc = calculateDistance(particles[indices[2]].pos, particles[indices[1]].pos);
-            const auto inverse_norm_ba = 1.0 / ba.norm();
-            const auto inverse_norm_bc = 1.0 / bc.norm();
-            const auto angle = std::acos(ba.dot(bc) * inverse_norm_ba * inverse_norm_bc);
-            const auto forcemagnitude = -2.0 * half_force_constant * (angle - equilibrium_angle);
-            const Point plane_babc = ba.cross(bc).eval();
-            const Point force0 = (forcemagnitude * inverse_norm_ba * ba.cross(plane_babc).normalized());
-            const Point force2 = (forcemagnitude * inverse_norm_bc * -bc.cross(plane_babc).normalized());
-            const Point force1 = -(force0 + force2); // Newton's third law
-            return {{indices[0], force0}, {indices[1], force1}, {indices[2], force2}};
-        }
+//        if constexpr (true) {
+//            // see https://github.com/OpenMD/OpenMD/blob/master/src/primitives/Bend.cpp
+//            Point vec1 = calculateDistance(particles[indices[0]].pos, particles[indices[1]].pos);
+//            Point vec2 = calculateDistance(particles[indices[2]].pos, particles[indices[1]].pos);
+//            const auto inverse_norm1 = 1.0 / vec1.norm();
+//            const auto inverse_norm2 = 1.0 / vec2.norm();
+//            vec1 *= inverse_norm1;
+//            vec2 *= inverse_norm2;
+//            const auto cosine_angle = vec1.dot(vec2);
+//            const auto inverse_sine_angle = 1.0 / std::sqrt(std::fabs(1.0 - cosine_angle * cosine_angle));
+//            const auto angle = std::acos(cosine_angle);
+//            const auto prefactor = 2.0 * half_force_constant * (angle - equilibrium_angle) * inverse_sine_angle;
+//            const Point force0 = prefactor * inverse_norm1 * (vec2 - vec1 * cosine_angle);
+//            const Point force2 = prefactor * inverse_norm2 * (vec1 - vec2 * cosine_angle);
+//            const Point force1 = -(force0 + force2); // no net force
+//            return {{indices[0], force0}, {indices[1], force1}, {indices[2], force2}};
+//        } else { // @todo which one of these two are fastest?
+      const Point ba = calculateDistance(particles[indices[1]].pos, particles[indices[0]].pos);
+      const Point bc = calculateDistance(particles[indices[1]].pos, particles[indices[2]].pos);
+      const auto inverse_norm_ba = 1.0 / ba.norm();
+      const auto inverse_norm_bc = 1.0 / bc.norm();
+      const auto angle = std::acos(ba.dot(bc) * inverse_norm_ba * inverse_norm_bc);
+      const auto forcemagnitude = -2.0 * half_force_constant * (angle - equilibrium_angle);
+      const Point plane_babc = ba.cross(bc).eval();
+      const Point force0 = (forcemagnitude * inverse_norm_ba * ba.cross(plane_babc).normalized());
+      const Point force2 = (forcemagnitude * inverse_norm_bc * -bc.cross(plane_babc).normalized());
+      const Point force1 = -(force0 + force2); // Newton's third law
+      return {{indices[0], force0}, {indices[1], force1}, {indices[2], force2}};
+//        }
     };
 }
 
@@ -308,6 +308,10 @@ TEST_CASE("[Faunus] BondData") {
     p_60deg_4a[0].pos = {1.0, 1.0 + std::sqrt(3), 4.0};
     p_60deg_4a[1].pos = {1.0, 1.0, 1.0};
     p_60deg_4a[2].pos = {1.0, 5.0, 1.0};
+    ParticleVector p_90deg_4a(3, Particle());
+    p_90deg_4a[0].pos = {0.0, 1.0, 0.0};
+    p_90deg_4a[1].pos = {0.0, 0.0, 0.0};
+    p_90deg_4a[2].pos = {1.0, 0.0, 0.0};
 
     Geometry::DistanceFunction distance = [](const Point& a, const Point& b) -> Point { return b - a; };
     Geometry::DistanceFunction distance_3a = [](const Point&, const Point&) -> Point { return {0, 3, 0}; };
@@ -411,23 +415,22 @@ TEST_CASE("[Faunus] BondData") {
             CHECK_EQ(bond.energyFunc(distance), Approx(100.0 / 2 * std::pow(15.0_deg, 2)));
         }
         SUBCASE("HarmonicTorsion Force") {
-            HarmonicTorsion bond(100.0, 45.0_deg, {0, 1, 2});
-            bond.setEnergyFunction(p_60deg_4a);
+            HarmonicTorsion bond(1, 45.0_deg, {0, 1, 2});
+            bond.setEnergyFunction(p_90deg_4a);
             auto forces = bond.forceFunc(distance);
             CHECK(forces.size() == 3);
             CHECK(forces[0].first == 0);
             CHECK(forces[1].first == 1);
             CHECK(forces[2].first == 2);
-            // @todo values below verifies consistency only, not correctness
-            CHECK(forces[0].second.x() == Approx(0.0));
-            CHECK(forces[0].second.y() == Approx(-6.544984695));
-            CHECK(forces[0].second.z() == Approx(3.7787486755));
-            CHECK(forces[1].second.x() == Approx(0.0));
-            CHECK(forces[1].second.y() == Approx(6.544984695));
-            CHECK(forces[1].second.z() == Approx(2.7662360195));
+            CHECK(forces[0].second.x() == Approx(0.78539816));
+            CHECK(forces[0].second.y() == Approx(0.0));
+            CHECK(forces[0].second.z() == Approx(0.0));
+            CHECK(forces[1].second.x() == Approx(-0.78539816));
+            CHECK(forces[1].second.y() == Approx(-0.78539816));
+            CHECK(forces[1].second.z() == Approx(0.0));
             CHECK(forces[2].second.x() == Approx(0.0));
-            CHECK(forces[2].second.y() == Approx(0.0));
-            CHECK(forces[2].second.z() == Approx(-6.544984695));
+            CHECK(forces[2].second.y() == Approx(0.78539816));
+            CHECK(forces[2].second.z() == Approx(0.0));
         }
         SUBCASE("HarmonicTorsion JSON") {
             json j = R"({"harmonic_torsion": {"index":[0,1,2], "k":0.5, "aeq":65}})"_json;

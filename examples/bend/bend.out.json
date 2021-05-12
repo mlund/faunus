@@ -2,7 +2,6 @@
   "analysis": [
     {
       "systemenergy": {
-        "Cv/kB": 2.0,
         "file": "energy.dat",
         "final": [
           1.773122609062241

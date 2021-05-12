@@ -201,35 +201,35 @@ void HarmonicTorsion::setEnergyFunction(const ParticleVector& particles) {
         return half_force_constant * delta_angle * delta_angle;
     };
     forceFunc = [&](Geometry::DistanceFunction calculateDistance) -> std::vector<IndexAndForce> {
-//        if constexpr (true) {
-//            // see https://github.com/OpenMD/OpenMD/blob/master/src/primitives/Bend.cpp
-//            Point vec1 = calculateDistance(particles[indices[0]].pos, particles[indices[1]].pos);
-//            Point vec2 = calculateDistance(particles[indices[2]].pos, particles[indices[1]].pos);
-//            const auto inverse_norm1 = 1.0 / vec1.norm();
-//            const auto inverse_norm2 = 1.0 / vec2.norm();
-//            vec1 *= inverse_norm1;
-//            vec2 *= inverse_norm2;
-//            const auto cosine_angle = vec1.dot(vec2);
-//            const auto inverse_sine_angle = 1.0 / std::sqrt(std::fabs(1.0 - cosine_angle * cosine_angle));
-//            const auto angle = std::acos(cosine_angle);
-//            const auto prefactor = 2.0 * half_force_constant * (angle - equilibrium_angle) * inverse_sine_angle;
-//            const Point force0 = prefactor * inverse_norm1 * (vec2 - vec1 * cosine_angle);
-//            const Point force2 = prefactor * inverse_norm2 * (vec1 - vec2 * cosine_angle);
-//            const Point force1 = -(force0 + force2); // no net force
-//            return {{indices[0], force0}, {indices[1], force1}, {indices[2], force2}};
-//        } else { // @todo which one of these two are fastest?
-      const Point ba = calculateDistance(particles[indices[1]].pos, particles[indices[0]].pos);
-      const Point bc = calculateDistance(particles[indices[1]].pos, particles[indices[2]].pos);
-      const auto inverse_norm_ba = 1.0 / ba.norm();
-      const auto inverse_norm_bc = 1.0 / bc.norm();
-      const auto angle = std::acos(ba.dot(bc) * inverse_norm_ba * inverse_norm_bc);
-      const auto forcemagnitude = -2.0 * half_force_constant * (angle - equilibrium_angle);
-      const Point plane_babc = ba.cross(bc).eval();
-      const Point force0 = (forcemagnitude * inverse_norm_ba * ba.cross(plane_babc).normalized());
-      const Point force2 = (forcemagnitude * inverse_norm_bc * -bc.cross(plane_babc).normalized());
-      const Point force1 = -(force0 + force2); // Newton's third law
-      return {{indices[0], force0}, {indices[1], force1}, {indices[2], force2}};
-//        }
+        if constexpr (false) {
+            // see https://github.com/OpenMD/OpenMD/blob/master/src/primitives/Bend.cpp
+            Point vec1 = calculateDistance(particles[indices[0]].pos, particles[indices[1]].pos);
+            Point vec2 = calculateDistance(particles[indices[2]].pos, particles[indices[1]].pos);
+            const auto inverse_norm1 = 1.0 / vec1.norm();
+            const auto inverse_norm2 = 1.0 / vec2.norm();
+            vec1 *= inverse_norm1;
+            vec2 *= inverse_norm2;
+            const auto cosine_angle = vec1.dot(vec2);
+            const auto inverse_sine_angle = 1.0 / std::sqrt(std::fabs(1.0 - cosine_angle * cosine_angle));
+            const auto angle = std::acos(cosine_angle);
+            const auto prefactor = 2.0 * half_force_constant * (angle - equilibrium_angle) * inverse_sine_angle;
+            Point force0 = prefactor * inverse_norm1 * (vec2 - vec1 * cosine_angle);
+            Point force2 = prefactor * inverse_norm2 * (vec1 - vec2 * cosine_angle);
+            Point force1 = -(force0 + force2); // no net force
+            return {{indices[0], force0}, {indices[1], force1}, {indices[2], force2}};
+        } else { // @todo which one of these two are fastest?
+            const Point ba = calculateDistance(particles[indices[1]].pos, particles[indices[0]].pos);
+            const Point bc = calculateDistance(particles[indices[1]].pos, particles[indices[2]].pos);
+            const auto inverse_norm_ba = 1.0 / ba.norm();
+            const auto inverse_norm_bc = 1.0 / bc.norm();
+            const auto angle = std::acos(ba.dot(bc) * inverse_norm_ba * inverse_norm_bc);
+            const auto forcemagnitude = -2.0 * half_force_constant * (angle - equilibrium_angle);
+            const Point plane_babc = ba.cross(bc).eval();
+            Point force0 = (forcemagnitude * inverse_norm_ba * ba.cross(plane_babc).normalized());
+            Point force2 = (forcemagnitude * inverse_norm_bc * -bc.cross(plane_babc).normalized());
+            Point force1 = -(force0 + force2); // Newton's third law
+            return {{indices[0], force0}, {indices[1], force1}, {indices[2], force2}};
+        }
     };
 }
 

@@ -253,7 +253,7 @@ class Constrain : public Energybase {
     void to_json(json &) const override;
 };
 
-/*
+/**
  * The keys of the `intra` map are group index and the values
  * is a vector of `BondData`. For bonds between groups, fill
  * in `inter` which is evaluated for every update of call to
@@ -263,57 +263,58 @@ class Constrain : public Energybase {
  */
 class Bonded : public Energybase {
   private:
-    Space &spc;
-    typedef BasePointerVector<Potential::BondData> BondVector;
-    BondVector inter;                // inter-molecular bonds
-    std::map<int, BondVector> intra; // intra-molecular bonds; key is group index
-
-  private:
-    void update_intra();                              // finds and adds all intra-molecular bonds of active molecules
-    double sum_energy(const BondVector &) const;      // sum energy in vector of BondData
-
-    /**
-     * @brief Sum energy in vector of BondData for matching particle indices
-     * @param bonds List of bonds
-     * @param indices_of_particles Particle index
-     *
-     * To speed up the bond search, the given indices must be ordered which allows
-     * for binary search which on large systems provides superior performance compared
-     * to simplistic search which scales as number_of_bonds x number_of_moved_particles
-     */
-    template <class RangeOfIndex>
-    double sum_energy(const Bonded::BondVector &bonds, const RangeOfIndex &indices_of_particles) const {
-        assert(std::is_sorted(indices_of_particles.begin(), indices_of_particles.end()));
-
-        auto bond_filter = [&](const auto &bond_ptr) { // determine if bond is part of indices of particles
-            for (auto index : bond_ptr->index) {
-                if (std::binary_search(indices_of_particles.begin(), indices_of_particles.end(), index)) {
-                    return true;
-                }
-            }
-            return false;
-        };
-        auto affected_bonds = bonds | ranges::cpp20::views::filter(bond_filter);
-
-        auto bond_energy = [&](const auto &bond_ptr) { return bond_ptr->energyFunc(spc.geo.getDistanceFunc()); };
-
-#if (defined(__clang__) && __clang_major__ >= 10) || (defined(__GNUC__) && __GNUC__ >= 10)
-        return std::transform_reduce(affected_bonds.begin(), affected_bonds.end(), 0.0, std::plus<>(), bond_energy);
-#else
-        double energy = 0.0;
-        for (const auto &bond_ptr : affected_bonds) {
-            energy += bond_energy(bond_ptr);
-        }
-        return energy;
-#endif
-    }
+    using BondVector = BasePointerVector<Potential::BondData>;
+    const Space& spc;
+    BondVector external_bonds;                         //!< inter-molecular bonds
+    std::map<int, BondVector> internal_bonds;          //!< intra-molecular bonds; key is group index
+    void updateGroupBonds(const Space::Tgroup& group); //!< Update/set bonds internally in group
+    void updateInternalBonds();                        //!< finds and adds all intra-molecular bonds of active molecules
+    double sumBondEnergy(const BondVector& bonds) const;     //!< sum energy in vector of BondData
+    double internalGroupEnergy(const Change::data& changed); //!< Energy from internal bonds
+    template <typename Indices> double sum_energy(const BondVector& bonds, const Indices& particle_indices) const;
 
   public:
-    Bonded(const json &, Space &);
-    void to_json(json &) const override;
-    double energy(Change &) override;          //!< brute force -- refine this!
-    void force(std::vector<Point> &) override; //!< Calculates the forces on all particles
+    Bonded(const Space& spc, const BondVector& external_bonds);
+    Bonded(const json& j, const Space& spc);
+    void to_json(json& j) const override;
+    double energy(Change& change) override;          //!< brute force -- refine this!
+    void force(std::vector<Point>& forces) override; //!< Calculates the forces on all particles
 };
+
+/**
+ * @brief Sum energy in vector of BondData for matching particle indices
+ * @param bonds List of bonds
+ * @param particle_indices Particle index
+ *
+ * To speed up the bond search, the given indices must be ordered which allows
+ * for binary search which on large systems provides superior performance compared
+ * to simplistic search which scales as number_of_bonds x number_of_moved_particles
+ */
+template <typename Indices>
+double Bonded::sum_energy(const Bonded::BondVector& bonds, const Indices& particle_indices) const {
+    assert(std::is_sorted(particle_indices.begin(), particle_indices.end()));
+
+    auto bond_filter = [&](const auto& bond) { // determine if bond is part of indices of particles
+        for (const auto bond_particle_index : bond->indices) {
+            if (std::binary_search(particle_indices.begin(), particle_indices.end(), bond_particle_index)) {
+                return true;
+            }
+        }
+        return false;
+    };
+    auto affected_bonds = bonds | ranges::cpp20::views::filter(bond_filter);
+    auto bond_energy = [&](const auto& bond) { return bond->energyFunc(spc.geo.getDistanceFunc()); };
+
+#if (defined(__clang__) && __clang_major__ >= 10) || (defined(__GNUC__) && __GNUC__ >= 10)
+    return std::transform_reduce(affected_bonds.begin(), affected_bonds.end(), 0.0, std::plus<>(), bond_energy);
+#else
+    double energy = 0.0;
+    for (const auto& bond : affected_bonds) {
+        energy += bond_energy(bond);
+    }
+    return energy;
+#endif
+}
 
 /**
  * @brief Provides a complementary set of ints with respect to the iota set of a given size.

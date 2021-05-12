@@ -168,11 +168,16 @@ double ForceMoveBase::bias(Change &, double, double) {
     return pc::neg_infty; // always accept the move
 }
 
+/**
+ * @note: omitting explicit return type in the std::transform lambda below can in some compiler settings lead to
+ *        a dangling Point& reference being returned. Observed with Clang10/RelWithDebInfo, but not in Debug, or
+ *        with GCC.
+ */
 void ForceMoveBase::generateVelocities() {
     NormalRandomVector random_vector; // generator of random 3d vector from a normal distribution
     const auto particles = spc.activeParticles();
     resizeForcesAndVelocities();
-    std::transform(particles.begin(), particles.end(), velocities.begin(), [&](auto &particle) {
+    std::transform(particles.begin(), particles.end(), velocities.begin(), [&](auto& particle) -> Point {
         return random_vector(random.engine) * std::sqrt(meanSquareSpeedComponent(particle.traits().mw));
     });
     std::fill(forces.begin(), forces.end(), Point::Zero());

@@ -1163,9 +1163,9 @@ TEST_CASE("[Faunus] Dipole-dipole interactions") {
           Approx(dipoledipole(
               b, b, r2, r))); // interaction between two parallell dipoles, directed perpendicular to their seperation
     CHECK(u(a, b, r2, r) == Approx(dipoledipole(a, b, r2, r))); // interaction between two perpendicular dipoles
-    CHECK(u(a, a, r2, r) == -(2.0 / 3.0) * dipoledipole.bjerrum_length);
+    CHECK(u(a, a, r2, r) == Approx(-(2.0 / 3.0) * dipoledipole.bjerrum_length));
     CHECK(u(b, b, r2, r) == (1.0 / 3.0) * dipoledipole.bjerrum_length);
-    CHECK(u(a, c, r2, r) == -2.0 / 9.0 * dipoledipole.bjerrum_length);
+    CHECK(u(a, c, r2, r) == Approx(-2.0 / 9.0 * dipoledipole.bjerrum_length));
     CHECK(u(b, c, r2, r) == 1.0 / 9.0 * dipoledipole.bjerrum_length);
     CHECK(u(a, b, r2, r) == 0);
 }

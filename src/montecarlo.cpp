@@ -13,10 +13,14 @@ namespace Faunus {
  *       when using some MPI schemes where the simulations must be in sync.
  */
 bool MetropolisMonteCarlo::metropolis(double energy_change) {
-    const auto random_number_between_zero_and_one = Move::MoveBase::slump();
+    static_assert(std::numeric_limits<double>::is_iec559, "IEEE 754 required");
+    if (std::isinf(energy_change) && energy_change < 0.0) {
+        return true;
+    }
     if (std::isnan(energy_change)) {
         throw std::runtime_error("Metropolis error: energy cannot be NaN");
     }
+    const auto random_number_between_zero_and_one = Move::MoveBase::slump();
     if (energy_change < 0.0) {
         return true;
     } else {
@@ -35,7 +39,7 @@ bool MetropolisMonteCarlo::metropolis(double energy_change) {
  * - recalculates the initial energy
  */
 void MetropolisMonteCarlo::init() {
-    sum_of_energy_changes = 0;
+    sum_of_energy_changes = 0.0;
     Change change;
     change.all = true;
 
@@ -43,8 +47,10 @@ void MetropolisMonteCarlo::init() {
     trial_state->pot->key = Energy::Energybase::TRIAL_MONTE_CARLO_STATE; // this is the new energy (trial)
 
     state->pot->init();
-    double energy = state->pot->energy(change);
+    auto energy = state->pot->energy(change);
     initial_energy = energy;
+    faunus_logger->log(std::isfinite(initial_energy) ? spdlog::level::info : spdlog::level::warn,
+                       "initial energy = {} kT", initial_energy);
 
     trial_state->sync(*state, change); // copy all information into trial state
     trial_state->pot->init();

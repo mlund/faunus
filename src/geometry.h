@@ -85,7 +85,7 @@ struct GeometryBase {
     virtual void boundary(Point &) const = 0;                      //!< Apply boundary conditions
     virtual bool collision(const Point &) const = 0;               //!< Overlap with boundaries
     virtual void randompos(Point &, Random &) const = 0;           //!< Generate random position
-    virtual Point vdist(const Point &, const Point &) const = 0;   //!< (Minimum) distance between two points
+    virtual Point vdist(const Point& a, const Point& b) const = 0; //!< Minimum distance vector b->a
     virtual Point getLength() const = 0;                           //!< Side lengths
     virtual ~GeometryBase();
     virtual void to_json(json &j) const = 0;
@@ -134,7 +134,7 @@ class Cuboid : public GeometryImplementation {
     double getVolume(int dim = 3) const final; // finalized to help the compiler with inlining
     void setLength(const Point &len);          // todo shall be protected
     Point setVolume(double volume, VolumeMethod method = ISOTROPIC) override;
-    Point vdist(const Point &a, const Point &b) const override;
+    Point vdist(const Point& a, const Point& b) const override; //!< Minimum distance vector b->a
     void boundary(Point &a) const override;
     bool collision(const Point &a) const override;
     void randompos(Point &m, Random &rand) const override;
@@ -182,7 +182,7 @@ class Sphere : public GeometryImplementation {
     Point getLength() const override;
     double getVolume(int dim = 3) const override;
     Point setVolume(double volume, VolumeMethod method = ISOTROPIC) override;
-    Point vdist(const Point &a, const Point &b) const override;
+    Point vdist(const Point& a, const Point& b) const override; //!< Minimum distance vector b->a
     double sqdist(const Point &a, const Point &b) const { return (a - b).squaredNorm(); };
     void boundary(Point &a) const override;
     bool collision(const Point &point) const override;
@@ -350,7 +350,7 @@ class Chameleon : public GeometryBase {
     // setLength() needed only for Move::ReplayMove (stems from IO::XTCReader).
     void setLength(const Point &);                            //!< Sets the box dimensions.
     void boundary(Point &) const override;                    //!< Apply boundary conditions
-    Point vdist(const Point &, const Point &) const override; //!< (Minimum) distance between two points
+    Point vdist(const Point&, const Point&) const override;   //!< Minimum distance vector b->a
     double sqdist(const Point &, const Point &) const;        //!< (Minimum) squared distance between two points
     void randompos(Point &, Random &) const override;
     bool collision(const Point &) const override;

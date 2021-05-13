@@ -121,7 +121,7 @@ struct PairPotentialBase {
     virtual void to_json(json &) const = 0;
     virtual void from_json(const json &) = 0;
     virtual ~PairPotentialBase() = default;
-    virtual Point force(const Particle &, const Particle &, double, const Point &) const;
+    virtual Point force(const Particle& a, const Particle& b, double squared_distance, const Point& b_towards_a) const;
     virtual double operator()(const Particle &, const Particle &, double, const Point &) const = 0;
 
   protected:
@@ -171,8 +171,17 @@ template <class T1, class T2> struct CombinedPairPotential : public PairPotentia
         return first(a, b, r2, r) + second(a, b, r2, r);
     } //!< Combine pair energy
 
-    inline Point force(const Particle &a, const Particle &b, double r2, const Point &p) const override {
-        return first.force(a, b, r2, p) + second.force(a, b, r2, p);
+    /**
+     * @brief Calculates force on particle a due to another particle, b
+     * @param particle_a Particle a
+     * @param particle_b Particle b
+     * @param squared_distance Squared norm |𝐚-𝐛|²
+     * @param b_towards_a Distance vector 𝐛 -> 𝐚 = 𝐚 - 𝐛
+     * @return Force on particle a due to particle b
+     */
+    inline Point force(const Particle& a, const Particle& b, double squared_distance,
+                       const Point& b_towards_a) const override {
+        return first.force(a, b, squared_distance, b_towards_a) + second.force(a, b, squared_distance, b_towards_a);
     } //!< Combine force
 
     void from_json(const json &j) override {
@@ -228,15 +237,23 @@ class LennardJones : public MixerPairPotentialBase {
     void extractorsFromJson(const json &j) override;
 
   public:
-    LennardJones(const std::string &name = "lennardjones", const std::string &cite = std::string(),
-                 CombinationRuleType combination_rule = COMB_LORENTZ_BERTHELOT)
-        : MixerPairPotentialBase(name, cite, combination_rule){};
+    LennardJones(const std::string& name = "lennardjones", const std::string& cite = std::string(),
+                 CombinationRuleType combination_rule = COMB_LORENTZ_BERTHELOT);
 
-    inline Point force(const Particle &a, const Particle &b, double r2, const Point &p) const override {
-        double s6 = powi((*sigma_squared)(a.id, b.id), 3);
-        double r6 = r2 * r2 * r2;
-        double r14 = r6 * r6 * r2;
-        return 6. * (*epsilon_quadruple)(a.id, b.id) * s6 * (2 * s6 - r6) / r14 * p;
+    /**
+     * @brief Calculates force on particle a due to another particle, b
+     * @param particle_a Particle a ("target")
+     * @param particle_b Particle b
+     * @param squared_distance Squared norm |𝐚-𝐛|²
+     * @param b_towards_a Distance vector 𝐛 -> 𝐚 = 𝐚 - 𝐛
+     * @return Force on particle a due to particle b
+     */
+    inline Point force(const Particle& a, const Particle& b, double squared_distance,
+                       const Point& b_towards_a) const override {
+        const auto s6 = powi((*sigma_squared)(a.id, b.id), 3);
+        const auto r6 = squared_distance * squared_distance * squared_distance;
+        const auto r14 = r6 * r6 * squared_distance;
+        return 6.0 * (*epsilon_quadruple)(a.id, b.id) * s6 * (2.0 * s6 - r6) / r14 * b_towards_a; // force in a
     }
 
     inline double operator()(const Particle &a, const Particle &b, double r2, const Point &) const override {
@@ -572,11 +589,12 @@ class NewCoulombGalore : public PairPotentialBase {
         return bjerrum_length *
                pot.ion_ion_energy(a.charge, b.charge, sqrt(r2) + std::numeric_limits<double>::epsilon());
     }
-    Point force(const Particle &, const Particle &, double, const Point &) const override;
+    Point force(const Particle& particle_a, const Particle& particle_b, double squared_distance,
+                const Point& b_towards_a) const override;
     void from_json(const json &) override;
     void to_json(json &) const override;
     double dielectric_constant(double M2V) { return pot.calc_dielectric(M2V); }
-    double bjerrum_length; // Bjerrum length (angstrom)
+    double bjerrum_length; //!< Bjerrum length (angstrom)
 };
 
 /**

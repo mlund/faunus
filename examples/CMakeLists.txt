@@ -70,6 +70,14 @@ add_test(
         WORKING_DIRECTORY ${EXAMPLES_DIR}/minimal)
 
 add_test(
+        NAME bend
+        COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} bend.yml\
+    | $<TARGET_FILE:faunus> --nobar\
+    && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} bend.out.json out.json --tol 0.03"
+        WORKING_DIRECTORY ${EXAMPLES_DIR}/bend)
+
+
+add_test(
         NAME chain
         COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} chain.yml\
     | $<TARGET_FILE:faunus> --nobar --state chain.state.json\
@@ -236,6 +244,9 @@ install(FILES
         ${EXAMPLES_DIR}/minimal/minimal.yml
         ${EXAMPLES_DIR}/minimal/minimal.out.json
         ${EXAMPLES_DIR}/minimal/minimal.state.json
+        ${EXAMPLES_DIR}/bend/bend.yml
+        ${EXAMPLES_DIR}/bend/bend.out.json
+        ${EXAMPLES_DIR}/bend/mc_vs_md.agr
         ${EXAMPLES_DIR}/penalty/penalty.yml
         ${EXAMPLES_DIR}/penalty/penalty.ipynb
         ${EXAMPLES_DIR}/multipole/multipole.yml

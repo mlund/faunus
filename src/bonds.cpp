@@ -92,32 +92,32 @@ BondData::Variant HarmonicBond::type() const { return BondData::HARMONIC; }
  * participating atoms
  */
 void HarmonicBond::setEnergyFunction(const ParticleVector& particles) {
-    energyFunc = [&](Geometry::DistanceFunction calculateDistance) { // potential energy functor
+    energyFunc = [&](Geometry::DistanceFunction calculateDistance) -> double {
         const auto& particle1 = particles[indices[0]];
         const auto& particle2 = particles[indices[1]];
         const auto distance = equilibrium_distance - calculateDistance(particle1.pos, particle2.pos).norm();
         return half_force_constant * distance * distance; // kT/Å
     };
-    forceFunc = [&](Geometry::DistanceFunction calculateDistance) { // force functor
+    forceFunc = [&](Geometry::DistanceFunction calculateDistance) -> std::vector<IndexAndForce> {
         const auto& particle1 = particles[indices[0]];
         const auto& particle2 = particles[indices[1]];
         const auto distance_vec = calculateDistance(particle1.pos, particle2.pos);
         const auto distance = distance_vec.norm(); // distance between particles
         auto force = 2.0 * half_force_constant * (equilibrium_distance - distance) * distance_vec / distance;
-        return std::vector<ParticleForce>({{indices[0], force}, {indices[1], -force}}); // force on both particles
+        return {{indices[0], force}, {indices[1], -force}};
     };
 }
 
 FENEBond::FENEBond(double k, double rmax, const std::vector<int>& indices)
-    : StretchData(indices), half_force_constant(k / 2), max_squared_distance(rmax * rmax) {}
+    : StretchData(indices), half_force_constant(0.5 * k), max_squared_distance(rmax * rmax) {}
 
 std::shared_ptr<BondData> FENEBond::clone() const { return std::make_shared<FENEBond>(*this); }
 
 BondData::Variant FENEBond::type() const { return BondData::FENE; }
 
 void FENEBond::from_json(const Faunus::json& j) {
-    half_force_constant = j.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2) / 2; // k
-    max_squared_distance = std::pow(j.at("rmax").get<double>() * 1.0_angstrom, 2);             // rmax
+    half_force_constant = 0.5 * j.at("k").get<double>() * 1.0_kJmol / (1.0_angstrom * 1.0_angstrom);
+    max_squared_distance = std::pow(j.at("rmax").get<double>() * 1.0_angstrom, 2);
 }
 
 void FENEBond::to_json(Faunus::json& j) const {
@@ -194,17 +194,48 @@ BondData::Variant HarmonicTorsion::type() const { return BondData::HARMONIC_TORS
 std::shared_ptr<BondData> HarmonicTorsion::clone() const { return std::make_shared<HarmonicTorsion>(*this); }
 
 void HarmonicTorsion::setEnergyFunction(const ParticleVector& particles) {
-    energyFunc = [&](Geometry::DistanceFunction calculateDistance) {
-        const auto ray1 = calculateDistance(particles[indices[0]].pos, particles[indices[1]].pos);
-        const auto ray2 = calculateDistance(particles[indices[2]].pos, particles[indices[1]].pos);
-        const auto angle = std::acos(ray1.dot(ray2) / (ray1.norm() * ray2.norm()));
-        return half_force_constant * (angle - equilibrium_angle) * (angle - equilibrium_angle);
+    energyFunc = [&](Geometry::DistanceFunction calculateDistance) -> double {
+        const auto vec1 = calculateDistance(particles[indices[0]].pos, particles[indices[1]].pos).normalized();
+        const auto vec2 = calculateDistance(particles[indices[2]].pos, particles[indices[1]].pos).normalized();
+        const auto delta_angle = equilibrium_angle - std::acos(vec1.dot(vec2));
+        return half_force_constant * delta_angle * delta_angle;
+    };
+    forceFunc = [&](Geometry::DistanceFunction calculateDistance) -> std::vector<IndexAndForce> {
+        if constexpr (false) {
+            // see https://github.com/OpenMD/OpenMD/blob/master/src/primitives/Bend.cpp
+            Point vec1 = calculateDistance(particles[indices[0]].pos, particles[indices[1]].pos);
+            Point vec2 = calculateDistance(particles[indices[2]].pos, particles[indices[1]].pos);
+            const auto inverse_norm1 = 1.0 / vec1.norm();
+            const auto inverse_norm2 = 1.0 / vec2.norm();
+            vec1 *= inverse_norm1;
+            vec2 *= inverse_norm2;
+            const auto cosine_angle = vec1.dot(vec2);
+            const auto inverse_sine_angle = 1.0 / std::sqrt(std::fabs(1.0 - cosine_angle * cosine_angle));
+            const auto angle = std::acos(cosine_angle);
+            const auto prefactor = 2.0 * half_force_constant * (angle - equilibrium_angle) * inverse_sine_angle;
+            Point force0 = prefactor * inverse_norm1 * (vec2 - vec1 * cosine_angle);
+            Point force2 = prefactor * inverse_norm2 * (vec1 - vec2 * cosine_angle);
+            Point force1 = -(force0 + force2); // no net force
+            return {{indices[0], force0}, {indices[1], force1}, {indices[2], force2}};
+        } else { // @todo which is faster?
+            const Point ba = calculateDistance(particles[indices[0]].pos, particles[indices[1]].pos); // b->a
+            const Point bc = calculateDistance(particles[indices[2]].pos, particles[indices[1]].pos); // b->c
+            const auto inverse_norm_ba = 1.0 / ba.norm();
+            const auto inverse_norm_bc = 1.0 / bc.norm();
+            const auto angle = std::acos(ba.dot(bc) * inverse_norm_ba * inverse_norm_bc);
+            const auto forcemagnitude = -2.0 * half_force_constant * (angle - equilibrium_angle);
+            const Point plane_babc = ba.cross(bc).eval();
+            Point force0 = (forcemagnitude * inverse_norm_ba * ba.cross(plane_babc).normalized());
+            Point force2 = (forcemagnitude * inverse_norm_bc * -bc.cross(plane_babc).normalized());
+            Point force1 = -(force0 + force2); // Newton's third law
+            return {{indices[0], force0}, {indices[1], force1}, {indices[2], force2}};
+        }
     };
 }
 
 void GromosTorsion::from_json(const Faunus::json& j) {
-    half_force_constant = j.at("k").get<double>() * 1.0_kJmol / 2.0;     // k
-    cosine_equilibrium_angle = cos(j.at("aeq").get<double>() * 1.0_deg); // cos(angle)
+    half_force_constant = 0.5 * j.at("k").get<double>() * 1.0_kJmol;
+    cosine_equilibrium_angle = std::cos(j.at("aeq").get<double>() * 1.0_deg);
 }
 
 void GromosTorsion::to_json(Faunus::json& j) const {
@@ -212,7 +243,7 @@ void GromosTorsion::to_json(Faunus::json& j) const {
 }
 
 GromosTorsion::GromosTorsion(double k, double cos_aeq, const std::vector<int>& indices)
-    : TorsionData(indices), half_force_constant(k / 2.0), cosine_equilibrium_angle(cos_aeq) {}
+    : TorsionData(indices), half_force_constant(0.5 * k), cosine_equilibrium_angle(cos_aeq) {}
 
 BondData::Variant GromosTorsion::type() const { return BondData::GROMOS_TORSION; }
 
@@ -220,9 +251,9 @@ std::shared_ptr<BondData> GromosTorsion::clone() const { return std::make_shared
 
 void GromosTorsion::setEnergyFunction(const ParticleVector& particles) {
     energyFunc = [&](Geometry::DistanceFunction calculateDistance) {
-        auto ray1 = calculateDistance(particles[indices[0]].pos, particles[indices[1]].pos);
-        auto ray2 = calculateDistance(particles[indices[2]].pos, particles[indices[1]].pos);
-        const auto x = cosine_equilibrium_angle - ray1.dot(ray2) / (ray1.norm() * ray2.norm());
+        auto vec1 = calculateDistance(particles[indices[0]].pos, particles[indices[1]].pos).normalized();
+        auto vec2 = calculateDistance(particles[indices[2]].pos, particles[indices[1]].pos).normalized();
+        const auto x = cosine_equilibrium_angle - vec1.dot(vec2);
         return half_force_constant * x * x;
     };
 }
@@ -232,9 +263,9 @@ int PeriodicDihedral::numindex() const { return 4; }
 std::shared_ptr<BondData> PeriodicDihedral::clone() const { return std::make_shared<PeriodicDihedral>(*this); }
 
 void PeriodicDihedral::from_json(const Faunus::json& j) {
-    force_constant = j.at("k").get<double>() * 1.0_kJmol; // k
-    periodicity = j.at("n").get<double>();                // multiplicity/periodicity n
-    dihedral_angle = j.at("phi").get<double>() * 1.0_deg; // angle
+    force_constant = j.at("k").get<double>() * 1.0_kJmol;
+    periodicity = j.at("n").get<double>();
+    dihedral_angle = j.at("phi").get<double>() * 1.0_deg;
 }
 
 void PeriodicDihedral::to_json(Faunus::json& j) const {
@@ -277,8 +308,12 @@ TEST_CASE("[Faunus] BondData") {
     p_60deg_4a[0].pos = {1.0, 1.0 + std::sqrt(3), 4.0};
     p_60deg_4a[1].pos = {1.0, 1.0, 1.0};
     p_60deg_4a[2].pos = {1.0, 5.0, 1.0};
+    ParticleVector p_90deg_4a(3, Particle());
+    p_90deg_4a[0].pos = {0.0, 1.0, 0.0};
+    p_90deg_4a[1].pos = {0.0, 0.0, 0.0};
+    p_90deg_4a[2].pos = {1.0, 0.0, 0.0};
 
-    Geometry::DistanceFunction distance = [](const Point& a, const Point& b) -> Point { return b - a; };
+    Geometry::DistanceFunction distance = [](auto& a, auto& b) -> Point { return a - b; };
     Geometry::DistanceFunction distance_3a = [](const Point&, const Point&) -> Point { return {0, 3, 0}; };
     Geometry::DistanceFunction distance_5a = [](const Point&, const Point&) -> Point { return {0, 3, 4}; };
 
@@ -378,6 +413,24 @@ TEST_CASE("[Faunus] BondData") {
             HarmonicTorsion bond(100.0, 45.0_deg, {0, 1, 2});
             bond.setEnergyFunction(p_60deg_4a);
             CHECK_EQ(bond.energyFunc(distance), Approx(100.0 / 2 * std::pow(15.0_deg, 2)));
+        }
+        SUBCASE("HarmonicTorsion Force") {
+            HarmonicTorsion bond(1, 45.0_deg, {0, 1, 2});
+            bond.setEnergyFunction(p_90deg_4a);
+            auto forces = bond.forceFunc(distance);
+            CHECK(forces.size() == 3);
+            CHECK(forces[0].first == 0);
+            CHECK(forces[1].first == 1);
+            CHECK(forces[2].first == 2);
+            CHECK(forces[0].second.x() == Approx(0.78539816));
+            CHECK(forces[0].second.y() == Approx(0.0));
+            CHECK(forces[0].second.z() == Approx(0.0));
+            CHECK(forces[1].second.x() == Approx(-0.78539816));
+            CHECK(forces[1].second.y() == Approx(-0.78539816));
+            CHECK(forces[1].second.z() == Approx(0.0));
+            CHECK(forces[2].second.x() == Approx(0.0));
+            CHECK(forces[2].second.y() == Approx(0.78539816));
+            CHECK(forces[2].second.z() == Approx(0.0));
         }
         SUBCASE("HarmonicTorsion JSON") {
             json j = R"({"harmonic_torsion": {"index":[0,1,2], "k":0.5, "aeq":65}})"_json;

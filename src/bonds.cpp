@@ -218,12 +218,12 @@ void HarmonicTorsion::setEnergyFunction(const ParticleVector& particles) {
             Point force1 = -(force0 + force2); // no net force
             return {{indices[0], force0}, {indices[1], force1}, {indices[2], force2}};
         } else { // @todo which is faster?
-            const Point ba = calculateDistance(particles[indices[1]].pos, particles[indices[0]].pos);
-            const Point bc = calculateDistance(particles[indices[1]].pos, particles[indices[2]].pos);
+            const Point ba = calculateDistance(particles[indices[0]].pos, particles[indices[1]].pos); // b->a
+            const Point bc = calculateDistance(particles[indices[2]].pos, particles[indices[1]].pos); // b->c
             const auto inverse_norm_ba = 1.0 / ba.norm();
             const auto inverse_norm_bc = 1.0 / bc.norm();
             const auto angle = std::acos(ba.dot(bc) * inverse_norm_ba * inverse_norm_bc);
-            const auto forcemagnitude = 2.0 * half_force_constant * (angle - equilibrium_angle);
+            const auto forcemagnitude = -2.0 * half_force_constant * (angle - equilibrium_angle);
             const Point plane_babc = ba.cross(bc).eval();
             Point force0 = (forcemagnitude * inverse_norm_ba * ba.cross(plane_babc).normalized());
             Point force2 = (forcemagnitude * inverse_norm_bc * -bc.cross(plane_babc).normalized());

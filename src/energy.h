@@ -465,11 +465,10 @@ template <typename TPairPotential, bool allow_anisotropic_pair_potential = true>
     }
 
     // just a temporary placement until PairForce class template will be implemented
-    template <typename T>
-    inline Point force(const T &a, const T &b) const {
-        assert(&a != &b); // a and b cannot be the same particle
-        const Point r = geometry.vdist(a.pos, b.pos);
-        return pair_potential.force(a, b, r.squaredNorm(), r);
+    template <typename ParticleType> inline Point force(const ParticleType& a, const ParticleType& b) const {
+        assert(&a != &b);                                       // a and b cannot be the same particle
+        const Point b_towards_a = geometry.vdist(a.pos, b.pos); // vector b -> a = a - b
+        return pair_potential.force(a, b, b_towards_a.squaredNorm(), b_towards_a);
     }
 
     /**

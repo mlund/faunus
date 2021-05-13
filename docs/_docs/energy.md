@@ -694,8 +694,9 @@ Should one insist on conducting simulations far from equilibrium, a large displa
 `index`            | Array with _exactly three_ indices (relative to molecule)
 
 $$
-u(r) = \frac{1}{2}k(\alpha - \alpha_{\mathrm{eq}})^2
+u(\alpha) = \frac{1}{2}k(\alpha - \alpha_{\mathrm{eq}})^2
 $$
+where $\alpha$ is the angle between vector 1→0 and 1→2 (numbers refer to the position in `index`).
 
 ### Cosine based torsion (GROMOS-96)
 
@@ -706,8 +707,10 @@ $$
 `index`            | Array with _exactly three_ indices (relative to molecule)
 
 $$
-u(r) = \frac{1}{2}k(\cos(\alpha) - \cos(\alpha_{{\mathrm{eq}}}))^2
+u(\alpha) = \frac{1}{2}k(\cos(\alpha) - \cos(\alpha_{{\mathrm{eq}}}))^2
 $$
+where $\alpha$ is the angle between vector 1→0 and 1→2 (numbers refer to the position in `index`).
+
 
 ### Proper periodic dihedral
 

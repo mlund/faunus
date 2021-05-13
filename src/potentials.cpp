@@ -180,8 +180,17 @@ void from_json(const json &j, std::vector<CustomInteractionData> &interactions) 
 PairPotentialBase::PairPotentialBase(const std::string &name, const std::string &cite, bool isotropic)
     : name(name), cite(cite), isotropic(isotropic) {}
 
-Point PairPotentialBase::force(const Particle &, const Particle &, double, const Point &) const {
-    assert(false && "We should never reach this point!");
+/**
+ * @brief Calculates force on particle a due to another particle, b
+ * @param particle_a Particle a
+ * @param particle_b Particle b
+ * @param squared_distance Squared norm |𝐚-𝐛|²
+ * @param b_towards_a Distance vector 𝐛 -> 𝐚 = 𝐚 - 𝐛
+ * @return Force on particle a due to particle b
+ */
+Point PairPotentialBase::force([[maybe_unused]] const Particle& a, [[maybe_unused]] const Particle& b,
+                               [[maybe_unused]] double squared_distance,
+                               [[maybe_unused]] const Point& b_towards_a) const {
     throw(std::logic_error("Force computation not implemented for this setup!"));
 }
 
@@ -432,6 +441,8 @@ void LennardJones::extractorsFromJson(const json &j) {
     json_extra_params["eps"] = epsilon_name;
     extract_epsilon = [epsilon_name](const InteractionData &a) -> double { return a.get(epsilon_name) * 1.0_kJmol; };
 }
+LennardJones::LennardJones(const std::string& name, const std::string& cite, CombinationRuleType combination_rule)
+    : MixerPairPotentialBase(name, cite, combination_rule) {}
 
 TEST_CASE("[Faunus] LennardJones") {
     atoms = R"([{"A": {"sigma":2.0, "eps":0.9}},
@@ -479,6 +490,16 @@ TEST_CASE("[Faunus] LennardJones") {
         LennardJones lj = R"({"mixing": "LB", "custom": [{"A B": {"eps": 0.5, "sigma": 8}}]})"_json;
         CHECK(lj(a, b, d * d, {0, 0, d}) == Approx(lj_func(0.8_nm, 0.5_kJmol)));
         CHECK(lj(a, a, d * d, {0, 0, d}) == Approx(lj_func(0.2_nm, 0.9_kJmol)));
+    }
+
+    SUBCASE("Force") {
+        using doctest::Approx;
+        LennardJones pot = R"({"mixing": "LB", "custom": [{"A B": {"eps": 2.0, "sigma": 8}}]})"_json;
+        a.pos = {0, 0, 0};
+        b.pos = {9, 0, 0};
+        Point b_towards_a = a.pos - b.pos;
+        Point force = pot.force(a, b, b_towards_a.squaredNorm(), b_towards_a);
+        CHECK(force.x() == Approx(0.0142838474)); // force on particle a
     }
 }
 
@@ -995,8 +1016,31 @@ void NewCoulombGalore::setSelfEnergy() {
 
 NewCoulombGalore::NewCoulombGalore(const std::string &name) : PairPotentialBase(name) { setSelfEnergy(); }
 
-Point NewCoulombGalore::force(const Particle &a, const Particle &b, double, const Point &r) const {
-    return bjerrum_length * pot.ion_ion_force(a.charge, b.charge, r);
+/**
+ * @param particle_a Particle a
+ * @param particle_b Particle b
+ * @param squared_distance Squared norm |𝐚-𝐛|²
+ * @param b_towards_a Distance vector 𝐛 -> 𝐚 = 𝐚 - 𝐛
+ * @return Force on particle a due to particle b
+ */
+Point NewCoulombGalore::force(const Particle& particle_a, const Particle& particle_b,
+                              [[maybe_unused]] double squared_distance, const Point& b_towards_a) const {
+    return bjerrum_length * pot.ion_ion_force(particle_a.charge, particle_b.charge, b_towards_a); // force on "a"
+}
+
+TEST_CASE("[Faunus] NewCoulombGalore") {
+    Particle a, b;
+    a.charge = 1.0;
+    b.charge = -1.0;
+    a.pos = {0, 0, 0};
+    b.pos = {0, 0, 7};
+    Point b_towards_a = a.pos - b.pos;
+    auto pot = NewCoulombGalore("dummy");
+    pot.from_json(R"({"epsr": 80, "type": "plain"})"_json);
+    Point force_on_a = pot.force(a, b, b_towards_a.squaredNorm(), b_towards_a);
+    CHECK(force_on_a.x() == doctest::Approx(0));
+    CHECK(force_on_a.y() == doctest::Approx(0));
+    CHECK(force_on_a.z() == doctest::Approx(0.1429734149)); // attraction -> positive direction expected
 }
 
 void NewCoulombGalore::from_json(const json &j) {
@@ -1119,9 +1163,9 @@ TEST_CASE("[Faunus] Dipole-dipole interactions") {
           Approx(dipoledipole(
               b, b, r2, r))); // interaction between two parallell dipoles, directed perpendicular to their seperation
     CHECK(u(a, b, r2, r) == Approx(dipoledipole(a, b, r2, r))); // interaction between two perpendicular dipoles
-    CHECK(u(a, a, r2, r) == -(2.0 / 3.0) * dipoledipole.bjerrum_length);
+    CHECK(u(a, a, r2, r) == Approx(-(2.0 / 3.0) * dipoledipole.bjerrum_length));
     CHECK(u(b, b, r2, r) == (1.0 / 3.0) * dipoledipole.bjerrum_length);
-    CHECK(u(a, c, r2, r) == -2.0 / 9.0 * dipoledipole.bjerrum_length);
+    CHECK(u(a, c, r2, r) == Approx(-2.0 / 9.0 * dipoledipole.bjerrum_length));
     CHECK(u(b, c, r2, r) == 1.0 / 9.0 * dipoledipole.bjerrum_length);
     CHECK(u(a, b, r2, r) == 0);
 }

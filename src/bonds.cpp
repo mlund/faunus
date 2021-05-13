@@ -217,13 +217,13 @@ void HarmonicTorsion::setEnergyFunction(const ParticleVector& particles) {
             Point force2 = prefactor * inverse_norm2 * (vec1 - vec2 * cosine_angle);
             Point force1 = -(force0 + force2); // no net force
             return {{indices[0], force0}, {indices[1], force1}, {indices[2], force2}};
-        } else { // @todo which one of these two are fastest?
+        } else { // @todo which is faster?
             const Point ba = calculateDistance(particles[indices[1]].pos, particles[indices[0]].pos);
             const Point bc = calculateDistance(particles[indices[1]].pos, particles[indices[2]].pos);
             const auto inverse_norm_ba = 1.0 / ba.norm();
             const auto inverse_norm_bc = 1.0 / bc.norm();
             const auto angle = std::acos(ba.dot(bc) * inverse_norm_ba * inverse_norm_bc);
-            const auto forcemagnitude = -2.0 * half_force_constant * (angle - equilibrium_angle);
+            const auto forcemagnitude = 2.0 * half_force_constant * (angle - equilibrium_angle);
             const Point plane_babc = ba.cross(bc).eval();
             Point force0 = (forcemagnitude * inverse_norm_ba * ba.cross(plane_babc).normalized());
             Point force2 = (forcemagnitude * inverse_norm_bc * -bc.cross(plane_babc).normalized());
@@ -313,7 +313,7 @@ TEST_CASE("[Faunus] BondData") {
     p_90deg_4a[1].pos = {0.0, 0.0, 0.0};
     p_90deg_4a[2].pos = {1.0, 0.0, 0.0};
 
-    Geometry::DistanceFunction distance = [](const Point& a, const Point& b) -> Point { return b - a; };
+    Geometry::DistanceFunction distance = [](auto& a, auto& b) -> Point { return a - b; };
     Geometry::DistanceFunction distance_3a = [](const Point&, const Point&) -> Point { return {0, 3, 0}; };
     Geometry::DistanceFunction distance_5a = [](const Point&, const Point&) -> Point { return {0, 3, 4}; };
 

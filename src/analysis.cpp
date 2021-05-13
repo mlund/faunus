@@ -1805,45 +1805,12 @@ VirialPressure::VirialPressure(const json& j, Space& spc, Energy::Energybase& po
 void VirialPressure::_sample() {
     std::fill(forces.begin(), forces.end(), Point::Zero());
     pot.force(forces);
+    Tensor pressure_tensor = Tensor::Zero();
+    for (size_t i = 0; i < spc.p.size(); i++) {
+        pressure_tensor += spc.p[i++] * force[i].transpose();
+    }
+}
 
-    // contributions from internal pressure
-    for (const auto index : groups_with_internal_pressure) {
-        auto [beg, end] = spc.groups[index].to_index(spc.p.begin());
-        for (auto i = beg; beg < end; beg++) {
-            pressure_tensor += spc.p[i].pos * forces[i].transpose();
-        }
-        pressure_tensor += group_internal(spc.groups.at(index));
-    }
-    // contributions from group-group interactions
-    for (auto i = spc.groups.cbegin(); i != spc.groups.cend(); ++i) {
-        for (auto j = i; ++j != spc.groups.cend();) {
-            pressure_tensor += group_to_group(*i, *j);
-        }
-    }
-}
-Tensor VirialPressure::group_internal(const Space::Tgroup& group) const {
-    Tensor pressure_tensor = Tensor::Zero();
-    for (auto particle1 = group.begin(); particle1 != group.end(); ++particle1) {
-        for (auto particle2 = particle1; ++particle2 != group.end();) {
-            pressure_tensor += distance_x_force(*particle1, *particle2);
-        }
-    }
-    return pressure_tensor;
-}
-Tensor VirialPressure::group_to_group(const Space::Tgroup& group1, const Space::Tgroup& group2) const {
-    Tensor pressure_tensor = Tensor::Zero();
-    for (const auto& particle_i : group1) {
-        for (const auto& particle_j : group2) {
-            pressure_tensor += distance_x_force(particle_i, particle_j);
-        }
-    }
-    return pressure_tensor;
-}
-Tensor VirialPressure::distance_x_force(const Particle& particle1, const Particle& particle2) const {
-    const Point distance = spc.geo.vdist(particle1.pos, particle2.pos);
-    const Point force = forcefunctor(particle1, particle2);
-    return distance * force.transpose();
-}
 void VirialPressure::_to_json(json& j) const {
     j["no_internal"] = user_excluded_molids |
                        ranges::cpp20::views::transform([](auto molid) { return Faunus::molecules.at(molid).name; }) |

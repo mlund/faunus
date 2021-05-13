@@ -461,9 +461,7 @@ class VirialPressure : public Analysisbase {
     void _from_json(const json&) override;
     void _to_json(json& j) const override;
     void _to_disk() override;
-    Tensor distance_x_force(const Particle& particle1, const Particle& particle2) const; // todo: get from Hamiltonian
-    Tensor group_to_group(const Space::Tgroup& group1, const Space::Tgroup& group2) const;
-    Tensor group_internal(const Space::Tgroup& group) const;
+    // todo: get from Hamiltonian
     void _sample() override;
 
   public:

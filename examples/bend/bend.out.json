@@ -13,6 +13,27 @@
       }
     },
     {
+      "reactioncoordinate": {
+        "average": 1.990380828288927,
+        "dir": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "file": "distance.dat.gz",
+        "index": 0,
+        "indexes": [
+          0,
+          2
+        ],
+        "nskip": 10,
+        "nstep": 1,
+        "property": "atomatom",
+        "samples": 199990,
+        "type": "molecule"
+      }
+    },
+    {
       "atomrdf": {
         "dim": 1,
         "dr": 0.1,

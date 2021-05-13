@@ -38,6 +38,15 @@ moves:
 
 analysis:
     - systemenergy: {file: energy.dat, nstep: 100, nskip: 1}
+    - reactioncoordinate:
+          file: distance.dat.gz
+          nstep: 1
+          nskip: 10
+          type: molecule
+          index: 0
+          property: atomatom
+          indexes: [0,2]
+          dir: [1,1,1]
     - atomrdf: {file: rdf.dat, nstep: 1, dr: 0.1, name1: bead, name2: bead, nskip: 1, dim: 1}
     - savestate: {file: state.json}
 

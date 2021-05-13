@@ -288,6 +288,48 @@ void PeriodicDihedral::setEnergyFunction(const ParticleVector& particles) {
         const auto angle = std::atan2((norm1.cross(norm2)).dot(v2) / v2.norm(), norm1.dot(norm2));
         return force_constant * (1.0 + std::cos(periodicity * angle - dihedral_angle));
     };
+    forceFunc = [&](Geometry::DistanceFunction dist) -> std::vector<IndexAndForce> {
+        // Torsion on the form a(0) - b(1) - c(2) - d(3)
+        // The need to recalclate the dihedral angle, using the energy function implementation.
+        auto v1 = dist(particles[indices[1]].pos, particles[indices[0]].pos); // a->b
+        auto v2 = dist(particles[indices[2]].pos, particles[indices[1]].pos); // b->c
+        auto v3 = dist(particles[indices[3]].pos, particles[indices[2]].pos); // c->d
+        auto norm1 = v1.cross(v2);                                            // ab x bc
+        auto norm2 = v2.cross(v3);                                            // bc x cd
+        const auto angle = std::atan2((norm1.cross(norm2)).dot(v2) / v2.norm(), norm1.dot(norm2)); // Dihedral angle
+
+        // Force begins:
+        // Calculation of the energy derivative with respect to the dihedral angle.
+        const auto magnitude = periodicity * force_constant * std::sin(periodicity * angle - dihedral_angle);
+
+        // Calculation of the dihedral angle derivative with respect to the position vector.
+        const auto inverse_norm_ab = 1.0 / v1.norm();
+        const auto inverse_norm_bc = 1.0 / v2.norm();
+        const auto inverse_norm_cd = 1.0 / v3.norm();
+        const auto angle_abc = std::acos(-v1.dot(v2) * inverse_norm_ab * inverse_norm_bc);
+        const auto angle_bcd = std::acos(-v2.dot(v3) * inverse_norm_bc * inverse_norm_cd);
+        const auto theta_a_derivative = inverse_norm_ab * 1 / std::sin(angle_abc);
+        const auto theta_d_derivative = inverse_norm_cd * 1 / std::sin(angle_bcd);
+
+        // Calculation of directional vectors on particle a and d.
+        const Point pa = (-v1.cross(v2)).normalized();
+        const Point pd = (v3.cross(-v2)).normalized();
+
+        // Calculation of forces on particle a and d
+        Point force0 = magnitude * pa * theta_a_derivative;
+        Point force3 = magnitude * pd * theta_d_derivative;
+
+        // Calculation of force and associated vectors for atom c.
+        const Point bc_midpoint = 0.5 * v2;
+        const auto inversed_squared_norm_bc_midpoint = 1 / (bc_midpoint.norm() * bc_midpoint.norm());
+        const Point tc = -(bc_midpoint.cross(force3) + 0.5*v3.cross(force3) - 0.5*v1.cross(force0)); // Uncertainty in this line.
+        Point force2 = inversed_squared_norm_bc_midpoint * tc.cross(bc_midpoint);
+
+        // Newton's third law for force on atom b.
+        Point force1 = -(force0 + force2 + force3);
+
+        return {{indices[0], force0}, {indices[1], force1}, {indices[2], force2}, {indices[3], force3}};
+    };
 }
 
 StretchData::StretchData(const std::vector<int>& indices) : BondData(indices) {}

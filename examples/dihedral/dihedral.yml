@@ -20,10 +20,10 @@ moleculelist:
         atomic: false
         atoms: [a, b, c, d]
         structure:
-          - a: [-9.80, -3.11, 7.57]
-          - b: [-9.56, -3.85, 8.26]
-          - c: [-8.10, -4.43, 7.78]
-          - d: [-8.38, -3.05, 7.16]
+          - a: [-3.45, -0.32, -5.19]
+          - b: [-4.65, -0.54, -6.52]
+          - c: [-3.33, -0.38, -6.43]
+          - d: [-3.93,  0.05, -5.94]
         bondlist:
           - harmonic: {k: 10, req: 1, index: [0,1]}
           - harmonic: {k: 10, req: 1, index: [1,2]}
@@ -36,28 +36,19 @@ insertmolecules:
     - fourbody: {N: 1}
 
 moves:
-    - langevin_dynamics: # Langevin dynamics
+    - langevin_dynamics:
         nsteps: 10
-        integrator: {time_step: 0.002, friction: 5}
+        integrator: {time_step: 0.005, friction: 5}
 #    - transrot: # Monte Carlo
 #        molecule: fourbody
 
 analysis:
     - systemenergy: {file: energy.dat, nstep: 100, nskip: 1}
-#    - reactioncoordinate:
-#          file: distance.dat.gz
-#          nstep: 1
-#          nskip: 10
-#          type: molecule
-#          index: 0
-#          property: atomatom
-#          indexes: [0,2]
-#          dir: [1,1,1]
     - atomrdf: {file: rdf.dat, nstep: 1, dr: 0.1, name1: a, name2: d, nskip: 1, dim: 1}
     - savestate: {file: state.json}
 
 geometry: {type: cuboid, length: 20}
-mcloop: {macro: 1, micro: 5000000}
+mcloop: {macro: 1, micro: 10000000}
 temperature: 298.15
 random: { seed: fixed }
 

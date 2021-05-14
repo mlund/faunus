@@ -159,7 +159,7 @@ struct GromosTorsion : public TorsionData {
  */
 struct PeriodicDihedral : public BondData {
     double force_constant = 0.0;
-    double dihedral_angle = 0.0;
+    double phase_angle = 0.0;
     double periodicity = 1.0;
     int numindex() const override;
     std::shared_ptr<BondData> clone() const override;

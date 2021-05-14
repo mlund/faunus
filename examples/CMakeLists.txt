@@ -76,6 +76,12 @@ add_test(
     && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} bend.out.json out.json --tol 0.03"
         WORKING_DIRECTORY ${EXAMPLES_DIR}/bend)
 
+add_test(
+        NAME dihedral
+        COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} dihedral.yml\
+    | $<TARGET_FILE:faunus> --nobar\
+   && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} dihedral.out.json out.json --tol 0.03"
+        WORKING_DIRECTORY ${EXAMPLES_DIR}/dihedral)
 
 add_test(
         NAME chain
@@ -247,6 +253,8 @@ install(FILES
         ${EXAMPLES_DIR}/bend/bend.yml
         ${EXAMPLES_DIR}/bend/bend.out.json
         ${EXAMPLES_DIR}/bend/mc_vs_md.agr
+        ${EXAMPLES_DIR}/dihedral/dihedral.yml
+        ${EXAMPLES_DIR}/dihedral/dihedral.out.json
         ${EXAMPLES_DIR}/penalty/penalty.yml
         ${EXAMPLES_DIR}/penalty/penalty.ipynb
         ${EXAMPLES_DIR}/multipole/multipole.yml

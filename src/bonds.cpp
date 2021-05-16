@@ -534,6 +534,28 @@ TEST_CASE("[Faunus] BondData") {
             bond.setEnergyFunction(p_90deg);
             CHECK_EQ(bond.energyFunc(distance), Approx(100.0));
         }
+        SUBCASE("PeriodicDihedral Forces") {
+            PeriodicDihedral bond(100.0, 0.0_deg, 3, {0, 1, 2, 3});
+            bond.setEnergyFunction(p_90deg);
+            auto forces = bond.forceFunc(distance);
+            CHECK(forces.size() == 4);
+            CHECK(forces[0].first == 0);
+            CHECK(forces[1].first == 1);
+            CHECK(forces[2].first == 2);
+            CHECK(forces[3].first == 3);
+            CHECK(forces[0].second.x() == Approx(0));
+            CHECK(forces[0].second.y() == Approx(60));
+            CHECK(forces[0].second.z() == Approx(0));
+            CHECK(forces[1].second.x() == Approx(0));
+            CHECK(forces[1].second.y() == Approx(-60));
+            CHECK(forces[1].second.z() == Approx(0));
+            CHECK(forces[2].second.x() == Approx(-30));
+            CHECK(forces[2].second.y() == Approx(0));
+            CHECK(forces[2].second.z() == Approx(0));
+            CHECK(forces[3].second.x() == Approx(30));
+            CHECK(forces[3].second.y() == Approx(0));
+            CHECK(forces[3].second.z() == Approx(0));
+        }
         SUBCASE("PeriodicDihedral JSON") {
             json j = R"({"periodic_dihedral": {"index":[0,1,2,3], "k":10, "phi":0.0, "n": 3}})"_json;
             bond_ptr = j;

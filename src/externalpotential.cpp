@@ -91,6 +91,7 @@ ExternalPotential::ExternalPotential(const json &j, Space &spc) : space(spc) {
         if (act_on_mass_center) {
             throw ConfigurationError("`indices` cannot be used with `com`");
         }
+        std::sort(atom_indices.begin(), atom_indices.end()); // for faster search using std::find
     }
 }
 double ExternalPotential::energy(Change &change) {
@@ -125,6 +126,9 @@ double ExternalPotential::energy(Change &change) {
 void ExternalPotential::to_json(json &j) const {
     j["molecules"] = molecule_names;
     j["com"] = act_on_mass_center;
+    if (!atom_indices.empty()) {
+        j["indices"] = atom_indices;
+    }
 }
 
 TEST_CASE("[Faunus] ExternalPotential") {

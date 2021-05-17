@@ -574,6 +574,10 @@ properties:
                             items: {type: string}
                             minItems: 1
                             description: "Array of molecules to operate on"
+                        indices:
+                            type: array
+                            items: {type: number}
+                            description: "atom indices to affect (relative to molecule)"
                     required: [epsr, molecules, nstep]
                     additionalProperties: false
 

@@ -255,6 +255,9 @@ install(FILES
         ${EXAMPLES_DIR}/bend/mc_vs_md.agr
         ${EXAMPLES_DIR}/dihedral/dihedral.yml
         ${EXAMPLES_DIR}/dihedral/dihedral.out.json
+        ${EXAMPLES_DIR}/dihedral/dihedral-plot.py
+        ${EXAMPLES_DIR}/dihedral/dihedral-mc-rdf.dat
+        ${EXAMPLES_DIR}/dihedral/dihedral-md-rdf.dat
         ${EXAMPLES_DIR}/penalty/penalty.yml
         ${EXAMPLES_DIR}/penalty/penalty.ipynb
         ${EXAMPLES_DIR}/multipole/multipole.yml

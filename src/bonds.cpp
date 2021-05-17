@@ -294,8 +294,8 @@ void PeriodicDihedral::setEnergyFunction(const ParticleVector& particles) {
         auto ab = distance(particles[indices[1]].pos, particles[indices[0]].pos); // a->b
         auto bc = distance(particles[indices[2]].pos, particles[indices[1]].pos); // b->c
         auto cd = distance(particles[indices[3]].pos, particles[indices[2]].pos); // c->d
-        auto normal_abc = ab.cross(bc).eval();                                    // ab x bc
-        auto normal_bcd = bc.cross(cd).eval();                                    // bc x cd
+        auto normal_abc = ab.cross(bc).eval();
+        auto normal_bcd = bc.cross(cd).eval();
         const auto dihedral_angle =
             std::atan2((normal_abc.cross(normal_bcd)).dot(bc) / bc.norm(), normal_abc.dot(normal_bcd));
 
@@ -308,8 +308,8 @@ void PeriodicDihedral::setEnergyFunction(const ParticleVector& particles) {
         const auto inverse_norm_cd = 1.0 / cd.norm();
         const auto angle_abc = std::acos(-ab.dot(bc) * inverse_norm_ab * inverse_norm_bc);
         const auto angle_bcd = std::acos(-bc.dot(cd) * inverse_norm_bc * inverse_norm_cd);
-        const auto theta_a_derivative = inverse_norm_ab * 1 / std::sin(angle_abc);
-        const auto theta_d_derivative = inverse_norm_cd * 1 / std::sin(angle_bcd);
+        const auto theta_a_derivative = inverse_norm_ab / std::sin(angle_abc);
+        const auto theta_d_derivative = inverse_norm_cd / std::sin(angle_bcd);
 
         // Calculation of directional vectors on particle a and d.
         const Point ortho_normalized_abc = -normal_abc.normalized();   // normalized vector orthogonal to the plane abc.
@@ -321,13 +321,9 @@ void PeriodicDihedral::setEnergyFunction(const ParticleVector& particles) {
 
         // Calculation of force and associated vectors for atom c.
         const Point bc_midpoint = 0.5 * bc;
-        const auto inversed_squared_norm_bc_midpoint = 1.0 / bc_midpoint.squaredNorm();
         const Point tc = -(bc_midpoint.cross(force_d) + 0.5 * cd.cross(force_d) - 0.5 * ab.cross(force_a));
-        Point force_c = inversed_squared_norm_bc_midpoint * tc.cross(bc_midpoint);
-
-        // Newton's third law for force on atom b.
-        Point force_b = -(force_a + force_c + force_d);
-
+        Point force_c = tc.cross(bc_midpoint) / bc_midpoint.squaredNorm();
+        Point force_b = -(force_a + force_c + force_d); // Newton's third law for force on atom b.
         return {{indices[0], force_a}, {indices[1], force_b}, {indices[2], force_c}, {indices[3], force_d}};
     };
 }

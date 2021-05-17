@@ -41,6 +41,9 @@ void to_json(json &j, const Energybase &base); //!< Converts any energy class to
  * atoms or the mass-center. The specific energy function, `externalPotentialFunc`
  * is defined in derived classes.
  *
+ * For a given molecule id, a subset of particles can be set with `indices`.
+ * If not specified, *all* particles in the group will be affected.
+ *
  * @todo The `dN` check is inefficient as it calculates the external potential on *all* particles.
  */
 class ExternalPotential : public Energybase {
@@ -48,6 +51,7 @@ class ExternalPotential : public Energybase {
     bool act_on_mass_center = false;                   //!< apply only on center-of-mass
     std::set<int> molecule_ids;                        //!< ids of molecules to act on
     std::vector<std::string> molecule_names;           //!< corresponding names of molecules to act on
+    std::vector<int> atom_indices;                     //!< atom indices relative to group
     double groupEnergy(const Group<Particle> &) const; //!< external potential on a single group
   protected:
     Space &space;                                                            //!< reference to simulation space

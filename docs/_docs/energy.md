@@ -734,6 +734,7 @@ $$
 `molecules`  | List of molecules to confine (names)
 `com=false`  | Apply to molecular mass center
 `k`          | Harmonic spring constant in kJ/mol or `inf` for infinity
+`indices`    | Limit potential to a list of atom index relative to group
 
 Confines `molecules` in a given region of the simulation container by applying a harmonic potential on
 exterior atom positions, $\mathbf{r}\_i$:
@@ -778,6 +779,10 @@ $f_i$           | $\sum_{\alpha\in \{x,y,z\} } (\delta r_{i,\alpha})^2$
 where $\delta r$ are distances to the confining, cuboidal faces.
 Note that the elements of `low` must be smaller than or equal to the corresponding
 elements of `high`.
+
+Use `indices` to limit the potential to a subset of particles in the molecule. This require
+that only one molecule is specified and that `com=false`.
+
 
 ## Solvent Accessible Surface Area
 

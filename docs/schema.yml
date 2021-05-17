@@ -532,6 +532,10 @@ properties:
                             items: {type: string}
                             minItems: 1
                             description: Array of molecules to operate on
+                        indices:
+                            type: array
+                            items: {type: number}
+                            description: "atom indices to affect (relative to molecule)"
                     required: [function, molecules]
                     additionalProperties: false
                     allOf:
@@ -610,6 +614,10 @@ properties:
                             type: array
                             minItems: 3
                             maxItems: 3
+                        indices:
+                            type: array
+                            items: {type: number}
+                            description: "atom indices to affect (relative to molecule)"
                         radius: {type: number}
                         scale: {type: boolean}
                         type: {type: string, enum: [sphere, cylinder, cuboid]}

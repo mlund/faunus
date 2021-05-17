@@ -41,26 +41,37 @@ void to_json(json &j, const Energybase &base) {
  * - If `act_on_mass_center` is true, the external potential is applied on a
  *   fictitious particle placed at the COM and with a net-charge of the group.
  */
-double ExternalPotential::groupEnergy(const Group<Particle> &group) const {
-    double u = 0;
+double ExternalPotential::groupEnergy(const Group<Particle>& group) const {
+    double energy = 0.0;
+
+    std::function<bool(const Particle&)> select_particle;
+    if (atom_indices.empty()) { // select all particles in group by default
+        select_particle = [&]([[maybe_unused]] const auto& particle) { return true; };
+    } else {
+        select_particle = [&](const auto& particle) {
+            auto atom_index = std::addressof(particle) - std::addressof(space.p.front());
+            return std::find(atom_indices.begin(), atom_indices.end(), atom_index) != atom_indices.end();
+        };
+    }
+
     if (molecule_ids.find(group.id) != molecule_ids.end()) {
-        if (act_on_mass_center and not group.atomic) { // apply only to center of mass
-            if (group.size() == group.capacity()) {    // only apply if group is active
-                Particle mass_center;                  // temp. particle representing molecule
-                mass_center.charge = Faunus::monopoleMoment(group.begin(), group.end());
-                mass_center.pos = group.cm;
-                return externalPotentialFunc(mass_center);
+        if (act_on_mass_center && group.isMolecular()) {
+            if (group.size() == group.capacity()) {
+                Particle fake_mass_center_particle;
+                fake_mass_center_particle.charge = Faunus::monopoleMoment(group.begin(), group.end());
+                fake_mass_center_particle.pos = group.cm;
+                return externalPotentialFunc(fake_mass_center_particle);
             }
         } else {
-            for (auto &particle : group) { // loop over active particles
-                u += externalPotentialFunc(particle);
-                if (std::isnan(u)) {
+            for (const auto& particle : group | ranges::cpp20::views::filter(select_particle)) {
+                energy += externalPotentialFunc(particle);
+                if (std::isnan(energy)) {
                     break;
                 }
             }
         }
     }
-    return u;
+    return energy;
 }
 
 ExternalPotential::ExternalPotential(const json &j, Space &spc) : space(spc) {
@@ -71,6 +82,15 @@ ExternalPotential::ExternalPotential(const json &j, Space &spc) : space(spc) {
     molecule_ids = std::set<int>(_ids.begin(), _ids.end());             // vector --> set
     if (molecule_ids.empty()) {
         throw std::runtime_error(name + ": molecule list is empty");
+    }
+    atom_indices = j.value("indices", atom_indices);
+    if (!atom_indices.empty()) {
+        if (molecule_ids.size() > 1) {
+            throw ConfigurationError("indices can be used only with one molecule id");
+        }
+        if (act_on_mass_center) {
+            throw ConfigurationError("`indices` cannot be used with `com`");
+        }
     }
 }
 double ExternalPotential::energy(Change &change) {

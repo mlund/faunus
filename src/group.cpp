@@ -90,17 +90,30 @@ template <class T> void Group<T>::translate(const Point &d, Geometry::BoundaryFu
 
 /**
  * @param boundary_function Function to apply periodic boundaries
- * @param original_mass_center Original or appriximate mass center used for PBC removal
+ * @param approximate_mass_center Original or appriximate mass center used for PBC removal
  *
  * Only active, molecular groups are affected. Before the mass center is
  * calculated, the molecule is translated towards the center of the simulation
  * box to remove possible periodic boundary conditions; then translated back again.
- * The translation is done by subtracting / adding `original_mass_center`.
+ * The translation is done by subtracting / adding `approximate_mass_center`.
  */
 template <class T>
-void Group<T>::updateMassCenter(Geometry::BoundaryFunction boundary_function, const Point &original_mass_center) {
+void Group<T>::updateMassCenter(Geometry::BoundaryFunction boundary_function, const Point& approximate_mass_center) {
     if (isMolecular() && !empty()) {
-        cm = Geometry::massCenter(begin(), end(), boundary_function, -original_mass_center);
+        cm = Geometry::massCenter(begin(), end(), boundary_function, -approximate_mass_center);
+    }
+}
+
+/**
+ * @param boundary_function Function to apply periodic boundaries
+ *
+ * This will approximate the existing mass center by the middle particle which for PBC systems
+ * is generally safer then using the old mass center.
+ */
+template <class T> void Group<T>::updateMassCenter(Geometry::BoundaryFunction boundary_function) {
+    if (!empty()) {
+        const auto& approximate_mass_center = operator[](size() / 2).pos;
+        updateMassCenter(boundary_function, approximate_mass_center);
     }
 }
 

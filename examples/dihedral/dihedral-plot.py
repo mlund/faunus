@@ -1,15 +1,20 @@
 #!/bin/env python
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 
-r_mc, g_mc = np.loadtxt('dihedral-mc-rdf.dat', unpack=True, usecols=(0,1))
-r_ld, g_ld = np.loadtxt('dihedral-md-rdf.dat', unpack=True, usecols=(0,1))
-r_test, g_test = np.loadtxt('rdf.dat', unpack=True, usecols=(0,1))
+mc = np.loadtxt('dihedral-mc-rdf.dat', unpack=True, usecols=(0,1))
+ld = np.loadtxt('dihedral-md-rdf.dat', unpack=True, usecols=(0,1))
 
-plt.plot(r_mc, g_mc, label='Monte Carlo', linewidth=10, alpha=0.5)
-plt.plot(r_ld, g_ld, label='Langevin', linewidth=2)
-plt.plot(r_test, g_test, label='Test', linewidth=2)
+plt.plot(mc[0], mc[1], label='Monte Carlo', linewidth=10, alpha=0.3)
+plt.plot(ld[0], ld[1], label='Langevin', linewidth=2)
+
+if os.path.isfile('rdf.dat'):
+    test = np.loadtxt('rdf.dat', unpack=True, usecols=(0,1))
+    plt.plot(test[0], test[1], label='Test', linewidth=2)
+
+plt.xlim(0, 5)
 plt.legend(loc=0, frameon=False, fontsize=10)
-plt.xlabel('Distance r (Å)', fontsize=14)
-plt.ylabel('g(r)', fontsize=14)
+plt.xlabel('Distance, $r$ (Å)', fontsize=14)
+plt.ylabel('$g(r)$', fontsize=14)
 plt.savefig('dihedral-plot.png')

@@ -105,6 +105,19 @@ void Group<T>::updateMassCenter(Geometry::BoundaryFunction boundary_function, co
 }
 
 /**
+ * @param boundary_function Function to apply periodic boundaries
+ *
+ * This will approximate the existing mass center by the middle particle which for PBC systems
+ * is generally safer then using the old mass center.
+ */
+template <class T> void Group<T>::updateMassCenter(Geometry::BoundaryFunction boundary_function) {
+    if (!empty()) {
+        const auto& approximate_mass_center = operator[](size() / 2).pos;
+        updateMassCenter(boundary_function, approximate_mass_center);
+    }
+}
+
+/**
  * @param mask Bitmask based on enum `Group::Selectors`
  * @return Lambda function that returns true if group matches mask
  *

@@ -141,12 +141,6 @@ size_t ForceMoveBase::resizeForcesAndVelocities() {
     return num_active_particles;
 }
 
-/**
- * @note Before returning, mass centers need to be updated, taking into account PBC.
- *       We could use the old mass center for this, but MD propagation may have
- *       moved this too far out of sync whereby the PBC removal may fail. For this reason, we
- *       simply use the position of one of the particles in the group (at index = size / 2)
- */
 void ForceMoveBase::_move(Change &change) {
     change.clear();
     change.all = true;
@@ -154,11 +148,8 @@ void ForceMoveBase::_move(Change &change) {
     for (unsigned int step = 0; step < number_of_steps; ++step) {
         integrator->step(velocities, forces);
     }
-    for (auto& group : spc.groups) { // update mass centers
-        if (!group.empty()) {
-            const auto& approximate_mass_center = group[group.size() / 2].pos;
-            group.updateMassCenter(spc.geo.getBoundaryFunc(), approximate_mass_center);
-        }
+    for (auto& group : spc.groups) { // update mass centers before returning to MC
+        group.updateMassCenter(spc.geo.getBoundaryFunc());
     }
 }
 

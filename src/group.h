@@ -265,6 +265,9 @@ namespace Faunus {
 
             void updateMassCenter(Geometry::BoundaryFunction,
                                   const Point& approximate_mass_center); //!< Calculates mass center
+
+            void updateMassCenter(Geometry::BoundaryFunction); //!< Calculates mass center
+
         }; //!< End of Group class
 
         // Group<Particle> is instantiated elsewhere (group.cpp)

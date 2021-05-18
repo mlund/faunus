@@ -406,9 +406,17 @@ template <typename PairEnergy> class OpenMPEnergyAccumulator : public BasicEnerg
     }
 
     inline explicit operator double() {
-        // target for openmp pragmas or std::execution policy
-        for (const auto& pair : particle_pairs) {
-            this->value += this->pair_energy.potential(pair.first.get(), pair.second.get());
+        if constexpr (true) { // use C++17 threading; requires gcc10 and Intel TBB as of writing
+            this->value += std::transform_reduce(
+                std::execution::par, particle_pairs.begin(), particle_pairs.end(), 0.0, std::plus<double>(),
+                [&](const auto& pair) { return this->pair_energy.potential(pair.first.get(), pair.second.get()); });
+        } else {
+            double sum = 0.0;
+#pragma omp parallel for reduction(+ : sum)
+            for (const auto& pair : particle_pairs) {
+                sum += this->pair_energy.potential(pair.first.get(), pair.second.get());
+            }
+            this->value += sum;
         }
         particle_pairs.clear();
         return this->value;

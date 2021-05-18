@@ -1194,29 +1194,25 @@ class Nonbonded : public Energybase {
     void force(std::vector<Point> &forces) override {
         auto update_force = [&](const Particle& particle1, const Particle& particle2) {
             auto force = pair_energy.force(particle1, particle2);
-            const auto first_particle_addresss = std::addressof(spc.p.front());
-            const auto index1 = std::addressof(particle1) - first_particle_addresss;
-            const auto index2 = std::addressof(particle2) - first_particle_addresss;
+            const auto index1 = spc.getParticleIndex(particle1);
+            const auto index2 = spc.getParticleIndex(particle2);
             forces[index1] += force;
             forces[index2] -= force;
         };
 
+        auto has_internal_force = [](const auto& group) {
+            return (group.traits().compressible && !group.traits().rigid);
+        };
+        auto compressible_groups = spc.groups | ranges::cpp20::views::filter(has_internal_force);
+
         // forces within a single group
-        auto internal_forces = [&](const Space::Tgroup& group) {
+        std::for_each(compressible_groups.begin(), compressible_groups.end(), [&](const Space::Tgroup& group) {
             for (auto particle1 = group.begin(); particle1 != group.end(); ++particle1) {
                 for (auto particle2 = particle1; ++particle2 != group.end();) {
                     update_force(*particle1, *particle2);
                 }
             }
-        };
-        auto has_internal_force = [](const auto& group) {
-          if (group.traits().rigid || !group.traits().compressible) {
-              return false;
-          }
-          return true;
-        };
-        auto compressible_groups = spc.groups | ranges::cpp20::views::filter(has_internal_force);
-        std::for_each(compressible_groups.begin(), compressible_groups.end(), internal_forces);
+        });
 
         // forces between groups
         auto intermolecular_forces = [&](const Space::Tgroup& group1, const Space::Tgroup& group2) {

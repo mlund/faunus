@@ -178,7 +178,7 @@ struct PeriodicDihedral : public BondData {
  * U(a) = k/2 * (phi - phi_eq)^2)
  */
 struct HarmonicDihedral : public BondData {
-    double half_force_constant = 0.0;<
+    double half_force_constant = 0.0;
     double equilibrium_dihedral = 0.0;
     int numindex() const override;
     std::shared_ptr<BondData> clone() const override;

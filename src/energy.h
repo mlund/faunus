@@ -349,9 +349,11 @@ struct BasicEnergyAccumulator {
     double value = 0.0;      //!< accumulated energy
 
   public:
-    typedef const std::reference_wrapper<const Space::Tparticle> ParticleRef;
+    using ParticleRef = const std::reference_wrapper<const Space::Tparticle>;
 
     BasicEnergyAccumulator(PairEnergy &pair_energy, const double value = 0.0) : pair_energy(pair_energy), value(value) {}
+
+    void clear() { value = 0.0; }
 
     inline BasicEnergyAccumulator &operator=(const double new_value) {
         value = new_value;
@@ -369,15 +371,49 @@ struct BasicEnergyAccumulator {
         return *this;
     }
 
-    template <typename TOtherAccumulator>
-    inline BasicEnergyAccumulator &operator+=(const TOtherAccumulator &acc) {
+    template <typename TOtherAccumulator> inline BasicEnergyAccumulator& operator+=(TOtherAccumulator& acc) {
         value += static_cast<double>(acc);
         return *this;
     }
 
-    inline explicit operator double() const { return value; }
+    inline explicit operator double() { return value; }
 };
 
+template <typename PairEnergy> class OpenMPEnergyAccumulator : public BasicEnergyAccumulator<PairEnergy> {
+  private:
+    using typename BasicEnergyAccumulator<PairEnergy>::ParticleRef;
+    using ParticlePairRef = std::pair<ParticleRef, ParticleRef>;
+    std::vector<ParticlePairRef> particle_pairs;
+
+  public:
+    void clear() {
+        this->value = 0.0;
+        particle_pairs.clear();
+    }
+
+    OpenMPEnergyAccumulator(PairEnergy& pair_energy, const double value = 0.0)
+        : BasicEnergyAccumulator<PairEnergy>(pair_energy, value) {}
+
+    inline OpenMPEnergyAccumulator& operator=(const double new_value) {
+        clear();
+        return BasicEnergyAccumulator<PairEnergy>::operator=(new_value);
+    }
+
+    inline OpenMPEnergyAccumulator& operator+=(const std::pair<ParticleRef, ParticleRef>& pair) {
+        // keep this short to get inlined
+        particle_pairs.template emplace_back(pair);
+        return *this;
+    }
+
+    inline explicit operator double() {
+        // target for openmp pragmas or std::execution policy
+        for (const auto& pair : particle_pairs) {
+            this->value += this->pair_energy.potential(pair.first.get(), pair.second.get());
+        }
+        particle_pairs.clear();
+        return this->value;
+    }
+};
 
 /**
  * @brief Determines if two groups are separated beyond the cutoff distance.
@@ -1151,10 +1187,11 @@ class Nonbonded : public Energybase {
     const Space &spc;              //!< space to operate on
     TPairEnergy pair_energy; //!< a functor to compute non-bonded energy between two particles, see PairEnergy
     TPairingPolicy pairing;  //!< pairing policy to effectively sum up the pairwise additive non-bonded energy
+    TAccumulator energy_accumulator;
 
   public:
-    Nonbonded(const json &j, Space &spc, BasePointerVector<Energybase> &pot)
-        : spc(spc), pair_energy(spc, pot), pairing(spc) {
+    Nonbonded(const json& j, Space& spc, BasePointerVector<Energybase>& pot)
+        : spc(spc), pair_energy(spc, pot), pairing(spc), energy_accumulator(pair_energy, 0.0) {
         name = "nonbonded";
         from_json(j);
     }
@@ -1170,9 +1207,9 @@ class Nonbonded : public Energybase {
     }
 
      double energy(Change &change) override {
-        TAccumulator energy_accumulator(pair_energy, 0.0);
-        pairing.accumulate(energy_accumulator, change);
-        return static_cast<double>(energy_accumulator);
+         energy_accumulator.clear();
+         pairing.accumulate(energy_accumulator, change);
+         return static_cast<double>(energy_accumulator);
     }
 
     /**

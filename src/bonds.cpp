@@ -37,6 +37,8 @@ void from_json(const json& j, std::shared_ptr<BondData>& bond) {
         case BondData::PERIODIC_DIHEDRAL:
             bond = std::make_shared<PeriodicDihedral>();
             break;
+        case BondData::HARMONIC_DIHEDRAL:
+            bond = std::make_shared<HarmonicDihedral>();
         default:
             throw ConfigurationError("invalid bondtype '{}'", bondtype);
         }
@@ -224,9 +226,9 @@ void HarmonicTorsion::setEnergyFunction(const ParticleVector& particles) {
             const auto inverse_norm_bc = 1.0 / bc.norm();
             const auto angle = std::acos(ba.dot(bc) * inverse_norm_ba * inverse_norm_bc);
             const auto forcemagnitude = -2.0 * half_force_constant * (angle - equilibrium_angle);
-            const Point plane_babc = ba.cross(bc).eval();
-            Point force0 = (forcemagnitude * inverse_norm_ba * ba.cross(plane_babc).normalized());
-            Point force2 = (forcemagnitude * inverse_norm_bc * -bc.cross(plane_babc).normalized());
+            const Point plane_abc = ba.cross(bc).eval();
+            Point force0 = (forcemagnitude * inverse_norm_ba * ba.cross(plane_abc).normalized());
+            Point force2 = (forcemagnitude * inverse_norm_bc * -bc.cross(plane_abc).normalized());
             Point force1 = -(force0 + force2); // Newton's third law
             return {{indices[0], force0}, {indices[1], force1}, {indices[2], force2}};
         }
@@ -255,6 +257,20 @@ void GromosTorsion::setEnergyFunction(const ParticleVector& particles) {
         auto vec2 = calculateDistance(particles[indices[2]].pos, particles[indices[1]].pos).normalized();
         const auto x = cosine_equilibrium_angle - vec1.dot(vec2);
         return half_force_constant * x * x;
+    };
+    forceFunc = [&](Geometry::DistanceFunction distance) -> std::vector<IndexAndForce> {
+        const Point ba = distance(particles[indices[0]].pos, particles[indices[1]].pos); // b->a
+        const Point bc = distance(particles[indices[2]].pos, particles[indices[1]].pos); // b->c
+        const auto inverse_norm_ba = 1.0 / ba.norm();
+        const auto inverse_norm_bc = 1.0 / bc.norm();
+        const auto cosine_angle = ba.dot(bc) * inverse_norm_ba * inverse_norm_bc;
+        const auto angle = std::acos(cosine_angle);
+        const auto magnitude = -2.0 * half_force_constant * std::sin(angle) * (cosine_angle - cosine_equilibrium_angle);
+        const Point plane_abc = ba.cross(bc).eval();
+        Point force0 = (magnitude * inverse_norm_ba * ba.cross(plane_abc).normalized());
+        Point force2 = (magnitude * inverse_norm_bc * -bc.cross(plane_abc).normalized());
+        Point force1 = -(force0 + force2); // Newton's third law
+        return {{indices[0], force0}, {indices[1], force1}, {indices[2], force2}};
     };
 }
 
@@ -325,6 +341,77 @@ void PeriodicDihedral::setEnergyFunction(const ParticleVector& particles) {
         Point force_c = tc.cross(bc_midpoint) / bc_midpoint.squaredNorm();
         Point force_b = -(force_a + force_c + force_d); // Newton's third law for force on atom b.
         return {{indices[0], force_a}, {indices[1], force_b}, {indices[2], force_c}, {indices[3], force_d}};
+    };
+}
+
+void HarmonicDihedral::from_json(const Faunus::json& j) {
+    half_force_constant = j.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_rad, 2) / 2.0;
+    equilibrium_dihedral = j.at("deq").get<double>() * 1.0_deg;
+}
+
+void HarmonicDihedral::to_json(Faunus::json& j) const {
+    j = {{"k", 2 * half_force_constant / (1.0_kJmol / std::pow(1.0_rad, 2))}, {"deq", equilibrium_dihedral / 1.0_deg}};
+    _roundjson(j, 6);
+}
+
+int HarmonicDihedral::numindex() const { return 4; }
+
+HarmonicDihedral::HarmonicDihedral(double k, double deq, const std::vector<int>& indices)
+    : BondData(indices), half_force_constant(k / 2.0), equilibrium_dihedral(deq) {}
+
+BondData::Variant HarmonicDihedral::type() const { return BondData::HARMONIC_DIHEDRAL; }
+
+std::shared_ptr<BondData> HarmonicDihedral::clone() const { return std::make_shared<HarmonicDihedral>(*this); }
+
+void HarmonicDihedral::setEnergyFunction(const ParticleVector& particles) {
+    // Torsion on the form a(0) - b(1) - c(2) - d(3)
+    energyFunc = [&](Geometry::DistanceFunction distance) {
+      auto ab = distance(particles[indices[1]].pos, particles[indices[0]].pos); // a->b
+      auto bc = distance(particles[indices[2]].pos, particles[indices[1]].pos); // b->c
+      auto cd = distance(particles[indices[3]].pos, particles[indices[2]].pos); // c->d
+      auto normal_abc = ab.cross(bc).eval();                                    // ab x bc
+      auto normal_bcd = bc.cross(cd).eval();                                    // bc x cd
+      // atan2( [ab×bc]×[bc×cd]⋅[bc/|bc|], [ab×bc]⋅[bc×cd] )
+      const auto dihedral_angle =
+          std::atan2((normal_abc.cross(normal_bcd)).dot(bc) / bc.norm(), normal_abc.dot(normal_bcd));
+      const auto delta_dihedral = equilibrium_dihedral - dihedral_angle;
+      return half_force_constant * delta_dihedral * delta_dihedral;
+    };
+    forceFunc = [&](Geometry::DistanceFunction distance) -> std::vector<IndexAndForce> {
+      auto ab = distance(particles[indices[1]].pos, particles[indices[0]].pos); // a->b
+      auto bc = distance(particles[indices[2]].pos, particles[indices[1]].pos); // b->c
+      auto cd = distance(particles[indices[3]].pos, particles[indices[2]].pos); // c->d
+      auto normal_abc = ab.cross(bc).eval();
+      auto normal_bcd = bc.cross(cd).eval();
+      const auto dihedral_angle =
+          std::atan2((normal_abc.cross(normal_bcd)).dot(bc) / bc.norm(), normal_abc.dot(normal_bcd));
+
+      // Calculation of the energy derivative with respect to the dihedral angle.
+      const auto magnitude = -2.0 * half_force_constant * (dihedral_angle - equilibrium_dihedral);
+
+      // Calculation of the dihedral angle derivative with respect to the position vector.
+      const auto inverse_norm_ab = 1.0 / ab.norm();
+      const auto inverse_norm_bc = 1.0 / bc.norm();
+      const auto inverse_norm_cd = 1.0 / cd.norm();
+      const auto angle_abc = std::acos(-ab.dot(bc) * inverse_norm_ab * inverse_norm_bc);
+      const auto angle_bcd = std::acos(-bc.dot(cd) * inverse_norm_bc * inverse_norm_cd);
+      const auto theta_a_derivative = inverse_norm_ab / std::sin(angle_abc);
+      const auto theta_d_derivative = inverse_norm_cd / std::sin(angle_bcd);
+
+      // Calculation of directional vectors on particle a and d.
+      const Point ortho_normalized_abc = -normal_abc.normalized();   // normalized vector orthogonal to the plane abc.
+      const Point ortho_normalized_bcd = cd.cross(-bc).normalized(); // normalized vector orthogonal to the plane bcd.
+
+      // Calculation of forces on particle a and d
+      Point force_a = magnitude * ortho_normalized_abc * theta_a_derivative;
+      Point force_d = magnitude * ortho_normalized_bcd * theta_d_derivative;
+
+      // Calculation of force and associated vectors for atom c.
+      const Point bc_midpoint = 0.5 * bc;
+      const Point tc = -(bc_midpoint.cross(force_d) + 0.5 * cd.cross(force_d) - 0.5 * ab.cross(force_a));
+      Point force_c = tc.cross(bc_midpoint) / bc_midpoint.squaredNorm();
+      Point force_b = -(force_a + force_c + force_d); // Newton's third law for force on atom b.
+      return {{indices[0], force_a}, {indices[1], force_b}, {indices[2], force_c}, {indices[3], force_d}};
     };
 }
 

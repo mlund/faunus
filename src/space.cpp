@@ -295,6 +295,21 @@ int Space::getFirstParticleIndex(const Tgroup& group) const {
     return std::distance<ParticleVector::const_iterator>(p.cbegin(), group.begin());
 }
 
+/**
+ * @param particle Particle to find absolute index of
+ * @return Index of particle, relative to first particle in `Space::p`
+ * @throw If particle is not part of particle vector
+ */
+int Space::getParticleIndex(const Particle& particle) const {
+    if (!p.empty()) {
+        auto index = &particle - &p.front();
+        if (index >= 0 && index < p.size()) {
+            return static_cast<int>(index);
+        }
+    }
+    throw std::out_of_range("invalid particle index");
+}
+
 TEST_CASE("Space::numParticles") {
     Space spc;
     spc.p.resize(10);

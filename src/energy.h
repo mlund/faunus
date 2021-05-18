@@ -19,6 +19,11 @@
 #include <execution>
 #endif
 
+#if defined(__cpp_lib_parallel_algorithm) &&                                                                           \
+    __has_include(<tbb/tbb.h>) && ((defined(__clang__) && __clang_major__ >= 10) || (defined(__GNUC__) && __GNUC__ >= 10))
+#define HAS_PARALLEL_TRANSFORM_REDUCE
+#endif
+
 namespace Faunus {
 
 namespace ReactionCoordinate {
@@ -365,7 +370,7 @@ struct BasicEnergyAccumulator {
         return *this;
     }
 
-    inline BasicEnergyAccumulator &operator+=(const std::pair<ParticleRef, ParticleRef> &pair) {
+    inline BasicEnergyAccumulator& operator+=(std::pair<ParticleRef, ParticleRef>&& pair) {
         // keep this short to get inlined
         value += pair_energy.potential(pair.first.get(), pair.second.get());
         return *this;
@@ -379,44 +384,77 @@ struct BasicEnergyAccumulator {
     inline explicit operator double() { return value; }
 };
 
-template <typename PairEnergy> class OpenMPEnergyAccumulator : public BasicEnergyAccumulator<PairEnergy> {
+/**
+ * This accumulator stores a vector of pairs and postpones the actualy energy evaluation until
+ * the first call to `operator double()`. Looping over the vector can be done in serial (as a fallback);
+ * using OpenMP; or using C++17 parallel algorithms if available.
+ */
+template <typename PairEnergy> class ParallelEnergyAccumulator : public BasicEnergyAccumulator<PairEnergy> {
   private:
     using typename BasicEnergyAccumulator<PairEnergy>::ParticleRef;
-    using ParticlePairRef = std::pair<ParticleRef, ParticleRef>;
-    std::vector<ParticlePairRef> particle_pairs;
+    std::vector<std::pair<ParticleRef, ParticleRef>> particle_pairs;
+
+    double accumulateSerial() const {
+        double sum = 0.0;
+        for (const auto& [particle1, particle2] : particle_pairs) {
+            sum += this->pair_energy.potential(particle1.get(), particle2.get());
+        }
+        return sum;
+    }
+
+    double accumulateParallel() const {
+#if defined(HAS_PARALLEL_TRANSFORM_REDUCE)
+        return std::transform_reduce(
+            std::execution::par, particle_pairs.cbegin(), particle_pairs.cend(), 0.0, std::plus<double>(),
+            [&](const auto& pair) { return this->pair_energy.potential(pair.first.get(), pair.second.get()); });
+#else
+        return accumulateSerial(); // fallback
+#endif
+    }
+
+    double accumulateOpenMP() const {
+        double sum = 0.0;
+#pragma omp parallel for reduction(+ : sum)
+        for (const auto& pair : particle_pairs) {
+            sum += this->pair_energy.potential(pair.first.get(), pair.second.get());
+        }
+        return sum;
+    }
 
   public:
+    enum Schemes { SERIAL, OPENMP, PARALLEL };
+    Schemes scheme = SERIAL;
+
     void clear() {
         this->value = 0.0;
         particle_pairs.clear();
     }
 
-    OpenMPEnergyAccumulator(PairEnergy& pair_energy, const double value = 0.0)
+    ParallelEnergyAccumulator(PairEnergy& pair_energy, const double value = 0.0)
         : BasicEnergyAccumulator<PairEnergy>(pair_energy, value) {}
 
-    inline OpenMPEnergyAccumulator& operator=(const double new_value) {
+    ParallelEnergyAccumulator& operator=(const double new_value) {
         clear();
-        return BasicEnergyAccumulator<PairEnergy>::operator=(new_value);
-    }
-
-    inline OpenMPEnergyAccumulator& operator+=(const std::pair<ParticleRef, ParticleRef>& pair) {
-        // keep this short to get inlined
-        particle_pairs.template emplace_back(pair);
+        this->value = new_value;
         return *this;
     }
 
-    inline explicit operator double() {
-        if constexpr (true) { // use C++17 threading; requires gcc10 and Intel TBB as of writing
-            this->value += std::transform_reduce(
-                std::execution::par, particle_pairs.begin(), particle_pairs.end(), 0.0, std::plus<double>(),
-                [&](const auto& pair) { return this->pair_energy.potential(pair.first.get(), pair.second.get()); });
-        } else {
-            double sum = 0.0;
-#pragma omp parallel for reduction(+ : sum)
-            for (const auto& pair : particle_pairs) {
-                sum += this->pair_energy.potential(pair.first.get(), pair.second.get());
-            }
-            this->value += sum;
+    inline ParallelEnergyAccumulator& operator+=(std::pair<ParticleRef, ParticleRef>&& pair) {
+        // keep this short to get inlined
+        particle_pairs.template emplace_back(std::move(pair));
+        return *this;
+    }
+
+    explicit operator double() {
+        switch (scheme) {
+        case OPENMP:
+            this->value += accumulateOpenMP();
+            break;
+        case PARALLEL:
+            this->value += accumulateParallel();
+            break;
+        case SERIAL:
+            this->value += accumulateSerial();
         }
         particle_pairs.clear();
         return this->value;
@@ -1191,11 +1229,11 @@ class GroupPairing {
 template <typename TPairEnergy, typename TPairingPolicy>
 class Nonbonded : public Energybase {
   protected:
-    typedef BasicEnergyAccumulator<TPairEnergy> TAccumulator;
-    const Space &spc;              //!< space to operate on
-    TPairEnergy pair_energy; //!< a functor to compute non-bonded energy between two particles, see PairEnergy
-    TPairingPolicy pairing;  //!< pairing policy to effectively sum up the pairwise additive non-bonded energy
-    TAccumulator energy_accumulator;
+    using TAccumulator = BasicEnergyAccumulator<TPairEnergy>;
+    const Space& spc;                //!< space to operate on
+    TPairEnergy pair_energy;         //!< a functor to compute non-bonded energy between two particles, see PairEnergy
+    TPairingPolicy pairing;          //!< pairing policy to effectively sum up the pairwise additive non-bonded energy
+    TAccumulator energy_accumulator; //!< energy accumulator used for storing and summing pair-wise energies
 
   public:
     Nonbonded(const json& j, Space& spc, BasePointerVector<Energybase>& pot)

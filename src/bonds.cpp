@@ -39,6 +39,7 @@ void from_json(const json& j, std::shared_ptr<BondData>& bond) {
             break;
         case BondData::HARMONIC_DIHEDRAL:
             bond = std::make_shared<HarmonicDihedral>();
+            break;
         default:
             throw ConfigurationError("invalid bondtype '{}'", bondtype);
         }
@@ -654,6 +655,68 @@ TEST_CASE("[Faunus] BondData") {
             CHECK_THROWS((R"({"periodic_dihedral": {"index":[0,1,2,3], "phi":2.1, "n": 2}})"_json).get<BondDataPtr>());
             CHECK_THROWS((R"({"periodic_dihedral": {"index":[0,1,2,3], "k":0.5, "n": 2}})"_json).get<BondDataPtr>());
             CHECK_THROWS((R"({"periodic_dihedral": {"index":[0,1,2,3], "k":0.5, "phi":2.1}})"_json).get<BondDataPtr>());
+        }
+    }
+
+        SUBCASE("HarmonicDihedral") {
+        ParticleVector p_45deg(4, Particle());
+        p_45deg[1].pos = {0.0, 0.0, 0.0};
+        p_45deg[2].pos = {0.0, 0.0, 2.0};
+        p_45deg[0].pos = {5.0, 0.0, 0.0};
+        p_45deg[3].pos = {10.0, 10.0, 2.0};
+
+        ParticleVector p_90deg(p_45deg);
+        p_90deg[3].pos[0] *= 0;
+        ParticleVector p_60deg(p_45deg);
+        p_60deg[3].pos[1] *= std::sqrt(3);
+        ParticleVector p_120deg(p_60deg);
+        p_120deg[3].pos[0] *= -1;
+
+            SUBCASE("HarmonicDihedral Energy") {
+            HarmonicDihedral bond(100.0, 90.0_deg, {0, 1, 2, 3});
+            bond.setEnergyFunction(p_120deg);
+                CHECK_EQ(bond.energyFunc(distance), Approx(13.7077838904));
+            bond.setEnergyFunction(p_60deg);
+                CHECK_EQ(bond.energyFunc(distance), Approx(13.7077838904));
+            bond.setEnergyFunction(p_90deg);
+                CHECK_EQ(bond.energyFunc(distance), Approx(0.0));
+        }
+            SUBCASE("HarmonicDihedral Forces") {
+            HarmonicDihedral bond(100.0, 90.0_deg, {0, 1, 2, 3});
+            bond.setEnergyFunction(p_120deg);
+            auto forces = bond.forceFunc(distance);
+                CHECK(forces.size() == 4);
+                CHECK(forces[0].first == 0);
+                CHECK(forces[1].first == 1);
+                CHECK(forces[2].first == 2);
+                CHECK(forces[3].first == 3);
+                CHECK(forces[0].second.x() == Approx(0));
+                CHECK(forces[0].second.y() == Approx(10.471975512));
+                CHECK(forces[0].second.z() == Approx(0));
+                CHECK(forces[1].second.x() == Approx(0));
+                CHECK(forces[1].second.y() == Approx(-10.471975512));
+                CHECK(forces[1].second.z() == Approx(0));
+                CHECK(forces[2].second.x() == Approx(-2.2672492053));
+                CHECK(forces[2].second.y() == Approx(-1.308996939));
+                CHECK(forces[2].second.z() == Approx(0));
+                CHECK(forces[3].second.x() == Approx(2.2672492053));
+                CHECK(forces[3].second.y() == Approx(1.308996939));
+                CHECK(forces[3].second.z() == Approx(0));
+        }
+            SUBCASE("HarmonicDihedral JSON") {
+            json j = R"({"harmonic_dihedral": {"index":[0,1,2,4], "k":100.0, "deq":90}})"_json;
+            bond_ptr = j;
+                CHECK_EQ(json(bond_ptr), j);
+            std::dynamic_pointer_cast<HarmonicDihedral>(bond_ptr)->setEnergyFunction(p_120deg);
+                CHECK_EQ(bond_ptr->energyFunc(distance), Approx(100.0_kJmol / 2 * std::pow(45.0_deg, 2)));
+        }
+            SUBCASE("HarmonicDihedral JSON Invalid") {
+                CHECK_NOTHROW(
+                (R"({"harmonic_dihedral": {"index":[0,1,2,3], "k":0.5, "deq":90}})"_json).get<BondDataPtr>());
+                CHECK_THROWS(
+                (R"({"harmonic_dihedral": {"index":[0,1,2], "k":0.5, "deq":90}})"_json).get<BondDataPtr>());
+                CHECK_THROWS((R"({"harmonic_dihedral": {"index":[0,1,2,3], "deq":90}})"_json).get<BondDataPtr>());
+                CHECK_THROWS((R"({"harmonic_dihedral": {"index":[0,1,2,3], "k":0.5}})"_json).get<BondDataPtr>());
         }
     }
 

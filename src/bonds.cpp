@@ -579,6 +579,24 @@ TEST_CASE("[Faunus] BondData") {
             bond.setEnergyFunction(p_60deg_4a);
             CHECK_EQ(bond.energyFunc(distance), Approx(100.0 / 2 * std::pow(cos(60.0_deg) - cos(45.0_deg), 2)));
         }
+        SUBCASE("GromosTorsion Force") {
+            GromosTorsion bond(100.0, cos(45.0_deg), {0, 1, 2});
+            bond.setEnergyFunction(p_90deg_4a);
+            auto forces = bond.forceFunc(distance);
+                CHECK(forces.size() == 3);
+                CHECK(forces[0].first == 0);
+                CHECK(forces[1].first == 1);
+                CHECK(forces[2].first == 2);
+                CHECK(forces[0].second.x() == Approx(-70.7106781187));
+                CHECK(forces[0].second.y() == Approx(0.0));
+                CHECK(forces[0].second.z() == Approx(0.0));
+                CHECK(forces[1].second.x() == Approx(70.7106781187));
+                CHECK(forces[1].second.y() == Approx(70.7106781187));
+                CHECK(forces[1].second.z() == Approx(0.0));
+                CHECK(forces[2].second.x() == Approx(0.0));
+                CHECK(forces[2].second.y() == Approx(-70.7106781187));
+                CHECK(forces[2].second.z() == Approx(0.0));
+        }
         SUBCASE("GromosTorsion JSON") {
             json j = R"({"gromos_torsion": {"index":[0,1,2], "k":0.5, "aeq":65}})"_json;
             bond_ptr = j;
@@ -708,7 +726,7 @@ TEST_CASE("[Faunus] BondData") {
             bond_ptr = j;
                 CHECK_EQ(json(bond_ptr), j);
             std::dynamic_pointer_cast<HarmonicDihedral>(bond_ptr)->setEnergyFunction(p_120deg);
-                CHECK_EQ(bond_ptr->energyFunc(distance), Approx(100.0_kJmol / 2 * std::pow(45.0_deg, 2)));
+                CHECK_EQ(bond_ptr->energyFunc(distance), Approx(100.0_kJmol / 2 * std::pow(45.0_deg, 2))); // This test stochastically fail
         }
             SUBCASE("HarmonicDihedral JSON Invalid") {
                 CHECK_NOTHROW(

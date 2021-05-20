@@ -650,11 +650,11 @@ $$
 Finite extensible nonlinear elastic potential long range repulsive potential.
 
 $$
-     u(r) =
-  \begin{cases} 
-   -\frac{1}{2} k r\_{\mathrm{max}}^2 \ln \left [ 1-(r/r\_{\mathrm{max}})^2 \right ],       & \text{if } r < r\_{\mathrm{max}} \\
-   \infty, & \text{if } r \geq r\_{\mathrm{max}}
-  \end{cases}
+u(r) =
+\begin{cases}
+-\frac{1}{2} k r_{\mathrm{max}}^2 \ln \left [ 1-(r/r_{\mathrm{max}})^2 \right ],  & \text{if } r < r_{\mathrm{max}} \\
+\infty, & \text{if } r \geq r_{\mathrm{max}}
+\end{cases}
 $$
 
 It is recommended to only use the potential if the initial configuration is near equilibrium, which prevalently depends on the value of `rmax`.

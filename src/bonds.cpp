@@ -203,7 +203,7 @@ void FENEWCABond::setEnergyFunction(const ParticleVector& particles) {
             wca_force = 48 * epsilon * sigma6 * sigma6 / ba.norm();
         }
         const auto magnitude =
-            -2.0 * half_force_constant * max_distance_squared / (max_distance_squared - squared_distance) + wca_force;
+            -(2.0 * half_force_constant * max_distance_squared / (max_distance_squared - squared_distance) + wca_force);
         Point force0 = magnitude * ba.normalized();
         Point force1 = -force0;
         return {{indices[0], force0}, {indices[1], force1}};
@@ -521,6 +521,20 @@ TEST_CASE("[Faunus] BondData") {
             CHECK_EQ(bond.energyFunc(distance_3a), Approx(557.86));
             CHECK_EQ(bond.energyFunc(distance), Approx(1277.06));
         }
+        SUBCASE("FENEBond Force") {
+            FENEBond bond(100.0, 5.0, {0, 1});
+            bond.setEnergyFunction(p_4a);
+            auto forces = bond.forceFunc(distance_3a);
+            CHECK(forces.size() == 2);
+            CHECK(forces[0].first == 0);
+            CHECK(forces[1].first == 1);
+            CHECK(forces[0].second.x() == Approx(0.0));
+            CHECK(forces[0].second.y() == Approx(-156.25));
+            CHECK(forces[0].second.z() == Approx(0.0));
+            CHECK(forces[1].second.x() == Approx(0.0));
+            CHECK(forces[1].second.y() == Approx(156.25));
+            CHECK(forces[1].second.z() == Approx(0.0));
+        }
         SUBCASE("FENEBond JSON") {
             json j = R"({"fene": {"index":[1,2], "k":8, "rmax":6.0 }})"_json;
             bond_ptr = j;
@@ -544,6 +558,20 @@ TEST_CASE("[Faunus] BondData") {
             CHECK_EQ(bond.energyFunc(distance_5a), pc::infty);
             CHECK_EQ(bond.energyFunc(distance_3a), Approx(557.86 + 18.931));
             CHECK_EQ(bond.energyFunc(distance), Approx(1277.06));
+        }
+        SUBCASE("FENEWCABond Force") {
+            FENEWCABond bond(100, 5.0, 20.0, 3.2, {0, 1});
+            bond.setEnergyFunction(p_4a);
+            auto forces = bond.forceFunc(distance_3a);
+            CHECK(forces.size() == 2);
+            CHECK(forces[0].first == 0);
+            CHECK(forces[1].first == 1);
+            CHECK(forces[0].second.x() == Approx(0.0));
+            CHECK(forces[0].second.y() == Approx(-850.4660681509));
+            CHECK(forces[0].second.z() == Approx(0.0));
+            CHECK(forces[1].second.x() == Approx(0.0));
+            CHECK(forces[1].second.y() == Approx(850.4660681509));
+            CHECK(forces[1].second.z() == Approx(0.0));
         }
         SUBCASE("FENEWCABond JSON") {
             json j = R"({"fene+wca": {"index":[1,2], "k":8, "rmax":6.0, "eps":3.5, "sigma":4.5}})"_json;

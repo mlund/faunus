@@ -143,7 +143,7 @@ void FENEBond::setEnergyFunction(const ParticleVector& particles) {
           throw std::runtime_error("Fene potential: Force undefined for distances greater than rmax.");
       };
       const auto magnitude =
-          -2.0 * half_force_constant * max_squared_distance / (max_squared_distance - squared_distance);
+          -2.0 * half_force_constant * ba.norm() / (1.0 - squared_distance/max_squared_distance);
       Point force0 = magnitude * ba.normalized();
       Point force1 = -force0;
       return {{indices[0], force0}, {indices[1], force1}};
@@ -200,10 +200,10 @@ void FENEWCABond::setEnergyFunction(const ParticleVector& particles) {
         if (squared_distance <= sigma_squared * two_to_the_power_of_two_sixths) {
             double sigma6 = sigma_squared / squared_distance;
             sigma6 = sigma6 * sigma6 * sigma6;
-            wca_force = 48 * epsilon * sigma6 * sigma6 / ba.norm();
+            wca_force = -24.0 * epsilon * (2.0 * sigma6 * sigma6 - sigma6) / ba.norm();
         }
         const auto magnitude =
-            -(2.0 * half_force_constant * max_distance_squared / (max_distance_squared - squared_distance) + wca_force);
+            -(2.0 * half_force_constant * ba.norm() / (1.0 - squared_distance/max_distance_squared) + wca_force);
         Point force0 = magnitude * ba.normalized();
         Point force1 = -force0;
         return {{indices[0], force0}, {indices[1], force1}};

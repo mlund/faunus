@@ -358,6 +358,7 @@ struct BasicEnergyAccumulator {
 
     BasicEnergyAccumulator(PairEnergy &pair_energy, const double value = 0.0) : pair_energy(pair_energy), value(value) {}
 
+    void reserve([[maybe_unused]] size_t number_of_particles) {}
     void clear() { value = 0.0; }
 
     inline BasicEnergyAccumulator &operator=(const double new_value) {
@@ -385,45 +386,27 @@ struct BasicEnergyAccumulator {
 };
 
 /**
- * This accumulator stores a vector of pairs and postpones the actualy energy evaluation until
+ * This accumulator stores a vector of pairs and postpones the actual energy evaluation until
  * the first call to `operator double()`. Looping over the vector can be done in serial (as a fallback);
  * using OpenMP; or using C++17 parallel algorithms if available.
  */
-template <typename PairEnergy> class ParallelEnergyAccumulator : public BasicEnergyAccumulator<PairEnergy> {
+template <typename PairEnergy> class ParallelEnergyAccumulator : private BasicEnergyAccumulator<PairEnergy> {
   private:
     using typename BasicEnergyAccumulator<PairEnergy>::ParticleRef;
     std::vector<std::pair<ParticleRef, ParticleRef>> particle_pairs;
 
-    double accumulateSerial() const {
-        double sum = 0.0;
-        for (const auto& [particle1, particle2] : particle_pairs) {
-            sum += this->pair_energy.potential(particle1.get(), particle2.get());
-        }
-        return sum;
-    }
-
-    double accumulateParallel() const {
-#if defined(HAS_PARALLEL_TRANSFORM_REDUCE)
-        return std::transform_reduce(
-            std::execution::par, particle_pairs.cbegin(), particle_pairs.cend(), 0.0, std::plus<double>(),
-            [&](const auto& pair) { return this->pair_energy.potential(pair.first.get(), pair.second.get()); });
-#else
-        return accumulateSerial(); // fallback
-#endif
-    }
-
-    double accumulateOpenMP() const {
-        double sum = 0.0;
-#pragma omp parallel for reduction(+ : sum)
-        for (const auto& pair : particle_pairs) {
-            sum += this->pair_energy.potential(pair.first.get(), pair.second.get());
-        }
-        return sum;
-    }
-
   public:
     enum Schemes { SERIAL, OPENMP, PARALLEL };
     Schemes scheme = SERIAL;
+
+    /** Reserve memory for N^2 interaction pairs which should be more then enough */
+    void reserve(size_t number_of_particles) {
+        try {
+            particle_pairs.reserve(number_of_particles * number_of_particles);
+        } catch (std::exception& e) {
+            throw std::runtime_error(fmt::format("cannot allocate memory for energy pairs: {}", e.what()));
+        }
+    }
 
     void clear() {
         this->value = 0.0;
@@ -458,6 +441,34 @@ template <typename PairEnergy> class ParallelEnergyAccumulator : public BasicEne
         }
         particle_pairs.clear();
         return this->value;
+    }
+
+  private:
+    double accumulateSerial() const {
+        double sum = 0.0;
+        for (const auto& [particle1, particle2] : particle_pairs) {
+            sum += this->pair_energy.potential(particle1.get(), particle2.get());
+        }
+        return sum;
+    }
+
+    double accumulateParallel() const {
+#if defined(HAS_PARALLEL_TRANSFORM_REDUCE)
+        return std::transform_reduce(
+            std::execution::par, particle_pairs.cbegin(), particle_pairs.cend(), 0.0, std::plus<double>(),
+            [&](const auto& pair) { return this->pair_energy.potential(pair.first.get(), pair.second.get()); });
+#else
+        return accumulateSerial(); // fallback
+#endif
+    }
+
+    double accumulateOpenMP() const {
+        double sum = 0.0;
+#pragma omp parallel for reduction(+ : sum)
+        for (const auto& pair : particle_pairs) {
+            sum += this->pair_energy.potential(pair.first.get(), pair.second.get());
+        }
+        return sum;
     }
 };
 
@@ -1229,7 +1240,7 @@ class GroupPairing {
 template <typename TPairEnergy, typename TPairingPolicy>
 class Nonbonded : public Energybase {
   protected:
-    using TAccumulator = BasicEnergyAccumulator<TPairEnergy>;
+    using TAccumulator = ParallelEnergyAccumulator<TPairEnergy>;
     const Space& spc;                //!< space to operate on
     TPairEnergy pair_energy;         //!< a functor to compute non-bonded energy between two particles, see PairEnergy
     TPairingPolicy pairing;          //!< pairing policy to effectively sum up the pairwise additive non-bonded energy
@@ -1240,6 +1251,7 @@ class Nonbonded : public Energybase {
         : spc(spc), pair_energy(spc, pot), pairing(spc), energy_accumulator(pair_energy, 0.0) {
         name = "nonbonded";
         from_json(j);
+        energy_accumulator.reserve(spc.numParticles()); // reduce memory fragmentation
     }
 
     void from_json(const json &j) {

@@ -726,7 +726,7 @@ TEST_CASE("[Faunus] BondData") {
             bond_ptr = j;
                 CHECK_EQ(json(bond_ptr), j);
             std::dynamic_pointer_cast<HarmonicDihedral>(bond_ptr)->setEnergyFunction(p_120deg);
-                CHECK_EQ(bond_ptr->energyFunc(distance), Approx(100.0_kJmol / 2.0 * std::pow(30.0_deg, 2))); // This test stochastically fail
+                CHECK_EQ(bond_ptr->energyFunc(distance), Approx(100.0_kJmol / 2.0 * std::pow(30.0_deg, 2)));
         }
             SUBCASE("HarmonicDihedral JSON Invalid") {
                 CHECK_NOTHROW(

@@ -136,6 +136,18 @@ void FENEBond::setEnergyFunction(const ParticleVector& particles) {
         }
         return -half_force_constant * max_squared_distance * std::log(1.0 - squared_distance / max_squared_distance);
     };
+    forceFunc = [&](Geometry::DistanceFunction distance) -> std::vector<IndexAndForce> {
+      const Point ba = distance(particles[indices[0]].pos, particles[indices[1]].pos); // b->a
+      const auto squared_distance = ba.squaredNorm();
+      if (squared_distance >= max_squared_distance) {
+          throw std::runtime_error("Fene potential: Force undefined for distances greater than rmax.");
+      };
+      const auto magnitude =
+          -2.0 * half_force_constant * max_squared_distance / (max_squared_distance - squared_distance);
+      Point force0 = magnitude * ba.normalized();
+      Point force1 = -force0;
+      return {{indices[0], force0}, {indices[1], force1}};
+    };
 }
 
 FENEWCABond::FENEWCABond(double k, double rmax, double epsilon, double sigma, const std::vector<int>& indices)
@@ -176,6 +188,25 @@ void FENEWCABond::setEnergyFunction(const ParticleVector& particles) {
         }
         return -half_force_constant * max_distance_squared * std::log(1.0 - squared_distance / max_distance_squared) +
                wca;
+    };
+    forceFunc = [&](Geometry::DistanceFunction distance) -> std::vector<IndexAndForce> {
+        const Point ba = distance(particles[indices[0]].pos, particles[indices[1]].pos); // b->a
+        const auto squared_distance = ba.squaredNorm();
+        if (squared_distance >= max_distance_squared) {
+            throw std::runtime_error("Fene+WCA potential: Force undefined for distances greater than rmax.");
+        }
+        double wca_force = 0.0;
+        constexpr auto two_to_the_power_of_two_sixths = 1.2599210498948732; // 2^((1/6)^2)
+        if (squared_distance <= sigma_squared * two_to_the_power_of_two_sixths) {
+            double sigma6 = sigma_squared / squared_distance;
+            sigma6 = sigma6 * sigma6 * sigma6;
+            wca_force = 48 * epsilon * sigma6 * sigma6 / ba.norm();
+        }
+        const auto magnitude =
+            -2.0 * half_force_constant * max_distance_squared / (max_distance_squared - squared_distance) + wca_force;
+        Point force0 = magnitude * ba.normalized();
+        Point force1 = -force0;
+        return {{indices[0], force0}, {indices[1], force1}};
     };
 }
 

@@ -8,6 +8,7 @@
 #include "io.h"
 #include "aux/timers.h"
 #include <range/v3/view/filter.hpp>
+#include <optional>
 
 namespace Faunus {
 

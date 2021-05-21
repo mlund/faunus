@@ -148,8 +148,8 @@ void ForceMoveBase::_move(Change &change) {
     for (unsigned int step = 0; step < number_of_steps; ++step) {
         integrator->step(velocities, forces);
     }
-    for (auto &group : spc.groups) { // update mass centers before returning to Monte Carlo
-        group.updateMassCenter(spc.geo.getBoundaryFunc(), group.cm);
+    for (auto& group : spc.groups) { // update mass centers before returning to MC
+        group.updateMassCenter(spc.geo.getBoundaryFunc());
     }
 }
 

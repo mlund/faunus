@@ -172,16 +172,21 @@ FetchContent_Declare(
 
 option(ENABLE_TBB "Enable Intel TBB" off)
 if (ENABLE_TBB)
-    FetchContent_Declare(
+    if (DEFINED TBB_DIR)
+        find_package(TBB REQUIRED COMPONENTS tbb)
+        target_link_libraries(project_options INTERFACE TBB::tbb)
+    else ()
+        FetchContent_Declare(
             tbb URL https://github.com/wjakob/tbb/archive/806df70ee69fc7b332fcf90a48651f6dbf0663ba.tar.gz
             URL_HASH MD5=63fda89e88d34da63ddcef472e7725ef
-    )
-    if (NOT tbb_POPULATED)
-        FetchContent_Populate(tbb)
-        add_subdirectory(${tbb_SOURCE_DIR} ${tbb_BINARY_DIR})
-        set_target_properties(tbb_static PROPERTIES COMPILE_FLAGS "-w")
-        include_directories(SYSTEM ${tbb_SOURCE_DIR}/include)
-        target_link_libraries(project_options INTERFACE tbb_static)
+            )
+        if (NOT tbb_POPULATED)
+            FetchContent_Populate(tbb)
+            add_subdirectory(${tbb_SOURCE_DIR} ${tbb_BINARY_DIR})
+            set_target_properties(tbb_static PROPERTIES COMPILE_FLAGS "-w")
+            include_directories(SYSTEM ${tbb_SOURCE_DIR}/include)
+            target_link_libraries(project_options INTERFACE tbb_static)
+        endif ()
     endif ()
 endif ()
 

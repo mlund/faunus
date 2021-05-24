@@ -793,7 +793,7 @@ TEST_CASE("[Faunus] FunctorPotential") {
                   ],
                   "C C" : [ { "hardsphere" : {} } ] })"_json;
 
-    NewCoulombGalore coulomb = R"({ "coulomb": {"epsr": 80.0, "type": "plain"} } )"_json;
+    Coulomb coulomb = R"({ "coulomb": {"epsr": 80.0} } )"_json;
     WeeksChandlerAndersen wca = R"({ "wca" : {"mixing": "LB"} })"_json;
 
     Particle a = atoms[0];

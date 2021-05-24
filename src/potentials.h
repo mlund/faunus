@@ -492,6 +492,10 @@ struct Coulomb : public PairPotentialBase {
     inline double operator()(const Particle &a, const Particle &b, double r2, const Point &) const override {
         return bjerrum_length * a.charge * b.charge / std::sqrt(r2);
     }
+    inline Point force(const Particle& a, const Particle& b, double r2, const Point& r) const override {
+        const auto force_scalar = bjerrum_length * a.charge * b.charge / r2;
+        return r * (force_scalar / std::sqrt(r2));
+    }
     void to_json(json &j) const override;
     void from_json(const json &j) override;
 };

@@ -626,27 +626,48 @@ class CustomPairPotential : public PairPotentialBase {
     // Only ExprFunction<double> is explicitly instantiated in functionparser.cpp. Other types as well as
     // the implicit template instantiation is disabled to save reasources during the compilation/build.
     ExprFunction<double> expr;
-    struct Data {
-        double r = 0, q1 = 0, q2 = 0, s1 = 0, s2 = 0;
+    struct Symbols {
+        double distance = 0.0;
+        double charge1 = 0.0;
+        double charge2 = 0.0;
+        double sigma1 = 0.0;
+        double sigma2 = 0.0;
     };
-    double Rc2;
-    std::shared_ptr<Data> d;
-    json jin; // initial json input
+    std::shared_ptr<Symbols> symbols;
+    double squared_cutoff_distance;
+    json original_input;
+
+    inline void setSymbols(const Particle& particle1, const Particle& particle2, double squared_distance) const {
+        symbols->distance = std::sqrt(squared_distance);
+        symbols->charge1 = particle1.charge;
+        symbols->charge2 = particle2.charge;
+        symbols->sigma1 = Faunus::atoms[particle1.id].sigma;
+        symbols->sigma2 = Faunus::atoms[particle2.id].sigma;
+    }
+
   public:
-    inline double operator()(const Particle &a, const Particle &b, double r2, const Point &) const override {
-        if (r2 > Rc2)
-            return 0;
-        d->r = sqrt(r2);
-        d->q1 = a.charge;
-        d->q2 = b.charge;
-        d->s1 = atoms[a.id].sigma;
-        d->s2 = atoms[b.id].sigma;
+    inline double operator()(const Particle& particle1, const Particle& particle2, double squared_distance,
+                             [[maybe_unused]] const Point& r) const override {
+        if (squared_distance > squared_cutoff_distance) {
+            return 0.0;
+        }
+        setSymbols(particle1, particle2, squared_distance);
         return expr();
     }
-    CustomPairPotential(const std::string & = "custom");
 
-    void from_json(const json &) override;
-    void to_json(json &) const override;
+    inline Point force(const Particle& particle1, const Particle& particle2, double squared_distance,
+                       const Point& r) const override {
+        if (squared_distance > squared_cutoff_distance) {
+            return Point::Zero();
+        }
+        setSymbols(particle1, particle2, squared_distance);
+        return -expr.derivative(symbols->distance) / symbols->distance * r;
+    }
+
+    CustomPairPotential(const std::string &name = "custom");
+
+    void from_json(const json &j) override;
+    void to_json(json &j) const override;
 };
 
 

@@ -372,43 +372,65 @@ TEST_CASE("[Faunus] SASApotential") {
 
 // =============== CustomPairPotential ===============
 
-void CustomPairPotential::from_json(const json &j) {
-    Rc2 = j.value("cutoff", pc::infty);
-    Rc2 = Rc2 * Rc2;
-    jin = j;
-    auto &_j = jin["constants"];
-    if (_j == nullptr)
-        _j = json::object();
-    _j["e0"] = pc::e0;
-    _j["kB"] = pc::kB;
-    _j["kT"] = pc::kT();
-    _j["Nav"] = pc::Nav;
-    _j["Rc"] = std::sqrt(Rc2);
-    _j["T"] = pc::temperature;
-    expr.set(jin, {{"r", &d->r}, {"q1", &d->q1}, {"q2", &d->q2}, {"s1", &d->s1}, {"s2", &d->s2}});
+void CustomPairPotential::from_json(const json& j) {
+    squared_cutoff_distance = std::pow(j.value("cutoff", pc::infty), 2);
+    original_input = j;
+    auto& constants = original_input["constants"];
+    if (constants == nullptr) {
+        constants = json::object();
+    }
+    constants["e0"] = pc::e0;
+    constants["kB"] = pc::kB;
+    constants["kT"] = pc::kT();
+    constants["Nav"] = pc::Nav;
+    constants["Rc"] = std::sqrt(squared_cutoff_distance);
+    constants["T"] = pc::temperature;
+    expr.set(original_input, {{"r", &symbols->distance},
+                              {"charge1", &symbols->charge1},
+                              {"charge2", &symbols->charge2},
+                              {"s1", &symbols->sigma1},
+                              {"s2", &symbols->sigma2}});
 }
 
-void CustomPairPotential::to_json(json &j) const {
-    j = jin;
-    if (std::isfinite(Rc2))
-        j["cutoff"] = std::sqrt(Rc2);
+void CustomPairPotential::to_json(json& j) const {
+    j = original_input;
+    if (std::isfinite(squared_cutoff_distance)) {
+        j["cutoff"] = std::sqrt(squared_cutoff_distance);
+    }
 }
-CustomPairPotential::CustomPairPotential(const std::string &name)
-    : PairPotentialBase(name), d(std::make_shared<Data>()) {}
+CustomPairPotential::CustomPairPotential(const std::string& name)
+    : PairPotentialBase(name), symbols(std::make_shared<Symbols>()) {}
 
 TEST_CASE("[Faunus] CustomPairPotential") {
     using doctest::Approx;
     json j = R"({ "atomlist" : [
                  {"A": { "q":1.0,  "r":3, "eps":0.1 }},
                  {"B": { "q":-1.0, "r":4, "eps":0.05 }} ]})"_json;
-    atoms = j["atomlist"].get<decltype(atoms)>();
+    Faunus::atoms = j["atomlist"].get<decltype(Faunus::atoms)>();
     Particle a, b;
-    a = atoms[0];
-    b = atoms[1];
-    CustomPairPotential pot = R"({
+    a = Faunus::atoms[0];
+    b = Faunus::atoms[1];
+
+    SUBCASE("energy") {
+        CustomPairPotential pot = R"({
                 "constants": { "kappa": 30, "lB": 7},
-                "function": "lB * q1 * q2 / (s1+s2) * exp(-kappa/r) * kT + pi"})"_json;
-    CHECK(pot(a, b, 2 * 2, {0, 0, 2}) == Approx(-7 / (3.0 + 4.0) * std::exp(-30 / 2) * pc::kT() + pc::pi));
+                "function": "lB * charge1 * charge2 / (s1+s2) * exp(-kappa/r) * kT + pi"})"_json;
+        CHECK(pot(a, b, 2 * 2, {0, 0, 2}) == Approx(-7.0 / (3.0 + 4.0) * std::exp(-30.0 / 2.0) * pc::kT() + pc::pi));
+    }
+    SUBCASE("force") {
+        Coulomb coulomb = R"({ "coulomb": {"epsr": 80.0} } )"_json;
+        CustomPairPotential pot =
+            R"({"constants": { "lB": 7.0056973292 }, "function": "lB * charge1 * charge2 / r"})"_json;
+        Point r = {coulomb.bjerrum_length, 0.2, -0.1};
+        auto r2 = r.squaredNorm();
+        auto force_ref = coulomb.force(a, b, r2, r);
+        auto force = pot.force(a, b, r2, r);
+        CHECK(coulomb.bjerrum_length == Approx(7.0056973292));
+        CHECK(force.norm() == Approx(0.1425956964));
+        CHECK(force.x() == Approx(force_ref.x()));
+        CHECK(force.y() == Approx(force_ref.y()));
+        CHECK(force.z() == Approx(force_ref.z()));
+    }
 }
 
 // =============== Dummy ===============

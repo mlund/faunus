@@ -175,7 +175,7 @@ void FENEWCABond::to_json(Faunus::json& j) const {
 void FENEWCABond::setEnergyFunction(const ParticleVector& particles) {
     energyFunc = [&](Geometry::DistanceFunction calculateDistance) {
         double wca = 0.0;
-        constexpr auto two_to_the_power_of_two_sixths = 1.2599210498948732; // 2^((1/6)^2)
+        constexpr auto two_to_the_power_of_two_sixths = 1.01944064370214482816981563263103378007648819; // 2^((1/6)^2)
         const auto squared_distance =
             calculateDistance(particles[indices[0]].pos, particles[indices[1]].pos).squaredNorm();
         if (squared_distance <= sigma_squared * two_to_the_power_of_two_sixths) {
@@ -196,7 +196,7 @@ void FENEWCABond::setEnergyFunction(const ParticleVector& particles) {
             throw std::runtime_error("Fene+WCA potential: Force undefined for distances greater than rmax.");
         }
         double wca_force = 0.0;
-        constexpr auto two_to_the_power_of_two_sixths = 1.2599210498948732; // 2^((1/6)^2)
+        constexpr auto two_to_the_power_of_two_sixths = 1.01944064370214482816981563263103378007648819; // 2^((1/6)^2)
         if (squared_distance <= sigma_squared * two_to_the_power_of_two_sixths) {
             double sigma6 = sigma_squared / squared_distance;
             sigma6 = sigma6 * sigma6 * sigma6;
@@ -299,8 +299,8 @@ void GromosTorsion::setEnergyFunction(const ParticleVector& particles) {
         const auto angle = std::acos(cosine_angle);
         const auto magnitude = -2.0 * half_force_constant * std::sin(angle) * (cosine_angle - cosine_equilibrium_angle);
         const Point plane_abc = ba.cross(bc).eval();
-        Point force0 = (magnitude * inverse_norm_ba * ba.cross(plane_abc).normalized());
-        Point force2 = (magnitude * inverse_norm_bc * -bc.cross(plane_abc).normalized());
+        Point force0 = magnitude * inverse_norm_ba * ba.cross(plane_abc).normalized();
+        Point force2 = magnitude * inverse_norm_bc * -bc.cross(plane_abc).normalized();
         Point force1 = -(force0 + force2); // Newton's third law
         return {{indices[0], force0}, {indices[1], force1}, {indices[2], force2}};
     };

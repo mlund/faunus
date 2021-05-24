@@ -253,6 +253,11 @@ install(FILES
         ${EXAMPLES_DIR}/bend/bend.yml
         ${EXAMPLES_DIR}/bend/bend.out.json
         ${EXAMPLES_DIR}/bend/mc_vs_md.agr
+        ${EXAMPLES_DIR}/gromosBend/gromosBend.yml
+        ${EXAMPLES_DIR}/gromosBend/gromosBend.out.json
+        ${EXAMPLES_DIR}/gromosBend/gromosBend-plot.py
+        ${EXAMPLES_DIR}/gromosBend/gromosBend-mc-rdf.dat
+        ${EXAMPLES_DIR}/gromosBend/dihedral-md-rdf.dat
         ${EXAMPLES_DIR}/dihedral/dihedral.yml
         ${EXAMPLES_DIR}/dihedral/dihedral.out.json
         ${EXAMPLES_DIR}/dihedral/dihedral-plot.py

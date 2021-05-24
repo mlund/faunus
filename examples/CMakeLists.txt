@@ -77,6 +77,13 @@ add_test(
         WORKING_DIRECTORY ${EXAMPLES_DIR}/bend)
 
 add_test(
+        NAME gromosBend
+        COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} gromosBend.yml\
+    | $<TARGET_FILE:faunus> --nobar\
+    && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} gromosBend.out.json out.json --tol 0.03"
+        WORKING_DIRECTORY ${EXAMPLES_DIR}/gromosBend)
+
+add_test(
         NAME dihedral
         COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} dihedral.yml\
     | $<TARGET_FILE:faunus> --nobar\

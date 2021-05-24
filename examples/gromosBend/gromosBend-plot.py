@@ -13,9 +13,7 @@ if os.path.isfile('rdf.dat'):
     test = np.loadtxt('rdf.dat', unpack=True, usecols=(0,1))
     plt.plot(test[0], test[1], label='Test', linewidth=2)
 
-#plt.xlim(0, 2.1)
 plt.legend(loc=0, frameon=False, fontsize=10)
 plt.xlabel('Distance, $r$ (Å)', fontsize=14)
 plt.ylabel('$g(r)$', fontsize=14)
-#plt.savefig('gromosBend-plot.png')
-plt.show()
+plt.savefig('gromosBend-plot.png')

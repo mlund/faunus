@@ -65,8 +65,8 @@ add_dependencies(spdlog project_spdlog)
 
 FetchContent_Declare(
     modernjson
-    URL "https://github.com/nlohmann/json/releases/download/v3.8.0/include.zip"
-    URL_HASH SHA256=8590fbcc2346a3eefc341935765dd57598022ada1081b425678f0da9a939a3c0)
+    URL "https://github.com/nlohmann/json/releases/download/v3.9.1/include.zip"
+    URL_HASH SHA256=6bea5877b1541d353bd77bdfbdb2696333ae5ed8f9e8cc22df657192218cad91)
 FetchContent_GetProperties(modernjson)
 if(NOT modernjson_POPULATED)
     FetchContent_Populate(modernjson)

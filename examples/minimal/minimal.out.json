@@ -22,6 +22,22 @@
             "savestate": {
                 "file": "state.json"
             }
+        },
+        {
+            "virialpressure": {
+                "contributions": {
+                    "total": {
+                        "pressure (mM)": -45.342140366128774
+                    }
+                }
+            }
+        },
+        {
+            "virtualvolume": {
+                "Pex/mM": -45.336,
+                "dV": 0.01,
+                "scaling": "isotropic"
+            }
         }
     ],
     "compiler": "Clang 10.0.0 (/var/tmp/portage/sys-devel/clang-10.0.0.9999/work/x/y/clang-10.0.0.9999 65acf43270ea2894dffa0d0b292b92402f80c8cb)",

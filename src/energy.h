@@ -220,7 +220,7 @@ class Ewald : public Energybase {
               Change &) override; //!< Called after a move is rejected/accepted
                                   //! as well as before simulation
     void to_json(json &) const override;
-    void force(std::vector<Point> &) override; // update forces on all particles
+    std::optional<Tensor> force(std::vector<Point> &) override; // update forces on all particles
 };
 
 /**
@@ -278,7 +278,7 @@ class Bonded : public Energybase {
     Bonded(const json& j, const Space& spc);
     void to_json(json& j) const override;
     double energy(Change& change) override;          //!< brute force -- refine this!
-    void force(std::vector<Point>& forces) override; //!< Calculates the forces on all particles
+    std::optional<Tensor> force(std::vector<Point>& forces) override; //!< Calculates the forces on all particles
 };
 
 /**
@@ -465,20 +465,11 @@ template <typename TPairPotential, bool allow_anisotropic_pair_potential = true>
     }
 
     // just a temporary placement until PairForce class template will be implemented
-    template <typename ParticleType> inline Point force(const ParticleType& a, const ParticleType& b) const {
+    template <typename ParticleType>
+    inline std::pair<Point, Point> force(const ParticleType& a, const ParticleType& b) const {
         assert(&a != &b);                                       // a and b cannot be the same particle
         const Point b_towards_a = geometry.vdist(a.pos, b.pos); // vector b -> a = a - b
-        return pair_potential.force(a, b, b_towards_a.squaredNorm(), b_towards_a);
-    }
-
-    /**
-     * @brief Contribution to pressure tensor, r x f.transpose()
-     */
-    template <typename T> inline Tensor force_x_distance(const T &a, const T &b) const {
-        assert(&a != &b); // a and b cannot be the same particle
-        auto distance = geometry.vdist(a.pos, b.pos);
-        auto force = pair_potential.force(a, b, distance.squaredNorm(), distance);
-        return distance * force.transpose();
+        return {b_towards_a, pair_potential.force(a, b, b_towards_a.squaredNorm(), b_towards_a)};
     }
 
     /**
@@ -528,12 +519,10 @@ template <typename TCutoff>
 class GroupPairingPolicy {
   protected:
     const Space &spc; //!< a space to operate on
-    TCutoff cut;      //!< a cutoff functor that determines if energy between two groups can be ignored
 
   public:
-    /**
-     * @param spc
-     */
+    TCutoff cut;      //!< a cutoff functor that determines if energy between two groups can be ignored
+
     GroupPairingPolicy(Space &spc)
         : spc(spc), cut(spc.geo) {}
 
@@ -1017,6 +1006,10 @@ template <typename TPolicy>
 class GroupPairing {
     const Space &spc;
     TPolicy pairing;
+  public:
+    bool cut(const Space::Tgroup &group1, const Space::Tgroup &group2) {
+        return pairing.cut(group1, group2);
+    }
 
   protected:
     /**
@@ -1186,21 +1179,32 @@ class Nonbonded : public Energybase {
     }
 
     /**
-     * @brief Calculates the force on all particles.
+     * @brief Add the nonbonded force on all particles.
+     * @returns virial tensor = ∑∑rᵢⱼ⊗fᵢⱼ
+     * @note Forces between rigid groups is currently summed as individual, atomic forces, whereas we would
+     *       likely prefer the resulting force on the mass center. This should give pressures comparable
+     *       to e.g. the `Move::VirtualVolume` analysis(?). Currently the two are equal for mono-atomic groups,
+     *       but differ for rigid bodies.
+     * @todo Implement as a `ForceAccumulator`
      *
-     * @todo A stub. Change to reflect only active particle, see Space::activeParticles().
+     * Internal contributions from incompressible or rigid molecules are excluded
      */
-    void force(std::vector<Point> &forces) override {
+    std::optional<Tensor> force(std::vector<Point> &forces) override {
+        Tensor virial_tensor;
         auto update_force = [&](const Particle& particle1, const Particle& particle2) {
-            auto force = pair_energy.force(particle1, particle2);
             const auto index1 = spc.getParticleIndex(particle1);
             const auto index2 = spc.getParticleIndex(particle2);
+            const auto [distance, force] = pair_energy.force(particle1, particle2);
+            virial_tensor += distance * force.transpose();
             forces[index1] += force;
             forces[index2] -= force;
         };
 
-        auto has_internal_force = [](const auto& group) {
-            return (group.traits().compressible && !group.traits().rigid);
+        auto has_internal_force = [](const Space::Tgroup& group) {
+            if (group.traits().rigid) {
+                return false;
+            }
+            return (group.traits().compressible || group.traits().atomic);
         };
         auto compressible_groups = spc.groups | ranges::cpp20::views::filter(has_internal_force);
 
@@ -1215,9 +1219,11 @@ class Nonbonded : public Energybase {
 
         // forces between groups
         auto intermolecular_forces = [&](const Space::Tgroup& group1, const Space::Tgroup& group2) {
-            for (const auto& particle_i : group1) {
-                for (const auto& particle_j : group2) {
-                    update_force(particle_i, particle_j);
+            if (!pairing.cut(group1, group2)) {
+                for (const auto& particle_i : group1) {
+                    for (const auto& particle_j : group2) {
+                        update_force(particle_i, particle_j);
+                    }
                 }
             }
         };
@@ -1226,17 +1232,7 @@ class Nonbonded : public Energybase {
                 intermolecular_forces(*group_i, *group_j);
             }
         }
-        if constexpr (false) { // this code is disabled!
-            // just a temporary hack; perhaps better to allow PairForce instead of the PairEnergy template
-            assert(forces.size() == spc.p.size() && "the forces size must match the particle size");
-            for (int i = 0; i < (int)spc.p.size() - 1; ++i) {
-                for (int j = i + 1; j < (int)spc.p.size(); ++j) {
-                    const Point f = pair_energy.force(spc.p[i], spc.p[j]);
-                    forces[i] += f;
-                    forces[j] -= f;
-                }
-            }
-        }
+        return virial_tensor;
     }
 };
 
@@ -1450,7 +1446,6 @@ class Hamiltonian : public Energybase, public BasePointerVector<Energybase> {
     void addEwald(const json& j, Space& spc);  //!< Adds an instance of reciprocal space Ewald energies (if appropriate)
     void checkBondedMolecules() const;         //!< Warn if bonded molecules and no bonded energy term
     void to_json(json& j) const override;
-    void force(PointVector& forces) override;
     std::shared_ptr<Energybase> createEnergy(Space& spc, const std::string& name, const json& j);
 
   public:
@@ -1458,6 +1453,7 @@ class Hamiltonian : public Energybase, public BasePointerVector<Energybase> {
     void init() override;
     void sync(Energybase* other_hamiltonian, Change& change) override;
     double energy(Change& change) override;            //!< Energy due to changes
+    std::optional<Tensor> force(PointVector& forces) override;
     const std::vector<double>& latestEnergies() const; //!< Energies for each term from the latest call to `energy()`
 };
 } // namespace Energy

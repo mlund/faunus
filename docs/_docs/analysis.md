@@ -422,6 +422,26 @@ is reported by diagonalising the gyration tensor to find the principal moments:
     {nstep: 100, file: angle.dat.gz, type: molecule, index: 0, property: angle, dir: [0,0,1]}
 ~~~ 
 
+## Virial Pressure
+
+Calculates the pressure tensor and pressure using the virial theorem,
+$$
+\mathcal{P} = \frac{1}{3V}\left <
+\sum_{i}^{N-1} \sum_{j=i+1}^N \mathbf{r}\_{ij} \otimes \mathbf{f}\_{ij}
+\right >\_{NVT}
+$$
+where $\mathbf{r}\_{ij}$ and $\mathbf{f}\_{ij}$ are distance vectors and
+forces, respectively. Internal contributions from molecules marked as incompressible or
+rigid are excempt from the summation.
+Only a subset of energy terms currently supports virial tensors, and the
+output will state the contribution from each term.
+
+`virialpressure` | Description
+---------------- | ----------------------------------------------------------
+`nstep`          | Interval between samples
+`nskip=0`        | Number of initial steps excluded from the analysis
+
+
 ### Processing
 
 In the above examples we stored two properties as a function of steps. To join the two

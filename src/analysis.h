@@ -451,21 +451,16 @@ class VirtualVolumeMove : public PerturbationAnalysisBase {
  */
 class VirialPressure : public Analysisbase {
   private:
-    PointVector forces;
-    Energy::Energybase& pot;
-    Tensor pressure_tensor;
-    std::function<Point(const Particle&, const Particle&)> forcefunctor;
-    std::vector<int> user_excluded_molids;          //!< User defined molids excluded from internal pressure
-    std::vector<int> groups_with_internal_pressure; //!< Index to `spc.groups[]`
-
+    PointVector particle_forces;
+    Energy::Hamiltonian& hamiltonian;
+    std::map<std::string, Tensor> pressure_tensors;
     void _from_json(const json&) override;
     void _to_json(json& j) const override;
     void _to_disk() override;
-    // todo: get from Hamiltonian
     void _sample() override;
 
   public:
-    VirialPressure(const json& j, Space& spc, Energy::Energybase& pot);
+    VirialPressure(const json& j, Space& spc, Energy::Hamiltonian& pot);
 };
 
 /**

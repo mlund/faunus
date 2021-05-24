@@ -1777,44 +1777,33 @@ void SpaceTrajectory::_to_json(json& j) const { j = {{"file", filename}}; }
 
 void SpaceTrajectory::_to_disk() { stream->flush(); }
 
-VirialPressure::VirialPressure(const json& j, Space& spc, Energy::Energybase& pot)
-    : Analysisbase(spc, "virial"), pot(pot) {
-    pressure_tensor.setZero();
-    forces.resize(spc.p.size(), Point::Zero());
-    const auto excluded_molecules = j.value("no_internal", std::vector<std::string>());
-    user_excluded_molids = Faunus::names2ids(Faunus::molecules, excluded_molecules);
-    std::sort(user_excluded_molids.begin(), user_excluded_molids.end());
-
-    // Find groups to be included, i.e. !user excluded, not rigid, or marked compressible)
-    auto include_group = [&](const auto& group) {
-        if (group.traits().rigid) {
-            return false;
-        }
-        if (std::binary_search(user_excluded_molids.begin(), user_excluded_molids.end(), group.id)) {
-            faunus_logger->debug("{}: excluding {} ({}) from internal pressure", name, group.traits().name,
-                                 spc.getGroupIndex(group));
-            return false;
-        }
-        return group.traits().compressible;
-    };
-    for (const auto& group : spc.groups | ranges::cpp20::views::filter(include_group)) {
-        groups_with_internal_pressure.push_back(spc.getGroupIndex(group));
-    }
+VirialPressure::VirialPressure(const json& j, Space& spc, Energy::Hamiltonian& hamiltonian)
+    : Analysisbase(spc, "virialpressure"), hamiltonian(hamiltonian) {
+    from_json(j);
+    particle_forces.resize(spc.p.size());
 }
 
 void VirialPressure::_sample() {
-    std::fill(forces.begin(), forces.end(), Point::Zero());
-    pot.force(forces);
-    Tensor pressure_tensor = Tensor::Zero();
-    for (size_t i = 0; i < spc.p.size(); i++) {
-        pressure_tensor += spc.p[i++] * force[i].transpose();
-    }
+    auto updateVirial = [&](const auto& energy_term) {
+        std::fill(particle_forces.begin(), particle_forces.end(), Point::Zero());
+        if (auto virial_tensor = energy_term->force(particle_forces)) {
+            pressure_tensors[energy_term->name] += *virial_tensor / (3.0 * spc.geo.getVolume());
+        }
+    };
+    std::for_each(hamiltonian.begin(), hamiltonian.end(), updateVirial);
 }
 
 void VirialPressure::_to_json(json& j) const {
-    j["no_internal"] = user_excluded_molids |
-                       ranges::cpp20::views::transform([](auto molid) { return Faunus::molecules.at(molid).name; }) |
-                       ranges::to<std::vector<std::string>>();
+    auto printjson = [&contribution = j["contributions"]](const auto& name, const Tensor& tensor) {
+        contribution[name] = {{"pressure tensor (kT/Å³)", tensor}, {"pressure (mM)", tensor.trace() / 1.0_millimolar}};
+    };
+    Tensor total_pressure_tensor;
+    for (const auto& [name, pressure_tensor] : pressure_tensors) {
+        Tensor average_pressure_tensor = pressure_tensor / number_of_samples;
+        printjson(name, average_pressure_tensor);
+        total_pressure_tensor += average_pressure_tensor;
+    }
+    printjson("total", total_pressure_tensor);
 }
 void VirialPressure::_from_json(const json&) {}
 void VirialPressure::_to_disk() {}

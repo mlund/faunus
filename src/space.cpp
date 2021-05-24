@@ -197,7 +197,7 @@ Point Space::scaleVolume(double Vnew, Geometry::VolumeMethod method) {
             std::for_each(group.begin(), group.end(), scale_position);
         } else {
             auto original_mass_center = group.cm;
-            if (group.traits().compressible) { // scale positions; recalculate mass center
+            if (group.traits().compressible && !group.traits().rigid) { // scale positions; recalculate mass center
                 std::for_each(group.begin(), group.end(), scale_position);
                 group.cm =
                     Geometry::massCenter(group.begin(), group.end(), geo.getBoundaryFunc(), -original_mass_center);

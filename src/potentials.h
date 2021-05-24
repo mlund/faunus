@@ -704,13 +704,27 @@ class FunctorPotential : public PairPotentialBase {
      * @brief Potential energy between two particles
      * @param a First particle
      * @param b Second particle
-     * @param r2 Squared distance
-     * @param r Distance vector
+     * @param squared_distance Squared distance
+     * @param b_towards_a Distance vector
      * @return Energy in kT
      */
-    inline double operator()(const Particle &a, const Particle &b, double r2,
-                             const Point &r = {0, 0, 0}) const override {
-        return umatrix(a.id, b.id)(a, b, r2, r);
+    inline double operator()(const Particle &a, const Particle &b, double squared_distance,
+                             const Point & b_towards_a = {0, 0, 0}) const override {
+        return umatrix(a.id, b.id)(a, b, squared_distance, b_towards_a);
+    }
+
+    /**
+     * @note Slow and brute; use `PairPotentialBase::force` instead
+     */
+    inline Point force(const Particle& a, const Particle& b, double squared_distance,
+                       const Point& b_towards_a) const override {
+        const auto displacement = 0.0001; // angstrom
+        const auto distance = std::sqrt(squared_distance);
+        const auto u1 = operator()(a, b, squared_distance, b_towards_a);
+        const auto u2 = operator()(a, b, std::pow(distance + displacement, 2),
+                                   b_towards_a*(1.0 + displacement / distance));
+        const auto force_scalar = -(u2 - u1) / displacement;
+        return b_towards_a * (force_scalar / distance);
     }
 };
 

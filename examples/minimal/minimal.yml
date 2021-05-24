@@ -17,6 +17,8 @@ analysis:                            # define on the fly analysis
     - systemenergy: {file: energy.dat, nstep: 100} # save system energy
     - savestate: {file: confout.pqr} # save PQR file for visualization
     - savestate: {file: state.json } # save restart file
+    - virialpressure: {nstep: 2}     # calculates pressure using forces
+    - virtualvolume: {nstep: 2, dV: 0.01} # calculates pressure using perturbation
 mcloop: {macro: 10, micro: 5000}     # number of MC steps
 geometry: {type: cuboid, length: 50} # sidelength(s): number OR array
 temperature: 300                     # in K

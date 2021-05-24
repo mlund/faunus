@@ -19,7 +19,12 @@ void Energybase::to_json(json &) const {}
 void Energybase::sync([[maybe_unused]] Energybase* other_energy, [[maybe_unused]] Change& change) {}
 
 void Energybase::init() {}
-void Energybase::force([[maybe_unused]] PointVector& forces) {}
+
+/**
+ * @param forces Forces for each atom in the system
+ * @return Contribution to the virial tensor if applicable for the potential
+ */
+std::optional<Tensor> Energybase::force([[maybe_unused]] PointVector& forces) { return std::nullopt; }
 
 void to_json(json &j, const Energybase &base) {
     assert(not base.name.empty());

@@ -499,7 +499,7 @@ double Ewald::energy(Change &change) {
  * the destination force vector will *not* be zeroed
  * before addition.
  */
-void Ewald::force(std::vector<Point> &forces) {
+std::optional<Tensor> Ewald::force(std::vector<Point> &forces) {
     assert(forces.size() == spc.p.size());
     const double volume = spc.geo.getVolume();
 
@@ -529,6 +529,7 @@ void Ewald::force(std::vector<Point> &forces) {
         (*force) *= -4.0 * pc::pi / volume * data.bjerrum_length; // to units of kT/Angstrom^2
         force++;                                                  // advance to next force vector
     }
+    return std::nullopt;
 }
 
 /**
@@ -827,7 +828,7 @@ double Bonded::internalGroupEnergy(const Change::data& changed) {
  *
  * @warning Untested
  */
-void Bonded::force(std::vector<Point>& forces) {
+std::optional<Tensor> Bonded::force(std::vector<Point>& forces) {
     auto distance_function = spc.geo.getDistanceFunc();
 
     auto calculateForces = [&](const auto& bond) {
@@ -848,6 +849,7 @@ void Bonded::force(std::vector<Point>& forces) {
     for (const auto& bond : external_bonds) {
         calculateForces(bond);
     }
+    return std::nullopt;
 }
 
 //---------- Hamiltonian ------------
@@ -881,8 +883,12 @@ void Hamiltonian::addEwald(const json& j, Space& spc) {
     }
 }
 
-void Hamiltonian::force(PointVector& forces) {
-    std::for_each(energy_terms.begin(), energy_terms.end(), [&](auto energy) { energy->force(forces); });
+std::optional<Tensor> Hamiltonian::force(PointVector& forces) {
+    Tensor virial_tensor;
+    std::for_each(energy_terms.begin(), energy_terms.end(), [&](auto energy) {
+        virial_tensor += energy->force(forces).value_or(Tensor::Zero());
+    });
+    return virial_tensor;
 }
 
 /**

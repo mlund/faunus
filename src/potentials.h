@@ -714,16 +714,16 @@ class FunctorPotential : public PairPotentialBase {
     }
 
     /**
-     * @note Slow and brute; use `PairPotentialBase::force` instead
+     * @todo Slow and brute; use `PairPotentialBase::force` instead
      */
     inline Point force(const Particle& a, const Particle& b, double squared_distance,
                        const Point& b_towards_a) const override {
         const auto displacement = 0.0001; // angstrom
         const auto distance = std::sqrt(squared_distance);
-        const auto u1 = operator()(a, b, squared_distance, b_towards_a);
-        const auto u2 = operator()(a, b, std::pow(distance + displacement, 2),
+        const auto energy1 = operator()(a, b, squared_distance, b_towards_a);
+        const auto energy2 = operator()(a, b, std::pow(distance + displacement, 2),
                                    b_towards_a*(1.0 + displacement / distance));
-        const auto force_scalar = -(u2 - u1) / displacement;
+        const auto force_scalar = -(energy2 - energy1) / displacement;
         return b_towards_a * (force_scalar / distance);
     }
 };

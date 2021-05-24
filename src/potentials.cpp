@@ -793,7 +793,7 @@ TEST_CASE("[Faunus] FunctorPotential") {
                   ],
                   "C C" : [ { "hardsphere" : {} } ] })"_json;
 
-    Coulomb coulomb = R"({ "coulomb": {"epsr": 80.0} } )"_json;
+    NewCoulombGalore coulomb = R"({ "coulomb": {"epsr": 80.0, "type": "plain"} } )"_json;
     WeeksChandlerAndersen wca = R"({ "wca" : {"mixing": "LB"} })"_json;
 
     Particle a = atoms[0];
@@ -806,6 +806,17 @@ TEST_CASE("[Faunus] FunctorPotential") {
     CHECK(u(a, b, r2, r) == Approx(coulomb(a, b, r2, r) + wca(a, b, r2, r)));
     CHECK(u(c, c, (r * 1.01).squaredNorm(), r * 1.01) == 0);
     CHECK(u(c, c, (r * 0.99).squaredNorm(), r * 0.99) == pc::infty);
+
+    SUBCASE("force()") {
+        Point r = {3.0, 0.1, 0.2};
+        double r2 = r.squaredNorm();
+        Point force_ref = coulomb.force(a, b, r2, r) + wca.force(a, b, r2, r);
+        Point force = u.force(a, b, r2, r);
+        CHECK(force.x() == Approx(force_ref.x()).epsilon(0.01));
+        CHECK(force.y() == Approx(force_ref.y()));
+        CHECK(force.z() == Approx(force_ref.z()));
+        CHECK(force.norm() == Approx(0.3941694939));
+    }
 
     SUBCASE("selfEnergy()") {
         // let's check that the self energy gets properly transferred to the functor potential

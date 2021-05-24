@@ -433,6 +433,8 @@ $$
 where $\mathbf{r}\_{ij}$ and $\mathbf{f}\_{ij}$ are distance vectors and
 forces, respectively. Internal contributions from molecules marked as incompressible or
 rigid are excempt from the summation.
+Note also that the analysis calculates forces on _atoms_ whereas the resulting forces
+on rigid bodies is yet to be implemented.
 Only a subset of energy terms currently supports virial tensors, and the
 output will state the contribution from each term.
 

@@ -91,6 +91,13 @@ add_test(
         WORKING_DIRECTORY ${EXAMPLES_DIR}/dihedral)
 
 add_test(
+        NAME improper-dihedral
+        COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} improper-dihedral.yml\
+    | $<TARGET_FILE:faunus> --nobar\
+   && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} improper-dihedral.out.json out.json --tol 0.03"
+        WORKING_DIRECTORY ${EXAMPLES_DIR}/improper-dihedral)
+
+add_test(
         NAME chain
         COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} chain.yml\
     | $<TARGET_FILE:faunus> --nobar --state chain.state.json\
@@ -270,6 +277,11 @@ install(FILES
         ${EXAMPLES_DIR}/dihedral/dihedral-plot.py
         ${EXAMPLES_DIR}/dihedral/dihedral-mc-rdf.dat
         ${EXAMPLES_DIR}/dihedral/dihedral-md-rdf.dat
+        ${EXAMPLES_DIR}/improper-dihedral/improper-dihedral.yml
+        ${EXAMPLES_DIR}/improper-dihedral/improper-dihedral.out.json
+        ${EXAMPLES_DIR}/improper-dihedral/improper-dihedral-plot.py
+        ${EXAMPLES_DIR}/improper-dihedral/improper-dihedral-mc-rdf.dat
+        ${EXAMPLES_DIR}/improper-dihedral/improper-dihedral-md-rdf.dat
         ${EXAMPLES_DIR}/penalty/penalty.yml
         ${EXAMPLES_DIR}/penalty/penalty.ipynb
         ${EXAMPLES_DIR}/multipole/multipole.yml

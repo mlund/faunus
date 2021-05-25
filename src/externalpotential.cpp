@@ -112,7 +112,13 @@ double ExternalPotential::energy(Change &change) {
             } else {                                           // only specified atoms in group
                 if (molecule_ids.find(group.id) != molecule_ids.end()) {
                     for (int index : group_change.atoms) { // loop over changed atoms in group
-                        energy += externalPotentialFunc(group[index]);
+                        if (atom_indices.empty()) {        // apply to all indices
+                            energy += externalPotentialFunc(group[index]);
+                        } else { // apply to a subset of indices
+                            if (std::find(atom_indices.begin(), atom_indices.end(), index) != atom_indices.end()) {
+                                energy += externalPotentialFunc(group[index]);
+                            }
+                        }
                     }
                 }
             }

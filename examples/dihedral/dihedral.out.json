@@ -2,7 +2,6 @@
   "analysis": [
     {
       "systemenergy": {
-        "Cv/kB": 4.7483,
         "file": "energy.dat",
         "final": [
           1.1170359051077228
@@ -179,9 +178,5 @@
   "number of particles": 4,
   "reactionlist": null,
   "relative drift": -3.9227378903011325e-13,
-  "simulation time": {
-    "in minutes": 0.25,
-    "in seconds": 15
-  },
   "temperature": 298.15
 }

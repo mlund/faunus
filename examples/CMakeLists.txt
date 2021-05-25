@@ -98,6 +98,13 @@ add_test(
         WORKING_DIRECTORY ${EXAMPLES_DIR}/improper-dihedral)
 
 add_test(
+        NAME fene-stretch
+        COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} feneStretch.yml\
+    | $<TARGET_FILE:faunus> --nobar\
+   && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} feneStretch.out.json out.json --tol 0.03"
+        WORKING_DIRECTORY ${EXAMPLES_DIR}/fene_stretch)
+
+add_test(
         NAME chain
         COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} chain.yml\
     | $<TARGET_FILE:faunus> --nobar --state chain.state.json\
@@ -282,6 +289,11 @@ install(FILES
         ${EXAMPLES_DIR}/improper-dihedral/improper-dihedral-plot.py
         ${EXAMPLES_DIR}/improper-dihedral/improper-dihedral-mc-rdf.dat
         ${EXAMPLES_DIR}/improper-dihedral/improper-dihedral-md-rdf.dat
+        ${EXAMPLES_DIR}/fene_stretch/feneStretch.yml
+        ${EXAMPLES_DIR}/fene_stretch/feneStretch.out.json
+        ${EXAMPLES_DIR}/fene_stretch/feneStretch-plot.py
+        ${EXAMPLES_DIR}/fene_stretch/feneStretch-mc-rdf.dat
+        ${EXAMPLES_DIR}/fene_stretch/feneStretch-md-rdf.dat
         ${EXAMPLES_DIR}/penalty/penalty.yml
         ${EXAMPLES_DIR}/penalty/penalty.ipynb
         ${EXAMPLES_DIR}/multipole/multipole.yml

@@ -1,0 +1,156 @@
+{
+  "analysis": [
+    {
+      "systemenergy": {
+        "Cv/kB": 3.153,
+        "file": "energy.dat",
+        "final": [
+          7.008767871182529
+        ],
+        "init": 3.5509,
+        "mean": 6.2811,
+        "nskip": 1,
+        "nstep": 100,
+        "samples": 5000
+      }
+    },
+    {
+      "atomrdf": {
+        "dim": 1,
+        "dr": 0.1,
+        "file": "rdf.dat",
+        "name1": "a",
+        "name2": "c",
+        "nskip": 1,
+        "nstep": 1,
+        "samples": 499999,
+        "slicedir": [
+          0,
+          0,
+          0
+        ],
+        "thickness": 0.0
+      }
+    },
+    {
+      "savestate": {
+        "file": "state.json"
+      }
+    }
+  ],
+  "compiler": "Apple LLVM 12.0.5 (clang-1205.0.22.9)",
+  "energy": [
+    {
+      "hamiltonian": [
+        {
+          "bonded": {
+            "bondlist-intramolecular": [
+              {
+                "fene+wca": {
+                  "eps": 1.0,
+                  "index": [
+                    0,
+                    1
+                  ],
+                  "k": 5.0,
+                  "rmax": 20.0,
+                  "sigma": 1.5
+                }
+              },
+              {
+                "fene+wca": {
+                  "eps": 1.2,
+                  "index": [
+                    1,
+                    2
+                  ],
+                  "k": 5.5,
+                  "rmax": 20.5,
+                  "sigma": 1.0
+                }
+              },
+              {
+                "harmonic_torsion": {
+                  "aeq": 180.0,
+                  "index": [
+                    0,
+                    1,
+                    2
+                  ],
+                  "k": 10.0
+                }
+              }
+            ],
+            "relative time": 0.0007876661058311826
+          }
+        }
+      ]
+    }
+  ],
+  "geometry": {
+    "length": [
+      20.0,
+      20.0,
+      20.0
+    ],
+    "type": "cuboid"
+  },
+  "git revision": "87968983 (2021-05-18)",
+  "groups": [
+    {
+      "threebody": {
+        "compressible": false,
+        "index": [
+          0,
+          2
+        ],
+        "size": 3
+      }
+    }
+  ],
+  "montecarlo": {
+    "average potential energy (kT)": 6.322195046141714,
+    "last move": "transrot"
+  },
+  "moves": [
+    {
+      "langevin_dynamics": {
+        "acceptance": 1.0,
+        "integrator": {
+          "friction": 5.0,
+          "time_step": 1e-06
+        },
+        "moves": 500357,
+        "nsteps": 10,
+        "relative time": 0.362,
+        "relative time (without energy calc)": 0.332,
+        "repeat": 1
+      }
+    },
+    {
+      "transrot": {
+        "acceptance": 0.125,
+        "dir": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "molecule": "threebody",
+        "molid": 0,
+        "moves": 1499643,
+        "relative time": 0.126,
+        "repeat": 3,
+        "√⟨r²⟩": 0.291
+      }
+    }
+  ],
+  "number of groups": 1,
+  "number of particles": 3,
+  "reactionlist": null,
+  "relative drift": 4.802512377373494e-14,
+  "simulation time": {
+    "in minutes": 0.21666666666666667,
+    "in seconds": 13
+  },
+  "temperature": 298.15
+}

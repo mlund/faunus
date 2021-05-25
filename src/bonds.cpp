@@ -529,10 +529,10 @@ TEST_CASE("[Faunus] BondData") {
             CHECK(forces[0].first == 0);
             CHECK(forces[1].first == 1);
             CHECK(forces[0].second.x() == Approx(0.0));
-            CHECK(forces[0].second.y() == Approx(-156.25));
+            CHECK(forces[0].second.y() == Approx(-468.75));
             CHECK(forces[0].second.z() == Approx(0.0));
             CHECK(forces[1].second.x() == Approx(0.0));
-            CHECK(forces[1].second.y() == Approx(156.25));
+            CHECK(forces[1].second.y() == Approx(468.75));
             CHECK(forces[1].second.z() == Approx(0.0));
         }
         SUBCASE("FENEBond JSON") {
@@ -567,10 +567,10 @@ TEST_CASE("[Faunus] BondData") {
             CHECK(forces[0].first == 0);
             CHECK(forces[1].first == 1);
             CHECK(forces[0].second.x() == Approx(0.0));
-            CHECK(forces[0].second.y() == Approx(-850.4660681509));
+            CHECK(forces[0].second.y() == Approx(-10.1974323155));
             CHECK(forces[0].second.z() == Approx(0.0));
             CHECK(forces[1].second.x() == Approx(0.0));
-            CHECK(forces[1].second.y() == Approx(850.4660681509));
+            CHECK(forces[1].second.y() == Approx(10.1974323155));
             CHECK(forces[1].second.z() == Approx(0.0));
         }
         SUBCASE("FENEWCABond JSON") {

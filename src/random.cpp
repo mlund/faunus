@@ -34,7 +34,6 @@ void to_json(nlohmann::json &j, const Random &random) {
     if constexpr (std::is_same<RandomNumberEngine, std::mt19937>::value) {
         j["engine"] = "Mersenne Twister (std::mt19937)";
     } else {
-        static_assert(PCG_RAND_HPP_INCLUDED);
         j["engine"] = "Permuted Congruential Generator (pcg32)";
     }
 }

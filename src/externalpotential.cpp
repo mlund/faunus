@@ -42,39 +42,39 @@ void to_json(json &j, const Energybase &base) {
  *   fictitious particle placed at the COM and with a net-charge of the group.
  */
 double ExternalPotential::groupEnergy(const Group<Particle>& group) const {
-    double energy = 0.0;
-
-    std::function<bool(const Particle&)> select_particle;
-    if (atom_indices.empty()) { // select all particles in group by default
-        select_particle = [&]([[maybe_unused]] const auto& particle) { return true; };
-    } else {
-        select_particle = [&](const auto& particle) {
-            auto atom_index = group.getParticleIndex(particle);
-            return std::find(atom_indices.begin(), atom_indices.end(), atom_index) != atom_indices.end();
-        };
+    if (molecule_ids.find(group.id) == molecule_ids.end()) {
+        return 0.0;
     }
-
-    if (molecule_ids.find(group.id) != molecule_ids.end()) {
-        if (act_on_mass_center && group.isMolecular()) {
-            if (group.size() == group.capacity()) {
-                Particle fake_mass_center_particle;
-                fake_mass_center_particle.charge = Faunus::monopoleMoment(group.begin(), group.end());
-                fake_mass_center_particle.pos = group.cm;
-                return externalPotentialFunc(fake_mass_center_particle);
-            }
-        } else {
-            for (const auto& particle : group | ranges::cpp20::views::filter(select_particle)) {
-                energy += externalPotentialFunc(particle);
-                if (std::isnan(energy)) {
-                    break;
-                }
-            }
+    if (act_on_mass_center && group.isMolecular()) {
+        if (group.size() == group.capacity()) {
+            return massCenterEnergy(group);
+        }
+    }
+    double energy = 0.0;
+    auto select_particle = [&](const Particle& particle) {
+        if (atom_indices.empty()) {
+            return true;
+        }
+        const auto atom_index = group.getParticleIndex(particle);
+        return std::find(atom_indices.begin(), atom_indices.end(), atom_index) != atom_indices.end();
+    };
+    for (const auto& particle : group | ranges::cpp20::views::filter(select_particle)) {
+        energy += externalPotentialFunc(particle);
+        if (std::isnan(energy)) {
+            break;
         }
     }
     return energy;
 }
 
-ExternalPotential::ExternalPotential(const json &j, Space &spc) : space(spc) {
+double ExternalPotential::massCenterEnergy(const Group<Particle>& group) const {
+    Particle fake_mass_center_particle;
+    fake_mass_center_particle.charge = monopoleMoment(group.begin(), group.end());
+    fake_mass_center_particle.pos = group.cm;
+    return externalPotentialFunc(fake_mass_center_particle);
+}
+
+ExternalPotential::ExternalPotential(const json &j, const Space &spc) : space(spc) {
     name = "external";
     act_on_mass_center = j.value("com", false);
     molecule_names = j.at("molecules").get<decltype(molecule_names)>(); // molecule names
@@ -94,41 +94,58 @@ ExternalPotential::ExternalPotential(const json &j, Space &spc) : space(spc) {
         std::sort(atom_indices.begin(), atom_indices.end()); // for faster search using std::find
     }
 }
-double ExternalPotential::energy(Change &change) {
+double ExternalPotential::energy(Change& change) {
     assert(externalPotentialFunc != nullptr);
-    double energy = 0.0;
     if (change.dV or change.all or change.dN) {
-        for (auto &group : space.groups) { // loop over all groups
-            energy += groupEnergy(group);
-            if (not std::isfinite(energy)) {
-                break; // stop summing if not finite
-            }
+        return totalEnergy();
+    }
+    double energy = 0.0;
+    for (const auto& group_change : change.groups) {       // loop over all changed groups
+        auto& group = space.groups.at(group_change.index); // check specified groups
+        if (group_change.all or act_on_mass_center) {      // check all atoms in group
+            energy += groupEnergy(group);                  // groupEnergy also checks for molecule id
+        } else {                                           // only specified atoms in group
+            energy += partialGroupEnergy(group, group_change.atoms);
         }
-    } else {
-        for (auto &group_change : change.groups) {             // loop over all changed groups
-            auto &group = space.groups.at(group_change.index); // check specified groups
-            if (group_change.all or act_on_mass_center) {      // check all atoms in group
-                energy += groupEnergy(group);                  // groupEnergy also checks for molecule id
-            } else {                                           // only specified atoms in group
-                if (molecule_ids.find(group.id) != molecule_ids.end()) {
-                    for (int index : group_change.atoms) { // loop over changed atoms in group
-                        if (atom_indices.empty()) {        // apply to all indices
-                            energy += externalPotentialFunc(group[index]);
-                        } else { // apply to a subset of indices
-                            if (std::find(atom_indices.begin(), atom_indices.end(), index) != atom_indices.end()) {
-                                energy += externalPotentialFunc(group[index]);
-                            }
-                        }
-                    }
-                }
-            }
-            if (not std::isfinite(energy)) {
-                break; // stop summing if not finite
-            }
+        if (not std::isfinite(energy)) {
+            break; // stop summing if not finite
         }
     }
     return energy; // in kT
 }
+
+double ExternalPotential::totalEnergy() {
+    double energy = 0.0;
+    for (auto& group : space.groups) { // loop over all groups
+        energy += groupEnergy(group);
+        if (not isfinite(energy)) {
+            break; // stop summing if not finite
+        }
+    }
+    return energy;
+}
+
+/**
+ * @param group Group to apply potential to
+ * @param indices Particle indices to operate on, relative to group begin
+ * @return summed energy
+ */
+double ExternalPotential::partialGroupEnergy(const Group<Particle>& group, const std::vector<int>& indices) const {
+    double energy = 0.0;
+    auto include_index = [&](auto particle_index) {
+        if (atom_indices.empty()) {
+            return true;
+        }
+        return std::find(atom_indices.begin(), atom_indices.end(), particle_index) != atom_indices.end();
+    };
+    if (molecule_ids.find(group.id) != molecule_ids.end()) {
+        for (auto particle_index : indices | ranges::cpp20::views::filter(include_index)) {
+            energy += externalPotentialFunc(group[particle_index]);
+        }
+    }
+    return energy;
+}
+
 void ExternalPotential::to_json(json &j) const {
     j["molecules"] = molecule_names;
     j["com"] = act_on_mass_center;

@@ -48,18 +48,22 @@ void to_json(json &j, const Energybase &base); //!< Converts any energy class to
  */
 class ExternalPotential : public Energybase {
   private:
-    bool act_on_mass_center = false;                   //!< apply only on center-of-mass
-    std::set<int> molecule_ids;                        //!< ids of molecules to act on
-    std::vector<std::string> molecule_names;           //!< corresponding names of molecules to act on
-    std::vector<int> atom_indices;                     //!< atom indices relative to group
-    double groupEnergy(const Group<Particle> &) const; //!< external potential on a single group
+    bool act_on_mass_center = false;         //!< apply only on center-of-mass
+    std::set<int> molecule_ids;              //!< ids of molecules to act on
+    std::vector<std::string> molecule_names; //!< corresponding names of molecules to act on
+    std::vector<int> atom_indices;           //!< atom indices relative to group to operate on (empty=ALL)
+    double totalEnergy();                    //!< energy on all groups
+    double groupEnergy(const Group<Particle>& group) const; //!< external potential on a single group
+    double partialGroupEnergy(const Group<Particle>& group,
+                              const std::vector<int>& indices) const; //!< partial energy on single group
   protected:
-    Space &space;                                                            //!< reference to simulation space
-    std::function<double(const Particle &)> externalPotentialFunc = nullptr; //!< energy of single particle
+    const Space& space;                                                     //!< reference to simulation space
+    std::function<double(const Particle&)> externalPotentialFunc = nullptr; //!< energy of single particle
   public:
-    ExternalPotential(const json &, Space &);
-    double energy(Change &) override;
-    void to_json(json &) const override;
+    ExternalPotential(const json &j, const Space &spc);
+    double energy(Change &change) override;
+    void to_json(json &j) const override;
+    double massCenterEnergy(const Group<Particle>& group) const;
 };
 
 /**

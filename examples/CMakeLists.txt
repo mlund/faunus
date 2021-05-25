@@ -274,26 +274,26 @@ install(FILES
         ${EXAMPLES_DIR}/bend/bend.yml
         ${EXAMPLES_DIR}/bend/bend.out.json
         ${EXAMPLES_DIR}/bend/mc_vs_md.agr
-        ${EXAMPLES_DIR}/gromosBend/gromosBend.yml
-        ${EXAMPLES_DIR}/gromosBend/gromosBend.out.json
-        ${EXAMPLES_DIR}/gromosBend/gromosBend-plot.py
-        ${EXAMPLES_DIR}/gromosBend/gromosBend-mc-rdf.dat
-        ${EXAMPLES_DIR}/gromosBend/dihedral-md-rdf.dat
+        ${EXAMPLES_DIR}/gromos_bend/gromos_bend.yml
+        ${EXAMPLES_DIR}/gromos_bend/gromos_bend.out.json
+        ${EXAMPLES_DIR}/gromos_bend/gromos_bend_plot.py
+        ${EXAMPLES_DIR}/gromos_bend/gromos_bend_mc_rdf.dat
+        ${EXAMPLES_DIR}/gromos_bend/gromos_bend_md_rdf.dat
         ${EXAMPLES_DIR}/dihedral/dihedral.yml
         ${EXAMPLES_DIR}/dihedral/dihedral.out.json
-        ${EXAMPLES_DIR}/dihedral/dihedral-plot.py
-        ${EXAMPLES_DIR}/dihedral/dihedral-mc-rdf.dat
-        ${EXAMPLES_DIR}/dihedral/dihedral-md-rdf.dat
-        ${EXAMPLES_DIR}/improper-dihedral/improper-dihedral.yml
-        ${EXAMPLES_DIR}/improper-dihedral/improper-dihedral.out.json
-        ${EXAMPLES_DIR}/improper-dihedral/improper-dihedral-plot.py
-        ${EXAMPLES_DIR}/improper-dihedral/improper-dihedral-mc-rdf.dat
-        ${EXAMPLES_DIR}/improper-dihedral/improper-dihedral-md-rdf.dat
-        ${EXAMPLES_DIR}/fene_stretch/feneStretch.yml
-        ${EXAMPLES_DIR}/fene_stretch/feneStretch.out.json
-        ${EXAMPLES_DIR}/fene_stretch/feneStretch-plot.py
-        ${EXAMPLES_DIR}/fene_stretch/feneStretch-mc-rdf.dat
-        ${EXAMPLES_DIR}/fene_stretch/feneStretch-md-rdf.dat
+        ${EXAMPLES_DIR}/dihedral/dihedral_plot.py
+        ${EXAMPLES_DIR}/dihedral/dihedral_mc_rdf.dat
+        ${EXAMPLES_DIR}/dihedral/dihedral_md_rdf.dat
+        ${EXAMPLES_DIR}/improper_dihedral/improper-dihedral.yml
+        ${EXAMPLES_DIR}/improper_dihedral/improper_dihedral.out.json
+        ${EXAMPLES_DIR}/improper_dihedral/improper_dihedral_plot.py
+        ${EXAMPLES_DIR}/improper_dihedral/improper_dihedral_mc_rdf.dat
+        ${EXAMPLES_DIR}/improper_dihedral/improper_dihedral_md_rdf.dat
+        ${EXAMPLES_DIR}/fene_stretch/fene_stretch.yml
+        ${EXAMPLES_DIR}/fene_stretch/fene_stretch.out.json
+        ${EXAMPLES_DIR}/fene_stretch/fene_stretch_plot.py
+        ${EXAMPLES_DIR}/fene_stretch/fene_stretch_mc_rdf.dat
+        ${EXAMPLES_DIR}/fene_stretch/fene_stretch_md_rdf.dat
         ${EXAMPLES_DIR}/penalty/penalty.yml
         ${EXAMPLES_DIR}/penalty/penalty.ipynb
         ${EXAMPLES_DIR}/multipole/multipole.yml

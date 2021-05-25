@@ -418,7 +418,7 @@ TEST_CASE("[Faunus] CustomPairPotential") {
         CHECK(pot(a, b, 2 * 2, {0, 0, 2}) == Approx(-7.0 / (3.0 + 4.0) * std::exp(-30.0 / 2.0) * pc::kT() + pc::pi));
     }
     SUBCASE("force") {
-        Coulomb coulomb = R"({ "coulomb": {"epsr": 80.0} } )"_json;
+        NewCoulombGalore coulomb = R"({ "coulomb": {"epsr": 80.0, "type": "plain"} } )"_json;
         CustomPairPotential pot =
             R"({"constants": { "lB": 7.0056973292 }, "function": "lB * charge1 * charge2 / r"})"_json;
         Point r = {coulomb.bjerrum_length, 0.2, -0.1};

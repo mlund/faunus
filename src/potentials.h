@@ -627,11 +627,11 @@ class CustomPairPotential : public PairPotentialBase {
     // the implicit template instantiation is disabled to save reasources during the compilation/build.
     ExprFunction<double> expr;
     struct Symbols {
-        double distance = 0.0;
-        double charge1 = 0.0;
-        double charge2 = 0.0;
-        double sigma1 = 0.0;
-        double sigma2 = 0.0;
+        double distance = 0.0; // available as "r"
+        double charge1 = 0.0;  // available as "charge1"
+        double charge2 = 0.0;  // available as "charge2"
+        double sigma1 = 0.0;   // available as "s1"
+        double sigma2 = 0.0;   // available as "s2"
     };
     std::shared_ptr<Symbols> symbols;
     double squared_cutoff_distance;
@@ -648,20 +648,20 @@ class CustomPairPotential : public PairPotentialBase {
   public:
     inline double operator()(const Particle& particle1, const Particle& particle2, double squared_distance,
                              [[maybe_unused]] const Point& r) const override {
-        if (squared_distance > squared_cutoff_distance) {
-            return 0.0;
+        if (squared_distance < squared_cutoff_distance) {
+            setSymbols(particle1, particle2, squared_distance);
+            return expr();
         }
-        setSymbols(particle1, particle2, squared_distance);
-        return expr();
+        return 0.0;
     }
 
     inline Point force(const Particle& particle1, const Particle& particle2, double squared_distance,
                        const Point& r) const override {
-        if (squared_distance > squared_cutoff_distance) {
-            return Point::Zero();
+        if (squared_distance < squared_cutoff_distance) {
+            setSymbols(particle1, particle2, squared_distance);
+            return -expr.derivative(symbols->distance) / symbols->distance * r;
         }
-        setSymbols(particle1, particle2, squared_distance);
-        return -expr.derivative(symbols->distance) / symbols->distance * r;
+        return Point::Zero();
     }
 
     CustomPairPotential(const std::string &name = "custom");

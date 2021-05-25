@@ -138,16 +138,16 @@ void FENEBond::setEnergyFunction(const ParticleVector& particles) {
         return -half_force_constant * max_squared_distance * std::log(1.0 - squared_distance / max_squared_distance);
     };
     forceFunc = [&](Geometry::DistanceFunction distance) -> std::vector<IndexAndForce> {
-      const Point ba = distance(particles[indices[0]].pos, particles[indices[1]].pos); // b->a
-      const auto squared_distance = ba.squaredNorm();
-      if (squared_distance >= max_squared_distance) {
-          throw std::runtime_error("Fene potential: Force undefined for distances greater than rmax.");
-      };
-      const auto force_magnitude =
-          -2.0 * half_force_constant * ba.norm() / (1.0 - squared_distance/max_squared_distance);
-      Point force0 = force_magnitude * ba.normalized();
-      Point force1 = -force0;
-      return {{indices[0], force0}, {indices[1], force1}};
+        const Point ba = distance(particles[indices[0]].pos, particles[indices[1]].pos); // b->a
+        const auto squared_distance = ba.squaredNorm();
+        if (squared_distance >= max_squared_distance) {
+            throw std::runtime_error("Fene potential: Force undefined for distances greater than rmax.");
+        };
+        const auto force_magnitude =
+            -2.0 * half_force_constant * ba.norm() / (1.0 - squared_distance / max_squared_distance);
+        Point force0 = force_magnitude * ba.normalized();
+        Point force1 = -force0;
+        return {{indices[0], force0}, {indices[1], force1}};
     };
 }
 
@@ -206,7 +206,7 @@ void FENEWCABond::setEnergyFunction(const ParticleVector& particles) {
             wca_force = -24.0 * epsilon * (2.0 * sigma6 * sigma6 - sigma6) / distance;
         }
         const auto force_magnitude =
-            -(2.0 * half_force_constant * distance / (1.0 - squared_distance/max_distance_squared) + wca_force);
+            -(2.0 * half_force_constant * distance / (1.0 - squared_distance / max_distance_squared) + wca_force);
         Point force0 = force_magnitude * ba.normalized();
         Point force1 = -force0;
         return {{indices[0], force0}, {indices[1], force1}};
@@ -301,7 +301,8 @@ void GromosTorsion::setEnergyFunction(const ParticleVector& particles) {
         const auto inverse_norm_bc = 1.0 / bc.norm();
         const auto cosine_angle = ba.dot(bc) * inverse_norm_ba * inverse_norm_bc;
         const auto angle = std::acos(cosine_angle);
-        const auto force_magnitude = -2.0 * half_force_constant * std::sin(angle) * (cosine_angle - cosine_equilibrium_angle);
+        const auto force_magnitude =
+            -2.0 * half_force_constant * std::sin(angle) * (cosine_angle - cosine_equilibrium_angle);
         const Point plane_abc = ba.cross(bc).eval();
         Point force0 = force_magnitude * inverse_norm_ba * ba.cross(plane_abc).normalized();
         Point force2 = force_magnitude * inverse_norm_bc * -bc.cross(plane_abc).normalized();
@@ -353,7 +354,8 @@ void PeriodicDihedral::setEnergyFunction(const ParticleVector& particles) {
             std::atan2((normal_abc.cross(normal_bcd)).dot(bc) / bc.norm(), normal_abc.dot(normal_bcd));
 
         // Calculation of the energy derivative with respect to the dihedral angle.
-        const auto force_magnitude = periodicity * force_constant * std::sin(periodicity * dihedral_angle - phase_angle);
+        const auto force_magnitude =
+            periodicity * force_constant * std::sin(periodicity * dihedral_angle - phase_angle);
 
         // Calculation of the dihedral angle derivative with respect to the position vector.
         const auto inverse_norm_ab = 1.0 / ab.norm();
@@ -403,52 +405,52 @@ std::shared_ptr<BondData> HarmonicDihedral::clone() const { return std::make_sha
 void HarmonicDihedral::setEnergyFunction(const ParticleVector& particles) {
     // Torsion on the form a(0) - b(1) - c(2) - d(3)
     energyFunc = [&](Geometry::DistanceFunction distance) {
-      auto ab = distance(particles[indices[1]].pos, particles[indices[0]].pos); // a->b
-      auto bc = distance(particles[indices[2]].pos, particles[indices[1]].pos); // b->c
-      auto cd = distance(particles[indices[3]].pos, particles[indices[2]].pos); // c->d
-      auto normal_abc = ab.cross(bc).eval();                                    // ab x bc
-      auto normal_bcd = bc.cross(cd).eval();                                    // bc x cd
-      // atan2( [ab×bc]×[bc×cd]⋅[bc/|bc|], [ab×bc]⋅[bc×cd] )
-      const auto dihedral_angle =
-          std::atan2((normal_abc.cross(normal_bcd)).dot(bc) / bc.norm(), normal_abc.dot(normal_bcd));
-      const auto delta_dihedral = equilibrium_dihedral - dihedral_angle;
-      return half_force_constant * delta_dihedral * delta_dihedral;
+        auto ab = distance(particles[indices[1]].pos, particles[indices[0]].pos); // a->b
+        auto bc = distance(particles[indices[2]].pos, particles[indices[1]].pos); // b->c
+        auto cd = distance(particles[indices[3]].pos, particles[indices[2]].pos); // c->d
+        auto normal_abc = ab.cross(bc).eval();                                    // ab x bc
+        auto normal_bcd = bc.cross(cd).eval();                                    // bc x cd
+        // atan2( [ab×bc]×[bc×cd]⋅[bc/|bc|], [ab×bc]⋅[bc×cd] )
+        const auto dihedral_angle =
+            std::atan2((normal_abc.cross(normal_bcd)).dot(bc) / bc.norm(), normal_abc.dot(normal_bcd));
+        const auto delta_dihedral = equilibrium_dihedral - dihedral_angle;
+        return half_force_constant * delta_dihedral * delta_dihedral;
     };
     forceFunc = [&](Geometry::DistanceFunction distance) -> std::vector<IndexAndForce> {
-      auto ab = distance(particles[indices[1]].pos, particles[indices[0]].pos); // a->b
-      auto bc = distance(particles[indices[2]].pos, particles[indices[1]].pos); // b->c
-      auto cd = distance(particles[indices[3]].pos, particles[indices[2]].pos); // c->d
-      auto normal_abc = ab.cross(bc).eval();
-      auto normal_bcd = bc.cross(cd).eval();
-      const auto dihedral_angle =
-          std::atan2((normal_abc.cross(normal_bcd)).dot(bc) / bc.norm(), normal_abc.dot(normal_bcd));
+        auto ab = distance(particles[indices[1]].pos, particles[indices[0]].pos); // a->b
+        auto bc = distance(particles[indices[2]].pos, particles[indices[1]].pos); // b->c
+        auto cd = distance(particles[indices[3]].pos, particles[indices[2]].pos); // c->d
+        auto normal_abc = ab.cross(bc).eval();
+        auto normal_bcd = bc.cross(cd).eval();
+        const auto dihedral_angle =
+            std::atan2((normal_abc.cross(normal_bcd)).dot(bc) / bc.norm(), normal_abc.dot(normal_bcd));
 
-      // Calculation of the energy derivative with respect to the dihedral angle.
-      const auto force_magnitude = -2.0 * half_force_constant * (dihedral_angle - equilibrium_dihedral);
+        // Calculation of the energy derivative with respect to the dihedral angle.
+        const auto force_magnitude = -2.0 * half_force_constant * (dihedral_angle - equilibrium_dihedral);
 
-      // Calculation of the dihedral angle derivative with respect to the position vector.
-      const auto inverse_norm_ab = 1.0 / ab.norm();
-      const auto inverse_norm_bc = 1.0 / bc.norm();
-      const auto inverse_norm_cd = 1.0 / cd.norm();
-      const auto angle_abc = std::acos(-ab.dot(bc) * inverse_norm_ab * inverse_norm_bc);
-      const auto angle_bcd = std::acos(-bc.dot(cd) * inverse_norm_bc * inverse_norm_cd);
-      const auto theta_a_derivative = inverse_norm_ab / std::sin(angle_abc);
-      const auto theta_d_derivative = inverse_norm_cd / std::sin(angle_bcd);
+        // Calculation of the dihedral angle derivative with respect to the position vector.
+        const auto inverse_norm_ab = 1.0 / ab.norm();
+        const auto inverse_norm_bc = 1.0 / bc.norm();
+        const auto inverse_norm_cd = 1.0 / cd.norm();
+        const auto angle_abc = std::acos(-ab.dot(bc) * inverse_norm_ab * inverse_norm_bc);
+        const auto angle_bcd = std::acos(-bc.dot(cd) * inverse_norm_bc * inverse_norm_cd);
+        const auto theta_a_derivative = inverse_norm_ab / std::sin(angle_abc);
+        const auto theta_d_derivative = inverse_norm_cd / std::sin(angle_bcd);
 
-      // Calculation of directional vectors on particle a and d.
-      const Point ortho_normalized_abc = -normal_abc.normalized();   // normalized vector orthogonal to the plane abc.
-      const Point ortho_normalized_bcd = cd.cross(-bc).normalized(); // normalized vector orthogonal to the plane bcd.
+        // Calculation of directional vectors on particle a and d.
+        const Point ortho_normalized_abc = -normal_abc.normalized();   // normalized vector orthogonal to the plane abc.
+        const Point ortho_normalized_bcd = cd.cross(-bc).normalized(); // normalized vector orthogonal to the plane bcd.
 
-      // Calculation of forces on particle a and d
-      Point force_a = force_magnitude * ortho_normalized_abc * theta_a_derivative;
-      Point force_d = force_magnitude * ortho_normalized_bcd * theta_d_derivative;
+        // Calculation of forces on particle a and d
+        Point force_a = force_magnitude * ortho_normalized_abc * theta_a_derivative;
+        Point force_d = force_magnitude * ortho_normalized_bcd * theta_d_derivative;
 
-      // Calculation of force and associated vectors for atom c.
-      const Point bc_midpoint = 0.5 * bc;
-      const Point torque_c = -(bc_midpoint.cross(force_d) + 0.5 * cd.cross(force_d) - 0.5 * ab.cross(force_a));
-      Point force_c = torque_c.cross(bc_midpoint) / bc_midpoint.squaredNorm();
-      Point force_b = -(force_a + force_c + force_d); // Newton's third law for force on atom b.
-      return {{indices[0], force_a}, {indices[1], force_b}, {indices[2], force_c}, {indices[3], force_d}};
+        // Calculation of force and associated vectors for atom c.
+        const Point bc_midpoint = 0.5 * bc;
+        const Point torque_c = -(bc_midpoint.cross(force_d) + 0.5 * cd.cross(force_d) - 0.5 * ab.cross(force_a));
+        Point force_c = torque_c.cross(bc_midpoint) / bc_midpoint.squaredNorm();
+        Point force_b = -(force_a + force_c + force_d); // Newton's third law for force on atom b.
+        return {{indices[0], force_a}, {indices[1], force_b}, {indices[2], force_c}, {indices[3], force_d}};
     };
 }
 

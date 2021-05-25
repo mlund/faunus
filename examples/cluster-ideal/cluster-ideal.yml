@@ -5,7 +5,7 @@
 #     N_c = 1 + 4 * pi * Rc**3 * N / (3 * L**3) = 1.22 in this case
 #
 temperature: 300
-random: {seed: fixed}
+random: {seed: hardware}
 geometry: {type: cuboid, length: 40}
 mcloop: {macro: 10, micro: 20000}
 

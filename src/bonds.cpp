@@ -374,8 +374,8 @@ void PeriodicDihedral::setEnergyFunction(const ParticleVector& particles) {
 
         // Calculation of force and associated vectors for atom c.
         const Point bc_midpoint = 0.5 * bc;
-        const Point tc = -(bc_midpoint.cross(force_d) + 0.5 * cd.cross(force_d) - 0.5 * ab.cross(force_a));
-        Point force_c = tc.cross(bc_midpoint) / bc_midpoint.squaredNorm();
+        const Point torque_c = -(bc_midpoint.cross(force_d) + 0.5 * cd.cross(force_d) - 0.5 * ab.cross(force_a));
+        Point force_c = torque_c.cross(bc_midpoint) / bc_midpoint.squaredNorm();
         Point force_b = -(force_a + force_c + force_d); // Newton's third law for force on atom b.
         return {{indices[0], force_a}, {indices[1], force_b}, {indices[2], force_c}, {indices[3], force_d}};
     };
@@ -445,8 +445,8 @@ void HarmonicDihedral::setEnergyFunction(const ParticleVector& particles) {
 
       // Calculation of force and associated vectors for atom c.
       const Point bc_midpoint = 0.5 * bc;
-      const Point tc = -(bc_midpoint.cross(force_d) + 0.5 * cd.cross(force_d) - 0.5 * ab.cross(force_a));
-      Point force_c = tc.cross(bc_midpoint) / bc_midpoint.squaredNorm();
+      const Point torque_c = -(bc_midpoint.cross(force_d) + 0.5 * cd.cross(force_d) - 0.5 * ab.cross(force_a));
+      Point force_c = torque_c.cross(bc_midpoint) / bc_midpoint.squaredNorm();
       Point force_b = -(force_a + force_c + force_d); // Newton's third law for force on atom b.
       return {{indices[0], force_a}, {indices[1], force_b}, {indices[2], force_c}, {indices[3], force_d}};
     };

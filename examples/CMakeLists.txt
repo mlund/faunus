@@ -77,11 +77,11 @@ add_test(
         WORKING_DIRECTORY ${EXAMPLES_DIR}/bend)
 
 add_test(
-        NAME gromosBend
-        COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} gromosBend.yml\
+        NAME gromos_bend
+        COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} gromos_bend.yml\
     | $<TARGET_FILE:faunus> --nobar\
-    && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} gromosBend.out.json out.json --tol 0.03"
-        WORKING_DIRECTORY ${EXAMPLES_DIR}/gromosBend)
+    && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} gromos_bend.out.json out.json --tol 0.03"
+        WORKING_DIRECTORY ${EXAMPLES_DIR}/gromos_bend)
 
 add_test(
         NAME dihedral
@@ -91,17 +91,17 @@ add_test(
         WORKING_DIRECTORY ${EXAMPLES_DIR}/dihedral)
 
 add_test(
-        NAME improper-dihedral
-        COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} improper-dihedral.yml\
+        NAME improper_dihedral
+        COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} improper_dihedral.yml\
     | $<TARGET_FILE:faunus> --nobar\
-   && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} improper-dihedral.out.json out.json --tol 0.03"
-        WORKING_DIRECTORY ${EXAMPLES_DIR}/improper-dihedral)
+   && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} improper_dihedral.out.json out.json --tol 0.03"
+        WORKING_DIRECTORY ${EXAMPLES_DIR}/improper_dihedral)
 
 add_test(
-        NAME fene-stretch
-        COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} feneStretch.yml\
+        NAME fene_stretch
+        COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} fene_stretch.yml\
     | $<TARGET_FILE:faunus> --nobar\
-   && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} feneStretch.out.json out.json --tol 0.03"
+   && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} fene_stretch.out.json out.json --tol 0.03"
         WORKING_DIRECTORY ${EXAMPLES_DIR}/fene_stretch)
 
 add_test(

@@ -385,11 +385,11 @@ void CustomPairPotential::from_json(const json& j) {
     constants["Nav"] = pc::Nav;
     constants["Rc"] = std::sqrt(squared_cutoff_distance);
     constants["T"] = pc::temperature;
-    expr.set(original_input, {{"r", &symbols->distance},
-                              {"charge1", &symbols->charge1},
-                              {"charge2", &symbols->charge2},
-                              {"s1", &symbols->sigma1},
-                              {"s2", &symbols->sigma2}});
+    expression.set(original_input, {{"r", &symbols->distance},
+                                    {"charge1", &symbols->charge1},
+                                    {"charge2", &symbols->charge2},
+                                    {"s1", &symbols->sigma1},
+                                    {"s2", &symbols->sigma2}});
 }
 
 void CustomPairPotential::to_json(json& j) const {

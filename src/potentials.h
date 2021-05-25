@@ -620,12 +620,14 @@ class Multipole : public NewCoulombGalore {
 
 /**
  * @brief Custom pair-potential taking math. expressions at runtime
+ * @note `symbols` is a shared_ptr as this allows it to be modified by `operator() const`.
+ *       A hack, but would otherwise require const-removal in all pair-potentials.
  */
 class CustomPairPotential : public PairPotentialBase {
   private:
     // Only ExprFunction<double> is explicitly instantiated in functionparser.cpp. Other types as well as
     // the implicit template instantiation is disabled to save reasources during the compilation/build.
-    ExprFunction<double> expr;
+    ExprFunction<double> expression;
     struct Symbols {
         double distance = 0.0; // available as "r"
         double charge1 = 0.0;  // available as "charge1"
@@ -650,7 +652,7 @@ class CustomPairPotential : public PairPotentialBase {
                              [[maybe_unused]] const Point& r) const override {
         if (squared_distance < squared_cutoff_distance) {
             setSymbols(particle1, particle2, squared_distance);
-            return expr();
+            return expression();
         }
         return 0.0;
     }
@@ -659,7 +661,7 @@ class CustomPairPotential : public PairPotentialBase {
                        const Point& r) const override {
         if (squared_distance < squared_cutoff_distance) {
             setSymbols(particle1, particle2, squared_distance);
-            return -expr.derivative(symbols->distance) / symbols->distance * r;
+            return -expression.derivative(symbols->distance) / symbols->distance * r;
         }
         return Point::Zero();
     }

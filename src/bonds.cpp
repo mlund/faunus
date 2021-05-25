@@ -687,11 +687,11 @@ TEST_CASE("[Faunus] BondData") {
         p_45deg[3].pos = {10.0, 10.0, 2.0};
 
         ParticleVector p_90deg(p_45deg);
-        p_90deg[3].pos[0] *= 0;
+        p_90deg[3].pos[0] = 0;
         ParticleVector p_60deg(p_45deg);
-        p_60deg[3].pos[1] *= std::sqrt(3);
+        p_60deg[3].pos[1] *= std::sqrt(3.0);
         ParticleVector p_120deg(p_60deg);
-        p_120deg[3].pos[0] *= -1;
+        p_120deg[3].pos[0] *= -1.0;
 
         SUBCASE("PeriodicDihedral Energy") {
             PeriodicDihedral bond(100.0, 0.0_deg, 3, {0, 1, 2, 3});
@@ -750,7 +750,7 @@ TEST_CASE("[Faunus] BondData") {
         p_45deg[3].pos = {10.0, 10.0, 2.0};
 
         ParticleVector p_90deg(p_45deg);
-        p_90deg[3].pos[0] == 0.0;
+        p_90deg[3].pos[0] = 0.0;
         ParticleVector p_60deg(p_45deg);
         p_60deg[3].pos[1] *= std::sqrt(3.0);
         ParticleVector p_120deg(p_60deg);

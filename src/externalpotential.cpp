@@ -49,7 +49,7 @@ double ExternalPotential::groupEnergy(const Group<Particle>& group) const {
         select_particle = [&]([[maybe_unused]] const auto& particle) { return true; };
     } else {
         select_particle = [&](const auto& particle) {
-            auto atom_index = std::addressof(particle) - std::addressof(space.p.front());
+            auto atom_index = group.getParticleIndex(particle);
             return std::find(atom_indices.begin(), atom_indices.end(), atom_index) != atom_indices.end();
         };
     }

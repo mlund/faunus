@@ -650,11 +650,11 @@ $$
 Finite extensible nonlinear elastic potential long range repulsive potential.
 
 $$
-     u(r) =
-  \begin{cases} 
-   -\frac{1}{2} k r\_{\mathrm{max}}^2 \ln \left [ 1-(r/r\_{\mathrm{max}})^2 \right ],       & \text{if } r < r\_{\mathrm{max}} \\
-   \infty, & \text{if } r \geq r\_{\mathrm{max}}
-  \end{cases}
+u(r) =
+\begin{cases}
+-\frac{1}{2} k r_{\mathrm{max}}^2 \ln \left [ 1-(r/r_{\mathrm{max}})^2 \right ],  & \text{if } r < r_{\mathrm{max}} \\
+\infty, & \text{if } r \geq r_{\mathrm{max}}
+\end{cases}
 $$
 
 It is recommended to only use the potential if the initial configuration is near equilibrium, which prevalently depends on the value of `rmax`.
@@ -718,12 +718,27 @@ where $\alpha$ is the angle between vector 1→0 and 1→2 (numbers refer to the
 ------------------- | -------------------------------------------
 `k`                 | Force constant (kJ/mol)
 `n`                 | Periodicity (multiplicity) of the dihedral (integer)
-`phi`               | Angle $\phi_{\mathrm{syn}}$ (deg)
+`phi`               | Phase angle $\phi_{\mathrm{syn}}$ (deg)
 `index`             | Array with _exactly four_ indices (relative to molecule)
 
 $$
 u(r) = k(1 + \cos(n\phi - \phi_{\mathrm{syn}}))
 $$
+where $\phi$ is the angle between the planes constructed from the points 0,1,2 and 1,2,3 (numbers refer to the position in `index`).
+
+
+### Improper harmonic dihedral
+
+`harmonic_dihedral` | Improper harmonic dihedral
+------------------- | -------------------------------------------
+`k`                 | Harmonic spring constant (kJ/mol/rad²)
+`deq`               | Equilibrium angle $\alpha_{\mathrm{eq}}$ (deg)
+`index`             | Array with _exactly four_ indices (relative to molecule)
+
+$$
+u(\phi) = \frac{1}{2}k(\phi - \phi_{\mathrm{eq}})^2
+$$
+where $\phi$ is the angle between the planes constructed from the points 0,1,2 and 1,2,3 (numbers refer to the position in `index`).
 
 
 ## Geometrical Confinement

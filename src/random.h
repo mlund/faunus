@@ -6,7 +6,7 @@
 #include <nlohmann/json_fwd.hpp>
 
 #ifdef ENABLE_PCG
-#include "pcg_random.hpp"
+#include <pcg_random.hpp>
 #endif
 
 namespace Faunus {
@@ -16,7 +16,6 @@ using RandomNumberEngine = pcg32;
 #else
 using RandomNumberEngine = std::mt19937;
 #endif
-
 
 /**
  * @brief Random number generator

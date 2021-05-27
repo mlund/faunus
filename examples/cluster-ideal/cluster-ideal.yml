@@ -5,7 +5,7 @@
 #     N_c = 1 + 4 * pi * Rc**3 * N / (3 * L**3) = 1.22 in this case
 #
 temperature: 300
-random: {seed: hardware}
+random: {seed: fixed}
 geometry: {type: cuboid, length: 40}
 mcloop: {macro: 10, micro: 20000}
 
@@ -27,7 +27,7 @@ energy:
 moves:
     - moltransrot: {molecule: water, dp: 20, dprot: 1, repeat: 1}
     - moltransrot: {molecule: other, dp: 20, dprot: 1, repeat: 1}
-    - cluster: {molecules: [water, other], dp: 20, dprot: 3, threshold: 7, satellites: [other]}
+    - cluster: {molecules: [water, other], dp: 19.99999, dprot: 3, threshold: 7, satellites: [other]}
 
 analysis:
     - savestate: {file: confout.pqr}

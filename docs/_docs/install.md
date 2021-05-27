@@ -74,6 +74,7 @@ CMake Option                         | Description
 `-DENABLE_PYTHON=OFF`                | Build python bindings (experimental)
 `-DENABLE_FREESASA=ON`               | Enable SASA routines (external download)
 `-DENABLE_TBB=OFF`                   | Build with Intel Threading Building Blocks (experimental)
+`-DENABLE_PCG=OFF`                   | Use PCG random number generator instead of C++'s Mersenne Twister
 `-DBUILD_STATIC=OFF`                 | Build statically linked binaries
 `-DCMAKE_BUILD_TYPE=Release`         | Alternatives: `Debug` or `RelWithDebInfo`
 `-DCMAKE_CXX_FLAGS_RELEASE="..."`    | Compiler options for Release mode

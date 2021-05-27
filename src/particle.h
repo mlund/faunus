@@ -126,11 +126,11 @@ template <typename... Properties> class ParticleTemplate : public Properties... 
     // Cereal serialisation
 
     template <typename... Ts, class Archive>
-    auto _serialize(Archive&) -> typename std::enable_if<sizeof...(Ts) == 0>::type {}
+    auto __serialize(Archive&) -> typename std::enable_if<sizeof...(Ts) == 0>::type {}
 
-    template <typename T, typename... Ts, class Archive> void _serialize(Archive& archive, T& a, Ts&... rest) {
+    template <typename T, typename... Ts, class Archive> void __serialize(Archive& archive, T& a, Ts&... rest) {
         a.serialize(archive);
-        _serialize<Ts...>(archive, rest...);
+        __serialize<Ts...>(archive, rest...);
     }
 
   public:
@@ -143,7 +143,7 @@ template <typename... Properties> class ParticleTemplate : public Properties... 
     } //!< Rotate all internal coordinates if needed
 
     template <class Archive> void serialize(Archive& archive) {
-        _serialize<Properties...>(archive, dynamic_cast<Properties&>(*this)...);
+        __serialize<Properties...>(archive, dynamic_cast<Properties&>(*this)...);
     }
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW

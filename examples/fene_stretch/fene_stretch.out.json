@@ -4,10 +4,10 @@
       "systemenergy": {
         "file": "energy.dat",
         "final": [
-          1.1170359051077228
+          7.008767871182529
         ],
-        "init": 2.7278,
-        "mean": 3.5271,
+        "init": 3.5509,
+        "mean": 6.2811,
         "nskip": 1,
         "nstep": 100,
         "samples": 5000
@@ -19,7 +19,7 @@
         "dr": 0.1,
         "file": "rdf.dat",
         "name1": "a",
-        "name2": "d",
+        "name2": "c",
         "nskip": 1,
         "nstep": 1,
         "samples": 499999,
@@ -45,72 +45,42 @@
           "bonded": {
             "bondlist-intramolecular": [
               {
-                "harmonic": {
+                "fene+wca": {
+                  "eps": 1.0,
                   "index": [
                     0,
                     1
                   ],
-                  "k": 10.0,
-                  "req": 1.0
-                }
-              },
-              {
-                "harmonic": {
-                  "index": [
-                    1,
-                    2
-                  ],
-                  "k": 10.0,
-                  "req": 1.0
-                }
-              },
-              {
-                "harmonic": {
-                  "index": [
-                    2,
-                    3
-                  ],
-                  "k": 10.0,
-                  "req": 1.0
-                }
-              },
-              {
-                "harmonic_torsion": {
-                  "aeq": 90.0,
-                  "index": [
-                    0,
-                    1,
-                    2
-                  ],
-                  "k": 10.0
-                }
-              },
-              {
-                "harmonic_torsion": {
-                  "aeq": 45.0,
-                  "index": [
-                    1,
-                    2,
-                    3
-                  ],
-                  "k": 10.0
-                }
-              },
-              {
-                "periodic_dihedral": {
-                  "index": [
-                    0,
-                    1,
-                    2,
-                    3
-                  ],
                   "k": 5.0,
-                  "n": 2.0,
-                  "phi": 180.0
+                  "rmax": 20.0,
+                  "sigma": 1.5
+                }
+              },
+              {
+                "fene+wca": {
+                  "eps": 1.2,
+                  "index": [
+                    1,
+                    2
+                  ],
+                  "k": 5.5,
+                  "rmax": 20.5,
+                  "sigma": 1.0
+                }
+              },
+              {
+                "harmonic_torsion": {
+                  "aeq": 180.0,
+                  "index": [
+                    0,
+                    1,
+                    2
+                  ],
+                  "k": 10.0
                 }
               }
             ],
-            "relative time": 0.00323969004751942
+            "relative time": 0.0007876661058311826
           }
         }
       ]
@@ -124,21 +94,21 @@
     ],
     "type": "cuboid"
   },
-  "git revision": "2bd0c2d4 (2021-05-17)",
+  "git revision": "87968983 (2021-05-18)",
   "groups": [
     {
-      "fourbody": {
+      "threebody": {
         "compressible": false,
         "index": [
           0,
-          3
+          2
         ],
-        "size": 4
+        "size": 3
       }
     }
   ],
   "montecarlo": {
-    "average potential energy (kT)": 3.5274214754152835,
+    "average potential energy (kT)": 6.322195046141714,
     "last move": "transrot"
   },
   "moves": [
@@ -147,36 +117,35 @@
         "acceptance": 1.0,
         "integrator": {
           "friction": 5.0,
-          "time_step": 0.001
+          "time_step": 1e-06
         },
-        "moves": 498590,
+        "moves": 500357,
         "nsteps": 10,
-        "relative time": 0.636,
-        "relative time (without energy calc)": 0.581,
+        "relative time": 0.362,
+        "relative time (without energy calc)": 0.332,
         "repeat": 1
       }
     },
     {
       "transrot": {
-        "acceptance": 0.153,
+        "acceptance": 0.125,
         "dir": [
           1.0,
           1.0,
           1.0
         ],
-        "molecule": "fourbody",
+        "molecule": "threebody",
         "molid": 0,
-        "moves": 2001410,
-        "relative time": 0.18,
-        "relative time (without energy calc)": 0.0192,
-        "repeat": 4,
-        "√⟨r²⟩": 0.387
+        "moves": 1499643,
+        "relative time": 0.126,
+        "repeat": 3,
+        "√⟨r²⟩": 0.291
       }
     }
   ],
   "number of groups": 1,
-  "number of particles": 4,
+  "number of particles": 3,
   "reactionlist": null,
-  "relative drift": -3.9227378903011325e-13,
+  "relative drift": 4.802512377373494e-14,
   "temperature": 298.15
 }

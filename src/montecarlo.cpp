@@ -93,7 +93,7 @@ double MetropolisMonteCarlo::relativeEnergyDrift() {
             return 0.0;
         } else {
             return (energy - (initial_energy + sum_of_energy_changes)) /
-                   (initial_energy != 0 ? initial_energy : energy);
+                   (std::fabs(initial_energy) > pc::epsilon_dbl ? initial_energy : energy);
         }
     }
     return std::numeric_limits<double>::quiet_NaN();

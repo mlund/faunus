@@ -506,6 +506,21 @@ template <typename PairEnergy> class DelayedEnergyAccumulator : public EnergyAcc
     }
 };
 
+template <typename TPairEnergy>
+std::shared_ptr<EnergyAccumulatorBase> createEnergyAccumulator(const json& j, const TPairEnergy& pair_energy,
+                                                               double initial_value) {
+    std::shared_ptr<EnergyAccumulatorBase> accumulator;
+    if (j.value("summation_policy", EnergyAccumulatorBase::SERIAL) != EnergyAccumulatorBase::SERIAL) {
+        accumulator = std::make_shared<DelayedEnergyAccumulator<TPairEnergy>>(pair_energy, initial_value);
+        faunus_logger->debug("activated delayed energy summation");
+    } else {
+        accumulator = std::make_shared<InstantEnergyAccumulator<TPairEnergy>>(pair_energy, initial_value);
+        faunus_logger->debug("activated instant energy summation");
+    }
+    accumulator->from_json(j);
+    return accumulator;
+}
+
 /**
  * @brief Determines if two groups are separated beyond the cutoff distance.
  *
@@ -1271,39 +1286,45 @@ class GroupPairing {
  * @tparam TPairEnergy  a functor to compute non-bonded energy between two particles
  * @tparam TPairingPolicy  pairing policy to effectively sum up the pairwise additive non-bonded energy
  */
-template <typename TPairEnergy, typename TPairingPolicy>
-class Nonbonded : public Energybase {
+template <typename TPairEnergy, typename TPairingPolicy> class Nonbonded : public Energybase {
   protected:
-    using TAccumulator = DelayedEnergyAccumulator<TPairEnergy>;
-    const Space& spc;                //!< space to operate on
-    TPairEnergy pair_energy;         //!< a functor to compute non-bonded energy between two particles, see PairEnergy
-    TPairingPolicy pairing;          //!< pairing policy to effectively sum up the pairwise additive non-bonded energy
-    TAccumulator energy_accumulator; //!< energy accumulator used for storing and summing pair-wise energies
+    const Space& spc;        //!< space to operate on
+    TPairEnergy pair_energy; //!< a functor to compute non-bonded energy between two particles, see PairEnergy
+    TPairingPolicy pairing;  //!< pairing policy to effectively sum up the pairwise additive non-bonded energy
+    std::shared_ptr<EnergyAccumulatorBase>
+        energy_accumulator; //!< energy accumulator used for storing and summing pair-wise energies
 
   public:
     Nonbonded(const json& j, Space& spc, BasePointerVector<Energybase>& pot)
-        : spc(spc), pair_energy(spc, pot), pairing(spc), energy_accumulator(pair_energy, 0.0) {
+        : spc(spc), pair_energy(spc, pot), pairing(spc) {
         name = "nonbonded";
         from_json(j);
-        energy_accumulator.reserve(spc.numParticles()); // reduce memory fragmentation
+        energy_accumulator = createEnergyAccumulator(j, pair_energy, 0.0);
+        energy_accumulator->reserve(spc.numParticles()); // attempt to reduce memory fragmentation
     }
 
     void from_json(const json &j) {
         pair_energy.from_json(j);
         pairing.from_json(j);
-        energy_accumulator.from_json(j);
     }
 
     void to_json(json &j) const override {
         pair_energy.to_json(j);
         pairing.to_json(j);
-        energy_accumulator.to_json(j);
+        energy_accumulator->to_json(j);
     }
 
-     double energy(Change &change) override {
-         energy_accumulator.clear();
-         pairing.accumulate(energy_accumulator, change);
-         return static_cast<double>(energy_accumulator);
+    double energy(Change& change) override {
+        energy_accumulator->clear();
+        // down-cast to avoid slow, virtual function calls:
+        if (auto ptr = std::dynamic_pointer_cast<InstantEnergyAccumulator<TPairEnergy>>(energy_accumulator)) {
+            pairing.accumulate(*ptr, change);
+        } else if (auto ptr = std::dynamic_pointer_cast<DelayedEnergyAccumulator<TPairEnergy>>(energy_accumulator)) {
+            pairing.accumulate(*ptr, change);
+        } else {
+            pairing.accumulate(*energy_accumulator, change);
+        }
+        return static_cast<double>(*energy_accumulator);
     }
 
     /**

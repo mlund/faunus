@@ -339,6 +339,37 @@ template <typename TSize, typename TSet> inline auto indexComplement(const TSize
 }
 
 /**
+ * @brief under construction
+ */
+class EnergyAccumulatorBase {
+  protected:
+    double value = 0.0; //!< accumulated energy
+  public:
+    using ParticleRef = const std::reference_wrapper<const Space::Tparticle>;
+    
+    inline EnergyAccumulatorBase(double value) : value(value) {}
+    virtual ~EnergyAccumulatorBase() = default;
+    inline virtual void reserve([[maybe_unused]] size_t number_of_particles) {}
+    inline virtual void clear() { value = 0.0; }
+    inline virtual EnergyAccumulatorBase& operator=(const double new_value) {
+        value = new_value;
+        return *this;
+    }
+    inline virtual EnergyAccumulatorBase& operator+=(const double new_value) {
+        value += new_value;
+        return *this;
+    }
+    virtual EnergyAccumulatorBase& operator+=(std::pair<ParticleRef, ParticleRef>&& pair) = 0;
+
+    inline virtual explicit operator double() { return value; }
+
+    template <typename TOtherAccumulator> inline EnergyAccumulatorBase& operator+=(TOtherAccumulator& acc) {
+        value += static_cast<double>(acc);
+        return *this;
+    }
+};
+
+/**
  * @brief A basic accumulator which immediately computes and adds energy of a pair of particles upon addition using
  * the PairEnergy templated class.
  *
@@ -350,13 +381,14 @@ template <typename TSize, typename TSet> inline auto indexComplement(const TSize
 template <typename PairEnergy>
 struct BasicEnergyAccumulator {
   protected:
-    PairEnergy &pair_energy; //!< recipe to compute non-bonded energy between two particles, see PairEnergy
+    const PairEnergy &pair_energy; //!< recipe to compute non-bonded energy between two particles, see PairEnergy
     double value = 0.0;      //!< accumulated energy
 
   public:
     using ParticleRef = const std::reference_wrapper<const Space::Tparticle>;
 
-    BasicEnergyAccumulator(PairEnergy &pair_energy, const double value = 0.0) : pair_energy(pair_energy), value(value) {}
+    BasicEnergyAccumulator(const PairEnergy& pair_energy, const double value = 0.0)
+        : pair_energy(pair_energy), value(value) {}
 
     void reserve([[maybe_unused]] size_t number_of_particles) {}
     void clear() { value = 0.0; }
@@ -383,10 +415,20 @@ struct BasicEnergyAccumulator {
     }
 
     inline explicit operator double() { return value; }
+
+    void from_json([[maybe_unused]] json& j) {}
+    void to_json([[maybe_unused]] json& j) {}
 };
 
+enum EnergyAccumulatorScheme { SERIAL, OPENMP, PARALLEL, INVALID };
+
+NLOHMANN_JSON_SERIALIZE_ENUM(EnergyAccumulatorScheme, {{EnergyAccumulatorScheme::INVALID, nullptr},
+                                                       {EnergyAccumulatorScheme::SERIAL, "serial"},
+                                                       {EnergyAccumulatorScheme::OPENMP, "openmp"},
+                                                       {EnergyAccumulatorScheme::PARALLEL, "parallel"}})
+
 /**
- * This accumulator stores a vector of pairs and postpones the actual energy evaluation until
+ * This accumulator stores a vector of particle pairs and postpones the energy evaluation until
  * the first call to `operator double()`. Looping over the vector can be done in serial (as a fallback);
  * using OpenMP; or using C++17 parallel algorithms if available.
  */
@@ -396,10 +438,19 @@ template <typename PairEnergy> class ParallelEnergyAccumulator : private BasicEn
     std::vector<std::pair<ParticleRef, ParticleRef>> particle_pairs;
 
   public:
-    enum Schemes { SERIAL, OPENMP, PARALLEL };
-    Schemes scheme = SERIAL;
+    EnergyAccumulatorScheme scheme = SERIAL;
 
-    /** Reserve memory for N^2 interaction pairs which should be more then enough */
+    explicit ParallelEnergyAccumulator(const PairEnergy& pair_energy, const double value = 0.0)
+        : BasicEnergyAccumulator<PairEnergy>(pair_energy, value) {}
+
+    void from_json(const json& j) {
+        scheme = j.value("summation_policy", EnergyAccumulatorScheme::SERIAL);
+        faunus_logger->debug("setting parallel scheme to {}", json(scheme).dump(1));
+    }
+
+    void to_json(json& j) { j["summation_policy"] = scheme; }
+
+    /** Reserves memory for N^2 interaction pairs which should be more than enough */
     void reserve(size_t number_of_particles) {
         try {
             particle_pairs.reserve(number_of_particles * number_of_particles);
@@ -412,9 +463,6 @@ template <typename PairEnergy> class ParallelEnergyAccumulator : private BasicEn
         this->value = 0.0;
         particle_pairs.clear();
     }
-
-    ParallelEnergyAccumulator(PairEnergy& pair_energy, const double value = 0.0)
-        : BasicEnergyAccumulator<PairEnergy>(pair_energy, value) {}
 
     ParallelEnergyAccumulator& operator=(const double new_value) {
         clear();
@@ -436,7 +484,7 @@ template <typename PairEnergy> class ParallelEnergyAccumulator : private BasicEn
         case PARALLEL:
             this->value += accumulateParallel();
             break;
-        case SERIAL:
+        default:
             this->value += accumulateSerial();
         }
         particle_pairs.clear();
@@ -528,7 +576,7 @@ void to_json(json&, const GroupCutoff &);
  * @tparam allow_anisotropic_pair_potential  pass also a distance vector to the pair potential, slower
  */
 template <typename TPairPotential, bool allow_anisotropic_pair_potential = true> class PairEnergy {
-    Space::Tgeometry &geometry;                //!< geometry to operate with
+    const Space::Tgeometry &geometry;          //!< geometry to operate with
     TPairPotential pair_potential;             //!< pair potential function/functor
     Space &spc;                                //!< space to init ParticleSelfEnergy with addPairPotentialSelfEnergy
     BasePointerVector<Energybase> &potentials; //!< registered non-bonded potentials, see addPairPotentialSelfEnergy
@@ -1257,11 +1305,13 @@ class Nonbonded : public Energybase {
     void from_json(const json &j) {
         pair_energy.from_json(j);
         pairing.from_json(j);
+        energy_accumulator.from_json(j);
     }
 
     void to_json(json &j) const override {
         pair_energy.to_json(j);
         pairing.to_json(j);
+        //energy_accumulator.to_json(j);
     }
 
      double energy(Change &change) override {

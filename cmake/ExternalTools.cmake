@@ -1,6 +1,24 @@
 include(ExternalProject)
 include(FetchContent)
 
+#############
+# PCG RANDOM
+#############
+
+option(ENABLE_PCG "Enable PCG random number generator" off)
+if (ENABLE_PCG)
+    FetchContent_Declare(
+        pcg-cpp
+        URL https://github.com/imneme/pcg-cpp/archive/ffd522e7188bef30a00c74dc7eb9de5faff90092.tar.gz
+        URL_HASH MD5=051b969bbaf924f35f2159813f93e341)
+    FetchContent_GetProperties(pcg-cpp)
+    if(NOT pcg-cpp_POPULATED)
+        FetchContent_Populate(pcg-cpp)
+    endif()
+    include_directories(SYSTEM ${pcg-cpp_SOURCE_DIR}/include)
+    add_definitions("-DENABLE_PCG")
+endif()
+
 #########
 # EXPRTK 
 #########

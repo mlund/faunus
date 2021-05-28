@@ -27,7 +27,7 @@ energy:
 moves:
     - moltransrot: {molecule: water, dp: 20, dprot: 1, repeat: 1}
     - moltransrot: {molecule: other, dp: 20, dprot: 1, repeat: 1}
-    - cluster: {molecules: [water, other], dp: 20, dprot: 3, threshold: 7, satellites: [other]}
+    - cluster: {molecules: [water, other], dp: 19.99999, dprot: 3, threshold: 7, satellites: [other]}
 
 analysis:
     - savestate: {file: confout.pqr}

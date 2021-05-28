@@ -284,7 +284,7 @@ install(FILES
         ${EXAMPLES_DIR}/dihedral/dihedral_plot.py
         ${EXAMPLES_DIR}/dihedral/dihedral_mc_rdf.dat
         ${EXAMPLES_DIR}/dihedral/dihedral_md_rdf.dat
-        ${EXAMPLES_DIR}/improper_dihedral/improper-dihedral.yml
+        ${EXAMPLES_DIR}/improper_dihedral/improper_dihedral.yml
         ${EXAMPLES_DIR}/improper_dihedral/improper_dihedral.out.json
         ${EXAMPLES_DIR}/improper_dihedral/improper_dihedral_plot.py
         ${EXAMPLES_DIR}/improper_dihedral/improper_dihedral_mc_rdf.dat

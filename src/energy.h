@@ -404,10 +404,17 @@ template <typename PairEnergy> class InstantEnergyAccumulator : public EnergyAcc
         return *this;
     }
 
-    inline EnergyAccumulatorBase& operator+=(std::pair<ParticleRef, ParticleRef>&& pair) override {
+    inline InstantEnergyAccumulator& operator+=(std::pair<ParticleRef, ParticleRef>&& pair) override {
         // keep this short to get inlined
         value += pair_energy.potential(pair.first.get(), pair.second.get());
         return *this;
+    }
+
+    void from_json(const json &j) override {
+        EnergyAccumulatorBase::from_json(j);
+        if (scheme != SERIAL) {
+            faunus_logger->warn("unsupported summation scheme; falling back to 'serial'");
+        }
     }
 };
 
@@ -1290,7 +1297,7 @@ class Nonbonded : public Energybase {
     void to_json(json &j) const override {
         pair_energy.to_json(j);
         pairing.to_json(j);
-        //energy_accumulator.to_json(j);
+        energy_accumulator.to_json(j);
     }
 
      double energy(Change &change) override {

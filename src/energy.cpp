@@ -1279,6 +1279,18 @@ EnergyAccumulatorBase::operator double() { return value; }
 
 void EnergyAccumulatorBase::from_json(const json& j) {
     scheme = j.value("summation_policy", Scheme::SERIAL);
+#ifndef HAS_PARALLEL_TRANSFORM_REDUCE
+    if (scheme == Scheme::PARALLEL) {
+        faunus_logger->warn("'parallel' summation unavailable; falling back to 'serial'");
+        scheme = SERIAL;
+    }
+#endif
+#ifndef _OPENMP
+    if (scheme == Scheme::OPENMP) {
+        faunus_logger->warn("'openmp' summation unavailable; falling back to 'serial'");
+        scheme = SERIAL;
+    }
+#endif
     faunus_logger->debug("setting parallel scheme to {}", json(scheme).dump(1));
 }
 

@@ -1268,4 +1268,20 @@ void to_json(json &j, const GroupCutoff &cutoff) {
         j["cutoff_g2g"] = _j;
     }
 }
+
+EnergyAccumulatorBase::EnergyAccumulatorBase(double value) : value(value) {}
+
+void EnergyAccumulatorBase::reserve([[maybe_unused]] size_t number_of_particles) {}
+
+void EnergyAccumulatorBase::clear() { value = 0.0; }
+
+EnergyAccumulatorBase::operator double() { return value; }
+
+void EnergyAccumulatorBase::from_json(const json& j) {
+    scheme = j.value("summation_policy", Scheme::SERIAL);
+    faunus_logger->debug("setting parallel scheme to {}", json(scheme).dump(1));
+}
+
+void EnergyAccumulatorBase::to_json(json& j) const { j["summation_policy"] = scheme; }
+
 } // end of namespace Faunus::Energy

@@ -390,7 +390,7 @@ properties:
             cutoff_g2g:
                 anyOf:
                     - {type: number, description: "Molecule-molecule cutoff (global)"}
-                    - {type: array, items: {type: object}}
+                    - {type: object}
             openmp:
                 type: array
                 items:
@@ -418,7 +418,7 @@ properties:
                     type: object
                     properties:
                         default: {"$ref": "#/properties/pairpotential/all"}
-                        cutoff_g2g: {type: [number, array]}
+                        cutoff_g2g: {type: [number, object]}
                         summation_policy:
                             type: string
                             enum: [serial, openmp, parallel]
@@ -437,7 +437,7 @@ properties:
                     type: object
                     properties:
                         default: {"$ref": "#/properties/pairpotential/all"}
-                        cutoff_g2g: {type: [number, array]}
+                        cutoff_g2g: {type: [number, object]}
                         summation_policy:
                             type: string
                             enum: [serial, openmp, parallel]

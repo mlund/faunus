@@ -536,6 +536,7 @@ class GroupCutoff {
     Space::Tgeometry &geometry;         //!< geometry to compute the inter group distance with
     friend void from_json(const json&, GroupCutoff &);
     friend void to_json(json&, const GroupCutoff &);
+    void setSingleCutoff(const double cutoff);
 
   public:
     /**
@@ -552,6 +553,8 @@ class GroupCutoff {
         }
         return result;
     }
+
+    double getCutoff(size_t id1, size_t id2) const;
 
     /**
      * @brief A functor alias for cut().

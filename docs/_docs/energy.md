@@ -144,6 +144,22 @@ Keyword            | Description
 Note: Anisotropic pair-potentials cannot be splined. This also applies
 to non-shifted electrostatic potentials such as `plain` and un-shifted `yukawa`.
 
+## Parallel summation
+
+Depending on how Faunus was compiled, parallel, nonbonded summation schemes may be available.
+Activate with:
+
+~~~ yaml
+- nonbonded:
+    summation_policy: parallel
+    ...
+~~~
+
+where `parallel` uses C++ internal threading; `openmp` uses OpenMP; and `serial` skip
+parallel summation (default). A warning will be issued if the desired scheme is unavailable.
+For the `openmp` policy, you may control the number of threads with the environmental variable
+`OMP_NUM_THREADS`.
+
 
 ## Electrostatics
 

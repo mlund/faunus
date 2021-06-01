@@ -11,12 +11,17 @@
 #include <numeric>
 #include <algorithm>
 
+
 #ifdef ENABLE_FREESASA
 #include <freesasa.h>
 #endif
 
 #if defined(__cpp_lib_parallel_algorithm) && __has_include(<tbb/tbb.h>)
 #include <execution>
+#elif defined(__INTEL_CLANG_COMPILER)
+#include <oneapi/dpl/execution>
+#include <oneapi/dpl/algorithm>
+#define HAS_PARALLEL_TRANSFORM_REDUCE
 #endif
 
 #if defined(__cpp_lib_parallel_algorithm) &&                                                                           \
@@ -310,8 +315,10 @@ double Bonded::sum_energy(const Bonded::BondVector& bonds, const Indices& partic
     auto affected_bonds = bonds | ranges::cpp20::views::filter(bond_filter);
     auto bond_energy = [&](const auto& bond) { return bond->energyFunc(spc.geo.getDistanceFunc()); };
 
-#if (defined(__clang__) && __clang_major__ >= 10) || (defined(__GNUC__) && __GNUC__ >= 10)
-    return std::transform_reduce(affected_bonds.begin(), affected_bonds.end(), 0.0, std::plus<>(), bond_energy);
+#ifdef __INTEL_CLANG_COMPILER
+    return oneapi::dpl::transform_reduce(std::execution::seq, affected_bonds.begin(), affected_bonds.end(), 0.0, std::plus<>(), bond_energy);
+#elif (defined(__clang__) && __clang_major__ >= 10) || (defined(__GNUC__) && __GNUC__ >= 10)
+    return std::transform_reduce(std::execution::seq, affected_bonds.begin(), affected_bonds.end(), 0.0, std::plus<>(), bond_energy);
 #else
     double energy = 0.0;
     for (const auto& bond : affected_bonds) {
@@ -487,12 +494,17 @@ template <typename PairEnergy> class DelayedEnergyAccumulator : public EnergyAcc
     }
 
     double accumulateParallel() const {
-#if defined(HAS_PARALLEL_TRANSFORM_REDUCE)
-        return std::transform_reduce(
+#ifdef HAS_PARALLEL_TRANSFORM_REDUCE
+#ifdef __INTEL_CLANG_COMPILER
+	using oneapi::dpl::transform_reduce;
+#else
+        using std::transform_reduce;
+#endif
+        return transform_reduce(
             std::execution::par, particle_pairs.cbegin(), particle_pairs.cend(), 0.0, std::plus<double>(),
             [&](const auto& pair) { return pair_energy.potential(pair.first.get(), pair.second.get()); });
 #else
-        return accumulateSerial(); // fallback
+	throw std::runtime_error("c++17 parallel algorithm unavailable");
 #endif
     }
 

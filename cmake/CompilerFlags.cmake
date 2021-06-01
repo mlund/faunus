@@ -4,6 +4,7 @@ add_compile_options($<$<CONFIG:Debug>:-O0>)
 
 # in Release mode, add aggressive optimizations
 add_compile_options($<$<CONFIG:Release>:-Ofast>)
+add_compile_options($<$<CONFIG:Release>:-fiopenmp>)
 add_compile_options($<$<CONFIG:Release>:-fno-finite-math-only>)
 
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)")

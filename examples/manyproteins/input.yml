@@ -1,0 +1,65 @@
+analysis:
+-   sanity: {nstep: 1000}
+  #-   systemenergy: {nstep: 10, file: "energy.dat"}
+-   savestate: {file: confout.pqr}
+-   savestate: {file: state.json}
+atomlist:
+-   ASP:  {eps: 0.10, mw: 110, q: -1, sigma: 7.2}
+-   CTR:  {eps: 0.10, mw: 16, q: -1, sigma: 4.0}
+-   GLU:  {eps: 0.10, mw: 122, q: -1, sigma: 7.6}
+-   HIS:  {eps: 0.10, mw: 130, q: 0.5, sigma: 7.8}
+-   SHIS: {eps: 0.10, mw: 130, q: 0.5, sigma: 7.8}
+-   NTR:  {eps: 0.10, mw: 14, q: 1, sigma: 4.0}
+-   SNTR: {eps: 0.10, mw: 14, q: 1, sigma: 4.0}
+-   TYR:  {eps: 0.10, mw: 154, q: 0, sigma: 8.2}
+-   LYS:  {eps: 0.10, mw: 116, q: 1, sigma: 7.4}
+-   SLYS: {eps: 0.10, mw: 116, q: 1, sigma: 7.4}
+-   CYS:  {eps: 0.10, mw: 103, q: -1, sigma: 7.2}
+-   CYT:  {eps: 0.10, mw: 103, q: 0, sigma: 7.2}
+-   ARG:  {eps: 0.10, mw: 144, q: 1, sigma: 8.0}
+-   SARG: {eps: 0.10, mw: 144, q: 1, sigma: 8.0}
+-   ALA:  {eps: 0.10, mw: 66, q: 0, sigma: 6.2}
+-   BALA: {eps: 0.10, mw: 66, q: 0, sigma: 6.2}
+-   ILE:  {eps: 0.10, mw: 102, q: 0, sigma: 7.2}
+-   BILE: {eps: 0.10, mw: 102, q: 0, sigma: 7.2}
+-   LEU:  {eps: 0.10, mw: 102, q: 0, sigma: 7.2}
+-   BLEU: {eps: 0.10, mw: 102, q: 0, sigma: 7.2}
+-   MET:  {eps: 0.10, mw: 122, q: 0, sigma: 7.6}
+-   PHE:  {eps: 0.10, mw: 138, q: 0, sigma: 7.8}
+-   BPHE: {eps: 0.10, mw: 138, q: 0, sigma: 7.8}
+-   PRO:  {eps: 0.10, mw: 90, q: 0, sigma: 6.8}
+-   BPRO: {eps: 0.10, mw: 90, q: 0, sigma: 6.8}
+-   TRP:  {eps: 0.10, mw: 176, q: 0, sigma: 8.6}
+-   BTRP: {eps: 0.10, mw: 176, q: 0, sigma: 8.6}
+-   VAL:  {eps: 0.10, mw: 90, q: 0, sigma: 6.8}
+-   BVAL: {eps: 0.10, mw: 90, q: 0, sigma: 6.8}
+-   SER:  {eps: 0.10, mw: 82, q: 0, sigma: 6.6}
+-   THR:  {eps: 0.10, mw: 94, q: 0, sigma: 7.0}
+-   ASN:  {eps: 0.10, mw: 108, q: 0, sigma: 7.2}
+-   GLN:  {eps: 0.10, mw: 120, q: 0, sigma: 7.6}
+-   GLY:  {eps: 0.10, mw: 54, q: 0, sigma: 5.8}
+-   SP:   {eps: 0.10, mw: 10000, q: 3, sigma: 2.0}
+-   MAN:  {eps: 0.10, mw: 108, q: 0, sigma: 5.8}
+-   MAP:  {eps: 0.10, mw: 108, q: 0, sigma: 11.6}
+-   MAQ:  {eps: 0.10, mw: 108, q: 0, sigma: 17.4}
+-   MAR:  {eps: 0.10, mw: 108, q: 0, sigma: 40.0}
+energy:
+-   nonbonded_splined:
+        summation_policy: parallel   # `serial`, `openmp`, `parallel` (C++17 STL)
+        cutoff_g2g: 102.90821838847594
+        default:
+          - coulomb: {cutoff: 46, debyelength: 20, epsr: 78.7, type: yukawa, shift: true}
+          - wca: {mixing: LB}
+geometry:
+    length: [1561.1283325686409, 1561.1283325686409, 1561.1283325686409]
+    type: cuboid
+insertmolecules:
+-   protein: {N: 325}
+mcloop: {macro: 10, micro: 100}
+moleculelist:
+-   protein: {rigid: true, structure: structure.pqr}
+moves:
+-   moltransrot: {dp: 10, dprot: 1, molecule: protein, repeat: N}
+random: {seed: fixed}
+temperature: 300
+

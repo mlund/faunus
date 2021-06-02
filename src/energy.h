@@ -345,11 +345,17 @@ template <typename TSize, typename TSet> inline auto indexComplement(const TSize
  * This can be done instantly (see `InstantEnergyAccumulator`) or delaying
  * the evaluation until the energy is needed (`DelayedEnergyAccumulator`).
  * The latter may be used with parallelism.
+ *
+ * @todo See https://www.youtube.com/watch?v=3LsRYnRDSRA for a bizarre example
+ *       where a custom `struct Tpair { const Particle &first, second; };`
+ *       outperforms `std::pair` due to missed compiler optimization.
  */
 class EnergyAccumulatorBase {
   protected:
-    double value = 0.0; //!< accumulated energy
-    using ParticleRef = const std::reference_wrapper<const Space::Tparticle>;
+    double value = 0.0;                                               //!< accumulated energy
+    using ParticleRef = const std::reference_wrapper<const Particle>; //!< Particle reference
+    using ParticlePair = std::pair<ParticleRef, ParticleRef>;         //!< References to two particles
+
   public:
     enum Scheme { SERIAL, OPENMP, PARALLEL, INVALID };
     Scheme scheme = SERIAL;
@@ -362,9 +368,9 @@ class EnergyAccumulatorBase {
     virtual void to_json(json &j) const;
 
     virtual explicit operator double();
-    virtual EnergyAccumulatorBase& operator=(const double new_value) = 0;
-    virtual EnergyAccumulatorBase& operator+=(const double new_value) = 0;
-    virtual EnergyAccumulatorBase& operator+=(std::pair<ParticleRef, ParticleRef>&& pair) = 0;
+    virtual EnergyAccumulatorBase& operator=(double new_value) = 0;
+    virtual EnergyAccumulatorBase& operator+=(double new_value) = 0;
+    virtual EnergyAccumulatorBase& operator+=(ParticlePair&& pair) = 0;
 
     template <typename TOtherAccumulator> inline EnergyAccumulatorBase& operator+=(TOtherAccumulator& acc) {
         value += static_cast<double>(acc);
@@ -404,7 +410,7 @@ template <typename PairEnergy> class InstantEnergyAccumulator : public EnergyAcc
         return *this;
     }
 
-    inline InstantEnergyAccumulator& operator+=(std::pair<ParticleRef, ParticleRef>&& pair) override {
+    inline InstantEnergyAccumulator& operator+=(ParticlePair&& pair) override {
         // keep this short to get inlined
         value += pair_energy.potential(pair.first.get(), pair.second.get());
         return *this;
@@ -425,7 +431,7 @@ template <typename PairEnergy> class InstantEnergyAccumulator : public EnergyAcc
  */
 template <typename PairEnergy> class DelayedEnergyAccumulator : public EnergyAccumulatorBase {
   private:
-    std::vector<std::pair<ParticleRef, ParticleRef>> particle_pairs;
+    std::vector<ParticlePair> particle_pairs;
     const PairEnergy& pair_energy; //!< recipe to compute non-bonded energy between two particles, see PairEnergy
 
   public:
@@ -457,7 +463,7 @@ template <typename PairEnergy> class DelayedEnergyAccumulator : public EnergyAcc
         return *this;
     }
 
-    inline DelayedEnergyAccumulator& operator+=(std::pair<ParticleRef, ParticleRef>&& pair) override {
+    inline DelayedEnergyAccumulator& operator+=(ParticlePair&& pair) override {
         particle_pairs.template emplace_back(std::move(pair));
         return *this;
     }
@@ -480,7 +486,7 @@ template <typename PairEnergy> class DelayedEnergyAccumulator : public EnergyAcc
   private:
     double accumulateSerial() const {
         double sum = 0.0;
-        for (const auto& [particle1, particle2] : particle_pairs) {
+        for (const auto [particle1, particle2] : particle_pairs) {
             sum += pair_energy.potential(particle1.get(), particle2.get());
         }
         return sum;

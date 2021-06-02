@@ -1291,7 +1291,7 @@ void EnergyAccumulatorBase::from_json(const json& j) {
         scheme = SERIAL;
     }
 #endif
-    faunus_logger->debug("setting parallel scheme to {}", json(scheme).dump(1));
+    faunus_logger->debug("setting summation policy to {}", json(scheme).dump(1));
 }
 
 void EnergyAccumulatorBase::to_json(json& j) const { j["summation_policy"] = scheme; }

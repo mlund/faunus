@@ -171,8 +171,8 @@ Also, adhere to the following naming conventions:
 
 Style        | Elements
 ------------ | -------------------------
-`PascalCase` | classes, namespaces
-`camelCase`  | functions
+`CamelCase`  | classes, namespaces
+`camelBack`  | functions
 `snake_case` | variables
 
 

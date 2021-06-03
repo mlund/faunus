@@ -84,7 +84,7 @@ target_link_libraries(libfaunus PRIVATE
 # ========== faunus (main executable) ==========
 
 add_executable(faunus faunus.cpp)
-target_link_libraries(faunus PRIVATE libfaunus docopt progresstracker project_options /glob/development-tools/versions/oneapi/2021.2/inteloneapi/compiler/2021.2.0/linux/compiler/lib/intel64_lin/libiomp5.so)
+target_link_libraries(faunus PRIVATE libfaunus docopt progresstracker project_options /glob/development-tools/versions/oneapi/2021.2/inteloneapi/tbb/2021.2.0/lib/intel64/gcc4.8/libtbb.so /glob/development-tools/versions/oneapi/2021.2/inteloneapi/compiler/2021.2.0/linux/compiler/lib/intel64_lin/libiomp5.so)
 target_compile_definitions(faunus PRIVATE SPDLOG_COMPILED_LIB)
 set_target_properties(faunus PROPERTIES
         POSITION_INDEPENDENT_CODE ON

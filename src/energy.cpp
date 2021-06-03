@@ -744,7 +744,7 @@ void Bonded::updateInternalBonds() {
 double Bonded::sumBondEnergy(const Bonded::BondVector& bonds) const {
     auto bond_energy = [&](const auto& bond) { return bond->energyFunc(spc.geo.getDistanceFunc()); };
 #ifdef __INTEL_CLANG_COMPILER
-    return oneapi::dpl::transform_reduce(std::execution::seq, bonds.begin(), bonds.end(), 0.0, std::plus<>(), bond_energy);
+    return oneapi::dpl::transform_reduce(oneapi::dpl::execution::seq, bonds.begin(), bonds.end(), 0.0, std::plus<>(), bond_energy);
 #elif defined(HAS_PARALLEL_TRANSFORM_REDUCE)
     return std:::transform_reduce(bonds.begin(), bonds.end(), 0.0, std::plus<>(), bond_energy);
 #else

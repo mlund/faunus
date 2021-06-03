@@ -2,7 +2,7 @@ analysis:
 -   sanity: {nstep: 1000}
   #-   systemenergy: {nstep: 10, file: "energy.dat"}
 -   savestate: {file: confout.pqr}
--   savestate: {file: state.json}
+-   savestate: {file: state.ubj}
 atomlist:
 -   ASP:  {eps: 0.10, mw: 110, q: -1, sigma: 7.2}
 -   CTR:  {eps: 0.10, mw: 16, q: -1, sigma: 4.0}
@@ -45,7 +45,7 @@ atomlist:
 -   MAR:  {eps: 0.10, mw: 108, q: 0, sigma: 40.0}
 energy:
 -   nonbonded_splined:
-        summation_policy: parallel   # `serial`, `openmp`, `parallel` (C++17 STL)
+        summation_policy: serial   # `serial`, `openmp`, `parallel` (C++17 STL)
         cutoff_g2g: 102.90821838847594
         default:
           - coulomb: {cutoff: 46, debyelength: 20, epsr: 78.7, type: yukawa, shift: true}
@@ -55,7 +55,7 @@ geometry:
     type: cuboid
 insertmolecules:
 -   protein: {N: 325}
-mcloop: {macro: 10, micro: 100}
+mcloop: {macro: 10, micro: 10}
 moleculelist:
 -   protein: {rigid: true, structure: structure.pqr}
 moves:

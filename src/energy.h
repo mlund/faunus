@@ -16,18 +16,9 @@
 #include <freesasa.h>
 #endif
 
-#if defined(__cpp_lib_parallel_algorithm) && __has_include(<tbb/tbb.h>)
-#include <execution>
-#elif defined(__INTEL_CLANG_COMPILER)
 #include <oneapi/dpl/execution>
 #include <oneapi/dpl/algorithm>
 #define HAS_PARALLEL_TRANSFORM_REDUCE
-#endif
-
-#if defined(__cpp_lib_parallel_algorithm) &&                                                                           \
-    __has_include(<tbb/tbb.h>) && ((defined(__clang__) && __clang_major__ >= 10) || (defined(__GNUC__) && __GNUC__ >= 10))
-#define HAS_PARALLEL_TRANSFORM_REDUCE
-#endif
 
 namespace Faunus {
 
@@ -316,7 +307,7 @@ double Bonded::sum_energy(const Bonded::BondVector& bonds, const Indices& partic
     auto bond_energy = [&](const auto& bond) { return bond->energyFunc(spc.geo.getDistanceFunc()); };
 
 #ifdef __INTEL_CLANG_COMPILER
-    return oneapi::dpl::transform_reduce(std::execution::seq, affected_bonds.begin(), affected_bonds.end(), 0.0, std::plus<>(), bond_energy);
+    return oneapi::dpl::transform_reduce(oneapi::dpl::execution::seq, affected_bonds.begin(), affected_bonds.end(), 0.0, std::plus<>(), bond_energy);
 #elif (defined(__clang__) && __clang_major__ >= 10) || (defined(__GNUC__) && __GNUC__ >= 10)
     return std::transform_reduce(std::execution::seq, affected_bonds.begin(), affected_bonds.end(), 0.0, std::plus<>(), bond_energy);
 #else
@@ -448,7 +439,7 @@ template <typename PairEnergy> class DelayedEnergyAccumulator : public EnergyAcc
     /** Reserves memory for N^2 interaction pairs (which may be excessive...) */
     void reserve(size_t number_of_particles) override {
         try {
-            particle_pairs.reserve(number_of_particles * number_of_particles);
+            particle_pairs.reserve(number_of_particles * 2);
         } catch (std::exception& e) {
             throw std::runtime_error(fmt::format("cannot allocate memory for energy pairs: {}", e.what()));
         }
@@ -507,7 +498,7 @@ template <typename PairEnergy> class DelayedEnergyAccumulator : public EnergyAcc
         using std::transform_reduce;
 #endif
         return transform_reduce(
-            std::execution::par, particle_pairs.cbegin(), particle_pairs.cend(), 0.0, std::plus<double>(),
+            oneapi::dpl::execution::par, particle_pairs.cbegin(), particle_pairs.cend(), 0.0, std::plus<double>(),
             [&](const auto& pair) { return pair_energy.potential(pair.first.get(), pair.second.get()); });
 #else
 	throw std::runtime_error("c++17 parallel algorithm unavailable");

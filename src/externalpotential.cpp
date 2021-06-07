@@ -118,7 +118,7 @@ double ExternalPotential::totalEnergy() {
     double energy = 0.0;
     for (auto& group : space.groups) { // loop over all groups
         energy += groupEnergy(group);
-        if (not isfinite(energy)) {
+        if (not std::isfinite(energy)) {
             break; // stop summing if not finite
         }
     }

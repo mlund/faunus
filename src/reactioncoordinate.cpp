@@ -233,6 +233,25 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordina
         }
     }
 
+    else if (property == "boundary_density") {
+        if (auto sphere = std::dynamic_pointer_cast<Geometry::Sphere>(spc.geo.asSimpleGeometry())) {
+            function = [&spc, i = index, sphere = sphere]() {
+                const auto R = sphere->getRadius();
+                const auto dR = 0.2_angstrom; // ugly and hard-coded value!
+                const auto shell_volume = 4.0 * pc::pi / 3.0 * (std::pow(R, 3) - std::pow(R - dR, 3));
+                for (const auto& particle : spc.groups.at(i)) {
+                    const auto r = particle.pos.norm();
+                    if (r > R - dR && r < R) {
+                        return 1.0 / shell_volume;
+                    }
+                }
+                return 0.0;
+            };
+        } else {
+            throw std::runtime_error("cell_contact require spherical geometry");
+        }
+    }
+
     else if (property == "atomatom") {
         dir = j.at("dir");
         indexes = j.at("indexes").get<decltype(indexes)>();

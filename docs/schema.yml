@@ -327,14 +327,16 @@ properties:
                     description: Molecular property to sample
                     type: string
                     enum: [angle, active, com_x, com_y, com_z, confid, end2end, Rg, mu_x, mu_y, mu_z, mu, muangle, N, Q,
-                    atomatom, cmcm, cmcm_z, mindist, "L/R", Rinner]
+                    atomatom, cmcm, cmcm_z, mindist, "L/R", Rinner, boundary_density]
             required: [property]
             allOf:
                 - if: {properties: {property: {const: "angle"}}}
                   then: {required: [index,dir]}
                 - if: {properties: {property: {const: "active"}}}
                   then: {required: [index]}
-                - if: {properties: {property: {const: "com_x"}}}
+                - if: {properties: {property: {const: "boundary_density"}}}
+                  then: {required: [index]}
+                 - if: {properties: {property: {const: "com_x"}}}
                   then: {required: [index]}
                 - if: {properties: {property: {const: "com_y"}}}
                   then: {required: [index]}

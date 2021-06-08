@@ -32,5 +32,5 @@ The `yason.py` script simply converts from YAML to JSON and at the same time che
 
 ~~~ bash
 cd examples/manyproteins
-../../scripts/yason.py input.yml | ../../faunus --verbosity 5 --state restart.json 
+../../faunus --input input.json --verbosity 5 --state restart.json 
 ~~~

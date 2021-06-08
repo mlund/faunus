@@ -448,7 +448,7 @@ template <typename PairEnergy> class DelayedEnergyAccumulator : public EnergyAcc
     /** Reserves memory for N^2 interaction pairs (which may be excessive...) */
     void reserve(size_t number_of_particles) override {
         try {
-            particle_pairs.reserve(number_of_particles * number_of_particles);
+            //particle_pairs.reserve(number_of_particles * number_of_particles);
         } catch (std::exception& e) {
             throw std::runtime_error(fmt::format("cannot allocate memory for energy pairs: {}", e.what()));
         }

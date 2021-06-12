@@ -1,6 +1,24 @@
 include(ExternalProject)
 include(FetchContent)
 
+#############
+# PCG RANDOM
+#############
+
+option(ENABLE_PCG "Enable PCG random number generator" off)
+if (ENABLE_PCG)
+    FetchContent_Declare(
+        pcg-cpp
+        URL https://github.com/imneme/pcg-cpp/archive/ffd522e7188bef30a00c74dc7eb9de5faff90092.tar.gz
+        URL_HASH MD5=051b969bbaf924f35f2159813f93e341)
+    FetchContent_GetProperties(pcg-cpp)
+    if(NOT pcg-cpp_POPULATED)
+        FetchContent_Populate(pcg-cpp)
+    endif()
+    include_directories(SYSTEM ${pcg-cpp_SOURCE_DIR}/include)
+    add_definitions("-DENABLE_PCG")
+endif()
+
 #########
 # EXPRTK 
 #########
@@ -245,8 +263,8 @@ set_target_properties(xdrfile PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 
 FetchContent_Declare(
     doctest
-    URL "https://github.com/onqtam/doctest/archive/2.4.4.tar.gz"
-    URL_HASH SHA256=3bcb62ad316bf4230873a336fcc6eb6292116568a6e19ab8cdd37a1610773d70)
+    URL "https://github.com/onqtam/doctest/archive/2.4.6.tar.gz"
+    URL_HASH SHA256=39110778e6baf373ef04342d7cb3fe35da104cb40769103e8a2f0035f5a5f1cb)
 FetchContent_GetProperties(doctest)
 if(NOT doctest_POPULATED)
     FetchContent_Populate(doctest)

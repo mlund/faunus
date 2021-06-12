@@ -1274,4 +1274,32 @@ void to_json(json &j, const GroupCutoff &cutoff) {
         j["cutoff_g2g"] = _j;
     }
 }
+
+EnergyAccumulatorBase::EnergyAccumulatorBase(double value) : value(value) {}
+
+void EnergyAccumulatorBase::reserve([[maybe_unused]] size_t number_of_particles) {}
+
+void EnergyAccumulatorBase::clear() { value = 0.0; }
+
+EnergyAccumulatorBase::operator double() { return value; }
+
+void EnergyAccumulatorBase::from_json(const json& j) {
+    scheme = j.value("summation_policy", Scheme::SERIAL);
+#ifndef HAS_PARALLEL_TRANSFORM_REDUCE
+    if (scheme == Scheme::PARALLEL) {
+        faunus_logger->warn("'parallel' summation unavailable; falling back to 'serial'");
+        scheme = SERIAL;
+    }
+#endif
+#ifndef _OPENMP
+    if (scheme == Scheme::OPENMP) {
+        faunus_logger->warn("'openmp' summation unavailable; falling back to 'serial'");
+        scheme = SERIAL;
+    }
+#endif
+    faunus_logger->debug("setting summation policy to {}", json(scheme).dump(1));
+}
+
+void EnergyAccumulatorBase::to_json(json& j) const { j["summation_policy"] = scheme; }
+
 } // end of namespace Faunus::Energy

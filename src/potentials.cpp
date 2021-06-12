@@ -1012,7 +1012,7 @@ void SplinedPotential::createKnots(int i, int j, double rmin, double rmax) {
                                  FunctorPotential::operator()(particle1, particle2, r *r, {r, 0, 0}));
         max_error = std::max(error, max_error);
     }
-    faunus_logger->debug(
+    faunus_logger->trace(
         "{}-{} interaction splined between [{:6.2f}:{:6.2f}] {} using {} knots w. maximum absolute error of {:.1E} kT",
         Faunus::atoms[i].name, Faunus::atoms[j].name, rmin, rmax, u8::angstrom, knotdata.numKnots(), max_error);
 }

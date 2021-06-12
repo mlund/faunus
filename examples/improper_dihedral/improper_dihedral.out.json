@@ -4,10 +4,10 @@
       "systemenergy": {
         "file": "energy.dat",
         "final": [
-          1.1170359051077228
+          3.2130677525434805
         ],
-        "init": 2.7278,
-        "mean": 3.5271,
+        "init": 0.71121,
+        "mean": 3.393,
         "nskip": 1,
         "nstep": 100,
         "samples": 5000
@@ -97,20 +97,19 @@
                 }
               },
               {
-                "periodic_dihedral": {
+                "harmonic_dihedral": {
+                  "deq": 90.0,
                   "index": [
                     0,
                     1,
                     2,
                     3
                   ],
-                  "k": 5.0,
-                  "n": 2.0,
-                  "phi": 180.0
+                  "k": 10.0
                 }
               }
             ],
-            "relative time": 0.00323969004751942
+            "relative time": 0.0009827565527115712
           }
         }
       ]
@@ -124,7 +123,7 @@
     ],
     "type": "cuboid"
   },
-  "git revision": "2bd0c2d4 (2021-05-17)",
+  "git revision": "87968983 (2021-05-18)",
   "groups": [
     {
       "fourbody": {
@@ -138,7 +137,7 @@
     }
   ],
   "montecarlo": {
-    "average potential energy (kT)": 3.5274214754152835,
+    "average potential energy (kT)": 3.3958031339600714,
     "last move": "transrot"
   },
   "moves": [
@@ -147,18 +146,18 @@
         "acceptance": 1.0,
         "integrator": {
           "friction": 5.0,
-          "time_step": 0.001
+          "time_step": 1e-06
         },
         "moves": 498590,
         "nsteps": 10,
-        "relative time": 0.636,
-        "relative time (without energy calc)": 0.581,
+        "relative time": 0.433,
+        "relative time (without energy calc)": 0.398,
         "repeat": 1
       }
     },
     {
       "transrot": {
-        "acceptance": 0.153,
+        "acceptance": 0.141,
         "dir": [
           1.0,
           1.0,
@@ -167,16 +166,15 @@
         "molecule": "fourbody",
         "molid": 0,
         "moves": 2001410,
-        "relative time": 0.18,
-        "relative time (without energy calc)": 0.0192,
+        "relative time": 0.118,
         "repeat": 4,
-        "√⟨r²⟩": 0.387
+        "√⟨r²⟩": 0.289
       }
     }
   ],
   "number of groups": 1,
   "number of particles": 4,
   "reactionlist": null,
-  "relative drift": -3.9227378903011325e-13,
+  "relative drift": 8.33594920924902e-13,
   "temperature": 298.15
 }

@@ -1,0 +1,51 @@
+#!/usr/bin/env yason.py
+#
+# Combined MC and MD moves on a three-bead molecule
+# with 2 finitely extensible nonlinear elastic (fene)
+# + Weeks-Chandler-Andersen (WCA) bonds and 1 harmonic
+# angular potential.
+#
+# You may disable either MD or MC to verify that they
+# individually give the same bead<->bead distribution
+#
+energy:
+    - bonded: {}
+
+atomlist:
+    - a: {mw: 1, dp: 5}
+    - b: {mw: 1, dp: 5}
+    - c: {mw: 1, dp: 5}
+
+moleculelist:
+    - threebody:
+        atomic: false
+        atoms: [a, b, c]
+        structure:
+          - a: [7.41, -9.15, 5.39]
+          - b: [8.47, -8.25, 4.80]
+          - c: [9.19, -7.67, 4.37]
+        bondlist:
+          - fene+wca: {k: 5.0, rmax: 20.0, eps: 1, sigma: 1.5, index: [0,1]}
+          - fene+wca: {k: 5.5, rmax: 20.5, eps: 1.2, sigma: 1.0, index: [1,2]}
+          - harmonic_torsion: {k: 10, aeq: 180, index: [0,1,2]}
+
+insertmolecules:
+    - threebody: {N: 1}
+
+moves:
+    - langevin_dynamics:
+        nsteps: 10
+        integrator: {time_step: 0.000001, friction: 5}
+    - transrot: # Monte Carlo
+        molecule: threebody
+
+analysis:
+    - systemenergy: {file: energy.dat, nstep: 100, nskip: 1}
+    - atomrdf: {file: rdf.dat, nstep: 1, dr: 0.1, name1: a, name2: c, nskip: 1, dim: 1}
+    - savestate: {file: state.json}
+
+geometry: {type: cuboid, length: 20}
+mcloop: {macro: 1, micro: 500000}
+temperature: 298.15
+random: { seed: fixed }
+

@@ -37,6 +37,9 @@ void from_json(const json& j, std::shared_ptr<BondData>& bond) {
         case BondData::PERIODIC_DIHEDRAL:
             bond = std::make_shared<PeriodicDihedral>();
             break;
+        case BondData::HARMONIC_DIHEDRAL:
+            bond = std::make_shared<HarmonicDihedral>();
+            break;
         default:
             throw ConfigurationError("invalid bondtype '{}'", bondtype);
         }
@@ -67,8 +70,8 @@ bool BondData::hasForceFunction() const { return forceFunc != nullptr; }
 
 BondData::BondData(const std::vector<int>& indices) : indices(indices) {}
 
-HarmonicBond::HarmonicBond(double k, double req, const std::vector<int>& indices)
-    : StretchData(indices), half_force_constant(k / 2.0), equilibrium_distance(req) {}
+HarmonicBond::HarmonicBond(double force_constant, double equilibrium_distance, const std::vector<int>& indices)
+    : StretchData(indices), half_force_constant(force_constant / 2.0), equilibrium_distance(equilibrium_distance) {}
 
 void HarmonicBond::from_json(const Faunus::json& j) {
     half_force_constant = j.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2) / 2.0; // k
@@ -108,8 +111,9 @@ void HarmonicBond::setEnergyFunction(const ParticleVector& particles) {
     };
 }
 
-FENEBond::FENEBond(double k, double rmax, const std::vector<int>& indices)
-    : StretchData(indices), half_force_constant(0.5 * k), max_squared_distance(rmax * rmax) {}
+FENEBond::FENEBond(double force_constant, double max_distance, const std::vector<int>& indices)
+    : StretchData(indices), half_force_constant(0.5 * force_constant),
+      max_squared_distance(max_distance * max_distance) {}
 
 std::shared_ptr<BondData> FENEBond::clone() const { return std::make_shared<FENEBond>(*this); }
 
@@ -133,11 +137,24 @@ void FENEBond::setEnergyFunction(const ParticleVector& particles) {
         }
         return -half_force_constant * max_squared_distance * std::log(1.0 - squared_distance / max_squared_distance);
     };
+    forceFunc = [&](Geometry::DistanceFunction distance) -> std::vector<IndexAndForce> {
+        const Point ba = distance(particles[indices[0]].pos, particles[indices[1]].pos); // b->a
+        const auto squared_distance = ba.squaredNorm();
+        if (squared_distance >= max_squared_distance) {
+            throw std::runtime_error("Fene potential: Force undefined for distances greater than rmax.");
+        };
+        const auto force_magnitude =
+            -2.0 * half_force_constant * ba.norm() / (1.0 - squared_distance / max_squared_distance);
+        Point force0 = force_magnitude * ba.normalized();
+        Point force1 = -force0;
+        return {{indices[0], force0}, {indices[1], force1}};
+    };
 }
 
-FENEWCABond::FENEWCABond(double k, double rmax, double epsilon, double sigma, const std::vector<int>& indices)
-    : StretchData(indices), half_force_constant(k / 2.0), max_distance_squared(rmax * rmax), epsilon(epsilon),
-      sigma_squared(sigma * sigma) {}
+FENEWCABond::FENEWCABond(double force_constant, double max_distance, double epsilon, double sigma,
+                         const std::vector<int>& indices)
+    : StretchData(indices), half_force_constant(force_constant / 2.0),
+      max_distance_squared(max_distance * max_distance), epsilon(epsilon), sigma_squared(sigma * sigma) {}
 
 std::shared_ptr<BondData> FENEWCABond::clone() const { return std::make_shared<FENEWCABond>(*this); }
 
@@ -160,7 +177,7 @@ void FENEWCABond::to_json(Faunus::json& j) const {
 void FENEWCABond::setEnergyFunction(const ParticleVector& particles) {
     energyFunc = [&](Geometry::DistanceFunction calculateDistance) {
         double wca = 0.0;
-        constexpr auto two_to_the_power_of_two_sixths = 1.2599210498948732; // 2^((1/6)^2)
+        constexpr auto two_to_the_power_of_two_sixths = 1.01944064370214482816981563263103378007648819; // 2^((1/6)^2)
         const auto squared_distance =
             calculateDistance(particles[indices[0]].pos, particles[indices[1]].pos).squaredNorm();
         if (squared_distance <= sigma_squared * two_to_the_power_of_two_sixths) {
@@ -174,6 +191,26 @@ void FENEWCABond::setEnergyFunction(const ParticleVector& particles) {
         return -half_force_constant * max_distance_squared * std::log(1.0 - squared_distance / max_distance_squared) +
                wca;
     };
+    forceFunc = [&](Geometry::DistanceFunction calculateDistance) -> std::vector<IndexAndForce> {
+        const Point ba = calculateDistance(particles[indices[0]].pos, particles[indices[1]].pos); // b->a
+        const auto distance = ba.norm();
+        const auto squared_distance = distance * distance;
+        if (squared_distance >= max_distance_squared) {
+            throw std::runtime_error("Fene+WCA potential: Force undefined for distances greater than rmax.");
+        }
+        double wca_force = 0.0;
+        constexpr auto two_to_the_power_of_two_sixths = 1.01944064370214482816981563263103378007648819; // 2^((1/6)^2)
+        if (squared_distance <= sigma_squared * two_to_the_power_of_two_sixths) {
+            double sigma6 = sigma_squared / squared_distance;
+            sigma6 = sigma6 * sigma6 * sigma6;
+            wca_force = -24.0 * epsilon * (2.0 * sigma6 * sigma6 - sigma6) / distance;
+        }
+        const auto force_magnitude =
+            -(2.0 * half_force_constant * distance / (1.0 - squared_distance / max_distance_squared) + wca_force);
+        Point force0 = force_magnitude * ba.normalized();
+        Point force1 = -force0;
+        return {{indices[0], force0}, {indices[1], force1}};
+    };
 }
 
 void HarmonicTorsion::from_json(const Faunus::json& j) {
@@ -186,8 +223,8 @@ void HarmonicTorsion::to_json(Faunus::json& j) const {
     _roundjson(j, 6);
 }
 
-HarmonicTorsion::HarmonicTorsion(double k, double aeq, const std::vector<int>& indices)
-    : TorsionData(indices), half_force_constant(k / 2.0), equilibrium_angle(aeq) {}
+HarmonicTorsion::HarmonicTorsion(double force_constant, double equilibrium_angle, const std::vector<int>& indices)
+    : TorsionData(indices), half_force_constant(force_constant / 2.0), equilibrium_angle(equilibrium_angle) {}
 
 BondData::Variant HarmonicTorsion::type() const { return BondData::HARMONIC_TORSION; }
 
@@ -223,10 +260,10 @@ void HarmonicTorsion::setEnergyFunction(const ParticleVector& particles) {
             const auto inverse_norm_ba = 1.0 / ba.norm();
             const auto inverse_norm_bc = 1.0 / bc.norm();
             const auto angle = std::acos(ba.dot(bc) * inverse_norm_ba * inverse_norm_bc);
-            const auto forcemagnitude = -2.0 * half_force_constant * (angle - equilibrium_angle);
-            const Point plane_babc = ba.cross(bc).eval();
-            Point force0 = (forcemagnitude * inverse_norm_ba * ba.cross(plane_babc).normalized());
-            Point force2 = (forcemagnitude * inverse_norm_bc * -bc.cross(plane_babc).normalized());
+            const auto force_magnitude = -2.0 * half_force_constant * (angle - equilibrium_angle);
+            const Point plane_abc = ba.cross(bc).eval();
+            Point force0 = (force_magnitude * inverse_norm_ba * ba.cross(plane_abc).normalized());
+            Point force2 = (force_magnitude * inverse_norm_bc * -bc.cross(plane_abc).normalized());
             Point force1 = -(force0 + force2); // Newton's third law
             return {{indices[0], force0}, {indices[1], force1}, {indices[2], force2}};
         }
@@ -242,8 +279,9 @@ void GromosTorsion::to_json(Faunus::json& j) const {
     j = {{"k", 2.0 * half_force_constant / 1.0_kJmol}, {"aeq", std::acos(cosine_equilibrium_angle) / 1.0_deg}};
 }
 
-GromosTorsion::GromosTorsion(double k, double cos_aeq, const std::vector<int>& indices)
-    : TorsionData(indices), half_force_constant(0.5 * k), cosine_equilibrium_angle(cos_aeq) {}
+GromosTorsion::GromosTorsion(double force_constant, double cosine_equilibrium_angle, const std::vector<int>& indices)
+    : TorsionData(indices), half_force_constant(0.5 * force_constant),
+      cosine_equilibrium_angle(cosine_equilibrium_angle) {}
 
 BondData::Variant GromosTorsion::type() const { return BondData::GROMOS_TORSION; }
 
@@ -253,8 +291,23 @@ void GromosTorsion::setEnergyFunction(const ParticleVector& particles) {
     energyFunc = [&](Geometry::DistanceFunction calculateDistance) {
         auto vec1 = calculateDistance(particles[indices[0]].pos, particles[indices[1]].pos).normalized();
         auto vec2 = calculateDistance(particles[indices[2]].pos, particles[indices[1]].pos).normalized();
-        const auto x = cosine_equilibrium_angle - vec1.dot(vec2);
-        return half_force_constant * x * x;
+        const auto cosine_angle_displacement = cosine_equilibrium_angle - vec1.dot(vec2);
+        return half_force_constant * cosine_angle_displacement * cosine_angle_displacement;
+    };
+    forceFunc = [&](Geometry::DistanceFunction distance) -> std::vector<IndexAndForce> {
+        const Point ba = distance(particles[indices[0]].pos, particles[indices[1]].pos); // b->a
+        const Point bc = distance(particles[indices[2]].pos, particles[indices[1]].pos); // b->c
+        const auto inverse_norm_ba = 1.0 / ba.norm();
+        const auto inverse_norm_bc = 1.0 / bc.norm();
+        const auto cosine_angle = ba.dot(bc) * inverse_norm_ba * inverse_norm_bc;
+        const auto angle = std::acos(cosine_angle);
+        const auto force_magnitude =
+            -2.0 * half_force_constant * std::sin(angle) * (cosine_angle - cosine_equilibrium_angle);
+        const Point plane_abc = ba.cross(bc).eval();
+        Point force0 = force_magnitude * inverse_norm_ba * ba.cross(plane_abc).normalized();
+        Point force2 = force_magnitude * inverse_norm_bc * -bc.cross(plane_abc).normalized();
+        Point force1 = -(force0 + force2); // Newton's third law
+        return {{indices[0], force0}, {indices[1], force1}, {indices[2], force2}};
     };
 }
 
@@ -272,8 +325,9 @@ void PeriodicDihedral::to_json(Faunus::json& j) const {
     j = {{"k", force_constant / 1.0_kJmol}, {"n", periodicity}, {"phi", phase_angle / 1.0_deg}};
 }
 
-PeriodicDihedral::PeriodicDihedral(double k, double phi, double n, const std::vector<int>& indices)
-    : BondData(indices), force_constant(k), phase_angle(phi), periodicity(n) {}
+PeriodicDihedral::PeriodicDihedral(double force_constant, double phase_angle, double periodicity,
+                                   const std::vector<int>& indices)
+    : BondData(indices), force_constant(force_constant), phase_angle(phase_angle), periodicity(periodicity) {}
 
 BondData::Variant PeriodicDihedral::type() const { return BondData::PERIODIC_DIHEDRAL; }
 
@@ -300,7 +354,8 @@ void PeriodicDihedral::setEnergyFunction(const ParticleVector& particles) {
             std::atan2((normal_abc.cross(normal_bcd)).dot(bc) / bc.norm(), normal_abc.dot(normal_bcd));
 
         // Calculation of the energy derivative with respect to the dihedral angle.
-        const auto magnitude = periodicity * force_constant * std::sin(periodicity * dihedral_angle - phase_angle);
+        const auto force_magnitude =
+            periodicity * force_constant * std::sin(periodicity * dihedral_angle - phase_angle);
 
         // Calculation of the dihedral angle derivative with respect to the position vector.
         const auto inverse_norm_ab = 1.0 / ab.norm();
@@ -316,13 +371,84 @@ void PeriodicDihedral::setEnergyFunction(const ParticleVector& particles) {
         const Point ortho_normalized_bcd = cd.cross(-bc).normalized(); // normalized vector orthogonal to the plane bcd.
 
         // Calculation of forces on particle a and d
-        Point force_a = magnitude * ortho_normalized_abc * theta_a_derivative;
-        Point force_d = magnitude * ortho_normalized_bcd * theta_d_derivative;
+        Point force_a = force_magnitude * ortho_normalized_abc * theta_a_derivative;
+        Point force_d = force_magnitude * ortho_normalized_bcd * theta_d_derivative;
 
         // Calculation of force and associated vectors for atom c.
         const Point bc_midpoint = 0.5 * bc;
-        const Point tc = -(bc_midpoint.cross(force_d) + 0.5 * cd.cross(force_d) - 0.5 * ab.cross(force_a));
-        Point force_c = tc.cross(bc_midpoint) / bc_midpoint.squaredNorm();
+        const Point torque_c = -(bc_midpoint.cross(force_d) + 0.5 * cd.cross(force_d) - 0.5 * ab.cross(force_a));
+        Point force_c = torque_c.cross(bc_midpoint) / bc_midpoint.squaredNorm();
+        Point force_b = -(force_a + force_c + force_d); // Newton's third law for force on atom b.
+        return {{indices[0], force_a}, {indices[1], force_b}, {indices[2], force_c}, {indices[3], force_d}};
+    };
+}
+
+void HarmonicDihedral::from_json(const Faunus::json& j) {
+    half_force_constant = j.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_rad, 2) / 2.0;
+    equilibrium_dihedral = j.at("deq").get<double>() * 1.0_deg;
+}
+
+void HarmonicDihedral::to_json(Faunus::json& j) const {
+    j = {{"k", 2 * half_force_constant / (1.0_kJmol / std::pow(1.0_rad, 2))}, {"deq", equilibrium_dihedral / 1.0_deg}};
+    _roundjson(j, 6);
+}
+
+int HarmonicDihedral::numindex() const { return 4; }
+
+HarmonicDihedral::HarmonicDihedral(double force_constant, double equilibrium_dihedral, const std::vector<int>& indices)
+    : BondData(indices), half_force_constant(force_constant / 2.0), equilibrium_dihedral(equilibrium_dihedral) {}
+
+BondData::Variant HarmonicDihedral::type() const { return BondData::HARMONIC_DIHEDRAL; }
+
+std::shared_ptr<BondData> HarmonicDihedral::clone() const { return std::make_shared<HarmonicDihedral>(*this); }
+
+void HarmonicDihedral::setEnergyFunction(const ParticleVector& particles) {
+    // Torsion on the form a(0) - b(1) - c(2) - d(3)
+    energyFunc = [&](Geometry::DistanceFunction distance) {
+        auto ab = distance(particles[indices[1]].pos, particles[indices[0]].pos); // a->b
+        auto bc = distance(particles[indices[2]].pos, particles[indices[1]].pos); // b->c
+        auto cd = distance(particles[indices[3]].pos, particles[indices[2]].pos); // c->d
+        auto normal_abc = ab.cross(bc).eval();                                    // ab x bc
+        auto normal_bcd = bc.cross(cd).eval();                                    // bc x cd
+        // atan2( [ab×bc]×[bc×cd]⋅[bc/|bc|], [ab×bc]⋅[bc×cd] )
+        const auto dihedral_angle =
+            std::atan2((normal_abc.cross(normal_bcd)).dot(bc) / bc.norm(), normal_abc.dot(normal_bcd));
+        const auto delta_dihedral = equilibrium_dihedral - dihedral_angle;
+        return half_force_constant * delta_dihedral * delta_dihedral;
+    };
+    forceFunc = [&](Geometry::DistanceFunction distance) -> std::vector<IndexAndForce> {
+        auto ab = distance(particles[indices[1]].pos, particles[indices[0]].pos); // a->b
+        auto bc = distance(particles[indices[2]].pos, particles[indices[1]].pos); // b->c
+        auto cd = distance(particles[indices[3]].pos, particles[indices[2]].pos); // c->d
+        auto normal_abc = ab.cross(bc).eval();
+        auto normal_bcd = bc.cross(cd).eval();
+        const auto dihedral_angle =
+            std::atan2((normal_abc.cross(normal_bcd)).dot(bc) / bc.norm(), normal_abc.dot(normal_bcd));
+
+        // Calculation of the energy derivative with respect to the dihedral angle.
+        const auto force_magnitude = -2.0 * half_force_constant * (dihedral_angle - equilibrium_dihedral);
+
+        // Calculation of the dihedral angle derivative with respect to the position vector.
+        const auto inverse_norm_ab = 1.0 / ab.norm();
+        const auto inverse_norm_bc = 1.0 / bc.norm();
+        const auto inverse_norm_cd = 1.0 / cd.norm();
+        const auto angle_abc = std::acos(-ab.dot(bc) * inverse_norm_ab * inverse_norm_bc);
+        const auto angle_bcd = std::acos(-bc.dot(cd) * inverse_norm_bc * inverse_norm_cd);
+        const auto theta_a_derivative = inverse_norm_ab / std::sin(angle_abc);
+        const auto theta_d_derivative = inverse_norm_cd / std::sin(angle_bcd);
+
+        // Calculation of directional vectors on particle a and d.
+        const Point ortho_normalized_abc = -normal_abc.normalized();   // normalized vector orthogonal to the plane abc.
+        const Point ortho_normalized_bcd = cd.cross(-bc).normalized(); // normalized vector orthogonal to the plane bcd.
+
+        // Calculation of forces on particle a and d
+        Point force_a = force_magnitude * ortho_normalized_abc * theta_a_derivative;
+        Point force_d = force_magnitude * ortho_normalized_bcd * theta_d_derivative;
+
+        // Calculation of force and associated vectors for atom c.
+        const Point bc_midpoint = 0.5 * bc;
+        const Point torque_c = -(bc_midpoint.cross(force_d) + 0.5 * cd.cross(force_d) - 0.5 * ab.cross(force_a));
+        Point force_c = torque_c.cross(bc_midpoint) / bc_midpoint.squaredNorm();
         Point force_b = -(force_a + force_c + force_d); // Newton's third law for force on atom b.
         return {{indices[0], force_a}, {indices[1], force_b}, {indices[2], force_c}, {indices[3], force_d}};
     };
@@ -402,6 +528,20 @@ TEST_CASE("[Faunus] BondData") {
             CHECK_EQ(bond.energyFunc(distance_3a), Approx(557.86));
             CHECK_EQ(bond.energyFunc(distance), Approx(1277.06));
         }
+        SUBCASE("FENEBond Force") {
+            FENEBond bond(100.0, 5.0, {0, 1});
+            bond.setEnergyFunction(p_4a);
+            auto forces = bond.forceFunc(distance_3a);
+            CHECK(forces.size() == 2);
+            CHECK(forces[0].first == 0);
+            CHECK(forces[1].first == 1);
+            CHECK(forces[0].second.x() == Approx(0.0));
+            CHECK(forces[0].second.y() == Approx(-468.75));
+            CHECK(forces[0].second.z() == Approx(0.0));
+            CHECK(forces[1].second.x() == Approx(0.0));
+            CHECK(forces[1].second.y() == Approx(468.75));
+            CHECK(forces[1].second.z() == Approx(0.0));
+        }
         SUBCASE("FENEBond JSON") {
             json j = R"({"fene": {"index":[1,2], "k":8, "rmax":6.0 }})"_json;
             bond_ptr = j;
@@ -425,6 +565,20 @@ TEST_CASE("[Faunus] BondData") {
             CHECK_EQ(bond.energyFunc(distance_5a), pc::infty);
             CHECK_EQ(bond.energyFunc(distance_3a), Approx(557.86 + 18.931));
             CHECK_EQ(bond.energyFunc(distance), Approx(1277.06));
+        }
+        SUBCASE("FENEWCABond Force") {
+            FENEWCABond bond(100, 5.0, 20.0, 3.2, {0, 1});
+            bond.setEnergyFunction(p_4a);
+            auto forces = bond.forceFunc(distance_3a);
+            CHECK(forces.size() == 2);
+            CHECK(forces[0].first == 0);
+            CHECK(forces[1].first == 1);
+            CHECK(forces[0].second.x() == Approx(0.0));
+            CHECK(forces[0].second.y() == Approx(-10.1974323155));
+            CHECK(forces[0].second.z() == Approx(0.0));
+            CHECK(forces[1].second.x() == Approx(0.0));
+            CHECK(forces[1].second.y() == Approx(10.1974323155));
+            CHECK(forces[1].second.z() == Approx(0.0));
         }
         SUBCASE("FENEWCABond JSON") {
             json j = R"({"fene+wca": {"index":[1,2], "k":8, "rmax":6.0, "eps":3.5, "sigma":4.5}})"_json;
@@ -487,9 +641,27 @@ TEST_CASE("[Faunus] BondData") {
 
     SUBCASE("GromosTorsion") {
         SUBCASE("GromosTorsion Energy") {
-            GromosTorsion bond(100.0, cos(45.0_deg), {0, 1, 2});
+            GromosTorsion bond(100.0, std::cos(45.0_deg), {0, 1, 2});
             bond.setEnergyFunction(p_60deg_4a);
             CHECK_EQ(bond.energyFunc(distance), Approx(100.0 / 2 * std::pow(cos(60.0_deg) - cos(45.0_deg), 2)));
+        }
+        SUBCASE("GromosTorsion Force") {
+            GromosTorsion bond(100.0, std::cos(45.0_deg), {0, 1, 2});
+            bond.setEnergyFunction(p_90deg_4a);
+            auto forces = bond.forceFunc(distance);
+                CHECK(forces.size() == 3);
+                CHECK(forces[0].first == 0);
+                CHECK(forces[1].first == 1);
+                CHECK(forces[2].first == 2);
+                CHECK(forces[0].second.x() == Approx(-70.7106781187));
+                CHECK(forces[0].second.y() == Approx(0.0));
+                CHECK(forces[0].second.z() == Approx(0.0));
+                CHECK(forces[1].second.x() == Approx(70.7106781187));
+                CHECK(forces[1].second.y() == Approx(70.7106781187));
+                CHECK(forces[1].second.z() == Approx(0.0));
+                CHECK(forces[2].second.x() == Approx(0.0));
+                CHECK(forces[2].second.y() == Approx(-70.7106781187));
+                CHECK(forces[2].second.z() == Approx(0.0));
         }
         SUBCASE("GromosTorsion JSON") {
             json j = R"({"gromos_torsion": {"index":[0,1,2], "k":0.5, "aeq":65}})"_json;
@@ -508,18 +680,18 @@ TEST_CASE("[Faunus] BondData") {
     }
 
     SUBCASE("PeriodicDihedral") {
-        ParticleVector p_45deg(4, Particle());
+        ParticleVector p_45deg(4);
         p_45deg[1].pos = {0.0, 0.0, 0.0};
         p_45deg[2].pos = {0.0, 0.0, 2.0};
         p_45deg[0].pos = {5.0, 0.0, 0.0};
         p_45deg[3].pos = {10.0, 10.0, 2.0};
 
         ParticleVector p_90deg(p_45deg);
-        p_90deg[3].pos[0] *= 0;
+        p_90deg[3].pos[0] = 0;
         ParticleVector p_60deg(p_45deg);
-        p_60deg[3].pos[1] *= std::sqrt(3);
+        p_60deg[3].pos[1] *= std::sqrt(3.0);
         ParticleVector p_120deg(p_60deg);
-        p_120deg[3].pos[0] *= -1;
+        p_120deg[3].pos[0] *= -1.0;
 
         SUBCASE("PeriodicDihedral Energy") {
             PeriodicDihedral bond(100.0, 0.0_deg, 3, {0, 1, 2, 3});
@@ -567,6 +739,68 @@ TEST_CASE("[Faunus] BondData") {
             CHECK_THROWS((R"({"periodic_dihedral": {"index":[0,1,2,3], "phi":2.1, "n": 2}})"_json).get<BondDataPtr>());
             CHECK_THROWS((R"({"periodic_dihedral": {"index":[0,1,2,3], "k":0.5, "n": 2}})"_json).get<BondDataPtr>());
             CHECK_THROWS((R"({"periodic_dihedral": {"index":[0,1,2,3], "k":0.5, "phi":2.1}})"_json).get<BondDataPtr>());
+        }
+    }
+
+        SUBCASE("HarmonicDihedral") {
+        ParticleVector p_45deg(4);
+        p_45deg[1].pos = {0.0, 0.0, 0.0};
+        p_45deg[2].pos = {0.0, 0.0, 2.0};
+        p_45deg[0].pos = {5.0, 0.0, 0.0};
+        p_45deg[3].pos = {10.0, 10.0, 2.0};
+
+        ParticleVector p_90deg(p_45deg);
+        p_90deg[3].pos[0] = 0.0;
+        ParticleVector p_60deg(p_45deg);
+        p_60deg[3].pos[1] *= std::sqrt(3.0);
+        ParticleVector p_120deg(p_60deg);
+        p_120deg[3].pos[0] *= -1.0;
+
+            SUBCASE("HarmonicDihedral Energy") {
+            HarmonicDihedral bond(100.0, 90.0_deg, {0, 1, 2, 3});
+            bond.setEnergyFunction(p_120deg);
+                CHECK_EQ(bond.energyFunc(distance), Approx(13.7077838904));
+            bond.setEnergyFunction(p_60deg);
+                CHECK_EQ(bond.energyFunc(distance), Approx(13.7077838904));
+            bond.setEnergyFunction(p_90deg);
+                CHECK_EQ(bond.energyFunc(distance), Approx(0.0));
+        }
+            SUBCASE("HarmonicDihedral Forces") {
+            HarmonicDihedral bond(100.0, 90.0_deg, {0, 1, 2, 3});
+            bond.setEnergyFunction(p_120deg);
+            auto forces = bond.forceFunc(distance);
+                CHECK(forces.size() == 4);
+                CHECK(forces[0].first == 0);
+                CHECK(forces[1].first == 1);
+                CHECK(forces[2].first == 2);
+                CHECK(forces[3].first == 3);
+                CHECK(forces[0].second.x() == Approx(0));
+                CHECK(forces[0].second.y() == Approx(10.471975512));
+                CHECK(forces[0].second.z() == Approx(0));
+                CHECK(forces[1].second.x() == Approx(0));
+                CHECK(forces[1].second.y() == Approx(-10.471975512));
+                CHECK(forces[1].second.z() == Approx(0));
+                CHECK(forces[2].second.x() == Approx(-2.2672492053));
+                CHECK(forces[2].second.y() == Approx(-1.308996939));
+                CHECK(forces[2].second.z() == Approx(0));
+                CHECK(forces[3].second.x() == Approx(2.2672492053));
+                CHECK(forces[3].second.y() == Approx(1.308996939));
+                CHECK(forces[3].second.z() == Approx(0));
+        }
+            SUBCASE("HarmonicDihedral JSON") {
+            json j = R"({"harmonic_dihedral": {"index":[0,1,2,3], "k":100.0, "deq":90}})"_json;
+            bond_ptr = j;
+                CHECK_EQ(json(bond_ptr), j);
+            std::dynamic_pointer_cast<HarmonicDihedral>(bond_ptr)->setEnergyFunction(p_120deg);
+                CHECK_EQ(bond_ptr->energyFunc(distance), Approx(100.0_kJmol / 2.0 * std::pow(30.0_deg, 2)));
+        }
+            SUBCASE("HarmonicDihedral JSON Invalid") {
+                CHECK_NOTHROW(
+                (R"({"harmonic_dihedral": {"index":[0,1,2,3], "k":0.5, "deq":90}})"_json).get<BondDataPtr>());
+                CHECK_THROWS(
+                (R"({"harmonic_dihedral": {"index":[0,1,2], "k":0.5, "deq":90}})"_json).get<BondDataPtr>());
+                CHECK_THROWS((R"({"harmonic_dihedral": {"index":[0,1,2,3], "deq":90}})"_json).get<BondDataPtr>());
+                CHECK_THROWS((R"({"harmonic_dihedral": {"index":[0,1,2,3], "k":0.5}})"_json).get<BondDataPtr>());
         }
     }
 

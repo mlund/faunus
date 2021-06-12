@@ -50,7 +50,7 @@ void MetropolisMonteCarlo::init() {
     auto energy = state->pot->energy(change);
     initial_energy = energy;
     faunus_logger->log(std::isfinite(initial_energy) ? spdlog::level::info : spdlog::level::warn,
-                       "initial energy = {} kT", initial_energy);
+                       "initial energy = {:.6E} kT", initial_energy);
 
     trial_state->sync(*state, change); // copy all information into trial state
     trial_state->pot->init();
@@ -93,7 +93,7 @@ double MetropolisMonteCarlo::relativeEnergyDrift() {
             return 0.0;
         } else {
             return (energy - (initial_energy + sum_of_energy_changes)) /
-                   (initial_energy != 0 ? initial_energy : energy);
+                   (std::fabs(initial_energy) > pc::epsilon_dbl ? initial_energy : energy);
         }
     }
     return std::numeric_limits<double>::quiet_NaN();

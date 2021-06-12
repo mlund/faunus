@@ -5,7 +5,17 @@
 #include <stdexcept>
 #include <nlohmann/json_fwd.hpp>
 
+#ifdef ENABLE_PCG
+#include <pcg_random.hpp>
+#endif
+
 namespace Faunus {
+
+#ifdef ENABLE_PCG
+using RandomNumberEngine = pcg32;
+#else
+using RandomNumberEngine = std::mt19937;
+#endif
 
 /**
  * @brief Random number generator
@@ -22,7 +32,7 @@ class Random {
   private:
     std::uniform_real_distribution<double> dist01; //!< Uniform real distribution [0,1)
   public:
-    std::mt19937 engine; //!< Random number engine used for all operations
+    RandomNumberEngine engine; //!< Random number engine used for all operations
     Random();            //!< Constructor with deterministic seed
     void seed();         //!< Set a non-deterministic ("hardware") seed
     double operator()(); //!< Random double in uniform range [0,1)

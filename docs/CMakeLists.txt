@@ -3,8 +3,8 @@
 # Check for python packages required to build manual and parse yaml files
 if (PYTHONINTERP_FOUND)
     # optional packages
-    execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "from bs4 import BeautifulSoup" RESULT_VARIABLE HAS_BS OUTPUT_QUIET)
-    execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import pypandoc" RESULT_VARIABLE HAS_PYPANDOC OUTPUT_QUIET)
+    execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "from bs4 import BeautifulSoup" RESULT_VARIABLE HAS_BS ERROR_QUIET)
+    execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import pypandoc" RESULT_VARIABLE HAS_PYPANDOC ERROR_QUIET)
 
     execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "from jsonschema import Draft7Validator" RESULT_VARIABLE HAS_JSONSCHEMA ERROR_QUIET)
     if (HAS_JSONSCHEMA EQUAL 1)

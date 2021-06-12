@@ -19,6 +19,11 @@
 #include <execution>
 #endif
 
+#if defined(__cpp_lib_parallel_algorithm) &&                                                                           \
+    __has_include(<tbb/tbb.h>) && ((defined(__clang__) && __clang_major__ >= 10) || (defined(__GNUC__) && __GNUC__ >= 10))
+#define HAS_PARALLEL_TRANSFORM_REDUCE
+#endif
+
 namespace Faunus {
 
 namespace ReactionCoordinate {
@@ -334,6 +339,51 @@ template <typename TSize, typename TSet> inline auto indexComplement(const TSize
 }
 
 /**
+ * @brief Interface for energy accumulators
+ *
+ * The energy accumulator is used to add up energies between two particles.
+ * This can be done instantly (see `InstantEnergyAccumulator`) or delaying
+ * the evaluation until the energy is needed (`DelayedEnergyAccumulator`).
+ * The latter may be used with parallelism.
+ *
+ * @todo See https://www.youtube.com/watch?v=3LsRYnRDSRA for a bizarre example
+ *       where a custom `struct Tpair { const Particle &first, second; };`
+ *       outperforms `std::pair` due to missed compiler optimization.
+ */
+class EnergyAccumulatorBase {
+  protected:
+    double value = 0.0;                                               //!< accumulated energy
+    using ParticleRef = const std::reference_wrapper<const Particle>; //!< Particle reference
+    using ParticlePair = std::pair<ParticleRef, ParticleRef>;         //!< References to two particles
+
+  public:
+    enum Scheme { SERIAL, OPENMP, PARALLEL, INVALID };
+    Scheme scheme = SERIAL;
+
+    EnergyAccumulatorBase(double value);
+    virtual ~EnergyAccumulatorBase() = default;
+    virtual void reserve(size_t number_of_particles);
+    virtual void clear();
+    virtual void from_json(const json &j);
+    virtual void to_json(json &j) const;
+
+    virtual explicit operator double();
+    virtual EnergyAccumulatorBase& operator=(double new_value) = 0;
+    virtual EnergyAccumulatorBase& operator+=(double new_value) = 0;
+    virtual EnergyAccumulatorBase& operator+=(ParticlePair&& pair) = 0;
+
+    template <typename TOtherAccumulator> inline EnergyAccumulatorBase& operator+=(TOtherAccumulator& acc) {
+        value += static_cast<double>(acc);
+        return *this;
+    }
+};
+
+NLOHMANN_JSON_SERIALIZE_ENUM(EnergyAccumulatorBase::Scheme, {{EnergyAccumulatorBase::Scheme::INVALID, nullptr},
+                                                             {EnergyAccumulatorBase::Scheme::SERIAL, "serial"},
+                                                             {EnergyAccumulatorBase::Scheme::OPENMP, "openmp"},
+                                                             {EnergyAccumulatorBase::Scheme::PARALLEL, "parallel"}})
+
+/**
  * @brief A basic accumulator which immediately computes and adds energy of a pair of particles upon addition using
  * the PairEnergy templated class.
  *
@@ -342,42 +392,140 @@ template <typename TSize, typename TSet> inline auto indexComplement(const TSize
  *
  * @tparam PairEnergy  pair energy implementing a potential(a, b) method for particles a and b
  */
-template <typename PairEnergy>
-struct BasicEnergyAccumulator {
-  protected:
-    PairEnergy &pair_energy; //!< recipe to compute non-bonded energy between two particles, see PairEnergy
-    double value = 0.0;      //!< accumulated energy
+template <typename PairEnergy> class InstantEnergyAccumulator : public EnergyAccumulatorBase {
+  private:
+    const PairEnergy& pair_energy; //!< recipe to compute non-bonded energy between two particles, see PairEnergy
 
   public:
-    typedef const std::reference_wrapper<const Space::Tparticle> ParticleRef;
+    InstantEnergyAccumulator(const PairEnergy& pair_energy, const double value = 0.0)
+        : EnergyAccumulatorBase(value), pair_energy(pair_energy) {}
 
-    BasicEnergyAccumulator(PairEnergy &pair_energy, const double value = 0.0) : pair_energy(pair_energy), value(value) {}
-
-    inline BasicEnergyAccumulator &operator=(const double new_value) {
+    inline InstantEnergyAccumulator& operator=(const double new_value) override {
         value = new_value;
         return *this;
     }
 
-    inline BasicEnergyAccumulator &operator+=(const double new_value) {
+    inline InstantEnergyAccumulator& operator+=(const double new_value) override {
         value += new_value;
         return *this;
     }
 
-    inline BasicEnergyAccumulator &operator+=(const std::pair<ParticleRef, ParticleRef> &pair) {
+    inline InstantEnergyAccumulator& operator+=(ParticlePair&& pair) override {
         // keep this short to get inlined
         value += pair_energy.potential(pair.first.get(), pair.second.get());
         return *this;
     }
 
-    template <typename TOtherAccumulator>
-    inline BasicEnergyAccumulator &operator+=(const TOtherAccumulator &acc) {
-        value += static_cast<double>(acc);
+    void from_json(const json &j) override {
+        EnergyAccumulatorBase::from_json(j);
+        if (scheme != SERIAL) {
+            faunus_logger->warn("unsupported summation scheme; falling back to 'serial'");
+        }
+    }
+};
+
+/**
+ * Stores a vector of particle pairs and postpones the energy evaluation until
+ * `operator double()` is called. Looping over the vector can be done in serial (as a fallback);
+ * using OpenMP; or using C++17 parallel algorithms if available.
+ */
+template <typename PairEnergy> class DelayedEnergyAccumulator : public EnergyAccumulatorBase {
+  private:
+    std::vector<ParticlePair> particle_pairs;
+    const PairEnergy& pair_energy; //!< recipe to compute non-bonded energy between two particles, see PairEnergy
+
+  public:
+    explicit DelayedEnergyAccumulator(const PairEnergy& pair_energy, const double value = 0.0)
+        : EnergyAccumulatorBase(value), pair_energy(pair_energy) {}
+
+    /** Reserves memory for N^2 interaction pairs (which may be excessive...) */
+    void reserve(size_t number_of_particles) override {
+        try {
+            particle_pairs.reserve(number_of_particles * number_of_particles);
+        } catch (std::exception& e) {
+            throw std::runtime_error(fmt::format("cannot allocate memory for energy pairs: {}", e.what()));
+        }
+    }
+
+    void clear() override {
+        value = 0.0;
+        particle_pairs.clear();
+    }
+
+    DelayedEnergyAccumulator& operator=(const double new_value) override {
+        clear();
+        value = new_value;
         return *this;
     }
 
-    inline explicit operator double() const { return value; }
+    inline DelayedEnergyAccumulator& operator+=(const double new_value) override {
+        value += new_value;
+        return *this;
+    }
+
+    inline DelayedEnergyAccumulator& operator+=(ParticlePair&& pair) override {
+        particle_pairs.template emplace_back(std::move(pair));
+        return *this;
+    }
+
+    explicit operator double() override {
+        switch (scheme) {
+        case OPENMP:
+            value += accumulateOpenMP();
+            break;
+        case PARALLEL:
+            value += accumulateParallel();
+            break;
+        default:
+            value += accumulateSerial();
+        }
+        particle_pairs.clear();
+        return value;
+    }
+
+  private:
+    double accumulateSerial() const {
+        double sum = 0.0;
+        for (const auto [particle1, particle2] : particle_pairs) {
+            sum += pair_energy.potential(particle1.get(), particle2.get());
+        }
+        return sum;
+    }
+
+    double accumulateParallel() const {
+#if defined(HAS_PARALLEL_TRANSFORM_REDUCE)
+        return std::transform_reduce(
+            std::execution::par, particle_pairs.cbegin(), particle_pairs.cend(), 0.0, std::plus<double>(),
+            [&](const auto& pair) { return pair_energy.potential(pair.first.get(), pair.second.get()); });
+#else
+        return accumulateSerial(); // fallback
+#endif
+    }
+
+    double accumulateOpenMP() const {
+        double sum = 0.0;
+#pragma omp parallel for reduction(+ : sum)
+        for (const auto& pair : particle_pairs) {
+            sum += pair_energy.potential(pair.first.get(), pair.second.get());
+        }
+        return sum;
+    }
 };
 
+template <typename TPairEnergy>
+std::shared_ptr<EnergyAccumulatorBase> createEnergyAccumulator(const json& j, const TPairEnergy& pair_energy,
+                                                               double initial_value) {
+    std::shared_ptr<EnergyAccumulatorBase> accumulator;
+    if (j.value("summation_policy", EnergyAccumulatorBase::SERIAL) != EnergyAccumulatorBase::SERIAL) {
+        accumulator = std::make_shared<DelayedEnergyAccumulator<TPairEnergy>>(pair_energy, initial_value);
+        faunus_logger->debug("activated delayed energy summation");
+    } else {
+        accumulator = std::make_shared<InstantEnergyAccumulator<TPairEnergy>>(pair_energy, initial_value);
+        faunus_logger->debug("activated instant energy summation");
+    }
+    accumulator->from_json(j);
+    return accumulator;
+}
 
 /**
  * @brief Determines if two groups are separated beyond the cutoff distance.
@@ -435,7 +583,7 @@ void to_json(json&, const GroupCutoff &);
  * @tparam allow_anisotropic_pair_potential  pass also a distance vector to the pair potential, slower
  */
 template <typename TPairPotential, bool allow_anisotropic_pair_potential = true> class PairEnergy {
-    Space::Tgeometry &geometry;                //!< geometry to operate with
+    const Space::Tgeometry &geometry;          //!< geometry to operate with
     TPairPotential pair_potential;             //!< pair potential function/functor
     Space &spc;                                //!< space to init ParticleSelfEnergy with addPairPotentialSelfEnergy
     BasePointerVector<Energybase> &potentials; //!< registered non-bonded potentials, see addPairPotentialSelfEnergy
@@ -513,7 +661,7 @@ template <typename TPairPotential, bool allow_anisotropic_pair_potential = true>
  * @remark Method arguments are generally not checked for correctness because of performance reasons.
  *
  * @tparam TCutoff  a cutoff scheme between groups
- * @see BasicEnergyAccumulator, GroupCutoff
+ * @see InstantEnergyAccumulator, GroupCutoff
  */
 template <typename TCutoff>
 class GroupPairingPolicy {
@@ -1147,19 +1295,21 @@ class GroupPairing {
  * @tparam TPairEnergy  a functor to compute non-bonded energy between two particles
  * @tparam TPairingPolicy  pairing policy to effectively sum up the pairwise additive non-bonded energy
  */
-template <typename TPairEnergy, typename TPairingPolicy>
-class Nonbonded : public Energybase {
+template <typename TPairEnergy, typename TPairingPolicy> class Nonbonded : public Energybase {
   protected:
-    typedef BasicEnergyAccumulator<TPairEnergy> TAccumulator;
-    Space& spc;              //!< space to operate on
+    const Space& spc;        //!< space to operate on
     TPairEnergy pair_energy; //!< a functor to compute non-bonded energy between two particles, see PairEnergy
     TPairingPolicy pairing;  //!< pairing policy to effectively sum up the pairwise additive non-bonded energy
+    std::shared_ptr<EnergyAccumulatorBase>
+        energy_accumulator; //!< energy accumulator used for storing and summing pair-wise energies
 
   public:
-    Nonbonded(const json &j, Space &spc, BasePointerVector<Energybase> &pot)
+    Nonbonded(const json& j, Space& spc, BasePointerVector<Energybase>& pot)
         : spc(spc), pair_energy(spc, pot), pairing(spc) {
         name = "nonbonded";
         from_json(j);
+        energy_accumulator = createEnergyAccumulator(j, pair_energy, 0.0);
+        energy_accumulator->reserve(spc.numParticles()); // attempt to reduce memory fragmentation
     }
 
     void from_json(const json &j) {
@@ -1170,12 +1320,20 @@ class Nonbonded : public Energybase {
     void to_json(json &j) const override {
         pair_energy.to_json(j);
         pairing.to_json(j);
+        energy_accumulator->to_json(j);
     }
 
-     double energy(Change &change) override {
-        TAccumulator energy_accumulator(pair_energy, 0.0);
-        pairing.accumulate(energy_accumulator, change);
-        return static_cast<double>(energy_accumulator);
+    double energy(Change& change) override {
+        energy_accumulator->clear();
+        // down-cast to avoid slow, virtual function calls:
+        if (auto ptr = std::dynamic_pointer_cast<InstantEnergyAccumulator<TPairEnergy>>(energy_accumulator)) {
+            pairing.accumulate(*ptr, change);
+        } else if (auto ptr = std::dynamic_pointer_cast<DelayedEnergyAccumulator<TPairEnergy>>(energy_accumulator)) {
+            pairing.accumulate(*ptr, change);
+        } else {
+            pairing.accumulate(*energy_accumulator, change);
+        }
+        return static_cast<double>(*energy_accumulator);
     }
 
     /**
@@ -1251,7 +1409,7 @@ class Nonbonded : public Energybase {
 template <typename TPairEnergy, typename TPairingPolicy>
 class NonbondedCached : public Nonbonded<TPairEnergy, TPairingPolicy> {
     typedef Nonbonded<TPairEnergy, TPairingPolicy> Base;
-    typedef BasicEnergyAccumulator<TPairEnergy> TAccumulator;
+    typedef InstantEnergyAccumulator<TPairEnergy> TAccumulator;
     Eigen::MatrixXf energy_cache;
     using Base::spc;
 

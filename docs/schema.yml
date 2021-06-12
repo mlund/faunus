@@ -384,6 +384,9 @@ properties:
 
     nonbonded_base:
         properties:
+            summation_policy:
+                type: string
+                enum: [serial, openmp, parallel]
             cutoff_g2g:
                 anyOf:
                     - {type: number, description: "Molecule-molecule cutoff (global)"}
@@ -416,6 +419,9 @@ properties:
                     properties:
                         default: {"$ref": "#/properties/pairpotential/all"}
                         cutoff_g2g: {type: [number, array]}
+                        summation_policy:
+                            type: string
+                            enum: [serial, openmp, parallel]
                         timings: {type: boolean}
                         openmp:
                             type: array
@@ -432,6 +438,9 @@ properties:
                     properties:
                         default: {"$ref": "#/properties/pairpotential/all"}
                         cutoff_g2g: {type: [number, array]}
+                        summation_policy:
+                            type: string
+                            enum: [serial, openmp, parallel]
                         timings: {type: boolean}
                         utol: {type: number, description: "Energy tolerance for spline (kT)"}
                         ftol: {type: number, description: "Force tolerance for spline (experimental!)"}

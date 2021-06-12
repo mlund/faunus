@@ -77,11 +77,32 @@ add_test(
         WORKING_DIRECTORY ${EXAMPLES_DIR}/bend)
 
 add_test(
+        NAME gromos_bend
+        COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} gromos_bend.yml\
+    | $<TARGET_FILE:faunus> --nobar\
+    && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} gromos_bend.out.json out.json --tol 0.03"
+        WORKING_DIRECTORY ${EXAMPLES_DIR}/gromos_bend)
+
+add_test(
         NAME dihedral
         COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} dihedral.yml\
     | $<TARGET_FILE:faunus> --nobar\
    && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} dihedral.out.json out.json --tol 0.03"
         WORKING_DIRECTORY ${EXAMPLES_DIR}/dihedral)
+
+add_test(
+        NAME improper_dihedral
+        COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} improper_dihedral.yml\
+    | $<TARGET_FILE:faunus> --nobar\
+   && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} improper_dihedral.out.json out.json --tol 0.03"
+        WORKING_DIRECTORY ${EXAMPLES_DIR}/improper_dihedral)
+
+add_test(
+        NAME fene_stretch
+        COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} fene_stretch.yml\
+    | $<TARGET_FILE:faunus> --nobar\
+   && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} fene_stretch.out.json out.json --tol 0.03"
+        WORKING_DIRECTORY ${EXAMPLES_DIR}/fene_stretch)
 
 add_test(
         NAME chain
@@ -253,11 +274,26 @@ install(FILES
         ${EXAMPLES_DIR}/bend/bend.yml
         ${EXAMPLES_DIR}/bend/bend.out.json
         ${EXAMPLES_DIR}/bend/mc_vs_md.agr
+        ${EXAMPLES_DIR}/gromos_bend/gromos_bend.yml
+        ${EXAMPLES_DIR}/gromos_bend/gromos_bend.out.json
+        ${EXAMPLES_DIR}/gromos_bend/gromos_bend_plot.py
+        ${EXAMPLES_DIR}/gromos_bend/gromos_bend_mc_rdf.dat
+        ${EXAMPLES_DIR}/gromos_bend/gromos_bend_md_rdf.dat
         ${EXAMPLES_DIR}/dihedral/dihedral.yml
         ${EXAMPLES_DIR}/dihedral/dihedral.out.json
-        ${EXAMPLES_DIR}/dihedral/dihedral-plot.py
-        ${EXAMPLES_DIR}/dihedral/dihedral-mc-rdf.dat
-        ${EXAMPLES_DIR}/dihedral/dihedral-md-rdf.dat
+        ${EXAMPLES_DIR}/dihedral/dihedral_plot.py
+        ${EXAMPLES_DIR}/dihedral/dihedral_mc_rdf.dat
+        ${EXAMPLES_DIR}/dihedral/dihedral_md_rdf.dat
+        ${EXAMPLES_DIR}/improper_dihedral/improper_dihedral.yml
+        ${EXAMPLES_DIR}/improper_dihedral/improper_dihedral.out.json
+        ${EXAMPLES_DIR}/improper_dihedral/improper_dihedral_plot.py
+        ${EXAMPLES_DIR}/improper_dihedral/improper_dihedral_mc_rdf.dat
+        ${EXAMPLES_DIR}/improper_dihedral/improper_dihedral_md_rdf.dat
+        ${EXAMPLES_DIR}/fene_stretch/fene_stretch.yml
+        ${EXAMPLES_DIR}/fene_stretch/fene_stretch.out.json
+        ${EXAMPLES_DIR}/fene_stretch/fene_stretch_plot.py
+        ${EXAMPLES_DIR}/fene_stretch/fene_stretch_mc_rdf.dat
+        ${EXAMPLES_DIR}/fene_stretch/fene_stretch_md_rdf.dat
         ${EXAMPLES_DIR}/penalty/penalty.yml
         ${EXAMPLES_DIR}/penalty/penalty.ipynb
         ${EXAMPLES_DIR}/multipole/multipole.yml

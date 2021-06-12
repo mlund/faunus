@@ -115,9 +115,13 @@ combinations:
 ~~~ yaml
 - nonbonded:
     cutoff_g2g:
-      default: 40
-      protein water: 60
+      default: 40.0
+      protein polymer: 20.0
 ~~~
+
+If `default` is omitted, only the specified pairs are subject to the cutoffs.
+Finally, `cutoff_g2g: 40.0` is allowed for a uniform cutoff between all groups.
+
 
 ### Spline Options
 

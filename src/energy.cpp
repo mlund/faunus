@@ -1204,46 +1204,53 @@ TEST_CASE("[Faunus] FreeSASA") {
 
 GroupCutoff::GroupCutoff(Space::Tgeometry &geometry) : geometry(geometry) {}
 
-void from_json(const json &j, GroupCutoff &cutoff) {
-    // disable all group-to-group cutoffs by setting infinity
-    for (auto &i : Faunus::molecules) {
-        for (auto &j : Faunus::molecules) {
-            cutoff.cutoff_squared.set(i.id(), j.id(), pc::max_value);
+void GroupCutoff::setSingleCutoff(const double cutoff) {
+    if (cutoff < std::sqrt(pc::max_value)) {
+        default_cutoff_squared = cutoff * cutoff;
+    } else {
+        default_cutoff_squared = pc::max_value;
+    }
+    for (const auto& molecule1 : Faunus::molecules) {
+        for (const auto& molecule2 : Faunus::molecules) {
+            cutoff_squared.set(molecule1.id(), molecule2.id(), default_cutoff_squared);
         }
     }
+}
 
-    auto it = j.find("cutoff_g2g");
-    if (it != j.end()) {
+double GroupCutoff::getCutoff(size_t id1, size_t id2) const {
+    if (cutoff_squared.size() != Faunus::molecules.size() || id1 >= cutoff_squared.size() ||
+        id2 >= cutoff_squared.size()) {
+        throw std::out_of_range("cutoff matrix doesn't fit molecules");
+    }
+    return std::sqrt(cutoff_squared(id1, id2));
+}
+
+void from_json(const json& j, GroupCutoff& cutoff) {
+    // default: no group-to-group cutoff
+    cutoff.setSingleCutoff(std::sqrt(pc::max_value));
+
+    if (const auto it = j.find("cutoff_g2g"); it != j.end()) {
         if (it->is_number()) {
-            // old style input w. only a single cutoff
-            cutoff.default_cutoff_squared = std::pow(it->get<double>(), 2);
-            for (auto &i : Faunus::molecules) {
-                for (auto &j : Faunus::molecules) {
-                    cutoff.cutoff_squared.set(i.id(), j.id(), cutoff.default_cutoff_squared);
+            cutoff.setSingleCutoff(it->get<double>());
+        } else if (it->is_object()) {
+            cutoff.setSingleCutoff(it->value("default", pc::max_value));
+            for (const auto& [named_pair, pair_cutoff] : it->items()) {
+                if (named_pair == "default") {
+                    continue;
                 }
-            }
-        }
-        else if (it->is_object()) {
-            // new style input w. multiple cutoffs between molecules
-            // ensure that there is a default, fallback cutoff
-            cutoff.default_cutoff_squared = std::pow(it->at("default").get<double>(), 2);
-            for (auto &i : Faunus::molecules) {
-                for (auto &j : Faunus::molecules) {
-                    cutoff.cutoff_squared.set(i.id(), j.id(), cutoff.default_cutoff_squared);
-                }
-            }
-            // loop for space separated molecule pairs in keys
-            for (auto &i : it->items()) {
                 try {
-                    if(const auto molecules_names = words2vec<std::string>(i.key()); molecules_names.size() == 2) {
-                        const auto molecule1 = findMoleculeByName(molecules_names[0]);
-                        const auto molecule2 = findMoleculeByName(molecules_names[1]);
-                        cutoff.cutoff_squared.set(molecule1.id(), molecule2.id(), std::pow(i.value().get<double>(), 2));
+                    if (const auto molecules_names = words2vec<std::string>(named_pair); molecules_names.size() == 2) {
+                        const auto& molecule1 = findMoleculeByName(molecules_names[0]);
+                        const auto& molecule2 = findMoleculeByName(molecules_names[1]);
+                        cutoff.cutoff_squared.set(molecule1.id(), molecule2.id(),
+                                                  std::pow(pair_cutoff.get<double>(), 2));
+                        faunus_logger->debug("custom cutoff for {}-{} = {} Å", molecule1.name, molecule2.name,
+                                             pair_cutoff.get<double>());
                     } else {
                         throw std::runtime_error("invalid molecules names");
                     }
-                } catch(const std::exception &e) {
-                    faunus_logger->warn("Unable to set a custom cutoff “{}” for “{}”.", i.value().dump(), i.key());
+                } catch (const std::exception& e) {
+                    throw ConfigurationError("Unable to set a custom cutoff for {}: {}", named_pair, e.what());
                 }
             }
         }
@@ -1266,6 +1273,50 @@ void to_json(json &j, const GroupCutoff &cutoff) {
     }
     if (not _j.empty()) {
         j["cutoff_g2g"] = _j;
+    }
+}
+
+TEST_CASE("[Faunus] GroupCutoff") {
+    Geometry::Chameleon geo;
+    Faunus::atoms = R"([
+        { "A": { "sigma": 4.0 } },
+        { "B": { "sigma": 2.4 } }
+    ])"_json.get<decltype(atoms)>();
+    Faunus::molecules = R"([
+        { "M": { "atoms": ["A", "B"] } },
+        { "Q": { "atoms": ["A", "B"] } }
+    ])"_json.get<decltype(molecules)>();
+
+    SUBCASE("old style default") {
+        GroupCutoff cutoff(geo);
+        from_json(R"({"cutoff_g2g": 12.0})"_json, cutoff);
+        CHECK(cutoff.getCutoff(0, 0) == doctest::Approx(12.0));
+        CHECK(cutoff.getCutoff(0, 1) == doctest::Approx(12.0));
+        CHECK(cutoff.getCutoff(1, 1) == doctest::Approx(12.0));
+    }
+
+    SUBCASE("new style default") {
+        GroupCutoff cutoff(geo);
+        from_json(R"({"cutoff_g2g": {"default": 13.0}})"_json, cutoff);
+        CHECK(cutoff.getCutoff(0, 0) == doctest::Approx(13.0));
+        CHECK(cutoff.getCutoff(0, 1) == doctest::Approx(13.0));
+        CHECK(cutoff.getCutoff(1, 1) == doctest::Approx(13.0));
+    }
+
+    SUBCASE("custom") {
+        GroupCutoff cutoff(geo);
+        from_json(R"({"cutoff_g2g": {"default": 13.0, "M Q": 14.0}})"_json, cutoff);
+        CHECK(cutoff.getCutoff(0, 0) == doctest::Approx(13.0));
+        CHECK(cutoff.getCutoff(0, 1) == doctest::Approx(14.0));
+        CHECK(cutoff.getCutoff(1, 1) == doctest::Approx(13.0));
+    }
+
+    SUBCASE("custom - no default value") {
+        GroupCutoff cutoff(geo);
+        from_json(R"({"cutoff_g2g": {"M Q": 11.0}})"_json, cutoff);
+        CHECK(cutoff.getCutoff(0, 0) == doctest::Approx(std::sqrt(pc::max_value)));
+        CHECK(cutoff.getCutoff(0, 1) == doctest::Approx(11.0));
+        CHECK(cutoff.getCutoff(1, 1) == doctest::Approx(std::sqrt(pc::max_value)));
     }
 }
 

@@ -1,0 +1,54 @@
+#!/usr/bin/env yason.py
+#
+# Combined MC and MD moves on a four-bead molecule
+# with 3 harmonic bonds, 2 harmonic bond angle, and 1 dihedral angle.
+#
+# You may disable either MD or MC to verify that they
+# individually give the same bead<->bead distribution
+#
+energy:
+    - bonded: {}
+
+atomlist:
+    - a: {mw: 1, dp: 5}
+    - b: {mw: 1, dp: 5}
+    - c: {mw: 1, dp: 5}
+    - d: {mw: 1, dp: 5}
+
+moleculelist:
+    - fourbody:
+        atomic: false
+        atoms: [a, b, c, d]
+        structure:
+          - a: [-2.50,  5.34, -7.10]
+          - b: [-1.82,  4.31, -7.44]
+          - c: [-1.57,  5.31, -7.39]
+          - d: [-1.70,  4.10, -7.60]
+        bondlist:
+          - harmonic: {k: 10, req: 1, index: [0,1]}
+          - harmonic: {k: 10, req: 1, index: [1,2]}
+          - harmonic: {k: 10, req: 1, index: [2,3]}
+          - harmonic_torsion: {k: 10, aeq: 90, index: [0,1,2]}
+          - harmonic_torsion: {k: 10, aeq: 45, index: [1,2,3]}
+          - periodic_dihedral: {k: 5, n: 2, phi: 180, index: [0,1,2,3]}
+
+insertmolecules:
+    - fourbody: {N: 1}
+
+moves:
+    - langevin_dynamics:
+        nsteps: 10
+        integrator: {time_step: 0.001, friction: 5}
+    - transrot: # Monte Carlo
+        molecule: fourbody
+
+analysis:
+    - systemenergy: {file: energy.dat, nstep: 100, nskip: 1}
+    - atomrdf: {file: rdf.dat, nstep: 1, dr: 0.1, name1: a, name2: d, nskip: 1, dim: 1}
+    - savestate: {file: state.json}
+
+geometry: {type: cuboid, length: 20}
+mcloop: {macro: 1, micro: 500000}
+temperature: 298.15
+random: { seed: fixed }
+

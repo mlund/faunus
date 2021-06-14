@@ -1,6 +1,24 @@
 include(ExternalProject)
 include(FetchContent)
 
+#############
+# PCG RANDOM
+#############
+
+option(ENABLE_PCG "Enable PCG random number generator" off)
+if (ENABLE_PCG)
+    FetchContent_Declare(
+        pcg-cpp
+        URL https://github.com/imneme/pcg-cpp/archive/ffd522e7188bef30a00c74dc7eb9de5faff90092.tar.gz
+        URL_HASH MD5=051b969bbaf924f35f2159813f93e341)
+    FetchContent_GetProperties(pcg-cpp)
+    if(NOT pcg-cpp_POPULATED)
+        FetchContent_Populate(pcg-cpp)
+    endif()
+    include_directories(SYSTEM ${pcg-cpp_SOURCE_DIR}/include)
+    add_definitions("-DENABLE_PCG")
+endif()
+
 #########
 # EXPRTK 
 #########
@@ -138,26 +156,24 @@ set_property(TARGET docopt PROPERTY IMPORTED_LOCATION ${binary_dir}/libdocopt.a)
 # CPPSID
 #########
 
-ExternalProject_Add(project_cppsid
-    PREFIX "${CMAKE_CURRENT_BINARY_DIR}/_deps"
-    CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DCMAKE_POSITION_INDEPENDENT_CODE=on
-    BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} "cppsid"
-    INSTALL_COMMAND "" LOG_DOWNLOAD ON
-    UPDATE_DISCONNECTED ON
-    URL_MD5 b420c4c114e00a147c2c9a974249f0d4
-    URL "https://github.com/mlund/cppsid/archive/v0.2.1.tar.gz")
-ExternalProject_Get_Property(project_cppsid binary_dir)
-ExternalProject_Get_Property(project_cppsid source_dir)
-set(CppsidIncludeDir ${source_dir}/include)
-add_library(cppsid STATIC IMPORTED GLOBAL)
-add_dependencies(cppsid project_cppsid)
-set_property(TARGET cppsid PROPERTY IMPORTED_LOCATION ${binary_dir}/libcppsid.a)
-
 option(ENABLE_SID "Enable SID emulation" off)
 if(ENABLE_SID)
-    find_package(SDL2 CONFIG)
+    find_package(SDL2 CONFIG REQUIRED)
+    ExternalProject_Add(project_cppsid
+        PREFIX "${CMAKE_CURRENT_BINARY_DIR}/_deps"
+        CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DCMAKE_POSITION_INDEPENDENT_CODE=on
+        BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} "cppsid"
+        INSTALL_COMMAND "" LOG_DOWNLOAD ON
+        UPDATE_DISCONNECTED ON
+        URL_MD5 b420c4c114e00a147c2c9a974249f0d4
+        URL "https://github.com/mlund/cppsid/archive/v0.2.1.tar.gz")
+    ExternalProject_Get_Property(project_cppsid binary_dir)
+    ExternalProject_Get_Property(project_cppsid source_dir)
+    set(CppsidIncludeDir ${source_dir}/include)
+    add_library(cppsid STATIC IMPORTED GLOBAL)
+    add_dependencies(cppsid project_cppsid)
+    set_property(TARGET cppsid PROPERTY IMPORTED_LOCATION ${binary_dir}/libcppsid.a)
 endif()
-
 
 ###########
 # PYBIND11
@@ -174,16 +190,21 @@ FetchContent_Declare(
 
 option(ENABLE_TBB "Enable Intel TBB" off)
 if (ENABLE_TBB)
-    FetchContent_Declare(
+    if (DEFINED TBB_DIR)
+        find_package(TBB REQUIRED COMPONENTS tbb)
+        target_link_libraries(project_options INTERFACE TBB::tbb)
+    else ()
+        FetchContent_Declare(
             tbb URL https://github.com/wjakob/tbb/archive/806df70ee69fc7b332fcf90a48651f6dbf0663ba.tar.gz
             URL_HASH MD5=63fda89e88d34da63ddcef472e7725ef
-    )
-    if (NOT tbb_POPULATED)
-        FetchContent_Populate(tbb)
-        add_subdirectory(${tbb_SOURCE_DIR} ${tbb_BINARY_DIR})
-        set_target_properties(tbb_static PROPERTIES COMPILE_FLAGS "-w")
-        include_directories(SYSTEM ${tbb_SOURCE_DIR}/include)
-        target_link_libraries(project_options INTERFACE tbb_static)
+            )
+        if (NOT tbb_POPULATED)
+            FetchContent_Populate(tbb)
+            add_subdirectory(${tbb_SOURCE_DIR} ${tbb_BINARY_DIR})
+            set_target_properties(tbb_static PROPERTIES COMPILE_FLAGS "-w")
+            include_directories(SYSTEM ${tbb_SOURCE_DIR}/include)
+            target_link_libraries(project_options INTERFACE tbb_static)
+        endif ()
     endif ()
 endif ()
 
@@ -206,8 +227,8 @@ endif()
 
 FetchContent_Declare(
     eigen
-    URL "https://gitlab.com/libeigen/eigen/-/archive/3.3.7/eigen-3.3.7.tar.gz"
-    URL_HASH MD5=9e30f67e8531477de4117506fe44669b)
+    URL "https://gitlab.com/libeigen/eigen/-/archive/3.3.9/eigen-3.3.9.tar.gz"
+    URL_HASH MD5=609286804b0f79be622ccf7f9ff2b660)
 FetchContent_GetProperties(eigen)
 if(NOT eigen_POPULATED)
     FetchContent_Populate(eigen)
@@ -242,8 +263,8 @@ set_target_properties(xdrfile PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 
 FetchContent_Declare(
     doctest
-    URL "https://github.com/onqtam/doctest/archive/2.4.4.tar.gz"
-    URL_HASH SHA256=3bcb62ad316bf4230873a336fcc6eb6292116568a6e19ab8cdd37a1610773d70)
+    URL "https://github.com/onqtam/doctest/archive/2.4.6.tar.gz"
+    URL_HASH SHA256=39110778e6baf373ef04342d7cb3fe35da104cb40769103e8a2f0035f5a5f1cb)
 FetchContent_GetProperties(doctest)
 if(NOT doctest_POPULATED)
     FetchContent_Populate(doctest)

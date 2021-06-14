@@ -80,28 +80,29 @@ extern std::vector<AtomData> atoms; //!< Global instance of atom list
  * @param rng  a range of elements
  * @param name  a name to look for
  * @return an iterator to the first element, or `last` if not found
- * @see obtainName()
+ * @see findAtomByName(), findMoleculeByName()
  */
 template <class Trange> auto findName(Trange &rng, const std::string &name) {
     return std::find_if(rng.begin(), rng.end(), [&name](auto &i) { return i.name == name; });
 }
 
 /**
- * @brief Finds the first element with a member attribute `name` matching the input. Throws an exception if not found.
- *
- * @param rng  a range of elements
- * @param name  a name to look for
- * @return an iterator to the first element
- * @throw std::range_error if such an element not found
- * @see findName()
+ * @brief An exception to indicate an unknown atom name in the input.
  */
-template <class Trange> auto obtainName(Trange &rng, const std::string &name) {
-    const auto result = findName(rng, name);
-    if(result == rng.end()) {
-        throw std::out_of_range(name + " not found");
-    }
-    return result;
-}
+struct UnknownAtomError: public std::runtime_error {
+    explicit UnknownAtomError(const std::string & atom_name);
+};
+
+/**
+ * @brief Finds an atom by its name in the global Faunus atoms lexicon.
+ *
+ * The first matching atom is returned, or an UnknownAtomError is thrown when not found.
+ *
+ * @param name  an atom name to look for
+ * @return an atom found
+ * @throw UnknownAtomError  when no atom found
+ */
+AtomData& findAtomByName(const std::string& name);
 
 /**
  * @brief Search for `name` in `database` and return `id()`

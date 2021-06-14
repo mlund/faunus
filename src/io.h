@@ -44,7 +44,7 @@ void strip(std::vector<std::string> &strings, const std::string &pattern); //!< 
 /**
  * @brief Open (gzip compressed) output stream
  */
-std::unique_ptr<std::ostream> openCompressedOutputStream(const std::string &);
+std::unique_ptr<std::ostream> openCompressedOutputStream(const std::string &, bool throw_on_error = false);
 
 /**
  * Write a map to an output stream as key-value pairs
@@ -132,6 +132,7 @@ class FormatPQR {
                      int = 1e9); //!< Save PQR file
     static void save(const std::string &, const ParticleVector &, const Point & = Point(0, 0, 0),
                      int = 1e9); //!< Save PQR file
+    //!< Sync charges from Faunus::atoms (topology)
 
     /**
      * @brief Write vector of groups to output stream

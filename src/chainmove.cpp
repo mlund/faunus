@@ -48,10 +48,7 @@ ChainRotationMove::ChainRotationMove(Space &spc, std::string name, std::string c
 
 void ChainRotationMove::_from_json(const json &j) {
     TBase::_from_json(j);
-    auto moliter = findName(molecules, molname);
-    if (moliter == molecules.end())
-        throw std::runtime_error("unknown molecule '" + molname + "'");
-    molid = moliter->id();
+    molid = findMoleculeByName(molname).id();
 }
 
 void ChainRotationMove::rotate_segment(double angle) {
@@ -184,8 +181,8 @@ size_t PivotMove::select_segment() {
             auto bond = this->slump.sample(bonds.begin(), bonds.end()); // a random harmonic bond
             if (bond != bonds.end()) {
                 auto chain_offset = std::distance(this->spc.p.begin(), chain.begin());
-                auto atom0_ndx = (*bond)->index.at(0) + chain_offset;
-                auto atom1_ndx = (*bond)->index.at(1) + chain_offset;
+                auto atom0_ndx = (*bond)->indices.at(0) + chain_offset;
+                auto atom1_ndx = (*bond)->indices.at(1) + chain_offset;
                 if (atom0_ndx < 0 || atom1_ndx < 0) {
                     throw std::range_error("A negative index of the atom occured.");
                 }

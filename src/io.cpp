@@ -55,14 +55,32 @@ void IO::strip(std::vector<std::string> &strings, const std::string &pattern) {
  * compression is enabled, otherwise a standard `std::ostream` is created.
  *
  * @param filename Name of output file
+ * @param throw_on_error Throw exception if file cannot be opened (default: false)
  * @return pointer to stream; nullptr if it could not be created
  */
-std::unique_ptr<std::ostream> IO::openCompressedOutputStream(const std::string &filename) {
-    if (filename.substr(filename.find_last_of(".") + 1) == "gz") {
-        faunus_logger->trace("enabling gzip compression for {}", filename);
-        return std::make_unique<zstr::ofstream>(filename);
+std::unique_ptr<std::ostream> IO::openCompressedOutputStream(const std::string& filename, bool throw_on_error) {
+    try { // any neater way to check if path is writable?
+        std::ofstream f;
+        f.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+        f.open(filename);
+    } catch (std::exception& e) { // reaching here, file cannot be created
+        if (throw_on_error) {
+            throw std::runtime_error("could not write to file "s + filename);
+        }
+        return std::make_unique<std::ofstream>(); // empty object
     }
-    return std::make_unique<std::ofstream>(filename);
+    if (filename.substr(filename.find_last_of('.') + 1) == "gz") {
+        faunus_logger->trace("enabling gzip compression for {}", filename);
+        return std::make_unique<zstr::ofstream>(filename); // compressed
+    } else {
+        return std::make_unique<std::ofstream>(filename); // uncompressed
+    }
+}
+
+TEST_CASE("[Faunus] openCompressedOutputStream") {
+    using doctest::Approx;
+    CHECK_THROWS(IO::openCompressedOutputStream("/../file", true));
+    CHECK_NOTHROW(IO::openCompressedOutputStream("/../file"));
 }
 
 bool FormatAAM::prefer_charges_from_file = true;
@@ -72,46 +90,43 @@ Particle FormatAAM::recordToParticle(const std::string &record) {
     std::string name;
     o << record;
     o >> name;
-    if (auto it = findName(atoms, name); it == atoms.end()) {
-        throw std::runtime_error("AAM load error: unknown atom name '" + name + "'.");
-    } else {
-        Particle particle = *it;
-        double radius;
-        double molecular_weight;
-        int atom_number;
-        o >> atom_number >> particle.pos.x() >> particle.pos.y() >> particle.pos.z() >> particle.charge >>
-            molecular_weight >> radius;
+    const auto atom = findAtomByName(name);
+    Particle particle(atom);
+    double radius;
+    double molecular_weight;
+    int atom_number;
+    o >> atom_number >> particle.pos.x() >> particle.pos.y() >> particle.pos.z() >> particle.charge >>
+        molecular_weight >> radius;
 
-        // does charge match AtomData?
-        if (std::fabs(it->charge - particle.charge) > pc::epsilon_dbl) {
-            faunus_logger->warn("charge mismatch on atom {0} {1}: {2} atomlist value", atom_number, name,
-                                (prefer_charges_from_file) ? "ignoring" : "using");
-            if (not prefer_charges_from_file) {
-                particle.charge = it->charge; // let's use atomdata charge
-            }
+    // does charge match AtomData?
+    if (std::fabs(atom.charge - particle.charge) > pc::epsilon_dbl) {
+        faunus_logger->warn("charge mismatch on atom {0} {1}: {2} atomlist value", atom_number, name,
+                            (prefer_charges_from_file) ? "ignoring" : "using");
+        if (not prefer_charges_from_file) {
+            particle.charge = atom.charge; // let's use atomdata charge
         }
-        // does radius match AtomData?
-        if (std::fabs(it->sigma - 2 * radius) > pc::epsilon_dbl) {
-            faunus_logger->warn("radius mismatch on atom {0} {1}: using atomlist value", atom_number, name);
-        }
-        return particle;
     }
+    // does radius match AtomData?
+    if (std::fabs(atom.sigma - 2 * radius) > pc::epsilon_dbl) {
+        faunus_logger->warn("radius mismatch on atom {0} {1}: using atomlist value", atom_number, name);
+    }
+    return particle;
 }
 ParticleVector FormatAAM::load(const std::string &filename, bool _keepcharges) {
     prefer_charges_from_file = _keepcharges;
     if (auto lines = IO::loadLinesFromFile(filename); lines.empty()) {
-        throw std::runtime_error("empty aam file: "s + filename);
+        throw std::runtime_error("empty file");
     } else {
         IO::strip(lines, "#"); // all lines beginning w. # are comments
         size_t number_of_atoms = std::stoul(lines[0]);
         if (lines.size() < number_of_atoms + 1) {
-            throw std::runtime_error("mismatch in number of atoms in "s + filename);
+            throw std::runtime_error("mismatch in number of atoms");
         }
         ParticleVector positions; // positions are loaded here
         positions.reserve(number_of_atoms);
         auto lines_atoms = lines | ranges::views::slice(1uL, 1uL + number_of_atoms);
-        std::transform(lines_atoms.begin(), lines_atoms.end(), std::back_inserter(positions),
-                       [](auto &i) { return recordToParticle(i); });
+            std::transform(lines_atoms.begin(), lines_atoms.end(), std::back_inserter(positions),
+                           [](auto &i) { return recordToParticle(i); });
         assert(positions.size() == number_of_atoms);
         return positions;
     }
@@ -161,14 +176,11 @@ bool FormatPQR::readAtomRecord(const std::string &record, Particle &particle, do
         std::string atom_name;
         std::string res_name;
         o >> atom_index >> atom_name;
-        if (auto it = findName(Faunus::atoms, atom_name); it != Faunus::atoms.end()) {
-            particle = *it;
-            o >> res_name >> res_index >> particle.pos.x() >> particle.pos.y() >> particle.pos.z() >> particle.charge >>
-                radius;
-            return true;
-        } else {
-            throw std::runtime_error("PQR load error: unknown atom name '" + atom_name + "'.");
-        }
+        const auto atom = findAtomByName(atom_name);
+        particle = atom;
+        o >> res_name >> res_index >> particle.pos.x() >> particle.pos.y() >> particle.pos.z() >> particle.charge >>
+            radius;
+        return true;
     }
     return false;
 }
@@ -242,10 +254,10 @@ Point FormatPQR::load(std::istream &stream, ParticleVector &destination, bool ke
  * @return Vector with unit cell dimensions. Zero length if not found.
  */
 Point FormatPQR::load(const std::string &filename, ParticleVector &particles, bool keep_charges) {
-    if (std::ifstream stream(filename); !stream) {
-        throw std::runtime_error("load error: "s + filename);
-    } else {
+    if (std::ifstream stream(filename); stream) {
         return load(stream, particles, keep_charges);
+    } else {
+        throw std::runtime_error("cannot open file");
     }
 }
 
@@ -257,9 +269,7 @@ Point FormatPQR::load(const std::string &filename, ParticleVector &particles, bo
  * ignored.
  */
 void FormatPQR::loadTrajectory(const std::string &filename, std::vector<ParticleVector> &traj) {
-    if (std::ifstream stream(filename); !stream) {
-        throw std::runtime_error("load error: "s + filename);
-    } else {
+    if (std::ifstream stream(filename); stream) {
         traj.clear();
         traj.resize(1); // prepare first frame
         std::string record;
@@ -280,6 +290,8 @@ void FormatPQR::loadTrajectory(const std::string &filename, std::vector<Particle
         if (traj.empty()) {
             faunus_logger->warn("pqr trajectory {} is empty", filename);
         }
+    } else {
+        throw std::runtime_error("cannot open file");
     }
 }
 
@@ -341,6 +353,7 @@ void FormatPQR::save(const std::string &filename, const ParticleVector &particle
 void FormatPQR::save(const std::string &filename, const Tgroup_vector &groups, const Point &box_length) {
     if (not groups.empty()) {
         if (std::ofstream stream(filename); stream) {
+            faunus_logger->debug("writing to {}", filename);
             save(stream, groups, box_length);
         } else {
             throw std::runtime_error("write error: "s + filename);
@@ -406,9 +419,7 @@ TEST_CASE("[Faunus] FormatPQR") {
  */
 
 void FormatXYZ::load(const std::string &filename, ParticleVector &particles, bool append) {
-    if (std::ifstream stream(filename); !stream) {
-        throw std::runtime_error("cannot open file: "s + filename);
-    } else {
+    if (std::ifstream stream(filename); stream) {
         std::string comment;
         std::string atom_name;
         size_t number_of_atoms;
@@ -421,15 +432,14 @@ void FormatXYZ::load(const std::string &filename, ParticleVector &particles, boo
         particles.reserve(particles.size() + number_of_atoms);
         for (size_t i = 0; i < number_of_atoms; i++) {
             stream >> atom_name;
-            if (auto it = findName(Faunus::atoms, atom_name); it != Faunus::atoms.end()) {
-                Particle particle = *it;
-                stream >> particle.pos.x() >> particle.pos.y() >> particle.pos.z();
-                particles.push_back(particle);
-            } else {
-                throw std::runtime_error("XYZ load error: unknown atom name '" + atom_name + "'.");
-            }
+            const auto atom = findAtomByName(atom_name);
+            Particle particle(atom);
+            stream >> particle.pos.x() >> particle.pos.y() >> particle.pos.z();
+            particles.push_back(particle);
         }
         assert(particles.size() == number_of_atoms);
+    } else {
+        throw std::runtime_error("cannot open file");
     }
 }
 
@@ -438,14 +448,11 @@ Particle FormatGRO::recordToParticle(const std::string &record) {
     std::string atom_name;
     o << record.substr(10, 5) << record.substr(20, 8) << record.substr(28, 8) << record.substr(36, 8);
     o >> atom_name;
-    if (auto it = findName(Faunus::atoms, atom_name); it != Faunus::atoms.end()) {
-        Particle particle = *it; // copy all atom properties, except positions
-        o >> particle.pos.x() >> particle.pos.y() >> particle.pos.z();
-        particle.pos *= 1.0_nm; // GRO files use nanometers
-        return particle;
-    } else {
-        throw std::runtime_error("GRO file: unknown atom name: " + atom_name);
-    }
+    const auto atom = findAtomByName(atom_name);
+    Particle particle(atom); // copy all atom properties, except positions
+    o >> particle.pos.x() >> particle.pos.y() >> particle.pos.z();
+    particle.pos *= 1.0_nm; // GRO files use nanometers
+    return particle;
 }
 
 /**
@@ -459,11 +466,11 @@ Particle FormatGRO::recordToParticle(const std::string &record) {
 ParticleVector FormatGRO::load(const std::string &filename) {
     constexpr size_t header_size = 2; // two lines before positions
     if (auto lines = IO::loadLinesFromFile(filename); lines.size() <= header_size) {
-        throw std::runtime_error("GRO file seems empty: " + filename);
+        throw std::runtime_error("GRO file seems empty");
     } else {
         size_t number_of_atoms = std::stoul(lines[1]); // second line = number of atoms
         if (lines.size() < header_size + number_of_atoms) {
-            throw std::runtime_error("Mismatch in number of atoms in GRO file");
+            throw std::runtime_error("mismatch in number of atoms");
         } else {
             ParticleVector positions; // positions are loaded here
             positions.reserve(number_of_atoms);
@@ -748,7 +755,7 @@ ParticleVector loadStructure(const std::string &file, bool keep_charges) {
         }
         return particles;
     } catch (std::exception &e) {
-        throw std::runtime_error("structure load error: "s + e.what());
+        throw std::runtime_error(fmt::format("error loading structure from file '{}': {}", file, e.what()));
     }
 }
 

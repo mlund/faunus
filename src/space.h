@@ -99,11 +99,8 @@ class Space {
     Tgvec::iterator randomMolecule(int, Random &, Selection = ACTIVE);       //!< Random group matching molid
     json info();
 
-    /**
-     * @brief Get index of given group in the group vector
-     * @throw If group is not part of space
-     */
-    int getGroupIndex(const Tgroup &group);
+    int getGroupIndex(const Tgroup& group) const;         //!< Get index of given group in the group vector
+    int getFirstParticleIndex(const Tgroup& group) const; //!< Index of first particle in group
 
     /**
      * @brief Update particles in Space from a source range
@@ -220,19 +217,19 @@ class Space {
         return groups | ranges::cpp20::views::filter(f);
     }
 
-    auto findAtoms(int atomid) {
-        return p | ranges::cpp20::views::filter([&, atomid](const Particle &i) {
-                   if (i.id == atomid)
-                       for (const auto &g : groups)
-                           if (g.contains(i, false))
-                               return true;
-                   return false;
-               });
-    } //!< Range with all active atoms of type `atomid` (complexity: order N)
-
     auto activeParticles() {
         return groups | ranges::cpp20::views::join;
     } //!< Returns range with all *active* particles in space
+
+    /**
+     * @brief Find active atoms of type `atomid` (complexity: order N)
+     * @param atomid Atom id to look for
+     * @return Range of filtered particles
+     */
+    auto findAtoms(const int atomid) {
+        return activeParticles() |
+               ranges::cpp20::views::filter([atomid](const Particle& particle) { return particle.id == atomid; });
+    }
 
     /**
      * @brief Count number of molecules matching criteria

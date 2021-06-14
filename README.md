@@ -37,7 +37,7 @@ Documentation
 Licence
 =======
 
-Copyright 2002-2020 Mikael Lund
+Copyright 2002-2021 Mikael Lund
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software
 and associated documentation files (the "Software"), to deal in the Software without restriction,

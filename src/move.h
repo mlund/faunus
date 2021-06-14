@@ -8,6 +8,7 @@
 #include "io.h"
 #include "aux/timers.h"
 #include <range/v3/view/filter.hpp>
+#include <optional>
 
 namespace Faunus {
 
@@ -107,12 +108,47 @@ class AtomicSwapCharge : public MoveBase {
 };
 
 /**
+ * @brief Histogram for an arbitrary set of values using a sparse memory layout (map)
+ *
+ * Builds a histogram by binning given values to a specified resolution. Values are stored
+ * in a memory efficient map-structure with log(N) lookup complexity.
+ */
+template <typename T = double> class SparseHistogram {
+    T resolution;
+    std::map<int, unsigned int> data;
+
+  public:
+    explicit SparseHistogram(T resolution) : resolution(resolution) {}
+    void add(const T value) {
+        if (std::isfinite(value)) {
+            data[static_cast<int>(std::round(value / resolution))]++;
+        } else {
+            faunus_logger->warn("histogram: skipping inf/nan number");
+        }
+    }
+    friend auto& operator<<(std::ostream& stream, const SparseHistogram& histogram) {
+        std::for_each(histogram.data.begin(), histogram.data.end(), [&](const auto& sample) {
+            stream << fmt::format("{:.6E} {}\n", T(sample.first) * histogram.resolution, sample.second);
+        });
+        return stream;
+    }
+};
+
+/**
  * @brief Translate and rotate a molecular group
  */
 class AtomicTranslateRotate : public MoveBase {
-    double _sqd; //!< temporary squared displacement
+    Space::Tpvec::const_iterator latest_particle;      //!< Iterator to last moved particle
+    const Energy::Hamiltonian& hamiltonian;            //!< Reference to Hamiltonian
+    std::map<int, SparseHistogram<>> energy_histogram; //!< Energy histogram (value) for each particle type (key)
+    double energy_resolution = 0.0;                    //!< Resolution of sampled energy histogram
+    double latest_displacement_squared;                //!< temporary squared displacement
+    void sampleEnergyHistogram();                      //!< Update energy histogram based on latest move
+    void saveHistograms();                             //!< Write histograms for file
+    void checkMassCenter(Space::Tgroup& group) const;  //!< Perform test to see if the move violates PBC
+    void groupToDisk(const Space::Tgroup& group) const; //!< Save structure to disk in case of failure
+
   protected:
-    using MoveBase::spc;
     int molid = -1;                           //!< Molecule id to move
     Point directions = {1, 1, 1};             //!< displacement directions
     Average<double> mean_square_displacement; //!< mean squared displacement
@@ -128,10 +164,11 @@ class AtomicTranslateRotate : public MoveBase {
     void _accept(Change &) override;
     void _reject(Change &) override;
 
-    AtomicTranslateRotate(Space &spc, std::string name, std::string cite);
+    AtomicTranslateRotate(Space& spc, const Energy::Hamiltonian& hamiltonian, std::string name, std::string cite);
 
   public:
-    explicit AtomicTranslateRotate(Space &spc);
+    AtomicTranslateRotate(Space& spc, const Energy::Hamiltonian& hamiltonian);
+    ~AtomicTranslateRotate();
 };
 
 /**
@@ -201,7 +238,7 @@ class TranslateRotate : public MoveBase {
     std::optional<std::reference_wrapper<Space::Tgroup>> findRandomMolecule() const;
     double translateMolecule(Space::Tgroup &group);
     double rotateMolecule(Space::Tgroup &group);
-    void sanityCheck(const Space::Tgroup &group) const; // sanity check of move
+    void checkMassCenter(const Space::Tgroup& group) const; // sanity check of move
 
     void _to_json(json &j) const override;
     void _from_json(const json &j) override;
@@ -279,20 +316,30 @@ class SmartTranslateRotate : public MoveBase {
  * @todo Add feature to align molecule on top of an exiting one
  */
 class ConformationSwap : public MoveBase {
+  public:
+    enum CopyPolicy { ALL, POSITIONS, CHARGES, INVALID }; //!< What to copy from conformation library
   private:
+    CopyPolicy copy_policy;
     RandomInserter inserter;
     int molid = -1; //!< Molecule ID to operate on
+    void copyConformation(ParticleVector& source_particle, ParticleVector::iterator destination) const;
     void _to_json(json &j) const override;
     void _from_json(const json &j) override;
     void _move(Change &change) override;
-    void setRepeat(); //!< Set move repeat
-    void checkMassCenterDrift(const Point &old_mass_center, const ParticleVector &particles); //!< Check for CM drift
-    void registerChanges(Change &change, const Space::Tgroup &group) const;                   //!< Update change object
-    ConformationSwap(Space &spc, const std::string &name, const std::string &cite);
+    void setRepeat();                   //!< Set move repeat
+    void checkConformationSize() const; //!< Do conformations fit simulation cell?
+    void checkMassCenterDrift(const Point& old_mass_center, const ParticleVector& particles); //!< Check for CM drift
+    void registerChanges(Change& change, const Space::Tgroup& group) const;                   //!< Update change object
+    ConformationSwap(Space& spc, const std::string& name, const std::string& cite);
 
   public:
     explicit ConformationSwap(Space &spc);
 }; // end of conformation swap move
+
+NLOHMANN_JSON_SERIALIZE_ENUM(ConformationSwap::CopyPolicy, {{ConformationSwap::INVALID, nullptr},
+                                                            {ConformationSwap::ALL, "all"},
+                                                            {ConformationSwap::POSITIONS, "positions"},
+                                                            {ConformationSwap::CHARGES, "charges"}})
 
 class VolumeMove : public MoveBase {
   private:

@@ -280,14 +280,19 @@ size_t Space::numParticles(Space::Selection selection) const {
     }
 }
 
-int Space::getGroupIndex(const Space::Tgroup &group) {
-    assert(!groups.empty());
+/**
+ * @throw If group is not part of space
+ */
+int Space::getGroupIndex(const Space::Tgroup& group) const {
     auto index = std::addressof(group) - std::addressof(groups.front()); // std::ptrdiff_t
     assert(std::abs(index) <= std::numeric_limits<int>::max());
     if (index < 0 or index >= groups.size()) {
-        throw std::runtime_error("invalid group index");
+        throw std::out_of_range("invalid group index");
     }
     return static_cast<int>(index);
+}
+int Space::getFirstParticleIndex(const Tgroup& group) const {
+    return std::distance<ParticleVector::const_iterator>(p.cbegin(), group.begin());
 }
 
 TEST_CASE("Space::numParticles") {
@@ -359,16 +364,17 @@ void from_json(const json &j, Space &spc) {
         }
 
         // check correctness of molecular mass centers
-        for (auto &group : spc.groups) {
-            if (!group.empty() && group.isMolecular()) {
-                if (spc.geo.sqdist(group.cm, Geometry::massCenter(group.begin(), group.end(), spc.geo.getBoundaryFunc(),
-                                                                  -group.cm)) > 1e-9) {
-                    throw std::runtime_error("mass center mismatch");
-                }
+        auto active_and_molecular = [](const auto& group) { return (!group.empty() && group.isMolecular()); };
+        for (const auto& group : spc.groups | ranges::cpp20::views::filter(active_and_molecular)) {
+            const auto should_be_small = spc.geo.sqdist(
+                group.cm, Geometry::massCenter(group.begin(), group.end(), spc.geo.getBoundaryFunc(), -group.cm));
+            if (should_be_small > 1e-9) {
+                throw std::runtime_error(fmt::format(
+                    "couldn't calculate mass center for {}; increase periodic box size?", group.traits().name));
             }
         }
-    } catch (std::exception &e) {
-        throw std::runtime_error("error building space: "s + e.what());
+    } catch (std::exception& e) {
+        throw std::runtime_error("space construction: "s + e.what());
     }
 }
 ActiveParticles::const_iterator::const_iterator(const Space &spc, ActiveParticles::const_iterator::Tparticle_iter it)
@@ -721,29 +727,25 @@ void InsertMoleculesInSpace::insertImplicitGroups(const MoleculeData &moldata, S
  * @param spc Space to insert into
  */
 void InsertMoleculesInSpace::insertItem(const std::string &molname, const json &properties, Space &spc) {
-    if (auto moldata = findName(Faunus::molecules, molname); moldata == Faunus::molecules.end()) {
-        throw ConfigurationError("unknown molecule: {}", molname);
+    auto moldata = findMoleculeByName(molname);
+    int num_molecules = getNumberOfMolecules(properties, spc.geo.getVolume(), molname);
+    if (num_molecules == 0) {
+        if (!moldata.isImplicit()) {
+            throw ConfigurationError("one or more {} molecule(s) required; concentration too low?", molname);
+        }
     } else {
-        int num_molecules = getNumberOfMolecules(properties, spc.geo.getVolume(), molname);
-        if (num_molecules == 0) {
-            if (!moldata->isImplicit()) {
-                throw ConfigurationError("one or more {} molecule(s) required; concentration too low?", molname);
-            }
+        int num_inactive = getNumberOfInactiveMolecules(properties, num_molecules);
+        double molarity = (num_molecules - num_inactive) / spc.geo.getVolume() / 1.0_molar;
+        if (moldata.isImplicit()) {
+            faunus_logger->info("adding {} implicit {} molecules --> {} mol/l", num_molecules, molname, molarity);
+            insertImplicitGroups(moldata, spc, num_molecules);
         } else {
-            int num_inactive = getNumberOfInactiveMolecules(properties, num_molecules);
-            double molarity = (num_molecules - num_inactive) / spc.geo.getVolume() / 1.0_molar;
-            if (moldata->isImplicit()) {
-                faunus_logger->info("adding {} implicit {} molecules --> {} mol/l", num_molecules, molname, molarity);
+            faunus_logger->info("adding {} {} molecules --> {} mol/l ({} inactive)", num_molecules, molname,
+                                molarity, num_inactive);
+            if (moldata.atomic) {
+                insertAtomicGroups(moldata, spc, num_molecules, num_inactive);
             } else {
-                faunus_logger->info("adding {} {} molecules --> {} mol/l ({} inactive)", num_molecules, molname,
-                                    molarity, num_inactive);
-            }
-            if (moldata->isImplicit()) {
-                insertImplicitGroups(*moldata, spc, num_molecules);
-            } else if (moldata->atomic) {
-                insertAtomicGroups(*moldata, spc, num_molecules, num_inactive);
-            } else {
-                insertMolecularGroups(*moldata, spc, num_molecules, num_inactive);
+                insertMolecularGroups(moldata, spc, num_molecules, num_inactive);
                 if (auto particles = getExternalPositions(properties, molname); !particles.empty()) {
                     auto offset = properties.value("translate", Point(0, 0, 0));
                     setPositionsForTrailingGroups(spc, num_molecules, particles, offset);

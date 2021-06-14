@@ -188,7 +188,8 @@ class MoleculeData {
 
     int &id();             //!< Type id
     const int &id() const; //!< Type id
-    void createMolecularConformations(const json&); //!< Add conformations if appropriate
+    void createMolecularConformations(const json& j); //!< Add conformations if appropriate
+    void setConformationWeights(const json& j);       //!< Add weights for conformations
 
     std::string name;            //!< Molecule name
     bool atomic = false;         //!< True if atomic group (salt etc.)
@@ -199,6 +200,7 @@ class MoleculeData {
     std::vector<int> atoms; //!< Sequence of atoms in molecule (atom id's)
     BasePointerVector<Potential::BondData> bonds;
     WeightedDistribution<ParticleVector> conformations; //!< Conformations of molecule
+    size_t numConformations() const;                     //!< Number of conformations
 
     MoleculeData();
     MoleculeData(const std::string &name, const ParticleVector &particles,
@@ -240,6 +242,25 @@ void from_json(const json &j, std::vector<MoleculeData> &v);
 
 // global instance of molecule vector
 extern std::vector<MoleculeData> molecules;
+
+
+/**
+ * @brief An exception to indicate an unknown molecule name in the input.
+ */
+struct UnknownMoleculeError: public std::runtime_error {
+    explicit UnknownMoleculeError(const std::string &molecule_name);
+};
+
+/**
+ * @brief Finds a molecule by its name in the global Faunus molecules lexicon.
+ *
+ * The first matching molecule is returned, or an UnknownMoleculeError is thrown when not found.
+ *
+ * @param name  a molecule name to look for
+ * @return a molecule found
+ * @throw UnknownMoleculeError  when no molecule found
+ */
+MoleculeData& findMoleculeByName(const std::string& name);
 
 /**
  * @brief Constructs MoleculeData from JSON.

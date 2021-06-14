@@ -35,6 +35,9 @@ template<typename T>
 T ExprFunction<T>::operator()() const {
     return expression->value();
 }
+template <typename T> T ExprFunction<T>::derivative(T& variable) const {
+    return exprtk::derivative(*expression, variable);
+}
 
 template class ExprFunction<double>;
 
@@ -46,4 +49,5 @@ TEST_CASE("[Faunus] ExprFunction") {
     std::function<double()> f = expr;
     x = 4;
     CHECK(f() == doctest::Approx(4 * 4 + 0.4));
+    CHECK(expr.derivative(x) == doctest::Approx(2.0 * 4.0));
 }

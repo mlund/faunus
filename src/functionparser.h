@@ -26,6 +26,7 @@ class ExprFunction {
     void set(const std::string &exprstr, const Tvarvec &vars = {}, const Tconstvec &consts = {});
     void set(const nlohmann::json &, const Tvarvec &vars = {});
     T operator()() const;
+    T derivative(T& variable) const;
 };
 
 extern template class ExprFunction<double>;

@@ -1,0 +1,182 @@
+{
+  "analysis": [
+    {
+      "systemenergy": {
+        "file": "energy.dat",
+        "final": [
+          1.1170359051077228
+        ],
+        "init": 2.7278,
+        "mean": 3.5271,
+        "nskip": 1,
+        "nstep": 100,
+        "samples": 5000
+      }
+    },
+    {
+      "atomrdf": {
+        "dim": 1,
+        "dr": 0.1,
+        "file": "rdf.dat",
+        "name1": "a",
+        "name2": "d",
+        "nskip": 1,
+        "nstep": 1,
+        "samples": 499999,
+        "slicedir": [
+          0,
+          0,
+          0
+        ],
+        "thickness": 0.0
+      }
+    },
+    {
+      "savestate": {
+        "file": "state.json"
+      }
+    }
+  ],
+  "compiler": "Apple LLVM 12.0.5 (clang-1205.0.22.9)",
+  "energy": [
+    {
+      "hamiltonian": [
+        {
+          "bonded": {
+            "bondlist-intramolecular": [
+              {
+                "harmonic": {
+                  "index": [
+                    0,
+                    1
+                  ],
+                  "k": 10.0,
+                  "req": 1.0
+                }
+              },
+              {
+                "harmonic": {
+                  "index": [
+                    1,
+                    2
+                  ],
+                  "k": 10.0,
+                  "req": 1.0
+                }
+              },
+              {
+                "harmonic": {
+                  "index": [
+                    2,
+                    3
+                  ],
+                  "k": 10.0,
+                  "req": 1.0
+                }
+              },
+              {
+                "harmonic_torsion": {
+                  "aeq": 90.0,
+                  "index": [
+                    0,
+                    1,
+                    2
+                  ],
+                  "k": 10.0
+                }
+              },
+              {
+                "harmonic_torsion": {
+                  "aeq": 45.0,
+                  "index": [
+                    1,
+                    2,
+                    3
+                  ],
+                  "k": 10.0
+                }
+              },
+              {
+                "periodic_dihedral": {
+                  "index": [
+                    0,
+                    1,
+                    2,
+                    3
+                  ],
+                  "k": 5.0,
+                  "n": 2.0,
+                  "phi": 180.0
+                }
+              }
+            ],
+            "relative time": 0.00323969004751942
+          }
+        }
+      ]
+    }
+  ],
+  "geometry": {
+    "length": [
+      20.0,
+      20.0,
+      20.0
+    ],
+    "type": "cuboid"
+  },
+  "git revision": "2bd0c2d4 (2021-05-17)",
+  "groups": [
+    {
+      "fourbody": {
+        "compressible": false,
+        "index": [
+          0,
+          3
+        ],
+        "size": 4
+      }
+    }
+  ],
+  "montecarlo": {
+    "average potential energy (kT)": 3.5274214754152835,
+    "last move": "transrot"
+  },
+  "moves": [
+    {
+      "langevin_dynamics": {
+        "acceptance": 1.0,
+        "integrator": {
+          "friction": 5.0,
+          "time_step": 0.001
+        },
+        "moves": 498590,
+        "nsteps": 10,
+        "relative time": 0.636,
+        "relative time (without energy calc)": 0.581,
+        "repeat": 1
+      }
+    },
+    {
+      "transrot": {
+        "acceptance": 0.153,
+        "dir": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "molecule": "fourbody",
+        "molid": 0,
+        "moves": 2001410,
+        "relative time": 0.18,
+        "relative time (without energy calc)": 0.0192,
+        "repeat": 4,
+        "√⟨r²⟩": 0.387
+      }
+    }
+  ],
+  "number of groups": 1,
+  "number of particles": 4,
+  "reactionlist": null,
+  "relative drift": -3.9227378903011325e-13,
+  "temperature": 298.15
+}

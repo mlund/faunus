@@ -34,7 +34,7 @@ namespace Faunus {
  * Each cell list is composed of a grid and a container by double inheritence. The grid (Grid) is responsible for
  * the cell indexing and the container (Container) holds he members assigned to respective cells. The class template
  * CellListBase is a bare-bone implementation with the the essential functionality only. It should be extended using
- * templated mixin to add features as needed.
+ * templated mixin to insert features as needed.
  *
  * ## Cell Grid
  *
@@ -360,7 +360,7 @@ class PeriodicBoundaryGrid : public GridBase<TGridType>, virtual public Abstract
      * @param new_box
      */
     void updateCellGrid() {
-        const auto cell_list_middle = (this->getCellListEnd() - 1).template cast<double>() / 2.;
+        const auto cell_list_middle = (this->getCellListEnd() - 1).template cast<double>() * 0.5;
         neighbours_cell_offset_min = -cell_list_middle.floor().template cast<CellIndex>();
         neighbours_cell_offset_max = cell_list_middle.ceil().template cast<CellIndex>();
     }
@@ -425,6 +425,7 @@ template <typename TMember, typename TIndex> class DenseContainer : virtual publ
      */
     std::vector<Index> indices() const override {
         std::vector<Index> indices;
+        indices.reserve(std::distance(container.begin(), container.end()));
         auto iterator = container.begin();
         while ((iterator = std::find_if(iterator, container.end(),
                                         [](const auto& members) { return !members.empty(); })) != container.end()) {
@@ -475,7 +476,7 @@ template <typename TMember, typename TIndex> class SparseContainer : virtual pub
         }
     }
 
-    const Members& getEmpty() const { return empty_set; }
+    const Members& getEmpty() const override { return empty_set; }
 
     /**
      * @brief Return all cell indicis that may contain members.
@@ -486,8 +487,9 @@ template <typename TMember, typename TIndex> class SparseContainer : virtual pub
      */
     std::vector<Index> indices() const override {
         std::vector<Index> indices;
-        transform(container.begin(), container.end(), back_inserter(indices),
-                  [](const auto& pair) { return pair.first; });
+        indices.reserve(std::distance(container.begin(), container.end()));
+        std::transform(container.begin(), container.end(), back_inserter(indices),
+                       [](const auto& pair) { return pair.first; });
         return indices;
     }
 
@@ -503,7 +505,7 @@ template <typename TMember, typename TIndex> class SparseContainer : virtual pub
 };
 
 /**
- * @brief A mixin allowing to add and remove members into and from the container, respectively.s
+ * @brief A mixin allowing to insert and erase members into and from the container, respectively.s
  * @tparam TMember
  * @tparam TIndex
  * @tparam TContainer
@@ -514,12 +516,12 @@ template <class TContainer> class Container : public TContainer {
     using Member = MemberOf<ContainerType>;
     using Index = IndexOf<ContainerType>;
 
-    void add(const Member& member, const Index index_new) {
+    void insert(const Member& member, const Index index_new) {
         assert(index_new < this->indexEnd());
         this->get(index_new).push_back(member);
     }
 
-    void remove(const Member& member, const Index index_old) {
+    void erase(const Member& member, const Index index_old) {
         assert(index_old < this->indexEnd());
         auto& members = this->get(index_old);
         // std::erase_if available in C++20
@@ -529,8 +531,8 @@ template <class TContainer> class Container : public TContainer {
     }
 
     void update(const Member& member, const Index index_old, const Index index_new) {
-        remove(member, index_old);
-        add(member, index_new);
+        erase(member, index_old);
+        insert(member, index_new);
     }
 
     using TContainer::TContainer; // use parent constructor
@@ -585,16 +587,17 @@ class CellListBase : protected TGrid,
     /**
      * @return  range of containg coordinates of all possibly non-empty cells
      */
-    std::vector<CellCoord> getCells() const {
-        auto vec = this->indices();
-        return ranges::views::all(vec) |
-               ranges::views::transform([this](auto index) { return this->coordinates(index); }) | ranges::to_vector;
+    std::vector<CellCoord> getCells() const override {
+        const auto indices = this->indices();
+        return ranges::cpp20::views::all(indices) |
+               ranges::cpp20::views::transform([this](auto index) { return this->coordinates(index); }) |
+               ranges::to_vector;
     }
 
     /**
      * @return  grid size as the total number of cells
      */
-    CellIndex gridSize() const { return Grid::size(); }
+    CellIndex gridSize() const override { return Grid::size(); }
 
     /**
      * @brief Static cast itself to a grid.
@@ -624,10 +627,10 @@ class CellListBase : protected TGrid,
     //    auto& getMembers(const CellIndex cell_index) { return this->get(cell_index); }
     //    const auto& getEmptyCell() const { return this->getEmpty(); }
 
-    using Container::add;
+    using Container::erase;
     using Container::get;
     using Container::getEmpty;
-    using Container::remove;
+    using Container::insert;
     using Container::update;
 };
 
@@ -700,8 +703,8 @@ class SortableCellList : public CellListBase<TContainer, TGrid>,
     }
 
   protected:
-    void add(const Member& member, const CellIndex& new_cell_index) {
-        TBase::add(member, new_cell_index);
+    void insert(const Member& member, const CellIndex& new_cell_index) {
+        TBase::insert(member, new_cell_index);
         if (is_sorted[new_cell_index]) {
             is_sorted[new_cell_index] = false;
         }
@@ -750,12 +753,12 @@ template <class TBase> class CellListReverseMap : public TBase {
     using typename TBase::Grid;
 
     void addMember(const Member& member, const CellCoord& new_cell_coordinates) {
-        this->add(member, this->index(new_cell_coordinates));
+        this->insert(member, this->index(new_cell_coordinates));
     }
 
     void removeMember(const Member& member) {
         const auto old_cell_index = member2cell.at(member);
-        this->remove(member, old_cell_index);
+        this->erase(member, old_cell_index);
         member2cell.erase(member);
     }
 
@@ -770,17 +773,17 @@ template <class TBase> class CellListReverseMap : public TBase {
      * @param members
      */
     template <typename T> void importMembers(CellListReverseMap& source, const T& members) {
-        for (const auto& m : members) {
-            add(m, source.member2cell[m]);
+        for (const auto& member : members) {
+            insert(member, source.member2cell[member]);
         }
     }
 
     using TBase::TBase;
 
   protected:
-    void add(const Member& member, const CellIndex& new_cell_index) {
+    void insert(const Member& member, const CellIndex& new_cell_index) {
         assert(member2cell.count(member) == 0); // FIXME C++20 contains
-        TBase::add(member, new_cell_index);
+        TBase::insert(member, new_cell_index);
         member2cell.insert({member, new_cell_index});
     }
 
@@ -812,7 +815,7 @@ template <class TBase> class CellListSpatial : public CellListReverseMap<TBase> 
 
     void addMemberAt(const Member& member, const Point& new_position) {
         const auto new_cell_index = this->indexAt(new_position);
-        this->add(member, new_cell_index);
+        this->insert(member, new_cell_index);
     }
 
     void updateMemberAt(const Member& member, const Point& new_position) {
@@ -839,9 +842,9 @@ class CellListDifference : virtual public AbstractSortableCellList<ContainerType
     using CellListSubtrahend = TCellListSubtrahend;
 
   public:
-    typedef typename CellListMinuend::AbstractCellList AbstractCellList;
-    typedef typename CellListMinuend::Grid Grid;
-    typedef typename CellListMinuend::Container Container;
+    using AbstractCellList = typename CellListMinuend::AbstractCellList;
+    using Grid = typename CellListMinuend::Grid;
+    using Container = typename CellListMinuend::Container;
     using typename AbstractCellList::CellCoord; //!< grid (cell) coordinates type
     using typename AbstractCellList::CellIndex; //!< grid (cell) index type
     using typename AbstractCellList::Member;    //!< member type

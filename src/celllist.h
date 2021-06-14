@@ -32,10 +32,10 @@ template <typename T> using PointOf = typename T::Point;
  */
 template <unsigned int VDimension, typename TCellIndex = int, typename TSpaceAxis = double> struct GridType {
     constexpr static unsigned int Dimension = VDimension; //!< number of dimmensions, e.g., 3 for the real 3D world
-    typedef TSpaceAxis SpaceAxis;                         //!< a single coordinate in physical space, e.g., double
-    typedef TCellIndex CellIndex; //!< a single coordinate in cell space, e.g., int; also an absolute cell index
-    typedef Eigen::Array<SpaceAxis, Dimension, 1> Point;     //!< a point in the VDimensional space
-    typedef Eigen::Array<CellIndex, Dimension, 1> CellCoord; //!< VDimensional cell coordinates
+    using SpaceAxis = TSpaceAxis;                         //!< a single coordinate in physical space, e.g., double
+    using CellIndex = TCellIndex; //!< a single coordinate in cell space, e.g., int; also an absolute cell index
+    using Point = Eigen::Array<SpaceAxis, Dimension, 1>;     //!< a point in the VDimensional space
+    using CellCoord = Eigen::Array<CellIndex, Dimension, 1>; //!< VDimensional cell coordinates
 };
 
 //! @brief Commonly used GridType in Faunus.
@@ -84,9 +84,9 @@ template <typename T> using MembersOf = typename ContainerTypeOf<T>::Members;
  */
 template <typename TMember, typename TIndex> struct AbstractContainer {
     using ContainerType = AbstractContainer<TMember, TIndex>;
-    typedef TIndex Index;  //!< the cell index (key) type
-    typedef TMember Member; //!< the cell member (primitive value) type
-    typedef std::vector<Member> Members; //!< the cell members type
+    using Index = TIndex;                //!< the cell index (key) type
+    using Member = TMember;              //!< the cell member (primitive value) type
+    using Members = std::vector<Member>; //!< the cell members type
 
     //! @brief Gets cell members at the given cell index.
     virtual const Members& get(TIndex) const = 0;
@@ -129,7 +129,7 @@ template <class TContainerType, class TGridType> struct AbstractImmutableCellLis
     using CellIndex = typename Grid::IndexOf<GridType>;                            //!< grid (cell) index type
     using CellCoord = typename Grid::CoordOf<GridType>;                            //!< grid (cell) coordinates type
 
-     //! @brief Gets cell members at given cell coordinates.
+    //! @brief Gets cell members at given cell coordinates.
     virtual const Members& getMembers(const CellCoord&) = 0;
     //! @brief Gets cell members at given cell coordinates.
     virtual const Members& getNeighborMembers(const CellCoord&, const CellCoord&) = 0;

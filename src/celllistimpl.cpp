@@ -11,24 +11,24 @@ GridOffsets3D::GridOffsets3D(CellIndex distance) : distance(distance) {
 }
 
 void GridOffsets3D::initNeighbors() {
-    const int neighbors_count = std::pow(1 + 2 * distance, 3) - 1;
+    const auto number_of_neighbors = std::pow(1 + 2 * distance, 3) - 1;
     neighbors.clear();
-    neighbors.reserve(neighbors_count);
+    neighbors.reserve(number_of_neighbors);
     for (auto i = -distance; i <= distance; ++i) {
         for (auto j = -distance; j <= distance; ++j) {
             for (auto k = -distance; k <= distance; ++k) {
                 if (i == 0 && j == 0 && k == 0) {
                     continue;
                 }
-                neighbors.push_back({i, j, k});
+                neighbors.emplace_back(CellCoord(i, j, k));
             }
         }
     }
-    assert(neighbors.size() == neighbors_count);
+    assert(neighbors.size() == number_of_neighbors);
 }
 
 void GridOffsets3D::initForwardNeighbors() {
-    const int forward_neighbors_count = neighbors.size() / 2;
+    const auto forward_neighbors_count = neighbors.size() / 2;
     forward_neighbors.clear();
     forward_neighbors.reserve(forward_neighbors_count);
     std::copy_if(neighbors.begin(), neighbors.end(), std::back_inserter(forward_neighbors), [](auto& offset) {
@@ -175,18 +175,18 @@ TEST_CASE_TEMPLATE("Cell List Container", TContainer, Container<DenseContainer<i
         CHECK_EQ(container.get(cell_ndx).size(), 0);
 
         SUBCASE("Add two elements to a single cell") {
-            container.add(1, cell_ndx);
-            container.add(2, cell_ndx);
+            container.insert(1, cell_ndx);
+            container.insert(2, cell_ndx);
             CHECK_EQ(container.indices().size(), 1);
             CHECK_EQ(container.get(cell_ndx).size(), 2);
 
             SUBCASE("Remove elements from the cell") {
-                container.remove(1, cell_ndx);
+                container.erase(1, cell_ndx);
                 CHECK_EQ(container.get(cell_ndx).size(), 1);
             }
 
             SUBCASE("Remove non-existing element") {
-                container.remove(-1, cell_ndx);
+                container.erase(-1, cell_ndx);
                 CHECK_EQ(container.get(cell_ndx).size(), 2);
             }
         }
@@ -200,7 +200,7 @@ TEST_CASE("CellListReverseMap") {
     const CellCoord cell{2, 3, 2};
 
     REQUIRE_EQ(cell_list.getMembers(cell).size(), 0);
-    SUBCASE("when add") {
+    SUBCASE("when insert") {
         cell_list.addMember(10, cell);
         cell_list.addMember(11, cell);
         CHECK_EQ(cell_list.getMembers(cell).size(), 2);
@@ -219,7 +219,7 @@ TEST_CASE("CellListSpatial") {
     const CellCoord cell{2, 3, 2};
 
     REQUIRE_EQ(cell_list.getMembers(cell).size(), 0);
-    SUBCASE("when add") {
+    SUBCASE("when insert") {
         cell_list.addMemberAt(10, pos);
         cell_list.addMemberAt(11, pos);
         CHECK_EQ(cell_list.getMembers(cell).size(), 2);

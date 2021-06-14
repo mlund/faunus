@@ -220,8 +220,8 @@ TEST_CASE("CellListSpatial") {
 
     REQUIRE_EQ(cell_list.getMembers(cell).size(), 0);
     SUBCASE("when insert") {
-        cell_list.addMemberAt(10, pos);
-        cell_list.addMemberAt(11, pos);
+        cell_list.insertMember(10, pos);
+        cell_list.insertMember(11, pos);
         CHECK_EQ(cell_list.getMembers(cell).size(), 2);
         SUBCASE("when removed") {
             cell_list.removeMember(10);

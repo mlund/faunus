@@ -530,7 +530,7 @@ template <class TContainer> class Container : public TContainer {
         // end of std::erase_if
     }
 
-    void update(const Member& member, const Index index_old, const Index index_new) {
+    void move(const Member& member, const Index index_old, const Index index_new) {
         erase(member, index_old);
         insert(member, index_new);
     }
@@ -631,7 +631,7 @@ class CellListBase : protected TGrid,
     using Container::get;
     using Container::getEmpty;
     using Container::insert;
-    using Container::update;
+    using Container::move;
 };
 
 /**
@@ -813,7 +813,7 @@ template <class TBase> class CellListSpatial : public CellListReverseMap<TBase> 
     using typename AbstractCellList::Member;          //!< member type
     using typename AbstractCellList::GridType::Point; //!< point
 
-    void addMemberAt(const Member& member, const Point& new_position) {
+    void insertMember(const Member& member, const Point& new_position) {
         const auto new_cell_index = this->indexAt(new_position);
         this->insert(member, new_cell_index);
     }

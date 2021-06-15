@@ -54,20 +54,20 @@ target_compile_definitions(functionparser PRIVATE DOCTEST_CONFIG_DISABLE)
 
 # ========== faunus cpp and header files ==========
 
-set(objs analysis.cpp average.cpp atomdata.cpp auxiliary.cpp bonds.cpp chainmove.cpp clustermove.cpp core.cpp
-        forcemove.cpp units.cpp energy.cpp externalpotential.cpp geometry.cpp group.cpp
-        io.cpp molecule.cpp montecarlo.cpp move.cpp mpicontroller.cpp particle.cpp
-        penalty.cpp potentials.cpp random.cpp reactioncoordinate.cpp regions.cpp rotate.cpp
-        scatter.cpp space.cpp speciation.cpp tensor.cpp)
+set(objs analysis.cpp average.cpp atomdata.cpp auxiliary.cpp bonds.cpp celllistimpl.cpp
+	chainmove.cpp clustermove.cpp core.cpp forcemove.cpp units.cpp energy.cpp externalpotential.cpp
+	geometry.cpp group.cpp io.cpp molecule.cpp montecarlo.cpp move.cpp mpicontroller.cpp
+	particle.cpp penalty.cpp potentials.cpp random.cpp reactioncoordinate.cpp regions.cpp rotate.cpp
+	scatter.cpp space.cpp speciation.cpp tensor.cpp)
 
-set(hdrs analysis.h average.h atomdata.h auxiliary.h bonds.h chainmove.h clustermove.h core.h
-        forcemove.h energy.h externalpotential.h geometry.h group.h io.h molecule.h montecarlo.h
-        move.h mpicontroller.h particle.h penalty.h potentials.h reactioncoordinate.h rotate.h
-        space.h speciation.h random.h regions.h tensor.h units.h
-        aux/eigen_cerealisation.h aux/eigensupport.h aux/iteratorsupport.h aux/multimatrix.h
-        aux/eigen_cerealisation.h aux/eigensupport.h aux/equidistant_table.h aux/error_function.h
-        aux/exp_function.h aux/invsqrt_function.h aux/iteratorsupport.h aux/legendre.h aux/multimatrix.h
-        aux/pairmatrix.h aux/pow_function.h aux/table_1d.h aux/table_2d.h aux/timers.h aux/typeerasure.h)
+set(hdrs analysis.h average.h atomdata.h auxiliary.h bonds.h celllist.h celllistimpl.h
+	chainmove.h clustermove.h core.h forcemove.h energy.h externalpotential.h geometry.h group.h io.h
+	molecule.h montecarlo.h move.h mpicontroller.h particle.h penalty.h potentials.h
+	reactioncoordinate.h rotate.h space.h speciation.h random.h regions.h tensor.h units.h
+	aux/eigen_cerealisation.h aux/eigensupport.h aux/iteratorsupport.h aux/multimatrix.h
+	aux/eigen_cerealisation.h aux/eigensupport.h aux/equidistant_table.h aux/error_function.h
+	aux/exp_function.h aux/invsqrt_function.h aux/iteratorsupport.h aux/legendre.h aux/multimatrix.h
+	aux/pairmatrix.h aux/pow_function.h aux/table_1d.h aux/table_2d.h aux/timers.h aux/typeerasure.h)
 
 set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 

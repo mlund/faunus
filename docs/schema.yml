@@ -386,7 +386,7 @@ properties:
         properties:
             summation_policy:
                 type: string
-                enum: [serial, openmp, parallel]
+                enum: [serial, openmp, parallel, simd]
             cutoff_g2g:
                 anyOf:
                     - {type: number, description: "Molecule-molecule cutoff (global)"}
@@ -421,7 +421,7 @@ properties:
                         cutoff_g2g: {type: [number, object]}
                         summation_policy:
                             type: string
-                            enum: [serial, openmp, parallel]
+                            enum: [serial, openmp, parallel, simd]
                         timings: {type: boolean}
                         openmp:
                             type: array
@@ -440,7 +440,7 @@ properties:
                         cutoff_g2g: {type: [number, object]}
                         summation_policy:
                             type: string
-                            enum: [serial, openmp, parallel]
+                            enum: [serial, openmp, parallel, simd]
                         timings: {type: boolean}
                         utol: {type: number, description: "Energy tolerance for spline (kT)"}
                         ftol: {type: number, description: "Force tolerance for spline (experimental!)"}

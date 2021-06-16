@@ -437,22 +437,26 @@ inline Point Chameleon::vdist(const Point &a, const Point &b) const {
     return distance;
 }
 
+#pragma omp declare simd
 inline double Chameleon::sqdist(const Point &a, const Point &b) const {
-    if (geometry->boundary_conditions.coordinates == ORTHOGONAL) {
-        if constexpr (true) {
-            Point d((a - b).cwiseAbs());
-            return (d - (d.array() > len_half.array()).cast<double>().matrix().cwiseProduct(len_or_zero)).squaredNorm();
-        } else { // more readable alternative(?), nearly same speed
-            Point d(a - b);
-            for (int i = 0; i < 3; ++i) {
-                d[i] = std::fabs(d[i]);
-                d[i] = d[i] - len_or_zero[i] * static_cast<double>(d[i] > len_half[i]); // casting faster than branching
+    // if (geometry->boundary_conditions.coordinates == ORTHOGONAL) {
+    if constexpr (false) {
+        Point d((a - b).cwiseAbs());
+        return (d - (d.array() > len_half.array()).cast<double>().matrix().cwiseProduct(len_or_zero)).squaredNorm();
+    } else { // more readable alternative(?), nearly same speed
+        Point d(a - b);
+        for (int i = 0; i < 3; ++i) {
+            if (d[i] < 0.0) {
+                d[i] = -d[i];
             }
-            return d[0] * d[0] + d[1] * d[1] + d[2] * d[2];
+            // d[i] = std::fabs(d[i]);
+            d[i] = d[i] - len_or_zero[i] * static_cast<double>(d[i] > len_half[i]); // casting faster than branching
         }
-    } else {
-        return geometry->vdist(a, b).squaredNorm();
+        return d[0] * d[0] + d[1] * d[1] + d[2] * d[2];
     }
+    //} else {
+    //   return geometry->vdist(a, b).squaredNorm();
+    //}
 }
 
 void to_json(json &, const Chameleon &);

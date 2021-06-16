@@ -354,10 +354,14 @@ class EnergyAccumulatorBase {
   protected:
     double value = 0.0;                                               //!< accumulated energy
     using ParticleRef = const std::reference_wrapper<const Particle>; //!< Particle reference
-    using ParticlePair = std::pair<ParticleRef, ParticleRef>;         //!< References to two particles
+    // using ParticlePair = std::pair<ParticleRef, ParticleRef>;         //!< References to two particles
+    struct ParticlePair {
+        const Particle& first;
+        const Particle& second;
+    };
 
   public:
-    enum Scheme { SERIAL, OPENMP, PARALLEL, INVALID };
+    enum Scheme { SERIAL, OPENMP, SIMD, PARALLEL, INVALID };
     Scheme scheme = SERIAL;
 
     EnergyAccumulatorBase(double value);
@@ -381,6 +385,7 @@ class EnergyAccumulatorBase {
 NLOHMANN_JSON_SERIALIZE_ENUM(EnergyAccumulatorBase::Scheme, {{EnergyAccumulatorBase::Scheme::INVALID, nullptr},
                                                              {EnergyAccumulatorBase::Scheme::SERIAL, "serial"},
                                                              {EnergyAccumulatorBase::Scheme::OPENMP, "openmp"},
+                                                             {EnergyAccumulatorBase::Scheme::SIMD, "simd"},
                                                              {EnergyAccumulatorBase::Scheme::PARALLEL, "parallel"}})
 
 /**
@@ -405,14 +410,16 @@ template <typename PairEnergy> class InstantEnergyAccumulator : public EnergyAcc
         return *this;
     }
 
+#pragma omp declare simd
     inline InstantEnergyAccumulator& operator+=(const double new_value) override {
         value += new_value;
         return *this;
     }
 
+#pragma omp declare simd
     inline InstantEnergyAccumulator& operator+=(ParticlePair&& pair) override {
         // keep this short to get inlined
-        value += pair_energy.potential(pair.first.get(), pair.second.get());
+        value += pair_energy.potential(pair.first, pair.second);
         return *this;
     }
 
@@ -458,11 +465,13 @@ template <typename PairEnergy> class DelayedEnergyAccumulator : public EnergyAcc
         return *this;
     }
 
+#pragma omp declare simd
     inline DelayedEnergyAccumulator& operator+=(const double new_value) override {
         value += new_value;
         return *this;
     }
 
+#pragma omp declare simd
     inline DelayedEnergyAccumulator& operator+=(ParticlePair&& pair) override {
         particle_pairs.template emplace_back(std::move(pair));
         return *this;
@@ -472,6 +481,9 @@ template <typename PairEnergy> class DelayedEnergyAccumulator : public EnergyAcc
         switch (scheme) {
         case OPENMP:
             value += accumulateOpenMP();
+            break;
+        case SIMD:
+            value += accumulateSIMD();
             break;
         case PARALLEL:
             value += accumulateParallel();
@@ -487,16 +499,16 @@ template <typename PairEnergy> class DelayedEnergyAccumulator : public EnergyAcc
     double accumulateSerial() const {
         double sum = 0.0;
         for (const auto [particle1, particle2] : particle_pairs) {
-            sum += pair_energy.potential(particle1.get(), particle2.get());
+            sum += pair_energy.potential(particle1, particle2);
         }
         return sum;
     }
 
     double accumulateParallel() const {
 #if defined(HAS_PARALLEL_TRANSFORM_REDUCE)
-        return std::transform_reduce(
-            std::execution::par, particle_pairs.cbegin(), particle_pairs.cend(), 0.0, std::plus<double>(),
-            [&](const auto& pair) { return pair_energy.potential(pair.first.get(), pair.second.get()); });
+        return std::transform_reduce(std::execution::par, particle_pairs.cbegin(), particle_pairs.cend(), 0.0,
+                                     std::plus<double>(),
+                                     [&](const auto& pair) { return pair_energy.potential(pair.first, pair.second); });
 #else
         return accumulateSerial(); // fallback
 #endif
@@ -506,7 +518,16 @@ template <typename PairEnergy> class DelayedEnergyAccumulator : public EnergyAcc
         double sum = 0.0;
 #pragma omp parallel for reduction(+ : sum)
         for (const auto& pair : particle_pairs) {
-            sum += pair_energy.potential(pair.first.get(), pair.second.get());
+            sum += pair_energy.potential(pair.first, pair.second);
+        }
+        return sum;
+    }
+
+    double accumulateSIMD() const {
+        double sum = 0.0;
+#pragma omp simd reduction(+ : sum)
+        for (int i = 0; i < particle_pairs.size(); i++) {
+            sum += pair_energy.potential(particle_pairs[i].first, particle_pairs[i].second);
         }
         return sum;
     }
@@ -604,6 +625,7 @@ template <typename TPairPotential, bool allow_anisotropic_pair_potential = true>
      * @param b  particle
      * @return pair potential energy between particles a and b
      */
+#pragma omp declare simd
     template <typename T>
     inline double potential(const T &a, const T &b) const {
         assert(&a != &b); // a and b cannot be the same particle
@@ -626,6 +648,7 @@ template <typename TPairPotential, bool allow_anisotropic_pair_potential = true>
      * @brief A functor alias for potential().
      * @see potential()
      */
+#pragma omp declare simd
     template <typename... Args>
     inline auto operator()(Args &&... args) {
         return potential(std::forward<Args>(args)...);
@@ -699,6 +722,8 @@ class GroupPairingPolicy {
      * @param a  first particle
      * @param b  second particle
      */
+
+#pragma omp declare simd
     template <typename TAccumulator, typename T>
     inline void particle2particle(TAccumulator &pair_accumulator, const T &a, const T &b) const {
         pair_accumulator += {std::cref(a), std::cref(b)};
@@ -751,19 +776,23 @@ class GroupPairingPolicy {
         if (!moldata.rigid) {
             if (group.atomic) {
                 // speed optimization: non-bonded interaction exclusions do not need to be checked for atomic groups
+#pragma omp simd
                 for (int i = 0; i < index; ++i) {
                     particle2particle(pair_accumulator, group[index], group[i]);
                 }
+#pragma omp simd
                 for (int i = index + 1; i < group.size(); ++i) {
                     particle2particle(pair_accumulator, group[index], group[i]);
                 }
             } else {
                 // molecular group
+#pragma omp simd
                 for (int i = 0; i < index; ++i) {
                     if (!moldata.isPairExcluded(index, i)) {
                         particle2particle(pair_accumulator, group[index], group[i]);
                     }
                 }
+#pragma omp simd
                 for (int i = index + 1; i < group.size(); ++i) {
                     if (!moldata.isPairExcluded(index, i)) {
                         particle2particle(pair_accumulator, group[index], group[i]);

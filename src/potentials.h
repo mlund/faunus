@@ -166,6 +166,7 @@ template <class T1, class T2> struct CombinedPairPotential : public PairPotentia
     T1 first;  //!< First pair potential of type T1
     T2 second; //!< Second pair potential of type T2
     CombinedPairPotential(const std::string &name = "") : PairPotentialBase(name){};
+#pragma omp declare simd
     inline double operator()(const Particle &a, const Particle &b, double r2,
                              const Point &r = {0, 0, 0}) const override {
         return first(a, b, r2, r) + second(a, b, r2, r);
@@ -279,6 +280,7 @@ class LennardJones : public MixerPairPotentialBase {
 class WeeksChandlerAndersen : public LennardJones {
     static constexpr double onefourth = 0.25, twototwosixth = 1.2599210498948732;
 
+#pragma omp declare simd
     inline double operator()(const Particle &a, const Particle &b, double r2) const {
         double x = (*sigma_squared)(a.id, b.id); // s^2
         if (r2 > x * twototwosixth)
@@ -489,6 +491,7 @@ class SASApotential : public PairPotentialBase {
 struct Coulomb : public PairPotentialBase {
     Coulomb(const std::string &name = "coulomb");
     double bjerrum_length = 0.0; //!< Bjerrum length
+#pragma omp declare simd
     inline double operator()(const Particle &a, const Particle &b, double r2, const Point &) const override {
         return bjerrum_length * a.charge * b.charge / std::sqrt(r2);
     }

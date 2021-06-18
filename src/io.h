@@ -200,15 +200,30 @@ class FormatPQR {
 
 /**
  * @brief XYZ format
- * @date June 2013
+ * @date June 2013, 2021
  *
  * Saves particles as a XYZ file. This format has number of particles at
- * the first line; comment on second line (box dimensions) followed by positions of all
- * particles xyz position on each line
+ * the first line; comment on the second line; and positions of named particles on the following lines.
+ *
+ * Example:
+ *
+ *     3
+ *     Three point water model (comment)
+ *     OW  2.30  6.28  1.13
+ *     HW  1.37  6.26  1.50
+ *     HW  2.31  5.89  0.21
+ *
  */
-struct FormatXYZ {
-    static void save(const std::string &, const ParticleVector &, const Point & = {0, 0, 0});     //!< Save XYZ
-    static void load(const std::string &filename, ParticleVector &particles, bool append = true); //!< Load XYZ
+class FormatXYZ {
+  private:
+    static size_t readNumberOfAtoms(std::istream& stream);
+    static std::string readComment(std::istream& stream);
+    static Particle readParticle(std::ifstream& stream);
+
+  public:
+    static void save(const std::string&, const ParticleVector&, const Point& = Point::Zero());      //!< Save XYZ
+    static void load(std::ifstream& stream, ParticleVector& destination);                           //!< Load XYZ
+    static void load(const std::string& filename, ParticleVector& destination, bool append = true); //!< Load XYZ
 };
 
 /**

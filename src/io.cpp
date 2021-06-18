@@ -365,7 +365,7 @@ void FormatXYZ::save(const std::string &file, const ParticleVector &particles, c
     std::ostringstream o;
     o << particles.size() << "\n" << box.transpose() << "\n";
     for (const auto &particle : particles) {
-        o << atoms.at(particle.id).name << " " << particle.pos.transpose() << "\n";
+        o << particle.traits().name << " " << particle.pos.transpose() << "\n";
     }
     IO::writeFile(file, o.str());
 }
@@ -413,34 +413,68 @@ TEST_CASE("[Faunus] FormatPQR") {
  * Loads coordinates from XYZ file into particle vector. Remaining atom properties
  * are taken from the defined atom list; error if the atom name is unknown.
  *
+ * @param stream Input stream
+ * @param destination Destination particle vector (append to)
+ * @throw if xyz syntax error
+ */
+void FormatXYZ::load(std::ifstream& stream, ParticleVector& destination) {
+    const auto number_of_atoms = readNumberOfAtoms(stream);
+    readComment(stream);
+    destination.reserve(destination.size() + number_of_atoms);
+    for (size_t i = 0; i < number_of_atoms; i++) {
+        destination.emplace_back(readParticle(stream));
+    }
+}
+
+/**
+ * Loads coordinates from XYZ file into particle vector. Remaining atom properties
+ * are taken from the defined atom list; error if the atom name is unknown.
+ *
  * @param filename Filename
- * @param particles Destination particle vector
+ * @param destination Destination particle vector
  * @param append True means append to `particles` (default). If `false`,`particles` is first cleared.
  */
+void FormatXYZ::load(const std::string& filename, ParticleVector& destination, bool append) {
+    try {
+        if (std::ifstream stream(filename); stream) {
+            if (!append) {
+                destination.clear();
+            }
+            load(stream, destination);
+        } else {
+            throw std::runtime_error("cannot open file");
+        }
+    } catch (std::exception& e) { throw std::runtime_error("xyz file error -> "s + e.what()); }
+}
 
-void FormatXYZ::load(const std::string &filename, ParticleVector &particles, bool append) {
-    if (std::ifstream stream(filename); stream) {
-        std::string comment;
-        std::string atom_name;
-        size_t number_of_atoms;
-        stream >> number_of_atoms;     // first line is number of atoms
-        std::getline(stream, comment); // ">>" token doesn't gobble new line
-        std::getline(stream, comment); // read comment line
-        if (append == false) {
-            particles.clear();
-        }
-        particles.reserve(particles.size() + number_of_atoms);
-        for (size_t i = 0; i < number_of_atoms; i++) {
-            stream >> atom_name;
-            const auto atom = findAtomByName(atom_name);
-            Particle particle(atom);
-            stream >> particle.pos.x() >> particle.pos.y() >> particle.pos.z();
-            particles.push_back(particle);
-        }
-        assert(particles.size() == number_of_atoms);
-    } else {
-        throw std::runtime_error("cannot open file");
+Particle FormatXYZ::readParticle(std::ifstream& stream) {
+    std::string atom_name;
+    stream >> atom_name;
+    if (atom_name.empty() || stream.eof()) {
+        throw std::runtime_error("too few atoms");
     }
+    const auto& atom = Faunus::findAtomByName(atom_name);
+    auto particle = Particle(atom);
+    stream >> particle.pos.x() >> particle.pos.y() >> particle.pos.z();
+    particle.pos *= 1.0_angstrom; // xyz files are commonly in Ångstroms
+    return particle;
+}
+
+size_t FormatXYZ::readNumberOfAtoms(std::istream& stream) {
+    try {
+        std::string line;
+        std::getline(stream, line);
+        return std::stoi(line);
+    } catch (std::exception& e) { throw std::invalid_argument("atom count expected on first line"); }
+}
+
+std::string FormatXYZ::readComment(std::istream& stream) {
+    try {
+        std::string comment;
+        std::getline(stream, comment);
+        faunus_logger->debug("xyz-file comment: {}", comment);
+        return comment;
+    } catch (std::exception& e) { throw std::invalid_argument("cannot load comment"); }
 }
 
 Particle FormatGRO::recordToParticle(const std::string &record) {
@@ -754,9 +788,7 @@ ParticleVector loadStructure(const std::string &file, bool keep_charges) {
             throw std::runtime_error("empty structure");
         }
         return particles;
-    } catch (std::exception &e) {
-        throw std::runtime_error(fmt::format("error loading structure from file '{}': {}", file, e.what()));
-    }
+    } catch (std::exception& e) { throw std::runtime_error(fmt::format("{} load error -> {}", file, e.what())); }
 }
 
 /**

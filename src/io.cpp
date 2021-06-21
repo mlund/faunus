@@ -85,68 +85,107 @@ TEST_CASE("[Faunus] openCompressedOutputStream") {
 
 bool FormatAAM::prefer_charges_from_file = true;
 
-Particle FormatAAM::recordToParticle(const std::string &record) {
-    std::stringstream o;
+Particle FormatAAM::stringToParticle(const std::string& record) {
+    std::stringstream o(record);
+    o.exceptions(std::ios::failbit);
     std::string name;
-    o << record;
-    o >> name;
-    const auto atom = findAtomByName(name);
-    Particle particle(atom);
+    int atom_index;
     double radius;
     double molecular_weight;
-    int atom_number;
-    o >> atom_number >> particle.pos.x() >> particle.pos.y() >> particle.pos.z() >> particle.charge >>
-        molecular_weight >> radius;
+    o >> name;
+    const auto& atomdata = Faunus::findAtomByName(name);
+    auto particle = Particle(atomdata);
+    try {
+        o >> atom_index >> particle.pos.x() >> particle.pos.y() >> particle.pos.z() >> particle.charge >>
+            molecular_weight >> radius;
+    } catch (std::exception& e) { throw std::runtime_error("syntax error in: " + record); }
+    particle.pos *= 1.0_angstrom;
 
-    // does charge match AtomData?
-    if (std::fabs(atom.charge - particle.charge) > pc::epsilon_dbl) {
-        faunus_logger->warn("charge mismatch on atom {0} {1}: {2} atomlist value", atom_number, name,
-                            (prefer_charges_from_file) ? "ignoring" : "using");
-        if (not prefer_charges_from_file) {
-            particle.charge = atom.charge; // let's use atomdata charge
-        }
-    }
-    // does radius match AtomData?
-    if (std::fabs(atom.sigma - 2 * radius) > pc::epsilon_dbl) {
-        faunus_logger->warn("radius mismatch on atom {0} {1}: using atomlist value", atom_number, name);
-    }
+    handleChargeMismatch(particle, atom_index);
+    handleRadiusMismatch(particle, radius, atom_index);
     return particle;
 }
-ParticleVector FormatAAM::load(const std::string &filename, bool _keepcharges) {
-    prefer_charges_from_file = _keepcharges;
-    if (auto lines = IO::loadLinesFromFile(filename); lines.empty()) {
-        throw std::runtime_error("empty file");
-    } else {
-        IO::strip(lines, "#"); // all lines beginning w. # are comments
-        size_t number_of_atoms = std::stoul(lines[0]);
-        if (lines.size() < number_of_atoms + 1) {
-            throw std::runtime_error("mismatch in number of atoms");
-        }
-        ParticleVector positions; // positions are loaded here
-        positions.reserve(number_of_atoms);
-        auto lines_atoms = lines | ranges::views::slice(1uL, 1uL + number_of_atoms);
-            std::transform(lines_atoms.begin(), lines_atoms.end(), std::back_inserter(positions),
-                           [](auto &i) { return recordToParticle(i); });
-        assert(positions.size() == number_of_atoms);
-        return positions;
+
+void FormatAAM::handleRadiusMismatch(const Particle& particle, double radius, int atom_index) {
+    if (std::fabs(particle.traits().sigma - 2.0 * radius) > pc::epsilon_dbl) {
+        faunus_logger->warn("radius mismatch on atom {0} {1}: using atomlist value", atom_index,
+                            particle.traits().name);
     }
+}
+
+void FormatAAM::handleChargeMismatch(Particle& particle, const int atom_index) {
+    if (fabs(particle.traits().charge - particle.charge) > pc::epsilon_dbl) {
+        faunus_logger->warn("charge mismatch on atom {0} {1}: {2} atomlist value", atom_index, particle.traits().name,
+                            (prefer_charges_from_file) ? "ignoring" : "using");
+        if (not prefer_charges_from_file) {
+            particle.charge = particle.traits().charge; // let's use atomdata charge
+        }
+    }
+}
+
+/**
+ * Any line starting with "#" will be skipped
+ */
+void FormatAAM::getNextLine(std::ifstream& stream, std::string& destination) {
+    std::getline(stream, destination);
+    if (destination.substr(0, 1) == "#") {
+        getNextLine(stream, destination);
+    }
+}
+
+ParticleVector FormatAAM::load(std::ifstream& stream) {
+    ParticleVector destination;
+    std::string line;
+    getNextLine(stream, line); // all lines starting w. "#" are skipped
+    const auto number_of_atoms = getNumberOfAtoms(line);
+    destination.reserve(number_of_atoms);
+    while (true) {
+        try {
+            getNextLine(stream, line);
+            destination.emplace_back(stringToParticle(line));
+        } catch (std::exception& e) {
+            if (destination.size() == number_of_atoms) {
+                break;
+            }
+            if (destination.size() > number_of_atoms) {
+                throw std::runtime_error(
+                    fmt::format("expected {} particle records but found {}", number_of_atoms, destination.size()));
+            }
+            throw std::runtime_error(e.what());
+        }
+    }
+    return destination;
+}
+
+ParticleVector FormatAAM::load(const std::string& filename) {
+    try {
+        if (std::ifstream stream(filename); stream) {
+            return load(stream);
+        }
+        throw std::runtime_error("cannot open file");
+    } catch (std::exception& e) { throw std::runtime_error("AAM file load error -> "s + e.what()); }
 }
 
 void FormatAAM::save(const std::string &file, const ParticleVector &particles) {
     std::ostringstream o;
     o << particles.size() << "\n";
     for (size_t i = 0; i < particles.size(); i++) {
-        o << p2s(particles[i], i);
+        o << particleToString(particles[i], i);
     }
     IO::writeFile(file, o.str());
 }
-std::string FormatAAM::p2s(const Particle &particle, int zero_based_index) {
-    std::ostringstream o;
-    o.precision(5);
-    auto &atom = Faunus::atoms.at(particle.id);
-    o << atom.name << " " << zero_based_index + 1 << " " << particle.pos.transpose() << " " << particle.charge << " "
-      << atom.mw << " " << atom.sigma / 2 << "\n";
-    return o.str();
+
+std::string FormatAAM::particleToString(const Particle& particle, int zero_based_index) {
+    const auto& traits = particle.traits();
+    return fmt::format("{:7} {:7d} {:>13.6E} {:>13.6E} {:>13.6E} {:>13.6E} {:9.3f} {:9.3f}\n", traits.name,
+                       zero_based_index + 1, particle.pos[0], particle.pos[1], particle.pos[2], particle.charge,
+                       traits.mw, 0.5 * traits.sigma);
+}
+
+size_t FormatAAM::getNumberOfAtoms(const std::string& line) {
+    try {
+        return std::stoul(line);
+    } catch (std::exception& e) { throw std::invalid_argument("invalid number of particles"); }
 }
 
 std::string FormatPQR::writeCryst1(const Point &box_length, const Point &angle) {
@@ -773,8 +812,9 @@ ParticleVector fastaToParticles(const std::string &fasta_sequence, double bond_l
 ParticleVector loadStructure(const std::string &file, bool keep_charges) {
     try {
         ParticleVector particles;
-        if (std::string suffix = file.substr(file.find_last_of(".") + 1); suffix == "aam") {
-            particles = FormatAAM::load(file, keep_charges);
+        if (std::string suffix = file.substr(file.find_last_of('.') + 1); suffix == "aam") {
+            FormatAAM::prefer_charges_from_file = keep_charges;
+            particles = FormatAAM::load(file);
         } else if (suffix == "pqr") {
             FormatPQR::load(file, particles, keep_charges);
         } else if (suffix == "xyz") {

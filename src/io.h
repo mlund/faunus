@@ -103,13 +103,18 @@ template <typename TKey, typename TValue> void write(const std::string &filename
  */
 class FormatAAM {
   private:
-    static bool prefer_charges_from_file; // true of we prefer charges from AAM file over AtomData
-    static std::string p2s(const Particle &, int);
-    static Particle recordToParticle(const std::string &); // convert string line to particle
+    static std::string particleToString(const Particle& particle, int zero_based_index);
+    static Particle stringToParticle(const std::string& record);
+    static void handleChargeMismatch(Particle& particle, int atom_index);
+    static void handleRadiusMismatch(const Particle& particle, double radius, int atom_index);
+    static void getNextLine(std::ifstream& stream, std::string& destination);
+    static size_t getNumberOfAtoms(const std::string& line);
 
   public:
-    static ParticleVector load(const std::string &, bool = true);
-    static void save(const std::string &, const ParticleVector &);
+    static bool prefer_charges_from_file; //!< Set to true to prefer charges from AAM file over `AtomData`
+    static ParticleVector load(std::ifstream& stream);
+    static ParticleVector load(const std::string& filename);
+    static void save(const std::string&, const ParticleVector& particles);
 };
 
 /**

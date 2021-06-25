@@ -20,11 +20,6 @@ namespace Faunus {
     typedef nlohmann::json json;  //!< Json object
     class Random;
 
-    using std::fabs;
-    using std::exp;
-    using std::sqrt;
-    using std::log;
-
     using namespace std::string_literals;
 
     json merge( const json &a, const json &b ); //!< Merge two json objects

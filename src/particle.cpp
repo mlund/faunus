@@ -5,6 +5,7 @@
 #include "aux/eigensupport.h"
 #include <fstream>
 #include <Eigen/Geometry>
+#include <cereal/types/memory.hpp>
 #include <cereal/archives/binary.hpp>
 
 namespace Faunus {

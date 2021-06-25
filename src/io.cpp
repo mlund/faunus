@@ -6,9 +6,6 @@
 #include <spdlog/spdlog.h>
 #include <zstr.hpp>
 #include <cereal/archives/binary.hpp>
-#include <fstream>
-#include <iostream>
-#include <range/v3/view.hpp>
 
 void Faunus::StructureFileReader::handleChargeMismatch(Particle& particle, const int atom_index) {
     if (fabs(particle.traits().charge - particle.charge) > pc::epsilon_dbl) {
@@ -21,50 +18,12 @@ void Faunus::StructureFileReader::handleChargeMismatch(Particle& particle, const
 }
 void Faunus::StructureFileReader::handleRadiusMismatch(const Particle& particle, const double radius,
                                                        const int atom_index) {
-    if (fabs(particle.traits().sigma - 2.0 * radius) > pc::epsilon_dbl) {
+    if (std::fabs(particle.traits().sigma - 2.0 * radius) > pc::epsilon_dbl) {
         faunus_logger->warn("radius mismatch on atom {0} {1}: using atomlist value", atom_index,
                             particle.traits().name);
     }
 }
 namespace Faunus {
-
-std::vector<std::string> IO::loadLinesFromFile(const std::string &filename) {
-    if (std::ifstream stream(filename); !stream) {
-        throw std::runtime_error("load error: "s + filename);
-    } else {
-        std::string single_line;
-        std::vector<std::string> destination;
-        while (std::getline(stream, single_line)) {
-            destination.push_back(single_line);
-        }
-        return destination;
-    }
-}
-
-/**
- * @param filename Filename
- * @param contents String to write
- * @param mode `std::ios_base::out` (new, default) or `std::ios_base::app` (append)
- */
-void IO::writeFile(const std::string &filename, const std::string &contents, std::ios_base::openmode mode) {
-    if (std::ofstream stream(filename, mode); stream) {
-        stream << contents;
-    } else {
-        throw std::runtime_error("cannot open file for writing: "s + filename);
-    }
-}
-
-/**
- * @param strings vector of std::string
- * @param pattern Pattern to search for
- *
- * All lines with matching `pattern` will be remove regardless
- * of where in the string it it found
- */
-void IO::strip(std::vector<std::string> &strings, const std::string &pattern) {
-    auto unary_predicate = [&](auto &s) { return s.find(pattern) != std::string::npos; };
-    strings.erase(std::remove_if(strings.begin(), strings.end(), unary_predicate), strings.end());
-}
 
 /**
  * Create an output file stream. If the filename extension is `.gz`, gzip
@@ -81,7 +40,7 @@ std::unique_ptr<std::ostream> IO::openCompressedOutputStream(const std::string& 
         f.open(filename);
     } catch (std::exception& e) { // reaching here, file cannot be created
         if (throw_on_error) {
-            throw std::runtime_error("could not write to file "s + filename);
+            throw std::runtime_error("could not writeKeyValuePairs to file "s + filename);
         }
         return std::make_unique<std::ofstream>(); // empty object
     }
@@ -135,9 +94,9 @@ void PQRTrajectoryReader::loadTrajectory(const std::string& filename, std::vecto
             double radius = 0.0;
             if (readAtomRecord(record, particle, radius)) {
                 destination.back().push_back(particle);
-            } else if (record.find("END") == 0) {         // if END record, advance to next frame
-                destination.back().shrink_to_fit();       // attempt to clean up
-                destination.push_back(ParticleVector());  // prepare next frame
+            } else if (record.find("END") == 0) {                       // if END record, advance to next frame
+                destination.back().shrink_to_fit();                     // attempt to clean up
+                destination.push_back(ParticleVector());                // prepare next frame
                 destination.back().reserve(destination.front().size()); // reserve memory
             }
         }
@@ -217,19 +176,19 @@ TEST_CASE("[Faunus] StructureFileReader and Writer") {
 
 XTCTrajectoryFrame::XTCTrajectoryFrame(int number_of_atoms) { initNumberOfAtoms(number_of_atoms); }
 
-XTCTrajectoryFrame::XTCTrajectoryFrame(const TrajectoryFrame &frame) {
+XTCTrajectoryFrame::XTCTrajectoryFrame(const TrajectoryFrame& frame) {
     initNumberOfAtoms(frame.coordinates.size());
     importFrame(frame);
 }
 
-void XTCTrajectoryFrame::operator=(const TrajectoryFrame &frame) {
+void XTCTrajectoryFrame::operator=(const TrajectoryFrame& frame) {
     if (frame.coordinates.size() != number_of_atoms) {
         throw std::runtime_error("wrong number of particles to be assign into the XTC frame");
     }
     importFrame(frame);
 }
 
-void XTCTrajectoryFrame::importFrame(const TrajectoryFrame &frame) {
+void XTCTrajectoryFrame::importFrame(const TrajectoryFrame& frame) {
     importTimestamp(frame.step, frame.timestamp);
     importBox(frame.box);
     importCoordinates(frame.coordinates, 0.5 * frame.box);
@@ -240,7 +199,7 @@ void XTCTrajectoryFrame::importTimestamp(const int step, const float time) {
     xtc_time = time / 1.0_ps;
 }
 
-void XTCTrajectoryFrame::importBox(const Point &box) {
+void XTCTrajectoryFrame::importBox(const Point& box) {
     // empty box tensor
     XTCMatrix xtc_box_matrix = XTCMatrix::Zero();
     // only XYZ dimensions in nanometers on diagonal, as floats
@@ -249,7 +208,7 @@ void XTCTrajectoryFrame::importBox(const Point &box) {
     std::copy(xtc_box_matrix.data(), xtc_box_matrix.data() + DIM * DIM, &(xtc_box[0][0]));
 }
 
-void XTCTrajectoryFrame::importCoordinates(const PointVector &coordinates, const Point &offset) {
+void XTCTrajectoryFrame::importCoordinates(const PointVector& coordinates, const Point& offset) {
     // setNumberOfAtoms(coordinates.size());
     if (coordinates.size() != number_of_atoms) {
         // to avoid mistakes, the number_of_atoms is immutable
@@ -263,18 +222,18 @@ void XTCTrajectoryFrame::importCoordinates(const PointVector &coordinates, const
     }
 }
 
-void XTCTrajectoryFrame::exportFrame(TrajectoryFrame &frame) const {
+void XTCTrajectoryFrame::exportFrame(TrajectoryFrame& frame) const {
     exportTimestamp(frame.step, frame.timestamp);
     exportBox(frame.box);
     exportCoordinates(frame.coordinates, 0.5 * frame.box);
 }
 
-void XTCTrajectoryFrame::exportTimestamp(int &step, float &time) const {
+void XTCTrajectoryFrame::exportTimestamp(int& step, float& time) const {
     step = xtc_step;
     time = xtc_time * 1.0_ps;
 }
 
-void XTCTrajectoryFrame::exportBox(Point &box) const {
+void XTCTrajectoryFrame::exportBox(Point& box) const {
     XTCMatrix xtc_box_matrix = Eigen::Map<const XTCTrajectoryFrame::XTCMatrix>(&(xtc_box[0][0]));
     if (xtc_box_matrix.diagonal().asDiagonal().toDenseMatrix() != xtc_box_matrix) {
         throw std::runtime_error("cannot load non-orthogonal box");
@@ -282,7 +241,7 @@ void XTCTrajectoryFrame::exportBox(Point &box) const {
     box = Point(xtc_box_matrix.diagonal().cast<double>() * 1.0_nm);
 }
 
-void XTCTrajectoryFrame::exportCoordinates(PointVector &coordinates, const Point &offset) const {
+void XTCTrajectoryFrame::exportCoordinates(PointVector& coordinates, const Point& offset) const {
     if (coordinates.size() != number_of_atoms) {
         throw std::runtime_error("wrong number of particles in the loaded XTC frame");
     }
@@ -302,15 +261,15 @@ void XTCTrajectoryFrame::initNumberOfAtoms(int new_number_of_atoms) {
 
 // ========== TrajectoryFrame ==========
 
-TrajectoryFrame::TrajectoryFrame(const Point &box, const PointVector &coordinates, int step, float timestamp)
+TrajectoryFrame::TrajectoryFrame(const Point& box, const PointVector& coordinates, int step, float timestamp)
     : box(box), coordinates(coordinates), step(step), timestamp(timestamp) {}
 
-TrajectoryFrame::TrajectoryFrame(const XTCTrajectoryFrame &xtc_frame) {
+TrajectoryFrame::TrajectoryFrame(const XTCTrajectoryFrame& xtc_frame) {
     coordinates.resize(xtc_frame.number_of_atoms);
     xtc_frame.exportFrame(*this);
 }
 
-void TrajectoryFrame::operator=(const XTCTrajectoryFrame &xtc_frame) { xtc_frame.exportFrame(*this); }
+void TrajectoryFrame::operator=(const XTCTrajectoryFrame& xtc_frame) { xtc_frame.exportFrame(*this); }
 
 TEST_CASE("XTCFrame") {
     using doctest::Approx;
@@ -357,7 +316,7 @@ TEST_CASE("XTCFrame") {
 
 // ========== XTCReader ==========
 
-XTCReader::XTCReader(const std::string &filename) : filename(filename) {
+XTCReader::XTCReader(const std::string& filename) : filename(filename) {
     int number_of_atoms;
     if (XDRfile::read_xtc_natoms(filename.c_str(), &number_of_atoms) == XDRfile::exdrOK) {
         xtc_frame = std::make_shared<XTCTrajectoryFrame>(number_of_atoms);
@@ -381,7 +340,7 @@ bool XTCReader::readFrame() {
     return return_code == XDRfile::exdrOK;
 }
 
-bool XTCReader::read(TrajectoryFrame &frame) {
+bool XTCReader::read(TrajectoryFrame& frame) {
     bool is_ok = readFrame();
     if (is_ok) {
         frame = *xtc_frame;
@@ -391,9 +350,9 @@ bool XTCReader::read(TrajectoryFrame &frame) {
 
 // ========== XTCWriter ==========
 
-XTCWriter::XTCWriter(const std::string &filename) : filename(filename) {
+XTCWriter::XTCWriter(const std::string& filename) : filename(filename) {
     xdrfile = XDRfile::xdrfile_open(filename.c_str(), "w");
-    if (!xdrfile) {
+    if (xdrfile == nullptr) {
         throw std::runtime_error(fmt::format("xtc file {} could not be opened", filename));
     }
 }
@@ -418,7 +377,7 @@ void XTCWriter::writeFrame() {
     }
 }
 
-void XTCWriter::write(const TrajectoryFrame &frame) {
+void XTCWriter::write(const TrajectoryFrame& frame) {
     if (!xtc_frame) {
         xtc_frame = std::make_shared<XTCTrajectoryFrame>(frame.coordinates.size());
     }
@@ -427,7 +386,7 @@ void XTCWriter::write(const TrajectoryFrame &frame) {
     step_counter = frame.step + 1;
 }
 
-void XTCWriter::writeNext(const TrajectoryFrame &frame) {
+void XTCWriter::writeNext(const TrajectoryFrame& frame) {
     if (!xtc_frame) {
         xtc_frame = std::make_shared<XTCTrajectoryFrame>(frame.coordinates.size());
     }
@@ -436,10 +395,10 @@ void XTCWriter::writeNext(const TrajectoryFrame &frame) {
     ++step_counter;
 }
 
-ParticleVector fastaToParticles(const std::string &fasta_sequence, double bond_length, const Point &origin) {
+ParticleVector fastaToParticles(const std::string& fasta_sequence, double bond_length, const Point& origin) {
     ParticleVector particles;                  // particle vector
     auto ids = fastaToAtomIds(fasta_sequence); // convert letters to atom ids
-    std::transform(ids.begin(), ids.end(), std::back_inserter(particles), [&](auto &id) {
+    std::transform(ids.begin(), ids.end(), std::back_inserter(particles), [&](auto& id) {
         Particle particle = Faunus::atoms.at(id);
         particle.pos = particles.empty() ? origin : particles.back().pos + ranunit(random) * bond_length;
         return particle;
@@ -478,7 +437,7 @@ ParticleVector loadStructure(const std::string& filename, bool prefer_charges_fr
  * @param fasta_sequence FASTA sequence, capital letters.
  * @return vector of verified and existing atom id's
  */
-std::vector<int> fastaToAtomIds(const std::string &fasta_sequence) {
+std::vector<int> fastaToAtomIds(const std::string& fasta_sequence) {
     const std::map<char, std::string> map = {{'A', "ALA"},
                                              {'R', "ARG"},
                                              {'N', "ASN"},
@@ -507,7 +466,7 @@ std::vector<int> fastaToAtomIds(const std::string &fasta_sequence) {
     std::vector<std::string> names;
     names.reserve(fasta_sequence.size());
 
-    for (auto letter : fasta_sequence) {                   // loop over letters
+    for (const auto letter : fasta_sequence) {             // loop over letters
         if (auto it = map.find(letter); it != map.end()) { // is it in map?
             names.push_back(it->second);
         } else {
@@ -517,18 +476,18 @@ std::vector<int> fastaToAtomIds(const std::string &fasta_sequence) {
     return Faunus::names2ids(atoms, names);
 }
 
-FormatSpaceTrajectory::FormatSpaceTrajectory(std::ostream &ostream) {
+FormatSpaceTrajectory::FormatSpaceTrajectory(std::ostream& ostream) {
     if (ostream) {
         output_archive = std::make_unique<cereal::BinaryOutputArchive>(ostream);
     }
 }
-FormatSpaceTrajectory::FormatSpaceTrajectory(std::istream &istream) {
+FormatSpaceTrajectory::FormatSpaceTrajectory(std::istream& istream) {
     if (istream) {
         input_archive = std::make_unique<cereal::BinaryInputArchive>(istream);
     }
 }
-void FormatSpaceTrajectory::load(Space &) { assert(input_archive != nullptr); }
-void FormatSpaceTrajectory::save(const Space &) { assert(output_archive != nullptr); }
+void FormatSpaceTrajectory::load([[maybe_unused]] Space& spc) { assert(input_archive != nullptr); }
+void FormatSpaceTrajectory::save([[maybe_unused]] const Space& spc) { assert(output_archive != nullptr); }
 
 // ------------------------
 
@@ -588,6 +547,19 @@ void StructureFileReader::loadFooter([[maybe_unused]] std::istream& stream) {}
 
 // -----------------------------
 
+void AminoAcidModelWriter::saveHeader(std::ostream& stream, int number_of_particles) const {
+    stream << number_of_particles << "\n";
+}
+void AminoAcidModelWriter::saveParticle(std::ostream& stream, const Particle& particle) {
+    const auto& traits = particle.traits();
+    auto scale = static_cast<double>(particle_is_active) / 1.0_angstrom;
+    stream << fmt::format("{:7} {:7d} {:>13.6E} {:>13.6E} {:>13.6E} {:>13.6E} {:9.3f} {:9.3f}\n", traits.name,
+                          particle_index + 1, scale * particle.pos[0], scale * particle.pos[1], scale * particle.pos[2],
+                          scale * particle.charge, scale * traits.mw, 0.5 * traits.sigma);
+}
+
+// -----------------------------
+
 void AminoAcidModelReader::loadHeader(std::istream& stream) {
     std::string line;
     getNextLine(stream, line); // all lines starting w. "#" are skipped
@@ -623,6 +595,16 @@ AminoAcidModelReader::AminoAcidModelReader() {
 
 // -----------------------------
 
+void XYZWriter::saveHeader(std::ostream& stream, int number_of_particles) const {
+    stream << number_of_particles << "\n"
+           << "Generated by Faunus - https://github.com/mlund/faunus\n";
+}
+void XYZWriter::saveParticle(std::ostream& stream, const Particle& particle) {
+    stream << particle.traits().name << " " << particle.pos.transpose() << "\n";
+}
+
+// -----------------------------
+
 void XYZReader::loadHeader(std::istream& stream) {
     std::string line;
     try {
@@ -654,7 +636,6 @@ Particle XYZReader::loadParticle(std::istream& stream) {
     particle.pos *= 1.0_angstrom; // xyz files are commonly in Ångstroms
     return particle;
 }
-
 // -----------------------------
 
 /**
@@ -726,57 +707,6 @@ PQRReader::PQRReader() {
 
 // -----------------------------
 
-void StructureFileWriter::saveFooter([[maybe_unused]] std::ostream& stream) const {}
-
-void StructureFileWriter::saveGroup(std::ostream& stream, const Group<Particle>& group) {
-    group_name = group.traits().name;
-    for (auto particle = group.begin(); particle != group.trueend(); particle++) { // loop over particles
-        particle_is_active = particle < group.end();
-        saveParticle(stream, *particle);
-        particle_index++;
-    }
-    group_index++;
-}
-
-std::shared_ptr<StructureFileWriter> createStructureFileWriter(const std::string& suffix) {
-    std::shared_ptr<StructureFileWriter> writer;
-    if (suffix == "aam") {
-        writer = std::make_shared<AminoAcidModelWriter>();
-    } else if (suffix == "pqr") {
-        writer = std::make_shared<PQRWriter>();
-    } else if (suffix == "xyz") {
-        writer = std::make_shared<XYZWriter>();
-    } else if (suffix == "gro") {
-        writer = std::make_shared<GromacsWriter>();
-    }
-    return writer;
-}
-
-// -----------------------------
-
-void AminoAcidModelWriter::saveHeader(std::ostream& stream, int number_of_particles) const {
-    stream << number_of_particles << "\n";
-}
-void AminoAcidModelWriter::saveParticle(std::ostream& stream, const Particle& particle) {
-    const auto& traits = particle.traits();
-    auto scale = static_cast<double>(particle_is_active) / 1.0_angstrom;
-    stream << fmt::format("{:7} {:7d} {:>13.6E} {:>13.6E} {:>13.6E} {:>13.6E} {:9.3f} {:9.3f}\n", traits.name,
-                          particle_index + 1, scale * particle.pos[0], scale * particle.pos[1], scale * particle.pos[2],
-                          scale * particle.charge, scale * traits.mw, 0.5 * traits.sigma);
-}
-
-// -----------------------------
-
-void XYZWriter::saveHeader(std::ostream& stream, int number_of_particles) const {
-    stream << number_of_particles << "\n"
-           << "Generated by Faunus - https://github.com/mlund/faunus\n";
-}
-void XYZWriter::saveParticle(std::ostream& stream, const Particle& particle) {
-    stream << particle.traits().name << " " << particle.pos.transpose() << "\n";
-}
-
-// -----------------------------
-
 void PQRWriter::saveParticle(std::ostream& stream, const Particle& particle) {
     const auto scale = static_cast<double>(particle_is_active);
     const auto position = scale * (particle.pos + 0.5 * box_dimensions); // origin to corner of box
@@ -826,6 +756,34 @@ void PQRWriter::saveHeader(std::ostream& stream, [[maybe_unused]] int number_of_
 void PQRWriter::saveFooter(std::ostream& stream) const { stream << "END\n"; }
 PQRWriter::PQRWriter(PQRWriter::Style style) : style(style) {}
 
+// -----------------------------
+
+void StructureFileWriter::saveFooter([[maybe_unused]] std::ostream& stream) const {}
+
+void StructureFileWriter::saveGroup(std::ostream& stream, const Group<Particle>& group) {
+    group_name = group.traits().name;
+    for (auto particle = group.begin(); particle != group.trueend(); particle++) { // loop over particles
+        particle_is_active = particle < group.end();
+        saveParticle(stream, *particle);
+        particle_index++;
+    }
+    group_index++;
+}
+
+std::shared_ptr<StructureFileWriter> createStructureFileWriter(const std::string& suffix) {
+    std::shared_ptr<StructureFileWriter> writer;
+    if (suffix == "aam") {
+        writer = std::make_shared<AminoAcidModelWriter>();
+    } else if (suffix == "pqr") {
+        writer = std::make_shared<PQRWriter>();
+    } else if (suffix == "xyz") {
+        writer = std::make_shared<XYZWriter>();
+    } else if (suffix == "gro") {
+        writer = std::make_shared<GromacsWriter>();
+    }
+    return writer;
+}
+
 // -----------------------
 
 void GromacsWriter::saveHeader(std::ostream& stream, int number_of_particles) const {
@@ -845,6 +803,8 @@ void GromacsWriter::saveParticle(std::ostream& stream, const Particle& particle)
     stream << fmt::format("{:5d}{:5}{:5}{:5d}{:8.3f}{:8.3f}{:8.3f}\n", group_index, atom_name, atom_name,
                           particle_index, position.x(), position.y(), position.z());
 }
+
+// -----------------------
 
 GromacsReader::GromacsReader() { box_dimension_support = true; }
 

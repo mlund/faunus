@@ -4,6 +4,7 @@
 #include "average.h"
 #include "aux/eigensupport.h"
 #include <spdlog/spdlog.h>
+#include <cereal/types/memory.hpp>
 #include <cereal/archives/binary.hpp>
 #include <Eigen/Eigenvalues>
 

@@ -7,6 +7,7 @@
 #include "aux/eigensupport.h"
 #include <spdlog/spdlog.h>
 #include <zstr.hpp>
+#include <cereal/types/memory.hpp>
 #include <cereal/archives/binary.hpp>
 
 #include <iomanip>
@@ -799,7 +800,7 @@ void Density::writeTable(const std::string& atom_or_molecule_name, Ttable& table
     if (std::ofstream file(filename); file) {
         file << "# N counts probability\n" << table;
     } else {
-        throw std::runtime_error("could not write "s + filename);
+        throw std::runtime_error("could not writeKeyValuePairs "s + filename);
     }
 }
 
@@ -1577,19 +1578,19 @@ void ScatteringFunction::_sample() {
     case DEBYE:
         debye->sample(scatter_positions, spc.geo.getVolume());
         if (save_after_sample) {
-            IO::write(filename + "." + suffix, debye->getIntensity());
+            IO::writeKeyValuePairs(filename + "." + suffix, debye->getIntensity());
         }
         break;
     case EXPLICIT_PBC:
         explicit_average_pbc->sample(scatter_positions, spc.geo.getLength());
         if (save_after_sample) {
-            IO::write(filename + "." + suffix, explicit_average_pbc->getSampling());
+            IO::writeKeyValuePairs(filename + "." + suffix, explicit_average_pbc->getSampling());
         }
         break;
     case EXPLICIT_IPBC:
         explicit_average_ipbc->sample(scatter_positions, spc.geo.getLength());
         if (save_after_sample) {
-            IO::write(filename + "." + suffix, explicit_average_ipbc->getSampling());
+            IO::writeKeyValuePairs(filename + "." + suffix, explicit_average_ipbc->getSampling());
         }
         break;
     }
@@ -1654,13 +1655,13 @@ ScatteringFunction::ScatteringFunction(const json& j, Space& spc) try : Analysis
 void ScatteringFunction::_to_disk() {
     switch (scheme) {
     case DEBYE:
-        IO::write(filename, debye->getIntensity());
+        IO::writeKeyValuePairs(filename, debye->getIntensity());
         break;
     case EXPLICIT_PBC:
-        IO::write(filename, explicit_average_pbc->getSampling());
+        IO::writeKeyValuePairs(filename, explicit_average_pbc->getSampling());
         break;
     case EXPLICIT_IPBC:
-        IO::write(filename, explicit_average_ipbc->getSampling());
+        IO::writeKeyValuePairs(filename, explicit_average_ipbc->getSampling());
         break;
     }
 }

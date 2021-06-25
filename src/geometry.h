@@ -5,7 +5,6 @@
 #include "particle.h"
 #include "tensor.h"
 #include <Eigen/Geometry>
-#include <iostream>
 #include <cereal/types/base_class.hpp>
 #include <spdlog/spdlog.h>
 

@@ -1,13 +1,14 @@
 #pragma once
 
-#include "units.h"
-#include "core.h"
 #include "particle.h"
 #include "spdlog/spdlog.h"
-#include <cereal/archives/binary.hpp>
+#include "units.h"
 #include <fstream>
-#include <range/v3/distance.hpp>
-#include <range/v3/view/transform.hpp>
+
+namespace cereal {
+class BinaryOutputArchive;
+class BinaryInputArchive;
+} // namespace cereal
 
 namespace Faunus {
 
@@ -30,19 +31,6 @@ namespace XDRfile {
 namespace IO {
 
 /**
- * @brief Read lines from file into vector
- * @param filename Filename to read
- * @param destination Reference to vector to load into
- * @return True if file was opened
- */
-std::vector<std::string> loadLinesFromFile(const std::string &filename); //!< Read lines from file into vector
-
-void writeFile(const std::string &filename, const std::string &contents,
-               std::ios_base::openmode mode = std::ios_base::out); //!< Write string to file
-
-void strip(std::vector<std::string> &strings, const std::string &pattern); //!< Strip lines matching a pattern
-
-/**
  * @brief Open (gzip compressed) output stream
  */
 std::unique_ptr<std::ostream> openCompressedOutputStream(const std::string &, bool throw_on_error = false);
@@ -55,10 +43,10 @@ std::unique_ptr<std::ostream> openCompressedOutputStream(const std::string &, bo
  * @param data
  */
 template <typename TKey, typename TValue>
-void write(std::ostream &stream, const std::map<TKey, TValue> &data, const std::string &sep = " ",
-           const std::string &end = "\n") {
+void writeKeyValuePairs(std::ostream& stream, const std::map<TKey, TValue>& data, const std::string& sep = " ",
+                        const std::string& end = "\n") {
     if (stream) {
-        for (auto [key, value] : data) {
+        for (const auto& [key, value] : data) {
             stream << key << sep << value << end;
         }
     }
@@ -71,10 +59,11 @@ void write(std::ostream &stream, const std::map<TKey, TValue> &data, const std::
  * @param filename
  * @param data
  */
-template <typename TKey, typename TValue> void write(const std::string &filename, const std::map<TKey, TValue> &data) {
+template <typename TKey, typename TValue>
+void writeKeyValuePairs(const std::string& filename, const std::map<TKey, TValue>& data) {
     if (!data.empty()) {
         std::ofstream file(filename);
-        write(file, data);
+        writeKeyValuePairs(file, data);
     }
 }
 
@@ -161,7 +150,7 @@ class GromacsReader : public StructureFileReader {
 };
 
 /**
- * Base class to write simple structure files such as XYZ, AAM, PQR etc.
+ * Base class to writeKeyValuePairs simple structure files such as XYZ, AAM, PQR etc.
  */
 class StructureFileWriter {
   private:
@@ -216,7 +205,7 @@ class StructureFileWriter {
             faunus_logger->debug("writing to {}", filename);
             save(stream, args...);
         } else {
-            throw std::runtime_error("write error: "s + filename);
+            throw std::runtime_error("writeKeyValuePairs error: "s + filename);
         }
     }
 

@@ -167,7 +167,7 @@ void AtomicTranslateRotate::groupToDisk(const Space::Tgroup& group) const {
     if (auto stream = std::ofstream("mass-center-failure.pqr"); stream) {
         const auto group_iter = spc.groups.cbegin() + spc.getGroupIndex(group);
         auto groups = ranges::cpp20::views::counted(group_iter, 1); // slice out single group
-        FormatPQR::save(stream, groups, spc.geo.getLength());
+        PQRWriter().save(stream, groups, spc.geo.getLength());
     }
 }
 
@@ -1007,7 +1007,7 @@ void TranslateRotate::checkMassCenter(const Space::Tgroup& group) const {
     const auto should_be_small = spc.geo.sqdist(group.cm, cm_recalculated);
     if (should_be_small > allowed_threshold) {
         faunus_logger->error("{}: error calculating mass center for {}", name, group.traits().name);
-        FormatPQR::save("mass-center-failure.pqr", spc.groups, spc.geo.getLength());
+        PQRWriter().save("mass-center-failure.pqr", spc.groups, spc.geo.getLength());
         throw std::runtime_error("molecule likely too large for periodic boundaries; increase box size?");
     }
 }

@@ -7,6 +7,7 @@
 #include <cereal/archives/binary.hpp>
 #include <fstream>
 #include <range/v3/distance.hpp>
+#include <range/v3/view/transform.hpp>
 
 namespace Faunus {
 
@@ -80,135 +81,50 @@ template <typename TKey, typename TValue> void write(const std::string &filename
 } // namespace IO
 
 /**
- * @brief Read/write AAM file format
- *
- * The AAM format is a simple format for loading particle positions
- * charges, radii and molecular weights. The structure is as follows:
- *
- * - Lines beginning with # are ignored and can be placed anywhere
- * - The first non-# line gives the number of particles
- * - Every subsequent line gives atom information in the format:
- *
- *   `name number x y z charge  weight radius`
- *
- * - Positions and radii should be in angstroms.
- * - Currently, data in the number field is ignored.
- * - No particular spacing is required.
- *
- * Example:
- *
- *     2
- *     Na    1     10.234 5.4454 -2.345  +1    22.0   1.7
- *     Cl    2    5.011     1.054  20.02   -1   35.0   2.0
+ * Base class to load simple structure files such as XYZ, AAM, PQR etc.
  */
-class FormatAAM {
+class StructureFileReader {
   private:
-    static std::string particleToString(const Particle& particle, int zero_based_index);
-    static Particle stringToParticle(const std::string& record);
-    static void handleChargeMismatch(Particle& particle, int atom_index);
-    static void handleRadiusMismatch(const Particle& particle, double radius, int atom_index);
-    static void getNextLine(std::ifstream& stream, std::string& destination);
-    static size_t getNumberOfAtoms(const std::string& line);
+    virtual void loadHeader(std::istream& stream) = 0;       //!< Gobble entire header
+    virtual void loadFooter(std::istream& stream);           //!< Gobble entire header
+    virtual Particle loadParticle(std::istream& stream) = 0; //!< Load single particle
+
+  protected:
+    size_t getNumberOfAtoms(const std::string& line);          //!< Helper function to extract N
+    void getNextLine(std::istream& stream, std::string& line); //!< Helper function to forward stream
+    size_t expected_number_of_particles = 0;
+
+    void handleChargeMismatch(Particle& particle, int atom_index);                      //!< Policy if charge mismatch
+    void handleRadiusMismatch(const Particle& particle, double radius, int atom_index); //!< Policy if radius mismatch
 
   public:
-    static bool prefer_charges_from_file; //!< Set to true to prefer charges from AAM file over `AtomData`
-    static ParticleVector load(std::ifstream& stream);
-    static ParticleVector load(const std::string& filename);
-    static void save(const std::string&, const ParticleVector& particles);
+    ParticleVector particles;
+    Point box_length = Point::Zero();
+    std::vector<std::string> comments;
+    bool prefer_charges_from_file = true; //!< If applicable, prefer charges from AAM file over `AtomData`
+
+    ParticleVector& load(std::istream& stream); //!< Load entire stream and populate data
+    ParticleVector& load(const std::string& filename);
+    virtual ~StructureFileReader() = default;
+};
+
+class AminoAcidModelReader : public StructureFileReader {
+  private:
+    void loadHeader(std::istream& stream) override;
+    Particle loadParticle(std::istream& stream) override;
+};
+
+class PQRReader : public StructureFileReader {
+  private:
+    void loadHeader(std::istream& stream) override;
+    Particle loadParticle(std::istream& stream) override;
 };
 
 /**
- * @brief Create and read PQR files
- * @date December 2007
- */
-class FormatPQR {
-  private:
-    static std::string writeCryst1(const Point &, const Point & = {90, 90, 90}); //!< Write CRYST1 record
-    static bool readCrystalRecord(const std::string &, Point &);                 //!< Read CRYST1 record
-    static bool readAtomRecord(const std::string &, Particle &, double &);       //!< Read ATOM or HETATOM record
-
-  public:
-    enum Style { PQR_LEGACY, PDB, PQR }; //!< PQR style (for ATOM records)
-    typedef std::vector<Group<Particle>> Tgroup_vector;
-    static Point load(std::istream &, ParticleVector &, bool);                      //!< Load PQR from stream
-    static Point load(const std::string &, ParticleVector &, bool);                 //!< Load PQR from file
-    static void loadTrajectory(const std::string &, std::vector<ParticleVector> &); //!< Load trajectory
-    static void save(std::ostream &, const ParticleVector &, const Point & = Point(0, 0, 0),
-                     int = 1e9); //!< Save PQR file
-    static void save(const std::string &, const ParticleVector &, const Point & = Point(0, 0, 0),
-                     int = 1e9); //!< Save PQR file
-    //!< Sync charges from Faunus::atoms (topology)
-
-    /**
-     * @brief Write vector of groups to output stream
-     * @param stream Output stream
-     * @param groups Vector of groups
-     * @param box_dimensions Box dimensions
-     *
-     * The residue number follows the group index and inactive particles will
-     * have zero charge; zero radius; and positioned in the corner of the box.
-     */
-    template <typename Range>
-    static void save(std::ostream &stream, const Range &groups, const Point &box_dimensions, Style style = PQR_LEGACY) {
-        if (stream) {
-            if (box_dimensions.norm() > pc::epsilon_dbl) {
-                stream << writeCryst1(box_dimensions);
-            }
-            int residue_cnt = 1;
-            int atom_cnt = 1;
-            for (const auto &group : groups) { // loop over all molecules
-                for (auto particle = group.begin(); particle != group.trueend(); particle++) { // loop over particles
-                    double scale = (particle < group.end()) ? 1.0 : 0.0;             // zero if inactive particle
-                    const auto pos = scale * (particle->pos + 0.5 * box_dimensions); // origin to corner of box
-                    std::string atomname = particle->traits().name;
-                    if (atomname.size() > 4) {
-                        atomname.erase(4);
-                    }
-                    std::string resname = group.traits().name;
-                    if (resname.size() > 3) {
-                        resname.erase(3);
-                    }
-                    const std::string chain = "A";
-                    if (style == PQR) {
-                        stream << fmt::format("{:6s}{:5d} {:^4s}{:1s}{:3s} {:1s}{:4d}{:1s}   "
-                                              "{:8.3f}{:8.3f}{:8.3f}{:6.2f}{:6.2f}\n",
-                                              "ATOM", atom_cnt, atomname, "A", resname, chain, residue_cnt, "0",
-                                              pos.x(), pos.y(), pos.z(), scale * particle->charge,
-                                              scale * particle->traits().sigma * 0.5);
-
-                    } else if (style == PDB) { // see https://cupnet.net/pdb-format
-                        const double occupancy = 0.0;
-                        const double temperature_factor = 1.0;
-                        const std::string element_symbol = particle->traits().name;
-                        const std::string charge = "0";
-                        stream << fmt::format("{:6s}{:5d} {:^4s}{:1s}{:3s} {:1s}{:4d}{:1s}   "
-                                              "{:8.3f}{:8.3f}{:8.3f}{:6.2f}{:6.2f}          {:>2s}{:2s}\n",
-                                              "ATOM", atom_cnt, atomname, "A", resname, chain, residue_cnt, "0",
-                                              pos.x(), pos.y(), pos.z(), occupancy, temperature_factor, element_symbol,
-                                              charge);
-                    } else { // legacy PQR
-                        stream << fmt::format("ATOM  {:5d} {:4} {:4}{:5d}    {:8.3f} {:8.3f} {:8.3f} {:.3f} {:.3f}\n",
-
-                                              atom_cnt, atomname, resname, residue_cnt, pos.x(), pos.y(), pos.z(),
-                                              scale * particle->charge, scale * particle->traits().sigma * 0.5);
-                    }
-                    atom_cnt++;
-                }
-                residue_cnt++;
-            }
-            stream << "END\n";
-        }
-    }
-
-    static void save(const std::string &, const Tgroup_vector &, const Point & = Point(0, 0, 0)); //!< Save PQR file
-};
-
-/**
- * @brief XYZ format
- * @date June 2013, 2021
+ * @brief XYZ file loader
  *
- * Saves particles as a XYZ file. This format has number of particles at
- * the first line; comment on the second line; and positions of named particles on the following lines.
+ * This format has number of particles at the first line;
+ * comment on the second line; and positions of named particles on the following lines.
  *
  * Example:
  *
@@ -217,18 +133,111 @@ class FormatPQR {
  *     OW  2.30  6.28  1.13
  *     HW  1.37  6.26  1.50
  *     HW  2.31  5.89  0.21
- *
  */
-class FormatXYZ {
+class XYZReader : public StructureFileReader {
   private:
-    static size_t readNumberOfAtoms(std::istream& stream);
-    static std::string readComment(std::istream& stream);
-    static Particle readParticle(std::ifstream& stream);
+    void loadHeader(std::istream& stream) override;
+    Particle loadParticle(std::istream& stream) override;
+};
+
+/**
+ * Base class to write simple structure files such as XYZ, AAM, PQR etc.
+ */
+class StructureFileWriter {
+  private:
+    virtual void saveHeader(std::ostream& stream, int number_of_particles) const = 0; //!< Write header
+    virtual void saveFooter(std::ostream& stream) const; //!< Called when all particles have been written
+    virtual void saveParticle(std::ostream& stream, const Particle& particle) = 0; //!< Write single particle
+    void saveGroup(std::ostream& stream, const Group<Particle>& group);            //!< Write entire group
+
+    template <class ParticleIter> void saveParticles(std::ostream& stream, ParticleIter begin, ParticleIter end) {
+        group_index = 0;
+        particle_index = 0;
+        std::for_each(begin, end, [&](const auto& particle) { saveParticle(stream, particle); });
+    }
+
+  protected:
+    bool particle_is_active = true;
+    std::string group_name;
+    std::size_t particle_index = 0;
+    std::size_t group_index = 0;
+    Point box_dimensions = Point::Zero();
 
   public:
-    static void save(const std::string&, const ParticleVector&, const Point& = Point::Zero());      //!< Save XYZ
-    static void load(std::ifstream& stream, ParticleVector& destination);                           //!< Load XYZ
-    static void load(const std::string& filename, ParticleVector& destination, bool append = true); //!< Load XYZ
+    template <class ParticleIter>
+    void save(std::ostream& stream, ParticleIter begin, ParticleIter end, const Point& box_dimensions) {
+        if (auto number_of_particles = std::distance(begin, end); number_of_particles > 0) {
+            this->box_dimensions = box_dimensions;
+            saveHeader(stream, number_of_particles);
+            saveParticles(stream, begin, end);
+            saveFooter(stream);
+        }
+    }
+
+    template <typename Range> void save(std::ostream& stream, const Range& groups, const Point& box_dimensions) {
+        group_index = 0;
+        particle_index = 0;
+        this->box_dimensions = box_dimensions;
+
+        std::size_t number_of_particles = 0;
+        std::for_each(groups.begin(), groups.end(),
+                      [&](const auto& group) { number_of_particles += group.capacity(); });
+        saveHeader(stream, number_of_particles);
+
+        std::for_each(groups.begin(), groups.end(), [&](const auto& group) { saveGroup(stream, group); });
+        saveFooter(stream);
+    }
+
+    template <class... Args> void save(const std::string& filename, const Args&... args) {
+        if (std::ofstream stream(filename); stream) {
+            faunus_logger->debug("writing to {}", filename);
+            save(stream, args...);
+        } else {
+            throw std::runtime_error("write error: "s + filename);
+        }
+    }
+
+    virtual ~StructureFileWriter() = default;
+};
+
+/** Write AAM files */
+class AminoAcidModelWriter : public StructureFileWriter {
+  private:
+    void saveHeader(std::ostream& stream, int number_of_particles) const override;
+    void saveParticle(std::ostream& stream, const Particle& particle) override;
+};
+
+/** Write XYZ files */
+class XYZWriter : public StructureFileWriter {
+  private:
+    void saveHeader(std::ostream& stream, int number_of_particles) const override;
+    void saveParticle(std::ostream& stream, const Particle& particle) override;
+};
+
+/** Write PQR files */
+class PQRWriter : public StructureFileWriter {
+  private:
+    void saveHeader(std::ostream& stream, int number_of_particles) const override;
+    void saveFooter(std::ostream& stream) const override;
+    void saveParticle(std::ostream& stream, const Particle& particle) override;
+
+  public:
+    enum Style { PQR_LEGACY, PDB, PQR }; //!< PQR style (for ATOM records)
+    Style style = PQR_LEGACY;
+    explicit PQRWriter(Style style = PQR_LEGACY);
+};
+
+/**
+ * @brief Create and read PQR files
+ * @date December 2007
+ * @todo Remove!
+ */
+class FormatPQR {
+  private:
+    static bool readAtomRecord(const std::string&, Particle&, double&); //!< Read ATOM or HETATOM record
+
+  public:
+    static void loadTrajectory(const std::string&, std::vector<ParticleVector>&); //!< Load trajectory
 };
 
 /**
@@ -623,12 +632,12 @@ ParticleVector fastaToParticles(const std::string &fasta_sequence, double bond_l
 
 /**
  * @brief Load structure file into particle vector
- * @param file filename to load (aam, pqr, xyz, gro)
- * @param keep_charges if true, ignore AtomData charges
+ * @param filename filename to load (aam, pqr, xyz, gro)
+ * @param prefer_charges_from_file if true, ignore AtomData charges
  * @throws Throws exception if nothing was loaded or if unknown suffix
  * @returns particles destination particle vector (will be overwritten)
  */
-ParticleVector loadStructure(const std::string &file, bool keep_charges = true);
+ParticleVector loadStructure(const std::string& filename, bool prefer_charges_from_file = true);
 
 /**
  * @brief Placeholder for Space Trajectory

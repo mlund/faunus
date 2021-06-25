@@ -293,7 +293,9 @@ SaveState::SaveState(json j, Space& spc) : Analysisbase(spc, "savestate") {
     convert_hexagonal_prism_to_cuboid = j.value("convert_hexagon", false);
 
     if (const auto suffix = filename.substr(filename.find_last_of('.') + 1); suffix == "aam") {
-        writeFunc = [&](auto& file) { FormatAAM::save(file, spc.p); };
+        writeFunc = [&](auto& file) {
+            AminoAcidModelWriter().save(file, spc.p.begin(), spc.p.end(), spc.geo.getLength());
+        };
     } else if (suffix == "gro") {
         writeFunc = [&](auto& file) { FormatGRO::save(file, spc); };
     } else if (suffix == "pqr") {
@@ -304,16 +306,16 @@ SaveState::SaveState(json j, Space& spc) : Analysisbase(spc, "savestate") {
                     faunus_logger->debug("creating cuboidal PQR from hexagonal prism");
                     const auto& [cuboid, particles] =
                         Geometry::HexagonalPrismToCuboid(*hexagonal_prism, spc.activeParticles());
-                    FormatPQR::save(file, particles, cuboid.getLength());
+                    PQRWriter().save(file, particles.begin(), particles.end(), cuboid.getLength());
                 } else {
                     throw std::runtime_error("hexagonal prism required for `convert_to_hexagon`");
                 }
             } else {
-                FormatPQR::save(file, spc.groups, spc.geo.getLength());
+                PQRWriter().save(file, spc.groups, spc.geo.getLength());
             }
         };
     } else if (suffix == "xyz") {
-        writeFunc = [&](auto& file) { FormatXYZ::save(file, spc.p, spc.geo.getLength()); };
+        writeFunc = [&](auto& file) { XYZWriter().save(file, spc.p.begin(), spc.p.end(), spc.geo.getLength()); };
     } else if (suffix == "json") { // JSON state file
         writeFunc = [&](auto& file) {
             if (std::ofstream f(file); f) {
@@ -823,8 +825,8 @@ void SanityCheck::_sample() {
             checkMassCenter(group);
         }
     } catch (std::exception& e) {
-        FormatPQR::save(fmt::format("{}step{}-error.pqr", MPI::prefix, getNumberOfSteps()), spc.groups,
-                        spc.geo.getLength());
+        PQRWriter().save(fmt::format("{}step{}-error.pqr", MPI::prefix, getNumberOfSteps()), spc.groups,
+                         spc.geo.getLength());
         throw std::runtime_error(e.what());
     }
 }
@@ -1485,7 +1487,8 @@ void ChargeFluctuations::_to_disk() {
         auto molecules = spc.findMolecules(mol_iter->id(), Space::ALL);
         if (not ranges::cpp20::empty(molecules)) {
             const auto particles_with_avg_charges = averageChargeParticles(*molecules.begin());
-            FormatPQR::save(MPI::prefix + filename, particles_with_avg_charges, spc.geo.getLength());
+            PQRWriter().save(MPI::prefix + filename, particles_with_avg_charges.begin(),
+                             particles_with_avg_charges.end(), spc.geo.getLength());
         }
     }
 }

@@ -437,7 +437,7 @@ void MoleculeBuilder::readParticles(const json &j_properties) {
         if (j_properties.value("ensphere", false))
             particles = Geometry::mapParticlesOnSphere(particles);
         if (j_properties.value("to_disk", false))
-            FormatPQR::save(molecule_name + "-initial.pqr", particles);
+            PQRWriter().save(molecule_name + "-initial.pqr", particles.begin(), particles.end(), Point(0, 0, 0));
     } else {
         // allow virtual molecules :-/
         // shall we rather try to fallback on readAtomic()?

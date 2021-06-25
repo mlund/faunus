@@ -87,7 +87,7 @@ void MoleculeData::createMolecularConformations(const json &j) {
             throw ConfigurationError("`structure` and `traj` are mutually exclusive");
         }
         try {
-            FormatPQR::loadTrajectory(trajfile, conformations.data); // read traj. from disk
+            PQRTrajectoryReader::loadTrajectory(trajfile, conformations.data); // read traj. from disk
             if (bool read_charges = j.value("keepcharges", true); read_charges) {
                 faunus_logger->debug("charges in {} preferred over `atomlist` values", trajfile);
             } else {

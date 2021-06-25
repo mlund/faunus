@@ -935,7 +935,7 @@ properties:
                         nskip: {type: integer, default: 0, description: "Initial steps to skip"}
                         saverandom: {type: boolean, default: false, description: "Include random number state"}
                         overwrite: {type: boolean, default: false, description: "Overwrite file for step, i.e. no file numbering"}
-                        convert_hexagon: {type: boolean, default: false, description: "Convert hexagonal prism to space-filling cuboid; `pqr` only"}
+                        convert_hexagon: {type: boolean, default: false, description: "Convert hexagonal prism to space-filling cuboid"}
                     required: [file]
                     additionalProperties: false
                     type: object

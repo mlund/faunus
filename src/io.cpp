@@ -99,7 +99,7 @@ TEST_CASE("[Faunus] openCompressedOutputStream") {
     CHECK_NOTHROW(IO::openCompressedOutputStream("/../file"));
 }
 
-bool FormatPQR::readAtomRecord(const std::string &record, Particle &particle, double &radius) {
+bool PQRTrajectoryReader::readAtomRecord(const std::string& record, Particle& particle, double& radius) {
     std::stringstream o(record);
     std::string key;
     o >> key;
@@ -120,31 +120,31 @@ bool FormatPQR::readAtomRecord(const std::string &record, Particle &particle, do
 
 /**
  * @param filename PQR trajectory filename
- * @param traj Destination vector of particle vector pointers
+ * @param destination Destination vector of particle vector pointers
  *
  * Each trajectory must be separated by an "END" record. Blank lines are
  * ignored.
  */
-void FormatPQR::loadTrajectory(const std::string &filename, std::vector<ParticleVector> &traj) {
+void PQRTrajectoryReader::loadTrajectory(const std::string& filename, std::vector<ParticleVector>& destination) {
     if (std::ifstream stream(filename); stream) {
-        traj.clear();
-        traj.resize(1); // prepare first frame
+        destination.clear();
+        destination.resize(1); // prepare first frame
         std::string record;
         while (std::getline(stream, record)) {
             Particle particle;
             double radius = 0.0;
             if (readAtomRecord(record, particle, radius)) {
-                traj.back().push_back(particle);
+                destination.back().push_back(particle);
             } else if (record.find("END") == 0) {         // if END record, advance to next frame
-                traj.back().shrink_to_fit();              // attempt to clean up
-                traj.push_back(ParticleVector());         // prepare next frame
-                traj.back().reserve(traj.front().size()); // reserve memory
+                destination.back().shrink_to_fit();       // attempt to clean up
+                destination.push_back(ParticleVector());  // prepare next frame
+                destination.back().reserve(destination.front().size()); // reserve memory
             }
         }
-        if (traj.back().empty()) { // delete empty frame after last "END" record
-            traj.pop_back();
+        if (destination.back().empty()) { // delete empty frame after last "END" record
+            destination.pop_back();
         }
-        if (traj.empty()) {
+        if (destination.empty()) {
             faunus_logger->warn("pqr trajectory {} is empty", filename);
         }
     } else {
@@ -152,7 +152,7 @@ void FormatPQR::loadTrajectory(const std::string &filename, std::vector<Particle
     }
 }
 
-TEST_CASE("[Faunus] PQR I/O") {
+TEST_CASE("[Faunus] StructureFileReader and Writer") {
     using doctest::Approx;
     // Space object with two salt pairs, i.e. four particles
     Space spc;
@@ -166,84 +166,50 @@ TEST_CASE("[Faunus] PQR I/O") {
         displacement += 0.5;
     }
 
-    SUBCASE("i/o roundtrip") {
+    auto io_roundtrip = [&](StructureFileReader& reader, StructureFileWriter& writer) {
         std::stringstream stream;
-        PQRWriter().save(stream, spc.p.begin(), spc.p.end(), spc.geo.getLength());
+        writer.save(stream, spc.p.begin(), spc.p.end(), spc.geo.getLength());
         stream.seekg(0); // rewind
-
-        PQRReader reader;
         reader.load(stream);
-        CHECK(reader.box_length.x() == 20);
-        CHECK(reader.box_length.y() == 30);
-        CHECK(reader.box_length.z() == 40);
+        if (reader.box_dimension_support) {
+            CHECK(reader.box_length.x() == Approx(spc.geo.getLength().x()));
+            CHECK(reader.box_length.y() == Approx(spc.geo.getLength().y()));
+            CHECK(reader.box_length.z() == Approx(spc.geo.getLength().z()));
+        }
         CHECK(reader.particles.size() == 4);
-
-        // check if positions are restored
         for (int i = 0; i < 4; i++) {
             CHECK(reader.particles[i].pos.x() == Approx(spc.p[i].pos.x()));
             CHECK(reader.particles[i].pos.y() == Approx(spc.p[i].pos.y()));
             CHECK(reader.particles[i].pos.z() == Approx(spc.p[i].pos.z()));
-            CHECK(reader.particles[i].charge == Approx(spc.p[i].charge));
-        }
-    }
-}
-
-Particle FormatGRO::recordToParticle(const std::string &record) {
-    std::stringstream o;
-    std::string atom_name;
-    o << record.substr(10, 5) << record.substr(20, 8) << record.substr(28, 8) << record.substr(36, 8);
-    o >> atom_name;
-    const auto atom = findAtomByName(atom_name);
-    Particle particle(atom); // copy all atom properties, except positions
-    o >> particle.pos.x() >> particle.pos.y() >> particle.pos.z();
-    particle.pos *= 1.0_nm; // GRO files use nanometers
-    return particle;
-}
-
-/**
- * @param filename Filename
- * @returns Particle vector
- *
- * The first line in a GRO file is a comment; the
- * second the number of atoms; and the last the
- * box dimensions. All lengths in nanometers.
- */
-ParticleVector FormatGRO::load(const std::string &filename) {
-    constexpr size_t header_size = 2; // two lines before positions
-    if (auto lines = IO::loadLinesFromFile(filename); lines.size() <= header_size) {
-        throw std::runtime_error("GRO file seems empty");
-    } else {
-        size_t number_of_atoms = std::stoul(lines[1]); // second line = number of atoms
-        if (lines.size() < header_size + number_of_atoms) {
-            throw std::runtime_error("mismatch in number of atoms");
-        } else {
-            ParticleVector positions; // positions are loaded here
-            positions.reserve(number_of_atoms);
-            std::transform(lines.begin(), lines.begin() + number_of_atoms, std::back_inserter(positions),
-                           [](auto &i) { return recordToParticle(i); });
-            return positions;
-        }
-    }
-}
-
-void FormatGRO::save(const std::string &filename, const Space &spc) {
-    if (std::ofstream stream(filename); !stream) {
-        std::runtime_error("write error: "s + filename);
-    } else {
-        int number_of_residues = 1;
-        int number_of_atoms = 1;
-        Point boxlength = spc.geo.getLength();
-        stream << "Generated by Faunus -- https://github.com/mlund/faunus\n" << spc.numParticles() << "\n";
-        for (const auto &group : spc.groups) { // loop over groups
-            for (auto &particle : group) {     // loop over active particles
-                auto &atom_name = Faunus::atoms.at(particle.id).name;
-                Point pos = (particle.pos + 0.5 * boxlength) / 1.0_nm; // shift origin and convert to nm
-                stream << fmt::format("{:5d}{:5}{:5}{:5d}{:8.3f}{:8.3f}{:8.3f}\n", number_of_residues, atom_name,
-                                      atom_name, number_of_atoms++, pos.x(), pos.y(), pos.z());
+            if (reader.particle_charge_support) {
+                CHECK(reader.particles[i].charge == Approx(spc.p[i].charge));
             }
-            number_of_residues++;
         }
-        stream << boxlength.transpose() / 1.0_nm << "\n";
+    };
+
+    SUBCASE("PQR roundtrip") {
+        PQRReader reader;
+        PQRWriter writer;
+        io_roundtrip(reader, writer);
+    }
+
+    SUBCASE("XYZ roundtrip") {
+        XYZReader reader;
+        XYZWriter writer;
+        io_roundtrip(reader, writer);
+    }
+
+    SUBCASE("AAM roundtrip") {
+        AminoAcidModelReader reader;
+        AminoAcidModelWriter writer;
+        io_roundtrip(reader, writer);
+    }
+
+    SUBCASE("Gromacs roundtrip") {
+        GromacsReader reader;
+        GromacsWriter writer;
+        io_roundtrip(reader, writer);
+        writer.save("/Users/mikael/test.gro", spc.p.begin(), spc.p.end(), spc.geo.getLength());
     }
 }
 
@@ -491,13 +457,13 @@ ParticleVector loadStructure(const std::string& filename, bool prefer_charges_fr
         reader = std::make_unique<PQRReader>();
     } else if (suffix == "xyz") {
         reader = std::make_unique<XYZReader>();
+    } else if (suffix == "gro") {
+        reader = std::make_unique<GromacsReader>();
     }
     try {
         if (reader) {
             reader->prefer_charges_from_file = prefer_charges_from_file;
             particles = reader->load(filename);
-        } else if (suffix == "gro") {
-            particles = FormatGRO::load(filename);
         } else {
             throw std::runtime_error("unknown format");
         }
@@ -650,6 +616,11 @@ Particle AminoAcidModelReader::loadParticle(std::istream& stream) {
     return particle;
 }
 
+AminoAcidModelReader::AminoAcidModelReader() {
+    particle_charge_support = true;
+    particle_radius_support = true;
+}
+
 // -----------------------------
 
 void XYZReader::loadHeader(std::istream& stream) {
@@ -747,6 +718,11 @@ void PQRReader::loadHeader(std::istream& stream) {
         }
     }
 }
+PQRReader::PQRReader() {
+    particle_charge_support = true;
+    particle_radius_support = true;
+    box_dimension_support = true;
+}
 
 // -----------------------------
 
@@ -760,6 +736,20 @@ void StructureFileWriter::saveGroup(std::ostream& stream, const Group<Particle>&
         particle_index++;
     }
     group_index++;
+}
+
+std::shared_ptr<StructureFileWriter> createStructureFileWriter(const std::string& suffix) {
+    std::shared_ptr<StructureFileWriter> writer;
+    if (suffix == "aam") {
+        writer = std::make_shared<AminoAcidModelWriter>();
+    } else if (suffix == "pqr") {
+        writer = std::make_shared<PQRWriter>();
+    } else if (suffix == "xyz") {
+        writer = std::make_shared<XYZWriter>();
+    } else if (suffix == "gro") {
+        writer = std::make_shared<GromacsWriter>();
+    }
+    return writer;
 }
 
 // -----------------------------
@@ -836,4 +826,78 @@ void PQRWriter::saveHeader(std::ostream& stream, [[maybe_unused]] int number_of_
 void PQRWriter::saveFooter(std::ostream& stream) const { stream << "END\n"; }
 PQRWriter::PQRWriter(PQRWriter::Style style) : style(style) {}
 
+// -----------------------
+
+void GromacsWriter::saveHeader(std::ostream& stream, int number_of_particles) const {
+    stream << "# Generated by Faunus - https://github.com/mlund/faunus\n" << number_of_particles << "\n";
+}
+
+void GromacsWriter::saveFooter(std::ostream& stream) const {
+    if (box_dimensions.squaredNorm() > pc::epsilon_dbl) {
+        stream << box_dimensions.transpose() / 1.0_nm << "\n";
+    }
+}
+
+void GromacsWriter::saveParticle(std::ostream& stream, const Particle& particle) {
+    const auto& atom_name = particle.traits().name;
+    auto scale = static_cast<double>(particle_is_active);
+    Point position = scale * (particle.pos + 0.5 * box_dimensions) / 1.0_nm; // shift origin and convert to nm
+    stream << fmt::format("{:5d}{:5}{:5}{:5d}{:8.3f}{:8.3f}{:8.3f}\n", group_index, atom_name, atom_name,
+                          particle_index, position.x(), position.y(), position.z());
+}
+
+GromacsReader::GromacsReader() { box_dimension_support = true; }
+
+/**
+ * This also loads the *footer* as box information is placed after the coordinates,
+ * but we need it to offset while loading particles.
+ */
+void GromacsReader::loadHeader(std::istream& stream) {
+    std::string line;
+    std::getline(stream, line);
+    comments.push_back(line);
+    std::getline(stream, line);
+    try {
+        expected_number_of_particles = std::stoi(line);
+    } catch (std::exception& e) { throw std::invalid_argument("atom count expected on second line"); }
+    loadBoxInformation(stream);
+}
+
+void GromacsReader::loadBoxInformation(std::istream& stream) {
+    auto initial_position = stream.tellg();
+    stream.seekg(-2, std::istream::end); // jump to end and skip possible newline
+    for (int i = stream.tellg(); i > 0; i--) {
+        if (stream.peek() != '\n') {
+            stream.seekg(-1, std::istream::cur); // one step backwards
+        } else {
+            stream.get(); // gobble newline
+            std::string line;
+            std::getline(stream, line);
+            std::stringstream o(line);
+            o.exceptions(std::stringstream::failbit);
+            try {
+                o >> box_length.x() >> box_length.y() >> box_length.z();
+                box_length *= 1.0_nm;
+            } catch (...) { faunus_logger->debug("no box information found in gro file"); }
+            break;
+        }
+    }
+    stream.seekg(initial_position);
+}
+
+Particle GromacsReader::loadParticle(std::istream& stream) {
+    if (particles.size() >= expected_number_of_particles) {
+        throw std::istream::failure("cannot read beyond expected number of particles");
+    }
+    std::string record;
+    std::getline(stream, record);
+    std::stringstream o;
+    o << record.substr(10, 5) << record.substr(20, 8) << record.substr(28, 8) << record.substr(36, 8);
+    std::string atom_name;
+    o >> atom_name;
+    Particle particle = Particle(findAtomByName(atom_name));
+    o >> particle.pos.x() >> particle.pos.y() >> particle.pos.z();
+    particle.pos = particle.pos * 1.0_nm - 0.5 * box_length;
+    return particle;
+}
 } // namespace Faunus

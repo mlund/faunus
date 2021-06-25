@@ -813,7 +813,7 @@ Chameleon::Chameleon(const Chameleon &geo)
     : GeometryBase(geo), len(geo.len), len_half(geo.len_half), len_inv(geo.len_inv),
       geometry(geo.geometry != nullptr ? geo.geometry->clone() : nullptr), _type(geo._type), _name(geo._name) {}
 
-std::shared_ptr<GeometryImplementation> Chameleon::asSimpleGeometry() { return geometry->clone(); }
+std::shared_ptr<GeometryImplementation> Chameleon::asSimpleGeometry() const { return geometry->clone(); }
 
 TEST_CASE("[Faunus] spherical coordinates") {
     using doctest::Approx;

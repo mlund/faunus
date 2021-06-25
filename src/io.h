@@ -106,18 +106,28 @@ class StructureFileReader {
     ParticleVector& load(std::istream& stream); //!< Load entire stream and populate data
     ParticleVector& load(const std::string& filename);
     virtual ~StructureFileReader() = default;
+
+    bool box_dimension_support = false;
+    bool particle_charge_support = false;
+    bool particle_radius_support = false;
 };
 
 class AminoAcidModelReader : public StructureFileReader {
   private:
     void loadHeader(std::istream& stream) override;
     Particle loadParticle(std::istream& stream) override;
+
+  public:
+    AminoAcidModelReader();
 };
 
 class PQRReader : public StructureFileReader {
   private:
     void loadHeader(std::istream& stream) override;
     Particle loadParticle(std::istream& stream) override;
+
+  public:
+    PQRReader();
 };
 
 /**
@@ -140,6 +150,16 @@ class XYZReader : public StructureFileReader {
     Particle loadParticle(std::istream& stream) override;
 };
 
+class GromacsReader : public StructureFileReader {
+  private:
+    void loadBoxInformation(std::istream& stream);
+    void loadHeader(std::istream& stream) override;
+    Particle loadParticle(std::istream& stream) override;
+
+  public:
+    GromacsReader();
+};
+
 /**
  * Base class to write simple structure files such as XYZ, AAM, PQR etc.
  */
@@ -153,7 +173,10 @@ class StructureFileWriter {
     template <class ParticleIter> void saveParticles(std::ostream& stream, ParticleIter begin, ParticleIter end) {
         group_index = 0;
         particle_index = 0;
-        std::for_each(begin, end, [&](const auto& particle) { saveParticle(stream, particle); });
+        std::for_each(begin, end, [&](const auto& particle) {
+            saveParticle(stream, particle);
+            particle_index++;
+        });
     }
 
   protected:
@@ -200,6 +223,8 @@ class StructureFileWriter {
     virtual ~StructureFileWriter() = default;
 };
 
+std::shared_ptr<StructureFileWriter> createStructureFileWriter(const std::string& suffix);
+
 /** Write AAM files */
 class AminoAcidModelWriter : public StructureFileWriter {
   private:
@@ -227,36 +252,18 @@ class PQRWriter : public StructureFileWriter {
     explicit PQRWriter(Style style = PQR_LEGACY);
 };
 
-/**
- * @brief Create and read PQR files
- * @date December 2007
- * @todo Remove!
- */
-class FormatPQR {
+/** Write GRO files */
+class GromacsWriter : public StructureFileWriter {
   private:
-    static bool readAtomRecord(const std::string&, Particle&, double&); //!< Read ATOM or HETATOM record
-
-  public:
-    static void loadTrajectory(const std::string&, std::vector<ParticleVector>&); //!< Load trajectory
+    void saveHeader(std::ostream& stream, int number_of_particles) const override;
+    void saveFooter(std::ostream& stream) const override;
+    void saveParticle(std::ostream& stream, const Particle& particle) override;
 };
 
-/**
- * @brief Gromacs GRO format
- * @date December 2007
- */
-class FormatGRO {
-  private:
-    static Particle recordToParticle(const std::string &); //!< Parse record to particle
-
-  public:
-    /**
-     * @brief Load GRO file into particle vector
-     * @param file Filename
-     * @returns Destination particle vector
-     */
-    static ParticleVector load(const std::string &);
-    static void save(const std::string &filename, const Space &spc);
-};
+namespace PQRTrajectoryReader {
+bool readAtomRecord(const std::string& record, Particle& particle, double& radius); //!< Read ATOM or HETATOM record
+void loadTrajectory(const std::string& filename, std::vector<ParticleVector>& destination); //!< Load trajectory
+}; // namespace PQRTrajectoryReader
 
 struct TrajectoryFrame;
 

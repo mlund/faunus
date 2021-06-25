@@ -286,63 +286,64 @@ SaveState::SaveState(json j, Space& spc) : Analysisbase(spc, "savestate") {
         j["nstep"] = -1;         // store only when _to_disk() is called
     }
     from_json(j);
-
     save_random_number_generator_state = j.value("saverandom", false);
     filename = MPI::prefix + j.at("file").get<std::string>();
     use_numbered_files = !j.value("overwrite", false);
     convert_hexagonal_prism_to_cuboid = j.value("convert_hexagon", false);
 
-    if (const auto suffix = filename.substr(filename.find_last_of('.') + 1); suffix == "aam") {
-        writeFunc = [&](auto& file) {
-            AminoAcidModelWriter().save(file, spc.p.begin(), spc.p.end(), spc.geo.getLength());
-        };
-    } else if (suffix == "gro") {
-        writeFunc = [&](auto& file) { FormatGRO::save(file, spc); };
-    } else if (suffix == "pqr") {
-        writeFunc = [&](auto& file) {
+    setWriteFunction(spc);
+}
+void SaveState::setWriteFunction(Space& spc) {
+    const auto suffix = filename.substr(filename.find_last_of('.') + 1);
+    if (auto writer = createStructureFileWriter(suffix)) {
+        writeFunc = [&, w = writer](auto& file) {
             if (convert_hexagonal_prism_to_cuboid) {
-                auto hexagonal_prism = std::dynamic_pointer_cast<Geometry::HexagonalPrism>(spc.geo.asSimpleGeometry());
-                if (hexagonal_prism) {
-                    faunus_logger->debug("creating cuboidal PQR from hexagonal prism");
-                    const auto& [cuboid, particles] =
-                        Geometry::HexagonalPrismToCuboid(*hexagonal_prism, spc.activeParticles());
-                    PQRWriter().save(file, particles.begin(), particles.end(), cuboid.getLength());
-                } else {
-                    throw std::runtime_error("hexagonal prism required for `convert_to_hexagon`");
-                }
+                saveAsCuboid(file, spc, *w);
             } else {
-                PQRWriter().save(file, spc.groups, spc.geo.getLength());
+                w->save(file, spc.groups, spc.geo.getLength());
             }
         };
-    } else if (suffix == "xyz") {
-        writeFunc = [&](auto& file) { XYZWriter().save(file, spc.p.begin(), spc.p.end(), spc.geo.getLength()); };
     } else if (suffix == "json") { // JSON state file
-        writeFunc = [&](auto& file) {
-            if (std::ofstream f(file); f) {
-                json j;
-                Faunus::to_json(j, spc);
-                if (save_random_number_generator_state) {
-                    j["random-move"] = Move::MoveBase::slump;
-                    j["random-global"] = Faunus::random;
-                }
-                f << std::setw(2) << j;
-            }
-        };
+        writeFunc = [&](auto& file) { saveJsonStateFile(file, spc); };
     } else if (suffix == "ubj") { // Universal Binary JSON state file
-        writeFunc = [&](auto& file) {
-            if (std::ofstream f(file, std::ios::binary); f) {
-                json j;
-                Faunus::to_json(j, spc);
-                if (save_random_number_generator_state) {
-                    j["random-move"] = Move::MoveBase::slump;
-                    j["random-global"] = Faunus::random;
-                }
-                auto v = json::to_ubjson(j); // json --> binary
-                f.write((const char*)v.data(), v.size() * sizeof(decltype(v)::value_type));
-            }
-        };
+        writeFunc = [&](auto& file) { saveBinaryJsonStateFile(file, spc); };
     } else {
         throw ConfigurationError("unknown file extension for '{}'", filename);
+    }
+}
+
+void SaveState::saveBinaryJsonStateFile(const std::string& filename, const Space& spc) const {
+    if (std::ofstream f(filename, std::ios::binary); f) {
+        json j;
+        Faunus::to_json(j, spc);
+        if (save_random_number_generator_state) {
+            j["random-move"] = Move::MoveBase::slump;
+            j["random-global"] = random;
+        }
+        auto buffer = json::to_ubjson(j); // json --> binary
+        f.write((const char*)buffer.data(), buffer.size() * sizeof(decltype(buffer)::value_type));
+    }
+}
+void SaveState::saveJsonStateFile(const std::string& filename, const Space& spc) const {
+    if (std::ofstream f(filename); f) {
+        json j;
+        Faunus::to_json(j, spc);
+        if (save_random_number_generator_state) {
+            j["random-move"] = Move::MoveBase::slump;
+            j["random-global"] = random;
+        }
+        f << std::setw(2) << j;
+    }
+}
+
+void SaveState::saveAsCuboid(const std::string& filename, Space& spc, StructureFileWriter& writer) const {
+    auto hexagonal_prism = std::dynamic_pointer_cast<Geometry::HexagonalPrism>(spc.geo.asSimpleGeometry());
+    if (hexagonal_prism) {
+        faunus_logger->debug("creating cuboid from hexagonal prism");
+        const auto& [cuboid, particles] = Geometry::HexagonalPrismToCuboid(*hexagonal_prism, spc.activeParticles());
+        writer.save(filename, particles.begin(), particles.end(), cuboid.getLength());
+    } else {
+        throw std::runtime_error("hexagonal prism required for `convert_to_hexagon`");
     }
 }
 

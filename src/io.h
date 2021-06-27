@@ -101,6 +101,26 @@ class StructureFileReader {
     bool particle_radius_support = false;
 };
 
+/**
+ * Reads FASTA file and generate one particle per amino acid
+ *
+ * Positions are generated as a random walk beginning from the
+ * given `initial_particle_position`, advancing in steps of `bond_length`
+ */
+class CoarseGrainedFastaFileReader : public StructureFileReader {
+  private:
+    void loadHeader(std::istream& stream) override;
+    Particle loadParticle(std::istream& stream) override;
+    double bond_length = 0.0;
+    Point new_particle_position = Point::Zero();
+
+  public:
+    explicit CoarseGrainedFastaFileReader(double bond_length, const Point& initial_particle_position = Point(0, 0, 0));
+    void setBondLength(double bond_length);
+    std::string loadSequence(std::istream& stream);
+    char getFastaLetter(std::istream& stream) const;
+};
+
 class AminoAcidModelReader : public StructureFileReader {
   private:
     void loadHeader(std::istream& stream) override;
@@ -169,6 +189,7 @@ class StructureFileWriter {
     }
 
   protected:
+    static const std::string generated_by_faunus_comment;
     bool particle_is_active = true;
     std::string group_name;
     std::size_t particle_index = 0;
@@ -212,23 +233,18 @@ class StructureFileWriter {
     virtual ~StructureFileWriter() = default;
 };
 
-std::shared_ptr<StructureFileWriter> createStructureFileWriter(const std::string& suffix);
-
-/** Write AAM files */
 class AminoAcidModelWriter : public StructureFileWriter {
   private:
     void saveHeader(std::ostream& stream, int number_of_particles) const override;
     void saveParticle(std::ostream& stream, const Particle& particle) override;
 };
 
-/** Write XYZ files */
 class XYZWriter : public StructureFileWriter {
   private:
     void saveHeader(std::ostream& stream, int number_of_particles) const override;
     void saveParticle(std::ostream& stream, const Particle& particle) override;
 };
 
-/** Write PQR files */
 class PQRWriter : public StructureFileWriter {
   private:
     void saveHeader(std::ostream& stream, int number_of_particles) const override;
@@ -241,7 +257,6 @@ class PQRWriter : public StructureFileWriter {
     explicit PQRWriter(Style style = PQR_LEGACY);
 };
 
-/** Write GRO files */
 class GromacsWriter : public StructureFileWriter {
   private:
     void saveHeader(std::ostream& stream, int number_of_particles) const override;
@@ -634,6 +649,13 @@ ParticleVector fastaToParticles(const std::string &fasta_sequence, double bond_l
  * @returns particles destination particle vector (will be overwritten)
  */
 ParticleVector loadStructure(const std::string& filename, bool prefer_charges_from_file = true);
+
+/**
+ * @brief Create structure writer
+ * @param suffix Filename suffix (pqr, pdb, aam, xyz, gro)
+ * @return Shared pointer to write instance; empty if unknown suffix
+ */
+std::shared_ptr<StructureFileWriter> createStructureFileWriter(const std::string& suffix);
 
 /**
  * @brief Placeholder for Space Trajectory

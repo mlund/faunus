@@ -7,22 +7,6 @@
 #include <zstr.hpp>
 #include <cereal/archives/binary.hpp>
 
-void Faunus::StructureFileReader::handleChargeMismatch(Particle& particle, const int atom_index) {
-    if (fabs(particle.traits().charge - particle.charge) > pc::epsilon_dbl) {
-        faunus_logger->warn("charge mismatch on atom {0} {1}: {2} atomlist value", atom_index, particle.traits().name,
-                            (prefer_charges_from_file) ? "ignoring" : "using");
-        if (not prefer_charges_from_file) {
-            particle.charge = particle.traits().charge; // let's use atomdata charge
-        }
-    }
-}
-void Faunus::StructureFileReader::handleRadiusMismatch(const Particle& particle, const double radius,
-                                                       const int atom_index) {
-    if (std::fabs(particle.traits().sigma - 2.0 * radius) > pc::epsilon_dbl) {
-        faunus_logger->warn("radius mismatch on atom {0} {1}: using atomlist value", atom_index,
-                            particle.traits().name);
-    }
-}
 namespace Faunus {
 
 /**
@@ -53,7 +37,6 @@ std::unique_ptr<std::ostream> IO::openCompressedOutputStream(const std::string& 
 }
 
 TEST_CASE("[Faunus] openCompressedOutputStream") {
-    using doctest::Approx;
     CHECK_THROWS(IO::openCompressedOutputStream("/../file", true));
     CHECK_NOTHROW(IO::openCompressedOutputStream("/../file"));
 }
@@ -108,67 +91,6 @@ void PQRTrajectoryReader::loadTrajectory(const std::string& filename, std::vecto
         }
     } else {
         throw std::runtime_error("cannot open file");
-    }
-}
-
-TEST_CASE("[Faunus] StructureFileReader and Writer") {
-    using doctest::Approx;
-    // Space object with two salt pairs, i.e. four particles
-    Space spc;
-    SpaceFactory::makeNaCl(spc, 2, R"( {"type": "cuboid", "length": [20,30,40]} )"_json);
-
-    // set positions
-    double displacement = 0.0;
-    for (int i = 0; i < 4; i++) {
-        spc.p[i].pos = {displacement, displacement + 0.1, displacement + 0.2};
-        spc.p[i].charge = double(i);
-        displacement += 0.5;
-    }
-
-    auto io_roundtrip = [&](StructureFileReader& reader, StructureFileWriter& writer) {
-        std::stringstream stream;
-        writer.save(stream, spc.p.begin(), spc.p.end(), spc.geo.getLength());
-        stream.seekg(0); // rewind
-        reader.load(stream);
-        if (reader.box_dimension_support) {
-            CHECK(reader.box_length.x() == Approx(spc.geo.getLength().x()));
-            CHECK(reader.box_length.y() == Approx(spc.geo.getLength().y()));
-            CHECK(reader.box_length.z() == Approx(spc.geo.getLength().z()));
-        }
-        CHECK(reader.particles.size() == 4);
-        for (int i = 0; i < 4; i++) {
-            CHECK(reader.particles[i].pos.x() == Approx(spc.p[i].pos.x()));
-            CHECK(reader.particles[i].pos.y() == Approx(spc.p[i].pos.y()));
-            CHECK(reader.particles[i].pos.z() == Approx(spc.p[i].pos.z()));
-            if (reader.particle_charge_support) {
-                CHECK(reader.particles[i].charge == Approx(spc.p[i].charge));
-            }
-        }
-    };
-
-    SUBCASE("PQR roundtrip") {
-        PQRReader reader;
-        PQRWriter writer;
-        io_roundtrip(reader, writer);
-    }
-
-    SUBCASE("XYZ roundtrip") {
-        XYZReader reader;
-        XYZWriter writer;
-        io_roundtrip(reader, writer);
-    }
-
-    SUBCASE("AAM roundtrip") {
-        AminoAcidModelReader reader;
-        AminoAcidModelWriter writer;
-        io_roundtrip(reader, writer);
-    }
-
-    SUBCASE("Gromacs roundtrip") {
-        GromacsReader reader;
-        GromacsWriter writer;
-        io_roundtrip(reader, writer);
-        writer.save("/Users/mikael/test.gro", spc.p.begin(), spc.p.end(), spc.geo.getLength());
     }
 }
 
@@ -406,6 +328,27 @@ ParticleVector fastaToParticles(const std::string& fasta_sequence, double bond_l
     return particles;
 }
 
+std::shared_ptr<StructureFileWriter> createStructureFileWriter(const std::string& suffix) {
+    if (suffix == "pqr") {
+        return std::make_shared<PQRWriter>();
+    }
+    if (suffix == "aam") {
+        return std::make_shared<AminoAcidModelWriter>();
+    }
+    if (suffix == "xyz") {
+        return std::make_shared<XYZWriter>();
+    }
+    if (suffix == "gro") {
+        return std::make_shared<GromacsWriter>();
+    }
+    if (suffix == "pdb") {
+        return std::make_shared<PQRWriter>(PQRWriter::PDB);
+    }
+    return std::shared_ptr<StructureFileWriter>();
+}
+
+// -----------------------------
+
 ParticleVector loadStructure(const std::string& filename, bool prefer_charges_from_file) {
     ParticleVector particles;
     std::unique_ptr<StructureFileReader> reader;
@@ -491,6 +434,22 @@ void FormatSpaceTrajectory::save([[maybe_unused]] const Space& spc) { assert(out
 
 // ------------------------
 
+void StructureFileReader::handleChargeMismatch(Particle& particle, const int atom_index) {
+    if (fabs(particle.traits().charge - particle.charge) > pc::epsilon_dbl) {
+        faunus_logger->warn("charge mismatch on atom {0} {1}: {2} atomlist value", atom_index, particle.traits().name,
+                            (prefer_charges_from_file) ? "ignoring" : "using");
+        if (not prefer_charges_from_file) {
+            particle.charge = particle.traits().charge; // let's use atomdata charge
+        }
+    }
+}
+void StructureFileReader::handleRadiusMismatch(const Particle& particle, const double radius, const int atom_index) {
+    if (std::fabs(particle.traits().sigma - 2.0 * radius) > pc::epsilon_dbl) {
+        faunus_logger->warn("radius mismatch on atom {0} {1}: using atomlist value", atom_index,
+                            particle.traits().name);
+    }
+}
+
 size_t StructureFileReader::getNumberOfAtoms(const std::string& line) {
     try {
         return std::stoul(line);
@@ -510,6 +469,8 @@ void StructureFileReader::getNextLine(std::istream& stream, std::string& line) {
 ParticleVector& StructureFileReader::load(std::istream& stream) {
     stream.exceptions(std::istream::failbit | std::istream::badbit);
     loadHeader(stream);
+    std::for_each(comments.begin(), comments.end(),
+                  [](auto& comment) { faunus_logger->debug("comment line: {}", comment); });
     particles.clear();
     if (expected_number_of_particles > 0) {
         particles.reserve(expected_number_of_particles);
@@ -547,8 +508,85 @@ void StructureFileReader::loadFooter([[maybe_unused]] std::istream& stream) {}
 
 // -----------------------------
 
+const std::string StructureFileWriter::generated_by_faunus_comment =
+    "Generated by Faunus - https://github.com/mlund/faunus";
+
+void StructureFileWriter::saveFooter([[maybe_unused]] std::ostream& stream) const {}
+
+void StructureFileWriter::saveGroup(std::ostream& stream, const Group<Particle>& group) {
+    group_name = group.traits().name;
+    for (auto particle = group.begin(); particle != group.trueend(); particle++) {
+        particle_is_active = particle < group.end();
+        saveParticle(stream, *particle);
+        particle_index++;
+    }
+    group_index++;
+}
+
+TEST_CASE("[Faunus] StructureFileReader and StructureFileWriter") {
+    using doctest::Approx;
+    // Space object with two salt pairs, i.e. four particles
+    Space spc;
+    SpaceFactory::makeNaCl(spc, 2, R"( {"type": "cuboid", "length": [20,30,40]} )"_json);
+
+    // set positions
+    double displacement = 0.0;
+    for (int i = 0; i < 4; i++) {
+        spc.p[i].pos = {displacement, displacement + 0.1, displacement + 0.2};
+        spc.p[i].charge = double(i);
+        displacement += 0.5;
+    }
+
+    auto io_roundtrip = [&](StructureFileReader& reader, StructureFileWriter& writer) {
+        std::stringstream stream;
+        writer.save(stream, spc.p.begin(), spc.p.end(), spc.geo.getLength());
+        stream.seekg(0); // rewind
+        reader.load(stream);
+        if (reader.box_dimension_support) {
+            CHECK(reader.box_length.x() == Approx(spc.geo.getLength().x()));
+            CHECK(reader.box_length.y() == Approx(spc.geo.getLength().y()));
+            CHECK(reader.box_length.z() == Approx(spc.geo.getLength().z()));
+        }
+        CHECK(reader.particles.size() == 4);
+        for (int i = 0; i < 4; i++) {
+            CHECK(reader.particles[i].pos.x() == Approx(spc.p[i].pos.x()));
+            CHECK(reader.particles[i].pos.y() == Approx(spc.p[i].pos.y()));
+            CHECK(reader.particles[i].pos.z() == Approx(spc.p[i].pos.z()));
+            if (reader.particle_charge_support) {
+                CHECK(reader.particles[i].charge == Approx(spc.p[i].charge));
+            }
+        }
+    };
+
+    SUBCASE("PQR roundtrip") {
+        PQRReader reader;
+        PQRWriter writer;
+        io_roundtrip(reader, writer);
+    }
+
+    SUBCASE("XYZ roundtrip") {
+        XYZReader reader;
+        XYZWriter writer;
+        io_roundtrip(reader, writer);
+    }
+
+    SUBCASE("AAM roundtrip") {
+        AminoAcidModelReader reader;
+        AminoAcidModelWriter writer;
+        io_roundtrip(reader, writer);
+    }
+
+    SUBCASE("Gromacs roundtrip") {
+        GromacsReader reader;
+        GromacsWriter writer;
+        io_roundtrip(reader, writer);
+    }
+}
+
+// -----------------------------
+
 void AminoAcidModelWriter::saveHeader(std::ostream& stream, int number_of_particles) const {
-    stream << number_of_particles << "\n";
+    stream << fmt::format("# {}\n{}\n", generated_by_faunus_comment, number_of_particles);
 }
 void AminoAcidModelWriter::saveParticle(std::ostream& stream, const Particle& particle) {
     const auto& traits = particle.traits();
@@ -596,11 +634,11 @@ AminoAcidModelReader::AminoAcidModelReader() {
 // -----------------------------
 
 void XYZWriter::saveHeader(std::ostream& stream, int number_of_particles) const {
-    stream << number_of_particles << "\n"
-           << "Generated by Faunus - https://github.com/mlund/faunus\n";
+    stream << fmt::format("{}\n{}\n", number_of_particles, generated_by_faunus_comment);
 }
 void XYZWriter::saveParticle(std::ostream& stream, const Particle& particle) {
-    stream << particle.traits().name << " " << particle.pos.transpose() << "\n";
+    const auto scale = static_cast<double>(particle_is_active);
+    stream << particle.traits().name << " " << scale * particle.pos.transpose() << "\n";
 }
 
 // -----------------------------
@@ -618,7 +656,6 @@ void XYZReader::loadHeader(std::istream& stream) {
         stream.exceptions(flags); // restore original state flags
         if (!line.empty()) {
             comments.push_back(line);
-            faunus_logger->debug("xyz-file comment: {}", line);
         }
     } catch (std::exception& e) { throw std::invalid_argument("cannot load comment"); }
 }
@@ -659,7 +696,7 @@ Particle PQRReader::loadParticle(std::istream& stream) {
         Particle particle = Faunus::findAtomByName(atom_name);
         record >> residue_name >> residue_index >> particle.pos.x() >> particle.pos.y() >> particle.pos.z() >>
             particle.charge >> radius;
-        particle.pos -= 0.5 * box_length; //
+        particle.pos = particle.pos * 1.0_angstrom - 0.5 * box_length;
         handleChargeMismatch(particle, atom_index);
         handleRadiusMismatch(particle, radius, atom_index);
         return particle;
@@ -719,7 +756,7 @@ void PQRWriter::saveParticle(std::ostream& stream, const Particle& particle) {
     } else if (group_name.empty()) {
         group_name = "n/a";
     }
-    const std::string chain = "A";
+    const auto chain = "A"s;
     if (style == PQR) {
         stream << fmt::format("{:6s}{:5d} {:^4s}{:1s}{:3s} {:1s}{:4d}{:1s}   "
                               "{:8.3f}{:8.3f}{:8.3f}{:6.2f}{:6.2f}\n",
@@ -728,10 +765,10 @@ void PQRWriter::saveParticle(std::ostream& stream, const Particle& particle) {
                               scale * particle.traits().sigma * 0.5);
 
     } else if (style == PDB) { // see https://cupnet.net/pdb-format
-        const double occupancy = 0.0;
-        const double temperature_factor = 1.0;
+        const auto occupancy = 0.0;
+        const auto temperature_factor = 1.0;
         const std::string element_symbol = atom_name;
-        const std::string charge = "0";
+        const auto charge = "0"s;
         stream << fmt::format("{:6s}{:5d} {:^4s}{:1s}{:3s} {:1s}{:4d}{:1s}   "
                               "{:8.3f}{:8.3f}{:8.3f}{:6.2f}{:6.2f}          {:>2s}{:2s}\n",
                               "ATOM", particle_index + 1, atom_name, "A", group_name, chain, group_index + 1, "0",
@@ -754,40 +791,13 @@ void PQRWriter::saveHeader(std::ostream& stream, [[maybe_unused]] int number_of_
 }
 
 void PQRWriter::saveFooter(std::ostream& stream) const { stream << "END\n"; }
+
 PQRWriter::PQRWriter(PQRWriter::Style style) : style(style) {}
-
-// -----------------------------
-
-void StructureFileWriter::saveFooter([[maybe_unused]] std::ostream& stream) const {}
-
-void StructureFileWriter::saveGroup(std::ostream& stream, const Group<Particle>& group) {
-    group_name = group.traits().name;
-    for (auto particle = group.begin(); particle != group.trueend(); particle++) { // loop over particles
-        particle_is_active = particle < group.end();
-        saveParticle(stream, *particle);
-        particle_index++;
-    }
-    group_index++;
-}
-
-std::shared_ptr<StructureFileWriter> createStructureFileWriter(const std::string& suffix) {
-    std::shared_ptr<StructureFileWriter> writer;
-    if (suffix == "aam") {
-        writer = std::make_shared<AminoAcidModelWriter>();
-    } else if (suffix == "pqr") {
-        writer = std::make_shared<PQRWriter>();
-    } else if (suffix == "xyz") {
-        writer = std::make_shared<XYZWriter>();
-    } else if (suffix == "gro") {
-        writer = std::make_shared<GromacsWriter>();
-    }
-    return writer;
-}
 
 // -----------------------
 
-void GromacsWriter::saveHeader(std::ostream& stream, int number_of_particles) const {
-    stream << "# Generated by Faunus - https://github.com/mlund/faunus\n" << number_of_particles << "\n";
+void GromacsWriter::saveHeader(std::ostream& stream, const int number_of_particles) const {
+    stream << fmt::format("{}\n{}\n", generated_by_faunus_comment, number_of_particles);
 }
 
 void GromacsWriter::saveFooter(std::ostream& stream) const {
@@ -817,9 +827,7 @@ void GromacsReader::loadHeader(std::istream& stream) {
     std::getline(stream, line);
     comments.push_back(line);
     std::getline(stream, line);
-    try {
-        expected_number_of_particles = std::stoi(line);
-    } catch (std::exception& e) { throw std::invalid_argument("atom count expected on second line"); }
+    expected_number_of_particles = getNumberOfAtoms(line);
     loadBoxInformation(stream);
 }
 
@@ -860,4 +868,115 @@ Particle GromacsReader::loadParticle(std::istream& stream) {
     particle.pos = particle.pos * 1.0_nm - 0.5 * box_length;
     return particle;
 }
+
+// -----------------------
+
+/**
+ * @brief Advance stream position past all initial lines starting with ";" or ">"
+ */
+void CoarseGrainedFastaFileReader::loadHeader(std::istream& stream) {
+    comments.clear();
+    std::string line;
+    auto position = stream.tellg();
+    std::getline(stream, line);
+    if (line[0] == '>' || line[0] == ';') {
+        comments.push_back(line);
+        return loadHeader(stream); // repeat
+    }
+    stream.seekg(position); // rewind
+}
+
+char CoarseGrainedFastaFileReader::getFastaLetter(std::istream& stream) const {
+    assert(stream.exceptions() & std::ios::failbit); // check that we throw upon failure
+    while (true) {
+        char letter = static_cast<char>(stream.get());
+        if (letter == ' ' || letter == '\n') { // ignore spaces and newlines
+            continue;
+        }
+        if (letter == '*') { // * signals end of sequence -> stop
+            throw std::istream::failure("end of sequence (*) reached");
+        }
+        if (letter == '>') { // multiple sequences?
+            faunus_logger->warn("multiple FASTA sequences detected; using only the first");
+            throw std::istream::failure("stopping after first sequence");
+        }
+        return letter;
+    }
+}
+
+Particle CoarseGrainedFastaFileReader::loadParticle(std::istream& stream) {
+    auto letter = getFastaLetter(stream);
+    const auto atomid = fastaToAtomIds(std::string(1, letter)).at(0);
+    auto particle = Particle(Faunus::atoms[atomid]);
+    particle.pos = new_particle_position;
+    new_particle_position += Faunus::ranunit(random) * bond_length;
+    return particle;
+}
+
+CoarseGrainedFastaFileReader::CoarseGrainedFastaFileReader(const double bond_length,
+                                                           const Point& initial_particle_position)
+    : bond_length(bond_length), new_particle_position(initial_particle_position) {}
+
+void CoarseGrainedFastaFileReader::setBondLength(const double bond_length) {
+    CoarseGrainedFastaFileReader::bond_length = bond_length;
+}
+
+std::string CoarseGrainedFastaFileReader::loadSequence(std::istream& stream) {
+    stream.exceptions(std::istream::failbit | std::istream::badbit);
+    loadHeader(stream);
+    std::string sequence;
+    while (true) {
+        try {
+            sequence.push_back(getFastaLetter(stream));
+        } catch (std::istream::failure& e) {
+            break; // end of stream reached
+        } catch (std::exception& e) { throw std::runtime_error(e.what()); }
+    }
+    return sequence;
+}
+
+TEST_CASE("[Faunus] CoarseGrainedFastaFileReader") {
+    Faunus::atoms = R"([{ "ARG": { } }, { "LYS": { } } ])"_json.get<decltype(atoms)>();
+    const auto bond_length = 7.0;
+
+    SUBCASE("single sequence") {
+        CoarseGrainedFastaFileReader reader(bond_length, {10, 20, 30});
+        std::stringstream stream(">MCHU - Calmodulin\n; another comment\nKR\n");
+        reader.load(stream);
+        CHECK(reader.particles.size() == 2);
+        CHECK(reader.particles[0].id == 1);
+        CHECK(reader.particles[1].id == 0);
+        CHECK(reader.particles[0].pos.x() == doctest::Approx(10));
+        CHECK(reader.particles[0].pos.y() == doctest::Approx(20));
+        CHECK(reader.particles[0].pos.z() == doctest::Approx(30));
+        Point distance = reader.particles[0].pos - reader.particles[1].pos;
+        CHECK(distance.squaredNorm() == doctest::Approx(bond_length * bond_length));
+    }
+    SUBCASE("single sequence - end by star") {
+        CoarseGrainedFastaFileReader reader(bond_length);
+        std::stringstream stream(">MCHU - Calmodulin\nR*K\n");
+        reader.load(stream);
+        CHECK(reader.particles.size() == 1);
+    }
+    SUBCASE("multisequence") {
+        CoarseGrainedFastaFileReader reader(bond_length);
+        std::stringstream stream(">MCHU - Calmodulin\nKKK\n>RK*\n");
+        reader.load(stream);
+        CHECK(reader.particles.size() == 3);
+    }
+    SUBCASE("unknown particle") {
+        CoarseGrainedFastaFileReader reader(bond_length);
+        std::stringstream stream(">MCHU - Calmodulin\nRKE*\n");
+        CHECK_THROWS(reader.load(stream));
+    }
+    SUBCASE("no comment") {
+        CoarseGrainedFastaFileReader reader(bond_length);
+        std::stringstream stream("RKK*\n");
+        reader.load(stream);
+        CHECK(reader.particles.size() == 3);
+    }
+}
+
+// -----------------------
+
 } // namespace Faunus

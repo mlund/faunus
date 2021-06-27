@@ -174,9 +174,9 @@ properties:
                                       maxItems: 3
                             - type: object
                               properties:
-                                  fasta: {type: string}
-                                  k: {type: number}
-                                  req: {type: number}
+                                  fasta: {type: string, description: "fasta sequence or .fasta filename"}
+                                  k: {type: number, description: "force constant"}
+                                  req: {type: number, description: "equilibrium distance"}
                               additionalProperties: false
                     to_disk:
                         type: boolean
@@ -930,7 +930,7 @@ properties:
                 savestate:
                     description: "Save particle positions to file"
                     properties:
-                        file: {type: string, description: "Output filename", pattern: "(.*?)\\.(aam|pqr|state|ubj|gro|xyz|json)$"}
+                        file: {type: string, description: "Output filename", pattern: "(.*?)\\.(aam|pqr|state|ubj|gro|xyz|json|pdb)$"}
                         nstep: {type: integer, default: -1, description: "Sample interval; -1 = end of simulation only"}
                         nskip: {type: integer, default: 0, description: "Initial steps to skip"}
                         saverandom: {type: boolean, default: false, description: "Include random number state"}

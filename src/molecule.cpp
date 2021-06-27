@@ -543,9 +543,19 @@ void MoleculeStructureReader::readArray(ParticleVector &particles, const json &j
 
 void MoleculeStructureReader::readFasta(ParticleVector &particles, const json &input) {
     if (auto it = input.find("fasta"); it != input.end()) {
-        std::string fasta = it->get<std::string>();
         Potential::HarmonicBond bond; // harmonic bond
         bond.from_json(input);        // read 'k' and 'req' from json
+
+        std::string fasta = it->get<std::string>(); // fasta sequence or filename
+
+        // is `fasta` a valid filename?
+        if ("fasta" == fasta.substr(fasta.find_last_of('.') + 1)) {
+            if (auto stream = std::ifstream(fasta)) {
+                fasta = CoarseGrainedFastaFileReader(0.0).loadSequence(stream);
+            } else {
+                throw ConfigurationError("Could not open fasta file: {}", fasta);
+            }
+        }
         particles = Faunus::fastaToParticles(fasta, bond.equilibrium_distance);
     } else {
         throw ConfigurationError("invalid FASTA format");

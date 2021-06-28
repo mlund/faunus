@@ -434,8 +434,8 @@ void FormatSpaceTrajectory::save([[maybe_unused]] const Space& spc) { assert(out
 
 // ------------------------
 
-void StructureFileReader::handleChargeMismatch(Particle& particle, const int atom_index) {
-    if (fabs(particle.traits().charge - particle.charge) > pc::epsilon_dbl) {
+void StructureFileReader::handleChargeMismatch(Particle& particle, const int atom_index) const {
+    if (std::fabs(particle.traits().charge - particle.charge) > pc::epsilon_dbl) {
         faunus_logger->warn("charge mismatch on atom {0} {1}: {2} atomlist value", atom_index, particle.traits().name,
                             (prefer_charges_from_file) ? "ignoring" : "using");
         if (not prefer_charges_from_file) {
@@ -443,14 +443,15 @@ void StructureFileReader::handleChargeMismatch(Particle& particle, const int ato
         }
     }
 }
-void StructureFileReader::handleRadiusMismatch(const Particle& particle, const double radius, const int atom_index) {
+void StructureFileReader::handleRadiusMismatch(const Particle& particle, const double radius,
+                                               const int atom_index) const {
     if (std::fabs(particle.traits().sigma - 2.0 * radius) > pc::epsilon_dbl) {
         faunus_logger->warn("radius mismatch on atom {0} {1}: using atomlist value", atom_index,
                             particle.traits().name);
     }
 }
 
-size_t StructureFileReader::getNumberOfAtoms(const std::string& line) {
+size_t StructureFileReader::getNumberOfAtoms(const std::string& line) const {
     try {
         return std::stoul(line);
     } catch (std::exception& e) { throw std::invalid_argument("invalid number of particles"); }

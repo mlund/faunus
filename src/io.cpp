@@ -79,7 +79,7 @@ void PQRTrajectoryReader::loadTrajectory(const std::string& filename, std::vecto
                 destination.back().push_back(particle);
             } else if (record.find("END") == 0) {                       // if END record, advance to next frame
                 destination.back().shrink_to_fit();                     // attempt to clean up
-                destination.push_back(ParticleVector());                // prepare next frame
+                destination.emplace_back();                             // prepare next frame
                 destination.back().reserve(destination.front().size()); // reserve memory
             }
         }
@@ -244,7 +244,7 @@ XTCReader::XTCReader(const std::string& filename) : filename(filename) {
         xtc_frame = std::make_shared<XTCTrajectoryFrame>(number_of_atoms);
         xdrfile = XDRfile::xdrfile_open(filename.c_str(), "r");
     }
-    if (!xtc_frame || !xdrfile) {
+    if (!xtc_frame || (xdrfile == nullptr)) {
         throw std::runtime_error(fmt::format("xtc file {} could not be opened", filename));
     }
 }
@@ -329,22 +329,19 @@ ParticleVector fastaToParticles(const std::string& fasta_sequence, double bond_l
 }
 
 std::shared_ptr<StructureFileWriter> createStructureFileWriter(const std::string& suffix) {
+    std::shared_ptr<StructureFileWriter> writer;
     if (suffix == "pqr") {
-        return std::make_shared<PQRWriter>();
+        writer = std::make_shared<PQRWriter>();
+    } else if (suffix == "aam") {
+        writer = std::make_shared<AminoAcidModelWriter>();
+    } else if (suffix == "xyz") {
+        writer = std::make_shared<XYZWriter>();
+    } else if (suffix == "gro") {
+        writer = std::make_shared<GromacsWriter>();
+    } else if (suffix == "pdb") {
+        writer = std::make_shared<PQRWriter>(PQRWriter::PDB);
     }
-    if (suffix == "aam") {
-        return std::make_shared<AminoAcidModelWriter>();
-    }
-    if (suffix == "xyz") {
-        return std::make_shared<XYZWriter>();
-    }
-    if (suffix == "gro") {
-        return std::make_shared<GromacsWriter>();
-    }
-    if (suffix == "pdb") {
-        return std::make_shared<PQRWriter>(PQRWriter::PDB);
-    }
-    return std::shared_ptr<StructureFileWriter>();
+    return writer;
 }
 
 // -----------------------------
@@ -409,14 +406,20 @@ std::vector<int> fastaToAtomIds(const std::string& fasta_sequence) {
     std::vector<std::string> names;
     names.reserve(fasta_sequence.size());
 
-    for (const auto letter : fasta_sequence) {             // loop over letters
+    for (const auto letter : fasta_sequence) { // loop over letters
+        if (letter == '*') {
+            break;
+        }
+        if (letter == ' ' || letter == '\n') {
+            continue;
+        }
         if (auto it = map.find(letter); it != map.end()) { // is it in map?
             names.push_back(it->second);
         } else {
             throw std::runtime_error("invalid FASTA letter '" + std::string(1, letter) + "'");
         }
     }
-    return Faunus::names2ids(atoms, names);
+    return Faunus::names2ids(Faunus::atoms, names);
 }
 
 FormatSpaceTrajectory::FormatSpaceTrajectory(std::ostream& ostream) {
@@ -443,26 +446,31 @@ void StructureFileReader::handleChargeMismatch(Particle& particle, const int ato
         }
     }
 }
-void StructureFileReader::handleRadiusMismatch(const Particle& particle, const double radius,
-                                               const int atom_index) const {
+void StructureFileReader::handleRadiusMismatch(const Particle& particle, const double radius, const int atom_index) {
     if (std::fabs(particle.traits().sigma - 2.0 * radius) > pc::epsilon_dbl) {
         faunus_logger->warn("radius mismatch on atom {0} {1}: using atomlist value", atom_index,
                             particle.traits().name);
     }
 }
 
-size_t StructureFileReader::getNumberOfAtoms(const std::string& line) const {
+size_t StructureFileReader::getNumberOfAtoms(const std::string& line) {
     try {
         return std::stoul(line);
     } catch (std::exception& e) { throw std::invalid_argument("invalid number of particles"); }
 }
 
-void StructureFileReader::getNextLine(std::istream& stream, std::string& line) {
-    std::getline(stream, line);
-    if (!line.empty()) {
-        if (line.substr(0, 1) == "#") {
-            comments.push_back(line);
-            getNextLine(stream, line);
+void StructureFileReader::getNextLine(std::istream& stream, std::string& line, const std::string& comment_identifiers) {
+    assert(stream.exceptions() & std::ios::failbit); // check that we throw upon failure
+    while (true) {
+        std::getline(stream, line);
+        if (!line.empty()) {
+            bool is_comment = comment_identifiers.find_first_of(line.front()) != std::string::npos;
+            if (is_comment) {
+                comments.push_back(line);
+                line.clear();
+                continue;
+            }
+            break;
         }
     }
 }
@@ -835,7 +843,7 @@ void GromacsReader::loadHeader(std::istream& stream) {
 void GromacsReader::loadBoxInformation(std::istream& stream) {
     auto initial_position = stream.tellg();
     stream.seekg(-2, std::istream::end); // jump to end and skip possible newline
-    for (int i = stream.tellg(); i > 0; i--) {
+    for (int i = (int)stream.tellg(); i > 0; i--) {
         if (stream.peek() != '\n') {
             stream.seekg(-1, std::istream::cur); // one step backwards
         } else {

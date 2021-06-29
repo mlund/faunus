@@ -553,10 +553,11 @@ void MoleculeStructureReader::readFasta(ParticleVector &particles, const json &i
             if (auto stream = std::ifstream(fasta)) {
                 fasta = CoarseGrainedFastaFileReader(0.0).loadSequence(stream);
             } else {
-                throw ConfigurationError("Could not open fasta file: {}", fasta);
+                throw ConfigurationError("could not open fasta file: {}", fasta);
             }
         }
         particles = Faunus::fastaToParticles(fasta, bond.equilibrium_distance);
+        faunus_logger->debug("fasta sequence parsed with {} letters", particles.size());
     } else {
         throw ConfigurationError("invalid FASTA format");
     }

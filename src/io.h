@@ -24,8 +24,8 @@ template <typename T = Particle> class Group;
 #endif
 
 namespace XDRfile {
-#include "xdrfile_trr.h"
-#include "xdrfile_xtc.h"
+#include <xdrfile_trr.h>
+#include <xdrfile_xtc.h>
 } // namespace XDRfile
 
 namespace IO {
@@ -79,13 +79,14 @@ class StructureFileReader {
     virtual Particle loadParticle(std::istream& stream) = 0; //!< Load single particle
 
   protected:
-    size_t getNumberOfAtoms(const std::string& line) const;    //!< Helper function to extract N
-    void getNextLine(std::istream& stream, std::string& line); //!< Helper function to forward stream
+    static size_t getNumberOfAtoms(const std::string& line); //!< Helper function to extract N
+    void getNextLine(std::istream& stream, std::string& line,
+                     const std::string& comment_identifiers = "#"); //!< Helper function to forward stream
     size_t expected_number_of_particles = 0;
 
     void handleChargeMismatch(Particle& particle, int atom_index) const; //!< Policy if charge mismatch
-    void handleRadiusMismatch(const Particle& particle, double radius,
-                              int atom_index) const; //!< Policy if radius mismatch
+    static void handleRadiusMismatch(const Particle& particle, double radius,
+                                     int atom_index); //!< Policy if radius mismatch
 
   public:
     ParticleVector particles;
@@ -199,21 +200,21 @@ class StructureFileWriter {
 
   public:
     template <class ParticleIter>
-    void save(std::ostream& stream, ParticleIter begin, ParticleIter end, const Point& box_dimensions) {
+    void save(std::ostream& stream, ParticleIter begin, ParticleIter end, const Point& box_length) {
         if (auto number_of_particles = std::distance(begin, end); number_of_particles > 0) {
-            this->box_dimensions = box_dimensions;
+            box_dimensions = box_length;
             saveHeader(stream, number_of_particles);
             saveParticles(stream, begin, end);
             saveFooter(stream);
         }
     }
 
-    template <typename Range> void save(std::ostream& stream, const Range& groups, const Point& box_dimensions) {
+    template <typename Range> void save(std::ostream& stream, const Range& groups, const Point& box_length) {
         group_index = 0;
         particle_index = 0;
-        this->box_dimensions = box_dimensions;
+        box_dimensions = box_length;
 
-        std::size_t number_of_particles = 0;
+        int number_of_particles = 0;
         std::for_each(groups.begin(), groups.end(),
                       [&](const auto& group) { number_of_particles += group.capacity(); });
         saveHeader(stream, number_of_particles);

@@ -77,11 +77,12 @@ class StructureFileReader {
     virtual void loadHeader(std::istream& stream) = 0;       //!< Gobble entire header
     virtual void loadFooter(std::istream& stream);           //!< Gobble entire header
     virtual Particle loadParticle(std::istream& stream) = 0; //!< Load single particle
+    void checkLoadedParticles() const;                       //!< Checks if expected number of particles were loaded
 
   protected:
     static size_t getNumberOfAtoms(const std::string& line); //!< Helper function to extract N
-    void getNextLine(std::istream& stream, std::string& line,
-                     const std::string& comment_identifiers = "#"); //!< Helper function to forward stream
+    void getNextLine(std::istream& stream, std::string& destination,
+                     const std::string& comment_identifiers); //!< Helper function to forward stream
     size_t expected_number_of_particles = 0;
 
     void handleChargeMismatch(Particle& particle, int atom_index) const; //!< Policy if charge mismatch
@@ -120,7 +121,7 @@ class CoarseGrainedFastaFileReader : public StructureFileReader {
     explicit CoarseGrainedFastaFileReader(double bond_length, const Point& initial_particle_position = Point(0, 0, 0));
     void setBondLength(double bond_length);
     std::string loadSequence(std::istream& stream);
-    char getFastaLetter(std::istream& stream) const;
+    static char getFastaLetter(std::istream& stream);
 };
 
 class AminoAcidModelReader : public StructureFileReader {

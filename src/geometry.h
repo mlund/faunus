@@ -5,7 +5,6 @@
 #include "particle.h"
 #include "tensor.h"
 #include <Eigen/Geometry>
-#include <iostream>
 #include <cereal/types/base_class.hpp>
 #include <spdlog/spdlog.h>
 
@@ -375,7 +374,7 @@ class Chameleon : public GeometryBase {
     //! During the assignment copy everything, but clone the geometry.
     Chameleon &operator=(const Chameleon &geo);
 
-    std::shared_ptr<GeometryImplementation> asSimpleGeometry();
+    std::shared_ptr<GeometryImplementation> asSimpleGeometry() const;
 };
 
 inline void Chameleon::randompos(Point &m, Random &rand) const {

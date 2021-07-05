@@ -334,12 +334,17 @@ class SaveState : public Analysisbase {
     bool use_numbered_files = true;
     bool convert_hexagonal_prism_to_cuboid = false;
     std::string filename;
+
     void _to_json(json& j) const override;
     void _sample() override;
+    void saveAsCuboid(const std::string& filename, Space& spc, StructureFileWriter& writer) const;
+    void saveJsonStateFile(const std::string& filename, const Space& spc) const;
+    void saveBinaryJsonStateFile(const std::string& filename, const Space& spc) const;
 
   public:
     SaveState(json j, Space& spc);
     ~SaveState() override;
+    void setWriteFunction(Space& spc);
 };
 
 /**

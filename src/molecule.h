@@ -1,11 +1,11 @@
 #pragma once
 
-#include <set>
 #include "core.h"
 #include "auxiliary.h"
 #include "particle.h"
 #include "random.h"
 #include "spdlog/spdlog.h"
+#include <set>
 
 namespace Faunus {
 

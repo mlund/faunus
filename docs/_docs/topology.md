@@ -154,20 +154,22 @@ moleculelist:
 
 When giving structures using the `structure` keyword, the following policies apply:
 
-- `structure` can be a file name: `file.@` where `@=xyz|pqr|aam`
+- `structure` can be a file name: `file.@` where `@=xyz|pqr|aam|gro`
 - `structure` can be an _array_ of atom names and their positions:
   `- Mg: [2.0,0.1,2.0]`
 - `structure` can be a [FASTA sequence](https://en.wikipedia.org/wiki/FASTA_format):
-  `{fasta: [AAAAAAAK], k: 2.0; req: 7.0}` which generates
+  `{fasta: AAAAAAAK, k: 2.0; req: 7.0}` which generates
   a linear chain of harmonically connected atoms.
   FASTA letters are translated into three letter residue names which _must_ be defined
   in `atomlist`.
   Special letters: `n=NTR`, `c=CTR`, `a=ANK`.
+  Instead of a sequence, `fasta` may be a _filename_ from which the first
+  sequence is extracted. The filename must end with `.fasta`.
 - Radii in files are _ignored_; `atomlist` definitions are used.
+  A warning is issued if radii/charges differ in files and `atomlist`.
 - By default, charges in files are _used_; `atomlist` definitions are ignored.
   Use `keepcharges=False` to override.
-- A warning is issued if radii/charges differ in files and `atomlist`.
-- Box dimensions in files are ignored.
+- If the structure file contains box size information, this will be _ignored_.
 
 ### Nonbonded Interaction Exclusion
 

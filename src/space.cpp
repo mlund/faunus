@@ -308,7 +308,7 @@ TEST_CASE("Space::numParticles") {
     CHECK(spc.numParticles(Space::ACTIVE) == 2);
 }
 
-void to_json(json &j, Space &spc) {
+void to_json(json& j, const Space& spc) {
     j["geometry"] = spc.geo;
     j["groups"] = spc.groups;
     j["particles"] = spc.p;

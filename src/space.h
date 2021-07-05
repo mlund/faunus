@@ -247,7 +247,7 @@ class Space {
 
 }; // end of space
 
-void to_json(json &j, Space &spc);         //!< Serialize Space to json object
+void to_json(json& j, const Space& spc);   //!< Serialize Space to json object
 void from_json(const json &j, Space &spc); //!< Deserialize json object to Space
 
 /**

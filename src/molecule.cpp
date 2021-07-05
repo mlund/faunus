@@ -87,7 +87,7 @@ void MoleculeData::createMolecularConformations(const json &j) {
             throw ConfigurationError("`structure` and `traj` are mutually exclusive");
         }
         try {
-            FormatPQR::loadTrajectory(trajfile, conformations.data); // read traj. from disk
+            PQRTrajectoryReader::loadTrajectory(trajfile, conformations.data); // read traj. from disk
             if (bool read_charges = j.value("keepcharges", true); read_charges) {
                 faunus_logger->debug("charges in {} preferred over `atomlist` values", trajfile);
             } else {
@@ -437,7 +437,7 @@ void MoleculeBuilder::readParticles(const json &j_properties) {
         if (j_properties.value("ensphere", false))
             particles = Geometry::mapParticlesOnSphere(particles);
         if (j_properties.value("to_disk", false))
-            FormatPQR::save(molecule_name + "-initial.pqr", particles);
+            PQRWriter().save(molecule_name + "-initial.pqr", particles.begin(), particles.end(), Point(0, 0, 0));
     } else {
         // allow virtual molecules :-/
         // shall we rather try to fallback on readAtomic()?
@@ -543,10 +543,21 @@ void MoleculeStructureReader::readArray(ParticleVector &particles, const json &j
 
 void MoleculeStructureReader::readFasta(ParticleVector &particles, const json &input) {
     if (auto it = input.find("fasta"); it != input.end()) {
-        std::string fasta = it->get<std::string>();
         Potential::HarmonicBond bond; // harmonic bond
         bond.from_json(input);        // read 'k' and 'req' from json
+
+        std::string fasta = it->get<std::string>(); // fasta sequence or filename
+
+        // is `fasta` a valid filename?
+        if ("fasta" == fasta.substr(fasta.find_last_of('.') + 1)) {
+            if (auto stream = std::ifstream(fasta)) {
+                fasta = CoarseGrainedFastaFileReader(0.0).loadSequence(stream);
+            } else {
+                throw ConfigurationError("could not open fasta file: {}", fasta);
+            }
+        }
         particles = Faunus::fastaToParticles(fasta, bond.equilibrium_distance);
+        faunus_logger->debug("fasta sequence parsed with {} letters", particles.size());
     } else {
         throw ConfigurationError("invalid FASTA format");
     }

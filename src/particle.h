@@ -2,7 +2,6 @@
 #include "core.h"
 #include "atomdata.h"
 #include "tensor.h"
-#include <cereal/types/memory.hpp>
 #include <spdlog/spdlog.h>
 
 namespace Eigen {

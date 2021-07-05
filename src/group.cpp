@@ -4,6 +4,7 @@
 #include <range/v3/view/sample.hpp>
 #include <range/v3/view/bounded.hpp>
 #include <cereal/archives/binary.hpp>
+#include <cereal/types/memory.hpp>
 #include <nlohmann/json.hpp>
 
 namespace Faunus {

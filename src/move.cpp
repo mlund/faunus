@@ -410,7 +410,7 @@ void ParallelTempering::_move(Change &change) {
  */
 double ParallelTempering::exchangeEnergy(double energy_change) {
     assert(partner >= 0);
-    std::vector<MPI::FloatTransmitter::floatp> energy_change_vector = {energy_change};
+    std::vector<MPI::FloatTransmitter::float_type> energy_change_vector = {energy_change};
     auto energy_change_partner = float_transmitter.swapf(mpi, energy_change_vector, partner);
     return energy_change_partner.at(0); // return partner energy change
 }

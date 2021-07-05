@@ -875,12 +875,14 @@ void SanityCheck::checkMassCenter(const Space::Tgroup& group) {
         const auto mass_center = Geometry::massCenter(group.begin(), group.end(), spc.geo.getBoundaryFunc(), -group.cm);
         const auto distance = spc.geo.vdist(group.cm, mass_center).norm();
         if (distance > mass_center_tolerance) {
-            throw std::runtime_error(fmt::format("step {}: {}{} mass center out of sync by {:.3f} Å",
-                                                 getNumberOfSteps(), group.traits().name, spc.getGroupIndex(group),
-                                                 distance));
+            throw std::runtime_error(fmt::format(
+                "step {}: {}{} mass center out of sync by {:.3f} Å. This *may* be due to a "
+                "molecule being longer than half the box length: consider increasing the simulation cell size.",
+                getNumberOfSteps(), group.traits().name, spc.getGroupIndex(group), distance));
         }
     }
 }
+
 SanityCheck::SanityCheck(const json& j, Space& spc) : Analysisbase(spc, "sanity") {
     from_json(j);
     sample_interval = j.value("nstep", -1);

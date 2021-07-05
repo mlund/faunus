@@ -164,7 +164,7 @@ class XYZReader : public StructureFileReader {
 
 class GromacsReader : public StructureFileReader {
   private:
-    void loadBoxInformation(std::istream& stream);
+    void loadBoxInformation(std::istream& stream); //!< Load box dimensions (stream position is preserved)
     void loadHeader(std::istream& stream) override;
     Particle loadParticle(std::istream& stream) override;
 

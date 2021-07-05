@@ -774,40 +774,36 @@ PQRReader::PQRReader() {
 // -----------------------------
 
 void PQRWriter::saveParticle(std::ostream& stream, const Particle& particle) {
-    const auto scale = static_cast<double>(particle_is_active);
+    const auto& atom_name = particle.traits().name;
+    const auto scale = static_cast<double>(particle_is_active) / 1.0_angstrom;
     const auto position = scale * (particle.pos + 0.5 * box_dimensions); // origin to corner of box
-    auto atom_name = particle.traits().name;
-    if (atom_name.size() > 4) {
-        atom_name.erase(4);
-    }
-    if (group_name.size() > 3) {
-        group_name.erase(3);
-    } else if (group_name.empty()) {
-        group_name = "n/a";
-    }
     const auto chain = "A"s;
+    const auto charge = "0"s;
     const auto occupancy = 0.0;
     const auto temperature_factor = 1.0;
     const std::string element_symbol = atom_name;
-    const auto charge = "0"s;
+
+    if (group_name.empty()) {
+        group_name = "n/a";
+    }
 
     switch (style) {
     case PQR:
-        stream << fmt::format("{:6s}{:5d} {:^4s}{:1s}{:3s} {:1s}{:4d}{:1s}   "
+        stream << fmt::format("{:6s}{:5d} {:^4.3s}{:1s}{:3.3s} {:1s}{:4d}{:1s}   "
                               "{:8.3f}{:8.3f}{:8.3f}{:6.2f}{:6.2f}\n",
                               "ATOM", particle_index + 1, atom_name, "A", group_name, chain, group_index + 1, "0",
                               position.x(), position.y(), position.z(), scale * particle.charge,
                               scale * particle.traits().sigma * 0.5);
         break;
     case PDB: // see https://cupnet.net/pdb-format
-        stream << fmt::format("{:6s}{:5d} {:^4s}{:1s}{:3s} {:1s}{:4d}{:1s}   "
-                              "{:8.3f}{:8.3f}{:8.3f}{:6.2f}{:6.2f}          {:>2s}{:2s}\n",
+        stream << fmt::format("{:6s}{:5d} {:^4.3s}{:1s}{:3.3s} {:1s}{:4d}{:1s}   "
+                              "{:8.3f}{:8.3f}{:8.3f}{:6.2f}{:6.2f}          {:>2.2s}{:2s}\n",
                               "ATOM", particle_index + 1, atom_name, "A", group_name, chain, group_index + 1, "0",
                               position.x(), position.y(), position.z(), occupancy, temperature_factor, element_symbol,
                               charge);
         break;
     case PQR_LEGACY:
-        stream << fmt::format("ATOM  {:5d} {:4} {:4}{:5d}    {:8.3f} {:8.3f} {:8.3f} {:.3f} {:.3f}\n",
+        stream << fmt::format("ATOM  {:5d} {:4.3} {:4.3}{:5d}    {:8.3f} {:8.3f} {:8.3f} {:.3f} {:.3f}\n",
                               particle_index + 1, atom_name, group_name, group_index + 1, position.x(), position.y(),
                               position.z(), scale * particle.charge, scale * particle.traits().sigma * 0.5);
         break;
@@ -817,13 +813,12 @@ void PQRWriter::saveParticle(std::ostream& stream, const Particle& particle) {
 }
 
 void PQRWriter::saveHeader(std::ostream& stream, [[maybe_unused]] int number_of_particles) const {
+    stream << "REMARK " << generated_by_faunus_comment << "\n";
     if (box_dimensions.squaredNorm() > pc::epsilon_dbl) {
         const Point angle = {90.0, 90.0, 90.0};
         const Point box = box_dimensions / 1.0_angstrom;
         stream << fmt::format("CRYST1{:9.3f}{:9.3f}{:9.3f}{:7.2f}{:7.2f}{:7.2f} P 1           1\n", box.x(), box.y(),
-                              box.z(), angle.x(), angle.y(), angle.z())
-               << "\n"
-               << "REMARK " << generated_by_faunus_comment << "\n";
+                              box.z(), angle.x(), angle.y(), angle.z());
     }
 }
 
@@ -834,21 +829,22 @@ PQRWriter::PQRWriter(PQRWriter::Style style) : style(style) {}
 // -----------------------
 
 void GromacsWriter::saveHeader(std::ostream& stream, const int number_of_particles) const {
-    stream << fmt::format("{}\n{}\n", generated_by_faunus_comment, number_of_particles);
+    stream << fmt::format("{}\n{:5d}\n", generated_by_faunus_comment, number_of_particles);
 }
 
 void GromacsWriter::saveFooter(std::ostream& stream) const {
     if (box_dimensions.squaredNorm() > pc::epsilon_dbl) {
-        stream << box_dimensions.transpose() / 1.0_nm << "\n";
+        stream << fmt::format("{:10.5f}{:10.5f}{:10.5f}\n", box_dimensions.x() / 1.0_nm, box_dimensions.y() / 1.0_nm,
+                              box_dimensions.z() / 1.0_nm);
     }
 }
 
 void GromacsWriter::saveParticle(std::ostream& stream, const Particle& particle) {
     const auto& atom_name = particle.traits().name;
-    auto scale = static_cast<double>(particle_is_active);
-    Point position = scale * (particle.pos + 0.5 * box_dimensions) / 1.0_nm; // shift origin and convert to nm
-    stream << fmt::format("{:5d}{:5}{:5}{:5d}{:8.3f}{:8.3f}{:8.3f}\n", group_index, atom_name, atom_name,
-                          particle_index, position.x(), position.y(), position.z());
+    const auto scale = static_cast<double>(particle_is_active) / 1.0_nm; // zero if inactive
+    Point position = scale * (particle.pos + 0.5 * box_dimensions);      // shift origin
+    stream << fmt::format("{:5d}{:5.5}{:>5.5}{:5d}{:8.3f}{:8.3f}{:8.3f}\n", group_index + 1, group_name, atom_name,
+                          particle_index + 1, position.x(), position.y(), position.z());
 }
 
 // -----------------------
@@ -870,8 +866,8 @@ void GromacsReader::loadHeader(std::istream& stream) {
 
 void GromacsReader::loadBoxInformation(std::istream& stream) {
     auto initial_position = stream.tellg();
-    stream.seekg(-2, std::istream::end); // jump to end and skip possible newline
-    for (auto i = (int)stream.tellg(); i > 0; i--) {
+    stream.seekg(-2, std::istream::end); // jump to end and skip possible newline and the very end
+    while (stream.tellg() > 0) {         // read file backwards, letter by letter
         if (stream.peek() != '\n') {
             stream.seekg(-1, std::ios::cur); // one step backwards
         } else {
@@ -894,15 +890,17 @@ Particle GromacsReader::loadParticle(std::istream& stream) {
     if (particles.size() >= expected_number_of_particles) {
         throw std::istream::failure("cannot read beyond expected number of particles");
     }
+    std::string atom_name;
     std::string record;
     std::getline(stream, record);
     std::stringstream o;
-    o << record.substr(10, 5) << record.substr(20, 8) << record.substr(28, 8) << record.substr(36, 8);
-    std::string atom_name;
+    o.exceptions(std::stringstream::failbit);
+    o << record.substr(10, 5) << " " << record.substr(20, 8) << " " << record.substr(28, 8) << " "
+      << record.substr(36, 8);
     o >> atom_name;
-    Particle particle = Particle(findAtomByName(atom_name));
+    auto particle = Particle(findAtomByName(atom_name));
     o >> particle.pos.x() >> particle.pos.y() >> particle.pos.z();
-    particle.pos = particle.pos * 1.0_nm - 0.5 * box_length;
+    particle.pos = particle.pos * 1.0_nm - 0.5 * box_length; // origin --> middle of the box
     return particle;
 }
 
@@ -929,7 +927,7 @@ char CoarseGrainedFastaFileReader::getFastaLetter(std::istream& stream) {
             continue;
         case '*': // signals end of sequence -> stop
             throw std::istream::failure("end of sequence (*) reached");
-        case '>': // multiple sequences?
+        case '>': // stop and warn if multiple sequences
             faunus_logger->warn("multiple FASTA sequences detected; using only the first");
             throw std::istream::failure("stopping after first sequence");
         default:

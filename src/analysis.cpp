@@ -471,19 +471,19 @@ void VirtualVolumeMove::sanityCheck(const double old_energy) {
     }
 }
 void VirtualVolumeMove::writeToFileStream(const Point& scale, const double energy_change) const {
-    if (stream) { // write to output file if open
-        *stream << fmt::format("{:d} {:.3f} {:.10f} {:.6f} {:.6f}", getNumberOfSteps(), volume_displacement,
-                               energy_change, exp(-energy_change), -meanFreeEnergy() / volume_displacement);
+    if (stream) {
+        const auto mean_excess_pressure = -meanFreeEnergy() / volume_displacement; // units of kT/Å³
+        *stream << fmt::format("{:d} {:.3E} {:.6E} {:.6E} {:.6E}", getNumberOfSteps(), volume_displacement,
+                               energy_change, std::exp(-energy_change), mean_excess_pressure);
 
         // if anisotropic scaling, add an extra column with area or length perturbation
+        const auto box_length = spc.geo.getLength();
         if (volume_scaling_method == Geometry::XY) {
-            const auto box_length = spc.geo.getLength();
             const auto area_change = box_length.x() * box_length.y() * (scale.x() * scale.y() - 1.0);
-            *stream << fmt::format(" {:.6f}", area_change);
+            *stream << fmt::format(" {:.6E}", area_change);
         } else if (volume_scaling_method == Geometry::Z) {
-            const auto box_length = spc.geo.getLength();
             const auto length_change = box_length.z() * (scale.z() - 1.0);
-            *stream << fmt::format(" {:.6f}", length_change);
+            *stream << fmt::format(" {:.6E}", length_change);
         }
         *stream << "\n"; // trailing newline
     }
@@ -1703,7 +1703,7 @@ void VirtualTranslate::_sample() {
 void VirtualTranslate::writeToFileStream(const double energy_change) const {
     if (stream) { // file to disk?
         const auto mean_force = -meanFreeEnergy() / perturbation_distance;
-        *stream << fmt::format("{:d} {:.3f} {:.10f} {:.6f}\n", getNumberOfSteps(), perturbation_distance, energy_change,
+        *stream << fmt::format("{:d} {:.3E} {:.6E} {:.6E}\n", getNumberOfSteps(), perturbation_distance, energy_change,
                                mean_force);
     }
 }

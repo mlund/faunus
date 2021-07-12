@@ -161,8 +161,10 @@ PivotMove::PivotMove(Space &spc) : PivotMove(spc, "pivot", "") {}
 void PivotMove::_from_json(const json &j) {
     TBase::_from_json(j);
     bonds = molecules[this->molid].bonds.find<Potential::HarmonicBond>();
-
-    if (this->repeat < 0) {
+    if (bonds.empty()) {
+        throw ConfigurationError("no harmonic bonds found for pivot move");
+    }
+    if (repeat < 0) {
         // set the number of repetitions to the length of the chain (minus 2) times the number of the chains
         auto moliter = this->spc.findMolecules(this->molid);
         this->repeat = std::distance(moliter.begin(), moliter.end());

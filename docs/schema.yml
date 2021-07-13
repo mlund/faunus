@@ -315,7 +315,7 @@ properties:
                 indexes: {type: array, items: {type: integer}}
                 property:
                     type: string
-                    enum: [V, Lx, Ly, Lz, radius, Q, N]
+                    enum: [V, Lx, Ly, Lz, radius, Q, N, mu, mu_x, mu_y, mu_z]
             required: [property]
         molecule:
             type: object

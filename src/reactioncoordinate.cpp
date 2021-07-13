@@ -106,21 +106,40 @@ SystemProperty::SystemProperty(const json &j, Space &spc) : ReactionCoordinateBa
             faunus_logger->warn("`radius` coordinate unavailable for geometry");
         else
             function = [&g = spc.geo]() { return 0.5 * g.getLength().x(); };
-    } else if (property == "Q") // system net charge
+    } else if (property == "Q") { // system net charge
         function = [&groups = spc.groups]() {
-            double charge_sum = 0;
-            for (auto &g : groups) // loops over groups
-                for (auto &p : g)  // loop over particles
-                    charge_sum += p.charge;
-            return charge_sum;
+            auto charges = groups | ranges::cpp20::views::join | ranges::cpp20::views::transform(&Particle::charge);
+            return std::accumulate(charges.begin(), charges.end(), 0.0);
         };
-    else if (property == "N") // number of particles
+    } else if (property == "mu") { // system dipole moment
         function = [&groups = spc.groups]() {
-            int N_sum = 0;
-            for (auto &g : groups) // loops over groups
-                N_sum += g.size();
-            return N_sum;
+            auto particles = groups | ranges::cpp20::views::join;
+            return Faunus::dipoleMoment(particles.begin(), particles.end()).norm();
         };
+    } else if (property == "mu_x") { // system dipole moment
+        function = [&groups = spc.groups]() {
+            auto particles = groups | ranges::cpp20::views::join;
+            return Faunus::dipoleMoment(particles.begin(), particles.end()).x();
+        };
+    } else if (property == "mu_y") { // system dipole moment
+        function = [&groups = spc.groups]() {
+            auto particles = groups | ranges::cpp20::views::join;
+            return Faunus::dipoleMoment(particles.begin(), particles.end()).y();
+        };
+    } else if (property == "mu_z") { // system dipole moment
+        function = [&groups = spc.groups]() {
+            auto particles = groups | ranges::cpp20::views::join;
+            return Faunus::dipoleMoment(particles.begin(), particles.end()).z();
+        };
+    } else if (property == "N") { // number of particles
+        function = [&groups = spc.groups]() {
+            size_t number_of_active_particles = 0;
+            for (const auto& group : groups) { // loops over groups
+                number_of_active_particles += group.size();
+            }
+            return number_of_active_particles;
+        };
+    }
     if (function == nullptr) {
         usageTip.pick("coords=[system]");
         throw ConfigurationError("{}: unknown property '{}'", name, property);

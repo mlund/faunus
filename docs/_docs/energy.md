@@ -969,14 +969,16 @@ mass center of the group and $N$ is the number of atoms in the molecule.
 
 #### System Properties
 
-`coords=[system]` | Property
------------------ | -----------------------------------------------
-`V`               | System volume
-`Q`               | System net-charge
-`Lx`, `Ly` or `Lz`| Side length of the cuboidal simulation cell
-`height`          | Alias for `Lz`
-`radius`          | Radius of spherical or cylindrical geometries
-`N`               | Number of active particles
+`coords=[system]`         | Property
+------------------------- | -----------------------------------------------
+`V`                       | System volume
+`Q`                       | System net-charge
+`Lx`, `Ly` or `Lz`        | Side length of the cuboidal simulation cell
+`height`                  | Alias for `Lz`
+`radius`                  | Radius of spherical or cylindrical geometries
+`N`                       | Number of active particles
+`mu`                      | System dipole moment scalar (𝑒Å)
+`mu_x`, `mu_y` or `mu_z`  | System dipole moment components (𝑒Å)
 
 The enclosing cuboid is the smallest cuboid that can contain the geometry.
 For example, for a cylindrical simulation container, `Lz` is the height

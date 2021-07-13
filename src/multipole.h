@@ -182,9 +182,9 @@ template <class Titer> double monopoleMoment(Titer begin, Titer end) {
  *
  * If the particle has extended properties, point dipole moments will be added as well
  */
-template <class Titer, class BoundaryFunction>
+template <class Titer, class BoundaryFunction = std::function<void(Point&)>>
 Point dipoleMoment(
-    Titer begin, Titer end, BoundaryFunction boundary = [](const Point &) {}, const Point origin = {0, 0, 0},
+    Titer begin, Titer end, BoundaryFunction boundary = [](Point&) {}, const Point origin = {0, 0, 0},
     double cutoff = pc::infty) {
     Point dipole_moment(0, 0, 0);
     std::for_each(begin, end, [&](const Particle &particle) {

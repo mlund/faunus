@@ -3,6 +3,7 @@
 #include "random.h"
 #include "group.h"
 #include "space.h"
+#include "multipole.h"
 #include <spdlog/spdlog.h>
 #include <zstr.hpp>
 #include <cereal/archives/binary.hpp>
@@ -505,6 +506,10 @@ ParticleVector& StructureFileReader::load(std::istream& stream) {
     particles.shrink_to_fit();
     loadFooter(stream);
     checkLoadedParticles();
+    if (particle_charge_support) {
+        faunus_logger->debug("net charge of loaded structure: {:.3}e",
+                             Faunus::monopoleMoment(particles.begin(), particles.end()));
+    }
     return particles;
 }
 
@@ -790,21 +795,21 @@ void PQRWriter::saveParticle(std::ostream& stream, const Particle& particle) {
 
     switch (style) {
     case PQR:
-        stream << fmt::format("{:6s}{:5d} {:^4.3s}{:1s}{:3.3s} {:1s}{:4d}{:1s}   "
+        stream << fmt::format("{:6s}{:5d} {:^4.4s}{:1s}{:3.3s} {:1s}{:4d}{:1s}   "
                               "{:8.3f}{:8.3f}{:8.3f}{:6.2f}{:6.2f}\n",
                               "ATOM", particle_index + 1, atom_name, "A", group_name, chain, group_index + 1, "0",
                               position.x(), position.y(), position.z(), scale * particle.charge,
                               scale * particle.traits().sigma * 0.5);
         break;
     case PDB: // see https://cupnet.net/pdb-format
-        stream << fmt::format("{:6s}{:5d} {:^4.3s}{:1s}{:3.3s} {:1s}{:4d}{:1s}   "
+        stream << fmt::format("{:6s}{:5d} {:^4.4s}{:1s}{:3.3s} {:1s}{:4d}{:1s}   "
                               "{:8.3f}{:8.3f}{:8.3f}{:6.2f}{:6.2f}          {:>2.2s}{:2s}\n",
                               "ATOM", particle_index + 1, atom_name, "A", group_name, chain, group_index + 1, "0",
                               position.x(), position.y(), position.z(), occupancy, temperature_factor, element_symbol,
                               charge);
         break;
     case PQR_LEGACY:
-        stream << fmt::format("ATOM  {:5d} {:4.3} {:4.3}{:5d}    {:8.3f} {:8.3f} {:8.3f} {:.3f} {:.3f}\n",
+        stream << fmt::format("ATOM  {:5d} {:4.4} {:4.3}{:5d}    {:8.3f} {:8.3f} {:8.3f} {:.3f} {:.3f}\n",
                               particle_index + 1, atom_name, group_name, group_index + 1, position.x(), position.y(),
                               position.z(), scale * particle.charge, scale * particle.traits().sigma * 0.5);
         break;

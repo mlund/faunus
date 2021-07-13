@@ -701,7 +701,7 @@ properties:
                         dV: {type: number}
                         method:
                             type: string
-                            enum: [xy, isotropic, isochoric]
+                            enum: [z, xy, isotropic, isochoric]
                         repeat: {type: integer}
                     required: [dV]
                     additionalProperties: false

@@ -20,18 +20,18 @@ namespace Move {
 
 class MoveBase {
   private:
-    virtual void _move(Change &) = 0;                          //!< Perform move and modify change object
-    virtual void _accept(Change &);                            //!< Call after move is accepted
-    virtual void _reject(Change &);                            //!< Call after move is rejected
-    virtual void _to_json(json &) const = 0;                   //!< Extra info for report if needed
-    virtual void _from_json(const json &) = 0;                 //!< Extra info for report if needed
+    virtual void _move(Change& change) = 0;                    //!< Perform move and modify change object
+    virtual void _accept(Change& change);                      //!< Call after move is accepted
+    virtual void _reject(Change& change);                      //!< Call after move is rejected
+    virtual void _to_json(json& j) const = 0;                  //!< Extra info for report if needed
+    virtual void _from_json(const json& j) = 0;                //!< Extra info for report if needed
     TimeRelativeOfTotal<std::chrono::microseconds> timer;      //!< Timer for whole move
     TimeRelativeOfTotal<std::chrono::microseconds> timer_move; //!< Timer for _move() only
   protected:
-    Space &spc;            //!< Space to operate on
-    unsigned long cnt = 0; //!< Counter for total number of move attempts
-    unsigned long accepted = 0;
-    unsigned long rejected = 0;
+    Space& spc;                                  //!< Space to operate on
+    unsigned long number_of_attempted_moves = 0; //!< Counter for total number of move attempts
+    unsigned long number_of_accepted_moves = 0;
+    unsigned long number_of_rejected_moves = 0;
 
   public:
     static Random slump; //!< Shared for all moves
@@ -39,14 +39,14 @@ class MoveBase {
     std::string cite;    //!< Reference, preferable a short-doi, e.g. "doi:10/b9jq"
     int repeat = 1;      //!< How many times the move should be repeated per sweep
 
-    void from_json(const json &);
-    void to_json(json &) const; //!< JSON report w. statistics, output etc.
-    void move(Change &);        //!< Perform move and modify given change object
-    void accept(Change &);
-    void reject(Change &);
-    virtual double bias(Change &, double old_energy,
+    void from_json(const json& j);
+    void to_json(json& j) const; //!< JSON report w. statistics, output etc.
+    void move(Change& change);   //!< Perform move and modify given change object
+    void accept(Change& change);
+    void reject(Change& change);
+    virtual double bias(Change& change, double old_energy,
                         double new_energy); //!< adds extra energy change not captured by the Hamiltonian
-    MoveBase(Space &spc, std::string name, std::string cite) : spc(spc), name(name), cite(cite) {};
+    MoveBase(Space& spc, const std::string& name, const std::string& cite);
     inline virtual ~MoveBase() = default;
 };
 

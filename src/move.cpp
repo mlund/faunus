@@ -15,7 +15,7 @@ namespace Faunus::Move {
 Random MoveBase::slump; // static instance of Random (shared for all moves)
 
 void MoveBase::from_json(const json &j) {
-    if (auto it = j.find("repeat"); it != j.end()) {
+    if (const auto it = j.find("repeat"); it != j.end()) {
         if (it->is_number()) {
             repeat = it->get<int>();
         } else if (it->is_string()) {
@@ -34,48 +34,55 @@ void MoveBase::from_json(const json &j) {
 
 void MoveBase::to_json(json &j) const {
     _to_json(j);
-    if (timer_move.result() > 0.01) // only print if more than 1% of the time
+    if (timer_move.result() > 0.01) { // only print if more than 1% of the time
         j["relative time (without energy calc)"] = timer_move.result();
-    if (timer.result() > 0.01) // only print if more than 1% of the time
+    }
+    if (timer.result() > 0.01) { // only print if more than 1% of the time
         j["relative time"] = timer.result();
-    j["acceptance"] = double(accepted) / cnt;
+    }
+    j["acceptance"] = double(number_of_accepted_moves) / number_of_attempted_moves;
     j["repeat"] = repeat;
-    j["moves"] = cnt;
-    if (!cite.empty())
+    j["moves"] = number_of_attempted_moves;
+    if (!cite.empty()) {
         j["cite"] = cite;
+    }
     _roundjson(j, 3);
 }
 
-void MoveBase::move(Change &change) {
+void MoveBase::move(Change& change) {
     timer.start();
     timer_move.start();
-    cnt++;
+    number_of_attempted_moves++;
     change.clear();
     _move(change);
-    if (change.empty())
+    if (change.empty()) {
         timer.stop();
+    }
     timer_move.stop();
 }
 
-void MoveBase::accept(Change &c) {
-    accepted++;
-    _accept(c);
+void MoveBase::accept(Change& change) {
+    number_of_accepted_moves++;
+    _accept(change);
     timer.stop();
 }
 
-void MoveBase::reject(Change &c) {
-    rejected++;
-    _reject(c);
+void MoveBase::reject(Change& change) {
+    number_of_rejected_moves++;
+    _reject(change);
     timer.stop();
 }
 
-double MoveBase::bias(Change &, double, double) {
-    return 0; // du
+double MoveBase::bias([[maybe_unused]] Change& change, [[maybe_unused]] double old_energy,
+                      [[maybe_unused]] double new_energy) {
+    return 0.0;
 }
 
-void MoveBase::_accept(Change &) {}
+void MoveBase::_accept([[maybe_unused]] Change& change) {}
 
-void MoveBase::_reject(Change &) {}
+void MoveBase::_reject([[maybe_unused]] Change& change) {}
+
+MoveBase::MoveBase(Space& spc, const std::string& name, const std::string& cite) : spc(spc), name(name), cite(cite) {}
 
 void from_json(const json &j, MoveBase &m) { m.from_json(j); }
 
@@ -83,6 +90,8 @@ void to_json(json &j, const MoveBase &m) {
     assert(!m.name.empty());
     m.to_json(j[m.name]);
 }
+
+// -----------------------------------
 
 ReplayMove::ReplayMove(Space &spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {}
 
@@ -488,7 +497,7 @@ ParallelTempering::~ParallelTempering() {
 #endif
 
 void VolumeMove::_to_json(json &j) const {
-    if (cnt > 0) {
+    if (number_of_attempted_moves > 0) {
         j = {{"dV", logarithmic_volume_displacement_factor},
              {"method", volume_scaling_method},
              {"⟨V⟩", mean_volume.avg()},

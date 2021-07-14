@@ -17,7 +17,7 @@ void ChainRotationMoveBase::_to_json(json &j) const {
          {"dprot", dprot},
          {u8::rootof + u8::bracket("r_cm" + u8::squared), std::sqrt(msqdispl.avg())}};
     if (small_box_encountered > 0) {
-        j["skipped"] = double(small_box_encountered) / cnt; // todo rename the json attribute
+        j["skipped"] = double(small_box_encountered) / number_of_attempted_moves; // todo rename the json attribute
     }
     _roundjson(j, 3);
 }

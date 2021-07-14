@@ -488,50 +488,46 @@ ParallelTempering::~ParallelTempering() {
 #endif
 
 void VolumeMove::_to_json(json &j) const {
-    using namespace u8;
     if (cnt > 0) {
-        j = {{"dV", volume_displacement_factor},
-             {"method", method->first},
-             {bracket("V"), mean_volume.avg()},
-             {rootof + bracket(Delta + "V" + squared), std::sqrt(mean_square_volume_change.avg())},
-             {cuberoot + rootof + bracket(Delta + "V" + squared),
-              std::cbrt(std::sqrt(mean_square_volume_change.avg()))}};
+        j = {{"dV", logarithmic_volume_displacement_factor},
+             {"method", volume_scaling_method},
+             {"⟨V⟩", mean_volume.avg()},
+             {"√⟨ΔV²⟩", std::sqrt(mean_square_volume_change.avg())},
+             {"∛√⟨ΔV²⟩", std::cbrt(std::sqrt(mean_square_volume_change.avg()))}};
         _roundjson(j, 3);
     }
 }
 void VolumeMove::_from_json(const json &j) {
-    method = methods.find(j.value("method", "isotropic"));
-    if (method == methods.end()) {
-        throw ConfigurationError("unknown volume change method");
+    logarithmic_volume_displacement_factor = j.at("dV").get<double>();
+    volume_scaling_method = j.value("method", Geometry::VolumeMethod::ISOTROPIC);
+    if (volume_scaling_method == Geometry::VolumeMethod::INVALID) {
+        throw ConfigurationError("invalid volume scaling method");
     }
-    volume_displacement_factor = j.at("dV").get<double>();
 }
 void VolumeMove::_move(Change &change) {
-    if (volume_displacement_factor > 0.0) {
+    if (logarithmic_volume_displacement_factor > 0.0) {
         change.dV = true;
         change.all = true;
         old_volume = spc.geo.getVolume();
-        new_volume = std::exp(std::log(old_volume) + (slump() - 0.5) * volume_displacement_factor);
-        volume_change = new_volume - old_volume;
-        spc.scaleVolume(new_volume, method->second);
-    } else
-        volume_change = 0.0;
+        new_volume = std::exp(std::log(old_volume) + (slump() - 0.5) * logarithmic_volume_displacement_factor);
+        spc.scaleVolume(new_volume, volume_scaling_method);
+    }
 }
-void VolumeMove::_accept(Change &) {
-    mean_square_volume_change += volume_change * volume_change;
+void VolumeMove::_accept([[maybe_unused]] Change& change) {
+    mean_square_volume_change += std::pow(new_volume - old_volume, 2);
     mean_volume += new_volume;
     assert(std::fabs(spc.geo.getVolume() - new_volume) < 1.0e-9);
 }
 
-VolumeMove::VolumeMove(Space &spc, std::string name, std::string cite) : MoveBase(spc, name, cite) { repeat = 1; }
+VolumeMove::VolumeMove(Space& spc) : MoveBase(spc, "volume"s, ""s) { repeat = 1; }
 
-VolumeMove::VolumeMove(Space &spc) : VolumeMove(spc, "volume", "") {}
-
-void VolumeMove::_reject(Change &) {
+void VolumeMove::_reject([[maybe_unused]] Change& change) {
     mean_square_volume_change += 0.0;
     mean_volume += old_volume;
     assert(std::fabs(spc.geo.getVolume() - old_volume) < 1.0e-9);
 }
+
+// ------------------------------------------------
 
 void ChargeMove::_to_json(json &j) const {
     using namespace u8;

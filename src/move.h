@@ -343,22 +343,18 @@ NLOHMANN_JSON_SERIALIZE_ENUM(ConformationSwap::CopyPolicy, {{ConformationSwap::I
 
 class VolumeMove : public MoveBase {
   private:
-    const std::map<std::string, Geometry::VolumeMethod> methods = {{"z", Geometry::Z},
-                                                                   {"xy", Geometry::XY},
-                                                                   {"isotropic", Geometry::ISOTROPIC},
-                                                                   {"isochoric", Geometry::ISOCHORIC}};
-    typename decltype(methods)::const_iterator method;
-    Average<double> mean_square_volume_change, mean_volume;
-    double volume_displacement_factor = 0.0, volume_change = 0.0, new_volume = 0.0, old_volume = 0.0;
+    Geometry::VolumeMethod volume_scaling_method = Geometry::VolumeMethod::ISOTROPIC;
+    Average<double> mean_volume;
+    Average<double> mean_square_volume_change;
+    double old_volume = 0.0;
+    double new_volume = 0.0;
+    double logarithmic_volume_displacement_factor = 0.0;
 
     void _to_json(json &j) const override;
     void _from_json(const json &j) override;
     void _move(Change &change) override;
-    void _accept(Change &) override;
-    void _reject(Change &) override;
-
-  protected:
-    VolumeMove(Space &spc, std::string name, std::string cite);
+    void _accept(Change& change) override;
+    void _reject(Change& change) override;
 
   public:
     explicit VolumeMove(Space &spc);

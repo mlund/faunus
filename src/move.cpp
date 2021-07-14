@@ -338,12 +338,13 @@ void to_json(json &j, const Propagator &propagator) { j = propagator._moves; }
 
 #ifdef ENABLE_MPI
 
-void ParallelTempering::_to_json(json &j) const {
-    j = {{"replicas", mpi.nproc()}, {"datasize", particle_transmitter.getFormat()}};
-    json &_j = j["exchange"];
-    _j = json::object();
-    for (const auto &[id, acceptance] : acceptance_map) {
-        _j[id] = {{"attempts", acceptance.cnt}, {"acceptance", acceptance.avg()}};
+void ParallelTempering::_to_json(json& j) const {
+    j = {{"replicas", mpi.nproc()},
+         {"datasize", particle_transmitter.getFormat()},
+         {"volume_scale", volume_scaling_method}};
+    auto& exchange_json = j["exchange"] = json::object();
+    for (const auto& [id, acceptance] : acceptance_map) {
+        exchange_json[id] = {{"attempts", acceptance.cnt}, {"acceptance", acceptance.avg()}};
     }
 }
 
@@ -386,7 +387,7 @@ void ParallelTempering::exchangeState(Change &change) {
         change.all = true;
         if (std::fabs(new_volume - old_volume) > pc::epsilon_dbl) {
             change.dV = true;
-            spc.geo.setVolume(new_volume);
+            spc.geo.setVolume(new_volume, volume_scaling_method);
         }
         spc.updateParticles(partner_particles->begin(), partner_particles->end(), spc.p.begin());
     }
@@ -457,7 +458,8 @@ void ParallelTempering::_reject(Change &) {
 }
 
 void ParallelTempering::_from_json(const json &j) {
-    particle_transmitter.setFormat(j.value("format", std::string("XYZQI")));
+    particle_transmitter.setFormat(j.value("format", "XYZQI"s));
+    volume_scaling_method = j.value("volume_scale", Geometry::VolumeMethod::ISOTROPIC);
 }
 
 ParallelTempering::ParallelTempering(Space &spc, MPI::MPIController &mpi)

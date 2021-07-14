@@ -473,6 +473,7 @@ class QuadrantJump : public MoveBase {
  */
 class ParallelTempering : public MoveBase {
   private:
+    Geometry::VolumeMethod volume_scaling_method = Geometry::VolumeMethod::ISOTROPIC; //!< How to scale volumes
     double very_small_volume = 1e-9;
     MPI::MPIController &mpi;
     std::shared_ptr<ParticleVector> partner_particles;

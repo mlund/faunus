@@ -234,9 +234,10 @@ The default value of `repeat` is the number of atoms in the `molecule` minus two
 
 ## Parallel Tempering
 
-`temper`         | Description
----------------- | --------------------------------------------
-`format=XYZQI`   | Particle properties to copy between replicas
+`temper`                 | Description
+------------------------ | ----------------------------------------------------------------------
+`format=XYZQI`           | Particle properties to copy between replicasi (`XYZQI`, `XYZQ`, `XYZ`)
+`volume_scale=isotropic` | How to apply exchanged volumes: `z`, `xy`, `isotropic`, `isochoric`
 
 We consider an extended ensemble, consisting of _n_
 sub-systems or replicas, each in a distinct thermodynamic state (different

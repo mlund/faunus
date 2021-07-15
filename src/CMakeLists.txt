@@ -18,7 +18,7 @@ if (ENABLE_PCH)
             <Eigen/Core> <Eigen/Geometry>
             <range/v3/view/filter.hpp> <range/v3/view/transform.hpp> <range/v3/view/join.hpp>
             <cereal/cereal.hpp> <cereal/types/base_class.hpp> <cereal/types/memory.hpp>
-            <nlohmann/json.hpp> <nlohmann/json_fwd.hpp>
+            <nlohmann/json.hpp>
             <spdlog/fmt/fmt.h> <spdlog/spdlog.h>)
 endif()
 
@@ -51,7 +51,7 @@ endif ()
 add_library(functionparser STATIC ${CMAKE_SOURCE_DIR}/src/functionparser.cpp ${CMAKE_SOURCE_DIR}/src/functionparser.h)
 set_target_properties(functionparser PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_definitions(functionparser PRIVATE DOCTEST_CONFIG_DISABLE)
-target_link_libraries(functionparser PUBLIC nlohmann_json::nlohmann_json)
+target_link_libraries(functionparser PRIVATE nlohmann_json exprtk)
 
 # ========== faunus cpp and header files ==========
 
@@ -82,7 +82,7 @@ target_link_libraries(libfaunus PUBLIC
         cereal
         Eigen
         functionparser
-        nlohmann_json::nlohmann_json
+        nlohmann_json
         pcg-cpp
         range-v3
         spdlog
@@ -93,11 +93,10 @@ target_link_libraries(libfaunus PUBLIC
 
 add_executable(faunus faunus.cpp)
 target_link_libraries(faunus PRIVATE
-    docopt
+    docopt_s
     Eigen
     libfaunus
     doctest
-    nlohmann_json::nlohmann_json
     progresstracker
     project_options
     range-v3
@@ -163,7 +162,7 @@ if (ENABLE_PYTHON)
                     project_options
                     xdrfile
                     spdlog
-                    nlohmann_json::nlohmann_json
+                    nlohmann_json
                     functionparser)
             target_compile_definitions(pyfaunus PUBLIC SPDLOG_COMPILED_LIB)
             target_compile_definitions(pyfaunus PRIVATE DOCTEST_CONFIG_DISABLE)

@@ -160,10 +160,14 @@ if (ENABLE_PYTHON)
             pybind11_add_module(pyfaunus pyfaunus.cpp ${objs})
             target_link_libraries(pyfaunus PRIVATE
                     project_options
-                    xdrfile
-                    spdlog
+                    cereal
+                    Eigen
+                    functionparser
                     nlohmann_json
-                    functionparser)
+                    range-v3
+                    spdlog
+                    xdrfile
+                    zstr)
             target_compile_definitions(pyfaunus PUBLIC SPDLOG_COMPILED_LIB)
             target_compile_definitions(pyfaunus PRIVATE DOCTEST_CONFIG_DISABLE)
         endif()

@@ -76,9 +76,10 @@ set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 
 add_library(libfaunus OBJECT ${objs} ${hdrs})
 target_compile_definitions(libfaunus PRIVATE SPDLOG_COMPILED_LIB)
-target_link_libraries(libfaunus PRIVATE
+target_link_libraries(libfaunus PUBLIC
         project_options
         project_warnings
+        cereal
         Eigen
         functionparser
         nlohmann_json::nlohmann_json
@@ -97,7 +98,8 @@ target_link_libraries(faunus PRIVATE
     nlohmann_json::nlohmann_json
     progresstracker
     project_options
-    range-v3)
+    range-v3
+    spdlog)
 target_compile_definitions(faunus PRIVATE SPDLOG_COMPILED_LIB)
 set_target_properties(faunus PROPERTIES
         POSITION_INDEPENDENT_CODE ON

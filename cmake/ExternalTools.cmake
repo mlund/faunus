@@ -5,11 +5,17 @@ include(FetchContent)
 # CPM Packages
 ###############
 
-#CPMAddPackage("gh:gabime/spdlog@1.8.5")
+CPMAddPackage("gh:gabime/spdlog@1.8.5")
 CPMAddPackage("gh:ericniebler/range-v3#0.11.0")
 CPMAddPackage("gh:onqtam/doctest#2.4.6")
 CPMAddPackage("gh:nlohmann/json@3.9.1")
 add_compile_definitions("NLOHMANN_JSON_HPP") # older versions used this macro. Now it's suffixed with "_"
+
+CPMAddPackage(
+    NAME cereal VERSION 1.3.0 GITHUB_REPOSITORY USCiLab/cereal
+    OPTIONS "SKIP_PORTABILITY_TEST ON" "JUST_INSTALL_CEREAL ON"
+)
+
 
 #############
 # PCG RANDOM
@@ -64,41 +70,6 @@ set(ProgressTrackerIncludeDir ${source_dir})
 add_library(progresstracker STATIC IMPORTED GLOBAL)
 add_dependencies(progresstracker project_progresstracker)
 set_property(TARGET progresstracker PROPERTY IMPORTED_LOCATION ${binary_dir}/libprogresstracker.a)
-
-
-#########
-# SPDLOG
-#########
-
-ExternalProject_Add(
-    project_spdlog
-    PREFIX "${CMAKE_CURRENT_BINARY_DIR}/_deps"
-    LOG_DOWNLOAD ON
-    URL https://github.com/gabime/spdlog/archive/v1.6.1.tar.gz
-    URL_HASH SHA256=378a040d91f787aec96d269b0c39189f58a6b852e4cbf9150ccfacbe85ebbbfc
-    CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DSPDLOG_INSTALL=off -DCMAKE_POSITION_INDEPENDENT_CODE=on
-    BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} spdlog
-    INSTALL_COMMAND ""
-)
-ExternalProject_Get_Property(project_spdlog source_dir)
-ExternalProject_Get_Property(project_spdlog binary_dir)
-set(SpdlogIncludeDir ${source_dir}/include)
-add_library(spdlog STATIC IMPORTED)
-set_property(TARGET spdlog PROPERTY IMPORTED_LOCATION ${binary_dir}/libspdlog.a)
-add_dependencies(spdlog project_spdlog)
-
-#########
-# CEREAL
-#########
-
-FetchContent_Declare(
-    cereal
-    URL "https://github.com/USCiLab/cereal/archive/v1.3.0.tar.gz"
-    URL_HASH MD5=4342e811f245403646c4175258f413f1)
-FetchContent_GetProperties(cereal)
-if(NOT cereal_POPULATED)
-    FetchContent_Populate(cereal)
-endif()
 
 #######
 # ZSTR

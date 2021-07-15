@@ -8,32 +8,48 @@ include(FetchContent)
 CPMAddPackage("gh:gabime/spdlog@1.8.5")
 CPMAddPackage("gh:ericniebler/range-v3#0.11.0")
 CPMAddPackage("gh:onqtam/doctest#2.4.6")
+
 CPMAddPackage("gh:nlohmann/json@3.9.1")
 add_compile_definitions("NLOHMANN_JSON_HPP") # older versions used this macro. Now it's suffixed with "_"
+
+CPMAddPackage("gh:mateidavid/zstr#v1.0.4")
+if (zstr_ADDED)
+    add_library(zstr INTERFACE)
+    target_include_directories(zstr INTERFACE "${zstr_SOURCE_DIR}/INCLUDE")
+endif()
 
 CPMAddPackage(
     NAME cereal VERSION 1.3.0 GITHUB_REPOSITORY USCiLab/cereal
     OPTIONS "SKIP_PORTABILITY_TEST ON" "JUST_INSTALL_CEREAL ON"
 )
 
+CPMAddPackage("gh:imneme/pcg-cpp#ffd522e7188bef30a00c74dc7eb9de5faff90092")
+if (pcg-cpp_ADDED)
+    add_library(pcg-cpp INTERFACE)
+    target_include_directories(pcg-cpp INTERFACE "${pcg-cpp_SOURCE_DIR}/INCLUDE")
+endif()
+option(ENABLE_PCG "Enable PCG random number generator" off)
+if (ENABLE_PCG)
+    add_definitions("-DENABLE_PCG")
+endif()
 
 #############
 # PCG RANDOM
 #############
 
-option(ENABLE_PCG "Enable PCG random number generator" off)
-if (ENABLE_PCG)
-    FetchContent_Declare(
-        pcg-cpp
-        URL https://github.com/imneme/pcg-cpp/archive/ffd522e7188bef30a00c74dc7eb9de5faff90092.tar.gz
-        URL_HASH MD5=051b969bbaf924f35f2159813f93e341)
-    FetchContent_GetProperties(pcg-cpp)
-    if(NOT pcg-cpp_POPULATED)
-        FetchContent_Populate(pcg-cpp)
-    endif()
-    include_directories(SYSTEM ${pcg-cpp_SOURCE_DIR}/include)
-    add_definitions("-DENABLE_PCG")
-endif()
+#option(ENABLE_PCG "Enable PCG random number generator" off)
+#if (ENABLE_PCG)
+#    FetchContent_Declare(
+#        pcg-cpp
+#        URL https://github.com/imneme/pcg-cpp/archive/ffd522e7188bef30a00c74dc7eb9de5faff90092.tar.gz
+#        URL_HASH MD5=051b969bbaf924f35f2159813f93e341)
+#    FetchContent_GetProperties(pcg-cpp)
+#    if(NOT pcg-cpp_POPULATED)
+#        FetchContent_Populate(pcg-cpp)
+#    endif()
+#    include_directories(SYSTEM ${pcg-cpp_SOURCE_DIR}/include)
+#    add_definitions("-DENABLE_PCG")
+#endif()
 
 #########
 # EXPRTK 
@@ -70,19 +86,6 @@ set(ProgressTrackerIncludeDir ${source_dir})
 add_library(progresstracker STATIC IMPORTED GLOBAL)
 add_dependencies(progresstracker project_progresstracker)
 set_property(TARGET progresstracker PROPERTY IMPORTED_LOCATION ${binary_dir}/libprogresstracker.a)
-
-#######
-# ZSTR
-#######
-
-FetchContent_Declare(
-    zstr
-    URL "https://github.com/mateidavid/zstr/archive/v1.0.1.tar.gz"
-    URL_HASH MD5=42de51b1c6adac0ec957a24088ef7523)
-FetchContent_GetProperties(zstr)
-if(NOT zstr_POPULATED)
-    FetchContent_Populate(zstr)
-endif()
 
 #############
 # DOCOPT.CPP

@@ -83,9 +83,11 @@ target_link_libraries(libfaunus PUBLIC
         Eigen
         functionparser
         nlohmann_json::nlohmann_json
+        pcg-cpp
         range-v3
         spdlog
-        xdrfile)
+        xdrfile
+        zstr)
 
 # ========== faunus (main executable) ==========
 

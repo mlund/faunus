@@ -49,7 +49,7 @@ class Penalty : public Energybase {
     Penalty(const json& j, Space& spc);
     virtual ~Penalty(); //!< destruct and save to disk (!)
     double energy(Change& change) override;
-    void sync(Energybase* other, Change& change) override;
+    void sync(Energybase* other, const Change& change) override;
 };
 
 #ifdef ENABLE_MPI

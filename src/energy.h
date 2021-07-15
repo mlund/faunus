@@ -221,9 +221,9 @@ class Ewald : public Energybase {
     Ewald(const json &, Space &);
     void init() override;
     double energy(Change &) override;
-    void sync(Energybase *,
-              Change &) override; //!< Called after a move is rejected/accepted
-                                  //! as well as before simulation
+    void sync(Energybase*,
+              const Change&) override; //!< Called after a move is rejected/accepted
+                                       //! as well as before simulation
     void to_json(json &) const override;
     void force(std::vector<Point> &) override; // update forces on all particles
 };
@@ -1479,7 +1479,7 @@ class NonbondedCached : public Nonbonded<TPairEnergy, TPairingPolicy> {
      * @param base_ptr
      * @param change
      */
-    void sync(Energybase *base_ptr, Change &change) override {
+    void sync(Energybase* base_ptr, const Change& change) override {
         auto other = dynamic_cast<decltype(this)>(base_ptr);
         assert(other);
         if (change.all || change.dV) {
@@ -1519,7 +1519,7 @@ class SASAEnergy : public Energybase {
 
     void updateSASA(const ParticleVector &p, const Change &change);
     void to_json(json &j) const override;
-    void sync(Energybase *basePtr, Change &c) override;
+    void sync(Energybase* basePtr, const Change& c) override;
 
   public:
     /**
@@ -1570,7 +1570,7 @@ class Hamiltonian : public Energybase, public BasePointerVector<Energybase> {
   public:
     Hamiltonian(Space& spc, const json& j);
     void init() override;
-    void sync(Energybase* other_hamiltonian, Change& change) override;
+    void sync(Energybase* other_hamiltonian, const Change& change) override;
     double energy(Change& change) override;            //!< Energy due to changes
     const std::vector<double>& latestEnergies() const; //!< Energies for each term from the latest call to `energy()`
 };

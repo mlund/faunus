@@ -55,7 +55,8 @@ class MetropolisMonteCarlo {
     struct State {
         std::shared_ptr<Space> spc;               //!< Simulation space (positions, geometry, molecules)
         std::shared_ptr<Energy::Hamiltonian> pot; //!< Hamiltonian for calc. potential energy
-        void sync(State &, Change &);             //!< Sync with another state (the other state is not modified)
+        void sync(const State& other,
+                  const Change& change); //!< Sync with another state (the other state is not modified)
     };
 
   private:
@@ -63,12 +64,13 @@ class MetropolisMonteCarlo {
     std::shared_ptr<State> state;                 //!< The accepted MC state
     std::shared_ptr<State> trial_state;           //!< Proposed or trial MC state
     std::shared_ptr<Move::Propagator> moves;      //!< Storage for all registered MC moves
-    std::shared_ptr<Move::MoveBase> latest_move;  //!< Pointer to latest MC move
+    std::string latest_move_name;                 //!< Name of latest MC move
     double sum_of_energy_changes = 0.0;           //!< Sum of all potential energy changes
     double initial_energy = 0.0;                  //!< Initial potential energy
     Average<double> average_energy;               //!< Average potential energy of the system
     void init();                                  //!< Reset state
-    void perform_move(std::shared_ptr<Move::MoveBase>); //!< Perform move using given move implementation
+    void performMove(Move::MoveBase& move);       //!< Perform move using given move implementation
+    static bool metropolisCriterion(double energy_change); //!< Metropolis criterion
 
   public:
     MetropolisMonteCarlo(const json &, MPI::MPIController &);
@@ -78,7 +80,7 @@ class MetropolisMonteCarlo {
     void move();                                               //!< Perform random Monte Carlo move
     void restore(const json &);                                //!< Restores system from previously store json object
     friend void to_json(json &, const MetropolisMonteCarlo &); //!< Write information to JSON object
-    static bool metropolis(double energy_change);              //!< Metropolis criterion
+    double getEnergyChange(double new_energy, double old_energy) const;
 };
 
 void from_json(const json &, MetropolisMonteCarlo::State &); //!< Build state from json object

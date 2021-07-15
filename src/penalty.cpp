@@ -153,7 +153,7 @@ void Penalty::logBarrierInformation() const {
  *  Called when a move is accepted or rejected, as well as when initializing the system
  *  @todo: this doubles the MPI communication
  */
-void Penalty::sync(Energybase* other, [[maybe_unused]] Change& change) {
+void Penalty::sync(Energybase* other, [[maybe_unused]] const Change& change) {
     auto* other_penalty = dynamic_cast<decltype(this)>(other);
     if (other_penalty == nullptr) {
         throw std::runtime_error("error in Penalty::sync - please report");

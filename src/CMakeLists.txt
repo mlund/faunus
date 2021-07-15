@@ -51,6 +51,7 @@ endif ()
 add_library(functionparser STATIC ${CMAKE_SOURCE_DIR}/src/functionparser.cpp ${CMAKE_SOURCE_DIR}/src/functionparser.h)
 set_target_properties(functionparser PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_definitions(functionparser PRIVATE DOCTEST_CONFIG_DISABLE)
+target_link_libraries(functionparser PUBLIC nlohmann_json::nlohmann_json)
 
 # ========== faunus cpp and header files ==========
 
@@ -78,13 +79,25 @@ target_compile_definitions(libfaunus PRIVATE SPDLOG_COMPILED_LIB)
 target_link_libraries(libfaunus PRIVATE
         project_options
         project_warnings
-        xdrfile spdlog
-        functionparser)
+        Eigen
+        functionparser
+        nlohmann_json::nlohmann_json
+        range-v3
+        spdlog
+        xdrfile)
 
 # ========== faunus (main executable) ==========
 
 add_executable(faunus faunus.cpp)
-target_link_libraries(faunus PRIVATE libfaunus docopt progresstracker project_options)
+target_link_libraries(faunus PRIVATE
+    docopt
+    Eigen
+    libfaunus
+    doctest
+    nlohmann_json::nlohmann_json
+    progresstracker
+    project_options
+    range-v3)
 target_compile_definitions(faunus PRIVATE SPDLOG_COMPILED_LIB)
 set_target_properties(faunus PROPERTIES
         POSITION_INDEPENDENT_CODE ON
@@ -146,6 +159,7 @@ if (ENABLE_PYTHON)
                     project_options
                     xdrfile
                     spdlog
+                    nlohmann_json::nlohmann_json
                     functionparser)
             target_compile_definitions(pyfaunus PUBLIC SPDLOG_COMPILED_LIB)
             target_compile_definitions(pyfaunus PRIVATE DOCTEST_CONFIG_DISABLE)

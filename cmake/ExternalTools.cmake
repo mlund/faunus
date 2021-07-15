@@ -1,6 +1,16 @@
 include(ExternalProject)
 include(FetchContent)
 
+###############
+# CPM Packages
+###############
+
+#CPMAddPackage("gh:gabime/spdlog@1.8.5")
+CPMAddPackage("gh:ericniebler/range-v3#0.11.0")
+CPMAddPackage("gh:onqtam/doctest#2.4.6")
+CPMAddPackage("gh:nlohmann/json@3.9.1")
+add_compile_definitions("NLOHMANN_JSON_HPP") # older versions used this macro. Now it's suffixed with "_"
+
 #############
 # PCG RANDOM
 #############
@@ -77,20 +87,6 @@ add_library(spdlog STATIC IMPORTED)
 set_property(TARGET spdlog PROPERTY IMPORTED_LOCATION ${binary_dir}/libspdlog.a)
 add_dependencies(spdlog project_spdlog)
 
-##############
-# MODERN JSON
-##############
-
-FetchContent_Declare(
-    modernjson
-    URL "https://github.com/nlohmann/json/releases/download/v3.8.0/include.zip"
-    URL_HASH SHA256=8590fbcc2346a3eefc341935765dd57598022ada1081b425678f0da9a939a3c0)
-FetchContent_GetProperties(modernjson)
-if(NOT modernjson_POPULATED)
-    FetchContent_Populate(modernjson)
-endif()
-add_compile_definitions("NLOHMANN_JSON_HPP") # older versions used this macro. Now it's suffixed with "_"
-
 #########
 # CEREAL
 #########
@@ -115,20 +111,6 @@ FetchContent_Declare(
 FetchContent_GetProperties(zstr)
 if(NOT zstr_POPULATED)
     FetchContent_Populate(zstr)
-endif()
-
-###########
-# RANGE-V3
-###########
-
-FetchContent_Declare(
-    rangev3
-    URL "https://github.com/ericniebler/range-v3/archive/0.11.0.tar.gz"
-    URL_HASH MD5=97ab1653f3aa5f9e3d8200ee2a4911d3)
-
-FetchContent_GetProperties(rangev3)
-if(NOT rangev3_POPULATED)
-    FetchContent_Populate(rangev3)
 endif()
 
 #############
@@ -225,15 +207,21 @@ endif()
 # EIGEN
 ########
 
-FetchContent_Declare(
-    eigen
-    URL "https://gitlab.com/libeigen/eigen/-/archive/3.3.9/eigen-3.3.9.tar.gz"
-    URL_HASH MD5=609286804b0f79be622ccf7f9ff2b660)
-FetchContent_GetProperties(eigen)
-if(NOT eigen_POPULATED)
-    FetchContent_Populate(eigen)
+#CPMAddPackage("gl:nlohmann/json@3.9.1")
+
+
+CPMAddPackage(
+    NAME Eigen
+    VERSION 3.3.9
+    URL https://gitlab.com/libeigen/eigen/-/archive/3.3.9/eigen-3.3.9.tar.gz
+    # Eigen's CMakelists are not intended for library use
+    DOWNLOAD_ONLY YES 
+)
+if(Eigen_ADDED)
+    add_library(Eigen INTERFACE IMPORTED)
+    target_include_directories(Eigen INTERFACE ${Eigen_SOURCE_DIR})
 endif()
- 
+
 ##########
 # XRDFILE
 ##########
@@ -257,19 +245,6 @@ set_property(TARGET xdrfile PROPERTY IMPORTED_LOCATION ${binary_dir}/libxdrfile-
 add_dependencies(xdrfile project_xdrfile)
 set_target_properties(xdrfile PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 
-##########
-# DOCTEST
-##########
-
-FetchContent_Declare(
-    doctest
-    URL "https://github.com/onqtam/doctest/archive/2.4.6.tar.gz"
-    URL_HASH SHA256=39110778e6baf373ef04342d7cb3fe35da104cb40769103e8a2f0035f5a5f1cb)
-FetchContent_GetProperties(doctest)
-if(NOT doctest_POPULATED)
-    FetchContent_Populate(doctest)
-    #add_definitions(-DDOCTEST_CONFIG_DISABLE)
-endif()
 
 ##############
 # TROMPELOEIL

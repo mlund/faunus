@@ -53,17 +53,17 @@ class MetropolisMonteCarlo {
      * `sync()` function.
      */
     struct State {
-        std::shared_ptr<Space> spc;               //!< Simulation space (positions, geometry, molecules)
-        std::shared_ptr<Energy::Hamiltonian> pot; //!< Hamiltonian for calc. potential energy
+        std::unique_ptr<Space> spc;               //!< Simulation space (positions, geometry, molecules)
+        std::unique_ptr<Energy::Hamiltonian> pot; //!< Hamiltonian for calc. potential energy
         void sync(const State& other,
                   const Change& change); //!< Sync with another state (the other state is not modified)
     };
 
   private:
     spdlog::level::level_enum original_log_level; //!< Storage for original loglevel
-    std::shared_ptr<State> state;                 //!< The accepted MC state
-    std::shared_ptr<State> trial_state;           //!< Proposed or trial MC state
-    std::shared_ptr<Move::Propagator> moves;      //!< Storage for all registered MC moves
+    std::unique_ptr<State> state;                 //!< The accepted MC state
+    std::unique_ptr<State> trial_state;           //!< Proposed or trial MC state
+    std::unique_ptr<Move::Propagator> moves;      //!< Storage for all registered MC moves
     std::string latest_move_name;                 //!< Name of latest MC move
     double sum_of_energy_changes = 0.0;           //!< Sum of all potential energy changes
     double initial_energy = 0.0;                  //!< Initial potential energy
@@ -71,16 +71,17 @@ class MetropolisMonteCarlo {
     void init();                                  //!< Reset state
     void performMove(Move::MoveBase& move);       //!< Perform move using given move implementation
     static bool metropolisCriterion(double energy_change); //!< Metropolis criterion
+    double getEnergyChange(double new_energy, double old_energy) const;
+    friend void to_json(json&, const MetropolisMonteCarlo&); //!< Write information to JSON object
 
   public:
-    MetropolisMonteCarlo(const json &, MPI::MPIController &);
+    MetropolisMonteCarlo(const json& j, MPI::MPIController& mpi);
     Energy::Hamiltonian &getHamiltonian();                     //!< Get Hamiltonian of accepted (default) state
     Space &getSpace();                                         //!< Access to space in accepted (default) state
     double relativeEnergyDrift();                              //!< Relative energy drift from initial configuration
     void move();                                               //!< Perform random Monte Carlo move
-    void restore(const json &);                                //!< Restores system from previously store json object
-    friend void to_json(json &, const MetropolisMonteCarlo &); //!< Write information to JSON object
-    double getEnergyChange(double new_energy, double old_energy) const;
+    void restore(const json& j);                               //!< Restores system from previously store json object
+    ~MetropolisMonteCarlo();                                   //!< Required due to unique_ptr to incomplete type
 };
 
 void from_json(const json &, MetropolisMonteCarlo::State &); //!< Build state from json object

@@ -19,7 +19,7 @@ bool MetropolisMonteCarlo::metropolisCriterion(const double energy_change) {
     }
     const auto random_number_between_zero_and_one = Move::MoveBase::slump(); // engine *must* be propagated!
     if (-energy_change > pc::max_exp_argument) {
-        mcloop_logger->warn("large negative metropolisCriterion energy");
+        mcloop_logger->warn("humongous negative energy change");
         return true;
     }
     return random_number_between_zero_and_one <= std::exp(-energy_change);
@@ -60,7 +60,7 @@ void MetropolisMonteCarlo::init() {
 
     // Inject reference to Space into `SpeciationMove`
     // Needed to calc. differences in ideal excess chem. potentials
-    for (auto speciation_move : moves->moves().find<Move::SpeciationMove>()) {
+    for (auto& speciation_move : moves->moves().find<Move::SpeciationMove>()) {
         speciation_move->setOther(*state->spc);
     }
 }
@@ -85,23 +85,24 @@ double MetropolisMonteCarlo::relativeEnergyDrift() {
     if (std::isfinite(du)) {
         if (std::fabs(du) <= pc::epsilon_dbl) {
             return 0.0;
-        } else {
-            return (energy - (initial_energy + sum_of_energy_changes)) /
-                   (std::fabs(initial_energy) > pc::epsilon_dbl ? initial_energy : energy);
         }
+        return (energy - (initial_energy + sum_of_energy_changes)) /
+               (std::fabs(initial_energy) > pc::epsilon_dbl ? initial_energy : energy);
     }
     return std::numeric_limits<double>::quiet_NaN();
 }
 
 MetropolisMonteCarlo::MetropolisMonteCarlo(const json &j, MPI::MPIController &mpi)
     : original_log_level(faunus_logger->level()) {
-    state = std::make_shared<State>(j);
+    state = std::make_unique<State>(j);
     faunus_logger->set_level(spdlog::level::off); // do not duplicate log info
-    trial_state = std::make_shared<State>(j);     // ...for the trial state
+    trial_state = std::make_unique<State>(j);     // ...for the trial state
     faunus_logger->set_level(original_log_level); // restore original log level
-    moves = std::make_shared<Move::Propagator>(j, *trial_state->spc, *trial_state->pot, mpi);
+    moves = std::make_unique<Move::Propagator>(j, *trial_state->spc, *trial_state->pot, mpi);
     init();
 }
+
+MetropolisMonteCarlo::~MetropolisMonteCarlo() = default;
 
 /**
  * @todo Too many responsibilities; tidy up!
@@ -219,8 +220,8 @@ Energy::Hamiltonian &MetropolisMonteCarlo::getHamiltonian() { return *state->pot
 Space &MetropolisMonteCarlo::getSpace() { return *state->spc; }
 
 void from_json(const json &j, MetropolisMonteCarlo::State &state) {
-    state.spc = std::make_shared<Space>(j);
-    state.pot = std::make_shared<Energy::Hamiltonian>(*state.spc, j.at("energy"));
+    state.spc = std::make_unique<Space>(j);
+    state.pot = std::make_unique<Energy::Hamiltonian>(*state.spc, j.at("energy"));
 }
 
 void MetropolisMonteCarlo::State::sync(const State& other, const Change& change) {
@@ -233,7 +234,7 @@ void to_json(json& j, const MetropolisMonteCarlo& monte_carlo) {
     j["temperature"] = pc::temperature / 1.0_K;
     j["moves"] = *monte_carlo.moves;
     j["energy"].push_back(*monte_carlo.state->pot);
-    if (monte_carlo.average_energy.cnt > 0) {
+    if (monte_carlo.average_energy.size() > 0) {
         j["montecarlo"] = {{"average potential energy (kT)", monte_carlo.average_energy.avg()},
                            {"last move", monte_carlo.latest_move_name}};
     }

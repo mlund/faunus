@@ -534,7 +534,7 @@ void Ewald::force(std::vector<Point> &forces) {
 /**
  * @todo Implement a sync() function in EwaldData to selectively copy information
  */
-void Ewald::sync(Energybase* energybase, Change& change) {
+void Ewald::sync(Energybase* energybase, const Change& change) {
     if (auto* other = dynamic_cast<Ewald*>(energybase)) {
         if (other->key == ACCEPTED_MONTE_CARLO_STATE) {
             old_groups = &(
@@ -953,7 +953,7 @@ void Hamiltonian::init() {
     std::for_each(energy_terms.begin(), energy_terms.end(), [&](auto& energy) { energy->init(); });
 }
 
-void Hamiltonian::sync(Energybase* other_hamiltonian, Change& change) {
+void Hamiltonian::sync(Energybase* other_hamiltonian, const Change& change) {
     if (auto* other = dynamic_cast<Hamiltonian*>(other_hamiltonian)) {
         if (other->size() == size()) {
             latest_energies = other->latestEnergies();
@@ -1130,7 +1130,7 @@ double SASAEnergy::energy(Change &change) {
     return u;
 }
 
-void SASAEnergy::sync(Energybase *basePtr, Change &c) {
+void SASAEnergy::sync(Energybase* basePtr, const Change& c) {
     auto other = dynamic_cast<decltype(this)>(basePtr);
     if (other) {
         if (c.all || c.dV) {

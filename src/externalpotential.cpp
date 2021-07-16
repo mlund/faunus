@@ -16,7 +16,7 @@ void Energybase::to_json(json &) const {}
  * @param other_energy Other energy instance to copy data from
  * @param change Describes the difference with the other energy term
  */
-void Energybase::sync([[maybe_unused]] Energybase* other_energy, [[maybe_unused]] Change& change) {}
+void Energybase::sync([[maybe_unused]] Energybase* other_energy, [[maybe_unused]] const Change& change) {}
 
 void Energybase::init() {}
 void Energybase::force([[maybe_unused]] PointVector& forces) {}
@@ -273,7 +273,7 @@ double ExternalAkesson::phi_ext(double z, double a) const {
            2 * z * (0.5 * pc::pi + std::asin((a2 * a2 - z2 * z2 - 2 * a2 * z2) / std::pow(a2 + z2, 2)));
 }
 
-void ExternalAkesson::sync(Energybase* energybase, Change&) {
+void ExternalAkesson::sync(Energybase* energybase, const Change&) {
     if (fixed_potential) {
         return;
     }

@@ -10,6 +10,7 @@
 #include <zstr.hpp>
 #include <cereal/types/memory.hpp>
 #include <cereal/archives/binary.hpp>
+#include <range/v3/numeric/accumulate.hpp>
 
 #include <iomanip>
 #include <iostream>
@@ -1862,13 +1863,12 @@ void ElectricPotential::_sample() {
 }
 
 double ElectricPotential::calcPotentialOnTarget(const ElectricPotential::Target& target) {
-    auto potential = 0.0;
-    auto particles = spc.groups | ranges::cpp20::views::join;
-    for (const Particle& particle : particles) {
+    auto potential_from_particle = [&](const Particle& particle) {
         const auto distance_to_target = spc.geo.sqdist(particle.pos, target.position);
-        potential += coulomb->getCoulombGalore().ion_potential(particle.charge, distance_to_target);
-    }
-    return potential;
+        return coulomb->getCoulombGalore().ion_potential(particle.charge, distance_to_target);
+    };
+    auto potentials = spc.activeParticles() | ranges::cpp20::views::transform(potential_from_particle);
+    return std::accumulate(potentials.begin(), potentials.end(), 0.0);
 }
 
 void ElectricPotential::_to_json(json& j) const {
@@ -1885,13 +1885,13 @@ void ElectricPotential::_to_json(json& j) const {
     }
 }
 void ElectricPotential::_to_disk() {
-    if (auto stream = std::ofstream("potential_correlation_histogram.dat")) {
+    if (auto stream = std::ofstream(MPI::prefix + "potential_correlation_histogram.dat")) {
         stream << potential_correlation_histogram;
     }
     int filenumber = 1;
     for (const auto& target : targets) {
-        if (auto stream = std::ofstream(fmt::format("potential_histogram{}.dat", filenumber++))) {
-            stream << *target.potential_histogram;
+        if (auto stream = std::ofstream(fmt::format("{}potential_histogram{}.dat", MPI::prefix, filenumber++))) {
+            stream << *(target.potential_histogram);
         }
     }
 }

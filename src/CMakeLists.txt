@@ -67,7 +67,7 @@ set(hdrs analysis.h average.h atomdata.h auxiliary.h bonds.h celllist.h celllist
 	aux/eigen_cerealisation.h aux/eigensupport.h aux/iteratorsupport.h aux/multimatrix.h
 	aux/eigen_cerealisation.h aux/eigensupport.h aux/equidistant_table.h aux/error_function.h
 	aux/exp_function.h aux/invsqrt_function.h aux/iteratorsupport.h aux/legendre.h aux/multimatrix.h
-	aux/pairmatrix.h aux/pow_function.h aux/table_1d.h aux/table_2d.h aux/timers.h aux/typeerasure.h)
+	aux/pairmatrix.h aux/pow_function.h aux/table_1d.h aux/table_2d.h aux/timers.h aux/typeerasure.h aux/sparsehistogram.h)
 
 set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 

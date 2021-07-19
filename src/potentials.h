@@ -595,6 +595,7 @@ class NewCoulombGalore : public PairPotentialBase {
     void to_json(json &) const override;
     double dielectric_constant(double M2V) { return pot.calc_dielectric(M2V); }
     double bjerrum_length; //!< Bjerrum length (angstrom)
+    const CoulombGalore::Splined& getCoulombGalore() const; //!< Access to full coulomb galore class
 };
 
 /**

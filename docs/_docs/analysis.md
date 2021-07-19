@@ -395,6 +395,26 @@ atomic species can be saved.
 `pqrfile`            | Output PQR file (optional)
 `verbose=True`       | If `True`, add results to general output
 
+### Electric Potential
+
+`electricpotential`   | Description
+--------------------- | ------------------------------------------------------
+`nstep`               | Interval between samples
+`nskip=0`             | Number of initial steps excluded from the analysis
+`epsr`                | Dielectric constant
+`type`                | Coulomb type, `plain` etc. -- see energies
+`structure`           | Either a _filename_ (pqr, aam, gro etc) or a _list_ of positions
+`policy=fixed`        | Policy used to augment positions before each sample event (`fixed`, `random_walk`)
+`ncalc`               | Number of potential calculations per sample event
+`length`              | Separation between target points when using `random_walk`
+
+This calculates the mean electric potential, $\langle \phi_i \rangle$ and correlations, $\langle \phi_1\phi_2 ...\rangle$
+at an arbitrary number of target positions in the simulation cell.
+The positions - given via `structure` - can be augmented using a `policy` that can currently be `fixed`
+or subjected to a `random_walk`.
+If a random walk, the first position is assigned a random position, while the following are randomly placed
+`length` distance away from the previous.
+Histograms of the correlation and the potentials at the target points are saved to disk.
 
 ## Reaction Coordinate
 

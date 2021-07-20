@@ -5,6 +5,8 @@
 #include "multipole.h"
 #include "aux/iteratorsupport.h"
 #include "aux/eigensupport.h"
+#include <range/v3/numeric/accumulate.hpp>
+#include <range/v3/algorithm/for_each.hpp>
 #include <spdlog/spdlog.h>
 #include <zstr.hpp>
 #include <cereal/types/memory.hpp>
@@ -181,9 +183,8 @@ CombinedAnalysis::CombinedAnalysis(const json& json_array, Space& spc, Energy::H
     }
     for (const auto& j : json_array) {
         try {
-            const auto& [key, j_params] = jsonSingleItem(j);
-            auto analysis = createAnalysis(key, j_params, spc, pot);
-            vec.push_back(analysis);
+            const auto& [key, json_parameters] = jsonSingleItem(j);
+            vec.emplace_back(createAnalysis(key, json_parameters, spc, pot));
         } catch (std::exception& e) {
             throw ConfigurationError("analysis: {}", e.what()).attachJson(j);
         }
@@ -198,8 +199,8 @@ void SystemEnergy::normalize() {
 }
 
 void SystemEnergy::_sample() {
-    const auto energies = calculateAllEnergies(); // current energy from all terms in Hamiltonian
-    const auto total_energy = std::accumulate(energies.begin(), energies.end(), 0.0);
+    const auto energies = calculateEnergies(); // current energy from all terms in Hamiltonian
+    const auto total_energy = ranges::accumulate(energies, 0.0);
     if (std::isfinite(total_energy)) {
         mean_energy += total_energy;
         mean_squared_energy += total_energy * total_energy;
@@ -213,7 +214,7 @@ void SystemEnergy::_sample() {
 }
 
 void SystemEnergy::_to_json(json& j) const {
-    j = {{"file", file_name}, {"init", initial_energy}, {"final", calculateAllEnergies()}};
+    j = {{"file", file_name}, {"init", initial_energy}, {"final", calculateEnergies()}};
     if (!mean_energy.empty()) {
         j["mean"] = mean_energy.avg();
         j["Cv/kB"] = mean_squared_energy.avg() - std::pow(mean_energy.avg(), 2);
@@ -223,8 +224,8 @@ void SystemEnergy::_to_json(json& j) const {
     // ehist.save( "distofstates.dat" );
 }
 
-void SystemEnergy::_from_json(const json& j) {
-    file_name = MPI::prefix + j.at("file").get<std::string>();
+void SystemEnergy::_from_json(const json& j) { file_name = MPI::prefix + j.at("file").get<std::string>(); }
+void SystemEnergy::createOutputStream() {
     output_stream = IO::openCompressedOutputStream(file_name, true);
     if (auto suffix = file_name.substr(file_name.find_last_of('.') + 1); suffix == "csv") {
         separator = ",";
@@ -233,35 +234,29 @@ void SystemEnergy::_from_json(const json& j) {
         *output_stream << "#";
     }
     *output_stream << fmt::format("{:>9}{}{:12}", "step", separator, "total");
-    for (const auto& name : names_of_energy_terms) {
-        *output_stream << fmt::format("{}{:12}", separator, name);
-    }
+    ranges::for_each(hamiltonian,
+                     [&](auto& energy) { *output_stream << fmt::format("{}{:12}", separator, energy->name); });
     *output_stream << "\n";
 }
 
-SystemEnergy::SystemEnergy(const json& j, Space& spc, Energy::Hamiltonian& pot) : Analysisbase(spc, "systemenergy") {
+SystemEnergy::SystemEnergy(const json& j, Space& spc, Energy::Hamiltonian& hamiltonian)
+    : Analysisbase(spc, "systemenergy"), hamiltonian(hamiltonian) {
     from_json(j);
-    std::transform(pot.vec.begin(), pot.vec.end(), std::back_inserter(names_of_energy_terms),
-                   [](auto& i) { return i->name; });
-
-    calculateAllEnergies = [&pot]() {
-        Change change;
-        change.all = true; // trigger full energy calculation
-        std::vector<double> energies;
-        std::transform(pot.vec.begin(), pot.vec.end(), std::back_inserter(energies),
-                       [&](auto i) { return i->energy(change); });
-        return energies;
-    };
     energy_histogram.setResolution(0.25);
-    auto energies = calculateAllEnergies();
-    initial_energy = std::accumulate(energies.begin(), energies.end(), 0.0); // initial energy
+    initial_energy = ranges::accumulate(calculateEnergies(), 0.0);
+    createOutputStream();
+}
+std::vector<double> SystemEnergy::calculateEnergies() const {
+    Change change;
+    change.all = true; // trigger full energy calculation
+    return hamiltonian | ranges::views::transform([&](auto& i) { return i->energy(change); }) | ranges::to_vector;
 }
 
 void SystemEnergy::_to_disk() {
-    if (*output_stream) {
-        output_stream->flush(); // empty buffer
-    }
+    output_stream->flush(); // empty buffer
 }
+
+// --------------------------------
 
 void SaveState::_to_json(json& j) const { j["file"] = filename; }
 

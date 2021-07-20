@@ -281,15 +281,17 @@ class Multipole : public Analysisbase {
  */
 class SystemEnergy : public Analysisbase {
   private:
-    std::string file_name, separator = " ";
-    std::unique_ptr<std::ostream> output_stream = nullptr;
-    std::function<std::vector<double>()> calculateAllEnergies;
+    Energy::Hamiltonian& hamiltonian;
+    std::string file_name;
+    std::string separator;
+    std::unique_ptr<std::ostream> output_stream;
+    std::vector<double> calculateEnergies() const;
     Average<double> mean_energy;
     Average<double> mean_squared_energy;
-    std::vector<std::string> names_of_energy_terms;
     Table2D<double, double> energy_histogram; // Density histograms
     double initial_energy = 0.0;
 
+    void createOutputStream();
     void normalize();
     void _sample() override;
     void _to_json(json& j) const override;
@@ -297,7 +299,7 @@ class SystemEnergy : public Analysisbase {
     void _to_disk() override;
 
   public:
-    SystemEnergy(const json&, Space& spc, Energy::Hamiltonian&);
+    SystemEnergy(const json& j, Space& spc, Energy::Hamiltonian& hamiltonian);
 };
 
 /**

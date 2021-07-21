@@ -1530,8 +1530,6 @@ class SASAEnergy : public Energybase {
      */
     template <typename Tfirst, typename Tend>
     void updateRadii(Tfirst begin, Tend end, [[maybe_unused]] const Change& change) {
-        auto it = spc.p.begin();
-        typename decltype(it)::value_type a;
         const auto number_of_particles = std::distance(begin, end);
         radii.clear();
         radii.reserve(number_of_particles);

@@ -11,9 +11,7 @@
 #include <numeric>
 #include <algorithm>
 
-#ifdef ENABLE_FREESASA
-#include <freesasa.h> // @todo forward declare `freesasa_parameters`
-#endif
+struct freesasa_parameters_fwd; // workaround for freesasa unnamed struct that cannot be forward declared
 
 #if defined(__cpp_lib_parallel_algorithm) && __has_include(<tbb/tbb.h>)
 #include <execution>
@@ -1513,8 +1511,8 @@ class SASAEnergy : public Energybase {
     std::vector<double> sasa;      //!< Target buffer for calculated surface areas
 
     Space& spc;
-    double cosolute_concentration;                   //!< co-solute concentration (mol/l)
-    std::unique_ptr<freesasa_parameters> parameters; //!< Parameters for freesasa
+    double cosolute_concentration;                       //!< co-solute concentration (mol/l)
+    std::unique_ptr<freesasa_parameters_fwd> parameters; //!< Parameters for freesasa
     Average<double> mean_surface_area;
 
     void to_json(json &j) const override;

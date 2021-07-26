@@ -4,6 +4,13 @@
 #include "externalpotential.h"
 #include <functional>
 
+#ifdef ENABLE_FREESASA
+#include <freesasa.h>
+struct freesasa_parameters_fwd : public freesasa_parameters {
+    freesasa_parameters_fwd(const freesasa_parameters& p) : freesasa_parameters(p){};
+};
+#endif
+
 #define ANKERL_NANOBENCH_IMPLEMENT
 #include <nanobench.h>
 
@@ -1065,7 +1072,7 @@ const std::vector<double>& Hamiltonian::latestEnergies() const { return latest_e
 
 SASAEnergy::SASAEnergy(Space& spc, const double cosolute_concentration, const double probe_radius)
     : spc(spc), cosolute_concentration(cosolute_concentration),
-      parameters(std::make_unique<freesasa_parameters>(freesasa_default_parameters)) {
+      parameters(std::make_unique<freesasa_parameters_fwd>(freesasa_default_parameters)) {
     name = "sasa";
     citation_information = "doi:10.12688/f1000research.7931.1";
     parameters->probe_radius = probe_radius;

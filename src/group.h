@@ -5,7 +5,7 @@
 #include "geometry.h"
 #include <range/v3/view/filter.hpp>
 #include <range/v3/view/transform.hpp>
-#include <nlohmann/json_fwd.hpp>
+#include <nlohmann/json.hpp>
 
 namespace Faunus {
 

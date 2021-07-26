@@ -1,38 +1,73 @@
 include(ExternalProject)
 include(FetchContent)
 
-#############
-# PCG RANDOM
-#############
+###############
+# CPM Packages
+###############
 
+CPMAddPackage("gh:gabime/spdlog@1.9.0")
+CPMAddPackage("gh:ericniebler/range-v3#0.11.0")
+CPMAddPackage("gh:docopt/docopt.cpp#v0.6.3")
+CPMAddPackage("gh:onqtam/doctest#2.4.6")
+CPMAddPackage("gh:mateidavid/zstr#v1.0.4")
+CPMAddPackage("gh:imneme/pcg-cpp#ffd522e7188bef30a00c74dc7eb9de5faff90092")
+CPMAddPackage("gh:ArashPartow/exprtk#7135f4ddb12e626d2a355c587d9d7d0d74b6aab3")
+
+CPMAddPackage(
+    NAME nlohmann_json VERSION 3.9.1
+    URL https://github.com/nlohmann/json/releases/download/v3.9.1/include.zip
+    OPTIONS "JSON_BuildTests OFF"
+)
+
+CPMAddPackage(
+    NAME Eigen VERSION 3.3.9 DOWNLOAD_ONLY YES 
+    URL https://gitlab.com/libeigen/eigen/-/archive/3.3.9/eigen-3.3.9.tar.gz
+)
+
+CPMAddPackage(
+    NAME cereal VERSION 1.3.0 GITHUB_REPOSITORY USCiLab/cereal
+    OPTIONS "SKIP_PORTABILITY_TEST ON" "JUST_INSTALL_CEREAL ON"
+)
+
+###################################
+# Configure CPM packages if needed
+###################################
+
+set_property(TARGET spdlog PROPERTY POSITION_INDEPENDENT_CODE ON)
+set_property(TARGET docopt PROPERTY POSITION_INDEPENDENT_CODE ON)
+
+if (nlohmann_json_ADDED)
+    add_library(nlohmann_json INTERFACE IMPORTED)
+    target_include_directories(nlohmann_json INTERFACE ${nlohmann_json_SOURCE_DIR}/include)
+endif()
+
+add_compile_definitions("NLOHMANN_JSON_HPP") # older versions used this macro. Now it's suffixed with "_"
+
+if(Eigen_ADDED)
+    add_library(Eigen INTERFACE IMPORTED)
+    target_include_directories(Eigen INTERFACE ${Eigen_SOURCE_DIR})
+endif()
+
+if (zstr_ADDED)
+    add_library(zstr INTERFACE)
+    target_include_directories(zstr INTERFACE "${zstr_SOURCE_DIR}/src")
+endif()
+
+if (pcg-cpp_ADDED)
+    add_library(pcg-cpp INTERFACE)
+    target_include_directories(pcg-cpp INTERFACE "${pcg-cpp_SOURCE_DIR}/include")
+endif()
 option(ENABLE_PCG "Enable PCG random number generator" off)
 if (ENABLE_PCG)
-    FetchContent_Declare(
-        pcg-cpp
-        URL https://github.com/imneme/pcg-cpp/archive/ffd522e7188bef30a00c74dc7eb9de5faff90092.tar.gz
-        URL_HASH MD5=051b969bbaf924f35f2159813f93e341)
-    FetchContent_GetProperties(pcg-cpp)
-    if(NOT pcg-cpp_POPULATED)
-        FetchContent_Populate(pcg-cpp)
-    endif()
-    include_directories(SYSTEM ${pcg-cpp_SOURCE_DIR}/include)
     add_definitions("-DENABLE_PCG")
 endif()
 
-#########
-# EXPRTK 
-#########
-
-FetchContent_Declare(
-    exprtk
-    URL https://github.com/ArashPartow/exprtk/archive/e0e880c3797ea363d24782ba63fe362f7d94f89c.zip
-    URL_HASH MD5=772293e80f8353961fcc8a2b337e8dec)
-FetchContent_GetProperties(exprtk)
-if(NOT exprtk_POPULATED)
-    FetchContent_Populate(exprtk)
+if (exprtk_ADDED)
+    add_definitions("-Dexprtk_disable_string_capabilities")
+    add_definitions("-Dexprtk_disable_rtl_io_file")
+    add_library(exprtk INTERFACE)
+    target_include_directories(exprtk INTERFACE "${exprtk_SOURCE_DIR}")
 endif()
-add_definitions("-Dexprtk_disable_string_capabilities")
-add_definitions("-Dexprtk_disable_rtl_io_file")
 
 ###################
 # PROGRESS TRACKER
@@ -55,102 +90,6 @@ add_library(progresstracker STATIC IMPORTED GLOBAL)
 add_dependencies(progresstracker project_progresstracker)
 set_property(TARGET progresstracker PROPERTY IMPORTED_LOCATION ${binary_dir}/libprogresstracker.a)
 
-
-#########
-# SPDLOG
-#########
-
-ExternalProject_Add(
-    project_spdlog
-    PREFIX "${CMAKE_CURRENT_BINARY_DIR}/_deps"
-    LOG_DOWNLOAD ON
-    URL https://github.com/gabime/spdlog/archive/v1.6.1.tar.gz
-    URL_HASH SHA256=378a040d91f787aec96d269b0c39189f58a6b852e4cbf9150ccfacbe85ebbbfc
-    CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DSPDLOG_INSTALL=off -DCMAKE_POSITION_INDEPENDENT_CODE=on
-    BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} spdlog
-    INSTALL_COMMAND ""
-)
-ExternalProject_Get_Property(project_spdlog source_dir)
-ExternalProject_Get_Property(project_spdlog binary_dir)
-set(SpdlogIncludeDir ${source_dir}/include)
-add_library(spdlog STATIC IMPORTED)
-set_property(TARGET spdlog PROPERTY IMPORTED_LOCATION ${binary_dir}/libspdlog.a)
-add_dependencies(spdlog project_spdlog)
-
-##############
-# MODERN JSON
-##############
-
-FetchContent_Declare(
-    modernjson
-    URL "https://github.com/nlohmann/json/releases/download/v3.8.0/include.zip"
-    URL_HASH SHA256=8590fbcc2346a3eefc341935765dd57598022ada1081b425678f0da9a939a3c0)
-FetchContent_GetProperties(modernjson)
-if(NOT modernjson_POPULATED)
-    FetchContent_Populate(modernjson)
-endif()
-add_compile_definitions("NLOHMANN_JSON_HPP") # older versions used this macro. Now it's suffixed with "_"
-
-#########
-# CEREAL
-#########
-
-FetchContent_Declare(
-    cereal
-    URL "https://github.com/USCiLab/cereal/archive/v1.3.0.tar.gz"
-    URL_HASH MD5=4342e811f245403646c4175258f413f1)
-FetchContent_GetProperties(cereal)
-if(NOT cereal_POPULATED)
-    FetchContent_Populate(cereal)
-endif()
-
-#######
-# ZSTR
-#######
-
-FetchContent_Declare(
-    zstr
-    URL "https://github.com/mateidavid/zstr/archive/v1.0.1.tar.gz"
-    URL_HASH MD5=42de51b1c6adac0ec957a24088ef7523)
-FetchContent_GetProperties(zstr)
-if(NOT zstr_POPULATED)
-    FetchContent_Populate(zstr)
-endif()
-
-###########
-# RANGE-V3
-###########
-
-FetchContent_Declare(
-    rangev3
-    URL "https://github.com/ericniebler/range-v3/archive/0.11.0.tar.gz"
-    URL_HASH MD5=97ab1653f3aa5f9e3d8200ee2a4911d3)
-
-FetchContent_GetProperties(rangev3)
-if(NOT rangev3_POPULATED)
-    FetchContent_Populate(rangev3)
-endif()
-
-#############
-# DOCOPT.CPP
-#############
-
-ExternalProject_Add(project_docopt
-    PREFIX "${CMAKE_CURRENT_BINARY_DIR}/_deps"
-    CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DCMAKE_POSITION_INDEPENDENT_CODE=on
-    BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} docopt_s
-    INSTALL_COMMAND ""
-    LOG_DOWNLOAD ON
-    UPDATE_DISCONNECTED ON
-    URL_MD5 c6290672c8dae49a01774297a51046fe
-    URL "https://github.com/docopt/docopt.cpp/archive/v0.6.3.tar.gz")
-
-ExternalProject_Get_Property(project_docopt binary_dir)
-ExternalProject_Get_Property(project_docopt source_dir)
-set(DocoptIncludeDir ${source_dir})
-add_library(docopt STATIC IMPORTED GLOBAL)
-add_dependencies(docopt project_docopt)
-set_property(TARGET docopt PROPERTY IMPORTED_LOCATION ${binary_dir}/libdocopt.a)
 
 #########
 # CPPSID
@@ -181,8 +120,8 @@ endif()
 
 FetchContent_Declare(
     pybind11
-    URL https://github.com/pybind/pybind11/archive/v2.5.0.tar.gz
-    URL_HASH MD5=1ad2c611378fb440e8550a7eb6b31b89)
+    URL https://github.com/pybind/pybind11/archive/v2.7.0.tar.gz
+    URL_HASH MD5=bd742c80621babef4814cc2df041490d)
 
 ############
 # INTEL TBB
@@ -221,19 +160,6 @@ if(NOT nanobench_POPULATED)
     FetchContent_Populate(nanobench)
 endif()
 
-########
-# EIGEN
-########
-
-FetchContent_Declare(
-    eigen
-    URL "https://gitlab.com/libeigen/eigen/-/archive/3.3.9/eigen-3.3.9.tar.gz"
-    URL_HASH MD5=609286804b0f79be622ccf7f9ff2b660)
-FetchContent_GetProperties(eigen)
-if(NOT eigen_POPULATED)
-    FetchContent_Populate(eigen)
-endif()
- 
 ##########
 # XRDFILE
 ##########
@@ -257,19 +183,6 @@ set_property(TARGET xdrfile PROPERTY IMPORTED_LOCATION ${binary_dir}/libxdrfile-
 add_dependencies(xdrfile project_xdrfile)
 set_target_properties(xdrfile PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 
-##########
-# DOCTEST
-##########
-
-FetchContent_Declare(
-    doctest
-    URL "https://github.com/onqtam/doctest/archive/2.4.6.tar.gz"
-    URL_HASH SHA256=39110778e6baf373ef04342d7cb3fe35da104cb40769103e8a2f0035f5a5f1cb)
-FetchContent_GetProperties(doctest)
-if(NOT doctest_POPULATED)
-    FetchContent_Populate(doctest)
-    #add_definitions(-DDOCTEST_CONFIG_DISABLE)
-endif()
 
 ##############
 # TROMPELOEIL
@@ -277,8 +190,8 @@ endif()
 
 FetchContent_Declare(
     trompeloeil
-    URL "https://github.com/rollbear/trompeloeil/archive/v39.tar.gz"
-    URL_HASH SHA256=10506e48abd605740bc9ed43e34059f5068bc80af14476bd129a3ed3b54d522f)
+    URL "https://github.com/rollbear/trompeloeil/archive/v41.tar.gz"
+    URL_HASH SHA256=48986b507497f027e4fa1144a08c2d0b6d81fb476fad024956f8104448ca9ad8)
 FetchContent_GetProperties(trompeloeil)
 if(NOT trompeloeil_POPULATED)
     FetchContent_Populate(trompeloeil)
@@ -327,7 +240,5 @@ include_directories(SYSTEM ${coulombgalore_SOURCE_DIR})
 # Add third-party headers to include path. Note this is done with SYSTEM
 # to disable potential compiler warnings
 
-include_directories(SYSTEM ${eigen_SOURCE_DIR} ${modernjson_SOURCE_DIR}/include ${rangev3_SOURCE_DIR}/include
-    ${doctest_SOURCE_DIR} ${trompeloeil_SOURCE_DIR}/include ${nanobench_SOURCE_DIR}/src/include
-    ${Pybind11IncludeDir} ${DocoptIncludeDir} ${CppsidIncludeDir} ${XdrfileIncludeDir} ${SpdlogIncludeDir}
-    ${ProgressTrackerIncludeDir} ${exprtk_SOURCE_DIR} ${cereal_SOURCE_DIR}/include ${zstr_SOURCE_DIR}/src)
+include_directories(SYSTEM ${trompeloeil_SOURCE_DIR}/include ${nanobench_SOURCE_DIR}/src/include
+    ${Pybind11IncludeDir} ${CppsidIncludeDir} ${XdrfileIncludeDir} ${ProgressTrackerIncludeDir} ${doctest_SOURCE_DIR})

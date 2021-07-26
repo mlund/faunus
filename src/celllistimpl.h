@@ -471,7 +471,7 @@ template <typename TMember, typename TIndex> class SparseContainer : virtual pub
         try {
             return container.at(index);
         } catch (std::out_of_range& e) {
-            auto [iterator, flag] = container.emplace(index, Members{});
+            [[maybe_unused]] auto [iterator, flag] = container.emplace(index, Members{});
             return iterator->second;
         }
     }

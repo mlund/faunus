@@ -1,6 +1,6 @@
 #pragma once
 #include <iterator>
-#include <range/v3/distance.hpp>
+#include <range/v3/iterator/operations.hpp>
 
 namespace Faunus {
 

@@ -5,7 +5,7 @@ include(FetchContent)
 # CPM Packages
 ###############
 
-CPMAddPackage("gh:gabime/spdlog@1.8.5")
+CPMAddPackage("gh:gabime/spdlog@1.9.0")
 CPMAddPackage("gh:ericniebler/range-v3#0.11.0")
 CPMAddPackage("gh:docopt/docopt.cpp#v0.6.3")
 CPMAddPackage("gh:onqtam/doctest#2.4.6")
@@ -120,8 +120,8 @@ endif()
 
 FetchContent_Declare(
     pybind11
-    URL https://github.com/pybind/pybind11/archive/v2.5.0.tar.gz
-    URL_HASH MD5=1ad2c611378fb440e8550a7eb6b31b89)
+    URL https://github.com/pybind/pybind11/archive/v2.7.0.tar.gz
+    URL_HASH MD5=bd742c80621babef4814cc2df041490d)
 
 ############
 # INTEL TBB
@@ -190,8 +190,8 @@ set_target_properties(xdrfile PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 
 FetchContent_Declare(
     trompeloeil
-    URL "https://github.com/rollbear/trompeloeil/archive/v39.tar.gz"
-    URL_HASH SHA256=10506e48abd605740bc9ed43e34059f5068bc80af14476bd129a3ed3b54d522f)
+    URL "https://github.com/rollbear/trompeloeil/archive/v41.tar.gz"
+    URL_HASH SHA256=48986b507497f027e4fa1144a08c2d0b6d81fb476fad024956f8104448ca9ad8)
 FetchContent_GetProperties(trompeloeil)
 if(NOT trompeloeil_POPULATED)
     FetchContent_Populate(trompeloeil)

@@ -101,6 +101,8 @@ class Space {
 
     int getGroupIndex(const Tgroup& group) const;         //!< Get index of given group in the group vector
     int getFirstParticleIndex(const Tgroup& group) const; //!< Index of first particle in group
+    int
+    getFirstActiveParticleIndex(const Tgroup& group) const; //!< Index of first particle w. respect to active particles
 
     /**
      * @brief Update particles in Space from a source range

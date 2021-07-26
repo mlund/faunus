@@ -295,6 +295,16 @@ int Space::getFirstParticleIndex(const Tgroup& group) const {
     return std::distance<ParticleVector::const_iterator>(p.cbegin(), group.begin());
 }
 
+/**
+ * Returns the index of the first particle of the group in the range returned by `activeParticles()`
+ */
+int Space::getFirstActiveParticleIndex(const Tgroup& group) const {
+    const auto group_index = getGroupIndex(group);
+    int index = 0;
+    std::for_each(groups.begin(), groups.begin() + group_index, [&](auto& g) { index += (int)g.size(); });
+    return index;
+}
+
 TEST_CASE("Space::numParticles") {
     Space spc;
     spc.p.resize(10);

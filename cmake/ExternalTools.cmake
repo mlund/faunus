@@ -33,6 +33,9 @@ CPMAddPackage(
 # Configure CPM packages if needed
 ###################################
 
+set_property(TARGET spdlog PROPERTY POSITION_INDEPENDENT_CODE ON)
+set_property(TARGET docopt PROPERTY POSITION_INDEPENDENT_CODE ON)
+
 if (nlohmann_json_ADDED)
     add_library(nlohmann_json INTERFACE IMPORTED)
     target_include_directories(nlohmann_json INTERFACE ${nlohmann_json_SOURCE_DIR}/include)

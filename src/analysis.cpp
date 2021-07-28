@@ -1820,11 +1820,11 @@ void ElectricPotential::setPolicy(const json& j) {
             auto origin = targets.begin();
             do {
                 spc.geo.randompos(origin->position, random);
-            } while (particleOverlap(origin->position));
+            } while (overlapWithParticles(origin->position));
             std::for_each(std::next(origin), targets.end(), [&](Target& target) {
                 do {
                     target.position = origin->position + stride * ranunit(random);
-                } while (particleOverlap(target.position));
+                } while (overlapWithParticles(target.position));
                 std::advance(origin, 1);
             });
         };
@@ -1840,9 +1840,8 @@ void ElectricPotential::getTargets(const json& j) {
     } else {
         PointVector positions;
         if (structure->is_string()) { // load positions from chemical structure file
-            const auto particles = loadStructure(structure->get<std::string>(), false);
-            std::transform(particles.begin(), particles.end(), std::back_inserter(positions),
-                           [](auto& particle) { return particle.pos; });
+            auto particles = loadStructure(structure->get<std::string>(), false);
+            positions = particles | ranges::cpp20::views::transform(&Particle::pos) | ranges::to_vector;
         } else if (structure->is_array()) { // list of positions
             positions = structure->get<PointVector>();
         }
@@ -1875,7 +1874,7 @@ void ElectricPotential::_sample() {
 
 double ElectricPotential::calcPotentialOnTarget(const ElectricPotential::Target& target) {
     auto potential_from_particle = [&](const Particle& particle) {
-        const auto distance_to_target = spc.geo.sqdist(particle.pos, target.position);
+        const auto distance_to_target = std::sqrt(spc.geo.sqdist(particle.pos, target.position));
         return coulomb->getCoulombGalore().ion_potential(particle.charge, distance_to_target);
     };
     auto potentials = spc.activeParticles() | ranges::cpp20::views::transform(potential_from_particle);
@@ -1906,7 +1905,14 @@ void ElectricPotential::_to_disk() {
         }
     }
 }
-bool ElectricPotential::particleOverlap(const Point& position) const {
+
+/**
+ * Checks if position lies within the spheres of diameters `sigma` defined
+ * by each active particle in the system. Complexity: N
+ *
+ * @return True if overlap with any particle
+ */
+bool ElectricPotential::overlapWithParticles(const Point& position) const {
     auto overlap = [&position, &geometry = spc.geo](const Particle& particle) {
         const auto radius = 0.5 * particle.traits().sigma;
         return geometry.sqdist(particle.pos, position) < radius * radius;

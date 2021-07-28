@@ -190,7 +190,7 @@ class ElectricPotential : public Analysisbase {
     void getTargets(const json& j);                          //!< Get user defined target positions
     void setPolicy(const json& j);                           //!< Set user defined position setting policy
     double calcPotentialOnTarget(const Target& target);      //!< Evaluate net potential of target position
-    bool particleOverlap(const Point& position) const;       //!< Check if position is within the radius of any particle
+    bool overlapWithParticles(const Point& position) const;  //!< Check if position is within the radius of any particle
     std::function<void()> applyPolicy;                       //!< Lambda for position setting policy
     json output_information;                                 //!< json output generated during construction
     void _to_json(json& j) const override;

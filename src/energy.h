@@ -11,9 +11,7 @@
 #include <numeric>
 #include <algorithm>
 
-#ifdef ENABLE_FREESASA
-#include <freesasa.h>
-#endif
+struct freesasa_parameters_fwd; // workaround for freesasa unnamed struct that cannot be forward declared
 
 #if defined(__cpp_lib_parallel_algorithm) && __has_include(<tbb/tbb.h>)
 #include <execution>
@@ -1501,25 +1499,58 @@ class NonbondedCached : public Nonbonded<TPairEnergy, TPairingPolicy> {
 #ifdef ENABLE_FREESASA
 /**
  * @brief Interface to the FreeSASA C-library. Experimental and unoptimized.
- *
  * https://freesasa.github.io/
+ *
+ * @todo - Forward declare `freesasa_parameters` but will require change in external lib.
+ *       - Implement partial evaluation refelcting `change` object
  */
 class SASAEnergy : public Energybase {
-  public:
-    std::vector<double> sasa, radii, positions;
-
   private:
-    Space &spc;
-    double cosolute_concentration;             // co-solute concentration (mol/l)
-    freesasa_parameters parameters;
-    Average<double> avgArea; // average surface area
+    std::vector<double> positions; //!< Flattened position buffer for all particles
+    std::vector<double> radii;     //!< Radii buffer for all particles
+    std::vector<double> sasa;      //!< Target buffer for calculated surface areas
 
-    void updatePositions(const ParticleVector &p);
-    void updateRadii(const ParticleVector &p);
+    Space& spc;
+    double cosolute_concentration;                       //!< co-solute concentration (mol/l)
+    std::unique_ptr<freesasa_parameters_fwd> parameters; //!< Parameters for freesasa
+    Average<double> mean_surface_area;
 
-    void updateSASA(const ParticleVector &p, const Change &change);
     void to_json(json &j) const override;
-    void sync(Energybase* basePtr, const Change& c) override;
+    void sync(Energybase* energybase_ptr, const Change& change) override;
+    void updateSASA(const Change& change);
+    void init() override;
+
+    /**
+     * @brief Copies radii from Space to internal buffer
+     * @param begin Iterator to first particle
+     * @param end Iterator to beyond last particle
+     * @param change Change object (currently unused)
+     */
+    template <typename Tfirst, typename Tend>
+    void updateRadii(Tfirst begin, Tend end, [[maybe_unused]] const Change& change) {
+        const auto number_of_particles = std::distance(begin, end);
+        radii.clear();
+        radii.reserve(number_of_particles);
+        std::transform(begin, end, std::back_inserter(radii),
+                       [](const Particle& particle) { return particle.traits().sigma * 0.5; });
+    }
+
+    /**
+     * @brief Copies positions from Space to internal (flattened) buffer
+     * @param begin Iterator to first particle
+     * @param end Iterator to beyond last particle
+     * @param change Change object (currently unused)
+     */
+    template <typename Tfirst, typename Tend>
+    void updatePositions(Tfirst begin, Tend end, [[maybe_unused]] const Change& change) {
+        const auto number_of_particles = std::distance(begin, end);
+        positions.clear();
+        positions.reserve(3 * number_of_particles);
+        for (const Point& position : spc.positions()) {
+            const auto* xyz = position.data();
+            positions.insert(positions.end(), xyz, xyz + 3);
+        }
+    }
 
   public:
     /**
@@ -1529,8 +1560,7 @@ class SASAEnergy : public Energybase {
      */
     SASAEnergy(Space &spc, double cosolute_concentration = 0.0, double probe_radius = 1.4);
     SASAEnergy(const json &j, Space &spc);
-    void init() override;
-    double energy(Change &) override;
+    double energy(Change& change) override;
 }; //!< SASA energy from transfer free energies
 #endif
 

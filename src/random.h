@@ -3,7 +3,7 @@
 #include <vector>
 #include <cassert>
 #include <stdexcept>
-#include <nlohmann/json_fwd.hpp>
+#include <nlohmann/json.hpp>
 
 #ifdef ENABLE_PCG
 #include <pcg_random.hpp>

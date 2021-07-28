@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string>
-#include <nlohmann/json_fwd.hpp>
+#include <nlohmann/json.hpp>
 
 namespace exprtk { // exprtk.hpp
 template <typename T> class parser;

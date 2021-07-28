@@ -329,7 +329,7 @@ void Cluster::_move(Change &change) {
  * currently implemented in `findCluster()`.
  */
 void Cluster::biasRejectOrAccept(const size_t seed_index, const std::vector<size_t> &cluster_index) {
-    auto [aftercluster, safe_to_rotate] = find_cluster->findCluster(seed_index);
+    [[maybe_unused]] auto [aftercluster, safe_to_rotate] = find_cluster->findCluster(seed_index);
     if (aftercluster == cluster_index) {
         _bias = 0.0;
     } else {

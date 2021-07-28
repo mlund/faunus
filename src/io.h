@@ -270,7 +270,7 @@ class GromacsWriter : public StructureFileWriter {
 namespace PQRTrajectoryReader {
 bool readAtomRecord(const std::string& record, Particle& particle, double& radius); //!< Read ATOM or HETATOM record
 void loadTrajectory(const std::string& filename, std::vector<ParticleVector>& destination); //!< Load trajectory
-}; // namespace PQRTrajectoryReader
+} // namespace PQRTrajectoryReader
 
 struct TrajectoryFrame;
 

@@ -18,7 +18,7 @@ if (ENABLE_PCH)
             <Eigen/Core> <Eigen/Geometry>
             <range/v3/view/filter.hpp> <range/v3/view/transform.hpp> <range/v3/view/join.hpp>
             <cereal/cereal.hpp> <cereal/types/base_class.hpp> <cereal/types/memory.hpp>
-            <nlohmann/json.hpp> <nlohmann/json_fwd.hpp>
+            <nlohmann/json.hpp>
             <spdlog/fmt/fmt.h> <spdlog/spdlog.h>)
 endif()
 
@@ -51,6 +51,7 @@ endif ()
 add_library(functionparser STATIC ${CMAKE_SOURCE_DIR}/src/functionparser.cpp ${CMAKE_SOURCE_DIR}/src/functionparser.h)
 set_target_properties(functionparser PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_definitions(functionparser PRIVATE DOCTEST_CONFIG_DISABLE)
+target_link_libraries(functionparser PRIVATE nlohmann_json exprtk)
 
 # ========== faunus cpp and header files ==========
 
@@ -75,16 +76,31 @@ set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 
 add_library(libfaunus OBJECT ${objs} ${hdrs})
 target_compile_definitions(libfaunus PRIVATE SPDLOG_COMPILED_LIB)
-target_link_libraries(libfaunus PRIVATE
+target_link_libraries(libfaunus PUBLIC
         project_options
         project_warnings
-        xdrfile spdlog
-        functionparser)
+        cereal
+        Eigen
+        functionparser
+        nlohmann_json
+        pcg-cpp
+        range-v3
+        spdlog
+        xdrfile
+        zstr)
 
 # ========== faunus (main executable) ==========
 
 add_executable(faunus faunus.cpp)
-target_link_libraries(faunus PRIVATE libfaunus docopt progresstracker project_options)
+target_link_libraries(faunus PRIVATE
+    docopt_s
+    Eigen
+    libfaunus
+    doctest
+    progresstracker
+    project_options
+    range-v3
+    spdlog)
 target_compile_definitions(faunus PRIVATE SPDLOG_COMPILED_LIB)
 set_target_properties(faunus PROPERTIES
         POSITION_INDEPENDENT_CODE ON
@@ -144,9 +160,14 @@ if (ENABLE_PYTHON)
             pybind11_add_module(pyfaunus pyfaunus.cpp ${objs})
             target_link_libraries(pyfaunus PRIVATE
                     project_options
-                    xdrfile
+                    cereal
+                    Eigen
+                    functionparser
+                    nlohmann_json
+                    range-v3
                     spdlog
-                    functionparser)
+                    xdrfile
+                    zstr)
             target_compile_definitions(pyfaunus PUBLIC SPDLOG_COMPILED_LIB)
             target_compile_definitions(pyfaunus PRIVATE DOCTEST_CONFIG_DISABLE)
         endif()

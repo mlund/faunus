@@ -404,17 +404,35 @@ atomic species can be saved.
 `epsr`                | Dielectric constant
 `type`                | Coulomb type, `plain` etc. -- see energies
 `structure`           | Either a _filename_ (pqr, aam, gro etc) or a _list_ of positions
-`policy=fixed`        | Policy used to augment positions before each sample event (`fixed`, `random_walk`)
+`policy=fixed`        | Policy used to augment positions before each sample event, see below
 `ncalc`               | Number of potential calculations per sample event
-`length`              | Separation between target points when using `random_walk`
+`stride`              | Separation between target points when using `random_walk` or `no_overlap`
 
-This calculates the mean electric potential, $\langle \phi_i \rangle$ and correlations, $\langle \phi_1\phi_2 ...\rangle$
+This calculates the mean electric potential, $\langle \phi\_i \rangle$ and correlations, $\langle \phi\_1\phi\_2 ...\rangle$
 at an arbitrary number of target positions in the simulation cell.
-The positions - given via `structure` - can be augmented using a `policy` that can currently be `fixed`
-or subjected to a `random_walk`.
-If a random walk, the first position is assigned a random position, while the following are randomly placed
-`length` distance away from the previous.
+The positions - given via `structure` - can be augmented using a `policy`:
+
+`policy`        | Description
+--------------- | ------------------------------------------------------------------
+`fixed`         | Expects a list of fixed positions where the potential is measured
+`random_walk`   | Assign random position to first; the following targets are randomly placed `stride` distance from previous.
+`no_overlap`    | As `random_walk` but with no particle overlap (size defined by `sigma`, see Topology)
+
 Histograms of the correlation and the potentials at the target points are saved to disk.
+
+Example:
+
+~~~ yaml
+- electricpotential:
+    nstep: 20
+    ncalc: 10
+    epsr: 80
+    type: plain
+    policy: random_walk
+    stride: 10   # in angstrom
+    structure:
+      - [0,0,0]  # defines two target points...
+      - [0,0,0]  # ...positions are randomly set
 
 ## Reaction Coordinate
 

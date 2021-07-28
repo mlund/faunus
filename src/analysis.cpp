@@ -1796,19 +1796,35 @@ ElectricPotential::ElectricPotential(const json& j, Space& spc)
 void ElectricPotential::setPolicy(const json& j) {
     output_information.clear();
     policy = j.value("policy", FIXED);
-    auto length = 0.0;
+    auto stride = 0.0;
     switch (policy) {
     case FIXED:
         applyPolicy = []() {};
         break;
     case RANDOM_WALK:
-        length = j.at("length").get<double>();
-        output_information["length"] = length;
-        applyPolicy = [&, length] {
+        stride = j.at("stride").get<double>();
+        output_information["stride"] = stride;
+        applyPolicy = [&, stride] {
             auto origin = targets.begin();
             spc.geo.randompos(origin->position, random);
             std::for_each(std::next(origin), targets.end(), [&](Target& target) {
-                target.position = origin->position + length * ranunit(random);
+                target.position = origin->position + stride * ranunit(random);
+                std::advance(origin, 1);
+            });
+        };
+        break;
+    case RANDOM_WALK_NO_OVERLAP:
+        stride = j.at("stride").get<double>();
+        output_information["stride"] = stride;
+        applyPolicy = [&, stride] {
+            auto origin = targets.begin();
+            do {
+                spc.geo.randompos(origin->position, random);
+            } while (particleOverlap(origin->position));
+            std::for_each(std::next(origin), targets.end(), [&](Target& target) {
+                do {
+                    target.position = origin->position + stride * ranunit(random);
+                } while (particleOverlap(target.position));
                 std::advance(origin, 1);
             });
         };
@@ -1889,6 +1905,14 @@ void ElectricPotential::_to_disk() {
             stream << *(target.potential_histogram);
         }
     }
+}
+bool ElectricPotential::particleOverlap(const Point& position) const {
+    auto overlap = [&position, &geometry = spc.geo](const Particle& particle) {
+        const auto radius = 0.5 * particle.traits().sigma;
+        return geometry.sqdist(particle.pos, position) < radius * radius;
+    };
+    auto particles = spc.activeParticles();
+    return std::any_of(particles.begin(), particles.end(), overlap);
 }
 
 } // namespace Faunus::Analysis

@@ -901,6 +901,36 @@ properties:
                         dr: {type: number, description: "Distance resolution along R (Å)"}
                     required: [molecules, nstep, dr]
 
+                electricpotential:
+                    type: object
+                    properties:
+                        epsr: {type: number, description: "Relative dielectric constant"}
+                        type: {type: string, description: "Coulomb potential type"}
+                        stride: {type: number, description: "Stride length for random walk"}
+                        policy:
+                            description: "Policy used to augment positions before each sample event"
+                            type: string
+                            enum: ["fixed", "random_walk", "no_overlap"]
+                            default: "fixed"
+                        ncalc: {type: integer, description: "Number of samples per event", default: 1, minimum: 1}
+                        nstep: {type: integer, description: "Sample interval"}
+                        nskip: {type: integer, default: 0, description: "Initial steps to skip"}
+                        structure:
+                            description: Target position definitions
+                            anyOf:
+                                - type: string
+                                  pattern: "(.*?)\\.(pqr|aam|xyz|gro)$"
+                                - type: array
+                                  items:
+                                      type: array
+                                      additionalProperties:
+                                          type: array
+                                          items: {type: number}
+                                          minItems: 3
+                                          maxItems: 3
+                    required: [nstep, epsr, type, structure]
+                    additionalProperties: false
+
                 chargefluctuations:
                     type: object
                     properties:

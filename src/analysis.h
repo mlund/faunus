@@ -172,7 +172,7 @@ class WidomInsertion : public PerturbationAnalysisBase {
  */
 class ElectricPotential : public Analysisbase {
   public:
-    enum Policies { FIXED, RANDOM_WALK, INVALID };
+    enum Policies { FIXED, RANDOM_WALK, RANDOM_WALK_NO_OVERLAP, INVALID };
 
   private:
     double histogram_resolution = 0.05; //!< Angstrom
@@ -190,6 +190,7 @@ class ElectricPotential : public Analysisbase {
     void getTargets(const json& j);                          //!< Get user defined target positions
     void setPolicy(const json& j);                           //!< Set user defined position setting policy
     double calcPotentialOnTarget(const Target& target);      //!< Evaluate net potential of target position
+    bool particleOverlap(const Point& position) const;       //!< Check if position is within the radius of any particle
     std::function<void()> applyPolicy;                       //!< Lambda for position setting policy
     json output_information;                                 //!< json output generated during construction
     void _to_json(json& j) const override;
@@ -200,9 +201,12 @@ class ElectricPotential : public Analysisbase {
     ElectricPotential(const json& j, Space& spc);
 };
 
-NLOHMANN_JSON_SERIALIZE_ENUM(ElectricPotential::Policies, {{ElectricPotential::INVALID, nullptr},
-                                                           {ElectricPotential::FIXED, "fixed"},
-                                                           {ElectricPotential::RANDOM_WALK, "random_walk"}})
+NLOHMANN_JSON_SERIALIZE_ENUM(ElectricPotential::Policies, {
+                                                              {ElectricPotential::INVALID, nullptr},
+                                                              {ElectricPotential::FIXED, "fixed"},
+                                                              {ElectricPotential::RANDOM_WALK_NO_OVERLAP, "no_overlap"},
+                                                              {ElectricPotential::RANDOM_WALK, "random_walk"},
+                                                          })
 
 /**
  * @brief Density of atom along axis

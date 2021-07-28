@@ -26,11 +26,12 @@ moves:
 `friction`      | Friction coefficient <!--𝛾--> $\gamma$ (1/ps)
 
 This move will solve the Langevin equation for the particles in the system on the form
+
 $$
 d\begin{bmatrix} \mathbf{q} \\ \mathbf{p} \end{bmatrix} =
-\underbrace{\begin{bmatrix} M^{-1}\mathbf{q} \\ 0 \end{bmatrix} \mathrm{d}t}_{\text{A}} +
-\underbrace{\begin{bmatrix} 0 \\ -\nabla U(\mathbf{q}) \end{bmatrix}\mathrm{d}t}_{\text{B}} +
-\underbrace{\begin{bmatrix} 0 \\ -\gamma \mathbf{p} + \sqrt{2\text{k}_{\mathrm{b}}T\gamma} \sqrt{M} ~\mathrm{d}\mathbf{W} \end{bmatrix}}_{\text{O}}
+\underbrace{\begin{bmatrix} M^{-1}\mathbf{q} \\ 0 \end{bmatrix} \mathrm{d}t}\_{\text{A}} +
+\underbrace{\begin{bmatrix} 0 \\ -\nabla U(\mathbf{q}) \end{bmatrix}\mathrm{d}t}\_{\text{B}} +
+\underbrace{\begin{bmatrix} 0 \\ -\gamma \mathbf{p} + \sqrt{2\text{k}\_{\mathrm{b}}T\gamma} \sqrt{M} ~\mathrm{d}\mathbf{W} \end{bmatrix}}\_{\text{O}}
 $$
 
 Where A, B, and O makes up the terms for solving the Langevin equation, which can be individually solved to obtain a trajectory given by

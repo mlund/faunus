@@ -14,14 +14,20 @@
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
 
+import datetime
+
+def getCurrentYear():
+    ''' return current year, 20XX '''
+    currentDateTime = datetime.datetime.now()
+    date = currentDateTime.date()
+    return date.strftime("%Y")
+
 project = 'Faunus'
-copyright = '2020, Mikael Lund'
+copyright = '{}, Mikael Lund'.format(getCurrentYear())
 author = 'Mikael Lund'
 source_suffix = ['.rst', '.md']
 master_doc = 'index'
 extensions = ['recommonmark', 'sphinx_markdown_tables', 'sphinx.ext.autosectionlabel']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
-
 autosectionlabel_prefix_document = True
-

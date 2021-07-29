@@ -410,12 +410,12 @@ atomic species can be saved.
 
 This calculates the mean electric potential, $\langle \phi\_i \rangle$ and correlations, $\langle \phi\_1\phi\_2 ...\rangle$
 at an arbitrary number of target positions in the simulation cell.
-The positions - given via `structure` - can be augmented using a `policy`:
+The positions, given via `structure`, can be augmented using a `policy`:
 
 `policy`        | Description
 --------------- | ------------------------------------------------------------------
 `fixed`         | Expects a list of fixed positions where the potential is measured
-`random_walk`   | Assign random position to first; the following targets are randomly placed `stride` distance from previous.
+`random_walk`   | Assign random position to first target; while following targets are randomly placed `stride` distance from previous.
 `no_overlap`    | As `random_walk` but with no particle overlap (size defined by `sigma`, see Topology)
 
 Histograms of the correlation and the potentials at the target points are saved to disk.
@@ -433,6 +433,7 @@ Example:
     structure:
       - [0,0,0]  # defines two target points...
       - [0,0,0]  # ...positions are randomly set
+~~~
 
 ## Reaction Coordinate
 

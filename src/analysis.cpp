@@ -441,8 +441,10 @@ void VirtualVolumeMove::_sample() {
         const auto old_energy = pot.energy(change);  // ...and energy
         const auto scale = spc.scaleVolume(old_volume + volume_displacement,
                                            volume_scaling_method); // scale entire system to new volume
-        const auto new_energy = pot.energy(change);                // energy after scaling
-        spc.scaleVolume(old_volume, volume_scaling_method);        // restore saved system
+        spc.runPostChangeActions(change);
+        const auto new_energy = pot.energy(change);         // energy after scaling
+        spc.scaleVolume(old_volume, volume_scaling_method); // restore saved system
+        spc.runPostChangeActions(change);
 
         const auto energy_change = new_energy - old_energy; // system energy change
         if (collectWidomAverage(energy_change)) {

@@ -31,13 +31,16 @@ void Change::sanityCheck(const std::vector<Group<Particle>> &group_vector) const
     for (auto &changed : groups) {
         auto first_particle = group_vector.at(0).begin(); // first particle in first group
         auto &group = group_vector.at(changed.index);     // current group
+        if (!std::is_sorted(changed.atoms.begin(), changed.atoms.end())) {
+            throw std::runtime_error("bug: list of index must be sorted");
+        }
         for (auto i : changed.atoms) {                    // all atoms must be within `group`
             if (i >= group.capacity()) {
                 auto first = std::distance(first_particle, group.begin());
                 auto last = std::distance(first_particle, group.trueend()) - 1;
                 faunus_logger->error("atom {} outside group capacity: '{}' ({}-{})", i + first,
                                      molecules.at(group.id).name, first, last);
-                throw std::runtime_error("insane change object: atom outside group capacity");
+                throw std::runtime_error("bug: insane change object: atom outside group capacity");
             }
         }
     }
@@ -61,7 +64,9 @@ TEST_CASE("[Faunus] Change") {
     change.clear();
     CHECK(change.empty());
 
-    SUBCASE("getChangedParticles") {
+    SUBCASE("changedParticles") {
+        auto atoms_backup = Faunus::atoms;         // current state of atoms and molecules
+        auto molecules_backup = Faunus::molecules; // are assumed in the following "Space" tests (arrr!)
         Space spc;
         SpaceFactory::makeWater(spc, 2, R"( {"type": "cuboid", "length": 20} )"_json);
         CHECK(spc.groups.size() == 2);
@@ -74,7 +79,7 @@ TEST_CASE("[Faunus] Change") {
         data.atoms.push_back(1); // middle atom in second water -> size = 4
         change.groups.push_back(data);
 
-        auto changed_particles = change.getChangedParticles(spc);
+        auto changed_particles = spc.changedParticles(change);
         CHECK(std::distance(changed_particles.begin(), changed_particles.end()) == 4);
         auto it = changed_particles.begin();
         CHECK(distance(spc.p.begin(), it++) == 0);
@@ -84,8 +89,11 @@ TEST_CASE("[Faunus] Change") {
         CHECK(distance(spc.p.end(), it) == 0);
 
         change.all = true;
-        changed_particles = change.getChangedParticles(spc);
+        changed_particles = spc.changedParticles(change);
         CHECK(std::distance(changed_particles.begin(), changed_particles.end()) == 6);
+
+        Faunus::atoms = atoms_backup;
+        Faunus::molecules = molecules_backup;
     }
 }
 
@@ -106,7 +114,7 @@ void Space::clear() {
  * @param molid Molecule id of inserted data
  * @param particles Particles to generate group from
  */
-void Space::push_back(int molid, const ParticleVector &particles) {
+void Space::addGroup(int molid, const ParticleVector& particles) {
     if (!particles.empty()) {
         auto original_begin = p.begin();                       // used to detect if `p` is relocated
         p.insert(p.end(), particles.begin(), particles.end()); // insert particle into space
@@ -245,8 +253,8 @@ Point Space::scaleVolume(double Vnew, Geometry::VolumeMethod method) {
         Vold = std::pow(Vold, 1. / 3.);  // ?
     }
 
-    // run external action such as celllist update etc.
-    std::for_each(postVolumeScaleActions.begin(), postVolumeScaleActions.end(),
+    // run possible external actions
+    std::for_each(postVolumeChangeActions.begin(), postVolumeChangeActions.end(),
                   [&](auto& action) { action(*this, Vold, Vnew); });
     return scale;
 }
@@ -329,6 +337,11 @@ int Space::getFirstActiveParticleIndex(const Tgroup& group) const {
     return index;
 }
 
+void Space::runPostChangeActions(const Change& change) {
+    std::for_each(postChangeActions.begin(), postChangeActions.end(),
+                  [&](auto& action) { action(*this, change); }); // update cell-list etc.
+}
+
 TEST_CASE("Space::numParticles") {
     Space spc;
     spc.p.resize(10);
@@ -349,6 +362,10 @@ void to_json(json& j, const Space& spc) {
     j["reactionlist"] = reactions;
     j["implicit_reservoir"] = spc.getImplicitReservoir();
 }
+
+/**
+ * @todo This function acts like a constructor and needs cleanup
+ */
 void from_json(const json &j, Space &spc) {
     using namespace std::string_literals;
 
@@ -365,22 +382,23 @@ void from_json(const json &j, Space &spc) {
             }
         }
 
+        // @todo this is not an ideal place to put this
         if (auto celllist = j.find("celllist"); celllist != j.end()) {
             spc.celllist = CellList::createCellList(spc, celllist->at("gridsize").get<double>());
             if (spc.celllist) {
-                spc.postVolumeScaleActions.emplace_back([](Space& spc, double, double) {
-                    // @todo Update celllist grid
-                    auto particles = spc.activeParticles();
-                    spc.celllist->updateParticles(particles.begin(), particles.end());
-                });
-                spc.postSyncActions.emplace_back(
+                spc.postSyncActions.emplace_back( // performed after each Space<->Space sync() call
                     [](Space& spc, [[maybe_unused]] const Space& other, const Change& change) {
-                        // @todo Update celllist grid
-                        auto changed_particles = change.getChangedParticles(spc);
+                        // @todo Copy from other space instead of re-calculating; update celllist grid
+                        auto changed_particles = spc.changedParticles(change);
                         spc.celllist->updateParticles(changed_particles.begin(), changed_particles.end());
                     });
-                spc.postParticleUpdateActions.emplace_back(
-                    [&](Space& spc, const Particle& particle) { spc.celllist->update(particle); });
+                spc.postChangeActions.emplace_back([](Space& spc, const Change& change) { // called after each move
+                    if (change.dV) {
+                        // @todo update grid
+                    }
+                    auto changed_particles = spc.changedParticles(change);
+                    spc.celllist->updateParticles(changed_particles.begin(), changed_particles.end());
+                });
             }
         }
 
@@ -391,6 +409,10 @@ void from_json(const json &j, Space &spc) {
             InsertMoleculesInSpace::insertMolecules(j.at("insertmolecules"), spc);
         } else {
             spc.p = j.at("particles").get<ParticleVector>();
+            if (spc.celllist) {
+                spc.celllist->setFirstParticle(spc.p.front());
+                spc.celllist->updateParticles(spc.p.begin(), spc.p.end());
+            }
             if (!spc.p.empty()) {
                 auto begin = spc.p.begin();
                 Space::Tgroup g(begin, begin); // create new grou[
@@ -483,7 +505,7 @@ TEST_CASE("[Faunus] Space") {
     CHECK(p[0].traits().mw == 1);
     p[0].pos.x() = 2;
     p[1].pos.x() = 3;
-    spc1.push_back(0, p); // insert molecular group
+    spc1.addGroup(0, p); // insert molecular group
     CHECK(spc1.p.size() == 2);
     CHECK(spc1.groups.size() == 1);
     CHECK(spc1.groups.back().isMolecular());
@@ -504,9 +526,9 @@ TEST_CASE("[Faunus] Space") {
 
         Faunus::molecules.at(0).atoms.resize(3);
 
-        spc.push_back(0, pvec);
-        spc.push_back(0, pvec);
-        spc.push_back(0, pvec);
+        spc.addGroup(0, pvec);
+        spc.addGroup(0, pvec);
+        spc.addGroup(0, pvec);
 
         spc.groups.at(0).id = 0;
         spc.groups.at(1).id = 1;
@@ -701,7 +723,7 @@ void InsertMoleculesInSpace::insertAtomicGroups(MoleculeData &moldata, Space &sp
         repeated_particles.insert(repeated_particles.end(), particles.begin(), particles.end());
     }
 
-    spc.push_back(moldata.id(), repeated_particles); // create new group in Space
+    spc.addGroup(moldata.id(), repeated_particles); // create new group in Space
 
     if (num_inactive_molecules > num_molecules) {
         throw std::runtime_error("too many inactive molecules requested");
@@ -715,7 +737,7 @@ void InsertMoleculesInSpace::insertMolecularGroups(MoleculeData &moldata, Space 
                                                    int num_inactive) {
     assert(moldata.atomic == false);
     for (size_t i = 0; i < num_molecules; i++) { // insert molecules
-        spc.push_back(moldata.id(), moldata.getRandomConformation(spc.geo, spc.p));
+        spc.addGroup(moldata.id(), moldata.getRandomConformation(spc.geo, spc.p));
     }
     if (num_inactive > num_molecules) {
         throw std::runtime_error("too many inactive molecules requested");

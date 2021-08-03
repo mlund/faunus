@@ -10,6 +10,9 @@
 namespace Faunus {
 
 class Space;
+namespace CellList {
+class ParticleCellListBase;
+}
 
 /**
  * @brief Specify change to a new state
@@ -30,7 +33,7 @@ struct Change {
         int index;              //!< Touched group index
         bool internal = false;  //!< True if the internal energy/config has changed
         bool all = false;       //!< True if all particles in group have been updated
-        std::vector<int> atoms; //!< Touched atom index w. respect to `Group::begin()`
+        std::vector<int> atoms; //!< Touched atom index w. respect to `Group::begin()` (sorted values)
 
         bool operator<(const data &other) const;
     }; //!< Properties of changed groups
@@ -46,61 +49,10 @@ struct Change {
     bool empty() const;                                           //!< Check if change object is empty
     explicit operator bool() const;                               //!< True if object is not empty
     void sanityCheck(const std::vector<Group<Particle>> &) const; //!< Sanity check on contained object data
-
-    template <typename SpaceType> auto getChangedParticles(SpaceType& spc) const {
-        assert(!spc.p.empty());
-        auto hasChanged = [&](const Particle& particle) {
-            assert(&particle >= &spc.p.front());
-            assert(&particle <= &spc.p.back());
-            if (all) {
-                return true;
-            }
-            for (const data& d : groups) { // loop over changed groups
-                if (d.atoms.empty()) {     // empty means that everything changed!
-                    if (spc.groups[d.index].contains(particle)) {
-                        return true;
-                    }
-                } else { // only a subset changed
-                    for (const auto index : d.atoms) {
-                        if (std::addressof(particle) == std::addressof(*(spc.groups[d.index].begin() + index))) {
-                            return true;
-                        }
-                    }
-                }
-            }
-            return false;
-        };
-        return spc.p | ranges::cpp20::views::filter(hasChanged);
-    }
 };
 
 void to_json(json &, const Change::data &); //!< Serialize Change data to json
 void to_json(json &, const Change &);       //!< Serialise Change object to json
-
-class ParticleCellListBase {
-  protected:
-    const Particle* first_particle_ptr = nullptr;
-    inline auto index(const Particle& particle) const {
-        assert(first_particle_ptr != nullptr);
-        assert(&particle - first_particle_ptr >= 0);
-        return &particle - first_particle_ptr;
-    }
-
-  public:
-    virtual ~ParticleCellListBase() = default;
-    virtual void insert(const Particle& particle) = 0;
-    // virtual void erase(const Particle& particle) = 0;
-    virtual void update(const Particle& particle) = 0;
-    inline void setFirstParticle(const Particle& particle) { first_particle_ptr = &particle; }
-
-    template <typename ParticleIterator> void updateParticles(ParticleIterator begin, ParticleIterator end) {
-        std::for_each(begin, end, [&](const Particle& particle) { update(particle); });
-    }
-
-    template <typename ParticleIterator> void insertParticles(ParticleIterator begin, ParticleIterator end) {
-        std::for_each(begin, end, [&](const Particle& particle) { insert(particle); });
-    }
-};
 
 /**
  * @brief Placeholder for atoms and molecules
@@ -115,7 +67,7 @@ class Space {
     using Tchange = Change;
     using PostVolumeChangeFunctor = std::function<void(Space&, double, double)>;
     using PostSyncFunctor = std::function<void(Space&, const Space&, const Tchange&)>;
-    using PostParticleUpdateFunctor = std::function<void(Space&, const Particle&)>;
+    using PostChangeFunctor = std::function<void(Space&, const Change&)>;
 
   private:
     /**
@@ -132,11 +84,13 @@ class Space {
     ParticleVector p;                               //!< Particle vector storing all particles in system
     Tgvec groups;                                   //!< Group vector storing all molecules in system
     Tgeometry geo;                                  //!< Container geometry (boundaries, shape, volume)
-    std::shared_ptr<ParticleCellListBase> celllist; //!< Particle cell list
 
-    std::vector<PostVolumeChangeFunctor> postVolumeScaleActions; //!< Called whenever the volume is scaled
-    std::vector<PostSyncFunctor> postSyncActions;                //!< Call when two Space objects are synched (unused)
-    std::vector<PostParticleUpdateFunctor> postParticleUpdateActions; //!< Called from `updateParticles`
+    std::shared_ptr<CellList::ParticleCellListBase> celllist; //!< Particle cell list
+
+    std::vector<PostVolumeChangeFunctor> postVolumeChangeActions; //!< Called whenever the volume is scaled
+    std::vector<PostSyncFunctor> postSyncActions;                 //!< Called when two Space objects are synched
+    std::vector<PostChangeFunctor> postChangeActions;             //!< Called after each move
+    void runPostChangeActions(const Change& change); //!< Apply callback functions after update (typically a move)
 
     const std::map<int, int> &getImplicitReservoir() const; //!< Storage for implicit molecules
     std::map<int, int> &getImplicitReservoir();             //!< Storage for implicit molecules
@@ -144,19 +98,23 @@ class Space {
     //!< Keywords to select particles based on the their active/inactive state and charge neutrality
     enum Selection { ALL, ACTIVE, INACTIVE, ALL_NEUTRAL, ACTIVE_NEUTRAL, INACTIVE_NEUTRAL };
 
-    void clear();                                           //!< Clears particle and molecule list
-    void push_back(int, const ParticleVector &);            //!< Safely add particles and corresponding group to back
-    Tgvec::iterator findGroupContaining(const Particle &i); //!< Finds the group containing the given atom
-    Tgvec::iterator findGroupContaining(size_t atom_index); //!< Finds the group containing given atom index
-    size_t numParticles(Selection selection = ACTIVE) const; //!< Number of particles, all or active (default)
-    Point scaleVolume(double, Geometry::VolumeMethod = Geometry::ISOTROPIC); //!< Scales atoms, molecules, container
-    Tgvec::iterator randomMolecule(int, Random &, Selection = ACTIVE);       //!< Random group matching molid
-    json info();
+    void clear();                                              //!< Clears particle and molecule list
+    void addGroup(int molid, const ParticleVector& particles); //!< Safely add particles and corresponding group to back
+    Tgvec::iterator findGroupContaining(const Particle& particle); //!< Finds the group containing the given atom
+    Tgvec::iterator findGroupContaining(size_t atom_index);        //!< Finds the group containing given atom index
+    size_t numParticles(Selection selection = ACTIVE) const;       //!< Number of particles, all or active (default)
 
+    Point
+    scaleVolume(double new_volume,
+                Geometry::VolumeMethod scaling_method = Geometry::ISOTROPIC); //!< Scales atoms, molecules, container
+
+    Tgvec::iterator randomMolecule(int molid, Random& rand,
+                                   Selection selection = ACTIVE); //!< Random group matching molid
+    json info();
     int getGroupIndex(const Tgroup& group) const;         //!< Get index of given group in the group vector
-    int getFirstParticleIndex(const Tgroup& group) const; //!< Index of first particle in group
-    int
-    getFirstActiveParticleIndex(const Tgroup& group) const; //!< Index of first particle w. respect to active particles
+    int getFirstParticleIndex(const Tgroup& group) const; //!< Absolute index of first particle in group
+    inline auto changedParticles(const Change& change);   //!< Range with all changed particles
+    int getFirstActiveParticleIndex(const Tgroup& group) const; //!< 1st particle index w. respect to active particles
 
     /**
      * @brief Update particles in Space from a source range
@@ -197,8 +155,6 @@ class Space {
         // copy data from source range (this modifies `destination`)
         std::for_each(begin, end, [&](const auto& source) {
             copy_function(source, *destination);
-            std::for_each(postParticleUpdateActions.begin(), postParticleUpdateActions.end(),
-                          [&](auto& action) { action(*this, *destination); });
             std::advance(destination, 1);
         });
 
@@ -309,6 +265,32 @@ class Space {
 
 void to_json(json& j, const Space& spc);   //!< Serialize Space to json object
 void from_json(const json &j, Space &spc); //!< Deserialize json object to Space
+
+auto Space::changedParticles(const Change& change) {
+    auto hasChanged = [&](const Particle& particle) {
+        assert(&particle >= &p.front());
+        assert(&particle <= &p.back());
+        if (change.all) {
+            return true;
+        }
+        for (const Change::data& group_changes : change.groups) { // loop over changed groups
+            const auto& group = groups[group_changes.index];
+            if (group_changes.atoms.empty() || group_changes.all) { // empty means that everything changed!
+                if (group.contains(particle)) {
+                    return true;
+                }
+            } else if (!group.empty()) { // only a subset changed
+                const auto relative_index = std::addressof(particle) - std::addressof(*group.begin());
+                if (std::binary_search(group_changes.atoms.begin(), group_changes.atoms.end(),
+                                       static_cast<int>(relative_index))) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    };
+    return p | ranges::cpp20::views::filter(hasChanged);
+}
 
 /**
  * @brief Insert molecules into space

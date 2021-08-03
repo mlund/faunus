@@ -1077,7 +1077,7 @@ SASAEnergy::SASAEnergy(Space& spc, const double cosolute_concentration, const do
     citation_information = "doi:10.12688/f1000research.7931.1";
     parameters->probe_radius = probe_radius;
     init();
-    if (spc.geo.asSimpleGeometry()->boundary_conditions.isPeriodic().sum() != 0) {
+    if (spc.geo.asSimpleGeometry()->boundary_conditions.isPeriodic().cast<int>().sum() != 0) {
         faunus_logger->error("PBC applied, but PBC not implemented for FreeSASA. Expect unphysical results.");
     }
 }

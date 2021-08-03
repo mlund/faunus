@@ -55,7 +55,9 @@ void MoveBase::move(Change& change) {
     number_of_attempted_moves++;
     change.clear();
     _move(change);
-    if (change.empty()) {
+    if (!change.empty()) {
+        spc.runPostChangeActions(change);
+    } else {
         timer.stop();
     }
     timer_move.stop();

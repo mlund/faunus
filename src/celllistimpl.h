@@ -911,6 +911,31 @@ class CellListDifference : virtual public AbstractSortableCellList<ContainerType
     std::map<CellIndex, Members> difference_cache;
 };
 
+class ParticleCellListBase {
+  protected:
+    const Particle* first_particle_ptr = nullptr; //!< Used to calculate index of particles
+    inline auto index(const Particle& particle) const {
+        assert(first_particle_ptr != nullptr);
+        assert(&particle - first_particle_ptr >= 0);
+        return &particle - first_particle_ptr;
+    }
+
+  public:
+    virtual ~ParticleCellListBase() = default;
+    virtual void insert(const Particle& particle) = 0;
+    // virtual void erase(const Particle& particle) = 0;
+    virtual void update(const Particle& particle) = 0;
+    inline void setFirstParticle(const Particle& particle) { first_particle_ptr = &particle; }
+
+    template <typename ParticleIterator> void updateParticles(ParticleIterator begin, ParticleIterator end) {
+        std::for_each(begin, end, [&](const Particle& particle) { update(particle); });
+    }
+
+    template <typename ParticleIterator> void insertParticles(ParticleIterator begin, ParticleIterator end) {
+        std::for_each(begin, end, [&](const Particle& particle) { insert(particle); });
+    }
+};
+
 template <typename CellListType> class ParticleCellList : public ParticleCellListBase {
   private:
     std::unique_ptr<CellListType> celllist;

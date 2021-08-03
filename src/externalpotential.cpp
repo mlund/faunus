@@ -155,7 +155,7 @@ Confine::Confine(const json &j, Tspace &spc) : ExternalPotential(j, spc) {
         // If volume is scaled, also scale the confining radius by adding a trigger
         // to `Space::scaleVolume()`
         if (scale)
-            spc.postVolumeScaleActions.push_back(
+            spc.postVolumeChangeActions.emplace_back(
                 [&radius = radius](Tspace&, double Vold, double Vnew) { radius *= std::cbrt(Vnew / Vold); });
     }
 

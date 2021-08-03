@@ -261,7 +261,8 @@ TEST_CASE("CellListDifference") {
 
 std::unique_ptr<ParticleCellListBase> createCellList(Space& spc, const double gridsize) {
     std::unique_ptr<ParticleCellListBase> celllist;
-    switch (spc.geo.asSimpleGeometry()->boundary_conditions.isPeriodic().sum()) {
+    const auto periodic_dimensions = spc.geo.asSimpleGeometry()->boundary_conditions.isPeriodic().cast<int>().sum();
+    switch (periodic_dimensions) {
     case 3: // PBC in all directions
         using Periodic = CellList::CellListSpatial<CellList::CellListType<int, CellList::Grid::Grid3DPeriodic>>;
         celllist = std::make_unique<CellList::ParticleCellList<Periodic>>(spc, spc.geo.getLength(), gridsize);

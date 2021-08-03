@@ -1,3 +1,5 @@
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "altera-unroll-loops"
 #pragma once
 #include "core.h"
 #include "geometry.h"
@@ -12,8 +14,9 @@ class Space;
 /**
  * @brief Specify change to a new state
  *
- * - If `moved` or `removed` are defined for a group, but are
- *   empty, it is assumed that *all* particles in the group are affected.
+ * For each changed group, `groups` contain information about which atoms were
+ * moved. Note that if `atoms` is empty, it means that *all* particles in the group were changed.
+ * This is due to efficiency.
  */
 struct Change {
     bool dV = false;         //!< Set to true if there's a volume change
@@ -39,32 +42,80 @@ struct Change {
         return ranges::cpp20::views::transform(groups, [](const data &i) -> int { return i.index; });
     }
 
-    //! List of changed atom index relative to first particle in system
-    std::vector<int> touchedParticleIndex(const std::vector<Group<Particle>> &) const;
-
     void clear();                                                 //!< Clear all change data
     bool empty() const;                                           //!< Check if change object is empty
     explicit operator bool() const;                               //!< True if object is not empty
     void sanityCheck(const std::vector<Group<Particle>> &) const; //!< Sanity check on contained object data
+
+    template <typename SpaceType> auto getChangedParticles(SpaceType& spc) const {
+        assert(!spc.p.empty());
+        auto hasChanged = [&](const Particle& particle) {
+            assert(&particle >= &spc.p.front());
+            assert(&particle <= &spc.p.back());
+            if (all) {
+                return true;
+            }
+            for (const data& d : groups) { // loop over changed groups
+                if (d.atoms.empty()) {     // empty means that everything changed!
+                    if (spc.groups[d.index].contains(particle)) {
+                        return true;
+                    }
+                } else { // only a subset changed
+                    for (const auto index : d.atoms) {
+                        if (std::addressof(particle) == std::addressof(*(spc.groups[d.index].begin() + index))) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        };
+        return spc.p | ranges::cpp20::views::filter(hasChanged);
+    }
 };
 
 void to_json(json &, const Change::data &); //!< Serialize Change data to json
 void to_json(json &, const Change &);       //!< Serialise Change object to json
+
+class ParticleCellListBase {
+  protected:
+    const Particle* first_particle_ptr = nullptr;
+    inline auto index(const Particle& particle) const {
+        assert(first_particle_ptr != nullptr);
+        assert(&particle - first_particle_ptr >= 0);
+        return &particle - first_particle_ptr;
+    }
+
+  public:
+    virtual ~ParticleCellListBase() = default;
+    virtual void insert(const Particle& particle) = 0;
+    // virtual void erase(const Particle& particle) = 0;
+    virtual void update(const Particle& particle) = 0;
+    inline void setFirstParticle(const Particle& particle) { first_particle_ptr = &particle; }
+
+    template <typename ParticleIterator> void updateParticles(ParticleIterator begin, ParticleIterator end) {
+        std::for_each(begin, end, [&](const Particle& particle) { update(particle); });
+    }
+
+    template <typename ParticleIterator> void insertParticles(ParticleIterator begin, ParticleIterator end) {
+        std::for_each(begin, end, [&](const Particle& particle) { insert(particle); });
+    }
+};
 
 /**
  * @brief Placeholder for atoms and molecules
  */
 class Space {
   public:
-    typedef Geometry::Chameleon Tgeometry;
-    typedef Particle Tparticle; // remove
-    typedef Faunus::ParticleVector Tpvec;
-    typedef Group<Particle> Tgroup;
-    typedef std::vector<Tgroup> Tgvec;
-    typedef Change Tchange;
-    typedef std::function<void(Space &, double, double)> ScaleVolumeTrigger;
-    typedef std::function<void(Space &, const Tchange &)> ChangeTrigger;
-    typedef std::function<void(Space &, const Space &, const Tchange &)> SyncTrigger;
+    using Tgeometry = Geometry::Chameleon;
+    using Tparticle = Particle; // remove
+    using Tpvec = Faunus::ParticleVector;
+    using Tgroup = Group<Particle>;
+    using Tgvec = std::vector<Tgroup>;
+    using Tchange = Change;
+    using PostVolumeChangeFunctor = std::function<void(Space&, double, double)>;
+    using PostSyncFunctor = std::function<void(Space&, const Space&, const Tchange&)>;
+    using PostParticleUpdateFunctor = std::function<void(Space&, const Particle&)>;
 
   private:
     /**
@@ -76,14 +127,17 @@ class Space {
      * number of implicit molecules can participate in equilibrium reactions.
      */
     std::map<int, int> implicit_reservoir;
-    std::vector<ChangeTrigger> changeTriggers; //!< Call when a Change object is applied (unused)
-    std::vector<SyncTrigger> onSyncTriggers;   //!< Call when two Space objects are synched (unused)
 
   public:
-    ParticleVector p;                                       //!< Particle vector storing all particles in system
-    Tgvec groups;                                           //!< Group vector storing all molecules in system
-    Tgeometry geo;                                          //!< Container geometry (boundaries, shape, volume)
-    std::vector<ScaleVolumeTrigger> scaleVolumeTriggers;    //!< Called whenever the volume is scaled
+    ParticleVector p;                               //!< Particle vector storing all particles in system
+    Tgvec groups;                                   //!< Group vector storing all molecules in system
+    Tgeometry geo;                                  //!< Container geometry (boundaries, shape, volume)
+    std::shared_ptr<ParticleCellListBase> celllist; //!< Particle cell list
+
+    std::vector<PostVolumeChangeFunctor> postVolumeScaleActions; //!< Called whenever the volume is scaled
+    std::vector<PostSyncFunctor> postSyncActions;                //!< Call when two Space objects are synched (unused)
+    std::vector<PostParticleUpdateFunctor> postParticleUpdateActions; //!< Called from `updateParticles`
+
     const std::map<int, int> &getImplicitReservoir() const; //!< Storage for implicit molecules
     std::map<int, int> &getImplicitReservoir();             //!< Storage for implicit molecules
 
@@ -109,8 +163,8 @@ class Space {
      *
      * @tparam iterator Iterator for source range
      * @tparam copy_operation Functor used to copy data from an element in the source range to element in `Space:p`
-     * @param begin Begin of source particle range
-     * @param end End of source particle range
+     * @param begin Begin of source position range
+     * @param end End of source position range
      * @param destination Iterator to target particle vector (should be in `Space::p`)
      * @param copy_function Function used to copy from source range to destination particle
      *
@@ -141,7 +195,12 @@ class Space {
                                }); // filtered group with affected groups only. Note we copy in org. `destination`
 
         // copy data from source range (this modifies `destination`)
-        std::for_each(begin, end, [&](const auto &source) { copy_function(source, *destination++); });
+        std::for_each(begin, end, [&](const auto& source) {
+            copy_function(source, *destination);
+            std::for_each(postParticleUpdateActions.begin(), postParticleUpdateActions.end(),
+                          [&](auto& action) { action(*this, *destination); });
+            std::advance(destination, 1);
+        });
 
         for (auto &group : affected_groups) { // update affected mass centers
             if (!group.empty()) {
@@ -246,7 +305,6 @@ class Space {
 
     void sync(const Space &other,
               const Tchange &change); //!< Copy differing data from other (o) Space using Change object
-
 }; // end of space
 
 void to_json(json& j, const Space& spc);   //!< Serialize Space to json object
@@ -330,3 +388,5 @@ void makeWater(Space &space, int num_particles, const Geometry::Chameleon &geome
 } // namespace SpaceFactory
 
 } // namespace Faunus
+
+#pragma clang diagnostic pop

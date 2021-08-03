@@ -259,5 +259,22 @@ TEST_CASE("CellListDifference") {
     CHECK_EQ(diff.getMembers(other_cell).size(), 1);
 }
 
+std::unique_ptr<ParticleCellListBase> createCellList(Space& spc, const double gridsize) {
+    std::unique_ptr<ParticleCellListBase> celllist;
+    switch (spc.geo.asSimpleGeometry()->boundary_conditions.isPeriodic().sum()) {
+    case 3: // PBC in all directions
+        using Periodic = CellList::CellListSpatial<CellList::CellListType<int, CellList::Grid::Grid3DPeriodic>>;
+        celllist = std::make_unique<CellList::ParticleCellList<Periodic>>(spc, spc.geo.getLength(), gridsize);
+        break;
+    case 0: // PBC in no directions
+        using Fixed = CellList::CellListSpatial<CellList::CellListType<int, CellList::Grid::Grid3DFixed>>;
+        celllist = std::make_unique<CellList::ParticleCellList<Fixed>>(spc, spc.geo.getLength(), gridsize);
+        break;
+    default:
+        faunus_logger->warn("Celllist unavailable for current geometry");
+    }
+    return celllist;
+}
+
 } // namespace CellList
 } // namespace Faunus

@@ -8,6 +8,7 @@
  * @date 2020-02-01
  */
 
+#include "space.h"
 #include <vector>
 #include <set>
 #include <map>
@@ -427,7 +428,7 @@ template <typename TMember, typename TIndex> class DenseContainer : virtual publ
         std::vector<Index> indices;
         indices.reserve(std::distance(container.begin(), container.end()));
         auto iterator = container.begin();
-        while ((iterator = std::find_if(iterator, container.end(),
+        while ((iterator = std::find_if(iterator, container.end(), // NOLINT(altera-unroll-loops)
                                         [](const auto& members) { return !members.empty(); })) != container.end()) {
             indices.push_back(std::distance(iterator, container.begin()));
             std::advance(iterator, 1);
@@ -435,7 +436,7 @@ template <typename TMember, typename TIndex> class DenseContainer : virtual publ
         return indices;
     }
 
-    DenseContainer(std::size_t size) { container.resize(size); }
+    explicit DenseContainer(std::size_t size) { container.resize(size); }
 
   protected:
     const Index indexEnd() const { return container.size(); }
@@ -493,7 +494,7 @@ template <typename TMember, typename TIndex> class SparseContainer : virtual pub
         return indices;
     }
 
-    SparseContainer(std::size_t size) : index_end(size) {}
+    explicit SparseContainer(std::size_t size) : index_end(size) {}
 
   protected:
     const Index indexEnd() const { return index_end; }
@@ -790,7 +791,7 @@ template <class TBase> class CellListReverseMap : public TBase {
     void update(const Member& member, const CellIndex& new_cell_index) {
         const auto old_cell_index = member2cell.at(member);
         if (new_cell_index != old_cell_index) {
-            TBase::update(member, old_cell_index, new_cell_index);
+            TBase::move(member, old_cell_index, new_cell_index);
             member2cell.at(member) = new_cell_index;
         }
     }
@@ -909,6 +910,28 @@ class CellListDifference : virtual public AbstractSortableCellList<ContainerType
     std::shared_ptr<CellListSubtrahend> subtrahend;
     std::map<CellIndex, Members> difference_cache;
 };
+
+template <typename CellListType> class ParticleCellList : public ParticleCellListBase {
+  private:
+    std::unique_ptr<CellListType> celllist;
+    const Space spc;
+
+  public:
+    template <typename... Args> ParticleCellList(const Space& spc, Args&&... args) : spc(spc) {
+        celllist = std::make_unique<CellListType>(args...);
+    }
+    virtual void insert(const Particle& particle) override {
+        celllist->insertMember(index(particle), particle.pos + 0.5 * spc.geo.getLength());
+    };
+    virtual void update(const Particle& particle) override {
+        celllist->updateMemberAt(index(particle), particle.pos + 0.5 * spc.geo.getLength());
+    };
+    // virtual void erase(const Particle& particle) override { celllist->erase(index(particle), particle.pos  + 0.5 *
+    // spc.geo.getLength());
+    // }
+};
+
+std::unique_ptr<ParticleCellListBase> createCellList(Space& spc, const double gridsize); //!< Cell list factory
 
 } // namespace CellList
 } // namespace Faunus

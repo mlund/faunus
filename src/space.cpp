@@ -3,6 +3,7 @@
 #include "aux/iteratorsupport.h"
 #include "spdlog/spdlog.h"
 #include "aux/eigensupport.h"
+#include "celllistimpl.h"
 #include <memory>
 
 namespace Faunus {
@@ -21,20 +22,6 @@ bool Change::empty() const {
     }
 }
 Change::operator bool() const { return !empty(); }
-
-std::vector<int> Change::touchedParticleIndex(const std::vector<Group<Particle>> &group_vector) const {
-    std::vector<int> atom_indexes;                                   // atom index rel. to first particle in system
-    for (const auto &changed : groups) {                             // loop over changed groups
-        auto begin_first = group_vector.front().begin();             // first particle, first group
-        auto begin_current = group_vector.at(changed.index).begin(); // first particle, current group
-        auto offset = std::distance(begin_first, begin_current);     // abs. distance from first particle
-        atom_indexes.reserve(atom_indexes.size() + changed.atoms.size());
-        for (auto index : changed.atoms) {          // atom index relative to group
-            atom_indexes.push_back(index + offset); // atom index relative to first
-        }
-    }
-    return atom_indexes;
-}
 
 /**
  * @param group_vector Vector of group connected to the change; typically `Space::groups`.
@@ -73,6 +60,33 @@ TEST_CASE("[Faunus] Change") {
     CHECK(change);
     change.clear();
     CHECK(change.empty());
+
+    SUBCASE("getChangedParticles") {
+        Space spc;
+        SpaceFactory::makeWater(spc, 2, R"( {"type": "cuboid", "length": 20} )"_json);
+        CHECK(spc.groups.size() == 2);
+        Change::data data;
+        data.index = 0; // all atoms in first water -> size = 3
+        data.all = true;
+        change.groups.push_back(data);
+        data.index = 1;
+        data.all = false;
+        data.atoms.push_back(1); // middle atom in second water -> size = 4
+        change.groups.push_back(data);
+
+        auto changed_particles = change.getChangedParticles(spc);
+        CHECK(std::distance(changed_particles.begin(), changed_particles.end()) == 4);
+        auto it = changed_particles.begin();
+        CHECK(distance(spc.p.begin(), it++) == 0);
+        CHECK(distance(spc.p.begin(), it++) == 1);
+        CHECK(distance(spc.p.begin(), it++) == 2);
+        CHECK(distance(spc.p.begin(), it++) == 4);
+        CHECK(distance(spc.p.end(), it) == 0);
+
+        change.all = true;
+        changed_particles = change.getChangedParticles(spc);
+        CHECK(std::distance(changed_particles.begin(), changed_particles.end()) == 6);
+    }
 }
 
 void Space::clear() {
@@ -118,6 +132,11 @@ void Space::push_back(int molid, const ParticleVector &particles) {
             }
         }
         groups.push_back(group);
+
+        if (celllist) {
+            celllist->setFirstParticle(p.front()); // we need to know in order to calc. index
+            celllist->insertParticles(group.begin(), group.end());
+        }
     }
 }
 
@@ -169,6 +188,10 @@ void Space::sync(const Space &other, const Change &change) {
                 }
             }
         }
+
+        // run registestered actions, e.g. celllist update etc.
+        std::for_each(postSyncActions.begin(), postSyncActions.end(),
+                      [&](auto& action) { action(*this, other, change); });
     }
 }
 
@@ -221,9 +244,10 @@ Point Space::scaleVolume(double Vnew, Geometry::VolumeMethod method) {
     if (method == Geometry::ISOCHORIC) { // ? not used for anything...
         Vold = std::pow(Vold, 1. / 3.);  // ?
     }
-    for (auto trigger_function : scaleVolumeTriggers) { // external clients may have added function
-        trigger_function(*this, Vold, Vnew);            // to be triggered upon each volume change
-    }
+
+    // run external action such as celllist update etc.
+    std::for_each(postVolumeScaleActions.begin(), postVolumeScaleActions.end(),
+                  [&](auto& action) { action(*this, Vold, Vnew); });
     return scale;
 }
 
@@ -326,7 +350,6 @@ void to_json(json& j, const Space& spc) {
     j["implicit_reservoir"] = spc.getImplicitReservoir();
 }
 void from_json(const json &j, Space &spc) {
-    typedef typename Space::Tpvec Tpvec;
     using namespace std::string_literals;
 
     try {
@@ -342,13 +365,32 @@ void from_json(const json &j, Space &spc) {
             }
         }
 
+        if (auto celllist = j.find("celllist"); celllist != j.end()) {
+            spc.celllist = CellList::createCellList(spc, celllist->at("gridsize").get<double>());
+            if (spc.celllist) {
+                spc.postVolumeScaleActions.emplace_back([](Space& spc, double, double) {
+                    // @todo Update celllist grid
+                    auto particles = spc.activeParticles();
+                    spc.celllist->updateParticles(particles.begin(), particles.end());
+                });
+                spc.postSyncActions.emplace_back(
+                    [](Space& spc, [[maybe_unused]] const Space& other, const Change& change) {
+                        // @todo Update celllist grid
+                        auto changed_particles = change.getChangedParticles(spc);
+                        spc.celllist->updateParticles(changed_particles.begin(), changed_particles.end());
+                    });
+                spc.postParticleUpdateActions.emplace_back(
+                    [&](Space& spc, const Particle& particle) { spc.celllist->update(particle); });
+            }
+        }
+
         spc.clear();
         spc.geo = j.at("geometry");
 
         if (j.count("groups") == 0) {
             InsertMoleculesInSpace::insertMolecules(j.at("insertmolecules"), spc);
         } else {
-            spc.p = j.at("particles").get<Tpvec>();
+            spc.p = j.at("particles").get<ParticleVector>();
             if (!spc.p.empty()) {
                 auto begin = spc.p.begin();
                 Space::Tgroup g(begin, begin); // create new grou[

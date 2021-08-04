@@ -337,6 +337,11 @@ int Space::getFirstActiveParticleIndex(const Tgroup& group) const {
     return index;
 }
 
+/**
+ * Runs all registered call-back functions after an update to Space as defined in the
+ * `Change` object. This is typically called right after a MC moves, but before the energy
+ * evaluation.
+ */
 void Space::runPostChangeActions(const Change& change) {
     std::for_each(postChangeActions.begin(), postChangeActions.end(),
                   [&](auto& action) { action(*this, change); }); // update cell-list etc.

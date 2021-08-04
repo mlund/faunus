@@ -267,29 +267,27 @@ void to_json(json& j, const Space& spc);   //!< Serialize Space to json object
 void from_json(const json &j, Space &spc); //!< Deserialize json object to Space
 
 auto Space::changedParticles(const Change& change) {
-    auto hasChanged = [&](const Particle& particle) {
-        assert(&particle >= &p.front());
-        assert(&particle <= &p.back());
+    auto has_changed = [&](const Particle& particle) {
         if (change.all) {
             return true;
         }
-        for (const Change::data& group_changes : change.groups) { // loop over changed groups
+        auto contains_particle = [&](const auto& group_changes) {
             const auto& group = groups[group_changes.index];
-            if (group_changes.atoms.empty() || group_changes.all) { // empty means that everything changed!
-                if (group.contains(particle)) {
+            if (!group.empty() && group.contains(particle)) {
+                if (group_changes.atoms.empty() || group_changes.all) { // empty means that everything changed!
                     return true;
                 }
-            } else if (!group.empty()) { // only a subset changed
+                // only a subset changed
                 const auto relative_index = std::addressof(particle) - std::addressof(*group.begin());
-                if (std::binary_search(group_changes.atoms.begin(), group_changes.atoms.end(),
-                                       static_cast<int>(relative_index))) {
+                if (std::binary_search(group_changes.atoms.begin(), group_changes.atoms.end(), relative_index)) {
                     return true;
                 }
             }
-        }
-        return false;
+            return false;
+        };
+        return std::any_of(change.groups.begin(), change.groups.end(), contains_particle);
     };
-    return p | ranges::cpp20::views::filter(hasChanged);
+    return p | ranges::cpp20::views::filter(has_changed);
 }
 
 /**

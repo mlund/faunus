@@ -275,7 +275,7 @@ auto Space::changedParticles(const Change& change) {
             return true;
         }
         auto contains_particle = [&](const auto& group_changes) {
-            if (const auto& group = groups[group_changes.index]; group.contains(particle)) {
+            if (const auto& group = groups.at(group_changes.index); group.contains(particle)) {
                 if (group_changes.all || group_changes.atoms.empty()) { // empty means that everything changed
                     return true;
                 }

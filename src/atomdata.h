@@ -11,15 +11,15 @@ namespace Faunus {
  * by potentials employed, as well as to convert units when initialized from JSON.
  */
 class InteractionData {
-    typedef std::string Tkey;
+    using Tkey = std::string;
     std::map<Tkey, double> data; //!< arbitrary additional properties
     friend void to_json(json&, const InteractionData&);
 
   public:
-    bool has(const Tkey name) const;               // like C++20 map::contains
-    double get(const Tkey name) const;             // like map::at()
-    double& get(const Tkey name);                  // like map::at()
-    void set(const Tkey name, const double value); // like C++17 map::insert_or_assign
+    bool contains(const Tkey name) const;               // like C++20 map::contains
+    double at(const Tkey name) const;             // like map::at()
+    double& at(const Tkey name);                  // like map::at()
+    void insert_or_assign(const Tkey name, const double value); // like C++17 map::insert_or_assign
 };
 
 void to_json(json& j, const InteractionData& a);

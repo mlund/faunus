@@ -77,13 +77,13 @@ namespace Faunus {
      */
     class TipFromTheManual {
       private:
-        json db; // database
+        json database; // database
         std::shared_ptr<Random> random;
         bool tip_already_given = false;
 
       public:
         std::string buffer; // accumulate output here
-        bool quiet = true;  // if operator[] returns empty string
+        bool quiet = true;  // if true, operator[] returns empty string
         bool asciiart = true;
         TipFromTheManual();
         void load(const std::vector<std::string>&);

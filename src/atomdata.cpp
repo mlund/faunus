@@ -7,12 +7,12 @@
 
 namespace Faunus {
 
-bool InteractionData::has(const Tkey name) const {
+bool InteractionData::contains(const Tkey name) const {
     auto it = data.find(name);
     return it != data.end() && !std::isnan(it->second);
 }
 
-double InteractionData::get(const Tkey name) const {
+double InteractionData::at(const Tkey name) const {
     try {
         return data.at(name);
     } catch (const std::out_of_range& e) {
@@ -22,14 +22,14 @@ double InteractionData::get(const Tkey name) const {
     }
 }
 
-double& InteractionData::get(const Tkey name) {
+double& InteractionData::at(const Tkey name) {
     if (data.find(name) == data.end()) {
-        set(name, std::numeric_limits<double>::signaling_NaN());
+        insert_or_assign(name, std::numeric_limits<double>::signaling_NaN());
     }
     return data.at(name);
 }
 
-void InteractionData::set(const Tkey name, const double value) {
+void InteractionData::insert_or_assign(const Tkey name, const double value) {
     auto it = data.find(name);
     if (it != data.end()) {
         it->second = value;
@@ -41,7 +41,7 @@ void InteractionData::set(const Tkey name, const double value) {
 void from_json(const json& j, InteractionData& a) {
     for (const auto& j_it : j.items()) {
         if (j_it.value().is_number()) {
-            a.set(j_it.key(), j_it.value());
+            a.insert_or_assign(j_it.key(), j_it.value());
         }
     }
 }
@@ -50,7 +50,7 @@ void from_single_use_json(SingleUseJSON& j, InteractionData& a) {
     auto j_copy = j;
     for (const auto& j_it : j_copy.items()) {
         if (j_it.value().is_number()) {
-            a.set(j_it.key(), j_it.value());
+            a.insert_or_assign(j_it.key(), j_it.value());
             j.erase(j_it.key());
         }
     }
@@ -126,12 +126,12 @@ void from_json(const json& j, AtomData& a) {
         if (val.count("r") == 1) {
             faunus_logger->warn("Atom property `r` is obsolete; use `sigma = 2*r` instead on atom {}", a.name);
         }
-        a.interaction.set("sigma", val.value("sigma", 0.0) * 1.0_angstrom);
-        if (fabs(a.interaction.get("sigma")) < 1e-20)
-            a.interaction.set("sigma", 2.0 * val.value("r", 0.0) * 1.0_angstrom);
+        a.interaction.insert_or_assign("sigma", val.value("sigma", 0.0) * 1.0_angstrom);
+        if (fabs(a.interaction.at("sigma")) < 1e-20)
+            a.interaction.insert_or_assign("sigma", 2.0 * val.value("r", 0.0) * 1.0_angstrom);
         // an ugly temporal hack needed until the refactorization is finished
         // as sigma is unfortunately accessed in loops
-        a.sigma = a.interaction.get("sigma");
+        a.sigma = a.interaction.at("sigma");
 
         from_single_use_json(val, a.interaction);
         if (!val.empty()) {
@@ -139,7 +139,7 @@ void from_json(const json& j, AtomData& a) {
             throw ConfigurationError("unused key(s) for atom '{}':\n{}", a.name, val.items().begin().key());
         }
 
-        if (std::isnan(a.interaction.get("sigma")))
+        if (std::isnan(a.interaction.at("sigma")))
             throw ConfigurationError("no sigma parameter defined");
     }
 }
@@ -201,10 +201,10 @@ TEST_CASE("[Faunus] AtomData") {
     CHECK_EQ(v.size(), 2);
     CHECK_EQ(v.front().id(), 0);
     CHECK_EQ(v.front().name, "A");                                 // alphabetic order in std::map
-    CHECK(v.front().interaction.get("sigma") == Approx(2.5));      // raw number, no units
-    CHECK(v.front().interaction.get("eps_custom") == Approx(0.1)); // raw number, no units
+    CHECK(v.front().interaction.at("sigma") == Approx(2.5));      // raw number, no units
+    CHECK(v.front().interaction.at("eps_custom") == Approx(0.1)); // raw number, no units
 
-    CHECK_EQ(std::isnan(v.front().interaction.get("eps_unknown")), true);
+    CHECK_EQ(std::isnan(v.front().interaction.at("eps_unknown")), true);
     // CHECK_THROWS_AS_MESSAGE(v.front().interaction.get("eps_unknown"), std::runtime_error, "unknown atom property");
     CHECK(v.front().sigma == Approx(2.5e-10_m));
     CHECK(v.front().activity == Approx(0.01_molar));
@@ -215,8 +215,8 @@ TEST_CASE("[Faunus] AtomData") {
     CHECK_EQ(a.name, "B");
     CHECK_EQ(a.id(), 1);
     CHECK(a.activity == Approx(0.2_molar));
-    CHECK(a.interaction.get("sigma") == Approx(2.2)); // raw number, no units
-    CHECK(a.interaction.get("eps") == Approx(0.05));  // raw number, no units
+    CHECK(a.interaction.at("sigma") == Approx(2.2)); // raw number, no units
+    CHECK(a.interaction.at("eps") == Approx(0.05));  // raw number, no units
     CHECK(a.dp == Approx(9.8));
     CHECK(a.dprot == Approx(3.14));
     CHECK(a.mw == Approx(1.1));

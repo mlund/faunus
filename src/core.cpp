@@ -76,11 +76,11 @@ TipFromTheManual::TipFromTheManual() {
  * tips. If no file can be opened, the database is left empty.
  */
 void TipFromTheManual::load(const std::vector<std::string>& files) {
-    // try loading `files`; stop of not empty
-    for (auto& file : files) {
+    // try loading `files`; stop if not empty
+    for (const auto& file : files) {
         try {
-            db = openjson(file); // allow for file not found
-            if (!db.empty()) {
+            database = openjson(file); // allow for file not found
+            if (!database.empty()) {
                 break;
             }
         } catch (...) {
@@ -96,26 +96,26 @@ std::string TipFromTheManual::operator[](const std::string& key) {
     std::string t;
     if (not tip_already_given) {
         // look for help for the given `key`
-        auto it = db.find(key);
-        if (it != db.end()) {
+        auto it = database.find(key);
+        if (it != database.end()) {
             t = "\nNeed help, my young apprentice?\n\n" + it->get<std::string>();
 
             // for the Coulomb potential, add additional table w. types
             if (key == "coulomb") {
-                t += "\n" + db.at("coulomb types").get<std::string>();
+                t += "\n" + database.at("coulomb types").get<std::string>();
             }
 
             // for the custom potential, add also list of symbols
             if (key == "custom") {
-                t += "\n" + db.at("symbol").get<std::string>();
+                t += "\n" + database.at("symbol").get<std::string>();
             }
 
             tip_already_given = true;
 
             // add ascii art
             if (asciiart) {
-                it = db.find("ascii");
-                if (it != db.end()) {
+                it = database.find("ascii");
+                if (it != database.end()) {
                     if (not it->empty() and it->is_array()) {
                         t += random->sample(it->begin(), it->end())->get<std::string>() + "\n";
                     }

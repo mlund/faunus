@@ -7,12 +7,12 @@
 
 namespace Faunus {
 
-bool InteractionData::contains(const Tkey name) const {
+bool InteractionData::contains(const key_type& name) const {
     auto it = data.find(name);
     return it != data.end() && !std::isnan(it->second);
 }
 
-double InteractionData::at(const Tkey name) const {
+double InteractionData::at(const key_type& name) const {
     try {
         return data.at(name);
     } catch (const std::out_of_range& e) {
@@ -22,14 +22,14 @@ double InteractionData::at(const Tkey name) const {
     }
 }
 
-double& InteractionData::at(const Tkey name) {
+double& InteractionData::at(const key_type& name) {
     if (data.find(name) == data.end()) {
         insert_or_assign(name, std::numeric_limits<double>::signaling_NaN());
     }
     return data.at(name);
 }
 
-void InteractionData::insert_or_assign(const Tkey name, const double value) {
+void InteractionData::insert_or_assign(const key_type& name, const double value) {
     auto it = data.find(name);
     if (it != data.end()) {
         it->second = value;

@@ -266,21 +266,22 @@ class Space {
 void to_json(json& j, const Space& spc);   //!< Serialize Space to json object
 void from_json(const json &j, Space &spc); //!< Deserialize json object to Space
 
+/**
+ * @todo Handle grand canonical changes
+ */
 auto Space::changedParticles(const Change& change) {
     auto has_changed = [&](const Particle& particle) {
         if (change.all) {
             return true;
         }
         auto contains_particle = [&](const auto& group_changes) {
-            const auto& group = groups[group_changes.index];
-            if (!group.empty() && group.contains(particle)) {
-                if (group_changes.atoms.empty() || group_changes.all) { // empty means that everything changed!
+            if (const auto& group = groups[group_changes.index]; group.contains(particle)) {
+                if (group_changes.all || group_changes.atoms.empty()) { // empty means that everything changed
                     return true;
                 }
-                // only a subset changed
                 const auto relative_index = std::addressof(particle) - std::addressof(*group.begin());
                 if (std::binary_search(group_changes.atoms.begin(), group_changes.atoms.end(), relative_index)) {
-                    return true;
+                    return true; // a subset changed
                 }
             }
             return false;

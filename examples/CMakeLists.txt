@@ -34,7 +34,7 @@ add_test(
 
 add_test(
         NAME penalty
-        COMMAND sh -c "jupyter nbconvert --execute penalty.ipynb --ExecutePreprocessor.timeout=None"
+        COMMAND sh -c "jupyter nbconvert --to html --execute penalty.ipynb --ExecutePreprocessor.timeout=None"
         WORKING_DIRECTORY ${EXAMPLES_DIR}/penalty)
 set_property(TEST penalty APPEND PROPERTY ENVIRONMENT FAUNUS_EXECUTABLE=$<TARGET_FILE:faunus>)
 set_property(TEST penalty APPEND PROPERTY ENVIRONMENT YASON_EXECUTABLE=${YASON})
@@ -42,7 +42,7 @@ set_property(TEST penalty APPEND PROPERTY ENVIRONMENT YASON_EXECUTABLE=${YASON})
 if (ENABLE_MPI)
     add_test(
         NAME temper
-        COMMAND sh -c "jupyter nbconvert --execute temper.ipynb --ExecutePreprocessor.timeout=None"
+        COMMAND sh -c "jupyter nbconvert --to html --execute temper.ipynb --ExecutePreprocessor.timeout=None"
         WORKING_DIRECTORY ${EXAMPLES_DIR}/temper)
     set_property(TEST temper APPEND PROPERTY ENVIRONMENT FAUNUS_EXECUTABLE=$<TARGET_FILE:faunus>)
     set_property(TEST temper APPEND PROPERTY ENVIRONMENT MPIEXEC=${MPIEXEC_EXECUTABLE})
@@ -50,14 +50,14 @@ endif()
 
 add_test(
         NAME multipole
-        COMMAND sh -c "jupyter nbconvert --execute multipole.ipynb --ExecutePreprocessor.timeout=None"
+        COMMAND sh -c "jupyter nbconvert --to html --execute multipole.ipynb --ExecutePreprocessor.timeout=None"
         WORKING_DIRECTORY ${EXAMPLES_DIR}/multipole)
 set_property(TEST multipole APPEND PROPERTY ENVIRONMENT FAUNUS_EXECUTABLE=$<TARGET_FILE:faunus>)
 set_property(TEST multipole APPEND PROPERTY ENVIRONMENT YASON_EXECUTABLE=${YASON})
 
 add_test(
         NAME virial
-        COMMAND sh -c "jupyter nbconvert --execute virial.ipynb --ExecutePreprocessor.timeout=None"
+        COMMAND sh -c "jupyter nbconvert --to html --execute virial.ipynb --ExecutePreprocessor.timeout=None"
         WORKING_DIRECTORY ${EXAMPLES_DIR}/virial)
 set_property(TEST virial APPEND PROPERTY ENVIRONMENT FAUNUS_EXECUTABLE=$<TARGET_FILE:faunus>)
 set_property(TEST virial APPEND PROPERTY ENVIRONMENT YASON_EXECUTABLE=${YASON})
@@ -68,6 +68,41 @@ add_test(
     | $<TARGET_FILE:faunus> --nobar --state minimal.state.json\
     && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} minimal.out.json out.json --tol 0.02"
         WORKING_DIRECTORY ${EXAMPLES_DIR}/minimal)
+
+add_test(
+        NAME bend
+        COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} bend.yml\
+    | $<TARGET_FILE:faunus> --nobar\
+    && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} bend.out.json out.json --tol 0.03"
+        WORKING_DIRECTORY ${EXAMPLES_DIR}/bend)
+
+add_test(
+        NAME gromos_bend
+        COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} gromos_bend.yml\
+    | $<TARGET_FILE:faunus> --nobar\
+    && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} gromos_bend.out.json out.json --tol 0.03"
+        WORKING_DIRECTORY ${EXAMPLES_DIR}/gromos_bend)
+
+add_test(
+        NAME dihedral
+        COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} dihedral.yml\
+    | $<TARGET_FILE:faunus> --nobar\
+   && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} dihedral.out.json out.json --tol 0.03"
+        WORKING_DIRECTORY ${EXAMPLES_DIR}/dihedral)
+
+add_test(
+        NAME improper_dihedral
+        COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} improper_dihedral.yml\
+    | $<TARGET_FILE:faunus> --nobar\
+   && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} improper_dihedral.out.json out.json --tol 0.03"
+        WORKING_DIRECTORY ${EXAMPLES_DIR}/improper_dihedral)
+
+add_test(
+        NAME fene_stretch
+        COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} fene_stretch.yml\
+    | $<TARGET_FILE:faunus> --nobar\
+   && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} fene_stretch.out.json out.json --tol 0.03"
+        WORKING_DIRECTORY ${EXAMPLES_DIR}/fene_stretch)
 
 add_test(
         NAME chain
@@ -202,6 +237,14 @@ add_test(
     && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} membrane.out.json out.json --tol 0.065"
         WORKING_DIRECTORY ${EXAMPLES_DIR}/membrane)
 
+add_test(
+        NAME widom
+        COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} widom.yml\
+    | $<TARGET_FILE:faunus> --nobar \
+    && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} widom.out.json out.json --tol 0.01"
+        WORKING_DIRECTORY ${EXAMPLES_DIR}/widom)
+
+
 install(FILES
         ${EXAMPLES_DIR}/README.md
         ${EXAMPLES_DIR}/bulk/bulk.yml
@@ -228,6 +271,29 @@ install(FILES
         ${EXAMPLES_DIR}/minimal/minimal.yml
         ${EXAMPLES_DIR}/minimal/minimal.out.json
         ${EXAMPLES_DIR}/minimal/minimal.state.json
+        ${EXAMPLES_DIR}/bend/bend.yml
+        ${EXAMPLES_DIR}/bend/bend.out.json
+        ${EXAMPLES_DIR}/bend/mc_vs_md.agr
+        ${EXAMPLES_DIR}/gromos_bend/gromos_bend.yml
+        ${EXAMPLES_DIR}/gromos_bend/gromos_bend.out.json
+        ${EXAMPLES_DIR}/gromos_bend/gromos_bend_plot.py
+        ${EXAMPLES_DIR}/gromos_bend/gromos_bend_mc_rdf.dat
+        ${EXAMPLES_DIR}/gromos_bend/gromos_bend_md_rdf.dat
+        ${EXAMPLES_DIR}/dihedral/dihedral.yml
+        ${EXAMPLES_DIR}/dihedral/dihedral.out.json
+        ${EXAMPLES_DIR}/dihedral/dihedral_plot.py
+        ${EXAMPLES_DIR}/dihedral/dihedral_mc_rdf.dat
+        ${EXAMPLES_DIR}/dihedral/dihedral_md_rdf.dat
+        ${EXAMPLES_DIR}/improper_dihedral/improper_dihedral.yml
+        ${EXAMPLES_DIR}/improper_dihedral/improper_dihedral.out.json
+        ${EXAMPLES_DIR}/improper_dihedral/improper_dihedral_plot.py
+        ${EXAMPLES_DIR}/improper_dihedral/improper_dihedral_mc_rdf.dat
+        ${EXAMPLES_DIR}/improper_dihedral/improper_dihedral_md_rdf.dat
+        ${EXAMPLES_DIR}/fene_stretch/fene_stretch.yml
+        ${EXAMPLES_DIR}/fene_stretch/fene_stretch.out.json
+        ${EXAMPLES_DIR}/fene_stretch/fene_stretch_plot.py
+        ${EXAMPLES_DIR}/fene_stretch/fene_stretch_mc_rdf.dat
+        ${EXAMPLES_DIR}/fene_stretch/fene_stretch_md_rdf.dat
         ${EXAMPLES_DIR}/penalty/penalty.yml
         ${EXAMPLES_DIR}/penalty/penalty.ipynb
         ${EXAMPLES_DIR}/multipole/multipole.yml
@@ -275,4 +341,6 @@ install(FILES
         ${EXAMPLES_DIR}/calciumhydroxide_molecular/calciumhydroxide_molecular.out.json
         ${EXAMPLES_DIR}/calciumhydroxide_molecular/calciumhydroxide_molecular.state.json
         ${EXAMPLES_DIR}/water/ewald.yml
+        ${EXAMPLES_DIR}/widom/widom.yml
+        ${EXAMPLES_DIR}/widom/widom.out.json
         DESTINATION share/faunus/examples)

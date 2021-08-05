@@ -2,6 +2,14 @@
 #include "penalty.h"
 #include "potentials.h"
 #include "externalpotential.h"
+#include <functional>
+
+#ifdef ENABLE_FREESASA
+#include <freesasa.h>
+struct freesasa_parameters_fwd : public freesasa_parameters {
+    freesasa_parameters_fwd(const freesasa_parameters& p) : freesasa_parameters(p){};
+};
+#endif
 
 #define ANKERL_NANOBENCH_IMPLEMENT
 #include <nanobench.h>
@@ -533,21 +541,23 @@ void Ewald::force(std::vector<Point> &forces) {
 /**
  * @todo Implement a sync() function in EwaldData to selectively copy information
  */
-void Ewald::sync(Energybase *energybase_pointer, Change &change) {
-    auto other = dynamic_cast<decltype(this)>(energybase_pointer);
-    assert(other);
-    if (other->key == ACCEPTED_MONTE_CARLO_STATE) {
-        old_groups =
-            &(other->spc
-                  .groups); // give NEW_MONTE_CARLO_STATE access to OLD_MONTE_CARLO_STATE space for optimized updates
-    }
+void Ewald::sync(Energybase* energybase, const Change& change) {
+    if (auto* other = dynamic_cast<Ewald*>(energybase)) {
+        if (other->key == ACCEPTED_MONTE_CARLO_STATE) {
+            old_groups = &(
+                other->spc
+                    .groups); // give NEW_MONTE_CARLO_STATE access to OLD_MONTE_CARLO_STATE space for optimized updates
+        }
 
-    // hard-coded sync; should be expanded when dipolar ewald is supported
-    if (change.all or change.dV) {
-        other->data.Q_dipole.resize(0); // dipoles are currently unsupported
-        data = other->data;
+        // hard-coded sync; should be expanded when dipolar ewald is supported
+        if (change.all or change.dV) {
+            other->data.Q_dipole.resize(0); // dipoles are currently unsupported
+            data = other->data;
+        } else {
+            data.Q_ion = other->data.Q_ion;
+        }
     } else {
-        data.Q_ion = other->data.Q_ion;
+        throw std::runtime_error("sync error");
     }
 }
 
@@ -580,71 +590,122 @@ void Example2D::to_json(json &j) const {
     j["2D"] = use_2d;
 }
 
-double ContainerOverlap::energy(Change &change) {
-    // if (spc.geo.type not_eq Geometry::CUBOID) // cuboid have PBC in all directions
-    if (change) {
-        // all groups have been updated
+double ContainerOverlap::energy(Change& change) {
+    if (change && spc.geo.type != Geometry::CUBOID) { // no need to check in PBC systems
+        // *all* groups
         if (change.dV or change.all) {
-            for (auto &g : spc.groups) // loop over *all* groups in system
-                for (auto &p : g)      // loop over *all* active particles in group
-                    if (spc.geo.collision(p.pos))
-                        return pc::infty;
-            return 0;
+            return energyOfAllGroups();
         }
-
-        // only a subset of groups have been updated
-        for (auto &d : change.groups) {
-            auto &g = spc.groups[d.index];
-            // all atoms were updated
-            if (d.all) {
-                for (auto &p : g) // loop over *all* active particles in group
-                    if (spc.geo.collision(p.pos))
-                        return pc::infty;
-            } else
-                // only a subset of atoms were updated
-                for (int i : d.atoms) // loop over specific atoms
-                    if (i < g.size())
-                        if (spc.geo.collision((g.begin() + i)->pos))
-                            return pc::infty;
+        // *subset* of groups
+        for (const auto& group_change : change.groups) {
+            if (groupIsOutsideContainer(group_change)) {
+                return pc::infty;
+            }
         }
     }
-    return 0;
+    return 0.0; // all particle insie simulation container
 }
+
+/**
+ * @return infinity if any active particle is outside; zero otherwise
+ */
+double ContainerOverlap::energyOfAllGroups() const {
+    auto positions = spc.groups | ranges::cpp20::views::join | ranges::cpp20::views::transform(&Particle::pos);
+    bool outside = std::any_of(positions.begin(), positions.end(),
+                               [&](const auto& position) { return spc.geo.collision(position); });
+    return outside ? pc::infty : 0.0;
+}
+
+/**
+ * @brief Check a single group based on change object
+ * @return true is any particle in group is outside; false otherwise
+ */
+bool ContainerOverlap::groupIsOutsideContainer(const Change::data& group_change) const {
+    const auto& group = spc.groups.at(group_change.index);
+    // *all* atoms
+    if (group_change.all) {
+        return std::any_of(group.begin(), group.end(),
+                           [&](auto const& particle) { return spc.geo.collision(particle.pos); });
+    }
+    // *subset* of atoms
+    for (const auto particle_index : group_change.atoms) {
+        if (particle_index < group.size()) { // condition due to speciation move?
+            if (spc.geo.collision((group.begin() + particle_index)->pos)) {
+                return true;
+            }
+        }
+    }
+    return false; // no overlap
+}
+ContainerOverlap::ContainerOverlap(const Space& spc) : spc(spc) { name = "ContainerOverlap"; }
 
 // ------------- Isobaric ---------------
 
-Isobaric::Isobaric(const json &j, Space &spc) : spc(spc) {
+Isobaric::Isobaric(const json& j, const Space& spc) : spc(spc) {
     name = "isobaric";
     citation_information = "Frenkel & Smith 2nd Ed (Eq. 5.4.13)";
-    P = j.value("P/mM", 0.0) * 1.0_millimolar;
-    if (P < 1e-10) {
-        P = j.value("P/Pa", 0.0) * 1.0_Pa;
-        if (P < 1e-10)
-            P = j.at("P/atm").get<double>() * 1.0_atm;
+
+    for (const auto& [key, conversion_factor] : pressure_units) {
+        if (auto it = j.find(key); it != j.end()) {
+            pressure = it->get<double>() * conversion_factor; // convert to internal units
+            return;
+        }
     }
+    throw ConfigurationError("specify pressure");
 }
 
-double Isobaric::energy(Change &change) {
-    if (change.dV || change.all || change.dN) {
-        size_t N = 0;
-        for (auto &g : spc.groups) {
-            if (!g.empty()) {
-                if (g.atomic)
-                    N += g.size();
-                else
-                    N++;
-            }
-        }
-        double V = spc.geo.getVolume();
-        return P * V - (N+1)*std::log(V);
-    } else
-        return 0;
-}
-void Isobaric::to_json(json &j) const {
-    j["P/atm"] = P / 1.0_atm;
-    j["P/mM"] = P / 1.0_millimolar;
-    j["P/Pa"] = P / 1.0_Pa;
+void Isobaric::to_json(json& j) const {
+    for (const auto& [key, conversion_factor] : pressure_units) {
+        j[key] = pressure / conversion_factor;
+    }
     _roundjson(j, 5);
+}
+
+/**
+ * @brief Calculates the energy contribution p × V / kT - (N + 1) × ln(V)
+ * @return energy in kT
+ */
+double Isobaric::energy(Change& change) {
+    if (change.dV || change.all || change.dN) {
+        auto group_is_active = [](const auto& group) { return !group.empty(); };
+        auto count_particles = [](const auto& group) { return group.isAtomic() ? group.size() : 1; };
+        auto particles_per_group = spc.groups | ranges::cpp20::views::filter(group_is_active) |
+                                   ranges::cpp20::views::transform(count_particles);
+        auto number_of_particles = std::accumulate(particles_per_group.begin(), particles_per_group.end(), 0);
+        const auto volume = spc.geo.getVolume();
+        return pressure * volume - static_cast<double>(number_of_particles + 1) * std::log(volume);
+    }
+    return 0.0;
+}
+
+const std::map<std::string, double> Isobaric::pressure_units = {{"P/atm", 1.0_atm},
+                                                                {"P/bar", 1.0_bar},
+                                                                {"P/kT", 1.0_kT},
+                                                                {"P/mM", 1.0_millimolar},
+                                                                {"P/Pa", 1.0_Pa}}; // add more if you fancy...
+
+TEST_CASE("Energy::Isobaric") {
+    Space spc;
+    CHECK_NOTHROW(Isobaric(json({{"P/atm", 0.0}}), spc));
+    CHECK_NOTHROW(Isobaric(json({{"P/bar", 0.0}}), spc));
+    CHECK_NOTHROW(Isobaric(json({{"P/kT", 0.0}}), spc));
+    CHECK_NOTHROW(Isobaric(json({{"P/mM", 0.0}}), spc));
+    CHECK_NOTHROW(Isobaric(json({{"P/Pa", 0.0}}), spc));
+    CHECK_THROWS(Isobaric(json({{"P/unknown_unit", 0.0}}), spc));
+
+    SUBCASE("to_json") {
+        json j;
+        Isobaric(json({{"P/atm", 0.5}}), spc).to_json(j);
+        CHECK(j.at("P/atm").get<double>() == doctest::Approx(0.5));
+        Isobaric(json({{"P/bar", 0.4}}), spc).to_json(j);
+        CHECK(j.at("P/bar").get<double>() == doctest::Approx(0.4));
+        Isobaric(json({{"P/kT", 0.3}}), spc).to_json(j);
+        CHECK(j.at("P/kT").get<double>() == doctest::Approx(0.3));
+        Isobaric(json({{"P/mM", 0.2}}), spc).to_json(j);
+        CHECK(j.at("P/mM").get<double>() == doctest::Approx(0.2));
+        Isobaric(json({{"P/Pa", 0.1}}), spc).to_json(j);
+        CHECK(j.at("P/Pa").get<double>() == doctest::Approx(0.1));
+    }
 }
 
 Constrain::Constrain(const json &j, Space &spc) {
@@ -667,76 +728,95 @@ void Constrain::to_json(json &j) const {
     j.erase("resolution");
     j["type"] = type;
 }
-void Bonded::update_intra() {
-    using namespace Potential;
-    intra.clear();
-    for (size_t i = 0; i < spc.groups.size(); i++) {
-        const auto &group = spc.groups[i];
-        for (const auto &bond : Faunus::molecules.at(group.id).bonds) {
-            intra[i].push_back<BondData>(bond->clone()); // deep copy BondData from MoleculeData
-            intra[i].back()->shift(std::distance(spc.p.begin(), group.begin()));
-            Potential::setBondEnergyFunction(intra[i].back(), spc.p);
+
+void Bonded::updateGroupBonds(const Space::Tgroup& group) {
+    const auto first_particle_index = spc.getFirstParticleIndex(group);
+    const auto group_index = spc.getGroupIndex(group);
+    auto& bonds = internal_bonds[group_index];              // access or insert
+    for (const auto& generic_bond : group.traits().bonds) { // generic bonds defined in topology
+        const auto& bond = bonds.template push_back<Potential::BondData>(generic_bond->clone());
+        bond->shiftIndices(first_particle_index); // shift to absolute particle index
+        bond->setEnergyFunction(spc.p);
+    }
+}
+
+/**
+ * Ensures that all internal bonds are updated according to bonds defined in the topology.
+ */
+void Bonded::updateInternalBonds() {
+    internal_bonds.clear();
+    std::for_each(spc.groups.begin(), spc.groups.end(), [&](auto& group) { updateGroupBonds(group); });
+}
+
+double Bonded::sumBondEnergy(const Bonded::BondVector& bonds) const {
+#if (defined(__clang__) && __clang_major__ >= 10) || (defined(__GNUC__) && __GNUC__ >= 10)
+    auto bond_energy = [&](const auto& bond) { return bond->energyFunc(spc.geo.getDistanceFunc()); };
+    return std::transform_reduce(bonds.begin(), bonds.end(), 0.0, std::plus<>(), bond_energy);
+#else
+    double energy = 0.0;
+    for (const auto& bond : bonds) {
+        energy += bond->energyFunc(spc.geo.getDistanceFunc());
+    }
+    return energy;
+#endif
+}
+
+Bonded::Bonded(const Space& spc, const BondVector& external_bonds = BondVector())
+    : spc(spc), external_bonds(external_bonds) {
+    name = "bonded";
+    updateInternalBonds();
+    for (auto& bond : this->external_bonds) {
+        bond->setEnergyFunction(spc.p);
+    }
+}
+
+Bonded::Bonded(const json& j, const Space& spc) : Bonded(spc, j.value("bondlist", BondVector())) {}
+
+void Bonded::to_json(json& j) const {
+    if (!external_bonds.empty()) {
+        j["bondlist"] = external_bonds;
+    }
+    if (!internal_bonds.empty()) {
+        json& array_of_bonds = j["bondlist-intramolecular"] = json::array();
+        for ([[maybe_unused]] const auto& [group_index, bonds] : internal_bonds) {
+            std::for_each(bonds.begin(), bonds.end(), [&](auto& bond) { array_of_bonds.push_back(bond); });
         }
     }
 }
-double Bonded::sum_energy(const Bonded::BondVector &bonds) const {
-    double energy = 0;
-    for (const auto &bond : bonds) {
-        assert(bond->hasEnergyFunction());
-        energy += bond->energyFunc(spc.geo.getDistanceFunc());
+
+double Bonded::energy(Change &change) {
+    double energy = 0.0;
+    if (change) {
+        energy += sumBondEnergy(external_bonds);
+        if (change.all || change.dV) { // calc. for everything!
+            for (const auto& [group_index, bonds] : internal_bonds) {
+                if (!spc.groups[group_index].empty()) {
+                    energy += sumBondEnergy(bonds);
+                }
+            }
+        } else { // calc. for a subset of groups
+            for (const auto& group_change : change.groups) {
+                energy += internalGroupEnergy(group_change);
+            }
+        }
     }
     return energy;
 }
 
-Bonded::Bonded(const json &j, Space &spc) : spc(spc) {
-    name = "bonded";
-    update_intra();
-    if (j.is_object())
-        if (j.count("bondlist") == 1)
-            inter = j["bondlist"].get<BondVector>();
-    for (auto &i : inter) // set all energy functions
-        Potential::setBondEnergyFunction(i, spc.p);
-}
-void Bonded::to_json(json &j) const {
-    if (!inter.empty())
-        j["bondlist"] = inter;
-    if (!intra.empty()) {
-        json &_j = j["bondlist-intramolecular"];
-        _j = json::array();
-        for (auto &i : intra)
-            for (auto &b : i.second)
-                _j.push_back(b);
-    }
-}
-double Bonded::energy(Change &change) {
-    double energy = 0;
-    if (change) {
-        energy += sum_energy(inter); // energy of inter-molecular bonds
-
-        if (change.all || change.dV) {              // compute all active groups
-            for (const auto &i : intra) {           // energies of intra-molecular bonds
-                if (!spc.groups[i.first].empty()) { // add only if group is active
-                    energy += sum_energy(i.second);
-                }
-            }
-        } else { // compute only the affected groups
-            for (const auto &changed : change.groups) {
-                const auto &intra_group = intra[changed.index];
-                if (changed.internal) {
-                    if (changed.all) { // all internal positions updated
-                        if (not spc.groups[changed.index].empty())
-                            energy += sum_energy(intra_group);
-                    } else { // only partial update of affected atoms
-                        // an offset is the index of the first particle in the group
-                        const int offset = std::distance(spc.p.begin(), spc.groups[changed.index].begin());
-                        // add an offset to the group atom indices to get the absolute indices
-                        auto particle_indices =
-                            changed.atoms | ranges::cpp20::views::transform([offset](auto i) { return i + offset; });
-                        energy += sum_energy(intra_group, particle_indices);
-                    }
-                }
-            }
-        } // for-loop over groups
+double Bonded::internalGroupEnergy(const Change::data& changed) {
+    using namespace ranges::cpp20::views; // @todo cpp20 --> std::ranges
+    double energy = 0.0;
+    const auto& group = spc.groups.at(changed.index);
+    if (changed.internal && !group.empty()) {
+        const auto& bonds = internal_bonds.at(changed.index);
+        if (changed.all) { // all internal positions updated
+            energy += sumBondEnergy(bonds);
+        } else { // only partial update of affected atoms
+            const auto first_particle_index = spc.getFirstParticleIndex(group);
+            auto particle_indices =
+                changed.atoms | transform([first_particle_index](auto i) { return i + first_particle_index; });
+            energy += sum_energy(bonds, particle_indices);
+        }
     }
     return energy;
 }
@@ -744,7 +824,7 @@ double Bonded::energy(Change &change) {
 /**
  * @param forces Target force vector for *all* particles in the system
  *
- * Each element in `force` represent the force on a particle and this
+ * Each element in `force` represents the force on a particle and this
  * updates (add) the bonded force.
  *
  * - loop over groups and their internal bonds and _add_ force
@@ -754,277 +834,313 @@ double Bonded::energy(Change &change) {
  *
  * @warning Untested
  */
-void Bonded::force(std::vector<Point> &forces) {
+void Bonded::force(std::vector<Point>& forces) {
     auto distance_function = spc.geo.getDistanceFunc();
-    for (const auto &[group_index, bonds] : intra) {                     // loop over all intra-molecular bonds
-        const auto &group = spc.groups[group_index];                     // this is the group we're currently working on
-        for (const auto &bond : bonds) {                                 // loop over all bonds in group
-            assert(bond->forceFunc != nullptr);                          // the force function must be implemented
-            const auto bond_forces = bond->forceFunc(distance_function); // get forces on each atom in bond
-            assert(bond->index.size() == bond_forces.size());
-            for (size_t i = 0; i < bond->index.size(); i++) { // loop over atom index in bond (relative to group begin)
-                const auto absolute_index = std::distance(spc.p.begin(), group.begin()) + bond->index[i];
-                assert(absolute_index < forces.size());
-                forces[absolute_index] += bond_forces[i]; // add to overall force
-            }
+
+    auto calculateForces = [&](const auto& bond) {
+        if (!bond->hasForceFunction()) {
+            throw std::runtime_error("force not implemented!");
+        }
+        for (const auto& [index, force] : bond->forceFunc(distance_function)) {
+            forces.at(index) += force;
+        }
+    };
+
+    for ([[maybe_unused]] const auto& [group_index, bonds] : internal_bonds) {
+        for (const auto& bond : bonds) {
+            calculateForces(bond);
         }
     }
 
-    for (const auto &bond : inter) {                                 // loop over inter-molecular bonds
-        assert(bond->forceFunc != nullptr);                          // the force function must be implemented
-        const auto bond_forces = bond->forceFunc(distance_function); // get forces on each atom in bond
-        assert(bond_forces.size() == bond->index.size());
-        for (size_t i = 0; i < bond->index.size(); i++) { // loop over atom index in bond (absolute index)
-            forces[bond->index[i]] += bond_forces[i];     // add to overall force
-        }
+    for (const auto& bond : external_bonds) {
+        calculateForces(bond);
     }
 }
 
 //---------- Hamiltonian ------------
 
 void Hamiltonian::to_json(json &j) const {
-    for (auto i : this->vec)
-        j.push_back(*i);
+    std::for_each(energy_terms.cbegin(), energy_terms.cend(), [&](auto energy) { j.push_back(*energy); });
 }
 
-void Hamiltonian::addEwald(const json &j, Space &spc) {
+void Hamiltonian::addEwald(const json& j, Space& spc) {
     // note this will currently not detect multipolar energies ore
     // deeply nested "coulomb" pair-potentials
     json _j;
     if (j.count("default") == 1) { // try to detect FunctorPotential
-        for (auto &i : j["default"]) {
+        for (const auto& i : j["default"]) {
             if (i.count("coulomb") == 1) {
                 _j = i["coulomb"];
                 break;
             }
         }
-    } else if (j.count("coulomb") == 1)
+    } else if (j.count("coulomb") == 1) {
         _j = j["coulomb"];
-    else
+    } else {
         return;
+    }
 
-    if (_j.count("type")) {
+    if (_j.count("type") == 1) {
         if (_j.at("type") == "ewald") {
-            faunus_logger->debug("adding Ewald reciprocal and surface energy terms");
             emplace_back<Energy::Ewald>(_j, spc);
+            faunus_logger->debug("hamiltonian expanded with {}", energy_terms.back()->name);
         }
     }
 }
 
-void Hamiltonian::force(PointVector &forces) {
-    for (auto energy_ptr : this->vec) { // loop over terms in Hamiltonian
-        energy_ptr->force(forces);      // and update forces
-    }
+void Hamiltonian::force(PointVector& forces) {
+    std::for_each(energy_terms.begin(), energy_terms.end(), [&](auto energy) { energy->force(forces); });
 }
 
-Hamiltonian::Hamiltonian(Space& spc, const json& j) {
-    using namespace Potential;
-
-    typedef CombinedPairPotential<NewCoulombGalore, LennardJones> CoulombLJ; // temporary name
-    typedef CombinedPairPotential<NewCoulombGalore, WeeksChandlerAndersen> CoulombWCA;
-    typedef CombinedPairPotential<Coulomb, WeeksChandlerAndersen> PrimitiveModelWCA;
-    typedef CombinedPairPotential<Coulomb, HardSphere> PrimitiveModel;
-
+/**
+ * @todo Move addEwald to Nonbonded as it now has access to Hamiltonian and can add
+ */
+Hamiltonian::Hamiltonian(Space& spc, const json& j) : energy_terms(this->vec) {
     name = "hamiltonian";
+    if (!j.is_array()) {
+        throw ConfigurationError("energy: json array expected");
+    }
 
     // add container overlap energy for non-cuboidal geometries
     if (spc.geo.type != Geometry::CUBOID) {
         emplace_back<Energy::ContainerOverlap>(spc);
+        faunus_logger->debug("hamiltonian expanded with {}", energy_terms.back()->name);
     }
 
-    // only a single pairing policy and cutoff scheme so far
-    typedef GroupPairing<GroupPairingPolicy<GroupCutoff>> PairingPolicy;
-
-    if (!j.is_array()) {
-        throw ConfigurationError("energy: json array expected");
-    }
-    for (auto& j_energy : j) { // loop over energy list
+    for (const auto& j_energy : j) { // loop over energy list
         try {
-            const auto& [key, j_params] = jsonSingleItem(j_energy);
+            const auto& [key, value] = Faunus::jsonSingleItem(j_energy);
             try {
-                if (key == "nonbonded_coulomblj" || key == "nonbonded_newcoulomblj") {
-                    emplace_back<Nonbonded<PairEnergy<CoulombLJ, false>, PairingPolicy>>(j_params, spc, *this);
-                } else if (key == "nonbonded_coulomblj_EM") {
-                    emplace_back<NonbondedCached<PairEnergy<CoulombLJ, false>, PairingPolicy>>(j_params, spc, *this);
-                } else if (key == "nonbonded_splined") {
-                    emplace_back<Nonbonded<PairEnergy<SplinedPotential, false>, PairingPolicy>>(j_params, spc, *this);
-                } else if (key == "nonbonded" || key == "nonbonded_exact") {
-                    emplace_back<Nonbonded<PairEnergy<FunctorPotential, true>, PairingPolicy>>(j_params, spc, *this);
-                } else if (key == "nonbonded_cached") {
-                    emplace_back<NonbondedCached<PairEnergy<SplinedPotential>, PairingPolicy>>(j_params, spc, *this);
-                } else if (key == "nonbonded_coulombwca") {
-                    emplace_back<Nonbonded<PairEnergy<CoulombWCA, false>, PairingPolicy>>(j_params, spc, *this);
-                } else if (key == "nonbonded_pm" or key == "nonbonded_coulombhs") {
-                    emplace_back<Nonbonded<PairEnergy<PrimitiveModel, false>, PairingPolicy>>(j_params, spc, *this);
-                } else if (key == "nonbonded_pmwca") {
-                    emplace_back<Nonbonded<PairEnergy<PrimitiveModelWCA, false>, PairingPolicy>>(j_params, spc, *this);
-                } else if (key == "bonded") {
-                    emplace_back<Bonded>(j_params, spc);
-                } else if (key == "customexternal") {
-                    emplace_back<CustomExternal>(j_params, spc);
-                } else if (key == "akesson") {
-                    emplace_back<ExternalAkesson>(j_params, spc);
-                } else if (key == "confine") {
-                    emplace_back<Confine>(j_params, spc);
-                } else if (key == "constrain") {
-                    emplace_back<Constrain>(j_params, spc);
-                } else if (key == "example2d") {
-                    emplace_back<Example2D>(j_params, spc);
-                } else if (key == "isobaric") {
-                    emplace_back<Isobaric>(j_params, spc);
-                } else if (key == "penalty") {
-#ifdef ENABLE_MPI
-                    emplace_back<PenaltyMPI>(j_params, spc);
-#else
-                    emplace_back<Penalty>(j_params, spc);
-#endif
-                } else if (key == "sasa") {
-#if defined ENABLE_FREESASA
-                    emplace_back<SASAEnergy>(j_params, spc);
-#else
-                    throw ConfigurationError("not included - recompile Faunus with FreeSASA support");
-#endif
-                } else if (key == "maxenergy") {
+                if (key == "maxenergy") {
                     // looks like an unfortumate json scheme decision that requires special handling here
-                    maxenergy = j_params.get<double>();
+                    maximum_allowed_energy = value.get<double>();
                 } else {
-                    throw ConfigurationError("unknown energy");
+                    energy_terms.push_back(createEnergy(spc, key, value));
+                    faunus_logger->debug("hamiltonian expanded with {}", key);
+                    addEwald(value, spc); // add reciprocal Ewald terms if appropriate
                 }
-                // append additional energies to the if-chain
-
-                // this should be moved into `Nonbonded` and added when appropriate
-                // Nonbonded now has access to Hamiltonian (*this) and can therefore
-                // add energy terms
-                addEwald(j_params, spc); // add reciprocal Ewald terms if appropriate
             } catch (std::exception& e) {
                 usageTip.pick(key);
-                throw ConfigurationError("'{}': {}", key, e.what());
+                throw ConfigurationError("{} -> {}", key, e.what());
             }
         } catch (std::exception& e) {
-            throw ConfigurationError("energy: {}", e.what()).attachJson(j_energy);
+            throw ConfigurationError("energy -> {}", e.what()).attachJson(j_energy);
         }
     }
+    latest_energies.reserve(energy_terms.size());
+    checkBondedMolecules();
+}
 
-    // Check if there are molecules with bonds and warn if "bonded" has not been added
-    for (auto& molecule : Faunus::molecules) {
-        if (!molecule.bonds.empty() && find<Energy::Bonded>().empty()) {
+void Hamiltonian::checkBondedMolecules() const {
+    if (find<Energy::Bonded>().empty()) { // no bond potential added? issue warning if molecules w. bonds
+        auto molecules_with_bonds = Faunus::molecules | ranges::cpp20::views::filter([](const auto& molecule) {
+                                        return !molecule.bonds.empty();
+                                    });
+        for (const auto& molecule : molecules_with_bonds) {
             faunus_logger->warn("{} bonds specified in topology but missing in energy", molecule.name);
         }
     }
 }
 
-double Hamiltonian::energy(Change &change) {
-    double du = 0;
-    for (auto i : this->vec) { // loop over terms in Hamiltonian
-        i->key = key;
-        i->timer.start(); // time each term
-        du += i->energy(change);
-        i->timer.stop();
-        if (du >= maxenergy)
+double Hamiltonian::energy(Change& change) {
+    latest_energies.clear();
+    for (auto& energy_ptr : energy_terms) {
+        energy_ptr->key = key; // is this needed?
+        energy_ptr->timer.start();
+        const auto energy = energy_ptr->energy(change);
+        latest_energies.push_back(energy);
+        energy_ptr->timer.stop();
+        if (energy >= maximum_allowed_energy || std::isnan(energy)) {
             break; // stop summing energies
+        }
     }
-    return du;
+    return std::accumulate(latest_energies.begin(), latest_energies.end(), 0.0);
 }
 void Hamiltonian::init() {
-    for (auto i : this->vec)
-        i->init();
+    std::for_each(energy_terms.begin(), energy_terms.end(), [&](auto& energy) { energy->init(); });
 }
-void Hamiltonian::sync(Energybase *basePtr, Change &change) {
-    auto other = dynamic_cast<decltype(this)>(basePtr);
-    if (other)
+
+void Hamiltonian::sync(Energybase* other_hamiltonian, const Change& change) {
+    if (auto* other = dynamic_cast<Hamiltonian*>(other_hamiltonian)) {
         if (other->size() == size()) {
-            for (size_t i = 0; i < size(); i++)
-                this->vec[i]->sync(other->vec[i].get(), change);
+            latest_energies = other->latestEnergies();
+            auto other_energy_term = other->energy_terms.cbegin();
+            std::for_each(energy_terms.begin(), energy_terms.end(), [&](auto& energy_term) {
+                energy_term->sync(other_energy_term->get(), change);
+                std::advance(other_energy_term, 1);
+            });
             return;
         }
+    }
     throw std::runtime_error("hamiltonian mismatch");
 }
 
+/**
+ * @brief Factory function to generate energy instances based on their name and json input
+ * @param spc Space to use
+ * @param name Name of energy
+ * @param j Configuration for energy
+ * @return shared pointer to energy base class
+ * @throw if unknown name or configuration error
+ *
+ * New energy terms should be added to the if-else chain in the function
+ */
+std::shared_ptr<Energybase> Hamiltonian::createEnergy(Space& spc, const std::string& name, const json& j) {
+    using namespace Potential;
+    using CoulombLJ = CombinedPairPotential<NewCoulombGalore, LennardJones>;
+    using CoulombWCA = CombinedPairPotential<NewCoulombGalore, WeeksChandlerAndersen>;
+    using PrimitiveModelWCA = CombinedPairPotential<Coulomb, WeeksChandlerAndersen>;
+    using PrimitiveModel = CombinedPairPotential<Coulomb, HardSphere>;
+
+    // only a single pairing policy and cutoff scheme so far
+    using PairingPolicy = GroupPairing<GroupPairingPolicy<GroupCutoff>>;
+
+    try {
+        if (name == "nonbonded_coulomblj" || name == "nonbonded_newcoulomblj") {
+            return std::make_shared<Nonbonded<PairEnergy<CoulombLJ, false>, PairingPolicy>>(j, spc, *this);
+        }
+        if (name == "nonbonded_coulomblj_EM") {
+            return std::make_shared<NonbondedCached<PairEnergy<CoulombLJ, false>, PairingPolicy>>(j, spc, *this);
+        }
+        if (name == "nonbonded_splined") {
+            return std::make_shared<Nonbonded<PairEnergy<Potential::SplinedPotential, false>, PairingPolicy>>(j, spc,
+                                                                                                              *this);
+        }
+        if (name == "nonbonded" || name == "nonbonded_exact") {
+            return std::make_shared<Nonbonded<PairEnergy<Potential::FunctorPotential, true>, PairingPolicy>>(j, spc,
+                                                                                                             *this);
+        }
+        if (name == "nonbonded_cached") {
+            return std::make_shared<NonbondedCached<PairEnergy<Potential::SplinedPotential>, PairingPolicy>>(j, spc,
+                                                                                                             *this);
+        }
+        if (name == "nonbonded_coulombwca") {
+            return std::make_shared<Nonbonded<PairEnergy<CoulombWCA, false>, PairingPolicy>>(j, spc, *this);
+        }
+        if (name == "nonbonded_pm" || name == "nonbonded_coulombhs") {
+            return std::make_shared<Nonbonded<PairEnergy<PrimitiveModel, false>, PairingPolicy>>(j, spc, *this);
+        }
+        if (name == "nonbonded_pmwca") {
+            return std::make_shared<Nonbonded<PairEnergy<PrimitiveModelWCA, false>, PairingPolicy>>(j, spc, *this);
+        }
+        if (name == "bonded") {
+            return std::make_shared<Bonded>(j, spc);
+        }
+        if (name == "customexternal") {
+            return std::make_shared<CustomExternal>(j, spc);
+        }
+        if (name == "akesson") {
+            return std::make_shared<ExternalAkesson>(j, spc);
+        }
+        if (name == "confine") {
+            return std::make_shared<Confine>(j, spc);
+        }
+        if (name == "constrain") {
+            return std::make_shared<Constrain>(j, spc);
+        }
+        if (name == "example2d") {
+            return std::make_shared<Example2D>(j, spc);
+        }
+        if (name == "isobaric") {
+            return std::make_shared<Isobaric>(j, spc);
+        }
+        if (name == "penalty") {
+#ifdef ENABLE_MPI
+            return std::make_shared<PenaltyMPI>(j, spc);
+#else
+            return std::make_shared<Penalty>(j, spc);
+#endif
+        }
+        if (name == "sasa") {
+#if defined ENABLE_FREESASA
+            return std::make_shared<SASAEnergy>(j, spc);
+#else
+            throw ConfigurationError("faunus not compiled with sasa support");
+#endif
+        }
+        throw ConfigurationError("'{}' unknown", name);
+    } catch (std::exception& e) {
+        // @todo For unknown reasons, ConfigurationError displays an *empty*
+        //       what() message, which is why std::runtime_error is used instead.
+        throw std::runtime_error("error creating energy -> "s + e.what());
+    }
+}
+
+const std::vector<double>& Hamiltonian::latestEnergies() const { return latest_energies; }
+
 #ifdef ENABLE_FREESASA
 
-SASAEnergy::SASAEnergy(Space &spc, double cosolute_concentration, double probe_radius)
-    : spc(spc), cosolute_concentration(cosolute_concentration)
-{
-    name = "sasa"; // todo predecessor constructor
-    citation_information = "doi:10.12688/f1000research.7931.1"; // todo predecessor constructor
-    parameters = freesasa_default_parameters;
-    parameters.probe_radius = probe_radius;
+SASAEnergy::SASAEnergy(Space& spc, const double cosolute_concentration, const double probe_radius)
+    : spc(spc), cosolute_concentration(cosolute_concentration),
+      parameters(std::make_unique<freesasa_parameters_fwd>(freesasa_default_parameters)) {
+    name = "sasa";
+    citation_information = "doi:10.12688/f1000research.7931.1";
+    parameters->probe_radius = probe_radius;
     init();
+    if (spc.geo.asSimpleGeometry()->boundary_conditions.isPeriodic().sum() != 0) {
+        faunus_logger->error("PBC applied, but PBC not implemented for FreeSASA. Expect unphysical results.");
+    }
 }
 
 SASAEnergy::SASAEnergy(const json &j, Space &spc)
     : SASAEnergy(spc, j.value("molarity", 0.0) * 1.0_molar, j.value("radius", 1.4) * 1.0_angstrom) {}
 
-void SASAEnergy::updatePositions([[gnu::unused]] const ParticleVector &p) {
-    assert(p.size() == spc.positions().size());
-    positions.clear();
-    for(auto pos: spc.positions()) {
-        auto xyz = pos.data();
-        positions.insert(positions.end(), xyz, xyz+3);
-    }
-}
+void SASAEnergy::updateSASA(const Change& change) {
+    const auto& particles = spc.activeParticles();
+    const auto number_of_active_particles = std::distance(particles.begin(), particles.end());
+    updateRadii(particles.begin(), particles.end(), change);
+    updatePositions(particles.begin(), particles.end(), change);
 
-void SASAEnergy::updateRadii(const ParticleVector &p) {
-    radii.resize(p.size());
-    std::transform(p.begin(), p.end(), radii.begin(),
-                   [](auto &a) { return atoms[a.id].sigma * 0.5; });
-}
-
-void SASAEnergy::updateSASA(const ParticleVector &p, const Change &) {
-    updateRadii(p);
-    updatePositions(p);
-    auto result = freesasa_calc_coord(positions.data(), radii.data(), p.size(), &parameters);
-    if(result) {
-        assert(result->n_atoms == p.size());
+    auto* result = freesasa_calc_coord(positions.data(), radii.data(), number_of_active_particles, parameters.get());
+    if (result != nullptr) {
+        assert(result->n_atoms == number_of_active_particles);
         sasa.clear();
+        sasa.reserve(number_of_active_particles);
         sasa.insert(sasa.begin(), result->sasa, result->sasa + result->n_atoms); // copy
-        assert(sasa.size() == p.size());
         freesasa_result_free(result);
+        assert(sasa.size() == number_of_active_particles);
     } else {
         throw std::runtime_error("FreeSASA failed");
     }
 }
 
 void SASAEnergy::init() {
-    auto box = spc.geo.getLength();
-    auto box_pbc = box;
-    spc.geo.boundary(box_pbc);
-    if(box_pbc != box) {
-        faunus_logger->error("PBC applied, but PBC not implemented for FreeSASA. Expect unphysical results.");
-    }
     Change change;
     change.all = true;
-    updateSASA(spc.p, change);
+    updateSASA(change);
 }
 
-double SASAEnergy::energy(Change &change) {
-    double u = 0, A = 0;
-    updateSASA(spc.p, change); // ideally we want
-    for (size_t i = 0; i < spc.p.size(); ++i) {
-        auto &a = atoms[spc.p[i].id];
-        u += sasa[i] * (a.tension + cosolute_concentration * a.tfe);
-        A += sasa[i];
+double SASAEnergy::energy(Change& change) {
+    double energy = 0.0;
+    double surface_area = 0.0;
+    updateSASA(change);
+    for (const auto& [area, particle] : ranges::views::zip(sasa, spc.activeParticles())) {
+        surface_area += area;
+        energy += area * (particle.traits().tension + cosolute_concentration * particle.traits().tfe);
     }
-    avgArea += A; // sample average area for accepted confs.
-    return u;
+    mean_surface_area += surface_area; // sample average area for accepted confs.
+    return energy;
 }
 
-void SASAEnergy::sync(Energybase *basePtr, Change &c) {
-    auto other = dynamic_cast<decltype(this)>(basePtr);
-    if (other) {
-        if (c.all || c.dV) {
+void SASAEnergy::sync(Energybase* energybase_ptr, const Change& change) {
+    // since the full SASA is calculated in each energy evaluation, this is
+    // currently not needed.
+    if (auto* other = dynamic_cast<SASAEnergy*>(energybase_ptr); other != nullptr) {
+        if (change.all || change.dV) {
             radii = other->radii;
             positions = other->positions;
             sasa = other->sasa;
         } else {
-            for (auto &d : c.groups) {
-                int offset = std::distance(spc.p.begin(), spc.groups.at(d.index).begin());
-                for (int j : d.atoms) {
-                    int i = j + offset;
-                    radii[i] = other->radii[i];
-                    sasa[i] = other->sasa[i];
-                    for(size_t k = 0; k < 3; ++k) {
-                        positions[3*i + k] = spc.positions()[i][k];
+            for (const auto& group_change : change.groups) {
+                const auto& group = spc.groups.at(group_change.index);
+                const auto offset = spc.getFirstActiveParticleIndex(group);
+                auto absolute_atom_index =
+                    group_change.atoms | ranges::cpp20::views::transform([offset](auto i) { return i + offset; });
+                for (auto i : absolute_atom_index) {
+                    radii.at(i) = other->radii.at(i);
+                    sasa.at(i) = other->sasa.at(i);
+                    for (int k = 0; k < 3; ++k) {
+                        positions.at(3 * i + k) = other->positions.at(3 * i + k);
                     }
                 }
             }
@@ -1035,8 +1151,8 @@ void SASAEnergy::sync(Energybase *basePtr, Change &c) {
 void SASAEnergy::to_json(json &j) const {
     using namespace u8;
     j["molarity"] = cosolute_concentration / 1.0_molar;
-    j["radius"] = parameters.probe_radius / 1.0_angstrom;
-    j[bracket("SASA") + "/" + angstrom + squared] = avgArea.avg() / 1.0_angstrom;
+    j["radius"] = parameters->probe_radius / 1.0_angstrom;
+    j[bracket("SASA") + "/" + angstrom + squared] = mean_surface_area.avg() / 1.0_angstrom;
     _roundjson(j, 5); // set json output precision
 }
 
@@ -1057,12 +1173,12 @@ TEST_CASE("[Faunus] FreeSASA") {
         "insertmolecules": [ { "M": { "N": 1 } } ]
     })"_json;
     Space spc = j;
-    spc.p[0].pos = {0.0, 0.0, 0.0};
-    spc.p[1].pos = {0.0, 0.0, 20.0};
+    spc.p.at(0).pos = {0.0, 0.0, 0.0};
+    spc.p.at(1).pos = {0.0, 0.0, 20.0};
 
     SUBCASE("Separated atoms") {
         SASAEnergy sasa(spc, 1.5_molar, 1.4_angstrom);
-        CHECK(sasa.energy(change) == Approx(4 * pc::pi * (3.4 * 3.4 + 2.6 * 2.6) * 1.5 * 1.0_kJmol));
+        CHECK(sasa.energy(change) == Approx(4.0 * pc::pi * (3.4 * 3.4 + 2.6 * 2.6) * 1.5 * 1.0_kJmol));
     }
 
     SUBCASE("Intersecting atoms") {
@@ -1070,8 +1186,8 @@ TEST_CASE("[Faunus] FreeSASA") {
         std::vector<double> distance = {0.0, 2.5, 5.0, 7.5, 10.0};
         std::vector<double> sasa_energy = {87.3576, 100.4612, 127.3487, 138.4422, 138.4422};
         for (size_t i = 0; i < distance.size(); ++i) {
-            spc.p[1].pos = {0.0, 0.0, distance[i]};
-            CHECK(sasa.energy(change) == Approx(sasa_energy[i]).epsilon(0.02));
+            spc.p.at(1).pos = {0.0, 0.0, distance.at(i)};
+            CHECK(sasa.energy(change) == Approx(sasa_energy.at(i)).epsilon(0.02));
         }
     }
 
@@ -1083,46 +1199,53 @@ TEST_CASE("[Faunus] FreeSASA") {
 
 GroupCutoff::GroupCutoff(Space::Tgeometry &geometry) : geometry(geometry) {}
 
-void from_json(const json &j, GroupCutoff &cutoff) {
-    // disable all group-to-group cutoffs by setting infinity
-    for (auto &i : Faunus::molecules) {
-        for (auto &j : Faunus::molecules) {
-            cutoff.cutoff_squared.set(i.id(), j.id(), pc::max_value);
+void GroupCutoff::setSingleCutoff(const double cutoff) {
+    if (cutoff < std::sqrt(pc::max_value)) {
+        default_cutoff_squared = cutoff * cutoff;
+    } else {
+        default_cutoff_squared = pc::max_value;
+    }
+    for (const auto& molecule1 : Faunus::molecules) {
+        for (const auto& molecule2 : Faunus::molecules) {
+            cutoff_squared.set(molecule1.id(), molecule2.id(), default_cutoff_squared);
         }
     }
+}
 
-    auto it = j.find("cutoff_g2g");
-    if (it != j.end()) {
+double GroupCutoff::getCutoff(size_t id1, size_t id2) const {
+    if (cutoff_squared.size() != Faunus::molecules.size() || id1 >= cutoff_squared.size() ||
+        id2 >= cutoff_squared.size()) {
+        throw std::out_of_range("cutoff matrix doesn't fit molecules");
+    }
+    return std::sqrt(cutoff_squared(id1, id2));
+}
+
+void from_json(const json& j, GroupCutoff& cutoff) {
+    // default: no group-to-group cutoff
+    cutoff.setSingleCutoff(std::sqrt(pc::max_value));
+
+    if (const auto it = j.find("cutoff_g2g"); it != j.end()) {
         if (it->is_number()) {
-            // old style input w. only a single cutoff
-            cutoff.default_cutoff_squared = std::pow(it->get<double>(), 2);
-            for (auto &i : Faunus::molecules) {
-                for (auto &j : Faunus::molecules) {
-                    cutoff.cutoff_squared.set(i.id(), j.id(), cutoff.default_cutoff_squared);
+            cutoff.setSingleCutoff(it->get<double>());
+        } else if (it->is_object()) {
+            cutoff.setSingleCutoff(it->value("default", pc::max_value));
+            for (const auto& [named_pair, pair_cutoff] : it->items()) {
+                if (named_pair == "default") {
+                    continue;
                 }
-            }
-        }
-        else if (it->is_object()) {
-            // new style input w. multiple cutoffs between molecules
-            // ensure that there is a default, fallback cutoff
-            cutoff.default_cutoff_squared = std::pow(it->at("default").get<double>(), 2);
-            for (auto &i : Faunus::molecules) {
-                for (auto &j : Faunus::molecules) {
-                    cutoff.cutoff_squared.set(i.id(), j.id(), cutoff.default_cutoff_squared);
-                }
-            }
-            // loop for space separated molecule pairs in keys
-            for (auto &i : it->items()) {
                 try {
-                    if(const auto molecules_names = words2vec<std::string>(i.key()); molecules_names.size() == 2) {
-                        const auto molecule1 = findMoleculeByName(molecules_names[0]);
-                        const auto molecule2 = findMoleculeByName(molecules_names[1]);
-                        cutoff.cutoff_squared.set(molecule1.id(), molecule2.id(), std::pow(i.value().get<double>(), 2));
+                    if (const auto molecules_names = words2vec<std::string>(named_pair); molecules_names.size() == 2) {
+                        const auto& molecule1 = findMoleculeByName(molecules_names[0]);
+                        const auto& molecule2 = findMoleculeByName(molecules_names[1]);
+                        cutoff.cutoff_squared.set(molecule1.id(), molecule2.id(),
+                                                  std::pow(pair_cutoff.get<double>(), 2));
+                        faunus_logger->debug("custom cutoff for {}-{} = {} Å", molecule1.name, molecule2.name,
+                                             pair_cutoff.get<double>());
                     } else {
                         throw std::runtime_error("invalid molecules names");
                     }
-                } catch(const std::exception &e) {
-                    faunus_logger->warn("Unable to set a custom cutoff “{}” for “{}”.", i.value().dump(), i.key());
+                } catch (const std::exception& e) {
+                    throw ConfigurationError("Unable to set a custom cutoff for {}: {}", named_pair, e.what());
                 }
             }
         }
@@ -1147,4 +1270,76 @@ void to_json(json &j, const GroupCutoff &cutoff) {
         j["cutoff_g2g"] = _j;
     }
 }
+
+TEST_CASE("[Faunus] GroupCutoff") {
+    Geometry::Chameleon geo;
+    Faunus::atoms = R"([
+        { "A": { "sigma": 4.0 } },
+        { "B": { "sigma": 2.4 } }
+    ])"_json.get<decltype(atoms)>();
+    Faunus::molecules = R"([
+        { "M": { "atoms": ["A", "B"] } },
+        { "Q": { "atoms": ["A", "B"] } }
+    ])"_json.get<decltype(molecules)>();
+
+    SUBCASE("old style default") {
+        GroupCutoff cutoff(geo);
+        from_json(R"({"cutoff_g2g": 12.0})"_json, cutoff);
+        CHECK(cutoff.getCutoff(0, 0) == doctest::Approx(12.0));
+        CHECK(cutoff.getCutoff(0, 1) == doctest::Approx(12.0));
+        CHECK(cutoff.getCutoff(1, 1) == doctest::Approx(12.0));
+    }
+
+    SUBCASE("new style default") {
+        GroupCutoff cutoff(geo);
+        from_json(R"({"cutoff_g2g": {"default": 13.0}})"_json, cutoff);
+        CHECK(cutoff.getCutoff(0, 0) == doctest::Approx(13.0));
+        CHECK(cutoff.getCutoff(0, 1) == doctest::Approx(13.0));
+        CHECK(cutoff.getCutoff(1, 1) == doctest::Approx(13.0));
+    }
+
+    SUBCASE("custom") {
+        GroupCutoff cutoff(geo);
+        from_json(R"({"cutoff_g2g": {"default": 13.0, "M Q": 14.0}})"_json, cutoff);
+        CHECK(cutoff.getCutoff(0, 0) == doctest::Approx(13.0));
+        CHECK(cutoff.getCutoff(0, 1) == doctest::Approx(14.0));
+        CHECK(cutoff.getCutoff(1, 1) == doctest::Approx(13.0));
+    }
+
+    SUBCASE("custom - no default value") {
+        GroupCutoff cutoff(geo);
+        from_json(R"({"cutoff_g2g": {"M Q": 11.0}})"_json, cutoff);
+        CHECK(cutoff.getCutoff(0, 0) == doctest::Approx(std::sqrt(pc::max_value)));
+        CHECK(cutoff.getCutoff(0, 1) == doctest::Approx(11.0));
+        CHECK(cutoff.getCutoff(1, 1) == doctest::Approx(std::sqrt(pc::max_value)));
+    }
+}
+
+EnergyAccumulatorBase::EnergyAccumulatorBase(double value) : value(value) {}
+
+void EnergyAccumulatorBase::reserve([[maybe_unused]] size_t number_of_particles) {}
+
+void EnergyAccumulatorBase::clear() { value = 0.0; }
+
+EnergyAccumulatorBase::operator double() { return value; }
+
+void EnergyAccumulatorBase::from_json(const json& j) {
+    scheme = j.value("summation_policy", Scheme::SERIAL);
+#ifndef HAS_PARALLEL_TRANSFORM_REDUCE
+    if (scheme == Scheme::PARALLEL) {
+        faunus_logger->warn("'parallel' summation unavailable; falling back to 'serial'");
+        scheme = SERIAL;
+    }
+#endif
+#ifndef _OPENMP
+    if (scheme == Scheme::OPENMP) {
+        faunus_logger->warn("'openmp' summation unavailable; falling back to 'serial'");
+        scheme = SERIAL;
+    }
+#endif
+    faunus_logger->debug("setting summation policy to {}", json(scheme).dump(1));
+}
+
+void EnergyAccumulatorBase::to_json(json& j) const { j["summation_policy"] = scheme; }
+
 } // end of namespace Faunus::Energy

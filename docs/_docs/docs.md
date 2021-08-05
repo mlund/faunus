@@ -22,7 +22,7 @@ Giulio Tesei, Alexei Abrikossov,
 João Henriques, Björn Stenqvist,
 Axel Thuresson, Robert Vácha,
 Magnus Ullner, Chris Evers,
-Anıl Kurut, André Teixeira,
+Anıl Kurut, Fernando Luís Barroso da Silva, André Teixeira,
 Christophe Labbez, Ondrej Marsalek,
 Martin Trulsson, Björn Persson,
 [Mikael Lund](http://www.teokem.lu.se/~mikael)_
@@ -38,8 +38,8 @@ Should you find Faunus useful, please consider supporting us by crediting:
 ## Quick Start
 
 Simulations are set up using YAML or JSON files, see for example
-[minimal.yml](https://github.com/mlund/faunus/blob/master/examples/minimal.yml),
-for a Metropolis Monte Carlo simulation of charged Lennard-Jones particles in a cubic PBC box.
+[minimal.yml](https://github.com/mlund/faunus/blob/master/examples/minimal/minimal.yml),
+for a Metropolis Monte Carlo simulation of charged Lennard-Jones particles.
 Running with
 
 ~~~ bash

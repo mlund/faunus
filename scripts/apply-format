@@ -231,7 +231,7 @@ if [ "$whole_file" = false ]; then
     # Homebrew.
     while read -r f; do
         paths_to_try+=("$f")
-    done < <(compgen -G "/usr/local/Cellar/clang-format/*/share/clang/clang-format-diff.py" | sort -n -r)
+    done < <(compgen -G "/opt/homebrew/Cellar/clang-format/*/share/clang/clang-format-diff.py" | sort -n -r)
 
     declare format_diff=
 

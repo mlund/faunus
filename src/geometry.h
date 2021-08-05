@@ -5,8 +5,8 @@
 #include "particle.h"
 #include "tensor.h"
 #include <Eigen/Geometry>
-#include <iostream>
 #include <cereal/types/base_class.hpp>
+#include <spdlog/spdlog.h>
 
 /** @brief Faunus main namespace */
 namespace Faunus {
@@ -48,14 +48,15 @@ NLOHMANN_JSON_SERIALIZE_ENUM(VolumeMethod, {{VolumeMethod::INVALID, nullptr},
                                             {VolumeMethod::Z, "z"}})
 
 enum Coordinates { ORTHOGONAL, ORTHOHEXAGONAL, TRUNC_OCTAHEDRAL, NON3D };
-enum Boundary { FIXED, PERIODIC };
+enum class Boundary : int { FIXED = 0, PERIODIC = 1 };
 
 /**
  * @brief A structure containing a type of boundary condition in each direction.
  *
  * A stub. It can be extended to fully json-configurable boundary conditions.
  */
-struct BoundaryCondition {
+class BoundaryCondition {
+  public:
     using BoundaryXYZ = Eigen::Matrix<Boundary, 3, 1>;
     // typedef std::pair<std::string, BoundaryXYZ> BoundaryName;
     // static const std::map<std::string, BoundaryXYZ> names; //!< boundary names
@@ -63,11 +64,14 @@ struct BoundaryCondition {
     Coordinates coordinates;
     BoundaryXYZ direction;
 
-    template <class Archive> void serialize(Archive &archive) {
+    template <class Archive> void serialize(Archive& archive) {
         archive(coordinates, direction);
     } //!< Cereal serialisation
 
-    BoundaryCondition(Coordinates coordinates = ORTHOGONAL, BoundaryXYZ boundary = {FIXED, FIXED, FIXED})
+    Eigen::Matrix<bool, 3, 1> isPeriodic() const;
+
+    BoundaryCondition(Coordinates coordinates = ORTHOGONAL,
+                      BoundaryXYZ boundary = {Boundary::FIXED, Boundary::FIXED, Boundary::FIXED})
         : coordinates(coordinates), direction(boundary){};
 };
 
@@ -80,7 +84,7 @@ struct GeometryBase {
     virtual void boundary(Point &) const = 0;                      //!< Apply boundary conditions
     virtual bool collision(const Point &) const = 0;               //!< Overlap with boundaries
     virtual void randompos(Point &, Random &) const = 0;           //!< Generate random position
-    virtual Point vdist(const Point &, const Point &) const = 0;   //!< (Minimum) distance between two points
+    virtual Point vdist(const Point& a, const Point& b) const = 0; //!< Minimum distance vector b->a
     virtual Point getLength() const = 0;                           //!< Side lengths
     virtual ~GeometryBase();
     virtual void to_json(json &j) const = 0;
@@ -129,7 +133,7 @@ class Cuboid : public GeometryImplementation {
     double getVolume(int dim = 3) const final; // finalized to help the compiler with inlining
     void setLength(const Point &len);          // todo shall be protected
     Point setVolume(double volume, VolumeMethod method = ISOTROPIC) override;
-    Point vdist(const Point &a, const Point &b) const override;
+    Point vdist(const Point& a, const Point& b) const override; //!< Minimum distance vector b->a
     void boundary(Point &a) const override;
     bool collision(const Point &a) const override;
     void randompos(Point &m, Random &rand) const override;
@@ -177,7 +181,7 @@ class Sphere : public GeometryImplementation {
     Point getLength() const override;
     double getVolume(int dim = 3) const override;
     Point setVolume(double volume, VolumeMethod method = ISOTROPIC) override;
-    Point vdist(const Point &a, const Point &b) const override;
+    Point vdist(const Point& a, const Point& b) const override; //!< Minimum distance vector b->a
     double sqdist(const Point &a, const Point &b) const { return (a - b).squaredNorm(); };
     void boundary(Point &a) const override;
     bool collision(const Point &point) const override;
@@ -185,6 +189,7 @@ class Sphere : public GeometryImplementation {
     void from_json(const json &j) override;
     void to_json(json &j) const override;
     Sphere(double radius = 0.0);
+    double getRadius() const;
 
     std::unique_ptr<GeometryImplementation> clone() const override {
         return std::make_unique<Sphere>(*this);
@@ -344,7 +349,7 @@ class Chameleon : public GeometryBase {
     // setLength() needed only for Move::ReplayMove (stems from IO::XTCReader).
     void setLength(const Point &);                            //!< Sets the box dimensions.
     void boundary(Point &) const override;                    //!< Apply boundary conditions
-    Point vdist(const Point &, const Point &) const override; //!< (Minimum) distance between two points
+    Point vdist(const Point&, const Point&) const override;   //!< Minimum distance vector b->a
     double sqdist(const Point &, const Point &) const;        //!< (Minimum) squared distance between two points
     void randompos(Point &, Random &) const override;
     bool collision(const Point &) const override;
@@ -369,7 +374,7 @@ class Chameleon : public GeometryBase {
     //! During the assignment copy everything, but clone the geometry.
     Chameleon &operator=(const Chameleon &geo);
 
-    std::shared_ptr<GeometryImplementation> asSimpleGeometry();
+    std::shared_ptr<GeometryImplementation> asSimpleGeometry() const;
 };
 
 inline void Chameleon::randompos(Point &m, Random &rand) const {
@@ -385,15 +390,15 @@ inline bool Chameleon::collision(const Point &a) const {
 inline void Chameleon::boundary(Point &a) const {
     const auto &boundary_conditions = geometry->boundary_conditions;
     if (boundary_conditions.coordinates == ORTHOGONAL) {
-        if (boundary_conditions.direction.x() == PERIODIC) {
+        if (boundary_conditions.direction.x() == Boundary::PERIODIC) {
             if (std::fabs(a.x()) > len_half.x())
                 a.x() -= len.x() * anint(a.x() * len_inv.x());
         }
-        if (boundary_conditions.direction.y() == PERIODIC) {
+        if (boundary_conditions.direction.y() == Boundary::PERIODIC) {
             if (std::fabs(a.y()) > len_half.y())
                 a.y() -= len.y() * anint(a.y() * len_inv.y());
         }
-        if (boundary_conditions.direction.z() == PERIODIC) {
+        if (boundary_conditions.direction.z() == Boundary::PERIODIC) {
             if (std::fabs(a.z()) > len_half.z())
                 a.z() -= len.z() * anint(a.z() * len_inv.z());
         }
@@ -407,19 +412,19 @@ inline Point Chameleon::vdist(const Point &a, const Point &b) const {
     const auto &boundary_conditions = geometry->boundary_conditions;
     if (boundary_conditions.coordinates == ORTHOGONAL) {
         distance = a - b;
-        if (boundary_conditions.direction.x() == PERIODIC) {
+        if (boundary_conditions.direction.x() == Boundary::PERIODIC) {
             if (distance.x() > len_half.x())
                 distance.x() -= len.x();
             else if (distance.x() < -len_half.x())
                 distance.x() += len.x();
         }
-        if (boundary_conditions.direction.y() == PERIODIC) {
+        if (boundary_conditions.direction.y() == Boundary::PERIODIC) {
             if (distance.y() > len_half.y())
                 distance.y() -= len.y();
             else if (distance.y() < -len_half.y())
                 distance.y() += len.y();
         }
-        if (boundary_conditions.direction.z() == PERIODIC) {
+        if (boundary_conditions.direction.z() == Boundary::PERIODIC) {
             if (distance.z() > len_half.z())
                 distance.z() -= len.z();
             else if (distance.z() < -len_half.z())
@@ -461,8 +466,8 @@ enum class weight { MASS, CHARGE, GEOMETRIC };
  * @param apply_boundary Boundary function to apply PBC (default: no PBC)
  * @param weight_function Functor return weight for a given particle
  * @param shift Shift by this vector before calculating center, then add again. For PBC removal; default: 0,0,0
- * @return Center position
- * @throws if the sum of weights is zero, thereby hampering normalization
+ * @return Center position; (0,0,0) if the sum of weights is zero
+ * @throw warning if the sum of weights is zero, thereby hampering normalization
  */
 template <typename iterator, typename weightFunc>
 Point anyCenter(iterator begin, iterator end, BoundaryFunction apply_boundary, const weightFunc &weight_function,
@@ -481,7 +486,8 @@ Point anyCenter(iterator begin, iterator end, BoundaryFunction apply_boundary, c
         apply_boundary(center);
         return center;
     } else {
-        throw std::runtime_error("cannot calculate center with zero weights");
+        faunus_logger->warn("warning: sum of weights is 0! setting center to (0,0,0)");
+        return Point::Zero();
     }
 } //!< Mass, charge, or geometric center of a collection of particles
 
@@ -544,7 +550,7 @@ void translateToOrigin(
 template <typename iterator>
 void rotate(
     iterator begin, iterator end, const Eigen::Quaterniond &quaternion,
-    BoundaryFunction apply_boundary = [](Point &) {}, const Point &shift = Point(0.0, 0.0, 0.0)) {
+    BoundaryFunction apply_boundary = [](Point &) {}, const Point &shift = Point::Zero()) {
     const auto rotation_matrix = quaternion.toRotationMatrix(); // rotation matrix
     std::for_each(begin, end, [&](auto &particle) {
         particle.rotate(quaternion, rotation_matrix); // rotate internal coordinates

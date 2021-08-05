@@ -1,11 +1,11 @@
 #pragma once
 
-#include <set>
 #include "core.h"
 #include "auxiliary.h"
 #include "particle.h"
 #include "random.h"
 #include "spdlog/spdlog.h"
+#include <set>
 
 namespace Faunus {
 
@@ -188,7 +188,8 @@ class MoleculeData {
 
     int &id();             //!< Type id
     const int &id() const; //!< Type id
-    void createMolecularConformations(const json&); //!< Add conformations if appropriate
+    void createMolecularConformations(const json& j); //!< Add conformations if appropriate
+    void setConformationWeights(const json& j);       //!< Add weights for conformations
 
     std::string name;            //!< Molecule name
     bool atomic = false;         //!< True if atomic group (salt etc.)
@@ -199,6 +200,7 @@ class MoleculeData {
     std::vector<int> atoms; //!< Sequence of atoms in molecule (atom id's)
     BasePointerVector<Potential::BondData> bonds;
     WeightedDistribution<ParticleVector> conformations; //!< Conformations of molecule
+    size_t numConformations() const;                     //!< Number of conformations
 
     MoleculeData();
     MoleculeData(const std::string &name, const ParticleVector &particles,

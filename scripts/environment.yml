@@ -25,3 +25,5 @@ dependencies:
     - jupyter_contrib_nbextensions=0.5
     - sdl2=2
     - jsonschema=3
+    - ruamel_yaml
+

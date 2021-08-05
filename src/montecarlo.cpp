@@ -12,19 +12,17 @@ namespace Faunus {
  * @note Regardless of outcome the random number generator should be incremented. This is important
  *       when using some MPI schemes where the simulations must be in sync.
  */
-bool MetropolisMonteCarlo::metropolis(double energy_change) {
-    const auto random_number_between_zero_and_one = Move::MoveBase::slump();
+bool MetropolisMonteCarlo::metropolisCriterion(const double energy_change) {
+    static_assert(std::numeric_limits<double>::is_iec559, "IEEE 754 required");
     if (std::isnan(energy_change)) {
         throw std::runtime_error("Metropolis error: energy cannot be NaN");
     }
-    if (energy_change < 0.0) {
+    const auto random_number_between_zero_and_one = Move::MoveBase::slump(); // engine *must* be propagated!
+    if (-energy_change > pc::max_exp_argument) {
+        mcloop_logger->warn("humongous negative energy change");
         return true;
-    } else {
-        if (-energy_change > pc::max_exp_argument) {
-            mcloop_logger->warn("large negative metropolis energy");
-        }
-        return random_number_between_zero_and_one <= std::exp(-energy_change);
     }
+    return random_number_between_zero_and_one <= std::exp(-energy_change);
 }
 
 /**
@@ -35,7 +33,7 @@ bool MetropolisMonteCarlo::metropolis(double energy_change) {
  * - recalculates the initial energy
  */
 void MetropolisMonteCarlo::init() {
-    sum_of_energy_changes = 0;
+    sum_of_energy_changes = 0.0;
     Change change;
     change.all = true;
 
@@ -43,8 +41,10 @@ void MetropolisMonteCarlo::init() {
     trial_state->pot->key = Energy::Energybase::TRIAL_MONTE_CARLO_STATE; // this is the new energy (trial)
 
     state->pot->init();
-    double energy = state->pot->energy(change);
+    auto energy = state->pot->energy(change);
     initial_energy = energy;
+    faunus_logger->log(std::isfinite(initial_energy) ? spdlog::level::info : spdlog::level::warn,
+                       "initial energy = {:.6E} kT", initial_energy);
 
     trial_state->sync(*state, change); // copy all information into trial state
     trial_state->pot->init();
@@ -60,7 +60,7 @@ void MetropolisMonteCarlo::init() {
 
     // Inject reference to Space into `SpeciationMove`
     // Needed to calc. differences in ideal excess chem. potentials
-    for (auto speciation_move : moves->moves().find<Move::SpeciationMove>()) {
+    for (auto& speciation_move : moves->moves().find<Move::SpeciationMove>()) {
         speciation_move->setOther(*state->spc);
     }
 }
@@ -85,23 +85,24 @@ double MetropolisMonteCarlo::relativeEnergyDrift() {
     if (std::isfinite(du)) {
         if (std::fabs(du) <= pc::epsilon_dbl) {
             return 0.0;
-        } else {
-            return (energy - (initial_energy + sum_of_energy_changes)) /
-                   (initial_energy != 0 ? initial_energy : energy);
         }
+        return (energy - (initial_energy + sum_of_energy_changes)) /
+               (std::fabs(initial_energy) > pc::epsilon_dbl ? initial_energy : energy);
     }
     return std::numeric_limits<double>::quiet_NaN();
 }
 
 MetropolisMonteCarlo::MetropolisMonteCarlo(const json &j, MPI::MPIController &mpi)
     : original_log_level(faunus_logger->level()) {
-    state = std::make_shared<State>(j);
+    state = std::make_unique<State>(j);
     faunus_logger->set_level(spdlog::level::off); // do not duplicate log info
-    trial_state = std::make_shared<State>(j);     // ...for the trial state
+    trial_state = std::make_unique<State>(j);     // ...for the trial state
     faunus_logger->set_level(original_log_level); // restore original log level
-    moves = std::make_shared<Move::Propagator>(j, *trial_state->spc, *trial_state->pot, mpi);
+    moves = std::make_unique<Move::Propagator>(j, *trial_state->spc, *trial_state->pot, mpi);
     init();
 }
+
+MetropolisMonteCarlo::~MetropolisMonteCarlo() = default;
 
 /**
  * @todo Too many responsibilities; tidy up!
@@ -123,9 +124,9 @@ void MetropolisMonteCarlo::restore(const json &j) {
     }
 }
 
-void MetropolisMonteCarlo::perform_move(std::shared_ptr<Move::MoveBase> move) {
+void MetropolisMonteCarlo::performMove(Move::MoveBase& move) {
     Change change;
-    move->move(change);
+    move.move(change);
 #ifndef NDEBUG
     try {
         change.sanityCheck(state->spc->groups);
@@ -134,32 +135,28 @@ void MetropolisMonteCarlo::perform_move(std::shared_ptr<Move::MoveBase> move) {
     }
 #endif
     if (change) {
-        latest_move = move;
-        double trial_energy = trial_state->pot->energy(change);    // trial potential energy (kT)
-        double energy = state->pot->energy(change);                // potential energy before move (kT)
-        double du = trial_energy - energy;                         // potential energy change (kT)
-        if (std::isnan(energy) and not std::isnan(trial_energy)) { // if NaN --> finite energy change
-            du = pc::neg_infty;                                    // ...always accept
-        } else if (std::isnan(trial_energy)) {                     // if moving to NaN, e.g. division by zero,
-            du = pc::infty;                                        // ...always reject
-        } else if (std::isnan(du)) {                               // if difference is NaN, e.g. infinity - infinity,
-            du = 0.0;                                              // ...always accept
+        latest_move_name = move.name;
+        const auto new_energy = trial_state->pot->energy(change); // trial potential energy (kT)
+        const auto old_energy = state->pot->energy(change);       // potential energy before move (kT)
+
+        auto energy_change = getEnergyChange(new_energy, old_energy);
+
+        const auto energy_bias = move.bias(change, old_energy, new_energy) +
+                                 TranslationalEntropy(*trial_state->spc, *state->spc).energy(change);
+
+        const auto total_trial_energy = energy_change + energy_bias;
+        if (std::isnan(total_trial_energy)) {
+            faunus_logger->error("NaN energy change in {} move.", move.name);
         }
-        double move_bias = move->bias(change, energy, trial_energy); // moves *may* add bias (kT)
-        double density_bias = TranslationalEntropy(*trial_state->spc, *state->spc).energy(change);
-        if (std::isnan(du + move_bias)) {
-            faunus_logger->error("NaN energy change in {} move.", move->name);
-            // throw exception here?
-        }
-        if (metropolis(du + move_bias + density_bias)) { // accept move
+        if (metropolisCriterion(total_trial_energy)) { // accept move
             state->sync(*trial_state, change);
-            move->accept(change);
+            move.accept(change);
         } else { // reject move
             trial_state->sync(*state, change);
-            move->reject(change);
-            du = 0.0;
+            move.reject(change);
+            energy_change = 0.0;
         }
-        sum_of_energy_changes += du; // sum of all energy changes
+        sum_of_energy_changes += energy_change; // sum of all energy changes
         if (std::isfinite(initial_energy)) {
             average_energy += initial_energy + sum_of_energy_changes; // update average potential energy
         }
@@ -168,6 +165,27 @@ void MetropolisMonteCarlo::perform_move(std::shared_ptr<Move::MoveBase> move) {
         // Alternatively, we could use `engine.discard()`
         Move::MoveBase::slump();
     }
+}
+
+/**
+ * Policies for infinite/nan energy changes
+ * @return modified energy change, new_energy - old_energy
+ */
+double MetropolisMonteCarlo::getEnergyChange(const double new_energy, const double old_energy) const {
+    if (std::isnan(old_energy) and !std::isnan(new_energy)) { // if NaN --> finite energy change
+        return pc::neg_infty;                                 // ...always accept
+    }
+    if (std::isnan(new_energy)) { // if moving to NaN, e.g. division by zero,
+        return pc::infty;         // ...always reject
+    }
+    if (new_energy > 0.0 && std::isinf(new_energy)) { // if positive infinity
+        return pc::infty;                             //...always reject
+    }
+    const auto energy_change = new_energy - old_energy; // potential energy change (kT)
+    if (std::isnan(energy_change)) {                    // if difference is NaN, e.g. infinity - infinity,
+        return 0.0;
+    }
+    return energy_change;
 }
 
 /**
@@ -188,12 +206,12 @@ void MetropolisMonteCarlo::move() {
     assert(moves);
     for (int i = 0; i < moves->repeat(); i++) {
         if (auto move_it = moves->sample(); move_it != moves->end()) { // pick random move
-            perform_move(*move_it);
+            performMove(**move_it);
         }
     }
     // run _hidden_ moves (weight=0) exactly once per MC sweep
-    for (auto move : moves->defusedMoves()) {
-        perform_move(move);
+    for (auto& move : moves->defusedMoves()) {
+        performMove(*move);
     }
 }
 
@@ -202,23 +220,23 @@ Energy::Hamiltonian &MetropolisMonteCarlo::getHamiltonian() { return *state->pot
 Space &MetropolisMonteCarlo::getSpace() { return *state->spc; }
 
 void from_json(const json &j, MetropolisMonteCarlo::State &state) {
-    state.spc = std::make_shared<Space>(j);
-    state.pot = std::make_shared<Energy::Hamiltonian>(*state.spc, j.at("energy"));
+    state.spc = std::make_unique<Space>(j);
+    state.pot = std::make_unique<Energy::Hamiltonian>(*state.spc, j.at("energy"));
 }
 
-void MetropolisMonteCarlo::State::sync(MetropolisMonteCarlo::State &other, Change &change) {
+void MetropolisMonteCarlo::State::sync(const State& other, const Change& change) {
     spc->sync(*other.spc, change);
     pot->sync(&*other.pot, change);
 }
 
-void to_json(json &j, const MetropolisMonteCarlo &mc) {
-    j = mc.state->spc->info();
+void to_json(json& j, const MetropolisMonteCarlo& monte_carlo) {
+    j = monte_carlo.state->spc->info();
     j["temperature"] = pc::temperature / 1.0_K;
-    j["moves"] = *mc.moves;
-    j["energy"].push_back(*mc.state->pot);
-    if (mc.average_energy.cnt > 0) {
-        j["montecarlo"] = {{"average potential energy (kT)", mc.average_energy.avg()},
-                           {"last move", mc.latest_move->name}};
+    j["moves"] = *monte_carlo.moves;
+    j["energy"].push_back(*monte_carlo.state->pot);
+    if (monte_carlo.average_energy.size() > 0) {
+        j["montecarlo"] = {{"average potential energy (kT)", monte_carlo.average_energy.avg()},
+                           {"last move", monte_carlo.latest_move_name}};
     }
 }
 

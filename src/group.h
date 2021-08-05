@@ -5,7 +5,7 @@
 #include "geometry.h"
 #include <range/v3/view/filter.hpp>
 #include <range/v3/view/transform.hpp>
-#include <nlohmann/json_fwd.hpp>
+#include <nlohmann/json.hpp>
 
 namespace Faunus {
 
@@ -206,6 +206,10 @@ namespace Faunus {
 
             bool contains(const T &a, bool include_inactive=false) const; //!< Determines if particle belongs to group (complexity: constant)
 
+            int getParticleIndex(const T& particle,
+                                 bool include_inactive = false)
+                const; //!< Finds index of particle within group. Throws if not part of group
+
             auto find_id(int id) const {
                 return *this | ranges::cpp20::views::filter([id](T &i) { return (i.id == id); });
             } //!< Range of all (active) elements with matching particle id
@@ -260,7 +264,10 @@ namespace Faunus {
             void rotate(const Eigen::Quaterniond&, Geometry::BoundaryFunction); //!< Rotate all particles in group incl. internal coordinates (dipole moment etc.)
 
             void updateMassCenter(Geometry::BoundaryFunction,
-                                  const Point &original_mass_center); //!< Calculates mass center
+                                  const Point& approximate_mass_center); //!< Calculates mass center
+
+            void updateMassCenter(Geometry::BoundaryFunction); //!< Calculates mass center
+
         }; //!< End of Group class
 
         // Group<Particle> is instantiated elsewhere (group.cpp)

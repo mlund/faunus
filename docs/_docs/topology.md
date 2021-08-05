@@ -117,12 +117,12 @@ Properties of molecules and their default values:
 `insdir=[1,1,1]`        | Insert directions are scaled by this
 `insoffset=[0,0,0]`     | Shifts mass center after insertion
 `keeppos=false`         | Keep original positions of `structure`
-`keepcharges=true`      | Keep original charges of `structure` (aam/pqr files)
+`keepcharges=true`      | Keep charges of `structure` (aam/pqr files) and `traj` even if mismatch with those in `atomlist`
 `rigid=false`           | Set to true for rigid molecules. Affects energy evaluation.
 `rotate=true`           | If false, the original structure will not be rotated upon insertion
 `structure`             | Structure file or direct information; required if `atomic=false`
 `to_disk=false`         | Save initial structure to `{name}-initial.pqr`; for molecular groups only
-`traj`                  | Read conformations from PQR trajectory (`structure` will be ignored)
+`traj`                  | Read conformations from PQR trajectory. Cannot be used w. `structure`; see also `keepcharges`
 `trajweight`            | One-column file with relative weights for each conformation. Must match frames in `traj` file.
 `trajcenter=false`      | Move CM of conformations to the origin assuming whole molecules
 
@@ -154,20 +154,22 @@ moleculelist:
 
 When giving structures using the `structure` keyword, the following policies apply:
 
-- `structure` can be a file name: `file.@` where `@=xyz|pqr|aam`
+- `structure` can be a file name: `file.@` where `@=xyz|pqr|aam|gro`
 - `structure` can be an _array_ of atom names and their positions:
   `- Mg: [2.0,0.1,2.0]`
 - `structure` can be a [FASTA sequence](https://en.wikipedia.org/wiki/FASTA_format):
-  `{fasta: [AAAAAAAK], k: 2.0; req: 7.0}` which generates
+  `{fasta: AAAAAAAK, k: 2.0; req: 7.0}` which generates
   a linear chain of harmonically connected atoms.
   FASTA letters are translated into three letter residue names which _must_ be defined
   in `atomlist`.
   Special letters: `n=NTR`, `c=CTR`, `a=ANK`.
+  Instead of a sequence, `fasta` may be a _filename_ from which the first
+  sequence is extracted. The filename must end with `.fasta`.
 - Radii in files are _ignored_; `atomlist` definitions are used.
+  A warning is issued if radii/charges differ in files and `atomlist`.
 - By default, charges in files are _used_; `atomlist` definitions are ignored.
   Use `keepcharges=False` to override.
-- A warning is issued if radii/charges differ in files and `atomlist`.
-- Box dimensions in files are ignored.
+- If the structure file contains box size information, this will be _ignored_.
 
 ### Nonbonded Interaction Exclusion
 

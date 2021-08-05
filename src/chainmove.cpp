@@ -17,7 +17,7 @@ void ChainRotationMoveBase::_to_json(json &j) const {
          {"dprot", dprot},
          {u8::rootof + u8::bracket("r_cm" + u8::squared), std::sqrt(msqdispl.avg())}};
     if (small_box_encountered > 0) {
-        j["skipped"] = double(small_box_encountered) / cnt; // todo rename the json attribute
+        j["skipped"] = double(small_box_encountered) / number_of_attempted_moves; // todo rename the json attribute
     }
     _roundjson(j, 3);
 }
@@ -161,8 +161,10 @@ PivotMove::PivotMove(Space &spc) : PivotMove(spc, "pivot", "") {}
 void PivotMove::_from_json(const json &j) {
     TBase::_from_json(j);
     bonds = molecules[this->molid].bonds.find<Potential::HarmonicBond>();
-
-    if (this->repeat < 0) {
+    if (bonds.empty()) {
+        throw ConfigurationError("no harmonic bonds found for pivot move");
+    }
+    if (repeat < 0) {
         // set the number of repetitions to the length of the chain (minus 2) times the number of the chains
         auto moliter = this->spc.findMolecules(this->molid);
         this->repeat = std::distance(moliter.begin(), moliter.end());
@@ -181,8 +183,8 @@ size_t PivotMove::select_segment() {
             auto bond = this->slump.sample(bonds.begin(), bonds.end()); // a random harmonic bond
             if (bond != bonds.end()) {
                 auto chain_offset = std::distance(this->spc.p.begin(), chain.begin());
-                auto atom0_ndx = (*bond)->index.at(0) + chain_offset;
-                auto atom1_ndx = (*bond)->index.at(1) + chain_offset;
+                auto atom0_ndx = (*bond)->indices.at(0) + chain_offset;
+                auto atom1_ndx = (*bond)->indices.at(1) + chain_offset;
                 if (atom0_ndx < 0 || atom1_ndx < 0) {
                     throw std::range_error("A negative index of the atom occured.");
                 }

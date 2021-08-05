@@ -176,9 +176,9 @@ properties:
                                       maxItems: 3
                             - type: object
                               properties:
-                                  fasta: {type: string}
-                                  k: {type: number}
-                                  req: {type: number}
+                                  fasta: {type: string, description: "fasta sequence or .fasta filename"}
+                                  k: {type: number, description: "force constant"}
+                                  req: {type: number, description: "equilibrium distance"}
                               additionalProperties: false
                     to_disk:
                         type: boolean
@@ -317,7 +317,7 @@ properties:
                 indexes: {type: array, items: {type: integer}}
                 property:
                     type: string
-                    enum: [V, Lx, Ly, Lz, radius, Q, N]
+                    enum: [V, Lx, Ly, Lz, radius, Q, N, mu, mu_x, mu_y, mu_z]
             required: [property]
         molecule:
             type: object
@@ -386,10 +386,13 @@ properties:
 
     nonbonded_base:
         properties:
+            summation_policy:
+                type: string
+                enum: [serial, openmp, parallel]
             cutoff_g2g:
                 anyOf:
                     - {type: number, description: "Molecule-molecule cutoff (global)"}
-                    - {type: array, items: {type: object}}
+                    - {type: object}
             openmp:
                 type: array
                 items:
@@ -417,7 +420,10 @@ properties:
                     type: object
                     properties:
                         default: {"$ref": "#/properties/pairpotential/all"}
-                        cutoff_g2g: {type: [number, array]}
+                        cutoff_g2g: {type: [number, object]}
+                        summation_policy:
+                            type: string
+                            enum: [serial, openmp, parallel]
                         timings: {type: boolean}
                         openmp:
                             type: array
@@ -433,7 +439,10 @@ properties:
                     type: object
                     properties:
                         default: {"$ref": "#/properties/pairpotential/all"}
-                        cutoff_g2g: {type: [number, array]}
+                        cutoff_g2g: {type: [number, object]}
+                        summation_policy:
+                            type: string
+                            enum: [serial, openmp, parallel]
                         timings: {type: boolean}
                         utol: {type: number, description: "Energy tolerance for spline (kT)"}
                         ftol: {type: number, description: "Force tolerance for spline (experimental!)"}
@@ -584,9 +593,11 @@ properties:
                         P/atm: {type: number, description: Pressure in atmospheres}
                         type: object
                     oneof:
+                        - required: [P/atm]
+                        - required: [P/bar]
+                        - required: [P/kT]
                         - required: [P/mM]
                         - required: [P/Pa]
-                        - required: [P/atm]
                     additionalProperties: false
                 confine:
                     description: "Geometrical confinement"
@@ -642,6 +653,11 @@ properties:
                         molecule: {type: string, description: Molecule name to operate on}
                         repeat: {type: [integer, string], description: Number of repeats per MC sweep}
                         keeppos: {type: boolean, default: true, description: Keep original positions from trajectory}
+                        copy_policy:
+                            type: string
+                            default: all
+                            enum: [all, positions, charges]
+                            description: "Data to copy from library: all, positions, charges"
                     additionalProperties: false
 
                 moltransrot:
@@ -671,6 +687,7 @@ properties:
                     properties:
                         molecule: {type: string}
                         repeat: {type: [integer, string]}
+                        energy_resolution: {type: number, minimum: 0, description: "resolution of energy histogram"}
                         dir:
                             items: {type: number}
                             type: array
@@ -686,7 +703,7 @@ properties:
                         dV: {type: number}
                         method:
                             type: string
-                            enum: [xy, isotropic, isochoric]
+                            enum: [z, xy, isotropic, isochoric]
                         repeat: {type: integer}
                     required: [dV]
                     additionalProperties: false
@@ -744,6 +761,21 @@ properties:
                     required: [dp, dprot, molecules, threshold]
                     additionalProperties: false
                     type: object
+
+                temper:
+                    properties:
+                        repeat: {type: integer}
+                        volume_scale:
+                            type: string
+                            enum: [z, xy, isotropic, isochoric]
+                        format:
+                            type: string
+                            enum: [XYZQI, XYZQ, XYZ]
+                            default: XYZQI
+                            description: "Which particle properties to exchange (I=atom id, Q=charge)"
+
+                    additionalProperties: false
+                    type: object
          
                 pivot:
                     properties:
@@ -788,6 +820,8 @@ properties:
                         name2: {type: string}
                         dim: {type: integer, minimum: 1, maximum: 3, default: 3}
                         nstep: {type: integer}
+                        slicedir: {type: array, items: {type: number}, default: [1,1,1], description: Direction along which the 3D, quasi-2D or quasi-1D RDF is calculated, minItems: 3, maxItems: 3}
+                        thickness: {type: number, description: Thickness of the slab or radius of the cylinder orthogonal to dir in the calculation of quasi-2D or quasi-1D RDFs}
                         nskip: {type: integer, default: 0, description: Initial steps to skip}
                     required: [dr, file, name1, name2, nstep]
                     additionalProperties: false
@@ -913,12 +947,12 @@ properties:
                 savestate:
                     description: "Save particle positions to file"
                     properties:
-                        file: {type: string, description: "Output filename", pattern: "(.*?)\\.(aam|pqr|state|ubj|gro|xyz|json)$"}
+                        file: {type: string, description: "Output filename", pattern: "(.*?)\\.(aam|pqr|state|ubj|gro|xyz|json|pdb)$"}
                         nstep: {type: integer, default: -1, description: "Sample interval; -1 = end of simulation only"}
                         nskip: {type: integer, default: 0, description: "Initial steps to skip"}
                         saverandom: {type: boolean, default: false, description: "Include random number state"}
                         overwrite: {type: boolean, default: false, description: "Overwrite file for step, i.e. no file numbering"}
-                        convert_hexagon: {type: boolean, default: false, description: "Convert hexagonal prism to space-filling cuboid; `pqr` only"}
+                        convert_hexagon: {type: boolean, default: false, description: "Convert hexagonal prism to space-filling cuboid"}
                     required: [file]
                     additionalProperties: false
                     type: object
@@ -1012,15 +1046,15 @@ properties:
                     description: "Virtual molecule translation"
                     properties:
                         molecule: {type: string, description: Molecule name to virtually translate (there can be only one}
-                        file: {type: string, description: Output filename w. data as a function of steps}
+                        file: {type: string, description: "Output filename w. data as a function of steps (.dat, .dat.gz)", pattern: "(.*?)\\.(dat|dat.gz)$"}
                         dir:
                             type: array
                             items: {type: number}
                             minItems: 3
                             maxItems: 3
                             default: [0,0,1]
-                            description: Translation directions (length unimportant)
-                        dL: {type: number, description: Displacement distance}
+                            description: Translation directions (will be scaled to unit-vector)
+                        dL: {type: number, description: Displacement distance along `dir`}
                         nstep: {type: integer, description: Interval between samples}
                         nskip: {type: integer, default: 0, description: Number of steps to initially skip}
                     required: [dL, molecule, nstep]

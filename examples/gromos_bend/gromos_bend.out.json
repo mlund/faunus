@@ -1,0 +1,148 @@
+{
+  "analysis": [
+    {
+      "systemenergy": {
+        "file": "energy.dat",
+        "final": [
+          0.3476438979047341
+        ],
+        "init": 4.1341e-31,
+        "mean": 1.7047,
+        "nskip": 1,
+        "nstep": 100,
+        "samples": 10000
+      }
+    },
+    {
+      "atomrdf": {
+        "dim": 1,
+        "dr": 0.1,
+        "file": "rdf.dat",
+        "name1": "a",
+        "name2": "c",
+        "nskip": 1,
+        "nstep": 1,
+        "samples": 999999,
+        "slicedir": [
+          0,
+          0,
+          0
+        ],
+        "thickness": 0.0
+      }
+    },
+    {
+      "savestate": {
+        "file": "state.json"
+      }
+    }
+  ],
+  "compiler": "Apple LLVM 12.0.5 (clang-1205.0.22.9)",
+  "energy": [
+    {
+      "hamiltonian": [
+        {
+          "bonded": {
+            "bondlist-intramolecular": [
+              {
+                "harmonic": {
+                  "index": [
+                    0,
+                    1
+                  ],
+                  "k": 10.0,
+                  "req": 1.0
+                }
+              },
+              {
+                "harmonic": {
+                  "index": [
+                    1,
+                    2
+                  ],
+                  "k": 10.0,
+                  "req": 1.0
+                }
+              },
+              {
+                "gromos_torsion": {
+                  "aeq": 90.0,
+                  "index": [
+                    0,
+                    1,
+                    2
+                  ],
+                  "k": 5.0
+                }
+              }
+            ],
+            "relative time": 0.0037240342372496255
+          }
+        }
+      ]
+    }
+  ],
+  "geometry": {
+    "length": [
+      20.0,
+      20.0,
+      20.0
+    ],
+    "type": "cuboid"
+  },
+  "git revision": "87968983 (2021-05-18)",
+  "groups": [
+    {
+      "threebody": {
+        "compressible": false,
+        "index": [
+          0,
+          2
+        ],
+        "size": 3
+      }
+    }
+  ],
+  "montecarlo": {
+    "average potential energy (kT)": 1.673714115750407,
+    "last move": "transrot"
+  },
+  "moves": [
+    {
+      "langevin_dynamics": {
+        "acceptance": 1.0,
+        "integrator": {
+          "friction": 5.0,
+          "time_step": 0.002
+        },
+        "moves": 999336,
+        "nsteps": 1,
+        "relative time": 0.19,
+        "relative time (without energy calc)": 0.123,
+        "repeat": 1
+      }
+    },
+    {
+      "transrot": {
+        "acceptance": 0.383,
+        "dir": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "molecule": "threebody",
+        "molid": 0,
+        "moves": 3000664,
+        "relative time": 0.351,
+        "relative time (without energy calc)": 0.0316,
+        "repeat": 3,
+        "√⟨r²⟩": 0.705
+      }
+    }
+  ],
+  "number of groups": 1,
+  "number of particles": 3,
+  "reactionlist": null,
+  "relative drift": -2.0453765844799135e-12,
+  "temperature": 298.15
+}

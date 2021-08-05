@@ -65,8 +65,8 @@ $$
 where $N$ is the total number of molecules and atomic species.
 
 `isobaric`   | Description
--------------|-------------------------------------------------------
-`P/unit`     | External pressure where unit can be `mM`, `atm`, or `Pa`.
+-------------|-------------------------------------------------------------------
+`P/unit`     | External pressure where unit can be `mM`, `atm`, `Pa`, `bar`, `kT`
 
 
 ## Nonbonded Interactions
@@ -115,9 +115,13 @@ combinations:
 ~~~ yaml
 - nonbonded:
     cutoff_g2g:
-      default: 40
-      protein water: 60
+      default: 40.0
+      protein polymer: 20.0
 ~~~
+
+If `default` is omitted, only the specified pairs are subject to the cutoffs.
+Finally, `cutoff_g2g: 40.0` is allowed for a uniform cutoff between all groups.
+
 
 ### Spline Options
 
@@ -143,6 +147,22 @@ Keyword            | Description
 
 Note: Anisotropic pair-potentials cannot be splined. This also applies
 to non-shifted electrostatic potentials such as `plain` and un-shifted `yukawa`.
+
+## Parallel summation
+
+Depending on how Faunus was compiled, parallel, nonbonded summation schemes may be available.
+Activate with:
+
+~~~ yaml
+- nonbonded:
+    summation_policy: parallel
+    ...
+~~~
+
+where `parallel` uses C++ internal threading; `openmp` uses OpenMP; and `serial` skip
+parallel summation (default). A warning will be issued if the desired scheme is unavailable.
+For the `openmp` policy, you may control the number of threads with the environmental variable
+`OMP_NUM_THREADS`.
 
 
 ## Electrostatics
@@ -650,11 +670,11 @@ $$
 Finite extensible nonlinear elastic potential long range repulsive potential.
 
 $$
-     u(r) =
-  \begin{cases} 
-   -\frac{1}{2} k r\_{\mathrm{max}}^2 \ln \left [ 1-(r/r\_{\mathrm{max}})^2 \right ],       & \text{if } r < r\_{\mathrm{max}} \\
-   \infty, & \text{if } r \geq r\_{\mathrm{max}}
-  \end{cases}
+u(r) =
+\begin{cases}
+-\frac{1}{2} k r_{\mathrm{max}}^2 \ln \left [ 1-(r/r_{\mathrm{max}})^2 \right ],  & \text{if } r < r_{\mathrm{max}} \\
+\infty, & \text{if } r \geq r_{\mathrm{max}}
+\end{cases}
 $$
 
 It is recommended to only use the potential if the initial configuration is near equilibrium, which prevalently depends on the value of `rmax`.
@@ -694,8 +714,9 @@ Should one insist on conducting simulations far from equilibrium, a large displa
 `index`            | Array with _exactly three_ indices (relative to molecule)
 
 $$
-u(r) = \frac{1}{2}k(\alpha - \alpha_{\mathrm{eq}})^2
+u(\alpha) = \frac{1}{2}k(\alpha - \alpha_{\mathrm{eq}})^2
 $$
+where $\alpha$ is the angle between vector 1→0 and 1→2 (numbers refer to the position in `index`).
 
 ### Cosine based torsion (GROMOS-96)
 
@@ -706,8 +727,10 @@ $$
 `index`            | Array with _exactly three_ indices (relative to molecule)
 
 $$
-u(r) = \frac{1}{2}k(\cos(\alpha) - \cos(\alpha_{{\mathrm{eq}}}))^2
+u(\alpha) = \frac{1}{2}k(\cos(\alpha) - \cos(\alpha_{{\mathrm{eq}}}))^2
 $$
+where $\alpha$ is the angle between vector 1→0 and 1→2 (numbers refer to the position in `index`).
+
 
 ### Proper periodic dihedral
 
@@ -715,12 +738,27 @@ $$
 ------------------- | -------------------------------------------
 `k`                 | Force constant (kJ/mol)
 `n`                 | Periodicity (multiplicity) of the dihedral (integer)
-`phi`               | Angle $\phi_{\mathrm{syn}}$ (deg)
+`phi`               | Phase angle $\phi_{\mathrm{syn}}$ (deg)
 `index`             | Array with _exactly four_ indices (relative to molecule)
 
 $$
 u(r) = k(1 + \cos(n\phi - \phi_{\mathrm{syn}}))
 $$
+where $\phi$ is the angle between the planes constructed from the points 0,1,2 and 1,2,3 (numbers refer to the position in `index`).
+
+
+### Improper harmonic dihedral
+
+`harmonic_dihedral` | Improper harmonic dihedral
+------------------- | -------------------------------------------
+`k`                 | Harmonic spring constant (kJ/mol/rad²)
+`deq`               | Equilibrium angle $\alpha_{\mathrm{eq}}$ (deg)
+`index`             | Array with _exactly four_ indices (relative to molecule)
+
+$$
+u(\phi) = \frac{1}{2}k(\phi - \phi_{\mathrm{eq}})^2
+$$
+where $\phi$ is the angle between the planes constructed from the points 0,1,2 and 1,2,3 (numbers refer to the position in `index`).
 
 
 ## Geometrical Confinement
@@ -931,14 +969,16 @@ mass center of the group and $N$ is the number of atoms in the molecule.
 
 #### System Properties
 
-`coords=[system]` | Property
------------------ | -----------------------------------------------
-`V`               | System volume
-`Q`               | System net-charge
-`Lx`, `Ly` or `Lz`| Side length of the cuboidal simulation cell
-`height`          | Alias for `Lz`
-`radius`          | Radius of spherical or cylindrical geometries
-`N`               | Number of active particles
+`coords=[system]`         | Property
+------------------------- | -----------------------------------------------
+`V`                       | System volume
+`Q`                       | System net-charge
+`Lx`, `Ly` or `Lz`        | Side length of the cuboidal simulation cell
+`height`                  | Alias for `Lz`
+`radius`                  | Radius of spherical or cylindrical geometries
+`N`                       | Number of active particles
+`mu`                      | System dipole moment scalar (𝑒Å)
+`mu_x`, `mu_y` or `mu_z`  | System dipole moment components (𝑒Å)
 
 The enclosing cuboid is the smallest cuboid that can contain the geometry.
 For example, for a cylindrical simulation container, `Lz` is the height

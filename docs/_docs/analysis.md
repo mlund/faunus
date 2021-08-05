@@ -108,8 +108,8 @@ which depends on dimensionality, `dim`.
 `dr=0.1`       |  $g(r)$ resolution
 `dim=3`        |  Dimensions for volume element
 `nstep=0`      |  Interval between samples
-`slicedir`     |  Direction of the slice for quasi-2D RDFs
-`thickness`    |  Thickness of the slice for quasi-2D RDFs
+`slicedir`     |  Direction of the slice for quasi-2D/1D RDFs
+`thickness`    |  Thickness of the slice for quasi-2D/1D RDFs
 
 `dim` |  $V(r)$        
 ----- | ---------------
@@ -117,7 +117,7 @@ which depends on dimensionality, `dim`.
 2     |  $2\pi r dr$   
 1     |  $dr$          
 
-By specifying `slicedir`, the RDF is calculated only for atoms within a slice of given `thickness`. For example, with `slicedir=[0,0,1]` and `thickness=2`, the RDF is calculated for atoms with _z_-coordinates differing by less than 2 Å. This quasi-2D RDF in the _xy_-plane should be normalized with `dim=2`.
+By specifying `slicedir`, the RDF is calculated only for atoms within a cylinder or slice of given `thickness`. For example, with `slicedir=[0,0,1]` and `thickness=1`, the RDF is calculated along _z_ for atoms within a cylinder of radius 1 Å. This quasi-1D RDF should be normalized with `dim=1`. Likewise, with `slicedir=[1,1,0]` and `thickness=2`, the RDF is calculated in the _xy_ plane for atoms with _z_ coordinates differing by less than 2 Å. This quasi-2D RDF should be normalized with `dim=2`.
 
 ### Molecular $g(r)$
 
@@ -521,7 +521,7 @@ $$
 `dL`               | Displacement (Å)
 `dir=[0,0,1]`      | Displacement direction (length ignored)
 `nstep`            | Interval between samples
-`file`             | Optional output filename for writing data as a function of steps
+`file`             | Optional output filename for writing data as a function of steps (`.dat|.dat.gz`)
 
 
 ### Widom Insertion

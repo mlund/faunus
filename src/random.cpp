@@ -31,9 +31,14 @@ void to_json(nlohmann::json &j, const Random &random) {
     std::ostringstream stream;
     stream << random.engine; // dump engine state to stream
     j["seed"] = stream.str();
+    if constexpr (std::is_same<RandomNumberEngine, std::mt19937>::value) {
+        j["engine"] = "Mersenne Twister (std::mt19937)";
+    } else {
+        j["engine"] = "Permuted Congruential Generator (pcg32)";
+    }
 }
 
-void Random::seed() { engine = std::mt19937(std::random_device()()); }
+void Random::seed() { engine = RandomNumberEngine(std::random_device()()); }
 
 Random::Random() : dist01(0, 1) {}
 

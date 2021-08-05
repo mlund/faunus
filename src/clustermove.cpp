@@ -227,7 +227,7 @@ void Cluster::_to_json(json &j) const {
          {"dirrot", rotation_axis},
          {"√⟨r²⟩", std::sqrt(translational_mean_square_displacement.avg())},
          {"√⟨θ²⟩/°", std::sqrt(rotational_mean_square_displacement.avg()) / 1.0_deg},
-         {"bias rejection rate", static_cast<double>(bias_rejected) / cnt},
+         {"bias rejection rate", static_cast<double>(bias_rejected) / number_of_attempted_moves},
          {"⟨N⟩", average_cluster_size.avg()},
          {"cluster analysis", *shape_analysis},
          {"cluster analysis interval", shape_analysis_interval}};
@@ -284,7 +284,7 @@ void Cluster::_move(Change &change) {
         const auto boundary = spc.geo.getBoundaryFunc();
         const Point COM = clusterMassCenter(cluster); // cluster mass center
 
-        if (cnt % shape_analysis_interval == 0) {
+        if (number_of_attempted_moves % shape_analysis_interval == 0) {
             shape_analysis->sample(cluster_groups, COM, spc);
         }
 
@@ -329,7 +329,7 @@ void Cluster::_move(Change &change) {
  * currently implemented in `findCluster()`.
  */
 void Cluster::biasRejectOrAccept(const size_t seed_index, const std::vector<size_t> &cluster_index) {
-    auto [aftercluster, safe_to_rotate] = find_cluster->findCluster(seed_index);
+    [[maybe_unused]] auto [aftercluster, safe_to_rotate] = find_cluster->findCluster(seed_index);
     if (aftercluster == cluster_index) {
         _bias = 0.0;
     } else {

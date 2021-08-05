@@ -72,16 +72,22 @@ Upon MC movement, the mean squared displacement will be tracked.
 
 ### Atomic
 
-`transrot`       |  Description
----------------- |  ---------------------------------
-`molecule`       |  Molecule name to operate on
-`dir=[1,1,1]`    |  Translational directions
+`transrot`          |  Description
+------------------- |  ---------------------------------
+`molecule`          |  Molecule name to operate on
+`dir=[1,1,1]`       |  Translational directions
+`energy_resolution` |  If set to a non-zero value (kT), an energy histogram will be generated.
 
 As `moltransrot` but instead of operating on the molecular mass center, this translates
 and rotates individual atoms in the group. The repeat is set to the number of atoms in the specified group and the
 displacement parameters `dp` and `dprot` for the individual atoms are taken from
 the atom properties defined in the [topology](topology).
 Atomic _rotation_ affects only anisotropic particles such as dipoles, spherocylinders, quadrupoles etc.
+
+An energy histogram of each participating species will be written to disk if the `energy_resolution`
+keyword is set. The value (in kT) specifies the resolution of the histogram binning. The analysis is
+essentially for free as the energies are already known from the move.
+
 
 ### Cluster Move
 
@@ -158,11 +164,12 @@ Instead, use a hard-coded variant like `nonbonded_coulomblj` etc.
 
 ### Conformational Swap
 
-`conformationswap` | Description
------------------- | ---------------------------------
-`molecule`         |  Molecule name to operate on
-`repeat=N`         |  Number of repeats per MC sweep
-`keeppos=False`    |  Keep original positions of `traj`
+`conformationswap`  | Description
+------------------- | ---------------------------------
+`molecule`          | Molecule name to operate on
+`repeat=N`          | Number of repeats per MC sweep
+`keeppos=False`     | Keep original positions of `traj`
+`copy_policy=all`   | What to copy from library: `all`, `positions`, `charges`
 
 This will swap between different molecular conformations
 as defined in the [Molecule Properties](topology.html#molecule-properties) with `traj` and `trajweight`
@@ -173,6 +180,10 @@ is randomly oriented and placed on top of the mass-center of
 an exising molecule. That is, there is no mass center movement.
 If `keeppos` is activated, the raw coordinates from the conformation
 is used, i.e. no rotation and no mass-center overlay.
+
+By default all information from the conformation is copied (`copy_policy=all`), including charges and particle type.
+To for example copy only positions, use `copy_policy=positions`. This can be useful when using speciation moves.
+
 
 ### Pivot
 
@@ -223,9 +234,10 @@ The default value of `repeat` is the number of atoms in the `molecule` minus two
 
 ## Parallel Tempering
 
-`temper`         | Description
----------------- | --------------------------------------------
-`format=XYZQI`   | Particle properties to copy between replicas
+`temper`                 | Description
+------------------------ | ----------------------------------------------------------------------
+`format=XYZQI`           | Particle properties to copy between replicasi (`XYZQI`, `XYZQ`, `XYZ`)
+`volume_scale=isotropic` | How to apply exchanged volumes: `z`, `xy`, `isotropic`, `isochoric`
 
 We consider an extended ensemble, consisting of _n_
 sub-systems or replicas, each in a distinct thermodynamic state (different

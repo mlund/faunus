@@ -9,6 +9,7 @@
 #include <fstream>
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/null_sink.h>
+#include <range/v3/view/filter.hpp>
 
 namespace Faunus {
 
@@ -217,7 +218,7 @@ Point ranunit(Random& rand, const Point& dir) {
 
 TEST_CASE("[Faunus] ranunit") {
     Random r;
-    int n = 2e5;
+    int n = 4e5;
     Point rtp(0, 0, 0);
     for (int i = 0; i < n; i++) {
         rtp += xyz2rtp(ranunit(r));

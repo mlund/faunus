@@ -16,7 +16,7 @@ energy:
     - example2d: {scale: {{scale}}, 2D: false } # this is hard-coded 2d potential, see Frenkel+Smit
 moves:
     - transrot: {molecule: mygroup, dir: [1,1,0], repeat: 10}
-    - temper: {format: xyz}
+    - temper: {format: xyz, volume_scale: isotropic}
 analysis:
     - reactioncoordinate: {type: atom, property: x, file: x.dat.gz, index: 0, nstep: 1}
     - savestate: {file: state.json}

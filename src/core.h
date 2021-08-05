@@ -20,11 +20,6 @@ namespace Faunus {
     typedef nlohmann::json json;            //!< Json object
     class Random;
 
-    using std::exp;
-    using std::fabs;
-    using std::log;
-    using std::sqrt;
-
     using namespace std::string_literals;
 
     json openjson(const std::string& filename); //!< Read json filename into json object (w. syntax check)

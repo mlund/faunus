@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string>
-#include <nlohmann/json_fwd.hpp>
+#include <nlohmann/json.hpp>
 
 namespace exprtk { // exprtk.hpp
 template <typename T> class parser;
@@ -26,6 +26,7 @@ class ExprFunction {
     void set(const std::string &exprstr, const Tvarvec &vars = {}, const Tconstvec &consts = {});
     void set(const nlohmann::json &, const Tvarvec &vars = {});
     T operator()() const;
+    T derivative(T& variable) const;
 };
 
 extern template class ExprFunction<double>;

@@ -5,63 +5,66 @@
 #include "reactioncoordinate.h"
 #include "aux/table_1d.h"
 
-namespace Faunus {
-namespace Energy {
+namespace Faunus::Energy {
 
 /**
- * `udelta` is the total change of updating the energy function. If
+ * `sum_of_energy_increments` is the total change of updating the energy function. If
  * not handled this will appear as an energy drift (which it is!). To
  * avoid this, this term is added to the energy but since it's the
  * same in both the trial and old state energies it will not affect
  * MC move acceptance.
  */
 class Penalty : public Energybase {
+  private:
+    Space& spc;
+    std::string penalty_function_filename;
+    std::string histogram_filename;
+    bool overwrite_penalty = true; // overwrite input penalty function?
+    void loadPenaltyFunction(const std::string& filename);
+    void savePenaltyFunction(); //!< Save penalty function and histogram to disk
+    void initializePenaltyFunction(const json& j);
+    void to_json(json& j) const override;
+    virtual void update(const std::vector<double>& coordinate);
+
   protected:
     typedef typename std::shared_ptr<ReactionCoordinate::ReactionCoordinateBase> Tcoord;
-
-    Space &spc;
-    bool overwrite_penalty = true; // overwrites the input penalty function
-    bool nodrift;                  // avoid energy drift when upgrading penalty function
-    bool quiet;                    // hold mund
-    size_t dim = 0;                // number of reaction coordinate
-    size_t cnt = 0;                // number of calls to `sync()`
-    size_t nupdate;                // update frequency [steps]
+    bool verbose = false;                      //!< kæft op?
+    bool avoid_energy_drift = true;            //!< avoid energy drift when upgrading penalty function
+    size_t number_of_reaction_coordinates = 0; //!< number of reaction coordinate
+    size_t update_counter = 0;                 //!< number of calls to `sync()`
+    size_t number_of_steps_between_updates;    //!< update frequency [steps]
+    size_t penalty_function_exchange_counter = 0;
     size_t samplings;
-    size_t nconv = 0;
-    double udelta = 0; // total energy change of updating penalty function
-    double scale;      // scaling factor for f0
-    double f0;         // penalty increment
-    std::string file, hisfile;
-    std::vector<Tcoord> rcvec; // vector of reaction coordinate functions (length = 1 or 2)
-    std::vector<double> coord; // latest reaction coordinate (length = 1 or 2)
+    double sum_of_energy_increments = 0;                //!< total energy change of updating penalty function
+    double energy_increment_scaling_factor = 1.0;       //!< scaling factor for f0
+    double energy_increment = 0.0;                      //!< penalty increment
+    std::vector<Tcoord> reaction_coordinates_functions; //!< vector of reaction coordinate functions (length = 1 or 2)
+    std::vector<double> latest_coordinate;              //!< latest reaction coordinate (length = 1 or 2)
 
-    Table<int> histo;      // sampling along reaction coordinates
-    Table<double> penalty; // penalty function
+    Table<unsigned int> histogram;      //!< count how often a reaction coordinate is visited
+    Table<double> penalty_energy;       //!< penalty energy as a function of coordinates
+    void logBarrierInformation() const; //!< Add barrier information to output log
 
   public:
-    Penalty(const json &j, Space &spc);
-    virtual ~Penalty();
-    void to_json(json &j) const override;
-    double energy(Change &change) override;
-
-    /*
-     * @todo: If this is called before `energy()`, the coord
-     * is never calculated and causes undefined behavior
-     */
-    virtual void update(const std::vector<double> &c);
-
-    void sync(Energybase *basePtr, Change &) override; // @todo: this doubles the MPI communication
+    Penalty(const json& j, Space& spc);
+    virtual ~Penalty(); //!< destruct and save to disk (!)
+    double energy(Change& change) override;
+    void sync(Energybase* other, const Change& change) override;
 };
 
 #ifdef ENABLE_MPI
-struct PenaltyMPI : public Penalty {
-    Eigen::VectorXi weights; // array w. mininum histogram counts
-    Eigen::VectorXd buffer;  // receive buffer for penalty functions
-
-    PenaltyMPI(const json &j, Space &spc);
-    void update(const std::vector<double> &c) override; //!< Average penalty function across all nodes
-};    //!< Penalty function with MPI exchange
+/**
+ * @brief Penalty function with MPI exchange
+ */
+class PenaltyMPI : public Penalty {
+  private:
+    Eigen::VectorXi weights;                                     //!< array w. mininum histogram counts
+    Eigen::VectorXd buffer;                                      //!< receive buffer for penalty functions
+    void update(const std::vector<double>& coordinate) override; //!< Average penalty function across all nodes
+    void averagePenaltyFunctions();                              //!< Average penalty functions over all MPI nodes
+  public:
+    PenaltyMPI(const json& j, Space& spc);
+};
 #endif
 
-} // end of Energy namespace
-} // end of Faunus namespace
+} // namespace Faunus::Energy

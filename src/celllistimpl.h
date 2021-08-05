@@ -942,9 +942,8 @@ template <typename CellListType> class ParticleCellList : public ParticleCellLis
     const Space spc;
 
   public:
-    template <typename... Args> ParticleCellList(const Space& spc, Args&&... args) : spc(spc) {
-        celllist = std::make_unique<CellListType>(args...);
-    }
+    template <typename... Args>
+    ParticleCellList(const Space& spc, Args&&... args) : celllist(std::make_unique<CellListType>(args...)), spc(spc) {}
     virtual void insert(const Particle& particle) override {
         celllist->insertMember(index(particle), particle.pos + 0.5 * spc.geo.getLength());
     };

@@ -172,7 +172,7 @@ void from_json(const json& j, std::vector<Faunus::AtomData>& atom_vector) {
                 throw ConfigurationError("atom entry must be string or object").attachJson(element);
             }
         }
-        assert(std::numeric_limits<Faunus::AtomData::Tid>::max() < atom_vector.size());
+        assert(atom_vector.size() < std::numeric_limits<Faunus::AtomData::Tid>::max());
         // the id exactly matches it's position (index) in the atom vector
         for (size_t i = 0; i < atom_vector.size(); ++i) {
             atom_vector[i].id() = i;

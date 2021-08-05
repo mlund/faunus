@@ -270,8 +270,8 @@ double TranslationalEntropy::atomSwapEnergy(const Change::data &data) {
     assert(data.dNswap);
     assert(data.atoms.size() == 1);
     double energy = 0.0;
-    int id1 = trial_spc.groups[data.index][data.atoms.front()].id;
-    int id2 = spc.groups[data.index][data.atoms.front()].id;
+    int id1 = trial_spc.groups.at(data.index).at(data.atoms.front()).id;
+    int id2 = spc.groups.at(data.index).at(data.atoms.front()).id;
     for (auto atomid : {id1, id2}) {
         auto atoms_new = trial_spc.findAtoms(atomid);
         auto atoms_old = spc.findAtoms(atomid);

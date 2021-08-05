@@ -1140,7 +1140,7 @@ InertiaTensor::InertiaTensor(const json& j, Space& spc) : Analysisbase(spc, "Ine
     output_stream.open(filename);
     group_index = j.at("index").get<size_t>();
     particle_range =
-        j.value("indexes", std::vector<size_t>({0, spc.groups[group_index].size()})); // whole molecule by default
+        j.value("indexes", std::vector<size_t>({0, spc.groups.at(group_index).size()})); // whole molecule by default
 }
 void InertiaTensor::_to_disk() {
     if (output_stream) {

@@ -223,6 +223,9 @@ namespace Faunus {
             inline auto &operator[](size_t i) { return *(this->first + i); }
             inline const auto &operator[](size_t i) const { return *(this->first + i); }
 
+            T& at(size_t index);
+            const T& at(size_t index) const;
+
             /*
              * @brief Reference to subset of given index, where 0 is the start of the group
              * @note do not parse index as `const&` which would create a dangling reference

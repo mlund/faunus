@@ -231,14 +231,16 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordina
 
     else if (property == "end2end")
         function = [&spc, i = index]() {
-            assert(spc.groups[i].size() > 1);
-            return std::sqrt(spc.geo.sqdist(spc.groups[i].begin()->pos, (spc.groups[i].end() - 1)->pos));
+            const auto group = spc.groups.at(i);
+            assert(group.size() > 1);
+            return std::sqrt(spc.geo.sqdist(group.begin()->pos, (group.end() - 1)->pos));
         };
 
     else if (property == "Rg")
         function = [&spc, i = index]() {
-            assert(spc.groups[i].size() > 1);
-            auto S = Geometry::gyration(spc.groups[i].begin(), spc.groups[i].end(), spc.groups[i].cm, spc.geo.getBoundaryFunc());
+            const auto group = spc.groups.at(i);
+            assert(group.size() > 1);
+            auto S = Geometry::gyration(group.begin(), group.end(), group.cm, spc.geo.getBoundaryFunc());
             return std::sqrt(S.trace()); // S.trace() == S.eigenvalues().sum() but faster
         };
 
@@ -276,8 +278,8 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordina
         }
         if (indexes.size() == 2) {
             function = [&spc, dir = dir, i = indexes[0], j = indexes[1]]() {
-                auto cm1 = spc.groups[i].cm;
-                auto cm2 = spc.groups[j].cm;
+                auto cm1 = spc.groups.at(i).cm;
+                auto cm2 = spc.groups.at(j).cm;
                 return spc.geo.vdist(cm1, cm2).z();
             };
         }
@@ -296,8 +298,8 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordina
         }
         if (indexes.size() == 2) {
             function = [&spc, dir = dir, i = indexes[0], j = indexes[1]]() {
-                auto cm1 = spc.groups[i].cm;
-                auto cm2 = spc.groups[j].cm;
+                auto cm1 = spc.groups.at(i).cm;
+                auto cm2 = spc.groups.at(j).cm;
                 return spc.geo.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).norm();
             };
         }
@@ -372,8 +374,9 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordina
         dir = j.at("dir").get<Point>().normalized();
         if (not spc.groups.at(index).atomic) {
             function = [&spc, &dir = dir, i = index]() {
-                auto &cm = spc.groups[i].cm;
-                auto S = Geometry::gyration(spc.groups[i].begin(), spc.groups[i].end(), cm, spc.geo.getBoundaryFunc());
+                auto& cm = spc.groups.at(i).cm;
+                auto S =
+                    Geometry::gyration(spc.groups.at(i).begin(), spc.groups.at(i).end(), cm, spc.geo.getBoundaryFunc());
                 Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(S);
                 Point eivals = esf.eigenvalues();
                 std::ptrdiff_t i_eival;

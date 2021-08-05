@@ -20,7 +20,7 @@ void SpeciationMove::_to_json(json &j) const {
                                       {"acceptance <--", data.left.avg()}};
     }
     for (auto [molid, size] : average_reservoir_size) {
-        j["implicit_reservoir"][molecules[molid].name] = size.avg();
+        j["implicit_reservoir"][molecules.at(molid).name] = size.avg();
     }
 }
 

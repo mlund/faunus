@@ -549,13 +549,13 @@ void ChargeMove::_to_json(json &j) const {
 void ChargeMove::_from_json(const json &j) {
     dq = j.at("dq").get<double>();
     atomIndex = j.at("index").get<int>();
-    auto git = spc.findGroupContaining(spc.p[atomIndex]);                    // group containing atomIndex
+    auto git = spc.findGroupContaining(spc.p.at(atomIndex));                 // group containing atomIndex
     cdata.index = std::distance(spc.groups.begin(), git);                    // integer *index* of moved group
     cdata.atoms[0] = std::distance(git->begin(), spc.p.begin() + atomIndex); // index of particle rel. to group
 }
 void ChargeMove::_move(Change &change) {
     if (dq > 0) {
-        auto &p = spc.p[atomIndex]; // refence to particle
+        auto& p = spc.p.at(atomIndex); // refence to particle
         double qold = p.charge;
         p.charge += dq * (slump() - 0.5);
         deltaq = p.charge - qold;

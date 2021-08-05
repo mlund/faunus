@@ -18,7 +18,10 @@ bool MetropolisMonteCarlo::metropolisCriterion(const double energy_change) {
         throw std::runtime_error("Metropolis error: energy cannot be NaN");
     }
     const auto random_number_between_zero_and_one = Move::MoveBase::slump(); // engine *must* be propagated!
-    if (-energy_change > pc::max_exp_argument) {
+    if (std::isinf(energy_change) && energy_change < 0.0) {                  // if negative infinity -> quietly accept
+        return true;
+    }
+    if (-energy_change > pc::max_exp_argument) { // if large negative value -> accept with warning
         mcloop_logger->warn("humongous negative energy change");
         return true;
     }

@@ -99,7 +99,7 @@ ReplayMove::ReplayMove(Space &spc) : ReplayMove(spc, "replay", "") {}
 
 void ReplayMove::_to_json(json &j) const { j["file"] = reader->filename; }
 
-void ReplayMove::_from_json(const json &j) { reader = std::make_shared<XTCReader>(j.at("file")); }
+void ReplayMove::_from_json(const json& j) { reader = std::make_unique<XTCReader>(j.at("file")); }
 
 void ReplayMove::_move(Change &change) {
     assert(reader != nullptr);
@@ -476,7 +476,7 @@ ParallelTempering::ParallelTempering(Space &spc, MPI::MPIController &mpi)
     if (mpi.nproc() < 2) {
         throw std::runtime_error(name + " requires two or more MPI processes");
     }
-    partner_particles = std::make_shared<ParticleVector>();
+    partner_particles = std::make_unique<ParticleVector>();
     partner_particles->reserve(spc.p.size());
     particle_transmitter.recvExtra.resize(1);
     particle_transmitter.sendExtra.resize(1);

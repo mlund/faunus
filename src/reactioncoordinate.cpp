@@ -64,28 +64,25 @@ namespace Faunus::ReactionCoordinate {
  *
  *     atom: {resolution: 0.1, ... }
  */
-std::shared_ptr<ReactionCoordinateBase> createReactionCoordinate(const json& j, Space& spc) {
-    std::shared_ptr<ReactionCoordinateBase> reaction_coordinate;
+std::unique_ptr<ReactionCoordinateBase> createReactionCoordinate(const json& j, Space& spc) {
     try {
         const auto& [key, j_params] = jsonSingleItem(j);
         try {
             if (key == "atom") {
-                reaction_coordinate = std::make_shared<AtomProperty>(j_params, spc);
-            } else if (key == "molecule") {
-                reaction_coordinate = std::make_shared<MoleculeProperty>(j_params, spc);
-            } else if (key == "system") {
-                reaction_coordinate = std::make_shared<SystemProperty>(j_params, spc);
-            } else {
-                throw ConfigurationError("unknown reaction coordinate");
+                return std::make_unique<AtomProperty>(j_params, spc);
             }
+            if (key == "molecule") {
+                return std::make_unique<MoleculeProperty>(j_params, spc);
+            }
+            if (key == "system") {
+                return std::make_unique<SystemProperty>(j_params, spc);
+            }
+            throw ConfigurationError("unknown reaction coordinate");
         } catch (std::exception& e) {
             usageTip.pick(fmt::format("coords=[{}]", key));
             throw ConfigurationError("'{}': {}", key, e.what());
         }
-    } catch (std::exception& e) {
-        throw ConfigurationError("reaction coordinate: {}", e.what()).attachJson(j);
-    }
-    return reaction_coordinate;
+    } catch (std::exception& e) { throw ConfigurationError("reaction coordinate: {}", e.what()).attachJson(j); }
 }
 
 void SystemProperty::_to_json(json &j) const { j["property"] = property; }

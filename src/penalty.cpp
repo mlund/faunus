@@ -29,13 +29,12 @@ void Penalty::initializePenaltyFunction(const json& j) {
     }
     std::vector<double> resolutions, minimum_values, maximum_values;
     for (const auto& i : j) {
-        const auto reaction_coordinate = ReactionCoordinate::createReactionCoordinate(i, spc);
+        auto& reaction_coordinate =
+            reaction_coordinates_functions.emplace_back(ReactionCoordinate::createReactionCoordinate(i, spc));
         if (reaction_coordinate->minimum_value >= reaction_coordinate->maximum_value ||
             reaction_coordinate->resolution <= 0) {
             throw ConfigurationError("min<max and resolution>0 required for penalty reaction coordinate");
         }
-        reaction_coordinates_functions.push_back(reaction_coordinate);
-
         resolutions.push_back(reaction_coordinate->resolution);
         minimum_values.push_back(reaction_coordinate->minimum_value);
         maximum_values.push_back(reaction_coordinate->maximum_value);

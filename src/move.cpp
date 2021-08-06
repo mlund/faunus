@@ -444,7 +444,7 @@ double ParallelTempering::bias(Change &, double uold, double unew) {
     } else {
         double energy_change = unew - uold;
         double partner_energy_change = exchangeEnergy(energy_change);
-        if (MetropolisMonteCarlo::metropolis(energy_change + partner_energy_change)) {
+        if (MetropolisMonteCarlo::metropolisCriterion(energy_change + partner_energy_change)) {
             return pc::neg_infty; // accept!
         } else {
             return pc::infty; // reject!

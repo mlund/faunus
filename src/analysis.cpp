@@ -1144,7 +1144,7 @@ InertiaTensor::InertiaTensor(const json& j, Space& spc) : Analysisbase(spc, "Ine
     output_stream.open(filename);
     group_index = j.at("index").get<size_t>();
     particle_range =
-        j.value("indexes", std::vector<size_t>({0, spc.groups[group_index].size()})); // whole molecule by default
+        j.value("indexes", std::vector<size_t>({0, spc.groups.at(group_index).size()})); // whole molecule by default
 }
 void InertiaTensor::_to_disk() {
     if (output_stream) {
@@ -1629,7 +1629,7 @@ ScatteringFunction::ScatteringFunction(const json& j, Space& spc) try : Analysis
 
     if (const auto scheme_str = j.value("scheme", "explicit"s); scheme_str == "debye") {
         scheme = DEBYE;
-        debye = std::make_shared<Scatter::DebyeFormula<Tformfactor>>(j);
+        debye = std::make_unique<Scatter::DebyeFormula<Tformfactor>>(j);
         if (cuboid) {
             faunus_logger->warn("cuboidal cell detected: consider using the `explicit` scheme");
         }
@@ -1641,10 +1641,10 @@ ScatteringFunction::ScatteringFunction(const json& j, Space& spc) try : Analysis
         const int pmax = j.value("pmax", 15);
         if (ipbc) {
             scheme = EXPLICIT_IPBC;
-            explicit_average_ipbc = std::make_shared<Scatter::StructureFactorIPBC<>>(pmax);
+            explicit_average_ipbc = std::make_unique<Scatter::StructureFactorIPBC<>>(pmax);
         } else {
             scheme = EXPLICIT_PBC;
-            explicit_average_pbc = std::make_shared<Scatter::StructureFactorPBC<>>(pmax);
+            explicit_average_pbc = std::make_unique<Scatter::StructureFactorPBC<>>(pmax);
         }
     } else {
         throw ConfigurationError("unknown scheme");

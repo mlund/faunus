@@ -70,7 +70,6 @@ class MetropolisMonteCarlo {
     Average<double> average_energy;               //!< Average potential energy of the system
     void init();                                  //!< Reset state
     void performMove(Move::MoveBase& move);       //!< Perform move using given move implementation
-    static bool metropolisCriterion(double energy_change); //!< Metropolis criterion
     double getEnergyChange(double new_energy, double old_energy) const;
     friend void to_json(json&, const MetropolisMonteCarlo&); //!< Write information to JSON object
 
@@ -81,6 +80,7 @@ class MetropolisMonteCarlo {
     double relativeEnergyDrift();                              //!< Relative energy drift from initial configuration
     void move();                                               //!< Perform random Monte Carlo move
     void restore(const json& j);                               //!< Restores system from previously store json object
+    static bool metropolisCriterion(double energy_change);     //!< Metropolis criterion
     ~MetropolisMonteCarlo();                                   //!< Required due to unique_ptr to incomplete type
 };
 

@@ -56,16 +56,17 @@ void ChainRotationMove::rotate_segment(double angle) {
         auto &chain = *molecule_iter;
         auto old_cm = chain.cm;
         // Uses an implementation from the old Pivot class. The translation of the chain might be unnecessary.
-        auto shift_pos = spc.p[axis_ndx[0]].pos;
+        auto shift_pos = spc.p.at(axis_ndx[0]).pos;
         // chain.unwrap(spc.geo.getDistanceFunc()); // remove pbc
         chain.translate(-shift_pos, spc.geo.getBoundaryFunc());
-        auto origin_pos = spc.p[axis_ndx[0]].pos; // != shift_pos because of chain.translate
-        auto axis_pos = spc.geo.vdist(origin_pos, spc.p[axis_ndx[1]].pos).normalized();
+        auto origin_pos = spc.p.at(axis_ndx[0]).pos; // != shift_pos because of chain.translate
+        auto axis_pos = spc.geo.vdist(origin_pos, spc.p.at(axis_ndx[1]).pos).normalized();
         Eigen::Quaterniond Q(Eigen::AngleAxisd(angle, axis_pos));
         auto M = Q.toRotationMatrix();
-        for (auto i : segment_ndx) {
-            spc.p[i].rotate(Q, M);                                       // internal rot.
-            spc.p[i].pos = Q * (spc.p[i].pos - origin_pos) + origin_pos; // positional rot.
+        for (auto index : segment_ndx) {
+            auto& particle = spc.p.at(index);
+            particle.rotate(Q, M);                                       // internal rot.
+            particle.pos = Q * (particle.pos - origin_pos) + origin_pos; // positional rot.
         }
         chain.cm = Geometry::massCenter(chain.begin(), chain.end());
         chain.translate(shift_pos, spc.geo.getBoundaryFunc());

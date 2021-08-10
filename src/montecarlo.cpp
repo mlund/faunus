@@ -18,7 +18,10 @@ bool MetropolisMonteCarlo::metropolisCriterion(const double energy_change) {
         throw std::runtime_error("Metropolis error: energy cannot be NaN");
     }
     const auto random_number_between_zero_and_one = Move::MoveBase::slump(); // engine *must* be propagated!
-    if (-energy_change > pc::max_exp_argument) {
+    if (std::isinf(energy_change) && energy_change < 0.0) {                  // if negative infinity -> quietly accept
+        return true;
+    }
+    if (-energy_change > pc::max_exp_argument) { // if large negative value -> accept with warning
         mcloop_logger->warn("humongous negative energy change");
         return true;
     }
@@ -267,8 +270,8 @@ double TranslationalEntropy::atomSwapEnergy(const Change::data &data) {
     assert(data.dNswap);
     assert(data.atoms.size() == 1);
     double energy = 0.0;
-    int id1 = trial_spc.groups[data.index][data.atoms.front()].id;
-    int id2 = spc.groups[data.index][data.atoms.front()].id;
+    int id1 = trial_spc.groups.at(data.index).at(data.atoms.front()).id;
+    int id2 = spc.groups.at(data.index).at(data.atoms.front()).id;
     for (auto atomid : {id1, id2}) {
         auto atoms_new = trial_spc.findAtoms(atomid);
         auto atoms_old = spc.findAtoms(atomid);

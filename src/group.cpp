@@ -119,6 +119,32 @@ template <class T> void Group<T>::updateMassCenter(Geometry::BoundaryFunction bo
 }
 
 /**
+ * @brief Returns i'th element in group
+ * @param index index starting at zero
+ * @return reference to value at i'th element
+ * @throw if out of interval `[0:capacity[`
+ */
+template <class T> T& Group<T>::at(size_t index) {
+    if (index < this->capacity()) {
+        return this->operator[](index);
+    }
+    throw std::out_of_range("group index out of range");
+}
+
+/**
+ * @brief Returns i'th element in group
+ * @param index index starting at zero
+ * @return reference to value at i'th element
+ * @throw if out of interval `[0:capacity[`
+ */
+template <class T> const T& Group<T>::at(size_t index) const {
+    if (index < this->capacity()) {
+        return this->operator[](index);
+    }
+    throw std::out_of_range("group index out of range");
+}
+
+/**
  * @param mask Bitmask based on enum `Group::Selectors`
  * @return Lambda function that returns true if group matches mask
  *

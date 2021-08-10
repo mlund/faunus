@@ -101,7 +101,7 @@ ReplayMove::ReplayMove(Space &spc) : ReplayMove(spc, "replay", "") {}
 
 void ReplayMove::_to_json(json &j) const { j["file"] = reader->filename; }
 
-void ReplayMove::_from_json(const json &j) { reader = std::make_shared<XTCReader>(j.at("file")); }
+void ReplayMove::_from_json(const json& j) { reader = std::make_unique<XTCReader>(j.at("file")); }
 
 void ReplayMove::_move(Change &change) {
     assert(reader != nullptr);
@@ -446,7 +446,7 @@ double ParallelTempering::bias(Change &, double uold, double unew) {
     } else {
         double energy_change = unew - uold;
         double partner_energy_change = exchangeEnergy(energy_change);
-        if (MetropolisMonteCarlo::metropolis(energy_change + partner_energy_change)) {
+        if (MetropolisMonteCarlo::metropolisCriterion(energy_change + partner_energy_change)) {
             return pc::neg_infty; // accept!
         } else {
             return pc::infty; // reject!
@@ -478,7 +478,7 @@ ParallelTempering::ParallelTempering(Space &spc, MPI::MPIController &mpi)
     if (mpi.nproc() < 2) {
         throw std::runtime_error(name + " requires two or more MPI processes");
     }
-    partner_particles = std::make_shared<ParticleVector>();
+    partner_particles = std::make_unique<ParticleVector>();
     partner_particles->reserve(spc.p.size());
     particle_transmitter.recvExtra.resize(1);
     particle_transmitter.sendExtra.resize(1);
@@ -551,13 +551,13 @@ void ChargeMove::_to_json(json &j) const {
 void ChargeMove::_from_json(const json &j) {
     dq = j.at("dq").get<double>();
     atomIndex = j.at("index").get<int>();
-    auto git = spc.findGroupContaining(spc.p[atomIndex]);                    // group containing atomIndex
+    auto git = spc.findGroupContaining(spc.p.at(atomIndex));                 // group containing atomIndex
     cdata.index = std::distance(spc.groups.begin(), git);                    // integer *index* of moved group
     cdata.atoms[0] = std::distance(git->begin(), spc.p.begin() + atomIndex); // index of particle rel. to group
 }
 void ChargeMove::_move(Change &change) {
     if (dq > 0) {
-        auto &p = spc.p[atomIndex]; // refence to particle
+        auto& p = spc.p.at(atomIndex); // refence to particle
         double qold = p.charge;
         p.charge += dq * (slump() - 0.5);
         deltaq = p.charge - qold;

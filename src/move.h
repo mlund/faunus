@@ -60,7 +60,7 @@ void to_json(json &, const MoveBase &);
  * XTCReader is supported.
  */
 class ReplayMove : public MoveBase {
-    std::shared_ptr<XTCReader> reader = nullptr; //!< trajectory reader
+    std::unique_ptr<XTCReader> reader = nullptr; //!< trajectory reader
     TrajectoryFrame frame;                       //!< recently read frame (w/o coordinates)
     bool end_of_trajectory = false;              //!< flag raised when end of trajectory was reached
     // FIXME resolve always accept / always reject on the Faunus level
@@ -472,7 +472,7 @@ class ParallelTempering : public MoveBase {
     Geometry::VolumeMethod volume_scaling_method = Geometry::VolumeMethod::ISOTROPIC; //!< How to scale volumes
     double very_small_volume = 1e-9;
     MPI::MPIController &mpi;
-    std::shared_ptr<ParticleVector> partner_particles;
+    std::unique_ptr<ParticleVector> partner_particles;
     Random random;
     int partner = -1;              //!< Exchange replica (partner)
     enum extradata { VOLUME = 0 }; //!< Structure of extra data to send

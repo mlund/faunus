@@ -1409,7 +1409,7 @@ class NonbondedCached : public Nonbonded<TPairEnergy, TPairingPolicy> {
         for (auto i = 0; i < groups_size - 1; ++i) {
             for (auto j = i + 1; j < groups_size; ++j) {
                 u = 0.0;
-                Base::pairing.group2group(u, spc.groups[i], spc.groups[j]);
+                Base::pairing.group2group(u, spc.groups.at(i), spc.groups.at(j));
                 energy_cache(i, j) = static_cast<double>(u);
             }
         }

@@ -64,28 +64,25 @@ namespace Faunus::ReactionCoordinate {
  *
  *     atom: {resolution: 0.1, ... }
  */
-std::shared_ptr<ReactionCoordinateBase> createReactionCoordinate(const json& j, Space& spc) {
-    std::shared_ptr<ReactionCoordinateBase> reaction_coordinate;
+std::unique_ptr<ReactionCoordinateBase> createReactionCoordinate(const json& j, Space& spc) {
     try {
         const auto& [key, j_params] = jsonSingleItem(j);
         try {
             if (key == "atom") {
-                reaction_coordinate = std::make_shared<AtomProperty>(j_params, spc);
-            } else if (key == "molecule") {
-                reaction_coordinate = std::make_shared<MoleculeProperty>(j_params, spc);
-            } else if (key == "system") {
-                reaction_coordinate = std::make_shared<SystemProperty>(j_params, spc);
-            } else {
-                throw ConfigurationError("unknown reaction coordinate");
+                return std::make_unique<AtomProperty>(j_params, spc);
             }
+            if (key == "molecule") {
+                return std::make_unique<MoleculeProperty>(j_params, spc);
+            }
+            if (key == "system") {
+                return std::make_unique<SystemProperty>(j_params, spc);
+            }
+            throw ConfigurationError("unknown reaction coordinate");
         } catch (std::exception& e) {
             usageTip.pick(fmt::format("coords=[{}]", key));
             throw ConfigurationError("'{}': {}", key, e.what());
         }
-    } catch (std::exception& e) {
-        throw ConfigurationError("reaction coordinate: {}", e.what()).attachJson(j);
-    }
-    return reaction_coordinate;
+    } catch (std::exception& e) { throw ConfigurationError("reaction coordinate: {}", e.what()).attachJson(j); }
 }
 
 void SystemProperty::_to_json(json &j) const { j["property"] = property; }
@@ -231,14 +228,16 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordina
 
     else if (property == "end2end")
         function = [&spc, i = index]() {
-            assert(spc.groups[i].size() > 1);
-            return std::sqrt(spc.geo.sqdist(spc.groups[i].begin()->pos, (spc.groups[i].end() - 1)->pos));
+            const auto group = spc.groups.at(i);
+            assert(group.size() > 1);
+            return std::sqrt(spc.geo.sqdist(group.begin()->pos, (group.end() - 1)->pos));
         };
 
     else if (property == "Rg")
         function = [&spc, i = index]() {
-            assert(spc.groups[i].size() > 1);
-            auto S = Geometry::gyration(spc.groups[i].begin(), spc.groups[i].end(), spc.groups[i].cm, spc.geo.getBoundaryFunc());
+            const auto group = spc.groups.at(i);
+            assert(group.size() > 1);
+            auto S = Geometry::gyration(group.begin(), group.end(), group.cm, spc.geo.getBoundaryFunc());
             return std::sqrt(S.trace()); // S.trace() == S.eigenvalues().sum() but faster
         };
 
@@ -276,8 +275,8 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordina
         }
         if (indexes.size() == 2) {
             function = [&spc, dir = dir, i = indexes[0], j = indexes[1]]() {
-                auto cm1 = spc.groups[i].cm;
-                auto cm2 = spc.groups[j].cm;
+                auto cm1 = spc.groups.at(i).cm;
+                auto cm2 = spc.groups.at(j).cm;
                 return spc.geo.vdist(cm1, cm2).z();
             };
         }
@@ -296,8 +295,8 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordina
         }
         if (indexes.size() == 2) {
             function = [&spc, dir = dir, i = indexes[0], j = indexes[1]]() {
-                auto cm1 = spc.groups[i].cm;
-                auto cm2 = spc.groups[j].cm;
+                auto cm1 = spc.groups.at(i).cm;
+                auto cm2 = spc.groups.at(j).cm;
                 return spc.geo.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).norm();
             };
         }
@@ -372,8 +371,9 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordina
         dir = j.at("dir").get<Point>().normalized();
         if (not spc.groups.at(index).atomic) {
             function = [&spc, &dir = dir, i = index]() {
-                auto &cm = spc.groups[i].cm;
-                auto S = Geometry::gyration(spc.groups[i].begin(), spc.groups[i].end(), cm, spc.geo.getBoundaryFunc());
+                auto& cm = spc.groups.at(i).cm;
+                auto S =
+                    Geometry::gyration(spc.groups.at(i).begin(), spc.groups.at(i).end(), cm, spc.geo.getBoundaryFunc());
                 Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(S);
                 Point eivals = esf.eigenvalues();
                 std::ptrdiff_t i_eival;

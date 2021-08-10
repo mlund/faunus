@@ -514,7 +514,7 @@ class XTCReader {
     int return_code = XDRfile::exdrOK;   //!< last return code of a C function
     XDRfile::XDRFILE* xdrfile = nullptr; //!< file handle
     //! data structure for C functions; the number of coordinates is immutable
-    std::shared_ptr<XTCTrajectoryFrame> xtc_frame;
+    std::unique_ptr<XTCTrajectoryFrame> xtc_frame;
 
   public:
     std::string filename; //!< name of the trajectory file, mainly for error reporting
@@ -575,7 +575,7 @@ class XTCReader {
 class XTCWriter {
     int return_code = XDRfile::exdrOK;             //!< last return code of a C function
     XDRfile::XDRFILE* xdrfile = nullptr;           //!< file handle
-    std::shared_ptr<XTCTrajectoryFrame> xtc_frame; //!< data structure for C functions;
+    std::unique_ptr<XTCTrajectoryFrame> xtc_frame; //!< data structure for C functions;
                                                    //!< the number of coordinates is immutable
     int step_counter = 0;                          //!< frame counter for automatic increments
     float time_delta = 1.0_ps;                     //!< timestamp of a frame is computed as step * time_delta
@@ -612,7 +612,7 @@ class XTCWriter {
     void writeNext(const Point& box, begin_iterator coordinates_begin, end_iterator coordinates_end) {
         if (!xtc_frame) {
             auto number_of_atoms = std::distance(coordinates_begin, coordinates_end);
-            xtc_frame = std::make_shared<XTCTrajectoryFrame>(number_of_atoms);
+            xtc_frame = std::make_unique<XTCTrajectoryFrame>(number_of_atoms);
         }
         xtc_frame->importFrame(step_counter, step_counter * time_delta, box, coordinates_begin, coordinates_end);
         writeFrame();

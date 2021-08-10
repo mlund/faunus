@@ -790,7 +790,7 @@ double Bonded::energy(Change &change) {
         energy += sumBondEnergy(external_bonds);
         if (change.all || change.dV) { // calc. for everything!
             for (const auto& [group_index, bonds] : internal_bonds) {
-                if (!spc.groups[group_index].empty()) {
+                if (!spc.groups.at(group_index).empty()) {
                     energy += sumBondEnergy(bonds);
                 }
             }

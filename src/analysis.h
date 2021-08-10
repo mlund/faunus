@@ -528,9 +528,9 @@ class ScatteringFunction : public Analysisbase {
     std::vector<std::string> molecule_names; //!< Molecule names corresponding to `molecule_ids`
     using Tformfactor = Scatter::FormFactorUnity<double>;
 
-    std::shared_ptr<Scatter::DebyeFormula<Tformfactor>> debye;
-    std::shared_ptr<Scatter::StructureFactorPBC<>> explicit_average_pbc;
-    std::shared_ptr<Scatter::StructureFactorIPBC<>> explicit_average_ipbc;
+    std::unique_ptr<Scatter::DebyeFormula<Tformfactor>> debye;
+    std::unique_ptr<Scatter::StructureFactorPBC<>> explicit_average_pbc;
+    std::unique_ptr<Scatter::StructureFactorIPBC<>> explicit_average_ipbc;
     void _sample() override;
     void _to_disk() override;
     void _to_json(json& j) const override;

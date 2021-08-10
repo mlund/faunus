@@ -242,7 +242,7 @@ TEST_CASE("XTCFrame") {
 XTCReader::XTCReader(const std::string& filename) : filename(filename) {
     int number_of_atoms;
     if (XDRfile::read_xtc_natoms(filename.c_str(), &number_of_atoms) == XDRfile::exdrOK) {
-        xtc_frame = std::make_shared<XTCTrajectoryFrame>(number_of_atoms);
+        xtc_frame = std::make_unique<XTCTrajectoryFrame>(number_of_atoms);
         xdrfile = XDRfile::xdrfile_open(filename.c_str(), "r");
     }
     if (!xtc_frame || (xdrfile == nullptr)) {
@@ -302,7 +302,7 @@ void XTCWriter::writeFrame() {
 
 void XTCWriter::write(const TrajectoryFrame& frame) {
     if (!xtc_frame) {
-        xtc_frame = std::make_shared<XTCTrajectoryFrame>(frame.coordinates.size());
+        xtc_frame = std::make_unique<XTCTrajectoryFrame>(frame.coordinates.size());
     }
     *xtc_frame = frame;
     writeFrame();
@@ -311,7 +311,7 @@ void XTCWriter::write(const TrajectoryFrame& frame) {
 
 void XTCWriter::writeNext(const TrajectoryFrame& frame) {
     if (!xtc_frame) {
-        xtc_frame = std::make_shared<XTCTrajectoryFrame>(frame.coordinates.size());
+        xtc_frame = std::make_unique<XTCTrajectoryFrame>(frame.coordinates.size());
     }
     *xtc_frame = frame;
     writeFrameAt(step_counter, step_counter * time_delta);

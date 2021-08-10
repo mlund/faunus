@@ -37,8 +37,8 @@ class ReactionCoordinateBase {
 
 void to_json(json &j, const ReactionCoordinateBase &r); //!< Serialize any reaction coordinate to json
 
-std::shared_ptr<ReactionCoordinateBase>
-createReactionCoordinate(const json &, Space &); //!< Factory function to create all known penalty functions
+std::unique_ptr<ReactionCoordinateBase>
+createReactionCoordinate(const json&, Space&); //!< Factory function to create all known penalty functions
 
 class SystemProperty : public ReactionCoordinateBase {
   protected:

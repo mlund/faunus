@@ -137,7 +137,7 @@ void FindCluster::parseThresholds(const json &j) {
  */
 std::optional<size_t> FindCluster::findSeed(Random &random) {
     updateMoleculeIndex();
-    auto avoid_satellites = [&](auto index) { return (satellites.count(spc.groups[index].id) == 0); };
+    auto avoid_satellites = [&](auto index) { return (satellites.count(spc.groups.at(index).id) == 0); };
     auto not_satellites = molecule_index | ranges::cpp20::views::filter(avoid_satellites);
     if (ranges::cpp20::empty(not_satellites)) {
         return std::nullopt;
@@ -253,11 +253,11 @@ Point Cluster::clusterMassCenter(const std::vector<size_t> &cluster_index) const
     auto boundary = spc.geo.getBoundaryFunc();
     double mass_sum = 0.0;
     Point mass_center(0, 0, 0);
-    Point origin = spc.groups[*cluster_index.begin()].cm;
+    Point origin = spc.groups.at(*cluster_index.begin()).cm;
     for (auto i : cluster_index) { // loop over clustered molecules (index)
-        Point r = spc.groups[i].cm - origin;
+        Point r = spc.groups.at(i).cm - origin;
         boundary(r);
-        const double mass = spc.groups[i].mass();
+        const double mass = spc.groups.at(i).mass();
         mass_center += mass * r;
         mass_sum += mass;
     }

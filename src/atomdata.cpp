@@ -8,8 +8,10 @@
 namespace Faunus {
 
 bool InteractionData::contains(const key_type& name) const {
-    auto it = data.find(name);
-    return it != data.end() && !std::isnan(it->second);
+    if (auto it = data.find(name); it != data.end()) {
+        return !std::isnan(it->second);
+    }
+    return false;
 }
 
 double InteractionData::at(const key_type& name) const {

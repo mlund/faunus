@@ -469,6 +469,7 @@ void ParallelTempering::_reject(Change &) {
 void ParallelTempering::_from_json(const json &j) {
     particle_transmitter.setFormat(j.value("format", "XYZQI"s));
     volume_scaling_method = j.value("volume_scale", Geometry::VolumeMethod::ISOTROPIC);
+    steps_between_samples = j.value("nstep", 1); //!< Number of steps between samples
 }
 
 ParallelTempering::ParallelTempering(Space &spc, MPI::MPIController &mpi)

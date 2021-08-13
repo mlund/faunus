@@ -38,6 +38,7 @@ class MoveBase {
     std::string name;    //!< Name of move
     std::string cite;    //!< Reference, preferable a short-doi, e.g. "doi:10/b9jq"
     int repeat = 1;      //!< How many times the move should be repeated per sweep
+    size_t steps_between_samples = 1; //!< Run interval for defused moves (with weight = 0)
 
     void from_json(const json& j);
     void to_json(json& j) const; //!< JSON report w. statistics, output etc.

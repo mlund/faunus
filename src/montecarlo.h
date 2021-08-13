@@ -72,6 +72,7 @@ class MetropolisMonteCarlo {
     void performMove(Move::MoveBase& move);       //!< Perform move using given move implementation
     double getEnergyChange(double new_energy, double old_energy) const;
     friend void to_json(json&, const MetropolisMonteCarlo&); //!< Write information to JSON object
+    size_t number_of_sweeps = 0;                             //!< Number of MC sweeps, e.g. calls to move()
 
   public:
     MetropolisMonteCarlo(const json& j, MPI::MPIController& mpi);

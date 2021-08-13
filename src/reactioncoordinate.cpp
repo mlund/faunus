@@ -99,7 +99,7 @@ SystemProperty::SystemProperty(const json &j, Space &spc) : ReactionCoordinateBa
     else if (property == "Lz" or property == "height")
         function = [&g = spc.geo]() { return g.getLength().z(); };
     else if (property == "radius") {
-        if (spc.geo.type == Geometry::CUBOID or spc.geo.type == Geometry::SLIT)
+        if (spc.geo.type == Geometry::Variant::CUBOID or spc.geo.type == Geometry::Variant::SLIT)
             faunus_logger->warn("`radius` coordinate unavailable for geometry");
         else
             function = [&g = spc.geo]() { return 0.5 * g.getLength().x(); };

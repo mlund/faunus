@@ -36,7 +36,7 @@ typedef std::function<void(Point &)> BoundaryFunction;
 typedef std::function<Point(const Point &, const Point &)> DistanceFunction;
 
 //! Geometry variant used for Chameleon
-enum Variant { CUBOID = 0, SPHERE, CYLINDER, SLIT, HEXAGONAL, OCTAHEDRON, HYPERSPHERE2D };
+enum class Variant { CUBOID = 0, SPHERE, CYLINDER, SLIT, HEXAGONAL, OCTAHEDRON, HYPERSPHERE2D };
 
 //! Various methods of volume scaling, @see GeometryBase::setVolume.
 enum VolumeMethod { ISOTROPIC, ISOCHORIC, XY, Z, INVALID };
@@ -337,7 +337,8 @@ class Chameleon : public GeometryBase {
     std::unique_ptr<GeometryImplementation> geometry = nullptr; //!< A concrete geometry implementation.
     Variant _type;                                              //!< Type of concrete geometry.
     std::string _name;                                          //!< Name of concrete geometry, e.g., for json.
-    void makeGeometry(const Variant type = CUBOID); //!< Creates and assigns a concrete geometry implementation.
+    void
+    makeGeometry(const Variant type = Variant::CUBOID); //!< Creates and assigns a concrete geometry implementation.
     void _setLength(const Point &l);
 
   public:
@@ -365,7 +366,7 @@ class Chameleon : public GeometryBase {
 
     static VariantName variantName(const json &j);
 
-    Chameleon(const Variant type = CUBOID);
+    Chameleon(const Variant type = Variant::CUBOID);
     Chameleon(const GeometryImplementation &geo, const Variant type);
 
     //! Copy everything, but clone the geometry.

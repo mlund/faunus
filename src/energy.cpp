@@ -591,7 +591,7 @@ void Example2D::to_json(json &j) const {
 }
 
 double ContainerOverlap::energy(Change& change) {
-    if (change && spc.geo.type != Geometry::CUBOID) { // no need to check in PBC systems
+    if (change && spc.geo.type != Geometry::Variant::CUBOID) { // no need to check in PBC systems
         // *all* groups
         if (change.dV or change.all) {
             return energyOfAllGroups();
@@ -902,7 +902,7 @@ Hamiltonian::Hamiltonian(Space& spc, const json& j) : energy_terms(this->vec) {
     }
 
     // add container overlap energy for non-cuboidal geometries
-    if (spc.geo.type != Geometry::CUBOID) {
+    if (spc.geo.type != Geometry::Variant::CUBOID) {
         emplace_back<Energy::ContainerOverlap>(spc);
         faunus_logger->debug("hamiltonian expanded with {}", energy_terms.back()->name);
     }

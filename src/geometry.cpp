@@ -560,15 +560,13 @@ void TruncatedOctahedron::to_json(json &j) const { j = {{"radius", side}}; }
 
 // =============== Chameleon==============
 
-const std::map<std::string, Variant> Chameleon::names = {{
-    {"cuboid", CUBOID},
-    {"cylinder", CYLINDER},
-    {"slit", SLIT},
-    {"sphere", SPHERE},
-    {"hexagonal", HEXAGONAL},
-    {"octahedron", OCTAHEDRON},
-    {"hypersphere2d", HYPERSPHERE2D}
-}};
+const std::map<std::string, Variant> Chameleon::names = {{{"cuboid", Variant::CUBOID},
+                                                          {"cylinder", Variant::CYLINDER},
+                                                          {"slit", Variant::SLIT},
+                                                          {"sphere", Variant::SPHERE},
+                                                          {"hexagonal", Variant::HEXAGONAL},
+                                                          {"octahedron", Variant::OCTAHEDRON},
+                                                          {"hypersphere2d", Variant::HYPERSPHERE2D}}};
 
 void from_json(const json &j, Chameleon &g) {
     try {
@@ -709,7 +707,7 @@ void Chameleon::setLength(const Point &l) {
     assert(geometry);
     _setLength(l);
     // ugly
-    if (type == CUBOID) {
+    if (type == Variant::CUBOID) {
         Cuboid &cuboid = dynamic_cast<Cuboid &>(*geometry);
         cuboid.setLength(l);
     } else {
@@ -719,25 +717,25 @@ void Chameleon::setLength(const Point &l) {
 
 void Chameleon::makeGeometry(const Variant type) {
     switch (type) {
-    case CUBOID:
+    case Variant::CUBOID:
         geometry = std::make_unique<Cuboid>();
         break;
-    case SLIT:
+    case Variant::SLIT:
         geometry = std::make_unique<Slit>();
         break;
-    case SPHERE:
+    case Variant::SPHERE:
         geometry = std::make_unique<Sphere>();
         break;
-    case CYLINDER:
+    case Variant::CYLINDER:
         geometry = std::make_unique<Cylinder>();
         break;
-    case HEXAGONAL:
+    case Variant::HEXAGONAL:
         geometry = std::make_unique<HexagonalPrism>();
         break;
-    case OCTAHEDRON:
+    case Variant::OCTAHEDRON:
         geometry = std::make_unique<TruncatedOctahedron>();
         break;
-    case HYPERSPHERE2D:
+    case Variant::HYPERSPHERE2D:
         geometry = std::make_unique<Hypersphere2d>();
         break;
     default:
@@ -1125,7 +1123,7 @@ TEST_CASE("[Faunus] Chameleon") {
         Point box_size = std::cbrt(2.0) * Point(x, y, z);
         Cuboid box(box_size);
         Cuboid geo({x, y, z});
-        Chameleon chameleon(geo, CUBOID);
+        Chameleon chameleon(geo, Variant::CUBOID);
         compare_boundary(chameleon, geo, box);
         compare_vdist(chameleon, geo, box);
         CHECK(geo.boundary_conditions.isPeriodic()[0] == true);
@@ -1138,7 +1136,7 @@ TEST_CASE("[Faunus] Chameleon") {
         Point box_size = std::cbrt(2.0) * Point(x, y, z);
         Cuboid box(box_size);
         Slit geo(x, y, z);
-        Chameleon chameleon(geo, SLIT);
+        Chameleon chameleon(geo, Variant::SLIT);
         compare_boundary(chameleon, geo, box);
         compare_vdist(chameleon, geo, box);
         CHECK(geo.boundary_conditions.isPeriodic()[0] == true);
@@ -1152,7 +1150,7 @@ TEST_CASE("[Faunus] Chameleon") {
         box_size.setConstant(std::cbrt(2.0) * 2 * radius);
         Cuboid box(box_size);
         Sphere geo(radius);
-        Chameleon chameleon(geo, SPHERE);
+        Chameleon chameleon(geo, Variant::SPHERE);
         compare_boundary(chameleon, geo, box);
         compare_vdist(chameleon, geo, box);
         CHECK(geo.boundary_conditions.isPeriodic()[0] == false);
@@ -1165,7 +1163,7 @@ TEST_CASE("[Faunus] Chameleon") {
         Point box_size = std::cbrt(2.0) * Point(2 * radius, 2 * radius, height);
         Cuboid box(box_size);
         Cylinder geo(radius, height);
-        Chameleon chameleon(geo, CYLINDER);
+        Chameleon chameleon(geo, Variant::CYLINDER);
         compare_boundary(chameleon, geo, box);
         compare_vdist(chameleon, geo, box);
         CHECK(geo.boundary_conditions.isPeriodic()[0] == false);
@@ -1178,7 +1176,7 @@ TEST_CASE("[Faunus] Chameleon") {
         Point box_size = std::cbrt(2.0) * Point(2 * edge, 2 * edge, height); // a bit larger in x-direction
         Cuboid box(box_size);
         HexagonalPrism geo(edge, height);
-        Chameleon chameleon(geo, HEXAGONAL);
+        Chameleon chameleon(geo, Variant::HEXAGONAL);
         compare_boundary(chameleon, geo, box);
         compare_vdist(chameleon, geo, box);
     }
@@ -1189,7 +1187,7 @@ TEST_CASE("[Faunus] Chameleon") {
         box_size.setConstant(std::cbrt(2.0) * edge * std::sqrt(5.0 / 2.0)); // enlarged circumradius
         Cuboid box(box_size);
         TruncatedOctahedron geo(edge);
-        Chameleon chameleon(geo, OCTAHEDRON);
+        Chameleon chameleon(geo, Variant::OCTAHEDRON);
         compare_boundary(chameleon, geo, box);
         compare_vdist(chameleon, geo, box);
     }

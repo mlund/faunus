@@ -367,7 +367,7 @@ std::function<double(const Particle &)> createGouyChapmanPotential(const json &j
 TEST_CASE("[Faunus] Gouy-Chapman") {
     using doctest::Approx;
     Geometry::Slit slit(50, 50, 50);
-    Geometry::Chameleon geometry(slit, Geometry::SLIT);
+    Geometry::Chameleon geometry(slit, Geometry::Variant::SLIT);
     json j = {{"molarity", 0.1}, {"epsr", 80}, {"linearise", false}, {"rhoinv", 100.0}};
     auto phi = Energy::createGouyChapmanPotential(j, geometry);
     Particle p;

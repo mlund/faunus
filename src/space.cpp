@@ -519,7 +519,7 @@ TEST_CASE("[Faunus] Space::updateParticles") {
     using doctest::Approx;
     Space spc;
     Geometry::Cuboid geo({100, 100, 100});
-    spc.geo = Geometry::Chameleon(geo, Geometry::CUBOID);
+    spc.geo = Geometry::Chameleon(geo, Geometry::Variant::CUBOID);
 
     spc.p.resize(2);
 

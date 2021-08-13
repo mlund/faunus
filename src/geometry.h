@@ -39,7 +39,7 @@ typedef std::function<Point(const Point &, const Point &)> DistanceFunction;
 enum class Variant { CUBOID = 0, SPHERE, CYLINDER, SLIT, HEXAGONAL, OCTAHEDRON, HYPERSPHERE2D };
 
 //! Various methods of volume scaling, @see GeometryBase::setVolume.
-enum VolumeMethod { ISOTROPIC, ISOCHORIC, XY, Z, INVALID };
+enum class VolumeMethod { ISOTROPIC, ISOCHORIC, XY, Z, INVALID };
 
 NLOHMANN_JSON_SERIALIZE_ENUM(VolumeMethod, {{VolumeMethod::INVALID, nullptr},
                                             {VolumeMethod::ISOTROPIC, "isotropic"},
@@ -79,7 +79,7 @@ class BoundaryCondition {
  * @brief An interface for all geometries.
  */
 struct GeometryBase {
-    virtual Point setVolume(double, VolumeMethod = ISOTROPIC) = 0; //!< Set volume
+    virtual Point setVolume(double, VolumeMethod = VolumeMethod::ISOTROPIC) = 0; //!< Set volume
     virtual double getVolume(int = 3) const = 0;                   //!< Get volume
     virtual void boundary(Point &) const = 0;                      //!< Apply boundary conditions
     virtual bool collision(const Point &) const = 0;               //!< Overlap with boundaries
@@ -132,7 +132,7 @@ class Cuboid : public GeometryImplementation {
     Point getLength() const override;
     double getVolume(int dim = 3) const final; // finalized to help the compiler with inlining
     void setLength(const Point &len);          // todo shall be protected
-    Point setVolume(double volume, VolumeMethod method = ISOTROPIC) override;
+    Point setVolume(double volume, VolumeMethod method = VolumeMethod::ISOTROPIC) override;
     Point vdist(const Point& a, const Point& b) const override; //!< Minimum distance vector b->a
     void boundary(Point &a) const override;
     bool collision(const Point &a) const override;
@@ -180,7 +180,7 @@ class Sphere : public GeometryImplementation {
   public:
     Point getLength() const override;
     double getVolume(int dim = 3) const override;
-    Point setVolume(double volume, VolumeMethod method = ISOTROPIC) override;
+    Point setVolume(double volume, VolumeMethod method = VolumeMethod::ISOTROPIC) override;
     Point vdist(const Point& a, const Point& b) const override; //!< Minimum distance vector b->a
     double sqdist(const Point &a, const Point &b) const { return (a - b).squaredNorm(); };
     void boundary(Point &a) const override;
@@ -223,7 +223,7 @@ class Cylinder : public GeometryImplementation {
   public:
     Point getLength() const override;
     double getVolume(int dim = 3) const override;
-    Point setVolume(double volume, VolumeMethod method = ISOTROPIC) override;
+    Point setVolume(double volume, VolumeMethod method = VolumeMethod::ISOTROPIC) override;
     Point vdist(const Point &a, const Point &b) const override;
     void boundary(Point &a) const override;
     bool collision(const Point &a) const override;
@@ -262,7 +262,7 @@ class HexagonalPrism : public GeometryImplementation {
   public:
     Point getLength() const override;
     double getVolume(int dim = 3) const override;
-    Point setVolume(double volume, VolumeMethod method = ISOTROPIC) override;
+    Point setVolume(double volume, VolumeMethod method = VolumeMethod::ISOTROPIC) override;
     Point vdist(const Point &a, const Point &b) const override;
     void boundary(Point &a) const override;
     bool collision(const Point &a) const override;
@@ -294,7 +294,7 @@ class TruncatedOctahedron : public GeometryImplementation {
   public:
     Point getLength() const override;
     double getVolume(int dim = 3) const override;
-    Point setVolume(double volume, VolumeMethod method = ISOTROPIC) override;
+    Point setVolume(double volume, VolumeMethod method = VolumeMethod::ISOTROPIC) override;
     Point vdist(const Point &a, const Point &b) const override;
     void boundary(Point &a) const override;
     bool collision(const Point &a) const override;
@@ -345,7 +345,7 @@ class Chameleon : public GeometryBase {
     const Variant &type = _type;     //!< Type of concrete geometry, read-only.
     const std::string &name = _name; //!< Name of concrete geometry, e.g., for json, read-only.
     double getVolume(int dim = 3) const override;
-    Point setVolume(double, VolumeMethod = ISOTROPIC) override;
+    Point setVolume(double, VolumeMethod = VolumeMethod::ISOTROPIC) override;
     Point getLength() const override; //!< A minimal containing cubic box.
     // setLength() needed only for Move::ReplayMove (stems from IO::XTCReader).
     void setLength(const Point &);                            //!< Sets the box dimensions.

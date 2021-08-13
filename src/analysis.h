@@ -432,7 +432,7 @@ class XTCtraj : public Analysisbase {
  * @brief Excess pressure using virtual volume move
  */
 class VirtualVolumeMove : public PerturbationAnalysisBase {
-    Geometry::VolumeMethod volume_scaling_method = Geometry::ISOTROPIC;
+    Geometry::VolumeMethod volume_scaling_method = Geometry::VolumeMethod::ISOTROPIC;
     double volume_displacement = 0.0;
     void _sample() override;
     void _from_json(const json& j) override;

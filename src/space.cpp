@@ -218,7 +218,7 @@ Point Space::scaleVolume(double Vnew, Geometry::VolumeMethod method) {
             }
         }
     }
-    if (method == Geometry::ISOCHORIC) { // ? not used for anything...
+    if (method == Geometry::VolumeMethod::ISOCHORIC) { // ? not used for anything...
         Vold = std::pow(Vold, 1. / 3.);  // ?
     }
     for (auto trigger_function : scaleVolumeTriggers) { // external clients may have added function

@@ -47,7 +47,7 @@ NLOHMANN_JSON_SERIALIZE_ENUM(VolumeMethod, {{VolumeMethod::INVALID, nullptr},
                                             {VolumeMethod::XY, "xy"},
                                             {VolumeMethod::Z, "z"}})
 
-enum Coordinates { ORTHOGONAL, ORTHOHEXAGONAL, TRUNC_OCTAHEDRAL, NON3D };
+enum class Coordinates { ORTHOGONAL, ORTHOHEXAGONAL, TRUNC_OCTAHEDRAL, NON3D };
 enum class Boundary : int { FIXED = 0, PERIODIC = 1 };
 
 /**
@@ -70,7 +70,7 @@ class BoundaryCondition {
 
     Eigen::Matrix<bool, 3, 1> isPeriodic() const;
 
-    BoundaryCondition(Coordinates coordinates = ORTHOGONAL,
+    BoundaryCondition(Coordinates coordinates = Coordinates::ORTHOGONAL,
                       BoundaryXYZ boundary = {Boundary::FIXED, Boundary::FIXED, Boundary::FIXED})
         : coordinates(coordinates), direction(boundary){};
 };
@@ -390,7 +390,7 @@ inline bool Chameleon::collision(const Point &a) const {
 
 inline void Chameleon::boundary(Point &a) const {
     const auto &boundary_conditions = geometry->boundary_conditions;
-    if (boundary_conditions.coordinates == ORTHOGONAL) {
+    if (boundary_conditions.coordinates == Coordinates::ORTHOGONAL) {
         if (boundary_conditions.direction.x() == Boundary::PERIODIC) {
             if (std::fabs(a.x()) > len_half.x())
                 a.x() -= len.x() * anint(a.x() * len_inv.x());
@@ -411,7 +411,7 @@ inline void Chameleon::boundary(Point &a) const {
 inline Point Chameleon::vdist(const Point &a, const Point &b) const {
     Point distance;
     const auto &boundary_conditions = geometry->boundary_conditions;
-    if (boundary_conditions.coordinates == ORTHOGONAL) {
+    if (boundary_conditions.coordinates == Coordinates::ORTHOGONAL) {
         distance = a - b;
         if (boundary_conditions.direction.x() == Boundary::PERIODIC) {
             if (distance.x() > len_half.x())
@@ -438,7 +438,7 @@ inline Point Chameleon::vdist(const Point &a, const Point &b) const {
 }
 
 inline double Chameleon::sqdist(const Point &a, const Point &b) const {
-    if (geometry->boundary_conditions.coordinates == ORTHOGONAL) {
+    if (geometry->boundary_conditions.coordinates == Coordinates::ORTHOGONAL) {
         if constexpr (true) {
             Point d((a - b).cwiseAbs());
             return (d - (d.array() > len_half.array()).cast<double>().matrix().cwiseProduct(len_or_zero)).squaredNorm();

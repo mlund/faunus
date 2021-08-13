@@ -23,7 +23,8 @@ Eigen::Matrix<bool, 3, 1> BoundaryCondition::isPeriodic() const {
 GeometryImplementation::~GeometryImplementation() = default;
 
 Cuboid::Cuboid(const Point &side_length) {
-    boundary_conditions = BoundaryCondition(ORTHOGONAL, {Boundary::PERIODIC, Boundary::PERIODIC, Boundary::PERIODIC});
+    boundary_conditions =
+        BoundaryCondition(Coordinates::ORTHOGONAL, {Boundary::PERIODIC, Boundary::PERIODIC, Boundary::PERIODIC});
     setLength(side_length);
 }
 
@@ -140,7 +141,8 @@ void Cuboid::to_json(json &j) const { j = {{"length", box}}; }
 // =============== Slit ===============
 
 Slit::Slit(const Point &p) : Tbase(p) {
-    boundary_conditions = BoundaryCondition(ORTHOGONAL, {Boundary::PERIODIC, Boundary::PERIODIC, Boundary::FIXED});
+    boundary_conditions =
+        BoundaryCondition(Coordinates::ORTHOGONAL, {Boundary::PERIODIC, Boundary::PERIODIC, Boundary::FIXED});
 }
 
 Slit::Slit(double x, double y, double z) : Slit(Point(x, y, z)) {}
@@ -149,7 +151,8 @@ Slit::Slit(double x) : Slit(x, x, x) {}
 // =============== Sphere ===============
 
 Sphere::Sphere(double radius) : radius(radius) {
-    boundary_conditions = BoundaryCondition(ORTHOGONAL, {Boundary::FIXED, Boundary::FIXED, Boundary::FIXED});
+    boundary_conditions =
+        BoundaryCondition(Coordinates::ORTHOGONAL, {Boundary::FIXED, Boundary::FIXED, Boundary::FIXED});
 }
 
 Point Sphere::getLength() const { return {2.0 * radius, 2.0 * radius, 2.0 * radius}; }
@@ -212,7 +215,9 @@ double Sphere::getRadius() const { return radius; }
 
 // =============== Hypersphere 2D ===============
 
-Hypersphere2d::Hypersphere2d(double radius) : Sphere(radius) { boundary_conditions = BoundaryCondition(NON3D); }
+Hypersphere2d::Hypersphere2d(double radius) : Sphere(radius) {
+    boundary_conditions = BoundaryCondition(Coordinates::NON3D);
+}
 
 Point Hypersphere2d::vdist(const Point &a, const Point &b) const {
     // ugly but works, needs fixing though...
@@ -242,7 +247,8 @@ const Eigen::Matrix3d HexagonalPrism::cartesian2rhombic = rhombic2cartesian.inve
 
 HexagonalPrism::HexagonalPrism(double side, double height) {
     // the current implementation is hardcoded as bellow and ignores other periodic_directions settings
-    boundary_conditions = BoundaryCondition(ORTHOHEXAGONAL, {Boundary::PERIODIC, Boundary::PERIODIC, Boundary::FIXED});
+    boundary_conditions =
+        BoundaryCondition(Coordinates::ORTHOHEXAGONAL, {Boundary::PERIODIC, Boundary::PERIODIC, Boundary::FIXED});
     set_box(side, height);
 }
 
@@ -360,7 +366,8 @@ double HexagonalPrism::height() const { return box.z(); }
 // =============== Cylinder ===============
 
 Cylinder::Cylinder(double radius, double height) : radius(radius), height(height) {
-    boundary_conditions = BoundaryCondition(ORTHOGONAL, {Boundary::FIXED, Boundary::FIXED, Boundary::PERIODIC});
+    boundary_conditions =
+        BoundaryCondition(Coordinates::ORTHOGONAL, {Boundary::FIXED, Boundary::FIXED, Boundary::PERIODIC});
 }
 
 Point Cylinder::getLength() const { return {2.0 * radius, 2.0 * radius, height}; }
@@ -444,7 +451,8 @@ void Cylinder::to_json(json &j) const { j = {{"radius", radius}, {"length", heig
 
 TruncatedOctahedron::TruncatedOctahedron(double side) : side(side) {
     // the current implementation is hardcoded as bellow and ignores other periodic_directions settings
-    boundary_conditions = BoundaryCondition(TRUNC_OCTAHEDRAL, {Boundary::PERIODIC, Boundary::PERIODIC, Boundary::PERIODIC});
+    boundary_conditions =
+        BoundaryCondition(Coordinates::TRUNC_OCTAHEDRAL, {Boundary::PERIODIC, Boundary::PERIODIC, Boundary::PERIODIC});
 }
 
 Point TruncatedOctahedron::getLength() const {
@@ -767,7 +775,7 @@ void Chameleon::_setLength(const Point &l) {
     // this is to speed up the `sqdist()` by avoiding branching when testing
     // for PBC in each direction. The variable `len_or_zero` either equals
     // `len` for PBC or zero if not.
-    if (geometry->boundary_conditions.coordinates == ORTHOGONAL)
+    if (geometry->boundary_conditions.coordinates == Coordinates::ORTHOGONAL)
         for (size_t i = 0; i < 3; i++)
             len_or_zero[i] = len[i] * (geometry->boundary_conditions.direction[i] == Boundary::PERIODIC);
 }

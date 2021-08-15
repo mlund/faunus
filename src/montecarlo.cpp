@@ -208,16 +208,11 @@ double MetropolisMonteCarlo::getEnergyChange(const double new_energy, const doub
 void MetropolisMonteCarlo::move() {
     assert(moves);
     number_of_sweeps++;
-    for (int i = 0; i < moves->repeat(); i++) {
-        if (auto move_it = moves->sample(); move_it != moves->end()) { // pick random move
-            performMove(**move_it);
-        }
+    for (auto& move : moves->repeatedStochasticMoves()) {
+        performMove(*move);
     }
-    // run _hidden_ moves (weight=0) once (default) or less per MC sweep
-    for (auto& move : moves->defusedMoves()) {
-        if (number_of_sweeps % move->steps_between_samples == 0) {
-            performMove(*move);
-        }
+    for (auto& move : moves->constantIntervalMoves(number_of_sweeps)) { // e.g. parallel tempering
+        performMove(*move);
     }
 }
 

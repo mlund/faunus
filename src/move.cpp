@@ -18,13 +18,15 @@ void MoveBase::from_json(const json &j) {
     if (const auto it = j.find("repeat"); it != j.end()) {
         if (it->is_number()) {
             repeat = it->get<int>();
-        } else if (it->is_string()) {
-            if (it->get<std::string>() == "N") {
-                repeat = -1;
-            } else {
-                throw std::runtime_error("Unknown string value for 'repeat'");
-            }
+        } else if (it->is_string() && it->get<std::string>() == "N") {
+            repeat = -1;
+        } else {
+            throw std::runtime_error("invalid 'repeat'");
         }
+    }
+    sweep_interval = j.value("nstep", 1); // Non-stochastic moves are defined with `repeat=0`...
+    if (sweep_interval > 1) {             // ...the move is then instead run at a fixed sweep interval
+        repeat = 0;
     }
     _from_json(j);
     if (repeat < 0) {
@@ -82,7 +84,7 @@ void MoveBase::_accept([[maybe_unused]] Change& change) {}
 
 void MoveBase::_reject([[maybe_unused]] Change& change) {}
 
-MoveBase::MoveBase(Space& spc, const std::string& name, const std::string& cite) : spc(spc), name(name), cite(cite) {}
+MoveBase::MoveBase(Space& spc, const std::string& name, const std::string& cite) : cite(cite), spc(spc), name(name) {}
 
 void from_json(const json &j, MoveBase &m) { m.from_json(j); }
 
@@ -469,7 +471,6 @@ void ParallelTempering::_reject(Change &) {
 void ParallelTempering::_from_json(const json &j) {
     particle_transmitter.setFormat(j.value("format", "XYZQI"s));
     volume_scaling_method = j.value("volume_scale", Geometry::VolumeMethod::ISOTROPIC);
-    steps_between_samples = j.value("nstep", 1); //!< Number of steps between samples
 }
 
 ParallelTempering::ParallelTempering(Space &spc, MPI::MPIController &mpi)

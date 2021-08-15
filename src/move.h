@@ -8,6 +8,8 @@
 #include "io.h"
 #include "aux/timers.h"
 #include <range/v3/view/filter.hpp>
+#include <range/v3/view/iota.hpp>
+#include <range/v3/view/indirect.hpp>
 #include <optional>
 
 namespace Faunus {
@@ -18,6 +20,8 @@ class Hamiltonian;
 
 namespace Move {
 
+class Propagator;
+
 class MoveBase {
   private:
     virtual void _move(Change& change) = 0;                    //!< Perform move and modify change object
@@ -27,18 +31,21 @@ class MoveBase {
     virtual void _from_json(const json& j) = 0;                //!< Extra info for report if needed
     TimeRelativeOfTotal<std::chrono::microseconds> timer;      //!< Timer for whole move
     TimeRelativeOfTotal<std::chrono::microseconds> timer_move; //!< Timer for _move() only
-  protected:
-    Space& spc;                                  //!< Space to operate on
-    unsigned long number_of_attempted_moves = 0; //!< Counter for total number of move attempts
+
+    friend Propagator;
     unsigned long number_of_accepted_moves = 0;
     unsigned long number_of_rejected_moves = 0;
+    unsigned int sweep_interval = 1; //!< Run interval for defused moves (with weight = 0)
+    std::string cite;                //!< Reference, preferable a short-doi, e.g. "doi:10/b9jq"
+
+  protected:
+    Space& spc;                                  //!< Space to operate on
+    int repeat = 1;                              //!< How many times the move should be repeated per sweep
+    unsigned long number_of_attempted_moves = 0; //!< Counter for total number of move attempts
 
   public:
     static Random slump; //!< Shared for all moves
     std::string name;    //!< Name of move
-    std::string cite;    //!< Reference, preferable a short-doi, e.g. "doi:10/b9jq"
-    int repeat = 1;      //!< How many times the move should be repeated per sweep
-    size_t steps_between_samples = 1; //!< Run interval for defused moves (with weight = 0)
 
     void from_json(const json& j);
     void to_json(json& j) const; //!< JSON report w. statistics, output etc.
@@ -540,11 +547,31 @@ class Propagator {
      * @brief Range of moves excluded from the `sample()` algorithm above due to ZERO weight
      *
      * Moves added with zero weight are excluded from the `sample()` function but can be
-     * accessed through this function. This is used to run these _hidden_ moves exactly
-     * once per Monte Carlo sweep.
+     * accessed through this function. This is used to run these moves at a fixed frequency
+     * Monte Carlo sweep frequency. This is used to e.g. parallel tempering that in the current
+     * implementation must be run at fixed intervals dur to MPI concurrency.
+     *
+     * @param number_of_sweeps Current sweep count to decide if move should be included based on `sweep_interval`
+     * @returns Range with move pointers to be run at constant interval, i.e. non-stochastically
      */
-    auto defusedMoves() {
-        return _moves | ranges::cpp20::views::filter([&](auto move) { return move->repeat == 0; });
+    auto constantIntervalMoves(const unsigned int number_of_sweeps = 1) {
+        return _moves | ranges::cpp20::views::filter([&](auto& move) {
+                   return (move->repeat == 0) && (number_of_sweeps % move->sweep_interval == 0);
+               });
+    }
+
+    /**
+     * Generates a range of repeated, randomized move pointers guaranteed to be valid.
+     * All moves with `repeat=0` are excluded.
+     *
+     * @returns Range of valid move pointers
+     */
+    auto repeatedStochasticMoves() {
+        return ranges::views::iota(0, repeat()) |
+               ranges::cpp20::views::transform([&]([[maybe_unused]] auto count) { return sample(); }) |
+               ranges::cpp20::views::filter(
+                   [&](auto move_iter) { return move_iter < _moves.end() && (*move_iter)->repeat != 0; }) |
+               ranges::views::indirect; // dereference iterator -> shared_ptr
     }
 };
 

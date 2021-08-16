@@ -339,10 +339,10 @@ Propagator::Propagator(const json& j, Space& spc, Energy::Hamiltonian& pot, [[ma
     }
 }
 
-void Propagator::addWeight(double weight) {
+void Propagator::addWeight(const double weight) {
     _weights.push_back(weight);
-    distribution = std::discrete_distribution<>(_weights.begin(), _weights.end());
-    _repeat = int(std::accumulate(_weights.begin(), _weights.end(), 0.0));
+    distribution = std::discrete_distribution<std::size_t>(_weights.begin(), _weights.end());
+    _repeat = static_cast<unsigned int>(std::accumulate(_weights.begin(), _weights.end(), 0.0));
 }
 
 void to_json(json &j, const Propagator &propagator) { j = propagator._moves; }

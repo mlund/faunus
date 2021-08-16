@@ -514,28 +514,26 @@ class ParallelTempering : public MoveBase {
  */
 class Propagator {
   private:
-    int _repeat;
-    std::discrete_distribution<> distribution;
+    unsigned int _repeat;
+    std::discrete_distribution<std::size_t> distribution;
     BasePointerVector<MoveBase> _moves; //!< list of moves
     std::vector<double> _weights;       //!< list of weights for each move
-    void addWeight(double weight = 1);
+    void addWeight(double weight = 1.0);
 
   public:
     Propagator() = default;
     Propagator(const json &j, Space &spc, Energy::Hamiltonian &pot, MPI::MPIController &mpi);
     auto repeat() const -> decltype(_repeat) { return _repeat; }
     auto moves() const -> const decltype(_moves) & { return _moves; };
+
     auto sample() {
-        if (!_moves.empty()) {
-            assert(_weights.size() == _moves.size());
 #ifdef ENABLE_MPI
-            //!< Avoid parallel processes to get out of sync
-            //!< Needed for replica exchange or parallel tempering
-            int offset = distribution(MPI::mpi.random.engine);
+        auto& random_engine = MPI::mpi.random.engine; // parallel processes (tempering) must be in sync
 #else
-            int offset = distribution(Move::MoveBase::slump.engine);
+        auto& random_engine = Move::MoveBase::slump.engine;
 #endif
-            return _moves.begin() + offset;
+        if (!_moves.empty()) {
+            return _moves.begin() + distribution(random_engine);
         }
         return _moves.end();
     } //!< Pick move from a weighted, random distribution
@@ -554,9 +552,9 @@ class Propagator {
      * @param number_of_sweeps Current sweep count to decide if move should be included based on `sweep_interval`
      * @returns Range with move pointers to be run at constant interval, i.e. non-stochastically
      */
-    auto constantIntervalMoves(const unsigned int number_of_sweeps = 1) {
+    auto constantIntervalMoves(const unsigned int sweep_number = 1) {
         return _moves | ranges::cpp20::views::filter([&](auto& move) {
-                   return (move->repeat == 0) && (number_of_sweeps % move->sweep_interval == 0);
+                   return (move->repeat == 0) && (sweep_number % move->sweep_interval == 0);
                });
     }
 
@@ -567,7 +565,7 @@ class Propagator {
      * @returns Range of valid move pointers
      */
     auto repeatedStochasticMoves() {
-        return ranges::views::iota(0, repeat()) |
+        return ranges::views::iota(0U, repeat()) |
                ranges::cpp20::views::transform([&]([[maybe_unused]] auto count) { return sample(); }) |
                ranges::cpp20::views::filter(
                    [&](auto move_iter) { return move_iter < _moves.end() && (*move_iter)->repeat != 0; }) |

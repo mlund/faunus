@@ -527,18 +527,33 @@ std::unique_ptr<MoveBase> createMove(const std::string& name, const json& proper
  */
 class Propagator {
   private:
-    unsigned int number_of_moves_per_sweep;               //!< Sum of all weights
-    BasePointerVector<MoveBase> moves;                    //!< list of moves
-    std::vector<double> weights;                          //!< list of weights for each move
-    std::discrete_distribution<std::size_t> distribution; //!< Probability distribution for all moves
-    void addWeight(double weight = 1.0);                  //!< Register weight of a newly added move
-    using move_iterator = decltype(moves.vec)::iterator;  //!< Iterator to pointer to move
-    move_iterator sample();                               //!< Pick move from a weighted, random distribution
+    unsigned int number_of_moves_per_sweep;                //!< Sum of all weights
+    BasePointerVector<MoveBase> moves;                     //!< list of moves
+    std::vector<double> repeats;                           //!< list of repeats (weights) for `moves`
+    std::discrete_distribution<unsigned int> distribution; //!< Probability distribution for `moves`
+    using move_iterator = decltype(moves.vec)::iterator;   //!< Iterator to move pointer
+    move_iterator sample();                                //!< Pick move from a weighted, random distribution
 
   public:
     Propagator(const json& j, Space& spc, Energy::Hamiltonian& hamiltonian, MPI::MPIController& mpi_controller);
+    void addMove(std::shared_ptr<MoveBase>&& move); //!< Add new move
     const BasePointerVector<MoveBase>& getMoves() const;
-    friend void to_json(json &j, const Propagator &propagator);
+    friend void to_json(json& j, const Propagator& propagator);
+
+    /**
+     * Generates a range of repeated, randomized move pointers guaranteed to be valid.
+     * All moves with `repeat=0` are excluded. Effectively each registered move is called
+     * with a probability proportional to it's `repeat` value. The random picking of moves is repeated
+     * $\sum repeat_i$ times so that running over the range constitutes a complete MC "sweep".
+     *
+     * @returns Range of valid move pointers
+     */
+    auto repeatedStochasticMoves() {
+        auto is_valid_and_stochastic = [&](auto move) { return move < moves.end() && (*move)->repeat != 0; };
+        return ranges::views::iota(0U, number_of_moves_per_sweep) |
+               ranges::cpp20::views::transform([&]([[maybe_unused]] auto count) { return sample(); }) |
+               ranges::cpp20::views::filter(is_valid_and_stochastic) | ranges::views::indirect; // dereference iterator
+    }
 
     /**
      * @brief Range of moves excluded from the `sample()` algorithm above due to ZERO weight
@@ -552,25 +567,10 @@ class Propagator {
      * @returns Range with move pointers to be run at constant interval, i.e. non-stochastically
      */
     auto constantIntervalMoves(const unsigned int sweep_number = 1) {
-        return moves | ranges::cpp20::views::filter([&](auto& move) {
-                   return (move->repeat == 0) && (sweep_number % move->sweep_interval == 0);
-               });
-    }
-
-    /**
-     * Generates a range of repeated, randomized move pointers guaranteed to be valid.
-     * All moves with `repeat=0` are excluded. Effectively each registered move is called
-     * with a probability proportional to `weight`. The random picking of moves is repeated
-     * \sum weight times, whereby each move
-     *
-     * @returns Range of valid move pointers
-     */
-    auto repeatedStochasticMoves() {
-        return ranges::views::iota(0U, number_of_moves_per_sweep) |
-               ranges::cpp20::views::transform([&]([[maybe_unused]] auto count) { return sample(); }) |
-               ranges::cpp20::views::filter(
-                   [&](auto move_iter) { return move_iter < moves.end() && (*move_iter)->repeat != 0; }) |
-               ranges::views::indirect; // dereference iterator -> shared_ptr
+        auto is_static_and_time_to_sample = [&](auto& move) {
+            return (move->repeat == 0) && (sweep_number % move->sweep_interval == 0);
+        };
+        return moves | ranges::cpp20::views::filter(is_static_and_time_to_sample);
     }
 };
 

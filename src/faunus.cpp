@@ -7,6 +7,7 @@
 #include "docopt.h"
 #include "progress_tracker.h"
 #include "spdlog/spdlog.h"
+#include "move.h"
 #include <spdlog/sinks/null_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
@@ -34,6 +35,7 @@ int runUnittests(int argc, const char* const* argv);
 std::string versionString();
 void setInformationLevelAndLoggers(bool quiet, docopt::Options& args);
 json getUserInput(docopt::Options& args);
+void setRandomNumberGenerator(const json& input);
 void loadState(docopt::Options& args, MetropolisMonteCarlo& simulation);
 void checkElectroNeutrality(MetropolisMonteCarlo& simulation);
 void showErrorMessage(std::exception& exception);
@@ -94,6 +96,10 @@ int main(int argc, const char** argv) {
         setInformationLevelAndLoggers(quiet, args);
 
         const auto input = getUserInput(args);
+
+        pc::temperature = input.at("temperature").get<double>() * 1.0_K;
+        setRandomNumberGenerator(input);
+
         MetropolisMonteCarlo simulation(input, Faunus::MPI::mpi);
         loadState(args, simulation);
         checkElectroNeutrality(simulation);
@@ -112,6 +118,12 @@ int main(int argc, const char** argv) {
             playRetroMusic();
         }
         return EXIT_FAILURE;
+    }
+}
+void setRandomNumberGenerator(const json& input) {
+    if (auto it = input.find("random"); it != input.end()) {
+        from_json(*it, Move::MoveBase::slump); // static --> shared for all moves
+        from_json(*it, Faunus::random);
     }
 }
 
@@ -328,7 +340,6 @@ json getUserInput(docopt::Options& args) {
             }
             j = openjson(filename);
         }
-        pc::temperature = j.at("temperature").get<double>() * 1.0_K;
         return j;
     } catch (json::parse_error& e) {
         faunus_logger->error(e.what());

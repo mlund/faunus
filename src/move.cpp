@@ -317,7 +317,8 @@ std::unique_ptr<MoveBase> createMove(const std::string& name, const json& proper
 #else
             throw ConfigurationError("{} requires that Faunus is compiled with MPI", name);
 #endif
-        } else {
+        }
+        if (!move) {
             throw ConfigurationError("unknown move '{}'", name);
         }
         move->from_json(properties);
@@ -325,28 +326,27 @@ std::unique_ptr<MoveBase> createMove(const std::string& name, const json& proper
     } catch (std::exception& e) { throw ConfigurationError("error creating move -> {}", e.what()); }
 }
 
+void Propagator::addMove(std::shared_ptr<MoveBase>&& move) {
+    if (!move) {
+        throw std::runtime_error("invalid move");
+    }
+    moves.vec.emplace_back(move);
+    repeats.push_back(static_cast<double>(move->repeat));
+    distribution = std::discrete_distribution<unsigned int>(repeats.begin(), repeats.end());
+    number_of_moves_per_sweep = static_cast<unsigned int>(std::accumulate(repeats.begin(), repeats.end(), 0.0));
+}
+
 Propagator::Propagator(const json& j, Space& spc, Energy::Hamiltonian& hamiltonian,
                        MPI::MPIController& mpi_controller) {
-    if (j.contains("random")) {
-        MoveBase::slump = j["random"]; // slump is static --> shared for all moves
-        Faunus::random = j["random"];
-    }
     for (const auto& j_move : j.at("moves")) { // loop over move list
-        const auto& [move_name, parameters_json] = jsonSingleItem(j_move);
+        const auto& [name, parameters] = jsonSingleItem(j_move);
         try {
-            moves.vec.emplace_back(createMove(move_name, parameters_json, spc, hamiltonian, mpi_controller));
-            addWeight(moves.back()->repeat);
+            addMove(createMove(name, parameters, spc, hamiltonian, mpi_controller));
         } catch (std::exception& e) {
-            usageTip.pick(move_name);
+            usageTip.pick(name);
             throw ConfigurationError("{}", e.what()).attachJson(j_move);
         }
     }
-}
-
-void Propagator::addWeight(const double weight) {
-    weights.push_back(weight);
-    distribution = std::discrete_distribution<std::size_t>(weights.begin(), weights.end());
-    number_of_moves_per_sweep = static_cast<unsigned int>(std::accumulate(weights.begin(), weights.end(), 0.0));
 }
 
 void to_json(json& j, const Propagator& propagator) { j = propagator.moves; }

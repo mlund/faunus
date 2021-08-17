@@ -1,11 +1,14 @@
 #include "group.h"
 #include "aux/eigensupport.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wuseless-cast"
 #include <Eigen/Geometry>
 #include <range/v3/view/sample.hpp>
 #include <range/v3/view/common.hpp>
 #include <cereal/archives/binary.hpp>
 #include <cereal/types/memory.hpp>
 #include <nlohmann/json.hpp>
+#pragma GCC diagnostic pop
 
 namespace Faunus {
 

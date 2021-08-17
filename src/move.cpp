@@ -9,6 +9,7 @@
 #include "aux/iteratorsupport.h"
 #include "aux/eigensupport.h"
 #include "spdlog/spdlog.h"
+#include <range/v3/view/counted.hpp>
 
 namespace Faunus::Move {
 

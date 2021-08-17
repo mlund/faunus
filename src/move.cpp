@@ -336,10 +336,10 @@ void Propagator::addMove(std::shared_ptr<MoveBase>&& move) {
     number_of_moves_per_sweep = static_cast<unsigned int>(std::accumulate(repeats.begin(), repeats.end(), 0.0));
 }
 
-Propagator::Propagator(const json& move_section, Space& spc, Energy::Hamiltonian& hamiltonian,
+Propagator::Propagator(const json& list_of_moves, Space& spc, Energy::Hamiltonian& hamiltonian,
                        MPI::MPIController& mpi_controller) {
-    assert(move_section.is_array());
-    for (const auto& j : move_section) { // loop over move list
+    assert(list_of_moves.is_array());
+    for (const auto& j : list_of_moves) { // loop over move list
         const auto& [name, parameters] = jsonSingleItem(j);
         try {
             addMove(createMove(name, parameters, spc, hamiltonian, mpi_controller));

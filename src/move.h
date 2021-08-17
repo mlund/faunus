@@ -535,11 +535,11 @@ class Propagator {
     move_iterator sample();                                //!< Pick move from a weighted, random distribution
 
   public:
-    Propagator(const json& move_section, Space& spc, Energy::Hamiltonian& hamiltonian,
+    Propagator(const json& list_of_moves, Space& spc, Energy::Hamiltonian& hamiltonian,
                MPI::MPIController& mpi_controller);
-    void addMove(std::shared_ptr<MoveBase>&& move); //!< Add new move
-    const BasePointerVector<MoveBase>& getMoves() const;
-    friend void to_json(json& j, const Propagator& propagator);
+    void addMove(std::shared_ptr<MoveBase>&& move);             //!< Register new move with correct weight
+    const BasePointerVector<MoveBase>& getMoves() const;        //!< Get list of moves
+    friend void to_json(json& j, const Propagator& propagator); //!< Generate json output
 
     /**
      * Generates a range of repeated, randomized move pointers guaranteed to be valid.
@@ -551,7 +551,7 @@ class Propagator {
      */
     auto repeatedStochasticMoves() {
         auto is_valid_and_stochastic = [&](auto move) { return move < moves.end() && (*move)->repeat != 0; };
-        return ranges::views::iota(0U, number_of_moves_per_sweep) |
+        return ranges::cpp20::views::iota(0U, number_of_moves_per_sweep) |
                ranges::cpp20::views::transform([&]([[maybe_unused]] auto count) { return sample(); }) |
                ranges::cpp20::views::filter(is_valid_and_stochastic) | ranges::views::indirect; // dereference iterator
     }

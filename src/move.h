@@ -40,7 +40,10 @@ class MoveBase {
 
   protected:
     Space& spc;                                  //!< Space to operate on
-    int repeat = 1;                              //!< How many times the move should be repeated per sweep
+    int repeat = 1;
+
+  protected:
+    //!< How many times the move should be repeated per sweep
     unsigned long number_of_attempted_moves = 0; //!< Counter for total number of move attempts
 
   public:
@@ -52,6 +55,7 @@ class MoveBase {
     void move(Change& change);   //!< Perform move and modify given change object
     void accept(Change& change);
     void reject(Change& change);
+    void setRepeat(int repeat);
     virtual double bias(Change& change, double old_energy,
                         double new_energy); //!< adds extra energy change not captured by the Hamiltonian
     MoveBase(Space& spc, const std::string& name, const std::string& cite);
@@ -509,36 +513,31 @@ class ParallelTempering : public MoveBase {
 #endif
 
 /**
+ * Factory for creating instances of fully constructed moves based on names (string)
+ *
+ * @returns unique pointer to move
+ * @throw if invalid name or input parameters
+ */
+std::unique_ptr<MoveBase> createMove(const std::string& name, const json& properties, Space& spc,
+                                     Energy::Hamiltonian& hamiltonian, MPI::MPIController& mpi_controller);
+
+/**
  * @brief Class storing a list of MC moves with their probability weights and
  * randomly selecting one.
  */
 class Propagator {
   private:
-    unsigned int _repeat;
-    std::discrete_distribution<std::size_t> distribution;
-    BasePointerVector<MoveBase> _moves; //!< list of moves
-    std::vector<double> _weights;       //!< list of weights for each move
-    void addWeight(double weight = 1.0);
+    unsigned int number_of_moves_per_sweep;               //!< Sum of all weights
+    BasePointerVector<MoveBase> moves;                    //!< list of moves
+    std::vector<double> weights;                          //!< list of weights for each move
+    std::discrete_distribution<std::size_t> distribution; //!< Probability distribution for all moves
+    void addWeight(double weight = 1.0);                  //!< Register weight of a newly added move
+    using move_iterator = decltype(moves.vec)::iterator;  //!< Iterator to pointer to move
+    move_iterator sample();                               //!< Pick move from a weighted, random distribution
 
   public:
-    Propagator() = default;
-    Propagator(const json &j, Space &spc, Energy::Hamiltonian &pot, MPI::MPIController &mpi);
-    auto repeat() const -> decltype(_repeat) { return _repeat; }
-    auto moves() const -> const decltype(_moves) & { return _moves; };
-
-    auto sample() {
-#ifdef ENABLE_MPI
-        auto& random_engine = MPI::mpi.random.engine; // parallel processes (tempering) must be in sync
-#else
-        auto& random_engine = Move::MoveBase::slump.engine;
-#endif
-        if (!_moves.empty()) {
-            return _moves.begin() + distribution(random_engine);
-        }
-        return _moves.end();
-    } //!< Pick move from a weighted, random distribution
-    auto end() { return _moves.end(); }
-
+    Propagator(const json& j, Space& spc, Energy::Hamiltonian& hamiltonian, MPI::MPIController& mpi_controller);
+    const BasePointerVector<MoveBase>& getMoves() const;
     friend void to_json(json &j, const Propagator &propagator);
 
     /**
@@ -553,22 +552,24 @@ class Propagator {
      * @returns Range with move pointers to be run at constant interval, i.e. non-stochastically
      */
     auto constantIntervalMoves(const unsigned int sweep_number = 1) {
-        return _moves | ranges::cpp20::views::filter([&](auto& move) {
+        return moves | ranges::cpp20::views::filter([&](auto& move) {
                    return (move->repeat == 0) && (sweep_number % move->sweep_interval == 0);
                });
     }
 
     /**
      * Generates a range of repeated, randomized move pointers guaranteed to be valid.
-     * All moves with `repeat=0` are excluded.
+     * All moves with `repeat=0` are excluded. Effectively each registered move is called
+     * with a probability proportional to `weight`. The random picking of moves is repeated
+     * \sum weight times, whereby each move
      *
      * @returns Range of valid move pointers
      */
     auto repeatedStochasticMoves() {
-        return ranges::views::iota(0U, repeat()) |
+        return ranges::views::iota(0U, number_of_moves_per_sweep) |
                ranges::cpp20::views::transform([&]([[maybe_unused]] auto count) { return sample(); }) |
                ranges::cpp20::views::filter(
-                   [&](auto move_iter) { return move_iter < _moves.end() && (*move_iter)->repeat != 0; }) |
+                   [&](auto move_iter) { return move_iter < moves.end() && (*move_iter)->repeat != 0; }) |
                ranges::views::indirect; // dereference iterator -> shared_ptr
     }
 };

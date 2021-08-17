@@ -86,6 +86,8 @@ void MoveBase::_reject([[maybe_unused]] Change& change) {}
 
 MoveBase::MoveBase(Space& spc, const std::string& name, const std::string& cite) : cite(cite), spc(spc), name(name) {}
 
+void MoveBase::setRepeat(const int new_repeat) { repeat = new_repeat; }
+
 void from_json(const json &j, MoveBase &m) { m.from_json(j); }
 
 void to_json(json &j, const MoveBase &m) {
@@ -276,76 +278,92 @@ void AtomicTranslateRotate::saveHistograms() {
 
 AtomicTranslateRotate::~AtomicTranslateRotate() { saveHistograms(); }
 
-Propagator::Propagator(const json& j, Space& spc, Energy::Hamiltonian& pot, [[maybe_unused]] MPI::MPIController& mpi) {
-    if (j.count("random") == 1) {
+std::unique_ptr<MoveBase> createMove(const std::string& name, const json& properties, Space& spc,
+                                     Energy::Hamiltonian& hamiltonian, MPI::MPIController& mpi_controller) {
+    try {
+        std::unique_ptr<MoveBase> move;
+        if (name == "moltransrot") {
+            move = std::make_unique<TranslateRotate>(spc);
+        } else if (name == "smartmoltransrot") {
+            move = std::make_unique<SmartTranslateRotate>(spc);
+        } else if (name == "conformationswap") {
+            move = std::make_unique<ConformationSwap>(spc);
+        } else if (name == "transrot") {
+            move = std::make_unique<AtomicTranslateRotate>(spc, hamiltonian);
+        } else if (name == "pivot") {
+            move = std::make_unique<PivotMove>(spc);
+        } else if (name == "crankshaft") {
+            move = std::make_unique<CrankshaftMove>(spc);
+        } else if (name == "volume") {
+            move = std::make_unique<VolumeMove>(spc);
+        } else if (name == "charge") {
+            move = std::make_unique<ChargeMove>(spc);
+        } else if (name == "chargetransfer") {
+            move = std::make_unique<ChargeTransfer>(spc);
+        } else if (name == "rcmc") {
+            move = std::make_unique<SpeciationMove>(spc);
+        } else if (name == "quadrantjump") {
+            move = std::make_unique<QuadrantJump>(spc);
+        } else if (name == "cluster") {
+            move = std::make_unique<Cluster>(spc);
+        } else if (name == "replay") {
+            move = std::make_unique<ReplayMove>(spc);
+        } else if (name == "langevin_dynamics") {
+            move = std::make_unique<LangevinDynamics>(spc, hamiltonian);
+        } else if (name == "temper") {
+#ifdef ENABLE_MPI
+            move = std::make_unique<ParallelTempering>(spc, mpi_controller);
+            move->setRepeat(0); // zero weight moves are run at the end of each sweep
+#else
+            throw ConfigurationError("{} requires that Faunus is compiled with MPI", name);
+#endif
+        } else {
+            throw ConfigurationError("unknown move '{}'", name);
+        }
+        move->from_json(properties);
+        return move;
+    } catch (std::exception& e) { throw ConfigurationError("error creating move -> {}", e.what()); }
+}
+
+Propagator::Propagator(const json& j, Space& spc, Energy::Hamiltonian& hamiltonian,
+                       MPI::MPIController& mpi_controller) {
+    if (j.contains("random")) {
         MoveBase::slump = j["random"]; // slump is static --> shared for all moves
         Faunus::random = j["random"];
     }
-
-    for (auto& j_move : j.at("moves")) { // loop over move list
+    for (const auto& j_move : j.at("moves")) { // loop over move list
+        const auto& [move_name, parameters_json] = jsonSingleItem(j_move);
         try {
-            const auto& [key, j_params] = jsonSingleItem(j_move);
-            if (key == "moltransrot") {
-                _moves.emplace_back<Move::TranslateRotate>(spc);
-            } else if (key == "smartmoltransrot") {
-                _moves.emplace_back<Move::SmartTranslateRotate>(spc);
-            } else if (key == "conformationswap") {
-                _moves.emplace_back<Move::ConformationSwap>(spc);
-            } else if (key == "transrot") {
-                _moves.emplace_back<Move::AtomicTranslateRotate>(spc, pot);
-            } else if (key == "pivot") {
-                _moves.emplace_back<Move::PivotMove>(spc);
-            } else if (key == "crankshaft") {
-                _moves.emplace_back<Move::CrankshaftMove>(spc);
-            } else if (key == "volume") {
-                _moves.emplace_back<Move::VolumeMove>(spc);
-            } else if (key == "charge") {
-                _moves.emplace_back<Move::ChargeMove>(spc);
-            } else if (key == "chargetransfer") {
-                _moves.emplace_back<Move::ChargeTransfer>(spc);
-            } else if (key == "rcmc") {
-                _moves.emplace_back<Move::SpeciationMove>(spc);
-            } else if (key == "quadrantjump") {
-                _moves.emplace_back<Move::QuadrantJump>(spc);
-            } else if (key == "cluster") {
-                _moves.emplace_back<Move::Cluster>(spc);
-            } else if (key == "replay") {
-                _moves.emplace_back<Move::ReplayMove>(spc);
-            } else if (key == "langevin_dynamics") {
-                auto move_ptr = std::make_shared<Move::LangevinDynamics>(spc, pot);
-                _moves.push_back<Move::LangevinDynamics>(move_ptr);
-            } else if (key == "temper") {
-#ifdef ENABLE_MPI
-                _moves.emplace_back<Move::ParallelTempering>(spc, mpi);
-                _moves.back()->repeat = 0; // this gives the move ZERO weight
-#else
-                throw ConfigurationError("'{}': not included - recompile Faunus with MPI support", key);
-#endif
-            } else {
-                throw ConfigurationError("'{}': unknown move", key);
-            }
-            // append additional moves to the if-chain
-
-            try {
-                _moves.back()->from_json(j_params);
-                addWeight(_moves.back()->repeat);
-            } catch (std::exception& e) {
-                usageTip.pick(key);
-                throw ConfigurationError("'{}': {}", key, e.what());
-            }
+            moves.vec.emplace_back(createMove(move_name, parameters_json, spc, hamiltonian, mpi_controller));
+            addWeight(moves.back()->repeat);
         } catch (std::exception& e) {
-            throw ConfigurationError("move: {}", e.what()).attachJson(j_move);
+            usageTip.pick(move_name);
+            throw ConfigurationError("{}", e.what()).attachJson(j_move);
         }
     }
 }
 
 void Propagator::addWeight(const double weight) {
-    _weights.push_back(weight);
-    distribution = std::discrete_distribution<std::size_t>(_weights.begin(), _weights.end());
-    _repeat = static_cast<unsigned int>(std::accumulate(_weights.begin(), _weights.end(), 0.0));
+    weights.push_back(weight);
+    distribution = std::discrete_distribution<std::size_t>(weights.begin(), weights.end());
+    number_of_moves_per_sweep = static_cast<unsigned int>(std::accumulate(weights.begin(), weights.end(), 0.0));
 }
 
-void to_json(json &j, const Propagator &propagator) { j = propagator._moves; }
+void to_json(json& j, const Propagator& propagator) { j = propagator.moves; }
+
+const BasePointerVector<MoveBase>& Propagator::getMoves() const { return moves; }
+
+Propagator::move_iterator Propagator::sample() {
+#ifdef ENABLE_MPI
+    auto& random_engine = MPI::mpi.random.engine; // parallel processes (tempering) must be in sync
+#else
+    auto& random_engine = Move::MoveBase::slump.engine;
+#endif
+    if (!moves.empty()) {
+        return moves.begin() + distribution(random_engine);
+    }
+    return moves.end();
+}
 
 #ifdef ENABLE_MPI
 

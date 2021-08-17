@@ -197,7 +197,7 @@ void mainLoop(bool show_progress, const json& json_in, MetropolisMonteCarlo& sim
                     progress_tracker->display();
                 }
             }
-            simulation.move();
+            simulation.sweep();
             analysis.sample();
         }                   // end of micro steps
         analysis.to_disk(); // save analysis to disk

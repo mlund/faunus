@@ -535,7 +535,8 @@ class Propagator {
     move_iterator sample();                                //!< Pick move from a weighted, random distribution
 
   public:
-    Propagator(const json& j, Space& spc, Energy::Hamiltonian& hamiltonian, MPI::MPIController& mpi_controller);
+    Propagator(const json& move_section, Space& spc, Energy::Hamiltonian& hamiltonian,
+               MPI::MPIController& mpi_controller);
     void addMove(std::shared_ptr<MoveBase>&& move); //!< Add new move
     const BasePointerVector<MoveBase>& getMoves() const;
     friend void to_json(json& j, const Propagator& propagator);

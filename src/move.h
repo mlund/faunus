@@ -22,6 +22,15 @@ namespace Move {
 
 class Propagator;
 
+/**
+ * @brief Base class for all moves (MC, Langevin, ...)
+ *
+ * This will propagate the system and return a `Change` object that describes which
+ * parts of the system that was updated. This object is later used to calculate the energy
+ * of the change, but this is not the responsibility of the move classes.
+ *
+ * @todo Privatize and rename members
+ */
 class MoveBase {
   private:
     virtual void _move(Change& change) = 0;                    //!< Perform move and modify change object
@@ -60,6 +69,7 @@ class MoveBase {
                         double new_energy); //!< adds extra energy change not captured by the Hamiltonian
     MoveBase(Space& spc, const std::string& name, const std::string& cite);
     inline virtual ~MoveBase() = default;
+    bool isStochastic() const; //!< True if move should be called stochastically
 };
 
 void from_json(const json &, MoveBase &); //!< Configure any move via json
@@ -550,7 +560,7 @@ class Propagator {
      * @returns Range of valid move pointers
      */
     auto repeatedStochasticMoves() {
-        auto is_valid_and_stochastic = [&](auto move) { return move < moves.end() && (*move)->repeat != 0; };
+        auto is_valid_and_stochastic = [&](auto move) { return move < moves.end() && (*move)->isStochastic(); };
         return ranges::cpp20::views::iota(0U, number_of_moves_per_sweep) |
                ranges::cpp20::views::transform([&]([[maybe_unused]] auto count) { return sample(); }) |
                ranges::cpp20::views::filter(is_valid_and_stochastic) | ranges::views::indirect; // dereference iterator
@@ -561,15 +571,15 @@ class Propagator {
      *
      * Moves added with zero weight are excluded from the `sample()` function but can be
      * accessed through this function. This is used to run these moves at a fixed frequency
-     * Monte Carlo sweep frequency. This is used to e.g. parallel tempering that in the current
-     * implementation must be run at fixed intervals dur to MPI concurrency.
+     * Monte Carlo sweep frequency. Used by e.g. parallel tempering that in the current
+     * implementation must be run at fixed intervals due to MPI concurrency.
      *
-     * @param number_of_sweeps Current sweep count to decide if move should be included based on `sweep_interval`
-     * @returns Range with move pointers to be run at constant interval, i.e. non-stochastically
+     * @param sweep_number Current sweep count to decide if move should be included based on `sweep_interval`
+     * @returns Range of valid move pointers to be run at given sweep number, i.e. non-stochastically
      */
     auto constantIntervalMoves(const unsigned int sweep_number = 1) {
         auto is_static_and_time_to_sample = [&](auto& move) {
-            return (move->repeat == 0) && (sweep_number % move->sweep_interval == 0);
+            return (!move->isStochastic()) && (sweep_number % move->sweep_interval == 0);
         };
         return moves | ranges::cpp20::views::filter(is_static_and_time_to_sample);
     }

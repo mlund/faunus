@@ -45,6 +45,7 @@ void MoveBase::to_json(json &j) const {
     }
     j["acceptance"] = double(number_of_accepted_moves) / number_of_attempted_moves;
     j["repeat"] = repeat;
+    j["stochastic"] = isStochastic();
     j["moves"] = number_of_attempted_moves;
     if (!cite.empty()) {
         j["cite"] = cite;
@@ -88,6 +89,7 @@ void MoveBase::_reject([[maybe_unused]] Change& change) {}
 MoveBase::MoveBase(Space& spc, const std::string& name, const std::string& cite) : cite(cite), spc(spc), name(name) {}
 
 void MoveBase::setRepeat(const int new_repeat) { repeat = new_repeat; }
+bool MoveBase::isStochastic() const { return repeat != 0; }
 
 void from_json(const json &j, MoveBase &m) { m.from_json(j); }
 

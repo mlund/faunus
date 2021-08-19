@@ -7,9 +7,8 @@ TEST_CASE("[Faunus] Average") {
     Faunus::Average<double> a;
     a += 1.0;
     a += 2.0;
-    CHECK(a.cnt == 2);
-    CHECK(a.sum == 3);
-    CHECK(a.sqsum == 5);
+    CHECK(a.size() == 2);
+    CHECK(a.rms() == doctest::Approx(1.5811388301));
     CHECK(a.avg() == 1.5);
     CHECK(a == 1.5); // implicit conversion to double
 
@@ -21,10 +20,28 @@ TEST_CASE("[Faunus] Average") {
     b += 2.0;
     b += 3.0;
     CHECK(a < b); // a.avg() < b.avg()
-    CHECK((a + b).avg() == doctest::Approx(2));
+    CHECK((a + b).avg() == doctest::Approx(2.0));
 
     b = 1.0; // assign from double
     CHECK(b.size() == 1);
+
+    SUBCASE("overflow") {
+        Average<double, std::uint8_t> a;
+        CHECK_NOTHROW(a += 0.0);
+        CHECK_NOTHROW(a + a);
+        CHECK_THROWS(a += std::numeric_limits<double>::max());
+        CHECK_THROWS(a += -std::numeric_limits<double>::max());
+        CHECK_NOTHROW(a += std::sqrt(std::numeric_limits<double>::max()));
+        CHECK_THROWS(a += std::sqrt(std::numeric_limits<double>::max() + 1.0));
+
+        a.clear();
+        const auto max_number_of_samples = std::numeric_limits<std::uint8_t>::max();
+        for (std::uint8_t i = 0; i < max_number_of_samples; i++) {
+            a += 1.0;
+        }
+        CHECK(a.size() == max_number_of_samples);
+        CHECK_THROWS(a += 1.0);
+    }
 }
 
 TEST_CASE("[Faunus] AverageObj") {

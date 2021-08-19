@@ -282,7 +282,8 @@ void AtomicTranslateRotate::saveHistograms() {
 AtomicTranslateRotate::~AtomicTranslateRotate() { saveHistograms(); }
 
 std::unique_ptr<MoveBase> createMove(const std::string& name, const json& properties, Space& spc,
-                                     Energy::Hamiltonian& hamiltonian, MPI::MPIController& mpi_controller) {
+                                     Energy::Hamiltonian& hamiltonian,
+                                     [[maybe_unused]] MPI::MPIController& mpi_controller) {
     try {
         std::unique_ptr<MoveBase> move;
         if (name == "moltransrot") {

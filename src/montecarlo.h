@@ -72,13 +72,14 @@ class MetropolisMonteCarlo {
     void performMove(Move::MoveBase& move);       //!< Perform move using given move implementation
     double getEnergyChange(double new_energy, double old_energy) const;
     friend void to_json(json&, const MetropolisMonteCarlo&); //!< Write information to JSON object
+    unsigned int number_of_sweeps = 0;                       //!< Number of MC sweeps, e.g. calls to sweep()
 
   public:
     MetropolisMonteCarlo(const json& j, MPI::MPIController& mpi);
     Energy::Hamiltonian &getHamiltonian();                     //!< Get Hamiltonian of accepted (default) state
     Space &getSpace();                                         //!< Access to space in accepted (default) state
     double relativeEnergyDrift();                              //!< Relative energy drift from initial configuration
-    void move();                                               //!< Perform random Monte Carlo move
+    void sweep();                                              //!< Perform all moves (stochastic and static)
     void restore(const json& j);                               //!< Restores system from previously store json object
     static bool metropolisCriterion(double energy_change);     //!< Metropolis criterion
     ~MetropolisMonteCarlo();                                   //!< Required due to unique_ptr to incomplete type

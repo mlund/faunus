@@ -1,6 +1,5 @@
 #include "group.h"
 #include "aux/eigensupport.h"
-#include <Eigen/Geometry>
 #include <range/v3/view/sample.hpp>
 #include <range/v3/view/common.hpp>
 #include <cereal/archives/binary.hpp>

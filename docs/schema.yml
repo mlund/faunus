@@ -763,9 +763,11 @@ properties:
                 temper:
                     properties:
                         repeat: {type: integer}
+                        nstep: {type: integer, minimum: 1, default: 1}
                         volume_scale:
                             type: string
                             enum: [z, xy, isotropic, isochoric]
+                            default: isotropic
                         format:
                             type: string
                             enum: [XYZQI, XYZQ, XYZ]

@@ -3,6 +3,7 @@
 #include "potentials.h"
 #include "externalpotential.h"
 #include <functional>
+#include <range/v3/view/zip.hpp>
 
 #ifdef ENABLE_FREESASA
 #include <freesasa.h>

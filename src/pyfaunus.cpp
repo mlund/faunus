@@ -178,13 +178,15 @@ PYBIND11_MODULE(pyfaunus, m)
     // AtomData
     py::class_<AtomData>(m, "AtomData")
         .def(py::init<>())
-        .def_property("eps", [](const AtomData &a) { return a.interaction.get("eps"); },
-                      [](AtomData &a, double val) { a.interaction.get("eps") = val; })
-        .def_property("sigma", [](const AtomData &a) { return a.interaction.get("sigma"); },
-                      [](AtomData &a, double val) { a.interaction.get("sigma") = val; })
+        .def_property(
+            "eps", [](const AtomData& a) { return a.interaction.at("eps"); },
+            [](AtomData& a, double val) { a.interaction.at("eps") = val; })
+        .def_property(
+            "sigma", [](const AtomData& a) { return a.interaction.at("sigma"); },
+            [](AtomData& a, double val) { a.interaction.at("sigma") = val; })
         .def_readwrite("name", &AtomData::name)
         .def_readwrite("activity", &AtomData::activity, "Activity = chemical potential in log scale (mol/l)")
-        .def("id", (const int& (AtomData::*)() const) &AtomData::id); // explicit signature due to overload in c++
+        .def("id", (const int& (AtomData::*)() const) & AtomData::id); // explicit signature due to overload in c++
 
     auto _atomdatavec = py::bind_vector<std::vector<AtomData>>(m, "AtomDataVector");
     _atomdatavec

@@ -10,11 +10,12 @@ TEST_CASE("[Faunus] Average") {
     CHECK(a.size() == 2);
     CHECK(a.rms() == doctest::Approx(1.5811388301));
     CHECK(a.avg() == 1.5);
-    CHECK(a == 1.5); // implicit conversion to double
+    CHECK(static_cast<double>(a) == 1.5); // conversion to double
 
     auto b = a;        // copy
     CHECK(!b.empty()); // check not empty()
     CHECK(a == b);
+    CHECK_EQ(a, b);
     b.clear();        // reset all data
     CHECK(b.empty()); // check empty()
     b += 2.0;

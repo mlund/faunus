@@ -11,39 +11,41 @@ namespace Faunus {
  * @brief Class to collect averages
  * @todo replace static assert w. concept in c++20
  * */
-template <class T = double, class counter_type = unsigned long int> class Average {
-    static_assert(std::is_floating_point<T>::value, "floating point type required");
+template <class value_type = double, class counter_type = unsigned long int> class Average {
+    static_assert(std::is_floating_point<value_type>::value, "floating point type required");
     static_assert(std::is_unsigned<counter_type>::value, "unsigned integer required");
 
   private:
     counter_type number_of_samples = 0; //!< number of values in average
-    T value_sum = 0.0;                  //!< Sum of all recorded values
-    T squared_value_sum = 0.0;          //!< Square sum of all recorded values
+    value_type value_sum = 0.0;         //!< Sum of all recorded values
+    value_type squared_value_sum = 0.0; //!< Square sum of all recorded values
   public:
-    void clear() { *this = Average(); }                                                           //!< Clear all data
-    bool empty() const { return number_of_samples == 0; }                                         //!< True if empty
-    auto size() const { return number_of_samples; }                                               //!< Number of samples
-    auto avg() const { return value_sum / static_cast<T>(number_of_samples); }                    //!< Average
-    auto rms() const { return std::sqrt(squared_value_sum / static_cast<T>(number_of_samples)); } //!< Root-mean-square
-    operator T() const { return avg(); }                                       //!< Static cast operator
+    void clear() { *this = Average(); }                                                 //!< Clear all data
+    bool empty() const { return number_of_samples == 0; }                               //!< True if empty
+    auto size() const { return number_of_samples; }                                     //!< Number of samples
+    auto avg() const { return value_sum / static_cast<value_type>(number_of_samples); } //!< Average
+    auto rms() const {
+        return std::sqrt(squared_value_sum / static_cast<value_type>(number_of_samples));
+    }                                                                          //!< Root-mean-square
+    operator value_type() const { return avg(); }                              //!< Static cast operator
     bool operator<(const Average& other) const { return avg() < other.avg(); } //!< Compare operator
 
     auto stdev() const {
         if (!empty()) {
             const auto mean = avg();
-            return std::sqrt(
-                (squared_value_sum + static_cast<T>(number_of_samples) * mean * mean - 2.0 * value_sum * mean) /
-                static_cast<T>(number_of_samples - 1));
+            return std::sqrt((squared_value_sum + static_cast<value_type>(number_of_samples) * mean * mean -
+                              2.0 * value_sum * mean) /
+                             static_cast<value_type>(number_of_samples - 1));
         }
         return 0.0;
     } //!< Standard deviation
 
-    void add(const T value) {
-        if (number_of_samples == std::numeric_limits<decltype(number_of_samples)>::max()) {
+    void add(const value_type value) {
+        if (number_of_samples == std::numeric_limits<counter_type>::max()) {
             throw std::overflow_error("max. number of samples reached");
         }
         const auto value_squared = value * value;
-        if (std::numeric_limits<T>::max() - value_squared < squared_value_sum) {
+        if (std::numeric_limits<value_type>::max() - value_squared < squared_value_sum) {
             throw std::overflow_error("value too large");
         }
         number_of_samples++;
@@ -51,12 +53,12 @@ template <class T = double, class counter_type = unsigned long int> class Averag
         squared_value_sum += value_squared;
     } //!< Add value
 
-    Average& operator+=(const T value) {
+    Average& operator+=(const value_type value) {
         add(value);
         return *this;
     } //!< Add value
 
-    Average& operator=(const T value) {
+    Average& operator=(const value_type value) {
         clear();
         add(value);
         return *this;
@@ -68,11 +70,11 @@ template <class T = double, class counter_type = unsigned long int> class Averag
      * @return Merged average
      * @throw if numeric overflow
      */
-    const Average operator+(const Average& other) const {
-        if (std::numeric_limits<decltype(number_of_samples)>::max() - other.number_of_samples < number_of_samples) {
+    Average operator+(const Average& other) const {
+        if (std::numeric_limits<counter_type>::max() - other.number_of_samples < number_of_samples) {
             throw std::overflow_error("maximum number of samples reached");
         }
-        if (std::numeric_limits<T>::max() - other.squared_value_sum < squared_value_sum) {
+        if (std::numeric_limits<value_type>::max() - other.squared_value_sum < squared_value_sum) {
             throw std::overflow_error("value too large");
         }
         Average summed_average = *this;
@@ -118,10 +120,10 @@ template <class T> concept Averageable = requires(T a) {
 #if __cplusplus > 201703L
 template <Averageable T, typename int_t = unsigned long int> class AverageObj {
 #else
-template <typename T, typename int_t = unsigned long int> class AverageObj {
+template <typename T, typename counter_type = unsigned long int> class AverageObj {
 #endif
   protected:
-    int_t number_of_samples = 0;
+    counter_type number_of_samples = 0;
     T sum; // make sure constructors zero this!
   public:
     AverageObj() : sum(T()){}; //!< Construct from empty object
@@ -130,7 +132,7 @@ template <typename T, typename int_t = unsigned long int> class AverageObj {
 
     //! Add to average
     AverageObj& operator+=(const T& value) {
-        if (number_of_samples == std::numeric_limits<int_t>::max()) {
+        if (number_of_samples == std::numeric_limits<counter_type>::max()) {
             throw std::overflow_error("maximum samples reached");
         }
         sum += value;
@@ -141,9 +143,8 @@ template <typename T, typename int_t = unsigned long int> class AverageObj {
     T avg() const {
         if (number_of_samples > 0) {
             return sum * (1.0 / static_cast<double>(number_of_samples));
-        } else {
-            return sum;
         }
+        return sum;
     }
 
     //! Convert to T
@@ -159,7 +160,7 @@ template <typename T, typename int_t = unsigned long int> class AverageObj {
     void clear() { *this = AverageObj<T>(); }
 
     //! Number of samples
-    int_t size() const { return number_of_samples; }
+    auto size() const { return number_of_samples; }
 };
 
 /*
@@ -177,7 +178,7 @@ template <typename T, typename int_t = unsigned long int> class AverageObjStdev 
   public:
     AverageObjStdev() : sum_squared(T()){}; //!< Construct from empty object
 
-    AverageObjStdev(const T& value) : AverageObj<T>(value), sum_squared(value * value){};
+    explicit AverageObjStdev(const T& value) : AverageObj<T>(value), sum_squared(value * value){};
 
     //! Add to average
     AverageObjStdev& operator+=(const T& value) {
@@ -190,20 +191,18 @@ template <typename T, typename int_t = unsigned long int> class AverageObjStdev 
     T rms() const {
         if (number_of_samples == 0) {
             return T();
-        } else {
-            return std::pow(sum_squared * (1.0 / static_cast<double>(number_of_samples)), 0.5);
         }
+        return std::pow(sum_squared * (1.0 / static_cast<double>(number_of_samples)), 0.5);
     }
 
     //! Standard deviation
     T stdev() const {
         if (number_of_samples == 0) {
             return T();
-        } else {
-            const auto N = static_cast<double>(number_of_samples);
-            const auto mean = avg();
-            return std::pow((sum_squared + N * mean * mean - 2.0 * sum * mean) * (1.0 / (N - 1.0)), 0.5);
         }
+        const auto N = static_cast<double>(number_of_samples);
+        const auto mean = avg();
+        return std::pow((sum_squared + N * mean * mean - 2.0 * sum * mean) * (1.0 / (N - 1.0)), 0.5);
     }
 
     //!< Clear all data

@@ -45,5 +45,5 @@ analysis:
 geometry: {type: cuboid, length: 20}
 mcloop: {macro: 1, micro: 1000000}
 temperature: 298.15
-random: { seed: fixed }
+random: { seed: hardware }
 

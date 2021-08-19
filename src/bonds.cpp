@@ -544,8 +544,10 @@ TEST_CASE("[Faunus] BondData") {
         }
         SUBCASE("FENEBond JSON") {
             json j = R"({"fene": {"index":[1,2], "k":8, "rmax":6.0 }})"_json;
-            bond_ptr = j;
-            CHECK_EQ(json(bond_ptr), j);
+            bond_ptr = j;                      // json --> object
+            json j_roundtrip = json(bond_ptr); // object --> json
+            _roundjson(j_roundtrip, 3);        // round decimals before comparison
+            CHECK_EQ(j_roundtrip, j);
             std::dynamic_pointer_cast<FENEBond>(bond_ptr)->setEnergyFunction(p_60deg_4a);
             CHECK_EQ(bond_ptr->energyFunc(distance), Approx(84.641_kJmol));
         }
@@ -582,8 +584,10 @@ TEST_CASE("[Faunus] BondData") {
         }
         SUBCASE("FENEWCABond JSON") {
             json j = R"({"fene+wca": {"index":[1,2], "k":8, "rmax":6.0, "eps":3.5, "sigma":4.5}})"_json;
-            bond_ptr = j;
-            CHECK_EQ(json(bond_ptr), j);
+            bond_ptr = j;                      // json --> object
+            json j_roundtrip = json(bond_ptr); // object --> json
+            _roundjson(j_roundtrip, 3);        // round decimals before comparison
+            CHECK_EQ(j_roundtrip, j);
             std::dynamic_pointer_cast<FENEWCABond>(bond_ptr)->setEnergyFunction(p_60deg_4a);
             CHECK_EQ(bond_ptr->energyFunc(distance), Approx(92.805_kJmol));
         }
@@ -665,8 +669,10 @@ TEST_CASE("[Faunus] BondData") {
         }
         SUBCASE("GromosTorsion JSON") {
             json j = R"({"gromos_torsion": {"index":[0,1,2], "k":0.5, "aeq":65}})"_json;
-            bond_ptr = j;
-            CHECK_EQ(json(bond_ptr), j);
+            bond_ptr = j;                      // json --> object
+            json j_roundtrip = json(bond_ptr); // object --> json
+            _roundjson(j_roundtrip, 3);        // round decimals before comparison
+            CHECK_EQ(j_roundtrip, j);
             std::dynamic_pointer_cast<GromosTorsion>(bond_ptr)->setEnergyFunction(p_60deg_4a);
             CHECK_EQ(bond_ptr->energyFunc(distance),
                      Approx(0.5_kJmol / 2 * std::pow(cos(60.0_deg) - cos(65.0_deg), 2)));

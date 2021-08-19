@@ -21,11 +21,13 @@ double _round(double x, int n) {
     return std::stod(o.str());
 }
 
-void _roundjson(json& j, int n) {
+void _roundjson(json& j, const int n) {
     if (j.is_object()) {
         for (auto& i : j) {
             if (i.is_number_float()) {
                 i = _round(i, n);
+            } else if (i.is_object() && !i.empty()) {
+                _roundjson(i, n);
             }
         }
     }

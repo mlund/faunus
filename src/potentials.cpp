@@ -1119,6 +1119,7 @@ void NewCoulombGalore::to_json(json &j) const {
     pot.to_json(j);
     j["lB"] = bjerrum_length;
 }
+const CoulombGalore::Splined& NewCoulombGalore::getCoulombGalore() const { return pot; }
 
 // =============== Multipole ===============
 

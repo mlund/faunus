@@ -3,6 +3,7 @@
 #include "energy.h"
 #include "reactioncoordinate.h"
 #include "multipole.h"
+#include "potentials.h"
 #include "aux/iteratorsupport.h"
 #include "aux/eigensupport.h"
 #include <range/v3/numeric/accumulate.hpp>
@@ -11,6 +12,7 @@
 #include <zstr.hpp>
 #include <cereal/types/memory.hpp>
 #include <cereal/archives/binary.hpp>
+#include <range/v3/numeric/accumulate.hpp>
 
 #include <iomanip>
 #include <iostream>
@@ -114,6 +116,8 @@ std::shared_ptr<Analysisbase> createAnalysis(const std::string& name, const json
             return std::make_shared<AtomDipDipCorr>(j, spc);
         } else if (name == "density") {
             return std::make_shared<Density>(j, spc);
+        } else if (name == "electricpotential") {
+            return std::make_shared<ElectricPotential>(j, spc);
         } else if (name == "chargefluctuations") {
             return std::make_shared<ChargeFluctuations>(j, spc);
         } else if (name == "molrdf") {
@@ -1776,4 +1780,145 @@ void SpaceTrajectory::_sample() {
 void SpaceTrajectory::_to_json(json& j) const { j = {{"file", filename}}; }
 
 void SpaceTrajectory::_to_disk() { stream->flush(); }
+
+// -----------------------------
+
+ElectricPotential::ElectricPotential(const json& j, Space& spc)
+    : Analysisbase(spc, "electricpotential"), potential_correlation_histogram(histogram_resolution) {
+    from_json(j);
+    coulomb = std::make_shared<Potential::NewCoulombGalore>();
+    coulomb->from_json(j);
+    getTargets(j);
+    setPolicy(j);
+    calculations_per_sample_event = j.value("ncalc", 1);
+}
+
+void ElectricPotential::setPolicy(const json& j) {
+    output_information.clear();
+    policy = j.value("policy", FIXED);
+    auto stride = 0.0;
+    switch (policy) {
+    case FIXED:
+        applyPolicy = []() {};
+        break;
+    case RANDOM_WALK:
+        stride = j.at("stride").get<double>();
+        output_information["stride"] = stride;
+        applyPolicy = [&, stride] {
+            auto origin = targets.begin();
+            spc.geo.randompos(origin->position, random);
+            std::for_each(std::next(origin), targets.end(), [&](Target& target) {
+                target.position = origin->position + stride * ranunit(random);
+                std::advance(origin, 1);
+            });
+        };
+        break;
+    case RANDOM_WALK_NO_OVERLAP:
+        stride = j.at("stride").get<double>();
+        output_information["stride"] = stride;
+        applyPolicy = [&, stride] {
+            auto origin = targets.begin();
+            do {
+                spc.geo.randompos(origin->position, random);
+            } while (overlapWithParticles(origin->position));
+            std::for_each(std::next(origin), targets.end(), [&](Target& target) {
+                do {
+                    target.position = origin->position + stride * ranunit(random);
+                } while (overlapWithParticles(target.position));
+                std::advance(origin, 1);
+            });
+        };
+        break;
+    default:
+        throw ConfigurationError("unknown policy");
+    }
+}
+
+void ElectricPotential::getTargets(const json& j) {
+    if (const auto& structure = j.find("structure"); structure == j.end()) {
+        throw ConfigurationError("missing structure");
+    } else {
+        PointVector positions;
+        if (structure->is_string()) { // load positions from chemical structure file
+            auto particles = loadStructure(structure->get<std::string>(), false);
+            positions = particles | ranges::cpp20::views::transform(&Particle::pos) | ranges::to_vector;
+        } else if (structure->is_array()) { // list of positions
+            positions = structure->get<PointVector>();
+        }
+        std::transform(positions.begin(), positions.end(), std::back_inserter(targets), [&](auto& position) {
+            Target target;
+            target.position = position;
+            target.potential_histogram = std::make_shared<SparseHistogram<double>>(histogram_resolution);
+            return target;
+        });
+        if (targets.empty()) {
+            throw ConfigurationError("no targets defined");
+        }
+    }
+}
+
+void ElectricPotential::_sample() {
+    for (unsigned int i = 0; i < calculations_per_sample_event; i++) {
+        applyPolicy();
+        auto potential_correlation = 1.0; // phi1 * phi2 * ...
+        for (auto& target : targets) {    // loop over each target point
+            auto potential = calcPotentialOnTarget(target);
+            target.potential_histogram->add(potential);
+            target.mean_potential += potential;
+            potential_correlation *= potential;
+        }
+        mean_potential_correlation += potential_correlation;        // <phi1 * phi2 * ...>
+        potential_correlation_histogram.add(potential_correlation); // P(<phi1 * phi2 * ...>)
+    }
+}
+
+double ElectricPotential::calcPotentialOnTarget(const ElectricPotential::Target& target) {
+    auto potential_from_particle = [&](const Particle& particle) {
+        const auto distance_to_target = std::sqrt(spc.geo.sqdist(particle.pos, target.position));
+        return coulomb->getCoulombGalore().ion_potential(particle.charge, distance_to_target);
+    };
+    auto potentials = spc.activeParticles() | ranges::cpp20::views::transform(potential_from_particle);
+    return std::accumulate(potentials.begin(), potentials.end(), 0.0);
+}
+
+void ElectricPotential::_to_json(json& j) const {
+    j = output_information;
+    coulomb->to_json(j["coulomb"]);
+    j["policy"] = policy;
+    j["number of targets"] = targets.size();
+    j["calculations per sample"] = calculations_per_sample_event;
+    if (number_of_samples > 0) {
+        j["correlation (βe)ⁱ⟨ϕ₁ϕ₂...ϕᵢ⟩"] = mean_potential_correlation.avg();
+        auto& mean_potential_j = j["mean potentials βe⟨ϕᵢ⟩"] = json::array();
+        std::transform(targets.begin(), targets.end(), std::back_inserter(mean_potential_j),
+                       [](const auto& target) { return target.mean_potential.avg(); });
+    }
+}
+void ElectricPotential::_to_disk() {
+    if (auto stream = std::ofstream(MPI::prefix + "potential_correlation_histogram.dat")) {
+        stream << potential_correlation_histogram;
+    }
+    int filenumber = 1;
+    for (const auto& target : targets) {
+        if (auto stream = std::ofstream(fmt::format("{}potential_histogram{}.dat", MPI::prefix, filenumber++))) {
+            stream << *(target.potential_histogram);
+        }
+    }
+}
+
+/**
+ * Checks if position lies within the spheres of diameters `sigma` defined
+ * by each active particle in the system. Complexity: N
+ *
+ * @return True if overlap with any particle
+ */
+bool ElectricPotential::overlapWithParticles(const Point& position) const {
+    auto overlap = [&position, &geometry = spc.geo](const Particle& particle) {
+        const auto radius = 0.5 * particle.traits().sigma;
+        return geometry.sqdist(particle.pos, position) < radius * radius;
+    };
+    auto particles = spc.activeParticles();
+    return std::any_of(particles.begin(), particles.end(), overlap);
+}
+
 } // namespace Faunus::Analysis

@@ -7,19 +7,23 @@
 #include "aux/timers.h"
 #include "aux/table_2d.h"
 #include "aux/equidistant_table.h"
+#include <aux/sparsehistogram.h>
 #include <set>
 
 namespace cereal {
 class BinaryOutputArchive;
 }
 
-namespace Faunus {
+namespace Faunus::Potential {
+class NewCoulombGalore;
+}
 
-namespace Energy {
+namespace Faunus::Energy {
 class Hamiltonian;
 class Energybase;
-} // namespace Energy
+} // namespace Faunus::Energy
 
+namespace Faunus {
 /**
  * Adding a new analysis requires the following steps:
  *
@@ -161,6 +165,48 @@ class WidomInsertion : public PerturbationAnalysisBase {
   public:
     WidomInsertion(const json& j, Space& spc, Energy::Hamiltonian& pot);
 };
+
+/**
+ * @brief Samples the electric potential at arbitrary positions in the simulation box
+ * @todo Add policies for random mass-center position and orientation
+ */
+class ElectricPotential : public Analysisbase {
+  public:
+    enum Policies { FIXED, RANDOM_WALK, RANDOM_WALK_NO_OVERLAP, INVALID };
+
+  private:
+    double histogram_resolution = 0.05; //!< Angstrom
+    unsigned int calculations_per_sample_event = 1;
+    struct Target {
+        Point position;                                               //!< Target position
+        Average<double> mean_potential;                               //!< mean potential at position
+        std::shared_ptr<SparseHistogram<double>> potential_histogram; //!< Histogram of observed potentials
+    };
+    std::vector<Target> targets;                             //!< List of target points where to sample the potential
+    Policies policy;                                         //!< Policy to apply to targets before each sample event
+    std::shared_ptr<Potential::NewCoulombGalore> coulomb;    //!< Class for calculating the potential
+    Average<double> mean_potential_correlation;              //!< Correlation between targets, <phi1 x phi2 x ... >
+    SparseHistogram<double> potential_correlation_histogram; //!< Distribution of correlations, P(<phi1 x phi2 x ... >)
+    void getTargets(const json& j);                          //!< Get user defined target positions
+    void setPolicy(const json& j);                           //!< Set user defined position setting policy
+    double calcPotentialOnTarget(const Target& target);      //!< Evaluate net potential of target position
+    bool overlapWithParticles(const Point& position) const;  //!< Check if position is within the radius of any particle
+    std::function<void()> applyPolicy;                       //!< Lambda for position setting policy
+    json output_information;                                 //!< json output generated during construction
+    void _to_json(json& j) const override;
+    void _sample() override;
+    void _to_disk() override;
+
+  public:
+    ElectricPotential(const json& j, Space& spc);
+};
+
+NLOHMANN_JSON_SERIALIZE_ENUM(ElectricPotential::Policies, {
+                                                              {ElectricPotential::INVALID, nullptr},
+                                                              {ElectricPotential::FIXED, "fixed"},
+                                                              {ElectricPotential::RANDOM_WALK_NO_OVERLAP, "no_overlap"},
+                                                              {ElectricPotential::RANDOM_WALK, "random_walk"},
+                                                          })
 
 /**
  * @brief Density of atom along axis

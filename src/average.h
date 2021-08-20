@@ -10,7 +10,7 @@ namespace Faunus {
 /**
  * @brief Class to collect averages
  * @todo replace static assert w. concept in c++20
- * */
+ */
 template <class value_type = double, class counter_type = unsigned long int> class Average {
     static_assert(std::is_floating_point<value_type>::value, "floating point type required");
     static_assert(std::is_unsigned<counter_type>::value, "unsigned integer required");
@@ -27,19 +27,24 @@ template <class value_type = double, class counter_type = unsigned long int> cla
     auto rms() const {
         return std::sqrt(squared_value_sum / static_cast<value_type>(number_of_samples));
     }                                                                          //!< Root-mean-square
-    operator value_type() const { return avg(); }                              //!< Static cast operator
+    explicit operator value_type() const { return avg(); }                     //!< Static cast operator
     bool operator<(const Average& other) const { return avg() < other.avg(); } //!< Compare operator
 
-    auto stdev() const {
-        if (!empty()) {
-            const auto mean = avg();
-            return std::sqrt((squared_value_sum + static_cast<value_type>(number_of_samples) * mean * mean -
-                              2.0 * value_sum * mean) /
-                             static_cast<value_type>(number_of_samples - 1));
+    value_type stdev() const {
+        if (empty()) {
+            return 0.0;
         }
-        return 0.0;
+        const auto mean = avg();
+        return std::sqrt(
+            (squared_value_sum + static_cast<value_type>(number_of_samples) * mean * mean - 2.0 * value_sum * mean) /
+            static_cast<value_type>(number_of_samples - 1));
     } //!< Standard deviation
 
+    /**
+     * @brief Add value to average
+     * @param value Value to add
+     * @throw If overflow in either the counter, or sum of squared values
+     */
     void add(const value_type value) {
         if (number_of_samples == std::numeric_limits<counter_type>::max()) {
             throw std::overflow_error("max. number of samples reached");
@@ -51,18 +56,29 @@ template <class value_type = double, class counter_type = unsigned long int> cla
         number_of_samples++;
         value_sum += value;
         squared_value_sum += value_squared;
-    } //!< Add value
+    }
 
+    /**
+     * @brief Add value to average
+     * @param value Value to add
+     * @throw If overflow in either the counter, or sum of squared values
+     */
     Average& operator+=(const value_type value) {
         add(value);
         return *this;
-    } //!< Add value
+    }
 
+    bool operator==(const Average& other) const {
+        return (size() == other.size()) && (value_sum == other.value_sum) &&
+               (squared_value_sum == other.squared_value_sum);
+    }
+
+    /** Clear and assign a new value */
     Average& operator=(const value_type value) {
         clear();
         add(value);
         return *this;
-    } //!< Assign to value
+    }
 
     /**
      * @brief Merge two averages with correct weights

@@ -378,7 +378,7 @@ void ParallelTempering::_to_json(json& j) const {
          {"volume_scale", volume_scaling_method}};
     auto& exchange_json = j["exchange"] = json::object();
     for (const auto& [id, acceptance] : acceptance_map) {
-        exchange_json[id] = {{"attempts", acceptance.cnt}, {"acceptance", acceptance.avg()}};
+        exchange_json[id] = {{"attempts", acceptance.size()}, {"acceptance", acceptance.avg()}};
     }
 }
 

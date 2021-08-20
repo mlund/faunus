@@ -15,30 +15,16 @@ template <class value_type = double, class counter_type = unsigned long int> cla
     static_assert(std::is_floating_point<value_type>::value, "floating point type required");
     static_assert(std::is_unsigned<counter_type>::value, "unsigned integer required");
 
-  private:
+  protected:
     counter_type number_of_samples = 0; //!< number of values in average
     value_type value_sum = 0.0;         //!< Sum of all recorded values
-    value_type squared_value_sum = 0.0; //!< Square sum of all recorded values
   public:
     void clear() { *this = Average(); }                                                 //!< Clear all data
     bool empty() const { return number_of_samples == 0; }                               //!< True if empty
     auto size() const { return number_of_samples; }                                     //!< Number of samples
     auto avg() const { return value_sum / static_cast<value_type>(number_of_samples); } //!< Average
-    auto rms() const {
-        return std::sqrt(squared_value_sum / static_cast<value_type>(number_of_samples));
-    }                                                                          //!< Root-mean-square
-    explicit operator value_type() const { return avg(); }                     //!< Static cast operator
-    bool operator<(const Average& other) const { return avg() < other.avg(); } //!< Compare operator
-
-    value_type stdev() const {
-        if (empty()) {
-            return 0.0;
-        }
-        const auto mean = avg();
-        return std::sqrt(
-            (squared_value_sum + static_cast<value_type>(number_of_samples) * mean * mean - 2.0 * value_sum * mean) /
-            static_cast<value_type>(number_of_samples - 1));
-    } //!< Standard deviation
+    explicit operator value_type() const { return avg(); }                              //!< Static cast operator
+    bool operator<(const Average& other) const { return avg() < other.avg(); }          //!< Compare means
 
     /**
      * @brief Add value to average
@@ -49,13 +35,8 @@ template <class value_type = double, class counter_type = unsigned long int> cla
         if (number_of_samples == std::numeric_limits<counter_type>::max()) {
             throw std::overflow_error("max. number of samples reached");
         }
-        const auto value_squared = value * value;
-        if (std::numeric_limits<value_type>::max() - value_squared < squared_value_sum) {
-            throw std::overflow_error("value too large");
-        }
-        number_of_samples++;
         value_sum += value;
-        squared_value_sum += value_squared;
+        number_of_samples++;
     }
 
     /**
@@ -68,10 +49,7 @@ template <class value_type = double, class counter_type = unsigned long int> cla
         return *this;
     }
 
-    bool operator==(const Average& other) const {
-        return (size() == other.size()) && (value_sum == other.value_sum) &&
-               (squared_value_sum == other.squared_value_sum);
-    }
+    bool operator==(const Average& other) const { return (size() == other.size()) && (value_sum == other.value_sum); }
 
     /** Clear and assign a new value */
     Average& operator=(const value_type value) {
@@ -86,31 +64,105 @@ template <class value_type = double, class counter_type = unsigned long int> cla
      * @return Merged average
      * @throw if numeric overflow
      */
-    Average operator+(const Average& other) const {
+    auto operator+(const Average& other) const {
         if (std::numeric_limits<counter_type>::max() - other.number_of_samples < number_of_samples) {
             throw std::overflow_error("maximum number of samples reached");
         }
-        if (std::numeric_limits<value_type>::max() - other.squared_value_sum < squared_value_sum) {
+        if (std::numeric_limits<value_type>::max() - other.value_sum < value_sum) {
             throw std::overflow_error("value too large");
         }
         Average summed_average = *this;
         summed_average.number_of_samples += other.number_of_samples;
         summed_average.value_sum += other.value_sum;
-        summed_average.squared_value_sum += other.squared_value_sum;
         return summed_average;
     }
 
     friend std::ostream& operator<<(std::ostream& stream, const Average& average) {
-        stream << average.number_of_samples << " " << average.value_sum << " " << average.squared_value_sum;
+        stream << average.number_of_samples << " " << average.value_sum;
         return stream;
     } // serialize to stream
 
     Average& operator<<(std::istream& stream) {
+        stream >> number_of_samples >> value_sum;
+        return *this;
+    } // de-serialize from stream
+
+    template <class Archive> void serialize(Archive& archive) { archive(value_sum, number_of_samples); }
+};
+
+/**
+ * @brief Class to collect averages and standard deviation
+ * @todo inherit from `Average`
+ */
+template <class value_type = double, class counter_type = unsigned long int>
+class AverageStdev : public Average<value_type, counter_type> {
+  private:
+    value_type squared_value_sum = 0.0; //!< Square sum of all recorded values
+    using base = Average<value_type, counter_type>;
+    using base::number_of_samples;
+    using base::value_sum;
+
+  public:
+    using base::avg;
+    using base::empty;
+    void clear() { *this = AverageStdev(); } //!< Clear all data
+    auto rms() const {
+        return std::sqrt(squared_value_sum / static_cast<value_type>(number_of_samples));
+    } //!< Root-mean-square
+
+    value_type stdev() const {
+        if (empty()) {
+            return 0.0;
+        }
+        const auto mean = avg();
+        return std::sqrt(
+            (squared_value_sum + static_cast<value_type>(number_of_samples) * mean * mean - 2.0 * value_sum * mean) /
+            static_cast<value_type>(number_of_samples - 1));
+    } //!< Standard deviation
+
+    /**
+     * @brief Add value to average
+     * @param value Value to add
+     * @throw If counter overflow
+     */
+    void add(const value_type value) {
+        base::add(value);
+        squared_value_sum += value * value;
+    }
+
+    /**
+     * @brief Add value to average
+     * @param value Value to add
+     * @throw If overflow in either the counter, or sum of squared values
+     */
+    AverageStdev& operator+=(const value_type value) {
+        add(value);
+        return *this;
+    }
+
+    bool operator==(const AverageStdev& other) const {
+        return (this->size() == other.size()) && (value_sum == other.value_sum) &&
+               (squared_value_sum == other.squared_value_sum);
+    }
+
+    /** Clear and assign a new value */
+    AverageStdev& operator=(const value_type value) {
+        clear();
+        add(value);
+        return *this;
+    }
+
+    friend std::ostream& operator<<(std::ostream& stream, const AverageStdev& average) {
+        stream << average.number_of_samples << " " << average.value_sum << " " << average.squared_value_sum;
+        return stream;
+    } // serialize to stream
+
+    AverageStdev& operator<<(std::istream& stream) {
         stream >> number_of_samples >> value_sum >> squared_value_sum;
         return *this;
     } // de-serialize from stream
 
-    template <class Archive> void serialize(Archive& archive) {
+    template <class Archive> void serialize(AverageStdev& archive) {
         archive(value_sum, squared_value_sum, number_of_samples);
     }
 };

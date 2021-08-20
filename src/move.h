@@ -267,7 +267,7 @@ class SmartTranslateRotate : public MoveBase {
     double r_x = 0,
            r_y = 0; // defining lengths of perpendicular radii defining the ellipsoid (or sphere if a and b are equal)
     double _sqd;    // squared displacement
-    Average<double> msqd, countNin_avg, countNin_avgBlocks, countNout_avg,
+    AverageStdev<double> msqd, countNin_avg, countNin_avgBlocks, countNout_avg,
         countNout_avgBlocks; // mean squared displacement and particle counters
 
     double cosTheta, theta;            // geometrical variables

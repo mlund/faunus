@@ -8,7 +8,6 @@ TEST_CASE("[Faunus] Average") {
     a += 1.0;
     a += 2.0;
     CHECK(a.size() == 2);
-    CHECK(a.rms() == doctest::Approx(1.5811388301));
     CHECK(a.avg() == 1.5);
     CHECK(static_cast<double>(a) == 1.5); // conversion to double
 
@@ -28,14 +27,6 @@ TEST_CASE("[Faunus] Average") {
 
     SUBCASE("overflow") {
         Average<double, std::uint8_t> a;
-        CHECK_NOTHROW(a += 0.0);
-        CHECK_NOTHROW(a + a);
-        CHECK_THROWS(a += std::numeric_limits<double>::max());
-        CHECK_THROWS(a += -std::numeric_limits<double>::max());
-        CHECK_NOTHROW(a += std::sqrt(std::numeric_limits<double>::max()));
-        CHECK_THROWS(a += std::sqrt(std::numeric_limits<double>::max() + 1.0));
-
-        a.clear();
         const auto max_number_of_samples = std::numeric_limits<std::uint8_t>::max();
         for (std::uint8_t i = 0; i < max_number_of_samples; i++) {
             a += 1.0;
@@ -43,6 +34,29 @@ TEST_CASE("[Faunus] Average") {
         CHECK(a.size() == max_number_of_samples);
         CHECK_THROWS(a += 1.0);
     }
+}
+
+TEST_CASE("[Faunus] AverageStd") {
+    Faunus::AverageStdev<double> a;
+    a += 1.0;
+    a += 2.0;
+    CHECK(a.size() == 2);
+    CHECK(a.rms() == doctest::Approx(1.5811388301));
+    CHECK(a.avg() == 1.5);
+    CHECK(static_cast<double>(a) == 1.5); // conversion to double
+
+    auto b = a;        // copy
+    CHECK(!b.empty()); // check not empty()
+    CHECK(a == b);
+    CHECK_EQ(a, b);
+    b.clear();        // reset all data
+    CHECK(b.empty()); // check empty()
+    b += 2.0;
+    b += 3.0;
+    CHECK(a < b); // a.avg() < b.avg()
+
+    b = 1.0; // assign from double
+    CHECK(b.size() == 1);
 }
 
 TEST_CASE("[Faunus] AverageObj") {
@@ -55,7 +69,7 @@ TEST_CASE("[Faunus] AverageObj") {
 
     struct MyClass {
         double x;
-        MyClass &operator+=(const MyClass &other) {
+        MyClass& operator+=(const MyClass& other) {
             x += other.x;
             return *this;
         } // required

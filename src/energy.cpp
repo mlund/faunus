@@ -1119,6 +1119,7 @@ double SASAEnergy::energy(Change& change) {
         surface_area += area;
         energy += area * (particle.traits().tension + cosolute_concentration * particle.traits().tfe);
     }
+    std::cout << "!!!" << surface_area << std::endl;
     mean_surface_area += surface_area; // sample average area for accepted confs.
     return energy;
 }

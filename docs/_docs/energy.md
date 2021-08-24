@@ -163,6 +163,7 @@ where `parallel` uses C++ internal threading; `openmp` uses OpenMP; and `serial`
 parallel summation (default). A warning will be issued if the desired scheme is unavailable.
 For the `openmp` policy, you may control the number of threads with the environmental variable
 `OMP_NUM_THREADS`.
+Summation policies other than `serial` may require substantial memory for systems with many particles.
 
 
 ## Electrostatics

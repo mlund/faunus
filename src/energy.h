@@ -432,6 +432,7 @@ template <typename PairEnergy> class DelayedEnergyAccumulator : public EnergyAcc
   private:
     std::vector<ParticlePair> particle_pairs;
     const PairEnergy& pair_energy; //!< recipe to compute non-bonded energy between two particles, see PairEnergy
+    const size_t max_particles_in_buffer = 10000; //!< this can be modified to suit memory requirements
 
   public:
     explicit DelayedEnergyAccumulator(const PairEnergy& pair_energy, const double value = 0.0)
@@ -440,6 +441,7 @@ template <typename PairEnergy> class DelayedEnergyAccumulator : public EnergyAcc
     /** Reserve memory for (N-1)*N/2 interaction pairs */
     void reserve(size_t number_of_particles) override {
         try {
+            number_of_particles = std::min(number_of_particles, max_particles_in_buffer);
             const auto number_of_pairs = (number_of_particles - 1U) * number_of_particles / 2U;
             faunus_logger->debug(fmt::format("reserving memory for {} energy pairs ({} MB)", number_of_pairs,
                                              number_of_pairs * sizeof(ParticlePair) / (1024U * 1024U)));
@@ -467,9 +469,9 @@ template <typename PairEnergy> class DelayedEnergyAccumulator : public EnergyAcc
     }
 
     inline DelayedEnergyAccumulator& operator+=(ParticlePair&& pair) override {
+        assert(particle_pairs.capacity() > 0);
         if (particle_pairs.size() == particle_pairs.capacity()) {
-            operator double();      // sum all previously stored pairs...
-            particle_pairs.clear(); // ...and reset storage
+            operator double(); // sum stored pairs and reset buffer
         }
         particle_pairs.template emplace_back(std::move(pair));
         return *this;
@@ -1316,9 +1318,7 @@ template <typename TPairEnergy, typename TPairingPolicy> class Nonbonded : publi
         name = "nonbonded";
         from_json(j);
         energy_accumulator = createEnergyAccumulator(j, pair_energy, 0.0);
-        const size_t max_particles_in_buffer = 10000U; //!< This can be modified to suit memory requirements
-        const auto particles_in_buffer = std::min<size_t>(spc.numParticles(), max_particles_in_buffer);
-        energy_accumulator->reserve(particles_in_buffer); // attempt to reduce memory fragmentation
+        energy_accumulator->reserve(spc.numParticles()); // attempt to reduce memory fragmentation
     }
 
     void from_json(const json &j) {

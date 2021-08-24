@@ -90,9 +90,9 @@ TEST_CASE("[Faunus] PairMixer") {
         SUBCASE("") {
             atoms =
                 R"([{"A": {"sigma":2.0}}, {"B": {"sigma":8.0}}, {"C": {"sigma":18.0}}])"_json.get<decltype(atoms)>();
-            REQUIRE(atoms.front().interaction.get("sigma") == Approx(2.0));
+            REQUIRE(atoms.front().interaction.at("sigma") == Approx(2.0));
             std::vector<CustomInteractionData> pairs = R"([{"A C": {"sigma": 9.5}}, {"C B": {"sigma": 12.5}}])"_json;
-            TExtractorFunc sigma = [](InteractionData a) -> double { return a.get("sigma"); };
+            TExtractorFunc sigma = [](InteractionData a) -> double { return a.at("sigma"); };
 
             SUBCASE("") {
                 PairMixer mixer(sigma, &PairMixer::combArithmetic);
@@ -458,10 +458,10 @@ void LennardJones::initPairMatrices() {
 void LennardJones::extractorsFromJson(const json &j) {
     auto sigma_name = j.value("sigma", "sigma");
     json_extra_params["sigma"] = sigma_name;
-    extract_sigma = [sigma_name](const InteractionData &a) -> double { return a.get(sigma_name) * 1.0_angstrom; };
+    extract_sigma = [sigma_name](const InteractionData &a) -> double { return a.at(sigma_name) * 1.0_angstrom; };
     auto epsilon_name = j.value("eps", "eps");
     json_extra_params["eps"] = epsilon_name;
-    extract_epsilon = [epsilon_name](const InteractionData &a) -> double { return a.get(epsilon_name) * 1.0_kJmol; };
+    extract_epsilon = [epsilon_name](const InteractionData &a) -> double { return a.at(epsilon_name) * 1.0_kJmol; };
 }
 LennardJones::LennardJones(const std::string& name, const std::string& cite, CombinationRuleType combination_rule)
     : MixerPairPotentialBase(name, cite, combination_rule) {}
@@ -537,7 +537,7 @@ void HardSphere::initPairMatrices() {
 void HardSphere::extractorsFromJson(const json &j) {
     auto sigma_name = j.value("sigma", "sigma");
     json_extra_params["sigma"] = sigma_name;
-    extract_sigma = [sigma_name](const InteractionData &a) -> double { return a.get(sigma_name) * 1.0_angstrom; };
+    extract_sigma = [sigma_name](const InteractionData &a) -> double { return a.at(sigma_name) * 1.0_angstrom; };
 }
 
 TEST_CASE("[Faunus] HardSphere") {
@@ -589,10 +589,10 @@ void Hertz::initPairMatrices() {
 void Hertz::extractorsFromJson(const json &j) {
     auto sigma_name = j.value("sigma", "sigma");
     json_extra_params["sigma"] = sigma_name;
-    extract_sigma = [sigma_name](const InteractionData &a) -> double { return a.get(sigma_name) * 1.0_angstrom; };
+    extract_sigma = [sigma_name](const InteractionData &a) -> double { return a.at(sigma_name) * 1.0_angstrom; };
     auto epsilon_name = j.value("eps", "eps");
     json_extra_params["eps"] = epsilon_name;
-    extract_epsilon = [epsilon_name](const InteractionData &a) -> double { return a.get(epsilon_name) * 1.0_kJmol; };
+    extract_epsilon = [epsilon_name](const InteractionData &a) -> double { return a.at(epsilon_name) * 1.0_kJmol; };
 }
 
 TEST_CASE("[Faunus] Hertz") {
@@ -636,10 +636,10 @@ void SquareWell::initPairMatrices() {
 void SquareWell::extractorsFromJson(const json &j) {
     auto sigma_name = j.value("sigma", "sigma");
     json_extra_params["sigma"] = sigma_name;
-    extract_sigma = [sigma_name](const InteractionData &a) -> double { return a.get(sigma_name) * 1.0_angstrom; };
+    extract_sigma = [sigma_name](const InteractionData &a) -> double { return a.at(sigma_name) * 1.0_angstrom; };
     auto epsilon_name = j.value("eps", "eps");
     json_extra_params["eps"] = epsilon_name;
-    extract_epsilon = [epsilon_name](const InteractionData &a) -> double { return a.get(epsilon_name) * 1.0_kJmol; };
+    extract_epsilon = [epsilon_name](const InteractionData &a) -> double { return a.at(epsilon_name) * 1.0_kJmol; };
 }
 
 TEST_CASE("[Faunus] SquareWell") {
@@ -1119,6 +1119,7 @@ void NewCoulombGalore::to_json(json &j) const {
     pot.to_json(j);
     j["lB"] = bjerrum_length;
 }
+const CoulombGalore::Splined& NewCoulombGalore::getCoulombGalore() const { return pot; }
 
 // =============== Multipole ===============
 

@@ -7,7 +7,10 @@
 #include "space.h"
 #include "io.h"
 #include "aux/timers.h"
+#include "aux/sparsehistogram.h"
 #include <range/v3/view/filter.hpp>
+#include <range/v3/view/iota.hpp>
+#include <range/v3/view/indirect.hpp>
 #include <optional>
 
 namespace Faunus {
@@ -18,6 +21,17 @@ class Hamiltonian;
 
 namespace Move {
 
+class Propagator;
+
+/**
+ * @brief Base class for all moves (MC, Langevin, ...)
+ *
+ * This will propagate the system and return a `Change` object that describes which
+ * parts of the system that was updated. This object is later used to calculate the energy
+ * of the change, but this is not the responsibility of the move classes.
+ *
+ * @todo Privatize and rename members
+ */
 class MoveBase {
   private:
     virtual void _move(Change& change) = 0;                    //!< Perform move and modify change object
@@ -27,27 +41,36 @@ class MoveBase {
     virtual void _from_json(const json& j) = 0;                //!< Extra info for report if needed
     TimeRelativeOfTotal<std::chrono::microseconds> timer;      //!< Timer for whole move
     TimeRelativeOfTotal<std::chrono::microseconds> timer_move; //!< Timer for _move() only
-  protected:
-    Space& spc;                                  //!< Space to operate on
-    unsigned long number_of_attempted_moves = 0; //!< Counter for total number of move attempts
+
+    friend Propagator;
     unsigned long number_of_accepted_moves = 0;
     unsigned long number_of_rejected_moves = 0;
+    unsigned int sweep_interval = 1; //!< Run interval for defused moves (with weight = 0)
+    std::string cite;                //!< Reference, preferable a short-doi, e.g. "doi:10/b9jq"
+
+  protected:
+    Space& spc;                                  //!< Space to operate on
+    int repeat = 1;
+
+  protected:
+    //!< How many times the move should be repeated per sweep
+    unsigned long number_of_attempted_moves = 0; //!< Counter for total number of move attempts
 
   public:
     static Random slump; //!< Shared for all moves
     std::string name;    //!< Name of move
-    std::string cite;    //!< Reference, preferable a short-doi, e.g. "doi:10/b9jq"
-    int repeat = 1;      //!< How many times the move should be repeated per sweep
 
     void from_json(const json& j);
     void to_json(json& j) const; //!< JSON report w. statistics, output etc.
     void move(Change& change);   //!< Perform move and modify given change object
     void accept(Change& change);
     void reject(Change& change);
+    void setRepeat(int repeat);
     virtual double bias(Change& change, double old_energy,
                         double new_energy); //!< adds extra energy change not captured by the Hamiltonian
     MoveBase(Space& spc, const std::string& name, const std::string& cite);
     inline virtual ~MoveBase() = default;
+    bool isStochastic() const; //!< True if move should be called stochastically
 };
 
 void from_json(const json &, MoveBase &); //!< Configure any move via json
@@ -105,33 +128,6 @@ class AtomicSwapCharge : public MoveBase {
 
   public:
     explicit AtomicSwapCharge(Space &spc);
-};
-
-/**
- * @brief Histogram for an arbitrary set of values using a sparse memory layout (map)
- *
- * Builds a histogram by binning given values to a specified resolution. Values are stored
- * in a memory efficient map-structure with log(N) lookup complexity.
- */
-template <typename T = double> class SparseHistogram {
-    T resolution;
-    std::map<int, unsigned int> data;
-
-  public:
-    explicit SparseHistogram(T resolution) : resolution(resolution) {}
-    void add(const T value) {
-        if (std::isfinite(value)) {
-            data[static_cast<int>(std::round(value / resolution))]++;
-        } else {
-            faunus_logger->warn("histogram: skipping inf/nan number");
-        }
-    }
-    friend auto& operator<<(std::ostream& stream, const SparseHistogram& histogram) {
-        std::for_each(histogram.data.begin(), histogram.data.end(), [&](const auto& sample) {
-            stream << fmt::format("{:.6E} {}\n", T(sample.first) * histogram.resolution, sample.second);
-        });
-        return stream;
-    }
 };
 
 /**
@@ -501,49 +497,65 @@ class ParallelTempering : public MoveBase {
 #endif
 
 /**
+ * Factory for creating instances of fully constructed moves based on names (string)
+ *
+ * @returns unique pointer to move
+ * @throw if invalid name or input parameters
+ */
+std::unique_ptr<MoveBase> createMove(const std::string& name, const json& properties, Space& spc,
+                                     Energy::Hamiltonian& hamiltonian, MPI::MPIController& mpi_controller);
+
+/**
  * @brief Class storing a list of MC moves with their probability weights and
  * randomly selecting one.
  */
 class Propagator {
   private:
-    int _repeat;
-    std::discrete_distribution<> distribution;
-    BasePointerVector<MoveBase> _moves; //!< list of moves
-    std::vector<double> _weights;       //!< list of weights for each move
-    void addWeight(double weight = 1);
+    unsigned int number_of_moves_per_sweep;                //!< Sum of all weights
+    BasePointerVector<MoveBase> moves;                     //!< list of moves
+    std::vector<double> repeats;                           //!< list of repeats (weights) for `moves`
+    std::discrete_distribution<unsigned int> distribution; //!< Probability distribution for `moves`
+    using move_iterator = decltype(moves.vec)::iterator;   //!< Iterator to move pointer
+    move_iterator sample();                                //!< Pick move from a weighted, random distribution
 
   public:
-    Propagator() = default;
-    Propagator(const json &j, Space &spc, Energy::Hamiltonian &pot, MPI::MPIController &mpi);
-    auto repeat() const -> decltype(_repeat) { return _repeat; }
-    auto moves() const -> const decltype(_moves) & { return _moves; };
-    auto sample() {
-        if (!_moves.empty()) {
-            assert(_weights.size() == _moves.size());
-#ifdef ENABLE_MPI
-            //!< Avoid parallel processes to get out of sync
-            //!< Needed for replica exchange or parallel tempering
-            int offset = distribution(MPI::mpi.random.engine);
-#else
-            int offset = distribution(Move::MoveBase::slump.engine);
-#endif
-            return _moves.begin() + offset;
-        }
-        return _moves.end();
-    } //!< Pick move from a weighted, random distribution
-    auto end() { return _moves.end(); }
+    Propagator(const json& list_of_moves, Space& spc, Energy::Hamiltonian& hamiltonian,
+               MPI::MPIController& mpi_controller);
+    void addMove(std::shared_ptr<MoveBase>&& move);             //!< Register new move with correct weight
+    const BasePointerVector<MoveBase>& getMoves() const;        //!< Get list of moves
+    friend void to_json(json& j, const Propagator& propagator); //!< Generate json output
 
-    friend void to_json(json &j, const Propagator &propagator);
+    /**
+     * Generates a range of repeated, randomized move pointers guaranteed to be valid.
+     * All moves with `repeat=0` are excluded. Effectively each registered move is called
+     * with a probability proportional to it's `repeat` value. The random picking of moves is repeated
+     * $\sum repeat_i$ times so that running over the range constitutes a complete MC "sweep".
+     *
+     * @returns Range of valid move pointers
+     */
+    auto repeatedStochasticMoves() {
+        auto is_valid_and_stochastic = [&](auto move) { return move < moves.end() && (*move)->isStochastic(); };
+        return ranges::cpp20::views::iota(0U, number_of_moves_per_sweep) |
+               ranges::cpp20::views::transform([&]([[maybe_unused]] auto count) { return sample(); }) |
+               ranges::cpp20::views::filter(is_valid_and_stochastic) | ranges::views::indirect; // dereference iterator
+    }
 
     /**
      * @brief Range of moves excluded from the `sample()` algorithm above due to ZERO weight
      *
      * Moves added with zero weight are excluded from the `sample()` function but can be
-     * accessed through this function. This is used to run these _hidden_ moves exactly
-     * once per Monte Carlo sweep.
+     * accessed through this function. This is used to run these moves at a fixed frequency
+     * Monte Carlo sweep frequency. Used by e.g. parallel tempering that in the current
+     * implementation must be run at fixed intervals due to MPI concurrency.
+     *
+     * @param sweep_number Current sweep count to decide if move should be included based on `sweep_interval`
+     * @returns Range of valid move pointers to be run at given sweep number, i.e. non-stochastically
      */
-    auto defusedMoves() {
-        return _moves | ranges::cpp20::views::filter([&](auto move) { return move->repeat == 0; });
+    auto constantIntervalMoves(const unsigned int sweep_number = 1) {
+        auto is_static_and_time_to_sample = [&](auto& move) {
+            return (!move->isStochastic()) && (sweep_number % move->sweep_interval == 0);
+        };
+        return moves | ranges::cpp20::views::filter(is_static_and_time_to_sample);
     }
 };
 

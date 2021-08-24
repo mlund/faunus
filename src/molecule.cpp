@@ -994,7 +994,7 @@ void MoleculeInserter::to_json(json &) const {}
 TEST_SUITE_END();
 
 UnknownMoleculeError::UnknownMoleculeError(const std::string& molecule_name)
-        : std::runtime_error(fmt::format("unknown molecule: '{}'", molecule_name)) {}
+        : GenericError("unknown molecule: '{}'", molecule_name) {}
 
 
 /**

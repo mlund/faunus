@@ -5,7 +5,8 @@
 #include "space.h"
 #include "aux/iteratorsupport.h"
 #include "aux/pairmatrix.h"
-#include <range/v3/view.hpp>
+#include <range/v3/range/conversion.hpp>
+#include <range/v3/view/iota.hpp>
 #include <Eigen/Dense>
 #include <spdlog/spdlog.h>
 #include <numeric>
@@ -436,12 +437,13 @@ template <typename PairEnergy> class DelayedEnergyAccumulator : public EnergyAcc
     explicit DelayedEnergyAccumulator(const PairEnergy& pair_energy, const double value = 0.0)
         : EnergyAccumulatorBase(value), pair_energy(pair_energy) {}
 
-    /** Reserves memory for N^2 interaction pairs (which may be excessive...) */
+    /** Reserve memory for (N-1)*N/2 interaction pairs */
     void reserve(size_t number_of_particles) override {
         try {
-            particle_pairs.reserve(number_of_particles * number_of_particles);
+            particle_pairs.reserve((number_of_particles - 1) * number_of_particles / 2);
         } catch (std::exception& e) {
-            throw std::runtime_error(fmt::format("cannot allocate memory for energy pairs: {}", e.what()));
+            throw std::runtime_error(
+                fmt::format("cannot allocate memory for energy pairs: {}. Use another summation policy.", e.what()));
         }
     }
 

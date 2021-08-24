@@ -4,6 +4,7 @@
 #include "spdlog/spdlog.h"
 #include "aux/eigensupport.h"
 #include <memory>
+#include <stdexcept>
 
 namespace Faunus {
 
@@ -384,7 +385,7 @@ void from_json(const json &j, Space &spc) {
             }
         }
     } catch (std::exception& e) {
-        throw std::runtime_error("space construction: "s + e.what());
+        std::throw_with_nested(std::runtime_error("error building space"));
     }
 }
 ActiveParticles::const_iterator::const_iterator(const Space &spc, ActiveParticles::const_iterator::Tparticle_iter it)

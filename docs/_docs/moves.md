@@ -238,6 +238,7 @@ The default value of `repeat` is the number of atoms in the `molecule` minus two
 ------------------------ | ----------------------------------------------------------------------
 `format=XYZQI`           | Particle properties to copy between replicasi (`XYZQI`, `XYZQ`, `XYZ`)
 `volume_scale=isotropic` | How to apply exchanged volumes: `z`, `xy`, `isotropic`, `isochoric`
+`nstep=1`                | Number of sweeps between samples.
 
 We consider an extended ensemble, consisting of _n_
 sub-systems or replicas, each in a distinct thermodynamic state (different
@@ -264,7 +265,7 @@ etc. and only exchange between neighboring processes is performed.
 
 Parallel tempering is currently limited to systems with
 constant number of particles, $N$, and the move is performed exactly
-once per Monte Carlo cycle.
+every `nstep` Monte Carlo cycle.
 
 
 ## Volume Move

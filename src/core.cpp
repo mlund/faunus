@@ -4,6 +4,7 @@
 #include "random.h"
 #include "units.h"
 #include "particle.h"
+#include <stdexcept>
 #include <iomanip>
 #include <fstream>
 #include <spdlog/spdlog.h>
@@ -20,14 +21,19 @@ double _round(double x, int n) {
     return std::stod(o.str());
 }
 
-void _roundjson(json &j, int n) {
-    if (j.is_object())
-        for (auto &i : j)
-            if (i.is_number_float())
+void _roundjson(json& j, const int n) {
+    if (j.is_object()) {
+        for (auto& i : j) {
+            if (i.is_number_float()) {
                 i = _round(i, n);
+            } else if (i.is_object() && !i.empty()) {
+                _roundjson(i, n);
+            }
+        }
+    }
 }
 
-double value_inf(const json &j, const std::string &key) {
+double value_inf(const json& j, const std::string& key) {
     auto it = j.find(key);
     if (it == j.end())
         throw std::runtime_error("unknown json key '" + key + "'");
@@ -41,26 +47,21 @@ double value_inf(const json &j, const std::string &key) {
     return double(*it);
 }
 
-json merge(const json &a, const json &b) {
-    json result = a.flatten();
-    json tmp = b.flatten();
-    for (auto it = tmp.begin(); it != tmp.end(); ++it)
-        result[it.key()] = it.value();
-    return result.unflatten();
-}
-
-json openjson(const std::string &file, bool throw_if_file_not_found) {
-    json js;
-    std::ifstream f(file);
-    if (f) {
-        try {
-            f >> js;
-        } catch (std::exception &e) {
-            throw std::runtime_error("Syntax error in JSON file " + file + ": " + e.what());
-        }
-    } else if (throw_if_file_not_found)
-        throw std::runtime_error("Cannot find or read JSON file " + file);
-    return js;
+/**
+ * @brief Reads content of a JSON file into a JSON object
+ * @param filename
+ * @return json object from the file
+ * @throw IOError when file cannot be read
+ * @throw json::parse_error when json ill-formatted
+ */
+json openjson(const std::string& filename) {
+    json j;
+    if (std::ifstream stream(filename); stream) {
+        stream >> j;
+    } else {
+        throw IOError("cannot open file '{}'", filename);
+    }
+    return j;
 }
 
 TipFromTheManual::TipFromTheManual() {
@@ -76,42 +77,51 @@ TipFromTheManual::TipFromTheManual() {
  * file must consist of objects with `key`s and markdown formatted
  * tips. If no file can be opened, the database is left empty.
  */
-void TipFromTheManual::load(const std::vector<std::string> &files) {
-    // try loading `files`; stop of not empty
-    for (auto &i : files) {
-        db = openjson(i, false); // allow for file not found
-        if (not db.empty())
-            break;
+void TipFromTheManual::load(const std::vector<std::string>& files) {
+    // try loading `files`; stop if not empty
+    for (const auto& file : files) {
+        try {
+            database = openjson(file); // allow for file not found
+            if (!database.empty()) {
+                break;
+            }
+        } catch (...) {
+            // ignore
+        }
     }
 }
 
 /**
  * @brief If possible, give help based on short keys/tags
  */
-std::string TipFromTheManual::operator[](const std::string &key) {
+std::string TipFromTheManual::operator[](const std::string& key) {
     std::string t;
     if (not tip_already_given) {
         // look for help for the given `key`
-        auto it = db.find(key);
-        if (it != db.end()) {
+        auto it = database.find(key);
+        if (it != database.end()) {
             t = "\nNeed help, my young apprentice?\n\n" + it->get<std::string>();
 
             // for the Coulomb potential, add additional table w. types
-            if (key == "coulomb")
-                t += "\n" + db.at("coulomb types").get<std::string>();
+            if (key == "coulomb") {
+                t += "\n" + database.at("coulomb types").get<std::string>();
+            }
 
             // for the custom potential, add also list of symbols
-            if (key == "custom")
-                t += "\n" + db.at("symbol").get<std::string>();
+            if (key == "custom") {
+                t += "\n" + database.at("symbol").get<std::string>();
+            }
 
             tip_already_given = true;
 
             // add ascii art
             if (asciiart) {
-                it = db.find("ascii");
-                if (it != db.end())
-                    if (not it->empty() and it->is_array())
+                it = database.find("ascii");
+                if (it != database.end()) {
+                    if (not it->empty() and it->is_array()) {
                         t += random->sample(it->begin(), it->end())->get<std::string>() + "\n";
+                    }
+                }
             }
         }
         buffer = t;
@@ -119,9 +129,7 @@ std::string TipFromTheManual::operator[](const std::string &key) {
     return (quiet) ? std::string() : t;
 }
 
-void TipFromTheManual::pick(const std::string &key) {
-    operator[](key);
-}
+void TipFromTheManual::pick(const std::string& key) { operator[](key); }
 
 TipFromTheManual usageTip; // Global instance
 
@@ -130,7 +138,7 @@ TipFromTheManual usageTip; // Global instance
 std::shared_ptr<spdlog::logger> faunus_logger = spdlog::create<spdlog::sinks::null_sink_st>("null");
 std::shared_ptr<spdlog::logger> mcloop_logger = faunus_logger;
 
-std::string addGrowingSuffix(const std::string &file) {
+std::string addGrowingSuffix(const std::string& file) {
     // using std::experimental::filesystem; // exp. c++17 feature, not available on MacOS (Dec. 2018)
     size_t cnt = 0;
     std::string newfile;
@@ -153,29 +161,28 @@ std::tuple<const std::string&, const json&> jsonSingleItem(const json& j) {
     return {j_it.key(), j_it.value()};
 }
 
-
-json::size_type SingleUseJSON::count(const std::string &key) const { return json::count(key); }
+json::size_type SingleUseJSON::count(const std::string& key) const { return json::count(key); }
 
 bool SingleUseJSON::empty() const { return json::empty(); }
 
-SingleUseJSON::SingleUseJSON(const json &j) : json(j) {}
+SingleUseJSON::SingleUseJSON(const json& j) : json(j) {}
 
 std::string SingleUseJSON::dump(int w) const { return json::dump(w); }
 
 void SingleUseJSON::clear() { json::clear(); }
 
-json SingleUseJSON::at(const std::string &key) {
+json SingleUseJSON::at(const std::string& key) {
     json val = json::at(key);
     json::erase(key);
     return val;
 }
 
-json SingleUseJSON::operator[](const std::string &key) { return at(key); }
+json SingleUseJSON::operator[](const std::string& key) { return at(key); }
 
-void SingleUseJSON::erase(const std::string &key) { json::erase(key); }
+void SingleUseJSON::erase(const std::string& key) { json::erase(key); }
 bool SingleUseJSON::is_object() const { return json::is_object(); }
 
-Point xyz2rth(const Point &p, const Point &origin, const Point &dir, const Point &dir2) {
+Point xyz2rth(const Point& p, const Point& origin, const Point& dir, const Point& dir2) {
     assert(fabs(dir.norm() - 1.0) < 1e-6);
     assert(fabs(dir2.norm() - 1.0) < 1e-6);
     assert(fabs(dir.dot(dir2)) < 1e-6); // check if unit-vectors are perpendicular
@@ -189,22 +196,23 @@ Point xyz2rth(const Point &p, const Point &origin, const Point &dir, const Point
     return {radius, theta, h};
 }
 
-Point xyz2rtp(const Point &p, const Point &origin) {
+Point xyz2rtp(const Point& p, const Point& origin) {
     Point xyz = p - origin;
     double radius = xyz.norm();
     return {radius, std::atan2(xyz.y(), xyz.x()), std::acos(xyz.z() / radius)};
 }
 
-Point rtp2xyz(const Point &rtp, const Point &origin) {
+Point rtp2xyz(const Point& rtp, const Point& origin) {
     return origin + rtp.x() * Point(std::cos(rtp.y()) * std::sin(rtp.z()), std::sin(rtp.y()) * std::sin(rtp.z()),
                                     std::cos(rtp.z()));
 }
-Point ranunit(Random &rand, const Point &dir) {
+Point ranunit(Random& rand, const Point& dir) {
     double r2;
     Point p;
     do {
-        for (size_t i = 0; i < 3; i++)
+        for (size_t i = 0; i < 3; i++) {
             p[i] = (rand() - 0.5) * dir[i];
+        }
         r2 = p.squaredNorm();
     } while (r2 > 0.25);
     return p / std::sqrt(r2);
@@ -214,15 +222,16 @@ TEST_CASE("[Faunus] ranunit") {
     Random r;
     int n = 4e5;
     Point rtp(0, 0, 0);
-    for (int i = 0; i < n; i++)
+    for (int i = 0; i < n; i++) {
         rtp += xyz2rtp(ranunit(r));
+    }
     rtp = rtp / n;
     CHECK(rtp.x() == doctest::Approx(1));
     CHECK(rtp.y() == doctest::Approx(0).epsilon(0.005));          // theta [-pi:pi] --> <theta>=0
     CHECK(rtp.z() == doctest::Approx(pc::pi / 2).epsilon(0.005)); // phi [0:pi] --> <phi>=pi/2
 }
 
-Point ranunit_polar(Random &rand) { return rtp2xyz({1, 2 * pc::pi * rand(), std::acos(2 * rand() - 1)}); }
+Point ranunit_polar(Random& rand) { return rtp2xyz({1, 2 * pc::pi * rand(), std::acos(2 * rand() - 1)}); }
 
 TEST_CASE("[Faunus] ranunit_polar") {
     Random r;
@@ -237,15 +246,35 @@ TEST_CASE("[Faunus] ranunit_polar") {
     CHECK(rtp.z() == doctest::Approx(pc::pi / 2).epsilon(0.005)); // phi [0:pi] --> <phi>=pi/2
 }
 
-ConfigurationError::ConfigurationError(const std::exception& e) : ConfigurationError(e.what()) {}
-ConfigurationError::ConfigurationError(const std::runtime_error& e) : std::runtime_error(e) {}
-ConfigurationError::ConfigurationError(const std::string& msg) : std::runtime_error(msg) {}
-ConfigurationError::ConfigurationError(const char* msg) : std::runtime_error(msg) {}
-json& ConfigurationError::attachedJson() { return attached_json; }
+GenericError::GenericError(const std::exception& e) : GenericError(e.what()) {}
+GenericError::GenericError(const std::runtime_error& e) : std::runtime_error(e) {}
+GenericError::GenericError(const std::string& msg) : std::runtime_error(msg) {}
+GenericError::GenericError(const char* msg) : std::runtime_error(msg) {}
+
+const json& ConfigurationError::attachedJson() const { return attached_json; }
 
 ConfigurationError& ConfigurationError::attachJson(const json j) {
     attached_json = j;
     return *this;
+}
+
+void displayError(spdlog::logger& logger, const std::exception& e, int level) {
+    const std::string padding = level > 0 ? "... " : "";
+
+    logger.error(padding + e.what());
+
+    // ConfigurationError can carry a JSON snippet which should be shown for debugging.
+    if (auto config_error = dynamic_cast<const ConfigurationError*>(&e);
+        config_error != nullptr && !config_error->attachedJson().empty()) {
+        logger.debug(padding + "JSON snippet:\n{}", config_error->attachedJson().dump(4));
+    }
+
+    // Process nested exceptions in a tail recursion.
+    try {
+        std::rethrow_if_nested(e);
+    } catch (const std::exception& e) {
+        displayError(logger, e, level + 1);
+    }
 }
 
 TEST_SUITE_BEGIN("Core");
@@ -276,8 +305,9 @@ TEST_CASE("[Faunus] member_view") {
     std::vector<data> v(2);                                // original vector
     auto Nvec = member_view(v.begin(), v.end(), &data::N); // ref. to all N's in vec
     int cnt = 1;
-    for (int &i : Nvec) // modify N values
+    for (int& i : Nvec) { // modify N values
         i = cnt++;
+    }
     CHECK(v[0].N == 1); // original vector was changed
     CHECK(v[1].N == 2); // original vector was changed
 }
@@ -312,4 +342,3 @@ TEST_SUITE_END();
 } // namespace Faunus
 
 template class nlohmann::basic_json<>;
-

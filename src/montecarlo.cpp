@@ -3,6 +3,7 @@
 #include "energy.h"
 #include "move.h"
 #include "spdlog/spdlog.h"
+#include <range/v3/algorithm/for_each.hpp>
 
 namespace Faunus {
 
@@ -63,7 +64,7 @@ void MetropolisMonteCarlo::init() {
 
     // Inject reference to Space into `SpeciationMove`
     // Needed to calc. differences in ideal excess chem. potentials
-    for (auto& speciation_move : moves->moves().find<Move::SpeciationMove>()) {
+    for (auto& speciation_move : moves->getMoves().find<Move::SpeciationMove>()) {
         speciation_move->setOther(*state->spc);
     }
 }
@@ -101,7 +102,7 @@ MetropolisMonteCarlo::MetropolisMonteCarlo(const json &j, MPI::MPIController &mp
     faunus_logger->set_level(spdlog::level::off); // do not duplicate log info
     trial_state = std::make_unique<State>(j);     // ...for the trial state
     faunus_logger->set_level(original_log_level); // restore original log level
-    moves = std::make_unique<Move::Propagator>(j, *trial_state->spc, *trial_state->pot, mpi);
+    moves = std::make_unique<Move::Propagator>(j.at("moves"), *trial_state->spc, *trial_state->pot, mpi);
     init();
 }
 
@@ -192,30 +193,20 @@ double MetropolisMonteCarlo::getEnergyChange(const double new_energy, const doub
 }
 
 /**
- * This propagates the system using a random MC move.
- * Flow:
+ * This "sweeps" over all registered MC moves respecting, with the probability
+ * of picking a move given by `Movebase::weight`. First stochastic moves
+ * are randomly picked and, if needed, repeated (randomly).
+ * Next, static moves are performed. Currently static moves
+ * are defined by setting `weight=0`.
  *
- * 1. Pick random MC move
- * 2. Perform move
- * 3. Calculate potential energy change
- * 4. Add bias from move if appropriate
- * 5. Add bias from density fluctuations (grand canonical, speciation)
- * 6. Use Metropolis criterion to either accept or reject move
- * 7. If accepted, copy changes from trial state to state
- * 8. If rejected, restored changes from state to trial state
- * 9. After the move the state and the trial state should be identical!
+ * @todo using `weight` to mark as move as static is ugly
  */
-void MetropolisMonteCarlo::move() {
+void MetropolisMonteCarlo::sweep() {
     assert(moves);
-    for (int i = 0; i < moves->repeat(); i++) {
-        if (auto move_it = moves->sample(); move_it != moves->end()) { // pick random move
-            performMove(**move_it);
-        }
-    }
-    // run _hidden_ moves (weight=0) exactly once per MC sweep
-    for (auto& move : moves->defusedMoves()) {
-        performMove(*move);
-    }
+    number_of_sweeps++;
+    auto perform_single_move = [&](auto& move) { performMove(*move); };
+    ranges::cpp20::for_each(moves->repeatedStochasticMoves(), perform_single_move);
+    ranges::cpp20::for_each(moves->constantIntervalMoves(number_of_sweeps), perform_single_move);
 }
 
 Energy::Hamiltonian &MetropolisMonteCarlo::getHamiltonian() { return *state->pot; }
@@ -235,9 +226,12 @@ void MetropolisMonteCarlo::State::sync(const State& other, const Change& change)
 void to_json(json& j, const MetropolisMonteCarlo& monte_carlo) {
     j = monte_carlo.state->spc->info();
     j["temperature"] = pc::temperature / 1.0_K;
-    j["moves"] = *monte_carlo.moves;
+    if (monte_carlo.moves) {
+        j["moves"] = *monte_carlo.moves;
+    }
+    j["number of sweeps"] = monte_carlo.number_of_sweeps;
     j["energy"].push_back(*monte_carlo.state->pot);
-    if (monte_carlo.average_energy.size() > 0) {
+    if (!monte_carlo.average_energy.empty()) {
         j["montecarlo"] = {{"average potential energy (kT)", monte_carlo.average_energy.avg()},
                            {"last move", monte_carlo.latest_move_name}};
     }

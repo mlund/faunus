@@ -78,32 +78,34 @@ properties:
     atomlist:
         type: array
         items:
-            type: object
-            additionalProperties:
-                type: object
-                additionalProperties: false
-                properties:
-                    activity: {type: number, default: 0.0}
-                    alphax: {type: number, default: 0.0}
-                    dp: {type: number, default: 0.0, minimum: 0.0}
-                    dprot: {type: number, default: 0.0, description: "Rotational displacement parameter"}
-                    eps: {type: number, default: 0.0}
-                    implicit: {type: boolean, default: false, description: "True if atom is implicit"}
-                    mu:
-                        items: {type: number}
-                        type: array
-                        minItems: 3
-                        maxItems: 3
-                        default: [0,0,0]
-                        description: Dipole moment vector (eÅ)
-                    mulen: {type: number, description: "Dipole moment scalar (eÅ)"}
-                    mw: {type: number, default: 1.0, description: "Molecular weight (g/mol)"}
-                    pactivity: {type: number, default: 0.0}
-                    q: {type: number, default: 0.0, description: "Valency (e)"}
-                    r: {type: number, default: 0.0}
-                    sigma: {type: number, default: 0.0, description: "Diameter (Å)"}
-                    tension: {type: number, default: 0.0, description: "Surface tension (kJ/mol/Å²)"}
-                    tfe: {type: number, default: 0.0, description: "Transfer free energy (kJ/mol/Å²/M)"}
+            anyOf:
+                - type: object
+                  additionalProperties:
+                      type: object
+                      additionalProperties: false
+                      properties:
+                          activity: {type: number, default: 0.0}
+                          alphax: {type: number, default: 0.0}
+                          dp: {type: number, default: 0.0, minimum: 0.0}
+                          dprot: {type: number, default: 0.0, description: "Rotational displacement parameter"}
+                          eps: {type: number, default: 0.0}
+                          implicit: {type: boolean, default: false, description: "True if atom is implicit"}
+                          mu:
+                              items: {type: number}
+                              type: array
+                              minItems: 3
+                              maxItems: 3
+                              default: [0,0,0]
+                              description: Dipole moment vector (eÅ)
+                          mulen: {type: number, description: "Dipole moment scalar (eÅ)"}
+                          mw: {type: number, default: 1.0, description: "Molecular weight (g/mol)"}
+                          pactivity: {type: number, default: 0.0}
+                          q: {type: number, default: 0.0, description: "Valency (e)"}
+                          r: {type: number, default: 0.0}
+                          sigma: {type: number, default: 0.0, description: "Diameter (Å)"}
+                          tension: {type: number, default: 0.0, description: "Surface tension (kJ/mol/Å²)"}
+                          tfe: {type: number, default: 0.0, description: "Transfer free energy (kJ/mol/Å²/M)"}
+                - type: string
 
     moleculelist:
         type: array
@@ -763,9 +765,11 @@ properties:
                 temper:
                     properties:
                         repeat: {type: integer}
+                        nstep: {type: integer, minimum: 1, default: 1}
                         volume_scale:
                             type: string
                             enum: [z, xy, isotropic, isochoric]
+                            default: isotropic
                         format:
                             type: string
                             enum: [XYZQI, XYZQ, XYZ]
@@ -900,6 +904,36 @@ properties:
                         nskip: {type: integer, default: 0, description: "Initial steps to skip"}
                         dr: {type: number, description: "Distance resolution along R (Å)"}
                     required: [molecules, nstep, dr]
+
+                electricpotential:
+                    type: object
+                    properties:
+                        epsr: {type: number, description: "Relative dielectric constant"}
+                        type: {type: string, description: "Coulomb potential type"}
+                        stride: {type: number, description: "Stride length for random walk"}
+                        policy:
+                            description: "Policy used to augment positions before each sample event"
+                            type: string
+                            enum: ["fixed", "random_walk", "no_overlap"]
+                            default: "fixed"
+                        ncalc: {type: integer, description: "Number of samples per event", default: 1, minimum: 1}
+                        nstep: {type: integer, description: "Sample interval"}
+                        nskip: {type: integer, default: 0, description: "Initial steps to skip"}
+                        structure:
+                            description: Target position definitions
+                            anyOf:
+                                - type: string
+                                  pattern: "(.*?)\\.(pqr|aam|xyz|gro)$"
+                                - type: array
+                                  items:
+                                      type: array
+                                      additionalProperties:
+                                          type: array
+                                          items: {type: number}
+                                          minItems: 3
+                                          maxItems: 3
+                    required: [nstep, epsr, type, structure]
+                    additionalProperties: false
 
                 chargefluctuations:
                     type: object

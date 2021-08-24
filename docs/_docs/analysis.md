@@ -395,6 +395,45 @@ atomic species can be saved.
 `pqrfile`            | Output PQR file (optional)
 `verbose=True`       | If `True`, add results to general output
 
+### Electric Potential
+
+`electricpotential`   | Description
+--------------------- | ------------------------------------------------------
+`nstep`               | Interval between samples
+`nskip=0`             | Number of initial steps excluded from the analysis
+`epsr`                | Dielectric constant
+`type`                | Coulomb type, `plain` etc. -- see energies
+`structure`           | Either a _filename_ (pqr, aam, gro etc) or a _list_ of positions
+`policy=fixed`        | Policy used to augment positions before each sample event, see below
+`ncalc`               | Number of potential calculations per sample event
+`stride`              | Separation between target points when using `random_walk` or `no_overlap`
+
+This calculates the mean electric potential, $\langle \phi\_i \rangle$ and correlations, $\langle \phi\_1\phi\_2 ...\rangle$
+at an arbitrary number of target positions in the simulation cell.
+The positions, given via `structure`, can be augmented using a `policy`:
+
+`policy`        | Description
+--------------- | ------------------------------------------------------------------
+`fixed`         | Expects a list of fixed positions where the potential is measured
+`random_walk`   | Assign random position to first target; while following targets are randomly placed `stride` distance from previous.
+`no_overlap`    | As `random_walk` but with no particle overlap (size defined by `sigma`, see Topology)
+
+Histograms of the correlation and the potentials at the target points are saved to disk.
+
+Example:
+
+~~~ yaml
+- electricpotential:
+    nstep: 20
+    ncalc: 10
+    epsr: 80
+    type: plain
+    policy: random_walk
+    stride: 10   # in angstrom
+    structure:
+      - [0,0,0]  # defines two target points...
+      - [0,0,0]  # ...positions are randomly set
+~~~
 
 ## Reaction Coordinate
 

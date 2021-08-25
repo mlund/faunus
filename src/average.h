@@ -4,6 +4,9 @@
 #include <ostream>
 #include <istream>
 #include <cmath>
+#include <fstream>
+#include <spdlog/fmt/fmt.h>
+#include <nlohmann/json.hpp>
 
 namespace Faunus {
 
@@ -164,6 +167,41 @@ class AverageStdev : public Average<value_type, counter_type> {
 
     template <class Archive> void serialize(AverageStdev& archive) {
         archive(value_sum, squared_value_sum, number_of_samples);
+    }
+};
+
+/**
+ * The "Decorrelation" class from https://dx.doi.org/10.1002/jcc.20746
+ */
+template <class value_type = double, class counter_type = unsigned long int> class Decorrelation {
+  private:
+    using average_type = AverageStdev<value_type, counter_type>;
+    std::vector<average_type> blocks;
+    average_type waiting; //!< average waiting to be filled
+    bool waitingComplete() const { return waiting.size() == static_cast<size_t>(std::pow(2, blocks.size())); }
+
+  public:
+    Decorrelation& add(const value_type value) {
+        waiting += value;
+        if (waitingComplete()) {
+            blocks.push_back(waiting);
+            // waiting.clear();
+        }
+        return *this;
+    }
+    void to_disk(const std::string& filename) const {
+        if (auto stream = std::ofstream(filename); stream) {
+            for (size_t i = 0; i < blocks.size(); i++) {
+                stream << fmt::format("{} {} {}\n", i, blocks[i].avg(), blocks[i].stdev());
+            }
+        }
+    }
+
+    void to_json(nlohmann::json& j) const {
+        j = nlohmann::json::array();
+        for (size_t i = 0; i < blocks.size(); i++) {
+            j.push_back(nlohmann::json::array({blocks[i].avg(), blocks[i].stdev()}));
+        }
     }
 };
 

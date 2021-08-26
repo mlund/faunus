@@ -173,6 +173,8 @@ class AverageStdev : public Average<value_type, counter_type> {
 /**
  * @brief "Decorrelation" class from https://dx.doi.org/10.1002/jcc.20746
  *
+ * See also Kent's dissertation: https://thesis.library.caltech.edu/748/1/david_randall_kent_iv-dissertation.pdf
+ *
  * Pecularities of the pseudo-code in the article:
  *
  * 1. vector index begins at 1 (see e.g. comparisons with `size`)

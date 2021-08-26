@@ -171,36 +171,69 @@ class AverageStdev : public Average<value_type, counter_type> {
 };
 
 /**
- * The "Decorrelation" class from https://dx.doi.org/10.1002/jcc.20746
+ * @brief "Decorrelation" class from https://dx.doi.org/10.1002/jcc.20746
+ *
+ * Pecularities of the pseudo-code in the article:
+ *
+ * 1. vector index begins at 1 (see e.g. comparisons with `size`)
+ * 2. is it really needed to initialize vectors with one element?
+ * 3. The indentation of the following code should likely be moved one level to the left:
+ * ~~~
+ *    carry = new_sample
+ *    i = 1
+ *    done = false
+ * ~~~
+ *
+ * @todo Bundle current vectors into single vector of struct
  */
 template <class value_type = double, class counter_type = unsigned long int> class Decorrelation {
   private:
-    using average_type = AverageStdev<value_type, counter_type>;
-    std::vector<average_type> blocks;
-    average_type waiting; //!< average waiting to be filled
-    bool waitingComplete() const { return waiting.size() == static_cast<size_t>(std::pow(2, blocks.size())); }
+    using Statistic = AverageStdev<value_type, counter_type>;
+    unsigned int nsamples = 0;
+    std::vector<Statistic> blocked_statistics = {Statistic()};
+    std::vector<value_type> waiting_sample = {0.0};
+    std::vector<bool> waiting_sample_exists = {false};
 
   public:
-    Decorrelation& add(const value_type value) {
-        waiting += value;
-        if (waitingComplete()) {
-            blocks.push_back(waiting);
-            // waiting.clear();
+    Decorrelation& add(value_type new_sample) {
+        nsamples++;
+        if (nsamples >= static_cast<unsigned int>(std::pow(2, blocked_statistics.size()))) {
+            blocked_statistics.template emplace_back();
+            waiting_sample.push_back(0.0);
+            waiting_sample_exists.push_back(false);
+            blocked_statistics.at(0) += new_sample;
+        }
+        auto carry = new_sample;
+        for (size_t i = 0; i < blocked_statistics.size(); i++) {
+            if (waiting_sample_exists.at(i)) {
+                new_sample = 0.5 * (waiting_sample.at(i) + carry);
+                carry = new_sample;
+                blocked_statistics.at(i) += new_sample;
+                waiting_sample_exists.at(i) = false;
+            } else {
+                waiting_sample_exists.at(i) = true;
+                waiting_sample.at(i) = carry;
+                break;
+            }
         }
         return *this;
     }
+
+    auto size() const { return nsamples; }
+    bool empty() const { return nsamples == 0; }
+
     void to_disk(const std::string& filename) const {
         if (auto stream = std::ofstream(filename); stream) {
-            for (size_t i = 0; i < blocks.size(); i++) {
-                stream << fmt::format("{} {} {}\n", i, blocks[i].avg(), blocks[i].stdev());
+            for (size_t i = 0; i < blocked_statistics.size(); i++) {
+                stream << fmt::format("{} {} {}\n", i, blocked_statistics[i].avg(), blocked_statistics[i].stdev());
             }
         }
     }
 
     void to_json(nlohmann::json& j) const {
         j = nlohmann::json::array();
-        for (size_t i = 0; i < blocks.size(); i++) {
-            j.push_back(nlohmann::json::array({blocks[i].avg(), blocks[i].stdev()}));
+        for (size_t i = 0; i < blocked_statistics.size(); i++) {
+            j.push_back(nlohmann::json::array({blocked_statistics[i].avg(), blocked_statistics[i].stdev()}));
         }
     }
 };

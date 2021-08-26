@@ -14,10 +14,10 @@ insertmolecules:                     # create an initial system (random insertio
 moves:                               # define Monte Carlo moves
     - transrot: {molecule: salt}     # atomic translation (and rotation if anisotropic atoms)
 analysis:                            # define on the fly analysis
-    - systemenergy: {file: energy.dat, nstep: 2} # save system energy
+    - systemenergy: {file: energy.dat, nstep: 10} # save system energy
     - savestate: {file: confout.pqr} # save PQR file for visualization
     - savestate: {file: state.json } # save restart file
-mcloop: {macro: 10, micro: 50000}     # number of MC steps
+mcloop: {macro: 10, micro: 10000}     # number of MC steps
 geometry: {type: cuboid, length: 50} # sidelength(s): number OR array
 temperature: 300                     # in K
 random: {seed: fixed}                # seed for pseudo random number generator

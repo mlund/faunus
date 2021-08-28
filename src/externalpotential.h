@@ -19,8 +19,8 @@ namespace Energy {
  */
 class Energybase {
   public:
-    enum keys { ACCEPTED_MONTE_CARLO_STATE, TRIAL_MONTE_CARLO_STATE, NONE };
-    keys key = NONE;
+    enum class MonteCarloState { ACCEPTED, TRIAL, NONE };
+    MonteCarloState state = MonteCarloState::NONE;
     std::string name;                                     //!< Meaningful name
     std::string citation_information;                     //!< Possible reference. May be left empty
     TimeRelativeOfTotal<std::chrono::microseconds> timer; //!< Timer for measure speed of each term

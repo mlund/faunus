@@ -482,7 +482,7 @@ double Ewald::energy(Change &change) {
     double u = 0;
     if (change) {
         // If the state is NEW_MONTE_CARLO_STATE (trial state), then update all k-vectors
-        if (key == TRIAL_MONTE_CARLO_STATE) {
+        if (state == MonteCarloState::TRIAL) {
             if (change.all or change.dV) { // everything changes
                 policy->updateBox(data, spc.geo.getLength());
                 policy->updateComplex(data, spc.groups); // update all (expensive!)
@@ -544,7 +544,7 @@ void Ewald::force(std::vector<Point> &forces) {
  */
 void Ewald::sync(Energybase* energybase, const Change& change) {
     if (auto* other = dynamic_cast<Ewald*>(energybase)) {
-        if (other->key == ACCEPTED_MONTE_CARLO_STATE) {
+        if (other->state == MonteCarloState::ACCEPTED) {
             old_groups = &(
                 other->spc
                     .groups); // give NEW_MONTE_CARLO_STATE access to OLD_MONTE_CARLO_STATE space for optimized updates
@@ -946,7 +946,7 @@ void Hamiltonian::checkBondedMolecules() const {
 double Hamiltonian::energy(Change& change) {
     latest_energies.clear();
     for (auto& energy_ptr : energy_terms) {
-        energy_ptr->key = key; // is this needed?
+        energy_ptr->state = state; // is this needed?
         energy_ptr->timer.start();
         const auto energy = energy_ptr->energy(change);
         latest_energies.push_back(energy);

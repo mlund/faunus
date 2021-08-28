@@ -1380,7 +1380,7 @@ class NonbondedCached : public Nonbonded<TPairEnergy, TPairingPolicy> {
         if (j < i) {
             std::swap(i, j);
         }
-        if (Energybase::key == Energybase::TRIAL_MONTE_CARLO_STATE) { // if this is from the trial system
+        if (Energybase::state == Energybase::MonteCarloState::TRIAL) { // if this is from the trial system
             TAccumulator energy_accumulator(Base::pair_energy);
             Base::pairing.group2group(energy_accumulator, g1, g2);
             energy_cache(i, j) = static_cast<double>(energy_accumulator);  // update the cache

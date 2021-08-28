@@ -41,8 +41,8 @@ void MetropolisMonteCarlo::init() {
     Change change;
     change.all = true;
 
-    state->pot->key = Energy::Energybase::ACCEPTED_MONTE_CARLO_STATE;    // this is the old energy (current, accepted)
-    trial_state->pot->key = Energy::Energybase::TRIAL_MONTE_CARLO_STATE; // this is the new energy (trial)
+    state->pot->state = Energy::Energybase::MonteCarloState::ACCEPTED;    // this is the old energy (current, accepted)
+    trial_state->pot->state = Energy::Energybase::MonteCarloState::TRIAL; // this is the new energy (trial)
 
     state->pot->init();
     auto energy = state->pot->energy(change);

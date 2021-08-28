@@ -1795,13 +1795,13 @@ ElectricPotential::ElectricPotential(const json& j, Space& spc)
 
 void ElectricPotential::setPolicy(const json& j) {
     output_information.clear();
-    policy = j.value("policy", FIXED);
+    policy = j.value("policy", Policies::FIXED);
     auto stride = 0.0;
     switch (policy) {
-    case FIXED:
+    case Policies::FIXED:
         applyPolicy = []() {};
         break;
-    case RANDOM_WALK:
+    case Policies::RANDOM_WALK:
         stride = j.at("stride").get<double>();
         output_information["stride"] = stride;
         applyPolicy = [&, stride] {
@@ -1813,7 +1813,7 @@ void ElectricPotential::setPolicy(const json& j) {
             });
         };
         break;
-    case RANDOM_WALK_NO_OVERLAP:
+    case Policies::RANDOM_WALK_NO_OVERLAP:
         stride = j.at("stride").get<double>();
         output_information["stride"] = stride;
         applyPolicy = [&, stride] {

@@ -52,14 +52,12 @@ void from_json(const json &j, std::vector<CustomInteractionData> &interactions);
  * When adding a new one, add a json mapping. Also consider appending the PairMixer::getCombinator()
  * method to recognize the new rule.
  */
-enum CombinationRuleType { COMB_UNDEFINED, COMB_ARITHMETIC, COMB_GEOMETRIC, COMB_LORENTZ_BERTHELOT };
-NLOHMANN_JSON_SERIALIZE_ENUM(CombinationRuleType, {
-                                                      {COMB_UNDEFINED, "undefined"},
-                                                      {COMB_ARITHMETIC, "arithmetic"},
-                                                      {COMB_GEOMETRIC, "geometric"},
-                                                      {COMB_LORENTZ_BERTHELOT, "lorentz_berthelot"},
-                                                      {COMB_LORENTZ_BERTHELOT, "LB"}, // alternative non-canonical name
-                                                  })
+enum class CombinationRuleType { UNDEFINED, ARITHMETIC, GEOMETRIC, LORENTZ_BERTHELOT };
+NLOHMANN_JSON_SERIALIZE_ENUM(CombinationRuleType, {{CombinationRuleType::UNDEFINED, "undefined"},
+                                                   {CombinationRuleType::ARITHMETIC, "arithmetic"},
+                                                   {CombinationRuleType::GEOMETRIC, "geometric"},
+                                                   {CombinationRuleType::LORENTZ_BERTHELOT, "lorentz_berthelot"},
+                                                   {CombinationRuleType::LORENTZ_BERTHELOT, "LB"}})
 
 /**
  * @brief Exception for handling pair potential initialization.
@@ -92,8 +90,9 @@ class PairMixer {
     TPairMatrixPtr createPairMatrix(const std::vector<AtomData> &atoms,
                                     const std::vector<CustomInteractionData> &interactions);
 
-    enum CoefficientType {COEF_ANY, COEF_SIGMA, COEF_EPSILON};
-    static TCombinatorFunc getCombinator(CombinationRuleType combination_rule, CoefficientType coefficient = COEF_ANY);
+    enum class CoefficientType { ANY, SIGMA, EPSILON };
+    static TCombinatorFunc getCombinator(CombinationRuleType combination_rule,
+                                         CoefficientType coefficient = CoefficientType::ANY);
 
     // when explicit custom pairs are the only option
     inline static constexpr double combUndefined(double = 0.0, double = 0.0) {
@@ -148,9 +147,9 @@ class MixerPairPotentialBase : public PairPotentialBase {
     virtual void initPairMatrices() = 0; //!< potential-specific initialization of parameter matrices
     virtual void extractorsFromJson(const json &) {}; //!< potential-specific assignment of coefficient extracting functions
   public:
-    MixerPairPotentialBase(const std::string &name = std::string(), const std::string &cite = std::string(),
-                           CombinationRuleType combination_rule = COMB_UNDEFINED, bool isotropic = true)
-        : PairPotentialBase(name, cite, isotropic), combination_rule(combination_rule) {};
+    MixerPairPotentialBase(const std::string& name = std::string(), const std::string& cite = std::string(),
+                           CombinationRuleType combination_rule = CombinationRuleType::UNDEFINED, bool isotropic = true)
+        : PairPotentialBase(name, cite, isotropic), combination_rule(combination_rule){};
     virtual ~MixerPairPotentialBase() = default;
     void from_json(const json &) override;
     void to_json(json &) const override;
@@ -238,7 +237,7 @@ class LennardJones : public MixerPairPotentialBase {
 
   public:
     LennardJones(const std::string& name = "lennardjones", const std::string& cite = std::string(),
-                 CombinationRuleType combination_rule = COMB_LORENTZ_BERTHELOT);
+                 CombinationRuleType combination_rule = CombinationRuleType::LORENTZ_BERTHELOT);
 
     /**
      * @brief Calculates force on particle a due to another particle, b
@@ -289,8 +288,8 @@ class WeeksChandlerAndersen : public LennardJones {
     }
 
   public:
-    WeeksChandlerAndersen(const std::string &name = "wca", const std::string &cite = "doi:ct4kh9",
-                          CombinationRuleType combination_rule = COMB_LORENTZ_BERTHELOT);
+    WeeksChandlerAndersen(const std::string& name = "wca", const std::string& cite = "doi:ct4kh9",
+                          CombinationRuleType combination_rule = CombinationRuleType::LORENTZ_BERTHELOT);
 
     inline double operator()(const Particle &a, const Particle &b, double r2, const Point &) const override {
         return operator()(a, b, r2);
@@ -321,8 +320,8 @@ class HardSphere : public MixerPairPotentialBase {
     void extractorsFromJson(const json &j) override;
 
   public:
-    HardSphere(const std::string &name = "hardsphere")
-        : MixerPairPotentialBase(name, std::string(), COMB_ARITHMETIC) {};
+    HardSphere(const std::string& name = "hardsphere")
+        : MixerPairPotentialBase(name, std::string(), CombinationRuleType::ARITHMETIC){};
 
     inline double operator()(const Particle &a, const Particle &b, double r2, const Point &) const override {
         return r2 < (*sigma_squared)(a.id, b.id) ? pc::infty : 0.0;

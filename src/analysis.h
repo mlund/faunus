@@ -332,7 +332,6 @@ class SystemEnergy : public Analysisbase {
     std::string separator;
     std::unique_ptr<std::ostream> output_stream;
     std::vector<double> calculateEnergies() const;
-    Decorrelation<double> blocked;
     Average<double> mean_energy;
     Average<double> mean_squared_energy;
     Table2D<double, double> energy_histogram; // Density histograms

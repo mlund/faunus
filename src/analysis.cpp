@@ -207,7 +207,6 @@ void SystemEnergy::_sample() {
     const auto total_energy = ranges::accumulate(energies, 0.0);
     if (std::isfinite(total_energy)) {
         mean_energy += total_energy;
-        blocked.add(total_energy);
         mean_squared_energy += total_energy * total_energy;
     }
     *output_stream << fmt::format("{:10d}{}{:.6E}", getNumberOfSteps(), separator, total_energy);
@@ -220,15 +219,11 @@ void SystemEnergy::_sample() {
 
 void SystemEnergy::_to_json(json& j) const {
     j = {{"file", file_name}, {"init", initial_energy}, {"final", calculateEnergies()}};
-    json b;
-    blocked.to_json(b);
     if (!mean_energy.empty()) {
         j["mean"] = mean_energy.avg();
         j["Cv/kB"] = mean_squared_energy.avg() - std::pow(mean_energy.avg(), 2);
-        j["blocked"] = b;
     }
     _roundjson(j, 5);
-    blocked.to_disk("block.dat");
     // normalize();
     // ehist.save( "distofstates.dat" );
 }

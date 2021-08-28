@@ -528,7 +528,7 @@ VirtualVolumeMove::VirtualVolumeMove(const json& j, Space& spc, Energy::Energyba
 }
 
 void MolecularConformationID::_sample() {
-    auto molecules = spc.findMolecules(molid, Space::ACTIVE);
+    auto molecules = spc.findMolecules(molid, Space::Selection::ACTIVE);
     for (const auto& group : molecules) {
         histogram[group.confid]++;
     }
@@ -617,7 +617,7 @@ void FileReactionCoordinate::_to_disk() {
  */
 void WidomInsertion::selectGhostGroup() {
     change.clear();
-    auto inactive_groups = spc.findMolecules(molid, Space::INACTIVE);
+    auto inactive_groups = spc.findMolecules(molid, Space::Selection::INACTIVE);
     if (!ranges::cpp20::empty(inactive_groups)) {
         const auto& group = *inactive_groups.begin(); // select first group
         if (group.empty() && group.capacity() > 0) {  // must be inactive and have a non-zero capacity
@@ -1242,7 +1242,7 @@ void PolymerShape::_to_json(json& j) const {
 }
 
 void PolymerShape::_sample() {
-    auto molecules = spc.findMolecules(molid, Space::ACTIVE);
+    auto molecules = spc.findMolecules(molid, Space::Selection::ACTIVE);
     const auto num_molecules = std::distance(molecules.begin(), molecules.end());
 
     if (num_molecules > 1 && tensor_output_stream) {
@@ -1442,7 +1442,7 @@ void SlicedDensity::_to_disk() {
     }
 }
 void ChargeFluctuations::_sample() {
-    auto filtered_molecules = spc.findMolecules(mol_iter->id(), Space::ACTIVE);
+    auto filtered_molecules = spc.findMolecules(mol_iter->id(), Space::Selection::ACTIVE);
     for (const auto& group : filtered_molecules) {
         size_t particle_index = 0;
         for (const auto& particle : group) {
@@ -1487,7 +1487,7 @@ std::vector<double> ChargeFluctuations::getMeanCharges() const {
 
 void ChargeFluctuations::_to_disk() {
     if (not filename.empty()) {
-        auto molecules = spc.findMolecules(mol_iter->id(), Space::ALL);
+        auto molecules = spc.findMolecules(mol_iter->id(), Space::Selection::ALL);
         if (not ranges::cpp20::empty(molecules)) {
             const auto particles_with_avg_charges = averageChargeParticles(*molecules.begin());
             PQRWriter().save(MPI::prefix + filename, particles_with_avg_charges.begin(),
@@ -1686,7 +1686,7 @@ void VirtualTranslate::_from_json(const json& j) {
 }
 void VirtualTranslate::_sample() {
     if (std::fabs(perturbation_distance) > 0.0) {
-        if (auto mollist = spc.findMolecules(molid, Space::ACTIVE); !ranges::cpp20::empty(mollist)) {
+        if (auto mollist = spc.findMolecules(molid, Space::Selection::ACTIVE); !ranges::cpp20::empty(mollist)) {
             if (ranges::distance(mollist.begin(), mollist.end()) > 1) {
                 throw std::runtime_error("exactly ONE active molecule expected");
             }

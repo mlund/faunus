@@ -136,7 +136,7 @@ ForceMoveBase::ForceMoveBase(Space &spc, std::string name, std::string cite,
  * Upon resizing, new elements in `forces` and `velocities` are zeroed.
  */
 size_t ForceMoveBase::resizeForcesAndVelocities() {
-    const auto num_active_particles = spc.numParticles(Space::ACTIVE);
+    const auto num_active_particles = spc.numParticles(Space::Selection::ACTIVE);
     forces.resize(num_active_particles, Point::Zero());
     velocities.resize(num_active_particles, Point::Zero());
     return num_active_particles;

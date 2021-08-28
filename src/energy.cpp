@@ -1329,13 +1329,13 @@ void EnergyAccumulatorBase::from_json(const json& j) {
 #ifndef HAS_PARALLEL_TRANSFORM_REDUCE
     if (scheme == Scheme::PARALLEL) {
         faunus_logger->warn("'parallel' summation unavailable; falling back to 'serial'");
-        scheme = SERIAL;
+        scheme = Scheme::SERIAL;
     }
 #endif
 #ifndef _OPENMP
     if (scheme == Scheme::OPENMP) {
         faunus_logger->warn("'openmp' summation unavailable; falling back to 'serial'");
-        scheme = SERIAL;
+        scheme = Scheme::SERIAL;
     }
 #endif
     faunus_logger->debug("setting summation policy to {}", json(scheme).dump(1));

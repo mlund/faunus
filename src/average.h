@@ -187,7 +187,8 @@ class AverageStdev : public Average<value_type, counter_type> {
  *    done = false
  * ~~~
  *
- * @todo Bundle current vectors into single vector of struct
+ * @todo Bundle current vectors into single vector of struct; unittests; check correctness
+ * @warning Under construction and untested
  */
 template <class value_type = double, class counter_type = unsigned long int> class Decorrelation {
   private:

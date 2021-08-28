@@ -340,7 +340,7 @@ std::shared_ptr<StructureFileWriter> createStructureFileWriter(const std::string
     } else if (suffix == "gro") {
         writer = std::make_shared<GromacsWriter>();
     } else if (suffix == "pdb") {
-        writer = std::make_shared<PQRWriter>(PQRWriter::PDB);
+        writer = std::make_shared<PQRWriter>(PQRWriter::Style::PDB);
     }
     return writer;
 }
@@ -794,21 +794,21 @@ void PQRWriter::saveParticle(std::ostream& stream, const Particle& particle) {
     }
 
     switch (style) {
-    case PQR:
+    case Style::PQR:
         stream << fmt::format("{:6s}{:5d} {:^4.4s}{:1s}{:3.3s} {:1s}{:4d}{:1s}   "
                               "{:8.3f}{:8.3f}{:8.3f}{:6.2f}{:6.2f}\n",
                               "ATOM", particle_index + 1, atom_name, "A", group_name, chain, group_index + 1, "0",
                               position.x(), position.y(), position.z(), scale * particle.charge,
                               scale * particle.traits().sigma * 0.5);
         break;
-    case PDB: // see https://cupnet.net/pdb-format
+    case Style::PDB: // see https://cupnet.net/pdb-format
         stream << fmt::format("{:6s}{:5d} {:^4.4s}{:1s}{:3.3s} {:1s}{:4d}{:1s}   "
                               "{:8.3f}{:8.3f}{:8.3f}{:6.2f}{:6.2f}          {:>2.2s}{:2s}\n",
                               "ATOM", particle_index + 1, atom_name, "A", group_name, chain, group_index + 1, "0",
                               position.x(), position.y(), position.z(), occupancy, temperature_factor, element_symbol,
                               charge);
         break;
-    case PQR_LEGACY:
+    case Style::PQR_LEGACY:
         stream << fmt::format("ATOM  {:5d} {:4.4} {:4.3}{:5d}    {:8.3f} {:8.3f} {:8.3f} {:.3f} {:.3f}\n",
                               particle_index + 1, atom_name, group_name, group_index + 1, position.x(), position.y(),
                               position.z(), scale * particle.charge, scale * particle.traits().sigma * 0.5);

@@ -255,9 +255,9 @@ class PQRWriter : public StructureFileWriter {
     void saveParticle(std::ostream& stream, const Particle& particle) override;
 
   public:
-    enum Style { PQR_LEGACY, PDB, PQR }; //!< PQR style (for ATOM records)
-    Style style = PQR_LEGACY;
-    explicit PQRWriter(Style style = PQR_LEGACY);
+    enum class Style { PQR_LEGACY, PDB, PQR }; //!< PQR style (for ATOM records)
+    Style style = Style::PQR_LEGACY;
+    explicit PQRWriter(Style style = Style::PQR_LEGACY);
 };
 
 class GromacsWriter : public StructureFileWriter {

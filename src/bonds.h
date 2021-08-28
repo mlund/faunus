@@ -21,7 +21,16 @@ namespace Faunus::Potential {
  * @todo Memory inefficient to store energy and force functors. Virtual functions?
  */
 struct BondData {
-    enum Variant { HARMONIC = 0, FENE, FENEWCA, HARMONIC_TORSION, GROMOS_TORSION, PERIODIC_DIHEDRAL, HARMONIC_DIHEDRAL, INVALID };
+    enum class Variant {
+        HARMONIC = 0,
+        FENE,
+        FENEWCA,
+        HARMONIC_TORSION,
+        GROMOS_TORSION,
+        PERIODIC_DIHEDRAL,
+        HARMONIC_DIHEDRAL,
+        INVALID
+    };
     std::vector<int> indices; //!< Absolute indiced of participating particles
 
     /** Calculates potential energy of bonded atoms(kT) */

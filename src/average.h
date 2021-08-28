@@ -173,7 +173,8 @@ class AverageStdev : public Average<value_type, counter_type> {
 /**
  * @brief "Decorrelation" class from https://dx.doi.org/10.1002/jcc.20746
  *
- * See also Kent's dissertation: https://thesis.library.caltech.edu/748/1/david_randall_kent_iv-dissertation.pdf
+ * See also Kent's dissertation, page 66:
+ * https://thesis.library.caltech.edu/748/1/david_randall_kent_iv-dissertation.pdf
  *
  * Pecularities of the pseudo-code in the article:
  *
@@ -203,10 +204,11 @@ template <class value_type = double, class counter_type = unsigned long int> cla
             blocked_statistics.template emplace_back();
             waiting_sample.push_back(0.0);
             waiting_sample_exists.push_back(false);
-            blocked_statistics.at(0) += new_sample;
         }
         auto carry = new_sample;
-        for (size_t i = 0; i < blocked_statistics.size(); i++) {
+        blocked_statistics.at(0) += new_sample;
+
+        for (size_t i = 1; i < blocked_statistics.size(); i++) {
             if (waiting_sample_exists.at(i)) {
                 new_sample = 0.5 * (waiting_sample.at(i) + carry);
                 carry = new_sample;

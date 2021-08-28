@@ -1334,13 +1334,13 @@ void ConformationSwap::_move(Change& change) {
 void ConformationSwap::copyConformation(ParticleVector& particles, ParticleVector::iterator destination) const {
     std::function<void(const Particle&, Particle&)> copy_function; // how to copy particle information
     switch (copy_policy) {
-    case ALL:
+    case CopyPolicy::ALL:
         copy_function = [](const Particle& src, Particle& dst) { dst = src; };
         break;
-    case POSITIONS:
+    case CopyPolicy::POSITIONS:
         copy_function = [](const Particle& src, Particle& dst) { dst.pos = src.pos; };
         break;
-    case CHARGES:
+    case CopyPolicy::CHARGES:
         copy_function = [](const Particle& src, Particle& dst) { dst.charge = src.charge; };
         break;
     default:
@@ -1366,7 +1366,7 @@ void ConformationSwap::registerChanges(Change &change, const Space::Tgroup &grou
  */
 void ConformationSwap::checkMassCenterDrift(const Point& old_mass_center, const ParticleVector& particles) {
     switch (copy_policy) {
-    case CHARGES: // positions untouched; no check needed
+    case CopyPolicy::CHARGES: // positions untouched; no check needed
         return;
     default:
         const auto max_allowed_distance = 1.0e-6;

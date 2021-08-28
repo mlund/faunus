@@ -1576,19 +1576,19 @@ void ScatteringFunction::_sample() {
     const auto suffix = fmt::format("{:07d}", number_of_samples);
 
     switch (scheme) {
-    case DEBYE:
+    case Schemes::DEBYE:
         debye->sample(scatter_positions, spc.geo.getVolume());
         if (save_after_sample) {
             IO::writeKeyValuePairs(filename + "." + suffix, debye->getIntensity());
         }
         break;
-    case EXPLICIT_PBC:
+    case Schemes::EXPLICIT_PBC:
         explicit_average_pbc->sample(scatter_positions, spc.geo.getLength());
         if (save_after_sample) {
             IO::writeKeyValuePairs(filename + "." + suffix, explicit_average_pbc->getSampling());
         }
         break;
-    case EXPLICIT_IPBC:
+    case Schemes::EXPLICIT_IPBC:
         explicit_average_ipbc->sample(scatter_positions, spc.geo.getLength());
         if (save_after_sample) {
             IO::writeKeyValuePairs(filename + "." + suffix, explicit_average_ipbc->getSampling());
@@ -1599,16 +1599,16 @@ void ScatteringFunction::_sample() {
 void ScatteringFunction::_to_json(json& j) const {
     j = {{"molecules", molecule_names}, {"com", mass_center_scattering}};
     switch (scheme) {
-    case DEBYE:
+    case Schemes::DEBYE:
         j["scheme"] = "debye";
         std::tie(j["qmin"], j["qmax"], std::ignore) = debye->getQMeshParameters();
         break;
-    case EXPLICIT_PBC:
+    case Schemes::EXPLICIT_PBC:
         j["scheme"] = "explicit";
         j["pmax"] = explicit_average_pbc->getQMultiplier();
         j["ipbc"] = false;
         break;
-    case EXPLICIT_IPBC:
+    case Schemes::EXPLICIT_IPBC:
         j["scheme"] = "explicit";
         j["pmax"] = explicit_average_ipbc->getQMultiplier();
         j["ipbc"] = true;
@@ -1628,7 +1628,7 @@ ScatteringFunction::ScatteringFunction(const json& j, Space& spc) try : Analysis
     const auto cuboid = std::dynamic_pointer_cast<Geometry::Cuboid>(spc.geo.asSimpleGeometry());
 
     if (const auto scheme_str = j.value("scheme", "explicit"s); scheme_str == "debye") {
-        scheme = DEBYE;
+        scheme = Schemes::DEBYE;
         debye = std::make_unique<Scatter::DebyeFormula<Tformfactor>>(j);
         if (cuboid) {
             faunus_logger->warn("cuboidal cell detected: consider using the `explicit` scheme");
@@ -1640,10 +1640,10 @@ ScatteringFunction::ScatteringFunction(const json& j, Space& spc) try : Analysis
         const bool ipbc = j.value("ipbc", false);
         const int pmax = j.value("pmax", 15);
         if (ipbc) {
-            scheme = EXPLICIT_IPBC;
+            scheme = Schemes::EXPLICIT_IPBC;
             explicit_average_ipbc = std::make_unique<Scatter::StructureFactorIPBC<>>(pmax);
         } else {
-            scheme = EXPLICIT_PBC;
+            scheme = Schemes::EXPLICIT_PBC;
             explicit_average_pbc = std::make_unique<Scatter::StructureFactorPBC<>>(pmax);
         }
     } else {
@@ -1655,13 +1655,13 @@ ScatteringFunction::ScatteringFunction(const json& j, Space& spc) try : Analysis
 
 void ScatteringFunction::_to_disk() {
     switch (scheme) {
-    case DEBYE:
+    case Schemes::DEBYE:
         IO::writeKeyValuePairs(filename, debye->getIntensity());
         break;
-    case EXPLICIT_PBC:
+    case Schemes::EXPLICIT_PBC:
         IO::writeKeyValuePairs(filename, explicit_average_pbc->getSampling());
         break;
-    case EXPLICIT_IPBC:
+    case Schemes::EXPLICIT_IPBC:
         IO::writeKeyValuePairs(filename, explicit_average_ipbc->getSampling());
         break;
     }

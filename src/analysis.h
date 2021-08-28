@@ -565,8 +565,8 @@ class MultipoleDistribution : public Analysisbase {
  */
 class ScatteringFunction : public Analysisbase {
   private:
-    enum Schemes { DEBYE, EXPLICIT_PBC, EXPLICIT_IPBC }; // three different schemes
-    Schemes scheme = DEBYE;
+    enum class Schemes { DEBYE, EXPLICIT_PBC, EXPLICIT_IPBC }; // three different schemes
+    Schemes scheme = Schemes::DEBYE;
     bool mass_center_scattering;             //!< scatter from mass center, only?
     bool save_after_sample = false;          //!< if true, save average S(q) after each sample point
     std::string filename;                    //!< output file name

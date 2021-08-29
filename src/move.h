@@ -552,7 +552,7 @@ class Propagator {
      * @returns Range of valid move pointers to be run at given sweep number, i.e. non-stochastically
      */
     auto constantIntervalMoves(const unsigned int sweep_number = 1) {
-        auto is_static_and_time_to_sample = [&](auto& move) {
+        auto is_static_and_time_to_sample = [&, sweep_number](const auto& move) {
             return (!move->isStochastic()) && (sweep_number % move->sweep_interval == 0);
         };
         return moves | ranges::cpp20::views::filter(is_static_and_time_to_sample);

@@ -755,7 +755,7 @@ class GroupPairingPolicy {
      * @param index  internal index of the selected particle within the group
      */
     template <typename TAccumulator, typename TGroup>
-    void groupInternal(TAccumulator &pair_accumulator, const TGroup &group, const int index) {
+    void groupInternal(TAccumulator& pair_accumulator, const TGroup& group, const std::size_t index) {
         const auto &moldata = group.traits();
         if (!moldata.rigid) {
             if (group.atomic) {
@@ -873,8 +873,8 @@ class GroupPairingPolicy {
      * @param index1  list of particle indices in group1 relative to the group beginning
      */
     template <typename TAccumulator, typename TGroup>
-    void group2group(TAccumulator &pair_accumulator, const TGroup &group1, const TGroup &group2,
-                     const std::vector<int> &index1) {
+    void group2group(TAccumulator& pair_accumulator, const TGroup& group1, const TGroup& group2,
+                     const std::vector<std::size_t>& index1) {
         if (!cut(group1, group2)) {
             for (auto particle1_ndx : index1) {
                 for (auto &particle2 : group2) {
@@ -907,8 +907,8 @@ class GroupPairingPolicy {
      * @param index2  list of particle indices in group2 relative to the group beginning
      */
     template <typename TAccumulator, typename TGroup>
-    void group2group(TAccumulator &pair_accumulator, const TGroup &group1, const TGroup &group2,
-                     const std::vector<int> &index1, const std::vector<int> &index2) {
+    void group2group(TAccumulator& pair_accumulator, const TGroup& group1, const TGroup& group2,
+                     const std::vector<std::size_t>& index1, const std::vector<std::size_t>& index2) {
         if (!cut(group1, group2)) {
             if (!index2.empty()) {
                 // (∁⊕group1 × ⊕group2) + (⊕group1 × ⊕group2) = group1 × ⊕group2
@@ -977,8 +977,8 @@ class GroupPairingPolicy {
      * @param index  list of particle indices in the group relative to the group beginning
      */
     template <typename TAccumulator, typename TGroup, typename TGroups>
-    void group2groups(TAccumulator &pair_accumulator, const TGroup &group, const TGroups &group_index,
-                      const std::vector<int> &index) {
+    void group2groups(TAccumulator& pair_accumulator, const TGroup& group, const TGroups& group_index,
+                      const std::vector<std::size_t>& index) {
         for (auto other_group_ndx : group_index) {
             const auto &other_group = spc.groups[other_group_ndx];
             if (&other_group != &group) {
@@ -1054,7 +1054,7 @@ class GroupPairingPolicy {
      * @param index  list of particle indices in the group relative to the group beginning
      */
     template <typename TAccumulator, typename Tgroup>
-    void group2all(TAccumulator &pair_accumulator, const Tgroup &group, const std::vector<int> &index) {
+    void group2all(TAccumulator& pair_accumulator, const Tgroup& group, const std::vector<std::size_t>& index) {
         if (index.size() == 1) {
             group2all(pair_accumulator, group, index[0]);
         } else {
@@ -1216,14 +1216,15 @@ class GroupPairing {
     void accumulateSpeciation(TAccumulator &pair_accumulator, const Change &change) {
         assert(change.dN);
         const auto &moved = change.touchedGroupIndex(); // index of moved groups
-        const auto &fixed = indexComplement(int(spc.groups.size()), moved) | ranges::to<std::vector>; // index of static groups
+        const auto& fixed =
+            indexComplement(spc.groups.size(), moved) | ranges::to<std::vector>; // index of static groups
         auto filter_active = [](int size) { return ranges::views::filter([size](const auto i) { return i < size; }); };
 
         // loop over all changed groups
         for (auto change_group1_it = change.groups.begin(); change_group1_it < change.groups.end(); ++change_group1_it) {
             auto &group1 = spc.groups.at(change_group1_it->index);
             // filter only active particles
-            const std::vector<int> index1 = change_group1_it->atoms | filter_active(group1.size()) | ranges::to<std::vector>;
+            const auto index1 = change_group1_it->atoms | filter_active(group1.size()) | ranges::to<std::vector>;
             if (!index1.empty()) {
                 // particles added into the group: compute (changed group) <-> (static group)
                 pairing.group2groups(pair_accumulator, group1, fixed, index1);
@@ -1231,7 +1232,7 @@ class GroupPairing {
             // loop over successor changed groups (hence avoid double counting group1×group2 and group2×group1)
             for (auto change_group2_it = std::next(change_group1_it); change_group2_it < change.groups.end(); ++change_group2_it) {
                 auto &group2 = spc.groups.at(change_group2_it->index);
-                const std::vector<int> index2 = change_group2_it->atoms | filter_active(group2.size()) | ranges::to<std::vector>;
+                const auto index2 = change_group2_it->atoms | filter_active(group2.size()) | ranges::to<std::vector>;
                 if (!index1.empty() || !index2.empty()) {
                     // particles added into one or other group: compute (changed group) <-> (changed group)
                     pairing.group2group(pair_accumulator, group1, group2, index1, index2);
@@ -1398,7 +1399,7 @@ class NonbondedCached : public Nonbonded<TPairEnergy, TPairingPolicy> {
     }
 
     template <typename TGroup>
-    double g2g(const TGroup &g1, const TGroup &g2, [[maybe_unused]] const std::vector<int> &index) {
+    double g2g(const TGroup& g1, const TGroup& g2, [[maybe_unused]] const std::vector<std::size_t>& index) {
         // index not implemented
         return g2g(g1, g2);
     }

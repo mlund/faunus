@@ -243,7 +243,7 @@ class SlicedDensity : public Analysisbase {
     double dz;                               //!< Resolution of `histogram` along z
     Table2D<double, unsigned int> histogram; // N(z)
     std::vector<std::string> atom_names;
-    std::vector<int> atom_ids; //!< atom id's to analyse
+    std::vector<MoleculeData::Tid> atom_ids; //!< atom id's to analyse
     std::string file;
     int center_of_mass_atom_id = -1; // center at COM of id_com atoms?
 
@@ -462,7 +462,7 @@ class AtomDipDipCorr : public PairAngleFunctionBase {
 
 /** @brief Write XTC trajectory file */
 class XTCtraj : public Analysisbase {
-    std::vector<int> molecule_ids;                    //!< molecule ids to save to disk
+    std::vector<MoleculeData::Tid> molecule_ids;      //!< molecule ids to save to disk
     std::vector<std::string> names;                   //!< molecule names of above
     std::function<bool(const Particle&)> atom_filter; //!< function to filter atoms
     std::shared_ptr<XTCWriter> writer;
@@ -545,7 +545,7 @@ class MultipoleDistribution : public Analysisbase {
     };
     std::map<int, Data> mean_energy; //!< Energy distributions
     std::vector<std::string> names;  //!< Molecule names (len=2)
-    std::vector<int> ids;            //!< Molecule ids (len=2)
+    std::vector<MoleculeData::Tid> ids; //!< Molecule ids (len=2)
     std::string filename;            //!< output file name
     double dr;                       //!< distance resolution
 
@@ -571,7 +571,7 @@ class ScatteringFunction : public Analysisbase {
     bool save_after_sample = false;          //!< if true, save average S(q) after each sample point
     std::string filename;                    //!< output file name
     std::vector<Point> scatter_positions;    //!< vector of scattering points
-    std::vector<int> molecule_ids;           //!< Molecule ids
+    std::vector<MoleculeData::Tid> molecule_ids; //!< Molecule ids
     std::vector<std::string> molecule_names; //!< Molecule names corresponding to `molecule_ids`
     using Tformfactor = Scatter::FormFactorUnity<double>;
 

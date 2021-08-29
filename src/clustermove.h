@@ -89,7 +89,7 @@ class FindCluster {
     Space &spc;
     bool single_layer = false;               //!< stop cluster search after first layer of neighbors
     std::vector<std::string> molecule_names; //!< names of molecules to be considered
-    std::vector<int> molids;                 //!< molecule id's of molecules to be considered (must be sorted!)
+    std::vector<MoleculeData::Tid> molids;   //!< molecule id's of molecules to be considered (must be sorted!)
     std::set<int> satellites; //!< subset of molecule id's to cluster, but NOT act as nuclei (cluster centers)
     PairMatrix<double, true> thresholds_squared; //!< Cluster thresholds for pairs of groups
 

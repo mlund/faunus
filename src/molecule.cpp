@@ -28,9 +28,9 @@ MoleculeData::MoleculeData(const std::string &name, const ParticleVector &partic
     }
 }
 
-int &MoleculeData::id() { return _id; }
+MoleculeData::Tid& MoleculeData::id() { return _id; }
 
-const int &MoleculeData::id() const { return _id; }
+const MoleculeData::Tid& MoleculeData::id() const { return _id; }
 
 bool MoleculeData::isImplicit() const { return implicit; }
 
@@ -236,9 +236,9 @@ void NeighboursGenerator::generatePaths(int bonded_distance) {
     }
 }
 
-void NeighboursGenerator::generatePairs(AtomPairList &pairs, int bond_distance) {
+void NeighboursGenerator::generatePairs(AtomPairList& pairs, std::size_t bond_distance) {
     generatePaths(bond_distance);
-    std::set<std::pair<int, int>> pairs_set; // use set to prevent duplicities
+    std::set<std::pair<std::size_t, std::size_t>> pairs_set; // use set to prevent duplicities
     for (auto &paths_set : paths) {
         for (auto &path : paths_set) {
             auto excluded_pair = std::make_pair(path.front(), path.back());
@@ -256,7 +256,7 @@ void NeighboursGenerator::generatePairs(AtomPairList &pairs, int bond_distance) 
 
 TEST_CASE("NeighboursGenerator") {
     BasePointerVector<Potential::BondData> bonds;
-    std::vector<std::pair<int, int>> pairs;
+    std::vector<std::pair<size_t, size_t>> pairs;
 
     SUBCASE("Linear Chain") {
         // decamer connected with harmonic bonds
@@ -270,10 +270,10 @@ TEST_CASE("NeighboursGenerator") {
         NeighboursGenerator generator(bonds);
         generator.generatePairs(pairs, distance);
         CHECK_EQ(pairs.size(), (mer - 1) + (mer - 2) + (mer - 3));
-        auto pairs_matched = [pairs]() -> int {
-            int match_cnt = 0;
+        auto pairs_matched = [pairs]() -> std::size_t {
+            std::size_t match_cnt = 0u;
             for (auto dist = 1; dist <= distance; ++dist) {
-                for (auto n = 0; n < mer - dist; ++n) {
+                for (std::size_t n = 0; n < mer - dist; ++n) {
                     if (std::find(pairs.begin(), pairs.end(), std::make_pair(n, n + dist)) != pairs.end()) {
                         ++match_cnt;
                     }
@@ -297,11 +297,11 @@ TEST_CASE("NeighboursGenerator") {
         generator.generatePairs(pairs, distance);
         CHECK_EQ(pairs.size(), mer + mer + mer / 2); // 1-4 pairs in the cyclic hexamer are double degenerated
         auto pairs_matched = [pairs]() -> int {
-            int match_cnt = 0;
+            std::size_t match_cnt = 0;
             for (auto dist = 1; dist <= distance; ++dist) {
-                for (auto n = 0; n < mer; ++n) {
-                    auto i = n;
-                    auto j = (n + dist) % mer;
+                for (std::size_t n = 0; n < mer; ++n) {
+                    std::size_t i = n;
+                    std::size_t j = (n + dist) % mer;
                     if (i > j) {
                         std::swap(i, j);
                         if (j - i == 3) {
@@ -607,26 +607,26 @@ TEST_CASE("[Faunus] MoleculeStructureReader") {
 
 // ============ ExclusionsSimple ============
 
-ExclusionsSimple ExclusionsSimple::create(int atoms_cnt, const std::vector<std::pair<int, int>> &pairs) {
+ExclusionsSimple ExclusionsSimple::create(index_type atoms_cnt, const std::vector<index_pair>& pairs) {
     ExclusionsSimple exclusions(atoms_cnt);
     exclusions.add(pairs);
     return exclusions;
 }
 
-ExclusionsSimple::ExclusionsSimple(int size)
+ExclusionsSimple::ExclusionsSimple(index_type size)
     : size(size), excluded_pairs(std::make_shared<std::vector<unsigned char>>()) {
     faunus_logger->log(size < 1000 ? spdlog::level::trace : spdlog::level::warn,
                        "creating exclusion matrix {}×{} for {} atoms", size, size, size);
     excluded_pairs->resize(size * size, false);
 }
 
-void ExclusionsSimple::add(const std::vector<std::pair<int, int>> &exclusions) {
+void ExclusionsSimple::add(const std::vector<index_pair>& exclusions) {
     for (const auto &pair : exclusions) {
         add(pair.first, pair.second);
     }
 }
 
-inline void ExclusionsSimple::add(int i, int j) {
+inline void ExclusionsSimple::add(index_type i, index_type j) {
     if(i >= size || j >= size) {
         throw std::range_error("exclusion index out of range");
     }
@@ -654,7 +654,7 @@ void from_json(const json &j, ExclusionsSimple &exclusions) {
 
 void to_json(json &j, const ExclusionsSimple &exclusions) {
     j = json::array();
-    for (auto m = 0; m < exclusions.size; ++m) {
+    for (auto m = 0u; m < exclusions.size; ++m) {
         for (auto n = m + 1; n < exclusions.size; ++n) {
             if (exclusions.isExcluded(m, n)) {
                 j.push_back({m, n});
@@ -665,18 +665,22 @@ void to_json(json &j, const ExclusionsSimple &exclusions) {
 
 // ============ ExclusionsVicinity ============
 
-ExclusionsVicinity ExclusionsVicinity::create(int atoms_cnt, const std::vector<std::pair<int, int>> &pairs) {
+ExclusionsVicinity ExclusionsVicinity::create(index_type atoms_cnt, const std::vector<index_pair>& pairs) {
     auto max_neighbours_distance = 0;
-    auto compare = [](auto &a, auto &b) { return std::abs(a.first - a.second) < std::abs(b.first - b.second); };
+    auto compare = [](auto& a, auto& b) {
+        auto diff1 = std::max(a.first, a.second) - std::min(a.first, a.second); // unsigned arithmetics...
+        auto diff2 = std::max(b.first, b.second) - std::min(b.first, b.second); // ...sucks!
+        return diff1 < diff2;
+    };
     if (auto it = std::max_element(pairs.begin(), pairs.end(), compare); it != pairs.end()) {
-        max_neighbours_distance = std::abs(it->first - it->second);
+        max_neighbours_distance = std::max(it->first, it->second) - std::min(it->first, it->second);
     }
     ExclusionsVicinity exclusions(atoms_cnt, max_neighbours_distance);
     exclusions.add(pairs);
     return exclusions;
 }
 
-ExclusionsVicinity::ExclusionsVicinity(int atoms_cnt, int max_difference)
+ExclusionsVicinity::ExclusionsVicinity(index_type atoms_cnt, index_type max_difference)
     : atoms_cnt(atoms_cnt), max_bond_distance(max_difference),
       excluded_pairs(std::make_shared<std::vector<unsigned char>>()) {
     faunus_logger->log(atoms_cnt * max_difference < 1'000'000 ? spdlog::level::trace : spdlog::level::warn,
@@ -686,7 +690,7 @@ ExclusionsVicinity::ExclusionsVicinity(int atoms_cnt, int max_difference)
     excluded_pairs->resize(atoms_cnt * max_difference, false);
 }
 
-void ExclusionsVicinity::add(int i, int j) {
+void ExclusionsVicinity::add(index_type i, index_type j) {
     if (i > j) {
         std::swap(i, j);
     }
@@ -696,8 +700,8 @@ void ExclusionsVicinity::add(int i, int j) {
     excluded_pairs->at(toIndex(i, j)) = true;
 }
 
-void ExclusionsVicinity::add(const std::vector<std::pair<int, int>> &pairs) {
-    for (auto pair : pairs) {
+void ExclusionsVicinity::add(const std::vector<index_pair>& pairs) {
+    for (const auto& pair : pairs) {
         add(pair.first, pair.second);
     }
 }
@@ -706,14 +710,14 @@ void to_json(json &j, const ExclusionsVicinity &exclusions) {
     j = json::array();
     for (auto it = exclusions.excluded_pairs->begin(); it != exclusions.excluded_pairs->end(); ++it) {
         if (*it) {
-            int n = std::distance(exclusions.excluded_pairs->begin(), it);
+            auto n = std::distance(exclusions.excluded_pairs->begin(), it);
             j.push_back(exclusions.fromIndex(n));
         }
     }
 }
 
 TEST_CASE("[Faunus] ExclusionsVicinity") {
-    std::vector<std::pair<int, int>> pairs{{0, 1}, {1, 2}, {1, 3}, {6, 7}};
+    std::vector<std::pair<std::size_t, std::size_t>> pairs{{0, 1}, {1, 2}, {1, 3}, {6, 7}};
     auto exclusions = ExclusionsVicinity::create(10, pairs);
 
     CHECK(exclusions.isExcluded(1, 3));

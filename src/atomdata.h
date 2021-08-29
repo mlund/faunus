@@ -31,7 +31,7 @@ void from_single_use_json(SingleUseJSON& j, InteractionData& a);
  */
 class AtomData { // has to be a class when a constant reference is used
   public:
-    typedef int Tid;
+    using Tid = std::size_t;
 
   private:
     Tid _id = -1;
@@ -118,13 +118,13 @@ AtomData& findAtomByName(const std::string& name);
  * a sequence containing all id's of the database, i.e.
  * `0, ..., database.size()-1`.
  */
-template <class Trange> std::vector<int> names2ids(Trange& database, const std::vector<std::string>& names) {
-    std::vector<AtomData::Tid> index;
+template <class Trange> std::vector<std::size_t> names2ids(Trange& database, const std::vector<std::string>& names) {
+    std::vector<std::size_t> index;
     index.reserve(names.size());
-    for (auto& name : names) {
+    for (const auto& name : names) {
         if (name == "*") { // wildcard selecting all id's
             index.resize(database.size());
-            std::iota(index.begin(), index.end(), 0);
+            std::iota(index.begin(), index.end(), 0u);
             return index;
         }
         if (auto it = findName(database, name); it != database.end())

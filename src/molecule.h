@@ -76,27 +76,32 @@ struct Conformation {
  * @internal Currently not used. MoleculeData can use this class internally.
  */
 class ExclusionsSimple {
+  public:
+    using index_type = std::size_t;
+    using index_pair = std::pair<index_type, index_type>;
+
+  private:
     bool any_exclusions = false; //!< true if at least one excluded interaction is present
-    int size;                    //!< number of particles within the group; matrix = size × size
+    index_type size;             //!< number of particles within the group; matrix = size × size
     //! 1D representation of excluded interaction matrix; the shared pointer saves copying
     //! Note that std::vector<bool> uses packing with performance implications
     std::shared_ptr<std::vector<unsigned char>> excluded_pairs;
 
   public:
     //! Creates and populates exclusions.
-    static ExclusionsSimple create(int atoms_cnt, const std::vector<std::pair<int, int>> &pairs);
-    explicit ExclusionsSimple(int size = 0);
+    static ExclusionsSimple create(index_type atoms_cnt, const std::vector<index_pair>& pairs);
+    explicit ExclusionsSimple(index_type size = 0);
     //! @param i, j indices of atoms within molecule with excluded nonbonded interaction
-    void add(int i, int j);
-    void add(const std::vector<std::pair<int, int>> &pairs);
+    void add(index_type i, index_type j);
+    void add(const std::vector<index_pair>& pairs);
     //! @param i, j indices of atoms within molecule with excluded nonbonded interaction
-    bool isExcluded(int i, int j) const;
+    bool isExcluded(index_type i, index_type j) const;
     bool empty() const; //!< true if no excluded interactions at all
     friend void from_json(const json &j, ExclusionsSimple &exclusions);
     friend void to_json(json &j, const ExclusionsSimple &exclusions);
 };
 
-inline bool ExclusionsSimple::isExcluded(int i, int j) const {
+inline bool ExclusionsSimple::isExcluded(index_type i, index_type j) const {
     if (i > j) {
         std::swap(i, j);
     }
@@ -119,39 +124,39 @@ void to_json(json &j, const ExclusionsSimple &exclusions);
  * @internal MoleculeData uses this class internally.
  */
 class ExclusionsVicinity {
-    //! count of atoms in the molecule; unmutable
-    int atoms_cnt;
-    //! maximal possible distance (difference) between indices of excluded particles
-    int  max_bond_distance;
+    using index_type = std::size_t;
+    using index_pair = std::pair<index_type, index_type>;
+    index_type atoms_cnt;         //!< count of atoms in the molecule; unmutable
+    index_type max_bond_distance; //!< maximal possible distance (difference) between indices of excluded particles
+
     //! 1D representation of excluded interaction matrix; the shared pointer saves copying
     //! Note that std::vector<bool> uses packing with performance implications
     std::shared_ptr<std::vector<unsigned char>> excluded_pairs;
-    int toIndex(int i, int j) const;
-    std::pair<int, int> fromIndex(int n) const;
+    std::size_t toIndex(index_type i, index_type j) const;
+    index_pair fromIndex(index_type n) const;
 
   public:
     /** Generates memory-optimal structure from underlying pair list.
      * @param atoms_cnt number of atoms in the molecule
      * @param pairs list of excluded pairs using intramolecular indices
      */
-    static ExclusionsVicinity create(int atoms_cnt, const std::vector<std::pair<int, int>> &pairs);
+    static ExclusionsVicinity create(index_type atoms_cnt, const std::vector<index_pair>& pairs);
     /**
      *
      * @param atoms_cnt number of atoms in the molecule
      * @param max_difference maximal allowed distance
      */
-    explicit ExclusionsVicinity(int atoms_cnt = 0, int max_difference = 0);
+    explicit ExclusionsVicinity(index_type atoms_cnt = 0, index_type max_difference = 0);
     //! @param i, j indices of atoms within molecule with excluded nonbonded interaction
-    void add(int i, int j);
-    void add(const std::vector<std::pair<int, int>> &pairs);
-    //! @param i, j indices of atoms within molecule with excluded nonbonded interaction
-    bool isExcluded(int i, int j) const;
+    void add(index_type i, index_type j);
+    void add(const std::vector<index_pair>& pairs);
+    bool isExcluded(index_type i, index_type j) const;
     bool empty() const; //!< true if no excluded interactions at all
-    // friend void from_json(const json &j, ExclusionsVicinity &exclusions); // not implemented
     friend void to_json(json &j, const ExclusionsVicinity &exclusions);
 };
 
-inline bool ExclusionsVicinity::isExcluded(int i, int j) const {
+//! @param i, j indices of atoms within molecule with excluded nonbonded interaction
+inline bool ExclusionsVicinity::isExcluded(index_type i, index_type j) const {
     if (i > j) {
         std::swap(i, j);
     }
@@ -161,11 +166,16 @@ inline bool ExclusionsVicinity::isExcluded(int i, int j) const {
 
 inline bool ExclusionsVicinity::empty() const { return max_bond_distance == 0; }
 
-inline int ExclusionsVicinity::toIndex(int i, int j) const { return i * max_bond_distance + (j - i - 1); }
+inline ExclusionsVicinity::index_type ExclusionsVicinity::toIndex(index_type i, index_type j) const {
+    if (i > j) {
+        std::swap(i, j);
+    }
+    return i * max_bond_distance + (j - i - 1);
+}
 
-inline std::pair<int, int> ExclusionsVicinity::fromIndex(int n) const {
-    int i = n / max_bond_distance;
-    int j = n % max_bond_distance + i + 1;
+inline ExclusionsVicinity::index_pair ExclusionsVicinity::fromIndex(index_type n) const {
+    index_type i = n / max_bond_distance;
+    index_type j = n % max_bond_distance + i + 1;
     return std::make_pair(i, j);
 }
 
@@ -176,18 +186,22 @@ void to_json(json &j, const ExclusionsVicinity &exclusions);
  * @brief General properties for molecules
  */
 class MoleculeData {
+  public:
+    using Tid = std::size_t;
+
+  private:
     json json_cfg; //!< data useful only for to_json
-    int _id = -1;
+    Tid _id = 0;
     bool implicit = false; //!< Is molecule implicit and explicitly absent from simulation cell?
 
   protected:
     ExclusionsVicinity exclusions; //!< Implementation of isPairExcluded;
                                    //!< various implementation can be provided in the future
-  public:
-    std::shared_ptr<MoleculeInserter> inserter = nullptr; //!< Functor for insertion into space
 
-    int &id();             //!< Type id
-    const int &id() const; //!< Type id
+    std::shared_ptr<MoleculeInserter> inserter = nullptr; //!< Functor for insertion into space
+  public:
+    Tid& id();                                        //!< Type id
+    const Tid& id() const;                            //!< Type id
     void createMolecularConformations(const json& j); //!< Add conformations if appropriate
     void setConformationWeights(const json& j);       //!< Add weights for conformations
 
@@ -207,7 +221,7 @@ class MoleculeData {
                  const BasePointerVector<Potential::BondData> &bonds);
 
     bool isImplicit() const; //!< Is molecule implicit and explicitly absent from simulation cell?
-    bool isPairExcluded(int i, int j) const;
+    bool isPairExcluded(Tid i, Tid j) const;
 
     /** @brief Specify function to be used when inserting into space.
      *
@@ -232,7 +246,7 @@ class MoleculeData {
     friend void from_json(const json &j, MoleculeData &a);
 }; // end of class
 
-inline bool MoleculeData::isPairExcluded(int i, int j) const { return exclusions.isExcluded(i, j); }
+inline bool MoleculeData::isPairExcluded(Tid i, Tid j) const { return exclusions.isExcluded(i, j); }
 
 void to_json(json &j, const MoleculeData &a);
 
@@ -272,7 +286,8 @@ class MoleculeBuilder {
     std::string molecule_name; //!< human readable name of the molecule
     ParticleVector particles;  //!< vector of particles; it unpacks to atoms and conformations[0]
     decltype(MoleculeData::bonds) bonds;
-    std::vector<std::pair<int, int>> exclusion_pairs;
+    std::vector<std::pair<MoleculeData::Tid, MoleculeData::Tid>> exclusion_pairs;
+
   protected:
     bool isFasta(const json &j_properties); //!< the structure is read in FASTA format with harmonic bonds
     void readCompoundValues(const json &j); //!< a director method calling the executive methods in the right order
@@ -328,14 +343,14 @@ class NeighboursGenerator {
     void generatePaths(int bonded_distance);
   public:
     //! atom pairs addressed by intramolecular indices
-    typedef std::vector<std::pair<int, int>> AtomPairList;
+    typedef std::vector<std::pair<std::size_t, std::size_t>> AtomPairList;
     NeighboursGenerator(const BondVector &bonds);
     /**
      * Append all atom pairs within a given bond distance to the pair list.
      * @param pairs atom pair list
      * @param bond_distance maximal number of 1-2 bonds between atoms to consider
      */
-    void generatePairs(AtomPairList &pairs, int bond_distance);
+    void generatePairs(AtomPairList& pairs, std::size_t bond_distance);
 };
 
 /**

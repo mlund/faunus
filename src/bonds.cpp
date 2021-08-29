@@ -19,25 +19,25 @@ void from_json(const json& j, std::shared_ptr<BondData>& bond) {
         const auto& [bondtype, parameters] = jsonSingleItem(j);
         const BondData::Variant variant = json(bondtype);
         switch (variant) {
-        case BondData::HARMONIC:
+        case BondData::Variant::HARMONIC:
             bond = std::make_shared<HarmonicBond>();
             break;
-        case BondData::FENE:
+        case BondData::Variant::FENE:
             bond = std::make_shared<FENEBond>();
             break;
-        case BondData::FENEWCA:
+        case BondData::Variant::FENEWCA:
             bond = std::make_shared<FENEWCABond>();
             break;
-        case BondData::HARMONIC_TORSION:
+        case BondData::Variant::HARMONIC_TORSION:
             bond = std::make_shared<HarmonicTorsion>();
             break;
-        case BondData::GROMOS_TORSION:
+        case BondData::Variant::GROMOS_TORSION:
             bond = std::make_shared<GromosTorsion>();
             break;
-        case BondData::PERIODIC_DIHEDRAL:
+        case BondData::Variant::PERIODIC_DIHEDRAL:
             bond = std::make_shared<PeriodicDihedral>();
             break;
-        case BondData::HARMONIC_DIHEDRAL:
+        case BondData::Variant::HARMONIC_DIHEDRAL:
             bond = std::make_shared<HarmonicDihedral>();
             break;
         default:
@@ -85,7 +85,7 @@ void HarmonicBond::to_json(Faunus::json& j) const {
 
 std::shared_ptr<BondData> HarmonicBond::clone() const { return std::make_shared<HarmonicBond>(*this); }
 
-BondData::Variant HarmonicBond::type() const { return BondData::HARMONIC; }
+BondData::Variant HarmonicBond::type() const { return BondData::Variant::HARMONIC; }
 
 /**
  * @param particles Particle vector to all particles in the system
@@ -117,7 +117,7 @@ FENEBond::FENEBond(double force_constant, double max_distance, const std::vector
 
 std::shared_ptr<BondData> FENEBond::clone() const { return std::make_shared<FENEBond>(*this); }
 
-BondData::Variant FENEBond::type() const { return BondData::FENE; }
+BondData::Variant FENEBond::type() const { return BondData::Variant::FENE; }
 
 void FENEBond::from_json(const Faunus::json& j) {
     half_force_constant = 0.5 * j.at("k").get<double>() * 1.0_kJmol / (1.0_angstrom * 1.0_angstrom);
@@ -158,7 +158,7 @@ FENEWCABond::FENEWCABond(double force_constant, double max_distance, double epsi
 
 std::shared_ptr<BondData> FENEWCABond::clone() const { return std::make_shared<FENEWCABond>(*this); }
 
-BondData::Variant FENEWCABond::type() const { return BondData::FENEWCA; }
+BondData::Variant FENEWCABond::type() const { return BondData::Variant::FENEWCA; }
 
 void FENEWCABond::from_json(const Faunus::json& j) {
     half_force_constant = j.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2) / 2.0;
@@ -226,7 +226,7 @@ void HarmonicTorsion::to_json(Faunus::json& j) const {
 HarmonicTorsion::HarmonicTorsion(double force_constant, double equilibrium_angle, const std::vector<int>& indices)
     : TorsionData(indices), half_force_constant(force_constant / 2.0), equilibrium_angle(equilibrium_angle) {}
 
-BondData::Variant HarmonicTorsion::type() const { return BondData::HARMONIC_TORSION; }
+BondData::Variant HarmonicTorsion::type() const { return BondData::Variant::HARMONIC_TORSION; }
 
 std::shared_ptr<BondData> HarmonicTorsion::clone() const { return std::make_shared<HarmonicTorsion>(*this); }
 
@@ -283,7 +283,7 @@ GromosTorsion::GromosTorsion(double force_constant, double cosine_equilibrium_an
     : TorsionData(indices), half_force_constant(0.5 * force_constant),
       cosine_equilibrium_angle(cosine_equilibrium_angle) {}
 
-BondData::Variant GromosTorsion::type() const { return BondData::GROMOS_TORSION; }
+BondData::Variant GromosTorsion::type() const { return BondData::Variant::GROMOS_TORSION; }
 
 std::shared_ptr<BondData> GromosTorsion::clone() const { return std::make_shared<GromosTorsion>(*this); }
 
@@ -329,7 +329,7 @@ PeriodicDihedral::PeriodicDihedral(double force_constant, double phase_angle, do
                                    const std::vector<int>& indices)
     : BondData(indices), force_constant(force_constant), phase_angle(phase_angle), periodicity(periodicity) {}
 
-BondData::Variant PeriodicDihedral::type() const { return BondData::PERIODIC_DIHEDRAL; }
+BondData::Variant PeriodicDihedral::type() const { return BondData::Variant::PERIODIC_DIHEDRAL; }
 
 void PeriodicDihedral::setEnergyFunction(const ParticleVector& particles) {
     // Torsion on the form a(0) - b(1) - c(2) - d(3)
@@ -398,7 +398,7 @@ int HarmonicDihedral::numindex() const { return 4; }
 HarmonicDihedral::HarmonicDihedral(double force_constant, double equilibrium_dihedral, const std::vector<int>& indices)
     : BondData(indices), half_force_constant(force_constant / 2.0), equilibrium_dihedral(equilibrium_dihedral) {}
 
-BondData::Variant HarmonicDihedral::type() const { return BondData::HARMONIC_DIHEDRAL; }
+BondData::Variant HarmonicDihedral::type() const { return BondData::Variant::HARMONIC_DIHEDRAL; }
 
 std::shared_ptr<BondData> HarmonicDihedral::clone() const { return std::make_shared<HarmonicDihedral>(*this); }
 
@@ -816,7 +816,7 @@ TEST_CASE("[Faunus] BondData") {
         bonds.emplace_back<HarmonicBond>(1.0, 2.1, std::vector<int>{2, 3});
         auto harmonic_bonds = bonds.find<HarmonicBond>();
         CHECK(harmonic_bonds.size() == 1);
-        CHECK(harmonic_bonds.front()->type() == BondData::HARMONIC);
+        CHECK(harmonic_bonds.front()->type() == BondData::Variant::HARMONIC);
         CHECK(harmonic_bonds.front() == bonds.back()); // harmonic_bonds should contain references to bonds
     }
 }

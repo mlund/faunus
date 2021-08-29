@@ -41,8 +41,8 @@ void MetropolisMonteCarlo::init() {
     Change change;
     change.all = true;
 
-    state->pot->key = Energy::Energybase::ACCEPTED_MONTE_CARLO_STATE;    // this is the old energy (current, accepted)
-    trial_state->pot->key = Energy::Energybase::TRIAL_MONTE_CARLO_STATE; // this is the new energy (trial)
+    state->pot->state = Energy::Energybase::MonteCarloState::ACCEPTED;    // this is the old energy (current, accepted)
+    trial_state->pot->state = Energy::Energybase::MonteCarloState::TRIAL; // this is the new energy (trial)
 
     state->pot->init();
     auto energy = state->pot->energy(change);
@@ -277,8 +277,8 @@ double TranslationalEntropy::atomSwapEnergy(const Change::data &data) {
 }
 
 double TranslationalEntropy::atomChangeEnergy(int molid) {
-    auto mollist_new = trial_spc.findMolecules(molid, Space::ALL); // "ALL" because "ACTIVE"
-    auto mollist_old = spc.findMolecules(molid, Space::ALL);       // ...returns only full groups
+    auto mollist_new = trial_spc.findMolecules(molid, Space::Selection::ALL); // "ALL" because "ACTIVE"
+    auto mollist_old = spc.findMolecules(molid, Space::Selection::ALL);       // ...returns only full groups
     if (range_size(mollist_new) > 1 || range_size(mollist_old) > 1) {
         throw std::runtime_error("multiple atomic groups of the same type is not allowed");
     }
@@ -288,8 +288,8 @@ double TranslationalEntropy::atomChangeEnergy(int molid) {
 }
 
 double TranslationalEntropy::moleculeChangeEnergy(int molid) {
-    auto mollist_new = trial_spc.findMolecules(molid, Space::ACTIVE);
-    auto mollist_old = spc.findMolecules(molid, Space::ACTIVE);
+    auto mollist_new = trial_spc.findMolecules(molid, Space::Selection::ACTIVE);
+    auto mollist_old = spc.findMolecules(molid, Space::Selection::ACTIVE);
     int N_new = range_size(mollist_new); // number of molecules after move
     int N_old = range_size(mollist_old); // number of molecules before move
     return bias(N_new, N_old);

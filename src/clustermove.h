@@ -67,7 +67,7 @@ class ClusterShapeAnalysis {
                        << fmt::format("REMARK   0 Relative shape anisotropy = {:.3f}\n",
                                       shape.relative_shape_anisotropy);
             PQRWriter pqr;
-            pqr.style = PQRWriter::PQR;
+            pqr.style = PQRWriter::Style::PQR;
             pqr.save(it->second, groups, spc.geo.getLength());
         }
         ++number_of_samples;

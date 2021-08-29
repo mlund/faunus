@@ -218,7 +218,7 @@ ExternalAkesson::ExternalAkesson(const json &j, Tspace &spc) : ExternalPotential
 
 double ExternalAkesson::energy(Change &change) {
     if (not fixed_potential) {              // phi(z) unconverged, keep sampling
-        if (key == ACCEPTED_MONTE_CARLO_STATE) { // only sample on accepted configs
+        if (state == MonteCarloState::ACCEPTED) { // only sample on accepted configs
             num_density_updates++;
             if (num_density_updates % nstep == 0) {
                 update_rho();
@@ -234,7 +234,7 @@ double ExternalAkesson::energy(Change &change) {
 ExternalAkesson::~ExternalAkesson() {
     // save only if still updating and if energy type is `ACCEPTED_MONTE_CARLO_STATE`,
     // that is, accepted configurations (not trial)
-    if (not fixed_potential and key == ACCEPTED_MONTE_CARLO_STATE) {
+    if (not fixed_potential and state == MonteCarloState::ACCEPTED) {
         save_rho();
     }
 }
@@ -278,7 +278,7 @@ void ExternalAkesson::sync(Energybase* energybase, const Change&) {
         return;
     }
     if (auto* other = dynamic_cast<ExternalAkesson*>(energybase)) {
-        if (other->key == ACCEPTED_MONTE_CARLO_STATE) { // only trial energy (new) requires sync
+        if (other->state == MonteCarloState::ACCEPTED) { // only trial energy (new) requires sync
             if (num_density_updates != other->num_density_updates) {
                 assert(num_density_updates < other->num_density_updates);
                 num_density_updates = other->num_density_updates;

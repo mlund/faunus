@@ -356,8 +356,8 @@ class EnergyAccumulatorBase {
     using ParticlePair = std::pair<ParticleRef, ParticleRef>;         //!< References to two particles
 
   public:
-    enum Scheme { SERIAL, OPENMP, PARALLEL, INVALID };
-    Scheme scheme = SERIAL;
+    enum class Scheme { SERIAL, OPENMP, PARALLEL, INVALID };
+    Scheme scheme = Scheme::SERIAL;
 
     EnergyAccumulatorBase(double value);
     virtual ~EnergyAccumulatorBase() = default;
@@ -417,7 +417,7 @@ template <typename PairEnergy> class InstantEnergyAccumulator : public EnergyAcc
 
     void from_json(const json &j) override {
         EnergyAccumulatorBase::from_json(j);
-        if (scheme != SERIAL) {
+        if (scheme != Scheme::SERIAL) {
             faunus_logger->warn("unsupported summation scheme; falling back to 'serial'");
         }
     }
@@ -470,10 +470,10 @@ template <typename PairEnergy> class DelayedEnergyAccumulator : public EnergyAcc
 
     explicit operator double() override {
         switch (scheme) {
-        case OPENMP:
+        case Scheme::OPENMP:
             value += accumulateOpenMP();
             break;
-        case PARALLEL:
+        case Scheme::PARALLEL:
             value += accumulateParallel();
             break;
         default:
@@ -516,7 +516,7 @@ template <typename TPairEnergy>
 std::shared_ptr<EnergyAccumulatorBase> createEnergyAccumulator(const json& j, const TPairEnergy& pair_energy,
                                                                double initial_value) {
     std::shared_ptr<EnergyAccumulatorBase> accumulator;
-    if (j.value("summation_policy", EnergyAccumulatorBase::SERIAL) != EnergyAccumulatorBase::SERIAL) {
+    if (j.value("summation_policy", EnergyAccumulatorBase::Scheme::SERIAL) != EnergyAccumulatorBase::Scheme::SERIAL) {
         accumulator = std::make_shared<DelayedEnergyAccumulator<TPairEnergy>>(pair_energy, initial_value);
         faunus_logger->debug("activated delayed energy summation");
     } else {
@@ -1380,7 +1380,7 @@ class NonbondedCached : public Nonbonded<TPairEnergy, TPairingPolicy> {
         if (j < i) {
             std::swap(i, j);
         }
-        if (Energybase::key == Energybase::TRIAL_MONTE_CARLO_STATE) { // if this is from the trial system
+        if (Energybase::state == Energybase::MonteCarloState::TRIAL) { // if this is from the trial system
             TAccumulator energy_accumulator(Base::pair_energy);
             Base::pairing.group2group(energy_accumulator, g1, g2);
             energy_cache(i, j) = static_cast<double>(energy_accumulator);  // update the cache

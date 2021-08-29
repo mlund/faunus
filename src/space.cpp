@@ -272,9 +272,9 @@ std::vector<Space::Tgroup, std::allocator<Space::Tgroup>>::iterator Space::findG
 }
 
 size_t Space::numParticles(Space::Selection selection) const {
-    if (selection == ALL) {
+    if (selection == Selection::ALL) {
         return p.size();
-    } else if (selection == ACTIVE) {
+    } else if (selection == Selection::ACTIVE) {
         return std::accumulate(groups.begin(), groups.end(), 0, [](auto sum, auto &g) { return sum + g.size(); });
     } else {
         throw std::runtime_error("invalid selection");
@@ -309,14 +309,14 @@ int Space::getFirstActiveParticleIndex(const Tgroup& group) const {
 TEST_CASE("Space::numParticles") {
     Space spc;
     spc.p.resize(10);
-    CHECK(spc.p.size() == spc.numParticles(Space::ALL));
-    CHECK(spc.numParticles(Space::ACTIVE) == 0);             // zero as there are still no groups
+    CHECK(spc.p.size() == spc.numParticles(Space::Selection::ALL));
+    CHECK(spc.numParticles(Space::Selection::ACTIVE) == 0);  // zero as there are still no groups
     spc.groups.emplace_back(spc.p.begin(), spc.p.end() - 2); // enclose first 8 particles in group
-    CHECK(spc.numParticles(Space::ACTIVE) == 8);
+    CHECK(spc.numParticles(Space::Selection::ACTIVE) == 8);
     spc.groups.emplace_back(spc.p.end() - 2, spc.p.end()); // enclose last 2 particles in group
-    CHECK(spc.numParticles(Space::ACTIVE) == 10);
+    CHECK(spc.numParticles(Space::Selection::ACTIVE) == 10);
     spc.groups.front().resize(0); // deactivate first group with 8 particles
-    CHECK(spc.numParticles(Space::ACTIVE) == 2);
+    CHECK(spc.numParticles(Space::Selection::ACTIVE) == 2);
 }
 
 void to_json(json& j, const Space& spc) {

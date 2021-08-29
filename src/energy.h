@@ -432,6 +432,7 @@ template <typename PairEnergy> class DelayedEnergyAccumulator : public EnergyAcc
   private:
     std::vector<ParticlePair> particle_pairs;
     const PairEnergy& pair_energy; //!< recipe to compute non-bonded energy between two particles, see PairEnergy
+    const size_t max_particles_in_buffer = 10000; //!< this can be modified to suit memory requirements
 
   public:
     explicit DelayedEnergyAccumulator(const PairEnergy& pair_energy, const double value = 0.0)
@@ -440,7 +441,11 @@ template <typename PairEnergy> class DelayedEnergyAccumulator : public EnergyAcc
     /** Reserve memory for (N-1)*N/2 interaction pairs */
     void reserve(size_t number_of_particles) override {
         try {
-            particle_pairs.reserve((number_of_particles - 1) * number_of_particles / 2);
+            number_of_particles = std::min(number_of_particles, max_particles_in_buffer);
+            const auto number_of_pairs = (number_of_particles - 1U) * number_of_particles / 2U;
+            faunus_logger->debug(fmt::format("reserving memory for {} energy pairs ({} MB)", number_of_pairs,
+                                             number_of_pairs * sizeof(ParticlePair) / (1024U * 1024U)));
+            particle_pairs.reserve(number_of_pairs);
         } catch (std::exception& e) {
             throw std::runtime_error(
                 fmt::format("cannot allocate memory for energy pairs: {}. Use another summation policy.", e.what()));
@@ -464,6 +469,10 @@ template <typename PairEnergy> class DelayedEnergyAccumulator : public EnergyAcc
     }
 
     inline DelayedEnergyAccumulator& operator+=(ParticlePair&& pair) override {
+        assert(particle_pairs.capacity() > 0);
+        if (particle_pairs.size() == particle_pairs.capacity()) {
+            operator double(); // sum stored pairs and reset buffer
+        }
         particle_pairs.template emplace_back(std::move(pair));
         return *this;
     }

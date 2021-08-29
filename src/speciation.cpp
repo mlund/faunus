@@ -15,7 +15,7 @@ void SpeciationMove::_to_json(json &j) const {
     json &_j = j["reactions"];
     _j = json::object();
     for (auto [reaction, data] : acceptance) {
-        _j[reaction->reaction_str] = {{"attempts", data.left.cnt + data.right.cnt},
+        _j[reaction->reaction_str] = {{"attempts", data.left.size() + data.right.size()},
                                       {"acceptance -->", data.right.avg()},
                                       {"acceptance <--", data.left.avg()}};
     }

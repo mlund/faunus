@@ -175,7 +175,8 @@ template <typename Tx = double, typename Ty = Tx, bool centerbin = false> class 
         while (std::getline(in, line)) {
             std::stringstream o(line);
             while (o >> x) {
-                if ((x >= _xmin) and (y << o)) {
+                if (x >= _xmin) {
+                    y << o;
                     operator()(x) = y;
                 } else {
                     throw std::runtime_error("table load error: x smaller than xmin");

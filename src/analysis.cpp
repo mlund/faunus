@@ -372,7 +372,7 @@ void PairFunctionBase::_to_disk() {
             const auto volume_at_r = volumeElement(r);
             if (volume_at_r > 0.0) {
                 const auto total_number_of_samples = histogram.sumy();
-                o << fmt::format("{:.6E} {:.6E}\n", r, N * mean_volume / (volume_at_r * total_number_of_samples));
+                o << fmt::format("{:.6E} {:.6E}\n", r, N * mean_volume.avg() / (volume_at_r * total_number_of_samples));
             }
         };
         f << histogram;
@@ -404,7 +404,9 @@ PairAngleFunctionBase::PairAngleFunctionBase(Space& spc, const json& j, const st
 void PairAngleFunctionBase::_to_disk() {
     std::ofstream f(MPI::prefix + file);
     if (f) {
-        hist2.stream_decorator = [&](std::ostream& o, double r, double N) { o << r << " " << N << "\n"; };
+        hist2.stream_decorator = [&](std::ostream& o, double r, Average<double> N) {
+            o << r << " " << N.avg() << "\n";
+        };
         f << hist2;
     }
     file = file + "gofr.dat"; // name file where free g(r) is saved, and make sure that the file is not overwritten by
@@ -1041,8 +1043,9 @@ void MultipoleDistribution::save() const {
                 const auto u_tot = energy.ion_ion.avg() + energy.ion_dipole.avg() + energy.dipole_dipole.avg() +
                                    energy.ion_quadrupole.avg();
                 stream << fmt::format("{:10.4f}{:10.4f}{:10.4f}{:10.4f}{:10.4f}{:10.4f}{:10.4f}{:10.4f}\n", distance,
-                                      energy.exact, u_tot, energy.ion_ion, energy.ion_dipole, energy.dipole_dipole,
-                                      energy.ion_quadrupole, energy.dipole_dipole_correlation);
+                                      energy.exact.avg(), u_tot, energy.ion_ion.avg(), energy.ion_dipole.avg(),
+                                      energy.dipole_dipole.avg(), energy.ion_quadrupole.avg(),
+                                      energy.dipole_dipole_correlation.avg());
             }
         }
     }
@@ -1229,7 +1232,7 @@ void MultipoleMoments::_to_disk() {
 // =============== PolymerShape ===============
 
 void PolymerShape::_to_json(json& j) const {
-    if (data.gyration_radius.cnt > 0) {
+    if (!data.gyration_radius.empty()) {
         j = {{"molecule", Faunus::molecules[molid].name},
              {"⟨s²⟩-⟨s⟩²", data.gyration_radius_squared.avg() - std::pow(data.gyration_radius.avg(), 2)},
              {"⟨r²⟩∕⟨s²⟩", data.end_to_end_squared.avg() / data.gyration_radius_squared.avg()},
@@ -1727,7 +1730,7 @@ double VirtualTranslate::momentarilyPerturb(Space::Tgroup& group) {
 void VirtualTranslate::_to_json(json& j) const {
     if (number_of_samples > 0 && std::fabs(perturbation_distance) > 0.0) {
         j = {{"dL", perturbation_distance},
-             {"force", std::log(mean_exponentiated_energy_change) / perturbation_distance},
+             {"force", std::log(mean_exponentiated_energy_change.avg()) / perturbation_distance},
              {"dir", perturbation_direction}};
     }
 }

@@ -282,7 +282,8 @@ void AtomicTranslateRotate::saveHistograms() {
 AtomicTranslateRotate::~AtomicTranslateRotate() { saveHistograms(); }
 
 std::unique_ptr<MoveBase> createMove(const std::string& name, const json& properties, Space& spc,
-                                     Energy::Hamiltonian& hamiltonian, MPI::MPIController& mpi_controller) {
+                                     Energy::Hamiltonian& hamiltonian,
+                                     [[maybe_unused]] MPI::MPIController& mpi_controller) {
     try {
         std::unique_ptr<MoveBase> move;
         if (name == "moltransrot") {
@@ -377,7 +378,7 @@ void ParallelTempering::_to_json(json& j) const {
          {"volume_scale", volume_scaling_method}};
     auto& exchange_json = j["exchange"] = json::object();
     for (const auto& [id, acceptance] : acceptance_map) {
-        exchange_json[id] = {{"attempts", acceptance.cnt}, {"acceptance", acceptance.avg()}};
+        exchange_json[id] = {{"attempts", acceptance.size()}, {"acceptance", acceptance.avg()}};
     }
 }
 

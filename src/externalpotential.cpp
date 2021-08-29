@@ -315,7 +315,7 @@ void ExternalAkesson::update_phi() {
     for (double z = -half_box_length_z; z <= half_box_length_z; z += dz) {
         double s = 0;
         for (double zn = -half_box_length_z; zn <= half_box_length_z; zn += dz) {
-            if (rho(zn).cnt > 0) {
+            if (!rho(zn).empty()) {
                 s += rho(zn).avg() * phi_ext(std::fabs(z - zn), a); // Eq. 14 in Greberg's paper
             }
         }

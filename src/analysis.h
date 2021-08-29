@@ -288,7 +288,7 @@ class ChargeFluctuations : public Analysisbase {
     typename decltype(Faunus::molecules)::const_iterator mol_iter; //!< selected molecule type
     using AtomHistogram = std::map<int, int>;                      //!< key = atom id; value = counts
     std::vector<AtomHistogram> atom_histograms;                    //!< one element for each atom in molecule
-    std::vector<Average<double>> atom_mean_charges;                //!< average charges of atomic indexes
+    std::vector<AverageStdev<double>> atom_mean_charges;           //!< average charges of atomic indexes
     std::string filename;                                          //!< name of PQR file with average charges
     bool verbose = true;                                           //!< set to true for more output
 

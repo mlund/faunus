@@ -56,15 +56,14 @@ void to_json(json &, const Change &);       //!< Serialise Change object to json
  */
 class Space {
   public:
-    typedef Geometry::Chameleon Tgeometry;
-    typedef Particle Tparticle; // remove
-    typedef Faunus::ParticleVector Tpvec;
-    typedef Group<Particle> Tgroup;
-    typedef std::vector<Tgroup> Tgvec;
-    typedef Change Tchange;
-    typedef std::function<void(Space &, double, double)> ScaleVolumeTrigger;
-    typedef std::function<void(Space &, const Tchange &)> ChangeTrigger;
-    typedef std::function<void(Space &, const Space &, const Tchange &)> SyncTrigger;
+    using Tgeometry = Geometry::Chameleon;
+    using Tparticle = Faunus::Particle;   // remove
+    using Tpvec = Faunus::ParticleVector; // remove
+    using Tgroup = Group<Particle>;
+    using Tgvec = std::vector<Tgroup>;
+    using ScaleVolumeTrigger = std::function<void(Space&, double, double)>;
+    using ChangeTrigger = std::function<void(Space&, const Change&)>;
+    using SyncTrigger = std::function<void(Space&, const Space&, const Change&)>;
 
   private:
     /**
@@ -75,7 +74,8 @@ class Space {
      * The reservoir is used to emulate a canonical system where a finite
      * number of implicit molecules can participate in equilibrium reactions.
      */
-    std::map<int, int> implicit_reservoir;
+    std::map<std::size_t, std::size_t> implicit_reservoir;
+
     std::vector<ChangeTrigger> changeTriggers; //!< Call when a Change object is applied (unused)
     std::vector<SyncTrigger> onSyncTriggers;   //!< Call when two Space objects are synched (unused)
 
@@ -84,8 +84,9 @@ class Space {
     Tgvec groups;                                           //!< Group vector storing all molecules in system
     Tgeometry geo;                                          //!< Container geometry (boundaries, shape, volume)
     std::vector<ScaleVolumeTrigger> scaleVolumeTriggers;    //!< Called whenever the volume is scaled
-    const std::map<int, int> &getImplicitReservoir() const; //!< Storage for implicit molecules
-    std::map<int, int> &getImplicitReservoir();             //!< Storage for implicit molecules
+
+    const std::map<std::size_t, std::size_t>& getImplicitReservoir() const; //!< Storage for implicit molecules
+    std::map<std::size_t, std::size_t>& getImplicitReservoir();             //!< Storage for implicit molecules
 
     //!< Keywords to select particles based on the their active/inactive state and charge neutrality
     enum class Selection { ALL, ACTIVE, INACTIVE, ALL_NEUTRAL, ACTIVE_NEUTRAL, INACTIVE_NEUTRAL };
@@ -250,8 +251,8 @@ class Space {
         return std::count_if(groups.begin(), groups.end(), filter);
     }
 
-    void sync(const Space &other,
-              const Tchange &change); //!< Copy differing data from other (o) Space using Change object
+    void sync(const Space& other,
+              const Change& change); //!< Copy differing data from other (o) Space using Change object
 
 }; // end of space
 
@@ -305,8 +306,8 @@ struct ActiveParticles {
     const Space &spc;
     class const_iterator {
       private:
-        typedef typename Space::Tgvec::const_iterator Tgroups_iter;
-        typedef typename Space::Tpvec::const_iterator Tparticle_iter;
+        using Tgroups_iter = typename Space::Tgvec::const_iterator;
+        using Tparticle_iter = typename Space::Tpvec::const_iterator;
         const Space &spc;
         Tparticle_iter particle_iter;
         Tgroups_iter groups_iter;

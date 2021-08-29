@@ -261,9 +261,9 @@ Space::Tgvec::iterator Space::randomMolecule(int molid, Random &rand, Space::Sel
         return groups.begin() + (&*rand.sample(m.begin(), m.end()) - &*groups.begin());
     return groups.end();
 }
-const std::map<int, int> &Space::getImplicitReservoir() const { return implicit_reservoir; }
+const std::map<std::size_t, std::size_t>& Space::getImplicitReservoir() const { return implicit_reservoir; }
 
-std::map<int, int> &Space::getImplicitReservoir() { return implicit_reservoir; }
+std::map<std::size_t, std::size_t>& Space::getImplicitReservoir() { return implicit_reservoir; }
 
 std::vector<Space::Tgroup, std::allocator<Space::Tgroup>>::iterator Space::findGroupContaining(const Particle &i) {
     return std::find_if(groups.begin(), groups.end(), [&i](auto &g) { return g.contains(i); });
@@ -279,7 +279,7 @@ std::size_t Space::numParticles(Space::Selection selection) const {
     if (selection == Selection::ALL) {
         return p.size();
     } else if (selection == Selection::ACTIVE) {
-        return std::accumulate(groups.begin(), groups.end(), 0U, [](auto sum, auto& g) { return sum + g.size(); });
+        return std::accumulate(groups.begin(), groups.end(), 0u, [](auto sum, auto& g) { return sum + g.size(); });
     } else {
         throw std::runtime_error("invalid selection");
     }

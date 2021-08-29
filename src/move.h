@@ -313,7 +313,7 @@ class SmartTranslateRotate : public MoveBase {
  */
 class ConformationSwap : public MoveBase {
   public:
-    enum CopyPolicy { ALL, POSITIONS, CHARGES, INVALID }; //!< What to copy from conformation library
+    enum class CopyPolicy { ALL, POSITIONS, CHARGES, INVALID }; //!< What to copy from conformation library
   private:
     CopyPolicy copy_policy;
     RandomInserter inserter;
@@ -332,10 +332,10 @@ class ConformationSwap : public MoveBase {
     explicit ConformationSwap(Space &spc);
 }; // end of conformation swap move
 
-NLOHMANN_JSON_SERIALIZE_ENUM(ConformationSwap::CopyPolicy, {{ConformationSwap::INVALID, nullptr},
-                                                            {ConformationSwap::ALL, "all"},
-                                                            {ConformationSwap::POSITIONS, "positions"},
-                                                            {ConformationSwap::CHARGES, "charges"}})
+NLOHMANN_JSON_SERIALIZE_ENUM(ConformationSwap::CopyPolicy, {{ConformationSwap::CopyPolicy::INVALID, nullptr},
+                                                            {ConformationSwap::CopyPolicy::ALL, "all"},
+                                                            {ConformationSwap::CopyPolicy::POSITIONS, "positions"},
+                                                            {ConformationSwap::CopyPolicy::CHARGES, "charges"}})
 
 class VolumeMove : public MoveBase {
   private:

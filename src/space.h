@@ -88,15 +88,16 @@ class Space {
     std::map<int, int> &getImplicitReservoir();             //!< Storage for implicit molecules
 
     //!< Keywords to select particles based on the their active/inactive state and charge neutrality
-    enum Selection { ALL, ACTIVE, INACTIVE, ALL_NEUTRAL, ACTIVE_NEUTRAL, INACTIVE_NEUTRAL };
+    enum class Selection { ALL, ACTIVE, INACTIVE, ALL_NEUTRAL, ACTIVE_NEUTRAL, INACTIVE_NEUTRAL };
 
     void clear();                                           //!< Clears particle and molecule list
     void push_back(int, const ParticleVector &);            //!< Safely add particles and corresponding group to back
     Tgvec::iterator findGroupContaining(const Particle &i); //!< Finds the group containing the given atom
     Tgvec::iterator findGroupContaining(size_t atom_index); //!< Finds the group containing given atom index
-    size_t numParticles(Selection selection = ACTIVE) const; //!< Number of particles, all or active (default)
+    size_t
+    numParticles(Selection selection = Selection::ACTIVE) const; //!< Number of particles, all or active (default)
     Point scaleVolume(double, Geometry::VolumeMethod = Geometry::ISOTROPIC); //!< Scales atoms, molecules, container
-    Tgvec::iterator randomMolecule(int, Random &, Selection = ACTIVE);       //!< Random group matching molid
+    Tgvec::iterator randomMolecule(int, Random&, Selection = Selection::ACTIVE); //!< Random group matching molid
     json info();
 
     int getGroupIndex(const Tgroup& group) const;         //!< Get index of given group in the group vector
@@ -166,19 +167,19 @@ class Space {
      * @param sel Selection
      * @return range with all groups of molid
      */
-    auto findMolecules(int molid, Selection sel = ACTIVE) {
+    auto findMolecules(int molid, Selection sel = Selection::ACTIVE) {
         std::function<bool(Tgroup &)> f;
         switch (sel) {
-        case (ALL):
+        case (Selection::ALL):
             f = [molid](Tgroup &i) { return i.id == molid; };
             break;
-        case (INACTIVE):
+        case (Selection::INACTIVE):
             f = [molid](Tgroup &i) { return (i.id == molid) && (i.size() != i.capacity()); };
             break;
-        case (ACTIVE):
+        case (Selection::ACTIVE):
             f = [molid](Tgroup &i) { return (i.id == molid) && (i.size() == i.capacity()); };
             break;
-        case (ALL_NEUTRAL):
+        case (Selection::ALL_NEUTRAL):
             f = [molid](Tgroup &group) {
                 if (group.id != molid)
                     return false;
@@ -189,7 +190,7 @@ class Space {
                 }
             };
             break;
-        case (INACTIVE_NEUTRAL):
+        case (Selection::INACTIVE_NEUTRAL):
             f = [molid](Tgroup &group) {
                 if ((group.id == molid) && (group.size() != group.capacity())) {
                     double charge = 0.0;
@@ -202,7 +203,7 @@ class Space {
                 }
             };
             break;
-        case (ACTIVE_NEUTRAL):
+        case (Selection::ACTIVE_NEUTRAL):
             f = [molid](Tgroup &group) {
                 if ((group.id == molid) && (group.size() == group.capacity())) {
                     double charge = 0.0;

@@ -144,7 +144,7 @@ void AtomicTranslateRotate::_from_json(const json& j) {
     }
     directions = j.value("dir", Point(1, 1, 1));
     if (repeat < 0) {
-        auto mollist = spc.findMolecules(molid, Space::ALL);
+        auto mollist = spc.findMolecules(molid, Space::Selection::ALL);
         repeat = std::distance(mollist.begin(), mollist.end()); // repeat for each molecule...
         if (repeat > 0) {
             repeat = repeat * mollist.front().size(); // ...and for each atom
@@ -241,7 +241,7 @@ AtomicTranslateRotate::AtomicTranslateRotate(Space& spc, const Energy::Hamiltoni
 ParticleVector::iterator AtomicTranslateRotate::randomAtom() {
     assert(molid >= 0);
     auto particle = spc.p.end(); // particle iterator
-    auto selection = (Faunus::molecules[molid].atomic) ? Space::ALL : Space::ACTIVE;
+    auto selection = (Faunus::molecules[molid].atomic) ? Space::Selection::ALL : Space::Selection::ACTIVE;
     auto mollist = spc.findMolecules(molid, selection);
     if (auto group = slump.sample(mollist.begin(), mollist.end()); group != mollist.end()) { // random molecule
         if (not group->empty()) {
@@ -664,8 +664,8 @@ void ChargeTransfer::_from_json(const json &j) {
 }
 
 void ChargeTransfer::_move(Change &change) {
-    auto mollist1 = spc.findMolecules(mol1.id, Space::ACTIVE);
-    auto mollist2 = spc.findMolecules(mol2.id, Space::ACTIVE);
+    auto mollist1 = spc.findMolecules(mol1.id, Space::Selection::ACTIVE);
+    auto mollist2 = spc.findMolecules(mol2.id, Space::Selection::ACTIVE);
     if ((not ranges::cpp20::empty(mollist1)) and (not ranges::cpp20::empty(mollist2))) {
         auto git1 = slump.sample(mollist1.begin(), mollist1.end()); // selecting a random molecule of type molecule1
         auto git2 = slump.sample(mollist2.begin(), mollist2.end()); // selecting a random molecule of type molecule2
@@ -842,7 +842,7 @@ void QuadrantJump::_move(Change &change) {
 
     // pick random group from the system matching molecule type
     // TODO: This can be slow -- implement look-up-table in Space
-    auto mollist = spc.findMolecules(molid, Space::ACTIVE); // list of molecules w. 'molid'
+    auto mollist = spc.findMolecules(molid, Space::Selection::ACTIVE); // list of molecules w. 'molid'
     if (not ranges::cpp20::empty(mollist)) {
         auto it = slump.sample(mollist.begin(), mollist.end());
         if (not it->empty()) {
@@ -972,7 +972,7 @@ void TranslateRotate::_from_json(const json &j) {
  * @todo `mollist` scales linearly w. system size -- implement look-up-table in Space?
  */
 std::optional<std::reference_wrapper<Space::Tgroup>> TranslateRotate::findRandomMolecule() const {
-    if (auto mollist = spc.findMolecules(molid, Space::ACTIVE); not ranges::cpp20::empty(mollist)) {
+    if (auto mollist = spc.findMolecules(molid, Space::Selection::ACTIVE); not ranges::cpp20::empty(mollist)) {
         if (auto group_it = slump.sample(mollist.begin(), mollist.end()); not group_it->empty()) {
             return *group_it;
         }
@@ -1134,7 +1134,7 @@ void SmartTranslateRotate::_move(Change &change) {
 
     // pick random group from the system matching molecule type
     // TODO: This can be slow -- implement look-up-table in Space
-    auto mollist = spc.findMolecules(molid, Space::ACTIVE); // list of molecules w. 'molid'
+    auto mollist = spc.findMolecules(molid, Space::Selection::ACTIVE); // list of molecules w. 'molid'
     auto reflist1 = spc.findAtoms(refid1);                  // list of atoms w. 'refid1'
     auto reflist2 = spc.findAtoms(refid2);                  // list of atoms w. 'refid2'
     if (not ranges::cpp20::empty(mollist)) {
@@ -1302,7 +1302,7 @@ void ConformationSwap::_from_json(const json &j) {
 void ConformationSwap::setRepeat() {
     assert(molid >= 0);
     if (repeat < 0) { // negative value signals repeat = N number of molecules
-        auto groups = spc.findMolecules(molid, Space::ALL);
+        auto groups = spc.findMolecules(molid, Space::Selection::ALL);
         repeat = std::distance(groups.begin(), groups.end());
         if (repeat == 0) {
             faunus_logger->warn("{}: no molecules found; repeat set to ZERO", name, repeat);
@@ -1310,7 +1310,7 @@ void ConformationSwap::setRepeat() {
     }
 }
 void ConformationSwap::_move(Change& change) {
-    auto groups = spc.findMolecules(molid, Space::ACTIVE);
+    auto groups = spc.findMolecules(molid, Space::Selection::ACTIVE);
     if (auto group = slump.sample(groups.begin(), groups.end()); group != groups.end()) {
         inserter.offset = group->cm;                                         // insert on top of mass center
         auto particles = inserter(spc.geo, Faunus::molecules[molid], spc.p); // new conformation
@@ -1335,13 +1335,13 @@ void ConformationSwap::_move(Change& change) {
 void ConformationSwap::copyConformation(ParticleVector& particles, ParticleVector::iterator destination) const {
     std::function<void(const Particle&, Particle&)> copy_function; // how to copy particle information
     switch (copy_policy) {
-    case ALL:
+    case CopyPolicy::ALL:
         copy_function = [](const Particle& src, Particle& dst) { dst = src; };
         break;
-    case POSITIONS:
+    case CopyPolicy::POSITIONS:
         copy_function = [](const Particle& src, Particle& dst) { dst.pos = src.pos; };
         break;
-    case CHARGES:
+    case CopyPolicy::CHARGES:
         copy_function = [](const Particle& src, Particle& dst) { dst.charge = src.charge; };
         break;
     default:
@@ -1367,7 +1367,7 @@ void ConformationSwap::registerChanges(Change &change, const Space::Tgroup &grou
  */
 void ConformationSwap::checkMassCenterDrift(const Point& old_mass_center, const ParticleVector& particles) {
     switch (copy_policy) {
-    case CHARGES: // positions untouched; no check needed
+    case CopyPolicy::CHARGES: // positions untouched; no check needed
         return;
     default:
         const auto max_allowed_distance = 1.0e-6;

@@ -13,21 +13,21 @@ namespace Potential {
 TCombinatorFunc PairMixer::getCombinator(CombinationRuleType combination_rule, CoefficientType coefficient) {
     TCombinatorFunc combinator;
     switch (combination_rule) {
-    case COMB_UNDEFINED:
+    case CombinationRuleType::UNDEFINED:
         combinator = &combUndefined;
         break;
-    case COMB_ARITHMETIC:
+    case CombinationRuleType::ARITHMETIC:
         combinator = &combArithmetic;
         break;
-    case COMB_GEOMETRIC:
+    case CombinationRuleType::GEOMETRIC:
         combinator = &combGeometric;
         break;
-    case COMB_LORENTZ_BERTHELOT:
+    case CombinationRuleType::LORENTZ_BERTHELOT:
         switch (coefficient) {
-        case COEF_SIGMA:
+        case CoefficientType::SIGMA:
             combinator = &combArithmetic;
             break;
-        case COEF_EPSILON:
+        case CoefficientType::EPSILON:
             combinator = &combGeometric;
             break;
         default:
@@ -81,11 +81,11 @@ TEST_CASE("[Faunus] PairMixer") {
     SUBCASE("Enumerated potential") {
         REQUIRE(PairMixer::combArithmetic(2.0, 8.0) == Approx(5.0));
         REQUIRE(PairMixer::combGeometric(2.0, 8.0) == Approx(4.0));
-        CHECK(PairMixer::getCombinator(COMB_LORENTZ_BERTHELOT, PairMixer::COEF_SIGMA)(2.0, 8.0) ==
-              PairMixer::combArithmetic(2.0, 8.0));
-        CHECK(PairMixer::getCombinator(COMB_LORENTZ_BERTHELOT, PairMixer::COEF_EPSILON)(2.0, 8.0) ==
-              PairMixer::combGeometric(2.0, 8.0));
-        CHECK_THROWS_AS(PairMixer::getCombinator(COMB_LORENTZ_BERTHELOT), std::logic_error);
+        CHECK(PairMixer::getCombinator(CombinationRuleType::LORENTZ_BERTHELOT, PairMixer::CoefficientType::SIGMA)(
+                  2.0, 8.0) == PairMixer::combArithmetic(2.0, 8.0));
+        CHECK(PairMixer::getCombinator(CombinationRuleType::LORENTZ_BERTHELOT, PairMixer::CoefficientType::EPSILON)(
+                  2.0, 8.0) == PairMixer::combGeometric(2.0, 8.0));
+        CHECK_THROWS_AS(PairMixer::getCombinator(CombinationRuleType::LORENTZ_BERTHELOT), std::logic_error);
 
         SUBCASE("") {
             atoms =
@@ -227,7 +227,7 @@ void MixerPairPotentialBase::from_json(const json &j) {
         if (j.count("mixing") == 1) {
             json mixing = j.at("mixing");
             combination_rule = mixing.get<CombinationRuleType>();
-            if (combination_rule == COMB_UNDEFINED && mixing != "undefined") {
+            if (combination_rule == CombinationRuleType::UNDEFINED && mixing != "undefined") {
                 // an ugly hack because the first pair in the json ↔ enum mapping is silently selected by default
                 throw PairPotentialException("unknown combination rule " + mixing.get<std::string>());
             }
@@ -442,8 +442,9 @@ void Dummy::to_json(json &) const {}
 // =============== LennardJones ===============
 
 void LennardJones::initPairMatrices() {
-    const TCombinatorFunc comb_sigma = PairMixer::getCombinator(combination_rule, PairMixer::COEF_SIGMA);
-    const TCombinatorFunc comb_epsilon = PairMixer::getCombinator(combination_rule, PairMixer::COEF_EPSILON);
+    const TCombinatorFunc comb_sigma = PairMixer::getCombinator(combination_rule, PairMixer::CoefficientType::SIGMA);
+    const TCombinatorFunc comb_epsilon =
+        PairMixer::getCombinator(combination_rule, PairMixer::CoefficientType::EPSILON);
 
     sigma_squared = PairMixer(extract_sigma, comb_sigma, &PairMixer::modSquared).createPairMatrix(atoms, *custom_pairs);
     epsilon_quadruple = PairMixer(extract_epsilon, comb_epsilon, [](double x) -> double {
@@ -574,8 +575,9 @@ TEST_CASE("[Faunus] HardSphere") {
 // =============== Hertz ===============
 
 void Hertz::initPairMatrices() {
-    const TCombinatorFunc comb_diameter = PairMixer::getCombinator(combination_rule, PairMixer::COEF_SIGMA);
-    const TCombinatorFunc comb_epsilon = PairMixer::getCombinator(combination_rule, PairMixer::COEF_EPSILON);
+    const TCombinatorFunc comb_diameter = PairMixer::getCombinator(combination_rule, PairMixer::CoefficientType::SIGMA);
+    const TCombinatorFunc comb_epsilon =
+        PairMixer::getCombinator(combination_rule, PairMixer::CoefficientType::EPSILON);
 
     sigma_squared =
         PairMixer(extract_sigma, comb_diameter, &PairMixer::modSquared).createPairMatrix(atoms, *custom_pairs);
@@ -621,8 +623,8 @@ TEST_CASE("[Faunus] Hertz") {
 // =============== SquareWell ===============
 
 void SquareWell::initPairMatrices() {
-    const TCombinatorFunc comb_diameter = PairMixer::getCombinator(combination_rule, PairMixer::COEF_SIGMA);
-    const TCombinatorFunc comb_depth = PairMixer::getCombinator(combination_rule, PairMixer::COEF_EPSILON);
+    const TCombinatorFunc comb_diameter = PairMixer::getCombinator(combination_rule, PairMixer::CoefficientType::SIGMA);
+    const TCombinatorFunc comb_depth = PairMixer::getCombinator(combination_rule, PairMixer::CoefficientType::EPSILON);
 
     sigma_squared =
         PairMixer(extract_sigma, comb_diameter, &PairMixer::modSquared).createPairMatrix(atoms, *custom_pairs);

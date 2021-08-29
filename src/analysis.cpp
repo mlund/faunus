@@ -530,7 +530,7 @@ VirtualVolumeMove::VirtualVolumeMove(const json& j, Space& spc, Energy::Energyba
 }
 
 void MolecularConformationID::_sample() {
-    auto molecules = spc.findMolecules(molid, Space::ACTIVE);
+    auto molecules = spc.findMolecules(molid, Space::Selection::ACTIVE);
     for (const auto& group : molecules) {
         histogram[group.confid]++;
     }
@@ -619,7 +619,7 @@ void FileReactionCoordinate::_to_disk() {
  */
 void WidomInsertion::selectGhostGroup() {
     change.clear();
-    auto inactive_groups = spc.findMolecules(molid, Space::INACTIVE);
+    auto inactive_groups = spc.findMolecules(molid, Space::Selection::INACTIVE);
     if (!ranges::cpp20::empty(inactive_groups)) {
         const auto& group = *inactive_groups.begin(); // select first group
         if (group.empty() && group.capacity() > 0) {  // must be inactive and have a non-zero capacity
@@ -1245,7 +1245,7 @@ void PolymerShape::_to_json(json& j) const {
 }
 
 void PolymerShape::_sample() {
-    auto molecules = spc.findMolecules(molid, Space::ACTIVE);
+    auto molecules = spc.findMolecules(molid, Space::Selection::ACTIVE);
     const auto num_molecules = std::distance(molecules.begin(), molecules.end());
 
     if (num_molecules > 1 && tensor_output_stream) {
@@ -1445,7 +1445,7 @@ void SlicedDensity::_to_disk() {
     }
 }
 void ChargeFluctuations::_sample() {
-    auto filtered_molecules = spc.findMolecules(mol_iter->id(), Space::ACTIVE);
+    auto filtered_molecules = spc.findMolecules(mol_iter->id(), Space::Selection::ACTIVE);
     for (const auto& group : filtered_molecules) {
         size_t particle_index = 0;
         for (const auto& particle : group) {
@@ -1490,7 +1490,7 @@ std::vector<double> ChargeFluctuations::getMeanCharges() const {
 
 void ChargeFluctuations::_to_disk() {
     if (not filename.empty()) {
-        auto molecules = spc.findMolecules(mol_iter->id(), Space::ALL);
+        auto molecules = spc.findMolecules(mol_iter->id(), Space::Selection::ALL);
         if (not ranges::cpp20::empty(molecules)) {
             const auto particles_with_avg_charges = averageChargeParticles(*molecules.begin());
             PQRWriter().save(MPI::prefix + filename, particles_with_avg_charges.begin(),
@@ -1579,19 +1579,19 @@ void ScatteringFunction::_sample() {
     const auto suffix = fmt::format("{:07d}", number_of_samples);
 
     switch (scheme) {
-    case DEBYE:
+    case Schemes::DEBYE:
         debye->sample(scatter_positions, spc.geo.getVolume());
         if (save_after_sample) {
             IO::writeKeyValuePairs(filename + "." + suffix, debye->getIntensity());
         }
         break;
-    case EXPLICIT_PBC:
+    case Schemes::EXPLICIT_PBC:
         explicit_average_pbc->sample(scatter_positions, spc.geo.getLength());
         if (save_after_sample) {
             IO::writeKeyValuePairs(filename + "." + suffix, explicit_average_pbc->getSampling());
         }
         break;
-    case EXPLICIT_IPBC:
+    case Schemes::EXPLICIT_IPBC:
         explicit_average_ipbc->sample(scatter_positions, spc.geo.getLength());
         if (save_after_sample) {
             IO::writeKeyValuePairs(filename + "." + suffix, explicit_average_ipbc->getSampling());
@@ -1602,16 +1602,16 @@ void ScatteringFunction::_sample() {
 void ScatteringFunction::_to_json(json& j) const {
     j = {{"molecules", molecule_names}, {"com", mass_center_scattering}};
     switch (scheme) {
-    case DEBYE:
+    case Schemes::DEBYE:
         j["scheme"] = "debye";
         std::tie(j["qmin"], j["qmax"], std::ignore) = debye->getQMeshParameters();
         break;
-    case EXPLICIT_PBC:
+    case Schemes::EXPLICIT_PBC:
         j["scheme"] = "explicit";
         j["pmax"] = explicit_average_pbc->getQMultiplier();
         j["ipbc"] = false;
         break;
-    case EXPLICIT_IPBC:
+    case Schemes::EXPLICIT_IPBC:
         j["scheme"] = "explicit";
         j["pmax"] = explicit_average_ipbc->getQMultiplier();
         j["ipbc"] = true;
@@ -1631,7 +1631,7 @@ ScatteringFunction::ScatteringFunction(const json& j, Space& spc) try : Analysis
     const auto cuboid = std::dynamic_pointer_cast<Geometry::Cuboid>(spc.geo.asSimpleGeometry());
 
     if (const auto scheme_str = j.value("scheme", "explicit"s); scheme_str == "debye") {
-        scheme = DEBYE;
+        scheme = Schemes::DEBYE;
         debye = std::make_unique<Scatter::DebyeFormula<Tformfactor>>(j);
         if (cuboid) {
             faunus_logger->warn("cuboidal cell detected: consider using the `explicit` scheme");
@@ -1643,10 +1643,10 @@ ScatteringFunction::ScatteringFunction(const json& j, Space& spc) try : Analysis
         const bool ipbc = j.value("ipbc", false);
         const int pmax = j.value("pmax", 15);
         if (ipbc) {
-            scheme = EXPLICIT_IPBC;
+            scheme = Schemes::EXPLICIT_IPBC;
             explicit_average_ipbc = std::make_unique<Scatter::StructureFactorIPBC<>>(pmax);
         } else {
-            scheme = EXPLICIT_PBC;
+            scheme = Schemes::EXPLICIT_PBC;
             explicit_average_pbc = std::make_unique<Scatter::StructureFactorPBC<>>(pmax);
         }
     } else {
@@ -1658,13 +1658,13 @@ ScatteringFunction::ScatteringFunction(const json& j, Space& spc) try : Analysis
 
 void ScatteringFunction::_to_disk() {
     switch (scheme) {
-    case DEBYE:
+    case Schemes::DEBYE:
         IO::writeKeyValuePairs(filename, debye->getIntensity());
         break;
-    case EXPLICIT_PBC:
+    case Schemes::EXPLICIT_PBC:
         IO::writeKeyValuePairs(filename, explicit_average_pbc->getSampling());
         break;
-    case EXPLICIT_IPBC:
+    case Schemes::EXPLICIT_IPBC:
         IO::writeKeyValuePairs(filename, explicit_average_ipbc->getSampling());
         break;
     }
@@ -1689,7 +1689,7 @@ void VirtualTranslate::_from_json(const json& j) {
 }
 void VirtualTranslate::_sample() {
     if (std::fabs(perturbation_distance) > 0.0) {
-        if (auto mollist = spc.findMolecules(molid, Space::ACTIVE); !ranges::cpp20::empty(mollist)) {
+        if (auto mollist = spc.findMolecules(molid, Space::Selection::ACTIVE); !ranges::cpp20::empty(mollist)) {
             if (ranges::distance(mollist.begin(), mollist.end()) > 1) {
                 throw std::runtime_error("exactly ONE active molecule expected");
             }
@@ -1798,13 +1798,13 @@ ElectricPotential::ElectricPotential(const json& j, Space& spc)
 
 void ElectricPotential::setPolicy(const json& j) {
     output_information.clear();
-    policy = j.value("policy", FIXED);
+    policy = j.value("policy", Policies::FIXED);
     auto stride = 0.0;
     switch (policy) {
-    case FIXED:
+    case Policies::FIXED:
         applyPolicy = []() {};
         break;
-    case RANDOM_WALK:
+    case Policies::RANDOM_WALK:
         stride = j.at("stride").get<double>();
         output_information["stride"] = stride;
         applyPolicy = [&, stride] {
@@ -1816,7 +1816,7 @@ void ElectricPotential::setPolicy(const json& j) {
             });
         };
         break;
-    case RANDOM_WALK_NO_OVERLAP:
+    case Policies::RANDOM_WALK_NO_OVERLAP:
         stride = j.at("stride").get<double>();
         output_information["stride"] = stride;
         applyPolicy = [&, stride] {

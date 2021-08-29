@@ -77,19 +77,19 @@ PYBIND11_MODULE(pyfaunus, m)
     py::class_<Geometry::GeometryBase>(m, "Geometrybase")
         .def("getVolume", &Geometry::GeometryBase::getVolume, "Get container volume", "dim"_a = 3)
         .def("setVolume", &Geometry::GeometryBase::setVolume, "Set container volume", "volume"_a,
-             "method"_a = Geometry::ISOTROPIC)
+             "method"_a = Geometry::VolumeMethod::ISOTROPIC)
         .def("collision", &Geometry::GeometryBase::collision, "pos"_a, "Checks if point is inside container")
         .def("getLength", &Geometry::GeometryBase::getLength, "Get cuboid sidelengths")
         .def("vdist", &Geometry::GeometryBase::vdist, "Minimum vector distance, a-b", "a"_a, "b"_a)
         .def("randompos",
-             [](Geometry::GeometryBase &g, Random &rnd) {
+             [](Geometry::GeometryBase& g, Random& rnd) {
                  Point pos;
                  g.randompos(pos, rnd);
                  return pos;
              })
         .def(
             "boundary",
-            [](Geometry::GeometryBase &g, const Point &pos) {
+            [](Geometry::GeometryBase& g, const Point& pos) {
                 Point a = pos; // we cannot modify `pos` directly
                 g.boundary(a); // as in c++
                 return a;

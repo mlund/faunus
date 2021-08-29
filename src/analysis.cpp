@@ -477,10 +477,10 @@ void VirtualVolumeMove::writeToFileStream(const Point& scale, const double energ
 
         // if anisotropic scaling, add an extra column with area or length perturbation
         const auto box_length = spc.geo.getLength();
-        if (volume_scaling_method == Geometry::XY) {
+        if (volume_scaling_method == Geometry::VolumeMethod::XY) {
             const auto area_change = box_length.x() * box_length.y() * (scale.x() * scale.y() - 1.0);
             *stream << fmt::format(" {:.6E}", area_change);
-        } else if (volume_scaling_method == Geometry::Z) {
+        } else if (volume_scaling_method == Geometry::VolumeMethod::Z) {
             const auto length_change = box_length.z() * (scale.z() - 1.0);
             *stream << fmt::format(" {:.6E}", length_change);
         }
@@ -490,8 +490,8 @@ void VirtualVolumeMove::writeToFileStream(const Point& scale, const double energ
 
 void VirtualVolumeMove::_from_json(const json& j) {
     volume_displacement = j.at("dV").get<double>();
-    volume_scaling_method = j.value("scaling", Geometry::ISOTROPIC);
-    if (volume_scaling_method == Geometry::ISOCHORIC) {
+    volume_scaling_method = j.value("scaling", Geometry::VolumeMethod::ISOTROPIC);
+    if (volume_scaling_method == Geometry::VolumeMethod::ISOCHORIC) {
         throw ConfigurationError("isochoric volume scaling not allowed");
     }
 }
@@ -518,9 +518,9 @@ VirtualVolumeMove::VirtualVolumeMove(const json& j, Space& spc, Energy::Energyba
     if (stream) {
         *stream << "# steps dV/" + u8::angstrom + u8::cubed + " du/kT exp(-du/kT) <Pex>/kT/" + u8::angstrom + u8::cubed;
         // if non-isotropic scaling, add another column with dA or dL
-        if (volume_scaling_method == Geometry::XY) {
+        if (volume_scaling_method == Geometry::VolumeMethod::XY) {
             *stream << " dA/" + u8::angstrom + u8::squared;
-        } else if (volume_scaling_method == Geometry::Z) {
+        } else if (volume_scaling_method == Geometry::VolumeMethod::Z) {
             *stream << " dL/" + u8::angstrom;
         }
         *stream << "\n"; // trailing newline

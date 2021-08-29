@@ -219,7 +219,7 @@ Point Space::scaleVolume(double Vnew, Geometry::VolumeMethod method) {
             }
         }
     }
-    if (method == Geometry::ISOCHORIC) { // ? not used for anything...
+    if (method == Geometry::VolumeMethod::ISOCHORIC) { // ? not used for anything...
         Vold = std::pow(Vold, 1. / 3.);  // ?
     }
     for (auto trigger_function : scaleVolumeTriggers) { // external clients may have added function
@@ -520,7 +520,7 @@ TEST_CASE("[Faunus] Space::updateParticles") {
     using doctest::Approx;
     Space spc;
     Geometry::Cuboid geo({100, 100, 100});
-    spc.geo = Geometry::Chameleon(geo, Geometry::CUBOID);
+    spc.geo = Geometry::Chameleon(geo, Geometry::Variant::CUBOID);
 
     spc.p.resize(2);
 

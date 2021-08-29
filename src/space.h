@@ -96,7 +96,11 @@ class Space {
     Tgvec::iterator findGroupContaining(size_t atom_index); //!< Finds the group containing given atom index
     size_t
     numParticles(Selection selection = Selection::ACTIVE) const; //!< Number of particles, all or active (default)
-    Point scaleVolume(double, Geometry::VolumeMethod = Geometry::ISOTROPIC); //!< Scales atoms, molecules, container
+
+    Point scaleVolume(
+        double new_volume,
+        Geometry::VolumeMethod method = Geometry::VolumeMethod::ISOTROPIC); //!< Scales atoms, molecules, container
+
     Tgvec::iterator randomMolecule(int, Random&, Selection = Selection::ACTIVE); //!< Random group matching molid
     json info();
 

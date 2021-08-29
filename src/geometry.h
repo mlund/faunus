@@ -36,10 +36,10 @@ typedef std::function<void(Point &)> BoundaryFunction;
 typedef std::function<Point(const Point &, const Point &)> DistanceFunction;
 
 //! Geometry variant used for Chameleon
-enum Variant { CUBOID = 0, SPHERE, CYLINDER, SLIT, HEXAGONAL, OCTAHEDRON, HYPERSPHERE2D };
+enum class Variant { CUBOID = 0, SPHERE, CYLINDER, SLIT, HEXAGONAL, OCTAHEDRON, HYPERSPHERE2D };
 
 //! Various methods of volume scaling, @see GeometryBase::setVolume.
-enum VolumeMethod { ISOTROPIC, ISOCHORIC, XY, Z, INVALID };
+enum class VolumeMethod { ISOTROPIC, ISOCHORIC, XY, Z, INVALID };
 
 NLOHMANN_JSON_SERIALIZE_ENUM(VolumeMethod, {{VolumeMethod::INVALID, nullptr},
                                             {VolumeMethod::ISOTROPIC, "isotropic"},
@@ -47,7 +47,7 @@ NLOHMANN_JSON_SERIALIZE_ENUM(VolumeMethod, {{VolumeMethod::INVALID, nullptr},
                                             {VolumeMethod::XY, "xy"},
                                             {VolumeMethod::Z, "z"}})
 
-enum Coordinates { ORTHOGONAL, ORTHOHEXAGONAL, TRUNC_OCTAHEDRAL, NON3D };
+enum class Coordinates { ORTHOGONAL, ORTHOHEXAGONAL, TRUNC_OCTAHEDRAL, NON3D };
 enum class Boundary : int { FIXED = 0, PERIODIC = 1 };
 
 /**
@@ -70,7 +70,7 @@ class BoundaryCondition {
 
     Eigen::Matrix<bool, 3, 1> isPeriodic() const;
 
-    BoundaryCondition(Coordinates coordinates = ORTHOGONAL,
+    BoundaryCondition(Coordinates coordinates = Coordinates::ORTHOGONAL,
                       BoundaryXYZ boundary = {Boundary::FIXED, Boundary::FIXED, Boundary::FIXED})
         : coordinates(coordinates), direction(boundary){};
 };
@@ -79,7 +79,7 @@ class BoundaryCondition {
  * @brief An interface for all geometries.
  */
 struct GeometryBase {
-    virtual Point setVolume(double, VolumeMethod = ISOTROPIC) = 0; //!< Set volume
+    virtual Point setVolume(double, VolumeMethod = VolumeMethod::ISOTROPIC) = 0; //!< Set volume
     virtual double getVolume(int = 3) const = 0;                   //!< Get volume
     virtual void boundary(Point &) const = 0;                      //!< Apply boundary conditions
     virtual bool collision(const Point &) const = 0;               //!< Overlap with boundaries
@@ -132,7 +132,7 @@ class Cuboid : public GeometryImplementation {
     Point getLength() const override;
     double getVolume(int dim = 3) const final; // finalized to help the compiler with inlining
     void setLength(const Point &len);          // todo shall be protected
-    Point setVolume(double volume, VolumeMethod method = ISOTROPIC) override;
+    Point setVolume(double volume, VolumeMethod method = VolumeMethod::ISOTROPIC) override;
     Point vdist(const Point& a, const Point& b) const override; //!< Minimum distance vector b->a
     void boundary(Point &a) const override;
     bool collision(const Point &a) const override;
@@ -180,7 +180,7 @@ class Sphere : public GeometryImplementation {
   public:
     Point getLength() const override;
     double getVolume(int dim = 3) const override;
-    Point setVolume(double volume, VolumeMethod method = ISOTROPIC) override;
+    Point setVolume(double volume, VolumeMethod method = VolumeMethod::ISOTROPIC) override;
     Point vdist(const Point& a, const Point& b) const override; //!< Minimum distance vector b->a
     double sqdist(const Point &a, const Point &b) const { return (a - b).squaredNorm(); };
     void boundary(Point &a) const override;
@@ -223,7 +223,7 @@ class Cylinder : public GeometryImplementation {
   public:
     Point getLength() const override;
     double getVolume(int dim = 3) const override;
-    Point setVolume(double volume, VolumeMethod method = ISOTROPIC) override;
+    Point setVolume(double volume, VolumeMethod method = VolumeMethod::ISOTROPIC) override;
     Point vdist(const Point &a, const Point &b) const override;
     void boundary(Point &a) const override;
     bool collision(const Point &a) const override;
@@ -262,7 +262,7 @@ class HexagonalPrism : public GeometryImplementation {
   public:
     Point getLength() const override;
     double getVolume(int dim = 3) const override;
-    Point setVolume(double volume, VolumeMethod method = ISOTROPIC) override;
+    Point setVolume(double volume, VolumeMethod method = VolumeMethod::ISOTROPIC) override;
     Point vdist(const Point &a, const Point &b) const override;
     void boundary(Point &a) const override;
     bool collision(const Point &a) const override;
@@ -294,7 +294,7 @@ class TruncatedOctahedron : public GeometryImplementation {
   public:
     Point getLength() const override;
     double getVolume(int dim = 3) const override;
-    Point setVolume(double volume, VolumeMethod method = ISOTROPIC) override;
+    Point setVolume(double volume, VolumeMethod method = VolumeMethod::ISOTROPIC) override;
     Point vdist(const Point &a, const Point &b) const override;
     void boundary(Point &a) const override;
     bool collision(const Point &a) const override;
@@ -337,14 +337,15 @@ class Chameleon : public GeometryBase {
     std::unique_ptr<GeometryImplementation> geometry = nullptr; //!< A concrete geometry implementation.
     Variant _type;                                              //!< Type of concrete geometry.
     std::string _name;                                          //!< Name of concrete geometry, e.g., for json.
-    void makeGeometry(const Variant type = CUBOID); //!< Creates and assigns a concrete geometry implementation.
+    void
+    makeGeometry(const Variant type = Variant::CUBOID); //!< Creates and assigns a concrete geometry implementation.
     void _setLength(const Point &l);
 
   public:
     const Variant &type = _type;     //!< Type of concrete geometry, read-only.
     const std::string &name = _name; //!< Name of concrete geometry, e.g., for json, read-only.
     double getVolume(int dim = 3) const override;
-    Point setVolume(double, VolumeMethod = ISOTROPIC) override;
+    Point setVolume(double, VolumeMethod = VolumeMethod::ISOTROPIC) override;
     Point getLength() const override; //!< A minimal containing cubic box.
     // setLength() needed only for Move::ReplayMove (stems from IO::XTCReader).
     void setLength(const Point &);                            //!< Sets the box dimensions.
@@ -365,7 +366,7 @@ class Chameleon : public GeometryBase {
 
     static VariantName variantName(const json &j);
 
-    Chameleon(const Variant type = CUBOID);
+    Chameleon(const Variant type = Variant::CUBOID);
     Chameleon(const GeometryImplementation &geo, const Variant type);
 
     //! Copy everything, but clone the geometry.
@@ -389,7 +390,7 @@ inline bool Chameleon::collision(const Point &a) const {
 
 inline void Chameleon::boundary(Point &a) const {
     const auto &boundary_conditions = geometry->boundary_conditions;
-    if (boundary_conditions.coordinates == ORTHOGONAL) {
+    if (boundary_conditions.coordinates == Coordinates::ORTHOGONAL) {
         if (boundary_conditions.direction.x() == Boundary::PERIODIC) {
             if (std::fabs(a.x()) > len_half.x())
                 a.x() -= len.x() * anint(a.x() * len_inv.x());
@@ -410,7 +411,7 @@ inline void Chameleon::boundary(Point &a) const {
 inline Point Chameleon::vdist(const Point &a, const Point &b) const {
     Point distance;
     const auto &boundary_conditions = geometry->boundary_conditions;
-    if (boundary_conditions.coordinates == ORTHOGONAL) {
+    if (boundary_conditions.coordinates == Coordinates::ORTHOGONAL) {
         distance = a - b;
         if (boundary_conditions.direction.x() == Boundary::PERIODIC) {
             if (distance.x() > len_half.x())
@@ -437,7 +438,7 @@ inline Point Chameleon::vdist(const Point &a, const Point &b) const {
 }
 
 inline double Chameleon::sqdist(const Point &a, const Point &b) const {
-    if (geometry->boundary_conditions.coordinates == ORTHOGONAL) {
+    if (geometry->boundary_conditions.coordinates == Coordinates::ORTHOGONAL) {
         if constexpr (true) {
             Point d((a - b).cwiseAbs());
             return (d - (d.array() > len_half.array()).cast<double>().matrix().cwiseProduct(len_or_zero)).squaredNorm();

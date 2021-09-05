@@ -20,8 +20,8 @@ CPMAddPackage(
 )
 
 CPMAddPackage(
-    NAME Eigen VERSION 3.3.9 DOWNLOAD_ONLY YES 
-    URL https://gitlab.com/libeigen/eigen/-/archive/3.3.9/eigen-3.3.9.tar.gz
+    NAME Eigen VERSION 3.4.0 DOWNLOAD_ONLY YES 
+    URL https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz
 )
 
 CPMAddPackage(

@@ -1514,8 +1514,8 @@ class NonbondedCached : public Nonbonded<TPairEnergy, TPairingPolicy> {
  * @brief Interface to the FreeSASA C-library. Experimental and unoptimized.
  * https://freesasa.github.io/
  *
- * @todo - Forward declare `freesasa_parameters` but will require change in external lib.
- *       - Implement partial evaluation refelcting `change` object
+ * @todo - Implement partial evaluation refelcting `change` object
+ *       - Average volume currently mixes accepted/rejected states
  */
 class SASAEnergy : public Energybase {
   private:
@@ -1523,7 +1523,7 @@ class SASAEnergy : public Energybase {
     std::vector<double> radii;     //!< Radii buffer for all particles
     std::vector<double> sasa;      //!< Target buffer for calculated surface areas
 
-    Space& spc;
+    const Space& spc;
     double cosolute_concentration;                       //!< co-solute concentration (mol/l)
     std::unique_ptr<freesasa_parameters_fwd> parameters; //!< Parameters for freesasa
     Average<double> mean_surface_area;
@@ -1569,8 +1569,8 @@ class SASAEnergy : public Energybase {
      * @param cosolute_concentration in particles per angstrom cubed
      * @param probe_radius in angstrom
      */
-    SASAEnergy(Space &spc, double cosolute_concentration = 0.0, double probe_radius = 1.4);
-    SASAEnergy(const json &j, Space &spc);
+    SASAEnergy(const Space& spc, double cosolute_concentration = 0.0, double probe_radius = 1.4);
+    SASAEnergy(const json& j, const Space& spc);
     double energy(Change& change) override;
 }; //!< SASA energy from transfer free energies
 #endif

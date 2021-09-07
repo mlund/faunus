@@ -230,6 +230,10 @@ class Space {
         return groups | ranges::cpp20::views::join;
     } //!< Returns range with all *active* particles in space
 
+    auto activeParticles() const {
+        return groups | ranges::cpp20::views::join;
+    } //!< Range with all *active* particles in space
+
     /**
      * @brief Find active atoms of type `atomid` (complexity: order N)
      * @param atomid Atom id to look for

@@ -4,6 +4,9 @@
 #include "externalpotential.h"
 #include <functional>
 #include <range/v3/view/zip.hpp>
+#if __cplusplus >= 202002L
+#include <span> // c++20
+#endif
 
 #ifdef ENABLE_FREESASA
 #include <freesasa.h>
@@ -1071,7 +1074,7 @@ const std::vector<double>& Hamiltonian::latestEnergies() const { return latest_e
 
 #ifdef ENABLE_FREESASA
 
-SASAEnergy::SASAEnergy(Space& spc, const double cosolute_concentration, const double probe_radius)
+SASAEnergy::SASAEnergy(const Space& spc, const double cosolute_concentration, const double probe_radius)
     : spc(spc), cosolute_concentration(cosolute_concentration),
       parameters(std::make_unique<freesasa_parameters_fwd>(freesasa_default_parameters)) {
     name = "sasa";
@@ -1083,22 +1086,25 @@ SASAEnergy::SASAEnergy(Space& spc, const double cosolute_concentration, const do
     }
 }
 
-SASAEnergy::SASAEnergy(const json &j, Space &spc)
+SASAEnergy::SASAEnergy(const json& j, const Space& spc)
     : SASAEnergy(spc, j.value("molarity", 0.0) * 1.0_molar, j.value("radius", 1.4) * 1.0_angstrom) {}
 
 void SASAEnergy::updateSASA(const Change& change) {
     const auto& particles = spc.activeParticles();
-    const auto number_of_active_particles = std::distance(particles.begin(), particles.end());
+    const auto number_of_active_particles = static_cast<int>(std::distance(particles.begin(), particles.end()));
     updateRadii(particles.begin(), particles.end(), change);
     updatePositions(particles.begin(), particles.end(), change);
 
     auto* result = freesasa_calc_coord(positions.data(), radii.data(), number_of_active_particles, parameters.get());
     if (result != nullptr && result->n_atoms == number_of_active_particles) {
-        sasa.clear();
-        sasa.reserve(number_of_active_particles);
-        sasa.insert(sasa.begin(), result->sasa, result->sasa + result->n_atoms); // copy
+        sasa.resize(number_of_active_particles);
+#if __cplusplus < 202002L
+        std::copy(result->sasa, result->sasa + result->n_atoms, sasa.begin()); // ugly
+#else
+        const auto values = std::span(result->sasa, result->n_atoms); // pretty
+        std::copy(values.begin(), values.end(), sasa.begin());
+#endif
         freesasa_result_free(result);
-        assert(sasa.size() == number_of_active_particles);
     } else {
         throw std::runtime_error("FreeSASA failed");
     }

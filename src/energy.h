@@ -7,6 +7,7 @@
 #include "aux/pairmatrix.h"
 #include <range/v3/range/conversion.hpp>
 #include <range/v3/view/iota.hpp>
+#include <range/v3/view/subrange.hpp>
 #include <Eigen/Dense>
 #include <spdlog/spdlog.h>
 #include <numeric>
@@ -1553,15 +1554,13 @@ class SASAEnergy : public Energybase {
      * @param end Iterator to beyond last particle
      * @param change Change object (currently unused)
      */
-    template <typename Tfirst, typename Tend>
-    void updatePositions(Tfirst begin, Tend end, [[maybe_unused]] const Change& change) {
-        const auto number_of_particles = std::distance(begin, end);
-        positions.clear();
-        positions.reserve(3 * number_of_particles);
-        for (const Point& position : spc.positions()) {
-            const auto* xyz = position.data();
-            positions.insert(positions.end(), xyz, xyz + 3);
-        }
+    template <typename Tbegin, typename Tend>
+    void updatePositions(Tbegin begin, Tend end, [[maybe_unused]] const Change& change) {
+        using namespace ranges::cpp20;
+        auto coordinates = subrange<Tbegin, Tend>(begin, end) | views::transform(&Particle::pos) |
+                           views::join;                  // flatten particles -> x1,y1,z1,...,xn,yn,zn
+        positions.resize(3 * std::distance(begin, end)); // resize for 3N coordinates
+        std::copy(coordinates.begin(), coordinates.end(), positions.begin());
     }
 
   public:

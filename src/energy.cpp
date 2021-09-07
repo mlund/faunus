@@ -1093,8 +1093,7 @@ void SASAEnergy::updateSASA(const Change& change) {
     updatePositions(particles.begin(), particles.end(), change);
 
     auto* result = freesasa_calc_coord(positions.data(), radii.data(), number_of_active_particles, parameters.get());
-    if (result != nullptr) {
-        assert(result->n_atoms == number_of_active_particles);
+    if (result != nullptr && result->n_atoms == number_of_active_particles) {
         sasa.clear();
         sasa.reserve(number_of_active_particles);
         sasa.insert(sasa.begin(), result->sasa, result->sasa + result->n_atoms); // copy
@@ -1140,7 +1139,7 @@ void SASAEnergy::sync(Energybase* energybase_ptr, const Change& change) {
                 for (auto i : absolute_atom_index) {
                     radii.at(i) = other->radii.at(i);
                     sasa.at(i) = other->sasa.at(i);
-                    for (int k = 0; k < 3; ++k) {
+                    for (size_t k = 0; k < 3; ++k) {
                         positions.at(3 * i + k) = other->positions.at(3 * i + k);
                     }
                 }

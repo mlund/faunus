@@ -79,13 +79,7 @@ template <class T> struct ordered_pair : public std::pair<T, T> {
     using base = std::pair<T, T>;
     ordered_pair() = default;
     ordered_pair(const T &a, const T &b) : base(std::minmax(a, b)) {}
-    bool contains(const T &value) const {
-        if (value != base::first && value != base::second) {
-            return false;
-        } else {
-            return true;
-        }
-    }
+    bool contains(const T& value) const { return value == base::first || value == base::second; }
 };
 
 /**
@@ -250,7 +244,7 @@ template <typename T> struct BasePointerVector {
 
     template <typename Tderived, class = std::enable_if_t<std::is_base_of<T, Tderived>::value>> auto find() const {
         BasePointerVector<Tderived> _v;
-        for (auto base : vec) {
+        for (auto& base : vec) {
             if (auto derived = std::dynamic_pointer_cast<Tderived>(base); derived) {
                 _v.template push_back<Tderived>(derived);
             }
@@ -265,7 +259,7 @@ template <typename T> struct BasePointerVector {
 template <typename T> void to_json(nlohmann::json &j, const BasePointerVector<T> &b) {
     using namespace std::string_literals;
     try {
-        for (auto shared_ptr : b.vec) {
+        for (auto& shared_ptr : b.vec) {
             j.push_back(*shared_ptr);
         }
     } catch (const std::exception &e) {
@@ -276,7 +270,7 @@ template <typename T> void to_json(nlohmann::json &j, const BasePointerVector<T>
 template <typename T> void from_json(const nlohmann::json &j, BasePointerVector<T> &b) {
     using namespace std::string_literals;
     try {
-        for (auto it : j) {
+        for (auto& it : j) {
             std::shared_ptr<T> ptr = it;
             b.template push_back<T>(ptr);
         }

@@ -2,6 +2,7 @@
 #include "aux/eigensupport.h"
 #include <range/v3/view/sample.hpp>
 #include <range/v3/view/common.hpp>
+#include <range/v3/view/transform.hpp>
 #include <cereal/archives/binary.hpp>
 #include <cereal/types/memory.hpp>
 #include <nlohmann/json.hpp>
@@ -64,10 +65,7 @@ template <class T> double Group<T>::mass() const {
     return std::accumulate(begin(), end(), 0.0, [](double sum, auto &i) { return sum + i.traits().mw; });
 }
 
-template <class T> std::vector<std::reference_wrapper<Point>> Group<T>::positions() const {
-    return Faunus::member_view(begin(), end(), &Particle::pos);
-    //return ranges::view::transform(*this, [](auto &i) -> Point& {return i.pos;});
-}
+template <class T> auto Group<T>::positions() { return ranges::cpp20::views::transform(*this, &Particle::pos); }
 
 template <class T> void Group<T>::wrap(Geometry::BoundaryFunction boundary) {
     boundary(cm);
@@ -322,8 +320,9 @@ TEST_CASE("[Faunus] Group") {
     p[1].pos = {4, 5, 6};
 
     // iterate over positions and modify them
-    for (Point &i : g.positions())
-        i = 2 * i;
+    for (auto& pos : g.positions()) {
+        pos *= 2.0;
+    }
     CHECK(p[1].pos.x() == doctest::Approx(8));
     CHECK(p[1].pos.y() == doctest::Approx(10));
     CHECK(p[1].pos.z() == doctest::Approx(12));

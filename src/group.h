@@ -242,8 +242,7 @@ namespace Faunus {
                 }
 
             double mass() const; //!< Sum of all active masses
-
-            std::vector<std::reference_wrapper<Point>> positions() const; //!< Iterable range with positions of active particles
+            auto positions();    //!< Iterable range with positions of active particles
 
             /**
              * @brief Remove PBC for molecular groups w. respect to mass center

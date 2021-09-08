@@ -662,7 +662,7 @@ void Isobaric::to_json(json& j) const {
     for (const auto& [key, conversion_factor] : pressure_units) {
         j[key] = pressure / conversion_factor;
     }
-    _roundjson(j, 5);
+    roundJSON(j, 5);
 }
 
 /**
@@ -1159,7 +1159,7 @@ void SASAEnergy::to_json(json &j) const {
     j["molarity"] = cosolute_concentration / 1.0_molar;
     j["radius"] = parameters->probe_radius / 1.0_angstrom;
     j[bracket("SASA") + "/" + angstrom + squared] = mean_surface_area.avg() / 1.0_angstrom;
-    _roundjson(j, 5); // set json output precision
+    roundJSON(j, 5); // set json output precision
 }
 
 TEST_CASE("[Faunus] FreeSASA") {

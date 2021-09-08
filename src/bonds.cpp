@@ -220,7 +220,7 @@ void HarmonicTorsion::from_json(const Faunus::json& j) {
 
 void HarmonicTorsion::to_json(Faunus::json& j) const {
     j = {{"k", 2 * half_force_constant / (1.0_kJmol / std::pow(1.0_rad, 2))}, {"aeq", equilibrium_angle / 1.0_deg}};
-    _roundjson(j, 6);
+    roundJSON(j, 6);
 }
 
 HarmonicTorsion::HarmonicTorsion(double force_constant, double equilibrium_angle, const std::vector<int>& indices)
@@ -390,7 +390,7 @@ void HarmonicDihedral::from_json(const Faunus::json& j) {
 
 void HarmonicDihedral::to_json(Faunus::json& j) const {
     j = {{"k", 2 * half_force_constant / (1.0_kJmol / std::pow(1.0_rad, 2))}, {"deq", equilibrium_dihedral / 1.0_deg}};
-    _roundjson(j, 6);
+    roundJSON(j, 6);
 }
 
 int HarmonicDihedral::numindex() const { return 4; }
@@ -546,7 +546,7 @@ TEST_CASE("[Faunus] BondData") {
             json j = R"({"fene": {"index":[1,2], "k":8, "rmax":6.0 }})"_json;
             bond_ptr = j;                      // json --> object
             json j_roundtrip = json(bond_ptr); // object --> json
-            _roundjson(j_roundtrip, 3);        // round decimals before comparison
+            roundJSON(j_roundtrip, 3);         // round decimals before comparison
             CHECK_EQ(j_roundtrip, j);
             std::dynamic_pointer_cast<FENEBond>(bond_ptr)->setEnergyFunction(p_60deg_4a);
             CHECK_EQ(bond_ptr->energyFunc(distance), Approx(84.641_kJmol));
@@ -586,7 +586,7 @@ TEST_CASE("[Faunus] BondData") {
             json j = R"({"fene+wca": {"index":[1,2], "k":8, "rmax":6.0, "eps":3.5, "sigma":4.5}})"_json;
             bond_ptr = j;                      // json --> object
             json j_roundtrip = json(bond_ptr); // object --> json
-            _roundjson(j_roundtrip, 3);        // round decimals before comparison
+            roundJSON(j_roundtrip, 3);         // round decimals before comparison
             CHECK_EQ(j_roundtrip, j);
             std::dynamic_pointer_cast<FENEWCABond>(bond_ptr)->setEnergyFunction(p_60deg_4a);
             CHECK_EQ(bond_ptr->energyFunc(distance), Approx(92.805_kJmol));
@@ -671,7 +671,7 @@ TEST_CASE("[Faunus] BondData") {
             json j = R"({"gromos_torsion": {"index":[0,1,2], "k":0.5, "aeq":65}})"_json;
             bond_ptr = j;                      // json --> object
             json j_roundtrip = json(bond_ptr); // object --> json
-            _roundjson(j_roundtrip, 3);        // round decimals before comparison
+            roundJSON(j_roundtrip, 3);         // round decimals before comparison
             CHECK_EQ(j_roundtrip, j);
             std::dynamic_pointer_cast<GromosTorsion>(bond_ptr)->setEnergyFunction(p_60deg_4a);
             CHECK_EQ(bond_ptr->energyFunc(distance),

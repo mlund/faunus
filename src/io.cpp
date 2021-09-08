@@ -323,7 +323,7 @@ ParticleVector fastaToParticles(const std::string& fasta_sequence, double bond_l
     auto ids = fastaToAtomIds(fasta_sequence); // convert letters to atom ids
     std::transform(ids.begin(), ids.end(), std::back_inserter(particles), [&](auto& id) {
         Particle particle = Faunus::atoms.at(id);
-        particle.pos = particles.empty() ? origin : particles.back().pos + ranunit(random) * bond_length;
+        particle.pos = particles.empty() ? origin : particles.back().pos + randomUnitVector(random) * bond_length;
         return particle;
     });
     return particles;
@@ -948,7 +948,7 @@ Particle CoarseGrainedFastaFileReader::loadParticle(std::istream& stream) {
     const auto atomid = fastaToAtomIds(std::string(1, letter)).at(0);
     auto particle = Particle(Faunus::atoms.at(atomid));
     particle.pos = new_particle_position;
-    new_particle_position += Faunus::ranunit(random) * bond_length;
+    new_particle_position += Faunus::randomUnitVector(random) * bond_length;
     return particle;
 }
 

@@ -342,7 +342,7 @@ json getUserInput(docopt::Options& args) {
             if (!args["--nopfx"].asBool()) {
                 filename = MPI::prefix + filename;
             }
-            j = openjson(filename);
+            j = loadJSON(filename);
         }
         return j;
     } catch (json::parse_error& e) {

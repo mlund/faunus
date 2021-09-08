@@ -169,7 +169,7 @@ void from_json(const json& j, std::vector<Faunus::AtomData>& atom_vector) {
             } else if (element.is_string()) { // treat element as filename
                 const auto filename = element.get<std::string>();
                 faunus_logger->info("reading atoms from external file '{}'", filename);
-                from_json(Faunus::openjson(filename), atom_vector);
+                from_json(Faunus::loadJSON(filename), atom_vector);
             } else {
                 throw ConfigurationError("atom entry must be string or object").attachJson(element);
             }

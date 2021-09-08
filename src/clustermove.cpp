@@ -206,7 +206,7 @@ void to_json(json &j, const FindCluster &cluster) {
             if (k >= l) {
                 const std::string key = Faunus::molecules[k].name + " " + Faunus::molecules[l].name;
                 _j[key] = std::sqrt(cluster.thresholds_squared(k, l));
-                _roundjson(_j[key], 3);
+                roundJSON(_j[key], 3);
             }
         }
     }
@@ -232,7 +232,7 @@ void Cluster::_to_json(json &j) const {
          {"cluster analysis", *shape_analysis},
          {"cluster analysis interval", shape_analysis_interval}};
     Move::to_json(j, *find_cluster);
-    _roundjson(j, 3);
+    roundJSON(j, 3);
 }
 
 void Cluster::_from_json(const json &j) {
@@ -267,7 +267,7 @@ Point Cluster::clusterMassCenter(const std::vector<size_t> &cluster_index) const
 }
 
 Eigen::Quaterniond Cluster::setRandomRotation() {
-    Point axis = (rotation_axis.count() > 0) ? rotation_axis : ranunit(slump);
+    Point axis = (rotation_axis.count() > 0) ? rotation_axis : randomUnitVector(slump);
     rotation_angle = rotation_displacement_factor * (slump() - 0.5);
     return static_cast<Eigen::Quaterniond>(Eigen::AngleAxisd(rotation_angle, axis));
 }
@@ -300,7 +300,8 @@ void Cluster::_move(Change &change) {
             std::for_each(cluster_groups.begin(), cluster_groups.end(), rotate_group);
         }
 
-        translation_displacement = ranunit(slump, translation_direction) * translation_displacement_factor * slump();
+        translation_displacement =
+            randomUnitVector(slump, translation_direction) * translation_displacement_factor * slump();
         auto translate_group = [&](Tgroup &group) { group.translate(translation_displacement, boundary); };
         std::for_each(cluster_groups.begin(), cluster_groups.end(), translate_group);
 

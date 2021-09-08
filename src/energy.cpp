@@ -4,7 +4,7 @@
 #include "externalpotential.h"
 #include <functional>
 #include <range/v3/view/zip.hpp>
-#if __cplusplus >= 202002L
+#if __cplusplus > 201703L
 #include <span> // c++20
 #endif
 
@@ -1098,11 +1098,11 @@ void SASAEnergy::updateSASA(const Change& change) {
     auto* result = freesasa_calc_coord(positions.data(), radii.data(), number_of_active_particles, parameters.get());
     if (result != nullptr && result->n_atoms == number_of_active_particles) {
         sasa.resize(number_of_active_particles);
-#if __cplusplus < 202002L
-        std::copy(result->sasa, result->sasa + result->n_atoms, sasa.begin()); // ugly
-#else
+#if __cplusplus > 201703L
         const auto values = std::span(result->sasa, result->n_atoms); // pretty
         std::copy(values.begin(), values.end(), sasa.begin());
+#else
+        std::copy(result->sasa, result->sasa + result->n_atoms, sasa.begin()); // ugly
 #endif
         freesasa_result_free(result);
     } else {

@@ -192,7 +192,8 @@ namespace Faunus {
         explicit GenericError(const std::string& msg);
         explicit GenericError(const char* msg);
         template <class... Args>
-        explicit GenericError(std::string_view fmt, const Args&... args) : std::runtime_error(fmt::format(fmt, args...)) {}
+        explicit GenericError(std::string_view fmt, const Args&... args)
+            : std::runtime_error(fmt::vformat(fmt, fmt::make_format_args(args...))) {}
     };
 
     //! Exception to be thrown when parsing json configuration

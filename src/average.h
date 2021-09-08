@@ -247,10 +247,11 @@ template <class value_type = double, class counter_type = unsigned long int> cla
 /** Requirements for types used with `AverageObj` */
 template <class T> concept Averageable = requires(T a) {
     a * 1.0; // please implement `T operator*(double) const`
-    a* a;    // please implement `T operator*(const T&) const`
+    // a* a;    // please implement `T operator*(const T&) const`
     a += a;  // please implement `T& operator+=(const T&)`
 };
 #endif
+
     /**
      * @brief Simple class to average data contained in objects
      * @tparam T Type to average
@@ -262,7 +263,7 @@ template <class T> concept Averageable = requires(T a) {
      * - `T& operator+=(const &T)`
      */
 #if __cplusplus > 201703L
-template <Averageable T, typename int_t = unsigned long int> class AverageObj {
+template <Averageable T, typename counter_type = unsigned long int> class AverageObj {
 #else
 template <typename T, typename counter_type = unsigned long int> class AverageObj {
 #endif

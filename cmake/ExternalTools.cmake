@@ -5,7 +5,7 @@ include(FetchContent)
 # CPM Packages
 ###############
 
-CPMAddPackage("gh:gabime/spdlog@1.9.0")
+CPMAddPackage("gh:gabime/spdlog@1.9.2")
 CPMAddPackage("gh:ericniebler/range-v3#0.11.0")
 CPMAddPackage("gh:docopt/docopt.cpp#v0.6.3")
 CPMAddPackage("gh:onqtam/doctest#2.4.6")
@@ -25,7 +25,8 @@ CPMAddPackage(
 )
 
 CPMAddPackage(
-    NAME cereal VERSION 1.3.0 GITHUB_REPOSITORY USCiLab/cereal
+    NAME cereal GITHUB_REPOSITORY USCiLab/cereal
+    GIT_TAG 46a4a910077bf9e9f8327c8f6ea761c89b06da53
     OPTIONS "SKIP_PORTABILITY_TEST ON" "JUST_INSTALL_CEREAL ON"
 )
 

@@ -260,13 +260,16 @@ ConfigurationError& ConfigurationError::attachJson(const json j) {
 
 void displayError(spdlog::logger& logger, const std::exception& e, int level) {
     const std::string padding = level > 0 ? "... " : "";
-
     logger.error(padding + e.what());
 
     // ConfigurationError can carry a JSON snippet which should be shown for debugging.
     if (auto config_error = dynamic_cast<const ConfigurationError*>(&e);
         config_error != nullptr && !config_error->attachedJson().empty()) {
-        logger.debug(padding + "JSON snippet:\n{}", config_error->attachedJson().dump(4));
+        if (level > 0) {
+            logger.debug("... JSON snippet:\n{}", config_error->attachedJson().dump(4));
+        } else {
+            logger.debug("JSON snippet:\n{}", config_error->attachedJson().dump(4));
+        }
     }
 
     // Process nested exceptions in a tail recursion.

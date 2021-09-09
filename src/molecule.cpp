@@ -749,7 +749,7 @@ ParticleVector RandomInserter::operator()(Geometry::GeometryBase &geo, MoleculeD
         if (molecule.atomic) {                 // insert atomic species
             for (auto &particle : particles) { // for each atom type id
                 if (rotate) {                  // internal rotation of atomic particles
-                    rotator.set(2.0 * pc::pi * random(), ranunit(random));
+                    rotator.set(2.0 * pc::pi * random(), randomUnitVector(random));
                     particle.rotate(rotator.getQuaternion(), rotator.getRotationMatrix());
                 }
                 geo.randompos(particle.pos, random);
@@ -764,7 +764,7 @@ ParticleVector RandomInserter::operator()(Geometry::GeometryBase &geo, MoleculeD
             } else {
                 Geometry::translateToOrigin(particles.begin(), particles.end()); // translate to origin
                 if (rotate) {
-                    rotator.set(2.0 * pc::pi * random(), ranunit(random)); // random rot around random vector
+                    rotator.set(2.0 * pc::pi * random(), randomUnitVector(random)); // random rot around random vector
                     Geometry::rotate(particles.begin(), particles.end(), rotator.getQuaternion());
                     assert(Geometry::massCenter(particles.begin(), particles.end()).norm() < 1e-6); // cm shouldn't move
                 }

@@ -50,7 +50,7 @@ void MoveBase::to_json(json &j) const {
     if (!cite.empty()) {
         j["cite"] = cite;
     }
-    _roundjson(j, 3);
+    roundJSON(j, 3);
 }
 
 void MoveBase::move(Change& change) {
@@ -131,7 +131,7 @@ void AtomicTranslateRotate::_to_json(json &j) const {
          {"molid", molid},
          {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(mean_square_displacement.avg())},
          {"molecule", molecule_name}};
-    _roundjson(j, 3);
+    roundJSON(j, 3);
 }
 
 void AtomicTranslateRotate::_from_json(const json& j) {
@@ -155,7 +155,7 @@ void AtomicTranslateRotate::_from_json(const json& j) {
 
 void AtomicTranslateRotate::translateParticle(ParticleVector::iterator particle, double displacement) {
     const auto old_position = particle->pos; // backup old position
-    particle->pos += ranunit(slump, directions) * displacement * slump();
+    particle->pos += randomUnitVector(slump, directions) * displacement * slump();
     spc.geo.boundary(particle->pos);
     latest_displacement_squared = spc.geo.sqdist(old_position, particle->pos); // square displacement
 
@@ -198,7 +198,7 @@ void AtomicTranslateRotate::_move(Change &change) {
         }
 
         if (rotational_displacement > 0.0) { // rotate
-            const auto random_unit_vector = Faunus::ranunit(slump);
+            const auto random_unit_vector = Faunus::randomUnitVector(slump);
             const auto angle = rotational_displacement * (slump() - 0.5);
             Eigen::Quaterniond quaternion(Eigen::AngleAxisd(angle, random_unit_vector));
             particle->rotate(quaternion, quaternion.toRotationMatrix());
@@ -528,7 +528,7 @@ void VolumeMove::_to_json(json &j) const {
              {"⟨V⟩", mean_volume.avg()},
              {"√⟨ΔV²⟩", std::sqrt(mean_square_volume_change.avg())},
              {"∛√⟨ΔV²⟩", std::cbrt(std::sqrt(mean_square_volume_change.avg()))}};
-        _roundjson(j, 3);
+        roundJSON(j, 3);
     }
 }
 void VolumeMove::_from_json(const json &j) {
@@ -569,7 +569,7 @@ void ChargeMove::_to_json(json &j) const {
          {"dq", dq},
          {rootof + bracket(Delta + "q" + squared), std::sqrt(msqd.avg())},
          {cuberoot + rootof + bracket(Delta + "q" + squared), std::cbrt(std::sqrt(msqd.avg()))}};
-    _roundjson(j, 3);
+    roundJSON(j, 3);
 }
 void ChargeMove::_from_json(const json &j) {
     dq = j.at("dq").get<double>();
@@ -604,7 +604,7 @@ void ChargeTransfer::_to_json(json &j) const {
     j = {{"dq", dq},
          {rootof + bracket(Delta + "q" + squared), std::sqrt(msqd.avg())},
          {cuberoot + rootof + bracket(Delta + "q" + squared), std::cbrt(std::sqrt(msqd.avg()))}};
-    _roundjson(j, 3);
+    roundJSON(j, 3);
 }
 void ChargeTransfer::_from_json(const json &j) {
     dq = j.at("dq").get<double>();
@@ -820,7 +820,7 @@ void QuadrantJump::_to_json(json &j) const {
          {"molid", molid},
          {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(msqd.avg())},
          {"molecule", molecules[molid].name}};
-    _roundjson(j, 3);
+    roundJSON(j, 3);
 }
 void QuadrantJump::_from_json(const json &j) {
     assert(!molecules.empty());
@@ -881,7 +881,7 @@ void AtomicSwapCharge::_to_json(json &j) const {
          {"molid", molid},
          {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(msqd.avg())},
          {"molecule", molname}};
-    _roundjson(j, 3);
+    roundJSON(j, 3);
 }
 void AtomicSwapCharge::_from_json(const json &j) {
     assert(!molecules.empty());
@@ -944,7 +944,7 @@ void TranslateRotate::_to_json(json &j) const {
          {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(mean_squared_displacement.avg())},
          {"√⟨θ²⟩/°", std::sqrt(mean_squared_rotation_angle.avg()) / 1.0_deg},
          {"molecule", Faunus::molecules[molid].name}};
-    _roundjson(j, 3);
+    roundJSON(j, 3);
 }
 void TranslateRotate::_from_json(const json &j) {
     const std::string molname = j.at("molecule");
@@ -988,7 +988,7 @@ double TranslateRotate::translateMolecule(Space::Tgroup &group) {
     if (translational_displacement > 0.0) { // translate
         const auto old_mass_center = group.cm;
         const auto displacement_vector =
-            Faunus::ranunit(slump, translational_direction) * translational_displacement * slump();
+            Faunus::randomUnitVector(slump, translational_direction) * translational_displacement * slump();
 
         group.translate(displacement_vector, spc.geo.getBoundaryFunc());
         return spc.geo.sqdist(old_mass_center, group.cm);
@@ -1003,7 +1003,7 @@ double TranslateRotate::translateMolecule(Space::Tgroup &group) {
  */
 double TranslateRotate::rotateMolecule(Space::Tgroup &group) {
     if (rotational_displacement > 0.0) {         // rotate
-        Point rotation_axis = Faunus::ranunit(slump); // rotate around random unit vector
+        Point rotation_axis = Faunus::randomUnitVector(slump); // rotate around random unit vector
         if (fixed_rotation_axis.count() > 0.0) { // OR a fixed, user-defined vector
             rotation_axis = fixed_rotation_axis;
         }
@@ -1100,7 +1100,7 @@ void SmartTranslateRotate::_to_json(json &j) const {
          {"molecule", molecules[molid].name},
          {"ref1", atoms[refid1].name},
          {"ref2", atoms[refid2].name}};
-    _roundjson(j, 3);
+    roundJSON(j, 3);
 }
 void SmartTranslateRotate::_from_json(const json &j) {
     assert(!molecules.empty());
@@ -1217,14 +1217,14 @@ void SmartTranslateRotate::_move(Change &change) {
                 }
                 if (dptrans > 0) { // translate
                     Point oldcm = it->cm;
-                    Point dp = ranunit(slump, dir) * dptrans * slump();
+                    Point dp = randomUnitVector(slump, dir) * dptrans * slump();
 
                     it->translate(dp, spc.geo.getBoundaryFunc());
                     _sqd = spc.geo.sqdist(oldcm, it->cm); // squared displacement
                 }
 
                 if (dprot > 0) { // rotate
-                    Point u = ranunit(slump);
+                    Point u = randomUnitVector(slump);
                     double angle = dprot * (slump() - 0.5);
                     Eigen::Quaterniond Q(Eigen::AngleAxisd(angle, u));
                     it->rotate(Q, spc.geo.getBoundaryFunc());
@@ -1280,7 +1280,7 @@ void ConformationSwap::_to_json(json& j) const {
          {"molecule", Faunus::molecules.at(molid).name},
          {"keeppos", inserter.keep_positions},
          {"copy_policy", copy_policy}};
-    _roundjson(j, 3);
+    roundJSON(j, 3);
 }
 
 void ConformationSwap::_from_json(const json &j) {

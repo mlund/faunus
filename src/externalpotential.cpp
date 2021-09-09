@@ -136,7 +136,7 @@ TEST_CASE("[Faunus] ExternalPotential") {
 
 Confine::Confine(const json &j, Tspace &spc) : ExternalPotential(j, spc) {
     name = "confine";
-    k = value_inf(j, "k") * 1.0_kJmol; // get floating point; allow inf/-inf
+    k = getValueInfinity(j, "k") * 1.0_kJmol; // get floating point; allow inf/-inf
     type = m.at(j.at("type"));
 
     if (type == sphere or type == cylinder) {
@@ -190,7 +190,7 @@ void Confine::to_json(json &j) const {
             j["type"] = i.first;
     j["k"] = k / 1.0_kJmol;
     ExternalPotential::to_json(j);
-    _roundjson(j, 5);
+    roundJSON(j, 5);
 }
 
 // ------------ ExternalAkesson -------------
@@ -243,7 +243,7 @@ void ExternalAkesson::to_json(json &j) const {
     j = {{"lB", bjerrum_length}, {"dz", dz},       {"nphi", phi_update_interval}, {"epsr", dielectric_constant},
          {"file", filename},     {"nstep", nstep}, {"Nupdates", num_rho_updates}, {"fixed", fixed_potential}};
     ExternalPotential::to_json(j);
-    _roundjson(j, 5);
+    roundJSON(j, 5);
 }
 
 void ExternalAkesson::save_rho() {

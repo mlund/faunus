@@ -19,7 +19,7 @@ void ChainRotationMoveBase::_to_json(json &j) const {
     if (small_box_encountered > 0) {
         j["skipped"] = double(small_box_encountered) / number_of_attempted_moves; // todo rename the json attribute
     }
-    _roundjson(j, 3);
+    roundJSON(j, 3);
 }
 
 void ChainRotationMoveBase::_move(Change &change) {

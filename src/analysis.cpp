@@ -78,7 +78,7 @@ void Analysisbase::to_json(json& json_output) const {
                 j["nskip"] = number_of_skipped_steps;
             }
             if (timer.result() > 0.01) { // only print if more than 1% of the time
-                j["relative time"] = _round(timer.result());
+                j["relative time"] = roundValue(timer.result());
             }
         }
         if (!cite.empty()) {
@@ -223,7 +223,7 @@ void SystemEnergy::_to_json(json& j) const {
         j["mean"] = mean_energy.avg();
         j["Cv/kB"] = mean_squared_energy.avg() - std::pow(mean_energy.avg(), 2);
     }
-    _roundjson(j, 5);
+    roundJSON(j, 5);
     // normalize();
     // ehist.save( "distofstates.dat" );
 }
@@ -507,7 +507,7 @@ void VirtualVolumeMove::_to_json(json& j) const {
              {"Pex/mM", excess_pressure / 1.0_millimolar},
              {"Pex/Pa", excess_pressure / 1.0_Pa},
              {"Pex/kT/" + u8::angstrom + u8::cubed, excess_pressure}};
-        _roundjson(j, 5);
+        roundJSON(j, 5);
     }
 }
 
@@ -768,7 +768,7 @@ void Density::_to_json(json& j) const {
             j_molecular[Faunus::molecules[molid].name] = json({{"c/M", density.avg() / 1.0_molar}});
         }
     }
-    _roundjson(j, 4);
+    roundJSON(j, 4);
 }
 
 Density::Density(const json& j, Space& spc) : Analysisbase(spc, "density") {
@@ -1811,7 +1811,7 @@ void ElectricPotential::setPolicy(const json& j) {
             auto origin = targets.begin();
             spc.geo.randompos(origin->position, random);
             std::for_each(std::next(origin), targets.end(), [&](Target& target) {
-                target.position = origin->position + stride * ranunit(random);
+                target.position = origin->position + stride * randomUnitVector(random);
                 std::advance(origin, 1);
             });
         };
@@ -1826,7 +1826,7 @@ void ElectricPotential::setPolicy(const json& j) {
             } while (overlapWithParticles(origin->position));
             std::for_each(std::next(origin), targets.end(), [&](Target& target) {
                 do {
-                    target.position = origin->position + stride * ranunit(random);
+                    target.position = origin->position + stride * randomUnitVector(random);
                 } while (overlapWithParticles(target.position));
                 std::advance(origin, 1);
             });

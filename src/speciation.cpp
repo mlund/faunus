@@ -223,7 +223,7 @@ Change::data SpeciationMove::activateMolecularGroup(Space::Tgroup &target) {
     Point cm = target.cm;
     spc.geo.randompos(cm, slump);                    // generate random position
     target.translate(cm, spc.geo.getBoundaryFunc()); // assign random position to mass-center
-    Point u = ranunit(slump);                        // random unit vector
+    Point u = randomUnitVector(slump);               // random unit vector
     Eigen::Quaterniond Q(Eigen::AngleAxisd(2 * pc::pi * (slump() - 0.5), u));
     target.rotate(Q, spc.geo.getBoundaryFunc()); // assign random orientation
 

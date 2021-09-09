@@ -64,9 +64,9 @@ void to_json(json& j, const InteractionData& a) {
     }
 }
 
-AtomData::Tid& AtomData::id() { return _id; }
+AtomData::index_type& AtomData::id() { return _id; }
 
-const AtomData::Tid& AtomData::id() const { return _id; }
+const AtomData::index_type& AtomData::id() const { return _id; }
 
 void to_json(json& j, const AtomData& a) {
     auto& _j = j[a.name];
@@ -174,7 +174,7 @@ void from_json(const json& j, std::vector<Faunus::AtomData>& atom_vector) {
                 throw ConfigurationError("atom entry must be string or object").attachJson(element);
             }
         }
-        assert(atom_vector.size() < std::numeric_limits<Faunus::AtomData::Tid>::max());
+        assert(atom_vector.size() < std::numeric_limits<Faunus::AtomData::index_type>::max());
         // the id exactly matches it's position (index) in the atom vector
         for (size_t i = 0; i < atom_vector.size(); ++i) {
             atom_vector[i].id() = i;

@@ -37,7 +37,7 @@ typedef std::function<double(double)> TModifierFunc;
  * The very same format is used as for a homogeneous interaction specified directly on an atom type.
  */
 struct CustomInteractionData {
-    std::array<AtomData::Tid, 2> atom_id;
+    std::array<AtomData::index_type, 2> atom_id;
     InteractionData interaction;
 };
 

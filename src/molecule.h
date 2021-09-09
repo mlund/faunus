@@ -176,8 +176,12 @@ void to_json(json &j, const ExclusionsVicinity &exclusions);
  * @brief General properties for molecules
  */
 class MoleculeData {
+  public:
+    using index_type = int;
+
+  private:
     json json_cfg; //!< data useful only for to_json
-    int _id = -1;
+    index_type _id = -1;
     bool implicit = false; //!< Is molecule implicit and explicitly absent from simulation cell?
 
   protected:

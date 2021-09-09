@@ -31,10 +31,10 @@ void from_single_use_json(SingleUseJSON& j, InteractionData& a);
  */
 class AtomData { // has to be a class when a constant reference is used
   public:
-    typedef int Tid;
+    using index_type = std::size_t; //!< Unsigned int used for atom id and atom indexing
 
   private:
-    Tid _id = -1;
+    index_type _id = 0;
     friend void to_json(json&, const AtomData&);
     friend void from_json(const json&, AtomData&);
 
@@ -58,8 +58,8 @@ class AtomData { // has to be a class when a constant reference is used
     bool implicit = false;       //!< Is the particle implicit (e.g. proton)?
     InteractionData interaction; //!< Arbitrary interaction parameters, e.g., epsilons in various potentials
 
-    Tid& id();             //!< Type id
-    const Tid& id() const; //!< Type id
+    index_type& id();             //!< Type id
+    const index_type& id() const; //!< Type id
 };
 
 void to_json(json& j, const AtomData& a);
@@ -118,13 +118,14 @@ AtomData& findAtomByName(const std::string& name);
  * a sequence containing all id's of the database, i.e.
  * `0, ..., database.size()-1`.
  */
-template <class Trange> std::vector<int> names2ids(Trange& database, const std::vector<std::string>& names) {
-    std::vector<AtomData::Tid> index;
+template <class Trange> auto names2ids(Trange& database, const std::vector<std::string>& names) {
+    using id_type = typename Trange::value_type::index_type;
+    std::vector<id_type> index;
     index.reserve(names.size());
     for (auto& name : names) {
         if (name == "*") { // wildcard selecting all id's
             index.resize(database.size());
-            std::iota(index.begin(), index.end(), 0);
+            std::iota(index.begin(), index.end(), id_type(0));
             return index;
         }
         if (auto it = findName(database, name); it != database.end())

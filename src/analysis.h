@@ -243,7 +243,7 @@ class SlicedDensity : public Analysisbase {
     double dz;                               //!< Resolution of `histogram` along z
     Table2D<double, unsigned int> histogram; // N(z)
     std::vector<std::string> atom_names;
-    std::vector<int> atom_ids; //!< atom id's to analyse
+    std::vector<AtomData::index_type> atom_ids; //!< atom id's to analyse
     std::string file;
     int center_of_mass_atom_id = -1; // center at COM of id_com atoms?
 

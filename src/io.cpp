@@ -378,7 +378,7 @@ ParticleVector loadStructure(const std::string& filename, bool prefer_charges_fr
  * @param fasta_sequence FASTA sequence, capital letters.
  * @return vector of verified and existing atom id's
  */
-std::vector<int> fastaToAtomIds(const std::string& fasta_sequence) {
+std::vector<AtomData::index_type> fastaToAtomIds(const std::string& fasta_sequence) {
     const std::map<char, std::string> map = {{'A', "ALA"},
                                              {'R', "ARG"},
                                              {'N', "ASN"},

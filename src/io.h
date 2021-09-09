@@ -633,7 +633,7 @@ class XTCWriter {
     void writeFrameAt(int step, float time);
 };
 
-std::vector<int> fastaToAtomIds(const std::string&); //!< Convert FASTA sequence to atom id sequence
+std::vector<AtomData::index_type> fastaToAtomIds(const std::string&); //!< Convert FASTA sequence to atom id sequence
 
 /**
  * @brief Create particle vector from FASTA sequence with equally spaced atoms

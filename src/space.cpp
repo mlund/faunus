@@ -400,8 +400,8 @@ void from_json(const json &j, Space &spc) {
                     "couldn't calculate mass center for {}; increase periodic box size?", group.traits().name));
             }
         }
-    } catch (std::exception& e) {
-        std::throw_with_nested(std::runtime_error("error building space"));
+    } catch (const std::exception& e) {
+        throw std::runtime_error("error building space -> "s + e.what());
     }
 }
 ActiveParticles::const_iterator::const_iterator(const Space &spc, ActiveParticles::const_iterator::Tparticle_iter it)

@@ -956,7 +956,12 @@ void TranslateRotate::_from_json(const json &j) {
     translational_direction = j.value("dir", Point(1, 1, 1));
     translational_displacement = j.at("dp").get<double>();
     rotational_displacement = j.at("dprot").get<double>();
-    fixed_rotation_axis = j.value("dirrot", Point(0, 0, 0)); // predefined axis of rotation
+    fixed_rotation_axis = j.value("dirrot", Point(0.0, 0.0, 0.0)); // predefined axis of rotation
+    if (fixed_rotation_axis.count() > 0.0) {
+        fixed_rotation_axis.normalize();
+        faunus_logger->debug("{}: fixed rotation axis [{:.3f},{:.3f},{:.3f}]", name, fixed_rotation_axis.x(),
+                             fixed_rotation_axis.y(), fixed_rotation_axis.z());
+    }
     if (repeat < 0) {
         repeat = spc.numMolecules<Space::Tgroup::ACTIVE>(molid);
         if (repeat == 0) {
@@ -1001,19 +1006,20 @@ double TranslateRotate::translateMolecule(Space::Tgroup &group) {
  * @param group Group to rotate
  * @return Squared rotation angle around mass-center
  */
-double TranslateRotate::rotateMolecule(Space::Tgroup &group) {
-    if (rotational_displacement > 0.0) {         // rotate
-        Point rotation_axis = Faunus::randomUnitVector(slump); // rotate around random unit vector
-        if (fixed_rotation_axis.count() > 0.0) { // OR a fixed, user-defined vector
-            rotation_axis = fixed_rotation_axis;
-        }
-        const auto angle = rotational_displacement * (slump() - 0.5); // random rotation angle
-        const Eigen::Quaterniond quaternion(Eigen::AngleAxisd(angle, rotation_axis));
-        group.rotate(quaternion, spc.geo.getBoundaryFunc());
-        return angle * angle;
-    } else {
+double TranslateRotate::rotateMolecule(Space::Tgroup& group) {
+    if (rotational_displacement <= pc::epsilon_dbl) {
         return 0.0;
     }
+    Point rotation_axis;
+    if (fixed_rotation_axis.count() > 0.0) { // fixed user-defined axis
+        rotation_axis = fixed_rotation_axis;
+    } else {
+        rotation_axis = Faunus::randomUnitVector(slump);
+    }
+    const auto angle = rotational_displacement * (slump() - 0.5);
+    const Eigen::Quaterniond quaternion(Eigen::AngleAxisd(angle, rotation_axis));
+    group.rotate(quaternion, spc.geo.getBoundaryFunc());
+    return angle * angle;
 }
 
 void TranslateRotate::_move(Change &change) {

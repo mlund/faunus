@@ -102,7 +102,7 @@ MetropolisMonteCarlo::MetropolisMonteCarlo(const json &j, MPI::MPIController &mp
     faunus_logger->set_level(spdlog::level::off); // do not duplicate log info
     trial_state = std::make_unique<State>(j);     // ...for the trial state
     faunus_logger->set_level(original_log_level); // restore original log level
-    moves = std::make_unique<Move::Propagator>(j.at("moves"), *trial_state->spc, *trial_state->pot, mpi);
+    moves = std::make_unique<Move::MoveCollection>(j.at("moves"), *trial_state->spc, *trial_state->pot, mpi);
     init();
 }
 

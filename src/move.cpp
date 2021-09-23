@@ -330,7 +330,7 @@ std::unique_ptr<MoveBase> createMove(const std::string& name, const json& proper
     } catch (std::exception& e) { throw ConfigurationError("error creating move -> {}", e.what()); }
 }
 
-void Propagator::addMove(std::shared_ptr<MoveBase>&& move) {
+void MoveCollection::addMove(std::shared_ptr<MoveBase>&& move) {
     if (!move) {
         throw std::runtime_error("invalid move");
     }
@@ -340,8 +340,8 @@ void Propagator::addMove(std::shared_ptr<MoveBase>&& move) {
     number_of_moves_per_sweep = static_cast<unsigned int>(std::accumulate(repeats.begin(), repeats.end(), 0.0));
 }
 
-Propagator::Propagator(const json& list_of_moves, Space& spc, Energy::Hamiltonian& hamiltonian,
-                       MPI::MPIController& mpi_controller) {
+MoveCollection::MoveCollection(const json& list_of_moves, Space& spc, Energy::Hamiltonian& hamiltonian,
+                               MPI::MPIController& mpi_controller) {
     assert(list_of_moves.is_array());
     for (const auto& j : list_of_moves) { // loop over move list
         const auto& [name, parameters] = jsonSingleItem(j);
@@ -354,11 +354,11 @@ Propagator::Propagator(const json& list_of_moves, Space& spc, Energy::Hamiltonia
     }
 }
 
-void to_json(json& j, const Propagator& propagator) { j = propagator.moves; }
+void to_json(json& j, const MoveCollection& propagator) { j = propagator.moves; }
 
-const BasePointerVector<MoveBase>& Propagator::getMoves() const { return moves; }
+const BasePointerVector<MoveBase>& MoveCollection::getMoves() const { return moves; }
 
-Propagator::move_iterator Propagator::sample() {
+MoveCollection::move_iterator MoveCollection::sample() {
 #ifdef ENABLE_MPI
     auto& random_engine = MPI::mpi.random.engine; // parallel processes (tempering) must be in sync
 #else

@@ -21,7 +21,7 @@ class Hamiltonian;
 
 namespace Move {
 
-class Propagator;
+class MoveCollection;
 
 /**
  * @brief Base class for all moves (MC, Langevin, ...)
@@ -42,7 +42,7 @@ class MoveBase {
     TimeRelativeOfTotal<std::chrono::microseconds> timer;      //!< Timer for whole move
     TimeRelativeOfTotal<std::chrono::microseconds> timer_move; //!< Timer for _move() only
 
-    friend Propagator;
+    friend MoveCollection;
     unsigned long number_of_accepted_moves = 0;
     unsigned long number_of_rejected_moves = 0;
     unsigned int sweep_interval = 1; //!< Run interval for defused moves (with weight = 0)
@@ -509,7 +509,7 @@ std::unique_ptr<MoveBase> createMove(const std::string& name, const json& proper
  * @brief Class storing a list of MC moves with their probability weights and
  * randomly selecting one.
  */
-class Propagator {
+class MoveCollection {
   private:
     unsigned int number_of_moves_per_sweep;                //!< Sum of all weights
     BasePointerVector<MoveBase> moves;                     //!< list of moves
@@ -519,11 +519,11 @@ class Propagator {
     move_iterator sample();                                //!< Pick move from a weighted, random distribution
 
   public:
-    Propagator(const json& list_of_moves, Space& spc, Energy::Hamiltonian& hamiltonian,
-               MPI::MPIController& mpi_controller);
+    MoveCollection(const json& list_of_moves, Space& spc, Energy::Hamiltonian& hamiltonian,
+                   MPI::MPIController& mpi_controller);
     void addMove(std::shared_ptr<MoveBase>&& move);             //!< Register new move with correct weight
     const BasePointerVector<MoveBase>& getMoves() const;        //!< Get list of moves
-    friend void to_json(json& j, const Propagator& propagator); //!< Generate json output
+    friend void to_json(json& j, const MoveCollection& propagator); //!< Generate json output
 
     /**
      * Generates a range of repeated, randomized move pointers guaranteed to be valid.
@@ -559,7 +559,7 @@ class Propagator {
     }
 };
 
-void to_json(json &j, const Propagator &propagator);
+void to_json(json& j, const MoveCollection& propagator);
 
 } // namespace Move
 

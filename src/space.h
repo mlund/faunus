@@ -298,38 +298,6 @@ class InsertMoleculesInSpace {
     static void insertMolecules(const json &, Space &);
 }; // end of insertMolecules class
 
-/**
- * @brief Helper class for range-based for-loops over *active* particles
- *
- * This class is currently not used as `Space::activeParticles` achieves the
- * same with much reduced code. However, this approach is expected to be
- * more efficient and is left here as an example of implementing a custom,
- * non-linear iterator.
- */
-struct ActiveParticles {
-    const Space &spc;
-    class const_iterator {
-      private:
-        using Tgroups_iter = typename Space::Tgvec::const_iterator;
-        using Tparticle_iter = typename Space::Tpvec::const_iterator;
-        const Space &spc;
-        Tparticle_iter particle_iter;
-        Tgroups_iter groups_iter;
-
-      public:
-        const_iterator(const Space &spc, Tparticle_iter it);
-        const_iterator operator++();
-        auto get() const { return std::pair{std::distance(particle_iter, spc.p.begin()), *particle_iter}; }
-        auto operator*() const { return *particle_iter; }
-        bool operator!=(const const_iterator &other) const { return particle_iter != other.particle_iter; }
-    }; // enable range-based for loops
-
-    const_iterator begin() const;
-    const_iterator end() const;
-    size_t size() const;
-    ActiveParticles(const Space &spc);
-};
-
 // Make a global alias to easy transition to non-templated code
 using Tspace = Space;
 

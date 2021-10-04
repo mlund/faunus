@@ -404,36 +404,6 @@ void from_json(const json &j, Space &spc) {
         throw std::runtime_error("error building space -> "s + e.what());
     }
 }
-ActiveParticles::const_iterator::const_iterator(const Space &spc, ActiveParticles::const_iterator::Tparticle_iter it)
-    : spc(spc), particle_iter(it) {
-    groups_iter = spc.groups.begin();
-}
-
-ActiveParticles::const_iterator ActiveParticles::const_iterator::operator++() { // advance particles and groups
-    if (++particle_iter == groups_iter->end()) {
-        do {
-            if (++groups_iter == spc.groups.end()) {
-                return *this;
-            }
-        } while (groups_iter->empty());
-        particle_iter = groups_iter->begin();
-    }
-    return *this;
-}
-ActiveParticles::const_iterator ActiveParticles::begin() const {
-    return const_iterator(spc, spc.p.begin());
-}
-
-ActiveParticles::const_iterator ActiveParticles::end() const {
-    return spc.groups.empty() ? begin() : const_iterator(spc, spc.groups.back().end());
-}
-
-size_t ActiveParticles::size() const {
-    return std::accumulate(spc.groups.begin(), spc.groups.end(), 0u,
-                           [](size_t sum, const auto& g) { return sum + g.size(); });
-}
-
-ActiveParticles::ActiveParticles(const Space &spc) : spc(spc) {}
 
 TEST_SUITE_BEGIN("Space");
 
@@ -509,24 +479,12 @@ TEST_CASE("[Faunus] Space") {
         CHECK(spc.numMolecules<Space::Tgroup::INACTIVE>(1) == 1);
         CHECK(spc.numMolecules<Space::Tgroup::INACTIVE | Space::Tgroup::NEUTRAL>(1) == 0);
 
-        auto p = ActiveParticles(spc);
-        size_t size = 0;
-        std::vector<int> vals;
-        for (const auto &i : p) {
-            size++;
-            vals.push_back(int(i.charge));
-        }
-
-        CHECK(vals == std::vector<int>({1, 2, 6, 7, 8}));
-        CHECK(size == p.size());
-
-        // now let's check the rangev3 implementation
-        // in `activeParticles()`:
+        // check the rangev3 implementation in `activeParticles()`:
         auto p2 = spc.activeParticles();
-        CHECK(std::distance(p2.begin(), p2.end()) == size);
-        vals.clear();
-        for (const auto &i : p2) {
-            vals.push_back(int(i.charge));
+        CHECK(std::distance(p2.begin(), p2.end()) == 5);
+        std::vector<int> vals;
+        for (const auto& particle : p2) {
+            vals.push_back(static_cast<int>(particle.charge));
         }
         CHECK(vals == std::vector<int>({1, 2, 6, 7, 8}));
     }

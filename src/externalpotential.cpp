@@ -76,7 +76,7 @@ ExternalPotential::ExternalPotential(const json &j, Space &spc) : space(spc) {
 double ExternalPotential::energy(Change &change) {
     assert(externalPotentialFunc != nullptr);
     double energy = 0.0;
-    if (change.dV or change.all or change.dN) {
+    if (change.volume_change or change.everything or change.matter_change) {
         for (auto &group : space.groups) { // loop over all groups
             energy += groupEnergy(group);
             if (not std::isfinite(energy)) {
@@ -85,12 +85,12 @@ double ExternalPotential::energy(Change &change) {
         }
     } else {
         for (auto &group_change : change.groups) {             // loop over all changed groups
-            auto &group = space.groups.at(group_change.index); // check specified groups
+            auto& group = space.groups.at(group_change.group_index); // check specified groups
             if (group_change.all or act_on_mass_center) {      // check all atoms in group
                 energy += groupEnergy(group);                  // groupEnergy also checks for molecule id
             } else {                                           // only specified atoms in group
                 if (molecule_ids.find(group.id) != molecule_ids.end()) {
-                    for (int index : group_change.atoms) { // loop over changed atoms in group
+                    for (int index : group_change.relative_atom_indices) { // loop over changed atoms in group
                         energy += externalPotentialFunc(group[index]);
                     }
                 }
@@ -127,7 +127,7 @@ TEST_CASE("[Faunus] ExternalPotential") {
         Space spc = j;
         ParticleSelfEnergy pot(spc, [](const Particle &) { return 0.5; });
         Change change;
-        change.all = true; // if both particles have changed
+        change.everything = true; // if both particles have changed
         CHECK(pot.energy(change) == Approx(0.5 + 0.5));
     }
 }

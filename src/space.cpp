@@ -8,48 +8,49 @@
 
 namespace Faunus {
 
-bool Change::data::operator<(const Faunus::Change::data &other) const { return index < other.index; }
+bool Change::GroupChange::operator<(const Faunus::Change::GroupChange& other) const {
+    return group_index < other.group_index;
+}
 
 void Change::clear() {
     *this = Change();
     assert(empty());
 }
 bool Change::empty() const {
-    if (dV || all || dN || !groups.empty()) {
+    if (volume_change || everything || matter_change || !groups.empty()) {
         return false;
-    } else {
-        return true;
     }
+    return true;
 }
 Change::operator bool() const { return !empty(); }
 
-std::vector<std::size_t> Change::touchedParticleIndex(const std::vector<Group<Particle>>& group_vector) const {
-    std::vector<std::size_t> atom_indexes;                           // atom index rel. to first particle in system
-    for (const auto& changed : groups) {                             // loop over changed groups
-        auto begin_first = group_vector.front().begin();             // first particle, first group
-        auto begin_current = group_vector.at(changed.index).begin(); // first particle, current group
-        auto offset = std::distance(begin_first, begin_current);     // abs. distance from first particle
-        atom_indexes.reserve(atom_indexes.size() + changed.atoms.size());
+std::vector<Change::index_type> Change::touchedParticleIndex(const std::vector<Group<Particle>>& group_vector) const {
+    std::vector<index_type> indices;                 // atom index rel. to first particle in system
+    auto begin_first = group_vector.front().begin(); // first particle, first group
+    for (const auto& changed : groups) {             // loop over changed groups
+        auto begin_current = group_vector.at(changed.group_index).begin(); // first particle, current group
+        auto offset = std::distance(begin_first, begin_current);           // abs. distance from first particle
         if (offset < 0) {
             throw std::runtime_error("negative index");
         }
-        const auto offset_i = static_cast<std::size_t>(offset);
-        for (auto index : changed.atoms) {            // atom index relative to group
-            atom_indexes.push_back(index + offset_i); // atom index relative to first
+        const auto offset_i = static_cast<index_type>(offset);
+        indices.reserve(indices.size() + changed.relative_atom_indices.size());
+        for (const auto index : changed.relative_atom_indices) { // atom index relative to group
+            indices.push_back(index + offset_i);                 // atom index relative to first
         }
     }
-    return atom_indexes;
+    return indices;
 }
 
 /**
  * @param group_vector Vector of group connected to the change; typically `Space::groups`.
- * @throws If the atoms in the change object is outside range of given group index.
+ * @throw If the atoms in the change object is outside range of given group index.
  */
-void Change::sanityCheck(const std::vector<Group<Particle>> &group_vector) const {
-    for (auto &changed : groups) {
-        auto first_particle = group_vector.at(0).begin(); // first particle in first group
-        auto &group = group_vector.at(changed.index);     // current group
-        for (auto i : changed.atoms) {                    // all atoms must be within `group`
+void Change::sanityCheck(const std::vector<Group<Particle>>& group_vector) const {
+    const auto first_particle = group_vector.at(0).begin(); // first particle in first group
+    for (const auto& changed : groups) {
+        const auto& group = group_vector.at(changed.group_index); // current group
+        for (auto i : changed.relative_atom_indices) {            // all atoms must be within `group`
             if (i >= group.capacity()) {
                 auto first = std::distance(first_particle, group.begin());
                 auto last = std::distance(first_particle, group.trueend()) - 1;
@@ -61,19 +62,24 @@ void Change::sanityCheck(const std::vector<Group<Particle>> &group_vector) const
     }
 }
 
-void to_json(json &j, const Change::data &d) {
-    j = {{"all", d.all},           {"internal", d.internal}, {"dNswap", d.dNswap},
-         {"dNatomic", d.dNatomic}, {"index", d.index},       {"atoms", d.atoms}};
+void to_json(json& j, const Change::GroupChange& group_change) {
+    j = {{"all", group_change.all},           {"internal", group_change.internal},
+         {"dNswap", group_change.dNswap},     {"dNatomic", group_change.dNatomic},
+         {"index", group_change.group_index}, {"atoms", group_change.relative_atom_indices}};
 }
 
-void to_json(json &j, const Change &c) {
-    j = {{"dV", c.dV}, {"all", c.all}, {"dN", c.dN}, {"moved2moved", c.moved2moved}, {"groups", c.groups}};
+void to_json(json& j, const Change& change) {
+    j = {{"dV", change.volume_change},
+         {"all", change.everything},
+         {"dN", change.matter_change},
+         {"moved2moved", change.moved_to_moved_interactions},
+         {"groups", change.groups}};
 }
 
 TEST_CASE("[Faunus] Change") {
     Change change;
     CHECK(not change);
-    change.dV = true;
+    change.volume_change = true;
     CHECK(not change.empty());
     CHECK(change);
     change.clear();
@@ -148,10 +154,10 @@ void Space::sync(const Space &other, const Change &change) {
         assert(p.size() == other.p.size());
         assert(groups.size() == other.groups.size());
         assert(implicit_reservoir.size() == other.implicit_reservoir.size());
-        if (change.dV or change.all) {
+        if (change.volume_change or change.everything) {
             geo = other.geo; // copy simulation geometry
         }
-        if (change.all) {                                                   // deep copy *everything*
+        if (change.everything) {                                            // deep copy *everything*
             implicit_reservoir = other.implicit_reservoir;                  // copy all implicit molecules
             p = other.p;                                                    // copy all positions
             groups = other.groups;                                          // copy all groups
@@ -159,8 +165,8 @@ void Space::sync(const Space &other, const Change &change) {
             assert(groups.front().begin() != other.groups.front().begin()); // check deep copy problem
         } else {
             for (const auto &changed : change.groups) {             // look over changed groups
-                auto &group = groups.at(changed.index);             // old group
-                auto &other_group = other.groups.at(changed.index); // new group
+                auto& group = groups.at(changed.group_index);       // old group
+                auto& other_group = other.groups.at(changed.group_index); // new group
                 assert(group.id == other_group.id);
                 if (group.traits().isImplicit()) { // the molecule is implicit
                     implicit_reservoir[group.id] = other.implicit_reservoir.at(group.id);
@@ -168,7 +174,7 @@ void Space::sync(const Space &other, const Change &change) {
                     group = other_group;            // copy everything
                 } else {                            // copy only a subset
                     group.shallowcopy(other_group); // copy group data but *not* particles
-                    for (auto i : changed.atoms) {  // loop over atom index (rel. to group)
+                    for (auto i : changed.relative_atom_indices) { // loop over atom index (rel. to group)
                         group.at(i) = other_group.at(i); // deep copy select particles
                     }
                 }

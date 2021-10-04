@@ -39,7 +39,7 @@ bool MetropolisMonteCarlo::metropolisCriterion(const double energy_change) {
 void MetropolisMonteCarlo::init() {
     sum_of_energy_changes = 0.0;
     Change change;
-    change.all = true;
+    change.everything = true;
 
     state->pot->state = Energy::Energybase::MonteCarloState::ACCEPTED;    // this is the old energy (current, accepted)
     trial_state->pot->state = Energy::Energybase::MonteCarloState::TRIAL; // this is the new energy (trial)
@@ -83,7 +83,7 @@ void MetropolisMonteCarlo::init() {
  */
 double MetropolisMonteCarlo::relativeEnergyDrift() {
     Change change;     // change object where ...
-    change.all = true; // ... we want to calculate the total energy
+    change.everything = true; // ... we want to calculate the total energy
     double energy = state->pot->energy(change);
     double du = energy - initial_energy;
     if (std::isfinite(du)) {
@@ -260,12 +260,12 @@ double TranslationalEntropy::bias(int trial_count, int count) const {
     return energy; // kT
 }
 
-double TranslationalEntropy::atomSwapEnergy(const Change::data &data) {
+double TranslationalEntropy::atomSwapEnergy(const Change::GroupChange& data) {
     assert(data.dNswap);
-    assert(data.atoms.size() == 1);
+    assert(data.relative_atom_indices.size() == 1);
     double energy = 0.0;
-    int id1 = trial_spc.groups.at(data.index).at(data.atoms.front()).id;
-    int id2 = spc.groups.at(data.index).at(data.atoms.front()).id;
+    int id1 = trial_spc.groups.at(data.group_index).at(data.relative_atom_indices.front()).id;
+    int id2 = spc.groups.at(data.group_index).at(data.relative_atom_indices.front()).id;
     for (auto atomid : {id1, id2}) {
         auto atoms_new = trial_spc.findAtoms(atomid);
         auto atoms_old = spc.findAtoms(atomid);
@@ -301,14 +301,14 @@ double TranslationalEntropy::moleculeChangeEnergy(int molid) {
  */
 double TranslationalEntropy::energy(const Change &change) {
     double energy_change = 0.0;
-    if (change.dN) {
+    if (change.matter_change) {
         std::set<int> already_processed;                 // ignore future encounters of these molid's
-        for (const Change::data &data : change.groups) { // loop over each change group
+        for (const Change::GroupChange& data : change.groups) { // loop over each change group
             if (data.dNswap) {                           // number of atoms has changed as a result of a swap move
                 energy_change += atomSwapEnergy(data);
             } else { // it is not a swap move
-                int molid = trial_spc.groups.at(data.index).id;
-                assert(molid == spc.groups.at(data.index).id);
+                int molid = trial_spc.groups.at(data.group_index).id;
+                assert(molid == spc.groups.at(data.group_index).id);
                 if (data.dNatomic and Faunus::molecules[molid].atomic) { // an atomic group has been changed
                     energy_change += atomChangeEnergy(molid);
                 } else if (already_processed.count(molid) == 0) { // a molecule has been inserted or deleted

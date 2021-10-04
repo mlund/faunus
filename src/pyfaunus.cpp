@@ -186,7 +186,8 @@ PYBIND11_MODULE(pyfaunus, m)
             [](AtomData& a, double val) { a.interaction.at("sigma") = val; })
         .def_readwrite("name", &AtomData::name)
         .def_readwrite("activity", &AtomData::activity, "Activity = chemical potential in log scale (mol/l)")
-        .def("id", (const int& (AtomData::*)() const) & AtomData::id); // explicit signature due to overload in c++
+        .def("id", (const AtomData::index_type& (AtomData::*)() const) &
+                       AtomData::id); // explicit signature due to overload in c++
 
     auto _atomdatavec = py::bind_vector<std::vector<AtomData>>(m, "AtomDataVector");
     _atomdatavec
@@ -216,23 +217,23 @@ PYBIND11_MODULE(pyfaunus, m)
         .def(py::init([](py::dict dict) { return from_dict<Potential::FunctorPotential>(dict); }));
 
     // Change::Data
-    py::class_<Change::data>(m, "ChangeData")
+    py::class_<Change::GroupChange>(m, "ChangeData")
         .def(py::init<>())
-        .def_readwrite("dNatomic", &Change::data::dNatomic)
-        .def_readwrite("dNswap", &Change::data::dNswap)
-        .def_readwrite("index", &Change::data::index)
-        .def_readwrite("internal", &Change::data::internal)
-        .def_readwrite("all", &Change::data::all)
-        .def_readwrite("atoms", &Change::data::atoms);
+        .def_readwrite("dNatomic", &Change::GroupChange::dNatomic)
+        .def_readwrite("dNswap", &Change::GroupChange::dNswap)
+        .def_readwrite("index", &Change::GroupChange::group_index)
+        .def_readwrite("internal", &Change::GroupChange::internal)
+        .def_readwrite("all", &Change::GroupChange::all)
+        .def_readwrite("atoms", &Change::GroupChange::relative_atom_indices);
 
-    py::bind_vector<std::vector<Change::data>>(m, "ChangeDataVec");
+    py::bind_vector<std::vector<Change::GroupChange>>(m, "ChangeDataVec");
 
     // Change
     py::class_<Change>(m, "Change")
         .def(py::init<>())
-        .def_readwrite("all", &Change::all)
-        .def_readwrite("dV", &Change::dV)
-        .def_readwrite("dN", &Change::dN)
+        .def_readwrite("everything", &Change::everything)
+        .def_readwrite("volume_change", &Change::volume_change)
+        .def_readwrite("matter_change", &Change::matter_change)
         .def_readwrite("groups", &Change::groups);
 
     // Space

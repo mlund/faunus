@@ -112,7 +112,7 @@ class AtomicSwapCharge : public MoveBase {
     Average<double> msqd; // mean squared displacement
     double _sqd, _bias;   // squared displament
     std::string molname;  // name of molecule to operate on
-    Change::data cdata;
+    Change::GroupChange cdata;
 
     void _to_json(json &) const override;
     void _from_json(const json &) override; //!< Configure via json object
@@ -149,7 +149,7 @@ class AtomicTranslateRotate : public MoveBase {
     Point directions = {1, 1, 1};             //!< displacement directions
     Average<double> mean_square_displacement; //!< mean squared displacement
     std::string molecule_name;                //!< name of molecule to operate on
-    Change::data cdata;                       //!< Data for change object
+    Change::GroupChange cdata;                //!< Data for change object
 
     void _to_json(json &) const override;
     void _from_json(const json &) override; //!< Configure via json object
@@ -365,7 +365,7 @@ class ChargeMove : public MoveBase {
     Average<double> msqd; // mean squared displacement
     double dq = 0, deltaq = 0;
     int atomIndex;
-    Change::data cdata;
+    Change::GroupChange cdata;
 
     void _to_json(json &j) const override;
     void _from_json(const json &j) override;
@@ -400,7 +400,7 @@ class ChargeTransfer : public MoveBase {
         std::vector<double> molrange;
         std::vector<double> ratio;
         std::vector<double> changeQ;
-        Change::data cdata;
+        Change::GroupChange cdata;
     };
 
     moldata mol1, mol2;

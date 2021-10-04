@@ -10,46 +10,60 @@ namespace Faunus {
 class Space;
 
 /**
- * @brief Specify change to a new state
+ * @brief Specify changes made to a system
  *
- * - If `moved` or `removed` are defined for a group, but are
- *   empty, it is assumed that *all* particles in the group are affected.
+ * This class is used to describe a change to the system. It carries
+ * information about changed group index, changed atom index, if the
+ * volume has been changed, if there has been a particle insertion etc.
+ * It does NOT describe the extent of the change, but simply points to
+ * the affected groups, particles, etc.
+ * The class is set when performing a system perturbation like a Monte Carlo
+ * move and then passed on to the energy function where it is used to establish
+ * which energies to calculate.
+ *
+ * Some notes:
+ *
+ * - If `GroupChange::all==true` then `relative_atom_indices` may be left empty. This is to
+ *   avoid constucting a large size N vector of indices.
  */
 struct Change {
-    bool dV = false;         //!< Set to true if there's a volume change
-    bool all = false;        //!< Set to true if *everything* has changed
-    bool dN = false;         //!< True if the number of atomic or molecular species has changed
-    bool moved2moved = true; //!< If several groups are moved, should they interact with each other?
+    using index_type = std::size_t;
+    bool everything = false;                 //!< Set to true if *everything* has changed
+    bool volume_change = false;              //!< Set to true if there's a volume change
+    bool matter_change = false;              //!< True if the number of atomic or molecular species has changed
+    bool moved_to_moved_interactions = true; //!< If several groups are moved, should they interact with each other?
 
-    struct data {
-        bool dNatomic = false;          //!< True if the number of atomic molecules has changed
-        bool dNswap = false;            //!< True if the number of atoms has changed as a result of a swap move
-        std::size_t index;              //!< Touched group index
-        bool internal = false;          //!< True if the internal energy/config has changed
-        bool all = false;               //!< True if all particles in group have been updated
-        std::vector<std::size_t> atoms; //!< Touched atom index w. respect to `Group::begin()`
+    struct GroupChange {
+        index_type group_index; //!< Touched group index
+        bool dNatomic = false;  //!< True if the number of atomic molecules has changed
+        bool dNswap = false;    //!< True if the number of atoms has changed as a result of a swap move
+        bool internal = false;  //!< True if the internal energy/config has changed
+        bool all = false;       //!< True if all particles in group have been updated
+        std::vector<index_type>
+            relative_atom_indices; //!< Sorted atom indices relative to group. Is empty if `all==true`.
 
-        bool operator<(const data& other) const;
-    }; //!< Properties of changed groups
+        bool operator<(const GroupChange& other) const; //!< Comparison operator based on `group_index`
+    };                                                  //!< Properties of changed groups
 
-    std::vector<data> groups; //!< Touched groups by index in group vector
+    std::vector<GroupChange> groups; //!< Touched groups by index in group vector
 
     //! List of moved groups (index)
     inline auto touchedGroupIndex() const {
-        return ranges::cpp20::views::transform(groups, [](const data& i) -> std::size_t { return i.index; });
+        return ranges::cpp20::views::transform(groups,
+                                               [](const GroupChange& i) -> index_type { return i.group_index; });
     }
 
     //! List of changed atom index relative to first particle in system
-    std::vector<std::size_t> touchedParticleIndex(const std::vector<Group<Particle>>&) const;
+    std::vector<index_type> touchedParticleIndex(const std::vector<Group<Particle>>&) const;
 
-    void clear();                                                 //!< Clear all change data
-    bool empty() const;                                           //!< Check if change object is empty
-    explicit operator bool() const;                               //!< True if object is not empty
-    void sanityCheck(const std::vector<Group<Particle>> &) const; //!< Sanity check on contained object data
+    void clear();                                                             //!< Clear all change data
+    bool empty() const;                                                       //!< Check if change object is empty
+    explicit operator bool() const;                                           //!< True if object is not empty
+    void sanityCheck(const std::vector<Group<Particle>>& group_vector) const; //!< Sanity check on contained object data
 };
 
-void to_json(json &, const Change::data &); //!< Serialize Change data to json
-void to_json(json &, const Change &);       //!< Serialise Change object to json
+void to_json(json& j, const Change::GroupChange& group_change); //!< Serialize Change data to json
+void to_json(json& j, const Change& change);                    //!< Serialise Change object to json
 
 /**
  * @brief Placeholder for atoms and molecules

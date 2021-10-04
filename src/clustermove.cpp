@@ -350,9 +350,9 @@ Change Cluster::createChangeObject(const std::vector<size_t> &cluster_index) con
         auto &change_data = change.groups.back();
         change_data.all = true;
         change_data.internal = false;
-        change_data.index = index;
+        change_data.group_index = index;
     });
-    change.moved2moved = false; // do not calc. internal cluster energy
+    change.moved_to_moved_interactions = false; // do not calc. internal cluster energy
     return change;
 }
 

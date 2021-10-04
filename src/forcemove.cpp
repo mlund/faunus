@@ -144,7 +144,7 @@ size_t ForceMoveBase::resizeForcesAndVelocities() {
 
 void ForceMoveBase::_move(Change &change) {
     change.clear();
-    change.all = true;
+    change.everything = true;
     resizeForcesAndVelocities();
     for (unsigned int step = 0; step < number_of_steps; ++step) {
         integrator->step(velocities, forces);

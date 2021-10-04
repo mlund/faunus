@@ -66,7 +66,7 @@ class Hamiltonian;
 class ContainerOverlap : public Energybase {
   private:
     const Space& spc;
-    bool groupIsOutsideContainer(const Change::data& group_change) const;
+    bool groupIsOutsideContainer(const Change::GroupChange& group_change) const;
     double energyOfAllGroups() const;
 
   public:
@@ -275,7 +275,7 @@ class Bonded : public Energybase {
     void updateGroupBonds(const Space::Tgroup& group); //!< Update/set bonds internally in group
     void updateInternalBonds();                        //!< finds and adds all intra-molecular bonds of active molecules
     double sumBondEnergy(const BondVector& bonds) const;     //!< sum energy in vector of BondData
-    double internalGroupEnergy(const Change::data& changed); //!< Energy from internal bonds
+    double internalGroupEnergy(const Change::GroupChange& changed); //!< Energy from internal bonds
     template <typename Indices> double sum_energy(const BondVector& bonds, const Indices& particle_indices) const;
 
   public:
@@ -1180,24 +1180,24 @@ class GroupPairing {
     template <typename TAccumulator>
     void accumulateGroup(TAccumulator &pair_accumulator, const Change &change) {
         const auto &change_data = change.groups.at(0);
-        const auto &group = spc.groups.at(change_data.index);
-        if (change_data.atoms.size() == 1) {
+        const auto& group = spc.groups.at(change_data.group_index);
+        if (change_data.relative_atom_indices.size() == 1) {
             // faster algorithm if only a single particle moves
-            pairing.group2all(pair_accumulator, group, change_data.atoms[0]);
+            pairing.group2all(pair_accumulator, group, change_data.relative_atom_indices[0]);
             if (change_data.internal) {
-                pairing.groupInternal(pair_accumulator, group, change_data.atoms[0]);
+                pairing.groupInternal(pair_accumulator, group, change_data.relative_atom_indices[0]);
             }
         } else {
-            const bool change_all = change_data.atoms.empty(); // all particles or only their subset?
+            const bool change_all = change_data.relative_atom_indices.empty(); // all particles or only their subset?
             if (change_all) {
                 pairing.group2all(pair_accumulator, group);
                 if (change_data.internal) {
                     pairing.groupInternal(pair_accumulator, group);
                 }
             } else {
-                pairing.group2all(pair_accumulator, group, change_data.atoms);
+                pairing.group2all(pair_accumulator, group, change_data.relative_atom_indices);
                 if (change_data.internal) {
-                    pairing.groupInternal(pair_accumulator, group, change_data.atoms);
+                    pairing.groupInternal(pair_accumulator, group, change_data.relative_atom_indices);
                 }
             }
         }
@@ -1215,7 +1215,7 @@ class GroupPairing {
      */
     template <typename TAccumulator>
     void accumulateSpeciation(TAccumulator &pair_accumulator, const Change &change) {
-        assert(change.dN);
+        assert(change.matter_change);
         const auto &moved = change.touchedGroupIndex(); // index of moved groups
         const auto& fixed =
             indexComplement(spc.groups.size(), moved) | ranges::to<std::vector>; // index of static groups
@@ -1223,17 +1223,19 @@ class GroupPairing {
 
         // loop over all changed groups
         for (auto change_group1_it = change.groups.begin(); change_group1_it < change.groups.end(); ++change_group1_it) {
-            auto &group1 = spc.groups.at(change_group1_it->index);
+            auto& group1 = spc.groups.at(change_group1_it->group_index);
             // filter only active particles
-            const auto index1 = change_group1_it->atoms | filter_active(group1.size()) | ranges::to<std::vector>;
+            const auto index1 =
+                change_group1_it->relative_atom_indices | filter_active(group1.size()) | ranges::to<std::vector>;
             if (!index1.empty()) {
                 // particles added into the group: compute (changed group) <-> (static group)
                 pairing.group2groups(pair_accumulator, group1, fixed, index1);
             }
             // loop over successor changed groups (hence avoid double counting group1×group2 and group2×group1)
             for (auto change_group2_it = std::next(change_group1_it); change_group2_it < change.groups.end(); ++change_group2_it) {
-                auto &group2 = spc.groups.at(change_group2_it->index);
-                const auto index2 = change_group2_it->atoms | filter_active(group2.size()) | ranges::to<std::vector>;
+                auto& group2 = spc.groups.at(change_group2_it->group_index);
+                const auto index2 =
+                    change_group2_it->relative_atom_indices | filter_active(group2.size()) | ranges::to<std::vector>;
                 if (!index1.empty() || !index2.empty()) {
                     // particles added into one or other group: compute (changed group) <-> (changed group)
                     pairing.group2group(pair_accumulator, group1, group2, index1, index2);
@@ -1263,12 +1265,12 @@ class GroupPairing {
     template <typename TAccumulator>
     void accumulate(TAccumulator &pair_accumulator, const Change &change) {
         assert(std::is_sorted(change.groups.begin(), change.groups.end()));
-        if (change.all) {
+        if (change.everything) {
             pairing.all(pair_accumulator);
-        } else if (change.dV) {
+        } else if (change.volume_change) {
             // sum all interaction energies except the internal energies of incompressible molecules
             pairing.all(pair_accumulator, [](auto &group) { return group.atomic || group.compressible; });
-        } else if (!change.dN) {
+        } else if (!change.matter_change) {
             if (change.groups.size() == 1) {
                 // if only a single group changes use faster algorithm and optionally add the internal energy
                 accumulateGroup(pair_accumulator, change);
@@ -1432,7 +1434,7 @@ class NonbondedCached : public Nonbonded<TPairEnergy, TPairingPolicy> {
         // Only g2g may be called there to compute (and cache) energy!
         double energy_sum = 0.0;
         if (change) {
-            if (change.all || change.dV) {
+            if (change.everything || change.volume_change) {
                 for (auto i = spc.groups.begin(); i < spc.groups.end(); ++i) {
                     for (auto j = std::next(i); j < Base::spc.groups.end(); ++j) {
                         energy_sum += g2g(*i, *j);
@@ -1441,16 +1443,16 @@ class NonbondedCached : public Nonbonded<TPairEnergy, TPairingPolicy> {
             } else {
                 if (change.groups.size() == 1) { // if exactly ONE molecule is changed
                     auto &d = change.groups[0];
-                    auto &g1 = spc.groups.at(d.index);
+                    auto& g1 = spc.groups.at(d.group_index);
                     for (auto g2_it = spc.groups.begin(); g2_it < spc.groups.end(); ++g2_it) {
                         if (&g1 != &(*g2_it)) {
-                            energy_sum += g2g(g1, *g2_it, d.atoms);
+                            energy_sum += g2g(g1, *g2_it, d.relative_atom_indices);
                         }
                     }
                 } else {                                     // many molecules are changed
                     auto moved = change.touchedGroupIndex(); // index of moved groups
                     // moved<->moved
-                    if (change.moved2moved) {
+                    if (change.moved_to_moved_interactions) {
                         for (auto i = moved.begin(); i < moved.end(); ++i) {
                             for (auto j = std::next(i); j < moved.end(); ++j) {
                                 energy_sum += g2g(spc.groups[*i], spc.groups[*j]);
@@ -1493,16 +1495,16 @@ class NonbondedCached : public Nonbonded<TPairEnergy, TPairingPolicy> {
     void sync(Energybase* base_ptr, const Change& change) override {
         auto other = dynamic_cast<decltype(this)>(base_ptr);
         assert(other);
-        if (change.all || change.dV) {
+        if (change.everything || change.volume_change) {
             energy_cache.triangularView<Eigen::StrictlyUpper>() =
                 (other->energy_cache).template triangularView<Eigen::StrictlyUpper>();
         } else {
             for (auto &d : change.groups) {
-                for (int i = 0; i < d.index; i++) {
-                    energy_cache(i, d.index) = other->energy_cache(i, d.index);
+                for (int i = 0; i < d.group_index; i++) {
+                    energy_cache(i, d.group_index) = other->energy_cache(i, d.group_index);
                 }
-                for (size_t i = d.index + 1; i < spc.groups.size(); i++) {
-                    energy_cache(d.index, i) = other->energy_cache(d.index, i);
+                for (size_t i = d.group_index + 1; i < spc.groups.size(); i++) {
+                    energy_cache(d.group_index, i) = other->energy_cache(d.group_index, i);
                 }
             }
         }

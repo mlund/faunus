@@ -80,11 +80,11 @@ void ChainRotationMove::store_change(Change &change) {
     if (!segment_ndx.empty()) {
         auto &chain = *molecule_iter;
         auto offset = std::distance(spc.p.begin(), chain.begin());
-        Change::data change_data;
+        Change::GroupChange change_data;
         for (int i : segment_ndx) {
-            change_data.atoms.push_back(i - offset); // `atoms` index are relative to chain
+            change_data.relative_atom_indices.push_back(i - offset); // `atoms` index are relative to chain
         }
-        change_data.index = Faunus::distance(spc.groups.begin(), &chain); // integer *index* of moved group
+        change_data.group_index = Faunus::distance(spc.groups.begin(), &chain); // integer *index* of moved group
         change_data.all = false;
         change_data.internal = true;          // trigger internal interactions
         change.groups.push_back(change_data); // add to list of moved groups

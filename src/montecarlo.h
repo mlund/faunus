@@ -114,7 +114,7 @@ class TranslationalEntropy {
     Space &trial_spc;                              //!< Space after proposed MC move ("trial")
     Space &spc;                                    //!< Space before MC move ("default")
     double bias(int trial_count, int count) const; //!< Bias due to change in atom/molecule numbers
-    double atomSwapEnergy(const Change::data &);   //!< Contribution from atomic swap move
+    double atomSwapEnergy(const Change::GroupChange&); //!< Contribution from atomic swap move
     double atomChangeEnergy(int molid);            //!< Contribution from size-change of atomic group
     double moleculeChangeEnergy(int molid);        //!< Contribution frin change in number of molecular groups
 

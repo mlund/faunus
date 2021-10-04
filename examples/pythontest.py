@@ -82,7 +82,7 @@ class TestSASA(unittest.TestCase):
         H = Hamiltonian(spc, [ {'sasa' : {'molarity': 1.5, 'radius': 1.4}} ] )
         spc.p[0].pos = [0,0,0] # fix 1st particle in origin
         c = Change()           # change object telling that a full energy calculation
-        c.all = True;          # should be performed when calling `energy()`
+        c.everything = True;   # should be performed when calling `energy()`
         u = []
         r = np.linspace(0,10,5)
         for i in r:   #         loop over particle-particle distances

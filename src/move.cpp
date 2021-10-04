@@ -113,7 +113,7 @@ void ReplayMove::_move(Change &change) {
     if (!end_of_trajectory) {
         if (reader->read(frame.step, frame.timestamp, frame.box, spc.positions().begin(), spc.positions().end())) {
             spc.geo.setLength(frame.box);
-            change.all = true;
+            change.everything = true;
         } else {
             // nothing to do, simulation shall stop
             end_of_trajectory = true;
@@ -159,7 +159,7 @@ void AtomicTranslateRotate::translateParticle(ParticleVector::iterator particle,
     spc.geo.boundary(particle->pos);
     latest_displacement_squared = spc.geo.sqdist(old_position, particle->pos); // square displacement
 
-    auto& group = spc.groups.at(cdata.index);
+    auto& group = spc.groups.at(cdata.group_index);
     if (group.isMolecular()) {
         group.cm = Geometry::massCenter(group.begin(), group.end(), spc.geo.getBoundaryFunc(), -group.cm);
         checkMassCenter(group);
@@ -224,7 +224,7 @@ AtomicTranslateRotate::AtomicTranslateRotate(Space& spc, const Energy::Hamiltoni
                                              std::string cite)
     : MoveBase(spc, name, cite), hamiltonian(hamiltonian) {
     repeat = -1; // meaning repeat N times
-    cdata.atoms.resize(1);
+    cdata.relative_atom_indices.resize(1);
     cdata.internal = true;
 }
 
@@ -246,8 +246,9 @@ ParticleVector::iterator AtomicTranslateRotate::randomAtom() {
     if (auto group = slump.sample(mollist.begin(), mollist.end()); group != mollist.end()) { // random molecule
         if (not group->empty()) {
             particle = slump.sample(group->begin(), group->end());     // random particle
-            cdata.index = Faunus::distance(spc.groups.begin(), group); // index of touched group
-            cdata.atoms[0] = std::distance(group->begin(), particle);  // index of moved particle relative to group
+            cdata.group_index = Faunus::distance(spc.groups.begin(), group); // index of touched group
+            cdata.relative_atom_indices[0] =
+                std::distance(group->begin(), particle); // index of moved particle relative to group
         }
     }
     return particle;
@@ -418,9 +419,9 @@ void ParallelTempering::exchangeState(Change &change) {
     if (new_volume < very_small_volume || spc.p.size() != partner_particles->size()) {
         MPI_Abort(mpi.comm, 1);
     } else {
-        change.all = true;
+        change.everything = true;
         if (std::fabs(new_volume - old_volume) > pc::epsilon_dbl) {
-            change.dV = true;
+            change.volume_change = true;
             spc.geo.setVolume(new_volume, volume_scaling_method);
         }
         spc.updateParticles(partner_particles->begin(), partner_particles->end(), spc.p.begin());
@@ -540,8 +541,8 @@ void VolumeMove::_from_json(const json &j) {
 }
 void VolumeMove::_move(Change &change) {
     if (logarithmic_volume_displacement_factor > 0.0) {
-        change.dV = true;
-        change.all = true;
+        change.volume_change = true;
+        change.everything = true;
         old_volume = spc.geo.getVolume();
         new_volume = std::exp(std::log(old_volume) + (slump() - 0.5) * logarithmic_volume_displacement_factor);
         spc.scaleVolume(new_volume, volume_scaling_method);
@@ -575,8 +576,9 @@ void ChargeMove::_from_json(const json &j) {
     dq = j.at("dq").get<double>();
     atomIndex = j.at("index").get<int>();
     auto git = spc.findGroupContaining(spc.p.at(atomIndex));                 // group containing atomIndex
-    cdata.index = std::distance(spc.groups.begin(), git);                    // integer *index* of moved group
-    cdata.atoms[0] = std::distance(git->begin(), spc.p.begin() + atomIndex); // index of particle rel. to group
+    cdata.group_index = std::distance(spc.groups.begin(), git);              // integer *index* of moved group
+    cdata.relative_atom_indices[0] =
+        std::distance(git->begin(), spc.p.begin() + atomIndex); // index of particle rel. to group
 }
 void ChargeMove::_move(Change &change) {
     if (dq > 0) {
@@ -594,7 +596,7 @@ void ChargeMove::_reject(Change &) { msqd += 0; }
 ChargeMove::ChargeMove(Space &spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {
     repeat = 1;
     cdata.internal = true; // the group is internally changed
-    cdata.atoms.resize(1); // we change exactly one atom
+    cdata.relative_atom_indices.resize(1); // we change exactly one atom
 }
 
 ChargeMove::ChargeMove(Space &spc) : ChargeMove(spc, "charge", "") {}
@@ -700,8 +702,8 @@ void ChargeTransfer::_move(Change &change) {
                 deltaq = dq * (slump() - 0.5);
                 mol1.changeQ.clear(); // clearing vector containing attempted charge moves on all atoms in molecule1
                 mol2.changeQ.clear(); // clearing vector containing attempted charge moves on all atoms in molecule2
-                mol1.cdata.index = Faunus::distance(spc.groups.begin(), git1);
-                mol2.cdata.index = Faunus::distance(spc.groups.begin(), git2);
+                mol1.cdata.group_index = Faunus::distance(spc.groups.begin(), git1);
+                mol2.cdata.group_index = Faunus::distance(spc.groups.begin(), git2);
 
                 for (i = 0; i < mol1.numOfAtoms; i++) {
                     auto p = git1->begin() + i; // object containing atom i in molecule1
@@ -857,8 +859,8 @@ void QuadrantJump::_move(Change &change) {
                 it->translate(-2 * oldcm.cwiseProduct(dir.cast<double>()), spc.geo.getBoundaryFunc());
             }
             _sqd = spc.geo.sqdist(oldcm, it->cm); // squared displacement
-            Change::data d;
-            d.index = Faunus::distance(spc.groups.begin(), it); // integer *index* of moved group
+            Change::GroupChange d;
+            d.group_index = Faunus::distance(spc.groups.begin(), it); // integer *index* of moved group
             d.all = true;                                       // *all* atoms in group were moved
             change.groups.push_back(d);                         // add to list of moved groups
 
@@ -904,8 +906,8 @@ typename Space::Tpvec::iterator AtomicSwapCharge::randomAtom() {
         auto git = slump.sample(mollist.begin(), mollist.end()); // random molecule iterator
         if (!git->empty()) {
             auto p = slump.sample(git->begin(), git->end());         // random particle iterator
-            cdata.index = Faunus::distance(spc.groups.begin(), git); // integer *index* of moved group
-            cdata.atoms[0] = std::distance(git->begin(), p);         // index of particle rel. to group
+            cdata.group_index = Faunus::distance(spc.groups.begin(), git);   // integer *index* of moved group
+            cdata.relative_atom_indices[0] = std::distance(git->begin(), p); // index of particle rel. to group
             return p;
         }
     }
@@ -929,7 +931,7 @@ void AtomicSwapCharge::_reject(Change &) { msqd += 0; }
 
 AtomicSwapCharge::AtomicSwapCharge(Space &spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {
     repeat = -1; // meaning repeat N times
-    cdata.atoms.resize(1);
+    cdata.relative_atom_indices.resize(1);
     cdata.internal = true;
 }
 
@@ -1022,7 +1024,7 @@ void TranslateRotate::_move(Change &change) {
         latest_rotation_angle_squared = rotateMolecule(group->get());
         if (latest_displacement_squared > 0.0 || latest_rotation_angle_squared > 0.0) { // report changes
             auto &change_data = change.groups.emplace_back();
-            change_data.index = spc.getGroupIndex(group->get());     // integer *index* of moved group
+            change_data.group_index = spc.getGroupIndex(group->get()); // integer *index* of moved group
             change_data.all = true;                                  // *all* atoms in group were moved
             change_data.internal = false;                            // internal energy is unchanged
         }
@@ -1231,8 +1233,8 @@ void SmartTranslateRotate::_move(Change &change) {
                 }
 
                 if (dptrans > 0 || dprot > 0) { // define changes
-                    Change::data d;
-                    d.index = Faunus::distance(spc.groups.begin(), it); // integer *index* of moved group
+                    Change::GroupChange d;
+                    d.group_index = Faunus::distance(spc.groups.begin(), it); // integer *index* of moved group
                     d.all = true;                                       // *all* atoms in group were moved
                     change.groups.push_back(d);                         // add to list of moved groups
                 }
@@ -1356,7 +1358,7 @@ void ConformationSwap::copyConformation(ParticleVector& particles, ParticleVecto
 
 void ConformationSwap::registerChanges(Change &change, const Space::Tgroup &group) const {
     auto &group_change = change.groups.emplace_back();
-    group_change.index = spc.getGroupIndex(group); // index of moved group
+    group_change.group_index = spc.getGroupIndex(group); // index of moved group
     group_change.all = true;                       // all atoms in group were moved
     group_change.internal = false;                 // skip internal energy calculation
 }

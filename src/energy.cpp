@@ -193,9 +193,9 @@ void PolicyIonIon::updateComplex(EwaldData &d, Change &change, Space::Tgvec &gro
         const Point &q = d.k_vectors.col(k);
 
         for (auto &changed_group : change.groups) {
-            auto &g_new = groups.at(changed_group.index);
-            auto &g_old = oldgroups.at(changed_group.index);
-            for (auto i : changed_group.atoms) {
+            auto& g_new = groups.at(changed_group.group_index);
+            auto& g_old = oldgroups.at(changed_group.group_index);
+            for (auto i : changed_group.relative_atom_indices) {
                 if (i < g_new.size()) {
                     double qr = q.dot(g_new[i].pos);
                     Q += g_new[i].charge * EwaldData::Tcomplex(std::cos(qr), std::sin(qr));
@@ -223,7 +223,7 @@ TEST_CASE("[Faunus] Ewald - IonIonPolicy") {
                 "epsr": 1.0, "alpha": 0.894427190999916, "epss": 1.0,
                 "ncutoff": 11.0, "spherical_sum": true, "cutoff": 5.0})"_json;
     Change c;
-    c.all = true;
+    c.everything = true;
     data.policy = EwaldData::PBC;
 
     SUBCASE("PBC") {
@@ -281,7 +281,7 @@ TEST_CASE("[Faunus] Ewald - IonIonPolicy Benchmarks") {
                 "epsr": 1.0, "alpha": 0.894427190999916, "epss": 1.0,
                 "ncutoff": 11.0, "spherical_sum": true, "cutoff": 9.0})"_json);
     Change c;
-    c.all = true;
+    c.everything = true;
     data.policy = EwaldData::PBC;
 
     {
@@ -387,9 +387,9 @@ void PolicyIonIonIPBC::updateComplex(EwaldData &d, Change &change, Space::Tgvec 
         auto &Q = d.Q_ion[k];
         const Point &q = d.k_vectors.col(k);
         for (auto &changed_group : change.groups) {
-            auto &g_new = groups.at(changed_group.index);
-            auto &g_old = oldgroups.at(changed_group.index);
-            for (auto i : changed_group.atoms) {
+            auto& g_new = groups.at(changed_group.group_index);
+            auto& g_old = oldgroups.at(changed_group.group_index);
+            for (auto i : changed_group.relative_atom_indices) {
                 if (i < g_new.size())
                     Q += q.cwiseProduct(g_new[i].pos).array().cos().prod() * g_new[i].charge;
                 if (i < g_old.size())
@@ -403,7 +403,7 @@ double PolicyIonIon::surfaceEnergy(const EwaldData &d, Change &change, Space::Tg
     if (d.const_inf < 0.5)
         return 0;
     Point qr(0, 0, 0);
-    if (change.all or change.dV) {
+    if (change.everything or change.volume_change) {
         for (auto &g : groups) {
             for (auto &particle : g) {
                 qr += particle.charge * particle.pos;
@@ -411,8 +411,8 @@ double PolicyIonIon::surfaceEnergy(const EwaldData &d, Change &change, Space::Tg
         }
     } else if (change.groups.size() > 0) {
         for (auto &changed_group : change.groups) {
-            auto &g = groups.at(changed_group.index);
-            for (auto i : changed_group.atoms) {
+            auto& g = groups.at(changed_group.group_index);
+            for (auto i : changed_group.relative_atom_indices) {
                 if (i < g.size()) {
                     qr += g[i].charge * g[i].pos;
                 }
@@ -427,17 +427,17 @@ double PolicyIonIon::surfaceEnergy(const EwaldData &d, Change &change, Space::Tg
 double PolicyIonIon::selfEnergy(const EwaldData &d, Change &change, Space::Tgvec &groups) {
     double charges_squared = 0;
     double charge_total = 0;
-    if (change.dN) {
+    if (change.matter_change) {
         for (auto &changed_group : change.groups) {
-            auto &g = groups.at(changed_group.index);
-            for (auto i : changed_group.atoms) {
+            auto& g = groups.at(changed_group.group_index);
+            for (auto i : changed_group.relative_atom_indices) {
                 if (i < g.size()) {
                     charges_squared += std::pow(g[i].charge, 2);
                     charge_total += g[i].charge;
                 }
             }
         }
-    } else if (change.all and not change.dV) {
+    } else if (change.everything and not change.volume_change) {
         for (auto &g : groups) {
             for (auto &particle : g) {
                 charges_squared += particle.charge * particle.charge;
@@ -486,14 +486,14 @@ double Ewald::energy(Change &change) {
     if (change) {
         // If the state is NEW_MONTE_CARLO_STATE (trial state), then update all k-vectors
         if (state == MonteCarloState::TRIAL) {
-            if (change.all or change.dV) { // everything changes
+            if (change.everything or change.volume_change) { // everything changes
                 policy->updateBox(data, spc.geo.getLength());
                 policy->updateComplex(data, spc.groups); // update all (expensive!)
-            } else { // much cheaper partial update
-              if (change.groups.size() > 0) {
-                assert(old_groups != nullptr);
-                policy->updateComplex(data, change, spc.groups, *old_groups);
-              }
+            } else {                                     // much cheaper partial update
+                if (change.groups.size() > 0) {
+                    assert(old_groups != nullptr);
+                    policy->updateComplex(data, change, spc.groups, *old_groups);
+                }
             }
         }
         // the selfEnergy() is omitted as this is added as a separate term in `Hamiltonian`
@@ -554,7 +554,7 @@ void Ewald::sync(Energybase* energybase, const Change& change) {
         }
 
         // hard-coded sync; should be expanded when dipolar ewald is supported
-        if (change.all or change.dV) {
+        if (change.everything or change.volume_change) {
             other->data.Q_dipole.resize(0); // dipoles are currently unsupported
             data = other->data;
         } else {
@@ -597,7 +597,7 @@ void Example2D::to_json(json &j) const {
 double ContainerOverlap::energy(Change& change) {
     if (change && spc.geo.type != Geometry::Variant::CUBOID) { // no need to check in PBC systems
         // *all* groups
-        if (change.dV or change.all) {
+        if (change.volume_change or change.everything) {
             return energyOfAllGroups();
         }
         // *subset* of groups
@@ -624,15 +624,15 @@ double ContainerOverlap::energyOfAllGroups() const {
  * @brief Check a single group based on change object
  * @return true is any particle in group is outside; false otherwise
  */
-bool ContainerOverlap::groupIsOutsideContainer(const Change::data& group_change) const {
-    const auto& group = spc.groups.at(group_change.index);
+bool ContainerOverlap::groupIsOutsideContainer(const Change::GroupChange& group_change) const {
+    const auto& group = spc.groups.at(group_change.group_index);
     // *all* atoms
     if (group_change.all) {
         return std::any_of(group.begin(), group.end(),
                            [&](auto const& particle) { return spc.geo.collision(particle.pos); });
     }
     // *subset* of atoms
-    for (const auto particle_index : group_change.atoms) {
+    for (const auto particle_index : group_change.relative_atom_indices) {
         if (particle_index < group.size()) { // condition due to speciation move?
             if (spc.geo.collision((group.begin() + particle_index)->pos)) {
                 return true;
@@ -670,7 +670,7 @@ void Isobaric::to_json(json& j) const {
  * @return energy in kT
  */
 double Isobaric::energy(Change& change) {
-    if (change.dV || change.all || change.dN) {
+    if (change.volume_change || change.everything || change.matter_change) {
         auto group_is_active = [](const auto& group) { return !group.empty(); };
         auto count_particles = [](const auto& group) { return group.isAtomic() ? group.size() : 1; };
         auto particles_per_group = spc.groups | ranges::cpp20::views::filter(group_is_active) |
@@ -792,7 +792,7 @@ double Bonded::energy(Change &change) {
     double energy = 0.0;
     if (change) {
         energy += sumBondEnergy(external_bonds);
-        if (change.all || change.dV) { // calc. for everything!
+        if (change.everything || change.volume_change) { // calc. for everything!
             for (const auto& [group_index, bonds] : internal_bonds) {
                 if (!spc.groups.at(group_index).empty()) {
                     energy += sumBondEnergy(bonds);
@@ -807,18 +807,18 @@ double Bonded::energy(Change &change) {
     return energy;
 }
 
-double Bonded::internalGroupEnergy(const Change::data& changed) {
+double Bonded::internalGroupEnergy(const Change::GroupChange& changed) {
     using namespace ranges::cpp20::views; // @todo cpp20 --> std::ranges
     double energy = 0.0;
-    const auto& group = spc.groups.at(changed.index);
+    const auto& group = spc.groups.at(changed.group_index);
     if (changed.internal && !group.empty()) {
-        const auto& bonds = internal_bonds.at(changed.index);
+        const auto& bonds = internal_bonds.at(changed.group_index);
         if (changed.all) { // all internal positions updated
             energy += sumBondEnergy(bonds);
         } else { // only partial update of affected atoms
             const auto first_particle_index = spc.getFirstParticleIndex(group);
-            auto particle_indices =
-                changed.atoms | transform([first_particle_index](auto i) { return i + first_particle_index; });
+            auto particle_indices = changed.relative_atom_indices |
+                                    transform([first_particle_index](auto i) { return i + first_particle_index; });
             energy += sum_energy(bonds, particle_indices);
         }
     }
@@ -1112,7 +1112,7 @@ void SASAEnergy::updateSASA(const Change& change) {
 
 void SASAEnergy::init() {
     Change change;
-    change.all = true;
+    change.everything = true;
     updateSASA(change);
 }
 
@@ -1132,16 +1132,16 @@ void SASAEnergy::sync(Energybase* energybase_ptr, const Change& change) {
     // since the full SASA is calculated in each energy evaluation, this is
     // currently not needed.
     if (auto* other = dynamic_cast<SASAEnergy*>(energybase_ptr); other != nullptr) {
-        if (change.all || change.dV) {
+        if (change.everything || change.volume_change) {
             radii = other->radii;
             positions = other->positions;
             sasa = other->sasa;
         } else {
             for (const auto& group_change : change.groups) {
-                const auto& group = spc.groups.at(group_change.index);
+                const auto& group = spc.groups.at(group_change.group_index);
                 const auto offset = spc.getFirstActiveParticleIndex(group);
-                auto absolute_atom_index =
-                    group_change.atoms | ranges::cpp20::views::transform([offset](auto i) { return i + offset; });
+                auto absolute_atom_index = group_change.relative_atom_indices |
+                                           ranges::cpp20::views::transform([offset](auto i) { return i + offset; });
                 for (auto i : absolute_atom_index) {
                     radii.at(i) = other->radii.at(i);
                     sasa.at(i) = other->sasa.at(i);
@@ -1165,7 +1165,7 @@ void SASAEnergy::to_json(json &j) const {
 TEST_CASE("[Faunus] FreeSASA") {
     using doctest::Approx;
     Change change; // change object telling that a full energy calculation
-    change.all = true;
+    change.everything = true;
     pc::temperature = 300.0_K;
     atoms = R"([
         { "A": { "sigma": 4.0, "tfe": 1.0 } },

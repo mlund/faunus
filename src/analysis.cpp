@@ -252,7 +252,7 @@ SystemEnergy::SystemEnergy(const json& j, Space& spc, Energy::Hamiltonian& hamil
 }
 std::vector<double> SystemEnergy::calculateEnergies() const {
     Change change;
-    change.all = true; // trigger full energy calculation
+    change.everything = true; // trigger full energy calculation
     return hamiltonian | ranges::views::transform([&](auto& i) { return i->energy(change); }) | ranges::to_vector;
 }
 
@@ -515,8 +515,8 @@ VirtualVolumeMove::VirtualVolumeMove(const json& j, Space& spc, Energy::Energyba
     : PerturbationAnalysisBase("virtualvolume", pot, spc, j.value("file", ""s)) {
     cite = "doi:10.1063/1.472721";
     from_json(j);
-    change.dV = true;
-    change.all = true;
+    change.volume_change = true;
+    change.everything = true;
     if (stream) {
         *stream << "# steps dV/" + u8::angstrom + u8::cubed + " du/kT exp(-du/kT) <Pex>/kT/" + u8::angstrom + u8::cubed;
         // if non-isotropic scaling, add another column with dA or dL
@@ -624,7 +624,7 @@ void WidomInsertion::selectGhostGroup() {
         const auto& group = *inactive_groups.begin(); // select first group
         if (group.empty() && group.capacity() > 0) {  // must be inactive and have a non-zero capacity
             auto& group_changes = change.groups.emplace_back();
-            group_changes.index = spc.getGroupIndex(group); // group index in space
+            group_changes.group_index = spc.getGroupIndex(group); // group index in space
             group_changes.all = true;
             group_changes.internal = group.isAtomic(); // internal energy only if non-molecular
         }
@@ -636,7 +636,7 @@ void WidomInsertion::_sample() {
     if (change.empty()) {
         faunus_logger->warn("{}: no inactive {} groups available", name, Faunus::molecules[molid].name);
     } else {
-        auto& group = spc.groups.at(change.groups.at(0).index); // inactive "ghost" group
+        auto& group = spc.groups.at(change.groups.at(0).group_index); // inactive "ghost" group
         group.resize(group.capacity());                         // activate ghost
         ParticleVector particles;                               // particles to insert
         for (int cnt = 0; cnt < number_of_insertions; ++cnt) {
@@ -1718,7 +1718,7 @@ void VirtualTranslate::writeToFileStream(const double energy_change) const {
  * then restore it to it's original position, leaving Space untouched.
  */
 double VirtualTranslate::momentarilyPerturb(Space::Tgroup& group) {
-    change.groups.at(0).index = spc.getGroupIndex(group);
+    change.groups.at(0).group_index = spc.getGroupIndex(group);
     const auto old_energy = pot.energy(change);
     const Point displacement_vector = perturbation_distance * perturbation_direction;
     group.translate(displacement_vector, spc.geo.getBoundaryFunc()); // temporarily translate group

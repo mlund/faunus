@@ -51,10 +51,10 @@ class SpeciationMove : public MoveBase {
     void deactivateAllReactants(Change &); //!< Delete reactant species
     void activateAllProducts(Change &);    //!< Insert product species
 
-    Change::data contractAtomicGroup(Space::Tgroup &, Space::Tgroup &, int);  //!< Contract atomic group
-    Change::data expandAtomicGroup(Space::Tgroup &, int);                     //!< Expand atomic group
-    Change::data activateMolecularGroup(Space::Tgroup &);                     //!< Activate molecular group
-    Change::data deactivateMolecularGroup(Space::Tgroup &);                   //!< Deactivate molecular group
+    Change::GroupChange contractAtomicGroup(Space::Tgroup&, Space::Tgroup&, int); //!< Contract atomic group
+    Change::GroupChange expandAtomicGroup(Space::Tgroup&, int);                   //!< Expand atomic group
+    Change::GroupChange activateMolecularGroup(Space::Tgroup&);                   //!< Activate molecular group
+    Change::GroupChange deactivateMolecularGroup(Space::Tgroup&);                 //!< Deactivate molecular group
 
     SpeciationMove(Space &, std::string, std::string);
   public:

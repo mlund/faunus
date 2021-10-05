@@ -7,8 +7,6 @@
 
 namespace Faunus {
 
-class Space;
-
 /**
  * @brief Specify changes made to a system
  *
@@ -33,17 +31,17 @@ struct Change {
     bool matter_change = false;              //!< True if the number of atomic or molecular species has changed
     bool moved_to_moved_interactions = true; //!< If several groups are moved, should they interact with each other?
 
+    //! Properties of changed groups
     struct GroupChange {
         index_type group_index; //!< Touched group index
         bool dNatomic = false;  //!< True if the number of atomic molecules has changed
         bool dNswap = false;    //!< True if the number of atoms has changed as a result of a swap move
         bool internal = false;  //!< True if the internal energy/config has changed
         bool all = false;       //!< True if all particles in group have been updated
-        std::vector<index_type>
-            relative_atom_indices; //!< Sorted atom indices relative to group. Is empty if `all==true`.
+        std::vector<index_type> relative_atom_indices; //!< Sorted indices relative to group. Empty if `all==true`.
 
         bool operator<(const GroupChange& other) const; //!< Comparison operator based on `group_index`
-    };                                                  //!< Properties of changed groups
+    };
 
     std::vector<GroupChange> groups; //!< Touched groups by index in group vector
 
@@ -71,7 +69,7 @@ void to_json(json& j, const Change& change);                    //!< Serialise C
 class Space {
   public:
     using GeometryType = Geometry::Chameleon;
-    using GroupType = Group<Particle>; //!< Range of particles defining molecules
+    using GroupType = Group<Particle>; //!< Continuous range of particles defining molecules
     using GroupVector = std::vector<GroupType>;
     using ScaleVolumeTrigger = std::function<void(Space&, double, double)>;
     using ChangeTrigger = std::function<void(Space&, const Change&)>;
@@ -113,8 +111,8 @@ class Space {
         double new_volume,
         Geometry::VolumeMethod method = Geometry::VolumeMethod::ISOTROPIC); //!< Scales atoms, molecules, container
 
-    GroupVector::iterator randomMolecule(MoleculeData::index_type, Random& rand,
-                                         Selection = Selection::ACTIVE); //!< Random group matching molid
+    GroupVector::iterator randomMolecule(MoleculeData::index_type molid, Random& rand,
+                                         Selection selection = Selection::ACTIVE); //!< Random group matching molid
 
     json info();
 
@@ -162,21 +160,19 @@ class Space {
         // copy data from source range (this modifies `destination`)
         std::for_each(begin, end, [&](const auto &source) { copy_function(source, *destination++); });
 
-        for (auto &group : affected_groups) { // update affected mass centers
-            if (!group.empty()) {
-                group.updateMassCenter(geometry.getBoundaryFunc(), group.begin()->pos);
-            }
-        };
+        for (auto& group : affected_groups) { // update affected mass centers
+            group.updateMassCenter(geometry.getBoundaryFunc(), group.begin()->pos);
+        }
     }
 
     //! Iterable range of all particle positions
     auto positions() const {
-        return ranges::cpp20::views::transform(particles, [](auto& i) -> const Point& { return i.pos; });
+        return ranges::cpp20::views::transform(particles, [](auto& particle) -> const Point& { return particle.pos; });
     }
 
     //! Mutable iterable range of all particle positions
     auto positions() {
-        return ranges::cpp20::views::transform(particles, [](auto& i) -> Point& { return i.pos; });
+        return ranges::cpp20::views::transform(particles, [](auto& particle) -> Point& { return particle.pos; });
     }
 
     /**
@@ -263,12 +259,13 @@ class Space {
      * @return Number of molecules matching molid and mask
      */
     template <unsigned int mask> auto numMolecules(MoleculeData::index_type molid) const {
-        auto filter = [&](const GroupType& g) { return (g.id == molid) ? g.template match<mask>() : false; };
+        auto filter = [&](const GroupType& group) {
+            return (group.id == molid) ? group.template match<mask>() : false;
+        };
         return std::count_if(groups.begin(), groups.end(), filter);
     }
 
-    void sync(const Space& other,
-              const Change& change); //!< Copy differing data from other (o) Space using Change object
+    void sync(const Space& other, const Change& change); //!< Copy differing data from other Space using Change object
 
 }; // end of space
 
@@ -317,8 +314,8 @@ class InsertMoleculesInSpace {
 
 namespace SpaceFactory {
 
-void makeNaCl(Space&, size_t, const Geometry::Chameleon&); //!< Create a simple salt system
-void makeWater(Space& space, size_t num_particles, const Geometry::Chameleon& geometry);
+void makeNaCl(Space& space, size_t num_particles, const Geometry::Chameleon& geometry);  //!< Create a salt system
+void makeWater(Space& space, size_t num_particles, const Geometry::Chameleon& geometry); //!< Create a water system
 
 } // namespace SpaceFactory
 

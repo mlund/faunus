@@ -3,6 +3,7 @@
 #include "aux/iteratorsupport.h"
 #include "spdlog/spdlog.h"
 #include "aux/eigensupport.h"
+#include <range/v3/algorithm/for_each.hpp>
 #include <memory>
 #include <stdexcept>
 
@@ -101,12 +102,12 @@ void Space::clear() {
  * - for molecular groups, the mass center is calculated and set
  *
  * @param molid Molecule id of inserted data
- * @param particles Particles to generate group from
+ * @param new_particles Particles to generate group from
  * @return Reference to the inserted group
  * @throw if particles is empty or if the given particles do not match the molecule id
  */
 Space::GroupType& Space::addGroup(MoleculeData::index_type molid, const ParticleVector& new_particles) {
-    if (particles.empty()) {
+    if (new_particles.empty()) {
         throw std::runtime_error("cannot add empty molecule");
     }
     auto original_begin = particles.begin(); // used to detect if `particles` is relocated
@@ -197,7 +198,7 @@ Point Space::scaleVolume(double Vnew, Geometry::VolumeMethod method) {
     for (auto &group : groups) {             // remove PBC on molecular groups ...
         group.unwrap(geometry.getDistanceFunc()); // ... before scaling the volume
     }
-    double Vold = geometry.getVolume();             // simulation volume before move
+    auto Vold = geometry.getVolume();               // simulation volume before move
     Point scale = geometry.setVolume(Vnew, method); // scale volume of simulation container
 
     auto scale_position = [&](auto &particle) {
@@ -234,7 +235,7 @@ Point Space::scaleVolume(double Vnew, Geometry::VolumeMethod method) {
         }
     }
     if (method == Geometry::VolumeMethod::ISOCHORIC) { // ? not used for anything...
-        Vold = std::pow(Vold, 1. / 3.);  // ?
+        Vold = std::pow(Vold, 1.0 / 3.0);              // ?
     }
     for (auto trigger_function : scaleVolumeTriggers) { // external clients may have added function
         trigger_function(*this, Vold, Vnew);            // to be triggered upon each volume change
@@ -245,7 +246,7 @@ Point Space::scaleVolume(double Vnew, Geometry::VolumeMethod method) {
 json Space::info() {
     json j = {{"number of particles", particles.size()}, {"number of groups", groups.size()}, {"geometry", geometry}};
     auto &j_groups = j["groups"];
-    for (auto &group : groups) {
+    for (const auto& group : groups) {
         auto &molname = Faunus::molecules.at(group.id).name;
         json tmp, d = group;
         d.erase("cm");
@@ -265,12 +266,15 @@ json Space::info() {
     return j;
 }
 
-Space::GroupVector::iterator Space::randomMolecule(MoleculeData::index_type molid, Random& rand, Space::Selection sel) {
-    auto m = findMolecules(molid, sel);
-    if (not ranges::cpp20::empty(m))
-        return groups.begin() + (&*rand.sample(m.begin(), m.end()) - &*groups.begin());
-    return groups.end();
+Space::GroupVector::iterator Space::randomMolecule(MoleculeData::index_type molid, Random& rand,
+                                                   Space::Selection selection) {
+    auto found_molecules = findMolecules(molid, selection);
+    if (ranges::cpp20::empty(found_molecules)) {
+        return groups.end();
+    }
+    return groups.begin() + (&*rand.sample(found_molecules.begin(), found_molecules.end()) - &*groups.begin());
 }
+
 const std::map<MoleculeData::index_type, std::size_t>& Space::getImplicitReservoir() const {
     return implicit_reservoir;
 }
@@ -292,11 +296,12 @@ Space::findGroupContaining(AtomData::index_type atom_index) {
 std::size_t Space::numParticles(Space::Selection selection) const {
     if (selection == Selection::ALL) {
         return particles.size();
-    } else if (selection == Selection::ACTIVE) {
-        return std::accumulate(groups.begin(), groups.end(), 0u, [](auto sum, auto& g) { return sum + g.size(); });
-    } else {
-        throw std::runtime_error("invalid selection");
     }
+    if (selection == Selection::ACTIVE) {
+        return std::accumulate(groups.begin(), groups.end(), 0u,
+                               [](auto sum, auto& group) { return sum + group.size(); });
+    }
+    throw std::runtime_error("invalid selection");
 }
 
 /**
@@ -357,8 +362,6 @@ void to_json(json& j, const Space& spc) {
     j["implicit_reservoir"] = spc.getImplicitReservoir();
 }
 void from_json(const json &j, Space &spc) {
-    using namespace std::string_literals;
-
     try {
         if (atoms.empty()) {
             atoms = j.at("atomlist").get<decltype(atoms)>();
@@ -367,7 +370,7 @@ void from_json(const json &j, Space &spc) {
             molecules = j.at("moleculelist").get<decltype(molecules)>();
         }
         if (reactions.empty()) {
-            if (j.count("reactionlist") > 0) {
+            if (j.contains("reactionlist")) {
                 reactions = j.at("reactionlist").get<decltype(reactions)>();
             }
         }
@@ -375,7 +378,7 @@ void from_json(const json &j, Space &spc) {
         spc.clear();
         spc.geometry = j.at("geometry");
 
-        if (j.count("groups") == 0) {
+        if (!j.contains("groups")) {
             InsertMoleculesInSpace::insertMolecules(j.at("insertmolecules"), spc);
         } else {
             spc.particles = j.at("particles").get<ParticleVector>();
@@ -394,8 +397,7 @@ void from_json(const json &j, Space &spc) {
             }
         }
 
-        if (auto it = j.find("implicit_reservoir"); it != j.end()) {
-            assert(it->is_array());
+        if (auto it = j.find("implicit_reservoir"); it != j.end() && it->is_array()) {
             for (auto vec : *it) {
                 assert(vec.is_array() && vec.size() == 2);
                 spc.getImplicitReservoir()[vec[0]] = vec[1];
@@ -404,18 +406,17 @@ void from_json(const json &j, Space &spc) {
         }
 
         // check correctness of molecular mass centers
-        auto active_and_molecular = [](const auto& group) { return (!group.empty() && group.isMolecular()); };
-        for (const auto& group : spc.groups | ranges::cpp20::views::filter(active_and_molecular)) {
+        auto check_mass_center = [&](const auto& group) {
             const auto should_be_small = spc.geometry.sqdist(
                 group.cm, Geometry::massCenter(group.begin(), group.end(), spc.geometry.getBoundaryFunc(), -group.cm));
             if (should_be_small > 1e-9) {
                 throw std::runtime_error(fmt::format(
                     "couldn't calculate mass center for {}; increase periodic box size?", group.traits().name));
             }
-        }
-    } catch (const std::exception& e) {
-        throw std::runtime_error("error building space -> "s + e.what());
-    }
+        };
+        auto active_and_molecular = [](const auto& group) { return (!group.empty() && group.isMolecular()); };
+        ranges::cpp20::for_each(spc.groups | ranges::cpp20::views::filter(active_and_molecular), check_mass_center);
+    } catch (const std::exception& e) { throw std::runtime_error("error building space -> "s + e.what()); }
 }
 
 TEST_SUITE_BEGIN("Space");
@@ -632,7 +633,7 @@ TEST_CASE("SpaceFactory") {
  * @param spc Space to insert into (at the end)
  * @param num_molecules Number of molecules to insert into the *same* group
  * @param num_inactive_molecules Number of molecules to declare inactive
- * @throws If number if inactive is higher than number of active molecules
+ * @throw If number if inactive is higher than number of active molecules
  *
  * The atoms in the atomic groups are repeated `num_molecules` times, then inserted
  * into Space.
@@ -651,7 +652,8 @@ void InsertMoleculesInSpace::insertAtomicGroups(MoleculeData& moldata, Space& sp
 
     if (num_inactive_molecules > num_molecules) {
         throw std::runtime_error("too many inactive molecules requested");
-    } else if (num_inactive_molecules > 0) {
+    }
+    if (num_inactive_molecules > 0) {
         auto num_active_atoms = (num_molecules - num_inactive_molecules) * moldata.atoms.size();
         spc.groups.back().resize(num_active_atoms); // deactivate atoms in molecule
     }
@@ -665,21 +667,21 @@ void InsertMoleculesInSpace::insertMolecularGroups(MoleculeData& moldata, Space&
     }
     if (num_inactive > num_molecules) {
         throw std::runtime_error("too many inactive molecules requested");
-    } else { // deactivate groups, starting from the back
-        std::for_each(spc.groups.rbegin(), spc.groups.rbegin() + num_inactive, [&](auto& group) {
-            group.unwrap(spc.geometry.getDistanceFunc()); // make molecules whole (remove PBC) ...
-            group.resize(0);                         // ... and then deactivate
-        });
     }
+    // deactivate groups, starting from the back
+    std::for_each(spc.groups.rbegin(), spc.groups.rbegin() + num_inactive, [&](auto& group) {
+        group.unwrap(spc.geometry.getDistanceFunc()); // make molecules whole (remove PBC) ...
+        group.resize(0);                              // ... and then deactivate
+    });
 }
 
 /**
  * @brief Set positions for num_molecules last groups in Space
  * @param spc Space to insert into
- * @param int num_molecules Number of groups set affect
+ * @param num_molecules num_molecules Number of groups set affect
  * @param particles Position vector for all particles in the N groups
  * @param offset Translate positions by this offset
- * @throws if num_molecules doesn't match, or if positions are outside simulation cell
+ * @throw if num_molecules doesn't match, or if positions are outside simulation cell
  *
  * Sets particle positions in space using a given input
  * particle vector. The vector can span several *identical* groups.
@@ -692,21 +694,21 @@ void InsertMoleculesInSpace::setPositionsForTrailingGroups(Space& spc, size_t nu
     assert(spc.groups.size() >= num_molecules);
     if (particles.size() != num_molecules * (spc.groups.rbegin())->traits().atoms.size()) {
         throw std::runtime_error("number of particles doesn't match groups");
-    } else {
-        // update positions in space, starting from the back
-        std::transform(particles.rbegin(), particles.rend(), spc.particles.rbegin(), spc.particles.rbegin(),
-                       [&](auto& src, auto& dst) {
-                           dst.pos = src.pos + offset;            // shift by offset
-                           if (spc.geometry.collision(dst.pos)) { // check if position is inside simulation volume
-                               throw std::runtime_error("positions outside box");
-                           }
-                           return dst;
-                       });
-        // update mass-centers on modified groups; start from the back
-        std::for_each(spc.groups.rbegin(), spc.groups.rbegin() + num_molecules, [&](auto& g) {
-            g.cm = Geometry::massCenter(g.begin(), g.end(), spc.geometry.getBoundaryFunc(), -g.begin()->pos);
-        });
     }
+    // update positions in space, starting from the back
+    std::transform(particles.rbegin(), particles.rend(), spc.particles.rbegin(), spc.particles.rbegin(),
+                   [&](auto& src, auto& dst) {
+                       dst.pos = src.pos + offset;            // shift by offset
+                       if (spc.geometry.collision(dst.pos)) { // check if position is inside simulation volume
+                           throw std::runtime_error("positions outside box");
+                       }
+                       return dst;
+                   });
+    // update mass-centers on modified groups; start from the back
+    std::for_each(spc.groups.rbegin(), spc.groups.rbegin() + num_molecules, [&](auto& group) {
+        group.cm =
+            Geometry::massCenter(group.begin(), group.end(), spc.geometry.getBoundaryFunc(), -group.begin()->pos);
+    });
 }
 
 /**
@@ -760,7 +762,7 @@ void InsertMoleculesInSpace::insertItem(const std::string &molname, const json &
  * @param j json object to search for key `positions`
  * @param molname name of molecule to affect; used for logging, only.
  * @returns Particle vector; empty if no external positions are requested
- * @throws If the 'positions' key is there, but could not be loaded
+ * @throw If the 'positions' key is there, but could not be loaded
  */
 ParticleVector InsertMoleculesInSpace::getExternalPositions(const json &j, const std::string &molname) {
     ParticleVector particles;
@@ -777,22 +779,18 @@ ParticleVector InsertMoleculesInSpace::getExternalPositions(const json &j, const
  * @param spc Space to insert into
  */
 void InsertMoleculesInSpace::insertMolecules(const json &j, Space &spc) {
-    spc.clear();
     if (!j.is_array()) {
         throw ConfigurationError("molecules to insert must be an array");
-    } else {
-        for (const auto &item : j) { // loop over array of molecules
-            if (item.is_object() && item.size() == 1) {
-                for (auto &[molecule_name, properties] : item.items()) {
-                    try {
-                        insertItem(molecule_name, properties, spc);
-                    } catch (std::exception &e) {
-                        throw ConfigurationError("error inserting {}: {}", molecule_name, e.what());
-                    }
-                }
-            } else {
-                throw ConfigurationError("syntax error inserting molecules");
-            }
+    }
+    spc.clear();
+    for (const auto& item : j) { // loop over array of molecules
+        if (!item.is_object() || item.size() != 1) {
+            throw ConfigurationError("syntax error inserting molecules");
+        }
+        for (const auto& [molecule_name, properties] : item.items()) {
+            try {
+                insertItem(molecule_name, properties, spc);
+            } catch (std::exception& e) { throw ConfigurationError("error inserting {}: {}", molecule_name, e.what()); }
         }
     }
 }
@@ -825,7 +823,7 @@ size_t InsertMoleculesInSpace::getNumberOfMolecules(const json& j, double volume
  * @param j Input json object
  * @param number_of_molecules Total number of molecules
  * @return Number of molecules to be inactive (always smaller than `number_of_molecules`)
- * @throws If Inactive molecules is higher than `number_of_molecules`
+ * @throw If Inactive molecules is higher than `number_of_molecules`
  *
  * Looks for key "inactive" and if:
  * - boolean true: all molecules are inactive

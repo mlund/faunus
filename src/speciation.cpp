@@ -27,7 +27,7 @@ void SpeciationMove::_to_json(json &j) const {
 /**
  * @param other Space representing the "old" state in a MC move
  */
-void SpeciationMove::setOther(Tspace &other) { other_spc = &other; }
+void SpeciationMove::setOther(Space& other) { other_spc = &other; }
 
 /**
  * Convert from one atom type to another in any group (atomic/molecular).
@@ -58,13 +58,13 @@ void SpeciationMove::atomicSwap(Change &change) {
             assert(molecular_reactants.size() == 1); // only one allowed this far
             auto [molid, N] = *molecular_reactants.begin();
             if (Faunus::molecules[molid].atomic) {
-                auto mollist = spc.findMolecules(molid, Tspace::Selection::ALL); // look for a single atomic group
+                auto mollist = spc.findMolecules(molid, Space::Selection::ALL); // look for a single atomic group
                 assert(range_size(mollist) == 1);
                 if (mollist.begin()->empty()) {
                     throw SpeciationMoveException();
                 }
             } else { // reactant is a molecular group
-                auto mollist = spc.findMolecules(molid, Tspace::Selection::ACTIVE);
+                auto mollist = spc.findMolecules(molid, Space::Selection::ACTIVE);
                 if (range_size(mollist) < N) {
                     throw SpeciationMoveException();
                 }
@@ -75,13 +75,13 @@ void SpeciationMove::atomicSwap(Change &change) {
             assert(molecular_products.size() == 1); // only one allowed this far
             auto [molid, N] = *molecular_products.begin();
             if (Faunus::molecules[molid].atomic) { // product is an atomic group
-                auto mollist = spc.findMolecules(molid, Tspace::Selection::ALL);
+                auto mollist = spc.findMolecules(molid, Space::Selection::ALL);
                 assert(range_size(mollist) == 1);
                 if (mollist.begin()->capacity() - mollist.begin()->size() < N) {
                     throw SpeciationMoveException();
                 }
             } else { // we're producing a molecular group
-                auto mollist = spc.findMolecules(molid, Tspace::Selection::INACTIVE);
+                auto mollist = spc.findMolecules(molid, Space::Selection::INACTIVE);
                 if (range_size(mollist) < N) {
                     throw SpeciationMoveException();
                 }
@@ -163,8 +163,8 @@ Change::GroupChange SpeciationMove::deactivateMolecularGroup(Space::GroupType& t
     // Store internal bond energy of the deactivated molecule
     for (auto &bond : Faunus::molecules.at(target.id).bonds) {
         auto bond_clone = bond->clone();
-        bond_clone->shiftIndices(std::distance(spc.p.begin(), target.begin()));
-        bond_clone->setEnergyFunction(spc.p);
+        bond_clone->shiftIndices(std::distance(spc.particles.begin(), target.begin()));
+        bond_clone->setEnergyFunction(spc.particles);
         bond_energy += bond_clone->energyFunc(spc.geometry.getDistanceFunc());
     }
 
@@ -235,8 +235,8 @@ Change::GroupChange SpeciationMove::activateMolecularGroup(Space::GroupType& tar
     // Store internal bond energy of activated molecule
     for (auto &bond : Faunus::molecules[target.id].bonds) {
         auto bondclone = bond->clone();
-        bondclone->shiftIndices(std::distance(spc.p.begin(), target.begin()));
-        bondclone->setEnergyFunction(spc.p);
+        bondclone->shiftIndices(std::distance(spc.particles.begin(), target.begin()));
+        bondclone->setEnergyFunction(spc.particles);
         bond_energy -= bondclone->energyFunc(spc.geometry.getDistanceFunc());
     }
 
@@ -264,7 +264,7 @@ void SpeciationMove::activateAllProducts(Change &change) {
         if (number_to_insert == 0 or Faunus::molecules[molid].isImplicit()) {
             continue;                                 // implicit molecules are added/removed after the move
         } else if (Faunus::molecules[molid].atomic) { // The product is an atom
-            auto mollist = spc.findMolecules(molid, Tspace::Selection::ALL);
+            auto mollist = spc.findMolecules(molid, Space::Selection::ALL);
             if (range_size(mollist) > 0) {
                 if (mollist.begin()->size() + number_to_insert > mollist.begin()->capacity()) {
                     faunus_logger->warn("atomic molecule {} is full; increase capacity?",
@@ -276,9 +276,9 @@ void SpeciationMove::activateAllProducts(Change &change) {
             }
         } else { // The product is a molecule
             auto selection =
-                (reaction->only_neutral_molecules) ? Tspace::Selection::INACTIVE_NEUTRAL : Tspace::Selection::INACTIVE;
+                (reaction->only_neutral_molecules) ? Space::Selection::INACTIVE_NEUTRAL : Space::Selection::INACTIVE;
             auto inactive = spc.findMolecules(molid, selection); // all inactive molecules
-            std::vector<std::reference_wrapper<Tspace::GroupType>> molecules_to_activate;
+            std::vector<std::reference_wrapper<Space::GroupType>> molecules_to_activate;
             std::sample(inactive.begin(), inactive.end(), std::back_inserter(molecules_to_activate), number_to_insert,
                         slump.engine);
             if (molecules_to_activate.size() != number_to_insert) {
@@ -295,7 +295,7 @@ void SpeciationMove::activateAllProducts(Change &change) {
         if (number_to_insert == 0 or Faunus::molecules[molid].isImplicit()) {
             continue;                                 // implicit molecules are added/removed after the move
         } else if (Faunus::molecules[molid].atomic) { // The product is an atom
-            auto mollist = spc.findMolecules(molid, Tspace::Selection::ALL);
+            auto mollist = spc.findMolecules(molid, Space::Selection::ALL);
             if (range_size(mollist) > 0) {
                 Change::GroupChange change_data = expandAtomicGroup(*mollist.begin(), number_to_insert);
                 if (not change_data.relative_atom_indices.empty()) {
@@ -308,9 +308,9 @@ void SpeciationMove::activateAllProducts(Change &change) {
             }
         } else { // The product is a molecule
             auto selection =
-                (reaction->only_neutral_molecules) ? Tspace::Selection::INACTIVE_NEUTRAL : Tspace::Selection::INACTIVE;
+                (reaction->only_neutral_molecules) ? Space::Selection::INACTIVE_NEUTRAL : Space::Selection::INACTIVE;
             auto inactive = spc.findMolecules(molid, selection); // all inactive molecules
-            std::vector<std::reference_wrapper<Tspace::GroupType>> molecules_to_activate;
+            std::vector<std::reference_wrapper<Space::GroupType>> molecules_to_activate;
             std::sample(inactive.begin(), inactive.end(), std::back_inserter(molecules_to_activate), number_to_insert,
                         slump.engine);
             if (molecules_to_activate.size() == number_to_insert) {
@@ -345,9 +345,9 @@ void SpeciationMove::deactivateAllReactants(Change &change) {
         if (N_delete <= 0 or Faunus::molecules[molid].isImplicit()) {
             continue;                         // implicit molecules are added/deleted after move
         } else if (Faunus::molecules[molid].atomic) { // reactant is an atomic group
-            auto mollist = spc.findMolecules(molid, Tspace::Selection::ALL);
+            auto mollist = spc.findMolecules(molid, Space::Selection::ALL);
             assert(range_size(mollist) == 1);
-            auto target = spc.findMolecules(molid, Tspace::Selection::ALL).begin();
+            auto target = spc.findMolecules(molid, Space::Selection::ALL).begin();
             if ((int)target->size() - N_delete < 0) {
                 faunus_logger->warn("atomic group {} is depleted; increase simulation volume?",
                                     Faunus::molecules[molid].name);
@@ -355,9 +355,9 @@ void SpeciationMove::deactivateAllReactants(Change &change) {
             }
         } else { // molecular reactant (non-atomic)
             auto selection =
-                (reaction->only_neutral_molecules) ? Tspace::Selection::ACTIVE_NEUTRAL : Tspace::Selection::ACTIVE;
+                (reaction->only_neutral_molecules) ? Space::Selection::ACTIVE_NEUTRAL : Space::Selection::ACTIVE;
             auto active = spc.findMolecules(molid, selection);
-            std::vector<std::reference_wrapper<Tspace::GroupType>> molecules_to_deactivate;
+            std::vector<std::reference_wrapper<Space::GroupType>> molecules_to_deactivate;
             std::sample(active.begin(), active.end(), std::back_inserter(molecules_to_deactivate), N_delete,
                         slump.engine); // pick random molecules to delete
             if (molecules_to_deactivate.size() != N_delete) {
@@ -371,10 +371,10 @@ void SpeciationMove::deactivateAllReactants(Change &change) {
         if (N_delete <= 0 or Faunus::molecules[molid].isImplicit()) {
             continue;                         // implicit molecules are added/deleted after move
         } else if (molecules[molid].atomic) { // reactant is an atomic group
-            auto mollist = spc.findMolecules(molid, Tspace::Selection::ALL);
+            auto mollist = spc.findMolecules(molid, Space::Selection::ALL);
             assert(range_size(mollist) == 1);
-            auto target = spc.findMolecules(molid, Tspace::Selection::ALL).begin();
-            auto other_target = other_spc->findMolecules(molid, Tspace::Selection::ALL).begin();
+            auto target = spc.findMolecules(molid, Space::Selection::ALL).begin();
+            auto other_target = other_spc->findMolecules(molid, Space::Selection::ALL).begin();
             auto change_data = contractAtomicGroup(*target, *other_target, N_delete);
             if (not change_data.relative_atom_indices.empty()) {
                 change.groups.push_back(change_data);
@@ -383,9 +383,9 @@ void SpeciationMove::deactivateAllReactants(Change &change) {
             }
         } else { // molecular reactant (non-atomic)
             auto selection =
-                (reaction->only_neutral_molecules) ? Tspace::Selection::ACTIVE_NEUTRAL : Tspace::Selection::ACTIVE;
+                (reaction->only_neutral_molecules) ? Space::Selection::ACTIVE_NEUTRAL : Space::Selection::ACTIVE;
             auto active = spc.findMolecules(molid, selection);
-            std::vector<std::reference_wrapper<Tspace::GroupType>> molecules_to_deactivate;
+            std::vector<std::reference_wrapper<Space::GroupType>> molecules_to_deactivate;
             std::sample(active.begin(), active.end(), std::back_inserter(molecules_to_deactivate), N_delete,
                         slump.engine); // pick random molecules to delete
             if (molecules_to_deactivate.size() == N_delete) {

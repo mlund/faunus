@@ -134,7 +134,7 @@ TEST_CASE("[Faunus] ExternalPotential") {
 
 // ------------ Confine -------------
 
-Confine::Confine(const json &j, Tspace &spc) : ExternalPotential(j, spc) {
+Confine::Confine(const json& j, Space& spc) : ExternalPotential(j, spc) {
     name = "confine";
     k = getValueInfinity(j, "k") * 1.0_kJmol; // get floating point; allow inf/-inf
     type = m.at(j.at("type"));
@@ -154,9 +154,10 @@ Confine::Confine(const json &j, Tspace &spc) : ExternalPotential(j, spc) {
 
         // If volume is scaled, also scale the confining radius by adding a trigger
         // to `Space::scaleVolume()`
-        if (scale)
-            spc.scaleVolumeTriggers.push_back(
-                [&radius = radius](Tspace &, double Vold, double Vnew) { radius *= std::cbrt(Vnew / Vold); });
+        if (scale) {
+            spc.scaleVolumeTriggers.push_back([&radius = radius]([[maybe_unused]] Space& spc, double Vold,
+                                                                 double Vnew) { radius *= std::cbrt(Vnew / Vold); });
+        }
     }
 
     if (type == cuboid) {
@@ -195,7 +196,7 @@ void Confine::to_json(json &j) const {
 
 // ------------ ExternalAkesson -------------
 
-ExternalAkesson::ExternalAkesson(const json &j, Tspace &spc) : ExternalPotential(j, spc) {
+ExternalAkesson::ExternalAkesson(const json& j, Space& spc) : ExternalPotential(j, spc) {
     name = "akesson";
     citation_information = "doi:10/dhb9mj";
     nstep = j.at("nstep").get<unsigned int>();

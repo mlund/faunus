@@ -1356,10 +1356,10 @@ template <typename TPairEnergy, typename TPairingPolicy> class Nonbonded : publi
      */
     void force(std::vector<Point> &forces) override {
         // just a temporary hack; perhaps better to allow PairForce instead of the PairEnergy template
-        assert(forces.size() == spc.p.size() && "the forces size must match the particle size");
-        for (size_t i = 0; i < spc.p.size() - 1; ++i) {
-            for (size_t j = i + 1; j < spc.p.size(); ++j) {
-                const Point f = pair_energy.force(spc.p[i], spc.p[j]);
+        assert(forces.size() == spc.particles.size() && "the forces size must match the particle size");
+        for (size_t i = 0; i < spc.particles.size() - 1; ++i) {
+            for (size_t j = i + 1; j < spc.particles.size(); ++j) {
+                const Point f = pair_energy.force(spc.particles[i], spc.particles[j]);
                 forces[i] += f;
                 forces[j] -= f;
             }

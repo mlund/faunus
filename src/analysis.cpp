@@ -640,7 +640,8 @@ void WidomInsertion::_sample() {
         group.resize(group.capacity());                         // activate ghost
         ParticleVector particles;                               // particles to insert
         for (int cnt = 0; cnt < number_of_insertions; ++cnt) {
-            particles = inserter->operator()(spc.geometry, Faunus::molecules[molid], spc.p); // random pos&orientation
+            particles =
+                inserter->operator()(spc.geometry, Faunus::molecules[molid], spc.particles); // random pos&orientation
             updateGroup(group, particles);
             const auto energy_change = pot.energy(change); // in kT
             collectWidomAverage(energy_change);
@@ -838,12 +839,12 @@ void SanityCheck::checkGroupsCoverParticles() {
     for (const auto& group : spc.groups) {
         for (auto it = group.begin(); it != group.trueend(); ++it) {
             const auto address_of_particle = std::addressof(*it);
-            if (address_of_particle != std::addressof(spc.p.at(particle_index++))) {
+            if (address_of_particle != std::addressof(spc.particles.at(particle_index++))) {
                 throw std::runtime_error("group vector out of sync");
             }
         }
     }
-    if (particle_index != spc.p.size()) {
+    if (particle_index != spc.particles.size()) {
         throw std::runtime_error("particle <-> group mismatch");
     }
 }
@@ -1015,7 +1016,7 @@ void XTCtraj::_from_json(const json& j) {
 void XTCtraj::_sample() {
     assert(atom_filter); // some gcc/clang/ubuntu/macos combinations wronly clear the `filter` function
     auto positions =
-        spc.p | ranges::cpp20::views::filter(atom_filter) | ranges::cpp20::views::transform(&Particle::pos);
+        spc.particles | ranges::cpp20::views::filter(atom_filter) | ranges::cpp20::views::transform(&Particle::pos);
     writer->writeNext(spc.geometry.getLength(), positions.begin(), positions.end());
 }
 

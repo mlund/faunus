@@ -86,35 +86,36 @@ class Space {
      * The reservoir is used to emulate a canonical system where a finite
      * number of implicit molecules can participate in equilibrium reactions.
      */
-    std::map<std::size_t, std::size_t> implicit_reservoir;
+    std::map<MoleculeData::index_type, std::size_t> implicit_reservoir;
 
     std::vector<ChangeTrigger> changeTriggers; //!< Call when a Change object is applied (unused)
     std::vector<SyncTrigger> onSyncTriggers;   //!< Call when two Space objects are synched (unused)
 
   public:
-    ParticleVector p;                                    //!< Particle vector storing all particles in system
+    ParticleVector particles;                            //!< Particle vector storing all particles in system
     GroupVector groups;                                  //!< Group vector storing all molecules in system
     GeometryType geometry;                               //!< Container geometry (boundaries, shape, volume)
     std::vector<ScaleVolumeTrigger> scaleVolumeTriggers; //!< Called whenever the volume is scaled
 
-    const std::map<std::size_t, std::size_t>& getImplicitReservoir() const; //!< Storage for implicit molecules
-    std::map<std::size_t, std::size_t>& getImplicitReservoir();             //!< Storage for implicit molecules
+    const std::map<MoleculeData::index_type, std::size_t>& getImplicitReservoir() const; //!< Implicit molecules
+    std::map<MoleculeData::index_type, std::size_t>& getImplicitReservoir();             //!< Implicit molecules
 
     //!< Keywords to select particles based on the their active/inactive state and charge neutrality
     enum class Selection { ALL, ACTIVE, INACTIVE, ALL_NEUTRAL, ACTIVE_NEUTRAL, INACTIVE_NEUTRAL };
 
     void clear(); //!< Clears particle and molecule list
     GroupType& addGroup(MoleculeData::index_type molid, const ParticleVector& particles); //!< Add group to back
-    GroupVector::iterator findGroupContaining(const Particle& i); //!< Finds the group containing the given atom
-    GroupVector::iterator findGroupContaining(size_t atom_index); //!< Finds the group containing given atom index
-    size_t
-    numParticles(Selection selection = Selection::ACTIVE) const; //!< Number of particles, all or active (default)
+    GroupVector::iterator findGroupContaining(const Particle& particle); //!< Finds the group containing the given atom
+    GroupVector::iterator findGroupContaining(AtomData::index_type atom_index); //!< Find group containing atom index
+    size_t numParticles(Selection selection = Selection::ACTIVE) const;         //!< Number of (active) particles
 
     Point scaleVolume(
         double new_volume,
         Geometry::VolumeMethod method = Geometry::VolumeMethod::ISOTROPIC); //!< Scales atoms, molecules, container
 
-    GroupVector::iterator randomMolecule(int, Random&, Selection = Selection::ACTIVE); //!< Random group matching molid
+    GroupVector::iterator randomMolecule(MoleculeData::index_type, Random& rand,
+                                         Selection = Selection::ACTIVE); //!< Random group matching molid
+
     json info();
 
     std::size_t getGroupIndex(const GroupType& group) const;         //!< Get index of given group in the group vector
@@ -151,8 +152,8 @@ class Space {
 
         const auto size = std::distance(begin, end); // number of affected particles
 
-        assert(destination >= p.begin() && destination < p.end());
-        assert(size <= std::distance(destination, p.end()));
+        assert(destination >= particles.begin() && destination < particles.end());
+        assert(size <= std::distance(destination, particles.end()));
 
         auto affected_groups = groups | ranges::cpp20::views::filter([=](auto &group) {
                                    return (group.begin() < destination + size) && (group.end() > destination);
@@ -170,23 +171,23 @@ class Space {
 
     //! Iterable range of all particle positions
     auto positions() const {
-        return ranges::cpp20::views::transform(p, [](auto &i) -> const Point & { return i.pos; });
+        return ranges::cpp20::views::transform(particles, [](auto& i) -> const Point& { return i.pos; });
     }
 
     //! Mutable iterable range of all particle positions
     auto positions() {
-        return ranges::cpp20::views::transform(p, [](auto &i) -> Point & { return i.pos; });
+        return ranges::cpp20::views::transform(particles, [](auto& i) -> Point& { return i.pos; });
     }
 
     /**
      * @brief Finds all groups of type `molid` (complexity: order N)
      * @param molid Molecular id to look for
-     * @param sel Selection
+     * @param selection Selection
      * @return range with all groups of molid
      */
-    auto findMolecules(std::size_t molid, Selection sel = Selection::ACTIVE) {
+    auto findMolecules(MoleculeData::index_type molid, Selection selection = Selection::ACTIVE) {
         std::function<bool(GroupType&)> f;
-        switch (sel) {
+        switch (selection) {
         case (Selection::ALL):
             f = [molid](GroupType& i) { return i.id == molid; };
             break;
@@ -250,7 +251,7 @@ class Space {
      * @param atomid Atom id to look for
      * @return Range of filtered particles
      */
-    auto findAtoms(const std::size_t atomid) {
+    auto findAtoms(AtomData::index_type atomid) {
         return activeParticles() |
                ranges::cpp20::views::filter([atomid](const Particle& particle) { return particle.id == atomid; });
     }
@@ -261,7 +262,7 @@ class Space {
      * @tparam mask Selection mask based on `Group::Selectors`
      * @return Number of molecules matching molid and mask
      */
-    template <unsigned int mask> auto numMolecules(std::size_t molid) const {
+    template <unsigned int mask> auto numMolecules(MoleculeData::index_type molid) const {
         auto filter = [&](const GroupType& g) { return (g.id == molid) ? g.template match<mask>() : false; };
         return std::count_if(groups.begin(), groups.end(), filter);
     }
@@ -288,10 +289,15 @@ void from_json(const json &j, Space &spc); //!< Deserialize json object to Space
  */
 class InsertMoleculesInSpace {
   private:
-    static void insertAtomicGroups(MoleculeData&, Space&, size_t num_molecules, size_t num_inactive_molecules);
-    static void insertMolecularGroups(MoleculeData&, Space&, size_t num_molecules, size_t num_inactive);
-    static void setPositionsForTrailingGroups(Space&, size_t, const Faunus::ParticleVector&, const Point&);
-    static void insertImplicitGroups(const MoleculeData&, Space&, size_t);
+    static void insertAtomicGroups(MoleculeData& moldata, Space& spc, size_t num_molecules,
+                                   size_t num_inactive_molecules);
+
+    static void insertMolecularGroups(MoleculeData& moldata, Space& spc, size_t num_molecules, size_t num_inactive);
+
+    static void setPositionsForTrailingGroups(Space& spc, size_t num_molecules, const Faunus::ParticleVector&,
+                                              const Point&);
+
+    static void insertImplicitGroups(const MoleculeData& moldata, Space& spc, size_t num_molecules);
 
     //! Get number of molecules to insert from json object
     static size_t getNumberOfMolecules(const json& j, double volume, const std::string& molecule_name);
@@ -306,11 +312,8 @@ class InsertMoleculesInSpace {
     static void insertItem(const std::string &molname, const json &properties, Space &spc);
 
   public:
-    static void insertMolecules(const json &, Space &);
+    static void insertMolecules(const json& j, Space& spc);
 }; // end of insertMolecules class
-
-// Make a global alias to easy transition to non-templated code
-using Tspace = Space;
 
 namespace SpaceFactory {
 

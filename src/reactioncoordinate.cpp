@@ -151,20 +151,20 @@ void AtomProperty::_to_json(json &j) const {
 AtomProperty::AtomProperty(const json &j, Space &spc) : ReactionCoordinateBase(j) {
     name = "atom";
     index = j.at("index");
-    if (index >= spc.p.size()) {
+    if (index >= spc.particles.size()) {
         throw ConfigurationError("invalid index");
     }
     property = j.at("property").get<std::string>();
     if (property == "x") {
-        function = [&particle = spc.p.at(index)]() { return particle.pos.x(); };
+        function = [&particle = spc.particles.at(index)]() { return particle.pos.x(); };
     } else if (property == "y") {
-        function = [&particle = spc.p.at(index)]() { return particle.pos.y(); };
+        function = [&particle = spc.particles.at(index)]() { return particle.pos.y(); };
     } else if (property == "z") {
-        function = [&particle = spc.p.at(index)]() { return particle.pos.z(); };
+        function = [&particle = spc.particles.at(index)]() { return particle.pos.z(); };
     } else if (property == "R") {
-        function = [&particle = spc.p.at(index)]() { return particle.pos.norm(); };
+        function = [&particle = spc.particles.at(index)]() { return particle.pos.norm(); };
     } else if (property == "q") {
-        function = [&particle = spc.p.at(index)]() { return particle.charge; };
+        function = [&particle = spc.particles.at(index)]() { return particle.charge; };
     } else if (property == "N") {
         function = [&groups = spc.groups, id = index]() {
             auto particles = groups | ranges::cpp20::views::join;
@@ -283,8 +283,10 @@ void MoleculeProperty::selectMassCenterDistanceZ(const json& j, Space& spc) {
     assert(indexes.size() > 1 && "An array of 2 or 4 indexes should be specified.");
     if (indexes.size() == 4) {
         function = [&spc, i = indexes[0], j = indexes[1] + 1, k = indexes[2], l = indexes[3] + 1]() {
-            auto cm1 = Geometry::massCenter(spc.p.begin() + i, spc.p.begin() + j, spc.geometry.getBoundaryFunc());
-            auto cm2 = Geometry::massCenter(spc.p.begin() + k, spc.p.begin() + l, spc.geometry.getBoundaryFunc());
+            auto cm1 = Geometry::massCenter(spc.particles.begin() + i, spc.particles.begin() + j,
+                                            spc.geometry.getBoundaryFunc());
+            auto cm2 = Geometry::massCenter(spc.particles.begin() + k, spc.particles.begin() + l,
+                                            spc.geometry.getBoundaryFunc());
             return spc.geometry.vdist(cm1, cm2).z();
         };
     } else if (indexes.size() == 2) {
@@ -299,7 +301,9 @@ void MoleculeProperty::selectAtomAtomDistance(const json& j, Space& spc) {
         throw std::runtime_error("exactly two indices expected");
     }
     function = [&spc, &dir = direction, i = indexes[0], j = indexes[1]]() {
-        return spc.geometry.vdist(spc.p.at(i).pos, spc.p.at(j).pos).cwiseProduct(dir.cast<double>()).norm();
+        return spc.geometry.vdist(spc.particles.at(i).pos, spc.particles.at(j).pos)
+            .cwiseProduct(dir.cast<double>())
+            .norm();
     };
 }
 void MoleculeProperty::selectGyrationRadius(Space& spc) {
@@ -325,8 +329,10 @@ void MoleculeProperty::selectMassCenterDistance(const json& j, Space& spc) {
     assert(indexes.size() > 1 && "An array of 2 or 4 indexes should be specified.");
     if (indexes.size() == 4) {
         function = [&spc, dir = direction, i = indexes[0], j = indexes[1] + 1, k = indexes[2], l = indexes[3] + 1]() {
-            auto cm1 = Geometry::massCenter(spc.p.begin() + i, spc.p.begin() + j, spc.geometry.getBoundaryFunc());
-            auto cm2 = Geometry::massCenter(spc.p.begin() + k, spc.p.begin() + l, spc.geometry.getBoundaryFunc());
+            auto cm1 = Geometry::massCenter(spc.particles.begin() + i, spc.particles.begin() + j,
+                                            spc.geometry.getBoundaryFunc());
+            auto cm2 = Geometry::massCenter(spc.particles.begin() + k, spc.particles.begin() + l,
+                                            spc.geometry.getBoundaryFunc());
             return spc.geometry.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).norm();
         };
     } else if (indexes.size() == 2) {

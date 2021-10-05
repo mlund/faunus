@@ -124,8 +124,8 @@ TEST_CASE("[Faunus] Integrator") {
 ForceMoveBase::ForceMoveBase(Space &spc, std::string name, std::string cite,
                              std::shared_ptr<IntegratorBase> integrator, unsigned int nsteps)
     : MoveBase(spc, name, cite), integrator(integrator), number_of_steps(nsteps) {
-    forces.reserve(spc.p.size());
-    velocities.reserve(spc.p.size());
+    forces.reserve(spc.particles.size());
+    velocities.reserve(spc.particles.size());
     resizeForcesAndVelocities();
     repeat = 1;
 }
@@ -215,8 +215,8 @@ TEST_CASE("[Faunus] LangevinDynamics") {
     DummyEnergy energy;
 
     SUBCASE("Velocity and force initialization") {
-        spc.p.resize(10);                                        // 10 particles in total
-        spc.groups.emplace_back(spc.p.begin(), spc.p.end() - 1); // 9 active particles
+        spc.particles.resize(10);                                                // 10 particles in total
+        spc.groups.emplace_back(spc.particles.begin(), spc.particles.end() - 1); // 9 active particles
         LangevinDynamics ld(spc, energy);
         CHECK(ld.getForces().capacity() >= 10);
         CHECK(ld.getVelocities().capacity() >= 10);

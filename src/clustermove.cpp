@@ -154,7 +154,7 @@ std::optional<size_t> FindCluster::findSeed(Random &random) {
  *          can be safely rotated in a PBC environment
  */
 std::pair<std::vector<size_t>, bool> FindCluster::findCluster(size_t seed_index) {
-    assert(seed_index < spc.p.size());
+    assert(seed_index < spc.particles.size());
     std::set<size_t> pool(molecule_index.begin(), molecule_index.end());
     assert(pool.count(seed_index) == 1);
 

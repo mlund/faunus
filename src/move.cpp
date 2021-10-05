@@ -188,7 +188,7 @@ void AtomicTranslateRotate::groupToDisk(const Space::GroupType& group) const {
 }
 
 void AtomicTranslateRotate::_move(Change &change) {
-    if (auto particle = randomAtom(); particle != spc.p.end()) {
+    if (auto particle = randomAtom(); particle != spc.particles.end()) {
         latest_particle = particle;
         const auto translational_displacement = particle->traits().dp;
         const auto rotational_displacement = particle->traits().dprot;
@@ -208,7 +208,7 @@ void AtomicTranslateRotate::_move(Change &change) {
             change.groups.push_back(cdata); // add to list of moved groups
         }
     } else {
-        latest_particle = spc.p.end();
+        latest_particle = spc.particles.end();
         latest_displacement_squared = 0.0; // no particle found --> no movement
     }
 }
@@ -240,7 +240,7 @@ AtomicTranslateRotate::AtomicTranslateRotate(Space& spc, const Energy::Hamiltoni
  */
 ParticleVector::iterator AtomicTranslateRotate::randomAtom() {
     assert(molid >= 0);
-    auto particle = spc.p.end(); // particle iterator
+    auto particle = spc.particles.end(); // particle iterator
     auto selection = (Faunus::molecules[molid].atomic) ? Space::Selection::ALL : Space::Selection::ACTIVE;
     auto mollist = spc.findMolecules(molid, selection);
     if (auto group = slump.sample(mollist.begin(), mollist.end()); group != mollist.end()) { // random molecule
@@ -260,7 +260,7 @@ ParticleVector::iterator AtomicTranslateRotate::randomAtom() {
  */
 void AtomicTranslateRotate::sampleEnergyHistogram() {
     if (energy_resolution > 0.0) {
-        assert(latest_particle != spc.p.end());
+        assert(latest_particle != spc.particles.end());
         const auto particle_energy =
             std::accumulate(hamiltonian.latestEnergies().begin(), hamiltonian.latestEnergies().end(), 0.0);
         auto& particle_histogram =
@@ -409,14 +409,14 @@ void ParallelTempering::exchangeState(Change &change) {
     assert(partner != -1);
     auto old_volume = spc.geometry.getVolume();
     particle_transmitter.sendExtra.at(VOLUME) = old_volume;      // copy current volume for sending
-    partner_particles->resize(spc.p.size());                     // temparary storage
+    partner_particles->resize(spc.particles.size());             // temparary storage
     particle_transmitter.recv(mpi, partner, *partner_particles); // receive particles
-    particle_transmitter.send(mpi, spc.p, partner);              // send everything
+    particle_transmitter.send(mpi, spc.particles, partner);      // send everything
     particle_transmitter.waitrecv();
     particle_transmitter.waitsend();
 
     auto new_volume = particle_transmitter.recvExtra.at(VOLUME);
-    if (new_volume < very_small_volume || spc.p.size() != partner_particles->size()) {
+    if (new_volume < very_small_volume || spc.particles.size() != partner_particles->size()) {
         MPI_Abort(mpi.comm, 1);
     } else {
         change.everything = true;
@@ -424,7 +424,7 @@ void ParallelTempering::exchangeState(Change &change) {
             change.volume_change = true;
             spc.geometry.setVolume(new_volume, volume_scaling_method);
         }
-        spc.updateParticles(partner_particles->begin(), partner_particles->end(), spc.p.begin());
+        spc.updateParticles(partner_particles->begin(), partner_particles->end(), spc.particles.begin());
     }
 }
 
@@ -503,7 +503,7 @@ ParallelTempering::ParallelTempering(Space &spc, MPI::MPIController &mpi)
         throw std::runtime_error(name + " requires two or more MPI processes");
     }
     partner_particles = std::make_unique<ParticleVector>();
-    partner_particles->reserve(spc.p.size());
+    partner_particles->reserve(spc.particles.size());
     particle_transmitter.recvExtra.resize(1);
     particle_transmitter.sendExtra.resize(1);
 }
@@ -575,14 +575,14 @@ void ChargeMove::_to_json(json &j) const {
 void ChargeMove::_from_json(const json &j) {
     dq = j.at("dq").get<double>();
     atomIndex = j.at("index").get<int>();
-    auto git = spc.findGroupContaining(spc.p.at(atomIndex));                 // group containing atomIndex
+    auto git = spc.findGroupContaining(spc.particles.at(atomIndex));         // group containing atomIndex
     cdata.group_index = std::distance(spc.groups.begin(), git);              // integer *index* of moved group
     cdata.relative_atom_indices[0] =
-        std::distance(git->begin(), spc.p.begin() + atomIndex); // index of particle rel. to group
+        std::distance(git->begin(), spc.particles.begin() + atomIndex); // index of particle rel. to group
 }
 void ChargeMove::_move(Change &change) {
     if (dq > 0) {
-        auto& p = spc.p.at(atomIndex); // refence to particle
+        auto& p = spc.particles.at(atomIndex); // refence to particle
         double qold = p.charge;
         p.charge += dq * (slump() - 0.5);
         deltaq = p.charge - qold;
@@ -851,7 +851,7 @@ void QuadrantJump::_move(Change &change) {
             assert(it->id == molid);
             Point oldcm = it->cm;
             if (index.size() == 2) {
-                auto cm_O = Geometry::massCenter(spc.p.begin() + index[0], spc.p.begin() + index[1] + 1,
+                auto cm_O = Geometry::massCenter(spc.particles.begin() + index[0], spc.particles.begin() + index[1] + 1,
                                                  spc.geometry.getBoundaryFunc());
                 it->translate(-2 * spc.geometry.vdist(oldcm, cm_O).cwiseProduct(dir.cast<double>()),
                               spc.geometry.getBoundaryFunc());
@@ -911,12 +911,12 @@ ParticleVector::iterator AtomicSwapCharge::randomAtom() {
             return p;
         }
     }
-    return spc.p.end();
+    return spc.particles.end();
 }
 void AtomicSwapCharge::_move(Change &change) {
     _sqd = 0.0;
     auto p = randomAtom();
-    if (p != spc.p.end()) {
+    if (p != spc.particles.end()) {
         // auto &g = spc.groups[cdata.index];
         double oldcharge = p->charge;
         p->charge = fabs(oldcharge - 1);
@@ -1317,7 +1317,7 @@ void ConformationSwap::_move(Change& change) {
     auto groups = spc.findMolecules(molid, Space::Selection::ACTIVE);
     if (auto group = slump.sample(groups.begin(), groups.end()); group != groups.end()) {
         inserter.offset = group->cm;                                         // insert on top of mass center
-        auto particles = inserter(spc.geometry, Faunus::molecules[molid], spc.p); // new conformation
+        auto particles = inserter(spc.geometry, Faunus::molecules[molid], spc.particles); // new conformation
         if (particles.size() == group->size()) {
             checkMassCenterDrift(group->cm, particles); // throws if not OK
             copyConformation(particles, group->begin());

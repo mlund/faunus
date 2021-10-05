@@ -238,7 +238,7 @@ PYBIND11_MODULE(pyfaunus, m)
     py::class_<Space>(m, "Space")
         .def(py::init<>())
         .def_readwrite("geo", &Space::geometry)
-        .def_readwrite("p", &Space::p)
+        .def_readwrite("particles", &Space::particles)
         .def_readwrite("groups", &Space::groups)
         .def("findMolecules", &Space::findMolecules)
         .def("from_dict", [](Space& spc, py::dict dict) { from_json(dict2json(dict), spc); });

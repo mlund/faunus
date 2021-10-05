@@ -213,11 +213,11 @@ void PolicyIonIon::updateComplex(EwaldData& d, Change& change, Space::GroupVecto
 TEST_CASE("[Faunus] Ewald - IonIonPolicy") {
     using doctest::Approx;
     Space spc;
-    spc.p.resize(2);
+    spc.particles.resize(2);
     spc.geometry = R"( {"type": "cuboid", "length": 10} )"_json;
-    spc.p[0] = R"( {"pos": [0,0,0], "q": 1.0} )"_json;
-    spc.p[1] = R"( {"pos": [1,0,0], "q": -1.0} )"_json;
-    Group<Particle> g(spc.p.begin(), spc.p.end());
+    spc.particles[0] = R"( {"pos": [0,0,0], "q": 1.0} )"_json;
+    spc.particles[1] = R"( {"pos": [1,0,0], "q": -1.0} )"_json;
+    Group<Particle> g(spc.particles.begin(), spc.particles.end());
     spc.groups.push_back(g);
 
     EwaldData data = R"({
@@ -270,12 +270,12 @@ TEST_CASE("[Faunus] Ewald - IonIonPolicy") {
 TEST_CASE("[Faunus] Ewald - IonIonPolicy Benchmarks") {
     Space spc;
     spc.geometry = R"( {"type": "cuboid", "length": 80} )"_json;
-    spc.p.resize(200);
-    for (auto &p : spc.p) {
+    spc.particles.resize(200);
+    for (auto& p : spc.particles) {
         p.charge = 1.0;
         p.pos = (random() - 0.5) * spc.geometry.getLength();
     }
-    Group<Particle> g(spc.p.begin(), spc.p.end());
+    Group<Particle> g(spc.particles.begin(), spc.particles.end());
     spc.groups.push_back(g);
 
     EwaldData data(R"({
@@ -512,12 +512,12 @@ double Ewald::energy(Change &change) {
  * before addition.
  */
 void Ewald::force(std::vector<Point> &forces) {
-    assert(forces.size() == spc.p.size());
+    assert(forces.size() == spc.particles.size());
     const double volume = spc.geometry.getVolume();
 
     // Surface contribution
     Point total_dipole_moment = {0.0, 0.0, 0.0};
-    for (auto &particle : spc.p) {
+    for (auto& particle : spc.particles) {
         auto mu = particle.hasExtension() ? particle.getExt().mu * particle.getExt().mulen : Point(0, 0, 0);
         total_dipole_moment += particle.pos * particle.charge + mu;
     }
@@ -527,7 +527,7 @@ void Ewald::force(std::vector<Point> &forces) {
     assert(data.k_vectors.cols() == data.Q_ion.size());
     data.Q_dipole.resize(data.Q_ion.size());
 
-    for (auto &particle : spc.p) { // loop over particles
+    for (auto& particle : spc.particles) { // loop over particles
         (*force) = total_dipole_moment * particle.charge / (2.0 * data.surface_dielectric_constant + 1.0);
         double mu_scalar = particle.hasExtension() ? particle.getExt().mulen : 0.0;
         std::complex<double> qmu(mu_scalar, particle.charge);
@@ -585,7 +585,7 @@ double Example2D::energy(Change &) {
     return 1e10;
 }
 
-Example2D::Example2D(const json &j, Space &spc) : particle(spc.p.at(0).pos) {
+Example2D::Example2D(const json& j, Space& spc) : particle(spc.particles.at(0).pos) {
     scale_energy = j.value("scale", 1.0);
     use_2d = j.value("2D", true);
     name = "Example2D";
@@ -741,7 +741,7 @@ void Bonded::updateGroupBonds(const Space::GroupType& group) {
     for (const auto& generic_bond : group.traits().bonds) { // generic bonds defined in topology
         const auto& bond = bonds.template push_back<Potential::BondData>(generic_bond->clone());
         bond->shiftIndices(first_particle_index); // shift to absolute particle index
-        bond->setEnergyFunction(spc.p);
+        bond->setEnergyFunction(spc.particles);
     }
 }
 
@@ -771,7 +771,7 @@ Bonded::Bonded(const Space& spc, const BondVector& external_bonds = BondVector()
     name = "bonded";
     updateInternalBonds();
     for (auto& bond : this->external_bonds) {
-        bond->setEnergyFunction(spc.p);
+        bond->setEnergyFunction(spc.particles);
     }
 }
 
@@ -1180,8 +1180,8 @@ TEST_CASE("[Faunus] FreeSASA") {
         "insertmolecules": [ { "M": { "N": 1 } } ]
     })"_json;
     Space spc = j;
-    spc.p.at(0).pos = {0.0, 0.0, 0.0};
-    spc.p.at(1).pos = {0.0, 0.0, 20.0};
+    spc.particles.at(0).pos = {0.0, 0.0, 0.0};
+    spc.particles.at(1).pos = {0.0, 0.0, 20.0};
 
     SUBCASE("Separated atoms") {
         SASAEnergy sasa(spc, 1.5_molar, 1.4_angstrom);
@@ -1193,7 +1193,7 @@ TEST_CASE("[Faunus] FreeSASA") {
         std::vector<double> distance = {0.0, 2.5, 5.0, 7.5, 10.0};
         std::vector<double> sasa_energy = {87.3576, 100.4612, 127.3487, 138.4422, 138.4422};
         for (size_t i = 0; i < distance.size(); ++i) {
-            spc.p.at(1).pos = {0.0, 0.0, distance.at(i)};
+            spc.particles.at(1).pos = {0.0, 0.0, distance.at(i)};
             CHECK(sasa.energy(change) == Approx(sasa_energy.at(i)).epsilon(0.02));
         }
     }

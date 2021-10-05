@@ -117,7 +117,7 @@ void SpeciationMove::atomicSwap(Change &change) {
  * @warning Directly modifying the groups in spc and otherspc might interfere with
  *          a future neighbour list implementation.
  */
-Change::GroupChange SpeciationMove::contractAtomicGroup(Space::Tgroup& target, Space::Tgroup& old_target,
+Change::GroupChange SpeciationMove::contractAtomicGroup(Space::GroupType& target, Space::GroupType& old_target,
                                                         int number_to_delete) {
     assert(target.atomic);
     Change::GroupChange change_data; // describes what has changed
@@ -153,19 +153,19 @@ Change::GroupChange SpeciationMove::contractAtomicGroup(Space::Tgroup& target, S
  * When deactivated, the molecule is made whole, i.e. periodic boundary conditions
  * are removed as this cannot be achieved later if the system volume changes.
  */
-Change::GroupChange SpeciationMove::deactivateMolecularGroup(Space::Tgroup& target) {
+Change::GroupChange SpeciationMove::deactivateMolecularGroup(Space::GroupType& target) {
     assert(target.atomic == false); // group must be molecular
     assert(not target.empty());
     assert(target.size() == target.capacity()); // group must be active
 
-    target.unwrap(spc.geo.getDistanceFunc()); // when in storage, remove PBC
+    target.unwrap(spc.geometry.getDistanceFunc()); // when in storage, remove PBC
 
     // Store internal bond energy of the deactivated molecule
     for (auto &bond : Faunus::molecules.at(target.id).bonds) {
         auto bond_clone = bond->clone();
         bond_clone->shiftIndices(std::distance(spc.p.begin(), target.begin()));
         bond_clone->setEnergyFunction(spc.p);
-        bond_energy += bond_clone->energyFunc(spc.geo.getDistanceFunc());
+        bond_energy += bond_clone->energyFunc(spc.geometry.getDistanceFunc());
     }
 
     target.deactivate(target.begin(), target.end()); // deactivate whole group
@@ -189,7 +189,7 @@ Change::GroupChange SpeciationMove::deactivateMolecularGroup(Space::Tgroup& targ
  * If the capacity of the group will be exceeded, a warning is issued and
  * the returned Change::data object will be empty.
  */
-Change::GroupChange SpeciationMove::expandAtomicGroup(Space::Tgroup& target, int number_to_insert) {
+Change::GroupChange SpeciationMove::expandAtomicGroup(Space::GroupType& target, int number_to_insert) {
     assert(target.atomic);
 
     Change::GroupChange change_data;
@@ -200,8 +200,8 @@ Change::GroupChange SpeciationMove::expandAtomicGroup(Space::Tgroup& target, int
         for (int i = 0; i < number_to_insert; i++) {
             target.activate(target.end(), target.end() + 1); // activate one particle
             auto last_atom = target.end() - 1;
-            spc.geo.randompos(last_atom->pos, slump);                              // give it a random position
-            spc.geo.getBoundaryFunc()(last_atom->pos);                             // apply PBC if needed
+            spc.geometry.randompos(last_atom->pos, slump);  // give it a random position
+            spc.geometry.getBoundaryFunc()(last_atom->pos); // apply PBC if needed
             change_data.relative_atom_indices.push_back(
                 std::distance(target.begin(), last_atom)); // index relative to group
         }
@@ -216,28 +216,28 @@ Change::GroupChange SpeciationMove::expandAtomicGroup(Space::Tgroup& target, int
  * If the molecule has internal bonds, the bond-energy is calculated to ensure that
  * the bond-energy does not affect the insertion acceptance.
  */
-Change::GroupChange SpeciationMove::activateMolecularGroup(Space::Tgroup& target) {
+Change::GroupChange SpeciationMove::activateMolecularGroup(Space::GroupType& target) {
     assert(not target.atomic);  // must be a molecule group
     assert(target.empty());     // must be inactive
     target.activate(target.inactive().begin(), target.inactive().end()); // activate all particles
     assert(not target.empty());
 
     Point cm = target.cm;
-    spc.geo.randompos(cm, slump);                    // generate random position
-    target.translate(cm, spc.geo.getBoundaryFunc()); // assign random position to mass-center
+    spc.geometry.randompos(cm, slump);                    // generate random position
+    target.translate(cm, spc.geometry.getBoundaryFunc()); // assign random position to mass-center
     Point u = randomUnitVector(slump);               // random unit vector
     Eigen::Quaterniond Q(Eigen::AngleAxisd(2 * pc::pi * (slump() - 0.5), u));
-    target.rotate(Q, spc.geo.getBoundaryFunc()); // assign random orientation
+    target.rotate(Q, spc.geometry.getBoundaryFunc()); // assign random orientation
 
-    assert(spc.geo.sqdist(target.cm, Geometry::massCenter(target.begin(), target.end(), spc.geo.getBoundaryFunc(),
-                                                          -target.cm)) < 1e-9);
+    assert(spc.geometry.sqdist(target.cm, Geometry::massCenter(target.begin(), target.end(),
+                                                               spc.geometry.getBoundaryFunc(), -target.cm)) < 1e-9);
 
     // Store internal bond energy of activated molecule
     for (auto &bond : Faunus::molecules[target.id].bonds) {
         auto bondclone = bond->clone();
         bondclone->shiftIndices(std::distance(spc.p.begin(), target.begin()));
         bondclone->setEnergyFunction(spc.p);
-        bond_energy -= bondclone->energyFunc(spc.geo.getDistanceFunc());
+        bond_energy -= bondclone->energyFunc(spc.geometry.getDistanceFunc());
     }
 
     Change::GroupChange d;                         // describes the changed - used for energy evaluation
@@ -278,7 +278,7 @@ void SpeciationMove::activateAllProducts(Change &change) {
             auto selection =
                 (reaction->only_neutral_molecules) ? Tspace::Selection::INACTIVE_NEUTRAL : Tspace::Selection::INACTIVE;
             auto inactive = spc.findMolecules(molid, selection); // all inactive molecules
-            std::vector<std::reference_wrapper<Tspace::Tgroup>> molecules_to_activate;
+            std::vector<std::reference_wrapper<Tspace::GroupType>> molecules_to_activate;
             std::sample(inactive.begin(), inactive.end(), std::back_inserter(molecules_to_activate), number_to_insert,
                         slump.engine);
             if (molecules_to_activate.size() != number_to_insert) {
@@ -310,7 +310,7 @@ void SpeciationMove::activateAllProducts(Change &change) {
             auto selection =
                 (reaction->only_neutral_molecules) ? Tspace::Selection::INACTIVE_NEUTRAL : Tspace::Selection::INACTIVE;
             auto inactive = spc.findMolecules(molid, selection); // all inactive molecules
-            std::vector<std::reference_wrapper<Tspace::Tgroup>> molecules_to_activate;
+            std::vector<std::reference_wrapper<Tspace::GroupType>> molecules_to_activate;
             std::sample(inactive.begin(), inactive.end(), std::back_inserter(molecules_to_activate), number_to_insert,
                         slump.engine);
             if (molecules_to_activate.size() == number_to_insert) {
@@ -357,7 +357,7 @@ void SpeciationMove::deactivateAllReactants(Change &change) {
             auto selection =
                 (reaction->only_neutral_molecules) ? Tspace::Selection::ACTIVE_NEUTRAL : Tspace::Selection::ACTIVE;
             auto active = spc.findMolecules(molid, selection);
-            std::vector<std::reference_wrapper<Tspace::Tgroup>> molecules_to_deactivate;
+            std::vector<std::reference_wrapper<Tspace::GroupType>> molecules_to_deactivate;
             std::sample(active.begin(), active.end(), std::back_inserter(molecules_to_deactivate), N_delete,
                         slump.engine); // pick random molecules to delete
             if (molecules_to_deactivate.size() != N_delete) {
@@ -385,7 +385,7 @@ void SpeciationMove::deactivateAllReactants(Change &change) {
             auto selection =
                 (reaction->only_neutral_molecules) ? Tspace::Selection::ACTIVE_NEUTRAL : Tspace::Selection::ACTIVE;
             auto active = spc.findMolecules(molid, selection);
-            std::vector<std::reference_wrapper<Tspace::Tgroup>> molecules_to_deactivate;
+            std::vector<std::reference_wrapper<Tspace::GroupType>> molecules_to_deactivate;
             std::sample(active.begin(), active.end(), std::back_inserter(molecules_to_deactivate), N_delete,
                         slump.engine); // pick random molecules to delete
             if (molecules_to_deactivate.size() == N_delete) {

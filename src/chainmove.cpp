@@ -58,9 +58,9 @@ void ChainRotationMove::rotate_segment(double angle) {
         // Uses an implementation from the old Pivot class. The translation of the chain might be unnecessary.
         auto shift_pos = spc.p.at(axis_ndx[0]).pos;
         // chain.unwrap(spc.geo.getDistanceFunc()); // remove pbc
-        chain.translate(-shift_pos, spc.geo.getBoundaryFunc());
+        chain.translate(-shift_pos, spc.geometry.getBoundaryFunc());
         auto origin_pos = spc.p.at(axis_ndx[0]).pos; // != shift_pos because of chain.translate
-        auto axis_pos = spc.geo.vdist(origin_pos, spc.p.at(axis_ndx[1]).pos).normalized();
+        auto axis_pos = spc.geometry.vdist(origin_pos, spc.p.at(axis_ndx[1]).pos).normalized();
         Eigen::Quaterniond Q(Eigen::AngleAxisd(angle, axis_pos));
         auto M = Q.toRotationMatrix();
         for (auto index : segment_ndx) {
@@ -69,10 +69,10 @@ void ChainRotationMove::rotate_segment(double angle) {
             particle.pos = Q * (particle.pos - origin_pos) + origin_pos; // positional rot.
         }
         chain.cm = Geometry::massCenter(chain.begin(), chain.end());
-        chain.translate(shift_pos, spc.geo.getBoundaryFunc());
+        chain.translate(shift_pos, spc.geometry.getBoundaryFunc());
         // chain.wrap(spc.geo.getBoundaryFunc()); // re-apply pbc
         if (box_big_enough()) {
-            sqdispl = spc.geo.sqdist(chain.cm, old_cm); // CM movement
+            sqdispl = spc.geometry.sqdist(chain.cm, old_cm); // CM movement
         }
     }
 }
@@ -92,8 +92,8 @@ void ChainRotationMove::store_change(Change &change) {
 }
 bool ChainRotationMove::box_big_enough() {
     auto &chain = *molecule_iter;
-    auto cm_pbc = Geometry::massCenter(chain.begin(), chain.end(), spc.geo.getBoundaryFunc(), -chain.cm);
-    double cm_diff = spc.geo.sqdist(chain.cm, cm_pbc);
+    auto cm_pbc = Geometry::massCenter(chain.begin(), chain.end(), spc.geometry.getBoundaryFunc(), -chain.cm);
+    double cm_diff = spc.geometry.sqdist(chain.cm, cm_pbc);
     if (cm_diff > 1e-6) {
         small_box_encountered++;
         permit_move = false;

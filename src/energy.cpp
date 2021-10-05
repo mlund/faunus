@@ -164,7 +164,7 @@ void PolicyIonIon::updateBox(EwaldData &d, const Point &box) const {
 /**
  * @todo Add OpenMP pragma to first loop
  */
-void PolicyIonIon::updateComplex(EwaldData &data, Space::Tgvec &groups) const {
+void PolicyIonIon::updateComplex(EwaldData& data, Space::GroupVector& groups) const {
     for (int k = 0; k < data.k_vectors.cols(); k++) {
         const Point &q = data.k_vectors.col(k);
         EwaldData::Tcomplex Q(0, 0);
@@ -179,14 +179,15 @@ void PolicyIonIon::updateComplex(EwaldData &data, Space::Tgvec &groups) const {
     }
 }
 
-void PolicyIonIonEigen::updateComplex(EwaldData &data, Space::Tgvec &groups) const {
+void PolicyIonIonEigen::updateComplex(EwaldData& data, Space::GroupVector& groups) const {
     auto [pos, charge] = mapGroupsToEigen(groups);                             // throws if inactive particles
     Eigen::MatrixXd kr = pos.matrix() * data.k_vectors;                        // ( N x 3 ) * ( 3 x K ) = N x K
     data.Q_ion.real() = (kr.array().cos().colwise() * charge).colwise().sum(); // real part of 'Q^q', see eq. 25 in ref.
     data.Q_ion.imag() = kr.array().sin().colwise().sum(); // imaginary part of 'Q^q', see eq. 25 in ref.
 }
 
-void PolicyIonIon::updateComplex(EwaldData &d, Change &change, Space::Tgvec &groups, Space::Tgvec &oldgroups) const {
+void PolicyIonIon::updateComplex(EwaldData& d, Change& change, Space::GroupVector& groups,
+                                 Space::GroupVector& oldgroups) const {
     assert(groups.size() == oldgroups.size());
     for (int k = 0; k < d.k_vectors.cols(); k++) {
         auto &Q = d.Q_ion[k];
@@ -213,7 +214,7 @@ TEST_CASE("[Faunus] Ewald - IonIonPolicy") {
     using doctest::Approx;
     Space spc;
     spc.p.resize(2);
-    spc.geo = R"( {"type": "cuboid", "length": 10} )"_json;
+    spc.geometry = R"( {"type": "cuboid", "length": 10} )"_json;
     spc.p[0] = R"( {"pos": [0,0,0], "q": 1.0} )"_json;
     spc.p[1] = R"( {"pos": [1,0,0], "q": -1.0} )"_json;
     Group<Particle> g(spc.p.begin(), spc.p.end());
@@ -228,7 +229,7 @@ TEST_CASE("[Faunus] Ewald - IonIonPolicy") {
 
     SUBCASE("PBC") {
         PolicyIonIon ionion;
-        ionion.updateBox(data, spc.geo.getLength());
+        ionion.updateBox(data, spc.geometry.getLength());
         ionion.updateComplex(data, spc.groups);
         CHECK(ionion.selfEnergy(data, c, spc.groups) == Approx(-1.0092530088080642 * data.bjerrum_length));
         CHECK(ionion.surfaceEnergy(data, c, spc.groups) == Approx(0.0020943951023931952 * data.bjerrum_length));
@@ -237,7 +238,7 @@ TEST_CASE("[Faunus] Ewald - IonIonPolicy") {
 
     SUBCASE("PBCEigen") {
         PolicyIonIonEigen ionion;
-        ionion.updateBox(data, spc.geo.getLength());
+        ionion.updateBox(data, spc.geometry.getLength());
         ionion.updateComplex(data, spc.groups);
         CHECK(ionion.selfEnergy(data, c, spc.groups) == Approx(-1.0092530088080642 * data.bjerrum_length));
         CHECK(ionion.surfaceEnergy(data, c, spc.groups) == Approx(0.0020943951023931952 * data.bjerrum_length));
@@ -247,7 +248,7 @@ TEST_CASE("[Faunus] Ewald - IonIonPolicy") {
     SUBCASE("IPBC") {
         PolicyIonIonIPBC ionion;
         data.policy = EwaldData::IPBC;
-        ionion.updateBox(data, spc.geo.getLength());
+        ionion.updateBox(data, spc.geometry.getLength());
         ionion.updateComplex(data, spc.groups);
         CHECK(ionion.selfEnergy(data, c, spc.groups) == Approx(-1.0092530088080642 * data.bjerrum_length));
         CHECK(ionion.surfaceEnergy(data, c, spc.groups) == Approx(0.0020943951023931952 * data.bjerrum_length));
@@ -268,11 +269,11 @@ TEST_CASE("[Faunus] Ewald - IonIonPolicy") {
 
 TEST_CASE("[Faunus] Ewald - IonIonPolicy Benchmarks") {
     Space spc;
-    spc.geo = R"( {"type": "cuboid", "length": 80} )"_json;
+    spc.geometry = R"( {"type": "cuboid", "length": 80} )"_json;
     spc.p.resize(200);
     for (auto &p : spc.p) {
         p.charge = 1.0;
-        p.pos = (random() - 0.5) * spc.geo.getLength();
+        p.pos = (random() - 0.5) * spc.geometry.getLength();
     }
     Group<Particle> g(spc.p.begin(), spc.p.end());
     spc.groups.push_back(g);
@@ -287,8 +288,8 @@ TEST_CASE("[Faunus] Ewald - IonIonPolicy Benchmarks") {
     {
         PolicyIonIon pbc;
         PolicyIonIonEigen pbc_eigen;
-        pbc.updateBox(data, spc.geo.getLength());
-        pbc_eigen.updateBox(data, spc.geo.getLength());
+        pbc.updateBox(data, spc.geometry.getLength());
+        pbc_eigen.updateBox(data, spc.geometry.getLength());
 
         ankerl::nanobench::Config bench;
         bench.minEpochIterations(20);
@@ -356,7 +357,7 @@ void PolicyIonIonIPBC::updateBox(EwaldData &data, const Point &box) const {
     }
 }
 
-void PolicyIonIonIPBC::updateComplex(EwaldData &d, Space::Tgvec &groups) const {
+void PolicyIonIonIPBC::updateComplex(EwaldData& d, Space::GroupVector& groups) const {
     assert(d.policy == EwaldData::IPBC or d.policy == EwaldData::IPBCEigen);
     for (int k = 0; k < d.k_vectors.cols(); k++) {
         const Point &q = d.k_vectors.col(k);
@@ -370,7 +371,7 @@ void PolicyIonIonIPBC::updateComplex(EwaldData &d, Space::Tgvec &groups) const {
     }
 }
 
-void PolicyIonIonIPBCEigen::updateComplex(EwaldData &d, Space::Tgvec &groups) const {
+void PolicyIonIonIPBCEigen::updateComplex(EwaldData& d, Space::GroupVector& groups) const {
     assert(d.policy == EwaldData::IPBC or d.policy == EwaldData::IPBCEigen);
     auto [pos, charge] = mapGroupsToEigen(groups); // throws if inactive particles
     d.Q_ion.real() = (d.k_vectors.array().cwiseProduct(pos).array().cos().prod() * charge)
@@ -378,8 +379,8 @@ void PolicyIonIonIPBCEigen::updateComplex(EwaldData &d, Space::Tgvec &groups) co
                          .sum(); // see eq. 2 in doi:10/css8
 }
 
-void PolicyIonIonIPBC::updateComplex(EwaldData &d, Change &change, Space::Tgvec &groups,
-                                     Space::Tgvec &oldgroups) const {
+void PolicyIonIonIPBC::updateComplex(EwaldData& d, Change& change, Space::GroupVector& groups,
+                                     Space::GroupVector& oldgroups) const {
     assert(d.policy == EwaldData::IPBC or d.policy == EwaldData::IPBCEigen);
     assert(groups.size() == oldgroups.size());
 
@@ -399,7 +400,7 @@ void PolicyIonIonIPBC::updateComplex(EwaldData &d, Change &change, Space::Tgvec 
     }
 }
 
-double PolicyIonIon::surfaceEnergy(const EwaldData &d, Change &change, Space::Tgvec &groups) {
+double PolicyIonIon::surfaceEnergy(const EwaldData& d, Change& change, Space::GroupVector& groups) {
     if (d.const_inf < 0.5)
         return 0;
     Point qr(0, 0, 0);
@@ -424,7 +425,7 @@ double PolicyIonIon::surfaceEnergy(const EwaldData &d, Change &change, Space::Tg
            d.bjerrum_length;
 }
 
-double PolicyIonIon::selfEnergy(const EwaldData &d, Change &change, Space::Tgvec &groups) {
+double PolicyIonIon::selfEnergy(const EwaldData& d, Change& change, Space::GroupVector& groups) {
     double charges_squared = 0;
     double charge_total = 0;
     if (change.matter_change) {
@@ -477,7 +478,7 @@ Ewald::Ewald(const json &j, Space &spc) : data(j), spc(spc) {
 }
 
 void Ewald::init() {
-    policy->updateBox(data, spc.geo.getLength());
+    policy->updateBox(data, spc.geometry.getLength());
     policy->updateComplex(data, spc.groups); // brute force. todo: be selective
 }
 
@@ -487,7 +488,7 @@ double Ewald::energy(Change &change) {
         // If the state is NEW_MONTE_CARLO_STATE (trial state), then update all k-vectors
         if (state == MonteCarloState::TRIAL) {
             if (change.everything or change.volume_change) { // everything changes
-                policy->updateBox(data, spc.geo.getLength());
+                policy->updateBox(data, spc.geometry.getLength());
                 policy->updateComplex(data, spc.groups); // update all (expensive!)
             } else {                                     // much cheaper partial update
                 if (change.groups.size() > 0) {
@@ -512,7 +513,7 @@ double Ewald::energy(Change &change) {
  */
 void Ewald::force(std::vector<Point> &forces) {
     assert(forces.size() == spc.p.size());
-    const double volume = spc.geo.getVolume();
+    const double volume = spc.geometry.getVolume();
 
     // Surface contribution
     Point total_dipole_moment = {0.0, 0.0, 0.0};
@@ -595,7 +596,7 @@ void Example2D::to_json(json &j) const {
 }
 
 double ContainerOverlap::energy(Change& change) {
-    if (change && spc.geo.type != Geometry::Variant::CUBOID) { // no need to check in PBC systems
+    if (change && spc.geometry.type != Geometry::Variant::CUBOID) { // no need to check in PBC systems
         // *all* groups
         if (change.volume_change or change.everything) {
             return energyOfAllGroups();
@@ -616,7 +617,7 @@ double ContainerOverlap::energy(Change& change) {
 double ContainerOverlap::energyOfAllGroups() const {
     auto positions = spc.groups | ranges::cpp20::views::join | ranges::cpp20::views::transform(&Particle::pos);
     bool outside = std::any_of(positions.begin(), positions.end(),
-                               [&](const auto& position) { return spc.geo.collision(position); });
+                               [&](const auto& position) { return spc.geometry.collision(position); });
     return outside ? pc::infty : 0.0;
 }
 
@@ -629,12 +630,12 @@ bool ContainerOverlap::groupIsOutsideContainer(const Change::GroupChange& group_
     // *all* atoms
     if (group_change.all) {
         return std::any_of(group.begin(), group.end(),
-                           [&](auto const& particle) { return spc.geo.collision(particle.pos); });
+                           [&](auto const& particle) { return spc.geometry.collision(particle.pos); });
     }
     // *subset* of atoms
     for (const auto particle_index : group_change.relative_atom_indices) {
         if (particle_index < group.size()) { // condition due to speciation move?
-            if (spc.geo.collision((group.begin() + particle_index)->pos)) {
+            if (spc.geometry.collision((group.begin() + particle_index)->pos)) {
                 return true;
             }
         }
@@ -676,7 +677,7 @@ double Isobaric::energy(Change& change) {
         auto particles_per_group = spc.groups | ranges::cpp20::views::filter(group_is_active) |
                                    ranges::cpp20::views::transform(count_particles);
         auto number_of_particles = std::accumulate(particles_per_group.begin(), particles_per_group.end(), 0);
-        const auto volume = spc.geo.getVolume();
+        const auto volume = spc.geometry.getVolume();
         return pressure * volume - static_cast<double>(number_of_particles + 1) * std::log(volume);
     }
     return 0.0;
@@ -733,7 +734,7 @@ void Constrain::to_json(json &j) const {
     j["type"] = type;
 }
 
-void Bonded::updateGroupBonds(const Space::Tgroup& group) {
+void Bonded::updateGroupBonds(const Space::GroupType& group) {
     const auto first_particle_index = spc.getFirstParticleIndex(group);
     const auto group_index = spc.getGroupIndex(group);
     auto& bonds = internal_bonds[group_index];              // access or insert
@@ -754,7 +755,7 @@ void Bonded::updateInternalBonds() {
 
 double Bonded::sumBondEnergy(const Bonded::BondVector& bonds) const {
 #if (defined(__clang__) && __clang_major__ >= 10) || (defined(__GNUC__) && __GNUC__ >= 10)
-    auto bond_energy = [&](const auto& bond) { return bond->energyFunc(spc.geo.getDistanceFunc()); };
+    auto bond_energy = [&](const auto& bond) { return bond->energyFunc(spc.geometry.getDistanceFunc()); };
     return std::transform_reduce(bonds.begin(), bonds.end(), 0.0, std::plus<>(), bond_energy);
 #else
     double energy = 0.0;
@@ -839,7 +840,7 @@ double Bonded::internalGroupEnergy(const Change::GroupChange& changed) {
  * @warning Untested
  */
 void Bonded::force(std::vector<Point>& forces) {
-    auto distance_function = spc.geo.getDistanceFunc();
+    auto distance_function = spc.geometry.getDistanceFunc();
 
     auto calculateForces = [&](const auto& bond) {
         if (!bond->hasForceFunction()) {
@@ -906,7 +907,7 @@ Hamiltonian::Hamiltonian(Space& spc, const json& j) : energy_terms(this->vec) {
     }
 
     // add container overlap energy for non-cuboidal geometries
-    if (spc.geo.type != Geometry::Variant::CUBOID) {
+    if (spc.geometry.type != Geometry::Variant::CUBOID) {
         emplace_back<Energy::ContainerOverlap>(spc);
         faunus_logger->debug("hamiltonian expanded with {}", energy_terms.back()->name);
     }
@@ -1081,7 +1082,7 @@ SASAEnergy::SASAEnergy(const Space& spc, const double cosolute_concentration, co
     citation_information = "doi:10.12688/f1000research.7931.1";
     parameters->probe_radius = probe_radius;
     init();
-    if (spc.geo.asSimpleGeometry()->boundary_conditions.isPeriodic().sum() != 0) {
+    if (spc.geometry.asSimpleGeometry()->boundary_conditions.isPeriodic().sum() != 0) {
         faunus_logger->error("PBC applied, but PBC not implemented for FreeSASA. Expect unphysical results.");
     }
 }
@@ -1203,7 +1204,7 @@ TEST_CASE("[Faunus] FreeSASA") {
 
 //==================== GroupCutoff ====================
 
-GroupCutoff::GroupCutoff(Space::Tgeometry &geometry) : geometry(geometry) {}
+GroupCutoff::GroupCutoff(Space::GeometryType& geometry) : geometry(geometry) {}
 
 void GroupCutoff::setSingleCutoff(const double cutoff) {
     if (cutoff < std::sqrt(pc::max_value)) {

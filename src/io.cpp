@@ -570,13 +570,13 @@ TEST_CASE("[Faunus] StructureFileReader and StructureFileWriter") {
 
     auto io_roundtrip = [&](StructureFileReader& reader, StructureFileWriter& writer) {
         std::stringstream stream;
-        writer.save(stream, spc.p.begin(), spc.p.end(), spc.geo.getLength());
+        writer.save(stream, spc.p.begin(), spc.p.end(), spc.geometry.getLength());
         stream.seekg(0); // rewind
         reader.load(stream);
         if (reader.box_dimension_support) {
-            CHECK(reader.box_length.x() == Approx(spc.geo.getLength().x()));
-            CHECK(reader.box_length.y() == Approx(spc.geo.getLength().y()));
-            CHECK(reader.box_length.z() == Approx(spc.geo.getLength().z()));
+            CHECK(reader.box_length.x() == Approx(spc.geometry.getLength().x()));
+            CHECK(reader.box_length.y() == Approx(spc.geometry.getLength().y()));
+            CHECK(reader.box_length.z() == Approx(spc.geometry.getLength().z()));
         }
         CHECK(reader.particles.size() == 4);
         for (int i = 0; i < 4; i++) {

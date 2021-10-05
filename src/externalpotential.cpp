@@ -203,7 +203,7 @@ ExternalAkesson::ExternalAkesson(const json &j, Tspace &spc) : ExternalPotential
     fixed_potential = j.value("fixed", false);
     phi_update_interval = j.value("nphi", 10);
 
-    half_box_length_z = 0.5 * spc.geo.getLength().z();
+    half_box_length_z = 0.5 * spc.geometry.getLength().z();
     bjerrum_length = pc::bjerrumLength(dielectric_constant);
 
     dz = j.value("dz", 0.2); // read z resolution
@@ -213,7 +213,7 @@ ExternalAkesson::ExternalAkesson(const json &j, Tspace &spc) : ExternalPotential
 
     filename = j.value("file", "mfcorr.dat"s);
     load_rho();
-    externalPotentialFunc = [&phi = phi](const typename Tspace::Tparticle &p) { return p.charge * phi(p.pos.z()); };
+    externalPotentialFunc = [&phi = phi](const Particle& particle) { return particle.charge * phi(particle.pos.z()); };
 }
 
 double ExternalAkesson::energy(Change &change) {
@@ -293,7 +293,7 @@ void ExternalAkesson::sync(Energybase* energybase, const Change&) {
 
 void ExternalAkesson::update_rho() {
     num_rho_updates++;
-    Point L = space.geo.getLength();
+    Point L = space.geometry.getLength();
     if (L.x() not_eq L.y() or 0.5 * L.z() != half_box_length_z) {
         throw std::runtime_error("Requires box Lx=Ly and Lz=const.");
     }
@@ -310,7 +310,7 @@ void ExternalAkesson::update_rho() {
 }
 
 void ExternalAkesson::update_phi() {
-    auto L = space.geo.getLength();
+    auto L = space.geometry.getLength();
     double a = 0.5 * L.x();
     for (double z = -half_box_length_z; z <= half_box_length_z; z += dz) {
         double s = 0;
@@ -397,7 +397,7 @@ CustomExternal::CustomExternal(const json &j, Space &spc) : ExternalPotential(j,
     name = "customexternal";
     auto &constants = json_input_backup["constants"];
     if (std::string function = j.at("function"); function == "gouychapman") {
-        externalPotentialFunc = createGouyChapmanPotential(constants, spc.geo);
+        externalPotentialFunc = createGouyChapmanPotential(constants, spc.geometry);
     } else if (function == "some-new-potential") { // add new potentials here
         // func = createSomeNewPotential(...);
     } else { // nothing found above; assume `function` is an expression

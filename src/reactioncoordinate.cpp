@@ -90,18 +90,18 @@ SystemProperty::SystemProperty(const json &j, Space &spc) : ReactionCoordinateBa
     name = "system";
     property = j.at("property").get<std::string>();
     if (property == "V") {
-        function = [&geometry = spc.geo]() { return geometry.getVolume(); };
+        function = [&geometry = spc.geometry]() { return geometry.getVolume(); };
     } else if (property == "Lx") {
-        function = [&geometry = spc.geo]() { return geometry.getLength().x(); };
+        function = [&geometry = spc.geometry]() { return geometry.getLength().x(); };
     } else if (property == "Ly") {
-        function = [&geometry = spc.geo]() { return geometry.getLength().y(); };
+        function = [&geometry = spc.geometry]() { return geometry.getLength().y(); };
     } else if (property == "Lz" or property == "height") {
-        function = [&geometry = spc.geo]() { return geometry.getLength().z(); };
+        function = [&geometry = spc.geometry]() { return geometry.getLength().z(); };
     } else if (property == "radius") {
-        if (spc.geo.type == Geometry::Variant::CUBOID or spc.geo.type == Geometry::Variant::SLIT) {
+        if (spc.geometry.type == Geometry::Variant::CUBOID or spc.geometry.type == Geometry::Variant::SLIT) {
             faunus_logger->warn("`radius` coordinate unavailable for geometry");
         } else {
-            function = [&geometry = spc.geo]() { return 0.5 * geometry.getLength().x(); };
+            function = [&geometry = spc.geometry]() { return 0.5 * geometry.getLength().x(); };
         }
     } else if (property == "Q") { // system net charge
         function = [&groups = spc.groups]() {
@@ -130,7 +130,7 @@ SystemProperty::SystemProperty(const json &j, Space &spc) : ReactionCoordinateBa
         };
     } else if (property == "N") { // number of particles
         function = [&groups = spc.groups]() {
-            auto sizes = groups | ranges::cpp20::views::transform(&Space::Tgroup::size);
+            auto sizes = groups | ranges::cpp20::views::transform(&Space::GroupType::size);
             return static_cast<double>(std::accumulate(sizes.begin(), sizes.end(), 0U));
         };
     }
@@ -196,7 +196,7 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordina
     if (index >= spc.groups.size()) {
         throw ConfigurationError("invalid index");
     }
-    auto b = spc.geo.getBoundaryFunc();
+    auto b = spc.geometry.getBoundaryFunc();
     auto& group = spc.groups.at(index);
 
     property = j.at("property").get<std::string>();
@@ -225,7 +225,7 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordina
         function = [&group, b]() { return dipoleMoment(group.begin(), group.end(), b).norm(); };
     } else if (property == "end2end") {
         function = [&spc, &group]() {
-            return std::sqrt(spc.geo.sqdist(group.begin()->pos, std::prev(group.end())->pos));
+            return std::sqrt(spc.geometry.sqdist(group.begin()->pos, std::prev(group.end())->pos));
         };
     } else if (property == "Rg") {
         selectGyrationRadius(spc);
@@ -260,21 +260,22 @@ void MoleculeProperty::selectLengthOverRadiusRatio(const json& j, Space& spc) {
         Average<double> Rin;
         Average<double> Rout;
         auto particles_i = spc.findAtoms(i);
-        auto mass_center_i = Geometry::massCenter(particles_i.begin(), particles_i.end(), spc.geo.getBoundaryFunc());
+        auto mass_center_i =
+            Geometry::massCenter(particles_i.begin(), particles_i.end(), spc.geometry.getBoundaryFunc());
         for (const auto& particle : spc.findAtoms(j)) {
-            mean_radius_j += spc.geo.vdist(particle.pos, mass_center_i).cwiseProduct(dir.cast<double>()).norm();
+            mean_radius_j += spc.geometry.vdist(particle.pos, mass_center_i).cwiseProduct(dir.cast<double>()).norm();
         }
         const auto Rjavg = mean_radius_j.avg();
         for (const auto& particle_i : particles_i) {
             const auto radial_distance =
-                spc.geo.vdist(particle_i.pos, mass_center_i).cwiseProduct(dir.cast<double>()).norm();
+                spc.geometry.vdist(particle_i.pos, mass_center_i).cwiseProduct(dir.cast<double>()).norm();
             if (radial_distance < Rjavg) {
                 Rin += radial_distance;
             } else if (radial_distance > Rjavg) {
                 Rout += radial_distance;
             }
         }
-        return 2.0 * spc.geo.getLength().z() / (Rin.avg() + Rout.avg());
+        return 2.0 * spc.geometry.getLength().z() / (Rin.avg() + Rout.avg());
     };
 }
 void MoleculeProperty::selectMassCenterDistanceZ(const json& j, Space& spc) {
@@ -282,14 +283,13 @@ void MoleculeProperty::selectMassCenterDistanceZ(const json& j, Space& spc) {
     assert(indexes.size() > 1 && "An array of 2 or 4 indexes should be specified.");
     if (indexes.size() == 4) {
         function = [&spc, i = indexes[0], j = indexes[1] + 1, k = indexes[2], l = indexes[3] + 1]() {
-            auto cm1 = Geometry::massCenter(spc.p.begin() + i, spc.p.begin() + j, spc.geo.getBoundaryFunc());
-            auto cm2 = Geometry::massCenter(spc.p.begin() + k, spc.p.begin() + l, spc.geo.getBoundaryFunc());
-            return spc.geo.vdist(cm1, cm2).z();
+            auto cm1 = Geometry::massCenter(spc.p.begin() + i, spc.p.begin() + j, spc.geometry.getBoundaryFunc());
+            auto cm2 = Geometry::massCenter(spc.p.begin() + k, spc.p.begin() + l, spc.geometry.getBoundaryFunc());
+            return spc.geometry.vdist(cm1, cm2).z();
         };
     } else if (indexes.size() == 2) {
-        function = [&geometry = spc.geo, &group1 = spc.groups.at(indexes[0]), &group2 = spc.groups.at(indexes[1])]() {
-            return geometry.vdist(group1.cm, group2.cm).z();
-        };
+        function = [&geometry = spc.geometry, &group1 = spc.groups.at(indexes[0]),
+                    &group2 = spc.groups.at(indexes[1])]() { return geometry.vdist(group1.cm, group2.cm).z(); };
     }
 }
 void MoleculeProperty::selectAtomAtomDistance(const json& j, Space& spc) {
@@ -299,13 +299,13 @@ void MoleculeProperty::selectAtomAtomDistance(const json& j, Space& spc) {
         throw std::runtime_error("exactly two indices expected");
     }
     function = [&spc, &dir = direction, i = indexes[0], j = indexes[1]]() {
-        return spc.geo.vdist(spc.p.at(i).pos, spc.p.at(j).pos).cwiseProduct(dir.cast<double>()).norm();
+        return spc.geometry.vdist(spc.p.at(i).pos, spc.p.at(j).pos).cwiseProduct(dir.cast<double>()).norm();
     };
 }
 void MoleculeProperty::selectGyrationRadius(Space& spc) {
     function = [&spc, &group = spc.groups.at(index)]() {
         assert(group.size() > 1);
-        auto S = Geometry::gyration(group.begin(), group.end(), group.cm, spc.geo.getBoundaryFunc());
+        auto S = Geometry::gyration(group.begin(), group.end(), group.cm, spc.geometry.getBoundaryFunc());
         return sqrt(S.trace()); // S.trace() == S.eigenvalues().sum() but faster
     };
 }
@@ -325,15 +325,15 @@ void MoleculeProperty::selectMassCenterDistance(const json& j, Space& spc) {
     assert(indexes.size() > 1 && "An array of 2 or 4 indexes should be specified.");
     if (indexes.size() == 4) {
         function = [&spc, dir = direction, i = indexes[0], j = indexes[1] + 1, k = indexes[2], l = indexes[3] + 1]() {
-            auto cm1 = Geometry::massCenter(spc.p.begin() + i, spc.p.begin() + j, spc.geo.getBoundaryFunc());
-            auto cm2 = Geometry::massCenter(spc.p.begin() + k, spc.p.begin() + l, spc.geo.getBoundaryFunc());
-            return spc.geo.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).norm();
+            auto cm1 = Geometry::massCenter(spc.p.begin() + i, spc.p.begin() + j, spc.geometry.getBoundaryFunc());
+            auto cm2 = Geometry::massCenter(spc.p.begin() + k, spc.p.begin() + l, spc.geometry.getBoundaryFunc());
+            return spc.geometry.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).norm();
         };
     } else if (indexes.size() == 2) {
         function = [&spc, dir = direction, i = indexes[0], j = indexes[1]]() {
             auto& cm1 = spc.groups.at(i).cm;
             auto& cm2 = spc.groups.at(j).cm;
-            return spc.geo.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).norm();
+            return spc.geometry.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).norm();
         };
     }
 }
@@ -341,10 +341,10 @@ void MoleculeProperty::selectMinimumGroupDistance(const json& j, Space& spc) {
     indexes = j.value("indexes", decltype(indexes)());
     assert(indexes.size() == 2 && "An array of 2 indexes should be specified.");
     function = [&spc, i = indexes[0], j = indexes[1]]() {
-        auto minimum_distance_squared = spc.geo.getLength().norm();
+        auto minimum_distance_squared = spc.geometry.getLength().norm();
         for (const auto& particle_i : spc.findAtoms(i)) {
             for (const auto& particle_j : spc.findAtoms(j)) {
-                const auto distance_squared = spc.geo.sqdist(particle_i.pos, particle_j.pos);
+                const auto distance_squared = spc.geometry.sqdist(particle_i.pos, particle_j.pos);
                 minimum_distance_squared = std::min(minimum_distance_squared, distance_squared);
             }
         }
@@ -361,14 +361,15 @@ void MoleculeProperty::selectRinner(const json& j, Space& spc) {
         Average<double> mean_radius_j;
         Average<double> mean_radius_i;
         auto slicei = spc.findAtoms(i);
-        const auto mass_center = Geometry::massCenter(slicei.begin(), slicei.end(), spc.geo.getBoundaryFunc());
+        const auto mass_center = Geometry::massCenter(slicei.begin(), slicei.end(), spc.geometry.getBoundaryFunc());
         for (const auto& particle : spc.findAtoms(j)) {
-            mean_radius_j += spc.geo.vdist(particle.pos, mass_center).cwiseProduct(dir.cast<double>()).norm();
+            mean_radius_j += spc.geometry.vdist(particle.pos, mass_center).cwiseProduct(dir.cast<double>()).norm();
         }
         const auto mean_radius = mean_radius_j.avg();
         for (const auto& particle : spc.activeParticles()) {
             if ((particle.id == k) or (particle.id == l)) {
-                const auto radius = spc.geo.vdist(particle.pos, mass_center).cwiseProduct(dir.cast<double>()).norm();
+                const auto radius =
+                    spc.geometry.vdist(particle.pos, mass_center).cwiseProduct(dir.cast<double>()).norm();
                 if (radius < mean_radius) {
                     mean_radius_i += radius;
                 }
@@ -382,7 +383,7 @@ void MoleculeProperty::selectAngleWithVector(const json& j, Space& spc) {
     if (not spc.groups.at(index).atomic) {
         function = [&spc, &dir = direction, &group = spc.groups.at(index)]() {
             auto& cm = group.cm;
-            auto S = Geometry::gyration(group.begin(), group.end(), cm, spc.geo.getBoundaryFunc());
+            auto S = Geometry::gyration(group.begin(), group.end(), cm, spc.geometry.getBoundaryFunc());
             Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(S);
             Point eivals = esf.eigenvalues();
             ptrdiff_t i_eival;

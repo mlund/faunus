@@ -87,7 +87,7 @@ void LangevinVelocityVerlet::step(PointVector &velocities, PointVector &forces) 
         particle.pos += positionIncrement(velocity);               // A step
         velocity = velocityFluctuationDissipation(velocity, mass); // O step
         particle.pos += positionIncrement(velocity);               // A step
-        spc.geo.boundary(particle.pos);
+        spc.geometry.boundary(particle.pos);
     }
     std::fill(forces.begin(), forces.end(), Point::Zero()); // forces must be updated ...
     energy.force(forces);                                   // ... before each B step
@@ -150,7 +150,7 @@ void ForceMoveBase::_move(Change &change) {
         integrator->step(velocities, forces);
     }
     for (auto& group : spc.groups) { // update mass centers before returning to MC
-        group.updateMassCenter(spc.geo.getBoundaryFunc());
+        group.updateMassCenter(spc.geometry.getBoundaryFunc());
     }
 }
 

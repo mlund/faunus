@@ -247,12 +247,12 @@ TranslationalEntropy::TranslationalEntropy(Space &trial_space, Space &space) : t
 double TranslationalEntropy::bias(int trial_count, int count) const {
     double energy = 0.0;
     if (int dN = trial_count - count; dN > 0) { // atoms or molecules were added
-        double V_trial = trial_spc.geo.getVolume();
+        double V_trial = trial_spc.geometry.getVolume();
         for (int n = 0; n < dN; n++) {
             energy += std::log((count + 1 + n) / (V_trial * 1.0_molar));
         }
     } else if (dN < 0) { // atoms or molecules were removed
-        double V = spc.geo.getVolume();
+        double V = spc.geometry.getVolume();
         for (int n = 0; n < (-dN); n++) {
             energy -= std::log((count - n) / (V * 1.0_molar));
         }

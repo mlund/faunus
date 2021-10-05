@@ -140,8 +140,8 @@ class FloatTransmitter {
  *     Faunus::MPI::MPIController mpi;
  *     Faunus::MPI::ParticleTransmitter pt;
  *
- *     pt.sendExtra.push_back(extra1);
- *     pt.sendExtra.push_back(extra2);
+ *     pt.sendExtra.addGroup(extra1);
+ *     pt.sendExtra.addGroup(extra2);
  *
  *     pt.send(mpi, myparticles, dst_rank);
  *     pt.waitsend();

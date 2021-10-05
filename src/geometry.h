@@ -572,7 +572,7 @@ Point trigoCom(const Tspace &spc, const GroupIndex &groups, const std::vector<in
     assert(!dir.empty() && dir.size() <= 3);
     Point xhi(0, 0, 0), zeta(0, 0, 0), theta(0, 0, 0), com(0, 0, 0);
     for (auto k : dir) {
-        double q = 2 * pc::pi / spc.geo.getLength()[k];
+        double q = 2 * pc::pi / spc.geometry.getLength()[k];
         size_t N = 0;
         for (auto i : groups)
             for (auto &particle : spc.groups[i]) {
@@ -582,9 +582,9 @@ Point trigoCom(const Tspace &spc, const GroupIndex &groups, const std::vector<in
                 N++;
             }
         theta[k] = std::atan2(-zeta[k] / N, -xhi[k] / N) + pc::pi;
-        com[k] = spc.geo.getLength()[k] * theta[k] / (2 * pc::pi);
+        com[k] = spc.geometry.getLength()[k] * theta[k] / (2 * pc::pi);
     }
-    spc.geo.boundary(com); // is this really needed?
+    spc.geometry.boundary(com); // is this really needed?
     return com;
 }
 

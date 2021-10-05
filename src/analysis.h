@@ -157,7 +157,7 @@ class WidomInsertion : public PerturbationAnalysisBase {
     bool absolute_z_coords = false;             //!< Apply abs() on all inserted z coordinates?
 
     void selectGhostGroup(); //!< Select inactive group to act as group particle
-    void updateGroup(Space::Tgroup& group, const ParticleVector& particles);
+    void updateGroup(Space::GroupType& group, const ParticleVector& particles);
     void _sample() override; //!< Called for each sample event
     void _to_json(json& j) const override;
     void _from_json(const json& j) override;
@@ -292,7 +292,7 @@ class ChargeFluctuations : public Analysisbase {
     std::string filename;                                          //!< name of PQR file with average charges
     bool verbose = true;                                           //!< set to true for more output
 
-    ParticleVector averageChargeParticles(const Space::Tgroup& group);
+    ParticleVector averageChargeParticles(const Space::GroupType& group);
     std::vector<double> getMeanCharges() const;
     std::vector<double> getChargeStandardDeviation() const;
     std::vector<std::string> getPredominantParticleNames() const;
@@ -357,8 +357,8 @@ class SanityCheck : public Analysisbase {
     const double mass_center_tolerance = 1.0e-6;
     void _sample() override;
     void checkGroupsCoverParticles();                      //!< Groups must exactly contain all particles in `p`
-    void checkMassCenter(const Space::Tgroup& group);      //!< check if molecular mass centers are correct
-    void checkWithinContainer(const Space::Tgroup& group); //!< check if particles are inside container
+    void checkMassCenter(const Space::GroupType& group);   //!< check if molecular mass centers are correct
+    void checkWithinContainer(const Space::GroupType& group); //!< check if particles are inside container
 
   public:
     SanityCheck(const json& j, Space& spc);
@@ -521,7 +521,7 @@ class VirtualTranslate : public PerturbationAnalysisBase {
     void _sample() override;
     void _from_json(const json& j) override;
     void _to_json(json& j) const override;
-    double momentarilyPerturb(Space::Tgroup& group);
+    double momentarilyPerturb(Space::GroupType& group);
     void writeToFileStream(double energy_change) const;
 
   public:
@@ -549,7 +549,8 @@ class MultipoleDistribution : public Analysisbase {
     std::string filename;            //!< output file name
     double dr;                       //!< distance resolution
 
-    double g2g(const Space::Tgroup& group1, const Space::Tgroup& group2); //<! exact ion-ion energy between particles
+    double g2g(const Space::GroupType& group1,
+               const Space::GroupType& group2);                           //<! exact ion-ion energy between particles
     void save() const;                                                    //!< save to disk
     void _sample() override;
     void _to_json(json& j) const override;
@@ -723,7 +724,7 @@ class QRtraj : public Analysisbase {
  */
 class SpaceTrajectory : public Analysisbase {
   private:
-    Space::Tgvec& groups; // reference to all groups
+    Space::GroupVector& groups; // reference to all groups
     std::string filename;
     std::unique_ptr<std::ostream> stream;
     std::unique_ptr<cereal::BinaryOutputArchive> archive;

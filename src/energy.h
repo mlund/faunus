@@ -125,14 +125,14 @@ class EwaldPolicyBase {
     std::string cite; //!< Optional reference, preferably DOI, to further information
     virtual ~EwaldPolicyBase() = default;
     virtual void updateBox(EwaldData &, const Point &) const = 0; //!< Prepare k-vectors according to given box vector
-    virtual void updateComplex(EwaldData &,
-                               Space::Tgvec &) const = 0; //!< Update all k vectors
-    virtual void updateComplex(EwaldData &, Change &, Space::Tgvec &,
-                               Space::Tgvec &) const = 0; //!< Update subset of k vectors. Require `old` pointer
-    virtual double selfEnergy(const EwaldData &, Change &,
-                              Space::Tgvec &) = 0; //!< Self energy contribution due to a change
-    virtual double surfaceEnergy(const EwaldData &, Change &,
-                                 Space::Tgvec &) = 0;       //!< Surface energy contribution due to a change
+    virtual void updateComplex(EwaldData&,
+                               Space::GroupVector&) const = 0; //!< Update all k vectors
+    virtual void updateComplex(EwaldData&, Change&, Space::GroupVector&,
+                               Space::GroupVector&) const = 0; //!< Update subset of k vectors. Require `old` pointer
+    virtual double selfEnergy(const EwaldData&, Change&,
+                              Space::GroupVector&) = 0; //!< Self energy contribution due to a change
+    virtual double surfaceEnergy(const EwaldData&, Change&,
+                                 Space::GroupVector&) = 0;  //!< Surface energy contribution due to a change
     virtual double reciprocalEnergy(const EwaldData &) = 0; //!< Total reciprocal energy
 
     /**
@@ -143,16 +143,16 @@ class EwaldPolicyBase {
      * @param groups Vector of groups to represent
      * @return tuple with positions, charges
      */
-    auto mapGroupsToEigen(Space::Tgvec &groups) const {
+    auto mapGroupsToEigen(Space::GroupVector& groups) const {
         for (auto &g : groups)
             if (g.size() != g.capacity())
                 throw std::runtime_error("Eigen optimized Ewald not available with inactive groups");
         auto first_particle = groups.front().begin();
         auto last_particle = groups.back().end();
         auto pos = asEigenMatrix(first_particle, last_particle,
-                                 &Space::Tparticle::pos); // N x 3
+                                 &Particle::pos); // N x 3
         auto charge = asEigenVector(first_particle, last_particle,
-                                    &Space::Tparticle::charge); // N x 1
+                                    &Particle::charge); // N x 1
         return std::make_tuple(pos, charge);
     }
 
@@ -165,10 +165,10 @@ class EwaldPolicyBase {
 struct PolicyIonIon : public EwaldPolicyBase {
     PolicyIonIon();
     void updateBox(EwaldData &, const Point &) const override;
-    void updateComplex(EwaldData &, Space::Tgvec &) const override;
-    void updateComplex(EwaldData &, Change &, Space::Tgvec &, Space::Tgvec &) const override;
-    double selfEnergy(const EwaldData &, Change &, Space::Tgvec &) override;
-    double surfaceEnergy(const EwaldData &, Change &, Space::Tgvec &) override;
+    void updateComplex(EwaldData&, Space::GroupVector&) const override;
+    void updateComplex(EwaldData&, Change&, Space::GroupVector&, Space::GroupVector&) const override;
+    double selfEnergy(const EwaldData&, Change&, Space::GroupVector&) override;
+    double surfaceEnergy(const EwaldData&, Change&, Space::GroupVector&) override;
     double reciprocalEnergy(const EwaldData &) override;
 };
 
@@ -185,7 +185,7 @@ struct PolicyIonIon : public EwaldPolicyBase {
  */
 struct PolicyIonIonEigen : public PolicyIonIon {
     using PolicyIonIon::updateComplex;
-    void updateComplex(EwaldData &, Space::Tgvec &) const override;
+    void updateComplex(EwaldData&, Space::GroupVector&) const override;
     double reciprocalEnergy(const EwaldData &) override;
 };
 
@@ -196,8 +196,8 @@ struct PolicyIonIonIPBC : public PolicyIonIon {
     using PolicyIonIon::updateComplex;
     PolicyIonIonIPBC();
     void updateBox(EwaldData &, const Point &) const override;
-    void updateComplex(EwaldData &, Space::Tgvec &) const override;
-    void updateComplex(EwaldData &, Change &, Space::Tgvec &, Space::Tgvec &) const override;
+    void updateComplex(EwaldData&, Space::GroupVector&) const override;
+    void updateComplex(EwaldData&, Change&, Space::GroupVector&, Space::GroupVector&) const override;
 };
 
 /**
@@ -206,7 +206,7 @@ struct PolicyIonIonIPBC : public PolicyIonIon {
  */
 struct PolicyIonIonIPBCEigen : public PolicyIonIonIPBC {
     using PolicyIonIonIPBC::updateComplex;
-    void updateComplex(EwaldData &, Space::Tgvec &) const override;
+    void updateComplex(EwaldData&, Space::GroupVector&) const override;
 };
 
 /** @brief Ewald summation reciprocal energy */
@@ -215,7 +215,7 @@ class Ewald : public Energybase {
     EwaldData data;
     std::shared_ptr<EwaldPolicyBase> policy; //!< Policy for updating k-space
     Space &spc;
-    Space::Tgvec *old_groups = nullptr;
+    Space::GroupVector* old_groups = nullptr;
 
   public:
     Ewald(const json &, Space &);
@@ -272,7 +272,7 @@ class Bonded : public Energybase {
     const Space& spc;
     BondVector external_bonds;                         //!< inter-molecular bonds
     std::map<int, BondVector> internal_bonds;          //!< intra-molecular bonds; key is group index
-    void updateGroupBonds(const Space::Tgroup& group); //!< Update/set bonds internally in group
+    void updateGroupBonds(const Space::GroupType& group); //!< Update/set bonds internally in group
     void updateInternalBonds();                        //!< finds and adds all intra-molecular bonds of active molecules
     double sumBondEnergy(const BondVector& bonds) const;     //!< sum energy in vector of BondData
     double internalGroupEnergy(const Change::GroupChange& changed); //!< Energy from internal bonds
@@ -308,7 +308,7 @@ double Bonded::sum_energy(const Bonded::BondVector& bonds, const Indices& partic
         return false;
     };
     auto affected_bonds = bonds | ranges::cpp20::views::filter(bond_filter);
-    auto bond_energy = [&](const auto& bond) { return bond->energyFunc(spc.geo.getDistanceFunc()); };
+    auto bond_energy = [&](const auto& bond) { return bond->energyFunc(spc.geometry.getDistanceFunc()); };
 
 #if (defined(__clang__) && __clang_major__ >= 10) || (defined(__GNUC__) && __GNUC__ >= 10)
     return std::transform_reduce(affected_bonds.begin(), affected_bonds.end(), 0.0, std::plus<>(), bond_energy);
@@ -549,7 +549,7 @@ class GroupCutoff {
     double default_cutoff_squared = pc::max_value;
     PairMatrix<double> cutoff_squared;  //!< matrix with group-to-group cutoff distances squared in angstrom squared
     double total_cnt = 0, skip_cnt = 0; //!< statistics
-    Space::Tgeometry &geometry;         //!< geometry to compute the inter group distance with
+    Space::GeometryType& geometry;      //!< geometry to compute the inter group distance with
     friend void from_json(const json&, GroupCutoff &);
     friend void to_json(json&, const GroupCutoff &);
     void setSingleCutoff(const double cutoff);
@@ -559,7 +559,7 @@ class GroupCutoff {
      * @brief Determines if two groups are separated beyond the cutoff distance.
      * @return true if the group-to-group distance is beyond the cutoff distance, false otherwise
      */
-    inline bool cut(const Space::Tgroup &group1, const Space::Tgroup &group2) {
+    inline bool cut(const Space::GroupType& group1, const Space::GroupType& group2) {
         bool result = false;
         ++total_cnt;
         if (!group1.atomic && !group2.atomic // atomic groups have no meaningful cm
@@ -583,7 +583,7 @@ class GroupCutoff {
      * @brief Sets the geometry.
      * @param geometry  geometry to compute the inter group distance with
      */
-    GroupCutoff(Space::Tgeometry &geometry);
+    GroupCutoff(Space::GeometryType& geometry);
 };
 
 void from_json(const json&, GroupCutoff &);
@@ -596,7 +596,7 @@ void to_json(json&, const GroupCutoff &);
  * @tparam allow_anisotropic_pair_potential  pass also a distance vector to the pair potential, slower
  */
 template <typename TPairPotential, bool allow_anisotropic_pair_potential = true> class PairEnergy {
-    const Space::Tgeometry &geometry;          //!< geometry to operate with
+    const Space::GeometryType& geometry;       //!< geometry to operate with
     TPairPotential pair_potential;             //!< pair potential function/functor
     Space &spc;                                //!< space to init ParticleSelfEnergy with addPairPotentialSelfEnergy
     BasePointerVector<Energybase> &potentials; //!< registered non-bonded potentials, see addPairPotentialSelfEnergy
@@ -605,7 +605,8 @@ template <typename TPairPotential, bool allow_anisotropic_pair_potential = true>
      * @param spc
      * @param potentials  registered non-bonded potentials
      */
-    PairEnergy(Space &spc, BasePointerVector<Energybase> &potentials) : geometry(spc.geo), spc(spc), potentials(potentials) {}
+    PairEnergy(Space& spc, BasePointerVector<Energybase>& potentials)
+        : geometry(spc.geometry), spc(spc), potentials(potentials) {}
 
     /**
      * @brief Computes pair potential energy.
@@ -685,8 +686,7 @@ class GroupPairingPolicy {
     /**
      * @param spc
      */
-    GroupPairingPolicy(Space &spc)
-        : spc(spc), cut(spc.geo) {}
+    GroupPairingPolicy(Space& spc) : spc(spc), cut(spc.geometry) {}
 
     void from_json(const json &j) {
         Energy::from_json(j, cut);
@@ -1296,9 +1296,9 @@ class GroupPairing {
 
     // FIXME a temporal fix for non-refactorized NonbondedCached
     template <typename Accumulator>
-    void group2group(Accumulator &pair_accumulator, const Space::Tgroup &group1, const Space::Tgroup &group2) {
-        pairing.group2group(std::forward<Accumulator &>(pair_accumulator), std::forward<const Space::Tgroup &>(group1),
-                            std::forward<const Space::Tgroup &>(group2));
+    void group2group(Accumulator& pair_accumulator, const Space::GroupType& group1, const Space::GroupType& group2) {
+        pairing.group2group(std::forward<Accumulator&>(pair_accumulator), std::forward<const Space::GroupType&>(group1),
+                            std::forward<const Space::GroupType&>(group2));
     }
 };
 

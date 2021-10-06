@@ -50,12 +50,12 @@ std::vector<Change::index_type> Change::touchedParticleIndex(const std::vector<G
 void Change::sanityCheck(const std::vector<Group<Particle>>& group_vector) const {
     const auto first_particle = group_vector.at(0).begin(); // first particle in first group
     for (const auto& changed : groups) {
-        const auto& group = group_vector.at(changed.group_index); // current group
-        for (auto i : changed.relative_atom_indices) {            // all atoms must be within `group`
-            if (i >= group.capacity()) {
+        const auto& group = group_vector.at(changed.group_index);
+        for (auto index : changed.relative_atom_indices) {
+            if (index >= group.capacity()) {
                 auto first = std::distance(first_particle, group.begin());
                 auto last = std::distance(first_particle, group.trueend()) - 1;
-                faunus_logger->error("atom {} outside group capacity: '{}' ({}-{})", i + first,
+                faunus_logger->error("atom {} outside group capacity: '{}' ({}-{})", index + first,
                                      molecules.at(group.id).name, first, last);
                 throw std::runtime_error("insane change object: atom outside group capacity");
             }
@@ -662,11 +662,11 @@ void InsertMoleculesInSpace::insertAtomicGroups(MoleculeData& moldata, Space& sp
 void InsertMoleculesInSpace::insertMolecularGroups(MoleculeData& moldata, Space& spc, size_t num_molecules,
                                                    size_t num_inactive) {
     assert(moldata.atomic == false);
-    for (size_t i = 0; i < num_molecules; i++) { // insert molecules
-        spc.addGroup(moldata.id(), moldata.getRandomConformation(spc.geometry, spc.particles));
-    }
     if (num_inactive > num_molecules) {
         throw std::runtime_error("too many inactive molecules requested");
+    }
+    for (size_t i = 0; i < num_molecules; i++) { // insert molecules
+        spc.addGroup(moldata.id(), moldata.getRandomConformation(spc.geometry, spc.particles));
     }
     // deactivate groups, starting from the back
     std::for_each(spc.groups.rbegin(), spc.groups.rbegin() + num_inactive, [&](auto& group) {
@@ -697,7 +697,7 @@ void InsertMoleculesInSpace::setPositionsForTrailingGroups(Space& spc, size_t nu
     }
     // update positions in space, starting from the back
     std::transform(particles.rbegin(), particles.rend(), spc.particles.rbegin(), spc.particles.rbegin(),
-                   [&](auto& src, auto& dst) {
+                   [&](const auto& src, auto& dst) {
                        dst.pos = src.pos + offset;            // shift by offset
                        if (spc.geometry.collision(dst.pos)) { // check if position is inside simulation volume
                            throw std::runtime_error("positions outside box");
@@ -784,20 +784,16 @@ void InsertMoleculesInSpace::insertMolecules(const json &j, Space &spc) {
     }
     spc.clear();
     for (const auto& item : j) { // loop over array of molecules
-        if (!item.is_object() || item.size() != 1) {
-            throw ConfigurationError("syntax error inserting molecules");
-        }
-        for (const auto& [molecule_name, properties] : item.items()) {
-            try {
-                insertItem(molecule_name, properties, spc);
-            } catch (std::exception& e) { throw ConfigurationError("error inserting {}: {}", molecule_name, e.what()); }
-        }
+        const auto& [molecule_name, properties] = jsonSingleItem(item);
+        try {
+            insertItem(molecule_name, properties, spc);
+        } catch (std::exception& e) { throw ConfigurationError("error inserting {}: {}", molecule_name, e.what()); }
     }
 }
 
 /**
  * @param j Input json object
- * @param volume Volume of simulation container needed to calculate concentration
+ * @param volume Volume of simulation container used to calculate initial concentration
  * @param molecule_name Name of molecule needed for logging
  * @return Number of molecules to insert
  *
@@ -805,14 +801,14 @@ void InsertMoleculesInSpace::insertMolecules(const json &j, Space &spc) {
  * number of particles is calculated based on the given system volume.
  */
 size_t InsertMoleculesInSpace::getNumberOfMolecules(const json& j, double volume, const std::string& molecule_name) {
-    const double error_limit = 0.01; // warn if relative density error is above this
     size_t num_molecules = 0;
     if (j.contains("N")) {
-        num_molecules = j.at("N").get<int>();
+        num_molecules = j.at("N").get<size_t>();
     } else {
         auto density = j.at("molarity").get<double>() * 1.0_molar;
         num_molecules = std::round(density * volume);
-        if (double error = (density - num_molecules / volume) / density; error > error_limit) {
+        const double error_limit = 0.01; // warn if relative density error is above this
+        if (auto error = (density - num_molecules / volume) / density; std::fabs(error) > error_limit) {
             faunus_logger->warn("{}: initial molarity differs by {}% from target value", molecule_name, error * 100);
         }
     }
@@ -832,13 +828,13 @@ size_t InsertMoleculesInSpace::getNumberOfMolecules(const json& j, double volume
  */
 size_t InsertMoleculesInSpace::getNumberOfInactiveMolecules(const json& j, size_t number_of_molecules) {
     size_t number_of_inactive_molecules = 0; // number of inactive molecules
-    if (auto it = j.find("inactive"); it != j.end()) {
-        if (it->is_boolean()) {
-            if (*it) {
+    if (auto inactive = j.find("inactive"); inactive != j.end()) {
+        if (inactive->is_boolean()) {
+            if (inactive->get<bool>()) {
                 number_of_inactive_molecules = number_of_molecules; // all molecules are inactive
             }
-        } else if (it->is_number_integer()) {
-            number_of_inactive_molecules = *it; // a subset are inactive
+        } else if (inactive->is_number_integer()) {
+            number_of_inactive_molecules = inactive->get<size_t>(); // a subset are inactive
             if (number_of_inactive_molecules > number_of_molecules) {
                 throw ConfigurationError("too many inactive particles requested");
             }

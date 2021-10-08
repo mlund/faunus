@@ -4,6 +4,7 @@
 #include "spdlog/spdlog.h"
 #include "aux/eigensupport.h"
 #include <range/v3/algorithm/for_each.hpp>
+#include <range/v3/algorithm/transform.hpp>
 #include <memory>
 #include <stdexcept>
 
@@ -696,20 +697,22 @@ void InsertMoleculesInSpace::setPositionsForTrailingGroups(Space& spc, size_t nu
     if (particles.size() != num_molecules * (spc.groups.rbegin())->traits().atoms.size()) {
         throw std::runtime_error("number of particles doesn't match groups");
     }
-    // update positions in space, starting from the back
+
+    auto copy_with_offset_and_boundary_check = [&](const Particle& src, Particle& dst) {
+        dst.pos = src.pos + offset;            // shift by offset
+        if (spc.geometry.collision(dst.pos)) { // check if position is inside simulation volume
+            throw std::runtime_error("positions outside box");
+        }
+        return dst;
+    };
+
     std::transform(particles.rbegin(), particles.rend(), spc.particles.rbegin(), spc.particles.rbegin(),
-                   [&](const auto& src, auto& dst) {
-                       dst.pos = src.pos + offset;            // shift by offset
-                       if (spc.geometry.collision(dst.pos)) { // check if position is inside simulation volume
-                           throw std::runtime_error("positions outside box");
-                       }
-                       return dst;
-                   });
-    // update mass-centers on modified groups; start from the back
+                   copy_with_offset_and_boundary_check);
+
     std::for_each(spc.groups.rbegin(), spc.groups.rbegin() + num_molecules, [&](auto& group) {
         group.cm =
             Geometry::massCenter(group.begin(), group.end(), spc.geometry.getBoundaryFunc(), -group.begin()->pos);
-    });
+    }); // update mass-centers on modified groups; start from the back
 }
 
 /**

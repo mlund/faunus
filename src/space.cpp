@@ -226,8 +226,9 @@ Point Space::scaleVolume(double Vnew, Geometry::VolumeMethod method) {
                     geometry.boundary(particle.pos);          // apply PBC
                 });
 #ifndef NDEBUG
-                auto recalc_cm = Geometry::massCenter(group.begin(), group.end(), geo.getBoundaryFunc(), -group.cm);
-                if (double error = geo.sqdist(group.cm, recalc_cm); error > 1e-6) {
+                auto recalc_cm =
+                    Geometry::massCenter(group.begin(), group.end(), geometry.getBoundaryFunc(), -group.cm);
+                if (double error = geometry.sqdist(group.cm, recalc_cm); error > 1e-6) {
                     assert(false); // mass center mismatch
                 }
 #endif

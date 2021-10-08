@@ -760,7 +760,7 @@ double Bonded::sumBondEnergy(const Bonded::BondVector& bonds) const {
 #else
     double energy = 0.0;
     for (const auto& bond : bonds) {
-        energy += bond->energyFunc(spc.geo.getDistanceFunc());
+        energy += bond->energyFunc(spc.geometry.getDistanceFunc());
     }
     return energy;
 #endif

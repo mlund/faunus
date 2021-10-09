@@ -113,11 +113,9 @@ Space::GroupType& Space::addGroup(MoleculeData::index_type molid, const Particle
         std::for_each(groups.begin(), groups.end(),
                       [&](auto& group) { group.relocate(original_begin, particles.begin()); });
     }
-    GroupType group(particles.end() - new_particles.size(), particles.end()); // create a group
+    GroupType group(molid, particles.end() - new_particles.size(), particles.end()); // create a group
     const auto& moldata = Faunus::molecules.at(molid);
     group.id = molid;
-    group.compressible = moldata.compressible;
-    group.atomic = moldata.atomic;
     if (group.isMolecular()) {
         if (new_particles.size() != moldata.atoms.size()) {
             faunus_logger->error("{} requires {} atoms but {} were provided", moldata.name, moldata.atoms.size(),
@@ -344,9 +342,9 @@ TEST_CASE("Space::numParticles") {
     spc.particles.resize(10);
     CHECK(spc.particles.size() == spc.numParticles(Space::Selection::ALL));
     CHECK(spc.numParticles(Space::Selection::ACTIVE) == 0);  // zero as there are still no groups
-    spc.groups.emplace_back(spc.particles.begin(), spc.particles.end() - 2); // enclose first 8 particles in group
+    spc.groups.emplace_back(0, spc.particles.begin(), spc.particles.end() - 2); // enclose first 8 particles in group
     CHECK(spc.numParticles(Space::Selection::ACTIVE) == 8);
-    spc.groups.emplace_back(spc.particles.end() - 2, spc.particles.end()); // enclose last 2 particles in group
+    spc.groups.emplace_back(0, spc.particles.end() - 2, spc.particles.end()); // enclose last 2 particles in group
     CHECK(spc.numParticles(Space::Selection::ACTIVE) == 10);
     spc.groups.front().resize(0); // deactivate first group with 8 particles
     CHECK(spc.numParticles(Space::Selection::ACTIVE) == 2);
@@ -382,7 +380,7 @@ void from_json(const json &j, Space &spc) {
             spc.particles = j.at("particles").get<ParticleVector>();
             if (!spc.particles.empty()) {
                 auto begin = spc.particles.begin();
-                Space::GroupType g(begin, begin); // create new grou[
+                Space::GroupType g(0, begin, begin); // create new group
                 for (auto &i : j.at("groups")) {
                     g.begin() = begin;
                     from_json(i, g);

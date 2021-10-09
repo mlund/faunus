@@ -44,7 +44,7 @@ void to_json(json &j, const Energybase &base) {
 double ExternalPotential::groupEnergy(const Group<Particle> &group) const {
     double u = 0;
     if (molecule_ids.find(group.id) != molecule_ids.end()) {
-        if (act_on_mass_center and not group.atomic) { // apply only to center of mass
+        if (act_on_mass_center && group.isMolecular()) { // apply only to center of mass
             if (group.size() == group.capacity()) {    // only apply if group is active
                 Particle mass_center;                  // temp. particle representing molecule
                 mass_center.charge = Faunus::monopoleMoment(group.begin(), group.end());

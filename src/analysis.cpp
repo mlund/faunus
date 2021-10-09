@@ -1127,7 +1127,7 @@ void InertiaTensor::_to_json(json& j) const {
 }
 InertiaTensor::Data InertiaTensor::compute() {
     const auto& group = spc.groups.at(group_index);
-    const Space::GroupType subgroup(group.begin() + particle_range[0], group.begin() + particle_range[1] + 1);
+    const Space::GroupType subgroup(group.id, group.begin() + particle_range[0], group.begin() + particle_range[1] + 1);
     InertiaTensor::Data d;
     auto I = Geometry::inertia(subgroup.begin(), subgroup.end(), group.cm, spc.geometry.getBoundaryFunc());
     Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(I);
@@ -1170,7 +1170,7 @@ void MultipoleMoments::_to_json(json& j) const {
 }
 MultipoleMoments::Data MultipoleMoments::calculateMultipoleMoment() const {
     const auto& group = spc.groups.at(group_index);
-    Space::GroupType subgroup(group.begin() + particle_range[0], group.begin() + particle_range[1] + 1);
+    Space::GroupType subgroup(group.id, group.begin() + particle_range[0], group.begin() + particle_range[1] + 1);
     const auto mass_center = use_molecular_mass_center ? group.cm
                                                        : Geometry::massCenter(subgroup.begin(), subgroup.end(),
                                                                               spc.geometry.getBoundaryFunc());

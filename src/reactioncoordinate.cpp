@@ -315,7 +315,7 @@ void MoleculeProperty::selectGyrationRadius(Space& spc) {
 }
 void MoleculeProperty::selectDipoleAngle(const json& j, Space& spc, Geometry::BoundaryFunction& b) {
     direction = j.at("dir").get<Point>().normalized();
-    if (not spc.groups.at(index).atomic) {
+    if (spc.groups.at(index).isMolecular()) {
         function = [&group = spc.groups.at(index), b, &dir = direction]() {
             const auto dot_product = dipoleMoment(group.begin(), group.end(), b).dot(dir);
             return acos(dot_product) * 180.0 / pc::pi;
@@ -386,7 +386,7 @@ void MoleculeProperty::selectRinner(const json& j, Space& spc) {
 }
 void MoleculeProperty::selectAngleWithVector(const json& j, Space& spc) {
     direction = j.at("dir").get<Point>().normalized();
-    if (not spc.groups.at(index).atomic) {
+    if (spc.groups.at(index).isMolecular()) {
         function = [&spc, &dir = direction, &group = spc.groups.at(index)]() {
             auto& cm = group.cm;
             auto S = Geometry::gyration(group.begin(), group.end(), cm, spc.geometry.getBoundaryFunc());

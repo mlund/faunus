@@ -83,13 +83,17 @@ WithinGroups::WithinGroups(const json &j, Space &spc) : RegionBase(WITHIN), spc(
     }
 
     // if COM requested, atomic groups are forbidden
-    if (com)
-        for (size_t i : indexes)
-            if (spc.groups.at(i).atomic)
+    if (com) {
+        for (auto index : indexes) {
+            if (spc.groups.at(index).isAtomic()) {
                 throw std::runtime_error("com cannot be used with atomic groups");
+            }
+        }
+    }
 
-    if (indexes.empty())
+    if (indexes.empty()) {
         std::cerr << "warning: no molecules selected for region" << std::endl;
+    }
 }
 
 bool WithinGroups::isInside(const Point &a) const {

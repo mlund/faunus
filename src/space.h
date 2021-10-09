@@ -26,19 +26,19 @@ namespace Faunus {
  */
 struct Change {
     using index_type = std::size_t;
-    bool everything = false;                 //!< Set to true if *everything* has changed
-    bool volume_change = false;              //!< Set to true if there's a volume change
-    bool matter_change = false;              //!< True if the number of atomic or molecular species has changed
+    bool everything = false;                 //!< Everything has changed (particles, groups, volume)
+    bool volume_change = false;              //!< The volume has changed
+    bool matter_change = false;              //!< The number of atomic or molecular species has changed
     bool moved_to_moved_interactions = true; //!< If several groups are moved, should they interact with each other?
 
     //! Properties of changed groups
     struct GroupChange {
         index_type group_index; //!< Touched group index
-        bool dNatomic = false;  //!< True if the number of atomic molecules has changed
-        bool dNswap = false;    //!< True if the number of atoms has changed as a result of a swap move
-        bool internal = false;  //!< True if the internal energy/config has changed
-        bool all = false;       //!< True if all particles in group have been updated
-        std::vector<index_type> relative_atom_indices; //!< Sorted indices relative to group. Empty if `all==true`.
+        bool dNatomic = false;  //!< The number of atomic molecules has changed
+        bool dNswap = false;    //!< The number of atoms has changed as a result of a swap move
+        bool internal = false;  //!< The internal energy or configuration has changed
+        bool all = false;       //!< All particles in the group have changed (leave relative_atom_indices empty)
+        std::vector<index_type> relative_atom_indices; //!< A subset of particles changed (sorted; empty if `all`=true)
 
         bool operator<(const GroupChange& other) const; //!< Comparison operator based on `group_index`
     };
@@ -46,10 +46,7 @@ struct Change {
     std::vector<GroupChange> groups; //!< Touched groups by index in group vector
 
     //! List of moved groups (index)
-    inline auto touchedGroupIndex() const {
-        return ranges::cpp20::views::transform(groups,
-                                               [](const GroupChange& i) -> index_type { return i.group_index; });
-    }
+    inline auto touchedGroupIndex() const { return ranges::cpp20::views::transform(groups, &GroupChange::group_index); }
 
     //! List of changed atom index relative to first particle in system
     std::vector<index_type> touchedParticleIndex(const std::vector<Group<Particle>>&) const;
@@ -65,6 +62,15 @@ void to_json(json& j, const Change& change);                    //!< Serialise C
 
 /**
  * @brief Placeholder for atoms and molecules
+ *
+ * Space is pervasive in the code as it stores the state of
+ * - particles
+ * - groups
+ * - simulation container (`geometry`)
+ * - implicit particles and groups
+ *
+ * It has methods to insert, find, and probe particles, groups, as
+ * well as scaling the volume of the system
  */
 class Space {
   public:
@@ -90,10 +96,10 @@ class Space {
     std::vector<SyncTrigger> onSyncTriggers;   //!< Call when two Space objects are synched (unused)
 
   public:
-    ParticleVector particles;                            //!< Particle vector storing all particles in system
-    GroupVector groups;                                  //!< Group vector storing all molecules in system
+    ParticleVector particles;                            //!< All particles are stored here!
+    GroupVector groups;                                  //!< All groups are stored here (i.e. molecules)
     GeometryType geometry;                               //!< Container geometry (boundaries, shape, volume)
-    std::vector<ScaleVolumeTrigger> scaleVolumeTriggers; //!< Called whenever the volume is scaled
+    std::vector<ScaleVolumeTrigger> scaleVolumeTriggers; //!< Functions triggered whenever the volume is scaled
 
     const std::map<MoleculeData::index_type, std::size_t>& getImplicitReservoir() const; //!< Implicit molecules
     std::map<MoleculeData::index_type, std::size_t>& getImplicitReservoir();             //!< Implicit molecules
@@ -102,7 +108,7 @@ class Space {
     enum class Selection { ALL, ACTIVE, INACTIVE, ALL_NEUTRAL, ACTIVE_NEUTRAL, INACTIVE_NEUTRAL };
 
     void clear(); //!< Clears particle and molecule list
-    GroupType& addGroup(MoleculeData::index_type molid, const ParticleVector& particles); //!< Add group to back
+    GroupType& addGroup(MoleculeData::index_type molid, const ParticleVector& particles); //!< Append a group
     GroupVector::iterator findGroupContaining(const Particle& particle); //!< Finds the group containing the given atom
     GroupVector::iterator findGroupContaining(AtomData::index_type atom_index); //!< Find group containing atom index
     size_t numParticles(Selection selection = Selection::ACTIVE) const;         //!< Number of (active) particles
@@ -182,65 +188,43 @@ class Space {
      * @return range with all groups of molid
      */
     auto findMolecules(MoleculeData::index_type molid, Selection selection = Selection::ACTIVE) {
-        std::function<bool(GroupType&)> f;
+
+        auto is_active = [](const GroupType& group) { return group.size() == group.capacity(); };
+
+        auto is_neutral = [](auto begin, auto end) {
+            auto charge =
+                std::accumulate(begin, end, 0.0, [](auto sum, auto& particle) { return sum + particle.charge; });
+            return (std::fabs(charge) < 1e-6);
+        }; //!< determines if range of particles is neutral
+
+        std::function<bool(const GroupType&)> f; //!< Lambda to filter groups according to selection
+
         switch (selection) {
         case (Selection::ALL):
-            f = [molid](GroupType& i) { return i.id == molid; };
+            f = []([[maybe_unused]] auto& group) { return true; };
             break;
         case (Selection::INACTIVE):
-            f = [molid](GroupType& i) { return (i.id == molid) && (i.size() != i.capacity()); };
+            f = [=](auto& group) { return !is_active(group); };
             break;
         case (Selection::ACTIVE):
-            f = [molid](GroupType& i) { return (i.id == molid) && (i.size() == i.capacity()); };
+            f = [=](auto& group) { return is_active(group); };
             break;
         case (Selection::ALL_NEUTRAL):
-            f = [molid](GroupType& group) {
-                if (group.id != molid)
-                    return false;
-                else {
-                    double charge = std::accumulate(group.begin(), group.trueend(), 0.0,
-                                                    [](double sum, auto &particle) { return sum + particle.charge; });
-                    return (std::fabs(charge) < 1e-6);
-                }
-            };
+            f = [=](auto& group) { return is_neutral(group.begin(), group.trueend()); };
             break;
         case (Selection::INACTIVE_NEUTRAL):
-            f = [molid](GroupType& group) {
-                if ((group.id == molid) && (group.size() != group.capacity())) {
-                    double charge = 0.0;
-                    for (auto it = group.begin(); it != group.trueend(); ++it) {
-                        charge += it->charge;
-                    }
-                    return (std::fabs(charge) <= pc::epsilon_dbl);
-                } else {
-                    return false;
-                }
-            };
+            f = [=](auto& group) { return !is_active(group) && is_neutral(group.begin(), group.trueend()); };
             break;
         case (Selection::ACTIVE_NEUTRAL):
-            f = [molid](GroupType& group) {
-                if ((group.id == molid) && (group.size() == group.capacity())) {
-                    double charge = 0.0;
-                    for (auto it = group.begin(); it != group.end(); ++it) {
-                        charge += it->charge;
-                    }
-                    return (std::fabs(charge) <= pc::epsilon_dbl);
-                } else {
-                    return false;
-                }
-            };
+            f = [=](auto& group) { return is_active(group) && is_neutral(group.begin(), group.end()); };
             break;
         }
+        f = [f, molid](auto& group) { return group.id == molid && f(group); };
         return groups | ranges::cpp20::views::filter(f);
     }
 
-    auto activeParticles() {
-        return groups | ranges::cpp20::views::join;
-    } //!< Returns range with all *active* particles in space
-
-    auto activeParticles() const {
-        return groups | ranges::cpp20::views::join;
-    } //!< Range with all *active* particles in space
+    auto activeParticles() { return groups | ranges::cpp20::views::join; }       //!< Range with all active particles
+    auto activeParticles() const { return groups | ranges::cpp20::views::join; } //!< Range with all active particles
 
     /**
      * @brief Find active atoms of type `atomid` (complexity: order N)

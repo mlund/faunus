@@ -18,12 +18,8 @@ void Change::clear() {
     *this = Change();
     assert(empty());
 }
-bool Change::empty() const {
-    if (volume_change || everything || matter_change || !groups.empty()) {
-        return false;
-    }
-    return true;
-}
+bool Change::empty() const { return not(volume_change || everything || matter_change || !groups.empty()); }
+
 Change::operator bool() const { return !empty(); }
 
 std::vector<Change::index_type> Change::touchedParticleIndex(const std::vector<Group<Particle>>& group_vector) const {

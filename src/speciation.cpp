@@ -222,15 +222,16 @@ Change::GroupChange SpeciationMove::activateMolecularGroup(Space::GroupType& tar
     target.activate(target.inactive().begin(), target.inactive().end()); // activate all particles
     assert(not target.empty());
 
-    Point cm = target.cm;
+    Point cm = target.mass_center;
     spc.geometry.randompos(cm, slump);                    // generate random position
     target.translate(cm, spc.geometry.getBoundaryFunc()); // assign random position to mass-center
     Point u = randomUnitVector(slump);               // random unit vector
     Eigen::Quaterniond Q(Eigen::AngleAxisd(2 * pc::pi * (slump() - 0.5), u));
     target.rotate(Q, spc.geometry.getBoundaryFunc()); // assign random orientation
 
-    assert(spc.geometry.sqdist(target.cm, Geometry::massCenter(target.begin(), target.end(),
-                                                               spc.geometry.getBoundaryFunc(), -target.cm)) < 1e-9);
+    assert(spc.geometry.sqdist(target.mass_center,
+                               Geometry::massCenter(target.begin(), target.end(), spc.geometry.getBoundaryFunc(),
+                                                    -target.mass_center)) < 1e-9);
 
     // Store internal bond energy of activated molecule
     for (auto &bond : Faunus::molecules[target.id].bonds) {

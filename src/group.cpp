@@ -38,7 +38,7 @@ template <class T> Group<T>& Group<T>::shallowcopy(const Group<T>& other) {
         }
         this->resize(other.size());
         id = other.id;
-        cm = other.cm;
+        mass_center = other.mass_center;
         confid = other.confid;
     }
     return *this;
@@ -71,19 +71,19 @@ template <class T> double Group<T>::mass() const {
 template <class T> auto Group<T>::positions() { return ranges::cpp20::views::transform(*this, &Particle::pos); }
 
 template <class T> void Group<T>::wrap(Geometry::BoundaryFunction boundary) {
-    boundary(cm);
+    boundary(mass_center);
     for (auto& particle : *this) {
         boundary(particle.pos);
     }
 }
 
 template <class T> void Group<T>::rotate(const Eigen::Quaterniond& quaternion, Geometry::BoundaryFunction boundary) {
-    Geometry::rotate(begin(), end(), quaternion, boundary, -cm);
+    Geometry::rotate(begin(), end(), quaternion, boundary, -mass_center);
 }
 
 template <class T> void Group<T>::translate(const Point& displacement, Geometry::BoundaryFunction boundary) {
-    cm += displacement;
-    boundary(cm);
+    mass_center += displacement;
+    boundary(mass_center);
     for (auto& particle : *this) {
         particle.pos += displacement;
         boundary(particle.pos);
@@ -102,7 +102,7 @@ template <class T> void Group<T>::translate(const Point& displacement, Geometry:
 template <class T>
 void Group<T>::updateMassCenter(Geometry::BoundaryFunction boundary_function, const Point& approximate_mass_center) {
     if (isMolecular() && !empty()) {
-        cm = Geometry::massCenter(begin(), end(), boundary_function, -approximate_mass_center);
+        mass_center = Geometry::massCenter(begin(), end(), boundary_function, -approximate_mass_center);
     }
 }
 
@@ -158,14 +158,14 @@ template <class T> const T& Group<T>::at(size_t index) const {
  */
 template <class T> std::optional<std::reference_wrapper<Point>> Group<T>::massCenter() {
     if (isMolecular()) {
-        return std::ref(cm);
+        return std::ref(mass_center);
     }
     return std::nullopt;
 }
 
 template <class T> std::optional<std::reference_wrapper<const Point>> Group<T>::massCenter() const {
     if (isMolecular()) {
-        return std::cref(cm);
+        return std::cref(mass_center);
     }
     return std::nullopt;
 }
@@ -187,7 +187,7 @@ template class Group<Particle>;
 
 void to_json(json& j, const Group<Particle>& group) {
     j = {{"id", group.id},
-         {"cm", group.cm},
+         {"cm", group.mass_center},
          {"atomic", group.isAtomic()},
          {"compressible", group.traits().compressible},
          {"size", group.size()}};
@@ -203,7 +203,7 @@ void from_json(const json& j, Group<Particle>& group) {
     group.resize(j.at("size").get<size_t>());
     group.trueend() = group.begin() + j.value("capacity", group.size());
     group.id = j.at("id").get<decltype(group.id)>();
-    group.cm = j.at("cm").get<Point>();
+    group.mass_center = j.at("cm").get<Point>();
     group.confid = j.value("confid", 0);
 }
 
@@ -385,12 +385,12 @@ TEST_CASE("[Faunus] Group") {
         Group<Particle> g2(0, p2.begin(), p2.end());
 
         g2.id = 100;
-        g2.cm = {1, 0, 0};
+        g2.mass_center = {1, 0, 0};
         g2.confid = 20;
         g1 = g2;
 
         CHECK(g1.id == 100);
-        CHECK(g1.cm.x() == 1);
+        CHECK(g1.mass_center.x() == 1);
         CHECK(g1.confid == 20);
 
         CHECK((*g1.begin()).id == -1);
@@ -445,7 +445,7 @@ TEST_CASE("[Faunus] Group") {
             p2.front().id = 8;
             p2.back().pos.x() = -10;
             g2.id = 100;
-            g2.cm = {1, 0, 0};
+            g2.mass_center = {1, 0, 0};
             g2.confid = 20;
             g2.resize(4);
             cereal::BinaryOutputArchive archive(out);
@@ -460,7 +460,7 @@ TEST_CASE("[Faunus] Group") {
             archive(g1);
 
             CHECK(g1.id == 100);
-            CHECK(g1.cm.x() == 1);
+            CHECK(g1.mass_center.x() == 1);
             CHECK(g1.confid == 20);
             CHECK(g1.size() == 4);
             CHECK(g1.capacity() == 5);

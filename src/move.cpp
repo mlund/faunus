@@ -161,14 +161,15 @@ void AtomicTranslateRotate::translateParticle(ParticleVector::iterator particle,
 
     auto& group = spc.groups.at(cdata.group_index);
     if (group.isMolecular()) {
-        group.cm = Geometry::massCenter(group.begin(), group.end(), spc.geometry.getBoundaryFunc(), -group.cm);
+        group.mass_center =
+            Geometry::massCenter(group.begin(), group.end(), spc.geometry.getBoundaryFunc(), -group.mass_center);
         checkMassCenter(group);
     }
 }
 
 void AtomicTranslateRotate::checkMassCenter(Space::GroupType& group) const {
     const auto allowed_threshold = 1e-6;
-    const auto old_mass_center = group.cm;
+    const auto old_mass_center = group.mass_center;
     group.translate(-old_mass_center, spc.geometry.getBoundaryFunc()); // translate to origin
     const auto should_be_zero = spc.geometry.sqdist({0, 0, 0}, Geometry::massCenter(group.begin(), group.end()));
     if (should_be_zero > allowed_threshold) {
@@ -849,7 +850,7 @@ void QuadrantJump::_move(Change &change) {
         auto it = slump.sample(mollist.begin(), mollist.end());
         if (not it->empty()) {
             assert(it->id == molid);
-            Point oldcm = it->cm;
+            Point oldcm = it->mass_center;
             if (index.size() == 2) {
                 auto cm_O = Geometry::massCenter(spc.particles.begin() + index[0], spc.particles.begin() + index[1] + 1,
                                                  spc.geometry.getBoundaryFunc());
@@ -858,14 +859,15 @@ void QuadrantJump::_move(Change &change) {
             } else {
                 it->translate(-2 * oldcm.cwiseProduct(dir.cast<double>()), spc.geometry.getBoundaryFunc());
             }
-            _sqd = spc.geometry.sqdist(oldcm, it->cm); // squared displacement
+            _sqd = spc.geometry.sqdist(oldcm, it->mass_center); // squared displacement
             Change::GroupChange d;
             d.group_index = Faunus::distance(spc.groups.begin(), it); // integer *index* of moved group
             d.all = true;                                       // *all* atoms in group were moved
             change.groups.push_back(d);                         // add to list of moved groups
 
-            assert(spc.geometry.sqdist(it->cm, Geometry::massCenter(it->begin(), it->end(),
-                                                                    spc.geometry.getBoundaryFunc(), -it->cm)) < 1e-9);
+            assert(spc.geometry.sqdist(it->mass_center,
+                                       Geometry::massCenter(it->begin(), it->end(), spc.geometry.getBoundaryFunc(),
+                                                            -it->mass_center)) < 1e-9);
         }
     } else
         faunus_logger->warn("{0}: no molecules found", name);
@@ -993,12 +995,12 @@ std::optional<std::reference_wrapper<Space::GroupType>> TranslateRotate::findRan
  */
 double TranslateRotate::translateMolecule(Space::GroupType& group) {
     if (translational_displacement > 0.0) { // translate
-        const auto old_mass_center = group.cm;
+        const auto old_mass_center = group.mass_center;
         const auto displacement_vector =
             Faunus::randomUnitVector(slump, translational_direction) * translational_displacement * slump();
 
         group.translate(displacement_vector, spc.geometry.getBoundaryFunc());
-        return spc.geometry.sqdist(old_mass_center, group.cm);
+        return spc.geometry.sqdist(old_mass_center, group.mass_center);
     } else {
         return 0.0;
     }
@@ -1044,8 +1046,8 @@ void TranslateRotate::_move(Change &change) {
 void TranslateRotate::checkMassCenter(const Space::GroupType& group) const {
     const auto allowed_threshold = 1e-6;
     const auto cm_recalculated =
-        Geometry::massCenter(group.begin(), group.end(), spc.geometry.getBoundaryFunc(), -group.cm);
-    const auto should_be_small = spc.geometry.sqdist(group.cm, cm_recalculated);
+        Geometry::massCenter(group.begin(), group.end(), spc.geometry.getBoundaryFunc(), -group.mass_center);
+    const auto should_be_small = spc.geometry.sqdist(group.mass_center, cm_recalculated);
     if (should_be_small > allowed_threshold) {
         faunus_logger->error("{}: error calculating mass center for {}", name, group.traits().name);
         PQRWriter().save("mass-center-failure.pqr", spc.groups, spc.geometry.getLength());
@@ -1163,7 +1165,8 @@ void SmartTranslateRotate::_move(Change &change) {
             assert(it->id == molid);
 
             randNbr = slump();                   // assigning random number in range [0,1]
-            molV = spc.geometry.vdist(it->cm, origo); // vector between selected molecule and center of geometry
+            molV =
+                spc.geometry.vdist(it->mass_center, origo); // vector between selected molecule and center of geometry
             cosTheta = molV.dot(cylAxis) / molV.norm() / cylAxis.norm(); // cosinus of angle between coordinate vector
                                                                          // of selected molecule and axis connecting
                                                                          // reference atoms
@@ -1189,7 +1192,7 @@ void SmartTranslateRotate::_move(Change &change) {
                     Ntot = 0.0;      // total number of particles
                     for (auto &g : mollist) {
                         Ntot += 1.0;
-                        molV = spc.geometry.vdist(g.cm, origo);
+                        molV = spc.geometry.vdist(g.mass_center, origo);
                         cosTheta = molV.dot(cylAxis) / molV.norm() / cylAxis.norm();
                         theta = acos(cosTheta);
                         x = cosTheta * molV.norm();
@@ -1225,11 +1228,11 @@ void SmartTranslateRotate::_move(Change &change) {
                     }
                 }
                 if (dptrans > 0) { // translate
-                    Point oldcm = it->cm;
+                    Point oldcm = it->mass_center;
                     Point dp = randomUnitVector(slump, dir) * dptrans * slump();
 
                     it->translate(dp, spc.geometry.getBoundaryFunc());
-                    _sqd = spc.geometry.sqdist(oldcm, it->cm); // squared displacement
+                    _sqd = spc.geometry.sqdist(oldcm, it->mass_center); // squared displacement
                 }
 
                 if (dprot > 0) { // rotate
@@ -1245,10 +1248,10 @@ void SmartTranslateRotate::_move(Change &change) {
                     d.all = true;                                       // *all* atoms in group were moved
                     change.groups.push_back(d);                         // add to list of moved groups
                 }
-                assert(spc.geometry.sqdist(it->cm, Geometry::massCenter(it->begin(), it->end(),
-                                                                        spc.geometry.getBoundaryFunc(), -it->cm)) <
-                       1e-6);
-                molV = spc.geometry.vdist(it->cm, origo);
+                assert(spc.geometry.sqdist(it->mass_center,
+                                           Geometry::massCenter(it->begin(), it->end(), spc.geometry.getBoundaryFunc(),
+                                                                -it->mass_center)) < 1e-6);
+                molV = spc.geometry.vdist(it->mass_center, origo);
                 cosTheta = molV.dot(cylAxis) / molV.norm() / cylAxis.norm();
                 theta = acos(cosTheta);
                 x = cosTheta * molV.norm();
@@ -1322,10 +1325,10 @@ void ConformationSwap::setRepeat() {
 void ConformationSwap::_move(Change& change) {
     auto groups = spc.findMolecules(molid, Space::Selection::ACTIVE);
     if (auto group = slump.sample(groups.begin(), groups.end()); group != groups.end()) {
-        inserter.offset = group->cm;                                         // insert on top of mass center
+        inserter.offset = group->mass_center; // insert on top of mass center
         auto particles = inserter(spc.geometry, Faunus::molecules[molid], spc.particles); // new conformation
         if (particles.size() == group->size()) {
-            checkMassCenterDrift(group->cm, particles); // throws if not OK
+            checkMassCenterDrift(group->mass_center, particles); // throws if not OK
             copyConformation(particles, group->begin());
             group->confid = Faunus::molecules[molid].conformations.getLastIndex(); // store conformation id
             registerChanges(change, *group);                                       // update change object

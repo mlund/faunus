@@ -117,24 +117,23 @@ template <class T> struct IterRange : std::pair<T, T> {
             using base::trueend;
             int id=-1;           //!< Molecule id
             int confid=0;        //!< Conformation index / id
-            Point cm={0,0,0};    //!< Mass center
+            Point mass_center = {0, 0, 0}; //!< Mass center
 
             inline bool isAtomic() const { return traits().atomic; } //!< Is it an atomic group?
             inline bool isMolecular() const { return !traits().atomic; } //!< is it a molecular group?
 
-            std::optional<std::reference_wrapper<Point>> massCenter(); //!< Reference to mass center if defined
-            std::optional<std::reference_wrapper<const Point>>
-            massCenter() const; //!< Reference to mass center if defined
+            std::optional<std::reference_wrapper<Point>> massCenter(); //!< Optional reference to mass center
+            std::optional<std::reference_wrapper<const Point>> massCenter() const; //!< Optional ref. to mass center
 
             //! Selections to filter groups using `getSelectionFilter()`
             enum Selectors : unsigned int {
-                ANY = (1u << 1),       //!< Match any group (disregards all other flags)
-                ACTIVE = (1u << 2),    //!< Only active groups (non-zero size)
-                INACTIVE = (1u << 3),  //!< Only inactive groups (zero size)
-                NEUTRAL = (1u << 4),   //!< Only groups with zero net charge
-                ATOMIC = (1u << 5),    //!< Only atomic groups
-                MOLECULAR = (1u << 6), //!< Only molecular groups (atomic=false)
-                FULL = (1u << 7)       //!< Only groups where size equals capacity
+                ANY = (1U << 1),       //!< Match any group (disregards all other flags)
+                ACTIVE = (1U << 2),    //!< Only active groups (non-zero size)
+                INACTIVE = (1U << 3),  //!< Only inactive groups (zero size)
+                NEUTRAL = (1U << 4),   //!< Only groups with zero net charge
+                ATOMIC = (1U << 5),    //!< Only atomic groups
+                MOLECULAR = (1U << 6), //!< Only molecular groups (atomic=false)
+                FULL = (1U << 7)       //!< Only groups where size equals capacity
             };
 
             /**
@@ -253,7 +252,7 @@ template <class T> struct IterRange : std::pair<T, T> {
             template <typename TdistanceFunc> void unwrap(const TdistanceFunc& vdist) {
                 if (isMolecular()) {
                     for (auto& particle : *this) {
-                        particle.pos = cm + vdist(particle.pos, cm);
+                        particle.pos = mass_center + vdist(particle.pos, mass_center);
                     }
                 }
             }
@@ -294,7 +293,7 @@ template <unsigned int mask> std::function<bool(const Group<Particle> &)> getGro
 template <class Archive, class T> void save(Archive &archive, const Group<T> &g, std::uint32_t const version) {
     switch (version) {
     case 0:
-        archive(g.id, g.confid, g.cm, g.size(), g.capacity());
+        archive(g.id, g.confid, g.mass_center, g.size(), g.capacity());
         for (auto it = g.begin(); it != g.trueend(); it++) {
             archive(*it);
         }
@@ -309,7 +308,7 @@ template <class Archive, class T> void load(Archive &archive, Group<T> &g, std::
     size_t capacity = 0;
     switch (version) {
     case 0:
-        archive(g.id, g.confid, g.cm, size, capacity);
+        archive(g.id, g.confid, g.mass_center, size, capacity);
         assert(size <= capacity);
         if (capacity != g.capacity()) {
             throw std::runtime_error("capacity mismatch of archived group");

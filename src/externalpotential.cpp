@@ -48,7 +48,7 @@ double ExternalPotential::groupEnergy(const Group<Particle> &group) const {
             if (group.size() == group.capacity()) {    // only apply if group is active
                 Particle mass_center;                  // temp. particle representing molecule
                 mass_center.charge = Faunus::monopoleMoment(group.begin(), group.end());
-                mass_center.pos = group.cm;
+                mass_center.pos = group.mass_center;
                 return externalPotentialFunc(mass_center);
             }
         } else {

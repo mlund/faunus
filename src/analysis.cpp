@@ -880,8 +880,8 @@ void SanityCheck::checkWithinContainer(const Space::GroupType& group) {
 void SanityCheck::checkMassCenter(const Space::GroupType& group) {
     if (group.isMolecular() && !group.empty()) {
         const auto mass_center =
-            Geometry::massCenter(group.begin(), group.end(), spc.geometry.getBoundaryFunc(), -group.cm);
-        const auto distance = spc.geometry.vdist(group.cm, mass_center).norm();
+            Geometry::massCenter(group.begin(), group.end(), spc.geometry.getBoundaryFunc(), -group.mass_center);
+        const auto distance = spc.geometry.vdist(group.mass_center, mass_center).norm();
         if (distance > mass_center_tolerance) {
             throw std::runtime_error(fmt::format(
                 "step {}: {}{} mass center out of sync by {:.3f} Å. This *may* be due to a "
@@ -931,7 +931,7 @@ void MoleculeRDF::_sample() {
     for (auto i = active_molecules.begin(); i != active_molecules.end(); ++i) {
         for (auto j = i; ++j != active_molecules.end();) {
             if ((i->id == id1 && j->id == id2) || (i->id == id2 && j->id == id1)) {
-                const auto distance = std::sqrt(spc.geometry.sqdist(i->cm, j->cm));
+                const auto distance = std::sqrt(spc.geometry.sqdist(i->mass_center, j->mass_center));
                 histogram(distance)++;
             }
         }
@@ -1060,7 +1060,7 @@ void MultipoleDistribution::_sample() {
             if (&group1 != &group2) {
                 const auto a = Faunus::toMultipole(group1, spc.geometry.getBoundaryFunc());
                 const auto b = Faunus::toMultipole(group2, spc.geometry.getBoundaryFunc());
-                const auto distance = spc.geometry.vdist(group1.cm, group2.cm);
+                const auto distance = spc.geometry.vdist(group1.mass_center, group2.mass_center);
                 auto& data = mean_energy[to_bin(distance.norm(), dr)];
                 data.exact += g2g(group1, group2);
                 data.ion_ion += a.charge * b.charge / distance.norm();
@@ -1129,7 +1129,7 @@ InertiaTensor::Data InertiaTensor::compute() {
     const auto& group = spc.groups.at(group_index);
     const Space::GroupType subgroup(group.id, group.begin() + particle_range[0], group.begin() + particle_range[1] + 1);
     InertiaTensor::Data d;
-    auto I = Geometry::inertia(subgroup.begin(), subgroup.end(), group.cm, spc.geometry.getBoundaryFunc());
+    auto I = Geometry::inertia(subgroup.begin(), subgroup.end(), group.mass_center, spc.geometry.getBoundaryFunc());
     Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(I);
     d.eigen_values = esf.eigenvalues();
     std::ptrdiff_t i_eival;
@@ -1171,7 +1171,7 @@ void MultipoleMoments::_to_json(json& j) const {
 MultipoleMoments::Data MultipoleMoments::calculateMultipoleMoment() const {
     const auto& group = spc.groups.at(group_index);
     Space::GroupType subgroup(group.id, group.begin() + particle_range[0], group.begin() + particle_range[1] + 1);
-    const auto mass_center = use_molecular_mass_center ? group.cm
+    const auto mass_center = use_molecular_mass_center ? group.mass_center
                                                        : Geometry::massCenter(subgroup.begin(), subgroup.end(),
                                                                               spc.geometry.getBoundaryFunc());
 
@@ -1258,7 +1258,7 @@ void PolymerShape::_sample() {
     for (const auto& group : molecules) {
         if (group.size() >= 2) { // two or more particles required to form a polymer
             const auto gyration_tensor =
-                Geometry::gyration(group.begin(), group.end(), group.cm, spc.geometry.getBoundaryFunc());
+                Geometry::gyration(group.begin(), group.end(), group.mass_center, spc.geometry.getBoundaryFunc());
             const auto principal_moment = Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d>(gyration_tensor).eigenvalues();
             const auto gyration_radius_squared = gyration_tensor.trace();
             const auto end_to_end_squared = spc.geometry.sqdist(group.begin()->pos, std::prev(group.end())->pos);
@@ -1514,7 +1514,7 @@ ParticleVector ChargeFluctuations::averageChargeParticles(const Space::GroupType
                                        [](auto& p1, auto& p2) { return p1.second < p2.second; });
         auto& added_particle = particles.emplace_back(Faunus::atoms.at(id_max->first));
         added_particle.charge = atom_mean_charges.at(particle_index).avg();
-        added_particle.pos = it->pos - group.cm;
+        added_particle.pos = it->pos - group.mass_center;
         spc.geometry.boundary(added_particle.pos);
         particle_index++;
     }
@@ -1569,7 +1569,7 @@ void ScatteringFunction::_sample() {
     for (int id : molecule_ids) {                         // loop over molecule names
         for (const auto& group : spc.findMolecules(id)) { // loop over groups
             if (mass_center_scattering && group.isMolecular()) {
-                scatter_positions.push_back(group.cm);
+                scatter_positions.push_back(group.mass_center);
             } else {
                 for (const auto& particle : group) { // loop over particle index in group
                     scatter_positions.push_back(particle.pos);

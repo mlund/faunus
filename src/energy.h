@@ -563,7 +563,7 @@ class GroupCutoff {
         bool result = false;
         ++total_cnt;
         if (group1.isMolecular() && group2.isMolecular() // atomic groups have no meaningful cm
-            && geometry.sqdist(group1.cm, group2.cm) >= cutoff_squared(group1.id, group2.id)) {
+            && geometry.sqdist(group1.mass_center, group2.mass_center) >= cutoff_squared(group1.id, group2.id)) {
             result = true;
             ++skip_cnt;
         }

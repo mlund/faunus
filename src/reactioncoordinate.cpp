@@ -206,11 +206,11 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordina
     } else if (property == "confid") {
         function = [&group]() { return static_cast<double>(group.confid); };
     } else if (property == "com_x") {
-        function = [&group]() { return group.cm.x(); };
+        function = [&group]() { return group.mass_center.x(); };
     } else if (property == "com_y") {
-        function = [&group]() { return group.cm.y(); };
+        function = [&group]() { return group.mass_center.y(); };
     } else if (property == "com_z") {
-        function = [&group]() { return group.cm.z(); };
+        function = [&group]() { return group.mass_center.z(); };
     } else if (property == "N") {
         function = [&group]() { return static_cast<double>(group.size()); };
     } else if (property == "Q") {
@@ -291,7 +291,9 @@ void MoleculeProperty::selectMassCenterDistanceZ(const json& j, Space& spc) {
         };
     } else if (indexes.size() == 2) {
         function = [&geometry = spc.geometry, &group1 = spc.groups.at(indexes[0]),
-                    &group2 = spc.groups.at(indexes[1])]() { return geometry.vdist(group1.cm, group2.cm).z(); };
+                    &group2 = spc.groups.at(indexes[1])]() {
+            return geometry.vdist(group1.mass_center, group2.mass_center).z();
+        };
     }
 }
 void MoleculeProperty::selectAtomAtomDistance(const json& j, Space& spc) {
@@ -309,7 +311,7 @@ void MoleculeProperty::selectAtomAtomDistance(const json& j, Space& spc) {
 void MoleculeProperty::selectGyrationRadius(Space& spc) {
     function = [&spc, &group = spc.groups.at(index)]() {
         assert(group.size() > 1);
-        auto S = Geometry::gyration(group.begin(), group.end(), group.cm, spc.geometry.getBoundaryFunc());
+        auto S = Geometry::gyration(group.begin(), group.end(), group.mass_center, spc.geometry.getBoundaryFunc());
         return sqrt(S.trace()); // S.trace() == S.eigenvalues().sum() but faster
     };
 }
@@ -337,8 +339,8 @@ void MoleculeProperty::selectMassCenterDistance(const json& j, Space& spc) {
         };
     } else if (indexes.size() == 2) {
         function = [&spc, dir = direction, i = indexes[0], j = indexes[1]]() {
-            auto& cm1 = spc.groups.at(i).cm;
-            auto& cm2 = spc.groups.at(j).cm;
+            auto& cm1 = spc.groups.at(i).mass_center;
+            auto& cm2 = spc.groups.at(j).mass_center;
             return spc.geometry.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).norm();
         };
     }
@@ -388,7 +390,7 @@ void MoleculeProperty::selectAngleWithVector(const json& j, Space& spc) {
     direction = j.at("dir").get<Point>().normalized();
     if (spc.groups.at(index).isMolecular()) {
         function = [&spc, &dir = direction, &group = spc.groups.at(index)]() {
-            auto& cm = group.cm;
+            auto& cm = group.mass_center;
             auto S = Geometry::gyration(group.begin(), group.end(), cm, spc.geometry.getBoundaryFunc());
             Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(S);
             Point eivals = esf.eigenvalues();

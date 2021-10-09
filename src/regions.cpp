@@ -101,7 +101,7 @@ bool WithinGroups::isInside(const Point &a) const {
         auto &g = spc.groups.at(i);  // ref. to current group
         if (com and not g.empty()) { // check only with mass-center
             assert(g.atomic == false);
-            if (spc.geometry.sqdist(a, g.cm) < threshold2)
+            if (spc.geometry.sqdist(a, g.mass_center) < threshold2)
                 return true;
         } else {
             for (Particle &b : g) // loop over active particles in group

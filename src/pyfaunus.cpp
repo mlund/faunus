@@ -144,7 +144,7 @@ PYBIND11_MODULE(pyfaunus, m)
         .def(py::init<ParticleVector&>())
         .def_readwrite("groups", &Tgroup::id, "Molecule id")
         .def_readwrite("id", &Tgroup::id, "Molecule id")
-        .def_readwrite("cm", &Tgroup::cm, "Center of mass")
+        .def_readwrite("cm", &Tgroup::mass_center, "Center of mass")
         .def_readwrite("atomic", &Tgroup::atomic)
         .def("__len__", [](Tgroup& self) { return self.size(); })
         .def(

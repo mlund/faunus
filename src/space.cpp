@@ -122,7 +122,7 @@ Space::GroupType& Space::addGroup(MoleculeData::index_type molid, const Particle
                                  new_particles.size());
             throw std::runtime_error("particle size mismatch");
         }
-        group.cm =
+        group.mass_center =
             Geometry::massCenter(group.begin(), group.end(), geometry.getBoundaryFunc(), -new_particles.begin()->pos);
     } else {
         if (new_particles.size() % moldata.atoms.size() != 0) {
@@ -207,15 +207,15 @@ Point Space::scaleVolume(double Vnew, Geometry::VolumeMethod method) {
         } else if (group.isAtomic()) { // scale all particle positions
             std::for_each(group.begin(), group.end(), scale_position);
         } else {
-            auto original_mass_center = group.cm;
+            auto original_mass_center = group.mass_center;
             if (group.traits().compressible) { // scale positions; recalculate mass center
                 std::for_each(group.begin(), group.end(), scale_position);
-                group.cm =
+                group.mass_center =
                     Geometry::massCenter(group.begin(), group.end(), geometry.getBoundaryFunc(), -original_mass_center);
             } else { // scale mass center; translate positions
-                group.cm = group.cm.cwiseProduct(scale);
-                geometry.boundary(group.cm);
-                auto mass_center_displacement = group.cm - original_mass_center;
+                group.mass_center = group.mass_center.cwiseProduct(scale);
+                geometry.boundary(group.mass_center);
+                auto mass_center_displacement = group.mass_center - original_mass_center;
                 std::for_each(group.begin(), group.end(), [&](auto &particle) {
                     particle.pos += mass_center_displacement; // translate internal coordinates
                     geometry.boundary(particle.pos);          // apply PBC
@@ -404,7 +404,8 @@ void from_json(const json &j, Space &spc) {
         // check correctness of molecular mass centers
         auto check_mass_center = [&](const auto& group) {
             const auto should_be_small = spc.geometry.sqdist(
-                group.cm, Geometry::massCenter(group.begin(), group.end(), spc.geometry.getBoundaryFunc(), -group.cm));
+                group.mass_center,
+                Geometry::massCenter(group.begin(), group.end(), spc.geometry.getBoundaryFunc(), -group.mass_center));
             if (should_be_small > 1e-9) {
                 throw std::runtime_error(fmt::format(
                     "couldn't calculate mass center for {}; increase periodic box size?", group.traits().name));
@@ -443,7 +444,7 @@ TEST_CASE("[Faunus] Space") {
     CHECK(spc1.groups.size() == 1);
     CHECK(spc1.groups.back().isMolecular());
     CHECK(spc1.groups.front().id == 0);
-    CHECK(spc1.groups.front().cm.x() == doctest::Approx(2.5));
+    CHECK(spc1.groups.front().mass_center.x() == doctest::Approx(2.5));
 
     // check `positions()`
     CHECK(&spc1.positions()[0] == &spc1.particles[0].pos);
@@ -531,24 +532,24 @@ TEST_CASE("[Faunus] Space::updateParticles") {
         std::vector<Point> positions = {{0, 0, 0}, {3, 3, 3}, {6, 6, 6}};
 
         // first group affected
-        spc.groups[0].cm.x() = -1;
-        spc.groups[1].cm.x() = -1;
+        spc.groups[0].mass_center.x() = -1;
+        spc.groups[1].mass_center.x() = -1;
         spc.updateParticles(positions.begin(), positions.end(), spc.groups[1].begin(), copy_function);
-        CHECK(spc.groups[0].cm.x() == Approx(-1));
-        CHECK(spc.groups[1].cm.x() == Approx(0.5031366235));
+        CHECK(spc.groups[0].mass_center.x() == Approx(-1));
+        CHECK(spc.groups[1].mass_center.x() == Approx(0.5031366235));
 
         // second group affected
-        spc.groups[1].cm.x() = -1;
+        spc.groups[1].mass_center.x() = -1;
         spc.updateParticles(positions.begin(), positions.end(), spc.groups[0].begin(), copy_function);
-        CHECK(spc.groups[0].cm.x() == Approx(0.5031366235));
-        CHECK(spc.groups[1].cm.x() == Approx(-1));
+        CHECK(spc.groups[0].mass_center.x() == Approx(0.5031366235));
+        CHECK(spc.groups[1].mass_center.x() == Approx(-1));
 
         // both groups affected
-        spc.groups[0].cm.x() = -1;
-        spc.groups[1].cm.x() = -1;
+        spc.groups[0].mass_center.x() = -1;
+        spc.groups[1].mass_center.x() = -1;
         spc.updateParticles(positions.begin(), positions.end(), spc.groups[0].begin() + 1, copy_function);
-        CHECK(spc.groups[0].cm.x() == Approx(0.1677122078));
-        CHECK(spc.groups[1].cm.x() == Approx(5.8322877922));
+        CHECK(spc.groups[0].mass_center.x() == Approx(0.1677122078));
+        CHECK(spc.groups[1].mass_center.x() == Approx(5.8322877922));
     }
 }
 
@@ -704,7 +705,7 @@ void InsertMoleculesInSpace::setPositionsForTrailingGroups(Space& spc, size_t nu
                    copy_with_offset_and_boundary_check);
 
     std::for_each(spc.groups.rbegin(), spc.groups.rbegin() + num_molecules, [&](auto& group) {
-        group.cm =
+        group.mass_center =
             Geometry::massCenter(group.begin(), group.end(), spc.geometry.getBoundaryFunc(), -group.begin()->pos);
     }); // update mass-centers on modified groups; start from the back
 }

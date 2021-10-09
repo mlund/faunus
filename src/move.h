@@ -134,15 +134,15 @@ class AtomicSwapCharge : public MoveBase {
  * @brief Translate and rotate a molecular group
  */
 class AtomicTranslateRotate : public MoveBase {
-    Space::Tpvec::const_iterator latest_particle;      //!< Iterator to last moved particle
+    ParticleVector::const_iterator latest_particle;    //!< Iterator to last moved particle
     const Energy::Hamiltonian& hamiltonian;            //!< Reference to Hamiltonian
     std::map<int, SparseHistogram<>> energy_histogram; //!< Energy histogram (value) for each particle type (key)
     double energy_resolution = 0.0;                    //!< Resolution of sampled energy histogram
     double latest_displacement_squared;                //!< temporary squared displacement
     void sampleEnergyHistogram();                      //!< Update energy histogram based on latest move
     void saveHistograms();                             //!< Write histograms for file
-    void checkMassCenter(Space::Tgroup& group) const;  //!< Perform test to see if the move violates PBC
-    void groupToDisk(const Space::Tgroup& group) const; //!< Save structure to disk in case of failure
+    void checkMassCenter(Space::GroupType& group) const;   //!< Perform test to see if the move violates PBC
+    void groupToDisk(const Space::GroupType& group) const; //!< Save structure to disk in case of failure
 
   protected:
     int molid = -1;                           //!< Molecule id to move
@@ -231,10 +231,10 @@ class TranslateRotate : public MoveBase {
     Point translational_direction = {1, 1, 1}; //!< User defined directions along x, y, z
     Point fixed_rotation_axis = {0, 0, 0};     //!< Axis of rotation. 0,0,0 == random.
 
-    std::optional<std::reference_wrapper<Space::Tgroup>> findRandomMolecule() const;
-    double translateMolecule(Space::Tgroup &group);
-    double rotateMolecule(Space::Tgroup &group);
-    void checkMassCenter(const Space::Tgroup& group) const; // sanity check of move
+    std::optional<std::reference_wrapper<Space::GroupType>> findRandomMolecule() const;
+    double translateMolecule(Space::GroupType& group);
+    double rotateMolecule(Space::GroupType& group);
+    void checkMassCenter(const Space::GroupType& group) const; // sanity check of move
 
     void _to_json(json &j) const override;
     void _from_json(const json &j) override;
@@ -257,7 +257,6 @@ class TranslateRotate : public MoveBase {
 
 class SmartTranslateRotate : public MoveBase {
   protected:
-    typedef typename Space::Tpvec Tpvec;
     using MoveBase::spc;
 
     int molid = -1, refid1 = -1, refid2 = -1; // molecule to displace, reference atoms 1 and 2 defining geometry
@@ -325,7 +324,7 @@ class ConformationSwap : public MoveBase {
     void setRepeat();                   //!< Set move repeat
     void checkConformationSize() const; //!< Do conformations fit simulation cell?
     void checkMassCenterDrift(const Point& old_mass_center, const ParticleVector& particles); //!< Check for CM drift
-    void registerChanges(Change& change, const Space::Tgroup& group) const;                   //!< Update change object
+    void registerChanges(Change& change, const Space::GroupType& group) const;                //!< Update change object
     ConformationSwap(Space& spc, const std::string& name, const std::string& cite);
 
   public:
@@ -361,7 +360,6 @@ class VolumeMove : public MoveBase {
  */
 class ChargeMove : public MoveBase {
   private:
-    typedef typename Space::Tpvec Tpvec;
     Average<double> msqd; // mean squared displacement
     double dq = 0, deltaq = 0;
     int atomIndex;
@@ -386,7 +384,6 @@ class ChargeMove : public MoveBase {
  */
 class ChargeTransfer : public MoveBase {
   private:
-    typedef typename Space::Tpvec Tpvec;
     Average<double> msqd; // mean squared displacement
     double dq = 0, deltaq = 0;
 
@@ -429,7 +426,6 @@ class ChargeTransfer : public MoveBase {
  */
 class QuadrantJump : public MoveBase {
   private:
-    typedef typename Space::Tpvec Tpvec;
     int molid = -1;
     Point dir = {1, 1, 1};
     std::vector<size_t> index;

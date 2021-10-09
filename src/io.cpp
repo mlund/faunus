@@ -558,33 +558,33 @@ TEST_CASE("[Faunus] StructureFileReader and StructureFileWriter") {
     Space spc;
     SpaceFactory::makeNaCl(spc, 2, R"( {"type": "cuboid", "length": [20,30,40]} )"_json);
 
-    CHECK(spc.p.size() == 4);
+    CHECK(spc.particles.size() == 4);
 
     // set positions
     double displacement = 0.0;
     for (int i = 0; i < 4; i++) {
-        spc.p[i].pos = {displacement, displacement + 0.1, displacement + 0.2};
-        spc.p[i].charge = double(i);
+        spc.particles[i].pos = {displacement, displacement + 0.1, displacement + 0.2};
+        spc.particles[i].charge = double(i);
         displacement += 0.5;
     }
 
     auto io_roundtrip = [&](StructureFileReader& reader, StructureFileWriter& writer) {
         std::stringstream stream;
-        writer.save(stream, spc.p.begin(), spc.p.end(), spc.geo.getLength());
+        writer.save(stream, spc.particles.begin(), spc.particles.end(), spc.geometry.getLength());
         stream.seekg(0); // rewind
         reader.load(stream);
         if (reader.box_dimension_support) {
-            CHECK(reader.box_length.x() == Approx(spc.geo.getLength().x()));
-            CHECK(reader.box_length.y() == Approx(spc.geo.getLength().y()));
-            CHECK(reader.box_length.z() == Approx(spc.geo.getLength().z()));
+            CHECK(reader.box_length.x() == Approx(spc.geometry.getLength().x()));
+            CHECK(reader.box_length.y() == Approx(spc.geometry.getLength().y()));
+            CHECK(reader.box_length.z() == Approx(spc.geometry.getLength().z()));
         }
         CHECK(reader.particles.size() == 4);
         for (int i = 0; i < 4; i++) {
-            CHECK(reader.particles[i].pos.x() == Approx(spc.p[i].pos.x()));
-            CHECK(reader.particles[i].pos.y() == Approx(spc.p[i].pos.y()));
-            CHECK(reader.particles[i].pos.z() == Approx(spc.p[i].pos.z()));
+            CHECK(reader.particles[i].pos.x() == Approx(spc.particles[i].pos.x()));
+            CHECK(reader.particles[i].pos.y() == Approx(spc.particles[i].pos.y()));
+            CHECK(reader.particles[i].pos.z() == Approx(spc.particles[i].pos.z()));
             if (reader.particle_charge_support) {
-                CHECK(reader.particles[i].charge == Approx(spc.p[i].charge));
+                CHECK(reader.particles[i].charge == Approx(spc.particles[i].charge));
             }
         }
         CHECK(!reader.comments.empty());

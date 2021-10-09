@@ -300,7 +300,7 @@ void SaveState::setWriteFunction(Space& spc) {
             if (convert_hexagonal_prism_to_cuboid) {
                 saveAsCuboid(file, spc, *w);
             } else {
-                w->save(file, spc.groups, spc.geo.getLength());
+                w->save(file, spc.groups, spc.geometry.getLength());
             }
         };
     } else if (suffix == "json") { // JSON state file
@@ -337,7 +337,7 @@ void SaveState::saveJsonStateFile(const std::string& filename, const Space& spc)
 }
 
 void SaveState::saveAsCuboid(const std::string& filename, Space& spc, StructureFileWriter& writer) const {
-    auto hexagonal_prism = std::dynamic_pointer_cast<Geometry::HexagonalPrism>(spc.geo.asSimpleGeometry());
+    auto hexagonal_prism = std::dynamic_pointer_cast<Geometry::HexagonalPrism>(spc.geometry.asSimpleGeometry());
     if (hexagonal_prism) {
         faunus_logger->debug("creating cuboid from hexagonal prism");
         const auto& [cuboid, particles] = Geometry::HexagonalPrismToCuboid(*hexagonal_prism, spc.activeParticles());
@@ -383,7 +383,7 @@ double PairFunctionBase::volumeElement(double r) const {
     case 3:
         return 4.0 * pc::pi * r * r * dr;
     case 2:
-        if (auto hypersphere = std::dynamic_pointer_cast<Geometry::Hypersphere2d>(spc.geo.asSimpleGeometry())) {
+        if (auto hypersphere = std::dynamic_pointer_cast<Geometry::Hypersphere2d>(spc.geometry.asSimpleGeometry())) {
             faunus_logger->trace("{}: hypersphere detected; radius set", name);
             const auto radius = hypersphere->getRadius();
             return 2.0 * pc::pi * radius * std::sin(r / radius) * dr;
@@ -443,7 +443,7 @@ double PerturbationAnalysisBase::meanFreeEnergy() const { return -std::log(mean_
 
 void VirtualVolumeMove::_sample() {
     if (std::fabs(volume_displacement) > 0.0) {
-        const auto old_volume = spc.geo.getVolume(); // store old volume
+        const auto old_volume = spc.geometry.getVolume(); // store old volume
         const auto old_energy = pot.energy(change);  // ...and energy
         const auto scale = spc.scaleVolume(old_volume + volume_displacement,
                                            volume_scaling_method); // scale entire system to new volume
@@ -478,7 +478,7 @@ void VirtualVolumeMove::writeToFileStream(const Point& scale, const double energ
                                energy_change, std::exp(-energy_change), mean_excess_pressure);
 
         // if anisotropic scaling, add an extra column with area or length perturbation
-        const auto box_length = spc.geo.getLength();
+        const auto box_length = spc.geometry.getLength();
         if (volume_scaling_method == Geometry::VolumeMethod::XY) {
             const auto area_change = box_length.x() * box_length.y() * (scale.x() * scale.y() - 1.0);
             *stream << fmt::format(" {:.6E}", area_change);
@@ -640,7 +640,8 @@ void WidomInsertion::_sample() {
         group.resize(group.capacity());                         // activate ghost
         ParticleVector particles;                               // particles to insert
         for (int cnt = 0; cnt < number_of_insertions; ++cnt) {
-            particles = inserter->operator()(spc.geo, Faunus::molecules[molid], spc.p); // random pos&orientation
+            particles =
+                inserter->operator()(spc.geometry, Faunus::molecules[molid], spc.particles); // random pos&orientation
             updateGroup(group, particles);
             const auto energy_change = pot.energy(change); // in kT
             collectWidomAverage(energy_change);
@@ -649,7 +650,7 @@ void WidomInsertion::_sample() {
     }
 }
 
-void WidomInsertion::updateGroup(Space::Tgroup& group, const ParticleVector& particles) {
+void WidomInsertion::updateGroup(Space::GroupType& group, const ParticleVector& particles) {
     assert(particles.size() == group.size());
     std::copy(particles.begin(), particles.end(), group.begin()); // copy to ghost group
     if (absolute_z_coords) {
@@ -657,7 +658,7 @@ void WidomInsertion::updateGroup(Space::Tgroup& group, const ParticleVector& par
     }
     if (group.isMolecular()) { // update molecular mass-center for molecular groups
         group.cm =
-            Geometry::massCenter(group.begin(), group.end(), this->spc.geo.getBoundaryFunc(), -group.begin()->pos);
+            Geometry::massCenter(group.begin(), group.end(), this->spc.geometry.getBoundaryFunc(), -group.begin()->pos);
     }
 }
 
@@ -742,7 +743,7 @@ std::pair<std::map<int, int>, std::map<int, int>> Density::countAtomsAndMolecule
 }
 
 double Density::updateVolumeStatistics() {
-    const auto volume = spc.geo.getVolume();
+    const auto volume = spc.geometry.getVolume();
     mean_volume += volume;
     mean_cubic_root_of_volume += std::cbrt(volume);
     mean_inverse_volume += 1.0 / volume;
@@ -829,7 +830,7 @@ void SanityCheck::_sample() {
         }
     } catch (std::exception& e) {
         PQRWriter().save(fmt::format("{}step{}-error.pqr", MPI::prefix, getNumberOfSteps()), spc.groups,
-                         spc.geo.getLength());
+                         spc.geometry.getLength());
         throw std::runtime_error(e.what());
     }
 }
@@ -838,12 +839,12 @@ void SanityCheck::checkGroupsCoverParticles() {
     for (const auto& group : spc.groups) {
         for (auto it = group.begin(); it != group.trueend(); ++it) {
             const auto address_of_particle = std::addressof(*it);
-            if (address_of_particle != std::addressof(spc.p.at(particle_index++))) {
+            if (address_of_particle != std::addressof(spc.particles.at(particle_index++))) {
                 throw std::runtime_error("group vector out of sync");
             }
         }
     }
-    if (particle_index != spc.p.size()) {
+    if (particle_index != spc.particles.size()) {
         throw std::runtime_error("particle <-> group mismatch");
     }
 }
@@ -854,10 +855,11 @@ void SanityCheck::checkGroupsCoverParticles() {
  * @param group Group to check
  * @throw if any particle is outside simulation cell
  */
-void SanityCheck::checkWithinContainer(const Space::Tgroup& group) {
+void SanityCheck::checkWithinContainer(const Space::GroupType& group) {
     bool outside_simulation_cell = false;
-    auto outside_particles =
-        group | ranges::cpp20::views::filter([&](const Particle& particle) { return spc.geo.collision(particle.pos); });
+    auto outside_particles = group | ranges::cpp20::views::filter([&](const Particle& particle) {
+                                 return spc.geometry.collision(particle.pos);
+                             });
 
     std::for_each(outside_particles.begin(), outside_particles.end(), [&](const auto& particle) {
         outside_simulation_cell = true;
@@ -875,10 +877,11 @@ void SanityCheck::checkWithinContainer(const Space::Tgroup& group) {
     }
 }
 
-void SanityCheck::checkMassCenter(const Space::Tgroup& group) {
+void SanityCheck::checkMassCenter(const Space::GroupType& group) {
     if (group.isMolecular() && !group.empty()) {
-        const auto mass_center = Geometry::massCenter(group.begin(), group.end(), spc.geo.getBoundaryFunc(), -group.cm);
-        const auto distance = spc.geo.vdist(group.cm, mass_center).norm();
+        const auto mass_center =
+            Geometry::massCenter(group.begin(), group.end(), spc.geometry.getBoundaryFunc(), -group.cm);
+        const auto distance = spc.geometry.vdist(group.cm, mass_center).norm();
         if (distance > mass_center_tolerance) {
             throw std::runtime_error(fmt::format(
                 "step {}: {}{} mass center out of sync by {:.3f} Å. This *may* be due to a "
@@ -894,7 +897,7 @@ SanityCheck::SanityCheck(const json& j, Space& spc) : Analysisbase(spc, "sanity"
 }
 
 void AtomRDF::sampleDistance(const Point& position1, const Point& position2) {
-    const auto distance = spc.geo.vdist(position1, position2);
+    const auto distance = spc.geometry.vdist(position1, position2);
     if (slicedir.sum() > 0) {
         if (distance.cwiseProduct((Point::Ones() - slicedir.cast<double>()).cwiseAbs()).norm() < thickness) {
             histogram(distance.cwiseProduct(slicedir.cast<double>()).norm())++;
@@ -905,7 +908,7 @@ void AtomRDF::sampleDistance(const Point& position1, const Point& position2) {
 }
 
 void AtomRDF::_sample() {
-    mean_volume += spc.geo.getVolume(dimensions);
+    mean_volume += spc.geometry.getVolume(dimensions);
 
     auto active_particles = spc.activeParticles();
     for (auto i = active_particles.begin(); i != active_particles.end(); ++i) {
@@ -922,13 +925,13 @@ AtomRDF::AtomRDF(const json& j, Space& spc) : PairFunctionBase(spc, j, "atomrdf"
 }
 
 void MoleculeRDF::_sample() {
-    mean_volume += spc.geo.getVolume(dimensions);
+    mean_volume += spc.geometry.getVolume(dimensions);
     auto active_molecules = spc.groups | ranges::cpp20::views::filter([](const auto& group) { return !group.empty(); });
 
     for (auto i = active_molecules.begin(); i != active_molecules.end(); ++i) {
         for (auto j = i; ++j != active_molecules.end();) {
             if ((i->id == id1 && j->id == id2) || (i->id == id2 && j->id == id1)) {
-                const auto distance = std::sqrt(spc.geo.sqdist(i->cm, j->cm));
+                const auto distance = std::sqrt(spc.geometry.sqdist(i->cm, j->cm));
                 histogram(distance)++;
             }
         }
@@ -941,7 +944,7 @@ MoleculeRDF::MoleculeRDF(const json& j, Space& spc) : PairFunctionBase(spc, j, "
 }
 
 void AtomDipDipCorr::_sample() {
-    mean_volume += spc.geo.getVolume(dimensions);
+    mean_volume += spc.geometry.getVolume(dimensions);
     const auto particles = spc.activeParticles();
 
     auto sample_distance = [&](const auto& particle1, const auto& particle2, const Point& distance) {
@@ -956,7 +959,7 @@ void AtomDipDipCorr::_sample() {
     for (auto i = particles.begin(); i != particles.end(); ++i) {
         for (auto j = i; ++j != particles.end();) {
             if ((i->id == id1 && j->id == id2) || (i->id == id2 && j->id == id1)) {
-                const Point distance = spc.geo.vdist(i->pos, j->pos);
+                const Point distance = spc.geometry.vdist(i->pos, j->pos);
                 if (slicedir.sum() > 0) {
                     if (distance.cwiseProduct(slicedir.cast<double>()).norm() < thickness) {
                         sample_distance(*i, *j, distance);
@@ -1013,17 +1016,17 @@ void XTCtraj::_from_json(const json& j) {
 void XTCtraj::_sample() {
     assert(atom_filter); // some gcc/clang/ubuntu/macos combinations wronly clear the `filter` function
     auto positions =
-        spc.p | ranges::cpp20::views::filter(atom_filter) | ranges::cpp20::views::transform(&Particle::pos);
-    writer->writeNext(spc.geo.getLength(), positions.begin(), positions.end());
+        spc.particles | ranges::cpp20::views::filter(atom_filter) | ranges::cpp20::views::transform(&Particle::pos);
+    writer->writeNext(spc.geometry.getLength(), positions.begin(), positions.end());
 }
 
 // =============== MultipoleDistribution ===============
 
-double MultipoleDistribution::g2g(const Space::Tgroup& group1, const Space::Tgroup& group2) {
+double MultipoleDistribution::g2g(const Space::GroupType& group1, const Space::GroupType& group2) {
     double energy = 0.0;
     for (const auto& particle_i : group1) {
         for (const auto& particle_j : group2) {
-            energy += particle_i.charge * particle_j.charge / spc.geo.vdist(particle_i.pos, particle_j.pos).norm();
+            energy += particle_i.charge * particle_j.charge / spc.geometry.vdist(particle_i.pos, particle_j.pos).norm();
         }
     }
     return energy;
@@ -1055,9 +1058,9 @@ void MultipoleDistribution::_sample() {
     for (auto& group1 : spc.findMolecules(ids[0])) {     // find active molecules
         for (auto& group2 : spc.findMolecules(ids[1])) { // find active molecules
             if (&group1 != &group2) {
-                const auto a = Faunus::toMultipole(group1, spc.geo.getBoundaryFunc());
-                const auto b = Faunus::toMultipole(group2, spc.geo.getBoundaryFunc());
-                const auto distance = spc.geo.vdist(group1.cm, group2.cm);
+                const auto a = Faunus::toMultipole(group1, spc.geometry.getBoundaryFunc());
+                const auto b = Faunus::toMultipole(group2, spc.geometry.getBoundaryFunc());
+                const auto distance = spc.geometry.vdist(group1.cm, group2.cm);
                 auto& data = mean_energy[to_bin(distance.norm(), dr)];
                 data.exact += g2g(group1, group2);
                 data.ion_ion += a.charge * b.charge / distance.norm();
@@ -1094,8 +1097,8 @@ void AtomInertia::_to_json(json& j) const {
 }
 Point AtomInertia::compute() {
     auto slice = spc.findAtoms(atom_id);
-    const auto cm = Geometry::massCenter(slice.begin(), slice.end(), spc.geo.getBoundaryFunc());
-    const auto I = Geometry::inertia(slice.begin(), slice.end(), cm, spc.geo.getBoundaryFunc());
+    const auto cm = Geometry::massCenter(slice.begin(), slice.end(), spc.geometry.getBoundaryFunc());
+    const auto I = Geometry::inertia(slice.begin(), slice.end(), cm, spc.geometry.getBoundaryFunc());
     Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(I);
     return esf.eigenvalues();
 }
@@ -1124,9 +1127,9 @@ void InertiaTensor::_to_json(json& j) const {
 }
 InertiaTensor::Data InertiaTensor::compute() {
     const auto& group = spc.groups.at(group_index);
-    const Space::Tgroup subgroup(group.begin() + particle_range[0], group.begin() + particle_range[1] + 1);
+    const Space::GroupType subgroup(group.begin() + particle_range[0], group.begin() + particle_range[1] + 1);
     InertiaTensor::Data d;
-    auto I = Geometry::inertia(subgroup.begin(), subgroup.end(), group.cm, spc.geo.getBoundaryFunc());
+    auto I = Geometry::inertia(subgroup.begin(), subgroup.end(), group.cm, spc.geometry.getBoundaryFunc());
     Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(I);
     d.eigen_values = esf.eigenvalues();
     std::ptrdiff_t i_eival;
@@ -1167,17 +1170,17 @@ void MultipoleMoments::_to_json(json& j) const {
 }
 MultipoleMoments::Data MultipoleMoments::calculateMultipoleMoment() const {
     const auto& group = spc.groups.at(group_index);
-    Space::Tgroup subgroup(group.begin() + particle_range[0], group.begin() + particle_range[1] + 1);
-    const auto mass_center = use_molecular_mass_center
-                                 ? group.cm
-                                 : Geometry::massCenter(subgroup.begin(), subgroup.end(), spc.geo.getBoundaryFunc());
+    Space::GroupType subgroup(group.begin() + particle_range[0], group.begin() + particle_range[1] + 1);
+    const auto mass_center = use_molecular_mass_center ? group.cm
+                                                       : Geometry::massCenter(subgroup.begin(), subgroup.end(),
+                                                                              spc.geometry.getBoundaryFunc());
 
     MultipoleMoments::Data multipole;
     Tensor quadrupole; // quadrupole tensor
     quadrupole.setZero();
     for (const auto& particle : subgroup) {
         Point position = particle.pos - mass_center;
-        spc.geo.boundary(position);
+        spc.geometry.boundary(position);
         multipole.charge += particle.charge;
         multipole.dipole_moment += particle.charge * position;
         quadrupole += particle.charge * (3.0 * position * position.transpose() -
@@ -1255,10 +1258,10 @@ void PolymerShape::_sample() {
     for (const auto& group : molecules) {
         if (group.size() >= 2) { // two or more particles required to form a polymer
             const auto gyration_tensor =
-                Geometry::gyration(group.begin(), group.end(), group.cm, spc.geo.getBoundaryFunc());
+                Geometry::gyration(group.begin(), group.end(), group.cm, spc.geometry.getBoundaryFunc());
             const auto principal_moment = Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d>(gyration_tensor).eigenvalues();
             const auto gyration_radius_squared = gyration_tensor.trace();
-            const auto end_to_end_squared = spc.geo.sqdist(group.begin()->pos, std::prev(group.end())->pos);
+            const auto end_to_end_squared = spc.geometry.sqdist(group.begin()->pos, std::prev(group.end())->pos);
 
             data.end_to_end_squared += end_to_end_squared;
             data.gyration_radius += std::sqrt(gyration_radius_squared);
@@ -1345,8 +1348,8 @@ void AtomProfile::_to_json(json& j) const {
 void AtomProfile::_sample() {
     if (center_of_mass_atom_id >= 0) { // calc. mass center of selected atoms
         auto mass_center_particles = spc.findAtoms(center_of_mass_atom_id);
-        origin =
-            Geometry::massCenter(mass_center_particles.begin(), mass_center_particles.end(), spc.geo.getBoundaryFunc());
+        origin = Geometry::massCenter(mass_center_particles.begin(), mass_center_particles.end(),
+                                      spc.geometry.getBoundaryFunc());
     }
 
     auto selected_particles = spc.activeParticles() | ranges::cpp20::views::filter([&](const Particle& particle) {
@@ -1360,7 +1363,7 @@ void AtomProfile::_sample() {
 }
 
 double AtomProfile::distanceToOrigin(const Point& position) const {
-    const Point distance = spc.geo.vdist(position, origin);
+    const Point distance = spc.geometry.vdist(position, origin);
     return distance.cwiseProduct(dir.cast<double>()).norm();
 }
 
@@ -1418,9 +1421,9 @@ void SlicedDensity::_sample() {
 
     if (center_of_mass_atom_id >= 0) { // calc. mass center of selected atoms
         auto mass_center_particles = spc.findAtoms(center_of_mass_atom_id);
-        z_offset =
-            Geometry::massCenter(mass_center_particles.begin(), mass_center_particles.end(), spc.geo.getBoundaryFunc())
-                .z();
+        z_offset = Geometry::massCenter(mass_center_particles.begin(), mass_center_particles.end(),
+                                        spc.geometry.getBoundaryFunc())
+                       .z();
     }
 
     auto filtered_particles = spc.activeParticles() | ranges::cpp20::views::filter([&](const auto& particle) {
@@ -1436,7 +1439,7 @@ SlicedDensity::SlicedDensity(const json& j, Space& spc) : Analysisbase(spc, "sli
 void SlicedDensity::_to_disk() {
     if (std::ofstream f(MPI::prefix + file); f and number_of_samples > 0) {
         f << "# z rho/M\n";
-        const Point box_length = spc.geo.getLength();
+        const Point box_length = spc.geometry.getLength();
         const auto half_z_length = 0.5 * box_length.z();
         const auto volume = box_length.x() * box_length.y() * dz;
         for (double z = -half_z_length; z <= half_z_length; z += dz) {
@@ -1494,12 +1497,12 @@ void ChargeFluctuations::_to_disk() {
         if (not ranges::cpp20::empty(molecules)) {
             const auto particles_with_avg_charges = averageChargeParticles(*molecules.begin());
             PQRWriter().save(MPI::prefix + filename, particles_with_avg_charges.begin(),
-                             particles_with_avg_charges.end(), spc.geo.getLength());
+                             particles_with_avg_charges.end(), spc.geometry.getLength());
         }
     }
 }
 
-ParticleVector ChargeFluctuations::averageChargeParticles(const Space::Tgroup& group) {
+ParticleVector ChargeFluctuations::averageChargeParticles(const Space::GroupType& group) {
     ParticleVector particles;            // temporary particle vector
     particles.reserve(group.capacity()); // allocate required memory already now
     size_t particle_index = 0;
@@ -1512,7 +1515,7 @@ ParticleVector ChargeFluctuations::averageChargeParticles(const Space::Tgroup& g
         auto& added_particle = particles.emplace_back(Faunus::atoms.at(id_max->first));
         added_particle.charge = atom_mean_charges.at(particle_index).avg();
         added_particle.pos = it->pos - group.cm;
-        spc.geo.boundary(added_particle.pos);
+        spc.geometry.boundary(added_particle.pos);
         particle_index++;
     }
     return particles;
@@ -1539,7 +1542,7 @@ ChargeFluctuations::ChargeFluctuations(const json& j, Space& spc) : Analysisbase
 void Multipole::_sample() {
     for (const auto& group : spc.groups) {            // loop over all groups molecules
         if (group.isMolecular() and !group.empty()) { // only active, molecular groups
-            const auto particle = Faunus::toMultipole(group, spc.geo.getBoundaryFunc());
+            const auto particle = Faunus::toMultipole(group, spc.geometry.getBoundaryFunc());
             auto& average = average_moments[group.id];
             average.charge += particle.charge;
             average.dipole_moment += particle.getExt().mulen;
@@ -1580,19 +1583,19 @@ void ScatteringFunction::_sample() {
 
     switch (scheme) {
     case Schemes::DEBYE:
-        debye->sample(scatter_positions, spc.geo.getVolume());
+        debye->sample(scatter_positions, spc.geometry.getVolume());
         if (save_after_sample) {
             IO::writeKeyValuePairs(filename + "." + suffix, debye->getIntensity());
         }
         break;
     case Schemes::EXPLICIT_PBC:
-        explicit_average_pbc->sample(scatter_positions, spc.geo.getLength());
+        explicit_average_pbc->sample(scatter_positions, spc.geometry.getLength());
         if (save_after_sample) {
             IO::writeKeyValuePairs(filename + "." + suffix, explicit_average_pbc->getSampling());
         }
         break;
     case Schemes::EXPLICIT_IPBC:
-        explicit_average_ipbc->sample(scatter_positions, spc.geo.getLength());
+        explicit_average_ipbc->sample(scatter_positions, spc.geometry.getLength());
         if (save_after_sample) {
             IO::writeKeyValuePairs(filename + "." + suffix, explicit_average_ipbc->getSampling());
         }
@@ -1628,7 +1631,7 @@ ScatteringFunction::ScatteringFunction(const json& j, Space& spc) try : Analysis
     molecule_names = j.at("molecules").get<decltype(molecule_names)>();
     molecule_ids = Faunus::names2ids(molecules, molecule_names);
 
-    const auto cuboid = std::dynamic_pointer_cast<Geometry::Cuboid>(spc.geo.asSimpleGeometry());
+    const auto cuboid = std::dynamic_pointer_cast<Geometry::Cuboid>(spc.geometry.asSimpleGeometry());
 
     if (const auto scheme_str = j.value("scheme", "explicit"s); scheme_str == "debye") {
         scheme = Schemes::DEBYE;
@@ -1717,13 +1720,13 @@ void VirtualTranslate::writeToFileStream(const double energy_change) const {
  * Calculates the energy change of displacing a group and
  * then restore it to it's original position, leaving Space untouched.
  */
-double VirtualTranslate::momentarilyPerturb(Space::Tgroup& group) {
+double VirtualTranslate::momentarilyPerturb(Space::GroupType& group) {
     change.groups.at(0).group_index = spc.getGroupIndex(group);
     const auto old_energy = pot.energy(change);
     const Point displacement_vector = perturbation_distance * perturbation_direction;
-    group.translate(displacement_vector, spc.geo.getBoundaryFunc()); // temporarily translate group
+    group.translate(displacement_vector, spc.geometry.getBoundaryFunc()); // temporarily translate group
     const auto new_energy = pot.energy(change);
-    group.translate(-displacement_vector, spc.geo.getBoundaryFunc()); // restore original position
+    group.translate(-displacement_vector, spc.geometry.getBoundaryFunc()); // restore original position
     return new_energy - old_energy;
 }
 
@@ -1809,7 +1812,7 @@ void ElectricPotential::setPolicy(const json& j) {
         output_information["stride"] = stride;
         applyPolicy = [&, stride] {
             auto origin = targets.begin();
-            spc.geo.randompos(origin->position, random);
+            spc.geometry.randompos(origin->position, random);
             std::for_each(std::next(origin), targets.end(), [&](Target& target) {
                 target.position = origin->position + stride * randomUnitVector(random);
                 std::advance(origin, 1);
@@ -1822,7 +1825,7 @@ void ElectricPotential::setPolicy(const json& j) {
         applyPolicy = [&, stride] {
             auto origin = targets.begin();
             do {
-                spc.geo.randompos(origin->position, random);
+                spc.geometry.randompos(origin->position, random);
             } while (overlapWithParticles(origin->position));
             std::for_each(std::next(origin), targets.end(), [&](Target& target) {
                 do {
@@ -1877,7 +1880,7 @@ void ElectricPotential::_sample() {
 
 double ElectricPotential::calcPotentialOnTarget(const ElectricPotential::Target& target) {
     auto potential_from_particle = [&](const Particle& particle) {
-        const auto distance_to_target = std::sqrt(spc.geo.sqdist(particle.pos, target.position));
+        const auto distance_to_target = std::sqrt(spc.geometry.sqdist(particle.pos, target.position));
         return coulomb->getCoulombGalore().ion_potential(particle.charge, distance_to_target);
     };
     auto potentials = spc.activeParticles() | ranges::cpp20::views::transform(potential_from_particle);
@@ -1916,7 +1919,7 @@ void ElectricPotential::_to_disk() {
  * @return True if overlap with any particle
  */
 bool ElectricPotential::overlapWithParticles(const Point& position) const {
-    auto overlap = [&position, &geometry = spc.geo](const Particle& particle) {
+    auto overlap = [&position, &geometry = spc.geometry](const Particle& particle) {
         const auto radius = 0.5 * particle.traits().sigma;
         return geometry.sqdist(particle.pos, position) < radius * radius;
     };

@@ -17,8 +17,7 @@
 namespace py = pybind11;
 using namespace Faunus;
 
-typedef typename Space::Tpvec Tpvec;
-typedef typename Space::Tgroup Tgroup;
+typedef typename Space::GroupType Tgroup;
 typedef Energy::Hamiltonian Thamiltonian;
 typedef MetropolisMonteCarlo Tmcsimulation;
 
@@ -129,35 +128,34 @@ PYBIND11_MODULE(pyfaunus, m)
         .def_readwrite("charge", &Particle::charge, "Particle charge (monopole)");
 
     // Particle vector and it's iterator
-    py::class_<typename Tpvec::iterator>(m, "ParticleVectorIterator")
-        .def("__add__", [](typename Tpvec::iterator it, int i){ return it+i; } )
-        .def("__sub__", [](typename Tpvec::iterator it, int i){ return it-i; } );
+    py::class_<ParticleVector::iterator>(m, "ParticleVectorIterator")
+        .def("__add__", [](ParticleVector::iterator it, int i) { return it + i; })
+        .def("__sub__", [](ParticleVector::iterator it, int i) { return it - i; });
 
-    auto _pvec = py::bind_vector<Tpvec>(m, "ParticleVector");
-    _pvec.def("positions", [](Tpvec &p) { return asEigenMatrix(p.begin(), p.end(), &Particle::pos); })
-        .def("charges", [](Tpvec &p) { return asEigenVector(p.begin(), p.end(), &Particle::charge); })
-        .def("begin", [](Tpvec &p) { return p.begin(); })
-        .def("end", [](Tpvec &p) { return p.end(); });
+    auto _pvec = py::bind_vector<ParticleVector>(m, "ParticleVector");
+    _pvec.def("positions", [](ParticleVector& p) { return asEigenMatrix(p.begin(), p.end(), &Particle::pos); })
+        .def("charges", [](ParticleVector& p) { return asEigenVector(p.begin(), p.end(), &Particle::charge); })
+        .def("begin", [](ParticleVector& p) { return p.begin(); })
+        .def("end", [](ParticleVector& p) { return p.end(); });
 
     // Group
     py::class_<Tgroup>(m, "Group")
-        .def(py::init<typename Tpvec::iterator, typename Tpvec::iterator>())
-        .def(py::init<Tpvec&>())
+        .def(py::init<ParticleVector::iterator, ParticleVector::iterator>())
+        .def(py::init<ParticleVector&>())
         .def_readwrite("groups", &Tgroup::id, "Molecule id")
         .def_readwrite("id", &Tgroup::id, "Molecule id")
         .def_readwrite("cm", &Tgroup::cm, "Center of mass")
         .def_readwrite("atomic", &Tgroup::atomic)
-        .def("__len__", [](Tgroup &self) { return self.size(); } )
-        .def("__iter__", [](Tgroup &v) {
-                return py::make_iterator(v.begin(), v.end()); },
-                py::keep_alive<0, 1>())
+        .def("__len__", [](Tgroup& self) { return self.size(); })
+        .def(
+            "__iter__", [](Tgroup& v) { return py::make_iterator(v.begin(), v.end()); }, py::keep_alive<0, 1>())
         .def("traits", &Tgroup::traits)
         .def("contains", &Tgroup::contains)
         .def("capacity", &Tgroup::capacity)
         .def("deactivate", &Tgroup::deactivate)
         .def("activate", &Tgroup::activate)
-        .def("begin", (Tpvec::iterator& (Tgroup::*)() ) &Tgroup::begin)
-        .def("end", (Tpvec::iterator& (Tgroup::*)() ) &Tgroup::end);
+        .def("begin", (ParticleVector::iterator & (Tgroup::*)()) & Tgroup::begin)
+        .def("end", (ParticleVector::iterator & (Tgroup::*)()) & Tgroup::end);
 
     py::bind_vector<std::vector<Tgroup>>(m, "GroupVector");
 
@@ -239,11 +237,11 @@ PYBIND11_MODULE(pyfaunus, m)
     // Space
     py::class_<Space>(m, "Space")
         .def(py::init<>())
-        .def_readwrite("geo", &Space::geo)
-        .def_readwrite("p", &Space::p)
+        .def_readwrite("geo", &Space::geometry)
+        .def_readwrite("particles", &Space::particles)
         .def_readwrite("groups", &Space::groups)
         .def("findMolecules", &Space::findMolecules)
-        .def("from_dict", [](Space &spc, py::dict dict) { from_json(dict2json(dict), spc); });
+        .def("from_dict", [](Space& spc, py::dict dict) { from_json(dict2json(dict), spc); });
 
     // Hamiltonian
     py::class_<Thamiltonian>(m, "Hamiltonian")

@@ -50,9 +50,11 @@ class ClusterShapeAnalysis {
         const auto cluster_size = std::distance(groups.begin(), groups.end());
         Tensor gyration_tensor;
         if (shape_anisotropy_use_com) {
-            gyration_tensor = gyrationFromMassCenterPositions(groups, mass_center_of_groups, spc.geo.getBoundaryFunc());
+            gyration_tensor =
+                gyrationFromMassCenterPositions(groups, mass_center_of_groups, spc.geometry.getBoundaryFunc());
         } else {
-            gyration_tensor = gyrationFromParticlePositions(groups, mass_center_of_groups, spc.geo.getBoundaryFunc());
+            gyration_tensor =
+                gyrationFromParticlePositions(groups, mass_center_of_groups, spc.geometry.getBoundaryFunc());
         }
         const auto shape = Geometry::ShapeDescriptors(gyration_tensor);
         size_distribution[cluster_size]++;
@@ -68,7 +70,7 @@ class ClusterShapeAnalysis {
                                       shape.relative_shape_anisotropy);
             PQRWriter pqr;
             pqr.style = PQRWriter::Style::PQR;
-            pqr.save(it->second, groups, spc.geo.getLength());
+            pqr.save(it->second, groups, spc.geometry.getLength());
         }
         ++number_of_samples;
     }
@@ -85,7 +87,7 @@ void to_json(json &j, const ClusterShapeAnalysis &shape);
  */
 class FindCluster {
   private:
-    typedef typename Space::Tgroup Tgroup;
+    typedef typename Space::GroupType Tgroup;
     Space &spc;
     bool single_layer = false;               //!< stop cluster search after first layer of neighbors
     std::vector<std::string> molecule_names; //!< names of molecules to be considered
@@ -113,7 +115,7 @@ void to_json(json &j, const FindCluster &cluster); //!< Serialize to json
  */
 class Cluster : public MoveBase {
   private:
-    typedef typename Space::Tgroup Tgroup;
+    typedef typename Space::GroupType Tgroup;
     std::shared_ptr<FindCluster> find_cluster;
     std::shared_ptr<ClusterShapeAnalysis> shape_analysis;
     Average<double> average_cluster_size;

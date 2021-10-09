@@ -112,7 +112,7 @@ void ReplayMove::_move(Change &change) {
     assert(reader != nullptr);
     if (!end_of_trajectory) {
         if (reader->read(frame.step, frame.timestamp, frame.box, spc.positions().begin(), spc.positions().end())) {
-            spc.geo.setLength(frame.box);
+            spc.geometry.setLength(frame.box);
             change.everything = true;
         } else {
             // nothing to do, simulation shall stop
@@ -156,39 +156,39 @@ void AtomicTranslateRotate::_from_json(const json& j) {
 void AtomicTranslateRotate::translateParticle(ParticleVector::iterator particle, double displacement) {
     const auto old_position = particle->pos; // backup old position
     particle->pos += randomUnitVector(slump, directions) * displacement * slump();
-    spc.geo.boundary(particle->pos);
-    latest_displacement_squared = spc.geo.sqdist(old_position, particle->pos); // square displacement
+    spc.geometry.boundary(particle->pos);
+    latest_displacement_squared = spc.geometry.sqdist(old_position, particle->pos); // square displacement
 
     auto& group = spc.groups.at(cdata.group_index);
     if (group.isMolecular()) {
-        group.cm = Geometry::massCenter(group.begin(), group.end(), spc.geo.getBoundaryFunc(), -group.cm);
+        group.cm = Geometry::massCenter(group.begin(), group.end(), spc.geometry.getBoundaryFunc(), -group.cm);
         checkMassCenter(group);
     }
 }
 
-void AtomicTranslateRotate::checkMassCenter(Space::Tgroup& group) const {
+void AtomicTranslateRotate::checkMassCenter(Space::GroupType& group) const {
     const auto allowed_threshold = 1e-6;
     const auto old_mass_center = group.cm;
-    group.translate(-old_mass_center, spc.geo.getBoundaryFunc()); // translate to origin
-    const auto should_be_zero = spc.geo.sqdist({0, 0, 0}, Geometry::massCenter(group.begin(), group.end()));
+    group.translate(-old_mass_center, spc.geometry.getBoundaryFunc()); // translate to origin
+    const auto should_be_zero = spc.geometry.sqdist({0, 0, 0}, Geometry::massCenter(group.begin(), group.end()));
     if (should_be_zero > allowed_threshold) {
         faunus_logger->error("{}: error calculating mass center for {}", name, group.traits().name);
         groupToDisk(group);
         throw std::runtime_error("molecule likely too large for periodic boundaries; increase box size?");
     }
-    group.translate(old_mass_center, spc.geo.getBoundaryFunc());
+    group.translate(old_mass_center, spc.geometry.getBoundaryFunc());
 }
 
-void AtomicTranslateRotate::groupToDisk(const Space::Tgroup& group) const {
+void AtomicTranslateRotate::groupToDisk(const Space::GroupType& group) const {
     if (auto stream = std::ofstream("mass-center-failure.pqr"); stream) {
         const auto group_iter = spc.groups.cbegin() + spc.getGroupIndex(group);
         auto groups = ranges::cpp20::views::counted(group_iter, 1); // slice out single group
-        PQRWriter().save(stream, groups, spc.geo.getLength());
+        PQRWriter().save(stream, groups, spc.geometry.getLength());
     }
 }
 
 void AtomicTranslateRotate::_move(Change &change) {
-    if (auto particle = randomAtom(); particle != spc.p.end()) {
+    if (auto particle = randomAtom(); particle != spc.particles.end()) {
         latest_particle = particle;
         const auto translational_displacement = particle->traits().dp;
         const auto rotational_displacement = particle->traits().dprot;
@@ -208,7 +208,7 @@ void AtomicTranslateRotate::_move(Change &change) {
             change.groups.push_back(cdata); // add to list of moved groups
         }
     } else {
-        latest_particle = spc.p.end();
+        latest_particle = spc.particles.end();
         latest_displacement_squared = 0.0; // no particle found --> no movement
     }
 }
@@ -240,7 +240,7 @@ AtomicTranslateRotate::AtomicTranslateRotate(Space& spc, const Energy::Hamiltoni
  */
 ParticleVector::iterator AtomicTranslateRotate::randomAtom() {
     assert(molid >= 0);
-    auto particle = spc.p.end(); // particle iterator
+    auto particle = spc.particles.end(); // particle iterator
     auto selection = (Faunus::molecules[molid].atomic) ? Space::Selection::ALL : Space::Selection::ACTIVE;
     auto mollist = spc.findMolecules(molid, selection);
     if (auto group = slump.sample(mollist.begin(), mollist.end()); group != mollist.end()) { // random molecule
@@ -260,7 +260,7 @@ ParticleVector::iterator AtomicTranslateRotate::randomAtom() {
  */
 void AtomicTranslateRotate::sampleEnergyHistogram() {
     if (energy_resolution > 0.0) {
-        assert(latest_particle != spc.p.end());
+        assert(latest_particle != spc.particles.end());
         const auto particle_energy =
             std::accumulate(hamiltonian.latestEnergies().begin(), hamiltonian.latestEnergies().end(), 0.0);
         auto& particle_histogram =
@@ -407,24 +407,24 @@ bool ParallelTempering::goodPartner() {
  */
 void ParallelTempering::exchangeState(Change &change) {
     assert(partner != -1);
-    auto old_volume = spc.geo.getVolume();
+    auto old_volume = spc.geometry.getVolume();
     particle_transmitter.sendExtra.at(VOLUME) = old_volume;      // copy current volume for sending
-    partner_particles->resize(spc.p.size());                     // temparary storage
+    partner_particles->resize(spc.particles.size());             // temparary storage
     particle_transmitter.recv(mpi, partner, *partner_particles); // receive particles
-    particle_transmitter.send(mpi, spc.p, partner);              // send everything
+    particle_transmitter.send(mpi, spc.particles, partner);      // send everything
     particle_transmitter.waitrecv();
     particle_transmitter.waitsend();
 
     auto new_volume = particle_transmitter.recvExtra.at(VOLUME);
-    if (new_volume < very_small_volume || spc.p.size() != partner_particles->size()) {
+    if (new_volume < very_small_volume || spc.particles.size() != partner_particles->size()) {
         MPI_Abort(mpi.comm, 1);
     } else {
         change.everything = true;
         if (std::fabs(new_volume - old_volume) > pc::epsilon_dbl) {
             change.volume_change = true;
-            spc.geo.setVolume(new_volume, volume_scaling_method);
+            spc.geometry.setVolume(new_volume, volume_scaling_method);
         }
-        spc.updateParticles(partner_particles->begin(), partner_particles->end(), spc.p.begin());
+        spc.updateParticles(partner_particles->begin(), partner_particles->end(), spc.particles.begin());
     }
 }
 
@@ -503,7 +503,7 @@ ParallelTempering::ParallelTempering(Space &spc, MPI::MPIController &mpi)
         throw std::runtime_error(name + " requires two or more MPI processes");
     }
     partner_particles = std::make_unique<ParticleVector>();
-    partner_particles->reserve(spc.p.size());
+    partner_particles->reserve(spc.particles.size());
     particle_transmitter.recvExtra.resize(1);
     particle_transmitter.sendExtra.resize(1);
 }
@@ -543,7 +543,7 @@ void VolumeMove::_move(Change &change) {
     if (logarithmic_volume_displacement_factor > 0.0) {
         change.volume_change = true;
         change.everything = true;
-        old_volume = spc.geo.getVolume();
+        old_volume = spc.geometry.getVolume();
         new_volume = std::exp(std::log(old_volume) + (slump() - 0.5) * logarithmic_volume_displacement_factor);
         spc.scaleVolume(new_volume, volume_scaling_method);
     }
@@ -551,7 +551,7 @@ void VolumeMove::_move(Change &change) {
 void VolumeMove::_accept([[maybe_unused]] Change& change) {
     mean_square_volume_change += std::pow(new_volume - old_volume, 2);
     mean_volume += new_volume;
-    assert(std::fabs(spc.geo.getVolume() - new_volume) < 1.0e-9);
+    assert(std::fabs(spc.geometry.getVolume() - new_volume) < 1.0e-9);
 }
 
 VolumeMove::VolumeMove(Space& spc) : MoveBase(spc, "volume"s, ""s) { repeat = 1; }
@@ -559,7 +559,7 @@ VolumeMove::VolumeMove(Space& spc) : MoveBase(spc, "volume"s, ""s) { repeat = 1;
 void VolumeMove::_reject([[maybe_unused]] Change& change) {
     mean_square_volume_change += 0.0;
     mean_volume += old_volume;
-    assert(std::fabs(spc.geo.getVolume() - old_volume) < 1.0e-9);
+    assert(std::fabs(spc.geometry.getVolume() - old_volume) < 1.0e-9);
 }
 
 // ------------------------------------------------
@@ -575,14 +575,14 @@ void ChargeMove::_to_json(json &j) const {
 void ChargeMove::_from_json(const json &j) {
     dq = j.at("dq").get<double>();
     atomIndex = j.at("index").get<int>();
-    auto git = spc.findGroupContaining(spc.p.at(atomIndex));                 // group containing atomIndex
+    auto git = spc.findGroupContaining(spc.particles.at(atomIndex));         // group containing atomIndex
     cdata.group_index = std::distance(spc.groups.begin(), git);              // integer *index* of moved group
     cdata.relative_atom_indices[0] =
-        std::distance(git->begin(), spc.p.begin() + atomIndex); // index of particle rel. to group
+        std::distance(git->begin(), spc.particles.begin() + atomIndex); // index of particle rel. to group
 }
 void ChargeMove::_move(Change &change) {
     if (dq > 0) {
-        auto& p = spc.p.at(atomIndex); // refence to particle
+        auto& p = spc.particles.at(atomIndex); // refence to particle
         double qold = p.charge;
         p.charge += dq * (slump() - 0.5);
         deltaq = p.charge - qold;
@@ -838,7 +838,7 @@ void QuadrantJump::_from_json(const json &j) {
 void QuadrantJump::_move(Change &change) {
     assert(molid >= 0);
     assert(!spc.groups.empty());
-    assert(spc.geo.getVolume() > 0);
+    assert(spc.geometry.getVolume() > 0);
 
     _sqd = 0.0;
 
@@ -851,21 +851,21 @@ void QuadrantJump::_move(Change &change) {
             assert(it->id == molid);
             Point oldcm = it->cm;
             if (index.size() == 2) {
-                auto cm_O = Geometry::massCenter(spc.p.begin() + index[0], spc.p.begin() + index[1] + 1,
-                                                 spc.geo.getBoundaryFunc());
-                it->translate(-2 * spc.geo.vdist(oldcm, cm_O).cwiseProduct(dir.cast<double>()),
-                              spc.geo.getBoundaryFunc());
+                auto cm_O = Geometry::massCenter(spc.particles.begin() + index[0], spc.particles.begin() + index[1] + 1,
+                                                 spc.geometry.getBoundaryFunc());
+                it->translate(-2 * spc.geometry.vdist(oldcm, cm_O).cwiseProduct(dir.cast<double>()),
+                              spc.geometry.getBoundaryFunc());
             } else {
-                it->translate(-2 * oldcm.cwiseProduct(dir.cast<double>()), spc.geo.getBoundaryFunc());
+                it->translate(-2 * oldcm.cwiseProduct(dir.cast<double>()), spc.geometry.getBoundaryFunc());
             }
-            _sqd = spc.geo.sqdist(oldcm, it->cm); // squared displacement
+            _sqd = spc.geometry.sqdist(oldcm, it->cm); // squared displacement
             Change::GroupChange d;
             d.group_index = Faunus::distance(spc.groups.begin(), it); // integer *index* of moved group
             d.all = true;                                       // *all* atoms in group were moved
             change.groups.push_back(d);                         // add to list of moved groups
 
-            assert(spc.geo.sqdist(it->cm, Geometry::massCenter(it->begin(), it->end(), spc.geo.getBoundaryFunc(),
-                                                               -it->cm)) < 1e-9);
+            assert(spc.geometry.sqdist(it->cm, Geometry::massCenter(it->begin(), it->end(),
+                                                                    spc.geometry.getBoundaryFunc(), -it->cm)) < 1e-9);
         }
     } else
         faunus_logger->warn("{0}: no molecules found", name);
@@ -899,7 +899,7 @@ void AtomicSwapCharge::_from_json(const json &j) {
         }
     }
 }
-typename Space::Tpvec::iterator AtomicSwapCharge::randomAtom() {
+ParticleVector::iterator AtomicSwapCharge::randomAtom() {
     assert(molid >= 0);
     auto mollist = spc.findMolecules(molid); // all `molid` groups
     if (not ranges::cpp20::empty(mollist)) {
@@ -911,12 +911,12 @@ typename Space::Tpvec::iterator AtomicSwapCharge::randomAtom() {
             return p;
         }
     }
-    return spc.p.end();
+    return spc.particles.end();
 }
 void AtomicSwapCharge::_move(Change &change) {
     _sqd = 0.0;
     auto p = randomAtom();
-    if (p != spc.p.end()) {
+    if (p != spc.particles.end()) {
         // auto &g = spc.groups[cdata.index];
         double oldcharge = p->charge;
         p->charge = fabs(oldcharge - 1);
@@ -965,7 +965,7 @@ void TranslateRotate::_from_json(const json &j) {
                              fixed_rotation_axis.y(), fixed_rotation_axis.z());
     }
     if (repeat < 0) {
-        repeat = spc.numMolecules<Space::Tgroup::ACTIVE>(molid);
+        repeat = spc.numMolecules<Space::GroupType::ACTIVE>(molid);
         if (repeat == 0) {
             faunus_logger->warn("no initial '{}' molecules found; setting repeat to 1", molname);
             repeat = 1;
@@ -978,7 +978,7 @@ void TranslateRotate::_from_json(const json &j) {
 /**
  * @todo `mollist` scales linearly w. system size -- implement look-up-table in Space?
  */
-std::optional<std::reference_wrapper<Space::Tgroup>> TranslateRotate::findRandomMolecule() const {
+std::optional<std::reference_wrapper<Space::GroupType>> TranslateRotate::findRandomMolecule() const {
     if (auto mollist = spc.findMolecules(molid, Space::Selection::ACTIVE); not ranges::cpp20::empty(mollist)) {
         if (auto group_it = slump.sample(mollist.begin(), mollist.end()); not group_it->empty()) {
             return *group_it;
@@ -991,14 +991,14 @@ std::optional<std::reference_wrapper<Space::Tgroup>> TranslateRotate::findRandom
  * @param group Group to translate
  * @return Squared translation distance of mass center
  */
-double TranslateRotate::translateMolecule(Space::Tgroup &group) {
+double TranslateRotate::translateMolecule(Space::GroupType& group) {
     if (translational_displacement > 0.0) { // translate
         const auto old_mass_center = group.cm;
         const auto displacement_vector =
             Faunus::randomUnitVector(slump, translational_direction) * translational_displacement * slump();
 
-        group.translate(displacement_vector, spc.geo.getBoundaryFunc());
-        return spc.geo.sqdist(old_mass_center, group.cm);
+        group.translate(displacement_vector, spc.geometry.getBoundaryFunc());
+        return spc.geometry.sqdist(old_mass_center, group.cm);
     } else {
         return 0.0;
     }
@@ -1008,7 +1008,7 @@ double TranslateRotate::translateMolecule(Space::Tgroup &group) {
  * @param group Group to rotate
  * @return Squared rotation angle around mass-center
  */
-double TranslateRotate::rotateMolecule(Space::Tgroup& group) {
+double TranslateRotate::rotateMolecule(Space::GroupType& group) {
     if (rotational_displacement <= pc::epsilon_dbl) {
         return 0.0;
     }
@@ -1020,7 +1020,7 @@ double TranslateRotate::rotateMolecule(Space::Tgroup& group) {
     }
     const auto angle = rotational_displacement * (slump() - 0.5);
     const Eigen::Quaterniond quaternion(Eigen::AngleAxisd(angle, rotation_axis));
-    group.rotate(quaternion, spc.geo.getBoundaryFunc());
+    group.rotate(quaternion, spc.geometry.getBoundaryFunc());
     return angle * angle;
 }
 
@@ -1041,13 +1041,14 @@ void TranslateRotate::_move(Change &change) {
     }
 }
 
-void TranslateRotate::checkMassCenter(const Space::Tgroup& group) const {
+void TranslateRotate::checkMassCenter(const Space::GroupType& group) const {
     const auto allowed_threshold = 1e-6;
-    const auto cm_recalculated = Geometry::massCenter(group.begin(), group.end(), spc.geo.getBoundaryFunc(), -group.cm);
-    const auto should_be_small = spc.geo.sqdist(group.cm, cm_recalculated);
+    const auto cm_recalculated =
+        Geometry::massCenter(group.begin(), group.end(), spc.geometry.getBoundaryFunc(), -group.cm);
+    const auto should_be_small = spc.geometry.sqdist(group.cm, cm_recalculated);
     if (should_be_small > allowed_threshold) {
         faunus_logger->error("{}: error calculating mass center for {}", name, group.traits().name);
-        PQRWriter().save("mass-center-failure.pqr", spc.groups, spc.geo.getLength());
+        PQRWriter().save("mass-center-failure.pqr", spc.groups, spc.geometry.getLength());
         throw std::runtime_error("molecule likely too large for periodic boundaries; increase box size?");
     }
 }
@@ -1136,7 +1137,7 @@ void SmartTranslateRotate::_from_json(const json &j) {
 void SmartTranslateRotate::_move(Change &change) {
     assert(molid >= 0);
     assert(!spc.groups.empty());
-    assert(spc.geo.getVolume() > 0);
+    assert(spc.geometry.getVolume() > 0);
     _bias = 0.0;
     _sqd = 0.0;
 
@@ -1149,7 +1150,7 @@ void SmartTranslateRotate::_move(Change &change) {
         auto it = slump.sample(mollist.begin(), mollist.end()); // chosing random molecule in group of type molname
         auto ref1 = slump.sample(reflist1.begin(), reflist1.end());
         auto ref2 = slump.sample(reflist2.begin(), reflist2.end());
-        cylAxis = spc.geo.vdist(ref2->pos, ref1->pos) * 0.5; // half vector between reference atoms
+        cylAxis = spc.geometry.vdist(ref2->pos, ref1->pos) * 0.5; // half vector between reference atoms
         origo = ref2->pos - cylAxis; // coordinates of middle point between reference atoms: new origo
         if (r_x < cylAxis.norm())    // checking so that a is larger than length of cylAxis
             throw std::runtime_error(
@@ -1162,7 +1163,7 @@ void SmartTranslateRotate::_move(Change &change) {
             assert(it->id == molid);
 
             randNbr = slump();                   // assigning random number in range [0,1]
-            molV = spc.geo.vdist(it->cm, origo); // vector between selected molecule and center of geometry
+            molV = spc.geometry.vdist(it->cm, origo); // vector between selected molecule and center of geometry
             cosTheta = molV.dot(cylAxis) / molV.norm() / cylAxis.norm(); // cosinus of angle between coordinate vector
                                                                          // of selected molecule and axis connecting
                                                                          // reference atoms
@@ -1188,7 +1189,7 @@ void SmartTranslateRotate::_move(Change &change) {
                     Ntot = 0.0;      // total number of particles
                     for (auto &g : mollist) {
                         Ntot += 1.0;
-                        molV = spc.geo.vdist(g.cm, origo);
+                        molV = spc.geometry.vdist(g.cm, origo);
                         cosTheta = molV.dot(cylAxis) / molV.norm() / cylAxis.norm();
                         theta = acos(cosTheta);
                         x = cosTheta * molV.norm();
@@ -1227,15 +1228,15 @@ void SmartTranslateRotate::_move(Change &change) {
                     Point oldcm = it->cm;
                     Point dp = randomUnitVector(slump, dir) * dptrans * slump();
 
-                    it->translate(dp, spc.geo.getBoundaryFunc());
-                    _sqd = spc.geo.sqdist(oldcm, it->cm); // squared displacement
+                    it->translate(dp, spc.geometry.getBoundaryFunc());
+                    _sqd = spc.geometry.sqdist(oldcm, it->cm); // squared displacement
                 }
 
                 if (dprot > 0) { // rotate
                     Point u = randomUnitVector(slump);
                     double angle = dprot * (slump() - 0.5);
                     Eigen::Quaterniond Q(Eigen::AngleAxisd(angle, u));
-                    it->rotate(Q, spc.geo.getBoundaryFunc());
+                    it->rotate(Q, spc.geometry.getBoundaryFunc());
                 }
 
                 if (dptrans > 0 || dprot > 0) { // define changes
@@ -1244,9 +1245,10 @@ void SmartTranslateRotate::_move(Change &change) {
                     d.all = true;                                       // *all* atoms in group were moved
                     change.groups.push_back(d);                         // add to list of moved groups
                 }
-                assert(spc.geo.sqdist(it->cm, Geometry::massCenter(it->begin(), it->end(), spc.geo.getBoundaryFunc(),
-                                                                   -it->cm)) < 1e-6);
-                molV = spc.geo.vdist(it->cm, origo);
+                assert(spc.geometry.sqdist(it->cm, Geometry::massCenter(it->begin(), it->end(),
+                                                                        spc.geometry.getBoundaryFunc(), -it->cm)) <
+                       1e-6);
+                molV = spc.geometry.vdist(it->cm, origo);
                 cosTheta = molV.dot(cylAxis) / molV.norm() / cylAxis.norm();
                 theta = acos(cosTheta);
                 x = cosTheta * molV.norm();
@@ -1321,7 +1323,7 @@ void ConformationSwap::_move(Change& change) {
     auto groups = spc.findMolecules(molid, Space::Selection::ACTIVE);
     if (auto group = slump.sample(groups.begin(), groups.end()); group != groups.end()) {
         inserter.offset = group->cm;                                         // insert on top of mass center
-        auto particles = inserter(spc.geo, Faunus::molecules[molid], spc.p); // new conformation
+        auto particles = inserter(spc.geometry, Faunus::molecules[molid], spc.particles); // new conformation
         if (particles.size() == group->size()) {
             checkMassCenterDrift(group->cm, particles); // throws if not OK
             copyConformation(particles, group->begin());
@@ -1362,7 +1364,7 @@ void ConformationSwap::copyConformation(ParticleVector& particles, ParticleVecto
     });
 }
 
-void ConformationSwap::registerChanges(Change &change, const Space::Tgroup &group) const {
+void ConformationSwap::registerChanges(Change& change, const Space::GroupType& group) const {
     auto &group_change = change.groups.emplace_back();
     group_change.group_index = spc.getGroupIndex(group); // index of moved group
     group_change.all = true;                       // all atoms in group were moved
@@ -1380,7 +1382,7 @@ void ConformationSwap::checkMassCenterDrift(const Point& old_mass_center, const 
     default:
         const auto max_allowed_distance = 1.0e-6;
         const auto new_mass_center =
-            Geometry::massCenter(particles.begin(), particles.end(), spc.geo.getBoundaryFunc(), -old_mass_center);
+            Geometry::massCenter(particles.begin(), particles.end(), spc.geometry.getBoundaryFunc(), -old_mass_center);
         if ((new_mass_center - old_mass_center).norm() > max_allowed_distance) {
             throw std::runtime_error(name + ": unexpected mass center movement");
         }
@@ -1403,7 +1405,7 @@ ConformationSwap::ConformationSwap(Space& spc) : ConformationSwap(spc, "conforma
 void ConformationSwap::checkConformationSize() const {
     assert(molid >= 0);
 
-    const auto is_periodic = spc.geo.boundaryConditions().isPeriodic();
+    const auto is_periodic = spc.geometry.boundaryConditions().isPeriodic();
     if (is_periodic.cast<int>().sum() == 0) { // if cell has no periodicity ...
         return;                               // ... then no need to check further
     }
@@ -1411,9 +1413,9 @@ void ConformationSwap::checkConformationSize() const {
     // find smallest periodic side-length
     const auto infinity = Point::Constant(pc::infty);
     const auto max_allowed_separation =
-        (is_periodic.array() == true).select(spc.geo.getLength(), infinity).minCoeff() * 0.5;
+        (is_periodic.array() == true).select(spc.geometry.getLength(), infinity).minCoeff() * 0.5;
 
-    auto find_max_distance = [&geometry = spc.geo](const auto& positions) {
+    auto find_max_distance = [&geometry = spc.geometry](const auto& positions) {
         double max_squared_distance = 0.0;
         for (auto i = positions.begin(); i != positions.end(); ++i) {
             for (auto j = i; ++j != positions.end();) {

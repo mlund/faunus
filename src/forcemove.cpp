@@ -87,7 +87,7 @@ void LangevinVelocityVerlet::step(PointVector &velocities, PointVector &forces) 
         particle.pos += positionIncrement(velocity);               // A step
         velocity = velocityFluctuationDissipation(velocity, mass); // O step
         particle.pos += positionIncrement(velocity);               // A step
-        spc.geo.boundary(particle.pos);
+        spc.geometry.boundary(particle.pos);
     }
     std::fill(forces.begin(), forces.end(), Point::Zero()); // forces must be updated ...
     energy.force(forces);                                   // ... before each B step
@@ -124,8 +124,8 @@ TEST_CASE("[Faunus] Integrator") {
 ForceMoveBase::ForceMoveBase(Space &spc, std::string name, std::string cite,
                              std::shared_ptr<IntegratorBase> integrator, unsigned int nsteps)
     : MoveBase(spc, name, cite), integrator(integrator), number_of_steps(nsteps) {
-    forces.reserve(spc.p.size());
-    velocities.reserve(spc.p.size());
+    forces.reserve(spc.particles.size());
+    velocities.reserve(spc.particles.size());
     resizeForcesAndVelocities();
     repeat = 1;
 }
@@ -150,7 +150,7 @@ void ForceMoveBase::_move(Change &change) {
         integrator->step(velocities, forces);
     }
     for (auto& group : spc.groups) { // update mass centers before returning to MC
-        group.updateMassCenter(spc.geo.getBoundaryFunc());
+        group.updateMassCenter(spc.geometry.getBoundaryFunc());
     }
 }
 
@@ -215,8 +215,8 @@ TEST_CASE("[Faunus] LangevinDynamics") {
     DummyEnergy energy;
 
     SUBCASE("Velocity and force initialization") {
-        spc.p.resize(10);                                        // 10 particles in total
-        spc.groups.emplace_back(spc.p.begin(), spc.p.end() - 1); // 9 active particles
+        spc.particles.resize(10);                                                // 10 particles in total
+        spc.groups.emplace_back(spc.particles.begin(), spc.particles.end() - 1); // 9 active particles
         LangevinDynamics ld(spc, energy);
         CHECK(ld.getForces().capacity() >= 10);
         CHECK(ld.getVelocities().capacity() >= 10);

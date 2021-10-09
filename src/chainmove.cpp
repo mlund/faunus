@@ -56,30 +56,30 @@ void ChainRotationMove::rotate_segment(double angle) {
         auto &chain = *molecule_iter;
         auto old_cm = chain.cm;
         // Uses an implementation from the old Pivot class. The translation of the chain might be unnecessary.
-        auto shift_pos = spc.p.at(axis_ndx[0]).pos;
+        auto shift_pos = spc.particles.at(axis_ndx[0]).pos;
         // chain.unwrap(spc.geo.getDistanceFunc()); // remove pbc
-        chain.translate(-shift_pos, spc.geo.getBoundaryFunc());
-        auto origin_pos = spc.p.at(axis_ndx[0]).pos; // != shift_pos because of chain.translate
-        auto axis_pos = spc.geo.vdist(origin_pos, spc.p.at(axis_ndx[1]).pos).normalized();
+        chain.translate(-shift_pos, spc.geometry.getBoundaryFunc());
+        auto origin_pos = spc.particles.at(axis_ndx[0]).pos; // != shift_pos because of chain.translate
+        auto axis_pos = spc.geometry.vdist(origin_pos, spc.particles.at(axis_ndx[1]).pos).normalized();
         Eigen::Quaterniond Q(Eigen::AngleAxisd(angle, axis_pos));
         auto M = Q.toRotationMatrix();
         for (auto index : segment_ndx) {
-            auto& particle = spc.p.at(index);
+            auto& particle = spc.particles.at(index);
             particle.rotate(Q, M);                                       // internal rot.
             particle.pos = Q * (particle.pos - origin_pos) + origin_pos; // positional rot.
         }
         chain.cm = Geometry::massCenter(chain.begin(), chain.end());
-        chain.translate(shift_pos, spc.geo.getBoundaryFunc());
+        chain.translate(shift_pos, spc.geometry.getBoundaryFunc());
         // chain.wrap(spc.geo.getBoundaryFunc()); // re-apply pbc
         if (box_big_enough()) {
-            sqdispl = spc.geo.sqdist(chain.cm, old_cm); // CM movement
+            sqdispl = spc.geometry.sqdist(chain.cm, old_cm); // CM movement
         }
     }
 }
 void ChainRotationMove::store_change(Change &change) {
     if (!segment_ndx.empty()) {
         auto &chain = *molecule_iter;
-        auto offset = std::distance(spc.p.begin(), chain.begin());
+        auto offset = std::distance(spc.particles.begin(), chain.begin());
         Change::GroupChange change_data;
         for (int i : segment_ndx) {
             change_data.relative_atom_indices.push_back(i - offset); // `atoms` index are relative to chain
@@ -92,8 +92,8 @@ void ChainRotationMove::store_change(Change &change) {
 }
 bool ChainRotationMove::box_big_enough() {
     auto &chain = *molecule_iter;
-    auto cm_pbc = Geometry::massCenter(chain.begin(), chain.end(), spc.geo.getBoundaryFunc(), -chain.cm);
-    double cm_diff = spc.geo.sqdist(chain.cm, cm_pbc);
+    auto cm_pbc = Geometry::massCenter(chain.begin(), chain.end(), spc.geometry.getBoundaryFunc(), -chain.cm);
+    double cm_diff = spc.geometry.sqdist(chain.cm, cm_pbc);
     if (cm_diff > 1e-6) {
         small_box_encountered++;
         permit_move = false;
@@ -139,8 +139,8 @@ size_t CrankshaftMove::select_segment() {
                 std::swap(joint0, joint1);
             }
             if (joint_distance > 1) { // at least one atom between the joints
-                auto joint0_ndx = std::distance(this->spc.p.begin(), joint0);
-                auto joint1_ndx = std::distance(this->spc.p.begin(), joint1);
+                auto joint0_ndx = std::distance(this->spc.particles.begin(), joint0);
+                auto joint1_ndx = std::distance(this->spc.particles.begin(), joint1);
                 if (joint0_ndx < 0 || joint1_ndx < 0) {
                     throw std::range_error("A negative index of the atom encountered.");
                 }
@@ -183,7 +183,7 @@ size_t PivotMove::select_segment() {
         if (chain.size() > 2) {                                         // must have at least three atoms
             auto bond = this->slump.sample(bonds.begin(), bonds.end()); // a random harmonic bond
             if (bond != bonds.end()) {
-                auto chain_offset = std::distance(this->spc.p.begin(), chain.begin());
+                auto chain_offset = std::distance(this->spc.particles.begin(), chain.begin());
                 auto atom0_ndx = (*bond)->indices.at(0) + chain_offset;
                 auto atom1_ndx = (*bond)->indices.at(1) + chain_offset;
                 if (atom0_ndx < 0 || atom1_ndx < 0) {

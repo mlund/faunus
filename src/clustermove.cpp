@@ -56,7 +56,7 @@ FindCluster::FindCluster(Space &spc, const json &j) : spc(spc) {
 
 double FindCluster::clusterProbability(const FindCluster::Tgroup &group1, const FindCluster::Tgroup &group2) const {
     if (!group1.empty() and !group2.empty()) {
-        if (spc.geo.sqdist(group1.cm, group2.cm) <= thresholds_squared(group1.id, group2.id)) {
+        if (spc.geometry.sqdist(group1.cm, group2.cm) <= thresholds_squared(group1.id, group2.id)) {
             return 1.0;
         }
     }
@@ -154,7 +154,7 @@ std::optional<size_t> FindCluster::findSeed(Random &random) {
  *          can be safely rotated in a PBC environment
  */
 std::pair<std::vector<size_t>, bool> FindCluster::findCluster(size_t seed_index) {
-    assert(seed_index < spc.p.size());
+    assert(seed_index < spc.particles.size());
     std::set<size_t> pool(molecule_index.begin(), molecule_index.end());
     assert(pool.count(seed_index) == 1);
 
@@ -183,11 +183,11 @@ std::pair<std::vector<size_t>, bool> FindCluster::findCluster(size_t seed_index)
     // check if cluster is too large to be rotated
     // (larger than half the box length)
     bool safe_to_rotate = true;
-    const double max = spc.geo.getLength().minCoeff() / 2;
+    const double max = spc.geometry.getLength().minCoeff() / 2;
     for (auto i : cluster) {
         for (auto j : cluster) {
             if (j > i) {
-                if (spc.geo.sqdist(spc.groups.at(i).cm, spc.groups.at(j).cm) >= max * max) {
+                if (spc.geometry.sqdist(spc.groups.at(i).cm, spc.groups.at(j).cm) >= max * max) {
                     safe_to_rotate = false;
                     break;
                 }
@@ -250,7 +250,7 @@ void Cluster::_from_json(const json &j) {
 }
 
 Point Cluster::clusterMassCenter(const std::vector<size_t> &cluster_index) const {
-    auto boundary = spc.geo.getBoundaryFunc();
+    auto boundary = spc.geometry.getBoundaryFunc();
     double mass_sum = 0.0;
     Point mass_center(0, 0, 0);
     Point origin = spc.groups.at(*cluster_index.begin()).cm;
@@ -279,9 +279,9 @@ void Cluster::_move(Change &change) {
     if (auto seed_index = find_cluster->findSeed(slump)) {
         const auto [cluster, safe_to_rotate] = find_cluster->findCluster(seed_index.value());
         auto cluster_groups = cluster | ranges::cpp20::views::transform(
-                                            [&](size_t index) -> Space::Tgroup & { return spc.groups.at(index); });
+                                            [&](size_t index) -> Space::GroupType& { return spc.groups.at(index); });
 
-        const auto boundary = spc.geo.getBoundaryFunc();
+        const auto boundary = spc.geometry.getBoundaryFunc();
         const Point COM = clusterMassCenter(cluster); // cluster mass center
 
         if (number_of_attempted_moves % shape_analysis_interval == 0) {
@@ -313,7 +313,7 @@ void Cluster::_move(Change &change) {
         if constexpr (false) { // debug code: check if cluster mass center movement matches displacement
             if (_bias == 0) {
                 auto newCOM = clusterMassCenter(cluster);             // org. cluster center
-                Point d = spc.geo.vdist(COM, newCOM);                 // distance between new and old COM
+                Point d = spc.geometry.vdist(COM, newCOM);            // distance between new and old COM
                 double _zero = (d + translation_displacement).norm(); // |d+dp| should ideally be zero...
                 if (std::fabs(_zero) > 1e-9) {
                     _bias = pc::infty; // by setting bias=oo the move is rejected

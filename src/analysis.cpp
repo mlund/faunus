@@ -656,8 +656,8 @@ void WidomInsertion::updateGroup(Space::GroupType& group, const ParticleVector& 
     if (absolute_z_coords) {
         std::for_each(group.begin(), group.end(), [](Particle& i) { i.pos.z() = std::fabs(i.pos.z()); });
     }
-    if (group.isMolecular()) { // update molecular mass-center for molecular groups
-        group.cm =
+    if (auto mass_center = group.massCenter()) { // update molecular mass-center for molecular groups
+        (*mass_center).get() =
             Geometry::massCenter(group.begin(), group.end(), this->spc.geometry.getBoundaryFunc(), -group.begin()->pos);
     }
 }

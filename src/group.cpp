@@ -147,6 +147,30 @@ template <class T> const T& Group<T>::at(size_t index) const {
 }
 
 /**
+ * If the group supports mass centers (i.e. molecular groups), an optional reference
+ * will be returned. Example usage:
+ *
+ *    if (auto mass_center = group.massCenter()) {
+ *        (*mass_center).get() = Point(0,1,2);
+ *    }
+ *
+ * @return Optional reference to stored group mass center
+ */
+template <class T> std::optional<std::reference_wrapper<Point>> Group<T>::massCenter() {
+    if (isMolecular()) {
+        return std::ref(cm);
+    }
+    return std::nullopt;
+}
+
+template <class T> std::optional<std::reference_wrapper<const Point>> Group<T>::massCenter() const {
+    if (isMolecular()) {
+        return std::cref(cm);
+    }
+    return std::nullopt;
+}
+
+/**
  * @param mask Bitmask based on enum `Group::Selectors`
  * @return Lambda function that returns true if group matches mask
  *

@@ -6,6 +6,7 @@
 #include <range/v3/view/filter.hpp>
 #include <range/v3/view/transform.hpp>
 #include <nlohmann/json.hpp>
+#include <optional>
 
 namespace Faunus {
 
@@ -120,6 +121,10 @@ template <class T> struct IterRange : std::pair<T, T> {
 
             inline bool isAtomic() const { return traits().atomic; } //!< Is it an atomic group?
             inline bool isMolecular() const { return !traits().atomic; } //!< is it a molecular group?
+
+            std::optional<std::reference_wrapper<Point>> massCenter(); //!< Reference to mass center if defined
+            std::optional<std::reference_wrapper<const Point>>
+            massCenter() const; //!< Reference to mass center if defined
 
             //! Selections to filter groups using `getSelectionFilter()`
             enum Selectors : unsigned int {

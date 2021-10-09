@@ -64,7 +64,7 @@ TPairMatrixPtr PairMixer::createPairMatrix(const std::vector<AtomData> &atoms,
     TPairMatrixPtr matrix = PairMixer::createPairMatrix(atoms);
     auto dimension = std::min(matrix->rows(), matrix->cols());
     for (auto &i : interactions) {
-        if (i.atom_id[0] >= 0 && i.atom_id[1] >= 0 && i.atom_id[0] < dimension && i.atom_id[1] < dimension) {
+        if (i.atom_id[0] < dimension && i.atom_id[1] < dimension) {
             // interaction is always symmetric
             (*matrix)(i.atom_id[0], i.atom_id[1]) = (*matrix)(i.atom_id[1], i.atom_id[0]) =
                 modifier(extractor(i.interaction));

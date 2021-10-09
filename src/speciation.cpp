@@ -468,7 +468,6 @@ void SpeciationMove::_accept(Change &) {
             spc.getImplicitReservoir()[molid] -= nu;
             other_spc->getImplicitReservoir()[molid] -= nu;
             average_reservoir_size[molid] += spc.getImplicitReservoir()[molid];
-            assert(spc.getImplicitReservoir()[molid] >= 0);
             assert(spc.getImplicitReservoir()[molid] == other_spc->getImplicitReservoir()[molid]);
         }
     }

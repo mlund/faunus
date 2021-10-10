@@ -217,7 +217,7 @@ TEST_CASE("[Faunus] Ewald - IonIonPolicy") {
     spc.geometry = R"( {"type": "cuboid", "length": 10} )"_json;
     spc.particles[0] = R"( {"pos": [0,0,0], "q": 1.0} )"_json;
     spc.particles[1] = R"( {"pos": [1,0,0], "q": -1.0} )"_json;
-    Group<Particle> g(0, spc.particles.begin(), spc.particles.end());
+    Group g(0, spc.particles.begin(), spc.particles.end());
     spc.groups.push_back(g);
 
     EwaldData data = R"({
@@ -275,7 +275,7 @@ TEST_CASE("[Faunus] Ewald - IonIonPolicy Benchmarks") {
         p.charge = 1.0;
         p.pos = (random() - 0.5) * spc.geometry.getLength();
     }
-    Group<Particle> g(0, spc.particles.begin(), spc.particles.end());
+    Group g(0, spc.particles.begin(), spc.particles.end());
     spc.groups.push_back(g);
 
     EwaldData data(R"({

@@ -22,7 +22,7 @@ bool Change::empty() const { return not(volume_change || everything || matter_ch
 
 Change::operator bool() const { return !empty(); }
 
-std::vector<Change::index_type> Change::touchedParticleIndex(const std::vector<Group<Particle>>& group_vector) const {
+std::vector<Change::index_type> Change::touchedParticleIndex(const std::vector<Group>& group_vector) const {
     std::vector<index_type> indices;                 // atom index rel. to first particle in system
     auto begin_first = group_vector.front().begin(); // first particle, first group
     for (const auto& changed : groups) {             // loop over changed groups
@@ -44,7 +44,7 @@ std::vector<Change::index_type> Change::touchedParticleIndex(const std::vector<G
  * @param group_vector Vector of group connected to the change; typically `Space::groups`.
  * @throw If the atoms in the change object is outside range of given group index.
  */
-void Change::sanityCheck(const std::vector<Group<Particle>>& group_vector) const {
+void Change::sanityCheck(const std::vector<Group>& group_vector) const {
     const auto first_particle = group_vector.at(0).begin(); // first particle in first group
     for (const auto& changed : groups) {
         const auto& group = group_vector.at(changed.group_index);

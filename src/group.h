@@ -105,9 +105,9 @@ void ElasticRange<T>::relocate(ElasticRange::const_iterator oldorigin, ElasticRa
     trueend() = neworigin + std::distance(oldorigin, const_iterator(trueend()));
 }
 
-template <class T /** Particle type */> class Group : public ElasticRange<T> {
+class Group : public ElasticRange<Particle> {
   public:
-    using base = ElasticRange<T>;
+    using base = ElasticRange<Particle>;
     using iter = typename base::Titer;
     using base::begin;
     using base::empty;
@@ -198,18 +198,18 @@ template <class T /** Particle type */> class Group : public ElasticRange<T> {
     Group(MoleculeData::index_type molid, iter begin, iter end); //!< Constructor
     Group& operator=(const Group& other);                        //!< Deep copy contents from another Group
     Group& shallowCopy(const Group& other); //!< copy group data from `other` but *not* particle data
-    bool contains(const T& particle, bool include_inactive = false) const; //!< Does particle belong?
-    double mass() const;                                                   //!< Sum of all active masses
-    auto positions();                                                      //!< Range of positions of active particles
-    T& at(size_t index);
-    const T& at(size_t index) const;
+    bool contains(const Particle& particle, bool include_inactive = false) const; //!< Does particle belong?
+    double mass() const;                                                          //!< Sum of all active masses
+    auto positions(); //!< Range of positions of active particles
+    Particle& at(size_t index);
+    const Particle& at(size_t index) const;
 
     AtomData::index_type getParticleIndex(
-        const T& particle,
+        const Particle& particle,
         bool include_inactive = false) const; //!< Finds index of particle within group. Throws if not part of group
 
     auto find_id(AtomData::index_type atomid) const {
-        return *this | ranges::cpp20::views::filter([atomid](const T& particle) { return (particle.id == atomid); });
+        return *this | ranges::cpp20::views::filter([atomid](auto& particle) { return (particle.id == atomid); });
     } //!< Range of all (active) elements with matching particle id
 
     /**
@@ -218,8 +218,8 @@ template <class T /** Particle type */> class Group : public ElasticRange<T> {
      * @return reference to value at i'th element
      * @note No range-checking and i must be in interval `[0:size[`
      */
-    inline auto& operator[](size_t index) { return *(this->first + index); }
-    inline const auto& operator[](size_t index) const { return *(this->first + index); }
+    inline auto& operator[](size_t index) { return *(begin() + index); }
+    inline const auto& operator[](size_t index) const { return *(begin() + index); }
 
     /*
      * @brief Reference to subset of given index, where 0 is the start of the group
@@ -231,7 +231,7 @@ template <class T /** Particle type */> class Group : public ElasticRange<T> {
         if (not index.empty())
             assert(*std::max_element(index.begin(), index.end()) < size());
 #endif
-        return index | ranges::cpp20::views::transform([this](auto i) -> T& { return *(begin() + i); });
+        return index | ranges::cpp20::views::transform([this](auto i) -> Particle& { return *(begin() + i); });
     }
 
     /**
@@ -266,15 +266,12 @@ template <class T /** Particle type */> class Group : public ElasticRange<T> {
 
 }; //!< End of Group class
 
-// Group<Particle> is instantiated elsewhere (group.cpp)
-extern template class Group<Particle>;
-
-void to_json(json& j, const Group<Particle>& group);
-void from_json(const json& j, Group<Particle>& group);
+void to_json(json& j, const Group& group);
+void from_json(const json& j, Group& group);
 
 //! Get lambda function matching given enum Select mask
-template <unsigned int mask> std::function<bool(const Group<Particle>&)> getGroupFilter() {
-    return [](const Group<Particle>& group) { return group.match<mask>(); };
+template <unsigned int mask> std::function<bool(const Group&)> getGroupFilter() {
+    return [](const Group& group) { return group.match<mask>(); };
 }
 
 /*
@@ -284,7 +281,7 @@ template <unsigned int mask> std::function<bool(const Group<Particle>&)> getGrou
  * is thrown.
  */
 
-template <class Archive, class T> void save(Archive& archive, const Group<T>& group, std::uint32_t const version) {
+template <class Archive> void save(Archive& archive, const Group& group, std::uint32_t const version) {
     switch (version) {
     case 0:
         archive(group.id, group.conformation_id, group.mass_center, group.size(), group.capacity());
@@ -295,7 +292,7 @@ template <class Archive, class T> void save(Archive& archive, const Group<T>& gr
     };
 } //!< Cereal serialisation
 
-template <class Archive, class T> void load(Archive& archive, Group<T>& group, std::uint32_t const version) {
+template <class Archive> void load(Archive& archive, Group& group, std::uint32_t const version) {
     size_t size = 0;
     size_t capacity = 0;
     switch (version) {

@@ -41,7 +41,7 @@ void to_json(json &j, const Energybase &base) {
  * - If `act_on_mass_center` is true, the external potential is applied on a
  *   fictitious particle placed at the COM and with a net-charge of the group.
  */
-double ExternalPotential::groupEnergy(const Group<Particle> &group) const {
+double ExternalPotential::groupEnergy(const Group& group) const {
     double u = 0;
     if (molecule_ids.find(group.id) != molecule_ids.end()) {
         if (act_on_mass_center && group.isMolecular()) { // apply only to center of mass

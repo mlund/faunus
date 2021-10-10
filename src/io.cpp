@@ -542,7 +542,7 @@ const std::string StructureFileWriter::generated_by_faunus_comment =
 
 void StructureFileWriter::saveFooter([[maybe_unused]] std::ostream& stream) const {}
 
-void StructureFileWriter::saveGroup(std::ostream& stream, const Group<Particle>& group) {
+void StructureFileWriter::saveGroup(std::ostream& stream, const Group& group) {
     group_name = group.traits().name;
     for (auto particle = group.begin(); particle != group.trueend(); particle++) {
         particle_is_active = particle < group.end();

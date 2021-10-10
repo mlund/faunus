@@ -9,15 +9,11 @@
 
 namespace Faunus {
 
-template <class T> Group<T>::Group(Group<T>& other) : base(other.begin(), other.trueend()) { *this = operator=(other); }
+Group::Group(Group& other) : base(other.begin(), other.trueend()) { *this = operator=(other); }
 
-template <class T> Group<T>::Group(const Group<T>& other) : base(other.begin(), other.trueend()) {
-    *this = operator=(other);
-}
+Group::Group(const Group& other) : base(other.begin(), other.trueend()) { *this = operator=(other); }
 
-template <class T>
-Group<T>::Group(MoleculeData::index_type molid, Group<T>::iter begin, Group<T>::iter end)
-    : base(begin, end), id(molid) {
+Group::Group(MoleculeData::index_type molid, Group::iter begin, Group::iter end) : base(begin, end), id(molid) {
     assert(Faunus::molecule.size() > id);
 }
 
@@ -26,7 +22,7 @@ Group<T>::Group(MoleculeData::index_type molid, Group<T>::iter begin, Group<T>::
  *
  * @throw if the capacities of the two groups differ
  */
-template <class T> Group<T>& Group<T>::operator=(const Group<T>& other) {
+Group& Group::operator=(const Group& other) {
     if (&other != this) {
         shallowCopy(other);
         if (other.begin() != begin()) {
@@ -42,12 +38,12 @@ template <class T> Group<T>& Group<T>::operator=(const Group<T>& other) {
  *
  * @throw if the capacities of the two groups differ
  */
-template <class T> Group<T>& Group<T>::shallowCopy(const Group<T>& other) {
+Group& Group::shallowCopy(const Group& other) {
     if (&other != this) {
-        if (this->capacity() != other.capacity()) {
+        if (capacity() != other.capacity()) {
             throw std::runtime_error("Group::shallowCopy: capacity mismatch");
         }
-        this->resize(other.size());
+        resize(other.size());
         id = other.id;
         mass_center = other.mass_center;
         conformation_id = other.conformation_id;
@@ -55,8 +51,8 @@ template <class T> Group<T>& Group<T>::shallowCopy(const Group<T>& other) {
     return *this;
 }
 
-template <class T> bool Group<T>::contains(const T& particle, bool include_inactive) const {
-    const auto size = (include_inactive ? this->capacity() : this->size());
+bool Group::contains(const Particle& particle, bool include_inactive) const {
+    const auto size = (include_inactive ? capacity() : this->size());
     if (size > 0) {
         auto index = std::addressof(particle) - std::addressof(*begin());
         return (index >= 0 and index < size);
@@ -64,10 +60,10 @@ template <class T> bool Group<T>::contains(const T& particle, bool include_inact
     return false;
 }
 
-template <class T> AtomData::index_type Group<T>::getParticleIndex(const T& particle, bool include_inactive) const {
+AtomData::index_type Group::getParticleIndex(const Particle& particle, bool include_inactive) const {
     if (!empty()) {
         const auto index = std::addressof(particle) - std::addressof(*begin()); // std::ptrdiff_t
-        const auto group_size = (include_inactive ? this->capacity() : this->size());
+        const auto group_size = (include_inactive ? capacity() : size());
         if (index >= 0 && index < group_size) {
             return static_cast<AtomData::index_type>(index);
         }
@@ -75,24 +71,24 @@ template <class T> AtomData::index_type Group<T>::getParticleIndex(const T& part
     throw std::out_of_range("invalid particle index or group is empty");
 }
 
-template <class T> double Group<T>::mass() const {
+double Group::mass() const {
     return std::accumulate(begin(), end(), 0.0, [](double sum, auto& particle) { return sum + particle.traits().mw; });
 }
 
-template <class T> auto Group<T>::positions() { return ranges::cpp20::views::transform(*this, &Particle::pos); }
+auto Group::positions() { return ranges::cpp20::views::transform(*this, &Particle::pos); }
 
-template <class T> void Group<T>::wrap(Geometry::BoundaryFunction boundary) {
+void Group::wrap(Geometry::BoundaryFunction boundary) {
     boundary(mass_center);
     for (auto& particle : *this) {
         boundary(particle.pos);
     }
 }
 
-template <class T> void Group<T>::rotate(const Eigen::Quaterniond& quaternion, Geometry::BoundaryFunction boundary) {
+void Group::rotate(const Eigen::Quaterniond& quaternion, Geometry::BoundaryFunction boundary) {
     Geometry::rotate(begin(), end(), quaternion, boundary, -mass_center);
 }
 
-template <class T> void Group<T>::translate(const Point& displacement, Geometry::BoundaryFunction boundary) {
+void Group::translate(const Point& displacement, Geometry::BoundaryFunction boundary) {
     mass_center += displacement;
     boundary(mass_center);
     for (auto& particle : *this) {
@@ -110,8 +106,7 @@ template <class T> void Group<T>::translate(const Point& displacement, Geometry:
  * box to remove possible periodic boundary conditions; then translated back again.
  * The translation is done by subtracting / adding `approximate_mass_center`.
  */
-template <class T>
-void Group<T>::updateMassCenter(Geometry::BoundaryFunction boundary_function, const Point& approximate_mass_center) {
+void Group::updateMassCenter(Geometry::BoundaryFunction boundary_function, const Point& approximate_mass_center) {
     if (isMolecular() && !empty()) {
         mass_center = Geometry::massCenter(begin(), end(), boundary_function, -approximate_mass_center);
     }
@@ -123,7 +118,7 @@ void Group<T>::updateMassCenter(Geometry::BoundaryFunction boundary_function, co
  * This will approximate the existing mass center by the middle particle which for PBC systems
  * is generally safer then using the old mass center.
  */
-template <class T> void Group<T>::updateMassCenter(Geometry::BoundaryFunction boundary_function) {
+void Group::updateMassCenter(Geometry::BoundaryFunction boundary_function) {
     if (empty()) {
         return;
     }
@@ -137,11 +132,11 @@ template <class T> void Group<T>::updateMassCenter(Geometry::BoundaryFunction bo
  * @return reference to value at i'th element
  * @throw if out of interval `[0:capacity[`
  */
-template <class T> T& Group<T>::at(size_t index) {
-    if (index >= this->capacity()) {
+Particle& Group::at(size_t index) {
+    if (index >= capacity()) {
         throw std::out_of_range("group index out of range");
     }
-    return this->operator[](index);
+    return operator[](index);
 }
 
 /**
@@ -150,11 +145,11 @@ template <class T> T& Group<T>::at(size_t index) {
  * @return reference to value at i'th element
  * @throw if out of interval `[0:capacity[`
  */
-template <class T> const T& Group<T>::at(size_t index) const {
-    if (index >= this->capacity()) {
+const Particle& Group::at(size_t index) const {
+    if (index >= capacity()) {
         throw std::out_of_range("group index out of range");
     }
-    return this->operator[](index);
+    return operator[](index);
 }
 
 /**
@@ -167,14 +162,14 @@ template <class T> const T& Group<T>::at(size_t index) const {
  *
  * @return Optional reference to stored group mass center
  */
-template <class T> std::optional<std::reference_wrapper<Point>> Group<T>::massCenter() {
+std::optional<std::reference_wrapper<Point>> Group::massCenter() {
     if (isMolecular()) {
         return std::ref(mass_center);
     }
     return std::nullopt;
 }
 
-template <class T> std::optional<std::reference_wrapper<const Point>> Group<T>::massCenter() const {
+std::optional<std::reference_wrapper<const Point>> Group::massCenter() const {
     if (isMolecular()) {
         return std::cref(mass_center);
     }
@@ -190,13 +185,11 @@ template <class T> std::optional<std::reference_wrapper<const Point>> Group<T>::
  * bool b = filter(mygroup); // true if mygroup is active and uncharged
  * ~~~
  */
-// constexpr std::function<bool(const Group<Particle> &)> getGroupFilter(unsigned int mask) {
-//    return [mask = mask](const Group<Particle> &g) { return g.match<mask>(); };
+// constexpr std::function<bool(const Group &)> getGroupFilter(unsigned int mask) {
+//    return [mask = mask](const Group &g) { return g.match<mask>(); };
 //}
 
-template class Group<Particle>;
-
-void to_json(json& j, const Group<Particle>& group) {
+void to_json(json& j, const Group& group) {
     j = {{"id", group.id},
          {"cm", group.mass_center},
          {"atomic", group.isAtomic()},
@@ -210,7 +203,7 @@ void to_json(json& j, const Group<Particle>& group) {
     }
 }
 
-void from_json(const json& j, Group<Particle>& group) {
+void from_json(const json& j, Group& group) {
     group.resize(j.at("size").get<size_t>());
     group.trueend() = group.begin() + j.value("capacity", group.size());
     group.id = j.at("id").get<decltype(group.id)>();
@@ -286,7 +279,7 @@ TEST_CASE("[Faunus] Group") {
     p[1].id = 1;
     p[2].id = 1;
     CHECK(Faunus::molecules.size() != 0);
-    Group<Particle> g(0, p.begin(), p.end());
+    Group g(0, p.begin(), p.end());
 
     SUBCASE("contains()") {
         CHECK(g.contains(p[0]));
@@ -302,7 +295,7 @@ TEST_CASE("[Faunus] Group") {
     }
 
     SUBCASE("getParticleIndex()") {
-        Group<Particle> gg(0, p.begin(), p.end());
+        Group gg(0, p.begin(), p.end());
         CHECK(gg.getParticleIndex(p[0]) == 0);
         CHECK(gg.getParticleIndex(p[1]) == 1);
         CHECK(gg.getParticleIndex(p[2]) == 2);
@@ -315,7 +308,7 @@ TEST_CASE("[Faunus] Group") {
     }
 
     SUBCASE("getGroupFilter(): complete group") {
-        using T = Group<Particle>;
+        using T = Group;
         auto filter = getGroupFilter<T::Selectors::ACTIVE>();
         CHECK(filter(g) == true);
         filter = getGroupFilter<T::Selectors::FULL>();
@@ -380,7 +373,7 @@ TEST_CASE("[Faunus] Group") {
         CHECK(subset.size() == 2);
         CHECK(&(*p.begin()) == &(*subset.begin()));
         CHECK(&(*(p.begin() + 1)) == &(*(subset.begin() + 1)));
-        for (auto &i : subset)
+        for (auto& i : subset)
             i.pos *= 2;
         CHECK(p[1].pos.x() == doctest::Approx(16));
         CHECK(p[1].pos.y() == doctest::Approx(20));
@@ -392,8 +385,8 @@ TEST_CASE("[Faunus] Group") {
         p1.front().id = 1;
         p2.front().id = -1;
 
-        Group<Particle> g1(0, p1.begin(), p1.end());
-        Group<Particle> g2(0, p2.begin(), p2.end());
+        Group g1(0, p1.begin(), p1.end());
+        Group g2(0, p2.begin(), p2.end());
 
         g2.id = 100;
         g2.mass_center = {1, 0, 0};
@@ -417,7 +410,7 @@ TEST_CASE("[Faunus] Group") {
 
         SUBCASE("getGroupFilter(): incomplete group") {
             CHECK(!Faunus::molecules.empty());
-            using Tgroup = Group<Particle>;
+            using Tgroup = Group;
             auto filter = getGroupFilter<Tgroup::FULL>();
             CHECK(filter(g1) == false);
             filter = getGroupFilter<Tgroup::INACTIVE>();
@@ -430,7 +423,7 @@ TEST_CASE("[Faunus] Group") {
             CHECK(filter(g1) == g1.isMolecular());
         }
 
-        std::vector<Group<Particle>> gvec1, gvec2;
+        std::vector<Group> gvec1, gvec2;
         gvec1.push_back(g1);
         gvec2.push_back(g2);
         p2.front().id = 21;
@@ -452,7 +445,7 @@ TEST_CASE("[Faunus] Group") {
         std::ostringstream out(std::stringstream::binary);
         { // serialize g2
             std::vector<Particle> p2(5);
-            Group<Particle> g2(0, p2.begin(), p2.end());
+            Group g2(0, p2.begin(), p2.end());
             p2.front().id = 8;
             p2.back().pos.x() = -10;
             g2.id = 100;
@@ -467,7 +460,7 @@ TEST_CASE("[Faunus] Group") {
             std::istringstream in(out.str()); // not pretty...
             cereal::BinaryInputArchive archive(in);
             std::vector<Particle> p1(5);
-            Group<Particle> g1(0, p1.begin(), p1.end());
+            Group g1(0, p1.begin(), p1.end());
             archive(g1);
 
             CHECK(g1.id == 100);

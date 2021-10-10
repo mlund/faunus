@@ -532,7 +532,7 @@ VirtualVolumeMove::VirtualVolumeMove(const json& j, Space& spc, Energy::Energyba
 void MolecularConformationID::_sample() {
     auto molecules = spc.findMolecules(molid, Space::Selection::ACTIVE);
     for (const auto& group : molecules) {
-        histogram[group.confid]++;
+        histogram[group.conformation_id]++;
     }
 }
 void MolecularConformationID::_to_json(json& j) const { j["histogram"] = histogram; }
@@ -865,7 +865,7 @@ void SanityCheck::checkWithinContainer(const Space::GroupType& group) {
         outside_simulation_cell = true;
         auto group_str = fmt::format("{}{}", group.traits().name, spc.getGroupIndex(group));
         if (group.traits().numConformations() > 1) {
-            group_str += fmt::format(" (conformation {})", group.confid);
+            group_str += fmt::format(" (conformation {})", group.conformation_id);
         }
         faunus_logger->error("step {}: atom {}{} in molecule {}", getNumberOfSteps(), particle.traits().name,
                              group.getParticleIndex(particle), group_str);

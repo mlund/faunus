@@ -1330,7 +1330,7 @@ void ConformationSwap::_move(Change& change) {
         if (particles.size() == group->size()) {
             checkMassCenterDrift(group->mass_center, particles); // throws if not OK
             copyConformation(particles, group->begin());
-            group->confid = Faunus::molecules[molid].conformations.getLastIndex(); // store conformation id
+            group->conformation_id = Faunus::molecules[molid].conformations.getLastIndex(); // store conformation id
             registerChanges(change, *group);                                       // update change object
         } else {
             throw std::out_of_range(name + ": conformation atom count mismatch");

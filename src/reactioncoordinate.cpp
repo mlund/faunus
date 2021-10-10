@@ -204,7 +204,7 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordina
     if (property == "active") { // if molecule is active (1) or not (0)
         function = [&group]() { return static_cast<double>(!group.empty()); };
     } else if (property == "confid") {
-        function = [&group]() { return static_cast<double>(group.confid); };
+        function = [&group]() { return static_cast<double>(group.conformation_id); };
     } else if (property == "com_x") {
         function = [&group]() { return group.mass_center.x(); };
     } else if (property == "com_y") {

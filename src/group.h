@@ -37,250 +37,244 @@ template <class T> struct IterRange : std::pair<T, T> {
     } //!< Returns particle index pair relative to given reference
 };    //!< Turns a pair of iterators into a range
 
-    /**
-     * @brief Turns a pair of iterators into an elastic range
-     *
-     * The elastic range is a range where elements can be deactivated
-     * and later activated without inserting/erasing:
-     *
-     * - Just deactivated elements are moved to `end()` and can be retrieved from there.
-     * - Just activated elements are placed at `end()-n`.
-     * - The true size is given by `capacity()`
-     */
-    template<class T>
-        class ElasticRange : public IterRange<typename std::vector<T>::iterator> {
-            public:
-              using Titer = typename std::vector<T>::iterator;
-              using const_iterator = typename std::vector<T>::const_iterator;
+/**
+ * @brief Turns a pair of iterators into an elastic range
+ *
+ * The elastic range is a range where elements can be deactivated
+ * and later activated without inserting/erasing:
+ *
+ * - Just deactivated elements are moved to `end()` and can be retrieved from there.
+ * - Just activated elements are placed at `end()-n`.
+ * - The true size is given by `capacity()`
+ */
+template <class T> class ElasticRange : public IterRange<typename std::vector<T>::iterator> {
+  public:
+    using Titer = typename std::vector<T>::iterator;
+    using const_iterator = typename std::vector<T>::const_iterator;
 
-            private:
-                Titer _trueend;
-            public:
-              using base = IterRange<typename std::vector<T>::iterator>;
-              using base::begin;
-              using base::end;
-              using base::size;
+  private:
+    Titer _trueend;
 
-              ElasticRange(Titer begin, Titer end);
-              size_t capacity() const;
-              auto inactive() const; //!< Range of inactive elements
-              void deactivate(Titer first,
-                              Titer last); //!< Deactivate particles by moving to end, reducing the effective size
-              void activate(Titer first, Titer last); //!< Activate previously deactivated elements
-              Titer& trueend();
-              const Titer& trueend() const;
-              void relocate(
-                  const_iterator oldorigin,
+  public:
+    using base = IterRange<typename std::vector<T>::iterator>;
+    using base::begin;
+    using base::end;
+    using base::size;
+
+    ElasticRange(Titer begin, Titer end);
+    size_t capacity() const;
+    auto inactive() const; //!< Range of inactive elements
+    void deactivate(Titer first,
+                    Titer last);            //!< Deactivate particles by moving to end, reducing the effective size
+    void activate(Titer first, Titer last); //!< Activate previously deactivated elements
+    Titer& trueend();
+    const Titer& trueend() const;
+    void relocate(const_iterator oldorigin,
                   Titer neworigin); //!< Shift all iterators to new underlying container; useful when resizing vectors
-        };
+    bool isFull() const { return end() == trueend(); }
+};
 
-        template <class T>
-        ElasticRange<T>::ElasticRange(ElasticRange::Titer begin, ElasticRange::Titer end)
-            : base({begin, end}), _trueend(end) {}
+template <class T>
+ElasticRange<T>::ElasticRange(ElasticRange::Titer begin, ElasticRange::Titer end) : base({begin, end}), _trueend(end) {}
 
-        template <class T> size_t ElasticRange<T>::capacity() const { return std::distance(begin(), _trueend); }
-        template <class T> auto ElasticRange<T>::inactive() const { return base({end(), _trueend}); }
+template <class T> size_t ElasticRange<T>::capacity() const { return std::distance(begin(), _trueend); }
+template <class T> auto ElasticRange<T>::inactive() const { return base({end(), _trueend}); }
 
-        template <class T> void ElasticRange<T>::deactivate(ElasticRange::Titer first, ElasticRange::Titer last) {
-            size_t n = std::distance(first, last);
-            assert(first >= begin() && last <= end());
-            std::rotate(begin(), last, end());
-            end() -= n;
-            assert(size() + inactive().size() == capacity());
-        }
+template <class T> void ElasticRange<T>::deactivate(ElasticRange::Titer first, ElasticRange::Titer last) {
+    size_t n = std::distance(first, last);
+    assert(first >= begin() && last <= end());
+    std::rotate(begin(), last, end());
+    end() -= n;
+    assert(size() + inactive().size() == capacity());
+}
 
-        template <class T> void ElasticRange<T>::activate(ElasticRange::Titer first, ElasticRange::Titer last) {
-            size_t n = std::distance(first, last);
-            std::rotate(end(), first, _trueend);
-            end() += n;
-            assert(size() + inactive().size() == capacity());
-        }
+template <class T> void ElasticRange<T>::activate(ElasticRange::Titer first, ElasticRange::Titer last) {
+    size_t n = std::distance(first, last);
+    std::rotate(end(), first, _trueend);
+    end() += n;
+    assert(size() + inactive().size() == capacity());
+}
 
-        template <class T> typename ElasticRange<T>::Titer &ElasticRange<T>::trueend() { return _trueend; }
-        template <class T> const typename ElasticRange<T>::Titer &ElasticRange<T>::trueend() const { return _trueend; }
+template <class T> typename ElasticRange<T>::Titer& ElasticRange<T>::trueend() { return _trueend; }
+template <class T> const typename ElasticRange<T>::Titer& ElasticRange<T>::trueend() const { return _trueend; }
 
-        template <class T>
-        void ElasticRange<T>::relocate(ElasticRange::const_iterator oldorigin, ElasticRange::Titer neworigin) {
-            begin() = neworigin + std::distance(oldorigin, const_iterator(begin()));
-            end() = neworigin + std::distance(oldorigin, const_iterator(end()));
-            trueend() = neworigin + std::distance(oldorigin, const_iterator(trueend()));
-        }
+template <class T>
+void ElasticRange<T>::relocate(ElasticRange::const_iterator oldorigin, ElasticRange::Titer neworigin) {
+    begin() = neworigin + std::distance(oldorigin, const_iterator(begin()));
+    end() = neworigin + std::distance(oldorigin, const_iterator(end()));
+    trueend() = neworigin + std::distance(oldorigin, const_iterator(trueend()));
+}
 
-        template <class T /** Particle type */> class Group : public ElasticRange<T> {
-          public:
-            using base = ElasticRange<T>;
-            using iter = typename base::Titer;
-            using base::begin;
-            using base::empty;
-            using base::end;
-            using base::size;
-            using base::trueend;
-            int id=-1;           //!< Molecule id
-            int confid=0;        //!< Conformation index / id
-            Point mass_center = {0, 0, 0}; //!< Mass center
+template <class T /** Particle type */> class Group : public ElasticRange<T> {
+  public:
+    using base = ElasticRange<T>;
+    using iter = typename base::Titer;
+    using base::begin;
+    using base::empty;
+    using base::end;
+    using base::size;
+    using base::trueend;
+    int id = -1;                         //!< Molecule id
+    int conformation_id = 0;             //!< Conformation index / id
+    Point mass_center = {0.0, 0.0, 0.0}; //!< Mass center
 
-            inline bool isAtomic() const { return traits().atomic; } //!< Is it an atomic group?
-            inline bool isMolecular() const { return !traits().atomic; } //!< is it a molecular group?
+    inline bool isAtomic() const { return traits().atomic; }     //!< Is it an atomic group?
+    inline bool isMolecular() const { return !traits().atomic; } //!< is it a molecular group?
 
-            std::optional<std::reference_wrapper<Point>> massCenter(); //!< Optional reference to mass center
-            std::optional<std::reference_wrapper<const Point>> massCenter() const; //!< Optional ref. to mass center
+    std::optional<std::reference_wrapper<Point>> massCenter();             //!< Optional reference to mass center
+    std::optional<std::reference_wrapper<const Point>> massCenter() const; //!< Optional ref. to mass center
 
-            //! Selections to filter groups using `getSelectionFilter()`
-            enum Selectors : unsigned int {
-                ANY = (1U << 1),       //!< Match any group (disregards all other flags)
-                ACTIVE = (1U << 2),    //!< Only active groups (non-zero size)
-                INACTIVE = (1U << 3),  //!< Only inactive groups (zero size)
-                NEUTRAL = (1U << 4),   //!< Only groups with zero net charge
-                ATOMIC = (1U << 5),    //!< Only atomic groups
-                MOLECULAR = (1U << 6), //!< Only molecular groups (atomic=false)
-                FULL = (1U << 7)       //!< Only groups where size equals capacity
-            };
+    //! Selections to filter groups using `getSelectionFilter()`
+    enum Selectors : unsigned int {
+        ANY = (1U << 1),       //!< Match any group (disregards all other flags)
+        ACTIVE = (1U << 2),    //!< Only active groups (non-zero size)
+        INACTIVE = (1U << 3),  //!< Only inactive groups (zero size)
+        NEUTRAL = (1U << 4),   //!< Only groups with zero net charge
+        ATOMIC = (1U << 5),    //!< Only atomic groups
+        MOLECULAR = (1U << 6), //!< Only molecular groups (atomic=false)
+        FULL = (1U << 7)       //!< Only groups where size equals capacity
+    };
 
-            /**
-             * @brief Determines if given `Selectors` bitmask matches group
-             * @tparam mask Bitmask build from enum `Group::Selectors`
-             * @return true if ALL enabled bits in the mask are satisfied
-             *
-             * Note that for `INACTIVE | NEUTRAL`, the criterion is applied
-             * to all active and inactive particles, i.e. until `trueend()`.
-             */
+    /**
+     * @brief Determines if given `Selectors` bitmask matches group
+     * @tparam mask Bitmask build from enum `Group::Selectors`
+     * @return true if ALL enabled bits in the mask are satisfied
+     *
+     * Note that for `INACTIVE | NEUTRAL`, the criterion is applied
+     * to all active and inactive particles, i.e. until `trueend()`.
+     */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wc++11-narrowing"
-            template <unsigned int mask> bool match() const {
-                static_assert(mask >= ANY && mask <= FULL);
-                if constexpr (mask & ANY) {
-                    static_assert(mask == ANY, "don't mix ANY with other flags");
-                    return true;
-                }
-                if constexpr (mask & ACTIVE) {
-                    static_assert(!(mask & INACTIVE), "don't mix ACTIVE and INACTIVE");
-                    if (size() == 0) {
-                        return false;
-                    }
-                } else if constexpr (mask & INACTIVE) {
-                    if (!empty()) {
-                        return false;
-                    }
-                }
-                if constexpr (mask & FULL) {
-                    if (end() != trueend()) {
-                        return false;
-                    }
-                }
-                if constexpr (mask & ATOMIC) {
-                    static_assert(!(mask & MOLECULAR), "don't mix ATOMIC and MOLECULAR");
-                    if (isMolecular()) {
-                        return false;
-                    }
-                } else if constexpr (mask & MOLECULAR) {
-                    if (isAtomic()) {
-                        return false;
-                    }
-                }
-                if constexpr (mask & NEUTRAL) {
-                    auto _end = (mask & INACTIVE) ? trueend() : end();
-                    auto _charge = std::accumulate(
-                        begin(), _end, 0.0, [](auto sum, const auto& particle) { return sum + particle.charge; });
-                    if (std::fabs(_charge) > pc::epsilon_dbl) {
-                        return false;
-                    }
-                }
-                return true;
+    template <unsigned int mask> bool match() const {
+        static_assert(mask >= ANY && mask <= FULL);
+        if constexpr (mask & ANY) {
+            static_assert(mask == ANY, "don't mix ANY with other flags");
+            return true;
+        }
+        if constexpr (mask & ACTIVE) {
+            static_assert(!(mask & INACTIVE), "don't mix ACTIVE and INACTIVE");
+            if (size() == 0) {
+                return false;
             }
+        } else if constexpr (mask & INACTIVE) {
+            if (!empty()) {
+                return false;
+            }
+        }
+        if constexpr (mask & FULL) {
+            if (end() != trueend()) {
+                return false;
+            }
+        }
+        if constexpr (mask & ATOMIC) {
+            static_assert(!(mask & MOLECULAR), "don't mix ATOMIC and MOLECULAR");
+            if (isMolecular()) {
+                return false;
+            }
+        } else if constexpr (mask & MOLECULAR) {
+            if (isAtomic()) {
+                return false;
+            }
+        }
+        if constexpr (mask & NEUTRAL) {
+            auto _end = (mask & INACTIVE) ? trueend() : end();
+            auto _charge = std::accumulate(begin(), _end, 0.0,
+                                           [](auto sum, const auto& particle) { return sum + particle.charge; });
+            if (std::fabs(_charge) > pc::epsilon_dbl) {
+                return false;
+            }
+        }
+        return true;
+    }
 #pragma clang diagnostic pop
 
-            inline const MoleculeData &traits() const {
-                assert(id >= 0 && id < Faunus::molecules.size());
-                return Faunus::molecules[id];
-            } //!< Convenient access to molecule properties
+    inline const MoleculeData& traits() const {
+        assert(id >= 0 && id < Faunus::molecules.size());
+        return Faunus::molecules[id];
+    } //!< Convenient access to molecule properties
 
-            Group(Group& other);
-            Group(const Group& other);
-            Group(MoleculeData::index_type molid, iter begin, iter end); //!< Constructor
+    Group(Group& other);
+    Group(const Group& other);
+    Group(MoleculeData::index_type molid, iter begin, iter end); //!< Constructor
+    Group& operator=(const Group& other);                        //!< Deep copy contents from another Group
+    Group& shallowCopy(const Group& other); //!< copy group data from `other` but *not* particle data
+    bool contains(const T& particle, bool include_inactive = false) const; //!< Does particle belong?
+    double mass() const;                                                   //!< Sum of all active masses
+    auto positions();                                                      //!< Range of positions of active particles
+    T& at(size_t index);
+    const T& at(size_t index) const;
 
-            Group& operator=(const Group& other); //!< Deep copy contents from another Group
+    AtomData::index_type getParticleIndex(
+        const T& particle,
+        bool include_inactive = false) const; //!< Finds index of particle within group. Throws if not part of group
 
-            Group& shallowcopy(const Group& other); //!< copy group data from `other` but *not* particle data
+    auto find_id(AtomData::index_type atomid) const {
+        return *this | ranges::cpp20::views::filter([atomid](const T& particle) { return (particle.id == atomid); });
+    } //!< Range of all (active) elements with matching particle id
 
-            bool contains(const T& particle,
-                          bool include_inactive = false) const; //!< Does particle belong? Complexity: constant
+    /**
+     * @brief Returns i'th element in group
+     * @param i index starting at zero
+     * @return reference to value at i'th element
+     * @note No range-checking and i must be in interval `[0:size[`
+     */
+    inline auto& operator[](size_t index) { return *(this->first + index); }
+    inline const auto& operator[](size_t index) const { return *(this->first + index); }
 
-            AtomData::index_type getParticleIndex(const T& particle,
-                                                  bool include_inactive = false)
-                const; //!< Finds index of particle within group. Throws if not part of group
-
-            auto find_id(AtomData::index_type atomid) const {
-                return *this | ranges::cpp20::views::filter([atomid](const T& i) { return (i.id == atomid); });
-            } //!< Range of all (active) elements with matching particle id
-
-            /**
-             * @brief Returns i'th element in group
-             * @param i index starting at zero
-             * @return reference to value at i'th element
-             * @note No range-checking and i must be in interval `[0:size[`
-             */
-            inline auto &operator[](size_t i) { return *(this->first + i); }
-            inline const auto &operator[](size_t i) const { return *(this->first + i); }
-
-            T& at(size_t index);
-            const T& at(size_t index) const;
-
-            /*
-             * @brief Reference to subset of given index, where 0 is the start of the group
-             * @note do not parse index as `const&` which would create a dangling reference
-             */
-            template<class Tint=size_t>
-                auto operator[](std::vector<Tint> &index) {
+    /*
+     * @brief Reference to subset of given index, where 0 is the start of the group
+     * @note do not parse index as `const&` which would create a dangling reference
+     */
+    template <class Tint = size_t> auto operator[](std::vector<Tint>& index) {
 #ifndef NDEBUG
-                    // check that range is within group
-                    if (not index.empty()) 
-                        assert( *std::max_element(index.begin(), index.end()) < size() );
+        // check that range is within group
+        if (not index.empty())
+            assert(*std::max_element(index.begin(), index.end()) < size());
 #endif
-                    return index | ranges::cpp20::views::transform([this](Tint i) -> T& { return *(begin() + i); });
-                }
+        return index | ranges::cpp20::views::transform([this](auto i) -> T& { return *(begin() + i); });
+    }
 
-            double mass() const; //!< Sum of all active masses
-            auto positions();    //!< Iterable range with positions of active particles
-
-            /**
-             * @brief Remove PBC for molecular groups w. respect to mass center
-             * @tparam TdistanceFunc
-             * @param vdist Distance calculation function
-             * @remarks Atomic groups are not touched
-             * @warning Is this fit for use?
-             */
-            template <typename TdistanceFunc> void unwrap(const TdistanceFunc& vdist) {
-                if (isMolecular()) {
-                    for (auto& particle : *this) {
-                        particle.pos = mass_center + vdist(particle.pos, mass_center);
-                    }
-                }
+    /**
+     * @brief Remove PBC for molecular groups w. respect to mass center
+     * @tparam TdistanceFunc
+     * @param vector_distance Distance calculation function
+     * @remarks Atomic groups are not touched
+     * @warning Is this fit for use?
+     */
+    template <typename TdistanceFunc> void unwrap(const TdistanceFunc& vector_distance) {
+        if (isMolecular()) {
+            for (auto& particle : *this) {
+                particle.pos = mass_center + vector_distance(particle.pos, mass_center);
             }
+        }
+    }
 
-            void wrap(Geometry::BoundaryFunction); //!< Apply periodic boundaries (Order N complexity).
+    void wrap(Geometry::BoundaryFunction boundary); //!< Apply periodic boundaries (Order N complexity).
 
-            void translate(const Point&, Geometry::BoundaryFunction=[](Point&){}); //!< Translate particle positions and mass center
+    void translate(
+        const Point& displacement,
+        Geometry::BoundaryFunction boundary = [](Point&) {}); //!< Translate particle positions and mass center
 
-            void
-            rotate(const Eigen::Quaterniond&,
-                   Geometry::BoundaryFunction); //!< Rotate particles incl. internal coordinates (dipole moment etc.)
+    void
+    rotate(const Eigen::Quaterniond& quaternion,
+           Geometry::BoundaryFunction boundary); //!< Rotate particles incl. internal coordinates (dipole moment etc.)
 
-            void updateMassCenter(Geometry::BoundaryFunction,
-                                  const Point& approximate_mass_center); //!< Calculates mass center
+    void updateMassCenter(Geometry::BoundaryFunction boundary,
+                          const Point& approximate_mass_center); //!< Calculates mass center
 
-            void updateMassCenter(Geometry::BoundaryFunction); //!< Calculates mass center
+    void updateMassCenter(Geometry::BoundaryFunction boundary); //!< Calculates mass center
 
-        }; //!< End of Group class
+}; //!< End of Group class
 
-        // Group<Particle> is instantiated elsewhere (group.cpp)
-    extern template class Group<Particle>;
+// Group<Particle> is instantiated elsewhere (group.cpp)
+extern template class Group<Particle>;
 
-void to_json(json&, const Group<Particle>&);
-void from_json(const json&, Group<Particle>&);
+void to_json(json& j, const Group<Particle>& group);
+void from_json(const json& j, Group<Particle>& group);
 
 //! Get lambda function matching given enum Select mask
-template <unsigned int mask> std::function<bool(const Group<Particle> &)> getGroupFilter() {
-    return [](const Group<Particle> &g) { return g.match<mask>(); };
+template <unsigned int mask> std::function<bool(const Group<Particle>&)> getGroupFilter() {
+    return [](const Group<Particle>& group) { return group.match<mask>(); };
 }
 
 /*
@@ -290,39 +284,33 @@ template <unsigned int mask> std::function<bool(const Group<Particle> &)> getGro
  * is thrown.
  */
 
-template <class Archive, class T> void save(Archive &archive, const Group<T> &g, std::uint32_t const version) {
+template <class Archive, class T> void save(Archive& archive, const Group<T>& group, std::uint32_t const version) {
     switch (version) {
     case 0:
-        archive(g.id, g.confid, g.mass_center, g.size(), g.capacity());
-        for (auto it = g.begin(); it != g.trueend(); it++) {
-            archive(*it);
-        }
+        archive(group.id, group.conformation_id, group.mass_center, group.size(), group.capacity());
+        std::for_each(group.begin(), group.trueend(), [&archive](auto& particle) { archive(particle); });
         break;
     default:
         throw std::runtime_error("unknown serialisation version");
     };
 } //!< Cereal serialisation
 
-template <class Archive, class T> void load(Archive &archive, Group<T> &g, std::uint32_t const version) {
+template <class Archive, class T> void load(Archive& archive, Group<T>& group, std::uint32_t const version) {
     size_t size = 0;
     size_t capacity = 0;
     switch (version) {
     case 0:
-        archive(g.id, g.confid, g.mass_center, size, capacity);
-        assert(size <= capacity);
-        if (capacity != g.capacity()) {
+        archive(group.id, group.conformation_id, group.mass_center, size, capacity);
+        if (capacity != group.capacity()) {
             throw std::runtime_error("capacity mismatch of archived group");
         }
-        g.resize(size);
-        assert(g.capacity() == capacity);
-        assert(g.size() == size);
-        for (auto it = g.begin(); it != g.trueend(); it++) {
-            archive(*it);
-        }
+        group.resize(size);
+        assert(group.size() == size);
+        std::for_each(group.begin(), group.trueend(), [&archive](auto& particle) { archive(particle); });
         break;
     default:
         throw std::runtime_error("unknown serialisation version");
     }
 } //!< Cereal serialisation
 
-}//end of faunus namespace
+} // namespace Faunus

@@ -173,7 +173,7 @@ void Space::sync(const Space &other, const Change &change) {
                 } else if (changed.all) {
                     group = other_group;            // copy everything
                 } else {                            // copy only a subset
-                    group.shallowcopy(other_group); // copy group data but *not* particles
+                    group.shallowCopy(other_group); // copy group data but *not* particles
                     for (auto i : changed.relative_atom_indices) { // loop over atom index (rel. to group)
                         group.at(i) = other_group.at(i); // deep copy select particles
                     }

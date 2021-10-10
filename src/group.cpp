@@ -21,9 +21,14 @@ Group<T>::Group(MoleculeData::index_type molid, Group<T>::iter begin, Group<T>::
     assert(Faunus::molecule.size() > id);
 }
 
+/**
+ * Performs a deep copy from another group
+ *
+ * @throw if the capacities of the two groups differ
+ */
 template <class T> Group<T>& Group<T>::operator=(const Group<T>& other) {
     if (&other != this) {
-        shallowcopy(other);
+        shallowCopy(other);
         if (other.begin() != begin()) {
             std::copy(other.begin(), other.trueend(), begin());
         } // copy all particle data
@@ -31,15 +36,21 @@ template <class T> Group<T>& Group<T>::operator=(const Group<T>& other) {
     return *this;
 }
 
-template <class T> Group<T>& Group<T>::shallowcopy(const Group<T>& other) {
+/**
+ * This copies size, id, mass center etc. from another group
+ * but does *not* copy particle data.
+ *
+ * @throw if the capacities of the two groups differ
+ */
+template <class T> Group<T>& Group<T>::shallowCopy(const Group<T>& other) {
     if (&other != this) {
         if (this->capacity() != other.capacity()) {
-            throw std::runtime_error("Group::shallowcopy: capacity mismatch");
+            throw std::runtime_error("Group::shallowCopy: capacity mismatch");
         }
         this->resize(other.size());
         id = other.id;
         mass_center = other.mass_center;
-        confid = other.confid;
+        conformation_id = other.conformation_id;
     }
     return *this;
 }
@@ -194,8 +205,8 @@ void to_json(json& j, const Group<Particle>& group) {
     if (group.capacity() > group.size()) {
         j["capacity"] = group.capacity();
     }
-    if (group.confid != 0) {
-        j["confid"] = group.confid;
+    if (group.conformation_id != 0) {
+        j["confid"] = group.conformation_id;
     }
 }
 
@@ -204,7 +215,7 @@ void from_json(const json& j, Group<Particle>& group) {
     group.trueend() = group.begin() + j.value("capacity", group.size());
     group.id = j.at("id").get<decltype(group.id)>();
     group.mass_center = j.at("cm").get<Point>();
-    group.confid = j.value("confid", 0);
+    group.conformation_id = j.value("confid", 0);
 }
 
 using doctest::Approx;
@@ -386,12 +397,12 @@ TEST_CASE("[Faunus] Group") {
 
         g2.id = 100;
         g2.mass_center = {1, 0, 0};
-        g2.confid = 20;
+        g2.conformation_id = 20;
         g1 = g2;
 
         CHECK(g1.id == 100);
         CHECK(g1.mass_center.x() == 1);
-        CHECK(g1.confid == 20);
+        CHECK(g1.conformation_id == 20);
 
         CHECK((*g1.begin()).id == -1);
         CHECK((*g2.begin()).id == -1);
@@ -446,7 +457,7 @@ TEST_CASE("[Faunus] Group") {
             p2.back().pos.x() = -10;
             g2.id = 100;
             g2.mass_center = {1, 0, 0};
-            g2.confid = 20;
+            g2.conformation_id = 20;
             g2.resize(4);
             cereal::BinaryOutputArchive archive(out);
             archive(g2);
@@ -461,7 +472,7 @@ TEST_CASE("[Faunus] Group") {
 
             CHECK(g1.id == 100);
             CHECK(g1.mass_center.x() == 1);
-            CHECK(g1.confid == 20);
+            CHECK(g1.conformation_id == 20);
             CHECK(g1.size() == 4);
             CHECK(g1.capacity() == 5);
             CHECK(g1.begin()->id == 8);

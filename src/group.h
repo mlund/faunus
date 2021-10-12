@@ -72,6 +72,7 @@ template <class T> class ElasticRange : public IterRange<typename std::vector<T>
     void relocate(const_iterator oldorigin,
                   Titer neworigin); //!< Shift all iterators to new underlying container; useful when resizing vectors
     bool isFull() const { return end() == trueend(); }
+    auto numInactive() const; //!< Number of inactive elements
 };
 
 template <class T>
@@ -105,15 +106,12 @@ void ElasticRange<T>::relocate(ElasticRange::const_iterator oldorigin, ElasticRa
     trueend() = neworigin + std::distance(oldorigin, const_iterator(trueend()));
 }
 
+template <class T> auto ElasticRange<T>::numInactive() const { return inactive().size(); }
+
 class Group : public ElasticRange<Particle> {
   public:
     using base = ElasticRange<Particle>;
     using iter = typename base::Titer;
-    using base::begin;
-    using base::empty;
-    using base::end;
-    using base::size;
-    using base::trueend;
     int id = -1;                         //!< Molecule id
     int conformation_id = 0;             //!< Conformation index / id
     Point mass_center = {0.0, 0.0, 0.0}; //!< Mass center
@@ -126,13 +124,13 @@ class Group : public ElasticRange<Particle> {
 
     //! Selections to filter groups using `getSelectionFilter()`
     enum Selectors : unsigned int {
-        ANY = (1U << 1),       //!< Match any group (disregards all other flags)
-        ACTIVE = (1U << 2),    //!< Only active groups (non-zero size)
-        INACTIVE = (1U << 3),  //!< Only inactive groups (zero size)
-        NEUTRAL = (1U << 4),   //!< Only groups with zero net charge
-        ATOMIC = (1U << 5),    //!< Only atomic groups
-        MOLECULAR = (1U << 6), //!< Only molecular groups (atomic=false)
-        FULL = (1U << 7)       //!< Only groups where size equals capacity
+        ANY = (1U << 1U),       //!< Match any group (disregards all other flags)
+        ACTIVE = (1U << 2U),    //!< Only active groups (non-zero size)
+        INACTIVE = (1U << 3U),  //!< Only inactive groups (zero size)
+        NEUTRAL = (1U << 4U),   //!< Only groups with zero net charge
+        ATOMIC = (1U << 5U),    //!< Only atomic groups
+        MOLECULAR = (1U << 6U), //!< Only molecular groups (atomic=false)
+        FULL = (1U << 7U)       //!< Only groups where size equals capacity
     };
 
     /**
@@ -197,18 +195,16 @@ class Group : public ElasticRange<Particle> {
     Group(const Group& other);
     Group(MoleculeData::index_type molid, iter begin, iter end); //!< Constructor
     Group& operator=(const Group& other);                        //!< Deep copy contents from another Group
-    Group& shallowCopy(const Group& other); //!< copy group data from `other` but *not* particle data
+    Group& shallowCopy(const Group& other);                      //!< copy from `other` but *not* particle data
     bool contains(const Particle& particle, bool include_inactive = false) const; //!< Does particle belong?
     double mass() const;                                                          //!< Sum of all active masses
     auto positions(); //!< Range of positions of active particles
-    Particle& at(size_t index);
-    const Particle& at(size_t index) const;
 
     AtomData::index_type getParticleIndex(
         const Particle& particle,
         bool include_inactive = false) const; //!< Finds index of particle within group. Throws if not part of group
 
-    auto find_id(AtomData::index_type atomid) const {
+    auto findAtomID(AtomData::index_type atomid) const {
         return *this | ranges::cpp20::views::filter([atomid](auto& particle) { return (particle.id == atomid); });
     } //!< Range of all (active) elements with matching particle id
 
@@ -221,17 +217,22 @@ class Group : public ElasticRange<Particle> {
     inline auto& operator[](size_t index) { return *(begin() + index); }
     inline const auto& operator[](size_t index) const { return *(begin() + index); }
 
-    /*
-     * @brief Reference to subset of given index, where 0 is the start of the group
-     * @note do not parse index as `const&` which would create a dangling reference
+    Particle& at(size_t index);
+    const Particle& at(size_t index) const;
+
+    /**
+     * @brief Reference to subset of given indices, where 0 is the start of the group
+     * @param indices Range of indices relative to group
+     * @warning Do not change `indices` to `const&` which would create a dangling reference
      */
-    template <class Tint = size_t> auto operator[](std::vector<Tint>& index) {
+    template <class Tint = size_t> auto operator[](std::vector<Tint>& indices) {
+        static_assert(std::is_integral<Tint>::value, "integer indices expected");
 #ifndef NDEBUG
-        // check that range is within group
-        if (not index.empty())
+        if (not indices.empty()) {
             assert(*std::max_element(index.begin(), index.end()) < size());
+        }
 #endif
-        return index | ranges::cpp20::views::transform([this](auto i) -> Particle& { return *(begin() + i); });
+        return indices | ranges::cpp20::views::transform([this](auto i) -> Particle& { return *(begin() + i); });
     }
 
     /**
@@ -302,7 +303,6 @@ template <class Archive> void load(Archive& archive, Group& group, std::uint32_t
             throw std::runtime_error("capacity mismatch of archived group");
         }
         group.resize(size);
-        assert(group.size() == size);
         std::for_each(group.begin(), group.trueend(), [&archive](auto& particle) { archive(particle); });
         break;
     default:

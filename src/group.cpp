@@ -105,6 +105,7 @@ void Group::translate(const Point& displacement, Geometry::BoundaryFunction boun
  * calculated, the molecule is translated towards the center of the simulation
  * box to remove possible periodic boundary conditions; then translated back again.
  * The translation is done by subtracting / adding `approximate_mass_center`.
+ * Safely handles empty groups.
  */
 void Group::updateMassCenter(Geometry::BoundaryFunction boundary_function, const Point& approximate_mass_center) {
     if (isMolecular() && !empty()) {
@@ -122,7 +123,7 @@ void Group::updateMassCenter(Geometry::BoundaryFunction boundary_function) {
     if (empty()) {
         return;
     }
-    const auto& approximate_mass_center = operator[](size() / 2).pos;
+    const auto& approximate_mass_center = at(size() / 2).pos;
     updateMassCenter(boundary_function, approximate_mass_center);
 }
 
@@ -331,7 +332,7 @@ TEST_CASE("[Faunus] Group") {
     }
 
     // find all elements with id=1
-    auto slice1 = g.find_id(1);
+    auto slice1 = g.findAtomID(1);
     CHECK(std::distance(slice1.begin(), slice1.end()) == 2);
 
     // find *one* random value with id=1

@@ -119,7 +119,7 @@ void SpeciationMove::atomicSwap(Change &change) {
  */
 Change::GroupChange SpeciationMove::contractAtomicGroup(Space::GroupType& target, Space::GroupType& old_target,
                                                         int number_to_delete) {
-    assert(target.atomic);
+    assert(target.isAtomic());
     Change::GroupChange change_data; // describes what has changed
 
     if ((int)target.size() - number_to_delete >= 0) {
@@ -154,7 +154,7 @@ Change::GroupChange SpeciationMove::contractAtomicGroup(Space::GroupType& target
  * are removed as this cannot be achieved later if the system volume changes.
  */
 Change::GroupChange SpeciationMove::deactivateMolecularGroup(Space::GroupType& target) {
-    assert(target.atomic == false); // group must be molecular
+    assert(target.isAtomic() == false); // group must be molecular
     assert(not target.empty());
     assert(target.size() == target.capacity()); // group must be active
 
@@ -190,7 +190,7 @@ Change::GroupChange SpeciationMove::deactivateMolecularGroup(Space::GroupType& t
  * the returned Change::data object will be empty.
  */
 Change::GroupChange SpeciationMove::expandAtomicGroup(Space::GroupType& target, int number_to_insert) {
-    assert(target.atomic);
+    assert(target.isAtomic());
 
     Change::GroupChange change_data;
     if (target.size() + number_to_insert <= target.capacity()) {
@@ -217,7 +217,7 @@ Change::GroupChange SpeciationMove::expandAtomicGroup(Space::GroupType& target, 
  * the bond-energy does not affect the insertion acceptance.
  */
 Change::GroupChange SpeciationMove::activateMolecularGroup(Space::GroupType& target) {
-    assert(not target.atomic);  // must be a molecule group
+    assert(not target.isAtomic()); // must be a molecule group
     assert(target.empty());     // must be inactive
     target.activate(target.inactive().begin(), target.inactive().end()); // activate all particles
     assert(not target.empty());

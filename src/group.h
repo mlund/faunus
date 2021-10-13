@@ -229,7 +229,7 @@ class Group : public ElasticRange<Particle> {
         static_assert(std::is_integral<Tint>::value, "integer indices expected");
 #ifndef NDEBUG
         if (not indices.empty()) {
-            assert(*std::max_element(index.begin(), index.end()) < size());
+            assert(*std::max_element(indices.begin(), indices.end()) < size());
         }
 #endif
         return indices | ranges::cpp20::views::transform([this](auto i) -> Particle& { return *(begin() + i); });

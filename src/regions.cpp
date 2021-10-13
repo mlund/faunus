@@ -100,7 +100,7 @@ bool WithinGroups::isInside(const Point &a) const {
     for (size_t i : indexes) {       // loop over user defined group index
         auto &g = spc.groups.at(i);  // ref. to current group
         if (com and not g.empty()) { // check only with mass-center
-            assert(g.atomic == false);
+            assert(g.isMolecular());
             if (spc.geometry.sqdist(a, g.mass_center) < threshold2)
                 return true;
         } else {

@@ -14,7 +14,7 @@ Group::Group(Group& other) : base(other.begin(), other.trueend()) { *this = oper
 Group::Group(const Group& other) : base(other.begin(), other.trueend()) { *this = operator=(other); }
 
 Group::Group(MoleculeData::index_type molid, Group::iter begin, Group::iter end) : base(begin, end), id(molid) {
-    assert(Faunus::molecule.size() > id);
+    assert(Faunus::molecules.size() > id);
 }
 
 /**

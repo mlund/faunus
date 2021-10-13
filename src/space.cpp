@@ -222,8 +222,8 @@ Point Space::scaleVolume(double Vnew, Geometry::VolumeMethod method) {
                 });
 #ifndef NDEBUG
                 auto recalc_cm =
-                    Geometry::massCenter(group.begin(), group.end(), geometry.getBoundaryFunc(), -group.cm);
-                if (double error = geometry.sqdist(group.cm, recalc_cm); error > 1e-6) {
+                    Geometry::massCenter(group.begin(), group.end(), geometry.getBoundaryFunc(), -group.mass_center);
+                if (double error = geometry.sqdist(group.mass_center, recalc_cm); error > 1e-6) {
                     assert(false); // mass center mismatch
                 }
 #endif

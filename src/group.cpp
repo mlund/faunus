@@ -13,8 +13,16 @@ Group::Group(Group& other) : base(other.begin(), other.trueend()) { *this = oper
 
 Group::Group(const Group& other) : base(other.begin(), other.trueend()) { *this = operator=(other); }
 
+/**
+ * @param molid Molecule id the group points to, i.e. a valid index in global `Faunus::molecules`.
+ * @param begin Iterator to first particle
+ * @param end Iterator to (beyond) end particle
+ * @throw if molid is out of range w. respect to `Faunus::molecules`
+ */
 Group::Group(MoleculeData::index_type molid, Group::iter begin, Group::iter end) : base(begin, end), id(molid) {
-    assert(Faunus::molecules.size() > id);
+    if (id >= Faunus::molecules.size()) {
+        throw std::range_error("invalid molecule id");
+    }
 }
 
 /**
@@ -279,7 +287,9 @@ TEST_CASE("[Faunus] Group") {
     p[0].id = 0;
     p[1].id = 1;
     p[2].id = 1;
-    CHECK(Faunus::molecules.size() != 0);
+    if (Faunus::molecules.empty()) {
+        Faunus::molecules.resize(1);
+    }
     Group g(0, p.begin(), p.end());
 
     SUBCASE("contains()") {
@@ -408,6 +418,8 @@ TEST_CASE("[Faunus] Group") {
         CHECK(g1.size() == 4);
         CHECK(g1.capacity() == 5);
         CHECK(p1.front().id == 10);
+
+        g1.id = 0;
 
         SUBCASE("getGroupFilter(): incomplete group") {
             CHECK(!Faunus::molecules.empty());

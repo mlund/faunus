@@ -135,8 +135,8 @@ if (ENABLE_TBB)
         target_link_libraries(project_options INTERFACE TBB::tbb)
     else ()
         FetchContent_Declare(
-            tbb URL https://github.com/wjakob/tbb/archive/806df70ee69fc7b332fcf90a48651f6dbf0663ba.tar.gz
-            URL_HASH MD5=63fda89e88d34da63ddcef472e7725ef
+            tbb URL https://github.com/wjakob/tbb/archive/9e219e24fe223b299783200f217e9d27790a87b0.tar.gz
+            URL_HASH MD5=9bccf5863c6deee08732e69fa3310675
             )
         if (NOT tbb_POPULATED)
             FetchContent_Populate(tbb)

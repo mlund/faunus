@@ -137,7 +137,7 @@ rm -fR CMakeCache.txt CMakeFiles _deps
 
 If `ENABLE_TBB=on`, TBB may be used for threaded simulations which may or may not be
 advantageous, depending on the system.
-By default, an unspecified and possibly dated version of TBB will be downloaded and build.
+By default, an unspecified and possibly outdated version of TBB will be downloaded and build.
 Alternatively you can use an existing installation _via_ `TBB_DIR`:
 
 ~~~ bash

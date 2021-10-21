@@ -27,7 +27,7 @@ class ClusterShapeAnalysis {
         const Range &groups, const Point &mass_center_of_groups,
         const Geometry::BoundaryFunction boundary = [](auto &) {}) {
         using namespace ranges::cpp20::views;
-        auto positions = groups | transform([](const auto &group) { return group.cm; });
+        auto positions = groups | transform([](const auto& group) { return group.mass_center; });
         auto masses = groups | transform([](const auto &group) { return group.mass(); });
         return Geometry::gyration(positions.begin(), positions.end(), masses.begin(), mass_center_of_groups, boundary);
     }

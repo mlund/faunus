@@ -216,7 +216,7 @@ TEST_CASE("[Faunus] LangevinDynamics") {
 
     SUBCASE("Velocity and force initialization") {
         spc.particles.resize(10);                                                // 10 particles in total
-        spc.groups.emplace_back(spc.particles.begin(), spc.particles.end() - 1); // 9 active particles
+        spc.groups.emplace_back(0, spc.particles.begin(), spc.particles.end() - 1); // 9 active particles
         LangevinDynamics ld(spc, energy);
         CHECK(ld.getForces().capacity() >= 10);
         CHECK(ld.getVelocities().capacity() >= 10);

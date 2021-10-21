@@ -271,7 +271,7 @@ TEST_CASE("[Faunus] quadrupoleMoment") {
 template <class Tgroup, class BoundaryFunction>
 auto toMultipole(const Tgroup &g, BoundaryFunction boundary = [](const Point &) {}, double cutoff = pc::infty) {
     Particle m;
-    m.pos = g.cm;
+    m.pos = g.mass_center;
     m.charge = Faunus::monopoleMoment(g.begin(), g.end());                                // monopole
     m.getExt().mu = Faunus::dipoleMoment(g.begin(), g.end(), boundary, m.pos, cutoff);    // dipole
     m.getExt().Q = Faunus::quadrupoleMoment(g.begin(), g.end(), boundary, m.pos, cutoff); // quadrupole

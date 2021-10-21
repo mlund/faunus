@@ -13,8 +13,7 @@ class BinaryInputArchive;
 namespace Faunus {
 
 class Space;
-
-template <typename T = Particle> class Group;
+class Group;
 
 #ifndef __cplusplus
 #define __cplusplus
@@ -180,7 +179,7 @@ class StructureFileWriter {
     virtual void saveHeader(std::ostream& stream, int number_of_particles) const = 0; //!< Write header
     virtual void saveFooter(std::ostream& stream) const; //!< Called when all particles have been written
     virtual void saveParticle(std::ostream& stream, const Particle& particle) = 0; //!< Write single particle
-    void saveGroup(std::ostream& stream, const Group<Particle>& group);            //!< Write entire group
+    void saveGroup(std::ostream& stream, const Group& group);                      //!< Write entire group
 
     template <class ParticleIter> void saveParticles(std::ostream& stream, ParticleIter begin, ParticleIter end) {
         group_index = 0;

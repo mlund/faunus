@@ -49,12 +49,12 @@ struct Change {
     inline auto touchedGroupIndex() const { return ranges::cpp20::views::transform(groups, &GroupChange::group_index); }
 
     //! List of changed atom index relative to first particle in system
-    std::vector<index_type> touchedParticleIndex(const std::vector<Group<Particle>>&) const;
+    std::vector<index_type> touchedParticleIndex(const std::vector<Group>&) const;
 
     void clear();                                                             //!< Clear all change data
     bool empty() const;                                                       //!< Check if change object is empty
     explicit operator bool() const;                                           //!< True if object is not empty
-    void sanityCheck(const std::vector<Group<Particle>>& group_vector) const; //!< Sanity check on contained object data
+    void sanityCheck(const std::vector<Group>& group_vector) const;           //!< Sanity check on contained object data
 };
 
 void to_json(json& j, const Change::GroupChange& group_change); //!< Serialize Change data to json
@@ -75,7 +75,7 @@ void to_json(json& j, const Change& change);                    //!< Serialise C
 class Space {
   public:
     using GeometryType = Geometry::Chameleon;
-    using GroupType = Group<Particle>; //!< Continuous range of particles defining molecules
+    using GroupType = Group; //!< Continuous range of particles defining molecules
     using GroupVector = std::vector<GroupType>;
     using ScaleVolumeTrigger = std::function<void(Space&, double, double)>;
     using ChangeTrigger = std::function<void(Space&, const Change&)>;

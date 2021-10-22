@@ -223,6 +223,10 @@ void MetropolisMonteCarlo::State::sync(const State& other, const Change& change)
     pot->sync(&*other.pot, change);
 }
 
+Space& MetropolisMonteCarlo::State::getSpace() { return *spc; }
+
+Energy::Hamiltonian& MetropolisMonteCarlo::State::getHamiltonian() { return *pot; }
+
 void to_json(json& j, const MetropolisMonteCarlo& monte_carlo) {
     j = monte_carlo.state->spc->info();
     j["temperature"] = pc::temperature / 1.0_K;
@@ -236,6 +240,8 @@ void to_json(json& j, const MetropolisMonteCarlo& monte_carlo) {
                            {"last move", monte_carlo.latest_move_name}};
     }
 }
+MetropolisMonteCarlo::State& MetropolisMonteCarlo::getTrialState() { return *state; }
+MetropolisMonteCarlo::State& MetropolisMonteCarlo::getState() { return *trial_state; }
 
 TranslationalEntropy::TranslationalEntropy(Space &trial_space, Space &space) : trial_spc(trial_space), spc(space) {}
 

@@ -17,9 +17,7 @@
 namespace py = pybind11;
 using namespace Faunus;
 
-typedef typename Space::GroupType Tgroup;
-typedef Energy::Hamiltonian Thamiltonian;
-typedef MetropolisMonteCarlo Tmcsimulation;
+// @todo The code below should be updated, see https://github.com/pybind/pybind11_json
 
 inline json dict2json(py::dict dict) {
     py::object dumps = py::module::import("json").attr("dumps");
@@ -139,25 +137,25 @@ PYBIND11_MODULE(pyfaunus, m)
         .def("end", [](ParticleVector& p) { return p.end(); });
 
     // Group
-    py::class_<Tgroup>(m, "Group")
+    py::class_<Group>(m, "Group")
         .def(py::init<MoleculeData::index_type, ParticleVector::iterator, ParticleVector::iterator>())
-        .def_readwrite("groups", &Tgroup::id, "Molecule id")
-        .def_readwrite("id", &Tgroup::id, "Molecule id")
-        .def_readwrite("cm", &Tgroup::mass_center, "Center of mass")
-        .def("__len__", [](Tgroup& self) { return self.size(); })
+        .def_readwrite("groups", &Group::id, "Molecule id")
+        .def_readwrite("id", &Group::id, "Molecule id")
+        .def_readwrite("cm", &Group::mass_center, "Center of mass")
+        .def("__len__", [](Group& self) { return self.size(); })
         .def(
-            "__iter__", [](Tgroup& v) { return py::make_iterator(v.begin(), v.end()); }, py::keep_alive<0, 1>())
-        .def("isAtomic", &Tgroup::isAtomic)
-        .def("isMolecular", &Tgroup::isMolecular)
-        .def("traits", &Tgroup::traits)
-        .def("contains", &Tgroup::contains)
-        .def("capacity", &Tgroup::capacity)
-        .def("deactivate", &Tgroup::deactivate)
-        .def("activate", &Tgroup::activate)
-        .def("begin", (ParticleVector::iterator & (Tgroup::*)()) & Tgroup::begin)
-        .def("end", (ParticleVector::iterator & (Tgroup::*)()) & Tgroup::end);
+            "__iter__", [](Group& v) { return py::make_iterator(v.begin(), v.end()); }, py::keep_alive<0, 1>())
+        .def("isAtomic", &Group::isAtomic)
+        .def("isMolecular", &Group::isMolecular)
+        .def("traits", &Group::traits)
+        .def("contains", &Group::contains)
+        .def("capacity", &Group::capacity)
+        .def("deactivate", &Group::deactivate)
+        .def("activate", &Group::activate)
+        .def("begin", (ParticleVector::iterator & (Group::*)()) & Group::begin)
+        .def("end", (ParticleVector::iterator & (Group::*)()) & Group::end);
 
-    py::bind_vector<std::vector<Tgroup>>(m, "GroupVector");
+    py::bind_vector<std::vector<Group>>(m, "GroupVector");
 
     // Region
     py::enum_<Region::RegionBase::RegionType>(m, "RegionType")
@@ -193,6 +191,15 @@ PYBIND11_MODULE(pyfaunus, m)
                 Faunus::from_json(list2json(list), a); } );
 
     m.attr("atoms") = &Faunus::atoms; // global instance
+
+    // MoleculeData
+    py::class_<MoleculeData>(m, "MoleculeData")
+        .def(py::init<>())
+        .def_readwrite("name", &MoleculeData::name)
+        .def("numConformations", &MoleculeData::numConformations);
+
+    auto _moleculedatavec = py::bind_vector<decltype(Faunus::molecules)>(m, "MoleculeDataVector");
+    m.attr("molecules") = &Faunus::molecules; // global instance
 
     // Temperature and other globals etc.
     m.def("getTemperature", []() { return pc::temperature; } );
@@ -243,31 +250,48 @@ PYBIND11_MODULE(pyfaunus, m)
         .def("findMolecules", &Space::findMolecules)
         .def("from_dict", [](Space& spc, py::dict dict) { from_json(dict2json(dict), spc); });
 
+    // Energybase
+    py::class_<Energy::Energybase>(m, "Energybase")
+        .def_readonly("name", &Energy::Energybase::name)
+        .def("force", &Energy::Energybase::force)
+        .def("energy", &Energy::Energybase::energy)
+        .def("sync", &Energy::Energybase::sync);
+
     // Hamiltonian
-    py::class_<Thamiltonian>(m, "Hamiltonian")
-        .def(py::init<Space &, const json &>())
-        .def(py::init([](Space &spc, py::list list) {
+    py::class_<Energy::Hamiltonian>(m, "Hamiltonian")
+        .def(py::init<Space&, const json&>())
+        .def(py::init([](Space& spc, py::list list) {
             json j = list2json(list);
-            return std::unique_ptr<Thamiltonian>(new Thamiltonian(spc, j));
+            return std::make_unique<Energy::Hamiltonian>(spc, j);
         }))
-        .def("init", &Thamiltonian::init)
-        .def("energy", &Thamiltonian::energy);
+        .def("init", &Energy::Hamiltonian::init)
+        .def("energy", &Energy::Hamiltonian::energy);
+
+    // State
+    py::class_<MetropolisMonteCarlo::State>(m, "State")
+        .def("getSpace", &MetropolisMonteCarlo::State::getSpace)
+        .def("getHamiltonian", &MetropolisMonteCarlo::State::getHamiltonian)
+        .def("sync", &MetropolisMonteCarlo::State::sync);
 
     // TranslationalEntropy
     py::class_<TranslationalEntropy>(m, "TranslationalEntropy")
         .def(py::init<Space &, Space &>())
         .def("energy", &TranslationalEntropy::energy);
 
-    // MCSimulation
-    py::class_<Tmcsimulation>(m, "MetropolisMonteCarlo")
+    // MetropolisMonteCarlo
+    py::class_<MetropolisMonteCarlo>(m, "MetropolisMonteCarlo")
         .def(py::init([](py::dict dict) {
             json j = dict2json(dict);
-            return std::unique_ptr<Tmcsimulation>(new Tmcsimulation(j, Faunus::MPI::mpi));
+            return std::make_unique<MetropolisMonteCarlo>(j, Faunus::MPI::mpi);
         }))
-        .def(py::init([](py::dict dict, Faunus::MPI::MPIController &mpi) {
+        .def(py::init([](py::dict dict, Faunus::MPI::MPIController& mpi) {
             json j = dict2json(dict);
-            return std::unique_ptr<Tmcsimulation>(new Tmcsimulation(j, mpi));
-        }));
+            return std::make_unique<MetropolisMonteCarlo>(j, mpi);
+        }))
+        .def("sweep", &MetropolisMonteCarlo::sweep)
+        .def("getState", &MetropolisMonteCarlo::getState)
+        .def("getTrialState", &MetropolisMonteCarlo::getTrialState)
+        .def("relativeEnergyDrift", &MetropolisMonteCarlo::relativeEnergyDrift);
 
     // Analysisbase
     py::class_<Analysis::Analysisbase>(m, "Analysisbase")
@@ -285,16 +309,17 @@ PYBIND11_MODULE(pyfaunus, m)
 
     // CombinedAnalysis
     py::class_<Analysis::CombinedAnalysis>(m, "Analysis")
-        .def(py::init([](Space &spc, Thamiltonian &pot, py::list list) {
+        .def(py::init([](Space& spc, Energy::Hamiltonian& pot, py::list list) {
             json j = list2json(list);
-            return std::unique_ptr<Analysis::CombinedAnalysis>(new Analysis::CombinedAnalysis(j, spc, pot));
+            return std::make_unique<Analysis::CombinedAnalysis>(j, spc, pot);
         }))
-        .def_readwrite("vector", &Analysis::CombinedAnalysis::vec)
+        .def_readwrite("moves", &Analysis::CombinedAnalysis::vec)
         .def("to_dict",
-             [](Analysis::CombinedAnalysis &self) {
+             [](Analysis::CombinedAnalysis& self) {
                  json j;
                  Faunus::to_json(j, self);
                  return json2dict(j);
              })
-        .def("sample", &Analysis::CombinedAnalysis::sample);
+        .def("sample", &Analysis::CombinedAnalysis::sample)
+        .def("to_disk", &Analysis::CombinedAnalysis::to_disk);
 }

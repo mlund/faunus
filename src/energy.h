@@ -562,8 +562,8 @@ class GroupCutoff {
     inline bool cut(const Space::GroupType& group1, const Space::GroupType& group2) {
         bool result = false;
         ++total_cnt;
-        if (!group1.atomic && !group2.atomic // atomic groups have no meaningful cm
-            && geometry.sqdist(group1.cm, group2.cm) >= cutoff_squared(group1.id, group2.id)) {
+        if (group1.isMolecular() && group2.isMolecular() // atomic groups have no meaningful cm
+            && geometry.sqdist(group1.mass_center, group2.mass_center) >= cutoff_squared(group1.id, group2.id)) {
             result = true;
             ++skip_cnt;
         }
@@ -735,7 +735,7 @@ class GroupPairingPolicy {
                 for (int j = i + 1; j < group_size; ++j) {
                     // This compound condition is faster than an outer atomic condition;
                     // tested on bulk example in GCC 9.2.
-                    if (group.atomic || !moldata.isPairExcluded(i, j)) {
+                    if (group.isAtomic() || !moldata.isPairExcluded(i, j)) {
                         particle2particle(pair_accumulator, group[i], group[j]);
                     }
                 }
@@ -759,7 +759,7 @@ class GroupPairingPolicy {
     void groupInternal(TAccumulator& pair_accumulator, const TGroup& group, const std::size_t index) {
         const auto &moldata = group.traits();
         if (!moldata.rigid) {
-            if (group.atomic) {
+            if (group.isAtomic()) {
                 // speed optimization: non-bonded interaction exclusions do not need to be checked for atomic groups
                 for (int i = 0; i < index; ++i) {
                     particle2particle(pair_accumulator, group[index], group[i]);
@@ -1269,7 +1269,7 @@ class GroupPairing {
             pairing.all(pair_accumulator);
         } else if (change.volume_change) {
             // sum all interaction energies except the internal energies of incompressible molecules
-            pairing.all(pair_accumulator, [](auto &group) { return group.atomic || group.compressible; });
+            pairing.all(pair_accumulator, [](auto& group) { return group.isAtomic() || group.traits().compressible; });
         } else if (!change.matter_change) {
             if (change.groups.size() == 1) {
                 // if only a single group changes use faster algorithm and optionally add the internal energy

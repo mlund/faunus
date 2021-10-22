@@ -48,7 +48,7 @@ class ExternalPotential : public Energybase {
     bool act_on_mass_center = false;                   //!< apply only on center-of-mass
     std::set<int> molecule_ids;                        //!< ids of molecules to act on
     std::vector<std::string> molecule_names;           //!< corresponding names of molecules to act on
-    double groupEnergy(const Group<Particle> &) const; //!< external potential on a single group
+    double groupEnergy(const Group&) const;            //!< external potential on a single group
   protected:
     Space &space;                                                            //!< reference to simulation space
     std::function<double(const Particle &)> externalPotentialFunc = nullptr; //!< energy of single particle

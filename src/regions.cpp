@@ -83,21 +83,25 @@ WithinGroups::WithinGroups(const json &j, Space &spc) : RegionBase(WITHIN), spc(
     }
 
     // if COM requested, atomic groups are forbidden
-    if (com)
-        for (size_t i : indexes)
-            if (spc.groups.at(i).atomic)
+    if (com) {
+        for (auto index : indexes) {
+            if (spc.groups.at(index).isAtomic()) {
                 throw std::runtime_error("com cannot be used with atomic groups");
+            }
+        }
+    }
 
-    if (indexes.empty())
+    if (indexes.empty()) {
         std::cerr << "warning: no molecules selected for region" << std::endl;
+    }
 }
 
 bool WithinGroups::isInside(const Point &a) const {
     for (size_t i : indexes) {       // loop over user defined group index
         auto &g = spc.groups.at(i);  // ref. to current group
         if (com and not g.empty()) { // check only with mass-center
-            assert(g.atomic == false);
-            if (spc.geometry.sqdist(a, g.cm) < threshold2)
+            assert(g.isMolecular());
+            if (spc.geometry.sqdist(a, g.mass_center) < threshold2)
                 return true;
         } else {
             for (Particle &b : g) // loop over active particles in group

@@ -56,7 +56,7 @@ FindCluster::FindCluster(Space &spc, const json &j) : spc(spc) {
 
 double FindCluster::clusterProbability(const FindCluster::Tgroup &group1, const FindCluster::Tgroup &group2) const {
     if (!group1.empty() and !group2.empty()) {
-        if (spc.geometry.sqdist(group1.cm, group2.cm) <= thresholds_squared(group1.id, group2.id)) {
+        if (spc.geometry.sqdist(group1.mass_center, group2.mass_center) <= thresholds_squared(group1.id, group2.id)) {
             return 1.0;
         }
     }
@@ -187,7 +187,7 @@ std::pair<std::vector<size_t>, bool> FindCluster::findCluster(size_t seed_index)
     for (auto i : cluster) {
         for (auto j : cluster) {
             if (j > i) {
-                if (spc.geometry.sqdist(spc.groups.at(i).cm, spc.groups.at(j).cm) >= max * max) {
+                if (spc.geometry.sqdist(spc.groups.at(i).mass_center, spc.groups.at(j).mass_center) >= max * max) {
                     safe_to_rotate = false;
                     break;
                 }
@@ -253,9 +253,9 @@ Point Cluster::clusterMassCenter(const std::vector<size_t> &cluster_index) const
     auto boundary = spc.geometry.getBoundaryFunc();
     double mass_sum = 0.0;
     Point mass_center(0, 0, 0);
-    Point origin = spc.groups.at(*cluster_index.begin()).cm;
+    Point origin = spc.groups.at(*cluster_index.begin()).mass_center;
     for (auto i : cluster_index) { // loop over clustered molecules (index)
-        Point r = spc.groups.at(i).cm - origin;
+        Point r = spc.groups.at(i).mass_center - origin;
         boundary(r);
         const double mass = spc.groups.at(i).mass();
         mass_center += mass * r;
@@ -292,10 +292,10 @@ void Cluster::_move(Change &change) {
             const auto quaternion = setRandomRotation(); // set rotation
             auto rotate_group = [&](Tgroup &group) {
                 Geometry::rotate(group.begin(), group.end(), quaternion, boundary, -COM);
-                group.cm = group.cm - COM;
-                boundary(group.cm);
-                group.cm = quaternion * group.cm + COM;
-                boundary(group.cm);
+                group.mass_center = group.mass_center - COM;
+                boundary(group.mass_center);
+                group.mass_center = quaternion * group.mass_center + COM;
+                boundary(group.mass_center);
             };
             std::for_each(cluster_groups.begin(), cluster_groups.end(), rotate_group);
         }

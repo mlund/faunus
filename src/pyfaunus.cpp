@@ -36,9 +36,7 @@ inline py::dict json2dict(const json &j) {
 
 template<class T>
 std::unique_ptr<T> from_dict(py::dict dict) {
-    auto ptr = new T();
-    *ptr = dict2json(dict);
-    return std::unique_ptr<T>(ptr);
+    return std::make_unique<T>(dict2json(dict));
 } // convert py::dict to T through Faunus::json
 
 PYBIND11_MODULE(pyfaunus, m)
@@ -47,14 +45,12 @@ PYBIND11_MODULE(pyfaunus, m)
 
     // json
     py::class_<json>(m, "json")
-        .def(py::init( [](std::string arg) {
-                    return std::unique_ptr<json>(new json(json::parse(arg)));
-                    } ) )
-    .def(py::init([](py::dict dict) {
-                py::object dumps = py::module::import("json").attr("dumps");
-                std::string s = dumps(dict).cast<std::string>();
-                return std::unique_ptr<json>(new json(json::parse(s)));
-                } ) );
+        .def(py::init([](std::string arg) { return std::make_unique<json>(json(json::parse(arg))); }))
+        .def(py::init([](py::dict dict) {
+            py::object dumps = py::module::import("json").attr("dumps");
+            auto s = dumps(dict).cast<std::string>();
+            return std::make_unique<json>(json(json::parse(s)));
+        }));
 
     // Random
     py::class_<Random>(m, "Random")
@@ -139,9 +135,8 @@ PYBIND11_MODULE(pyfaunus, m)
     // Group
     py::class_<Group>(m, "Group")
         .def(py::init<MoleculeData::index_type, ParticleVector::iterator, ParticleVector::iterator>())
-        .def_readwrite("groups", &Group::id, "Molecule id")
         .def_readwrite("id", &Group::id, "Molecule id")
-        .def_readwrite("cm", &Group::mass_center, "Center of mass")
+        .def_readwrite("mass_center", &Group::mass_center, "Center of mass")
         .def("__len__", [](Group& self) { return self.size(); })
         .def(
             "__iter__", [](Group& v) { return py::make_iterator(v.begin(), v.end()); }, py::keep_alive<0, 1>())
@@ -265,7 +260,11 @@ PYBIND11_MODULE(pyfaunus, m)
             return std::make_unique<Energy::Hamiltonian>(spc, j);
         }))
         .def("init", &Energy::Hamiltonian::init)
-        .def("energy", &Energy::Hamiltonian::energy);
+        .def("energy", &Energy::Hamiltonian::energy)
+        .def(
+            "__iter__",
+            [](Energy::Hamiltonian& hamiltonian) { return py::make_iterator(hamiltonian.begin(), hamiltonian.end()); },
+            py::keep_alive<0, 1>());
 
     // State
     py::class_<MetropolisMonteCarlo::State>(m, "State")

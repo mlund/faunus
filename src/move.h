@@ -448,19 +448,18 @@ class QuadrantJump : public MoveBase {
 
 #ifdef ENABLE_MPI
 
-enum class MPIPartnerPolicy { ODDEVEN, INVALID }; //!< Policies for MPI partner search
-NLOHMANN_JSON_SERIALIZE_ENUM(MPIPartnerPolicy,
-                             {{MPIPartnerPolicy::INVALID, nullptr}, {MPIPartnerPolicy::ODDEVEN, "oddeven"}})
+enum class PartnerPolicy { ODDEVEN, INVALID }; //!< Policies for MPI partner search
+NLOHMANN_JSON_SERIALIZE_ENUM(PartnerPolicy, {{PartnerPolicy::INVALID, nullptr}, {PartnerPolicy::ODDEVEN, "oddeven"}})
 
 /** Base class for finding MPI partners */
 class FindMPIPartner {
   public:
-    const MPIPartnerPolicy policy;
+    const PartnerPolicy policy;
     int partner_rank_number = -1;
-    virtual bool findPartner(MPI::MPIController& mpi, Random& random) = 0; //!< Finds and sets MPI partner
-    bool goodPartner(const MPI::MPIController& mpi) const;                 //!< Determines if current partner is valid
-    std::string id(const MPI::MPIController& mpi) const; //!< Generates a string id for the two partners
-    FindMPIPartner(MPIPartnerPolicy policy);
+    virtual bool findPartner(const MPI::MPIController& mpi, Random& random) = 0; //!< Finds and sets MPI partner
+    bool goodPartner(const MPI::MPIController& mpi) const; //!< Determines if current partner is valid
+    std::string id(const MPI::MPIController& mpi) const;   //!< Generates a string id for the two partners
+    FindMPIPartner(PartnerPolicy policy);
     virtual ~FindMPIPartner() = default;
 };
 
@@ -470,7 +469,7 @@ class FindMPIPartner {
 class OddEvenPartner : public FindMPIPartner {
   public:
     OddEvenPartner();
-    bool findPartner(MPI::MPIController& mpi, Random& random) override;
+    bool findPartner(const MPI::MPIController& mpi, Random& random) override;
 };
 
 /**
@@ -478,7 +477,7 @@ class OddEvenPartner : public FindMPIPartner {
  * @param policy Policy name ("oddeven", ...)
  * @throw if unknown policy
  */
-std::unique_ptr<FindMPIPartner> createMPIPartnerPolicy(MPIPartnerPolicy policy);
+std::unique_ptr<FindMPIPartner> createMPIPartnerPolicy(PartnerPolicy policy);
 
 /**
  * @brief Class for parallel tempering (aka replica exchange) using MPI

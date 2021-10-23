@@ -374,7 +374,7 @@ MoveCollection::move_iterator MoveCollection::sample() {
 
 #ifdef ENABLE_MPI
 
-FindMPIPartner::FindMPIPartner(MPIPartnerPolicy policy) : policy(policy) {}
+FindMPIPartner::FindMPIPartner(PartnerPolicy policy) : policy(policy) {}
 
 bool FindMPIPartner::goodPartner(const MPI::MPIController& mpi) const {
     return (partner_rank_number >= 0 && partner_rank_number < mpi.nproc() && partner_rank_number != mpi.rank());
@@ -388,9 +388,9 @@ std::string FindMPIPartner::id(const MPI::MPIController& mpi) const {
     return fmt::format("{} <-> {}", min, max);
 }
 
-OddEvenPartner::OddEvenPartner() : FindMPIPartner(MPIPartnerPolicy::ODDEVEN) {}
+OddEvenPartner::OddEvenPartner() : FindMPIPartner(PartnerPolicy::ODDEVEN) {}
 
-bool OddEvenPartner::findPartner(MPI::MPIController& mpi, Random& random) {
+bool OddEvenPartner::findPartner(const MPI::MPIController& mpi, Random& random) {
     int rank_increment = static_cast<bool>(random.range(0, 1)) ? 1 : -1;
     if (mpi.rank() % 2 == 0) { // even replica
         partner_rank_number = mpi.rank() + rank_increment;
@@ -400,9 +400,9 @@ bool OddEvenPartner::findPartner(MPI::MPIController& mpi, Random& random) {
     return true;
 }
 
-std::unique_ptr<FindMPIPartner> createMPIPartnerPolicy(MPIPartnerPolicy policy) {
+std::unique_ptr<FindMPIPartner> createMPIPartnerPolicy(PartnerPolicy policy) {
     switch (policy) {
-    case MPIPartnerPolicy::ODDEVEN:
+    case PartnerPolicy::ODDEVEN:
         return std::make_unique<OddEvenPartner>();
     default:
         throw std::runtime_error("unknown policy");
@@ -500,7 +500,7 @@ void ParallelTempering::_reject([[maybe_unused]] Change& change) { acceptance_ma
 
 void ParallelTempering::_from_json(const json &j) {
     particle_transmitter.setFormat(j.value("format", "XYZQI"s));
-    partner = createMPIPartnerPolicy(j.value("partner_policy", MPIPartnerPolicy::ODDEVEN));
+    partner = createMPIPartnerPolicy(j.value("partner_policy", PartnerPolicy::ODDEVEN));
     volume_scaling_method = j.value("volume_scale", Geometry::VolumeMethod::ISOTROPIC);
 }
 
@@ -509,7 +509,7 @@ ParallelTempering::ParallelTempering(Space &spc, MPI::MPIController &mpi)
     if (mpi.nproc() < 2) {
         throw std::runtime_error(name + " requires two or more MPI processes");
     }
-    partner = createMPIPartnerPolicy(MPIPartnerPolicy::ODDEVEN);
+    partner = createMPIPartnerPolicy(PartnerPolicy::ODDEVEN);
     partner_particles = std::make_unique<ParticleVector>();
     partner_particles->reserve(spc.particles.size());
     particle_transmitter.recvExtra.resize(1);

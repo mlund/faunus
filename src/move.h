@@ -448,6 +448,38 @@ class QuadrantJump : public MoveBase {
 
 #ifdef ENABLE_MPI
 
+enum class MPIPartnerPolicy { ODDEVEN, INVALID }; //!< Policies for MPI partner search
+NLOHMANN_JSON_SERIALIZE_ENUM(MPIPartnerPolicy,
+                             {{MPIPartnerPolicy::INVALID, nullptr}, {MPIPartnerPolicy::ODDEVEN, "oddeven"}})
+
+/** Base class for finding MPI partners */
+class FindMPIPartner {
+  public:
+    const MPIPartnerPolicy policy;
+    int partner_rank_number = -1;
+    virtual bool findPartner(MPI::MPIController& mpi, Random& random) = 0; //!< Finds and sets MPI partner
+    bool goodPartner(const MPI::MPIController& mpi) const;                 //!< Determines if current partner is valid
+    std::string id(const MPI::MPIController& mpi) const; //!< Generates a string id for the two partners
+    FindMPIPartner(MPIPartnerPolicy policy);
+    virtual ~FindMPIPartner() = default;
+};
+
+/**
+ * @brief Odd ranks pairs with neighboring even rank (left or right)
+ */
+class OddEvenPartner : public FindMPIPartner {
+  public:
+    OddEvenPartner();
+    bool findPartner(MPI::MPIController& mpi, Random& random) override;
+};
+
+/**
+ * @brief Factory function for generating MPI partner policies
+ * @param policy Policy name ("oddeven", ...)
+ * @throw if unknown policy
+ */
+std::unique_ptr<FindMPIPartner> createMPIPartnerPolicy(MPIPartnerPolicy policy);
+
 /**
  * @brief Class for parallel tempering (aka replica exchange) using MPI
  *
@@ -461,32 +493,29 @@ class QuadrantJump : public MoveBase {
  */
 class ParallelTempering : public MoveBase {
   private:
+    std::unique_ptr<FindMPIPartner> partner;                                          //!< Policy for finding partners
     Geometry::VolumeMethod volume_scaling_method = Geometry::VolumeMethod::ISOTROPIC; //!< How to scale volumes
     double very_small_volume = 1e-9;
     MPI::MPIController &mpi;
     std::unique_ptr<ParticleVector> partner_particles;
     Random random;
-    int partner = -1;              //!< Exchange replica (partner)
     enum extradata { VOLUME = 0 }; //!< Structure of extra data to send
     std::map<std::string, Average<double>> acceptance_map;
 
     MPI::FloatTransmitter float_transmitter;                       //!< Class for transmitting floats over MPI
     MPI::ParticleTransmitter<ParticleVector> particle_transmitter; //!< Class for transmitting particles over MPI
 
-    void findPartner(); //!< Find replica to exchange with
-    bool goodPartner(); //!< Is partner valid?
-    void _to_json(json &j) const override;
-    void _move(Change &change) override;
-    double exchangeEnergy(double energy_change);              //!< Exchange energy with partner
-    void exchangeState(Change &change);                       //!< Exchange positions, charges, volume etc.
-    double bias(Change &, double uold, double unew) override; //!< Energy change in partner replica
-    std::string id() const;                                   //!< Unique string to identify set of partners
-    void _accept(Change &) override;
-    void _reject(Change &) override;
-    void _from_json(const json &j) override;
+    void _to_json(json& j) const override;
+    void _move(Change& change) override;
+    double exchangeEnergy(double energy_change);                    //!< Exchange energy with partner
+    void exchangeState(Change& change);                             //!< Exchange positions, charges, volume etc.
+    double bias(Change& change, double uold, double unew) override; //!< Energy change in partner replica
+    void _accept(Change& change) override;
+    void _reject(Change& change) override;
+    void _from_json(const json& j) override;
 
   public:
-    ParallelTempering(Space &spc, MPI::MPIController &mpi);
+    ParallelTempering(Space& spc, MPI::MPIController& mpi);
     ~ParallelTempering();
 };
 

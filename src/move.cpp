@@ -374,9 +374,45 @@ MoveCollection::move_iterator MoveCollection::sample() {
 
 #ifdef ENABLE_MPI
 
+FindMPIPartner::FindMPIPartner(PartnerPolicy policy) : policy(policy) {}
+
+bool FindMPIPartner::goodPartner(const MPI::MPIController& mpi) const {
+    return (partner_rank_number >= 0 && partner_rank_number < mpi.nproc() && partner_rank_number != mpi.rank());
+}
+std::string FindMPIPartner::id(const MPI::MPIController& mpi) const {
+    if (!goodPartner(mpi)) {
+        throw std::runtime_error("bad partner");
+    }
+    // note `std::minmax(a,b)` takes _references_; the initializer list (used here) takes a _copy_
+    const auto [min, max] = std::minmax({mpi.rank(), partner_rank_number});
+    return fmt::format("{} <-> {}", min, max);
+}
+
+OddEvenPartner::OddEvenPartner() : FindMPIPartner(PartnerPolicy::ODDEVEN) {}
+
+bool OddEvenPartner::findPartner(const MPI::MPIController& mpi, Random& random) {
+    int rank_increment = static_cast<bool>(random.range(0, 1)) ? 1 : -1;
+    if (mpi.rank() % 2 == 0) { // even replica
+        partner_rank_number = mpi.rank() + rank_increment;
+    } else { // odd replica
+        partner_rank_number = mpi.rank() - rank_increment;
+    }
+    return true;
+}
+
+std::unique_ptr<FindMPIPartner> createMPIPartnerPolicy(PartnerPolicy policy) {
+    switch (policy) {
+    case PartnerPolicy::ODDEVEN:
+        return std::make_unique<OddEvenPartner>();
+    default:
+        throw std::runtime_error("unknown policy");
+    }
+}
+
 void ParallelTempering::_to_json(json& j) const {
     j = {{"replicas", mpi.nproc()},
          {"datasize", particle_transmitter.getFormat()},
+         {"partner_policy", partner->policy},
          {"volume_scale", volume_scaling_method}};
     auto& exchange_json = j["exchange"] = json::object();
     for (const auto& [id, acceptance] : acceptance_map) {
@@ -384,35 +420,16 @@ void ParallelTempering::_to_json(json& j) const {
     }
 }
 
-void ParallelTempering::findPartner() {
-    auto true_or_false = static_cast<bool>(mpi.random.range(0, 1));
-    int rank_increment = true_or_false ? 1 : -1;
-    if (mpi.rank() % 2 == 0) { // even replica
-        partner = mpi.rank() + rank_increment;
-    } else { // odd replica
-        partner = mpi.rank() - rank_increment;
-    }
-}
-
-bool ParallelTempering::goodPartner() {
-    if (partner >= 0 && partner < mpi.nproc() && partner != mpi.rank()) {
-        return true;
-    } else {
-        partner = -1;
-        return false;
-    }
-}
-
 /**
  * This will exchange the states between two partner replicas and set the change object accordingy
  */
 void ParallelTempering::exchangeState(Change &change) {
-    assert(partner != -1);
+    assert(partner->goodPartner(mpi));
     auto old_volume = spc.geometry.getVolume();
     particle_transmitter.sendExtra.at(VOLUME) = old_volume;      // copy current volume for sending
     partner_particles->resize(spc.particles.size());             // temparary storage
-    particle_transmitter.recv(mpi, partner, *partner_particles); // receive particles
-    particle_transmitter.send(mpi, spc.particles, partner);      // send everything
+    particle_transmitter.recv(mpi, partner->partner_rank_number, *partner_particles); // receive particles
+    particle_transmitter.send(mpi, spc.particles, partner->partner_rank_number);      // send everything
     particle_transmitter.waitrecv();
     particle_transmitter.waitsend();
 
@@ -431,8 +448,8 @@ void ParallelTempering::exchangeState(Change &change) {
 
 void ParallelTempering::_move(Change &change) {
     mpi.barrier(); // wait until all ranks reach here
-    findPartner();
-    if (goodPartner()) {
+    partner->findPartner(mpi, mpi.random);
+    if (partner->goodPartner(mpi)) {
         exchangeState(change);
     }
 }
@@ -446,9 +463,9 @@ void ParallelTempering::_move(Change &change) {
  * to form the final trial energy for the tempering move.
  */
 double ParallelTempering::exchangeEnergy(double energy_change) {
-    assert(partner >= 0);
+    assert(partner->goodPartner(mpi));
     std::vector<MPI::FloatTransmitter::float_type> energy_change_vector = {energy_change};
-    auto energy_change_partner = float_transmitter.swapf(mpi, energy_change_vector, partner);
+    auto energy_change_partner = float_transmitter.swapf(mpi, energy_change_vector, partner->partner_rank_number);
     return energy_change_partner.at(0); // return partner energy change
 }
 
@@ -463,38 +480,27 @@ double ParallelTempering::exchangeEnergy(double energy_change) {
  * This would however ignore other bias contributions, particularly it would prove
  * problematic with grand canonical moves.
  */
-double ParallelTempering::bias(Change &, double uold, double unew) {
-    assert(partner != -1);
+double ParallelTempering::bias([[maybe_unused]] Change& change, double uold, double unew) {
+    assert(partner->goodPartner(mpi));
     if constexpr (false) {
         // todo: add sanity check for random number generator state in partnering replicas.
         return exchangeEnergy(unew - uold); // exchange change with partner (MPI)
     } else {
-        double energy_change = unew - uold;
-        double partner_energy_change = exchangeEnergy(energy_change);
+        auto energy_change = unew - uold;
+        auto partner_energy_change = exchangeEnergy(energy_change);
         if (MetropolisMonteCarlo::metropolisCriterion(energy_change + partner_energy_change)) {
             return pc::neg_infty; // accept!
-        } else {
-            return pc::infty; // reject!
         }
+        return pc::infty; // reject!
     }
 }
 
-std::string ParallelTempering::id() const {
-    assert(partner != -1);
-    // note `std::minmax(a,b)` takes _references_; the initializer list (used here) takes a _copy_
-    const auto pair = std::minmax({mpi.rank(), partner});
-    return fmt::format("{} <-> {}", pair.first, pair.second);
-}
-
-void ParallelTempering::_accept(Change &) {
-    acceptance_map[id()] += 1;
-}
-void ParallelTempering::_reject(Change &) {
-    acceptance_map[id()] += 0;
-}
+void ParallelTempering::_accept([[maybe_unused]] Change& change) { acceptance_map[partner->id(mpi)] += 1.0; }
+void ParallelTempering::_reject([[maybe_unused]] Change& change) { acceptance_map[partner->id(mpi)] += 0.0; }
 
 void ParallelTempering::_from_json(const json &j) {
     particle_transmitter.setFormat(j.value("format", "XYZQI"s));
+    partner = createMPIPartnerPolicy(j.value("partner_policy", PartnerPolicy::ODDEVEN));
     volume_scaling_method = j.value("volume_scale", Geometry::VolumeMethod::ISOTROPIC);
 }
 
@@ -503,6 +509,7 @@ ParallelTempering::ParallelTempering(Space &spc, MPI::MPIController &mpi)
     if (mpi.nproc() < 2) {
         throw std::runtime_error(name + " requires two or more MPI processes");
     }
+    partner = createMPIPartnerPolicy(PartnerPolicy::ODDEVEN);
     partner_particles = std::make_unique<ParticleVector>();
     partner_particles->reserve(spc.particles.size());
     particle_transmitter.recvExtra.resize(1);

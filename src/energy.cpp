@@ -1059,12 +1059,18 @@ std::shared_ptr<Energybase> Hamiltonian::createEnergy(Space& spc, const std::str
             return std::make_shared<Penalty>(j, spc);
 #endif
         }
-        if (name == "sasa") {
+        if (name == "sasafree") {
 #if defined ENABLE_FREESASA
             return std::make_shared<SASAEnergy>(j, spc);
 #else
             throw ConfigurationError("faunus not compiled with sasa support");
 #endif
+        }
+        if (name == "sasabase") {
+            return std::make_shared<SASAEnergyPBCBase>(j, spc);
+        }
+        if (name == "sasa") {
+            return std::make_shared<SASAEnergyPBC>(j, spc);
         }
         throw ConfigurationError("'{}' unknown", name);
     } catch (std::exception& e) {
@@ -1101,14 +1107,11 @@ void SASAEnergy::updateSASA(const Change& change) {
 
     auto* result = freesasa_calc_coord(positions.data(), radii.data(), number_of_active_particles, parameters.get());
     if (result != nullptr && result->n_atoms == number_of_active_particles) {
-        sasa.resize(number_of_active_particles);
-#if __cplusplus > 201703L
-        const auto values = std::span(result->sasa, result->n_atoms); // pretty
-        std::copy(values.begin(), values.end(), sasa.begin());
-#else
-        std::copy(result->sasa, result->sasa + result->n_atoms, sasa.begin()); // ugly
-#endif
+        sasa.clear();
+        sasa.reserve(number_of_active_particles);
+        sasa.insert(sasa.begin(), result->sasa, result->sasa + result->n_atoms); // copy
         freesasa_result_free(result);
+        assert(sasa.size() == number_of_active_particles);
     } else {
         throw std::runtime_error("FreeSASA failed");
     }
@@ -1136,10 +1139,10 @@ void SASAEnergy::sync(Energybase* energybase_ptr, const Change& change) {
     // since the full SASA is calculated in each energy evaluation, this is
     // currently not needed.
     if (auto* other = dynamic_cast<SASAEnergy*>(energybase_ptr); other != nullptr) {
-        if (change.everything || change.volume_change) {
+        sasa = other->sasa;
+        if (change.everything || change.volume_change || change.matter_change) {
             radii = other->radii;
             positions = other->positions;
-            sasa = other->sasa;
         } else {
             for (const auto& group_change : change.groups) {
                 const auto& group = spc.groups.at(group_change.group_index);
@@ -1148,7 +1151,6 @@ void SASAEnergy::sync(Energybase* energybase_ptr, const Change& change) {
                                            ranges::cpp20::views::transform([offset](auto i) { return i + offset; });
                 for (auto i : absolute_atom_index) {
                     radii.at(i) = other->radii.at(i);
-                    sasa.at(i) = other->sasa.at(i);
                     for (size_t k = 0; k < 3; ++k) {
                         positions.at(3 * i + k) = other->positions.at(3 * i + k);
                     }
@@ -1204,6 +1206,260 @@ TEST_CASE("[Faunus] FreeSASA") {
     SUBCASE("PBC") {}
 }
 #endif
+
+SASAEnergyPBCBase::SASAEnergyPBCBase(Space& spc, double cosolute_concentration, double probe_radius,
+                                     int n_slices_per_atom)
+    : spc(spc), cosolute_concentration(cosolute_concentration), sasa(spc, probe_radius, n_slices_per_atom) {
+    name = "sasa";
+    citation_information = "doi:10.12688/f1000research.7931.1";
+    init();
+}
+
+SASAEnergyPBCBase::SASAEnergyPBCBase(const json& j, Space& spc)
+    : SASAEnergyPBCBase(spc, j.value("molarity", 0.0) * 1.0_molar, j.value("radius", 1.4) * 1.0_angstrom) {}
+
+SASAEnergyPBC::SASAEnergyPBC(Space& spc, double cosolute_concentration, double probe_radius, int n_slices_per_atom)
+    : SASAEnergyPBCBase(spc, cosolute_concentration, probe_radius, n_slices_per_atom) {
+    name = "sasa";
+    citation_information = "doi:10.12688/f1000research.7931.1";
+    init();
+}
+
+SASAEnergyPBC::SASAEnergyPBC(const json& j, Space& spc)
+    : SASAEnergyPBC(spc, j.value("molarity", 0.0) * 1.0_molar, j.value("radius", 1.4) * 1.0_angstrom) {}
+
+void SASAEnergyPBCBase::init() {
+    Change change;
+    change.everything = true;
+
+    for (const auto& particle : spc.particles) {
+        radii.push_back(particle.traits().sigma * 0.5);
+    }
+    sasa.init(spc);
+    areas.resize(spc.particles.size());
+}
+
+void SASAEnergyPBC::init() {
+    Change change;
+    change.everything = true;
+
+    sasa.init(spc);
+    areas.resize(spc.particles.size(), 0.);
+    current_neighbours.resize(spc.particles.size());
+}
+
+double SASAEnergyPBCBase::energy(Change& change) {
+
+    double energy = 0.;
+    sasa.update(spc, change);
+
+    const auto& particles = spc.activeParticles();
+
+    std::vector<int> target_inds;
+    for (const auto& particle : particles) {
+        int active_particle_ind = static_cast<int>(std::addressof(particle) - std::addressof(spc.particles.at(0)));
+        target_inds.push_back(active_particle_ind);
+    }
+
+    const auto neighbour_data = sasa.calcNeighbourData(spc, target_inds);
+    sasa.updateSASA(neighbour_data, radii, target_inds);
+
+    const auto& new_areas = sasa.getAreas();
+    for (int target_ind : target_inds) {
+        areas[target_ind] = new_areas[target_ind];
+    }
+
+    double surface_area(0.);
+    for (const auto& particle : particles) {
+        const int active_particle_ind =
+            static_cast<int>(std::addressof(particle) - std::addressof(spc.particles.at(0)));
+        surface_area += areas.at(active_particle_ind);
+        energy += areas.at(active_particle_ind) *
+                  (particle.traits().tension + cosolute_concentration * particle.traits().tfe);
+    }
+    mean_surface_area += surface_area; // sample average area for accepted confs.
+
+    return energy;
+}
+
+void SASAEnergyPBCBase::sync(Energybase* energybase_ptr, const Change& change) {
+
+    if (auto* other = dynamic_cast<SASAEnergyPBCBase*>(energybase_ptr); other != nullptr) {
+        areas = other->areas;
+        sasa.sync(other->spc, change);
+    }
+}
+
+void SASAEnergyPBCBase::to_json(json& j) const {
+
+    using namespace u8;
+    j["molarity"] = cosolute_concentration / 1.0_molar;
+    j[bracket("SASA") + "/" + angstrom + squared] = mean_surface_area.avg() / 1.0_angstrom;
+    roundJSON(j, 6); // set json output precision
+}
+
+std::vector<int> SASAEnergyPBC::findTargetInds(Change& change) {
+
+    /*    if( EnergyBase::state == EnergyBase::MonteCarloState::ACCEPTED){
+            std::vector<int> target_inds;
+            return target_inds;
+            }*/
+
+    // using set to get rid of repeating target_inds in touched_atoms neighbours lists
+    std::set<int> target_inds_set;
+    for (const auto& group_change : change.groups) {
+        const auto& group = spc.groups[group_change.group_index];
+        const auto offset = spc.getFirstParticleIndex(group);
+        if (group_change.relative_atom_indices.empty()) {
+            int N = group.size();
+            auto indices = ranges::cpp20::views::iota(offset, N + offset);
+            target_inds_set.insert(indices.begin(), indices.end());
+            for (const auto index : indices) {
+                const auto& current_neighbour = sasa.calcNeighbourDataOfParticle(spc, index).neighbour_inds;
+                const auto& past_neighbour = current_neighbours[index];
+                target_inds_set.insert(past_neighbour.begin(), past_neighbour.end());
+                target_inds_set.insert(current_neighbour.begin(), current_neighbour.end());
+            }
+        } else {
+            if (!change.matter_change) {
+                // for each touched atoms we need to recalculate SASA for the touched atom
+                // and for its neighbours before it moved and after it moved
+                for (const int touched_atom_index : group_change.relative_atom_indices) {
+                    const auto& past_neighbour = current_neighbours[touched_atom_index + offset];
+                    target_inds_set.insert(touched_atom_index + offset);
+                    target_inds_set.insert(past_neighbour.begin(), past_neighbour.end());
+                    const auto& current_neighbour =
+                        sasa.calcNeighbourDataOfParticle(spc, touched_atom_index + offset).neighbour_inds;
+                    target_inds_set.insert(current_neighbour.begin(), current_neighbour.end());
+                }
+            } else {
+                for (const int touched_atom_index : group_change.relative_atom_indices) {
+                    const auto& past_neighbour = current_neighbours[touched_atom_index + offset];
+                    const auto& current_neighbour =
+                        sasa.calcNeighbourDataOfParticle(spc, touched_atom_index + offset).neighbour_inds;
+                    target_inds_set.insert(touched_atom_index + offset);
+                    target_inds_set.insert(current_neighbour.begin(), current_neighbour.end());
+                    target_inds_set.insert(past_neighbour.begin(), past_neighbour.end());
+                }
+            }
+        }
+    }
+    std::vector<int> target_inds(target_inds_set.begin(), target_inds_set.end());
+    return target_inds;
+}
+
+double SASAEnergyPBC::energy(Change& change) {
+
+    double energy(0.);
+    sasa.update(spc, change);
+
+    std::vector<int> target_inds;
+    if (!change.everything) {
+        target_inds = findTargetInds(change);
+    } else { // all the active particles will be used for SASA calculation
+        for (const auto& particle : spc.activeParticles()) {
+            const int active_ind = static_cast<int>(std::addressof(particle) - std::addressof(spc.particles.at(0)));
+            target_inds.push_back(active_ind);
+        }
+    }
+
+    const auto neighbours_data = sasa.calcNeighbourData(spc, target_inds);
+    for (const auto [neighbour_data, ind] : ranges::views::zip(neighbours_data, target_inds)) {
+        current_neighbours[ind] = neighbour_data.neighbour_inds;
+    }
+
+    // update sasa areas in sasa object and update
+    sasa.updateSASA(neighbours_data, radii, target_inds);
+    const auto& new_areas = sasa.getAreas();
+    for (int target_ind : target_inds) {
+        areas[target_ind] = new_areas[target_ind];
+    }
+
+    double surface_area(0.0);
+    for (const auto& particle : spc.activeParticles()) {
+        const int active_ind = static_cast<int>(std::addressof(particle) - std::addressof(spc.particles.at(0)));
+        energy += areas.at(active_ind) * (particle.traits().tension + cosolute_concentration * particle.traits().tfe);
+        surface_area += areas.at(active_ind);
+    }
+    mean_surface_area += surface_area; // sample average area for accepted confs.
+
+    return energy;
+}
+
+void SASAEnergyPBC::sync(Energybase* energybase_ptr, const Change& change) {
+    // this will change in further optimisations, will add target_inds to members so that we know which areas changed
+    if (auto* other = dynamic_cast<SASAEnergyPBC*>(energybase_ptr); other != nullptr) {
+        current_neighbours = other->current_neighbours;
+        areas = other->areas;
+        sasa.sync(other->spc, change);
+    }
+}
+
+void SASAEnergyPBC::to_json(json& j) const {
+    using namespace u8;
+    j["molarity"] = cosolute_concentration / 1.0_molar;
+    j[bracket("SASA") + "/" + angstrom + squared] = mean_surface_area.avg() / 1.0_angstrom;
+    roundJSON(j, 5); // set json output precision
+}
+
+TEST_CASE("[Faunus] SASAPBCsmart") {
+
+    using doctest::Approx;
+    Change change; // change object telling that a full energy calculation
+    change.everything = true;
+    pc::temperature = 300.0_K;
+    atoms = R"([
+        { "A": { "sigma": 2.0, "tfe": 1.0 } },
+        { "B": { "sigma": 2.0, "tfe": 1.0 } }
+    ])"_json.get<decltype(atoms)>();
+    molecules = R"([
+        { "M": { "structure": [
+                { "A": [0.0, 0.0, 0.0] },
+                { "B": [3.0, 0.0, 0.0] }
+                ] }}
+    ])"_json.get<decltype(molecules)>();
+
+    Space spc;
+    spc.geometry = R"( {"type": "cuboid", "length": 200} )"_json;
+    json j = json::array();
+    j.push_back({{"M", {{"N", 2}}}});
+    InsertMoleculesInSpace::insertMolecules(j, spc);
+
+    spc.particles.at(0).pos = {52.0, 0.0, 0.0};
+    spc.particles.at(1).pos = {8.0, 0.0, 0.0};
+
+    spc.particles.at(2).pos = {11.0, 0.0, 0.0};
+    spc.particles.at(3).pos = {50.0, 0.0, 0.0};
+
+    SASAEnergyPBC sasaPBC(spc, 1.5_molar, 1.0_angstrom);
+    sasaPBC.energy(change);
+    auto areasPBC = sasaPBC.getAreas();
+
+    SASAEnergy sasa(spc, 1.5_molar, 1.0_angstrom);
+    sasa.energy(change);
+    auto areas = sasa.getAreas();
+
+    for (int i = 0; i < spc.particles.size(); ++i) {
+        CHECK(areasPBC[i] == Approx(areas[i]));
+    }
+
+    spc.particles.at(3).pos = {14.0, 0.0, 0.0};
+
+    Change::GroupChange changed_data;
+    changed_data.group_index = 1;
+    changed_data.relative_atom_indices = {1};
+    change.groups.push_back(changed_data);
+
+    sasaPBC.energy(change);
+    sasa.energy(change);
+
+    areasPBC = sasaPBC.getAreas();
+    areas = sasa.getAreas();
+
+    for (int i = 0; i < spc.particles.size(); ++i) {
+        CHECK(areasPBC[i] == Approx(areas[i]));
+    }
+}
 
 //==================== GroupCutoff ====================
 

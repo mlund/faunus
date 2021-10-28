@@ -13,11 +13,10 @@ namespace Faunus {
 class SASA {
 
   public:
-    class NeighboursData {
-      public:
-        std::vector<int> neighbour_inds; // indices of neighbouring particles in ParticleVector
-        PointVector points;              // vectors to neighbouring particles
-        int ind;                         // index of particle which corresponds to the object
+    struct NeighboursData {
+        std::vector<int> neighbour_indices; //!< indices of neighbouring particles in ParticleVector
+        PointVector points;                 //!< vectors to neighbouring particles
+        AtomData::index_type index;         //!< index of particle which corresponds to the object
     };
 
   protected:
@@ -29,51 +28,55 @@ class SASA {
   private:
     /**
      * @brief Calcuates SASA of a single particle defined by NeighbourData object
-     * @param NeighbourData object of given particle
-     * @param radii of ALL the particles
+     * @param neighbour_data NeighbourData object of given particle
+     * @param radii of the particles in the ParticleVector
      */
-    double calcSASAOfParticle(const NeighboursData& neighbours, const std::vector<double>& radii) const;
+    double calcSASAOfParticle(const NeighboursData& neighbour_data, const std::vector<double>& radii) const;
 
     /**
-     * @brief Calcuates total arc length in radians of overlapping arcs
-     * @param vector of arcs, defined by a pair (beginning angle, end angle)
+     * @brief Calcuates total arc length in radians of overlapping arcs defined by two angles
+     * @param vector of arcs, defined by a pair (first angle, second angle)
      */
     double exposedArcLength(std::vector<std::pair<double, double>>& arcs) const;
 
   public:
     /**
      * @brief updates sasa of target particles
-     * @param absolute indicies of target particles in ParticleVector
-     * @param neighbourData object of all particles in ParticleVector
+     * @param neighbours_data array of NeighbourData objects
+     * @param radii of the particles in the ParticleVector
+     * @param target_indices absolute indicies of target particles in ParticleVector
      */
-    void updateSASA(const std::vector<SASA::NeighboursData>& neighbours, const std::vector<double>& radii,
-                    const std::vector<int>& target_inds);
+    void updateSASA(const std::vector<SASA::NeighboursData>& neighbours_data, const std::vector<double>& radii,
+                    const std::vector<int>& target_indices);
 
+    /**
+     * @brief resizes areas buffer to size of ParticleVector
+     * @param space
+     */
     void init(Space& spc);
 
     /**
      * @brief calculates neighbourData objects of particles specified by target indices in ParticleVector
      * @param space
-     * @param absolute indicies of target particles in ParticleVector
+     * @param target_indices absolute indicies of target particles in ParticleVector
      */
-    const std::vector<SASA::NeighboursData> calcNeighbourData(Space& spc, const std::vector<int>& target_inds);
+    const std::vector<SASA::NeighboursData> calcNeighbourData(Space& spc, const std::vector<int>& target_indices);
 
     /**
      * @brief calculates neighbourData object of a target particle specified by target indiex in ParticleVector
      * @param space
-     * @param absolute indicies of target particles in ParticleVector
+     * @param target_index indicex of target particle in ParticleVector
      */
-    SASA::NeighboursData calcNeighbourDataOfParticle(Space& spc, const int target_ind);
+    SASA::NeighboursData calcNeighbourDataOfParticle(Space& spc, const int target_index);
 
-    void update([[maybe_unused]] Space& spc, [[maybe_unused]] const Change& change) {}
+    void update(Space& spc, const Change& change) {}
 
-    void sync([[maybe_unused]] Space& other_space, [[maybe_unused]] const Change& change) {}
+    void sync(Space& other_space, const Change& change) {}
 
     const std::vector<double>& getAreas() const { return areas; }
 
-    SASA(const json& j, [[maybe_unused]] Space& spc)
-        : SASA(spc, j.value("radius", 1.4) * 1.0_angstrom, j.value("slices", 20)) {}
-    SASA([[maybe_unused]] Space& spc, double probe_radius, int n_slices_per_atom)
+    SASA(const json& j, Space& spc) : SASA(spc, j.value("radius", 1.4) * 1.0_angstrom, j.value("slices", 20)) {}
+    SASA(Space& spc, double probe_radius, int n_slices_per_atom)
         : probe_radius(probe_radius), n_slices_per_atom(n_slices_per_atom) {}
 };
 
@@ -113,7 +116,7 @@ class SASACellList : public SASA {
         cell_size = max_radius + 2.0 * probe_radius;
         cell_list = std::make_unique<CellList_t>(spc.geometry.getLength(), cell_size);
         for (auto& particle : spc.activeParticles()) {
-            const int i = static_cast<int>(std::addressof(particle) - std::addressof(spc.particles.at(0)));
+            const auto i = std::addressof(particle) - std::addressof(spc.particles.at(0));
             spc.geometry.boundary(particle.pos);
             cell_list->insertMember(i, particle.pos);
         }
@@ -121,77 +124,59 @@ class SASACellList : public SASA {
         areas.resize(spc.particles.size());
     }
 
-    SASA::NeighboursData calcNeighbourDataOfParticle(Space& spc, const int target_ind) {
+    SASA::NeighboursData calcNeighbourDataOfParticle(Space& spc, const int target_index) {
 
-        SASA::NeighboursData neighbour;
+        SASA::NeighboursData neighbour_data;
 
-        const int i = target_ind;
-        const auto& particle_i = spc.particles.at(i);
-        neighbour.ind = i;
+        const auto& particle_i = spc.particles.at(target_index);
+        neighbour_data.index = target_index;
         const auto rc_i = particle_i.traits().sigma * 0.5 + probe_radius;
         const auto& center_cell = cell_list->getGrid().coordinatesAt(particle_i.pos);
 
         for (const auto& offset : cell_offsets) {
             const auto& neighbour_particle_inds = cell_list->getNeighborMembers(center_cell, offset);
-            for (const int j : neighbour_particle_inds) {
+            for (const auto neighbour_particle_index : neighbour_particle_inds) {
 
-                const auto& particle_j = spc.particles.at(j);
+                const auto& particle_j = spc.particles.at(neighbour_particle_index);
                 const double rc_j = particle_j.traits().sigma * 0.5 + probe_radius;
                 const auto sq_cutoff = (rc_i + rc_j) * (rc_i + rc_j);
-                if (i != j && spc.geometry.sqdist(particle_i.pos, particle_j.pos) <= sq_cutoff) {
+                if (target_index != neighbour_particle_index &&
+                    spc.geometry.sqdist(particle_i.pos, particle_j.pos) <= sq_cutoff) {
 
-                    Point dr = particle_i.pos - particle_j.pos;
-                    spc.geometry.boundary(dr);
+                    Point d_r = particle_i.pos - particle_j.pos;
+                    spc.geometry.boundary(d_r);
 
-                    neighbour.neighbour_inds.push_back(j);
-                    neighbour.points.push_back(dr);
+                    neighbour_data.neighbour_indices.push_back(neighbour_particle_index);
+                    neighbour_data.points.push_back(d_r);
                 }
             }
         }
-        return neighbour;
+        return neighbour_data;
     }
 
-    const std::vector<SASA::NeighboursData> calcNeighbourData(Space& spc, const std::vector<int>& target_inds) {
+    const std::vector<SASA::NeighboursData> calcNeighbourData(Space& spc, const std::vector<int>& target_indices) {
 
-        std::vector<SASA::NeighboursData> neighbours(spc.particles.size());
+        // O(N^2) search for neighbours ... will be done using Cell-Lists
+        const auto number_of_indices = target_indices.size();
+        std::vector<SASA::NeighboursData> neighbour_data(number_of_indices);
 
-        for (const int i : target_inds) {
-            const auto& particle_i = spc.particles.at(i);
-            neighbours[i].ind = i;
-            const auto rc_i = particle_i.traits().sigma * 0.5 + probe_radius;
-            const auto& center_cell = cell_list->getGrid().coordinatesAt(particle_i.pos);
-
-            for (const auto& offset : cell_offsets) {
-                const auto& neighbour_particle_inds = cell_list->getNeighborMembers(center_cell, offset);
-                for (const int j : neighbour_particle_inds) {
-
-                    const auto& particle_j = spc.particles.at(j);
-                    const double rc_j = particle_j.traits().sigma * 0.5 + probe_radius;
-                    const auto sq_cutoff = (rc_i + rc_j) * (rc_i + rc_j);
-                    if (i != j && spc.geometry.sqdist(particle_i.pos, particle_j.pos) <= sq_cutoff) {
-
-                        Point dr = particle_i.pos - particle_j.pos;
-                        spc.geometry.boundary(dr);
-
-                        neighbours[i].neighbour_inds.push_back(j);
-                        neighbours[i].points.push_back(dr);
-                    }
-                }
-            }
+        for (size_t i = 0; i != number_of_indices; ++i) {
+            neighbour_data.at(i) = calcNeighbourDataOfParticle(spc, target_indices.at(i));
         }
-        return neighbours;
+
+        return neighbour_data;
     }
 
     void sync(Space& other_space, const Change& change) { this->update(other_space, change); }
 
     void update(Space& spc, const Change& change) {
 
-        if (change.everything) {
+        if (change.everything || change.volume_change) {
             cell_list.reset(new CellList_t(spc.geometry.getLength(), cell_size));
             for (auto& particle : spc.activeParticles()) {
-                const int i = static_cast<int>(std::addressof(particle) - std::addressof(spc.particles.at(0)));
+                const auto particle_index = std::addressof(particle) - std::addressof(spc.particles.at(0));
                 spc.geometry.boundary(particle.pos);
-                cell_list->insertMember(i, particle.pos);
+                cell_list->insertMember(particle_index, particle.pos);
             }
             return;
         }

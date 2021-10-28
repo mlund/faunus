@@ -9,151 +9,157 @@ void SASA::init(Space& spc) {
     areas.resize(spc.particles.size());
 }
 
-void SASA::updateSASA(const std::vector<SASA::NeighboursData>& neighbours, const std::vector<double>& radii,
-                      const std::vector<int>& target_inds) {
+void SASA::updateSASA(const std::vector<SASA::NeighboursData>& neighbours_data, const std::vector<double>& radii,
+                      const std::vector<int>& target_indices) {
 
     // here is a potential place for parallelization?
     // #pragma OMP parallel num_threads(2)
     // {
-    for (const auto [neighbour, ind] : ranges::views::zip(neighbours, target_inds)) {
-        double sasa = calcSASAOfParticle(neighbour, radii);
-        areas[ind] = sasa;
+    for (const auto& [neighbour_data, index] : ranges::views::zip(neighbours_data, target_indices)) {
+        areas[index] = calcSASAOfParticle(neighbour_data, radii);
     }
     //  }
 }
 
-SASA::NeighboursData SASA::calcNeighbourDataOfParticle(Space& spc, const int target_ind) {
+SASA::NeighboursData SASA::calcNeighbourDataOfParticle(Space& spc, const int target_index) {
 
     // O(N^2) search for neighbours
     SASA::NeighboursData neighbour_data;
 
-    const auto& p_i = spc.particles.at(target_ind);
-    const double rc_i = p_i.traits().sigma * 0.5 + probe_radius;
-    neighbour_data.ind = target_ind;
+    const auto& particle_i = spc.particles.at(target_index);
+    const double rc_i = particle_i.traits().sigma * 0.5 + probe_radius;
+    neighbour_data.index = target_index;
 
-    for (const auto& p_j : spc.activeParticles()) {
-        const double rc_j = p_j.traits().sigma * 0.5 + probe_radius;
+    for (const auto& particle_j : spc.activeParticles()) {
+        const double rc_j = particle_j.traits().sigma * 0.5 + probe_radius;
         const auto sq_cutoff = (rc_i + rc_j) * (rc_i + rc_j);
-        const int j = static_cast<int>(std::addressof(p_j) - std::addressof(spc.particles[0]));
+        const auto neighbour_index = std::addressof(particle_j) - std::addressof(spc.particles[0]);
 
-        if (spc.geometry.sqdist(p_i.pos, p_j.pos) < sq_cutoff && target_ind != j) {
-            neighbour_data.neighbour_inds.push_back(j);
+        if (spc.geometry.sqdist(particle_i.pos, particle_j.pos) < sq_cutoff && target_index != neighbour_index) {
+            neighbour_data.neighbour_indices.push_back(neighbour_index);
 
-            Point dr = p_i.pos - p_j.pos;
+            Point dr = particle_i.pos - particle_j.pos;
             spc.geometry.boundary(dr);
             neighbour_data.points.push_back(dr);
         }
     }
     return neighbour_data;
 }
-const std::vector<SASA::NeighboursData> SASA::calcNeighbourData(Space& spc, const std::vector<int>& target_inds) {
+
+const std::vector<SASA::NeighboursData> SASA::calcNeighbourData(Space& spc, const std::vector<int>& target_indices) {
 
     // O(N^2) search for neighbours ... will be done using Cell-Lists
-    const int n_inds = target_inds.size();
-    std::vector<SASA::NeighboursData> neighbour_data(n_inds);
+    const auto number_of_indices = target_indices.size();
+    std::vector<SASA::NeighboursData> neighbour_data(number_of_indices);
 
-    for (int i = 0; i != n_inds; ++i) {
-        neighbour_data.at(i) = calcNeighbourDataOfParticle(spc, target_inds.at(i));
+    for (size_t i = 0; i != number_of_indices; ++i) {
+        neighbour_data.at(i) = calcNeighbourDataOfParticle(spc, target_indices.at(i));
     }
 
     return neighbour_data;
 }
 
-double SASA::calcSASAOfParticle(const SASA::NeighboursData& neighbours, const std::vector<double>& radii) const {
+//!< slices a sphere in z-direction, for each slice, radius of circle_i in the corresponding z-plane is calculated
+//!< then for each neighbour, calculate the overlaping part of circle_i with neighbouring circle_j and add these
+//!< arcs into vector, finally from this vector, calculate the exposed part of circle_i
+double SASA::calcSASAOfParticle(const SASA::NeighboursData& neighbour_data, const std::vector<double>& radii) const {
 
-    const int number_of_neighbours = neighbours.points.size();
-
-    double dj, dij, ri_prime2, ri_prime, rj_prime, rj_prime2;
-    const double ri = radii[neighbours.ind] + probe_radius;
+    const double particle_radius_i = radii[neighbour_data.index] + probe_radius;
     double area(0.);
 
-    double delta = 2. * ri / n_slices_per_atom;
-    double z = -ri - 0.5 * delta;
+    double slice_height = 2. * particle_radius_i / n_slices_per_atom;
+    double z = -particle_radius_i - 0.5 * slice_height;
 
     for (int islice = 0; islice != n_slices_per_atom; ++islice) {
-        z += delta;
-        ri_prime2 = ri * ri - z * z;
-        if (ri_prime2 < 0)
+        z += slice_height;
+        const double sqrd_circle_radius_i = particle_radius_i * particle_radius_i - z * z;
+        if (sqrd_circle_radius_i < 0) {
             continue;
-        ri_prime = std::sqrt(ri_prime2);
-        if (ri_prime <= 0)
-            continue; /* round-off errors */
-        std::vector<std::pair<double, double>> arc;
-        bool is_buried = false;
-        for (int j = 0; j != number_of_neighbours; ++j) {
-            const Point d_r = neighbours.points[j];
-            const double rj = radii[neighbours.neighbour_inds[j]] + probe_radius;
-            dj = std::fabs(d_r.z() - z);
+        }
 
-            if (dj < rj) {
-                rj_prime2 = rj * rj - dj * dj;
-                rj_prime = std::sqrt(rj_prime2);
-                dij = std::sqrt(d_r.x() * d_r.x() + d_r.y() * d_r.y());
-                if (dij >= ri_prime + rj_prime) { /* atoms aren't in contact */
+        const double circle_radius_i = std::sqrt(sqrd_circle_radius_i);
+        if (circle_radius_i <= 0) {
+            continue;
+        } /* round-off errors */
+
+        std::vector<std::pair<double, double>> arcs;
+        bool is_buried = false;
+        for (const auto& [d_r, neighbour_index] :
+             ranges::views::zip(neighbour_data.points, neighbour_data.neighbour_indices)) {
+            const double particle_radius_j = radii[neighbour_index] + probe_radius;
+            const double z_distance = std::fabs(d_r.z() - z);
+
+            if (z_distance < particle_radius_j) {
+                const double sqrd_circle_radius_j = particle_radius_j * particle_radius_j - z_distance * z_distance;
+                const double circle_radius_j = std::sqrt(sqrd_circle_radius_j);
+                const double xy_distance = std::sqrt(d_r.x() * d_r.x() + d_r.y() * d_r.y());
+                if (xy_distance >= circle_radius_i + circle_radius_j) { /* atoms aren't in contact */
                     continue;
                 }
-                if (dij + ri_prime < rj_prime) { /* circle i is completely inside j */
+                if (xy_distance + circle_radius_i < circle_radius_j) { /* circle i is completely inside j */
                     is_buried = true;
                     break;
                 }
-                if (dij + rj_prime < ri_prime) { /* circle j is completely inside i */
+                if (xy_distance + circle_radius_j < circle_radius_i) { /* circle j is completely inside i */
                     continue;
                 }
                 /* arc of circle i intersected by circle j */
-                double alpha = std::acos((ri_prime2 + dij * dij - rj_prime2) / (2.0 * ri_prime * dij));
+                double alpha = std::acos((sqrd_circle_radius_i + xy_distance * xy_distance - sqrd_circle_radius_j) /
+                                         (2.0 * circle_radius_i * xy_distance));
                 /* position of mid-point of intersection along circle i */
                 double beta = std::atan2(d_r.y(), d_r.x()) + M_PI;
                 double inf = beta - alpha;
                 double sup = beta + alpha;
-                if (inf < 0)
+                if (inf < 0) {
                     inf += TWOPI;
-                if (sup > TWOPI)
+                }
+                if (sup > TWOPI) {
                     sup -= TWOPI;
+                }
                 /* store the arc, if arc passes 2*PI split into two */
                 if (sup < inf) {
                     /* store arcs as pairs of angles */
-                    arc.insert(arc.end(), {std::make_pair(0.0, sup), std::make_pair(inf, TWOPI)});
+                    arcs.insert(arcs.end(), {std::make_pair(0.0, sup), std::make_pair(inf, TWOPI)});
                 } else {
-                    arc.insert(arc.end(), std::make_pair(inf, sup));
+                    arcs.insert(arcs.end(), std::make_pair(inf, sup));
                 }
             }
         }
         if (!is_buried) {
-            area += delta * ri * exposedArcLength(arc);
+            area += slice_height * particle_radius_i * exposedArcLength(arcs);
         }
     }
     return area;
 }
 
-double SASA::exposedArcLength(std::vector<std::pair<double, double>>& arc_f) const {
+double SASA::exposedArcLength(std::vector<std::pair<double, double>>& arcs) const {
 
-    if (arc_f.empty()) {
+    if (arcs.empty()) {
         return TWOPI;
     }
 
     auto sortByFirst = [](const std::pair<double, double>& a, const std::pair<double, double>& b) {
         return a.first < b.first;
     };
-    std::sort(arc_f.begin(), arc_f.end(), sortByFirst);
+    std::sort(arcs.begin(), arcs.end(), sortByFirst);
 
-    double sum = arc_f[0].first;
-    double sup = arc_f[0].second;
+    double sum = arcs[0].first;
+    double sup = arcs[0].second;
     double tmp;
 
-    for (int i = 1; i < arc_f.size(); ++i) {
-        if (sup < arc_f[i].first) {
-            sum += arc_f[i].first - sup;
+    for (size_t i = 1; i < arcs.size(); ++i) {
+        if (sup < arcs[i].first) {
+            sum += arcs[i].first - sup;
         }
-        tmp = arc_f[i].second;
+        tmp = arcs[i].second;
         if (tmp > sup) {
             sup = tmp;
         }
     }
-
     return sum + TWOPI - sup;
 }
 
-TEST_CASE("[Faunus] SASAPBC2") {
+TEST_CASE("[Faunus] SASAPBC") {
     using doctest::Approx;
     Change change; // change object telling that a full energy calculation
     change.everything = true;

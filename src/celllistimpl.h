@@ -8,6 +8,7 @@
  * @date 2020-02-01
  */
 
+#include "space.h"
 #include <vector>
 #include <set>
 #include <map>
@@ -290,8 +291,18 @@ class PeriodicBoundaryGrid : public GridBase<TGridType>, virtual public Abstract
      * @return  cell index
      */
     CellIndex index(const CellCoord& coordinates) const override {
-        const auto pbc_coord = (coordinates - (coordinates / this->getCellListEnd()) * this->getCellListEnd()).eval();
-        return Base::index(pbc_coord);
+        // const auto pbc_coord = (coordinates - (coordinates / this->getCellListEnd()) *
+        // this->getCellListEnd()).eval();
+        auto pbc_coordinates = coordinates;
+        auto& boundary_coords = this->getCellListEnd();
+        for (auto i = 0; i < pbc_coordinates.size(); ++i) {
+            if (coordinates[i] < 0) {
+                pbc_coordinates[i] += boundary_coords[i] * (std::abs(coordinates[i]) / boundary_coords[i] + 1);
+            } else if (coordinates[i] >= boundary_coords[i]) {
+                pbc_coordinates[i] -= boundary_coords[i] * (coordinates[i] / boundary_coords[i]);
+            }
+        }
+        return Base::index(pbc_coordinates);
     }
 
     /**
@@ -765,6 +776,13 @@ template <class TBase> class CellListReverseMap : public TBase {
         this->update(member, this->index(new_cell_coordinates));
     }
 
+    bool containsMember(const Member& member) {
+        if (member2cell.count(member) == 0) {
+            return false;
+        }
+        return true;
+    }
+
     /**
      * @brief Imports members from other list without computing cell coordinates from member positions.
      * @tparam T
@@ -789,7 +807,7 @@ template <class TBase> class CellListReverseMap : public TBase {
     void update(const Member& member, const CellIndex& new_cell_index) {
         const auto old_cell_index = member2cell.at(member);
         if (new_cell_index != old_cell_index) {
-            TBase::update(member, old_cell_index, new_cell_index);
+            TBase::move(member, old_cell_index, new_cell_index);
             member2cell.at(member) = new_cell_index;
         }
     }

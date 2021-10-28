@@ -4,13 +4,8 @@
 
 namespace Faunus {
 
-void SASA::init(Space& spc) {
-    // make areas vector with a size of ALL particles in ParticleVector
-    areas.resize(spc.particles.size());
-}
-
-void SASA::updateSASA(const std::vector<SASA::NeighboursData>& neighbours_data, const std::vector<double>& radii,
-                      const std::vector<int>& target_indices) {
+void SASABase::updateSASA(const std::vector<SASA::NeighboursData>& neighbours_data, const std::vector<double>& radii,
+                          const std::vector<int>& target_indices) {
 
     // here is a potential place for parallelization?
     // #pragma OMP parallel num_threads(2)
@@ -19,6 +14,11 @@ void SASA::updateSASA(const std::vector<SASA::NeighboursData>& neighbours_data, 
         areas[index] = calcSASAOfParticle(neighbour_data, radii);
     }
     //  }
+}
+
+void SASA::init(Space& spc) {
+    // make areas vector with a size of ALL particles in ParticleVector
+    areas.resize(spc.particles.size());
 }
 
 SASA::NeighboursData SASA::calcNeighbourDataOfParticle(Space& spc, const int target_index) {
@@ -46,7 +46,7 @@ SASA::NeighboursData SASA::calcNeighbourDataOfParticle(Space& spc, const int tar
     return neighbour_data;
 }
 
-const std::vector<SASA::NeighboursData> SASA::calcNeighbourData(Space& spc, const std::vector<int>& target_indices) {
+std::vector<SASA::NeighboursData> SASA::calcNeighbourData(Space& spc, const std::vector<int>& target_indices) {
 
     // O(N^2) search for neighbours ... will be done using Cell-Lists
     const auto number_of_indices = target_indices.size();
@@ -62,7 +62,8 @@ const std::vector<SASA::NeighboursData> SASA::calcNeighbourData(Space& spc, cons
 //!< slices a sphere in z-direction, for each slice, radius of circle_i in the corresponding z-plane is calculated
 //!< then for each neighbour, calculate the overlaping part of circle_i with neighbouring circle_j and add these
 //!< arcs into vector, finally from this vector, calculate the exposed part of circle_i
-double SASA::calcSASAOfParticle(const SASA::NeighboursData& neighbour_data, const std::vector<double>& radii) const {
+double SASABase::calcSASAOfParticle(const SASA::NeighboursData& neighbour_data,
+                                    const std::vector<double>& radii) const {
 
     const double particle_radius_i = radii[neighbour_data.index] + probe_radius;
     double area(0.);
@@ -132,7 +133,7 @@ double SASA::calcSASAOfParticle(const SASA::NeighboursData& neighbour_data, cons
     return area;
 }
 
-double SASA::exposedArcLength(std::vector<std::pair<double, double>>& arcs) const {
+double SASABase::exposedArcLength(std::vector<std::pair<double, double>>& arcs) const {
 
     if (arcs.empty()) {
         return TWOPI;

@@ -1588,7 +1588,7 @@ class SASAEnergyBase : public Energybase {
     std::vector<double> radii; //!< Radii buffer for all particles
     Space& spc;
     double cosolute_concentration; //!< co-solute concentration (mol/l)
-    SASA sasa;                     //!< performs neighbour searching and subsequent sasa calculation
+    std::unique_ptr<SASABase> sasa; //!< performs neighbour searching and subsequent sasa calculation
     Average<double> mean_surface_area;
 
   private:
@@ -1614,7 +1614,7 @@ class SASAEnergy : public SASAEnergyBase {
 
   private:
     std::vector<std::vector<int>>
-        current_neighbours; // holds cached neighbour indices for each particle in ParticleVector
+        current_neighbours; //!< holds cached neighbour indices for each particle in ParticleVector
 
     void to_json(json& j) const override;
     void sync(Energybase* energybase_ptr, const Change& change) override;

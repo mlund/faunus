@@ -1208,7 +1208,26 @@ TEST_CASE("[Faunus] FreeSASA") {
 #endif
 
 SASAEnergyBase::SASAEnergyBase(Space& spc, double cosolute_concentration, double probe_radius, int n_slices_per_atom)
-    : spc(spc), cosolute_concentration(cosolute_concentration), sasa(spc, probe_radius, n_slices_per_atom) {
+    : spc(spc), cosolute_concentration(cosolute_concentration) {
+
+    const auto periodic_dimensions =
+        spc.geometry.asSimpleGeometry()->boundary_conditions.isPeriodic().cast<int>().sum();
+    switch (periodic_dimensions) {
+    case 3: // PBC in all directions
+        using PeriodicCellList = CellList::CellListSpatial<CellList::CellListType<int, CellList::Grid::Grid3DPeriodic>>;
+        using CellCoord = CellList::GridOf<PeriodicCellList>::CellCoord;
+        sasa = std::make_unique<SASACellList<PeriodicCellList, CellCoord>>(spc, probe_radius, n_slices_per_atom);
+        break;
+    case 0:
+        using FixedCellList = CellList::CellListSpatial<CellList::CellListType<int, CellList::Grid::Grid3DFixed>>;
+        using CellCoord = CellList::GridOf<FixedCellList>::CellCoord;
+        sasa = std::make_unique<SASACellList<FixedCellList, CellCoord>>(spc, probe_radius, n_slices_per_atom);
+        break;
+    default:
+        sasa = std::make_unique<SASA>(spc, probe_radius, n_slices_per_atom);
+        faunus_logger->info("CellList neighbour search not available yet for current geometry");
+        break;
+    }
     name = "sasa";
     citation_information = "doi:10.12688/f1000research.7931.1";
     init();
@@ -1234,7 +1253,7 @@ void SASAEnergyBase::init() {
     for (const auto& particle : spc.particles) {
         radii.push_back(particle.traits().sigma * 0.5);
     }
-    sasa.init(spc);
+    sasa->init(spc);
     areas.resize(spc.particles.size());
 }
 
@@ -1242,7 +1261,7 @@ void SASAEnergy::init() {
     Change change;
     change.everything = true;
 
-    sasa.init(spc);
+    sasa->init(spc);
     areas.resize(spc.particles.size(), 0.);
     current_neighbours.resize(spc.particles.size());
 }
@@ -1250,30 +1269,30 @@ void SASAEnergy::init() {
 double SASAEnergyBase::energy(Change& change) {
 
     double energy = 0.;
-    sasa.update(spc, change);
+    sasa->update(spc, change);
 
     const auto& particles = spc.activeParticles();
 
     std::vector<int> target_indices;
     for (const auto& particle : particles) {
-        const auto active_particle_index = std::addressof(particle) - std::addressof(spc.particles.at(0));
-        target_indices.push_back(active_particle_index);
+        const auto particle_index = std::addressof(particle) - std::addressof(spc.particles.at(0));
+        target_indices.push_back(particle_index);
     }
 
-    const auto neighbour_data = sasa.calcNeighbourData(spc, target_indices);
-    sasa.updateSASA(neighbour_data, radii, target_indices);
+    const auto neighbour_data = sasa->calcNeighbourData(spc, target_indices);
+    sasa->updateSASA(neighbour_data, radii, target_indices);
 
-    const auto& new_areas = sasa.getAreas();
-    for (const auto target_index : target_indices) {
+    const auto& new_areas = sasa->getAreas();
+    for (const auto& target_index : target_indices) {
         areas[target_index] = new_areas[target_index];
     }
 
     double surface_area(0.);
     for (const auto& particle : particles) {
-        const auto active_particle_index = std::addressof(particle) - std::addressof(spc.particles.at(0));
-        surface_area += areas.at(active_particle_index);
-        energy += areas.at(active_particle_index) *
-                  (particle.traits().tension + cosolute_concentration * particle.traits().tfe);
+        const auto particle_index = std::addressof(particle) - std::addressof(spc.particles.at(0));
+        surface_area += areas.at(particle_index);
+        energy +=
+            areas.at(particle_index) * (particle.traits().tension + cosolute_concentration * particle.traits().tfe);
     }
     mean_surface_area += surface_area; // sample average area for accepted confs.
 
@@ -1284,7 +1303,7 @@ void SASAEnergyBase::sync(Energybase* energybase_ptr, const Change& change) {
 
     if (auto* other = dynamic_cast<SASAEnergyBase*>(energybase_ptr)) {
         areas = other->areas;
-        sasa.sync(other->spc, change);
+        sasa->sync(other->spc, change);
     }
 }
 
@@ -1313,7 +1332,7 @@ std::vector<int> SASAEnergy::findTargetIndices(Change& change) {
             auto indices = ranges::cpp20::views::iota(offset, group.size() + offset);
             target_indices.insert(indices.begin(), indices.end());
             for (const auto index : indices) {
-                const auto& current_neighbour = sasa.calcNeighbourDataOfParticle(spc, index).neighbour_indices;
+                const auto& current_neighbour = sasa->calcNeighbourDataOfParticle(spc, index).neighbour_indices;
                 const auto& past_neighbour = current_neighbours[index];
                 target_indices.insert(past_neighbour.begin(), past_neighbour.end());
                 target_indices.insert(current_neighbour.begin(), current_neighbour.end());
@@ -1327,7 +1346,7 @@ std::vector<int> SASAEnergy::findTargetIndices(Change& change) {
                     target_indices.insert(touched_atom_index + offset);
                     target_indices.insert(past_neighbour_indices.begin(), past_neighbour_indices.end());
                     const auto& current_neighbour_data =
-                        sasa.calcNeighbourDataOfParticle(spc, touched_atom_index + offset);
+                        sasa->calcNeighbourDataOfParticle(spc, touched_atom_index + offset);
                     const auto& current_neighbour_indices = current_neighbour_data.neighbour_indices;
                     target_indices.insert(current_neighbour_indices.begin(), current_neighbour_indices.end());
                 }
@@ -1335,7 +1354,7 @@ std::vector<int> SASAEnergy::findTargetIndices(Change& change) {
                 for (const auto touched_atom_index : group_change.relative_atom_indices) {
                     const auto& past_neighbour_indices = current_neighbours[touched_atom_index + offset];
                     const auto& current_neighbour =
-                        sasa.calcNeighbourDataOfParticle(spc, touched_atom_index + offset).neighbour_indices;
+                        sasa->calcNeighbourDataOfParticle(spc, touched_atom_index + offset).neighbour_indices;
                     target_indices.insert(touched_atom_index + offset);
                     target_indices.insert(current_neighbour.begin(), current_neighbour.end());
                     target_indices.insert(past_neighbour_indices.begin(), past_neighbour_indices.end());
@@ -1350,7 +1369,8 @@ std::vector<int> SASAEnergy::findTargetIndices(Change& change) {
 double SASAEnergy::energy(Change& change) {
 
     double energy(0.);
-    sasa.update(spc, change);
+
+    sasa->update(spc, change);
 
     std::vector<int> target_indices;
     if (!change.everything) {
@@ -1362,14 +1382,14 @@ double SASAEnergy::energy(Change& change) {
         }
     }
 
-    const auto neighbours_data = sasa.calcNeighbourData(spc, target_indices);
+    const auto neighbours_data = sasa->calcNeighbourData(spc, target_indices);
     for (const auto [neighbour_data, index] : ranges::views::zip(neighbours_data, target_indices)) {
         current_neighbours[index] = neighbour_data.neighbour_indices;
     }
 
     // update sasa areas in sasa object and update
-    sasa.updateSASA(neighbours_data, radii, target_indices);
-    const auto& new_areas = sasa.getAreas();
+    sasa->updateSASA(neighbours_data, radii, target_indices);
+    const auto& new_areas = sasa->getAreas();
     for (const auto target_index : target_indices) {
         areas[target_index] = new_areas[target_index];
     }
@@ -1388,10 +1408,10 @@ double SASAEnergy::energy(Change& change) {
 
 void SASAEnergy::sync(Energybase* energybase_ptr, const Change& change) {
     // this will change in further optimisations, will add target_indices to members so that we know which areas changed
-    if (auto* other = dynamic_cast<SASAEnergy*>(energybase_ptr); other != nullptr) {
+    if (auto* other = dynamic_cast<SASAEnergy*>(energybase_ptr)) {
         current_neighbours = other->current_neighbours;
         areas = other->areas;
-        sasa.sync(other->spc, change);
+        sasa->sync(other->spc, change);
     }
 }
 

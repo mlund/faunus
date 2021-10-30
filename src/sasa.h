@@ -12,25 +12,36 @@ namespace Faunus {
 
 class SASABase {
 
+  protected:
+    using Index = AtomData::index_type;
+
   public:
     struct NeighboursData {
-        std::vector<int> neighbour_indices; //!< indices of neighbouring particles in ParticleVector
+        std::vector<size_t> neighbour_indices; //!< indices of neighbouring particles in ParticleVector
         PointVector points;                 //!< vectors to neighbouring particles
-        AtomData::index_type index;         //!< index of particle which corresponds to the object
+        Index index;                        //!< index of particle which corresponds to the object
     };
 
   protected:
-    double probe_radius;
-    std::vector<double> areas;
-    int n_slices_per_atom;
-    const double TWOPI = 2. * M_PI;
+    double probe_radius;            //!< radius of the probe sphere
+    std::vector<double> areas;      //!< vector holding SASA area of each atom
+    std::vector<double> radii;      //!< Radii buffer for all particles
+    int slices_per_atom;            //!< number of slices of each sphere in SASA calculation
+    const double TWOPI = 2. * M_PI; //!< 2 PI
+    const Particle* first_particle; //! first particle in ParticleVector
+
+    /**
+     * @brief returns absolute index of particle in ParticleVector
+     * @param particle
+     */
+    size_t indexOf(const Particle& particle) { return static_cast<size_t>(std::addressof(particle) - first_particle); }
 
     /**
      * @brief Calcuates SASA of a single particle defined by NeighbourData object
      * @param neighbour_data NeighbourData object of given particle
      * @param radii of the particles in the ParticleVector
      */
-    double calcSASAOfParticle(const NeighboursData& neighbour_data, const std::vector<double>& radii) const;
+    double calcSASAOfParticle(const NeighboursData& neighbour_data) const;
 
     /**
      * @brief Calcuates total arc length in radians of overlapping arcs defined by two angles
@@ -45,8 +56,8 @@ class SASABase {
      * @param radii of the particles in the ParticleVector
      * @param target_indices absolute indicies of target particles in ParticleVector
      */
-    void updateSASA(const std::vector<SASABase::NeighboursData>& neighbours_data, const std::vector<double>& radii,
-                    const std::vector<int>& target_indices);
+    void updateSASA(const std::vector<SASABase::NeighboursData>& neighbours_data,
+                    const std::vector<size_t>& target_indices);
 
     /**
      * @brief resizes areas buffer to size of ParticleVector
@@ -60,23 +71,28 @@ class SASABase {
      * @param target_indices absolute indicies of target particles in ParticleVector
      */
     virtual std::vector<SASABase::NeighboursData> calcNeighbourData(Space& spc,
-                                                                    const std::vector<int>& target_indices) = 0;
+                                                                    const std::vector<size_t>& target_indices) = 0;
 
     /**
      * @brief calculates neighbourData object of a target particle specified by target indiex in ParticleVector
      * @param space
      * @param target_index indicex of target particle in ParticleVector
      */
-    virtual SASABase::NeighboursData calcNeighbourDataOfParticle(Space& spc, const int target_index) = 0;
+    virtual SASABase::NeighboursData calcNeighbourDataOfParticle(Space& spc, const size_t target_index) = 0;
 
     virtual void update(Space& spc, const Change& change) = 0;
 
-    virtual void sync(Space& other_space, const Change& change) = 0;
-
     const std::vector<double>& getAreas() const { return areas; }
 
-    SASABase(Space& spc, double probe_radius, int n_slices_per_atom)
-        : probe_radius(probe_radius), n_slices_per_atom(n_slices_per_atom) {}
+    /**
+     * @param spc
+     * @param probe_radius in angstrom
+     * @param slices_per_atom number of slices of each sphere in sasa calculations
+     */
+    SASABase(Space& spc, double probe_radius, int slices_per_atom)
+        : probe_radius(probe_radius), slices_per_atom(slices_per_atom),
+          first_particle(std::addressof(spc.particles.at(0U))) {}
+    virtual ~SASABase() {}
 };
 
 class SASA : public SASABase {
@@ -94,7 +110,7 @@ class SASA : public SASABase {
      * @param target_indices absolute indicies of target particles in ParticleVector
      */
     std::vector<SASABase::NeighboursData> calcNeighbourData(Space& spc,
-                                                            const std::vector<int>& target_indices) override;
+                                                            const std::vector<size_t>& target_indices) override;
 
     /**
      * @brief calculates neighbourData object of a target particle
@@ -102,19 +118,17 @@ class SASA : public SASABase {
      * @param space
      * @param target_index indicex of target particle in ParticleVector
      */
-    SASABase::NeighboursData calcNeighbourDataOfParticle(Space& spc, const int target_index) override;
+    SASABase::NeighboursData calcNeighbourDataOfParticle(Space& spc, const size_t target_index) override;
 
     void update(Space& spc, const Change& change) override {}
-
-    void sync(Space& other_space, const Change& change) override {}
 
     /**
      * @param spc
      * @param probe_radius in angstrom
-     * @param n_slices_per_atom number of slices of each sphere in sasa calculations
+     * @param slices_per_atom number of slices of each sphere in sasa calculations
      */
+    SASA(Space& spc, double probe_radius, int slices_per_atom) : SASABase(spc, probe_radius, slices_per_atom) {}
     SASA(const json& j, Space& spc) : SASABase(spc, j.value("radius", 1.4) * 1.0_angstrom, j.value("slices", 20)) {}
-    SASA(Space& spc, double probe_radius, int n_slices_per_atom) : SASABase(spc, probe_radius, n_slices_per_atom) {}
 };
 
 //!< TODO Figure out how to do it with just CellList_T template argument
@@ -130,12 +144,12 @@ template <typename CellList_T, typename CellCoord> class SASACellList : public S
     /**
      * @param spc
      * @param probe_radius in angstrom
-     * @param n_slices_per_atom number of slices of each sphere in sasa calculations
+     * @param slices_per_atom number of slices of each sphere in sasa calculations
      */
+    SASACellList(Space& spc, double probe_radius, int slices_per_atom) : SASABase(spc, probe_radius, slices_per_atom) {}
     SASACellList(const json& j, Space& spc)
         : SASABase(spc, j.value("radius", 1.4) * 1.0_angstrom, j.value("slices", 20)) {}
-    SASACellList(Space& spc, double probe_radius, int n_slices_per_atom)
-        : SASABase(spc, probe_radius, n_slices_per_atom) {}
+    virtual ~SASACellList() {}
 
     /**
      * @brief constructs cell_list with appropriate cell_size and fills it with particles from space
@@ -152,19 +166,18 @@ template <typename CellList_T, typename CellCoord> class SASACellList : public S
             }
         }
 
-        double max_radius = 0.0;
-        for (const auto& particle : spc.particles) {
-            if (particle.traits().sigma > max_radius) {
-                max_radius = particle.traits().sigma;
-            }
-        }
-        cell_size = max_radius + 2.0 * probe_radius;
+        radii.clear();
+        std::for_each(spc.particles.begin(), spc.particles.end(),
+                      [&](const Particle& particle) { radii.push_back(particle.traits().sigma * 0.5); });
+        auto max_radius = ranges::max(radii);
+
+        cell_size = 2.0 * (max_radius + probe_radius);
         cell_list = std::make_unique<CellList_T>(spc.geometry.getLength(), cell_size);
 
         for (auto& particle : spc.activeParticles()) {
-            const auto i = std::addressof(particle) - std::addressof(spc.particles.at(0));
+            const auto particle_index = indexOf(particle);
             spc.geometry.boundary(particle.pos);
-            cell_list->insertMember(i, particle.pos + spc.geometry.getLength() / 2.);
+            cell_list->insertMember(particle_index, particle.pos + spc.geometry.getLength() / 2.);
         }
 
         areas.resize(spc.particles.size(), 0.);
@@ -176,22 +189,28 @@ template <typename CellList_T, typename CellCoord> class SASACellList : public S
      * @param space
      * @param target_index indicex of target particle in ParticleVector
      */
-    SASABase::NeighboursData calcNeighbourDataOfParticle(Space& spc, const int target_index) override {
+    SASABase::NeighboursData calcNeighbourDataOfParticle(Space& spc, const size_t target_index) override {
 
         SASABase::NeighboursData neighbour_data;
 
         const auto& particle_i = spc.particles.at(target_index);
         neighbour_data.index = target_index;
-        const auto rc_i = particle_i.traits().sigma * 0.5 + probe_radius;
+        const auto sasa_radius_i = particle_i.traits().sigma * 0.5 + probe_radius;
         const auto& center_cell = cell_list->getGrid().coordinatesAt(particle_i.pos + spc.geometry.getLength() / 2.);
 
-        for (const auto& offset : cell_offsets) {
-            const auto& neighbour_particle_inds = cell_list->getNeighborMembers(center_cell, offset);
-            for (const auto neighbour_particle_index : neighbour_particle_inds) {
+        auto neighour_particles_at = [&](const CellCoord& offset) {
+            return cell_list->getNeighborMembers(center_cell, offset);
+        };
+
+        for (const auto& cell_offset : cell_offsets) {
+
+            const auto& neighbour_particle_indices = neighour_particles_at(cell_offset);
+
+            for (const auto neighbour_particle_index : neighbour_particle_indices) {
 
                 const auto& particle_j = spc.particles.at(neighbour_particle_index);
-                const double rc_j = particle_j.traits().sigma * 0.5 + probe_radius;
-                const auto sq_cutoff = (rc_i + rc_j) * (rc_i + rc_j);
+                const auto sasa_radius_j = particle_j.traits().sigma * 0.5 + probe_radius;
+                const auto sq_cutoff = (sasa_radius_i + sasa_radius_j) * (sasa_radius_i + sasa_radius_j);
                 if (target_index != neighbour_particle_index &&
                     spc.geometry.sqdist(particle_i.pos, particle_j.pos) <= sq_cutoff) {
 
@@ -203,6 +222,7 @@ template <typename CellList_T, typename CellCoord> class SASACellList : public S
                 }
             }
         }
+
         return neighbour_data;
     }
 
@@ -213,7 +233,7 @@ template <typename CellList_T, typename CellCoord> class SASACellList : public S
      * @param target_indices absolute indicies of target particles in ParticleVector
      */
     std::vector<SASABase::NeighboursData> calcNeighbourData(Space& spc,
-                                                            const std::vector<int>& target_indices) override {
+                                                            const std::vector<size_t>& target_indices) override {
 
         // O(N^2) search for neighbours
         const auto number_of_indices = target_indices.size();
@@ -235,9 +255,8 @@ template <typename CellList_T, typename CellCoord> class SASACellList : public S
 
         if (change.everything || change.volume_change) {
             cell_list.reset(new CellList_T(spc.geometry.getLength(), cell_size));
-            for (auto& particle : spc.activeParticles()) {
-                const auto particle_index = std::addressof(particle) - std::addressof(spc.particles.at(0));
-                spc.geometry.boundary(particle.pos);
+            for (const auto& particle : spc.activeParticles()) {
+                const auto particle_index = indexOf(particle);
                 cell_list->insertMember(particle_index, particle.pos + spc.geometry.getLength() / 2.);
             }
         } else if (!change.matter_change) {
@@ -257,11 +276,11 @@ template <typename CellList_T, typename CellCoord> class SASACellList : public S
                 }
             }
         } else {
-            auto isActive = getGroupFilter<Group::Selectors::ACTIVE>();
+            auto is_active = getGroupFilter<Group::Selectors::ACTIVE>();
             for (const auto& group_change : change.groups) {
                 const auto& group = spc.groups.at(group_change.group_index);
                 const auto offset = spc.getFirstParticleIndex(group);
-                if (isActive(group)) { // if the group is active, there is at least one active particle in it
+                if (is_active(group)) { // if the group is active, there is at least one active particle in it
                     for (auto i : group_change.relative_atom_indices) {
                         if (i > std::distance(group.begin(), group.end()) // if index lies behind last active index
                             && cell_list->containsMember(i + offset)) {
@@ -281,8 +300,6 @@ template <typename CellList_T, typename CellCoord> class SASACellList : public S
             }
         }
     }
-
-    void sync(Space& other_space, const Change& change) override { this->update(other_space, change); }
 };
 
 } // namespace Faunus

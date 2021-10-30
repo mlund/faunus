@@ -4,24 +4,26 @@
 
 namespace Faunus {
 
-void SASABase::updateSASA(const std::vector<SASA::NeighboursData>& neighbours_data, const std::vector<double>& radii,
-                          const std::vector<int>& target_indices) {
+void SASABase::updateSASA(const std::vector<SASA::NeighboursData>& neighbours_data,
+                          const std::vector<size_t>& target_indices) {
 
     // here is a potential place for parallelization?
     // #pragma OMP parallel num_threads(2)
     // {
     for (const auto& [neighbour_data, index] : ranges::views::zip(neighbours_data, target_indices)) {
-        areas[index] = calcSASAOfParticle(neighbour_data, radii);
+        areas[index] = calcSASAOfParticle(neighbour_data);
     }
     //  }
 }
 
 void SASA::init(Space& spc) {
-    // make areas vector with a size of ALL particles in ParticleVector
+    radii.clear();
+    std::for_each(spc.particles.begin(), spc.particles.end(),
+                  [&](const Particle& particle) { radii.push_back(particle.traits().sigma * 0.5); });
     areas.resize(spc.particles.size());
 }
 
-SASA::NeighboursData SASA::calcNeighbourDataOfParticle(Space& spc, const int target_index) {
+SASA::NeighboursData SASA::calcNeighbourDataOfParticle(Space& spc, const size_t target_index) {
 
     // O(N^2) search for neighbours
     SASA::NeighboursData neighbour_data;
@@ -33,7 +35,7 @@ SASA::NeighboursData SASA::calcNeighbourDataOfParticle(Space& spc, const int tar
     for (const auto& particle_j : spc.activeParticles()) {
         const double rc_j = particle_j.traits().sigma * 0.5 + probe_radius;
         const auto sq_cutoff = (rc_i + rc_j) * (rc_i + rc_j);
-        const auto neighbour_index = std::addressof(particle_j) - std::addressof(spc.particles[0]);
+        const auto neighbour_index = indexOf(particle_j);
 
         if (spc.geometry.sqdist(particle_i.pos, particle_j.pos) < sq_cutoff && target_index != neighbour_index) {
             neighbour_data.neighbour_indices.push_back(neighbour_index);
@@ -46,13 +48,13 @@ SASA::NeighboursData SASA::calcNeighbourDataOfParticle(Space& spc, const int tar
     return neighbour_data;
 }
 
-std::vector<SASA::NeighboursData> SASA::calcNeighbourData(Space& spc, const std::vector<int>& target_indices) {
+std::vector<SASA::NeighboursData> SASA::calcNeighbourData(Space& spc, const std::vector<size_t>& target_indices) {
 
     // O(N^2) search for neighbours ... will be done using Cell-Lists
-    const auto number_of_indices = target_indices.size();
+    const auto number_of_indices = static_cast<size_t>(target_indices.size());
     std::vector<SASA::NeighboursData> neighbour_data(number_of_indices);
 
-    for (size_t i = 0; i != number_of_indices; ++i) {
+    for (size_t i = 0U; i != number_of_indices; ++i) {
         neighbour_data.at(i) = calcNeighbourDataOfParticle(spc, target_indices.at(i));
     }
 
@@ -62,24 +64,23 @@ std::vector<SASA::NeighboursData> SASA::calcNeighbourData(Space& spc, const std:
 //!< slices a sphere in z-direction, for each slice, radius of circle_i in the corresponding z-plane is calculated
 //!< then for each neighbour, calculate the overlaping part of circle_i with neighbouring circle_j and add these
 //!< arcs into vector, finally from this vector, calculate the exposed part of circle_i
-double SASABase::calcSASAOfParticle(const SASA::NeighboursData& neighbour_data,
-                                    const std::vector<double>& radii) const {
+double SASABase::calcSASAOfParticle(const SASA::NeighboursData& neighbour_data) const {
 
     const double particle_radius_i = radii[neighbour_data.index] + probe_radius;
     double area(0.);
 
-    double slice_height = 2. * particle_radius_i / n_slices_per_atom;
+    double slice_height = 2. * particle_radius_i / slices_per_atom;
     double z = -particle_radius_i - 0.5 * slice_height;
 
-    for (int islice = 0; islice != n_slices_per_atom; ++islice) {
+    for (int islice = 0; islice != slices_per_atom; ++islice) {
         z += slice_height;
         const double sqrd_circle_radius_i = particle_radius_i * particle_radius_i - z * z;
-        if (sqrd_circle_radius_i < 0) {
+        if (sqrd_circle_radius_i < 0.) {
             continue;
         }
 
         const double circle_radius_i = std::sqrt(sqrd_circle_radius_i);
-        if (circle_radius_i <= 0) {
+        if (circle_radius_i <= 0.) {
             continue;
         } /* round-off errors */
 
@@ -139,10 +140,10 @@ double SASABase::exposedArcLength(std::vector<std::pair<double, double>>& arcs) 
         return TWOPI;
     }
 
-    auto sortByFirst = [](const std::pair<double, double>& a, const std::pair<double, double>& b) {
+    auto sort_by_first = [](const std::pair<double, double>& a, const std::pair<double, double>& b) {
         return a.first < b.first;
     };
-    std::sort(arcs.begin(), arcs.end(), sortByFirst);
+    std::sort(arcs.begin(), arcs.end(), sort_by_first);
 
     double sum = arcs[0].first;
     double sup = arcs[0].second;
@@ -188,7 +189,7 @@ TEST_CASE("[Faunus] SASAPBC") {
         spc.particles.at(1).pos = {5.0, 0.0, 0.0};
 
         const auto& neighbours = sasa.calcNeighbourData(spc, {0, 1});
-        sasa.updateSASA(neighbours, radii, {0, 1});
+        sasa.updateSASA(neighbours, {0, 1});
         const auto& areas = sasa.getAreas();
 
         CHECK(areas[0] == Approx(3.4 * 3.4 * M_PI * 4.));
@@ -200,7 +201,7 @@ TEST_CASE("[Faunus] SASAPBC") {
         spc.particles.at(1).pos = {5.0, 0.0, 0.0};
 
         const auto& neighbours = sasa.calcNeighbourData(spc, {0, 1});
-        sasa.updateSASA(neighbours, radii, {0, 1});
+        sasa.updateSASA(neighbours, {0, 1});
         const auto& areas = sasa.getAreas();
 
         CHECK(areas[0] == Approx(119.48260171150575));
@@ -212,7 +213,7 @@ TEST_CASE("[Faunus] SASAPBC") {
         spc.particles.at(1).pos = {1., 0.0, 199.};
 
         const auto& neighbours = sasa.calcNeighbourData(spc, {0, 1});
-        sasa.updateSASA(neighbours, radii, {0, 1});
+        sasa.updateSASA(neighbours, {0, 1});
         const auto& areas = sasa.getAreas();
 
         CHECK(areas[0] == Approx(118.99710056237043));
@@ -224,7 +225,7 @@ TEST_CASE("[Faunus] SASAPBC") {
         spc.particles.at(1).pos = {1.1, 0.0, 0.0};
 
         const auto& neighbours = sasa.calcNeighbourData(spc, {0, 1});
-        sasa.updateSASA(neighbours, radii, {0, 1});
+        sasa.updateSASA(neighbours, {0, 1});
         const auto& areas = sasa.getAreas();
 
         CHECK(areas[0] == Approx(3.4 * 3.4 * M_PI * 4));

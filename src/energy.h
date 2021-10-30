@@ -1526,7 +1526,7 @@ class FreeSASAEnergy : public Energybase {
     std::vector<double> sasa;      //!< Target buffer for calculated surface areas
 
     const Space& spc;
-    double cosolute_concentration;                       //!< co-solute concentration (mol/l)
+    double cosolute_molarity;                            //!< co-solute concentration (mol/l)
     std::unique_ptr<freesasa_parameters_fwd> parameters; //!< Parameters for freesasa
     Average<double> mean_surface_area;
 
@@ -1571,10 +1571,10 @@ class FreeSASAEnergy : public Energybase {
   public:
     /**
      * @param spc
-     * @param cosolute_concentration in particles per angstrom cubed
+     * @param cosolute_molarity in particles per angstrom cubed
      * @param probe_radius in angstrom
      */
-    FreeSASAEnergy(const Space& spc, double cosolute_concentration = 0.0, double probe_radius = 1.4);
+    FreeSASAEnergy(const Space& spc, double cosolute_molarity = 0.0, double probe_radius = 1.4);
     FreeSASAEnergy(const json& j, const Space& spc);
     double energy(Change& change) override;
     const std::vector<double>& getAreas() const { return sasa; }
@@ -1585,9 +1585,8 @@ class SASAEnergyBase : public Energybase {
 
   protected:
     std::vector<double> areas; //!< Target buffer for calculated surface areas
-    std::vector<double> radii; //!< Radii buffer for all particles
     Space& spc;
-    double cosolute_concentration; //!< co-solute concentration (mol/l)
+    double cosolute_molarity;       //!< co-solute concentration (mol/l)
     std::unique_ptr<SASABase> sasa; //!< performs neighbour searching and subsequent sasa calculation
     Average<double> mean_surface_area;
 
@@ -1596,24 +1595,33 @@ class SASAEnergyBase : public Energybase {
     void sync(Energybase* energybase_ptr, const Change& change) override;
     void init() override;
 
+  protected:
+    /**
+     * @brief returns absolute index of particle in ParticleVector
+     * @param particle
+     */
+    size_t indexOf(const Particle& particle) {
+        return static_cast<size_t>(std::addressof(particle) - std::addressof(spc.particles.at(0U)));
+    }
+
   public:
     /**
      * @param spc
-     * @param cosolute_concentration in particles per angstrom cubed
+     * @param cosolute_molarity in particles per angstrom cubed
      * @param probe_radius in angstrom
-     * @param n_slices_per_atom number of slices of spheres in SASA calculation
+     * @param slices_per_atom number of slices of spheres in SASA calculation
      */
-    SASAEnergyBase(Space& spc, double cosolute_concentration = 0.0, double probe_radius = 1.4,
-                   int n_slices_per_atom = 20);
+    SASAEnergyBase(Space& spc, double cosolute_molarity = 0.0, double probe_radius = 1.4, int slices_per_atom = 20);
     SASAEnergyBase(const json& j, Space& spc);
     const std::vector<double>& getAreas() const { return areas; }
     double energy(Change& change) override;
+
 }; //!< SASA energy from transfer free energies with SASA calculation each step
 
 class SASAEnergy : public SASAEnergyBase {
 
   private:
-    std::vector<std::vector<int>>
+    std::vector<std::vector<size_t>>
         current_neighbours; //!< holds cached neighbour indices for each particle in ParticleVector
 
     void to_json(json& j) const override;
@@ -1624,16 +1632,16 @@ class SASAEnergy : public SASAEnergyBase {
      * @brief Finds absolute indices of particles whose SASA has changed
      * @param change Change object
      */
-    std::vector<int> findTargetIndices(Change& change);
+    std::vector<size_t> findTargetIndices(Change& change);
 
   public:
     /**
      * @param spc
-     * @param cosolute_concentration in particles per angstrom cubed
+     * @param cosolute_molarity in particles per angstrom cubed
      * @param probe_radius in angstrom
-     * @param n_slices_per_atom number of slices of spheres in SASA calculation
+     * @param slices_per_atom number of slices of spheres in SASA calculation
      */
-    SASAEnergy(Space& spc, double cosolute_concentration = 0.0, double probe_radius = 1.4, int n_slices_per_atom = 20);
+    SASAEnergy(Space& spc, double cosolute_molarity = 0.0, double probe_radius = 1.4, int slices_per_atom = 20);
     SASAEnergy(const json& j, Space& spc);
     double energy(Change& change) override;
 }; //!< SASA energy from transfer free energies

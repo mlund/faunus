@@ -779,7 +779,7 @@ FunctorPotential::uFunc FunctorPotential::combineFunc(json &j) {
 }
 
 void FunctorPotential::to_json(json &j) const {
-    j = _j;
+    j["functor potential"] = _j;
     j["selfenergy"] = {{"monopole", have_monopole_self_energy}, {"dipole", have_dipole_self_energy}};
 }
 

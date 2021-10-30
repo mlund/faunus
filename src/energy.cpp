@@ -1161,10 +1161,9 @@ void FreeSASAEnergy::sync(Energybase* energybase_ptr, const Change& change) {
 }
 
 void FreeSASAEnergy::to_json(json& j) const {
-    using namespace u8;
     j["molarity"] = cosolute_molarity / 1.0_molar;
     j["radius"] = parameters->probe_radius / 1.0_angstrom;
-    j[bracket("SASA") + "/" + angstrom + squared] = mean_surface_area.avg() / 1.0_angstrom;
+    j[u8::bracket("SASA") + "/" + u8::angstrom + u8::squared] = mean_surface_area.avg() / 1.0_angstrom;
     roundJSON(j, 5); // set json output precision
 }
 
@@ -1274,8 +1273,8 @@ double SASAEnergyBase::energy(Change& change) {
         target_indices.push_back(particle_index);
     }
 
-    const auto neighbour_data = sasa->calcNeighbourData(spc, target_indices);
-    sasa->updateSASA(neighbour_data, target_indices);
+    const auto neighbour = sasa->calcNeighbourData(spc, target_indices);
+    sasa->updateSASA(neighbour, target_indices);
 
     const auto& new_areas = sasa->getAreas();
     for (const auto& target_index : target_indices) {
@@ -1303,9 +1302,8 @@ void SASAEnergyBase::sync(Energybase* energybase_ptr, const Change& change) {
 
 void SASAEnergyBase::to_json(json& j) const {
 
-    using namespace u8;
     j["molarity"] = cosolute_molarity / 1.0_molar;
-    j[bracket("SASA") + "/" + angstrom + squared] = mean_surface_area.avg() / 1.0_angstrom;
+    j[u8::bracket("SASA") + "/" + u8::angstrom + u8::squared] = mean_surface_area.avg() / 1.0_angstrom;
     roundJSON(j, 6); // set json output precision
 }
 
@@ -1326,7 +1324,7 @@ std::vector<size_t> SASAEnergy::findTargetIndices(Change& change) {
             auto indices = ranges::cpp20::views::iota(offset, group.size() + offset);
             target_indices.insert(indices.begin(), indices.end());
             for (const auto index : indices) {
-                const auto& current_neighbour = sasa->calcNeighbourDataOfParticle(spc, index).neighbour_indices;
+                const auto& current_neighbour = sasa->calcNeighbourDataOfParticle(spc, index).indices;
                 const auto& past_neighbour = current_neighbours[index];
                 target_indices.insert(past_neighbour.begin(), past_neighbour.end());
                 target_indices.insert(current_neighbour.begin(), current_neighbour.end());
@@ -1339,16 +1337,15 @@ std::vector<size_t> SASAEnergy::findTargetIndices(Change& change) {
                     const auto& past_neighbour_indices = current_neighbours[touched_atom_index + offset];
                     target_indices.insert(touched_atom_index + offset);
                     target_indices.insert(past_neighbour_indices.begin(), past_neighbour_indices.end());
-                    const auto& current_neighbour_data =
-                        sasa->calcNeighbourDataOfParticle(spc, touched_atom_index + offset);
-                    const auto& current_neighbour_indices = current_neighbour_data.neighbour_indices;
+                    const auto& current_neighbour = sasa->calcNeighbourDataOfParticle(spc, touched_atom_index + offset);
+                    const auto& current_neighbour_indices = current_neighbour.indices;
                     target_indices.insert(current_neighbour_indices.begin(), current_neighbour_indices.end());
                 }
             } else {
                 for (const auto touched_atom_index : group_change.relative_atom_indices) {
                     const auto& past_neighbour_indices = current_neighbours[touched_atom_index + offset];
                     const auto& current_neighbour =
-                        sasa->calcNeighbourDataOfParticle(spc, touched_atom_index + offset).neighbour_indices;
+                        sasa->calcNeighbourDataOfParticle(spc, touched_atom_index + offset).indices;
                     target_indices.insert(touched_atom_index + offset);
                     target_indices.insert(current_neighbour.begin(), current_neighbour.end());
                     target_indices.insert(past_neighbour_indices.begin(), past_neighbour_indices.end());
@@ -1377,8 +1374,8 @@ double SASAEnergy::energy(Change& change) {
     }
 
     const auto neighbours_data = sasa->calcNeighbourData(spc, target_indices);
-    for (const auto [neighbour_data, index] : ranges::views::zip(neighbours_data, target_indices)) {
-        current_neighbours[index] = neighbour_data.neighbour_indices;
+    for (const auto [neighbour, index] : ranges::views::zip(neighbours_data, target_indices)) {
+        current_neighbours[index] = neighbour.indices;
     }
 
     // update sasa areas in sasa object and update
@@ -1409,9 +1406,8 @@ void SASAEnergy::sync(Energybase* energybase_ptr, const Change& change) {
 }
 
 void SASAEnergy::to_json(json& j) const {
-    using namespace u8;
     j["molarity"] = cosolute_molarity / 1.0_molar;
-    j[bracket("SASA") + "/" + angstrom + squared] = mean_surface_area.avg() / 1.0_angstrom;
+    j[u8::bracket("SASA") + "/" + u8::angstrom + u8::squared] = mean_surface_area.avg() / 1.0_angstrom;
     roundJSON(j, 6); // set json output precision
 }
 

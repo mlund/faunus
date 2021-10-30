@@ -16,8 +16,8 @@ class SASABase {
     using Index = AtomData::index_type;
 
   public:
-    struct NeighboursData {
-        std::vector<size_t> neighbour_indices; //!< indices of neighbouring particles in ParticleVector
+    struct Neighbours {
+        std::vector<size_t> indices;        //!< indices of neighbouring particles in ParticleVector
         PointVector points;                 //!< vectors to neighbouring particles
         Index index;                        //!< index of particle which corresponds to the object
     };
@@ -38,10 +38,10 @@ class SASABase {
 
     /**
      * @brief Calcuates SASA of a single particle defined by NeighbourData object
-     * @param neighbour_data NeighbourData object of given particle
+     * @param neighbours NeighbourData object of given particle
      * @param radii of the particles in the ParticleVector
      */
-    double calcSASAOfParticle(const NeighboursData& neighbour_data) const;
+    double calcSASAOfParticle(const Neighbours& neighbour) const;
 
     /**
      * @brief Calcuates total arc length in radians of overlapping arcs defined by two angles
@@ -56,7 +56,7 @@ class SASABase {
      * @param radii of the particles in the ParticleVector
      * @param target_indices absolute indicies of target particles in ParticleVector
      */
-    void updateSASA(const std::vector<SASABase::NeighboursData>& neighbours_data,
+    void updateSASA(const std::vector<SASABase::Neighbours>& neighbours_data,
                     const std::vector<size_t>& target_indices);
 
     /**
@@ -70,15 +70,15 @@ class SASABase {
      * @param space
      * @param target_indices absolute indicies of target particles in ParticleVector
      */
-    virtual std::vector<SASABase::NeighboursData> calcNeighbourData(Space& spc,
-                                                                    const std::vector<size_t>& target_indices) = 0;
+    virtual std::vector<SASABase::Neighbours> calcNeighbourData(Space& spc,
+                                                                const std::vector<size_t>& target_indices) = 0;
 
     /**
      * @brief calculates neighbourData object of a target particle specified by target indiex in ParticleVector
      * @param space
      * @param target_index indicex of target particle in ParticleVector
      */
-    virtual SASABase::NeighboursData calcNeighbourDataOfParticle(Space& spc, const size_t target_index) = 0;
+    virtual SASABase::Neighbours calcNeighbourDataOfParticle(Space& spc, const size_t target_index) = 0;
 
     virtual void update(Space& spc, const Change& change) = 0;
 
@@ -109,8 +109,7 @@ class SASA : public SASABase {
      * @param space
      * @param target_indices absolute indicies of target particles in ParticleVector
      */
-    std::vector<SASABase::NeighboursData> calcNeighbourData(Space& spc,
-                                                            const std::vector<size_t>& target_indices) override;
+    std::vector<SASABase::Neighbours> calcNeighbourData(Space& spc, const std::vector<size_t>& target_indices) override;
 
     /**
      * @brief calculates neighbourData object of a target particle
@@ -118,7 +117,7 @@ class SASA : public SASABase {
      * @param space
      * @param target_index indicex of target particle in ParticleVector
      */
-    SASABase::NeighboursData calcNeighbourDataOfParticle(Space& spc, const size_t target_index) override;
+    SASABase::Neighbours calcNeighbourDataOfParticle(Space& spc, const size_t target_index) override;
 
     void update(Space& spc, const Change& change) override {}
 
@@ -133,11 +132,12 @@ class SASA : public SASABase {
 
 //!< TODO Figure out how to do it with just CellList_T template argument
 //!< TODO update function does perhaps unnecessary containsMember(Member&) checks
+//!< TODO finish proper test case
 template <typename CellList_T, typename CellCoord> class SASACellList : public SASABase {
 
   private:
     std::unique_ptr<CellList_T> cell_list; //!< pointer to cell list
-    double cell_size;                      //!< dimension of a single cell
+    double cell_length;                    //!< dimension of a single cell
     std::vector<CellCoord> cell_offsets;   //!< holds offsets which define a 3x3x3 cube around central cell
 
   public:
@@ -152,7 +152,7 @@ template <typename CellList_T, typename CellCoord> class SASACellList : public S
     virtual ~SASACellList() {}
 
     /**
-     * @brief constructs cell_list with appropriate cell_size and fills it with particles from space
+     * @brief constructs cell_list with appropriate cell_length and fills it with particles from space
      * @param space
      */
     void init(Space& spc) override {
@@ -171,12 +171,11 @@ template <typename CellList_T, typename CellCoord> class SASACellList : public S
                       [&](const Particle& particle) { radii.push_back(particle.traits().sigma * 0.5); });
         auto max_radius = ranges::max(radii);
 
-        cell_size = 2.0 * (max_radius + probe_radius);
-        cell_list = std::make_unique<CellList_T>(spc.geometry.getLength(), cell_size);
+        cell_length = 2.0 * (max_radius + probe_radius);
+        cell_list = std::make_unique<CellList_T>(spc.geometry.getLength(), cell_length);
 
-        for (auto& particle : spc.activeParticles()) {
+        for (const auto& particle : spc.activeParticles()) {
             const auto particle_index = indexOf(particle);
-            spc.geometry.boundary(particle.pos);
             cell_list->insertMember(particle_index, particle.pos + spc.geometry.getLength() / 2.);
         }
 
@@ -189,13 +188,13 @@ template <typename CellList_T, typename CellCoord> class SASACellList : public S
      * @param space
      * @param target_index indicex of target particle in ParticleVector
      */
-    SASABase::NeighboursData calcNeighbourDataOfParticle(Space& spc, const size_t target_index) override {
+    SASABase::Neighbours calcNeighbourDataOfParticle(Space& spc, const size_t target_index) override {
 
-        SASABase::NeighboursData neighbour_data;
+        SASABase::Neighbours neighbours;
 
         const auto& particle_i = spc.particles.at(target_index);
-        neighbour_data.index = target_index;
-        const auto sasa_radius_i = particle_i.traits().sigma * 0.5 + probe_radius;
+        neighbours.index = target_index;
+        const auto sasa_radius_i = radii[target_index] + probe_radius;
         const auto& center_cell = cell_list->getGrid().coordinatesAt(particle_i.pos + spc.geometry.getLength() / 2.);
 
         auto neighour_particles_at = [&](const CellCoord& offset) {
@@ -209,21 +208,20 @@ template <typename CellList_T, typename CellCoord> class SASACellList : public S
             for (const auto neighbour_particle_index : neighbour_particle_indices) {
 
                 const auto& particle_j = spc.particles.at(neighbour_particle_index);
-                const auto sasa_radius_j = particle_j.traits().sigma * 0.5 + probe_radius;
+                const auto sasa_radius_j = radii[neighbour_particle_index] + probe_radius;
                 const auto sq_cutoff = (sasa_radius_i + sasa_radius_j) * (sasa_radius_i + sasa_radius_j);
+
                 if (target_index != neighbour_particle_index &&
                     spc.geometry.sqdist(particle_i.pos, particle_j.pos) <= sq_cutoff) {
 
-                    Point d_r = particle_i.pos - particle_j.pos;
-                    spc.geometry.boundary(d_r);
-
-                    neighbour_data.neighbour_indices.push_back(neighbour_particle_index);
-                    neighbour_data.points.push_back(d_r);
+                    const auto dr = spc.geometry.vdist(particle_i.pos, particle_j.pos);
+                    neighbours.points.push_back(dr);
+                    neighbours.indices.push_back(neighbour_particle_index);
                 }
             }
         }
 
-        return neighbour_data;
+        return neighbours;
     }
 
     /**
@@ -232,18 +230,18 @@ template <typename CellList_T, typename CellCoord> class SASACellList : public S
      * @param space
      * @param target_indices absolute indicies of target particles in ParticleVector
      */
-    std::vector<SASABase::NeighboursData> calcNeighbourData(Space& spc,
-                                                            const std::vector<size_t>& target_indices) override {
+    std::vector<SASABase::Neighbours> calcNeighbourData(Space& spc,
+                                                        const std::vector<size_t>& target_indices) override {
 
         // O(N^2) search for neighbours
         const auto number_of_indices = target_indices.size();
-        std::vector<SASA::NeighboursData> neighbour_data(number_of_indices);
+        std::vector<SASA::Neighbours> neighbours(number_of_indices);
 
         for (size_t i = 0; i != number_of_indices; ++i) {
-            neighbour_data.at(i) = calcNeighbourDataOfParticle(spc, target_indices.at(i));
+            neighbours.at(i) = calcNeighbourDataOfParticle(spc, target_indices.at(i));
         }
 
-        return neighbour_data;
+        return neighbours;
     }
 
     /**
@@ -254,7 +252,7 @@ template <typename CellList_T, typename CellCoord> class SASACellList : public S
     void update(Space& spc, const Change& change) override {
 
         if (change.everything || change.volume_change) {
-            cell_list.reset(new CellList_T(spc.geometry.getLength(), cell_size));
+            cell_list.reset(new CellList_T(spc.geometry.getLength(), cell_length));
             for (const auto& particle : spc.activeParticles()) {
                 const auto particle_index = indexOf(particle);
                 cell_list->insertMember(particle_index, particle.pos + spc.geometry.getLength() / 2.);

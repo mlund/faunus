@@ -1,5 +1,6 @@
 
 #include "sasa.h"
+#include "space.h"
 #include <range/v3/view/zip.hpp>
 
 namespace Faunus {
@@ -37,7 +38,6 @@ SASA::Neighbours SASA::calcNeighbourDataOfParticle(Space& spc, const size_t targ
         const auto sq_cutoff = (sasa_radius_i + sasa_radius_j) * (sasa_radius_i + sasa_radius_j);
 
         if (target_index != neighbour_index && spc.geometry.sqdist(particle_i.pos, particle_j.pos) < sq_cutoff) {
-
             const auto dr = spc.geometry.vdist(particle_i.pos, particle_j.pos);
             neighbour.points.push_back(dr);
             neighbour.indices.push_back(neighbour_index);
@@ -63,21 +63,20 @@ std::vector<SASA::Neighbours> SASA::calcNeighbourData(Space& spc, const std::vec
 //!< then for each neighbour, calculate the overlaping part of circle_i with neighbouring circle_j and add these
 //!< arcs into vector, finally from this vector, calculate the exposed part of circle_i
 double SASA::calcSASAOfParticle(const SASA::Neighbours& neighbour) const {
-
-    const double particle_radius_i = radii[neighbour.index] + probe_radius;
+    const auto particle_radius_i = radii[neighbour.index] + probe_radius;
     double area(0.);
 
-    double slice_height = 2. * particle_radius_i / slices_per_atom;
-    double z = -particle_radius_i - 0.5 * slice_height;
+    auto slice_height = 2. * particle_radius_i / slices_per_atom;
+    auto z = -particle_radius_i - 0.5 * slice_height;
 
     for (int islice = 0; islice != slices_per_atom; ++islice) {
         z += slice_height;
-        const double sqrd_circle_radius_i = particle_radius_i * particle_radius_i - z * z;
+        const auto sqrd_circle_radius_i = particle_radius_i * particle_radius_i - z * z;
         if (sqrd_circle_radius_i < 0.) {
             continue;
         }
 
-        const double circle_radius_i = std::sqrt(sqrd_circle_radius_i);
+        const auto circle_radius_i = std::sqrt(sqrd_circle_radius_i);
         if (circle_radius_i <= 0.) {
             continue;
         } /* round-off errors */
@@ -85,13 +84,13 @@ double SASA::calcSASAOfParticle(const SASA::Neighbours& neighbour) const {
         std::vector<std::pair<double, double>> arcs;
         bool is_buried = false;
         for (const auto& [d_r, neighbour_index] : ranges::views::zip(neighbour.points, neighbour.indices)) {
-            const double particle_radius_j = radii[neighbour_index] + probe_radius;
-            const double z_distance = std::fabs(d_r.z() - z);
+            const auto particle_radius_j = radii[neighbour_index] + probe_radius;
+            const auto z_distance = std::fabs(d_r.z() - z);
 
             if (z_distance < particle_radius_j) {
-                const double sqrd_circle_radius_j = particle_radius_j * particle_radius_j - z_distance * z_distance;
-                const double circle_radius_j = std::sqrt(sqrd_circle_radius_j);
-                const double xy_distance = std::sqrt(d_r.x() * d_r.x() + d_r.y() * d_r.y());
+                const auto sqrd_circle_radius_j = particle_radius_j * particle_radius_j - z_distance * z_distance;
+                const auto circle_radius_j = std::sqrt(sqrd_circle_radius_j);
+                const auto xy_distance = std::sqrt(d_r.x() * d_r.x() + d_r.y() * d_r.y());
                 if (xy_distance >= circle_radius_i + circle_radius_j) { /* atoms aren't in contact */
                     continue;
                 }
@@ -103,13 +102,13 @@ double SASA::calcSASAOfParticle(const SASA::Neighbours& neighbour) const {
                     continue;
                 }
                 /* arc of circle i intersected by circle j */
-                double intersected_arc_halfsize =
+                auto intersected_arc_halfsize =
                     std::acos((sqrd_circle_radius_i + xy_distance * xy_distance - sqrd_circle_radius_j) /
                               (2.0 * circle_radius_i * xy_distance));
                 /* position of mid-point of intersection along circle i */
-                double intersection_midpoint_angle = std::atan2(d_r.y(), d_r.x()) + M_PI;
-                double beginning_arc_angle = intersection_midpoint_angle - intersected_arc_halfsize;
-                double end_arc_angle = intersection_midpoint_angle + intersected_arc_halfsize;
+                auto intersection_midpoint_angle = std::atan2(d_r.y(), d_r.x()) + M_PI;
+                auto beginning_arc_angle = intersection_midpoint_angle - intersected_arc_halfsize;
+                auto end_arc_angle = intersection_midpoint_angle + intersected_arc_halfsize;
                 if (beginning_arc_angle < 0) {
                     beginning_arc_angle += TWOPI;
                 }
@@ -119,10 +118,9 @@ double SASA::calcSASAOfParticle(const SASA::Neighbours& neighbour) const {
                 /* store the arc, if arc passes 2*PI split into two */
                 if (end_arc_angle < beginning_arc_angle) {
                     /* store arcs as pairs of angles */
-                    arcs.insert(arcs.end(),
-                                {std::make_pair(0.0, end_arc_angle), std::make_pair(beginning_arc_angle, TWOPI)});
+                    arcs.insert(arcs.end(), {{0.0, end_arc_angle}, {beginning_arc_angle, TWOPI}});
                 } else {
-                    arcs.insert(arcs.end(), std::make_pair(beginning_arc_angle, end_arc_angle));
+                    arcs.insert(arcs.end(), {beginning_arc_angle, end_arc_angle});
                 }
             }
         }
@@ -134,29 +132,35 @@ double SASA::calcSASAOfParticle(const SASA::Neighbours& neighbour) const {
 }
 
 double SASA::exposedArcLength(std::vector<std::pair<double, double>>& arcs) const {
-
     if (arcs.empty()) {
         return TWOPI;
     }
 
-    auto sortByFirst = [](const std::pair<double, double>& a, const std::pair<double, double>& b) {
-        return a.first < b.first;
-    };
-    std::sort(arcs.begin(), arcs.end(), sortByFirst);
+    std::sort(arcs.begin(), arcs.end(), [](auto& a, auto& b) { return a.first < b.first; });
 
-    double total_arc_angle = arcs[0].first;
-    double end_arc_angle = arcs[0].second;
+    auto total_arc_angle = arcs[0].first;
+    auto end_arc_angle = arcs[0].second;
 
-    for (size_t i = 1; i < arcs.size(); ++i) {
-        if (end_arc_angle < arcs[i].first) {
-            total_arc_angle += arcs[i].first - end_arc_angle;
+    std::for_each(arcs.begin()+1, arcs.end(), [&](const auto &arc){
+        if (end_arc_angle < arc.first) {
+            total_arc_angle += arc.first - end_arc_angle;
         }
-        if (arcs[i].second > end_arc_angle) {
-            end_arc_angle = arcs[i].second;
+        if (arc.second > end_arc_angle) {
+            end_arc_angle = arc.second;
         }
-    }
+    });
     return total_arc_angle + TWOPI - end_arc_angle;
 }
+const std::vector<double>& SASA::getAreas() const { return areas; }
+
+SASA::SASA(Space& spc, double probe_radius, int slices_per_atom)
+    : probe_radius(probe_radius), slices_per_atom(slices_per_atom),
+      first_particle(std::addressof(spc.particles.at(0U))) {}
+
+SASA::SASA(const json& j, Space& spc) : SASA(spc, j.value("radius", 1.4) * 1.0_angstrom, j.value("slices", 20)) {}
+
+void SASA::update([[maybe_unused]] Space& spc, [[maybe_unused]] const Change& change) {}
+
 TEST_CASE("[Faunus] SASAPBC") {
     using doctest::Approx;
     Change change; // change object telling that a full energy calculation

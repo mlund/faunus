@@ -3,15 +3,15 @@
 #ifndef FAUNUS_SASA_H
 #define FAUNUS_SASA_H
 
-#include "space.h"
-#include "celllistimpl.h"
-#include <range/v3/view/iota.hpp>
-#include <unordered_set>
+#include "atomdata.h"
+#include "particle.h"
 
 namespace Faunus {
 
-class SASA {
+class Space;
+struct Change;
 
+class SASA {
   protected:
     using Index = AtomData::index_type;
 
@@ -34,7 +34,9 @@ class SASA {
      * @brief returns absolute index of particle in ParticleVector
      * @param particle
      */
-    size_t indexOf(const Particle& particle) { return static_cast<size_t>(std::addressof(particle) - first_particle); }
+    inline size_t indexOf(const Particle& particle) {
+        return static_cast<size_t>(std::addressof(particle) - first_particle);
+    }
 
     /**
      * @brief Calcuates SASA of a single particle defined by NeighbourData object
@@ -78,19 +80,18 @@ class SASA {
      */
     SASA::Neighbours calcNeighbourDataOfParticle(Space& spc, const size_t target_index);
 
-    void update(Space& spc, const Change& change) {}
+    void update([[maybe_unused]] Space& spc, [[maybe_unused]] const Change& change);
 
-    const std::vector<double>& getAreas() const { return areas; }
+    const std::vector<double>& getAreas() const;
 
     /**
      * @param spc
      * @param probe_radius in angstrom
      * @param slices_per_atom number of slices of each sphere in sasa calculations
      */
-    SASA(Space& spc, double probe_radius, int slices_per_atom)
-        : probe_radius(probe_radius), slices_per_atom(slices_per_atom),
-          first_particle(std::addressof(spc.particles.at(0U))) {}
-    SASA(const json& j, Space& spc) : SASA(spc, j.value("radius", 1.4) * 1.0_angstrom, j.value("slices", 20)) {}
+    SASA(Space& spc, double probe_radius, int slices_per_atom);
+
+    SASA(const json& j, Space& spc);
 
 };
 

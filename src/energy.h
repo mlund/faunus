@@ -1561,7 +1561,6 @@ class FreeSASAEnergy : public Energybase {
         const auto number_of_particles = std::distance(begin, end);
         positions.clear();
         positions.reserve(3 * number_of_particles);
-        const auto& positions_faunus = spc.positions();
         for (const auto& particle : spc.activeParticles()) {
             const auto* xyz = particle.pos.data();
             positions.insert(positions.end(), xyz, xyz + 3);

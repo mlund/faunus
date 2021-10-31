@@ -73,6 +73,12 @@ template <class T> class ElasticRange : public IterRange<typename std::vector<T>
                   Titer neworigin); //!< Shift all iterators to new underlying container; useful when resizing vectors
     bool isFull() const { return end() == trueend(); }
     auto numInactive() const; //!< Number of inactive elements
+    //!< Determines if the given number (positive or negative) of particles can be inserted or deleted
+
+    inline bool resizeIsPossible(int number_to_insert_or_delete) const {
+        auto new_size = static_cast<int>(size()) + number_to_insert_or_delete;
+        return (new_size >= 0 && new_size <= capacity());
+    }
 };
 
 template <class T>

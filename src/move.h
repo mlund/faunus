@@ -453,12 +453,13 @@ NLOHMANN_JSON_SERIALIZE_ENUM(PartnerPolicy, {{PartnerPolicy::INVALID, nullptr}, 
 
 /** Base class for finding MPI partners */
 class FindMPIPartner {
+  protected:
+    static bool goodPartner(const MPI::MPIController& mpi, int partner); //!< Determines if current partner is valid
   public:
     const PartnerPolicy policy;
-    int partner_rank_number = -1;
-    virtual bool findPartner(const MPI::MPIController& mpi, Random& random) = 0; //!< Finds and sets MPI partner
-    bool goodPartner(const MPI::MPIController& mpi) const; //!< Determines if current partner is valid
-    std::string id(const MPI::MPIController& mpi) const;   //!< Generates a string id for the two partners
+    std::optional<int> partner_rank = std::nullopt; //!< Rank of partner MPI process if available
+    virtual bool setPartner(const MPI::MPIController& mpi, Random& random) = 0; //!< Sets MPI partner
+    std::pair<int, int> partnerPair(const MPI::MPIController& mpi) const; //!< Get ordered pair of current partners
     FindMPIPartner(PartnerPolicy policy);
     virtual ~FindMPIPartner() = default;
 };
@@ -469,7 +470,7 @@ class FindMPIPartner {
 class OddEvenPartner : public FindMPIPartner {
   public:
     OddEvenPartner();
-    bool findPartner(const MPI::MPIController& mpi, Random& random) override;
+    bool setPartner(const MPI::MPIController& mpi, Random& random) override;
 };
 
 /**
@@ -494,12 +495,12 @@ class ParallelTempering : public MoveBase {
   private:
     std::unique_ptr<FindMPIPartner> partner;                                          //!< Policy for finding partners
     Geometry::VolumeMethod volume_scaling_method = Geometry::VolumeMethod::ISOTROPIC; //!< How to scale volumes
-    double very_small_volume = 1e-9;
-    MPI::MPIController &mpi;
+    const double very_small_volume = 1e-9;
+    MPI::MPIController& mpi;
     std::unique_ptr<ParticleVector> partner_particles;
     Random random;
     enum extradata { VOLUME = 0 }; //!< Structure of extra data to send
-    std::map<std::string, Average<double>> acceptance_map;
+    std::map<std::pair<int, int>, Average<double>> acceptance_map;
 
     MPI::FloatTransmitter float_transmitter;                       //!< Class for transmitting floats over MPI
     MPI::ParticleTransmitter<ParticleVector> particle_transmitter; //!< Class for transmitting particles over MPI

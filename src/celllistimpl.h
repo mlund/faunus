@@ -8,7 +8,6 @@
  * @date 2020-02-01
  */
 
-#include "space.h"
 #include <vector>
 #include <set>
 #include <map>
@@ -776,6 +775,10 @@ template <class TBase> class CellListReverseMap : public TBase {
         this->update(member, this->index(new_cell_coordinates));
     }
 
+    /**
+     * @brief returns true if member is present in the cell list false if not
+     * @param member
+     */
     bool containsMember(const Member& member) {
         if (member2cell.count(member) == 0) {
             return false;

@@ -515,9 +515,12 @@ template <typename PairEnergy> class DelayedEnergyAccumulator : public EnergyAcc
     double accumulateOpenMP() const {
         double sum = 0.0;
 #pragma omp parallel for reduction(+ : sum)
-        for (const auto& pair : particle_pairs) {
-            sum += pair_energy.potential(pair.first.get(), pair.second.get());
+        for (auto pair = particle_pairs.begin(); pair < particle_pairs.end(); ++pair) {
+            sum += pair_energy.potential(pair->first.get(), pair->second.get());
         }
+        /*for (const auto& pair : particle_pairs) {
+            sum += pair_energy.potential(pair.first.get(), pair.second.get());
+        }*/
         return sum;
     }
 };
@@ -1561,7 +1564,6 @@ class FreeSASAEnergy : public Energybase {
         const auto number_of_particles = std::distance(begin, end);
         positions.clear();
         positions.reserve(3 * number_of_particles);
-        const auto& positions_faunus = spc.positions();
         for (const auto& particle : spc.activeParticles()) {
             const auto* xyz = particle.pos.data();
             positions.insert(positions.end(), xyz, xyz + 3);

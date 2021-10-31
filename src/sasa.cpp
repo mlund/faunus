@@ -59,6 +59,9 @@ std::vector<SASA::Neighbours> SASA::calcNeighbourData(Space& spc, const std::vec
     return neighbour;
 }
 
+SASA::SASA(Space& spc, double probe_radius, int slices_per_atom) : SASABase(spc, probe_radius, slices_per_atom) {}
+SASA::SASA(const json& j, Space& spc) : SASABase(spc, j.value("radius", 1.4) * 1.0_angstrom, j.value("slices", 20)) {}
+
 //!< slices a sphere in z-direction, for each slice, radius of circle_i in the corresponding z-plane is calculated
 //!< then for each neighbour, calculate the overlaping part of circle_i with neighbouring circle_j and add these
 //!< arcs into vector, finally from this vector, calculate the exposed part of circle_i
@@ -157,6 +160,11 @@ double SASABase::exposedArcLength(std::vector<std::pair<double, double>>& arcs) 
     }
     return total_arc_angle + TWOPI - end_arc_angle;
 }
+
+SASABase::SASABase(Space& spc, double probe_radius, int slices_per_atom)
+    : probe_radius(probe_radius), slices_per_atom(slices_per_atom),
+      first_particle(std::addressof(spc.particles.at(0U))) {}
+
 TEST_CASE("[Faunus] SASAPBC") {
     using doctest::Approx;
     Change change; // change object telling that a full energy calculation

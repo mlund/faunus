@@ -1215,13 +1215,11 @@ SASAEnergyBase::SASAEnergyBase(Space& spc, double cosolute_molarity, double prob
     case 3: // PBC in all directions
         using PeriodicCellList =
             CellList::CellListSpatial<CellList::CellListType<size_t, CellList::Grid::Grid3DPeriodic>>;
-        using CellCoord = CellList::GridOf<PeriodicCellList>::CellCoord;
-        sasa = std::make_unique<SASACellList<PeriodicCellList, CellCoord>>(spc, probe_radius, slices_per_atom);
+        sasa = std::make_unique<SASACellList<PeriodicCellList>>(spc, probe_radius, slices_per_atom);
         break;
     case 0:
         using FixedCellList = CellList::CellListSpatial<CellList::CellListType<size_t, CellList::Grid::Grid3DFixed>>;
-        using CellCoord = CellList::GridOf<FixedCellList>::CellCoord;
-        sasa = std::make_unique<SASACellList<FixedCellList, CellCoord>>(spc, probe_radius, slices_per_atom);
+        sasa = std::make_unique<SASACellList<FixedCellList>>(spc, probe_radius, slices_per_atom);
         break;
     default:
         sasa = std::make_unique<SASA>(spc, probe_radius, slices_per_atom);
@@ -1263,8 +1261,9 @@ void SASAEnergy::init() {
 double SASAEnergyBase::energy(Change& change) {
 
     double energy = 0.;
-    sasa->update(spc, change);
-
+    if (state != MonteCarloState::ACCEPTED) {
+        sasa->update(spc, change);
+    }
     const auto& particles = spc.activeParticles();
 
     std::vector<size_t> target_indices;
@@ -1361,7 +1360,10 @@ double SASAEnergy::energy(Change& change) {
 
     double energy(0.);
 
-    sasa->update(spc, change);
+    //! update not needed when the state is already accepted
+    if (state != MonteCarloState::ACCEPTED) {
+        sasa->update(spc, change);
+    }
 
     std::vector<size_t> target_indices;
     if (!change.everything) {

@@ -814,7 +814,7 @@ template <class TBase> class CellListReverseMap : public TBase {
 
   private:
     // TODO as a vector because size of Particle vector is constant
-    std::map<Member, CellIndex> member2cell; //!< mapping from a member to its cell
+    std::unordered_map<Member, CellIndex> member2cell; //!< mapping from a member to its cell
 };
 
 /**

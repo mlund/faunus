@@ -148,6 +148,9 @@ if (ENABLE_TBB)
     endif ()
 endif ()
 
+add_definitions(-D_GLIBCXX_USE_C99_MATH=1)
+add_definitions(-D_GLIBCXX_USE_TBB_PAR_BACKEND=0)
+
 ############
 # NANOBENCH
 ############

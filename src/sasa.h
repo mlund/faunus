@@ -13,13 +13,13 @@ struct Change;
 
 class SASA {
   protected:
-    using Index = AtomData::index_type;
+    using AtomIndex = AtomData::index_type;
 
   public:
     struct Neighbours {
-        std::vector<size_t> indices; //!< indices of neighbouring particles in ParticleVector
+        std::vector<AtomIndex> indices; //!< indices of neighbouring particles in ParticleVector
         PointVector points;          //!< vectors to neighbouring particles
-        Index index;                 //!< index of particle which corresponds to the object
+        AtomIndex index;             //!< index of particle which corresponds to the object
     };
 
   protected:
@@ -34,8 +34,8 @@ class SASA {
      * @brief returns absolute index of particle in ParticleVector
      * @param particle
      */
-    inline size_t indexOf(const Particle& particle) {
-        return static_cast<size_t>(std::addressof(particle) - first_particle);
+    inline AtomIndex indexOf(const Particle& particle) {
+        return static_cast<AtomIndex>(std::addressof(particle) - first_particle);
     }
 
     /**
@@ -58,11 +58,11 @@ class SASA {
      * @param radii of the particles in the ParticleVector
      * @param target_indices absolute indicies of target particles in ParticleVector
      */
-    void updateSASA(const std::vector<SASA::Neighbours>& neighbours_data, const std::vector<size_t>& target_indices);
+    void updateSASA(const std::vector<SASA::Neighbours>& neighbours_data, const std::vector<AtomIndex>& target_indices);
 
     /**
      * @brief resizes areas buffer to size of ParticleVector
-     * @param space
+     * @param particles from full ParticleVector
      */
     void init(ParticleVector& particles);
 
@@ -71,14 +71,14 @@ class SASA {
      * @param space
      * @param target_indices absolute indicies of target particles in ParticleVector
      */
-    std::vector<SASA::Neighbours> calcNeighbourData(Space& spc, const std::vector<size_t>& target_indices);
+    std::vector<SASA::Neighbours> calcNeighbourData(Space& spc, const std::vector<AtomIndex>& target_indices);
 
     /**
      * @brief calculates neighbourData object of a target particle specified by target indiex in ParticleVector
      * @param space
      * @param target_index indicex of target particle in ParticleVector
      */
-    SASA::Neighbours calcNeighbourDataOfParticle(Space& spc, const size_t target_index);
+    SASA::Neighbours calcNeighbourDataOfParticle(Space& spc, const AtomIndex target_index);
 
     void update([[maybe_unused]] Space& spc, [[maybe_unused]] const Change& change);
 

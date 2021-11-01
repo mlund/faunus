@@ -5,7 +5,7 @@
 
 namespace Faunus {
 
-void SASA::updateSASA(const std::vector<SASA::Neighbours>& neighbours, const std::vector<size_t>& target_indices) {
+void SASA::updateSASA(const std::vector<SASA::Neighbours>& neighbours, const std::vector<AtomIndex>& target_indices) {
 
     // here is a potential place for parallelization?
     // #pragma OMP parallel num_threads(2)
@@ -23,7 +23,7 @@ void SASA::init(ParticleVector& particles) {
     areas.resize(particles.size());
 }
 
-SASA::Neighbours SASA::calcNeighbourDataOfParticle(Space& spc, const size_t target_index) {
+SASA::Neighbours SASA::calcNeighbourDataOfParticle(Space& spc, const AtomIndex target_index) {
 
     // O(N^2) search for neighbours
     SASA::Neighbours neighbour;
@@ -46,7 +46,7 @@ SASA::Neighbours SASA::calcNeighbourDataOfParticle(Space& spc, const size_t targ
     return neighbour;
 }
 
-std::vector<SASA::Neighbours> SASA::calcNeighbourData(Space& spc, const std::vector<size_t>& target_indices) {
+std::vector<SASA::Neighbours> SASA::calcNeighbourData(Space& spc, const std::vector<AtomIndex>& target_indices) {
 
     // O(N^2) search for neighbours ... will be done using Cell-Lists
     const auto number_of_indices = target_indices.size();

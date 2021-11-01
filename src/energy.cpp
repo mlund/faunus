@@ -1209,12 +1209,11 @@ TEST_CASE("[Faunus] FreeSASA") {
 SASAEnergyBase::SASAEnergyBase(Space& spc, double cosolute_molarity, double probe_radius, int slices_per_atom)
     : spc(spc), cosolute_molarity(cosolute_molarity) {
 
+    using namespace SASA;
     const auto periodic_dimensions =
         spc.geometry.asSimpleGeometry()->boundary_conditions.isPeriodic().cast<int>().sum();
     switch (periodic_dimensions) {
     case 3: // PBC in all directions
-        using PeriodicCellList =
-            CellList::CellListSpatial<CellList::CellListType<size_t, CellList::Grid::Grid3DPeriodic>>;
         sasa = std::make_unique<SASACellList<PeriodicCellList>>(spc, probe_radius, slices_per_atom);
         break;
     case 0:
@@ -1222,7 +1221,7 @@ SASAEnergyBase::SASAEnergyBase(Space& spc, double cosolute_molarity, double prob
         sasa = std::make_unique<SASACellList<FixedCellList>>(spc, probe_radius, slices_per_atom);
         break;
     default:
-        sasa = std::make_unique<SASA>(spc, probe_radius, slices_per_atom);
+        sasa = std::make_unique<SASA::SASA>(spc, probe_radius, slices_per_atom);
         faunus_logger->info("CellList neighbour search not available yet for current geometry");
         break;
     }
@@ -1253,7 +1252,6 @@ void SASAEnergyBase::init() {
 }
 
 void SASAEnergy::init() {
-    sasa->init(spc);
     areas.resize(spc.particles.size(), 0.);
     current_neighbours.resize(spc.particles.size());
 }
@@ -1306,7 +1304,7 @@ void SASAEnergyBase::to_json(json& j) const {
     roundJSON(j, 6); // set json output precision
 }
 
-std::vector<size_t> SASAEnergy::findTargetIndices(Change& change) {
+std::vector<size_t> SASAEnergy::findChangedIndices(Change& change) {
 
     //!< if the state is ACCEPTED there is no need to recalculate SASAs so return empty target_indices
     if (state == MonteCarloState::ACCEPTED) {
@@ -1367,7 +1365,7 @@ double SASAEnergy::energy(Change& change) {
 
     std::vector<size_t> target_indices;
     if (!change.everything) {
-        target_indices = findTargetIndices(change);
+        target_indices = findChangedIndices(change);
     } else { // all the active particles will be used for SASA calculation
         for (const auto& particle : spc.activeParticles()) {
             const auto particle_index = indexOf(particle);

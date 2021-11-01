@@ -515,9 +515,12 @@ template <typename PairEnergy> class DelayedEnergyAccumulator : public EnergyAcc
     double accumulateOpenMP() const {
         double sum = 0.0;
 #pragma omp parallel for reduction(+ : sum)
-        for (const auto& pair : particle_pairs) {
-            sum += pair_energy.potential(pair.first.get(), pair.second.get());
+        for (auto pair = particle_pairs.begin(); pair < particle_pairs.end(); ++pair) {
+            sum += pair_energy.potential(pair->first.get(), pair->second.get());
         }
+        /*for (const auto& pair : particle_pairs) {
+            sum += pair_energy.potential(pair.first.get(), pair.second.get());
+        }*/
         return sum;
     }
 };
@@ -1586,7 +1589,7 @@ class SASAEnergyBase : public Energybase {
     std::vector<double> areas; //!< Target buffer for calculated surface areas
     Space& spc;
     double cosolute_molarity;       //!< co-solute concentration (mol/l)
-    std::unique_ptr<SASABase> sasa; //!< performs neighbour searching and subsequent sasa calculation
+    std::unique_ptr<SASA::SASABase> sasa; //!< performs neighbour searching and subsequent sasa calculation
     Average<double> mean_surface_area;
 
   private:
@@ -1631,7 +1634,7 @@ class SASAEnergy : public SASAEnergyBase {
      * @brief Finds absolute indices of particles whose SASA has changed
      * @param change Change object
      */
-    std::vector<size_t> findTargetIndices(Change& change);
+    std::vector<size_t> findChangedIndices(Change& change);
 
   public:
     /**

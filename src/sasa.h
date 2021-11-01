@@ -9,17 +9,17 @@
 #include <unordered_set>
 
 namespace Faunus {
+namespace SASA {
 
 class SASABase {
 
-  protected:
-    using Index = AtomData::index_type;
-
   public:
+    using AtomIndex = AtomData::index_type;
+
     struct Neighbours {
-        std::vector<size_t> indices;        //!< indices of neighbouring particles in ParticleVector
-        PointVector points;                 //!< vectors to neighbouring particles
-        Index index;                        //!< index of particle which corresponds to the object
+        std::vector<size_t> indices; //!< indices of neighbouring particles in ParticleVector
+        PointVector points;          //!< vectors to neighbouring particles
+        AtomIndex index;             //!< index of particle whose neighbours are in indices
     };
 
   protected:
@@ -82,7 +82,7 @@ class SASABase {
 
     virtual void update(Space& spc, const Change& change) = 0;
 
-    const std::vector<double>& getAreas() const { return areas; }
+    const std::vector<double>& getAreas() const;
 
     /**
      * @param spc
@@ -117,8 +117,7 @@ class SASA : public SASABase {
      */
     SASABase::Neighbours calcNeighbourDataOfParticle(Space& spc, const size_t target_index) override;
 
-    void update(Space& spc, const Change& change) override {}
-
+    void update([[maybe_unused]] Space& spc, [[maybe_unused]] const Change& change);
     /**
      * @param spc
      * @param probe_radius in angstrom
@@ -188,155 +187,17 @@ template <typename CellList_T> class SASACellList : public SASABase {
     /**
      * @brief updates cell_list when particles got activated or desactivated
      * @param space
+     * @param change
      */
     void updateMatterChange(Space& spc, const Change& change);
 };
 
-template <typename CellList_T>
-SASACellList<CellList_T>::SASACellList(Space& spc, double probe_radius, int slices_per_atom)
-    : SASABase(spc, probe_radius, slices_per_atom) {}
+using PeriodicCellList = CellList::CellListSpatial<CellList::CellListType<size_t, CellList::Grid::Grid3DPeriodic>>;
+using FixedCellList = CellList::CellListSpatial<CellList::CellListType<size_t, CellList::Grid::Grid3DFixed>>;
+extern template class SASACellList<PeriodicCellList>;
+extern template class SASACellList<FixedCellList>;
 
-template <typename CellList_T>
-SASACellList<CellList_T>::SASACellList(const json& j, Space& spc)
-    : SASABase(spc, j.value("radius", 1.4) * 1.0_angstrom, j.value("slices", 20)) {}
-
-template <typename CellList_T> void SASACellList<CellList_T>::init(Space& spc) {
-
-    cell_offsets.clear();
-    for (auto i = -1; i <= 1; ++i) {
-        for (auto j = -1; j <= 1; ++j) {
-            for (auto k = -1; k <= 1; ++k) {
-                cell_offsets.push_back(CellCoord(i, j, k));
-            }
-        }
-    }
-
-    radii.clear();
-    std::for_each(spc.particles.begin(), spc.particles.end(),
-                  [&](const Particle& particle) { radii.push_back(particle.traits().sigma * 0.5); });
-    auto max_radius = ranges::max(radii);
-
-    cell_length = 2.0 * (max_radius + probe_radius);
-    createCellList(spc);
-
-    areas.resize(spc.particles.size(), 0.);
-}
-
-template <typename CellList_T>
-SASABase::Neighbours SASACellList<CellList_T>::calcNeighbourDataOfParticle(Space& spc, const size_t target_index) {
-
-    SASABase::Neighbours neighbours;
-
-    const auto& particle_i = spc.particles.at(target_index);
-    neighbours.index = target_index;
-    const auto sasa_radius_i = radii[target_index] + probe_radius;
-    const auto& center_cell = cell_list->getGrid().coordinatesAt(particle_i.pos + spc.geometry.getLength() / 2.);
-
-    auto neighour_particles_at = [&](const CellCoord& offset) {
-        return cell_list->getNeighborMembers(center_cell, offset);
-    };
-
-    for (const auto& cell_offset : cell_offsets) {
-
-        const auto& neighbour_particle_indices = neighour_particles_at(cell_offset);
-
-        for (const auto neighbour_particle_index : neighbour_particle_indices) {
-
-            const auto& particle_j = spc.particles.at(neighbour_particle_index);
-            const auto sasa_radius_j = radii[neighbour_particle_index] + probe_radius;
-            const auto sq_cutoff = (sasa_radius_i + sasa_radius_j) * (sasa_radius_i + sasa_radius_j);
-
-            if (target_index != neighbour_particle_index &&
-                spc.geometry.sqdist(particle_i.pos, particle_j.pos) <= sq_cutoff) {
-
-                const auto dr = spc.geometry.vdist(particle_i.pos, particle_j.pos);
-                neighbours.points.push_back(dr);
-                neighbours.indices.push_back(neighbour_particle_index);
-            }
-        }
-    }
-
-    return neighbours;
-}
-
-template <typename CellList_T>
-std::vector<SASABase::Neighbours>
-SASACellList<CellList_T>::calcNeighbourData(Space& spc, const std::vector<size_t>& target_indices) {
-
-    const auto number_of_indices = target_indices.size();
-    std::vector<SASA::Neighbours> neighbours(number_of_indices);
-
-    for (size_t i = 0; i != number_of_indices; ++i) {
-        neighbours.at(i) = calcNeighbourDataOfParticle(spc, target_indices.at(i));
-    }
-
-    return neighbours;
-}
-template <typename CellList_T> void SASACellList<CellList_T>::update(Space& spc, const Change& change) {
-
-    if (change.everything || change.volume_change) {
-        createCellList(spc);
-    } else if (change.matter_change) {
-        updateMatterChange(spc, change);
-    } else {
-        for (const auto& group_change : change.groups) {
-            const auto& group = spc.groups.at(group_change.group_index);
-            const auto offset = spc.getFirstParticleIndex(group);
-            if (group_change.relative_atom_indices.empty()) {
-                const auto changed_atom_indices = ranges::cpp20::views::iota(offset, offset + group.size());
-                for (const auto changed_index : changed_atom_indices) {
-                    cell_list->updateMemberAt(changed_index,
-                                              spc.particles.at(changed_index).pos + spc.geometry.getLength() / 2.);
-                }
-            } else {
-                const auto changed_atom_indices =
-                    group_change.relative_atom_indices |
-                    ranges::cpp20::views::transform([offset](auto i) { return i + offset; });
-                for (const auto changed_index : changed_atom_indices) {
-                    cell_list->updateMemberAt(changed_index,
-                                              spc.particles.at(changed_index).pos + spc.geometry.getLength() / 2.);
-                }
-            }
-        }
-    }
-}
-
-template <typename CellList_T> void SASACellList<CellList_T>::createCellList(Space& spc) {
-
-    cell_list = std::make_unique<CellList_T>(spc.geometry.getLength(), cell_length);
-    for (const auto& particle : spc.activeParticles()) {
-        const auto particle_index = indexOf(particle);
-        cell_list->insertMember(particle_index, particle.pos + spc.geometry.getLength() / 2.);
-    }
-}
-
-template <typename CellList_T> void SASACellList<CellList_T>::updateMatterChange(Space& spc, const Change& change) {
-    const auto is_active = getGroupFilter<Group::Selectors::ACTIVE>();
-    for (const auto& group_change : change.groups) {
-        const auto& group = spc.groups.at(group_change.group_index);
-        const auto offset = spc.getFirstParticleIndex(group);
-        if (is_active(group)) { // if the group is active, there is at least one active particle in it
-            for (const auto relative_index : group_change.relative_atom_indices) {
-                const auto absolute_index = relative_index + offset;
-                if (relative_index > std::distance(group.begin(), group.end()) &&
-                    cell_list->containsMember(absolute_index)) { // if index lies behind last active index
-                    assert(cell_list->containsMember(absolute_index));
-                    cell_list->removeMember(absolute_index);
-                } else if (!cell_list->containsMember(absolute_index)) {
-                    cell_list->insertMember(absolute_index,
-                                            spc.particles.at(absolute_index).pos + spc.geometry.getLength() / 2.);
-                }
-            }
-        } else { // if everything in the group is inactive remove all members
-            for (auto relative_index : group_change.relative_atom_indices) {
-                const auto absolute_index = relative_index + offset;
-                if (cell_list->containsMember(absolute_index)) {
-                    cell_list->removeMember(absolute_index);
-                }
-            }
-        }
-    }
-}
+} // namespace SASA
 
 } // namespace Faunus
 

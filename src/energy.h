@@ -2,6 +2,7 @@
 
 #include "bonds.h"
 #include "externalpotential.h" // Energybase implemented here
+#include "sasa.h"
 #include "space.h"
 #include "aux/iteratorsupport.h"
 #include "aux/pairmatrix.h"
@@ -333,9 +334,8 @@ double Bonded::sum_energy(const Bonded::BondVector& bonds, const Indices& partic
  */
 template <typename TSize, typename TSet> inline auto indexComplement(const TSize size, const TSet &set) {
     assert(size <= std::numeric_limits<int>::max());
-    return ranges::views::ints(0, static_cast<int>(size)) | ranges::views::remove_if([&set](TSize i) {
-      return std::binary_search(set.begin(), set.end(), i);
-    });
+    return ranges::views::ints(0, static_cast<int>(size)) |
+           ranges::views::remove_if([&set](TSize i) { return std::binary_search(set.begin(), set.end(), i); });
 }
 
 /**
@@ -1149,10 +1149,10 @@ class GroupPairingPolicy {
     void all(TAccumulator &pair_accumulator, TCondition condition) {
         for (auto group_it = spc.groups.begin(); group_it < spc.groups.end(); ++group_it) {
             if (condition(*group_it)) {
-                 groupInternal(pair_accumulator, *group_it);
+                groupInternal(pair_accumulator, *group_it);
             }
             for (auto other_group_it = std::next(group_it); other_group_it < spc.groups.end(); other_group_it++) {
-                 group2group(pair_accumulator, *group_it, *other_group_it);
+                group2group(pair_accumulator, *group_it, *other_group_it);
             }
         }
     }
@@ -1519,14 +1519,14 @@ class NonbondedCached : public Nonbonded<TPairEnergy, TPairingPolicy> {
  * @todo - Implement partial evaluation refelcting `change` object
  *       - Average volume currently mixes accepted/rejected states
  */
-class SASAEnergy : public Energybase {
+class FreeSASAEnergy : public Energybase {
   private:
     std::vector<double> positions; //!< Flattened position buffer for all particles
     std::vector<double> radii;     //!< Radii buffer for all particles
     std::vector<double> sasa;      //!< Target buffer for calculated surface areas
 
     const Space& spc;
-    double cosolute_concentration;                       //!< co-solute concentration (mol/l)
+    double cosolute_molarity;                            //!< co-solute concentration (mol/l)
     std::unique_ptr<freesasa_parameters_fwd> parameters; //!< Parameters for freesasa
     Average<double> mean_surface_area;
 
@@ -1556,26 +1556,94 @@ class SASAEnergy : public Energybase {
      * @param end Iterator to beyond last particle
      * @param change Change object (currently unused)
      */
-    template <typename Tbegin, typename Tend>
-    void updatePositions(Tbegin begin, Tend end, [[maybe_unused]] const Change& change) {
-        using namespace ranges::cpp20;
-        auto coordinates = subrange<Tbegin, Tend>(begin, end) | views::transform(&Particle::pos) |
-                           views::join;                  // flatten particles -> x1,y1,z1,...,xn,yn,zn
-        positions.resize(3 * std::distance(begin, end)); // resize for 3N coordinates
-        std::copy(coordinates.begin(), coordinates.end(), positions.begin());
+    template <typename Tfirst, typename Tend>
+    void updatePositions(Tfirst begin, Tend end, [[maybe_unused]] const Change& change) {
+        const auto number_of_particles = std::distance(begin, end);
+        positions.clear();
+        positions.reserve(3 * number_of_particles);
+        for (const auto& particle : spc.activeParticles()) {
+            const auto* xyz = particle.pos.data();
+            positions.insert(positions.end(), xyz, xyz + 3);
+        }
     }
 
   public:
     /**
      * @param spc
-     * @param cosolute_concentration in particles per angstrom cubed
+     * @param cosolute_molarity in particles per angstrom cubed
      * @param probe_radius in angstrom
      */
-    SASAEnergy(const Space& spc, double cosolute_concentration = 0.0, double probe_radius = 1.4);
-    SASAEnergy(const json& j, const Space& spc);
+    FreeSASAEnergy(const Space& spc, double cosolute_molarity = 0.0, double probe_radius = 1.4);
+    FreeSASAEnergy(const json& j, const Space& spc);
     double energy(Change& change) override;
+    const std::vector<double>& getAreas() const { return sasa; }
 }; //!< SASA energy from transfer free energies
 #endif
+
+class SASAEnergyBase : public Energybase {
+
+  protected:
+    std::vector<double> areas; //!< Target buffer for calculated surface areas
+    Space& spc;
+    double cosolute_molarity; //!< co-solute concentration (mol/l)
+    SASA sasa;                //!< performs neighbour searching and subsequent sasa calculation
+    Average<double> mean_surface_area;
+
+  private:
+    void to_json(json& j) const override;
+    void sync(Energybase* energybase_ptr, const Change& change) override;
+    void init() override;
+
+  protected:
+    /**
+     * @brief returns absolute index of particle in ParticleVector
+     * @param particle
+     */
+    size_t indexOf(const Particle& particle) {
+        return static_cast<size_t>(std::addressof(particle) - std::addressof(spc.particles.at(0U)));
+    }
+
+  public:
+    /**
+     * @param spc
+     * @param cosolute_molarity in particles per angstrom cubed
+     * @param probe_radius in angstrom
+     * @param slices_per_atom number of slices of spheres in SASA calculation
+     */
+    SASAEnergyBase(Space& spc, double cosolute_molarity = 0.0, double probe_radius = 1.4, int slices_per_atom = 20);
+    SASAEnergyBase(const json& j, Space& spc);
+    const std::vector<double>& getAreas() const { return areas; }
+    double energy(Change& change) override;
+
+}; //!< SASA energy from transfer free energies with SASA calculation each step
+
+class SASAEnergy : public SASAEnergyBase {
+
+  private:
+    std::vector<std::vector<size_t>>
+        current_neighbours; //!< holds cached neighbour indices for each particle in ParticleVector
+
+    void to_json(json& j) const override;
+    void sync(Energybase* energybase_ptr, const Change& change) override;
+    void init() override;
+
+    /**
+     * @brief Finds absolute indices of particles whose SASA has changed
+     * @param change Change object
+     */
+    std::vector<size_t> findTargetIndices(Change& change);
+
+  public:
+    /**
+     * @param spc
+     * @param cosolute_molarity in particles per angstrom cubed
+     * @param probe_radius in angstrom
+     * @param slices_per_atom number of slices of spheres in SASA calculation
+     */
+    SASAEnergy(Space& spc, double cosolute_molarity = 0.0, double probe_radius = 1.4, int slices_per_atom = 20);
+    SASAEnergy(const json& j, Space& spc);
+    double energy(Change& change) override;
+}; //!< SASA energy from transfer free energies
 
 /**
  * @brief Oscillating energy on a single particle

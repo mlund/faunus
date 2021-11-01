@@ -87,7 +87,6 @@ int main(int argc, const char** argv) {
     bool fun = false;   //!< enable utterly unnecessarily stuff?
     bool quiet = false; //!< hold kaje?
     try {
-        Faunus::MPI::mpi.init(); // initialize MPI, if available
         const auto starting_time = std::chrono::steady_clock::now();
         const auto version = versionString();
         auto args = docopt::docopt(USAGE, {argv + 1, argv + argc}, true, version);
@@ -100,7 +99,7 @@ int main(int argc, const char** argv) {
         pc::temperature = input.at("temperature").get<double>() * 1.0_K;
         setRandomNumberGenerator(input);
 
-        MetropolisMonteCarlo simulation(input, Faunus::MPI::mpi);
+        MetropolisMonteCarlo simulation(input);
         loadState(args, simulation);
         checkElectroNeutrality(simulation);
         Analysis::CombinedAnalysis analysis(input.at("analysis"), simulation.getSpace(), simulation.getHamiltonian());
@@ -109,7 +108,7 @@ int main(int argc, const char** argv) {
         mainLoop(show_progress, input, simulation, analysis); // run simulation!
 
         saveOutput(starting_time, args, simulation, analysis);
-        Faunus::MPI::mpi.finalize();
+        //Faunus::MPI::mpi.finalize();
         return EXIT_SUCCESS;
 
     } catch (std::exception& e) {
@@ -388,9 +387,6 @@ void saveOutput(TimePoint& starting_time, docopt::Options& args, MetropolisMonte
         to_json(j, simulation);
         j["relative drift"] = simulation.relativeEnergyDrift();
         j["analysis"] = analysis;
-        if (MPI::mpi.nproc() > 1) {
-            j["mpi"] = MPI::mpi;
-        }
 #ifdef GIT_COMMIT_HASH
         j["git revision"] = GIT_COMMIT_HASH;
 #endif

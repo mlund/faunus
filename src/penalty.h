@@ -58,6 +58,7 @@ class Penalty : public Energybase {
  */
 class PenaltyMPI : public Penalty {
   private:
+    MPI::Controller& mpi;
     Eigen::VectorXi weights;                                     //!< array w. mininum histogram counts
     Eigen::VectorXd buffer;                                      //!< receive buffer for penalty functions
     void update(const std::vector<double>& coordinate) override; //!< Average penalty function across all nodes

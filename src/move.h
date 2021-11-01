@@ -454,12 +454,12 @@ NLOHMANN_JSON_SERIALIZE_ENUM(PartnerPolicy, {{PartnerPolicy::INVALID, nullptr}, 
 /** Base class for finding MPI partners */
 class FindMPIPartner {
   protected:
-    static bool goodPartner(const MPI::MPIController& mpi, int partner); //!< Determines if current partner is valid
+    static bool goodPartner(const mpl::communicator& mpi, int partner); //!< Determines if current partner is valid
   public:
     const PartnerPolicy policy;
     std::optional<int> partner_rank = std::nullopt; //!< Rank of partner MPI process if available
-    virtual bool setPartner(const MPI::MPIController& mpi, Random& random) = 0; //!< Sets MPI partner
-    std::pair<int, int> partnerPair(const MPI::MPIController& mpi) const; //!< Get ordered pair of current partners
+    virtual bool setPartner(const mpl::communicator&, Random& random) = 0; //!< Sets MPI partner
+    std::pair<int, int> partnerPair(const mpl::communicator& mpi) const; //!< Get ordered pair of current partners
     FindMPIPartner(PartnerPolicy policy);
     virtual ~FindMPIPartner() = default;
 };
@@ -470,7 +470,7 @@ class FindMPIPartner {
 class OddEvenPartner : public FindMPIPartner {
   public:
     OddEvenPartner();
-    bool setPartner(const MPI::MPIController& mpi, Random& random) override;
+    bool setPartner(const mpl::communicator&, Random& random) override;
 };
 
 /**
@@ -496,7 +496,7 @@ class ParallelTempering : public MoveBase {
     std::unique_ptr<FindMPIPartner> partner;                                          //!< Policy for finding partners
     Geometry::VolumeMethod volume_scaling_method = Geometry::VolumeMethod::ISOTROPIC; //!< How to scale volumes
     const double very_small_volume = 1e-9;
-    MPI::MPIController& mpi;
+    MPI::Controller &mpi;
     std::unique_ptr<ParticleVector> partner_particles;
     Random random;
     enum extradata { VOLUME = 0 }; //!< Structure of extra data to send
@@ -515,7 +515,7 @@ class ParallelTempering : public MoveBase {
     void _from_json(const json& j) override;
 
   public:
-    ParallelTempering(Space& spc, MPI::MPIController& mpi);
+    ParallelTempering(Space& spc);
     ~ParallelTempering();
 };
 
@@ -528,7 +528,7 @@ class ParallelTempering : public MoveBase {
  * @throw if invalid name or input parameters
  */
 std::unique_ptr<MoveBase> createMove(const std::string& name, const json& properties, Space& spc,
-                                     Energy::Hamiltonian& hamiltonian, MPI::MPIController& mpi_controller);
+                                     Energy::Hamiltonian& hamiltonian);
 
 /**
  * @brief Class storing a list of MC moves with their probability weights and
@@ -544,8 +544,7 @@ class MoveCollection {
     move_iterator sample();                                //!< Pick move from a weighted, random distribution
 
   public:
-    MoveCollection(const json& list_of_moves, Space& spc, Energy::Hamiltonian& hamiltonian,
-                   MPI::MPIController& mpi_controller);
+    MoveCollection(const json& list_of_moves, Space& spc, Energy::Hamiltonian& hamiltonian);
     void addMove(std::shared_ptr<MoveBase>&& move);             //!< Register new move with correct weight
     const BasePointerVector<MoveBase>& getMoves() const;        //!< Get list of moves
     friend void to_json(json& j, const MoveCollection& propagator); //!< Generate json output

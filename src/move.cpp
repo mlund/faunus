@@ -284,8 +284,7 @@ void AtomicTranslateRotate::saveHistograms() {
 AtomicTranslateRotate::~AtomicTranslateRotate() { saveHistograms(); }
 
 std::unique_ptr<MoveBase> createMove(const std::string& name, const json& properties, Space& spc,
-                                     Energy::Hamiltonian& hamiltonian,
-                                     [[maybe_unused]] MPI::MPIController& mpi_controller) {
+                                     Energy::Hamiltonian& hamiltonian) {
     try {
         std::unique_ptr<MoveBase> move;
         if (name == "moltransrot") {
@@ -318,7 +317,7 @@ std::unique_ptr<MoveBase> createMove(const std::string& name, const json& proper
             move = std::make_unique<LangevinDynamics>(spc, hamiltonian);
         } else if (name == "temper") {
 #ifdef ENABLE_MPI
-            move = std::make_unique<ParallelTempering>(spc, mpi_controller);
+            move = std::make_unique<ParallelTempering>(spc);
             move->setRepeat(0); // zero weight moves are run at the end of each sweep
 #else
             throw ConfigurationError("{} requires that Faunus is compiled with MPI", name);
@@ -342,13 +341,12 @@ void MoveCollection::addMove(std::shared_ptr<MoveBase>&& move) {
     number_of_moves_per_sweep = static_cast<unsigned int>(std::accumulate(repeats.begin(), repeats.end(), 0.0));
 }
 
-MoveCollection::MoveCollection(const json& list_of_moves, Space& spc, Energy::Hamiltonian& hamiltonian,
-                               MPI::MPIController& mpi_controller) {
+MoveCollection::MoveCollection(const json& list_of_moves, Space& spc, Energy::Hamiltonian& hamiltonian) {
     assert(list_of_moves.is_array());
     for (const auto& j : list_of_moves) { // loop over move list
         const auto& [name, parameters] = jsonSingleItem(j);
         try {
-            addMove(createMove(name, parameters, spc, hamiltonian, mpi_controller));
+            addMove(createMove(name, parameters, spc, hamiltonian));
         } catch (std::exception& e) {
             usageTip.pick(name);
             throw ConfigurationError("{}", e.what()).attachJson(j);
@@ -376,16 +374,16 @@ MoveCollection::move_iterator MoveCollection::sample() {
 
 FindMPIPartner::FindMPIPartner(PartnerPolicy policy) : policy(policy) {}
 
-bool FindMPIPartner::goodPartner(const MPI::MPIController& mpi, int partner) {
-    return (partner >= 0 && partner < mpi.nproc() && partner != mpi.rank());
+bool FindMPIPartner::goodPartner(const mpl::communicator& communicator, int partner) {
+    return (partner >= 0 && partner < communicator.size() && partner != communicator.rank());
 }
 
-std::pair<int, int> FindMPIPartner::partnerPair(const MPI::MPIController& mpi) const {
+std::pair<int, int> FindMPIPartner::partnerPair(const mpl::communicator& communicator) const {
     if (!partner_rank) {
         throw std::runtime_error("bad partner");
     }
     // note `std::minmax(a,b)` takes _references_; the initializer list (used here) takes a _copy_
-    return std::minmax({mpi.rank(), partner_rank.value()});
+    return std::minmax({communicator.rank(), partner_rank.value()});
 }
 
 OddEvenPartner::OddEvenPartner() : FindMPIPartner(PartnerPolicy::ODDEVEN) {}
@@ -393,14 +391,14 @@ OddEvenPartner::OddEvenPartner() : FindMPIPartner(PartnerPolicy::ODDEVEN) {}
 /**
  * If true is returned, a valid partner was found
  */
-bool OddEvenPartner::setPartner(const MPI::MPIController& mpi, Random& random) {
+bool OddEvenPartner::setPartner(const mpl::communicator& communicator, Random& random) {
     int rank_increment = static_cast<bool>(random.range(0, 1)) ? 1 : -1;
-    if (mpi.rank() % 2 == 0) { // even replica
-        partner_rank = mpi.rank() + rank_increment;
+    if (communicator.rank() % 2 == 0) { // even replica
+        partner_rank = communicator.rank() + rank_increment;
     } else { // odd replica
-        partner_rank = mpi.rank() - rank_increment;
+        partner_rank = communicator.rank() - rank_increment;
     }
-    if (!goodPartner(mpi, *partner_rank)) {
+    if (!goodPartner(communicator, *partner_rank)) {
         partner_rank = std::nullopt;
     }
     return partner_rank.has_value();
@@ -416,7 +414,7 @@ std::unique_ptr<FindMPIPartner> createMPIPartnerPolicy(PartnerPolicy policy) {
 }
 
 void ParallelTempering::_to_json(json& j) const {
-    j = {{"replicas", mpi.nproc()},
+    j = {{"replicas", mpi.world_comm.size()},
          {"datasize", particle_transmitter.getFormat()},
          {"partner_policy", partner->policy},
          {"volume_scale", volume_scaling_method}};
@@ -435,14 +433,14 @@ void ParallelTempering::exchangeState(Change& change) {
     auto old_volume = spc.geometry.getVolume();
     particle_transmitter.sendExtra.at(VOLUME) = old_volume; // copy current volume for sending
     partner_particles->resize(spc.particles.size());        // temparary storage
-    particle_transmitter.recv(mpi, partner->partner_rank.value(), *partner_particles); // receive particles
-    particle_transmitter.send(mpi, spc.particles, partner->partner_rank.value());      // send everything
+    particle_transmitter.recv(mpi.world_comm, partner->partner_rank.value(), *partner_particles); // receive particles
+    particle_transmitter.send(mpi.world_comm, spc.particles, partner->partner_rank.value());      // send everything
     particle_transmitter.waitrecv();
-    particle_transmitter.waitsend();
 
     auto new_volume = particle_transmitter.recvExtra.at(VOLUME);
     if (new_volume < very_small_volume || spc.particles.size() != partner_particles->size()) {
-        MPI_Abort(mpi.comm, 1);
+        mpi.world_comm.abort(1);
+        //Generic: MPI_Abort(mpi.comm, 1);
     } else {
         change.everything = true;
         if (std::fabs(new_volume - old_volume) > pc::epsilon_dbl) {
@@ -454,8 +452,8 @@ void ParallelTempering::exchangeState(Change& change) {
 }
 
 void ParallelTempering::_move(Change& change) {
-    mpi.barrier(); // wait until all ranks reach here
-    if (partner->setPartner(mpi, mpi.random)) {
+    mpi.world_comm.barrier(); // wait until all ranks reach here
+    if (partner->setPartner(mpi.world_comm, mpi.random)) {
         exchangeState(change);
     }
 }
@@ -470,8 +468,9 @@ void ParallelTempering::_move(Change& change) {
  */
 double ParallelTempering::exchangeEnergy(double energy_change) {
     assert(partner->partner_rank.has_value());
-    std::vector<MPI::FloatTransmitter::float_type> energy_change_vector = {energy_change};
-    auto energy_change_partner = float_transmitter.swapf(mpi, energy_change_vector, partner->partner_rank.value());
+    std::vector<double> energy_change_vector = {energy_change};
+    auto energy_change_partner =
+        float_transmitter.swapf(mpi.world_comm, energy_change_vector, partner->partner_rank.value());
     return energy_change_partner.at(0); // return partner energy change
 }
 
@@ -501,8 +500,12 @@ double ParallelTempering::bias([[maybe_unused]] Change& change, double uold, dou
     }
 }
 
-void ParallelTempering::_accept([[maybe_unused]] Change& change) { acceptance_map[partner->partnerPair(mpi)] += 1.0; }
-void ParallelTempering::_reject([[maybe_unused]] Change& change) { acceptance_map[partner->partnerPair(mpi)] += 0.0; }
+void ParallelTempering::_accept([[maybe_unused]] Change& change) {
+    acceptance_map[partner->partnerPair(mpi.world_comm)] += 1.0;
+}
+void ParallelTempering::_reject([[maybe_unused]] Change& change) {
+    acceptance_map[partner->partnerPair(mpi.world_comm)] += 0.0;
+}
 
 void ParallelTempering::_from_json(const json& j) {
     particle_transmitter.setFormat(j.value("format", "XYZQI"s));
@@ -510,9 +513,9 @@ void ParallelTempering::_from_json(const json& j) {
     volume_scaling_method = j.value("volume_scale", Geometry::VolumeMethod::ISOTROPIC);
 }
 
-ParallelTempering::ParallelTempering(Space& spc, MPI::MPIController& mpi)
-    : MoveBase(spc, "temper", "doi:10/b3vcw7"), mpi(mpi) {
-    if (mpi.nproc() < 2) {
+ParallelTempering::ParallelTempering(Space& spc)
+    : MoveBase(spc, "temper", "doi:10/b3vcw7"), mpi(MPI::mpi) {
+    if (mpi.world_comm.size() < 2) {
         throw std::runtime_error(name + " requires two or more MPI processes");
     }
     partner = createMPIPartnerPolicy(PartnerPolicy::ODDEVEN);
@@ -528,9 +531,9 @@ ParallelTempering::ParallelTempering(Space& spc, MPI::MPIController& mpi)
  */
 ParallelTempering::~ParallelTempering() {
 #ifndef NDEBUG
-    faunus_logger->trace("mpi{}: last random number (Movebase) = {}", mpi.rank(), slump());
-    faunus_logger->trace("mpi{}: last random number (Temper) = {}", mpi.rank(), random());
-    faunus_logger->trace("mpi{}: last random number (MPI) = {}", mpi.rank(), mpi.random());
+    faunus_logger->trace("mpi{}: last random number (Movebase) = {}", mpi.world_comm.rank(), slump());
+    faunus_logger->trace("mpi{}: last random number (Temper) = {}", mpi.world_comm.rank(), random());
+    faunus_logger->trace("mpi{}: last random number (MPI) = {}", mpi.world_comm.rank(), mpi.random());
 #endif
 }
 

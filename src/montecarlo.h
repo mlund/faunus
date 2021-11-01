@@ -16,10 +16,6 @@ class MoveBase;
 class MoveCollection;
 } // namespace Move
 
-namespace MPI {
-class MPIController;
-}
-
 /**
  * @brief Class to handle Monte Carlo moves
  *
@@ -75,7 +71,7 @@ class MetropolisMonteCarlo {
     unsigned int number_of_sweeps = 0;                       //!< Number of MC sweeps, e.g. calls to sweep()
 
   public:
-    MetropolisMonteCarlo(const json& j, MPI::MPIController& mpi);
+    MetropolisMonteCarlo(const json& j);
     Energy::Hamiltonian &getHamiltonian();                     //!< Get Hamiltonian of accepted (default) state
     Space &getSpace();                                         //!< Access to space in accepted (default) state
     double relativeEnergyDrift();                              //!< Relative energy drift from initial configuration

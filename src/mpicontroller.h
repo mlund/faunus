@@ -1,6 +1,7 @@
 #pragma once
 #include "random.h"
 #include "core.h"
+#include "particle.h"
 
 #include <vector>
 #include <string>
@@ -9,74 +10,37 @@
 #include <cstdio>
 
 #ifdef ENABLE_MPI
-#include <mpi.h>
+#include "mpl/mpl.hpp"
+// Expose classes for MPI serialization
+MPL_REFLECTION(Faunus::Point, x(), y(), z())
+MPL_REFLECTION(Faunus::Particle, id, charge, pos)
 #endif
-
-#define COUT                                                                                                           \
-    if (isMaster())                                                                                                    \
-    std::cout
-
-/**
- * @todo:
- *
- * This is legacy code that works but would benefit from a lot of polishing.
- * In particular:
- * - add exceptions
- * - update documentation
- */
 
 namespace Faunus::MPI {
 
 extern std::string prefix; //!< Filneme prefix for MPI related input and output (empty if no MPI)
 
-/**
- * @brief Main controller for MPI calls
- *
- * This is the MPI controller required for all MPI programs.
- *
- *     MPIController mpi;
- *     mpi.init();
- *     std::cout << "I'm rank " << mpi.rank << " out of " << mpi.nproc;
- *     mpi.cout << "This will go to a file called mpi%r.stdout where %r is my rank"
- *     if (mpi.isMaster())
- *       cout << "I'm the master!";
- *
- * When MPIController is instantiated the textio::prefix variable is automatically
- * set to `mpi%j`. Which can be used to prefix input and output files. For example:
- *
- *     InputMap mcp(textio::prefix+"input"); // tries to load "mpi%r.input" where %r is the rank
- *
- * @date Lund 2012
- */
-class MPIController {
-  public:
-    void init();            //!< Initialize MPI and file IO
-    void finalize();        //!< Finalize MPI
-    ~MPIController();       //!< End of all MPI calls!
-    int nproc() const;      //!< Number of processors in communicator
-    int rank() const;       //!< Rank of process
-    int rankMaster() const; //!< Rank number of the master
-    bool isMaster() const;  //!< Test if current process is master
-    void barrier() const;   //!< Set up a MPI Barrier to sync. all ranks
-    std::ostream& cout();
-    Random random;  //!< Random number generator for MPI calls
-    std::string id; //!< Unique name associated with current rank
 #ifdef ENABLE_MPI
-    MPI_Comm comm = MPI_COMM_WORLD; //!< Communicator (Default: MPI_COMM_WORLD)
-#endif
+
+/**
+ * @brief Main container for MPI related functionality
+ *
+ * A global instance is available.
+ */
+class Controller {
   private:
     std::ofstream stream; //!< Redirect stdout to here for rank-based file output
-    int _nproc = 1;       //!< Number of processors in communicator
-    int _rank = 0;        //!< Rank of process
-    int _master = 0;      //!< Rank number of the master
-    bool mpi_initialized = false;
+  public:
+    Controller();
+    const mpl::communicator& world_comm; //!< MPI World communicator
+    Random random;                      //!< Random number generator for MPI calls
+    int masterRank() const;             //!< MPI rank of master process
+    bool isMaster() const;              //!< Determines if current rank is the master
+    std::ostream& cout();               //!< Rank specific (file) stream
+    void to_json(json& j) const;
 };
 
-void to_json(json&, const MPIController&);
-
-extern MPIController mpi;
-
-#ifdef ENABLE_MPI
+extern Controller mpi;
 
 /**
  * @brief Split N items into nproc parts
@@ -84,9 +48,9 @@ extern MPIController mpi;
  * This returns a pair with the first and last
  * item for the current rank.
  */
-template <class T = int> std::pair<T, T> splitEven(const MPIController& mpi, T N) {
-    T M = mpi.nproc();
-    T i = mpi.rank();
+template <class T = int> std::pair<T, T> splitEven(const mpl::communicator& communicator, T N) {
+    T M = communicator.size();
+    T i = communicator.rank();
     T beg = (N * i) / M;
     T end = (N * i + N) / M - 1;
     return std::pair<T, T>(beg, end);
@@ -98,27 +62,17 @@ template <class T = int> std::pair<T, T> splitEven(const MPIController& mpi, T N
  * Each rank sends "local" to master who sums them up.
  * Master sends back (broadcasts) sum to all ranks.
  */
-double reduceDouble(MPIController& mpi, double local);
+double reduceDouble(const mpl::communicator& communicator, double local);
 
-/*!
- * \brief Class for transmitting floating point arrays over MPI
- * \note If you change the floatp typedef, remember also to change to change to/from
- *       MPI_FLOAT or MPI_DOUBLE.
+/**
+ * @brief Class for transmitting floating point arrays over MPI
  */
 class FloatTransmitter {
-  private:
-    MPI_Request sendReq, recvReq;
-    MPI_Status sendStat, recvStat;
-    int tag;
-
   public:
-    using float_type = double; //!< Transmission precision
-    FloatTransmitter();
-    std::vector<float_type> swapf(MPIController&, std::vector<float_type>&, int); //!< Swap data with another process
-    void sendf(MPIController&, std::vector<float_type>&, int);                    //!< Send vector of floats
-    void recvf(MPIController&, int, std::vector<float_type>&);                    //!< Receive vector of floats
-    void waitsend();                                                              //!< Wait for send to finish
-    void waitrecv();                                                              //!< Wait for reception to finish
+    std::vector<double> swapf(const mpl::communicator& communicator, std::vector<double>&,
+                              int); //!< Swap data with another process
+    void sendf(const mpl::communicator& communicator, std::vector<double>&, int dst);     //!< Send vector of floats
+    void recvf(const mpl::communicator& communicator, int src, std::vector<double>& dst); //!< Receive vector of floats
 };
 
 /**
@@ -153,11 +107,11 @@ class FloatTransmitter {
 template <typename Tpvec> class ParticleTransmitter : public FloatTransmitter {
   public:
     enum dataformat { XYZ = 3, XYZQ = 4, XYZQI = 5 };
-    std::vector<float_type> sendExtra; //!< Put extra data to send here.
-    std::vector<float_type> recvExtra; //!< Received extra data will be stored here
+    std::vector<double> sendExtra; //!< Put extra data to send here.
+    std::vector<double> recvExtra; //!< Received extra data will be stored here
     ParticleTransmitter();
-    void send(MPIController&, const Tpvec&, int); //!< Send particle vector to another node
-    void recv(MPIController&, int, Tpvec&);       //!< Receive particle vector from another node
+    void send(const mpl::communicator& communicator, const Tpvec&, int); //!< Send particle vector to another node
+    void recv(const mpl::communicator& communicator, int, Tpvec&);       //!< Receive particle vector from another node
     void waitrecv();
     void setFormat(dataformat);
     void setFormat(const std::string&);
@@ -165,7 +119,8 @@ template <typename Tpvec> class ParticleTransmitter : public FloatTransmitter {
 
   private:
     dataformat format; //!< Data format to send/receive - default is XYZQ
-    std::vector<float_type> sendBuf, recvBuf;
+    std::vector<double> sendBuf;
+    std::vector<double> recvBuf;
     Tpvec* dstPtr;               //!< pointer to receiving particle vector
     void pvec2buf(const Tpvec&); //!< Copy source particle vector to send buffer
     void buf2pvec(Tpvec&);       //!< Copy receive buffer to target particle vector
@@ -195,10 +150,11 @@ typename ParticleTransmitter<Tpvec>::dataformat ParticleTransmitter<Tpvec>::getF
  * \param src Source particle vector
  * \param dst Destination node
  */
-template <typename Tpvec> void ParticleTransmitter<Tpvec>::send(MPIController& mpi, const Tpvec& src, int dst) {
-    assert(dst >= 0 && dst < mpi.nproc() && "Invalid MPI destination");
+template <typename Tpvec>
+void ParticleTransmitter<Tpvec>::send(const mpl::communicator& communicator, const Tpvec& src, int dst) {
+    assert(dst >= 0 && dst < communicator.size() && "Invalid MPI destination");
     pvec2buf(src);
-    FloatTransmitter::sendf(mpi, sendBuf, dst);
+    FloatTransmitter::sendf(communicator, sendBuf, dst);
 }
 
 template <typename Tpvec> void ParticleTransmitter<Tpvec>::pvec2buf(const Tpvec& src) {
@@ -213,7 +169,7 @@ template <typename Tpvec> void ParticleTransmitter<Tpvec>::pvec2buf(const Tpvec&
         }
         if (format == XYZQI) {
             sendBuf.push_back(p.charge);
-            sendBuf.push_back((float_type)p.id);
+            sendBuf.push_back(static_cast<double>(p.id));
         }
     }
     for (auto i : sendExtra) {
@@ -226,8 +182,9 @@ template <typename Tpvec> void ParticleTransmitter<Tpvec>::pvec2buf(const Tpvec&
  * \param src Source node
  * \param dst Destination particle vector
  */
-template <typename Tpvec> void ParticleTransmitter<Tpvec>::recv(MPIController& mpi, int src, Tpvec& dst) {
-    assert(src >= 0 && src < mpi.nproc() && "Invalid MPI source");
+template <typename Tpvec>
+void ParticleTransmitter<Tpvec>::recv(const mpl::communicator& communicator, int src, Tpvec& dst) {
+    assert(src >= 0 && src < communicator.size() && "Invalid MPI source");
     dstPtr = &dst; // save a pointer to the destination particle vector
     if (format == XYZ) {
         recvBuf.resize(3 * dst.size());
@@ -243,26 +200,25 @@ template <typename Tpvec> void ParticleTransmitter<Tpvec>::recv(MPIController& m
     recvExtra.resize(sendExtra.size());
     recvBuf.resize(recvBuf.size() + recvExtra.size());
 
-    FloatTransmitter::recvf(mpi, src, recvBuf);
+    FloatTransmitter::recvf(communicator, src, recvBuf);
 }
 
 template <typename Tpvec> void ParticleTransmitter<Tpvec>::waitrecv() {
-    FloatTransmitter::waitrecv();
     buf2pvec(*dstPtr);
 }
 
 template <typename Tpvec> void ParticleTransmitter<Tpvec>::buf2pvec(Tpvec& dst) {
     int i = 0;
-    for (auto& p : dst) {
-        p.pos.x() = recvBuf[i++];
-        p.pos.y() = recvBuf[i++];
-        p.pos.z() = recvBuf[i++];
+    for (auto& particle : dst) {
+        particle.pos.x() = recvBuf[i++];
+        particle.pos.y() = recvBuf[i++];
+        particle.pos.z() = recvBuf[i++];
         if (format == XYZQ) {
-            p.charge = recvBuf[i++];
+            particle.charge = recvBuf[i++];
         }
         if (format == XYZQI) {
-            p.charge = recvBuf[i++];
-            p.id = (int)recvBuf[i++];
+            particle.charge = recvBuf[i++];
+            particle.id = (int)recvBuf[i++];
         }
     }
     for (auto& x : recvExtra) {
@@ -281,28 +237,28 @@ template <typename Tpvec> void ParticleTransmitter<Tpvec>::buf2pvec(Tpvec& dst) 
  * average and sends it back to the slaves. Ttable can be Table, Table2D or Table3D in auxiliary.h.
  *
  */
-template <class Ttable> void avgTables(MPIController* mpiPtr, FloatTransmitter& ft, Ttable& table, int& size) {
-    if (!mpiPtr->isMaster()) {
-        std::vector<FloatTransmitter::float_type> sendBuf = table.hist2buf(size);
-        std::vector<FloatTransmitter::float_type> recvBuf = ft.swapf(*mpiPtr, sendBuf, mpiPtr->rankMaster());
+template <class Ttable>
+void avgTables(const mpl::communicator& communicator, FloatTransmitter& ft, Ttable& table, int& size) {
+    if (!mpi.isMaster()) {
+        std::vector<double> sendBuf = table.hist2buf(size);
+        std::vector<double> recvBuf = ft.swapf(communicator, sendBuf, mpi.masterRank());
         table.buf2hist(recvBuf);
     }
-    if (mpiPtr->isMaster()) {
-        std::vector<FloatTransmitter::float_type> sendBuf = table.hist2buf(size);
-        std::vector<FloatTransmitter::float_type> recvBuf(size);
-        for (int i = 0; i < mpiPtr->nproc(); ++i) {
-            if (i != mpiPtr->rankMaster()) {
-                ft.recvf(*mpiPtr, i, recvBuf);
-                ft.waitrecv();
+    if (mpi.isMaster()) {
+        std::vector<double> sendBuf = table.hist2buf(size);
+        std::vector<double> recvBuf(size);
+        for (int i = 0; i < communicator.size(); ++i) {
+            if (i != mpi.masterRank()) {
+                ft.recvf(communicator, i, recvBuf);
                 sendBuf.insert(sendBuf.end(), recvBuf.begin(), recvBuf.end());
             }
         }
         table.buf2hist(sendBuf);
         sendBuf = table.hist2buf(size);
-        for (int i = 0; i < mpiPtr->nproc(); ++i) {
-            if (i != mpiPtr->rankMaster()) {
-                ft.sendf(*mpiPtr, sendBuf, i);
-                ft.waitsend();
+        for (int i = 0; i < communicator.size(); ++i) {
+            if (i != mpi.masterRank()) {
+                ft.sendf(communicator, sendBuf, i);
+                //ft.waitsend();
             }
         }
     }

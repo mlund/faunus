@@ -1244,8 +1244,6 @@ SASAEnergy::SASAEnergy(const json& j, Space& spc)
     : SASAEnergy(spc, j.value("molarity", 0.0) * 1.0_molar, j.value("radius", 1.4) * 1.0_angstrom) {}
 
 void SASAEnergyBase::init() {
-    Change change;
-    change.everything = true;
 
     sasa->init(spc);
     areas.resize(spc.particles.size());
@@ -1353,7 +1351,6 @@ std::vector<size_t> SASAEnergy::findChangedIndices(Change& change) {
 
     return std::vector<size_t>(target_indices.begin(), target_indices.end());
 }
-
 double SASAEnergy::energy(Change& change) {
 
     double energy(0.);
@@ -1381,6 +1378,7 @@ double SASAEnergy::energy(Change& change) {
     // update sasa areas in sasa object and update
     sasa->updateSASA(neighbours_data, target_indices);
     const auto& new_areas = sasa->getAreas();
+
     for (const auto target_index : target_indices) {
         areas[target_index] = new_areas[target_index];
     }

@@ -39,7 +39,11 @@ const MoleculeData::index_type& MoleculeData::id() const { return _id; }
 
 bool MoleculeData::isImplicit() const { return implicit; }
 
-ParticleVector MoleculeData::getRandomConformation(Geometry::GeometryBase &geo, const ParticleVector &otherparticles) {
+bool MoleculeData::isMolecular() const { return !atomic; }
+
+bool MoleculeData::isAtomic() const { return atomic; }
+
+ParticleVector MoleculeData::getRandomConformation(Geometry::GeometryBase& geo, const ParticleVector& otherparticles) {
     assert(inserter != nullptr);
     return (*inserter)(geo, *this, otherparticles);
 }

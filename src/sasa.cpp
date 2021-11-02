@@ -10,7 +10,6 @@ namespace SASA {
 
 void SASABase::updateSASA(const std::vector<SASA::Neighbours>& neighbours,
                           const std::vector<AtomIndex>& target_indices) {
-
     // here is a potential place for parallelization?
     // #pragma OMP parallel num_threads(2)
     // {
@@ -162,6 +161,7 @@ std::vector<SASA::Neighbours> SASA::calcNeighbourData(Space& spc, const std::vec
 
     return neighbour;
 }
+const std::vector<double>& SASA::getAreas() const { return areas; }
 
 SASA::SASA(Space& spc, double probe_radius, int slices_per_atom) : SASABase(spc, probe_radius, slices_per_atom) {}
 SASA::SASA(const json& j, Space& spc) : SASABase(spc, j.value("radius", 1.4) * 1.0_angstrom, j.value("slices", 20)) {}
@@ -188,7 +188,7 @@ TEST_CASE("[Faunus] SASAPBC") {
 
     SASA sasa(spc, 1.4_angstrom, 20);
     const std::vector<double> radii = {4.0 * 0.5, 2.4 * 0.5};
-    sasa.init(spc);
+    sasa.init(spc.particles);
 
     SUBCASE("not intersecting") {
 

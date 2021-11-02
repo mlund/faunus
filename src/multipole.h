@@ -166,10 +166,7 @@ TEST_CASE("[Faunus] qPochhammerSymbol") {
  * @param end Last particle
  */
 template <class Titer> double monopoleMoment(Titer begin, Titer end) {
-    double z = 0;
-    for (auto it = begin; it != end; ++it)
-        z += it->charge;
-    return z;
+    return std::accumulate(begin, end, 0.0, [](auto sum, auto& particle) { return sum + particle.charge; });
 } //!< Calculates dipole moment vector for a set of particles
 
 /**

@@ -12,6 +12,7 @@ CPMAddPackage("gh:onqtam/doctest#2.4.6")
 CPMAddPackage("gh:mateidavid/zstr#v1.0.4")
 CPMAddPackage("gh:imneme/pcg-cpp#ffd522e7188bef30a00c74dc7eb9de5faff90092")
 CPMAddPackage("gh:ArashPartow/exprtk#93a9f44f99b910bfe07cd1e933371e83cea3841c")
+CPMAddPackage("gh:rabauke/mpl#afb2fd7525ecd43e5a52d5624f3a4998a4eac52c")
 
 CPMAddPackage(
     NAME nlohmann_json VERSION 3.9.1

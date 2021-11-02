@@ -168,8 +168,8 @@ void Penalty::sync(Energybase* other, [[maybe_unused]] const Change& change) {
 #ifdef ENABLE_MPI
 
 PenaltyMPI::PenaltyMPI(const json& j, Space& spc) : Penalty(j, spc), mpi(MPI::mpi) {
-    weights.resize(mpi.world_comm.size());
-    buffer.resize(penalty_energy.size() * mpi.world_comm.size()); // recieve buffer for penalty func
+    weights.resize(mpi.world.size());
+    buffer.resize(penalty_energy.size() * mpi.world.size()); // recieve buffer for penalty func
 }
 
 /**
@@ -180,7 +180,7 @@ void PenaltyMPI::update(const std::vector<double>& coordinate) {
     update_counter++;
     if (update_counter % number_of_steps_between_updates == 0 and energy_increment > 0.0) {
         int least_sampled_in_histogram = histogram.minCoeff(); // if > 0 --> all RC's visited
-        mpi.world_comm.allgather(&least_sampled_in_histogram, mpl::contiguous_layout<int>(1), weights.data(),
+        mpi.world.allgather(&least_sampled_in_histogram, mpl::contiguous_layout<int>(1), weights.data(),
                                  mpl::contiguous_layout<int>(weights.size()));
         // Generic: MPI_Allgather(&least_sampled_in_histogram, 1, MPI_INT, weights.data(), 1, MPI_INT, mpi.comm);
 
@@ -211,22 +211,22 @@ void PenaltyMPI::averagePenaltyFunctions() {
 
     const auto size = mpl::contiguous_layout<double>(penalty_energy.size());
 
-    mpi.world_comm.gather(mpi.masterRank(), penalty_energy.data(), size, buffer.data(), size);
+    mpi.world.gather(mpi.masterRank(), penalty_energy.data(), size, buffer.data(), size);
     //    Generic: MPI_Gather(penalty_energy.data(), penalty_energy.size(), MPI_DOUBLE, buffer.data(),
     //    penalty_energy.size(),
     //               MPI_DOUBLE, 0, mpi.comm); // master collects penalty from all slaves
 
     if (mpi.isMaster()) { // master performs the average
         penalty_energy.setZero();
-        for (int i = 0; i < mpi.world_comm.size(); i++) {
+        for (int i = 0; i < mpi.world.size(); i++) {
             penalty_energy += Eigen::Map<Eigen::MatrixXd>(buffer.data() + i * penalty_energy.size(),
                                                           penalty_energy.rows(), penalty_energy.cols());
         }
         penalty_energy =
-            (penalty_energy.array() - penalty_energy.minCoeff()) / static_cast<double>(mpi.world_comm.size());
+            (penalty_energy.array() - penalty_energy.minCoeff()) / static_cast<double>(mpi.world.size());
     }
 
-    mpi.world_comm.bcast(mpi.masterRank(), penalty_energy.data(), size);
+    mpi.world.bcast(mpi.masterRank(), penalty_energy.data(), size);
     // Generic: MPI_Bcast(penalty_energy.data(), penalty_energy.size(), MPI_DOUBLE, 0,
     //              mpi.comm); // master sends average penalty function to all slaves
 }

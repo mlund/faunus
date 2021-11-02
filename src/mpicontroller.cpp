@@ -14,11 +14,11 @@ double reduceDouble(const mpl::communicator& communicator, double local) {
 }
 int Controller::masterRank() const { return 0; }
 
-bool Controller::isMaster() const { return world_comm.rank() == masterRank(); }
+bool Controller::isMaster() const { return world.rank() == masterRank(); }
 
-Controller::Controller() : world_comm(mpl::environment::comm_world()) {
-    if (world_comm.size() > 1) {
-        prefix = fmt::format("mpi{}.", world_comm.rank());
+Controller::Controller() : world(mpl::environment::comm_world()) {
+    if (world.size() > 1) {
+        prefix = fmt::format("mpi{}.", world.rank());
         stream.open((prefix + "stdout"));
     } else {
         prefix.clear();
@@ -26,38 +26,68 @@ Controller::Controller() : world_comm(mpl::environment::comm_world()) {
 }
 
 void Controller::to_json(json& j) const {
-    j = {{"rank", world_comm.rank()}, {"nproc", world_comm.size()}, {"prefix", prefix}, {"master", masterRank()}};
+    j = {{"rank", world.rank()}, {"nproc", world.size()}, {"prefix", prefix}, {"master", masterRank()}};
 }
 
 std::ostream& Controller::cout() {
     return stream.is_open() ? stream : std::cout;
 }
 
-void FloatTransmitter::sendf(const mpl::communicator& communicator, std::vector<double>& src, int dst) {
-    communicator.send(src, dst);
-    // Generic: MPI_Issend(&src[0], src.size(), MPI_DOUBLE, dst, tag, mpi.comm, &sendReq);
+void ParticleBuffer::setFormat(dataformat d) { format = d; }
+
+void ParticleBuffer::setFormat(const std::string& s) {
+    setFormat(XYZQI);
+    if (s == "XYZQ") {
+        setFormat(XYZQ);
+    } else if (s == "XYZ") {
+        setFormat(XYZ);
+    }
 }
 
-void FloatTransmitter::recvf(const mpl::communicator& communicator, int src, std::vector<double>& dst) {
-    communicator.recv(dst, src);
-    // Generic: MPI_Irecv(&dst[0], dst.size(), MPI_DOUBLE, src, tag, mpi.comm, &recvReq);
+typename ParticleBuffer::dataformat ParticleBuffer::getFormat() const { return format; }
+
+void ParticleBuffer::copyParticlesToBuffer(const ParticleVector& particles) {
+    if (format == XYZ) {
+        buffer.resize(3 * particles.size());
+    } else if (format == XYZQ) {
+        buffer.resize(4 * particles.size());
+    } else if (format == XYZQI) {
+        buffer.resize(5 * particles.size());
+    }
+    size_t i = 0;
+    for (const auto& particle : particles) {
+        buffer.at(i++) = particle.pos.x();
+        buffer.at(i++) = particle.pos.y();
+        buffer.at(i++) = particle.pos.z();
+        if (format == XYZQ) {
+            buffer.at(i++) = particle.charge;
+        } else if (format == XYZQI) {
+            buffer.at(i++) = particle.charge;
+            buffer.at(i++) = static_cast<double>(particle.id);
+        }
+    }
+    if (i != buffer.size()) {
+        throw std::runtime_error("buffer mismatch");
+    }
+
 }
 
-/**
- * This will send a vector of floats and at the same time wait for the destination process
- * to send back another vector of the same size.
- *
- * @param communicator MPI communicator to use
- * @param src Vector to send
- * @param dst Node to send/receive to/from
- * @return Received data
- */
-std::vector<double> FloatTransmitter::swapf(const mpl::communicator& communicator, std::vector<double>& src, int dst) {
-    std::vector<double> buffer(src.size());
-    auto tag = mpl::tag_t(0);
-    auto layout = mpl::contiguous_layout<double>(src.size());
-    communicator.sendrecv(src.data(), layout, dst, tag, buffer.data(), layout, dst, tag);
-    return buffer;
+void ParticleBuffer::copyBufferToParticles(ParticleVector& particles) {
+    size_t i = 0;
+    for (auto& particle : particles) {
+        particle.pos.x() = buffer.at(i++);
+        particle.pos.y() = buffer.at(i++);
+        particle.pos.z() = buffer.at(i++);
+        if (format == XYZQ) {
+            particle.charge = buffer.at(i++);
+        } else if (format == XYZQI) {
+            particle.charge = buffer.at(i++);
+            particle.id = static_cast<AtomData::index_type>(buffer.at(i++));
+        }
+    }
+    if (i != buffer.size()) {
+        throw std::runtime_error("buffer <-> particle mismatch");
+    }
 }
 
 Controller mpi; //!< Global instance of MPI controller

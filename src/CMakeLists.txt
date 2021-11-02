@@ -30,6 +30,7 @@ if (ENABLE_MPI)
     if (MPI_CXX_FOUND)
         target_link_libraries(project_options INTERFACE MPI::MPI_CXX)
         target_compile_definitions(project_options INTERFACE ENABLE_MPI)
+        target_link_libraries(project_options INTERFACE mpl::mpl)
     endif()
 endif()
 

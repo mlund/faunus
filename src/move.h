@@ -452,22 +452,22 @@ enum class PartnerPolicy { ODDEVEN, INVALID }; //!< Policies for MPI partner sea
 NLOHMANN_JSON_SERIALIZE_ENUM(PartnerPolicy, {{PartnerPolicy::INVALID, nullptr}, {PartnerPolicy::ODDEVEN, "oddeven"}})
 
 /** Base class for finding MPI partners */
-class FindMPIPartner {
+class MPIPartner {
   protected:
     static bool goodPartner(const mpl::communicator& mpi, int partner); //!< Determines if current partner is valid
   public:
     const PartnerPolicy policy;
-    std::optional<int> partner_rank = std::nullopt; //!< Rank of partner MPI process if available
+    std::optional<int> rank = std::nullopt; //!< Rank of partner MPI process if available
     virtual bool setPartner(const mpl::communicator&, Random& random) = 0; //!< Sets MPI partner
     std::pair<int, int> partnerPair(const mpl::communicator& mpi) const; //!< Get ordered pair of current partners
-    FindMPIPartner(PartnerPolicy policy);
-    virtual ~FindMPIPartner() = default;
+    MPIPartner(PartnerPolicy policy);
+    virtual ~MPIPartner() = default;
 };
 
 /**
  * @brief Odd ranks pairs with neighboring even rank (left or right)
  */
-class OddEvenPartner : public FindMPIPartner {
+class OddEvenPartner : public MPIPartner {
   public:
     OddEvenPartner();
     bool setPartner(const mpl::communicator&, Random& random) override;
@@ -478,7 +478,7 @@ class OddEvenPartner : public FindMPIPartner {
  * @param policy Policy name ("oddeven", ...)
  * @throw if unknown policy
  */
-std::unique_ptr<FindMPIPartner> createMPIPartnerPolicy(PartnerPolicy policy);
+std::unique_ptr<MPIPartner> createMPIPartnerPolicy(PartnerPolicy policy);
 
 /**
  * @brief Class for parallel tempering (aka replica exchange) using MPI
@@ -493,17 +493,14 @@ std::unique_ptr<FindMPIPartner> createMPIPartnerPolicy(PartnerPolicy policy);
  */
 class ParallelTempering : public MoveBase {
   private:
-    std::unique_ptr<FindMPIPartner> partner;                                          //!< Policy for finding partners
+    std::unique_ptr<MPIPartner> partner;                                          //!< Policy for finding partners
     Geometry::VolumeMethod volume_scaling_method = Geometry::VolumeMethod::ISOTROPIC; //!< How to scale volumes
     const double very_small_volume = 1e-9;
     MPI::Controller &mpi;
     std::unique_ptr<ParticleVector> partner_particles;
     Random random;
-    enum extradata { VOLUME = 0 }; //!< Structure of extra data to send
     std::map<std::pair<int, int>, Average<double>> acceptance_map;
-
-    MPI::FloatTransmitter float_transmitter;                       //!< Class for transmitting floats over MPI
-    MPI::ParticleTransmitter<ParticleVector> particle_transmitter; //!< Class for transmitting particles over MPI
+    MPI::ParticleBuffer particle_buffer; //!< Class for serializing particles
 
     void _to_json(json& j) const override;
     void _move(Change& change) override;

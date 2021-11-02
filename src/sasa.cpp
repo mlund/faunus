@@ -188,7 +188,7 @@ TEST_CASE("[Faunus] SASAPBC") {
 
     SASA sasa(spc, 1.4_angstrom, 20);
     const std::vector<double> radii = {4.0 * 0.5, 2.4 * 0.5};
-    sasa.init(spc.particles);
+    sasa.init(spc);
 
     SUBCASE("not intersecting") {
 

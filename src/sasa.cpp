@@ -161,7 +161,6 @@ std::vector<SASA::Neighbours> SASA::calcNeighbourData(Space& spc, const std::vec
 
     return neighbour;
 }
-const std::vector<double>& SASA::getAreas() const { return areas; }
 
 SASA::SASA(Space& spc, double probe_radius, int slices_per_atom) : SASABase(spc, probe_radius, slices_per_atom) {}
 SASA::SASA(const json& j, Space& spc) : SASABase(spc, j.value("radius", 1.4) * 1.0_angstrom, j.value("slices", 20)) {}

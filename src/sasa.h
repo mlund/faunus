@@ -3,12 +3,14 @@
 #ifndef FAUNUS_SASA_H
 #define FAUNUS_SASA_H
 
-#include "space.h"
 #include "celllistimpl.h"
-#include <range/v3/view/iota.hpp>
-#include <unordered_set>
+#include "particle.h"
 
 namespace Faunus {
+
+class Space;
+class Change;
+
 namespace SASA {
 
 class SASABase {
@@ -34,8 +36,8 @@ class SASABase {
      * @brief returns absolute index of particle in ParticleVector
      * @param particle
      */
-    inline size_t indexOf(const Particle& particle) {
-        return static_cast<size_t>(std::addressof(particle) - first_particle);
+    inline AtomIndex indexOf(const Particle& particle) {
+        return static_cast<AtomIndex>(std::addressof(particle) - first_particle);
     }
 
     /**
@@ -59,25 +61,11 @@ class SASABase {
     void updateSASA(const std::vector<SASABase::Neighbours>& neighbours_data,
                     const std::vector<size_t>& target_indices);
 
-    /**
-     * @brief resizes areas buffer to size of ParticleVector
-     * @param space
-     */
     virtual void init(Space& spc) = 0;
 
-    /**
-     * @brief calculates neighbourData objects of particles specified by target indices in ParticleVector
-     * @param space
-     * @param target_indices absolute indicies of target particles in ParticleVector
-     */
     virtual std::vector<SASABase::Neighbours> calcNeighbourData(Space& spc,
                                                                 const std::vector<size_t>& target_indices) = 0;
 
-    /**
-     * @brief calculates neighbourData object of a target particle specified by target indiex in ParticleVector
-     * @param space
-     * @param target_index indicex of target particle in ParticleVector
-     */
     virtual SASABase::Neighbours calcNeighbourDataOfParticle(Space& spc, const size_t target_index) = 0;
 
     virtual void update(Space& spc, const Change& change) = 0;
@@ -97,7 +85,7 @@ class SASA : public SASABase {
 
   public:
     /**
-     * @brief resizes areas buffer to size of ParticleVector
+     * @brief resizes areas buffer to size of ParticleVector and fill radii buffer with radii
      * @param space
      */
     void init(Space& spc) override;
@@ -110,14 +98,20 @@ class SASA : public SASABase {
     std::vector<SASABase::Neighbours> calcNeighbourData(Space& spc, const std::vector<size_t>& target_indices) override;
 
     /**
-     * @brief calculates neighbourData object of a target particle
-     * @brief specified by target index in ParticleVector using O(N^2)
+     * @brief calculates neighbourData object of a target particle specified by target indiex in ParticleVector
+     * @brief using the naive O(N) neighbour search
      * @param space
      * @param target_index indicex of target particle in ParticleVector
      */
-    SASABase::Neighbours calcNeighbourDataOfParticle(Space& spc, const size_t target_index) override;
+    SASA::Neighbours calcNeighbourDataOfParticle(Space& spc, const AtomIndex target_index);
 
-    void update([[maybe_unused]] Space& spc, [[maybe_unused]] const Change& change);
+    /**
+     * @brief updates radii vector in case of matter change
+     * @param space
+     * @param change
+     */
+    void update([[maybe_unused]] Space& spc, [[maybe_unused]] const Change& change) override;
+
     /**
      * @param spc
      * @param probe_radius in angstrom
@@ -172,6 +166,7 @@ template <typename CellList_T> class SASACellList : public SASABase {
 
     /**
      * @brief updates cell_list according to change, if the volume changes the cell_list gets rebuilt
+     * @brief also updates radii in case of matter change
      * @param space
      * @param change
      */

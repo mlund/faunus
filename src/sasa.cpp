@@ -1,6 +1,8 @@
 
 #include "sasa.h"
+#include "space.h"
 #include <range/v3/view/zip.hpp>
+#include <range/v3/view/iota.hpp>
 
 namespace Faunus {
 

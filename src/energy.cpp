@@ -1222,7 +1222,7 @@ SASAEnergyBase::SASAEnergyBase(Space& spc, double cosolute_molarity, double prob
         break;
     default:
         sasa = std::make_unique<SASA::SASA>(spc, probe_radius, slices_per_atom);
-        faunus_logger->info("CellList neighbour search not available yet for current geometry");
+        faunus_logger->warn("CellList neighbour search not available yet for current geometry");
         break;
     }
     name = "sasa";
@@ -1262,7 +1262,7 @@ double SASAEnergyBase::energy(Change& change) {
     }
     const auto& particles = spc.activeParticles();
 
-    std::vector<size_t> target_indices;
+    std::vector<index_type> target_indices;
     for (const auto& particle : particles) {
         const auto particle_index = indexOf(particle);
         target_indices.push_back(particle_index);
@@ -1273,7 +1273,7 @@ double SASAEnergyBase::energy(Change& change) {
 
     const auto& new_areas = sasa->getAreas();
     for (const auto& target_index : target_indices) {
-        areas[target_index] = new_areas[target_index];
+        areas.at(target_index) = new_areas.at(target_index);
     }
 
     double surface_area(0.);
@@ -1302,55 +1302,45 @@ void SASAEnergyBase::to_json(json& j) const {
     roundJSON(j, 6); // set json output precision
 }
 
-std::vector<size_t> SASAEnergy::findChangedIndices(Change& change) {
+std::vector<SASAEnergyBase::index_type> SASAEnergy::findChangedIndices(Change& change) {
 
     //!< if the state is ACCEPTED there is no need to recalculate SASAs so return empty target_indices
     if (state == MonteCarloState::ACCEPTED) {
-        std::vector<size_t> target_indices;
+        std::vector<index_type> target_indices;
         return target_indices;
     }
 
     //!< using set to get rid of repeating target_indices in touched_atoms neighbours lists
-    std::set<size_t> target_indices;
+    std::set<index_type> target_indices;
     for (const auto& group_change : change.groups) {
-        const auto& group = spc.groups[group_change.group_index];
+        const auto& group = spc.groups.at(group_change.group_index);
         const auto offset = spc.getFirstParticleIndex(group);
         if (group_change.relative_atom_indices.empty()) {
             auto indices = ranges::cpp20::views::iota(offset, group.size() + offset);
             target_indices.insert(indices.begin(), indices.end());
             for (const auto index : indices) {
                 const auto& current_neighbour = sasa->calcNeighbourDataOfParticle(spc, index).indices;
-                const auto& past_neighbour = current_neighbours[index];
+                const auto& past_neighbour = current_neighbours.at(index);
                 target_indices.insert(past_neighbour.begin(), past_neighbour.end());
                 target_indices.insert(current_neighbour.begin(), current_neighbour.end());
             }
         } else {
-            if (!change.matter_change) {
-                // for each touched atoms we need to recalculate SASA for the touched atom
-                // and for its neighbours before it moved and after it moved
-                for (const auto touched_atom_index : group_change.relative_atom_indices) {
-                    const auto& past_neighbour_indices = current_neighbours[touched_atom_index + offset];
-                    target_indices.insert(touched_atom_index + offset);
-                    target_indices.insert(past_neighbour_indices.begin(), past_neighbour_indices.end());
-                    const auto& current_neighbour = sasa->calcNeighbourDataOfParticle(spc, touched_atom_index + offset);
-                    const auto& current_neighbour_indices = current_neighbour.indices;
-                    target_indices.insert(current_neighbour_indices.begin(), current_neighbour_indices.end());
-                }
-            } else {
-                for (const auto touched_atom_index : group_change.relative_atom_indices) {
-                    const auto& past_neighbour_indices = current_neighbours[touched_atom_index + offset];
-                    const auto& current_neighbour =
-                        sasa->calcNeighbourDataOfParticle(spc, touched_atom_index + offset).indices;
-                    target_indices.insert(touched_atom_index + offset);
-                    target_indices.insert(current_neighbour.begin(), current_neighbour.end());
-                    target_indices.insert(past_neighbour_indices.begin(), past_neighbour_indices.end());
-                }
+            // for each touched atoms we need to recalculate SASA for the touched atom
+            // and for its neighbours before it moved and after it moved
+            for (const auto touched_atom_index : group_change.relative_atom_indices) {
+                const auto& past_neighbour_indices = current_neighbours[touched_atom_index + offset];
+                target_indices.insert(touched_atom_index + offset);
+                target_indices.insert(past_neighbour_indices.begin(), past_neighbour_indices.end());
+                const auto& current_neighbour = sasa->calcNeighbourDataOfParticle(spc, touched_atom_index + offset);
+                const auto& current_neighbour_indices = current_neighbour.indices;
+                target_indices.insert(current_neighbour_indices.begin(), current_neighbour_indices.end());
             }
         }
     }
 
-    return std::vector<size_t>(target_indices.begin(), target_indices.end());
+    return std::vector<index_type>(target_indices.begin(), target_indices.end());
 }
+
 double SASAEnergy::energy(Change& change) {
 
     double energy(0.);
@@ -1360,7 +1350,7 @@ double SASAEnergy::energy(Change& change) {
         sasa->update(spc, change);
     }
 
-    std::vector<size_t> target_indices;
+    std::vector<index_type> target_indices;
     if (!change.everything) {
         target_indices = findChangedIndices(change);
     } else { // all the active particles will be used for SASA calculation
@@ -1371,8 +1361,8 @@ double SASAEnergy::energy(Change& change) {
     }
 
     const auto neighbours_data = sasa->calcNeighbourData(spc, target_indices);
-    for (const auto [neighbour, index] : ranges::views::zip(neighbours_data, target_indices)) {
-        current_neighbours[index] = neighbour.indices;
+    for (const auto& [neighbour, index] : ranges::views::zip(neighbours_data, target_indices)) {
+        current_neighbours.at(index) = neighbour.indices;
     }
 
     // update sasa areas in sasa object and update
@@ -1380,7 +1370,7 @@ double SASAEnergy::energy(Change& change) {
     const auto& new_areas = sasa->getAreas();
 
     for (const auto target_index : target_indices) {
-        areas[target_index] = new_areas[target_index];
+        areas.at(target_index) = new_areas.at(target_index);
     }
 
     double surface_area(0.0);

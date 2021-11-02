@@ -148,7 +148,6 @@ if (ENABLE_TBB)
     endif ()
 endif ()
 
-
 ############
 # NANOBENCH
 ############

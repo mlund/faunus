@@ -290,8 +290,6 @@ class PeriodicBoundaryGrid : public GridBase<TGridType>, virtual public Abstract
      * @return  cell index
      */
     CellIndex index(const CellCoord& coordinates) const override {
-        // const auto pbc_coord = (coordinates - (coordinates / this->getCellListEnd()) *
-        // this->getCellListEnd()).eval();
         auto pbc_coordinates = coordinates;
         auto& boundary_coords = this->getCellListEnd();
         for (auto i = 0; i < pbc_coordinates.size(); ++i) {
@@ -779,12 +777,7 @@ template <class TBase> class CellListReverseMap : public TBase {
      * @brief returns true if member is present in the cell list false if not
      * @param member
      */
-    bool containsMember(const Member& member) {
-        if (member2cell.count(member) == 0) {
-            return false;
-        }
-        return true;
-    }
+    bool containsMember(const Member& member) { return member2cell.count(member) != 0; }
 
     /**
      * @brief Imports members from other list without computing cell coordinates from member positions.
@@ -817,7 +810,7 @@ template <class TBase> class CellListReverseMap : public TBase {
 
   private:
     // TODO as a vector because size of Particle vector is constant
-    std::unordered_map<Member, CellIndex> member2cell; //!< mapping from a member to its cell
+    std::map<Member, CellIndex> member2cell; //!< mapping from a member to its cell
 };
 
 /**

@@ -9,19 +9,24 @@
 namespace Faunus {
 
 class Space;
+namespace Geometry {
+class Chameleon;
+}
 class Change;
 
 namespace SASA {
 
+using index_type = size_t;
+using GeometryType = Geometry::Chameleon;
+
 class SASABase {
 
   public:
-    using AtomIndex = AtomData::index_type;
 
     struct Neighbours {
-        std::vector<size_t> indices; //!< indices of neighbouring particles in ParticleVector
+        std::vector<index_type> indices; //!< indices of neighbouring particles in ParticleVector
         PointVector points;          //!< vectors to neighbouring particles
-        AtomIndex index;             //!< index of particle whose neighbours are in indices
+        index_type index;            //!< index of particle whose neighbours are in indices
     };
 
   protected:
@@ -36,159 +41,84 @@ class SASABase {
      * @brief returns absolute index of particle in ParticleVector
      * @param particle
      */
-    inline AtomIndex indexOf(const Particle& particle) {
-        return static_cast<AtomIndex>(std::addressof(particle) - first_particle);
+    inline index_type indexOf(const Particle& particle) {
+        return static_cast<index_type>(std::addressof(particle) - first_particle);
     }
 
-    /**
-     * @brief Calcuates SASA of a single particle defined by NeighbourData object
-     * @param neighbours NeighbourData object of given particle
-     */
     double calcSASAOfParticle(const Neighbours& neighbour) const;
 
-    /**
-     * @brief Calcuates total arc length in radians of overlapping arcs defined by two angles
-     * @param vector of arcs, defined by a pair (first angle, second angle)
-     */
     double exposedArcLength(std::vector<std::pair<double, double>>& arcs) const;
 
   public:
-    /**
-     * @brief updates sasa of target particles
-     * @param neighbours_data array of NeighbourData objects
-     * @param target_indices absolute indicies of target particles in ParticleVector
-     */
     void updateSASA(const std::vector<SASABase::Neighbours>& neighbours_data,
-                    const std::vector<size_t>& target_indices);
+                    const std::vector<index_type>& target_indices);
 
     virtual void init(Space& spc) = 0;
 
     virtual std::vector<SASABase::Neighbours> calcNeighbourData(Space& spc,
-                                                                const std::vector<size_t>& target_indices) = 0;
+                                                                const std::vector<index_type>& target_indices) = 0;
 
-    virtual SASABase::Neighbours calcNeighbourDataOfParticle(Space& spc, const size_t target_index) = 0;
+    virtual SASABase::Neighbours calcNeighbourDataOfParticle(Space& spc, const index_type target_index) = 0;
 
     virtual void update(Space& spc, const Change& change) = 0;
 
     const std::vector<double>& getAreas() const;
 
-    /**
-     * @param spc
-     * @param probe_radius in angstrom
-     * @param slices_per_atom number of slices of each sphere in sasa calculations
-     */
     SASABase(Space& spc, double probe_radius, int slices_per_atom);
-    virtual ~SASABase() {}
+    virtual ~SASABase() = default;
 };
 
 class SASA : public SASABase {
 
   public:
-    /**
-     * @brief resizes areas buffer to size of ParticleVector and fill radii buffer with radii
-     * @param space
-     */
     void init(Space& spc) override;
 
-    /**
-     * @brief calculates neighbourData objects of particles specified by target indices in ParticleVector
-     * @param space
-     * @param target_indices absolute indicies of target particles in ParticleVector
-     */
-    std::vector<SASABase::Neighbours> calcNeighbourData(Space& spc, const std::vector<size_t>& target_indices) override;
+    std::vector<SASABase::Neighbours> calcNeighbourData(Space& spc,
+                                                        const std::vector<index_type>& target_indices) override;
 
-    /**
-     * @brief calculates neighbourData object of a target particle specified by target indiex in ParticleVector
-     * @brief using the naive O(N) neighbour search
-     * @param space
-     * @param target_index indicex of target particle in ParticleVector
-     */
-    SASA::Neighbours calcNeighbourDataOfParticle(Space& spc, const AtomIndex target_index);
+    SASA::Neighbours calcNeighbourDataOfParticle(Space& spc, const index_type target_index);
 
-    /**
-     * @brief updates radii vector in case of matter change
-     * @param space
-     * @param change
-     */
     void update([[maybe_unused]] Space& spc, [[maybe_unused]] const Change& change) override;
 
-    /**
-     * @param spc
-     * @param probe_radius in angstrom
-     * @param slices_per_atom number of slices of each sphere in sasa calculations
-     */
     SASA(Space& spc, double probe_radius, int slices_per_atom);
     SASA(const json& j, Space& spc);
 };
 
 //!< TODO update function does perhaps unnecessary containsMember(Member&) checks
-//!< TODO finish proper test case
 //!< TODO create a wrapper class for cell_list so that the Space dependence is in there and not here
-template <typename CellList_T> class SASACellList : public SASABase {
+template <typename CellList> class SASACellList : public SASABase {
 
   private:
-    using CellCoord = typename CellList_T::Grid::CellCoord;
+    using CellCoord = typename CellList::Grid::CellCoord;
 
-    std::unique_ptr<CellList_T> cell_list; //!< pointer to cell list
+    std::unique_ptr<CellList> cell_list;   //!< pointer to cell list
     double cell_length;                    //!< dimension of a single cell
     std::vector<CellCoord> cell_offsets;   //!< holds offsets which define a 3x3x3 cube around central cell
 
   public:
-    /**
-     * @param spc
-     * @param probe_radius in angstrom
-     * @param slices_per_atom number of slices of each sphere in sasa calculations
-     */
     SASACellList(Space& spc, double probe_radius, int slices_per_atom);
     SASACellList(const json& j, Space& spc);
-    virtual ~SASACellList() {}
+    virtual ~SASACellList() = default;
 
-    /**
-     * @brief constructs cell_list with appropriate cell_length and fills it with particles from space
-     * @param space
-     */
     void init(Space& spc) override;
-    /**
-     * @brief calculates neighbourData object of a target particle
-     * @brief specified by target index in ParticleVector using cell list
-     * @param space
-     * @param target_index indicex of target particle in ParticleVector
-     */
-    SASABase::Neighbours calcNeighbourDataOfParticle(Space& spc, const size_t target_index) override;
 
-    /**
-     * @brief calculates neighbourData objects of particles
-     * @brief specified by target indices in ParticleVector using cell lists
-     * @param space
-     * @param target_indices absolute indicies of target particles in ParticleVector
-     */
-    std::vector<SASABase::Neighbours> calcNeighbourData(Space& spc, const std::vector<size_t>& target_indices) override;
+    SASABase::Neighbours calcNeighbourDataOfParticle(Space& spc, const index_type target_index) override;
 
-    /**
-     * @brief updates cell_list according to change, if the volume changes the cell_list gets rebuilt
-     * @brief also updates radii in case of matter change
-     * @param space
-     * @param change
-     */
+    std::vector<SASABase::Neighbours> calcNeighbourData(Space& spc,
+                                                        const std::vector<index_type>& target_indices) override;
+
     void update(Space& spc, const Change& change) override;
 
   private:
-    /**
-     * @brief creates cell_list if it does not exist, otherwise resets its and fills it with active particles
-     * @param space
-     */
-    void createCellList(Space& spc);
+    template <typename TBegin, typename TEnd> void createCellList(TBegin begin, TEnd end, GeometryType& geometry);
 
-    /**
-     * @brief updates cell_list when particles got activated or desactivated
-     * @param space
-     * @param change
-     */
     void updateMatterChange(Space& spc, const Change& change);
+
+    void updatePositionsChange(Space& spc, const Change& change);
 };
 
-using PeriodicCellList = CellList::CellListSpatial<CellList::CellListType<size_t, CellList::Grid::Grid3DPeriodic>>;
-using FixedCellList = CellList::CellListSpatial<CellList::CellListType<size_t, CellList::Grid::Grid3DFixed>>;
+using PeriodicCellList = CellList::CellListSpatial<CellList::CellListType<index_type, CellList::Grid::Grid3DPeriodic>>;
+using FixedCellList = CellList::CellListSpatial<CellList::CellListType<index_type, CellList::Grid::Grid3DFixed>>;
 extern template class SASACellList<PeriodicCellList>;
 extern template class SASACellList<FixedCellList>;
 

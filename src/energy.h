@@ -1526,7 +1526,7 @@ class FreeSASAEnergy : public Energybase {
     std::vector<double> sasa;      //!< Target buffer for calculated surface areas
 
     const Space& spc;
-    double cosolute_molarity;                            //!< co-solute concentration (mol/l)
+    double cosolute_molarity = 0.;                       //!< co-solute concentration (mol/l)
     std::unique_ptr<freesasa_parameters_fwd> parameters; //!< Parameters for freesasa
     Average<double> mean_surface_area;
 
@@ -1582,10 +1582,12 @@ class FreeSASAEnergy : public Energybase {
 
 class SASAEnergyBase : public Energybase {
 
-  protected:
+  public:
+    using index_type = size_t;
+
     std::vector<double> areas; //!< Target buffer for calculated surface areas
     Space& spc;
-    double cosolute_molarity;       //!< co-solute concentration (mol/l)
+    double cosolute_molarity = 0.;        //!< co-solute concentration (mol/l)
     std::unique_ptr<SASA::SASABase> sasa; //!< performs neighbour searching and subsequent sasa calculation
     Average<double> mean_surface_area;
 
@@ -1599,8 +1601,8 @@ class SASAEnergyBase : public Energybase {
      * @brief returns absolute index of particle in ParticleVector
      * @param particle
      */
-    size_t indexOf(const Particle& particle) {
-        return static_cast<size_t>(std::addressof(particle) - std::addressof(spc.particles.at(0U)));
+    inline auto indexOf(const Particle& particle) {
+        return static_cast<index_type>(std::addressof(particle) - std::addressof(spc.particles.at(0)));
     }
 
   public:
@@ -1620,7 +1622,7 @@ class SASAEnergyBase : public Energybase {
 class SASAEnergy : public SASAEnergyBase {
 
   private:
-    std::vector<std::vector<size_t>>
+    std::vector<std::vector<index_type>>
         current_neighbours; //!< holds cached neighbour indices for each particle in ParticleVector
 
     void to_json(json& j) const override;
@@ -1631,7 +1633,7 @@ class SASAEnergy : public SASAEnergyBase {
      * @brief Finds absolute indices of particles whose SASA has changed
      * @param change Change object
      */
-    std::vector<size_t> findChangedIndices(Change& change);
+    std::vector<index_type> findChangedIndices(Change& change);
 
   public:
     /**

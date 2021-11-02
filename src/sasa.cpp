@@ -91,7 +91,7 @@ double SASABase::calcSASAOfParticle(const SASABase::Neighbours& neighbour) const
                     /* store arcs as pairs of angles */
                     arcs.insert(arcs.end(), {{0.0, end_arc_angle}, {beginning_arc_angle, TWOPI}});
                 } else {
-                    arcs.insert(arcs.end(), {beginning_arc_angle, end_arc_angle});
+                    arcs.emplace_back(beginning_arc_angle, end_arc_angle);
                 }
             }
         }
@@ -143,9 +143,9 @@ SASABase::SASABase(Space& spc, double probe_radius, int slices_per_atom)
  * @param space
  */
 void SASA::init(Space& spc) {
-    radii.reserve(spc.particles.size());
-    std::for_each(spc.particles.begin(), spc.particles.end(),
-                  [&](const Particle& particle) { radii.push_back(particle.traits().sigma * 0.5); });
+    using namespace ranges::cpp20::views;
+    auto particle_radius = [](const auto& i) { return 0.5 * i.traits().sigma; };
+    radii = spc.particles | ranges::cpp20::views::transform(particle_radius) | ranges::to<std::vector>;
     areas.resize(spc.particles.size());
 }
 
@@ -308,9 +308,8 @@ template <typename CellList> void SASACellList<CellList>::init(Space& spc) {
         }
     }
 
-    radii.reserve(spc.particles.size());
-    std::for_each(spc.particles.begin(), spc.particles.end(),
-                  [&](const Particle& particle) { radii.push_back(particle.traits().sigma * 0.5); });
+    auto get_radius = [](auto& i) { return 0.5 * i.traits().sigma; };
+    radii = spc.particles | ranges::cpp20::views::transform(get_radius) | ranges::to<std::vector>;
     const auto max_radius = ranges::cpp20::max(radii);
 
     cell_length = 2.0 * (max_radius + probe_radius);

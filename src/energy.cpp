@@ -1208,13 +1208,12 @@ TEST_CASE("[Faunus] FreeSASA") {
 
 SASAEnergyBase::SASAEnergyBase(Space& spc, double cosolute_molarity, double probe_radius, int slices_per_atom)
     : spc(spc), cosolute_molarity(cosolute_molarity) {
-
-    using namespace SASA;
+    using SASA::SASACellList;
     const auto periodic_dimensions =
         spc.geometry.asSimpleGeometry()->boundary_conditions.isPeriodic().cast<int>().sum();
     switch (periodic_dimensions) {
     case 3: // PBC in all directions
-        sasa = std::make_unique<SASACellList<PeriodicCellList>>(spc, probe_radius, slices_per_atom);
+        sasa = std::make_unique<SASACellList<SASA::PeriodicCellList>>(spc, probe_radius, slices_per_atom);
         break;
     case 0:
         using FixedCellList = CellList::CellListSpatial<CellList::CellListType<size_t, CellList::Grid::Grid3DFixed>>;
@@ -1244,7 +1243,6 @@ SASAEnergy::SASAEnergy(const json& j, Space& spc)
     : SASAEnergy(spc, j.value("molarity", 0.0) * 1.0_molar, j.value("radius", 1.4) * 1.0_angstrom) {}
 
 void SASAEnergyBase::init() {
-
     sasa->init(spc);
     areas.resize(spc.particles.size());
 }
@@ -1255,7 +1253,6 @@ void SASAEnergy::init() {
 }
 
 double SASAEnergyBase::energy(Change& change) {
-
     double energy = 0.;
     if (state != MonteCarloState::ACCEPTED) {
         sasa->update(spc, change);
@@ -1288,7 +1285,6 @@ double SASAEnergyBase::energy(Change& change) {
 }
 
 void SASAEnergyBase::sync(Energybase* energybase_ptr, const Change& change) {
-
     if (auto* other = dynamic_cast<SASAEnergyBase*>(energybase_ptr)) {
         areas = other->areas;
         sasa->update(other->spc, change);
@@ -1296,14 +1292,12 @@ void SASAEnergyBase::sync(Energybase* energybase_ptr, const Change& change) {
 }
 
 void SASAEnergyBase::to_json(json& j) const {
-
     j["molarity"] = cosolute_molarity / 1.0_molar;
     j[u8::bracket("SASA") + "/" + u8::angstrom + u8::squared] = mean_surface_area.avg() / 1.0_angstrom;
     roundJSON(j, 6); // set json output precision
 }
 
 std::vector<SASAEnergyBase::index_type> SASAEnergy::findChangedIndices(Change& change) {
-
     //!< if the state is ACCEPTED there is no need to recalculate SASAs so return empty target_indices
     if (state == MonteCarloState::ACCEPTED) {
         std::vector<index_type> target_indices;
@@ -1342,7 +1336,6 @@ std::vector<SASAEnergyBase::index_type> SASAEnergy::findChangedIndices(Change& c
 }
 
 double SASAEnergy::energy(Change& change) {
-
     double energy(0.);
 
     //! update not needed when the state is already accepted
@@ -1400,7 +1393,6 @@ void SASAEnergy::to_json(json& j) const {
 }
 
 TEST_CASE("[Faunus] SASAEnergy_updates") {
-
     using doctest::Approx;
     Change change;
     change.everything = true;

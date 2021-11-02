@@ -12,7 +12,7 @@ class Space;
 namespace Geometry {
 class Chameleon;
 }
-class Change;
+struct Change;
 
 namespace SASA {
 
@@ -20,13 +20,11 @@ using index_type = size_t;
 using GeometryType = Geometry::Chameleon;
 
 class SASABase {
-
   public:
-
     struct Neighbours {
         std::vector<index_type> indices; //!< indices of neighbouring particles in ParticleVector
-        PointVector points;          //!< vectors to neighbouring particles
-        index_type index;            //!< index of particle whose neighbours are in indices
+        PointVector points;              //!< vectors to neighbouring particles
+        index_type index;                //!< index of particle whose neighbours are in indices
     };
 
   protected:
@@ -46,40 +44,28 @@ class SASABase {
     }
 
     double calcSASAOfParticle(const Neighbours& neighbour) const;
-
     double exposedArcLength(std::vector<std::pair<double, double>>& arcs) const;
 
   public:
     void updateSASA(const std::vector<SASABase::Neighbours>& neighbours_data,
                     const std::vector<index_type>& target_indices);
-
     virtual void init(Space& spc) = 0;
-
     virtual std::vector<SASABase::Neighbours> calcNeighbourData(Space& spc,
                                                                 const std::vector<index_type>& target_indices) = 0;
-
     virtual SASABase::Neighbours calcNeighbourDataOfParticle(Space& spc, const index_type target_index) = 0;
-
     virtual void update(Space& spc, const Change& change) = 0;
-
     const std::vector<double>& getAreas() const;
-
     SASABase(Space& spc, double probe_radius, int slices_per_atom);
     virtual ~SASABase() = default;
 };
 
 class SASA : public SASABase {
-
   public:
     void init(Space& spc) override;
-
     std::vector<SASABase::Neighbours> calcNeighbourData(Space& spc,
                                                         const std::vector<index_type>& target_indices) override;
-
-    SASA::Neighbours calcNeighbourDataOfParticle(Space& spc, const index_type target_index);
-
+    SASA::Neighbours calcNeighbourDataOfParticle(Space& spc, const index_type target_index) override;
     void update([[maybe_unused]] Space& spc, [[maybe_unused]] const Change& change) override;
-
     SASA(Space& spc, double probe_radius, int slices_per_atom);
     SASA(const json& j, Space& spc);
 };
@@ -87,33 +73,25 @@ class SASA : public SASABase {
 //!< TODO update function does perhaps unnecessary containsMember(Member&) checks
 //!< TODO create a wrapper class for cell_list so that the Space dependence is in there and not here
 template <typename CellList> class SASACellList : public SASABase {
-
   private:
     using CellCoord = typename CellList::Grid::CellCoord;
-
-    std::unique_ptr<CellList> cell_list;   //!< pointer to cell list
-    double cell_length;                    //!< dimension of a single cell
-    std::vector<CellCoord> cell_offsets;   //!< holds offsets which define a 3x3x3 cube around central cell
+    std::unique_ptr<CellList> cell_list; //!< pointer to cell list
+    double cell_length;                  //!< dimension of a single cell
+    std::vector<CellCoord> cell_offsets; //!< holds offsets which define a 3x3x3 cube around central cell
 
   public:
     SASACellList(Space& spc, double probe_radius, int slices_per_atom);
     SASACellList(const json& j, Space& spc);
     virtual ~SASACellList() = default;
-
     void init(Space& spc) override;
-
     SASABase::Neighbours calcNeighbourDataOfParticle(Space& spc, const index_type target_index) override;
-
     std::vector<SASABase::Neighbours> calcNeighbourData(Space& spc,
                                                         const std::vector<index_type>& target_indices) override;
-
     void update(Space& spc, const Change& change) override;
 
   private:
     template <typename TBegin, typename TEnd> void createCellList(TBegin begin, TEnd end, GeometryType& geometry);
-
     void updateMatterChange(Space& spc, const Change& change);
-
     void updatePositionsChange(Space& spc, const Change& change);
 };
 
@@ -123,7 +101,6 @@ extern template class SASACellList<PeriodicCellList>;
 extern template class SASACellList<FixedCellList>;
 
 } // namespace SASA
-
 } // namespace Faunus
 
 #endif // FAUNUS_SASA_H

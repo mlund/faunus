@@ -1100,7 +1100,7 @@ FreeSASAEnergy::FreeSASAEnergy(const json& j, const Space& spc)
     : FreeSASAEnergy(spc, j.value("molarity", 0.0) * 1.0_molar, j.value("radius", 1.4) * 1.0_angstrom) {}
 
 void FreeSASAEnergy::updateSASA(const Change& change) {
-    const auto& particles = spc.activeParticles();
+    const auto particles = spc.activeParticles();
     const auto number_of_active_particles = std::distance(particles.begin(), particles.end());
     updateRadii(particles.begin(), particles.end(), change);
     updatePositions(particles.begin(), particles.end(), change);
@@ -1216,8 +1216,7 @@ SASAEnergyBase::SASAEnergyBase(Space& spc, double cosolute_molarity, double prob
         sasa = std::make_unique<SASACellList<SASA::PeriodicCellList>>(spc, probe_radius, slices_per_atom);
         break;
     case 0:
-        using FixedCellList = CellList::CellListSpatial<CellList::CellListType<size_t, CellList::Grid::Grid3DFixed>>;
-        sasa = std::make_unique<SASACellList<FixedCellList>>(spc, probe_radius, slices_per_atom);
+        sasa = std::make_unique<SASACellList<SASA::FixedCellList>>(spc, probe_radius, slices_per_atom);
         break;
     default:
         sasa = std::make_unique<SASA::SASA>(spc, probe_radius, slices_per_atom);
@@ -1230,7 +1229,8 @@ SASAEnergyBase::SASAEnergyBase(Space& spc, double cosolute_molarity, double prob
 }
 
 SASAEnergyBase::SASAEnergyBase(const json& j, Space& spc)
-    : SASAEnergyBase(spc, j.value("molarity", 0.0) * 1.0_molar, j.value("radius", 1.4) * 1.0_angstrom) {}
+    : SASAEnergyBase(spc, j.value("molarity", 0.0) * 1.0_molar, j.value("radius", 1.4) * 1.0_angstrom,
+                     j.value("slices", 20)) {}
 
 SASAEnergy::SASAEnergy(Space& spc, double cosolute_molarity, double probe_radius, int slices_per_atom)
     : SASAEnergyBase(spc, cosolute_molarity, probe_radius, slices_per_atom) {
@@ -1240,7 +1240,8 @@ SASAEnergy::SASAEnergy(Space& spc, double cosolute_molarity, double probe_radius
 }
 
 SASAEnergy::SASAEnergy(const json& j, Space& spc)
-    : SASAEnergy(spc, j.value("molarity", 0.0) * 1.0_molar, j.value("radius", 1.4) * 1.0_angstrom) {}
+    : SASAEnergy(spc, j.value("molarity", 0.0) * 1.0_molar, j.value("radius", 1.4) * 1.0_angstrom,
+                 j.value("slices", 20)) {}
 
 void SASAEnergyBase::init() {
     sasa->init(spc);
@@ -1257,7 +1258,7 @@ double SASAEnergyBase::energy(Change& change) {
     if (state != MonteCarloState::ACCEPTED) {
         sasa->update(spc, change);
     }
-    const auto& particles = spc.activeParticles();
+    const auto particles = spc.activeParticles();
 
     std::vector<index_type> target_indices;
     for (const auto& particle : particles) {
@@ -1276,10 +1277,8 @@ double SASAEnergyBase::energy(Change& change) {
     double surface_area(0.);
     for (const auto& particle : particles) {
         const auto particle_index = indexOf(particle);
-        surface_area += areas.at(particle_index);
         energy += areas.at(particle_index) * (particle.traits().tension + cosolute_molarity * particle.traits().tfe);
     }
-    mean_surface_area += surface_area; // sample average area for accepted confs.
 
     return energy;
 }
@@ -1293,7 +1292,6 @@ void SASAEnergyBase::sync(Energybase* energybase_ptr, const Change& change) {
 
 void SASAEnergyBase::to_json(json& j) const {
     j["molarity"] = cosolute_molarity / 1.0_molar;
-    j[u8::bracket("SASA") + "/" + u8::angstrom + u8::squared] = mean_surface_area.avg() / 1.0_angstrom;
     roundJSON(j, 6); // set json output precision
 }
 
@@ -1370,9 +1368,7 @@ double SASAEnergy::energy(Change& change) {
     for (const auto& particle : spc.activeParticles()) {
         const auto particle_index = std::addressof(particle) - std::addressof(spc.particles.at(0));
         energy += areas.at(particle_index) * (particle.traits().tension + cosolute_molarity * particle.traits().tfe);
-        surface_area += areas.at(particle_index);
     }
-    mean_surface_area += surface_area; // sample average area for accepted confs.
 
     return energy;
 }
@@ -1388,7 +1384,6 @@ void SASAEnergy::sync(Energybase* energybase_ptr, const Change& change) {
 
 void SASAEnergy::to_json(json& j) const {
     j["molarity"] = cosolute_molarity / 1.0_molar;
-    j[u8::bracket("SASA") + "/" + u8::angstrom + u8::squared] = mean_surface_area.avg() / 1.0_angstrom;
     roundJSON(j, 6); // set json output precision
 }
 

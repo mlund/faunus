@@ -19,6 +19,11 @@ namespace SASA {
 using index_type = size_t;
 using GeometryType = Geometry::Chameleon;
 
+/**
+ * @brief base class for calculating solvent accessible surface areas of target particles
+ *        derived classes implement specific neighbour search algorithms
+ *
+ */
 class SASABase {
   public:
     struct Neighbours {
@@ -28,10 +33,10 @@ class SASABase {
     };
 
   protected:
-    double probe_radius;            //!< radius of the probe sphere
+    double probe_radius = 1.4;      //!< radius of the probe sphere
     std::vector<double> areas;      //!< vector holding SASA area of each atom
     std::vector<double> radii;      //!< Radii buffer for all particles
-    int slices_per_atom;            //!< number of slices of each sphere in SASA calculation
+    int slices_per_atom = 20;       //!< number of slices of each sphere in SASA calculation
     const double TWOPI = 2. * M_PI; //!< 2 PI
     const Particle* first_particle; //! first particle in ParticleVector
 
@@ -39,7 +44,7 @@ class SASABase {
      * @brief returns absolute index of particle in ParticleVector
      * @param particle
      */
-    inline index_type indexOf(const Particle& particle) {
+    inline index_type indexOf(const Particle& particle) const {
         return static_cast<index_type>(std::addressof(particle) - first_particle);
     }
 
@@ -50,28 +55,37 @@ class SASABase {
     void updateSASA(const std::vector<SASABase::Neighbours>& neighbours_data,
                     const std::vector<index_type>& target_indices);
     virtual void init(Space& spc) = 0;
-    virtual std::vector<SASABase::Neighbours> calcNeighbourData(Space& spc,
-                                                                const std::vector<index_type>& target_indices) = 0;
-    virtual SASABase::Neighbours calcNeighbourDataOfParticle(Space& spc, const index_type target_index) = 0;
+    virtual std::vector<SASABase::Neighbours>
+    calcNeighbourData(Space& spc, const std::vector<index_type>& target_indices) const = 0;
+    virtual SASABase::Neighbours calcNeighbourDataOfParticle(Space& spc, const index_type target_index) const = 0;
     virtual void update(Space& spc, const Change& change) = 0;
     const std::vector<double>& getAreas() const;
     SASABase(Space& spc, double probe_radius, int slices_per_atom);
     virtual ~SASABase() = default;
 };
 
+/**
+ * @brief derived class of SASABase which uses O(N^2) neighbour search
+ *
+ **/
 class SASA : public SASABase {
   public:
     void init(Space& spc) override;
     std::vector<SASABase::Neighbours> calcNeighbourData(Space& spc,
-                                                        const std::vector<index_type>& target_indices) override;
-    SASA::Neighbours calcNeighbourDataOfParticle(Space& spc, const index_type target_index) override;
+                                                        const std::vector<index_type>& target_indices) const override;
+    SASA::Neighbours calcNeighbourDataOfParticle(Space& spc, const index_type target_index) const override;
     void update([[maybe_unused]] Space& spc, [[maybe_unused]] const Change& change) override;
     SASA(Space& spc, double probe_radius, int slices_per_atom);
     SASA(const json& j, Space& spc);
 };
 
-//!< TODO update function does perhaps unnecessary containsMember(Member&) checks
-//!< TODO create a wrapper class for cell_list so that the Space dependence is in there and not here
+/**
+ * @brief derived class of SASABase which uses cell lists for neighbour search
+ *        currently can be used only for geometries with either 3 or 0 periodic boundaries
+ *
+ * @todo  update function does perhaps unnecessary containsMember(Member&) checks
+ * @todo  create a wrapper class for cell_list so that the Space dependence is in there and not here
+ **/
 template <typename CellList> class SASACellList : public SASABase {
   private:
     using CellCoord = typename CellList::Grid::CellCoord;
@@ -84,9 +98,9 @@ template <typename CellList> class SASACellList : public SASABase {
     SASACellList(const json& j, Space& spc);
     virtual ~SASACellList() = default;
     void init(Space& spc) override;
-    SASABase::Neighbours calcNeighbourDataOfParticle(Space& spc, const index_type target_index) override;
+    SASABase::Neighbours calcNeighbourDataOfParticle(Space& spc, const index_type target_index) const override;
     std::vector<SASABase::Neighbours> calcNeighbourData(Space& spc,
-                                                        const std::vector<index_type>& target_indices) override;
+                                                        const std::vector<index_type>& target_indices) const override;
     void update(Space& spc, const Change& change) override;
 
   private:

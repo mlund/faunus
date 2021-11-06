@@ -1580,6 +1580,10 @@ class FreeSASAEnergy : public Energybase {
 }; //!< SASA energy from transfer free energies
 #endif
 
+/**
+ * @brief class for calculating SASA energies calculating SASA of each particle every step
+ *
+ */
 class SASAEnergyBase : public Energybase {
 
   public:
@@ -1589,7 +1593,6 @@ class SASAEnergyBase : public Energybase {
     Space& spc;
     double cosolute_molarity = 0.;        //!< co-solute concentration (mol/l)
     std::unique_ptr<SASA::SASABase> sasa; //!< performs neighbour searching and subsequent sasa calculation
-    Average<double> mean_surface_area;
 
   private:
     void to_json(json& j) const override;
@@ -1601,7 +1604,7 @@ class SASAEnergyBase : public Energybase {
      * @brief returns absolute index of particle in ParticleVector
      * @param particle
      */
-    inline auto indexOf(const Particle& particle) {
+    inline auto indexOf(const Particle& particle) const {
         return static_cast<index_type>(std::addressof(particle) - std::addressof(spc.particles.at(0)));
     }
 
@@ -1619,6 +1622,10 @@ class SASAEnergyBase : public Energybase {
 
 }; //!< SASA energy from transfer free energies with SASA calculation each step
 
+/**
+ * @brief class for calculating SASA energies calculating SASA of particles based on change object every step
+ *
+ */
 class SASAEnergy : public SASAEnergyBase {
 
   private:

@@ -155,7 +155,7 @@ void SASA::init(Space& spc) {
  * @param space
  * @param target_index indicex of target particle in ParticleVector
  */
-SASA::Neighbours SASA::calcNeighbourDataOfParticle(Space& spc, const index_type target_index) {
+SASA::Neighbours SASA::calcNeighbourDataOfParticle(Space& spc, const index_type target_index) const {
 
     // O(N^2) search for neighbours
     SASA::Neighbours neighbour;
@@ -183,7 +183,7 @@ SASA::Neighbours SASA::calcNeighbourDataOfParticle(Space& spc, const index_type 
  * @param space
  * @param target_indices absolute indicies of target particles in ParticleVector
  */
-std::vector<SASA::Neighbours> SASA::calcNeighbourData(Space& spc, const std::vector<index_type>& target_indices) {
+std::vector<SASA::Neighbours> SASA::calcNeighbourData(Space& spc, const std::vector<index_type>& target_indices) const {
     // O(N^2) search for neighbours ... will be done using Cell-Lists
     std::vector<SASA::Neighbours> neighbour(target_indices.size());
     std::transform(target_indices.begin(), target_indices.end(), neighbour.begin(), [&](auto index){
@@ -324,7 +324,8 @@ template <typename CellList> void SASACellList<CellList>::init(Space& spc) {
  * @param target_index indicex of target particle in ParticleVector
  */
 template <typename CellList>
-SASABase::Neighbours SASACellList<CellList>::calcNeighbourDataOfParticle(Space& spc, const index_type target_index) {
+SASABase::Neighbours SASACellList<CellList>::calcNeighbourDataOfParticle(Space& spc,
+                                                                         const index_type target_index) const {
 
     SASABase::Neighbours neighbours;
 
@@ -363,7 +364,7 @@ SASABase::Neighbours SASACellList<CellList>::calcNeighbourDataOfParticle(Space& 
  */
 template <typename CellList>
 std::vector<SASABase::Neighbours>
-SASACellList<CellList>::calcNeighbourData(Space& spc, const std::vector<index_type>& target_indices) {
+SASACellList<CellList>::calcNeighbourData(Space& spc, const std::vector<index_type>& target_indices) const {
     std::vector<SASA::Neighbours> neighbours(target_indices.size());
     std::transform(target_indices.begin(), target_indices.end(), neighbours.begin(), [&](auto index){
         return calcNeighbourDataOfParticle(spc, index);

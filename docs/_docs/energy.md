@@ -825,6 +825,7 @@ The FreeSASA library option has to be enabled when compiling.
 ------------ | --------------------------------------------
 `radius=1.4` | Probe radius for SASA calculation (Å)
 `molarity`   | Molar concentration of co-solute
+`dense=true` | Flag specifying if a dense or a sparse version of a cell list container is used
 
 Calculates the free energy contribution due to
 
@@ -832,7 +833,7 @@ Calculates the free energy contribution due to
 2. co-solute concentration (typically electrolytes)
 
 via a [SASA calculation](http://dx.doi.org/10/dbjh) for each atom, as implemented in
-the [FreeSASA library](https://freesasa.github.io/).
+the [FreeSASA library](https://freesasa.github.io/). 
 
 The energy term is:
 
@@ -843,6 +844,8 @@ $$
 where $c_s$ is the molar concentration of the co-solute;
 $\gamma_i$ is the atomic surface tension; and $\varepsilon_{\text{tfe},i}$ the atomic transfer free energy,
 both specified in the atom topology with `tension` and `tfe`, respectively.
+Will use cell lists if a geometry is either `cuboid` or `sphere`. The `dense` option specifies if a dense implementation 
+(memory heavy but faster) or a sparse one (slightly slower but light) of a cell list container will be used.
 
 ## Penalty Function
 

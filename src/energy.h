@@ -515,12 +515,9 @@ template <typename PairEnergy> class DelayedEnergyAccumulator : public EnergyAcc
     double accumulateOpenMP() const {
         double sum = 0.0;
 #pragma omp parallel for reduction(+ : sum)
-        for (auto pair = particle_pairs.begin(); pair < particle_pairs.end(); ++pair) {
-            sum += pair_energy.potential(pair->first.get(), pair->second.get());
-        }
-        /*for (const auto& pair : particle_pairs) {
+        for (const auto& pair : particle_pairs) {
             sum += pair_energy.potential(pair.first.get(), pair.second.get());
-        }*/
+        }
         return sum;
     }
 };

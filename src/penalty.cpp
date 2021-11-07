@@ -173,16 +173,16 @@ PenaltyMPI::PenaltyMPI(const json& j, Space& spc) : Penalty(j, spc), mpi(MPI::mp
 }
 
 /**
- * @warning Check allgather() why is size = 1 for weights.data()?
+ * @note These are generic MPI calls previously used:
+ *
+ * MPI_Allgather(&least_sampled_in_histogram, 1, MPI_INT, weights.data(), 1, MPI_INT, mpi.comm);
  */
 void PenaltyMPI::update(const std::vector<double>& coordinate) {
     const auto old_penalty_energy = penalty_energy[coordinate];
     update_counter++;
     if (update_counter % number_of_steps_between_updates == 0 and energy_increment > 0.0) {
         int least_sampled_in_histogram = histogram.minCoeff(); // if > 0 --> all RC's visited
-        mpi.world.allgather(&least_sampled_in_histogram, mpl::contiguous_layout<int>(1), weights.data(),
-                                 mpl::contiguous_layout<int>(weights.size()));
-        // Generic: MPI_Allgather(&least_sampled_in_histogram, 1, MPI_INT, weights.data(), 1, MPI_INT, mpi.comm);
+        mpi.world.allgather(least_sampled_in_histogram, weights.data());
 
         // if at least one walker has sampled full RC space at least `samplings` times
         if (weights.maxCoeff() > samplings) { // change to minCoeff()?
@@ -205,30 +205,35 @@ void PenaltyMPI::update(const std::vector<double>& coordinate) {
  * Broadcast, collect, and average penalty functions across all MPI nodes. The resulting
  * function is shifted so that the minimum energy is at zero.
  * When done, all penalty functions shall be identical!
+ *
+ * @note These are generic MPI calls previously used:
+ *
+ * MPI_Gather(penalty_energy.data(), penalty_energy.size(), MPI_DOUBLE, buffer.data(),
+ *            penalty_energy.size(), MPI_DOUBLE, 0, mpi.comm); // master collects penalty from all nodes
+ *
+ * MPI_Bcast(penalty_energy.data(), penalty_energy.size(), MPI_DOUBLE, 0,
+ *           mpi.comm); // master sends average penalty function to all slaves
  */
 void PenaltyMPI::averagePenaltyFunctions() {
     penalty_function_exchange_counter += 1;
+    const auto layout = mpl::contiguous_layout<double>(penalty_energy.size());
 
-    const auto size = mpl::contiguous_layout<double>(penalty_energy.size());
+    // master collects penalty from all nodes
+    mpi.world.gather(mpi.masterRank(), penalty_energy.data(), layout, buffer.data(), layout);
 
-    mpi.world.gather(mpi.masterRank(), penalty_energy.data(), size, buffer.data(), size);
-    //    Generic: MPI_Gather(penalty_energy.data(), penalty_energy.size(), MPI_DOUBLE, buffer.data(),
-    //    penalty_energy.size(),
-    //               MPI_DOUBLE, 0, mpi.comm); // master collects penalty from all slaves
-
-    if (mpi.isMaster()) { // master performs the average
+    // master calculates an average over all nodes
+    if (mpi.isMaster()) {
         penalty_energy.setZero();
         for (int i = 0; i < mpi.world.size(); i++) {
-            penalty_energy += Eigen::Map<Eigen::MatrixXd>(buffer.data() + i * penalty_energy.size(),
-                                                          penalty_energy.rows(), penalty_energy.cols());
+            auto offset = i * penalty_energy.size();
+            penalty_energy +=
+                Eigen::Map<Eigen::MatrixXd>(buffer.data() + offset, penalty_energy.rows(), penalty_energy.cols());
         }
-        penalty_energy =
-            (penalty_energy.array() - penalty_energy.minCoeff()) / static_cast<double>(mpi.world.size());
+        penalty_energy = (penalty_energy.array() - penalty_energy.minCoeff()) / static_cast<double>(mpi.world.size());
     }
 
-    mpi.world.bcast(mpi.masterRank(), penalty_energy.data(), size);
-    // Generic: MPI_Bcast(penalty_energy.data(), penalty_energy.size(), MPI_DOUBLE, 0,
-    //              mpi.comm); // master sends average penalty function to all slaves
+    // distribute average to all nodes
+    mpi.world.bcast(mpi.masterRank(), penalty_energy.data(), layout);
 }
 
 #endif

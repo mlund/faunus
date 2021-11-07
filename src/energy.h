@@ -515,9 +515,12 @@ template <typename PairEnergy> class DelayedEnergyAccumulator : public EnergyAcc
     double accumulateOpenMP() const {
         double sum = 0.0;
 #pragma omp parallel for reduction(+ : sum)
-        for (const auto& pair : particle_pairs) {
-            sum += pair_energy.potential(pair.first.get(), pair.second.get());
+        for (auto pair = particle_pairs.begin(); pair < particle_pairs.end(); ++pair) {
+            sum += pair_energy.potential(pair->first.get(), pair->second.get());
         }
+        /*for (const auto& pair : particle_pairs) {
+            sum += pair_energy.potential(pair.first.get(), pair.second.get());
+        }*/
         return sum;
     }
 };
@@ -1614,8 +1617,10 @@ class SASAEnergyBase : public Energybase {
      * @param cosolute_molarity in particles per angstrom cubed
      * @param probe_radius in angstrom
      * @param slices_per_atom number of slices of spheres in SASA calculation
+     * @param dense_container flag specifying if a fast memory heavy version of cell_list container is used
      */
-    SASAEnergyBase(Space& spc, double cosolute_molarity = 0.0, double probe_radius = 1.4, int slices_per_atom = 20);
+    SASAEnergyBase(Space& spc, double cosolute_molarity = 0.0, double probe_radius = 1.4, int slices_per_atom = 20,
+                   bool dense_container = true);
     SASAEnergyBase(const json& j, Space& spc);
     const std::vector<double>& getAreas() const { return areas; }
     double energy(Change& change) override;
@@ -1648,8 +1653,10 @@ class SASAEnergy : public SASAEnergyBase {
      * @param cosolute_molarity in particles per angstrom cubed
      * @param probe_radius in angstrom
      * @param slices_per_atom number of slices of spheres in SASA calculation
+     * @param dense_container flag specifying if a fast memory heavy version of cell_list container is used
      */
-    SASAEnergy(Space& spc, double cosolute_molarity = 0.0, double probe_radius = 1.4, int slices_per_atom = 20);
+    SASAEnergy(Space& spc, double cosolute_molarity = 0.0, double probe_radius = 1.4, int slices_per_atom = 20,
+               bool dense_container = true);
     SASAEnergy(const json& j, Space& spc);
     double energy(Change& change) override;
 }; //!< SASA energy from transfer free energies

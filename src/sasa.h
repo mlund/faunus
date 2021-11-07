@@ -32,6 +32,10 @@ class SASABase {
         index_type index;                //!< index of particle whose neighbours are in indices
     };
 
+    bool needs_syncing = false; //!< flag indicating if syncing of cell_lists is needed
+                                //!< this is important  in case there is a particle insertion
+                                //!< which is rejected due to containerOverlap, because the sasa->update is not called
+
   protected:
     double probe_radius = 1.4;      //!< radius of the probe sphere
     std::vector<double> areas;      //!< vector holding SASA area of each atom
@@ -108,11 +112,27 @@ template <typename CellList> class SASACellList : public SASABase {
     void updateMatterChange(Space& spc, const Change& change);
     void updatePositionsChange(Space& spc, const Change& change);
 };
+using PeriodicGrid = CellList::Grid::Grid3DPeriodic;
+using FixedGrid = CellList::Grid::Grid3DFixed;
 
-using PeriodicCellList = CellList::CellListSpatial<CellList::CellListType<index_type, CellList::Grid::Grid3DPeriodic>>;
-using FixedCellList = CellList::CellListSpatial<CellList::CellListType<index_type, CellList::Grid::Grid3DFixed>>;
-extern template class SASACellList<PeriodicCellList>;
-extern template class SASACellList<FixedCellList>;
+template <typename TMember, typename TIndex>
+using DenseContainer = CellList::Container::DenseContainer<TMember, TIndex>;
+template <typename TMember, typename TIndex>
+using SparseContainer = CellList::Container::SparseContainer<TMember, TIndex>;
+
+template <class TGrid, template <typename, typename> class TContainer = DenseContainer>
+using CellListType =
+    CellList::CellListSpatial<CellList::CellListType<index_type, TGrid, CellList::CellListBase, TContainer>>;
+
+using DensePeriodicCellList = CellListType<PeriodicGrid, DenseContainer>;
+using DenseFixedCellList = CellListType<FixedGrid, DenseContainer>;
+using SparsePeriodicCellList = CellListType<PeriodicGrid, SparseContainer>;
+using SparseFixedCellList = CellListType<FixedGrid, SparseContainer>;
+
+extern template class SASACellList<DensePeriodicCellList>;
+extern template class SASACellList<DenseFixedCellList>;
+extern template class SASACellList<SparsePeriodicCellList>;
+extern template class SASACellList<SparseFixedCellList>;
 
 } // namespace SASA
 } // namespace Faunus

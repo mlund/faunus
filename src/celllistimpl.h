@@ -18,6 +18,8 @@
 #include <range/v3/view/join.hpp>
 #include <range/v3/view/transform.hpp>
 #include "celllist.h"
+#include "core.h"
+#include "spdlog/spdlog.h"
 
 namespace Faunus {
 
@@ -442,12 +444,20 @@ template <typename TMember, typename TIndex> class DenseContainer : virtual publ
         return indices;
     }
 
-    DenseContainer(std::size_t size) { container.resize(size); }
+    DenseContainer(std::size_t size) {
+        if (size >= max_container_size) {
+            faunus_logger->error("Size of the cell list container is too large! \n"
+                                 "Try using a sparse version (i.e. dense: false)");
+            throw std::runtime_error("cell list `container` size too large");
+        }
+        container.resize(size);
+    }
 
   protected:
     const Index indexEnd() const { return container.size(); }
 
   private:
+    const std::size_t max_container_size = 1000000000; //!< maximum container size
     const Members empty_set;        //!< an empty set, e.g., for out of boundary conditions
     std::vector<Members> container; //!< container itself
 };
@@ -508,7 +518,7 @@ template <typename TMember, typename TIndex> class SparseContainer : virtual pub
   private:
     Index index_end;                    //!< the lowest index not allowed to appear, i.e., the grid size
     const Members empty_set;            //!< an empty set, e.g., for out of boundary conditions
-    std::map<Index, Members> container; //!< container itself
+    std::unordered_map<Index, Members> container; //!< container itself
 };
 
 /**

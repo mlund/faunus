@@ -396,7 +396,12 @@ template <typename CellList> void SASACellList<CellList>::update(Space& spc, con
 template <typename CellList>
 template <typename TBegin, typename TEnd>
 void SASACellList<CellList>::createCellList(TBegin begin, TEnd end, GeometryType& geometry) {
-    cell_list = std::make_unique<CellList>(geometry.getLength(), cell_length);
+    if (cell_list.get()) {
+        delete cell_list.release();
+        cell_list = std::make_unique<CellList>(geometry.getLength(), cell_length);
+    } else {
+        cell_list = std::make_unique<CellList>(geometry.getLength(), cell_length);
+    }
     std::for_each(begin, end, [&, half_box = 0.5 * geometry.getLength()](const Particle& particle) {
         cell_list->insertMember(indexOf(particle), particle.pos + half_box);
     });
@@ -413,10 +418,9 @@ template <typename CellList> void SASACellList<CellList>::updateMatterChange(Spa
         const auto offset = spc.getFirstParticleIndex(group);
         for (const auto relative_index : group_change.relative_atom_indices) {
             const auto absolute_index = relative_index + offset;
-            if (relative_index >= group.size() &&
-                cell_list->containsMember(absolute_index)) { // if index lies behind last active index
+            if (relative_index >= group.size()) { // if index lies behind last active index
                 cell_list->removeMember(absolute_index);
-            } else if (relative_index < group.size() && !cell_list->containsMember(absolute_index)) {
+            } else if (relative_index < group.size()) {
                 cell_list->insertMember(absolute_index,
                                         spc.particles.at(absolute_index).pos + 0.5 * spc.geometry.getLength());
             }
@@ -449,8 +453,10 @@ template <typename CellList> void SASACellList<CellList>::updatePositionsChange(
     }
 }
 
-template class SASACellList<PeriodicCellList>;
-template class SASACellList<FixedCellList>;
+template class SASACellList<DensePeriodicCellList>;
+template class SASACellList<DenseFixedCellList>;
+template class SASACellList<SparsePeriodicCellList>;
+template class SASACellList<SparseFixedCellList>;
 } // namespace SASA
 
 TEST_CASE("[Faunus] SASA_CellList") {
@@ -477,7 +483,7 @@ TEST_CASE("[Faunus] SASA_CellList") {
         spc.particles.at(0).pos = {49.0, 0.0, 0.0};
         spc.particles.at(1).pos = {1.0, 0.0, 0.0};
 
-        SASACellList<PeriodicCellList> sasa(spc, 1.4_angstrom, 20);
+        SASACellList<SparsePeriodicCellList> sasa(spc, 1.4_angstrom, 20);
         sasa.init(spc);
 
         auto neighbours = sasa.calcNeighbourData(spc, {0, 1});
@@ -508,7 +514,7 @@ TEST_CASE("[Faunus] SASA_CellList") {
         spc.particles.at(0).pos = {49.0, 0.0, 0.0};
         spc.particles.at(1).pos = {1.0, 0.0, 0.0};
 
-        SASACellList<FixedCellList> sasa(spc, 1.4_angstrom, 20);
+        SASACellList<SparseFixedCellList> sasa(spc, 1.4_angstrom, 20);
         sasa.init(spc);
 
         auto neighbours = sasa.calcNeighbourData(spc, {0, 1});

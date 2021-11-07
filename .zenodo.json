@@ -9,6 +9,7 @@
         }
     ],
     "contributors": [
+        {"type": "Researcher", "name": "Jakub Smutek"},
         {"type": "Researcher", "name": "Marco Polimeni", "orcid": "0000-0002-9670-7232"},
         {"type": "Researcher", "name": "Vidar Aspelin", "orcid": "0000-0002-6888-1591"},
         {"type": "Researcher", "name": "Stefan Hervø-Hansen", "orcid": "0000-0002-9629-9195"},

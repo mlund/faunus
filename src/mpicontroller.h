@@ -18,7 +18,7 @@ MPL_REFLECTION(Faunus::Particle, id, charge, pos)
 
 namespace Faunus::MPI {
 
-extern std::string prefix; //!< Filneme prefix for MPI related input and output (empty if no MPI)
+extern std::string prefix; //!< Filename prefix for MPI related input and output (empty if no MPI)
 
 #ifdef ENABLE_MPI
 

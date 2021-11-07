@@ -39,6 +39,7 @@ void setRandomNumberGenerator(const json& input);
 void loadState(docopt::Options& args, MetropolisMonteCarlo& simulation);
 void checkElectroNeutrality(MetropolisMonteCarlo& simulation);
 void showErrorMessage(std::exception& exception);
+void showProgress(std::shared_ptr<ProgressIndicator::ProgressTracker>& progress_tracker);
 void playRetroMusic();
 template <typename TimePoint>
 void saveOutput(TimePoint& starting_time, docopt::Options& args, MetropolisMonteCarlo& simulation,
@@ -46,6 +47,7 @@ void saveOutput(TimePoint& starting_time, docopt::Options& args, MetropolisMonte
 
 void mainLoop(bool show_progress, const json& json_in, MetropolisMonteCarlo& simulation,
               Analysis::CombinedAnalysis& analysis);
+
 
 static const char USAGE[] =
     R"(Faunus - the Monte Carlo code you're looking for!
@@ -104,11 +106,15 @@ int main(int argc, const char** argv) {
         checkElectroNeutrality(simulation);
         Analysis::CombinedAnalysis analysis(input.at("analysis"), simulation.getSpace(), simulation.getHamiltonian());
 
-        const bool show_progress = !quiet && !args["--nobar"].asBool();
+        bool show_progress = !quiet && !args["--nobar"].asBool();
+#ifdef ENABLE_MPI
+        if (!MPI::mpi.isMaster()) {
+            show_progress = false; // show progress only for root rank
+        }
+#endif
         mainLoop(show_progress, input, simulation, analysis); // run simulation!
 
         saveOutput(starting_time, args, simulation, analysis);
-        //Faunus::MPI::mpi.finalize();
         return EXIT_SUCCESS;
 
     } catch (std::exception& e) {
@@ -145,20 +151,23 @@ void showErrorMessage(std::exception& exception) {
 }
 
 void playRetroMusic() {
+#ifdef ENABLE_MPI
+    if (!MPI::mpi.isMaster()) {
+        return;
+    }
+#endif
 #ifdef ENABLE_SID
     using std::chrono_literals::operator""s;
     using std::chrono_literals::operator""ns;
-    if (MPI::mpi.isMaster()) {
-        if (auto player = createLoadedSIDplayer()) { // create C64 SID emulation and load a random tune
-            faunus_logger->info("error message music '{}' by {}, {} (6502/SID emulation)", player->title(),
-                                player->author(), player->info());
-            faunus_logger->info("\033[1mpress ctrl-c to quit\033[0m");
-            player->start();                                                        // start music
-            std::this_thread::sleep_for(10ns);                                      // short delay
-            std::this_thread::sleep_until(std::chrono::system_clock::now() + 240s); // play for 4 minutes, then exit
-            player->stop();
-            std::cout << std::endl;
-        }
+    if (auto player = createLoadedSIDplayer()) { // create C64 SID emulation and load a random tune
+        faunus_logger->info("error message music '{}' by {}, {} (6502/SID emulation)", player->title(),
+                            player->author(), player->info());
+        faunus_logger->info("\033[1mpress ctrl-c to quit\033[0m");
+        player->start();                                                        // start music
+        std::this_thread::sleep_for(10ns);                                      // short delay
+        std::this_thread::sleep_until(std::chrono::system_clock::now() + 240s); // play for 4 minutes, then exit
+        player->stop();
+        std::cout << std::endl;
     }
 #endif
 }
@@ -203,22 +212,24 @@ void mainLoop(bool show_progress, const json& json_in, MetropolisMonteCarlo& sim
     auto progress_tracker = createProgressTracker(show_progress, macro * micro);
     for (int i = 0; i < macro; i++) {
         for (int j = 0; j < micro; j++) {
-            if (progress_tracker && MPI::mpi.isMaster()) {
-                if (++(*progress_tracker) % 10 == 0) {
-                    progress_tracker->display();
-                }
-            }
             simulation.sweep();
             analysis.sample();
+            showProgress(progress_tracker);
         }                   // end of micro steps
         analysis.to_disk(); // save analysis to disk
     }                       // end of macro steps
-    if (progress_tracker && MPI::mpi.isMaster()) {
+    if (progress_tracker) {
         progress_tracker->done();
     }
     const double drift_tolerance = 1e-9;
     const auto level = simulation.relativeEnergyDrift() < drift_tolerance ? spdlog::level::info : spdlog::level::warn;
     faunus_logger->log(level, "relative energy drift = {:.3E}", simulation.relativeEnergyDrift());
+}
+
+void showProgress(std::shared_ptr<ProgressIndicator::ProgressTracker>& progress_tracker) {
+    if (progress_tracker && (++(*progress_tracker) % 10 == 0)) {
+        progress_tracker->display();
+    }
 }
 
 void checkElectroNeutrality(MetropolisMonteCarlo& simulation) {
@@ -315,21 +326,17 @@ std::shared_ptr<CPPSID::Player> createLoadedSIDplayer() {
 #endif
 
 std::shared_ptr<ProgressIndicator::ProgressTracker> createProgressTracker(bool show_progress, unsigned int steps) {
-    using std::chrono::milliseconds;
-    using std::chrono::minutes;
-    std::shared_ptr<ProgressIndicator::ProgressTracker> tracker = nullptr;
-    if (show_progress) {
-        if (static_cast<bool>(isatty(fileno(stdout)))) { // show a progress bar on the console
-            tracker = std::make_shared<ProgressIndicator::ProgressBar>(steps);
-        } else { // not in a console
-            tracker = std::make_shared<ProgressIndicator::TaciturnDecorator>(
-                // hence print a new line
-                std::make_shared<ProgressIndicator::ProgressLog>(steps),
-                // at most every 10 minutes or after 0.5% of progress, whatever comes first
-                std::chrono::duration_cast<milliseconds>(minutes(10)), 0.005);
-        }
+    if (!show_progress) {
+        return nullptr;
     }
-    return tracker;
+    if (static_cast<bool>(isatty(fileno(stdout)))) { // show a progress bar on the console
+        return std::make_shared<ProgressIndicator::ProgressBar>(steps);
+    }
+    return std::make_shared<ProgressIndicator::TaciturnDecorator>(
+        // hence print a new line
+        std::make_shared<ProgressIndicator::ProgressLog>(steps),
+        // at most every 10 minutes or after 0.5% of progress, whatever comes first
+        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::minutes(10)), 0.005);
 }
 
 json getUserInput(docopt::Options& args) {

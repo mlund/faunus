@@ -81,10 +81,8 @@ static const char USAGE[] =
 )";
 
 int main(int argc, const char** argv) {
-    if (argc > 1) { // run unittests if the first argument equals "test"
-        if (std::string(argv[1]) == "test") {
-            return runUnittests(argc, argv);
-        }
+    if (argc > 1 && std::string(argv[1]) == "test") { // run unittests if the first argument equals "test"
+        return runUnittests(argc, argv);
     }
     bool fun = false;   //!< enable utterly unnecessarily stuff?
     bool quiet = false; //!< hold kaje?
@@ -358,30 +356,31 @@ json getUserInput(docopt::Options& args) {
 }
 
 void loadState(docopt::Options& args, MetropolisMonteCarlo& simulation) {
-    if (args["--state"]) {
-        const auto statefile = MPI::prefix + args["--state"].asString();
-        const auto suffix = statefile.substr(statefile.find_last_of('.') + 1);
-        const bool binary = (suffix == "ubj");
-        auto mode = std::ios_base::in;
+    if (not args["--state"]) {
+        return;
+    }
+    const auto statefile = MPI::prefix + args["--state"].asString();
+    const auto suffix = statefile.substr(statefile.find_last_of('.') + 1);
+    const bool binary = (suffix == "ubj");
+    auto mode = std::ios_base::in;
+    if (binary) {
+        mode = std::ios_base::ate | std::ios_base::binary; // ate = open at end
+    }
+    if (auto stream = std::ifstream(statefile, mode)) {
+        json j;
+        faunus_logger->info("loading state file {}", statefile);
         if (binary) {
-            mode = std::ios_base::ate | std::ios_base::binary; // ate = open at end
-        }
-        if (auto stream = std::ifstream(statefile, mode)) {
-            json j;
-            faunus_logger->info("loading state file {}", statefile);
-            if (binary) {
-                const auto size = stream.tellg(); // get file size
-                std::vector<std::uint8_t> buffer(size / sizeof(std::uint8_t));
-                stream.seekg(0, stream.beg);             // go back to start...
-                stream.read((char*)buffer.data(), size); // ...and read into buffer
-                j = json::from_ubjson(buffer);
-            } else {
-                stream >> j;
-            }
-            simulation.restore(j);
+            const auto size = stream.tellg(); // get file size
+            std::vector<std::uint8_t> buffer(size / sizeof(std::uint8_t));
+            stream.seekg(0, stream.beg);             // go back to start...
+            stream.read((char*)buffer.data(), size); // ...and read into buffer
+            j = json::from_ubjson(buffer);
         } else {
-            throw std::runtime_error("state file error -> "s + statefile);
+            stream >> j;
         }
+        simulation.restore(j);
+    } else {
+        throw std::runtime_error("state file error -> "s + statefile);
     }
 }
 

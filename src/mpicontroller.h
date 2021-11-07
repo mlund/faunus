@@ -18,7 +18,15 @@ MPL_REFLECTION(Faunus::Particle, id, charge, pos)
 
 namespace Faunus::MPI {
 
-extern std::string prefix; //!< Filename prefix for MPI related input and output (empty if no MPI)
+/**
+ * @brief Filename prefix for MPI related input and output (empty if no MPI)
+ *
+ * This can be used to generate rank-based IO for MPI processes. If the number
+ * of ranks is 2 or more, `prefix` will be set to `mpi{rank}.` and empty otherwise.
+ * It's a good habbit to append `MPI::prefix` to analysis output in e.g. the `Analysis`
+ * namespace
+ */
+extern std::string prefix;
 
 #ifdef ENABLE_MPI
 

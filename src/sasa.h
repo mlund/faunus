@@ -39,7 +39,7 @@ class SASABase {
   protected:
     double probe_radius = 1.4;      //!< radius of the probe sphere
     std::vector<double> areas;      //!< vector holding SASA area of each atom
-    std::vector<double> radii;      //!< Radii buffer for all particles
+    std::vector<double> sasa_radii; //!< Radii buffer for all particles
     int slices_per_atom = 20;       //!< number of slices of each sphere in SASA calculation
     const double TWOPI = 2. * M_PI; //!< 2 PI
     const Particle* first_particle; //! first particle in ParticleVector

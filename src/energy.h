@@ -1609,13 +1609,6 @@ class SASAEnergyBase : public Energybase {
     }
 
   public:
-    /**
-     * @param spc
-     * @param cosolute_molarity in particles per angstrom cubed
-     * @param probe_radius in angstrom
-     * @param slices_per_atom number of slices of spheres in SASA calculation
-     * @param dense_container flag specifying if a fast memory heavy version of cell_list container is used
-     */
     SASAEnergyBase(Space& spc, double cosolute_molarity = 0.0, double probe_radius = 1.4, int slices_per_atom = 20,
                    bool dense_container = true);
     SASAEnergyBase(const json& j, Space& spc);
@@ -1633,25 +1626,16 @@ class SASAEnergy : public SASAEnergyBase {
   private:
     std::vector<std::vector<index_type>>
         current_neighbours; //!< holds cached neighbour indices for each particle in ParticleVector
+    std::vector<index_type> changed_indices; //!< paritcle indices whose SASA changed based on change object
 
     void to_json(json& j) const override;
     void sync(Energybase* energybase_ptr, const Change& change) override;
     void init() override;
 
-    /**
-     * @brief Finds absolute indices of particles whose SASA has changed
-     * @param change Change object
-     */
-    std::vector<index_type> findChangedIndices(Change& change);
+    void updateChangedIndices(const Change& change);
+    void insertChangedNeighboursOf(const index_type index, std::set<index_type>& target_indices) const;
 
   public:
-    /**
-     * @param spc
-     * @param cosolute_molarity in particles per angstrom cubed
-     * @param probe_radius in angstrom
-     * @param slices_per_atom number of slices of spheres in SASA calculation
-     * @param dense_container flag specifying if a fast memory heavy version of cell_list container is used
-     */
     SASAEnergy(Space& spc, double cosolute_molarity = 0.0, double probe_radius = 1.4, int slices_per_atom = 20,
                bool dense_container = true);
     SASAEnergy(const json& j, Space& spc);

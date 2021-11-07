@@ -485,6 +485,7 @@ properties:
                     properties:
                         radius: {type: number, default: 1.4, description: Probe radius for SASA calculation (Å)}
                         molarity: {type: number, description: Molar concentration of co-solute}
+                        dense: {type: boolean, default: true, description: True if the dense container for cell lists is desired}
                     required: [molarity]
                     additionalProperties: false
 

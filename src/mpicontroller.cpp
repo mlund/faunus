@@ -51,18 +51,6 @@ void ParticleBuffer::setFormat(const std::string& format) {
 typename ParticleBuffer::dataformat ParticleBuffer::getFormat() const { return format; }
 
 void ParticleBuffer::copyParticlesToBuffer(const ParticleVector& particles) {
-    auto expand = [](const Particle& particle) {
-        return std::vector<const double*>({&particle.charge, &particle.charge});
-    };
-    auto expand2 = [](const Particle& particle) -> std::vector<std::reference_wrapper<const double>> {
-        return {particle.charge};
-    };
-    auto expand3 = [](const Particle& particle) -> std::vector<double> {
-        return {particle.charge};
-    };
-
-    using namespace ranges::cpp20::views;
-    auto flatten = particles | transform(expand2) | ranges::view::join;
     switch (format) {
     case XYZ:
         buffer.resize(3 * particles.size());

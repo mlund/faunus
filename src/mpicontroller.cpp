@@ -1,6 +1,9 @@
 #include "mpicontroller.h"
 #include "core.h"
 #include <vector>
+#include <range/v3/view/transform.hpp>
+#include <range/v3/view/join.hpp>
+#include <tuple>
 
 namespace Faunus::MPI {
 
@@ -35,24 +38,41 @@ std::ostream& Controller::cout() {
 
 void ParticleBuffer::setFormat(dataformat d) { format = d; }
 
-void ParticleBuffer::setFormat(const std::string& s) {
-    setFormat(XYZQI);
-    if (s == "XYZQ") {
+void ParticleBuffer::setFormat(const std::string& format) {
+    if (format == "XYZQ") {
         setFormat(XYZQ);
-    } else if (s == "XYZ") {
+    } else if (format == "XYZ") {
         setFormat(XYZ);
+    } else {
+        setFormat(XYZQI);
     }
 }
 
 typename ParticleBuffer::dataformat ParticleBuffer::getFormat() const { return format; }
 
 void ParticleBuffer::copyParticlesToBuffer(const ParticleVector& particles) {
-    if (format == XYZ) {
+    auto expand = [](const Particle& particle) {
+        return std::vector<const double*>({&particle.charge, &particle.charge});
+    };
+    auto expand2 = [](const Particle& particle) -> std::vector<std::reference_wrapper<const double>> {
+        return {particle.charge};
+    };
+    auto expand3 = [](const Particle& particle) -> std::vector<double> {
+        return {particle.charge};
+    };
+
+    using namespace ranges::cpp20::views;
+    auto flatten = particles | transform(expand2) | ranges::view::join;
+    switch (format) {
+    case XYZ:
         buffer.resize(3 * particles.size());
-    } else if (format == XYZQ) {
+        break;
+    case XYZQ:
         buffer.resize(4 * particles.size());
-    } else if (format == XYZQI) {
+        break;
+    case XYZQI:
         buffer.resize(5 * particles.size());
+        break;
     }
     size_t i = 0;
     for (const auto& particle : particles) {

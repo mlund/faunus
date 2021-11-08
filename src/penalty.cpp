@@ -219,7 +219,7 @@ void PenaltyMPI::averagePenaltyFunctions() {
     const auto layout = mpl::contiguous_layout<double>(penalty_energy.size());
 
     // master collects penalty from all nodes
-    mpi.world.gather(mpi.masterRank(), penalty_energy.data(), layout, buffer.data(), layout);
+    mpi.world.gather(mpi.master_rank, penalty_energy.data(), layout, buffer.data(), layout);
 
     // master calculates an average over all nodes
     if (mpi.isMaster()) {
@@ -233,7 +233,7 @@ void PenaltyMPI::averagePenaltyFunctions() {
     }
 
     // distribute average to all nodes
-    mpi.world.bcast(mpi.masterRank(), penalty_energy.data(), layout);
+    mpi.world.bcast(mpi.master_rank, penalty_energy.data(), layout);
 }
 
 #endif

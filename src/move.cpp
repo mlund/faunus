@@ -415,7 +415,7 @@ std::unique_ptr<MPIPartner> createMPIPartnerPolicy(PartnerPolicy policy) {
 
 void ParallelTempering::_to_json(json& j) const {
     j = {{"replicas", mpi.world.size()},
-         {"datasize", particle_buffer.getFormat()},
+         {"datasize", particle_buffer.packetSize()},
          {"partner_policy", partner->policy},
          {"volume_scale", volume_scaling_method}};
     auto& exchange_json = j["exchange"] = json::object();

@@ -1,9 +1,6 @@
 #include "mpicontroller.h"
-#include "core.h"
-#include <vector>
-#include <range/v3/view/transform.hpp>
-#include <range/v3/view/join.hpp>
-#include <tuple>
+#include <range/v3/algorithm/copy.hpp>
+#include <iostream>
 
 namespace Faunus::MPI {
 
@@ -51,50 +48,69 @@ void ParticleBuffer::setFormat(const std::string& format) {
 typename ParticleBuffer::dataformat ParticleBuffer::getFormat() const { return format; }
 
 void ParticleBuffer::copyParticlesToBuffer(const ParticleVector& particles) {
+    std::function<void(const Particle&, decltype(buffer)::iterator&)> copy_to_buffer;
     switch (format) {
-    case XYZ:
+    case XYZ: // copy x, y, z
         buffer.resize(3 * particles.size());
+        copy_to_buffer = [&](auto& particle, auto& destination) {
+            ranges::cpp20::copy(particle.pos, destination);
+            std::advance(destination, 3);
+        };
         break;
-    case XYZQ:
+    case XYZQ: // copy x, y, z, charge
         buffer.resize(4 * particles.size());
+        copy_to_buffer = [&](auto& particle, auto& destination) {
+            ranges::cpp20::copy(particle.pos, destination);
+            std::advance(destination, 3);
+            *(destination++) = particle.charge;
+        };
         break;
-    case XYZQI:
+    case XYZQI: // copy x, y, z, charge, id
         buffer.resize(5 * particles.size());
+        copy_to_buffer = [&](auto& particle, auto& destination) {
+            ranges::cpp20::copy(particle.pos, destination);
+            std::advance(destination, 3);
+            *(destination++) = particle.charge;
+            *(destination++) = static_cast<double>(particle.id);
+        };
         break;
     }
-    size_t i = 0;
-    for (const auto& particle : particles) {
-        buffer.at(i++) = particle.pos.x();
-        buffer.at(i++) = particle.pos.y();
-        buffer.at(i++) = particle.pos.z();
-        if (format == XYZQ) {
-            buffer.at(i++) = particle.charge;
-        } else if (format == XYZQI) {
-            buffer.at(i++) = particle.charge;
-            buffer.at(i++) = static_cast<double>(particle.id);
-        }
-    }
-    if (i != buffer.size()) {
+    auto destination = buffer.begin(); // set *after* buffer resize
+    ranges::cpp20::for_each(particles, std::bind(copy_to_buffer, std::placeholders::_1, std::ref(destination)));
+    if (destination != buffer.end()) {
         throw std::runtime_error("buffer mismatch");
     }
-
 }
 
 void ParticleBuffer::copyBufferToParticles(ParticleVector& particles) {
-    size_t i = 0;
-    for (auto& particle : particles) {
-        particle.pos.x() = buffer.at(i++);
-        particle.pos.y() = buffer.at(i++);
-        particle.pos.z() = buffer.at(i++);
-        if (format == XYZQ) {
-            particle.charge = buffer.at(i++);
-        } else if (format == XYZQI) {
-            particle.charge = buffer.at(i++);
-            particle.id = static_cast<AtomData::index_type>(buffer.at(i++));
-        }
+    std::function<void(Particle&)> copy_to_particle;
+    auto source = buffer.begin();
+    switch (format) {
+    case XYZ:
+        copy_to_particle = [&](auto& particle) {
+            std::copy(source, source + 3, particle.pos.begin());
+            std::advance(source, 3);
+        };
+        break;
+    case XYZQ:
+        copy_to_particle = [&](auto& particle) {
+            std::copy(source, source + 3, particle.pos.begin());
+            std::advance(source, 3);
+            particle.charge = *source++;
+        };
+        break;
+    case XYZQI:
+        copy_to_particle = [&](auto& particle) {
+            std::copy(source, source + 3, particle.pos.begin());
+            std::advance(source, 3);
+            particle.charge = *source++;
+            particle.id = static_cast<AtomData::index_type>(*source++);
+        };
+        break;
     }
-    if (i != buffer.size()) {
-        throw std::runtime_error("buffer <-> particle mismatch");
+    ranges::cpp20::for_each(particles, copy_to_particle);
+    if (source != buffer.end()) {
+        throw std::runtime_error("buffer mismatch");
     }
 }
 

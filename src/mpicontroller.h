@@ -1,16 +1,19 @@
 #pragma once
+
+#include <string>
+
+#ifdef ENABLE_MPI
 #include "random.h"
 #include "core.h"
 #include "particle.h"
 
 #include <vector>
-#include <string>
 #include <fstream>
-#include <iostream>
-#include <cstdio>
-
-#ifdef ENABLE_MPI
+#include <range/v3/view/iota.hpp>
+#include <range/v3/view/filter.hpp>
+#include <range/v3/algorithm/for_each.hpp>
 #include <mpl/mpl.hpp>
+
 // Expose classes for MPI serialization
 MPL_REFLECTION(Faunus::Point, x(), y(), z())
 MPL_REFLECTION(Faunus::Particle, id, charge, pos)
@@ -110,23 +113,21 @@ void avgTables(const mpl::communicator& communicator, Ttable& table, int& size) 
         communicator.sendrecv(sendBuf.data(), layout, mpi.masterRank(), tag, recvBuf.data(), layout, mpi.masterRank(),
                               tag);
         table.buf2hist(recvBuf);
-    }
-    if (mpi.isMaster()) {
+    } else {
         std::vector<double> sendBuf = table.hist2buf(size);
         std::vector<double> recvBuf(size);
-        for (int rank = 0; rank < communicator.size(); ++rank) {
-            if (rank != mpi.masterRank()) {
-                communicator.recv(recvBuf, rank);
-                sendBuf.insert(sendBuf.end(), recvBuf.begin(), recvBuf.end());
-            }
-        }
+        auto slaves = ranges::cpp20::views::iota(0, communicator.size()) |
+                      ranges::cpp20::views::filter([&](auto rank) { return rank != mpi.masterRank(); });
+
+        ranges::cpp20::for_each(slaves, [&](auto rank) {
+            communicator.recv(recvBuf, rank);
+            sendBuf.insert(sendBuf.end(), recvBuf.begin(), recvBuf.end());
+        });
+
         table.buf2hist(sendBuf);
         sendBuf = table.hist2buf(size);
-        for (int rank = 0; rank < communicator.size(); ++rank) {
-            if (rank != mpi.masterRank()) {
-                communicator.send(sendBuf, rank);
-            }
-        }
+
+        ranges::cpp20::for_each(slaves, [&](auto rank) { communicator.send(sendBuf, rank); });
     }
 }
 #endif

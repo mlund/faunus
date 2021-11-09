@@ -505,6 +505,8 @@ class ParallelTempering : public MoveBase {
     void _to_json(json& j) const override;
     void _move(Change& change) override;
     double exchangeEnergy(double energy_change);                    //!< Exchange energy with partner
+    void exchangeVolume(Change& change);                            //!< Exchange volumes
+    void exchangeParticles();                                       //!< Exchange particles
     void exchangeState(Change& change);                             //!< Exchange positions, charges, volume etc.
     double bias(Change& change, double uold, double unew) override; //!< Energy change in partner replica
     void _accept(Change& change) override;

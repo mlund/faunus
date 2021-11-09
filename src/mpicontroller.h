@@ -84,8 +84,6 @@ double reduceDouble(const mpl::communicator& communicator, double local);
  * communication.
  */
 class ParticleBuffer {
-  private:
-    int packet_size = 0; //!< Number of doubles per particle
   public:
     /**
      * @brief Particle information to be copied
@@ -94,14 +92,32 @@ class ParticleBuffer {
      * XYZQ -> positions, charge.
      * XYZQI -> positions, charge, atom id.
      */
-    enum class Format { XYZ, XYZQ, XYZQI };
-    Format format = Format::XYZQI; //!< Data format to send/receive - default is XYZQ
-    void setFormat(const std::string& format_string);
+    enum class Format { XYZ, XYZQ, XYZQI, INVALID };
+
+  private:
     std::vector<double> buffer;
-    void copyParticlesToBuffer(const ParticleVector& particles); //!< Copy source particle vector to send buffer
-    void copyBufferToParticles(ParticleVector& particles);       //!< Copy receive buffer to target particle vector
-    int packetSize() const;                                      //!< Number of doubles per particle
+    using buffer_iterator = decltype(buffer)::iterator;
+    Format format;
+    int packet_size = 0;                                                  //!< Number of doubles per particle
+    std::function<void(const Particle&, buffer_iterator&)> from_particle; //!< Copy particle -> buffer
+    std::function<void(buffer_iterator&, Particle&)> to_particle;         //!< Copy buffer -> particle
+
+  public:
+    ParticleBuffer();
+    void setFormat(Format data_format);                 //!< Set format from case-insensitive string
+    Format getFormat() const;                           //!< Data format to send/receive - default is XYZQ
+    void copyToBuffer(const ParticleVector& particles); //!< Copy source particle vector to send buffer
+    void copyFromBuffer(ParticleVector& particles);     //!< Copy receive buffer to target particle vector
+    buffer_iterator begin();                            //!< Begin iterator to `buffer`
+    buffer_iterator end();                              //!< End iterator to `buffer`
 };
+
+NLOHMANN_JSON_SERIALIZE_ENUM(ParticleBuffer::Format, {
+                                                         {ParticleBuffer::Format::INVALID, nullptr},
+                                                         {ParticleBuffer::Format::XYZ, "xyz"},
+                                                         {ParticleBuffer::Format::XYZQ, "xyzq"},
+                                                         {ParticleBuffer::Format::XYZQI, "xyzqi"},
+                                                     })
 
 /**
  * @brief Sum tables computed by parallel processes

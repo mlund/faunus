@@ -15,7 +15,7 @@ namespace Faunus::Move {
 
 Random MoveBase::slump; // static instance of Random (shared for all moves)
 
-void MoveBase::from_json(const json &j) {
+void MoveBase::from_json(const json& j) {
     if (const auto it = j.find("repeat"); it != j.end()) {
         if (it->is_number()) {
             repeat = it->get<int>();
@@ -35,7 +35,7 @@ void MoveBase::from_json(const json &j) {
     }
 }
 
-void MoveBase::to_json(json &j) const {
+void MoveBase::to_json(json& j) const {
     _to_json(j);
     if (timer_move.result() > 0.01) { // only print if more than 1% of the time
         j["relative time (without energy calc)"] = timer_move.result();
@@ -91,24 +91,24 @@ MoveBase::MoveBase(Space& spc, const std::string& name, const std::string& cite)
 void MoveBase::setRepeat(const int new_repeat) { repeat = new_repeat; }
 bool MoveBase::isStochastic() const { return repeat != 0; }
 
-void from_json(const json &j, MoveBase &m) { m.from_json(j); }
+void from_json(const json& j, MoveBase& m) { m.from_json(j); }
 
-void to_json(json &j, const MoveBase &m) {
+void to_json(json& j, const MoveBase& m) {
     assert(!m.name.empty());
     m.to_json(j[m.name]);
 }
 
 // -----------------------------------
 
-ReplayMove::ReplayMove(Space &spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {}
+ReplayMove::ReplayMove(Space& spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {}
 
-ReplayMove::ReplayMove(Space &spc) : ReplayMove(spc, "replay", "") {}
+ReplayMove::ReplayMove(Space& spc) : ReplayMove(spc, "replay", "") {}
 
-void ReplayMove::_to_json(json &j) const { j["file"] = reader->filename; }
+void ReplayMove::_to_json(json& j) const { j["file"] = reader->filename; }
 
 void ReplayMove::_from_json(const json& j) { reader = std::make_unique<XTCReader>(j.at("file")); }
 
-void ReplayMove::_move(Change &change) {
+void ReplayMove::_move(Change& change) {
     assert(reader != nullptr);
     if (!end_of_trajectory) {
         if (reader->read(frame.step, frame.timestamp, frame.box, spc.positions().begin(), spc.positions().end())) {
@@ -122,11 +122,11 @@ void ReplayMove::_move(Change &change) {
     }
 }
 
-double ReplayMove::bias(Change &, double, double) {
+double ReplayMove::bias(Change&, double, double) {
     return force_accept; // always accept
 }
 
-void AtomicTranslateRotate::_to_json(json &j) const {
+void AtomicTranslateRotate::_to_json(json& j) const {
     j = {{"dir", directions},
          {"molid", molid},
          {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(mean_square_displacement.avg())},
@@ -188,7 +188,7 @@ void AtomicTranslateRotate::groupToDisk(const Space::GroupType& group) const {
     }
 }
 
-void AtomicTranslateRotate::_move(Change &change) {
+void AtomicTranslateRotate::_move(Change& change) {
     if (auto particle = randomAtom(); particle != spc.particles.end()) {
         latest_particle = particle;
         const auto translational_displacement = particle->traits().dp;
@@ -219,7 +219,7 @@ void AtomicTranslateRotate::_accept(Change&) {
     sampleEnergyHistogram();
 }
 
-void AtomicTranslateRotate::_reject(Change &) { mean_square_displacement += 0; }
+void AtomicTranslateRotate::_reject(Change&) { mean_square_displacement += 0; }
 
 AtomicTranslateRotate::AtomicTranslateRotate(Space& spc, const Energy::Hamiltonian& hamiltonian, std::string name,
                                              std::string cite)
@@ -246,7 +246,7 @@ ParticleVector::iterator AtomicTranslateRotate::randomAtom() {
     auto mollist = spc.findMolecules(molid, selection);
     if (auto group = slump.sample(mollist.begin(), mollist.end()); group != mollist.end()) { // random molecule
         if (not group->empty()) {
-            particle = slump.sample(group->begin(), group->end());     // random particle
+            particle = slump.sample(group->begin(), group->end());           // random particle
             cdata.group_index = Faunus::distance(spc.groups.begin(), group); // index of touched group
             cdata.relative_atom_indices[0] =
                 std::distance(group->begin(), particle); // index of moved particle relative to group
@@ -379,11 +379,11 @@ bool MPIPartner::goodPartner(const mpl::communicator& communicator, int partner)
 }
 
 std::pair<int, int> MPIPartner::partnerPair(const mpl::communicator& communicator) const {
-    if (!rank) {
-        throw std::runtime_error("bad partner");
+    if (rank.has_value()) {
+        // note `std::minmax(a,b)` takes _references_; the initializer list (used here) takes a _copy_
+        return std::minmax({communicator.rank(), rank.value()});
     }
-    // note `std::minmax(a,b)` takes _references_; the initializer list (used here) takes a _copy_
-    return std::minmax({communicator.rank(), rank.value()});
+    throw std::runtime_error("bad partner");
 }
 
 OddEvenPartner::OddEvenPartner() : MPIPartner(PartnerPolicy::ODDEVEN) {}
@@ -398,7 +398,7 @@ bool OddEvenPartner::setPartner(const mpl::communicator& communicator, Random& r
     } else { // odd replica
         rank = communicator.rank() - rank_increment;
     }
-    if (!goodPartner(communicator, *rank)) {
+    if (!goodPartner(communicator, rank.value())) {
         rank = std::nullopt;
     }
     return rank.has_value();
@@ -415,7 +415,7 @@ std::unique_ptr<MPIPartner> createMPIPartnerPolicy(PartnerPolicy policy) {
 
 void ParallelTempering::_to_json(json& j) const {
     j = {{"replicas", mpi.world.size()},
-         {"datasize", particle_buffer.packetSize()},
+         {"format", particle_buffer.getFormat()},
          {"partner_policy", partner->policy},
          {"volume_scale", volume_scaling_method}};
     auto& exchange_json = j["exchange"] = json::object();
@@ -425,6 +425,27 @@ void ParallelTempering::_to_json(json& j) const {
     }
 }
 
+void ParallelTempering::exchangeVolume(Change& change) {
+    const auto old_volume = spc.geometry.getVolume();
+    auto new_volume = 0.0;
+    mpi.world.sendrecv(old_volume, *partner->rank, mpl::tag_t(0), new_volume, *partner->rank, mpl::tag_t(0));
+    if (new_volume < very_small_volume) {
+        mpi.world.abort(1);
+    }
+    if (std::fabs(new_volume - old_volume) > pc::epsilon_dbl) {
+        change.volume_change = true;
+        spc.geometry.setVolume(new_volume, volume_scaling_method);
+    }
+}
+
+void ParallelTempering::exchangeParticles() {
+    particle_buffer.copyToBuffer(spc.particles);
+    mpi.world.sendrecv_replace(particle_buffer.begin(), particle_buffer.end(), *partner->rank, mpl::tag_t(0),
+                               *partner->rank, mpl::tag_t(0));
+    particle_buffer.copyFromBuffer(*partner_particles);
+    spc.updateParticles(partner_particles->begin(), partner_particles->end(), spc.particles.begin());
+}
+
 /**
  * This will exchange the states between two partner replicas and set the change object accordingy
  *
@@ -432,36 +453,15 @@ void ParallelTempering::_to_json(json& j) const {
  */
 void ParallelTempering::exchangeState(Change& change) {
     assert(partner->rank.has_value());
-    const auto tag = mpl::tag_t(0);
-
-    // exchange volumes
-    double new_volume = 0.0;
-    const auto old_volume = spc.geometry.getVolume();
-    mpi.world.sendrecv(old_volume, *partner->rank, tag, new_volume, *partner->rank, tag);
-
-    // exchange particles
-    particle_buffer.copyParticlesToBuffer(spc.particles);
-    mpi.world.sendrecv_replace(particle_buffer.buffer.begin(), particle_buffer.buffer.end(), *partner->rank, tag,
-                                    *partner->rank, tag);
-    particle_buffer.copyBufferToParticles(*partner_particles);
-
-    // sanity check
-    if (new_volume < very_small_volume || spc.particles.size() != partner_particles->size()) {
-        mpi.world.abort(1);
-    }
-
-    // prepare change object and update particles
+    exchangeVolume(change);
+    exchangeParticles();
     change.everything = true;
-    if (std::fabs(new_volume - old_volume) > pc::epsilon_dbl) {
-        change.volume_change = true;
-        spc.geometry.setVolume(new_volume, volume_scaling_method);
-    }
-    spc.updateParticles(partner_particles->begin(), partner_particles->end(), spc.particles.begin());
 }
 
 void ParallelTempering::_move(Change& change) {
     mpi.world.barrier(); // wait until all ranks reach here
-    if (partner->setPartner(mpi.world, mpi.random)) {
+    partner->setPartner(mpi.world, mpi.random);
+    if (partner->rank.has_value()) {
         exchangeState(change);
     }
 }
@@ -475,7 +475,6 @@ void ParallelTempering::_move(Change& change) {
  * to form the final trial energy for the tempering move.
  */
 double ParallelTempering::exchangeEnergy(const double energy_change) {
-    assert(partner->rank.has_value());
     double partner_energy_change = 0.0;
     const auto tag = mpl::tag_t(0);
     mpi.world.sendrecv(energy_change, *partner->rank, tag, partner_energy_change, *partner->rank, tag);
@@ -516,13 +515,12 @@ void ParallelTempering::_reject([[maybe_unused]] Change& change) {
 }
 
 void ParallelTempering::_from_json(const json& j) {
-    particle_buffer.setFormat(j.value("format", "XYZQI"s));
+    particle_buffer.setFormat(j.value("format", MPI::ParticleBuffer::Format::XYZQI));
     partner = createMPIPartnerPolicy(j.value("partner_policy", PartnerPolicy::ODDEVEN));
     volume_scaling_method = j.value("volume_scale", Geometry::VolumeMethod::ISOTROPIC);
 }
 
-ParallelTempering::ParallelTempering(Space& spc)
-    : MoveBase(spc, "temper", "doi:10/b3vcw7"), mpi(MPI::mpi) {
+ParallelTempering::ParallelTempering(Space& spc) : MoveBase(spc, "temper", "doi:10/b3vcw7"), mpi(MPI::mpi) {
     if (mpi.world.size() < 2) {
         throw std::runtime_error(name + " requires two or more MPI processes");
     }
@@ -544,7 +542,7 @@ ParallelTempering::~ParallelTempering() {
 
 #endif
 
-void VolumeMove::_to_json(json &j) const {
+void VolumeMove::_to_json(json& j) const {
     if (number_of_attempted_moves > 0) {
         j = {{"dV", logarithmic_volume_displacement_factor},
              {"method", volume_scaling_method},
@@ -554,14 +552,14 @@ void VolumeMove::_to_json(json &j) const {
         roundJSON(j, 3);
     }
 }
-void VolumeMove::_from_json(const json &j) {
+void VolumeMove::_from_json(const json& j) {
     logarithmic_volume_displacement_factor = j.at("dV").get<double>();
     volume_scaling_method = j.value("method", Geometry::VolumeMethod::ISOTROPIC);
     if (volume_scaling_method == Geometry::VolumeMethod::INVALID) {
         throw ConfigurationError("invalid volume scaling method");
     }
 }
-void VolumeMove::_move(Change &change) {
+void VolumeMove::_move(Change& change) {
     if (logarithmic_volume_displacement_factor > 0.0) {
         change.volume_change = true;
         change.everything = true;
@@ -586,7 +584,7 @@ void VolumeMove::_reject([[maybe_unused]] Change& change) {
 
 // ------------------------------------------------
 
-void ChargeMove::_to_json(json &j) const {
+void ChargeMove::_to_json(json& j) const {
     using namespace u8;
     j = {{"index", atomIndex},
          {"dq", dq},
@@ -594,15 +592,15 @@ void ChargeMove::_to_json(json &j) const {
          {cuberoot + rootof + bracket(Delta + "q" + squared), std::cbrt(std::sqrt(msqd.avg()))}};
     roundJSON(j, 3);
 }
-void ChargeMove::_from_json(const json &j) {
+void ChargeMove::_from_json(const json& j) {
     dq = j.at("dq").get<double>();
     atomIndex = j.at("index").get<int>();
-    auto git = spc.findGroupContaining(spc.particles.at(atomIndex));         // group containing atomIndex
-    cdata.group_index = std::distance(spc.groups.begin(), git);              // integer *index* of moved group
+    auto git = spc.findGroupContaining(spc.particles.at(atomIndex)); // group containing atomIndex
+    cdata.group_index = std::distance(spc.groups.begin(), git);      // integer *index* of moved group
     cdata.relative_atom_indices[0] =
         std::distance(git->begin(), spc.particles.begin() + atomIndex); // index of particle rel. to group
 }
-void ChargeMove::_move(Change &change) {
+void ChargeMove::_move(Change& change) {
     if (dq > 0) {
         auto& p = spc.particles.at(atomIndex); // refence to particle
         double qold = p.charge;
@@ -612,30 +610,30 @@ void ChargeMove::_move(Change &change) {
     } else
         deltaq = 0;
 }
-void ChargeMove::_accept(Change &) { msqd += deltaq * deltaq; }
-void ChargeMove::_reject(Change &) { msqd += 0; }
+void ChargeMove::_accept(Change&) { msqd += deltaq * deltaq; }
+void ChargeMove::_reject(Change&) { msqd += 0; }
 
-ChargeMove::ChargeMove(Space &spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {
+ChargeMove::ChargeMove(Space& spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {
     repeat = 1;
-    cdata.internal = true; // the group is internally changed
+    cdata.internal = true;                 // the group is internally changed
     cdata.relative_atom_indices.resize(1); // we change exactly one atom
 }
 
-ChargeMove::ChargeMove(Space &spc) : ChargeMove(spc, "charge", "") {}
+ChargeMove::ChargeMove(Space& spc) : ChargeMove(spc, "charge", "") {}
 
-void ChargeTransfer::_to_json(json &j) const {
+void ChargeTransfer::_to_json(json& j) const {
     using namespace u8;
     j = {{"dq", dq},
          {rootof + bracket(Delta + "q" + squared), std::sqrt(msqd.avg())},
          {cuberoot + rootof + bracket(Delta + "q" + squared), std::cbrt(std::sqrt(msqd.avg()))}};
     roundJSON(j, 3);
 }
-void ChargeTransfer::_from_json(const json &j) {
+void ChargeTransfer::_from_json(const json& j) {
     dq = j.at("dq").get<double>();
-    mol1.molname = j.at("mol1"); // string containing name of molecule 1
-    mol2.molname = j.at("mol2"); // string containing name of molecule 2
-    mol1.id = findMoleculeByName(mol1.molname).id(); // group containing mol1.molname
-    mol2.id = findMoleculeByName(mol2.molname).id(); // group containing mol2.molname
+    mol1.molname = j.at("mol1");                                  // string containing name of molecule 1
+    mol2.molname = j.at("mol2");                                  // string containing name of molecule 2
+    mol1.id = findMoleculeByName(mol1.molname).id();              // group containing mol1.molname
+    mol2.id = findMoleculeByName(mol2.molname).id();              // group containing mol2.molname
     mol1.molrange = j.at("molrange1").get<std::vector<double>>(); // vector containing lower and upper limit of
                                                                   // total charge of molecule 1
     mol2.molrange = j.at("molrange2").get<std::vector<double>>(); // vector containing lower and upper limit of
@@ -687,7 +685,7 @@ void ChargeTransfer::_from_json(const json &j) {
     }
 }
 
-void ChargeTransfer::_move(Change &change) {
+void ChargeTransfer::_move(Change& change) {
     auto mollist1 = spc.findMolecules(mol1.id, Space::Selection::ACTIVE);
     auto mollist2 = spc.findMolecules(mol2.id, Space::Selection::ACTIVE);
     if ((not ranges::cpp20::empty(mollist1)) and (not ranges::cpp20::empty(mollist2))) {
@@ -826,10 +824,10 @@ void ChargeTransfer::_move(Change &change) {
     }
 }
 
-void ChargeTransfer::_accept(Change &) { msqd += deltaq * deltaq; }
-void ChargeTransfer::_reject(Change &) { msqd += 0; }
+void ChargeTransfer::_accept(Change&) { msqd += deltaq * deltaq; }
+void ChargeTransfer::_reject(Change&) { msqd += 0; }
 
-ChargeTransfer::ChargeTransfer(Space &spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {
+ChargeTransfer::ChargeTransfer(Space& spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {
     repeat = -1; // meaning repeat N times
     mol1.cdata.internal = true;
     mol2.cdata.internal = true;
@@ -837,16 +835,16 @@ ChargeTransfer::ChargeTransfer(Space &spc, std::string name, std::string cite) :
     // cdata2.atoms.resize(numOfAtoms2);
 }
 
-ChargeTransfer::ChargeTransfer(Space &spc) : ChargeTransfer(spc, "chargetransfer", "") {}
+ChargeTransfer::ChargeTransfer(Space& spc) : ChargeTransfer(spc, "chargetransfer", "") {}
 
-void QuadrantJump::_to_json(json &j) const {
+void QuadrantJump::_to_json(json& j) const {
     j = {{"dir", dir},
          {"molid", molid},
          {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(msqd.avg())},
          {"molecule", molecules[molid].name}};
     roundJSON(j, 3);
 }
-void QuadrantJump::_from_json(const json &j) {
+void QuadrantJump::_from_json(const json& j) {
     assert(!molecules.empty());
     const std::string molname = j.at("molecule");
     molid = findMoleculeByName(molname).id();
@@ -857,7 +855,7 @@ void QuadrantJump::_from_json(const json &j) {
         repeat = std::distance(v.begin(), v.end());
     }
 }
-void QuadrantJump::_move(Change &change) {
+void QuadrantJump::_move(Change& change) {
     assert(molid >= 0);
     assert(!spc.groups.empty());
     assert(spc.geometry.getVolume() > 0);
@@ -883,8 +881,8 @@ void QuadrantJump::_move(Change &change) {
             _sqd = spc.geometry.sqdist(oldcm, it->mass_center); // squared displacement
             Change::GroupChange d;
             d.group_index = Faunus::distance(spc.groups.begin(), it); // integer *index* of moved group
-            d.all = true;                                       // *all* atoms in group were moved
-            change.groups.push_back(d);                         // add to list of moved groups
+            d.all = true;                                             // *all* atoms in group were moved
+            change.groups.push_back(d);                               // add to list of moved groups
 
             assert(spc.geometry.sqdist(it->mass_center,
                                        Geometry::massCenter(it->begin(), it->end(), spc.geometry.getBoundaryFunc(),
@@ -894,13 +892,13 @@ void QuadrantJump::_move(Change &change) {
         faunus_logger->warn("{0}: no molecules found", name);
 }
 
-QuadrantJump::QuadrantJump(Space &spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {
+QuadrantJump::QuadrantJump(Space& spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {
     repeat = -1; // meaning repeat N times
 }
 
-QuadrantJump::QuadrantJump(Space &spc) : QuadrantJump(spc, "quadrantjump", "") {}
+QuadrantJump::QuadrantJump(Space& spc) : QuadrantJump(spc, "quadrantjump", "") {}
 
-void AtomicSwapCharge::_to_json(json &j) const {
+void AtomicSwapCharge::_to_json(json& j) const {
     j = {{"pH", pH},
          {"pka", pKa},
          {"molid", molid},
@@ -908,7 +906,7 @@ void AtomicSwapCharge::_to_json(json &j) const {
          {"molecule", molname}};
     roundJSON(j, 3);
 }
-void AtomicSwapCharge::_from_json(const json &j) {
+void AtomicSwapCharge::_from_json(const json& j) {
     assert(!molecules.empty());
     molname = j.at("molecule");
     molid = findMoleculeByName(molname).id();
@@ -928,7 +926,7 @@ ParticleVector::iterator AtomicSwapCharge::randomAtom() {
     if (not ranges::cpp20::empty(mollist)) {
         auto git = slump.sample(mollist.begin(), mollist.end()); // random molecule iterator
         if (!git->empty()) {
-            auto p = slump.sample(git->begin(), git->end());         // random particle iterator
+            auto p = slump.sample(git->begin(), git->end());                 // random particle iterator
             cdata.group_index = Faunus::distance(spc.groups.begin(), git);   // integer *index* of moved group
             cdata.relative_atom_indices[0] = std::distance(git->begin(), p); // index of particle rel. to group
             return p;
@@ -936,7 +934,7 @@ ParticleVector::iterator AtomicSwapCharge::randomAtom() {
     }
     return spc.particles.end();
 }
-void AtomicSwapCharge::_move(Change &change) {
+void AtomicSwapCharge::_move(Change& change) {
     _sqd = 0.0;
     auto p = randomAtom();
     if (p != spc.particles.end()) {
@@ -948,19 +946,19 @@ void AtomicSwapCharge::_move(Change &change) {
         _bias = _sqd * (pH - pKa) * ln10; // one may add bias here...
     }
 }
-double AtomicSwapCharge::bias(Change &, double, double) { return _bias; }
-void AtomicSwapCharge::_accept(Change &) { msqd += _sqd; }
-void AtomicSwapCharge::_reject(Change &) { msqd += 0; }
+double AtomicSwapCharge::bias(Change&, double, double) { return _bias; }
+void AtomicSwapCharge::_accept(Change&) { msqd += _sqd; }
+void AtomicSwapCharge::_reject(Change&) { msqd += 0; }
 
-AtomicSwapCharge::AtomicSwapCharge(Space &spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {
+AtomicSwapCharge::AtomicSwapCharge(Space& spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {
     repeat = -1; // meaning repeat N times
     cdata.relative_atom_indices.resize(1);
     cdata.internal = true;
 }
 
-AtomicSwapCharge::AtomicSwapCharge(Space &spc) : AtomicSwapCharge(spc, "swapcharge", "") {}
+AtomicSwapCharge::AtomicSwapCharge(Space& spc) : AtomicSwapCharge(spc, "swapcharge", "") {}
 
-void TranslateRotate::_to_json(json &j) const {
+void TranslateRotate::_to_json(json& j) const {
     j = {{"dir", translational_direction},
          {"dp", translational_displacement},
          {"dprot", rotational_displacement},
@@ -971,10 +969,10 @@ void TranslateRotate::_to_json(json &j) const {
          {"molecule", Faunus::molecules[molid].name}};
     roundJSON(j, 3);
 }
-void TranslateRotate::_from_json(const json &j) {
+void TranslateRotate::_from_json(const json& j) {
     const std::string molname = j.at("molecule");
     const auto molecule = findMoleculeByName(molname);
-    if(molecule.atomic) {
+    if (molecule.atomic) {
         throw ConfigurationError("molecule '{}' cannot be atomic", molname);
     }
     molid = molecule.id();
@@ -1047,15 +1045,15 @@ double TranslateRotate::rotateMolecule(Space::GroupType& group) {
     return angle * angle;
 }
 
-void TranslateRotate::_move(Change &change) {
+void TranslateRotate::_move(Change& change) {
     if (auto group = findRandomMolecule()) { // note that group is of type std::optional
         latest_displacement_squared = translateMolecule(group->get());
         latest_rotation_angle_squared = rotateMolecule(group->get());
         if (latest_displacement_squared > 0.0 || latest_rotation_angle_squared > 0.0) { // report changes
-            auto &change_data = change.groups.emplace_back();
+            auto& change_data = change.groups.emplace_back();
             change_data.group_index = spc.getGroupIndex(group->get()); // integer *index* of moved group
-            change_data.all = true;                                  // *all* atoms in group were moved
-            change_data.internal = false;                            // internal energy is unchanged
+            change_data.all = true;                                    // *all* atoms in group were moved
+            change_data.internal = false;                              // internal energy is unchanged
         }
         checkMassCenter(group->get());
     } else {
@@ -1076,21 +1074,21 @@ void TranslateRotate::checkMassCenter(const Space::GroupType& group) const {
     }
 }
 
-void TranslateRotate::_accept(Change &) {
+void TranslateRotate::_accept(Change&) {
     mean_squared_displacement += latest_displacement_squared;
     mean_squared_rotation_angle += latest_rotation_angle_squared;
 }
 
-void TranslateRotate::_reject(Change &) {
+void TranslateRotate::_reject(Change&) {
     mean_squared_displacement += 0.0;
     mean_squared_rotation_angle += 0.0;
 }
 
-TranslateRotate::TranslateRotate(Space &spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {
+TranslateRotate::TranslateRotate(Space& spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {
     repeat = -1; // meaning repeat N times
 }
 
-TranslateRotate::TranslateRotate(Space &spc) : TranslateRotate(spc, "moltransrot", "") {}
+TranslateRotate::TranslateRotate(Space& spc) : TranslateRotate(spc, "moltransrot", "") {}
 } // namespace Faunus::Move
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
@@ -1115,7 +1113,7 @@ TEST_CASE("[Faunus] TranslateRotate") {
 
 namespace Faunus::Move {
 
-void SmartTranslateRotate::_to_json(json &j) const {
+void SmartTranslateRotate::_to_json(json& j) const {
     j = {{"Number of counts inside geometry", cntInner},
          {"Number of counts outside geometry", cnt - cntInner},
          {"dir", dir},
@@ -1134,14 +1132,15 @@ void SmartTranslateRotate::_to_json(json &j) const {
          {"ref2", atoms[refid2].name}};
     roundJSON(j, 3);
 }
-void SmartTranslateRotate::_from_json(const json &j) {
+void SmartTranslateRotate::_from_json(const json& j) {
     assert(!molecules.empty());
     const std::string molname = j.at("molecule");
     const std::string refname1 = j.at("ref1");
     const std::string refname2 = j.at("ref2");
     molid = findMoleculeByName(molname).id();
     refid1 = findAtomByName(refname1).id();
-    refid2 = findAtomByName(refname2).id();;
+    refid2 = findAtomByName(refname2).id();
+    ;
     dir = j.value("dir", Point(1, 1, 1));
     dprot = j.at("dprot");
     dptrans = j.at("dp");
@@ -1157,7 +1156,7 @@ void SmartTranslateRotate::_from_json(const json &j) {
     }
 }
 
-void SmartTranslateRotate::_move(Change &change) {
+void SmartTranslateRotate::_move(Change& change) {
     assert(molid >= 0);
     assert(!spc.groups.empty());
     assert(spc.geometry.getVolume() > 0);
@@ -1167,8 +1166,8 @@ void SmartTranslateRotate::_move(Change &change) {
     // pick random group from the system matching molecule type
     // TODO: This can be slow -- implement look-up-table in Space
     auto mollist = spc.findMolecules(molid, Space::Selection::ACTIVE); // list of molecules w. 'molid'
-    auto reflist1 = spc.findAtoms(refid1);                  // list of atoms w. 'refid1'
-    auto reflist2 = spc.findAtoms(refid2);                  // list of atoms w. 'refid2'
+    auto reflist1 = spc.findAtoms(refid1);                             // list of atoms w. 'refid1'
+    auto reflist2 = spc.findAtoms(refid2);                             // list of atoms w. 'refid2'
     if (not ranges::cpp20::empty(mollist)) {
         auto it = slump.sample(mollist.begin(), mollist.end()); // chosing random molecule in group of type molname
         auto ref1 = slump.sample(reflist1.begin(), reflist1.end());
@@ -1185,7 +1184,7 @@ void SmartTranslateRotate::_move(Change &change) {
         if (not it->empty()) { // checking so that molecule exists
             assert(it->id == molid);
 
-            randNbr = slump();                   // assigning random number in range [0,1]
+            randNbr = slump(); // assigning random number in range [0,1]
             molV =
                 spc.geometry.vdist(it->mass_center, origo); // vector between selected molecule and center of geometry
             cosTheta = molV.dot(cylAxis) / molV.norm() / cylAxis.norm(); // cosinus of angle between coordinate vector
@@ -1211,7 +1210,7 @@ void SmartTranslateRotate::_move(Change &change) {
                     countNin = 0.0;  // counter keeping track of number of molecules inside geometry
                     countNout = 0.0; // counter keeping track of number of molecules outside geometry
                     Ntot = 0.0;      // total number of particles
-                    for (auto &g : mollist) {
+                    for (auto& g : mollist) {
                         Ntot += 1.0;
                         molV = spc.geometry.vdist(g.mass_center, origo);
                         cosTheta = molV.dot(cylAxis) / molV.norm() / cylAxis.norm();
@@ -1266,8 +1265,8 @@ void SmartTranslateRotate::_move(Change &change) {
                 if (dptrans > 0 || dprot > 0) { // define changes
                     Change::GroupChange d;
                     d.group_index = Faunus::distance(spc.groups.begin(), it); // integer *index* of moved group
-                    d.all = true;                                       // *all* atoms in group were moved
-                    change.groups.push_back(d);                         // add to list of moved groups
+                    d.all = true;                                             // *all* atoms in group were moved
+                    change.groups.push_back(d);                               // add to list of moved groups
                 }
                 assert(spc.geometry.sqdist(it->mass_center,
                                            Geometry::massCenter(it->begin(), it->end(), spc.geometry.getBoundaryFunc(),
@@ -1301,13 +1300,13 @@ void SmartTranslateRotate::_move(Change &change) {
     }
 }
 
-double SmartTranslateRotate::bias(Change &, double, double) { return _bias; }
+double SmartTranslateRotate::bias(Change&, double, double) { return _bias; }
 
-SmartTranslateRotate::SmartTranslateRotate(Space &spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {
+SmartTranslateRotate::SmartTranslateRotate(Space& spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {
     repeat = -1; // meaning repeat N times
 }
 
-SmartTranslateRotate::SmartTranslateRotate(Space &spc) : SmartTranslateRotate(spc, "smartmoltransrot", "") {}
+SmartTranslateRotate::SmartTranslateRotate(Space& spc) : SmartTranslateRotate(spc, "smartmoltransrot", "") {}
 
 void ConformationSwap::_to_json(json& j) const {
     j = {{"molid", molid},
@@ -1317,7 +1316,7 @@ void ConformationSwap::_to_json(json& j) const {
     roundJSON(j, 3);
 }
 
-void ConformationSwap::_from_json(const json &j) {
+void ConformationSwap::_from_json(const json& j) {
     const auto molecule_name = j.at("molecule").get<std::string>();
     const auto molecule = Faunus::findMoleculeByName(molecule_name);
     molid = molecule.id();
@@ -1352,7 +1351,7 @@ void ConformationSwap::_move(Change& change) {
             checkMassCenterDrift(group->mass_center, particles); // throws if not OK
             copyConformation(particles, group->begin());
             group->conformation_id = Faunus::molecules[molid].conformations.getLastIndex(); // store conformation id
-            registerChanges(change, *group);                                       // update change object
+            registerChanges(change, *group);                                                // update change object
         } else {
             throw std::out_of_range(name + ": conformation atom count mismatch");
         }
@@ -1389,10 +1388,10 @@ void ConformationSwap::copyConformation(ParticleVector& particles, ParticleVecto
 }
 
 void ConformationSwap::registerChanges(Change& change, const Space::GroupType& group) const {
-    auto &group_change = change.groups.emplace_back();
+    auto& group_change = change.groups.emplace_back();
     group_change.group_index = spc.getGroupIndex(group); // index of moved group
-    group_change.all = true;                       // all atoms in group were moved
-    group_change.internal = false;                 // skip internal energy calculation
+    group_change.all = true;                             // all atoms in group were moved
+    group_change.internal = false;                       // skip internal energy calculation
 }
 /**
  * @throw if there's a mass-center drift
@@ -1413,7 +1412,7 @@ void ConformationSwap::checkMassCenterDrift(const Point& old_mass_center, const 
     }
 }
 
-ConformationSwap::ConformationSwap(Space &spc, const std::string &name, const std::string &cite)
+ConformationSwap::ConformationSwap(Space& spc, const std::string& name, const std::string& cite)
     : MoveBase(spc, name, cite) {}
 
 ConformationSwap::ConformationSwap(Space& spc) : ConformationSwap(spc, "conformationswap", "doi:10/dmc3") {

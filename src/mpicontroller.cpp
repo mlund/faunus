@@ -1,5 +1,4 @@
 #include "mpicontroller.h"
-#include "space.h"
 #include <range/v3/algorithm/copy.hpp>
 #include <algorithm>
 #include <iostream>
@@ -29,14 +28,14 @@ std::ostream& Controller::cout() { return stream.is_open() ? stream : std::cout;
 
 Partner::Partner(PartnerPolicy policy) : policy(policy) {}
 
-bool Partner::goodPartner(const mpl::communicator& communicator, int partner) {
-    return (partner >= 0 && partner < communicator.size() && partner != communicator.rank());
+bool Partner::isValid(const mpl::communicator& mpi, int partner) {
+    return (partner >= 0 && partner < mpi.size() && partner != mpi.rank());
 }
 
-Partner::PartnerPair Partner::partnerPair(const mpl::communicator& communicator) const {
+Partner::PartnerPair Partner::getPair(const mpl::communicator& mpi) const {
     if (rank.has_value()) {
         // note `std::minmax(a,b)` takes _references_; the initializer list (used here) takes a _copy_
-        return std::minmax({communicator.rank(), rank.value()});
+        return std::minmax({mpi.rank(), rank.value()});
     }
     throw std::runtime_error("bad partner");
 }
@@ -46,14 +45,14 @@ OddEvenPartner::OddEvenPartner() : Partner(PartnerPolicy::ODDEVEN) {}
 /**
  * If true is returned, a valid partner was found
  */
-bool OddEvenPartner::setPartner(const mpl::communicator& communicator, Random& random) {
+bool OddEvenPartner::generate(const mpl::communicator& mpi, Random& random) {
     int rank_increment = static_cast<bool>(random.range(0, 1)) ? 1 : -1;
-    if (communicator.rank() % 2 == 0) { // even replica
-        rank = communicator.rank() + rank_increment;
+    if (mpi.rank() % 2 == 0) { // even replica
+        rank = mpi.rank() + rank_increment;
     } else { // odd replica
-        rank = communicator.rank() - rank_increment;
+        rank = mpi.rank() - rank_increment;
     }
-    if (!goodPartner(communicator, rank.value())) {
+    if (!isValid(mpi, rank.value())) {
         rank = std::nullopt;
     }
     return rank.has_value();
@@ -157,7 +156,6 @@ const ParticleVector& ExchangeParticles::operator()(const Controller& mpi, int p
     mpi.world.sendrecv_replace(particle_buffer.begin(), particle_buffer.end(), partner_rank, mpl::tag_t(0),
                                partner_rank, mpl::tag_t(0));
     particle_buffer.copyFromBuffer(*partner_particles);
-
     return *partner_particles;
 }
 

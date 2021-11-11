@@ -402,14 +402,14 @@ void ParallelTempering::exchangeState(Change& change) {
         change.volume_change = true;
     }
     exchangeGroupSizes(spc.groups, *partner->rank);
-    auto& partner_particles = exchange_particles(mpi, *partner->rank, spc.particles);
+    const auto& partner_particles = exchange_particles(mpi, *partner->rank, spc.particles);
     spc.updateParticles(partner_particles.begin(), partner_particles.end(), spc.particles.begin());
     change.everything = true;
 }
 
 void ParallelTempering::_move(Change& change) {
     mpi.world.barrier(); // wait until all ranks reach here
-    partner->setPartner(mpi.world, mpi.random);
+    partner->generate(mpi.world, mpi.random);
     if (partner->rank.has_value()) {
         exchangeState(change);
     }
@@ -455,10 +455,10 @@ double ParallelTempering::bias([[maybe_unused]] Change& change, double uold, dou
 }
 
 void ParallelTempering::_accept([[maybe_unused]] Change& change) {
-    acceptance_map[partner->partnerPair(mpi.world)] += 1.0;
+    acceptance_map[partner->getPair(mpi.world)] += 1.0;
 }
 void ParallelTempering::_reject([[maybe_unused]] Change& change) {
-    acceptance_map[partner->partnerPair(mpi.world)] += 0.0;
+    acceptance_map[partner->getPair(mpi.world)] += 0.0;
 }
 
 void ParallelTempering::_from_json(const json& j) {

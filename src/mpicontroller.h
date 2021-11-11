@@ -20,11 +20,6 @@ MPL_REFLECTION(Faunus::Point, x(), y(), z())
 MPL_REFLECTION(Faunus::Particle, id, charge, pos)
 #endif
 
-namespace Faunus {
-struct Change;
-class Space;
-} // namespace Faunus
-
 namespace Faunus::MPI {
 
 /**
@@ -70,13 +65,13 @@ NLOHMANN_JSON_SERIALIZE_ENUM(PartnerPolicy, {{PartnerPolicy::INVALID, nullptr}, 
  */
 class Partner {
   protected:
-    static bool goodPartner(const mpl::communicator& mpi, int partner); //!< Determines if current partner is valid
+    static bool isValid(const mpl::communicator& mpi, int partner); //!< Is current partner valid?
   public:
     using PartnerPair = std::pair<int, int>; //!< Pair of partner MPI ranks
-    const PartnerPolicy policy;
-    std::optional<int> rank = std::nullopt;                                //!< Rank of partner MPI process if available
-    virtual bool setPartner(const mpl::communicator&, Random& random) = 0; //!< Sets MPI partner
-    PartnerPair partnerPair(const mpl::communicator& mpi) const;           //!< Get ordered pair of current partners
+    const PartnerPolicy policy;              //!< Partner generation policy
+    std::optional<int> rank = std::nullopt;  //!< Rank of partner MPI process if available
+    virtual bool generate(const mpl::communicator& mpi, Random& random) = 0; //!< Generate partner according to policy
+    PartnerPair getPair(const mpl::communicator& mpi) const;                 //!< Get ordered pair of current partners
     explicit Partner(PartnerPolicy policy);
     virtual ~Partner() = default;
 };
@@ -87,7 +82,7 @@ class Partner {
 class OddEvenPartner : public Partner {
   public:
     OddEvenPartner();
-    bool setPartner(const mpl::communicator& mpi, Random& random) override;
+    bool generate(const mpl::communicator& mpi, Random& random) override;
 };
 
 /**
@@ -169,7 +164,7 @@ NLOHMANN_JSON_SERIALIZE_ENUM(ParticleBuffer::Format, {
  * @param partner_rank Partner MPI process to exchange with
  * @param geometry Geometry to operate on
  * @param volume_scaling_method Policy used to scale the volume
- * @return True if volume difference between the two processes
+ * @return True if a volume difference was detected
  */
 bool exchangeVolume(const Controller& mpi, int partner_rank, Geometry::GeometryBase& geometry,
                     Geometry::VolumeMethod& volume_scaling_method);
@@ -179,7 +174,7 @@ bool exchangeVolume(const Controller& mpi, int partner_rank, Geometry::GeometryB
  */
 class ExchangeParticles {
   private:
-    std::unique_ptr<ParticleVector> partner_particles; //!< Temporary storage for exchanged particles
+    std::unique_ptr<ParticleVector> partner_particles; //!< Storage for recieved particles
     ParticleBuffer particle_buffer;                    //!< Class for serializing particles
   public:
     const ParticleVector& operator()(const Controller& mpi, int partner_rank, const ParticleVector& particles);

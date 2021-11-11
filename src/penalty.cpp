@@ -119,7 +119,7 @@ double Penalty::energy(Change& change) {
     return energy;
 }
 
-/*
+/**
  * @todo: If this is called before `energy()`, the latest_coordinate
  * is never calculated and causes undefined behavior
  */
@@ -169,7 +169,6 @@ void Penalty::sync(Energybase* other, [[maybe_unused]] const Change& change) {
 
 PenaltyMPI::PenaltyMPI(const json& j, Space& spc) : Penalty(j, spc), mpi(MPI::mpi) {
     weights.resize(mpi.world.size());
-    buffer.resize(penalty_energy.size() * mpi.world.size()); // recieve buffer for penalty func
 }
 
 /**
@@ -202,37 +201,25 @@ void PenaltyMPI::update(const std::vector<double>& coordinate) {
 }
 
 /**
- * Broadcast, collect, and average penalty functions across all MPI nodes. The resulting
- * function is shifted so that the minimum energy is at zero.
- * When done, all penalty functions shall be identical!
- *
- * @note These are generic MPI calls previously used:
- *
- * MPI_Gather(penalty_energy.data(), penalty_energy.size(), MPI_DOUBLE, buffer.data(),
- *            penalty_energy.size(), MPI_DOUBLE, 0, mpi.comm); // master collects penalty from all nodes
- *
- * MPI_Bcast(penalty_energy.data(), penalty_energy.size(), MPI_DOUBLE, 0,
- *           mpi.comm); // master sends average penalty function to all slaves
+ * 1. Master gathers penalty functions from all ranks
+ * 2. Master calculates an average, shifter so that minimum energy is at zero
+ * 3. Master broadcasts average to all nodes
+ * 4. When done, all penalty functions shall be identical
  */
 void PenaltyMPI::averagePenaltyFunctions() {
     penalty_function_exchange_counter += 1;
     const auto layout = mpl::contiguous_layout<double>(penalty_energy.size());
-
-    // master collects penalty from all nodes
+    buffer.resize(penalty_energy.size() * mpi.world.size());
     mpi.world.gather(mpi.master_rank, penalty_energy.data(), layout, buffer.data(), layout);
-
-    // master calculates an average over all nodes
     if (mpi.isMaster()) {
         penalty_energy.setZero();
         for (int i = 0; i < mpi.world.size(); i++) {
-            auto offset = i * penalty_energy.size();
+            const auto offset = i * penalty_energy.size();
             penalty_energy +=
                 Eigen::Map<Eigen::MatrixXd>(buffer.data() + offset, penalty_energy.rows(), penalty_energy.cols());
         }
         penalty_energy = (penalty_energy.array() - penalty_energy.minCoeff()) / static_cast<double>(mpi.world.size());
     }
-
-    // distribute average to all nodes
     mpi.world.bcast(mpi.master_rank, penalty_energy.data(), layout);
 }
 

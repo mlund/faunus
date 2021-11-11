@@ -69,8 +69,8 @@ class MoveBase {
     virtual double bias(Change& change, double old_energy,
                         double new_energy); //!< adds extra energy change not captured by the Hamiltonian
     MoveBase(Space& spc, const std::string& name, const std::string& cite);
-    inline virtual ~MoveBase() = default;
     bool isStochastic() const; //!< True if move should be called stochastically
+    virtual ~MoveBase() = default;
 };
 
 void from_json(const json &, MoveBase &); //!< Configure any move via json
@@ -164,7 +164,7 @@ class AtomicTranslateRotate : public MoveBase {
 
   public:
     AtomicTranslateRotate(Space& spc, const Energy::Hamiltonian& hamiltonian);
-    ~AtomicTranslateRotate();
+    ~AtomicTranslateRotate() override;
 };
 
 /**
@@ -376,7 +376,7 @@ class ChargeMove : public MoveBase {
     ChargeMove(Space &spc, std::string name, std::string cite);
 
   public:
-    ChargeMove(Space &spc);
+    explicit ChargeMove(Space &spc);
 };
 
 /**
@@ -448,38 +448,6 @@ class QuadrantJump : public MoveBase {
 
 #ifdef ENABLE_MPI
 
-enum class PartnerPolicy { ODDEVEN, INVALID }; //!< Policies for MPI partner search
-NLOHMANN_JSON_SERIALIZE_ENUM(PartnerPolicy, {{PartnerPolicy::INVALID, nullptr}, {PartnerPolicy::ODDEVEN, "oddeven"}})
-
-/** Base class for finding MPI partners */
-class MPIPartner {
-  protected:
-    static bool goodPartner(const mpl::communicator& mpi, int partner); //!< Determines if current partner is valid
-  public:
-    const PartnerPolicy policy;
-    std::optional<int> rank = std::nullopt; //!< Rank of partner MPI process if available
-    virtual bool setPartner(const mpl::communicator&, Random& random) = 0; //!< Sets MPI partner
-    std::pair<int, int> partnerPair(const mpl::communicator& mpi) const; //!< Get ordered pair of current partners
-    MPIPartner(PartnerPolicy policy);
-    virtual ~MPIPartner() = default;
-};
-
-/**
- * @brief Odd ranks pairs with neighboring even rank (left or right)
- */
-class OddEvenPartner : public MPIPartner {
-  public:
-    OddEvenPartner();
-    bool setPartner(const mpl::communicator&, Random& random) override;
-};
-
-/**
- * @brief Factory function for generating MPI partner policies
- * @param policy Policy name ("oddeven", ...)
- * @throw if unknown policy
- */
-std::unique_ptr<MPIPartner> createMPIPartnerPolicy(PartnerPolicy policy);
-
 /**
  * @brief Class for parallel tempering (aka replica exchange) using MPI
  *
@@ -493,29 +461,24 @@ std::unique_ptr<MPIPartner> createMPIPartnerPolicy(PartnerPolicy policy);
  */
 class ParallelTempering : public MoveBase {
   private:
-    std::unique_ptr<MPIPartner> partner;                                          //!< Policy for finding partners
+    MPI::Controller& mpi;
+    MPI::ExchangeParticles exchange_particles; //!< Helper class to exchange particles
+    std::unique_ptr<MPI::Partner> partner;     //!< Policy for finding MPI partners
     Geometry::VolumeMethod volume_scaling_method = Geometry::VolumeMethod::ISOTROPIC; //!< How to scale volumes
-    const double very_small_volume = 1e-9;
-    MPI::Controller &mpi;
-    std::unique_ptr<ParticleVector> partner_particles;
-    Random random;
-    std::map<std::pair<int, int>, Average<double>> acceptance_map;
-    MPI::ParticleBuffer particle_buffer; //!< Class for serializing particles
+    std::map<MPI::Partner::PartnerPair, Average<double>> acceptance_map;              //!< Exchange statistics
 
     void _to_json(json& j) const override;
+    void _from_json(const json& j) override;
     void _move(Change& change) override;
-    double exchangeEnergy(double energy_change);                    //!< Exchange energy with partner
-    void exchangeVolume(Change& change);                            //!< Exchange volumes
-    void exchangeParticles();                                       //!< Exchange particles
-    void exchangeState(Change& change);                             //!< Exchange positions, charges, volume etc.
-    double bias(Change& change, double uold, double unew) override; //!< Energy change in partner replica
     void _accept(Change& change) override;
     void _reject(Change& change) override;
-    void _from_json(const json& j) override;
+    double bias(Change& change, double uold, double unew) override; //!< Energy change in partner replica
+    double exchangeEnergy(double energy_change);                    //!< Exchange energy with partner
+    void exchangeState(Change& change);                             //!< Exchange positions, charges, volume etc.
+    void exchangeGroupSizes(Space::GroupVector& groups, int partner_rank);
 
   public:
-    ParallelTempering(Space& spc);
-    ~ParallelTempering();
+    explicit ParallelTempering(Space& spc);
 };
 
 #endif
@@ -585,6 +548,4 @@ class MoveCollection {
 void to_json(json& j, const MoveCollection& propagator);
 
 } // namespace Move
-
-
 } // namespace Faunus

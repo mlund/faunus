@@ -1,4 +1,5 @@
 #include "mpicontroller.h"
+#include "space.h"
 #include <range/v3/algorithm/copy.hpp>
 #include <algorithm>
 #include <iostream>
@@ -25,6 +26,47 @@ void Controller::to_json(json& j) const {
 }
 
 std::ostream& Controller::cout() { return stream.is_open() ? stream : std::cout; }
+
+Partner::Partner(PartnerPolicy policy) : policy(policy) {}
+
+bool Partner::goodPartner(const mpl::communicator& communicator, int partner) {
+    return (partner >= 0 && partner < communicator.size() && partner != communicator.rank());
+}
+
+Partner::PartnerPair Partner::partnerPair(const mpl::communicator& communicator) const {
+    if (rank.has_value()) {
+        // note `std::minmax(a,b)` takes _references_; the initializer list (used here) takes a _copy_
+        return std::minmax({communicator.rank(), rank.value()});
+    }
+    throw std::runtime_error("bad partner");
+}
+
+OddEvenPartner::OddEvenPartner() : Partner(PartnerPolicy::ODDEVEN) {}
+
+/**
+ * If true is returned, a valid partner was found
+ */
+bool OddEvenPartner::setPartner(const mpl::communicator& communicator, Random& random) {
+    int rank_increment = static_cast<bool>(random.range(0, 1)) ? 1 : -1;
+    if (communicator.rank() % 2 == 0) { // even replica
+        rank = communicator.rank() + rank_increment;
+    } else { // odd replica
+        rank = communicator.rank() - rank_increment;
+    }
+    if (!goodPartner(communicator, rank.value())) {
+        rank = std::nullopt;
+    }
+    return rank.has_value();
+}
+
+std::unique_ptr<Partner> createMPIPartnerPolicy(PartnerPolicy policy) {
+    switch (policy) {
+    case PartnerPolicy::ODDEVEN:
+        return std::make_unique<OddEvenPartner>();
+    default:
+        throw std::runtime_error("unknown policy");
+    }
+}
 
 void ParticleBuffer::setFormat(ParticleBuffer::Format data_format) {
     format = data_format;
@@ -95,6 +137,48 @@ ParticleBuffer::Format ParticleBuffer::getFormat() const { return format; }
 ParticleBuffer::ParticleBuffer() { setFormat(Format::XYZQI); }
 ParticleBuffer::buffer_iterator ParticleBuffer::begin() { return buffer.begin(); }
 ParticleBuffer::buffer_iterator ParticleBuffer::end() { return buffer.end(); }
+
+/**
+ * @brief Perform the exchange
+ * @param mpi MPI Controller
+ * @param partner_rank MPI partner to exchange with
+ * @param particles The particles to send to partner_rank
+ * @return Reference to recieved particles from partner MPI process
+ * @todo This involves a lot of copying...
+ */
+const ParticleVector& ExchangeParticles::operator()(const Controller& mpi, int partner_rank,
+                                                    const ParticleVector& particles) {
+    if (!partner_particles) {
+        partner_particles = std::make_unique<ParticleVector>();
+    }
+    partner_particles->resize(particles.size());
+
+    particle_buffer.copyToBuffer(particles); // particle data -> vector of doubles
+    mpi.world.sendrecv_replace(particle_buffer.begin(), particle_buffer.end(), partner_rank, mpl::tag_t(0),
+                               partner_rank, mpl::tag_t(0));
+    particle_buffer.copyFromBuffer(*partner_particles);
+
+    return *partner_particles;
+}
+
+ParticleBuffer::Format ExchangeParticles::getFormat() const { return particle_buffer.getFormat(); }
+
+void ExchangeParticles::setFormat(ParticleBuffer::Format format) { particle_buffer.setFormat(format); }
+
+bool exchangeVolume(const Controller& mpi, int partner_rank, Geometry::GeometryBase& geometry,
+                    Geometry::VolumeMethod& volume_scaling_method) {
+    const auto old_volume = geometry.getVolume();
+    auto new_volume = 0.0;
+    mpi.world.sendrecv(old_volume, partner_rank, mpl::tag_t(0), new_volume, partner_rank, mpl::tag_t(0));
+    if (new_volume <= pc::epsilon_dbl) {
+        mpi.world.abort(1);
+    }
+    if (std::fabs(new_volume - old_volume) > pc::epsilon_dbl) {
+        geometry.setVolume(new_volume, volume_scaling_method);
+        return true;
+    }
+    return false;
+}
 
 Controller mpi; //!< Global instance of MPI controller
 

@@ -6,6 +6,7 @@
 #include "random.h"
 #include "core.h"
 #include "particle.h"
+#include "geometry.h"
 
 #include <vector>
 #include <fstream>
@@ -18,6 +19,11 @@
 MPL_REFLECTION(Faunus::Point, x(), y(), z())
 MPL_REFLECTION(Faunus::Particle, id, charge, pos)
 #endif
+
+namespace Faunus {
+struct Change;
+class Space;
+} // namespace Faunus
 
 namespace Faunus::MPI {
 
@@ -52,6 +58,44 @@ class Controller {
 };
 
 extern Controller mpi;
+
+enum class PartnerPolicy { ODDEVEN, INVALID }; //!< Policies for MPI partner search
+NLOHMANN_JSON_SERIALIZE_ENUM(PartnerPolicy, {{PartnerPolicy::INVALID, nullptr}, {PartnerPolicy::ODDEVEN, "oddeven"}})
+
+/**
+ * Base class for finding MPI partners
+ *
+ * Finds pairs of MPI ranks for use with e.g. parallel tempering moves.
+ * The partner rank is contained in `rank`
+ */
+class Partner {
+  protected:
+    static bool goodPartner(const mpl::communicator& mpi, int partner); //!< Determines if current partner is valid
+  public:
+    using PartnerPair = std::pair<int, int>; //!< Pair of partner MPI ranks
+    const PartnerPolicy policy;
+    std::optional<int> rank = std::nullopt;                                //!< Rank of partner MPI process if available
+    virtual bool setPartner(const mpl::communicator&, Random& random) = 0; //!< Sets MPI partner
+    PartnerPair partnerPair(const mpl::communicator& mpi) const;           //!< Get ordered pair of current partners
+    explicit Partner(PartnerPolicy policy);
+    virtual ~Partner() = default;
+};
+
+/**
+ * @brief Odd ranks pairs with neighboring even rank (left or right)
+ */
+class OddEvenPartner : public Partner {
+  public:
+    OddEvenPartner();
+    bool setPartner(const mpl::communicator& mpi, Random& random) override;
+};
+
+/**
+ * @brief Factory function for generating MPI partner policies
+ * @param policy Policy type (`oddeven`, ...)
+ * @throw if unknown policy
+ */
+std::unique_ptr<Partner> createMPIPartnerPolicy(PartnerPolicy policy);
 
 /**
  * @brief Split N items into nproc parts
@@ -120,11 +164,34 @@ NLOHMANN_JSON_SERIALIZE_ENUM(ParticleBuffer::Format, {
                                                      })
 
 /**
+ * @brief Exchange volumes between MPI processes
+ * @param mpi MPI Controller
+ * @param partner_rank Partner MPI process to exchange with
+ * @param geometry Geometry to operate on
+ * @param volume_scaling_method Policy used to scale the volume
+ * @return True if volume difference between the two processes
+ */
+bool exchangeVolume(const Controller& mpi, int partner_rank, Geometry::GeometryBase& geometry,
+                    Geometry::VolumeMethod& volume_scaling_method);
+
+/**
+ * Helper class to exchange a range of particles between two MPI nodes
+ */
+class ExchangeParticles {
+  private:
+    std::unique_ptr<ParticleVector> partner_particles; //!< Temporary storage for exchanged particles
+    ParticleBuffer particle_buffer;                    //!< Class for serializing particles
+  public:
+    const ParticleVector& operator()(const Controller& mpi, int partner_rank, const ParticleVector& particles);
+    ParticleBuffer::Format getFormat() const;
+    void setFormat(ParticleBuffer::Format format);
+};
+
+/**
  * @brief Sum tables computed by parallel processes
  *
  * @details Slave processes send histograms to the master. The master computes the
  * average and sends it back to the slaves. Ttable can be Table, Table2D or Table3D in auxiliary.h.
- *
  */
 template <class Ttable> void avgTables(const mpl::communicator& communicator, Ttable& table, int& size) {
     std::vector<double> send_buffer; // data to be sent

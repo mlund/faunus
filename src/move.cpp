@@ -372,50 +372,9 @@ MoveCollection::move_iterator MoveCollection::sample() {
 
 #ifdef ENABLE_MPI
 
-MPIPartner::MPIPartner(PartnerPolicy policy) : policy(policy) {}
-
-bool MPIPartner::goodPartner(const mpl::communicator& communicator, int partner) {
-    return (partner >= 0 && partner < communicator.size() && partner != communicator.rank());
-}
-
-std::pair<int, int> MPIPartner::partnerPair(const mpl::communicator& communicator) const {
-    if (rank.has_value()) {
-        // note `std::minmax(a,b)` takes _references_; the initializer list (used here) takes a _copy_
-        return std::minmax({communicator.rank(), rank.value()});
-    }
-    throw std::runtime_error("bad partner");
-}
-
-OddEvenPartner::OddEvenPartner() : MPIPartner(PartnerPolicy::ODDEVEN) {}
-
-/**
- * If true is returned, a valid partner was found
- */
-bool OddEvenPartner::setPartner(const mpl::communicator& communicator, Random& random) {
-    int rank_increment = static_cast<bool>(random.range(0, 1)) ? 1 : -1;
-    if (communicator.rank() % 2 == 0) { // even replica
-        rank = communicator.rank() + rank_increment;
-    } else { // odd replica
-        rank = communicator.rank() - rank_increment;
-    }
-    if (!goodPartner(communicator, rank.value())) {
-        rank = std::nullopt;
-    }
-    return rank.has_value();
-}
-
-std::unique_ptr<MPIPartner> createMPIPartnerPolicy(PartnerPolicy policy) {
-    switch (policy) {
-    case PartnerPolicy::ODDEVEN:
-        return std::make_unique<OddEvenPartner>();
-    default:
-        throw std::runtime_error("unknown policy");
-    }
-}
-
 void ParallelTempering::_to_json(json& j) const {
     j = {{"replicas", mpi.world.size()},
-         {"format", particle_buffer.getFormat()},
+         {"format", exchange_particles.getFormat()},
          {"partner_policy", partner->policy},
          {"volume_scale", volume_scaling_method}};
     auto& exchange_json = j["exchange"] = json::object();
@@ -425,36 +384,26 @@ void ParallelTempering::_to_json(json& j) const {
     }
 }
 
-void ParallelTempering::exchangeVolume(Change& change) {
-    const auto old_volume = spc.geometry.getVolume();
-    auto new_volume = 0.0;
-    mpi.world.sendrecv(old_volume, *partner->rank, mpl::tag_t(0), new_volume, *partner->rank, mpl::tag_t(0));
-    if (new_volume < very_small_volume) {
-        mpi.world.abort(1);
-    }
-    if (std::fabs(new_volume - old_volume) > pc::epsilon_dbl) {
-        change.volume_change = true;
-        spc.geometry.setVolume(new_volume, volume_scaling_method);
-    }
-}
-
-void ParallelTempering::exchangeParticles() {
-    particle_buffer.copyToBuffer(spc.particles);
-    mpi.world.sendrecv_replace(particle_buffer.begin(), particle_buffer.end(), *partner->rank, mpl::tag_t(0),
-                               *partner->rank, mpl::tag_t(0));
-    particle_buffer.copyFromBuffer(*partner_particles);
-    spc.updateParticles(partner_particles->begin(), partner_particles->end(), spc.particles.begin());
+/**
+ * Exchange groups sizes with partner MPI rank and Resize all groups to the exchanged values
+ */
+void ParallelTempering::exchangeGroupSizes(Space::GroupVector& groups, int partner_rank) {
+    std::vector<size_t> sizes = groups | ranges::cpp20::views::transform(&Group::size) | ranges::to_vector;
+    mpi.world.sendrecv_replace(sizes.begin(), sizes.end(), partner_rank, mpl::tag_t(0), partner_rank, mpl::tag_t(0));
+    auto it = sizes.begin();
+    ranges::cpp20::for_each(groups, [&it](Group& group) { group.resize(*it++); });
 }
 
 /**
  * This will exchange the states between two partner replicas and set the change object accordingy
- *
- * @todo Exchange groups sizes; direct exchange of particles using mpl
  */
 void ParallelTempering::exchangeState(Change& change) {
-    assert(partner->rank.has_value());
-    exchangeVolume(change);
-    exchangeParticles();
+    if (MPI::exchangeVolume(mpi, *partner->rank, spc.geometry, volume_scaling_method)) {
+        change.volume_change = true;
+    }
+    exchangeGroupSizes(spc.groups, *partner->rank);
+    auto& partner_particles = exchange_particles(mpi, *partner->rank, spc.particles);
+    spc.updateParticles(partner_particles.begin(), partner_particles.end(), spc.particles.begin());
     change.everything = true;
 }
 
@@ -493,18 +442,16 @@ double ParallelTempering::exchangeEnergy(const double energy_change) {
  * problematic with grand canonical moves.
  */
 double ParallelTempering::bias([[maybe_unused]] Change& change, double uold, double unew) {
-    assert(partner->rank.has_value());
     if constexpr (false) {
         // todo: add sanity check for random number generator state in partnering replicas.
         return exchangeEnergy(unew - uold); // exchange change with partner (MPI)
-    } else {
-        auto energy_change = unew - uold;
-        auto partner_energy_change = exchangeEnergy(energy_change);
-        if (MetropolisMonteCarlo::metropolisCriterion(energy_change + partner_energy_change)) {
-            return pc::neg_infty; // accept!
-        }
-        return pc::infty; // reject!
     }
+    auto energy_change = unew - uold;
+    auto partner_energy_change = exchangeEnergy(energy_change);
+    if (MetropolisMonteCarlo::metropolisCriterion(energy_change + partner_energy_change)) {
+        return pc::neg_infty; // accept!
+    }
+    return pc::infty; // reject!
 }
 
 void ParallelTempering::_accept([[maybe_unused]] Change& change) {
@@ -515,8 +462,8 @@ void ParallelTempering::_reject([[maybe_unused]] Change& change) {
 }
 
 void ParallelTempering::_from_json(const json& j) {
-    particle_buffer.setFormat(j.value("format", MPI::ParticleBuffer::Format::XYZQI));
-    partner = createMPIPartnerPolicy(j.value("partner_policy", PartnerPolicy::ODDEVEN));
+    exchange_particles.setFormat(j.value("format", MPI::ParticleBuffer::Format::XYZQI));
+    partner = createMPIPartnerPolicy(j.value("partner_policy", MPI::PartnerPolicy::ODDEVEN));
     volume_scaling_method = j.value("volume_scale", Geometry::VolumeMethod::ISOTROPIC);
 }
 
@@ -524,20 +471,7 @@ ParallelTempering::ParallelTempering(Space& spc) : MoveBase(spc, "temper", "doi:
     if (mpi.world.size() < 2) {
         throw std::runtime_error(name + " requires two or more MPI processes");
     }
-    partner = createMPIPartnerPolicy(PartnerPolicy::ODDEVEN);
-    partner_particles = std::make_unique<ParticleVector>(spc.particles.size());
-}
-
-/**
- * At the end of the simulation, the state of the random number generators
- * must be the same on all ranks. Run with verbose logging (trace) and observe output!
- */
-ParallelTempering::~ParallelTempering() {
-#ifndef NDEBUG
-    faunus_logger->trace("mpi{}: last random number (Movebase) = {}", mpi.world.rank(), slump());
-    faunus_logger->trace("mpi{}: last random number (Temper) = {}", mpi.world.rank(), random());
-    faunus_logger->trace("mpi{}: last random number (MPI) = {}", mpi.world.rank(), mpi.random());
-#endif
+    partner = MPI::createMPIPartnerPolicy(MPI::PartnerPolicy::ODDEVEN);
 }
 
 #endif
@@ -1089,6 +1023,7 @@ TranslateRotate::TranslateRotate(Space& spc, std::string name, std::string cite)
 }
 
 TranslateRotate::TranslateRotate(Space& spc) : TranslateRotate(spc, "moltransrot", "") {}
+
 } // namespace Faunus::Move
 
 #ifdef DOCTEST_LIBRARY_INCLUDED

@@ -409,7 +409,7 @@ void ParallelTempering::exchangeState(Change& change) {
 
 void ParallelTempering::_move(Change& change) {
     mpi.world.barrier(); // wait until all ranks reach here
-    if (MPI::checkRandomEngineState(mpi.world, MoveBase::slump)) {
+    if (!MPI::checkRandomEngineState(mpi.world, MoveBase::slump)) {
         faunus_logger->error("Random numbers out of sync across MPI nodes. Do not use 'hardware' seed.");
         mpi.world.abort(1); // neighbor search *requires* that random engines are in sync
     }

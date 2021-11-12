@@ -402,8 +402,8 @@ void ParallelTempering::exchangeState(Change& change) {
         change.volume_change = true;
     }
     exchangeGroupSizes(spc.groups, *partner->rank);
-    const auto& partner_particles = exchange_particles(mpi, *partner->rank, spc.particles);
-    spc.updateParticles(partner_particles.begin(), partner_particles.end(), spc.particles.begin());
+    exchange_particles.replace(mpi.world, *partner->rank, spc.particles);
+    spc.updateParticles(spc.particles.begin(), spc.particles.end(), spc.particles.begin());
     change.everything = true;
 }
 

@@ -181,6 +181,7 @@ class ExchangeParticles {
     ParticleBuffer particle_buffer;                    //!< Class for serializing particles
   public:
     const ParticleVector& operator()(const Controller& mpi, int partner_rank, const ParticleVector& particles);
+    void replace(const mpl::communicator& comm, int partner_rank, ParticleVector& particles);
     ParticleBuffer::Format getFormat() const;
     void setFormat(ParticleBuffer::Format format);
 };

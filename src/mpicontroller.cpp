@@ -159,6 +159,18 @@ const ParticleVector& ExchangeParticles::operator()(const Controller& mpi, int p
     return *partner_particles;
 }
 
+/**
+ * @param comm MPI communicator
+ * @param partner_rank Destination and source
+ * @param particles Particle vector to send/recieve
+ */
+void ExchangeParticles::replace(const mpl::communicator& comm, int partner_rank, ParticleVector& particles) {
+    particle_buffer.copyToBuffer(particles); // particle data -> vector of doubles
+    comm.sendrecv_replace(particle_buffer.begin(), particle_buffer.end(), partner_rank, mpl::tag_t(0),
+                               partner_rank, mpl::tag_t(0));
+    particle_buffer.copyFromBuffer(particles);
+}
+
 ParticleBuffer::Format ExchangeParticles::getFormat() const { return particle_buffer.getFormat(); }
 
 void ExchangeParticles::setFormat(ParticleBuffer::Format format) { particle_buffer.setFormat(format); }

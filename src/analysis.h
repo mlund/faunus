@@ -4,6 +4,7 @@
 #include "io.h"
 #include "scatter.h"
 #include "reactioncoordinate.h"
+#include "sasa.h"
 #include "aux/timers.h"
 #include "aux/table_2d.h"
 #include "aux/equidistant_table.h"
@@ -735,6 +736,119 @@ class SpaceTrajectory : public Analysisbase {
 
   public:
     SpaceTrajectory(const json& j, Space& spc);
+};
+
+class SamplingPolicyBase;
+
+class SASABase : public Analysisbase {
+    using index_type = Faunus::AtomData::index_type;
+    using count_type = size_t;
+    using Ttable = Equidistant2DTable<double, count_type>;
+
+  public:
+    enum class Policies { ATOMIC, MOLECULAR, ATOMS_IN_MOLECULE, INVALID };
+  private:
+    struct AverageData {
+        using average_type = Average<double>;
+        average_type area;
+        average_type area_squared;
+    }; //!< Placeholder class for average properties
+    AverageData average_data;   //!< Stores all averages for the selected molecule
+
+    std::unique_ptr<std::ostream> output_stream; //!< output stream
+
+    double probe_radius;            //!< radius of the probe sphere
+    int slices_per_atom;            //!< number of slices of each sphere in SASA calculation
+
+    std::string filename;           //!< output file name
+    Ttable sasa_histogram;          //!< histogram of sasa values
+    std::unique_ptr<Faunus::SASA::SASABase> sasa;  //!< sasa object for calculating solute areas
+    std::unique_ptr<SamplingPolicyBase> policy;    //!< policy specyfing how sampling will be performed
+
+    virtual void _to_json(json& j) const override;
+    virtual void _from_json(const json& json_input) override;
+    virtual void _to_disk() override;
+    virtual void _sample() override;
+
+    void setPolicy(const json& j);
+    friend class SamplingPolicyBase;
+
+    void takeSample(const double area);
+
+  public:
+    SASABase(const json& j, Space& spc);
+};
+
+NLOHMANN_JSON_SERIALIZE_ENUM(SASABase::Policies,
+                             {
+                                 {SASABase::Policies::ATOMIC, "atomic"},
+                                 {SASABase::Policies::MOLECULAR, "molecular"},
+                                 {SASABase::Policies::ATOMS_IN_MOLECULE, "atoms_in_molecule"},
+                                 {SASABase::Policies::INVALID, nullptr}
+                             })
+
+/** @brief base class for different SASA sampling policies*/
+class SamplingPolicyBase {
+
+  protected:
+    template< bool AsWhole = false, typename TBegin, typename TEnd>
+    void sampleSASA (TBegin first, TEnd last, SASABase& analysis);
+
+  public:
+    virtual void sample(Space& spc, SASABase& analysis) = 0;
+    virtual void to_json(json& json_output) const = 0;
+    virtual void from_json(const json& json_input) = 0;
+
+    SamplingPolicyBase() = default;
+    virtual ~SamplingPolicyBase() = default;
+};
+
+/** @brief SASA sampling policy which samples individually atoms selected by atom type name*/
+class AtomicPolicy : public SamplingPolicyBase {
+
+    size_t atom_id;        //!< id of atom type to be sampled
+    std::string atom_name; //!< name of the atom type to be sampled
+
+    void sample(Space& spc, SASABase& analysis) override;
+    void to_json(json& json_output) const override;
+    void from_json(const json& json_input) override;
+
+  public:
+    AtomicPolicy() = default;
+};
+
+/** @brief SASA sampling policy which samples individually molecules selected by molecules name*/
+class MolecularPolicy : public SamplingPolicyBase {
+
+    int molecule_id;            //!< id of molecule to be sampled
+    std::string molecule_name;  //!< name of the molecule to be sampled
+
+    void sample(Space& spc, SASABase& analysis) override;
+    void to_json(json& json_output) const override;
+    void from_json(const json& json_input) override;
+
+  public:
+    MolecularPolicy() = default;
+};
+
+/** @brief SASA sampling policy which samples as a whole atom in a selected molecule
+ *          if multiple atoms are selected (either by atom names or by indices in a selected molecule)
+ *          it samples sum of their SASAs in a given molecule
+ *          if single atom name is selected, it samples just the selected atom SASA in a selected molecule
+ *          */
+class AtomsInMoleculePolicy : public SamplingPolicyBase {
+
+    int molecule_id;                    //!< id of molecule to be sampled
+    std::set<size_t> selected_indices;  //!< selected indices of atoms in the chosen molecule
+    std::string molecule_name;          //!<  selected molecule name to be sampled
+    std::set<std::string> atom_names;   //!< selected names of atoms in the chosen molecule
+
+    void sample(Space& spc, SASABase& analysis) override;
+    void to_json(json& json_output) const override;
+    void from_json(const json& json_input) override;
+
+  public:
+    AtomsInMoleculePolicy() = default;
 };
 
 /** @brief Example analysis */

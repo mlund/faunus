@@ -13,6 +13,7 @@
 #include <cereal/types/memory.hpp>
 #include <cereal/archives/binary.hpp>
 #include <range/v3/numeric/accumulate.hpp>
+#include <range/v3/view/zip.hpp>
 
 #include <iomanip>
 #include <iostream>
@@ -142,6 +143,8 @@ std::shared_ptr<Analysisbase> createAnalysis(const std::string& name, const json
             return std::make_shared<FileReactionCoordinate>(j, spc);
         } else if (name == "sanity") {
             return std::make_shared<SanityCheck>(j, spc);
+        } else if (name == "sasa") {
+            return std::make_shared<SASABase>(j, spc);
         } else if (name == "savestate") {
             return std::make_shared<SaveState>(j, spc);
         } else if (name == "scatter") {
@@ -1320,6 +1323,187 @@ PolymerShape::PolymerShape(const json& j, Space& spc) : Analysisbase(spc, "Polym
         tensor_output_stream = IO::openCompressedOutputStream(MPI::prefix + filename);
         *tensor_output_stream << "# step Rg xx xy xz xy yy yz xz yz zz\n";
     }
+}
+
+void SASABase::_to_disk() {
+
+    if (auto stream = std::ofstream(filename + "_histogram.dat")) {
+        stream << sasa_histogram;
+    }
+
+    if (output_stream) {
+        output_stream->flush();
+    }
+}
+
+void SASABase::_from_json(const json& json_input) {
+    probe_radius = json_input.value("radius", 1.4) * 1.0_angstrom;
+    slices_per_atom = json_input.value("slices", 20);
+    sasa_histogram.setResolution(json_input.value("resolution", 50.0_angstrom), 0.);
+
+    if (filename = json_input.value("file", ""s); !filename.empty()) {
+        output_stream = IO::openCompressedOutputStream(MPI::prefix + filename);
+        *output_stream << "# step SASA SASA" + u8::squared + " \n";
+    }
+}
+
+SASABase::SASABase(const json& j, Space& spc) : Analysisbase(spc, "sasa"){
+    from_json(j);
+    cite = "doi:10.12688/f1000research.7931.1";
+
+    using Faunus::SASA::SASACellList;
+    const auto periodic_dimensions =
+        spc.geometry.asSimpleGeometry()->boundary_conditions.isPeriodic().cast<int>().sum();
+    switch (periodic_dimensions) {
+    case 3: // PBC in all directions
+        sasa = std::make_unique<SASACellList<Faunus::SASA::SparsePeriodicCellList>>(spc, probe_radius, slices_per_atom);
+        break;
+    case 0:
+        sasa = std::make_unique<SASACellList<Faunus::SASA::SparseFixedCellList>>(spc, probe_radius, slices_per_atom);
+        break;
+    default:
+        faunus_logger->warn("CellList neighbour search not available yet for current geometry");
+        sasa = std::make_unique<Faunus::SASA::SASA>(spc, probe_radius, slices_per_atom);
+        break;
+    }
+    setPolicy(j);
+}
+
+void SASABase::_to_json(json& j) const {
+    if (!average_data.area.empty()) {
+        j = {{"⟨SASA⟩", average_data.area.avg()},
+             {"⟨SASA²⟩-⟨SASA⟩²", average_data.area_squared.avg() - std::pow(average_data.area.avg(), 2)}};
+    }
+    j["radius"].push_back(probe_radius);
+    j["slices_per_atom"].push_back(slices_per_atom);
+    policy->to_json(j);
+}
+
+/** @brief puts a sample of sasa area into histogram and updates average
+ *
+ * @param area
+ */
+void SASABase::takeSample(const double area){
+    average_data.area += area;
+    average_data.area_squared += std::pow(area, 2);
+    sasa_histogram(area)++;
+}
+
+/** @brief constructs a SamplingPolicy object based on json input and loads it with data
+ *
+ * @param j
+ */
+void SASABase::setPolicy(const json& j){
+    auto selected_policy = j.value("policy", Policies::INVALID);
+    switch(selected_policy) {
+    case Policies::ATOMIC:
+        policy = std::make_unique<AtomicPolicy>();
+        break;
+    case Policies::MOLECULAR:
+        policy = std::make_unique<MolecularPolicy>();
+        break;
+    case Policies::ATOMS_IN_MOLECULE:
+        policy = std::make_unique<AtomsInMoleculePolicy>();
+        break;
+    default:
+        throw ConfigurationError("Invalid or no sasa policy chosen!");
+        break;
+    }
+    policy->from_json(j);
+}
+
+void SASABase::_sample() {
+        policy->sample(spc, *this);
+}
+
+/** @brief samples sasa of each object (either a whole group or a particle)
+     * either by sampling each sasa between first and last individually
+     * or by sampling only the total sum of SASAs between first and last
+     * @param first iterator at first particle or group
+     * @param last iterator at last particle or group
+     * @param analysis SASAanalysis object to insert samples into
+     * @tparam AsWhole true if total sum of SASAs between first and last is to be sampled
+     *                  false if sampled individually
+     * @tparam TBegin
+     * @tparam TEnd
+     * */
+template< bool asWhole, typename TBegin, typename TEnd>
+void SamplingPolicyBase::sampleSASA (TBegin first, TEnd last, SASABase& analysis) {
+    analysis.sasa->init(analysis.spc);
+    if(asWhole){
+        double area = analysis.sasa->calcSASA(analysis.spc, first, last);
+        analysis.takeSample(area);
+        if (analysis.output_stream) {
+            *analysis.output_stream << fmt::format("{} {:.3f} \n", analysis.getNumberOfSteps(), area);
+        }
+    }
+    else {
+        std::for_each(first, last, [&analysis](const auto& species) {
+            double area = analysis.sasa->calcSASAOf(analysis.spc, species);
+            analysis.takeSample(area);
+        });
+    }
+}
+
+void AtomicPolicy::sample(Space& spc, SASABase& analysis) {
+    auto atoms = spc.findAtoms(atom_id);
+    sampleSASA<false>(atoms.begin(), atoms.end(), analysis);
+}
+void AtomicPolicy::to_json(json& json_output) const {
+    json_output["atom_name"].push_back(atom_name);
+}
+void AtomicPolicy::from_json(const json& json_input) {
+    atom_name = json_input.at("atom").get<std::string>();
+    atom_id = findAtomByName(atom_name).id();
+}
+
+void MolecularPolicy::sample(Space& spc, SASABase& analysis) {
+    auto molecules = spc.findMolecules(molecule_id);
+    sampleSASA<false>(molecules.begin(), molecules.end(), analysis);
+}
+void MolecularPolicy::to_json(json& json_output) const {
+    json_output["molecule"].push_back(molecule_name);
+}
+void MolecularPolicy::from_json(const json& json_input) {
+    molecule_name = json_input.at("molecule").get<std::string>();
+    molecule_id = findMoleculeByName(molecule_name).id();
+}
+
+void AtomsInMoleculePolicy::sample(Space& spc, SASABase& analysis) {
+
+    auto molecules = spc.findMolecules(molecule_id);
+    for( const auto& molecule : molecules ){
+
+        auto selected_atoms = molecule | ranges::cpp20::views::filter([this, &molecule](const Particle& particle) {
+                                  return selected_indices.count(molecule.getParticleIndex(particle)) > 0; } ) ;
+        sampleSASA<true>(selected_atoms.begin(), selected_atoms.end(), analysis);
+    }
+}
+
+void AtomsInMoleculePolicy::to_json(json& json_output) const {
+    json_output["molecule"].push_back(molecule_name);
+    json_output["atomlist"].push_back(atom_names);
+}
+void AtomsInMoleculePolicy::from_json(const json& json_input) {
+
+    const auto atomlist = json_input.at("atomlist");
+    if(!atomlist.empty()) {
+        for (const auto& atom_specifier : atomlist) {
+            if(atom_specifier.is_string()) {
+                const auto& atom_name = atom_specifier.get<std::string>();
+                atom_names.insert(atom_name);
+                selected_indices.insert(findAtomByName(atom_name).id());
+            }
+            else if(atom_specifier.is_number_integer()){
+                const auto& atom_id = atom_specifier.get<int>();
+                selected_indices.insert(atom_id);
+            }
+        }
+    }
+    else{
+        ConfigurationError("you must choose at least one atom in atomlist");
+    }
+    molecule_name =json_input.at("molecule").get<std::string>();
 }
 
 void AtomProfile::_from_json(const json& j) {

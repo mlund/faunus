@@ -56,8 +56,29 @@ class SASABase {
     double exposedArcLength(std::vector<std::pair<double, double>>& arcs) const;
 
   public:
+    double calcSASAOfParticle(Space& spc, const Particle& particle) const;
+
+    /**
+ * @brief calculates total sasa of either particles or groups between given iterators
+ * @param spc
+ * @param begin iterator to either a first particle or group in a range
+ * @param end  iterator to either end of particle or group in a range
+ * @tparam TBegin
+ * @tparam TEnd
+     */
+    template<typename TBegin, typename TEnd>
+    double calcSASA(Space& spc, TBegin begin, TEnd end) const {
+        double area = std::accumulate(begin, end, 0.0, [this, &spc](auto& area, const auto& species){
+            return area + calcSASAOf(spc, species); });
+        return area;
+    }
+
+    template<typename TSpecies>
+    double calcSASAOf(Space& spc, const TSpecies& species) const;
+
     void updateSASA(const std::vector<SASABase::Neighbours>& neighbours_data,
                     const std::vector<index_type>& target_indices);
+
     virtual void init(Space& spc) = 0;
     virtual std::vector<SASABase::Neighbours>
     calcNeighbourData(Space& spc, const std::vector<index_type>& target_indices) const = 0;

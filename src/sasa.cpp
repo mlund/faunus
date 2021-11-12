@@ -25,6 +25,11 @@ void SASABase::updateSASA(const std::vector<SASA::Neighbours>& neighbours,
     //}
 }
 
+double SASABase::calcSASAOfParticle(Space& spc, const Particle& particle) const {
+    const auto neighbours = calcNeighbourDataOfParticle(spc, indexOf(particle));
+    return calcSASAOfParticle(neighbours);
+}
+
 /**
  * @brief Calcuates SASA of a single particle defined by NeighbourData object
  * @details cuts a sphere in z-direction, for each slice, radius of circle_i in the corresponding z-plane is
@@ -452,6 +457,17 @@ template class SASACellList<DensePeriodicCellList>;
 template class SASACellList<DenseFixedCellList>;
 template class SASACellList<SparsePeriodicCellList>;
 template class SASACellList<SparseFixedCellList>;
+
+template<>
+double SASABase::calcSASAOf<Group>(Space& spc, const Group& group) const{
+    return calcSASA(spc, group.begin(), group.end());
+}
+
+template<>
+double SASABase::calcSASAOf<Particle>(Space& spc, const Particle& particle) const{
+    return calcSASAOfParticle(spc, particle);
+}
+
 } // namespace SASA
 
 TEST_CASE("[Faunus] SASA_CellList") {
@@ -517,5 +533,7 @@ TEST_CASE("[Faunus] SASA_CellList") {
         CHECK(neighbours[1].indices.empty());
     }
 }
+
+
 
 } // namespace Faunus

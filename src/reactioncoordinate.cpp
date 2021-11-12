@@ -63,7 +63,7 @@ namespace Faunus::ReactionCoordinate {
  *
  *     atom: {resolution: 0.1, ... }
  */
-std::unique_ptr<ReactionCoordinateBase> createReactionCoordinate(const json& j, Space& spc) {
+std::unique_ptr<ReactionCoordinateBase> createReactionCoordinate(const json& j, const Space& spc) {
     try {
         const auto& [key, j_params] = jsonSingleItem(j);
         try {
@@ -86,7 +86,7 @@ std::unique_ptr<ReactionCoordinateBase> createReactionCoordinate(const json& j, 
 
 void SystemProperty::_to_json(json &j) const { j["property"] = property; }
 
-SystemProperty::SystemProperty(const json &j, Space &spc) : ReactionCoordinateBase(j) {
+SystemProperty::SystemProperty(const json &j, const Space &spc) : ReactionCoordinateBase(j) {
     name = "system";
     property = j.at("property").get<std::string>();
     if (property == "V") {
@@ -148,7 +148,7 @@ void AtomProperty::_to_json(json &j) const {
     }
 }
 
-AtomProperty::AtomProperty(const json &j, Space &spc) : ReactionCoordinateBase(j) {
+AtomProperty::AtomProperty(const json &j, const Space &spc) : ReactionCoordinateBase(j) {
     name = "atom";
     index = j.at("index");
     if (index >= spc.particles.size()) {
@@ -190,14 +190,14 @@ void MoleculeProperty::_to_json(json& j) const {
     }
 }
 
-MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordinateBase(j) {
+MoleculeProperty::MoleculeProperty(const json &j, const Space &spc) : ReactionCoordinateBase(j) {
     name = "molecule";
     index = j.value("index", 0);
     if (index >= spc.groups.size()) {
         throw ConfigurationError("invalid index");
     }
     auto b = spc.geometry.getBoundaryFunc();
-    auto& group = spc.groups.at(index);
+    const auto& group = spc.groups.at(index);
 
     property = j.at("property").get<std::string>();
 
@@ -251,7 +251,7 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordina
         throw ConfigurationError("{}: unknown or impossible property property '{}'", name, property);
     }
 }
-void MoleculeProperty::selectLengthOverRadiusRatio(const json& j, Space& spc) {
+void MoleculeProperty::selectLengthOverRadiusRatio(const json& j, const Space& spc) {
     direction = j.at("dir");
     indexes = j.value("indexes", decltype(indexes)());
     assert(indexes.size() == 2 && "An array of 2 indexes should be specified.");
@@ -278,7 +278,7 @@ void MoleculeProperty::selectLengthOverRadiusRatio(const json& j, Space& spc) {
         return 2.0 * spc.geometry.getLength().z() / (Rin.avg() + Rout.avg());
     };
 }
-void MoleculeProperty::selectMassCenterDistanceZ(const json& j, Space& spc) {
+void MoleculeProperty::selectMassCenterDistanceZ(const json& j, const Space& spc) {
     indexes = j.value("indexes", decltype(indexes)());
     assert(indexes.size() > 1 && "An array of 2 or 4 indexes should be specified.");
     if (indexes.size() == 4) {
@@ -296,7 +296,7 @@ void MoleculeProperty::selectMassCenterDistanceZ(const json& j, Space& spc) {
         };
     }
 }
-void MoleculeProperty::selectAtomAtomDistance(const json& j, Space& spc) {
+void MoleculeProperty::selectAtomAtomDistance(const json& j, const Space& spc) {
     direction = j.at("dir");
     indexes = j.at("indexes").get<decltype(indexes)>();
     if (indexes.size() != 2) {
@@ -308,14 +308,14 @@ void MoleculeProperty::selectAtomAtomDistance(const json& j, Space& spc) {
             .norm();
     };
 }
-void MoleculeProperty::selectGyrationRadius(Space& spc) {
+void MoleculeProperty::selectGyrationRadius(const Space& spc) {
     function = [&spc, &group = spc.groups.at(index)]() {
         assert(group.size() > 1);
         auto S = Geometry::gyration(group.begin(), group.end(), group.mass_center, spc.geometry.getBoundaryFunc());
         return sqrt(S.trace()); // S.trace() == S.eigenvalues().sum() but faster
     };
 }
-void MoleculeProperty::selectDipoleAngle(const json& j, Space& spc, Geometry::BoundaryFunction& b) {
+void MoleculeProperty::selectDipoleAngle(const json& j, const Space& spc, Geometry::BoundaryFunction& b) {
     direction = j.at("dir").get<Point>().normalized();
     if (spc.groups.at(index).isMolecular()) {
         function = [&group = spc.groups.at(index), b, &dir = direction]() {
@@ -325,7 +325,7 @@ void MoleculeProperty::selectDipoleAngle(const json& j, Space& spc, Geometry::Bo
     }
 }
 
-void MoleculeProperty::selectMassCenterDistance(const json& j, Space& spc) {
+void MoleculeProperty::selectMassCenterDistance(const json& j, const Space& spc) {
     direction = j.at("dir");
     indexes = j.value("indexes", decltype(indexes)());
     assert(indexes.size() > 1 && "An array of 2 or 4 indexes should be specified.");
@@ -345,7 +345,7 @@ void MoleculeProperty::selectMassCenterDistance(const json& j, Space& spc) {
         };
     }
 }
-void MoleculeProperty::selectMinimumGroupDistance(const json& j, Space& spc) {
+void MoleculeProperty::selectMinimumGroupDistance(const json& j, const Space& spc) {
     indexes = j.value("indexes", decltype(indexes)());
     assert(indexes.size() == 2 && "An array of 2 indexes should be specified.");
     function = [&spc, i = indexes[0], j = indexes[1]]() {
@@ -359,7 +359,7 @@ void MoleculeProperty::selectMinimumGroupDistance(const json& j, Space& spc) {
         return sqrt(minimum_distance_squared);
     };
 }
-void MoleculeProperty::selectRinner(const json& j, Space& spc) {
+void MoleculeProperty::selectRinner(const json& j, const Space& spc) {
     direction = j.at("dir");
     indexes = j.value("indexes", decltype(indexes)());
     if (indexes.size() != 3) {
@@ -386,7 +386,7 @@ void MoleculeProperty::selectRinner(const json& j, Space& spc) {
         return mean_radius_i.avg();
     };
 }
-void MoleculeProperty::selectAngleWithVector(const json& j, Space& spc) {
+void MoleculeProperty::selectAngleWithVector(const json& j, const Space& spc) {
     direction = j.at("dir").get<Point>().normalized();
     if (spc.groups.at(index).isMolecular()) {
         function = [&spc, &dir = direction, &group = spc.groups.at(index)]() {

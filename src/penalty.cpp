@@ -167,7 +167,7 @@ void Penalty::sync(Energybase* other, [[maybe_unused]] const Change& change) {
 
 #ifdef ENABLE_MPI
 
-PenaltyMPI::PenaltyMPI(const json& j, Space& spc) : Penalty(j, spc), mpi(MPI::mpi) {
+PenaltyMPI::PenaltyMPI(const json& j, Space& spc, const MPI::Controller& mpi) : Penalty(j, spc), mpi(mpi) {
     weights.resize(mpi.world.size());
 }
 

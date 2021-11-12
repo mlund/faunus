@@ -64,7 +64,7 @@ class PenaltyMPI : public Penalty {
     void update(const std::vector<double>& coordinate) override; //!< Average penalty function across all nodes
     void averagePenaltyFunctions();                              //!< Average penalty functions over all MPI nodes
   public:
-    PenaltyMPI(const json& j, Space& spc);
+    PenaltyMPI(const json& j, Space& spc, const MPI::Controller& mpi);
 };
 #endif
 

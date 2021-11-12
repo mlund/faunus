@@ -317,7 +317,7 @@ std::unique_ptr<MoveBase> createMove(const std::string& name, const json& proper
             move = std::make_unique<LangevinDynamics>(spc, hamiltonian);
         } else if (name == "temper") {
 #ifdef ENABLE_MPI
-            move = std::make_unique<ParallelTempering>(spc);
+            move = std::make_unique<ParallelTempering>(spc, MPI::mpi);
             move->setRepeat(0); // zero weight moves are run at the end of each sweep
 #else
             throw ConfigurationError("{} requires that Faunus is compiled with MPI", name);
@@ -457,7 +457,8 @@ void ParallelTempering::_from_json(const json& j) {
     volume_scaling_method = j.value("volume_scale", Geometry::VolumeMethod::ISOTROPIC);
 }
 
-ParallelTempering::ParallelTempering(Space& spc) : MoveBase(spc, "temper", "doi:10/b3vcw7"), mpi(MPI::mpi) {
+ParallelTempering::ParallelTempering(Space& spc, const MPI::Controller& mpi)
+    : MoveBase(spc, "temper", "doi:10/b3vcw7"), mpi(mpi) {
     if (mpi.world.size() < 2) {
         throw std::runtime_error(name + " requires two or more MPI processes");
     }

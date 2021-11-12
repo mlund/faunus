@@ -461,7 +461,7 @@ class QuadrantJump : public MoveBase {
  */
 class ParallelTempering : public MoveBase {
   private:
-    MPI::Controller& mpi;
+    const MPI::Controller& mpi;
     MPI::ExchangeParticles exchange_particles; //!< Helper class to exchange particles
     std::unique_ptr<MPI::Partner> partner;     //!< Policy for finding MPI partners
     Geometry::VolumeMethod volume_scaling_method = Geometry::VolumeMethod::ISOTROPIC; //!< How to scale volumes
@@ -478,7 +478,7 @@ class ParallelTempering : public MoveBase {
     void exchangeGroupSizes(Space::GroupVector& groups, int partner_rank);
 
   public:
-    explicit ParallelTempering(Space& spc);
+    explicit ParallelTempering(Space& spc, const MPI::Controller& mpi);
 };
 
 #endif

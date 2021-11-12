@@ -409,7 +409,11 @@ void ParallelTempering::exchangeState(Change& change) {
 
 void ParallelTempering::_move(Change& change) {
     mpi.world.barrier(); // wait until all ranks reach here
-    partner->generate(mpi.world, mpi.random);
+    if (MPI::checkRandomEngineState(mpi.world, MoveBase::slump)) {
+        faunus_logger->error("Random numbers out of sync across MPI nodes. Do not use 'hardware' seed.");
+        mpi.world.abort(1); // neighbor search *requires* that random engines are in sync
+    }
+    partner->generate(mpi.world, MoveBase::slump);
     if (partner->rank.has_value()) {
         exchangeState(change);
     }
@@ -433,25 +437,11 @@ double ParallelTempering::exchangeEnergy(const double energy_change) {
 /**
  * The bias() function takes the current old and new energy and exchanges
  * the resulting energy change with the partner replica. The change in the
- * replica is returned.
- *
- * @todo Here we could run a custom Metropolis criterion and return +/- infinity
- * to trigger accept/reject. This would remedy the dangerous expectation that
- * the states of the random number generators (Movebase) are aligned on all nodes.
- * This would however ignore other bias contributions, particularly it would prove
- * problematic with grand canonical moves.
+ * replica is returned and will be added to the total trial energy in
+ * the MetropolicMonteCarlo class.
  */
 double ParallelTempering::bias([[maybe_unused]] Change& change, double uold, double unew) {
-    if constexpr (false) {
-        // todo: add sanity check for random number generator state in partnering replicas.
-        return exchangeEnergy(unew - uold); // exchange change with partner (MPI)
-    }
-    auto energy_change = unew - uold;
-    auto partner_energy_change = exchangeEnergy(energy_change);
-    if (MetropolisMonteCarlo::metropolisCriterion(energy_change + partner_energy_change)) {
-        return pc::neg_infty; // accept!
-    }
-    return pc::infty; // reject!
+    return exchangeEnergy(unew - uold); // energy change in partner replica
 }
 
 void ParallelTempering::_accept([[maybe_unused]] Change& change) {

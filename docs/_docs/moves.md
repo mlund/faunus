@@ -263,12 +263,13 @@ Parallel tempering requires compilation with MPI and the number
 of replicas, _n_, exactly matches the number of processes. Each
 replica prefixes input and output files with `mpi0.`, `mpi1.`,
 etc. and only exchange between neighboring processes is performed.
-The move is currently limited to systems with
-constant number of particles, $N$, and is performed exactly
-every `nstep` Monte Carlo cycle.
-
+The move is is performed exactly every `nstep` Monte Carlo cycle.
 By default, particle positions (`xyz`), charge (`q`), and atom id (`i`) are exchanged
 between replicas and can be controlled with `format`.
+
+Support for fluctuating number of particles, i.e.
+grand canonical moves is currently untested and should be
+considered experimental.
 
 
 ## Volume Move

@@ -178,6 +178,18 @@ bool exchangeVolume(const Controller& mpi, int partner_rank, Geometry::GeometryB
     return false;
 }
 
+/**
+ * @param comm MPI communicator
+ * @param random Random number object to test. Will be propagated.
+ * @return True if all random number engines are in sync, i.e. returns the same values
+ */
+bool checkRandomEngineState(const mpl::communicator& comm, Random& random) {
+    double random_number = random();
+    std::vector<double> buffer(comm.size(), 0.0);
+    comm.gather(0, random_number, buffer.data());
+    return std::adjacent_find(buffer.begin(), buffer.end(), std::not_equal_to<>()) == buffer.end();
+}
+
 Controller mpi; //!< Global instance of MPI controller
 
 #endif

@@ -54,6 +54,9 @@ class Controller {
 
 extern Controller mpi;
 
+/** @brief Check if all random number generators are in sync */
+bool checkRandomEngineState(const mpl::communicator& comm, Random& random);
+
 enum class PartnerPolicy { ODDEVEN, INVALID }; //!< Policies for MPI partner search
 NLOHMANN_JSON_SERIALIZE_ENUM(PartnerPolicy, {{PartnerPolicy::INVALID, nullptr}, {PartnerPolicy::ODDEVEN, "oddeven"}})
 

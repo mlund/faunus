@@ -1365,17 +1365,18 @@ SASAAnalysis::SASAAnalysis(const json& j, Space& spc) : Analysisbase(spc, "sasa"
         sasa = std::make_unique<Faunus::SASA::SASA>(spc, probe_radius, slices_per_atom);
         break;
     }
+
     setPolicy(j);
 }
 
-void SASAAnalysis::_to_json(json& j) const {
+void SASAAnalysis::_to_json(json& json_ouput) const {
     if (!average_data.area.empty()) {
-        j = {{"⟨SASA⟩", average_data.area.avg()},
-             {"⟨SASA²⟩-⟨SASA⟩²", average_data.area_squared.avg() - std::pow(average_data.area.avg(), 2)}};
+        json_ouput = {{"⟨SASA⟩", average_data.area.avg()},
+                      {"⟨SASA²⟩-⟨SASA⟩²", average_data.area_squared.avg() - std::pow(average_data.area.avg(), 2)}};
     }
-    j["radius"].push_back(probe_radius);
-    j["slices_per_atom"].push_back(slices_per_atom);
-    policy->to_json(j);
+    json_ouput["radius"].push_back(probe_radius);
+    json_ouput["slices_per_atom"].push_back(slices_per_atom);
+    policy->to_json(json_ouput);
 }
 
 /** @brief puts a sample of sasa area into histogram and updates average
@@ -1390,10 +1391,10 @@ void SASAAnalysis::takeSample(const double area) {
 
 /** @brief constructs a SamplingPolicy object based on json input and loads it with data
  *
- * @param j
+ * @param json_input
  */
-void SASAAnalysis::setPolicy(const json& j) {
-    auto selected_policy = j.value("policy", Policies::INVALID);
+void SASAAnalysis::setPolicy(const json& json_input) {
+    auto selected_policy = json_input.value("policy", Policies::INVALID);
     switch(selected_policy) {
     case Policies::ATOMIC:
         policy = std::make_unique<AtomicPolicy>();
@@ -1408,7 +1409,7 @@ void SASAAnalysis::setPolicy(const json& j) {
         throw ConfigurationError("Invalid or no sasa policy chosen!");
         break;
     }
-    policy->from_json(j);
+    policy->from_json(json_input);
 }
 
 void SASAAnalysis::_sample() { policy->sample(spc, *this); }

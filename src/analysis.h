@@ -787,7 +787,7 @@ NLOHMANN_JSON_SERIALIZE_ENUM(SASAAnalysis::Policies, {{SASAAnalysis::Policies::A
                                                       {SASAAnalysis::Policies::ATOMS_IN_MOLECULE, "atoms_in_molecule"},
                                                       {SASAAnalysis::Policies::INVALID, nullptr}})
 
-/** @brief base class for different SASA sampling policies*/
+/** @brief abstract base class for different SASA sampling policies*/
 class SamplingPolicyBase {
 
   protected:

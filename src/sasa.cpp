@@ -458,11 +458,25 @@ template class SASACellList<DenseFixedCellList>;
 template class SASACellList<SparsePeriodicCellList>;
 template class SASACellList<SparseFixedCellList>;
 
+/**
+ * @brief calculates total sasa of a group
+ * @param spc
+ * @param Group
+ *
+ * @return total sasa of a given group
+ */
 template<>
 double SASABase::calcSASAOf<Group>(Space& spc, const Group& group) const{
     return calcSASA(spc, group.begin(), group.end());
 }
 
+/**
+ * @brief calculates total sasa of a particle
+ * @param spc
+ * @param Particle
+ *
+ * @return total sasa of a given particle
+ */
 template<>
 double SASABase::calcSASAOf<Particle>(Space& spc, const Particle& particle) const{
     return calcSASAOfParticle(spc, particle);

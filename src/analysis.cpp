@@ -1433,7 +1433,7 @@ void SamplingPolicyBase::sampleIndividualSASA(TBegin first, TEnd last, SASAAnaly
 }
 
 /** @brief samples a sum of SASAs of objects (either a whole group or a particle)
- * between first and last
+ *         between first and last
  * @param first iterator at first particle or group
  * @param last iterator at last particle or group
  * @param analysis SASAanalysis object to insert samples into

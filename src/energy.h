@@ -1,14 +1,16 @@
 #pragma once
-
 #include "bonds.h"
 #include "externalpotential.h" // Energybase implemented here
 #include "sasa.h"
+#include "celllist.h"
 #include "space.h"
 #include "aux/iteratorsupport.h"
 #include "aux/pairmatrix.h"
+#include "unordered_set"
 #include <range/v3/range/conversion.hpp>
 #include <range/v3/view/iota.hpp>
 #include <range/v3/view/subrange.hpp>
+#include <range/v3/algorithm/for_each.hpp>
 #include <Eigen/Dense>
 #include <spdlog/spdlog.h>
 #include <numeric>
@@ -515,9 +517,12 @@ template <typename PairEnergy> class DelayedEnergyAccumulator : public EnergyAcc
     double accumulateOpenMP() const {
         double sum = 0.0;
 #pragma omp parallel for reduction(+ : sum)
-        for (const auto& pair : particle_pairs) {
-            sum += pair_energy.potential(pair.first.get(), pair.second.get());
+        for (auto pair = particle_pairs.begin(); pair < particle_pairs.end(); ++pair) {
+            sum += pair_energy.potential(pair->first.get(), pair->second.get());
         }
+        /*for (const auto& pair : particle_pairs) {
+            sum += pair_energy.potential(pair.first.get(), pair.second.get());
+        }*/
         return sum;
     }
 };
@@ -1158,6 +1163,18 @@ class GroupPairingPolicy {
     }
 };
 
+class PairingBase {
+
+  protected:
+    const Space& spc;
+
+  public:
+    bool needs_syncing = false;
+    virtual void sync(const Space& spc, const Change change) = 0;
+
+    PairingBase(Space& spc) : spc(spc) {}
+};
+
 /**
  * @brief Computes pair quantity difference for a systen perturbation. Such quantity can be energy using nonponded
  * pair potential
@@ -1165,10 +1182,12 @@ class GroupPairingPolicy {
  * @tparam TPolicy  a pairing policy
  */
 template <typename TPolicy>
-class GroupPairing {
-    const Space &spc;
+class GroupPairing : public PairingBase {
+    //const Space &spc;
     TPolicy pairing;
 
+  public:
+    virtual void sync(const Space& spc, const Change change) override {};
   protected:
     /**
      * @brief Computes pair quantity difference if only a single group has changed.
@@ -1284,7 +1303,7 @@ class GroupPairing {
         }
     }
 
-    GroupPairing(Space &spc) : spc(spc), pairing(spc) {}
+    GroupPairing(Space &spc) : PairingBase(spc), pairing(spc) {}
 
     void from_json(const json &j) {
         pairing.from_json(j);
@@ -1337,6 +1356,11 @@ template <typename TPairEnergy, typename TPairingPolicy> class Nonbonded : publi
     }
 
     double energy(Change& change) override {
+
+        if( state != MonteCarloState::ACCEPTED ){
+            pairing.sync(spc, change);
+        }
+
         energy_accumulator->clear();
         // down-cast to avoid slow, virtual function calls:
         if (auto ptr = std::dynamic_pointer_cast<InstantEnergyAccumulator<TPairEnergy>>(energy_accumulator)) {
@@ -1363,6 +1387,16 @@ template <typename TPairEnergy, typename TPairingPolicy> class Nonbonded : publi
                 forces[i] += f;
                 forces[j] -= f;
             }
+        }
+    }
+
+    void sync(Energybase* energybase_ptr, const Change& change) override {
+        if (auto* other = dynamic_cast<Nonbonded*>(energybase_ptr)) {
+            if (pairing.needs_syncing) {
+                pairing.sync(other->spc, change);
+            }
+            pairing.needs_syncing = false;
+            other->pairing.needs_syncing = false;
         }
     }
 };
@@ -1682,5 +1716,414 @@ class Hamiltonian : public Energybase, public BasePointerVector<Energybase> {
     double energy(Change& change) override;            //!< Energy due to changes
     const std::vector<double>& latestEnergies() const; //!< Energies for each term from the latest call to `energy()`
 };
+
+template<class CellList>
+class ParticlePairing : public PairingBase {
+    using CellCoord = typename CellList::Grid::CellCoord;
+    using GeometryType = Geometry::Chameleon;
+    using index_type = std::size_t;
+
+    std::unique_ptr<CellList> cell_list; //!< pointer to cell list
+    std::vector<CellCoord> cell_offsets; //!< holds offsets which define a 3x3x3 cube around central cell
+    double cell_length;                  //!< dimension of a single cell
+
+    PairMatrix<double> cutoff_squared;  //!< matrix with atom-to-atom cutoff distances squared in angstrom squared
+
+    template <typename TAccumulator, typename T>
+    inline void particle2particle(TAccumulator &pair_accumulator, const T &a, const T &b) const {
+        pair_accumulator += {std::cref(a), std::cref(b)};
+    }
+
+    inline bool cut(const Particle& particle1, const Particle& particle2) {
+        bool result = false;
+        if ( spc.geometry.sqdist(particle1.pos, particle2.pos) >= cutoff_squared(particle1.id, particle2.id) ) {
+            result = true;
+        }
+        return result;
+    }
+
+    /**
+     * @brief returns absolute index of particle in ParticleVector
+     * @param particle
+     */
+    inline auto indexOf(const Particle& particle) const {
+        return static_cast<index_type>(std::addressof(particle) - std::addressof(spc.particles.at(0)));
+    }
+
+
+  public:
+    void from_json(const json &j) {
+        auto cutoff = j["cutoff"].get<double>();
+        cell_length = cutoff ;
+        init(spc);
+    }
+
+    void to_json(json &j) const {}
+
+    virtual void sync(const Space& space, const Change change) override{
+        update(space, change);
+    }
+    ParticlePairing(Space& space) : PairingBase(space) {}
+
+    void init(const Space& space){
+        cell_offsets.clear();
+        for (auto i = -1; i <= 1; ++i) {
+            for (auto j = -1; j <= 1; ++j) {
+                for (auto k = -1; k <= 1; ++k) {
+                    cell_offsets.emplace_back(i, j, k);
+                }
+            }
+        }
+
+        const auto active_particles = space.activeParticles();
+        createCellList(active_particles.begin(), active_particles.end(), space.geometry);
+    }
+    /**
+ * @brief calculates neighbourData object of a target particle
+ * @brief specified by target index in ParticleVector using cell list
+ * @param space
+ * @param target_index indicex of target particle in ParticleVector
+     */
+    template <typename TAccumulator>
+    void particle2all(TAccumulator &pair_accumulator, const Space& space, const index_type target_index,
+                      std::unordered_set<int>& already_done) const {
+        const auto& particle_i = space.particles.at(target_index);
+        const auto& center_cell = cell_list->getGrid().coordinatesAt(particle_i.pos + 0.5 * space.geometry.getLength());
+
+        auto neighour_particles_at = [&](const CellCoord& offset) {
+            return cell_list->getNeighborMembers(center_cell, offset);
+        };
+
+        for (const auto& cell_offset : cell_offsets) {
+            const auto& neighbour_particle_indices = neighour_particles_at(cell_offset);
+            for (const auto neighbour_particle_index : neighbour_particle_indices) {
+
+                const auto& particle_j = space.particles.at(neighbour_particle_index);
+
+                if (target_index != neighbour_particle_index && already_done.count(neighbour_particle_index) == 0) {
+                    particle2particle(pair_accumulator, particle_i , particle_j);
+                }
+            }
+        }
+    }
+
+    std::vector<index_type> neighbouring_indices(const Particle& particle) {
+        const auto& center_cell = cell_list->getGrid().coordinatesAt(particle.pos + 0.5 * spc.geometry.getLength());
+        std::vector<index_type> neighbours;
+        auto insert_neighbours = [&](const CellCoord& offset) {
+            const auto& a =  cell_list->getNeighborMembers(center_cell, offset);
+            neighbours.insert(neighbours.end(), a.begin(), a.end());
+        };
+        std::for_each(cell_offsets.begin(), cell_offsets.end(), insert_neighbours);
+        return neighbours;
+    }
+
+    void update(const Space& space, const Change& change) {
+        if (change.everything || change.volume_change) {
+            const auto active_particles = space.activeParticles();
+            createCellList(active_particles.begin(), active_particles.end(), space.geometry);
+        } else if (change.matter_change) {
+            updateMatterChange(space, change);
+        } else {
+            updatePositionsChange(space, change);
+        }
+    }
+
+    template <typename TAccumulator>
+    void accumulate(TAccumulator &pair_accumulator, const Change &change){
+
+        std::unordered_set<int> already_done;
+        if( change.everything ){
+            for( const auto& particle : spc.activeParticles()){
+                particle2all(pair_accumulator, spc, indexOf(particle), already_done);
+                already_done.insert(indexOf(particle));
+            }
+            return;
+        }
+        needs_syncing = true;
+
+        if(!change.matter_change) {
+            for (const auto& changed_group : change.groups) {
+                const auto& group = spc.groups.at(changed_group.group_index);
+                const auto offset = spc.getFirstParticleIndex(group);
+
+                if (changed_group.relative_atom_indices.empty()) {
+                    const auto indices = ranges::cpp20::views::iota(offset, group.size() + offset);
+                    for (const auto index : indices) {
+                        particle2all(pair_accumulator, spc, index, already_done);
+                        already_done.insert(index);
+                    }
+                } else {
+                    const auto indices = changed_group.relative_atom_indices |
+                                         ranges::cpp20::views::transform([offset](auto i) { return offset + i; });
+                    for (const auto index : indices) {
+                        particle2all(pair_accumulator, spc, index, already_done);
+                        already_done.insert(index);
+                    }
+                }
+            }
+        }
+        else{
+            for (const auto& changed_group : change.groups) {
+                const auto& group = spc.groups.at(changed_group.group_index);
+                const auto offset = spc.getFirstParticleIndex(group);
+
+                for (const auto relative_index : changed_group.relative_atom_indices) {
+                    const auto absolute_index = relative_index + offset;
+                    if (relative_index < group.size()) {
+                        particle2all(pair_accumulator, spc, absolute_index, already_done);
+                    }
+                    already_done.insert(absolute_index);
+                }
+            }
+        }
+    }
+
+  private:
+    /**
+ * @brief updates cell_list when particles got activated or desactivated
+ * @param space
+ * @param change
+     */
+    void updateMatterChange(const Space& space, const Change& change) {
+        for (const auto& group_change : change.groups) {
+            const auto& group = space.groups.at(group_change.group_index);
+            const auto offset = space.getFirstParticleIndex(group);
+            for (const auto relative_index : group_change.relative_atom_indices) {
+                const auto absolute_index = relative_index + offset;
+                if (relative_index >= group.size()) { // if index lies behind last active index
+                    cell_list->removeMember(absolute_index);
+                } else if (relative_index < group.size()) {
+                    cell_list->insertMember(absolute_index,
+                                            space.particles.at(absolute_index).pos + 0.5 * space.geometry.getLength());
+                }
+            }
+        }
+    }
+
+    /**
+ * @brief updates cell_list when particles moved only
+ * @param space
+ * @param change
+     */
+    void updatePositionsChange(const Space& space, const Change& change) {
+        for (const auto& group_change : change.groups) {
+            const auto& group = space.groups.at(group_change.group_index);
+            const auto offset = space.getFirstParticleIndex(group);
+
+            auto update = [&, half_box = 0.5 * space.geometry.getLength()](auto index) {
+                cell_list->updateMemberAt(index, space.particles.at(index).pos + half_box);
+            };
+
+            if (group_change.relative_atom_indices.empty()) {
+                const auto changed_atom_indices = ranges::cpp20::views::iota(offset, offset + group.size());
+                ranges::cpp20::for_each(changed_atom_indices, update);
+            } else {
+                const auto changed_atom_indices = group_change.relative_atom_indices |
+                                                  ranges::cpp20::views::transform([offset](auto i) { return i + offset; });
+                ranges::cpp20::for_each(changed_atom_indices, update);
+            }
+        }
+    }
+
+    template <typename TBegin, typename TEnd>
+    void createCellList(TBegin begin, TEnd end, const GeometryType& geometry) {
+        if (cell_list.get()) {
+            delete cell_list.release();
+            cell_list = std::make_unique<CellList>(geometry.getLength(), cell_length);
+        } else {
+            cell_list = std::make_unique<CellList>(geometry.getLength(), cell_length);
+        }
+        std::for_each(begin, end, [&, half_box = 0.5 * geometry.getLength()](const Particle& particle) {
+            cell_list->insertMember(indexOf(particle), particle.pos + half_box);
+        });
+    }
+};
+
+template <typename TPairEnergy, typename TPairingPolicy>
+class NonbondedCachedCellList : public Nonbonded<TPairEnergy, TPairingPolicy> {
+    using Base = Nonbonded<TPairEnergy, TPairingPolicy>;
+    using TAccumulator = InstantEnergyAccumulator<TPairEnergy>;
+    Eigen::MatrixXd energy_cache;
+    //Eigen::VectorXd energy_cache;
+    //std::vector<std::vector<double>> energy_cache;
+    using Base::spc;
+    using index_type = std::size_t;
+    std::vector<std::pair<index_type, index_type>> changed_pairs;
+
+    /**
+     * @brief returns absolute index of particle in ParticleVector
+     * @param particle
+     */
+    inline auto indexOf(const Particle& particle) const {
+        return static_cast<index_type>(std::addressof(particle) - std::addressof(spc.particles.at(0)));
+    }
+
+    template <typename TAccumulator, typename T>
+        inline void particle2particle(TAccumulator &pair_accumulator, const T &a, const T &b) const {
+        pair_accumulator += {std::cref(a), std::cref(b)};
+    }
+
+  public:
+    NonbondedCachedCellList(const json& j, Space& spc, BasePointerVector<Energybase>& pot) : Base(j, spc, pot) {
+        Base::name += "EM";
+        init();
+    }
+
+    /**
+     * @brief Cache pair interactions in matrix.
+     */
+    void init() override {
+        const auto particles_number = spc.particles.size();
+        energy_cache.resize(particles_number, particles_number);
+        energy_cache.setZero();
+        TAccumulator u(Base::pair_energy);
+        //Base::pairing.init(spc);
+
+        for (auto i = 0; i < particles_number-1; ++i) {
+            for (auto j = i + 1; j < particles_number; ++j) {
+                u = 0.0;
+                particle2particle(u, spc.particles.at(i), spc.particles.at(j));
+                energy_cache(j, i) = static_cast<double>(u);
+                energy_cache(i, j) = static_cast<double>(u);
+            }
+        }
+    }
+
+    double energy(Change& change) override {
+        double energy_sum = 0.0;
+        TAccumulator pair_accumulator(Base::pair_energy);
+        changed_pairs.clear();
+
+        if (change) {
+            Base::pairing.update(spc, change);
+            if(!change.everything){
+                Base::pairing.needs_syncing = true;
+            }
+            std::unordered_set<int> already_done;
+            if( change.everything ){
+                for( const auto& particle : spc.activeParticles()){
+                    const auto index = indexOf(particle);
+                    const auto neighbours = Base::pairing.neighbouring_indices(spc.particles[index]);
+                    for(const auto neighbour : neighbours){
+                        const auto& particle_j = spc.particles.at(neighbour);
+                        if (index != neighbour && already_done.count(neighbour) == 0) {
+                            pair_accumulator = 0.0;
+                            particle2particle(pair_accumulator, spc.particles[index] , particle_j);
+                            energy_sum +=  static_cast<double>(pair_accumulator);
+                            energy_cache(index, neighbour) = static_cast<double>(pair_accumulator);
+                            energy_cache(neighbour, index) = static_cast<double>(pair_accumulator);
+                        }
+                    }
+                    already_done.insert(index);
+                }
+                return energy_sum;
+            }
+            if( Energybase::state == Energybase::MonteCarloState::ACCEPTED ){
+                return 0.0;
+            }
+
+            for (const auto& changed_group : change.groups) {
+                const auto& group = spc.groups.at(changed_group.group_index);
+                const auto offset = spc.getFirstParticleIndex(group);
+
+                if (changed_group.relative_atom_indices.empty()) {
+                    const auto indices = ranges::cpp20::views::iota(offset, group.size() + offset);
+                    for( const auto index : indices){
+                        const auto neighbours = Base::pairing.neighbouring_indices(spc.particles[index]);
+                        for(const auto neighbour : neighbours){
+                            const auto& particle_j = spc.particles.at(neighbour);
+                            if (index != neighbour && already_done.count(neighbour) == 0) {
+                                pair_accumulator = 0.0;
+                                particle2particle(pair_accumulator, spc.particles[index] , particle_j);
+                                energy_sum +=  static_cast<double>(pair_accumulator) - energy_cache(index,neighbour);
+                                // energy_cache[index][neighbour] = static_cast<double>(pair_accumulator);
+                                //energy_cache[neighbour][index] = static_cast<double>(pair_accumulator);
+                                energy_cache(index, neighbour) = static_cast<double>(pair_accumulator);
+                                energy_cache(neighbour, index) = static_cast<double>(pair_accumulator);
+                                changed_pairs.push_back({index, neighbour});
+                            }
+                        }
+                        already_done.insert(index);
+                    }
+                } else {
+                    const auto indices = changed_group.relative_atom_indices |
+                                         ranges::cpp20::views::transform([offset](auto i) { return offset + i; });
+                    for( const auto index : indices){
+                        const auto neighbours = Base::pairing.neighbouring_indices(spc.particles[index]);
+                        for(const auto neighbour : neighbours){
+                            const auto& particle_j = spc.particles.at(neighbour);
+                            if (index != neighbour && already_done.count(neighbour) == 0) {
+                                pair_accumulator = 0.0;
+                                particle2particle(pair_accumulator, spc.particles[index] , particle_j);
+                                energy_sum +=  static_cast<double>(pair_accumulator) - energy_cache(index,neighbour);
+                               // energy_cache[index][neighbour] = static_cast<double>(pair_accumulator);
+                               // energy_cache[neighbour][index] = static_cast<double>(pair_accumulator);
+                                energy_cache(index, neighbour) = static_cast<double>(pair_accumulator);
+                                energy_cache(neighbour, index) = static_cast<double>(pair_accumulator);
+                                changed_pairs.push_back({index, neighbour});
+                            }
+                        }
+                        already_done.insert(index);
+                    }
+                }
+            }
+        }
+
+        return energy_sum;
+    }
+
+    void sync(Energybase* energybase_ptr, const Change& change) {
+        if (auto* other = dynamic_cast<NonbondedCachedCellList*>(energybase_ptr)) {
+
+            if (Energybase::state == Energybase::MonteCarloState::TRIAL) { //! changed_indices get updated only in TRIAL state for speedup
+                for (const auto& changed_pair : changed_pairs) {
+                    this->energy_cache(changed_pair.first, changed_pair.second) =
+                        other->energy_cache(changed_pair.first, changed_pair.second);
+                    this->energy_cache(changed_pair.second, changed_pair.first) =
+                        other->energy_cache(changed_pair.first, changed_pair.second);
+                }
+           }
+           else{
+               for (const auto& changed_pair : other->changed_pairs) {
+                   this->energy_cache(changed_pair.first, changed_pair.second) =
+                       other->energy_cache(changed_pair.first, changed_pair.second);
+                   this->energy_cache(changed_pair.second, changed_pair.first) =
+                       other->energy_cache(changed_pair.first, changed_pair.second);
+               }
+           }
+
+            if (Base::pairing.needs_syncing) {
+                Base::pairing.sync(other->spc, change);
+            }
+            other->Base::pairing.needs_syncing = false;
+            Base::pairing.needs_syncing = false;
+        }
+    }
+
+};
+
+using PeriodicGrid = CellList::Grid::Grid3DPeriodic;
+using FixedGrid = CellList::Grid::Grid3DFixed;
+
+template <typename TMember, typename TIndex>
+using DenseContainer = CellList::Container::DenseContainer<TMember, TIndex>;
+template <typename TMember, typename TIndex>
+using SparseContainer = CellList::Container::SparseContainer<TMember, TIndex>;
+
+template <class TGrid, template <typename, typename> class TContainer = DenseContainer>
+using CellListType =
+    CellList::CellListSpatial<CellList::CellListType<std::size_t, TGrid, CellList::CellListBase, TContainer>>;
+
+using DensePeriodicCellList = CellListType<PeriodicGrid, DenseContainer>;
+using DenseFixedCellList = CellListType<FixedGrid, DenseContainer>;
+using SparsePeriodicCellList = CellListType<PeriodicGrid, SparseContainer>;
+using SparseFixedCellList = CellListType<FixedGrid, SparseContainer>;
+/*
+extern template class ParticlePairing<DensePeriodicCellList>;
+extern template class ParticlePairing<DenseFixedCellList>;
+extern template class ParticlePairing<SparsePeriodicCellList>;
+extern template class ParticlePairing<SparseFixedCellList>;*/
+
 } // namespace Energy
 } // namespace Faunus

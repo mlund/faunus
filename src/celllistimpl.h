@@ -774,6 +774,7 @@ template <class TBase> class CellListReverseMap : public TBase {
     }
 
     void removeMember(const Member& member) {
+        assert(member2cell.count(member) > 0);
         const auto old_cell_index = member2cell.at(member);
         this->erase(member, old_cell_index);
         member2cell.erase(member);
@@ -811,6 +812,7 @@ template <class TBase> class CellListReverseMap : public TBase {
     }
 
     void update(const Member& member, const CellIndex& new_cell_index) {
+        assert(member2cell.count(member) > 0);
         const auto old_cell_index = member2cell.at(member);
         if (new_cell_index != old_cell_index) {
             TBase::move(member, old_cell_index, new_cell_index);

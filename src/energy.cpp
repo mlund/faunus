@@ -1015,6 +1015,10 @@ std::shared_ptr<Energybase> Hamiltonian::createEnergy(Space& spc, const std::str
             return std::make_shared<Nonbonded<PairEnergy<Potential::SplinedPotential, false>, PairingPolicy>>(j, spc,
                                                                                                               *this);
         }
+        if (name == "nonbonded_eff" || name == "nonbonded_exact_eff") {
+            return std::make_shared<Nonbonded<PairEnergy<Potential::FunctorPotential, true>,
+                ParticlePairing<DensePeriodicCellList>>>(j, spc, *this);
+        }
         if (name == "nonbonded" || name == "nonbonded_exact") {
             return std::make_shared<Nonbonded<PairEnergy<Potential::FunctorPotential, true>, PairingPolicy>>(j, spc,
                                                                                                              *this);
@@ -1022,6 +1026,10 @@ std::shared_ptr<Energybase> Hamiltonian::createEnergy(Space& spc, const std::str
         if (name == "nonbonded_cached") {
             return std::make_shared<NonbondedCached<PairEnergy<Potential::SplinedPotential>, PairingPolicy>>(j, spc,
                                                                                                              *this);
+        }
+        if (name == "nonbonded_cached_eff") {
+            return std::make_shared<NonbondedCachedCellList<PairEnergy<Potential::SplinedPotential>,
+                ParticlePairing<DensePeriodicCellList>>>(j, spc,*this);
         }
         if (name == "nonbonded_coulombwca") {
             return std::make_shared<Nonbonded<PairEnergy<CoulombWCA, false>, PairingPolicy>>(j, spc, *this);
@@ -1487,6 +1495,14 @@ TEST_CASE("[Faunus] SASAEnergy_updates") {
         CHECK(areasPBC[i] == Approx(areas[i]));
     }
 }
+
+/**
+ * @brief updates cell_list according to change, if the volume changes the cell_list gets rebuilt
+ * @brief also updates radii in case of matter change
+ * @param space
+ * @param change
+ */
+
 
 //==================== GroupCutoff ====================
 

@@ -1471,7 +1471,7 @@ void MolecularPolicy::from_json(const json& input) {
     molecule_id = findMoleculeByName(molecule_name).id();
 }
 
-void AtomsInMoleculePolicy::sample(const Space& spc, SASAAnalysis& analysis) {
+void AtomsInMoleculePolicy::sample(Space& spc, SASAAnalysis& analysis) {
 
     auto molecules = spc.findMolecules(molecule_id);
     ranges::for_each(molecules, [&](const auto& molecule) {

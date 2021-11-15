@@ -69,8 +69,8 @@ class MoveBase {
     virtual double bias(Change& change, double old_energy,
                         double new_energy); //!< adds extra energy change not captured by the Hamiltonian
     MoveBase(Space& spc, const std::string& name, const std::string& cite);
-    inline virtual ~MoveBase() = default;
     bool isStochastic() const; //!< True if move should be called stochastically
+    virtual ~MoveBase() = default;
 };
 
 void from_json(const json &, MoveBase &); //!< Configure any move via json
@@ -164,7 +164,7 @@ class AtomicTranslateRotate : public MoveBase {
 
   public:
     AtomicTranslateRotate(Space& spc, const Energy::Hamiltonian& hamiltonian);
-    ~AtomicTranslateRotate();
+    ~AtomicTranslateRotate() override;
 };
 
 /**
@@ -376,7 +376,7 @@ class ChargeMove : public MoveBase {
     ChargeMove(Space &spc, std::string name, std::string cite);
 
   public:
-    ChargeMove(Space &spc);
+    explicit ChargeMove(Space &spc);
 };
 
 /**
@@ -448,38 +448,6 @@ class QuadrantJump : public MoveBase {
 
 #ifdef ENABLE_MPI
 
-enum class PartnerPolicy { ODDEVEN, INVALID }; //!< Policies for MPI partner search
-NLOHMANN_JSON_SERIALIZE_ENUM(PartnerPolicy, {{PartnerPolicy::INVALID, nullptr}, {PartnerPolicy::ODDEVEN, "oddeven"}})
-
-/** Base class for finding MPI partners */
-class FindMPIPartner {
-  protected:
-    static bool goodPartner(const MPI::MPIController& mpi, int partner); //!< Determines if current partner is valid
-  public:
-    const PartnerPolicy policy;
-    std::optional<int> partner_rank = std::nullopt; //!< Rank of partner MPI process if available
-    virtual bool setPartner(const MPI::MPIController& mpi, Random& random) = 0; //!< Sets MPI partner
-    std::pair<int, int> partnerPair(const MPI::MPIController& mpi) const; //!< Get ordered pair of current partners
-    FindMPIPartner(PartnerPolicy policy);
-    virtual ~FindMPIPartner() = default;
-};
-
-/**
- * @brief Odd ranks pairs with neighboring even rank (left or right)
- */
-class OddEvenPartner : public FindMPIPartner {
-  public:
-    OddEvenPartner();
-    bool setPartner(const MPI::MPIController& mpi, Random& random) override;
-};
-
-/**
- * @brief Factory function for generating MPI partner policies
- * @param policy Policy name ("oddeven", ...)
- * @throw if unknown policy
- */
-std::unique_ptr<FindMPIPartner> createMPIPartnerPolicy(PartnerPolicy policy);
-
 /**
  * @brief Class for parallel tempering (aka replica exchange) using MPI
  *
@@ -493,30 +461,24 @@ std::unique_ptr<FindMPIPartner> createMPIPartnerPolicy(PartnerPolicy policy);
  */
 class ParallelTempering : public MoveBase {
   private:
-    std::unique_ptr<FindMPIPartner> partner;                                          //!< Policy for finding partners
+    const MPI::Controller& mpi;
+    MPI::ExchangeParticles exchange_particles; //!< Helper class to exchange particles
+    std::unique_ptr<MPI::Partner> partner;     //!< Policy for finding MPI partners
     Geometry::VolumeMethod volume_scaling_method = Geometry::VolumeMethod::ISOTROPIC; //!< How to scale volumes
-    const double very_small_volume = 1e-9;
-    MPI::MPIController& mpi;
-    std::unique_ptr<ParticleVector> partner_particles;
-    Random random;
-    enum extradata { VOLUME = 0 }; //!< Structure of extra data to send
-    std::map<std::pair<int, int>, Average<double>> acceptance_map;
-
-    MPI::FloatTransmitter float_transmitter;                       //!< Class for transmitting floats over MPI
-    MPI::ParticleTransmitter<ParticleVector> particle_transmitter; //!< Class for transmitting particles over MPI
+    std::map<MPI::Partner::PartnerPair, Average<double>> acceptance_map;              //!< Exchange statistics
 
     void _to_json(json& j) const override;
+    void _from_json(const json& j) override;
     void _move(Change& change) override;
-    double exchangeEnergy(double energy_change);                    //!< Exchange energy with partner
-    void exchangeState(Change& change);                             //!< Exchange positions, charges, volume etc.
-    double bias(Change& change, double uold, double unew) override; //!< Energy change in partner replica
     void _accept(Change& change) override;
     void _reject(Change& change) override;
-    void _from_json(const json& j) override;
+    double bias(Change& change, double uold, double unew) override; //!< Energy change in partner replica
+    double exchangeEnergy(double energy_change);                    //!< Exchange energy with partner
+    void exchangeState(Change& change);                             //!< Exchange positions, charges, volume etc.
+    void exchangeGroupSizes(Space::GroupVector& groups, int partner_rank);
 
   public:
-    ParallelTempering(Space& spc, MPI::MPIController& mpi);
-    ~ParallelTempering();
+    explicit ParallelTempering(Space& spc, const MPI::Controller& mpi);
 };
 
 #endif
@@ -528,7 +490,7 @@ class ParallelTempering : public MoveBase {
  * @throw if invalid name or input parameters
  */
 std::unique_ptr<MoveBase> createMove(const std::string& name, const json& properties, Space& spc,
-                                     Energy::Hamiltonian& hamiltonian, MPI::MPIController& mpi_controller);
+                                     Energy::Hamiltonian& hamiltonian);
 
 /**
  * @brief Class storing a list of MC moves with their probability weights and
@@ -544,8 +506,7 @@ class MoveCollection {
     move_iterator sample();                                //!< Pick move from a weighted, random distribution
 
   public:
-    MoveCollection(const json& list_of_moves, Space& spc, Energy::Hamiltonian& hamiltonian,
-                   MPI::MPIController& mpi_controller);
+    MoveCollection(const json& list_of_moves, Space& spc, Energy::Hamiltonian& hamiltonian);
     void addMove(std::shared_ptr<MoveBase>&& move);             //!< Register new move with correct weight
     const BasePointerVector<MoveBase>& getMoves() const;        //!< Get list of moves
     friend void to_json(json& j, const MoveCollection& propagator); //!< Generate json output
@@ -587,6 +548,4 @@ class MoveCollection {
 void to_json(json& j, const MoveCollection& propagator);
 
 } // namespace Move
-
-
 } // namespace Faunus

@@ -96,13 +96,13 @@ double MetropolisMonteCarlo::relativeEnergyDrift() {
     return std::numeric_limits<double>::quiet_NaN();
 }
 
-MetropolisMonteCarlo::MetropolisMonteCarlo(const json &j, MPI::MPIController &mpi)
+MetropolisMonteCarlo::MetropolisMonteCarlo(const json &j)
     : original_log_level(faunus_logger->level()) {
     state = std::make_unique<State>(j);
     faunus_logger->set_level(spdlog::level::off); // do not duplicate log info
     trial_state = std::make_unique<State>(j);     // ...for the trial state
     faunus_logger->set_level(original_log_level); // restore original log level
-    moves = std::make_unique<Move::MoveCollection>(j.at("moves"), *trial_state->spc, *trial_state->pot, mpi);
+    moves = std::make_unique<Move::MoveCollection>(j.at("moves"), *trial_state->spc, *trial_state->pot);
     init();
 }
 

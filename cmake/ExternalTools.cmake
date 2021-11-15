@@ -14,6 +14,11 @@ CPMAddPackage("gh:imneme/pcg-cpp#ffd522e7188bef30a00c74dc7eb9de5faff90092")
 CPMAddPackage("gh:ArashPartow/exprtk#93a9f44f99b910bfe07cd1e933371e83cea3841c")
 
 CPMAddPackage(
+    NAME mpl GITHUB_REPOSITORY rabauke/mpl DOWNLOAD_ONLY YES
+    GIT_TAG afb2fd7525ecd43e5a52d5624f3a4998a4eac52c
+)
+
+CPMAddPackage(
     NAME nlohmann_json VERSION 3.9.1
     URL https://github.com/nlohmann/json/releases/download/v3.9.1/include.zip
     OPTIONS "JSON_BuildTests OFF"
@@ -43,6 +48,11 @@ if (nlohmann_json_ADDED)
 endif()
 
 add_compile_definitions("NLOHMANN_JSON_HPP") # older versions used this macro. Now it's suffixed with "_"
+
+if(mpl_ADDED)
+    add_library(mpl INTERFACE IMPORTED)
+    target_include_directories(mpl INTERFACE ${mpl_SOURCE_DIR})
+endif()
 
 if(Eigen_ADDED)
     add_library(Eigen INTERFACE IMPORTED)

@@ -66,7 +66,7 @@ class Analysisbase {
     void to_disk();                //!< Save data to disk (if defined)
     void sample();                 //!< Increase step count and sample
     int getNumberOfSteps() const;  //!< Number of steps
-    Analysisbase(Space& spc, const std::string& name);
+    Analysisbase(Space& spc, std::string_view name);
     virtual ~Analysisbase() = default;
 };
 

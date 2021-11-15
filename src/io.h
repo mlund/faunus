@@ -632,7 +632,8 @@ class XTCWriter {
     void writeFrameAt(int step, float time);
 };
 
-std::vector<AtomData::index_type> fastaToAtomIds(const std::string&); //!< Convert FASTA sequence to atom id sequence
+std::vector<AtomData::index_type>
+fastaToAtomIds(std::string_view fasta_sequence); //!< Convert FASTA sequence to atom id sequence
 
 /**
  * @brief Create particle vector from FASTA sequence with equally spaced atoms
@@ -640,7 +641,7 @@ std::vector<AtomData::index_type> fastaToAtomIds(const std::string&); //!< Conve
  * Particle positions are generated as a random walk, starting at `origin`,
  * propagating in `bond_length` steps.
  */
-ParticleVector fastaToParticles(const std::string& fasta_sequence, double bond_length = 7.0,
+ParticleVector fastaToParticles(std::string_view fasta_sequence, double bond_length = 7.0,
                                 const Point& origin = {0, 0, 0});
 
 /**

@@ -46,19 +46,16 @@ class MoveBase {
     unsigned long number_of_accepted_moves = 0;
     unsigned long number_of_rejected_moves = 0;
     unsigned int sweep_interval = 1; //!< Run interval for defused moves (with weight = 0)
-    std::string cite;                //!< Reference, preferable a short-doi, e.g. "doi:10/b9jq"
+    const std::string cite;          //!< Reference, preferable a short-doi, e.g. "doi:10/b9jq"
 
   protected:
-    Space& spc;                                  //!< Space to operate on
+    const std::string name; //!< Name of move
+    Space& spc;             //!< Space to operate on
     int repeat = 1;
-
-  protected:
-    //!< How many times the move should be repeated per sweep
     unsigned long number_of_attempted_moves = 0; //!< Counter for total number of move attempts
 
   public:
     static Random slump; //!< Shared for all moves
-    std::string name;    //!< Name of move
 
     void from_json(const json& j);
     void to_json(json& j) const; //!< JSON report w. statistics, output etc.
@@ -67,10 +64,11 @@ class MoveBase {
     void reject(Change& change);
     void setRepeat(int repeat);
     virtual double bias(Change& change, double old_energy,
-                        double new_energy); //!< adds extra energy change not captured by the Hamiltonian
-    MoveBase(Space& spc, const std::string& name, const std::string& cite);
+                        double new_energy); //!< Extra energy not captured by the Hamiltonian
+    MoveBase(Space& spc, std::string_view name, std::string_view cite);
     inline virtual ~MoveBase() = default;
     bool isStochastic() const; //!< True if move should be called stochastically
+    const std::string& getName() const;
 };
 
 void from_json(const json &, MoveBase &); //!< Configure any move via json

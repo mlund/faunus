@@ -88,7 +88,7 @@ class TipFromTheManual {
     bool asciiart = true;
     TipFromTheManual();
     void load(const std::vector<std::string>&);
-    std::string operator[](const std::string&);
+    std::string operator[](std::string_view key);
     void pick(const std::string&);
 };
 

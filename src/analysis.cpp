@@ -95,7 +95,7 @@ void Analysisbase::_from_json(const json&) {}
 
 int Analysisbase::getNumberOfSteps() const { return number_of_steps; }
 
-Analysisbase::Analysisbase(Space& spc, const std::string& name) : spc(spc), name(name) { assert(!name.empty()); }
+Analysisbase::Analysisbase(Space& spc, std::string_view name) : spc(spc), name(name) { assert(!name.empty()); }
 
 /**
  * @brief Factory function for generating analysis based on name

@@ -318,7 +318,7 @@ void XTCWriter::writeNext(const TrajectoryFrame& frame) {
     ++step_counter;
 }
 
-ParticleVector fastaToParticles(const std::string& fasta_sequence, double bond_length, const Point& origin) {
+ParticleVector fastaToParticles(std::string_view fasta_sequence, double bond_length, const Point& origin) {
     ParticleVector particles;                  // particle vector
     auto ids = fastaToAtomIds(fasta_sequence); // convert letters to atom ids
     std::transform(ids.begin(), ids.end(), std::back_inserter(particles), [&](auto& id) {
@@ -378,7 +378,7 @@ ParticleVector loadStructure(const std::string& filename, bool prefer_charges_fr
  * @param fasta_sequence FASTA sequence, capital letters.
  * @return vector of verified and existing atom id's
  */
-std::vector<AtomData::index_type> fastaToAtomIds(const std::string& fasta_sequence) {
+std::vector<AtomData::index_type> fastaToAtomIds(std::string_view fasta_sequence) {
     const std::map<char, std::string> map = {{'A', "ALA"},
                                              {'R', "ARG"},
                                              {'N', "ASN"},

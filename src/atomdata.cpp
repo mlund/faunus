@@ -232,10 +232,10 @@ TEST_CASE("[Faunus] AtomData") {
 }
 TEST_SUITE_END();
 
-UnknownAtomError::UnknownAtomError(const std::string& atom_name)
+UnknownAtomError::UnknownAtomError(std::string_view atom_name)
     : GenericError("unknown atom: '{}'", atom_name) {}
 
-AtomData& findAtomByName(const std::string& name) {
+AtomData& findAtomByName(std::string_view name) {
     const auto result = findName(Faunus::atoms, name);
     if (result == Faunus::atoms.end()) {
         throw UnknownAtomError(name);

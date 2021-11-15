@@ -83,7 +83,7 @@ extern std::vector<AtomData> atoms; //!< Global instance of atom list
  * @return an iterator to the first element, or `last` if not found
  * @see findAtomByName(), findMoleculeByName()
  */
-template <class Trange> auto findName(Trange& rng, const std::string& name) {
+template <class Trange> auto findName(Trange& rng, std::string_view name) {
     return std::find_if(rng.begin(), rng.end(), [&name](auto& i) { return i.name == name; });
 }
 
@@ -91,7 +91,7 @@ template <class Trange> auto findName(Trange& rng, const std::string& name) {
  * @brief An exception to indicate an unknown atom name in the input.
  */
 struct UnknownAtomError : public GenericError {
-    explicit UnknownAtomError(const std::string& atom_name);
+    explicit UnknownAtomError(std::string_view atom_name);
 };
 
 /**
@@ -103,7 +103,7 @@ struct UnknownAtomError : public GenericError {
  * @return an atom found
  * @throw UnknownAtomError  when no atom found
  */
-AtomData& findAtomByName(const std::string& name);
+AtomData& findAtomByName(std::string_view name);
 
 /**
  * @brief Search for `name` in `database` and return `id()`
@@ -122,16 +122,17 @@ template <class Trange> auto names2ids(Trange& database, const std::vector<std::
     using id_type = typename Trange::value_type::index_type;
     std::vector<id_type> index;
     index.reserve(names.size());
-    for (auto& name : names) {
+    for (const auto& name : names) {
         if (name == "*") { // wildcard selecting all id's
             index.resize(database.size());
             std::iota(index.begin(), index.end(), id_type(0));
             return index;
         }
-        if (auto it = findName(database, name); it != database.end())
-            index.push_back(it->id());
-        else
+        if (auto it = findName(database, name); it != database.end()) {
+            index.template emplace_back(it->id());
+        } else {
             throw std::out_of_range("name '" + name + "' not found");
+        }
     }
     return index;
 }

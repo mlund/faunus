@@ -1055,7 +1055,7 @@ std::shared_ptr<Energybase> Hamiltonian::createEnergy(Space& spc, const std::str
         }
         if (name == "penalty") {
 #ifdef ENABLE_MPI
-            return std::make_shared<PenaltyMPI>(j, spc);
+            return std::make_shared<PenaltyMPI>(j, spc, MPI::mpi);
 #else
             return std::make_shared<Penalty>(j, spc);
 #endif

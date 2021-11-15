@@ -1,82 +1,99 @@
 #pragma once
-#include "random.h"
-#include "core.h"
 
-#include <vector>
 #include <string>
-#include <fstream>
-#include <iostream>
-#include <cstdio>
 
 #ifdef ENABLE_MPI
-#include <mpi.h>
+#include "random.h"
+#include "core.h"
+#include "particle.h"
+#include "geometry.h"
+
+#include <vector>
+#include <fstream>
+#include <range/v3/view/iota.hpp>
+#include <range/v3/view/filter.hpp>
+#include <range/v3/algorithm/for_each.hpp>
+#include <mpl/mpl.hpp>
+
+// Expose classes for MPI serialization
+MPL_REFLECTION(Faunus::Point, x(), y(), z())
+MPL_REFLECTION(Faunus::Particle, id, charge, pos)
 #endif
-
-#define COUT                                                                                                           \
-    if (isMaster())                                                                                                    \
-    std::cout
-
-/**
- * @todo:
- *
- * This is legacy code that works but would benefit from a lot of polishing.
- * In particular:
- * - add exceptions
- * - update documentation
- */
 
 namespace Faunus::MPI {
 
-extern std::string prefix; //!< Filneme prefix for MPI related input and output (empty if no MPI)
+/**
+ * @brief Filename prefix for MPI related input and output (empty if no MPI)
+ *
+ * Used to generate rank-based I/O for MPI processes. If the number
+ * of ranks is above 2, `prefix = "mpi{rank}."` or otherwise empty.
+ * It's a good habbit to append `MPI::prefix` to analysis output in e.g. the `Analysis`
+ * namespace.
+ */
+extern std::string prefix;
+
+#ifdef ENABLE_MPI
 
 /**
- * @brief Main controller for MPI calls
+ * @brief Main container for MPI related functionality
  *
- * This is the MPI controller required for all MPI programs.
- *
- *     MPIController mpi;
- *     mpi.init();
- *     std::cout << "I'm rank " << mpi.rank << " out of " << mpi.nproc;
- *     mpi.cout << "This will go to a file called mpi%r.stdout where %r is my rank"
- *     if (mpi.isMaster())
- *       cout << "I'm the master!";
- *
- * When MPIController is instantiated the textio::prefix variable is automatically
- * set to `mpi%j`. Which can be used to prefix input and output files. For example:
- *
- *     InputMap mcp(textio::prefix+"input"); // tries to load "mpi%r.input" where %r is the rank
- *
- * @date Lund 2012
+ * A global instance is available.
  */
-class MPIController {
-  public:
-    void init();            //!< Initialize MPI and file IO
-    void finalize();        //!< Finalize MPI
-    ~MPIController();       //!< End of all MPI calls!
-    int nproc() const;      //!< Number of processors in communicator
-    int rank() const;       //!< Rank of process
-    int rankMaster() const; //!< Rank number of the master
-    bool isMaster() const;  //!< Test if current process is master
-    void barrier() const;   //!< Set up a MPI Barrier to sync. all ranks
-    std::ostream& cout();
-    Random random;  //!< Random number generator for MPI calls
-    std::string id; //!< Unique name associated with current rank
-#ifdef ENABLE_MPI
-    MPI_Comm comm = MPI_COMM_WORLD; //!< Communicator (Default: MPI_COMM_WORLD)
-#endif
+class Controller {
   private:
     std::ofstream stream; //!< Redirect stdout to here for rank-based file output
-    int _nproc = 1;       //!< Number of processors in communicator
-    int _rank = 0;        //!< Rank of process
-    int _master = 0;      //!< Rank number of the master
-    bool mpi_initialized = false;
+  public:
+    Controller();
+    const mpl::communicator& world; //!< MPI World communicator
+    Random random;                  //!< Random number generator for MPI calls
+    const int master_rank = 0;      //!< MPI rank of master process
+    bool isMaster() const;          //!< Determines if current rank is the master
+    std::ostream& cout();           //!< Rank specific (file) stream
+    void to_json(json& j) const;
 };
 
-void to_json(json&, const MPIController&);
+extern Controller mpi;
 
-extern MPIController mpi;
+/** @brief Check if all random number generators are in sync */
+bool checkRandomEngineState(const mpl::communicator& comm, Random& random);
 
-#ifdef ENABLE_MPI
+enum class PartnerPolicy { ODDEVEN, INVALID }; //!< Policies for MPI partner search
+NLOHMANN_JSON_SERIALIZE_ENUM(PartnerPolicy, {{PartnerPolicy::INVALID, nullptr}, {PartnerPolicy::ODDEVEN, "oddeven"}})
+
+/**
+ * Base class for finding MPI partners
+ *
+ * Finds pairs of MPI ranks for use with e.g. parallel tempering moves.
+ * The partner rank is contained in `rank`
+ */
+class Partner {
+  protected:
+    static bool isValid(const mpl::communicator& mpi, int partner); //!< Is current partner valid?
+  public:
+    using PartnerPair = std::pair<int, int>; //!< Pair of partner MPI ranks
+    const PartnerPolicy policy;              //!< Partner generation policy
+    std::optional<int> rank = std::nullopt;  //!< Rank of partner MPI process if available
+    virtual bool generate(const mpl::communicator& mpi, Random& random) = 0; //!< Generate partner according to policy
+    PartnerPair getPair(const mpl::communicator& mpi) const;                 //!< Get ordered pair of current partners
+    explicit Partner(PartnerPolicy policy);
+    virtual ~Partner() = default;
+};
+
+/**
+ * @brief Odd ranks pairs with neighboring even rank (left or right)
+ */
+class OddEvenPartner : public Partner {
+  public:
+    OddEvenPartner();
+    bool generate(const mpl::communicator& mpi, Random& random) override;
+};
+
+/**
+ * @brief Factory function for generating MPI partner policies
+ * @param policy Policy type (`oddeven`, ...)
+ * @throw if unknown policy
+ */
+std::unique_ptr<Partner> createMPIPartnerPolicy(PartnerPolicy policy);
 
 /**
  * @brief Split N items into nproc parts
@@ -84,12 +101,13 @@ extern MPIController mpi;
  * This returns a pair with the first and last
  * item for the current rank.
  */
-template <class T = int> std::pair<T, T> splitEven(const MPIController& mpi, T N) {
-    T M = mpi.nproc();
-    T i = mpi.rank();
-    T beg = (N * i) / M;
-    T end = (N * i + N) / M - 1;
-    return std::pair<T, T>(beg, end);
+template <class T = int> std::pair<T, T> splitEven(const mpl::communicator& communicator, T N) {
+    static_assert(std::is_integral_v<T>());
+    auto M = static_cast<T>(communicator.size());
+    auto i = static_cast<T>(communicator.rank());
+    auto beg = (N * i) / M;
+    auto end = (N * i + N) / M - 1;
+    return {beg, end};
 }
 
 /**
@@ -98,213 +116,107 @@ template <class T = int> std::pair<T, T> splitEven(const MPIController& mpi, T N
  * Each rank sends "local" to master who sums them up.
  * Master sends back (broadcasts) sum to all ranks.
  */
-double reduceDouble(MPIController& mpi, double local);
+double reduceDouble(const mpl::communicator& communicator, double local);
 
-/*!
- * \brief Class for transmitting floating point arrays over MPI
- * \note If you change the floatp typedef, remember also to change to change to/from
- *       MPI_FLOAT or MPI_DOUBLE.
+/**
+ * @brief Class for serializing particle vector
+ *
+ * This is used to serialize select information from a particle vector into a
+ * continuous block of memory (std::vector<double>) for use with MPI
+ * communication.
  */
-class FloatTransmitter {
+class ParticleBuffer {
+  public:
+    /**
+     * @brief Particle information to be copied
+     *
+     * XYZ -> positions.
+     * XYZQ -> positions, charge.
+     * XYZQI -> positions, charge, atom id.
+     */
+    enum class Format { XYZ, XYZQ, XYZQI, INVALID };
+
   private:
-    MPI_Request sendReq, recvReq;
-    MPI_Status sendStat, recvStat;
-    int tag;
+    std::vector<double> buffer;
+    using buffer_iterator = decltype(buffer)::iterator;
+    Format format;
+    int packet_size = 0;                                                  //!< Number of doubles per particle
+    std::function<void(const Particle&, buffer_iterator&)> from_particle; //!< Copy particle -> buffer
+    std::function<void(buffer_iterator&, Particle&)> to_particle;         //!< Copy buffer -> particle
 
   public:
-    using float_type = double; //!< Transmission precision
-    FloatTransmitter();
-    std::vector<float_type> swapf(MPIController&, std::vector<float_type>&, int); //!< Swap data with another process
-    void sendf(MPIController&, std::vector<float_type>&, int);                    //!< Send vector of floats
-    void recvf(MPIController&, int, std::vector<float_type>&);                    //!< Receive vector of floats
-    void waitsend();                                                              //!< Wait for send to finish
-    void waitrecv();                                                              //!< Wait for reception to finish
+    ParticleBuffer();
+    void setFormat(Format data_format);                 //!< Set format from case-insensitive string
+    Format getFormat() const;                           //!< Data format to send/receive - default is XYZQ
+    void copyToBuffer(const ParticleVector& particles); //!< Copy source particle vector to send buffer
+    void copyFromBuffer(ParticleVector& particles);     //!< Copy receive buffer to target particle vector
+    buffer_iterator begin();                            //!< Begin iterator to `buffer`
+    buffer_iterator end();                              //!< End iterator to `buffer`
+};
+
+NLOHMANN_JSON_SERIALIZE_ENUM(ParticleBuffer::Format, {
+                                                         {ParticleBuffer::Format::INVALID, nullptr},
+                                                         {ParticleBuffer::Format::XYZ, "xyz"},
+                                                         {ParticleBuffer::Format::XYZQ, "xyzq"},
+                                                         {ParticleBuffer::Format::XYZQI, "xyzqi"},
+                                                     })
+
+/**
+ * @brief Exchange volumes between MPI processes
+ * @param mpi MPI Controller
+ * @param partner_rank Partner MPI process to exchange with
+ * @param geometry Geometry to operate on
+ * @param volume_scaling_method Policy used to scale the volume
+ * @return True if a volume difference was detected
+ */
+bool exchangeVolume(const Controller& mpi, int partner_rank, Geometry::GeometryBase& geometry,
+                    Geometry::VolumeMethod& volume_scaling_method);
+
+/**
+ * Helper class to exchange a range of particles between two MPI nodes
+ */
+class ExchangeParticles {
+  private:
+    std::unique_ptr<ParticleVector> partner_particles; //!< Storage for recieved particles
+    ParticleBuffer particle_buffer;                    //!< Class for serializing particles
+  public:
+    const ParticleVector& operator()(const Controller& mpi, int partner_rank, const ParticleVector& particles);
+    void replace(const mpl::communicator& comm, int partner_rank, ParticleVector& particles);
+    ParticleBuffer::Format getFormat() const;
+    void setFormat(ParticleBuffer::Format format);
 };
 
 /**
- * @brief Class for sending/receiving particle vectors over MPI.
- *
- * This will take a particle vector and send selected information though MPI. It is
- * possible to send only coordinates using the dataformat `XYZ` or, if charges should be
- * send too, `XYZQ`.
- *
- * Besides particle data it is possible to send extra floats by adding
- * these to the `sendExtra` vector; received extras will be stored in `recvExtra`. Before
- * transmitting extra data, make sure that `recvExtra` and `sendExtra` have the
- * same size.
- *
- *     int dst_rank = 1;
- *     floatp extra1 = 2.34, extra2 = -1.23
- *     Tpvec myparticles(200); // we have 200 particles
- *
- *     Faunus::MPI::MPIController mpi;
- *     Faunus::MPI::ParticleTransmitter pt;
- *
- *     pt.sendExtra.addGroup(extra1);
- *     pt.sendExtra.addGroup(extra2);
- *
- *     pt.send(mpi, myparticles, dst_rank);
- *     pt.waitsend();
- *
- * @date Lund 2012
- * @todo This class needs refactoring for clarity and better safety
- *
- */
-template <typename Tpvec> class ParticleTransmitter : public FloatTransmitter {
-  public:
-    enum dataformat { XYZ = 3, XYZQ = 4, XYZQI = 5 };
-    std::vector<float_type> sendExtra; //!< Put extra data to send here.
-    std::vector<float_type> recvExtra; //!< Received extra data will be stored here
-    ParticleTransmitter();
-    void send(MPIController&, const Tpvec&, int); //!< Send particle vector to another node
-    void recv(MPIController&, int, Tpvec&);       //!< Receive particle vector from another node
-    void waitrecv();
-    void setFormat(dataformat);
-    void setFormat(const std::string&);
-    dataformat getFormat() const;
-
-  private:
-    dataformat format; //!< Data format to send/receive - default is XYZQ
-    std::vector<float_type> sendBuf, recvBuf;
-    Tpvec* dstPtr;               //!< pointer to receiving particle vector
-    void pvec2buf(const Tpvec&); //!< Copy source particle vector to send buffer
-    void buf2pvec(Tpvec&);       //!< Copy receive buffer to target particle vector
-};
-
-template <typename Tpvec> ParticleTransmitter<Tpvec>::ParticleTransmitter() { setFormat(XYZQI); }
-
-template <typename Tpvec> void ParticleTransmitter<Tpvec>::setFormat(dataformat d) { format = d; }
-
-template <typename Tpvec> void ParticleTransmitter<Tpvec>::setFormat(const std::string& s) {
-    setFormat(XYZQI);
-    if (s == "XYZQ") {
-        setFormat(XYZQ);
-    }
-    if (s == "XYZ") {
-        setFormat(XYZ);
-    }
-}
-
-template <typename Tpvec>
-typename ParticleTransmitter<Tpvec>::dataformat ParticleTransmitter<Tpvec>::getFormat() const {
-    return format;
-}
-
-/*!
- * \param mpi MPI controller to use
- * \param src Source particle vector
- * \param dst Destination node
- */
-template <typename Tpvec> void ParticleTransmitter<Tpvec>::send(MPIController& mpi, const Tpvec& src, int dst) {
-    assert(dst >= 0 && dst < mpi.nproc() && "Invalid MPI destination");
-    pvec2buf(src);
-    FloatTransmitter::sendf(mpi, sendBuf, dst);
-}
-
-template <typename Tpvec> void ParticleTransmitter<Tpvec>::pvec2buf(const Tpvec& src) {
-    sendBuf.clear();
-    sendBuf.reserve(src.size() * 5 + sendExtra.size());
-    for (auto& p : src) {
-        sendBuf.push_back(p.pos.x());
-        sendBuf.push_back(p.pos.y());
-        sendBuf.push_back(p.pos.z());
-        if (format == XYZQ) {
-            sendBuf.push_back(p.charge);
-        }
-        if (format == XYZQI) {
-            sendBuf.push_back(p.charge);
-            sendBuf.push_back((float_type)p.id);
-        }
-    }
-    for (auto i : sendExtra) {
-        sendBuf.push_back(i);
-    }
-}
-
-/*!
- * \param mpi MPI controller to use
- * \param src Source node
- * \param dst Destination particle vector
- */
-template <typename Tpvec> void ParticleTransmitter<Tpvec>::recv(MPIController& mpi, int src, Tpvec& dst) {
-    assert(src >= 0 && src < mpi.nproc() && "Invalid MPI source");
-    dstPtr = &dst; // save a pointer to the destination particle vector
-    if (format == XYZ) {
-        recvBuf.resize(3 * dst.size());
-    }
-    if (format == XYZQ) {
-        recvBuf.resize(4 * dst.size());
-    }
-    if (format == XYZQI) {
-        recvBuf.resize(5 * dst.size());
-    }
-
-    // resize to fit extra data (if any)
-    recvExtra.resize(sendExtra.size());
-    recvBuf.resize(recvBuf.size() + recvExtra.size());
-
-    FloatTransmitter::recvf(mpi, src, recvBuf);
-}
-
-template <typename Tpvec> void ParticleTransmitter<Tpvec>::waitrecv() {
-    FloatTransmitter::waitrecv();
-    buf2pvec(*dstPtr);
-}
-
-template <typename Tpvec> void ParticleTransmitter<Tpvec>::buf2pvec(Tpvec& dst) {
-    int i = 0;
-    for (auto& p : dst) {
-        p.pos.x() = recvBuf[i++];
-        p.pos.y() = recvBuf[i++];
-        p.pos.z() = recvBuf[i++];
-        if (format == XYZQ) {
-            p.charge = recvBuf[i++];
-        }
-        if (format == XYZQI) {
-            p.charge = recvBuf[i++];
-            p.id = (int)recvBuf[i++];
-        }
-    }
-    for (auto& x : recvExtra) {
-        x = recvBuf[i++];
-    }
-    assert((size_t)i == recvBuf.size());
-    if ((size_t)i != recvBuf.size()) {
-        std::cerr << "Particle transmitter says: !!!!!!!!!!!" << std::endl;
-    }
-}
-
-/*
  * @brief Sum tables computed by parallel processes
  *
  * @details Slave processes send histograms to the master. The master computes the
  * average and sends it back to the slaves. Ttable can be Table, Table2D or Table3D in auxiliary.h.
- *
  */
-template <class Ttable> void avgTables(MPIController* mpiPtr, FloatTransmitter& ft, Ttable& table, int& size) {
-    if (!mpiPtr->isMaster()) {
-        std::vector<FloatTransmitter::float_type> sendBuf = table.hist2buf(size);
-        std::vector<FloatTransmitter::float_type> recvBuf = ft.swapf(*mpiPtr, sendBuf, mpiPtr->rankMaster());
-        table.buf2hist(recvBuf);
-    }
-    if (mpiPtr->isMaster()) {
-        std::vector<FloatTransmitter::float_type> sendBuf = table.hist2buf(size);
-        std::vector<FloatTransmitter::float_type> recvBuf(size);
-        for (int i = 0; i < mpiPtr->nproc(); ++i) {
-            if (i != mpiPtr->rankMaster()) {
-                ft.recvf(*mpiPtr, i, recvBuf);
-                ft.waitrecv();
-                sendBuf.insert(sendBuf.end(), recvBuf.begin(), recvBuf.end());
-            }
-        }
-        table.buf2hist(sendBuf);
-        sendBuf = table.hist2buf(size);
-        for (int i = 0; i < mpiPtr->nproc(); ++i) {
-            if (i != mpiPtr->rankMaster()) {
-                ft.sendf(*mpiPtr, sendBuf, i);
-                ft.waitsend();
-            }
-        }
+template <class Ttable> void avgTables(const mpl::communicator& communicator, Ttable& table, int& size) {
+    std::vector<double> send_buffer; // data to be sent
+    std::vector<double> recv_buffer; // buffer for recieving data
+    if (!mpi.isMaster()) {
+        send_buffer = table.hist2buf(size);
+        recv_buffer.resize(send_buffer.size());
+        const auto tag = mpl::tag_t(0);
+        const auto layout = mpl::contiguous_layout<double>(send_buffer.size());
+        communicator.sendrecv(send_buffer.data(), layout, mpi.master_rank, tag, recv_buffer.data(), layout,
+                              mpi.master_rank, tag);
+        table.buf2hist(recv_buffer);
+    } else {
+        send_buffer = table.hist2buf(size);
+        recv_buffer.resize(size);
+        auto slaves = ranges::cpp20::views::iota(0, communicator.size()) |
+                      ranges::cpp20::views::filter([&](auto rank) { return rank != mpi.master_rank; });
+
+        ranges::cpp20::for_each(slaves, [&](auto rank) {
+            communicator.recv(recv_buffer, rank);
+            send_buffer.insert(send_buffer.end(), recv_buffer.begin(), recv_buffer.end());
+        });
+
+        table.buf2hist(send_buffer);
+        send_buffer = table.hist2buf(size);
+        ranges::cpp20::for_each(slaves, [&](auto rank) { communicator.send(send_buffer, rank); });
     }
 }
 #endif

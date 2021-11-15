@@ -58,12 +58,13 @@ class Penalty : public Energybase {
  */
 class PenaltyMPI : public Penalty {
   private:
+    const MPI::Controller& mpi;
     Eigen::VectorXi weights;                                     //!< array w. mininum histogram counts
     Eigen::VectorXd buffer;                                      //!< receive buffer for penalty functions
     void update(const std::vector<double>& coordinate) override; //!< Average penalty function across all nodes
     void averagePenaltyFunctions();                              //!< Average penalty functions over all MPI nodes
   public:
-    PenaltyMPI(const json& j, Space& spc);
+    PenaltyMPI(const json& j, Space& spc, const MPI::Controller& mpi);
 };
 #endif
 

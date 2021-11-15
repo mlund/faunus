@@ -262,11 +262,11 @@ PYBIND11_MODULE(pyfaunus, m)
     py::class_<Tmcsimulation>(m, "MetropolisMonteCarlo")
         .def(py::init([](py::dict dict) {
             json j = dict2json(dict);
-            return std::unique_ptr<Tmcsimulation>(new Tmcsimulation(j, Faunus::MPI::mpi));
+            return std::unique_ptr<Tmcsimulation>(new Tmcsimulation(j));
         }))
-        .def(py::init([](py::dict dict, Faunus::MPI::MPIController &mpi) {
+        .def(py::init([](py::dict dict) {
             json j = dict2json(dict);
-            return std::unique_ptr<Tmcsimulation>(new Tmcsimulation(j, mpi));
+            return std::unique_ptr<Tmcsimulation>(new Tmcsimulation(j));
         }));
 
     // Analysisbase

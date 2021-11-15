@@ -68,9 +68,8 @@ class SASABase {
      */
     template<typename TBegin, typename TEnd>
     double calcSASA(Space& spc, TBegin begin, TEnd end) const {
-        double area = std::accumulate(begin, end, 0.0, [this, &spc](auto& area, const auto& species){
-            return area + calcSASAOf(spc, species); });
-        return area;
+        return std::accumulate(
+            begin, end, 0.0, [this, &spc](auto& area, const auto& species) { return area + calcSASAOf(spc, species); });
     }
 
     template<typename TSpecies>

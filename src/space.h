@@ -237,6 +237,16 @@ class Space {
     }
 
     /**
+     * @brief Find active atoms of type `atomid` (complexity: order N)
+     * @param atomid Atom id to look for
+     * @return Range of filtered particles
+     */
+    auto findAtoms(AtomData::index_type atomid) const {
+        return activeParticles() |
+        ranges::cpp20::views::filter([atomid](const Particle& particle) { return particle.id == atomid; });
+    }
+
+    /**
      * @brief Count number of molecules matching criteria
      * @param molid Molecule id to match
      * @tparam mask Selection mask based on `Group::Selectors`

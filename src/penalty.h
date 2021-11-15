@@ -16,7 +16,7 @@ namespace Faunus::Energy {
  */
 class Penalty : public Energybase {
   private:
-    Space& spc;
+    const Space& spc;
     std::string penalty_function_filename;
     std::string histogram_filename;
     bool overwrite_penalty = true; // overwrite input penalty function?
@@ -46,7 +46,7 @@ class Penalty : public Energybase {
     void logBarrierInformation() const; //!< Add barrier information to output log
 
   public:
-    Penalty(const json& j, Space& spc);
+    Penalty(const json& j, const Space& spc);
     virtual ~Penalty(); //!< destruct and save to disk (!)
     double energy(Change& change) override;
     void sync(Energybase* other, const Change& change) override;

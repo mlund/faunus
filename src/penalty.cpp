@@ -4,7 +4,7 @@
 
 namespace Faunus::Energy {
 
-Penalty::Penalty(const json& j, Space& spc) : spc(spc) {
+Penalty::Penalty(const json& j, const Space& spc) : spc(spc) {
     name = "penalty";
     overwrite_penalty = j.value("overwrite", true);
     energy_increment = j.at("f0").get<double>();

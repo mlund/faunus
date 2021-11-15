@@ -77,6 +77,16 @@ void MoveBase::reject(Change& change) {
     timer.stop();
 }
 
+/**
+ * This can be used to introduce an extra energy change that will be added to the
+ * total trial energy in the Metropolis acceptance criterion. Typically used
+ * to include bias not contained in Energy::Hamiltonian.
+ *
+ * @param change Change made to the system
+ * @param old_energy Energy from hamiltonian before the change (kT)
+ * @param new_energy Energy from hamiltonian after the change (kT)
+ * @return Energy due to custom bias from the particular move (kT)
+ */
 double MoveBase::bias([[maybe_unused]] Change& change, [[maybe_unused]] double old_energy,
                       [[maybe_unused]] double new_energy) {
     return 0.0;
@@ -86,16 +96,18 @@ void MoveBase::_accept([[maybe_unused]] Change& change) {}
 
 void MoveBase::_reject([[maybe_unused]] Change& change) {}
 
-MoveBase::MoveBase(Space& spc, const std::string& name, const std::string& cite) : cite(cite), spc(spc), name(name) {}
+MoveBase::MoveBase(Space& spc, std::string_view name, std::string_view cite) : cite(cite), name(name), spc(spc) {}
 
 void MoveBase::setRepeat(const int new_repeat) { repeat = new_repeat; }
 bool MoveBase::isStochastic() const { return repeat != 0; }
 
-void from_json(const json& j, MoveBase& m) { m.from_json(j); }
+void from_json(const json &j, MoveBase &move) { move.from_json(j); }
 
-void to_json(json& j, const MoveBase& m) {
-    assert(!m.name.empty());
-    m.to_json(j[m.name]);
+void to_json(json& j, const MoveBase& move) { move.to_json(j[move.getName()]); }
+
+const std::string& MoveBase::getName() const {
+    assert(!name.empty());
+    return name;
 }
 
 // -----------------------------------
@@ -106,10 +118,10 @@ ReplayMove::ReplayMove(Space& spc) : ReplayMove(spc, "replay", "") {}
 
 void ReplayMove::_to_json(json& j) const { j["file"] = reader->filename; }
 
-void ReplayMove::_from_json(const json& j) { reader = std::make_unique<XTCReader>(j.at("file")); }
+void ReplayMove::_from_json(const json& j) { reader = std::make_unique<XTCReader>(j.at("file").get<std::string>()); }
 
-void ReplayMove::_move(Change& change) {
-    assert(reader != nullptr);
+void ReplayMove::_move(Change &change) {
+    assert(reader);
     if (!end_of_trajectory) {
         if (reader->read(frame.step, frame.timestamp, frame.box, spc.positions().begin(), spc.positions().end())) {
             spc.geometry.setLength(frame.box);
@@ -1028,7 +1040,7 @@ TEST_CASE("[Faunus] TranslateRotate") {
     json j = R"( {"molecule":"A", "dp":1.0, "dprot":0.5, "dir":[0,1,0], "repeat":2 })"_json;
     mv.from_json(j);
 
-    j = json(mv).at(mv.name);
+    j = json(mv).at(mv.getName());
     CHECK(j.at("molecule") == "A");
     // CHECK(j.at("dir") == Point(0, 1, 0));
     CHECK(j.at("dp") == 1.0);

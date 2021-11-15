@@ -139,7 +139,7 @@ void MetropolisMonteCarlo::performMove(Move::MoveBase& move) {
     }
 #endif
     if (change) {
-        latest_move_name = move.name;
+        latest_move_name = move.getName();
         const auto new_energy = trial_state->pot->energy(change); // trial potential energy (kT)
         const auto old_energy = state->pot->energy(change);       // potential energy before move (kT)
 
@@ -150,7 +150,7 @@ void MetropolisMonteCarlo::performMove(Move::MoveBase& move) {
 
         const auto total_trial_energy = energy_change + energy_bias;
         if (std::isnan(total_trial_energy)) {
-            faunus_logger->error("NaN energy change in {} move.", move.name);
+            faunus_logger->error("NaN energy change in {} move.", move.getName());
         }
         if (metropolisCriterion(total_trial_energy)) { // accept move
             state->sync(*trial_state, change);

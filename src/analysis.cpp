@@ -1492,7 +1492,7 @@ void AtomsInMoleculePolicy::from_json(const json& input) {
         for (const auto& atom_specifier : atomlist) {
             if(atom_specifier.is_string()) {
                 atom_names.insert(static_cast<const std::string>(atom_specifier));
-                selected_indices.insert(findAtomByName(atom_specifier).id());
+                selected_indices.insert(findAtomByName(static_cast<const std::string>(atom_specifier)).id());
             }
             else if(atom_specifier.is_number_integer()){
                 selected_indices.insert(static_cast<AtomData::index_type>(atom_specifier));

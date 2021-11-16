@@ -595,6 +595,56 @@ void from_json(const json&, GroupCutoff &);
 void to_json(json&, const GroupCutoff &);
 
 /**
+ * @brief Determines if two particles are separated beyond the cutoff distance.
+ *
+ * The cutoff distance can be specified independently for each
+ * atom pair to override the default value.
+ *
+ * @see ParticlePairing
+ */
+class ParticleCutoff {
+    double default_cutoff_squared = pc::max_value;
+    PairMatrix<double>
+        cutoff_squared_matrix;              //!< matrix with group-to-group cutoff distances squared in angstrom squared
+    double total_count = 0, skip_count = 0; //!< statistics
+    Space::GeometryType& geometry;          //!< geometry to compute the inter group distance with
+    void setSingleCutoff(const double cutoff);
+
+  public:
+    void from_json(const json&);
+    void to_json(json&) const;
+    double getMaximumCutoff() const;
+
+    /**
+     * @brief Determines if two groups are separated beyond the cutoff distance.
+     * @return true if the group-to-group distance is beyond the cutoff distance, false otherwise
+     */
+    inline bool cut(const Particle& particle1, const Particle& particle2) {
+        bool result = false;
+        ++total_count;
+        if (geometry.sqdist(particle1.pos, particle2.pos) >= cutoff_squared_matrix(particle1.id, particle2.id)) {
+            result = true;
+            ++skip_count;
+        }
+        return result;
+    }
+
+    double getCutoff(size_t id1, size_t id2) const;
+
+    /**
+     * @brief A functor alias for cut().
+     * @see cut()
+     */
+    template <typename... Args> inline auto operator()(Args&&... args) { return cut(std::forward<Args>(args)...); }
+
+    /**
+     * @brief Sets the geometry.
+     * @param geometry  geometry to compute the inter group distance with
+     */
+    ParticleCutoff(Space::GeometryType& geometry);
+};
+
+/**
  * @brief Provides a fast inlineable interface for non-bonded pair potential energy computation.
  *
  * @tparam TPairPotential  a pair potential to compute with
@@ -1171,8 +1221,10 @@ class PairingBase {
   public:
     bool needs_syncing = false;
     virtual void sync(const Space& spc, const Change change) = 0;
+    // virtual void sync(const PairingBase& pairing, const Change change) = 0;
+    virtual ~PairingBase() = default;
 
-    PairingBase(Space& spc) : spc(spc) {}
+    PairingBase(Space& spc) : spc(spc){};
 };
 
 /**
@@ -1394,6 +1446,7 @@ template <typename TPairEnergy, typename TPairingPolicy> class Nonbonded : publi
         if (auto* other = dynamic_cast<Nonbonded*>(energybase_ptr)) {
             if (pairing.needs_syncing) {
                 pairing.sync(other->spc, change);
+                // pairing.sync(other->pairing, change);
             }
             pairing.needs_syncing = false;
             other->pairing.needs_syncing = false;
@@ -1660,7 +1713,7 @@ class SASAEnergy : public SASAEnergyBase {
   private:
     std::vector<std::vector<index_type>>
         current_neighbours; //!< holds cached neighbour indices for each particle in ParticleVector
-    std::vector<index_type> changed_indices; //!< paritcle indices whose SASA changed based on change object
+    std::vector<index_type> changed_indices; //!< particle indices whose SASA changed based on change object
 
     void to_json(json& j) const override;
     void sync(Energybase* energybase_ptr, const Change& change) override;
@@ -1717,29 +1770,21 @@ class Hamiltonian : public Energybase, public BasePointerVector<Energybase> {
     const std::vector<double>& latestEnergies() const; //!< Energies for each term from the latest call to `energy()`
 };
 
-template<class CellList>
 class ParticlePairing : public PairingBase {
-    using CellCoord = typename CellList::Grid::CellCoord;
     using GeometryType = Geometry::Chameleon;
     using index_type = std::size_t;
 
-    std::unique_ptr<CellList> cell_list; //!< pointer to cell list
-    std::vector<CellCoord> cell_offsets; //!< holds offsets which define a 3x3x3 cube around central cell
-    double cell_length;                  //!< dimension of a single cell
+    double default_cutoff_squared = pc::max_value;
 
-    PairMatrix<double> cutoff_squared;  //!< matrix with atom-to-atom cutoff distances squared in angstrom squared
+    std::unique_ptr<Faunus::CellList::ParticleCellListBase> pcell_list;
+    double cell_length = 0.0; //!< dimension of a single cell
+
+    PairMatrix<double> cutoff_squared; //!< matrix with atom-to-atom cutoff distances squared in angstrom squared
+    ParticleCutoff cutoff;
 
     template <typename TAccumulator, typename T>
-    inline void particle2particle(TAccumulator &pair_accumulator, const T &a, const T &b) const {
+    inline void particle2particle(TAccumulator& pair_accumulator, const T& a, const T& b) const {
         pair_accumulator += {std::cref(a), std::cref(b)};
-    }
-
-    inline bool cut(const Particle& particle1, const Particle& particle2) {
-        bool result = false;
-        if ( spc.geometry.sqdist(particle1.pos, particle2.pos) >= cutoff_squared(particle1.id, particle2.id) ) {
-            result = true;
-        }
-        return result;
     }
 
     /**
@@ -1750,78 +1795,21 @@ class ParticlePairing : public PairingBase {
         return static_cast<index_type>(std::addressof(particle) - std::addressof(spc.particles.at(0)));
     }
 
-
   public:
-    void from_json(const json &j) {
-        auto cutoff = j["cutoff"].get<double>();
-        cell_length = cutoff ;
+    void from_json(const json& j) {
+        cutoff.from_json(j);
         init(spc);
     }
 
-    void to_json(json &j) const {}
+    void to_json(json& j) const { cutoff.to_json(j); }
 
-    virtual void sync(const Space& space, const Change change) override{
-        update(space, change);
-    }
-    ParticlePairing(Space& space) : PairingBase(space) {}
+    virtual void sync(const Space& space, const Change change) override { update(space, change); }
 
-    void init(const Space& space){
-        cell_offsets.clear();
-        for (auto i = -1; i <= 1; ++i) {
-            for (auto j = -1; j <= 1; ++j) {
-                for (auto k = -1; k <= 1; ++k) {
-                    cell_offsets.emplace_back(i, j, k);
-                }
-            }
-        }
-
-        const auto active_particles = space.activeParticles();
-        createCellList(active_particles.begin(), active_particles.end(), space.geometry);
-    }
-    /**
- * @brief calculates neighbourData object of a target particle
- * @brief specified by target index in ParticleVector using cell list
- * @param space
- * @param target_index indicex of target particle in ParticleVector
-     */
-    template <typename TAccumulator>
-    void particle2all(TAccumulator &pair_accumulator, const Space& space, const index_type target_index,
-                      std::unordered_set<int>& already_done) const {
-        const auto& particle_i = space.particles.at(target_index);
-        const auto& center_cell = cell_list->getGrid().coordinatesAt(particle_i.pos + 0.5 * space.geometry.getLength());
-
-        auto neighour_particles_at = [&](const CellCoord& offset) {
-            return cell_list->getNeighborMembers(center_cell, offset);
-        };
-
-        for (const auto& cell_offset : cell_offsets) {
-            const auto& neighbour_particle_indices = neighour_particles_at(cell_offset);
-            for (const auto neighbour_particle_index : neighbour_particle_indices) {
-
-                const auto& particle_j = space.particles.at(neighbour_particle_index);
-
-                if (target_index != neighbour_particle_index && already_done.count(neighbour_particle_index) == 0) {
-                    particle2particle(pair_accumulator, particle_i , particle_j);
-                }
-            }
-        }
-    }
-
-    std::vector<index_type> neighbouring_indices(const Particle& particle) {
-        const auto& center_cell = cell_list->getGrid().coordinatesAt(particle.pos + 0.5 * spc.geometry.getLength());
-        std::vector<index_type> neighbours;
-        auto insert_neighbours = [&](const CellCoord& offset) {
-            const auto& a =  cell_list->getNeighborMembers(center_cell, offset);
-            neighbours.insert(neighbours.end(), a.begin(), a.end());
-        };
-        std::for_each(cell_offsets.begin(), cell_offsets.end(), insert_neighbours);
-        return neighbours;
-    }
+    ParticlePairing(Space& space) : PairingBase(space), cutoff(space.geometry) {}
 
     void update(const Space& space, const Change& change) {
         if (change.everything || change.volume_change) {
-            const auto active_particles = space.activeParticles();
-            createCellList(active_particles.begin(), active_particles.end(), space.geometry);
+            pcell_list->updateParticles(space.activeParticles().begin(), space.activeParticles().end());
         } else if (change.matter_change) {
             updateMatterChange(space, change);
         } else {
@@ -1829,12 +1817,10 @@ class ParticlePairing : public PairingBase {
         }
     }
 
-    template <typename TAccumulator>
-    void accumulate(TAccumulator &pair_accumulator, const Change &change){
-
+    template <typename TAccumulator> void accumulate(TAccumulator& pair_accumulator, const Change& change) {
         std::unordered_set<int> already_done;
-        if( change.everything ){
-            for( const auto& particle : spc.activeParticles()){
+        if (change.everything) {
+            for (const auto& particle : spc.activeParticles()) {
                 particle2all(pair_accumulator, spc, indexOf(particle), already_done);
                 already_done.insert(indexOf(particle));
             }
@@ -1842,44 +1828,84 @@ class ParticlePairing : public PairingBase {
         }
         needs_syncing = true;
 
-        if(!change.matter_change) {
-            for (const auto& changed_group : change.groups) {
-                const auto& group = spc.groups.at(changed_group.group_index);
-                const auto offset = spc.getFirstParticleIndex(group);
-
-                if (changed_group.relative_atom_indices.empty()) {
-                    const auto indices = ranges::cpp20::views::iota(offset, group.size() + offset);
-                    for (const auto index : indices) {
-                        particle2all(pair_accumulator, spc, index, already_done);
-                        already_done.insert(index);
-                    }
-                } else {
-                    const auto indices = changed_group.relative_atom_indices |
-                                         ranges::cpp20::views::transform([offset](auto i) { return offset + i; });
-                    for (const auto index : indices) {
-                        particle2all(pair_accumulator, spc, index, already_done);
-                        already_done.insert(index);
-                    }
-                }
-            }
+        if (change.matter_change) {
+            accumulateSpeciation(pair_accumulator, change);
+        } else {
+            accumulateChanged(pair_accumulator, change);
         }
-        else{
-            for (const auto& changed_group : change.groups) {
-                const auto& group = spc.groups.at(changed_group.group_index);
-                const auto offset = spc.getFirstParticleIndex(group);
+    }
 
-                for (const auto relative_index : changed_group.relative_atom_indices) {
-                    const auto absolute_index = relative_index + offset;
-                    if (relative_index < group.size()) {
-                        particle2all(pair_accumulator, spc, absolute_index, already_done);
-                    }
-                    already_done.insert(absolute_index);
+  private:
+    template <typename TAccumulator> void accumulateChanged(TAccumulator& pair_accumulator, const Change& change) {
+        std::unordered_set<int> already_done;
+        for (const auto& changed_group : change.groups) {
+            const auto& group = spc.groups.at(changed_group.group_index);
+            const auto offset = spc.getFirstParticleIndex(group);
+
+            if (changed_group.relative_atom_indices.empty()) {
+                const auto indices = ranges::cpp20::views::iota(offset, group.size() + offset);
+                for (const auto index : indices) {
+                    particle2all(pair_accumulator, spc, index, already_done);
+                    already_done.insert(index);
+                }
+            } else {
+                const auto indices = changed_group.relative_atom_indices |
+                                     ranges::cpp20::views::transform([offset](auto i) { return offset + i; });
+                for (const auto index : indices) {
+                    particle2all(pair_accumulator, spc, index, already_done);
+                    already_done.insert(index);
                 }
             }
         }
     }
 
-  private:
+    template <typename TAccumulator> void accumulateSpeciation(TAccumulator& pair_accumulator, const Change& change) {
+        std::unordered_set<int> already_done;
+        for (const auto& changed_group : change.groups) {
+            const auto& group = spc.groups.at(changed_group.group_index);
+            const auto offset = spc.getFirstParticleIndex(group);
+
+            for (const auto relative_index : changed_group.relative_atom_indices) {
+                const auto absolute_index = relative_index + offset;
+                if (relative_index < group.size()) {
+                    particle2all(pair_accumulator, spc, absolute_index, already_done);
+                }
+                already_done.insert(absolute_index);
+            }
+        }
+    }
+
+    void init(const Space& space, const bool isDenseContainer = true) {
+        cell_length = cutoff.getMaximumCutoff();
+        const auto minimum_dimension_length = ranges::min(space.geometry.getLength());
+        if (cell_length > minimum_dimension_length) {
+            throw ConfigurationError(
+                "cutoff is larger than the smallest dimension, reduce cutoff or increase box size");
+        }
+        const auto active_particles = space.activeParticles();
+        if (isDenseContainer) {
+            pcell_list = CellList::createCellList<CellList::Container::DenseContainer>(space, cell_length);
+        } else {
+            pcell_list = CellList::createCellList<CellList::Container::SparseContainer>(space, cell_length);
+        }
+        pcell_list->setFirstParticle(spc.particles[0]);
+        pcell_list->insertParticles(active_particles.begin(), active_particles.end());
+    }
+
+    template <typename TAccumulator>
+    void particle2all(TAccumulator& pair_accumulator, const Space& space, const index_type target_index,
+                      std::unordered_set<int>& already_done) {
+        const auto& particle_i = space.particles.at(target_index);
+
+        for (const auto neighbour_particle_index : pcell_list->getNeighbouringIndicesOf(particle_i)) {
+            const auto& particle_j = space.particles.at(neighbour_particle_index);
+            if (target_index != neighbour_particle_index && already_done.count(neighbour_particle_index) == 0 &&
+                not cutoff.cut(particle_i, particle_j)) {
+                particle2particle(pair_accumulator, particle_i, particle_j);
+            }
+        }
+    }
+
     /**
  * @brief updates cell_list when particles got activated or desactivated
  * @param space
@@ -1892,10 +1918,9 @@ class ParticlePairing : public PairingBase {
             for (const auto relative_index : group_change.relative_atom_indices) {
                 const auto absolute_index = relative_index + offset;
                 if (relative_index >= group.size()) { // if index lies behind last active index
-                    cell_list->removeMember(absolute_index);
+                    pcell_list->remove(absolute_index);
                 } else if (relative_index < group.size()) {
-                    cell_list->insertMember(absolute_index,
-                                            space.particles.at(absolute_index).pos + 0.5 * space.geometry.getLength());
+                    pcell_list->insert(absolute_index);
                 }
             }
         }
@@ -1911,9 +1936,7 @@ class ParticlePairing : public PairingBase {
             const auto& group = space.groups.at(group_change.group_index);
             const auto offset = space.getFirstParticleIndex(group);
 
-            auto update = [&, half_box = 0.5 * space.geometry.getLength()](auto index) {
-                cell_list->updateMemberAt(index, space.particles.at(index).pos + half_box);
-            };
+            auto update = [&, half_box = 0.5 * space.geometry.getLength()](auto index) { pcell_list->update(index); };
 
             if (group_change.relative_atom_indices.empty()) {
                 const auto changed_atom_indices = ranges::cpp20::views::iota(offset, offset + group.size());
@@ -1924,19 +1947,6 @@ class ParticlePairing : public PairingBase {
                 ranges::cpp20::for_each(changed_atom_indices, update);
             }
         }
-    }
-
-    template <typename TBegin, typename TEnd>
-    void createCellList(TBegin begin, TEnd end, const GeometryType& geometry) {
-        if (cell_list.get()) {
-            delete cell_list.release();
-            cell_list = std::make_unique<CellList>(geometry.getLength(), cell_length);
-        } else {
-            cell_list = std::make_unique<CellList>(geometry.getLength(), cell_length);
-        }
-        std::for_each(begin, end, [&, half_box = 0.5 * geometry.getLength()](const Particle& particle) {
-            cell_list->insertMember(indexOf(particle), particle.pos + half_box);
-        });
     }
 };
 
@@ -2102,28 +2112,6 @@ class NonbondedCachedCellList : public Nonbonded<TPairEnergy, TPairingPolicy> {
     }
 
 };
-
-using PeriodicGrid = CellList::Grid::Grid3DPeriodic;
-using FixedGrid = CellList::Grid::Grid3DFixed;
-
-template <typename TMember, typename TIndex>
-using DenseContainer = CellList::Container::DenseContainer<TMember, TIndex>;
-template <typename TMember, typename TIndex>
-using SparseContainer = CellList::Container::SparseContainer<TMember, TIndex>;
-
-template <class TGrid, template <typename, typename> class TContainer = DenseContainer>
-using CellListType =
-    CellList::CellListSpatial<CellList::CellListType<std::size_t, TGrid, CellList::CellListBase, TContainer>>;
-
-using DensePeriodicCellList = CellListType<PeriodicGrid, DenseContainer>;
-using DenseFixedCellList = CellListType<FixedGrid, DenseContainer>;
-using SparsePeriodicCellList = CellListType<PeriodicGrid, SparseContainer>;
-using SparseFixedCellList = CellListType<FixedGrid, SparseContainer>;
-/*
-extern template class ParticlePairing<DensePeriodicCellList>;
-extern template class ParticlePairing<DenseFixedCellList>;
-extern template class ParticlePairing<SparsePeriodicCellList>;
-extern template class ParticlePairing<SparseFixedCellList>;*/
 
 } // namespace Energy
 } // namespace Faunus

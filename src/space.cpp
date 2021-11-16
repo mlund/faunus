@@ -164,8 +164,8 @@ void Space::sync(const Space &other, const Change &change) {
             assert(particles.begin() != other.particles.begin());           // check deep copy problem
             assert(groups.front().begin() != other.groups.front().begin()); // check deep copy problem
         } else {
-            for (const auto &changed : change.groups) {             // look over changed groups
-                auto& group = groups.at(changed.group_index);       // old group
+            for (const auto& changed : change.groups) {                   // look over changed groups
+                auto& group = groups.at(changed.group_index);             // old group
                 auto& other_group = other.groups.at(changed.group_index); // new group
                 assert(group.id == other_group.id);
                 if (group.traits().isImplicit()) { // the molecule is implicit
@@ -664,11 +664,13 @@ void InsertMoleculesInSpace::insertMolecularGroups(MoleculeData& moldata, Space&
     }
     for (size_t i = 0; i < num_molecules; i++) { // insert molecules
         spc.addGroup(moldata.id(), moldata.getRandomConformation(spc.geometry, spc.particles));
+        spc.molecule_type2active_groups[moldata.id()].insert(spc.groups.size() - 1);
     }
     // deactivate groups, starting from the back
     std::for_each(spc.groups.rbegin(), spc.groups.rbegin() + num_inactive, [&](auto& group) {
         group.unwrap(spc.geometry.getDistanceFunc()); // make molecules whole (remove PBC) ...
         group.resize(0);                              // ... and then deactivate
+        spc.molecule_type2active_groups[moldata.id()].erase(std::distance(&spc.groups[0], &group));
     });
 }
 

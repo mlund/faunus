@@ -1016,8 +1016,8 @@ std::shared_ptr<Energybase> Hamiltonian::createEnergy(Space& spc, const std::str
                                                                                                               *this);
         }
         if (name == "nonbonded_eff" || name == "nonbonded_exact_eff") {
-            return std::make_shared<Nonbonded<PairEnergy<Potential::FunctorPotential, true>,
-                ParticlePairing<DensePeriodicCellList>>>(j, spc, *this);
+            return std::make_shared<Nonbonded<PairEnergy<Potential::FunctorPotential, true>, ParticlePairing>>(j, spc,
+                                                                                                               *this);
         }
         if (name == "nonbonded" || name == "nonbonded_exact") {
             return std::make_shared<Nonbonded<PairEnergy<Potential::FunctorPotential, true>, PairingPolicy>>(j, spc,
@@ -1026,10 +1026,6 @@ std::shared_ptr<Energybase> Hamiltonian::createEnergy(Space& spc, const std::str
         if (name == "nonbonded_cached") {
             return std::make_shared<NonbondedCached<PairEnergy<Potential::SplinedPotential>, PairingPolicy>>(j, spc,
                                                                                                              *this);
-        }
-        if (name == "nonbonded_cached_eff") {
-            return std::make_shared<NonbondedCachedCellList<PairEnergy<Potential::SplinedPotential>,
-                ParticlePairing<DensePeriodicCellList>>>(j, spc,*this);
         }
         if (name == "nonbonded_coulombwca") {
             return std::make_shared<Nonbonded<PairEnergy<CoulombWCA, false>, PairingPolicy>>(j, spc, *this);
@@ -1624,6 +1620,92 @@ TEST_CASE("[Faunus] GroupCutoff") {
     }
 }
 
+//==================== ParticleCutoff ====================
+
+ParticleCutoff::ParticleCutoff(Space::GeometryType& geometry) : geometry(geometry) {}
+
+void ParticleCutoff::setSingleCutoff(const double cutoff) {
+    if (cutoff < std::sqrt(pc::max_value)) {
+        default_cutoff_squared = cutoff * cutoff;
+    } else {
+        default_cutoff_squared = pc::max_value;
+    }
+    for (const auto& atom1 : Faunus::atoms) {
+        for (const auto& atom2 : Faunus::atoms) {
+            cutoff_squared_matrix.set(atom1.id(), atom2.id(), default_cutoff_squared);
+        }
+    }
+}
+
+double ParticleCutoff::getMaximumCutoff() const {
+    double maximum_cutoff(0.0);
+    for (const auto& atom1 : Faunus::atoms) {
+        for (const auto& atom2 : Faunus::atoms) {
+            const auto cutoff_distance = getCutoff(atom1.id(), atom2.id());
+            if (maximum_cutoff <= cutoff_distance) {
+                maximum_cutoff = cutoff_distance;
+            }
+        }
+    }
+    return maximum_cutoff;
+}
+double ParticleCutoff::getCutoff(size_t id1, size_t id2) const {
+    if (cutoff_squared_matrix.size() != Faunus::atoms.size() || id1 >= cutoff_squared_matrix.size() ||
+        id2 >= cutoff_squared_matrix.size()) {
+        throw std::out_of_range("cutoff matrix doesn't fit atoms");
+    }
+    return std::sqrt(cutoff_squared_matrix(id1, id2));
+}
+
+void ParticleCutoff::from_json(const json& j) {
+    // default: no particle-to-particle cutoff
+    setSingleCutoff(std::sqrt(pc::max_value));
+
+    if (const auto it = j.find("cutoff_a2a"); it != j.end()) {
+        if (it->is_number()) {
+            setSingleCutoff(it->get<double>());
+        } else if (it->is_object()) {
+            setSingleCutoff(it->value("default", pc::max_value));
+            for (const auto& [named_pair, pair_cutoff] : it->items()) {
+                if (named_pair == "default") {
+                    continue;
+                }
+                try {
+                    if (const auto atom_names = words2vec<std::string>(named_pair); atom_names.size() == 2) {
+                        const auto& atom1 = findAtomByName(atom_names[0]);
+                        const auto& atom2 = findAtomByName(atom_names[1]);
+                        const auto& cutoff = pair_cutoff.template get<double>();
+                        cutoff_squared_matrix.set(atom1.id(), atom2.id(), std::pow(cutoff, 2));
+                        faunus_logger->debug("custom cutoff for {}-{} = {} Å", atom1.name, atom2.name, cutoff);
+                    } else {
+                        throw std::runtime_error("invalid atom names");
+                    }
+                } catch (const std::exception& e) {
+                    throw ConfigurationError("Unable to set a custom cutoff for {}: {}", named_pair, e.what());
+                }
+            }
+        }
+    }
+}
+
+void ParticleCutoff::to_json(json& j) const {
+    auto _j = json::object();
+    for (auto& a : Faunus::molecules) {
+        for (auto& b : Faunus::molecules) {
+            if (a.id() >= b.id()) {
+                if (not a.atomic && not b.atomic) {
+                    auto cutoff_squared = cutoff_squared_matrix(a.id(), b.id());
+                    if (cutoff_squared < pc::max_value) {
+                        _j[a.name + " " + b.name] = std::sqrt(cutoff_squared);
+                    }
+                }
+            }
+        }
+    }
+    if (not _j.empty()) {
+        j["cutoff_a2a"] = _j;
+    }
+}
 EnergyAccumulatorBase::EnergyAccumulatorBase(double value) : value(value) {}
 
 void EnergyAccumulatorBase::reserve([[maybe_unused]] size_t number_of_particles) {}

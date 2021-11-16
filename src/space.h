@@ -4,6 +4,7 @@
 #include "group.h"
 #include "molecule.h"
 #include <range/v3/view/join.hpp>
+#include <unordered_set>
 
 namespace Faunus {
 
@@ -117,6 +118,7 @@ class Space {
         double new_volume,
         Geometry::VolumeMethod method = Geometry::VolumeMethod::ISOTROPIC); //!< Scales atoms, molecules, container
 
+    std::unordered_map<MoleculeData::index_type, std::unordered_set<size_t>> molecule_type2active_groups;
     GroupVector::iterator randomMolecule(MoleculeData::index_type molid, Random& rand,
                                          Selection selection = Selection::ACTIVE); //!< Random group matching molid
 

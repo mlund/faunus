@@ -319,6 +319,7 @@ void SpeciationMove::activateAllProducts(Change &change) {
                     if (auto change_data = activateMolecularGroup(target);
                         not change_data.relative_atom_indices.empty()) {
                         change.groups.push_back(change_data); // Add to list of moved groups
+                        spc.molecule_type2active_groups.at(molid).insert(change_data.group_index);
                     } else {
                         assert(false); // we should never reach here
                     }
@@ -394,6 +395,7 @@ void SpeciationMove::deactivateAllReactants(Change &change) {
                     if (auto change_data = deactivateMolecularGroup(target);
                         not change_data.relative_atom_indices.empty()) {
                         change.groups.push_back(change_data); // add to list of moved groups
+                        spc.molecule_type2active_groups.at(molid).erase(change_data.group_index);
                     } else {
                         assert(false); // we should never reach here
                     }
@@ -457,11 +459,23 @@ double SpeciationMove::bias(Change &, double, double) {
     return -reaction->lnK + bond_energy;
 }
 
-void SpeciationMove::_accept(Change &) {
+void SpeciationMove::_accept(Change& change) {
     acceptance[reaction].update(reaction->getDirection(), true);
 
     [[maybe_unused]] auto [atomic_products, molecular_products] = reaction->getProducts();
     [[maybe_unused]] auto [atomic_reactants, molecular_reactants] = reaction->getReactants();
+
+    if (reaction->getDirection() == ReactionData::Direction::RIGHT) {
+        for (const auto& changed : change.groups) {                        // look over changed groups
+            auto& other_group = other_spc->groups.at(changed.group_index); // new group
+            other_spc->molecule_type2active_groups.at(other_group.id).erase(changed.group_index);
+        }
+    } else {
+        for (const auto& changed : change.groups) {                        // look over changed groups
+            auto& other_group = other_spc->groups.at(changed.group_index); // new group
+            other_spc->molecule_type2active_groups.at(other_group.id).insert(changed.group_index);
+        }
+    }
 
     // adjust amount of implicit matter
     for (auto [molid, nu] : molecular_reactants) {
@@ -482,11 +496,24 @@ void SpeciationMove::_accept(Change &) {
     }
 }
 
-void SpeciationMove::_reject(Change &) {
+void SpeciationMove::_reject(Change& change) {
     acceptance[reaction].update(reaction->getDirection(), false);
 
     [[maybe_unused]] auto [atomic_products, molecular_products] = reaction->getProducts();
     [[maybe_unused]] auto [atomic_reactants, molecular_reactants] = reaction->getReactants();
+
+    if (reaction->getDirection() == ReactionData::Direction::RIGHT) {
+        for (const auto& changed : change.groups) {           // look over changed groups
+            auto& group = spc.groups.at(changed.group_index); // old group
+            spc.molecule_type2active_groups.at(group.id).erase(changed.group_index);
+            spc.molecule_type2active_groups.at(group.id).erase(changed.group_index);
+        }
+    } else {
+        for (const auto& changed : change.groups) {           // look over changed groups
+            auto& group = spc.groups.at(changed.group_index); // old group
+            spc.molecule_type2active_groups.at(group.id).insert(changed.group_index);
+        }
+    }
 
     // average number of implicit molecules
     for (auto [molid, nu] : molecular_reactants) {

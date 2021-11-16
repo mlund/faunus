@@ -8,6 +8,7 @@
  * @date 2020-02-01
  */
 
+#include "space.h"
 #include <vector>
 #include <set>
 #include <map>
@@ -934,6 +935,114 @@ class CellListDifference : virtual public AbstractSortableCellList<ContainerType
     std::shared_ptr<CellListSubtrahend> subtrahend;
     std::map<CellIndex, Members> difference_cache;
 };
+
+class ParticleCellListBase {
+  protected:
+    using index_type = std::size_t;
+
+    const Particle* first_particle_ptr = nullptr; //!< Used to calculate index of particles
+    inline auto index(const Particle& particle) const {
+        assert(first_particle_ptr != nullptr);
+        assert(&particle - first_particle_ptr >= 0);
+        return &particle - first_particle_ptr;
+    }
+
+  public:
+    virtual ~ParticleCellListBase() = default;
+    virtual void insert(const Particle& particle) = 0;
+    virtual void remove(const Particle& particle) = 0;
+    virtual void update(const Particle& particle) = 0;
+
+    virtual void insert(const index_type index) = 0;
+    virtual void remove(const index_type index) = 0;
+    virtual void update(const index_type index) = 0;
+
+    inline void setFirstParticle(const Particle& particle) { first_particle_ptr = &particle; }
+
+    template <typename ParticleIterator> void updateParticles(ParticleIterator begin, ParticleIterator end) {
+        std::for_each(begin, end, [&](const Particle& particle) { update(particle); });
+    }
+
+    template <typename ParticleIterator> void insertParticles(ParticleIterator begin, ParticleIterator end) {
+        std::for_each(begin, end, [&](const Particle& particle) { insert(particle); });
+    }
+
+    virtual std::vector<index_type> getNeighbouringIndicesOf(const Particle& particle) = 0;
+};
+
+template <typename CellListType> class ParticleCellList : public ParticleCellListBase {
+  private:
+    using CellCoord = typename CellList::CoordOf<CellListType>;
+
+    std::unique_ptr<CellListType> cell_list;
+    const Space& spc;
+    std::vector<CellCoord> cell_offsets; //!< holds offsets which define a 3x3x3 cube around central cell
+
+  public:
+    template <typename... Args>
+    ParticleCellList(const Space& spc, Args&&... args) : cell_list(std::make_unique<CellListType>(args...)), spc(spc) {
+        cell_offsets.clear();
+        for (auto i = -1; i <= 1; ++i) {
+            for (auto j = -1; j <= 1; ++j) {
+                for (auto k = -1; k <= 1; ++k) {
+                    cell_offsets.emplace_back(i, j, k);
+                }
+            }
+        }
+    }
+    virtual void insert(const Particle& particle) override {
+        cell_list->insertMember(index(particle), particle.pos + 0.5 * spc.geometry.getLength());
+    };
+    virtual void update(const Particle& particle) override {
+        cell_list->updateMemberAt(index(particle), particle.pos + 0.5 * spc.geometry.getLength());
+    };
+    virtual void remove(const Particle& particle) override { cell_list->removeMember(index(particle)); };
+
+    virtual void insert(const index_type index) override {
+        cell_list->insertMember(index, spc.particles.at(index).pos + 0.5 * spc.geometry.getLength());
+    };
+    virtual void update(const index_type index) override {
+        cell_list->updateMemberAt(index, spc.particles.at(index).pos + 0.5 * spc.geometry.getLength());
+    };
+    virtual void remove(const index_type index) override { cell_list->removeMember(index); };
+    virtual std::vector<index_type> getNeighbouringIndicesOf(const Particle& particle) override {
+        const auto& center_cell = cell_list->getGrid().coordinatesAt(particle.pos + 0.5 * spc.geometry.getLength());
+        std::vector<index_type> neighbours;
+        auto insert_neighbours = [&](const CellCoord& offset) {
+            const auto& a = cell_list->getNeighborMembers(center_cell, offset);
+            neighbours.insert(neighbours.end(), a.begin(), a.end());
+        };
+        std::for_each(cell_offsets.begin(), cell_offsets.end(), insert_neighbours);
+        return neighbours;
+    }
+};
+
+template <template <typename TMember, typename TIndex> class ContainerT>
+using FixedCellList = CellList::CellListSpatial<
+    CellList::CellListType<std::size_t, Grid::Grid3DFixed, CellList::CellListBase, ContainerT>>;
+template <template <typename TMember, typename TIndex> class ContainerT>
+using PeriodicCellList = CellList::CellListSpatial<
+    CellList::CellListType<std::size_t, Grid::Grid3DFixed, CellList::CellListBase, ContainerT>>;
+
+template <template <typename TMember, typename TIndex> class ContainerType>
+std::unique_ptr<ParticleCellListBase> createCellList(const Space& spc, const double gridsize) { //!< Cell list factory
+    std::unique_ptr<ParticleCellListBase> celllist;
+    const auto periodic_dimensions =
+        spc.geometry.asSimpleGeometry()->boundary_conditions.isPeriodic().cast<int>().sum();
+    switch (periodic_dimensions) {
+    case 3: // PBC in all directions
+        celllist = std::make_unique<ParticleCellList<PeriodicCellList<ContainerType>>>(spc, spc.geometry.getLength(),
+                                                                                       gridsize);
+        break;
+    case 0: // PBC in no directions
+        celllist =
+            std::make_unique<ParticleCellList<FixedCellList<ContainerType>>>(spc, spc.geometry.getLength(), gridsize);
+        break;
+    default:
+        faunus_logger->warn("Celllist unavailable for current geometry");
+    }
+    return celllist;
+}
 
 } // namespace CellList
 } // namespace Faunus

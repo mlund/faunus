@@ -261,17 +261,23 @@ class SlicedDensity : public Analysisbase {
  */
 class Density : public Analysisbase {
   private:
-    using Ttable = Equidistant2DTable<unsigned int, double>;
+    using Table = Equidistant2DTable<unsigned int, double>;
 
-    std::map<int, Ttable> atomswap_probability_density;
-    std::map<int, Ttable> atomic_group_probability_density;
-    std::map<int, Ttable> molecular_group_probability_density;
-    std::map<int, Average<double>> mean_molecule_density, mean_atom_density;
-    Average<double> mean_cubic_root_of_volume, mean_volume, mean_inverse_volume;
+    std::map<MoleculeData::index_type, Table> atomic_group_probability_density;
+    std::map<MoleculeData::index_type, Table> molecular_group_probability_density;
+    std::map<AtomData::index_type, Table> atomswap_probability_density;
+
+    std::map<AtomData::index_type, Average<double>> mean_atom_density;
+    std::map<MoleculeData::index_type, Average<double>> mean_molecule_density;
+
+    Average<double> mean_cubic_root_of_volume;
+    Average<double> mean_volume;
+    Average<double> mean_inverse_volume;
 
     double updateVolumeStatistics();
-    std::pair<std::map<int, int>, std::map<int, int>> countAtomsAndMolecules();
-    void writeTable(const std::string& atom_or_molecule_name, Ttable& table);
+    std::map<MoleculeData::index_type, int> countMolecules() const;
+    std::map<AtomData::index_type, int> countAtoms() const;
+    void writeTable(const std::string& atom_or_molecule_name, Table& table);
     void _sample() override;
     void _to_json(json& j) const override;
     void _to_disk() override;

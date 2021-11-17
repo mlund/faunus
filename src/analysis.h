@@ -256,34 +256,55 @@ class SlicedDensity : public Analysisbase {
     SlicedDensity(const json& j, Space& spc);
 };
 
-/**
- * @brief Analysis of particle densities
- */
-class Density : public Analysisbase {
-  private:
+class DensityBase : public Analysisbase {
+  protected:
     using Table = Equidistant2DTable<unsigned int, double>;
-
-    std::map<MoleculeData::index_type, Table> atomic_group_probability_density;
-    std::map<MoleculeData::index_type, Table> molecular_group_probability_density;
-    std::map<AtomData::index_type, Table> atomswap_probability_density;
-
-    std::map<AtomData::index_type, Average<double>> mean_atom_density;
-    std::map<MoleculeData::index_type, Average<double>> mean_molecule_density;
-
+    std::map<size_t, Average<double>> mean_density;
+    void _to_disk() override;
+    void _sample() override;
+    void _to_json(json &j) const override;
+    void writeTable(std::string_view name, Table& table);
+  private:
+    virtual std::map<size_t, int> count() const = 0;
+    std::map<MoleculeData::index_type, Table> probability_density;
     Average<double> mean_cubic_root_of_volume;
     Average<double> mean_volume;
     Average<double> mean_inverse_volume;
-
     double updateVolumeStatistics();
-    std::map<MoleculeData::index_type, int> countMolecules() const;
-    std::map<AtomData::index_type, int> countAtoms() const;
-    void writeTable(const std::string& atom_or_molecule_name, Table& table);
+
+  public:
+    template <typename Range>
+    DensityBase(Space& spc, const Range& range_of_ids, std::string_view name) : Analysisbase(spc, name) {
+        for (auto id : range_of_ids) {
+            probability_density[id].setResolution(1, 0);
+        }
+    }
+};
+
+/**
+ * @brief Analysis of molecular group densities
+ */
+class MoleculeDensity : public DensityBase {
+  private:
+    void _to_json(json& j) const override;
+    std::map<size_t, int> count() const override;
+  public:
+    MoleculeDensity(const json& j, Space& spc);
+};
+
+/**
+ * @brief Analysis of single atom densities
+ */
+class AtomDensity : public DensityBase {
+  private:
+    std::map<AtomData::index_type, Table> atomswap_probability_density;
     void _sample() override;
     void _to_json(json& j) const override;
     void _to_disk() override;
+    std::map<size_t, int> count() const override;
 
   public:
-    Density(const json&, Space&);
+    AtomDensity(const json& j, Space& spc);
 };
 
 /**

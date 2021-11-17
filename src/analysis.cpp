@@ -115,7 +115,13 @@ std::shared_ptr<Analysisbase> createAnalysis(const std::string& name, const json
         } else if (name == "atomdipdipcorr") {
             return std::make_shared<AtomDipDipCorr>(j, spc);
         } else if (name == "density") {
-            return std::make_shared<Density>(j, spc);
+            faunus_logger->warn("`density` is replaced by `molecule_density` and `atom_density`. "
+                                "Activating the latter...");
+            return std::make_shared<AtomDensity>(j, spc);
+        } else if (name == "molecule_density") {
+            return std::make_shared<MoleculeDensity>(j, spc);
+        } else if (name == "atom_density") {
+            return std::make_shared<AtomDensity>(j, spc);
         } else if (name == "electricpotential") {
             return std::make_shared<ElectricPotential>(j, spc);
         } else if (name == "chargefluctuations") {
@@ -691,20 +697,66 @@ WidomInsertion::WidomInsertion(const json& j, Space& spc, Energy::Hamiltonian& p
     from_json(j);
 }
 
-void Density::_sample() {
+double DensityBase::updateVolumeStatistics() {
+    const auto volume = spc.geometry.getVolume();
+    mean_volume += volume;
+    mean_cubic_root_of_volume += std::cbrt(volume);
+    mean_inverse_volume += 1.0 / volume;
+    return volume;
+}
+
+DensityBase::DensityBase(Space& spc, std::string_view name) : Analysisbase(spc, name) {
+    for (const auto& molecule : Faunus::molecules) {
+        group_probability_density[molecule.id()].setResolution(1, 0);
+    }
+}
+void DensityBase::_sample() {
     const auto volume = updateVolumeStatistics();
-    for (auto [atomid, number_of_atoms] : countAtoms()) {
-        mean_atom_density[atomid] += number_of_atoms / volume;
+    for (auto [id, number] : count()) {
+        mean_density[id] += number / volume;
+        group_probability_density.at(id)(number)++;
     }
-    for (auto [molid, number_of_molecules] : countMolecules()) {
-        mean_molecule_density[molid] += number_of_molecules / volume;
-        molecular_group_probability_density[molid](number_of_molecules)++;
+}
+
+void DensityBase::_to_json(json& j) const {
+    j["<V>"] = mean_volume.avg();
+    j["<∛V>"] = mean_cubic_root_of_volume.avg();
+    j["∛<V>"] = std::cbrt(mean_volume.avg());
+    j["<1/V>"] = mean_inverse_volume.avg();
+}
+
+/**
+ * Write histograms to disk
+ */
+void DensityBase::writeTable(std::string_view name, Table& table) {
+    table.stream_decorator = [&table](auto& stream, int N, double counts) {
+        if (counts > 0) {
+            stream << fmt::format("{} {} {:.3f}\n", N, counts, counts / table.sumy());
+        }
+    };
+    const auto filename = fmt::format("{}rho-{}.dat", MPI::prefix, name);
+    if (std::ofstream file(filename); file) {
+        file << "# N counts probability\n" << table;
+    } else {
+        throw std::runtime_error("could not writeKeyValuePairs "s + filename);
     }
+}
+
+void DensityBase::_to_disk() {
+    for (auto [id, table] : probability_density) { // atomic molecules
+        if (!table.empty()) {
+            writeTable(Faunus::molecules.at(id).name, table);
+        }
+    }
+}
+
+void AtomDensity::_sample() {
+    DensityBase::_sample();
     for (const auto& reaction : reactions) { // in case of reactions involving atoms (swap moves)
         const auto reactive_atomic_species = reaction.getReactantsAndProducts().first;
         for (auto atomid : reactive_atomic_species) {
             auto atomlist = spc.findAtoms(atomid);
-            atomswap_probability_density[atomid](range_size(atomlist))++;
+            atomswap_probability_density.at(atomid)(range_size(atomlist))++;
         }
     }
 }
@@ -712,9 +764,9 @@ void Density::_sample() {
 /**
  * @brief Counts atoms in atomic groups
  */
-std::map<AtomData::index_type, int> Density::countAtoms() const {
+std::map<size_t, int> AtomDensity::count() const {
     using namespace ranges::cpp20;
-    std::map<AtomData::index_type, int> atom_count;
+    std::map<size_t, int> atom_count;
     //for_each(Faunus::atoms, [&](auto& atomdata) { atom_count[atomdata.id()] = 0; });
 
     auto particle_ids_in_atomic_groups =
@@ -723,12 +775,44 @@ std::map<AtomData::index_type, int> Density::countAtoms() const {
     for_each(particle_ids_in_atomic_groups, [&](auto id) { atom_count[id]++; });
     return atom_count;
 }
+
+AtomDensity::AtomDensity(const json& j, Space& spc) : DensityBase(spc, "atom_density") {
+    from_json(j);
+    for (const auto& reaction : Faunus::reactions) { // in case of reactions involving atoms (swap moves)
+        const auto reactive_atomic_species = reaction.getReactantsAndProducts().first;
+        for (auto atomid : reactive_atomic_species) {
+            atomswap_probability_density[atomid].setResolution(1, 0);
+        }
+    }
+}
+
+void AtomDensity::_to_json(json& j) const {
+    DensityBase::_to_json(j);
+    auto& j_atomic = j["atomic"] = json::object();
+    for (auto [atomid, density] : mean_density) {
+        if (!density.empty() && density.avg() > pc::epsilon_dbl) {
+            j_atomic[Faunus::atoms.at(atomid).name] = json({{"c/M", density.avg() / 1.0_molar}});
+        }
+    }
+    roundJSON(j, 4);
+}
+
+void AtomDensity::_to_disk() {
+    DensityBase::_to_disk();
+    for (const auto& reaction : Faunus::reactions) {
+        const auto reactive_atomic_species = reaction.getReactantsAndProducts().first;
+        for (auto atomid : reactive_atomic_species) {
+            writeTable(Faunus::atoms.at(atomid).name, atomswap_probability_density.at(atomid));
+        }
+    }
+}
+
 /**
  * @brief Counts active, molecular groups
  */
-std::map<MoleculeData::index_type, int> Density::countMolecules() const {
+std::map<size_t, int> MoleculeDensity::count() const {
     using namespace ranges::cpp20;
-    std::map<MoleculeData::index_type, int> molecular_group_count;
+    std::map<size_t, int> molecular_group_count;
 
     // ensure that also inactive groups are registered (as zero)
     for_each(Faunus::molecules | views::filter(&MoleculeData::isMolecular),
@@ -741,29 +825,10 @@ std::map<MoleculeData::index_type, int> Density::countMolecules() const {
     return molecular_group_count;
 }
 
-double Density::updateVolumeStatistics() {
-    const auto volume = spc.geometry.getVolume();
-    mean_volume += volume;
-    mean_cubic_root_of_volume += std::cbrt(volume);
-    mean_inverse_volume += 1.0 / volume;
-    return volume;
-}
-
-void Density::_to_json(json& j) const {
-    j["<V>"] = mean_volume.avg();
-    j["<∛V>"] = mean_cubic_root_of_volume.avg();
-    j["∛<V>"] = std::cbrt(mean_volume.avg());
-    j["<1/V>"] = mean_inverse_volume.avg();
-
-    auto& j_atomic = j["atomic"] = json::object();
+void MoleculeDensity::_to_json(json& j) const {
+    DensityBase::_to_json(j);
     auto& j_molecular = j["molecular"] = json::object();
-
-    for (auto [atomid, density] : mean_atom_density) {
-        if (!density.empty() && density.avg() > pc::epsilon_dbl) {
-            j_atomic[Faunus::atoms.at(atomid).name] = json({{"c/M", density.avg() / 1.0_molar}});
-        }
-    }
-    for (auto [molid, density] : mean_molecule_density) {
+    for (auto [molid, density] : mean_density) {
         if (!density.empty() && density.avg() > pc::epsilon_dbl) {
             j_molecular[Faunus::molecules.at(molid).name] = json({{"c/M", density.avg() / 1.0_molar}});
         }
@@ -771,54 +836,7 @@ void Density::_to_json(json& j) const {
     roundJSON(j, 4);
 }
 
-Density::Density(const json& j, Space& spc) : Analysisbase(spc, "density") {
-    from_json(j);
-    for (const auto& molecule : Faunus::molecules) {
-        if (molecule.atomic) {
-            atomic_group_probability_density[molecule.id()].setResolution(1, 0);
-        } else {
-            molecular_group_probability_density[molecule.id()].setResolution(1, 0);
-        }
-    }
-    for (const auto& reaction : Faunus::reactions) { // in case of reactions involving atoms (swap moves)
-        const auto reactive_atomic_species = reaction.getReactantsAndProducts().first;
-        for (auto atomid : reactive_atomic_species) {
-            atomswap_probability_density[atomid].setResolution(1, 0);
-        }
-    }
-}
-
-/**
- * Write histograms to disk
- */
-void Density::writeTable(const std::string& atom_or_molecule_name, Table& table) {
-    table.stream_decorator = [&table](auto& stream, int N, double counts) {
-        if (counts > 0) {
-            stream << fmt::format("{} {} {:.3f}\n", N, counts, counts / table.sumy());
-        }
-    };
-    const auto filename = fmt::format("{}rho-{}.dat", MPI::prefix, atom_or_molecule_name);
-    if (std::ofstream file(filename); file) {
-        file << "# N counts probability\n" << table;
-    } else {
-        throw std::runtime_error("could not writeKeyValuePairs "s + filename);
-    }
-}
-
-void Density::_to_disk() {
-    for (auto [molid, table] : atomic_group_probability_density) { // atomic molecules
-        writeTable(Faunus::molecules.at(molid).name, table);
-    }
-    for (auto [molid, table] : molecular_group_probability_density) { // polyatomic molecules
-        writeTable(Faunus::molecules.at(molid).name, table);
-    }
-    for (const auto& reaction : Faunus::reactions) {
-        const auto reactive_atomic_species = reaction.getReactantsAndProducts().first;
-        for (auto atomid : reactive_atomic_species) {
-            writeTable(Faunus::atoms.at(atomid).name, atomswap_probability_density[atomid]);
-        }
-    }
-}
+MoleculeDensity::MoleculeDensity(const json& j, Space& spc) : DensityBase(spc, "molecule_density") { from_json(j); }
 
 void SanityCheck::_sample() {
     try {

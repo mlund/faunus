@@ -119,8 +119,9 @@ class Space {
         Geometry::VolumeMethod method = Geometry::VolumeMethod::ISOTROPIC); //!< Scales atoms, molecules, container
 
     std::unordered_map<MoleculeData::index_type, std::unordered_set<size_t>> molecule_type2active_groups;
-    GroupVector::iterator randomMolecule(MoleculeData::index_type molid, Random& rand,
-                                         Selection selection = Selection::ACTIVE); //!< Random group matching molid
+    std::vector<std::reference_wrapper<Group>>
+    randomMolecule(MoleculeData::index_type molid, size_t number_of_samples, Random& rand,
+                   Selection selection = Selection::ACTIVE); //!< Random group matching molid
 
     json info();
 

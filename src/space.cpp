@@ -5,6 +5,9 @@
 #include "aux/eigensupport.h"
 #include <range/v3/algorithm/for_each.hpp>
 #include <range/v3/algorithm/transform.hpp>
+#include <range/v3/view/sample.hpp>
+#include <range/v3/range/conversion.hpp>
+
 #include <memory>
 #include <stdexcept>
 
@@ -262,13 +265,28 @@ json Space::info() {
     return j;
 }
 
-Space::GroupVector::iterator Space::randomMolecule(MoleculeData::index_type molid, Random& rand,
-                                                   Space::Selection selection) {
-    auto found_molecules = findMolecules(molid, selection);
-    if (ranges::cpp20::empty(found_molecules)) {
-        return groups.end();
-    }
-    return groups.begin() + (&*rand.sample(found_molecules.begin(), found_molecules.end()) - &*groups.begin());
+class Tracker {
+  public:
+    using id_type = size_t;
+    using map_type = std::map<id_type, std::set<int>>;
+  private:
+    map_type active, inactive;
+  public:
+    template <typename Range> void activate(id_type id, const Range&){};
+    template <typename Range> void deactivate(id_type, const Range&){};
+    size_t countActive(id_type);
+    std::set<int>& getActive(id_type);
+    const std::set<int>& getActive(id_type) const;
+};
+
+std::vector<std::reference_wrapper<Group>> Space::randomMolecule(MoleculeData::index_type molid,
+                                                                 size_t number_of_samples, Random& rand,
+                                                                 Space::Selection selection) {
+    const auto& active_groupindices = molecule_type2active_groups[molid];
+    return active_groupindices | ranges::views::sample(number_of_samples) |
+           ranges::cpp20::views::transform(
+               [&](auto index) -> std::reference_wrapper<Group> { return groups.at(index); }) |
+           ranges::to<std::vector<std::reference_wrapper<Group>>>;
 }
 
 const std::map<MoleculeData::index_type, std::size_t>& Space::getImplicitReservoir() const {

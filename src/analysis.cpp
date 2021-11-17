@@ -705,16 +705,11 @@ double DensityBase::updateVolumeStatistics() {
     return volume;
 }
 
-DensityBase::DensityBase(Space& spc, std::string_view name) : Analysisbase(spc, name) {
-    for (const auto& molecule : Faunus::molecules) {
-        group_probability_density[molecule.id()].setResolution(1, 0);
-    }
-}
 void DensityBase::_sample() {
     const auto volume = updateVolumeStatistics();
     for (auto [id, number] : count()) {
         mean_density[id] += number / volume;
-        group_probability_density.at(id)(number)++;
+        probability_density.at(id)(number)++;
     }
 }
 
@@ -753,7 +748,7 @@ void DensityBase::_to_disk() {
 void AtomDensity::_sample() {
     DensityBase::_sample();
     for (const auto& reaction : reactions) { // in case of reactions involving atoms (swap moves)
-        const auto reactive_atomic_species = reaction.getReactantsAndProducts().first;
+        const auto& reactive_atomic_species = reaction.getReactantsAndProducts().first;
         for (auto atomid : reactive_atomic_species) {
             auto atomlist = spc.findAtoms(atomid);
             atomswap_probability_density.at(atomid)(range_size(atomlist))++;
@@ -776,7 +771,7 @@ std::map<size_t, int> AtomDensity::count() const {
     return atom_count;
 }
 
-AtomDensity::AtomDensity(const json& j, Space& spc) : DensityBase(spc, "atom_density") {
+AtomDensity::AtomDensity(const json& j, Space& spc) : DensityBase(spc, Faunus::atoms, "atom_density") {
     from_json(j);
     for (const auto& reaction : Faunus::reactions) { // in case of reactions involving atoms (swap moves)
         const auto reactive_atomic_species = reaction.getReactantsAndProducts().first;
@@ -836,7 +831,10 @@ void MoleculeDensity::_to_json(json& j) const {
     roundJSON(j, 4);
 }
 
-MoleculeDensity::MoleculeDensity(const json& j, Space& spc) : DensityBase(spc, "molecule_density") { from_json(j); }
+MoleculeDensity::MoleculeDensity(const json& j, Space& spc)
+    : DensityBase(spc, Faunus::molecules | ranges::cpp20::views::transform(&MoleculeData::id), "molecule_density") {
+    from_json(j);
+}
 
 void SanityCheck::_sample() {
     try {

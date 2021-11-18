@@ -732,7 +732,7 @@ void DensityBase::_to_json(json& j) const {
  * Write histograms to disk
  */
 void DensityBase::writeTable(std::string_view name, Table& table) {
-    if (table.empty()) {
+    if (table.size() <= 1) { // do not save non-existent or non-fluctuating groups
         return;
     }
     table.stream_decorator = [&table](auto& stream, int N, double counts) {

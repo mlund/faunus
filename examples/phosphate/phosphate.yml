@@ -1,14 +1,28 @@
 #!/usr/bin/env yason.py
-energy:
-    - nonbonded_splined:
-        default:
-            - wca: {mixing: LB}
+#
+# Protonation state of o-phosphate at constant pH
+#
+#   The exact mole fractions for PO43- to H3PO4 at pH 4 are:
+#
+#   xhi = [5.68e-17, 2.66e-6, 0.431, 0.568]
+#   (see e.g. doi:10.1021/ac950430l)
+#
+#   In this simulation we have 100 atoms in a cubic box
+#   of 100 x 100 x 100 angstrom --> c = 0.166054 mol/l
+#
+#   Expected phophate species concentrations, xhi_i x c, are:
+#
+#   c_i = [9.43e-18, 4.42e-07, 7.16e-02, 9.43e-02] mol/l
+#
+#   Check output!
+#
+energy: []
 atomlist:
     - h3po4 : {eps: 1, sigma: 1, q: 0}
     - h2po4 : {eps: 1, sigma: 1, q: -1}
     - hpo4 : {eps: 1, sigma: 1., q: -2}
     - po4 : {eps: 1, sigma: 1, q: -3}
-    - H : {eps: 1, sigma: 1, q: 1, activity: 0.01, implicit: True}
+    - H : {eps: 1, sigma: 1, q: 1, activity: 0.0001, implicit: True}
 moleculelist:
     - H3PO4: {atoms: [h3po4], atomic: true}
     - H2PO4: {atoms: [h2po4], atomic: true}
@@ -24,9 +38,9 @@ moves:
     - rcmc: {repeat: 1}
 analysis:
     - savestate: {file: state.json}
-    - density: {nstep: 10, nskip: 1000}
+    - atom_density: {nstep: 1, nskip: 1000}
     - reactioncoordinate: {file: Q.dat, nstep: 100, type: system, property: Q, nskip: 1000}
-    - sanity: {nstep: 100}
+    - sanity: {nstep: 1000}
 mcloop: {macro: 10, micro: 60000}
 geometry: {type: cuboid, length: 100}
 temperature: 300

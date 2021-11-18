@@ -718,12 +718,23 @@ void DensityBase::_to_json(json& j) const {
     j["<∛V>"] = mean_cubic_root_of_volume.avg();
     j["∛<V>"] = std::cbrt(mean_volume.avg());
     j["<1/V>"] = mean_inverse_volume.avg();
+
+    auto& densities = j["densities"] = json::object();
+    for (auto [id, density] : mean_density) {
+        if (!density.empty() && density.avg() > pc::epsilon_dbl) {
+            densities[std::string{names.at(id)}] = json({{"c/M", density.avg() / 1.0_molar}});
+        }
+    }
+    roundJSON(j, 4);
 }
 
 /**
  * Write histograms to disk
  */
 void DensityBase::writeTable(std::string_view name, Table& table) {
+    if (table.empty()) {
+        return;
+    }
     table.stream_decorator = [&table](auto& stream, int N, double counts) {
         if (counts > 0) {
             stream << fmt::format("{} {} {:.3f}\n", N, counts, counts / table.sumy());
@@ -739,9 +750,7 @@ void DensityBase::writeTable(std::string_view name, Table& table) {
 
 void DensityBase::_to_disk() {
     for (auto [id, table] : probability_density) { // atomic molecules
-        if (!table.empty()) {
-            writeTable(Faunus::molecules.at(id).name, table);
-        }
+        writeTable(names.at(id), table);
     }
 }
 
@@ -761,14 +770,21 @@ void AtomDensity::_sample() {
  */
 std::map<size_t, int> AtomDensity::count() const {
     using namespace ranges::cpp20;
-    std::map<size_t, int> atom_count;
-    //for_each(Faunus::atoms, [&](auto& atomdata) { atom_count[atomdata.id()] = 0; });
 
+    // All ids incl. inactive are counted; std::vector ensures constant lookup (index = id)
+    std::vector<int> atom_count(names.size(), 0);
+
+    // Count number of active atoms in atomic groups
     auto particle_ids_in_atomic_groups =
         spc.groups | views::filter(&Group::isAtomic) | views::join | views::transform(&Particle::id);
-    for_each(particle_ids_in_atomic_groups, [&](auto id) { atom_count[id] = 0; });
-    for_each(particle_ids_in_atomic_groups, [&](auto id) { atom_count[id]++; });
-    return atom_count;
+    for_each(particle_ids_in_atomic_groups, [&](auto id) { atom_count.at(id)++; });
+    
+    // Copy vector --> map
+    auto id = 0U;
+    std::map<size_t, int> map;
+    for_each(atom_count, [&id, &map](auto count) { map.emplace_hint(map.end(), id++, count); });
+    assert(map.size() == atom_count.size());
+    return map;
 }
 
 AtomDensity::AtomDensity(const json& j, Space& spc) : DensityBase(spc, Faunus::atoms, "atom_density") {
@@ -781,23 +797,12 @@ AtomDensity::AtomDensity(const json& j, Space& spc) : DensityBase(spc, Faunus::a
     }
 }
 
-void AtomDensity::_to_json(json& j) const {
-    DensityBase::_to_json(j);
-    auto& j_atomic = j["atomic"] = json::object();
-    for (auto [atomid, density] : mean_density) {
-        if (!density.empty() && density.avg() > pc::epsilon_dbl) {
-            j_atomic[Faunus::atoms.at(atomid).name] = json({{"c/M", density.avg() / 1.0_molar}});
-        }
-    }
-    roundJSON(j, 4);
-}
-
 void AtomDensity::_to_disk() {
     DensityBase::_to_disk();
     for (const auto& reaction : Faunus::reactions) {
         const auto reactive_atomic_species = reaction.getReactantsAndProducts().first;
         for (auto atomid : reactive_atomic_species) {
-            writeTable(Faunus::atoms.at(atomid).name, atomswap_probability_density.at(atomid));
+            writeTable(names.at(atomid), atomswap_probability_density.at(atomid));
         }
     }
 }
@@ -820,19 +825,7 @@ std::map<size_t, int> MoleculeDensity::count() const {
     return molecular_group_count;
 }
 
-void MoleculeDensity::_to_json(json& j) const {
-    DensityBase::_to_json(j);
-    auto& j_molecular = j["molecular"] = json::object();
-    for (auto [molid, density] : mean_density) {
-        if (!density.empty() && density.avg() > pc::epsilon_dbl) {
-            j_molecular[Faunus::molecules.at(molid).name] = json({{"c/M", density.avg() / 1.0_molar}});
-        }
-    }
-    roundJSON(j, 4);
-}
-
-MoleculeDensity::MoleculeDensity(const json& j, Space& spc)
-    : DensityBase(spc, Faunus::molecules | ranges::cpp20::views::transform(&MoleculeData::id), "molecule_density") {
+MoleculeDensity::MoleculeDensity(const json& j, Space& spc) : DensityBase(spc, Faunus::molecules, "molecule_density") {
     from_json(j);
 }
 

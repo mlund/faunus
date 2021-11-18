@@ -260,6 +260,7 @@ class DensityBase : public Analysisbase {
   protected:
     using Table = Equidistant2DTable<unsigned int, double>;
     std::map<size_t, Average<double>> mean_density;
+    std::map<size_t, std::string_view> names; // id <-> name database
     void _to_disk() override;
     void _sample() override;
     void _to_json(json &j) const override;
@@ -274,9 +275,10 @@ class DensityBase : public Analysisbase {
 
   public:
     template <typename Range>
-    DensityBase(Space& spc, const Range& range_of_ids, std::string_view name) : Analysisbase(spc, name) {
-        for (auto id : range_of_ids) {
-            probability_density[id].setResolution(1, 0);
+    DensityBase(Space& spc, const Range& atoms_or_molecules, std::string_view name) : Analysisbase(spc, name) {
+        for (const auto& data : atoms_or_molecules) {
+            names[data.id()] = data.name;
+            probability_density[data.id()].setResolution(1, 0);
         }
     }
 };
@@ -286,7 +288,6 @@ class DensityBase : public Analysisbase {
  */
 class MoleculeDensity : public DensityBase {
   private:
-    void _to_json(json& j) const override;
     std::map<size_t, int> count() const override;
   public:
     MoleculeDensity(const json& j, Space& spc);
@@ -299,7 +300,6 @@ class AtomDensity : public DensityBase {
   private:
     std::map<AtomData::index_type, Table> atomswap_probability_density;
     void _sample() override;
-    void _to_json(json& j) const override;
     void _to_disk() override;
     std::map<size_t, int> count() const override;
 

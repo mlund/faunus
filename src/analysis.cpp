@@ -783,7 +783,6 @@ std::map<size_t, int> AtomDensity::count() const {
     auto id = 0U;
     std::map<size_t, int> map;
     for_each(atom_count, [&id, &map](auto count) { map.emplace_hint(map.end(), id++, count); });
-    assert(map.size() == atom_count.size());
     return map;
 }
 

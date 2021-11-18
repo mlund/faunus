@@ -256,6 +256,9 @@ class SlicedDensity : public Analysisbase {
     SlicedDensity(const json& j, Space& spc);
 };
 
+/**
+ * Abstract base class for analysing atomic and molecular densities
+ */
 class DensityBase : public Analysisbase {
   protected:
     using Table = Equidistant2DTable<unsigned int, double>;

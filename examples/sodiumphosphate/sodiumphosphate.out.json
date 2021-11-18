@@ -223,9 +223,5 @@
     }
   ],
   "relative drift": 0.0,
-  "simulation time": {
-    "in minutes": 0.5333333333333333,
-    "in seconds": 32
-  },
   "temperature": 300.0
 }

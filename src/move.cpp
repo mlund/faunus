@@ -10,7 +10,6 @@
 #include "aux/eigensupport.h"
 #include "spdlog/spdlog.h"
 #include <range/v3/view/counted.hpp>
-#include <range/v3/view/sample.hpp>
 
 namespace Faunus::Move {
 
@@ -995,17 +994,18 @@ void TranslateRotate::_from_json(const json &j) {
  * @todo `mollist` scales linearly w. system size -- implement look-up-table in Space?
  */
 std::optional<std::reference_wrapper<Space::GroupType>> TranslateRotate::findRandomMolecule() const {
-        const auto& active_groupindices = spc.molecule_type2active_groups[molid];
-        if( not active_groupindices.empty() ) {
-            std::vector<std::reference_wrapper<Group>> groups;
-            auto indices = active_groupindices | ranges::views::sample(1);
-            auto g = indice | ranges::views::sample(1) | ranges::cpp20::views::transform([&](auto index) -> std::reference_wrapper<Group> {
-                               return spc.groups.at(index);
-                           });
-            groups = g | ranges::to<std::vector<std::reference_wrapper<Group>>>;
-            //auto group_index_it = slump.sample(active_groupindices.begin(), active_groupindices.end());
-            return spc.groups[*indices.begin()];
-        }
+    const auto& active_group_indices = spc.molecule_type2active_groups[molid];
+    // const auto& active_group_indices = spc.getActiveMolecules(molid);
+    if (not active_group_indices.empty()) {
+        auto group_index_it = slump.sample(active_group_indices.begin(), active_group_indices.end());
+        return spc.groups[*group_index_it];
+    }
+
+    /*       auto g = indices | ranges::cpp20::views::transform([&](auto index) -> std::reference_wrapper<Group> {
+                        return spc.groups.at(index);
+                    });
+           groups = g | ranges::to<std::vector<std::reference_wrapper<Group>>>;*/
+    // auto group_index_it = slump.sample(active_groupindices.begin(), active_groupindices.end());
 
     /*if (auto mollist = spc.findMolecules(molid, Space::Selection::ACTIVE); not ranges::cpp20::empty(mollist)) {
         if (auto group_it = slump.sample(mollist.begin(), mollist.end()); not group_it->empty()) {

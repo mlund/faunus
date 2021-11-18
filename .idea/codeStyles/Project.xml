@@ -20,9 +20,6 @@
         <rule entity="LOCAL_VARIABLE" visibility="ANY" specifier="ANY" prefix="" style="SNAKE_CASE" suffix="" />
       </rules>
     </Objective-C-extensions>
-    <clangFormatSettings>
-      <option name="ENABLED" value="true" />
-    </clangFormatSettings>
     <codeStyleSettings language="yaml">
       <indentOptions>
         <option name="INDENT_SIZE" value="4" />

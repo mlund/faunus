@@ -5,6 +5,9 @@ add_compile_options($<$<CONFIG:Debug>:-O0>)
 # in Release mode, add aggressive optimizations
 add_compile_options($<$<CONFIG:Release>:-Ofast>)
 add_compile_options($<$<CONFIG:Release>:-fno-finite-math-only>)
+#[[add_compile_options($<$<CONFIG:Release>:-fsave-optimization-record=yaml>)
+add_compile_options($<$<CONFIG:Release>:-foptimization-record-file=/home/jakub/Opt.yaml>)]]
+
 
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)")
     add_compile_options($<$<CONFIG:Release>:-march=native>)

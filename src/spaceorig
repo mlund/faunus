@@ -12,29 +12,28 @@ class Tracker {
   public:
     using id_type = size_t;
     using map_type = std::unordered_map<id_type, std::unordered_set<size_t>>;
-
   private:
     map_type active, inactive;
-
   public:
-    // template <typename Range> void activate(const id_type id, const Range&);
-    template <typename Range> void deactivate(const id_type id, const Range&);
-    void activate(const id_type id, size_t index);
-    void deactivate(const id_type id, const size_t);
-    void insert(const id_type id, const size_t);
-    template <typename Range> void insert(const id_type id, const Range& range) {
+    template <typename Range> void activate(id_type id, const Range&);
+    template <typename Range> void deactivate(id_type id, const Range&);
+    void activate(id_type id, const size_t);
+    void deactivate(id_type id, const size_t);
+    void insert(id_type id,  const size_t);
+    template <typename Range> void insert(id_type id, const Range& range) {
         std::for_each(range.begin(), range.end(), [&](const auto index) { insert(id, index); });
     }
-    size_t countActive(const id_type) const;
-    std::unordered_set<size_t>& getActive(const id_type);
-    const std::unordered_set<size_t>& getActive(const id_type id) const;
-    std::unordered_set<size_t>& getInactive(const id_type);
-    const std::unordered_set<size_t>& getInactive(const id_type) const;
+    size_t countActive(id_type) const;
+    std::unordered_set<size_t>& getActive(id_type);
+    inline const std::unordered_set<size_t>& getActive(id_type id) const { return active.at(id); }
+    std::unordered_set<size_t>& getInactive(id_type);
+    const std::unordered_set<size_t>& getInactive(id_type) const;
 
-    void init(const id_type id) {
+    void init(id_type id){
         active[id] = {};
         inactive[id] = {};
     }
+
 };
 
 /**
@@ -122,8 +121,8 @@ class Space {
      */
     std::map<MoleculeData::index_type, std::size_t> implicit_reservoir;
 
-    std::unique_ptr<Tracker> atom_tracker;
-    std::unique_ptr<Tracker> molecule_tracker;
+    Tracker atom_tracker;
+    Tracker molecule_tracker;
 
     std::vector<ChangeTrigger> changeTriggers; //!< Call when a Change object is applied (unused)
     std::vector<SyncTrigger> onSyncTriggers;   //!< Call when two Space objects are synched (unused)
@@ -151,12 +150,12 @@ class Space {
         Geometry::VolumeMethod method = Geometry::VolumeMethod::ISOTROPIC); //!< Scales atoms, molecules, container
 
     std::unordered_map<MoleculeData::index_type, std::unordered_set<size_t>> molecule_type2active_groups;
-    /*    std::vector<std::reference_wrapper<Group>>
-        randomMolecules(MoleculeData::index_type molid, Random& rand, size_t number_of_samples = 1,
-                       Selection selection = Selection::ACTIVE); //!< Random group matching molid*/
+/*    std::vector<std::reference_wrapper<Group>>
+    randomMolecules(MoleculeData::index_type molid, Random& rand, size_t number_of_samples = 1,
+                   Selection selection = Selection::ACTIVE); //!< Random group matching molid*/
 
     Space::GroupVector::iterator randomMolecule(MoleculeData::index_type molid, Random& rand,
-                                                Space::Selection selection = Selection::ACTIVE);
+                                                       Space::Selection selection = Selection::ACTIVE );
 
     json info();
 
@@ -229,16 +228,24 @@ class Space {
     inline auto indexOf(const GroupType& group) const {
         return static_cast<size_t>(std::addressof(group) - std::addressof(groups.at(0)));
     }
+    void activate(const GroupType& group ) {
+        molecule_tracker.activate(group.id, indexOf(group));
+        std::for_each(group.begin(), group.end(), [this](const auto& particle){
+                                     activate(particle);});
+    }
+    void deactivate(const GroupType& group ) {
+        molecule_tracker.deactivate(group.id, indexOf(group));
+        std::for_each(group.begin(), group.end(), [this](const auto& particle){
+            deactivate(particle);});
+    }
+    void activate(const Particle& particle ) {atom_tracker.activate(particle.id, indexOf(particle)); }
+    void deactivate(const Particle& particle ) {atom_tracker.deactivate(particle.id, indexOf(particle)); }
 
-    void activate2(const GroupType& group);
-    void deactivate2(const GroupType& group);
-    void activateParticle(const Particle& particle);
-    void deactivateParticle(const Particle& particle);
 
-    // Tracker& getMolecularTracker() { return molecule_tracker;}
-    const auto& getActiveMolecules(MoleculeData::index_type molid) const;
+    Tracker& getMolecularTracker() { return molecule_tracker;}
+    inline const auto& getActiveMolecules(MoleculeData::index_type molid) const { return molecule_tracker.getActive(molid); }
 
-    const auto& getInactiveMolecules(MoleculeData::index_type molid) const;
+    const auto& getInactiveMolecules(MoleculeData::index_type molid) const { return molecule_tracker.getInactive(molid); }
 
     /**
      * @brief Finds all groups of type `molid` (complexity: order N)
@@ -310,14 +317,12 @@ class Space {
 
     void sync(const Space& other, const Change& change); //!< Copy differing data from other Space using Change object
 
-    void initTrackers() {
-        molecule_tracker = std::make_unique<Tracker>();
-        atom_tracker = std::make_unique<Tracker>();
+    void initTrackers(){
         for (const auto molecule : Faunus::molecules) {
-            molecule_tracker->init(molecule.id());
+            molecule_tracker.init(molecule.id());
         }
         for (const auto atom : Faunus::atoms) {
-            atom_tracker->init(atom.id());
+            atom_tracker.init(atom.id());
         }
     }
 

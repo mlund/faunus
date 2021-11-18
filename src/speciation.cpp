@@ -319,7 +319,7 @@ void SpeciationMove::activateAllProducts(Change &change) {
                     if (auto change_data = activateMolecularGroup(target);
                         not change_data.relative_atom_indices.empty()) {
                         change.groups.push_back(change_data); // Add to list of moved groups
-                        spc.molecule_type2active_groups.at(molid).insert(change_data.group_index);
+                        // spc.activate(target);
                     } else {
                         assert(false); // we should never reach here
                     }
@@ -395,7 +395,7 @@ void SpeciationMove::deactivateAllReactants(Change &change) {
                     if (auto change_data = deactivateMolecularGroup(target);
                         not change_data.relative_atom_indices.empty()) {
                         change.groups.push_back(change_data); // add to list of moved groups
-                        spc.molecule_type2active_groups.at(molid).erase(change_data.group_index);
+                        // spc.deactivate(target);
                     } else {
                         assert(false); // we should never reach here
                     }

@@ -28,18 +28,28 @@ points, and the relative run-time spent on the analysis.
 
 ## Density
 
-### Bulk Density
+### Atomic Density
 
-`density`   |  Description
------------ |  -------------------------------------------
-`nstep=0`   |  Interval between samples
+`atom_density` | Description
+-------------- | ------------------------
+`nstep=0`      | Interval between samples
 
-This calculates the average density, $\langle N\_i/V \rangle$ of molecules and atoms
+This calculates the average density, $\langle N\_i/V \rangle$ of atoms in atomic groups
 which may fluctuate in _e.g._ the isobaric ensemble or the Grand Canonical ensemble.
 For atomic groups, densities of individual atom types are reported.
 The analysis also files probability density distributions of atomic and polyatomic molecules
 as well as of atoms involved in id transformations, _e.g._, acid-base equilibria.
 The filename format is `rho-@name.dat`.
+
+### Molecule Density
+
+`molecule_density` | Description
+------------------ | ------------------------
+`nstep=0`          | Interval between samples
+
+This calculates the average density, $\langle N\_i/V \rangle$ of molecular groups
+which may fluctuate in _e.g._ the isobaric ensemble or the Grand Canonical ensemble.
+
 
 ### Density Profile
 

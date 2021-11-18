@@ -302,6 +302,8 @@ class InsertMoleculesInSpace {
     //!< Aggregated version of the above, called on each item in json array
     static void insertItem(const std::string &molname, const json &properties, Space &spc);
 
+    static void reserveMemory(const json& j, Space& spc);
+
   public:
     static void insertMolecules(const json& j, Space& spc);
 }; // end of insertMolecules class

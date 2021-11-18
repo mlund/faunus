@@ -782,12 +782,44 @@ void InsertMoleculesInSpace::insertMolecules(const json &j, Space &spc) {
         throw ConfigurationError("molecules to insert must be an array");
     }
     spc.clear();
+    reserveMemory(j, spc);
+
     for (const auto& item : j) { // loop over array of molecules
         const auto& [molecule_name, properties] = jsonSingleItem(item);
         try {
             insertItem(molecule_name, properties, spc);
         } catch (std::exception& e) { throw ConfigurationError("error inserting {}: {}", molecule_name, e.what()); }
     }
+    faunus_logger->trace("particles inserted = {}", spc.particles.size());
+    faunus_logger->trace("groups inserted = {}", spc.groups.size());
+}
+
+/**
+ * Allocate space for particles and groups to be inserted
+ */
+void InsertMoleculesInSpace::reserveMemory(const json& j, Space& spc) {
+    auto required_number_of_particles = spc.particles.size();
+    auto required_number_of_groups = spc.groups.size();
+
+    for (const auto& item : j) { // loop over array of molecules
+        const auto& [molecule_name, properties] = jsonSingleItem(item);
+        const auto& moldata = findMoleculeByName(molecule_name);
+        if (moldata.isImplicit()) {
+            continue;
+        }
+        const auto num_molecules = getNumberOfMolecules(properties, spc.geometry.getVolume(), molecule_name);
+        required_number_of_particles += num_molecules * moldata.atoms.size();
+        if (moldata.isAtomic()) {
+            required_number_of_groups++;
+        } else {
+            required_number_of_groups += num_molecules;
+        }
+    }
+
+    spc.particles.reserve(required_number_of_particles);
+    spc.groups.reserve(required_number_of_groups);
+    faunus_logger->trace("space particle capacity = {}", spc.particles.capacity());
+    faunus_logger->trace("space groups capacity = {}", spc.groups.capacity());
 }
 
 /**

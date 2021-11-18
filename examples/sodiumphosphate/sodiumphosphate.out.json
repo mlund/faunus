@@ -1,203 +1,231 @@
 {
-    "analysis": [
-        {
-            "savestate": {
-                "file": "state.json"
-            }
-        },
-        {
-            "atom_density": {
-                "∛⟨V⟩": 100.0,
-                "⟨1/V⟩": 1e-06,
-                "⟨V⟩": 1000000.0,
-                "⟨∛V⟩": 100.0,
-                "densities": {
-                    "cl": {
-                        "c/M": 0.4652881884551666
-                    },
-                    "h2po4": {
-                        "c/M": 0.06860434115586783
-                    },
-                    "h3po4": {
-                        "c/M": 0.09744925341135122
-                    },
-                    "hpo4": {
-                        "c/M": 0.001660540103953132
-                    },
-                    "na": {
-                        "c/M": 0.533893361267224
-                    }
-                },
-                "nskip": 1000,
-                "nstep": 10,
-                "relative time": 0.0442,
-                "samples": 59900
-            }
-        },
-        {
-            "reactioncoordinate": {
-                "average": 0.0,
-                "file": "Q.dat",
-                "nskip": 1000,
-                "nstep": 100,
-                "property": "Q",
-                "relative time": 0.000823,
-                "samples": 5990,
-                "type": "system"
-            }
-        },
-        {
-            "sanity": {
-                "nskip": 0,
-                "nstep": 100,
-                "relative time": 0.000441,
-                "samples": 6000
-            }
-        }
-    ],
-    "compiler": "4.2.1 Compatible Apple LLVM 10.0.0 (clang-1000.11.45.5)",
-    "energy": [
-        {
-            "hamiltonian": [
-                {
-                    "nonbonded": {
-                        "cutoff_g2g": null,
-                        "pairpot": {
-                            "default": [
-                                {
-                                    "wca": {
-                                        "mixing": "LB"
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "relative time": 0.28175986932597774
-                }
-            ]
-        }
-    ],
-    "geometry": {
-        "length": [
-            100.0,
-            100.0,
-            100.0
-        ],
-        "type": "cuboid"
+  "analysis": [
+    {
+      "savestate": {
+        "file": "state.json"
+      }
     },
-    "git revision": "d2ee5e1e (2019-01-28)",
-    "groups": [
-        {
-            "H3PO4": {
-                "index": [
-                    0,
-                    99
-                ],
-                "size": 100
-            }
+    {
+      "atom_density": {
+        "<1/V>": 1e-06,
+        "<V>": 1000000.0,
+        "<∛V>": 100.0,
+        "densities": {
+          "cl": {
+            "c/M": 0.919
+          },
+          "h2po4": {
+            "c/M": 0.164
+          },
+          "h3po4": {
+            "c/M": 0.002323
+          },
+          "hpo4": {
+            "c/M": 8.903e-05
+          },
+          "na": {
+            "c/M": 1.083
+          }
         },
-        {
-            "Na": {
-                "capacity": 1000,
-                "index": [
-                    100,
-                    402
-                ],
-                "size": 303
-            }
-        },
-        {
-            "Cl": {
-                "capacity": 1000,
-                "index": [
-                    1100,
-                    1367
-                ],
-                "size": 268
-            }
-        }
+        "nskip": 100,
+        "nstep": 1,
+        "relative time": 0.0136,
+        "samples": 19900,
+        "∛<V>": 100.0
+      }
+    },
+    {
+      "reactioncoordinate": {
+        "average": 0.0,
+        "file": "total_charge.dat",
+        "nstep": 1000,
+        "property": "Q",
+        "samples": 20,
+        "type": "system"
+      }
+    },
+    {
+      "sanity": {
+        "nstep": 1000,
+        "samples": 20
+      }
+    }
+  ],
+  "compiler": "Apple LLVM 12.0.5 (clang-1205.0.22.9)",
+  "energy": [
+    {
+      "hamiltonian": null
+    }
+  ],
+  "geometry": {
+    "length": [
+      100.0,
+      100.0,
+      100.0
     ],
-    "moves": [
-        {
-            "speciation": {
-                "acceptance": 0.471,
-                "moves": 600000,
-                "reactions": {
-                    "= Na + Cl": {
-                        "acceptance": 0.9655987429925831,
-                        "attempts": 150198
-                    },
-                    "h2po4 = hpo4 + H + Na": {
-                        "attempts": 74718
-                    },
-                    "h3po4 = h2po4 + H + Na": {
-                        "acceptance": 0.9162694576847439,
-                        "attempts": 150005
-                    }
-                },
-                "relative time": 0.901,
-                "relative time (without energy calc)": 0.196,
-                "repeat": 1
-            }
-        }
-    ],
-    "number of groups": 3,
-    "number of particles": 2100,
-    "reactionlist": [
-        {
-            "h3po4 = h2po4 + H + Na": {
-                "pK": 2.12,
-                "pK'": 0.42102999566398164,
-                "products": [
-                    "h2po4",
-                    "H",
-                    "Na"
-                ],
-                "reactants": [
-                    "h3po4"
-                ]
-            }
+    "type": "cuboid"
+  },
+  "git revision": "50b389e0 (2021-11-18)",
+  "groups": [
+    {
+      "H2PO4": {
+        "compressible": false,
+        "index": [
+          0,
+          99
+        ],
+        "size": 100
+      }
+    },
+    {
+      "Na": {
+        "capacity": 800,
+        "compressible": false,
+        "index": [
+          100,
+          740
+        ],
+        "size": 641
+      }
+    },
+    {
+      "Cl": {
+        "capacity": 800,
+        "compressible": false,
+        "index": [
+          900,
+          1442
+        ],
+        "size": 543
+      }
+    }
+  ],
+  "montecarlo": {
+    "average potential energy (kT)": 0.0,
+    "last move": "rcmc"
+  },
+  "moves": [
+    {
+      "rcmc": {
+        "acceptance": 0.341,
+        "cite": "doi:10/fqcpg3",
+        "moves": 2000000,
+        "reactions": {
+          "= Na + Cl": {
+            "acceptance -->": 0.979,
+            "acceptance <--": 0.975,
+            "attempts": 285865
+          },
+          "Cl + h2po4 = hpo4 + H": {
+            "acceptance -->": 0.0539,
+            "acceptance <--": 1.0,
+            "attempts": 150721
+          },
+          "Cl + h3po4 = h2po4 + H": {
+            "acceptance -->": 0.861,
+            "acceptance <--": 0.655,
+            "attempts": 250738
+          },
+          "Cl + hpo4 = po4 + H": {
+            "acceptance -->": 0.0,
+            "acceptance <--": null,
+            "attempts": 7967
+          },
+          "h2po4 = hpo4 + H + Na": {
+            "acceptance -->": 0.0545,
+            "acceptance <--": 1.0,
+            "attempts": 151483
+          },
+          "h3po4 = h2po4 + H + Na": {
+            "acceptance -->": 0.862,
+            "acceptance <--": 0.654,
+            "attempts": 250045
+          },
+          "hpo4 = po4 + H + Na": {
+            "acceptance -->": 0.0,
+            "acceptance <--": null,
+            "attempts": 7683
+          }
         },
-        {
-            "h2po4 = hpo4 + H + Na": {
-                "pK": 7.21,
-                "pK'": 5.511029995663981,
-                "products": [
-                    "hpo4",
-                    "H",
-                    "Na"
-                ],
-                "reactants": [
-                    "h2po4"
-                ]
-            }
-        },
-        {
-            "hpo4 = po4 + H + Na": {
-                "pK": 12.67,
-                "pK'": 10.971029995663981,
-                "products": [
-                    "po4",
-                    "H",
-                    "Na"
-                ],
-                "reactants": [
-                    "hpo4"
-                ]
-            }
-        },
-        {
-            "= Na + Cl": {
-                "pK": -0.0,
-                "pK'": 0.6020599913279623,
-                "products": [
-                    "Na",
-                    "Cl"
-                ],
-                "reactants": []
-            }
-        }
-    ],
-    "relative drift": -4.440892098500626e-16,
-    "temperature": 300.0
+        "relative time": 0.935,
+        "relative time (without energy calc)": 0.781,
+        "repeat": 100,
+        "stochastic": true
+      }
+    }
+  ],
+  "number of groups": 3,
+  "number of particles": 1700,
+  "number of sweeps": 20000,
+  "reactionlist": [
+    {
+      "h3po4 = h2po4 + H + Na": {
+        "lnK": -4.881480397147378,
+        "neutral": false,
+        "pK": 2.12,
+        "pK'": -1.8799999999999988,
+        "swap_move": true
+      }
+    },
+    {
+      "Cl + h3po4 = h2po4 + H": {
+        "lnK": -4.881480397147378,
+        "neutral": false,
+        "pK": 2.12,
+        "pK'": -1.8799999999999988,
+        "swap_move": true
+      }
+    },
+    {
+      "h2po4 = hpo4 + H + Na": {
+        "lnK": -16.60163852048707,
+        "neutral": false,
+        "pK": 7.21,
+        "pK'": 3.210000000000001,
+        "swap_move": true
+      }
+    },
+    {
+      "Cl + h2po4 = hpo4 + H": {
+        "lnK": -16.60163852048707,
+        "neutral": false,
+        "pK": 7.21,
+        "pK'": 3.210000000000001,
+        "swap_move": true
+      }
+    },
+    {
+      "hpo4 = po4 + H + Na": {
+        "lnK": -29.173753128234562,
+        "neutral": false,
+        "pK": 12.67,
+        "pK'": 8.67,
+        "swap_move": true
+      }
+    },
+    {
+      "Cl + hpo4 = po4 + H": {
+        "lnK": -29.173753128234562,
+        "neutral": false,
+        "pK": 12.67,
+        "pK'": 8.67,
+        "swap_move": true
+      }
+    },
+    {
+      "= Na + Cl": {
+        "lnK": 0.0,
+        "neutral": false,
+        "pK": -0.0,
+        "pK'": -0.0,
+        "swap_move": false
+      }
+    }
+  ],
+  "relative drift": 0.0,
+  "simulation time": {
+    "in minutes": 0.5333333333333333,
+    "in seconds": 32
+  },
+  "temperature": 300.0
 }

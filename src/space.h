@@ -246,6 +246,8 @@ class Space {
         ranges::cpp20::views::filter([atomid](const Particle& particle) { return particle.id == atomid; });
     }
 
+    size_t countAtoms(AtomData::index_type atomid) const; //!< Count active particles
+
     /**
      * @brief Count number of molecules matching criteria
      * @param molid Molecule id to match

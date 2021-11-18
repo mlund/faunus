@@ -262,14 +262,15 @@ class SlicedDensity : public Analysisbase {
 class DensityBase : public Analysisbase {
   protected:
     using Table = Equidistant2DTable<unsigned int, double>;
-    std::map<size_t, Average<double>> mean_density;
-    std::map<size_t, std::string_view> names; // id <-> name database
+    using id_type = size_t;
+    std::map<id_type, Average<double>> mean_density;
+    std::map<id_type, std::string_view> names; // id <-> name database
     void _to_disk() override;
     void _sample() override;
     void _to_json(json &j) const override;
     void writeTable(std::string_view name, Table& table);
   private:
-    virtual std::map<size_t, int> count() const = 0;
+    virtual std::map<id_type, int> count() const = 0;
     std::map<MoleculeData::index_type, Table> probability_density;
     Average<double> mean_cubic_root_of_volume;
     Average<double> mean_volume;
@@ -291,7 +292,7 @@ class DensityBase : public Analysisbase {
  */
 class MoleculeDensity : public DensityBase {
   private:
-    std::map<size_t, int> count() const override;
+    std::map<id_type, int> count() const override;
   public:
     MoleculeDensity(const json& j, Space& spc);
 };
@@ -301,10 +302,10 @@ class MoleculeDensity : public DensityBase {
  */
 class AtomDensity : public DensityBase {
   private:
-    std::map<AtomData::index_type, Table> atomswap_probability_density;
+    std::map<id_type, Table> atomswap_probability_density;
     void _sample() override;
     void _to_disk() override;
-    std::map<size_t, int> count() const override;
+    std::map<id_type, int> count() const override;
 
   public:
     AtomDensity(const json& j, Space& spc);

@@ -756,19 +756,21 @@ void DensityBase::_to_disk() {
 
 void AtomDensity::_sample() {
     DensityBase::_sample();
+    std::set<id_type> unique_reactive_atoms;
     for (const auto& reaction : reactions) { // in case of reactions involving atoms (swap moves)
-        const auto& reactive_atomic_species = reaction.getReactantsAndProducts().first;
-        for (auto atomid : reactive_atomic_species) {
-            auto atomlist = spc.findAtoms(atomid);
-            atomswap_probability_density.at(atomid)(range_size(atomlist))++;
-        }
+        const auto& atomic_ids = reaction.getReactantsAndProducts().first;
+        unique_reactive_atoms.insert(atomic_ids.begin(), atomic_ids.end());
     }
+    ranges::cpp20::for_each(unique_reactive_atoms, [&](auto id) {
+        const auto count = spc.countAtoms(id);
+        atomswap_probability_density[id](count)++;
+    });
 }
 
 /**
  * @brief Counts atoms in atomic groups
  */
-std::map<size_t, int> AtomDensity::count() const {
+std::map<DensityBase::id_type, int> AtomDensity::count() const {
     using namespace ranges::cpp20;
 
     // All ids incl. inactive are counted; std::vector ensures constant lookup (index = id)
@@ -780,8 +782,8 @@ std::map<size_t, int> AtomDensity::count() const {
     for_each(particle_ids_in_atomic_groups, [&](auto id) { atom_count.at(id)++; });
     
     // Copy vector --> map
-    auto id = 0U;
-    std::map<size_t, int> map;
+    id_type id = 0U;
+    std::map<id_type, int> map;
     for_each(atom_count, [&id, &map](auto count) { map.emplace_hint(map.end(), id++, count); });
     return map;
 }
@@ -809,9 +811,9 @@ void AtomDensity::_to_disk() {
 /**
  * @brief Counts active, molecular groups
  */
-std::map<size_t, int> MoleculeDensity::count() const {
+std::map<DensityBase::id_type, int> MoleculeDensity::count() const {
     using namespace ranges::cpp20;
-    std::map<size_t, int> molecular_group_count;
+    std::map<id_type, int> molecular_group_count;
 
     // ensure that also inactive groups are registered (as zero)
     for_each(Faunus::molecules | views::filter(&MoleculeData::isMolecular),

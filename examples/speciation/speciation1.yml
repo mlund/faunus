@@ -1,16 +1,16 @@
 temperature: 300
 mcloop: {macro: 10, micro: 10}
-geometry: {length: 19.73}
+geometry: {type: cuboid, length: 19.73}
 energy:
     - nonbonded_coulomblj:
         lennardjones: {mixing: LB}
         coulomb: {type: ewald, epsr: 1, cutoff: 9, cutoffK: 7, alpha: 0.2}
 atomlist:
-    - Ba+2: {q: 2.0, radius: 2.0, dp: 1}
-    - SO4-2: {q: -2.0, radius: 2.0, dp: 1}
-    - HSO4-: {q: -1.0, radius: 2.0, dp: 1}
-    - H2SO4: {q: 0, radius: 2.0, dp: 1}
-    - H+: {q: 1.0, radius: 2.0, dp: 1}
+    - Ba+2: {q: 2.0, sigma: 2.0, dp: 1}
+    - SO4-2: {q: -2.0, sigma: 2.0, dp: 1}
+    - HSO4-: {q: -1.0, sigma: 2.0, dp: 1}
+    - H2SO4: {q: 0, sigma: 2.0, dp: 1}
+    - H+: {q: 1.0, sigma: 2.0, dp: 1}
 moleculelist:
     - Ba+2: {Ninit: 0, atoms: [Ba+2], atomic: true}
     - SO4-2: {Ninit: 0, atoms: [SO4-2], atomic: true}

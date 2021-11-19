@@ -67,6 +67,9 @@ void MetropolisMonteCarlo::init() {
     for (auto& speciation_move : moves->getMoves().find<Move::SpeciationMove>()) {
         speciation_move->setOther(*state->spc);
     }
+    // initialize  molecule and atom trackers
+    state->spc->initTrackers();
+    trial_state->spc->initTrackers();
 }
 
 /**
@@ -244,7 +247,7 @@ TranslationalEntropy::TranslationalEntropy(Space &trial_space, Space &space) : t
  * @param count Number of atoms or molecular before move
  * @return Energy contribution (kT) to be added to MC trial energy
  */
-double TranslationalEntropy::bias(int trial_count, int count) const {
+double TranslationalEntropy::bias(size_t trial_count, size_t count) const {
     double energy = 0.0;
     if (int dN = trial_count - count; dN > 0) { // atoms or molecules were added
         double V_trial = trial_spc.geometry.getVolume();
@@ -264,14 +267,12 @@ double TranslationalEntropy::atomSwapEnergy(const Change::GroupChange& data) {
     assert(data.dNswap);
     assert(data.relative_atom_indices.size() == 1);
     double energy = 0.0;
-    int id1 = trial_spc.groups.at(data.group_index).at(data.relative_atom_indices.front()).id;
-    int id2 = spc.groups.at(data.group_index).at(data.relative_atom_indices.front()).id;
+    auto id1 = trial_spc.groups.at(data.group_index).at(data.relative_atom_indices.front()).id;
+    auto id2 = spc.groups.at(data.group_index).at(data.relative_atom_indices.front()).id;
     for (auto atomid : {id1, id2}) {
-        auto atoms_new = trial_spc.findAtoms(atomid);
-        auto atoms_old = spc.findAtoms(atomid);
-        int N_new = range_size(atoms_new); // number of atoms after change
-        int N_old = range_size(atoms_old); // number of atoms before change
-        energy += bias(N_new, N_old);
+        auto number_of_atoms_after = trial_spc.countAtoms(atomid); // number of atoms after change
+        auto number_of_atoms_prior = spc.countAtoms(atomid);       // number of atoms before change
+        energy += bias(number_of_atoms_after, number_of_atoms_prior);
     }
     return energy; // kT
 }
@@ -282,17 +283,15 @@ double TranslationalEntropy::atomChangeEnergy(int molid) {
     if (range_size(mollist_new) > 1 || range_size(mollist_old) > 1) {
         throw std::runtime_error("multiple atomic groups of the same type is not allowed");
     }
-    int N_new = mollist_new.begin()->size(); // number of atoms after move
-    int N_old = mollist_old.begin()->size(); // number of atoms before move
-    return bias(N_new, N_old);
+    auto number_of_molecules_after = mollist_new.begin()->size(); // number of atoms after move
+    auto number_of_molecules_prior = mollist_old.begin()->size(); // number of atoms before move
+    return bias(number_of_molecules_after, number_of_molecules_prior);
 }
 
 double TranslationalEntropy::moleculeChangeEnergy(int molid) {
-    auto mollist_new = trial_spc.findMolecules(molid, Space::Selection::ACTIVE);
-    auto mollist_old = spc.findMolecules(molid, Space::Selection::ACTIVE);
-    int N_new = range_size(mollist_new); // number of molecules after move
-    int N_old = range_size(mollist_old); // number of molecules before move
-    return bias(N_new, N_old);
+    auto number_of_molecules_after = trial_spc.countMolecules(molid); // number of molecules after move
+    auto number_of_molecules_prior = spc.countMolecules(molid);       // number of molecules before move
+    return bias(number_of_molecules_after, number_of_molecules_prior);
 }
 
 /**
@@ -307,7 +306,7 @@ double TranslationalEntropy::energy(const Change &change) {
             if (data.dNswap) {                           // number of atoms has changed as a result of a swap move
                 energy_change += atomSwapEnergy(data);
             } else { // it is not a swap move
-                int molid = trial_spc.groups.at(data.group_index).id;
+                auto molid = trial_spc.groups.at(data.group_index).id;
                 assert(molid == spc.groups.at(data.group_index).id);
                 if (data.dNatomic and Faunus::molecules[molid].atomic) { // an atomic group has been changed
                     energy_change += atomChangeEnergy(molid);

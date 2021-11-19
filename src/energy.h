@@ -1274,7 +1274,8 @@ class GroupPairing {
             if (change.groups.size() == 1) {
                 // if only a single group changes use faster algorithm and optionally add the internal energy
                 accumulateGroup(pair_accumulator, change);
-            } else {
+            } else { // this branch slows down simulation even when it is never called! this could be because the code
+                     // is generated nonetheless (in 50% of cases...) and groups2all is quite large
                 // if multiple groups move, no internal energies are computed
                 const auto &moved = change.touchedGroupIndex(); // index of moved groups
                 pairing.groups2all(pair_accumulator, moved);

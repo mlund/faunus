@@ -4,8 +4,47 @@
 #include "group.h"
 #include "molecule.h"
 #include <range/v3/view/join.hpp>
+#include <range/v3/algorithm.hpp>
+#include <unordered_set>
 
 namespace Faunus {
+
+/**
+ * @brief
+ *
+ * holds indices of either particles or groups and remembers which are active/inactive
+ *
+ * TODO use some flat container instead of unordered_set?
+ * TODO instead of indices the trackers might track references? -> would probably need templating the class
+ * TODO since molecules are ordered by MoleculeData::molecule_id in the GroupVector, the tracker for molecules
+ * TODO could be made for efficient (would need separating GroupVector into buckets, one for each molid, and maintaining
+ * it)
+ * TODO reserve so that a union of active+inactive is contigious in memory
+ */
+class Tracker {
+  public:
+    using id_type = size_t;
+    using map_type = std::vector<std::unordered_set<size_t>>; // std::set is too slow and I did not find a place where
+                                                              // sorted indices are neede
+  private:
+    map_type active, inactive; //! containers for active/inactive indices;
+
+    void activate(id_type id, size_t index);
+    void deactivate(id_type id, size_t);
+    void insert(id_type id, size_t);
+    size_t countActive(id_type) const;
+    size_t countInactive(id_type) const;
+    std::unordered_set<size_t>& getActive(id_type);
+    const std::unordered_set<size_t>& getActive(id_type id) const;
+    std::unordered_set<size_t>& getInactive(id_type);
+    const std::unordered_set<size_t>& getInactive(id_type) const;
+
+    void clear();
+    void reserve(const id_type id, const size_t total_number_of_species);
+    void init(const id_type max_number_of_ids);
+
+    friend class Space; // I think there is no need for this class to be used outside space
+};
 
 /**
  * @brief Specify changes made to a system
@@ -92,6 +131,11 @@ class Space {
      */
     std::map<MoleculeData::index_type, std::size_t> implicit_reservoir;
 
+    std::unique_ptr<Tracker> atom_tracker;
+    std::unique_ptr<Tracker> molecule_tracker;
+    std::unique_ptr<Tracker> neutral_atom_tracker;
+    std::unique_ptr<Tracker> neutral_molecule_tracker;
+
     std::vector<ChangeTrigger> changeTriggers; //!< Call when a Change object is applied (unused)
     std::vector<SyncTrigger> onSyncTriggers;   //!< Call when two Space objects are synched (unused)
 
@@ -117,8 +161,13 @@ class Space {
         double new_volume,
         Geometry::VolumeMethod method = Geometry::VolumeMethod::ISOTROPIC); //!< Scales atoms, molecules, container
 
-    GroupVector::iterator randomMolecule(MoleculeData::index_type molid, Random& rand,
-                                         Selection selection = Selection::ACTIVE); //!< Random group matching molid
+    // std::unordered_map<MoleculeData::index_type, std::unordered_set<size_t>> molecule_type2active_groups;
+    /*    std::vector<std::reference_wrapper<Group>>
+        randomMolecules(MoleculeData::index_type molid, Random& rand, size_t number_of_samples = 1,
+                       Selection selection = Selection::ACTIVE); //!< Random group matching molid*/
+
+    Space::GroupVector::iterator randomMolecule(MoleculeData::index_type molid, Random& rand,
+                                                Space::Selection selection = Selection::ACTIVE);
 
     json info();
 
@@ -182,6 +231,30 @@ class Space {
     }
 
     /**
+     * @brief returns absolute index of particle in ParticleVector
+     * @param particle
+     */
+    inline auto indexOf(const Particle& particle) const {
+        return static_cast<size_t>(std::addressof(particle) - std::addressof(particles.at(0)));
+    }
+    inline auto indexOf(const GroupType& group) const {
+        return static_cast<size_t>(std::addressof(group) - std::addressof(groups.at(0)));
+    }
+
+    void activate(const GroupType& group);
+    void deactivate(const GroupType& group);
+    void activateParticle(const Particle& particle);
+    void deactivateParticle(const Particle& particle);
+
+    Tracker& getMolecularTracker() { return *molecule_tracker; }
+    Tracker& getAtomicTracker() { return *atom_tracker; }
+
+    const std::unordered_set<size_t>& getMolecules(MoleculeData::index_type molid,
+                                                   Selection selection = Selection::ACTIVE) const;
+    const std::unordered_set<size_t>& getAtoms(AtomData::index_type atom_id,
+                                               Selection selection = Selection::ACTIVE) const;
+
+    /**
      * @brief Finds all groups of type `molid` (complexity: order N)
      * @param molid Molecular id to look for
      * @param selection Selection
@@ -243,10 +316,14 @@ class Space {
      */
     auto findAtoms(AtomData::index_type atomid) const {
         return activeParticles() |
-        ranges::cpp20::views::filter([atomid](const Particle& particle) { return particle.id == atomid; });
+               ranges::cpp20::views::filter([atomid](const Particle& particle) { return particle.id == atomid; });
     }
 
-    size_t countAtoms(AtomData::index_type atomid) const; //!< Count active particles
+    //!< Count particles specified by selection
+    size_t countAtoms(AtomData::index_type, Selection selection = Selection::ACTIVE) const;
+
+    //!< Count molecules specified by selection
+    size_t countMolecules(MoleculeData::index_type, Selection selection = Selection::ACTIVE) const;
 
     /**
      * @brief Count number of molecules matching criteria
@@ -261,7 +338,10 @@ class Space {
         return std::count_if(groups.begin(), groups.end(), filter);
     }
 
-    void sync(const Space& other, const Change& change); //!< Copy differing data from other Space using Change object
+    void sync(Space& other, const Change& change); //!< Copy differing data from other Space using Change object
+
+    void reserveTrackers();
+    void initTrackers();
 
 }; // end of space
 

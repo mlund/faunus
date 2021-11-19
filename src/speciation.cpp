@@ -49,8 +49,8 @@ void SpeciationMove::atomicSwap(Change &change) {
 
         assert(atomic_products.size() == 1 and atomic_reactants.size() == 1);
 
-        auto atomlist = spc.findAtoms(atomic_reactants.begin()->first); // search all active molecules
-        if (ranges::cpp20::empty(atomlist)) { // Make sure that there are any active atoms to swap
+        const auto& atom_indices = spc.getAtoms(atomic_reactants.begin()->first); // search all active molecules
+        if (atom_indices.size() == 0) { // Make sure that there are any active atoms to swap
             throw SpeciationMoveException();
         }
 
@@ -87,12 +87,13 @@ void SpeciationMove::atomicSwap(Change &change) {
                 }
             }
         }
-        auto random_particle = slump.sample(atomlist.begin(), atomlist.end()); // target particle to swap
-        auto group = spc.findGroupContaining(*random_particle);                // find enclosing group
+        auto random_particle_index = *slump.sample(atom_indices.begin(), atom_indices.end()); // target particle to swap
+        auto& random_particle = spc.particles.at(random_particle_index);
+        auto group = spc.findGroupContaining(random_particle); // find enclosing group
 
         Change::GroupChange d; // describe what has change - used for energy cal.
         d.relative_atom_indices.push_back(
-            Faunus::distance(group->begin(), random_particle));      // Index of particle rel. to group
+            Faunus::distance(group->begin(), &random_particle));     // Index of particle rel. to group
         d.group_index = Faunus::distance(spc.groups.begin(), group); // index of particle in group (starting from zero)
         d.internal = true;
         d.dNswap = true;
@@ -100,11 +101,11 @@ void SpeciationMove::atomicSwap(Change &change) {
 
         int atomid = atomic_products.begin()->first; // atomid of new atom type
         Particle p = Faunus::atoms[atomid];          // temporary particle of new type
-        p.pos = random_particle->pos;                // get position from old particle
+        p.pos = random_particle.pos;                 // get position from old particle
         // todo: extended properties, dipole etc?
         assert(!p.hasExtension() && "extended properties not yet implemented");
-        *random_particle = p; // copy new particle onto old particle
-        assert(random_particle->id == atomid);
+        random_particle = p; // copy new particle onto old particle
+        assert(random_particle.id == atomid);
     }
 }
 
@@ -278,10 +279,11 @@ void SpeciationMove::activateAllProducts(Change &change) {
         } else { // The product is a molecule
             auto selection =
                 (reaction->only_neutral_molecules) ? Space::Selection::INACTIVE_NEUTRAL : Space::Selection::INACTIVE;
-            auto inactive = spc.findMolecules(molid, selection); // all inactive molecules
-            std::vector<std::reference_wrapper<Space::GroupType>> molecules_to_activate;
-            std::sample(inactive.begin(), inactive.end(), std::back_inserter(molecules_to_activate), number_to_insert,
-                        slump.engine);
+            const auto& inactive_inds = spc.getMolecules(molid, selection);
+            std::vector<size_t> molecules_to_activate;
+            std::sample(inactive_inds.begin(), inactive_inds.end(), std::back_inserter(molecules_to_activate),
+                        number_to_insert,
+                        slump.engine); // pick random molecules to delete
             if (molecules_to_activate.size() != number_to_insert) {
                 faunus_logger->warn("maximum number of {} molecules reached; increase capacity?",
                                     Faunus::molecules[molid].name);
@@ -310,15 +312,18 @@ void SpeciationMove::activateAllProducts(Change &change) {
         } else { // The product is a molecule
             auto selection =
                 (reaction->only_neutral_molecules) ? Space::Selection::INACTIVE_NEUTRAL : Space::Selection::INACTIVE;
-            auto inactive = spc.findMolecules(molid, selection); // all inactive molecules
-            std::vector<std::reference_wrapper<Space::GroupType>> molecules_to_activate;
-            std::sample(inactive.begin(), inactive.end(), std::back_inserter(molecules_to_activate), number_to_insert,
-                        slump.engine);
+            const auto& inactive_inds = spc.getMolecules(molid, selection);
+            std::vector<size_t> molecules_to_activate;
+            std::sample(inactive_inds.begin(), inactive_inds.end(), std::back_inserter(molecules_to_activate),
+                        number_to_insert,
+                        slump.engine); // pick random molecules to delete
             if (molecules_to_activate.size() == number_to_insert) {
-                for (auto &target : molecules_to_activate) {
+                for (auto target_index : molecules_to_activate) {
+                    auto& target = spc.groups.at(target_index);
                     if (auto change_data = activateMolecularGroup(target);
                         not change_data.relative_atom_indices.empty()) {
                         change.groups.push_back(change_data); // Add to list of moved groups
+                        spc.activate(target);
                     } else {
                         assert(false); // we should never reach here
                     }
@@ -357,11 +362,16 @@ void SpeciationMove::deactivateAllReactants(Change &change) {
         } else { // molecular reactant (non-atomic)
             auto selection =
                 (reaction->only_neutral_molecules) ? Space::Selection::ACTIVE_NEUTRAL : Space::Selection::ACTIVE;
-            auto active = spc.findMolecules(molid, selection);
-            std::vector<std::reference_wrapper<Space::GroupType>> molecules_to_deactivate;
-            std::sample(active.begin(), active.end(), std::back_inserter(molecules_to_deactivate), N_delete,
+            const auto& active_inds = spc.getMolecules(molid, selection);
+            std::vector<size_t> molecules_to_deactivate;
+            std::sample(active_inds.begin(), active_inds.end(), std::back_inserter(molecules_to_deactivate), N_delete,
                         slump.engine); // pick random molecules to delete
             if (molecules_to_deactivate.size() != N_delete) {
+                if (molecules_to_deactivate.size() == 0) {
+                    faunus_logger->warn("ran out of active molecules {}; activity too small?",
+                                        Faunus::molecules[molid].name);
+                    throw SpeciationMoveException();
+                }
                 throw SpeciationMoveException();
             }
         }
@@ -385,15 +395,17 @@ void SpeciationMove::deactivateAllReactants(Change &change) {
         } else { // molecular reactant (non-atomic)
             auto selection =
                 (reaction->only_neutral_molecules) ? Space::Selection::ACTIVE_NEUTRAL : Space::Selection::ACTIVE;
-            auto active = spc.findMolecules(molid, selection);
-            std::vector<std::reference_wrapper<Space::GroupType>> molecules_to_deactivate;
-            std::sample(active.begin(), active.end(), std::back_inserter(molecules_to_deactivate), N_delete,
+            const auto& active_inds = spc.getMolecules(molid, selection);
+            std::vector<size_t> molecules_to_deactivate;
+            std::sample(active_inds.begin(), active_inds.end(), std::back_inserter(molecules_to_deactivate), N_delete,
                         slump.engine); // pick random molecules to delete
             if (molecules_to_deactivate.size() == N_delete) {
-                for (auto &target : molecules_to_deactivate) {
+                for (auto target_index : molecules_to_deactivate) {
+                    auto& target = spc.groups[target_index];
                     if (auto change_data = deactivateMolecularGroup(target);
                         not change_data.relative_atom_indices.empty()) {
                         change.groups.push_back(change_data); // add to list of moved groups
+                        spc.deactivate(target);               // update trackers in space
                     } else {
                         assert(false); // we should never reach here
                     }
@@ -451,14 +463,13 @@ void SpeciationMove::_move(Change &change) {
     }
 }
 
-double SpeciationMove::bias([[maybe_unused]] Change& change, [[maybe_unused]] double old_energy,
-                            [[maybe_unused]] double new_energy) {
+double SpeciationMove::bias(Change&, double, double) {
     // The acceptance/rejection of the move is affected by the equilibrium constant
     // but unaffected by the change in bonded energy
     return -reaction->lnK + bond_energy;
 }
 
-void SpeciationMove::_accept(Change &) {
+void SpeciationMove::_accept(Change& change) {
     acceptance[reaction].update(reaction->getDirection(), true);
 
     [[maybe_unused]] auto [atomic_products, molecular_products] = reaction->getProducts();
@@ -483,7 +494,7 @@ void SpeciationMove::_accept(Change &) {
     }
 }
 
-void SpeciationMove::_reject(Change &) {
+void SpeciationMove::_reject(Change& change) {
     acceptance[reaction].update(reaction->getDirection(), false);
 
     [[maybe_unused]] auto [atomic_products, molecular_products] = reaction->getProducts();

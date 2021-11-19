@@ -5,6 +5,7 @@
 #include "aux/eigensupport.h"
 #include <range/v3/algorithm/for_each.hpp>
 #include <range/v3/algorithm/transform.hpp>
+#include <range/v3/algorithm/count_if.hpp>
 #include <memory>
 #include <stdexcept>
 
@@ -335,6 +336,10 @@ std::size_t Space::getFirstActiveParticleIndex(const GroupType& group) const {
     std::size_t index = 0u;
     std::for_each(groups.begin(), groups.begin() + group_index, [&](const auto& g) { index += g.size(); });
     return index;
+}
+
+size_t Space::countAtoms(AtomData::index_type atomid) const {
+    return ranges::cpp20::count_if(activeParticles(), [&](auto& particle) { return particle.id == atomid; });
 }
 
 TEST_CASE("Space::numParticles") {

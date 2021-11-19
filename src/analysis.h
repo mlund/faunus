@@ -257,27 +257,58 @@ class SlicedDensity : public Analysisbase {
 };
 
 /**
- * @brief Analysis of particle densities
+ * Abstract base class for analysing atomic and molecular densities
  */
-class Density : public Analysisbase {
-  private:
-    using Ttable = Equidistant2DTable<unsigned int, double>;
-
-    std::map<int, Ttable> atomswap_probability_density;
-    std::map<int, Ttable> atomic_group_probability_density;
-    std::map<int, Ttable> molecular_group_probability_density;
-    std::map<int, Average<double>> mean_molecule_density, mean_atom_density;
-    Average<double> mean_cubic_root_of_volume, mean_volume, mean_inverse_volume;
-
-    double updateVolumeStatistics();
-    std::pair<std::map<int, int>, std::map<int, int>> countAtomsAndMolecules();
-    void writeTable(const std::string& atom_or_molecule_name, Ttable& table);
-    void _sample() override;
-    void _to_json(json& j) const override;
+class DensityBase : public Analysisbase {
+  protected:
+    using Table = Equidistant2DTable<unsigned int, double>;
+    using id_type = size_t;
+    std::map<id_type, Average<double>> mean_density;
+    std::map<id_type, std::string_view> names; // id <-> name database
     void _to_disk() override;
+    void _sample() override;
+    void _to_json(json &j) const override;
+    void writeTable(std::string_view name, Table& table);
+  private:
+    virtual std::map<id_type, int> count() const = 0;
+    std::map<MoleculeData::index_type, Table> probability_density;
+    Average<double> mean_cubic_root_of_volume;
+    Average<double> mean_volume;
+    Average<double> mean_inverse_volume;
+    double updateVolumeStatistics();
 
   public:
-    Density(const json&, Space&);
+    template <typename Range>
+    DensityBase(Space& spc, const Range& atoms_or_molecules, std::string_view name) : Analysisbase(spc, name) {
+        for (const auto& data : atoms_or_molecules) {
+            names[data.id()] = data.name;
+            probability_density[data.id()].setResolution(1, 0);
+        }
+    }
+};
+
+/**
+ * @brief Analysis of molecular group densities
+ */
+class MoleculeDensity : public DensityBase {
+  private:
+    std::map<id_type, int> count() const override;
+  public:
+    MoleculeDensity(const json& j, Space& spc);
+};
+
+/**
+ * @brief Analysis of single atom densities
+ */
+class AtomDensity : public DensityBase {
+  private:
+    std::map<id_type, Table> atomswap_probability_density;
+    void _sample() override;
+    void _to_disk() override;
+    std::map<id_type, int> count() const override;
+
+  public:
+    AtomDensity(const json& j, Space& spc);
 };
 
 /**

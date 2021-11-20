@@ -113,15 +113,17 @@ MetropolisMonteCarlo::~MetropolisMonteCarlo() = default;
  */
 void MetropolisMonteCarlo::restore(const json &j) {
     try {
-        *state->spc = j;       // default, accepted state
-        *trial_state->spc = j; // trial state
-        if (j.count("random-move") == 1) {
+        from_json(j, *state->spc);       // default, accepted state
+        from_json(j, *trial_state->spc); // trial state
+        if (j.contains("random-move")) {
             Move::MoveBase::slump = j["random-move"]; // restore move random number generator
         }
-        if (j.count("random-global") == 1) {
+        if (j.contains("random-global")) {
             Faunus::random = j["random-global"]; // restore global random number generator
         }
-        reactions = j.at("reactionlist").get<decltype(reactions)>(); // should be handled by space
+        if (j.contains("reactionlist")) {
+            faunus_logger->warn("'reactionlist' in state file is deprecated and will be ignored");
+        }
         init();
     } catch (std::exception &e) {
         throw std::runtime_error("error initialising simulation: "s + e.what());

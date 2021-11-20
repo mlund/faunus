@@ -334,11 +334,12 @@ void SaveState::saveJsonStateFile(const std::string& filename, const Space& spc)
     if (std::ofstream f(filename); f) {
         json j;
         Faunus::to_json(j, spc);
+        j.erase("reactionlist");
         if (save_random_number_generator_state) {
             j["random-move"] = Move::MoveBase::slump;
             j["random-global"] = random;
         }
-        f << std::setw(2) << j;
+        f << std::setw(1) << j;
     }
 }
 
@@ -737,7 +738,7 @@ void DensityBase::writeTable(std::string_view name, Table& table) {
     }
     table.stream_decorator = [&table](auto& stream, int N, double counts) {
         if (counts > 0) {
-            stream << fmt::format("{} {} {:.3f}\n", N, counts, counts / table.sumy());
+            stream << fmt::format("{} {} {:.3E}\n", N, counts, counts / table.sumy());
         }
     };
     const auto filename = fmt::format("{}rho-{}.dat", MPI::prefix, name);

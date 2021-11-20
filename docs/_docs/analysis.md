@@ -624,7 +624,7 @@ If the suffix is `json` or `ubj` ([binary](http://ubjson.org)), a single
 state file that can be used to restart the simulation is saved
 with the following information:
 
-- topology: atom, molecule, and reaction definitions
+- topology: atom, molecule
 - particle and group properties incl. positions
 - geometry
 - state of random number generator (if `saverandom=true`)

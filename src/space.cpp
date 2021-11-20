@@ -370,10 +370,8 @@ void from_json(const json &j, Space &spc) {
         if (molecules.empty()) {
             molecules = j.at("moleculelist").get<decltype(molecules)>();
         }
-        if (reactions.empty()) {
-            if (j.contains("reactionlist")) {
-                reactions = j.at("reactionlist").get<decltype(reactions)>();
-            }
+        if (reactions.empty() && j.contains("reactionlist")) {
+            reactions = j.at("reactionlist").get<decltype(reactions)>();
         }
 
         spc.clear();

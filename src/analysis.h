@@ -454,18 +454,6 @@ class PairFunctionBase : public Analysisbase {
     PairFunctionBase(Space& spc, const json&, const std::string& name);
 };
 
-class PairAngleFunctionBase : public PairFunctionBase {
-  protected:
-    Equidistant2DTable<double, Average<double>> hist2;
-
-  private:
-    void _from_json(const json& j) override;
-    void _to_disk() override;
-
-  public:
-    PairAngleFunctionBase(Space& spc, const json& j, const std::string& name);
-};
-
 /** @brief Atomic radial distribution function, g(r) */
 class AtomRDF : public PairFunctionBase {
     void _sample() override;
@@ -481,6 +469,23 @@ class MoleculeRDF : public PairFunctionBase {
 
   public:
     MoleculeRDF(const json&, Space&);
+};
+
+/**
+ * @todo Is this class justified? Messy file handling
+ */
+class PairAngleFunctionBase : public PairFunctionBase {
+  private:
+    std::string correlation_filename;
+  protected:
+    Equidistant2DTable<double, Average<double>> average_correlation_vs_distance;
+
+  private:
+    void _from_json(const json& j) override;
+    void _to_disk() override;
+
+  public:
+    PairAngleFunctionBase(Space& spc, const json& j, const std::string& name);
 };
 
 /** @brief Dipole-dipole correlation function, <\boldsymbol{\mu}(0)\cdot\boldsymbol{\mu}(r)> */

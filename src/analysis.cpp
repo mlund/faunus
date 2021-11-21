@@ -406,21 +406,24 @@ double PairFunctionBase::volumeElement(double r) const {
 PairAngleFunctionBase::PairAngleFunctionBase(Space& spc, const json& j, const std::string& name)
     : PairFunctionBase(spc, j, name) {
     from_json(j);
+    correlation_filename = MPI::prefix + file;
+    average_correlation_vs_distance.stream_decorator = [&](auto& stream, double distance, Average<double> N) {
+        if (!N.empty() && std::isfinite(N.avg())) {
+            stream << distance << " " << N.avg() << "\n";
+        }
+    };
+    // rename `file` so that it will not be overwritten by base class destructor(!)
+    // @todo Call The Wolf!
+    file = fmt::format("{}{}.dummy", MPI::prefix, file);
 }
 
 void PairAngleFunctionBase::_to_disk() {
-    std::ofstream f(MPI::prefix + file);
-    if (f) {
-        hist2.stream_decorator = [&](std::ostream& o, double r, Average<double> N) {
-            o << r << " " << N.avg() << "\n";
-        };
-        f << hist2;
+    if (auto f = std::ofstream(correlation_filename)) {
+        f << average_correlation_vs_distance;
     }
-    file = file + "gofr.dat"; // name file where free g(r) is saved, and make sure that the file is not overwritten by
-                              // base-destructor
 }
 
-void PairAngleFunctionBase::_from_json(const json&) { hist2.setResolution(dr, 0); }
+void PairAngleFunctionBase::_from_json(const json&) { average_correlation_vs_distance.setResolution(dr, 0); }
 
 void PerturbationAnalysisBase::_to_disk() {
     if (stream) {
@@ -961,7 +964,7 @@ void AtomDipDipCorr::_sample() {
         if (particle1.hasExtension() && particle2.hasExtension()) {
             const auto cosine_angle = particle1.getExt().mu.dot(particle2.getExt().mu);
             const auto r = distance.norm();
-            hist2(r) += cosine_angle;
+            average_correlation_vs_distance(r) += cosine_angle;
             histogram(r)++; // get g(r) for free
         }
     };

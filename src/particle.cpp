@@ -119,18 +119,16 @@ Particle::ParticleExtension &Particle::createExtension() {
     return *ext;
 }
 
-void from_json(const json &j, Particle &p) {
-    p.id = j.value("id", -1);
-    p.pos = j.value("pos", Point(0, 0, 0));
-    p.charge = j.value("q", 0.0);
-
-    p.ext = std::make_shared<Particle::ParticleExtension>();
-    from_json(j, *p.ext);
-    Particle::ParticleExtension empty_extended_particle;
-    // why can't we compare ParticleExtension directly?!
-    // (slow and ugly)
-    if (json(*p.ext) == json(empty_extended_particle))
-        p.ext = nullptr; // no extended features found in json
+void from_json(const json &j, Particle &particle) {
+    particle.id = j.value("id", -1);
+    particle.pos = j.value("pos", Point::Zero().eval());
+    particle.charge = j.value("q", 0.0);
+    particle.ext = std::make_unique<Particle::ParticleExtension>(j);
+    // Disable extended features if unused. Slow and ugly check:
+    const auto empty_extended_particle = json(Particle::ParticleExtension());
+    if (json(*particle.ext) == empty_extended_particle) {
+        particle.ext = nullptr; // no extended features found in json
+    }
 }
 void to_json(json &j, const Particle &p) {
     if (p.ext) {

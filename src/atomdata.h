@@ -53,7 +53,7 @@ class AtomData { // has to be a class when a constant reference is used
     double tension = 0;          //!< Surface tension [kT/Å^2]
     double tfe = 0;              //!< Transfer free energy [J/mol/angstrom^2/M]
     Point mu = {0, 0, 0};        //!< Dipole moment unit vector
-    Point scdir = {1, 0, 0};     //!< Sphero-cylinder direction
+    Point scdir = {0, 0, 0};     //!< Sphero-cylinder direction
     bool hydrophobic = false;    //!< Is the particle hydrophobic?
     bool implicit = false;       //!< Is the particle implicit (e.g. proton)?
     InteractionData interaction; //!< Arbitrary interaction parameters, e.g., epsilons in various potentials

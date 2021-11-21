@@ -28,8 +28,8 @@ void Dipole::to_json(json &j) const {
 }
 
 void Dipole::from_json(const json &j) {
-    mu = j.value("mu", Point(1, 0, 0));
-    mulen = j.value("mulen", mulen);
+    mu = j.value("mu", Point::Zero().eval());
+    mulen = j.value("mulen", 0.0);
 }
 
 void Polarizable::rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &m) {
@@ -53,7 +53,7 @@ void Quadrupole::rotate(const Eigen::Quaterniond &, const Eigen::Matrix3d &m) { 
 
 void Quadrupole::to_json(json &j) const { j["Q"] = Q; }
 
-void Quadrupole::from_json(const json &j) { Q = j.value("Q", Q); }
+void Quadrupole::from_json(const json& j) { Q = j.value("Q", Tensor(Tensor::Zero()));}
 
 void Cigar::rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &) { scdir = q * scdir; }
 
@@ -62,11 +62,11 @@ void Cigar::to_json(json &j) const {
     j["sclen"] = sclen;
 }
 void Cigar::from_json(const json &j) {
-    scdir = j.value("scdir", scdir);
+    scdir = j.value("scdir", Point::Zero().eval());
     sclen = j.value("sclen", sclen);
 }
 
-const AtomData &Particle::traits() const { return atoms.at(id); }
+const AtomData &Particle::traits() const { return atoms[id]; }
 
 /**
  * @warning Performance is sub-optimal as conversion is done through a json object

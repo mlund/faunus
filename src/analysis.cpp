@@ -354,7 +354,7 @@ void SaveState::saveAsCuboid(const std::string& filename, Space& spc, StructureF
     }
 }
 
-PairFunctionBase::PairFunctionBase(Space& spc, const json& j, const std::string& name) : Analysisbase(spc, name) {
+PairFunctionBase::PairFunctionBase(Space& spc, const json& j, const std::string_view name) : Analysisbase(spc, name) {
     from_json(j);
 }
 
@@ -909,8 +909,8 @@ SanityCheck::SanityCheck(const json& j, Space& spc) : Analysisbase(spc, "sanity"
     sample_interval = j.value("nstep", -1);
 }
 
-void AtomRDF::sampleDistance(const Point& position1, const Point& position2) {
-    const auto distance = spc.geometry.vdist(position1, position2);
+void AtomRDF::sampleDistance(const Particle& particle1, const Particle& particle2) {
+    const auto distance = spc.geometry.vdist(particle1.pos, particle2.pos);
     if (slicedir.sum() > 0) {
         if (distance.cwiseProduct((Point::Ones() - slicedir.cast<double>()).cwiseAbs()).norm() < thickness) {
             histogram(distance.cwiseProduct(slicedir.cast<double>()).norm())++;
@@ -922,13 +922,26 @@ void AtomRDF::sampleDistance(const Point& position1, const Point& position2) {
 
 void AtomRDF::_sample() {
     mean_volume += spc.geometry.getVolume(dimensions);
-
-    auto active_particles = spc.activeParticles();
-    for (auto i = active_particles.begin(); i != active_particles.end(); ++i) {
-        for (auto j = i; ++j != active_particles.end();) {
-            if ((i->id == id1 && j->id == id2) || (i->id == id2 && j->id == id1)) {
-                sampleDistance(i->pos, j->pos);
-            }
+    if (id1 != id2) {
+        sampleDifferent();
+    } else {
+        sampleIdentical();
+    }
+}
+void AtomRDF::sampleIdentical() {
+    auto particles = spc.findAtoms(id1); // (id1 == id2)
+    for (auto i = particles.begin(); i != particles.end(); ++i) {
+        for (auto j = i; ++j != particles.end();) {
+            sampleDistance(*i, *j);
+        }
+    }
+}
+void AtomRDF::sampleDifferent() {
+    auto particles1 = spc.findAtoms(id1);
+    auto particles2 = spc.findAtoms(id2);
+    for (const auto& i : particles1) {
+        for (const auto& j : particles2) {
+            sampleDistance(i, j);
         }
     }
 }
@@ -939,16 +952,33 @@ AtomRDF::AtomRDF(const json& j, Space& spc) : PairFunctionBase(spc, j, "atomrdf"
 
 void MoleculeRDF::_sample() {
     mean_volume += spc.geometry.getVolume(dimensions);
-    auto active_molecules = spc.groups | ranges::cpp20::views::filter([](const auto& group) { return !group.empty(); });
-
-    for (auto i = active_molecules.begin(); i != active_molecules.end(); ++i) {
-        for (auto j = i; ++j != active_molecules.end();) {
-            if ((i->id == id1 && j->id == id2) || (i->id == id2 && j->id == id1)) {
-                const auto distance = std::sqrt(spc.geometry.sqdist(i->mass_center, j->mass_center));
-                histogram(distance)++;
-            }
+    if (id1 != id2) {
+        sampleDifferent();
+    } else {
+        sampleIdentical();
+    }
+}
+void MoleculeRDF::sampleIdentical() {
+    auto groups = spc.findMolecules(id1);
+    for (auto i = groups.begin(); i != groups.end(); ++i) {
+        for (auto j = i; ++j != groups.end();) {
+            sampleDistance(*i, *j);
         }
     }
+}
+void MoleculeRDF::sampleDifferent() {
+    auto ids1 = spc.findMolecules(id1);
+    auto ids2 = spc.findMolecules(id2);
+    for (const auto& i : ids1) {
+        for (const auto& j : ids2) {
+            sampleDistance(i, j);
+        }
+    }
+}
+
+void MoleculeRDF::sampleDistance(const Group& group_i, const Group& group_j) {
+    const auto distance = sqrt(spc.geometry.sqdist(group_i.mass_center, group_j.mass_center));
+    histogram(distance)++;
 }
 
 MoleculeRDF::MoleculeRDF(const json& j, Space& spc) : PairFunctionBase(spc, j, "molrdf") {

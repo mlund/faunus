@@ -432,9 +432,10 @@ class SaveState : public Analysisbase {
  */
 class PairFunctionBase : public Analysisbase {
   protected:
+    using index_type = size_t;
     int dimensions = 3;                           //!< dimensions to use when normalizing
-    int id1 = -1;                                 //!< molecule or atom id
-    int id2 = -1;                                 //!< molecule or atom id
+    index_type id1 = 0;                           //!< molecule or atom id
+    index_type id2 = 0;                           //!< molecule or atom id
     double dr = 0;                                //!< distance resolution
     std::string name1;                            //!< atom or molecule
     std::string name2;                            //!< atom or molecule name
@@ -451,24 +452,35 @@ class PairFunctionBase : public Analysisbase {
     double volumeElement(double r) const;
 
   public:
-    PairFunctionBase(Space& spc, const json&, const std::string& name);
+    PairFunctionBase(Space& spc, const json &j, const std::string_view name);
 };
 
-/** @brief Atomic radial distribution function, g(r) */
+/**
+ * @brief Atomic radial distribution function, g(r)
+ */
 class AtomRDF : public PairFunctionBase {
+  private:
     void _sample() override;
-    void sampleDistance(const Point& position1, const Point& position2);
+    void sampleDistance(const Particle& particle1, const Particle& particle2);
+    void sampleDifferent(); //!< particle types are different (id1!=id2)
+    void sampleIdentical(); //!< particle types are identical (id1==id2)
 
   public:
-    AtomRDF(const json&, Space&);
+    AtomRDF(const json& j, Space& spc);
 };
 
-/** @brief Same as `AtomRDF` but for molecules. Identical input. */
+/**
+ * @brief Same as `AtomRDF` but for molecules. Identical input
+ */
 class MoleculeRDF : public PairFunctionBase {
+  private:
     void _sample() override;
+    void sampleDistance(const Group& group_i, const Group& group_j);
+    void sampleDifferent(); //!< group types are different (id1!=id2)
+    void sampleIdentical(); //!< group types are identical (id1==id2)
 
   public:
-    MoleculeRDF(const json&, Space&);
+    MoleculeRDF(const json &j, Space &spc);
 };
 
 /**

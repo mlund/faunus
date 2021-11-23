@@ -83,7 +83,7 @@ void to_json(json& j, const Analysisbase& base);
  * After writing a new analysis, it must be added to this function in
  * order to be controlled from the main faunus input.
  */
-std::shared_ptr<Analysisbase> createAnalysis(const std::string& name, const json& j, Space& spc,
+std::unique_ptr<Analysisbase> createAnalysis(const std::string& name, const json& j, Space& spc,
                                              Energy::Hamiltonian& pot);
 
 /**

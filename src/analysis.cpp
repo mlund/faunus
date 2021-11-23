@@ -105,67 +105,67 @@ Analysisbase::Analysisbase(Space& spc, std::string_view name) : spc(spc), name(n
  * @param pot Hamiltonian
  * @return shared pointer to created analysis base class
  */
-std::shared_ptr<Analysisbase> createAnalysis(const std::string& name, const json& j, Space& spc,
+std::unique_ptr<Analysisbase> createAnalysis(const std::string& name, const json& j, Space& spc,
                                              Energy::Hamiltonian& pot) {
     try {
         if (name == "atomprofile") {
-            return std::make_shared<AtomProfile>(j, spc);
+            return std::make_unique<AtomProfile>(j, spc);
         } else if (name == "atomrdf") {
-            return std::make_shared<AtomRDF>(j, spc);
+            return std::make_unique<AtomRDF>(j, spc);
         } else if (name == "atomdipdipcorr") {
-            return std::make_shared<AtomDipDipCorr>(j, spc);
+            return std::make_unique<AtomDipDipCorr>(j, spc);
         } else if (name == "density") {
             faunus_logger->warn("`density` is replaced by `molecule_density` and `atom_density`. "
                                 "Activating the latter...");
-            return std::make_shared<AtomDensity>(j, spc);
+            return std::make_unique<AtomDensity>(j, spc);
         } else if (name == "molecule_density") {
-            return std::make_shared<MoleculeDensity>(j, spc);
+            return std::make_unique<MoleculeDensity>(j, spc);
         } else if (name == "atom_density") {
-            return std::make_shared<AtomDensity>(j, spc);
+            return std::make_unique<AtomDensity>(j, spc);
         } else if (name == "electricpotential") {
-            return std::make_shared<ElectricPotential>(j, spc);
+            return std::make_unique<ElectricPotential>(j, spc);
         } else if (name == "chargefluctuations") {
-            return std::make_shared<ChargeFluctuations>(j, spc);
+            return std::make_unique<ChargeFluctuations>(j, spc);
         } else if (name == "molrdf") {
-            return std::make_shared<MoleculeRDF>(j, spc);
+            return std::make_unique<MoleculeRDF>(j, spc);
         } else if (name == "multipole") {
-            return std::make_shared<Multipole>(j, spc);
+            return std::make_unique<Multipole>(j, spc);
         } else if (name == "atominertia") {
-            return std::make_shared<AtomInertia>(j, spc);
+            return std::make_unique<AtomInertia>(j, spc);
         } else if (name == "inertia") {
-            return std::make_shared<InertiaTensor>(j, spc);
+            return std::make_unique<InertiaTensor>(j, spc);
         } else if (name == "moleculeconformation") {
-            return std::make_shared<MolecularConformationID>(j, spc);
+            return std::make_unique<MolecularConformationID>(j, spc);
         } else if (name == "multipolemoments") {
-            return std::make_shared<MultipoleMoments>(j, spc);
+            return std::make_unique<MultipoleMoments>(j, spc);
         } else if (name == "multipoledist") {
-            return std::make_shared<MultipoleDistribution>(j, spc);
+            return std::make_unique<MultipoleDistribution>(j, spc);
         } else if (name == "polymershape") {
-            return std::make_shared<PolymerShape>(j, spc);
+            return std::make_unique<PolymerShape>(j, spc);
         } else if (name == "qrfile") {
-            return std::make_shared<QRtraj>(j, spc);
+            return std::make_unique<QRtraj>(j, spc);
         } else if (name == "reactioncoordinate") {
-            return std::make_shared<FileReactionCoordinate>(j, spc);
+            return std::make_unique<FileReactionCoordinate>(j, spc);
         } else if (name == "sanity") {
-            return std::make_shared<SanityCheck>(j, spc);
+            return std::make_unique<SanityCheck>(j, spc);
         } else if (name == "savestate") {
-            return std::make_shared<SaveState>(j, spc);
+            return std::make_unique<SaveState>(j, spc);
         } else if (name == "scatter") {
-            return std::make_shared<ScatteringFunction>(j, spc);
+            return std::make_unique<ScatteringFunction>(j, spc);
         } else if (name == "sliceddensity") {
-            return std::make_shared<SlicedDensity>(j, spc);
+            return std::make_unique<SlicedDensity>(j, spc);
         } else if (name == "systemenergy") {
-            return std::make_shared<SystemEnergy>(j, spc, pot);
+            return std::make_unique<SystemEnergy>(j, spc, pot);
         } else if (name == "virtualvolume") {
-            return std::make_shared<VirtualVolumeMove>(j, spc, pot);
+            return std::make_unique<VirtualVolumeMove>(j, spc, pot);
         } else if (name == "virtualtranslate") {
-            return std::make_shared<VirtualTranslate>(j, spc, pot);
+            return std::make_unique<VirtualTranslate>(j, spc, pot);
         } else if (name == "widom") {
-            return std::make_shared<WidomInsertion>(j, spc, pot);
+            return std::make_unique<WidomInsertion>(j, spc, pot);
         } else if (name == "xtcfile") {
-            return std::make_shared<XTCtraj>(j, spc);
+            return std::make_unique<XTCtraj>(j, spc);
         } else if (name == "spacetraj") {
-            return std::make_shared<SpaceTrajectory>(j, spc);
+            return std::make_unique<SpaceTrajectory>(j, spc);
         }
         // append more analysis here...
         throw ConfigurationError("unknown analysis");

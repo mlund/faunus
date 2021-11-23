@@ -344,10 +344,10 @@ struct XTCTrajectoryFrame {
      * @param[in] box  box dimensions (xyz) in nanometers
      * @param[in] coordinates_begin  input iterator with coordinates in nanometers
      * @param[in] coordinates_end  input iterator's end
-     * @throw std::runtime_error  when the number of coordinates does not match
+     * @throw std::runtime_error when the number of coordinates does not match
      */
     template <class begin_iterator, class end_iterator>
-    void importFrame(const int step, const float time, const Point box, begin_iterator coordinates_begin,
+    void importFrame(const int step, const float time, const Point& box, begin_iterator coordinates_begin,
                      end_iterator coordinates_end) {
         importTimestamp(step, time);
         importBox(box);
@@ -416,8 +416,7 @@ struct XTCTrajectoryFrame {
             if (i >= number_of_atoms) {
                 throw std::runtime_error("too many particles for XTC frame");
             }
-            const Point pos = (position + offset) / 1.0_nm;
-            const XTCVector xtc_pos = pos.cast<XTCFloat>();
+            const XTCVector xtc_pos = ((position + offset) / 1.0_nm).template cast<XTCFloat>();
             std::copy(xtc_pos.data(), xtc_pos.data() + DIM, xtc_coordinates.get()[i++]);
         });
         if (i != number_of_atoms) {

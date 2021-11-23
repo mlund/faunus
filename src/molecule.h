@@ -32,7 +32,7 @@ class MoleculeData;
  * and molecule data.
  */
 struct MoleculeInserter {
-    virtual ParticleVector operator()(Geometry::GeometryBase &geo, MoleculeData &mol,
+    virtual ParticleVector operator()(const Geometry::GeometryBase &geo, MoleculeData &mol,
                                       const ParticleVector &other_particles) = 0;
     virtual void from_json(const json& j);
     virtual void to_json(json& j) const;
@@ -60,7 +60,7 @@ class RandomInserter : public MoleculeInserter {
     bool allow_overlap = false;  //!< Set to true to skip container overlap check
     int max_trials = 20'000;     //!< Maximum number of container overlap checks
 
-    ParticleVector operator()(Geometry::GeometryBase &geo, MoleculeData &molecule,
+    ParticleVector operator()(const Geometry::GeometryBase &geo, MoleculeData &molecule,
                               const ParticleVector &ignored_other_particles = ParticleVector()) override;
     void from_json(const json &j) override;
     void to_json(json &j) const override;

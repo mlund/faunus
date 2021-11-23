@@ -95,7 +95,7 @@ void Analysisbase::_from_json(const json&) {}
 
 int Analysisbase::getNumberOfSteps() const { return number_of_steps; }
 
-Analysisbase::Analysisbase(Space& spc, std::string_view name) : spc(spc), name(name) { assert(!name.empty()); }
+Analysisbase::Analysisbase(const Space& spc, std::string_view name) : spc(spc), name(name) { assert(!name.empty()); }
 
 /**
  * @brief Factory function for generating analysis based on name
@@ -249,7 +249,7 @@ void SystemEnergy::createOutputStream() {
     *output_stream << "\n";
 }
 
-SystemEnergy::SystemEnergy(const json& j, Space& spc, Energy::Hamiltonian& hamiltonian)
+SystemEnergy::SystemEnergy(const json& j, const Space& spc, Energy::Hamiltonian& hamiltonian)
     : Analysisbase(spc, "systemenergy"), hamiltonian(hamiltonian) {
     from_json(j);
     energy_histogram.setResolution(0.25);
@@ -287,7 +287,7 @@ SaveState::~SaveState() {
     }
 }
 
-SaveState::SaveState(json j, Space& spc) : Analysisbase(spc, "savestate") {
+SaveState::SaveState(json j, const Space& spc) : Analysisbase(spc, "savestate") {
     if (j.count("nstep") == 0) { // by default, disable _sample() and
         j["nstep"] = -1;         // store only when _to_disk() is called
     }
@@ -299,7 +299,7 @@ SaveState::SaveState(json j, Space& spc) : Analysisbase(spc, "savestate") {
 
     setWriteFunction(spc);
 }
-void SaveState::setWriteFunction(Space& spc) {
+void SaveState::setWriteFunction(const Space& spc) {
     const auto suffix = filename.substr(filename.find_last_of('.') + 1);
     if (auto writer = createStructureFileWriter(suffix)) {
         writeFunc = [&, w = writer](auto& file) {
@@ -343,7 +343,7 @@ void SaveState::saveJsonStateFile(const std::string& filename, const Space& spc)
     }
 }
 
-void SaveState::saveAsCuboid(const std::string& filename, Space& spc, StructureFileWriter& writer) const {
+void SaveState::saveAsCuboid(const std::string& filename, const Space& spc, StructureFileWriter& writer) const {
     auto hexagonal_prism = std::dynamic_pointer_cast<Geometry::HexagonalPrism>(spc.geometry.asSimpleGeometry());
     if (hexagonal_prism) {
         faunus_logger->debug("creating cuboid from hexagonal prism");
@@ -354,7 +354,7 @@ void SaveState::saveAsCuboid(const std::string& filename, Space& spc, StructureF
     }
 }
 
-PairFunctionBase::PairFunctionBase(Space& spc, const json& j, const std::string_view name) : Analysisbase(spc, name) {
+PairFunctionBase::PairFunctionBase(const Space& spc, const json& j, const std::string_view name) : Analysisbase(spc, name) {
     from_json(j);
 }
 
@@ -403,7 +403,7 @@ double PairFunctionBase::volumeElement(double r) const {
     }
 }
 
-PairAngleFunctionBase::PairAngleFunctionBase(Space& spc, const json& j, const std::string& name)
+PairAngleFunctionBase::PairAngleFunctionBase(const Space& spc, const json& j, const std::string& name)
     : PairFunctionBase(spc, j, name) {
     from_json(j);
     correlation_filename = MPI::prefix + file;
@@ -432,7 +432,7 @@ void PerturbationAnalysisBase::_to_disk() {
 }
 PerturbationAnalysisBase::PerturbationAnalysisBase(const std::string& name, Energy::Energybase& pot, Space& spc,
                                                    const std::string& filename)
-    : Analysisbase(spc, name), pot(pot), filename(filename) {
+    : Analysisbase(spc, name), mutable_space(spc), pot(pot), filename(filename) {
     if (!filename.empty()) {
         this->filename = MPI::prefix + filename;
         stream = IO::openCompressedOutputStream(this->filename, true); // throws if error
@@ -453,12 +453,12 @@ double PerturbationAnalysisBase::meanFreeEnergy() const { return -std::log(mean_
 
 void VirtualVolumeMove::_sample() {
     if (std::fabs(volume_displacement) > 0.0) {
-        const auto old_volume = spc.geometry.getVolume(); // store old volume
-        const auto old_energy = pot.energy(change);  // ...and energy
-        const auto scale = spc.scaleVolume(old_volume + volume_displacement,
-                                           volume_scaling_method); // scale entire system to new volume
-        const auto new_energy = pot.energy(change);                // energy after scaling
-        spc.scaleVolume(old_volume, volume_scaling_method);        // restore saved system
+        const auto old_volume = mutable_space.geometry.getVolume(); // store old volume
+        const auto old_energy = pot.energy(change);                 // ...and energy
+        const auto scale = mutable_space.scaleVolume(old_volume + volume_displacement,
+                                                     volume_scaling_method); // scale entire system to new volume
+        const auto new_energy = pot.energy(change);                          // energy after scaling
+        mutable_space.scaleVolume(old_volume, volume_scaling_method);        // restore saved system
 
         const auto energy_change = new_energy - old_energy; // system energy change
         if (collectWidomAverage(energy_change)) {
@@ -547,7 +547,7 @@ void MolecularConformationID::_sample() {
 }
 void MolecularConformationID::_to_json(json& j) const { j["histogram"] = histogram; }
 
-MolecularConformationID::MolecularConformationID(const json& j, Space& spc)
+MolecularConformationID::MolecularConformationID(const json& j, const Space& spc)
     : Analysisbase(spc, "moleculeconformation") {
     from_json(j);
     const auto molname = j.at("molecule").get<std::string>();
@@ -558,7 +558,7 @@ void QRtraj::_sample() { write_to_file(); }
 
 void QRtraj::_to_json(json& j) const { j = {{"file", filename}}; }
 
-QRtraj::QRtraj(const json& j, Space& spc) : Analysisbase(spc, "qrfile") {
+QRtraj::QRtraj(const json& j, const Space& spc) : Analysisbase(spc, "qrfile") {
     from_json(j);
     filename = MPI::prefix + j.value("file", "qrtraj.dat"s);
     stream = IO::openCompressedOutputStream(filename, true);
@@ -606,7 +606,7 @@ void FileReactionCoordinate::_sample() {
     }
 }
 
-FileReactionCoordinate::FileReactionCoordinate(const json& j, Space& spc) : Analysisbase(spc, "reactioncoordinate") {
+FileReactionCoordinate::FileReactionCoordinate(const json& j, const Space& spc) : Analysisbase(spc, "reactioncoordinate") {
     from_json(j);
     filename = MPI::prefix + j.at("file").get<std::string>();
     if (stream = IO::openCompressedOutputStream(filename); not *stream) {
@@ -646,12 +646,12 @@ void WidomInsertion::_sample() {
     if (change.empty()) {
         faunus_logger->warn("{}: no inactive {} groups available", name, Faunus::molecules[molid].name);
     } else {
-        auto& group = spc.groups.at(change.groups.at(0).group_index); // inactive "ghost" group
-        group.resize(group.capacity());                         // activate ghost
-        ParticleVector particles;                               // particles to insert
+        auto& group = mutable_space.groups.at(change.groups.at(0).group_index); // inactive "ghost" group
+        group.resize(group.capacity());                                         // activate ghost
+        ParticleVector particles;                                               // particles to insert
         for (int cnt = 0; cnt < number_of_insertions; ++cnt) {
             particles =
-                inserter->operator()(spc.geometry, Faunus::molecules[molid], spc.particles); // random pos&orientation
+                inserter->operator()(mutable_space.geometry, Faunus::molecules[molid], spc.particles); // random pos&orientation
             updateGroup(group, particles);
             const auto energy_change = pot.energy(change); // in kT
             collectWidomAverage(energy_change);
@@ -823,7 +823,7 @@ std::map<DensityBase::id_type, int> MoleculeDensity::count() const {
     for_each(Faunus::molecules | views::filter(&MoleculeData::isMolecular),
              [&](auto& moldata) { molecular_group_count[moldata.id()] = 0; });
 
-    auto non_empty_molecular = [](Group& group) { return group.isMolecular() && !group.empty(); };
+    auto non_empty_molecular = [](const Group& group) { return group.isMolecular() && !group.empty(); };
     auto molecular_group_ids = spc.groups | views::filter(non_empty_molecular) | views::transform(&Group::id);
 
     for_each(molecular_group_ids, [&](auto id) { molecular_group_count[id]++; });
@@ -904,7 +904,7 @@ void SanityCheck::checkMassCenter(const Space::GroupType& group) {
     }
 }
 
-SanityCheck::SanityCheck(const json& j, Space& spc) : Analysisbase(spc, "sanity") {
+SanityCheck::SanityCheck(const json& j, const Space& spc) : Analysisbase(spc, "sanity") {
     from_json(j);
     sample_interval = j.value("nstep", -1);
 }
@@ -945,7 +945,7 @@ void AtomRDF::sampleDifferent() {
         }
     }
 }
-AtomRDF::AtomRDF(const json& j, Space& spc) : PairFunctionBase(spc, j, "atomrdf") {
+AtomRDF::AtomRDF(const json& j, const Space& spc) : PairFunctionBase(spc, j, "atomrdf") {
     id1 = Faunus::findAtomByName(name1).id();
     id2 = Faunus::findAtomByName(name2).id();
 }
@@ -981,7 +981,7 @@ void MoleculeRDF::sampleDistance(const Group& group_i, const Group& group_j) {
     histogram(distance)++;
 }
 
-MoleculeRDF::MoleculeRDF(const json& j, Space& spc) : PairFunctionBase(spc, j, "molrdf") {
+MoleculeRDF::MoleculeRDF(const json& j, const Space& spc) : PairFunctionBase(spc, j, "molrdf") {
     id1 = findMoleculeByName(name1).id();
     id2 = findMoleculeByName(name2).id();
 }
@@ -1014,7 +1014,7 @@ void AtomDipDipCorr::_sample() {
         }
     }
 }
-AtomDipDipCorr::AtomDipDipCorr(const json& j, Space& spc) : PairAngleFunctionBase(spc, j, "atomdipdipcorr") {
+AtomDipDipCorr::AtomDipDipCorr(const json& j, const Space& spc) : PairAngleFunctionBase(spc, j, "atomdipdipcorr") {
     id1 = findAtomByName(name1).id();
     id2 = findAtomByName(name2).id();
 }
@@ -1120,7 +1120,7 @@ void MultipoleDistribution::_sample() {
 
 void MultipoleDistribution::_to_json(json& j) const { j = {{"molecules", names}, {"file", filename}, {"dr", dr}}; }
 
-MultipoleDistribution::MultipoleDistribution(const json& j, Space& spc) : Analysisbase(spc, "Multipole Distribution") {
+MultipoleDistribution::MultipoleDistribution(const json& j, const Space& spc) : Analysisbase(spc, "Multipole Distribution") {
     from_json(j);
     dr = j.at("dr").get<double>();
     filename = j.at("file").get<std::string>();
@@ -1150,7 +1150,7 @@ void AtomInertia::_sample() {
         output_stream << getNumberOfSteps() << " " << compute().transpose() << "\n";
     }
 }
-AtomInertia::AtomInertia(const json& j, Space& spc) : Analysisbase(spc, "Atomic Inertia Eigenvalues") {
+AtomInertia::AtomInertia(const json& j, const Space& spc) : Analysisbase(spc, "Atomic Inertia Eigenvalues") {
     from_json(j);
     filename = MPI::prefix + j.at("file").get<std::string>();
     output_stream.open(filename);
@@ -1187,7 +1187,7 @@ void InertiaTensor::_sample() {
                       << "\n";
     }
 }
-InertiaTensor::InertiaTensor(const json& j, Space& spc) : Analysisbase(spc, "Inertia Tensor") {
+InertiaTensor::InertiaTensor(const json& j, const Space& spc) : Analysisbase(spc, "Inertia Tensor") {
     from_json(j);
     filename = MPI::prefix + j.at("file").get<std::string>();
     output_stream.open(filename);
@@ -1246,14 +1246,14 @@ void MultipoleMoments::_sample() {
                       << multipole.eivec.transpose() << "\n";
     }
 }
-MultipoleMoments::MultipoleMoments(const json& j, Space& spc) : Analysisbase(spc, "Multipole Moments") {
+MultipoleMoments::MultipoleMoments(const json& j, const Space& spc) : Analysisbase(spc, "Multipole Moments") {
     from_json(j);
     try {
         use_molecular_mass_center = j.value("mol_cm", true); // use the mass center of the whole molecule
         filename = MPI::prefix + j.at("file").get<std::string>();
         output_stream.open(filename); // output file
 
-        group_index = j.at("index").get<int>();
+        group_index = j.at("index").get<decltype(group_index)>();
         const auto& group = spc.groups.at(group_index);
 
         particle_range = j.value("indexes", decltype(particle_range)({0, group.size() - 1}));
@@ -1346,7 +1346,7 @@ void PolymerShape::_to_disk() {
     }
 }
 
-PolymerShape::PolymerShape(const json& j, Space& spc) : Analysisbase(spc, "Polymer Shape") {
+PolymerShape::PolymerShape(const json& j, const Space& spc) : Analysisbase(spc, "Polymer Shape") {
     from_json(j);
     cite = "https://dx.doi.org/10/d6ff";
     if (j.count("molecules") > 0) {
@@ -1371,7 +1371,7 @@ void AtomProfile::_from_json(const json& j) {
     file = j.at("file").get<std::string>();
     names = j.at("atoms").get<decltype(names)>();                            // atom names
     const auto vec_of_ids = Faunus::names2ids(Faunus::atoms, names);         // names --> molids
-    atom_id_selection = std::set<int>(vec_of_ids.begin(), vec_of_ids.end()); // copy vector to set
+    atom_id_selection = std::set<AtomData::index_type>(vec_of_ids.begin(), vec_of_ids.end()); // copy vector to set
     dr = j.value("dr", 0.1);
     table.setResolution(dr, 0);
     count_charge = j.value("charge", false);
@@ -1410,7 +1410,7 @@ double AtomProfile::distanceToOrigin(const Point& position) const {
     return distance.cwiseProduct(dir.cast<double>()).norm();
 }
 
-AtomProfile::AtomProfile(const json& j, Space& spc) : Analysisbase(spc, "atomprofile") { from_json(j); }
+AtomProfile::AtomProfile(const json& j, const Space& spc) : Analysisbase(spc, "atomprofile") { from_json(j); }
 
 void AtomProfile::_to_disk() {
     std::ofstream f(MPI::prefix + file);
@@ -1477,7 +1477,7 @@ void SlicedDensity::_sample() {
         histogram(particle.pos.z() - z_offset)++;
     }
 }
-SlicedDensity::SlicedDensity(const json& j, Space& spc) : Analysisbase(spc, "sliceddensity") { from_json(j); }
+SlicedDensity::SlicedDensity(const json& j, const Space& spc) : Analysisbase(spc, "sliceddensity") { from_json(j); }
 
 void SlicedDensity::_to_disk() {
     if (std::ofstream f(MPI::prefix + file); f and number_of_samples > 0) {
@@ -1567,7 +1567,7 @@ ParticleVector ChargeFluctuations::averageChargeParticles(const Space::GroupType
 /**
  * @todo replace `mol_iter` with simple molid integer
  */
-ChargeFluctuations::ChargeFluctuations(const json& j, Space& spc) : Analysisbase(spc, "chargefluctuations") {
+ChargeFluctuations::ChargeFluctuations(const json& j, const Space& spc) : Analysisbase(spc, "chargefluctuations") {
     from_json(j);
     filename = j.value("pqrfile", ""s);
     verbose = j.value("verbose", true);
@@ -1606,7 +1606,7 @@ void Multipole::_to_json(json& j) const {
                                          {u8::mu + u8::squared, average.dipole_moment_squared.avg()}};
     }
 }
-Multipole::Multipole(const json& j, Space& spc) : Analysisbase(spc, "multipole") { from_json(j); }
+Multipole::Multipole(const json& j, const Space& spc) : Analysisbase(spc, "multipole") { from_json(j); }
 void ScatteringFunction::_sample() {
     scatter_positions.clear();
     for (int id : molecule_ids) {                         // loop over molecule names
@@ -1665,7 +1665,7 @@ void ScatteringFunction::_to_json(json& j) const {
     }
 }
 
-ScatteringFunction::ScatteringFunction(const json& j, Space& spc) try : Analysisbase(spc, "scatter") {
+ScatteringFunction::ScatteringFunction(const json& j, const Space& spc) try : Analysisbase(spc, "scatter") {
     from_json(j);
 
     mass_center_scattering = j.value("com", true);
@@ -1734,20 +1734,22 @@ void VirtualTranslate::_from_json(const json& j) {
     }
 }
 void VirtualTranslate::_sample() {
-    if (std::fabs(perturbation_distance) > 0.0) {
-        if (auto mollist = spc.findMolecules(molid, Space::Selection::ACTIVE); !ranges::cpp20::empty(mollist)) {
-            if (ranges::distance(mollist.begin(), mollist.end()) > 1) {
-                throw std::runtime_error("exactly ONE active molecule expected");
-            }
-            if (auto group_it = random.sample(mollist.begin(), mollist.end()); not group_it->empty()) {
-                const auto energy_change = momentarilyPerturb(*group_it);
-                if (collectWidomAverage(energy_change)) { // collect average (with sanity check)
-                    writeToFileStream(energy_change);
-                }
+    if (std::fabs(perturbation_distance) < pc::epsilon_dbl) {
+        return;
+    }
+    if (auto mollist = mutable_space.findMolecules(molid, Space::Selection::ACTIVE); !ranges::cpp20::empty(mollist)) {
+        if (ranges::distance(mollist.begin(), mollist.end()) > 1) {
+            throw std::runtime_error("exactly ONE active molecule expected");
+        }
+        if (auto group_it = random.sample(mollist.begin(), mollist.end()); not group_it->empty()) {
+            const auto energy_change = momentarilyPerturb(*group_it);
+            if (collectWidomAverage(energy_change)) { // collect average (with sanity check)
+                writeToFileStream(energy_change);
             }
         }
     }
 }
+
 void VirtualTranslate::writeToFileStream(const double energy_change) const {
     if (stream) { // file to disk?
         const auto mean_force = -meanFreeEnergy() / perturbation_distance;
@@ -1787,7 +1789,7 @@ VirtualTranslate::VirtualTranslate(const json& j, Space& spc, Energy::Energybase
     from_json(j);
 }
 
-SpaceTrajectory::SpaceTrajectory(const json& j, Space& spc)
+SpaceTrajectory::SpaceTrajectory(const json& j, const Space& spc)
     : Analysisbase(spc, "space trajectory"), groups(spc.groups) {
     from_json(j);
     filename = j.at("file").get<std::string>();
@@ -1832,7 +1834,7 @@ void SpaceTrajectory::_to_disk() { stream->flush(); }
 
 // -----------------------------
 
-ElectricPotential::ElectricPotential(const json& j, Space& spc)
+ElectricPotential::ElectricPotential(const json& j, const Space& spc)
     : Analysisbase(spc, "electricpotential"), potential_correlation_histogram(histogram_resolution) {
     from_json(j);
     coulomb = std::make_shared<Potential::NewCoulombGalore>();

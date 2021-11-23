@@ -5,6 +5,7 @@
 #include "geometry.h"
 #include <range/v3/view/filter.hpp>
 #include <range/v3/view/transform.hpp>
+#include <range/v3/view/subrange.hpp>
 #include <nlohmann/json.hpp>
 #include <optional>
 
@@ -79,6 +80,14 @@ template <class T> class ElasticRange : public IterRange<typename std::vector<T>
         auto new_size = static_cast<int>(size()) + number_to_insert_or_delete;
         return (new_size >= 0 && new_size <= capacity());
     }
+
+    /*
+     * @note On Apple Clang 12.0.5 (Nov. 2021) template deduction is unavailable and we have to use
+     *       `make_subrange()`. With GCC `cpp20::subrange()` can be used. More info here:
+     *       https://stackoverflow.com/questions/58316189/in-ranges-v3-how-do-i-create-a-range-from-a-pair-of-iterators
+     */
+    inline auto all() { return ranges::make_subrange(begin(), trueend()); }       //!< Active and inactive elements
+    inline auto all() const { return ranges::make_subrange(begin(), trueend()); } //!< Active and inactive elements
 };
 
 template <class T>

@@ -110,6 +110,7 @@ AtomData& findAtomByName(std::string_view name);
  * @tparam Trange Container of object having `.name` and `.id()` data members
  * @param database Iterable range having `.name` and `.id()` members
  * @param names Container with names to convert to id
+ * @throw if names not found
  * @return Vector of ids matching `names`
  *
  * This is typically used with `Faunus::atoms` or `Faunus::molecules`

@@ -279,8 +279,9 @@ const std::map<MoleculeData::index_type, std::size_t>& Space::getImplicitReservo
 std::map<MoleculeData::index_type, std::size_t>& Space::getImplicitReservoir() { return implicit_reservoir; }
 
 std::vector<Space::GroupType, std::allocator<Space::GroupType>>::iterator
-Space::findGroupContaining(const Particle& particle) {
-    return std::find_if(groups.begin(), groups.end(), [&particle](auto& group) { return group.contains(particle); });
+Space::findGroupContaining(const Particle& particle, bool include_inactive) {
+    return std::find_if(groups.begin(), groups.end(),
+                        [&](Group& group) { return group.contains(particle, include_inactive); });
 }
 
 std::vector<Space::GroupType, std::allocator<Space::GroupType>>::iterator

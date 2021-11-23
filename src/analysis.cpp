@@ -8,11 +8,11 @@
 #include "aux/eigensupport.h"
 #include <range/v3/numeric/accumulate.hpp>
 #include <range/v3/algorithm/for_each.hpp>
+#include <range/v3/view/cache1.hpp>
 #include <spdlog/spdlog.h>
 #include <zstr.hpp>
 #include <cereal/types/memory.hpp>
 #include <cereal/archives/binary.hpp>
-#include <range/v3/numeric/accumulate.hpp>
 
 #include <iomanip>
 #include <iostream>
@@ -1021,46 +1021,54 @@ AtomDipDipCorr::AtomDipDipCorr(const json& j, Space& spc) : PairAngleFunctionBas
 
 // =============== XTCtraj ===============
 
-XTCtraj::XTCtraj(const json& j, Space& spc)
-    : Analysisbase(spc, "xtcfile"), atom_filter([](const Particle&) { return true; }) {
-    from_json(j);
-    assert(atom_filter);
-}
-
-void XTCtraj::_to_json(json& j) const {
-    j["file"] = writer->filename;
-    if (not names.empty()) {
-        j["molecules"] = names;
-    }
-}
-
-void XTCtraj::_from_json(const json& j) {
-    const auto file = MPI::prefix + j.at("file").get<std::string>();
-    writer = std::make_shared<XTCWriter>(file);
-
-    atom_filter = [](const Particle&) { return true; }; // default: save all particles
-    names = j.value("molecules", std::vector<std::string>());
-    if (!names.empty()) {
-        molecule_ids = Faunus::names2ids(Faunus::molecules, names); // molecule types to save
-        if (!molecule_ids.empty()) {
-            std::sort(molecule_ids.begin(), molecule_ids.end()); // needed for binary_search
-            atom_filter = [&](const Particle& particle) {
-                for (const auto& group : spc.groups) {
-                    if (group.contains(particle, true)) {
-                        return std::binary_search(molecule_ids.begin(), molecule_ids.end(), group.id);
-                    }
-                }
-                return false;
-            };
+/**
+ * @param spc Space to operate on
+ * @param filename Output xtc file name
+ * @param molecule_names Save only a subset of molecules with matching names (default empty = all)
+ */
+XTCtraj::XTCtraj(Space& spc, const std::string& filename, const std::vector<std::string>& molecule_names)
+    : Analysisbase(spc, "xtcfile") {
+    namespace rv = ranges::cpp20::views;
+    writer = std::make_unique<XTCWriter>(filename);
+    if (!molecule_names.empty()) {
+        group_ids = Faunus::names2ids(Faunus::molecules, molecule_names); // molecule types to save
+        group_indices = group_ids |
+                        rv::transform([&](auto id) { return spc.findMolecules(id, Space::Selection::ALL); }) |
+                        ranges::views::cache1 | rv::join |
+                        rv::transform([&](const Group& group) { return spc.getGroupIndex(group); }) | ranges::to_vector;
+        if (group_indices.empty()) {
+            throw ConfigurationError("xtc selection is empty - nothing to sample");
         }
     }
 }
 
+XTCtraj::XTCtraj(const json& j, Space& spc)
+    : XTCtraj(spc, MPI::prefix + j.at("file").get<std::string>(), j.value("molecules", std::vector<std::string>())) {
+    Analysisbase::from_json(j);
+}
+
+void XTCtraj::_to_json(json& j) const {
+    j["file"] = writer->filename;
+    if (!group_ids.empty()) {
+        j["molecules"] = group_ids |
+                         ranges::cpp20::views::transform([](auto id) { return Faunus::molecules.at(id).name; }) |
+                         ranges::to_vector;
+    }
+}
+
+/**
+ * Write one frame to the xtc file containing both active AND inactive particles.
+ */
 void XTCtraj::_sample() {
-    assert(atom_filter); // some gcc/clang/ubuntu/macos combinations wronly clear the `filter` function
-    auto positions =
-        spc.particles | ranges::cpp20::views::filter(atom_filter) | ranges::cpp20::views::transform(&Particle::pos);
-    writer->writeNext(spc.geometry.getLength(), positions.begin(), positions.end());
+    namespace rv = ranges::cpp20::views;
+    if (group_ids.empty()) {
+        auto positions = spc.particles | rv::transform(&Particle::pos);
+        writer->writeNext(spc.geometry.getLength(), positions.begin(), positions.end());
+    } else {
+        auto positions = group_indices | rv::transform([&](auto i) { return spc.groups.at(i).all(); }) |
+                         ranges::views::cache1 | rv::join | rv::transform(&Particle::pos);
+        writer->writeNext(spc.geometry.getLength(), positions.begin(), positions.end());
+    }
 }
 
 // =============== MultipoleDistribution ===============

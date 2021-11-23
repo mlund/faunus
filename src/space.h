@@ -109,7 +109,7 @@ class Space {
 
     void clear(); //!< Clears particle and molecule list
     GroupType& addGroup(MoleculeData::index_type molid, const ParticleVector& particles); //!< Append a group
-    GroupVector::iterator findGroupContaining(const Particle& particle); //!< Finds the group containing the given atom
+    GroupVector::iterator findGroupContaining(const Particle& particle, bool include_inactive = false); //!< Finds the group containing the given atom
     GroupVector::iterator findGroupContaining(AtomData::index_type atom_index); //!< Find group containing atom index
     size_t numParticles(Selection selection = Selection::ACTIVE) const;         //!< Number of (active) particles
 

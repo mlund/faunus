@@ -6,6 +6,7 @@
 #include "potentials.h"
 #include "aux/iteratorsupport.h"
 #include "aux/eigensupport.h"
+#include "aux/arange.h"
 #include <range/v3/numeric/accumulate.hpp>
 #include <range/v3/algorithm/for_each.hpp>
 #include <spdlog/spdlog.h>
@@ -1480,13 +1481,17 @@ void SlicedDensity::_sample() {
 SlicedDensity::SlicedDensity(const json& j, const Space& spc) : Analysisbase(spc, "sliceddensity") { from_json(j); }
 
 void SlicedDensity::_to_disk() {
-    if (std::ofstream f(MPI::prefix + file); f and number_of_samples > 0) {
-        f << "# z rho/M\n";
-        const Point box_length = spc.geometry.getLength();
-        const auto half_z_length = 0.5 * box_length.z();
-        const auto volume = box_length.x() * box_length.y() * dz;
-        for (double z = -half_z_length; z <= half_z_length; z += dz) {
-            f << fmt::format("{:.6E} {:.6E}\n", z, histogram(z) / volume / number_of_samples * 1e27 / pc::Nav);
+    if (number_of_samples == 0) {
+        return;
+    }
+    if (std::ofstream stream(MPI::prefix + file); stream) {
+        const auto box = spc.geometry.getLength();
+        const auto slice_volume = box.x() * box.y() * dz;
+        const auto normalize = slice_volume * number_of_samples * 1.0_molar;
+        const auto zhalf = 0.5 * box.z();
+        stream << "# z rho/M\n";
+        for (auto z : arange(-zhalf, zhalf + dz, dz)) { // interval [-Lz/2, Lz/2]
+            stream << fmt::format("{:.6E} {:.6E}\n", z, histogram(z) / normalize);
         }
     }
 }

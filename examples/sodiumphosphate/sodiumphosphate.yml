@@ -43,7 +43,7 @@ reactionlist:
     - "h2po4 = hpo4 + H + Na": {pK: 7.21}
     - "Cl + h2po4 = hpo4 + H": {pK: 7.21}
     - "hpo4 = po4 + H + Na":  {pK: 12.67}
-    - "Cl + hpo4 = po4 + H":  {pK: 12.67} 
+    - "Cl + hpo4 = po4 + H":  {pK: 12.67}
     - "= Na + Cl": { } # grand canonical salt
 moves:
     - rcmc: {repeat: 100}

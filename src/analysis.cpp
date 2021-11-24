@@ -817,12 +817,12 @@ std::map<DensityBase::id_type, int> MoleculeDensity::count() const {
 
     // ensure that also inactive groups are registered (as zero)
     for_each(Faunus::molecules | views::filter(&MoleculeData::isMolecular),
-             [&](auto& moldata) { molecular_group_count[moldata.id()] = 0; });
+             [&](auto& moldata) { molecular_group_count[moldata.id()] = spc.countMolecules(moldata.id()); });
 
-    auto non_empty_molecular = [](Group& group) { return group.isMolecular() && !group.empty(); };
-    auto molecular_group_ids = spc.groups | views::filter(non_empty_molecular) | views::transform(&Group::id);
+    /*    auto non_empty_molecular = [](Group& group) { return group.isMolecular() && !group.empty(); };
+        auto molecular_group_ids = spc.groups | views::filter(non_empty_molecular) | views::transform(&Group::id);
 
-    for_each(molecular_group_ids, [&](auto id) { molecular_group_count[id]++; });
+        for_each(molecular_group_ids, [&](auto id) { molecular_group_count[id]++; });*/
     return molecular_group_count;
 }
 

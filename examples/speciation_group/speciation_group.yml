@@ -25,4 +25,4 @@ analysis:
 mcloop: {macro: 10, micro: 100000}
 geometry: {type: cuboid, length: 60}
 temperature: 300
-random: {seed: hardware}
+random: {seed: fixed}

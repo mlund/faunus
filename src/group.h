@@ -90,7 +90,7 @@ template <class T> auto ElasticRange<T>::inactive() const { return base({end(), 
 template <class T> void ElasticRange<T>::deactivate(ElasticRange::Titer first, ElasticRange::Titer last) {
     size_t n = std::distance(first, last);
     assert(first >= begin() && last <= end());
-    std::rotate(begin(), last, end());
+    std::rotate(first, last, end());
     end() -= n;
     assert(size() + inactive().size() == capacity());
 }

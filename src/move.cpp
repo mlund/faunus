@@ -934,13 +934,13 @@ void TranslateRotate::_from_json(const json& j) {
 }
 
 /**
- * @todo `mollist` scales linearly w. system size -- implement look-up-table in Space?
+ *
  */
 std::optional<std::reference_wrapper<Space::GroupType>> TranslateRotate::findRandomMolecule() const {
-    const auto& active_group_indices = spc.getMolecules(molid, Space::Selection::ACTIVE);
-    if (not active_group_indices.empty()) {
-        auto group_index_it = slump.sample(active_group_indices.begin(), active_group_indices.end());
-        return spc.groups[*group_index_it];
+    auto active_group_inds = spc.getMoleculesIndices(molid, Space::Selection::ACTIVE);
+    if (not active_group_inds.empty()) {
+        auto random_number = slump.range<size_t>(0, spc.countMolecules(molid) - 1);
+        return spc.groups[active_group_inds[random_number]];
     }
     return std::nullopt;
 }

@@ -4,52 +4,87 @@
 #include "spdlog/spdlog.h"
 #include "aux/eigensupport.h"
 #include <range/v3/algorithm/for_each.hpp>
-#include <range/v3/algorithm/transform.hpp>
 #include <memory>
 #include <stdexcept>
 
 namespace Faunus {
 
 void Tracker::activate(const id_type id, const size_t index) {
-    active.at(id).insert(index);
+
+    active.at(id).insert({index, number_of_active.at(id)});
+    assert(inactive.at(id).count(index) != 0); // deactivating reference must be among inactive
+    assert(number_of_active.at(id) <
+           index_holder.at(id).size()); // I cannot activate anything when everything is active
+
+    auto old_reference_to_holder = inactive.at(id).at(index);
+    assert(index_holder.at(id).size() > old_reference_to_holder);
+
+    auto first_inactive = index_holder.at(id).at(number_of_active.at(id));
+    index_holder.at(id).at(old_reference_to_holder) = first_inactive;
+    index_holder.at(id).at(number_of_active.at(id)) = index;
+
+    assert(inactive.at(id).count(first_inactive) != 0);
+    inactive.at(id).at(first_inactive) = old_reference_to_holder;
+
     inactive.at(id).erase(index);
+
+    number_of_active.at(id)++;
 }
 
 void Tracker::deactivate(const id_type id, const size_t index) {
-    inactive.at(id).insert(index);
+
+    inactive.at(id).insert({index, number_of_active.at(id) - 1});
+    assert(active.at(id).count(index) != 0); // deactivating reference must be among inactive
+    assert(number_of_active.at(id) > 0);     // I cannot deactivate anything when everything is inactive
+    auto old_reference_to_holder = active.at(id).at(index);
+    assert(index_holder.at(id).size() > old_reference_to_holder);
+
+    auto last_active = index_holder.at(id).at(number_of_active.at(id) - 1);
+    index_holder.at(id).at(old_reference_to_holder) = last_active;
+    index_holder.at(id).at(number_of_active.at(id) - 1) = index;
+
+    assert(active.at(id).count(last_active) != 0);
+    active.at(id).at(last_active) = old_reference_to_holder;
     active.at(id).erase(index);
+
+    number_of_active.at(id)--;
 }
 
-void Tracker::insert(const id_type id, const size_t index) { inactive.at(id).insert(index); }
-
-size_t Tracker::countActive(const id_type id) const { return active.at(id).size(); }
-
-size_t Tracker::countInactive(const id_type id) const { return inactive.at(id).size(); }
-
-std::unordered_set<size_t>& Tracker::getActive(const id_type id) { return active.at(id); }
-
-const std::unordered_set<size_t>& Tracker::getActive(const id_type id) const { return active.at(id); }
-
-std::unordered_set<size_t>& Tracker::getInactive(const id_type id) { return inactive.at(id); }
-
-const std::unordered_set<size_t>& Tracker::getInactive(const id_type id) const { return inactive.at(id); }
-
-void Tracker::clear() {
-    active.clear();
-    inactive.clear();
-    active.shrink_to_fit();
-    inactive.shrink_to_fit();
+void Tracker::insert(const id_type id, const size_t index) {
+    inactive.at(id).insert({index, index_holder.at(id).size()});
+    index_holder.at(id).push_back(index);
 }
 
-void Tracker::reserve(const id_type id, const size_t total_number_of_species) {
-    active.at(id).reserve(total_number_of_species);
-    inactive.at(id).reserve(total_number_of_species);
+void Tracker::removeInactive(const id_type id, const size_t index) {
+    auto old_reference_to_holder = inactive.at(id).at(index); // swap deactivated index to end of original index holder
+    auto last_inactive = index_holder.at(id).at(index_holder.at(id).size() - 1);
+
+    assert(index_holder.at(id).size() > old_reference_to_holder);
+    index_holder.at(id).at(old_reference_to_holder) = last_inactive;
+    index_holder.at(id).pop_back();
+    inactive.at(id).erase(index);
 }
 
-void Tracker::init(const id_type max_number_of_ids) {
-    active.resize(max_number_of_ids);
-    inactive.resize(max_number_of_ids);
+/**
+ * @brief swaps index from one holder into another
+ *
+ * @param old_id of bucket where @param index originally resides
+ * @param new_id of bucket where @param index will be placed
+ * @param index is a reference to particle/group, which we are swapping
+ *
+ * @note needed for speciation only when species is Atomic.
+ */
+void Tracker::swap(const id_type old_id, const id_type new_id, const size_t index) {
+
+    insert(new_id, index);   // push to top of inactive indices of new holder
+    activate(new_id, index); // activate the newly inserted inactive index
+
+    deactivate(old_id, index);     // deactivate index in original holder
+    removeInactive(old_id, index); // remove deactivated index from original holder
 }
+
+size_t Tracker::countActive(const id_type id) const { return number_of_active.at(id); }
+size_t Tracker::countInactive(const id_type id) const { return index_holder.at(id).size() - countActive(id); }
 
 bool Change::GroupChange::operator<(const Faunus::Change::GroupChange& other) const {
     return group_index < other.group_index;
@@ -210,6 +245,15 @@ void Space::sync(Space& other, const Change& change) {
                 auto& group = groups.at(changed.group_index);             // old group
                 auto& other_group = other.groups.at(changed.group_index); // new group
                 assert(group.id == other_group.id);
+
+                if (changed.dNswap) {
+                    for (auto changed_index : changed.relative_atom_indices) {
+                        auto& changed_particle = group.at(changed_index);
+                        auto& original_particle = other_group.at(changed_index);
+                        swapInTrackers(changed_particle.id, original_particle.id, changed_particle);
+                    }
+                }
+
                 if (group.traits().isImplicit()) { // the molecule is implicit
                     implicit_reservoir[group.id] = other.implicit_reservoir.at(group.id);
                 } else if (changed.all) {
@@ -220,11 +264,27 @@ void Space::sync(Space& other, const Change& change) {
                         group.at(i) = other_group.at(i);           // deep copy select particles
                     }
                 }
-                auto is_active = getGroupFilter<Group::Selectors::ACTIVE>();
-                if (is_active(group)) {
-                    activate(group);
-                } else {
-                    deactivate(group);
+
+                if (changed.dNatomic) {
+                    for (auto changed_index : changed.relative_atom_indices) {
+                        auto& changed_particle = group.at(changed_index);
+                        if (changed_index < group.size()) {
+                            activateParticle(changed_particle);
+                        } else {
+                            deactivateParticle(changed_particle);
+                        }
+                    }
+                } else if (not changed.dNswap) { // molecular group got activated or deactivated
+                    auto is_active = getGroupFilter<Group::Selectors::ACTIVE>();
+                    if (is_active(group)) {
+                        activate(group);
+                    } else {
+                        this->molecule_tracker->deactivate(group.id, indexOf(group));
+                        for (auto changed_index : changed.relative_atom_indices) {
+                            auto& changed_particle = group.at(changed_index);
+                            deactivateParticle(changed_particle);
+                        }
+                    }
                 }
             }
         } else {
@@ -358,7 +418,7 @@ void Space::deactivate(const GroupType& group) {
 void Space::activateParticle(const Particle& particle) {
     atom_tracker->activate(particle.id, indexOf(particle));
     if (std::fabs(particle.charge) < 1e-6) {
-        neutral_atom_tracker->activate(particle.id, indexOf(particle));
+        // neutral_atom_tracker->activate(particle.id, indexOf(particle));
     }
 }
 
@@ -372,7 +432,7 @@ void Space::activateParticle(const Particle& particle) {
 void Space::deactivateParticle(const Particle& particle) {
     atom_tracker->deactivate(particle.id, indexOf(particle));
     if (std::fabs(particle.charge) < 1e-6) {
-        neutral_atom_tracker->deactivate(particle.id, indexOf(particle));
+        // neutral_atom_tracker->deactivate(particle.id, indexOf(particle));
     }
 }
 
@@ -452,48 +512,6 @@ std::size_t Space::getFirstActiveParticleIndex(const GroupType& group) const {
 }
 
 /**
- * @brief Returns a set of molecule indices according to selection and 'molid'
- * @param molid Molecule id to look for
- * @param selection
- * @return unordered_set of molecule indices
- */
-const std::unordered_set<size_t>& Space::getMolecules(const MoleculeData::index_type molid, Selection selection) const {
-    switch (selection) {
-    case (Selection::ACTIVE):
-        return molecule_tracker->getActive(molid);
-    case (Selection::INACTIVE):
-        return molecule_tracker->getInactive(molid);
-    case (Selection::ACTIVE_NEUTRAL):
-        return neutral_molecule_tracker->getActive(molid);
-    case (Selection::INACTIVE_NEUTRAL):
-        return neutral_molecule_tracker->getInactive(molid);
-    default:
-        throw ConfigurationError("invalid selection!");
-    }
-}
-
-/**
- * @brief Returns a set of particle indices according to selection and 'atom'
- * @param atom_id Molecule id to look for
- * @param selection
- * @return unordered_set of particle indices
- */
-const std::unordered_set<size_t>& Space::getAtoms(const AtomData::index_type atom_id, Selection selection) const {
-    switch (selection) {
-    case (Selection::ACTIVE):
-        return atom_tracker->getActive(atom_id);
-    case (Selection::INACTIVE):
-        return molecule_tracker->getInactive(atom_id);
-    case (Selection::ACTIVE_NEUTRAL):
-        return neutral_molecule_tracker->getActive(atom_id);
-    case (Selection::INACTIVE_NEUTRAL):
-        return neutral_molecule_tracker->getInactive(atom_id);
-    default:
-        throw ConfigurationError("invalid selection!");
-    }
-}
-
-/**
  * @brief Returns number particles according to selection and 'atom_id'
  * @param atom_id Atom id to look for
  * @param selection
@@ -515,6 +533,11 @@ size_t Space::countAtoms(AtomData::index_type atom_id, Selection selection) cons
     }
 }
 
+/*size_t Space::countAtoms(AtomData::index_type atomid, Selection selection) const {
+    auto x = atom_tracker->countActive(atomid);
+    return ranges::cpp20::count_if(activeParticles(), [&](auto& particle) { return particle.id == atomid; });
+}*/
+
 /**
  * @brief Returns number molecules according to selection and 'molid'
  * @param molid Atom id to look for
@@ -525,7 +548,7 @@ size_t Space::countMolecules(const MoleculeData::index_type molid, Selection sel
     case (Selection::ALL):
         return molecule_tracker->countActive(molid) + molecule_tracker->countInactive(molid);
     case (Selection::INACTIVE):
-        return molecule_tracker->countActive(molid);
+        return molecule_tracker->countInactive(molid);
     case (Selection::ACTIVE):
         return molecule_tracker->countActive(molid);
     case (Selection::ALL_NEUTRAL):
@@ -534,30 +557,6 @@ size_t Space::countMolecules(const MoleculeData::index_type molid, Selection sel
         return neutral_molecule_tracker->countInactive(molid);
     case (Selection::ACTIVE_NEUTRAL):
         return neutral_molecule_tracker->countActive(molid);
-    }
-}
-
-/*
- * TODO Where should this be? It should have access to total number of molecule/atom types and numbers
- */
-void Space::reserveTrackers() {
-    molecule_tracker = std::make_unique<Tracker>();
-    atom_tracker = std::make_unique<Tracker>();
-    molecule_tracker->init(Faunus::molecules.size());
-    atom_tracker->init(Faunus::atoms.size());
-
-    neutral_molecule_tracker = std::make_unique<Tracker>();
-    neutral_atom_tracker = std::make_unique<Tracker>();
-    neutral_molecule_tracker->init(Faunus::molecules.size());
-    neutral_atom_tracker->init(Faunus::atoms.size());
-
-    for (const auto& molecule : Faunus::molecules) {
-        molecule_tracker->reserve(molecule.id(), numMolecules<Group::Selectors::ANY>(molecule.id()));
-    }
-    for (const auto& atom : Faunus::atoms) {
-        auto filter = [&](const Particle& particle) { return (particle.id == atom.id()); };
-        auto number_of_atoms = std::count_if(particles.begin(), particles.end(), filter);
-        molecule_tracker->reserve(atom.id(), number_of_atoms);
     }
 }
 
@@ -581,16 +580,19 @@ void Space::initTrackers() {
     for (const auto& group : groups) {
         molecule_tracker->insert(group.id, indexOf(group));
         neutral_molecule_tracker->insert(group.id, indexOf(group));
+    }
+    for (const auto& group : groups) {
         if (is_active(group)) {
             molecule_tracker->activate(group.id, indexOf(group));
             if (is_neutral(group.begin(), group.end())) {
                 neutral_molecule_tracker->activate(group.id, indexOf(group));
             }
         }
-        /*std::for_each(group.begin(), group.trueend(), [&](const Particle& particle){
-            atom_tracker->insert(particle.id, indexOf(particle));
-        });*/ // this part provides a 2x slowdown
-        // i will give my kingdom and half the princess to anyone who figures out why
+    }
+
+    for (const auto& particle : particles) {
+        atom_tracker->insert(particle.id, indexOf(particle));
+        neutral_atom_tracker->insert(particle.id, indexOf(particle));
     }
 
     for (const auto& particle : activeParticles()) {
@@ -1019,10 +1021,8 @@ void InsertMoleculesInSpace::insertImplicitGroups(const MoleculeData& moldata, S
 void InsertMoleculesInSpace::insertItem(const std::string& molname, const json& properties, Space& spc) {
     auto& moldata = findMoleculeByName(molname);
     const auto num_molecules = getNumberOfMolecules(properties, spc.geometry.getVolume(), molname);
-    if (num_molecules == 0) {
-        if (!moldata.isImplicit()) {
-            throw ConfigurationError("one or more {} molecule(s) required; concentration too low?", molname);
-        }
+    if (num_molecules == 0 && !moldata.isImplicit()) {
+        throw ConfigurationError("one or more {} molecule(s) required; concentration too low?", molname);
     } else {
         const auto num_inactive = getNumberOfInactiveMolecules(properties, num_molecules);
         const auto molarity = (num_molecules - num_inactive) / spc.geometry.getVolume() / 1.0_molar;

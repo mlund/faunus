@@ -156,9 +156,11 @@ void MetropolisMonteCarlo::performMove(Move::MoveBase& move) {
             faunus_logger->error("NaN energy change in {} move.", move.getName());
         }
         if (metropolisCriterion(total_trial_energy)) { // accept move
+            change.accepted = true;
             state->sync(*trial_state, change);
             move.accept(change);
         } else { // reject move
+            change.accepted = false;
             trial_state->sync(*state, change);
             move.reject(change);
             energy_change = 0.0;

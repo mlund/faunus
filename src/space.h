@@ -5,6 +5,8 @@
 #include "molecule.h"
 #include <range/v3/view/join.hpp>
 #include <range/v3/algorithm.hpp>
+#include <range/v3/range/conversion.hpp>
+#include <range/v3/view/sample.hpp>
 #include <unordered_set>
 
 namespace Faunus {
@@ -14,37 +16,158 @@ namespace Faunus {
  *
  * holds indices of either particles or groups and remembers which are active/inactive
  *
- * TODO use some flat container instead of unordered_set?
- * TODO instead of indices the trackers might track references? -> would probably need templating the class
- * TODO since molecules are ordered by MoleculeData::molecule_id in the GroupVector, the tracker for molecules
- * TODO could be made for efficient (would need separating GroupVector into buckets, one for each molid, and maintaining
- * it)
- * TODO reserve so that a union of active+inactive is contigious in memory
+ *
+ *
  */
 class Tracker {
   public:
     using id_type = size_t;
-    using map_type = std::vector<std::unordered_set<size_t>>; // std::set is too slow and I did not find a place where
-                                                              // sorted indices are neede
-  private:
-    map_type active, inactive; //! containers for active/inactive indices;
+    using index_type = size_t;
 
-    void activate(id_type id, size_t index);
-    void deactivate(id_type id, size_t);
-    void insert(id_type id, size_t);
+  private:
+    std::vector<std::unordered_map<index_type, index_type>> active, inactive; //
+    std::vector<std::vector<index_type>> index_holder;
+
+    std::vector<size_t> number_of_active;
+
+    void activate(id_type, size_t index);
+    void deactivate(id_type, size_t);
+    void insert(id_type, size_t);
+
+    void removeInactive(id_type, size_t);
+    void swap(id_type, id_type, size_t);
+
     size_t countActive(id_type) const;
     size_t countInactive(id_type) const;
-    std::unordered_set<size_t>& getActive(id_type);
-    const std::unordered_set<size_t>& getActive(id_type id) const;
-    std::unordered_set<size_t>& getInactive(id_type);
-    const std::unordered_set<size_t>& getInactive(id_type) const;
 
-    void clear();
-    void reserve(const id_type id, const size_t total_number_of_species);
-    void init(const id_type max_number_of_ids);
-
+    auto getActive(const id_type id) const {
+        return ranges::subrange(index_holder.at(id).begin(), index_holder.at(id).begin() + countActive(id));
+    }
+    auto getInactive(const id_type id) const {
+        return ranges::subrange(index_holder.at(id).begin() + countActive(id), index_holder.at(id).end());
+    }
+    void init(const id_type max_number_of_ids) {
+        active.resize(max_number_of_ids);
+        inactive.resize(max_number_of_ids);
+        index_holder.resize(max_number_of_ids);
+        number_of_active.resize(max_number_of_ids);
+    }
     friend class Space; // I think there is no need for this class to be used outside space
 };
+
+template <typename reference_type> class Tracker2 {
+  public:
+    using id_type = size_t;
+
+  private:
+    std::unordered_map<reference_type, size_t> active, inactive; //
+    std::vector<reference_type> index_holder;
+
+    size_t number_of_active;
+
+    void activate(id_type, reference_type);
+    void deactivate(id_type, reference_type);
+    void insert(id_type, reference_type);
+    void removeInactive(id_type, reference_type);
+    void swap(id_type, id_type, reference_type);
+
+    size_t countActive(id_type) const;
+    size_t countInactive(id_type) const;
+
+    auto getActive(const id_type id) const {
+        return ranges::subrange(index_holder.at(id).begin(), index_holder.at(id).begin() + countActive(id));
+    }
+    auto getInactive(const id_type id) const {
+        return ranges::subrange(index_holder.at(id).begin() + countActive(id), index_holder.at(id).end());
+    }
+    void init(const id_type max_number_of_ids) {
+        active.resize(max_number_of_ids);
+        inactive.resize(max_number_of_ids);
+        index_holder.resize(max_number_of_ids);
+    }
+    friend class Space; // I think there is no need for this class to be used outside space
+};
+
+template <typename reference_type>
+void Tracker2<reference_type>::activate(const id_type i3d, reference_type reference) {
+
+    active.insert({index, number_of_active});
+    assert(inactive.count(index) != 0);             // deactivating reference must be among inactive
+    assert(number_of_active < index_holder.size()); // I cannot activate anything when everything is active
+
+    auto old_reference_to_holder = inactive.at(index);
+    assert(index_holder.size() > old_reference_to_holder);
+
+    auto first_inactive = index_holder.at(number_of_active);
+    index_holder.at(old_reference_to_holder) = first_inactive;
+    index_holder.at(number_of_active) = index;
+
+    assert(inactive.count(first_inactive) != 0);
+    inactive.at(first_inactive) = old_reference_to_holder;
+
+    inactive.erase(index);
+
+    number_of_active++;
+}
+template <typename reference_type>
+void Tracker2<reference_type>::deactivate(const id_type id2, const reference_type index) {
+
+    inactive.insert({index, number_of_active - 1});
+    assert(active.count(index) != 0); // deactivating reference must be among inactive
+    assert(number_of_active > 0);     // I cannot deactivate anything when everything is inactive
+    auto old_reference_to_holder = active.at(index);
+    assert(index_holder.size() > old_reference_to_holder);
+
+    auto last_active = index_holder.at(number_of_active - 1);
+    index_holder.at(old_reference_to_holder) = last_active;
+    index_holder.at(number_of_active - 1) = index;
+
+    assert(active.count(last_active) != 0);
+    active.at(last_active) = old_reference_to_holder;
+    active.erase(index);
+
+    number_of_active--;
+}
+template <typename reference_type> void Tracker2<reference_type>::insert(const id_type id, const reference_type index) {
+    inactive.insert({index, index_holder.size()});
+    index_holder.push_back(index);
+}
+
+template <typename reference_type>
+void Tracker2<reference_type>::removeInactive(const id_type id, const reference_type index) {
+    auto old_reference_to_holder = inactive.at(index); // swap deactivated index to end of original index holder
+    auto last_inactive = index_holder.at(index_holder.at(id).size() - 1);
+
+    assert(index_holder.size() > old_reference_to_holder);
+    index_holder.at(old_reference_to_holder) = last_inactive;
+    index_holder.pop_back();
+    inactive.erase(index);
+}
+
+/**
+ * @brief swaps index from one holder into another
+ *
+ * @param old_id of bucket where @param index originally resides
+ * @param new_id of bucket where @param index will be placed
+ * @param index is a reference to particle/group, which we are swapping
+ *
+ * @note needed for speciation only when species is Atomic.
+ */
+template <typename reference_type>
+void Tracker2<reference_type>::swap(const id_type old_id, const id_type new_id, reference_type index) {
+
+    insert(new_id, index);   // push to top of inactive indices of new holder
+    activate(new_id, index); // activate the newly inserted inactive index
+
+    deactivate(old_id, index);     // deactivate index in original holder
+    removeInactive(old_id, index); // remove deactivated index from original holder
+}
+template <typename reference_type> size_t Tracker2<reference_type>::countActive(const id_type id) const {
+    return number_of_active;
+}
+template <typename reference_type> size_t Tracker2<reference_type>::countInactive(const id_type id) const {
+    return index_holder.size() - countActive(id);
+}
 
 /**
  * @brief Specify changes made to a system
@@ -69,6 +192,7 @@ struct Change {
     bool volume_change = false;              //!< The volume has changed
     bool matter_change = false;              //!< The number of atomic or molecular species has changed
     bool moved_to_moved_interactions = true; //!< If several groups are moved, should they interact with each other?
+    bool accepted = false;
 
     //! Properties of changed groups
     struct GroupChange {
@@ -133,6 +257,8 @@ class Space {
 
     std::unique_ptr<Tracker> atom_tracker;
     std::unique_ptr<Tracker> molecule_tracker;
+    std::unique_ptr<std::vector<Tracker2<size_t>>> molecule_tracker2;
+
     std::unique_ptr<Tracker> neutral_atom_tracker;
     std::unique_ptr<Tracker> neutral_molecule_tracker;
 
@@ -161,10 +287,9 @@ class Space {
         double new_volume,
         Geometry::VolumeMethod method = Geometry::VolumeMethod::ISOTROPIC); //!< Scales atoms, molecules, container
 
-    // std::unordered_map<MoleculeData::index_type, std::unordered_set<size_t>> molecule_type2active_groups;
-    /*    std::vector<std::reference_wrapper<Group>>
-        randomMolecules(MoleculeData::index_type molid, Random& rand, size_t number_of_samples = 1,
-                       Selection selection = Selection::ACTIVE); //!< Random group matching molid*/
+    std::vector<std::reference_wrapper<Group>>
+    randomMolecules2(MoleculeData::index_type molid, Random& rand, size_t number_of_samples = 1,
+                     Selection selection = Selection::ACTIVE); //!< Random group matching molid
 
     Space::GroupVector::iterator randomMolecule(MoleculeData::index_type molid, Random& rand,
                                                 Space::Selection selection = Selection::ACTIVE);
@@ -241,6 +366,10 @@ class Space {
         return static_cast<size_t>(std::addressof(group) - std::addressof(groups.at(0)));
     }
 
+    void swapInTrackers(const size_t old_atom_id, const size_t new_atom_id, Particle& particle) {
+        atom_tracker->swap(old_atom_id, new_atom_id, indexOf(particle));
+    }
+
     void activate(const GroupType& group);
     void deactivate(const GroupType& group);
     void activateParticle(const Particle& particle);
@@ -249,10 +378,26 @@ class Space {
     Tracker& getMolecularTracker() { return *molecule_tracker; }
     Tracker& getAtomicTracker() { return *atom_tracker; }
 
-    const std::unordered_set<size_t>& getMolecules(MoleculeData::index_type molid,
-                                                   Selection selection = Selection::ACTIVE) const;
-    const std::unordered_set<size_t>& getAtoms(AtomData::index_type atom_id,
-                                               Selection selection = Selection::ACTIVE) const;
+    /**
+     * @brief Returns a range of particle indices according to selection and 'atom'
+     * @param atom_id Molecule id to look for
+     * @param selection
+     * @return unordered_set of particle indices
+     */
+    auto getAtoms(const AtomData::index_type atom_id, Selection selection = Selection::ACTIVE) const {
+        switch (selection) {
+        case (Selection::ACTIVE):
+            return atom_tracker->getActive(atom_id);
+        case (Selection::INACTIVE):
+            return molecule_tracker->getInactive(atom_id);
+        case (Selection::ACTIVE_NEUTRAL):
+            return neutral_molecule_tracker->getActive(atom_id);
+        case (Selection::INACTIVE_NEUTRAL):
+            return neutral_molecule_tracker->getInactive(atom_id);
+        default:
+            throw ConfigurationError("invalid selection!");
+        }
+    }
 
     /**
      * @brief Finds all groups of type `molid` (complexity: order N)
@@ -300,6 +445,32 @@ class Space {
     auto activeParticles() const { return groups | ranges::cpp20::views::join; } //!< Range with all active particles
 
     /**
+     * @brief Returns a set of molecule indices according to selection and 'molid'
+     * @param molid Molecule id to look for
+     * @param selection
+     * @return unordered_set of molecule indices
+     */
+    auto getMoleculesIndices(const MoleculeData::index_type molid, Selection selection = Selection::ACTIVE) {
+        switch (selection) {
+        case (Selection::ACTIVE):
+            return molecule_tracker->getActive(molid);
+        case (Selection::INACTIVE):
+            return molecule_tracker->getInactive(molid);
+        case (Selection::ACTIVE_NEUTRAL):
+            return neutral_molecule_tracker->getActive(molid);
+        case (Selection::INACTIVE_NEUTRAL):
+            return neutral_molecule_tracker->getInactive(molid);
+        default:
+            throw ConfigurationError("invalid selection!");
+        }
+    }
+
+    auto getMolecules(const MoleculeData::index_type molid, Selection selection = Selection::ACTIVE) {
+        return getMoleculesIndices(molid, selection) |
+               ranges::views::transform([this](auto index) { return groups[index]; });
+    }
+
+    /**
      * @brief Find active atoms of type `atomid` (complexity: order N)
      * @param atomid Atom id to look for
      * @return Range of filtered particles
@@ -307,6 +478,32 @@ class Space {
     auto findAtoms(AtomData::index_type atomid) {
         return activeParticles() |
                ranges::cpp20::views::filter([atomid](const Particle& particle) { return particle.id == atomid; });
+    }
+
+    std::vector<size_t> randomMolecules(const size_t molid, const size_t number_to_sample, Random& slump,
+                                        Selection selection = Selection::ACTIVE) {
+        auto molecule_indices = getMoleculesIndices(molid, selection);
+        if (countMolecules(molid, selection) == 0) {
+            return {};
+        }
+        if (number_to_sample == 1) {
+            auto random_index = slump.range<size_t>(0, countMolecules(molid, selection) - 1);
+            return {molecule_indices[random_index]};
+        }
+        return molecule_indices | ranges::views::sample(number_to_sample, slump.engine) | ranges::to<std::vector>;
+    }
+
+    std::vector<size_t> randomAtoms(const size_t atom_id, const size_t number_to_sample, Random& slump,
+                                    Selection selection = Selection::ACTIVE) {
+        auto atoms = getAtoms(atom_id, selection);
+        if (countAtoms(atom_id, selection) == 0) {
+            return {};
+        }
+        if (number_to_sample == 1) {
+            auto random_index = slump.range<size_t>(0, countAtoms(atom_id, selection) - 1);
+            return {atoms[random_index]};
+        }
+        return atoms | ranges::views::sample(number_to_sample, slump.engine) | ranges::to<std::vector>;
     }
 
     /**

@@ -32,8 +32,8 @@ reactionlist:
     - "A = B": {lnK: -0.6931471805599453} # K=2/1
 
 insertmolecules:
-    - A: {N: 1}
-    - B: {N: 1, inactive: True}
+    - A: {N: 10}
+    - B: {N: 10, inactive: True}
 
 energy:
     - nonbonded: 

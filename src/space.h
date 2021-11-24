@@ -181,20 +181,13 @@ class Space {
         return ranges::cpp20::views::transform(particles, [](auto& particle) -> Point& { return particle.pos; });
     }
 
-    /**
-     * @brief Finds all groups of type `molid` (complexity: order N)
-     * @param molid Molecular id to look for
-     * @param selection Selection
-     * @return range with all groups of molid
-     */
-    auto findMolecules(MoleculeData::index_type molid, Selection selection = Selection::ACTIVE) {
-
+    std::function<bool(const GroupType&)> getGroupFiler(int molid, const Selection& selection) const {
         auto is_active = [](const GroupType& group) { return group.size() == group.capacity(); };
 
         auto is_neutral = [](auto begin, auto end) {
             auto charge =
                 std::accumulate(begin, end, 0.0, [](auto sum, auto& particle) { return sum + particle.charge; });
-            return (std::fabs(charge) < 1e-6);
+            return (fabs(charge) < 1e-6);
         }; //!< determines if range of particles is neutral
 
         std::function<bool(const GroupType&)> f; //!< Lambda to filter groups according to selection
@@ -220,7 +213,23 @@ class Space {
             break;
         }
         f = [f, molid](auto& group) { return group.id == molid && f(group); };
-        return groups | ranges::cpp20::views::filter(f);
+        return f;
+    }
+
+    /**
+     * @brief Finds all groups of type `molid` (complexity: order N)
+     * @param molid Molecular id to look for
+     * @param selection Selection
+     * @return range with all groups of molid
+     */
+    auto findMolecules(MoleculeData::index_type molid, Selection selection = Selection::ACTIVE) {
+        auto group_filter = getGroupFiler(molid, selection);
+        return groups | ranges::cpp20::views::filter(group_filter);
+    }
+
+    auto findMolecules(MoleculeData::index_type molid, Selection selection = Selection::ACTIVE) const {
+        auto group_filter = getGroupFiler(molid, selection);
+        return groups | ranges::cpp20::views::filter(group_filter);
     }
 
     auto activeParticles() { return groups | ranges::cpp20::views::join; }       //!< Range with all active particles

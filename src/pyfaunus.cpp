@@ -240,7 +240,8 @@ PYBIND11_MODULE(pyfaunus, m)
         .def_readwrite("geo", &Space::geometry)
         .def_readwrite("particles", &Space::particles)
         .def_readwrite("groups", &Space::groups)
-        .def("findMolecules", &Space::findMolecules)
+        // https://stackoverflow.com/questions/65812046/disambiguate-non-const-and-const-access-methods-pybind11
+        // .def("findMolecules", &Space::findMolecules)
         .def("from_dict", [](Space& spc, py::dict dict) { from_json(dict2json(dict), spc); });
 
     // Hamiltonian
@@ -271,7 +272,7 @@ PYBIND11_MODULE(pyfaunus, m)
 
     // Analysisbase
     py::class_<Analysis::Analysisbase>(m, "Analysisbase")
-        .def_readwrite("name", &Analysis::Analysisbase::name)
+        .def_readonly("name", &Analysis::Analysisbase::name)
         .def_readwrite("cite", &Analysis::Analysisbase::cite)
         .def("to_disk", &Analysis::Analysisbase::to_disk)
         .def("sample", &Analysis::Analysisbase::sample)

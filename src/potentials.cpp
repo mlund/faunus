@@ -161,14 +161,22 @@ void to_json(json &j, const CustomInteractionData &interaction) {
     j = {{vec2words(atom_names), interaction.interaction}};
 }
 
-void from_json(const json &j, std::vector<CustomInteractionData> &interactions) {
-    if(j.is_array()) {
-        for (const auto &j_pair: j) {
-            interactions.push_back(j_pair);
+void from_json(const json& j, std::vector<CustomInteractionData>& interactions) {
+    auto append = [&](const auto& key, const auto& value) {
+        interactions.push_back(json{{key, value}});
+        faunus_logger->debug("Custom interaction for particle pair {}: {}", key, value.dump(-1));
+    };
+    if (j.is_array()) {
+        for (const auto& j_pair : j) {
+            if (j_pair.size() != 1) {
+                throw ConfigurationError("Custom interaction input error");
+            }
+            const auto& [key, value] = j_pair.items().begin();
+            append(key, value);
         }
-    } else if(j.is_object()) {
-        for (const auto &j_kv: j.items()) {
-            interactions.push_back(json {{j_kv.key(), j_kv.value()}});
+    } else if (j.is_object()) {
+        for (const auto& [key, value] : j.items()) {
+            append(key, value);
         }
     } else {
         throw ConfigurationError("invalid JSON for custom interaction parameters");

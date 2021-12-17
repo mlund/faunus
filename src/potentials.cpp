@@ -2,6 +2,7 @@
 #include "multipole.h"
 #include "units.h"
 #include "auxiliary.h"
+#include "aux/arange.h"
 #include "spdlog/spdlog.h"
 #include <coulombgalore.h>
 
@@ -865,23 +866,22 @@ SplinedPotential::KnotData::KnotData(const base &b) : base(b) {}
 
 /**
  * @param stream output stream
- * @param i fist atom index
- * @param j second atom index
+ * @param id1 fist atom id
+ * @param id2 second atom id
  *
  * Stream splined and exact energy as a function of particle-particle separation to output stream
  */
-void SplinedPotential::stream_pair_potential(std::ostream &stream, int i, int j) {
-    if (stream) {
-        if (!atoms.at(i).implicit && !atoms.at(j).implicit) {
-            Particle particle1 = Faunus::atoms.at(i);
-            Particle particle2 = Faunus::atoms.at(j);
-            stream << "# r u_splined/kT u_exact/kT\n";
-            double rmax = sqrt(matrix_of_knots(i, j).rmax2);
-            for (double r = dr; r < rmax; r += dr) {
-                stream << fmt::format("{:.6E} {:.6E} {:.6E}\n", r, operator()(particle1, particle2, r *r, {r, 0, 0}),
-                                      FunctorPotential::operator()(particle1, particle2, r *r, {r, 0, 0}));
-            }
-        }
+void SplinedPotential::stream_pair_potential(std::ostream& stream, const size_t id1, const size_t id2) {
+    if (!stream || atoms.at(id1).implicit || atoms.at(id2).implicit) {
+        return;
+    }
+    stream << "# r u_splined/kT u_exact/kT\n";
+    const auto particle_1 = static_cast<Particle>(Faunus::atoms.at(id1));
+    const auto particle_2 = static_cast<Particle>(Faunus::atoms.at(id2));
+    const auto rmax = std::sqrt(matrix_of_knots(id1, id2).rmax2);
+    for (auto r : arange(dr, rmax, dr)) {
+        stream << fmt::format("{:.6E} {:.6E} {:.6E}\n", r, operator()(particle_1, particle_2, r* r, {r, 0, 0}),
+                              FunctorPotential::operator()(particle_1, particle_2, r* r, {r, 0, 0}));
     }
 }
 

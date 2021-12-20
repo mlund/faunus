@@ -510,16 +510,22 @@ class AtomDipDipCorr : public PairAngleFunctionBase {
     AtomDipDipCorr(const json& j, const Space& spc);
 };
 
-/** @brief Write XTC trajectory file */
+/**
+ * @brief Write XTC trajectory file
+ *
+ * This will save both active and inactive particles as the XTC format must have the
+ * same number of particles on all frames. See `QRtraj` for a solution how to disable
+ * inactive groups in e.g. VMD.
+ */
 class XTCtraj : public Analysisbase {
-    std::vector<int> molecule_ids;                    //!< molecule ids to save to disk
-    std::vector<std::string> names;                   //!< molecule names of above
-    std::function<bool(const Particle&)> atom_filter; //!< function to filter atoms
-    std::shared_ptr<XTCWriter> writer;
-
+  private:
+    using index_type = MoleculeData::index_type;
+    std::vector<index_type> group_ids;      //!< group ids to save to disk (empty = all)
+    std::vector<std::size_t> group_indices; //!< indices of groups to save (active AND inactive)
+    std::unique_ptr<XTCWriter> writer;
     void _to_json(json& j) const override;
-    void _from_json(const json& j) override;
     void _sample() override;
+    XTCtraj(Space& spc, const std::string& filename, const std::vector<std::string>& molecule_names);
 
   public:
     XTCtraj(const json& j, Space& spc);

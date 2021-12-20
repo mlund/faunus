@@ -14,6 +14,11 @@ CPMAddPackage("gh:imneme/pcg-cpp#ffd522e7188bef30a00c74dc7eb9de5faff90092")
 CPMAddPackage("gh:ArashPartow/exprtk#93a9f44f99b910bfe07cd1e933371e83cea3841c")
 
 CPMAddPackage(
+    NAME mpl GITHUB_REPOSITORY rabauke/mpl DOWNLOAD_ONLY YES
+    GIT_TAG afb2fd7525ecd43e5a52d5624f3a4998a4eac52c
+)
+
+CPMAddPackage(
     NAME nlohmann_json VERSION 3.9.1
     URL https://github.com/nlohmann/json/releases/download/v3.9.1/include.zip
     OPTIONS "JSON_BuildTests OFF"
@@ -43,6 +48,11 @@ if (nlohmann_json_ADDED)
 endif()
 
 add_compile_definitions("NLOHMANN_JSON_HPP") # older versions used this macro. Now it's suffixed with "_"
+
+if(mpl_ADDED)
+    add_library(mpl INTERFACE IMPORTED)
+    target_include_directories(mpl INTERFACE ${mpl_SOURCE_DIR})
+endif()
 
 if(Eigen_ADDED)
     add_library(Eigen INTERFACE IMPORTED)
@@ -135,8 +145,8 @@ if (ENABLE_TBB)
         target_link_libraries(project_options INTERFACE TBB::tbb)
     else ()
         FetchContent_Declare(
-            tbb URL https://github.com/wjakob/tbb/archive/806df70ee69fc7b332fcf90a48651f6dbf0663ba.tar.gz
-            URL_HASH MD5=63fda89e88d34da63ddcef472e7725ef
+            tbb URL https://github.com/wjakob/tbb/archive/9e219e24fe223b299783200f217e9d27790a87b0.tar.gz
+            URL_HASH MD5=9bccf5863c6deee08732e69fa3310675
             )
         if (NOT tbb_POPULATED)
             FetchContent_Populate(tbb)

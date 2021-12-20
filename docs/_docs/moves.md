@@ -236,9 +236,10 @@ The default value of `repeat` is the number of atoms in the `molecule` minus two
 
 `temper`                 | Description
 ------------------------ | ----------------------------------------------------------------------
-`format=XYZQI`           | Particle properties to copy between replicasi (`XYZQI`, `XYZQ`, `XYZ`)
+`format=xyzqi`           | Particle properties to copy between replicas (`xyzqi`, `xyzq`, `xyz`)
 `volume_scale=isotropic` | How to apply exchanged volumes: `z`, `xy`, `isotropic`, `isochoric`
 `nstep=1`                | Number of sweeps between samples.
+`partner_policy=oddeven` | Policy used to create partner pairs (currently only `oddeven`)
 
 We consider an extended ensemble, consisting of _n_
 sub-systems or replicas, each in a distinct thermodynamic state (different
@@ -262,10 +263,13 @@ Parallel tempering requires compilation with MPI and the number
 of replicas, _n_, exactly matches the number of processes. Each
 replica prefixes input and output files with `mpi0.`, `mpi1.`,
 etc. and only exchange between neighboring processes is performed.
+The move is is performed exactly every `nstep` Monte Carlo cycle.
+By default, particle positions (`xyz`), charge (`q`), and atom id (`i`) are exchanged
+between replicas and can be controlled with `format`.
 
-Parallel tempering is currently limited to systems with
-constant number of particles, $N$, and the move is performed exactly
-every `nstep` Monte Carlo cycle.
+Support for fluctuating number of particles, i.e.
+grand canonical moves is currently untested and should be
+considered experimental.
 
 
 ## Volume Move

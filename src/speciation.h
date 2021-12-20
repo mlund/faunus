@@ -56,11 +56,13 @@ class SpeciationMove : public MoveBase {
     Change::GroupChange activateMolecularGroup(Space::GroupType&);                      //!< Activate molecular group
     Change::GroupChange deactivateMolecularGroup(Space::GroupType&);                    //!< Deactivate molecular group
 
-    SpeciationMove(Space &, std::string, std::string);
+    SpeciationMove(Space& spc, std::string_view name, std::string_view cite);
+
   public:
-    SpeciationMove(Space &);
-    void setOther(Space &);
-    double bias(Change &, double, double) override; //!< adds extra energy change not captured by the Hamiltonian
+    SpeciationMove(Space& spc);
+    void setOther(Space& spc);
+    double bias(Change& change, double old_energy,
+                double new_energy) override; //!< adds extra energy change not captured by the Hamiltonian
 
 }; // End of class SpeciationMove
 

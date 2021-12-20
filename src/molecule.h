@@ -32,7 +32,7 @@ class MoleculeData;
  * and molecule data.
  */
 struct MoleculeInserter {
-    virtual ParticleVector operator()(Geometry::GeometryBase &geo, MoleculeData &mol,
+    virtual ParticleVector operator()(const Geometry::GeometryBase &geo, MoleculeData &mol,
                                       const ParticleVector &other_particles) = 0;
     virtual void from_json(const json& j);
     virtual void to_json(json& j) const;
@@ -60,7 +60,7 @@ class RandomInserter : public MoleculeInserter {
     bool allow_overlap = false;  //!< Set to true to skip container overlap check
     int max_trials = 20'000;     //!< Maximum number of container overlap checks
 
-    ParticleVector operator()(Geometry::GeometryBase &geo, MoleculeData &molecule,
+    ParticleVector operator()(const Geometry::GeometryBase &geo, MoleculeData &molecule,
                               const ParticleVector &ignored_other_particles = ParticleVector()) override;
     void from_json(const json &j) override;
     void to_json(json &j) const override;
@@ -213,14 +213,16 @@ class MoleculeData {
     std::vector<AtomData::index_type> atoms; //!< Sequence of atoms in molecule (atom id's)
     BasePointerVector<Potential::BondData> bonds;
     WeightedDistribution<ParticleVector> conformations; //!< Conformations of molecule
-    size_t numConformations() const;                     //!< Number of conformations
+    size_t numConformations() const;                    //!< Number of conformations
 
     MoleculeData();
-    MoleculeData(const std::string &name, const ParticleVector &particles,
-                 const BasePointerVector<Potential::BondData> &bonds);
+    MoleculeData(const std::string& name, const ParticleVector& particles,
+                 const BasePointerVector<Potential::BondData>& bonds);
 
     bool isImplicit() const; //!< Is molecule implicit and explicitly absent from simulation cell?
     bool isPairExcluded(int i, int j) const;
+    bool isMolecular() const;
+    bool isAtomic() const;
 
     /** @brief Specify function to be used when inserting into space.
      *

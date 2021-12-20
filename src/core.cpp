@@ -87,7 +87,7 @@ void TipFromTheManual::load(const std::vector<std::string>& files) {
 /**
  * @brief If possible, give help based on short keys/tags
  */
-std::string TipFromTheManual::operator[](const std::string& key) {
+std::string TipFromTheManual::operator[](std::string_view key) {
     std::string tip;
     if (not tip_already_given) {
         // look for help for the given `key`

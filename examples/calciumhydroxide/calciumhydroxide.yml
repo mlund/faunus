@@ -50,8 +50,7 @@ reactionlist:
     - "Ca(OH)2 = Ca++ + OH- + OH-": {pK: 5.19}
     - "NaOH = Na+ + OH-": {pK: -2.03}
 
-energy:
-    - bonded: {} # dummy energy as the list cannot be empty
+energy: []
 
 moves:
     - rcmc: {repeat: 1}
@@ -62,6 +61,6 @@ analysis:
     - reactioncoordinate: {file: _hydroxide.dat, nstep: 5, type: molecule, property: N, index: 2}
     - reactioncoordinate: {file: _chloride.dat, nstep: 5, type: molecule, property: N, index: 3}
     - sanity: {nstep: 100}
-    - density: {nstep: 5}
+    - atom_density: {nstep: 5}
     - savestate: {file: state.json}
 

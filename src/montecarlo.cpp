@@ -96,13 +96,13 @@ double MetropolisMonteCarlo::relativeEnergyDrift() {
     return std::numeric_limits<double>::quiet_NaN();
 }
 
-MetropolisMonteCarlo::MetropolisMonteCarlo(const json &j, MPI::MPIController &mpi)
+MetropolisMonteCarlo::MetropolisMonteCarlo(const json &j)
     : original_log_level(faunus_logger->level()) {
     state = std::make_unique<State>(j);
     faunus_logger->set_level(spdlog::level::off); // do not duplicate log info
     trial_state = std::make_unique<State>(j);     // ...for the trial state
     faunus_logger->set_level(original_log_level); // restore original log level
-    moves = std::make_unique<Move::MoveCollection>(j.at("moves"), *trial_state->spc, *trial_state->pot, mpi);
+    moves = std::make_unique<Move::MoveCollection>(j.at("moves"), *trial_state->spc, *trial_state->pot);
     init();
 }
 
@@ -113,15 +113,17 @@ MetropolisMonteCarlo::~MetropolisMonteCarlo() = default;
  */
 void MetropolisMonteCarlo::restore(const json &j) {
     try {
-        *state->spc = j;       // default, accepted state
-        *trial_state->spc = j; // trial state
-        if (j.count("random-move") == 1) {
+        from_json(j, *state->spc);       // default, accepted state
+        from_json(j, *trial_state->spc); // trial state
+        if (j.contains("random-move")) {
             Move::MoveBase::slump = j["random-move"]; // restore move random number generator
         }
-        if (j.count("random-global") == 1) {
+        if (j.contains("random-global")) {
             Faunus::random = j["random-global"]; // restore global random number generator
         }
-        reactions = j.at("reactionlist").get<decltype(reactions)>(); // should be handled by space
+        if (j.contains("reactionlist")) {
+            faunus_logger->warn("'reactionlist' in state file is deprecated and will be ignored");
+        }
         init();
     } catch (std::exception &e) {
         throw std::runtime_error("error initialising simulation: "s + e.what());
@@ -139,7 +141,7 @@ void MetropolisMonteCarlo::performMove(Move::MoveBase& move) {
     }
 #endif
     if (change) {
-        latest_move_name = move.name;
+        latest_move_name = move.getName();
         const auto new_energy = trial_state->pot->energy(change); // trial potential energy (kT)
         const auto old_energy = state->pot->energy(change);       // potential energy before move (kT)
 
@@ -150,7 +152,7 @@ void MetropolisMonteCarlo::performMove(Move::MoveBase& move) {
 
         const auto total_trial_energy = energy_change + energy_bias;
         if (std::isnan(total_trial_energy)) {
-            faunus_logger->error("NaN energy change in {} move.", move.name);
+            faunus_logger->error("NaN energy change in {} move.", move.getName());
         }
         if (metropolisCriterion(total_trial_energy)) { // accept move
             state->sync(*trial_state, change);

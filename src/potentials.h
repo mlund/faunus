@@ -762,7 +762,7 @@ class SplinedPotential : public FunctorPotential {
     Tabulate::Andrea<double> spline;                      //!< Spline method
     bool hardsphere_repulsion = false;                    //!< Use hardsphere repulsion for r smaller than rmin
     const int max_iterations = 1e6;                       //!< Max number of iterations when determining spline interval
-    void stream_pair_potential(std::ostream &, int, int); //!< Stream pair potential to output stream
+    void stream_pair_potential(std::ostream&, size_t id1, size_t id2); //!< Stream pair potential to output stream
     void save_potentials();                               //!< Save splined and exact pair potentials to disk
     double findLowerDistance(int, int, double, double);   //!< Find lower distance for splining (rmin)
     double findUpperDistance(int, int, double, double);   //!< Find upper distance for splining (rmax)

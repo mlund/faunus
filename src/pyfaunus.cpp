@@ -242,7 +242,8 @@ PYBIND11_MODULE(pyfaunus, m)
         .def_readwrite("geo", &Space::geometry)
         .def_readwrite("particles", &Space::particles)
         .def_readwrite("groups", &Space::groups)
-        .def("findMolecules", &Space::findMolecules)
+        // https://stackoverflow.com/questions/65812046/disambiguate-non-const-and-const-access-methods-pybind11
+        // .def("findMolecules", &Space::findMolecules)
         .def("from_dict", [](Space& spc, py::dict dict) { from_json(dict2json(dict), spc); });
 
     // Energybase
@@ -281,11 +282,11 @@ PYBIND11_MODULE(pyfaunus, m)
     py::class_<MetropolisMonteCarlo>(m, "MetropolisMonteCarlo")
         .def(py::init([](py::dict dict) {
             json j = dict2json(dict);
-            return std::make_unique<MetropolisMonteCarlo>(j, Faunus::MPI::mpi);
+            return std::make_unique<MetropolisMonteCarlo>(j);
         }))
-        .def(py::init([](py::dict dict, Faunus::MPI::MPIController& mpi) {
+        .def(py::init([](py::dict dict) {
             json j = dict2json(dict);
-            return std::make_unique<MetropolisMonteCarlo>(j, mpi);
+            return std::make_unique<MetropolisMonteCarlo>(j);
         }))
         .def("sweep", &MetropolisMonteCarlo::sweep)
         .def("getState", &MetropolisMonteCarlo::getState)
@@ -294,7 +295,7 @@ PYBIND11_MODULE(pyfaunus, m)
 
     // Analysisbase
     py::class_<Analysis::Analysisbase>(m, "Analysisbase")
-        .def_readwrite("name", &Analysis::Analysisbase::name)
+        .def_readonly("name", &Analysis::Analysisbase::name)
         .def_readwrite("cite", &Analysis::Analysisbase::cite)
         .def("to_disk", &Analysis::Analysisbase::to_disk)
         .def("sample", &Analysis::Analysisbase::sample)

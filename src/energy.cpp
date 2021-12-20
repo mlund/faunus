@@ -4,6 +4,7 @@
 #include "externalpotential.h"
 #include <functional>
 #include <range/v3/view/zip.hpp>
+#include <range/v3/algorithm/for_each.hpp>
 #if __cplusplus > 201703L
 #include <span> // c++20
 #endif
@@ -1054,17 +1055,23 @@ std::shared_ptr<Energybase> Hamiltonian::createEnergy(Space& spc, const std::str
         }
         if (name == "penalty") {
 #ifdef ENABLE_MPI
-            return std::make_shared<PenaltyMPI>(j, spc);
+            return std::make_shared<PenaltyMPI>(j, spc, MPI::mpi);
 #else
             return std::make_shared<Penalty>(j, spc);
 #endif
         }
-        if (name == "sasa") {
+        if (name == "freesasa") {
 #if defined ENABLE_FREESASA
-            return std::make_shared<SASAEnergy>(j, spc);
+            return std::make_shared<FreeSASAEnergy>(j, spc);
 #else
             throw ConfigurationError("faunus not compiled with sasa support");
 #endif
+        }
+        if (name == "sasabase") {
+            return std::make_shared<SASAEnergyBase>(j, spc);
+        }
+        if (name == "sasa") {
+            return std::make_shared<SASAEnergy>(j, spc);
         }
         throw ConfigurationError("'{}' unknown", name);
     } catch (std::exception& e) {
@@ -1078,8 +1085,8 @@ const std::vector<double>& Hamiltonian::latestEnergies() const { return latest_e
 
 #ifdef ENABLE_FREESASA
 
-SASAEnergy::SASAEnergy(const Space& spc, const double cosolute_concentration, const double probe_radius)
-    : spc(spc), cosolute_concentration(cosolute_concentration),
+FreeSASAEnergy::FreeSASAEnergy(const Space& spc, const double cosolute_molarity, const double probe_radius)
+    : spc(spc), cosolute_molarity(cosolute_molarity),
       parameters(std::make_unique<freesasa_parameters_fwd>(freesasa_default_parameters)) {
     name = "sasa";
     citation_information = "doi:10.12688/f1000research.7931.1";
@@ -1090,56 +1097,53 @@ SASAEnergy::SASAEnergy(const Space& spc, const double cosolute_concentration, co
     }
 }
 
-SASAEnergy::SASAEnergy(const json& j, const Space& spc)
-    : SASAEnergy(spc, j.value("molarity", 0.0) * 1.0_molar, j.value("radius", 1.4) * 1.0_angstrom) {}
+FreeSASAEnergy::FreeSASAEnergy(const json& j, const Space& spc)
+    : FreeSASAEnergy(spc, j.value("molarity", 0.0) * 1.0_molar, j.value("radius", 1.4) * 1.0_angstrom) {}
 
-void SASAEnergy::updateSASA(const Change& change) {
-    const auto& particles = spc.activeParticles();
-    const auto number_of_active_particles = static_cast<int>(std::distance(particles.begin(), particles.end()));
+void FreeSASAEnergy::updateSASA(const Change& change) {
+    const auto particles = spc.activeParticles();
+    const auto number_of_active_particles = std::distance(particles.begin(), particles.end());
     updateRadii(particles.begin(), particles.end(), change);
     updatePositions(particles.begin(), particles.end(), change);
 
     auto* result = freesasa_calc_coord(positions.data(), radii.data(), number_of_active_particles, parameters.get());
     if (result != nullptr && result->n_atoms == number_of_active_particles) {
-        sasa.resize(number_of_active_particles);
-#if __cplusplus > 201703L
-        const auto values = std::span(result->sasa, result->n_atoms); // pretty
-        std::copy(values.begin(), values.end(), sasa.begin());
-#else
-        std::copy(result->sasa, result->sasa + result->n_atoms, sasa.begin()); // ugly
-#endif
+        sasa.clear();
+        sasa.reserve(number_of_active_particles);
+        sasa.insert(sasa.begin(), result->sasa, result->sasa + result->n_atoms); // copy
         freesasa_result_free(result);
+        assert(sasa.size() == number_of_active_particles);
     } else {
         throw std::runtime_error("FreeSASA failed");
     }
 }
 
-void SASAEnergy::init() {
+void FreeSASAEnergy::init() {
     Change change;
     change.everything = true;
     updateSASA(change);
 }
 
-double SASAEnergy::energy(Change& change) {
+double FreeSASAEnergy::energy(Change& change) {
     double energy = 0.0;
     double surface_area = 0.0;
     updateSASA(change);
     for (const auto& [area, particle] : ranges::views::zip(sasa, spc.activeParticles())) {
         surface_area += area;
-        energy += area * (particle.traits().tension + cosolute_concentration * particle.traits().tfe);
+        energy += area * (particle.traits().tension + cosolute_molarity * particle.traits().tfe);
     }
     mean_surface_area += surface_area; // sample average area for accepted confs.
     return energy;
 }
 
-void SASAEnergy::sync(Energybase* energybase_ptr, const Change& change) {
+void FreeSASAEnergy::sync(Energybase* energybase_ptr, const Change& change) {
     // since the full SASA is calculated in each energy evaluation, this is
     // currently not needed.
-    if (auto* other = dynamic_cast<SASAEnergy*>(energybase_ptr); other != nullptr) {
-        if (change.everything || change.volume_change) {
+    if (auto* other = dynamic_cast<FreeSASAEnergy*>(energybase_ptr); other != nullptr) {
+        sasa = other->sasa;
+        if (change.everything || change.volume_change || change.matter_change) {
             radii = other->radii;
             positions = other->positions;
-            sasa = other->sasa;
         } else {
             for (const auto& group_change : change.groups) {
                 const auto& group = spc.groups.at(group_change.group_index);
@@ -1148,7 +1152,6 @@ void SASAEnergy::sync(Energybase* energybase_ptr, const Change& change) {
                                            ranges::cpp20::views::transform([offset](auto i) { return i + offset; });
                 for (auto i : absolute_atom_index) {
                     radii.at(i) = other->radii.at(i);
-                    sasa.at(i) = other->sasa.at(i);
                     for (size_t k = 0; k < 3; ++k) {
                         positions.at(3 * i + k) = other->positions.at(3 * i + k);
                     }
@@ -1158,11 +1161,10 @@ void SASAEnergy::sync(Energybase* energybase_ptr, const Change& change) {
     }
 }
 
-void SASAEnergy::to_json(json &j) const {
-    using namespace u8;
-    j["molarity"] = cosolute_concentration / 1.0_molar;
+void FreeSASAEnergy::to_json(json& j) const {
+    j["molarity"] = cosolute_molarity / 1.0_molar;
     j["radius"] = parameters->probe_radius / 1.0_angstrom;
-    j[bracket("SASA") + "/" + angstrom + squared] = mean_surface_area.avg() / 1.0_angstrom;
+    j[u8::bracket("SASA") + "/" + u8::angstrom + u8::squared] = mean_surface_area.avg() / 1.0_angstrom;
     roundJSON(j, 5); // set json output precision
 }
 
@@ -1187,12 +1189,12 @@ TEST_CASE("[Faunus] FreeSASA") {
     spc.particles.at(1).pos = {0.0, 0.0, 20.0};
 
     SUBCASE("Separated atoms") {
-        SASAEnergy sasa(spc, 1.5_molar, 1.4_angstrom);
+        FreeSASAEnergy sasa(spc, 1.5_molar, 1.4_angstrom);
         CHECK(sasa.energy(change) == Approx(4.0 * pc::pi * (3.4 * 3.4 + 2.6 * 2.6) * 1.5 * 1.0_kJmol));
     }
 
     SUBCASE("Intersecting atoms") {
-        SASAEnergy sasa(spc, 1.5_molar, 1.4_angstrom);
+        FreeSASAEnergy sasa(spc, 1.5_molar, 1.4_angstrom);
         std::vector<double> distance = {0.0, 2.5, 5.0, 7.5, 10.0};
         std::vector<double> sasa_energy = {87.3576, 100.4612, 127.3487, 138.4422, 138.4422};
         for (size_t i = 0; i < distance.size(); ++i) {
@@ -1204,6 +1206,287 @@ TEST_CASE("[Faunus] FreeSASA") {
     SUBCASE("PBC") {}
 }
 #endif
+
+/**
+ * @param spc
+ * @param cosolute_molarity in particles per angstrom cubed
+ * @param probe_radius in angstrom
+ * @param slices_per_atom number of slices of spheres in SASA calculation
+ * @param dense_container flag specifying if a fast memory heavy version of cell_list container is used
+ */
+SASAEnergyBase::SASAEnergyBase(Space& spc, double cosolute_molarity, double probe_radius, int slices_per_atom,
+                               bool dense_container)
+    : spc(spc), cosolute_molarity(cosolute_molarity) {
+    using SASA::SASACellList;
+    const auto periodic_dimensions =
+        spc.geometry.asSimpleGeometry()->boundary_conditions.isPeriodic().cast<int>().sum();
+    switch (periodic_dimensions) {
+    case 3: // PBC in all directions
+        if (dense_container) {
+            sasa = std::make_unique<SASACellList<SASA::DensePeriodicCellList>>(spc, probe_radius, slices_per_atom);
+        } else {
+            sasa = std::make_unique<SASACellList<SASA::SparsePeriodicCellList>>(spc, probe_radius, slices_per_atom);
+        }
+        break;
+    case 0:
+        if (dense_container) {
+            sasa = std::make_unique<SASACellList<SASA::DenseFixedCellList>>(spc, probe_radius, slices_per_atom);
+        } else {
+            sasa = std::make_unique<SASACellList<SASA::SparseFixedCellList>>(spc, probe_radius, slices_per_atom);
+        }
+        break;
+    default:
+        sasa = std::make_unique<SASA::SASA>(spc, probe_radius, slices_per_atom);
+        faunus_logger->warn("CellList neighbour search not available yet for current geometry");
+        break;
+    }
+    name = "sasa";
+    citation_information = "doi:10.12688/f1000research.7931.1";
+    init();
+}
+
+SASAEnergyBase::SASAEnergyBase(const json& j, Space& spc)
+    : SASAEnergyBase(spc, j.value("molarity", 0.0) * 1.0_molar, j.value("radius", 1.4) * 1.0_angstrom,
+                     j.value("slices", 20), j.value("dense", true)) {}
+
+/**
+ * @param spc
+ * @param cosolute_molarity in particles per angstrom cubed
+ * @param probe_radius in angstrom
+ * @param slices_per_atom number of slices of spheres in SASA calculation
+ * @param dense_container flag specifying if a fast memory heavy version of cell_list container is used
+ */
+SASAEnergy::SASAEnergy(Space& spc, double cosolute_molarity, double probe_radius, int slices_per_atom,
+                       bool dense_container)
+    : SASAEnergyBase(spc, cosolute_molarity, probe_radius, slices_per_atom, dense_container) {
+    name = "sasa";
+    citation_information = "doi:10.12688/f1000research.7931.1";
+    init();
+}
+
+SASAEnergy::SASAEnergy(const json& j, Space& spc)
+    : SASAEnergy(spc, j.value("molarity", 0.0) * 1.0_molar, j.value("radius", 1.4) * 1.0_angstrom,
+                 j.value("slices", 20), j.value("dense", true)) {}
+
+void SASAEnergyBase::init() {
+    sasa->init(spc);
+    areas.resize(spc.particles.size());
+}
+
+void SASAEnergy::init() {
+    areas.resize(spc.particles.size(), 0.);
+    current_neighbours.resize(spc.particles.size());
+    changed_indices.reserve(spc.particles.size());
+}
+
+double SASAEnergyBase::energy(Change& change) {
+    double energy = 0.;
+    if (state != MonteCarloState::ACCEPTED) {
+        sasa->update(spc, change);
+    }
+    if (!change.everything) {
+        sasa->needs_syncing = true;
+    }
+    const auto particles = spc.activeParticles();
+
+    std::vector<index_type> target_indices;
+    auto to_index = [this](const auto& particle) { return indexOf(particle); };
+    target_indices = particles | ranges::cpp20::views::transform(to_index) | ranges::to<std::vector>;
+
+    const auto neighbours = sasa->calcNeighbourData(spc, target_indices);
+    sasa->updateSASA(neighbours, target_indices);
+
+    const auto& new_areas = sasa->getAreas();
+    ranges::cpp20::for_each(target_indices,
+                            [this, &new_areas](const auto index) { areas.at(index) = new_areas.at(index); });
+
+    auto accumulate_energy = [this, &energy](const auto& particle) {
+        energy += areas.at(indexOf(particle)) * (particle.traits().tension + cosolute_molarity * particle.traits().tfe);
+    };
+    ranges::cpp20::for_each(particles, accumulate_energy);
+    return energy;
+}
+
+void SASAEnergyBase::sync(Energybase* energybase_ptr, const Change& change) {
+    if (auto* other = dynamic_cast<SASAEnergyBase*>(energybase_ptr)) {
+        areas = other->areas;
+        if (sasa->needs_syncing) {
+            sasa->update(other->spc, change);
+        }
+        other->sasa->needs_syncing = false;
+        sasa->needs_syncing = false;
+    }
+}
+
+void SASAEnergyBase::to_json(json& j) const {
+    j["molarity"] = cosolute_molarity / 1.0_molar;
+    roundJSON(j, 6); // set json output precision
+}
+
+/**
+ * @brief Finds absolute indices of particles whose SASA has changed
+ * @param change Change object
+ */
+void SASAEnergy::updateChangedIndices(const Change& change) {
+    //!< if the state is ACCEPTED there is no need to recalculate SASAs so return empty target_indices
+    if (state == MonteCarloState::ACCEPTED) {
+        return;
+    }
+
+    //!< using set to get rid of repeating target_indices in touched_atoms neighbours lists
+    std::set<index_type> target_indices;
+    for (const auto& group_change : change.groups) {
+        const auto& group = spc.groups.at(group_change.group_index);
+        const auto offset = spc.getFirstParticleIndex(group);
+        auto insert_changed = [this, &target_indices](const auto index) {
+            target_indices.insert(index);
+            insertChangedNeighboursOf(index, target_indices);
+        };
+
+        if (group_change.relative_atom_indices.empty()) {
+            const auto indices = ranges::cpp20::views::iota(offset, group.size() + offset);
+            ranges::cpp20::for_each(indices, insert_changed);
+        } else {
+            const auto indices = group_change.relative_atom_indices |
+                                 ranges::cpp20::views::transform([offset](auto i) { return offset + i; });
+            ranges::cpp20::for_each(indices, insert_changed);
+        }
+    }
+    changed_indices.assign(target_indices.begin(), target_indices.end());
+}
+/**
+ @brief
+* for each touched atoms we need to recalculate SASA for the touched atom
+* and for its neighbours before it moved and after it moved
+*
+*      * @param index_type index of particle whose neighbours sasa has changed
+*      * @param target_indices placeholder to insert changed indices
+**/
+void SASAEnergy::insertChangedNeighboursOf(const index_type index, std::set<index_type>& target_indices) const {
+    const auto& current_neighbour = sasa->calcNeighbourDataOfParticle(spc, index).indices;
+    const auto& past_neighbour = current_neighbours.at(index);
+    target_indices.insert(past_neighbour.begin(), past_neighbour.end());
+    target_indices.insert(current_neighbour.begin(), current_neighbour.end());
+}
+
+double SASAEnergy::energy(Change& change) {
+    double energy(0.);
+
+    //! update not needed when the state is already accepted
+    if (state != MonteCarloState::ACCEPTED) {
+        sasa->update(spc, change);
+    }
+    const auto particles = spc.activeParticles();
+    changed_indices.clear();
+    if (!change.everything) {
+        updateChangedIndices(change);
+        sasa->needs_syncing = true;
+    } else { //! all the active particles will be used for SASA calculation
+        auto to_index = [this](const auto& particle) { return indexOf(particle); };
+        changed_indices = particles | ranges::cpp20::views::transform(to_index) | ranges::to<std::vector>;
+    }
+
+    const auto neighbours_data = sasa->calcNeighbourData(spc, changed_indices);
+
+    // update sasa areas in sasa object and update
+    sasa->updateSASA(neighbours_data, changed_indices);
+    const auto& new_areas = sasa->getAreas();
+
+    for (const auto& [neighbour, index] : ranges::views::zip(neighbours_data, changed_indices)) {
+        current_neighbours.at(index) = neighbour.indices;
+        areas.at(index) = new_areas.at(index);
+    }
+
+    auto accumulate_energy = [this, &energy](const auto& particle) {
+        energy += areas.at(indexOf(particle)) * (particle.traits().tension + cosolute_molarity * particle.traits().tfe);
+    };
+    ranges::cpp20::for_each(particles, accumulate_energy);
+    return energy;
+}
+
+void SASAEnergy::sync(Energybase* energybase_ptr, const Change& change) {
+    if (auto* other = dynamic_cast<SASAEnergy*>(energybase_ptr)) {
+        const auto sync_data = [this, other](const size_t changed_index) {
+            this->current_neighbours.at(changed_index) = other->current_neighbours.at(changed_index);
+            this->areas.at(changed_index) = other->areas.at(changed_index);
+        };
+
+        if (state == MonteCarloState::TRIAL) { //! changed_indices get updated only in TRIAL state for speedup
+            ranges::for_each(this->changed_indices, sync_data);
+        } else {
+            ranges::for_each(other->changed_indices, sync_data);
+        }
+
+        if (sasa->needs_syncing) {
+            sasa->update(other->spc, change);
+        }
+        other->sasa->needs_syncing = false;
+        sasa->needs_syncing = false;
+    }
+}
+
+void SASAEnergy::to_json(json& j) const {
+    j["molarity"] = cosolute_molarity / 1.0_molar;
+    roundJSON(j, 6); // set json output precision
+}
+
+TEST_CASE("[Faunus] SASAEnergy_updates") {
+    using doctest::Approx;
+    Change change;
+    change.everything = true;
+    pc::temperature = 300.0_K;
+    atoms = R"([
+        { "A": { "sigma": 2.0, "tfe": 1.0 } },
+        { "B": { "sigma": 2.0, "tfe": 1.0 } }
+    ])"_json.get<decltype(atoms)>();
+    molecules = R"([
+        { "M": { "structure": [
+                { "A": [0.0, 0.0, 0.0] },
+                { "B": [3.0, 0.0, 0.0] }
+                ] }}
+    ])"_json.get<decltype(molecules)>();
+
+    Space spc;
+    spc.geometry = R"( {"type": "cuboid", "length": 200} )"_json;
+    json j = json::array();
+    j.push_back({{"M", {{"N", 2}}}});
+    InsertMoleculesInSpace::insertMolecules(j, spc);
+
+    spc.particles.at(0).pos = {52.0, 0.0, 0.0};
+    spc.particles.at(1).pos = {8.0, 0.0, 0.0};
+
+    spc.particles.at(2).pos = {11.0, 0.0, 0.0};
+    spc.particles.at(3).pos = {50.0, 0.0, 0.0};
+
+    SASAEnergy sasaPBC(spc, 1.5_molar, 1.0_angstrom);
+    sasaPBC.energy(change);
+    auto areasPBC = sasaPBC.getAreas();
+
+    FreeSASAEnergy sasa(spc, 1.5_molar, 1.0_angstrom);
+    sasa.energy(change);
+    auto areas = sasa.getAreas();
+
+    for (size_t i = 0; i < spc.particles.size(); ++i) {
+        CHECK(areasPBC[i] == Approx(areas[i]));
+    }
+
+    spc.particles.at(3).pos = {14.0, 0.0, 0.0};
+
+    Change::GroupChange changed_data;
+    changed_data.group_index = 1;
+    changed_data.relative_atom_indices = {1};
+    change.groups.push_back(changed_data);
+
+    sasaPBC.energy(change);
+    sasa.energy(change);
+
+    areasPBC = sasaPBC.getAreas();
+    areas = sasa.getAreas();
+
+    for (size_t i = 0; i < spc.particles.size(); ++i) {
+        CHECK(areasPBC[i] == Approx(areas[i]));
+    }
+}
 
 //==================== GroupCutoff ====================
 

@@ -46,19 +46,16 @@ class MoveBase {
     unsigned long number_of_accepted_moves = 0;
     unsigned long number_of_rejected_moves = 0;
     unsigned int sweep_interval = 1; //!< Run interval for defused moves (with weight = 0)
-    std::string cite;                //!< Reference, preferable a short-doi, e.g. "doi:10/b9jq"
+    const std::string cite;          //!< Reference, preferable a short-doi, e.g. "doi:10/b9jq"
 
   protected:
-    Space& spc;                                  //!< Space to operate on
+    const std::string name; //!< Name of move
+    Space& spc;             //!< Space to operate on
     int repeat = 1;
-
-  protected:
-    //!< How many times the move should be repeated per sweep
     unsigned long number_of_attempted_moves = 0; //!< Counter for total number of move attempts
 
   public:
     static Random slump; //!< Shared for all moves
-    std::string name;    //!< Name of move
 
     void from_json(const json& j);
     void to_json(json& j) const; //!< JSON report w. statistics, output etc.
@@ -67,10 +64,11 @@ class MoveBase {
     void reject(Change& change);
     void setRepeat(int repeat);
     virtual double bias(Change& change, double old_energy,
-                        double new_energy); //!< adds extra energy change not captured by the Hamiltonian
-    MoveBase(Space& spc, const std::string& name, const std::string& cite);
+                        double new_energy); //!< Extra energy not captured by the Hamiltonian
+    MoveBase(Space& spc, std::string_view name, std::string_view cite);
     inline virtual ~MoveBase() = default;
     bool isStochastic() const; //!< True if move should be called stochastically
+    const std::string& getName() const;
 };
 
 void from_json(const json &, MoveBase &); //!< Configure any move via json
@@ -164,7 +162,7 @@ class AtomicTranslateRotate : public MoveBase {
 
   public:
     AtomicTranslateRotate(Space& spc, const Energy::Hamiltonian& hamiltonian);
-    ~AtomicTranslateRotate();
+    ~AtomicTranslateRotate() override;
 };
 
 /**
@@ -376,7 +374,7 @@ class ChargeMove : public MoveBase {
     ChargeMove(Space &spc, std::string name, std::string cite);
 
   public:
-    ChargeMove(Space &spc);
+    explicit ChargeMove(Space &spc);
 };
 
 /**
@@ -461,33 +459,24 @@ class QuadrantJump : public MoveBase {
  */
 class ParallelTempering : public MoveBase {
   private:
+    const MPI::Controller& mpi;
+    MPI::ExchangeParticles exchange_particles; //!< Helper class to exchange particles
+    std::unique_ptr<MPI::Partner> partner;     //!< Policy for finding MPI partners
     Geometry::VolumeMethod volume_scaling_method = Geometry::VolumeMethod::ISOTROPIC; //!< How to scale volumes
-    double very_small_volume = 1e-9;
-    MPI::MPIController &mpi;
-    std::unique_ptr<ParticleVector> partner_particles;
-    Random random;
-    int partner = -1;              //!< Exchange replica (partner)
-    enum extradata { VOLUME = 0 }; //!< Structure of extra data to send
-    std::map<std::string, Average<double>> acceptance_map;
+    std::map<MPI::Partner::PartnerPair, Average<double>> acceptance_map;              //!< Exchange statistics
 
-    MPI::FloatTransmitter float_transmitter;                       //!< Class for transmitting floats over MPI
-    MPI::ParticleTransmitter<ParticleVector> particle_transmitter; //!< Class for transmitting particles over MPI
-
-    void findPartner(); //!< Find replica to exchange with
-    bool goodPartner(); //!< Is partner valid?
-    void _to_json(json &j) const override;
-    void _move(Change &change) override;
-    double exchangeEnergy(double energy_change);              //!< Exchange energy with partner
-    void exchangeState(Change &change);                       //!< Exchange positions, charges, volume etc.
-    double bias(Change &, double uold, double unew) override; //!< Energy change in partner replica
-    std::string id() const;                                   //!< Unique string to identify set of partners
-    void _accept(Change &) override;
-    void _reject(Change &) override;
-    void _from_json(const json &j) override;
+    void _to_json(json& j) const override;
+    void _from_json(const json& j) override;
+    void _move(Change& change) override;
+    void _accept(Change& change) override;
+    void _reject(Change& change) override;
+    double bias(Change& change, double uold, double unew) override; //!< Energy change in partner replica
+    double exchangeEnergy(double energy_change);                    //!< Exchange energy with partner
+    void exchangeState(Change& change);                             //!< Exchange positions, charges, volume etc.
+    void exchangeGroupSizes(Space::GroupVector& groups, int partner_rank);
 
   public:
-    ParallelTempering(Space &spc, MPI::MPIController &mpi);
-    ~ParallelTempering();
+    explicit ParallelTempering(Space& spc, const MPI::Controller& mpi);
 };
 
 #endif
@@ -499,7 +488,7 @@ class ParallelTempering : public MoveBase {
  * @throw if invalid name or input parameters
  */
 std::unique_ptr<MoveBase> createMove(const std::string& name, const json& properties, Space& spc,
-                                     Energy::Hamiltonian& hamiltonian, MPI::MPIController& mpi_controller);
+                                     Energy::Hamiltonian& hamiltonian);
 
 /**
  * @brief Class storing a list of MC moves with their probability weights and
@@ -515,8 +504,7 @@ class MoveCollection {
     move_iterator sample();                                //!< Pick move from a weighted, random distribution
 
   public:
-    MoveCollection(const json& list_of_moves, Space& spc, Energy::Hamiltonian& hamiltonian,
-                   MPI::MPIController& mpi_controller);
+    MoveCollection(const json& list_of_moves, Space& spc, Energy::Hamiltonian& hamiltonian);
     void addMove(std::shared_ptr<MoveBase>&& move);             //!< Register new move with correct weight
     const BasePointerVector<MoveBase>& getMoves() const;        //!< Get list of moves
     friend void to_json(json& j, const MoveCollection& propagator); //!< Generate json output
@@ -558,6 +546,4 @@ class MoveCollection {
 void to_json(json& j, const MoveCollection& propagator);
 
 } // namespace Move
-
-
 } // namespace Faunus

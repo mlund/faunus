@@ -109,7 +109,7 @@ class Space {
 
     void clear(); //!< Clears particle and molecule list
     GroupType& addGroup(MoleculeData::index_type molid, const ParticleVector& particles); //!< Append a group
-    GroupVector::iterator findGroupContaining(const Particle& particle); //!< Finds the group containing the given atom
+    GroupVector::iterator findGroupContaining(const Particle& particle, bool include_inactive = false); //!< Finds the group containing the given atom
     GroupVector::iterator findGroupContaining(AtomData::index_type atom_index); //!< Find group containing atom index
     size_t numParticles(Selection selection = Selection::ACTIVE) const;         //!< Number of (active) particles
 
@@ -181,20 +181,13 @@ class Space {
         return ranges::cpp20::views::transform(particles, [](auto& particle) -> Point& { return particle.pos; });
     }
 
-    /**
-     * @brief Finds all groups of type `molid` (complexity: order N)
-     * @param molid Molecular id to look for
-     * @param selection Selection
-     * @return range with all groups of molid
-     */
-    auto findMolecules(MoleculeData::index_type molid, Selection selection = Selection::ACTIVE) {
-
+    std::function<bool(const GroupType&)> getGroupFiler(int molid, const Selection& selection) const {
         auto is_active = [](const GroupType& group) { return group.size() == group.capacity(); };
 
         auto is_neutral = [](auto begin, auto end) {
             auto charge =
                 std::accumulate(begin, end, 0.0, [](auto sum, auto& particle) { return sum + particle.charge; });
-            return (std::fabs(charge) < 1e-6);
+            return (fabs(charge) < 1e-6);
         }; //!< determines if range of particles is neutral
 
         std::function<bool(const GroupType&)> f; //!< Lambda to filter groups according to selection
@@ -220,7 +213,23 @@ class Space {
             break;
         }
         f = [f, molid](auto& group) { return group.id == molid && f(group); };
-        return groups | ranges::cpp20::views::filter(f);
+        return f;
+    }
+
+    /**
+     * @brief Finds all groups of type `molid` (complexity: order N)
+     * @param molid Molecular id to look for
+     * @param selection Selection
+     * @return range with all groups of molid
+     */
+    auto findMolecules(MoleculeData::index_type molid, Selection selection = Selection::ACTIVE) {
+        auto group_filter = getGroupFiler(molid, selection);
+        return groups | ranges::cpp20::views::filter(group_filter);
+    }
+
+    auto findMolecules(MoleculeData::index_type molid, Selection selection = Selection::ACTIVE) const {
+        auto group_filter = getGroupFiler(molid, selection);
+        return groups | ranges::cpp20::views::filter(group_filter);
     }
 
     auto activeParticles() { return groups | ranges::cpp20::views::join; }       //!< Range with all active particles
@@ -235,6 +244,18 @@ class Space {
         return activeParticles() |
                ranges::cpp20::views::filter([atomid](const Particle& particle) { return particle.id == atomid; });
     }
+
+    /**
+     * @brief Find active atoms of type `atomid` (complexity: order N)
+     * @param atomid Atom id to look for
+     * @return Range of filtered particles
+     */
+    auto findAtoms(AtomData::index_type atomid) const {
+        return activeParticles() |
+        ranges::cpp20::views::filter([atomid](const Particle& particle) { return particle.id == atomid; });
+    }
+
+    size_t countAtoms(AtomData::index_type atomid) const; //!< Count active particles
 
     /**
      * @brief Count number of molecules matching criteria
@@ -291,6 +312,8 @@ class InsertMoleculesInSpace {
 
     //!< Aggregated version of the above, called on each item in json array
     static void insertItem(const std::string &molname, const json &properties, Space &spc);
+
+    static void reserveMemory(const json& j, Space& spc);
 
   public:
     static void insertMolecules(const json& j, Space& spc);

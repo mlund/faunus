@@ -39,7 +39,11 @@ const MoleculeData::index_type& MoleculeData::id() const { return _id; }
 
 bool MoleculeData::isImplicit() const { return implicit; }
 
-ParticleVector MoleculeData::getRandomConformation(Geometry::GeometryBase &geo, const ParticleVector &otherparticles) {
+bool MoleculeData::isMolecular() const { return !atomic; }
+
+bool MoleculeData::isAtomic() const { return atomic; }
+
+ParticleVector MoleculeData::getRandomConformation(Geometry::GeometryBase& geo, const ParticleVector& otherparticles) {
     assert(inserter != nullptr);
     return (*inserter)(geo, *this, otherparticles);
 }
@@ -714,7 +718,7 @@ void to_json(json &j, const MoleculeInserter &inserter) { inserter.to_json(j); }
  * @param ignored_other_particles Other particles in the system (ignored for this inserter!)
  * @return Inserted particle vector
  */
-ParticleVector RandomInserter::operator()(Geometry::GeometryBase &geo, MoleculeData &molecule,
+ParticleVector RandomInserter::operator()(const Geometry::GeometryBase &geo, MoleculeData &molecule,
                                           [[maybe_unused]] const ParticleVector &ignored_other_particles) {
     auto particles = molecule.conformations.sample(random.engine); // random, weighted conformation
     if (particles.empty()) {

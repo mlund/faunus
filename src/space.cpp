@@ -5,6 +5,7 @@
 #include "aux/eigensupport.h"
 #include <range/v3/algorithm/for_each.hpp>
 #include <range/v3/algorithm/transform.hpp>
+#include <range/v3/algorithm/count_if.hpp>
 #include <memory>
 #include <stdexcept>
 
@@ -278,8 +279,9 @@ const std::map<MoleculeData::index_type, std::size_t>& Space::getImplicitReservo
 std::map<MoleculeData::index_type, std::size_t>& Space::getImplicitReservoir() { return implicit_reservoir; }
 
 std::vector<Space::GroupType, std::allocator<Space::GroupType>>::iterator
-Space::findGroupContaining(const Particle& particle) {
-    return std::find_if(groups.begin(), groups.end(), [&particle](auto& group) { return group.contains(particle); });
+Space::findGroupContaining(const Particle& particle, bool include_inactive) {
+    return std::find_if(groups.begin(), groups.end(),
+                        [&](Group& group) { return group.contains(particle, include_inactive); });
 }
 
 std::vector<Space::GroupType, std::allocator<Space::GroupType>>::iterator
@@ -337,6 +339,10 @@ std::size_t Space::getFirstActiveParticleIndex(const GroupType& group) const {
     return index;
 }
 
+size_t Space::countAtoms(AtomData::index_type atomid) const {
+    return ranges::cpp20::count_if(activeParticles(), [&](auto& particle) { return particle.id == atomid; });
+}
+
 TEST_CASE("Space::numParticles") {
     Space spc;
     spc.particles.resize(10);
@@ -365,10 +371,8 @@ void from_json(const json &j, Space &spc) {
         if (molecules.empty()) {
             molecules = j.at("moleculelist").get<decltype(molecules)>();
         }
-        if (reactions.empty()) {
-            if (j.contains("reactionlist")) {
-                reactions = j.at("reactionlist").get<decltype(reactions)>();
-            }
+        if (reactions.empty() && j.contains("reactionlist")) {
+            reactions = j.at("reactionlist").get<decltype(reactions)>();
         }
 
         spc.clear();
@@ -782,12 +786,44 @@ void InsertMoleculesInSpace::insertMolecules(const json &j, Space &spc) {
         throw ConfigurationError("molecules to insert must be an array");
     }
     spc.clear();
+    reserveMemory(j, spc);
+
     for (const auto& item : j) { // loop over array of molecules
         const auto& [molecule_name, properties] = jsonSingleItem(item);
         try {
             insertItem(molecule_name, properties, spc);
         } catch (std::exception& e) { throw ConfigurationError("error inserting {}: {}", molecule_name, e.what()); }
     }
+    faunus_logger->trace("particles inserted = {}", spc.particles.size());
+    faunus_logger->trace("groups inserted = {}", spc.groups.size());
+}
+
+/**
+ * Allocate space for particles and groups to be inserted
+ */
+void InsertMoleculesInSpace::reserveMemory(const json& j, Space& spc) {
+    auto required_number_of_particles = spc.particles.size();
+    auto required_number_of_groups = spc.groups.size();
+
+    for (const auto& item : j) { // loop over array of molecules
+        const auto& [molecule_name, properties] = jsonSingleItem(item);
+        const auto& moldata = findMoleculeByName(molecule_name);
+        if (moldata.isImplicit()) {
+            continue;
+        }
+        const auto num_molecules = getNumberOfMolecules(properties, spc.geometry.getVolume(), molecule_name);
+        required_number_of_particles += num_molecules * moldata.atoms.size();
+        if (moldata.isAtomic()) {
+            required_number_of_groups++;
+        } else {
+            required_number_of_groups += num_molecules;
+        }
+    }
+
+    spc.particles.reserve(required_number_of_particles);
+    spc.groups.reserve(required_number_of_groups);
+    faunus_logger->trace("space particle capacity = {}", spc.particles.capacity());
+    faunus_logger->trace("space groups capacity = {}", spc.groups.capacity());
 }
 
 /**

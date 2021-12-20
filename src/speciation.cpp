@@ -451,7 +451,8 @@ void SpeciationMove::_move(Change &change) {
     }
 }
 
-double SpeciationMove::bias(Change &, double, double) {
+double SpeciationMove::bias([[maybe_unused]] Change& change, [[maybe_unused]] double old_energy,
+                            [[maybe_unused]] double new_energy) {
     // The acceptance/rejection of the move is affected by the equilibrium constant
     // but unaffected by the change in bonded energy
     return -reaction->lnK + bond_energy;
@@ -501,7 +502,7 @@ void SpeciationMove::_reject(Change &) {
     }
 }
 
-SpeciationMove::SpeciationMove(Space& spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {}
+SpeciationMove::SpeciationMove(Space& spc, std::string_view name, std::string_view cite) : MoveBase(spc, name, cite) {}
 
 SpeciationMove::SpeciationMove(Space &spc) : SpeciationMove(spc, "rcmc", "doi:10/fqcpg3") {}
 

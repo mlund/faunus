@@ -38,14 +38,14 @@ class ReactionCoordinateBase {
 void to_json(json& j, const ReactionCoordinateBase& reaction_coordinate); //!< Serialize any reaction coordinate to json
 
 std::unique_ptr<ReactionCoordinateBase>
-createReactionCoordinate(const json&, Space&); //!< Factory function to create all known penalty functions
+createReactionCoordinate(const json&, const Space&); //!< Factory function to create all known penalty functions
 
 class SystemProperty : public ReactionCoordinateBase {
   protected:
     std::string property;
 
   public:
-    SystemProperty(const json &j, Space &spc);
+    SystemProperty(const json &j, const Space &spc);
     void _to_json(json &j) const override;
 };
 
@@ -56,7 +56,7 @@ class AtomProperty : public ReactionCoordinateBase {
 
   public:
     std::string property;
-    AtomProperty(const json &j, Space &spc);
+    AtomProperty(const json &j, const Space &spc);
     void _to_json(json &j) const override;
 };
 
@@ -71,18 +71,18 @@ struct MoleculeProperty : public ReactionCoordinateBase {
     std::vector<size_t> indexes;
     std::string property;
 
-    void selectAngleWithVector(const json& j, Space& spc);
-    void selectRinner(const json& j, Space& spc);
-    void selectMinimumGroupDistance(const json& j, Space& spc);
-    void selectMassCenterDistance(const json& j, Space& spc);
-    void selectDipoleAngle(const json& j, Space& spc, Geometry::BoundaryFunction& b);
-    void selectGyrationRadius(Space& spc);
-    void selectAtomAtomDistance(const json& j, Space& spc);
-    void selectMassCenterDistanceZ(const json& j, Space& spc);
-    void selectLengthOverRadiusRatio(const json& j, Space& spc);
+    void selectAngleWithVector(const json& j, const Space& spc);
+    void selectRinner(const json& j, const Space& spc);
+    void selectMinimumGroupDistance(const json& j, const Space& spc);
+    void selectMassCenterDistance(const json& j, const Space& spc);
+    void selectDipoleAngle(const json& j, const Space& spc, Geometry::BoundaryFunction& b);
+    void selectGyrationRadius(const Space& spc);
+    void selectAtomAtomDistance(const json& j, const Space& spc);
+    void selectMassCenterDistanceZ(const json& j, const Space& spc);
+    void selectLengthOverRadiusRatio(const json& j, const Space& spc);
 
   public:
-    MoleculeProperty(const json &j, Space &spc);
+    MoleculeProperty(const json &j, const Space &spc);
     void _to_json(json &j) const override;
 };
 

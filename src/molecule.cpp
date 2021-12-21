@@ -953,7 +953,16 @@ void to_json(json &j, const ReactionData &reaction) {
                          {"neutral", a.only_neutral_molecules},
                          {"pK'", -a.lnK / std::log(10)}};
 }
-//!< Serialize to JSON object
+
+std::pair<decltype(Faunus::atoms)::const_iterator, decltype(Faunus::molecules)::const_iterator>
+ReactionData::findAtomOrMolecule(const std::string& atom_or_molecule_name) {
+    auto atom_iter = findName(Faunus::atoms, atom_or_molecule_name);
+    auto molecule_iter = findName(Faunus::molecules, atom_or_molecule_name);
+    if (molecule_iter == Faunus::molecules.end() and atom_iter == Faunus::atoms.end()) {
+        throw std::runtime_error("unknown species '" + atom_or_molecule_name + "'");
+    }
+    return {atom_iter, molecule_iter};
+}
 
 TEST_CASE("[Faunus] ReactionData") {
     using doctest::Approx;
@@ -999,6 +1008,23 @@ MoleculeData& findMoleculeByName(const std::string& name) {
         throw UnknownMoleculeError(name);
     }
     return *result;
+}
+std::pair<std::vector<std::string>, std::vector<std::string>> parseReactionString(const std::string& process_string) {
+    using Tvec = std::vector<std::string>;
+    Tvec names; // vector of atom/molecule names
+    std::string atom_or_molecule_name;
+    std::istringstream iss(process_string);
+    while (iss >> atom_or_molecule_name) { // stream all words into vector
+        names.push_back(atom_or_molecule_name);
+    }
+
+    names.erase(std::remove(names.begin(), names.end(), "+"), names.end());
+
+    auto it = std::find(names.begin(), names.end(), "=");
+    if (it == names.end()) {
+        throw std::runtime_error("products and reactants must be separated by ' = '");
+    }
+    return {Tvec(names.begin(), it), Tvec(it + 1, names.end())};
 }
 
 } // namespace Faunus

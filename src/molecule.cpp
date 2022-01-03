@@ -995,14 +995,13 @@ void MoleculeInserter::to_json(json &) const {}
 
 TEST_SUITE_END();
 
-UnknownMoleculeError::UnknownMoleculeError(const std::string& molecule_name)
-        : GenericError("unknown molecule: '{}'", molecule_name) {}
-
+UnknownMoleculeError::UnknownMoleculeError(std::string_view molecule_name)
+    : GenericError("unknown molecule: '{}'", molecule_name) {}
 
 /**
  * @throw if molecule not found
  */
-MoleculeData& findMoleculeByName(const std::string& name) {
+MoleculeData& findMoleculeByName(std::string_view name) {
     const auto result = findName(Faunus::molecules, name);
     if (result == Faunus::molecules.end()) {
         throw UnknownMoleculeError(name);

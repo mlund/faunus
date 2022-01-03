@@ -259,7 +259,7 @@ extern std::vector<MoleculeData> molecules;
  * @brief An exception to indicate an unknown molecule name in the input.
  */
 struct UnknownMoleculeError: public GenericError {
-    explicit UnknownMoleculeError(const std::string &molecule_name);
+    explicit UnknownMoleculeError(std::string_view molecule_name);
 };
 
 /**
@@ -271,7 +271,7 @@ struct UnknownMoleculeError: public GenericError {
  * @return a molecule found
  * @throw UnknownMoleculeError  when no molecule found
  */
-MoleculeData& findMoleculeByName(const std::string& name);
+MoleculeData& findMoleculeByName(std::string_view name);
 
 /**
  * @brief Constructs MoleculeData from JSON.

@@ -213,7 +213,15 @@ class Group : public ElasticRange<Particle> {
     Group& shallowCopy(const Group& other);                      //!< copy from `other` but *not* particle data
     bool contains(const Particle& particle, bool include_inactive = false) const; //!< Does particle belong?
     double mass() const;                                                          //!< Sum of all active masses
-    auto positions(); //!< Range of positions of active particles
+
+    auto positions() {
+        return ranges::cpp20::views::transform(*this, [&](auto& particle) -> Point& { return particle.pos; });
+    } //!< Range of positions of active particles
+
+    auto positions() const {
+        return ranges::cpp20::views::transform(*this,
+                                               [&](const auto& particle) -> const Point& { return particle.pos; });
+    } //!< Range of positions of active particles
 
     AtomData::index_type getParticleIndex(
         const Particle& particle,

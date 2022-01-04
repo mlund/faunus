@@ -505,6 +505,20 @@ TEST_CASE("[Faunus] Space") {
     }
 }
 
+TEST_CASE("[Faunus] Space::toIndices") {
+    Space spc;
+    spc.particles.resize(3);
+
+    auto subrange = ranges::make_subrange(spc.particles.begin() + 1, spc.particles.end()); // p1, p2
+    auto indices = spc.toIndices(subrange);
+    CHECK(indices.size() == 2);
+    CHECK(indices.at(0) == 1);
+    CHECK(indices.at(1) == 2);
+
+    ParticleVector particles(2); // invalid particles outside Space
+    CHECK_THROWS(spc.toIndices(particles));
+}
+
 TEST_CASE("[Faunus] Space::updateParticles") {
     using doctest::Approx;
     Space spc;

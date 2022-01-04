@@ -445,9 +445,22 @@ void SpeciationMove::_move(Change &change) {
         if (!change.empty()) {
             change.matter_change = true; // Attempting to change the number of atoms / molecules
             std::sort(change.groups.begin(), change.groups.end()); // change groups *must* be sorted!
+            updateGroupMassCenters(change);
         }
-    } catch(SpeciationMoveException &) {
-        change.clear();
+    } catch (SpeciationMoveException&) { change.clear(); }
+}
+
+/**
+ * Speciation move may induce a change in molecular mass centers
+ */
+void SpeciationMove::updateGroupMassCenters(const Change& change) const {
+    for (const auto& change_data : change.groups) {
+        if (change_data.dNatomic || change_data.dNswap) {
+            auto& group = spc.groups.at(change_data.group_index);
+            if (group.massCenter()) { // update only if group has a well-defined mass center
+                group.updateMassCenter(spc.geometry.getBoundaryFunc(), group.mass_center);
+            }
+        }
     }
 }
 

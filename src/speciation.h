@@ -18,10 +18,12 @@ namespace Move {
  *    - atomic swap
  *    - deactivate reactants
  *    - activate products
+ *
+ * @todo This class is still overly messy and needs general refactoring
  */
 class SpeciationMove : public MoveBase {
   private:
-    typedef decltype(Faunus::reactions)::iterator reaction_iterator;
+    using reaction_iterator = decltype(Faunus::reactions)::iterator;
     using MoveBase::spc;        //!< Trial space (particles, groups)
     Space *other_spc = nullptr; //!< Old space (particles, groups)
     double bond_energy = 0;     //!< Accumulated bond energy if inserted/deleted molecule
@@ -50,6 +52,7 @@ class SpeciationMove : public MoveBase {
     void atomicSwap(Change &);             //!< Swap atom type
     void deactivateAllReactants(Change &); //!< Delete reactant species
     void activateAllProducts(Change &);    //!< Insert product species
+    void updateGroupMassCenters(const Change& change) const; //!< Update affected molecular mass centers
 
     Change::GroupChange contractAtomicGroup(Space::GroupType&, Space::GroupType&, int); //!< Contract atomic group
     Change::GroupChange expandAtomicGroup(Space::GroupType&, int);                      //!< Expand atomic group

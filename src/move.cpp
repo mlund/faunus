@@ -940,7 +940,7 @@ void TranslateRotate::_from_json(const json& j) {
 /**
  * @todo `mollist` scales linearly w. system size -- implement look-up-table in Space?
  */
-std::optional<std::reference_wrapper<Space::GroupType>> TranslateRotate::findRandomMolecule() const {
+std::optional<std::reference_wrapper<Space::GroupType>> TranslateRotate::findRandomMolecule() {
     if (auto mollist = spc.findMolecules(molid, Space::Selection::ACTIVE); not ranges::cpp20::empty(mollist)) {
         if (auto group_it = slump.sample(mollist.begin(), mollist.end()); not group_it->empty()) {
             return *group_it;
@@ -1055,6 +1055,49 @@ double SmartMonteCarlo::bias(const int number_total, const int number_inside, Sm
     }
 }
 
+/**
+ * This is called *after* the move and the `bias()` function will determine if the move
+ * resulted in a flux over the region boundary and return the appropriate bias.
+ */
+double SmartTranslateRotate2::bias([[maybe_unused]] Change& change, [[maybe_unused]] double old_energy,
+                                   [[maybe_unused]] double new_energy) {
+    if (selection) {
+        updateAverageCountInside(selection->number_inside);
+        return smart_monte_carlo.bias(*selection);
+    }
+    return 0.0;
+}
+
+/**
+ * This is used to sample the average number of groups inside the region. Once converged, the
+ * expensive region search can be disabled by giving `fixed_count_inside` a mean value which will
+ * be used for all further bias evaluations.
+ */
+void SmartTranslateRotate2::updateAverageCountInside(int count_inside) {
+    mean_count_inside += static_cast<double>(count_inside);
+    if (mean_count_inside.size() % bias_update_interval == 0) {
+        if (mean_count_inside.stdev() / mean_count_inside.avg() < 0.05) {
+            smart_monte_carlo.fixed_count_inside = static_cast<int>(mean_count_inside.avg());
+            faunus_logger->info("Stopping bias update since threshold reached.");
+        }
+    }
+}
+
+/**
+ * Upon calling `select()`, the `outside_rejection_probability` is used to exclude particles
+ * outside and may thus often return `std::nullopt`.
+ */
+std::optional<std::reference_wrapper<Space::GroupType>> SmartTranslateRotate2::findRandomMolecule() {
+    if (auto mollist = spc.findMolecules(molid, Space::Selection::ACTIVE); ranges::cpp20::empty(mollist)) {
+        selection = std::nullopt;
+    } else {
+        selection = smart_monte_carlo.select<Group>(mollist, slump);
+        if (selection) {
+            return *(selection->item);
+        }
+    }
+    return std::nullopt;
+}
 } // namespace Faunus::Move
 
 #ifdef DOCTEST_LIBRARY_INCLUDED

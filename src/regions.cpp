@@ -8,6 +8,8 @@ namespace Region {
 
 RegionBase::RegionBase(RegionType type) : type(type) {}
 
+std::optional<double> RegionBase::volume() const { return std::nullopt; }
+
 /**
  * Expects an object where KEY is an arbitrary, user-defined name and
  * the VALUE is another object defining rhe region type and other
@@ -104,6 +106,40 @@ std::optional<double> SphereAroundParticle::volume() const {
 }
 void SphereAroundParticle::to_json(json& j) const {
     j = {{"index", particle_index}, {"threshold", std::sqrt(radius_squared)}};
+}
+
+VidarsRegion::VidarsRegion(const Space& spc, ParticleVector::size_type particle_index1,
+                           ParticleVector::size_type particle_index2, double r_x, double r_y)
+    : RegionBase(RegionType::WITHIN_ELLIPSOID), spc(spc), particle_index1(particle_index1),
+      particle_index2(particle_index2), parallel_radius(r_x), perpendicular_radius(r_y) {}
+
+bool VidarsRegion::isInside(const Point& position) const {
+    const auto ref1_pos = spc.particles.at(particle_index1).pos;
+    const auto ref2_pos = spc.particles.at(particle_index2).pos;
+
+    Point cylAxis = spc.geometry.vdist(ref2_pos, ref1_pos) * 0.5; // half vector between reference atoms
+    if (parallel_radius < cylAxis.norm()) {                       // checking so that a is larger than length of cylAxis
+        throw std::runtime_error(
+            "specified radius of ellipsoid along the axis connecting reference atoms (rx) must be larger or equal "
+            "to half the distance between reference atoms. Specified radius is " +
+            std::to_string(parallel_radius) + " Å whereas half the distance between reference atoms is " +
+            std::to_string(cylAxis.norm()) + "Å");
+    }
+    Point origin = ref2_pos - cylAxis;                // coordinates of middle point between reference atoms: new origo
+    auto molV = spc.geometry.vdist(position, origin); // vector between selected molecule and center of geometry
+    auto cosTheta = molV.dot(cylAxis) / molV.norm() / cylAxis.norm(); // cosinus of angle between coordinate
+    // vector of selected molecule and axis
+    // connecting reference atoms
+    auto theta = acos(cosTheta);     // angle between coordinate vector of sel. molecule and axis connecting ref. atoms
+    auto x = cosTheta * molV.norm(); // x coordinate of selected molecule with respect to center of geometry
+    // (in plane including vectors molV and cylAxis)
+    auto y = sin(theta) * molV.norm(); // y coordinate of selected molecule with respect to center of geometry
+    // (in plane including vectors molV and cylAxis)
+    auto coord =
+        x * x / (parallel_radius * parallel_radius) +
+        y * y / (perpendicular_radius * perpendicular_radius); // calculating normalized coordinate with respect to
+    // dimensions of geometry (>1.0 → outside, <1.0 → inside)
+    return coord <= 1.0;
 }
 
 } // namespace Region

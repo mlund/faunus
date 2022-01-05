@@ -25,7 +25,7 @@ class Space; // forward declare Space
  */
 namespace Region {
 
-enum class RegionType { WITHIN_MOLID, WITHIN_PARTICLE, INVALID };
+enum class RegionType { WITHIN_MOLID, WITHIN_PARTICLE, WITHIN_ELLIPSOID, INVALID };
 
 NLOHMANN_JSON_SERIALIZE_ENUM(RegionType, {{RegionType::INVALID, nullptr},
                                           {RegionType::WITHIN_MOLID, "within_molecule_type"},
@@ -44,7 +44,7 @@ class RegionBase {
     virtual bool isInside(const Point& position) const = 0; //!< true if point is inside region
   public:
     const RegionType type;
-    virtual std::optional<double> volume() const = 0;       //!< Volume of region if applicable
+    virtual std::optional<double> volume() const; //!< Volume of region if applicable
     virtual void to_json(json& j) const = 0;
     virtual ~RegionBase() = default;
     explicit RegionBase(RegionType type);
@@ -112,6 +112,23 @@ class SphereAroundParticle : public RegionBase {
     bool isInside(const Point& position) const override;
     std::optional<double> volume() const override;
     void to_json(json& j) const override;
+};
+
+/**
+ * An ellipsoid defined by two (moving) particles
+ */
+class VidarsRegion : public RegionBase {
+  private:
+    const Space& spc;
+    const ParticleVector::size_type particle_index1; //!< Index of first reference particle
+    const ParticleVector::size_type particle_index2; //!< Index of second reference particle
+    const double parallel_radius;                    //!< ellipsoidal radius along axis connecting reference atoms
+    const double perpendicular_radius; //!< ellipsoidal radius perpendicular to axis connecting reference atoms
+
+  public:
+    VidarsRegion(const Space& spc, ParticleVector::size_type particle_index1, ParticleVector::size_type particle_index2,
+                 double r_x, double r_y);
+    bool isInside(const Point& position) const override;
 };
 
 } // namespace Region

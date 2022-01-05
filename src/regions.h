@@ -4,7 +4,6 @@
 #include "group.h"
 #include <range/v3/view/filter.hpp>
 #include <range/v3/view/transform.hpp>
-#include <range/v3/algorithm/any_of.hpp>
 
 /**
 Possible layout:
@@ -50,14 +49,8 @@ class RegionBase {
     virtual ~RegionBase() = default;
     explicit RegionBase(RegionType type);
 
-    inline bool inside(const Particle& particle) const { return isInside(particle.pos); }
-
-    inline bool inside(const Group& group) const {
-        if (auto mass_center = group.massCenter()) {
-            return isInside(mass_center.value());
-        }
-        return ranges::cpp20::any_of(group, [&](const Particle& particle) { return inside(particle); });
-    }
+    bool inside(const Particle& particle) const; //!< Determines if particle is inside region
+    bool inside(const Group& group) const;       //!< Determines of groups is inside region
 
     /** Selects particles within the region */
     template <typename ParticleRange> auto filterInside(const ParticleRange& particles) const {
@@ -128,7 +121,7 @@ class VidarsRegion : public RegionBase {
 
   public:
     VidarsRegion(const Space& spc, ParticleVector::size_type particle_index1, ParticleVector::size_type particle_index2,
-                 double r_x, double r_y);
+                 double parallel_radius, double perpendicular_radius);
     VidarsRegion(const Space& spc, const json& j);
     bool isInside(const Point& position) const override;
     void to_json(json& j) const override;

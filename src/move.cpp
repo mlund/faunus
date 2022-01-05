@@ -307,6 +307,8 @@ std::unique_ptr<MoveBase> createMove(const std::string& name, const json& proper
             move = std::make_unique<TranslateRotate>(spc);
         } else if (name == "smartmoltransrot") {
             move = std::make_unique<SmartTranslateRotate>(spc);
+        } else if (name == "smartmoltransrot2") {
+            return std::make_unique<SmartTranslateRotate2>(spc, properties);
         } else if (name == "conformationswap") {
             move = std::make_unique<ConformationSwap>(spc);
         } else if (name == "transrot") {
@@ -371,6 +373,11 @@ MoveCollection::MoveCollection(const json& list_of_moves, Space& spc, Energy::Ha
 }
 
 void to_json(json& j, const MoveCollection& propagator) { j = propagator.moves; }
+
+void to_json(json& j, const SmartMonteCarlo& smc) {
+    j["region"] = static_cast<json>(*smc.region);
+    j["p"] = smc.outside_rejection_probability;
+}
 
 const BasePointerVector<MoveBase>& MoveCollection::getMoves() const { return moves; }
 
@@ -1097,6 +1104,10 @@ std::optional<std::reference_wrapper<Space::GroupType>> SmartTranslateRotate2::f
         }
     }
     return std::nullopt;
+}
+void SmartTranslateRotate2::_to_json(json& j) const {
+    TranslateRotate::_to_json(j);
+    j["smart monte carlo"] = static_cast<json>(smart_monte_carlo);
 }
 } // namespace Faunus::Move
 

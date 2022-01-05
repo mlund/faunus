@@ -10,6 +10,15 @@ RegionBase::RegionBase(RegionType type) : type(type) {}
 
 std::optional<double> RegionBase::volume() const { return std::nullopt; }
 
+bool RegionBase::inside(const Particle& particle) const { return isInside(particle.pos); }
+
+bool RegionBase::inside(const Group& group) const {
+    if (auto mass_center = group.massCenter()) {
+        return isInside(mass_center.value());
+    }
+    return ranges::cpp20::any_of(group, [&](const Particle& particle) { return inside(particle); });
+}
+
 /**
  * Expects an object where KEY is an arbitrary, user-defined name and
  * the VALUE is another object defining rhe region type and other
@@ -139,10 +148,18 @@ bool VidarsRegion::isInside(const Point& position) const {
     return coord <= 1.0;
 }
 
+/**
+ * @param spc Space to operate on
+ * @param particle_index1 Index of first particle defining ellipsoid
+ * @param particle_index2 Index of second particle defining ellipsoid
+ * @param parallel_radius Ellipsoidal radius along axis connecting reference atoms
+ * @param perpendicular_radius Ellipsoidal radius perpendicular to axis connecting reference atoms
+ */
 VidarsRegion::VidarsRegion(const Space& spc, ParticleVector::size_type particle_index1,
-                           ParticleVector::size_type particle_index2, double r_x, double r_y)
+                           ParticleVector::size_type particle_index2, double parallel_radius,
+                           double perpendicular_radius)
     : RegionBase(RegionType::WITHIN_ELLIPSOID), spc(spc), particle_index1(particle_index1),
-      particle_index2(particle_index2), parallel_radius(r_x), perpendicular_radius(r_y) {}
+      particle_index2(particle_index2), parallel_radius(parallel_radius), perpendicular_radius(perpendicular_radius) {}
 
 VidarsRegion::VidarsRegion(const Space& spc, const json& j)
     : VidarsRegion(spc, j.at("index1").get<int>(), j.at("index2").get<int>(), j.at("r_x").get<double>(),

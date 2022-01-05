@@ -279,6 +279,7 @@ SmartMonteCarloSelection<T>::SmartMonteCarloSelection(T& item, int number_total,
 class SmartMonteCarlo {
   public:
     enum class MoveEvent { ENTER_REGION, EXIT_REGION, NO_CROSSING };
+    friend void to_json(json&, const SmartMonteCarlo&);
 
   private:
     double outside_rejection_probability = 1.0;
@@ -364,6 +365,8 @@ class SmartMonteCarlo {
     }
 };
 
+void to_json(json& j, const SmartMonteCarlo& smc);
+
 /**
  * @brief Smart Monte Carlo version of molecular translationa and rotation
  */
@@ -373,13 +376,15 @@ class SmartTranslateRotate2 : public TranslateRotate {
     AverageStdev<double> mean_count_inside;
     SmartMonteCarlo smart_monte_carlo;
     std::optional<SmartMonteCarloSelection<Group>> selection;
-    double bias(Change& change, double old_energy, double new_energy) override;
+
     std::optional<std::reference_wrapper<Space::GroupType>> findRandomMolecule() override;
+    double bias(Change& change, double old_energy, double new_energy) override;
+    void updateAverageCountInside(int count_inside);
+    void _to_json(json& j) const override;
 
   public:
     SmartTranslateRotate2(Space& spc, const json& j)
         : TranslateRotate(spc), smart_monte_carlo(1.0, Region::createRegion(spc, j)) {}
-    void updateAverageCountInside(int count_inside);
 };
 
 /**

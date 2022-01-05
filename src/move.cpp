@@ -1055,8 +1055,8 @@ TEST_CASE("[Faunus] TranslateRotate") {
 namespace Faunus::Move {
 
 void SmartTranslateRotate::_to_json(json& j) const {
-    j = {{"Number of counts inside geometry", cntInner},
-         {"Number of counts outside geometry", cnt - cntInner},
+    j = {//{"Number of counts inside geometry", cntInner},
+         //{"Number of counts outside geometry", cnt - cntInner},
          {"dir", dir},
          {"dp", dptrans},
          {"dprot", dprot},
@@ -1109,10 +1109,6 @@ void SmartTranslateRotate::_move(Change& change) {
 
     const auto is_inside = createInsideLambdaFunc();
     const auto molecule_is_inside = is_inside(selected_molecule->mass_center);
-    if (molecule_is_inside) {
-        cntInner += 1; // counting number of times a molecule is found inside geometry
-    }
-
     cnt++; // total number of counts
 
     if (update_bias) { // continuing to adjust bias according to number of molecules inside and outside geometry

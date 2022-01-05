@@ -15,6 +15,8 @@
 
 namespace Faunus {
 
+class RegionBase;
+
 namespace Energy {
 class Hamiltonian;
 }
@@ -246,6 +248,15 @@ class TranslateRotate : public MoveBase {
     explicit TranslateRotate(Space &spc);
 };
 
+class SmartMonteCarlo {
+  protected:
+    double bias_energy = 0.0;
+    int number_inside = 0;
+    int number_total = 0;
+    std::unique_ptr<RegionBase> region;
+    // double bias(int number_total, int number_inside);
+};
+
 /**
  * @brief Move that preferentially displaces molecules within a specified region around a specified atom type
  * Idea based on the chapter 'Smarter Monte Carlo' in 'Computer Simulation of Liquids' by Allen & Tildesley (p. 317)
@@ -282,8 +293,9 @@ class SmartTranslateRotate : public MoveBase {
     double num_molecules_inside = 0.0;
     double num_molecules_outside = 0.0;
     double num_molecules_total = 0.0;
-    double cntInner = 0; // bias to add when crossing boundary between in and out, counters keeping track of molecules
-                         // inside, outside geomtry etc...
+    // double cntInner = 0; // bias to add when crossing boundary between in and out, counters keeping track of
+    // molecules
+    // inside, outside geomtry etc...
 
     Point dir = {1, 1, 1};
     bool update_bias = true; //!< Should we keep updating the bias?

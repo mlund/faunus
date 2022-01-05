@@ -251,48 +251,58 @@ class TranslateRotate : public MoveBase {
  * Idea based on the chapter 'Smarter Monte Carlo' in 'Computer Simulation of Liquids' by Allen & Tildesley (p. 317)
  * The current region implemented is an ellipsoid for which you specify radii along length and width of ellipsoid
  *
+ * @todo
+ * - Too many class variables
+ * - Use Regions
+ * - Base on recent version of Translate/Rotate using inheritance
  */
 
 class SmartTranslateRotate : public MoveBase {
-  protected:
+  private:
     using MoveBase::spc;
 
-    int molid = -1, refid1 = -1, refid2 = -1; // molecule to displace, reference atoms 1 and 2 defining geometry
+    int molid = -1;
+    int refid1 = -1;
+    int refid2 = -1; // molecule to displace, reference atoms 1 and 2 defining geometry
     unsigned long cnt;
-    double dptrans = 0, dprot = 0;
+    double dptrans = 0;
+    double dprot = 0;
     double p = 1; // initializing probability that a molecule outside geometry is kept as selected molecule
     double r_x = 0,
            r_y = 0; // defining lengths of perpendicular radii defining the ellipsoid (or sphere if a and b are equal)
-    double _sqd;    // squared displacement
-    AverageStdev<double> msqd, countNin_avg, countNin_avgBlocks, countNout_avg,
-        countNout_avgBlocks; // mean squared displacement and particle counters
+    double squared_displacement; // squared displacement
+    using average_type = AverageStdev<double>;
+    average_type msqd;
+    average_type mean_num_molecules_inside;
+    average_type countNin_avgBlocks;
+    average_type mean_num_molecules_outside;
+    average_type countNout_avgBlocks; // mean squared displacement and particle counters
 
-    double cosTheta, theta;            // geometrical variables
-    double x, y;                       // x and y coordinate relative to center of geometry of chosen molecule
-    double coord, coordNew, coordTemp; // normalized coordinates to decide if molecule is inside or outside geometry
-    double randNbr;
-    double _bias = 0, rsd = 0.01, Nin, countNin, countNout, Ntot = 0,
-           cntInner = 0; // bias to add when crossing boundary between in and out, counters keeping track of molecules
+    double _bias = 0.0;
+    double rsd = 0.01;
+    double average_num_molecules_inside;
+    double num_molecules_inside = 0.0;
+    double num_molecules_outside = 0.0;
+    double num_molecules_total = 0.0;
+    double cntInner = 0; // bias to add when crossing boundary between in and out, counters keeping track of molecules
                          // inside, outside geomtry etc...
 
     Point dir = {1, 1, 1};
-    Point cylAxis = {0, 0, 0}; // axis/vector connecting the two reference atoms
-    Point origo = {0, 0, 0};
-    Point molV = {0, 0, 0}; // coordinate vector of chosen molecule
-
-    bool findBias = true;
+    bool update_bias = true; //!< Should we keep updating the bias?
 
     void _to_json(json &j) const override;
     void _from_json(const json &j) override; //!< Configure via json object
     void _move(Change &change) override;
-    double bias(Change &, double, double) override;
-    void _accept(Change &) override { msqd += _sqd; }
-    void _reject(Change &) override { msqd += 0; }
+    double bias(Change& change, double, double) override;
+    void _accept(Change& change) override;
+    void _reject(Change& change) override;
 
     SmartTranslateRotate(Space &spc, std::string name, std::string cite);
 
   public:
     explicit SmartTranslateRotate(Space &spc);
+    std::function<bool(const Point&)> createInsideLambdaFunc();
+    void updateAveragesAndBias();
 };
 
 /**

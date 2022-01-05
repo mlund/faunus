@@ -6,6 +6,7 @@
 #include "chainmove.h"
 #include "forcemove.h"
 #include "montecarlo.h"
+#include "regions.h"
 #include "aux/iteratorsupport.h"
 #include "aux/eigensupport.h"
 #include "spdlog/spdlog.h"
@@ -1030,6 +1031,30 @@ TranslateRotate::TranslateRotate(Space& spc, std::string name, std::string cite)
 
 TranslateRotate::TranslateRotate(Space& spc) : TranslateRotate(spc, "moltransrot", "") {}
 
+/**
+ * @param outside_rejection_probability Probability that any element outside the region will be rejected
+ * @param region Region to preferentially pick from
+ */
+SmartMonteCarlo::SmartMonteCarlo(double outside_rejection_probability, std::unique_ptr<Region::RegionBase> region)
+    : outside_rejection_probability(outside_rejection_probability), region(std::move(region)) {}
+
+/**
+ * @param number_total Total number of elements
+ * @param number_inside Total number of elements inside region
+ * @param event Did element exit or enter the region? Returns zero if no boundary crossing
+ */
+double SmartMonteCarlo::bias(const int number_total, const int number_inside, SmartMonteCarlo::MoveEvent event) const {
+    const auto p = outside_rejection_probability;
+    switch (event) {
+    case MoveEvent::EXIT_REGION:
+        return -std::log(p / (1.0 - (1.0 - p) / (p * number_total + (1.0 - p) * number_inside)));
+    case MoveEvent::ENTER_REGION:
+        return -std::log(1.0 / (1.0 + (1.0 - p) / (p * number_total + (1.0 - p) * number_inside)));
+    case MoveEvent::NO_CROSSING:
+        return 0.0;
+    }
+}
+
 } // namespace Faunus::Move
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
@@ -1097,6 +1122,8 @@ void SmartTranslateRotate::_from_json(const json& j) {
 
 void SmartTranslateRotate::_move(Change& change) {
     squared_displacement = 0.0;
+    bias_energy = 0.0;
+
     auto mollist = spc.findMolecules(molid, Space::Selection::ACTIVE); // list of molecules w. 'molid'
     if (ranges::cpp20::empty(mollist)) {
         return;
@@ -1110,6 +1137,10 @@ void SmartTranslateRotate::_move(Change& change) {
     const auto is_inside = createInsideLambdaFunc();
     const auto molecule_is_inside = is_inside(selected_molecule->mass_center);
     cnt++; // total number of counts
+
+    if (!molecule_is_inside && slump() < p) {
+        return; // reject outside molecule with probability p
+    }
 
     if (update_bias) { // continuing to adjust bias according to number of molecules inside and outside geometry
         auto mass_centers = mollist | ranges::cpp20::views::transform(&Group::mass_center);
@@ -1149,7 +1180,7 @@ void SmartTranslateRotate::_move(Change& change) {
            1e-6);
 
     const auto moved_molecule_is_inside = is_inside(selected_molecule->mass_center);
-    const auto N = update_bias ? num_molecules_inside : average_num_molecules_inside;
+    const double N = update_bias ? static_cast<double>(num_molecules_inside) : average_num_molecules_inside;
     if (molecule_is_inside && !moved_molecule_is_inside) {
         // inside --> outside
         bias_energy = -std::log(p / (1.0 - (1.0 - p) / (p * num_molecules_total + (1.0 - p) * N)));

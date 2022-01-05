@@ -6,11 +6,13 @@
 #include "geometry.h"
 #include "space.h"
 #include "io.h"
+#include "regions.h"
 #include "aux/timers.h"
 #include "aux/sparsehistogram.h"
 #include <range/v3/view/filter.hpp>
 #include <range/v3/view/iota.hpp>
 #include <range/v3/view/indirect.hpp>
+#include <range/v3/algorithm/count_if.hpp>
 #include <optional>
 
 namespace Faunus {
@@ -248,13 +250,89 @@ class TranslateRotate : public MoveBase {
     explicit TranslateRotate(Space &spc);
 };
 
-class SmartMonteCarlo {
+/**
+ * @brief Particle or groups selection for smart Monte Carlo (SMC) moves
+ *
+ * This contains data useful for performing a SMC move. This object should be created
+ * only with `SmartMonteCarlo::select` and hence has a protected constructor.
+ */
+template <typename T> class SmartMonteCarloSelection {
+  public:
+    std::reference_wrapper<T> item; //!< Selected group, particle etc.
+    const int number_total = 0;
+    const int number_inside = 0;
+    const bool item_is_inside = false;
+
   protected:
-    double bias_energy = 0.0;
-    int number_inside = 0;
-    int number_total = 0;
-    std::unique_ptr<RegionBase> region;
-    // double bias(int number_total, int number_inside);
+    SmartMonteCarloSelection(T& item, int number_total, int number_inside, bool item_is_inside);
+    friend class SmartMonteCarlo; //!< Create with SmartMonteCarlo::select();
+};
+
+/**
+ * @tparam T Particle or group (`item')
+ * @param item Reference to item
+ * @param number_total Total number of items
+ * @param number_inside Number of items inside region
+ * @param item_is_inside Is current `item' inside region?
+ */
+template <typename T>
+SmartMonteCarloSelection<T>::SmartMonteCarloSelection(T& item, int number_total, int number_inside, bool item_is_inside)
+    : item(item), number_total(number_total), number_inside(number_inside), item_is_inside(item_is_inside) {}
+
+class SmartMonteCarlo {
+  public:
+    enum class MoveEvent { ENTER_REGION, EXIT_REGION, NO_CROSSING };
+
+  private:
+    double outside_rejection_probability = 1.0;
+    std::unique_ptr<Region::RegionBase> region;
+    double bias(int number_total, int number_inside, MoveEvent event) const; //!< Bias based on outside/inside ratio
+  public:
+    SmartMonteCarlo(double outside_rejection_probability, std::unique_ptr<Region::RegionBase> region);
+
+    /**
+     * @brief Select a random element from range and perform region check. Typically *before* a move.
+     * @tparam Range range of particles or groups
+     * @tparam T typically `Particle` or `Group`
+     * @param range Range of particles or groups
+     * @param random Random number object used to perform a random selection
+     * @return Optional selection object. May be empty if outside and `outside_rejection_probability < 1`
+     */
+    template <typename Range, typename T = typename Range::iterator::value_type>
+    std::optional<SmartMonteCarloSelection<T>> select(Range& range, Random& random) {
+        auto iter = random.sample(range.begin(), range.end()); // random particle or group
+        if (iter == range.end()) {
+            return std::nullopt;
+        }
+        const auto is_inside = region->inside(*iter);
+        if (!is_inside && random() < outside_rejection_probability) {
+            return std::nullopt; // reject outside items w. `outside_rejection_probability` `
+        }
+        SmartMonteCarloSelection<T> selection(
+            *iter, ranges::cpp20::distance(range.begin(), range.end()),
+            ranges::cpp20::count_if(range, [&](const auto& i) { return region->inside(i); }), is_inside);
+        return selection;
+    }
+
+    /**
+     * @tparam T Typically `Particle` or `Group`
+     * @param selection Smart selection created *before* a MC move
+     *
+     * This function is typically called *after* a MC move and will determine the
+     * bias due to non-uniform sampling.
+     */
+    template <typename T> double bias(const SmartMonteCarloSelection<T>& selection) {
+        SmartMonteCarlo::MoveEvent event;
+        const auto moved_item_is_inside = region->inside(selection.item); // may have changed due to move
+        if (selection.item_is_inside && !moved_item_is_inside) {
+            event = SmartMonteCarlo::MoveEvent::EXIT_REGION;
+        } else if (!selection.item_is_inside && moved_item_is_inside) {
+            event = SmartMonteCarlo::MoveEvent::ENTER_REGION;
+        } else {
+            event = SmartMonteCarlo::MoveEvent::NO_CROSSING;
+        }
+        return bias(selection.number_total, selection.number_inside, event);
+    }
 };
 
 /**
@@ -276,7 +354,7 @@ class SmartTranslateRotate : public MoveBase {
     unsigned long cnt = 0;
     double dptrans = 0;
     double dprot = 0;
-    double p = 1; // initializing probability that a molecule outside geometry is kept as selected molecule
+    double p = 1; //!< probability that outside molecule is rejected
     double r_x = 0,
            r_y = 0; // defining lengths of perpendicular radii defining the ellipsoid (or sphere if a and b are equal)
     double squared_displacement; // squared displacement
@@ -287,18 +365,15 @@ class SmartTranslateRotate : public MoveBase {
     average_type mean_num_molecules_outside;
     average_type countNout_avgBlocks; // mean squared displacement and particle counters
 
+    bool update_bias = true;  //!< Should we keep updating the bias?
     double bias_energy = 0.0; //!< Bias energy in units of kT
     double rsd = 0.01;
     double average_num_molecules_inside;
-    double num_molecules_inside = 0.0;
-    double num_molecules_outside = 0.0;
-    double num_molecules_total = 0.0;
-    // double cntInner = 0; // bias to add when crossing boundary between in and out, counters keeping track of
-    // molecules
-    // inside, outside geomtry etc...
+    int num_molecules_inside = 0;
+    int num_molecules_outside = 0;
+    int num_molecules_total = 0;
 
     Point dir = {1, 1, 1};
-    bool update_bias = true; //!< Should we keep updating the bias?
 
     void _to_json(json &j) const override;
     void _from_json(const json &j) override; //!< Configure via json object

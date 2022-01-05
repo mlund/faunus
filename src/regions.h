@@ -1,8 +1,10 @@
 #pragma once
 #include "core.h"
 #include "molecule.h"
+#include "group.h"
 #include <range/v3/view/filter.hpp>
 #include <range/v3/view/transform.hpp>
+#include <range/v3/algorithm/any_of.hpp>
 
 /**
 Possible layout:
@@ -38,13 +40,23 @@ NLOHMANN_JSON_SERIALIZE_ENUM(RegionType, {{RegionType::INVALID, nullptr},
  * follow molecules. A region may or may not have a well-defined volume.
  */
 class RegionBase {
+  private:
+    virtual bool isInside(const Point& position) const = 0; //!< true if point is inside region
   public:
     const RegionType type;
-    virtual bool isInside(const Point& position) const = 0; //!< true if point is inside region
     virtual std::optional<double> volume() const = 0;       //!< Volume of region if applicable
     virtual void to_json(json& j) const = 0;
     virtual ~RegionBase() = default;
     explicit RegionBase(RegionType type);
+
+    inline bool inside(const Particle& particle) const { return isInside(particle.pos); }
+
+    inline bool inside(const Group& group) const {
+        if (auto mass_center = group.massCenter()) {
+            return isInside(mass_center.value());
+        }
+        return ranges::cpp20::any_of(group, [&](const Particle& particle) { return inside(particle); });
+    }
 
     /** Selects particles within the region */
     template <typename ParticleRange> auto filterInside(const ParticleRange& particles) const {

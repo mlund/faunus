@@ -1096,27 +1096,23 @@ void SmartTranslateRotate::_from_json(const json& j) {
 }
 
 void SmartTranslateRotate::_move(Change& change) {
-    assert(molid >= 0);
-    assert(!spc.groups.empty());
-    assert(spc.geometry.getVolume() > 0);
     squared_displacement = 0.0;
-
-    // pick random group from the system matching molecule type
-    // TODO: This can be slow -- implement look-up-table in Space
     auto mollist = spc.findMolecules(molid, Space::Selection::ACTIVE); // list of molecules w. 'molid'
     if (ranges::cpp20::empty(mollist)) {
         return;
     }
-    auto it = slump.sample(mollist.begin(), mollist.end()); // chosing random molecule in group of type molname
-    if (it != mollist.end() || it->empty()) {
+    auto selected_molecule =
+        slump.sample(mollist.begin(), mollist.end()); // chosing random molecule in group of type molname
+    if (selected_molecule != mollist.end() || selected_molecule->empty()) {
         return;
     }
-    const auto is_inside = createInsideLambdaFunc();
 
-    const auto molecule_is_inside = is_inside(it->mass_center);
+    const auto is_inside = createInsideLambdaFunc();
+    const auto molecule_is_inside = is_inside(selected_molecule->mass_center);
     if (molecule_is_inside) {
         cntInner += 1; // counting number of times a molecule is found inside geometry
     }
+
     cnt++; // total number of counts
 
     if (update_bias) { // continuing to adjust bias according to number of molecules inside and outside geometry
@@ -1128,44 +1124,45 @@ void SmartTranslateRotate::_move(Change& change) {
     }
 
     if (dptrans > 0) { // translate
-        Point oldcm = it->mass_center;
+        Point oldcm = selected_molecule->mass_center;
         Point dp = randomUnitVector(slump, dir) * dptrans * slump();
 
-        it->translate(dp, spc.geometry.getBoundaryFunc());
-        squared_displacement = spc.geometry.sqdist(oldcm, it->mass_center); // squared displacement
+        selected_molecule->translate(dp, spc.geometry.getBoundaryFunc());
+        squared_displacement = spc.geometry.sqdist(oldcm, selected_molecule->mass_center); // squared displacement
     }
 
     if (dprot > 0) { // rotate
         Point u = randomUnitVector(slump);
         double angle = dprot * (slump() - 0.5);
         Eigen::Quaterniond Q(Eigen::AngleAxisd(angle, u));
-        it->rotate(Q, spc.geometry.getBoundaryFunc());
+        selected_molecule->rotate(Q, spc.geometry.getBoundaryFunc());
     }
 
     if (dptrans > 0 || dprot > 0) { // define changes
         Change::GroupChange d;
-        d.group_index = Faunus::distance(spc.groups.begin(), it); // integer *index* of moved group
+        d.group_index = Faunus::distance(spc.groups.begin(), selected_molecule); // integer *index* of moved group
         d.all = true;                                             // *all* atoms in group were moved
         change.groups.push_back(d);                               // add to list of moved groups
     } else {
         return;
     }
 
-    assert(spc.geometry.sqdist(
-               it->mass_center,
-               Geometry::massCenter(it->begin(), it->end(), spc.geometry.getBoundaryFunc(), -it->mass_center)) < 1e-6);
+    assert(spc.geometry.sqdist(selected_molecule->mass_center,
+                               Geometry::massCenter(selected_molecule->begin(), selected_molecule->end(),
+                                                    spc.geometry.getBoundaryFunc(), -selected_molecule->mass_center)) <
+           1e-6);
 
-    const auto moved_molecule_is_inside = is_inside(it->mass_center);
+    const auto moved_molecule_is_inside = is_inside(selected_molecule->mass_center);
     const auto N = update_bias ? num_molecules_inside : average_num_molecules_inside;
     if (molecule_is_inside && !moved_molecule_is_inside) {
         // inside --> outside
-        _bias = -std::log(p / (1.0 - (1.0 - p) / (p * num_molecules_total + (1.0 - p) * N)));
+        bias_energy = -std::log(p / (1.0 - (1.0 - p) / (p * num_molecules_total + (1.0 - p) * N)));
     } else if (!molecule_is_inside && moved_molecule_is_inside) {
         // outside --> inside
-        _bias = -std::log(1.0 / (1.0 + (1.0 - p) / (p * num_molecules_total + (1.0 - p) * N)));
+        bias_energy = -std::log(1.0 / (1.0 + (1.0 - p) / (p * num_molecules_total + (1.0 - p) * N)));
     } else {
         // boundary not crossed
-        _bias = 0.0;
+        bias_energy = 0.0;
     }
 }
 void SmartTranslateRotate::updateAveragesAndBias() {
@@ -1226,7 +1223,7 @@ std::function<bool(const Point&)> SmartTranslateRotate::createInsideLambdaFunc()
     };
 }
 
-double SmartTranslateRotate::bias([[maybe_unused]] Change& change, double, double) { return _bias; }
+double SmartTranslateRotate::bias([[maybe_unused]] Change& change, double, double) { return bias_energy; }
 
 SmartTranslateRotate::SmartTranslateRotate(Space& spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {
     repeat = -1; // meaning repeat N times

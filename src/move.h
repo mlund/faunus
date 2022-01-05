@@ -259,12 +259,10 @@ class TranslateRotate : public MoveBase {
 
 class SmartTranslateRotate : public MoveBase {
   private:
-    using MoveBase::spc;
-
     int molid = -1;
     int refid1 = -1;
     int refid2 = -1; // molecule to displace, reference atoms 1 and 2 defining geometry
-    unsigned long cnt;
+    unsigned long cnt = 0;
     double dptrans = 0;
     double dprot = 0;
     double p = 1; // initializing probability that a molecule outside geometry is kept as selected molecule
@@ -278,7 +276,7 @@ class SmartTranslateRotate : public MoveBase {
     average_type mean_num_molecules_outside;
     average_type countNout_avgBlocks; // mean squared displacement and particle counters
 
-    double _bias = 0.0;
+    double bias_energy = 0.0; //!< Bias energy in units of kT
     double rsd = 0.01;
     double average_num_molecules_inside;
     double num_molecules_inside = 0.0;

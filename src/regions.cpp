@@ -30,6 +30,8 @@ std::unique_ptr<RegionBase> createRegion(const Space& spc, const json& j) {
         return std::make_unique<WithinMoleculeType>(spc, j);
     case RegionType::WITHIN_PARTICLE:
         return std::make_unique<SphereAroundParticle>(spc, j);
+    case RegionType::WITHIN_ELLIPSOID:
+        return std::make_unique<VidarsRegion>(spc, j);
     default:
         throw ConfigurationError("unknown region type");
     }
@@ -108,11 +110,6 @@ void SphereAroundParticle::to_json(json& j) const {
     j = {{"index", particle_index}, {"threshold", std::sqrt(radius_squared)}};
 }
 
-VidarsRegion::VidarsRegion(const Space& spc, ParticleVector::size_type particle_index1,
-                           ParticleVector::size_type particle_index2, double r_x, double r_y)
-    : RegionBase(RegionType::WITHIN_ELLIPSOID), spc(spc), particle_index1(particle_index1),
-      particle_index2(particle_index2), parallel_radius(r_x), perpendicular_radius(r_y) {}
-
 bool VidarsRegion::isInside(const Point& position) const {
     const auto ref1_pos = spc.particles.at(particle_index1).pos;
     const auto ref2_pos = spc.particles.at(particle_index2).pos;
@@ -140,6 +137,22 @@ bool VidarsRegion::isInside(const Point& position) const {
         y * y / (perpendicular_radius * perpendicular_radius); // calculating normalized coordinate with respect to
     // dimensions of geometry (>1.0 → outside, <1.0 → inside)
     return coord <= 1.0;
+}
+
+VidarsRegion::VidarsRegion(const Space& spc, ParticleVector::size_type particle_index1,
+                           ParticleVector::size_type particle_index2, double r_x, double r_y)
+    : RegionBase(RegionType::WITHIN_ELLIPSOID), spc(spc), particle_index1(particle_index1),
+      particle_index2(particle_index2), parallel_radius(r_x), perpendicular_radius(r_y) {}
+
+VidarsRegion::VidarsRegion(const Space& spc, const json& j)
+    : VidarsRegion(spc, j.at("index1").get<int>(), j.at("index2").get<int>(), j.at("r_x").get<double>(),
+                   j.at("r_y").get<double>()) {}
+
+void VidarsRegion::to_json(json& j) const {
+    j["index1"] = particle_index1;
+    j["index2"] = particle_index1;
+    j["perpendicular_radius"] = perpendicular_radius;
+    j["parallel_radius"] = parallel_radius;
 }
 
 } // namespace Region

@@ -309,6 +309,7 @@ class SmartMonteCarlo {
 
         const auto number_total = ranges::cpp20::distance(range.begin(), range.end());
         const auto number_inside = getNumberInside(range); // number of elements inside region
+
         return SmartMonteCarloSelection<T>(*item, number_total, number_inside, item_is_inside);
     }
 

@@ -29,7 +29,8 @@ enum class RegionType { WITHIN_MOLID, WITHIN_PARTICLE, WITHIN_ELLIPSOID, INVALID
 
 NLOHMANN_JSON_SERIALIZE_ENUM(RegionType, {{RegionType::INVALID, nullptr},
                                           {RegionType::WITHIN_MOLID, "within_molecule_type"},
-                                          {RegionType::WITHIN_PARTICLE, "within_particle"}})
+                                          {RegionType::WITHIN_PARTICLE, "within_particle"},
+                                          {RegionType::WITHIN_ELLIPSOID, "within_ellipsoid"}})
 
 /**
  * @brief Base class for defining sub-spaces of a simulation
@@ -128,7 +129,9 @@ class VidarsRegion : public RegionBase {
   public:
     VidarsRegion(const Space& spc, ParticleVector::size_type particle_index1, ParticleVector::size_type particle_index2,
                  double r_x, double r_y);
+    VidarsRegion(const Space& spc, const json& j);
     bool isInside(const Point& position) const override;
+    void to_json(json& j) const override;
 };
 
 } // namespace Region

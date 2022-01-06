@@ -6,6 +6,7 @@
 #include "chainmove.h"
 #include "forcemove.h"
 #include "montecarlo.h"
+#include "smart_montecarlo.h"
 #include "regions.h"
 #include "aux/iteratorsupport.h"
 #include "aux/eigensupport.h"
@@ -306,7 +307,7 @@ std::unique_ptr<MoveBase> createMove(const std::string& name, const json& proper
         if (name == "moltransrot") {
             move = std::make_unique<TranslateRotate>(spc);
         } else if (name == "smartmoltransrot") {
-            return std::make_unique<SmartTranslateRotate2>(spc, properties);
+            return std::make_unique<SmartTranslateRotate>(spc, properties);
         } else if (name == "conformationswap") {
             move = std::make_unique<ConformationSwap>(spc);
         } else if (name == "transrot") {
@@ -371,11 +372,6 @@ MoveCollection::MoveCollection(const json& list_of_moves, Space& spc, Energy::Ha
 }
 
 void to_json(json& j, const MoveCollection& propagator) { j = propagator.moves; }
-
-void to_json(json& j, const SmartMonteCarlo& smc) {
-    j["region"] = static_cast<json>(*smc.region);
-    j["p"] = smc.outside_rejection_probability;
-}
 
 const BasePointerVector<MoveBase>& MoveCollection::getMoves() const { return moves; }
 
@@ -1036,37 +1032,13 @@ TranslateRotate::TranslateRotate(Space& spc, std::string name, std::string cite)
 
 TranslateRotate::TranslateRotate(Space& spc) : TranslateRotate(spc, "moltransrot", "") {}
 
-/**
- * @param outside_rejection_probability Probability that any element outside the region will be rejected
- * @param region Region to preferentially pick from
- */
-SmartMonteCarlo::SmartMonteCarlo(double outside_rejection_probability, std::unique_ptr<Region::RegionBase> region)
-    : outside_rejection_probability(outside_rejection_probability), region(std::move(region)) {}
-
-/**
- * @param number_total Total number of elements
- * @param number_inside Total number of elements inside region
- * @param direction Did element exit or enter the region? Returns zero if no boundary crossing
- */
-double SmartMonteCarlo::bias(const int number_total, const int number_inside,
-                             SmartMonteCarlo::BiasDirection direction) const {
-    const auto p = outside_rejection_probability;
-    switch (direction) {
-    case BiasDirection::EXIT_REGION:
-        return -std::log(p / (1.0 - (1.0 - p) / (p * number_total + (1.0 - p) * number_inside)));
-    case BiasDirection::ENTER_REGION:
-        return -std::log(1.0 / (1.0 + (1.0 - p) / (p * number_total + (1.0 - p) * number_inside)));
-    case BiasDirection::NO_CROSSING:
-        return 0.0;
-    }
-}
 
 /**
  * This is called *after* the move and the `bias()` function will determine if the move
  * resulted in a flux over the region boundary and return the appropriate bias.
  */
-double SmartTranslateRotate2::bias([[maybe_unused]] Change& change, [[maybe_unused]] double old_energy,
-                                   [[maybe_unused]] double new_energy) {
+double SmartTranslateRotate::bias([[maybe_unused]] Change& change, [[maybe_unused]] double old_energy,
+                                  [[maybe_unused]] double new_energy) {
     if (selection) {
         updateAverageCountInside(selection->number_inside);
         return smart_monte_carlo->bias(*selection);
@@ -1079,7 +1051,7 @@ double SmartTranslateRotate2::bias([[maybe_unused]] Change& change, [[maybe_unus
  * expensive region search can be disabled by giving `fixed_count_inside` a mean value which will
  * be used for all further bias evaluations.
  */
-void SmartTranslateRotate2::updateAverageCountInside(int count_inside) {
+void SmartTranslateRotate::updateAverageCountInside(int count_inside) {
     mean_count_inside += static_cast<double>(count_inside);
     if (mean_count_inside.size() % bias_update_interval == 0) {
         if (mean_count_inside.stdev() / mean_count_inside.avg() < 0.05) {
@@ -1093,7 +1065,7 @@ void SmartTranslateRotate2::updateAverageCountInside(int count_inside) {
  * Upon calling `select()`, the `outside_rejection_probability` is used to exclude particles
  * outside and may thus often return `std::nullopt`.
  */
-std::optional<std::reference_wrapper<Space::GroupType>> SmartTranslateRotate2::findRandomMolecule() {
+std::optional<std::reference_wrapper<Space::GroupType>> SmartTranslateRotate::findRandomMolecule() {
     if (auto mollist = spc.findMolecules(molid, Space::Selection::ACTIVE); ranges::cpp20::empty(mollist)) {
         selection = std::nullopt;
     } else {
@@ -1104,10 +1076,13 @@ std::optional<std::reference_wrapper<Space::GroupType>> SmartTranslateRotate2::f
     }
     return std::nullopt;
 }
-void SmartTranslateRotate2::_to_json(json& j) const {
+void SmartTranslateRotate::_to_json(json& j) const {
     TranslateRotate::_to_json(j);
     j["smart monte carlo"] = static_cast<json>(*smart_monte_carlo);
 }
+SmartTranslateRotate::SmartTranslateRotate(Space& spc, const json& j)
+    : TranslateRotate(spc),
+      smart_monte_carlo(std::make_unique<SmartMonteCarlo::BiasTracker>(1.0, Region::createRegion(spc, j))) {}
 } // namespace Faunus::Move
 
 #ifdef DOCTEST_LIBRARY_INCLUDED

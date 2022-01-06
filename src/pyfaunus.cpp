@@ -163,13 +163,13 @@ PYBIND11_MODULE(pyfaunus, m)
     py::enum_<Region::RegionType>(m, "RegionType")
         .value("WITHIN_PARTICLE", Region::RegionType::WITHIN_PARTICLE)
         .value("WITHIN_MOLID", Region::RegionType::WITHIN_MOLID)
+        .value("WITHIN_ELLIPSOID", Region::RegionType::WITHIN_ELLIPSOID)
         .value("NONE", Region::RegionType::INVALID)
         .export_values();
 
     py::class_<Region::RegionBase>(m, "RegionBase")
         .def_readonly("type", &Region::RegionBase::type)
-        .def("volume", &Region::RegionBase::isInside)
-        .def("isInside", &Region::RegionBase::isInside);
+        .def("volume", &Region::RegionBase::volume);
 
     // AtomData
     py::class_<AtomData>(m, "AtomData")

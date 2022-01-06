@@ -378,61 +378,6 @@ class SmartTranslateRotate2 : public TranslateRotate {
 };
 
 /**
- * @brief Move that preferentially displaces molecules within a specified region around a specified atom type
- * Idea based on the chapter 'Smarter Monte Carlo' in 'Computer Simulation of Liquids' by Allen & Tildesley (p. 317)
- * The current region implemented is an ellipsoid for which you specify radii along length and width of ellipsoid
- *
- * @todo
- * - Too many class variables
- * - Use Regions
- * - Base on recent version of Translate/Rotate using inheritance
- */
-
-class SmartTranslateRotate : public MoveBase {
-  private:
-    int molid = -1;
-    int refid1 = -1;
-    int refid2 = -1; // molecule to displace, reference atoms 1 and 2 defining geometry
-    unsigned long cnt = 0;
-    double dptrans = 0;
-    double dprot = 0;
-    double p = 1; //!< probability that outside molecule is rejected
-    double r_x = 0,
-           r_y = 0; // defining lengths of perpendicular radii defining the ellipsoid (or sphere if a and b are equal)
-    double squared_displacement; // squared displacement
-    using average_type = AverageStdev<double>;
-    average_type msqd;
-    average_type mean_num_molecules_inside;
-    average_type countNin_avgBlocks;
-    average_type mean_num_molecules_outside;
-    average_type countNout_avgBlocks; // mean squared displacement and particle counters
-
-    bool update_bias = true;  //!< Should we keep updating the bias?
-    double bias_energy = 0.0; //!< Bias energy in units of kT
-    double rsd = 0.01;
-    double average_num_molecules_inside;
-    int num_molecules_inside = 0;
-    int num_molecules_outside = 0;
-    int num_molecules_total = 0;
-
-    Point dir = {1, 1, 1};
-
-    void _to_json(json &j) const override;
-    void _from_json(const json &j) override; //!< Configure via json object
-    void _move(Change &change) override;
-    double bias(Change& change, double, double) override;
-    void _accept(Change& change) override;
-    void _reject(Change& change) override;
-
-    SmartTranslateRotate(Space &spc, std::string name, std::string cite);
-
-  public:
-    explicit SmartTranslateRotate(Space &spc);
-    std::function<bool(const Point&)> createInsideLambdaFunc();
-    void updateAveragesAndBias();
-};
-
-/**
  * @brief Move that will swap conformation of a molecule
  *
  * This will swap between different molecular conformations

@@ -276,15 +276,22 @@ template <typename T>
 SmartMonteCarloSelection<T>::SmartMonteCarloSelection(T& item, int number_total, int number_inside, bool item_is_inside)
     : item(&item), number_total(number_total), number_inside(number_inside), item_is_inside(item_is_inside) {}
 
+/**
+ * Helper class for smart MC moves
+ *
+ * Responsibilities:
+ * - Randomly select groups or particles with respect to an arbitrary `Region`
+ * - Calculate the corresponding energy bias due to the non-uniform sampling
+ */
 class SmartMonteCarlo {
   public:
-    enum class MoveEvent { ENTER_REGION, EXIT_REGION, NO_CROSSING };
+    enum class BiasDirection { ENTER_REGION, EXIT_REGION, NO_CROSSING }; //!< Controls the bias direction
     friend void to_json(json&, const SmartMonteCarlo&);
 
   private:
     double outside_rejection_probability = 1.0;
     std::unique_ptr<Region::RegionBase> region;
-    double bias(int number_total, int number_inside, MoveEvent event) const; //!< Bias based on outside/inside ratio
+    double bias(int number_total, int number_inside, BiasDirection direction) const; //!< Bias energy (kT)
   public:
     std::optional<int> fixed_count_inside; //!< Set this to speed up (skip) region check
     SmartMonteCarlo(double outside_rejection_probability, std::unique_ptr<Region::RegionBase> region);
@@ -305,7 +312,7 @@ class SmartMonteCarlo {
         }
         const auto item_is_inside = region->inside(*item);
         if (!item_is_inside && random() < outside_rejection_probability) {
-            return std::nullopt; // reject outside items w. `outside_rejection_probability` `
+            return std::nullopt; // reject outside items w. `outside_rejection_probability`
         }
 
         const auto number_total = ranges::cpp20::distance(range.begin(), range.end());
@@ -326,42 +333,24 @@ class SmartMonteCarlo {
     }
 
     /**
-     * Faster version that assumes that the number of groups/particles inside the region can be
-     * described by an average value.
-     */
-    template <typename T, typename Range>
-    std::optional<SmartMonteCarloSelection<T>> selectWithMeanInsideCount(Range& range, Random& random,
-                                                                         int mean_number_inside) {
-        auto iter = random.sample(range.begin(), range.end()); // random particle or group
-        if (iter == range.end()) {
-            return std::nullopt;
-        }
-        const auto is_inside = region->inside(*iter);
-        if (!is_inside && random() < outside_rejection_probability) {
-            return std::nullopt; // reject outside items w. `outside_rejection_probability` `
-        }
-        return SmartMonteCarloSelection<T>(*iter, ranges::cpp20::distance(range.begin(), range.end()),
-                                           mean_number_inside, is_inside);
-    }
-
-    /**
      * @tparam T Typically `Particle` or `Group`
      * @param selection Smart selection created *before* a MC move
+     * @returns Bias energy (kT)
      *
      * This function is typically called *after* a MC move and will determine the
      * bias due to non-uniform sampling.
      */
     template <typename T> double bias(const SmartMonteCarloSelection<T>& selection) {
-        SmartMonteCarlo::MoveEvent event;
+        BiasDirection direction;
         const auto moved_item_is_inside = region->inside(*(selection.item)); // may have changed due to move
         if (selection.item_is_inside && !moved_item_is_inside) {
-            event = SmartMonteCarlo::MoveEvent::EXIT_REGION;
+            direction = BiasDirection::EXIT_REGION;
         } else if (!selection.item_is_inside && moved_item_is_inside) {
-            event = SmartMonteCarlo::MoveEvent::ENTER_REGION;
+            direction = BiasDirection::ENTER_REGION;
         } else {
-            event = SmartMonteCarlo::MoveEvent::NO_CROSSING;
+            direction = BiasDirection::NO_CROSSING;
         }
-        return bias(selection.number_total, selection.number_inside, event);
+        return bias(selection.number_total, selection.number_inside, direction);
     }
 };
 
@@ -373,9 +362,9 @@ void to_json(json& j, const SmartMonteCarlo& smc);
 class SmartTranslateRotate2 : public TranslateRotate {
   private:
     int bias_update_interval = 100;
-    AverageStdev<double> mean_count_inside;
-    SmartMonteCarlo smart_monte_carlo;
-    std::optional<SmartMonteCarloSelection<Group>> selection;
+    AverageStdev<double> mean_count_inside;                   //!< Average number of groups found inside region
+    std::unique_ptr<SmartMonteCarlo> smart_monte_carlo;       //!< Helper class to handle smart mc book-keeping
+    std::optional<SmartMonteCarloSelection<Group>> selection; //!< Contains data on currently selected group (if any)
 
     std::optional<std::reference_wrapper<Space::GroupType>> findRandomMolecule() override;
     double bias(Change& change, double old_energy, double new_energy) override;
@@ -384,7 +373,8 @@ class SmartTranslateRotate2 : public TranslateRotate {
 
   public:
     SmartTranslateRotate2(Space& spc, const json& j)
-        : TranslateRotate(spc), smart_monte_carlo(1.0, Region::createRegion(spc, j)) {}
+        : TranslateRotate(spc),
+          smart_monte_carlo(std::make_unique<SmartMonteCarlo>(1.0, Region::createRegion(spc, j))) {}
 };
 
 /**

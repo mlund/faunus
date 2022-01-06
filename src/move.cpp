@@ -1048,16 +1048,17 @@ SmartMonteCarlo::SmartMonteCarlo(double outside_rejection_probability, std::uniq
 /**
  * @param number_total Total number of elements
  * @param number_inside Total number of elements inside region
- * @param event Did element exit or enter the region? Returns zero if no boundary crossing
+ * @param direction Did element exit or enter the region? Returns zero if no boundary crossing
  */
-double SmartMonteCarlo::bias(const int number_total, const int number_inside, SmartMonteCarlo::MoveEvent event) const {
+double SmartMonteCarlo::bias(const int number_total, const int number_inside,
+                             SmartMonteCarlo::BiasDirection direction) const {
     const auto p = outside_rejection_probability;
-    switch (event) {
-    case MoveEvent::EXIT_REGION:
+    switch (direction) {
+    case BiasDirection::EXIT_REGION:
         return -std::log(p / (1.0 - (1.0 - p) / (p * number_total + (1.0 - p) * number_inside)));
-    case MoveEvent::ENTER_REGION:
+    case BiasDirection::ENTER_REGION:
         return -std::log(1.0 / (1.0 + (1.0 - p) / (p * number_total + (1.0 - p) * number_inside)));
-    case MoveEvent::NO_CROSSING:
+    case BiasDirection::NO_CROSSING:
         return 0.0;
     }
 }
@@ -1070,7 +1071,7 @@ double SmartTranslateRotate2::bias([[maybe_unused]] Change& change, [[maybe_unus
                                    [[maybe_unused]] double new_energy) {
     if (selection) {
         updateAverageCountInside(selection->number_inside);
-        return smart_monte_carlo.bias(*selection);
+        return smart_monte_carlo->bias(*selection);
     }
     return 0.0;
 }
@@ -1084,7 +1085,7 @@ void SmartTranslateRotate2::updateAverageCountInside(int count_inside) {
     mean_count_inside += static_cast<double>(count_inside);
     if (mean_count_inside.size() % bias_update_interval == 0) {
         if (mean_count_inside.stdev() / mean_count_inside.avg() < 0.05) {
-            smart_monte_carlo.fixed_count_inside = static_cast<int>(mean_count_inside.avg());
+            smart_monte_carlo->fixed_count_inside = static_cast<int>(mean_count_inside.avg());
             faunus_logger->info("Stopping bias update since threshold reached.");
         }
     }
@@ -1098,7 +1099,7 @@ std::optional<std::reference_wrapper<Space::GroupType>> SmartTranslateRotate2::f
     if (auto mollist = spc.findMolecules(molid, Space::Selection::ACTIVE); ranges::cpp20::empty(mollist)) {
         selection = std::nullopt;
     } else {
-        selection = smart_monte_carlo.select<Group>(mollist, slump);
+        selection = smart_monte_carlo->select<Group>(mollist, slump);
         if (selection) {
             return *(selection->item);
         }
@@ -1107,7 +1108,7 @@ std::optional<std::reference_wrapper<Space::GroupType>> SmartTranslateRotate2::f
 }
 void SmartTranslateRotate2::_to_json(json& j) const {
     TranslateRotate::_to_json(j);
-    j["smart monte carlo"] = static_cast<json>(smart_monte_carlo);
+    j["smart monte carlo"] = static_cast<json>(*smart_monte_carlo);
 }
 } // namespace Faunus::Move
 

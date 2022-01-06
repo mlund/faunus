@@ -160,16 +160,14 @@ PYBIND11_MODULE(pyfaunus, m)
     py::bind_vector<std::vector<Tgroup>>(m, "GroupVector");
 
     // Region
-    py::enum_<Region::RegionBase::RegionType>(m, "RegionType")
-        .value("SPHERE", Region::RegionBase::RegionType::SPHERE)
-        .value("CUBOID", Region::RegionBase::RegionType::CUBOID)
-        .value("WITHIN", Region::RegionBase::RegionType::WITHIN)
-        .value("NONE", Region::RegionBase::RegionType::NONE)
+    py::enum_<Region::RegionType>(m, "RegionType")
+        .value("WITHIN_PARTICLE", Region::RegionType::WITHIN_PARTICLE)
+        .value("WITHIN_MOLID", Region::RegionType::WITHIN_MOLID)
+        .value("NONE", Region::RegionType::INVALID)
         .export_values();
 
     py::class_<Region::RegionBase>(m, "RegionBase")
-        .def_readwrite("name", &Region::RegionBase::name)
-        .def_readwrite("type", &Region::RegionBase::type)
+        .def_readonly("type", &Region::RegionBase::type)
         .def("volume", &Region::RegionBase::isInside)
         .def("isInside", &Region::RegionBase::isInside);
 

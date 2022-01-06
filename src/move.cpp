@@ -941,7 +941,7 @@ void TranslateRotate::_from_json(const json& j) {
 /**
  * @todo `mollist` scales linearly w. system size -- implement look-up-table in Space?
  */
-std::optional<std::reference_wrapper<Space::GroupType>> TranslateRotate::findRandomMolecule() {
+TranslateRotate::OptionalGroup TranslateRotate::findRandomMolecule() {
     if (auto mollist = spc.findMolecules(molid, Space::Selection::ACTIVE); not ranges::cpp20::empty(mollist)) {
         if (auto group_it = slump.sample(mollist.begin(), mollist.end()); not group_it->empty()) {
             return *group_it;
@@ -1032,57 +1032,36 @@ TranslateRotate::TranslateRotate(Space& spc, std::string name, std::string cite)
 
 TranslateRotate::TranslateRotate(Space& spc) : TranslateRotate(spc, "moltransrot", "") {}
 
-
 /**
  * This is called *after* the move and the `bias()` function will determine if the move
  * resulted in a flux over the region boundary and return the appropriate bias.
  */
-double SmartTranslateRotate::bias([[maybe_unused]] Change& change, [[maybe_unused]] double old_energy,
-                                  [[maybe_unused]] double new_energy) {
-    if (selection) {
-        updateAverageCountInside(selection->number_inside);
-        return smart_monte_carlo->bias(*selection);
-    }
-    return 0.0;
-}
-
-/**
- * This is used to sample the average number of groups inside the region. Once converged, the
- * expensive region search can be disabled by giving `fixed_count_inside` a mean value which will
- * be used for all further bias evaluations.
- */
-void SmartTranslateRotate::updateAverageCountInside(int count_inside) {
-    mean_count_inside += static_cast<double>(count_inside);
-    if (mean_count_inside.size() % bias_update_interval == 0) {
-        if (mean_count_inside.stdev() / mean_count_inside.avg() < 0.05) {
-            smart_monte_carlo->fixed_count_inside = static_cast<int>(mean_count_inside.avg());
-            faunus_logger->info("Stopping bias update since threshold reached.");
-        }
-    }
+double SmartTranslateRotate::bias(Change& change, double old_energy, double new_energy) {
+    return TranslateRotate::bias(change, old_energy, new_energy) + smartmc.bias();
 }
 
 /**
  * Upon calling `select()`, the `outside_rejection_probability` is used to exclude particles
  * outside and may thus often return `std::nullopt`.
  */
-std::optional<std::reference_wrapper<Space::GroupType>> SmartTranslateRotate::findRandomMolecule() {
+TranslateRotate::OptionalGroup SmartTranslateRotate::findRandomMolecule() {
     if (auto mollist = spc.findMolecules(molid, Space::Selection::ACTIVE); ranges::cpp20::empty(mollist)) {
-        selection = std::nullopt;
+        smartmc.selection = std::nullopt;
     } else {
-        selection = smart_monte_carlo->select<Group>(mollist, slump);
-        if (selection) {
-            return *(selection->item);
+        smartmc.selection = smartmc.select<Group>(mollist, slump);
+        if (smartmc.selection) {
+            return *(smartmc.selection->item);
         }
     }
     return std::nullopt;
 }
+
 void SmartTranslateRotate::_to_json(json& j) const {
     TranslateRotate::_to_json(j);
-    j["smart monte carlo"] = static_cast<json>(*smart_monte_carlo);
+    j["smart monte carlo"] = static_cast<json>(smartmc);
 }
-SmartTranslateRotate::SmartTranslateRotate(Space& spc, const json& j)
-    : TranslateRotate(spc),
-      smart_monte_carlo(std::make_unique<SmartMonteCarlo::BiasTracker>(1.0, Region::createRegion(spc, j))) {}
+
+SmartTranslateRotate::SmartTranslateRotate(Space& spc, const json& j) : TranslateRotate(spc), smartmc(spc, j) {}
 } // namespace Faunus::Move
 
 #ifdef DOCTEST_LIBRARY_INCLUDED

@@ -40,10 +40,10 @@ TEST_CASE("[Faunus] SmartMonteCarlo::bias") {
  * @param outside_rejection_probability Probability that any element outside the region will be rejected
  * @param region Region to preferentially pick from
  */
-BiasTracker::BiasTracker(double outside_rejection_probability, std::unique_ptr<Region::RegionBase> region)
+RegionSampler::RegionSampler(double outside_rejection_probability, std::unique_ptr<Region::RegionBase> region)
     : outside_rejection_probability(outside_rejection_probability), region(std::move(region)) {}
 
-void to_json(json& j, const BiasTracker& smc) {
+void to_json(json& j, const RegionSampler& smc) {
     j["region"] = static_cast<json>(*smc.region);
     j["p"] = smc.outside_rejection_probability;
 }

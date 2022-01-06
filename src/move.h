@@ -220,7 +220,11 @@ spc.geo.getBoundaryFunc()); #endif
  */
 class TranslateRotate : public MoveBase {
   protected:
+    using OptionalGroup = std::optional<std::reference_wrapper<Space::GroupType>>;
     int molid = -1; //!< Molecule ID of the molecule(s) to move
+    void _to_json(json& j) const override;
+
+  private:
     Average<double> mean_squared_displacement;
     Average<double> mean_squared_rotation_angle;
 
@@ -231,12 +235,11 @@ class TranslateRotate : public MoveBase {
     Point translational_direction = {1, 1, 1}; //!< User defined directions along x, y, z
     Point fixed_rotation_axis = {0, 0, 0};     //!< Axis of rotation. 0,0,0 == random.
 
-    virtual std::optional<std::reference_wrapper<Space::GroupType>> findRandomMolecule();
+    virtual OptionalGroup findRandomMolecule();
     double translateMolecule(Space::GroupType& group);
     double rotateMolecule(Space::GroupType& group);
     void checkMassCenter(const Space::GroupType& group) const; // sanity check of move
 
-    void _to_json(json &j) const override;
     void _from_json(const json &j) override;
     void _move(Change &change) override;
     void _accept(Change &) override;
@@ -249,19 +252,55 @@ class TranslateRotate : public MoveBase {
 };
 
 /**
- * @brief Smart Monte Carlo version of molecular translationa and rotation
+ * Helper class for constructing smart monte carlo moves
+ */
+template <typename T> class SmartMonteCarloMoveSupport : public SmartMonteCarlo::RegionSampler {
+  private:
+    int bias_update_interval = 100;
+    AverageStdev<double> mean_count_inside;    //!< Average number of groups found inside region
+    void analyzeCountInside(int count_inside); //!< Track and analyze inside count
+
+  public:
+    std::optional<SmartMonteCarlo::Selection<T>> selection; //!< Contains data on currently selected group (if any)
+    double bias();
+    SmartMonteCarloMoveSupport(const Space& spc, const json& j);
+};
+
+template <typename T>
+SmartMonteCarloMoveSupport<T>::SmartMonteCarloMoveSupport(const Space& spc, const json& j)
+    : SmartMonteCarlo::RegionSampler(1.0, Region::createRegion(spc, j)) {}
+
+/**
+ * This is used to sample the average number of groups inside the region. Once converged, the
+ * expensive region search can be disabled by giving `fixed_count_inside` a mean value which will
+ * be used for all further bias evaluations.
+ */
+template <typename T> void SmartMonteCarloMoveSupport<T>::analyzeCountInside(int count_inside) {
+    mean_count_inside += static_cast<double>(count_inside);
+    if (mean_count_inside.size() % bias_update_interval == 0) {
+        if (mean_count_inside.stdev() / mean_count_inside.avg() < 0.05) {
+            fixed_count_inside = static_cast<int>(mean_count_inside.avg());
+            faunus_logger->info("Stopping bias update since threshold reached.");
+        }
+    }
+}
+template <typename T> double SmartMonteCarloMoveSupport<T>::bias() {
+    if (selection) {
+        analyzeCountInside(selection->number_inside);
+        return SmartMonteCarlo::RegionSampler::bias(*selection);
+    }
+    return 0.0;
+}
+
+/**
+ * @brief Smart Monte Carlo version of molecular translation and rotation
  */
 class SmartTranslateRotate : public TranslateRotate {
   private:
-    int bias_update_interval = 100;
-    AverageStdev<double> mean_count_inside;                          //!< Average number of groups found inside region
-    std::unique_ptr<SmartMonteCarlo::BiasTracker> smart_monte_carlo; //!< Helper class to handle smart mc book-keeping
-    std::optional<SmartMonteCarlo::Selection<Group>> selection; //!< Contains data on currently selected group (if any)
-
-    std::optional<std::reference_wrapper<Space::GroupType>> findRandomMolecule() override;
-    double bias(Change& change, double old_energy, double new_energy) override;
-    void updateAverageCountInside(int count_inside);
+    SmartMonteCarloMoveSupport<Group> smartmc;
     void _to_json(json& j) const override;
+    OptionalGroup findRandomMolecule() override;
+    double bias(Change& change, double old_energy, double new_energy) override;
 
   public:
     SmartTranslateRotate(Space& spc, const json& j);

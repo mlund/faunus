@@ -38,15 +38,15 @@ double bias(double outside_rejection_probability, int number_total, int number_i
             BiasDirection direction); //!< Bias energy (kT)
 
 /**
- * Helper class for smart MC moves
+ * Helper class for smart MC moves that preferentially samples within Regions
  *
  * Responsibilities:
  * - Randomly select groups or particles with respect to an arbitrary `Region`
  * - Calculate the corresponding energy bias due to the non-uniform sampling
  */
-class BiasTracker {
+class RegionSampler {
   public:
-    friend void to_json(json&, const BiasTracker&);
+    friend void to_json(json&, const RegionSampler&);
 
   private:
     double outside_rejection_probability = 1.0;
@@ -55,7 +55,7 @@ class BiasTracker {
   public:
     std::optional<int> fixed_count_inside; //!< Set this to speed up (skip) region check
 
-    BiasTracker(double outside_rejection_probability, std::unique_ptr<Region::RegionBase> region);
+    RegionSampler(double outside_rejection_probability, std::unique_ptr<Region::RegionBase> region);
 
     /**
      * @brief Select a random element from range and perform region check. Typically *before* a move.
@@ -114,6 +114,6 @@ class BiasTracker {
     }
 };
 
-void to_json(json& j, const BiasTracker& smc);
+void to_json(json& j, const RegionSampler& smc);
 
 } // namespace Faunus::SmartMonteCarlo

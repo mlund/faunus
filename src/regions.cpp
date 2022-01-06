@@ -40,7 +40,7 @@ std::unique_ptr<RegionBase> createRegion(const Space& spc, const json& j) {
     case RegionType::WITHIN_PARTICLE:
         return std::make_unique<SphereAroundParticle>(spc, j);
     case RegionType::WITHIN_ELLIPSOID:
-        return std::make_unique<VidarsRegion>(spc, j);
+        return std::make_unique<MovingEllipsoid>(spc, j);
     default:
         throw ConfigurationError("unknown region type");
     }
@@ -119,9 +119,9 @@ void SphereAroundParticle::to_json(json& j) const {
     j = {{"index", particle_index}, {"threshold", std::sqrt(radius_squared)}};
 }
 
-bool VidarsRegion::isInside(const Point& position) const {
-    const auto ref1_pos = spc.particles.at(particle_index1).pos;
-    const auto ref2_pos = spc.particles.at(particle_index2).pos;
+bool MovingEllipsoid::isInside(const Point& position) const {
+    const auto ref1_pos = spc.particles.at(particle_index_1).pos;
+    const auto ref2_pos = spc.particles.at(particle_index_2).pos;
 
     Point cylAxis = spc.geometry.vdist(ref2_pos, ref1_pos) * 0.5; // half vector between reference atoms
     if (parallel_radius < cylAxis.norm()) {                       // checking so that a is larger than length of cylAxis
@@ -155,19 +155,19 @@ bool VidarsRegion::isInside(const Point& position) const {
  * @param parallel_radius Ellipsoidal radius along axis connecting reference atoms
  * @param perpendicular_radius Ellipsoidal radius perpendicular to axis connecting reference atoms
  */
-VidarsRegion::VidarsRegion(const Space& spc, ParticleVector::size_type particle_index1,
-                           ParticleVector::size_type particle_index2, double parallel_radius,
-                           double perpendicular_radius)
-    : RegionBase(RegionType::WITHIN_ELLIPSOID), spc(spc), particle_index1(particle_index1),
-      particle_index2(particle_index2), parallel_radius(parallel_radius), perpendicular_radius(perpendicular_radius) {}
+MovingEllipsoid::MovingEllipsoid(const Space& spc, ParticleVector::size_type particle_index1,
+                                 ParticleVector::size_type particle_index2, double parallel_radius,
+                                 double perpendicular_radius)
+    : RegionBase(RegionType::WITHIN_ELLIPSOID), spc(spc), particle_index_1(particle_index1),
+      particle_index_2(particle_index2), parallel_radius(parallel_radius), perpendicular_radius(perpendicular_radius) {}
 
-VidarsRegion::VidarsRegion(const Space& spc, const json& j)
-    : VidarsRegion(spc, j.at("index1").get<int>(), j.at("index2").get<int>(), j.at("r_x").get<double>(),
-                   j.at("r_y").get<double>()) {}
+MovingEllipsoid::MovingEllipsoid(const Space& spc, const json& j)
+    : MovingEllipsoid(spc, j.at("index1").get<int>(), j.at("index2").get<int>(), j.at("parallel_radius").get<double>(),
+                      j.at("perpendicular_radius").get<double>()) {}
 
-void VidarsRegion::to_json(json& j) const {
-    j["index1"] = particle_index1;
-    j["index2"] = particle_index1;
+void MovingEllipsoid::to_json(json& j) const {
+    j["index1"] = particle_index_1;
+    j["index2"] = particle_index_1;
     j["perpendicular_radius"] = perpendicular_radius;
     j["parallel_radius"] = parallel_radius;
 }

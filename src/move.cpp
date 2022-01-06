@@ -305,9 +305,10 @@ std::unique_ptr<MoveBase> createMove(const std::string& name, const json& proper
     try {
         std::unique_ptr<MoveBase> move;
         if (name == "moltransrot") {
+            if (properties.contains("region")) {
+                return std::make_unique<SmartTranslateRotate>(spc, properties);
+            }
             move = std::make_unique<TranslateRotate>(spc);
-        } else if (name == "smartmoltransrot") {
-            return std::make_unique<SmartTranslateRotate>(spc, properties);
         } else if (name == "conformationswap") {
             move = std::make_unique<ConformationSwap>(spc);
         } else if (name == "transrot") {
@@ -1045,23 +1046,21 @@ double SmartTranslateRotate::bias(Change& change, double old_energy, double new_
  * outside and may thus often return `std::nullopt`.
  */
 TranslateRotate::OptionalGroup SmartTranslateRotate::findRandomMolecule() {
-    if (auto mollist = spc.findMolecules(molid, Space::Selection::ACTIVE); ranges::cpp20::empty(mollist)) {
-        smartmc.selection = std::nullopt;
-    } else {
-        smartmc.selection = smartmc.select<Group>(mollist, slump);
-        if (smartmc.selection) {
-            return *(smartmc.selection->item);
-        }
+    auto mollist = spc.findMolecules(molid, Space::Selection::ACTIVE);
+    smartmc.selection = smartmc.select<Group>(mollist, slump);
+    if (smartmc.selection) {
+        return *(smartmc.selection->item);
     }
     return std::nullopt;
 }
 
 void SmartTranslateRotate::_to_json(json& j) const {
     TranslateRotate::_to_json(j);
-    j["smart monte carlo"] = static_cast<json>(smartmc);
+    j["smartmc"] = static_cast<json>(smartmc);
 }
 
-SmartTranslateRotate::SmartTranslateRotate(Space& spc, const json& j) : TranslateRotate(spc), smartmc(spc, j) {}
+SmartTranslateRotate::SmartTranslateRotate(Space& spc, const json& j)
+    : TranslateRotate(spc), smartmc(spc, j.at("region")) {}
 } // namespace Faunus::Move
 
 #ifdef DOCTEST_LIBRARY_INCLUDED

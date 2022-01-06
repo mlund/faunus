@@ -268,7 +268,7 @@ template <typename T> class SmartMonteCarloMoveSupport : public SmartMonteCarlo:
 
 template <typename T>
 SmartMonteCarloMoveSupport<T>::SmartMonteCarloMoveSupport(const Space& spc, const json& j)
-    : SmartMonteCarlo::RegionSampler(1.0, Region::createRegion(spc, j)) {}
+    : SmartMonteCarlo::RegionSampler(j.at("reject_outside").get<double>(), Region::createRegion(spc, j)) {}
 
 /**
  * This is used to sample the average number of groups inside the region. Once converged, the

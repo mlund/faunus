@@ -27,9 +27,9 @@ namespace Region {
 enum class RegionType { WITHIN_MOLID, WITHIN_PARTICLE, WITHIN_ELLIPSOID, INVALID };
 
 NLOHMANN_JSON_SERIALIZE_ENUM(RegionType, {{RegionType::INVALID, nullptr},
-                                          {RegionType::WITHIN_MOLID, "within_molecule_type"},
-                                          {RegionType::WITHIN_PARTICLE, "within_particle"},
-                                          {RegionType::WITHIN_ELLIPSOID, "within_ellipsoid"}})
+                                          {RegionType::WITHIN_MOLID, "around_molecule_type"},
+                                          {RegionType::WITHIN_PARTICLE, "around_particle"},
+                                          {RegionType::WITHIN_ELLIPSOID, "ellipsoid"}})
 
 /**
  * @brief Base class for defining sub-spaces of a simulation
@@ -111,18 +111,18 @@ class SphereAroundParticle : public RegionBase {
 /**
  * An ellipsoid defined by two (moving) particles
  */
-class VidarsRegion : public RegionBase {
+class MovingEllipsoid : public RegionBase {
   private:
     const Space& spc;
-    const ParticleVector::size_type particle_index1; //!< Index of first reference particle
-    const ParticleVector::size_type particle_index2; //!< Index of second reference particle
-    const double parallel_radius;                    //!< ellipsoidal radius along axis connecting reference atoms
+    const ParticleVector::size_type particle_index_1; //!< Index of first reference particle
+    const ParticleVector::size_type particle_index_2; //!< Index of second reference particle
+    const double parallel_radius;                     //!< ellipsoidal radius along axis connecting reference atoms
     const double perpendicular_radius; //!< ellipsoidal radius perpendicular to axis connecting reference atoms
 
   public:
-    VidarsRegion(const Space& spc, ParticleVector::size_type particle_index1, ParticleVector::size_type particle_index2,
-                 double parallel_radius, double perpendicular_radius);
-    VidarsRegion(const Space& spc, const json& j);
+    MovingEllipsoid(const Space& spc, ParticleVector::size_type particle_index1,
+                    ParticleVector::size_type particle_index2, double parallel_radius, double perpendicular_radius);
+    MovingEllipsoid(const Space& spc, const json& j);
     bool isInside(const Point& position) const override;
     void to_json(json& j) const override;
 };

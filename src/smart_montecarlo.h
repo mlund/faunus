@@ -49,13 +49,16 @@ class RegionSampler {
     friend void to_json(json&, const RegionSampler&);
 
   private:
-    double outside_rejection_probability = 1.0;
-    std::unique_ptr<Region::RegionBase> region;
+    double outside_rejection_probability = 1.0; //!< Probability to reject a particle outside region
+    std::unique_ptr<Region::RegionBase> region; //!< This defines the smart MC region
+  protected:
+    virtual void to_json(json& j) const; //!< Serialise to json
 
   public:
     std::optional<int> fixed_count_inside; //!< Set this to speed up (skip) region check
 
     RegionSampler(double outside_rejection_probability, std::unique_ptr<Region::RegionBase> region);
+    virtual ~RegionSampler() = default;
 
     /**
      * @brief Select a random element from range and perform region check. Typically *before* a move.

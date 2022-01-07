@@ -43,9 +43,10 @@ TEST_CASE("[Faunus] SmartMonteCarlo::bias") {
 RegionSampler::RegionSampler(double outside_rejection_probability, std::unique_ptr<Region::RegionBase> region)
     : outside_rejection_probability(outside_rejection_probability), region(std::move(region)) {}
 
-void to_json(json& j, const RegionSampler& smc) {
-    j["region"] = static_cast<json>(*smc.region);
-    j["reject_outside"] = smc.outside_rejection_probability;
+void to_json(json& j, const RegionSampler& smc) { smc.to_json(j); }
+void RegionSampler::to_json(json& j) const {
+    j["region"] = static_cast<json>(*region);
+    j["reject_outside"] = outside_rejection_probability;
 }
 
 } // namespace Faunus::SmartMonteCarlo

@@ -259,6 +259,7 @@ template <typename T> class SmartMonteCarloMoveSupport : public SmartMonteCarlo:
     int bias_update_interval = 100;
     AverageStdev<double> mean_count_inside;    //!< Average number of groups found inside region
     void analyzeCountInside(int count_inside); //!< Track and analyze inside count
+    void to_json(json& j) const override;
 
   public:
     std::optional<SmartMonteCarlo::Selection<T>> selection; //!< Contains data on currently selected group (if any)
@@ -279,8 +280,8 @@ template <typename T> void SmartMonteCarloMoveSupport<T>::analyzeCountInside(int
     mean_count_inside += static_cast<double>(count_inside);
     if (mean_count_inside.size() % bias_update_interval == 0) {
         if (mean_count_inside.stdev() / mean_count_inside.avg() < 0.05) {
-            fixed_count_inside = static_cast<int>(mean_count_inside.avg());
-            faunus_logger->info("Stopping bias update since threshold reached.");
+            // fixed_count_inside = static_cast<int>(mean_count_inside.avg());
+            // faunus_logger->info("Stopping bias update since threshold reached.");
         }
     }
 }
@@ -290,6 +291,12 @@ template <typename T> double SmartMonteCarloMoveSupport<T>::bias() {
         return SmartMonteCarlo::RegionSampler::bias(*selection);
     }
     return 0.0;
+}
+template <typename T> void SmartMonteCarloMoveSupport<T>::to_json(json& j) const {
+    SmartMonteCarlo::RegionSampler::to_json(j);
+    if (!mean_count_inside.empty()) {
+        j["mean number inside"] = mean_count_inside.avg();
+    }
 }
 
 /**

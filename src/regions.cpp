@@ -159,7 +159,11 @@ MovingEllipsoid::MovingEllipsoid(const Space& spc, ParticleVector::size_type par
       particle_index_2(particle_index2), parallel_radius(parallel_radius), perpendicular_radius(perpendicular_radius),
       parallel_radius_squared(parallel_radius * parallel_radius),
       reference_position_1(spc.particles.at(particle_index_1).pos),
-      reference_position_2(spc.particles.at(particle_index_2).pos) {}
+      reference_position_2(spc.particles.at(particle_index_2).pos) {
+    if (particle_index_1 == particle_index_2) {
+        throw ConfigurationError("reference indices must differ");
+    }
+}
 
 MovingEllipsoid::MovingEllipsoid(const Space& spc, const json& j)
     : MovingEllipsoid(spc, j.at("index1").get<int>(), j.at("index2").get<int>(), j.at("parallel_radius").get<double>(),
@@ -167,7 +171,7 @@ MovingEllipsoid::MovingEllipsoid(const Space& spc, const json& j)
 
 void MovingEllipsoid::to_json(json& j) const {
     j["index1"] = particle_index_1;
-    j["index2"] = particle_index_1;
+    j["index2"] = particle_index_2;
     j["perpendicular_radius"] = perpendicular_radius;
     j["parallel_radius"] = parallel_radius;
 }

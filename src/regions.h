@@ -120,6 +120,10 @@ class MovingEllipsoid : public RegionBase {
     const ParticleVector::size_type particle_index_2; //!< Index of second reference particle
     const double parallel_radius;                     //!< ellipsoidal radius along axis connecting reference atoms
     const double perpendicular_radius; //!< ellipsoidal radius perpendicular to axis connecting reference atoms
+    const double parallel_radius_squared;
+
+    const Point& reference_position_1; //!< Reference to first reference particle position
+    const Point& reference_position_2; //!< Reference to second reference particle position
 
   public:
     MovingEllipsoid(const Space& spc, ParticleVector::size_type particle_index1,

@@ -49,6 +49,8 @@ class RegionBase {
     virtual ~RegionBase() = default;
     explicit RegionBase(RegionType type);
 
+    bool use_group_mass_center = false; //!< Use group mass-center to check if inside region
+
     bool inside(const Particle& particle) const; //!< Determines if particle is inside region
     bool inside(const Group& group) const;       //!< Determines of groups is inside region
 

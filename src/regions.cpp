@@ -13,8 +13,10 @@ std::optional<double> RegionBase::volume() const { return std::nullopt; }
 bool RegionBase::inside(const Particle& particle) const { return isInside(particle.pos); }
 
 bool RegionBase::inside(const Group& group) const {
-    if (auto mass_center = group.massCenter()) {
-        return isInside(mass_center.value());
+    if (use_group_mass_center) {
+        if (auto mass_center = group.massCenter()) {
+            return isInside(mass_center.value());
+        }
     }
     return ranges::cpp20::any_of(group, [&](const Particle& particle) { return inside(particle); });
 }

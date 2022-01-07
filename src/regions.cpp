@@ -124,13 +124,14 @@ void SphereAroundParticle::to_json(json& j) const {
 bool MovingEllipsoid::isInside(const Point& position) const {
     Point r21_half = 0.5 * spc.geometry.vdist(reference_position_2, reference_position_1); // half ref2 -> ref1
     const auto r21_half_len = r21_half.norm();
+    // is this check needed?
     if (parallel_radius_squared < r21_half_len) {
         faunus_logger->error("Parallel radius ({} Å) smaller than half distance between reference atoms ({} Å)",
                              parallel_radius, r21_half_len);
     }
-    auto midpoint = spc.geometry.vdist(reference_position_2, r21_half); // between ref1 & ref2
-    Point midpoint_pos = spc.geometry.vdist(position, midpoint);        // midpoint -> pos
-    const auto midpoint_pos_len = midpoint_pos.norm();
+    Point midpoint = spc.geometry.vdist(reference_position_2, r21_half); // between ref1 & ref2
+    Point midpoint_pos = spc.geometry.vdist(position, midpoint);         // midpoint -> pos
+    const auto midpoint_pos_len = midpoint_pos.norm() + pc::epsilon_dbl; // must be *exactly* zero
     const auto cos_theta = midpoint_pos.dot(r21_half) / midpoint_pos_len / r21_half_len;
     const auto theta = std::acos(cos_theta);
     const auto x = cos_theta * midpoint_pos_len;
@@ -142,10 +143,14 @@ bool MovingEllipsoid::isInside(const Point& position) const {
 
 /**
  * @param spc Space to operate on
- * @param particle_index1 Index of first particle defining ellipsoid
- * @param particle_index2 Index of second particle defining ellipsoid
+ * @param particle_index1 Index of first particle defining ellipsoid direction
+ * @param particle_index2 Index of second particle defining ellipsoid direction
  * @param parallel_radius Ellipsoidal radius along axis connecting reference atoms
  * @param perpendicular_radius Ellipsoidal radius perpendicular to axis connecting reference atoms
+ *
+ * The reference atoms are used only to define the direction of the ellipsoid and they
+ * absolute separation is imimportant. The size of the ellipsoid is defined solely by
+ * the two radii, originating from the midpoint between the two reference particles.
  */
 MovingEllipsoid::MovingEllipsoid(const Space& spc, ParticleVector::size_type particle_index1,
                                  ParticleVector::size_type particle_index2, double parallel_radius,
@@ -168,15 +173,34 @@ void MovingEllipsoid::to_json(json& j) const {
 }
 
 TEST_CASE("[Faunus] Region::MovingEllipsoid") {
+    const auto delta = 1e-6; // spatial resolution
+    const auto parallel_radius = 4.0;
+    const auto perpendilar_radius = 5.0;
     Space spc;
     spc.geometry = Geometry::Chameleon(Geometry::Sphere(100), Geometry::Variant::SPHERE);
     spc.particles.resize(2);
-    spc.particles.at(0).pos = {-4.0, 0.0, 0.0}; // first reference
-    spc.particles.at(1).pos = {4.0, 0.0, 0.0};  // second reference
-    MovingEllipsoid region(spc, 0, 1, 5, 5);
+    spc.particles.at(0).pos = {-1.0, 0.0, 0.0}; // first reference
+    spc.particles.at(1).pos = {1.0, 0.0, 0.0};  // second reference
+    MovingEllipsoid region(spc, 0, 1, parallel_radius, perpendilar_radius);
 
-    // add checks for a number of point to verify if inside or outside
-    CHECK(region.isInside({0.0, 0.0, 0.0}));
+    SUBCASE("parallel axis") {
+        CHECK(region.isInside({parallel_radius + delta, 0.0, 0.0}) == false);
+        CHECK(region.isInside({parallel_radius - delta, 0.0, 0.0}));
+        CHECK(region.isInside({-(parallel_radius + delta), 0.0, 0.0}) == false);
+        CHECK(region.isInside({-(parallel_radius - delta), 0.0, 0.0}));
+    }
+
+    SUBCASE("perpendicular axis") {
+        CHECK(region.isInside({0.0, perpendilar_radius + delta, 0.0}) == false);
+        CHECK(region.isInside({0.0, perpendilar_radius - delta, 0.0}));
+        CHECK(region.isInside({0.0, -(perpendilar_radius + delta), 0.0}) == false);
+        CHECK(region.isInside({0.0, -(perpendilar_radius - delta), 0.0}));
+        CHECK(region.isInside({0.0, 0.0, perpendilar_radius + delta}) == false);
+        CHECK(region.isInside({0.0, 0.0, perpendilar_radius - delta}));
+        CHECK(region.isInside({0.0, 0.0, -(perpendilar_radius + delta)}) == false);
+        CHECK(region.isInside({0.0, 0.0, -(perpendilar_radius - delta)}));
+    }
+    SUBCASE("exactly on midpoint") { CHECK(region.isInside({0.0, 0.0, 0.0})); }
 }
 
 } // namespace Region

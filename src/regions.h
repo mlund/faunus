@@ -27,7 +27,7 @@ namespace Region {
 enum class RegionType { WITHIN_MOLID, WITHIN_PARTICLE, WITHIN_ELLIPSOID, INVALID };
 
 NLOHMANN_JSON_SERIALIZE_ENUM(RegionType, {{RegionType::INVALID, nullptr},
-                                          {RegionType::WITHIN_MOLID, "around_molecule_type"},
+                                          {RegionType::WITHIN_MOLID, "within_molid"},
                                           {RegionType::WITHIN_PARTICLE, "around_particle"},
                                           {RegionType::WITHIN_ELLIPSOID, "ellipsoid"}})
 

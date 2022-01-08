@@ -145,6 +145,61 @@ are distributed on a sphere then $\kappa^2=0$, while if on a straight line, $\ka
 `interval=10` | Interval between samples
 
 
+### Smarter Monte Carlo
+
+Preferential selction of particles can be enabled via the `region` keyword which instructs
+some moves to pick particles or groups preferentially from a given _region_. As described
+in [doi:10/frvx8j](https://doi.org/frvx8j) a bias is introduced which is automatically
+accounted for. The preference for sampling inside the region is controlled by the `symmetry`
+keyword (often denoted _p_ in the litterature). If set to one, no bias is introduces, whereas
+if set to a low number, more sampling will be made from inside the region.
+
+For example:
+
+~~~ yaml
+- moltransrot:
+    ...
+    ...
+    region:
+      policy: ellipsoid
+      symmetry: 0.5
+      parallel_radius: 5.0
+      perpendicular_radius: 4.0
+      index1: 10
+      index2: 12
+~~~
+
+The available regions are:
+
+#### Ellipsoid
+
+The connection vector between two reference particles defines an ellipsoid.
+The distance between the particles is unimportant and only the direction is used.
+
+`policy=ellipsoid`     | Description
+---------------------- | ----------------------------------------------------------------
+`symmetry`             | Number (0,1] where a lower number means higher regional sampling
+`index1`               | Index of first reference particle
+`index2`               | Index of second reference particle
+`parallel_radius`      | Radius parallel to axis connecting the two references
+`perpendicular_radius` | Radius perpendicular to axis connecting the two references
+
+
+#### Molecule
+
+Samples from within a threshold from a molecule type. This can be useful to for example
+preferentially update solvent molecules in a dilute solute solution.
+The `com` keyword is available if the selected `molecule` has a well-defines mass-center,
+i.e. if `is_atomic=False`.
+
+`policy=within_molid`  | Description
+---------------------- | ----------------------------------------------------------------
+`symmetry`             | Number (0,1] where a lower number means higher regional sampling
+`molecule`             | Name of molecule to search around
+`threshold`            | Distance threshold to any particle in `molecule`
+`com`                  | Use `threshold` with respect to mass-center of `molecule`
+
+
 ## Internal Degrees of Freedom
 
 ### Charge Move

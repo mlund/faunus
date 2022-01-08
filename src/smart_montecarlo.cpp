@@ -26,29 +26,29 @@ double bias(double outside_rejection_probability, const int n_total, const int n
 
 TEST_CASE("[Faunus] SmartMonteCarlo::bias") {
     using doctest::Approx;
-    //    CHECK(bias(1.0, 20, 5, BiasDirection::NO_CROSSING) == Approx(0.0));
-    //    CHECK(bias(1.0, 20, 5, BiasDirection::EXIT_REGION) == Approx(0.0));
-    //    CHECK(bias(1.0, 20, 5, BiasDirection::ENTER_REGION) == Approx(0.0));
-    //
-    //    CHECK(bias(0.0, 20, 5, BiasDirection::NO_CROSSING) == Approx(0.0));
-    //    CHECK(std::isinf(bias(0.0, 20, 5, BiasDirection::EXIT_REGION)));
-    //    CHECK(bias(0.0, 20, 5, BiasDirection::ENTER_REGION) == Approx(0.1823215568));
-    //
-    //    CHECK(bias(0.1, 20, 5, BiasDirection::NO_CROSSING) == Approx(0.0));
-    //    CHECK(bias(0.1, 20, 5, BiasDirection::EXIT_REGION) == Approx(2.1535495138));
-    //    CHECK(bias(0.1, 20, 5, BiasDirection::ENTER_REGION) == Approx(0.1296778233));
+    CHECK(bias(1.0, 20, 5, BiasDirection::NO_CROSSING) == Approx(0.0));
+    CHECK(bias(1.0, 20, 5, BiasDirection::EXIT_REGION) == Approx(0.0));
+    CHECK(bias(1.0, 20, 5, BiasDirection::ENTER_REGION) == Approx(0.0));
+
+    CHECK(bias(0.1, 20, 5, BiasDirection::NO_CROSSING) == Approx(0.0));
+    CHECK(bias(0.1, 20, 5, BiasDirection::EXIT_REGION) == Approx(2.1535495138));
+    CHECK(bias(0.1, 20, 5, BiasDirection::ENTER_REGION) == Approx(-2.1729072697));
 }
 
 /**
  * @param outside_rejection_probability Probability that any element outside the region will be rejected
  * @param region Region to preferentially pick from
  */
-RegionSampler::RegionSampler(double outside_rejection_probability, std::unique_ptr<Region::RegionBase> region)
-    : outside_rejection_probability(outside_rejection_probability), region(std::move(region)) {}
+RegionSampler::RegionSampler(double symmetry, std::unique_ptr<Region::RegionBase> region)
+    : symmetry(symmetry), region(std::move(region)) {
+    if (symmetry <= pc::epsilon_dbl || symmetry > 1.0) {
+        throw ConfigurationError("'symmetry' must be in the range (0,1]");
+    }
+}
 
 void RegionSampler::to_json(json& j) const {
     j["region"] = static_cast<json>(*region);
-    j["reject_outside"] = outside_rejection_probability;
+    j["symmetry"] = symmetry;
 }
 
 } // namespace Faunus::SmartMonteCarlo

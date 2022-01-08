@@ -47,14 +47,14 @@ double bias(double outside_rejection_probability, int n_total, int n_inside,
  */
 class RegionSampler {
   private:
-    double outside_rejection_probability = 1.0; //!< Probability to reject a particle outside region
+    double symmetry = 1.0; //!< Or "p" between ]0:1]; 1 --> uniform sampling (no regional preference)
   protected:
     std::unique_ptr<Region::RegionBase> region; //!< This defines the smart MC region
     std::optional<int> fixed_number_inside;     //!< Optionally give a fixed number inside
     template <typename Range> int getNumberInside(Range& range) const;
 
   public:
-    RegionSampler(double outside_rejection_probability, std::unique_ptr<Region::RegionBase> region);
+    RegionSampler(double symmetry, std::unique_ptr<Region::RegionBase> region);
     virtual ~RegionSampler() = default;
     void to_json(json& j) const; //!< Serialise to json
     template <typename T, typename Range> std::optional<Selection<T>> select(Range& range, Random& random);
@@ -82,24 +82,23 @@ template <typename Range> int RegionSampler::getNumberInside(Range& range) const
  *
  * This will loop until a perturbable element is found. If a max number of attempts is reached
  * without any selection, an empty object will be returned and a warning issued. The maximum
- * number of attempts is currently set to the size of the given range.
+ * number of attempts is currently set to ten times the size of the given range.
  */
 template <typename T, typename Range> std::optional<Selection<T>> RegionSampler::select(Range& range, Random& random) {
     const auto n_total = ranges::distance(range.begin(), range.end());
-    int n_selection_attempts = 0;
+    int selection_attemps = 10 * n_total;
     do {
         auto it = random.sample(range.begin(), range.end()); // random particle or group
         if (it == range.end()) {
             return std::nullopt;
         }
         const auto inside = region->inside(*it); // is element inside or outside region?
-        if (not inside && outside_rejection_probability < random()) {
+        if (not inside && symmetry < random()) {
             continue;
         }
-        const auto number_inside = getNumberInside(range);
-        return Selection<T>(*it, n_total, number_inside, inside);
-    } while (n_selection_attempts++ < n_total);
-    faunus_logger->warn("Max number of selection attempts reached for smart mc");
+        return Selection<T>(*it, n_total, getNumberInside(range), inside);
+    } while (selection_attemps-- > 0);
+    faunus_logger->warn("Max number selection attempts reached. Increase 'symmetry'?");
     return std::nullopt;
 }
 
@@ -120,7 +119,7 @@ template <typename T> double RegionSampler::bias(const Selection<T>& selection) 
     } else {
         direction = BiasDirection::NO_CROSSING;
     }
-    return SmartMonteCarlo::bias(outside_rejection_probability, selection.n_total, selection.n_inside, direction);
+    return SmartMonteCarlo::bias(symmetry, selection.n_total, selection.n_inside, direction);
 }
 
 /**
@@ -128,64 +127,73 @@ template <typename T> double RegionSampler::bias(const Selection<T>& selection) 
  */
 template <typename T> class MoveSupport {
   private:
-    using OptionalElement = std::optional<std::reference_wrapper<T>>;
+    using OptionalElement = std::optional<std::reference_wrapper<T>>; //!< Reference to selected element
+    std::optional<SmartMonteCarlo::Selection<T>> selection; //!< Contains data on currently selected group (if any)
     SmartMonteCarlo::RegionSampler region_sampler;
     int bias_update_interval = 100;
-    Average<double> mean_bias;
-    AverageStdev<double> mean_count_inside;                 //!< Average number of groups found inside region
-    void analyzeCountInside(int count_inside);              //!< Track and analyze inside count
-    std::optional<SmartMonteCarlo::Selection<T>> selection; //!< Contains data on currently selected group (if any)
+    Average<double> mean_bias_energy;
+    Average<double> mean_selected_inside;    //!< Fraction of selections found inside
+    AverageStdev<double> mean_number_inside; //!< Average number of groups found inside region
+    void analyseSelection(int count_inside); //!< Track and analyze inside count
 
   public:
     MoveSupport(const Space& spc, const json& j);
     double bias();
     void to_json(json& j) const;
-
-    template <typename Range> OptionalElement select(Range& mollist, Random& random) {
-        selection = region_sampler.select<T>(mollist, random);
-        if (selection) {
-            return *(selection->item);
-        }
-        return std::nullopt;
-    }
+    template <typename Range> OptionalElement select(Range& mollist, Random& random);
 };
 
 template <typename T>
 MoveSupport<T>::MoveSupport(const Space& spc, const json& j)
-    : region_sampler(j.at("reject_outside").get<double>(), Region::createRegion(spc, j)) {}
+    : region_sampler(j.at("symmetry").get<double>(), Region::createRegion(spc, j)) {}
 
 /**
  * This is used to sample the average number of groups inside the region. Once converged, the
  * expensive region search can be disabled by giving `fixed_count_inside` a mean value which will
  * be used for all further bias evaluations.
  */
-template <typename T> void MoveSupport<T>::analyzeCountInside(int count_inside) {
-    mean_count_inside += static_cast<double>(count_inside);
-    if (mean_count_inside.size() % bias_update_interval == 0) {
-        if (mean_count_inside.stdev() / mean_count_inside.avg() < 0.05) {
+template <typename T> void MoveSupport<T>::analyseSelection(int count_inside) {
+    assert(selection);
+    mean_number_inside += static_cast<double>(count_inside);
+    mean_selected_inside += static_cast<double>(selection->is_inside);
+
+    if (mean_number_inside.size() % bias_update_interval == 0) {
+        if (mean_number_inside.stdev() / mean_number_inside.avg() < 0.05) {
             // fixed_count_inside = static_cast<int>(mean_count_inside.avg());
             // faunus_logger->info("Stopping bias update since threshold reached.");
         }
     }
 }
 template <typename T> double MoveSupport<T>::bias() {
+    auto bias_energy(0.0);
     if (selection) {
-        analyzeCountInside(selection->n_inside);
-        const auto bias_energy = region_sampler.bias(*selection);
-        mean_bias += bias_energy;
-        return bias_energy;
+        analyseSelection(selection->n_inside);
+        bias_energy = region_sampler.bias(*selection);
     }
-    mean_bias += 0.0;
-    return 0.0;
+    mean_bias_energy += bias_energy;
+    return bias_energy;
 }
 template <typename T> void MoveSupport<T>::to_json(json& j) const {
     region_sampler.to_json(j);
-    if (!mean_count_inside.empty()) {
-        j["mean number inside"] = mean_count_inside.avg();
+    if (!mean_number_inside.empty()) {
+        j["mean number inside"] = mean_number_inside.avg();
     }
-    if (!mean_bias.empty()) {
-        j["mean bias energy (kT)"] = mean_bias.avg();
+    if (!mean_bias_energy.empty()) {
+        j["mean bias energy (kT)"] = mean_bias_energy.avg();
     }
+    if (!mean_selected_inside.empty()) {
+        j["selected inside fraction"] = mean_selected_inside.avg();
+    }
+}
+
+template <typename T>
+template <typename Range>
+typename MoveSupport<T>::OptionalElement MoveSupport<T>::select(Range& mollist, Random& random) {
+    selection = region_sampler.select<T>(mollist, random);
+    if (selection) {
+        return *(selection->item);
+    }
+    return std::nullopt;
 }
 
 } // namespace Faunus::SmartMonteCarlo

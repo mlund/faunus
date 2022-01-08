@@ -16,9 +16,9 @@ double bias(double outside_rejection_probability, const int n_total, const int n
     const auto n_prime = p * n_total + (1.0 - p) * n_inside;
     switch (direction) {
     case BiasDirection::EXIT_REGION: // in --> out
-        return std::log(p / ((1.0 - (1.0 - p) / n_prime)));
+        return -std::log(p / ((1.0 - (1.0 - p) / n_prime)));
     case BiasDirection::ENTER_REGION: // out --> in
-        return -std::log(p * (1.0 + (1.0 - p) / n_prime));
+        return std::log(p * (1.0 + (1.0 - p) / n_prime));
     case BiasDirection::NO_CROSSING:
         return 0.0;
     }
@@ -46,7 +46,6 @@ TEST_CASE("[Faunus] SmartMonteCarlo::bias") {
 RegionSampler::RegionSampler(double outside_rejection_probability, std::unique_ptr<Region::RegionBase> region)
     : outside_rejection_probability(outside_rejection_probability), region(std::move(region)) {}
 
-void to_json(json& j, const RegionSampler& smc) { smc.to_json(j); }
 void RegionSampler::to_json(json& j) const {
     j["region"] = static_cast<json>(*region);
     j["reject_outside"] = outside_rejection_probability;

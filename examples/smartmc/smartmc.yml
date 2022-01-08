@@ -12,7 +12,7 @@
 temperature: 300
 random: {seed: hardware}
 geometry: {type: sphere, radius: 2}
-mcloop: {macro: 10, micro: 100000}
+mcloop: {macro: 10, micro: 50000}
 
 atomlist:
   - a: {mw: 1.0}
@@ -45,7 +45,7 @@ moves:
       dir: [1,0,0]
       region:
         policy: ellipsoid
-        reject_outside: 0.1
+        reject_outside: 0.9
         parallel_radius: 1
         perpendicular_radius: 1
         index1: 0

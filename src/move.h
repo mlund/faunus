@@ -251,66 +251,11 @@ class TranslateRotate : public MoveBase {
 };
 
 /**
- * Helper class for constructing smart monte carlo moves
- */
-template <typename T> class SmartMonteCarloMoveSupport : public SmartMonteCarlo::RegionSampler {
-  private:
-    int bias_update_interval = 100;
-    Average<double> mean_bias;
-    AverageStdev<double> mean_count_inside;    //!< Average number of groups found inside region
-    void analyzeCountInside(int count_inside); //!< Track and analyze inside count
-    void to_json(json& j) const override;
-
-  public:
-    std::optional<SmartMonteCarlo::Selection<T>> selection; //!< Contains data on currently selected group (if any)
-    double bias();
-    SmartMonteCarloMoveSupport(const Space& spc, const json& j);
-};
-
-template <typename T>
-SmartMonteCarloMoveSupport<T>::SmartMonteCarloMoveSupport(const Space& spc, const json& j)
-    : SmartMonteCarlo::RegionSampler(j.at("reject_outside").get<double>(), Region::createRegion(spc, j)) {}
-
-/**
- * This is used to sample the average number of groups inside the region. Once converged, the
- * expensive region search can be disabled by giving `fixed_count_inside` a mean value which will
- * be used for all further bias evaluations.
- */
-template <typename T> void SmartMonteCarloMoveSupport<T>::analyzeCountInside(int count_inside) {
-    mean_count_inside += static_cast<double>(count_inside);
-    if (mean_count_inside.size() % bias_update_interval == 0) {
-        if (mean_count_inside.stdev() / mean_count_inside.avg() < 0.05) {
-            // fixed_count_inside = static_cast<int>(mean_count_inside.avg());
-            // faunus_logger->info("Stopping bias update since threshold reached.");
-        }
-    }
-}
-template <typename T> double SmartMonteCarloMoveSupport<T>::bias() {
-    if (selection) {
-        analyzeCountInside(selection->n_inside);
-        const auto bias_energy = SmartMonteCarlo::RegionSampler::bias(*selection);
-        mean_bias += bias_energy;
-        return bias_energy;
-    }
-    mean_bias += 0.0;
-    return 0.0;
-}
-template <typename T> void SmartMonteCarloMoveSupport<T>::to_json(json& j) const {
-    SmartMonteCarlo::RegionSampler::to_json(j);
-    if (!mean_count_inside.empty()) {
-        j["mean number inside"] = mean_count_inside.avg();
-    }
-    if (!mean_bias.empty()) {
-        j["mean bias energy (kT)"] = mean_bias.avg();
-    }
-}
-
-/**
  * @brief Smart Monte Carlo version of molecular translation and rotation
  */
 class SmartTranslateRotate : public TranslateRotate {
   private:
-    SmartMonteCarloMoveSupport<Group> smartmc;
+    SmartMonteCarlo::MoveSupport<Group> smartmc;
     void _to_json(json& j) const override;
     OptionalGroup findRandomMolecule() override;
     double bias(Change& change, double old_energy, double new_energy) override;

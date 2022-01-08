@@ -1047,16 +1047,12 @@ double SmartTranslateRotate::bias(Change& change, double old_energy, double new_
  */
 TranslateRotate::OptionalGroup SmartTranslateRotate::findRandomMolecule() {
     auto mollist = spc.findMolecules(molid, Space::Selection::ACTIVE);
-    smartmc.selection = smartmc.select<Group>(mollist, slump);
-    if (smartmc.selection) {
-        return *(smartmc.selection->item);
-    }
-    return std::nullopt;
+    return smartmc.select(mollist, slump);
 }
 
 void SmartTranslateRotate::_to_json(json& j) const {
     TranslateRotate::_to_json(j);
-    j["smartmc"] = static_cast<json>(smartmc);
+    smartmc.to_json(j["smartmc"]);
 }
 
 SmartTranslateRotate::SmartTranslateRotate(Space& spc, const json& j)

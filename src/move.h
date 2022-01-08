@@ -223,6 +223,7 @@ class TranslateRotate : public MoveBase {
     using OptionalGroup = std::optional<std::reference_wrapper<Space::GroupType>>;
     int molid = -1; //!< Molecule ID of the molecule(s) to move
     void _to_json(json& j) const override;
+    TranslateRotate(Space& spc, std::string name, std::string cite);
 
   private:
     Average<double> mean_squared_displacement;
@@ -244,8 +245,6 @@ class TranslateRotate : public MoveBase {
     void _move(Change &change) override;
     void _accept(Change &) override;
     void _reject(Change &) override;
-
-    TranslateRotate(Space &spc, std::string name, std::string cite);
 
   public:
     explicit TranslateRotate(Space &spc);

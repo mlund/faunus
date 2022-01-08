@@ -1060,7 +1060,7 @@ void SmartTranslateRotate::_to_json(json& j) const {
 }
 
 SmartTranslateRotate::SmartTranslateRotate(Space& spc, const json& j)
-    : TranslateRotate(spc), smartmc(spc, j.at("region")) {
+    : TranslateRotate(spc, "moltransrot", "doi:10/frvx8j"), smartmc(spc, j.at("region")) {
     this->from_json(j);
 }
 } // namespace Faunus::Move

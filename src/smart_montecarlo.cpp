@@ -8,15 +8,16 @@ namespace Faunus::SmartMonteCarlo {
  * @param n_inside Total number of elements inside region
  * @param direction Did element exit or enter the region? Returns zero if no boundary crossing
  *
- * See Allen and Tildesley p. 318 (2017 ed.)
+ * - See Allen and Tildesley p. 318 (2017 ed.).
+ * - Original work: [doi:10/frvx8j](https://doi.org/frvx8j)
  */
 double bias(double outside_rejection_probability, const int n_total, const int n_inside, BiasDirection direction) {
     const auto p = outside_rejection_probability;
     const auto n_prime = p * n_total + (1.0 - p) * n_inside;
     switch (direction) {
-    case BiasDirection::EXIT_REGION:
+    case BiasDirection::EXIT_REGION: // in --> out
         return std::log(p / ((1.0 - (1.0 - p) / n_prime)));
-    case BiasDirection::ENTER_REGION:
+    case BiasDirection::ENTER_REGION: // out --> in
         return -std::log(p * (1.0 + (1.0 - p) / n_prime));
     case BiasDirection::NO_CROSSING:
         return 0.0;

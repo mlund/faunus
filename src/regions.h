@@ -79,14 +79,15 @@ void to_json(json& j, const RegionBase& region);
  */
 class WithinMoleculeType : public RegionBase {
   private:
-    const Space& spc;                     //!< reference to space
-    const MoleculeData::index_type molid; //!< molid to target
-    const bool use_mass_center = false;   //!< true = with respect to center of mass
-    const double threshold_squared;       //!< squared distance threshold from other particles or com
+    const Space& spc;                          //!< reference to space
+    const MoleculeData::index_type molid;      //!< molid to target
+    const bool use_region_mass_center = false; //!< true = with respect to center of mass of `molid`
+    const double threshold_squared;            //!< squared distance threshold from other particles or com
     bool within_threshold(const Point& position1, const Point& position2) const;
 
   public:
-    WithinMoleculeType(const Space& spc, std::string_view molecule_name, double threshold, bool use_mass_center);
+    WithinMoleculeType(const Space& spc, std::string_view molecule_name, double threshold, bool use_region_mass_center,
+                       bool use_group_mass_center);
     WithinMoleculeType(const Space& spc, const json& j);
     bool isInside(const Point& position) const override;
     std::optional<double> volume() const override;
@@ -127,7 +128,8 @@ class MovingEllipsoid : public RegionBase {
 
   public:
     MovingEllipsoid(const Space& spc, ParticleVector::size_type particle_index1,
-                    ParticleVector::size_type particle_index2, double parallel_radius, double perpendicular_radius);
+                    ParticleVector::size_type particle_index2, double parallel_radius, double perpendicular_radius,
+                    bool use_group_mass_center);
     MovingEllipsoid(const Space& spc, const json& j);
     bool isInside(const Point& position) const override;
     void to_json(json& j) const override;

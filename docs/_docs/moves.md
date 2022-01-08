@@ -183,6 +183,7 @@ The distance between the particles is unimportant and only the direction is used
 `index2`               | Index of second reference particle
 `parallel_radius`      | Radius parallel to axis connecting the two references
 `perpendicular_radius` | Radius perpendicular to axis connecting the two references
+`group_com=false`      | Test only mass center of molecular groups
 
 
 #### Molecule
@@ -190,14 +191,15 @@ The distance between the particles is unimportant and only the direction is used
 Samples from within a threshold from a molecule type. This can be useful to for example
 preferentially update solvent molecules in a dilute solute solution.
 The `com` keyword is available if the selected `molecule` has a well-defines mass-center,
-i.e. if `is_atomic=False`.
+i.e. if `is_atomic=false`.
 
 `policy=within_molid`  | Description
 ---------------------- | ----------------------------------------------------------------
 `symmetry`             | Number (0,1] where a lower number means higher regional sampling
 `molecule`             | Name of molecule to search around
 `threshold`            | Distance threshold to any particle in `molecule`
-`com`                  | Use `threshold` with respect to mass-center of `molecule`
+`com=false`            | Use `threshold` with respect to mass-center of `molecule`
+`group_com=false`      | Test with respect to mass center of molecular groups
 
 
 ## Internal Degrees of Freedom

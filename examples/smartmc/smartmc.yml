@@ -45,7 +45,7 @@ moves:
       dir: [1,0,0]
       region:
         policy: ellipsoid
-        symmetry: 0.1
+        symmetry: 0.3
         parallel_radius: 1
         perpendicular_radius: 1
         index1: 0

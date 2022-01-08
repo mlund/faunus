@@ -16,9 +16,9 @@ namespace Faunus::SmartMonteCarlo {
 template <typename T> class Selection {
   public:
     T* item = nullptr; //!< Selected group, particle etc.
-    int number_total = 0;
-    int number_inside = 0;
-    bool item_is_inside = false;
+    int n_total = 0;
+    int n_inside = 0;
+    bool is_inside = false;
     Selection(T& item, int number_total, int number_inside, bool item_is_inside);
 };
 /**
@@ -30,11 +30,11 @@ template <typename T> class Selection {
  */
 template <typename T>
 Selection<T>::Selection(T& item, int number_total, int number_inside, bool item_is_inside)
-    : item(&item), number_total(number_total), number_inside(number_inside), item_is_inside(item_is_inside) {}
+    : item(&item), n_total(number_total), n_inside(number_inside), is_inside(item_is_inside) {}
 
 enum class BiasDirection { ENTER_REGION, EXIT_REGION, NO_CROSSING }; //!< Controls the bias direction
 
-double bias(double outside_rejection_probability, int number_total, int number_inside,
+double bias(double outside_rejection_probability, int n_total, int n_inside,
             BiasDirection direction); //!< Bias energy (kT)
 
 /**
@@ -52,7 +52,7 @@ class RegionSampler {
     double outside_rejection_probability = 1.0; //!< Probability to reject a particle outside region
     std::unique_ptr<Region::RegionBase> region; //!< This defines the smart MC region
   protected:
-    virtual void to_json(json& j) const; //!< Serialise to json
+    virtual void to_json(json& j) const = 0; //!< Serialise to json
 
   public:
     std::optional<int> fixed_count_inside; //!< Set this to speed up (skip) region check
@@ -73,15 +73,13 @@ class RegionSampler {
         if (item == range.end()) {
             return std::nullopt;
         }
-        const auto item_is_inside = region->inside(*item);
-        if (!item_is_inside && random() < outside_rejection_probability) {
-            return std::nullopt; // reject outside items w. `outside_rejection_probability`
+        const auto inside = region->inside(*item); // is it inside or outside region?
+        if (not inside && outside_rejection_probability < random()) {
+            return std::nullopt;
         }
-
         const auto number_total = ranges::distance(range.begin(), range.end());
-        const auto number_inside = getNumberInside(range); // number of elements inside region
-
-        return Selection<T>(*item, number_total, number_inside, item_is_inside);
+        const auto number_inside = getNumberInside(range);
+        return Selection<T>(*item, number_total, number_inside, inside);
     }
 
     /**
@@ -105,15 +103,14 @@ class RegionSampler {
     template <typename T> double bias(const Selection<T>& selection) {
         BiasDirection direction;
         const auto moved_item_is_inside = region->inside(*(selection.item)); // may have changed due to move
-        if (selection.item_is_inside && !moved_item_is_inside) {
+        if (selection.is_inside && (!moved_item_is_inside)) {
             direction = BiasDirection::EXIT_REGION;
-        } else if (!selection.item_is_inside && moved_item_is_inside) {
+        } else if (moved_item_is_inside && (!selection.is_inside)) {
             direction = BiasDirection::ENTER_REGION;
         } else {
             direction = BiasDirection::NO_CROSSING;
         }
-        return SmartMonteCarlo::bias(outside_rejection_probability, selection.number_total, selection.number_inside,
-                                     direction);
+        return SmartMonteCarlo::bias(outside_rejection_probability, selection.n_total, selection.n_inside, direction);
     }
 };
 

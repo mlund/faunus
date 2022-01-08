@@ -7,12 +7,12 @@
 #
 # The SMC region is a sphere of radius 2
 # and centered at the edge of the container
-# (x=5)
+# (at x=4)
 #
 temperature: 300
-random: {seed: fixed}
-geometry: {type: sphere, radius: 5}
-mcloop: {macro: 10, micro: 50000}
+random: {seed: hardware}
+geometry: {type: sphere, radius: 2}
+mcloop: {macro: 10, micro: 100000}
 
 atomlist:
   - a: {mw: 1.0}
@@ -23,13 +23,13 @@ moleculelist:
       rigid: true
       keeppos: true
       structure:
-        - a: [5.000, 0.0, 0.0]
-        - a: [4.999, 0.0, 0.0]
+        - a: [2.000, 0.0, 0.0]
+        - a: [1.999, 0.0, 0.0]
   - test:
       rigid: true
       insdir: [1,0,0]
       structure:
-        - b: [4.999, 0.0, 0.0]
+        - b: [0.0, 0.0, 0.0]
 
 insertmolecules:
   - ref: {N: 1}
@@ -45,9 +45,9 @@ moves:
       dir: [1,0,0]
       region:
         policy: ellipsoid
-        reject_outside: 0.9
-        parallel_radius: 2
-        perpendicular_radius: 2
+        reject_outside: 0.1
+        parallel_radius: 1
+        perpendicular_radius: 1
         index1: 0
         index2: 1
 

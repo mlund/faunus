@@ -257,6 +257,7 @@ class TranslateRotate : public MoveBase {
 template <typename T> class SmartMonteCarloMoveSupport : public SmartMonteCarlo::RegionSampler {
   private:
     int bias_update_interval = 100;
+    Average<double> mean_bias;
     AverageStdev<double> mean_count_inside;    //!< Average number of groups found inside region
     void analyzeCountInside(int count_inside); //!< Track and analyze inside count
     void to_json(json& j) const override;
@@ -287,15 +288,21 @@ template <typename T> void SmartMonteCarloMoveSupport<T>::analyzeCountInside(int
 }
 template <typename T> double SmartMonteCarloMoveSupport<T>::bias() {
     if (selection) {
-        analyzeCountInside(selection->number_inside);
-        return SmartMonteCarlo::RegionSampler::bias(*selection);
+        analyzeCountInside(selection->n_inside);
+        const auto bias_energy = SmartMonteCarlo::RegionSampler::bias(*selection);
+        mean_bias += bias_energy;
+        return bias_energy;
     }
+    mean_bias += 0.0;
     return 0.0;
 }
 template <typename T> void SmartMonteCarloMoveSupport<T>::to_json(json& j) const {
     SmartMonteCarlo::RegionSampler::to_json(j);
     if (!mean_count_inside.empty()) {
         j["mean number inside"] = mean_count_inside.avg();
+    }
+    if (!mean_bias.empty()) {
+        j["mean bias energy (kT)"] = mean_bias.avg();
     }
 }
 

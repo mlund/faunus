@@ -358,6 +358,8 @@ class VolumeMove : public MoveBase {
  */
 class ChargeMove : public MoveBase {
   private:
+    Average<double> mean_bias;
+    bool use_quadratic_displacement = true; //!< Displace linearly along q^2
     Average<double> mean_squared_charge_displacement;
     double max_charge_displacement = 0.0;
     double charge_displacement = 0.0;
@@ -370,9 +372,8 @@ class ChargeMove : public MoveBase {
     void _accept(Change &) override;
     void _reject(Change &) override;
     double bias(Change& change, double old_energy, double new_energy) override;
+    double getChargeDisplacement(const Particle& particle) const;
 
-  public:
-  private:
     ChargeMove(Space& spc, std::string_view name, std::string_view cite);
 
   public:

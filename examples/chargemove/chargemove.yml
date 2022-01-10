@@ -1,7 +1,7 @@
 #!/usr/bin/env yason.py
 #
 # Test charge move of a single particle
-# that can have q=[0,1] as enforced by
+# that can have q=[-1.5,1.0] as enforced by
 # the constraint energy. We expect a uniform
 # distribution along q which may be verified
 # with the notebook.
@@ -23,12 +23,13 @@ insertmolecules:
   - ref: {N: 1}
 
 energy:
-  - constrain: {type: atom, index: 0, property: q, range: [0,1]}
+  - constrain: {type: atom, index: 0, property: q, range: [-1.5,1.0]}
 
 moves:
   - charge:
       index: 0
       dq: 0.5
+      quadratic: false
 
 analysis:
   - reactioncoordinate: {file: q.dat.gz, nstep: 5, type: atom, property: q, index: 0}

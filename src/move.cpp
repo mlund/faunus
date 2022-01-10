@@ -544,12 +544,33 @@ void ChargeMove::_from_json(const json& j) {
 void ChargeMove::_move(Change& change) {
     if (std::fabs(max_charge_displacement) > 0.0) {
         auto& particle = spc.particles.at(particle_index); // refence to particle
-        charge_displacement = max_charge_displacement * (slump() - 0.5);
+        if constexpr (false) {
+            // normal linear displacement in q (no bias required)
+            charge_displacement = max_charge_displacement * (slump() - 0.5);
+        } else {
+            // linear displacement in q^2 (bias energy required)
+            // @todo properly handle negative charges
+            auto q = particle.charge * particle.charge + max_charge_displacement * (slump() - 0.5);
+            if (q < 0) {
+                q = -sqrt(-q);
+            } else {
+                q = sqrt(q);
+            }
+            charge_displacement = q - particle.charge;
+        }
         particle.charge += charge_displacement;
         change.groups.push_back(group_change); // add to list of moved groups
     } else
         charge_displacement = 0.0;
 }
+
+double ChargeMove::bias(Change& change, [[maybe_unused]] double old_energy, double new_energy) {
+    if (change && std::isfinite(new_energy)) {
+        return 0.0; // @todo derive
+    }
+    return 0.0;
+}
+
 void ChargeMove::_accept(Change&) { mean_squared_charge_displacement += charge_displacement * charge_displacement; }
 void ChargeMove::_reject(Change&) { mean_squared_charge_displacement += 0.0; }
 

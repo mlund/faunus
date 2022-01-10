@@ -652,7 +652,7 @@ ContainerOverlap::ContainerOverlap(const Space& spc) : spc(spc) { name = "Contai
 
 Isobaric::Isobaric(const json& j, const Space& spc) : spc(spc) {
     name = "isobaric";
-    citation_information = "Frenkel & Smith 2nd Ed (Eq. 5.4.13)";
+    citation_information = "doi:10/dhn4v6 alt. Frenkel & Smith, 2nd Ed (Eq. 5.4.13)";
 
     for (const auto& [key, conversion_factor] : pressure_units) {
         if (auto it = j.find(key); it != j.end()) {

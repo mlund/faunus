@@ -369,7 +369,10 @@ class ChargeMove : public MoveBase {
     void _move(Change &change) override;
     void _accept(Change &) override;
     void _reject(Change &) override;
+    double bias(Change& change, double old_energy, double new_energy) override;
 
+  public:
+  private:
     ChargeMove(Space& spc, std::string_view name, std::string_view cite);
 
   public:

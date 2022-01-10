@@ -358,10 +358,11 @@ class VolumeMove : public MoveBase {
  */
 class ChargeMove : public MoveBase {
   private:
-    Average<double> msqd; // mean squared displacement
-    double dq = 0, deltaq = 0;
-    int atomIndex;
-    Change::GroupChange cdata;
+    Average<double> mean_squared_charge_displacement;
+    double max_charge_displacement = 0.0;
+    double charge_displacement = 0.0;
+    ParticleVector::size_type particle_index;
+    Change::GroupChange group_change;
 
     void _to_json(json &j) const override;
     void _from_json(const json &j) override;
@@ -369,9 +370,7 @@ class ChargeMove : public MoveBase {
     void _accept(Change &) override;
     void _reject(Change &) override;
 
-  protected:
-    using MoveBase::spc;
-    ChargeMove(Space &spc, std::string name, std::string cite);
+    ChargeMove(Space& spc, std::string_view name, std::string_view cite);
 
   public:
     explicit ChargeMove(Space &spc);

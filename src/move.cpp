@@ -523,37 +523,40 @@ void VolumeMove::_reject([[maybe_unused]] Change& change) {
 
 void ChargeMove::_to_json(json& j) const {
     using namespace u8;
-    j = {{"index", atomIndex},
-         {"dq", dq},
-         {rootof + bracket(Delta + "q" + squared), std::sqrt(msqd.avg())},
-         {cuberoot + rootof + bracket(Delta + "q" + squared), std::cbrt(std::sqrt(msqd.avg()))}};
+    j = {{"index", particle_index}, {"dq", max_charge_displacement}};
+    if (!mean_squared_charge_displacement.empty()) {
+        j["√⟨Δq²⟩"] = std::sqrt(mean_squared_charge_displacement.avg());
+    }
     roundJSON(j, 3);
 }
 void ChargeMove::_from_json(const json& j) {
-    dq = j.at("dq").get<double>();
-    atomIndex = j.at("index").get<int>();
-    auto git = spc.findGroupContaining(spc.particles.at(atomIndex)); // group containing atomIndex
-    cdata.group_index = std::distance(spc.groups.begin(), git);      // integer *index* of moved group
-    cdata.relative_atom_indices[0] =
-        std::distance(git->begin(), spc.particles.begin() + atomIndex); // index of particle rel. to group
+    max_charge_displacement = j.at("dq").get<double>();
+    particle_index = j.at("index").get<decltype(particle_index)>();
+    auto group_it = spc.findGroupContaining(spc.particles.at(particle_index));
+    if (group_it == spc.groups.end()) {
+        throw ConfigurationError("index {} does not belong to any group", particle_index);
+    }
+    group_change.group_index = spc.getGroupIndex(*group_it);
+    group_change.relative_atom_indices.at(0) =
+        std::distance(group_it->begin(), spc.particles.begin() + particle_index); // index of particle rel. to group
 }
-void ChargeMove::_move(Change& change) {
-    if (dq > 0) {
-        auto& p = spc.particles.at(atomIndex); // refence to particle
-        double qold = p.charge;
-        p.charge += dq * (slump() - 0.5);
-        deltaq = p.charge - qold;
-        change.groups.push_back(cdata); // add to list of moved groups
-    } else
-        deltaq = 0;
-}
-void ChargeMove::_accept(Change&) { msqd += deltaq * deltaq; }
-void ChargeMove::_reject(Change&) { msqd += 0; }
 
-ChargeMove::ChargeMove(Space& spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {
+void ChargeMove::_move(Change& change) {
+    if (std::fabs(max_charge_displacement) > 0.0) {
+        auto& particle = spc.particles.at(particle_index); // refence to particle
+        charge_displacement = max_charge_displacement * (slump() - 0.5);
+        particle.charge += charge_displacement;
+        change.groups.push_back(group_change); // add to list of moved groups
+    } else
+        charge_displacement = 0.0;
+}
+void ChargeMove::_accept(Change&) { mean_squared_charge_displacement += charge_displacement * charge_displacement; }
+void ChargeMove::_reject(Change&) { mean_squared_charge_displacement += 0.0; }
+
+ChargeMove::ChargeMove(Space& spc, std::string_view name, std::string_view cite) : MoveBase(spc, name, cite) {
     repeat = 1;
-    cdata.internal = true;                 // the group is internally changed
-    cdata.relative_atom_indices.resize(1); // we change exactly one atom
+    group_change.internal = true;                 // the group is internally changed
+    group_change.relative_atom_indices.resize(1); // we change exactly one atom
 }
 
 ChargeMove::ChargeMove(Space& spc) : ChargeMove(spc, "charge", "") {}

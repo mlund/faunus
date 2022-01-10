@@ -1,0 +1,36 @@
+#!/usr/bin/env yason.py
+#
+# Test charge move of a single particle
+# that can have q=[0,1] as enforced by
+# the constraint energy. We expect a uniform
+# distribution along q which may be verified
+# with the notebook.
+#
+temperature: 300
+random: {seed: hardware}
+geometry: {type: sphere, radius: 2}
+mcloop: {macro: 10, micro: 200000}
+
+atomlist:
+  - a: {mw: 1.0, q: 0.5}
+
+moleculelist:
+  - ref:
+      atomic: true
+      atoms: [a]
+
+insertmolecules:
+  - ref: {N: 1}
+
+energy:
+  - constrain: {type: atom, index: 0, property: q, range: [0,1]}
+
+moves:
+  - charge:
+      index: 0
+      dq: 0.5
+
+analysis:
+  - reactioncoordinate: {file: q.dat.gz, nstep: 5, type: atom, property: q, index: 0}
+  - sanity: {nstep: 10000}
+

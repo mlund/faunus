@@ -28,6 +28,7 @@ template <class value_type = double, class counter_type = unsigned long int> cla
     auto avg() const { return value_sum / static_cast<value_type>(number_of_samples); } //!< Average
     explicit operator value_type() const { return avg(); }                              //!< Static cast operator
     bool operator<(const Average& other) const { return avg() < other.avg(); }          //!< Compare means
+    operator bool() const { return number_of_samples > 0; }                             //!< Check if not empty
 
     /**
      * @brief Add value to average
@@ -112,6 +113,10 @@ class AverageStdev : public Average<value_type, counter_type> {
     auto rms() const {
         return std::sqrt(squared_value_sum / static_cast<value_type>(number_of_samples));
     } //!< Root-mean-square
+
+    auto rsd() const {
+        return empty() ? 0.0 : stdev() / avg();
+    } //!< Relative standard deviation or coefficient of variation
 
     value_type stdev() const {
         if (empty()) {

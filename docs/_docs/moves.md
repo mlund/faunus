@@ -151,8 +151,9 @@ Preferential selction of particles can be enabled via the `region` keyword which
 some moves to pick particles or groups preferentially from a given _region_. As described
 in [doi:10/frvx8j](https://doi.org/frvx8j) a bias is introduced which is automatically
 accounted for. The preference for sampling inside the region is controlled by the `symmetry`
-keyword (often denoted _p_ in the litterature). If set to one, no bias is introduces, whereas
-if set to a low number, more sampling will be made from inside the region.
+keyword (often denoted _p_).
+If set to one, no bias is introduced, whereas
+if set to a low number, more sampling is done inside the region.
 
 For example:
 
@@ -173,8 +174,9 @@ The available regions are:
 
 #### Ellipsoid
 
-The connection vector between two reference particles defines an ellipsoid.
-The distance between the particles is unimportant and only the direction is used.
+The connection vector between two (moving) reference particles defines an ellipsoid
+centered at the midpoint between the reference particles.
+The reference particle separation is unimportant, only the direction is used.
 
 `policy=ellipsoid`     | Description
 ---------------------- | ----------------------------------------------------------------
@@ -186,12 +188,13 @@ The distance between the particles is unimportant and only the direction is used
 `group_com=false`      | Test only mass center of molecular groups
 
 
-#### Molecule
+#### Within Molecule
 
-Samples from within a threshold from a molecule type. This can be useful to for example
-preferentially update solvent molecules in a dilute solute solution.
-The `com` keyword is available if the selected `molecule` has a well-defines mass-center,
-i.e. if `is_atomic=false`.
+Samples from within a threshold from a molecule type. This can be useful for _e.g._
+preferentially sample solvent molecules around dilute solute molecules.
+The `com` keyword is available if the selected `molecule` has a well-defined mass-center,
+_i.e._ if `is_atomic=false`.
+It is also possible to use only the mass center for the moved groups by setting `group_com`.
 
 `policy=within_molid`  | Description
 ---------------------- | ----------------------------------------------------------------

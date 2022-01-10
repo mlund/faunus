@@ -306,7 +306,7 @@ std::unique_ptr<MoveBase> createMove(const std::string& name, const json& proper
         std::unique_ptr<MoveBase> move;
         if (name == "moltransrot") {
             if (properties.contains("region")) {
-                return std::make_unique<SmartTranslateRotate>(spc, properties);
+                return std::make_unique<SmarterTranslateRotate>(spc, properties);
             }
             move = std::make_unique<TranslateRotate>(spc);
         } else if (name == "conformationswap") {
@@ -1037,7 +1037,7 @@ TranslateRotate::TranslateRotate(Space& spc) : TranslateRotate(spc, "moltransrot
  * This is called *after* the move and the `bias()` function will determine if the move
  * resulted in a flux over the region boundary and return the appropriate bias.
  */
-double SmartTranslateRotate::bias(Change& change, double old_energy, double new_energy) {
+double SmarterTranslateRotate::bias(Change& change, double old_energy, double new_energy) {
     return TranslateRotate::bias(change, old_energy, new_energy) + smartmc.bias();
 }
 
@@ -1045,18 +1045,19 @@ double SmartTranslateRotate::bias(Change& change, double old_energy, double new_
  * Upon calling `select()`, the `outside_rejection_probability` is used to exclude particles
  * outside and may thus often return `std::nullopt`.
  */
-TranslateRotate::OptionalGroup SmartTranslateRotate::findRandomMolecule() {
+TranslateRotate::OptionalGroup SmarterTranslateRotate::findRandomMolecule() {
     auto mollist = spc.findMolecules(molid, Space::Selection::ACTIVE);
     return smartmc.select(mollist, slump);
 }
 
-void SmartTranslateRotate::_to_json(json& j) const {
+void SmarterTranslateRotate::_to_json(json& j) const {
     TranslateRotate::_to_json(j);
     smartmc.to_json(j["smartmc"]);
 }
 
-SmartTranslateRotate::SmartTranslateRotate(Space& spc, const json& j)
-    : TranslateRotate(spc, "moltransrot", "doi:10/frvx8j"), smartmc(spc, j.at("region")) {
+SmarterTranslateRotate::SmarterTranslateRotate(Space& spc, const json& j)
+    : TranslateRotate(spc, "moltransrot", "doi:10/frvx8j")
+    , smartmc(spc, j.at("region")) {
     this->from_json(j);
 }
 } // namespace Faunus::Move

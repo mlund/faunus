@@ -5,19 +5,8 @@
 #include <range/v3/view/filter.hpp>
 #include <range/v3/view/transform.hpp>
 
-/**
-Possible layout:
-
-regions:
-    subspace1:
-        type: within
-        radius: 7
-        molecules: [membrane]
-        com: true
-*/
-
 namespace Faunus {
-class Space; // forward declare Space
+class Space;
 
 /**
  * Subspaces around particles, molecules etc.
@@ -44,12 +33,11 @@ class RegionBase {
     virtual bool isInside(const Point& position) const = 0; //!< true if point is inside region
   public:
     const RegionType type;
+    bool use_group_mass_center = false;           //!< Use group mass-center to check if inside region
     virtual std::optional<double> volume() const; //!< Volume of region if applicable
     virtual void to_json(json& j) const = 0;
     virtual ~RegionBase() = default;
     explicit RegionBase(RegionType type);
-
-    bool use_group_mass_center = false; //!< Use group mass-center to check if inside region
 
     bool inside(const Particle& particle) const; //!< Determines if particle is inside region
     bool inside(const Group& group) const;       //!< Determines of groups is inside region
@@ -61,7 +49,7 @@ class RegionBase {
     }
 };
 
-/*
+/**
  * @brief Factory function to generate all known regions from json
  */
 std::unique_ptr<RegionBase> createRegion(const Space& spc, const json& j);
@@ -79,10 +67,10 @@ void to_json(json& j, const RegionBase& region);
  */
 class WithinMoleculeType : public RegionBase {
   private:
-    const Space& spc;                          //!< reference to space
-    const MoleculeData::index_type molid;      //!< molid to target
-    const bool use_region_mass_center = false; //!< true = with respect to center of mass of `molid`
-    const double threshold_squared;            //!< squared distance threshold from other particles or com
+    const Space& spc;                     //!< reference to space
+    const MoleculeData::index_type molid; //!< molid to target
+    const bool use_region_mass_center;    //!< true = with respect to center of mass of `molid`
+    const double threshold_squared;       //!< squared distance threshold from other particles or com
     bool within_threshold(const Point& position1, const Point& position2) const;
 
   public:
@@ -119,12 +107,14 @@ class MovingEllipsoid : public RegionBase {
     const Space& spc;
     const ParticleVector::size_type particle_index_1; //!< Index of first reference particle
     const ParticleVector::size_type particle_index_2; //!< Index of second reference particle
-    const double parallel_radius;                     //!< ellipsoidal radius along axis connecting reference atoms
-    const double perpendicular_radius; //!< ellipsoidal radius perpendicular to axis connecting reference atoms
+    const double parallel_radius;                     //!< radius along axis connecting reference atoms
+    const double perpendicular_radius;                //!< radius perpendicular to axis connecting reference atoms
     const double parallel_radius_squared;
 
     const Point& reference_position_1; //!< Reference to first reference particle position
     const Point& reference_position_2; //!< Reference to second reference particle position
+
+    std::pair<Point, Point> getEllipsoidPositionAndDirection() const;
 
   public:
     MovingEllipsoid(const Space& spc, ParticleVector::size_type particle_index1,

@@ -6,10 +6,9 @@
 namespace Faunus {
 namespace Region {
 
-RegionBase::RegionBase(RegionType type) : type(type) {}
-
+RegionBase::RegionBase(RegionType type)
+    : type(type) {}
 std::optional<double> RegionBase::volume() const { return std::nullopt; }
-
 bool RegionBase::inside(const Particle& particle) const { return isInside(particle.pos); }
 
 bool RegionBase::inside(const Group& group) const {
@@ -47,6 +46,7 @@ std::unique_ptr<RegionBase> createRegion(const Space& spc, const json& j) {
         throw ConfigurationError("unknown region type");
     }
 }
+
 void to_json(json& j, const RegionBase& region) {
     region.to_json(j);
     j["policy"] = region.type;
@@ -69,8 +69,11 @@ void WithinMoleculeType::to_json(json& j) const {
  */
 WithinMoleculeType::WithinMoleculeType(const Space& spc, std::string_view molecule_name, double threshold,
                                        bool use_region_mass_center, bool use_group_mass_center)
-    : RegionBase(RegionType::WITHIN_MOLID), spc(spc), molid(findMoleculeByName(molecule_name).id()),
-      use_region_mass_center(use_region_mass_center), threshold_squared(threshold * threshold) {
+    : RegionBase(RegionType::WITHIN_MOLID)
+    , spc(spc)
+    , molid(findMoleculeByName(molecule_name).id())
+    , use_region_mass_center(use_region_mass_center)
+    , threshold_squared(threshold * threshold) {
     if (use_region_mass_center && !Faunus::molecules.at(molid).isMolecular()) {
         throw ConfigurationError("center of mass threshold ill-defined for `{}`", molecule_name);
     }
@@ -83,7 +86,7 @@ WithinMoleculeType::WithinMoleculeType(const Space& spc, const json& j)
 
 bool WithinMoleculeType::isInside(const Point& position) const {
     using ranges::cpp20::any_of;
-    auto is_inside_group = [&](const Group& group) {
+    auto position_is_inside = [&](const Group& group) {
         if (use_region_mass_center) {
             return within_threshold(position, *group.massCenter());
         }
@@ -91,7 +94,7 @@ bool WithinMoleculeType::isInside(const Point& position) const {
                       [&](const auto& position_in_group) { return within_threshold(position, position_in_group); });
     };
     auto groups = spc.findMolecules(molid, Space::Selection::ACTIVE);
-    return any_of(groups, is_inside_group);
+    return any_of(groups, position_is_inside);
 }
 
 std::optional<double> WithinMoleculeType::volume() const {
@@ -111,7 +114,10 @@ bool WithinMoleculeType::within_threshold(const Point& position1, const Point& p
  * @param radius Radius of spherical region
  */
 SphereAroundParticle::SphereAroundParticle(const Space& spc, ParticleVector::size_type index, double radius)
-    : RegionBase(RegionType::WITHIN_PARTICLE), spc(spc), particle_index(index), radius_squared(radius * radius) {}
+    : RegionBase(RegionType::WITHIN_PARTICLE)
+    , spc(spc)
+    , particle_index(index)
+    , radius_squared(radius * radius) {}
 
 SphereAroundParticle::SphereAroundParticle(const Space& spc, const json& j)
     : SphereAroundParticle(spc, j.at("index").get<double>(), j.at("radius").get<double>()) {}
@@ -119,31 +125,40 @@ SphereAroundParticle::SphereAroundParticle(const Space& spc, const json& j)
 bool SphereAroundParticle::isInside(const Point& position) const {
     return spc.geometry.sqdist(position, spc.particles.at(particle_index).pos) < radius_squared;
 }
+
 std::optional<double> SphereAroundParticle::volume() const {
     return 4.0 * pc::pi / 3.0 * std::pow(radius_squared, 1.5);
 }
+
 void SphereAroundParticle::to_json(json& j) const {
     j = {{"index", particle_index}, {"threshold", std::sqrt(radius_squared)}};
 }
 
 bool MovingEllipsoid::isInside(const Point& position) const {
-    Point r21_half = 0.5 * spc.geometry.vdist(reference_position_2, reference_position_1); // half ref2 -> ref1
-    const auto r21_half_len = r21_half.norm();
-    // is this check needed?
-    if (parallel_radius_squared < r21_half_len) {
-        faunus_logger->error("Parallel radius ({} Å) smaller than half distance between reference atoms ({} Å)",
-                             parallel_radius, r21_half_len);
-    }
-    Point midpoint = spc.geometry.vdist(reference_position_2, r21_half); // between ref1 & ref2
-    Point midpoint_pos = spc.geometry.vdist(position, midpoint);         // midpoint -> pos
+    const auto [midpoint, direction] = getEllipsoidPositionAndDirection();
+    auto midpoint_pos = spc.geometry.vdist(position, midpoint);          // midpoint -> pos
     const auto midpoint_pos_len = midpoint_pos.norm() + pc::epsilon_dbl; // must be *exactly* zero
-    const auto cos_theta = midpoint_pos.dot(r21_half) / midpoint_pos_len / r21_half_len;
+    const auto cos_theta = midpoint_pos.dot(direction) / midpoint_pos_len;
     const auto theta = std::acos(cos_theta);
     const auto x = cos_theta * midpoint_pos_len;
     const auto y = std::sin(theta) * midpoint_pos_len;
     const auto coord =
         x * x / parallel_radius_squared + y * y / (perpendicular_radius * perpendicular_radius); // normalized coord
-    return coord < 1.0; // (>1.0 → outside, <1.0 → inside)
+    return coord < 1.0;                                                                          // < 1.0 -> inside
+}
+
+/**
+ * @return Center of ellipsoid and it's normalized direction
+ */
+std::pair<Point, Point> MovingEllipsoid::getEllipsoidPositionAndDirection() const {
+    auto direction = 0.5 * spc.geometry.vdist(reference_position_2, reference_position_1);
+    const auto distance = direction.norm();
+    if (parallel_radius < distance) { // is this check needed?
+        faunus_logger->error("Parallel radius ({} Å) smaller than half distance between reference atoms ({} Å)",
+                             parallel_radius, distance);
+    }
+    auto midpoint = spc.geometry.vdist(reference_position_2, direction); // half 2 -> 1
+    return {midpoint, direction / distance};
 }
 
 /**
@@ -160,11 +175,15 @@ bool MovingEllipsoid::isInside(const Point& position) const {
 MovingEllipsoid::MovingEllipsoid(const Space& spc, ParticleVector::size_type particle_index1,
                                  ParticleVector::size_type particle_index2, double parallel_radius,
                                  double perpendicular_radius, bool use_group_mass_center)
-    : RegionBase(RegionType::WITHIN_ELLIPSOID), spc(spc), particle_index_1(particle_index1),
-      particle_index_2(particle_index2), parallel_radius(parallel_radius), perpendicular_radius(perpendicular_radius),
-      parallel_radius_squared(parallel_radius * parallel_radius),
-      reference_position_1(spc.particles.at(particle_index_1).pos),
-      reference_position_2(spc.particles.at(particle_index_2).pos) {
+    : RegionBase(RegionType::WITHIN_ELLIPSOID)
+    , spc(spc)
+    , particle_index_1(particle_index1)
+    , particle_index_2(particle_index2)
+    , parallel_radius(parallel_radius)
+    , perpendicular_radius(perpendicular_radius)
+    , parallel_radius_squared(parallel_radius * parallel_radius)
+    , reference_position_1(spc.particles.at(particle_index_1).pos)
+    , reference_position_2(spc.particles.at(particle_index_2).pos) {
     this->use_group_mass_center = use_group_mass_center;
     if (particle_index_1 == particle_index_2) {
         throw ConfigurationError("reference indices must differ");

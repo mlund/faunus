@@ -358,26 +358,41 @@ class VolumeMove : public MoveBase {
  */
 class ChargeMove : public MoveBase {
   private:
-    Average<double> mean_bias;
-    bool use_quadratic_displacement = true; //!< Displace linearly along q^2
     Average<double> mean_squared_charge_displacement;
+    Change::GroupChange group_change;
+
+    void _move(Change& change) override;
+    void _accept(Change&) override;
+    void _reject(Change&) override;
+    void _from_json(const json& j) override;
+    virtual double getChargeDisplacement(const Particle& particle) const;
+    ChargeMove(Space& spc, std::string_view name, std::string_view cite);
+
+  protected:
     double max_charge_displacement = 0.0;
     double charge_displacement = 0.0;
     ParticleVector::size_type particle_index;
-    Change::GroupChange group_change;
-
-    void _to_json(json &j) const override;
-    void _from_json(const json &j) override;
-    void _move(Change &change) override;
-    void _accept(Change &) override;
-    void _reject(Change &) override;
-    double bias(Change& change, double old_energy, double new_energy) override;
-    double getChargeDisplacement(const Particle& particle) const;
-
-    ChargeMove(Space& spc, std::string_view name, std::string_view cite);
+    void _to_json(json& j) const override;
 
   public:
-    explicit ChargeMove(Space &spc);
+    explicit ChargeMove(Space& spc);
+};
+
+/**
+ * @brief As `ChargeMove` but performs displacements in squared charge
+ *
+ * The displacement is q' = sqrt(q^2 + dq^2) and the following bias
+ * must be added to enforce symmetry: u/kT = ln( |q'/q| )
+ */
+class QuadraticChargeMove : public ChargeMove {
+  private:
+    Average<double> mean_bias;
+    void _to_json(json& j) const override;
+    double getChargeDisplacement(const Particle& particle) const override;
+    double bias(Change& change, double old_energy, double new_energy) override;
+
+  public:
+    explicit QuadraticChargeMove(Space& spc);
 };
 
 /**

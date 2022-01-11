@@ -314,7 +314,11 @@ std::unique_ptr<MoveBase> createMove(const std::string& name, const json& proper
         } else if (name == "volume") {
             move = std::make_unique<VolumeMove>(spc);
         } else if (name == "charge") {
-            move = std::make_unique<ChargeMove>(spc);
+            if (properties.value("quadratic", true)) {
+                move = std::make_unique<QuadraticChargeMove>(spc);
+            } else {
+                move = std::make_unique<ChargeMove>(spc);
+            }
         } else if (name == "chargetransfer") {
             move = std::make_unique<ChargeTransfer>(spc);
         } else if (name == "rcmc") {
@@ -522,20 +526,15 @@ void VolumeMove::_reject([[maybe_unused]] Change& change) {
 // ------------------------------------------------
 
 void ChargeMove::_to_json(json& j) const {
-    using namespace u8;
-    j = {{"index", particle_index}, {"dq", max_charge_displacement}, {"quadratic", use_quadratic_displacement}};
+    j = {{"index", particle_index}, {"dq", max_charge_displacement}};
     if (!mean_squared_charge_displacement.empty()) {
         j["√⟨Δq²⟩"] = std::sqrt(mean_squared_charge_displacement.avg());
-    }
-    if (!mean_bias.empty()) {
-        j["mean bias energy"] = mean_bias.avg();
     }
     roundJSON(j, 3);
 }
 void ChargeMove::_from_json(const json& j) {
     max_charge_displacement = j.at("dq").get<double>();
     particle_index = j.at("index").get<decltype(particle_index)>();
-    use_quadratic_displacement = j.value("quadratic", true);
     auto group_it = spc.findGroupContaining(spc.particles.at(particle_index));
     if (group_it == spc.groups.end()) {
         throw ConfigurationError("index {} does not belong to any group", particle_index);
@@ -546,40 +545,16 @@ void ChargeMove::_from_json(const json& j) {
 }
 
 void ChargeMove::_move(Change& change) {
-    auto& particle = spc.particles.at(particle_index); // refence to particle
-    charge_displacement = getChargeDisplacement(particle);
-    if (std::fabs(charge_displacement) > pc::epsilon_dbl) {
+    if (std::fabs(max_charge_displacement) > pc::epsilon_dbl) {
+        auto& particle = spc.particles.at(particle_index); // refence to particle
+        charge_displacement = getChargeDisplacement(particle);
         particle.charge += charge_displacement;
         change.groups.push_back(group_change); // add to list of moved groups
     }
 }
 
-double ChargeMove::getChargeDisplacement(const Particle& particle) const {
-    if (std::fabs(max_charge_displacement) < pc::epsilon_dbl) {
-        return 0.0;
-    }
-    if (use_quadratic_displacement) {
-        // linear displacement in q^2 (bias energy required)
-        const auto sign = particle.charge < 0.0 ? -1.0 : 1.0;
-        const auto q = sign * particle.charge * particle.charge + max_charge_displacement * (slump() - 0.5);
-        if (q < 0.0) {
-            return -std::sqrt(-q) - particle.charge;
-        }
-        return std::sqrt(q) - particle.charge;
-    }
-    // linear displacement in q (no bias required)
+double ChargeMove::getChargeDisplacement([[maybe_unused]] const Particle& particle) const {
     return max_charge_displacement * (slump() - 0.5);
-}
-
-double ChargeMove::bias(Change& change, [[maybe_unused]] double old_energy, [[maybe_unused]] double new_energy) {
-    if (use_quadratic_displacement && change) {
-        const auto new_charge = spc.particles.at(particle_index).charge;
-        const auto old_charge = new_charge - charge_displacement;
-        const auto bias_energy = std::log(std::fabs(new_charge / old_charge)); // @todo derive this!
-        mean_bias += bias_energy;
-        return bias_energy;
-    }
-    return 0.0;
 }
 
 void ChargeMove::_accept(Change&) { mean_squared_charge_displacement += charge_displacement * charge_displacement; }
@@ -592,6 +567,48 @@ ChargeMove::ChargeMove(Space& spc, std::string_view name, std::string_view cite)
 }
 
 ChargeMove::ChargeMove(Space& spc) : ChargeMove(spc, "charge", "") {}
+
+// -----------------------------------
+
+/**
+ * Displacement in q^2 (bias energy required)
+ *
+ * @returns dq = q' - q
+ */
+double QuadraticChargeMove::getChargeDisplacement(const Particle& particle) const {
+    const auto old_charge = particle.charge;
+    const auto sign = (old_charge < 0.0) ? -1.0 : 1.0;
+    auto new_charge = sign * old_charge * old_charge + max_charge_displacement * (slump() - 0.5);
+    new_charge = (new_charge < 0.0) ? -std::sqrt(-new_charge) : std::sqrt(new_charge);
+    return new_charge - old_charge;
+}
+
+/**
+ * @return Bias energy/kT = ln( |q'/q| )
+ */
+double QuadraticChargeMove::bias(Change& change, [[maybe_unused]] double old_energy,
+                                 [[maybe_unused]] double new_energy) {
+    if (change.empty()) {
+        return 0.0;
+    }
+    const auto new_charge = spc.particles.at(particle_index).charge;
+    const auto old_charge = new_charge - charge_displacement;
+    const auto bias_energy = std::log(std::fabs(new_charge / old_charge)); // @todo derive this!
+    mean_bias += bias_energy;
+    return bias_energy;
+}
+
+void QuadraticChargeMove::_to_json(json& j) const {
+    ChargeMove::_to_json(j);
+    j["quadratic"] = true;
+    if (!mean_bias.empty()) {
+        j["mean bias energy"] = mean_bias.avg();
+    }
+}
+
+QuadraticChargeMove::QuadraticChargeMove(Space& spc) : ChargeMove(spc) {}
+
+// -----------------------------------
 
 void ChargeTransfer::_to_json(json& j) const {
     using namespace u8;

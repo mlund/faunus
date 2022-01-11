@@ -29,9 +29,9 @@ moves:
   - charge:
       index: 0
       dq: 0.5
-      quadratic: false
+      quadratic: true
 
 analysis:
-  - reactioncoordinate: {file: q.dat.gz, nstep: 5, type: atom, property: q, index: 0}
+  - reactioncoordinate: {file: q.dat.gz, nstep: 2, type: atom, property: q, index: 0}
   - sanity: {nstep: 10000}
 

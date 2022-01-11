@@ -647,6 +647,16 @@ properties:
             type: object
             properties:
 
+                charge:
+                    description: "Displaces charge of selected particle"
+                    type: object
+                    properties:
+                        dq: {type: number, description: "Max displacement parameter"}
+                        index: {type: integer, description: "Index of particle to affect"}
+                        quadratic: {type: boolean, default: true, description: "Displace squared charge"}
+                    required: [dq, index]
+                    additionalProperties: false
+
                 conformationswap:
                     description: Swap molecular configurations from loaded library of structures
                     type: object

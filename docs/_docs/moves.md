@@ -156,8 +156,13 @@ are distributed on a sphere then $\kappa^2=0$, while if on a straight line, $\ka
 `quadratic=true` | Displace linearly along q^2 instead of q
 
 This performs a fractional charge move on a specific atom. The charge
-displacement can be performed linerly along $q$ or linerly along $q^2$.
-The latter introduces a bias that is automatically corrected for.
+displacement can be performed linerly along $q$ or linearly along $q^2$.
+For the latter the following bias energy will be added to ensure
+uniform sampling of $q$,
+
+$$
+u = k\_BT\ln \left ( \left | q^{\prime} / q \right |\right )
+$$
 
 Limitations:
 This move changes the particle charge and therefore cannot be used with

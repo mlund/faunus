@@ -56,9 +56,12 @@
             }
         },
         {
-            "density": {
-                "atomic": null,
-                "molecular": {
+            "molecule_density": {
+                "∛⟨V⟩": 300.0,
+                "⟨1/V⟩": 3.704e-08,
+                "⟨V⟩": 27000000.0,
+                "⟨∛V⟩": 300.0,
+                "densities": {
                     "Ca++": {
                         "c/M": 0.021070087529344344
                     },
@@ -74,11 +77,7 @@
                 },
                 "nstep": 5,
                 "relative time": 0.0755,
-                "samples": 40000,
-                "∛⟨V⟩": 300.0,
-                "⟨1/V⟩": 3.704e-08,
-                "⟨V⟩": 27000000.0,
-                "⟨∛V⟩": 300.0
+                "samples": 40000
             }
         },
         {
@@ -88,18 +87,6 @@
         }
     ],
     "compiler": "4.2.1 Compatible Apple LLVM 11.0.0 (clang-1100.0.33.12)",
-    "energy": [
-        {
-            "hamiltonian": [
-                {
-                    "bonded": {
-                        "bondlist-intramolecular": [],
-                        "relative time": 0.00034187054710602973
-                    }
-                }
-            ]
-        }
-    ],
     "geometry": {
         "length": [
             300.0,

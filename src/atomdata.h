@@ -53,7 +53,7 @@ class AtomData { // has to be a class when a constant reference is used
     double tension = 0;          //!< Surface tension [kT/Å^2]
     double tfe = 0;              //!< Transfer free energy [J/mol/angstrom^2/M]
     Point mu = {0, 0, 0};        //!< Dipole moment unit vector
-    Point scdir = {1, 0, 0};     //!< Sphero-cylinder direction
+    Point scdir = {0, 0, 0};     //!< Sphero-cylinder direction
     bool hydrophobic = false;    //!< Is the particle hydrophobic?
     bool implicit = false;       //!< Is the particle implicit (e.g. proton)?
     InteractionData interaction; //!< Arbitrary interaction parameters, e.g., epsilons in various potentials
@@ -83,7 +83,7 @@ extern std::vector<AtomData> atoms; //!< Global instance of atom list
  * @return an iterator to the first element, or `last` if not found
  * @see findAtomByName(), findMoleculeByName()
  */
-template <class Trange> auto findName(Trange& rng, const std::string& name) {
+template <class Trange> auto findName(Trange& rng, std::string_view name) {
     return std::find_if(rng.begin(), rng.end(), [&name](auto& i) { return i.name == name; });
 }
 
@@ -91,7 +91,7 @@ template <class Trange> auto findName(Trange& rng, const std::string& name) {
  * @brief An exception to indicate an unknown atom name in the input.
  */
 struct UnknownAtomError : public GenericError {
-    explicit UnknownAtomError(const std::string& atom_name);
+    explicit UnknownAtomError(std::string_view atom_name);
 };
 
 /**
@@ -103,13 +103,14 @@ struct UnknownAtomError : public GenericError {
  * @return an atom found
  * @throw UnknownAtomError  when no atom found
  */
-AtomData& findAtomByName(const std::string& name);
+AtomData& findAtomByName(std::string_view name);
 
 /**
  * @brief Search for `name` in `database` and return `id()`
  * @tparam Trange Container of object having `.name` and `.id()` data members
  * @param database Iterable range having `.name` and `.id()` members
  * @param names Container with names to convert to id
+ * @throw if names not found
  * @return Vector of ids matching `names`
  *
  * This is typically used with `Faunus::atoms` or `Faunus::molecules`
@@ -122,16 +123,17 @@ template <class Trange> auto names2ids(Trange& database, const std::vector<std::
     using id_type = typename Trange::value_type::index_type;
     std::vector<id_type> index;
     index.reserve(names.size());
-    for (auto& name : names) {
+    for (const auto& name : names) {
         if (name == "*") { // wildcard selecting all id's
             index.resize(database.size());
             std::iota(index.begin(), index.end(), id_type(0));
             return index;
         }
-        if (auto it = findName(database, name); it != database.end())
-            index.push_back(it->id());
-        else
+        if (auto it = findName(database, name); it != database.end()) {
+            index.template emplace_back(it->id());
+        } else {
             throw std::out_of_range("name '" + name + "' not found");
+        }
     }
     return index;
 }

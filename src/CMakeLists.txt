@@ -30,6 +30,7 @@ if (ENABLE_MPI)
     if (MPI_CXX_FOUND)
         target_link_libraries(project_options INTERFACE MPI::MPI_CXX)
         target_compile_definitions(project_options INTERFACE ENABLE_MPI)
+        target_link_libraries(project_options INTERFACE mpl)
     endif()
 endif()
 
@@ -65,6 +66,7 @@ set(hdrs analysis.h average.h atomdata.h auxiliary.h bonds.h celllist.h celllist
 	chainmove.h clustermove.h core.h forcemove.h energy.h externalpotential.h geometry.h group.h io.h
 	molecule.h montecarlo.h move.h mpicontroller.h particle.h penalty.h potentials.h
 	reactioncoordinate.h rotate.h sasa.h space.h speciation.h random.h regions.h tensor.h units.h
+        aux/arange.h
 	aux/eigen_cerealisation.h aux/eigensupport.h aux/iteratorsupport.h aux/multimatrix.h
 	aux/eigen_cerealisation.h aux/eigensupport.h aux/equidistant_table.h aux/error_function.h
 	aux/exp_function.h aux/invsqrt_function.h aux/iteratorsupport.h aux/legendre.h aux/multimatrix.h

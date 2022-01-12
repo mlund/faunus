@@ -100,15 +100,16 @@ void PQRTrajectoryReader::loadTrajectory(const std::string& filename, std::vecto
 XTCTrajectoryFrame::XTCTrajectoryFrame(int number_of_atoms) { initNumberOfAtoms(number_of_atoms); }
 
 XTCTrajectoryFrame::XTCTrajectoryFrame(const TrajectoryFrame& frame) {
-    initNumberOfAtoms(frame.coordinates.size());
+    initNumberOfAtoms(static_cast<int>(frame.coordinates.size()));
     importFrame(frame);
 }
 
-void XTCTrajectoryFrame::operator=(const TrajectoryFrame& frame) {
+XTCTrajectoryFrame& XTCTrajectoryFrame::operator=(const TrajectoryFrame& frame) {
     if (frame.coordinates.size() != number_of_atoms) {
         throw std::runtime_error("wrong number of particles to be assign into the XTC frame");
     }
     importFrame(frame);
+    return *this;
 }
 
 void XTCTrajectoryFrame::importFrame(const TrajectoryFrame& frame) {
@@ -119,7 +120,7 @@ void XTCTrajectoryFrame::importFrame(const TrajectoryFrame& frame) {
 
 void XTCTrajectoryFrame::importTimestamp(const int step, const float time) {
     xtc_step = step;
-    xtc_time = time / 1.0_ps;
+    xtc_time = time / static_cast<float>(1.0_ps);
 }
 
 void XTCTrajectoryFrame::importBox(const Point& box) {
@@ -153,7 +154,7 @@ void XTCTrajectoryFrame::exportFrame(TrajectoryFrame& frame) const {
 
 void XTCTrajectoryFrame::exportTimestamp(int& step, float& time) const {
     step = xtc_step;
-    time = xtc_time * 1.0_ps;
+    time = xtc_time * static_cast<float>(1.0_ps);
 }
 
 void XTCTrajectoryFrame::exportBox(Point& box) const {
@@ -168,7 +169,7 @@ void XTCTrajectoryFrame::exportCoordinates(PointVector& coordinates, const Point
     if (coordinates.size() != number_of_atoms) {
         throw std::runtime_error("wrong number of particles in the loaded XTC frame");
     }
-    for (size_t i = 0; i < number_of_atoms; ++i) {
+    for (int i = 0; i < number_of_atoms; ++i) {
         XTCVector xtc_atom_coordinates(xtc_coordinates.get()[i]);
         coordinates[i] = Point(xtc_atom_coordinates.cast<double>() * 1.0_nm) - offset;
     }
@@ -264,18 +265,17 @@ bool XTCReader::readFrame() {
 }
 
 bool XTCReader::read(TrajectoryFrame& frame) {
-    bool is_ok = readFrame();
-    if (is_ok) {
+    if (readFrame()) {
         frame = *xtc_frame;
+        return true;
     }
-    return is_ok;
+    return false;
 }
 
 // ========== XTCWriter ==========
 
-XTCWriter::XTCWriter(const std::string& filename) : filename(filename) {
-    xdrfile = XDRfile::xdrfile_open(filename.c_str(), "w");
-    if (xdrfile == nullptr) {
+XTCWriter::XTCWriter(const std::string& filename) : xdrfile(XDRfile::xdrfile_open(filename.c_str(), "w")), filename(filename) {
+    if (!xdrfile) {
         throw std::runtime_error(fmt::format("xtc file {} could not be opened", filename));
     }
 }
@@ -318,7 +318,7 @@ void XTCWriter::writeNext(const TrajectoryFrame& frame) {
     ++step_counter;
 }
 
-ParticleVector fastaToParticles(const std::string& fasta_sequence, double bond_length, const Point& origin) {
+ParticleVector fastaToParticles(std::string_view fasta_sequence, double bond_length, const Point& origin) {
     ParticleVector particles;                  // particle vector
     auto ids = fastaToAtomIds(fasta_sequence); // convert letters to atom ids
     std::transform(ids.begin(), ids.end(), std::back_inserter(particles), [&](auto& id) {
@@ -378,7 +378,7 @@ ParticleVector loadStructure(const std::string& filename, bool prefer_charges_fr
  * @param fasta_sequence FASTA sequence, capital letters.
  * @return vector of verified and existing atom id's
  */
-std::vector<AtomData::index_type> fastaToAtomIds(const std::string& fasta_sequence) {
+std::vector<AtomData::index_type> fastaToAtomIds(std::string_view fasta_sequence) {
     const std::map<char, std::string> map = {{'A', "ALA"},
                                              {'R', "ARG"},
                                              {'N', "ASN"},

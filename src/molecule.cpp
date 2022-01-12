@@ -718,7 +718,7 @@ void to_json(json &j, const MoleculeInserter &inserter) { inserter.to_json(j); }
  * @param ignored_other_particles Other particles in the system (ignored for this inserter!)
  * @return Inserted particle vector
  */
-ParticleVector RandomInserter::operator()(Geometry::GeometryBase &geo, MoleculeData &molecule,
+ParticleVector RandomInserter::operator()(const Geometry::GeometryBase &geo, MoleculeData &molecule,
                                           [[maybe_unused]] const ParticleVector &ignored_other_particles) {
     auto particles = molecule.conformations.sample(random.engine); // random, weighted conformation
     if (particles.empty()) {
@@ -953,7 +953,16 @@ void to_json(json &j, const ReactionData &reaction) {
                          {"neutral", a.only_neutral_molecules},
                          {"pK'", -a.lnK / std::log(10)}};
 }
-//!< Serialize to JSON object
+
+std::pair<decltype(Faunus::atoms)::const_iterator, decltype(Faunus::molecules)::const_iterator>
+ReactionData::findAtomOrMolecule(const std::string& atom_or_molecule_name) {
+    auto atom_iter = findName(Faunus::atoms, atom_or_molecule_name);
+    auto molecule_iter = findName(Faunus::molecules, atom_or_molecule_name);
+    if (molecule_iter == Faunus::molecules.end() and atom_iter == Faunus::atoms.end()) {
+        throw std::runtime_error("unknown species '" + atom_or_molecule_name + "'");
+    }
+    return {atom_iter, molecule_iter};
+}
 
 TEST_CASE("[Faunus] ReactionData") {
     using doctest::Approx;
@@ -986,19 +995,35 @@ void MoleculeInserter::to_json(json &) const {}
 
 TEST_SUITE_END();
 
-UnknownMoleculeError::UnknownMoleculeError(const std::string& molecule_name)
-        : GenericError("unknown molecule: '{}'", molecule_name) {}
-
+UnknownMoleculeError::UnknownMoleculeError(std::string_view molecule_name)
+    : GenericError("unknown molecule: '{}'", molecule_name) {}
 
 /**
  * @throw if molecule not found
  */
-MoleculeData& findMoleculeByName(const std::string& name) {
+MoleculeData& findMoleculeByName(std::string_view name) {
     const auto result = findName(Faunus::molecules, name);
     if (result == Faunus::molecules.end()) {
         throw UnknownMoleculeError(name);
     }
     return *result;
+}
+std::pair<std::vector<std::string>, std::vector<std::string>> parseReactionString(const std::string& process_string) {
+    using Tvec = std::vector<std::string>;
+    Tvec names; // vector of atom/molecule names
+    std::string atom_or_molecule_name;
+    std::istringstream iss(process_string);
+    while (iss >> atom_or_molecule_name) { // stream all words into vector
+        names.push_back(atom_or_molecule_name);
+    }
+
+    names.erase(std::remove(names.begin(), names.end(), "+"), names.end());
+
+    auto it = std::find(names.begin(), names.end(), "=");
+    if (it == names.end()) {
+        throw std::runtime_error("products and reactants must be separated by ' = '");
+    }
+    return {Tvec(names.begin(), it), Tvec(it + 1, names.end())};
 }
 
 } // namespace Faunus

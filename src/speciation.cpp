@@ -445,13 +445,27 @@ void SpeciationMove::_move(Change &change) {
         if (!change.empty()) {
             change.matter_change = true; // Attempting to change the number of atoms / molecules
             std::sort(change.groups.begin(), change.groups.end()); // change groups *must* be sorted!
+            updateGroupMassCenters(change);
         }
-    } catch(SpeciationMoveException &) {
-        change.clear();
+    } catch (SpeciationMoveException&) { change.clear(); }
+}
+
+/**
+ * Speciation move may induce a change in molecular mass centers
+ */
+void SpeciationMove::updateGroupMassCenters(const Change& change) const {
+    for (const auto& change_data : change.groups) {
+        if (change_data.dNatomic || change_data.dNswap) {
+            auto& group = spc.groups.at(change_data.group_index);
+            if (group.massCenter()) { // update only if group has a well-defined mass center
+                group.updateMassCenter(spc.geometry.getBoundaryFunc(), group.mass_center);
+            }
+        }
     }
 }
 
-double SpeciationMove::bias(Change &, double, double) {
+double SpeciationMove::bias([[maybe_unused]] Change& change, [[maybe_unused]] double old_energy,
+                            [[maybe_unused]] double new_energy) {
     // The acceptance/rejection of the move is affected by the equilibrium constant
     // but unaffected by the change in bonded energy
     return -reaction->lnK + bond_energy;
@@ -501,7 +515,7 @@ void SpeciationMove::_reject(Change &) {
     }
 }
 
-SpeciationMove::SpeciationMove(Space& spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {}
+SpeciationMove::SpeciationMove(Space& spc, std::string_view name, std::string_view cite) : MoveBase(spc, name, cite) {}
 
 SpeciationMove::SpeciationMove(Space &spc) : SpeciationMove(spc, "rcmc", "doi:10/fqcpg3") {}
 

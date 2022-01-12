@@ -83,8 +83,6 @@ double Group::mass() const {
     return std::accumulate(begin(), end(), 0.0, [](double sum, auto& particle) { return sum + particle.traits().mw; });
 }
 
-auto Group::positions() { return ranges::cpp20::views::transform(*this, &Particle::pos); }
-
 void Group::wrap(Geometry::BoundaryFunction boundary) {
     boundary(mass_center);
     for (auto& particle : *this) {

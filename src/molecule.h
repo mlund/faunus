@@ -4,8 +4,6 @@
 #include "auxiliary.h"
 #include "particle.h"
 #include "random.h"
-#include "spdlog/spdlog.h"
-#include "rotate.h"
 #include <set>
 
 namespace Faunus {
@@ -18,6 +16,7 @@ namespace Geometry {
 struct GeometryBase;
 }
 
+class QuaternionRotate;
 class MoleculeData;
 
 /**
@@ -32,7 +31,7 @@ class MoleculeData;
  * and molecule data.
  */
 struct MoleculeInserter {
-    virtual ParticleVector operator()(Geometry::GeometryBase &geo, MoleculeData &mol,
+    virtual ParticleVector operator()(const Geometry::GeometryBase &geo, MoleculeData &mol,
                                       const ParticleVector &other_particles) = 0;
     virtual void from_json(const json& j);
     virtual void to_json(json& j) const;
@@ -60,7 +59,7 @@ class RandomInserter : public MoleculeInserter {
     bool allow_overlap = false;  //!< Set to true to skip container overlap check
     int max_trials = 20'000;     //!< Maximum number of container overlap checks
 
-    ParticleVector operator()(Geometry::GeometryBase &geo, MoleculeData &molecule,
+    ParticleVector operator()(const Geometry::GeometryBase &geo, MoleculeData &molecule,
                               const ParticleVector &ignored_other_particles = ParticleVector()) override;
     void from_json(const json &j) override;
     void to_json(json &j) const override;
@@ -260,7 +259,7 @@ extern std::vector<MoleculeData> molecules;
  * @brief An exception to indicate an unknown molecule name in the input.
  */
 struct UnknownMoleculeError: public GenericError {
-    explicit UnknownMoleculeError(const std::string &molecule_name);
+    explicit UnknownMoleculeError(std::string_view molecule_name);
 };
 
 /**
@@ -272,7 +271,7 @@ struct UnknownMoleculeError: public GenericError {
  * @return a molecule found
  * @throw UnknownMoleculeError  when no molecule found
  */
-MoleculeData& findMoleculeByName(const std::string& name);
+MoleculeData& findMoleculeByName(std::string_view name);
 
 /**
  * @brief Constructs MoleculeData from JSON.
@@ -416,14 +415,8 @@ class ReactionData {
      *
      * Note that molecules and atoms *cannot* have the same name
      */
-    static auto findAtomOrMolecule(const std::string& atom_or_molecule_name) {
-        auto atom_iter = findName(Faunus::atoms, atom_or_molecule_name);
-        auto molecule_iter = findName(Faunus::molecules, atom_or_molecule_name);
-        if (molecule_iter == Faunus::molecules.end() and atom_iter == Faunus::atoms.end()) {
-            throw std::runtime_error("unknown species '" + atom_or_molecule_name + "'");
-        }
-        return std::make_pair(atom_iter, molecule_iter);
-    }
+    static std::pair<decltype(Faunus::atoms)::const_iterator, decltype(Faunus::molecules)::const_iterator>
+    findAtomOrMolecule(const std::string& atom_or_molecule_name);
 
 }; //!< End of class
 
@@ -433,23 +426,7 @@ class ReactionData {
  * Reactants and products are split by a `=` sign. All elements in the string
  * must be separated by a white-space.
  */
-inline auto parseReactionString(const std::string &process_string) {
-    using Tvec = std::vector<std::string>;
-    Tvec names; // vector of atom/molecule names
-    std::string atom_or_molecule_name;
-    std::istringstream iss(process_string);
-    while (iss >> atom_or_molecule_name) { // stream all words into vector
-        names.push_back(atom_or_molecule_name);
-    }
-
-    names.erase(std::remove(names.begin(), names.end(), "+"), names.end());
-
-    auto it = std::find(names.begin(), names.end(), "=");
-    if (it == names.end()) {
-        throw std::runtime_error("products and reactants must be separated by ' = '");
-    }
-    return std::make_pair(Tvec(names.begin(), it), Tvec(it + 1, names.end()));
-}
+std::pair<std::vector<std::string>, std::vector<std::string>> parseReactionString(const std::string& process_string);
 
 void from_json(const json &, ReactionData &);
 void to_json(json &, const ReactionData &);

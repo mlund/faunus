@@ -83,7 +83,7 @@ struct Polarizable : public ParticlePropertyBase {
 };
 
 struct Quadrupole : public ParticlePropertyBase {
-    Tensor Q;                                                           //!< Quadrupole
+    Tensor Q = Tensor::Zero();                                          //!< Quadrupole
     void rotate(const Eigen::Quaterniond& q, const Eigen::Matrix3d& m); //!< Rotate quadrupole moment
     void to_json(json& j) const override;
     void from_json(const json& j) override;
@@ -92,7 +92,7 @@ struct Quadrupole : public ParticlePropertyBase {
 }; // Quadrupole property
 
 struct Cigar : public ParticlePropertyBase {
-    Point scdir = {1, 0, 0};                                          //!< Sphero-cylinder direction unit vector
+    Point scdir = {0, 0, 0};                                          //!< Sphero-cylinder direction unit vector
     double sclen = 0;                                                 //!< Length
     void rotate(const Eigen::Quaterniond& q, const Eigen::Matrix3d&); //!< Rotate sphero-cylinder
     void to_json(json& j) const override;

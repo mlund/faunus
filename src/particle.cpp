@@ -28,8 +28,8 @@ void Dipole::to_json(json &j) const {
 }
 
 void Dipole::from_json(const json &j) {
-    mu = j.value("mu", Point(1, 0, 0));
-    mulen = j.value("mulen", mulen);
+    mu = j.value("mu", Point::Zero().eval());
+    mulen = j.value("mulen", 0.0);
 }
 
 void Polarizable::rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &m) {
@@ -53,7 +53,7 @@ void Quadrupole::rotate(const Eigen::Quaterniond &, const Eigen::Matrix3d &m) { 
 
 void Quadrupole::to_json(json &j) const { j["Q"] = Q; }
 
-void Quadrupole::from_json(const json &j) { Q = j.value("Q", Q); }
+void Quadrupole::from_json(const json& j) { Q = j.value("Q", Tensor(Tensor::Zero()));}
 
 void Cigar::rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &) { scdir = q * scdir; }
 
@@ -62,11 +62,11 @@ void Cigar::to_json(json &j) const {
     j["sclen"] = sclen;
 }
 void Cigar::from_json(const json &j) {
-    scdir = j.value("scdir", scdir);
+    scdir = j.value("scdir", Point::Zero().eval());
     sclen = j.value("sclen", sclen);
 }
 
-const AtomData &Particle::traits() const { return atoms.at(id); }
+const AtomData &Particle::traits() const { return atoms[id]; }
 
 /**
  * @warning Performance is sub-optimal as conversion is done through a json object
@@ -119,18 +119,16 @@ Particle::ParticleExtension &Particle::createExtension() {
     return *ext;
 }
 
-void from_json(const json &j, Particle &p) {
-    p.id = j.value("id", -1);
-    p.pos = j.value("pos", Point(0, 0, 0));
-    p.charge = j.value("q", 0.0);
-
-    p.ext = std::make_shared<Particle::ParticleExtension>();
-    from_json(j, *p.ext);
-    Particle::ParticleExtension empty_extended_particle;
-    // why can't we compare ParticleExtension directly?!
-    // (slow and ugly)
-    if (json(*p.ext) == json(empty_extended_particle))
-        p.ext = nullptr; // no extended features found in json
+void from_json(const json &j, Particle &particle) {
+    particle.id = j.value("id", -1);
+    particle.pos = j.value("pos", Point::Zero().eval());
+    particle.charge = j.value("q", 0.0);
+    particle.ext = std::make_unique<Particle::ParticleExtension>(j);
+    // Disable extended features if unused. Slow and ugly check:
+    const auto empty_extended_particle = json(Particle::ParticleExtension());
+    if (json(*particle.ext) == empty_extended_particle) {
+        particle.ext = nullptr; // no extended features found in json
+    }
 }
 void to_json(json &j, const Particle &p) {
     if (p.ext) {

@@ -86,15 +86,15 @@ WithinMoleculeType::WithinMoleculeType(const Space& spc, const json& j)
 
 bool WithinMoleculeType::isInside(const Point& position) const {
     using ranges::cpp20::any_of;
-    auto position_is_inside = [&](const Group& group) {
+    auto has_position_inside = [&](const Group& group) {
         if (use_region_mass_center) {
             return within_threshold(position, *group.massCenter());
         }
         return any_of(group.positions(),
                       [&](const auto& position_in_group) { return within_threshold(position, position_in_group); });
-    };
+    }; // true if `position` is within the threshold distance of `group`
     auto groups = spc.findMolecules(molid, Space::Selection::ACTIVE);
-    return any_of(groups, position_is_inside);
+    return any_of(groups, has_position_inside);
 }
 
 std::optional<double> WithinMoleculeType::volume() const {

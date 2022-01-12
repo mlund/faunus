@@ -53,6 +53,8 @@ class MetropolisMonteCarlo {
         std::unique_ptr<Energy::Hamiltonian> pot; //!< Hamiltonian for calc. potential energy
         void sync(const State& other,
                   const Change& change); //!< Sync with another state (the other state is not modified)
+        Space& getSpace();
+        Energy::Hamiltonian& getHamiltonian();
     };
 
   private:
@@ -79,6 +81,8 @@ class MetropolisMonteCarlo {
     void restore(const json& j);                               //!< Restores system from previously store json object
     static bool metropolisCriterion(double energy_change);     //!< Metropolis criterion
     ~MetropolisMonteCarlo();                                   //!< Required due to unique_ptr to incomplete type
+    State& getTrialState();                                    //!< Get trial state where trial moves are performed
+    State& getState();                                         //!< Get current accepted state
 };
 
 void from_json(const json &, MetropolisMonteCarlo::State &); //!< Build state from json object

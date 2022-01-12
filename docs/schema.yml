@@ -678,6 +678,7 @@ properties:
                         dprot: {type: number}
                         molecule: {type: string}
                         repeat: {type: [integer, string]}
+                        region: {type: object, description: "Enable smart MC region search"}
                         dir:
                             type: array
                             items: {type: number}

@@ -1,0 +1,59 @@
+#!/usr/bin/env yason.py
+#
+# Smart MC displacement of particles
+# fixed on a line (x-axis). No energy is added
+# and the distibution along the line should
+# therefore be uniform.
+#
+# The SMC region is a sphere of radius 2
+# and centered at the edge of the container
+# (at x=4)
+#
+temperature: 300
+random: {seed: hardware}
+geometry: {type: sphere, radius: 2}
+mcloop: {macro: 10, micro: 50000}
+
+atomlist:
+  - a: {mw: 1.0}
+  - b: {mw: 1.0}
+
+moleculelist:
+  - ref: # defines the region
+      rigid: true
+      keeppos: true
+      structure:
+        - a: [2.000, 0.0, 0.0]
+        - a: [1.999, 0.0, 0.0]
+  - test:
+      rigid: true
+      insdir: [1,0,0]
+      structure:
+        - b: [0.0, 0.0, 0.0]
+
+insertmolecules:
+  - ref: {N: 1}
+  - test: {N: 10}
+
+energy: []
+
+moves:
+  - moltransrot:
+      molecule: test
+      dp: 0.5
+      dprot: 0
+      dir: [1,0,0]
+      region:
+        policy: ellipsoid
+        symmetry: 0.3
+        parallel_radius: 1
+        perpendicular_radius: 1
+        index1: 0
+        index2: 1
+
+analysis:
+  - reactioncoordinate: {file: x.dat.gz, nstep: 10, type: molecule, property: com_x, index: 1}
+  - savestate: {file: confout.pqr}
+  - savestate: {file: state.json}
+  - sanity: {nstep: 1000}
+

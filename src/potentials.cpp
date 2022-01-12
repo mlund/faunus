@@ -4,6 +4,7 @@
 #include "auxiliary.h"
 #include "aux/arange.h"
 #include "spdlog/spdlog.h"
+#include "smart_montecarlo.h"
 #include <coulombgalore.h>
 
 namespace Faunus {

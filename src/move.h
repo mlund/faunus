@@ -6,11 +6,13 @@
 #include "geometry.h"
 #include "space.h"
 #include "io.h"
+#include "smart_montecarlo.h"
 #include "aux/timers.h"
 #include "aux/sparsehistogram.h"
 #include <range/v3/view/filter.hpp>
 #include <range/v3/view/iota.hpp>
 #include <range/v3/view/indirect.hpp>
+#include <range/v3/algorithm/count_if.hpp>
 #include <optional>
 
 namespace Faunus {
@@ -71,8 +73,8 @@ class MoveBase {
     const std::string& getName() const;
 };
 
-void from_json(const json &, MoveBase &); //!< Configure any move via json
-void to_json(json &, const MoveBase &);
+void from_json(const json&, MoveBase&); //!< Configure any move via json
+void to_json(json&, const MoveBase&);
 
 /**
  * @brief Replay simulation from a trajectory
@@ -85,19 +87,19 @@ class ReplayMove : public MoveBase {
     TrajectoryFrame frame;                       //!< recently read frame (w/o coordinates)
     bool end_of_trajectory = false;              //!< flag raised when end of trajectory was reached
     // FIXME resolve always accept / always reject on the Faunus level
-    const double force_accept = -1e12;           //!< a very negative value of energy difference to force-accept the move
+    const double force_accept = -1e12; //!< a very negative value of energy difference to force-accept the move
 
-    void _move(Change &change) override;
-    void _to_json(json &) const override;
-    void _from_json(const json &) override;
-    double bias(Change &, double, double) override;
+    void _move(Change& change) override;
+    void _to_json(json&) const override;
+    void _from_json(const json&) override;
+    double bias(Change&, double, double) override;
 
   protected:
     using MoveBase::spc;
-    ReplayMove(Space &spc, std::string name, std::string cite);
+    ReplayMove(Space& spc, std::string name, std::string cite);
 
   public:
-    explicit ReplayMove(Space &spc);
+    explicit ReplayMove(Space& spc);
 };
 
 /**
@@ -112,33 +114,33 @@ class AtomicSwapCharge : public MoveBase {
     std::string molname;  // name of molecule to operate on
     Change::GroupChange cdata;
 
-    void _to_json(json &) const override;
-    void _from_json(const json &) override; //!< Configure via json object
+    void _to_json(json&) const override;
+    void _from_json(const json&) override; //!< Configure via json object
     typename ParticleVector::iterator randomAtom();
-    void _move(Change &change) override;
-    double bias(Change &, double, double) override; //!< adds extra energy change not captured by the Hamiltonian
-    void _accept(Change &) override;
-    void _reject(Change &) override;
+    void _move(Change& change) override;
+    double bias(Change&, double, double) override; //!< adds extra energy change not captured by the Hamiltonian
+    void _accept(Change&) override;
+    void _reject(Change&) override;
 
   protected:
     using MoveBase::spc;
-    AtomicSwapCharge(Space &spc, std::string name, std::string cite);
+    AtomicSwapCharge(Space& spc, std::string name, std::string cite);
 
   public:
-    explicit AtomicSwapCharge(Space &spc);
+    explicit AtomicSwapCharge(Space& spc);
 };
 
 /**
  * @brief Translate and rotate a molecular group
  */
 class AtomicTranslateRotate : public MoveBase {
-    ParticleVector::const_iterator latest_particle;    //!< Iterator to last moved particle
-    const Energy::Hamiltonian& hamiltonian;            //!< Reference to Hamiltonian
-    std::map<int, SparseHistogram<>> energy_histogram; //!< Energy histogram (value) for each particle type (key)
-    double energy_resolution = 0.0;                    //!< Resolution of sampled energy histogram
-    double latest_displacement_squared;                //!< temporary squared displacement
-    void sampleEnergyHistogram();                      //!< Update energy histogram based on latest move
-    void saveHistograms();                             //!< Write histograms for file
+    ParticleVector::const_iterator latest_particle;        //!< Iterator to last moved particle
+    const Energy::Hamiltonian& hamiltonian;                //!< Reference to Hamiltonian
+    std::map<int, SparseHistogram<>> energy_histogram;     //!< Energy histogram (value) for each particle type (key)
+    double energy_resolution = 0.0;                        //!< Resolution of sampled energy histogram
+    double latest_displacement_squared;                    //!< temporary squared displacement
+    void sampleEnergyHistogram();                          //!< Update energy histogram based on latest move
+    void saveHistograms();                                 //!< Write histograms for file
     void checkMassCenter(Space::GroupType& group) const;   //!< Perform test to see if the move violates PBC
     void groupToDisk(const Space::GroupType& group) const; //!< Save structure to disk in case of failure
 
@@ -149,14 +151,14 @@ class AtomicTranslateRotate : public MoveBase {
     std::string molecule_name;                //!< name of molecule to operate on
     Change::GroupChange cdata;                //!< Data for change object
 
-    void _to_json(json &) const override;
-    void _from_json(const json &) override; //!< Configure via json object
-    ParticleVector::iterator randomAtom();  //!< Select random particle to move
+    void _to_json(json&) const override;
+    void _from_json(const json&) override; //!< Configure via json object
+    ParticleVector::iterator randomAtom(); //!< Select random particle to move
 
     virtual void translateParticle(ParticleVector::iterator, double); //!< translate single particle
-    void _move(Change &) override;
-    void _accept(Change &) override;
-    void _reject(Change &) override;
+    void _move(Change&) override;
+    void _accept(Change&) override;
+    void _reject(Change&) override;
 
     AtomicTranslateRotate(Space& spc, const Energy::Hamiltonian& hamiltonian, std::string name, std::string cite);
 
@@ -218,7 +220,12 @@ spc.geo.getBoundaryFunc()); #endif
  */
 class TranslateRotate : public MoveBase {
   protected:
+    using OptionalGroup = std::optional<std::reference_wrapper<Space::GroupType>>;
     int molid = -1; //!< Molecule ID of the molecule(s) to move
+    void _to_json(json& j) const override;
+    TranslateRotate(Space& spc, std::string name, std::string cite);
+
+  private:
     Average<double> mean_squared_displacement;
     Average<double> mean_squared_rotation_angle;
 
@@ -229,70 +236,38 @@ class TranslateRotate : public MoveBase {
     Point translational_direction = {1, 1, 1}; //!< User defined directions along x, y, z
     Point fixed_rotation_axis = {0, 0, 0};     //!< Axis of rotation. 0,0,0 == random.
 
-    std::optional<std::reference_wrapper<Space::GroupType>> findRandomMolecule() const;
+    virtual OptionalGroup findRandomMolecule();
     double translateMolecule(Space::GroupType& group);
     double rotateMolecule(Space::GroupType& group);
     void checkMassCenter(const Space::GroupType& group) const; // sanity check of move
 
-    void _to_json(json &j) const override;
-    void _from_json(const json &j) override;
-    void _move(Change &change) override;
-    void _accept(Change &) override;
-    void _reject(Change &) override;
-
-    TranslateRotate(Space &spc, std::string name, std::string cite);
+    void _from_json(const json& j) override;
+    void _move(Change& change) override;
+    void _accept(Change&) override;
+    void _reject(Change&) override;
 
   public:
-    explicit TranslateRotate(Space &spc);
+    explicit TranslateRotate(Space& spc);
 };
 
 /**
- * @brief Move that preferentially displaces molecules within a specified region around a specified atom type
- * Idea based on the chapter 'Smarter Monte Carlo' in 'Computer Simulation of Liquids' by Allen & Tildesley (p. 317)
- * The current region implemented is an ellipsoid for which you specify radii along length and width of ellipsoid
+ * @brief Smart Monte Carlo version of molecular translation and rotation
  *
+ * The important steps in modifying the original TranslateRotate is to
+ * replace:
+ *
+ * 1. `findRandomMolecule()` which performs the group selection
+ * 2. `bias()` as we need to correct for the asymmetric sampling
  */
-
-class SmartTranslateRotate : public MoveBase {
-  protected:
-    using MoveBase::spc;
-
-    int molid = -1, refid1 = -1, refid2 = -1; // molecule to displace, reference atoms 1 and 2 defining geometry
-    unsigned long cnt;
-    double dptrans = 0, dprot = 0;
-    double p = 1; // initializing probability that a molecule outside geometry is kept as selected molecule
-    double r_x = 0,
-           r_y = 0; // defining lengths of perpendicular radii defining the ellipsoid (or sphere if a and b are equal)
-    double _sqd;    // squared displacement
-    AverageStdev<double> msqd, countNin_avg, countNin_avgBlocks, countNout_avg,
-        countNout_avgBlocks; // mean squared displacement and particle counters
-
-    double cosTheta, theta;            // geometrical variables
-    double x, y;                       // x and y coordinate relative to center of geometry of chosen molecule
-    double coord, coordNew, coordTemp; // normalized coordinates to decide if molecule is inside or outside geometry
-    double randNbr;
-    double _bias = 0, rsd = 0.01, Nin, countNin, countNout, Ntot = 0,
-           cntInner = 0; // bias to add when crossing boundary between in and out, counters keeping track of molecules
-                         // inside, outside geomtry etc...
-
-    Point dir = {1, 1, 1};
-    Point cylAxis = {0, 0, 0}; // axis/vector connecting the two reference atoms
-    Point origo = {0, 0, 0};
-    Point molV = {0, 0, 0}; // coordinate vector of chosen molecule
-
-    bool findBias = true;
-
-    void _to_json(json &j) const override;
-    void _from_json(const json &j) override; //!< Configure via json object
-    void _move(Change &change) override;
-    double bias(Change &, double, double) override;
-    void _accept(Change &) override { msqd += _sqd; }
-    void _reject(Change &) override { msqd += 0; }
-
-    SmartTranslateRotate(Space &spc, std::string name, std::string cite);
+class SmarterTranslateRotate : public TranslateRotate {
+  private:
+    SmarterMonteCarlo::MoveSupport<Group> smartmc;
+    void _to_json(json& j) const override;
+    OptionalGroup findRandomMolecule() override;
+    double bias(Change& change, double old_energy, double new_energy) override;
 
   public:
-    explicit SmartTranslateRotate(Space &spc);
+    SmarterTranslateRotate(Space& spc, const json& j);
 };
 
 /**
@@ -316,9 +291,9 @@ class ConformationSwap : public MoveBase {
     RandomInserter inserter;
     int molid = -1; //!< Molecule ID to operate on
     void copyConformation(ParticleVector& source_particle, ParticleVector::iterator destination) const;
-    void _to_json(json &j) const override;
-    void _from_json(const json &j) override;
-    void _move(Change &change) override;
+    void _to_json(json& j) const override;
+    void _from_json(const json& j) override;
+    void _move(Change& change) override;
     void setRepeat();                   //!< Set move repeat
     void checkConformationSize() const; //!< Do conformations fit simulation cell?
     void checkMassCenterDrift(const Point& old_mass_center, const ParticleVector& particles); //!< Check for CM drift
@@ -326,7 +301,7 @@ class ConformationSwap : public MoveBase {
     ConformationSwap(Space& spc, const std::string& name, const std::string& cite);
 
   public:
-    explicit ConformationSwap(Space &spc);
+    explicit ConformationSwap(Space& spc);
 }; // end of conformation swap move
 
 NLOHMANN_JSON_SERIALIZE_ENUM(ConformationSwap::CopyPolicy, {{ConformationSwap::CopyPolicy::INVALID, nullptr},
@@ -343,14 +318,14 @@ class VolumeMove : public MoveBase {
     double new_volume = 0.0;
     double logarithmic_volume_displacement_factor = 0.0;
 
-    void _to_json(json &j) const override;
-    void _from_json(const json &j) override;
-    void _move(Change &change) override;
+    void _to_json(json& j) const override;
+    void _from_json(const json& j) override;
+    void _move(Change& change) override;
     void _accept(Change& change) override;
     void _reject(Change& change) override;
 
   public:
-    explicit VolumeMove(Space &spc);
+    explicit VolumeMove(Space& spc);
 }; // end of VolumeMove
 
 /**
@@ -364,16 +339,16 @@ class ChargeMove : public MoveBase {
     ParticleVector::size_type particle_index;
     Change::GroupChange group_change;
 
-    void _to_json(json &j) const override;
-    void _from_json(const json &j) override;
-    void _move(Change &change) override;
-    void _accept(Change &) override;
-    void _reject(Change &) override;
+    void _to_json(json& j) const override;
+    void _from_json(const json& j) override;
+    void _move(Change& change) override;
+    void _accept(Change&) override;
+    void _reject(Change&) override;
 
     ChargeMove(Space& spc, std::string_view name, std::string_view cite);
 
   public:
-    explicit ChargeMove(Space &spc);
+    explicit ChargeMove(Space& spc);
 };
 
 /**
@@ -402,18 +377,18 @@ class ChargeTransfer : public MoveBase {
     double sumTemp = 0;
     int i = 0;
 
-    void _to_json(json &j) const override;
-    void _from_json(const json &j) override;
-    void _move(Change &change) override;
-    void _accept(Change &) override;
-    void _reject(Change &) override;
+    void _to_json(json& j) const override;
+    void _from_json(const json& j) override;
+    void _move(Change& change) override;
+    void _accept(Change&) override;
+    void _reject(Change&) override;
 
   protected:
     using MoveBase::spc;
-    ChargeTransfer(Space &spc, std::string name, std::string cite);
+    ChargeTransfer(Space& spc, std::string name, std::string cite);
 
   public:
-    explicit ChargeTransfer(Space &spc);
+    explicit ChargeTransfer(Space& spc);
 };
 
 /**
@@ -429,18 +404,18 @@ class QuadrantJump : public MoveBase {
     double _sqd;          // squared displacement
     Average<double> msqd; // mean squared displacement
 
-    void _to_json(json &j) const override;
-    void _from_json(const json &j) override; //!< Configure via json object
-    void _move(Change &change) override;
-    void _accept(Change &) override { msqd += _sqd; }
-    void _reject(Change &) override { msqd += 0; }
+    void _to_json(json& j) const override;
+    void _from_json(const json& j) override; //!< Configure via json object
+    void _move(Change& change) override;
+    void _accept(Change&) override { msqd += _sqd; }
+    void _reject(Change&) override { msqd += 0; }
 
   protected:
     using MoveBase::spc;
-    QuadrantJump(Space &spc, std::string name, std::string cite);
+    QuadrantJump(Space& spc, std::string name, std::string cite);
 
   public:
-    explicit QuadrantJump(Space &spc);
+    explicit QuadrantJump(Space& spc);
 };
 
 #ifdef ENABLE_MPI
@@ -504,8 +479,8 @@ class MoveCollection {
 
   public:
     MoveCollection(const json& list_of_moves, Space& spc, Energy::Hamiltonian& hamiltonian);
-    void addMove(std::shared_ptr<MoveBase>&& move);             //!< Register new move with correct weight
-    const BasePointerVector<MoveBase>& getMoves() const;        //!< Get list of moves
+    void addMove(std::shared_ptr<MoveBase>&& move);                 //!< Register new move with correct weight
+    const BasePointerVector<MoveBase>& getMoves() const;            //!< Get list of moves
     friend void to_json(json& j, const MoveCollection& propagator); //!< Generate json output
 
     /**

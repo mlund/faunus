@@ -26,6 +26,12 @@ add_test(
         WORKING_DIRECTORY ${EXAMPLES_DIR}/swapconf)
 
 add_test(
+        NAME chargemove
+        COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} chargemove.yml | $<TARGET_FILE:faunus> --nobar\
+    && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} chargemove.out.json out.json --tol 0.05"
+        WORKING_DIRECTORY ${EXAMPLES_DIR}/chargemove)
+
+add_test(
         NAME doublelayer
         COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} doublelayer.yml\
     | $<TARGET_FILE:faunus> --nobar --state doublelayer.state.json\

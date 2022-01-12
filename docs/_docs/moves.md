@@ -213,8 +213,16 @@ It is also possible to use only the mass center for the moved groups by setting 
 ---------------- | ---------------------------------
 `index`          | Atom index to operate on
 `dq`             | Charge displacement
+`quadratic=true` | Displace linearly along q^2 instead of q
 
-This performs a fractional charge move on a specific atom.
+This performs a fractional charge move on a specific atom. The charge
+displacement can be performed linerly along $q$ or linearly along $q^2$.
+For the latter the following bias energy will be added to ensure
+uniform sampling of $q$,
+
+$$
+u = k\_BT\ln \left ( \left | q^{\prime} / q \right |\right )
+$$
 
 Limitations:
 This move changes the particle charge and therefore cannot be used with

@@ -188,9 +188,9 @@ The reference particle separation is unimportant, only the direction is used.
 `group_com=false`      | Test only mass center of molecular groups
 
 
-#### Within Molecule
+#### Within Molecule (experimental)
 
-Samples from within a threshold from a molecule type. This can be useful for _e.g._
+Samples from within a threshold from a molecule type. This can be useful to _e.g._
 preferentially sample solvent molecules around dilute solute molecules.
 The `com` keyword is available if the selected `molecule` has a well-defined mass-center,
 _i.e._ if `is_atomic=false`.

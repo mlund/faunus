@@ -136,8 +136,8 @@ void SphereAroundParticle::to_json(json& j) const {
 
 bool MovingEllipsoid::isInside(const Point& position) const {
     const auto [midpoint, direction] = getEllipsoidPositionAndDirection();
-    auto midpoint_pos = spc.geometry.vdist(position, midpoint);          // midpoint -> pos
-    const auto midpoint_pos_len = midpoint_pos.norm() + pc::epsilon_dbl; // must be *exactly* zero
+    Point midpoint_pos = spc.geometry.vdist(position, midpoint);         // midpoint -> pos
+    const auto midpoint_pos_len = midpoint_pos.norm() + pc::epsilon_dbl; // must not be *exactly* zero
     const auto cos_theta = midpoint_pos.dot(direction) / midpoint_pos_len;
     const auto theta = std::acos(cos_theta);
     const auto x = cos_theta * midpoint_pos_len;
@@ -151,14 +151,14 @@ bool MovingEllipsoid::isInside(const Point& position) const {
  * @return Center of ellipsoid and it's normalized direction
  */
 std::pair<Point, Point> MovingEllipsoid::getEllipsoidPositionAndDirection() const {
-    auto direction = 0.5 * spc.geometry.vdist(reference_position_2, reference_position_1);
+    Point direction = 0.5 * spc.geometry.vdist(reference_position_2, reference_position_1);
     const auto distance = direction.norm();
     if (parallel_radius < distance) { // is this check needed?
         faunus_logger->error("Parallel radius ({} Å) smaller than half distance between reference atoms ({} Å)",
                              parallel_radius, distance);
     }
-    auto midpoint = spc.geometry.vdist(reference_position_2, direction); // half 2 -> 1
-    return {midpoint, direction / distance};
+    Point midpoint = spc.geometry.vdist(reference_position_2, direction); // half 2 -> 1
+    return {midpoint, (direction / distance).eval()};
 }
 
 /**

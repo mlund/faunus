@@ -1447,7 +1447,7 @@ void SamplingPolicyBase::sampleTotalSASA(TBegin first, TEnd last, SASAAnalysis& 
     auto area = analysis.sasa->calcSASA(analysis.spc, first, last);
     analysis.takeSample(area);
     if (analysis.output_stream) {
-        *analysis.output_stream << fmt::format("{} {:.3f} \n", analysis.getNumberOfSteps(), area);
+        *analysis.output_stream << fmt::format("{} {:.3f}\n", analysis.getNumberOfSteps(), area);
     }
 }
 

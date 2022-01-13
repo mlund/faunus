@@ -2,6 +2,7 @@
 #include "core.h"
 #include "molecule.h"
 #include "group.h"
+#include "space.h"
 #include <range/v3/view/filter.hpp>
 #include <range/v3/view/transform.hpp>
 
@@ -71,7 +72,9 @@ class WithinMoleculeType : public RegionBase {
     const MoleculeData::index_type molid; //!< molid to target
     const bool use_region_mass_center;    //!< true = with respect to center of mass of `molid`
     const double threshold_squared;       //!< squared distance threshold from other particles or com
-    bool within_threshold(const Point& position1, const Point& position2) const;
+    inline bool within_threshold(const Point& position1, const Point& position2) const {
+        return spc.geometry.sqdist(position1, position2) < threshold_squared;
+    }
 
   public:
     WithinMoleculeType(const Space& spc, std::string_view molecule_name, double threshold, bool use_region_mass_center,

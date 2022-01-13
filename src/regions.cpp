@@ -104,10 +104,6 @@ std::optional<double> WithinMoleculeType::volume() const {
     return std::nullopt;
 }
 
-bool WithinMoleculeType::within_threshold(const Point& position1, const Point& position2) const {
-    return spc.geometry.sqdist(position1, position2) < threshold_squared;
-}
-
 /**
  * @param spc Space to operate on
  * @param index Particle index used to define center of region

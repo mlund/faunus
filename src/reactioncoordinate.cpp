@@ -7,6 +7,7 @@
 #include "aux/eigensupport.h"
 #include <range/v3/view/filter.hpp>
 #include <range/v3/algorithm/count_if.hpp>
+#include <range/v3/algorithm/for_each.hpp>
 #include <range/v3/view/join.hpp>
 #include "spdlog/spdlog.h"
 
@@ -329,7 +330,7 @@ void MoleculeProperty::selectAtomAtomDistance(const json& j, const Space& spc) {
 }
 void MoleculeProperty::selectGyrationRadius(const Space& spc) {
     function = [&spc, i = index]() {
-        assert(spc.groups.at(index).size() > 1);
+        assert(spc.groups.at(i).size() > 1);
         Tensor S = Geometry::gyration(spc.groups.at(i).begin(), spc.groups.at(i).end(), spc.groups.at(i).mass_center,
                                       spc.geometry.getBoundaryFunc());
         return sqrt(S.trace()); // S.trace() == S.eigenvalues().sum() but faster
@@ -350,25 +351,28 @@ void MoleculeProperty::selectMassCenterDistance(const json& j, const Space& spc)
     indexes = j.value("indexes", decltype(indexes)());
     assert(indexes.size() > 1 && "An array of 2 or 4 indexes should be specified.");
     if (indexes.size() == 4) {
-        function = [&spc, dir = direction, i = indexes[0], j = indexes[1] + 1, k = indexes[2], l = indexes[3] + 1]() {
+        function = [&spc, dir = direction.cast<double>(), i = indexes[0], j = indexes[1] + 1, k = indexes[2],
+                    l = indexes[3] + 1]() {
             Point cm1 = Geometry::massCenter(spc.particles.begin() + i, spc.particles.begin() + j,
                                              spc.geometry.getBoundaryFunc());
             Point cm2 = Geometry::massCenter(spc.particles.begin() + k, spc.particles.begin() + l,
                                              spc.geometry.getBoundaryFunc());
-            return spc.geometry.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).norm();
+            return spc.geometry.vdist(cm1, cm2).cwiseProduct(dir).norm();
         };
     } else if (indexes.size() == 2) {
-        function = [&spc, dir = direction, i = indexes[0], j = indexes[1]]() {
-            auto& cm1 = spc.groups.at(i).mass_center;
-            auto& cm2 = spc.groups.at(j).mass_center;
-            return spc.geometry.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).norm();
+        function = [&spc, dir = direction.cast<double>(), i = indexes[0], j = indexes[1]]() {
+            const auto& cm1 = spc.groups.at(i).mass_center;
+            const auto& cm2 = spc.groups.at(j).mass_center;
+            return spc.geometry.vdist(cm1, cm2).cwiseProduct(dir).norm();
         };
     }
 }
 void MoleculeProperty::selectMinimumGroupDistance(const json& j, const Space& spc) {
     indexes = j.value("indexes", decltype(indexes)());
-    assert(indexes.size() == 2 && "An array of 2 indexes should be specified.");
-    function = [&spc, i = indexes[0], j = indexes[1]]() {
+    if (indexes.size() != 2) {
+        throw ConfigurationError("indexes must have two elements");
+    }
+    function = [&spc, i = indexes.at(0), j = indexes.at(1)]() {
         auto minimum_distance_squared = spc.geometry.getLength().norm();
         for (const auto& particle_i : spc.findAtoms(i)) {
             for (const auto& particle_j : spc.findAtoms(j)) {
@@ -382,28 +386,31 @@ void MoleculeProperty::selectMinimumGroupDistance(const json& j, const Space& sp
 void MoleculeProperty::selectRinner(const json& j, const Space& spc) {
     direction = j.at("dir");
     indexes = j.value("indexes", decltype(indexes)());
-    if (indexes.size() != 3) {
-        throw ConfigurationError("An array of at least 3 indexes should be specified.");
+    if (indexes.size() != 4) {
+        throw ConfigurationError("indexes must have four elements");
     }
-    function = [&spc, &dir = direction, i = indexes[0], j = indexes[1], k = indexes[2], l = indexes[3]]() {
-        Average<double> mean_radius_j;
-        Average<double> mean_radius_i;
+    function = [&spc, &dir = direction, i = indexes.at(0), j = indexes.at(1), k = indexes.at(2), l = indexes.at(3)]() {
+        namespace rv = ranges::cpp20::views;
         auto slicei = spc.findAtoms(i);
-        const Point mass_center = Geometry::massCenter(slicei.begin(), slicei.end(), spc.geometry.getBoundaryFunc());
-        for (const Particle& particle : spc.findAtoms(j)) {
-            mean_radius_j += spc.geometry.vdist(particle.pos, mass_center).cwiseProduct(dir.cast<double>()).norm();
-        }
-        const auto mean_radius = mean_radius_j.avg();
-        for (const Particle& particle : spc.activeParticles()) {
-            if ((particle.id == k) or (particle.id == l)) {
-                const auto radius =
-                    spc.geometry.vdist(particle.pos, mass_center).cwiseProduct(dir.cast<double>()).norm();
-                if (radius < mean_radius) {
-                    mean_radius_i += radius;
-                }
-            }
-        }
-        return mean_radius_i.avg();
+        const auto mass_center = Geometry::massCenter(slicei.begin(), slicei.end(), spc.geometry.getBoundaryFunc());
+
+        // filter and transform lambdas
+        auto k_or_l = [k, l](auto& particle) { return (particle.id == k) or (particle.id == l); };
+        auto radius = [&, dir = dir.cast<double>()](auto& particle) {
+            return spc.geometry.vdist(particle.pos, mass_center).cwiseProduct(dir).norm();
+        };
+        auto mean = [](auto& radii) {
+            Average<double> mean;
+            ranges::cpp20::for_each(radii, [&](auto radius) { mean += radius; });
+            return mean.avg();
+        };
+
+        auto radii_j = spc.findAtoms(j) | rv::transform(radius);
+        auto mean_radii_j = mean(radii_j);
+
+        auto radii = spc.activeParticles() | rv::filter(k_or_l) | rv::transform(radius) |
+                     rv::filter([mean_radii_j](auto radius) { return radius < mean_radii_j; });
+        return mean(radii);
     };
 }
 void MoleculeProperty::selectAngleWithVector(const json& j, const Space& spc) {

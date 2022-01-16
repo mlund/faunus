@@ -965,7 +965,7 @@ properties:
                         nstep: {type: integer}
                         nskip: {type: integer, default: 0, description: Initial steps to skip}
                         type: {type: string, enum: [atom, molecule, system], description: Reaction coordinate type}
-                    required: [file, nstep, type]
+                    required: [nstep, type]
                     allOf:
                         - if:
                               properties: {type: {const: "atom"}}

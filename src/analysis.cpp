@@ -584,41 +584,56 @@ void QRtraj::_to_disk() {
 }
 
 void FileReactionCoordinate::_to_json(json& j) const {
-    json rcjson = *reaction_coordinate; // invoke to_json(...)
-    if (rcjson.count(reaction_coordinate_type) == 0) {
+    json rcjson = static_cast<json>(*reaction_coordinate);
+    if (rcjson.size() != 1) {
         throw std::runtime_error("error writing json for reaction coordinate");
     }
-    j = rcjson[reaction_coordinate_type];
-    j["type"] = reaction_coordinate_type;
-    j["file"] = filename;
+    j = rcjson.begin().value();
+    j["type"] = rcjson.begin().key();
     j.erase("range");      // these are for penalty function
     j.erase("resolution"); // use only, so no need to show
-    if (number_of_samples > 0) {
+    if (stream) {
+        j["file"] = MPI::prefix + filename;
+    }
+    if (mean_reaction_coordinate) {
         j["average"] = mean_reaction_coordinate.avg();
     }
 }
 
 void FileReactionCoordinate::_sample() {
-    if (*stream) {
-        const auto reaction_coordinate_value = reaction_coordinate->operator()();
-        mean_reaction_coordinate += reaction_coordinate_value;
-        (*stream) << fmt::format("{} {:.6f} {:.6f}\n", getNumberOfSteps(), reaction_coordinate_value,
-                                 mean_reaction_coordinate.avg());
+    const auto value = reaction_coordinate->operator()();
+    mean_reaction_coordinate += value;
+    if (stream) {
+        (*stream) << fmt::format("{} {:.6f} {:.6f}\n", getNumberOfSteps(), value, mean_reaction_coordinate.avg());
     }
 }
 
-FileReactionCoordinate::FileReactionCoordinate(const json& j, const Space& spc) : Analysisbase(spc, "reactioncoordinate") {
-    from_json(j);
-    filename = MPI::prefix + j.at("file").get<std::string>();
-    if (stream = IO::openCompressedOutputStream(filename); not *stream) {
-        throw std::runtime_error("could not open create "s + filename);
+FileReactionCoordinate::FileReactionCoordinate(
+    const Space& spc, const std::string& filename,
+    std::unique_ptr<ReactionCoordinate::ReactionCoordinateBase> reaction_coordinate)
+    : Analysisbase(spc, "reactioncoordinate")
+    , filename(filename)
+    , reaction_coordinate(std::move(reaction_coordinate)) {
+    if (filename.empty()) {
+        faunus_logger->warn("{}: no filename given - only the mean coordinate will be saved", name);
+    } else {
+        stream = IO::openCompressedOutputStream(MPI::prefix + filename, true);
+        assert(stream);
+        if (!*stream) {
+            throw std::runtime_error("could not open "s + MPI::prefix + filename);
+        }
     }
-    reaction_coordinate_type = j.at("type").get<std::string>();
-    reaction_coordinate = ReactionCoordinate::createReactionCoordinate({{reaction_coordinate_type, j}}, spc);
+}
+
+FileReactionCoordinate::FileReactionCoordinate(const json& j, const Space& spc)
+    : FileReactionCoordinate(
+          spc, j.value("filename", ""s),
+          ReactionCoordinate::createReactionCoordinate({{j.at("type").get<std::string>(), j}}, spc)) {
+    from_json(j);
 }
 
 void FileReactionCoordinate::_to_disk() {
-    if (*stream) {
+    if (stream) {
         stream->flush(); // empty buffer
     }
 }
@@ -1369,7 +1384,7 @@ PolymerShape::PolymerShape(const json& j, const Space& spc) : Analysisbase(spc, 
     gyration_radius_histogram.setResolution(j.value("histogram_resolution", 0.2), 0.0);
 
     if (auto filename = j.value("file", ""s); !filename.empty()) {
-        tensor_output_stream = IO::openCompressedOutputStream(MPI::prefix + filename);
+        tensor_output_stream = IO::openCompressedOutputStream(MPI::prefix + filename, true);
         *tensor_output_stream << "# step Rg xx xy xz xy yy yz xz yz zz\n";
     }
 }

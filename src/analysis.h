@@ -125,20 +125,21 @@ class PerturbationAnalysisBase : public Analysisbase {
     double meanFreeEnergy() const; //!< Average perturbation free energy, `-ln(<exp(-du/kT)>)`
 };
 
-/*
+/**
  * @brief Sample and save reaction coordinates to a file
  */
 class FileReactionCoordinate : public Analysisbase {
   private:
     Average<double> mean_reaction_coordinate;
-    std::string reaction_coordinate_type;
-    std::string filename;
+    const std::string filename;
     std::unique_ptr<std::ostream> stream = nullptr;
-    std::shared_ptr<ReactionCoordinate::ReactionCoordinateBase> reaction_coordinate = nullptr;
+    const std::unique_ptr<ReactionCoordinate::ReactionCoordinateBase> reaction_coordinate;
 
     void _to_json(json& j) const override;
     void _sample() override;
     void _to_disk() override;
+    FileReactionCoordinate(const Space& spc, const std::string& filename,
+                           std::unique_ptr<ReactionCoordinate::ReactionCoordinateBase> reaction_coordinate);
 
   public:
     FileReactionCoordinate(const json& j, const Space& spc);

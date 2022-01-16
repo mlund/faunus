@@ -25,9 +25,9 @@ std::unique_ptr<std::ostream> IO::openCompressedOutputStream(const std::string& 
         f.open(filename);
     } catch (std::exception& e) { // reaching here, file cannot be created
         if (throw_on_error) {
-            throw std::runtime_error("could not writeKeyValuePairs to file "s + filename);
+            throw std::runtime_error("could not open file "s + filename);
         }
-        return std::make_unique<std::ofstream>(); // empty object
+        return nullptr;
     }
     if (filename.substr(filename.find_last_of('.') + 1) == "gz") {
         faunus_logger->trace("enabling gzip compression for {}", filename);

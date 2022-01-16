@@ -453,19 +453,20 @@ bool PerturbationAnalysisBase::collectWidomAverage(const double energy_change) {
 double PerturbationAnalysisBase::meanFreeEnergy() const { return -std::log(mean_exponentiated_energy_change.avg()); }
 
 void VirtualVolumeMove::_sample() {
-    if (std::fabs(volume_displacement) > 0.0) {
-        const auto old_volume = mutable_space.geometry.getVolume(); // store old volume
-        const auto old_energy = pot.energy(change);                 // ...and energy
-        const auto scale = mutable_space.scaleVolume(old_volume + volume_displacement,
-                                                     volume_scaling_method); // scale entire system to new volume
-        const auto new_energy = pot.energy(change);                          // energy after scaling
-        mutable_space.scaleVolume(old_volume, volume_scaling_method);        // restore saved system
+    if (std::fabs(volume_displacement) <= pc::epsilon_dbl) {
+        return;
+    }
+    const auto old_volume = mutable_space.geometry.getVolume(); // store old volume
+    const auto old_energy = pot.energy(change);                 // ...and energy
+    const auto scale = mutable_space.scaleVolume(old_volume + volume_displacement,
+                                                 volume_scaling_method); // scale entire system to new volume
+    const auto new_energy = pot.energy(change);                          // energy after scaling
+    mutable_space.scaleVolume(old_volume, volume_scaling_method);        // restore saved system
 
-        const auto energy_change = new_energy - old_energy; // system energy change
-        if (collectWidomAverage(energy_change)) {
-            writeToFileStream(scale, energy_change);
-            sanityCheck(old_energy);
-        }
+    const auto energy_change = new_energy - old_energy; // system energy change
+    if (collectWidomAverage(energy_change)) {
+        writeToFileStream(scale, energy_change);
+        sanityCheck(old_energy);
     }
 }
 
@@ -618,10 +619,6 @@ FileReactionCoordinate::FileReactionCoordinate(
         faunus_logger->warn("{}: no filename given - only the mean coordinate will be saved", name);
     } else {
         stream = IO::openCompressedOutputStream(MPI::prefix + filename, true);
-        assert(stream);
-        if (!*stream) {
-            throw std::runtime_error("could not open "s + MPI::prefix + filename);
-        }
     }
 }
 

@@ -150,10 +150,10 @@ are distributed on a sphere then $\kappa^2=0$, while if on a straight line, $\ka
 Preferential selction of particles can be enabled via the `region` keyword which instructs
 some moves to pick particles or groups preferentially from a given _region_. As described
 in [doi:10/frvx8j](https://doi.org/frvx8j) a bias is introduced which is automatically
-accounted for. The preference for sampling inside the region is controlled by the `symmetry`
-keyword (often denoted _p_).
-If set to one, no bias is introduced, whereas
-if set to a low number, more sampling is done inside the region.
+accounted for. The preference for sampling inside the region is controlled by `p` which
+can be regarded as an outside update probability.
+If $p=1$ no preferential sampling is performed, whereas if
+$p<1$, more sampling is done inside the region.
 
 For example:
 
@@ -163,11 +163,11 @@ For example:
     ...
     region:
       policy: ellipsoid
-      symmetry: 0.5
       parallel_radius: 5.0
       perpendicular_radius: 4.0
       index1: 10
       index2: 12
+      p: 0.2
 ~~~
 
 The available regions are:
@@ -180,7 +180,7 @@ The reference particle separation is unimportant, only the direction is used.
 
 `policy=ellipsoid`     | Description
 ---------------------- | ----------------------------------------------------------------
-`symmetry`             | Number (0,1] where a lower number means higher regional sampling
+`p`                    | Number (0,1] where a lower number means higher regional sampling
 `index1`               | Index of first reference particle
 `index2`               | Index of second reference particle
 `parallel_radius`      | Radius parallel to axis connecting the two references
@@ -198,7 +198,7 @@ It is also possible to use only the mass center for the moved groups by setting 
 
 `policy=within_molid`  | Description
 ---------------------- | ----------------------------------------------------------------
-`symmetry`             | Number (0,1] where a lower number means higher regional sampling
+`p`                    | Number (0,1] where a lower number means higher regional sampling
 `molecule`             | Name of molecule to search around
 `threshold`            | Distance threshold to any particle in `molecule`
 `com=false`            | Use `threshold` with respect to mass-center of `molecule`

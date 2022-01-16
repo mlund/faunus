@@ -36,7 +36,7 @@ Selection<T>::Selection(T& item, int number_total, int number_inside, bool item_
 
 enum class BiasDirection { ENTER_REGION, EXIT_REGION, NO_CROSSING }; //!< Controls the bias direction
 
-double bias(double outside_rejection_probability, int n_total, int n_inside,
+double bias(double outside_acceptance, int n_total, int n_inside,
             BiasDirection direction); //!< Bias energy (kT)
 
 /**
@@ -49,7 +49,7 @@ double bias(double outside_rejection_probability, int n_total, int n_inside,
  */
 class RegionSampler {
   private:
-    const double symmetry = 1.0; //!< Or "p" between ]0:1]; 1 --> uniform sampling (no regional preference)
+    const double outside_acceptance = 1.0; //!< Or "p" between ]0:1]; 1 --> uniform sampling (no regional preference)
     BiasDirection getDirection(bool inside_before, bool inside_after) const;
     template <typename Range> double getNumberInside(Range& range) const;
 
@@ -57,7 +57,7 @@ class RegionSampler {
     const std::unique_ptr<Region::RegionBase> region; //!< This defines the smart MC region
 
   public:
-    RegionSampler(double symmetry, std::unique_ptr<Region::RegionBase> region);
+    RegionSampler(double outside_acceptance, std::unique_ptr<Region::RegionBase> region);
     virtual ~RegionSampler() = default;
     void to_json(json& j) const; //!< Serialise to json
     template <typename T, typename Range> std::optional<Selection<T>> select(Range& range, Random& random);
@@ -99,12 +99,12 @@ template <typename T, typename Range> std::optional<Selection<T>> RegionSampler:
             return std::nullopt;
         }
         const auto inside = region->inside(*it); // is element inside or outside region?
-        if (not inside && symmetry < random()) {
+        if (not inside && outside_acceptance < random()) {
             continue;
         }
         return Selection<T>(*it, n_total, getNumberInside(range), inside);
     } while (max_selection_attempts-- > 0);
-    faunus_logger->warn("Max selection attempts reached. Increase 'symmetry'?");
+    faunus_logger->warn("Max selection attempts reached. Increase outside acceptance (p) ?");
     return std::nullopt;
 }
 
@@ -119,7 +119,7 @@ template <typename T, typename Range> std::optional<Selection<T>> RegionSampler:
 template <typename T> double RegionSampler::bias(const Selection<T>& selection) {
     const auto is_inside_after = region->inside(*(selection.item)); // may have changed due to move
     const auto direction = getDirection(selection.is_inside, is_inside_after);
-    return SmarterMonteCarlo::bias(symmetry, selection.n_total, selection.n_inside, direction);
+    return SmarterMonteCarlo::bias(outside_acceptance, selection.n_total, selection.n_inside, direction);
 }
 
 /**
@@ -145,7 +145,7 @@ template <typename T> class MoveSupport {
 
 template <typename T>
 MoveSupport<T>::MoveSupport(const Space& spc, const json& j)
-    : region_sampler(j.at("symmetry").get<double>(), Region::createRegion(spc, j)) {}
+    : region_sampler(j.at("p").get<double>(), Region::createRegion(spc, j)) {}
 
 /**
  * This is used to sample and analyse the average number of groups inside the region.

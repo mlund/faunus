@@ -3,7 +3,7 @@
 namespace Faunus::SmarterMonteCarlo {
 
 /**
- * @param outside_rejection_probability Probability to reject if outside region
+ * @param outside_acceptance Probability to accept if outside region ("p")
  * @param n_total Total number of elements
  * @param n_inside Total number of elements inside region
  * @param direction Did element exit or enter the region? Returns zero if no boundary crossing
@@ -11,15 +11,15 @@ namespace Faunus::SmarterMonteCarlo {
  * - See Allen and Tildesley p. 318 (2017 ed.).
  * - Original reference: [doi:10/frvx8j](https://doi.org/frvx8j)
  */
-double bias(double outside_rejection_probability, const int n_total, const int n_inside, BiasDirection direction) {
-    const auto p = outside_rejection_probability;
+double bias(double outside_acceptance, const int n_total, const int n_inside, BiasDirection direction) {
+    const auto p = outside_acceptance;
     const auto n_prime = p * n_total + (1.0 - p) * n_inside;
     switch (direction) {
     case BiasDirection::EXIT_REGION: // in --> out
         return -std::log(p / ((1.0 - (1.0 - p) / n_prime)));
     case BiasDirection::ENTER_REGION: // out --> in
         return std::log(p * (1.0 + (1.0 - p) / n_prime));
-    case BiasDirection::NO_CROSSING:
+    default:
         return 0.0;
     }
 }
@@ -36,14 +36,14 @@ TEST_CASE("[Faunus] SmartMonteCarlo::bias") {
 }
 
 /**
- * @param outside_rejection_probability Probability that any element outside the region will be rejected
+ * @param outside_acceptance Probability to accept element outside the region
  * @param region Region to preferentially pick from
  */
-RegionSampler::RegionSampler(double symmetry, std::unique_ptr<Region::RegionBase> region)
-    : symmetry(symmetry)
+RegionSampler::RegionSampler(const double outside_acceptance, std::unique_ptr<Region::RegionBase> region)
+    : outside_acceptance(outside_acceptance)
     , region(std::move(region)) {
-    if (symmetry <= pc::epsilon_dbl || symmetry > 1.0) {
-        throw ConfigurationError("'symmetry' must be in the range (0,1]");
+    if (outside_acceptance <= pc::epsilon_dbl || outside_acceptance > 1.0) {
+        throw ConfigurationError("outside_acceptance (p), must be in the range (0,1]");
     }
 }
 
@@ -59,9 +59,9 @@ BiasDirection RegionSampler::getDirection(const bool inside_before, const bool i
 
 void RegionSampler::to_json(json& j) const {
     j["region"] = static_cast<json>(*region);
-    j["symmetry"] = symmetry;
+    j["p"] = outside_acceptance;
     if (fixed_number_inside) {
-        j["Fixed <N_inside>"] = fixed_number_inside.value();
+        j["fixed <N_inside>"] = fixed_number_inside.value();
     }
 }
 

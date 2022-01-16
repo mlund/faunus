@@ -125,6 +125,13 @@ add_test(
         WORKING_DIRECTORY ${EXAMPLES_DIR}/polymers)
 
 add_test(
+        NAME smartmc
+        COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} smartmc.yml\
+    | $<TARGET_FILE:faunus> --quiet\
+    && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} smartmc.out.json out.json --tol 0.05"
+        WORKING_DIRECTORY ${EXAMPLES_DIR}/smartmc)
+
+add_test(
         NAME speciation
         COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} speciation.yml\
     | $<TARGET_FILE:faunus> --quiet --state speciation.state.json\

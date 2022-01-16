@@ -45,14 +45,14 @@ moves:
       dir: [1,0,0]
       region:
         policy: ellipsoid
-        symmetry: 0.3
         parallel_radius: 1
         perpendicular_radius: 1
         index1: 0
         index2: 1
+        p: 0.3
 
 analysis:
-  - reactioncoordinate: {file: x.dat.gz, nstep: 10, type: molecule, property: com_x, index: 1}
+  - reactioncoordinate: {nstep: 10, type: molecule, property: com_x, index: 1}
   - savestate: {file: confout.pqr}
   - savestate: {file: state.json}
   - sanity: {nstep: 1000}

@@ -252,12 +252,12 @@ class Isobaric : public Energybase {
 class Constrain : public Energybase {
   private:
     std::string type;
-    std::shared_ptr<ReactionCoordinate::ReactionCoordinateBase> rc = nullptr;
+    std::unique_ptr<ReactionCoordinate::ReactionCoordinateBase> coordinate;
 
   public:
-    Constrain(const json &, Space &);
-    double energy(Change &) override;
-    void to_json(json &) const override;
+    Constrain(const json& j, Space& space);
+    double energy(Change& change) override;
+    void to_json(json& j) const override;
 };
 
 /**

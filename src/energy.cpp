@@ -718,22 +718,21 @@ TEST_CASE("Energy::Isobaric") {
 }
 
 Constrain::Constrain(const json &j, Space &spc) {
-    using namespace Faunus::ReactionCoordinate;
     name = "constrain";
     type = j.at("type").get<std::string>();
-    rc = ReactionCoordinate::createReactionCoordinate({{type, j}}, spc);
+    coordinate = ReactionCoordinate::createReactionCoordinate({{type, j}}, spc);
 }
 
-double Constrain::energy(Change &change) {
+double Constrain::energy(Change& change) {
     if (change) {
-        double val = (*rc)();     // calculate reaction coordinate
-        if (not rc->inRange(val)) // is it within allowed range?
-            return pc::infty;     // if not, return infinite energy
+        const auto value = (*coordinate)(); // calculate reaction coordinate
+        if (not coordinate->inRange(value)) // is it within allowed range?
+            return pc::infty;               // if not, return infinite energy
     }
-    return 0;
+    return 0.0;
 }
 void Constrain::to_json(json &j) const {
-    j = json(*rc).at(type);
+    j = json(*coordinate).at(type);
     j.erase("resolution");
     j["type"] = type;
 }

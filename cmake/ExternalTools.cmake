@@ -164,12 +164,11 @@ endif ()
 
 FetchContent_Declare(
     nanobench
-    URL "https://github.com/martinus/nanobench/archive/v3.1.0.tar.gz"
-    URL_HASH MD5=e646fb61164a60921c1a1834fbca24bc)
-FetchContent_GetProperties(nanobench)
-if(NOT nanobench_POPULATED)
-    FetchContent_Populate(nanobench)
-endif()
+    GIT_REPOSITORY https://github.com/martinus/nanobench.git
+    GIT_TAG v4.3.6
+    GIT_SHALLOW TRUE)
+
+FetchContent_MakeAvailable(nanobench)
 
 ##########
 # XRDFILE
@@ -251,5 +250,5 @@ include_directories(SYSTEM ${coulombgalore_SOURCE_DIR})
 # Add third-party headers to include path. Note this is done with SYSTEM
 # to disable potential compiler warnings
 
-include_directories(SYSTEM ${trompeloeil_SOURCE_DIR}/include ${nanobench_SOURCE_DIR}/src/include
+include_directories(SYSTEM ${trompeloeil_SOURCE_DIR}/include
     ${Pybind11IncludeDir} ${CppsidIncludeDir} ${XdrfileIncludeDir} ${ProgressTrackerIncludeDir} ${doctest_SOURCE_DIR})

@@ -2,9 +2,6 @@
 #include "analysis.h"
 #include "io.h"
 
-//#define ANKERL_NANOBENCH_IMPLEMENT
-#include "nanobench.h"
-
 namespace Faunus::Scatter {
 
 using doctest::Approx;
@@ -27,20 +24,6 @@ TEST_CASE_TEMPLATE("[Faunus] StructureFactorPBC", T, StructureFactorPBC<float, S
     }
     CHECK(cnt == result.size());
 }
-
-#ifdef ANKERL_NANOBENCH_H_INCLUDED
-TEST_CASE("Benchmark") {
-    Point box = {80.0, 80.0, 80.0};
-    std::vector<Point> pos(1000);
-    for (auto &p : pos)
-        p = Eigen::Vector3d::Random() * box.x();
-    ankerl::nanobench::Config bench;
-    bench.minEpochIterations(100);
-    bench.run("SIMD", [&] { StructureFactorPBC<double, SIMD>(10).sample(pos, box); }).doNotOptimizeAway();
-    bench.run("EIGEN", [&] { StructureFactorPBC<double, EIGEN>(10).sample(pos, box); }).doNotOptimizeAway();
-    bench.run("GENERIC", [&] { StructureFactorPBC<double, GENERIC>(10).sample(pos, box); }).doNotOptimizeAway();
-}
-#endif
 
 TEST_CASE("[Faunus] StructureFactorIPBC") {
     size_t cnt = 0;

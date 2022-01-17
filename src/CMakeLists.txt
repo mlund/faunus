@@ -91,6 +91,23 @@ target_link_libraries(libfaunus PUBLIC
         xdrfile
         zstr)
 
+# ========== benchmarks ==========
+
+add_executable(benchmarks benchmarks.cpp)
+target_link_libraries(benchmarks PRIVATE
+        Eigen
+        libfaunus
+        doctest
+        nanobench
+        project_options
+        range-v3
+        spdlog)
+target_compile_definitions(benchmarks PRIVATE SPDLOG_COMPILED_LIB)
+set_target_properties(benchmarks PROPERTIES
+        POSITION_INDEPENDENT_CODE ON
+        LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+
+
 # ========== faunus (main executable) ==========
 
 add_executable(faunus faunus.cpp)

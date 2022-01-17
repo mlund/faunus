@@ -16,9 +16,6 @@ struct freesasa_parameters_fwd : public freesasa_parameters {
 };
 #endif
 
-#define ANKERL_NANOBENCH_IMPLEMENT
-#include <nanobench.h>
-
 namespace Faunus::Energy {
 
 EwaldData::EwaldData(const json &j) {
@@ -269,37 +266,6 @@ TEST_CASE("[Faunus] Ewald - IonIonPolicy") {
         CHECK(ionion.surfaceEnergy(data, c, spc.groups) == Approx(0.0020943951023931952 * data.lB));
         CHECK(ionion.reciprocalEnergy(data) == Approx(0.0865107467 * data.lB));
     }*/
-}
-
-TEST_CASE("[Faunus] Ewald - IonIonPolicy Benchmarks") {
-    Space spc;
-    spc.geometry = R"( {"type": "cuboid", "length": 80} )"_json;
-    spc.particles.resize(200);
-    for (auto& p : spc.particles) {
-        p.charge = 1.0;
-        p.pos = (random() - 0.5) * spc.geometry.getLength();
-    }
-    Group g(0, spc.particles.begin(), spc.particles.end());
-    spc.groups.push_back(g);
-
-    EwaldData data(R"({
-                "epsr": 1.0, "alpha": 0.894427190999916, "epss": 1.0,
-                "ncutoff": 11.0, "spherical_sum": true, "cutoff": 9.0})"_json);
-    Change c;
-    c.everything = true;
-    data.policy = EwaldData::PBC;
-
-    {
-        PolicyIonIon pbc;
-        PolicyIonIonEigen pbc_eigen;
-        pbc.updateBox(data, spc.geometry.getLength());
-        pbc_eigen.updateBox(data, spc.geometry.getLength());
-
-        ankerl::nanobench::Config bench;
-        bench.minEpochIterations(20);
-        bench.run("PBC", [&] { pbc.updateComplex(data, spc.groups); }).doNotOptimizeAway();
-        bench.run("PBCEigen", [&] { pbc_eigen.updateComplex(data, spc.groups); }).doNotOptimizeAway();
-    }
 }
 
 //----------------- IPBC Ewald -------------------

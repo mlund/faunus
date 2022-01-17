@@ -8,6 +8,7 @@
 #include <cereal/types/base_class.hpp>
 #include <spdlog/spdlog.h>
 #include <range/v3/view/zip.hpp>
+#include <range/v3/view/join.hpp>
 #include <range/v3/view/transform.hpp>
 
 /** @brief Faunus main namespace */
@@ -581,27 +582,34 @@ void rotate(
     });
 } //!< Rotate particle pos and internal coordinates
 
-/*
+/**
  * @brief Calculate mass center of cluster of particles in unbounded environment
  *
  * [More info](http://dx.doi.org/10.1080/2151237X.2008.10129266)
  */
 template <class Tspace, class GroupIndex>
-Point trigoCom(const Tspace &spc, const GroupIndex &groups, const std::vector<int> &dir = {0, 1, 2}) {
-    assert(!dir.empty() && dir.size() <= 3);
-    Point xhi(0, 0, 0), zeta(0, 0, 0), theta(0, 0, 0), com(0, 0, 0);
+Point trigoCom(const Tspace& spc, const GroupIndex& indices, const std::vector<int>& dir = {0, 1, 2}) {
+    if (dir.empty() || dir.size() > 3) {
+        throw std::out_of_range("invalid directions");
+    }
+    namespace rv = ranges::cpp20::views;
+    auto positions =
+        indices | rv::transform([&](auto i) { return spc.groups.at(i); }) | rv::join | rv::transform(&Particle::pos);
+    Point xhi(0, 0, 0);
+    Point zeta(0, 0, 0);
+    Point theta(0, 0, 0);
+    Point com(0, 0, 0);
     for (auto k : dir) {
-        double q = 2 * pc::pi / spc.geometry.getLength()[k];
-        size_t N = 0;
-        for (auto i : groups)
-            for (auto &particle : spc.groups[i]) {
-                theta[k] = particle.pos[k] * q;
-                zeta[k] += std::sin(theta[k]);
-                xhi[k] += std::cos(theta[k]);
-                N++;
-            }
-        theta[k] = std::atan2(-zeta[k] / N, -xhi[k] / N) + pc::pi;
-        com[k] = spc.geometry.getLength()[k] * theta[k] / (2 * pc::pi);
+        const auto q = 2.0 * pc::pi / spc.geometry.getLength()[k];
+        int cnt = 0;
+        std::for_each(positions.begin(), positions.end(), [&](auto& position) {
+            theta[k] = position[k] * q;
+            zeta[k] += std::sin(theta[k]);
+            xhi[k] += std::cos(theta[k]);
+            cnt++;
+        });
+        theta[k] = std::atan2(-zeta[k] / static_cast<double>(cnt), -xhi[k] / static_cast<double>(cnt)) + pc::pi;
+        com[k] = spc.geometry.getLength()[k] * theta[k] / (2.0 * pc::pi);
     }
     spc.geometry.boundary(com); // is this really needed?
     return com;
@@ -612,37 +620,40 @@ Point trigoCom(const Tspace &spc, const GroupIndex &groups, const std::vector<in
  *
  * The gyration tensor is computed from the atomic position vectors with respect to the reference point
  * which is always a center of mass,
- * \f$ t_{i} = r_{i} - r_\mathrm{cm} \f$:
- * \f$ S = (1 / \sum_{i=1}^{N} m_{i}) \sum_{i=1}^{N} m_{i} t_{i} t_{i}^{T} \f$
+ *
+ * S = (1 / \sum m_i) \sum m_i t_i t_i^T where t_i = r_i - r_cm
  *
  * Before the calculation, the molecule is made whole to moving it to the center or the
  * simulation box (0,0,0), then apply the given boundary function.
  *
- * @tparam iterator Iterator to `Particle` range
- * @param begin Iterator to first particle
- * @param end Iterator to end
+ * @Note This is the polymer science definition of the gyration tensor which is
+ *       mass-weighted. In physics, the gyration tensor is normally defined by positions only.
+ *
+ * @param begin Iterator to first position
+ * @param end Iterator to past last position
+ * @param mass Iterator to first mass
  * @param mass_center The mass center used as reference and to remove PBC
  * @param boundary Function to apply periodic boundary functions (default: none)
  * @return gyration tensor; or zero tensor if empty particle range
- * @throws If total mass is non-positive
+ * @throw If total mass is non-positive
  */
-template <typename iterator>
+template <typename position_iterator, typename mass_iterator>
 Tensor gyration(
-    iterator begin, iterator end, const Point &mass_center, const BoundaryFunction boundary = [](auto &) {}) {
+    position_iterator begin, position_iterator end, mass_iterator mass, const Point& mass_center,
+    const BoundaryFunction boundary = [](auto&) {}) {
     Tensor S = Tensor::Zero();
     double total_mass = 0.0;
-    std::for_each(begin, end, [&](const auto &particle) {
-        const auto mass = particle.traits().mw;
-        Point r = particle.pos - mass_center; // get rid...
-        boundary(r);                          // ...of PBC (if any)
-        S += mass * r * r.transpose();
-        total_mass += mass;
+    std::for_each(begin, end, [&](const Point& position) {
+        Point r = position - mass_center; // get rid...
+        boundary(r);                      // ...of PBC (if any)
+        S += (*mass) * r * r.transpose();
+        total_mass += (*mass);
+        std::advance(mass, 1);
     });
-    if (total_mass > 0.0) {
+    if (total_mass > pc::epsilon_dbl) {
         return S / total_mass;
-    } else {
-        throw std::runtime_error("gyration tensor: total mass must be positive");
     }
+    throw std::runtime_error("gyration tensor: total mass must be positive");
 }
 
 /**
@@ -656,32 +667,23 @@ Tensor gyration(
  * Before the calculation, the molecule is made whole to moving it to the center or the
  * simulation box (0,0,0), then apply the given boundary function.
  *
- * @param begin Iterator to first position
- * @param end Iterator to past last position
- * @param mass Iterator to first mass
+ * @tparam particle_iterator Iterator to `Particle` range
+ * @param begin Iterator to first particle
+ * @param end Iterator to end
  * @param mass_center The mass center used as reference and to remove PBC
  * @param boundary Function to apply periodic boundary functions (default: none)
  * @return gyration tensor; or zero tensor if empty particle range
  * @throws If total mass is non-positive
  */
-template <typename position_iterator, typename mass_iterator>
+template <typename particle_iterator>
 Tensor gyration(
-    position_iterator begin, position_iterator end, mass_iterator mass, const Point &mass_center,
-    const BoundaryFunction boundary = [](auto &) {}) {
-    Tensor S = Tensor::Zero();
-    double total_mass = 0.0;
-    std::for_each(begin, end, [&](const auto &position) {
-        Point r = position - mass_center; // get rid...
-        boundary(r);                      // ...of PBC (if any)
-        S += (*mass) * r * r.transpose();
-        total_mass += (*mass);
-        std::advance(mass, 1);
-    });
-    if (total_mass > 0.0) {
-        return S / total_mass;
-    } else {
-        throw std::runtime_error("gyration tensor: total mass must be positive");
-    }
+    particle_iterator begin, particle_iterator end, const Point& mass_center,
+    const BoundaryFunction boundary = [](auto&) {}) {
+    namespace rv = ranges::cpp20::views;
+    auto particles = ranges::make_subrange(begin, end);
+    auto positions = particles | rv::transform(&Particle::pos);
+    auto masses = particles | rv::transform(&Particle::traits) | rv::transform(&AtomData::mw);
+    return gyration(positions.begin(), positions.end(), masses.begin(), mass_center, boundary);
 }
 
 /**
@@ -713,15 +715,16 @@ void to_json(json &j, const ShapeDescriptors &shape); //!< Store Shape as json o
  * @param origin a reference point
  * @return inertia tensor (a zero tensor for an empty group)
  */
-template <typename iter>
+template <typename particle_iter>
 Tensor inertia(
-    iter begin, iter end, const Point origin = {0, 0, 0}, const BoundaryFunction boundary = [](const Point &) {}) {
+    particle_iter begin, particle_iter end, const Point origin = Point::Zero(),
+    const BoundaryFunction boundary = [](auto&) {}) {
     Tensor I = Tensor::Zero();
-    for (auto it = begin; it != end; ++it) {
-        Point t = it->pos - origin;
+    std::for_each(begin, end, [&](const Particle& particle) {
+        Point t = particle.pos - origin;
         boundary(t);
-        I += atoms.at(it->id).mw * (t.squaredNorm() * Tensor::Identity() - t * t.transpose());
-    }
+        I += particle.traits().mw * (t.squaredNorm() * Tensor::Identity() - t * t.transpose());
+    });
     return I;
 }
 
@@ -768,7 +771,7 @@ ParticleVector mapParticlesOnSphere(const ParticleVector &);
  * the number of particles
  */
 template <typename Particles>
-std::pair<Cuboid, ParticleVector> HexagonalPrismToCuboid(const HexagonalPrism &hexagon, const Particles &particles) {
+std::pair<Cuboid, ParticleVector> hexagonalPrismToCuboid(const HexagonalPrism& hexagon, const Particles& particles) {
     Cuboid cuboid({2.0 * hexagon.innerRadius(), 3.0 * hexagon.outerRadius(), hexagon.height()});
     ParticleVector cuboid_particles;
     cuboid_particles.reserve(2 * std::distance(particles.begin(), particles.end()));

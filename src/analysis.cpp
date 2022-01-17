@@ -348,7 +348,7 @@ void SaveState::saveAsCuboid(const std::string& filename, const Space& spc, Stru
     auto hexagonal_prism = std::dynamic_pointer_cast<Geometry::HexagonalPrism>(spc.geometry.asSimpleGeometry());
     if (hexagonal_prism) {
         faunus_logger->debug("creating cuboid from hexagonal prism");
-        const auto& [cuboid, particles] = Geometry::HexagonalPrismToCuboid(*hexagonal_prism, spc.activeParticles());
+        const auto& [cuboid, particles] = Geometry::hexagonalPrismToCuboid(*hexagonal_prism, spc.activeParticles());
         writer.save(filename, particles.begin(), particles.end(), cuboid.getLength());
     } else {
         throw std::runtime_error("hexagonal prism required for `convert_to_hexagon`");

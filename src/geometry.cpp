@@ -667,7 +667,7 @@ TEST_CASE("[Faunus] ShapeDescriptors") {
     CHECK(shape.relative_shape_anisotropy == Approx(0.0));
 }
 
-TEST_CASE("[Faunus] HexagonalPrismToCuboid") {
+TEST_CASE("[Faunus] hexagonalPrismToCuboid") {
     using doctest::Approx;
     double radius = 2.0, height = 20.0;
     double side = 2.0 / std::sqrt(3.0) * radius;
@@ -679,7 +679,7 @@ TEST_CASE("[Faunus] HexagonalPrismToCuboid") {
     p[3].pos = {0, -1, 0};
     p[4].pos = {-0.866, -0.5, 0};
     p[5].pos = {-0.866, 0.5, 0};
-    auto [cuboid, p_new] = HexagonalPrismToCuboid(hexagonal_prism, p);
+    auto [cuboid, p_new] = hexagonalPrismToCuboid(hexagonal_prism, p);
     CHECK(p_new.size() == 12);
     CHECK(cuboid.getLength().x() == Approx(radius * 2.0));
     CHECK(cuboid.getLength().y() == Approx(side * 3.0));
@@ -1237,6 +1237,68 @@ TEST_CASE("[Faunus] weightedCenter") {
     CHECK(cm.x() == doctest::Approx(12.5));
     CHECK(cm.y() == doctest::Approx(0));
     CHECK(cm.z() == doctest::Approx(0));
+}
+
+TEST_CASE("[Faunus] gyration") {
+    std::vector<Point> positions = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
+    std::vector<double> weights = {0.6, 1.5, 2.2};
+    auto boundary = [](auto&) {};
+
+    Faunus::atoms.resize(3);
+    Faunus::atoms.at(0).mw = weights.at(0);
+    Faunus::atoms.at(1).mw = weights.at(1);
+    Faunus::atoms.at(2).mw = weights.at(2);
+    ParticleVector particles(3);
+    particles.at(0).id = 0;
+    particles.at(1).id = 1;
+    particles.at(2).id = 2;
+    particles.at(0).pos = positions.at(0);
+    particles.at(1).pos = positions.at(1);
+    particles.at(2).pos = positions.at(2);
+
+    auto mass_center = Geometry::massCenter(particles.begin(), particles.end(), boundary);
+
+    SUBCASE("mass center") {
+        CHECK(mass_center.x() == doctest::Approx(5.1162790698));
+        CHECK(mass_center.y() == doctest::Approx(6.1162790698));
+        CHECK(mass_center.z() == doctest::Approx(7.1162790698));
+    }
+
+    SUBCASE("position based") {
+        auto gyration = Geometry::gyration(positions.begin(), positions.end(), weights.begin(), mass_center, boundary);
+        CHECK(gyration.trace() == doctest::Approx(13.843158464));
+        CHECK(gyration.diagonal().x() == doctest::Approx(4.6143861547));
+        CHECK(gyration.diagonal().y() == doctest::Approx(4.6143861547));
+        CHECK(gyration.diagonal().z() == doctest::Approx(4.6143861547));
+
+        // check symmetry
+        CHECK(gyration(0, 1) == doctest::Approx(gyration(1, 0)));
+        CHECK(gyration(0, 2) == doctest::Approx(gyration(2, 0)));
+        CHECK(gyration(1, 2) == doctest::Approx(gyration(2, 1)));
+
+        // principal moment
+        Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(gyration);
+        auto eigen_values = esf.eigenvalues().eval();
+        std::ptrdiff_t i_eival;
+        eigen_values.minCoeff(&i_eival);
+        auto principle_axis = esf.eigenvectors().col(i_eival).real().eval();
+        CHECK(principle_axis.x() == doctest::Approx(-0.8164965809));
+        CHECK(principle_axis.y() == doctest::Approx(0.4082482905));
+        CHECK(principle_axis.z() == doctest::Approx(0.4082482905));
+    }
+
+    SUBCASE("particle based") {
+        auto gyration = Geometry::gyration(particles.begin(), particles.end(), mass_center, boundary);
+        CHECK(gyration.trace() == doctest::Approx(13.843158464));
+        CHECK(gyration.diagonal().x() == doctest::Approx(4.6143861547));
+        CHECK(gyration.diagonal().y() == doctest::Approx(4.6143861547));
+        CHECK(gyration.diagonal().z() == doctest::Approx(4.6143861547));
+
+        // check symmetry
+        CHECK(gyration(0, 1) == doctest::Approx(gyration(1, 0)));
+        CHECK(gyration(0, 2) == doctest::Approx(gyration(2, 0)));
+        CHECK(gyration(1, 2) == doctest::Approx(gyration(2, 1)));
+    }
 }
 
 TEST_CASE("[Faunus] rootMeanSquareDeviation") {

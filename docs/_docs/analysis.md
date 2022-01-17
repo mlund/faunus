@@ -244,6 +244,7 @@ $\bf{I}$ is the identity matrix and $N$ is the number of atoms.
 `nstep`          | Interval with which to sample
 `indexes`        | Array defining a range of indexes within the molecule 
 `index`          | Index of the molecular group
+`file`           | Output filename (.dat|.dat.gz)
 
 ### Polymer Shape
 

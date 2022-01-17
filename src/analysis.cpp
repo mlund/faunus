@@ -11,6 +11,7 @@
 #include <range/v3/algorithm/for_each.hpp>
 #include <range/v3/view/cache1.hpp>
 #include <spdlog/spdlog.h>
+#include <spdlog/fmt/ostr.h>
 #include <zstr.hpp>
 #include <cereal/types/memory.hpp>
 #include <cereal/archives/binary.hpp>
@@ -1188,38 +1189,48 @@ void AtomInertia::_to_disk() {
 void InertiaTensor::_to_json(json& j) const {
     j["indexes"] = particle_range; // range of indexes within the group
     j["index"] = group_index;      // group index
+    j["file"] = filename;
 }
-InertiaTensor::Data InertiaTensor::compute() {
+
+std::pair<Point, Point> InertiaTensor::compute() const {
     const auto& group = spc.groups.at(group_index);
-    const Space::GroupType subgroup(group.id, group.begin() + particle_range[0], group.begin() + particle_range[1] + 1);
-    InertiaTensor::Data d;
+    auto subgroup =
+        ranges::make_subrange(group.begin() + particle_range.at(0), group.begin() + particle_range.at(1) + 1);
+
     auto I = Geometry::inertia(subgroup.begin(), subgroup.end(), group.mass_center, spc.geometry.getBoundaryFunc());
-    Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(I);
-    d.eigen_values = esf.eigenvalues();
-    std::ptrdiff_t i_eival;
-    d.eigen_values.minCoeff(&i_eival);
-    d.principle_axis = esf.eigenvectors().col(i_eival).real(); // eigenvector corresponding to the smallest eigenvalue
-    return d;
+
+    std::ptrdiff_t index; // index of eigenvector w. minimum eigenvalue
+    const auto esf = Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d>(I);
+    Point eigen_values = esf.eigenvalues();
+    eigen_values.minCoeff(&index);
+    Point principle_axis = esf.eigenvectors().col(index).real(); // eigenvector corresponding to the smallest eigenvalue
+    return {eigen_values, principle_axis};
 }
+
 void InertiaTensor::_sample() {
-    InertiaTensor::Data d = compute();
-    if (output_stream) {
-        output_stream << getNumberOfSteps() << " " << d.eigen_values.transpose() << " " << d.principle_axis.transpose()
-                      << "\n";
-    }
+    const auto [eigen_values, principle_axis] = compute();
+    *stream << fmt::format("{} {} {}\n", getNumberOfSteps(), eigen_values.transpose(), principle_axis.transpose());
 }
-InertiaTensor::InertiaTensor(const json& j, const Space& spc) : Analysisbase(spc, "Inertia Tensor") {
+
+InertiaTensor::InertiaTensor(const json& j, const Space& spc)
+    : Analysisbase(spc, "Inertia Tensor") {
     from_json(j);
-    filename = MPI::prefix + j.at("file").get<std::string>();
-    output_stream.open(filename);
     group_index = j.at("index").get<size_t>();
-    particle_range =
-        j.value("indexes", std::vector<size_t>({0, spc.groups.at(group_index).size()})); // whole molecule by default
-}
-void InertiaTensor::_to_disk() {
-    if (output_stream) {
-        output_stream.flush(); // empty buffer
+    const auto& group = spc.groups.at(group_index);
+    if (!group.massCenter()) {
+        throw ConfigurationError("group must have a well-defined mass center (e.g. molecular groups)");
     }
+    particle_range = j.value("indexes", std::vector<size_t>({0, group.size()})); // whole molecule by default
+    if (particle_range.size() != 2) {
+        throw ConfigurationError("{}: either two or no indices expected", name);
+    }
+    filename = MPI::prefix + j.at("file").get<std::string>();
+    stream = IO::openCompressedOutputStream(filename, true);
+    *stream << "# step eigen_values_xyz principal_axis_xyz\n";
+}
+
+void InertiaTensor::_to_disk() {
+    stream->flush(); // empty buffer
 }
 
 // =============== MultipoleMoments ===============

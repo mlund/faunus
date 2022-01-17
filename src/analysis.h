@@ -667,16 +667,11 @@ class AtomInertia : public Analysisbase {
  */
 class InertiaTensor : public Analysisbase {
   private:
-    std::string filename;
-    std::vector<size_t> particle_range; //!< range of indexes within the group
-    MoleculeData::index_type group_index;
-    std::ofstream output_stream;
-    struct Data {
-        Point eigen_values;
-        Point principle_axis;
-    };
-
-    Data compute();
+    std::string filename;                    //!< file to stream to
+    std::unique_ptr<std::ostream> stream;    //!< file output stream
+    MoleculeData::index_type group_index;    //!< Group to analyse
+    std::vector<size_t> particle_range;      //!< range of indexes within the group
+    std::pair<Point, Point> compute() const; //!< Compute eigen values and principal axis
     void _to_json(json& j) const override;
     void _sample() override;
     void _to_disk() override;

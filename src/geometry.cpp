@@ -1222,7 +1222,7 @@ TEST_CASE("[Faunus] Chameleon") {
     }
 }
 
-TEST_CASE("[Faunus] anyCenter") {
+TEST_CASE("[Faunus] weightedCenter") {
     Chameleon cyl = json({{"type", "cuboid"}, {"length", 100}, {"radius", 20}});
     std::vector<Particle> p;
 

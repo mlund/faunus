@@ -7,6 +7,8 @@
 #include <Eigen/Geometry>
 #include <cereal/types/base_class.hpp>
 #include <spdlog/spdlog.h>
+#include <range/v3/view/zip.hpp>
+#include <range/v3/view/transform.hpp>
 
 /** @brief Faunus main namespace */
 namespace Faunus {
@@ -461,35 +463,52 @@ void from_json(const json &, Chameleon &);
 enum class weight { MASS, CHARGE, GEOMETRIC };
 
 /**
+ * @brief Calculates the (weighted) center for a set of positions
+ * @param positions Positions
+ * @param weights Weights (ones, masses, charges etc.)
+ * @param boundary Used to remove periodic boundaries
+ * @param shift Shift with this value before and after center calculation. To e.g. remove PBC
+ */
+template <typename Positions, typename Weights>
+Point weightedCenter(
+    const Positions& positions, const Weights& weights, Geometry::BoundaryFunction boundary = [](auto&) {},
+    const Point& shift = Point::Zero()) {
+    double weight_sum = 0.0;
+    Point center(0.0, 0.0, 0.0);
+    for (const auto& [position, weight] : ranges::views::zip(positions, weights)) {
+        Point shifted_position = position + shift;
+        boundary(shifted_position);
+        center += weight * shifted_position;
+        weight_sum += weight;
+    }
+    if (std::fabs(weight_sum) > pc::epsilon_dbl) {
+        center = center / weight_sum - shift; // translate back
+        boundary(center);
+        return center;
+    } else {
+        faunus_logger->warn("warning: sum of weights is zero! setting center to (0,0,0)");
+        return Point::Zero();
+    }
+}
+
+/**
  * @brief Calculate Center of particle range using arbitrary weight functions applied to each particle
  * @param begin Begin particle iterator
  * @param end End parti cle iterator
- * @param apply_boundary Boundary function to apply PBC (default: no PBC)
+ * @param boundary Boundary function to apply PBC (default: no PBC)
  * @param weight_function Functor return weight for a given particle
  * @param shift Shift by this vector before calculating center, then add again. For PBC removal; default: 0,0,0
  * @return Center position; (0,0,0) if the sum of weights is zero
  * @throw warning if the sum of weights is zero, thereby hampering normalization
  */
-template <typename iterator, typename weightFunc>
-Point anyCenter(iterator begin, iterator end, BoundaryFunction apply_boundary, const weightFunc &weight_function,
-                const Point &shift = {0, 0, 0}) {
-    double weight_sum = 0.0;
-    Point center(0.0, 0.0, 0.0);
-    std::for_each(begin, end, [&](const auto &particle) {
-        const auto weight = weight_function(particle);
-        Point pos = particle.pos + shift; // translate
-        apply_boundary(pos);
-        center += weight * pos;
-        weight_sum += weight;
-    });
-    if (weight_sum > pc::epsilon_dbl) {
-        center = center / weight_sum - shift; // translate back
-        apply_boundary(center);
-        return center;
-    } else {
-        faunus_logger->warn("warning: sum of weights is 0! setting center to (0,0,0)");
-        return Point::Zero();
-    }
+template <typename iterator> //, typename weightFunc>
+Point weightedCenter(iterator begin, iterator end, BoundaryFunction boundary,
+                     std::function<double(const Particle&)> weight_function, const Point& shift = Point::Zero()) {
+    namespace rv = ranges::cpp20::views;
+    auto particles = ranges::make_subrange(begin, end);
+    auto positions = particles | rv::transform(&Particle::pos);
+    auto weights = particles | rv::transform(weight_function);
+    return weightedCenter(positions, weights, boundary, shift);
 } //!< Mass, charge, or geometric center of a collection of particles
 
 /**
@@ -503,10 +522,10 @@ Point anyCenter(iterator begin, iterator end, BoundaryFunction apply_boundary, c
  */
 template <typename iterator>
 Point massCenter(
-    iterator begin, iterator end, BoundaryFunction apply_boundary = [](Point &) {},
-    const Point &shift = {0.0, 0.0, 0.0}) {
-    auto particle_mass = [](const auto &particle) { return particle.traits().mw; };
-    return anyCenter(begin, end, apply_boundary, particle_mass, shift);
+    iterator begin, iterator end, BoundaryFunction apply_boundary = [](Point&) {},
+    const Point& shift = {0.0, 0.0, 0.0}) {
+    auto particle_mass = [](const auto& particle) -> double { return particle.traits().mw; };
+    return weightedCenter(begin, end, apply_boundary, particle_mass, shift);
 }
 
 /**
@@ -517,8 +536,8 @@ Point massCenter(
  */
 template <typename iterator>
 void translate(
-    iterator begin, iterator end, const Point &displacement, BoundaryFunction apply_boundary = [](Point &) {}) {
-    std::for_each(begin, end, [&](auto &particle) {
+    iterator begin, iterator end, const Point& displacement, BoundaryFunction apply_boundary = [](auto&) {}) {
+    std::for_each(begin, end, [&](auto& particle) {
         particle.pos += displacement;
         apply_boundary(particle.pos);
     });
@@ -532,7 +551,7 @@ void translate(
  */
 template <typename iterator>
 void translateToOrigin(
-    iterator begin, iterator end, BoundaryFunction apply_boundary = [](Point &) {}) {
+    iterator begin, iterator end, BoundaryFunction apply_boundary = [](auto&) {}) {
     Point cm = massCenter(begin, end, apply_boundary);
     translate(begin, end, -cm, apply_boundary);
 }
@@ -550,10 +569,10 @@ void translateToOrigin(
  */
 template <typename iterator>
 void rotate(
-    iterator begin, iterator end, const Eigen::Quaterniond &quaternion,
-    BoundaryFunction apply_boundary = [](Point &) {}, const Point &shift = Point::Zero()) {
+    iterator begin, iterator end, const Eigen::Quaterniond& quaternion, BoundaryFunction apply_boundary = [](auto&) {},
+    const Point& shift = Point::Zero()) {
     const auto rotation_matrix = quaternion.toRotationMatrix(); // rotation matrix
-    std::for_each(begin, end, [&](auto &particle) {
+    std::for_each(begin, end, [&](auto& particle) {
         particle.rotate(quaternion, rotation_matrix); // rotate internal coordinates
         particle.pos += shift;
         apply_boundary(particle.pos);

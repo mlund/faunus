@@ -175,8 +175,8 @@ void PolicyIonIon::updateComplex(EwaldData& data, Space::GroupVector& groups) co
                 Q += particle.charge * EwaldData::Tcomplex(std::cos(qr),
                                                            std::sin(qr)); // 'Q^q', see eq. 25 in ref.
             }
-            data.Q_ion[k] = Q;
         }
+        data.Q_ion[k] = Q;
     }
 }
 

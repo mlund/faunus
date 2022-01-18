@@ -270,50 +270,41 @@ class StructureFactorPBC : private TSamplingPolicy {
   public:
     StructureFactorPBC(int q_multiplier) : p_max(q_multiplier){}
 
-    template <class Tpositions> void sample(const Tpositions &positions, const Point &boxlength) {
+    template <typename Tpositions> void sample(const Tpositions& positions, const Point& boxlength) {
         // https://gcc.gnu.org/gcc-9/porting_to.html#ompdatasharing
         // #pragma omp parallel for collapse(2) default(none) shared(directions, p_max, boxlength) shared(positions)
         #pragma omp parallel for collapse(2) default(shared)
-        for (int i = 0; i < directions.size(); ++i) {
+        for (size_t i = 0; i < directions.size(); ++i) {
             for (int p = 1; p <= p_max; ++p) {                                         // loop over multiples of q
                 const Point q = 2.0 * pc::pi * p * directions[i].cwiseQuotient(boxlength); // scattering vector
-                T sum_sin = 0.0;
                 T sum_cos = 0.0;
+                T sum_sin = 0.0;
                 if constexpr (method == SIMD) {
-                    // When sine and cosine is computed in separate loops, advanced sine and cosine implementation
-                    // utilizing SIMD instructions may be used to get at least 4 times performance boost.
-                    // As of January 2020, only GCC exploits this using libmvec library if --ffast-math is enabled.
-                    std::vector<T> qr_std(positions.size());
-                    std::transform(positions.begin(), positions.end(), qr_std.begin(),
-                                   [&q](auto &r) { return q.dot(r); });
-                    // as of January 2020 the std::transform_reduce is not implemented in libc++
-                    for (auto &qr : qr_std) {
-                        sum_sin += std::sin(qr);
-                    }
-                    // as of January 2020 the std::transform_reduce is not implemented in libc++
-                    for (auto &qr : qr_std) {
-                        sum_cos += std::cos(qr);
-                    }
+                    // When sine and cosine is computed in separate loops, sine and cosine SIMD
+                    // instructions may be used to get at least 4 times performance boost.
+                    // Note January 2020: only GCC exploits this using libmvec library if --ffast-math is enabled.
+                    auto dot_product = [q](const auto& pos) { return static_cast<T>(q.dot(pos)); };
+                    auto qdotr = positions | ranges::cpp20::views::transform(dot_product) | ranges::to<std::vector>;
+                    std::for_each(qdotr.begin(), qdotr.end(), [&](auto qr) { sum_cos += std::cos(qr); });
+                    std::for_each(qdotr.begin(), qdotr.end(), [&](auto qr) { sum_sin += std::sin(qr); });
                 } else if constexpr (method == EIGEN) {
-                    // Map is a Nx3 matrix facade into original std::vector. Eigen does not accept `float`,
-                    // hence `double` must be used instead of the template parameter T here.
-                    auto qr = Eigen::Map<Eigen::MatrixXd, 0, Eigen::Stride<1, 3>>((double *)positions.data(),
-                        positions.size(), 3) * q;
-                    sum_sin = qr.array().cast<T>().sin().sum();
-                    sum_cos = qr.array().cast<T>().cos().sum();
+                    // Map is a Nx3 matrix facade into original positions (std::vector)
+                    using namespace Eigen;
+                    static_assert(std::is_same_v<Tpositions, std::vector<Point>>);
+                    auto r = Map<MatrixXd, 0, Stride<1, 3>>((double*)positions.data(), positions.size(), 3);
+                    auto qdotr = (r * q).array().cast<T>().eval(); // explicitly evaluate dot products
+                    sum_cos = qdotr.cos().sum();
+                    sum_sin = qdotr.sin().sum();
                 } else if constexpr (method == GENERIC) {
-                    // TODO: Optimize also for other compilers than GCC by using a vector math library, e.g.,
-                    // TODO: https://github.com/vectorclass/version2
-                    for (auto &r : positions) { // loop over positions
-                        T qr = q.dot(r);        // scalar product q*r
-                        sum_sin += sin(qr);
-                        sum_cos += cos(qr);
+                    for (const auto& r : positions) {
+                        const auto qr = static_cast<T>(q.dot(r));
+                        sum_cos += cos(qr); // sine and cosine in same loop obstructs
+                        sum_sin += sin(qr); // vectorization on most compilers...
                     }
                 };
                 // collect average, `norm()` gives the scattering vector length
-                const T sf = (sum_sin * sum_sin + sum_cos * sum_cos) / (T)(positions.size());
-                #pragma omp critical
-                // avoid race conditions when updating the map
+                const auto sf = std::norm(std::complex<T>(sum_cos, sum_sin)) / static_cast<T>(positions.size());
+#pragma omp critical // avoid race conditions when updating the map
                 addSampling(q.norm(), sf, 1.0);
             }
         }

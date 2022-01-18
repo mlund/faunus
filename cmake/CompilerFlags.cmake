@@ -10,6 +10,16 @@ if (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)")
     add_compile_options($<$<CONFIG:Release>:-march=native>)
 endif()
 
+if (APPLE AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
+    if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+        add_compile_options($<$<CONFIG:Release>:-mcpu=native>)
+    endif()
+    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        add_compile_options($<$<CONFIG:Release>:-mcpu=apple-a14>)
+    endif()
+endif()
+
+
 option(ENABLE_APPROXMATH "Use approximate math" off)
 if (ENABLE_APPROXMATH)
     add_definitions(-DFAU_APPROXMATH)

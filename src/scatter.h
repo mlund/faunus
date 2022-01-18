@@ -291,10 +291,11 @@ class StructureFactorPBC : private TSamplingPolicy {
                     // Map is a Nx3 matrix facade into original positions (std::vector)
                     using namespace Eigen;
                     static_assert(std::is_same_v<Tpositions, std::vector<Point>>);
-                    auto r = Map<MatrixXd, 0, Stride<1, 3>>((double*)positions.data(), positions.size(), 3);
-                    auto qdotr = (r * q).array().cast<T>().eval(); // explicitly evaluate dot products
-                    sum_cos = qdotr.cos().sum();
-                    sum_sin = qdotr.sin().sum();
+                    auto qdotr = (Map<MatrixXd, 0, Stride<1, 3>>((double*)positions.data(), positions.size(), 3) * q)
+                                     .array()
+                                     .eval();
+                    sum_cos = qdotr.cast<T>().cos().sum();
+                    sum_sin = qdotr.cast<T>().sin().sum();
                 } else if constexpr (method == GENERIC) {
                     for (const auto& r : positions) {
                         const auto qr = static_cast<T>(q.dot(r));

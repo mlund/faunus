@@ -8,8 +8,37 @@
 #include "space.h"
 #include "analysis.h"
 #include "energy.h"
+#include "tabulate.h"
+#include "aux/arange.h"
 
 namespace Faunus {
+
+TEST_CASE("Andrea benchmark") {
+    Tabulate::Andrea<double> spline;
+    spline.setTolerance(1e-5, 1e-4); // ftol carries no meaning
+    double radius = 50;
+    auto f = [=](double r) { return std::pow((2.0 / r), 12) - 7.0 / r * std::exp(-r / radius); };
+    auto knots = spline.generate(f, 2.0, radius);
+
+    // Distance distribution weighted by volume element, p(r) ∝ 4πr²
+    WeightedDistribution<double> distance_distribution;
+    for (auto r : arange(2.0 + 0.01, radius - 0.01, 0.5)) {
+        distance_distribution.push_back(r, r * r); // register distance and it's relative weight
+    }
+    // Generate set of weighted distances
+    std::vector<double> rvec(10000);
+    std::generate(rvec.begin(), rvec.end(), [&]() { return distance_distribution.sample(random.engine); });
+
+    ankerl::nanobench::Bench bench;
+    bench.minEpochIterations(300);
+    bench.run("Andrea", [&] {
+        double sum = 0;
+        for (auto r : rvec) {
+            sum += spline.eval(knots, r * r);
+        }
+        ankerl::nanobench::doNotOptimizeAway(sum);
+    });
+}
 
 TEST_CASE("sofq") {
     using namespace Faunus::Scatter;
@@ -18,7 +47,7 @@ TEST_CASE("sofq") {
     for (auto& p : pos)
         p = Eigen::Vector3d::Random() * box.x();
     ankerl::nanobench::Bench bench;
-    bench.minEpochIterations(100);
+    bench.minEpochIterations(300);
     bench.run("S(Q)_SIMD", [&] { StructureFactorPBC<double, SIMD>(10).sample(pos, box); });
     bench.run("S(Q)_EIGEN", [&] { StructureFactorPBC<double, EIGEN>(10).sample(pos, box); });
     bench.run("S(Q)_GENERIC", [&] { StructureFactorPBC<double, GENERIC>(10).sample(pos, box); });

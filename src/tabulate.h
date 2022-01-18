@@ -159,6 +159,7 @@ template <typename T = double> class Andrea : public TabulatorBase<T> {
      * @param d Table data
      * @param r2 value
      * @note Auto-vectorization in Clang: https://llvm.org/docs/Vectorizers.html
+     *       Alternative lower_bound: https://github.com/stgatilov/linear-vs-binary-search
      */
     inline T eval(const typename base::data &d, T r2) const {
         size_t pos = std::lower_bound(d.r2.begin(), d.r2.end(), r2) - d.r2.begin() - 1;

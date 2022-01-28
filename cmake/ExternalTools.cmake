@@ -11,6 +11,8 @@ CPMAddPackage("gh:docopt/docopt.cpp#v0.6.3")
 CPMAddPackage("gh:onqtam/doctest#v2.4.8")
 CPMAddPackage("gh:mateidavid/zstr#v1.0.5")
 CPMAddPackage("gh:martinus/nanobench#v4.3.6")
+CPMAddPackage("gh:pybind/pybind11#v2.9.0")
+CPMAddPackage("gh:nlohmann/json#v3.10.5")
 CPMAddPackage("gh:imneme/pcg-cpp#ffd522e7188bef30a00c74dc7eb9de5faff90092")
 CPMAddPackage("gh:ArashPartow/exprtk#93a9f44f99b910bfe07cd1e933371e83cea3841c")
 
@@ -20,19 +22,13 @@ CPMAddPackage(
 )
 
 CPMAddPackage(
-    NAME nlohmann_json VERSION 3.10.5
-    URL https://github.com/nlohmann/json/releases/download/v3.10.5/include.zip
-    OPTIONS "JSON_BuildTests OFF"
-)
-
-CPMAddPackage(
-    NAME Eigen VERSION 3.4.0 DOWNLOAD_ONLY YES 
+    NAME Eigen VERSION 3.4.0 DOWNLOAD_ONLY YES
     URL https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz
 )
 
 CPMAddPackage(
     NAME cereal GITHUB_REPOSITORY USCiLab/cereal
-    GIT_TAG 46a4a910077bf9e9f8327c8f6ea761c89b06da53
+    GIT_TAG v1.3.1
     OPTIONS "SKIP_PORTABILITY_TEST ON" "JUST_INSTALL_CEREAL ON"
 )
 
@@ -42,11 +38,6 @@ CPMAddPackage(
 
 set_property(TARGET spdlog PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_property(TARGET docopt PROPERTY POSITION_INDEPENDENT_CODE ON)
-
-if (nlohmann_json_ADDED)
-    add_library(nlohmann_json INTERFACE IMPORTED)
-    target_include_directories(nlohmann_json INTERFACE ${nlohmann_json_SOURCE_DIR}/include)
-endif()
 
 add_compile_definitions("NLOHMANN_JSON_HPP") # older versions used this macro. Now it's suffixed with "_"
 
@@ -59,11 +50,6 @@ if(Eigen_ADDED)
     add_library(Eigen INTERFACE IMPORTED)
     target_include_directories(Eigen INTERFACE ${Eigen_SOURCE_DIR})
 endif()
-
-#if (zstr_ADDED)
-#    add_library(zstr INTERFACE)
-#    target_include_directories(zstr INTERFACE "${zstr_SOURCE_DIR}/src")
-#endif()
 
 if (pcg-cpp_ADDED)
     add_library(pcg-cpp INTERFACE)
@@ -125,15 +111,6 @@ if(ENABLE_SID)
     add_dependencies(cppsid project_cppsid)
     set_property(TARGET cppsid PROPERTY IMPORTED_LOCATION ${binary_dir}/libcppsid.a)
 endif()
-
-###########
-# PYBIND11
-###########
-
-FetchContent_Declare(
-    pybind11
-    URL https://github.com/pybind/pybind11/archive/v2.7.0.tar.gz
-    URL_HASH MD5=bd742c80621babef4814cc2df041490d)
 
 ############
 # INTEL TBB

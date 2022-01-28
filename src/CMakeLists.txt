@@ -78,52 +78,24 @@ set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 
 add_library(libfaunus OBJECT ${objs} ${hdrs})
 target_compile_definitions(libfaunus PRIVATE SPDLOG_COMPILED_LIB)
-target_link_libraries(libfaunus PUBLIC
-        project_options
-        project_warnings
-        cereal
-        Eigen
-        functionparser
-        nlohmann_json
-        pcg-cpp
-        range-v3
-        spdlog
-        xdrfile
-        zstr)
+target_link_libraries(libfaunus PUBLIC project_options project_warnings cereal Eigen functionparser
+        nlohmann_json::nlohmann_json pcg-cpp range-v3 spdlog xdrfile zstr)
 
 # ========== benchmarks ==========
 
-add_executable(benchmarks benchmarks.cpp)
-target_link_libraries(benchmarks PRIVATE
-        Eigen
-        libfaunus
-        doctest
-        nanobench
-        project_options
-        range-v3
-        spdlog)
+add_executable(benchmarks benchmarks.cpp ${objs})
+target_link_libraries(benchmarks PRIVATE nanobench project_options project_warnings cereal Eigen functionparser
+        nlohmann_json::nlohmann_json pcg-cpp range-v3 spdlog xdrfile zstr)
 target_compile_definitions(benchmarks PRIVATE SPDLOG_COMPILED_LIB)
-set_target_properties(benchmarks PROPERTIES
-        POSITION_INDEPENDENT_CODE ON
-        LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
-
+target_compile_definitions(benchmarks PRIVATE DOCTEST_CONFIG_DISABLE)
+set_target_properties(benchmarks PROPERTIES POSITION_INDEPENDENT_CODE ON LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
 # ========== faunus (main executable) ==========
 
 add_executable(faunus faunus.cpp)
-target_link_libraries(faunus PRIVATE
-    docopt_s
-    Eigen
-    libfaunus
-    doctest
-    progresstracker
-    project_options
-    range-v3
-    spdlog)
+target_link_libraries(faunus PRIVATE docopt_s Eigen libfaunus doctest progresstracker project_options range-v3 spdlog)
 target_compile_definitions(faunus PRIVATE SPDLOG_COMPILED_LIB)
-set_target_properties(faunus PROPERTIES
-        POSITION_INDEPENDENT_CODE ON
-        LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+set_target_properties(faunus PROPERTIES POSITION_INDEPENDENT_CODE ON LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
 if (ENABLE_SID)
     if (SDL2_FOUND)
@@ -172,24 +144,12 @@ if (ENABLE_PYTHON)
     endif()
 
     if (PYTHONLIBS_FOUND)
-        FetchContent_GetProperties(pybind11)
-        if(NOT pybind11_POPULATED)
-            FetchContent_Populate(pybind11)
-            add_subdirectory(${pybind11_SOURCE_DIR} ${pybind11_BINARY_DIR})
-            pybind11_add_module(pyfaunus pyfaunus.cpp ${objs})
-            target_link_libraries(pyfaunus PRIVATE
-                    project_options
-                    cereal
-                    Eigen
-                    functionparser
-                    nlohmann_json
-                    range-v3
-                    spdlog
-                    xdrfile
-                    zstr)
-            target_compile_definitions(pyfaunus PUBLIC SPDLOG_COMPILED_LIB)
-            target_compile_definitions(pyfaunus PRIVATE DOCTEST_CONFIG_DISABLE)
-        endif()
+        pybind11_add_module(pyfaunus pyfaunus.cpp ${objs})
+        target_link_libraries(pyfaunus PRIVATE
+                project_options cereal Eigen functionparser nlohmann_json
+                range-v3 spdlog xdrfile zstr)
+        target_compile_definitions(pyfaunus PUBLIC SPDLOG_COMPILED_LIB)
+        target_compile_definitions(pyfaunus PRIVATE DOCTEST_CONFIG_DISABLE)
     endif ()
 endif ()
 

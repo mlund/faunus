@@ -18,9 +18,9 @@ TEST_CASE_TEMPLATE("[Faunus] StructureFactorPBC", T, StructureFactorPBC<float, S
                                  0.1571, 0.730579, 0.2221, 0.701547, 0.2721, 0.692064};
     T scatter(2);
     scatter.sample(positions, box);
-    for (auto [q, S] : scatter.getSampling()) {
-        CHECK(q == Approx(result[cnt++]));
-        CHECK(S == Approx(result[cnt++]));
+    for (auto sample : scatter.getSampling()) {
+        CHECK(sample.first == Approx(result[cnt++]));
+        CHECK(sample.second == Approx(result[cnt++]));
     }
     CHECK(cnt == result.size());
 }
@@ -35,9 +35,9 @@ TEST_CASE("[Faunus] StructureFactorIPBC") {
                                   0.1571, 1.40662,  0.2221, 2.06042, 0.2721, 1.53482};
     StructureFactorIPBC scatter(2);
     scatter.sample(positions, box);
-    for (auto [q, S] : scatter.getSampling()) {
-        CHECK(q == Approx(result[cnt++]));
-        CHECK(S == Approx(result[cnt++]));
+    for (auto sample : scatter.getSampling()) {
+        CHECK(sample.first == Approx(result[cnt++]));
+        CHECK(sample.second == Approx(result[cnt++]));
     }
     CHECK(cnt == result.size());
 }

@@ -679,7 +679,9 @@ TEST_CASE("[Faunus] hexagonalPrismToCuboid") {
     p[3].pos = {0, -1, 0};
     p[4].pos = {-0.866, -0.5, 0};
     p[5].pos = {-0.866, 0.5, 0};
-    auto [cuboid, p_new] = hexagonalPrismToCuboid(hexagonal_prism, p);
+    auto result = hexagonalPrismToCuboid(hexagonal_prism, p);
+    auto& cuboid = result.first; // issue w. structured binding:
+    auto& p_new = result.second; // https://github.com/doctest/doctest/issues/279
     CHECK(p_new.size() == 12);
     CHECK(cuboid.getLength().x() == Approx(radius * 2.0));
     CHECK(cuboid.getLength().y() == Approx(side * 3.0));

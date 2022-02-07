@@ -1,10 +1,8 @@
 #include "clustermove.h"
 #include "aux/eigensupport.h"
-#include <algorithm>
 #include <range/v3/view/cartesian_product.hpp>
 #include <range/v3/range/conversion.hpp>
 #include <range/v3/algorithm/for_each.hpp>
-#include <set>
 
 namespace Faunus {
 namespace Move {
@@ -13,23 +11,20 @@ ClusterShapeAnalysis::ClusterShapeAnalysis(bool shape_anisotropy_use_com, const 
                                            bool dump_pqr_files)
     : save_pqr_files(dump_pqr_files), shape_anisotropy_use_com(shape_anisotropy_use_com) {
     if (!filename.empty()) {
-        if (stream = IO::openCompressedOutputStream(MPI::prefix + filename); !*stream) { // may be gzip compressed
-            throw std::runtime_error("could not create "s + filename);
-        } else {
-            *stream << "# size seed shape_anisotropy\n";
-        }
+        stream = IO::openCompressedOutputStream(MPI::prefix + filename, true);
+        *stream << "# size seed shape_anisotropy\n";
     }
 }
 ClusterShapeAnalysis::ClusterShapeAnalysis(const json &j)
     : ClusterShapeAnalysis(j.value("com", true), j.value("file", std::string()), j.value("save_pqr", false)) {}
 
 decltype(ClusterShapeAnalysis::pqr_distribution)::iterator ClusterShapeAnalysis::findPQRstream(size_t cluster_size) {
-    if (auto it = pqr_distribution.find(cluster_size); it == pqr_distribution.end()) {
+    auto it = pqr_distribution.find(cluster_size);
+    if (it == pqr_distribution.end()) {
         const std::string file = MPI::prefix + fmt::format("clustersize{}.pqr", cluster_size);
         return pqr_distribution.emplace(cluster_size, std::ofstream(file)).first;
-    } else {
-        return it;
     }
+    return it;
 }
 
 void to_json(json &j, const ClusterShapeAnalysis &shape) {
@@ -79,9 +74,8 @@ void FindCluster::updateMoleculeIndex() {
     auto matching_molid = [&](auto& group) {
         if (group.isAtomic() || group.end() != group.trueend()) {
             return false; // skip atomic and incomplete groups
-        } else {
-            return std::binary_search(molids.begin(), molids.end(), group.id);
         }
+        return std::binary_search(molids.begin(), molids.end(), group.id);
     };
     molecule_index = spc.groups | rv::filter(matching_molid) | rv::transform(group_to_index) |
                      ranges::to<decltype(molecule_index)>();
@@ -113,7 +107,7 @@ void FindCluster::parseThresholds(const json &j) {
             thresholds_squared.set(id1, id2, std::pow(j.get<double>(), 2));
         }
     } else if (j.is_object()) { // threshold is given as pairs of clustering molecules
-        const int threshold_combinations = molids.size() * (molids.size() + 1) / 2; // N*(N+1)/2
+        const auto threshold_combinations = molids.size() * (molids.size() + 1) / 2; // N*(N+1)/2
         if (j.size() != threshold_combinations) {
             throw ConfigurationError(
                 "exactly {} molecule pairs must be given in threshold matrix to cover all combinations",
@@ -144,9 +138,8 @@ std::optional<size_t> FindCluster::findSeed(Random &random) {
     auto not_satellites = molecule_index | ranges::cpp20::views::filter(avoid_satellites);
     if (ranges::cpp20::empty(not_satellites)) {
         return std::nullopt;
-    } else {
-        return *random.sample(not_satellites.begin(), not_satellites.end());
     }
+    return *random.sample(not_satellites.begin(), not_satellites.end());
 }
 
 /**

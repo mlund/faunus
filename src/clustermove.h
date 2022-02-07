@@ -166,7 +166,7 @@ class Cluster : public MoveBase {
     void _to_json(json& j) const override;
     void _from_json(const json& j) override;
     void setChange(Change& change, const std::vector<size_t>& group_indices) const;
-    void calculateBias(const size_t seed_index, const std::vector<size_t>& cluster_index);
+    void calculateBias(size_t seed_index, const std::vector<size_t>& cluster_index);
     void clearForMove(); //!< Clear displacements and bias
 
   protected:

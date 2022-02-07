@@ -1,0 +1,211 @@
+{
+  "analysis": [
+    {
+      "reactioncoordinate": {
+        "average": -0.03486577721419472,
+        "index": 1,
+        "nstep": 10,
+        "property": "com_x",
+        "samples": 50000,
+        "type": "molecule"
+      }
+    },
+    {
+      "savestate": {
+        "file": "confout.pqr"
+      }
+    },
+    {
+      "savestate": {
+        "file": "state.json"
+      }
+    },
+    {
+      "sanity": {
+        "nstep": 1000,
+        "samples": 500
+      }
+    }
+  ],
+  "compiler": "Apple LLVM 12.0.5 (clang-1205.0.22.9)",
+  "energy": [
+    {
+      "hamiltonian": [
+        {
+          "ContainerOverlap": {
+            "relative time": 0.0012179730457269446
+          }
+        }
+      ]
+    }
+  ],
+  "geometry": {
+    "radius": 2.0,
+    "type": "sphere"
+  },
+  "git revision": "ff13c81a (2022-01-28)",
+  "groups": [
+    {
+      "ref": {
+        "compressible": false,
+        "index": [
+          0,
+          1
+        ],
+        "size": 2
+      }
+    },
+    {
+      "test": {
+        "compressible": false,
+        "index": [
+          2,
+          2
+        ],
+        "size": 1
+      }
+    },
+    {
+      "test": {
+        "compressible": false,
+        "index": [
+          3,
+          3
+        ],
+        "size": 1
+      }
+    },
+    {
+      "test": {
+        "compressible": false,
+        "index": [
+          4,
+          4
+        ],
+        "size": 1
+      }
+    },
+    {
+      "test": {
+        "compressible": false,
+        "index": [
+          5,
+          5
+        ],
+        "size": 1
+      }
+    },
+    {
+      "test": {
+        "compressible": false,
+        "index": [
+          6,
+          6
+        ],
+        "size": 1
+      }
+    },
+    {
+      "test": {
+        "compressible": false,
+        "index": [
+          7,
+          7
+        ],
+        "size": 1
+      }
+    },
+    {
+      "test": {
+        "compressible": false,
+        "index": [
+          8,
+          8
+        ],
+        "size": 1
+      }
+    },
+    {
+      "test": {
+        "compressible": false,
+        "index": [
+          9,
+          9
+        ],
+        "size": 1
+      }
+    },
+    {
+      "test": {
+        "compressible": false,
+        "index": [
+          10,
+          10
+        ],
+        "size": 1
+      }
+    },
+    {
+      "test": {
+        "compressible": false,
+        "index": [
+          11,
+          11
+        ],
+        "size": 1
+      }
+    }
+  ],
+  "montecarlo": {
+    "average potential energy (kT)": 0.0,
+    "last move": "moltransrot"
+  },
+  "moves": [
+    {
+      "moltransrot": {
+        "acceptance": 0.878,
+        "cite": "doi:10/frvx8j",
+        "dir": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "dirrot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "dp": 0.5,
+        "dprot": 0.0,
+        "molecule": "test",
+        "molid": 1,
+        "moves": 5000000,
+        "repeat": 10,
+        "smartmc": {
+          "fixed <N_inside>": 2.58,
+          "mean bias energy (kT)": 0.0402,
+          "mean number inside": 2.55,
+          "p": 0.3,
+          "region": {
+            "group_com": false,
+            "index1": 0,
+            "index2": 1,
+            "parallel_radius": 1.0,
+            "perpendicular_radius": 1.0,
+            "policy": "ellipsoid"
+          },
+          "selected inside fraction": 0.486
+        },
+        "stochastic": true,
+        "√⟨r²⟩": 0.261,
+        "√⟨θ²⟩/°": 0.0
+      }
+    }
+  ],
+  "number of groups": 11,
+  "number of particles": 12,
+  "number of sweeps": 500000,
+  "reactionlist": null,
+  "relative drift": 0.0,
+  "temperature": 300.0
+}

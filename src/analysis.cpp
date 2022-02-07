@@ -789,20 +789,20 @@ void AtomDensity::_sample() {
  * @brief Counts atoms in atomic groups
  */
 std::map<DensityBase::id_type, int> AtomDensity::count() const {
-    using namespace ranges::cpp20;
+    namespace rv = ranges::cpp20::views;
 
     // All ids incl. inactive are counted; std::vector ensures constant lookup (index = id)
     std::vector<int> atom_count(names.size(), 0);
 
     // Count number of active atoms in atomic groups
     auto particle_ids_in_atomic_groups =
-        spc.groups | views::filter(&Group::isAtomic) | views::join | views::transform(&Particle::id);
-    for_each(particle_ids_in_atomic_groups, [&](auto id) { atom_count.at(id)++; });
-    
+        spc.groups | rv::filter(&Group::isAtomic) | rv::join | rv::transform(&Particle::id);
+    ranges::cpp20::for_each(particle_ids_in_atomic_groups, [&](auto id) { atom_count.at(id)++; });
+
     // Copy vector --> map
     id_type id = 0U;
     std::map<id_type, int> map;
-    for_each(atom_count, [&id, &map](auto count) { map.emplace_hint(map.end(), id++, count); });
+    ranges::cpp20::for_each(atom_count, [&id, &map](auto count) { map.emplace_hint(map.end(), id++, count); });
     return map;
 }
 
@@ -1873,7 +1873,7 @@ void SpaceTrajectory::_to_disk() { stream->flush(); }
 ElectricPotential::ElectricPotential(const json& j, const Space& spc)
     : Analysisbase(spc, "electricpotential"), potential_correlation_histogram(histogram_resolution) {
     from_json(j);
-    coulomb = std::make_shared<Potential::NewCoulombGalore>();
+    coulomb = std::make_unique<Potential::NewCoulombGalore>();
     coulomb->from_json(j);
     getTargets(j);
     setPolicy(j);
@@ -1935,7 +1935,7 @@ void ElectricPotential::getTargets(const json& j) {
         std::transform(positions.begin(), positions.end(), std::back_inserter(targets), [&](auto& position) {
             Target target;
             target.position = position;
-            target.potential_histogram = std::make_shared<SparseHistogram<double>>(histogram_resolution);
+            target.potential_histogram = std::make_unique<SparseHistogram<double>>(histogram_resolution);
             return target;
         });
         if (targets.empty()) {

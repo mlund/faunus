@@ -182,11 +182,11 @@ class ElectricPotential : public Analysisbase {
     struct Target {
         Point position;                                               //!< Target position
         Average<double> mean_potential;                               //!< mean potential at position
-        std::shared_ptr<SparseHistogram<double>> potential_histogram; //!< Histogram of observed potentials
+        std::unique_ptr<SparseHistogram<double>> potential_histogram; //!< Histogram of observed potentials
     };
     std::vector<Target> targets;                             //!< List of target points where to sample the potential
     Policies policy;                                         //!< Policy to apply to targets before each sample event
-    std::shared_ptr<Potential::NewCoulombGalore> coulomb;    //!< Class for calculating the potential
+    std::unique_ptr<Potential::NewCoulombGalore> coulomb;    //!< Class for calculating the potential
     Average<double> mean_potential_correlation;              //!< Correlation between targets, <phi1 x phi2 x ... >
     SparseHistogram<double> potential_correlation_histogram; //!< Distribution of correlations, P(<phi1 x phi2 x ... >)
     void getTargets(const json& j);                          //!< Get user defined target positions

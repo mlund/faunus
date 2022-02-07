@@ -52,7 +52,7 @@ moves:
         p: 0.3
 
 analysis:
-  - reactioncoordinate: {nstep: 10, type: molecule, property: com_x, index: 1}
+  - reactioncoordinate: {nstep: 1, type: molecule, property: com_x, index: 1}
   - savestate: {file: confout.pqr}
   - savestate: {file: state.json}
   - sanity: {nstep: 1000}

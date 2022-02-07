@@ -2,11 +2,11 @@
   "analysis": [
     {
       "reactioncoordinate": {
-        "average": -0.03486577721419472,
+        "average": 0.0010915424613008172,
         "index": 1,
-        "nstep": 10,
+        "nstep": 1,
         "property": "com_x",
-        "samples": 50000,
+        "samples": 500000,
         "type": "molecule"
       }
     },
@@ -33,7 +33,7 @@
       "hamiltonian": [
         {
           "ContainerOverlap": {
-            "relative time": 0.0012179730457269446
+            "relative time": 0.0019986100634692247
           }
         }
       ]
@@ -163,7 +163,7 @@
   "moves": [
     {
       "moltransrot": {
-        "acceptance": 0.878,
+        "acceptance": 0.88,
         "cite": "doi:10/frvx8j",
         "dir": [
           1.0,
@@ -182,9 +182,9 @@
         "moves": 5000000,
         "repeat": 10,
         "smartmc": {
-          "fixed <N_inside>": 2.58,
-          "mean bias energy (kT)": 0.0402,
-          "mean number inside": 2.55,
+          "fixed <N_inside>": 2.49,
+          "mean bias energy (kT)": 0.0396,
+          "mean number inside": 2.5,
           "p": 0.3,
           "region": {
             "group_com": false,
@@ -194,7 +194,7 @@
             "perpendicular_radius": 1.0,
             "policy": "ellipsoid"
           },
-          "selected inside fraction": 0.486
+          "selected inside fraction": 0.479
         },
         "stochastic": true,
         "√⟨r²⟩": 0.261,

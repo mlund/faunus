@@ -42,12 +42,12 @@ TCombinatorFunc PairMixer::getCombinator(CombinationRuleType combination_rule, C
     return combinator;
 }
 
-TPairMatrixPtr PairMixer::createPairMatrix(const std::vector<AtomData> &atoms) {
+TPairMatrixPtr PairMixer::createPairMatrix(const std::vector<AtomData>& atoms) {
     size_t n = atoms.size(); // number of atom types
     TPairMatrixPtr matrix = std::make_shared<TPairMatrix>(n, n);
-    for (auto &i : atoms) {
-        for (auto &j : atoms) {
-            if(i.implicit || j.implicit) {
+    for (const auto& i : atoms) {
+        for (const auto& j : atoms) {
+            if (i.implicit || j.implicit) {
                 // implicit atoms are ignored as the missing properties, e.g., sigma and epsilon, might raise errors
                 (*matrix)(i.id(), j.id()) = combUndefined();
             } else if (i.id() == j.id()) {
@@ -65,7 +65,7 @@ TPairMatrixPtr PairMixer::createPairMatrix(const std::vector<AtomData> &atoms,
                                            const std::vector<CustomInteractionData> &interactions) {
     TPairMatrixPtr matrix = PairMixer::createPairMatrix(atoms);
     auto dimension = std::min(matrix->rows(), matrix->cols());
-    for (auto &i : interactions) {
+    for (const auto &i : interactions) {
         if (i.atom_id[0] < dimension && i.atom_id[1] < dimension) {
             // interaction is always symmetric
             (*matrix)(i.atom_id[0], i.atom_id[1]) = (*matrix)(i.atom_id[1], i.atom_id[0]) =
@@ -446,8 +446,8 @@ TEST_CASE("[Faunus] CustomPairPotential") {
 // =============== Dummy ===============
 
 Dummy::Dummy() { name = "dummy"; }
-void Dummy::from_json(const json &) {}
-void Dummy::to_json(json &) const {}
+void Dummy::from_json([[maybe_unused]] const json &j) {}
+void Dummy::to_json([[maybe_unused]] json &j) const {}
 
 // =============== LennardJones ===============
 
@@ -681,14 +681,14 @@ TEST_CASE("[Faunus] SquareWell") {
 
 // =============== Polarizability ===============
 
-void Polarizability::from_json(const json &j) {
+void Polarizability::from_json(const json& j) {
     epsr = j.at("epsr").get<double>();
-    double lB = pc::bjerrumLength(epsr);
-    for (auto &i : Faunus::atoms) {
-        for (auto &j : Faunus::atoms) {
+    const auto bjerrum_length = pc::bjerrumLength(epsr);
+    for (const auto& i : Faunus::atoms) {
+        for (const auto& j : Faunus::atoms) {
             m_neutral->set(i.id(), j.id(), -3 * i.alphax * pow(0.5 * i.sigma, 3) * j.alphax * pow(0.5 * j.sigma, 3));
             m_charged->set(i.id(), j.id(),
-                           -lB / 2 *
+                           -bjerrum_length * 0.5 *
                                (pow(i.charge, 2) * j.alphax * pow(0.5 * j.sigma, 3) +
                                 pow(j.charge, 2) * i.alphax * pow(0.5 * i.sigma, 3)));
         }
@@ -697,17 +697,20 @@ void Polarizability::from_json(const json &j) {
 
 // =============== FunctorPotential ===============
 
-void FunctorPotential::registerSelfEnergy(PairPotentialBase *pot) {
+void FunctorPotential::registerSelfEnergy(PairPotentialBase* pot) {
     if (pot->selfEnergy) {
-        if (not selfEnergy) // no self energy is defined
+        if (not selfEnergy) { // no self energy is defined
             selfEnergy = pot->selfEnergy;
-        else // accumulate self energies
-            selfEnergy = [pot = pot, &selfEnergy = selfEnergy](const Particle &p) {
+        } else // accumulate self energies
+        {
+            selfEnergy = [pot = pot, &selfEnergy = selfEnergy](const Particle& p) {
                 return pot->selfEnergy(p) + selfEnergy(p);
             };
+        }
         faunus_logger->debug("Added selfEnergy function from {} to {}", pot->name, name);
-    } else
+    } else {
         faunus_logger->trace("Failed to register non-defined selfEnergy() for {}", pot->name);
+    }
 }
 
 FunctorPotential::uFunc FunctorPotential::combineFunc(json &j) {
@@ -718,12 +721,13 @@ FunctorPotential::uFunc FunctorPotential::combineFunc(json &j) {
                 for (const auto& [key, j_val] : i.items()) {
                     uFunc _u = nullptr;
                     try {
-                        if (key == "custom")
+                        if (key == "custom") {
                             _u = CustomPairPotential() = j_val;
+                        }
 
                         // add Coulomb potential and self-energy
                         // terms if not already added
-                        else if (key == "coulomb") { // temporary key
+                        else if (key == "coulomb") {               // temporary key
                             std::get<0>(potlist).from_json(j_val); // initialize w. json object
                             std::get<0>(potlist).to_json(j_val);   // write back to json object with added values
                             _u = std::get<0>(potlist);
@@ -761,7 +765,7 @@ FunctorPotential::uFunc FunctorPotential::combineFunc(json &j) {
                             std::get<12>(potlist).from_json(j_val); // init from json
                             std::get<12>(potlist).to_json(j_val);   // write back added info to json
                             _u = std::get<12>(potlist);
-                            isotropic = false;                         // potential is now angular dependent
+                            isotropic = false; // potential is now angular dependent
                             if (not have_dipole_self_energy) {
                                 registerSelfEnergy(&std::get<12>(potlist));
                                 have_dipole_self_energy = true;
@@ -1029,9 +1033,9 @@ void SplinedPotential::createKnots(int i, int j, double rmin, double rmax) {
     matrix_of_knots.set(i, j, knotdata); // register knots for the pair
 
     double max_error = 0.0; // maximum absolute error of the spline along r
-    for (double r = rmin + dr; r < rmax; r += dr) {
-        double error = std::fabs(operator()(particle1, particle2, r *r, {r, 0, 0}) -
-                                 FunctorPotential::operator()(particle1, particle2, r *r, {r, 0, 0}));
+    for (const auto r : arange(rmin + dr, rmax, dr)) {
+        auto error = std::fabs(operator()(particle1, particle2, r* r, {r, 0, 0}) -
+                                 FunctorPotential::operator()(particle1, particle2, r* r, {r, 0, 0}));
         max_error = std::max(error, max_error);
     }
     faunus_logger->trace(
@@ -1148,7 +1152,8 @@ void Multipole::setSelfEnergy() {
     }; // expose self-energy as a functor in potential base class
 }
 
-Point Multipole::force(const Faunus::Particle &a, const Faunus::Particle &b, double, const Faunus::Point &r) const {
+Point Multipole::force(const Faunus::Particle& a, const Faunus::Particle& b, [[maybe_unused]] double squared_distance,
+                       const Faunus::Point& r) const {
     Point mua = a.getExt().mu * a.getExt().mulen;
     Point mub = b.getExt().mu * b.getExt().mulen;
     Point ionion = pot.ion_ion_force(a.charge, b.charge, r);

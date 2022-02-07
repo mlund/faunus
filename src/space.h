@@ -57,7 +57,7 @@ struct Change {
     bool empty() const;                                                       //!< Check if change object is empty
     explicit operator bool() const;                                           //!< True if object is not empty
     void sanityCheck(const std::vector<Group>& group_vector) const;           //!< Sanity check on contained object data
-};
+} __attribute__((aligned(32)));
 
 void to_json(json& j, const Change::GroupChange& group_change); //!< Serialize Change data to json
 void to_json(json& j, const Change& change);                    //!< Serialise Change object to json
@@ -168,9 +168,8 @@ class Space {
         // copy data from source range (this modifies `destination`)
         std::for_each(begin, end, [&](const auto &source) { copy_function(source, *destination++); });
 
-        for (auto& group : affected_groups) { // update affected mass centers
-            group.updateMassCenter(geometry.getBoundaryFunc(), group.begin()->pos);
-        }
+        std::for_each(affected_groups.begin(), affected_groups.end(),
+                      [&](Group& group) { group.updateMassCenter(geometry.getBoundaryFunc(), group.begin()->pos); });
     }
 
     //! Iterable range of all particle positions
@@ -183,7 +182,7 @@ class Space {
         return ranges::cpp20::views::transform(particles, [](auto& particle) -> Point& { return particle.pos; });
     }
 
-    std::function<bool(const GroupType&)> getGroupFiler(int molid, const Selection& selection) const {
+    static std::function<bool(const GroupType&)> getGroupFilter(int molid, const Selection& selection) {
         auto is_active = [](const GroupType& group) { return group.size() == group.capacity(); };
 
         auto is_neutral = [](auto begin, auto end) {
@@ -214,8 +213,7 @@ class Space {
             f = [=](auto& group) { return is_active(group) && is_neutral(group.begin(), group.end()); };
             break;
         }
-        f = [f, molid](auto& group) { return group.id == molid && f(group); };
-        return f;
+        return [f, molid](auto& group) { return group.id == molid && f(group); };
     }
 
     /**
@@ -225,12 +223,12 @@ class Space {
      * @return range with all groups of molid
      */
     auto findMolecules(MoleculeData::index_type molid, Selection selection = Selection::ACTIVE) {
-        auto group_filter = getGroupFiler(molid, selection);
+        auto group_filter = getGroupFilter(molid, selection);
         return groups | ranges::cpp20::views::filter(group_filter);
     }
 
     auto findMolecules(MoleculeData::index_type molid, Selection selection = Selection::ACTIVE) const {
-        auto group_filter = getGroupFiler(molid, selection);
+        auto group_filter = getGroupFilter(molid, selection);
         return groups | ranges::cpp20::views::filter(group_filter);
     }
 

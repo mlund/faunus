@@ -1,13 +1,9 @@
 #include "space.h"
 #include "io.h"
-#include "aux/iteratorsupport.h"
 #include "spdlog/spdlog.h"
 #include "aux/eigensupport.h"
 #include <range/v3/algorithm/for_each.hpp>
-#include <range/v3/algorithm/transform.hpp>
 #include <range/v3/algorithm/count_if.hpp>
-#include <memory>
-#include <stdexcept>
 
 namespace Faunus {
 

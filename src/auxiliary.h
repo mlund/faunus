@@ -252,6 +252,16 @@ template <typename T> struct BasePointerVector {
         return _v;
     } //!< Pointer list to all matching type
 
+    template <typename Tderived, class = std::enable_if_t<std::is_base_of<T, Tderived>::value>>
+    std::shared_ptr<Tderived> findFirstOf() const {
+        for (auto& base : vec) {
+            if (auto derived = std::dynamic_pointer_cast<Tderived>(base); derived) {
+                return derived;
+            }
+        }
+        return nullptr;
+    }
+
     template <typename U>
     friend void to_json(nlohmann::json &, const BasePointerVector<U> &); //!< Allow serialization to JSON
 }; //!< Helper class for storing vectors of base pointers

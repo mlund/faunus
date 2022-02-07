@@ -89,17 +89,17 @@ TEST_CASE("[Faunus] Ewald - EwaldData") {
 
 //----------------- Ewald Policies -------------------
 
-std::shared_ptr<EwaldPolicyBase> EwaldPolicyBase::makePolicy(EwaldData::Policies policy) {
+std::unique_ptr<EwaldPolicyBase> EwaldPolicyBase::makePolicy(EwaldData::Policies policy) {
     switch (policy) {
     case EwaldData::PBC:
-        return std::make_shared<PolicyIonIon>();
+        return std::make_unique<PolicyIonIon>();
     case EwaldData::PBCEigen:
-        return std::make_shared<PolicyIonIonEigen>();
+        return std::make_unique<PolicyIonIonEigen>();
     case EwaldData::IPBC:
-        return std::make_shared<PolicyIonIonIPBC>();
+        return std::make_unique<PolicyIonIonIPBC>();
     case EwaldData::IPBCEigen:
-        return std::make_shared<PolicyIonIonIPBCEigen>();
-    case EwaldData::INVALID:
+        return std::make_unique<PolicyIonIonIPBCEigen>();
+    default:
         throw std::runtime_error("invalid Ewald policy");
     }
     return nullptr;
@@ -993,7 +993,7 @@ void Hamiltonian::sync(Energybase* other_hamiltonian, const Change& change) {
  *
  * New energy terms should be added to the if-else chain in the function
  */
-std::shared_ptr<Energybase> Hamiltonian::createEnergy(Space& spc, const std::string& name, const json& j) {
+std::unique_ptr<Energybase> Hamiltonian::createEnergy(Space& spc, const std::string& name, const json& j) {
     using namespace Potential;
     using CoulombLJ = CombinedPairPotential<NewCoulombGalore, LennardJones>;
     using CoulombWCA = CombinedPairPotential<NewCoulombGalore, WeeksChandlerAndersen>;
@@ -1005,72 +1005,72 @@ std::shared_ptr<Energybase> Hamiltonian::createEnergy(Space& spc, const std::str
 
     try {
         if (name == "nonbonded_coulomblj" || name == "nonbonded_newcoulomblj") {
-            return std::make_shared<Nonbonded<PairEnergy<CoulombLJ, false>, PairingPolicy>>(j, spc, *this);
+            return std::make_unique<Nonbonded<PairEnergy<CoulombLJ, false>, PairingPolicy>>(j, spc, *this);
         }
         if (name == "nonbonded_coulomblj_EM") {
-            return std::make_shared<NonbondedCached<PairEnergy<CoulombLJ, false>, PairingPolicy>>(j, spc, *this);
+            return std::make_unique<NonbondedCached<PairEnergy<CoulombLJ, false>, PairingPolicy>>(j, spc, *this);
         }
         if (name == "nonbonded_splined") {
-            return std::make_shared<Nonbonded<PairEnergy<Potential::SplinedPotential, false>, PairingPolicy>>(j, spc,
+            return std::make_unique<Nonbonded<PairEnergy<Potential::SplinedPotential, false>, PairingPolicy>>(j, spc,
                                                                                                               *this);
         }
         if (name == "nonbonded" || name == "nonbonded_exact") {
-            return std::make_shared<Nonbonded<PairEnergy<Potential::FunctorPotential, true>, PairingPolicy>>(j, spc,
+            return std::make_unique<Nonbonded<PairEnergy<Potential::FunctorPotential, true>, PairingPolicy>>(j, spc,
                                                                                                              *this);
         }
         if (name == "nonbonded_cached") {
-            return std::make_shared<NonbondedCached<PairEnergy<Potential::SplinedPotential>, PairingPolicy>>(j, spc,
+            return std::make_unique<NonbondedCached<PairEnergy<Potential::SplinedPotential>, PairingPolicy>>(j, spc,
                                                                                                              *this);
         }
         if (name == "nonbonded_coulombwca") {
-            return std::make_shared<Nonbonded<PairEnergy<CoulombWCA, false>, PairingPolicy>>(j, spc, *this);
+            return std::make_unique<Nonbonded<PairEnergy<CoulombWCA, false>, PairingPolicy>>(j, spc, *this);
         }
         if (name == "nonbonded_pm" || name == "nonbonded_coulombhs") {
-            return std::make_shared<Nonbonded<PairEnergy<PrimitiveModel, false>, PairingPolicy>>(j, spc, *this);
+            return std::make_unique<Nonbonded<PairEnergy<PrimitiveModel, false>, PairingPolicy>>(j, spc, *this);
         }
         if (name == "nonbonded_pmwca") {
-            return std::make_shared<Nonbonded<PairEnergy<PrimitiveModelWCA, false>, PairingPolicy>>(j, spc, *this);
+            return std::make_unique<Nonbonded<PairEnergy<PrimitiveModelWCA, false>, PairingPolicy>>(j, spc, *this);
         }
         if (name == "bonded") {
-            return std::make_shared<Bonded>(j, spc);
+            return std::make_unique<Bonded>(j, spc);
         }
         if (name == "customexternal") {
-            return std::make_shared<CustomExternal>(j, spc);
+            return std::make_unique<CustomExternal>(j, spc);
         }
         if (name == "akesson") {
-            return std::make_shared<ExternalAkesson>(j, spc);
+            return std::make_unique<ExternalAkesson>(j, spc);
         }
         if (name == "confine") {
-            return std::make_shared<Confine>(j, spc);
+            return std::make_unique<Confine>(j, spc);
         }
         if (name == "constrain") {
-            return std::make_shared<Constrain>(j, spc);
+            return std::make_unique<Constrain>(j, spc);
         }
         if (name == "example2d") {
-            return std::make_shared<Example2D>(j, spc);
+            return std::make_unique<Example2D>(j, spc);
         }
         if (name == "isobaric") {
-            return std::make_shared<Isobaric>(j, spc);
+            return std::make_unique<Isobaric>(j, spc);
         }
         if (name == "penalty") {
 #ifdef ENABLE_MPI
-            return std::make_shared<PenaltyMPI>(j, spc, MPI::mpi);
+            return std::make_unique<PenaltyMPI>(j, spc, MPI::mpi);
 #else
-            return std::make_shared<Penalty>(j, spc);
+            return std::make_unique<Penalty>(j, spc);
 #endif
         }
         if (name == "freesasa") {
 #if defined ENABLE_FREESASA
-            return std::make_shared<FreeSASAEnergy>(j, spc);
+            return std::make_unique<FreeSASAEnergy>(j, spc);
 #else
             throw ConfigurationError("faunus not compiled with sasa support");
 #endif
         }
         if (name == "sasabase") {
-            return std::make_shared<SASAEnergyBase>(j, spc);
+            return std::make_unique<SASAEnergyBase>(j, spc);
         }
         if (name == "sasa") {
-            return std::make_shared<SASAEnergy>(j, spc);
+            return std::make_unique<SASAEnergy>(j, spc);
         }
         throw ConfigurationError("'{}' unknown", name);
     } catch (std::exception& e) {

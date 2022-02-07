@@ -10,6 +10,7 @@
 #include <range/v3/range/conversion.hpp>
 #include <range/v3/view/iota.hpp>
 #include <range/v3/view/subrange.hpp>
+#include <range/v3/algorithm/any_of.hpp>
 #include <Eigen/Dense>
 #include <spdlog/spdlog.h>
 #include <numeric>
@@ -146,9 +147,10 @@ class EwaldPolicyBase {
      * @return tuple with positions, charges
      */
     auto mapGroupsToEigen(Space::GroupVector& groups) const {
-        for (auto &g : groups)
-            if (g.size() != g.capacity())
-                throw std::runtime_error("Eigen optimized Ewald not available with inactive groups");
+        auto is_partially_inactive = [](const Group& group) { return group.size() != group.capacity(); };
+        if (ranges::cpp20::any_of(groups, is_partially_inactive)) {
+            throw std::runtime_error("Eigen optimized Ewald not available with inactive groups");
+        }
         auto first_particle = groups.front().begin();
         auto last_particle = groups.back().end();
         auto pos = asEigenMatrix(first_particle, last_particle,
@@ -158,7 +160,7 @@ class EwaldPolicyBase {
         return std::make_tuple(pos, charge);
     }
 
-    static std::shared_ptr<EwaldPolicyBase> makePolicy(EwaldData::Policies); //!< Policy factory
+    static std::unique_ptr<EwaldPolicyBase> makePolicy(EwaldData::Policies); //!< Policy factory
 };
 
 /**
@@ -291,7 +293,7 @@ class Bonded : public Energybase {
 /**
  * @brief Sum energy in vector of BondData for matching particle indices
  * @param bonds List of bonds
- * @param particle_indices Particle index
+ * @param particle_indices Particle indices to calculate the energy for
  *
  * To speed up the bond search, the given indices must be ordered which allows
  * for binary search which on large systems provides superior performance compared
@@ -301,16 +303,13 @@ template <typename Indices>
 double Bonded::sum_energy(const Bonded::BondVector& bonds, const Indices& particle_indices) const {
     assert(std::is_sorted(particle_indices.begin(), particle_indices.end()));
 
-    auto bond_filter = [&](const auto& bond) { // determine if bond is part of indices of particles
-        for (const auto bond_particle_index : bond->indices) {
-            if (std::binary_search(particle_indices.begin(), particle_indices.end(), bond_particle_index)) {
-                return true;
-            }
-        }
-        return false;
+    auto index_is_included = [&](auto index) {
+        return std::binary_search(particle_indices.begin(), particle_indices.end(), index);
     };
-    auto affected_bonds = bonds | ranges::cpp20::views::filter(bond_filter);
-    auto bond_energy = [&](const auto& bond) { return bond->energyFunc(spc.geometry.getDistanceFunc()); };
+    auto affected_bonds = bonds | ranges::cpp20::views::filter([&](const auto& bond) {
+                              return std::any_of(bond->indices.begin(), bond->indices.end(), index_is_included);
+                          });
+    auto bond_energy = [dist = spc.geometry.getDistanceFunc()](const auto& bond) { return bond->energyFunc(dist); };
 
 #if (defined(__clang__) && __clang_major__ >= 10) || (defined(__GNUC__) && __GNUC__ >= 10)
     return std::transform_reduce(affected_bonds.begin(), affected_bonds.end(), 0.0, std::plus<>(), bond_energy);
@@ -524,14 +523,14 @@ template <typename PairEnergy> class DelayedEnergyAccumulator : public EnergyAcc
 };
 
 template <typename TPairEnergy>
-std::shared_ptr<EnergyAccumulatorBase> createEnergyAccumulator(const json& j, const TPairEnergy& pair_energy,
+std::unique_ptr<EnergyAccumulatorBase> createEnergyAccumulator(const json& j, const TPairEnergy& pair_energy,
                                                                double initial_value) {
-    std::shared_ptr<EnergyAccumulatorBase> accumulator;
+    std::unique_ptr<EnergyAccumulatorBase> accumulator;
     if (j.value("summation_policy", EnergyAccumulatorBase::Scheme::SERIAL) != EnergyAccumulatorBase::Scheme::SERIAL) {
-        accumulator = std::make_shared<DelayedEnergyAccumulator<TPairEnergy>>(pair_energy, initial_value);
+        accumulator = std::make_unique<DelayedEnergyAccumulator<TPairEnergy>>(pair_energy, initial_value);
         faunus_logger->debug("activated delayed energy summation");
     } else {
-        accumulator = std::make_shared<InstantEnergyAccumulator<TPairEnergy>>(pair_energy, initial_value);
+        accumulator = std::make_unique<InstantEnergyAccumulator<TPairEnergy>>(pair_energy, initial_value);
         faunus_logger->debug("activated instant energy summation");
     }
     accumulator->from_json(j);
@@ -548,11 +547,10 @@ std::shared_ptr<EnergyAccumulatorBase> createEnergyAccumulator(const json& j, co
  */
 class GroupCutoff {
     double default_cutoff_squared = pc::max_value;
-    PairMatrix<double> cutoff_squared;  //!< matrix with group-to-group cutoff distances squared in angstrom squared
-    double total_cnt = 0, skip_cnt = 0; //!< statistics
-    Space::GeometryType& geometry;      //!< geometry to compute the inter group distance with
-    friend void from_json(const json&, GroupCutoff &);
-    friend void to_json(json&, const GroupCutoff &);
+    PairMatrix<double> cutoff_squared;    //!< matrix with group-to-group cutoff distances squared in angstrom squared
+    Space::GeometryType& geometry;        //!< geometry to compute the inter group distance with
+    friend void from_json(const json&, GroupCutoff&);
+    friend void to_json(json&, const GroupCutoff&);
     void setSingleCutoff(const double cutoff);
 
   public:
@@ -560,15 +558,11 @@ class GroupCutoff {
      * @brief Determines if two groups are separated beyond the cutoff distance.
      * @return true if the group-to-group distance is beyond the cutoff distance, false otherwise
      */
-    inline bool cut(const Space::GroupType& group1, const Space::GroupType& group2) {
-        bool result = false;
-        ++total_cnt;
-        if (group1.isMolecular() && group2.isMolecular() // atomic groups have no meaningful cm
-            && geometry.sqdist(group1.mass_center, group2.mass_center) >= cutoff_squared(group1.id, group2.id)) {
-            result = true;
-            ++skip_cnt;
+    inline bool cut(const Group& group1, const Group& group2) {
+        if (group1.isAtomic() || group2.isAtomic()) {
+            return false; // atomic groups have ill-defined mass centers
         }
-        return result;
+        return geometry.sqdist(group1.mass_center, group2.mass_center) >= cutoff_squared(group1.id, group2.id);
     }
 
     double getCutoff(size_t id1, size_t id2) const;
@@ -1674,7 +1668,7 @@ class Hamiltonian : public Energybase, public BasePointerVector<Energybase> {
     void checkBondedMolecules() const;         //!< Warn if bonded molecules and no bonded energy term
     void to_json(json& j) const override;
     void force(PointVector& forces) override;
-    std::shared_ptr<Energybase> createEnergy(Space& spc, const std::string& name, const json& j);
+    std::unique_ptr<Energybase> createEnergy(Space& spc, const std::string& name, const json& j);
 
   public:
     Hamiltonian(Space& spc, const json& j);

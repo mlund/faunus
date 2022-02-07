@@ -166,7 +166,7 @@ class Group : public ElasticRange<Particle> {
         }
         if constexpr (mask & ACTIVE) {
             static_assert(!(mask & INACTIVE), "don't mix ACTIVE and INACTIVE");
-            if (size() == 0) {
+            if (empty()) {
                 return false;
             }
         } else if constexpr (mask & INACTIVE) {
@@ -215,12 +215,13 @@ class Group : public ElasticRange<Particle> {
     double mass() const;                                                          //!< Sum of all active masses
 
     auto positions() {
-        return ranges::cpp20::views::transform(*this, [&](auto& particle) -> Point& { return particle.pos; });
+        return ranges::make_subrange(begin(), end()) |
+               ranges::cpp20::views::transform([&](Particle& particle) -> Point& { return particle.pos; });
     } //!< Range of positions of active particles
 
     auto positions() const {
-        return ranges::cpp20::views::transform(*this,
-                                               [&](const auto& particle) -> const Point& { return particle.pos; });
+        return ranges::make_subrange(begin(), end()) |
+               ranges::cpp20::views::transform([&](const Particle& particle) -> const Point& { return particle.pos; });
     } //!< Range of positions of active particles
 
     AtomData::index_type getParticleIndex(

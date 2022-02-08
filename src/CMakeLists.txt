@@ -65,8 +65,8 @@ set(objs analysis.cpp average.cpp atomdata.cpp auxiliary.cpp bonds.cpp celllisti
 set(hdrs analysis.h average.h atomdata.h auxiliary.h bonds.h celllist.h celllistimpl.h
 	chainmove.h clustermove.h core.h forcemove.h energy.h externalpotential.h geometry.h group.h io.h
 	molecule.h montecarlo.h move.h mpicontroller.h particle.h penalty.h potentials.h
-	reactioncoordinate.h rotate.h sasa.h smart_montecarlo.h space.h speciation.h random.h regions.h tensor.h units.h
-        aux/arange.h
+	reactioncoordinate.h rotate.h sasa.h smart_montecarlo.h space.h speciation.h spherocylinder.h
+        random.h regions.h tensor.h units.h aux/arange.h
 	aux/eigen_cerealisation.h aux/eigensupport.h aux/iteratorsupport.h aux/multimatrix.h
 	aux/eigen_cerealisation.h aux/eigensupport.h aux/equidistant_table.h aux/error_function.h
 	aux/exp_function.h aux/invsqrt_function.h aux/iteratorsupport.h aux/legendre.h aux/multimatrix.h

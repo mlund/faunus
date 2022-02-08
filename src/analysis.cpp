@@ -99,6 +99,12 @@ int Analysisbase::getNumberOfSteps() const { return number_of_steps; }
 
 Analysisbase::Analysisbase(const Space& spc, std::string_view name) : spc(spc), name(name) { assert(!name.empty()); }
 
+Analysisbase::Analysisbase(const Space& spc, std::string_view name, int sample_interval, int number_of_skipped_steps)
+    : number_of_skipped_steps(number_of_skipped_steps)
+    , spc(spc)
+    , sample_interval(sample_interval)
+    , name(name) {}
+
 /**
  * @brief Factory function for generating analysis based on name
  * @param name name of analysis to create

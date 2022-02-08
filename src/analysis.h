@@ -67,6 +67,7 @@ class Analysisbase {
     void sample();                 //!< Increase step count and sample
     int getNumberOfSteps() const;  //!< Number of steps
     Analysisbase(const Space& spc, std::string_view name);
+    Analysisbase(const Space& spc, std::string_view name, int sample_interval, int number_of_skipped_steps);
     virtual ~Analysisbase() = default;
 };
 

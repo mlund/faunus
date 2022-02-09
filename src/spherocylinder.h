@@ -34,8 +34,7 @@ inline Point vec_perpproject(const Point& a, const Point& b) { return a - b * a.
  * @param halfl2 Half length of second segment
  * @param r_cm Distance vector between the middle of the two segments
  */
-inline Point mindist_segment2segment(const Point& dir1, double halfl1, const Point& dir2, double halfl2,
-                                     const Point& r_cm);
+Point mindist_segment2segment(const Point& dir1, double halfl1, const Point& dir2, double halfl2, const Point& r_cm);
 
 /**
  * @param dir Direction of segment
@@ -45,13 +44,14 @@ inline Point mindist_segment2segment(const Point& dir1, double halfl1, const Poi
 inline Point mindist_segment2point(const Point& dir, double halfl, const Point& r_cm) {
     double d;
     double c = dir.dot(r_cm);
-    if (c > halfl)
+    if (c > halfl) {
         d = halfl;
-    else {
-        if (c > -halfl)
+    } else {
+        if (c > -halfl) {
             d = c;
-        else
+        } else {
             d = -halfl;
+        }
     }
     return -r_cm + (dir * d);
 }
@@ -60,13 +60,13 @@ inline Point mindist_segment2point(const Point& dir, double halfl, const Point& 
  * Finds intersections of spherocylinder and plane defined by vector
  * "w_vec" and if they are in all-way patch then returns number of them (PSC)
  */
-inline int find_intersect_plane(const Cigar& part1, const Cigar& part2, const Point& r_cm, const Point& w_vec,
-                                double rcut2, double cospatch, double intersections[5]);
+int find_intersect_plane(const Cigar& part1, const Cigar& part2, const Point& r_cm, const Point& w_vec, double rcut2,
+                         double cospatch, double intersections[5]);
 
 /**
  * @brief Finds if vector "vec" has angular intersection w. patch of part1
  */
-inline int test_intrpatch(const Cigar& part1, Point& vec, double cospatch, double ti, double intersections[5]);
+int test_intrpatch(const Cigar& part1, Point& vec, double cospatch, double ti, double intersections[5]);
 
 /**
  * @brief Intersect of plane
@@ -74,45 +74,45 @@ inline int test_intrpatch(const Cigar& part1, Point& vec, double cospatch, doubl
  * Finds intersections of plane defined by vector "w_vec"
  * and if they are in cylindrical patch then returns number of them (CPSC)
  */
-inline int find_intersect_planec(const Cigar& part1, const Cigar& part2, const Point& r_cm, const Point& w_vec,
-                                 double rcut2, double cospatch, double intersections[5]);
+int find_intersect_planec(const Cigar& part1, const Cigar& part2, const Point& r_cm, const Point& w_vec, double rcut2,
+                          double cospatch, double intersections[5]);
 
 /**
  * @brief Intersections of spherocylinder2 with a all-way patch of spherocylinder1 and return them (PSC)
  */
-inline int psc_intersect(const Cigar& part1, const Cigar& part2, const Point& r_cm, double intersections[5],
-                         double rcut2);
+int psc_intersect(const Cigar& part1, const Cigar& part2, const Point& r_cm, double intersections[5], double rcut2);
 
 /**
  * @brief Intersection of PSC2 with cylindrical patch of PSC1 and return them (CPSC)
  */
-inline int cpsc_intersect(const Cigar& part1, const Cigar& part2, const Point& r_cm, double intersections[5],
-                          double rcut2);
+int cpsc_intersect(const Cigar& part1, const Cigar& part2, const Point& r_cm, double intersections[5], double rcut2);
 } // namespace Faunus::SpheroCylinder
 
 // ---------------------------------------------------------------------------------------------
 
 namespace Faunus::Potential {
 
-inline double fanglscale(double a, const Cigar& p) {
+inline double fanglscale(const double a, const Cigar& particle) {
     // a = r_ij * n_i
-    if (a <= p.pcanglsw)
+    if (a <= particle.pcanglsw) {
         return 0.0;
-    if (a >= p.pcangl)
+    }
+    if (a >= particle.pcangl) {
         return 1.0;
-    return 0.5 - ((p.pcanglsw + p.pcangl) * 0.5 - a) / (p.pcangl - p.pcanglsw);
+    }
+    return 0.5 - ((particle.pcanglsw + particle.pcangl) * 0.5 - a) / (particle.pcangl - particle.pcanglsw);
 }
 
 /** @brief Hard pair potential for spherocylinders */
-class HardSpheroCylinder : public PairPotentialBase {
+class HardSpheroCylinder {
   public:
     struct prop {
         double halfl;
     };
 
-    std::map<Particle::Tid, prop> m;
+    std::map<int, prop> m; // should be filled...
 
-    inline double operator()(const Particle& p1, const Particle& p2, double r2, Point r_cm) {
+    inline double operator()(const Particle& p1, const Particle& p2, Point r_cm) {
         auto distvec =
             SpheroCylinder::mindist_segment2segment(p1.ext->scdir, m[p1.id].halfl, p2.ext->scdir, m[p2.id].halfl, r_cm);
         const auto mindist = 0.5 * (p1.traits().sigma + p2.traits().sigma);
@@ -130,7 +130,7 @@ class HardSpheroCylinder : public PairPotentialBase {
  * For patchy spherocylinder `Tcigarshere` should be a combined pair potential,
  * where `first` accounts for patchy interaction and `second` is isotropic, only.
  */
-class PatchyCigarSphere : public PairPotentialBase {
+template <typename Tcigarsphere> class PatchyCigarSphere {
   public:
     Tcigarsphere pairpot;
 
@@ -139,39 +139,43 @@ class PatchyCigarSphere : public PairPotentialBase {
         // b is sphere, a is spherocylinder
         double s, t, f0, f1, contt;
 
-        assert(a.halfl < 1e-6 && "First (a) should be cigar then sphere, not opposite!");
+        assert(a.half_length < 1e-6 && "First (a) should be cigar then sphere, not opposite!");
         double c = a.ext->scdir.dot(r_cm);
-        if (c > a.halfl)
-            contt = a.halfl;
-        else {
-            if (c > -a.halfl)
+        if (c > a.ext->half_length) {
+            contt = a.ext->half_length;
+        } else {
+            if (c > -a.ext->half_length) {
                 contt = c;
-            else
-                contt = -a.halfl;
+            } else {
+                contt = -a.ext->half_length;
+            }
         }
         Point distvec = -r_cm + (a.ext->scdir * contt);
 
-        if (a.traits().patchtype == 0 && b.traits().patchtype == 0)
+        if (a.traits().patch_type == 0 && b.traits().patch_type == 0) {
             return pairpot(a, b, distvec.dot(distvec));
+        }
 
         // patchy interaction
-        double rcut2 = pairpot.first.rcut2(a.id, b.id);
+        auto rcut2 = pairpot.first.rcut2(a.id, b.id);
         // scaling function: angular dependence of patch1
-        Point vec1 = SpheroCylinder::vec_perpproject(distvec, a.ext->dir).normalized();
+        Point vec1 = SpheroCylinder::vec_perpproject(distvec, a.ext->scdir).normalized();
         s = vec1.dot(a.ext->patchdir);
-        f1 = fanglscale(s, a);
+        f1 = fanglscale(s, a.getExt());
 
         // scaling function for the length of spherocylinder within cutoff
-        double ndistsq = distvec.dot(distvec);
+        auto ndistsq = distvec.dot(distvec);
         t = sqrt(rcut2 - ndistsq); // TODO cutoff
-        if (contt + t > a.halfl)
-            f0 = a.halfl;
-        else
+        if (contt + t > a.ext->half_length) {
+            f0 = a.ext->half_length;
+        } else {
             f0 = contt + t;
-        if (contt - t < -a.halfl)
-            f0 -= -a.halfl;
-        else
+        }
+        if (contt - t < -a.ext->half_length) {
+            f0 -= -a.ext->half_length;
+        } else {
             f0 -= contt - t;
+        }
 
         return pairpot.first(a, b, ndistsq) * f1 * (f0 + 1.0) + pairpot.second(a, b, ndistsq);
     }
@@ -190,16 +194,16 @@ class PatchyCigarSphere : public PairPotentialBase {
  * patchtype 1 (PSC) runs along the whole axis including the ends
  * patchtype 2 (CPSC) is limited to the cylindrical part
  */
-template <typename Tcigarcigar> class PatchyCigarCigar : public PairPotentialBase {
+template <typename Tcigarcigar> class PatchyCigarCigar {
   public:
     Tcigarcigar pairpot;
 
     double operator()(const Particle& a, const Particle& b, const Point& r_cm) {
         // 0- isotropic, 1-PSC all-way patch,2 -CPSC cylindrical patch
-        if (a.traits().patchtype > 0) {
-            if (b.traits().patchtype > 0) {
+        if (a.traits().patch_type > 0) {
+            if (b.traits().patch_type > 0) {
                 // patchy sc with patchy sc
-                int i, intrs;
+                int intrs;
                 double rcut2 = pairpot.first.rcut2(a.id, b.id);
                 double ndistsq;
                 double v1, v2, f0, f1, f2, T1, T2, S1, S2, s;
@@ -208,36 +212,37 @@ template <typename Tcigarcigar> class PatchyCigarCigar : public PairPotentialBas
 
                 assert(rcut2 > 1e-6 && "Cutoff for patchy cigar interaction has zero size.");
                 // distance for repulsion
-                Point rclose = SpheroCylinder::mindist_segment2segment(a.ext->scdir, a.ext->halfl, b.ext->scdir,
-                                                                       b.ext->halfl, r_cm);
+                Point rclose = SpheroCylinder::mindist_segment2segment(a.ext->scdir, a.ext->half_length, b.ext->scdir,
+                                                                       b.ext->half_length, r_cm);
                 intrs = 0;
-                for (i = 0; i < 5; i++)
+                for (int i = 0; i < 5; i++) {
                     intersections[i] = 0;
+                }
                 // 1- do intersections of spherocylinder2 with patch of spherocylinder1 at.
                 //  cut distance C
-                if (a.traits().patchtype == 1) {
-                    intrs = SpheroCylinder::psc_intersect(a, b, r_cm, intersections, rcut2);
+                if (a.traits().patch_type == 1) {
+                    intrs = SpheroCylinder::psc_intersect(a.getExt(), b.getExt(), r_cm, intersections, rcut2);
                 } else {
-                    if (a.traits().patchtype == 2) {
-                        intrs = SpheroCylinder::cpsc_intersect(a, b, r_cm, intersections, rcut2);
+                    if (a.traits().patch_type == 2) {
+                        intrs = SpheroCylinder::cpsc_intersect(a.getExt(), b.getExt(), r_cm, intersections, rcut2);
                     } else {
                         assert(!"Patchtype not implemented!");
                     }
                 }
-                if (intrs < 2)
-                    return pairpot.second(a, b,
-                                          rclose.squaredNorm()); // sc is all outside patch, attractive energy is 0
-                T1 = intersections[0];                           // points on sc2
+                if (intrs < 2) {
+                    return pairpot.second(a, b, rclose.squaredNorm());
+                }                      // sc is all outside patch, attractive energy is 0
+                T1 = intersections[0]; // points on sc2
                 T2 = intersections[1];
                 // 2- now do the same oposite way psc1 in patch of psc2
-                for (i = 0; i < 5; i++) {
+                for (int i = 0; i < 5; i++) {
                     intersections[i] = 0;
                 }
-                if (a.traits().patchtype == 1) {
-                    intrs = SpheroCylinder::psc_intersect(b, a, -r_cm, intersections, rcut2);
+                if (a.traits().patch_type == 1) {
+                    intrs = SpheroCylinder::psc_intersect(b.getExt(), a.getExt(), -r_cm, intersections, rcut2);
                 } else {
-                    if (a.traits().patchtype == 2) {
-                        intrs = SpheroCylinder::cpsc_intersect(b, a, -r_cm, intersections, rcut2);
+                    if (a.traits().patch_type == 2) {
+                        intrs = SpheroCylinder::cpsc_intersect(b.getExt(), a.getExt(), -r_cm, intersections, rcut2);
                     } else {
                         assert(!"Patchtype not implemented!");
                     }
@@ -267,26 +272,25 @@ template <typename Tcigarcigar> class PatchyCigarCigar : public PairPotentialBas
                 vec1 = SpheroCylinder::vec_perpproject(vec_intrs, a.ext->scdir);
                 vec1.normalize();
                 s = vec1.dot(a.ext->patchdir);
-                f1 = fanglscale(s, a);
+                f1 = fanglscale(s, a.getExt());
 
                 // 6- scaling function3: angular dependence of patch2
                 vec1 = SpheroCylinder::vec_perpproject(-vec_intrs, b.ext->scdir).normalized();
                 s = vec1.dot(b.ext->patchdir);
-                f2 = fanglscale(s, b);
+                f2 = fanglscale(s, b.getExt());
 
                 // 8- put it all together and output scale
                 return f0 * f1 * f2 * pairpot.first(a, b, ndistsq) + pairpot.second(a, b, rclose.squaredNorm());
-            } else {
-                assert(!"PSC w. isotropic cigar not implemented!");
             }
+            assert(!"PSC w. isotropic cigar not implemented!");
         } else {
-            if (b.traits().patchtype > 0) {
+            if (b.traits().patch_type > 0) {
                 assert(!"PSC w. isotropic cigar not implemented!");
                 // isotropic sc with patchy sc - we dont have at the moment
             } else {
                 // isotropic sc with isotropic sc
-                Point rclose = SpheroCylinder::mindist_segment2segment(a.ext->scdir, a.ext->halfl, b.ext->scdir,
-                                                                       b.ext->halfl, r_cm);
+                Point rclose = SpheroCylinder::mindist_segment2segment(a.ext->scdir, a.ext->half_length, b.ext->scdir,
+                                                                       b.ext->half_length, r_cm);
                 return pairpot(a, b, rclose.squaredNorm());
             }
         }
@@ -302,44 +306,29 @@ template <typename Tcigarcigar> class PatchyCigarCigar : public PairPotentialBas
  * nature of the two particles. If the sphero-cylinder has zero length it
  * is assumed to be a spherical, isotropic particle.
  */
-template <typename Tcigarcigar, typename Tspheresphere, typename Tcigarsphere>
-class CigarSphereSplit : public PairPotentialBase {
+template <typename Tcigarcigar, typename Tspheresphere, typename Tcigarsphere> class CigarSphereSplit {
   public:
     Tspheresphere pairpot_ss;
     PatchyCigarCigar<Tcigarcigar> pairpot_cc;
     PatchyCigarSphere<Tcigarsphere> pairpot_cs;
 
-    CigarSphereSplit(json& j)
-        : pairpot_ss(j)
-        , pairpot_cc(j)
-        , pairpot_cs(j) {
-        name = "CigarSphereSplit";
-    }
-
-    double operator()(const Particle& a, const Particle& b, double r2) const {
-        throw std::runtime_error("We should never reach here!");
-        return pc::infty;
-    }
-
     double operator()(const Particle& a, const Particle& b, const Point& r_cm) {
-        if (a.ext->halfl < 1e-6) {
+        if (a.ext->half_length < 1e-6) {
             // a sphere - b sphere
-            if (b.ext->halfl < 1e-6) {
+            if (b.ext->half_length < 1e-6) {
                 return pairpot_ss(a, b, r_cm.squaredNorm());
             }
             // a sphere - b cigar
-            else {
-                // PatchyCigarSphere(b,a)
-                assert(b.dir.squaredNorm() > 1e-6 && "Direction vector of patchy spherocylinder has zero size.");
-                assert(b.patchdir.squaredNorm() > 1e-6 &&
-                       "Patch direction vector of patchy spherocylinder has zero size.");
-                assert(b.patchsides[0].squaredNorm() > 1e-6 && "Vector associated with patch side has zero size. "
-                                                               "Patchy spherocylinder were probably not initialized.");
-                return pairpot_cs(b, a, r_cm);
-            }
+            // PatchyCigarSphere(b,a)
+            assert(b.dir.squaredNorm() > 1e-6 && "Direction vector of patchy spherocylinder has zero size.");
+            assert(b.patchdir.squaredNorm() > 1e-6 && "Patch direction vector of patchy spherocylinder has zero size.");
+            assert(b.patchsides[0].squaredNorm() > 1e-6 && "Vector associated with patch side has zero size. "
+                                                           "Patchy spherocylinder were probably not initialized.");
+            return pairpot_cs(b, a, r_cm);
+
         } else {
             // a cigar - b sphere
-            if (b.halfl < 1e-6) {
+            if (b.ext->half_length < 1e-6) {
                 // PatchyCigarSphere(a,b)
                 assert(a.dir.squaredNorm() > 1e-6 && "Direction vector of patchy spherocylinder has zero size.");
                 assert(a.patchdir.squaredNorm() > 1e-6 &&

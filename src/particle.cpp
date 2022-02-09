@@ -55,15 +55,78 @@ void Quadrupole::to_json(json &j) const { j["Q"] = Q; }
 
 void Quadrupole::from_json(const json& j) { Q = j.value("Q", Tensor(Tensor::Zero()));}
 
-void Cigar::rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &) { scdir = q * scdir; }
-
-void Cigar::to_json(json &j) const {
-    j["scdir"] = scdir;
-    j["sclen"] = sclen;
+void Cigar::rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &) {
+    scdir = q * scdir;
+    patchdir = q * patchdir;
+    chdir = q * patchdir;
+    patchsides.at(0) = q * patchsides.at(0);
+    patchsides.at(1) = q * patchsides.at(1);
 }
-void Cigar::from_json(const json &j) {
-    scdir = j.value("scdir", Point::Zero().eval());
-    sclen = j.value("sclen", sclen);
+
+void Cigar::to_json(json& j) const {
+    j["scdir"] = scdir;
+    j["psc_length"] = 2.0 * half_length;
+}
+void Cigar::from_json(const json& j) {
+    scdir = j.value("scdir", Point(1.0, 0.0, 0.0));
+    half_length = 0.5 * j.value("psc_length", 0.0);
+    auto patch_angle = j.value("patch_angle", 0.0);
+    auto panglsw = j.value("patch_angle_switch", 0.0);
+    auto chiral_angle = j.value("patch_chiral_angle", 0.0) * 1.0_deg;
+    initialize(patch_angle, panglsw, chiral_angle);
+}
+
+/**
+ * @param patch_angle Defines the size of the patch (`pangle` in v1 code)
+ * @param patch_angle_switch (`panglewe` in v1 code)
+ * @param chiral_angle Rotate patch with respect to PSC length axis
+ */
+void Cigar::initialize(double patch_angle, double patch_angle_switch, double chiral_angle) {
+    constexpr auto zero = 1e-9;
+    if (half_length > zero) {
+        Point vec;
+        Eigen::Quaterniond Q;
+        pcangl = std::cos(0.5 * patch_angle);
+        pcanglsw = std::cos(0.5 * patch_angle + patch_angle_switch);
+
+        if (scdir.squaredNorm() < zero) {
+            scdir = {1, 0, 0};
+        }
+        if (patchdir.squaredNorm() < zero) {
+            patchdir = {0, 1, 0};
+        }
+        scdir.normalize();
+
+        patchdir = patchdir - scdir * patchdir.dot(scdir); // perp. project
+        patchdir.normalize();
+
+        /* calculate patch sides */
+        if (chiral_angle < zero) {
+            vec = scdir;
+        } else {
+            chdir = scdir;
+            Q = Eigen::AngleAxisd(0.5 * chiral_angle, patchdir);
+            chdir = Q * chdir; // rotate
+            vec = chdir;
+        }
+
+        /* create side vector by rotating patch vector by half size of patch*/
+        /* the first side */
+        patchsides[0] = patchdir;
+        Q = Eigen::AngleAxisd(0.5 * patch_angle + patch_angle_switch, vec);
+        patchsides[0] = Q * patchsides[0]; // rotate
+        patchsides[0].normalize();
+
+        /* the second side */
+        patchsides[1] = patchdir;
+        Q = Eigen::AngleAxisd(-0.5 * patch_angle - patch_angle_switch, vec);
+        patchsides[1] = Q * patchsides[1]; // rotate
+        patchsides[1].normalize();
+
+        if (patchsides[0].squaredNorm() < zero) {
+            throw std::runtime_error("Patch side vector has zero size.");
+        }
+    }
 }
 
 const AtomData &Particle::traits() const { return atoms[id]; }
@@ -160,7 +223,7 @@ TEST_CASE("[Faunus] Particle") {
     p1.getExt().mu = {0, 0, 1};
     p1.getExt().mulen = 2.8;
     p1.getExt().scdir = {-0.1, 0.3, 1.9};
-    p1.getExt().sclen = 0.5;
+    p1.getExt().half_length = 0.5;
     p1.getExt().Q = Tensor(1, 2, 3, 4, 5, 6);
 
     p2 = json(p1); // p1 --> json --> p2
@@ -174,7 +237,7 @@ TEST_CASE("[Faunus] Particle") {
     CHECK(p2.getExt().mu == Point(0, 0, 1));
     CHECK(p2.getExt().mulen == 2.8);
     CHECK(p2.getExt().scdir == Point(-0.1, 0.3, 1.9));
-    CHECK(p2.getExt().sclen == 0.5);
+    CHECK(p2.getExt().half_length == 0.5);
     CHECK(p2.getExt().Q == Tensor(1, 2, 3, 4, 5, 6));
 
     // check of all properties are rotated

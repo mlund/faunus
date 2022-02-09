@@ -91,13 +91,36 @@ struct Quadrupole : public ParticlePropertyBase {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 }; // Quadrupole property
 
-struct Cigar : public ParticlePropertyBase {
-    Point scdir = {0, 0, 0};                                          //!< Sphero-cylinder direction unit vector
-    double sclen = 0;                                                 //!< Length
+class Cigar : public ParticlePropertyBase {
+  private:
+    /**
+     * @brief Initialize patchy spherocylinder - run at start and after patch changes
+     *
+     * Calculates cosine of angles, patch direction including chirality
+     * and vector corresponding to sides of patch that are used in
+     * calculations of interactions.
+     * This function must be called at the beginning of calculations and after changes
+     * of patch properties.
+     * It shall be also after a lot of move to remove accumulated comouptation errors
+     */
+    void initialize(double patch_angle, double patch_angle_switch, double chiral_angle);
+
+    Point chdir = {0.0, 0.0, 0.0};
+
+  public:
+    Point scdir = {0.0, 0.0, 0.0};    //!< Sphero-cylinder direction unit vector
+    Point patchdir = {0.0, 0.0, 0.0}; //!< Patch direction
+    std::array<Point, 2> patchsides;
+    double half_length = 0.0;
+    double pcanglsw = 0.0; //!< Cosine of switch angle from AtomData (speed optimization)
+    double pcangl = 0.0;   //!< Cosine of AtomData::patch_angle (speed optimization)
     void rotate(const Eigen::Quaterniond& q, const Eigen::Matrix3d&); //!< Rotate sphero-cylinder
     void to_json(json& j) const override;
     void from_json(const json& j) override;
-    template <class Archive> void serialize(Archive& archive) { archive(scdir, sclen); }
+    template <class Archive> void serialize(Archive& archive) {
+        archive(scdir, patchdir, patchsides.at(0), patchsides.at(1), chdir);
+    }
+
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 }; //!< Sphero-cylinder properties
 

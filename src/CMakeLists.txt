@@ -60,7 +60,7 @@ set(objs analysis.cpp average.cpp atomdata.cpp auxiliary.cpp bonds.cpp celllisti
 	chainmove.cpp clustermove.cpp core.cpp forcemove.cpp units.cpp energy.cpp externalpotential.cpp
 	geometry.cpp group.cpp io.cpp molecule.cpp montecarlo.cpp move.cpp mpicontroller.cpp
 	particle.cpp penalty.cpp potentials.cpp random.cpp reactioncoordinate.cpp regions.cpp rotate.cpp sasa.cpp
-        scatter.cpp smart_montecarlo.cpp space.cpp speciation.cpp tensor.cpp)
+        scatter.cpp smart_montecarlo.cpp space.cpp speciation.cpp spherocylinder.cpp tensor.cpp)
 
 set(hdrs analysis.h average.h atomdata.h auxiliary.h bonds.h celllist.h celllistimpl.h
 	chainmove.h clustermove.h core.h forcemove.h energy.h externalpotential.h geometry.h group.h io.h

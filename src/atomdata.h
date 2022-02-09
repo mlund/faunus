@@ -35,7 +35,7 @@ class SpheroCylinderData {
     friend void to_json(json&, const SpheroCylinderData&);
 
   public:
-    enum class patchType {
+    enum PatchType {
         None = 0,                      //!< No patch
         Full = 1,                      //!< Patch runs the full length of the SC
         Capped = 2                     //!< Patch stops before the end caps
@@ -46,7 +46,7 @@ class SpheroCylinderData {
     double patch_angle_switch = 0;     //!< Angle of angular switch on sides of patch on PSC
     double patch_attraction_range = 0; //!< Dist. to which attraction is flat on attrative patch on PSC
     double patch_cutoff = 0;           //!< Distance on which attraction switches to zero on PSC
-    int patch_type = 0;                //!< Patch type of spherocylinder
+    PatchType type = None;       //!< Patch type of spherocylinder
 };
 
 void from_json(const json& j, SpheroCylinderData& psc);
@@ -65,22 +65,22 @@ class AtomData { // has to be a class when a constant reference is used
     friend void from_json(const json&, AtomData&);
 
   public:
-    std::string name;            //!< Name
-    double charge = 0;           //!< Particle charge [e]
-    double mw = 1;               //!< Weight
-    double sigma = 0;            //!< Diameter for e.g Lennard-Jones etc. [angstrom]
-                                 //!< Do not set! Only a temporal class member during the refactorization
-    double activity = 0;         //!< Chemical activity [mol/l]
-    double alphax = 0;           //!< Excess polarisability (unit-less)
-    double dp = 0;               //!< Translational displacement parameter [angstrom]
-    double dprot = 0;            //!< Rotational displacement parameter [degrees]
-    double tension = 0;          //!< Surface tension [kT/Å^2]
-    double tfe = 0;              //!< Transfer free energy [J/mol/angstrom^2/M]
-    Point mu = {0, 0, 0};        //!< Dipole moment unit vector
-    double mulen = 0;            //!< Dipole moment length
-    bool hydrophobic = false;    //!< Is the particle hydrophobic?
-    bool implicit = false;       //!< Is the particle implicit (e.g. proton)?
-    InteractionData interaction; //!< Arbitrary interaction parameters, e.g., epsilons in various potentials
+    std::string name;                   //!< Name
+    double charge = 0;                  //!< Particle charge [e]
+    double mw = 1;                      //!< Weight
+    double sigma = 0;                   //!< Diameter for e.g Lennard-Jones etc. [angstrom]
+                                        //!< Do not set! Only a temporal class member during the refactorization
+    double activity = 0;                //!< Chemical activity [mol/l]
+    double alphax = 0;                  //!< Excess polarisability (unit-less)
+    double dp = 0;                      //!< Translational displacement parameter [angstrom]
+    double dprot = 0;                   //!< Rotational displacement parameter [degrees]
+    double tension = 0;                 //!< Surface tension [kT/Å^2]
+    double tfe = 0;                     //!< Transfer free energy [J/mol/angstrom^2/M]
+    Point mu = {0, 0, 0};               //!< Dipole moment unit vector
+    double mulen = 0;                   //!< Dipole moment length
+    bool hydrophobic = false;           //!< Is the particle hydrophobic?
+    bool implicit = false;              //!< Is the particle implicit (e.g. proton)?
+    InteractionData interaction;        //!< Arbitrary interaction parameters, e.g., epsilons in various potentials
     SpheroCylinderData sphero_cylinder; //!< Data for patchy sphero cylinders (PSCs)
 
     index_type& id();             //!< Type id

@@ -68,7 +68,7 @@ void Cigar::rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &) {
 void Cigar::to_json(json& j) const { j["scdir"] = scdir; }
 
 void Cigar::from_json(const json& j) {
-    const auto& psc = Faunus::atoms.at(j.at("id").get<int>()).patchy_sphero_cylinder;
+    const auto& psc = Faunus::atoms.at(j.at("id").get<int>()).sphero_cylinder;
     scdir = j.value("scdir", Point(1.0, 0.0, 0.0));
     initialize(psc);
 }
@@ -83,7 +83,7 @@ void Cigar::from_json(const json& j) {
  *
  * @note Largely from Robert Vacha's C code
  */
-void Cigar::initialize(const PatchySpheroCylinderData &psc) {
+void Cigar::initialize(const SpheroCylinderData&psc) {
     constexpr auto zero = 1e-9;
     half_length = 0.5 * psc.length;
     if (half_length > zero) {

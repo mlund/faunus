@@ -96,7 +96,7 @@ struct Quadrupole : public ParticlePropertyBase {
  */
 class Cigar : public ParticlePropertyBase {
   private:
-    void initialize(const PatchySpheroCylinderData& psc); // initialize; run at start and after patch changes
+    void initialize(const SpheroCylinderData& psc); // initialize; run at start and after patch changes
 
   public:
     Point scdir = {0.0, 0.0, 0.0};    //!< Sphero-cylinder direction unit vector

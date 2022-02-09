@@ -81,7 +81,7 @@ void to_json(json& j, const AtomData& a) {
           {"tfe", a.tfe * 1.0_angstrom * 1.0_angstrom * 1.0_molar / 1.0_kJmol},
           {"mu", a.mu},
           {"mulen", a.mulen},
-          {"psc", a.patchy_sphero_cylinder},
+          {"psc", a.sphero_cylinder},
           {"id", a.id()}};
     to_json(_j, a.interaction); // append other interactions
     if (a.hydrophobic)
@@ -108,7 +108,7 @@ void from_json(const json& j, AtomData& a) {
                 a.mulen = a.mu.norm();     // ... then set mulen
             a.mu = a.mu / a.mu.norm();     // normalize mu
         }
-        a.patchy_sphero_cylinder = val.value("psc", PatchySpheroCylinderData());
+        a.sphero_cylinder = val.value("psc", SpheroCylinderData());
         a.mw = val.value("mw", a.mw);
         a.tension = val.value("tension", a.tension) * 1.0_kJmol / (1.0_angstrom * 1.0_angstrom);
         a.tfe = val.value("tfe", a.tfe) * 1.0_kJmol / (1.0_angstrom * 1.0_angstrom * 1.0_molar);
@@ -241,7 +241,7 @@ AtomData& findAtomByName(std::string_view name) {
     return *result;
 }
 
-void from_json(const json& j, PatchySpheroCylinderData& psc) {
+void from_json(const json& j, SpheroCylinderData& psc) {
     psc.length = j.value("length", 0.0) * 1.0_angstrom;
     psc.patch_type = j.value("patch_type", 0);
     psc.patch_angle = j.value("patch_angle", 0.0) * 1.0_deg;
@@ -251,7 +251,7 @@ void from_json(const json& j, PatchySpheroCylinderData& psc) {
     psc.chiral_angle = j.value("chiral_angle", 0.0) * 1.0_deg;
 }
 
-void to_json(json& j, const PatchySpheroCylinderData& psc) {
+void to_json(json& j, const SpheroCylinderData& psc) {
     j = {{"length", psc.length / 1.0_angstrom},
          {"patch_type", psc.patch_type},
          {"patch_angle", psc.patch_angle / 1.0_deg},

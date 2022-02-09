@@ -27,25 +27,26 @@ void from_json(const json& j, InteractionData& a);
 void from_single_use_json(SingleUseJSON& j, InteractionData& a);
 
 /**
- * @brief Static properties for patchy sphero cylinders
+ * @brief Static properties for patchy sphero cylinders (PSC)
  */
-class PatchySpheroCylinderData {
+class SpheroCylinderData {
   protected:
-    friend void from_json(const json&, PatchySpheroCylinderData&);
-    friend void to_json(json&, const PatchySpheroCylinderData&);
+    friend void from_json(const json&, SpheroCylinderData&);
+    friend void to_json(json&, const SpheroCylinderData&);
 
   public:
-    double chiral_angle = 0;           //!< Chiral angle (rotation of patch) on PSC [degrees];
-    double length = 0;                 //!< Sphere-cylinder length [angstrom]
-    double patch_angle = 0;            //!< Angle of attrative patch on PSC [degrees]
-    double patch_angle_switch = 0;     //!< Angle of angular switch on sides of patch on PSC [degrees]
-    double patch_attraction_range = 0; //!< Dist. to which attraction is flat on attrative patch on PSC [angstrom]
-    double patch_cutoff = 0;           //!< Distance on which attraction switches to zero on PSC [angstrom]
+    enum class patchType {FullLength, Capped}; //!< Not yet in use @todo replace `patch_type` integer
+    double chiral_angle = 0;           //!< Chiral angle (rotation of patch) on PSC
+    double length = 0;                 //!< Sphere-cylinder length
+    double patch_angle = 0;            //!< Angle of attrative patch on PSC
+    double patch_angle_switch = 0;     //!< Angle of angular switch on sides of patch on PSC
+    double patch_attraction_range = 0; //!< Dist. to which attraction is flat on attrative patch on PSC
+    double patch_cutoff = 0;           //!< Distance on which attraction switches to zero on PSC
     int patch_type = 0;                //!< Patch type of spherocylinder
 };
 
-void from_json(const json& j, PatchySpheroCylinderData& psc);
-void to_json(json& j, const PatchySpheroCylinderData& psc);
+void from_json(const json& j, SpheroCylinderData& psc);
+void to_json(json& j, const SpheroCylinderData& psc);
 
 /**
  * @brief General properties for atoms
@@ -76,7 +77,7 @@ class AtomData { // has to be a class when a constant reference is used
     bool hydrophobic = false;    //!< Is the particle hydrophobic?
     bool implicit = false;       //!< Is the particle implicit (e.g. proton)?
     InteractionData interaction; //!< Arbitrary interaction parameters, e.g., epsilons in various potentials
-    PatchySpheroCylinderData patchy_sphero_cylinder; //!< Data for patchy sphero cylinders
+    SpheroCylinderData sphero_cylinder; //!< Data for patchy sphero cylinders (PSCs)
 
     index_type& id();             //!< Type id
     const index_type& id() const; //!< Type id

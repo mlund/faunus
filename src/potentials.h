@@ -423,6 +423,7 @@ class CosAttract : public PairPotentialBase {
 
   public:
     CosAttract(const std::string &name = "cos2") : PairPotentialBase(name) {};
+    double cutOffSquared() const; //!< Squared cutoff distance where potential goes to zero
 
     /**
      * @todo

@@ -87,7 +87,7 @@ Point mindist_segment2segment(const Point& dir1, double half_length1, const Poin
 }
 
 int find_intersect_plane(const Cigar& part1, const Cigar& part2, const Point& r_cm, const Point& w_vec,
-                         const double rcut2, const double cospatch, double* intersections) {
+                         const double cutoff_squared, const double cospatch, std::array<double, 5>& intersections) {
     Point nplane = part1.scdir.cross(w_vec).normalized();
     const auto a = nplane.dot(part2.scdir);
     if (a == 0.0) {
@@ -109,7 +109,7 @@ int find_intersect_plane(const Cigar& part1, const Cigar& part2, const Point& r_
     else {
         disti = c * c;
     } /*is inside patch*/
-    if (disti > rcut2) {
+    if (disti > cutoff_squared) {
         return 0; /* the intersection is outside sc */
     }
     int intrs = 1;
@@ -126,7 +126,7 @@ int find_intersect_plane(const Cigar& part1, const Cigar& part2, const Point& r_
     return intrs;
 }
 
-int test_intrpatch(const Cigar& part1, Point& vec, double cospatch, double ti, double* intersections) {
+int test_intrpatch(const Cigar& part1, Point& vec, double cospatch, double ti, std::array<double, 5>& intersections) {
     /*test if we have intersection*/
     /* do projection to patch plane*/
     vec = vec_perpproject(vec, part1.scdir).normalized();
@@ -150,7 +150,7 @@ int test_intrpatch(const Cigar& part1, Point& vec, double cospatch, double ti, d
 }
 
 int find_intersect_planec(const Cigar& part1, const Cigar& part2, const Point& r_cm, const Point& w_vec, double rcut2,
-                          double cospatch, double* intersections) {
+                          double cospatch, std::array<double, 5>& intersections) {
     Point nplane = part1.scdir.cross(w_vec).normalized();
     auto a = nplane.dot(part2.scdir);
     if (a == 0.0) { // @todo unstable comparison
@@ -196,7 +196,8 @@ int find_intersect_planec(const Cigar& part1, const Cigar& part2, const Point& r
  * @return
  * @todo Add documentation and split into smaller parts(!)
  */
-int psc_intersect(const Cigar& part1, const Cigar& part2, const Point& r_cm, double* intersections, double rcut2) {
+int psc_intersect(const Cigar& part1, const Cigar& part2, const Point& r_cm, std::array<double, 5>& intersections,
+                  double rcut2) {
     double a, b, c, d, e, x1, x2;
     Point cm21, vec1, vec2, vec3, vec4;
 
@@ -373,7 +374,8 @@ int psc_intersect(const Cigar& part1, const Cigar& part2, const Point& r_cm, dou
     return intrs;
 }
 
-int cpsc_intersect(const Cigar& part1, const Cigar& part2, const Point& r_cm, double* intersections, double rcut2) {
+int cpsc_intersect(const Cigar& cigar1, const Cigar& cigar2, const Point& r_cm, std::array<double, 5>& intersections,
+                   const double cutoff_squared) {
     int intrs;
     double a, b, c, d, e, x1, x2;
     Point cm21, vec1, vec2, vec3, vec4;
@@ -386,52 +388,54 @@ int cpsc_intersect(const Cigar& part1, const Cigar& part2, const Point& r_cm, do
 
     /* plane1 */
     /* find intersections of part2 with plane by par1 and part1.patchsides[0] */
-    intrs += find_intersect_planec(part1, part2, r_cm, part1.patchsides[0], rcut2, part1.pcanglsw, intersections);
+    intrs += find_intersect_planec(cigar1, cigar2, r_cm, cigar1.patchsides[0], cutoff_squared, cigar1.pcanglsw,
+                                   intersections);
     /* plane2 */
     /* find intersections of part2 with plane by par1 and part1.patchsides[1] */
-    intrs += find_intersect_planec(part1, part2, r_cm, part1.patchsides[1], rcut2, part1.pcanglsw, intersections);
+    intrs += find_intersect_planec(cigar1, cigar2, r_cm, cigar1.patchsides[1], cutoff_squared, cigar1.pcanglsw,
+                                   intersections);
 
-    if ((intrs == 2) && (part1.pcanglsw < 0)) {
+    if ((intrs == 2) && (cigar1.pcanglsw < 0)) {
         throw std::runtime_error("Patch larger than 180 deg -> two segments - this is not yet implemented");
     }
 
     /*1b- test intersection with cylinder - it is at distance C*/
     if (intrs < 2) {
         cm21 = -r_cm;
-        vec1 = cm21.cross(part1.scdir);
-        vec2 = part2.scdir.cross(part1.scdir);
+        vec1 = cm21.cross(cigar1.scdir);
+        vec2 = cigar2.scdir.cross(cigar1.scdir);
         a = vec2.dot(vec2);
         b = 2 * vec1.dot(vec2);
-        c = -rcut2 + vec1.dot(vec1);
+        c = -cutoff_squared + vec1.dot(vec1);
         d = b * b - 4 * a * c;
         if (d >= 0) {                      /*there is intersection with infinite cylinder */
             x1 = (-b + sqrt(d)) * 0.5 / a; /*parameter on line of SC2 determining intersection*/
-            if ((x1 >= part2.half_length) || (x1 <= -part2.half_length)) {
+            if ((x1 >= cigar2.half_length) || (x1 <= -cigar2.half_length)) {
                 intrs += 0;
             } /*intersection is outside sc2*/
             else {
                 /* vectors from center os sc1 to intersection with infinite cylinder*/
-                vec1 = part2.scdir * x1 - r_cm;
-                e = part1.scdir.dot(vec1);
-                if ((e >= part1.half_length) || (e <= -part1.half_length)) {
+                vec1 = cigar2.scdir * x1 - r_cm;
+                e = cigar1.scdir.dot(vec1);
+                if ((e >= cigar1.half_length) || (e <= -cigar1.half_length)) {
                     intrs += 0;
                 } /*intersection is outside sc1*/
                 else {
-                    intrs += test_intrpatch(part1, vec1, part1.pcanglsw, x1, intersections);
+                    intrs += test_intrpatch(cigar1, vec1, cigar1.pcanglsw, x1, intersections);
                 }
             }
             if (d > 0) {
                 x2 = (-b - sqrt(d)) * 0.5 / a; /*parameter on line of SC2 determining intersection*/
-                if ((x2 >= part2.half_length) || (x2 <= -part2.half_length)) {
+                if ((x2 >= cigar2.half_length) || (x2 <= -cigar2.half_length)) {
                     intrs += 0; /*intersection is outside sc2*/
                 } else {
-                    vec2 = part2.scdir * x2 - r_cm;
-                    e = part1.scdir.dot(vec2);
-                    if ((e >= part1.half_length) || (e <= -part1.half_length)) {
+                    vec2 = cigar2.scdir * x2 - r_cm;
+                    e = cigar1.scdir.dot(vec2);
+                    if ((e >= cigar1.half_length) || (e <= -cigar1.half_length)) {
                         intrs += 0;
                     } /*intersection is outside sc1*/
                     else {
-                        intrs += test_intrpatch(part1, vec2, part1.pcanglsw, x2, intersections);
+                        intrs += test_intrpatch(cigar1, vec2, cigar1.pcanglsw, x2, intersections);
                     }
                 }
             }
@@ -440,41 +444,41 @@ int cpsc_intersect(const Cigar& part1, const Cigar& part2, const Point& r_cm, do
 
     /*1c- test intersection with plates at the end - it is at distace C and in wedge*/
     if (intrs < 2) {
-        a = part1.scdir.dot(part2.scdir);
+        a = cigar1.scdir.dot(cigar2.scdir);
         if (a == 0.0) {
             intrs = 0;
         } /* there is no intersection plane and sc are paralel*/
         else {
             /*plane cap1*/
-            vec1 = r_cm + part1.half_length * part1.scdir;
-            x1 = part1.scdir.dot(vec1) / a; /*parameter on line of SC2 determining intersection*/
-            if ((x1 > part2.half_length) || (x1 < -part2.half_length)) {
+            vec1 = r_cm + cigar1.half_length * cigar1.scdir;
+            x1 = cigar1.scdir.dot(vec1) / a; /*parameter on line of SC2 determining intersection*/
+            if ((x1 > cigar2.half_length) || (x1 < -cigar2.half_length)) {
                 intrs += 0;
             } /* there is no intersection plane sc is too short*/
             else {
-                vec2 = x1 * part2.scdir - vec1; /*vector from ENDPOINT to intersection point */
+                vec2 = x1 * cigar2.scdir - vec1; /*vector from ENDPOINT to intersection point */
                 b = vec2.dot(vec2);
-                if (b > rcut2) {
+                if (b > cutoff_squared) {
                     intrs += 0;
                 } /* the intersection is outside sc */
                 else {
-                    intrs += test_intrpatch(part1, vec2, part1.pcanglsw, x1, intersections);
+                    intrs += test_intrpatch(cigar1, vec2, cigar1.pcanglsw, x1, intersections);
                 }
             }
             /*plane cap2*/
-            vec1 = r_cm - part1.half_length * part1.scdir;
-            x2 = part1.scdir.dot(vec1) / a; /*parameter on line of SC2 determining intersection*/
-            if ((x2 > part2.half_length) || (x2 < -part2.half_length)) {
+            vec1 = r_cm - cigar1.half_length * cigar1.scdir;
+            x2 = cigar1.scdir.dot(vec1) / a; /*parameter on line of SC2 determining intersection*/
+            if ((x2 > cigar2.half_length) || (x2 < -cigar2.half_length)) {
                 intrs += 0;
             } /* there is no intersection plane sc is too short*/
             else {
-                vec2 = x2 * part2.scdir - vec1; /*vector from ENDPOINT to intersection point */
+                vec2 = x2 * cigar2.scdir - vec1; /*vector from ENDPOINT to intersection point */
                 b = vec2.dot(vec2);
-                if (b > rcut2) {
+                if (b > cutoff_squared) {
                     intrs += 0;
                 } /* the intersection is outside sc */
                 else {
-                    intrs += test_intrpatch(part1, vec2, part1.pcanglsw, x2, intersections);
+                    intrs += test_intrpatch(cigar1, vec2, cigar1.pcanglsw, x2, intersections);
                 }
             }
         }
@@ -483,30 +487,30 @@ int cpsc_intersect(const Cigar& part1, const Cigar& part2, const Point& r_cm, do
       set as second intersection end inside patch*/
     if (intrs < 2) {
         /*whole spherocylinder is in or all out if intrs ==0*/
-        vec1 = part2.scdir * part2.half_length - r_cm;
+        vec1 = cigar2.scdir * cigar2.half_length - r_cm;
         /*vector from CM of sc1 to end of sc2*/
         /*check is is inside sc1*/
-        a = vec1.dot(part1.scdir);
-        vec3 = vec1 - part1.scdir * a;
+        a = vec1.dot(cigar1.scdir);
+        vec3 = vec1 - cigar1.scdir * a;
         b = vec3.dot(vec3);
-        d = fabs(a) - part1.half_length;
+        d = fabs(a) - cigar1.half_length;
         if (d <= 0) { /*is in cylindrical part*/
             /*c is distance squared from line or end to test if is inside sc*/
-            if (b < rcut2) {
-                intrs += test_intrpatch(part1, vec1, part1.pcanglsw, part2.half_length, intersections);
+            if (b < cutoff_squared) {
+                intrs += test_intrpatch(cigar1, vec1, cigar1.pcanglsw, cigar2.half_length, intersections);
             }
         }
         if (intrs < 2) {
-            vec2 = -part2.scdir * part2.half_length - r_cm;
+            vec2 = -cigar2.scdir * cigar2.half_length - r_cm;
             /*check is is inside sc1*/
-            a = vec2.dot(part1.scdir);
-            vec4 = vec2 - part1.scdir * a;
+            a = vec2.dot(cigar1.scdir);
+            vec4 = vec2 - cigar1.scdir * a;
             b = vec4.dot(vec4);
-            d = fabs(a) - part1.half_length;
+            d = fabs(a) - cigar1.half_length;
             if (d <= 0) {
                 /*c is distance squared from line or end to test if is inside sc*/
-                if (b < rcut2) {
-                    intrs += test_intrpatch(part1, vec2, part1.pcanglsw, -1.0 * part2.half_length, intersections);
+                if (b < cutoff_squared) {
+                    intrs += test_intrpatch(cigar1, vec2, cigar1.pcanglsw, -1.0 * cigar2.half_length, intersections);
                 }
             }
         }

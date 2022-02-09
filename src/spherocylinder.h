@@ -60,13 +60,13 @@ inline Point mindist_segment2point(const Point& dir, double halfl, const Point& 
  * Finds intersections of spherocylinder and plane defined by vector
  * "w_vec" and if they are in all-way patch then returns number of them (PSC)
  */
-int find_intersect_plane(const Cigar& part1, const Cigar& part2, const Point& r_cm, const Point& w_vec, double rcut2,
-                         double cospatch, double intersections[5]);
+int find_intersect_plane(const Cigar& part1, const Cigar& part2, const Point& r_cm, const Point& w_vec,
+                         double cutoff_squared, double cospatch, std::array<double, 5>& intersections);
 
 /**
  * @brief Finds if vector "vec" has angular intersection w. patch of part1
  */
-int test_intrpatch(const Cigar& part1, Point& vec, double cospatch, double ti, double intersections[5]);
+int test_intrpatch(const Cigar& part1, Point& vec, double cospatch, double ti, std::array<double, 5>& intersections);
 
 /**
  * @brief Intersect of plane
@@ -75,17 +75,19 @@ int test_intrpatch(const Cigar& part1, Point& vec, double cospatch, double ti, d
  * and if they are in cylindrical patch then returns number of them (CPSC)
  */
 int find_intersect_planec(const Cigar& part1, const Cigar& part2, const Point& r_cm, const Point& w_vec, double rcut2,
-                          double cospatch, double intersections[5]);
+                          double cospatch, std::array<double, 5>& intersections);
 
 /**
  * @brief Intersections of spherocylinder2 with a all-way patch of spherocylinder1 and return them (PSC)
  */
-int psc_intersect(const Cigar& part1, const Cigar& part2, const Point& r_cm, double intersections[5], double rcut2);
+int psc_intersect(const Cigar& part1, const Cigar& part2, const Point& r_cm, std::array<double, 5>& intersections,
+                  double rcut2);
 
 /**
  * @brief Intersection of PSC2 with cylindrical patch of PSC1 and return them (CPSC)
  */
-int cpsc_intersect(const Cigar& part1, const Cigar& part2, const Point& r_cm, double intersections[5], double rcut2);
+int cpsc_intersect(const Cigar& part1, const Cigar& part2, const Point& r_cm, std::array<double, 5>& intersections,
+                   double rcut2);
 } // namespace Faunus::SpheroCylinder
 
 // ---------------------------------------------------------------------------------------------
@@ -189,114 +191,118 @@ template <typename Tcigarsphere> class PatchyCigarSphere {
  * here we calculate scaling factors based on the overlapping segments of the two
  * cigars (spherocylinders) withn their patches. f0 is for size of overlapping segment
  * whicle f1 anf f2 are scaling fators for orientation of pacthes.
- * For patchy spherocylinder `Tcigarcigar` potential should be a combined pair potential,
- * where `first` accounts for patchy interaction and `second` is isotropic, only.
+ * `PatchPotential` is an isotropic potential, typically CosAttract, used for the patch, while `IsotropicPairPotential`
+ * is used for the remaining "isotropic" SC, typically WeeksChandlerAnderson.
  * There are two types of patches evaluated here:
  * patchtype 1 (PSC) runs along the whole axis including the ends
  * patchtype 2 (CPSC) is limited to the cylindrical part
+ *
+ * @todo Energy calculation badly needs refactoring!
  */
-template <typename Tcigarcigar> class PatchyCigarCigar {
-  public:
-    Tcigarcigar pairpot;
+template <typename PatchPotential, typename SpheroCylinderPotential> class PatchyCigarCigar : public PairPotentialBase {
+  private:
+    PatchPotential patch_pairpotential;             // typically `CosAttact`
+    SpheroCylinderPotential spherocylinder_pairpot; // typically `WeeksChandlerAndersen`
 
-    inline double operator()(const Particle& a, const Particle& b, const Point& r_cm) {
-        // 0- isotropic, 1-PSC all-way patch,2 -CPSC cylindrical patch
-        if (a.traits().sphero_cylinder.patch_type > 0) {
-            if (b.traits().sphero_cylinder.patch_type > 0) {
-                // patchy sc with patchy sc
-                int intrs;
-                double rcut2 = pairpot.first.rcut2(a.id, b.id);
-                double ndistsq;
-                double v1, v2, f0, f1, f2, T1, T2, S1, S2, s;
-                double intersections[5];
-                Point vec1, vec2, vec_intrs, vec_mindist;
+    double patchyPatchyEnergy(const Particle& a, const Particle& b,
+                              const Point& center_separation) const { // patchy sc with patchy sc
+        const auto cutoff_squared = patch_pairpotential.cutOffSquared();
+        std::array<double, 5> intersections;
 
-                assert(rcut2 > 1e-6 && "Cutoff for patchy cigar interaction has zero size.");
-                // distance for repulsion
-                Point rclose = SpheroCylinder::mindist_segment2segment(a.ext->scdir, a.ext->half_length, b.ext->scdir,
-                                                                       b.ext->half_length, r_cm);
-                intrs = 0;
-                for (int i = 0; i < 5; i++) {
-                    intersections[i] = 0;
-                }
-                // 1- do intersections of spherocylinder2 with patch of spherocylinder1 at.
-                //  cut distance C
-                if (a.traits().sphero_cylinder.patch_type == 1) {
-                    intrs = SpheroCylinder::psc_intersect(a.getExt(), b.getExt(), r_cm, intersections, rcut2);
-                } else {
-                    if (a.traits().sphero_cylinder.patch_type == 2) {
-                        intrs = SpheroCylinder::cpsc_intersect(a.getExt(), b.getExt(), r_cm, intersections, rcut2);
-                    } else {
-                        assert(!"Patchtype not implemented!");
-                    }
-                }
-                if (intrs < 2) {
-                    return pairpot.second(a, b, rclose.squaredNorm());
-                }                      // sc is all outside patch, attractive energy is 0
-                T1 = intersections[0]; // points on sc2
-                T2 = intersections[1];
-                // 2- now do the same oposite way psc1 in patch of psc2
-                for (int i = 0; i < 5; i++) {
-                    intersections[i] = 0;
-                }
-                if (a.traits().sphero_cylinder.patch_type == 1) {
-                    intrs = SpheroCylinder::psc_intersect(b.getExt(), a.getExt(), -r_cm, intersections, rcut2);
-                } else {
-                    if (a.traits().sphero_cylinder.patch_type == 2) {
-                        intrs = SpheroCylinder::cpsc_intersect(b.getExt(), a.getExt(), -r_cm, intersections, rcut2);
-                    } else {
-                        assert(!"Patchtype not implemented!");
-                    }
-                }
-                if (intrs < 2) {
-                    return pairpot.second(a, b,
-                                          rclose.squaredNorm()); // sc is all outside patch, attractive energy is 0
-                }
-                S1 = intersections[0]; // points on sc1
-                S2 = intersections[1];
-
-                // 3- scaling function1: dependence on the length of intersetions
-                v1 = fabs(S1 - S2) * 0.5;
-                v2 = fabs(T1 - T2) * 0.5;
-                f0 = v1 + v2;
-                // 4a- with two intersection pices calculate vector between their CM
-                //-this is for angular orientation
-                vec1 = a.ext->scdir * (S1 + S2) * 0.5;
-                vec2 = b.ext->scdir * (T1 + T2) * 0.5;
-                vec_intrs = vec2 - vec1 - r_cm;
-                // vec_intrs should be from sc1 t sc2
-                // 4b - calculate closest distance attractive energy from it
-                vec_mindist = SpheroCylinder::mindist_segment2segment(a.ext->scdir, v1, b.ext->scdir, v2, vec_intrs);
-                ndistsq = vec_mindist.dot(vec_mindist);
-
-                // 5- scaling function2: angular dependence of patch1
-                vec1 = SpheroCylinder::vec_perpproject(vec_intrs, a.ext->scdir);
-                vec1.normalize();
-                s = vec1.dot(a.ext->patchdir);
-                f1 = fanglscale(s, a.getExt());
-
-                // 6- scaling function3: angular dependence of patch2
-                vec1 = SpheroCylinder::vec_perpproject(-vec_intrs, b.ext->scdir).normalized();
-                s = vec1.dot(b.ext->patchdir);
-                f2 = fanglscale(s, b.getExt());
-
-                // 8- put it all together and output scale
-                return f0 * f1 * f2 * pairpot.first(a, b, ndistsq) + pairpot.second(a, b, rclose.squaredNorm());
-            }
-            assert(!"PSC w. isotropic cigar not implemented!");
+        // distance for repulsion
+        const auto rclose = SpheroCylinder::mindist_segment2segment(a.ext->scdir, a.ext->half_length, b.ext->scdir,
+                                                                    b.ext->half_length, center_separation);
+        // 1- do intersections of spherocylinder2 with patch of spherocylinder1 at.
+        //  cut distance C
+        int intrs = 0;
+        intersections.fill(0.0);
+        if (a.traits().sphero_cylinder.patch_type == 1) {
+            intrs =
+                SpheroCylinder::psc_intersect(a.getExt(), b.getExt(), center_separation, intersections, cutoff_squared);
         } else {
-            if (b.traits().sphero_cylinder.patch_type > 0) {
-                assert(!"PSC w. isotropic cigar not implemented!");
-                // isotropic sc with patchy sc - we dont have at the moment
+            if (a.traits().sphero_cylinder.patch_type == 2) {
+                intrs = SpheroCylinder::cpsc_intersect(a.getExt(), b.getExt(), center_separation, intersections,
+                                                       cutoff_squared);
             } else {
-                // isotropic sc with isotropic sc
-                Point rclose = SpheroCylinder::mindist_segment2segment(a.ext->scdir, a.ext->half_length, b.ext->scdir,
-                                                                       b.ext->half_length, r_cm);
-                return pairpot(a, b, rclose.squaredNorm());
+                assert(!"Patchtype not implemented!");
             }
         }
-        assert(!"Something we have not implemented");
-        return 0.0;
+        if (intrs < 2) {
+            // sc is all outside patch, attractive energy is 0
+            return spherocylinder_pairpot(a, b, rclose.squaredNorm());
+        }
+        auto T1 = intersections[0]; // points on sc2
+        auto T2 = intersections[1];
+        // 2- now do the same oposite way psc1 in patch of psc2
+        intersections.fill(0.0);
+        if (a.traits().sphero_cylinder.patch_type == 1) {
+            intrs = SpheroCylinder::psc_intersect(b.getExt(), a.getExt(), -center_separation, intersections,
+                                                  cutoff_squared);
+        } else {
+            if (a.traits().sphero_cylinder.patch_type == 2) {
+                intrs = SpheroCylinder::cpsc_intersect(b.getExt(), a.getExt(), -center_separation, intersections,
+                                                       cutoff_squared);
+            } else {
+                assert(!"Patchtype not implemented!");
+            }
+        }
+        if (intrs < 2) {
+            return spherocylinder_pairpot(a, b,
+                                          rclose.squaredNorm()); // sc is all outside patch, attractive energy is 0
+        }
+        auto S1 = intersections[0]; // points on sc1
+        auto S2 = intersections[1];
+
+        // 3- scaling function1: dependence on the length of intersetions
+        auto v1 = fabs(S1 - S2) * 0.5;
+        auto v2 = fabs(T1 - T2) * 0.5;
+        auto f0 = v1 + v2;
+        // 4a- with two intersection pices calculate vector between their CM
+        //-this is for angular orientation
+        Point vec1 = a.ext->scdir * (S1 + S2) * 0.5;
+        Point vec2 = b.ext->scdir * (T1 + T2) * 0.5;
+        Point vec_intrs = vec2 - vec1 - center_separation; // vec_intrs should be from sc1 t sc2
+
+        // 5- scaling function2: angular dependence of patch1
+        vec1 = SpheroCylinder::vec_perpproject(vec_intrs, a.ext->scdir);
+        vec1.normalize();
+        auto s = vec1.dot(a.ext->patchdir);
+        auto f1 = fanglscale(s, a.getExt());
+
+        // 6- scaling function3: angular dependence of patch2
+        vec1 = SpheroCylinder::vec_perpproject(-vec_intrs, b.ext->scdir).normalized();
+        s = vec1.dot(b.ext->patchdir);
+        auto f2 = fanglscale(s, b.getExt());
+
+        // 7 - calculate closest distance attractive energy from it
+        auto vec_mindist = SpheroCylinder::mindist_segment2segment(a.ext->scdir, v1, b.ext->scdir, v2, vec_intrs);
+        auto ndistsq = vec_mindist.dot(vec_mindist);
+
+        // 8- put it all together and output scale
+        return f0 * f1 * f2 * patch_pairpotential(a, b, ndistsq) + spherocylinder_pairpot(a, b, rclose.squaredNorm());
+    }
+
+    double isotropicIsotropicEnergy(const Particle& particle1, const Particle& particle2,
+                                    const Point& center_separation) const { // isotropic sc with isotropic sc
+        const auto rclose =
+            SpheroCylinder::mindist_segment2segment(particle1.ext->scdir, particle1.ext->half_length,
+                                                    particle2.ext->scdir, particle2.ext->half_length, center_separation)
+                .squaredNorm();
+        return patch_pairpotential(particle1, particle2, rclose) + spherocylinder_pairpot(particle1, particle2, rclose);
+    }
+
+  public:
+    double operator()(const Particle& particle1, const Particle& particle2,
+                      [[maybe_unused]] double center_separation_squared,
+                      const Point& center_separation) const override {
+        // 0- isotropic, 1-PSC all-way patch,2 -CPSC cylindrical patch
+        if (particle1.traits().sphero_cylinder.patch_type > 0 && particle2.traits().sphero_cylinder.patch_type > 0) {
+            return patchyPatchyEnergy(particle1, particle2, center_separation);
+        }
+        if (particle1.traits().sphero_cylinder.patch_type == 0 && particle2.traits().sphero_cylinder.patch_type == 0) {
+            return isotropicIsotropicEnergy(particle1, particle2, center_separation);
+        }
+        throw std::runtime_error("PSC w. isotropic cigar not implemented");
     }
 };
 
@@ -310,7 +316,7 @@ template <typename Tcigarcigar> class PatchyCigarCigar {
 template <typename Tcigarcigar, typename Tspheresphere, typename Tcigarsphere> class CigarSphereSplit {
   public:
     Tspheresphere pairpot_ss;
-    PatchyCigarCigar<Tcigarcigar> pairpot_cc;
+    PatchyCigarCigar<Tcigarcigar, Tcigarcigar> pairpot_cc;
     PatchyCigarSphere<Tcigarsphere> pairpot_cs;
 
     inline double operator()(const Particle& a, const Particle& b, const Point& r_cm) {

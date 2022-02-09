@@ -286,6 +286,9 @@ void CosAttract::from_json(const json &j) {
     c = pc::pi / 2 / wc;
     rcwc2 = pow((rc + wc), 2);
 }
+double CosAttract::cutOffSquared() const {
+    return rc2;
+}
 
 // =============== Coulomb (old) ===============
 

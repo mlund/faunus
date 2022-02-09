@@ -35,7 +35,11 @@ class SpheroCylinderData {
     friend void to_json(json&, const SpheroCylinderData&);
 
   public:
-    enum class patchType {FullLength, Capped}; //!< Not yet in use @todo replace `patch_type` integer
+    enum class patchType {
+        None = 0,                      //!< No patch
+        Full = 1,                      //!< Patch runs the full length of the SC
+        Capped = 2                     //!< Patch stops before the end caps
+    };                                 //!< Not yet in use @todo replace `patch_type` integer
     double chiral_angle = 0;           //!< Chiral angle (rotation of patch) on PSC
     double length = 0;                 //!< Sphere-cylinder length
     double patch_angle = 0;            //!< Angle of attrative patch on PSC

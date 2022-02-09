@@ -105,7 +105,7 @@ class Cigar : public ParticlePropertyBase {
      */
     void initialize(double patch_angle, double patch_angle_switch, double chiral_angle);
 
-    Point chdir = {0.0, 0.0, 0.0};
+    Point chirality_direction = {0.0, 0.0, 0.0};
 
   public:
     Point scdir = {0.0, 0.0, 0.0};    //!< Sphero-cylinder direction unit vector
@@ -118,7 +118,7 @@ class Cigar : public ParticlePropertyBase {
     void to_json(json& j) const override;
     void from_json(const json& j) override;
     template <class Archive> void serialize(Archive& archive) {
-        archive(scdir, patchdir, patchsides.at(0), patchsides.at(1), chdir);
+        archive(scdir, patchdir, patchsides.at(0), patchsides.at(1), chirality_direction);
     }
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -192,10 +192,10 @@ template <typename... Properties> void from_json(const json& j, ParticleTemplate
 class Particle {
   public:
     using ParticleExtension = ParticleTemplate<Dipole, Quadrupole, Cigar>;
-    std::shared_ptr<ParticleExtension> ext = nullptr; //!< Point to extended properties
-    int id = -1;                                      //!< Particle id/type
-    double charge = 0.0;                              //!< Particle charge
-    Point pos = {0.0, 0.0, 0.0};                      //!< Particle position vector
+    std::unique_ptr<ParticleExtension> ext; //!< Point to extended properties
+    int id = -1;                            //!< Particle id/type
+    double charge = 0.0;                    //!< Particle charge
+    Point pos = {0.0, 0.0, 0.0};            //!< Particle position vector
 
     Particle() = default;
     Particle(const AtomData& a, const Point& pos);

@@ -105,13 +105,12 @@ inline double fanglscale(const double a, const Cigar& particle) {
 
 /** @brief Hard pair potential for spherocylinders */
 class HardSpheroCylinder {
-  public:
+  private:
     struct prop {
         double halfl;
     };
-
     std::map<int, prop> m; // should be filled...
-
+  public:
     inline double operator()(const Particle& p1, const Particle& p2, Point r_cm) {
         auto distvec =
             SpheroCylinder::mindist_segment2segment(p1.ext->scdir, m[p1.id].halfl, p2.ext->scdir, m[p2.id].halfl, r_cm);
@@ -134,7 +133,7 @@ template <typename Tcigarsphere> class PatchyCigarSphere {
   public:
     Tcigarsphere pairpot;
 
-    double operator()(const Particle& a, const Particle& b, const Point& r_cm) {
+    inline double operator()(const Particle& a, const Particle& b, const Point& r_cm) {
         // 0- isotropic, 1-PSC all-way patch,2 -CPSC cylindrical patch
         // b is sphere, a is spherocylinder
         double s, t, f0, f1, contt;
@@ -176,7 +175,6 @@ template <typename Tcigarsphere> class PatchyCigarSphere {
         } else {
             f0 -= contt - t;
         }
-
         return pairpot.first(a, b, ndistsq) * f1 * (f0 + 1.0) + pairpot.second(a, b, ndistsq);
     }
 };
@@ -198,7 +196,7 @@ template <typename Tcigarcigar> class PatchyCigarCigar {
   public:
     Tcigarcigar pairpot;
 
-    double operator()(const Particle& a, const Particle& b, const Point& r_cm) {
+    inline double operator()(const Particle& a, const Particle& b, const Point& r_cm) {
         // 0- isotropic, 1-PSC all-way patch,2 -CPSC cylindrical patch
         if (a.traits().patch_type > 0) {
             if (b.traits().patch_type > 0) {
@@ -312,7 +310,7 @@ template <typename Tcigarcigar, typename Tspheresphere, typename Tcigarsphere> c
     PatchyCigarCigar<Tcigarcigar> pairpot_cc;
     PatchyCigarSphere<Tcigarsphere> pairpot_cs;
 
-    double operator()(const Particle& a, const Particle& b, const Point& r_cm) {
+    inline double operator()(const Particle& a, const Particle& b, const Point& r_cm) {
         if (a.ext->half_length < 1e-6) {
             // a sphere - b sphere
             if (b.ext->half_length < 1e-6) {
@@ -325,27 +323,21 @@ template <typename Tcigarcigar, typename Tspheresphere, typename Tcigarsphere> c
             assert(b.patchsides[0].squaredNorm() > 1e-6 && "Vector associated with patch side has zero size. "
                                                            "Patchy spherocylinder were probably not initialized.");
             return pairpot_cs(b, a, r_cm);
-
-        } else {
-            // a cigar - b sphere
-            if (b.ext->half_length < 1e-6) {
-                // PatchyCigarSphere(a,b)
-                assert(a.dir.squaredNorm() > 1e-6 && "Direction vector of patchy spherocylinder has zero size.");
-                assert(a.patchdir.squaredNorm() > 1e-6 &&
-                       "Patch direction vector of patchy spherocylinder has zero size.");
-                assert(a.patchsides[0].squaredNorm() > 1e-6 && "Vector associated with patch side has zero size. "
-                                                               "Patchy spherocylinder were probably not initialized.");
-                return pairpot_cs(a, b, r_cm);
-            }
-            // a cigar - b cigar
-            else {
-                // PatchyCigarCigar
-                assert(a.dir.squaredNorm() > 1e-6 && "Direction vector of patchy spherocylinder has zero size.");
-                assert(b.dir.squaredNorm() > 1e-6 && "Direction vector of patchy spherocylinder has zero size.");
-                return pairpot_cc(a, b, r_cm);
-            }
         }
-        return 0;
+        // a cigar - b sphere
+        if (b.ext->half_length < 1e-6) {
+            // PatchyCigarSphere(a,b)
+            assert(a.dir.squaredNorm() > 1e-6 && "Direction vector of patchy spherocylinder has zero size.");
+            assert(a.patchdir.squaredNorm() > 1e-6 && "Patch direction vector of patchy spherocylinder has zero size.");
+            assert(a.patchsides[0].squaredNorm() > 1e-6 && "Vector associated with patch side has zero size. "
+                                                           "Patchy spherocylinder were probably not initialized.");
+            return pairpot_cs(a, b, r_cm);
+        }
+        // a cigar - b cigar
+        // PatchyCigarCigar
+        assert(a.dir.squaredNorm() > 1e-6 && "Direction vector of patchy spherocylinder has zero size.");
+        assert(b.dir.squaredNorm() > 1e-6 && "Direction vector of patchy spherocylinder has zero size.");
+        return pairpot_cc(a, b, r_cm);
     }
 };
 

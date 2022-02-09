@@ -58,7 +58,7 @@ void Quadrupole::from_json(const json& j) { Q = j.value("Q", Tensor(Tensor::Zero
 void Cigar::rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &) {
     scdir = q * scdir;
     patchdir = q * patchdir;
-    chdir = q * patchdir;
+    chirality_direction = q * patchdir;
     patchsides.at(0) = q * patchsides.at(0);
     patchsides.at(1) = q * patchsides.at(1);
 }
@@ -67,11 +67,12 @@ void Cigar::to_json(json& j) const {
     j["scdir"] = scdir;
     j["psc_length"] = 2.0 * half_length;
 }
+
 void Cigar::from_json(const json& j) {
     scdir = j.value("scdir", Point(1.0, 0.0, 0.0));
-    half_length = 0.5 * j.value("psc_length", 0.0);
-    auto patch_angle = j.value("patch_angle", 0.0);
-    auto panglsw = j.value("patch_angle_switch", 0.0);
+    half_length = 0.5 * j.value("psc_length", 0.0) * 1.0_angstrom;
+    auto patch_angle = j.value("patch_angle", 0.0) * 1.0_deg;
+    auto panglsw = j.value("patch_angle_switch", 0.0) * 1.0_deg;
     auto chiral_angle = j.value("patch_chiral_angle", 0.0) * 1.0_deg;
     initialize(patch_angle, panglsw, chiral_angle);
 }
@@ -104,10 +105,10 @@ void Cigar::initialize(double patch_angle, double patch_angle_switch, double chi
         if (chiral_angle < zero) {
             vec = scdir;
         } else {
-            chdir = scdir;
+            chirality_direction = scdir;
             Q = Eigen::AngleAxisd(0.5 * chiral_angle, patchdir);
-            chdir = Q * chdir; // rotate
-            vec = chdir;
+            chirality_direction = Q * chirality_direction; // rotate
+            vec = chirality_direction;
         }
 
         /* create side vector by rotating patch vector by half size of patch*/
@@ -137,8 +138,8 @@ const AtomData &Particle::traits() const { return atoms[id]; }
 Particle::Particle(const AtomData &a) { *this = json(a).front(); }
 Particle::Particle(const AtomData &a, const Point &pos) : Particle(a) { this->pos = pos; }
 Particle::Particle(const Particle &other) : id(other.id), charge(other.charge), pos(other.pos) {
-    if (other.ext) {
-        ext = std::make_shared<Particle::ParticleExtension>(*other.ext); // deep copy
+    if (other.hasExtension()) {
+        ext = std::make_unique<Particle::ParticleExtension>(other.getExt()); // deep copy
     }
 }
 
@@ -147,11 +148,11 @@ Particle &Particle::operator=(const Particle &other) {
         charge = other.charge;
         pos = other.pos;
         id = other.id;
-        if (other.ext) {           // if particle has
-            if (ext) {             // extension, then
-                *ext = *other.ext; // deep copy
-            } else {               // else if *this is empty, create new based on p
-                ext = std::make_shared<Particle::ParticleExtension>(*other.ext); // create new
+        if (other.hasExtension()) {    // if particle has
+            if (ext) {                 // extension, then
+                *ext = other.getExt(); // deep copy
+            } else {                   // else if *this is empty, create new based on p
+                ext = std::make_unique<Particle::ParticleExtension>(other.getExt()); // create and deep copy
             }
         } else { // other doesn't have extended properties
             ext = nullptr;
@@ -178,7 +179,7 @@ bool Particle::hasExtension() const { return ext != nullptr; }
 
 Particle::ParticleExtension &Particle::createExtension() {
     assert(ext == nullptr && "extension already created");
-    ext = std::make_shared<ParticleExtension>();
+    ext = std::make_unique<ParticleExtension>();
     return *ext;
 }
 
@@ -222,7 +223,7 @@ TEST_CASE("[Faunus] Particle") {
 
     p1.getExt().mu = {0, 0, 1};
     p1.getExt().mulen = 2.8;
-    p1.getExt().scdir = {-0.1, 0.3, 1.9};
+    p1.getExt().scdir = Point(-0.1, 0.3, 1.9).normalized();
     p1.getExt().half_length = 0.5;
     p1.getExt().Q = Tensor(1, 2, 3, 4, 5, 6);
 
@@ -236,11 +237,11 @@ TEST_CASE("[Faunus] Particle") {
     CHECK(p2.charge == -0.8);
     CHECK(p2.getExt().mu == Point(0, 0, 1));
     CHECK(p2.getExt().mulen == 2.8);
-    CHECK(p2.getExt().scdir == Point(-0.1, 0.3, 1.9));
+    CHECK(p2.getExt().scdir == Point(-0.1, 0.3, 1.9).normalized());
     CHECK(p2.getExt().half_length == 0.5);
     CHECK(p2.getExt().Q == Tensor(1, 2, 3, 4, 5, 6));
 
-    // check of all properties are rotated
+    // check if all properties are rotated
     QuaternionRotate qrot(pc::pi / 2, {0, 1, 0});
     p1.getExt().mu = p1.getExt().scdir = {1, 0, 0};
     p1.rotate(qrot.getQuaternion(), qrot.getRotationMatrix());
@@ -262,7 +263,7 @@ TEST_CASE("[Faunus] Particle") {
         p.pos = {10, 20, 30};
         p.charge = -1;
         p.id = 8;
-        p.ext = std::make_shared<Particle::ParticleExtension>();
+        p.ext = std::make_unique<Particle::ParticleExtension>();
         p.getExt().mu = {0.1, 0.2, 0.3};
         p.getExt().mulen = 104;
 

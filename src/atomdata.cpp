@@ -82,12 +82,12 @@ void to_json(json& j, const AtomData& a) {
           {"mu", a.mu},
           {"mulen", a.mulen},
           // sphero cylinders
-          {"psc_length", a.psc_length},
+          {"psc_length", a.psc_length / 1.0_angstrom},
           {"patch_type", a.patch_type},
-          {"patch_angle", a.patch_angle},
-          {"patch_angle_switch", a.patch_angle_switch},
-          {"patch_attraction_range", a.patch_attraction_range},
-          {"patch_cutoff", a.patch_cutoff},
+          {"patch_angle", a.patch_angle / 1.0_deg},
+          {"patch_angle_switch", a.patch_angle_switch / 1.0_deg},
+          {"patch_attraction_range", a.patch_attraction_range / 1.0_angstrom},
+          {"patch_cutoff", a.patch_cutoff / 1.0_angstrom},
           {"patch_chiral_angle", a.patch_chiral_angle / 1.0_deg},
           {"id", a.id()}};
     to_json(_j, a.interaction); // append other interactions
@@ -117,12 +117,12 @@ void from_json(const json& j, AtomData& a) {
         }
 
         // spherocylindrical stuff
-        a.psc_length = val.value("psc_length", 0.0);
+        a.psc_length = val.value("psc_length", 0.0) * 1.0_angstrom;
         a.patch_type = val.value("patch_type", 0);
-        a.patch_angle = val.value("patch_angle", 0.0);
-        a.patch_angle_switch = val.value("patch_angle_switch", 0.0);
-        a.patch_attraction_range = val.value("patch_attraction_range", 0.0);
-        a.patch_cutoff = val.value("patch_cutoff", 0.0);
+        a.patch_angle = val.value("patch_angle", 0.0) * 1.0_deg;
+        a.patch_angle_switch = val.value("patch_angle_switch", 0.0) * 1.0_deg;
+        a.patch_attraction_range = val.value("patch_attraction_range", 0.0) * 1.0_angstrom;
+        a.patch_cutoff = val.value("patch_cutoff", 0.0) * 1.0_angstrom;
         a.patch_chiral_angle = val.value("patch_chiral_angle", 0.0) * 1.0_deg;
 
         a.mw = val.value("mw", a.mw);

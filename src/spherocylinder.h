@@ -103,23 +103,26 @@ inline double fanglscale(const double a, const Cigar& particle) {
     return 0.5 - ((particle.pcanglsw + particle.pcangl) * 0.5 - a) / (particle.pcangl - particle.pcanglsw);
 }
 
-/** @brief Hard pair potential for spherocylinders */
-class HardSpheroCylinder {
-  private:
-    struct prop {
-        double halfl;
-    };
-    std::map<int, prop> m; // should be filled...
+/** @brief Hard-sphere pair potential for spherocylinders */
+class HardSpheroCylinder : public PairPotentialBase {
   public:
-    inline double operator()(const Particle& p1, const Particle& p2, Point r_cm) {
-        auto distvec =
-            SpheroCylinder::mindist_segment2segment(p1.ext->scdir, m[p1.id].halfl, p2.ext->scdir, m[p2.id].halfl, r_cm);
-        const auto mindist = 0.5 * (p1.traits().sigma + p2.traits().sigma);
-        if (distvec.dot(distvec) < mindist * mindist) {
+    double operator()(const Particle& particle1, const Particle& particle2, [[maybe_unused]] double d,
+                      const Point& center_to_center_distance) const override {
+        assert(particle1.hasExtension() && particle2.hasExtension());
+        auto minimum_distance_squared = SpheroCylinder::mindist_segment2segment(
+                                            particle1.ext->scdir, particle1.ext->half_length, particle2.ext->scdir,
+                                            particle1.ext->half_length, center_to_center_distance)
+                                            .squaredNorm();
+        const auto contact_distance = 0.5 * (particle1.traits().sigma + particle2.traits().sigma);
+        if (minimum_distance_squared < contact_distance * contact_distance) {
             return pc::infty;
         }
-        return 0;
-    }
+        return 0.0;
+    } //!< Pair energy in units of kT
+
+    HardSpheroCylinder();
+    void to_json(json& j) const override;
+    void from_json(const json& j) override;
 };
 
 /**

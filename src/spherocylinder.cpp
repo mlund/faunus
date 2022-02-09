@@ -2,7 +2,7 @@
 #include <Eigen/Geometry>
 
 /**
- * The algorithms found here are mainly conversions from
+ * The algorithms found here are mainly direct conversions from
  * Robert Vacha's spherocylinder C code (~2008-2010).
  *
  * @todo cleanup and split into smaller functions.
@@ -514,3 +514,14 @@ int cpsc_intersect(const Cigar& part1, const Cigar& part2, const Point& r_cm, do
     return intrs;
 }
 } // namespace Faunus::SpheroCylinder
+
+namespace Faunus::Potential {
+
+HardSpheroCylinder::HardSpheroCylinder()
+    : PairPotentialBase("hardspherocylinder", "", false) {}
+
+void HardSpheroCylinder::to_json([[maybe_unused]] json& j) const {}
+
+void HardSpheroCylinder::from_json([[maybe_unused]] const json& j) {}
+
+} // namespace Faunus::Potential

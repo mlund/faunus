@@ -88,7 +88,7 @@ void to_json(json& j, const AtomData& a) {
           {"patch_angle_switch", a.patch_angle_switch / 1.0_deg},
           {"patch_attraction_range", a.patch_attraction_range / 1.0_angstrom},
           {"patch_cutoff", a.patch_cutoff / 1.0_angstrom},
-          {"patch_chiral_angle", a.patch_chiral_angle / 1.0_deg},
+          {"chiral_angle", a.patch_chiral_angle / 1.0_deg},
           {"id", a.id()}};
     to_json(_j, a.interaction); // append other interactions
     if (a.hydrophobic)
@@ -123,7 +123,7 @@ void from_json(const json& j, AtomData& a) {
         a.patch_angle_switch = val.value("patch_angle_switch", 0.0) * 1.0_deg;
         a.patch_attraction_range = val.value("patch_attraction_range", 0.0) * 1.0_angstrom;
         a.patch_cutoff = val.value("patch_cutoff", 0.0) * 1.0_angstrom;
-        a.patch_chiral_angle = val.value("patch_chiral_angle", 0.0) * 1.0_deg;
+        a.patch_chiral_angle = val.value("chiral_angle", 0.0) * 1.0_deg;
 
         a.mw = val.value("mw", a.mw);
         a.tension = val.value("tension", a.tension) * 1.0_kJmol / (1.0_angstrom * 1.0_angstrom);
@@ -255,6 +255,27 @@ AtomData& findAtomByName(std::string_view name) {
         throw UnknownAtomError(name);
     }
     return *result;
+}
+
+void from_json(const json& j, PatchySpheroCylinderData& psc) {
+    psc.scdir = j.value("scdir", Point(1.0, 0.0, 0.0));
+    psc.psc_length = j.value("psc_length", 0.0) * 1.0_angstrom;
+    psc.patch_type = j.value("patch_type", 0);
+    psc.patch_angle = j.value("patch_angle", 0.0) * 1.0_deg;
+    psc.patch_angle_switch = j.value("patch_angle_switch", 0.0) * 1.0_deg;
+    psc.patch_attraction_range = j.value("patch_attraction_range", 0.0) * 1.0_angstrom;
+    psc.patch_cutoff = j.value("patch_cutoff", 0.0) * 1.0_angstrom;
+    psc.chiral_angle = j.value("chiral_angle", 0.0) * 1.0_deg;
+}
+
+void to_json(json& j, const PatchySpheroCylinderData& psc) {
+    j = {{"length", psc.psc_length / 1.0_angstrom},
+         {"patch_type", psc.patch_type},
+         {"patch_angle", psc.patch_angle / 1.0_deg},
+         {"patch_angle_switch", psc.patch_angle_switch / 1.0_deg},
+         {"patch_attraction_range", psc.patch_attraction_range / 1.0_angstrom},
+         {"patch_cutoff", psc.patch_cutoff / 1.0_angstrom},
+         {"chiral_angle", psc.chiral_angle / 1.0_deg}};
 }
 
 } // namespace Faunus

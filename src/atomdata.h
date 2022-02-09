@@ -26,6 +26,27 @@ void to_json(json& j, const InteractionData& a);
 void from_json(const json& j, InteractionData& a);
 void from_single_use_json(SingleUseJSON& j, InteractionData& a);
 
+class PatchySpheroCylinderData {
+  protected:
+    double pcangl = std::cos(0.5 * patch_angle);
+    double pcanglsw = std::cos(0.5 * patch_angle + patch_angle_switch);
+    friend void from_json(const json&, PatchySpheroCylinderData&);
+    friend void to_json(json&, const PatchySpheroCylinderData&);
+
+  public:
+    Point scdir = {1.0, 0.0, 0.0};
+    double chiral_angle = 0;           //!< Chiral angle (rotation of patch) on PSC [degrees];
+    double psc_length = 0;             //!< Sphere-cylinder length [angstrom]
+    double patch_angle = 0;            //!< Angle of attrative patch on PSC [degrees]
+    double patch_angle_switch = 0;     //!< Angle of angular switch on sides of patch on PSC [degrees]
+    double patch_attraction_range = 0; //!< Dist. to which attraction is flat on attrative patch on PSC [angstrom]
+    double patch_cutoff = 0;           //!< Distance on which attraction switches to zero on PSC [angstrom]
+    int patch_type = 0;                //!< Patch type of spherocylinder
+};
+
+void from_json(const json& j, PatchySpheroCylinderData& psc);
+void to_json(json& j, const PatchySpheroCylinderData& psc);
+
 /**
  * @brief General properties for atoms
  */

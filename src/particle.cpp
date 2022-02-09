@@ -73,7 +73,7 @@ void Cigar::from_json(const json& j) {
     half_length = 0.5 * j.value("psc_length", 0.0) * 1.0_angstrom;
     auto patch_angle = j.value("patch_angle", 0.0) * 1.0_deg;
     auto panglsw = j.value("patch_angle_switch", 0.0) * 1.0_deg;
-    auto chiral_angle = j.value("patch_chiral_angle", 0.0) * 1.0_deg;
+    auto chiral_angle = j.value("chiral_angle", 0.0) * 1.0_deg;
     initialize(patch_angle, panglsw, chiral_angle);
 }
 

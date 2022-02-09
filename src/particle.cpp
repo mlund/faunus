@@ -61,34 +61,36 @@ void Cigar::rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &) {
     chirality_direction = q * patchdir;
     patchsides.at(0) = q * patchsides.at(0);
     patchsides.at(1) = q * patchsides.at(1);
+    // here we may want to run `initialize()` to reduce numerical rounding issues
+    // after many rotations...will require access to AtomData.
 }
 
-void Cigar::to_json(json& j) const {
-    j["scdir"] = scdir;
-    j["psc_length"] = 2.0 * half_length;
-}
+void Cigar::to_json(json& j) const { j["scdir"] = scdir; }
 
 void Cigar::from_json(const json& j) {
+    const auto& psc = Faunus::atoms.at(j.at("id").get<int>()).patchy_sphero_cylinder;
     scdir = j.value("scdir", Point(1.0, 0.0, 0.0));
-    half_length = 0.5 * j.value("psc_length", 0.0) * 1.0_angstrom;
-    auto patch_angle = j.value("patch_angle", 0.0) * 1.0_deg;
-    auto panglsw = j.value("patch_angle_switch", 0.0) * 1.0_deg;
-    auto chiral_angle = j.value("chiral_angle", 0.0) * 1.0_deg;
-    initialize(patch_angle, panglsw, chiral_angle);
+    initialize(psc);
 }
 
 /**
- * @param patch_angle Defines the size of the patch (`pangle` in v1 code)
- * @param patch_angle_switch (`panglewe` in v1 code)
- * @param chiral_angle Rotate patch with respect to PSC length axis
+ * Calculates cosine of angles, patch direction including chirality
+ * and vector corresponding to sides of patch that are used in
+ * calculations of interactions.
+ * This function must be called at the beginning of calculations and after changes
+ * of patch properties.
+ * It shall be also after a lot of moves to remove accumulated errors
+ *
+ * @note Largely from Robert Vacha's C code
  */
-void Cigar::initialize(double patch_angle, double patch_angle_switch, double chiral_angle) {
+void Cigar::initialize(const PatchySpheroCylinderData &psc) {
     constexpr auto zero = 1e-9;
+    half_length = 0.5 * psc.length;
     if (half_length > zero) {
         Point vec;
         Eigen::Quaterniond Q;
-        pcangl = std::cos(0.5 * patch_angle);
-        pcanglsw = std::cos(0.5 * patch_angle + patch_angle_switch);
+        pcangl = std::cos(0.5 * psc.patch_angle);
+        pcanglsw = std::cos(0.5 * psc.patch_angle + psc.patch_angle_switch);
 
         if (scdir.squaredNorm() < zero) {
             scdir = {1, 0, 0};
@@ -102,11 +104,11 @@ void Cigar::initialize(double patch_angle, double patch_angle_switch, double chi
         patchdir.normalize();
 
         /* calculate patch sides */
-        if (chiral_angle < zero) {
+        if (psc.chiral_angle < zero) {
             vec = scdir;
         } else {
             chirality_direction = scdir;
-            Q = Eigen::AngleAxisd(0.5 * chiral_angle, patchdir);
+            Q = Eigen::AngleAxisd(0.5 * psc.chiral_angle, patchdir);
             chirality_direction = Q * chirality_direction; // rotate
             vec = chirality_direction;
         }
@@ -114,13 +116,13 @@ void Cigar::initialize(double patch_angle, double patch_angle_switch, double chi
         /* create side vector by rotating patch vector by half size of patch*/
         /* the first side */
         patchsides[0] = patchdir;
-        Q = Eigen::AngleAxisd(0.5 * patch_angle + patch_angle_switch, vec);
+        Q = Eigen::AngleAxisd(0.5 * psc.patch_angle + psc.patch_angle_switch, vec);
         patchsides[0] = Q * patchsides[0]; // rotate
         patchsides[0].normalize();
 
         /* the second side */
         patchsides[1] = patchdir;
-        Q = Eigen::AngleAxisd(-0.5 * patch_angle - patch_angle_switch, vec);
+        Q = Eigen::AngleAxisd(-0.5 * psc.patch_angle - psc.patch_angle_switch, vec);
         patchsides[1] = Q * patchsides[1]; // rotate
         patchsides[1].normalize();
 
@@ -135,7 +137,7 @@ const AtomData &Particle::traits() const { return atoms[id]; }
 /**
  * @warning Performance is sub-optimal as conversion is done through a json object
  */
-Particle::Particle(const AtomData &a) { *this = json(a).front(); }
+Particle::Particle(const AtomData &a) {*this = json(a).front(); }
 Particle::Particle(const AtomData &a, const Point &pos) : Particle(a) { this->pos = pos; }
 Particle::Particle(const Particle &other) : id(other.id), charge(other.charge), pos(other.pos) {
     if (other.hasExtension()) {
@@ -205,26 +207,33 @@ void to_json(json &j, const Particle &p) {
 
 TEST_SUITE_BEGIN("Particle");
 
-// convert test to use `Particle::shape`
 TEST_CASE("[Faunus] Particle") {
     using doctest::Approx;
+
+    json j = R"({ "atomlist" : [
+             { "A": { "sigma": 2.5, "pactivity":2, "eps_custom": 0.1 } },
+             { "B": { "psc": {"length": 9, "chiral_angle": 5.0} } }
+             ]})"_json;
+
+    pc::temperature = 298.15_K;
+    atoms = j["atomlist"].get<decltype(atoms)>();
+
     Particle p1, p2;
-    p1.id = 100;
+    p1.id = 1;
     p1.pos = {1, 2, 3};
     p1.charge = -0.8;
 
     CHECK(p1.hasExtension() == false);
+    CHECK(p2.hasExtension() == false);
 
     p1.createExtension();
+    [[maybe_unused]] auto& newly_created_extension = p2.getExt();
     CHECK(p1.hasExtension() == true);
-
-    p2.createExtension();
     CHECK(p2.hasExtension() == true);
 
     p1.getExt().mu = {0, 0, 1};
     p1.getExt().mulen = 2.8;
     p1.getExt().scdir = Point(-0.1, 0.3, 1.9).normalized();
-    p1.getExt().half_length = 0.5;
     p1.getExt().Q = Tensor(1, 2, 3, 4, 5, 6);
 
     p2 = json(p1); // p1 --> json --> p2
@@ -232,31 +241,45 @@ TEST_CASE("[Faunus] Particle") {
 
     CHECK(json(p1) == json(p2)); // p1 --> json == json <-- p2 ?
 
-    CHECK(p2.id == 100);
+    CHECK(p2.id == 1);
     CHECK(p2.pos == Point(1, 2, 3));
     CHECK(p2.charge == -0.8);
     CHECK(p2.getExt().mu == Point(0, 0, 1));
     CHECK(p2.getExt().mulen == 2.8);
-    CHECK(p2.getExt().scdir == Point(-0.1, 0.3, 1.9).normalized());
-    CHECK(p2.getExt().half_length == 0.5);
     CHECK(p2.getExt().Q == Tensor(1, 2, 3, 4, 5, 6));
 
-    // check if all properties are rotated
-    QuaternionRotate qrot(pc::pi / 2, {0, 1, 0});
-    p1.getExt().mu = p1.getExt().scdir = {1, 0, 0};
-    p1.rotate(qrot.getQuaternion(), qrot.getRotationMatrix());
+    SUBCASE("Cigar") {
+        CHECK(p2.getExt().scdir == Point(-0.1, 0.3, 1.9).normalized());
+        CHECK(p2.getExt().scdir.x() == Approx(-0.0519174));
+        CHECK(p2.getExt().scdir.y() == Approx(0.155752));
+        CHECK(p2.getExt().scdir.z() == Approx(0.986431));
+        CHECK(p2.getExt().chirality_direction.x() == Approx(-0.0083089));
+        CHECK(p2.getExt().chirality_direction.y() == Approx(0.155604));
+        CHECK(p2.getExt().chirality_direction.z() == Approx(0.987785));
+        CHECK(p2.getExt().patchdir.x() == Approx(0.008186156));
+        CHECK(p2.getExt().patchdir.y() == Approx(0.987796153));
+        CHECK(p2.getExt().patchdir.z() == Approx(-0.1555369633));
+        CHECK(p2.getExt().half_length == 4.5);
+    }
 
-    CHECK(p1.getExt().mu.x() == Approx(0));
-    CHECK(p1.getExt().mu.z() == Approx(-1));
-    CHECK(p1.getExt().scdir.x() == Approx(0));
-    CHECK(p1.getExt().scdir.z() == Approx(-1));
+    SUBCASE("rotate") {
+        // check if all properties are rotated
+        QuaternionRotate qrot(pc::pi / 2, {0, 1, 0});
+        p1.getExt().mu = p1.getExt().scdir = {1, 0, 0};
+        p1.rotate(qrot.getQuaternion(), qrot.getRotationMatrix());
 
-    CHECK(p1.getExt().Q(0, 0) == Approx(6));
-    CHECK(p1.getExt().Q(0, 1) == Approx(5));
-    CHECK(p1.getExt().Q(0, 2) == Approx(-3));
-    CHECK(p1.getExt().Q(1, 1) == Approx(4));
-    CHECK(p1.getExt().Q(1, 2) == Approx(-2));
-    CHECK(p1.getExt().Q(2, 2) == Approx(1));
+        CHECK(p1.getExt().mu.x() == Approx(0));
+        CHECK(p1.getExt().mu.z() == Approx(-1));
+        CHECK(p1.getExt().scdir.x() == Approx(0));
+        CHECK(p1.getExt().scdir.z() == Approx(-1));
+
+        CHECK(p1.getExt().Q(0, 0) == Approx(6));
+        CHECK(p1.getExt().Q(0, 1) == Approx(5));
+        CHECK(p1.getExt().Q(0, 2) == Approx(-3));
+        CHECK(p1.getExt().Q(1, 1) == Approx(4));
+        CHECK(p1.getExt().Q(1, 2) == Approx(-2));
+        CHECK(p1.getExt().Q(2, 2) == Approx(1));
+    }
 
     SUBCASE("Cereal serialisation") {
         Particle p;

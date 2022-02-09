@@ -91,26 +91,18 @@ struct Quadrupole : public ParticlePropertyBase {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 }; // Quadrupole property
 
+/**
+ * @brief Patchy sphero cylinder a.k.a. Cigar particles
+ */
 class Cigar : public ParticlePropertyBase {
   private:
-    /**
-     * @brief Initialize patchy spherocylinder - run at start and after patch changes
-     *
-     * Calculates cosine of angles, patch direction including chirality
-     * and vector corresponding to sides of patch that are used in
-     * calculations of interactions.
-     * This function must be called at the beginning of calculations and after changes
-     * of patch properties.
-     * It shall be also after a lot of move to remove accumulated comouptation errors
-     */
-    void initialize(double patch_angle, double patch_angle_switch, double chiral_angle);
-
-    Point chirality_direction = {0.0, 0.0, 0.0};
+    void initialize(const PatchySpheroCylinderData& psc); // initialize; run at start and after patch changes
 
   public:
     Point scdir = {0.0, 0.0, 0.0};    //!< Sphero-cylinder direction unit vector
     Point patchdir = {0.0, 0.0, 0.0}; //!< Patch direction
     std::array<Point, 2> patchsides;
+    Point chirality_direction = {0.0, 0.0, 0.0}; // unused
     double half_length = 0.0;
     double pcanglsw = 0.0; //!< Cosine of switch angle from AtomData (speed optimization)
     double pcangl = 0.0;   //!< Cosine of AtomData::patch_angle (speed optimization)

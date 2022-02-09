@@ -26,17 +26,17 @@ void to_json(json& j, const InteractionData& a);
 void from_json(const json& j, InteractionData& a);
 void from_single_use_json(SingleUseJSON& j, InteractionData& a);
 
+/**
+ * @brief Static properties for patchy sphero cylinders
+ */
 class PatchySpheroCylinderData {
   protected:
-    double pcangl = std::cos(0.5 * patch_angle);
-    double pcanglsw = std::cos(0.5 * patch_angle + patch_angle_switch);
     friend void from_json(const json&, PatchySpheroCylinderData&);
     friend void to_json(json&, const PatchySpheroCylinderData&);
 
   public:
-    Point scdir = {1.0, 0.0, 0.0};
     double chiral_angle = 0;           //!< Chiral angle (rotation of patch) on PSC [degrees];
-    double psc_length = 0;             //!< Sphere-cylinder length [angstrom]
+    double length = 0;                 //!< Sphere-cylinder length [angstrom]
     double patch_angle = 0;            //!< Angle of attrative patch on PSC [degrees]
     double patch_angle_switch = 0;     //!< Angle of angular switch on sides of patch on PSC [degrees]
     double patch_attraction_range = 0; //!< Dist. to which attraction is flat on attrative patch on PSC [angstrom]
@@ -69,23 +69,14 @@ class AtomData { // has to be a class when a constant reference is used
     double alphax = 0;           //!< Excess polarisability (unit-less)
     double dp = 0;               //!< Translational displacement parameter [angstrom]
     double dprot = 0;            //!< Rotational displacement parameter [degrees]
-    double mulen = 0;            //!< Dipole moment scalar [eÃ]
-
-    double patch_chiral_angle = 0;       //!< Chiral angle (rotation of patch) on PSC [degrees];
-    double psc_length = 0;             //!< Sphere-cylinder length [angstrom]
-    double patch_angle = 0;            //!< Angle of attrative patch on PSC [degrees]
-    double patch_angle_switch = 0;     //!< Angle of angular switch on sides of patch on PSC [degrees]
-    double patch_attraction_range = 0; //!< Dist. to which attraction is flat on attrative patch on PSC [angstrom]
-    double patch_cutoff = 0;           //!< Distance on which attraction switches to zero on PSC [angstrom]
-    int patch_type = 0;  //!< Patch type of spherocylinder
-
     double tension = 0;          //!< Surface tension [kT/Å^2]
     double tfe = 0;              //!< Transfer free energy [J/mol/angstrom^2/M]
     Point mu = {0, 0, 0};        //!< Dipole moment unit vector
-    Point scdir = {0, 0, 0};     //!< Sphero-cylinder direction
+    double mulen = 0;            //!< Dipole moment length
     bool hydrophobic = false;    //!< Is the particle hydrophobic?
     bool implicit = false;       //!< Is the particle implicit (e.g. proton)?
     InteractionData interaction; //!< Arbitrary interaction parameters, e.g., epsilons in various potentials
+    PatchySpheroCylinderData patchy_sphero_cylinder; //!< Data for patchy sphero cylinders
 
     index_type& id();             //!< Type id
     const index_type& id() const; //!< Type id

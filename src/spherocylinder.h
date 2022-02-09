@@ -151,7 +151,7 @@ template <typename Tcigarsphere> class PatchyCigarSphere {
         }
         Point distvec = -r_cm + (a.ext->scdir * contt);
 
-        if (a.traits().patch_type == 0 && b.traits().patch_type == 0) {
+        if (a.traits().patchy_sphero_cylinder.patch_type == 0 && b.traits().patchy_sphero_cylinder.patch_type == 0) {
             return pairpot(a, b, distvec.dot(distvec));
         }
 
@@ -198,8 +198,8 @@ template <typename Tcigarcigar> class PatchyCigarCigar {
 
     inline double operator()(const Particle& a, const Particle& b, const Point& r_cm) {
         // 0- isotropic, 1-PSC all-way patch,2 -CPSC cylindrical patch
-        if (a.traits().patch_type > 0) {
-            if (b.traits().patch_type > 0) {
+        if (a.traits().patchy_sphero_cylinder.patch_type > 0) {
+            if (b.traits().patchy_sphero_cylinder.patch_type > 0) {
                 // patchy sc with patchy sc
                 int intrs;
                 double rcut2 = pairpot.first.rcut2(a.id, b.id);
@@ -218,10 +218,10 @@ template <typename Tcigarcigar> class PatchyCigarCigar {
                 }
                 // 1- do intersections of spherocylinder2 with patch of spherocylinder1 at.
                 //  cut distance C
-                if (a.traits().patch_type == 1) {
+                if (a.traits().patchy_sphero_cylinder.patch_type == 1) {
                     intrs = SpheroCylinder::psc_intersect(a.getExt(), b.getExt(), r_cm, intersections, rcut2);
                 } else {
-                    if (a.traits().patch_type == 2) {
+                    if (a.traits().patchy_sphero_cylinder.patch_type == 2) {
                         intrs = SpheroCylinder::cpsc_intersect(a.getExt(), b.getExt(), r_cm, intersections, rcut2);
                     } else {
                         assert(!"Patchtype not implemented!");
@@ -236,10 +236,10 @@ template <typename Tcigarcigar> class PatchyCigarCigar {
                 for (int i = 0; i < 5; i++) {
                     intersections[i] = 0;
                 }
-                if (a.traits().patch_type == 1) {
+                if (a.traits().patchy_sphero_cylinder.patch_type == 1) {
                     intrs = SpheroCylinder::psc_intersect(b.getExt(), a.getExt(), -r_cm, intersections, rcut2);
                 } else {
-                    if (a.traits().patch_type == 2) {
+                    if (a.traits().patchy_sphero_cylinder.patch_type == 2) {
                         intrs = SpheroCylinder::cpsc_intersect(b.getExt(), a.getExt(), -r_cm, intersections, rcut2);
                     } else {
                         assert(!"Patchtype not implemented!");
@@ -282,7 +282,7 @@ template <typename Tcigarcigar> class PatchyCigarCigar {
             }
             assert(!"PSC w. isotropic cigar not implemented!");
         } else {
-            if (b.traits().patch_type > 0) {
+            if (b.traits().patchy_sphero_cylinder.patch_type > 0) {
                 assert(!"PSC w. isotropic cigar not implemented!");
                 // isotropic sc with patchy sc - we dont have at the moment
             } else {

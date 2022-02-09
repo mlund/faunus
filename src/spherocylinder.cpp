@@ -89,20 +89,20 @@ Point mindist_segment2segment(const Point& dir1, double half_length1, const Poin
 int find_intersect_plane(const Cigar& part1, const Cigar& part2, const Point& r_cm, const Point& w_vec,
                          const double rcut2, const double cospatch, double* intersections) {
     Point nplane = part1.scdir.cross(w_vec).normalized();
-    auto a = nplane.dot(part2.scdir);
+    const auto a = nplane.dot(part2.scdir);
     if (a == 0.0) {
         return 0; /* there is no intersection plane and sc are paralel*/
     }
-    auto ti = nplane.dot(r_cm) / a;
+    const auto ti = nplane.dot(r_cm) / a;
     if ((ti > part2.half_length) || (ti < -part2.half_length)) {
         return 0; /* there is no intersection plane sc is too short*/
     }
     Point d_vec = ti * part2.scdir - r_cm; /*vector from intersection point to CM*/
-    auto c = d_vec.dot(w_vec);
+    const auto c = d_vec.dot(w_vec);
     if (c * cospatch < 0) {
         return 0; /* the intersection in plane is on other side of patch */
     }
-    auto d = fabs(d_vec.dot(part1.scdir)) - part2.half_length;
+    const auto d = fabs(d_vec.dot(part1.scdir)) - part2.half_length;
     double disti;
     if (d > 0)
         disti = d * d + c * c; /*is inside cylinder*/

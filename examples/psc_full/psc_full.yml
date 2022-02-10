@@ -14,20 +14,20 @@ atomlist:
       dprot: 5.0
       psc: {length: 30, patchtype: 1, patchangle: 80, patchangleswitch: 5.0, patchswitch: 6.0, patchdistance: 11.2246204831}
 
-moleculelist:                        # define molecule types
+moleculelist:
     - bulk: {atoms: [PSC], atomic: true}
 
-insertmolecules:                     # create an initial system (random insertion)
+insertmolecules:
     - bulk: {N: 20}
 
-moves:                               # define Monte Carlo moves
-    - transrot: {molecule: bulk}     # atomic translation (and rotation if anisotropic atoms)
+moves:
+    - transrot: {molecule: bulk}
 
-analysis:                            # define on the fly analysis
-    - systemenergy: {file: energy.dat, nstep: 100} # save system energy
-    - savestate: {file: confout.pqr} # save PQR file for visualization
-    - savestate: {file: state.json } # save restart file
-mcloop: {macro: 10, micro: 5000}     # number of MC steps
-geometry: {type: cuboid, length: 50} # sidelength(s): number OR array
-temperature: 300                     # in K
-random: {seed: fixed}                # seed for pseudo random number generator
+analysis:
+    - systemenergy: {file: energy.dat, nstep: 100}
+    - savestate: {file: confout.xyz_psc}
+    - savestate: {file: state.json }
+mcloop: {macro: 10, micro: 5000}
+geometry: {type: cuboid, length: 50}
+temperature: 300
+random: {seed: fixed}

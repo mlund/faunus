@@ -249,6 +249,17 @@ class XYZWriter : public StructureFileWriter {
     void saveParticle(std::ostream& stream, const Particle& particle) override;
 };
 
+/**
+ * Modified XYZ format that also saves spherocylinder direction and patch
+ * (ported from Faunus v1)
+ */
+class SpheroCylinderXYZWriter : public StructureFileWriter {
+  private:
+    void saveHeader(std::ostream& stream, int number_of_particles) const override;
+    void saveParticle(std::ostream& stream, const Particle& particle) override;
+};
+
+
 class PQRWriter : public StructureFileWriter {
   private:
     void saveHeader(std::ostream& stream, int number_of_particles) const override;

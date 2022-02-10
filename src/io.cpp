@@ -337,6 +337,8 @@ std::shared_ptr<StructureFileWriter> createStructureFileWriter(const std::string
         writer = std::make_shared<AminoAcidModelWriter>();
     } else if (suffix == "xyz") {
         writer = std::make_shared<XYZWriter>();
+    } else if (suffix == "xyz_psc") {
+        writer = std::make_shared<SpheroCylinderXYZWriter>();
     } else if (suffix == "gro") {
         writer = std::make_shared<GromacsWriter>();
     } else if (suffix == "pdb") {
@@ -672,6 +674,20 @@ void XYZWriter::saveHeader(std::ostream& stream, int number_of_particles) const 
 void XYZWriter::saveParticle(std::ostream& stream, const Particle& particle) {
     const auto scale = static_cast<double>(particle_is_active);
     stream << particle.traits().name << " " << scale * particle.pos.transpose() << "\n";
+}
+
+// -----------------------------
+
+void SpheroCylinderXYZWriter::saveHeader(std::ostream& stream, int number_of_particles) const {
+    // @todo we currently have no access to the "sweep" and is now fixed to "0"
+    stream << fmt::format("{}\nsweep {}; box ", number_of_particles, 0) << box_dimensions.transpose() << "\n";
+}
+void SpheroCylinderXYZWriter::saveParticle(std::ostream& stream, const Particle& particle) {
+    if (particle.hasExtension()) {
+        const auto scale = static_cast<double>(particle_is_active);
+        stream << scale * particle.pos.transpose() << " " << scale * particle.getExt().scdir.transpose() << " "
+               << scale * particle.getExt().patchdir.transpose() << "\n";
+    }
 }
 
 // -----------------------------

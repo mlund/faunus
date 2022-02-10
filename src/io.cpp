@@ -329,22 +329,26 @@ ParticleVector fastaToParticles(std::string_view fasta_sequence, double bond_len
     return particles;
 }
 
-std::shared_ptr<StructureFileWriter> createStructureFileWriter(const std::string& suffix) {
-    std::shared_ptr<StructureFileWriter> writer;
+std::unique_ptr<StructureFileWriter> createStructureFileWriter(const std::string& suffix) {
     if (suffix == "pqr") {
-        writer = std::make_shared<PQRWriter>();
-    } else if (suffix == "aam") {
-        writer = std::make_shared<AminoAcidModelWriter>();
-    } else if (suffix == "xyz") {
-        writer = std::make_shared<XYZWriter>();
-    } else if (suffix == "xyz_psc") {
-        writer = std::make_shared<SpheroCylinderXYZWriter>();
-    } else if (suffix == "gro") {
-        writer = std::make_shared<GromacsWriter>();
-    } else if (suffix == "pdb") {
-        writer = std::make_shared<PQRWriter>(PQRWriter::Style::PDB);
+        return std::make_unique<PQRWriter>();
     }
-    return writer;
+    if (suffix == "aam") {
+        return std::make_unique<AminoAcidModelWriter>();
+    }
+    if (suffix == "xyz") {
+        return std::make_unique<XYZWriter>();
+    }
+    if (suffix == "xyz_psc") {
+        return std::make_unique<SpheroCylinderXYZWriter>();
+    }
+    if (suffix == "gro") {
+        return std::make_unique<GromacsWriter>();
+    }
+    if (suffix == "pdb") {
+        return std::make_unique<PQRWriter>(PQRWriter::Style::PDB);
+    }
+    return nullptr;
 }
 
 // -----------------------------

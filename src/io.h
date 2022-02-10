@@ -672,7 +672,7 @@ ParticleVector loadStructure(const std::string& filename, bool prefer_charges_fr
  * @param suffix Filename suffix (pqr, pdb, aam, xyz, gro)
  * @return Shared pointer to write instance; empty if unknown suffix
  */
-std::shared_ptr<StructureFileWriter> createStructureFileWriter(const std::string& suffix);
+std::unique_ptr<StructureFileWriter> createStructureFileWriter(const std::string& suffix);
 
 /**
  * @brief Placeholder for Space Trajectory

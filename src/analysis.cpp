@@ -309,7 +309,7 @@ SaveState::SaveState(json j, const Space& spc) : Analysisbase(spc, "savestate") 
 }
 void SaveState::setWriteFunction(const Space& spc) {
     const auto suffix = filename.substr(filename.find_last_of('.') + 1);
-    if (auto writer = createStructureFileWriter(suffix)) {
+    if (std::shared_ptr<StructureFileWriter> writer = createStructureFileWriter(suffix)) {
         writeFunc = [&, w = writer](auto& file) {
             if (convert_hexagonal_prism_to_cuboid) {
                 saveAsCuboid(file, spc, *w);

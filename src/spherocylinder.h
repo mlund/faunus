@@ -156,8 +156,8 @@ template <typename Tcigarsphere> class PatchyCigarSphere {
         }
         Point distvec = -center_separation + (a.ext->scdir * contt);
 
-        if (a.traits().sphero_cylinder.type == SpheroCylinderData::None &&
-            b.traits().sphero_cylinder.type == SpheroCylinderData::None) {
+        if (a.traits().sphero_cylinder.type == SpheroCylinderData::PatchType::None &&
+            b.traits().sphero_cylinder.type == SpheroCylinderData::PatchType::None) {
             return pairpot(a, b, distvec.dot(distvec));
         }
 
@@ -218,11 +218,11 @@ template <typename PatchPotential, typename SpheroCylinderPotential> class Patch
         //  cut distance C
         int intrs = 0;
         intersections.fill(0.0);
-        if (particle1.traits().sphero_cylinder.type == SpheroCylinderData::Full) {
+        if (particle1.traits().sphero_cylinder.type == SpheroCylinderData::PatchType::Full) {
             intrs = SpheroCylinder::psc_intersect(particle1.getExt(), particle2.getExt(), center_separation,
                                                   intersections, cutoff_squared);
         } else {
-            if (particle1.traits().sphero_cylinder.type == SpheroCylinderData::Capped) {
+            if (particle1.traits().sphero_cylinder.type == SpheroCylinderData::PatchType::Capped) {
                 intrs = SpheroCylinder::cpsc_intersect(particle1.getExt(), particle2.getExt(), center_separation,
                                                        intersections, cutoff_squared);
             } else {
@@ -238,12 +238,12 @@ template <typename PatchPotential, typename SpheroCylinderPotential> class Patch
         // 2- now do the same oposite way psc1 in patch of psc2
         intersections.fill(0.0);
         if (particle1.traits().sphero_cylinder.type ==
-            SpheroCylinderData::Full) { //!< @warning should this not be b.traits()?
+            SpheroCylinderData::PatchType::Full) { //!< @warning should this not be b.traits()?
             intrs = SpheroCylinder::psc_intersect(particle2.getExt(), particle1.getExt(), -center_separation,
                                                   intersections, cutoff_squared);
         } else {
             if (particle1.traits().sphero_cylinder.type ==
-                SpheroCylinderData::Capped) { //!< @warning should this not be b.traits()?
+                SpheroCylinderData::PatchType::Capped) { //!< @warning should this not be b.traits()?
                 intrs = SpheroCylinder::cpsc_intersect(particle2.getExt(), particle1.getExt(), -center_separation,
                                                        intersections, cutoff_squared);
             } else {
@@ -302,12 +302,12 @@ template <typename PatchPotential, typename SpheroCylinderPotential> class Patch
     double operator()(const Particle& particle1, const Particle& particle2,
                       [[maybe_unused]] double center_separation_squared,
                       const Point& center_separation) const override {
-        if (particle1.traits().sphero_cylinder.type != SpheroCylinderData::None &&
-            particle2.traits().sphero_cylinder.type != SpheroCylinderData::None) {
+        if (particle1.traits().sphero_cylinder.type != SpheroCylinderData::PatchType::None &&
+            particle2.traits().sphero_cylinder.type != SpheroCylinderData::PatchType::None) {
             return patchyPatchyEnergy(particle1, particle2, center_separation);
         }
-        if (particle1.traits().sphero_cylinder.type == SpheroCylinderData::None &&
-            particle2.traits().sphero_cylinder.type == SpheroCylinderData::None) {
+        if (particle1.traits().sphero_cylinder.type == SpheroCylinderData::PatchType::None &&
+            particle2.traits().sphero_cylinder.type == SpheroCylinderData::PatchType::None) {
             return isotropicIsotropicEnergy(particle1, particle2, center_separation);
         }
         throw std::runtime_error("PSC w. isotropic cigar not implemented");

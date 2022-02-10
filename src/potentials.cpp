@@ -76,6 +76,8 @@ TPairMatrixPtr PairMixer::createPairMatrix(const std::vector<AtomData> &atoms,
     }
     return matrix;
 }
+PairMixer::PairMixer(TExtractorFunc extractor, TCombinatorFunc combinator, TModifierFunc modifier)
+    : extractor(extractor), combinator(combinator), modifier(modifier){}
 
 TEST_CASE("[Faunus] PairMixer") {
     using namespace std::string_literals;
@@ -261,6 +263,10 @@ void MixerPairPotentialBase::to_json(json &j) const {
         j["custom"] = *custom_pairs;
     }
 }
+void MixerPairPotentialBase::extractorsFromJson(const json&) {}
+MixerPairPotentialBase::MixerPairPotentialBase(const std::string& name, const std::string& cite,
+                                               CombinationRuleType combination_rule, bool isotropic)
+    : PairPotentialBase(name, cite, isotropic), combination_rule(combination_rule){}
 
 // =============== RepulsionR3 ===============
 
@@ -289,6 +295,8 @@ void CosAttract::from_json(const json &j) {
 double CosAttract::cutOffSquared() const {
     return rc2;
 }
+CosAttract::CosAttract(const std::string& name)
+    : PairPotentialBase(name) {}
 
 // =============== Coulomb (old) ===============
 
@@ -314,6 +322,9 @@ void DipoleDipole::to_json(json &j) const {
 }
 
 void DipoleDipole::from_json(const json &j) { lB = pc::bjerrumLength(j.at("epsr")); }
+DipoleDipole::DipoleDipole(const std::string& name, const std::string& cite)
+    :
+    PairPotentialBase(name, cite, false) {}
 
 // =============== FENE ===============
 
@@ -324,6 +335,8 @@ void FENE::from_json(const json &j) {
 }
 
 void FENE::to_json(json &j) const { j = {{"stiffness", k}, {"maxsep", std::sqrt(r02)}}; }
+FENE::FENE(const std::string& name)
+    : PairPotentialBase(name) {}
 
 // =============== SASApotential ===============
 
@@ -355,6 +368,9 @@ void SASApotential::to_json(json &j) const {
     j["radius"] = proberadius / 1.0_angstrom;
     j["shift"] = shift;
 }
+SASApotential::SASApotential(const std::string& name, const std::string& cite)
+    :
+    PairPotentialBase(name, cite) {}
 
 TEST_CASE("[Faunus] SASApotential") {
     using doctest::Approx;
@@ -553,6 +569,8 @@ void HardSphere::extractorsFromJson(const json &j) {
     json_extra_params["sigma"] = sigma_name;
     extract_sigma = [sigma_name](const InteractionData &a) -> double { return a.at(sigma_name) * 1.0_angstrom; };
 }
+HardSphere::HardSphere(const std::string& name)
+    : MixerPairPotentialBase(name, std::string(), CombinationRuleType::ARITHMETIC){}
 
 TEST_CASE("[Faunus] HardSphere") {
     atoms = R"([{"A": {"sigma": 2}}, {"B": {"sigma": 8}}])"_json.get<decltype(atoms)>();
@@ -609,6 +627,8 @@ void Hertz::extractorsFromJson(const json &j) {
     json_extra_params["eps"] = epsilon_name;
     extract_epsilon = [epsilon_name](const InteractionData &a) -> double { return a.at(epsilon_name) * 1.0_kJmol; };
 }
+Hertz::Hertz(const std::string& name)
+    : MixerPairPotentialBase(name) {}
 
 TEST_CASE("[Faunus] Hertz") {
     json j = R"({ "atomlist" : [
@@ -656,6 +676,8 @@ void SquareWell::extractorsFromJson(const json &j) {
     json_extra_params["eps"] = epsilon_name;
     extract_epsilon = [epsilon_name](const InteractionData &a) -> double { return a.at(epsilon_name) * 1.0_kJmol; };
 }
+SquareWell::SquareWell(const std::string& name)
+    : MixerPairPotentialBase(name) {}
 
 TEST_CASE("[Faunus] SquareWell") {
     atoms = R"([{"A": { "r":5,  "sigma":4, "eps":0.2 }},
@@ -697,6 +719,12 @@ void Polarizability::from_json(const json& j) {
         }
     }
 }
+Polarizability::Polarizability(const std::string& name)
+    : Coulomb(name) {
+    m_neutral = std::make_shared<PairMatrix<double>>();
+    m_charged = std::make_shared<PairMatrix<double>>();
+}
+void Polarizability::to_json(json& j) const { j = {{"epsr", epsr}}; }
 
 // =============== FunctorPotential ===============
 
@@ -1138,6 +1166,7 @@ void NewCoulombGalore::to_json(json &j) const {
     j["lB"] = bjerrum_length;
 }
 const CoulombGalore::Splined& NewCoulombGalore::getCoulombGalore() const { return pot; }
+double NewCoulombGalore::dielectric_constant(double M2V) { return pot.calc_dielectric(M2V); }
 
 // =============== Multipole ===============
 
@@ -1264,5 +1293,7 @@ TEST_CASE("[Faunus] WeeksChandlerAndersen") {
     }
 }
 
+PairPotentialException::PairPotentialException(const std::string msg)
+    : std::runtime_error(msg){}
 } // namespace Potential
 } // namespace Faunus

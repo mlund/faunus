@@ -35,7 +35,7 @@ class SpheroCylinderData {
     friend void to_json(json&, const SpheroCylinderData&);
 
   public:
-    enum PatchType {
+    enum class PatchType {
         None = 0,                      //!< No patch
         Full = 1,                      //!< Patch runs the full length of the SC
         Capped = 2                     //!< Patch stops before the end caps
@@ -46,7 +46,7 @@ class SpheroCylinderData {
     double patch_angle_switch = 0;     //!< Angle of angular switch on sides of patch on PSC
     double patch_attraction_range = 0; //!< Dist. to which attraction is flat on attrative patch on PSC
     double patch_cutoff = 0;           //!< Distance on which attraction switches to zero on PSC
-    PatchType type = None;       //!< Patch type of spherocylinder
+    PatchType type = PatchType::None;  //!< Patch type of spherocylinder
 };
 
 void from_json(const json& j, SpheroCylinderData& psc);

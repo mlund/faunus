@@ -7,8 +7,7 @@
 #include "smart_montecarlo.h"
 #include <coulombgalore.h>
 
-namespace Faunus {
-namespace Potential {
+namespace Faunus::Potential {
 
 // =============== PairMixer ===============
 
@@ -801,6 +800,10 @@ FunctorPotential::uFunc FunctorPotential::combineFunc(json &j) {
                                 registerSelfEnergy(&std::get<12>(potlist));
                                 have_dipole_self_energy = true;
                             }
+                        } else if (key == "hs-cigar-cigar") {
+                            _u = std::get<13>(potlist) = j_val;
+                        } else if (key == "cos2wca-cigar-cigar") {
+                            _u = std::get<14>(potlist) = j_val;
                         }
                         // place additional potentials here...
                     } catch (std::exception &e) {
@@ -1295,5 +1298,4 @@ TEST_CASE("[Faunus] WeeksChandlerAndersen") {
 
 PairPotentialException::PairPotentialException(const std::string msg)
     : std::runtime_error(msg){}
-} // namespace Potential
-} // namespace Faunus
+} // namespace Faunus::Potential

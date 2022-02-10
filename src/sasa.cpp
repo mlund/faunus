@@ -4,6 +4,7 @@
 #include <range/v3/view/zip.hpp>
 #include <range/v3/view/iota.hpp>
 #include <range/v3/algorithm/for_each.hpp>
+#include <doctest/doctest.h>
 
 namespace Faunus {
 

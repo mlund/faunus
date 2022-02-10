@@ -2,7 +2,8 @@
 
 #include "core.h"
 #include "particle.h"
-#include "potentials.h"
+#include "potentials_base.h"
+#include "units.h"
 
 namespace Faunus::SpheroCylinder {
 
@@ -231,7 +232,7 @@ template <typename PatchPotential, typename SpheroCylinderPotential> class Patch
         }
         if (intrs < 2) {
             // sc is all outside patch, attractive energy is 0
-            return spherocylinder_pairpot(particle1, particle2, rclose.squaredNorm());
+            return spherocylinder_pairpot(particle1, particle2, rclose.squaredNorm(), Point::Zero());
         }
         auto T1 = intersections[0]; // points on sc2
         auto T2 = intersections[1];
@@ -251,8 +252,8 @@ template <typename PatchPotential, typename SpheroCylinderPotential> class Patch
             }
         }
         if (intrs < 2) {
-            return spherocylinder_pairpot(particle1, particle2,
-                                          rclose.squaredNorm()); // sc is all outside patch, attractive energy is 0
+            return spherocylinder_pairpot(particle1, particle2, rclose.squaredNorm(),
+                                          Point::Zero()); // sc is all outside patch, attractive energy is 0
         }
         auto S1 = intersections[0]; // points on sc1
         auto S2 = intersections[1];
@@ -284,8 +285,8 @@ template <typename PatchPotential, typename SpheroCylinderPotential> class Patch
         auto ndistsq = vec_mindist.dot(vec_mindist);
 
         // 8- put it all together and output scale
-        return f0 * f1 * f2 * patch_pairpotential(particle1, particle2, ndistsq) +
-               spherocylinder_pairpot(particle1, particle2, rclose.squaredNorm());
+        return f0 * f1 * f2 * patch_pairpotential(particle1, particle2, ndistsq, Point::Zero()) +
+               spherocylinder_pairpot(particle1, particle2, rclose.squaredNorm(), Point::Zero());
     }
 
     double isotropicIsotropicEnergy(const Particle& particle1, const Particle& particle2,
@@ -294,11 +295,14 @@ template <typename PatchPotential, typename SpheroCylinderPotential> class Patch
             SpheroCylinder::mindist_segment2segment(particle1.ext->scdir, particle1.ext->half_length,
                                                     particle2.ext->scdir, particle2.ext->half_length, center_separation)
                 .squaredNorm();
-        return patch_pairpotential(particle1, particle2, mindist) +
-               spherocylinder_pairpot(particle1, particle2, mindist);
+        return patch_pairpotential(particle1, particle2, mindist, Point::Zero()) +
+               spherocylinder_pairpot(particle1, particle2, mindist, Point::Zero());
     }
 
   public:
+    PatchyCigarCigar()
+        : PairPotentialBase("patchy-cigar-cigar", ""s, false) {}
+
     double operator()(const Particle& particle1, const Particle& particle2,
                       [[maybe_unused]] double center_separation_squared,
                       const Point& center_separation) const override {
@@ -311,6 +315,18 @@ template <typename PatchPotential, typename SpheroCylinderPotential> class Patch
             return isotropicIsotropicEnergy(particle1, particle2, center_separation);
         }
         throw std::runtime_error("PSC w. isotropic cigar not implemented");
+    }
+
+    void to_json(json& j) const override {
+        j["patch"] = static_cast<json>(patch_pairpotential);
+        j["cylinder"] = static_cast<json>(spherocylinder_pairpot);
+    }
+    void from_json(const json& j) override {
+        if (!j.contains("patch") || !j.contains("cylinder")) {
+            throw ConfigurationError("patch and/or cylinder undefined");
+        }
+        patch_pairpotential = j["patch"];
+        spherocylinder_pairpot = j["cylinder"];
     }
 };
 

@@ -1,0 +1,33 @@
+#!/usr/bin/env yason.py
+energy:
+  - nonbonded:
+      default:
+        - cos2wca-cigar-cigar:
+            patch: {eps: 1.0, rc: 11.2246204831, wc: 5.0}
+            cylinder: {mixing: "LB"}
+
+atomlist:
+  - PSC:
+      eps: 2.479
+      sigma: 10.0
+      dp: 1.0
+      dprot: 5.0
+      psc: {length: 30, patchtype: 1, patchangle: 80, patchangleswitch: 5.0, patchswitch: 6.0, patchdistance: 11.2246204831}
+
+moleculelist:                        # define molecule types
+    - bulk: {atoms: [PSC], atomic: true}
+
+insertmolecules:                     # create an initial system (random insertion)
+    - bulk: {N: 20}
+
+moves:                               # define Monte Carlo moves
+    - transrot: {molecule: bulk}     # atomic translation (and rotation if anisotropic atoms)
+
+analysis:                            # define on the fly analysis
+    - systemenergy: {file: energy.dat, nstep: 100} # save system energy
+    - savestate: {file: confout.pqr} # save PQR file for visualization
+    - savestate: {file: state.json } # save restart file
+mcloop: {macro: 10, micro: 5000}     # number of MC steps
+geometry: {type: cuboid, length: 50} # sidelength(s): number OR array
+temperature: 300                     # in K
+random: {seed: fixed}                # seed for pseudo random number generator

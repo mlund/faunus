@@ -13,6 +13,7 @@
 #include <range/v3/algorithm/any_of.hpp>
 #include <range/v3/algorithm/none_of.hpp>
 #include <utility>
+#include <doctest/doctest.h>
 
 namespace Faunus {
 

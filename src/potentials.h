@@ -213,7 +213,12 @@ struct RepulsionR3 : public PairPotentialBase {
  *
  */
 class CosAttract : public PairPotentialBase {
-    double eps, wc, rc, rc2, c, rcwc2;
+    double eps;
+    double wc;
+    double rc;
+    double rc2;
+    double c;
+    double rcwc2;
 
   public:
     CosAttract(const std::string &name = "cos2");

@@ -83,19 +83,19 @@ void Cigar::from_json(const json& j) {
  *
  * @note Largely from Robert Vacha's C code
  */
-void Cigar::initialize(const SpheroCylinderData&psc) {
-    constexpr auto zero = 1e-9;
+void Cigar::initialize(const SpheroCylinderData& psc) {
+    constexpr auto very_small_number = 1e-9;
     half_length = 0.5 * psc.length;
-    if (half_length > zero) {
+    if (half_length > very_small_number) {
         Point vec;
         Eigen::Quaterniond Q;
         pcangl = std::cos(0.5 * psc.patch_angle);
         pcanglsw = std::cos(0.5 * psc.patch_angle + psc.patch_angle_switch);
 
-        if (scdir.squaredNorm() < zero) {
+        if (scdir.squaredNorm() < very_small_number) {
             scdir = {1, 0, 0};
         }
-        if (patchdir.squaredNorm() < zero) {
+        if (patchdir.squaredNorm() < very_small_number) {
             patchdir = {0, 1, 0};
         }
         scdir.normalize();
@@ -104,7 +104,7 @@ void Cigar::initialize(const SpheroCylinderData&psc) {
         patchdir.normalize();
 
         /* calculate patch sides */
-        if (psc.chiral_angle < zero) {
+        if (psc.chiral_angle < very_small_number) {
             vec = scdir;
         } else {
             chirality_direction = scdir;
@@ -126,7 +126,7 @@ void Cigar::initialize(const SpheroCylinderData&psc) {
         patchsides[1] = Q * patchsides[1]; // rotate
         patchsides[1].normalize();
 
-        if (patchsides[0].squaredNorm() < zero) {
+        if (patchsides[0].squaredNorm() < very_small_number) {
             throw std::runtime_error("Patch side vector has zero size.");
         }
     }

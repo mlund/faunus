@@ -9,7 +9,7 @@ import os
 import sys
 import math
 import optparse
-import commands
+import commands # not in python3?
 import string
 import random
 
@@ -17,15 +17,14 @@ def write_pdb(outfilename,box,newdata):
     f = open(outfilename, 'w')
     outstring=""
     for frame in range(len(newdata)):
-	newline="CRYST1 %8.3f %8.3f %8.3f  90.00  90.00  90.00 P 1           1\n" % (box[frame][0],box[frame][1],box[frame][2])
-	outstring=outstring+newline
-	for line in range(len(newdata[frame])):
-	    newline="ATOM  %5d  N%1d  PSC F%4d    % 8.3f% 8.3f% 8.3f\n" % (line+1,(line)%4+1 ,(4+line-(line%4))/4,newdata[frame][line][0],newdata[frame][line][1],newdata[frame][line][2])
-	    outstring=outstring+newline
-	outstring=outstring+"END\n"
+        newline="CRYST1 %8.3f %8.3f %8.3f  90.00  90.00  90.00 P 1           1\n" % (box[frame][0],box[frame][1],box[frame][2])
+        outstring=outstring+newline
+        for line in range(len(newdata[frame])):
+            newline="ATOM  %5d  N%1d  PSC F%4d    % 8.3f% 8.3f% 8.3f\n" % (line+1,(line)%4+1 ,(4+line-(line%4))/4,newdata[frame][line][0],newdata[frame][line][1],newdata[frame][line][2])
+            outstring=outstring+newline
+        outstring=outstring+"END\n"
     f.write(outstring)
     f.close()
-
     return 0
 
 def write_psf(outfilename,box,newdata):
@@ -35,22 +34,20 @@ def write_psf(outfilename,box,newdata):
     newline="%8d !NATOM\n" % (len(frame0))
     outstring=outstring+newline
     for line in range(len(frame0)):
-	newline="%8d N%03d %4d PSC  N%1d   N%1d                   \n" % ( line+1,line%4+1, (4+line-(line%4))/4,line%4+1,line%4+1 )
-	outstring=outstring+newline
-    newline="%8d !NBOND\n" % (len(frame0)/2)
-    outstring=outstring+newline
+        newline="%8d N%03d %4d PSC  N%1d   N%1d                   \n" % ( line+1,line%4+1, (4+line-(line%4))/4,line%4+1,line%4+1 )
+        outstring=outstring+newline
+        newline="%8d !NBOND\n" % (len(frame0)/2)
+        outstring=outstring+newline
     newline=""
     for i in range(len(frame0)/2):
-	newline+=" %7d %7d" % (2*i+1,2*i+2)
-	if (i%4 ==3):
-	    outstring=outstring+newline+"\n"
-	    newline=""
-    outstring=outstring+"%-64s"%(newline)
+        newline+=" %7d %7d" % (2*i+1,2*i+2)
+        if (i%4 ==3):
+            outstring=outstring+newline+"\n"
+            newline=""
+        outstring=outstring+"%-64s"%(newline)
     f.write(outstring)
     f.close()
-
     return 0
-
 
 def read_input(infilename):
     data=[]
@@ -59,23 +56,23 @@ def read_input(infilename):
     inp=open(infilename)
     i=0
     for line in inp:
-	linesplit=line.split()
-	if (len(linesplit)==1):
-	    atomnum = int(linesplit[0])
-	    #print atomnum
-	    i=0
-	else:
-	    if (len(linesplit)==6):
-		[sweep,num,boxstr,bx,by,bz]=linesplit[:]
-		box.append([float(bx),float(by),float(bz)])
-	    else:
-		[x,y,z,vx,vy,vz,px,py,pz]=linesplit[:]
-		frame.append([float(x),float(y),float(z),float(vx),float(vy),float(vz),float(px),float(py),float(pz)])
-		i=i+1
-	if (i==atomnum):
-	    #print frame
-	    data.append(frame)
-	    frame=[]
+        linesplit=line.split()
+        if (len(linesplit)==1):
+            atomnum = int(linesplit[0])
+            #print atomnum
+            i=0
+        else:
+            if (len(linesplit)==6):
+                [sweep,num,boxstr,bx,by,bz]=linesplit[:]
+                box.append([float(bx),float(by),float(bz)])
+            else:
+                [x,y,z,vx,vy,vz,px,py,pz]=linesplit[:]
+                frame.append([float(x),float(y),float(z),float(vx),float(vy),float(vz),float(px),float(py),float(pz)])
+            i=i+1
+        if (i==atomnum):
+            #print frame
+            data.append(frame)
+            frame=[]
 
     return [box,data]
 
@@ -94,23 +91,22 @@ def vec_normalize(vec):
 def datatransform(data,leng,patch):
     newdata=[]
     for frame in data:
-	newframe=[]
-	for line in frame:
-	    [x,y,z,vx,vy,vz,px,py,pz]=line[:]
-	    vec=vec_normalize([vx,vy,vz])
-	    newframe.append([x+leng/2*vec[0],y+leng/2*vec[1],z+leng/2*vec[2]])
-	    newframe.append([x-leng/2*vec[0],y-leng/2*vec[1],z-leng/2*vec[2]])
-	    patchmove=10*0.5*math.cos((patch+10)/2/180*math.pi)
-	    newx=x+leng/2*vec[0]+patchmove*px
-	    newy=y+leng/2*vec[1]+patchmove*py
-	    newz=z+leng/2*vec[2]+patchmove*pz
-	    newframe.append([newx,newy,newz])
-	    newx=x-leng/2*vec[0]+patchmove*px
-	    newy=y-leng/2*vec[1]+patchmove*py
-	    newz=z-leng/2*vec[2]+patchmove*pz
-	    newframe.append([newx,newy,newz])
-	newdata.append(newframe)
-
+        newframe=[]
+        for line in frame:
+            [x,y,z,vx,vy,vz,px,py,pz]=line[:]
+            vec=vec_normalize([vx,vy,vz])
+            newframe.append([x+leng/2*vec[0],y+leng/2*vec[1],z+leng/2*vec[2]])
+            newframe.append([x-leng/2*vec[0],y-leng/2*vec[1],z-leng/2*vec[2]])
+            patchmove=10*0.5*math.cos((patch+10)/2/180*math.pi)
+            newx=x+leng/2*vec[0]+patchmove*px
+            newy=y+leng/2*vec[1]+patchmove*py
+            newz=z+leng/2*vec[2]+patchmove*pz
+            newframe.append([newx,newy,newz])
+            newx=x-leng/2*vec[0]+patchmove*px
+            newy=y-leng/2*vec[1]+patchmove*py
+            newz=z-leng/2*vec[2]+patchmove*pz
+            newframe.append([newx,newy,newz])
+        newdata.append(newframe)
     return newdata
 
 def write_vmd(outfilename,outfilename2,patch):
@@ -145,7 +141,6 @@ def write_vmd(outfilename,outfilename2,patch):
     return 0
 
 def make(infilename,outfilename,outfilename2,leng,patch):
-
     [box,data]=read_input(infilename)
     newdata=datatransform(data,leng,patch)
     write_pdb(outfilename,box,newdata)

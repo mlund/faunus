@@ -1649,19 +1649,19 @@ void Multipole::_to_json(json& j) const {
     }
 }
 Multipole::Multipole(const json& j, const Space& spc) : Analysisbase(spc, "multipole") { from_json(j); }
+
 void ScatteringFunction::_sample() {
+    namespace rv = ranges::cpp20::views;
     scatter_positions.clear();
-    for (int id : molecule_ids) {                         // loop over molecule names
-        for (const auto& group : spc.findMolecules(id)) { // loop over groups
-            if (mass_center_scattering && group.isMolecular()) {
-                scatter_positions.push_back(group.mass_center);
-            } else {
-                for (const auto& particle : group) { // loop over particle index in group
-                    scatter_positions.push_back(particle.pos);
-                }
-            }
+    auto groups = molecule_ids | rv::transform([&](auto id) { return spc.findMolecules(id); }) | rv::join;
+    ranges::cpp20::for_each(groups, [&](auto& group) {
+        if (mass_center_scattering && group.isMolecular()) {
+            scatter_positions.push_back(group.mass_center);
+        } else {
+            auto positions = group.positions();
+            std::copy(positions.begin(), positions.end(), std::back_inserter(scatter_positions));
         }
-    }
+    });
 
     // zero-padded suffix to use with `save_after_sample`
     const auto suffix = fmt::format("{:07d}", number_of_samples);
@@ -1687,6 +1687,7 @@ void ScatteringFunction::_sample() {
         break;
     }
 }
+
 void ScatteringFunction::_to_json(json& j) const {
     j = {{"molecules", molecule_names}, {"com", mass_center_scattering}};
     switch (scheme) {

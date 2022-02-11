@@ -2,9 +2,9 @@
 energy:
   - nonbonded:
       default:
-        - cos2wca-cigar-cigar:
-            patch: {eps: 1.0, rc: 11.2246204831, wc: 5.0}
-            cylinder: {mixing: "LB"}
+        - cos2wca-cigar:
+            cos2: {eps: 1.0, rc: 11.2246204831, wc: 5.0} # used for interactions with patch
+            wca: {mixing: "LB"} # used for interactions with cylinder
 
 atomlist:
   - PSC:

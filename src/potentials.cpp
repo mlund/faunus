@@ -800,9 +800,9 @@ FunctorPotential::uFunc FunctorPotential::combineFunc(json &j) {
                                 registerSelfEnergy(&std::get<12>(potlist));
                                 have_dipole_self_energy = true;
                             }
-                        } else if (key == "hs-cigar-cigar") {
+                        } else if (key == "hs-cigar") {
                             _u = std::get<13>(potlist) = j_val;
-                        } else if (key == "cos2wca-cigar-cigar") {
+                        } else if (key == "cos2wca-cigar") {
                             _u = std::get<14>(potlist) = j_val;
                         }
                         // place additional potentials here...

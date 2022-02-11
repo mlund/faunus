@@ -11,7 +11,7 @@ namespace Faunus::Potential {
 class CosAttract;
 class WeeksChandlerAndersen;
 
-using CigarCigarCosAttractWCA = PatchyCigarCigar<CosAttract, WeeksChandlerAndersen>;
+using CigarCosAttractWCA = CompleteCigarPotential<CosAttract, WeeksChandlerAndersen>;
 
 struct Dummy : public PairPotentialBase {
     Dummy();
@@ -509,8 +509,8 @@ class FunctorPotential : public PairPotentialBase {
                Hertz,                 // 10
                SquareWell,            // 11
                Multipole,             // 12
-               HardSpheroCylinder,     // 13
-               CigarCigarCosAttractWCA // 14
+               HardSpheroCylinder,    // 13
+               CigarCosAttractWCA     // 14
                >
         potlist;
 

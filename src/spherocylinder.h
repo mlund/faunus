@@ -1,7 +1,5 @@
 #pragma once
 
-#include "core.h"
-#include "particle.h"
 #include "potentials_base.h"
 #include "units.h"
 
@@ -95,15 +93,15 @@ int cpsc_intersect(const Cigar& part1, const Cigar& part2, const Point& r_cm, st
 
 namespace Faunus::Potential {
 
-inline double fanglscale(const double a, const Cigar& particle) {
+inline double fanglscale(const double a, const Cigar& cigar) {
     // a = r_ij * n_i
-    if (a <= particle.pcanglsw) {
+    if (a <= cigar.pcanglsw) {
         return 0.0;
     }
-    if (a >= particle.pcangl) {
+    if (a >= cigar.pcangl) {
         return 1.0;
     }
-    return 0.5 - ((particle.pcanglsw + particle.pcangl) * 0.5 - a) / (particle.pcangl - particle.pcanglsw);
+    return 0.5 - ((cigar.pcanglsw + cigar.pcangl) * 0.5 - a) / (cigar.pcangl - cigar.pcanglsw);
 }
 
 /** @brief Hard-sphere pair potential for spherocylinders */
@@ -144,8 +142,8 @@ template <typename Tcigarsphere> class PatchyCigarSphere {
         // b is sphere, a is spherocylinder
         double s, t, f0, f1, contt;
 
-        assert(a.half_length < 1e-6 && "First (a) should be cigar then sphere, not opposite!");
-        double c = a.ext->scdir.dot(center_separation);
+        assert(a.ext->half_length < 1e-6); // First (a) should be cigar then sphere, not opposite!
+        const auto c = a.ext->scdir.dot(center_separation);
         if (c > a.ext->half_length) {
             contt = a.ext->half_length;
         } else {
@@ -351,25 +349,25 @@ template <typename Tcigarcigar, typename Tspheresphere, typename Tcigarsphere> c
             }
             // a sphere - b cigar
             // PatchyCigarSphere(b,a)
-            assert(b.dir.squaredNorm() > 1e-6 && "Direction vector of patchy spherocylinder has zero size.");
-            assert(b.patchdir.squaredNorm() > 1e-6 && "Patch direction vector of patchy spherocylinder has zero size.");
-            assert(b.patchsides[0].squaredNorm() > 1e-6 && "Vector associated with patch side has zero size. "
+            assert(b.ext->scdir.squaredNorm() > 1e-6 && "Direction vector of patchy spherocylinder has zero size.");
+            assert(b.ext->patchdir.squaredNorm() > 1e-6 && "Patch direction vector of patchy spherocylinder has zero size.");
+            assert(b.ext->patchsides[0].squaredNorm() > 1e-6 && "Vector associated with patch side has zero size. "
                                                            "Patchy spherocylinder were probably not initialized.");
             return pairpot_cs(b, a, r_cm);
         }
         // a cigar - b sphere
         if (b.ext->half_length < 1e-6) {
             // PatchyCigarSphere(a,b)
-            assert(a.dir.squaredNorm() > 1e-6 && "Direction vector of patchy spherocylinder has zero size.");
-            assert(a.patchdir.squaredNorm() > 1e-6 && "Patch direction vector of patchy spherocylinder has zero size.");
-            assert(a.patchsides[0].squaredNorm() > 1e-6 && "Vector associated with patch side has zero size. "
+            assert(a.ext->scdir.squaredNorm() > 1e-6 && "Direction vector of patchy spherocylinder has zero size.");
+            assert(a.ext->patchdir.squaredNorm() > 1e-6 && "Patch direction vector of patchy spherocylinder has zero size.");
+            assert(a.ext->patchsides[0].squaredNorm() > 1e-6 && "Vector associated with patch side has zero size. "
                                                            "Patchy spherocylinder were probably not initialized.");
             return pairpot_cs(a, b, r_cm);
         }
         // a cigar - b cigar
         // PatchyCigarCigar
-        assert(a.dir.squaredNorm() > 1e-6 && "Direction vector of patchy spherocylinder has zero size.");
-        assert(b.dir.squaredNorm() > 1e-6 && "Direction vector of patchy spherocylinder has zero size.");
+        assert(a.ext->scdir.squaredNorm() > 1e-6 && "Direction vector of patchy spherocylinder has zero size.");
+        assert(b.ext->scdir.squaredNorm() > 1e-6 && "Direction vector of patchy spherocylinder has zero size.");
         return pairpot_cc(a, b, r_cm);
     }
 };

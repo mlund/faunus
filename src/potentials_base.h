@@ -11,10 +11,13 @@ namespace Faunus::Potential {
 //! type of a matrix containing pair potential coefficients
 using TPairMatrix = Eigen::MatrixXd;
 using TPairMatrixPtr = std::shared_ptr<TPairMatrix>;
+
 //! type of a function extracting a potential coefficient from the InteractionData, e.g., sigma or eps
 using TExtractorFunc = std::function<double(const InteractionData&)>;
+
 //! type of a function defining a combination rule of a heterogeneous pair interaction
 using TCombinatorFunc = std::function<double(double, double)>;
+
 //! type of a function modifying combinator's output
 using TModifierFunc = std::function<double(double)>;
 
@@ -97,7 +100,8 @@ class PairMixer {
  * This term is important for for example Widom insertion and grand canonical
  * Monte Carlo schemes.
  */
-struct PairPotentialBase {
+class PairPotentialBase {
+  public:
     std::string name;      //!< unique name per polymorphic call; used in FunctorPotential::combineFunc
     std::string cite;      //!< Typically a short-doi litterature reference
     bool isotropic = true; //!< true if pair-potential is independent of particle orientation
@@ -109,7 +113,7 @@ struct PairPotentialBase {
     virtual double operator()(const Particle&, const Particle&, double, const Point&) const = 0;
 
   protected:
-    PairPotentialBase(const std::string& name = std::string(), const std::string& cite = std::string(),
+    explicit PairPotentialBase(const std::string& name = std::string(), const std::string& cite = std::string(),
                       bool isotropic = true);
 };
 

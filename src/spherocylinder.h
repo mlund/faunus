@@ -183,10 +183,16 @@ template <typename PatchPotential, typename CylinderPotential> class CigarWithSp
                cylinder_potential(cigar, sphere, ndist_squared, Point::Zero());
     }
 
-    void to_json([[maybe_unused]] json& j) const override {}
+    void to_json(json& j) const override {
+        j["patch"] = static_cast<json>(patch_potential);
+        j["cylinder"] = static_cast<json>(cylinder_potential);
+    }
     void from_json(const json& j) override {
-        patch_potential = j;
-        cylinder_potential = j;
+        if (!j.contains("patch") || !j.contains("cylinder")) {
+            throw ConfigurationError("patch and/or cylinder undefined");
+        }
+        patch_potential = j["patch"];
+        cylinder_potential = j["cylinder"];
     }
 };
 

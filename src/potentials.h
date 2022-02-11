@@ -8,11 +8,6 @@
 
 namespace Faunus::Potential {
 
-class CosAttract;
-class WeeksChandlerAndersen;
-
-using CigarCosAttractWCA = CompleteCigarPotential<CosAttract, WeeksChandlerAndersen>;
-
 struct Dummy : public PairPotentialBase {
     Dummy();
     inline double operator()(const Particle &, const Particle &, double, const Point &) const override { return 0.0; }
@@ -486,6 +481,8 @@ class FunctorPotential : public PairPotentialBase {
     using uFunc = std::function<double (const Particle &, const Particle &, double, const Point &)>;
     using PrimitiveModel = CombinedPairPotential<Coulomb, HardSphere>;
     using PrimitiveModelWCA = CombinedPairPotential<Coulomb, WeeksChandlerAndersen>;
+    using CigarCosAttractWCA = CompleteCigarPotential<CosAttract, WeeksChandlerAndersen>;
+
     json _j; // storage for input json
     bool have_monopole_self_energy = false;
     bool have_dipole_self_energy = false;

@@ -118,6 +118,8 @@ std::unique_ptr<Analysisbase> createAnalysis(const std::string& name, const json
     try {
         if (name == "atomprofile") {
             return std::make_unique<AtomProfile>(j, spc);
+        } else if (name == "displacement") {
+            return std::make_unique<Displacement>(j, spc);
         } else if (name == "atomrdf") {
             return std::make_unique<AtomRDF>(j, spc);
         } else if (name == "atomdipdipcorr") {
@@ -639,6 +641,106 @@ FileReactionCoordinate::FileReactionCoordinate(const json& j, const Space& spc)
 void FileReactionCoordinate::_to_disk() {
     if (stream) {
         stream->flush(); // empty buffer
+    }
+}
+
+Displacement::Displacement(const json& j, const Space& spc, std::string_view name)
+    : Analysisbase(spc, name)
+    , displacement_histogram(j.value("histogram_resolution", 1.0))
+    , reference_reset_interval(j.value("reset_interval", std::numeric_limits<int>::max())) {
+
+    const auto molecule_name = j.at("molecule").get<std::string>();
+
+    max_possible_displacement = j.value("max_displacement", spc.geometry.getLength().minCoeff() / 3.0);
+    displacement_histogram_filename =
+        j.value("histogram_file", fmt::format("displacement_histogram_{}.dat", molecule_name));
+
+    if (j.contains("file")) {
+        single_position_stream = IO::openCompressedOutputStream(j.at("file").get<std::string>(), true);
+        *single_position_stream << "# step x y z displacement\n";
+    }
+
+    auto molecule_data = findMoleculeByName(molecule_name);
+    molid = molecule_data.id();
+
+    auto positions = getPositions();
+    const auto num_positions = ranges::cpp20::distance(positions.begin(), positions.end());
+    cell_indices.resize(num_positions);
+    mean_squared_displacement.resize(num_positions);
+
+    resetReferencePositions();
+
+    from_json(j);
+}
+
+void Displacement::resetReferencePositions() {
+    reference_positions = getPositions() | ranges::to_vector;
+    for (auto &indices : cell_indices) {
+        indices.setZero();
+    }
+}
+
+/**
+ * This will detect if the particle crossed a perididic boundary since the
+ * previously recorded state. If so, the PBC will be removed to mimic distances outside
+ * the periodic box and the correct offset will be returned.
+ *
+ * @param diff Current position minus previous position
+ * @param cell Stored unit cell information for the particle (will be updated)
+ * @returns Offset used to shift currrent position to correct unit-cell
+ */
+Point Displacement::getOffset(const Point& diff, Eigen::Vector3i& cell) const {
+    for (int i = 0; i < 3; i++) {
+        if (-diff[i] > max_possible_displacement) { // dx < 0
+            cell[i]++;
+        } else if (diff[i] > max_possible_displacement) { // dx > 0
+            cell[i]--;
+        }
+    }
+    const Point is_periodic = spc.geometry.boundaryConditions().isPeriodic().cast<double>();
+    const Point box = spc.geometry.getLength().cwiseProduct(is_periodic);
+    return box.cwiseProduct(cell.cast<double>());
+}
+
+void Displacement::_sample() {
+    auto current_positions = getPositions();
+    auto zipped = ranges::views::zip(previous_positions, current_positions, cell_indices);
+    if (number_of_samples > 1) {
+        if (getNumberOfSteps() % reference_reset_interval == 0) {
+            resetReferencePositions();
+        }
+        int index = 0;
+        for (auto&& [previous, current, cell] : zipped) {
+            const Point current_unbound = current + getOffset(current - previous, cell);
+            sampleDisplacementFromReference(current_unbound, index);
+            index++;
+        }
+    }
+    previous_positions = current_positions | ranges::to_vector;
+}
+
+void Displacement::sampleDisplacementFromReference(const Point& position, const int index) {
+    const Point total_displacement = position - reference_positions.at(index);
+    mean_squared_displacement.at(index) += total_displacement.squaredNorm();
+    displacement_histogram.add(total_displacement.norm());
+    if (index == 0 && single_position_stream) {
+        *single_position_stream << fmt::format("{} {:.2f} {:.2f} {:.2f} {:.2f}\n", getNumberOfSteps(), position.x(),
+                                               position.y(), position.z(), total_displacement.norm());
+    }
+}
+
+void Displacement::_to_json(json& j) const {
+    j["max_displacement"] = max_possible_displacement;
+    j["reset interval (steps)"] = reference_reset_interval;
+    j["histogram_file"] = displacement_histogram_filename;
+    j["histogram_resolution"] = displacement_histogram.getResolution();
+}
+
+void Displacement::_to_disk() {
+    if (!displacement_histogram_filename.empty()) {
+        if (auto stream = std::ofstream(displacement_histogram_filename)) {
+            stream << "# distance count\n" << displacement_histogram;
+        }
     }
 }
 

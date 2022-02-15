@@ -892,6 +892,21 @@ properties:
                     type: object
                     additionalProperties: false
 
+                displacement:
+                    properties:
+                        nstep: {type: integer}
+                        nskip: {type: integer, default: 0, description: Initial steps to skip}
+                        molecule: {type: string, description: "Molecule type to operate on"}
+                        reset_interval: {type: integer, default: 0, description: "Steps between resetting reference positions"}
+                        max_displacement: {type: number, default: 0, description: "Mox. possible displacement between samples"}
+                        histogram_file: {type: string, default: "displacement_histogram.dat", description: "Name of P(r) histogram file"}
+                        histogram_resolution: {type: number, default: 1.0, description: "Resolution of saved histogram (Å)"}
+                        file: {type: string, description: "Name of steps-x-y-z-r file", pattern: "(.*?)\\.(dat|dat.gz)$"}
+
+                    required: [molecule, nstep]
+                    type: object
+                    additionalProperties: false
+
                 polymershape:
                     properties:
                         nstep: {type: integer}

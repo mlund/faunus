@@ -147,6 +147,44 @@ class FileReactionCoordinate : public Analysisbase {
 };
 
 /**
+ * @brief Tracks displacements of particles
+ */
+class Displacement : public Analysisbase {
+  protected:
+    MoleculeData::index_type molid;
+
+  private:
+    std::unique_ptr<std::ostream> single_position_stream; //!< Stream x, y, z, displacement
+    using average_type = Average<double>;
+    std::vector<Point> reference_positions;
+    std::vector<Point> previous_positions;
+    std::vector<Eigen::Vector3i> cell_indices;
+    std::vector<average_type> mean_squared_displacement;
+    double max_possible_displacement;
+
+    SparseHistogram<double> displacement_histogram;                 //!< P(r) where r is distance from reference
+    std::string displacement_histogram_filename;                    //!< Name of P(r) histogram file
+    int reference_reset_interval = std::numeric_limits<int>::max(); //!< Renew reference at given interval
+
+    auto getPositions() {
+        auto full_group = [&](const Group& group) { return ranges::make_subrange(group.begin(), group.trueend()); };
+        namespace rv = ranges::cpp20::views;
+        return spc.findMolecules(molid, Space::Selection::ALL) | rv::transform(full_group) | rv::join |
+               rv::transform(&Particle::pos);
+    } // @todo Make this injectable to support e.g. molecular groups
+
+    void resetReferencePositions(); //!< Store current positions as reference
+    Point getOffset(const Point& diff, Eigen::Vector3i& cell) const; //!< Offset to other cells
+    void sampleDisplacementFromReference(const Point& position, const int index);
+    void _sample() override;
+    void _to_json(json& j) const override;
+    void _to_disk() override;
+
+  public:
+    Displacement(const json& j, const Space& spc, std::string_view name = "displacement");
+};
+
+/**
  * @brief Excess chemical potential of molecules
  *
  * @todo While `inserter` is currently limited to random

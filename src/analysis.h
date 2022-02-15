@@ -148,6 +148,11 @@ class FileReactionCoordinate : public Analysisbase {
 
 /**
  * @brief Tracks displacements of particles
+ *
+ * This tracks particle displacements relative to a (dynamic) reference position. For
+ * first particle only, a trajectory file and histogram can be saved to disk.
+ *
+ * @todo So far an atomic group is assumed
  */
 class Displacement : public Analysisbase {
   protected:
@@ -167,13 +172,15 @@ class Displacement : public Analysisbase {
     int reference_reset_interval = std::numeric_limits<int>::max(); //!< Renew reference at given interval
 
     auto getPositions() {
-        auto full_group = [&](const Group& group) { return ranges::make_subrange(group.begin(), group.trueend()); };
+        auto active_and_inactive = [&](const Group& group) {
+            return ranges::make_subrange(group.begin(), group.trueend());
+        };
         namespace rv = ranges::cpp20::views;
-        return spc.findMolecules(molid, Space::Selection::ALL) | rv::transform(full_group) | rv::join |
+        return spc.findMolecules(molid, Space::Selection::ALL) | rv::transform(active_and_inactive) | rv::join |
                rv::transform(&Particle::pos);
     } // @todo Make this injectable to support e.g. molecular groups
 
-    void resetReferencePositions(); //!< Store current positions as reference
+    void resetReferencePosition(const Point& position, int index);   //!< Store current positions as reference
     Point getOffset(const Point& diff, Eigen::Vector3i& cell) const; //!< Offset to other cells
     void sampleDisplacementFromReference(const Point& position, const int index);
     void _sample() override;

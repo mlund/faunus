@@ -649,9 +649,10 @@ Displacement::Displacement(const json& j, const Space& spc, std::string_view nam
     , displacement_histogram(j.value("histogram_resolution", 1.0))
     , reference_reset_interval(j.value("reset_interval", std::numeric_limits<int>::max())) {
 
+    from_json(j);
     const auto molecule_name = j.at("molecule").get<std::string>();
 
-    max_possible_displacement = j.value("max_displacement", spc.geometry.getLength().minCoeff() / 3.0);
+    max_possible_displacement = j.value("max_displacement", spc.geometry.getLength().minCoeff() / 4.0);
     displacement_histogram_filename =
         j.value("histogram_file", fmt::format("displacement_histogram_{}.dat", molecule_name));
 
@@ -665,19 +666,13 @@ Displacement::Displacement(const json& j, const Space& spc, std::string_view nam
 
     auto positions = getPositions();
     const auto num_positions = ranges::cpp20::distance(positions.begin(), positions.end());
-    cell_indices.resize(num_positions);
+    reference_positions = positions | ranges::to_vector;
+    cell_indices.resize(num_positions, {0,0,0});
     mean_squared_displacement.resize(num_positions);
-
-    resetReferencePositions();
-
-    from_json(j);
 }
 
-void Displacement::resetReferencePositions() {
-    reference_positions = getPositions() | ranges::to_vector;
-    for (auto &indices : cell_indices) {
-        indices.setZero();
-    }
+void Displacement::resetReferencePosition(const Point& position, const int index) {
+    reference_positions.at(index) = position;
 }
 
 /**
@@ -705,14 +700,15 @@ Point Displacement::getOffset(const Point& diff, Eigen::Vector3i& cell) const {
 void Displacement::_sample() {
     auto current_positions = getPositions();
     auto zipped = ranges::views::zip(previous_positions, current_positions, cell_indices);
+    const auto time_to_reset = getNumberOfSteps() % reference_reset_interval == 0;
     if (number_of_samples > 1) {
-        if (getNumberOfSteps() % reference_reset_interval == 0) {
-            resetReferencePositions();
-        }
         int index = 0;
         for (auto&& [previous, current, cell] : zipped) {
             const Point current_unbound = current + getOffset(current - previous, cell);
             sampleDisplacementFromReference(current_unbound, index);
+            if (time_to_reset) {
+                resetReferencePosition(current_unbound, index);
+            }
             index++;
         }
     }

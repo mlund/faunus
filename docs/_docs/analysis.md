@@ -497,7 +497,9 @@ Further, the command line tools `zcat`, `zless` etc. are useful for handling
 compressed files.
 
 
-## System Sanity
+## System
+
+### System Sanity
 
 It is wise to always assert that the simulation
 is internally sane. This analysis checks the following and aborts if insane:
@@ -512,7 +514,7 @@ This is not a particularly time-consuming analysis and we recommend that it is e
 for all simulations.
 
 
-## System Energy
+### System Energy
 
 Calculates the energy contributions from all terms in the Hamiltonian and
 outputs to a file as a function of steps.
@@ -525,6 +527,18 @@ All units in $k\_BT$.
 -------------- | -------------------------------------------
 `file`         | Output filename (`.dat`, `.csv`, `.dat.gz`)
 `nstep`        | Interval between samples
+
+
+### Penalty function
+
+If a penalty function is added to the hamiltonian, this can dump it to disk at a specified interval. At each sample event,
+the filename counter is incremented and follows the convention.
+
+`penaltyfunction` | Description
+----------------- | -------------------------------------------
+`file`            | Output filename (`.dat`, `.dat.gz`)
+`nstep`           | Interval between samples
+`nskip=0`         | Number of initial steps excluded from the analysis
 
 
 ## Perturbations

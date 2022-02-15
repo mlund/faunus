@@ -68,20 +68,26 @@ void Penalty::loadPenaltyFunction(const std::string& filename) {
 /**
  * @todo Foul to let constructor be responsible for i/o...
  */
-Penalty::~Penalty() { savePenaltyFunction(); }
+Penalty::~Penalty() { toDisk(); }
 
-void Penalty::savePenaltyFunction() {
+/**
+ * @brief Stream penalty function, offset with the minimum observed energy
+ */
+void Penalty::streamPenaltyFunction(std::ostream& stream) const {
+    stream.precision(16);
+    stream << fmt::format("# {} {} {}\n", energy_increment, samplings, penalty_function_exchange_counter)
+           << penalty_energy.array() - penalty_energy.minCoeff() << "\n";
+}
+
+void Penalty::toDisk() {
     if (overwrite_penalty) {
         if (std::ofstream stream(MPI::prefix + penalty_function_filename); stream) {
-            stream.precision(16);
-            stream << "# " << energy_increment << " " << samplings << " " << penalty_function_exchange_counter << "\n"
-                   << penalty_energy.array() - penalty_energy.minCoeff() << "\n";
+            streamPenaltyFunction(stream);
         }
     }
     if (std::ofstream stream(MPI::prefix + histogram_filename); stream) {
         stream << histogram << "\n";
     }
-    // add function to save to numpy-friendly file...?
 }
 
 void Penalty::to_json(json& j) const {

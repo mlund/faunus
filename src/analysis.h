@@ -21,6 +21,7 @@ class NewCoulombGalore;
 namespace Faunus::Energy {
 class Hamiltonian;
 class Energybase;
+class Penalty;
 } // namespace Faunus::Energy
 
 namespace Faunus {
@@ -844,6 +845,17 @@ template <class T, class Enable = void> struct _analyse {
 template <class T> struct _analyse<T, typename std::enable_if<std::is_base_of<Dipole, T>::value>::type> {
     void sample(T&) { std::cout << "dipole!" << std::endl; } //!< Sample
 };                                                           // specialized template
+
+class SavePenaltyEnergy : public Analysisbase {
+  private:
+    const std::string filename; //!< Base file name
+    int filenumber = 0;   //!< Counter for each saved file
+    std::shared_ptr<Energy::Penalty> penalty_energy;
+    void _sample() override;
+
+  public:
+    SavePenaltyEnergy(const json &j, const Space &spc, const Energy::Hamiltonian &pot);
+};
 
 } // namespace Analysis
 

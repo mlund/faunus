@@ -1078,6 +1078,15 @@ properties:
                     additionalProperties: false
                     type: object
 
+                penaltyfunction:
+                    properties:
+                        file: {type: string, description: "Base output filename (.dat|.dat.gz)"}
+                        nstep: {type: integer}
+                        nskip: {type: integer, default: 0, description: Initial steps to skip}
+                    required: [file, nstep]
+                    additionalProperties: false
+                    type: object
+
                 moleculeconformation:
                     description: "Conformation ID histogram"
                     properties:

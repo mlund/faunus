@@ -1,6 +1,7 @@
 #include "analysis.h"
 #include "move.h"
 #include "energy.h"
+#include "penalty.h"
 #include "reactioncoordinate.h"
 #include "multipole.h"
 #include "potentials.h"
@@ -160,6 +161,8 @@ std::unique_ptr<Analysisbase> createAnalysis(const std::string& name, const json
             return std::make_unique<SanityCheck>(j, spc);
         } else if (name == "savestate") {
             return std::make_unique<SaveState>(j, spc);
+        } else if (name == "penaltyfunction") {
+            return std::make_unique<SavePenaltyEnergy>(j, spc, pot);
         } else if (name == "scatter") {
             return std::make_unique<ScatteringFunction>(j, spc);
         } else if (name == "sliceddensity") {
@@ -2111,6 +2114,25 @@ bool ElectricPotential::overlapWithParticles(const Point& position) const {
     };
     auto particles = spc.activeParticles();
     return std::any_of(particles.begin(), particles.end(), overlap);
+}
+
+SavePenaltyEnergy::SavePenaltyEnergy(const json& j, const Space& spc, const Energy::Hamiltonian& pot)
+    : Analysisbase(spc, "penaltyfunction")
+    , filename(j.at("file").get<std::string>())
+    , penalty_energy(pot.findFirstOf<Energy::Penalty>()) {
+    Analysisbase::from_json(j);
+    if (!penalty_energy) {
+        faunus_logger->warn("{}: analysis disabled as no penalty function found", name);
+    }
+}
+
+void SavePenaltyEnergy::_sample() {
+    if (penalty_energy) {
+        const auto name = fmt::format("{}{:04d}.{}", MPI::prefix, filenumber++, filename);
+        if (auto stream = IO::openCompressedOutputStream(name, true); stream) {
+            penalty_energy->streamPenaltyFunction(*stream);
+        }
+    }
 }
 
 } // namespace Faunus::Analysis

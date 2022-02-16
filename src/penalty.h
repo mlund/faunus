@@ -21,7 +21,7 @@ class Penalty : public Energybase {
     std::string histogram_filename;
     bool overwrite_penalty = true; // overwrite input penalty function?
     void loadPenaltyFunction(const std::string& filename);
-    void savePenaltyFunction(); //!< Save penalty function and histogram to disk
+    void toDisk(); //!< Save penalty function and histogram to disk
     void initializePenaltyFunction(const json& j);
     void to_json(json& j) const override;
     virtual void update(const std::vector<double>& coordinate);
@@ -50,6 +50,7 @@ class Penalty : public Energybase {
     virtual ~Penalty(); //!< destruct and save to disk (!)
     double energy(Change& change) override;
     void sync(Energybase* other, const Change& change) override;
+    void streamPenaltyFunction(std::ostream &stream) const;
 };
 
 #ifdef ENABLE_MPI

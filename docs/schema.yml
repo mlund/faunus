@@ -106,6 +106,8 @@ properties:
                           tension: {type: number, default: 0.0, description: "Surface tension (kJ/mol/Å²)"}
                           tfe: {type: number, default: 0.0, description: "Transfer free energy (kJ/mol/Å²/M)"}
                           psc: {type: object, description: "Patchy spherocylinder properties"}
+                          rc: {type: number, description: "Cosine attraction"}
+                          wc: {type: number, description: "Cosine attraction"}
                 - type: string
 
     moleculelist:

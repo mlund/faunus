@@ -244,7 +244,7 @@ AtomData& findAtomByName(std::string_view name) {
 void from_json(const json& j, SpheroCylinderData& psc) {
     psc.length = j.value("length", 0.0) * 1.0_angstrom;
     psc.type = j.value("patch_type", SpheroCylinderData::PatchType::None);
-    psc.patch_angle = j.value("patch_angle", 0.0) * 1.0_deg;
+    psc.patch_angle = j.value("patch_angle", 0.0) * 1.0_deg; // ~ patchangle
     psc.patch_angle_switch = j.value("patch_angle_switch", 0.0) * 1.0_deg;
     psc.patch_attraction_range = j.value("patch_attraction_range", 0.0) * 1.0_angstrom;
     psc.patch_cutoff = j.value("patch_cutoff", 0.0) * 1.0_angstrom;

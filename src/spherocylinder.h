@@ -160,7 +160,7 @@ template <typename PatchPotential, typename CylinderPotential> class CigarWithSp
         }
 
         // patchy interaction
-        const auto cutoff_squared = patch_potential.cutOffSquared(); //(cigar.id, sphere.id);
+        const auto cutoff_squared = patch_potential.cutOffSquared(cigar.id, sphere.id);
         // scaling function: angular dependence of patch1
         Point vec1 = SpheroCylinder::vec_perpproject(distvec, cigar.ext->scdir).normalized();
         const auto s = vec1.dot(cigar.ext->patchdir);
@@ -216,7 +216,7 @@ template <typename PatchPotential, typename CylinderPotential> class CigarWithCi
 
     double patchyPatchyEnergy(const Particle& particle1, const Particle& particle2,
                               const Point& center_separation) const { // patchy sc with patchy sc
-        const auto cutoff_squared = patch_potential.cutOffSquared();
+        const auto cutoff_squared = patch_potential.cutOffSquared(particle1.id, particle1.id);
         std::array<double, 5> intersections;
 
         // distance for repulsion

@@ -258,6 +258,65 @@ class CosAttract : public PairPotentialBase {
     void from_json(const json &j) override;
 };
 
+class CosAttractMixed : public MixerPairPotentialBase {
+  private:
+    TExtractorFunc extract_rc;
+    TExtractorFunc extract_wc;
+    TExtractorFunc extract_eps;
+
+    TPairMatrixPtr rc;
+    TPairMatrixPtr wc;
+    TPairMatrixPtr eps;
+
+    void initPairMatrices() override;
+    void extractorsFromJson(const json& j) override;
+
+  public:
+    CosAttractMixed(const std::string& name = "cos2mix", const std::string& cite = ""s,
+                    CombinationRuleType combination_rule = CombinationRuleType::LORENTZ_BERTHELOT);
+
+    double cutOffSquared(AtomData::index_type id1, AtomData::index_type id2) const;
+
+    /**
+     * @brief Calculates force on particle a due to another particle, b
+     * @param particle_a Particle a ("target")
+     * @param particle_b Particle b
+     * @param squared_distance Squared norm |𝐚-𝐛|²
+     * @param b_towards_a Distance vector 𝐛 -> 𝐚 = 𝐚 - 𝐛
+     * @return Force on particle a due to particle b
+     */
+    inline Point force(const Particle& a, const Particle& b, double squared_distance,
+                       const Point& b_towards_a) const override {
+        const auto _rc = (*rc)(a.id, b.id);
+        const auto _wc = (*wc)(a.id, b.id);
+        const auto rcwc2 = (_rc + _wc) * (_rc + _wc);
+        if (squared_distance > rcwc2 || squared_distance < (_rc * _rc)) {
+            return {0.0, 0.0, 0.0};
+        }
+        const auto c = pc::pi / (2.0 * _wc);
+        const auto r = sqrt(squared_distance);
+        const auto x1 = std::cos(c * (r - _rc));
+        const auto x2 = std::sin(c * (r - _rc));
+        return -2.0 * c * (*eps)(a.id, b.id) * x1 * x2 / r * b_towards_a;
+    }
+
+    inline double operator()(const Particle& a, const Particle& b, const double squared_distance,
+                             [[maybe_unused]] const Point& b_towards_a) const override {
+        const auto _rc = (*rc)(a.id, b.id);
+        if (squared_distance < (_rc * _rc)) {
+            return -(*eps)(a.id, b.id);
+        }
+        const auto _wc = (*wc)(a.id, b.id);
+        const auto rcwc2 = (_rc + _wc) * (_rc + _wc);
+        if (squared_distance > rcwc2) {
+            return 0.0;
+        }
+        const auto c = pc::pi / (2.0 * _wc);
+        const auto x = std::cos(c * (sqrt(squared_distance) - _rc));
+        return -(*eps)(a.id, b.id) * x * x;
+    }
+};
+
 /**
  * @brief Pairwise SASA potential calculating the surface area of inter-secting spheres
  */
@@ -481,7 +540,7 @@ class FunctorPotential : public PairPotentialBase {
     using uFunc = std::function<double (const Particle &, const Particle &, double, const Point &)>;
     using PrimitiveModel = CombinedPairPotential<Coulomb, HardSphere>;
     using PrimitiveModelWCA = CombinedPairPotential<Coulomb, WeeksChandlerAndersen>;
-    using CigarCosAttractWCA = CompleteCigarPotential<CosAttract, WeeksChandlerAndersen>;
+    using CigarCosAttractWCA = CompleteCigarPotential<CosAttractMixed, WeeksChandlerAndersen>;
 
     json _j; // storage for input json
     bool have_monopole_self_energy = false;

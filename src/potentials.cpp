@@ -297,6 +297,54 @@ double CosAttract::cutOffSquared() const {
 CosAttract::CosAttract(const std::string& name)
     : PairPotentialBase(name) {}
 
+TEST_CASE("[Faunus] CosAttract") {
+    SUBCASE("basic") {
+        auto j = R"({ "atomlist" : [
+                 { "A": { "eps": 1.0, "rc": 0.5, "wc": 2.1 } },
+                 { "B": { "eps": 1.0, "rc": 0.5, "wc": 2.1 } }]})"_json;
+        Faunus::atoms = j["atomlist"].get<decltype(atoms)>();
+        Particle a, b;
+        a.id = 0;
+        b.id = 1;
+        CosAttract pairpot = R"({ "cos2": {"eps": 1.0, "rc": 0.5, "wc": 2.1}})"_json;
+        CHECK(pairpot(a, b, std::pow(0.5 - 0.001, 2), Point::Zero()) == doctest::Approx(-0.4033930777));
+        CHECK(pairpot(a, b, std::pow(2.1 + 0.5 + 0.001, 2), Point::Zero()) == doctest::Approx(0));
+        CHECK(pairpot(a, b, std::pow(1.0, 2), Point::Zero()) == doctest::Approx(-0.3495505642));
+    }
+
+    SUBCASE("mixed - symmetric") {
+        auto j = R"({ "atomlist" : [
+                 { "A": { "eps": 1.0, "rc": 0.5, "wc": 2.1 } },
+                 { "B": { "eps": 1.0, "rc": 0.5, "wc": 2.1 } }]})"_json;
+        Faunus::atoms = j["atomlist"].get<decltype(atoms)>();
+        Particle a, b;
+        a.id = 0;
+        b.id = 1;
+        CosAttractMixed pairpot = R"({ "cos2mix": {"mixing": "LB"}})"_json;
+        CHECK(pairpot(a, b, std::pow(0.5 - 0.001, 2), Point::Zero()) == doctest::Approx(-0.4033930777));
+        CHECK(pairpot(a, b, std::pow(2.1 + 0.5 + 0.001, 2), Point::Zero()) == doctest::Approx(0));
+        CHECK(pairpot(a, b, std::pow(1.0, 2), Point::Zero()) == doctest::Approx(-0.3495505642));
+        CHECK(pairpot.cutOffSquared(a.id, b.id) == doctest::Approx(std::pow(0.5 + 2.1, 2)));
+    }
+
+    SUBCASE("mixed - asymmetric") {
+        auto j = R"({ "atomlist" : [
+                 { "A": { "eps": 1.0, "rc": 0.5, "wc": 2.1 } },
+                 { "B": { "eps": 0.5, "rc": 0.6, "wc": 1.9 } }]})"_json;
+        Faunus::atoms = j["atomlist"].get<decltype(atoms)>();
+        Particle a, b;
+        a.id = 0;
+        b.id = 1;
+        CosAttractMixed pairpot = R"({ "cos2mix": {"mixing": "LB"}})"_json;
+        CHECK(pairpot(a, b, std::pow(0.5 - 0.001, 2), Point::Zero()) == doctest::Approx(-0.2852419807));
+        CHECK(pairpot(a, b, std::pow(2.1 + 0.5 + 0.001, 2), Point::Zero()) == doctest::Approx(0));
+        CHECK(pairpot(a, b, std::pow(1.0, 2), Point::Zero()) == doctest::Approx(-0.2510708423));
+        CHECK(pairpot(a, b, std::pow(0.55 + 2.0 + 0.001, 2), Point::Zero()) == doctest::Approx(0));
+        CHECK(pairpot.cutOffSquared(a.id, b.id) == doctest::Approx(6.5025));
+    }
+
+}
+
 // =============== Coulomb (old) ===============
 
 void Coulomb::to_json(json &j) const {
@@ -1298,4 +1346,39 @@ TEST_CASE("[Faunus] WeeksChandlerAndersen") {
 
 PairPotentialException::PairPotentialException(const std::string msg)
     : std::runtime_error(msg){}
+
+void CosAttractMixed::initPairMatrices() {
+    auto comb_distance = PairMixer::getCombinator(combination_rule, PairMixer::CoefficientType::SIGMA);
+    auto comb_epsilon = PairMixer::getCombinator(combination_rule, PairMixer::CoefficientType::EPSILON);
+
+    rc = PairMixer(extract_rc, comb_distance, &PairMixer::modIdentity).createPairMatrix(atoms, *custom_pairs);
+    wc = PairMixer(extract_wc, comb_distance, &PairMixer::modIdentity).createPairMatrix(atoms, *custom_pairs);
+    eps = PairMixer(extract_eps, comb_epsilon, &PairMixer::modIdentity).createPairMatrix(atoms, *custom_pairs);
+
+    faunus_logger->trace("Pair matrices for {} sigma ({}×{}) and epsilon ({}×{}) created using {} custom pairs.", name,
+                         rc->rows(), rc->cols(), eps->rows(), eps->cols(), custom_pairs->size());
+}
+
+void CosAttractMixed::extractorsFromJson(const json& j) {
+    auto name = j.value("rc", "rc");
+    json_extra_params["rc"] = name;
+    extract_rc = [=](auto& a) { return a.at(name) * 1.0_angstrom; };
+
+    name = j.value("wc", "wc");
+    json_extra_params["wc"] = name;
+    extract_wc = [=](auto& a) { return a.at(name) * 1.0_angstrom; };
+
+    name = j.value("eps", "eps");
+    json_extra_params["eps"] = name;
+    extract_eps = [=](auto& a) { return a.at(name) * 1.0_kJmol; };
+}
+
+CosAttractMixed::CosAttractMixed(const std::string& name, const std::string& cite, CombinationRuleType combination_rule)
+    : MixerPairPotentialBase(name, cite, combination_rule) {}
+
+double CosAttractMixed::cutOffSquared(AtomData::index_type id1, AtomData::index_type id2) const {
+    const auto _rc = (*rc)(id1, id2);
+    const auto _wc = (*wc)(id1, id2);
+    return (_rc + _wc) * (_rc + _wc);
+}
 } // namespace Faunus::Potential

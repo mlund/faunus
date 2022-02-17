@@ -292,7 +292,7 @@ void CosAttract::from_json(const json &j) {
     rcwc2 = pow((rc + wc), 2);
 }
 double CosAttract::cutOffSquared() const {
-    return rc2;
+    return rcwc2;
 }
 CosAttract::CosAttract(const std::string& name)
     : PairPotentialBase(name) {}

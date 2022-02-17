@@ -179,9 +179,10 @@ void Particle::rotate(const Eigen::Quaterniond &quaternion, const Eigen::Matrix3
 
 bool Particle::hasExtension() const { return ext != nullptr; }
 
-Particle::ParticleExtension &Particle::createExtension() {
-    assert(ext == nullptr && "extension already created");
-    ext = std::make_unique<ParticleExtension>();
+Particle::ParticleExtension& Particle::createExtension() {
+    if (!ext) {
+        ext = std::make_unique<ParticleExtension>();
+    }
     return *ext;
 }
 

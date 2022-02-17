@@ -213,7 +213,7 @@ class CosAttract : public PairPotentialBase {
     double rc;
     double rc2;
     double c;
-    double rcwc2;
+    double rcwc2; // (rc + wc)^2 ~ "rcut2" in faunus v1
 
   public:
     CosAttract(const std::string &name = "cos2");

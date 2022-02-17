@@ -38,7 +38,8 @@ class SpheroCylinderData {
     enum class PatchType {
         None = 0,                      //!< No patch
         Full = 1,                      //!< Patch runs the full length of the SC
-        Capped = 2                     //!< Patch stops before the end caps
+        Capped = 2,                    //!< Patch stops before the end caps
+        Invalid = 3
     };                                 //!< Not yet in use @todo replace `patch_type` integer
     double chiral_angle = 0;           //!< Chiral angle (rotation of patch) on PSC
     double length = 0;                 //!< Sphere-cylinder length
@@ -51,6 +52,11 @@ class SpheroCylinderData {
 
 void from_json(const json& j, SpheroCylinderData& psc);
 void to_json(json& j, const SpheroCylinderData& psc);
+
+NLOHMANN_JSON_SERIALIZE_ENUM(SpheroCylinderData::PatchType, {{SpheroCylinderData::PatchType::Invalid, nullptr},
+                                                             {SpheroCylinderData::PatchType::Full, "full"},
+                                                             {SpheroCylinderData::PatchType::Capped, "capped"},
+                                                             {SpheroCylinderData::PatchType::None, "none"}})
 
 /**
  * @brief General properties for atoms

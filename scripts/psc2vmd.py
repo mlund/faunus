@@ -69,9 +69,9 @@ def read_input(infilename):
                 [x,y,z,vx,vy,vz,px,py,pz]=linesplit[:]
                 frame.append([float(x),float(y),float(z),float(vx),float(vy),float(vz),float(px),float(py),float(pz)])
             i=i+1
-        if (i==atomnum):
-            #print frame
-            data.append(frame)
+            if (i==atomnum):
+                #print frame
+                data.append(frame)
             frame=[]
 
     return [box,data]

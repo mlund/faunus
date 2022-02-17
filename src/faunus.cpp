@@ -55,23 +55,24 @@ static const char USAGE[] =
     https://faunus.readthedocs.io
 
     Usage:
-      faunus [-q] [--verbosity <N>] [--nobar] [--nopfx] [--notips] [--nofun] [--state=<file>] [--input=<file>] [--output=<file>]
+      faunus [-q] [--verbosity <N>] [--nobar] [--nopfx] [--notips] [--nofun] [--state=<file>] [--input=<file>] [--output=<file>] [--positions=<file>]
       faunus (-h | --help)
       faunus --version
       faunus test <doctest-options>...
 
     Options:
-      -i <file> --input <file>   Input file [default: /dev/stdin].
-      -o <file> --output <file>  Output file [default: out.json].
-      -s <file> --state <file>   State file to start from (.json/.ubj).
-      -v <N> --verbosity <N>     Log verbosity level (0 = off, 1 = critical, ..., 6 = trace) [default: 4]
-      -q --quiet                 Less verbose output. It implicates -v0 --nobar --notips --nofun.
-      -h --help                  Show this screen.
-      --nobar                    No progress bar.
-      --nopfx                    Do not prefix input file with MPI rank.
-      --notips                   Do not give input assistance
-      --nofun                    No fun
-      --version                  Show version.
+      -i <file> --input <file>         Input file [default: /dev/stdin].
+      -o <file> --output <file>        Output file [default: out.json].
+      -s <file> --state <file>         State file to start from (.json/.ubj).
+      -p <file> --positions <file>     Overwrite initial positions (xyz, gro, etc.).
+      -v <N> --verbosity <N>           Log verbosity level (0 = off, 1 = critical, ..., 6 = trace) [default: 4]
+      -q --quiet                       Less verbose output. It implicates -v0 --nobar --notips --nofun.
+      -h --help                        Show this screen.
+      --nobar                          No progress bar.
+      --nopfx                          Do not prefix input file with MPI rank.
+      --notips                         Do not give input assistance
+      --nofun                          No fun
+      --version                        Show version.
 
     Multiple processes using MPI:
 
@@ -355,32 +356,63 @@ json getUserInput(docopt::Options& args) {
     }
 }
 
-void loadState(docopt::Options& args, MetropolisMonteCarlo& simulation) {
-    if (not args["--state"]) {
-        return;
+/**
+ * @brief Overwrites all coordinates in the given simulation object (space and trial_space).
+ *
+ * The given file name should be one of the known type (xyz, pqr, gro, ...) and only
+ * the _coordinates_ will be copied. All other properties are unused.
+ */
+void loadCoordinates(std::string_view filename, MetropolisMonteCarlo& simulation) {
+    auto& space = simulation.getSpace();
+    auto& trial_space = simulation.getTrialSpace();
+    auto source = Faunus::loadStructure(filename, false);
+    if (source.size() > space.particles.size()) {
+        throw ConfigurationError("too many particles in {}", filename);
     }
-    const auto statefile = MPI::prefix + args["--state"].asString();
-    const auto suffix = statefile.substr(statefile.find_last_of('.') + 1);
-    const bool binary = (suffix == "ubj");
-    auto mode = std::ios_base::in;
-    if (binary) {
-        mode = std::ios_base::ate | std::ios_base::binary; // ate = open at end
-    }
-    if (auto stream = std::ifstream(statefile, mode)) {
-        json j;
-        faunus_logger->info("loading state file {}", statefile);
-        if (binary) {
-            const auto size = stream.tellg(); // get file size
-            std::vector<std::uint8_t> buffer(size / sizeof(std::uint8_t));
-            stream.seekg(0, stream.beg);             // go back to start...
-            stream.read((char*)buffer.data(), size); // ...and read into buffer
-            j = json::from_ubjson(buffer);
-        } else {
-            stream >> j;
+    faunus_logger->info("overwriting {} of {} positions using {}", source.size(), space.particles.size(), filename);
+    auto copy_f = [](const Particle& source, Particle& destination) {
+        destination.pos = source.pos;
+        if (source.hasExtension()) {
+            auto& ext = destination.getExt();
+            ext.mu = source.getExt().mu;
+            ext.scdir = source.getExt().scdir;
+            ext.patchdir = source.getExt().patchdir;
+            ext.initialize(destination.traits().sphero_cylinder);
         }
-        simulation.restore(j);
-    } else {
-        throw std::runtime_error("state file error -> "s + statefile);
+    };
+    space.updateParticles(source.begin(), source.end(), space.particles.begin(), copy_f);
+    trial_space.updateParticles(source.begin(), source.end(), trial_space.particles.begin(), copy_f);
+}
+
+void loadState(docopt::Options& args, MetropolisMonteCarlo& simulation) {
+    if (args["--state"]) {
+        const auto statefile = MPI::prefix + args["--state"].asString();
+        const auto suffix = statefile.substr(statefile.find_last_of('.') + 1);
+        const bool binary = (suffix == "ubj");
+        auto mode = std::ios_base::in;
+        if (binary) {
+            mode = std::ios_base::ate | std::ios_base::binary; // ate = open at end
+        }
+        if (auto stream = std::ifstream(statefile, mode)) {
+            json j;
+            faunus_logger->info("loading state file {}", statefile);
+            if (binary) {
+                const auto size = stream.tellg(); // get file size
+                std::vector<std::uint8_t> buffer(size / sizeof(std::uint8_t));
+                stream.seekg(0, stream.beg);             // go back to start...
+                stream.read((char*)buffer.data(), size); // ...and read into buffer
+                j = json::from_ubjson(buffer);
+            } else {
+                stream >> j;
+            }
+            simulation.restore(j);
+        } else {
+            throw std::runtime_error("state file error -> "s + statefile);
+        }
+    }
+    if (args["--positions"]) {
+        const auto positionfile = MPI::prefix + args["--positions"].asString();
+        loadCoordinates(positionfile, simulation);
     }
 }
 

@@ -95,9 +95,6 @@ struct Quadrupole : public ParticlePropertyBase {
  * @brief Patchy sphero cylinder a.k.a. Cigar particles
  */
 class Cigar : public ParticlePropertyBase {
-  private:
-    void initialize(const SpheroCylinderData& psc); // initialize; run at start and after patch changes
-
   public:
     Point scdir = {0.0, 0.0, 0.0};    //!< Sphero-cylinder direction unit vector
     Point patchdir = {0.0, 0.0, 0.0}; //!< Patch direction
@@ -109,6 +106,7 @@ class Cigar : public ParticlePropertyBase {
     void rotate(const Eigen::Quaterniond& q, const Eigen::Matrix3d&); //!< Rotate sphero-cylinder
     void to_json(json& j) const override;
     void from_json(const json& j) override;
+    void initialize(const SpheroCylinderData& psc); // initialize; run at start and after patch changes
     template <class Archive> void serialize(Archive& archive) {
         archive(scdir, patchdir, patchsides.at(0), patchsides.at(1), chirality_direction);
     }

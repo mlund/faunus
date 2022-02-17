@@ -105,9 +105,19 @@ properties:
                           sigma: {type: number, default: 0.0, description: "Diameter (Å)"}
                           tension: {type: number, default: 0.0, description: "Surface tension (kJ/mol/Å²)"}
                           tfe: {type: number, default: 0.0, description: "Transfer free energy (kJ/mol/Å²/M)"}
-                          psc: {type: object, description: "Patchy spherocylinder properties"}
                           rc: {type: number, description: "Cosine attraction"}
                           wc: {type: number, description: "Cosine attraction"}
+                          psc:
+                              type: object
+                              description: "Patchy spherocylinder properties"
+                              required: [type, length]
+                              additionalProperties: false
+                              properties:
+                                  type: {type: string, enum: [none, full, capped], description: "patchtype"}
+                                  length: {type: number, description: "length of spherocylinder"}
+                                  patch_angle: {type: number, description: "patch opening angle (degrees)"}
+                                  patch_angle_switch: {type: number}
+                                  chiral_angle: {type: number, default: 0.0, description: "rotate patch w. respect to length axis (degrees)"}
                 - type: string
 
     moleculelist:

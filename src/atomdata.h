@@ -45,8 +45,6 @@ class SpheroCylinderData {
     double length = 0;                 //!< Sphere-cylinder length
     double patch_angle = 0;            //!< Angle of attrative patch on PSC (~pangle)
     double patch_angle_switch = 0;     //!< Angle of angular switch on sides of patch on PSC (~panglsw)
-    double patch_attraction_range = 0; //!< Dist. to which attraction is flat on attrative patch on PSC (~pdis~rc)
-    double patch_cutoff = 0;           //!< Distance on which attraction switches to zero on PSC (~pswitch~rcutoff)
     PatchType type = PatchType::None;  //!< Patch type of spherocylinder
 };
 

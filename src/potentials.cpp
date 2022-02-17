@@ -298,18 +298,33 @@ CosAttract::CosAttract(const std::string& name)
     : PairPotentialBase(name) {}
 
 TEST_CASE("[Faunus] CosAttract") {
+    Particle a, b;
+    Point r1 = {0.5 - 0.001, 0.0, 0.0};       // r < r_c (-epsilon)
+    Point r2 = {2.1 + 0.5 + 0.001, 0.0, 0.0}; // r > r_c + w_c (zero)
+    Point r3 = {1.0, 0.0, 0.0};               // r_c > r < r_c + w_c (switching region)
+    a.id = 0;
+    b.id = 1;
+
     SUBCASE("basic") {
         auto j = R"({ "atomlist" : [
                  { "A": { "eps": 1.0, "rc": 0.5, "wc": 2.1 } },
                  { "B": { "eps": 1.0, "rc": 0.5, "wc": 2.1 } }]})"_json;
         Faunus::atoms = j["atomlist"].get<decltype(atoms)>();
-        Particle a, b;
-        a.id = 0;
-        b.id = 1;
         CosAttract pairpot = R"({ "cos2": {"eps": 1.0, "rc": 0.5, "wc": 2.1}})"_json;
-        CHECK(pairpot(a, b, std::pow(0.5 - 0.001, 2), Point::Zero()) == doctest::Approx(-0.4033930777));
-        CHECK(pairpot(a, b, std::pow(2.1 + 0.5 + 0.001, 2), Point::Zero()) == doctest::Approx(0));
-        CHECK(pairpot(a, b, std::pow(1.0, 2), Point::Zero()) == doctest::Approx(-0.3495505642));
+
+        CHECK(pairpot(a, b, r1.squaredNorm(), r1) == doctest::Approx(-0.4033930777));
+        CHECK(pairpot(a, b, r2.squaredNorm(), r2) == doctest::Approx(0));
+        CHECK(pairpot(a, b, r3.squaredNorm(), r3) == doctest::Approx(-0.3495505642));
+
+        CHECK(pairpot.force(a, b, r1.squaredNorm(), r1).x() == doctest::Approx(0));
+        CHECK(pairpot.force(a, b, r1.squaredNorm(), r1).y() == doctest::Approx(0));
+        CHECK(pairpot.force(a, b, r1.squaredNorm(), r1).y() == doctest::Approx(0));
+        CHECK(pairpot.force(a, b, r2.squaredNorm(), r2).x() == doctest::Approx(0));
+        CHECK(pairpot.force(a, b, r2.squaredNorm(), r2).y() == doctest::Approx(0));
+        CHECK(pairpot.force(a, b, r2.squaredNorm(), r2).z() == doctest::Approx(0));
+        CHECK(pairpot.force(a, b, r3.squaredNorm(), r3).x() == doctest::Approx(-0.2052334967));
+        CHECK(pairpot.force(a, b, r3.squaredNorm(), r3).y() == doctest::Approx(0));
+        CHECK(pairpot.force(a, b, r3.squaredNorm(), r3).z() == doctest::Approx(0));
     }
 
     SUBCASE("mixed - symmetric") {
@@ -317,14 +332,21 @@ TEST_CASE("[Faunus] CosAttract") {
                  { "A": { "eps": 1.0, "rc": 0.5, "wc": 2.1 } },
                  { "B": { "eps": 1.0, "rc": 0.5, "wc": 2.1 } }]})"_json;
         Faunus::atoms = j["atomlist"].get<decltype(atoms)>();
-        Particle a, b;
-        a.id = 0;
-        b.id = 1;
         CosAttractMixed pairpot = R"({ "cos2mix": {"mixing": "LB"}})"_json;
-        CHECK(pairpot(a, b, std::pow(0.5 - 0.001, 2), Point::Zero()) == doctest::Approx(-0.4033930777));
-        CHECK(pairpot(a, b, std::pow(2.1 + 0.5 + 0.001, 2), Point::Zero()) == doctest::Approx(0));
-        CHECK(pairpot(a, b, std::pow(1.0, 2), Point::Zero()) == doctest::Approx(-0.3495505642));
+        CHECK(pairpot(a, b, r1.squaredNorm(), r1) == doctest::Approx(-0.4033930777));
+        CHECK(pairpot(a, b, r2.squaredNorm(), r2) == doctest::Approx(0));
+        CHECK(pairpot(a, b, r3.squaredNorm(), r3) == doctest::Approx(-0.3495505642));
         CHECK(pairpot.cutOffSquared(a.id, b.id) == doctest::Approx(std::pow(0.5 + 2.1, 2)));
+
+        CHECK(pairpot.force(a, b, r1.squaredNorm(), r1).x() == doctest::Approx(0));
+        CHECK(pairpot.force(a, b, r1.squaredNorm(), r1).y() == doctest::Approx(0));
+        CHECK(pairpot.force(a, b, r1.squaredNorm(), r1).y() == doctest::Approx(0));
+        CHECK(pairpot.force(a, b, r2.squaredNorm(), r2).x() == doctest::Approx(0));
+        CHECK(pairpot.force(a, b, r2.squaredNorm(), r2).y() == doctest::Approx(0));
+        CHECK(pairpot.force(a, b, r2.squaredNorm(), r2).z() == doctest::Approx(0));
+        CHECK(pairpot.force(a, b, r3.squaredNorm(), r3).x() == doctest::Approx(-0.2052334967));
+        CHECK(pairpot.force(a, b, r3.squaredNorm(), r3).y() == doctest::Approx(0));
+        CHECK(pairpot.force(a, b, r3.squaredNorm(), r3).z() == doctest::Approx(0));
     }
 
     SUBCASE("mixed - asymmetric") {
@@ -332,13 +354,10 @@ TEST_CASE("[Faunus] CosAttract") {
                  { "A": { "eps": 1.0, "rc": 0.5, "wc": 2.1 } },
                  { "B": { "eps": 0.5, "rc": 0.6, "wc": 1.9 } }]})"_json;
         Faunus::atoms = j["atomlist"].get<decltype(atoms)>();
-        Particle a, b;
-        a.id = 0;
-        b.id = 1;
         CosAttractMixed pairpot = R"({ "cos2mix": {"mixing": "LB"}})"_json;
-        CHECK(pairpot(a, b, std::pow(0.5 - 0.001, 2), Point::Zero()) == doctest::Approx(-0.2852419807));
-        CHECK(pairpot(a, b, std::pow(2.1 + 0.5 + 0.001, 2), Point::Zero()) == doctest::Approx(0));
-        CHECK(pairpot(a, b, std::pow(1.0, 2), Point::Zero()) == doctest::Approx(-0.2510708423));
+        CHECK(pairpot(a, b, r1.squaredNorm(), r1) == doctest::Approx(-0.2852419807));
+        CHECK(pairpot(a, b, r2.squaredNorm(), r2) == doctest::Approx(0));
+        CHECK(pairpot(a, b, r3.squaredNorm(), r3) == doctest::Approx(-0.2510708423));
         CHECK(pairpot(a, b, std::pow(0.55 + 2.0 + 0.001, 2), Point::Zero()) == doctest::Approx(0));
         CHECK(pairpot.cutOffSquared(a.id, b.id) == doctest::Approx(6.5025));
     }
@@ -1351,12 +1370,12 @@ void CosAttractMixed::initPairMatrices() {
     auto comb_distance = PairMixer::getCombinator(combination_rule, PairMixer::CoefficientType::SIGMA);
     auto comb_epsilon = PairMixer::getCombinator(combination_rule, PairMixer::CoefficientType::EPSILON);
 
-    rc = PairMixer(extract_rc, comb_distance, &PairMixer::modIdentity).createPairMatrix(atoms, *custom_pairs);
-    wc = PairMixer(extract_wc, comb_distance, &PairMixer::modIdentity).createPairMatrix(atoms, *custom_pairs);
-    eps = PairMixer(extract_eps, comb_epsilon, &PairMixer::modIdentity).createPairMatrix(atoms, *custom_pairs);
+    switching_distance = PairMixer(extract_rc, comb_distance, &PairMixer::modIdentity).createPairMatrix(atoms, *custom_pairs);
+    switching_width = PairMixer(extract_wc, comb_distance, &PairMixer::modIdentity).createPairMatrix(atoms, *custom_pairs);
+    epsilon = PairMixer(extract_eps, comb_epsilon, &PairMixer::modIdentity).createPairMatrix(atoms, *custom_pairs);
 
     faunus_logger->trace("Pair matrices for {} sigma ({}×{}) and epsilon ({}×{}) created using {} custom pairs.", name,
-                         rc->rows(), rc->cols(), eps->rows(), eps->cols(), custom_pairs->size());
+                         switching_distance->rows(), switching_distance->cols(), epsilon->rows(), epsilon->cols(), custom_pairs->size());
 }
 
 void CosAttractMixed::extractorsFromJson(const json& j) {
@@ -1377,8 +1396,8 @@ CosAttractMixed::CosAttractMixed(const std::string& name, const std::string& cit
     : MixerPairPotentialBase(name, cite, combination_rule) {}
 
 double CosAttractMixed::cutOffSquared(AtomData::index_type id1, AtomData::index_type id2) const {
-    const auto _rc = (*rc)(id1, id2);
-    const auto _wc = (*wc)(id1, id2);
-    return (_rc + _wc) * (_rc + _wc);
+    const auto rc = (*switching_distance)(id1, id2);
+    const auto wc = (*switching_width)(id1, id2);
+    return (rc + wc) * (rc + wc);
 }
 } // namespace Faunus::Potential

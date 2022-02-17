@@ -65,11 +65,15 @@ void Cigar::rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &) {
     // after many rotations...will require access to AtomData.
 }
 
-void Cigar::to_json(json& j) const { j["scdir"] = scdir; }
+void Cigar::to_json(json& j) const {
+    j["scdir"] = scdir;
+    j["pdir"] = patchdir;
+}
 
 void Cigar::from_json(const json& j) {
     const auto& psc = Faunus::atoms.at(j.at("id").get<int>()).sphero_cylinder;
     scdir = j.value("scdir", Point(1.0, 0.0, 0.0));
+    patchdir = j.value("pdir", Point(0.0, 1.0, 0.0));
     initialize(psc);
 }
 
@@ -87,47 +91,34 @@ void Cigar::initialize(const SpheroCylinderData& psc) {
     constexpr auto very_small_number = 1e-9;
     half_length = 0.5 * psc.length;
     if (half_length > very_small_number) {
-        Point vec;
-        Eigen::Quaterniond Q;
         pcangl = std::cos(0.5 * psc.patch_angle);
         pcanglsw = std::cos(0.5 * psc.patch_angle + psc.patch_angle_switch);
 
-        if (scdir.squaredNorm() < very_small_number) {
-            scdir = {1, 0, 0};
-        }
-        if (patchdir.squaredNorm() < very_small_number) {
-            patchdir = {0, 1, 0};
-        }
-        scdir.normalize();
-
-        patchdir = patchdir - scdir * patchdir.dot(scdir); // perp. project
-        patchdir.normalize();
+        scdir = scdir.squaredNorm() < very_small_number ? Point(1, 0, 0) : scdir.normalized();
+        patchdir = patchdir.squaredNorm() < very_small_number ? Point(1, 0, 0) : patchdir.normalized();
+        patchdir = (patchdir - scdir * patchdir.dot(scdir)).normalized(); // perp. project
 
         /* calculate patch sides */
+        Point patch_length_axis;
+        Eigen::Quaterniond Q;
         if (psc.chiral_angle < very_small_number) {
-            vec = scdir;
+            patch_length_axis = scdir;
         } else {
             chirality_direction = scdir;
             Q = Eigen::AngleAxisd(0.5 * psc.chiral_angle, patchdir);
             chirality_direction = Q * chirality_direction; // rotate
-            vec = chirality_direction;
+            patch_length_axis = chirality_direction;
         }
 
         /* create side vector by rotating patch vector by half size of patch*/
-        /* the first side */
-        patchsides[0] = patchdir;
-        Q = Eigen::AngleAxisd(0.5 * psc.patch_angle + psc.patch_angle_switch, vec);
-        patchsides[0] = Q * patchsides[0]; // rotate
-        patchsides[0].normalize();
+        const auto half_angle = 0.5 * psc.patch_angle + psc.patch_angle_switch;
+        Q = Eigen::AngleAxisd(half_angle, patch_length_axis);
+        patchsides.at(0) = (Q * patchdir).normalized();
+        Q = Eigen::AngleAxisd(-half_angle, patch_length_axis);
+        patchsides.at(1) = (Q * patchdir).normalized();
 
-        /* the second side */
-        patchsides[1] = patchdir;
-        Q = Eigen::AngleAxisd(-0.5 * psc.patch_angle - psc.patch_angle_switch, vec);
-        patchsides[1] = Q * patchsides[1]; // rotate
-        patchsides[1].normalize();
-
-        if (patchsides[0].squaredNorm() < very_small_number) {
-            throw std::runtime_error("Patch side vector has zero size.");
+        if (patchsides.at(0).squaredNorm() < very_small_number) {
+            throw std::runtime_error("patch side vector has zero size");
         }
     }
 }

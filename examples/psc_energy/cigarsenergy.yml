@@ -1,0 +1,48 @@
+#!/usr/bin/env yason.py
+#
+# This is an energy calculation of a fixed configuration of a mixture
+# of patchy sphero-cylinders. The PSC code has been ported from Faunus V1
+# where we got a an energy of -308.884 kT:
+#
+#    https://github.com/mlund/faunus/blob/v1.0.0/src/examples/cigarsenergy.test
+#
+energy:
+  - nonbonded:
+      default:
+        - cos2wca-cigar:
+            cos2mix: {mixing: "LB"} # used for interactions with patch
+            wca: {mixing: "LB"}     # used for interactions with cylinder
+
+atomlist:
+  - CPSC:
+      eps: 2.479
+      rc: 11.2246204831
+      wc: 6.0
+      sigma: 10.0
+      psc: {length: 40, type: capped, patch_angle: 80, patch_angle_switch: 5.0}
+
+  - PSC:
+      eps: 2.479
+      rc: 11.2246204831
+      wc: 6.0
+      sigma: 10.0
+      psc: {length: 40, type: full, patch_angle: 80, patch_angle_switch: 5.0}
+
+moleculelist:
+    - mol1: {atoms: [PSC], atomic: true}
+    - mol2: {atoms: [CPSC], atomic: true}
+
+insertmolecules:
+    - mol1: {N: 30}
+    - mol2: {N: 30}
+
+moves: []
+
+analysis:
+    - systemenergy: {file: energy.dat, nstep: 1}
+    - savestate: {file: confout.xyz_psc}
+    - savestate: {file: state.json }
+mcloop: {macro: 1, micro: 1}
+geometry: {type: cuboid, length: 2000}
+temperature: 298.15
+random: {seed: fixed}

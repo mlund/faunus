@@ -1,0 +1,95 @@
+{
+  "analysis": [
+    {
+      "systemenergy": {
+        "Cv/kB": 0.0,
+        "file": "energy.dat",
+        "final": [
+          -308.8838670416866
+        ],
+        "init": -308.88,
+        "mean": -308.88,
+        "nstep": 1,
+        "samples": 1
+      }
+    },
+    {
+      "savestate": {
+        "file": "confout.xyz_psc"
+      }
+    },
+    {
+      "savestate": {
+        "file": "state.json"
+      }
+    }
+  ],
+  "compiler": "Apple LLVM 12.0.5 (clang-1205.0.22.9)",
+  "energy": [
+    {
+      "hamiltonian": [
+        {
+          "nonbonded": {
+            "functor potential": {
+              "default": [
+                {
+                  "cos2wca-cigar": {
+                    "cos2mix": {
+                      "mixing": "LB"
+                    },
+                    "wca": {
+                      "mixing": "LB"
+                    }
+                  }
+                }
+              ]
+            },
+            "selfenergy": {
+              "dipole": false,
+              "monopole": false
+            },
+            "summation_policy": "serial"
+          }
+        }
+      ]
+    }
+  ],
+  "geometry": {
+    "length": [
+      2000.0,
+      2000.0,
+      2000.0
+    ],
+    "type": "cuboid"
+  },
+  "git revision": "36bc7f38 (2022-02-16)",
+  "groups": [
+    {
+      "mol1": {
+        "compressible": false,
+        "index": [
+          0,
+          29
+        ],
+        "size": 30
+      }
+    },
+    {
+      "mol2": {
+        "compressible": false,
+        "index": [
+          30,
+          59
+        ],
+        "size": 30
+      }
+    }
+  ],
+  "moves": null,
+  "number of groups": 2,
+  "number of particles": 60,
+  "number of sweeps": 1,
+  "reactionlist": null,
+  "relative drift": 0.0,
+  "temperature": 298.15
+}

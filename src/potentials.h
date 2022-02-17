@@ -258,24 +258,27 @@ class CosAttract : public PairPotentialBase {
     void from_json(const json &j) override;
 };
 
+/**
+ * @brief Cosine attraction (Eq. 4 in doi:10/chqzjk)
+ */
 class CosAttractMixed : public MixerPairPotentialBase {
   private:
     TExtractorFunc extract_rc;
     TExtractorFunc extract_wc;
     TExtractorFunc extract_eps;
 
-    TPairMatrixPtr rc;
-    TPairMatrixPtr wc;
-    TPairMatrixPtr eps;
+    TPairMatrixPtr switching_distance; //!< Switching region begins here (r_c)
+    TPairMatrixPtr switching_width;    //!< Width of switching region (w_c)
+    TPairMatrixPtr epsilon;            //!< Energy depth
 
     void initPairMatrices() override;
     void extractorsFromJson(const json& j) override;
 
   public:
-    CosAttractMixed(const std::string& name = "cos2mix", const std::string& cite = ""s,
+    CosAttractMixed(const std::string& name = "cos2mix", const std::string& cite = "doi:10/chqzjk"s,
                     CombinationRuleType combination_rule = CombinationRuleType::LORENTZ_BERTHELOT);
 
-    double cutOffSquared(AtomData::index_type id1, AtomData::index_type id2) const;
+    double cutOffSquared(AtomData::index_type id1, AtomData::index_type id2) const; //!< (r_c+w_c)^2
 
     /**
      * @brief Calculates force on particle a due to another particle, b
@@ -287,33 +290,33 @@ class CosAttractMixed : public MixerPairPotentialBase {
      */
     inline Point force(const Particle& a, const Particle& b, double squared_distance,
                        const Point& b_towards_a) const override {
-        const auto _rc = (*rc)(a.id, b.id);
-        const auto _wc = (*wc)(a.id, b.id);
-        const auto rcwc2 = (_rc + _wc) * (_rc + _wc);
-        if (squared_distance > rcwc2 || squared_distance < (_rc * _rc)) {
+        const auto rc = (*switching_distance)(a.id, b.id);
+        const auto wc = (*switching_width)(a.id, b.id);
+        const auto cutoff_squared = (rc + wc) * (rc + wc);
+        if (squared_distance > cutoff_squared || squared_distance < (rc * rc)) {
             return {0.0, 0.0, 0.0};
         }
-        const auto c = pc::pi / (2.0 * _wc);
+        const auto c = pc::pi / (2.0 * wc);
         const auto r = sqrt(squared_distance);
-        const auto x1 = std::cos(c * (r - _rc));
-        const auto x2 = std::sin(c * (r - _rc));
-        return -2.0 * c * (*eps)(a.id, b.id) * x1 * x2 / r * b_towards_a;
+        const auto x1 = std::cos(c * (r - rc));
+        const auto x2 = std::sin(c * (r - rc));
+        return -2.0 * c * (*epsilon)(a.id, b.id) * x1 * x2 / r * b_towards_a;
     }
 
     inline double operator()(const Particle& a, const Particle& b, const double squared_distance,
                              [[maybe_unused]] const Point& b_towards_a) const override {
-        const auto _rc = (*rc)(a.id, b.id);
-        if (squared_distance < (_rc * _rc)) {
-            return -(*eps)(a.id, b.id);
+        const auto rc = (*switching_distance)(a.id, b.id);
+        if (squared_distance < (rc * rc)) {
+            return -(*epsilon)(a.id, b.id);
         }
-        const auto _wc = (*wc)(a.id, b.id);
-        const auto rcwc2 = (_rc + _wc) * (_rc + _wc);
-        if (squared_distance > rcwc2) {
+        const auto wc = (*switching_width)(a.id, b.id);
+        const auto cutoff_squared = (rc + wc) * (rc + wc);
+        if (squared_distance > cutoff_squared) {
             return 0.0;
         }
-        const auto c = pc::pi / (2.0 * _wc);
-        const auto x = std::cos(c * (sqrt(squared_distance) - _rc));
-        return -(*eps)(a.id, b.id) * x * x;
+        const auto c = pc::pi / (2.0 * wc);
+        const auto x = std::cos(c * (sqrt(squared_distance) - rc));
+        return -(*epsilon)(a.id, b.id) * x * x;
     }
 };
 

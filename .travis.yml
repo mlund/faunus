@@ -20,7 +20,7 @@ addons:
         update: true
     apt:
         packages:
-            - python-ruamel.yaml
+            - python3-ruamel.yaml
             - libsdl2-dev
             - mpich
             - libmpich-dev

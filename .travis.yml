@@ -1,5 +1,5 @@
 language: cpp
-dist: bionic
+dist: focal
 sudo: required
 group: edge
 compiler: clang
@@ -14,11 +14,17 @@ addons:
             - open-mpi
         update: true
     apt:
+        sources:
+            - ubuntu-toolchain-r-test
         packages:
+            - gcc-11
+            - g++-11
             - python-ruamel.yaml
             - libsdl2-dev
             - mpich
             - libmpich-dev
+        env:
+            - MATRIX_EVAL="CC=gcc-11 && CXX=g++-11"
     snaps:
         - name: cmake
           confinement: classic

@@ -534,7 +534,7 @@ void StructureFileReader::checkLoadedParticles() const {
 
 ParticleVector& StructureFileReader::load(std::string_view filename) {
     try {
-        if (std::ifstream stream(filename); stream) {
+        if (auto stream = std::ifstream(std::string(filename)); stream) {
             return load(stream);
         }
         throw std::runtime_error("cannot open file");

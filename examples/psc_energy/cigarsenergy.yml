@@ -6,6 +6,9 @@
 #
 #    https://github.com/mlund/faunus/blob/v1.0.0/src/examples/cigarsenergy.test
 #
+# Note that running in RELEASE mode with aggressive optimizations, the
+# total energy may deviate by a few percent.
+#
 energy:
   - nonbonded:
       default:

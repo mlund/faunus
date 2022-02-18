@@ -121,7 +121,7 @@ add_test(
         NAME psc_energy
         COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} cigarsenergy.yml\
     | $<TARGET_FILE:faunus> --nobar --state cigarsenergy.state.json\
-    && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} cigarsenergy.out.json out.json --tol 0.005"
+    && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} cigarsenergy.out.json out.json --tol 0.05"
         WORKING_DIRECTORY ${EXAMPLES_DIR}/psc_energy)
 
 add_test(

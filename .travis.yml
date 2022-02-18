@@ -7,6 +7,11 @@ compiler: clang
 python:
     - "3.7"
 
+before_install:
+    - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+    - sudo apt-get -q update
+    - sudo apt-get -y install gcc-11
+
 addons:
     homebrew:
         packages:
@@ -14,11 +19,7 @@ addons:
             - open-mpi
         update: true
     apt:
-        sources:
-            - ubuntu-toolchain-r-test
         packages:
-            - gcc-11
-            - g++-11
             - python-ruamel.yaml
             - libsdl2-dev
             - mpich

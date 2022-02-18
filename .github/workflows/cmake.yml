@@ -15,12 +15,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
 
     - name: Set up Clang
-        uses: egor-tensin/setup-clang@v1
-        with:
-          version: 13
+      uses: egor-tensin/setup-clang@v1
+      with:
+        version: 13
+
+    - uses: actions/checkout@v2
 
     - name: Create Build Environment
       # Some projects don't allow in-source building, so create a separate build directory

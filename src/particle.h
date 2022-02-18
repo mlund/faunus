@@ -96,19 +96,18 @@ struct Quadrupole : public ParticlePropertyBase {
  */
 class Cigar : public ParticlePropertyBase {
   public:
-    Point scdir = {0.0, 0.0, 0.0};    //!< Sphero-cylinder direction unit vector
-    Point patchdir = {0.0, 0.0, 0.0}; //!< Patch direction
+    Point scdir = {1.0, 0.0, 0.0};    //!< Sphero-cylinder direction unit vector
+    Point patchdir = {0.0, 1.0, 0.0}; //!< Patch direction
     std::array<Point, 2> patchsides;
-    Point chirality_direction = {0.0, 0.0, 0.0}; // unused
     double half_length = 0.0;
     double pcanglsw = 0.0; //!< Cosine of switch angle from AtomData (speed optimization)
     double pcangl = 0.0;   //!< Cosine of AtomData::patch_angle (speed optimization)
-    void rotate(const Eigen::Quaterniond& q, const Eigen::Matrix3d&); //!< Rotate sphero-cylinder
+    void rotate(const Eigen::Quaterniond& quaternion, const Eigen::Matrix3d& rotation_matrix); //!< Rotate sphero-cylinder
     void to_json(json& j) const override;
     void from_json(const json& j) override;
     void initialize(const SpheroCylinderData& psc); // initialize; run at start and after patch changes
     template <class Archive> void serialize(Archive& archive) {
-        archive(scdir, patchdir, patchsides.at(0), patchsides.at(1), chirality_direction);
+        archive(scdir, patchdir, patchsides.at(0), patchsides.at(1));
     }
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW

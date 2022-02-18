@@ -33,8 +33,8 @@
             "functor potential": {
               "default": [
                 {
-                  "cos2wca-cigar": {
-                    "cos2mix": {
+                  "coswca-psc": {
+                    "cos2": {
                       "mixing": "LB"
                     },
                     "wca": {

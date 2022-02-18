@@ -142,7 +142,8 @@ template <typename PatchPotential, typename CylinderPotential> class CigarWithSp
 
     inline double operator()(const Particle& cigar, const Particle& sphere, [[maybe_unused]] double distance_squared,
                              const Point& center_separation) const override {
-        const auto c = cigar.ext->scdir.dot(center_separation);
+        assert(cigar.hasExtension());
+        const auto c = cigar.getExt().scdir.dot(center_separation);
         double contt = 0;
         if (c > cigar.ext->half_length) {
             contt = cigar.ext->half_length;
@@ -315,6 +316,8 @@ template <typename PatchPotential, typename CylinderPotential> class CigarWithCi
                       [[maybe_unused]] double center_separation_squared,
                       const Point& center_separation) const override {
 
+        assert(particle1.hasExtension() && particle2.hasExtension());
+
         if (particle1.traits().sphero_cylinder.type != SpheroCylinderData::PatchType::None &&
             particle2.traits().sphero_cylinder.type != SpheroCylinderData::PatchType::None) {
             return patchyPatchyEnergy(particle1, particle2, center_separation);
@@ -355,8 +358,8 @@ class CompleteCigarPotential : public PairPotentialBase {
     inline double operator()(const Particle& a, const Particle& b, [[maybe_unused]] double distance_squared,
                              const Point& distance) const override {
         const double small_number = 1e-6;
-        const auto a_is_sphere = a.ext->half_length < small_number;
-        const auto b_is_sphere = b.ext->half_length < small_number;
+        const auto a_is_sphere = !a.hasExtension() || a.ext->half_length < small_number;
+        const auto b_is_sphere = !a.hasExtension() || b.ext->half_length < small_number;
 
         if (!a_is_sphere && !b_is_sphere) {
             return cigar_cigar(a, b, distance_squared, distance);

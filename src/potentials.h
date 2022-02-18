@@ -259,7 +259,11 @@ class CosAttract : public PairPotentialBase {
 };
 
 /**
- * @brief Cosine attraction (Eq. 4 in doi:10/chqzjk)
+ * @brief Cosine attraction using combination rules (Eq. 4 in doi:10/chqzjk)
+ *
+ * This will collect `rc`, `wc`, and `eps` from the atom topology and mix using arbitrary
+ * combination rules. `EPSILON` is used to mix the energy, `eps`. `SIGMA` is used to mix
+ * distances, `rc` and `wc`.
  */
 class CosAttractMixed : public MixerPairPotentialBase {
   private:
@@ -269,13 +273,13 @@ class CosAttractMixed : public MixerPairPotentialBase {
 
     TPairMatrixPtr switching_distance; //!< Switching region begins here (r_c)
     TPairMatrixPtr switching_width;    //!< Width of switching region (w_c)
-    TPairMatrixPtr epsilon;            //!< Energy depth
+    TPairMatrixPtr epsilon;            //!< Energy depth in kT
 
     void initPairMatrices() override;
     void extractorsFromJson(const json& j) override;
 
   public:
-    CosAttractMixed(const std::string& name = "cos2mix", const std::string& cite = "doi:10/chqzjk"s,
+    CosAttractMixed(const std::string& name = "cos2", const std::string& cite = "doi:10/chqzjk"s,
                     CombinationRuleType combination_rule = CombinationRuleType::LORENTZ_BERTHELOT);
 
     double cutOffSquared(AtomData::index_type id1, AtomData::index_type id2) const; //!< (r_c+w_c)^2

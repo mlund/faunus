@@ -869,7 +869,7 @@ FunctorPotential::uFunc FunctorPotential::combineFunc(json &j) {
                             }
                         } else if (key == "hs-cigar") {
                             _u = std::get<13>(potlist) = j_val;
-                        } else if (key == "cos2wca-cigar") {
+                        } else if (key == "coswca-psc") {
                             _u = std::get<14>(potlist) = j_val;
                         }
                         // place additional potentials here...

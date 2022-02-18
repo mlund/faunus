@@ -55,12 +55,11 @@ void Quadrupole::to_json(json &j) const { j["Q"] = Q; }
 
 void Quadrupole::from_json(const json& j) { Q = j.value("Q", Tensor(Tensor::Zero()));}
 
-void Cigar::rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &) {
-    scdir = q * scdir;
-    patchdir = q * patchdir;
-    chirality_direction = q * patchdir;
-    patchsides.at(0) = q * patchsides.at(0);
-    patchsides.at(1) = q * patchsides.at(1);
+void Cigar::rotate(const Eigen::Quaterniond& quaternion, [[maybe_unused]] const Eigen::Matrix3d& rotation_matrix) {
+    scdir = quaternion * scdir;
+    patchdir = quaternion * patchdir;
+    patchsides.at(0) = quaternion * patchsides.at(0);
+    patchsides.at(1) = quaternion * patchsides.at(1);
     // here we may want to run `initialize()` to reduce numerical rounding issues
     // after many rotations...will require access to AtomData.
 }
@@ -71,6 +70,7 @@ void Cigar::to_json(json& j) const {
 }
 
 void Cigar::from_json(const json& j) {
+    assert(j.contains("id"));
     const auto& psc = Faunus::atoms.at(j.at("id").get<int>()).sphero_cylinder;
     scdir = j.value("scdir", Point(1.0, 0.0, 0.0));
     patchdir = j.value("pdir", Point(0.0, 1.0, 0.0));
@@ -95,27 +95,26 @@ void Cigar::initialize(const SpheroCylinderData& psc) {
         pcanglsw = std::cos(0.5 * psc.patch_angle + psc.patch_angle_switch);
 
         scdir = scdir.squaredNorm() < very_small_number ? Point(1, 0, 0) : scdir.normalized();
-        patchdir = patchdir.squaredNorm() < very_small_number ? Point(1, 0, 0) : patchdir.normalized();
-        patchdir = (patchdir - scdir * patchdir.dot(scdir)).normalized(); // perp. project
+        patchdir = patchdir.squaredNorm() < very_small_number ? Point(0, 1, 0) : patchdir.normalized();
+        if (fabs(patchdir.dot(scdir)) > very_small_number) { // must be perpendicular
+            faunus_logger->trace("straigthening patch direction");
+            patchdir = (patchdir - scdir * patchdir.dot(scdir)).normalized(); // perp. project
+        }
 
         /* calculate patch sides */
-        Point patch_length_axis;
-        Eigen::Quaterniond Q;
-        if (psc.chiral_angle < very_small_number) {
-            patch_length_axis = scdir;
-        } else {
-            chirality_direction = scdir;
-            Q = Eigen::AngleAxisd(0.5 * psc.chiral_angle, patchdir);
-            chirality_direction = Q * chirality_direction; // rotate
-            patch_length_axis = chirality_direction;
+        Point patch_length_axis = scdir;
+        Eigen::Quaterniond quaternion;
+        if (psc.chiral_angle > very_small_number) {
+            quaternion = Eigen::AngleAxisd(0.5 * psc.chiral_angle, patchdir);
+            patch_length_axis = quaternion * patch_length_axis;
         }
 
         /* create side vector by rotating patch vector by half size of patch*/
         const auto half_angle = 0.5 * psc.patch_angle + psc.patch_angle_switch;
-        Q = Eigen::AngleAxisd(half_angle, patch_length_axis);
-        patchsides.at(0) = (Q * patchdir).normalized();
-        Q = Eigen::AngleAxisd(-half_angle, patch_length_axis);
-        patchsides.at(1) = (Q * patchdir).normalized();
+        quaternion = Eigen::AngleAxisd(half_angle, patch_length_axis);
+        patchsides.at(0) = (quaternion * patchdir).normalized();
+        quaternion = Eigen::AngleAxisd(-half_angle, patch_length_axis);
+        patchsides.at(1) = (quaternion * patchdir).normalized();
 
         if (patchsides.at(0).squaredNorm() < very_small_number) {
             throw std::runtime_error("patch side vector has zero size");
@@ -178,7 +177,8 @@ Particle::ParticleExtension& Particle::createExtension() {
 }
 
 void from_json(const json &j, Particle &particle) {
-    particle.id = j.value("id", -1);
+    assert(j.contains("id"));
+    particle.id = j.at("id").get<int>();
     particle.pos = j.value("pos", Point::Zero().eval());
     particle.charge = j.value("q", 0.0);
     particle.ext = std::make_unique<Particle::ParticleExtension>(j);
@@ -204,7 +204,7 @@ TEST_CASE("[Faunus] Particle") {
 
     json j = R"({ "atomlist" : [
              { "A": { "sigma": 2.5, "pactivity":2, "eps_custom": 0.1 } },
-             { "B": { "psc": {"length": 9, "chiral_angle": 5.0} } }
+             { "B": { "psc": {"length": 9, "chiral_angle": 5.0, "patch_angle": 30} } }
              ]})"_json;
 
     pc::temperature = 298.15_K;
@@ -225,7 +225,13 @@ TEST_CASE("[Faunus] Particle") {
 
     p1.getExt().mu = {0, 0, 1};
     p1.getExt().mulen = 2.8;
+
     p1.getExt().scdir = Point(-0.1, 0.3, 1.9).normalized();
+    p1.getExt().patchdir = Point::Ones().normalized();
+    p1.getExt().patchdir =
+        (p1.getExt().patchdir - p1.getExt().scdir * p1.getExt().patchdir.dot(p1.getExt().scdir)).normalized();
+    CHECK(p1.getExt().patchdir.dot(p1.getExt().scdir) < 1e-9); // must be perpendicular
+
     p1.getExt().Q = Tensor(1, 2, 3, 4, 5, 6);
 
     p2 = json(p1); // p1 --> json --> p2
@@ -241,17 +247,24 @@ TEST_CASE("[Faunus] Particle") {
     CHECK(p2.getExt().Q == Tensor(1, 2, 3, 4, 5, 6));
 
     SUBCASE("Cigar") {
-        CHECK(p2.getExt().scdir == Point(-0.1, 0.3, 1.9).normalized());
-        CHECK(p2.getExt().scdir.x() == Approx(-0.0519174));
-        CHECK(p2.getExt().scdir.y() == Approx(0.155752));
-        CHECK(p2.getExt().scdir.z() == Approx(0.986431));
-        CHECK(p2.getExt().chirality_direction.x() == Approx(-0.0083089));
-        CHECK(p2.getExt().chirality_direction.y() == Approx(0.155604));
-        CHECK(p2.getExt().chirality_direction.z() == Approx(0.987785));
-        CHECK(p2.getExt().patchdir.x() == Approx(0.008186156));
-        CHECK(p2.getExt().patchdir.y() == Approx(0.987796153));
-        CHECK(p2.getExt().patchdir.z() == Approx(-0.1555369633));
-        CHECK(p2.getExt().half_length == 4.5);
+        const auto& cigar = p2.getExt();
+        CHECK(cigar.scdir == Point(-0.1, 0.3, 1.9).normalized());
+        CHECK(cigar.scdir.x() == Approx(-0.0519174));
+        CHECK(cigar.scdir.y() == Approx(0.155752));
+        CHECK(cigar.scdir.z() == Approx(0.986431));
+        CHECK(cigar.scdir.dot(p2.getExt().patchdir) < 1e-9);
+        CHECK(cigar.patchdir.x() == Approx(0.7850810157));
+        CHECK(cigar.patchdir.y() == Approx(0.6168493695));
+        CHECK(cigar.patchdir.z() == Approx(-0.0560772154));
+        CHECK(cigar.half_length == Approx(4.5));
+        CHECK(cigar.patchsides.at(0).x() == Approx(0.5981493663));
+        CHECK(cigar.patchsides.at(0).y() == Approx(0.7970822805));
+        CHECK(cigar.patchsides.at(0).z() == Approx(-0.0829287266));
+        CHECK(cigar.patchsides.at(1).x() == Approx(0.9185106913));
+        CHECK(cigar.patchsides.at(1).y() == Approx(0.3945791934));
+        CHECK(cigar.patchsides.at(1).z() == Approx(-0.0254041347));
+        CHECK(p2.traits().sphero_cylinder.patch_angle == 30.0 * 1.0_deg);
+        CHECK(p2.traits().sphero_cylinder.chiral_angle == 5.0 * 1.0_deg);
     }
 
     SUBCASE("rotate") {

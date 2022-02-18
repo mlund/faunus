@@ -2,17 +2,19 @@
 energy:
   - nonbonded:
       default:
-        - cos2wca-cigar:
-            cos2: {eps: 1.0, rc: 11.2246204831, wc: 5.0} # used for interactions with patch
-            wca: {mixing: "LB"} # used for interactions with cylinder
+        - coswca-psc:
+            cos2: {mising: "LB"} # used for interactions with patch
+            wca: {mixing: "LB"}  # used for interactions with cylinder
 
 atomlist:
   - PSC:
       eps: 2.479
+      rc: 11.2246204831
+      wc: 6.0
       sigma: 10.0
-      dp: 1.0
-      dprot: 5.0
-      psc: {length: 30, patchtype: 1, patchangle: 80, patchangleswitch: 5.0, patchswitch: 6.0, patchdistance: 11.2246204831}
+      dp: 10.0
+      dprot: 2.0
+      psc: {length: 30, type: full, patch_angle: 80, patch_angle_switch: 5.0}
 
 moleculelist:
     - bulk: {atoms: [PSC], atomic: true}
@@ -27,7 +29,7 @@ analysis:
     - systemenergy: {file: energy.dat, nstep: 100}
     - savestate: {file: confout.xyz_psc}
     - savestate: {file: state.json }
-mcloop: {macro: 10, micro: 5000}
+mcloop: {macro: 10, micro: 100}
 geometry: {type: cuboid, length: 50}
 temperature: 300
 random: {seed: fixed}

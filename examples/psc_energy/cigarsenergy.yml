@@ -9,9 +9,9 @@
 energy:
   - nonbonded:
       default:
-        - cos2wca-cigar:
-            cos2mix: {mixing: "LB"} # used for interactions with patch
-            wca: {mixing: "LB"}     # used for interactions with cylinder
+        - coswca-psc:
+            cos2: {mixing: "LB"} # used for interactions with patch
+            wca: {mixing: "LB"}  # used for interactions with cylinder
 
 atomlist:
   - CPSC:

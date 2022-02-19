@@ -67,6 +67,7 @@ struct Dipole : public ParticlePropertyBase {
     void rotate(const Eigen::Quaterniond& q, const Eigen::Matrix3d&); //!< Rotate dipole moment
     void to_json(json& j) const override;
     void from_json(const json& j) override;
+    bool isDipolar() const;
     template <class Archive> void serialize(Archive& archive) { archive(mu, mulen); }
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
@@ -74,10 +75,11 @@ struct Dipole : public ParticlePropertyBase {
 struct Polarizable : public ParticlePropertyBase {
     Point mui = {1.0, 0.0, 0.0};                                        //!< induced dipole moment unit vector
     double muilen = 0.0;                                                //!< induced dipole moment scalar
-    Tensor alpha;                                                       //!< polarizability tensor
+    Tensor alpha = Tensor::Zero();                                      //!< polarizability tensor
     void rotate(const Eigen::Quaterniond& q, const Eigen::Matrix3d& m); //!< Rotate polarizability tensor
     void to_json(json& j) const override;
     void from_json(const json& j) override;
+    bool isPolarizable() const; //!< True if non-zero polarizability
     template <class Archive> void serialize(Archive& archive) { archive(mui, muilen, alpha); }
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
@@ -87,6 +89,7 @@ struct Quadrupole : public ParticlePropertyBase {
     void rotate(const Eigen::Quaterniond& q, const Eigen::Matrix3d& m); //!< Rotate quadrupole moment
     void to_json(json& j) const override;
     void from_json(const json& j) override;
+    bool isQuadrupolar() const; //!< True if non-zero quadrupolar moment
     template <class Archive> void serialize(Archive& archive) { archive(Q); }
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 }; // Quadrupole property
@@ -95,6 +98,7 @@ struct Quadrupole : public ParticlePropertyBase {
  * @brief Patchy sphero cylinder a.k.a. Cigar particles
  */
 class Cigar : public ParticlePropertyBase {
+  private:
   public:
     Point scdir = {1.0, 0.0, 0.0};    //!< Sphero-cylinder direction unit vector
     Point patchdir = {0.0, 1.0, 0.0}; //!< Patch direction
@@ -109,6 +113,7 @@ class Cigar : public ParticlePropertyBase {
     template <class Archive> void serialize(Archive& archive) {
         archive(scdir, patchdir, patchsides.at(0), patchsides.at(1));
     }
+    bool isCylindrical() const; //!< True of non-zero length
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 }; //!< Sphero-cylinder properties

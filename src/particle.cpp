@@ -31,6 +31,9 @@ void Dipole::from_json(const json &j) {
     mu = j.value("mu", Point::Zero().eval());
     mulen = j.value("mulen", 0.0);
 }
+bool Dipole::isDipolar() const {
+    return mulen > pc::epsilon_dbl;
+}
 
 void Polarizable::rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &m) {
     mui = q * mui;
@@ -48,12 +51,18 @@ void Polarizable::from_json(const json &j) {
     mui = j.value("mui", Point(1, 0, 0));
     muilen = j.value("mulen", muilen);
 }
+bool Polarizable::isPolarizable() const {
+    return alpha.cwiseAbs().sum() > pc::epsilon_dbl;
+}
 
 void Quadrupole::rotate(const Eigen::Quaterniond &, const Eigen::Matrix3d &m) { Q.rotate(m); }
 
 void Quadrupole::to_json(json &j) const { j["Q"] = Q; }
 
 void Quadrupole::from_json(const json& j) { Q = j.value("Q", Tensor(Tensor::Zero()));}
+bool Quadrupole::isQuadrupolar() const {
+    return Q.cwiseAbs().sum() > pc::epsilon_dbl;
+}
 
 void Cigar::rotate(const Eigen::Quaterniond& quaternion, [[maybe_unused]] const Eigen::Matrix3d& rotation_matrix) {
     scdir = quaternion * scdir;
@@ -121,14 +130,17 @@ void Cigar::initialize(const SpheroCylinderData& psc) {
         }
     }
 }
+bool Cigar::isCylindrical() const {
+    return half_length > pc::epsilon_dbl;
+}
 
 const AtomData &Particle::traits() const { return atoms[id]; }
 
 /**
  * @warning Performance is sub-optimal as conversion is done through a json object
  */
-Particle::Particle(const AtomData &a) {*this = json(a).front(); }
-Particle::Particle(const AtomData &a, const Point &pos) : Particle(a) { this->pos = pos; }
+Particle::Particle(const AtomData &atomdata) {*this = static_cast<json>(atomdata).front(); }
+Particle::Particle(const AtomData &atomdata, const Point &pos) : Particle(atomdata) { this->pos = pos; }
 Particle::Particle(const Particle &other) : id(other.id), charge(other.charge), pos(other.pos) {
     if (other.hasExtension()) {
         ext = std::make_unique<Particle::ParticleExtension>(other.getExt()); // deep copy
@@ -181,20 +193,22 @@ void from_json(const json &j, Particle &particle) {
     particle.id = j.at("id").get<int>();
     particle.pos = j.value("pos", Point::Zero().eval());
     particle.charge = j.value("q", 0.0);
-    particle.ext = std::make_unique<Particle::ParticleExtension>(j);
-    // Disable extended features if unused. Slow and ugly check:
-    const auto empty_extended_particle = json(Particle::ParticleExtension());
-    if (json(*particle.ext) == empty_extended_particle) {
-        particle.ext = nullptr; // no extended features found in json
+    if (j.contains("psc") || j.contains("mu") || j.contains("Q") || j.contains("scdir")) {
+        particle.ext = std::make_unique<Particle::ParticleExtension>(j);
+        // delete extension if not in use:
+        if (!particle.ext->isCylindrical() && !particle.ext->isDipolar() && !particle.ext->isQuadrupolar() &&
+            !particle.ext->isQuadrupolar()) {
+            particle.ext = nullptr;
+        }
     }
 }
-void to_json(json &j, const Particle &p) {
-    if (p.ext) {
-        to_json(j, *p.ext);
+void to_json(json &j, const Particle &particle) {
+    if (particle.hasExtension()) {
+        to_json(j, particle.getExt());
     }
-    j["id"] = p.id;
-    j["pos"] = p.pos;
-    j["q"] = p.charge;
+    j["id"] = particle.id;
+    j["pos"] = particle.pos;
+    j["q"] = particle.charge;
 }
 
 TEST_SUITE_BEGIN("Particle");

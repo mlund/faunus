@@ -1154,6 +1154,16 @@ properties:
                     additionalProperties: false
                     type: object
 
+                psctraj:
+                    description: "Write trajectory with sphero-cylindrical information"
+                    properties:
+                        file: {type: string, pattern: "(.*?)\\.(dat|gz)$", description: "Output file (.dat, .gz)"}
+                        nstep: {type: integer, description: "Interval between samples"}
+                        nskip: {type: integer, default: 0, description: "Initial steps to skip"}
+                    required: [nstep, file]
+                    additionalProperties: false
+                    type: object
+
                 xtcfile:
                     description: "Write Gromacs XTC trajectory"
                     properties:

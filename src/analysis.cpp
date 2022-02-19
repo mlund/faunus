@@ -615,7 +615,6 @@ PatchySpheroCylinderTrajectory::PatchySpheroCylinderTrajectory(const json& j, co
             }
         }
     };
-
 }
 
 void FileReactionCoordinate::_to_json(json& j) const {

@@ -765,6 +765,16 @@ class QRtraj : public Analysisbase {
     QRtraj(const json& j, const Space& spc, const std::string &name = "qrtraj");
 };
 
+/**
+ * Generate PSCs text trajectory containing
+ *
+ * 1. number of particles (incl. inactive)
+ * 2. step number and box dimensions
+ * 3. midpoint position; direction; patch direction
+ *
+ * This can be used to generate VMD visualisation using a conversion
+ * script (see scripts/ folder)
+ */
 class PatchySpheroCylinderTrajectory : public QRtraj {
   public:
     PatchySpheroCylinderTrajectory(const json& j, const Space& spc);

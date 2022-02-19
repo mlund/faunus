@@ -8,5 +8,5 @@ else
     vmd="vmd"
 fi
 
-python2 ../../scripts/psc2vmd.py -i movie.dat -o movie.pdb --psf movie.psf
+python2 ../../scripts/psc2vmd.py -i movie.dat -o movie.pdb --psf movie.psf --length 30
 "${vmd}" -e vmd.script

@@ -532,7 +532,8 @@ All units in $k\_BT$.
 ### Penalty function
 
 If a penalty function is added to the hamiltonian, this can dump it to disk at a specified interval. At each sample event,
-the filename counter is incremented and follows the convention.
+the filename counter is incremented and follows the convention. In addition to the penalty energy, this will also
+save the current (numbered) histogram.
 
 `penaltyfunction` | Description
 ----------------- | -------------------------------------------

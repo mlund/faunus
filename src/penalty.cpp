@@ -79,6 +79,10 @@ void Penalty::streamPenaltyFunction(std::ostream& stream) const {
            << penalty_energy.array() - penalty_energy.minCoeff() << "\n";
 }
 
+void Penalty::streamHistogram(std::ostream& stream) const {
+    stream << histogram;
+}
+
 void Penalty::toDisk() {
     if (overwrite_penalty) {
         if (std::ofstream stream(MPI::prefix + penalty_function_filename); stream) {

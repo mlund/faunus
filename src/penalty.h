@@ -51,6 +51,7 @@ class Penalty : public Energybase {
     double energy(Change& change) override;
     void sync(Energybase* other, const Change& change) override;
     void streamPenaltyFunction(std::ostream &stream) const;
+    void streamHistogram(std::ostream &stream) const;
 };
 
 #ifdef ENABLE_MPI

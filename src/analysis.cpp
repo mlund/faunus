@@ -2030,9 +2030,13 @@ SavePenaltyEnergy::SavePenaltyEnergy(const json& j, const Space& spc, const Ener
 
 void SavePenaltyEnergy::_sample() {
     if (penalty_energy) {
-        const auto name = fmt::format("{}{:04d}.{}", MPI::prefix, filenumber++, filename);
+        auto name = fmt::format("{}{:06d}.{}", MPI::prefix, filenumber++, filename);
         if (auto stream = IO::openCompressedOutputStream(name, true); stream) {
             penalty_energy->streamPenaltyFunction(*stream);
+        }
+        name = fmt::format("{}{:06d}-histogram.{}", MPI::prefix, filenumber++, filename);
+        if (auto stream = IO::openCompressedOutputStream(name, true); stream) {
+            penalty_energy->streamHistogram(*stream);
         }
     }
 }

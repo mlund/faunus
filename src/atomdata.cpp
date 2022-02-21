@@ -101,6 +101,9 @@ void from_json(const json& j, AtomData& a) {
         a.charge = val.value("q", a.charge);
         a.dp = val.value("dp", a.dp) * 1.0_angstrom;
         a.dprot = val.value("dprot", a.dprot) * 1.0_rad;
+        if (std::fabs(a.dprot) > 2.0 * pc::pi) {
+            faunus_logger->warn("rotational displacement should be between [0:2π]");
+        }
         a.id() = val.value("id", a.id());
         a.mu = val.value("mu", a.mu);
         a.mulen = val.value("mulen", a.mulen);

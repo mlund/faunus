@@ -106,7 +106,7 @@ int main(int argc, const char** argv) {
 
         bool show_progress = !quiet && !args["--nobar"].asBool();
 #ifdef ENABLE_MPI
-        if (!MPI::mpi.isMaster()) {
+        if (!Faunus::MPI::mpi.isMaster()) {
             show_progress = false; // show progress only for root rank
         }
 #endif
@@ -150,7 +150,7 @@ void showErrorMessage(std::exception& exception) {
 
 void playRetroMusic() {
 #ifdef ENABLE_MPI
-    if (!MPI::mpi.isMaster()) {
+    if (!Faunus::MPI::mpi.isMaster()) {
         return;
     }
 #endif
@@ -344,7 +344,7 @@ json getUserInput(docopt::Options& args) {
             std::cin >> j;
         } else {
             if (!args["--nopfx"].asBool()) {
-                filename = MPI::prefix + filename;
+                filename = Faunus::MPI::prefix + filename;
             }
             j = loadJSON(filename);
         }
@@ -359,7 +359,7 @@ void loadState(docopt::Options& args, MetropolisMonteCarlo& simulation) {
     if (not args["--state"]) {
         return;
     }
-    const auto statefile = MPI::prefix + args["--state"].asString();
+    const auto statefile = Faunus::MPI::prefix + args["--state"].asString();
     const auto suffix = statefile.substr(statefile.find_last_of('.') + 1);
     const bool binary = (suffix == "ubj");
     auto mode = std::ios_base::in;
@@ -388,7 +388,7 @@ template <typename TimePoint>
 void saveOutput(TimePoint& starting_time, docopt::Options& args, MetropolisMonteCarlo& simulation,
                 const Analysis::CombinedAnalysis& analysis) {
 
-    if (std::ofstream stream(MPI::prefix + args["--output"].asString()); stream) {
+    if (std::ofstream stream(Faunus::MPI::prefix + args["--output"].asString()); stream) {
         json j;
         to_json(j, simulation);
         j["relative drift"] = simulation.relativeEnergyDrift();

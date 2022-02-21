@@ -53,13 +53,8 @@ struct Charge : public ParticlePropertyBase {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 }; //!< Charge (monopole) property
 
-/** @brief Dipole properties
- *
- * Json (de)serialization:
- *
- * ```{.cpp}
- *     Dipole d = R"( "mu":[0,0,1], "mulen":10 )"_json
- * ```
+/**
+ * @brief Dipole properties
  */
 struct Dipole : public ParticlePropertyBase {
     Point mu = {0.0, 0.0, 0.0};                                       //!< dipole moment unit vector
@@ -103,9 +98,9 @@ class Cigar : public ParticlePropertyBase {
     Point scdir = {1.0, 0.0, 0.0};    //!< Sphero-cylinder direction unit vector
     Point patchdir = {0.0, 1.0, 0.0}; //!< Patch direction
     std::array<Point, 2> patchsides;
-    double half_length = 0.0;
-    double pcanglsw = 0.0; //!< Cosine of switch angle from AtomData (speed optimization)
-    double pcangl = 0.0;   //!< Cosine of AtomData::patch_angle (speed optimization)
+    double half_length = 0.0; //!< Half end-to-end distace
+    double pcanglsw = 0.0;    //!< Cosine of switch angle from AtomData (speed optimization)
+    double pcangl = 0.0;      //!< Cosine of AtomData::patch_angle (speed optimization)
     void rotate(const Eigen::Quaterniond& quaternion, const Eigen::Matrix3d& rotation_matrix); //!< Rotate sphero-cylinder
     void to_json(json& j) const override;
     void from_json(const json& j) override;

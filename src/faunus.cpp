@@ -377,6 +377,9 @@ void loadCoordinates(std::string_view filename, MetropolisMonteCarlo& simulation
             if (source.getExt().half_length > pc::epsilon_dbl) {
                 ext.scdir = source.getExt().scdir;
                 ext.patchdir = source.getExt().patchdir;
+                ext.mu = source.getExt().mu;
+                ext.mulen = source.getExt().mulen;
+                ext.Q = source.getExt().Q;
                 ext.initialize(destination.traits().sphero_cylinder);
             }
         }

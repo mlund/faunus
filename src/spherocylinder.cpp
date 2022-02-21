@@ -1,16 +1,20 @@
 #include "spherocylinder.h"
 #include <Eigen/Geometry>
+#include "potentials.h"
 
-/**
- * The algorithms found here are mainly direct conversions from
- * Robert Vacha's spherocylinder C code (~2008-2010).
- *
- * @todo cleanup and split into smaller functions.
- */
 namespace Faunus::SpheroCylinder {
 
-Point mindist_segment2segment(const Point& dir1, double half_length1, const Point& dir2, double half_length2,
-                              const Point& r_cm) {
+/**
+ * @param dir1
+ * @param half_length1
+ * @param dir2
+ * @param half_length2
+ * @param r_cm
+ * @return
+ */
+Point mindist_segment2segment(const Point& dir1, const double half_length1, const Point& dir2,
+                              const double half_length2, const Point& r_cm) {
+    constexpr auto very_small_number = 0.00000001;
     Point u = dir1 * (half_length1 * 2);                        // S1.P1 - S1.P0;
     Point v = dir2 * (half_length2 * 2);                        // S2.P1 - S2.P0;
     Point w = dir2 * half_length2 - dir1 * half_length1 - r_cm; // S1.P0-S2.P0
@@ -28,9 +32,9 @@ Point mindist_segment2segment(const Point& dir1, double half_length1, const Poin
     auto tD = D; // tc = tN / tD, default tD = D >= 0
 
     // compute the line parameters of the two closest points
-    if (D < 0.00000001) { // the lines are almost parallel
-        sN = 0.0;         // force using point P0 on segment S1
-        sD = 1.0;         // to prevent possible division by 0.0 later
+    if (D < very_small_number) { // the lines are almost parallel
+        sN = 0.0;                // force using point P0 on segment S1
+        sD = 1.0;                // to prevent possible division by 0.0 later
         tN = e;
         tD = c;
     } else { // get the closest points on the infinite lines
@@ -46,7 +50,6 @@ Point mindist_segment2segment(const Point& dir1, double half_length1, const Poin
             tD = c;
         }
     }
-
     if (tN < 0.0) { // tc < 0 => the t=0 edge is visible
         tN = 0.0;
         // recompute sc for this edge
@@ -71,44 +74,41 @@ Point mindist_segment2segment(const Point& dir1, double half_length1, const Poin
         }
     }
     // finally do the division to get sc and tc
-    if (std::fabs(sN) < 0.00000001) {
-        sc = 0.0;
-    } else {
-        sc = sN / sD;
-    }
-    if (std::fabs(tN) < 0.00000001) {
-        tc = 0.0;
-    } else {
-        tc = tN / tD;
-    }
+    sc = (std::fabs(sN) < very_small_number) ? 0.0 : sN / sD;
+    tc = (std::fabs(tN) < very_small_number) ? 0.0 : tN / tD;
 
     // get the difference of the two closest points
     return u * sc + w - v * tc;
 }
 
+/**
+ * @param part1 Particle 1
+ * @param part2 Particle 2
+ * @param r_cm
+ * @param w_vec
+ * @param cutoff_squared
+ * @param cospatch
+ * @param intersections
+ * @return
+ */
 int find_intersect_plane(const Cigar& part1, const Cigar& part2, const Point& r_cm, const Point& w_vec,
                          const double cutoff_squared, const double cospatch, std::array<double, 5>& intersections) {
     Point nplane = part1.scdir.cross(w_vec).normalized();
     const auto a = nplane.dot(part2.scdir);
-    if (a == 0.0) {
+    if (std::fabs(a) <= pc::epsilon_dbl) {
         return 0; /* there is no intersection plane and sc are paralel*/
     }
     const auto ti = nplane.dot(r_cm) / a;
     if ((ti > part2.half_length) || (ti < -part2.half_length)) {
         return 0; /* there is no intersection plane sc is too short*/
     }
-    Point d_vec = ti * part2.scdir - r_cm; /*vector from intersection point to CM*/
-    const auto c = d_vec.dot(w_vec);
+    Point intersection_to_cm = ti * part2.scdir - r_cm; /*vector from intersection point to CM*/
+    const auto c = intersection_to_cm.dot(w_vec);
     if (c * cospatch < 0) {
         return 0; /* the intersection in plane is on other side of patch */
     }
-    const auto d = fabs(d_vec.dot(part1.scdir)) - part2.half_length;
-    double disti;
-    if (d > 0)
-        disti = d * d + c * c; /*is inside cylinder*/
-    else {
-        disti = c * c;
-    } /*is inside patch*/
+    const auto d = std::fabs(intersection_to_cm.dot(part1.scdir)) - part2.half_length;
+    const auto disti = (d > 0.0) ? (d * d + c * c) : (c * c); // inside either cylinder or patch?
     if (disti > cutoff_squared) {
         return 0; /* the intersection is outside sc */
     }
@@ -126,12 +126,20 @@ int find_intersect_plane(const Cigar& part1, const Cigar& part2, const Point& r_
     return intrs;
 }
 
+/**
+ * @param part1
+ * @param vec
+ * @param cospatch
+ * @param ti
+ * @param intersections
+ * @return
+ */
 int test_intrpatch(const Cigar& part1, Point& vec, double cospatch, double ti, std::array<double, 5>& intersections) {
     /*test if we have intersection*/
     /* do projection to patch plane*/
     vec = vec_perpproject(vec, part1.scdir).normalized();
     /* test angle distance from patch*/
-    auto a = part1.patchdir.dot(vec);
+    const auto a = part1.patchdir.dot(vec);
     int intrs = 0;
     if (a >= cospatch) {
         intrs = 1;
@@ -149,24 +157,34 @@ int test_intrpatch(const Cigar& part1, Point& vec, double cospatch, double ti, s
     return intrs;
 }
 
+/**
+ * @param part1
+ * @param part2
+ * @param r_cm
+ * @param w_vec
+ * @param rcut2
+ * @param cospatch
+ * @param intersections
+ * @return
+ */
 int find_intersect_planec(const Cigar& part1, const Cigar& part2, const Point& r_cm, const Point& w_vec, double rcut2,
                           double cospatch, std::array<double, 5>& intersections) {
     Point nplane = part1.scdir.cross(w_vec).normalized();
     auto a = nplane.dot(part2.scdir);
-    if (a == 0.0) { // @todo unstable comparison
-        return 0;   // there is no intersection plane and sc are paralel
+    if (std::fabs(a) <= pc::epsilon_dbl) {
+        return 0; // there is no intersection plane and sc are paralel
     }
-    auto ti = nplane.dot(r_cm) / a;
+    const auto ti = nplane.dot(r_cm) / a;
     if ((ti > part2.half_length) || (ti < -part2.half_length)) {
         return 0; // there is no intersection plane sc is too short
     }
     Point d_vec = ti * part2.scdir - r_cm; /*vector from intersection point to CM*/
-    auto c = d_vec.dot(w_vec);
+    const auto c = d_vec.dot(w_vec);
     if (c * cospatch < 0) {
         return 0; /* the intersection in plane is on other side of patch */
     }
     int intrs = 0;
-    auto d = fabs(d_vec.dot(part1.scdir)) - part2.half_length;
+    const auto d = fabs(d_vec.dot(part1.scdir)) - part2.half_length;
     if (d <= 0) {
         auto disti = c * c; /*is inside cylinder*/
         if (disti > rcut2) {
@@ -188,16 +206,16 @@ int find_intersect_planec(const Cigar& part1, const Cigar& part2, const Point& r
 }
 
 /**
- * @param part1
- * @param part2
+ * @param particle1
+ * @param particle2
  * @param r_cm
  * @param intersections
- * @param rcut2
+ * @param cutoff_squared
  * @return
  * @todo Add documentation and split into smaller parts(!)
  */
-int psc_intersect(const Cigar& part1, const Cigar& part2, const Point& r_cm, std::array<double, 5>& intersections,
-                  double rcut2) {
+int psc_intersect(const Cigar& particle1, const Cigar& particle2, const Point& r_cm,
+                  std::array<double, 5>& intersections, const double cutoff_squared) {
     double a, b, c, d, e, x1, x2;
     Point cm21, vec1, vec2, vec3, vec4;
 
@@ -209,52 +227,54 @@ int psc_intersect(const Cigar& part1, const Cigar& part2, const Point& r_cm, std
     /* plane1 */
     /* find intersections of part2 with plane by par1 and patchsides[0] */
     int intrs = 0;
-    intrs += find_intersect_plane(part1, part2, r_cm, part1.patchsides[0], rcut2, part1.pcanglsw, intersections);
+    intrs += find_intersect_plane(particle1, particle2, r_cm, particle1.patchsides[0], cutoff_squared,
+                                  particle1.pcanglsw, intersections);
     /* plane2 */
     /* find intersections of part2 with plane by par1 and patchsides[1] */
-    intrs += find_intersect_plane(part1, part2, r_cm, part1.patchsides[1], rcut2, part1.pcanglsw, intersections);
+    intrs += find_intersect_plane(particle1, particle2, r_cm, particle1.patchsides[1], cutoff_squared,
+                                  particle1.pcanglsw, intersections);
 
-    if ((intrs == 2) && (part1.pcanglsw < 0)) {
+    if ((intrs == 2) && (particle1.pcanglsw < 0)) {
         assert("Patch>180 -> two segments.");
     }
 
     /*1b- test intersection with cylinder - it is at distance C*/
     if (intrs < 2) {
         cm21 = -r_cm;
-        vec1 = cm21.cross(part1.scdir);
-        vec2 = part2.scdir.cross(part1.scdir);
+        vec1 = cm21.cross(particle1.scdir);
+        vec2 = particle2.scdir.cross(particle1.scdir);
         a = vec2.dot(vec2);
         b = 2 * vec1.dot(vec2);
-        c = -rcut2 + vec1.dot(vec1);
+        c = -cutoff_squared + vec1.dot(vec1);
         d = b * b - 4 * a * c;
         if (d >= 0) {                      /*there is intersection with infinite cylinder */
             x1 = (-b + sqrt(d)) * 0.5 / a; /*parameter on line of SC2 determining intersection*/
-            if ((x1 >= part2.half_length) || (x1 <= -part2.half_length)) {
+            if ((x1 >= particle2.half_length) || (x1 <= -particle2.half_length)) {
                 intrs += 0;
             } /*intersection is outside sc2*/
             else {
                 /* vectors from center os sc1 to intersection with infinite cylinder*/
-                vec1 = part2.scdir * x1 - r_cm;
-                e = part1.scdir.dot(vec1);
-                if ((e >= part1.half_length) || (e <= -part1.half_length)) {
+                vec1 = particle2.scdir * x1 - r_cm;
+                e = particle1.scdir.dot(vec1);
+                if ((e >= particle1.half_length) || (e <= -particle1.half_length)) {
                     intrs += 0;
                 } /*intersection is outside sc1*/
                 else {
-                    intrs += test_intrpatch(part1, vec1, part1.pcanglsw, x1, intersections);
+                    intrs += test_intrpatch(particle1, vec1, particle1.pcanglsw, x1, intersections);
                 }
             }
             if (d > 0) {
                 x2 = (-b - sqrt(d)) * 0.5 / a; /*parameter on line of SC2 determining intersection*/
-                if ((x2 >= part2.half_length) || (x2 <= -part2.half_length)) {
+                if ((x2 >= particle2.half_length) || (x2 <= -particle2.half_length)) {
                     intrs += 0;
                 } /*intersection is outside sc2*/
                 else {
-                    vec2 = part2.scdir * x2 - r_cm;
-                    e = part1.scdir.dot(vec2);
-                    if ((e >= part1.half_length) || (e <= -part1.half_length))
+                    vec2 = particle2.scdir * x2 - r_cm;
+                    e = particle1.scdir.dot(vec2);
+                    if ((e >= particle1.half_length) || (e <= -particle1.half_length))
                         intrs += 0; /*intersection is outside sc1*/
                     else {
-                        intrs += test_intrpatch(part1, vec2, part1.pcanglsw, x2, intersections);
+                        intrs += test_intrpatch(particle1, vec2, particle1.pcanglsw, x2, intersections);
                     }
                 }
             }
@@ -264,67 +284,71 @@ int psc_intersect(const Cigar& part1, const Cigar& part2, const Point& r_cm, std
     if (intrs < 2) {
         /*centers of spheres*/
         /*relative to the CM of sc2*/
-        vec1 = part1.scdir * part1.half_length - r_cm;
-        vec2 = -part1.scdir * part1.half_length - r_cm;
+        vec1 = particle1.scdir * particle1.half_length - r_cm;
+        vec2 = -particle1.scdir * particle1.half_length - r_cm;
 
         /*sphere1*/
-        a = part2.scdir.dot(part2.scdir);
-        b = 2.0 * vec1.dot(part2.scdir);
-        c = vec1.dot(vec1) - rcut2;
+        a = particle2.scdir.dot(particle2.scdir);
+        b = 2.0 * vec1.dot(particle2.scdir);
+        c = vec1.dot(vec1) - cutoff_squared;
         d = b * b - 4 * a * c;
         if (d >= 0) {                      /*if d<0 there are no intersections*/
             x1 = (-b + sqrt(d)) * 0.5 / a; /*parameter on line of SC2 determining intersection*/
-            if ((x1 >= part2.half_length) || (x1 <= -part2.half_length)) {
+            if ((x1 >= particle2.half_length) || (x1 <= -particle2.half_length)) {
                 intrs += 0;
             } /*intersection is outside sc2*/
             else {
-                vec3 = part2.scdir * x1 - r_cm;
-                e = part1.scdir.dot(vec3);
-                if ((e >= part1.half_length) || (e <= -part1.half_length)) { /*if not intersection is inside sc1*/
-                    intrs += test_intrpatch(part1, vec3, part1.pcanglsw, x1, intersections);
+                vec3 = particle2.scdir * x1 - r_cm;
+                e = particle1.scdir.dot(vec3);
+                if ((e >= particle1.half_length) ||
+                    (e <= -particle1.half_length)) { /*if not intersection is inside sc1*/
+                    intrs += test_intrpatch(particle1, vec3, particle1.pcanglsw, x1, intersections);
                 }
             }
             if (d > 0) {
                 x2 = (-b - sqrt(d)) * 0.5 / a; /*parameter on line of SC2 determining intersection*/
-                if ((x2 >= part2.half_length) || (x2 <= -part2.half_length)) {
+                if ((x2 >= particle2.half_length) || (x2 <= -particle2.half_length)) {
                     intrs += 0;
                 } /*intersection is outside sc2*/
                 else {
-                    vec4 = part2.scdir * x2 - r_cm;
-                    e = part1.scdir.dot(vec4);
-                    if ((e >= part1.half_length) || (e <= -part1.half_length)) { /*if not intersection is inside sc1*/
-                        intrs += test_intrpatch(part1, vec4, part1.pcanglsw, x2, intersections);
+                    vec4 = particle2.scdir * x2 - r_cm;
+                    e = particle1.scdir.dot(vec4);
+                    if ((e >= particle1.half_length) ||
+                        (e <= -particle1.half_length)) { /*if not intersection is inside sc1*/
+                        intrs += test_intrpatch(particle1, vec4, particle1.pcanglsw, x2, intersections);
                     }
                 }
             }
         }
         /*sphere2*/
-        a = part2.scdir.dot(part2.scdir);
-        b = 2.0 * vec2.dot(part2.scdir);
-        c = vec2.dot(vec2) - rcut2;
+        a = particle2.scdir.dot(particle2.scdir);
+        b = 2.0 * vec2.dot(particle2.scdir);
+        c = vec2.dot(vec2) - cutoff_squared;
         d = b * b - 4 * a * c;
         if (d >= 0) {                      /*if d<0 there are no intersections*/
             x1 = (-b + sqrt(d)) * 0.5 / a; /*parameter on line of SC2 determining intersection*/
-            if ((x1 >= part2.half_length) || (x1 <= -part2.half_length)) {
+            if ((x1 >= particle2.half_length) || (x1 <= -particle2.half_length)) {
                 intrs += 0;
             } /*intersection is outside sc2*/
             else {
-                vec3 = part2.scdir * x1 - r_cm;
-                e = part1.scdir.dot(vec3);
-                if ((e >= part1.half_length) || (e <= -part1.half_length)) { /*if not intersection is inside sc1*/
-                    intrs += test_intrpatch(part1, vec3, part1.pcanglsw, x1, intersections);
+                vec3 = particle2.scdir * x1 - r_cm;
+                e = particle1.scdir.dot(vec3);
+                if ((e >= particle1.half_length) ||
+                    (e <= -particle1.half_length)) { /*if not intersection is inside sc1*/
+                    intrs += test_intrpatch(particle1, vec3, particle1.pcanglsw, x1, intersections);
                 }
             }
             if (d > 0) {
                 x2 = (-b - sqrt(d)) * 0.5 / a; /*parameter on line of SC2 determining intersection*/
-                if ((x2 >= part2.half_length) || (x2 <= -part2.half_length)) {
+                if ((x2 >= particle2.half_length) || (x2 <= -particle2.half_length)) {
                     intrs += 0;
                 } /*intersection is outside sc2*/
                 else {
-                    vec4 = part2.scdir * x2 - r_cm;
-                    e = part1.scdir.dot(vec4);
-                    if ((e >= part1.half_length) || (e <= -part1.half_length)) { /*if not intersection is inside sc1*/
-                        intrs += test_intrpatch(part1, vec4, part1.pcanglsw, x2, intersections);
+                    vec4 = particle2.scdir * x2 - r_cm;
+                    e = particle1.scdir.dot(vec4);
+                    if ((e >= particle1.half_length) ||
+                        (e <= -particle1.half_length)) { /*if not intersection is inside sc1*/
+                        intrs += test_intrpatch(particle1, vec4, particle1.pcanglsw, x2, intersections);
                     }
                 }
             }
@@ -335,13 +359,13 @@ int psc_intersect(const Cigar& part1, const Cigar& part2, const Point& r_cm, std
       set as second intersection end inside patch*/
     if (intrs < 2) {
         /*whole spherocylinder is in or all out if intrs ==0*/
-        vec1 = part2.scdir * part2.half_length - r_cm;
+        vec1 = particle2.scdir * particle2.half_length - r_cm;
         /*vector from CM of sc1 to end of sc2*/
         /*check is is inside sc1*/
-        a = vec1.dot(part1.scdir);
-        vec3 = vec1 - part1.scdir * a;
+        a = vec1.dot(particle1.scdir);
+        vec3 = vec1 - particle1.scdir * a;
         b = vec3.dot(vec3);
-        d = fabs(a) - part1.half_length;
+        d = fabs(a) - particle1.half_length;
         if (d <= 0) {
             c = b;
         } /*is inside cylindrical part*/
@@ -349,16 +373,16 @@ int psc_intersect(const Cigar& part1, const Cigar& part2, const Point& r_cm, std
             c = d * d + b;
         } /*is inside caps*/
         /*c is distance squared from line or end to test if is inside sc*/
-        if (c < rcut2) {
-            intrs += test_intrpatch(part1, vec1, part1.pcanglsw, part2.half_length, intersections);
+        if (c < cutoff_squared) {
+            intrs += test_intrpatch(particle1, vec1, particle1.pcanglsw, particle2.half_length, intersections);
         }
         if (intrs < 2) {
-            vec2 = -part2.scdir * part2.half_length - r_cm;
+            vec2 = -particle2.scdir * particle2.half_length - r_cm;
             /*check is is inside sc1*/
-            a = vec2.dot(part1.scdir);
-            vec4 = vec2 - part1.scdir * a;
+            a = vec2.dot(particle1.scdir);
+            vec4 = vec2 - particle1.scdir * a;
             b = vec4.dot(vec4);
-            d = fabs(a) - part1.half_length;
+            d = fabs(a) - particle1.half_length;
             if (d <= 0) {
                 c = b;
             } /*is inside cylindrical part*/
@@ -366,14 +390,23 @@ int psc_intersect(const Cigar& part1, const Cigar& part2, const Point& r_cm, std
                 c = d * d + b;
             } /*is inside caps*/
             /*c is distance squared from line or end to test if is inside sc*/
-            if (c < rcut2) {
-                intrs += test_intrpatch(part1, vec2, part1.pcanglsw, -1.0 * part2.half_length, intersections);
+            if (c < cutoff_squared) {
+                intrs +=
+                    test_intrpatch(particle1, vec2, particle1.pcanglsw, -1.0 * particle2.half_length, intersections);
             }
         }
     }
     return intrs;
 }
 
+/**
+ * @param cigar1
+ * @param cigar2
+ * @param r_cm
+ * @param intersections
+ * @param cutoff_squared
+ * @return
+ */
 int cpsc_intersect(const Cigar& cigar1, const Cigar& cigar2, const Point& r_cm, std::array<double, 5>& intersections,
                    const double cutoff_squared) {
     int intrs;
@@ -527,5 +560,164 @@ HardSpheroCylinder::HardSpheroCylinder()
 void HardSpheroCylinder::to_json([[maybe_unused]] json& j) const {}
 
 void HardSpheroCylinder::from_json([[maybe_unused]] const json& j) {}
+
+/**
+ * @param particle1 First PSC particle
+ * @param particle2 Second PSC particle
+ * @param center_separation
+ * @return
+ */
+template <typename PatchPotential, typename CylinderPotential>
+double CigarWithCigar<PatchPotential, CylinderPotential>::patchyPatchyEnergy(
+    const Particle& particle1, const Particle& particle2,
+    const Point& center_separation) const { // patchy sc with patchy sc
+    const auto cutoff_squared = patch_potential.cutOffSquared(particle1.id, particle1.id);
+    std::array<double, 5> intersections;
+
+    // distance for repulsion
+    const auto rclose_squared =
+        SpheroCylinder::mindist_segment2segment(particle1.ext->scdir, particle1.ext->half_length, particle2.ext->scdir,
+                                                particle2.ext->half_length, center_separation)
+            .squaredNorm();
+    // 1- do intersections of spherocylinder2 with patch of spherocylinder1 at.
+    //  cut distance C
+    int intrs = 0;
+    intersections.fill(0.0);
+    if (particle1.traits().sphero_cylinder.type == SpheroCylinderData::PatchType::Full) {
+        intrs = SpheroCylinder::psc_intersect(particle1.getExt(), particle2.getExt(), center_separation, intersections,
+                                              cutoff_squared);
+    } else {
+        if (particle1.traits().sphero_cylinder.type == SpheroCylinderData::PatchType::Capped) {
+            intrs = SpheroCylinder::cpsc_intersect(particle1.getExt(), particle2.getExt(), center_separation,
+                                                   intersections, cutoff_squared);
+        } else {
+            throw std::runtime_error("unimplemented");
+        }
+    }
+    if (intrs < 2) {
+        // sc is all outside patch, attractive energy is 0
+        return cylinder_potential(particle1, particle2, rclose_squared, Point::Zero());
+    }
+    auto T1 = intersections[0]; // points on sc2
+    auto T2 = intersections[1];
+    // 2- now do the same oposite way psc1 in patch of psc2
+    intersections.fill(0.0);
+    if (particle1.traits().sphero_cylinder.type ==
+        SpheroCylinderData::PatchType::Full) { //!< @warning should this not be b.traits()?
+        intrs = SpheroCylinder::psc_intersect(particle2.getExt(), particle1.getExt(), -center_separation, intersections,
+                                              cutoff_squared);
+    } else {
+        if (particle1.traits().sphero_cylinder.type ==
+            SpheroCylinderData::PatchType::Capped) { //!< @warning should this not be particle2.traits()?
+            intrs = SpheroCylinder::cpsc_intersect(particle2.getExt(), particle1.getExt(), -center_separation,
+                                                   intersections, cutoff_squared);
+        } else {
+            throw std::runtime_error("unimplemented");
+        }
+    }
+    if (intrs < 2) { // sc is all outside patch, attractive energy is 0
+        return cylinder_potential(particle1, particle2, rclose_squared, Point::Zero());
+    }
+    const auto S1 = intersections[0]; // points on sc1
+    const auto S2 = intersections[1];
+
+    // 3- scaling function1: dependence on the length of intersetions
+    const auto v1 = fabs(S1 - S2) * 0.5;
+    const auto v2 = fabs(T1 - T2) * 0.5;
+    const auto f0 = v1 + v2;
+    // 4a- with two intersection pices calculate vector between their CM
+    //-this is for angular orientation
+    Point vec1 = particle1.ext->scdir * (S1 + S2) * 0.5;
+    Point vec2 = particle2.ext->scdir * (T1 + T2) * 0.5;
+    Point vec_intrs = vec2 - vec1 - center_separation; // vec_intrs should be from sc1 t sc2
+
+    // 5- scaling function2: angular dependence of patch1
+    vec1 = SpheroCylinder::vec_perpproject(vec_intrs, particle1.ext->scdir);
+    vec1.normalize();
+    auto s = vec1.dot(particle1.ext->patchdir);
+    const auto f1 = SpheroCylinder::fanglscale(s, particle1.getExt());
+
+    // 6- scaling function3: angular dependence of patch2
+    vec1 = SpheroCylinder::vec_perpproject(-vec_intrs, particle2.ext->scdir).normalized();
+    s = vec1.dot(particle2.ext->patchdir);
+    const auto f2 = SpheroCylinder::fanglscale(s, particle2.getExt());
+
+    // 7 - calculate closest distance attractive energy from it
+    auto vec_mindist =
+        SpheroCylinder::mindist_segment2segment(particle1.ext->scdir, v1, particle2.ext->scdir, v2, vec_intrs);
+    auto ndistsq = vec_mindist.dot(vec_mindist);
+
+    // 8- put it all together and output scale
+    return f0 * f1 * f2 * patch_potential(particle1, particle2, ndistsq, Point::Zero()) +
+           cylinder_potential(particle1, particle2, rclose_squared, Point::Zero());
+}
+
+template <typename PatchPotential, typename CylinderPotential>
+double CigarWithCigar<PatchPotential, CylinderPotential>::isotropicIsotropicEnergy(
+    const Particle& particle1, const Particle& particle2,
+    const Point& center_separation) const { // isotropic sc with isotropic sc
+    const auto mindist =
+        SpheroCylinder::mindist_segment2segment(particle1.ext->scdir, particle1.ext->half_length,
+                                                particle2.ext->scdir, particle2.ext->half_length, center_separation)
+            .squaredNorm();
+    return patch_potential(particle1, particle2, mindist, Point::Zero()) +
+           cylinder_potential(particle1, particle2, mindist, Point::Zero());
+}
+
+template <typename PatchPotential, typename CylinderPotential>
+void CigarWithCigar<PatchPotential, CylinderPotential>::to_json(json& j) const {
+    j["patch"] = static_cast<json>(patch_potential);
+    j["cylinder"] = static_cast<json>(cylinder_potential);
+}
+
+template <typename PatchPotential, typename CylinderPotential>
+void CigarWithCigar<PatchPotential, CylinderPotential>::from_json(const json& j) {
+    patch_potential = j;
+    cylinder_potential = j;
+}
+
+template <typename PatchPotential, typename CylinderPotential>
+CigarWithCigar<PatchPotential, CylinderPotential>::CigarWithCigar()
+    : PairPotentialBase("cigar-cigar", ""s, false) {}
+
+template class CigarWithCigar<CosAttractMixed, WeeksChandlerAndersen>; // explicit initialization
+
+// -----------------------------
+
+template <typename PatchPotential, typename CylinderPotential, typename SphereWithSphere>
+void CompleteCigarPotential<PatchPotential, CylinderPotential, SphereWithSphere>::to_json(json& j) const { j = {sphere_sphere, cigar_cigar, cigar_sphere}; }
+
+template <typename PatchPotential, typename CylinderPotential, typename SphereWithSphere>
+void CompleteCigarPotential<PatchPotential, CylinderPotential, SphereWithSphere>::from_json(const json& j) {
+    sphere_sphere = j;
+    cigar_cigar = j;
+    cigar_sphere = j;
+}
+
+template <typename PatchPotential, typename CylinderPotential, typename SphereWithSphere>
+CompleteCigarPotential<PatchPotential, CylinderPotential, SphereWithSphere>::CompleteCigarPotential()
+    : PairPotentialBase("complete cigar", ""s, false) {}
+
+template class CompleteCigarPotential<CosAttractMixed, WeeksChandlerAndersen>; // explicit initialization
+
+// -------------------------------
+
+template <typename PatchPotential, typename CylinderPotential>
+CigarWithSphere<PatchPotential, CylinderPotential>::CigarWithSphere()
+    : PairPotentialBase("cigar-sphere", ""s, false) {}
+
+template <typename PatchPotential, typename CylinderPotential>
+void CigarWithSphere<PatchPotential, CylinderPotential>::to_json(json& j) const {
+    j["patch"] = static_cast<json>(patch_potential);
+    j["cylinder"] = static_cast<json>(cylinder_potential);
+}
+
+template <typename PatchPotential, typename CylinderPotential>
+void CigarWithSphere<PatchPotential, CylinderPotential>::from_json(const json& j) {
+    patch_potential = j;
+    cylinder_potential = j;
+}
+
+template class CigarWithSphere<CosAttractMixed, WeeksChandlerAndersen>; // explicit initialization
 
 } // namespace Faunus::Potential

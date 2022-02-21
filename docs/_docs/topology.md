@@ -116,20 +116,19 @@ energy:
 ~~~
 
 Possible patch types are `none`, `full` and `capped` signifying
-no patch (○◻◻○);
-a patch that runs the full length including the end caps (●◼◼●);
-or a capped variant where the patch stops before the caps (○◼◼○).
-Angles are given in degrees.
+no patch (○◻○);
+a patch that runs the full length including the end caps (●◼●);
+or a capped variant where the patch stops before the caps (○◼○).
 The `coswca-psc` potential can handle mixtures of PSCs and spherical particles.
 When a spherical particle interacts with the PSC, the closest distances to the patch and excluded volume
 are used to evaluate the attractive and repulsive energy.
 
 `psc`                  | Description
 ---------------------- | -------------------------------------------------
-`type=none`            | `none` (○◻◻○), `full` (●◼◼●), `capped` (○◼◼○)
+`type=none`            | `none` (○◻○), `full` (●◼●), `capped` (○◼○)
 `length=0`             | Length of cylinder (Å)
 `chiral_angle=0`       | Patch angle with respect to length axis (degrees)
-`patch_angle=0`        | Opening angle of patch (degrees), i.e. ◔
+`patch_angle=0`        | Opening angle of patch (degrees), ◔ (degrees)
 `patch_angle_switch=0` | (degrees)
 
 

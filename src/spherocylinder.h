@@ -3,6 +3,12 @@
 #include "potentials_base.h"
 #include "units.h"
 
+/**
+ * The algorithms found here are mainly direct conversions from
+ * Robert Vacha's spherocylinder C code (~2008-2010).
+ *
+ * @todo cleanup and split into smaller functions.
+ */
 namespace Faunus::SpheroCylinder {
 
 /**
@@ -36,23 +42,19 @@ inline Point vec_perpproject(const Point& a, const Point& b) { return a - b * a.
 Point mindist_segment2segment(const Point& dir1, double halfl1, const Point& dir2, double halfl2, const Point& r_cm);
 
 /**
- * @param dir Direction of segment
- * @param halfl Half length of segment
- * @param r_cm Distance vector between the middle segment to point
+ * @param segment_direction Direction of segment
+ * @param half_length Half length of segment
+ * @param separation Distance vector between the middle segment to point
  */
-inline Point mindist_segment2point(const Point& dir, double halfl, const Point& r_cm) {
+inline Point mindist_segment2point(const Point& segment_direction, const double half_length, const Point& separation) {
+    const auto c = segment_direction.dot(separation);
     double d;
-    double c = dir.dot(r_cm);
-    if (c > halfl) {
-        d = halfl;
+    if (c > half_length) {
+        d = half_length;
     } else {
-        if (c > -halfl) {
-            d = c;
-        } else {
-            d = -halfl;
-        }
+        d = (c > -half_length) ? d = c : -half_length;
     }
-    return -r_cm + (dir * d);
+    return -separation + (segment_direction * d);
 }
 
 /**
@@ -79,19 +81,14 @@ int find_intersect_planec(const Cigar& part1, const Cigar& part2, const Point& r
 /**
  * @brief Intersections of spherocylinder2 with a all-way patch of spherocylinder1 and return them (PSC)
  */
-int psc_intersect(const Cigar& part1, const Cigar& part2, const Point& r_cm, std::array<double, 5>& intersections,
-                  double rcut2);
+int psc_intersect(const Cigar& particle1, const Cigar& particle2, const Point& r_cm,
+                  std::array<double, 5>& intersections, double cutoff_squared);
 
 /**
  * @brief Intersection of PSC2 with cylindrical patch of PSC1 and return them (CPSC)
  */
 int cpsc_intersect(const Cigar& part1, const Cigar& part2, const Point& r_cm, std::array<double, 5>& intersections,
                    double rcut2);
-} // namespace Faunus::SpheroCylinder
-
-// ---------------------------------------------------------------------------------------------
-
-namespace Faunus::Potential {
 
 inline double fanglscale(const double a, const Cigar& cigar) {
     // a = r_ij * n_i
@@ -103,6 +100,12 @@ inline double fanglscale(const double a, const Cigar& cigar) {
     }
     return 0.5 - ((cigar.pcanglsw + cigar.pcangl) * 0.5 - a) / (cigar.pcangl - cigar.pcanglsw);
 }
+
+} // namespace Faunus::SpheroCylinder
+
+// --------------------
+
+namespace Faunus::Potential {
 
 /** @brief Hard-sphere pair potential for spherocylinders */
 class HardSpheroCylinder : public PairPotentialBase {
@@ -133,12 +136,13 @@ class HardSpheroCylinder : public PairPotentialBase {
  */
 template <typename PatchPotential, typename CylinderPotential> class CigarWithSphere : public PairPotentialBase {
   private:
-    PatchPotential patch_potential;
-    CylinderPotential cylinder_potential;
+    PatchPotential patch_potential;       //!< Isotropic pair-potential between patches
+    CylinderPotential cylinder_potential; //!< Isotropic pair-potential between non-patchy parts
 
   public:
-    CigarWithSphere()
-        : PairPotentialBase("cigar-sphere", ""s, false) {}
+    CigarWithSphere();
+    void to_json(json& j) const override;
+    void from_json(const json& j) override;
 
     inline double operator()(const Particle& cigar, const Particle& sphere, [[maybe_unused]] double distance_squared,
                              const Point& center_separation) const override {
@@ -154,7 +158,7 @@ template <typename PatchPotential, typename CylinderPotential> class CigarWithSp
                 contt = -cigar.ext->half_length;
             }
         }
-        Point distvec = -center_separation + (cigar.ext->scdir * contt);
+        const Point distvec = -center_separation + (cigar.ext->scdir * contt);
         if (cigar.traits().sphero_cylinder.type == SpheroCylinderData::PatchType::None &&
             sphere.traits().sphero_cylinder.type == SpheroCylinderData::PatchType::None) {
             return cylinder_potential(cigar, sphere, distvec.squaredNorm(), Point::Zero());
@@ -163,13 +167,13 @@ template <typename PatchPotential, typename CylinderPotential> class CigarWithSp
         // patchy interaction
         const auto cutoff_squared = patch_potential.cutOffSquared(cigar.id, sphere.id);
         // scaling function: angular dependence of patch1
-        Point vec1 = SpheroCylinder::vec_perpproject(distvec, cigar.ext->scdir).normalized();
+        const Point vec1 = SpheroCylinder::vec_perpproject(distvec, cigar.ext->scdir).normalized();
         const auto s = vec1.dot(cigar.ext->patchdir);
-        const auto f1 = fanglscale(s, cigar.getExt());
+        const auto f1 = SpheroCylinder::fanglscale(s, cigar.getExt());
 
         // scaling function for the length of spherocylinder within cutoff
-        auto ndist_squared = distvec.dot(distvec);
-        auto t = sqrt(cutoff_squared - ndist_squared); // TODO cutoff
+        const auto ndist_squared = distvec.dot(distvec);
+        const auto t = sqrt(cutoff_squared - ndist_squared); // TODO cutoff
         double f0;
         if (contt + t > cigar.ext->half_length) {
             f0 = cigar.ext->half_length;
@@ -184,27 +188,15 @@ template <typename PatchPotential, typename CylinderPotential> class CigarWithSp
         return f1 * (f0 + 1.0) * patch_potential(cigar, sphere, ndist_squared, Point::Zero()) +
                cylinder_potential(cigar, sphere, ndist_squared, Point::Zero());
     }
-
-    void to_json(json& j) const override {
-        j["patch"] = static_cast<json>(patch_potential);
-        j["cylinder"] = static_cast<json>(cylinder_potential);
-    }
-
-    void from_json(const json& j) override {
-        patch_potential = j;
-        cylinder_potential = j;
-    }
 };
 
 /**
- * @brief Template for cigar-cigar interactions including patchy cigars
+ * @brief Template for interactions between patchy sphero-cylinders (PSCs) interactions
  *
- * This template takes care of cigar-cigar interactions. If there are patches
- * here we calculate scaling factors based on the overlapping segments of the two
- * cigars (spherocylinders) withn their patches. f0 is for size of overlapping segment
+ * This template takes care of psc-psc interactions. If there are patches
+ * we calculate scaling factors based on the overlapping segments of the two
+ * PSCs withn their patches. f0 is for size of overlapping segment
  * whicle f1 anf f2 are scaling fators for orientation of pacthes.
- * `PatchPotential` is an isotropic potential, typically CosAttract, used for the patch, while `IsotropicPairPotential`
- * is used for the remaining "isotropic" SC, typically WeeksChandlerAndersen.
  *
  * @tparam PatchPotential Pair potential between two points on the patches (isotropic, e.g. CosAttract)
  * @tparam CylinderPotential Pair potential between closest cylinder parts (isotropic, e.g. WCA)
@@ -212,127 +204,29 @@ template <typename PatchPotential, typename CylinderPotential> class CigarWithSp
  */
 template <typename PatchPotential, typename CylinderPotential> class CigarWithCigar : public PairPotentialBase {
   private:
-    PatchPotential patch_potential;
-    CylinderPotential cylinder_potential;
+    PatchPotential patch_potential;       //!< Isotropic pair-potential for patchy parts
+    CylinderPotential cylinder_potential; //!< Isotropic pair-potential for cylindrical parts
 
     double patchyPatchyEnergy(const Particle& particle1, const Particle& particle2,
-                              const Point& center_separation) const { // patchy sc with patchy sc
-        const auto cutoff_squared = patch_potential.cutOffSquared(particle1.id, particle1.id);
-        std::array<double, 5> intersections;
-
-        // distance for repulsion
-        const auto rclose_squared =
-            SpheroCylinder::mindist_segment2segment(particle1.ext->scdir, particle1.ext->half_length,
-                                                    particle2.ext->scdir, particle2.ext->half_length, center_separation)
-                .squaredNorm();
-        // 1- do intersections of spherocylinder2 with patch of spherocylinder1 at.
-        //  cut distance C
-        int intrs = 0;
-        intersections.fill(0.0);
-        if (particle1.traits().sphero_cylinder.type == SpheroCylinderData::PatchType::Full) {
-            intrs = SpheroCylinder::psc_intersect(particle1.getExt(), particle2.getExt(), center_separation,
-                                                  intersections, cutoff_squared);
-        } else {
-            if (particle1.traits().sphero_cylinder.type == SpheroCylinderData::PatchType::Capped) {
-                intrs = SpheroCylinder::cpsc_intersect(particle1.getExt(), particle2.getExt(), center_separation,
-                                                       intersections, cutoff_squared);
-            } else {
-                throw std::runtime_error("unimplemented");
-            }
-        }
-        if (intrs < 2) {
-            // sc is all outside patch, attractive energy is 0
-            return cylinder_potential(particle1, particle2, rclose_squared, Point::Zero());
-        }
-        auto T1 = intersections[0]; // points on sc2
-        auto T2 = intersections[1];
-        // 2- now do the same oposite way psc1 in patch of psc2
-        intersections.fill(0.0);
-        if (particle1.traits().sphero_cylinder.type ==
-            SpheroCylinderData::PatchType::Full) { //!< @warning should this not be b.traits()?
-            intrs = SpheroCylinder::psc_intersect(particle2.getExt(), particle1.getExt(), -center_separation,
-                                                  intersections, cutoff_squared);
-        } else {
-            if (particle1.traits().sphero_cylinder.type ==
-                SpheroCylinderData::PatchType::Capped) { //!< @warning should this not be particle2.traits()?
-                intrs = SpheroCylinder::cpsc_intersect(particle2.getExt(), particle1.getExt(), -center_separation,
-                                                       intersections, cutoff_squared);
-            } else {
-                throw std::runtime_error("unimplemented");
-            }
-        }
-        if (intrs < 2) { // sc is all outside patch, attractive energy is 0
-            return cylinder_potential(particle1, particle2, rclose_squared, Point::Zero());
-        }
-        auto S1 = intersections[0]; // points on sc1
-        auto S2 = intersections[1];
-
-        // 3- scaling function1: dependence on the length of intersetions
-        auto v1 = fabs(S1 - S2) * 0.5;
-        auto v2 = fabs(T1 - T2) * 0.5;
-        auto f0 = v1 + v2;
-        // 4a- with two intersection pices calculate vector between their CM
-        //-this is for angular orientation
-        Point vec1 = particle1.ext->scdir * (S1 + S2) * 0.5;
-        Point vec2 = particle2.ext->scdir * (T1 + T2) * 0.5;
-        Point vec_intrs = vec2 - vec1 - center_separation; // vec_intrs should be from sc1 t sc2
-
-        // 5- scaling function2: angular dependence of patch1
-        vec1 = SpheroCylinder::vec_perpproject(vec_intrs, particle1.ext->scdir);
-        vec1.normalize();
-        auto s = vec1.dot(particle1.ext->patchdir);
-        auto f1 = fanglscale(s, particle1.getExt());
-
-        // 6- scaling function3: angular dependence of patch2
-        vec1 = SpheroCylinder::vec_perpproject(-vec_intrs, particle2.ext->scdir).normalized();
-        s = vec1.dot(particle2.ext->patchdir);
-        auto f2 = fanglscale(s, particle2.getExt());
-
-        // 7 - calculate closest distance attractive energy from it
-        auto vec_mindist =
-            SpheroCylinder::mindist_segment2segment(particle1.ext->scdir, v1, particle2.ext->scdir, v2, vec_intrs);
-        auto ndistsq = vec_mindist.dot(vec_mindist);
-
-        // 8- put it all together and output scale
-        return f0 * f1 * f2 * patch_potential(particle1, particle2, ndistsq, Point::Zero()) +
-               cylinder_potential(particle1, particle2, rclose_squared, Point::Zero());
-    }
+                              const Point& center_separation) const;
 
     double isotropicIsotropicEnergy(const Particle& particle1, const Particle& particle2,
-                                    const Point& center_separation) const { // isotropic sc with isotropic sc
-        const auto mindist =
-            SpheroCylinder::mindist_segment2segment(particle1.ext->scdir, particle1.ext->half_length,
-                                                    particle2.ext->scdir, particle2.ext->half_length, center_separation)
-                .squaredNorm();
-        return patch_potential(particle1, particle2, mindist, Point::Zero()) +
-               cylinder_potential(particle1, particle2, mindist, Point::Zero());
-    }
+                                    const Point& center_separation) const;
 
   public:
-    CigarWithCigar()
-        : PairPotentialBase("cigar-cigar", ""s, false) {}
+    CigarWithCigar();
+    void to_json(json& j) const override;
+    void from_json(const json& j) override;
 
-    double operator()(const Particle& particle1, const Particle& particle2,
-                      [[maybe_unused]] double center_separation_squared,
-                      const Point& center_separation) const override {
-
+    inline double operator()(const Particle& particle1, const Particle& particle2,
+                             [[maybe_unused]] double center_separation_squared,
+                             const Point& center_separation) const override {
         assert(particle1.hasExtension() && particle2.hasExtension());
-
         if (particle1.traits().sphero_cylinder.type != SpheroCylinderData::PatchType::None &&
             particle2.traits().sphero_cylinder.type != SpheroCylinderData::PatchType::None) {
             return patchyPatchyEnergy(particle1, particle2, center_separation);
         }
         return isotropicIsotropicEnergy(particle1, particle2, center_separation);
-    }
-
-    void to_json(json& j) const override {
-        j["patch"] = static_cast<json>(patch_potential);
-        j["cylinder"] = static_cast<json>(cylinder_potential);
-    }
-
-    void from_json(const json& j) override {
-        patch_potential = j;
-        cylinder_potential = j;
     }
 };
 
@@ -373,16 +267,9 @@ class CompleteCigarPotential : public PairPotentialBase {
         return cigar_sphere(b, a, distance_squared, distance);
     }
 
-    void to_json([[maybe_unused]] json& j) const override { j = {sphere_sphere, cigar_cigar, cigar_sphere}; }
-
-    void from_json(const json& j) override {
-        sphere_sphere = j;
-        cigar_cigar = j;
-        cigar_sphere = j;
-    }
-
-    CompleteCigarPotential()
-        : PairPotentialBase("complete cigar", ""s, false) {}
+    void to_json([[maybe_unused]] json& j) const override;
+    void from_json(const json& j) override;
+    CompleteCigarPotential();
 };
 
 } // namespace Faunus::Potential

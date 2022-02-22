@@ -104,7 +104,8 @@ class Cigar : public ParticlePropertyBase {
     void rotate(const Eigen::Quaterniond& quaternion, const Eigen::Matrix3d& rotation_matrix); //!< Rotate sphero-cylinder
     void to_json(json& j) const override;
     void from_json(const json& j) override;
-    void initialize(const SpheroCylinderData& psc); // initialize; run at start and after patch changes
+    void setDirections(const SpheroCylinderData& psc_data, const Point& new_direction,
+                       const Point& new_patch_direction);  // initialize; run at start and after patch changes
     template <class Archive> void serialize(Archive& archive) {
         archive(scdir, patchdir, patchsides.at(0), patchsides.at(1));
     }

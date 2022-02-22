@@ -36,16 +36,16 @@ class SpheroCylinderData {
 
   public:
     enum class PatchType {
-        None = 0,                      //!< No patch
-        Full = 1,                      //!< Patch runs the full length of the SC
-        Capped = 2,                    //!< Patch stops before the end caps
-        Invalid = 3
-    };                                 //!< Not yet in use @todo replace `patch_type` integer
-    double chiral_angle = 0;           //!< Chiral angle (rotation of patch) on PSC
-    double length = 0;                 //!< Sphere-cylinder length
-    double patch_angle = 0;            //!< Angle of attrative patch on PSC (~pangle)
-    double patch_angle_switch = 0;     //!< Angle of angular switch on sides of patch on PSC (~panglsw)
-    PatchType type = PatchType::None;  //!< Patch type of spherocylinder
+        None = 0,                     //!< No patch
+        Full = 1,                     //!< Patch runs the full length of the SC
+        Capped = 2,                   //!< Patch stops before the end caps
+        Invalid = 3                   //!< Used to detect invalid input
+    };                                //!< Type of PSC particle
+    double chiral_angle = 0.0;        //!< Rotation of patch relative to direction (radians)
+    double length = 0.0;              //!< Sphere-cylinder length
+    double patch_angle = 0.0;         //!< Opening angle of attrative patch (radians)
+    double patch_angle_switch = 0.0;  //!< Gradually switch on patch interaction over angular interval (radians)
+    PatchType type = PatchType::None; //!< Patch type of spherocylinder
 };
 
 void from_json(const json& j, SpheroCylinderData& psc);

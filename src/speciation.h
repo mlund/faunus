@@ -53,6 +53,7 @@ class SpeciationMove : public MoveBase {
     void deactivateAllReactants(Change &); //!< Delete reactant species
     void activateAllProducts(Change &);    //!< Insert product species
     void updateGroupMassCenters(const Change& change) const; //!< Update affected molecular mass centers
+    void swapParticleProperties(Particle& target_particle, int new_atomid) const; //!< Swap particle properties
 
     Change::GroupChange contractAtomicGroup(Space::GroupType&, Space::GroupType&, int); //!< Contract atomic group
     Change::GroupChange expandAtomicGroup(Space::GroupType&, int);                      //!< Expand atomic group

@@ -81,9 +81,7 @@ void Cigar::to_json(json& j) const {
 void Cigar::from_json(const json& j) {
     assert(j.contains("id"));
     const auto& psc = Faunus::atoms.at(j.at("id").get<int>()).sphero_cylinder;
-    scdir = j.value("scdir", Point(1.0, 0.0, 0.0));
-    patchdir = j.value("pdir", Point(0.0, 1.0, 0.0));
-    initialize(psc);
+    setDirections(psc, j.value("scdir", Point(1.0, 0.0, 0.0)), j.value("pdir", Point(0.0, 1.0, 0.0)));
 }
 
 /**
@@ -93,41 +91,41 @@ void Cigar::from_json(const json& j) {
  * This function must be called at the beginning of calculations and after changes
  * of patch properties.
  * It shall be also after a lot of moves to remove accumulated errors
- *
- * @note Largely from Robert Vacha's C code
  */
-void Cigar::initialize(const SpheroCylinderData& psc) {
+void Cigar::setDirections(const SpheroCylinderData& psc_data, const Point& new_direction, const Point &new_patch_direction) {
     constexpr auto very_small_number = 1e-9;
-    half_length = 0.5 * psc.length;
-    if (half_length > very_small_number) {
-        pcangl = std::cos(0.5 * psc.patch_angle);
-        pcanglsw = std::cos(0.5 * psc.patch_angle + psc.patch_angle_switch);
+    half_length = 0.5 * psc_data.length;
+    if (half_length < very_small_number) {
+        return;
+    }
 
-        scdir = scdir.squaredNorm() < very_small_number ? Point(1, 0, 0) : scdir.normalized();
-        patchdir = patchdir.squaredNorm() < very_small_number ? Point(0, 1, 0) : patchdir.normalized();
-        if (fabs(patchdir.dot(scdir)) > very_small_number) { // must be perpendicular
-            faunus_logger->trace("straigthening patch direction");
-            patchdir = (patchdir - scdir * patchdir.dot(scdir)).normalized(); // perp. project
-        }
+    pcangl = std::cos(0.5 * psc_data.patch_angle);
+    pcanglsw = std::cos(0.5 * psc_data.patch_angle + psc_data.patch_angle_switch);
 
-        /* calculate patch sides */
-        Point patch_length_axis = scdir;
-        Eigen::Quaterniond quaternion;
-        if (psc.chiral_angle > very_small_number) {
-            quaternion = Eigen::AngleAxisd(0.5 * psc.chiral_angle, patchdir);
-            patch_length_axis = quaternion * patch_length_axis;
-        }
+    scdir = scdir.squaredNorm() < very_small_number ? Point(1, 0, 0) : new_direction.normalized();
+    patchdir = patchdir.squaredNorm() < very_small_number ? Point(0, 1, 0) : new_patch_direction.normalized();
+    if (fabs(patchdir.dot(scdir)) > very_small_number) { // must be perpendicular
+        faunus_logger->trace("straigthening patch direction");
+        patchdir = (patchdir - scdir * patchdir.dot(scdir)).normalized(); // perp. project
+    }
 
-        /* create side vector by rotating patch vector by half size of patch*/
-        const auto half_angle = 0.5 * psc.patch_angle + psc.patch_angle_switch;
-        quaternion = Eigen::AngleAxisd(half_angle, patch_length_axis);
-        patchsides.at(0) = (quaternion * patchdir).normalized();
-        quaternion = Eigen::AngleAxisd(-half_angle, patch_length_axis);
-        patchsides.at(1) = (quaternion * patchdir).normalized();
+    /* calculate patch sides */
+    Point patch_length_axis = scdir;
+    Eigen::Quaterniond quaternion;
+    if (psc_data.chiral_angle > very_small_number) {
+        quaternion = Eigen::AngleAxisd(0.5 * psc_data.chiral_angle, patchdir);
+        patch_length_axis = quaternion * patch_length_axis;
+    }
 
-        if (patchsides.at(0).squaredNorm() < very_small_number) {
-            throw std::runtime_error("patch side vector has zero size");
-        }
+    /* create side vector by rotating patch vector by half size of patch*/
+    const auto half_angle = 0.5 * psc_data.patch_angle + psc_data.patch_angle_switch;
+    quaternion = Eigen::AngleAxisd(half_angle, patch_length_axis);
+    patchsides.at(0) = (quaternion * patchdir).normalized();
+    quaternion = Eigen::AngleAxisd(-half_angle, patch_length_axis);
+    patchsides.at(1) = (quaternion * patchdir).normalized();
+
+    if (patchsides.at(0).squaredNorm() < very_small_number) {
+        throw std::runtime_error("patch side vector has zero size");
     }
 }
 bool Cigar::isCylindrical() const {

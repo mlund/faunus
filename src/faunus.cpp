@@ -374,13 +374,14 @@ void loadCoordinates(std::string_view filename, MetropolisMonteCarlo& simulation
         destination.pos = source.pos;
         if (source.hasExtension()) {
             auto& ext = destination.getExt();
-            if (source.getExt().half_length > pc::epsilon_dbl) {
+            if (source.getExt().isCylindrical() > pc::epsilon_dbl) {
                 ext.scdir = source.getExt().scdir;
                 ext.patchdir = source.getExt().patchdir;
                 ext.mu = source.getExt().mu;
                 ext.mulen = source.getExt().mulen;
                 ext.Q = source.getExt().Q;
-                ext.initialize(destination.traits().sphero_cylinder);
+                ext.setDirections(destination.traits().sphero_cylinder, source.getExt().scdir,
+                                  source.getExt().patchdir);
             }
         }
     };

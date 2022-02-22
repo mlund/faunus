@@ -42,70 +42,91 @@ void SpeciationMove::setOther(Space& other) { other_spc = &other; }
  *
  * @todo If particle has extended properties, make sure to copy the state of those
  */
-void SpeciationMove::atomicSwap(Change &change) {
-    if (reaction->swap) {
-        [[maybe_unused]] auto [atomic_products, molecular_products] = reaction->getProducts();
-        [[maybe_unused]] auto [atomic_reactants, molecular_reactants] = reaction->getReactants();
-
-        assert(atomic_products.size() == 1 and atomic_reactants.size() == 1);
-
-        auto atomlist = spc.findAtoms(atomic_reactants.begin()->first); // search all active molecules
-        if (ranges::cpp20::empty(atomlist)) { // Make sure that there are any active atoms to swap
-            throw SpeciationMoveException();
-        }
-
-        if (!molecular_reactants.empty()) {          // enough molecular reactants?
-            assert(molecular_reactants.size() == 1); // only one allowed this far
-            auto [molid, N] = *molecular_reactants.begin();
-            if (Faunus::molecules[molid].atomic) {
-                auto mollist = spc.findMolecules(molid, Space::Selection::ALL); // look for a single atomic group
-                assert(range_size(mollist) == 1);
-                if (mollist.begin()->empty()) {
-                    throw SpeciationMoveException();
-                }
-            } else { // reactant is a molecular group
-                auto mollist = spc.findMolecules(molid, Space::Selection::ACTIVE);
-                if (range_size(mollist) < N) {
-                    throw SpeciationMoveException();
-                }
-            }
-        }
-
-        if (!molecular_products.empty()) {          // enough inactive molecular products?
-            assert(molecular_products.size() == 1); // only one allowed this far
-            auto [molid, N] = *molecular_products.begin();
-            if (Faunus::molecules[molid].atomic) { // product is an atomic group
-                auto mollist = spc.findMolecules(molid, Space::Selection::ALL);
-                assert(range_size(mollist) == 1);
-                if (mollist.begin()->capacity() - mollist.begin()->size() < N) {
-                    throw SpeciationMoveException();
-                }
-            } else { // we're producing a molecular group
-                auto mollist = spc.findMolecules(molid, Space::Selection::INACTIVE);
-                if (range_size(mollist) < N) {
-                    throw SpeciationMoveException();
-                }
-            }
-        }
-        auto random_particle = slump.sample(atomlist.begin(), atomlist.end()); // target particle to swap
-        auto group = spc.findGroupContaining(*random_particle);                // find enclosing group
-
-        Change::GroupChange d; // describe what has change - used for energy cal.
-        d.relative_atom_indices.push_back(
-            Faunus::distance(group->begin(), random_particle));      // Index of particle rel. to group
-        d.group_index = Faunus::distance(spc.groups.begin(), group); // index of particle in group (starting from zero)
-        d.internal = true;
-        d.dNswap = true;
-        change.groups.push_back(d); // Add to list of moved groups
-
-        int atomid = atomic_products.begin()->first; // atomid of new atom type
-        Particle p = Faunus::atoms[atomid];          // temporary particle of new type
-        p.pos = random_particle->pos;                // get position from old particle
-        // todo: extended properties, dipole etc?
-        assert(!p.hasExtension() && "extended properties not yet implemented");
-        *random_particle = p; // copy new particle onto old particle
-        assert(random_particle->id == atomid);
+void SpeciationMove::atomicSwap(Change& change) {
+    if (!reaction->swap) {
+        return;
     }
+    [[maybe_unused]] const auto [atomic_products, molecular_products] = reaction->getProducts();
+    [[maybe_unused]] const auto [atomic_reactants, molecular_reactants] = reaction->getReactants();
+
+    assert(atomic_products.size() == 1 and atomic_reactants.size() == 1);
+
+    auto atomlist = spc.findAtoms(atomic_reactants.begin()->first); // search all active molecules
+    if (ranges::cpp20::empty(atomlist)) {                           // Make sure that there are any active atoms to swap
+        throw SpeciationMoveException();
+    }
+    auto& target_particle = *slump.sample(atomlist.begin(), atomlist.end()); // target particle to swap
+    auto& group = *spc.findGroupContaining(target_particle);                 // find enclosing group
+
+    if (!molecular_reactants.empty()) {          // enough molecular reactants?
+        assert(molecular_reactants.size() == 1); // only one allowed this far
+        const auto [molid, N] = *molecular_reactants.begin();
+        if (Faunus::molecules.at(molid).isAtomic()) {
+            auto mollist = spc.findMolecules(molid, Space::Selection::ALL); // look for a single atomic group
+            assert(range_size(mollist) == 1);
+            if (mollist.begin()->empty()) {
+                throw SpeciationMoveException();
+            }
+        } else { // reactant is a molecular group
+            auto mollist = spc.findMolecules(molid, Space::Selection::ACTIVE);
+            if (range_size(mollist) < N) {
+                throw SpeciationMoveException();
+            }
+        }
+    }
+
+    if (!molecular_products.empty()) {          // enough inactive molecular products?
+        assert(molecular_products.size() == 1); // only one allowed this far
+        const auto [molid, N] = *molecular_products.begin();
+        if (Faunus::molecules.at(molid).isAtomic()) { // product is an atomic group
+            auto mollist = spc.findMolecules(molid, Space::Selection::ALL);
+            assert(range_size(mollist) == 1);
+            if (mollist.begin()->capacity() - mollist.begin()->size() < N) {
+                throw SpeciationMoveException();
+            }
+        } else { // we're producing a molecular group
+            auto mollist = spc.findMolecules(molid, Space::Selection::INACTIVE);
+            if (range_size(mollist) < N) {
+                throw SpeciationMoveException();
+            }
+        }
+    }
+
+    auto& group_change = change.groups.emplace_back();
+    group_change.relative_atom_indices.push_back(group.getParticleIndex(target_particle));
+    group_change.group_index = spc.getGroupIndex(group);
+    group_change.internal = true;
+    group_change.dNswap = true;
+
+    const auto new_atomid = atomic_products.begin()->first;  // atomid of new atom type
+    swapParticleProperties(target_particle, new_atomid);
+}
+
+/**
+ * @brief Swap particle to another type
+ * @param target_particle The particle to update
+ * @param new_atomid The new atomtype to apply
+ *
+ * This will keep original positions and internal orientation of particles, while swapping
+ * the atomid and other properties related to the new atom type
+ *
+ * @todo This could make use of policies to customize how particles should be updated
+ */
+void SpeciationMove::swapParticleProperties(Particle& target_particle, const int new_atomid) const {
+    Particle source_particle = atoms.at(new_atomid); // temporary particle of new type
+    source_particle.pos = target_particle.pos;       // keep original positio
+    if (source_particle.hasExtension() || target_particle.hasExtension()) { // keep other orientational data
+        auto& source_ext = source_particle.getExt();
+        auto& target_ext = target_particle.getExt();
+        if (target_ext.isCylindrical() || source_ext.isCylindrical()) {
+            source_ext.setDirections(source_particle.traits().sphero_cylinder, target_ext.scdir, target_ext.patchdir);
+        }
+        if (target_ext.isDipolar() || source_ext.isQuadrupolar()) {
+            throw std::runtime_error("dipolar/quadrupolar properties not yet implemented");
+        }
+    }
+    target_particle = source_particle; // copy new particle onto old particle
+    assert(target_particle->id == new_atomid);
 }
 
 /**

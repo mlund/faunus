@@ -12,7 +12,6 @@
 #include "aux/eigensupport.h"
 #include "spdlog/spdlog.h"
 #include <range/v3/view/counted.hpp>
-#include <range/v3/algorithm/count_if.hpp>
 #include <range/v3/algorithm/count.hpp>
 #include <range/v3/view/transform.hpp>
 
@@ -956,8 +955,8 @@ AtomicSwapCharge::AtomicSwapCharge(Space& spc) : AtomicSwapCharge(spc, "swapchar
 
 void TranslateRotate::_to_json(json& j) const {
     j = {{"dir", translational_direction},
-         {"dp", translational_displacement},
-         {"dprot", rotational_displacement},
+         {"dp", translational_displacement / 1.0_angstrom},
+         {"dprot", rotational_displacement / 1.0_rad},
          {"dirrot", fixed_rotation_axis},
          {"molid", molid},
          {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(mean_squared_displacement.avg())},
@@ -973,10 +972,15 @@ void TranslateRotate::_from_json(const json& j) {
     }
     molid = molecule.id();
     translational_direction = j.value("dir", Point(1, 1, 1));
-    translational_displacement = j.at("dp").get<double>();
-    rotational_displacement = j.at("dprot").get<double>();
+    translational_displacement = j.at("dp").get<double>() * 1.0_angstrom;
+
+    rotational_displacement = std::fabs(j.at("dprot").get<double>() * 1.0_rad);
+    if (rotational_displacement > 2.0 * pc::pi) {
+        faunus_logger->warn("rotational displacement should be between [0:2π]");
+    }
+
     fixed_rotation_axis = j.value("dirrot", Point(0.0, 0.0, 0.0)); // predefined axis of rotation
-    if (fixed_rotation_axis.count() > 0.0) {
+    if (fixed_rotation_axis.count() > 0) {
         fixed_rotation_axis.normalize();
         faunus_logger->debug("{}: fixed rotation axis [{:.3f},{:.3f},{:.3f}]", name, fixed_rotation_axis.x(),
                              fixed_rotation_axis.y(), fixed_rotation_axis.z());
@@ -1030,7 +1034,7 @@ double TranslateRotate::rotateMolecule(Space::GroupType& group) {
         return 0.0;
     }
     Point rotation_axis;
-    if (fixed_rotation_axis.count() > 0.0) { // fixed user-defined axis
+    if (fixed_rotation_axis.count() > 0) { // fixed user-defined axis
         rotation_axis = fixed_rotation_axis;
     } else {
         rotation_axis = Faunus::randomUnitVector(slump);

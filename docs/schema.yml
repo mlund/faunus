@@ -87,7 +87,7 @@ properties:
                           activity: {type: number, default: 0.0}
                           alphax: {type: number, default: 0.0}
                           dp: {type: number, default: 0.0, minimum: 0.0}
-                          dprot: {type: number, default: 0.0, description: "Rotational displacement parameter"}
+                          dprot: {type: number, default: 0.0, description: "Rotational displacement (radians)", minimum: 0.0, maximum: 6.283185}
                           eps: {type: number, default: 0.0}
                           implicit: {type: boolean, default: false, description: "True if atom is implicit"}
                           mu:
@@ -688,7 +688,7 @@ properties:
                     description: "Molecular translation and rotation"
                     properties:
                         dp: {type: number}
-                        dprot: {type: number}
+                        dprot: {type: number, default: 0.0, description: "Rotational displacement (radians)", minimum: 0.0, maximum: 6.283185}
                         molecule: {type: string}
                         repeat: {type: [integer, string]}
                         region: {type: object, description: "Enable smart MC region search"}
@@ -757,7 +757,7 @@ properties:
                             minItems: 3
                             maxItems: 3
                         dp: {type: number}
-                        dprot: {type: number}
+                        dprot: {type: number, default: 0.0, description: "Rotational displacement (radians)", minimum: 0.0, maximum: 6.283185}
                         molecules:
                             items: {type: string}
                             type: array

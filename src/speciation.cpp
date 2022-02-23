@@ -126,7 +126,7 @@ void SpeciationMove::swapParticleProperties(Particle& target_particle, const int
         }
     }
     target_particle = source_particle; // copy new particle onto old particle
-    assert(target_particle->id == new_atomid);
+    assert(target_particle.id == new_atomid);
 }
 
 /**

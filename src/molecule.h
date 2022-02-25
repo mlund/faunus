@@ -377,8 +377,16 @@ class NeighboursGenerator {
  */
 class ReactionData {
   public:
-    using StoichiometryMap = std::map<int, int>; // key = molid; value = stoichiometic coefficient
+    using StoichiometryMap = std::map<int, int>; //!< key = id; value = stoichiometic coeff.
+    using AtomicAndMolecularPair = std::pair<const StoichiometryMap&, const StoichiometryMap&>;
+    using StoichiometryPair = StoichiometryMap::value_type; //!< first = id; second = stoichiometic coeff.
+    using MapFilter = std::function<bool(const ReactionData::StoichiometryPair&)>;
     enum class Direction : char { LEFT = 0, RIGHT = 1 };
+
+    const static MapFilter not_implicit_group;
+    const static MapFilter not_implicit_atom;
+    const static MapFilter is_atomic_group;
+    const static MapFilter is_molecular_group;
 
   private:
     friend void from_json(const json &, ReactionData &);
@@ -386,28 +394,13 @@ class ReactionData {
 
     Direction direction = Direction::RIGHT;           //!< Direction of reaction
     std::vector<std::string> left_names, right_names; //!< Names of reactants and products
-
-    StoichiometryMap left_molecules;  //!< Initial reactants (molecules)
-    StoichiometryMap right_molecules; //!< Initial products (molecules)
-    StoichiometryMap left_atoms;      //!< Initial reactants (atoms)
-    StoichiometryMap right_atoms;     //!< Initial products (atoms)
-
-  public:
-    void setDirection(Direction);                               //!< Set directions of the process
-    Direction getDirection() const;                             //!< Get direction of the process
-    void reverseDirection();                                    //!< Reverse direction of reaction
-    std::pair<const StoichiometryMap &, const StoichiometryMap &>
-    getProducts() const; //!< Pair with atomic and molecular products
-    std::pair<const StoichiometryMap &, const StoichiometryMap &>
-    getReactants() const; //!< Pair with atomic and molecular reactants
-
-    std::pair<std::set<int>, std::set<int>> getReactantsAndProducts() const;
-
-    bool swap = false;                   //!< True if swap move
-    double lnK = 0.0;                    //!< Effective, natural logarithm of molar eq. const.
-    double lnK_unmodified = 0.0;         //!< Natural logarithm of molar eq. const. (unmodified as in input)
-    bool only_neutral_molecules = false; //!< Only neutral molecules are involved in the reaction
-    std::string reaction_str;            //!< Name of reaction
+    StoichiometryMap left_molecules;                  //!< Initial reactants (molecules)
+    StoichiometryMap right_molecules;                 //!< Initial products (molecules)
+    StoichiometryMap left_atoms;                      //!< Initial reactants (atoms)
+    StoichiometryMap right_atoms;                     //!< Initial products (atoms)
+    double lnK = 0.0;                                 //!< Effective, natural logarithm of molar eq. const (left->right)
+    double lnK_unmodified = 0.0; //!< Natural logarithm of molar eq. const. (unmodified as in input)
+    std::string reaction_str;    //!< Name of reaction
 
     /**
      * @brief Find atom name or molecule name
@@ -418,6 +411,19 @@ class ReactionData {
     static std::pair<decltype(Faunus::atoms)::const_iterator, decltype(Faunus::molecules)::const_iterator>
     findAtomOrMolecule(const std::string& atom_or_molecule_name);
 
+  public:
+    void setDirection(Direction);                 //!< Set directions of the process
+    Direction getDirection() const;               //!< Get direction of the process
+    void reverseDirection();                      //!< Reverse direction of reaction
+    AtomicAndMolecularPair getProducts() const;   //!< Pair with atomic and molecular products
+    AtomicAndMolecularPair getReactants() const;  //!< Pair with atomic and molecular reactants
+    double freeEnergy() const;                    //!< Free energy of process in current direction (kT)
+    bool containsAtomicSwap() const;              //!< True if a swap move is detected, i.e. atom_a <-> atom_b
+    const std::string& getReactionString() const; //!< Reaction string
+
+    std::pair<std::set<int>, std::set<int>> participatingAtomsAndMolecules() const; //!< Atom and molecule id's affected
+
+    bool only_neutral_molecules = false; //!< Only neutral molecules are involved in the reaction
 }; //!< End of class
 
 /**

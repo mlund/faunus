@@ -6,6 +6,24 @@ namespace Faunus {
 namespace Move {
 
 /**
+ * Helper class to check if a reaction is possible, i.e.
+ * that there's sufficient reactant and product capacity
+ */
+class ValidateReaction {
+  private:
+    const Space& spc;
+    bool enoughImplicitMolecules(const ReactionData& reaction) const;
+    bool canSwapAtoms(const ReactionData& reaction) const;
+    bool canReduceMolecularGrups(const ReactionData& reaction) const;
+    bool canProduceMolecularGroups(const ReactionData& reaction) const;
+    bool canReduceAtomicGrups(const ReactionData& reaction) const;
+    bool canProduceAtomicGroups(const ReactionData& reaction) const;
+  public:
+    explicit ValidateReaction(const Space& spc);
+    bool reactionIsPossible(const ReactionData& reaction) const;
+};
+
+/**
  * @brief Generalised Grand Canonical Monte Carlo Move
  *
  * This move handles insertion and deletion of atomic and
@@ -24,21 +42,15 @@ namespace Move {
 class SpeciationMove : public MoveBase {
   private:
     using reaction_iterator = decltype(Faunus::reactions)::iterator;
-    using MoveBase::spc;        //!< Trial space (particles, groups)
-    Space *other_spc = nullptr; //!< Old space (particles, groups)
-    double bond_energy = 0;     //!< Accumulated bond energy if inserted/deleted molecule
-    reaction_iterator reaction; //!< Randomly selected reaction
+    Space* other_spc = nullptr;         //!< Old space (particles, groups)
+    double bond_energy = 0;             //!< Accumulated bond energy if inserted/deleted molecule
+    reaction_iterator reaction;         //!< Randomly selected reaction
+    ValidateReaction validate_reaction; //!< Helper to check if reaction is doable
 
     class AcceptanceData {
       public:
         Average<double> right, left;
-        inline void update(ReactionData::Direction direction, bool accept) {
-            if (direction == ReactionData::Direction::RIGHT) {
-                right += double(accept);
-            } else {
-                left += double(accept);
-            }
-        }
+        void update(ReactionData::Direction direction, bool accept);
     };
     std::map<reaction_iterator, AcceptanceData> acceptance;
     std::map<int, Average<double>> average_reservoir_size; //!< Average number of implicit molecules

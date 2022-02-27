@@ -413,6 +413,7 @@ class ReactionData {
 
   public:
     void setDirection(Direction);                 //!< Set directions of the process
+    void setRandomDirection(Random &random);      //!< Set random direction (left or right)
     Direction getDirection() const;               //!< Get direction of the process
     void reverseDirection();                      //!< Reverse direction of reaction
     AtomicAndMolecularPair getProducts() const;   //!< Pair with atomic and molecular products

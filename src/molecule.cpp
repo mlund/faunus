@@ -839,6 +839,11 @@ void ReactionData::setDirection(ReactionData::Direction new_direction) {
     }
 }
 
+void ReactionData::setRandomDirection(Random& random) {
+    auto direction = static_cast<ReactionData::Direction>((char)random.range(0, 1)); // random direction
+    setDirection(direction);
+}
+
 ReactionData::AtomicAndMolecularPair ReactionData::getProducts() const {
     if (direction == Direction::RIGHT) {
         return {right_atoms, right_molecules};

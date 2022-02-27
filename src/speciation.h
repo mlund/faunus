@@ -25,9 +25,7 @@ class ValidateReaction {
 };
 
 /**
- * Base class for (de)activating groups
- *
- * @todo Not yet implemented
+ * Helper base class for (de)activating groups in speciation move
  */
 class GroupDeActivator {
   public:
@@ -38,7 +36,20 @@ class GroupDeActivator {
     virtual ~GroupDeActivator() = default;
 };
 
-class AtomicGroupDeActivator : public GroupDeActivator {};
+/**
+ * Helper class for contracting and expanding atomic groups
+ */
+class AtomicGroupDeActivator : public GroupDeActivator {
+  private:
+    Space& spc;
+    Space& old_spc;
+    Random& slump;
+
+  public:
+    AtomicGroupDeActivator(Space& spc, Space& old_spc, Random& random);
+    ChangeAndBias activate(Group& group, OptionalInt number_to_insert) override;
+    ChangeAndBias deactivate(Group& group, OptionalInt number_to_delete) override;
+};
 
 /**
  * Helper class to (de)activate a single molecular group
@@ -55,7 +66,7 @@ class AtomicGroupDeActivator : public GroupDeActivator {};
 class MolecularGroupDeActivator : public GroupDeActivator {
   private:
     Space& spc;
-    std::function<void(Group&)> setGroupCoordinates; //!< Sets position and rotation of inserted group
+    std::function<void(Group&)> setPositionAndOrientation; //!< Sets position and rotation of inserted group
     double getBondEnergy(const Group& group) const;
 
   public:
@@ -77,54 +88,44 @@ class MolecularGroupDeActivator : public GroupDeActivator {
  *    - atomic swap
  *    - deactivate reactants
  *    - activate products
- *
- * @todo This class is still overly messy and needs general refactoring
  */
 class SpeciationMove : public MoveBase {
   private:
     using reaction_iterator = decltype(Faunus::reactions)::iterator;
-    Space* old_spc = nullptr;           //!< Old space (particles, groups)
-    double bond_energy = 0;             //!< Accumulated bond energy if inserted/deleted molecule
     reaction_iterator reaction;         //!< Randomly selected reaction
+    Space* old_spc = nullptr;           //!< Old space (particles, groups)
+    double bias_energy = 0.0;           //!< Accumulated bond energy if inserted/deleted molecule
     ValidateReaction validate_reaction; //!< Helper to check if reaction is doable
     std::unique_ptr<GroupDeActivator> molecularGroupDeActivator; //!< (de)activator for molecular groups
     std::unique_ptr<GroupDeActivator> atomicGroupDeActivator;    //!< (de)activator for atomic groups
 
-    std::function<void(Group&)> setActivatedGroupCoordinates; //!< Sets position and rotation of inserted group
-
-    class AcceptanceData {
-      public:
-        Average<double> right, left;
+    struct AcceptanceData {
+        Average<double> right; //!< Original left side of reaction
+        Average<double> left;  //!< Original right side of reaction
         void update(ReactionData::Direction direction, bool accept);
     };
     std::map<reaction_iterator, AcceptanceData> acceptance;
     std::map<int, Average<double>> average_reservoir_size; //!< Average number of implicit molecules
 
-    void _to_json(json&) const override;
+    void _to_json(json& j) const override;
     void _from_json(const json&) override;
-    void _move(Change&) override;                            //!< Perform move
-    void _accept(Change&) override;                          //!< Called when accepted
-    void _reject(Change&) override;                          //!< Called when rejected
-    bool enoughImplicitMolecules() const;                    //!< Check if we have enough implicit matter for reaction
-    void atomicSwap(Change&);                                //!< Swap atom type
-    void deactivateAllReactants(Change&);                    //!< Delete reactant species
-    void activateAllProducts(Change&);                       //!< Insert product species
+    void _move(Change& change) override;   //!< Perform move
+    void _accept(Change& change) override; //!< Called when accepted
+    void _reject(Change& change) override; //!< Called when rejected
+
+    void setReaction();                                      //!< Set random reaction and direction
+    bool enoughImplicitMolecules() const;                    //!< enough implicit matter for reaction?
+    void atomicSwap(Change& change);                         //!< Swap atom type
+    void deactivateAllReactants(Change& change);             //!< Delete all reactants
+    void activateAllProducts(Change& change);                //!< Insert all products
     void updateGroupMassCenters(const Change& change) const; //!< Update affected molecular mass centers
-    double getBondEnergy(const Group& group) const;          //!< Summed bond energy of group
 
-    Change::GroupChange contractAtomicGroup(Space::GroupType&, Space::GroupType&, int); //!< Contract atomic group
-    Change::GroupChange expandAtomicGroup(Space::GroupType&, int);                      //!< Expand atomic group
-    Change::GroupChange activateMolecularGroup(Space::GroupType&);                      //!< Activate molecular group
-    Change::GroupChange deactivateMolecularGroup(Space::GroupType&);                    //!< Deactivate molecular group
-
-    SpeciationMove(Space& spc, Space &old_spc, std::string_view name, std::string_view cite);
+    SpeciationMove(Space& spc, Space& old_spc, std::string_view name, std::string_view cite);
 
   public:
-    SpeciationMove(Space& spc, Space &old_spc);
-    double bias(Change& change, double old_energy,
-                double new_energy) override; //!< adds extra energy change not captured by the Hamiltonian
-
-}; // End of class SpeciationMove
+    SpeciationMove(Space& spc, Space& old_spc);
+    double bias(Change& change, double old_energy, double new_energy) override;
+};
 
 } // namespace Move
 } // namespace Faunus

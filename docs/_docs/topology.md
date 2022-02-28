@@ -238,7 +238,7 @@ i.e. hard-sphere potentials the initial energy may be infinite.
 Faunus supports density fluctuations, coupled to chemical equilibria with
 explicit and/or implicit particles via their chemical potentials as
 defined in the `reactionlist` detailed below, as well as in `atomlist` and
-`moleculelist`. The level of flexibility is very high and reactions can be
+`moleculelist`. The level of flexibility is high and reactions can be
 freely composed.
 
 The move involves deletion and insertion of reactants and products and it is
@@ -253,7 +253,7 @@ into products (right of `=`) that may be a mix of atomic and molecular species.
 
 - all species, `+`, and `=` must be surrounded by white-space
 - atom and molecule names cannot overlap
-- species can be repeated to match the desired stoichiometry, e.g. `A + A = C`
+- species can be repeated to match the desired stoichiometry, _e.g._ `A + A = C`
 
 Available keywords:
 
@@ -278,7 +278,7 @@ moleculelist:
   - Na+: {atoms: [na], atomic: true, activity: 0.1}
   - Cl-: {atoms: [cl], atomic: true, activity: 0.1}
 reactionlist:
-  - = Na+ + Cl+: {} # note: molecules, not atoms
+  - "= Na+ + Cl+": {} # note: molecules, not atoms
 moves:
   - rcmc: {} # activate speciation move
 ~~~
@@ -286,7 +286,7 @@ moves:
 The same setup can be used also for molecular molecules, _i.e._ molecules with `atomic: false`.
 
 
-### Example: Acid/base titration with _implicit_ protons
+### Example: Acid-base titration with _implicit_ protons
 
 An _implicit_ atomic reactant or product is included in the reaction but not 
 explicitly in the simulation cell.
@@ -312,7 +312,7 @@ only with Hamiltonians where this is allowed. This could for example be in syste
 Yukawa interactions. 
 
 
-### Example: Acid/base titration coupled with Grand Canonical Salt
+### Example: Acid-base titration coupled with Grand Canonical Salt
 
 To respect electroneutrality when swapping species, we can associate the titration move with
 an artificial insertion or deletion of salt ions. These ions should be present under constant
@@ -329,9 +329,9 @@ moleculelist:
   - Na+: {atoms: [na], atomic: true, activity: 0.1}
   - Cl-: {atoms: [cl], atomic: true, activity: 0.1}
 reactionlist:
-  - COOH + Cl- = COO- + H+: {pK: 4.8} # electroneutral!
-  - COOH = Na+ + COO- + H+: {pK: 4.8} # electroneutral!
-  - = Na+ + Cl-: {} # grand canonical salt
+  - "COOH + Cl- = COO- + H+": {pK: 4.8} # electroneutral!
+  - "COOH = Na+ + COO- + H+": {pK: 4.8} # electroneutral!
+  - "= Na+ + Cl-": {} # grand canonical salt
 ~~~
 
 For the first reaction, $K$ is divided by both $a_{\mathrm{H^+}}$ and $a_{\mathrm{Cl^-}}$, so that the final equilibrium constant
@@ -345,11 +345,14 @@ since the Grand Canonical ensemble ensures constant salt activity.
 
 ### Example: Precipitation of Calcium Hydroxide using _implicit_ molecules
 
-Here we introduce a solid phase of Ca(OH)2 and its solubility product
+Here we introduce a solid phase of Ca(OH)₂ and its solubility product
 to predict the amount of dissolved calcium and hydroxide ions. Note that
 we start from an empty simulation box (both ions are inactive) and the solid
-phase is treated _implicitly_, i.e. it never inters the simulation box.
-Additional coupled reactions can naturally be introduced in order to study complex
+phase is treated _implicitly_, _i.e._ it never inters the simulation box.
+If a forward reaction is made, one implicit molecule (out 200 in total) will
+be converted into explicit molecules.
+Once all 200 have been consumed, only backward reactions are possible.
+Additional, coupled reactions can be introduced to study complex
 equilibrium systems under influence of intermolecular interactions.
 
 ~~~ yaml
@@ -368,12 +371,20 @@ reactionlist:
 
 ### Example: Swapping between molecular conformations
 
-The following can be used to alternate between different molecular conformations
+The following can be used to alternate between different molecular conformations.
+When swapping, the mass center position and orientation are randomly generated.
 
 ~~~ yaml
 moleculelist:
-  - A: {atomic: false, structure: ...}
-  - B: {atomic: false, structure: ...}
+  - A: {structure: "conformationA.xyz", ...}
+  - B: {structure: "conformationB.xyz", ...}
 reactionlist:
-  - A = B: {lnK: 0.69} # K=2, "B" twice as likely as "A"
+  - "A = B": {lnK: 0.69} # K=2, "B" twice as likely as "A"
 ~~~
+
+### Internal degrees of freedom (experimental)
+
+If a fluctuating molecule has internal degreees of freedom, the internal bond energy is included
+as a bias so that the internal state does not affect the acceptance.
+To disable this behavior, a minor code modification is currently required (see `MolecularGroupDeActivator::apply_bond_bias`).
+

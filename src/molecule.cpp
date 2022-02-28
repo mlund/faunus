@@ -971,6 +971,10 @@ bool ReactionData::containsAtomicSwap() const {
     return (left_atoms.size() == 1 && right_atoms.size() == 1);
 }
 
+const ReactionData::MapFilter ReactionData::is_implicit_group = [](const auto& pair) {
+    return Faunus::molecules.at(pair.first).isImplicit();
+};
+
 const ReactionData::MapFilter ReactionData::not_implicit_group = [](const auto& pair) {
     return !Faunus::molecules.at(pair.first).isImplicit();
 };

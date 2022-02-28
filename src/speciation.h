@@ -9,19 +9,19 @@ namespace Move {
  * Helper class to check if a reaction is possible, i.e.
  * that there's sufficient reactant and product capacity
  */
-class ValidateReaction {
+class ReactionValidator {
   private:
     const Space& spc;
-    bool enoughImplicitMolecules(const ReactionData& reaction) const;
     bool canSwapAtoms(const ReactionData& reaction) const;
-    bool canReduceMolecularGrups(const ReactionData& reaction) const;
+    bool canReduceImplicitGroups(const ReactionData& reaction) const;
+    bool canReduceMolecularGroups(const ReactionData& reaction) const;
     bool canProduceMolecularGroups(const ReactionData& reaction) const;
     bool canReduceAtomicGrups(const ReactionData& reaction) const;
     bool canProduceAtomicGroups(const ReactionData& reaction) const;
 
   public:
-    explicit ValidateReaction(const Space& spc);
-    bool reactionIsPossible(const ReactionData& reaction) const;
+    explicit ReactionValidator(const Space& spc);
+    bool isPossible(const ReactionData& reaction) const; //!< Enough reactants and product capacity?
 };
 
 /**
@@ -67,11 +67,12 @@ class MolecularGroupDeActivator : public GroupDeActivator {
   private:
     Space& spc;
     Random& random;
+    const bool apply_bond_bias; //!< Set to true to use internal bond energy as bias
     double getBondEnergy(const Group& group) const;
     virtual void setPositionAndOrientation(Group& group) const; //!< Applied to newly activated groups
 
   public:
-    MolecularGroupDeActivator(Space& spc, Random& random);
+    MolecularGroupDeActivator(Space& spc, Random& random, bool apply_bond_bias);
     ChangeAndBias activate(Group& group, OptionalInt num_particles = std::nullopt) override;
     ChangeAndBias deactivate(Group& group, OptionalInt num_particles = std::nullopt) override;
 };
@@ -114,20 +115,19 @@ class SpeciationMove : public MoveBase {
     reaction_iterator reaction;                                //!< Randomly selected reaction
     Space* old_spc = nullptr;                                  //!< Old space (particles, groups)
     double bias_energy = 0.0;                                  //!< Group (de)activators may add bias
-    ValidateReaction validate_reaction;                        //!< Helper to check if reaction is doable
+    ReactionValidator reaction_validator;                      //!< Helper to check if reaction is doable
+    ReactionDirectionRatio direction_ratio;                    //!< Track acceptance in each direction
     std::unique_ptr<GroupDeActivator> molecular_group_bouncer; //!< (de)activator for molecular groups
     std::unique_ptr<GroupDeActivator> atomic_group_bouncer;    //!< (de)activator for atomic groups
-    ReactionDirectionRatio direction_ratio;                    //!< Track acceptance in each direction
     std::map<int, Average<double>> average_reservoir_size;     //!< Average number of implicit molecules
 
     void _to_json(json& j) const override;
-    void _from_json(const json&) override;
+    void _from_json(const json& j) override;
     void _move(Change& change) override;
     void _accept(Change& change) override;
     void _reject(Change& change) override;
 
     void setReaction();                                      //!< Set random reaction and direction
-    bool enoughImplicitMolecules() const;                    //!< enough implicit matter for reaction?
     void atomicSwap(Change& change);                         //!< Swap atom type
     void deactivateAllReactants(Change& change);             //!< Delete all reactants
     void activateAllProducts(Change& change);                //!< Insert all products

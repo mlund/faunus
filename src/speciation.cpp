@@ -3,12 +3,10 @@
 #include "aux/iteratorsupport.h"
 #include <algorithm>
 #include <range/v3/algorithm/all_of.hpp>
-#include <range/v3/algorithm/any_of.hpp>
 #include <range/v3/view/take.hpp>
 #include <range/v3/view/sample.hpp>
 
-namespace Faunus {
-namespace Move {
+namespace Faunus::Move {
 
 /**
  * @brief Internal exception to carry errors preventing the speciation move.
@@ -129,10 +127,6 @@ void SpeciationMove::activateAllProducts(Change& change) {
  */
 void SpeciationMove::deactivateAllReactants(Change& change) {
     namespace rv = ranges::cpp20::views;
-    if (not enoughImplicitMolecules()) {
-        throw SpeciationMoveException();
-    }
-
     auto molecular_reactants = reaction->getReactants().second | rv::filter(ReactionData::not_implicit_group) |
                                rv::filter([](auto& i) { return i.second > 0; });
 
@@ -173,53 +167,29 @@ TEST_CASE("[Faunus] Speciation - Ranges::sample") {
     CHECK(range_size(take_too_much) == 4);
 }
 
-/**
- * Checks if there is enough implicit molecules to carry out the reaction
- */
-bool SpeciationMove::enoughImplicitMolecules() const {
-    auto isExhausted = [&](auto& i) {                             // check if species has enough implicit
-        auto [molid, nu] = i;                                     // molid and stoichiometric coefficient
-        if (Faunus::molecules.at(molid).isImplicit()) {           // matter to perform process
-            assert(spc.getImplicitReservoir().count(molid) == 1); // must be registered in space!
-            return nu > spc.getImplicitReservoir()[molid];        // not enough material?
-        }
-        return false; // non-implicit molecules cannot be exhausted
-
-    };
-
-    [[maybe_unused]] auto [atomic_reactants, molecular_reactants] = reaction->getReactants();
-
-    return std::find_if(molecular_reactants.begin(), molecular_reactants.end(), isExhausted) ==
-           molecular_reactants.end(); // no molecule exhausted?
-}
-
 void SpeciationMove::_move(Change& change) {
     if (Faunus::reactions.empty()) {
         return;
     }
     bias_energy = 0.0;
     try {
-        setReaction(); // may throw
-        atomicSwap(change);
-        deactivateAllReactants(change);
-        activateAllProducts(change);
-        if (change) {
-            change.matter_change = true;
-            std::sort(change.groups.begin(), change.groups.end()); // change groups *must* be sorted!
-            updateGroupMassCenters(change);
+        setReaction();
+        if (reaction_validator.isPossible(*reaction)) {
+            atomicSwap(change);
+            deactivateAllReactants(change);
+            activateAllProducts(change);
+            if (change) {
+                change.matter_change = true;
+                std::sort(change.groups.begin(), change.groups.end()); // change groups *must* be sorted!
+                updateGroupMassCenters(change);
+            }
         }
     } catch (SpeciationMoveException&) { change.clear(); }
 }
 
-/**
- * Throws of the selected reaction cannot be carried out due to lack of reactants and product capacity
- */
 void SpeciationMove::setReaction() {
     reaction = slump.sample(reactions.begin(), reactions.end());
     reaction->setRandomDirection(slump);
-    if (!validate_reaction.reactionIsPossible(*reaction)) {
-        throw SpeciationMoveException();
-    }
 }
 
 /**
@@ -296,8 +266,8 @@ void SpeciationMove::_reject([[maybe_unused]] Change& change) {
 SpeciationMove::SpeciationMove(Space& spc, Space& old_spc, std::string_view name, std::string_view cite)
     : MoveBase(spc, name, cite)
     , old_spc(&old_spc)
-    , validate_reaction(spc) {
-    molecular_group_bouncer = std::make_unique<MolecularGroupDeActivator>(spc, slump);
+    , reaction_validator(spc) {
+    molecular_group_bouncer = std::make_unique<MolecularGroupDeActivator>(spc, slump, true);
     atomic_group_bouncer = std::make_unique<AtomicGroupDeActivator>(spc, old_spc, slump);
 }
 
@@ -308,30 +278,25 @@ void SpeciationMove::_from_json(const json&) {}
 
 // -----------------------------------------
 
-ValidateReaction::ValidateReaction(const Space& spc)
+ReactionValidator::ReactionValidator(const Space& spc)
     : spc(spc) {}
 
-bool ValidateReaction::reactionIsPossible(const ReactionData& reaction) const {
-    return enoughImplicitMolecules(reaction) && canSwapAtoms(reaction) && canReduceMolecularGrups(reaction) &&
+bool ReactionValidator::isPossible(const ReactionData& reaction) const {
+    return canReduceImplicitGroups(reaction) && canSwapAtoms(reaction) && canReduceMolecularGroups(reaction) &&
            canProduceMolecularGroups(reaction) && canReduceAtomicGrups(reaction) && canProduceAtomicGroups(reaction);
 }
 
-bool ValidateReaction::enoughImplicitMolecules(const ReactionData& reaction) const {
-    auto isExhausted = [&](auto& _pair) {                     // check if species has enough implicit
-        const auto [molid, nu] = _pair;                       // molid and stoichiometric coefficient
-        if (Faunus::molecules.at(molid).isImplicit()) {       // matter to perform process
-            return nu > spc.getImplicitReservoir().at(molid); // not enough material?
-        }
-        return false; // non-implicit molecules cannot be exhausted
+bool ReactionValidator::canReduceImplicitGroups(const ReactionData& reaction) const {
+    auto has_enough = [&](const auto& key_value) {
+        const auto& [molid, number_to_delete] = key_value;
+        return spc.getImplicitReservoir().at(molid) >= number_to_delete;
     };
-
-    [[maybe_unused]] auto [atomic_reactants, molecular_reactants] = reaction.getReactants();
-
-    return std::find_if(molecular_reactants.begin(), molecular_reactants.end(), isExhausted) ==
-           molecular_reactants.end(); // no molecule exhausted?
+    auto implicit_reactants =
+        reaction.getReactants().second | ranges::cpp20::views::filter(ReactionData::is_implicit_group);
+    return ranges::cpp20::all_of(implicit_reactants, has_enough);
 }
 
-bool ValidateReaction::canSwapAtoms(const ReactionData& reaction) const {
+bool ReactionValidator::canSwapAtoms(const ReactionData& reaction) const {
     namespace rv = ranges::cpp20::views;
     if (reaction.containsAtomicSwap()) {
         auto reactive_atoms = reaction.getReactants().first | rv::filter(ReactionData::not_implicit_atom);
@@ -345,13 +310,13 @@ bool ValidateReaction::canSwapAtoms(const ReactionData& reaction) const {
     return true;
 }
 
-bool ValidateReaction::canReduceMolecularGrups(const ReactionData& reaction) const {
+bool ReactionValidator::canReduceMolecularGroups(const ReactionData& reaction) const {
     namespace rv = ranges::cpp20::views;
     auto molecular_groups = reaction.getReactants().second | rv::filter(ReactionData::not_implicit_group) |
                             rv::filter(ReactionData::is_molecular_group);
 
-    auto cannot_reduce_molecular_group = [&](const auto& _pair) { // molecular reactant (non-atomic)
-        const auto [molid, number_to_delete] = _pair;
+    auto can_reduce = [&](const auto& key_value) { // molecular reactant (non-atomic)
+        const auto [molid, number_to_delete] = key_value;
         if (number_to_delete > 0) {
             const auto selection =
                 reaction.only_neutral_molecules ? Space::Selection::ACTIVE_NEUTRAL : Space::Selection::ACTIVE;
@@ -361,45 +326,45 @@ bool ValidateReaction::canReduceMolecularGrups(const ReactionData& reaction) con
                     faunus_logger->warn("all grand canonical {} molecules have been deleted; increase system volume?",
                                         Faunus::molecules.at(molid).name);
                 }
-                return true;
+                return false;
             }
         }
-        return false;
+        return true;
     };
-    return !ranges::cpp20::any_of(molecular_groups, cannot_reduce_molecular_group);
+    return ranges::cpp20::all_of(molecular_groups, can_reduce);
 }
 
-bool ValidateReaction::canReduceAtomicGrups(const ReactionData& reaction) const {
+bool ReactionValidator::canReduceAtomicGrups(const ReactionData& reaction) const {
     namespace rv = ranges::cpp20::views;
     auto atomic_groups = reaction.getReactants().second | rv::filter(ReactionData::not_implicit_group) |
                          rv::filter(ReactionData::is_atomic_group);
 
-    auto cannot_reduce_atomic_group = [&](const auto& _pair) {
+    auto can_reduce = [&](const auto& _pair) {
         const auto [molid, number_to_delete] = _pair;
         if (number_to_delete > 0) {
             auto mollist = spc.findMolecules(molid, Space::Selection::ALL);
             if (range_size(mollist) != 1) {
-                return true;
+                return false;
             }
             auto target = mollist.begin();
             if ((int)target->size() < number_to_delete) {
                 faunus_logger->warn("atomic group {} is depleted; increase simulation volume?",
                                     Faunus::molecules.at(molid).name);
-                return true;
+                return false;
             }
         }
-        return false;
+        return true;
     };
-    return !ranges::cpp20::any_of(atomic_groups, cannot_reduce_atomic_group);
+    return ranges::cpp20::all_of(atomic_groups, can_reduce);
 }
 
 /** enough molecular products? */
-bool ValidateReaction::canProduceMolecularGroups(const ReactionData& reaction) const {
+bool ReactionValidator::canProduceMolecularGroups(const ReactionData& reaction) const {
     namespace rv = ranges::cpp20::views;
     auto molecular_groups = reaction.getProducts().second | rv::filter(ReactionData::not_implicit_group) |
                             rv::filter(ReactionData::is_molecular_group);
 
-    auto cannot_create_molecular_group = [&](const auto& _pair) {
+    auto can_create = [&](const auto& _pair) {
         const auto [molid, number_to_insert] = _pair;
         if (number_to_insert > 0) {
             const auto selection =
@@ -408,31 +373,31 @@ bool ValidateReaction::canProduceMolecularGroups(const ReactionData& reaction) c
             if (range_size(inactive) != number_to_insert) {
                 faunus_logger->warn("maximum number of {} molecules reached; increase capacity?",
                                     Faunus::molecules.at(molid).name);
-                return true;
+                return false;
             }
         }
-        return false;
+        return true;
     };
-    return !ranges::cpp20::any_of(molecular_groups, cannot_create_molecular_group);
+    return ranges::cpp20::all_of(molecular_groups, can_create);
 }
 
-bool ValidateReaction::canProduceAtomicGroups(const ReactionData& reaction) const {
+bool ReactionValidator::canProduceAtomicGroups(const ReactionData& reaction) const {
     namespace rv = ranges::cpp20::views;
     auto atomic_groups = reaction.getProducts().second | rv::filter(ReactionData::not_implicit_group) |
                          rv::filter(ReactionData::is_atomic_group);
 
-    auto cannot_create_atomic_group = [&](const auto& _pair) {
+    auto can_expand = [&](const auto& _pair) {
         const auto [molid, number_to_insert] = _pair;
         auto mollist = spc.findMolecules(molid, Space::Selection::ALL);
         if (number_to_insert > 0 && range_size(mollist) > 0) {
             if (mollist.begin()->size() + number_to_insert > mollist.begin()->capacity()) {
                 faunus_logger->warn("atomic molecule {} is full; increase capacity?", Faunus::molecules.at(molid).name);
-                return true;
+                return false;
             }
         }
-        return false;
+        return true;
     };
-    return !ranges::cpp20::any_of(atomic_groups, cannot_create_atomic_group);
+    return ranges::cpp20::all_of(atomic_groups, can_expand);
 }
 
 // ----------------------------------------------
@@ -505,18 +470,21 @@ MolecularGroupDeActivator::deactivate(Group& group, GroupDeActivator::OptionalIn
     return {change_data, getBondEnergy(group)};
 }
 
-MolecularGroupDeActivator::MolecularGroupDeActivator(Space& spc, Random& random)
+MolecularGroupDeActivator::MolecularGroupDeActivator(Space& spc, Random& random, bool apply_bond_bias)
     : spc(spc)
-    , random(random) {}
+    , random(random)
+    , apply_bond_bias(apply_bond_bias) {}
 
 double MolecularGroupDeActivator::getBondEnergy(const Group& group) const {
     double energy = 0.0;
-    auto bonds = group.traits().bonds | ranges::views::transform(&Potential::BondData::clone);
-    ranges::cpp20::for_each(bonds, [&](auto bond) {
-        bond->shiftIndices(spc.getFirstParticleIndex(group));
-        bond->setEnergyFunction(spc.particles);
-        energy += bond->energyFunc(spc.geometry.getDistanceFunc());
-    });
+    if (apply_bond_bias) {
+        auto bonds = group.traits().bonds | ranges::views::transform(&Potential::BondData::clone);
+        ranges::cpp20::for_each(bonds, [&](auto bond) {
+            bond->shiftIndices(spc.getFirstParticleIndex(group));
+            bond->setEnergyFunction(spc.particles);
+            energy += bond->energyFunc(spc.geometry.getDistanceFunc());
+        });
+    }
     return energy;
 }
 
@@ -586,5 +554,4 @@ GroupDeActivator::ChangeAndBias AtomicGroupDeActivator::deactivate(Group& group,
     return {change_data, 0.0};
 }
 
-} // end of namespace Move
 } // end of namespace Faunus

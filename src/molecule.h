@@ -383,6 +383,7 @@ class ReactionData {
     using MapFilter = std::function<bool(const ReactionData::StoichiometryPair&)>;
     enum class Direction : char { LEFT = 0, RIGHT = 1 };
 
+    const static MapFilter is_implicit_group;
     const static MapFilter not_implicit_group;
     const static MapFilter not_implicit_atom;
     const static MapFilter is_atomic_group;

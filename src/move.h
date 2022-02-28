@@ -497,7 +497,7 @@ class MoveCollection {
     move_iterator sample();                                //!< Pick move from a weighted, random distribution
 
   public:
-    MoveCollection(const json& list_of_moves, Space& spc, Energy::Hamiltonian& hamiltonian);
+    MoveCollection(const json& list_of_moves, Space& spc, Energy::Hamiltonian& hamiltonian, Space &old_spc);
     void addMove(std::shared_ptr<MoveBase>&& move);                 //!< Register new move with correct weight
     const BasePointerVector<MoveBase>& getMoves() const;            //!< Get list of moves
     friend void to_json(json& j, const MoveCollection& propagator); //!< Generate json output

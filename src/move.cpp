@@ -299,8 +299,15 @@ void AtomicTranslateRotate::saveHistograms() {
 
 AtomicTranslateRotate::~AtomicTranslateRotate() { saveHistograms(); }
 
+/**
+ * @param name Name of move to create
+ * @param properties json configuration for move
+ * @param spc Reference to trial or "new" space
+ * @param hamiltonian Hamiltonian used for trial space
+ * @param old_spc Reference to "old" space (rarely used by any move, except Speciation)
+ */
 std::unique_ptr<MoveBase> createMove(const std::string& name, const json& properties, Space& spc,
-                                     Energy::Hamiltonian& hamiltonian) {
+                                     Energy::Hamiltonian& hamiltonian, Space &old_spc) {
     try {
         std::unique_ptr<MoveBase> move;
         if (name == "moltransrot") {
@@ -327,7 +334,7 @@ std::unique_ptr<MoveBase> createMove(const std::string& name, const json& proper
         } else if (name == "chargetransfer") {
             move = std::make_unique<ChargeTransfer>(spc);
         } else if (name == "rcmc") {
-            move = std::make_unique<SpeciationMove>(spc);
+            move = std::make_unique<SpeciationMove>(spc, old_spc);
         } else if (name == "quadrantjump") {
             move = std::make_unique<QuadrantJump>(spc);
         } else if (name == "cluster") {
@@ -362,12 +369,12 @@ void MoveCollection::addMove(std::shared_ptr<MoveBase>&& move) {
     number_of_moves_per_sweep = static_cast<unsigned int>(std::accumulate(repeats.begin(), repeats.end(), 0.0));
 }
 
-MoveCollection::MoveCollection(const json& list_of_moves, Space& spc, Energy::Hamiltonian& hamiltonian) {
+MoveCollection::MoveCollection(const json& list_of_moves, Space& spc, Energy::Hamiltonian& hamiltonian, Space &old_spc) {
     assert(list_of_moves.is_array());
     for (const auto& j : list_of_moves) { // loop over move list
         const auto& [name, parameters] = jsonSingleItem(j);
         try {
-            addMove(createMove(name, parameters, spc, hamiltonian));
+            addMove(createMove(name, parameters, spc, hamiltonian, old_spc));
         } catch (std::exception& e) {
             usageTip.pick(name);
             throw ConfigurationError("{}", e.what()).attachJson(j);

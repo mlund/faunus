@@ -10,6 +10,9 @@ namespace Faunus {
 bool Change::GroupChange::operator<(const Faunus::Change::GroupChange& other) const {
     return group_index < other.group_index;
 }
+void Change::GroupChange::sort() {
+    std::sort(relative_atom_indices.begin(), relative_atom_indices.end());
+}
 
 void Change::clear() {
     *this = Change();

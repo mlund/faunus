@@ -785,7 +785,7 @@ void AtomDensity::_sample() {
     DensityBase::_sample();
     std::set<id_type> unique_reactive_atoms;
     for (const auto& reaction : reactions) { // in case of reactions involving atoms (swap moves)
-        const auto& atomic_ids = reaction.getReactantsAndProducts().first;
+        const auto& atomic_ids = reaction.participatingAtomsAndMolecules().first;
         unique_reactive_atoms.insert(atomic_ids.begin(), atomic_ids.end());
     }
     ranges::cpp20::for_each(unique_reactive_atoms, [&](auto id) {
@@ -818,7 +818,7 @@ std::map<DensityBase::id_type, int> AtomDensity::count() const {
 AtomDensity::AtomDensity(const json& j, Space& spc) : DensityBase(spc, Faunus::atoms, "atom_density") {
     from_json(j);
     for (const auto& reaction : Faunus::reactions) { // in case of reactions involving atoms (swap moves)
-        const auto reactive_atomic_species = reaction.getReactantsAndProducts().first;
+        const auto reactive_atomic_species = reaction.participatingAtomsAndMolecules().first;
         for (auto atomid : reactive_atomic_species) {
             atomswap_probability_density[atomid].setResolution(1, 0);
         }
@@ -828,7 +828,7 @@ AtomDensity::AtomDensity(const json& j, Space& spc) : DensityBase(spc, Faunus::a
 void AtomDensity::_to_disk() {
     DensityBase::_to_disk();
     for (const auto& reaction : Faunus::reactions) {
-        const auto reactive_atomic_species = reaction.getReactantsAndProducts().first;
+        const auto reactive_atomic_species = reaction.participatingAtomsAndMolecules().first;
         for (auto atomid : reactive_atomic_species) {
             writeTable(names.at(atomid), atomswap_probability_density.at(atomid));
         }

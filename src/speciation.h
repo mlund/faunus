@@ -2,8 +2,7 @@
 
 #include "move.h"
 
-namespace Faunus {
-namespace Move {
+namespace Faunus::Speciation {
 
 /**
  * Helper class to check if a reaction is possible, i.e.
@@ -95,6 +94,10 @@ class ReactionDirectionRatio {
     void to_json(json& j) const;
 };
 
+} // end of namespace Faunus::Speciation
+
+namespace Faunus::Move {
+
 /**
  * @brief Generalised Grand Canonical Monte Carlo Move
  *
@@ -114,13 +117,15 @@ class ReactionDirectionRatio {
 class SpeciationMove : public MoveBase {
   private:
     using reaction_iterator = decltype(Faunus::reactions)::iterator;
-    reaction_iterator reaction;                                //!< Randomly selected reaction
-    double bias_energy = 0.0;                                  //!< Group (de)activators may add bias
-    ReactionValidator reaction_validator;                      //!< Helper to check if reaction is doable
-    ReactionDirectionRatio direction_ratio;                    //!< Track acceptance in each direction
-    std::unique_ptr<GroupDeActivator> molecular_group_bouncer; //!< (de)activator for molecular groups
-    std::unique_ptr<GroupDeActivator> atomic_group_bouncer;    //!< (de)activator for atomic groups
-    std::map<int, Average<double>> average_reservoir_size;     //!< Average number of implicit molecules
+    reaction_iterator reaction;                                            //!< Randomly selected reaction
+    double bias_energy = 0.0;                                              //!< Group (de)activators may add bias
+    Speciation::ReactionValidator reaction_validator;                      //!< Helper to check if reaction is doable
+    Speciation::ReactionDirectionRatio direction_ratio;                    //!< Track acceptance in each direction
+    std::unique_ptr<Speciation::GroupDeActivator> molecular_group_bouncer; //!< (de)activator for molecular groups
+    std::unique_ptr<Speciation::GroupDeActivator> atomic_group_bouncer;    //!< (de)activator for atomic groups
+
+    std::map<MoleculeData::index_type, Average<double>>
+        average_reservoir_size; //!< Average number of implicit molecules
 
     void _to_json(json& j) const override;
     void _from_json(const json& j) override;
@@ -145,5 +150,4 @@ class SpeciationMove : public MoveBase {
     double bias(Change& change, double old_energy, double new_energy) override;
 };
 
-} // namespace Move
-} // namespace Faunus
+} // namespace Faunus::Move

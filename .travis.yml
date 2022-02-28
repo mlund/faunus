@@ -42,6 +42,8 @@ matrix:
 
 script:
   - |
+    export CXX=/usr/bin/g++-11
+    export CC=/usr/bin/gcc-11
     export PATH=/snap/bin:$PATH
     cmake . -DENABLE_OPENMP=off -DCMAKE_BUILD_TYPE=Debug -DENABLE_PYTHON=on
     make faunus || travis_terminate 1

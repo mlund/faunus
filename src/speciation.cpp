@@ -221,41 +221,34 @@ double SpeciationMove::bias([[maybe_unused]] Change& change, [[maybe_unused]] do
 }
 
 void SpeciationMove::_accept(Change&) {
+    namespace rv = ranges::cpp20::views;
     direction_ratio[reaction].update(reaction->getDirection(), true);
-    const auto& molecular_products = reaction->getProducts().second;
-    const auto& molecular_reactants = reaction->getReactants().second;
 
-    // adjust amount of implicit matter
-    for (const auto [molid, nu] : molecular_reactants) {
-        if (Faunus::molecules.at(molid).isImplicit()) {
-            spc.getImplicitReservoir()[molid] -= nu;
-            average_reservoir_size[molid] += spc.getImplicitReservoir().at(molid);
-        }
+    auto implicit_reactants = reaction->getReactants().second | rv::filter(ReactionData::is_implicit_group);
+    for (const auto [molid, nu] : implicit_reactants) {
+        spc.getImplicitReservoir()[molid] -= nu;
+        average_reservoir_size[molid] += spc.getImplicitReservoir().at(molid);
     }
-    for (const auto [molid, nu] : molecular_products) {
-        if (Faunus::molecules.at(molid).isImplicit()) {
-            spc.getImplicitReservoir()[molid] += nu;
-            average_reservoir_size[molid] += spc.getImplicitReservoir().at(molid);
-        }
+
+    auto implicit_products = reaction->getProducts().second | rv::filter(ReactionData::is_implicit_group);
+    for (const auto [molid, nu] : implicit_products) {
+        spc.getImplicitReservoir()[molid] += nu;
+        average_reservoir_size[molid] += spc.getImplicitReservoir().at(molid);
     }
 }
 
 void SpeciationMove::_reject([[maybe_unused]] Change& change) {
+    namespace rv = ranges::cpp20::views;
     direction_ratio[reaction].update(reaction->getDirection(), false);
 
-    const auto& molecular_products = reaction->getProducts().second;
-    const auto& molecular_reactants = reaction->getReactants().second;
-
-    // average number of implicit molecules
-    for (auto [molid, nu] : molecular_reactants) {
-        if (Faunus::molecules[molid].isImplicit()) {
-            average_reservoir_size[molid] += spc.getImplicitReservoir().at(molid);
-        }
+    auto implicit_reactants = reaction->getReactants().second | rv::filter(ReactionData::is_implicit_group);
+    for (auto [molid, nu] : implicit_reactants) {
+        average_reservoir_size[molid] += spc.getImplicitReservoir().at(molid);
     }
-    for (auto [molid, nu] : molecular_products) {
-        if (Faunus::molecules[molid].isImplicit()) {
-            average_reservoir_size[molid] += spc.getImplicitReservoir().at(molid);
-        }
+
+    auto implicit_products = reaction->getProducts().second | rv::filter(ReactionData::is_implicit_group);
+    for (auto [molid, nu] : implicit_products) {
+        average_reservoir_size[molid] += spc.getImplicitReservoir().at(molid);
     }
 }
 
@@ -491,7 +484,7 @@ double MolecularGroupDeActivator::getBondEnergy(const Group& group) const {
 AtomicGroupDeActivator::AtomicGroupDeActivator(Space& spc, Space& old_spc, Random& random)
     : spc(spc)
     , old_spc(old_spc)
-    , slump(random) {}
+    , random(random) {}
 
 GroupDeActivator::ChangeAndBias AtomicGroupDeActivator::activate(Group& group,
                                                                  GroupDeActivator::OptionalInt number_to_insert) {
@@ -505,7 +498,7 @@ GroupDeActivator::ChangeAndBias AtomicGroupDeActivator::activate(Group& group,
     for (int i = 0; i < number_to_insert.value(); i++) {
         group.activate(group.end(), group.end() + 1); // activate one particle
         auto last_atom = group.end() - 1;
-        spc.geometry.randompos(last_atom->pos, slump);  // give it a random position
+        spc.geometry.randompos(last_atom->pos, random); // give it a random position
         spc.geometry.getBoundaryFunc()(last_atom->pos); // apply PBC if needed
         change_data.relative_atom_indices.push_back(std::distance(group.begin(), last_atom)); // index relative to group
     }
@@ -535,7 +528,7 @@ GroupDeActivator::ChangeAndBias AtomicGroupDeActivator::deactivate(Group& group,
     const auto& old_group = old_spc.groups.at(change_data.group_index);
 
     for (int i = 0; i < number_to_delete.value(); i++) {
-        auto particle_to_delete = slump.sample(group.begin(), group.end());
+        auto particle_to_delete = random.sample(group.begin(), group.end());
         auto last_particle = group.end() - 1;
         const auto dist = std::distance(particle_to_delete, group.end());
 

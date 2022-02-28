@@ -29,7 +29,7 @@ class ReactionValidator {
  */
 class GroupDeActivator {
   public:
-    using ChangeAndBias = std::pair<Change::GroupChange, double>; //!< Group change and possible bias energy
+    using ChangeAndBias = std::pair<Change::GroupChange, double>; //!< Group change and bias energy
     using OptionalInt = std::optional<int>;
     virtual ChangeAndBias activate(Group& group, OptionalInt num_particles = std::nullopt) = 0;
     virtual ChangeAndBias deactivate(Group& group, OptionalInt num_particles = std::nullopt) = 0;
@@ -41,9 +41,9 @@ class GroupDeActivator {
  */
 class AtomicGroupDeActivator : public GroupDeActivator {
   private:
-    Space& spc;
-    Space& old_spc;
-    Random& slump;
+    Space& spc;     //!< Trial space
+    Space& old_spc; //!< Old (accepted) space
+    Random& random;
 
   public:
     AtomicGroupDeActivator(Space& spc, Space& old_spc, Random& random);

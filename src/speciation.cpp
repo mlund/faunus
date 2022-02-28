@@ -123,7 +123,7 @@ void SpeciationMove::activateMolecularGroups(Change& change) {
                         ranges::to<std::vector<std::reference_wrapper<Group>>>;
 
         ranges::for_each(inactive, [&](auto& group) {
-            const auto [change_data, bias] = molecular_group_bouncer->activate(group);
+            auto [change_data, bias] = molecular_group_bouncer->activate(group);
             change.groups.emplace_back(change_data);
             bias_energy += bias;
         });
@@ -137,7 +137,7 @@ void SpeciationMove::activateAtomicGroups(Change& change) {
 
     for (auto [molid, number_to_insert] : atomic_products) {
         auto groups = spc.findMolecules(molid, Space::Selection::ALL);
-        const auto [change_data, bias] = atomic_group_bouncer->activate(*groups.begin(), number_to_insert);
+        auto [change_data, bias] = atomic_group_bouncer->activate(*groups.begin(), number_to_insert);
         change.groups.emplace_back(change_data);
         bias_energy += bias;
     }
@@ -163,7 +163,7 @@ void SpeciationMove::deactivateMolecularGroups(Change& change) {
         auto groups = spc.findMolecules(molid, selection) | ranges::views::sample(number_to_delete, slump.engine) |
                       ranges::to<std::vector<std::reference_wrapper<Group>>>;
         std::for_each(groups.begin(), groups.end(), [&](auto& group) {
-            const auto [change_data, bias] = molecular_group_bouncer->deactivate(group);
+            auto [change_data, bias] = molecular_group_bouncer->deactivate(group);
             change.groups.emplace_back(change_data);
             bias_energy += bias;
         });
@@ -181,8 +181,7 @@ void SpeciationMove::deactivateAtomicGroups(Change& change) {
         auto groups = spc.findMolecules(molid, Space::Selection::ALL);
         assert(range_size(groups) == 1);
         auto group = groups.begin();
-        auto const [change_data, bias] = atomic_group_bouncer->deactivate(*group, number_to_delete);
-        assert(!change_data.relative_atom_indices.empty());
+        auto [change_data, bias] = atomic_group_bouncer->deactivate(*group, number_to_delete);
         change.groups.push_back(change_data);
         bias_energy += bias;
     }

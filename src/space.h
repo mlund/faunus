@@ -43,6 +43,7 @@ struct Change {
         std::vector<index_type> relative_atom_indices; //!< A subset of particles changed (sorted; empty if `all`=true)
 
         bool operator<(const GroupChange& other) const; //!< Comparison operator based on `group_index`
+        void sort(); //!< Sort group indices
     };
 
     std::vector<GroupChange> groups; //!< Touched groups by index in group vector

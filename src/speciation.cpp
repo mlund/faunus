@@ -312,10 +312,7 @@ bool ReactionValidator::canSwapAtoms(const ReactionData& reaction) const {
 
 bool ReactionValidator::canReduceMolecularGroups(const ReactionData& reaction) const {
     namespace rv = ranges::cpp20::views;
-    auto molecular_groups = reaction.getReactants().second | rv::filter(ReactionData::not_implicit_group) |
-                            rv::filter(ReactionData::is_molecular_group);
-
-    auto can_reduce = [&](const auto& key_value) { // molecular reactant (non-atomic)
+    auto can_reduce = [&](auto key_value) { // molecular reactant (non-atomic)
         const auto [molid, number_to_delete] = key_value;
         if (number_to_delete > 0) {
             const auto selection =
@@ -331,16 +328,17 @@ bool ReactionValidator::canReduceMolecularGroups(const ReactionData& reaction) c
         }
         return true;
     };
+
+    auto molecular_groups = reaction.getReactants().second | rv::filter(ReactionData::not_implicit_group) |
+                            rv::filter(ReactionData::is_molecular_group);
+
     return ranges::cpp20::all_of(molecular_groups, can_reduce);
 }
 
 bool ReactionValidator::canReduceAtomicGrups(const ReactionData& reaction) const {
     namespace rv = ranges::cpp20::views;
-    auto atomic_groups = reaction.getReactants().second | rv::filter(ReactionData::not_implicit_group) |
-                         rv::filter(ReactionData::is_atomic_group);
-
-    auto can_reduce = [&](const auto& _pair) {
-        const auto [molid, number_to_delete] = _pair;
+    auto can_reduce = [&](auto key_value) {
+        const auto [molid, number_to_delete] = key_value;
         if (number_to_delete > 0) {
             auto mollist = spc.findMolecules(molid, Space::Selection::ALL);
             if (range_size(mollist) != 1) {
@@ -355,17 +353,17 @@ bool ReactionValidator::canReduceAtomicGrups(const ReactionData& reaction) const
         }
         return true;
     };
+
+    auto atomic_groups = reaction.getReactants().second | rv::filter(ReactionData::not_implicit_group) |
+                         rv::filter(ReactionData::is_atomic_group);
     return ranges::cpp20::all_of(atomic_groups, can_reduce);
 }
 
 /** enough molecular products? */
 bool ReactionValidator::canProduceMolecularGroups(const ReactionData& reaction) const {
     namespace rv = ranges::cpp20::views;
-    auto molecular_groups = reaction.getProducts().second | rv::filter(ReactionData::not_implicit_group) |
-                            rv::filter(ReactionData::is_molecular_group);
-
-    auto can_create = [&](const auto& _pair) {
-        const auto [molid, number_to_insert] = _pair;
+    auto can_create = [&](auto key_value) {
+        const auto [molid, number_to_insert] = key_value;
         if (number_to_insert > 0) {
             const auto selection =
                 (reaction.only_neutral_molecules) ? Space::Selection::INACTIVE_NEUTRAL : Space::Selection::INACTIVE;
@@ -378,16 +376,17 @@ bool ReactionValidator::canProduceMolecularGroups(const ReactionData& reaction) 
         }
         return true;
     };
+
+    auto molecular_groups = reaction.getProducts().second | rv::filter(ReactionData::not_implicit_group) |
+                            rv::filter(ReactionData::is_molecular_group);
+
     return ranges::cpp20::all_of(molecular_groups, can_create);
 }
 
 bool ReactionValidator::canProduceAtomicGroups(const ReactionData& reaction) const {
     namespace rv = ranges::cpp20::views;
-    auto atomic_groups = reaction.getProducts().second | rv::filter(ReactionData::not_implicit_group) |
-                         rv::filter(ReactionData::is_atomic_group);
-
-    auto can_expand = [&](const auto& _pair) {
-        const auto [molid, number_to_insert] = _pair;
+    auto can_expand = [&](auto key_value) {
+        const auto [molid, number_to_insert] = key_value;
         auto mollist = spc.findMolecules(molid, Space::Selection::ALL);
         if (number_to_insert > 0 && range_size(mollist) > 0) {
             if (mollist.begin()->size() + number_to_insert > mollist.begin()->capacity()) {
@@ -397,6 +396,10 @@ bool ReactionValidator::canProduceAtomicGroups(const ReactionData& reaction) con
         }
         return true;
     };
+
+    auto atomic_groups = reaction.getProducts().second | rv::filter(ReactionData::not_implicit_group) |
+                         rv::filter(ReactionData::is_atomic_group);
+
     return ranges::cpp20::all_of(atomic_groups, can_expand);
 }
 
@@ -497,61 +500,51 @@ AtomicGroupDeActivator::AtomicGroupDeActivator(Space& spc, Space& old_spc, Rando
 
 GroupDeActivator::ChangeAndBias AtomicGroupDeActivator::activate(Group& group,
                                                                  GroupDeActivator::OptionalInt number_to_insert) {
-    if (!group.isAtomic() || !number_to_insert) {
-        throw std::runtime_error("atomic group and number required");
+    if (!group.isAtomic() || !number_to_insert || number_to_insert.value() + group.size() > group.capacity()) {
+        throw std::runtime_error("atomic group expansion bug");
     }
-
     Change::GroupChange change_data;
-    if (group.size() + number_to_insert.value() <= group.capacity()) {
-        change_data.group_index = spc.getGroupIndex(group);
-        change_data.internal = true;
-        change_data.dNatomic = true;
-        for (int i = 0; i < number_to_insert; i++) {
-            group.activate(group.end(), group.end() + 1); // activate one particle
-            auto last_atom = group.end() - 1;
-            spc.geometry.randompos(last_atom->pos, slump);  // give it a random position
-            spc.geometry.getBoundaryFunc()(last_atom->pos); // apply PBC if needed
-            change_data.relative_atom_indices.push_back(
-                std::distance(group.begin(), last_atom)); // index relative to group
-        }
-    } else {
-        faunus_logger->warn("atomic group {} is full; increase capacity?", group.traits().name);
+    change_data.group_index = spc.getGroupIndex(group);
+    change_data.internal = true;
+    change_data.dNatomic = true;
+    for (int i = 0; i < number_to_insert.value(); i++) {
+        group.activate(group.end(), group.end() + 1); // activate one particle
+        auto last_atom = group.end() - 1;
+        spc.geometry.randompos(last_atom->pos, slump);  // give it a random position
+        spc.geometry.getBoundaryFunc()(last_atom->pos); // apply PBC if needed
+        change_data.relative_atom_indices.push_back(std::distance(group.begin(), last_atom)); // index relative to group
     }
+    change_data.sort();
     return {change_data, 0.0};
 }
 
 GroupDeActivator::ChangeAndBias AtomicGroupDeActivator::deactivate(Group& group,
                                                                    GroupDeActivator::OptionalInt number_to_delete) {
-    if (!group.isAtomic() || !number_to_delete) {
-        throw std::runtime_error("atomic group and number required");
+    if (!group.isAtomic() || !number_to_delete || number_to_delete.value() > group.size()) {
+        throw std::runtime_error("atomic group expansion bug");
     }
     Change::GroupChange change_data; // describes what has changed
+    change_data.group_index = spc.getGroupIndex(group);
+    change_data.internal = true;
+    change_data.dNatomic = true;
 
-    if ((int)group.size() - number_to_delete.value() >= 0) {
-        change_data.group_index = spc.getGroupIndex(group);
-        change_data.internal = true;
-        change_data.dNatomic = true;
+    const auto& old_group = old_spc.groups.at(change_data.group_index);
 
-        const auto& old_group = old_spc.groups.at(change_data.group_index);
+    for (int i = 0; i < number_to_delete.value(); i++) {
+        auto atom_to_delete = slump.sample(group.begin(), group.end()); // iterator to atom to delete
+        auto last_atom = group.end() - 1;                               // iterator to last atom
+        const int dist = std::distance(atom_to_delete, group.end());    // distance to atom from end
 
-        for (int i = 0; i < number_to_delete; i++) {
-            auto atom_to_delete = slump.sample(group.begin(), group.end()); // iterator to atom to delete
-            auto last_atom = group.end() - 1;                               // iterator to last atom
-            const int dist = std::distance(atom_to_delete, group.end());    // distance to atom from end
-
-            if (std::distance(atom_to_delete, last_atom) > 1) { // Shuffle back to end, both in trial and old target
-                std::iter_swap(atom_to_delete, last_atom);
-                std::iter_swap(old_group.end() - dist - i, old_group.end() - (1 + i));
-            }
-
-            change_data.relative_atom_indices.push_back(std::distance(group.begin(), last_atom));
-            group.deactivate(last_atom, group.end()); // deactivate a single atom at the time
+        if (std::distance(atom_to_delete, last_atom) > 1) { // Shuffle back to end, both in trial and old target
+            std::iter_swap(atom_to_delete, last_atom);
+            std::iter_swap(old_group.end() - dist - i, old_group.end() - (1 + i));
         }
-        std::sort(change_data.relative_atom_indices.begin(), change_data.relative_atom_indices.end());
-    } else {
-        faunus_logger->warn("atomic group {} is depleted; increase simulation volume?", group.traits().name);
+
+        change_data.relative_atom_indices.push_back(std::distance(group.begin(), last_atom));
+        group.deactivate(last_atom, group.end()); // deactivate a single atom at the time
     }
+    change_data.sort();
     return {change_data, 0.0};
 }
 
-} // end of namespace Faunus
+} // namespace Faunus::Move

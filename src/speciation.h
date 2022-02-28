@@ -113,7 +113,6 @@ class SpeciationMove : public MoveBase {
   private:
     using reaction_iterator = decltype(Faunus::reactions)::iterator;
     reaction_iterator reaction;                                //!< Randomly selected reaction
-    Space* old_spc = nullptr;                                  //!< Old space (particles, groups)
     double bias_energy = 0.0;                                  //!< Group (de)activators may add bias
     ReactionValidator reaction_validator;                      //!< Helper to check if reaction is doable
     ReactionDirectionRatio direction_ratio;                    //!< Track acceptance in each direction

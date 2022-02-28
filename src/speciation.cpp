@@ -220,38 +220,26 @@ double SpeciationMove::bias([[maybe_unused]] Change& change, [[maybe_unused]] do
     return -reaction->freeEnergy() + bias_energy;
 }
 
-/**
- * @todo Space::sync() already handles implicit reservoir updates.
- *       Also move implicit reservoir averaging to Analysis namespace
- */
 void SpeciationMove::_accept(Change&) {
     direction_ratio[reaction].update(reaction->getDirection(), true);
     const auto& molecular_products = reaction->getProducts().second;
     const auto& molecular_reactants = reaction->getReactants().second;
 
     // adjust amount of implicit matter
-    for (auto [molid, nu] : molecular_reactants) {
+    for (const auto [molid, nu] : molecular_reactants) {
         if (Faunus::molecules.at(molid).isImplicit()) {
             spc.getImplicitReservoir()[molid] -= nu;
-            old_spc->getImplicitReservoir()[molid] -= nu;
-            average_reservoir_size[molid] += spc.getImplicitReservoir()[molid];
-            assert(spc.getImplicitReservoir()[molid] == old_spc->getImplicitReservoir()[molid]);
+            average_reservoir_size[molid] += spc.getImplicitReservoir().at(molid);
         }
     }
-    for (auto [molid, nu] : molecular_products) {
+    for (const auto [molid, nu] : molecular_products) {
         if (Faunus::molecules.at(molid).isImplicit()) {
             spc.getImplicitReservoir()[molid] += nu;
-            old_spc->getImplicitReservoir()[molid] += nu;
-            average_reservoir_size[molid] += spc.getImplicitReservoir()[molid];
-            assert(spc.getImplicitReservoir()[molid] == old_spc->getImplicitReservoir()[molid]);
+            average_reservoir_size[molid] += spc.getImplicitReservoir().at(molid);
         }
     }
 }
 
-/**
- * @todo Space::sync() already handles implicit reservoir updates.
- *       Also move implicit reservoir averaging to Analysis namespace
- */
 void SpeciationMove::_reject([[maybe_unused]] Change& change) {
     direction_ratio[reaction].update(reaction->getDirection(), false);
 
@@ -261,19 +249,18 @@ void SpeciationMove::_reject([[maybe_unused]] Change& change) {
     // average number of implicit molecules
     for (auto [molid, nu] : molecular_reactants) {
         if (Faunus::molecules[molid].isImplicit()) {
-            average_reservoir_size[molid] += spc.getImplicitReservoir()[molid];
+            average_reservoir_size[molid] += spc.getImplicitReservoir().at(molid);
         }
     }
     for (auto [molid, nu] : molecular_products) {
         if (Faunus::molecules[molid].isImplicit()) {
-            average_reservoir_size[molid] += spc.getImplicitReservoir()[molid];
+            average_reservoir_size[molid] += spc.getImplicitReservoir().at(molid);
         }
     }
 }
 
 SpeciationMove::SpeciationMove(Space& spc, Space& old_spc, std::string_view name, std::string_view cite)
     : MoveBase(spc, name, cite)
-    , old_spc(&old_spc)
     , reaction_validator(spc) {
     molecular_group_bouncer = std::make_unique<MolecularGroupDeActivator>(spc, slump, true);
     atomic_group_bouncer = std::make_unique<AtomicGroupDeActivator>(spc, old_spc, slump);
@@ -526,6 +513,15 @@ GroupDeActivator::ChangeAndBias AtomicGroupDeActivator::activate(Group& group,
     return {change_data, 0.0};
 }
 
+/**
+ * Reduce an atomic group by `number_to_delete` particles. The deleted particles are
+ * picked by random; moved the the end of the group; then deactivated. In order for
+ * the Hamiltonian to pick up the energy change, particles in the reference Space
+ * (`old_group`) are swapped to the same index, albeit not deactivated.
+ *
+ * @warning Directly modifying the groups in spc and old_spc might interfere with
+ *          a future neighbour list implementation.
+ */
 GroupDeActivator::ChangeAndBias AtomicGroupDeActivator::deactivate(Group& group,
                                                                    GroupDeActivator::OptionalInt number_to_delete) {
     if (!group.isAtomic() || !number_to_delete || number_to_delete.value() > group.size()) {
@@ -539,17 +535,17 @@ GroupDeActivator::ChangeAndBias AtomicGroupDeActivator::deactivate(Group& group,
     const auto& old_group = old_spc.groups.at(change_data.group_index);
 
     for (int i = 0; i < number_to_delete.value(); i++) {
-        auto atom_to_delete = slump.sample(group.begin(), group.end()); // iterator to atom to delete
-        auto last_atom = group.end() - 1;                               // iterator to last atom
-        const int dist = std::distance(atom_to_delete, group.end());    // distance to atom from end
+        auto particle_to_delete = slump.sample(group.begin(), group.end());
+        auto last_particle = group.end() - 1;
+        const auto dist = std::distance(particle_to_delete, group.end());
 
-        if (std::distance(atom_to_delete, last_atom) > 1) { // Shuffle back to end, both in trial and old target
-            std::iter_swap(atom_to_delete, last_atom);
-            std::iter_swap(old_group.end() - dist - i, old_group.end() - (1 + i));
+        if (std::distance(particle_to_delete, last_particle) > 1) {
+            std::iter_swap(particle_to_delete, last_particle);                     // Shuffle back to end in trial ...
+            std::iter_swap(old_group.end() - dist - i, old_group.end() - (1 + i)); // ...and in old group
         }
-
-        change_data.relative_atom_indices.push_back(std::distance(group.begin(), last_atom));
-        group.deactivate(last_atom, group.end()); // deactivate a single atom at the time
+        const auto deactivated_particle_index = std::distance(group.begin(), last_particle);
+        change_data.relative_atom_indices.push_back(deactivated_particle_index);
+        group.deactivate(last_particle, group.end()); // deactivate one particle at the time
     }
     change_data.sort();
     return {change_data, 0.0};

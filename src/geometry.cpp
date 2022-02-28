@@ -7,6 +7,7 @@
 #include <cereal/types/memory.hpp>
 #include <cereal/archives/binary.hpp>
 #include <Eigen/Eigenvalues>
+#include <doctest/doctest.h>
 
 namespace Faunus::Geometry {
 

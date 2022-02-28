@@ -329,25 +329,31 @@ ParticleVector fastaToParticles(std::string_view fasta_sequence, double bond_len
     return particles;
 }
 
-std::shared_ptr<StructureFileWriter> createStructureFileWriter(const std::string& suffix) {
-    std::shared_ptr<StructureFileWriter> writer;
+std::unique_ptr<StructureFileWriter> createStructureFileWriter(const std::string& suffix) {
     if (suffix == "pqr") {
-        writer = std::make_shared<PQRWriter>();
-    } else if (suffix == "aam") {
-        writer = std::make_shared<AminoAcidModelWriter>();
-    } else if (suffix == "xyz") {
-        writer = std::make_shared<XYZWriter>();
-    } else if (suffix == "gro") {
-        writer = std::make_shared<GromacsWriter>();
-    } else if (suffix == "pdb") {
-        writer = std::make_shared<PQRWriter>(PQRWriter::Style::PDB);
+        return std::make_unique<PQRWriter>();
     }
-    return writer;
+    if (suffix == "aam") {
+        return std::make_unique<AminoAcidModelWriter>();
+    }
+    if (suffix == "xyz") {
+        return std::make_unique<XYZWriter>();
+    }
+    if (suffix == "xyz_psc") {
+        return std::make_unique<SpheroCylinderXYZWriter>();
+    }
+    if (suffix == "gro") {
+        return std::make_unique<GromacsWriter>();
+    }
+    if (suffix == "pdb") {
+        return std::make_unique<PQRWriter>(PQRWriter::Style::PDB);
+    }
+    return nullptr;
 }
 
 // -----------------------------
 
-ParticleVector loadStructure(const std::string& filename, bool prefer_charges_from_file) {
+ParticleVector loadStructure(std::string_view filename, bool prefer_charges_from_file) {
     ParticleVector particles;
     std::unique_ptr<StructureFileReader> reader;
     const auto suffix = filename.substr(filename.find_last_of('.') + 1);
@@ -359,6 +365,8 @@ ParticleVector loadStructure(const std::string& filename, bool prefer_charges_fr
         reader = std::make_unique<XYZReader>();
     } else if (suffix == "gro") {
         reader = std::make_unique<GromacsReader>();
+    } else if (suffix == "xyz_psc") {
+        reader = std::make_unique<SpheroCylinderXYZReader>();
     }
     try {
         if (reader) {
@@ -524,9 +532,9 @@ void StructureFileReader::checkLoadedParticles() const {
     }
 }
 
-ParticleVector& StructureFileReader::load(const std::string& filename) {
+ParticleVector& StructureFileReader::load(std::string_view filename) {
     try {
-        if (std::ifstream stream(filename); stream) {
+        if (auto stream = std::ifstream(std::string(filename)); stream) {
             return load(stream);
         }
         throw std::runtime_error("cannot open file");
@@ -676,6 +684,21 @@ void XYZWriter::saveParticle(std::ostream& stream, const Particle& particle) {
 
 // -----------------------------
 
+void SpheroCylinderXYZWriter::saveHeader(std::ostream& stream, [[maybe_unused]] int number_of_particles) const {
+    // @todo we currently have no access to the "sweep" and is now fixed to "0"
+    stream << fmt::format("sweep {}; box ", 0) << box_dimensions.transpose() << "\n";
+}
+void SpheroCylinderXYZWriter::saveParticle(std::ostream& stream, const Particle& particle) {
+    if (particle.hasExtension()) {
+        const auto scale = static_cast<double>(particle_is_active);
+        stream << particle.traits().name << " " << scale * particle.pos.transpose() << " "
+               << scale * particle.getExt().scdir.transpose() << " " << scale * particle.getExt().patchdir.transpose()
+               << "\n";
+    }
+}
+
+// -----------------------------
+
 void XYZReader::loadHeader(std::istream& stream) {
     std::string line;
     try {
@@ -706,6 +729,32 @@ Particle XYZReader::loadParticle(std::istream& stream) {
     particle.pos *= 1.0_angstrom; // xyz files are commonly in Ångstroms
     return particle;
 }
+
+// -----------------------------
+
+void SpheroCylinderXYZReader::loadHeader(std::istream& stream) {
+    std::string line;
+    try {
+        std::getline(stream, line);
+    } catch (std::exception& e) { throw std::invalid_argument("cannot load comment"); }
+}
+
+Particle SpheroCylinderXYZReader::loadParticle(std::istream& stream) {
+    std::string line;
+    getNextLine(stream, line, ";#");
+    std::stringstream record(line);
+    record.exceptions(std::ios::failbit);
+    std::string atom_name;
+    record >> atom_name;
+    const auto& atom = Faunus::findAtomByName(atom_name);
+    auto particle = Particle(atom);
+    auto& extension = particle.createExtension();
+    record >> particle.pos.x() >> particle.pos.y() >> particle.pos.z() >> extension.scdir.x() >> extension.scdir.y() >>
+        extension.scdir.z() >> extension.patchdir.x() >> extension.patchdir.y() >> extension.patchdir.z();
+    particle.pos *= 1.0_angstrom; // xyz files are commonly in Ångstroms
+    return particle;
+}
+
 // -----------------------------
 
 /**

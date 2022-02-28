@@ -751,16 +751,33 @@ class PolymerShape : public Analysisbase {
  * file is created.
  */
 class QRtraj : public Analysisbase {
-  private:
-    std::string filename;                           //!< Output filename
-    std::unique_ptr<std::ostream> stream = nullptr; //!< Output stream
+  protected:
     std::function<void()> write_to_file;            //!< Write a single frame to stream
-    void _sample() override;                        //!< Samples one frame and outputs to stream
+    std::unique_ptr<std::ostream> stream = nullptr; //!< Output stream
+
+  private:
+    std::string filename;    //!< Output filename
+    void _sample() override; //!< Samples one frame and outputs to stream
     void _to_json(json& j) const override;
     void _to_disk() override;
 
   public:
-    QRtraj(const json& j, const Space& spc);
+    QRtraj(const json& j, const Space& spc, const std::string &name = "qrtraj");
+};
+
+/**
+ * Generate PSCs text trajectory containing
+ *
+ * 1. number of particles (incl. inactive)
+ * 2. step number and box dimensions
+ * 3. midpoint position; direction; patch direction
+ *
+ * This can be used to generate VMD visualisation using a conversion
+ * script (see scripts/ folder)
+ */
+class PatchySpheroCylinderTrajectory : public QRtraj {
+  public:
+    PatchySpheroCylinderTrajectory(const json& j, const Space& spc);
 };
 
 /**

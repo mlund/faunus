@@ -153,6 +153,8 @@ std::unique_ptr<Analysisbase> createAnalysis(const std::string& name, const json
             return std::make_unique<PolymerShape>(j, spc);
         } else if (name == "qrfile") {
             return std::make_unique<QRtraj>(j, spc);
+        } else if (name == "psctraj") {
+            return std::make_unique<PatchySpheroCylinderTrajectory>(j, spc);
         } else if (name == "reactioncoordinate") {
             return std::make_unique<FileReactionCoordinate>(j, spc);
         } else if (name == "sanity") {
@@ -312,7 +314,7 @@ SaveState::SaveState(json j, const Space& spc) : Analysisbase(spc, "savestate") 
 }
 void SaveState::setWriteFunction(const Space& spc) {
     const auto suffix = filename.substr(filename.find_last_of('.') + 1);
-    if (auto writer = createStructureFileWriter(suffix)) {
+    if (std::shared_ptr<StructureFileWriter> writer = createStructureFileWriter(suffix)) {
         writeFunc = [&, w = writer](auto& file) {
             if (convert_hexagonal_prism_to_cuboid) {
                 saveAsCuboid(file, spc, *w);
@@ -570,7 +572,7 @@ void QRtraj::_sample() { write_to_file(); }
 
 void QRtraj::_to_json(json& j) const { j = {{"file", filename}}; }
 
-QRtraj::QRtraj(const json& j, const Space& spc) : Analysisbase(spc, "qrfile") {
+QRtraj::QRtraj(const json& j, const Space& spc, const std::string &name) : Analysisbase(spc, name) {
     from_json(j);
     filename = MPI::prefix + j.value("file", "qrtraj.dat"s);
     stream = IO::openCompressedOutputStream(filename, true);
@@ -592,6 +594,27 @@ void QRtraj::_to_disk() {
     if (*stream) {
         stream->flush(); // empty buffer
     }
+}
+
+PatchySpheroCylinderTrajectory::PatchySpheroCylinderTrajectory(const json& j, const Space& spc)
+    : QRtraj(j, spc, "psctraj") {
+    if (!j.contains("file")) {
+        throw ConfigurationError("missing filename");
+    }
+    write_to_file = [&]() {
+        assert(stream);
+        *stream << fmt::format("{}\nsweep {}; box ", spc.particles.size(), getNumberOfSteps())
+                << spc.geometry.getLength().transpose() << "\n";
+
+        for (const auto& group : spc.groups) {
+            for (auto it = group.begin(); it != group.trueend(); ++it) {
+                const auto particle_is_active = it < group.end();
+                const auto scale = static_cast<double>(particle_is_active);
+                *stream << scale * it->pos.transpose() << " " << scale * it->getExt().scdir.transpose() << " "
+                        << scale * it->getExt().patchdir.transpose() << "\n";
+            }
+        }
+    };
 }
 
 void FileReactionCoordinate::_to_json(json& j) const {

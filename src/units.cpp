@@ -1,5 +1,6 @@
 #include <doctest/doctest.h>
 #include "units.h"
+#include <numeric>
 #include <cmath>
 #include <spdlog/fmt/fmt.h>
 

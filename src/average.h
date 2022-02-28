@@ -1,5 +1,4 @@
 #pragma once
-#include <doctest/doctest.h>
 #include <limits>
 #include <ostream>
 #include <istream>

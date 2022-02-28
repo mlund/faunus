@@ -216,8 +216,8 @@ TEST_CASE("[Faunus] Ewald - IonIonPolicy") {
     Space spc;
     spc.particles.resize(2);
     spc.geometry = R"( {"type": "cuboid", "length": 10} )"_json;
-    spc.particles[0] = R"( {"pos": [0,0,0], "q": 1.0} )"_json;
-    spc.particles[1] = R"( {"pos": [1,0,0], "q": -1.0} )"_json;
+    spc.particles.at(0) = R"( {"id": 0, "pos": [0,0,0], "q": 1.0} )"_json;
+    spc.particles.at(1) = R"( {"id": 0, "pos": [1,0,0], "q": -1.0} )"_json;
     if (Faunus::molecules.empty()) {
         Faunus::molecules.resize(1);
     }

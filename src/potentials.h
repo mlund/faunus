@@ -1,220 +1,12 @@
 #pragma once
-#include "core.h"
-#include "units.h"
-#include "particle.h"
-#include "aux/pairmatrix.h"
+#include "potentials_base.h"
 #include "tabulate.h"
 #include "functionparser.h"
 #include "multipole.h"
+#include "spherocylinder.h"
 #include <coulombgalore.h>
-#include <array>
-#include <functional>
 
-/*
-namespace CoulombGalore {
-    class SchemeBase;
-    class Splined;
-}*/
-
-namespace Faunus {
-namespace Potential {
-
-using namespace std::string_literals;
-
-//! type of a matrix containing pair potential coefficients
-typedef Eigen::MatrixXd TPairMatrix;
-typedef std::shared_ptr<TPairMatrix> TPairMatrixPtr;
-//! type of a function extracting a potential coefficient from the InteractionData, e.g., sigma or eps
-typedef std::function<double(const InteractionData &)> TExtractorFunc;
-//! type of a function defining a combination rule of a heterogeneous pair interaction
-typedef std::function<double(double, double)> TCombinatorFunc;
-//! type of a function modifying combinator's output
-typedef std::function<double(double)> TModifierFunc;
-
-/**
- * @brief Data for a custom (heterogeneous) interaction between two given atom types.
- *
- * The very same format is used as for a homogeneous interaction specified directly on an atom type.
- */
-struct CustomInteractionData {
-    std::array<AtomData::index_type, 2> atom_id;
-    InteractionData interaction;
-};
-
-void from_json(const json &j, CustomInteractionData &interaction);
-void to_json(json &j, const CustomInteractionData &interaction);
-
-void from_json(const json &j, std::vector<CustomInteractionData> &interactions);
-
-/**
- * @brief Known named combination rules for parameters of pair potential interaction.
- *
- * When adding a new one, add a json mapping. Also consider appending the PairMixer::getCombinator()
- * method to recognize the new rule.
- */
-enum class CombinationRuleType { UNDEFINED, ARITHMETIC, GEOMETRIC, LORENTZ_BERTHELOT };
-NLOHMANN_JSON_SERIALIZE_ENUM(CombinationRuleType, {{CombinationRuleType::UNDEFINED, "undefined"},
-                                                   {CombinationRuleType::ARITHMETIC, "arithmetic"},
-                                                   {CombinationRuleType::GEOMETRIC, "geometric"},
-                                                   {CombinationRuleType::LORENTZ_BERTHELOT, "lorentz_berthelot"},
-                                                   {CombinationRuleType::LORENTZ_BERTHELOT, "LB"}})
-
-/**
- * @brief Exception for handling pair potential initialization.
- */
-struct PairPotentialException : public std::runtime_error {
-    PairPotentialException(const std::string msg) : std::runtime_error(msg){};
-};
-
-/**
- * @brief PairMixer creates a matrix of pair potential coefficients based on the atom properties
- * and/or custom values using an arbitrary combination rule.
- *
- * PairMixer holds three functions that are applied in order extractor → combinator → modifier to create
- * a coefficient matrix for all possible interactions. The function createPairMatrix applies the functions
- * on all atom type pairs, and optionally also on the list of custom pair parameters (not the combinator
- * function).
- */
-class PairMixer {
-    TExtractorFunc extractor;   //!< Function extracting the coefficient from the InteractionData structure
-    TCombinatorFunc combinator; //!< Function combining two values
-    TModifierFunc modifier;     //!< Function modifying the result for fast computations, e.g., a square of
-
-  public:
-    PairMixer(TExtractorFunc extractor, TCombinatorFunc combinator, TModifierFunc modifier = &modIdentity)
-        : extractor(extractor), combinator(combinator), modifier(modifier){};
-
-    //! @return a square matrix of atoms.size()
-    TPairMatrixPtr createPairMatrix(const std::vector<AtomData> &atoms);
-    //! @return a square matrix of atoms.size()
-    TPairMatrixPtr createPairMatrix(const std::vector<AtomData> &atoms,
-                                    const std::vector<CustomInteractionData> &interactions);
-
-    enum class CoefficientType { ANY, SIGMA, EPSILON };
-    static TCombinatorFunc getCombinator(CombinationRuleType combination_rule,
-                                         CoefficientType coefficient = CoefficientType::ANY);
-
-    // when explicit custom pairs are the only option
-    inline static constexpr double combUndefined(double = 0.0, double = 0.0) {
-        return std::numeric_limits<double>::signaling_NaN();
-    };
-    inline static double combArithmetic(double a, double b) { return 0.5 * (a + b); }
-    inline static double combGeometric(double a, double b) { return std::sqrt(a * b); }
-    inline static double modIdentity(double x) { return x; }
-    inline static double modSquared(double x) { return x * x; }
-};
-
-/**
- * @brief Base for all pair-potentials
- *
- * The `selfEnergy` functor is by default a nullptr. Coulombic potentials
- * may change this to add a self-energy stemming from charges and dipoles.
- * This term is important for for example Widom insertion and grand canonical
- * Monte Carlo schemes.
- */
-struct PairPotentialBase {
-    std::string name; //!< unique name per polymorphic call; used in FunctorPotential::combineFunc
-    std::string cite; //!< Typically a short-doi litterature reference
-    bool isotropic = true; //!< true if pair-potential is independent of particle orientation
-    std::function<double(const Particle &)> selfEnergy = nullptr; //!< self energy of particle (kT)
-    virtual void to_json(json &) const = 0;
-    virtual void from_json(const json &) = 0;
-    virtual ~PairPotentialBase() = default;
-    virtual Point force(const Particle& a, const Particle& b, double squared_distance, const Point& b_towards_a) const;
-    virtual double operator()(const Particle &, const Particle &, double, const Point &) const = 0;
-
-  protected:
-    PairPotentialBase(const std::string &name = std::string(), const std::string &cite = std::string(),
-                      bool isotropic = true);
-};
-
-void to_json(json &j, const PairPotentialBase &base);   //!< Serialize any pair potential to json
-void from_json(const json &j, PairPotentialBase &base); //!< Serialize any pair potential from json
-
-/**
- * @brief A common ancestor for potentials that use parameter matrices computed from atomic
- * properties and/or custom atom pair properties.
- *
- * The class and their descendants have now also a responsibility to create themselves from a json object
- * and store back. This is gradually becoming a complex task which shall be moved into other class.
- */
-class MixerPairPotentialBase : public PairPotentialBase {
-  protected:
-    CombinationRuleType combination_rule;
-    std::shared_ptr<std::vector<CustomInteractionData>> custom_pairs = std::make_shared<std::vector<CustomInteractionData>>();
-    json json_extra_params;              //!< pickled extra parameters like a coefficient names mapping
-    void init();                         //!< initialize the potential when data, e.g., atom parameters, are available
-    virtual void initPairMatrices() = 0; //!< potential-specific initialization of parameter matrices
-    virtual void extractorsFromJson(const json &) {}; //!< potential-specific assignment of coefficient extracting functions
-  public:
-    MixerPairPotentialBase(const std::string& name = std::string(), const std::string& cite = std::string(),
-                           CombinationRuleType combination_rule = CombinationRuleType::UNDEFINED, bool isotropic = true)
-        : PairPotentialBase(name, cite, isotropic), combination_rule(combination_rule){};
-    virtual ~MixerPairPotentialBase() = default;
-    void from_json(const json &) override;
-    void to_json(json &) const override;
-};
-
-/**
- * @brief Statically combines two pair potentials at compile-time
- *
- * This is the most efficient way to combining pair-potentials due
- * to the possibility for compile-time optimisation.
- */
-template <class T1, class T2> struct CombinedPairPotential : public PairPotentialBase {
-    T1 first;  //!< First pair potential of type T1
-    T2 second; //!< Second pair potential of type T2
-    CombinedPairPotential(const std::string &name = "") : PairPotentialBase(name){};
-    inline double operator()(const Particle &a, const Particle &b, double r2,
-                             const Point &r = {0, 0, 0}) const override {
-        return first(a, b, r2, r) + second(a, b, r2, r);
-    } //!< Combine pair energy
-
-    /**
-     * @brief Calculates force on particle a due to another particle, b
-     * @param particle_a Particle a
-     * @param particle_b Particle b
-     * @param squared_distance Squared norm |𝐚-𝐛|²
-     * @param b_towards_a Distance vector 𝐛 -> 𝐚 = 𝐚 - 𝐛
-     * @return Force on particle a due to particle b
-     */
-    inline Point force(const Particle& a, const Particle& b, double squared_distance,
-                       const Point& b_towards_a) const override {
-        return first.force(a, b, squared_distance, b_towards_a) + second.force(a, b, squared_distance, b_towards_a);
-    } //!< Combine force
-
-    void from_json(const json &j) override {
-        Faunus::Potential::from_json(j, first);
-        Faunus::Potential::from_json(j, second);
-        name = first.name + "/" + second.name;
-        if (first.selfEnergy or second.selfEnergy) { // combine self-energies
-            selfEnergy = [u1 = first.selfEnergy, u2 = second.selfEnergy](const Particle &p) {
-                if (u1 and u2) {
-                    return u1(p) + u2(p);
-                }
-                if (u1) {
-                    return u1(p);
-                }
-                return u2(p);
-            };
-        } else {
-            selfEnergy = nullptr;
-        }
-    }
-    void to_json(json &j) const override {
-        assert(j.is_object());
-        auto &_j = j["default"] = json::array();
-        _j.push_back(first);
-        _j.push_back(second);
-    }
-};
-
-template <class T1, class T2, class = typename std::enable_if<std::is_base_of<PairPotentialBase, T1>::value>::type,
-          class = typename std::enable_if<std::is_base_of<PairPotentialBase, T2>::value>::type>
-CombinedPairPotential<T1, T2> &operator+(const T1 &pot1, const T2 &) {
-    return *(new CombinedPairPotential<T1, T2>(pot1.name));
-} //!< Statically add two pair potentials at compile-time
-
+namespace Faunus::Potential {
 
 struct Dummy : public PairPotentialBase {
     Dummy();
@@ -322,8 +114,7 @@ class HardSphere : public MixerPairPotentialBase {
     void extractorsFromJson(const json &j) override;
 
   public:
-    HardSphere(const std::string& name = "hardsphere")
-        : MixerPairPotentialBase(name, std::string(), CombinationRuleType::ARITHMETIC){};
+    HardSphere(const std::string& name = "hardsphere");
 
     inline double operator()(const Particle &a, const Particle &b, double r2, const Point &) const override {
         return r2 < (*sigma_squared)(a.id, b.id) ? pc::infty : 0.0;
@@ -351,8 +142,7 @@ class Hertz : public MixerPairPotentialBase {
     void extractorsFromJson(const json &j) override;
 
   public:
-    Hertz(const std::string &name = "hertz")
-        : MixerPairPotentialBase(name) {};
+    Hertz(const std::string &name = "hertz");
     inline double operator()(const Particle &a, const Particle &b, double r2, const Point &) const override {
         if (r2 <= (*sigma_squared)(a.id, b.id)) {
             return (*epsilon)(a.id, b.id) * pow((1 - (sqrt(r2 / (*sigma_squared)(a.id, b.id)))), 2.5);
@@ -379,8 +169,7 @@ class SquareWell : public MixerPairPotentialBase {
     void initPairMatrices() override;
 
   public:
-    SquareWell(const std::string &name = "squarewell")
-        : MixerPairPotentialBase(name) {};
+    SquareWell(const std::string &name = "squarewell");
     inline double operator()(const Particle &a, const Particle &b, double r2, const Point &) const override {
         return (r2 < (*sigma_squared)(a.id, b.id)) ? -(*epsilon)(a.id, b.id) : 0.0;
     }
@@ -419,10 +208,16 @@ struct RepulsionR3 : public PairPotentialBase {
  *
  */
 class CosAttract : public PairPotentialBase {
-    double eps, wc, rc, rc2, c, rcwc2;
+    double eps;
+    double wc;
+    double rc;
+    double rc2;
+    double c;
+    double rcwc2; // (rc + wc)^2 ~ "rcut2" in faunus v1
 
   public:
-    CosAttract(const std::string &name = "cos2") : PairPotentialBase(name) {};
+    CosAttract(const std::string &name = "cos2");
+    double cutOffSquared() const; //!< Squared cutoff distance where potential goes to zero
 
     /**
      * @todo
@@ -464,6 +259,72 @@ class CosAttract : public PairPotentialBase {
 };
 
 /**
+ * @brief Cosine attraction using combination rules (Eq. 4 in doi:10/chqzjk)
+ *
+ * This will collect `rc`, `wc`, and `eps` from the atom topology and mix using arbitrary
+ * combination rules. `EPSILON` is used to mix the energy, `eps`. `SIGMA` is used to mix
+ * distances, `rc` and `wc`.
+ */
+class CosAttractMixed : public MixerPairPotentialBase {
+  private:
+    TExtractorFunc extract_rc;
+    TExtractorFunc extract_wc;
+    TExtractorFunc extract_eps;
+
+    TPairMatrixPtr switching_distance; //!< Switching region begins here (r_c)
+    TPairMatrixPtr switching_width;    //!< Width of switching region (w_c)
+    TPairMatrixPtr epsilon;            //!< Energy depth in kT
+
+    void initPairMatrices() override;
+    void extractorsFromJson(const json& j) override;
+
+  public:
+    CosAttractMixed(const std::string& name = "cos2", const std::string& cite = "doi:10/chqzjk"s,
+                    CombinationRuleType combination_rule = CombinationRuleType::LORENTZ_BERTHELOT);
+
+    double cutOffSquared(AtomData::index_type id1, AtomData::index_type id2) const; //!< (r_c+w_c)^2
+
+    /**
+     * @brief Calculates force on particle a due to another particle, b
+     * @param particle_a Particle a ("target")
+     * @param particle_b Particle b
+     * @param squared_distance Squared norm |𝐚-𝐛|²
+     * @param b_towards_a Distance vector 𝐛 -> 𝐚 = 𝐚 - 𝐛
+     * @return Force on particle a due to particle b
+     */
+    inline Point force(const Particle& a, const Particle& b, double squared_distance,
+                       const Point& b_towards_a) const override {
+        const auto rc = (*switching_distance)(a.id, b.id);
+        const auto wc = (*switching_width)(a.id, b.id);
+        const auto cutoff_squared = (rc + wc) * (rc + wc);
+        if (squared_distance > cutoff_squared || squared_distance < (rc * rc)) {
+            return {0.0, 0.0, 0.0};
+        }
+        const auto c = pc::pi / (2.0 * wc);
+        const auto r = sqrt(squared_distance);
+        const auto x1 = std::cos(c * (r - rc));
+        const auto x2 = std::sin(c * (r - rc));
+        return -2.0 * c * (*epsilon)(a.id, b.id) * x1 * x2 / r * b_towards_a;
+    }
+
+    inline double operator()(const Particle& a, const Particle& b, const double squared_distance,
+                             [[maybe_unused]] const Point& b_towards_a) const override {
+        const auto rc = (*switching_distance)(a.id, b.id);
+        if (squared_distance < (rc * rc)) {
+            return -(*epsilon)(a.id, b.id);
+        }
+        const auto wc = (*switching_width)(a.id, b.id);
+        const auto cutoff_squared = (rc + wc) * (rc + wc);
+        if (squared_distance > cutoff_squared) {
+            return 0.0;
+        }
+        const auto c = pc::pi / (2.0 * wc);
+        const auto x = std::cos(c * (sqrt(squared_distance) - rc));
+        return -(*epsilon)(a.id, b.id) * x * x;
+    }
+};
+
+/**
  * @brief Pairwise SASA potential calculating the surface area of inter-secting spheres
  */
 class SASApotential : public PairPotentialBase {
@@ -482,8 +343,7 @@ class SASApotential : public PairPotentialBase {
             return (tension + conc * tfe) * area(0.5 * atoms[a.id].sigma, 0.5 * atoms[b.id].sigma, r2);
         return 0.0;
     }
-    SASApotential(const std::string &name = "sasa", const std::string &cite = std::string()) :
-        PairPotentialBase(name, cite) {};
+    SASApotential(const std::string &name = "sasa", const std::string &cite = std::string());
     void to_json(json &j) const override;
     void from_json(const json &j) override;
 };
@@ -502,8 +362,7 @@ struct Coulomb : public PairPotentialBase {
 };
 
 struct DipoleDipole : public PairPotentialBase {
-    DipoleDipole(const std::string &name = "dipoledipole", const std::string &cite = std::string()) :
-        PairPotentialBase(name, cite, false) {};
+    DipoleDipole(const std::string &name = "dipoledipole", const std::string &cite = std::string());
     double lB; //!< Bjerrum length
     inline double operator()(const Particle &a, const Particle &b, double, const Point &r) const override {
         return lB*mu2mu(a.getExt().mu, b.getExt().mu, a.getExt().mulen*b.getExt().mulen, r,1.0,0.0);
@@ -522,14 +381,9 @@ class Polarizability : public Coulomb {
     std::shared_ptr<PairMatrix<double>> m_neutral, m_charged;
 
   public:
-    Polarizability(const std::string &name = "polar") : Coulomb(name) {
-        m_neutral = std::make_shared<PairMatrix<double>>();
-        m_charged = std::make_shared<PairMatrix<double>>();
-    };
-
+    Polarizability(const std::string &name = "polar");
     void from_json(const json &j) override;
-
-    void to_json(json &j) const override { j = {{"epsr", epsr}}; }
+    void to_json(json &j) const override;
 
     inline double operator()(const Particle &a, const Particle &b, double r2, const Point &) const override {
         double r4inv = 1 / (r2 * r2);
@@ -566,7 +420,7 @@ class FENE : public PairPotentialBase {
     double k, r02, r02inv;
 
   public:
-    FENE(const std::string &name = "fene") : PairPotentialBase(name) {};
+    FENE(const std::string &name = "fene");
     void from_json(const json &j) override;
     void to_json(json &j) const override;
 
@@ -598,7 +452,7 @@ class NewCoulombGalore : public PairPotentialBase {
                 const Point& b_towards_a) const override;
     void from_json(const json &) override;
     void to_json(json &) const override;
-    double dielectric_constant(double M2V) { return pot.calc_dielectric(M2V); }
+    double dielectric_constant(double M2V);
     double bjerrum_length; //!< Bjerrum length (angstrom)
     const CoulombGalore::Splined& getCoulombGalore() const; //!< Access to full coulomb galore class
 };
@@ -690,10 +544,12 @@ class CustomPairPotential : public PairPotentialBase {
  *          problematic if these have large memory requirements.
  */
 class FunctorPotential : public PairPotentialBase {
-    typedef std::function<double(const Particle &, const Particle &, double, const Point &)> uFunc;
+    using uFunc = std::function<double (const Particle &, const Particle &, double, const Point &)>;
+    using PrimitiveModel = CombinedPairPotential<Coulomb, HardSphere>;
+    using PrimitiveModelWCA = CombinedPairPotential<Coulomb, WeeksChandlerAndersen>;
+    using CigarCosAttractWCA = CompleteCigarPotential<CosAttractMixed, WeeksChandlerAndersen>;
+
     json _j; // storage for input json
-    typedef CombinedPairPotential<Coulomb, HardSphere> PrimitiveModel;
-    typedef CombinedPairPotential<Coulomb, WeeksChandlerAndersen> PrimitiveModelWCA;
     bool have_monopole_self_energy = false;
     bool have_dipole_self_energy = false;
     void registerSelfEnergy(PairPotentialBase *); //!< helper func to add to selv_energy_vector
@@ -715,7 +571,9 @@ class FunctorPotential : public PairPotentialBase {
                PrimitiveModelWCA,     // 9
                Hertz,                 // 10
                SquareWell,            // 11
-               Multipole              // 12
+               Multipole,             // 12
+               HardSpheroCylinder,    // 13
+               CigarCosAttractWCA     // 14
                >
         potlist;
 
@@ -787,7 +645,7 @@ class SplinedPotential : public FunctorPotential {
      * 4. return exact energy if r<=rmin
      */
     inline double operator()(const Particle &p1, const Particle &p2, double r2, const Point &) const override {
-        auto &knots = matrix_of_knots(p1.id, p2.id);
+        const auto &knots = matrix_of_knots(p1.id, p2.id);
         if (r2 >= knots.rmax2) {
             return 0.0;
         }
@@ -803,5 +661,4 @@ class SplinedPotential : public FunctorPotential {
     void from_json(const json &) override;
 };
 
-} // end of namespace Potential
-} // end of namespace Faunus
+} // end of namespace

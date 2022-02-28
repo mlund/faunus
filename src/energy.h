@@ -34,7 +34,7 @@ class ReactionCoordinateBase;
 }
 
 namespace Potential {
-struct PairPotentialBase;
+class PairPotentialBase;
 }
 
 /**

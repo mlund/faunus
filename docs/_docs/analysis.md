@@ -678,6 +678,7 @@ saved.
 -------------- | ---------------------------------------------------------
 `file`         |  Filename of output xtc file
 `nstep`        |  Interval between samples.
+`nskip=0`      | Number of initial steps excluded from the analysis
 `molecules=*`  |  Array of molecules to save (default: all)
 
 
@@ -699,5 +700,24 @@ vmd confout.pqr traj.xtc -e scripts/vmd-qrtraj.tcl
 
 `qrfile`          |  Description
 ----------------- | -----------------------------------
-`file=qrtraj.dat` |  Output filename (.dat, .gz)
+`file=qrtraj.dat` |  Output filename (.dat|.gz)
 `nstep`           |  Interval between samples
+`nskip=0`         | Number of initial steps excluded from the analysis
+
+### Patchy Sphero-Cylinder trajectory
+
+This will save a text trajectory containing the number of particles, box dimensions, midpoint positions,
+direction, and patch direction of PSCs. Using the provided **python 2** script, this can be used 
+to visualise a simulation in Visual Molecular Dynamics (VMD):
+
+~~~ bash
+python2 psc2vmd.py -i tracjectory.dat -o movie.pdb --psf movie.psf
+vmd -e vmd.script
+~~~
+
+`psctraj`  |  Description
+---------- | -----------------------------------
+`file=`    |  Output filename (.dat|.gz)
+`nstep`    |  Interval between samples
+`nskip=0`  | Number of initial steps excluded from the analysis
+

@@ -2,8 +2,6 @@
 #include <limits>
 #include <string>
 #include <cmath>
-#include <memory>
-#include <numeric>
 #include <array>
 
 namespace Faunus {

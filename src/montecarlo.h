@@ -72,13 +72,14 @@ class MetropolisMonteCarlo {
 
   public:
     MetropolisMonteCarlo(const json& j);
-    Energy::Hamiltonian &getHamiltonian();                     //!< Get Hamiltonian of accepted (default) state
-    Space &getSpace();                                         //!< Access to space in accepted (default) state
-    double relativeEnergyDrift();                              //!< Relative energy drift from initial configuration
-    void sweep();                                              //!< Perform all moves (stochastic and static)
-    void restore(const json& j);                               //!< Restores system from previously store json object
-    static bool metropolisCriterion(double energy_change);     //!< Metropolis criterion
-    ~MetropolisMonteCarlo();                                   //!< Required due to unique_ptr to incomplete type
+    Energy::Hamiltonian& getHamiltonian();                 //!< Get Hamiltonian of accepted (default) state
+    Space& getSpace();                                     //!< Access to space in accepted (default) state
+    Space& getTrialSpace();                                //!< Access to trial space
+    double relativeEnergyDrift();                          //!< Relative energy drift from initial configuration
+    void sweep();                                          //!< Perform all moves (stochastic and static)
+    void restore(const json& j);                           //!< Restores system from previously store json object
+    static bool metropolisCriterion(double energy_change); //!< Metropolis criterion
+    ~MetropolisMonteCarlo();                               //!< Required due to unique_ptr to incomplete type
 };
 
 void from_json(const json &, MetropolisMonteCarlo::State &); //!< Build state from json object

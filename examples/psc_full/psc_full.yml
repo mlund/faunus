@@ -1,0 +1,41 @@
+#!/usr/bin/env yason.py
+
+# Simulates a fibrillation process of patchy sphero-cylinders (PSFs)
+# The trajectory can be visialised in VMD using the provided script
+
+temperature: 300
+random: {seed: fixed}
+geometry: {type: cuboid, length: 50}
+mcloop: {macro: 10, micro: 4000}
+
+energy:
+  - nonbonded:
+      default:
+        - coswca-psc:
+            cos2: {mising: "LB"} # used for interactions with patch
+            wca: {mixing: "LB"}  # used for interactions with cylinder
+
+atomlist:
+  - PSC:
+      eps: 2.479        # used by both cos2 and wca
+      rc: 11.2246204831 # where cosine decay begins
+      wc: 6.0           # width of cosine decay
+      sigma: 10.0       # cylinder diameter
+      dp: 1.0
+      dprot: 0.1
+      psc: {length: 30, type: full, patch_angle: 80, patch_angle_switch: 5.0}
+
+moleculelist:
+    - bulk: {atoms: [PSC], atomic: true}
+
+insertmolecules:
+    - bulk: {N: 20}
+
+moves:
+    - transrot: {molecule: bulk, repeat: N}
+
+analysis:
+    - systemenergy: {file: energy.dat, nstep: 100}
+    - psctraj: {file: movie.dat, nstep: 50}
+    - savestate: {file: state.json }
+

@@ -72,6 +72,7 @@ Atoms are the smallest possible particle entities with properties defined below.
 `sigma=0`     | `2r` [Å] (overrides radius)
 `tension=0`   | Surface tension [kJ/mol/Å$^2$]
 `tfe=0`       | Transfer free energy [kJ/mol/Å$^2$/M]
+`psc`         | Patchy sphero-cylinders properties (object)
 
 A filename (`.json`) may be given instead of an atom definition to load
 from an external atom list. Atoms are loaded in the given order, and if it occurs
@@ -86,6 +87,49 @@ atomlist:
   - my-external-atomlist.json
   - ...
 ~~~
+
+### Anisotropic particles (experimental)
+
+Faunus supports anisotropic particles such as dipoles, spherocylinders, and quadrupoles.
+While the implementation is pretty stable, it is not well optimized and should be considered experimental.
+
+#### Patchy Sphero-cylinders
+
+Sphero-cylinders are activated using the `psc` keyword. Currently only a single pair-potential is readily available, namely
+a cosine attraction for patch-patch interactions, mixed with Weeks-Chandler-Andersen for excluded volume.
+
+~~~ yaml
+atomlist:
+  - mycigar:
+      psc: {type: capped, length: 40, patch_angle: 80}
+      eps: 2.4  # used for both wca and the cosine attraction
+      sigma: 10 # cylinder and cap radius
+      rc: 11.2  # cosine attraction switch distance
+      wc: 6.0   # cosine attraction switch width
+
+energy:
+  - nonbonded:
+      default:
+        - coswca-psc:          # cosine attraction + WCA pair potential
+            cos2: {mixing: LB} # used for interactions with patch
+            wca: {mixing: LB}  # used for interactions with cylinder
+~~~
+
+Possible patch types are `none`, `full` and `capped` signifying
+no patch (○◻○);
+a patch that runs the full length including the end caps (●◼●);
+or a capped variant where the patch stops before the caps (○◼○).
+The `coswca-psc` potential can handle mixtures of PSCs and spherical particles.
+When a spherical particle interacts with the PSC, the closest distances to the patch and excluded volume
+are used to evaluate the attractive and repulsive energy.
+
+`psc`                  | Description
+---------------------- | -------------------------------------------------
+`type=none`            | `none` (○◻○), `full` (●◼●), `capped` (○◼○)
+`length=0`             | Length of cylinder (Å)
+`chiral_angle=0`       | Patch angle with respect to length axis (degrees)
+`patch_angle=0`        | Opening angle of patch (degrees), ◔ (degrees)
+`patch_angle_switch=0` | (degrees)
 
 
 ## Molecule Properties

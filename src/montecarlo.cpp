@@ -209,6 +209,8 @@ Energy::Hamiltonian &MetropolisMonteCarlo::getHamiltonian() { return *state->pot
 
 Space &MetropolisMonteCarlo::getSpace() { return *state->spc; }
 
+Space& MetropolisMonteCarlo::getTrialSpace() { return *trial_state->spc; }
+
 void from_json(const json &j, MetropolisMonteCarlo::State &state) {
     state.spc = std::make_unique<Space>(j);
     state.pot = std::make_unique<Energy::Hamiltonian>(*state.spc, j.at("energy"));

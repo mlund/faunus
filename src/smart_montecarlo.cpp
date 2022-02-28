@@ -1,4 +1,5 @@
 #include "smart_montecarlo.h"
+#include <doctest/doctest.h>
 
 namespace Faunus::SmarterMonteCarlo {
 

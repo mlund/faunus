@@ -4,6 +4,7 @@
 #include "aux/eigensupport.h"
 #include <range/v3/algorithm/for_each.hpp>
 #include <range/v3/algorithm/count_if.hpp>
+#include <doctest/doctest.h>
 
 namespace Faunus {
 

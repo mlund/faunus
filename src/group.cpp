@@ -6,6 +6,7 @@
 #include <cereal/archives/binary.hpp>
 #include <cereal/types/memory.hpp>
 #include <nlohmann/json.hpp>
+#include <doctest/doctest.h>
 
 namespace Faunus {
 

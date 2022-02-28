@@ -2,6 +2,7 @@
 #include "space.h"
 #include <range/v3/algorithm/any_of.hpp>
 #include <iostream>
+#include <doctest/doctest.h>
 
 namespace Faunus {
 namespace Region {

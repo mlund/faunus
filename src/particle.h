@@ -53,13 +53,8 @@ struct Charge : public ParticlePropertyBase {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 }; //!< Charge (monopole) property
 
-/** @brief Dipole properties
- *
- * Json (de)serialization:
- *
- * ```{.cpp}
- *     Dipole d = R"( "mu":[0,0,1], "mulen":10 )"_json
- * ```
+/**
+ * @brief Dipole properties
  */
 struct Dipole : public ParticlePropertyBase {
     Point mu = {0.0, 0.0, 0.0};                                       //!< dipole moment unit vector
@@ -67,6 +62,7 @@ struct Dipole : public ParticlePropertyBase {
     void rotate(const Eigen::Quaterniond& q, const Eigen::Matrix3d&); //!< Rotate dipole moment
     void to_json(json& j) const override;
     void from_json(const json& j) override;
+    bool isDipolar() const;
     template <class Archive> void serialize(Archive& archive) { archive(mu, mulen); }
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
@@ -74,10 +70,11 @@ struct Dipole : public ParticlePropertyBase {
 struct Polarizable : public ParticlePropertyBase {
     Point mui = {1.0, 0.0, 0.0};                                        //!< induced dipole moment unit vector
     double muilen = 0.0;                                                //!< induced dipole moment scalar
-    Tensor alpha;                                                       //!< polarizability tensor
+    Tensor alpha = Tensor::Zero();                                      //!< polarizability tensor
     void rotate(const Eigen::Quaterniond& q, const Eigen::Matrix3d& m); //!< Rotate polarizability tensor
     void to_json(json& j) const override;
     void from_json(const json& j) override;
+    bool isPolarizable() const; //!< True if non-zero polarizability
     template <class Archive> void serialize(Archive& archive) { archive(mui, muilen, alpha); }
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
@@ -87,17 +84,33 @@ struct Quadrupole : public ParticlePropertyBase {
     void rotate(const Eigen::Quaterniond& q, const Eigen::Matrix3d& m); //!< Rotate quadrupole moment
     void to_json(json& j) const override;
     void from_json(const json& j) override;
+    bool isQuadrupolar() const; //!< True if non-zero quadrupolar moment
     template <class Archive> void serialize(Archive& archive) { archive(Q); }
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 }; // Quadrupole property
 
-struct Cigar : public ParticlePropertyBase {
-    Point scdir = {0, 0, 0};                                          //!< Sphero-cylinder direction unit vector
-    double sclen = 0;                                                 //!< Length
-    void rotate(const Eigen::Quaterniond& q, const Eigen::Matrix3d&); //!< Rotate sphero-cylinder
+/**
+ * @brief Patchy sphero cylinder a.k.a. Cigar particles
+ */
+class Cigar : public ParticlePropertyBase {
+  private:
+  public:
+    Point scdir = {1.0, 0.0, 0.0};    //!< Sphero-cylinder direction unit vector
+    Point patchdir = {0.0, 1.0, 0.0}; //!< Patch direction
+    std::array<Point, 2> patchsides;
+    double half_length = 0.0; //!< Half end-to-end distace
+    double pcanglsw = 0.0;    //!< Cosine of switch angle from AtomData (speed optimization)
+    double pcangl = 0.0;      //!< Cosine of AtomData::patch_angle (speed optimization)
+    void rotate(const Eigen::Quaterniond& quaternion, const Eigen::Matrix3d& rotation_matrix); //!< Rotate sphero-cylinder
     void to_json(json& j) const override;
     void from_json(const json& j) override;
-    template <class Archive> void serialize(Archive& archive) { archive(scdir, sclen); }
+    void setDirections(const SpheroCylinderData& psc_data, const Point& new_direction,
+                       const Point& new_patch_direction);  // initialize; run at start and after patch changes
+    template <class Archive> void serialize(Archive& archive) {
+        archive(scdir, patchdir, patchsides.at(0), patchsides.at(1));
+    }
+    bool isCylindrical() const; //!< True of non-zero length
+
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 }; //!< Sphero-cylinder properties
 
@@ -169,10 +182,10 @@ template <typename... Properties> void from_json(const json& j, ParticleTemplate
 class Particle {
   public:
     using ParticleExtension = ParticleTemplate<Dipole, Quadrupole, Cigar>;
-    std::shared_ptr<ParticleExtension> ext = nullptr; //!< Point to extended properties
-    int id = -1;                                      //!< Particle id/type
-    double charge = 0.0;                              //!< Particle charge
-    Point pos = {0.0, 0.0, 0.0};                      //!< Particle position vector
+    std::unique_ptr<ParticleExtension> ext; //!< Point to extended properties
+    int id = -1;                            //!< Particle id/type
+    double charge = 0.0;                    //!< Particle charge
+    Point pos = {0.0, 0.0, 0.0};            //!< Particle position vector
 
     Particle() = default;
     Particle(const AtomData& a, const Point& pos);

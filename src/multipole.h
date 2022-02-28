@@ -1,5 +1,7 @@
 #pragma once
 #include <doctest/doctest.h>
+#include "core.h"
+#include "particle.h"
 #include "units.h"
 #include "aux/pow_function.h"
 

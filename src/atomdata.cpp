@@ -81,8 +81,7 @@ void to_json(json& j, const AtomData& a) {
           {"tfe", a.tfe * 1.0_angstrom * 1.0_angstrom * 1.0_molar / 1.0_kJmol},
           {"mu", a.mu},
           {"mulen", a.mulen},
-          {"scdir", a.scdir},
-          {"sclen", a.sclen},
+          {"psc", a.sphero_cylinder},
           {"id", a.id()}};
     to_json(_j, a.interaction); // append other interactions
     if (a.hydrophobic)
@@ -112,8 +111,7 @@ void from_json(const json& j, AtomData& a) {
                 a.mulen = a.mu.norm();     // ... then set mulen
             a.mu = a.mu / a.mu.norm();     // normalize mu
         }
-        a.scdir = val.value("scdir", a.scdir);
-        a.sclen = val.value("sclen", a.sclen);
+        a.sphero_cylinder = val.value("psc", SpheroCylinderData());
         a.mw = val.value("mw", a.mw);
         a.tension = val.value("tension", a.tension) * 1.0_kJmol / (1.0_angstrom * 1.0_angstrom);
         a.tfe = val.value("tfe", a.tfe) * 1.0_kJmol / (1.0_angstrom * 1.0_angstrom * 1.0_molar);
@@ -244,6 +242,22 @@ AtomData& findAtomByName(std::string_view name) {
         throw UnknownAtomError(name);
     }
     return *result;
+}
+
+void from_json(const json& j, SpheroCylinderData& psc) {
+    psc.length = j.value("length", 0.0) * 1.0_angstrom;
+    psc.type = j.value("type", SpheroCylinderData::PatchType::None);
+    psc.patch_angle = j.value("patch_angle", 0.0) * 1.0_deg;
+    psc.patch_angle_switch = j.value("patch_angle_switch", 0.0) * 1.0_deg;
+    psc.chiral_angle = j.value("chiral_angle", 0.0) * 1.0_deg;
+}
+
+void to_json(json& j, const SpheroCylinderData& psc) {
+    j = {{"length", psc.length / 1.0_angstrom},
+         {"patch_angle", psc.patch_angle / 1.0_deg},
+         {"patch_angle_switch", psc.patch_angle_switch / 1.0_deg},
+         {"type", psc.type},
+         {"chiral_angle", psc.chiral_angle / 1.0_deg}};
 }
 
 } // namespace Faunus

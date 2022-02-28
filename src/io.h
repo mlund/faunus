@@ -97,7 +97,7 @@ class StructureFileReader {
     bool prefer_charges_from_file = true; //!< If applicable, prefer charges from AAM file over `AtomData`
 
     ParticleVector& load(std::istream& stream); //!< Load entire stream and populate data
-    ParticleVector& load(const std::string& filename);
+    ParticleVector& load(std::string_view filename);
     virtual ~StructureFileReader() = default;
 
     bool box_dimension_support = false;
@@ -162,6 +162,13 @@ class XYZReader : public StructureFileReader {
     void loadHeader(std::istream& stream) override;
     Particle loadParticle(std::istream& stream) override;
 };
+
+class SpheroCylinderXYZReader : public StructureFileReader {
+  private:
+    void loadHeader(std::istream& stream) override;
+    Particle loadParticle(std::istream& stream) override;
+};
+
 
 class GromacsReader : public StructureFileReader {
   private:
@@ -248,6 +255,17 @@ class XYZWriter : public StructureFileWriter {
     void saveHeader(std::ostream& stream, int number_of_particles) const override;
     void saveParticle(std::ostream& stream, const Particle& particle) override;
 };
+
+/**
+ * Modified XYZ format that also saves spherocylinder direction and patch
+ * (ported from Faunus v1)
+ */
+class SpheroCylinderXYZWriter : public StructureFileWriter {
+  private:
+    void saveHeader(std::ostream& stream, int number_of_particles) const override;
+    void saveParticle(std::ostream& stream, const Particle& particle) override;
+};
+
 
 class PQRWriter : public StructureFileWriter {
   private:
@@ -654,14 +672,14 @@ ParticleVector fastaToParticles(std::string_view fasta_sequence, double bond_len
  * @throws Throws exception if nothing was loaded or if unknown suffix
  * @returns particles destination particle vector (will be overwritten)
  */
-ParticleVector loadStructure(const std::string& filename, bool prefer_charges_from_file = true);
+ParticleVector loadStructure(std::string_view filename, bool prefer_charges_from_file = true);
 
 /**
  * @brief Create structure writer
  * @param suffix Filename suffix (pqr, pdb, aam, xyz, gro)
  * @return Shared pointer to write instance; empty if unknown suffix
  */
-std::shared_ptr<StructureFileWriter> createStructureFileWriter(const std::string& suffix);
+std::unique_ptr<StructureFileWriter> createStructureFileWriter(const std::string& suffix);
 
 /**
  * @brief Placeholder for Space Trajectory

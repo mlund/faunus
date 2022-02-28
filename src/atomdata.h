@@ -27,6 +27,36 @@ void from_json(const json& j, InteractionData& a);
 void from_single_use_json(SingleUseJSON& j, InteractionData& a);
 
 /**
+ * @brief Static properties for patchy sphero cylinders (PSC)
+ */
+class SpheroCylinderData {
+  protected:
+    friend void from_json(const json&, SpheroCylinderData&);
+    friend void to_json(json&, const SpheroCylinderData&);
+
+  public:
+    enum class PatchType {
+        None = 0,                     //!< No patch
+        Full = 1,                     //!< Patch runs the full length of the SC
+        Capped = 2,                   //!< Patch stops before the end caps
+        Invalid = 3                   //!< Used to detect invalid input
+    };                                //!< Type of PSC particle
+    double chiral_angle = 0.0;        //!< Rotation of patch relative to direction (radians)
+    double length = 0.0;              //!< Sphere-cylinder length
+    double patch_angle = 0.0;         //!< Opening angle of attrative patch (radians)
+    double patch_angle_switch = 0.0;  //!< Gradually switch on patch interaction over angular interval (radians)
+    PatchType type = PatchType::None; //!< Patch type of spherocylinder
+};
+
+void from_json(const json& j, SpheroCylinderData& psc);
+void to_json(json& j, const SpheroCylinderData& psc);
+
+NLOHMANN_JSON_SERIALIZE_ENUM(SpheroCylinderData::PatchType, {{SpheroCylinderData::PatchType::Invalid, nullptr},
+                                                             {SpheroCylinderData::PatchType::Full, "full"},
+                                                             {SpheroCylinderData::PatchType::Capped, "capped"},
+                                                             {SpheroCylinderData::PatchType::None, "none"}})
+
+/**
  * @brief General properties for atoms
  */
 class AtomData { // has to be a class when a constant reference is used
@@ -39,24 +69,23 @@ class AtomData { // has to be a class when a constant reference is used
     friend void from_json(const json&, AtomData&);
 
   public:
-    std::string name;            //!< Name
-    double charge = 0;           //!< Particle charge [e]
-    double mw = 1;               //!< Weight
-    double sigma = 0;            //!< Diameter for e.g Lennard-Jones etc. [angstrom]
-                                 //!< Do not set! Only a temporal class member during the refactorization
-    double activity = 0;         //!< Chemical activity [mol/l]
-    double alphax = 0;           //!< Excess polarisability (unit-less)
-    double dp = 0;               //!< Translational displacement parameter [angstrom]
-    double dprot = 0;            //!< Rotational displacement parameter [degrees]
-    double mulen = 0;            //!< Dipole moment scalar [eÃ]
-    double sclen = 0;            //!< Sphere-cylinder length [angstrom]
-    double tension = 0;          //!< Surface tension [kT/Å^2]
-    double tfe = 0;              //!< Transfer free energy [J/mol/angstrom^2/M]
-    Point mu = {0, 0, 0};        //!< Dipole moment unit vector
-    Point scdir = {0, 0, 0};     //!< Sphero-cylinder direction
-    bool hydrophobic = false;    //!< Is the particle hydrophobic?
-    bool implicit = false;       //!< Is the particle implicit (e.g. proton)?
-    InteractionData interaction; //!< Arbitrary interaction parameters, e.g., epsilons in various potentials
+    std::string name;                   //!< Name
+    double charge = 0;                  //!< Particle charge [e]
+    double mw = 1;                      //!< Weight
+    double sigma = 0;                   //!< Diameter for e.g Lennard-Jones etc. [angstrom]
+                                        //!< Do not set! Only a temporal class member during the refactorization
+    double activity = 0;                //!< Chemical activity [mol/l]
+    double alphax = 0;                  //!< Excess polarisability (unit-less)
+    double dp = 0;                      //!< Translational displacement parameter [angstrom]
+    double dprot = 0;                   //!< Rotational displacement parameter [degrees]
+    double tension = 0;                 //!< Surface tension [kT/Å^2]
+    double tfe = 0;                     //!< Transfer free energy [J/mol/angstrom^2/M]
+    Point mu = {0, 0, 0};               //!< Dipole moment unit vector
+    double mulen = 0;                   //!< Dipole moment length
+    bool hydrophobic = false;           //!< Is the particle hydrophobic?
+    bool implicit = false;              //!< Is the particle implicit (e.g. proton)?
+    InteractionData interaction;        //!< Arbitrary interaction parameters, e.g., epsilons in various potentials
+    SpheroCylinderData sphero_cylinder; //!< Data for patchy sphero cylinders (PSCs)
 
     index_type& id();             //!< Type id
     const index_type& id() const; //!< Type id

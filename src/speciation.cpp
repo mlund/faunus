@@ -220,6 +220,10 @@ double SpeciationMove::bias([[maybe_unused]] Change& change, [[maybe_unused]] do
     return -reaction->freeEnergy() + bias_energy;
 }
 
+/**
+ * @todo Space::sync() already handles implicit reservoir updates.
+ *       Also move implicit reservoir averaging to Analysis namespace
+ */
 void SpeciationMove::_accept(Change&) {
     direction_ratio[reaction].update(reaction->getDirection(), true);
     const auto& molecular_products = reaction->getProducts().second;
@@ -244,6 +248,10 @@ void SpeciationMove::_accept(Change&) {
     }
 }
 
+/**
+ * @todo Space::sync() already handles implicit reservoir updates.
+ *       Also move implicit reservoir averaging to Analysis namespace
+ */
 void SpeciationMove::_reject([[maybe_unused]] Change& change) {
     direction_ratio[reaction].update(reaction->getDirection(), false);
 

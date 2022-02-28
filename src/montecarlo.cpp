@@ -61,12 +61,6 @@ void MetropolisMonteCarlo::init() {
             throw std::runtime_error("error aligning energies - this could be a bug...");
         }
     }
-
-    // Inject reference to Space into `SpeciationMove`
-    // Needed to calc. differences in ideal excess chem. potentials
-    for (auto& speciation_move : moves->getMoves().find<Move::SpeciationMove>()) {
-        speciation_move->setOther(*state->spc);
-    }
 }
 
 /**
@@ -102,7 +96,7 @@ MetropolisMonteCarlo::MetropolisMonteCarlo(const json &j)
     faunus_logger->set_level(spdlog::level::off); // do not duplicate log info
     trial_state = std::make_unique<State>(j);     // ...for the trial state
     faunus_logger->set_level(original_log_level); // restore original log level
-    moves = std::make_unique<Move::MoveCollection>(j.at("moves"), *trial_state->spc, *trial_state->pot);
+    moves = std::make_unique<Move::MoveCollection>(j.at("moves"), *trial_state->spc, *trial_state->pot, *state->spc);
     init();
 }
 

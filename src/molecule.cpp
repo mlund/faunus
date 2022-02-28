@@ -834,23 +834,25 @@ TEST_CASE("[Faunus] Conformation") {
 
 ReactionData::Direction ReactionData::getDirection() const { return direction; }
 
-void ReactionData::setDirection(ReactionData::Direction dir) {
-    if (dir != direction) {
-        direction = dir;
-        lnK = -lnK;
+void ReactionData::setDirection(ReactionData::Direction new_direction) {
+    if (new_direction != direction) {
+        direction = new_direction;
     }
 }
 
-std::pair<const ReactionData::StoichiometryMap&, const ReactionData::StoichiometryMap&>
-ReactionData::getProducts() const {
+void ReactionData::setRandomDirection(Random& random) {
+    auto direction = static_cast<ReactionData::Direction>((char)random.range(0, 1)); // random direction
+    setDirection(direction);
+}
+
+ReactionData::AtomicAndMolecularPair ReactionData::getProducts() const {
     if (direction == Direction::RIGHT) {
         return {right_atoms, right_molecules};
     }
     return {left_atoms, left_molecules};
 }
 
-std::pair<const ReactionData::StoichiometryMap&, const ReactionData::StoichiometryMap&>
-ReactionData::getReactants() const {
+ReactionData::AtomicAndMolecularPair ReactionData::getReactants() const {
     if (direction == Direction::RIGHT) {
         return {left_atoms, left_molecules};
     }
@@ -860,7 +862,7 @@ ReactionData::getReactants() const {
 /**
  * @return Pair of sets with id's for atoms and molecules participating in the reaction (i.e. reactants & products)
  */
-std::pair<std::set<int>, std::set<int>> ReactionData::getReactantsAndProducts() const {
+std::pair<std::set<int>, std::set<int>> ReactionData::participatingAtomsAndMolecules() const {
     auto extract_keys = [](const auto &map, std::set<int> &keys) { // map keys --> set
         std::transform(map.begin(), map.end(), std::inserter(keys, keys.end()), [](auto &pair) { return pair.first; });
     };
@@ -876,15 +878,16 @@ std::pair<std::set<int>, std::set<int>> ReactionData::getReactantsAndProducts() 
 }
 
 void ReactionData::reverseDirection() {
-    if (direction == Direction::RIGHT)
+    if (direction == Direction::RIGHT) {
         setDirection(Direction::LEFT);
-    else
+    } else {
         setDirection(Direction::RIGHT);
+    }
 }
 
 void from_json(const json &j, ReactionData &a) {
     if (!j.is_object() || j.size() != 1) {
-        throw std::runtime_error("Invalid JSON data for ReactionData");
+        throw ConfigurationError("Invalid JSON data for ReactionData");
     }
 
     a.direction = ReactionData::Direction::RIGHT;
@@ -892,7 +895,7 @@ void from_json(const json &j, ReactionData &a) {
     for (const auto& molecule : Faunus::molecules) {
         for (const auto& atom : Faunus::atoms) {
             if (molecule.name == atom.name) {
-                throw std::runtime_error("Molecules and atoms must have different names");
+                throw ConfigurationError("Molecules and atoms must have different names");
             }
         }
     }
@@ -900,9 +903,9 @@ void from_json(const json &j, ReactionData &a) {
     for (const auto& [key, val] : j.items()) {
         a.reaction_str = key; // reaction string, e.g. "A + B = C"
         a.only_neutral_molecules = val.value("neutral", false);
-        if (val.count("lnK") == 1) {
+        if (val.contains("lnK")) {
             a.lnK_unmodified = val.at("lnK").get<double>();
-        } else if (val.count("pK") == 1) {
+        } else if (val.contains("pK")) {
             a.lnK_unmodified = -std::log(10) * val.at("pK").get<double>();
         } else {
             a.lnK_unmodified = 0.0;
@@ -912,20 +915,20 @@ void from_json(const json &j, ReactionData &a) {
         // helper function used to parse and register atom and molecule names; updates lnK
         auto registerNames = [&](auto& names, auto&& atom_map, auto& mol_map, double sign) {
             for (const auto& atom_or_molecule_name : names) { // loop over species on reactant side (left)
-                auto [atom_iter, molecule_iter] = a.findAtomOrMolecule(atom_or_molecule_name);
-                if (atom_iter != Faunus::atoms.end()) { // atomic reactants
-                    if (atom_iter->implicit) {          // if atom is implicit, multiply K by its activity
-                        if (atom_iter->activity > 0) {
-                            a.lnK += sign * std::log(atom_iter->activity / 1.0_molar);
+                auto [atom, molecule] = a.findAtomOrMolecule(atom_or_molecule_name);
+                if (atom != Faunus::atoms.end()) { // atomic reactants
+                    if (atom->implicit) {          // if atom is implicit, multiply K by its activity
+                        if (atom->activity > 0.0) {
+                            a.lnK += sign * std::log(atom->activity / 1.0_molar);
                         }
                     } else {
-                        assert(std::fabs(atom_iter->activity) <= pc::epsilon_dbl);
-                        atom_map[atom_iter->id()]++; // increment stoichiometric number
+                        assert(std::fabs(atom->activity) <= pc::epsilon_dbl);
+                        atom_map[atom->id()]++; // increment stoichiometric number
                     }
-                } else if (molecule_iter != Faunus::molecules.end()) { // molecular reactants (incl. "atomic" groups)
-                    mol_map[molecule_iter->id()]++;                    // increment stoichiometric number
-                    if (molecule_iter->activity > 0) { // assume activity not part of K -> divide by activity
-                        a.lnK -= sign * std::log(molecule_iter->activity / 1.0_molar);
+                } else if (molecule != Faunus::molecules.end()) { // molecular reactants (incl. "atomic" groups)
+                    mol_map[molecule->id()]++;                    // increment stoichiometric number
+                    if (molecule->activity > 0) { // assume activity not part of K -> divide by activity
+                        a.lnK -= sign * std::log(molecule->activity / 1.0_molar);
                     }
                 } else {
                     assert(false); // we should never reach here
@@ -936,11 +939,6 @@ void from_json(const json &j, ReactionData &a) {
         std::tie(a.left_names, a.right_names) = parseReactionString(a.reaction_str); // lists of species
         registerNames(a.left_names, a.left_atoms, a.left_molecules, 1.0);            // reactants
         registerNames(a.right_names, a.right_atoms, a.right_molecules, -1.0);        // products
-
-        // If exactly one atomic reactant and one atomic products, it's a swap move!
-        if (a.left_atoms.size() == 1 and a.right_atoms.size() == 1) {
-            a.swap = true;
-        }
     }
 }
 
@@ -948,11 +946,11 @@ void to_json(json &j, const ReactionData &reaction) {
     ReactionData a = reaction;
     // we want lnK to show for LEFT-->RIGHT direction
     a.setDirection(ReactionData::Direction::RIGHT);
-    j[a.reaction_str] = {{"lnK", a.lnK_unmodified},
+    j[a.getReactionString()] = {{"lnK", a.lnK_unmodified},
                          {"pK", -a.lnK_unmodified / std::log(10)},
-                         {"swap_move", a.swap},
+                         {"swap_move", a.containsAtomicSwap()},
                          {"neutral", a.only_neutral_molecules},
-                         {"pK'", -a.lnK / std::log(10)}};
+                         {"pK'", -a.freeEnergy() / std::log(10)}};
 }
 
 std::pair<decltype(Faunus::atoms)::const_iterator, decltype(Faunus::molecules)::const_iterator>
@@ -964,6 +962,35 @@ ReactionData::findAtomOrMolecule(const std::string& atom_or_molecule_name) {
     }
     return {atom_iter, molecule_iter};
 }
+
+double ReactionData::freeEnergy() const { return (direction == Direction::RIGHT) ? lnK : -lnK; }
+
+const std::string& ReactionData::getReactionString() const { return reaction_str; }
+
+bool ReactionData::containsAtomicSwap() const {
+    // If exactly one atomic reactant and one atomic products, it's a swap move!
+    return (left_atoms.size() == 1 && right_atoms.size() == 1);
+}
+
+const ReactionData::MapFilter ReactionData::is_implicit_group = [](const auto& pair) {
+    return Faunus::molecules.at(pair.first).isImplicit();
+};
+
+const ReactionData::MapFilter ReactionData::not_implicit_group = [](const auto& pair) {
+    return !Faunus::molecules.at(pair.first).isImplicit();
+};
+
+const ReactionData::MapFilter ReactionData::not_implicit_atom = [](const auto& pair) {
+    return !Faunus::atoms.at(pair.first).implicit;
+};
+
+const ReactionData::MapFilter ReactionData::is_atomic_group = [](const auto& pair) {
+    return Faunus::molecules.at(pair.first).isAtomic();
+};
+
+const ReactionData::MapFilter ReactionData::is_molecular_group = [](const auto& pair) {
+    return Faunus::molecules.at(pair.first).isMolecular();
+};
 
 TEST_CASE("[Faunus] ReactionData") {
     using doctest::Approx;
@@ -987,8 +1014,8 @@ TEST_CASE("[Faunus] ReactionData") {
     r = j["reactionlist"].get<decltype(reactions)>();
 
     CHECK(r.size() == 1);
-    CHECK(r.front().reaction_str == "A = B");
-    CHECK(r.front().lnK == Approx(-10.051 - std::log(0.2)));
+    CHECK(r.front().getReactionString() == "A = B");
+    CHECK(r.front().freeEnergy() == Approx(-10.051 - std::log(0.2)));
 }
 
 void MoleculeInserter::from_json(const json &) {}

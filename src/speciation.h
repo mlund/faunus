@@ -66,13 +66,32 @@ class AtomicGroupDeActivator : public GroupDeActivator {
 class MolecularGroupDeActivator : public GroupDeActivator {
   private:
     Space& spc;
-    std::function<void(Group&)> setPositionAndOrientation; //!< Sets position and rotation of inserted group
+    Random& random;
     double getBondEnergy(const Group& group) const;
+    virtual void setPositionAndOrientation(Group& group) const; //!< Applied to newly activated groups
 
   public:
     MolecularGroupDeActivator(Space& spc, Random& random);
     ChangeAndBias activate(Group& group, OptionalInt num_particles = std::nullopt) override;
     ChangeAndBias deactivate(Group& group, OptionalInt num_particles = std::nullopt) override;
+};
+
+/**
+ * Helper class to keep track of acceptance in left or right direction
+ */
+class ReactionDirectionRatio {
+  private:
+    using reaction_iterator = decltype(Faunus::reactions)::iterator;
+    struct AcceptanceData {
+        Average<double> right; //!< Acceptance ratio left -> right
+        Average<double> left;  //!< Acceptance ratio right -> left
+        void update(ReactionData::Direction direction, bool accept);
+    };
+    std::map<reaction_iterator, AcceptanceData> acceptance;
+
+  public:
+    AcceptanceData& operator[](reaction_iterator iter);
+    void to_json(json& j) const;
 };
 
 /**
@@ -92,26 +111,20 @@ class MolecularGroupDeActivator : public GroupDeActivator {
 class SpeciationMove : public MoveBase {
   private:
     using reaction_iterator = decltype(Faunus::reactions)::iterator;
-    reaction_iterator reaction;         //!< Randomly selected reaction
-    Space* old_spc = nullptr;           //!< Old space (particles, groups)
-    double bias_energy = 0.0;           //!< Accumulated bond energy if inserted/deleted molecule
-    ValidateReaction validate_reaction; //!< Helper to check if reaction is doable
-    std::unique_ptr<GroupDeActivator> molecularGroupDeActivator; //!< (de)activator for molecular groups
-    std::unique_ptr<GroupDeActivator> atomicGroupDeActivator;    //!< (de)activator for atomic groups
-
-    struct AcceptanceData {
-        Average<double> right; //!< Original left side of reaction
-        Average<double> left;  //!< Original right side of reaction
-        void update(ReactionData::Direction direction, bool accept);
-    };
-    std::map<reaction_iterator, AcceptanceData> acceptance;
-    std::map<int, Average<double>> average_reservoir_size; //!< Average number of implicit molecules
+    reaction_iterator reaction;                                //!< Randomly selected reaction
+    Space* old_spc = nullptr;                                  //!< Old space (particles, groups)
+    double bias_energy = 0.0;                                  //!< Group (de)activators may add bias
+    ValidateReaction validate_reaction;                        //!< Helper to check if reaction is doable
+    std::unique_ptr<GroupDeActivator> molecular_group_bouncer; //!< (de)activator for molecular groups
+    std::unique_ptr<GroupDeActivator> atomic_group_bouncer;    //!< (de)activator for atomic groups
+    ReactionDirectionRatio direction_ratio;                    //!< Track acceptance in each direction
+    std::map<int, Average<double>> average_reservoir_size;     //!< Average number of implicit molecules
 
     void _to_json(json& j) const override;
     void _from_json(const json&) override;
-    void _move(Change& change) override;   //!< Perform move
-    void _accept(Change& change) override; //!< Called when accepted
-    void _reject(Change& change) override; //!< Called when rejected
+    void _move(Change& change) override;
+    void _accept(Change& change) override;
+    void _reject(Change& change) override;
 
     void setReaction();                                      //!< Set random reaction and direction
     bool enoughImplicitMolecules() const;                    //!< enough implicit matter for reaction?
@@ -119,7 +132,6 @@ class SpeciationMove : public MoveBase {
     void deactivateAllReactants(Change& change);             //!< Delete all reactants
     void activateAllProducts(Change& change);                //!< Insert all products
     void updateGroupMassCenters(const Change& change) const; //!< Update affected molecular mass centers
-
     SpeciationMove(Space& spc, Space& old_spc, std::string_view name, std::string_view cite);
 
   public:

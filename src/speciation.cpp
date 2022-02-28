@@ -15,14 +15,33 @@ namespace Move {
  */
 struct SpeciationMoveException : public std::exception {};
 
-void SpeciationMove::_to_json(json& j) const {
-    json& _j = j["reactions"];
-    _j = json::object();
-    for (auto [reaction, data] : acceptance) {
+// ----------------------------------
+
+void ReactionDirectionRatio::AcceptanceData::update(ReactionData::Direction direction, bool accept) {
+    if (direction == ReactionData::Direction::RIGHT) {
+        right += static_cast<double>(accept);
+    } else {
+        left += static_cast<double>(accept);
+    }
+}
+void ReactionDirectionRatio::to_json(json& j) const {
+    auto& _j = j["reactions"] = json::object();
+    for (const auto& [reaction, data] : acceptance) {
         _j[reaction->getReactionString()] = {{"attempts", data.left.size() + data.right.size()},
                                              {"acceptance -->", data.right.avg()},
                                              {"acceptance <--", data.left.avg()}};
     }
+}
+
+ReactionDirectionRatio::AcceptanceData&
+ReactionDirectionRatio::operator[](ReactionDirectionRatio::reaction_iterator iter) {
+    return acceptance[iter];
+}
+
+// ----------------------------------
+
+void SpeciationMove::_to_json(json& j) const {
+    direction_ratio.to_json(j);
     for (auto [molid, size] : average_reservoir_size) {
         j["implicit_reservoir"][molecules.at(molid).name] = size.avg();
     }
@@ -83,7 +102,7 @@ void SpeciationMove::activateAllProducts(Change& change) {
 
     for (auto [molid, number_to_insert] : atomic_groups) {
         auto mollist = spc.findMolecules(molid, Space::Selection::ALL);
-        const auto& [change_data, bias] = atomicGroupDeActivator->activate(*mollist.begin(), number_to_insert);
+        const auto& [change_data, bias] = atomic_group_bouncer->activate(*mollist.begin(), number_to_insert);
         change.groups.emplace_back(change_data);
         bias_energy += bias;
     }
@@ -96,7 +115,7 @@ void SpeciationMove::activateAllProducts(Change& change) {
 
         assert(inactive.size() == number_to_insert); // should be ok if passed by reaction validator
         ranges::cpp20::for_each(inactive, [&](auto& group) {
-            const auto& [change_data, bias] = molecularGroupDeActivator->activate(group);
+            const auto& [change_data, bias] = molecular_group_bouncer->activate(group);
             change.groups.emplace_back(change_data);
             bias_energy += bias;
         });
@@ -122,7 +141,7 @@ void SpeciationMove::deactivateAllReactants(Change& change) {
             auto mollist = spc.findMolecules(molid, Space::Selection::ALL);
             assert(range_size(mollist) == 1);
             auto group = mollist.begin();
-            auto const& [change_data, bias] = atomicGroupDeActivator->deactivate(*group, N_delete);
+            auto const& [change_data, bias] = atomic_group_bouncer->deactivate(*group, N_delete);
             assert(!change_data.relative_atom_indices.empty());
             change.groups.push_back(change_data);
             bias_energy += bias;
@@ -133,7 +152,7 @@ void SpeciationMove::deactivateAllReactants(Change& change) {
                           ranges::to<std::vector<std::reference_wrapper<Group>>>;
             assert(active.size() == N_delete);
             std::for_each(active.begin(), active.end(), [&](auto& group) {
-                const auto& [change_data, bias] = molecularGroupDeActivator->deactivate(group);
+                const auto& [change_data, bias] = molecular_group_bouncer->deactivate(group);
                 change.groups.emplace_back(change_data);
                 bias_energy += bias;
             });
@@ -232,8 +251,7 @@ double SpeciationMove::bias([[maybe_unused]] Change& change, [[maybe_unused]] do
 }
 
 void SpeciationMove::_accept(Change&) {
-    acceptance[reaction].update(reaction->getDirection(), true);
-
+    direction_ratio[reaction].update(reaction->getDirection(), true);
     const auto& molecular_products = reaction->getProducts().second;
     const auto& molecular_reactants = reaction->getReactants().second;
 
@@ -257,7 +275,7 @@ void SpeciationMove::_accept(Change&) {
 }
 
 void SpeciationMove::_reject([[maybe_unused]] Change& change) {
-    acceptance[reaction].update(reaction->getDirection(), false);
+    direction_ratio[reaction].update(reaction->getDirection(), false);
 
     const auto& molecular_products = reaction->getProducts().second;
     const auto& molecular_reactants = reaction->getReactants().second;
@@ -279,22 +297,14 @@ SpeciationMove::SpeciationMove(Space& spc, Space& old_spc, std::string_view name
     : MoveBase(spc, name, cite)
     , old_spc(&old_spc)
     , validate_reaction(spc) {
-    molecularGroupDeActivator = std::make_unique<MolecularGroupDeActivator>(spc, slump);
-    atomicGroupDeActivator = std::make_unique<AtomicGroupDeActivator>(spc, old_spc, slump);
+    molecular_group_bouncer = std::make_unique<MolecularGroupDeActivator>(spc, slump);
+    atomic_group_bouncer = std::make_unique<AtomicGroupDeActivator>(spc, old_spc, slump);
 }
 
 SpeciationMove::SpeciationMove(Space& spc, Space& old_spc)
     : SpeciationMove(spc, old_spc, "rcmc", "doi:10/fqcpg3") {}
 
 void SpeciationMove::_from_json(const json&) {}
-
-void SpeciationMove::AcceptanceData::update(const ReactionData::Direction direction, const bool accept) {
-    if (direction == ReactionData::Direction::RIGHT) {
-        right += static_cast<double>(accept);
-    } else {
-        left += static_cast<double>(accept);
-    }
-}
 
 // -----------------------------------------
 
@@ -425,6 +435,27 @@ bool ValidateReaction::canProduceAtomicGroups(const ReactionData& reaction) cons
     return !ranges::cpp20::any_of(atomic_groups, cannot_create_atomic_group);
 }
 
+// ----------------------------------------------
+
+/**
+ * Randomly assign a new mass center and random orientation
+ */
+void MolecularGroupDeActivator::setPositionAndOrientation(Group& group) const {
+    auto& geometry = spc.geometry;
+
+    // translate to random position within simulation cell
+    Point new_mass_center;
+    geometry.randompos(new_mass_center, random); // place COM randomly in simulation box
+    Point displacement = geometry.vdist(new_mass_center, group.massCenter()->get());
+    group.translate(displacement, geometry.getBoundaryFunc());
+
+    // generate random orientation
+    const auto rotation_angle = 2.0 * pc::pi * (random() - 0.5); // -pi to pi
+    const auto random_unit_vector = randomUnitVector(random);
+    Eigen::Quaterniond quaternion(Eigen::AngleAxisd(rotation_angle, random_unit_vector));
+    group.rotate(quaternion, geometry.getBoundaryFunc());
+}
+
 MolecularGroupDeActivator::ChangeAndBias
 MolecularGroupDeActivator::activate(Group& group, GroupDeActivator::OptionalInt num_particles) {
     assert(group.isMolecular());                                      // must be a molecule group
@@ -475,18 +506,8 @@ MolecularGroupDeActivator::deactivate(Group& group, GroupDeActivator::OptionalIn
 }
 
 MolecularGroupDeActivator::MolecularGroupDeActivator(Space& spc, Random& random)
-    : spc(spc) {
-    // By default, an newly activated group recieves a random positio and orientation.
-    // Customize by overriding this function.
-    setPositionAndOrientation = [&geo = spc.geometry, &slump = random](auto& group) {
-        Point new_mass_center;
-        geo.randompos(new_mass_center, slump); // place COM randomly in simulation box
-        Point displacement = geo.vdist(new_mass_center, group.massCenter()->get());
-        group.translate(displacement, geo.getBoundaryFunc());
-        Eigen::Quaterniond quaternion(Eigen::AngleAxisd(2.0 * pc::pi * (slump() - 0.5), randomUnitVector(slump)));
-        group.rotate(quaternion, geo.getBoundaryFunc()); // assign random orientation
-    };
-}
+    : spc(spc)
+    , random(random) {}
 
 double MolecularGroupDeActivator::getBondEnergy(const Group& group) const {
     double energy = 0.0;
@@ -498,6 +519,8 @@ double MolecularGroupDeActivator::getBondEnergy(const Group& group) const {
     });
     return energy;
 }
+
+// ------------------------------------------
 
 AtomicGroupDeActivator::AtomicGroupDeActivator(Space& spc, Space& old_spc, Random& random)
     : spc(spc)
@@ -562,5 +585,6 @@ GroupDeActivator::ChangeAndBias AtomicGroupDeActivator::deactivate(Group& group,
     }
     return {change_data, 0.0};
 }
+
 } // end of namespace Move
 } // end of namespace Faunus

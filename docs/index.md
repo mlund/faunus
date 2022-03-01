@@ -1,5 +1,5 @@
 ---
-title: "Faunus Mk2"
+title: "Faunus"
 layout: splash
 header:
   overlay_color: "#000"

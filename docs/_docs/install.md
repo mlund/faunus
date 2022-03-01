@@ -25,12 +25,13 @@ Starting from version 2.1, we adhere to [semantic versioning](https://semver.org
 ## Building from source code
 
 Faunus is continuously [tested](https://travis-ci.org/mlund/faunus) on macOS/Linux,
-but should compile on most unix operating systems and possibly under Cygwin (Windows).
+but should compile on most unix operating systems, including the Windows Subsystem
+for Linux.
 
 ### Requirements
 
 - CMake 3.16+
-- C/C++17 compiler (Clang 5+, GCC 7+, etc.)
+- C++20 compiler (clang, g++, intel ixpc, ...)
 - Python 3.6+ with the following packages:
   - `jinja2`, `ruamel_yaml` or `yaml`
 
@@ -41,13 +42,6 @@ The following are optional:
 - `pypandoc` (for building manual)
 - `BeautifulSoup4` (for building manual)
 - Message Passing Interface (MPI)
-
-**macOS tip:**
-Apple's developer tools, Xcode, include clang;
-CMake can be installed with an
-[Installer package](https://cmake.org/download) from Kitware, or using
-[Homebrew](https://brew.sh), or
-[(mini)conda](https://conda.io/docs/user-guide/install/index.html)
 
 ### Compiling
 

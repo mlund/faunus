@@ -419,7 +419,7 @@ class ReactionData {
     void reverseDirection();                      //!< Reverse direction of reaction
     AtomicAndMolecularPair getProducts() const;   //!< Pair with atomic and molecular products
     AtomicAndMolecularPair getReactants() const;  //!< Pair with atomic and molecular reactants
-    double freeEnergy() const;                    //!< Free energy of process in current direction (kT)
+    double freeEnergy() const;                    //!< Free energy of reaction in current direction (kT)
     bool containsAtomicSwap() const;              //!< True if a swap move is detected, i.e. atom_a <-> atom_b
     const std::string& getReactionString() const; //!< Reaction string
 

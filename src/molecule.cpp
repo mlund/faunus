@@ -950,7 +950,7 @@ void to_json(json &j, const ReactionData &reaction) {
                          {"pK", -a.lnK_unmodified / std::log(10)},
                          {"swap_move", a.containsAtomicSwap()},
                          {"neutral", a.only_neutral_molecules},
-                         {"pK'", -a.freeEnergy() / std::log(10)}};
+                         {"pK'", a.freeEnergy() / std::log(10)}};
 }
 
 std::pair<decltype(Faunus::atoms)::const_iterator, decltype(Faunus::molecules)::const_iterator>
@@ -963,7 +963,10 @@ ReactionData::findAtomOrMolecule(const std::string& atom_or_molecule_name) {
     return {atom_iter, molecule_iter};
 }
 
-double ReactionData::freeEnergy() const { return (direction == Direction::RIGHT) ? lnK : -lnK; }
+/**
+ * @return Reaction free energy in the current direction, i.e. products minus reactants (kT)
+ */
+double ReactionData::freeEnergy() const { return (direction == Direction::RIGHT) ? -lnK : lnK; }
 
 const std::string& ReactionData::getReactionString() const { return reaction_str; }
 
@@ -1015,7 +1018,7 @@ TEST_CASE("[Faunus] ReactionData") {
 
     CHECK(r.size() == 1);
     CHECK(r.front().getReactionString() == "A = B");
-    CHECK(r.front().freeEnergy() == Approx(-10.051 - std::log(0.2)));
+    CHECK(r.front().freeEnergy() == Approx(10.051 + std::log(0.2)));
 }
 
 void MoleculeInserter::from_json(const json &) {}
@@ -1036,6 +1039,12 @@ MoleculeData& findMoleculeByName(std::string_view name) {
     }
     return *result;
 }
+
+/**
+ * @param process_string Reaction such as "A + B = C"
+ * @return Pair with reactants (first) and products (second) as atomic or molecule names
+ * @throws std::runtime_error if unknown atom or molecule, or syntax error
+ */
 std::pair<std::vector<std::string>, std::vector<std::string>> parseReactionString(const std::string& process_string) {
     using Tvec = std::vector<std::string>;
     Tvec names; // vector of atom/molecule names

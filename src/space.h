@@ -80,6 +80,8 @@ class Space {
     using GeometryType = Geometry::Chameleon;
     using GroupType = Group; //!< Continuous range of particles defining molecules
     using GroupVector = std::vector<GroupType>;
+    using GroupRefVector = std::vector<std::reference_wrapper<Group>>;
+    using ConstGroupRefVector = std::vector<std::reference_wrapper<const Group>>;
     using ScaleVolumeTrigger = std::function<void(Space&, double, double)>;
     using ChangeTrigger = std::function<void(Space&, const Change&)>;
     using SyncTrigger = std::function<void(Space&, const Space&, const Change&)>;

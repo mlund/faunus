@@ -105,12 +105,12 @@ bool ReactionValidator::canReduceAtomicGrups(const ReactionData& reaction) const
     auto can_reduce = [&](auto key_value) {
         const auto [molid, number_to_delete] = key_value;
         if (number_to_delete > 0) {
-            auto groups = spc.findMolecules(molid, Space::Selection::ALL);
-            if (range_size(groups) != 1) {
+            auto groups = spc.findMolecules(molid, Space::Selection::ALL) | ranges::to<Space::ConstGroupRefVector>;
+            if (groups.size() != 1) {
                 return false;
             }
-            auto group = groups.begin();
-            if ((int)group->size() < number_to_delete) {
+            const Group& group = groups.front();
+            if ((int)group.size() < number_to_delete) {
                 faunus_logger->warn("atomic group {} is depleted; increase simulation volume?",
                                     Faunus::molecules.at(molid).name);
                 return false;
@@ -151,12 +151,14 @@ bool ReactionValidator::canProduceAtomicGroups(const ReactionData& reaction) con
     namespace rv = ranges::cpp20::views;
     auto can_expand = [&](auto key_value) {
         const auto [molid, number_to_insert] = key_value;
-        auto groups = spc.findMolecules(molid, Space::Selection::ALL);
-        if (number_to_insert > 0 && range_size(groups) > 0) {
-            if (groups.begin()->size() + number_to_insert > groups.begin()->capacity()) {
-                faunus_logger->warn("atomic molecule {} is full; increase capacity?", Faunus::molecules.at(molid).name);
-                return false;
-            }
+        auto groups = spc.findMolecules(molid, Space::Selection::ALL) | ranges::to<Space::ConstGroupRefVector>;
+        if (groups.empty()) {
+            return false;
+        }
+        const Group& group = groups.front();
+        if (group.size() + number_to_insert > group.capacity()) {
+            faunus_logger->warn("atomic molecule {} is full; increase capacity?", group.traits().name);
+            return false;
         }
         return true;
     };
@@ -188,6 +190,14 @@ void MolecularGroupDeActivator::setPositionAndOrientation(Group& group) const {
     group.rotate(quaternion, geometry.getBoundaryFunc());
 }
 
+
+/**
+ * Activates a number of particles in an atomic group. Before calling this, make sure that there's
+ * sufficient capacity.
+ *
+ * @param group Group to affect
+ * @param num_particles Number of particles to expand with
+ */
 MolecularGroupDeActivator::ChangeAndBias
 MolecularGroupDeActivator::activate(Group& group, GroupDeActivator::OptionalInt num_particles) {
     assert(group.isMolecular());                                      // must be a molecule group
@@ -468,8 +478,8 @@ void SpeciationMove::deactivateAtomicGroups(Change& change) {
     for (auto [molid, number_to_delete] : atomic_reactants) {
         auto groups = spc.findMolecules(molid, Space::Selection::ALL);
         assert(range_size(groups) == 1);
-        auto group = groups.begin();
-        auto [change_data, bias] = atomic_group_bouncer->deactivate(*group, number_to_delete);
+        auto& group = *groups.begin();
+        auto [change_data, bias] = atomic_group_bouncer->deactivate(group, number_to_delete);
         change.groups.push_back(change_data);
         bias_energy += bias;
     }
@@ -494,21 +504,21 @@ void SpeciationMove::_move(Change& change) {
     }
     bias_energy = 0.0;
     try {
-        setReaction();
+        setRandomReactionAndDirection();
         if (reaction_validator.isPossible(*reaction)) {
             atomicSwap(change);
             deactivateReactants(change);
             activateProducts(change);
+            std::sort(change.groups.begin(), change.groups.end()); // change groups *must* be sorted!
             if (change) {
                 change.matter_change = true;
-                std::sort(change.groups.begin(), change.groups.end()); // change groups *must* be sorted!
                 updateGroupMassCenters(change);
             }
         }
     } catch (Speciation::SpeciationMoveException&) { change.clear(); }
 }
 
-void SpeciationMove::setReaction() {
+void SpeciationMove::setRandomReactionAndDirection() {
     reaction = slump.sample(reactions.begin(), reactions.end());
     reaction->setRandomDirection(slump);
 }
@@ -538,10 +548,10 @@ void SpeciationMove::updateGroupMassCenters(const Change& change) const {
  */
 double SpeciationMove::bias([[maybe_unused]] Change& change, [[maybe_unused]] double old_energy,
                             [[maybe_unused]] double new_energy) {
-    return -reaction->freeEnergy() + bias_energy;
+    return reaction->freeEnergy() + bias_energy;
 }
 
-void SpeciationMove::_accept(Change&) {
+void SpeciationMove::_accept([[maybe_unused]] Change &change) {
     namespace rv = ranges::cpp20::views;
     direction_ratio[reaction].update(reaction->getDirection(), true);
 
@@ -583,6 +593,6 @@ SpeciationMove::SpeciationMove(Space& spc, Space& old_spc, std::string_view name
 SpeciationMove::SpeciationMove(Space& spc, Space& old_spc)
     : SpeciationMove(spc, old_spc, "rcmc", "doi:10/fqcpg3") {}
 
-void SpeciationMove::_from_json(const json&) {}
+void SpeciationMove::_from_json([[maybe_unused]] const json& j) {}
 
 } // namespace Faunus::Move

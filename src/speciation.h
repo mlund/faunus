@@ -133,7 +133,7 @@ class SpeciationMove : public MoveBase {
     void _accept(Change& change) override;
     void _reject(Change& change) override;
 
-    void setReaction();                       //!< Set random reaction and direction
+    void setRandomReactionAndDirection();                       //!< Set random reaction and direction
     void atomicSwap(Change& change);          //!< Swap atom type
     void deactivateReactants(Change& change); //!< Delete all reactants
     void activateProducts(Change& change);    //!< Insert all products

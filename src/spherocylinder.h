@@ -52,7 +52,7 @@ inline Point mindist_segment2point(const Point& segment_direction, const double 
     if (c > half_length) {
         d = half_length;
     } else {
-        d = (c > -half_length) ? d = c : -half_length;
+        d = (c > -half_length) ? c : -half_length;
     }
     return -separation + (segment_direction * d);
 }

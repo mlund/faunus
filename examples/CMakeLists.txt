@@ -269,6 +269,8 @@ install(FILES
         ${EXAMPLES_DIR}/README.md
         ${EXAMPLES_DIR}/bulk/bulk.yml
         ${EXAMPLES_DIR}/bulk-replay/bulk-replay.yml
+        ${EXAMPLES_DIR}/chargemove/chargemove.yml
+        ${EXAMPLES_DIR}/chargemove/chargemove.out.json
         ${EXAMPLES_DIR}/cluster/cluster.yml
         ${EXAMPLES_DIR}/cluster/cluster.agr
         ${EXAMPLES_DIR}/cluster/cluster.out.json
@@ -325,6 +327,9 @@ install(FILES
         ${EXAMPLES_DIR}/chain/chain.xyz
         ${EXAMPLES_DIR}/chain/chain.state.json
         ${EXAMPLES_DIR}/chain/chain.out.json
+        ${EXAMPLES_DIR}/psc_energy/cigarsenergy.yml
+        ${EXAMPLES_DIR}/psc_energy/cigarsenergy.out.json
+        ${EXAMPLES_DIR}/psc_energy/cigarsenergy.state.json
         ${EXAMPLES_DIR}/polymers/polymers.yml
         ${EXAMPLES_DIR}/polymers/polymers.readme
         ${EXAMPLES_DIR}/polymers/polymers.pdf
@@ -332,6 +337,8 @@ install(FILES
         ${EXAMPLES_DIR}/polymers/polymers.out.json
         ${EXAMPLES_DIR}/pythontest.py
         ${EXAMPLES_DIR}/seawater/seawater.yml
+        ${EXAMPLES_DIR}/smartmc/smartmc.yml
+        ${EXAMPLES_DIR}/smartmc/smartmc.out.json
         ${EXAMPLES_DIR}/speciation/speciation.yml
         ${EXAMPLES_DIR}/speciation/speciation.out.json
         ${EXAMPLES_DIR}/speciation/speciation.state.json

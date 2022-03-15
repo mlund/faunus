@@ -224,9 +224,9 @@ TEST_CASE("[Faunus] Ewald - IonIonPolicy") {
     Group g(0, spc.particles.begin(), spc.particles.end());
     spc.groups.push_back(g);
 
-    EwaldData data = R"({
+    auto data = static_cast<EwaldData>(R"({
                 "epsr": 1.0, "alpha": 0.894427190999916, "epss": 1.0,
-                "ncutoff": 11.0, "spherical_sum": true, "cutoff": 5.0})"_json;
+                "ncutoff": 11.0, "spherical_sum": true, "cutoff": 5.0})"_json);
     Change c;
     c.everything = true;
     data.policy = EwaldData::PBC;
@@ -742,7 +742,7 @@ void Bonded::updateGroupBonds(const Space::GroupType& group) {
     const auto group_index = spc.getGroupIndex(group);
     auto& bonds = internal_bonds[group_index];              // access or insert
     for (const auto& generic_bond : group.traits().bonds) { // generic bonds defined in topology
-        const auto& bond = bonds.template push_back<Potential::BondData>(generic_bond->clone());
+        const auto& bond = bonds.push_back(generic_bond->clone());
         bond->shiftIndices(first_particle_index); // shift to absolute particle index
         bond->setEnergyFunction(spc.particles);
     }
@@ -823,7 +823,7 @@ double Bonded::internalGroupEnergy(const Change::GroupChange& changed) {
             const auto first_particle_index = spc.getFirstParticleIndex(group);
             auto particle_indices = changed.relative_atom_indices |
                                     transform([first_particle_index](auto i) { return i + first_particle_index; });
-            energy += sum_energy(bonds, particle_indices);
+            energy += sumEnergy(bonds, particle_indices);
         }
     }
     return energy;

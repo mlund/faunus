@@ -9,9 +9,14 @@ CheckOptions:
     - { key: readability-identifier-naming.ClassCase, value: CamelCase }
     - { key: readability-identifier-naming.StructCase, value: CamelCase }
     - { key: readability-identifier-naming.VariableCase, value: lower_case}
-    - { key: readability-identifier-naming.LocalVariableCase,  value: lower_case}
+    - { key: readability-identifier-naming.LocalVariableCase, value: lower_case}
     - { key: readability-identifier-naming.FunctionCase, value: camelBack}
+    - { key: readability-identifier-naming.FunctionIgnoredRegexp, value: '^to_json$|^from_json$'}
     - { key: readability-identifier-naming.ClassMethodCase, value: camelBack}
+    - { key: readability-identifier-naming.ClassMethodIgnoredRegexp, value: '^to_json$|^from_json$'}
     - { key: readability-identifier-naming.ParameterCase, value: lower_case}
+    - { key: readability-identifier-naming.ParameterIgnoredRegexp, value: '^j$'}
     - { key: readability-identifier-naming.ConstantParameterCase, value: lower_case}
+    - { key: readability-identifier-naming.ConstantParameterIgnoredRegexp, value: lower_case}
     - { key: readability-identifier-naming.TypedefCase, value: CamelCase}
+    - { key: misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic, value: 'true'}

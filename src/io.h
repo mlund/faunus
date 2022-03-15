@@ -3,9 +3,14 @@
 #include "particle.h"
 #include "spdlog/spdlog.h"
 #include "units.h"
+#include "group.h"
 #include <fstream>
+#include <type_traits>
+#include <concepts>
+#include <iterator>
 #include <range/v3/iterator/operations.hpp>
 #include <range/v3/algorithm/for_each.hpp>
+#include <numeric>
 
 namespace cereal {
 class BinaryOutputArchive;
@@ -34,7 +39,7 @@ namespace IO {
 /**
  * @brief Open (gzip compressed) output stream
  */
-std::unique_ptr<std::ostream> openCompressedOutputStream(const std::string&, bool throw_on_error = false);
+std::unique_ptr<std::ostream> openCompressedOutputStream(const std::string& filename, bool throw_on_error = false);
 
 /**
  * Write a map to an output stream as key-value pairs
@@ -208,7 +213,7 @@ class StructureFileWriter {
     Point box_dimensions = Point::Zero();
 
   public:
-    template <class ParticleIter>
+    template <std::forward_iterator ParticleIter>
     void save(std::ostream& stream, ParticleIter begin, ParticleIter end, const Point& box_length) {
         if (auto number_of_particles = std::distance(begin, end); number_of_particles > 0) {
             box_dimensions = box_length;
@@ -218,17 +223,16 @@ class StructureFileWriter {
         }
     }
 
-    template <typename Range> void save(std::ostream& stream, const Range& groups, const Point& box_length) {
+    void save(std::ostream& stream, const RequireGroups auto& groups, const Point& box_length) {
         group_index = 0;
         particle_index = 0;
         box_dimensions = box_length;
 
-        int number_of_particles = 0;
-        std::for_each(groups.begin(), groups.end(),
-                      [&](const auto& group) { number_of_particles += group.capacity(); });
+        auto group_sizes = groups | ranges::cpp20::views::transform(&Group::capacity);
+        const auto number_of_particles = std::accumulate(group_sizes.begin(), group_sizes.end(), 0u);
         saveHeader(stream, number_of_particles);
 
-        std::for_each(groups.begin(), groups.end(), [&](const auto& group) { saveGroup(stream, group); });
+        ranges::cpp20::for_each(groups, [&](const auto& group) { saveGroup(stream, group); });
         saveFooter(stream);
     }
 
@@ -333,7 +337,7 @@ struct XTCTrajectoryFrame {
      * @param[in] coordinates_begin  input iterator with coordinates in nanometers
      * @param[in] coordinates_end  input iterator's end
      */
-    template <class begin_iterator, class end_iterator>
+    template <RequirePointIterator begin_iterator, class end_iterator>
     XTCTrajectoryFrame(int step, float time, const Point& box, begin_iterator coordinates_begin,
                        end_iterator coordinates_end) {
         initNumberOfAtoms(std::distance(coordinates_begin, coordinates_end));
@@ -364,7 +368,7 @@ struct XTCTrajectoryFrame {
      * @param[in] coordinates_end  input iterator's end
      * @throw std::runtime_error when the number of coordinates does not match
      */
-    template <class begin_iterator, class end_iterator>
+    template <RequirePointIterator begin_iterator, class end_iterator>
     void importFrame(const int step, const float time, const Point& box, begin_iterator coordinates_begin,
                      end_iterator coordinates_end) {
         importTimestamp(step, time);
@@ -388,7 +392,7 @@ struct XTCTrajectoryFrame {
      * @param[out] coordinates_end  output iterator's end
      * @throw std::runtime_error  when the number of coordinates does not match
      */
-    template <class begin_iterator, class end_iterator>
+    template <RequirePointIterator begin_iterator, RequirePointIterator end_iterator>
     void exportFrame(int& step, float& time, Point& box, begin_iterator coordinates_begin,
                      end_iterator coordinates_end) const {
         exportTimestamp(step, time);
@@ -427,7 +431,7 @@ struct XTCTrajectoryFrame {
      * @param[in] end  input iterator's end
      * @param[in] offset  offset in nanometers to add to all coordinates upon conversion
      */
-    template <class begin_iterator, class end_iterator>
+    template <RequirePointIterator begin_iterator, typename end_iterator>
     void importCoordinates(begin_iterator begin, end_iterator end, const Point& offset) const {
         int i = 0;
         ranges::cpp20::for_each(begin, end, [&](const auto& position) {
@@ -470,7 +474,7 @@ struct XTCTrajectoryFrame {
      * @param[out] end  output iterator's end
      * @param[in] offset  offset in nanometers to subtract from all coordinates upon conversion
      */
-    template <class begin_iterator, class end_iterator>
+    template <RequirePointIterator begin_iterator, typename end_iterator>
     void exportCoordinates(begin_iterator begin, end_iterator end, const Point& offset) const {
         // comparison of i is probably faster than prior call of std::distance
         int i = 0;
@@ -565,7 +569,7 @@ class XTCReader {
      * @return true on success, false at the end of file
      * @throw std::runtime_error  when other I/O error occures
      */
-    template <class begin_iterator, class end_iterator>
+    template <RequirePointIterator begin_iterator, typename end_iterator>
     bool read(int& step, float& time, Point& box, begin_iterator coordinates_begin, end_iterator coordinates_end) {
         if (readFrame()) {
             xtc_frame->exportFrame(step, time, box, coordinates_begin, coordinates_end);
@@ -626,7 +630,7 @@ class XTCWriter {
      * @param[in] coordinates_begin  input iterator with coordinates (not particles)
      * @param[in] coordinates_end  input iterator's end
      */
-    template <class begin_iterator, class end_iterator>
+    template <RequirePointIterator begin_iterator, typename end_iterator>
     void writeNext(const Point& box, begin_iterator coordinates_begin, end_iterator coordinates_end) {
         if (!xtc_frame) {
             auto number_of_atoms = ranges::cpp20::distance(coordinates_begin, coordinates_end);

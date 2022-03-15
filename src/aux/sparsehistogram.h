@@ -14,11 +14,7 @@ namespace Faunus {
  * Builds a histogram by binning given values to a specified resolution. Values are stored
  * in a memory efficient map-structure with log(N) lookup complexity.
  */
-#if __cplusplus >= 202002L
 template <std::floating_point T = double> class SparseHistogram {
-#else
-template <typename T = double> class SparseHistogram {
-#endif
     const T resolution;
     using map_type = std::map<int, unsigned int>;
     map_type data;

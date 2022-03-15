@@ -154,10 +154,10 @@ class Space {
      *
      * @todo Since Space::groups is ordered, binary search could be used to filter
      */
-    template <class iterator, class copy_operation = std::function<void(const Particle &, Particle &)>>
+    template <std::forward_iterator iterator, class copy_operation = std::function<void(const Particle&, Particle&)>>
     void updateParticles(
         const iterator begin, const iterator end, ParticleVector::iterator destination,
-        copy_operation copy_function = [](const Particle &src, Particle &dst) { dst = src; }) {
+        copy_operation copy_function = [](const Particle& src, Particle& dst) { dst = src; }) {
 
         const auto size = std::distance(begin, end); // number of affected particles
 
@@ -243,8 +243,7 @@ class Space {
      * @returns std::vector of indices pointing to Space::particles
      * @throw std::out_of_range if any particle in range does not belong to Space::particles
      */
-    template <typename index_type = int, typename ParticleRange>
-    auto toIndices(const ParticleRange& particle_range) const {
+    template <std::integral index_type = int> auto toIndices(const RequireParticles auto& particle_range) const {
         return particle_range | ranges::cpp20::views::transform([&](const Particle& particle) {
                    const auto index = std::addressof(particle) - std::addressof(particles.at(0));
                    if (index < 0 || index >= particles.size()) {

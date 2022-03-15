@@ -459,7 +459,7 @@ void MoleculeBuilder::readFastaBonds(const json& j) {
     bond.from_json(j.at("structure")); // read 'k' and 'req' from json
     for (int i = 1; i < (int)particles.size(); ++i) {
         bond.indices = {i - 1, i};
-        bonds.push_back<Potential::HarmonicBond>(bond.clone());
+        bonds.push_back(bond.clone());
     }
 }
 

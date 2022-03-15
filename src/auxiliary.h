@@ -1,11 +1,13 @@
 #pragma once
 #include "average.h"
 #include <nlohmann/json.hpp>
+#include <range/v3/range/concepts.hpp>
 #include <functional>
 #include <fstream>
 #include <vector>
 #include <string>
 #include <sstream>
+#include <concepts>
 
 /**
  * @file auxiliary.h
@@ -24,9 +26,7 @@ namespace Faunus {
  * @return number (integral type)
  * @throw std::overflow_error
  */
-template <typename TOut, typename TIn> inline TOut numeric_cast(const TIn number) {
-    static_assert(std::is_floating_point<TIn>::value, "TIn must be floating point.");
-    static_assert(std::is_integral<TOut>::value, "TOut must be integer.");
+template <std::integral TOut, std::floating_point TIn> inline TOut numeric_cast(const TIn number) {
     if (std::isfinite(number)) {
         // The number is finite ...
         if (number < std::nextafter(static_cast<TIn>(std::numeric_limits<TOut>::max()), 0) &&
@@ -48,7 +48,7 @@ template <typename TOut, typename TIn> inline TOut numeric_cast(const TIn number
  * @param f Function to apply to the pair
  * @param aggregator Function to aggregate the result from each pair. Default: `std::plus<T>`
  */
-template <typename Titer, typename Tfunction, typename T = double, typename Taggregate_function>
+template <std::forward_iterator Titer, typename Tfunction, typename T = double, typename Taggregate_function>
 T for_each_unique_pair(Titer begin, Titer end, Tfunction f, Taggregate_function aggregator = std::plus<T>()) {
     T x = T();
     for (auto i = begin; i != end; ++i) {
@@ -59,12 +59,12 @@ T for_each_unique_pair(Titer begin, Titer end, Tfunction f, Taggregate_function 
     return x;
 }
 
-/** @brief Erase from container `a` all values found in container `b` */
-template <typename T> T erase_range(T a, const T &b) {
-    a.erase(std::remove_if(a.begin(), a.end(),
-                           [b](typename T::value_type i) { return std::find(b.begin(), b.end(), i) != b.end(); }),
-            a.end());
-    return a;
+/** @brief Erase from `target` range all values found in `values` range */
+template <ranges::cpp20::range T> T erase_range(T target, const T& values) {
+    target.erase(std::remove_if(target.begin(), target.end(),
+                                [&](auto i) { return std::find(values.begin(), values.end(), i) != values.end(); }),
+                 target.end());
+    return target;
 }
 
 /**
@@ -99,7 +99,7 @@ template <class T> struct ordered_pair : public std::pair<T, T> {
  * ~~~~
  *
  */
-template <class T, class Tint = int> Tint to_bin(T x, T dx = 1) {
+template <std::floating_point T, std::integral Tint = int> Tint to_bin(T x, T dx = 1) {
     return (x < 0) ? Tint(x / dx - 0.5) : Tint(x / dx + 0.5);
 }
 
@@ -125,7 +125,7 @@ template <class T, class Tint = int> Tint to_bin(T x, T dx = 1) {
  * ~~~
  *
  */
-template <class Tfloat = double> class Quantize {
+template <std::floating_point Tfloat = double> class Quantize {
   private:
     Tfloat xmin, dx, x;
 
@@ -205,7 +205,8 @@ template <class T> std::string vec2words(const std::vector<T> &v) {
 } // vector to space separated string w values
 
 template <typename T> struct BasePointerVector {
-    std::vector<std::shared_ptr<T>> vec; //!< Vector of shared pointers to base class
+    using value_type = std::shared_ptr<T>;
+    std::vector<value_type> vec; //!< Vector of shared pointers to base class
 
     auto begin() noexcept { return vec.begin(); }
     auto begin() const noexcept { return vec.begin(); }
@@ -230,8 +231,13 @@ template <typename T> struct BasePointerVector {
         vec.push_back(std::make_shared<Tderived>(args...));
     } //!< Create an (derived) instance and append a pointer to it to the vector
 
-    template <typename Tderived, class Arg, class = std::enable_if_t<std::is_base_of<T, Tderived>::value>>
-    auto& push_back(std::shared_ptr<Arg> arg) {
+    //    template <typename Tderived, class Arg, class = std::enable_if_t<std::is_base_of<T, Tderived>::value>>
+    //    auto& push_back(std::shared_ptr<Arg> arg) {
+    //        vec.push_back(arg);
+    //        return vec.back(); // reference to element just added
+    //    }                      //!< Append a pointer to a (derived) instance to the vector
+
+    auto& push_back(value_type arg) {
         vec.push_back(arg);
         return vec.back(); // reference to element just added
     }                      //!< Append a pointer to a (derived) instance to the vector
@@ -246,7 +252,7 @@ template <typename T> struct BasePointerVector {
         BasePointerVector<Tderived> _v;
         for (auto& base : vec) {
             if (auto derived = std::dynamic_pointer_cast<Tderived>(base); derived) {
-                _v.template push_back<Tderived>(derived);
+                _v.push_back(derived);
             }
         }
         return _v;
@@ -280,9 +286,9 @@ template <typename T> void to_json(nlohmann::json &j, const BasePointerVector<T>
 template <typename T> void from_json(const nlohmann::json &j, BasePointerVector<T> &b) {
     using namespace std::string_literals;
     try {
-        for (auto& it : j) {
+        for (const auto& it : j) {
             std::shared_ptr<T> ptr = it;
-            b.template push_back<T>(ptr);
+            b.push_back(ptr);
         }
     } catch (const std::exception &e) {
         throw std::runtime_error("error converting from json: "s + e.what());

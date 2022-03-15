@@ -249,8 +249,7 @@ class Group : public ElasticRange<Particle> {
      * @param indices Range of indices relative to group
      * @warning Do not change `indices` to `const&` which would create a dangling reference
      */
-    template <class Tint = size_t> auto operator[](std::vector<Tint>& indices) {
-        static_assert(std::is_integral<Tint>::value, "integer indices expected");
+    template <std::integral Tint = size_t> auto operator[](std::vector<Tint>& indices) {
 #ifndef NDEBUG
         if (not indices.empty()) {
             assert(*std::max_element(indices.begin(), indices.end()) < size());
@@ -333,5 +332,9 @@ template <class Archive> void load(Archive& archive, Group& group, std::uint32_t
         throw std::runtime_error("unknown serialisation version");
     }
 } //!< Cereal serialisation
+
+/** Concept for a range of groups */
+template <typename T>
+concept RequireGroups = ranges::cpp20::range<T> && std::is_convertible_v<ranges::cpp20::range_value_t<T>, Group>;
 
 } // namespace Faunus

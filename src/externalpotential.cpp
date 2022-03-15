@@ -5,8 +5,7 @@
 #include "space.h"
 #include "spdlog/spdlog.h"
 
-namespace Faunus {
-namespace Energy {
+namespace Faunus::Energy {
 
 // ------------ Energybase -------------
 
@@ -451,5 +450,4 @@ ParticleSelfEnergy::ParticleSelfEnergy(Space &spc, std::function<double(const Pa
     name = "particle-self-energy";
 }
 
-} // namespace Energy
-} // namespace Faunus
+} // namespace Faunus::Energy

@@ -4,6 +4,7 @@
 #include <istream>
 #include <cmath>
 #include <fstream>
+#include <concepts>
 #include <spdlog/fmt/fmt.h>
 #include <nlohmann/json.hpp>
 
@@ -13,10 +14,8 @@ namespace Faunus {
  * @brief Class to collect averages
  * @todo replace static assert w. concept in c++20
  */
-template <class value_type = double, class counter_type = unsigned long int> class Average {
-    static_assert(std::is_floating_point<value_type>::value, "floating point type required");
-    static_assert(std::is_unsigned<counter_type>::value, "unsigned integer required");
-
+template <std::floating_point value_type = double, std::unsigned_integral counter_type = unsigned long int>
+class Average {
   protected:
     counter_type number_of_samples = 0; //!< number of values in average
     value_type value_sum = 0.0;         //!< Sum of all recorded values
@@ -97,7 +96,7 @@ template <class value_type = double, class counter_type = unsigned long int> cla
  * @brief Class to collect averages and standard deviation
  * @todo inherit from `Average`
  */
-template <class value_type = double, class counter_type = unsigned long int>
+template <std::floating_point value_type = double, std::unsigned_integral counter_type = unsigned long int>
 class AverageStdev : public Average<value_type, counter_type> {
   private:
     value_type squared_value_sum = 0.0; //!< Square sum of all recorded values
@@ -194,7 +193,8 @@ class AverageStdev : public Average<value_type, counter_type> {
  * @todo Bundle current vectors into single vector of struct; unittests; check correctness
  * @warning Under construction and untested
  */
-template <class value_type = double, class counter_type = unsigned long int> class Decorrelation {
+template <std::floating_point value_type = double, std::unsigned_integral counter_type = unsigned long int>
+class Decorrelation {
   private:
     using Statistic = AverageStdev<value_type, counter_type>;
     unsigned int nsamples = 0;
@@ -247,14 +247,12 @@ template <class value_type = double, class counter_type = unsigned long int> cla
     }
 };
 
-#if __cplusplus > 201703L
 /** Requirements for types used with `AverageObj` */
 template <class T> concept Averageable = requires(T a) {
     a * 1.0; // please implement `T operator*(double) const`
     // a* a;    // please implement `T operator*(const T&) const`
     a += a;  // please implement `T& operator+=(const T&)`
 };
-#endif
 
     /**
      * @brief Simple class to average data contained in objects
@@ -266,11 +264,7 @@ template <class T> concept Averageable = requires(T a) {
      * - `T operator*(const T&) const`
      * - `T& operator+=(const &T)`
      */
-#if __cplusplus > 201703L
 template <Averageable T, typename counter_type = unsigned long int> class AverageObj {
-#else
-template <typename T, typename counter_type = unsigned long int> class AverageObj {
-#endif
   protected:
     counter_type number_of_samples = 0;
     T sum; // make sure constructors zero this!

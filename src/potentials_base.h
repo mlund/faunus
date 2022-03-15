@@ -52,7 +52,7 @@ NLOHMANN_JSON_SERIALIZE_ENUM(CombinationRuleType, {{CombinationRuleType::UNDEFIN
  * @brief Exception for handling pair potential initialization.
  */
 struct PairPotentialException : public std::runtime_error {
-    PairPotentialException(const std::string msg);
+    explicit PairPotentialException(const std::string msg);
 };
 
 /**
@@ -99,26 +99,66 @@ class PairMixer {
  * may change this to add a self-energy stemming from charges and dipoles.
  * This term is important for for example Widom insertion and grand canonical
  * Monte Carlo schemes.
+ *
+ * @todo Self-energies should be handled by a separate interaction class and is stored
+ *       here only to be able to retrieve them later on. The main reason for this is
+ *       convenience as we in this way can register the self energy during processing
+ *       of the pair potential input.
  */
 class PairPotentialBase {
+  private:
+    friend void from_json(const json&, PairPotentialBase&);
+
   public:
-    std::string name;      //!< unique name per polymorphic call; used in FunctorPotential::combineFunc
+    std::string name;      //!< unique name per polymorphic call; used in FunctorPotential::combinePairPotentials
     std::string cite;      //!< Typically a short-doi litterature reference
     bool isotropic = true; //!< true if pair-potential is independent of particle orientation
     std::function<double(const Particle&)> selfEnergy = nullptr; //!< self energy of particle (kT)
     virtual void to_json(json&) const = 0;
     virtual void from_json(const json&) = 0;
     virtual ~PairPotentialBase() = default;
+
+    /**
+     * @brief Force on particle a due to particle b
+     * @param particle_a First particle
+     * @param particle_b Second particle
+     * @param squared_distance Squared distance, |𝐚-𝐛|²
+     * @param b_towards_a Distance vector 𝐛 -> 𝐚 = 𝐚 - 𝐛
+     * @return Force acting on a dur to b in units of kT/Å
+     */
     virtual Point force(const Particle& a, const Particle& b, double squared_distance, const Point& b_towards_a) const;
-    virtual double operator()(const Particle&, const Particle&, double, const Point&) const = 0;
+
+    /**
+     * @brief Pair energy between two particles
+     * @param particle_a First particle
+     * @param particle_b Second particle
+     * @param squared_distance Squared distance, |𝐚-𝐛|²
+     * @param b_towards_a Distance vector 𝐛 -> 𝐚 = 𝐚 - 𝐛
+     * @return Interaction energy in units of kT
+     */
+    virtual double operator()(const Particle& particle_a, const Particle& particle_b, double squared_distance,
+                              const Point& b_towards_a) const = 0;
 
   protected:
     explicit PairPotentialBase(const std::string& name = std::string(), const std::string& cite = std::string(),
-                      bool isotropic = true);
+                               bool isotropic = true);
 };
 
 void to_json(json& j, const PairPotentialBase& base);   //!< Serialize any pair potential to json
 void from_json(const json& j, PairPotentialBase& base); //!< Serialize any pair potential from json
+
+/**
+ * Concept matching a particle pair potential derived from `Potential::PairPotentialBase`
+ */
+template <class T>
+concept RequirePairPotential = std::derived_from<T, Potential::PairPotentialBase>;
+
+/** @brief Convenience function to generate a pair potential initialized from JSON object */
+template <RequirePairPotential T> auto makePairPotential(const json& j) {
+    T pair_potential;
+    Potential::from_json(j, pair_potential);
+    return pair_potential;
+}
 
 /**
  * @brief A common ancestor for potentials that use parameter matrices computed from atomic
@@ -137,12 +177,12 @@ class MixerPairPotentialBase : public PairPotentialBase {
     virtual void initPairMatrices() = 0; //!< potential-specific initialization of parameter matrices
     virtual void extractorsFromJson(const json&); //!< potential-specific assignment of coefficient extracting functions
   public:
-    MixerPairPotentialBase(const std::string& name = std::string(), const std::string& cite = std::string(),
-                           CombinationRuleType combination_rule = CombinationRuleType::UNDEFINED,
-                           bool isotropic = true);
+    explicit MixerPairPotentialBase(const std::string& name = std::string(), const std::string& cite = std::string(),
+                                    CombinationRuleType combination_rule = CombinationRuleType::UNDEFINED,
+                                    bool isotropic = true);
     virtual ~MixerPairPotentialBase() = default;
-    void from_json(const json&) override;
-    void to_json(json&) const override;
+    void from_json(const json& j) override;
+    void to_json(json& j) const override;
 };
 
 /**
@@ -151,14 +191,15 @@ class MixerPairPotentialBase : public PairPotentialBase {
  * This is the most efficient way to combining pair-potentials due
  * to the possibility for compile-time optimisation.
  */
-template <class T1, class T2> struct CombinedPairPotential : public PairPotentialBase {
+template <RequirePairPotential T1, RequirePairPotential T2> struct CombinedPairPotential : public PairPotentialBase {
     T1 first;  //!< First pair potential of type T1
     T2 second; //!< Second pair potential of type T2
-    CombinedPairPotential(const std::string& name = "")
+    explicit CombinedPairPotential(const std::string& name = "")
         : PairPotentialBase(name){};
-    inline double operator()(const Particle& a, const Particle& b, double r2,
-                             const Point& r = {0, 0, 0}) const override {
-        return first(a, b, r2, r) + second(a, b, r2, r);
+    inline double operator()(const Particle& particle_a, const Particle& particle_b, const double squared_distance,
+                             const Point& b_towards_a = {0, 0, 0}) const override {
+        return first(particle_a, particle_b, squared_distance, b_towards_a) +
+               second(particle_a, particle_b, squared_distance, b_towards_a);
     } //!< Combine pair energy
 
     /**
@@ -169,9 +210,10 @@ template <class T1, class T2> struct CombinedPairPotential : public PairPotentia
      * @param b_towards_a Distance vector 𝐛 -> 𝐚 = 𝐚 - 𝐛
      * @return Force on particle a due to particle b
      */
-    inline Point force(const Particle& a, const Particle& b, double squared_distance,
+    inline Point force(const Particle& particle_a, const Particle& particle_b, const double squared_distance,
                        const Point& b_towards_a) const override {
-        return first.force(a, b, squared_distance, b_towards_a) + second.force(a, b, squared_distance, b_towards_a);
+        return first.force(particle_a, particle_b, squared_distance, b_towards_a) +
+               second.force(particle_a, particle_b, squared_distance, b_towards_a);
     } //!< Combine force
 
     void from_json(const json& j) override {
@@ -199,11 +241,5 @@ template <class T1, class T2> struct CombinedPairPotential : public PairPotentia
         _j.push_back(second);
     }
 };
-
-template <class T1, class T2, class = typename std::enable_if<std::is_base_of<PairPotentialBase, T1>::value>::type,
-          class = typename std::enable_if<std::is_base_of<PairPotentialBase, T2>::value>::type>
-CombinedPairPotential<T1, T2>& operator+(const T1& pot1, const T2&) {
-    return *(new CombinedPairPotential<T1, T2>(pot1.name));
-} //!< Statically add two pair potentials at compile-time
 
 } // namespace Faunus::Potential

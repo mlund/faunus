@@ -99,7 +99,7 @@ class CombinedAnalysis : public BasePointerVector<Analysisbase> {
   public:
     CombinedAnalysis(const json& json_array, Space& spc, Energy::Hamiltonian& pot);
     void sample();
-    void to_disk(); //!< prompt all analysis to safe to disk if appropriate
+    void to_disk(); //!< prompt all analysis to save to disk if appropriate
 };
 
 /**

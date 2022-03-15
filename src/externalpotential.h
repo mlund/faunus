@@ -5,7 +5,7 @@
 #include "aux/equidistant_table.h"
 #include <set>
 
-template<typename T> class ExprFunction;
+template <std::floating_point T> class ExprFunction;
 
 namespace Faunus {
 

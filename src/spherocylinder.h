@@ -134,7 +134,8 @@ class HardSpheroCylinder : public PairPotentialBase {
  * @tparam PatchPotential Pair potential between sphere and point on patch (isotropic)
  * @tparam CylinderPotential Pair potential between sphere and closest cylinder part (isotropic)
  */
-template <typename PatchPotential, typename CylinderPotential> class CigarWithSphere : public PairPotentialBase {
+template <Potential::RequirePairPotential PatchPotential, Potential::RequirePairPotential CylinderPotential>
+class CigarWithSphere : public PairPotentialBase {
   private:
     PatchPotential patch_potential;       //!< Isotropic pair-potential between patches
     CylinderPotential cylinder_potential; //!< Isotropic pair-potential between non-patchy parts
@@ -202,7 +203,8 @@ template <typename PatchPotential, typename CylinderPotential> class CigarWithSp
  * @tparam CylinderPotential Pair potential between closest cylinder parts (isotropic, e.g. WCA)
  * @todo Energy calculation badly needs refactoring!
  */
-template <typename PatchPotential, typename CylinderPotential> class CigarWithCigar : public PairPotentialBase {
+template <Potential::RequirePairPotential PatchPotential, Potential::RequirePairPotential CylinderPotential>
+class CigarWithCigar : public PairPotentialBase {
   private:
     PatchPotential patch_potential;       //!< Isotropic pair-potential for patchy parts
     CylinderPotential cylinder_potential; //!< Isotropic pair-potential for cylindrical parts
@@ -241,7 +243,8 @@ template <typename PatchPotential, typename CylinderPotential> class CigarWithCi
  * @tparam CylinderPotential Pair potential used for cylindrical path (isotropic, e.g. WCA)
  * @tparam CylinderPotential Pair potential used sphere-sphere interaction (isotropic, e.g. WCA)
  */
-template <typename PatchPotential, typename CylinderPotential, typename SphereWithSphere = CylinderPotential>
+template <Potential::RequirePairPotential PatchPotential, Potential::RequirePairPotential CylinderPotential,
+          Potential::RequirePairPotential SphereWithSphere = CylinderPotential>
 class CompleteCigarPotential : public PairPotentialBase {
   private:
     SphereWithSphere sphere_sphere;                                  // pair potential between spheres

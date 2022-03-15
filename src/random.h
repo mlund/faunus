@@ -1,4 +1,5 @@
 #pragma once
+#include <range/v3/range/concepts.hpp>
 #include <random>
 #include <vector>
 #include <cassert>
@@ -38,14 +39,13 @@ class Random {
     double operator()(); //!< Random double in uniform range [0,1)
 
     /**
-     * @brief Integer in uniform range [min:max]
-     * @param min minimum value
-     * @param max maximum value
+     * @brief Integer in closed interval [min:max]
+     * @param min minimum value (included)
+     * @param max maximum value (included)
      * @return random integer in [min:max] range
      */
-    template <typename IntType = int> IntType range(IntType min, IntType max) {
-        static_assert(std::is_integral<IntType>::value, "Integral required");
-        return std::uniform_int_distribution<IntType>(min, max)(engine);
+    auto range(std::integral auto min, std::integral auto max) {
+        return std::uniform_int_distribution<>(min, max)(engine);
     }
 
     /**
@@ -55,7 +55,7 @@ class Random {
      * @return Iterator to random element
      */
     template <typename Iterator> Iterator sample(Iterator begin, Iterator end) {
-        std::advance(begin, range<size_t>(0, std::distance(begin, end) - 1));
+        std::advance(begin, range<>(0, std::distance(begin, end) - 1));
         return begin;
     }
 };
@@ -103,6 +103,7 @@ template <typename T> class WeightedDistribution {
      * otherwise an exception is thrown.
      */
     template <typename Iterator> void setWeight(Iterator begin, Iterator end) {
+        static_assert(std::is_convertible_v<ranges::cpp20::iter_value_t<Iterator>, double>);
         if (auto size = std::distance(begin, end); size == data.size()) {
             weights.resize(size);
             std::copy(begin, end, weights.begin());

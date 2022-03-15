@@ -118,6 +118,9 @@ install_name_tool -change libpython3.6.dylib \
   $HOME/miniconda/lib/libpython3.6.dylib pyfaunus.so
 ~~~
 
+For further help with compiling with python bindings, see
+[here](https://pybind11.readthedocs.io/en/stable/faq.html#cmake-doesn-t-detect-the-right-python-version).
+
 ### Resetting the build system
 
 To change the compiler or for another reason reset the build system, do:

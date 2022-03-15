@@ -2,7 +2,9 @@
 #include "core.h"
 #include "atomdata.h"
 #include "tensor.h"
+#include <iterator>
 #include <spdlog/spdlog.h>
+#include <range/v3/range/concepts.hpp>
 
 namespace Eigen {
 using Matrix3d = Matrix<double, 3, 3>;
@@ -217,6 +219,13 @@ class Particle {
 //! Storage type for collections of particles
 using ParticleVector = std::vector<Particle>;
 
+/** Concept for a range of particles */
+template <class T>
+concept RequireParticles = ranges::cpp20::range<T> && std::is_convertible_v<ranges::cpp20::range_value_t<T>, Particle>;
+
+template <class T>
+concept RequireParticleIterator = std::is_convertible_v<std::iter_value_t<T>, Particle>;
+
 void from_json(const json&, Particle&);
 void to_json(json&, const Particle&);
 
@@ -226,7 +235,7 @@ void to_json(json&, const Particle&);
  * @param last Iterator to end
  * @param max_difference Apply only if charge mismatch is larger than this, then log
  */
-template <typename Iterator>
+template <RequireParticleIterator Iterator>
 void applyAtomDataCharges(Iterator first, Iterator last, const double max_difference = 1e-9) {
     size_t mismatch_counter = 0;
     std::for_each(first, last, [&](Particle& particle) {

@@ -4,6 +4,7 @@
 #include <Eigen/Core>
 #include <nlohmann/json.hpp>
 #include <spdlog/fmt/fmt.h>
+#include <range/v3/range/concepts.hpp>
 
 // forward declare logger
 namespace spdlog {
@@ -20,6 +21,14 @@ using PointVector = std::vector<Point>; //!< Vector of 3D vectors
 using json = nlohmann::json;            //!< JSON object
 class Random;
 
+/** Concept for a range of points */
+template <class T>
+concept RequirePoints = ranges::cpp20::range<T> && std::is_same_v<ranges::cpp20::range_value_t<T>, Point>;
+
+/** Concept for an iterator to a `Point` */
+template <class T>
+concept RequirePointIterator = std::is_convertible_v<ranges::cpp20::iter_value_t<T>, Point>;
+
 using namespace std::string_literals;
 
 json loadJSON(const std::string& filename); //!< Read json filename into json object (w. syntax check)
@@ -32,6 +41,8 @@ json loadJSON(const std::string& filename); //!< Read json filename into json ob
  * can be used only once. This can be used to check for unknown
  * keys as the object should be zero after being processed by
  * i.e. `from_json` or similar.
+ *
+ * @todo This class should be retired and handled by JSON schema instead
  */
 struct SingleUseJSON : public json {
     SingleUseJSON(const json&);
@@ -48,7 +59,7 @@ struct SingleUseJSON : public json {
     template <class T> T value(const std::string& key, const T& fallback) {
         return (count(key) > 0) ? at(key).get<T>() : fallback;
     }
-}; //!< Like json, but delete entries after access
+};
 
 double roundValue(double value, int number_of_digits = 3); //!< Round to n number of significant digits
 void roundJSON(json& j, int number_of_digits = 3);         //!< Round float objects to n number of significant digits

@@ -15,7 +15,7 @@ namespace Faunus {
  * compression is enabled, otherwise a standard `std::ostream` is created.
  *
  * @param filename Name of output file
- * @param throw_on_error Throw exception if file cannot be opened (default: false)
+ * @param throw_on_error Throw `std::runtime_error` if file cannot be opened (default: false)
  * @return pointer to stream; nullptr if it could not be created
  */
 std::unique_ptr<std::ostream> IO::openCompressedOutputStream(const std::string& filename, bool throw_on_error) {

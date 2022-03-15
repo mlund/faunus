@@ -9,7 +9,8 @@ CPMAddPackage("gh:gabime/spdlog@1.9.2")
 CPMAddPackage("gh:ericniebler/range-v3#0.11.0")
 CPMAddPackage("gh:docopt/docopt.cpp#v0.6.3")
 CPMAddPackage("gh:onqtam/doctest#2.4.6")
-CPMAddPackage("gh:mateidavid/zstr#v1.0.4")
+CPMAddPackage("gh:mateidavid/zstr#v1.0.5")
+CPMAddPackage("gh:pybind/pybind11#v2.9.1")
 CPMAddPackage("gh:imneme/pcg-cpp#ffd522e7188bef30a00c74dc7eb9de5faff90092")
 CPMAddPackage("gh:ArashPartow/exprtk#93a9f44f99b910bfe07cd1e933371e83cea3841c")
 
@@ -19,8 +20,8 @@ CPMAddPackage(
 )
 
 CPMAddPackage(
-    NAME nlohmann_json VERSION 3.9.1
-    URL https://github.com/nlohmann/json/releases/download/v3.9.1/include.zip
+    NAME nlohmann_json VERSION 3.10.5
+    URL https://github.com/nlohmann/json/releases/download/v3.10.5/include.zip
     OPTIONS "JSON_BuildTests OFF"
 )
 
@@ -30,10 +31,12 @@ CPMAddPackage(
 )
 
 CPMAddPackage(
-    NAME cereal GITHUB_REPOSITORY USCiLab/cereal
-    GIT_TAG 46a4a910077bf9e9f8327c8f6ea761c89b06da53
+    NAME cereal VERSION 1.3.2 GITHUB_REPOSITORY USCiLab/cereal
     OPTIONS "SKIP_PORTABILITY_TEST ON" "JUST_INSTALL_CEREAL ON"
 )
+
+CPMAddPackage("gh:pybind/pybind11_json#0.2.12")
+
 
 ###################################
 # Configure CPM packages if needed
@@ -57,11 +60,6 @@ endif()
 if(Eigen_ADDED)
     add_library(Eigen INTERFACE IMPORTED)
     target_include_directories(Eigen INTERFACE ${Eigen_SOURCE_DIR})
-endif()
-
-if (zstr_ADDED)
-    add_library(zstr INTERFACE)
-    target_include_directories(zstr INTERFACE "${zstr_SOURCE_DIR}/src")
 endif()
 
 if (pcg-cpp_ADDED)
@@ -124,15 +122,6 @@ if(ENABLE_SID)
     add_dependencies(cppsid project_cppsid)
     set_property(TARGET cppsid PROPERTY IMPORTED_LOCATION ${binary_dir}/libcppsid.a)
 endif()
-
-###########
-# PYBIND11
-###########
-
-FetchContent_Declare(
-    pybind11
-    URL https://github.com/pybind/pybind11/archive/v2.7.0.tar.gz
-    URL_HASH MD5=bd742c80621babef4814cc2df041490d)
 
 ############
 # INTEL TBB

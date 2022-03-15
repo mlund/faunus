@@ -30,7 +30,8 @@ template <typename T> using PointOf = typename T::Point;
  * @tparam TCellIndex  type of a single coordinate in cell space; also an absolute cell index
  * @tparam TSpaceAxis  type of a single coordinate in physical space
  */
-template <unsigned int VDimension, typename TCellIndex = int, typename TSpaceAxis = double> struct GridType {
+template <unsigned int VDimension, std::integral TCellIndex = int, std::floating_point TSpaceAxis = double>
+struct GridType {
     constexpr static unsigned int Dimension = VDimension; //!< number of dimmensions, e.g., 3 for the real 3D world
     using SpaceAxis = TSpaceAxis;                         //!< a single coordinate in physical space, e.g., double
     using CellIndex = TCellIndex; //!< a single coordinate in cell space, e.g., int; also an absolute cell index

@@ -14,8 +14,7 @@ template <typename T> class symbol_table;
  * with a shared pointer, allowing `ExprFunction`
  * to be directly assigned to `std::function`.
  */
-template<typename T=double>
-class ExprFunction {
+template <std::floating_point T = double> class ExprFunction {
     std::shared_ptr<exprtk::parser<T>> parser;
     std::shared_ptr<exprtk::expression<T>> expression;
     std::shared_ptr<exprtk::symbol_table<T>> symbols;

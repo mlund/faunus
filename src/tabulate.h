@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cmath>
 #include <memory>
+#include <concepts>
 
 namespace Faunus {
 
@@ -24,7 +25,7 @@ namespace Faunus {
 namespace Tabulate {
 
 /* base class for all tabulators - no dependencies */
-template <typename T = double> class TabulatorBase {
+template <std::floating_point T = double> class TabulatorBase {
   protected:
     T utol = 1e-5, ftol = -1, umaxtol = -1, fmaxtol = -1;
     T numdr = 0.0001; // dr for derivative evaluation
@@ -79,7 +80,7 @@ template <typename T = double> class TabulatorBase {
  * @note Slow on Intel compiler
  * @todo Hide data and functions; clean up r vs r2 mess.
  */
-template <typename T = double> class Andrea : public TabulatorBase<T> {
+template <std::floating_point T = double> class Andrea : public TabulatorBase<T> {
   private:
     typedef TabulatorBase<T> base; // for convenience
     int mngrid = 1200;             // Max number of controlpoints
@@ -267,8 +268,6 @@ template <typename T = double> class Andrea : public TabulatorBase<T> {
             throw std::runtime_error("Andrea spline: try to increase utol/ftol");
 
         // create final reversed c and r2
-#if __cplusplus >= 201703L
-        // C++17 only code
         assert( td.c.size() % 6 == 0 );
         assert( td.c.size() / (td.r2.size()-1) == 6 );
         assert( std::is_sorted(td.r2.rbegin(), td.r2.rend()));
@@ -276,27 +275,6 @@ template <typename T = double> class Andrea : public TabulatorBase<T> {
         for (size_t i = 0; i < td.c.size() / 2; i += 6)                         // reverse knot order in packets of six
             std::swap_ranges(td.c.begin()+i, td.c.begin()+i+6, td.c.end()-i-6); // c++17 only
         return td;
-#else
-        typename base::data tdsort;
-        tdsort.rmax2 = td.rmax2;
-        tdsort.rmin2 = td.rmin2;
-
-        // reverse copy all elements in r2
-        tdsort.r2.resize( td.r2.size() );
-        std::reverse_copy(td.r2.begin(), td.r2.end(), tdsort.r2.begin());
-
-        // sanity check before reverse knot copy
-        assert( std::is_sorted(td.r2.rbegin(), td.r2.rend()));
-        assert( td.c.size() % 6 == 0 );
-        assert( td.c.size() / (td.r2.size()-1) == 6 );
-
-        // reverse copy knots
-        tdsort.c.resize( td.c.size() );
-        auto dst = tdsort.c.end();
-        for (auto src=td.c.begin(); src!=td.c.end(); src+=6)
-            std::copy(src, src+6, dst-=6);
-        return tdsort;
-#endif
     }
 };
 } // namespace Tabulate

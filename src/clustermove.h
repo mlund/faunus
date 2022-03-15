@@ -22,10 +22,10 @@ class ClusterShapeAnalysis {
     decltype(pqr_distribution)::iterator findPQRstream(size_t cluster_size);     //!< Create or find PQR files stream
 
     /** brief Calculates the gyration tensor for a collection of groups */
-    template <typename Range>
+    template <RequireGroups Range>
     Tensor gyrationFromMassCenterPositions(
-        const Range &groups, const Point &mass_center_of_groups,
-        const Geometry::BoundaryFunction boundary = [](auto &) {}) {
+        const Range& groups, const Point& mass_center_of_groups,
+        const Geometry::BoundaryFunction boundary = [](auto&) {}) {
         using namespace ranges::cpp20::views;
         auto positions = groups | transform(&Group::mass_center);
         auto masses = groups | transform(&Group::mass);
@@ -33,10 +33,10 @@ class ClusterShapeAnalysis {
     }
 
     /** brief Calculates the gyration tensor for a collection of groups */
-    template <typename Range>
+    template <RequireGroups Range>
     Tensor gyrationFromParticlePositions(
-        const Range &groups, const Point &mass_center_of_groups,
-        const Geometry::BoundaryFunction boundary = [](auto &) {}) {
+        const Range& groups, const Point& mass_center_of_groups,
+        const Geometry::BoundaryFunction boundary = [](auto&) {}) {
         using namespace ranges::cpp20::views;
         auto positions = groups | join | transform(&Particle::pos);
         auto masses = groups | join | transform(&Particle::traits) | transform(&AtomData::mw);
@@ -46,7 +46,8 @@ class ClusterShapeAnalysis {
     friend void to_json(json &, const ClusterShapeAnalysis &);
 
   public:
-    template <typename Range> void sample(const Range &groups, const Point &mass_center_of_groups, const Space &spc) {
+    template <RequireGroups Range>
+    void sample(const Range& groups, const Point& mass_center_of_groups, const Space& spc) {
         const auto cluster_size = std::distance(groups.begin(), groups.end());
         Tensor gyration_tensor;
         if (shape_anisotropy_use_com) {

@@ -567,7 +567,7 @@ void HardSpheroCylinder::from_json([[maybe_unused]] const json& j) {}
  * @param center_separation
  * @return
  */
-template <typename PatchPotential, typename CylinderPotential>
+template <Potential::RequirePairPotential PatchPotential, Potential::RequirePairPotential CylinderPotential>
 double CigarWithCigar<PatchPotential, CylinderPotential>::patchyPatchyEnergy(
     const Particle& particle1, const Particle& particle2,
     const Point& center_separation) const { // patchy sc with patchy sc
@@ -652,7 +652,7 @@ double CigarWithCigar<PatchPotential, CylinderPotential>::patchyPatchyEnergy(
            cylinder_potential(particle1, particle2, rclose_squared, Point::Zero());
 }
 
-template <typename PatchPotential, typename CylinderPotential>
+template <Potential::RequirePairPotential PatchPotential, Potential::RequirePairPotential CylinderPotential>
 double CigarWithCigar<PatchPotential, CylinderPotential>::isotropicIsotropicEnergy(
     const Particle& particle1, const Particle& particle2,
     const Point& center_separation) const { // isotropic sc with isotropic sc

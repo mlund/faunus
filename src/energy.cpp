@@ -1250,7 +1250,7 @@ SASAEnergyReference::SASAEnergyReference(const json& j, const Space& spc)
 
 void SASAEnergyReference::init() {
     sasa->init(spc);
-    areas.resize(spc.particles.size());
+    areas.resize(spc.particles.size(), 0.0);
 }
 
 // -----------------------------------
@@ -1268,6 +1268,7 @@ SASAEnergy::SASAEnergy(const Space& spc, double cosolute_molarity, double probe_
     name = "sasa";
     citation_information = "doi:10.12688/f1000research.7931.1";
     init();
+    areas = sasa->getAreas();
 }
 
 SASAEnergy::SASAEnergy(const json& j, const Space& spc)
@@ -1276,7 +1277,7 @@ SASAEnergy::SASAEnergy(const json& j, const Space& spc)
 
 
 void SASAEnergy::init() {
-    areas.resize(spc.particles.size(), 0.);
+    areas.resize(spc.particles.size(), 0.0);
     current_neighbours.resize(spc.particles.size());
     changed_indices.reserve(spc.particles.size());
 }
@@ -1382,12 +1383,12 @@ double SASAEnergy::energy(Change& change) {
     }
     const auto particles = spc.activeParticles();
     changed_indices.clear();
-    if (!change.everything) {
-        updateChangedIndices(change);
-        sasa->needs_syncing = true;
-    } else { //! all the active particles will be used for SASA calculation
+    if (change.everything) { //! all the active particles will be used for SASA calculation
         auto to_index = [this](const auto& particle) { return indexOf(particle); };
         changed_indices = particles | ranges::cpp20::views::transform(to_index) | ranges::to<std::vector>;
+    } else {
+        updateChangedIndices(change);
+        sasa->needs_syncing = true;
     }
 
     const auto neighbours_data = sasa->calcNeighbourData(spc, changed_indices);
@@ -1402,7 +1403,7 @@ double SASAEnergy::energy(Change& change) {
     }
 
     auto accumulate_energy = [this, &energy](const auto& particle) {
-        energy += areas.at(indexOf(particle)) * (particle.traits().tension + cosolute_molarity * particle.traits().tfe);
+      energy += areas.at(indexOf(particle)) * (particle.traits().tension + cosolute_molarity * particle.traits().tfe);
     };
     ranges::cpp20::for_each(particles, accumulate_energy);
     return energy;
@@ -1429,10 +1430,8 @@ void SASAEnergy::sync(Energybase* energybase_ptr, const Change& change) {
     }
 }
 
-TEST_CASE_TEMPLATE("[Faunus] SASAEnergy_updates", EnergyTemplate, SASAEnergy, SASAEnergyReference) {
+TEST_CASE_TEMPLATE("[Faunus] SASAEnergy_updates", EnergyTemplate, SASAEnergyReference, SASAEnergy) {
     using doctest::Approx;
-    Change change;
-    change.everything = true;
     pc::temperature = 300.0_K;
     atoms = R"([
         { "A": { "sigma": 2.0, "tfe": 1.0 } },
@@ -1456,33 +1455,35 @@ TEST_CASE_TEMPLATE("[Faunus] SASAEnergy_updates", EnergyTemplate, SASAEnergy, SA
     spc.particles.at(2).pos = {11.0, 0.0, 0.0};
     spc.particles.at(3).pos = {50.0, 0.0, 0.0};
 
-    EnergyTemplate sasaPBC(spc, 1.5_molar, 1.0_angstrom, 20);
-    sasaPBC.energy(change);
-    auto areasPBC = sasaPBC.getAreas();
+    SUBCASE("Update everything") {
+        Change change;
+        change.everything = true;
 
-    FreeSASAEnergy sasa(spc, 1.5_molar, 1.0_angstrom);
-    sasa.energy(change);
-    auto areas = sasa.getAreas();
+        EnergyTemplate sasa_energy(spc, 1.5_molar, 1.0_angstrom, 20);
+        FreeSASAEnergy ref_energy(spc, 1.5_molar, 1.0_angstrom);
+        CHECK(sasa_energy.energy(change) == Approx(98.0789260855));
+        CHECK(ref_energy.energy(change) == Approx(98.0789260855));
 
-    for (size_t i = 0; i < spc.particles.size(); ++i) {
-        CHECK(areasPBC.at(i) == Approx(areas.at(i)));
+        for (const auto& [area, ref_area] : ranges::views::zip(sasa_energy.getAreas(), ref_energy.getAreas())) {
+            CHECK(area == Approx(ref_area));
+        }
     }
 
     SUBCASE("Partial update") {
-        spc.particles.at(3).pos = {14.0, 0.0, 0.0};
-
+        spc.particles.at(3).pos = {14.0, 0.0, 0.0}; // update last particle in last group
+        Change change;
+        //change.everything = true; // accidentally set to `true` in master branch --> test passes
         auto& changed_data = change.groups.emplace_back();
         changed_data.group_index = 1;
         changed_data.relative_atom_indices = {1};
 
-        sasaPBC.energy(change);
-        sasa.energy(change);
+        EnergyTemplate sasa_energy(spc, 1.5_molar, 1.0_angstrom, 20);
+        FreeSASAEnergy ref_energy(spc, 1.5_molar, 1.0_angstrom);
+        CHECK(sasa_energy.energy(change) == Approx(105.7104501023));
+        CHECK(ref_energy.energy(change) == Approx(105.7104501023));
 
-        areasPBC = sasaPBC.getAreas();
-        areas = sasa.getAreas();
-
-        for (size_t i = 0; i < spc.particles.size(); ++i) {
-            CHECK(areasPBC.at(i) == Approx(areas.at(i)));
+        for (const auto& [area, ref_area] : ranges::views::zip(sasa_energy.getAreas(), ref_energy.getAreas())) {
+            CHECK(area == Approx(ref_area));
         }
     }
 }

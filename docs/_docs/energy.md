@@ -817,35 +817,40 @@ elements of `high`.
 
 ## Solvent Accessible Surface Area
 
-Note that the implementation of Solvent Accessible Surface Area potential is considered _experimental_;
-the code is untested, unoptimized, and the configuration syntax below can change.
-The FreeSASA library option has to be enabled when compiling.
-
 `sasa`       | SASA Transfer Free Energy
 ------------ | --------------------------------------------
 `radius=1.4` | Probe radius for SASA calculation (Å)
 `molarity`   | Molar concentration of co-solute
 `dense=true` | Flag specifying if a dense or a sparse version of a cell list container is used
+`slices=25`  | Number of slices per particle when calculating SASA (the more, the more precise)
 
 Calculates the free energy contribution due to
 
 1. atomic surface tension
 2. co-solute concentration (typically electrolytes)
 
-via a [SASA calculation](http://dx.doi.org/10/dbjh) for each atom, as implemented in
-the [FreeSASA library](https://freesasa.github.io/). 
-
+via a [SASA calculation](http://dx.doi.org/10/dbjh) for each particle.
 The energy term is:
 
 $$
     U = \sum_i^N A_{\text{sasa},i} \left ( \gamma_i + c_s \varepsilon_{\text{tfe},i} \right )
 $$
 
-where $c_s$ is the molar concentration of the co-solute;
-$\gamma_i$ is the atomic surface tension; and $\varepsilon_{\text{tfe},i}$ the atomic transfer free energy,
+where $c\_s$ is the molar concentration of the co-solute;
+$\gamma\_i$ is the atomic surface tension; and $\varepsilon_{\text{tfe},i}$ the atomic transfer free energy,
 both specified in the atom topology with `tension` and `tfe`, respectively.
-Will use cell lists if a geometry is either `cuboid` or `sphere`. The `dense` option specifies if a dense implementation 
+Will use cell lists if a geometry is either `cuboid` or `sphere`.
+The `dense` option specifies if a dense implementation 
 (memory heavy but faster) or a sparse one (slightly slower but light) of a cell list container will be used.
+
+### Alternative schemes
+
+Scheme           | PBC | Cell list | Note
+-----------------|:---:|:---------:|-----------------------------
+`sasa`           |  ✓  |     ✓     | Default
+`sasa_reference` |  ✓  |     ✓     | Use for debugging
+`freesasa`       |     |           | Uses [FreeSASA](https://freesasa.github.io/)
+
 
 ## Penalty Function
 

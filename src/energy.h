@@ -1568,7 +1568,7 @@ class FreeSASAEnergy : public Energybase {
      * @param cosolute_molarity in particles per angstrom cubed
      * @param probe_radius in angstrom
      */
-    FreeSASAEnergy(const Space& spc, double cosolute_molarity = 0.0, double probe_radius = 1.4);
+    FreeSASAEnergy(const Space& spc, double cosolute_molarity, double probe_radius);
     FreeSASAEnergy(const json& j, const Space& spc);
     double energy(Change& change) override;
     const std::vector<double>& getAreas() const { return sasa; }
@@ -1578,52 +1578,45 @@ class FreeSASAEnergy : public Energybase {
 /**
  * @brief class for calculating SASA energies calculating SASA of each particle every step
  *
+ * This calculates SASA for all particles, i.e. the `Change` object is ignored and a full
+ * (and slow) system update is performed on each call to `energy()`. This class is used as
+ * a reference and base class for more clever implementations.
  */
-class SASAEnergyBase : public Energybase {
-
-  public:
-    using index_type = size_t;
-
-    std::vector<double> areas; //!< Target buffer for calculated surface areas
-    Space& spc;
-    double cosolute_molarity = 0.;        //!< co-solute concentration (mol/l)
-    std::unique_ptr<SASA::SASABase> sasa; //!< performs neighbour searching and subsequent sasa calculation
-
+class SASAEnergyReference : public Energybase {
   private:
     void to_json(json& j) const override;
     void sync(Energybase* energybase_ptr, const Change& change) override;
-    void init() override;
 
   protected:
-    /**
-     * @brief returns absolute index of particle in ParticleVector
-     * @param particle
-     */
+    void init() override;
+    using index_type = size_t;
+    const Space& spc;                     //!< Space to operate on
+    std::vector<double> areas;            //!< Target buffer for calculated surface areas
+    double cosolute_molarity = 0.0;       //!< co-solute concentration (mol/l)
+    std::unique_ptr<SASA::SASABase> sasa; //!< performs neighbour searching and subsequent sasa calculation
+
+    /** absolute index of particle in space particle vector */
     inline auto indexOf(const Particle& particle) const {
         return static_cast<index_type>(std::addressof(particle) - std::addressof(spc.particles.at(0)));
     }
 
   public:
-    SASAEnergyBase(Space& spc, double cosolute_molarity = 0.0, double probe_radius = 1.4, int slices_per_atom = 20,
+    SASAEnergyReference(const Space& spc, double cosolute_molarity, double probe_radius, int slices_per_atom = 25,
                    bool dense_container = true);
-    SASAEnergyBase(const json& j, Space& spc);
-    const std::vector<double>& getAreas() const { return areas; }
+    SASAEnergyReference(const json& j, const Space& spc);
+    const std::vector<double>& getAreas() const;
     double energy(Change& change) override;
-
-}; //!< SASA energy from transfer free energies with SASA calculation each step
+};
 
 /**
  * @brief class for calculating SASA energies calculating SASA of particles based on change object every step
- *
  */
-class SASAEnergy : public SASAEnergyBase {
-
+class SASAEnergy : public SASAEnergyReference {
   private:
     std::vector<std::vector<index_type>>
         current_neighbours; //!< holds cached neighbour indices for each particle in ParticleVector
     std::vector<index_type> changed_indices; //!< paritcle indices whose SASA changed based on change object
 
-    void to_json(json& j) const override;
     void sync(Energybase* energybase_ptr, const Change& change) override;
     void init() override;
 
@@ -1631,11 +1624,11 @@ class SASAEnergy : public SASAEnergyBase {
     void insertChangedNeighboursOf(const index_type index, std::set<index_type>& target_indices) const;
 
   public:
-    SASAEnergy(Space& spc, double cosolute_molarity = 0.0, double probe_radius = 1.4, int slices_per_atom = 20,
+    SASAEnergy(const Space& spc, double cosolute_molarity, double probe_radius, int slices_per_atom = 25,
                bool dense_container = true);
-    SASAEnergy(const json& j, Space& spc);
+    SASAEnergy(const json& j, const Space& spc);
     double energy(Change& change) override;
-}; //!< SASA energy from transfer free energies
+};
 
 /**
  * @brief Oscillating energy on a single particle

@@ -3,9 +3,19 @@
 #include <vector>
 #include <cassert>
 #include <stdexcept>
-#include <nlohmann/json_fwd.hpp>
+#include <nlohmann/json.hpp>
+
+#ifdef ENABLE_PCG
+#include <pcg_random.hpp>
+#endif
 
 namespace Faunus {
+
+#ifdef ENABLE_PCG
+using RandomNumberEngine = pcg32;
+#else
+using RandomNumberEngine = std::mt19937;
+#endif
 
 /**
  * @brief Random number generator
@@ -22,7 +32,7 @@ class Random {
   private:
     std::uniform_real_distribution<double> dist01; //!< Uniform real distribution [0,1)
   public:
-    std::mt19937 engine; //!< Random number engine used for all operations
+    RandomNumberEngine engine; //!< Random number engine used for all operations
     Random();            //!< Constructor with deterministic seed
     void seed();         //!< Set a non-deterministic ("hardware") seed
     double operator()(); //!< Random double in uniform range [0,1)
@@ -60,7 +70,7 @@ extern Random random; //!< global instance of Random
  *
  * Elements is accessed with `get()` that will
  * randomly pick from the weighted distribution.
- * Add elements with `push_back()`
+ * Add elements with `addGroup()`
  * where the default weight is _unity_.
  *
  * @tparam T Data type to store
@@ -69,7 +79,7 @@ template <typename T> class WeightedDistribution {
   private:
     std::discrete_distribution<> distribution;
     std::vector<double> weights; //!< weights for each data point
-    size_t latest_index;         //!< index from latest element access via push_back or get
+    size_t latest_index;         //!< index from latest element access via addGroup or get
   public:
     std::vector<T> data;                        //!< raw vector of T
     auto size() const { return data.size(); }   //!< Number of data points
@@ -77,7 +87,7 @@ template <typename T> class WeightedDistribution {
     size_t getLastIndex() const {
         assert(!data.empty());
         return latest_index;
-    } //!< index of last `get()` or `push_back()` element
+    } //!< index of last `get()` or `addGroup()` element
 
     void clear() {
         data.clear();

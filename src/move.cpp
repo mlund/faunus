@@ -6,25 +6,32 @@
 #include "chainmove.h"
 #include "forcemove.h"
 #include "montecarlo.h"
+#include "smart_montecarlo.h"
+#include "regions.h"
 #include "aux/iteratorsupport.h"
 #include "aux/eigensupport.h"
 #include "spdlog/spdlog.h"
+#include <range/v3/view/counted.hpp>
+#include <range/v3/algorithm/count.hpp>
+#include <range/v3/view/transform.hpp>
 
 namespace Faunus::Move {
 
 Random MoveBase::slump; // static instance of Random (shared for all moves)
 
-void MoveBase::from_json(const json &j) {
-    if (auto it = j.find("repeat"); it != j.end()) {
+void MoveBase::from_json(const json& j) {
+    if (const auto it = j.find("repeat"); it != j.end()) {
         if (it->is_number()) {
             repeat = it->get<int>();
-        } else if (it->is_string()) {
-            if (it->get<std::string>() == "N") {
-                repeat = -1;
-            } else {
-                throw std::runtime_error("Unknown string value for 'repeat'");
-            }
+        } else if (it->is_string() && it->get<std::string>() == "N") {
+            repeat = -1;
+        } else {
+            throw std::runtime_error("invalid 'repeat'");
         }
+    }
+    sweep_interval = j.value("nstep", 1); // Non-stochastic moves are defined with `repeat=0`...
+    if (sweep_interval > 1) {             // ...the move is then instead run at a fixed sweep interval
+        repeat = 0;
     }
     _from_json(j);
     if (repeat < 0) {
@@ -32,72 +39,97 @@ void MoveBase::from_json(const json &j) {
     }
 }
 
-void MoveBase::to_json(json &j) const {
+void MoveBase::to_json(json& j) const {
     _to_json(j);
-    if (timer_move.result() > 0.01) // only print if more than 1% of the time
+    if (timer_move.result() > 0.01) { // only print if more than 1% of the time
         j["relative time (without energy calc)"] = timer_move.result();
-    if (timer.result() > 0.01) // only print if more than 1% of the time
+    }
+    if (timer.result() > 0.01) { // only print if more than 1% of the time
         j["relative time"] = timer.result();
-    j["acceptance"] = double(accepted) / cnt;
+    }
+    j["acceptance"] = double(number_of_accepted_moves) / number_of_attempted_moves;
     j["repeat"] = repeat;
-    j["moves"] = cnt;
-    if (!cite.empty())
+    j["stochastic"] = isStochastic();
+    j["moves"] = number_of_attempted_moves;
+    if (!cite.empty()) {
         j["cite"] = cite;
-    _roundjson(j, 3);
+    }
+    roundJSON(j, 3);
 }
 
-void MoveBase::move(Change &change) {
+void MoveBase::move(Change& change) {
     timer.start();
     timer_move.start();
-    cnt++;
+    number_of_attempted_moves++;
     change.clear();
     _move(change);
-    if (change.empty())
+    if (change.empty()) {
         timer.stop();
+    }
     timer_move.stop();
 }
 
-void MoveBase::accept(Change &c) {
-    accepted++;
-    _accept(c);
+void MoveBase::accept(Change& change) {
+    number_of_accepted_moves++;
+    _accept(change);
     timer.stop();
 }
 
-void MoveBase::reject(Change &c) {
-    rejected++;
-    _reject(c);
+void MoveBase::reject(Change& change) {
+    number_of_rejected_moves++;
+    _reject(change);
     timer.stop();
 }
 
-double MoveBase::bias(Change &, double, double) {
-    return 0; // du
+/**
+ * This can be used to introduce an extra energy change that will be added to the
+ * total trial energy in the Metropolis acceptance criterion. Typically used
+ * to include bias not contained in Energy::Hamiltonian.
+ *
+ * @param change Change made to the system
+ * @param old_energy Energy from hamiltonian before the change (kT)
+ * @param new_energy Energy from hamiltonian after the change (kT)
+ * @return Energy due to custom bias from the particular move (kT)
+ */
+double MoveBase::bias([[maybe_unused]] Change& change, [[maybe_unused]] double old_energy,
+                      [[maybe_unused]] double new_energy) {
+    return 0.0;
 }
 
-void MoveBase::_accept(Change &) {}
+void MoveBase::_accept([[maybe_unused]] Change& change) {}
 
-void MoveBase::_reject(Change &) {}
+void MoveBase::_reject([[maybe_unused]] Change& change) {}
 
-void from_json(const json &j, MoveBase &m) { m.from_json(j); }
+MoveBase::MoveBase(Space& spc, std::string_view name, std::string_view cite) : cite(cite), name(name), spc(spc) {}
 
-void to_json(json &j, const MoveBase &m) {
-    assert(!m.name.empty());
-    m.to_json(j[m.name]);
+void MoveBase::setRepeat(const int new_repeat) { repeat = new_repeat; }
+bool MoveBase::isStochastic() const { return repeat != 0; }
+
+void from_json(const json &j, MoveBase &move) { move.from_json(j); }
+
+void to_json(json& j, const MoveBase& move) { move.to_json(j[move.getName()]); }
+
+const std::string& MoveBase::getName() const {
+    assert(!name.empty());
+    return name;
 }
 
-ReplayMove::ReplayMove(Space &spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {}
+// -----------------------------------
 
-ReplayMove::ReplayMove(Space &spc) : ReplayMove(spc, "replay", "") {}
+ReplayMove::ReplayMove(Space& spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {}
 
-void ReplayMove::_to_json(json &j) const { j["file"] = reader->filename; }
+ReplayMove::ReplayMove(Space& spc) : ReplayMove(spc, "replay", "") {}
 
-void ReplayMove::_from_json(const json &j) { reader = std::make_shared<XTCReader>(j.at("file")); }
+void ReplayMove::_to_json(json& j) const { j["file"] = reader->filename; }
+
+void ReplayMove::_from_json(const json& j) { reader = std::make_unique<XTCReader>(j.at("file").get<std::string>()); }
 
 void ReplayMove::_move(Change &change) {
-    assert(reader != nullptr);
+    assert(reader);
     if (!end_of_trajectory) {
         if (reader->read(frame.step, frame.timestamp, frame.box, spc.positions().begin(), spc.positions().end())) {
-            spc.geo.setLength(frame.box);
-            change.all = true;
+            spc.geometry.setLength(frame.box);
+            change.everything = true;
         } else {
             // nothing to do, simulation shall stop
             end_of_trajectory = true;
@@ -106,16 +138,16 @@ void ReplayMove::_move(Change &change) {
     }
 }
 
-double ReplayMove::bias(Change &, double, double) {
+double ReplayMove::bias(Change&, double, double) {
     return force_accept; // always accept
 }
 
-void AtomicTranslateRotate::_to_json(json &j) const {
+void AtomicTranslateRotate::_to_json(json& j) const {
     j = {{"dir", directions},
          {"molid", molid},
          {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(mean_square_displacement.avg())},
          {"molecule", molecule_name}};
-    _roundjson(j, 3);
+    roundJSON(j, 3);
 }
 
 void AtomicTranslateRotate::_from_json(const json& j) {
@@ -128,7 +160,7 @@ void AtomicTranslateRotate::_from_json(const json& j) {
     }
     directions = j.value("dir", Point(1, 1, 1));
     if (repeat < 0) {
-        auto mollist = spc.findMolecules(molid, Space::ALL);
+        auto mollist = spc.findMolecules(molid, Space::Selection::ALL);
         repeat = std::distance(mollist.begin(), mollist.end()); // repeat for each molecule...
         if (repeat > 0) {
             repeat = repeat * mollist.front().size(); // ...and for each atom
@@ -139,40 +171,41 @@ void AtomicTranslateRotate::_from_json(const json& j) {
 
 void AtomicTranslateRotate::translateParticle(ParticleVector::iterator particle, double displacement) {
     const auto old_position = particle->pos; // backup old position
-    particle->pos += ranunit(slump, directions) * displacement * slump();
-    spc.geo.boundary(particle->pos);
-    latest_displacement_squared = spc.geo.sqdist(old_position, particle->pos); // square displacement
+    particle->pos += randomUnitVector(slump, directions) * displacement * slump();
+    spc.geometry.boundary(particle->pos);
+    latest_displacement_squared = spc.geometry.sqdist(old_position, particle->pos); // square displacement
 
-    auto& group = spc.groups.at(cdata.index);
+    auto& group = spc.groups.at(cdata.group_index);
     if (group.isMolecular()) {
-        group.cm = Geometry::massCenter(group.begin(), group.end(), spc.geo.getBoundaryFunc(), -group.cm);
+        group.mass_center =
+            Geometry::massCenter(group.begin(), group.end(), spc.geometry.getBoundaryFunc(), -group.mass_center);
         checkMassCenter(group);
     }
 }
 
-void AtomicTranslateRotate::checkMassCenter(Space::Tgroup& group) const {
+void AtomicTranslateRotate::checkMassCenter(Space::GroupType& group) const {
     const auto allowed_threshold = 1e-6;
-    const auto old_mass_center = group.cm;
-    group.translate(-old_mass_center, spc.geo.getBoundaryFunc()); // translate to origin
-    const auto should_be_zero = spc.geo.sqdist({0, 0, 0}, Geometry::massCenter(group.begin(), group.end()));
+    const auto old_mass_center = group.mass_center;
+    group.translate(-old_mass_center, spc.geometry.getBoundaryFunc()); // translate to origin
+    const auto should_be_zero = spc.geometry.sqdist({0, 0, 0}, Geometry::massCenter(group.begin(), group.end()));
     if (should_be_zero > allowed_threshold) {
         faunus_logger->error("{}: error calculating mass center for {}", name, group.traits().name);
         groupToDisk(group);
         throw std::runtime_error("molecule likely too large for periodic boundaries; increase box size?");
     }
-    group.translate(old_mass_center, spc.geo.getBoundaryFunc());
+    group.translate(old_mass_center, spc.geometry.getBoundaryFunc());
 }
 
-void AtomicTranslateRotate::groupToDisk(const Space::Tgroup& group) const {
+void AtomicTranslateRotate::groupToDisk(const Space::GroupType& group) const {
     if (auto stream = std::ofstream("mass-center-failure.pqr"); stream) {
         const auto group_iter = spc.groups.cbegin() + spc.getGroupIndex(group);
         auto groups = ranges::cpp20::views::counted(group_iter, 1); // slice out single group
-        FormatPQR::save(stream, groups, spc.geo.getLength());
+        PQRWriter().save(stream, groups, spc.geometry.getLength());
     }
 }
 
-void AtomicTranslateRotate::_move(Change &change) {
-    if (auto particle = randomAtom(); particle != spc.p.end()) {
+void AtomicTranslateRotate::_move(Change& change) {
+    if (auto particle = randomAtom(); particle != spc.particles.end()) {
         latest_particle = particle;
         const auto translational_displacement = particle->traits().dp;
         const auto rotational_displacement = particle->traits().dprot;
@@ -182,7 +215,7 @@ void AtomicTranslateRotate::_move(Change &change) {
         }
 
         if (rotational_displacement > 0.0) { // rotate
-            const auto random_unit_vector = Faunus::ranunit(slump);
+            const auto random_unit_vector = Faunus::randomUnitVector(slump);
             const auto angle = rotational_displacement * (slump() - 0.5);
             Eigen::Quaterniond quaternion(Eigen::AngleAxisd(angle, random_unit_vector));
             particle->rotate(quaternion, quaternion.toRotationMatrix());
@@ -192,7 +225,7 @@ void AtomicTranslateRotate::_move(Change &change) {
             change.groups.push_back(cdata); // add to list of moved groups
         }
     } else {
-        latest_particle = spc.p.end();
+        latest_particle = spc.particles.end();
         latest_displacement_squared = 0.0; // no particle found --> no movement
     }
 }
@@ -202,13 +235,13 @@ void AtomicTranslateRotate::_accept(Change&) {
     sampleEnergyHistogram();
 }
 
-void AtomicTranslateRotate::_reject(Change &) { mean_square_displacement += 0; }
+void AtomicTranslateRotate::_reject(Change&) { mean_square_displacement += 0; }
 
 AtomicTranslateRotate::AtomicTranslateRotate(Space& spc, const Energy::Hamiltonian& hamiltonian, std::string name,
                                              std::string cite)
     : MoveBase(spc, name, cite), hamiltonian(hamiltonian) {
     repeat = -1; // meaning repeat N times
-    cdata.atoms.resize(1);
+    cdata.relative_atom_indices.resize(1);
     cdata.internal = true;
 }
 
@@ -224,14 +257,15 @@ AtomicTranslateRotate::AtomicTranslateRotate(Space& spc, const Energy::Hamiltoni
  */
 ParticleVector::iterator AtomicTranslateRotate::randomAtom() {
     assert(molid >= 0);
-    auto particle = spc.p.end(); // particle iterator
-    auto selection = (Faunus::molecules[molid].atomic) ? Space::ALL : Space::ACTIVE;
+    auto particle = spc.particles.end(); // particle iterator
+    auto selection = (Faunus::molecules[molid].atomic) ? Space::Selection::ALL : Space::Selection::ACTIVE;
     auto mollist = spc.findMolecules(molid, selection);
     if (auto group = slump.sample(mollist.begin(), mollist.end()); group != mollist.end()) { // random molecule
         if (not group->empty()) {
-            particle = slump.sample(group->begin(), group->end());     // random particle
-            cdata.index = Faunus::distance(spc.groups.begin(), group); // index of touched group
-            cdata.atoms[0] = std::distance(group->begin(), particle);  // index of moved particle relative to group
+            particle = slump.sample(group->begin(), group->end());           // random particle
+            cdata.group_index = Faunus::distance(spc.groups.begin(), group); // index of touched group
+            cdata.relative_atom_indices[0] =
+                std::distance(group->begin(), particle); // index of moved particle relative to group
         }
     }
     return particle;
@@ -243,7 +277,7 @@ ParticleVector::iterator AtomicTranslateRotate::randomAtom() {
  */
 void AtomicTranslateRotate::sampleEnergyHistogram() {
     if (energy_resolution > 0.0) {
-        assert(latest_particle != spc.p.end());
+        assert(latest_particle != spc.particles.end());
         const auto particle_energy =
             std::accumulate(hamiltonian.latestEnergies().begin(), hamiltonian.latestEnergies().end(), 0.0);
         auto& particle_histogram =
@@ -265,137 +299,150 @@ void AtomicTranslateRotate::saveHistograms() {
 
 AtomicTranslateRotate::~AtomicTranslateRotate() { saveHistograms(); }
 
-Propagator::Propagator(const json& j, Space& spc, Energy::Hamiltonian& pot, [[maybe_unused]] MPI::MPIController& mpi) {
-    if (j.count("random") == 1) {
-        MoveBase::slump = j["random"]; // slump is static --> shared for all moves
-        Faunus::random = j["random"];
-    }
-
-    for (auto& j_move : j.at("moves")) { // loop over move list
-        try {
-            const auto& [key, j_params] = jsonSingleItem(j_move);
-            if (key == "moltransrot") {
-                _moves.emplace_back<Move::TranslateRotate>(spc);
-            } else if (key == "smartmoltransrot") {
-                _moves.emplace_back<Move::SmartTranslateRotate>(spc);
-            } else if (key == "conformationswap") {
-                _moves.emplace_back<Move::ConformationSwap>(spc);
-            } else if (key == "transrot") {
-                _moves.emplace_back<Move::AtomicTranslateRotate>(spc, pot);
-            } else if (key == "pivot") {
-                _moves.emplace_back<Move::PivotMove>(spc);
-            } else if (key == "crankshaft") {
-                _moves.emplace_back<Move::CrankshaftMove>(spc);
-            } else if (key == "volume") {
-                _moves.emplace_back<Move::VolumeMove>(spc);
-            } else if (key == "charge") {
-                _moves.emplace_back<Move::ChargeMove>(spc);
-            } else if (key == "chargetransfer") {
-                _moves.emplace_back<Move::ChargeTransfer>(spc);
-            } else if (key == "rcmc") {
-                _moves.emplace_back<Move::SpeciationMove>(spc);
-            } else if (key == "quadrantjump") {
-                _moves.emplace_back<Move::QuadrantJump>(spc);
-            } else if (key == "cluster") {
-                _moves.emplace_back<Move::Cluster>(spc);
-            } else if (key == "replay") {
-                _moves.emplace_back<Move::ReplayMove>(spc);
-            } else if (key == "langevin_dynamics") {
-                auto move_ptr = std::make_shared<Move::LangevinDynamics>(spc, pot);
-                _moves.push_back<Move::LangevinDynamics>(move_ptr);
-            } else if (key == "temper") {
-#ifdef ENABLE_MPI
-                _moves.emplace_back<Move::ParallelTempering>(spc, mpi);
-                _moves.back()->repeat = 0; // this gives the move ZERO weight
-#else
-                throw ConfigurationError("'{}': not included - recompile Faunus with MPI support", key);
-#endif
+/**
+ * @param name Name of move to create
+ * @param properties json configuration for move
+ * @param spc Reference to trial or "new" space
+ * @param hamiltonian Hamiltonian used for trial space
+ * @param old_spc Reference to "old" space (rarely used by any move, except Speciation)
+ */
+std::unique_ptr<MoveBase> createMove(const std::string& name, const json& properties, Space& spc,
+                                     Energy::Hamiltonian& hamiltonian, Space &old_spc) {
+    try {
+        std::unique_ptr<MoveBase> move;
+        if (name == "moltransrot") {
+            if (properties.contains("region")) {
+                return std::make_unique<SmarterTranslateRotate>(spc, properties);
+            }
+            move = std::make_unique<TranslateRotate>(spc);
+        } else if (name == "conformationswap") {
+            move = std::make_unique<ConformationSwap>(spc);
+        } else if (name == "transrot") {
+            move = std::make_unique<AtomicTranslateRotate>(spc, hamiltonian);
+        } else if (name == "pivot") {
+            move = std::make_unique<PivotMove>(spc);
+        } else if (name == "crankshaft") {
+            move = std::make_unique<CrankshaftMove>(spc);
+        } else if (name == "volume") {
+            move = std::make_unique<VolumeMove>(spc);
+        } else if (name == "charge") {
+            if (properties.value("quadratic", true)) {
+                move = std::make_unique<QuadraticChargeMove>(spc);
             } else {
-                throw ConfigurationError("'{}': unknown move", key);
+                move = std::make_unique<ChargeMove>(spc);
             }
-            // append additional moves to the if-chain
+        } else if (name == "chargetransfer") {
+            move = std::make_unique<ChargeTransfer>(spc);
+        } else if (name == "rcmc") {
+            move = std::make_unique<SpeciationMove>(spc, old_spc);
+        } else if (name == "quadrantjump") {
+            move = std::make_unique<QuadrantJump>(spc);
+        } else if (name == "cluster") {
+            move = std::make_unique<Cluster>(spc);
+        } else if (name == "replay") {
+            move = std::make_unique<ReplayMove>(spc);
+        } else if (name == "langevin_dynamics") {
+            move = std::make_unique<LangevinDynamics>(spc, hamiltonian);
+        } else if (name == "temper") {
+#ifdef ENABLE_MPI
+            move = std::make_unique<ParallelTempering>(spc, MPI::mpi);
+            move->setRepeat(0); // zero weight moves are run at the end of each sweep
+#else
+            throw ConfigurationError("{} requires that Faunus is compiled with MPI", name);
+#endif
+        }
+        if (!move) {
+            throw ConfigurationError("unknown move '{}'", name);
+        }
+        move->from_json(properties);
+        return move;
+    } catch (std::exception& e) { throw ConfigurationError("error creating move -> {}", e.what()); }
+}
 
-            try {
-                _moves.back()->from_json(j_params);
-                addWeight(_moves.back()->repeat);
-            } catch (std::exception& e) {
-                usageTip.pick(key);
-                throw ConfigurationError("'{}': {}", key, e.what());
-            }
+void MoveCollection::addMove(std::shared_ptr<MoveBase>&& move) {
+    if (!move) {
+        throw std::runtime_error("invalid move");
+    }
+    moves.vec.emplace_back(move);
+    repeats.push_back(static_cast<double>(move->repeat));
+    distribution = std::discrete_distribution<unsigned int>(repeats.begin(), repeats.end());
+    number_of_moves_per_sweep = static_cast<unsigned int>(std::accumulate(repeats.begin(), repeats.end(), 0.0));
+}
+
+MoveCollection::MoveCollection(const json& list_of_moves, Space& spc, Energy::Hamiltonian& hamiltonian, Space &old_spc) {
+    assert(list_of_moves.is_array());
+    for (const auto& j : list_of_moves) { // loop over move list
+        const auto& [name, parameters] = jsonSingleItem(j);
+        try {
+            addMove(createMove(name, parameters, spc, hamiltonian, old_spc));
         } catch (std::exception& e) {
-            throw ConfigurationError("move: {}", e.what()).attachJson(j_move);
+            usageTip.pick(name);
+            throw ConfigurationError("{}", e.what()).attachJson(j);
         }
     }
 }
 
-void Propagator::addWeight(double weight) {
-    _weights.push_back(weight);
-    distribution = std::discrete_distribution<>(_weights.begin(), _weights.end());
-    _repeat = int(std::accumulate(_weights.begin(), _weights.end(), 0.0));
-}
+void to_json(json& j, const MoveCollection& propagator) { j = propagator.moves; }
 
-void to_json(json &j, const Propagator &propagator) { j = propagator._moves; }
+const BasePointerVector<MoveBase>& MoveCollection::getMoves() const { return moves; }
+
+MoveCollection::move_iterator MoveCollection::sample() {
+#ifdef ENABLE_MPI
+    auto& random_engine = MPI::mpi.random.engine; // parallel processes (tempering) must be in sync
+#else
+    auto& random_engine = Move::MoveBase::slump.engine;
+#endif
+    if (!moves.empty()) {
+        return moves.begin() + distribution(random_engine);
+    }
+    return moves.end();
+}
 
 #ifdef ENABLE_MPI
 
-void ParallelTempering::_to_json(json &j) const {
-    j = {{"replicas", mpi.nproc()}, {"datasize", particle_transmitter.getFormat()}};
-    json &_j = j["exchange"];
-    _j = json::object();
-    for (const auto &[id, acceptance] : acceptance_map) {
-        _j[id] = {{"attempts", acceptance.cnt}, {"acceptance", acceptance.avg()}};
+void ParallelTempering::_to_json(json& j) const {
+    j = {{"replicas", mpi.world.size()},
+         {"format", exchange_particles.getFormat()},
+         {"partner_policy", partner->policy},
+         {"volume_scale", volume_scaling_method}};
+    auto& exchange_json = j["exchange"] = json::object();
+    for (const auto& [pair, acceptance] : acceptance_map) {
+        auto id = fmt::format("{} <-> {}", pair.first, pair.second);
+        exchange_json[id] = {{"attempts", acceptance.size()}, {"acceptance", acceptance.avg()}};
     }
 }
 
-void ParallelTempering::findPartner() {
-    auto true_or_false = static_cast<bool>(mpi.random.range(0, 1));
-    int rank_increment = true_or_false ? 1 : -1;
-    if (mpi.rank() % 2 == 0) { // even replica
-        partner = mpi.rank() + rank_increment;
-    } else { // odd replica
-        partner = mpi.rank() - rank_increment;
-    }
-}
-
-bool ParallelTempering::goodPartner() {
-    if (partner >= 0 && partner < mpi.nproc() && partner != mpi.rank()) {
-        return true;
-    } else {
-        partner = -1;
-        return false;
-    }
+/**
+ * Exchange groups sizes with partner MPI rank and Resize all groups to the exchanged values
+ */
+void ParallelTempering::exchangeGroupSizes(Space::GroupVector& groups, int partner_rank) {
+    std::vector<size_t> sizes = groups | ranges::cpp20::views::transform(&Group::size) | ranges::to_vector;
+    mpi.world.sendrecv_replace(sizes.begin(), sizes.end(), partner_rank, mpl::tag_t(0), partner_rank, mpl::tag_t(0));
+    auto it = sizes.begin();
+    ranges::cpp20::for_each(groups, [&it](Group& group) { group.resize(*it++); });
 }
 
 /**
  * This will exchange the states between two partner replicas and set the change object accordingy
  */
-void ParallelTempering::exchangeState(Change &change) {
-    assert(partner != -1);
-    auto old_volume = spc.geo.getVolume();
-    particle_transmitter.sendExtra.at(VOLUME) = old_volume;      // copy current volume for sending
-    partner_particles->resize(spc.p.size());                     // temparary storage
-    particle_transmitter.recv(mpi, partner, *partner_particles); // receive particles
-    particle_transmitter.send(mpi, spc.p, partner);              // send everything
-    particle_transmitter.waitrecv();
-    particle_transmitter.waitsend();
-
-    auto new_volume = particle_transmitter.recvExtra.at(VOLUME);
-    if (new_volume < very_small_volume || spc.p.size() != partner_particles->size()) {
-        MPI_Abort(mpi.comm, 1);
-    } else {
-        change.all = true;
-        if (std::fabs(new_volume - old_volume) > pc::epsilon_dbl) {
-            change.dV = true;
-            spc.geo.setVolume(new_volume);
-        }
-        spc.updateParticles(partner_particles->begin(), partner_particles->end(), spc.p.begin());
+void ParallelTempering::exchangeState(Change& change) {
+    if (MPI::exchangeVolume(mpi, *partner->rank, spc.geometry, volume_scaling_method)) {
+        change.volume_change = true;
     }
+    exchangeGroupSizes(spc.groups, *partner->rank);
+    exchange_particles.replace(mpi.world, *partner->rank, spc.particles);
+    spc.updateParticles(spc.particles.begin(), spc.particles.end(), spc.particles.begin());
+    change.everything = true;
 }
 
-void ParallelTempering::_move(Change &change) {
-    mpi.barrier(); // wait until all ranks reach here
-    findPartner();
-    if (goodPartner()) {
+void ParallelTempering::_move(Change& change) {
+    mpi.world.barrier(); // wait until all ranks reach here
+    if (!MPI::checkRandomEngineState(mpi.world, MoveBase::slump)) {
+        faunus_logger->error("Random numbers out of sync across MPI nodes. Do not use 'hardware' seed.");
+        mpi.world.abort(1); // neighbor search *requires* that random engines are in sync
+    }
+    partner->generate(mpi.world, MoveBase::slump);
+    if (partner->rank.has_value()) {
         exchangeState(change);
     }
 }
@@ -408,178 +455,187 @@ void ParallelTempering::_move(Change &change) {
  * the bias (== energy change of the partner) are added together
  * to form the final trial energy for the tempering move.
  */
-double ParallelTempering::exchangeEnergy(double energy_change) {
-    assert(partner >= 0);
-    std::vector<MPI::FloatTransmitter::floatp> energy_change_vector = {energy_change};
-    auto energy_change_partner = float_transmitter.swapf(mpi, energy_change_vector, partner);
-    return energy_change_partner.at(0); // return partner energy change
+double ParallelTempering::exchangeEnergy(const double energy_change) {
+    double partner_energy_change = 0.0;
+    const auto tag = mpl::tag_t(0);
+    mpi.world.sendrecv(energy_change, *partner->rank, tag, partner_energy_change, *partner->rank, tag);
+    return partner_energy_change; // return partner energy change
 }
 
 /**
  * The bias() function takes the current old and new energy and exchanges
  * the resulting energy change with the partner replica. The change in the
- * replica is returned.
- *
- * @todo Here we could run a custom Metropolis criterion and return +/- infinity
- * to trigger accept/reject. This would remedy the dangerous expectation that
- * the states of the random number generators (Movebase) are aligned on all nodes.
- * This would however ignore other bias contributions, particularly it would prove
- * problematic with grand canonical moves.
+ * replica is returned and will be added to the total trial energy in
+ * the MetropolicMonteCarlo class.
  */
-double ParallelTempering::bias(Change &, double uold, double unew) {
-    assert(partner != -1);
-    if constexpr (false) {
-        // todo: add sanity check for random number generator state in partnering replicas.
-        return exchangeEnergy(unew - uold); // exchange change with partner (MPI)
-    } else {
-        double energy_change = unew - uold;
-        double partner_energy_change = exchangeEnergy(energy_change);
-        if (MetropolisMonteCarlo::metropolis(energy_change + partner_energy_change)) {
-            return pc::neg_infty; // accept!
-        } else {
-            return pc::infty; // reject!
-        }
-    }
+double ParallelTempering::bias([[maybe_unused]] Change& change, double uold, double unew) {
+    return exchangeEnergy(unew - uold); // energy change in partner replica
 }
 
-std::string ParallelTempering::id() const {
-    assert(partner != -1);
-    // note `std::minmax(a,b)` takes _references_; the initializer list (used here) takes a _copy_
-    const auto pair = std::minmax({mpi.rank(), partner});
-    return fmt::format("{} <-> {}", pair.first, pair.second);
+void ParallelTempering::_accept([[maybe_unused]] Change& change) {
+    acceptance_map[partner->getPair(mpi.world)] += 1.0;
+}
+void ParallelTempering::_reject([[maybe_unused]] Change& change) {
+    acceptance_map[partner->getPair(mpi.world)] += 0.0;
 }
 
-void ParallelTempering::_accept(Change &) {
-    acceptance_map[id()] += 1;
-}
-void ParallelTempering::_reject(Change &) {
-    acceptance_map[id()] += 0;
-}
-
-void ParallelTempering::_from_json(const json &j) {
-    particle_transmitter.setFormat(j.value("format", std::string("XYZQI")));
+void ParallelTempering::_from_json(const json& j) {
+    exchange_particles.setFormat(j.value("format", MPI::ParticleBuffer::Format::XYZQI));
+    partner = createMPIPartnerPolicy(j.value("partner_policy", MPI::PartnerPolicy::ODDEVEN));
+    volume_scaling_method = j.value("volume_scale", Geometry::VolumeMethod::ISOTROPIC);
 }
 
-ParallelTempering::ParallelTempering(Space &spc, MPI::MPIController &mpi)
+ParallelTempering::ParallelTempering(Space& spc, const MPI::Controller& mpi)
     : MoveBase(spc, "temper", "doi:10/b3vcw7"), mpi(mpi) {
-    if (mpi.nproc() < 2) {
+    if (mpi.world.size() < 2) {
         throw std::runtime_error(name + " requires two or more MPI processes");
     }
-    partner_particles = std::make_shared<ParticleVector>();
-    partner_particles->reserve(spc.p.size());
-    particle_transmitter.recvExtra.resize(1);
-    particle_transmitter.sendExtra.resize(1);
+    partner = MPI::createMPIPartnerPolicy(MPI::PartnerPolicy::ODDEVEN);
+}
+
+#endif
+
+void VolumeMove::_to_json(json& j) const {
+    if (number_of_attempted_moves > 0) {
+        j = {{"dV", logarithmic_volume_displacement_factor},
+             {"method", volume_scaling_method},
+             {"⟨V⟩", mean_volume.avg()},
+             {"√⟨ΔV²⟩", std::sqrt(mean_square_volume_change.avg())},
+             {"∛√⟨ΔV²⟩", std::cbrt(std::sqrt(mean_square_volume_change.avg()))}};
+        roundJSON(j, 3);
+    }
+}
+void VolumeMove::_from_json(const json& j) {
+    logarithmic_volume_displacement_factor = j.at("dV").get<double>();
+    volume_scaling_method = j.value("method", Geometry::VolumeMethod::ISOTROPIC);
+    if (volume_scaling_method == Geometry::VolumeMethod::INVALID) {
+        throw ConfigurationError("invalid volume scaling method");
+    }
+}
+void VolumeMove::_move(Change& change) {
+    if (logarithmic_volume_displacement_factor > 0.0) {
+        change.volume_change = true;
+        change.everything = true;
+        old_volume = spc.geometry.getVolume();
+        new_volume = std::exp(std::log(old_volume) + (slump() - 0.5) * logarithmic_volume_displacement_factor);
+        spc.scaleVolume(new_volume, volume_scaling_method);
+    }
+}
+void VolumeMove::_accept([[maybe_unused]] Change& change) {
+    mean_square_volume_change += std::pow(new_volume - old_volume, 2);
+    mean_volume += new_volume;
+    assert(std::fabs(spc.geometry.getVolume() - new_volume) < 1.0e-9);
+}
+
+VolumeMove::VolumeMove(Space& spc) : MoveBase(spc, "volume"s, ""s) { repeat = 1; }
+
+void VolumeMove::_reject([[maybe_unused]] Change& change) {
+    mean_square_volume_change += 0.0;
+    mean_volume += old_volume;
+    assert(std::fabs(spc.geometry.getVolume() - old_volume) < 1.0e-9);
+}
+
+// ------------------------------------------------
+
+void ChargeMove::_to_json(json& j) const {
+    j = {{"index", particle_index}, {"dq", max_charge_displacement}};
+    if (!mean_squared_charge_displacement.empty()) {
+        j["√⟨Δq²⟩"] = std::sqrt(mean_squared_charge_displacement.avg());
+    }
+    roundJSON(j, 3);
+}
+void ChargeMove::_from_json(const json& j) {
+    max_charge_displacement = j.at("dq").get<double>();
+    particle_index = j.at("index").get<decltype(particle_index)>();
+    auto group_it = spc.findGroupContaining(spc.particles.at(particle_index));
+    if (group_it == spc.groups.end()) {
+        throw ConfigurationError("index {} does not belong to any group", particle_index);
+    }
+    group_change.group_index = spc.getGroupIndex(*group_it);
+    group_change.relative_atom_indices.at(0) =
+        std::distance(group_it->begin(), spc.particles.begin() + particle_index); // index of particle rel. to group
+}
+
+void ChargeMove::_move(Change& change) {
+    if (std::fabs(max_charge_displacement) > pc::epsilon_dbl) {
+        auto& particle = spc.particles.at(particle_index); // refence to particle
+        charge_displacement = getChargeDisplacement(particle);
+        particle.charge += charge_displacement;
+        change.groups.push_back(group_change); // add to list of moved groups
+    }
+}
+
+double ChargeMove::getChargeDisplacement([[maybe_unused]] const Particle& particle) const {
+    return max_charge_displacement * (slump() - 0.5);
+}
+
+void ChargeMove::_accept(Change&) { mean_squared_charge_displacement += charge_displacement * charge_displacement; }
+void ChargeMove::_reject(Change&) { mean_squared_charge_displacement += 0.0; }
+
+ChargeMove::ChargeMove(Space& spc, std::string_view name, std::string_view cite)
+    : MoveBase(spc, name, cite) {
+    repeat = 1;
+    group_change.internal = true;                 // the group is internally changed
+    group_change.relative_atom_indices.resize(1); // we change exactly one atom
+}
+
+ChargeMove::ChargeMove(Space& spc) : ChargeMove(spc, "charge", "") {}
+
+// -----------------------------------
+
+/**
+ * Displacement in q^2 (bias energy required)
+ *
+ * @returns dq = q' - q
+ */
+double QuadraticChargeMove::getChargeDisplacement(const Particle& particle) const {
+    const auto old_charge = particle.charge;
+    const auto sign = (old_charge < 0.0) ? -1.0 : 1.0;
+    auto new_charge = sign * old_charge * old_charge + max_charge_displacement * (slump() - 0.5);
+    new_charge = (new_charge < 0.0) ? -std::sqrt(-new_charge) : std::sqrt(new_charge);
+    return new_charge - old_charge;
 }
 
 /**
- * At the end of the simulation, the state of the random number generators
- * must be the same on all ranks. Run with verbose logging (trace) and observe output!
+ * @return Bias energy/kT = ln( |q'/q| )
  */
-ParallelTempering::~ParallelTempering() {
-#ifndef NDEBUG
-    faunus_logger->trace("mpi{}: last random number (Movebase) = {}", mpi.rank(), slump());
-    faunus_logger->trace("mpi{}: last random number (Temper) = {}", mpi.rank(), random());
-    faunus_logger->trace("mpi{}: last random number (MPI) = {}", mpi.rank(), mpi.random());
-#endif
+double QuadraticChargeMove::bias(Change& change, [[maybe_unused]] double old_energy,
+                                 [[maybe_unused]] double new_energy) {
+    if (change.empty()) {
+        return 0.0;
+    }
+    const auto new_charge = spc.particles.at(particle_index).charge;
+    const auto old_charge = new_charge - charge_displacement;
+    const auto bias_energy = std::log(std::fabs(new_charge / old_charge)); // @todo derive this!
+    mean_bias += bias_energy;
+    return bias_energy;
 }
 
-#endif
-
-void VolumeMove::_to_json(json &j) const {
-    using namespace u8;
-    if (cnt > 0) {
-        j = {{"dV", volume_displacement_factor},
-             {"method", method->first},
-             {bracket("V"), mean_volume.avg()},
-             {rootof + bracket(Delta + "V" + squared), std::sqrt(mean_square_volume_change.avg())},
-             {cuberoot + rootof + bracket(Delta + "V" + squared),
-              std::cbrt(std::sqrt(mean_square_volume_change.avg()))}};
-        _roundjson(j, 3);
+void QuadraticChargeMove::_to_json(json& j) const {
+    ChargeMove::_to_json(j);
+    j["quadratic"] = true;
+    if (!mean_bias.empty()) {
+        j["mean bias energy"] = mean_bias.avg();
     }
 }
-void VolumeMove::_from_json(const json &j) {
-    method = methods.find(j.value("method", "isotropic"));
-    if (method == methods.end()) {
-        throw ConfigurationError("unknown volume change method");
-    }
-    volume_displacement_factor = j.at("dV").get<double>();
-}
-void VolumeMove::_move(Change &change) {
-    if (volume_displacement_factor > 0.0) {
-        change.dV = true;
-        change.all = true;
-        old_volume = spc.geo.getVolume();
-        new_volume = std::exp(std::log(old_volume) + (slump() - 0.5) * volume_displacement_factor);
-        volume_change = new_volume - old_volume;
-        spc.scaleVolume(new_volume, method->second);
-    } else
-        volume_change = 0.0;
-}
-void VolumeMove::_accept(Change &) {
-    mean_square_volume_change += volume_change * volume_change;
-    mean_volume += new_volume;
-    assert(std::fabs(spc.geo.getVolume() - new_volume) < 1.0e-9);
-}
 
-VolumeMove::VolumeMove(Space &spc, std::string name, std::string cite) : MoveBase(spc, name, cite) { repeat = 1; }
+QuadraticChargeMove::QuadraticChargeMove(Space& spc) : ChargeMove(spc) {}
 
-VolumeMove::VolumeMove(Space &spc) : VolumeMove(spc, "volume", "") {}
+// -----------------------------------
 
-void VolumeMove::_reject(Change &) {
-    mean_square_volume_change += 0.0;
-    mean_volume += old_volume;
-    assert(std::fabs(spc.geo.getVolume() - old_volume) < 1.0e-9);
-}
-
-void ChargeMove::_to_json(json &j) const {
-    using namespace u8;
-    j = {{"index", atomIndex},
-         {"dq", dq},
-         {rootof + bracket(Delta + "q" + squared), std::sqrt(msqd.avg())},
-         {cuberoot + rootof + bracket(Delta + "q" + squared), std::cbrt(std::sqrt(msqd.avg()))}};
-    _roundjson(j, 3);
-}
-void ChargeMove::_from_json(const json &j) {
-    dq = j.at("dq").get<double>();
-    atomIndex = j.at("index").get<int>();
-    auto git = spc.findGroupContaining(spc.p[atomIndex]);                    // group containing atomIndex
-    cdata.index = std::distance(spc.groups.begin(), git);                    // integer *index* of moved group
-    cdata.atoms[0] = std::distance(git->begin(), spc.p.begin() + atomIndex); // index of particle rel. to group
-}
-void ChargeMove::_move(Change &change) {
-    if (dq > 0) {
-        auto &p = spc.p[atomIndex]; // refence to particle
-        double qold = p.charge;
-        p.charge += dq * (slump() - 0.5);
-        deltaq = p.charge - qold;
-        change.groups.push_back(cdata); // add to list of moved groups
-    } else
-        deltaq = 0;
-}
-void ChargeMove::_accept(Change &) { msqd += deltaq * deltaq; }
-void ChargeMove::_reject(Change &) { msqd += 0; }
-
-ChargeMove::ChargeMove(Space &spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {
-    repeat = 1;
-    cdata.internal = true; // the group is internally changed
-    cdata.atoms.resize(1); // we change exactly one atom
-}
-
-ChargeMove::ChargeMove(Space &spc) : ChargeMove(spc, "charge", "") {}
-
-void ChargeTransfer::_to_json(json &j) const {
+void ChargeTransfer::_to_json(json& j) const {
     using namespace u8;
     j = {{"dq", dq},
          {rootof + bracket(Delta + "q" + squared), std::sqrt(msqd.avg())},
          {cuberoot + rootof + bracket(Delta + "q" + squared), std::cbrt(std::sqrt(msqd.avg()))}};
-    _roundjson(j, 3);
+    roundJSON(j, 3);
 }
-void ChargeTransfer::_from_json(const json &j) {
+void ChargeTransfer::_from_json(const json& j) {
     dq = j.at("dq").get<double>();
-    mol1.molname = j.at("mol1"); // string containing name of molecule 1
-    mol2.molname = j.at("mol2"); // string containing name of molecule 2
-    mol1.id = findMoleculeByName(mol1.molname).id(); // group containing mol1.molname
-    mol2.id = findMoleculeByName(mol2.molname).id(); // group containing mol2.molname
+    mol1.molname = j.at("mol1");                                  // string containing name of molecule 1
+    mol2.molname = j.at("mol2");                                  // string containing name of molecule 2
+    mol1.id = findMoleculeByName(mol1.molname).id();              // group containing mol1.molname
+    mol2.id = findMoleculeByName(mol2.molname).id();              // group containing mol2.molname
     mol1.molrange = j.at("molrange1").get<std::vector<double>>(); // vector containing lower and upper limit of
                                                                   // total charge of molecule 1
     mol2.molrange = j.at("molrange2").get<std::vector<double>>(); // vector containing lower and upper limit of
@@ -631,9 +687,9 @@ void ChargeTransfer::_from_json(const json &j) {
     }
 }
 
-void ChargeTransfer::_move(Change &change) {
-    auto mollist1 = spc.findMolecules(mol1.id, Space::ACTIVE);
-    auto mollist2 = spc.findMolecules(mol2.id, Space::ACTIVE);
+void ChargeTransfer::_move(Change& change) {
+    auto mollist1 = spc.findMolecules(mol1.id, Space::Selection::ACTIVE);
+    auto mollist2 = spc.findMolecules(mol2.id, Space::Selection::ACTIVE);
     if ((not ranges::cpp20::empty(mollist1)) and (not ranges::cpp20::empty(mollist2))) {
         auto git1 = slump.sample(mollist1.begin(), mollist1.end()); // selecting a random molecule of type molecule1
         auto git2 = slump.sample(mollist2.begin(), mollist2.end()); // selecting a random molecule of type molecule2
@@ -668,8 +724,8 @@ void ChargeTransfer::_move(Change &change) {
                 deltaq = dq * (slump() - 0.5);
                 mol1.changeQ.clear(); // clearing vector containing attempted charge moves on all atoms in molecule1
                 mol2.changeQ.clear(); // clearing vector containing attempted charge moves on all atoms in molecule2
-                mol1.cdata.index = Faunus::distance(spc.groups.begin(), git1);
-                mol2.cdata.index = Faunus::distance(spc.groups.begin(), git2);
+                mol1.cdata.group_index = Faunus::distance(spc.groups.begin(), git1);
+                mol2.cdata.group_index = Faunus::distance(spc.groups.begin(), git2);
 
                 for (i = 0; i < mol1.numOfAtoms; i++) {
                     auto p = git1->begin() + i; // object containing atom i in molecule1
@@ -770,10 +826,10 @@ void ChargeTransfer::_move(Change &change) {
     }
 }
 
-void ChargeTransfer::_accept(Change &) { msqd += deltaq * deltaq; }
-void ChargeTransfer::_reject(Change &) { msqd += 0; }
+void ChargeTransfer::_accept(Change&) { msqd += deltaq * deltaq; }
+void ChargeTransfer::_reject(Change&) { msqd += 0; }
 
-ChargeTransfer::ChargeTransfer(Space &spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {
+ChargeTransfer::ChargeTransfer(Space& spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {
     repeat = -1; // meaning repeat N times
     mol1.cdata.internal = true;
     mol2.cdata.internal = true;
@@ -781,16 +837,16 @@ ChargeTransfer::ChargeTransfer(Space &spc, std::string name, std::string cite) :
     // cdata2.atoms.resize(numOfAtoms2);
 }
 
-ChargeTransfer::ChargeTransfer(Space &spc) : ChargeTransfer(spc, "chargetransfer", "") {}
+ChargeTransfer::ChargeTransfer(Space& spc) : ChargeTransfer(spc, "chargetransfer", "") {}
 
-void QuadrantJump::_to_json(json &j) const {
+void QuadrantJump::_to_json(json& j) const {
     j = {{"dir", dir},
          {"molid", molid},
          {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(msqd.avg())},
          {"molecule", molecules[molid].name}};
-    _roundjson(j, 3);
+    roundJSON(j, 3);
 }
-void QuadrantJump::_from_json(const json &j) {
+void QuadrantJump::_from_json(const json& j) {
     assert(!molecules.empty());
     const std::string molname = j.at("molecule");
     molid = findMoleculeByName(molname).id();
@@ -801,57 +857,58 @@ void QuadrantJump::_from_json(const json &j) {
         repeat = std::distance(v.begin(), v.end());
     }
 }
-void QuadrantJump::_move(Change &change) {
+void QuadrantJump::_move(Change& change) {
     assert(molid >= 0);
     assert(!spc.groups.empty());
-    assert(spc.geo.getVolume() > 0);
+    assert(spc.geometry.getVolume() > 0);
 
     _sqd = 0.0;
 
     // pick random group from the system matching molecule type
     // TODO: This can be slow -- implement look-up-table in Space
-    auto mollist = spc.findMolecules(molid, Space::ACTIVE); // list of molecules w. 'molid'
+    auto mollist = spc.findMolecules(molid, Space::Selection::ACTIVE); // list of molecules w. 'molid'
     if (not ranges::cpp20::empty(mollist)) {
         auto it = slump.sample(mollist.begin(), mollist.end());
         if (not it->empty()) {
             assert(it->id == molid);
-            Point oldcm = it->cm;
+            Point oldcm = it->mass_center;
             if (index.size() == 2) {
-                auto cm_O = Geometry::massCenter(spc.p.begin() + index[0], spc.p.begin() + index[1] + 1,
-                                                 spc.geo.getBoundaryFunc());
-                it->translate(-2 * spc.geo.vdist(oldcm, cm_O).cwiseProduct(dir.cast<double>()),
-                              spc.geo.getBoundaryFunc());
+                auto cm_O = Geometry::massCenter(spc.particles.begin() + index[0], spc.particles.begin() + index[1] + 1,
+                                                 spc.geometry.getBoundaryFunc());
+                it->translate(-2 * spc.geometry.vdist(oldcm, cm_O).cwiseProduct(dir.cast<double>()),
+                              spc.geometry.getBoundaryFunc());
             } else {
-                it->translate(-2 * oldcm.cwiseProduct(dir.cast<double>()), spc.geo.getBoundaryFunc());
+                it->translate(-2 * oldcm.cwiseProduct(dir.cast<double>()), spc.geometry.getBoundaryFunc());
             }
-            _sqd = spc.geo.sqdist(oldcm, it->cm); // squared displacement
-            Change::data d;
-            d.index = Faunus::distance(spc.groups.begin(), it); // integer *index* of moved group
-            d.all = true;                                       // *all* atoms in group were moved
-            change.groups.push_back(d);                         // add to list of moved groups
+            _sqd = spc.geometry.sqdist(oldcm, it->mass_center); // squared displacement
+            Change::GroupChange d;
+            d.group_index = Faunus::distance(spc.groups.begin(), it); // integer *index* of moved group
+            d.all = true;                                             // *all* atoms in group were moved
+            change.groups.push_back(d);                               // add to list of moved groups
 
-            assert(spc.geo.sqdist(it->cm, Geometry::massCenter(it->begin(), it->end(), spc.geo.getBoundaryFunc(),
-                                                               -it->cm)) < 1e-9);
+            assert(spc.geometry.sqdist(it->mass_center,
+                                       Geometry::massCenter(it->begin(), it->end(), spc.geometry.getBoundaryFunc(),
+                                                            -it->mass_center)) < 1e-9);
         }
     } else
         faunus_logger->warn("{0}: no molecules found", name);
 }
 
-QuadrantJump::QuadrantJump(Space &spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {
+QuadrantJump::QuadrantJump(Space& spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {
     repeat = -1; // meaning repeat N times
 }
 
-QuadrantJump::QuadrantJump(Space &spc) : QuadrantJump(spc, "quadrantjump", "") {}
+QuadrantJump::QuadrantJump(Space& spc) : QuadrantJump(spc, "quadrantjump", "") {}
 
-void AtomicSwapCharge::_to_json(json &j) const {
+void AtomicSwapCharge::_to_json(json& j) const {
     j = {{"pH", pH},
          {"pka", pKa},
          {"molid", molid},
          {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(msqd.avg())},
          {"molecule", molname}};
-    _roundjson(j, 3);
+    roundJSON(j, 3);
 }
-void AtomicSwapCharge::_from_json(const json &j) {
+void AtomicSwapCharge::_from_json(const json& j) {
     assert(!molecules.empty());
     molname = j.at("molecule");
     molid = findMoleculeByName(molname).id();
@@ -865,24 +922,24 @@ void AtomicSwapCharge::_from_json(const json &j) {
         }
     }
 }
-typename Space::Tpvec::iterator AtomicSwapCharge::randomAtom() {
+ParticleVector::iterator AtomicSwapCharge::randomAtom() {
     assert(molid >= 0);
     auto mollist = spc.findMolecules(molid); // all `molid` groups
     if (not ranges::cpp20::empty(mollist)) {
         auto git = slump.sample(mollist.begin(), mollist.end()); // random molecule iterator
         if (!git->empty()) {
-            auto p = slump.sample(git->begin(), git->end());         // random particle iterator
-            cdata.index = Faunus::distance(spc.groups.begin(), git); // integer *index* of moved group
-            cdata.atoms[0] = std::distance(git->begin(), p);         // index of particle rel. to group
+            auto p = slump.sample(git->begin(), git->end());                 // random particle iterator
+            cdata.group_index = Faunus::distance(spc.groups.begin(), git);   // integer *index* of moved group
+            cdata.relative_atom_indices[0] = std::distance(git->begin(), p); // index of particle rel. to group
             return p;
         }
     }
-    return spc.p.end();
+    return spc.particles.end();
 }
-void AtomicSwapCharge::_move(Change &change) {
+void AtomicSwapCharge::_move(Change& change) {
     _sqd = 0.0;
     auto p = randomAtom();
-    if (p != spc.p.end()) {
+    if (p != spc.particles.end()) {
         // auto &g = spc.groups[cdata.index];
         double oldcharge = p->charge;
         p->charge = fabs(oldcharge - 1);
@@ -891,42 +948,52 @@ void AtomicSwapCharge::_move(Change &change) {
         _bias = _sqd * (pH - pKa) * ln10; // one may add bias here...
     }
 }
-double AtomicSwapCharge::bias(Change &, double, double) { return _bias; }
-void AtomicSwapCharge::_accept(Change &) { msqd += _sqd; }
-void AtomicSwapCharge::_reject(Change &) { msqd += 0; }
+double AtomicSwapCharge::bias(Change&, double, double) { return _bias; }
+void AtomicSwapCharge::_accept(Change&) { msqd += _sqd; }
+void AtomicSwapCharge::_reject(Change&) { msqd += 0; }
 
-AtomicSwapCharge::AtomicSwapCharge(Space &spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {
+AtomicSwapCharge::AtomicSwapCharge(Space& spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {
     repeat = -1; // meaning repeat N times
-    cdata.atoms.resize(1);
+    cdata.relative_atom_indices.resize(1);
     cdata.internal = true;
 }
 
-AtomicSwapCharge::AtomicSwapCharge(Space &spc) : AtomicSwapCharge(spc, "swapcharge", "") {}
+AtomicSwapCharge::AtomicSwapCharge(Space& spc) : AtomicSwapCharge(spc, "swapcharge", "") {}
 
-void TranslateRotate::_to_json(json &j) const {
+void TranslateRotate::_to_json(json& j) const {
     j = {{"dir", translational_direction},
-         {"dp", translational_displacement},
-         {"dprot", rotational_displacement},
+         {"dp", translational_displacement / 1.0_angstrom},
+         {"dprot", rotational_displacement / 1.0_rad},
          {"dirrot", fixed_rotation_axis},
          {"molid", molid},
          {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(mean_squared_displacement.avg())},
          {"√⟨θ²⟩/°", std::sqrt(mean_squared_rotation_angle.avg()) / 1.0_deg},
          {"molecule", Faunus::molecules[molid].name}};
-    _roundjson(j, 3);
+    roundJSON(j, 3);
 }
-void TranslateRotate::_from_json(const json &j) {
+void TranslateRotate::_from_json(const json& j) {
     const std::string molname = j.at("molecule");
     const auto molecule = findMoleculeByName(molname);
-    if(molecule.atomic) {
+    if (molecule.atomic) {
         throw ConfigurationError("molecule '{}' cannot be atomic", molname);
     }
     molid = molecule.id();
     translational_direction = j.value("dir", Point(1, 1, 1));
-    translational_displacement = j.at("dp").get<double>();
-    rotational_displacement = j.at("dprot").get<double>();
-    fixed_rotation_axis = j.value("dirrot", Point(0, 0, 0)); // predefined axis of rotation
+    translational_displacement = j.at("dp").get<double>() * 1.0_angstrom;
+
+    rotational_displacement = std::fabs(j.at("dprot").get<double>() * 1.0_rad);
+    if (rotational_displacement > 2.0 * pc::pi) {
+        faunus_logger->warn("rotational displacement should be between [0:2π]");
+    }
+
+    fixed_rotation_axis = j.value("dirrot", Point(0.0, 0.0, 0.0)); // predefined axis of rotation
+    if (fixed_rotation_axis.count() > 0) {
+        fixed_rotation_axis.normalize();
+        faunus_logger->debug("{}: fixed rotation axis [{:.3f},{:.3f},{:.3f}]", name, fixed_rotation_axis.x(),
+                             fixed_rotation_axis.y(), fixed_rotation_axis.z());
+    }
     if (repeat < 0) {
-        repeat = spc.numMolecules<Space::Tgroup::ACTIVE>(molid);
+        repeat = spc.numMolecules<Space::GroupType::ACTIVE>(molid);
         if (repeat == 0) {
             faunus_logger->warn("no initial '{}' molecules found; setting repeat to 1", molname);
             repeat = 1;
@@ -939,8 +1006,8 @@ void TranslateRotate::_from_json(const json &j) {
 /**
  * @todo `mollist` scales linearly w. system size -- implement look-up-table in Space?
  */
-std::optional<std::reference_wrapper<Space::Tgroup>> TranslateRotate::findRandomMolecule() const {
-    if (auto mollist = spc.findMolecules(molid, Space::ACTIVE); not ranges::cpp20::empty(mollist)) {
+TranslateRotate::OptionalGroup TranslateRotate::findRandomMolecule() {
+    if (auto mollist = spc.findMolecules(molid, Space::Selection::ACTIVE); not ranges::cpp20::empty(mollist)) {
         if (auto group_it = slump.sample(mollist.begin(), mollist.end()); not group_it->empty()) {
             return *group_it;
         }
@@ -952,14 +1019,14 @@ std::optional<std::reference_wrapper<Space::Tgroup>> TranslateRotate::findRandom
  * @param group Group to translate
  * @return Squared translation distance of mass center
  */
-double TranslateRotate::translateMolecule(Space::Tgroup &group) {
+double TranslateRotate::translateMolecule(Space::GroupType& group) {
     if (translational_displacement > 0.0) { // translate
-        const auto old_mass_center = group.cm;
+        const auto old_mass_center = group.mass_center;
         const auto displacement_vector =
-            Faunus::ranunit(slump, translational_direction) * translational_displacement * slump();
+            Faunus::randomUnitVector(slump, translational_direction) * translational_displacement * slump();
 
-        group.translate(displacement_vector, spc.geo.getBoundaryFunc());
-        return spc.geo.sqdist(old_mass_center, group.cm);
+        group.translate(displacement_vector, spc.geometry.getBoundaryFunc());
+        return spc.geometry.sqdist(old_mass_center, group.mass_center);
     } else {
         return 0.0;
     }
@@ -969,30 +1036,31 @@ double TranslateRotate::translateMolecule(Space::Tgroup &group) {
  * @param group Group to rotate
  * @return Squared rotation angle around mass-center
  */
-double TranslateRotate::rotateMolecule(Space::Tgroup &group) {
-    if (rotational_displacement > 0.0) {         // rotate
-        Point rotation_axis = Faunus::ranunit(slump); // rotate around random unit vector
-        if (fixed_rotation_axis.count() > 0.0) { // OR a fixed, user-defined vector
-            rotation_axis = fixed_rotation_axis;
-        }
-        const auto angle = rotational_displacement * (slump() - 0.5); // random rotation angle
-        const Eigen::Quaterniond quaternion(Eigen::AngleAxisd(angle, rotation_axis));
-        group.rotate(quaternion, spc.geo.getBoundaryFunc());
-        return angle * angle;
-    } else {
+double TranslateRotate::rotateMolecule(Space::GroupType& group) {
+    if (rotational_displacement <= pc::epsilon_dbl) {
         return 0.0;
     }
+    Point rotation_axis;
+    if (fixed_rotation_axis.count() > 0) { // fixed user-defined axis
+        rotation_axis = fixed_rotation_axis;
+    } else {
+        rotation_axis = Faunus::randomUnitVector(slump);
+    }
+    const auto angle = rotational_displacement * (slump() - 0.5);
+    const Eigen::Quaterniond quaternion(Eigen::AngleAxisd(angle, rotation_axis));
+    group.rotate(quaternion, spc.geometry.getBoundaryFunc());
+    return angle * angle;
 }
 
-void TranslateRotate::_move(Change &change) {
+void TranslateRotate::_move(Change& change) {
     if (auto group = findRandomMolecule()) { // note that group is of type std::optional
         latest_displacement_squared = translateMolecule(group->get());
         latest_rotation_angle_squared = rotateMolecule(group->get());
         if (latest_displacement_squared > 0.0 || latest_rotation_angle_squared > 0.0) { // report changes
-            auto &change_data = change.groups.emplace_back();
-            change_data.index = spc.getGroupIndex(group->get());     // integer *index* of moved group
-            change_data.all = true;                                  // *all* atoms in group were moved
-            change_data.internal = false;                            // internal energy is unchanged
+            auto& change_data = change.groups.emplace_back();
+            change_data.group_index = spc.getGroupIndex(group->get()); // integer *index* of moved group
+            change_data.all = true;                                    // *all* atoms in group were moved
+            change_data.internal = false;                              // internal energy is unchanged
         }
         checkMassCenter(group->get());
     } else {
@@ -1001,32 +1069,61 @@ void TranslateRotate::_move(Change &change) {
     }
 }
 
-void TranslateRotate::checkMassCenter(const Space::Tgroup& group) const {
+void TranslateRotate::checkMassCenter(const Space::GroupType& group) const {
     const auto allowed_threshold = 1e-6;
-    const auto cm_recalculated = Geometry::massCenter(group.begin(), group.end(), spc.geo.getBoundaryFunc(), -group.cm);
-    const auto should_be_small = spc.geo.sqdist(group.cm, cm_recalculated);
+    const auto cm_recalculated =
+        Geometry::massCenter(group.begin(), group.end(), spc.geometry.getBoundaryFunc(), -group.mass_center);
+    const auto should_be_small = spc.geometry.sqdist(group.mass_center, cm_recalculated);
     if (should_be_small > allowed_threshold) {
         faunus_logger->error("{}: error calculating mass center for {}", name, group.traits().name);
-        FormatPQR::save("mass-center-failure.pqr", spc.groups, spc.geo.getLength());
+        PQRWriter().save("mass-center-failure.pqr", spc.groups, spc.geometry.getLength());
         throw std::runtime_error("molecule likely too large for periodic boundaries; increase box size?");
     }
 }
 
-void TranslateRotate::_accept(Change &) {
+void TranslateRotate::_accept(Change&) {
     mean_squared_displacement += latest_displacement_squared;
     mean_squared_rotation_angle += latest_rotation_angle_squared;
 }
 
-void TranslateRotate::_reject(Change &) {
+void TranslateRotate::_reject(Change&) {
     mean_squared_displacement += 0.0;
     mean_squared_rotation_angle += 0.0;
 }
 
-TranslateRotate::TranslateRotate(Space &spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {
+TranslateRotate::TranslateRotate(Space& spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {
     repeat = -1; // meaning repeat N times
 }
 
-TranslateRotate::TranslateRotate(Space &spc) : TranslateRotate(spc, "moltransrot", "") {}
+TranslateRotate::TranslateRotate(Space& spc) : TranslateRotate(spc, "moltransrot", "") {}
+
+/**
+ * This is called *after* the move and the `bias()` function will determine if the move
+ * resulted in a flux over the region boundary and return the appropriate bias.
+ */
+double SmarterTranslateRotate::bias(Change& change, double old_energy, double new_energy) {
+    return TranslateRotate::bias(change, old_energy, new_energy) + smartmc.bias();
+}
+
+/**
+ * Upon calling `select()`, the `outside_rejection_probability` is used to exclude particles
+ * outside and may thus often return `std::nullopt`.
+ */
+TranslateRotate::OptionalGroup SmarterTranslateRotate::findRandomMolecule() {
+    auto mollist = spc.findMolecules(molid, Space::Selection::ACTIVE);
+    return smartmc.select(mollist, slump);
+}
+
+void SmarterTranslateRotate::_to_json(json& j) const {
+    TranslateRotate::_to_json(j);
+    smartmc.to_json(j["smartmc"]);
+}
+
+SmarterTranslateRotate::SmarterTranslateRotate(Space& spc, const json& j)
+    : TranslateRotate(spc, "moltransrot", "doi:10/frvx8j")
+    , smartmc(spc, j.at("region")) {
+    this->from_json(j);
+}
 } // namespace Faunus::Move
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
@@ -1040,7 +1137,7 @@ TEST_CASE("[Faunus] TranslateRotate") {
     json j = R"( {"molecule":"A", "dp":1.0, "dprot":0.5, "dir":[0,1,0], "repeat":2 })"_json;
     mv.from_json(j);
 
-    j = json(mv).at(mv.name);
+    j = json(mv).at(mv.getName());
     CHECK(j.at("molecule") == "A");
     // CHECK(j.at("dir") == Point(0, 1, 0));
     CHECK(j.at("dp") == 1.0);
@@ -1051,207 +1148,16 @@ TEST_CASE("[Faunus] TranslateRotate") {
 
 namespace Faunus::Move {
 
-void SmartTranslateRotate::_to_json(json &j) const {
-    j = {{"Number of counts inside geometry", cntInner},
-         {"Number of counts outside geometry", cnt - cntInner},
-         {"dir", dir},
-         {"dp", dptrans},
-         {"dprot", dprot},
-         {"p", p},
-         {"origo", origo},
-         {"rx", r_x},
-         {"ry", r_y},
-         {"molid", molid},
-         {"refid", refid1},
-         {"refid", refid2},
-         {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(msqd.avg())},
-         {"molecule", molecules[molid].name},
-         {"ref1", atoms[refid1].name},
-         {"ref2", atoms[refid2].name}};
-    _roundjson(j, 3);
-}
-void SmartTranslateRotate::_from_json(const json &j) {
-    assert(!molecules.empty());
-    const std::string molname = j.at("molecule");
-    const std::string refname1 = j.at("ref1");
-    const std::string refname2 = j.at("ref2");
-    molid = findMoleculeByName(molname).id();
-    refid1 = findAtomByName(refname1).id();
-    refid2 = findAtomByName(refname2).id();;
-    dir = j.value("dir", Point(1, 1, 1));
-    dprot = j.at("dprot");
-    dptrans = j.at("dp");
-    p = j.at("p");
-    r_x = j.at("rx");  // length of ellipsoidal radius along axis connecting reference atoms (in Å)
-    r_y = j.at("ry");  // length of ellipsoidal radius perpendicular to axis connecting reference atoms (in Å)
-    rsd = j.at("rsd"); // threshold for relative standard deviation of molecules inside geometry. When it goes below
-    // this value, a constant bias is used
-
-    if (repeat < 0) {
-        auto v = spc.findMolecules(molid);
-        repeat = std::distance(v.begin(), v.end());
-    }
-}
-
-void SmartTranslateRotate::_move(Change &change) {
-    assert(molid >= 0);
-    assert(!spc.groups.empty());
-    assert(spc.geo.getVolume() > 0);
-    _bias = 0.0;
-    _sqd = 0.0;
-
-    // pick random group from the system matching molecule type
-    // TODO: This can be slow -- implement look-up-table in Space
-    auto mollist = spc.findMolecules(molid, Space::ACTIVE); // list of molecules w. 'molid'
-    auto reflist1 = spc.findAtoms(refid1);                  // list of atoms w. 'refid1'
-    auto reflist2 = spc.findAtoms(refid2);                  // list of atoms w. 'refid2'
-    if (not ranges::cpp20::empty(mollist)) {
-        auto it = slump.sample(mollist.begin(), mollist.end()); // chosing random molecule in group of type molname
-        auto ref1 = slump.sample(reflist1.begin(), reflist1.end());
-        auto ref2 = slump.sample(reflist2.begin(), reflist2.end());
-        cylAxis = spc.geo.vdist(ref2->pos, ref1->pos) * 0.5; // half vector between reference atoms
-        origo = ref2->pos - cylAxis; // coordinates of middle point between reference atoms: new origo
-        if (r_x < cylAxis.norm())    // checking so that a is larger than length of cylAxis
-            throw std::runtime_error(
-                "specified radius of ellipsoid along the axis connecting reference atoms (rx) must be larger or equal "
-                "to half the distance between reference atoms. Specified radius is " +
-                std::to_string(r_x) + " Å whereas half the distance between reference atoms is " +
-                std::to_string(cylAxis.norm()) + "Å");
-
-        if (not it->empty()) { // checking so that molecule exists
-            assert(it->id == molid);
-
-            randNbr = slump();                   // assigning random number in range [0,1]
-            molV = spc.geo.vdist(it->cm, origo); // vector between selected molecule and center of geometry
-            cosTheta = molV.dot(cylAxis) / molV.norm() / cylAxis.norm(); // cosinus of angle between coordinate vector
-                                                                         // of selected molecule and axis connecting
-                                                                         // reference atoms
-            theta = acos(cosTheta);       // angle between coordinate vector of selected molecule and axis connecting
-                                          // reference atoms
-            x = cosTheta * molV.norm();   // x coordinate of selected molecule with respect to center of geometry
-                                          // (in plane including vectors molV and cylAxis)
-            y = sin(theta) * molV.norm(); // y coordinate of selected molecule with respect to center of geometry
-                                          // (in plane including vectors molV and cylAxis)
-            coord = x * x / (r_x * r_x) + y * y / (r_y * r_y); // calculating normalized coordinate with respect to
-                                                               // dimensions of geometry (>1.0 → outside, <1.0 → inside)
-            if (not(coord > 1.0 && p < randNbr)) {
-
-                if (coord <= 1.0)
-                    cntInner += 1; // counting number of times a molecule is found inside geometry
-
-                cnt += 1; // total number of counts
-
-                if (findBias ==
-                    true) { // continuing to adjust bias according to number of molecules inside and outside geometry
-                    countNin = 0.0;  // counter keeping track of number of molecules inside geometry
-                    countNout = 0.0; // counter keeping track of number of molecules outside geometry
-                    Ntot = 0.0;      // total number of particles
-                    for (auto &g : mollist) {
-                        Ntot += 1.0;
-                        molV = spc.geo.vdist(g.cm, origo);
-                        cosTheta = molV.dot(cylAxis) / molV.norm() / cylAxis.norm();
-                        theta = acos(cosTheta);
-                        x = cosTheta * molV.norm();
-                        y = sin(theta) * molV.norm();
-                        coordTemp = x * x / (r_x * r_x) + y * y / (r_y * r_y);
-                        if (coordTemp <= 1.0)
-                            countNin += 1.0;
-                        else
-                            countNout += 1.0;
-                    }
-
-                    countNin_avg += countNin;   // appending number of molecules inside geometry
-                                                // (since it has type Average)
-                    countNout_avg += countNout; // appending number of molecules outside geometry
-                                                // (since it has type Average)
-
-                    if (cnt % 100 == 0) {
-                        countNin_avgBlocks += countNin_avg.avg();   // appending average number of molecules inside
-                                                                    // geometry (type Average)
-                        countNout_avgBlocks += countNout_avg.avg(); // appending average number of molecules outside
-                                                                    // geometry (type Average)
-                    }
-
-                    if (cnt % 100000 == 0) {
-                        Nin = countNin_avgBlocks.avg(); // block average number of molecules inside geometry
-                        if (countNin_avgBlocks.stdev() / Nin < rsd) {
-                            // if block standard deviation is below specified threshold
-                            std::cout << "Bias found with rsd = " << countNin_avgBlocks.stdev() / Nin << " < " << rsd
-                                      << "\n\n";
-                            std::cout << "Average # of water molecules inside sphere: " << Nin << "\n";
-                            findBias = false; // stop updating bias, use constant value
-                        }
-                    }
-                }
-                if (dptrans > 0) { // translate
-                    Point oldcm = it->cm;
-                    Point dp = ranunit(slump, dir) * dptrans * slump();
-
-                    it->translate(dp, spc.geo.getBoundaryFunc());
-                    _sqd = spc.geo.sqdist(oldcm, it->cm); // squared displacement
-                }
-
-                if (dprot > 0) { // rotate
-                    Point u = ranunit(slump);
-                    double angle = dprot * (slump() - 0.5);
-                    Eigen::Quaterniond Q(Eigen::AngleAxisd(angle, u));
-                    it->rotate(Q, spc.geo.getBoundaryFunc());
-                }
-
-                if (dptrans > 0 || dprot > 0) { // define changes
-                    Change::data d;
-                    d.index = Faunus::distance(spc.groups.begin(), it); // integer *index* of moved group
-                    d.all = true;                                       // *all* atoms in group were moved
-                    change.groups.push_back(d);                         // add to list of moved groups
-                }
-                assert(spc.geo.sqdist(it->cm, Geometry::massCenter(it->begin(), it->end(), spc.geo.getBoundaryFunc(),
-                                                                   -it->cm)) < 1e-6);
-                molV = spc.geo.vdist(it->cm, origo);
-                cosTheta = molV.dot(cylAxis) / molV.norm() / cylAxis.norm();
-                theta = acos(cosTheta);
-                x = cosTheta * molV.norm();
-                y = sin(theta) * molV.norm();
-                coordNew = x * x / (r_x * r_x) + y * y / (r_y * r_y);
-
-                if (findBias == true) {                 // if using constantly updated bias
-                    if (coord <= 1.0 && coordNew > 1.0) // if molecule goes from inside to outside geometry
-                        // use corresponding bias, based on this cycle's number of molecules inside
-                        _bias = -log(p / (1 - (1 - p) / (p * Ntot + (1 - p) * countNin)));
-                    else if (coord > 1.0 && coordNew <= 1.0) // if molecules goes from outside to inside geometry
-                        // use corresponding bias, based on this cycle's number of molecules inside
-                        _bias = -log(1 / (1 + (1 - p) / (p * Ntot + (1 - p) * countNin)));
-                }
-
-                else {                                  // if constant bias has been found
-                    if (coord <= 1.0 && coordNew > 1.0) // if molecule goes from inside to outside geometry
-                        // use corresponding bias based on average, constant value Nin
-                        _bias = -log(p / (1 - (1 - p) / (p * Ntot + (1 - p) * Nin)));
-                    else if (coord > 1.0 && coordNew <= 1.0) // if molecule goes from outside to inside geometry
-                        // use corresponding bias based on average, constant value Nin
-                        _bias = -log(1 / (1 + (1 - p) / (p * Ntot + (1 - p) * Nin)));
-                }
-            }
-        }
-    }
-}
-
-double SmartTranslateRotate::bias(Change &, double, double) { return _bias; }
-
-SmartTranslateRotate::SmartTranslateRotate(Space &spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {
-    repeat = -1; // meaning repeat N times
-}
-
-SmartTranslateRotate::SmartTranslateRotate(Space &spc) : SmartTranslateRotate(spc, "smartmoltransrot", "") {}
 
 void ConformationSwap::_to_json(json& j) const {
     j = {{"molid", molid},
          {"molecule", Faunus::molecules.at(molid).name},
          {"keeppos", inserter.keep_positions},
          {"copy_policy", copy_policy}};
-    _roundjson(j, 3);
+    roundJSON(j, 3);
 }
 
-void ConformationSwap::_from_json(const json &j) {
+void ConformationSwap::_from_json(const json& j) {
     const auto molecule_name = j.at("molecule").get<std::string>();
     const auto molecule = Faunus::findMoleculeByName(molecule_name);
     molid = molecule.id();
@@ -1270,7 +1176,7 @@ void ConformationSwap::_from_json(const json &j) {
 void ConformationSwap::setRepeat() {
     assert(molid >= 0);
     if (repeat < 0) { // negative value signals repeat = N number of molecules
-        auto groups = spc.findMolecules(molid, Space::ALL);
+        auto groups = spc.findMolecules(molid, Space::Selection::ALL);
         repeat = std::distance(groups.begin(), groups.end());
         if (repeat == 0) {
             faunus_logger->warn("{}: no molecules found; repeat set to ZERO", name, repeat);
@@ -1278,15 +1184,15 @@ void ConformationSwap::setRepeat() {
     }
 }
 void ConformationSwap::_move(Change& change) {
-    auto groups = spc.findMolecules(molid, Space::ACTIVE);
+    auto groups = spc.findMolecules(molid, Space::Selection::ACTIVE);
     if (auto group = slump.sample(groups.begin(), groups.end()); group != groups.end()) {
-        inserter.offset = group->cm;                                         // insert on top of mass center
-        auto particles = inserter(spc.geo, Faunus::molecules[molid], spc.p); // new conformation
+        inserter.offset = group->mass_center; // insert on top of mass center
+        auto particles = inserter(spc.geometry, Faunus::molecules[molid], spc.particles); // new conformation
         if (particles.size() == group->size()) {
-            checkMassCenterDrift(group->cm, particles); // throws if not OK
+            checkMassCenterDrift(group->mass_center, particles); // throws if not OK
             copyConformation(particles, group->begin());
-            group->confid = Faunus::molecules[molid].conformations.getLastIndex(); // store conformation id
-            registerChanges(change, *group);                                       // update change object
+            group->conformation_id = Faunus::molecules[molid].conformations.getLastIndex(); // store conformation id
+            registerChanges(change, *group);                                                // update change object
         } else {
             throw std::out_of_range(name + ": conformation atom count mismatch");
         }
@@ -1303,13 +1209,13 @@ void ConformationSwap::_move(Change& change) {
 void ConformationSwap::copyConformation(ParticleVector& particles, ParticleVector::iterator destination) const {
     std::function<void(const Particle&, Particle&)> copy_function; // how to copy particle information
     switch (copy_policy) {
-    case ALL:
+    case CopyPolicy::ALL:
         copy_function = [](const Particle& src, Particle& dst) { dst = src; };
         break;
-    case POSITIONS:
+    case CopyPolicy::POSITIONS:
         copy_function = [](const Particle& src, Particle& dst) { dst.pos = src.pos; };
         break;
-    case CHARGES:
+    case CopyPolicy::CHARGES:
         copy_function = [](const Particle& src, Particle& dst) { dst.charge = src.charge; };
         break;
     default:
@@ -1322,11 +1228,11 @@ void ConformationSwap::copyConformation(ParticleVector& particles, ParticleVecto
     });
 }
 
-void ConformationSwap::registerChanges(Change &change, const Space::Tgroup &group) const {
-    auto &group_change = change.groups.emplace_back();
-    group_change.index = spc.getGroupIndex(group); // index of moved group
-    group_change.all = true;                       // all atoms in group were moved
-    group_change.internal = false;                 // skip internal energy calculation
+void ConformationSwap::registerChanges(Change& change, const Space::GroupType& group) const {
+    auto& group_change = change.groups.emplace_back();
+    group_change.group_index = spc.getGroupIndex(group); // index of moved group
+    group_change.all = true;                             // all atoms in group were moved
+    group_change.internal = false;                       // skip internal energy calculation
 }
 /**
  * @throw if there's a mass-center drift
@@ -1335,19 +1241,19 @@ void ConformationSwap::registerChanges(Change &change, const Space::Tgroup &grou
  */
 void ConformationSwap::checkMassCenterDrift(const Point& old_mass_center, const ParticleVector& particles) {
     switch (copy_policy) {
-    case CHARGES: // positions untouched; no check needed
+    case CopyPolicy::CHARGES: // positions untouched; no check needed
         return;
     default:
         const auto max_allowed_distance = 1.0e-6;
         const auto new_mass_center =
-            Geometry::massCenter(particles.begin(), particles.end(), spc.geo.getBoundaryFunc(), -old_mass_center);
+            Geometry::massCenter(particles.begin(), particles.end(), spc.geometry.getBoundaryFunc(), -old_mass_center);
         if ((new_mass_center - old_mass_center).norm() > max_allowed_distance) {
             throw std::runtime_error(name + ": unexpected mass center movement");
         }
     }
 }
 
-ConformationSwap::ConformationSwap(Space &spc, const std::string &name, const std::string &cite)
+ConformationSwap::ConformationSwap(Space& spc, const std::string& name, const std::string& cite)
     : MoveBase(spc, name, cite) {}
 
 ConformationSwap::ConformationSwap(Space& spc) : ConformationSwap(spc, "conformationswap", "doi:10/dmc3") {
@@ -1363,7 +1269,7 @@ ConformationSwap::ConformationSwap(Space& spc) : ConformationSwap(spc, "conforma
 void ConformationSwap::checkConformationSize() const {
     assert(molid >= 0);
 
-    const auto is_periodic = spc.geo.boundaryConditions().isPeriodic();
+    const auto is_periodic = spc.geometry.boundaryConditions().isPeriodic();
     if (is_periodic.cast<int>().sum() == 0) { // if cell has no periodicity ...
         return;                               // ... then no need to check further
     }
@@ -1371,9 +1277,9 @@ void ConformationSwap::checkConformationSize() const {
     // find smallest periodic side-length
     const auto infinity = Point::Constant(pc::infty);
     const auto max_allowed_separation =
-        (is_periodic.array() == true).select(spc.geo.getLength(), infinity).minCoeff() * 0.5;
+        (is_periodic.array() == true).select(spc.geometry.getLength(), infinity).minCoeff() * 0.5;
 
-    auto find_max_distance = [&geometry = spc.geo](const auto& positions) {
+    auto find_max_distance = [&geometry = spc.geometry](const auto& positions) {
         double max_squared_distance = 0.0;
         for (auto i = positions.begin(); i != positions.end(); ++i) {
             for (auto j = i; ++j != positions.end();) {

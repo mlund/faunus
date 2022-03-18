@@ -1,5 +1,7 @@
 #pragma once
 #include <doctest/doctest.h>
+#include "core.h"
+#include "particle.h"
 #include "units.h"
 #include "aux/pow_function.h"
 
@@ -166,10 +168,7 @@ TEST_CASE("[Faunus] qPochhammerSymbol") {
  * @param end Last particle
  */
 template <class Titer> double monopoleMoment(Titer begin, Titer end) {
-    double z = 0;
-    for (auto it = begin; it != end; ++it)
-        z += it->charge;
-    return z;
+    return std::accumulate(begin, end, 0.0, [](auto sum, auto& particle) { return sum + particle.charge; });
 } //!< Calculates dipole moment vector for a set of particles
 
 /**
@@ -182,9 +181,9 @@ template <class Titer> double monopoleMoment(Titer begin, Titer end) {
  *
  * If the particle has extended properties, point dipole moments will be added as well
  */
-template <class Titer, class BoundaryFunction>
+template <class Titer, class BoundaryFunction = std::function<void(Point&)>>
 Point dipoleMoment(
-    Titer begin, Titer end, BoundaryFunction boundary = [](const Point &) {}, const Point origin = {0, 0, 0},
+    Titer begin, Titer end, BoundaryFunction boundary = [](Point&) {}, const Point origin = {0, 0, 0},
     double cutoff = pc::infty) {
     Point dipole_moment(0, 0, 0);
     std::for_each(begin, end, [&](const Particle &particle) {
@@ -271,7 +270,7 @@ TEST_CASE("[Faunus] quadrupoleMoment") {
 template <class Tgroup, class BoundaryFunction>
 auto toMultipole(const Tgroup &g, BoundaryFunction boundary = [](const Point &) {}, double cutoff = pc::infty) {
     Particle m;
-    m.pos = g.cm;
+    m.pos = g.mass_center;
     m.charge = Faunus::monopoleMoment(g.begin(), g.end());                                // monopole
     m.getExt().mu = Faunus::dipoleMoment(g.begin(), g.end(), boundary, m.pos, cutoff);    // dipole
     m.getExt().Q = Faunus::quadrupoleMoment(g.begin(), g.end(), boundary, m.pos, cutoff); // quadrupole

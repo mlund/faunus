@@ -1,161 +1,164 @@
 #pragma once
-
-#include <iostream>
-#include <vector>
-#include <set>
-#include <cassert>
-#include <cmath>
-#include <array>
-#include <Eigen/Core>
+/**
+ * @brief Cell list class templates.
+ *
+ * Minimal interface to be used in other header file to avoid number of class templates. Full class templates
+ * definitions are provided in "celllistimpl.h" file.
+ *
+ * @author Richard Chudoba
+ * @date 2021-02-01
+ */
 
 namespace Faunus {
 
+namespace CellList {
+
+namespace Grid {
+/**
+ * Type manipulation helpers.
+ */
+template <typename T> using GridTypeOf = typename T::GridType;
+template <typename T> using IndexOf = typename T::CellIndex;
+template <typename T> using CoordOf = typename T::CellCoord;
+template <typename T> using SpaceAxisOf = typename T::SpaceAxis;
+template <typename T> using PointOf = typename T::Point;
 
 /**
- * @brief Cuboidal cell list with periodic boundaries
+ * @brief A cell grid type declarations.
  *
- * Maps cartesian points to a grid of arbitrary resolution that
- * stores particle index.
- *
- * - cartesian space is assumed to use all 8 octants (i.e. +/i round 0,0,0)
- * - grid space use only the first octant (all +)
- * - resolution and size is set by `resize`
- * - index of neighbors to a grid point
- *   is obtained with `neighbors()`
- * - index can be moved from one grid point to another with `move()`
- * - the list of particle index in each grid point is stored in a
- *   `std::set<int>` container.
- *
- * @todo
- * - Update cell list based on Change object
- * - Make a non-periodic version
- * - std::set --> set::vector?
- *
- * @date Malmo, March 2018
+ * @tparam VDimension  number of grid dimensions, e.g., 3 for the real 3D world
+ * @tparam TCellIndex  type of a single coordinate in cell space; also an absolute cell index
+ * @tparam TSpaceAxis  type of a single coordinate in physical space
  */
-template <typename CellPoint = Eigen::Vector3i> class CellList {
-    typedef size_t Tindex;
-    typedef Eigen::Vector3d Point;
-    Point halfbox;
-    double cellsize = 0;                                           // cell side length (angstrom)
-    std::vector<std::vector<std::vector<std::set<Tindex>>>> cells; // dense storage
-
-    std::vector<std::set<Tindex>> cells_dense;    // dense storage (to replace `cells`)
-    std::map<int, std::set<Tindex>> cells_sparse; // sparse storage
-
-    inline std::set<Tindex> &row_major(const CellPoint &c) {
-        return cells_dense[c[0] * KLM[0] * KLM[2] + c[1] * KLM[2] + c[2]]; // to replace operator[] below
-    }                                                                      // row-major ordering of dense storage
-
-  public:
-    bool sparse = false;
-    CellPoint KLM = {0, 0, 0}; // max cell index K,L,M
-
-    std::set<Tindex> &operator[](const CellPoint &c) {
-        return cells[c[0]][c[1]][c[2]];
-    } //!< returns set with all index in given cell (complexity: constant)
-
-    CellPoint p2c(const Point &p) const {
-        return ((p + halfbox) / cellsize).array().round().template cast<int>();
-    } //!< cartesian point --> cell point
-
-    Point c2p(const CellPoint &c) const {
-        return (c.template cast<double>()) * cellsize - halfbox;
-    } //!< cell point --> cartesian point
-
-    void move(Tindex i, const CellPoint &src, const CellPoint &dst) {
-        assert((*this)[src].count(i) == 1 && "i not present in old cell");
-        assert((*this)[dst].count(i) == 0 && "i already in new cell");
-        (*this)[src].erase(i);
-        (*this)[dst].insert(i);
-    } //!< move particle index i from one cell to another (complexity: log N)
-
-    void resize(const Point &box, double cutoff) {
-        clear();
-        halfbox = 0.5 * box;
-        cellsize = cutoff;
-        KLM = (box / cellsize).array().round().template cast<int>();
-        if (KLM.minCoeff() >= 3) {
-            cells.resize(KLM[0] + 1);
-            for (auto &k : cells) {
-                k.resize(KLM[1] + 1);
-                for (auto &l : k)
-                    l.resize(KLM[2] + 1);
-            }
-        } else
-            throw std::runtime_error("celllist error: too few grid point - cutoff or box too small");
-    }
-
-    void clear() {
-        for (auto &k : cells)
-            for (auto &l : k)
-                for (auto &m : l)
-                    m.clear();
-    } //<! clear all index in cell list
-
-    template <class Tpvec, class T = std::function<Point(const typename Tpvec::value_type &)>>
-    void update(
-        const Tpvec &p, T getpos = [](auto &i) { return i; }) {
-        clear();
-        for (Tindex i = 0; i < p.size(); i++)
-            (*this)[p2c(getpos(p[i]))].insert(i);
-    }
-
-    void neighbors(const Eigen::Vector3i &c, std::vector<Tindex> &index, bool clear = true) const {
-        if (clear)
-            index.clear();
-        int cnt = 0;
-        std::array<int, 3> k = {{c[0] - 1, c[0], c[0] + 1}}, l = {{c[1] - 1, c[1], c[1] + 1}},
-                           m = {{c[2] - 1, c[2], c[2] + 1}};
-        if (k[0] < 0)
-            k[0] = KLM[0];
-        else if (k[2] > KLM[0])
-            k[2] = 0;
-        if (l[0] < 0)
-            l[0] = KLM[1];
-        else if (l[2] > KLM[1])
-            l[2] = 0;
-        if (m[0] < 0)
-            m[0] = KLM[2];
-        else if (m[2] > KLM[2])
-            m[2] = 0;
-        for (int _k : k)
-            for (int _l : l)
-                for (int _m : m) {
-                    cnt++;
-                    auto &s = cells[_k][_l][_m];
-                    std::copy(s.begin(), s.end(), std::back_inserter(index));
-                }
-        assert(cnt == 27);
-    } //!< Index from all 26+1 neighboring+own cells (complexity: N neighbors)
+template <unsigned int VDimension, typename TCellIndex = int, typename TSpaceAxis = double> struct GridType {
+    constexpr static unsigned int Dimension = VDimension; //!< number of dimmensions, e.g., 3 for the real 3D world
+    using SpaceAxis = TSpaceAxis;                         //!< a single coordinate in physical space, e.g., double
+    using CellIndex = TCellIndex; //!< a single coordinate in cell space, e.g., int; also an absolute cell index
+    using Point = Eigen::Array<SpaceAxis, Dimension, 1>;     //!< a point in the VDimensional space
+    using CellCoord = Eigen::Array<CellIndex, Dimension, 1>; //!< VDimensional cell coordinates
 };
 
-#ifdef DOCTEST_LIBRARY_INCLUDED
-TEST_CASE("[Faunus] CellList") {
-    typedef Eigen::Vector3d Point;
-    Point box = {10, 20, 6};
-    CellList<Eigen::Vector3i> l;
-    l.resize(box, 2);
-    CHECK(l.KLM == Eigen::Vector3i(5, 10, 3));
-    CHECK(l.p2c({5, 10, 3}) == l.KLM);
-    CHECK(l.p2c({-5, -10, -3}) == Eigen::Vector3i(0, 0, 0));
-    CHECK(l.p2c({0, 0, 0}) == Eigen::Vector3i(3, 5, 2));
+//! @brief Commonly used GridType in Faunus.
+using Grid3DType = GridType<3, int, double>;
 
-    std::vector<size_t> index; // index of neighbors (and self) in...
-    std::vector<Point> vec;    // ...array of points
+/**
+ * @brief A simple data holder for common offsets in 3D grids, e.g., nearest neighbors or forward neighbors.
+ */
+class GridOffsets3D {
+    using CellCoord = CoordOf<Grid3DType>; //!< 3-dimension cell coordinates
+    using CellIndex = IndexOf<Grid3DType>; //!< cell index
+  public:
+    const std::vector<CellCoord> self{{0, 0, 0}}; //!< the cell itself
+    std::vector<CellCoord> neighbors;             //!< all neighbors (excluding self); (1 + 2×distance)³ - 1
+    std::vector<CellCoord> forward_neighbors;     //!< only the preceding half of all neighbors
+    CellIndex distance;                           //!< maximal distance of neighbours (1 for the nearest neighbors)
 
-    vec = {{0, 0, 0}, {0, 3, 0}};
-    l.update(vec);
-    l.neighbors(l.p2c(vec[0]), index);
-    CHECK(index.size() == 1);  // alone by myself...
-    CHECK(index.front() == 0); // ...am I really me?
+    /**
+     * @param distance  maximal distance of neighbours (1 for the nearest neighbors)
+     */
+    GridOffsets3D(CellIndex distance);
 
-    vec = {{0, 0, 0}, {0, -3, 0}};
-    l.update(vec);
-    l.neighbors(l.p2c(vec[0]), index);
-    CHECK(index.size() == 2); // now we're two
-    l.neighbors(l.p2c(vec[1]), index);
-    CHECK(index.size() == 2); // now we're two
-}
-#endif
+  private:
+    void initNeighbors();
+    void initForwardNeighbors();
+};
+} // namespace Grid
+
+namespace Container {
+/**
+ * Type manipulation helpers.
+ */
+template <typename T> using ContainerTypeOf = typename T::ContainerType;
+template <typename T> using IndexOf = typename ContainerTypeOf<T>::Index;
+template <typename T> using MemberOf = typename ContainerTypeOf<T>::Member;
+template <typename T> using MembersOf = typename ContainerTypeOf<T>::Members;
+
+/**
+ * @brief An interface of a container.
+ *
+ * The container is responsible for storing (and retriving) members under a given cell index. Various storage policies
+ * may be used in different implementations, e.g., a vector or a map.
+ *
+ * @tparam TMember  a member type
+ * @tparam TIndex  an index type, see GridType::CellIndex
+ */
+template <typename TMember, typename TIndex> struct AbstractContainer {
+    using ContainerType = AbstractContainer<TMember, TIndex>;
+    using Index = TIndex;                //!< the cell index (key) type
+    using Member = TMember;              //!< the cell member (primitive value) type
+    using Members = std::vector<Member>; //!< the cell members type
+
+    //! @brief Gets cell members at the given cell index.
+    virtual const Members& get(TIndex) const = 0;
+    //! @brief Gets cell members at the given cell index.
+    virtual Members& get(TIndex) = 0;
+    //! @brief Gets cell members of an empty cell. Allows non-existing cells.
+    virtual const Members& getEmpty() const = 0;
+    //! @brief Gets indicies of non-empty cells.
+    //! All non-empty cells are included. However, not all cells included must be non-empty.
+    virtual std::vector<TIndex> indices() const = 0;
+    virtual ~AbstractContainer() = default;
+};
+} // namespace Container
+
+/**
+ * Type manipulation helpers.
+ */
+template <typename T> using ContainerOf = typename T::Container;
+template <typename T> using GridOf = typename T::Grid;
+using Container::ContainerTypeOf;
+using Grid::GridTypeOf;
+template <typename T> using IndexOf = typename Grid::IndexOf<GridTypeOf<typename T::AbstractCellList>>;
+template <typename T> using CoordOf = typename Grid::CoordOf<GridTypeOf<typename T::AbstractCellList>>;
+template <typename T> using PointOf = typename Grid::PointOf<GridTypeOf<typename T::AbstractCellList>>;
+template <typename T> using SpaceAxisOf = typename Grid::SpaceAxisOf<GridTypeOf<typename T::AbstractCellList>>;
+template <typename T> using MemberOf = typename Container::MemberOf<typename T::AbstractCellList>;
+template <typename T> using MembersOf = typename Container::MembersOf<typename T::AbstractCellList>;
+
+/**
+ * @brief An interface of a immutable cell list. No methods for manipulating (adding, removing) members are provided.
+ * @tparam TContainerType  a container type to obtain Member and Members subtypes
+ * @tparam TGridType  a grid type to obtain index and coordinates subtypes
+ */
+template <class TContainerType, class TGridType> struct AbstractImmutableCellList {
+    using AbstractCellList = AbstractImmutableCellList<TContainerType, TGridType>; //! self
+    using ContainerType = TContainerType;                                          //!< abstract container types
+    using GridType = TGridType;                                                    //!< abstract grid type
+    using Members = typename Container::MembersOf<ContainerType>;                  //!< members type
+    using Member = typename Container::MemberOf<ContainerType>;                    //!< member type
+    using CellIndex = typename Grid::IndexOf<GridType>;                            //!< grid (cell) index type
+    using CellCoord = typename Grid::CoordOf<GridType>;                            //!< grid (cell) coordinates type
+
+    //! @brief Gets cell members at given cell coordinates.
+    virtual const Members& getMembers(const CellCoord&) = 0;
+    //! @brief Gets cell members at given cell coordinates.
+    virtual const Members& getNeighborMembers(const CellCoord&, const CellCoord&) = 0;
+    //! @brief Get cells count. Valid cell indices are in the range [0, gridSize).
+    virtual CellIndex gridSize() const = 0; // todo check if needed
+    //! @brief Gets indicies of non-empty cells. See AbstractContainer interface.
+    //! @todo refactor as an iterator
+    virtual std::vector<CellCoord> getCells() const = 0;
+    virtual ~AbstractImmutableCellList() = default;
+};
+
+/**
+ * @brief An interface to a cell list that can return cell's members in sorted order.
+ *
+ * Interface is used to efficiently compute differences between cell lists.
+ *
+ * @tparam TContainerType  a container type to obtain Member and Members subtypes
+ * @tparam TGridType  a grid type to obtain index and coordinates subtypes
+ */
+template <class TContainerType, class TGridType>
+struct AbstractSortableCellList : virtual public AbstractImmutableCellList<TContainerType, TGridType> {
+    using typename AbstractImmutableCellList<TContainerType, TGridType>::AbstractCellList;
+    using typename AbstractCellList::CellCoord;
+    using typename AbstractCellList::Members;
+
+    //! @brief Gets sorted cell members at given cell coordinates
+    virtual const Members& getSortedMembers(const CellCoord&) = 0;
+    virtual const Members& getNeighborSortedMembers(const CellCoord&, const CellCoord&) = 0;
+    virtual ~AbstractSortableCellList() = default;
+};
+} // namespace CellList
 } // namespace Faunus

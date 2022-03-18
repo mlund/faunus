@@ -1,160 +1,143 @@
 {
-    "analysis": [
-        {
-            "savestate": {
-                "file": "state.json"
-            }
-        },
-        {
-            "density": {
-                "atomic": {
-                    "h2po4": {
-                        "c/M": 0.07162491627651757
-                    },
-                    "h3po4": {
-                        "c/M": 0.09442859512509481
-                    },
-                    "hpo4": {
-                        "c/M": 0.001660540103953132
-                    }
-                },
-                "molecular": null,
-                "nskip": 1000,
-                "nstep": 10,
-                "relative time": 0.0171,
-                "samples": 59900,
-                "∛⟨V⟩": 100.0,
-                "⟨1/V⟩": 1e-06,
-                "⟨V⟩": 1000000.0,
-                "⟨∛V⟩": 100.0
-            }
-        },
-        {
-            "reactioncoordinate": {
-                "average": -43.124040066777965,
-                "file": "Q.dat",
-                "nskip": 1000,
-                "nstep": 100,
-                "property": "Q",
-                "relative time": 0.0031,
-                "samples": 5990,
-                "type": "system"
-            }
-        },
-        {
-            "sanity": {
-                "nskip": 0,
-                "nstep": 100,
-                "relative time": 9.29e-06,
-                "samples": 6000
-            }
-        }
-    ],
-    "compiler": "4.2.1 Compatible Apple LLVM 10.0.0 (clang-1000.11.45.5)",
-    "energy": [
-        {
-            "hamiltonian": [
-                {
-                    "nonbonded": {
-                        "cutoff_g2g": null,
-                        "pairpot": {
-                            "default": [
-                                {
-                                    "wca": {
-                                        "mixing": "LB"
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "relative time": 0.08467190034260605
-                }
-            ]
-        }
-    ],
-    "geometry": {
-        "length": [
-            100.0,
-            100.0,
-            100.0
-        ],
-        "type": "cuboid"
+  "analysis": [
+    {
+      "savestate": {
+        "file": "state.json"
+      }
     },
-    "git revision": "d2ee5e1e (2019-01-28)",
-    "groups": [
-        {
-            "H3PO4": {
-                "index": [
-                    0,
-                    99
-                ],
-                "size": 100
-            }
-        }
-    ],
-    "moves": [
-        {
-            "speciation": {
-                "acceptance": 0.306,
-                "moves": 600000,
-                "reactions": {
-                    "h2po4 = hpo4 + H": {
-                        "attempts": 100203
-                    },
-                    "h3po4 = h2po4 + H": {
-                        "acceptance": 0.9194168768711543,
-                        "attempts": 199409
-                    }
-                },
-                "relative time": 0.835,
-                "relative time (without energy calc)": 0.559,
-                "repeat": 1
-            }
-        }
-    ],
-    "number of groups": 1,
-    "number of particles": 100,
-    "reactionlist": [
-        {
-            "h3po4 = h2po4 + H": {
-                "pK": 2.12,
-                "pK'": 0.12000000000000045,
-                "products": [
-                    "h2po4",
-                    "H"
-                ],
-                "reactants": [
-                    "h3po4"
-                ]
-            }
+    {
+      "atom_density": {
+        "<1/V>": 1e-06,
+        "<V>": 1000000.0,
+        "<∛V>": 100.0,
+        "densities": {
+          "h2po4": {
+            "c/M": 0.164
+          },
+          "h3po4": {
+            "c/M": 0.00216
+          },
+          "hpo4": {
+            "c/M": 0.000101
+          }
         },
-        {
-            "h2po4 = hpo4 + H": {
-                "pK": 7.21,
-                "pK'": 5.21,
-                "products": [
-                    "hpo4",
-                    "H"
-                ],
-                "reactants": [
-                    "h2po4"
-                ]
-            }
-        },
-        {
-            "hpo4 = po4 + H": {
-                "pK": 12.67,
-                "pK'": 10.670000000000002,
-                "products": [
-                    "po4",
-                    "H"
-                ],
-                "reactants": [
-                    "hpo4"
-                ]
-            }
-        }
+        "nskip": 1000,
+        "nstep": 1,
+        "samples": 9000,
+        "∛<V>": 100.0
+      }
+    },
+    {
+      "reactioncoordinate": {
+        "average": -98.83333333333333,
+        "file": "Q.dat",
+        "nskip": 1000,
+        "nstep": 100,
+        "property": "Q",
+        "samples": 90,
+        "type": "system"
+      }
+    },
+    {
+      "sanity": {
+        "nstep": 1000,
+        "samples": 10
+      }
+    }
+  ],
+  "compiler": "Apple LLVM 12.0.5 (clang-1205.0.22.9)",
+  "energy": [
+    {
+      "hamiltonian": null
+    }
+  ],
+  "geometry": {
+    "length": [
+      100.0,
+      100.0,
+      100.0
     ],
-    "relative drift": 1e-11,
-    "temperature": 300.0
+    "type": "cuboid"
+  },
+  "git revision": "50b389e0 (2021-11-18)",
+  "groups": [
+    {
+      "H3PO4": {
+        "compressible": false,
+        "index": [
+          0,
+          99
+        ],
+        "size": 100
+      }
+    }
+  ],
+  "montecarlo": {
+    "average potential energy (kT)": 0.0,
+    "last move": "rcmc"
+  },
+  "moves": [
+    {
+      "rcmc": {
+        "acceptance": 0.233,
+        "cite": "doi:10/fqcpg3",
+        "moves": 1000000,
+        "reactions": {
+          "h2po4 = hpo4 + H": {
+            "acceptance -->": 0.0586,
+            "acceptance <--": 1.0,
+            "attempts": 176558
+          },
+          "h3po4 = h2po4 + H": {
+            "acceptance -->": 0.882,
+            "acceptance <--": 0.644,
+            "attempts": 287095
+          },
+          "hpo4 = po4 + H": {
+            "acceptance -->": 0.0,
+            "acceptance <--": null,
+            "attempts": 9679
+          }
+        },
+        "relative time": 0.932,
+        "relative time (without energy calc)": 0.902,
+        "repeat": 100,
+        "stochastic": true
+      }
+    }
+  ],
+  "number of groups": 1,
+  "number of particles": 100,
+  "number of sweeps": 10000,
+  "reactionlist": [
+    {
+      "h3po4 = h2po4 + H": {
+        "lnK": -4.881480397147378,
+        "neutral": false,
+        "pK": 2.12,
+        "pK'": -1.8799999999999988,
+        "swap_move": true
+      }
+    },
+    {
+      "h2po4 = hpo4 + H": {
+        "lnK": -16.60163852048707,
+        "neutral": false,
+        "pK": 7.21,
+        "pK'": 3.210000000000001,
+        "swap_move": true
+      }
+    },
+    {
+      "hpo4 = po4 + H": {
+        "lnK": -29.173753128234562,
+        "neutral": false,
+        "pK": 12.67,
+        "pK'": 8.67,
+        "swap_move": true
+      }
+    }
+  ],
+  "relative drift": 0.0,
+  "temperature": 300.0
 }

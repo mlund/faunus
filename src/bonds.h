@@ -21,16 +21,25 @@ namespace Faunus::Potential {
  * @todo Memory inefficient to store energy and force functors. Virtual functions?
  */
 struct BondData {
-    enum Variant { HARMONIC = 0, FENE, FENEWCA, HARMONIC_TORSION, GROMOS_TORSION, PERIODIC_DIHEDRAL, INVALID };
+    enum class Variant {
+        HARMONIC = 0,
+        FENE,
+        FENEWCA,
+        HARMONIC_TORSION,
+        GROMOS_TORSION,
+        PERIODIC_DIHEDRAL,
+        HARMONIC_DIHEDRAL,
+        INVALID
+    };
     std::vector<int> indices; //!< Absolute indiced of participating particles
 
     /** Calculates potential energy of bonded atoms(kT) */
     std::function<double(Geometry::DistanceFunction)> energyFunc = nullptr;
 
-    using ParticleForce = std::pair<int, Point>; //!< Force (second) on particle w. absolute index (first)
+    using IndexAndForce = std::pair<int, Point>; //!< Force (second) on particle w. absolute index (first)
 
     /** Calculates forces on bonded atoms (kT/Å) */
-    std::function<std::vector<ParticleForce>(Geometry::DistanceFunction)> forceFunc = nullptr;
+    std::function<std::vector<IndexAndForce>(Geometry::DistanceFunction)> forceFunc = nullptr;
 
     virtual void from_json(const json&) = 0;
     virtual void to_json(json&) const = 0;
@@ -52,7 +61,8 @@ NLOHMANN_JSON_SERIALIZE_ENUM(BondData::Variant, {{BondData::Variant::INVALID, nu
                                                  {BondData::Variant::FENEWCA, "fene+wca"},
                                                  {BondData::Variant::HARMONIC_TORSION, "harmonic_torsion"},
                                                  {BondData::Variant::GROMOS_TORSION, "gromos_torsion"},
-                                                 {BondData::Variant::PERIODIC_DIHEDRAL, "periodic_dihedral"}})
+                                                 {BondData::Variant::PERIODIC_DIHEDRAL, "periodic_dihedral"},
+                                                 {BondData::Variant::HARMONIC_DIHEDRAL, "harmonic_dihedral"}})
 
 struct StretchData : public BondData {
     int numindex() const override;
@@ -159,7 +169,7 @@ struct GromosTorsion : public TorsionData {
  */
 struct PeriodicDihedral : public BondData {
     double force_constant = 0.0;
-    double dihedral_angle = 0.0;
+    double phase_angle = 0.0;
     double periodicity = 1.0;
     int numindex() const override;
     std::shared_ptr<BondData> clone() const override;
@@ -169,6 +179,24 @@ struct PeriodicDihedral : public BondData {
     void setEnergyFunction(const ParticleVector& particles) override;
     PeriodicDihedral() = default;
     PeriodicDihedral(double k, double phi, double n, const std::vector<int>& indices);
+};
+
+/**
+ * @brief Harmonic dihedral
+ *
+ * U(a) = k/2 * (phi - phi_eq)^2)
+ */
+struct HarmonicDihedral : public BondData {
+    double half_force_constant = 0.0;
+    double equilibrium_dihedral = 0.0;
+    int numindex() const override;
+    std::shared_ptr<BondData> clone() const override;
+    void from_json(const json& j) override;
+    void to_json(json& j) const override;
+    Variant type() const override;
+    void setEnergyFunction(const ParticleVector& particles) override;
+    HarmonicDihedral() = default;
+    HarmonicDihedral(double k, double deq, const std::vector<int>& indices);
 };
 
 void from_json(const json& j, std::shared_ptr<BondData>& bond);

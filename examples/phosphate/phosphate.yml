@@ -1,14 +1,27 @@
 #!/usr/bin/env yason.py
-energy:
-    - nonbonded_splined:
-        default:
-            - wca: {mixing: LB}
+#
+# Protonation state of o-phosphate at constant pH = 4
+#
+#   Solving analytically gives:
+#
+#   Species | xhi      | molarity
+#   ------- | -------- | ---------- 
+#   PO43-   | 1.30e-12 | 2.16e-13
+#   HPO42-  | 6.08e-4  | 1.01e-4
+#   H2PO4-  | 0.986    | 0.164
+#   H3PO4   | 0.0130   | 0.00216
+#
+#   (see e.g. doi:10.1021/ac950430l)
+#
+#   The last column should be compared with the output!
+#
+energy: []
 atomlist:
     - h3po4 : {eps: 1, sigma: 1, q: 0}
     - h2po4 : {eps: 1, sigma: 1, q: -1}
     - hpo4 : {eps: 1, sigma: 1., q: -2}
     - po4 : {eps: 1, sigma: 1, q: -3}
-    - H : {eps: 1, sigma: 1, q: 1, activity: 0.01, implicit: True}
+    - H : {eps: 1, sigma: 1, q: 1, activity: 0.0001, implicit: True}
 moleculelist:
     - H3PO4: {atoms: [h3po4], atomic: true}
     - H2PO4: {atoms: [h2po4], atomic: true}
@@ -21,13 +34,13 @@ reactionlist:
     - "h2po4 = hpo4 + H": {pK: 7.21}
     - "hpo4 = po4 + H":  {pK: 12.67}
 moves:
-    - rcmc: {repeat: 1}
+    - rcmc: {repeat: 100}
 analysis:
     - savestate: {file: state.json}
-    - density: {nstep: 10, nskip: 1000}
+    - atom_density: {nstep: 1, nskip: 1000}
     - reactioncoordinate: {file: Q.dat, nstep: 100, type: system, property: Q, nskip: 1000}
-    - sanity: {nstep: 100}
-mcloop: {macro: 10, micro: 60000}
+    - sanity: {nstep: 1000}
+mcloop: {macro: 10, micro: 1000}
 geometry: {type: cuboid, length: 100}
 temperature: 300
 random: {seed: fixed }

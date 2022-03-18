@@ -11,7 +11,10 @@ class Table : public base {
   private:
     typedef std::vector<double> Tvec;
     Tvec _bw, _lo, _hi;
-    int _rows, _cols;
+    using index_t = typename base::Index;
+    static_assert(std::is_integral_v<index_t> && std::is_signed_v<index_t>, "signed integral value expected");
+    index_t _rows;
+    index_t _cols;
 
   public:
     Table(const Tvec &bw = {1, 1}, const Tvec &lo = {0, 0}, const Tvec &hi = {2, 2}) { reInitializer(bw, lo, hi); }
@@ -56,7 +59,9 @@ class Table : public base {
         v.resize(2, 0);
     }
 
-    Tcoeff &operator[](const Tvec &v) { return base::operator()(v[0], v[1]); }
+    Tcoeff& operator[](const Tvec& v) {
+        return base::operator()(static_cast<index_t>(v[0]), static_cast<index_t>(v[1]));
+    }
 
     bool isInRange(const Tvec &v) const {
         bool b = true;
@@ -67,8 +72,8 @@ class Table : public base {
 
     Tvec hist2buf(int) const {
         Tvec sendBuf;
-        for (int i = 0; i < _cols; ++i)
-            for (int j = 0; j < _rows; ++j)
+        for (index_t i = 0; i < _cols; ++i)
+            for (index_t j = 0; j < _rows; ++j)
                 sendBuf.push_back(base::operator()(j, i));
         return sendBuf;
     }
@@ -76,13 +81,13 @@ class Table : public base {
     void buf2hist(const Tvec &v) {
         assert(!v.empty());
         base::setZero();
-        int p = v.size() / this->size(), n = 0;
+        auto p = static_cast<int>(v.size()) / this->size();
+        Tvec::size_type n = 0;
         double nproc = p;
         while (p-- > 0) {
-            for (int i = 0; i < _cols; ++i)
-                for (int j = 0; j < _rows; ++j) {
-                    base::operator()(j, i) += v.at(n) / nproc;
-                    ++n;
+            for (index_t i = 0; i < _cols; ++i)
+                for (index_t j = 0; j < _rows; ++j) {
+                    base::operator()(j, i) += v.at(n++) / nproc;
                 }
         }
     }
@@ -116,10 +121,10 @@ class Table : public base {
     void save(const std::string &filename, Tcoeff scale = 1, Tcoeff translate = 0) const {
         Eigen::VectorXd v1(_cols + 1), v2(_rows + 1);
         v1(0) = v2(0) = base::size();
-        for (int i = 1; i != _cols + 1; ++i) {
+        for (index_t i = 1; i != _cols + 1; ++i) {
             v1(i) = (i - 1) * _bw[1] + _lo[1];
         }
-        for (int i = 1; i != _rows + 1; ++i)
+        for (index_t i = 1; i != _rows + 1; ++i)
             v2(i) = (i - 1) * _bw[0] + _lo[0];
         base m(_rows + 1, _cols + 1);
         m.leftCols(1) = v2;
@@ -140,9 +145,9 @@ class Table : public base {
     void saveRow(const std::string &filename, const Tvec &v, Tcoeff scale = 1, Tcoeff translate = 0) {
         if (this->isInRange(v)) {
             auto b = this->getBlock(v);
-            int size = b.size();
+            auto size = b.size();
             Eigen::VectorXd w(size);
-            for (int i = 0; i != size; ++i)
+            for (index_t i = 0; i != size; ++i)
                 w(i) = i * _bw[1] + _lo[1];
             base m(size, 2);
             m.leftCols(1) = w;
@@ -160,7 +165,8 @@ class Table : public base {
 
     void load(const std::string &filename) {
         if (std::ifstream f(filename.c_str()); f) {
-            int i = 0, j = -1;
+            index_t i = 0;
+            index_t j = -1;
             std::string line;
             getline(f, line);
             while (getline(f, line)) {

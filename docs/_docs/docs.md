@@ -15,7 +15,8 @@ are available.
 The development is a team effort with, in reverse chronological order,
 many valiant contributions from:
 
-_Marco Polimeni, Vidar Aspelin, Stefan Hervø-Hansen,
+_Jakub Smutek, Marco Polimeni,
+Vidar Aspelin, Stefan Hervø-Hansen,
 Richard Chudoba, Niels Kouwenhoven,
 Coralie Pasquier, Lukáš Sukeník,
 Giulio Tesei, Alexei Abrikossov,
@@ -38,8 +39,8 @@ Should you find Faunus useful, please consider supporting us by crediting:
 ## Quick Start
 
 Simulations are set up using YAML or JSON files, see for example
-[minimal.yml](https://github.com/mlund/faunus/blob/master/examples/minimal.yml),
-for a Metropolis Monte Carlo simulation of charged Lennard-Jones particles in a cubic PBC box.
+[minimal.yml](https://github.com/mlund/faunus/blob/master/examples/minimal/minimal.yml),
+for a Metropolis Monte Carlo simulation of charged Lennard-Jones particles.
 Running with
 
 ~~~ bash

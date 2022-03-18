@@ -4,7 +4,7 @@
 
 namespace Faunus::Energy {
 
-Penalty::Penalty(const json& j, Space& spc) : spc(spc) {
+Penalty::Penalty(const json& j, const Space& spc) : spc(spc) {
     name = "penalty";
     overwrite_penalty = j.value("overwrite", true);
     energy_increment = j.at("f0").get<double>();
@@ -29,13 +29,12 @@ void Penalty::initializePenaltyFunction(const json& j) {
     }
     std::vector<double> resolutions, minimum_values, maximum_values;
     for (const auto& i : j) {
-        const auto reaction_coordinate = ReactionCoordinate::createReactionCoordinate(i, spc);
+        auto& reaction_coordinate =
+            reaction_coordinates_functions.emplace_back(ReactionCoordinate::createReactionCoordinate(i, spc));
         if (reaction_coordinate->minimum_value >= reaction_coordinate->maximum_value ||
             reaction_coordinate->resolution <= 0) {
             throw ConfigurationError("min<max and resolution>0 required for penalty reaction coordinate");
         }
-        reaction_coordinates_functions.push_back(reaction_coordinate);
-
         resolutions.push_back(reaction_coordinate->resolution);
         minimum_values.push_back(reaction_coordinate->minimum_value);
         maximum_values.push_back(reaction_coordinate->maximum_value);
@@ -69,20 +68,30 @@ void Penalty::loadPenaltyFunction(const std::string& filename) {
 /**
  * @todo Foul to let constructor be responsible for i/o...
  */
-Penalty::~Penalty() { savePenaltyFunction(); }
+Penalty::~Penalty() { toDisk(); }
 
-void Penalty::savePenaltyFunction() {
+/**
+ * @brief Stream penalty function, offset with the minimum observed energy
+ */
+void Penalty::streamPenaltyFunction(std::ostream& stream) const {
+    stream.precision(16);
+    stream << fmt::format("# {} {} {}\n", energy_increment, samplings, penalty_function_exchange_counter)
+           << penalty_energy.array() - penalty_energy.minCoeff() << "\n";
+}
+
+void Penalty::streamHistogram(std::ostream& stream) const {
+    stream << histogram;
+}
+
+void Penalty::toDisk() {
     if (overwrite_penalty) {
         if (std::ofstream stream(MPI::prefix + penalty_function_filename); stream) {
-            stream.precision(16);
-            stream << "# " << energy_increment << " " << samplings << " " << penalty_function_exchange_counter << "\n"
-                   << penalty_energy.array() - penalty_energy.minCoeff() << "\n";
+            streamPenaltyFunction(stream);
         }
     }
     if (std::ofstream stream(MPI::prefix + histogram_filename); stream) {
         stream << histogram << "\n";
     }
-    // add function to save to numpy-friendly file...?
 }
 
 void Penalty::to_json(json& j) const {
@@ -120,7 +129,7 @@ double Penalty::energy(Change& change) {
     return energy;
 }
 
-/*
+/**
  * @todo: If this is called before `energy()`, the latest_coordinate
  * is never calculated and causes undefined behavior
  */
@@ -153,7 +162,7 @@ void Penalty::logBarrierInformation() const {
  *  Called when a move is accepted or rejected, as well as when initializing the system
  *  @todo: this doubles the MPI communication
  */
-void Penalty::sync(Energybase* other, [[maybe_unused]] Change& change) {
+void Penalty::sync(Energybase* other, [[maybe_unused]] const Change& change) {
     auto* other_penalty = dynamic_cast<decltype(this)>(other);
     if (other_penalty == nullptr) {
         throw std::runtime_error("error in Penalty::sync - please report");
@@ -168,18 +177,21 @@ void Penalty::sync(Energybase* other, [[maybe_unused]] Change& change) {
 
 #ifdef ENABLE_MPI
 
-PenaltyMPI::PenaltyMPI(const json& j, Space& spc) : Penalty(j, spc) {
-    weights.resize(MPI::mpi.nproc());
-    buffer.resize(penalty_energy.size() * MPI::mpi.nproc()); // recieve buffer for penalty func
+PenaltyMPI::PenaltyMPI(const json& j, Space& spc, const MPI::Controller& mpi) : Penalty(j, spc), mpi(mpi) {
+    weights.resize(mpi.world.size());
 }
 
+/**
+ * @note These are generic MPI calls previously used:
+ *
+ * MPI_Allgather(&least_sampled_in_histogram, 1, MPI_INT, weights.data(), 1, MPI_INT, mpi.comm);
+ */
 void PenaltyMPI::update(const std::vector<double>& coordinate) {
-    using namespace Faunus::MPI;
     const auto old_penalty_energy = penalty_energy[coordinate];
     update_counter++;
     if (update_counter % number_of_steps_between_updates == 0 and energy_increment > 0.0) {
-        const auto least_sampled_in_histogram = histogram.minCoeff(); // if > 0 --> all RC's visited
-        MPI_Allgather(&least_sampled_in_histogram, 1, MPI_INT, weights.data(), 1, MPI_INT, mpi.comm);
+        int least_sampled_in_histogram = histogram.minCoeff(); // if > 0 --> all RC's visited
+        mpi.world.allgather(least_sampled_in_histogram, weights.data());
 
         // if at least one walker has sampled full RC space at least `samplings` times
         if (weights.maxCoeff() > samplings) { // change to minCoeff()?
@@ -199,27 +211,26 @@ void PenaltyMPI::update(const std::vector<double>& coordinate) {
 }
 
 /**
- * Broadcast, collect, and average penalty functions across all MPI nodes. The resulting
- * function is shifted so that the minimum energy is at zero.
- * When done, all penalty functions shall be identical!
+ * 1. Master gathers penalty functions from all ranks
+ * 2. Master calculates an average, shifter so that minimum energy is at zero
+ * 3. Master broadcasts average to all nodes
+ * 4. When done, all penalty functions shall be identical
  */
 void PenaltyMPI::averagePenaltyFunctions() {
     penalty_function_exchange_counter += 1;
-
-    MPI_Gather(penalty_energy.data(), penalty_energy.size(), MPI_DOUBLE, buffer.data(), penalty_energy.size(),
-               MPI_DOUBLE, 0, MPI::mpi.comm); // master collects penalty from all slaves
-
-    if (MPI::mpi.isMaster()) { // master performs the average
+    const auto layout = mpl::contiguous_layout<double>(penalty_energy.size());
+    buffer.resize(penalty_energy.size() * mpi.world.size());
+    mpi.world.gather(mpi.master_rank, penalty_energy.data(), layout, buffer.data(), layout);
+    if (mpi.isMaster()) {
         penalty_energy.setZero();
-        for (int i = 0; i < MPI::mpi.nproc(); i++) {
-            penalty_energy += Eigen::Map<Eigen::MatrixXd>(buffer.data() + i * penalty_energy.size(),
-                                                          penalty_energy.rows(), penalty_energy.cols());
+        for (int i = 0; i < mpi.world.size(); i++) {
+            const auto offset = i * penalty_energy.size();
+            penalty_energy +=
+                Eigen::Map<Eigen::MatrixXd>(buffer.data() + offset, penalty_energy.rows(), penalty_energy.cols());
         }
-        penalty_energy = (penalty_energy.array() - penalty_energy.minCoeff()) / double(MPI::mpi.nproc());
+        penalty_energy = (penalty_energy.array() - penalty_energy.minCoeff()) / static_cast<double>(mpi.world.size());
     }
-
-    MPI_Bcast(penalty_energy.data(), penalty_energy.size(), MPI_DOUBLE, 0,
-              MPI::mpi.comm); // master sends average penalty function to all slaves
+    mpi.world.bcast(mpi.master_rank, penalty_energy.data(), layout);
 }
 
 #endif

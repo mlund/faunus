@@ -2,10 +2,7 @@
 #include <limits>
 #include <string>
 #include <cmath>
-#include <memory>
-#include <numeric>
-#include <vector>
-#include <nlohmann/json_fwd.hpp>
+#include <array>
 
 namespace Faunus {
 
@@ -186,7 +183,7 @@ namespace Faunus {
         const std::string subr = "\u1D63";       //!< Subscript "r"
         const std::string theta = "\u03b8";      //!< Greek theta
 
-        std::string bracket( const std::string & );
+        std::string bracket(std::string_view sv);
     } //!< Unicode
 
 } // end of Faunus namespace

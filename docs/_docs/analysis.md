@@ -28,18 +28,28 @@ points, and the relative run-time spent on the analysis.
 
 ## Density
 
-### Bulk Density
+### Atomic Density
 
-`density`   |  Description
------------ |  -------------------------------------------
-`nstep=0`   |  Interval between samples
+`atom_density` | Description
+-------------- | ------------------------
+`nstep=0`      | Interval between samples
 
-This calculates the average density, $\langle N\_i/V \rangle$ of molecules and atoms
+This calculates the average density, $\langle N\_i/V \rangle$ of atoms in atomic groups
 which may fluctuate in _e.g._ the isobaric ensemble or the Grand Canonical ensemble.
 For atomic groups, densities of individual atom types are reported.
 The analysis also files probability density distributions of atomic and polyatomic molecules
 as well as of atoms involved in id transformations, _e.g._, acid-base equilibria.
 The filename format is `rho-@name.dat`.
+
+### Molecule Density
+
+`molecule_density` | Description
+------------------ | ------------------------
+`nstep=0`          | Interval between samples
+
+This calculates the average density, $\langle N\_i/V \rangle$ of molecular groups
+which may fluctuate in _e.g._ the isobaric ensemble or the Grand Canonical ensemble.
+
 
 ### Density Profile
 
@@ -234,6 +244,7 @@ $\bf{I}$ is the identity matrix and $N$ is the number of atoms.
 `nstep`          | Interval with which to sample
 `indexes`        | Array defining a range of indexes within the molecule 
 `index`          | Index of the molecular group
+`file`           | Output filename (.dat|.dat.gz)
 
 ### Polymer Shape
 
@@ -395,6 +406,45 @@ atomic species can be saved.
 `pqrfile`            | Output PQR file (optional)
 `verbose=True`       | If `True`, add results to general output
 
+### Electric Potential
+
+`electricpotential`   | Description
+--------------------- | ------------------------------------------------------
+`nstep`               | Interval between samples
+`nskip=0`             | Number of initial steps excluded from the analysis
+`epsr`                | Dielectric constant
+`type`                | Coulomb type, `plain` etc. -- see energies
+`structure`           | Either a _filename_ (pqr, aam, gro etc) or a _list_ of positions
+`policy=fixed`        | Policy used to augment positions before each sample event, see below
+`ncalc`               | Number of potential calculations per sample event
+`stride`              | Separation between target points when using `random_walk` or `no_overlap`
+
+This calculates the mean electric potential, $\langle \phi\_i \rangle$ and correlations, $\langle \phi\_1\phi\_2 ...\rangle$
+at an arbitrary number of target positions in the simulation cell.
+The positions, given via `structure`, can be augmented using a `policy`:
+
+`policy`        | Description
+--------------- | ------------------------------------------------------------------
+`fixed`         | Expects a list of fixed positions where the potential is measured
+`random_walk`   | Assign random position to first target; while following targets are randomly placed `stride` distance from previous.
+`no_overlap`    | As `random_walk` but with no particle overlap (size defined by `sigma`, see Topology)
+
+Histograms of the correlation and the potentials at the target points are saved to disk.
+
+Example:
+
+~~~ yaml
+- electricpotential:
+    nstep: 20
+    ncalc: 10
+    epsr: 80
+    type: plain
+    policy: random_walk
+    stride: 10   # in angstrom
+    structure:
+      - [0,0,0]  # defines two target points...
+      - [0,0,0]  # ...positions are randomly set
+~~~
 
 ## Reaction Coordinate
 
@@ -447,7 +497,9 @@ Further, the command line tools `zcat`, `zless` etc. are useful for handling
 compressed files.
 
 
-## System Sanity
+## System
+
+### System Sanity
 
 It is wise to always assert that the simulation
 is internally sane. This analysis checks the following and aborts if insane:
@@ -462,7 +514,7 @@ This is not a particularly time-consuming analysis and we recommend that it is e
 for all simulations.
 
 
-## System Energy
+### System Energy
 
 Calculates the energy contributions from all terms in the Hamiltonian and
 outputs to a file as a function of steps.
@@ -475,6 +527,19 @@ All units in $k\_BT$.
 -------------- | -------------------------------------------
 `file`         | Output filename (`.dat`, `.csv`, `.dat.gz`)
 `nstep`        | Interval between samples
+
+
+### Penalty function
+
+If a penalty function is added to the hamiltonian, this can dump it to disk at a specified interval. At each sample event,
+the filename counter is incremented and follows the convention. In addition to the penalty energy, this will also
+save the current (numbered) histogram.
+
+`penaltyfunction` | Description
+----------------- | -------------------------------------------
+`file`            | Output filename (`.dat`, `.dat.gz`)
+`nstep`           | Interval between samples
+`nskip=0`         | Number of initial steps excluded from the analysis
 
 
 ## Perturbations
@@ -575,7 +640,7 @@ If the suffix is `json` or `ubj` ([binary](http://ubjson.org)), a single
 state file that can be used to restart the simulation is saved
 with the following information:
 
-- topology: atom, molecule, and reaction definitions
+- topology: atom, molecule
 - particle and group properties incl. positions
 - geometry
 - state of random number generator (if `saverandom=true`)
@@ -613,6 +678,7 @@ saved.
 -------------- | ---------------------------------------------------------
 `file`         |  Filename of output xtc file
 `nstep`        |  Interval between samples.
+`nskip=0`      | Number of initial steps excluded from the analysis
 `molecules=*`  |  Array of molecules to save (default: all)
 
 
@@ -634,5 +700,24 @@ vmd confout.pqr traj.xtc -e scripts/vmd-qrtraj.tcl
 
 `qrfile`          |  Description
 ----------------- | -----------------------------------
-`file=qrtraj.dat` |  Output filename (.dat, .gz)
+`file=qrtraj.dat` |  Output filename (.dat|.gz)
 `nstep`           |  Interval between samples
+`nskip=0`         | Number of initial steps excluded from the analysis
+
+### Patchy Sphero-Cylinder trajectory
+
+This will save a text trajectory containing the number of particles, box dimensions, midpoint positions,
+direction, and patch direction of PSCs. Using the provided **python 2** script, this can be used 
+to visualise a simulation in Visual Molecular Dynamics (VMD):
+
+~~~ bash
+python2 psc2vmd.py -i tracjectory.dat -o movie.pdb --psf movie.psf
+vmd -e vmd.script
+~~~
+
+`psctraj`  |  Description
+---------- | -----------------------------------
+`file=`    |  Output filename (.dat|.gz)
+`nstep`    |  Interval between samples
+`nskip=0`  | Number of initial steps excluded from the analysis
+

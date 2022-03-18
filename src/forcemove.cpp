@@ -1,6 +1,7 @@
 #include "forcemove.h"
 #include "random.h"
 #include "energy.h"
+#include <range/v3/view/zip.hpp>
 
 namespace Faunus::Move {
 
@@ -75,7 +76,7 @@ inline Point LangevinVelocityVerlet::velocityFluctuationDissipation(const Point 
  * @todo Splitting scheme still hard-coded to 'BAOAB'
  */
 void LangevinVelocityVerlet::step(PointVector &velocities, PointVector &forces) {
-    assert(spc.numParticles(Space::ACTIVE) == forces.size());
+    assert(spc.numParticles(Space::Selection::ACTIVE) == forces.size());
     assert(forces.size() == velocities.size());
 
     auto zipped = ranges::views::zip(spc.activeParticles(), forces, velocities);
@@ -86,7 +87,7 @@ void LangevinVelocityVerlet::step(PointVector &velocities, PointVector &forces) 
         particle.pos += positionIncrement(velocity);               // A step
         velocity = velocityFluctuationDissipation(velocity, mass); // O step
         particle.pos += positionIncrement(velocity);               // A step
-        spc.geo.boundary(particle.pos);
+        spc.geometry.boundary(particle.pos);
     }
     std::fill(forces.begin(), forces.end(), Point::Zero()); // forces must be updated ...
     energy.force(forces);                                   // ... before each B step
@@ -123,8 +124,8 @@ TEST_CASE("[Faunus] Integrator") {
 ForceMoveBase::ForceMoveBase(Space &spc, std::string name, std::string cite,
                              std::shared_ptr<IntegratorBase> integrator, unsigned int nsteps)
     : MoveBase(spc, name, cite), integrator(integrator), number_of_steps(nsteps) {
-    forces.reserve(spc.p.size());
-    velocities.reserve(spc.p.size());
+    forces.reserve(spc.particles.size());
+    velocities.reserve(spc.particles.size());
     resizeForcesAndVelocities();
     repeat = 1;
 }
@@ -135,7 +136,7 @@ ForceMoveBase::ForceMoveBase(Space &spc, std::string name, std::string cite,
  * Upon resizing, new elements in `forces` and `velocities` are zeroed.
  */
 size_t ForceMoveBase::resizeForcesAndVelocities() {
-    const auto num_active_particles = spc.numParticles(Space::ACTIVE);
+    const auto num_active_particles = spc.numParticles(Space::Selection::ACTIVE);
     forces.resize(num_active_particles, Point::Zero());
     velocities.resize(num_active_particles, Point::Zero());
     return num_active_particles;
@@ -143,13 +144,13 @@ size_t ForceMoveBase::resizeForcesAndVelocities() {
 
 void ForceMoveBase::_move(Change &change) {
     change.clear();
-    change.all = true;
+    change.everything = true;
     resizeForcesAndVelocities();
     for (unsigned int step = 0; step < number_of_steps; ++step) {
         integrator->step(velocities, forces);
     }
-    for (auto &group : spc.groups) { // update mass centers before returning to Monte Carlo
-        group.updateMassCenter(spc.geo.getBoundaryFunc(), group.cm);
+    for (auto& group : spc.groups) { // update mass centers before returning to MC
+        group.updateMassCenter(spc.geometry.getBoundaryFunc());
     }
 }
 
@@ -214,8 +215,8 @@ TEST_CASE("[Faunus] LangevinDynamics") {
     DummyEnergy energy;
 
     SUBCASE("Velocity and force initialization") {
-        spc.p.resize(10);                                        // 10 particles in total
-        spc.groups.emplace_back(spc.p.begin(), spc.p.end() - 1); // 9 active particles
+        spc.particles.resize(10);                                                // 10 particles in total
+        spc.groups.emplace_back(0, spc.particles.begin(), spc.particles.end() - 1); // 9 active particles
         LangevinDynamics ld(spc, energy);
         CHECK(ld.getForces().capacity() >= 10);
         CHECK(ld.getVelocities().capacity() >= 10);

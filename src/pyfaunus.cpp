@@ -17,8 +17,7 @@
 namespace py = pybind11;
 using namespace Faunus;
 
-typedef typename Space::Tpvec Tpvec;
-typedef typename Space::Tgroup Tgroup;
+typedef typename Space::GroupType Tgroup;
 typedef Energy::Hamiltonian Thamiltonian;
 typedef MetropolisMonteCarlo Tmcsimulation;
 
@@ -77,19 +76,19 @@ PYBIND11_MODULE(pyfaunus, m)
     py::class_<Geometry::GeometryBase>(m, "Geometrybase")
         .def("getVolume", &Geometry::GeometryBase::getVolume, "Get container volume", "dim"_a = 3)
         .def("setVolume", &Geometry::GeometryBase::setVolume, "Set container volume", "volume"_a,
-             "method"_a = Geometry::ISOTROPIC)
+             "method"_a = Geometry::VolumeMethod::ISOTROPIC)
         .def("collision", &Geometry::GeometryBase::collision, "pos"_a, "Checks if point is inside container")
         .def("getLength", &Geometry::GeometryBase::getLength, "Get cuboid sidelengths")
         .def("vdist", &Geometry::GeometryBase::vdist, "Minimum vector distance, a-b", "a"_a, "b"_a)
         .def("randompos",
-             [](Geometry::GeometryBase &g, Random &rnd) {
+             [](Geometry::GeometryBase& g, Random& rnd) {
                  Point pos;
                  g.randompos(pos, rnd);
                  return pos;
              })
         .def(
             "boundary",
-            [](Geometry::GeometryBase &g, const Point &pos) {
+            [](Geometry::GeometryBase& g, const Point& pos) {
                 Point a = pos; // we cannot modify `pos` directly
                 g.boundary(a); // as in c++
                 return a;
@@ -129,62 +128,62 @@ PYBIND11_MODULE(pyfaunus, m)
         .def_readwrite("charge", &Particle::charge, "Particle charge (monopole)");
 
     // Particle vector and it's iterator
-    py::class_<typename Tpvec::iterator>(m, "ParticleVectorIterator")
-        .def("__add__", [](typename Tpvec::iterator it, int i){ return it+i; } )
-        .def("__sub__", [](typename Tpvec::iterator it, int i){ return it-i; } );
+    py::class_<ParticleVector::iterator>(m, "ParticleVectorIterator")
+        .def("__add__", [](ParticleVector::iterator it, int i) { return it + i; })
+        .def("__sub__", [](ParticleVector::iterator it, int i) { return it - i; });
 
-    auto _pvec = py::bind_vector<Tpvec>(m, "ParticleVector");
-    _pvec.def("positions", [](Tpvec &p) { return asEigenMatrix(p.begin(), p.end(), &Particle::pos); })
-        .def("charges", [](Tpvec &p) { return asEigenVector(p.begin(), p.end(), &Particle::charge); })
-        .def("begin", [](Tpvec &p) { return p.begin(); })
-        .def("end", [](Tpvec &p) { return p.end(); });
+    auto _pvec = py::bind_vector<ParticleVector>(m, "ParticleVector");
+    _pvec.def("positions", [](ParticleVector& p) { return asEigenMatrix(p.begin(), p.end(), &Particle::pos); })
+        .def("charges", [](ParticleVector& p) { return asEigenVector(p.begin(), p.end(), &Particle::charge); })
+        .def("begin", [](ParticleVector& p) { return p.begin(); })
+        .def("end", [](ParticleVector& p) { return p.end(); });
 
     // Group
     py::class_<Tgroup>(m, "Group")
-        .def(py::init<typename Tpvec::iterator, typename Tpvec::iterator>())
-        .def(py::init<Tpvec&>())
+        .def(py::init<MoleculeData::index_type, ParticleVector::iterator, ParticleVector::iterator>())
         .def_readwrite("groups", &Tgroup::id, "Molecule id")
         .def_readwrite("id", &Tgroup::id, "Molecule id")
-        .def_readwrite("cm", &Tgroup::cm, "Center of mass")
-        .def_readwrite("atomic", &Tgroup::atomic)
-        .def("__len__", [](Tgroup &self) { return self.size(); } )
-        .def("__iter__", [](Tgroup &v) {
-                return py::make_iterator(v.begin(), v.end()); },
-                py::keep_alive<0, 1>())
+        .def_readwrite("cm", &Tgroup::mass_center, "Center of mass")
+        .def("__len__", [](Tgroup& self) { return self.size(); })
+        .def(
+            "__iter__", [](Tgroup& v) { return py::make_iterator(v.begin(), v.end()); }, py::keep_alive<0, 1>())
+        .def("isAtomic", &Tgroup::isAtomic)
+        .def("isMolecular", &Tgroup::isMolecular)
         .def("traits", &Tgroup::traits)
         .def("contains", &Tgroup::contains)
         .def("capacity", &Tgroup::capacity)
         .def("deactivate", &Tgroup::deactivate)
         .def("activate", &Tgroup::activate)
-        .def("begin", (Tpvec::iterator& (Tgroup::*)() ) &Tgroup::begin)
-        .def("end", (Tpvec::iterator& (Tgroup::*)() ) &Tgroup::end);
+        .def("begin", (ParticleVector::iterator & (Tgroup::*)()) & Tgroup::begin)
+        .def("end", (ParticleVector::iterator & (Tgroup::*)()) & Tgroup::end);
 
     py::bind_vector<std::vector<Tgroup>>(m, "GroupVector");
 
     // Region
-    py::enum_<Region::RegionBase::RegionType>(m, "RegionType")
-        .value("SPHERE", Region::RegionBase::RegionType::SPHERE)
-        .value("CUBOID", Region::RegionBase::RegionType::CUBOID)
-        .value("WITHIN", Region::RegionBase::RegionType::WITHIN)
-        .value("NONE", Region::RegionBase::RegionType::NONE)
+    py::enum_<Region::RegionType>(m, "RegionType")
+        .value("WITHIN_PARTICLE", Region::RegionType::WITHIN_PARTICLE)
+        .value("WITHIN_MOLID", Region::RegionType::WITHIN_MOLID)
+        .value("WITHIN_ELLIPSOID", Region::RegionType::WITHIN_ELLIPSOID)
+        .value("NONE", Region::RegionType::INVALID)
         .export_values();
 
     py::class_<Region::RegionBase>(m, "RegionBase")
-        .def_readwrite("name", &Region::RegionBase::name)
-        .def_readwrite("type", &Region::RegionBase::type)
-        .def("volume", &Region::RegionBase::isInside)
-        .def("isInside", &Region::RegionBase::isInside);
+        .def_readonly("type", &Region::RegionBase::type)
+        .def("volume", &Region::RegionBase::volume);
 
     // AtomData
     py::class_<AtomData>(m, "AtomData")
         .def(py::init<>())
-        .def_property("eps", [](const AtomData &a) { return a.interaction.get("eps"); },
-                      [](AtomData &a, double val) { a.interaction.get("eps") = val; })
-        .def_property("sigma", [](const AtomData &a) { return a.interaction.get("sigma"); },
-                      [](AtomData &a, double val) { a.interaction.get("sigma") = val; })
+        .def_property(
+            "eps", [](const AtomData& a) { return a.interaction.at("eps"); },
+            [](AtomData& a, double val) { a.interaction.at("eps") = val; })
+        .def_property(
+            "sigma", [](const AtomData& a) { return a.interaction.at("sigma"); },
+            [](AtomData& a, double val) { a.interaction.at("sigma") = val; })
         .def_readwrite("name", &AtomData::name)
         .def_readwrite("activity", &AtomData::activity, "Activity = chemical potential in log scale (mol/l)")
-        .def("id", (const int& (AtomData::*)() const) &AtomData::id); // explicit signature due to overload in c++
+        .def("id", (const AtomData::index_type& (AtomData::*)() const) &
+                       AtomData::id); // explicit signature due to overload in c++
 
     auto _atomdatavec = py::bind_vector<std::vector<AtomData>>(m, "AtomDataVector");
     _atomdatavec
@@ -214,33 +213,34 @@ PYBIND11_MODULE(pyfaunus, m)
         .def(py::init([](py::dict dict) { return from_dict<Potential::FunctorPotential>(dict); }));
 
     // Change::Data
-    py::class_<Change::data>(m, "ChangeData")
+    py::class_<Change::GroupChange>(m, "ChangeData")
         .def(py::init<>())
-        .def_readwrite("dNatomic", &Change::data::dNatomic)
-        .def_readwrite("dNswap", &Change::data::dNswap)
-        .def_readwrite("index", &Change::data::index)
-        .def_readwrite("internal", &Change::data::internal)
-        .def_readwrite("all", &Change::data::all)
-        .def_readwrite("atoms", &Change::data::atoms);
+        .def_readwrite("dNatomic", &Change::GroupChange::dNatomic)
+        .def_readwrite("dNswap", &Change::GroupChange::dNswap)
+        .def_readwrite("index", &Change::GroupChange::group_index)
+        .def_readwrite("internal", &Change::GroupChange::internal)
+        .def_readwrite("all", &Change::GroupChange::all)
+        .def_readwrite("atoms", &Change::GroupChange::relative_atom_indices);
 
-    py::bind_vector<std::vector<Change::data>>(m, "ChangeDataVec");
+    py::bind_vector<std::vector<Change::GroupChange>>(m, "ChangeDataVec");
 
     // Change
     py::class_<Change>(m, "Change")
         .def(py::init<>())
-        .def_readwrite("all", &Change::all)
-        .def_readwrite("dV", &Change::dV)
-        .def_readwrite("dN", &Change::dN)
+        .def_readwrite("everything", &Change::everything)
+        .def_readwrite("volume_change", &Change::volume_change)
+        .def_readwrite("matter_change", &Change::matter_change)
         .def_readwrite("groups", &Change::groups);
 
     // Space
     py::class_<Space>(m, "Space")
         .def(py::init<>())
-        .def_readwrite("geo", &Space::geo)
-        .def_readwrite("p", &Space::p)
+        .def_readwrite("geo", &Space::geometry)
+        .def_readwrite("particles", &Space::particles)
         .def_readwrite("groups", &Space::groups)
-        .def("findMolecules", &Space::findMolecules)
-        .def("from_dict", [](Space &spc, py::dict dict) { from_json(dict2json(dict), spc); });
+        // https://stackoverflow.com/questions/65812046/disambiguate-non-const-and-const-access-methods-pybind11
+        // .def("findMolecules", &Space::findMolecules)
+        .def("from_dict", [](Space& spc, py::dict dict) { from_json(dict2json(dict), spc); });
 
     // Hamiltonian
     py::class_<Thamiltonian>(m, "Hamiltonian")
@@ -261,16 +261,16 @@ PYBIND11_MODULE(pyfaunus, m)
     py::class_<Tmcsimulation>(m, "MetropolisMonteCarlo")
         .def(py::init([](py::dict dict) {
             json j = dict2json(dict);
-            return std::unique_ptr<Tmcsimulation>(new Tmcsimulation(j, Faunus::MPI::mpi));
+            return std::unique_ptr<Tmcsimulation>(new Tmcsimulation(j));
         }))
-        .def(py::init([](py::dict dict, Faunus::MPI::MPIController &mpi) {
+        .def(py::init([](py::dict dict) {
             json j = dict2json(dict);
-            return std::unique_ptr<Tmcsimulation>(new Tmcsimulation(j, mpi));
+            return std::unique_ptr<Tmcsimulation>(new Tmcsimulation(j));
         }));
 
     // Analysisbase
     py::class_<Analysis::Analysisbase>(m, "Analysisbase")
-        .def_readwrite("name", &Analysis::Analysisbase::name)
+        .def_readonly("name", &Analysis::Analysisbase::name)
         .def_readwrite("cite", &Analysis::Analysisbase::cite)
         .def("to_disk", &Analysis::Analysisbase::to_disk)
         .def("sample", &Analysis::Analysisbase::sample)

@@ -44,7 +44,7 @@ class ChainRotationMove : public ChainRotationMoveBase {
 
   protected:
     using TBase::spc;
-    typename Space::Tgvec::iterator molecule_iter;
+    typename Space::GroupVector::iterator molecule_iter;
     //! Indices of atoms in the spc.p vector that mark the origin and the direction of the axis of rotation.
     std::array<size_t, 2> axis_ndx;
     //! Indices of atoms in the spc.p vector that shall be rotated.

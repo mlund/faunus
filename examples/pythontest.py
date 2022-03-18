@@ -63,8 +63,8 @@ class TestCoulomb(unittest.TestCase):
             ] }
         pot = FunctorPotential( d )
         r = np.linspace(1,10,5)
-        u = np.array( [pot.energy( spc.p[0], spc.p[1], i*i, [0,0,i] ) for i in r] )
-        pot.selfEnergy(spc.p[0])
+        u = np.array( [pot.energy( spc.particles[0], spc.particles[1], i*i, [0,0,i] ) for i in r] )
+        pot.selfEnergy(spc.particles[0])
 
 # Test SASA calculations
 
@@ -75,18 +75,18 @@ class TestSASA(unittest.TestCase):
             ] }
         pot = FunctorPotential( d )
         r = np.linspace(0,10,5)
-        u = np.array( [pot.energy( spc.p[0], spc.p[1], i*i, [0,0,i] ) for i in r] )
+        u = np.array( [pot.energy( spc.particles[0], spc.particles[1], i*i, [0,0,i] ) for i in r] )
         np.testing.assert_almost_equal(np.divide(u, [87.3576,100.4613,127.3487,138.4422,138.4422]), 1., 4)
 
     def test_freesasa_hamiltonian(self):
         H = Hamiltonian(spc, [ {'sasa' : {'molarity': 1.5, 'radius': 1.4}} ] )
-        spc.p[0].pos = [0,0,0] # fix 1st particle in origin
+        spc.particles[0].pos = [0,0,0] # fix 1st particle in origin
         c = Change()           # change object telling that a full energy calculation
-        c.all = True;          # should be performed when calling `energy()`
+        c.everything = True;   # should be performed when calling `energy()`
         u = []
         r = np.linspace(0,10,5)
         for i in r:   #         loop over particle-particle distances
-            spc.p[1].pos = [0,0,i]
+            spc.particles[1].pos = [0,0,i]
             u.append( H.energy(c) )
         np.testing.assert_almost_equal(np.divide(u, np.multiply(1.26, [87.3576,100.4613,127.3487,138.4422,138.4422])), 1/1.26, 2) # 2.5% error
 

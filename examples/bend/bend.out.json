@@ -1,0 +1,162 @@
+{
+  "analysis": [
+    {
+      "systemenergy": {
+        "file": "energy.dat",
+        "final": [
+          1.773122609062241
+        ],
+        "init": 1.4933,
+        "nskip": 1,
+        "nstep": 100,
+        "samples": 2000
+      }
+    },
+    {
+      "reactioncoordinate": {
+        "average": 1.990380828288927,
+        "dir": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "file": "distance.dat.gz",
+        "index": 0,
+        "indexes": [
+          0,
+          2
+        ],
+        "nskip": 10,
+        "nstep": 1,
+        "property": "atomatom",
+        "samples": 199990,
+        "type": "molecule"
+      }
+    },
+    {
+      "atomrdf": {
+        "dim": 1,
+        "dr": 0.1,
+        "file": "rdf.dat",
+        "name1": "bead",
+        "name2": "bead",
+        "nskip": 1,
+        "nstep": 1,
+        "samples": 199999,
+        "slicedir": [
+          0,
+          0,
+          0
+        ],
+        "thickness": 0.0
+      }
+    }
+  ],
+  "compiler": "10.2.1 20201220",
+  "energy": [
+    {
+      "hamiltonian": [
+        {
+          "bonded": {
+            "bondlist-intramolecular": [
+              {
+                "harmonic": {
+                  "index": [
+                    0,
+                    1
+                  ],
+                  "k": 10.0,
+                  "req": 1.0
+                }
+              },
+              {
+                "harmonic": {
+                  "index": [
+                    1,
+                    2
+                  ],
+                  "k": 10.0,
+                  "req": 1.0
+                }
+              },
+              {
+                "harmonic_torsion": {
+                  "aeq": 90.0,
+                  "index": [
+                    0,
+                    1,
+                    2
+                  ],
+                  "k": 10.0
+                }
+              }
+            ],
+            "relative time": 0.05504322236267151
+          }
+        }
+      ]
+    }
+  ],
+  "geometry": {
+    "length": [
+      20.0,
+      20.0,
+      20.0
+    ],
+    "type": "cuboid"
+  },
+  "git revision": "d3ce821d (2021-05-04)",
+  "groups": [
+    {
+      "threebody": {
+        "compressible": false,
+        "index": [
+          0,
+          2
+        ],
+        "size": 3
+      }
+    }
+  ],
+  "montecarlo": {
+    "average potential energy (kT)": 1.796037325037313,
+    "last move": "langevin_dynamics"
+  },
+  "moves": [
+    {
+      "langevin_dynamics": {
+        "acceptance": 1.0,
+        "integrator": {
+          "friction": 5.0,
+          "time_step": 0.005
+        },
+        "moves": 200259,
+        "nsteps": 10,
+        "relative time": 0.713,
+        "relative time (without energy calc)": 0.663,
+        "repeat": 1
+      }
+    },
+    {
+      "transrot": {
+        "acceptance": 0.21,
+        "dir": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "molecule": "threebody",
+        "molid": 0,
+        "moves": 599741,
+        "relative time": 0.236,
+        "relative time (without energy calc)": 0.108,
+        "repeat": 3,
+        "√⟨r²⟩": 0.539
+      }
+    }
+  ],
+  "number of groups": 1,
+  "number of particles": 3,
+  "reactionlist": null,
+  "temperature": 298.15
+}

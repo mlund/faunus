@@ -74,6 +74,7 @@ CMake Option                         | Description
 `-DENABLE_PYTHON=OFF`                | Build python bindings (experimental)
 `-DENABLE_FREESASA=ON`               | Enable SASA routines (external download)
 `-DENABLE_TBB=OFF`                   | Build with Intel Threading Building Blocks (experimental)
+`-DENABLE_PCG=OFF`                   | Use PCG random number generator instead of C++'s Mersenne Twister
 `-DBUILD_STATIC=OFF`                 | Build statically linked binaries
 `-DCMAKE_BUILD_TYPE=Release`         | Alternatives: `Debug` or `RelWithDebInfo`
 `-DCMAKE_CXX_FLAGS_RELEASE="..."`    | Compiler options for Release mode
@@ -82,7 +83,6 @@ CMake Option                         | Description
 `-DPYTHON_EXECUTABLE="..."`          | Full path to Python executable
 `-DPYTHON_INCLUDE_DIR="..."`         | Full path to python headers
 `-DPYTHON_LIBRARY="..."`             | Full path to python library, i.e. libpythonX.dylib/so
-
 
 ### Compiling the Manual
 
@@ -133,12 +133,25 @@ make clean
 rm -fR CMakeCache.txt CMakeFiles _deps
 ~~~
 
+### Intel Threading Building Blocks
+
+If `ENABLE_TBB=on`, TBB may be used for threaded simulations which may or may not be
+advantageous, depending on the system.
+By default, an unspecified and possibly outdated version of TBB will be downloaded and build.
+Alternatively you can use an existing installation _via_ `TBB_DIR`:
+
+~~~ bash
+cmake -DENABLE_TBB=on -DTBB_DIR={tbb-root}/lib/cmake/TBB
+~~~
+
+where `{tbb-root}` is the installation directory of TBB, _e.g._ `/usr/local`.
+
 # Development
 
 The development of Faunus is done mainly in Jetbrain's [CLion](https://www.jetbrains.com/clion)
 (free academic license) but any other IDE or merely a text editor can be used.
-We do recommend to use tools that respect the provided `.clang-format` which will easy merging
-changes into the code base, see below.
+We recommend to use tools that respect the provided `.clang-format` which will ease merging
+changes into the codebase, see below.
 
 ## Code Style
 
@@ -150,7 +163,7 @@ cd faunus
 ./scripts/git-pre-commit-format install
 ```
 
-This requires `clang-format` which may also be directly used in IDE's
+This requires `clang-format` which may also be directly used in IDEs
 such as CLion. In the top-level directory of Faunus you will find
 the style configuration file [`.clang-format`](https://github.com/mlund/faunus/blob/master/.clang-format)
 
@@ -158,8 +171,8 @@ Also, adhere to the following naming conventions:
 
 Style        | Elements
 ------------ | -------------------------
-`PascalCase` | classes, namespaces
-`camelCase`  | functions
+`CamelCase`  | classes, namespaces
+`camelBack`  | functions
 `snake_case` | variables
 
 

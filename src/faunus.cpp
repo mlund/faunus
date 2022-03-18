@@ -7,6 +7,7 @@
 #include "docopt.h"
 #include "progress_tracker.h"
 #include "spdlog/spdlog.h"
+#include "move.h"
 #include <spdlog/sinks/null_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
@@ -34,9 +35,11 @@ int runUnittests(int argc, const char* const* argv);
 std::string versionString();
 void setInformationLevelAndLoggers(bool quiet, docopt::Options& args);
 json getUserInput(docopt::Options& args);
+void setRandomNumberGenerator(const json& input);
 void loadState(docopt::Options& args, MetropolisMonteCarlo& simulation);
 void checkElectroNeutrality(MetropolisMonteCarlo& simulation);
 void showErrorMessage(std::exception& exception);
+void showProgress(std::shared_ptr<ProgressIndicator::ProgressTracker>& progress_tracker);
 void playRetroMusic();
 template <typename TimePoint>
 void saveOutput(TimePoint& starting_time, docopt::Options& args, MetropolisMonteCarlo& simulation,
@@ -45,29 +48,31 @@ void saveOutput(TimePoint& starting_time, docopt::Options& args, MetropolisMonte
 void mainLoop(bool show_progress, const json& json_in, MetropolisMonteCarlo& simulation,
               Analysis::CombinedAnalysis& analysis);
 
+
 static const char USAGE[] =
     R"(Faunus - the Monte Carlo code you're looking for!
 
     https://faunus.readthedocs.io
 
     Usage:
-      faunus [-q] [--verbosity <N>] [--nobar] [--nopfx] [--notips] [--nofun] [--state=<file>] [--input=<file>] [--output=<file>]
+      faunus [-q] [--verbosity <N>] [--nobar] [--nopfx] [--notips] [--nofun] [--state=<file>] [--input=<file>] [--output=<file>] [--positions=<file>]
       faunus (-h | --help)
       faunus --version
       faunus test <doctest-options>...
 
     Options:
-      -i <file> --input <file>   Input file [default: /dev/stdin].
-      -o <file> --output <file>  Output file [default: out.json].
-      -s <file> --state <file>   State file to start from (.json/.ubj).
-      -v <N> --verbosity <N>     Log verbosity level (0 = off, 1 = critical, ..., 6 = trace) [default: 4]
-      -q --quiet                 Less verbose output. It implicates -v0 --nobar --notips --nofun.
-      -h --help                  Show this screen.
-      --nobar                    No progress bar.
-      --nopfx                    Do not prefix input file with MPI rank.
-      --notips                   Do not give input assistance
-      --nofun                    No fun
-      --version                  Show version.
+      -i <file> --input <file>         Input file [default: /dev/stdin].
+      -o <file> --output <file>        Output file [default: out.json].
+      -s <file> --state <file>         State file to start from (.json/.ubj).
+      -p <file> --positions <file>     Overwrite initial positions (xyz, gro, etc.).
+      -v <N> --verbosity <N>           Log verbosity level (0 = off, 1 = critical, ..., 6 = trace) [default: 4]
+      -q --quiet                       Less verbose output. It implicates -v0 --nobar --notips --nofun.
+      -h --help                        Show this screen.
+      --nobar                          No progress bar.
+      --nopfx                          Do not prefix input file with MPI rank.
+      --notips                         Do not give input assistance
+      --nofun                          No fun
+      --version                        Show version.
 
     Multiple processes using MPI:
 
@@ -77,15 +82,12 @@ static const char USAGE[] =
 )";
 
 int main(int argc, const char** argv) {
-    if (argc > 1) { // run unittests if the first argument equals "test"
-        if (std::string(argv[1]) == "test") {
-            return runUnittests(argc, argv);
-        }
+    if (argc > 1 && std::string(argv[1]) == "test") { // run unittests if the first argument equals "test"
+        return runUnittests(argc, argv);
     }
     bool fun = false;   //!< enable utterly unnecessarily stuff?
     bool quiet = false; //!< hold kaje?
     try {
-        Faunus::MPI::mpi.init(); // initialize MPI, if available
         const auto starting_time = std::chrono::steady_clock::now();
         const auto version = versionString();
         auto args = docopt::docopt(USAGE, {argv + 1, argv + argc}, true, version);
@@ -94,16 +96,24 @@ int main(int argc, const char** argv) {
         setInformationLevelAndLoggers(quiet, args);
 
         const auto input = getUserInput(args);
-        MetropolisMonteCarlo simulation(input, Faunus::MPI::mpi);
+
+        pc::temperature = input.at("temperature").get<double>() * 1.0_K;
+        setRandomNumberGenerator(input);
+
+        MetropolisMonteCarlo simulation(input);
         loadState(args, simulation);
         checkElectroNeutrality(simulation);
         Analysis::CombinedAnalysis analysis(input.at("analysis"), simulation.getSpace(), simulation.getHamiltonian());
 
-        const bool show_progress = !quiet && !args["--nobar"].asBool();
+        bool show_progress = !quiet && !args["--nobar"].asBool();
+#ifdef ENABLE_MPI
+        if (!Faunus::MPI::mpi.isMaster()) {
+            show_progress = false; // show progress only for root rank
+        }
+#endif
         mainLoop(show_progress, input, simulation, analysis); // run simulation!
 
         saveOutput(starting_time, args, simulation, analysis);
-        Faunus::MPI::mpi.finalize();
         return EXIT_SUCCESS;
 
     } catch (std::exception& e) {
@@ -112,6 +122,12 @@ int main(int argc, const char** argv) {
             playRetroMusic();
         }
         return EXIT_FAILURE;
+    }
+}
+void setRandomNumberGenerator(const json& input) {
+    if (auto it = input.find("random"); it != input.end()) {
+        from_json(*it, Move::MoveBase::slump); // static --> shared for all moves
+        from_json(*it, Faunus::random);
     }
 }
 
@@ -134,20 +150,23 @@ void showErrorMessage(std::exception& exception) {
 }
 
 void playRetroMusic() {
+#ifdef ENABLE_MPI
+    if (!Faunus::MPI::mpi.isMaster()) {
+        return;
+    }
+#endif
 #ifdef ENABLE_SID
     using std::chrono_literals::operator""s;
     using std::chrono_literals::operator""ns;
-    if (MPI::mpi.isMaster()) {
-        if (auto player = createLoadedSIDplayer()) { // create C64 SID emulation and load a random tune
-            faunus_logger->info("error message music '{}' by {}, {} (6502/SID emulation)", player->title(),
-                                player->author(), player->info());
-            faunus_logger->info("\033[1mpress ctrl-c to quit\033[0m");
-            player->start();                                                        // start music
-            std::this_thread::sleep_for(10ns);                                      // short delay
-            std::this_thread::sleep_until(std::chrono::system_clock::now() + 240s); // play for 4 minutes, then exit
-            player->stop();
-            std::cout << std::endl;
-        }
+    if (auto player = createLoadedSIDplayer()) { // create C64 SID emulation and load a random tune
+        faunus_logger->info("error message music '{}' by {}, {} (6502/SID emulation)", player->title(),
+                            player->author(), player->info());
+        faunus_logger->info("\033[1mpress ctrl-c to quit\033[0m");
+        player->start();                                                        // start music
+        std::this_thread::sleep_for(10ns);                                      // short delay
+        std::this_thread::sleep_until(std::chrono::system_clock::now() + 240s); // play for 4 minutes, then exit
+        player->stop();
+        std::cout << std::endl;
     }
 #endif
 }
@@ -192,22 +211,24 @@ void mainLoop(bool show_progress, const json& json_in, MetropolisMonteCarlo& sim
     auto progress_tracker = createProgressTracker(show_progress, macro * micro);
     for (int i = 0; i < macro; i++) {
         for (int j = 0; j < micro; j++) {
-            if (progress_tracker && MPI::mpi.isMaster()) {
-                if (++(*progress_tracker) % 10 == 0) {
-                    progress_tracker->display();
-                }
-            }
-            simulation.move();
+            simulation.sweep();
             analysis.sample();
+            showProgress(progress_tracker);
         }                   // end of micro steps
         analysis.to_disk(); // save analysis to disk
     }                       // end of macro steps
-    if (progress_tracker && MPI::mpi.isMaster()) {
+    if (progress_tracker) {
         progress_tracker->done();
     }
     const double drift_tolerance = 1e-9;
     const auto level = simulation.relativeEnergyDrift() < drift_tolerance ? spdlog::level::info : spdlog::level::warn;
     faunus_logger->log(level, "relative energy drift = {:.3E}", simulation.relativeEnergyDrift());
+}
+
+void showProgress(std::shared_ptr<ProgressIndicator::ProgressTracker>& progress_tracker) {
+    if (progress_tracker && (++(*progress_tracker) % 10 == 0)) {
+        progress_tracker->display();
+    }
 }
 
 void checkElectroNeutrality(MetropolisMonteCarlo& simulation) {
@@ -258,12 +279,16 @@ std::pair<std::string, int> findSIDsong() {
         // look for json file with hvsc sid tune names
         std::string pfx;
         json json_music;
-        for (std::string dir :
-             {FAUNUS_BINARY_DIR, FAUNUS_INSTALL_PREFIX "/share/faunus/"}) { // installed and uninstalled cmake builds
-            json_music = Faunus::openjson(dir + "/sids/music.json", false);
-            if (!json_music.empty()) {
-                pfx = dir + "/";
-                break;
+        for (std::string dir : {FAUNUS_BINARY_DIR, FAUNUS_INSTALL_PREFIX "/share/faunus/"}) {
+            try {
+                // look at installed and uninstalled cmake builds
+                json_music = Faunus::openjson(dir + "/sids/music.json");
+                if (!json_music.empty()) {
+                    pfx = dir + "/";
+                    break;
+                }
+            } catch (...) {
+                // ignore any error
             }
         }
         if (not json_music.empty()) {
@@ -300,21 +325,17 @@ std::shared_ptr<CPPSID::Player> createLoadedSIDplayer() {
 #endif
 
 std::shared_ptr<ProgressIndicator::ProgressTracker> createProgressTracker(bool show_progress, unsigned int steps) {
-    using std::chrono::milliseconds;
-    using std::chrono::minutes;
-    std::shared_ptr<ProgressIndicator::ProgressTracker> tracker = nullptr;
-    if (show_progress) {
-        if (static_cast<bool>(isatty(fileno(stdout)))) { // show a progress bar on the console
-            tracker = std::make_shared<ProgressIndicator::ProgressBar>(steps);
-        } else { // not in a console
-            tracker = std::make_shared<ProgressIndicator::TaciturnDecorator>(
-                // hence print a new line
-                std::make_shared<ProgressIndicator::ProgressLog>(steps),
-                // at most every 10 minutes or after 0.5% of progress, whatever comes first
-                std::chrono::duration_cast<milliseconds>(minutes(10)), 0.005);
-        }
+    if (!show_progress) {
+        return nullptr;
     }
-    return tracker;
+    if (static_cast<bool>(isatty(fileno(stdout)))) { // show a progress bar on the console
+        return std::make_shared<ProgressIndicator::ProgressBar>(steps);
+    }
+    return std::make_shared<ProgressIndicator::TaciturnDecorator>(
+        // hence print a new line
+        std::make_shared<ProgressIndicator::ProgressLog>(steps),
+        // at most every 10 minutes or after 0.5% of progress, whatever comes first
+        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::minutes(10)), 0.005);
 }
 
 json getUserInput(docopt::Options& args) {
@@ -324,11 +345,10 @@ json getUserInput(docopt::Options& args) {
             std::cin >> j;
         } else {
             if (!args["--nopfx"].asBool()) {
-                filename = MPI::prefix + filename;
+                filename = Faunus::MPI::prefix + filename;
             }
-            j = openjson(filename);
+            j = loadJSON(filename);
         }
-        pc::temperature = j.at("temperature").get<double>() * 1.0_K;
         return j;
     } catch (json::parse_error& e) {
         faunus_logger->error(e.what());
@@ -336,9 +356,42 @@ json getUserInput(docopt::Options& args) {
     }
 }
 
+/**
+ * @brief Overwrites all coordinates in the given simulation object (space and trial_space).
+ *
+ * The given file name should be one of the known type (xyz, pqr, gro, ...) and only
+ * the _coordinates_ will be copied. All other properties are unused.
+ */
+void loadCoordinates(std::string_view filename, MetropolisMonteCarlo& simulation) {
+    auto& space = simulation.getSpace();
+    auto& trial_space = simulation.getTrialSpace();
+    auto source = Faunus::loadStructure(filename, false);
+    if (source.size() > space.particles.size()) {
+        throw ConfigurationError("too many particles in {}", filename);
+    }
+    faunus_logger->info("overwriting {} of {} positions using {}", source.size(), space.particles.size(), filename);
+    auto copy_f = [](const Particle& source, Particle& destination) {
+        destination.pos = source.pos;
+        if (source.hasExtension()) {
+            auto& ext = destination.getExt();
+            if (source.getExt().isCylindrical() > pc::epsilon_dbl) {
+                ext.scdir = source.getExt().scdir;
+                ext.patchdir = source.getExt().patchdir;
+                ext.mu = source.getExt().mu;
+                ext.mulen = source.getExt().mulen;
+                ext.Q = source.getExt().Q;
+                ext.setDirections(destination.traits().sphero_cylinder, source.getExt().scdir,
+                                  source.getExt().patchdir);
+            }
+        }
+    };
+    space.updateParticles(source.begin(), source.end(), space.particles.begin(), copy_f);
+    trial_space.updateParticles(source.begin(), source.end(), trial_space.particles.begin(), copy_f);
+}
+
 void loadState(docopt::Options& args, MetropolisMonteCarlo& simulation) {
     if (args["--state"]) {
-        const auto statefile = MPI::prefix + args["--state"].asString();
+        const auto statefile = Faunus::MPI::prefix + args["--state"].asString();
         const auto suffix = statefile.substr(statefile.find_last_of('.') + 1);
         const bool binary = (suffix == "ubj");
         auto mode = std::ios_base::in;
@@ -362,20 +415,21 @@ void loadState(docopt::Options& args, MetropolisMonteCarlo& simulation) {
             throw std::runtime_error("state file error -> "s + statefile);
         }
     }
+    if (args["--positions"]) {
+        const auto positionfile = MPI::prefix + args["--positions"].asString();
+        loadCoordinates(positionfile, simulation);
+    }
 }
 
 template <typename TimePoint>
 void saveOutput(TimePoint& starting_time, docopt::Options& args, MetropolisMonteCarlo& simulation,
                 const Analysis::CombinedAnalysis& analysis) {
 
-    if (std::ofstream stream(MPI::prefix + args["--output"].asString()); stream) {
+    if (std::ofstream stream(Faunus::MPI::prefix + args["--output"].asString()); stream) {
         json j;
         to_json(j, simulation);
         j["relative drift"] = simulation.relativeEnergyDrift();
         j["analysis"] = analysis;
-        if (MPI::mpi.nproc() > 1) {
-            j["mpi"] = MPI::mpi;
-        }
 #ifdef GIT_COMMIT_HASH
         j["git revision"] = GIT_COMMIT_HASH;
 #endif

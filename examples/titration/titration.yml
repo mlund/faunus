@@ -113,6 +113,7 @@ analysis:
     - chargefluctuations: {nstep: 5, molecule: protein, pqrfile: avgcharge.pqr} # charge analysis of all sites
     - multipole: {nstep: 5}                         # molecular charge, capacitance and dipole moment
     - systemenergy: {file: energy.dat, nstep: 10} # track total system energy
-    - density: {nstep: 5, nskip: 1000}             # monitors salt density
+    - atom_density: {nstep: 5, nskip: 1000}             # monitors salt density
+    - molecule_density: {nstep: 5, nskip: 1000}             # monitors salt density
     - savestate: {file: state.json}
 

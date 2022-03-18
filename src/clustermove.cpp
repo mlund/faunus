@@ -1,9 +1,8 @@
 #include "clustermove.h"
 #include "aux/eigensupport.h"
-#include <algorithm>
 #include <range/v3/view/cartesian_product.hpp>
 #include <range/v3/range/conversion.hpp>
-#include <set>
+#include <range/v3/algorithm/for_each.hpp>
 
 namespace Faunus {
 namespace Move {
@@ -12,23 +11,20 @@ ClusterShapeAnalysis::ClusterShapeAnalysis(bool shape_anisotropy_use_com, const 
                                            bool dump_pqr_files)
     : save_pqr_files(dump_pqr_files), shape_anisotropy_use_com(shape_anisotropy_use_com) {
     if (!filename.empty()) {
-        if (stream = IO::openCompressedOutputStream(MPI::prefix + filename); !*stream) { // may be gzip compressed
-            throw std::runtime_error("could not create "s + filename);
-        } else {
-            *stream << "# size seed shape_anisotropy\n";
-        }
+        stream = IO::openCompressedOutputStream(MPI::prefix + filename, true);
+        *stream << "# size seed shape_anisotropy\n";
     }
 }
 ClusterShapeAnalysis::ClusterShapeAnalysis(const json &j)
     : ClusterShapeAnalysis(j.value("com", true), j.value("file", std::string()), j.value("save_pqr", false)) {}
 
 decltype(ClusterShapeAnalysis::pqr_distribution)::iterator ClusterShapeAnalysis::findPQRstream(size_t cluster_size) {
-    if (auto it = pqr_distribution.find(cluster_size); it == pqr_distribution.end()) {
+    auto it = pqr_distribution.find(cluster_size);
+    if (it == pqr_distribution.end()) {
         const std::string file = MPI::prefix + fmt::format("clustersize{}.pqr", cluster_size);
         return pqr_distribution.emplace(cluster_size, std::ofstream(file)).first;
-    } else {
-        return it;
     }
+    return it;
 }
 
 void to_json(json &j, const ClusterShapeAnalysis &shape) {
@@ -39,7 +35,8 @@ void to_json(json &j, const ClusterShapeAnalysis &shape) {
     }
 }
 
-FindCluster::FindCluster(Space &spc, const json &j) : spc(spc) {
+FindCluster::FindCluster(const Space& spc, const json& j)
+    : spc(spc) {
     single_layer = j.value("single_layer", false);
     if (j.count("spread")) {
         faunus_logger->error("cluster: 'spread' is deprecated, use 'single_layer' instead");
@@ -54,9 +51,9 @@ FindCluster::FindCluster(Space &spc, const json &j) : spc(spc) {
     parseThresholds(j.at("threshold"));
 }
 
-double FindCluster::clusterProbability(const FindCluster::Tgroup &group1, const FindCluster::Tgroup &group2) const {
+double FindCluster::clusterProbability(const Group& group1, const Group& group2) const {
     if (!group1.empty() and !group2.empty()) {
-        if (spc.geo.sqdist(group1.cm, group2.cm) <= thresholds_squared(group1.id, group2.id)) {
+        if (spc.geometry.sqdist(group1.mass_center, group2.mass_center) <= thresholds_squared(group1.id, group2.id)) {
             return 1.0;
         }
     }
@@ -72,16 +69,16 @@ double FindCluster::clusterProbability(const FindCluster::Tgroup &group1, const 
  * Atomic groups and inactive groups are ignored.
  */
 void FindCluster::updateMoleculeIndex() {
-    auto to_group_index = [&](const Tgroup &group) { return &group - &spc.groups.front(); };
-    auto matching_molid = [&](const Tgroup &group) {
+    namespace rv = ranges::cpp20::views;
+    auto group_to_index = [&](auto& group) { return &group - &spc.groups.front(); };
+    auto matching_molid = [&](auto& group) {
         if (group.isAtomic() || group.end() != group.trueend()) {
             return false; // skip atomic and incomplete groups
-        } else {
-            return std::binary_search(molids.begin(), molids.end(), group.id);
         }
+        return std::binary_search(molids.begin(), molids.end(), group.id);
     };
-    molecule_index = spc.groups | ranges::cpp20::views::filter(matching_molid) |
-                     ranges::cpp20::views::transform(to_group_index) | ranges::to<decltype(molecule_index)>();
+    molecule_index = spc.groups | rv::filter(matching_molid) | rv::transform(group_to_index) |
+                     ranges::to<decltype(molecule_index)>();
 }
 
 void FindCluster::registerSatellites(const std::vector<std::string> &satellite_names) {
@@ -110,7 +107,7 @@ void FindCluster::parseThresholds(const json &j) {
             thresholds_squared.set(id1, id2, std::pow(j.get<double>(), 2));
         }
     } else if (j.is_object()) { // threshold is given as pairs of clustering molecules
-        const int threshold_combinations = molids.size() * (molids.size() + 1) / 2; // N*(N+1)/2
+        const auto threshold_combinations = molids.size() * (molids.size() + 1) / 2; // N*(N+1)/2
         if (j.size() != threshold_combinations) {
             throw ConfigurationError(
                 "exactly {} molecule pairs must be given in threshold matrix to cover all combinations",
@@ -137,13 +134,12 @@ void FindCluster::parseThresholds(const json &j) {
  */
 std::optional<size_t> FindCluster::findSeed(Random &random) {
     updateMoleculeIndex();
-    auto avoid_satellites = [&](auto index) { return (satellites.count(spc.groups[index].id) == 0); };
+    auto avoid_satellites = [&](auto index) { return (satellites.count(spc.groups.at(index).id) == 0); };
     auto not_satellites = molecule_index | ranges::cpp20::views::filter(avoid_satellites);
     if (ranges::cpp20::empty(not_satellites)) {
         return std::nullopt;
-    } else {
-        return *random.sample(not_satellites.begin(), not_satellites.end());
     }
+    return *random.sample(not_satellites.begin(), not_satellites.end());
 }
 
 /**
@@ -154,8 +150,9 @@ std::optional<size_t> FindCluster::findSeed(Random &random) {
  *          can be safely rotated in a PBC environment
  */
 std::pair<std::vector<size_t>, bool> FindCluster::findCluster(size_t seed_index) {
-    assert(seed_index < spc.p.size());
-    std::set<size_t> pool(molecule_index.begin(), molecule_index.end());
+    namespace rv = ranges::cpp20::views;
+    assert(seed_index < spc.particles.size());
+    std::set<size_t> pool(molecule_index.begin(), molecule_index.end()); // decreasing pool of candidate groups
     assert(pool.count(seed_index) == 1);
 
     std::vector<size_t> cluster;            // molecular index
@@ -166,12 +163,12 @@ std::pair<std::vector<size_t>, bool> FindCluster::findCluster(size_t seed_index)
     // cluster search algorithm
     for (auto it1 = cluster.begin(); it1 != cluster.end(); it1++) {
         for (auto it2 = pool.begin(); it2 != pool.end();) {
-            double P = clusterProbability(spc.groups.at(*it1), spc.groups.at(*it2)); // probability to cluster
-            if (MoveBase::slump() <= P) {
-                cluster.push_back(*it2); // add to cluster
-                it2 = pool.erase(it2);   // erase and advance (c++11)
+            const auto p = clusterProbability(spc.groups.at(*it1), spc.groups.at(*it2)); // probability to cluster
+            if (MoveBase::slump() <= p) {                                                // is group part of cluster?
+                cluster.push_back(*it2);                                                 // yes, expand cluster...
+                it2 = pool.erase(it2);                                                   // ...and remove from pool
             } else {
-                ++it2;
+                ++it2; // not part of cluster, move along to next group in pool
             }
         }
         if (single_layer) { // stop after one iteration around 'seed_index'
@@ -180,18 +177,17 @@ std::pair<std::vector<size_t>, bool> FindCluster::findCluster(size_t seed_index)
     }
     std::sort(cluster.begin(), cluster.end()); // required for correct energy evaluation
 
-    // check if cluster is too large to be rotated
-    // (larger than half the box length)
+    // check if cluster is too large to be rotated (larger than half the box length)
+    auto mass_centers = cluster | rv::transform([&](auto i) -> const Point& { return spc.groups.at(i).mass_center; });
+    const auto max = 0.5 * spc.geometry.getLength().minCoeff();
     bool safe_to_rotate = true;
-    const double max = spc.geo.getLength().minCoeff() / 2;
-    for (auto i : cluster) {
-        for (auto j : cluster) {
-            if (j > i) {
-                if (spc.geo.sqdist(spc.groups.at(i).cm, spc.groups.at(j).cm) >= max * max) {
-                    safe_to_rotate = false;
-                    break;
-                }
+    for (auto i = mass_centers.begin(); i != mass_centers.end(); ++i) {
+        for (auto j = i; ++j != mass_centers.end();) {
+            if (spc.geometry.sqdist(*i, *j) < max * max) {
+                continue;
             }
+            safe_to_rotate = false;
+            break;
         }
     }
     assert(std::adjacent_find(cluster.begin(), cluster.end()) == cluster.end()); // check for duplicates
@@ -204,9 +200,9 @@ void to_json(json &j, const FindCluster &cluster) {
     for (const auto k : cluster.molids) {
         for (const auto l : cluster.molids) {
             if (k >= l) {
-                const std::string key = Faunus::molecules[k].name + " " + Faunus::molecules[l].name;
+                const auto key = fmt::format("{} {}", Faunus::molecules.at(k).name, Faunus::molecules.at(l).name);
                 _j[key] = std::sqrt(cluster.thresholds_squared(k, l));
-                _roundjson(_j[key], 3);
+                roundJSON(_j[key], 3);
             }
         }
     }
@@ -221,106 +217,74 @@ void to_json(json &j, const FindCluster &cluster) {
 }
 
 void Cluster::_to_json(json &j) const {
-    j = {{"dir", translation_direction},
-         {"dp", translation_displacement_factor},
-         {"dprot", rotation_displacement_factor},
-         {"dirrot", rotation_axis},
-         {"√⟨r²⟩", std::sqrt(translational_mean_square_displacement.avg())},
-         {"√⟨θ²⟩/°", std::sqrt(rotational_mean_square_displacement.avg()) / 1.0_deg},
-         {"bias rejection rate", static_cast<double>(bias_rejected) / cnt},
+    j = {{"dir", translate->direction},
+         {"dp", translate->displacement_factor},
+         {"dprot", rotate->displacement_factor},
+         {"dirrot", rotate->direction},
+         {"√⟨r²⟩", std::sqrt(translate->mean_square_displacement.avg())},
+         {"√⟨θ²⟩/°", std::sqrt(rotate->mean_square_displacement.avg()) / 1.0_deg},
+         {"bias rejection rate", static_cast<double>(bias_rejected) / number_of_attempted_moves},
          {"⟨N⟩", average_cluster_size.avg()},
          {"cluster analysis", *shape_analysis},
          {"cluster analysis interval", shape_analysis_interval}};
     Move::to_json(j, *find_cluster);
-    _roundjson(j, 3);
+    roundJSON(j, 3);
 }
 
 void Cluster::_from_json(const json &j) {
-    translation_displacement_factor = j.at("dp").get<double>();
-    translation_direction = j.value("dir", Point(1, 1, 1));
-    rotation_axis = j.value("dirrot", Point(0, 0, 0)); // predefined axis of rotation
-    rotation_axis.normalize();                         // make sure dirrot is a unit-vector
-    rotation_displacement_factor = j.at("dprot");
-    find_cluster = std::make_shared<FindCluster>(spc, j);
+    translate = std::make_unique<GroupTranslator>(j.at("dp").get<double>(), j.value("dir", Point(1.0, 1.0, 1.0)));
+    rotate = std::make_unique<GroupRotator>(j.at("dprot"), j.value("dirrot", Point(0, 0, 0)));
+    find_cluster = std::make_unique<FindCluster>(spc, j);
     repeat = std::max<size_t>(1, find_cluster->molecule_index.size());
 
     auto analysis_json = j.value("analysis", json::object());
-    shape_analysis = std::make_shared<ClusterShapeAnalysis>(analysis_json);
+    shape_analysis = std::make_unique<ClusterShapeAnalysis>(analysis_json);
     shape_analysis_interval = analysis_json.value("interval", 10);
 }
 
-Point Cluster::clusterMassCenter(const std::vector<size_t> &cluster_index) const {
-    auto boundary = spc.geo.getBoundaryFunc();
-    double mass_sum = 0.0;
-    Point mass_center(0, 0, 0);
-    Point origin = spc.groups[*cluster_index.begin()].cm;
-    for (auto i : cluster_index) { // loop over clustered molecules (index)
-        Point r = spc.groups[i].cm - origin;
-        boundary(r);
-        const double mass = spc.groups[i].mass();
-        mass_center += mass * r;
-        mass_sum += mass;
-    }
-    mass_center = mass_center / mass_sum + origin;
-    boundary(mass_center);
-    return mass_center;
+/**
+ * @param indices Indices of groups in cluster
+ * @return Mass center of the cluster
+ */
+Point Cluster::clusterMassCenter(const std::vector<size_t>& indices) const {
+    assert(!indices.empty());
+    namespace rv = ranges::cpp20::views;
+    auto groups = indices | rv::transform(index_to_group);
+    auto positions = groups | rv::transform(&Group::mass_center);
+    auto masses = groups | rv::transform(&Group::mass);
+    return Geometry::weightedCenter(positions, masses, spc.geometry.getBoundaryFunc(), -groups.begin()->mass_center);
 }
 
-Eigen::Quaterniond Cluster::setRandomRotation() {
-    Point axis = (rotation_axis.count() > 0) ? rotation_axis : ranunit(slump);
-    rotation_angle = rotation_displacement_factor * (slump() - 0.5);
-    return static_cast<Eigen::Quaterniond>(Eigen::AngleAxisd(rotation_angle, axis));
+void Cluster::_move(Change& change) {
+    clearForMove();
+    auto seed_index = find_cluster->findSeed(slump);
+    if (!seed_index) {
+        return;
+    }
+    const auto [cluster, safe_to_rotate] = find_cluster->findCluster(seed_index.value());
+    const Point cluster_mass_center = clusterMassCenter(cluster); // cluster mass center
+    auto groups = cluster | ranges::cpp20::views::transform(index_to_group);
+
+    average_cluster_size += cluster.size(); // average cluster size
+    if (number_of_attempted_moves % shape_analysis_interval == 0) {
+        shape_analysis->sample(groups, cluster_mass_center, spc);
+    }
+
+    using ranges::cpp20::for_each;
+    auto boundary = spc.geometry.getBoundaryFunc();
+    if (safe_to_rotate) {
+        for_each(groups, rotate->getLambda(boundary, cluster_mass_center, slump));
+    }
+    for_each(groups, translate->getLambda(boundary, slump));
+
+    calculateBias(seed_index.value(), cluster);
+    setChange(change, cluster);
 }
 
-void Cluster::_move(Change &change) {
-    _bias = 0.0;
-    rotation_angle = 0.0;
-    translation_displacement.setZero();
-    if (auto seed_index = find_cluster->findSeed(slump)) {
-        const auto [cluster, safe_to_rotate] = find_cluster->findCluster(seed_index.value());
-        auto cluster_groups = cluster | ranges::cpp20::views::transform(
-                                            [&](size_t index) -> Space::Tgroup & { return spc.groups.at(index); });
-
-        const auto boundary = spc.geo.getBoundaryFunc();
-        const Point COM = clusterMassCenter(cluster); // cluster mass center
-
-        if (cnt % shape_analysis_interval == 0) {
-            shape_analysis->sample(cluster_groups, COM, spc);
-        }
-
-        if (safe_to_rotate) {
-            const auto quaternion = setRandomRotation(); // set rotation
-            auto rotate_group = [&](Tgroup &group) {
-                Geometry::rotate(group.begin(), group.end(), quaternion, boundary, -COM);
-                group.cm = group.cm - COM;
-                boundary(group.cm);
-                group.cm = quaternion * group.cm + COM;
-                boundary(group.cm);
-            };
-            std::for_each(cluster_groups.begin(), cluster_groups.end(), rotate_group);
-        }
-
-        translation_displacement = ranunit(slump, translation_direction) * translation_displacement_factor * slump();
-        auto translate_group = [&](Tgroup &group) { group.translate(translation_displacement, boundary); };
-        std::for_each(cluster_groups.begin(), cluster_groups.end(), translate_group);
-
-        biasRejectOrAccept(seed_index.value(), cluster);
-
-        average_cluster_size += cluster.size(); // average cluster size
-        change = createChangeObject(cluster);
-
-        if constexpr (false) { // debug code: check if cluster mass center movement matches displacement
-            if (_bias == 0) {
-                auto newCOM = clusterMassCenter(cluster);             // org. cluster center
-                Point d = spc.geo.vdist(COM, newCOM);                 // distance between new and old COM
-                double _zero = (d + translation_displacement).norm(); // |d+dp| should ideally be zero...
-                if (std::fabs(_zero) > 1e-9) {
-                    _bias = pc::infty; // by setting bias=oo the move is rejected
-                    faunus_logger->warn("Skipping too large cluster: COM difference = {}", _zero);
-                }
-            }
-        }
-    }
+void Cluster::clearForMove() {
+    translate->current_displacement.setZero();
+    rotate->current_displacement = 0.0;
+    bias_energy = 0.0;
 }
 
 /**
@@ -328,12 +292,12 @@ void Cluster::_move(Change &change) {
  * Current implementation works only for the binary 0/1 probability function
  * currently implemented in `findCluster()`.
  */
-void Cluster::biasRejectOrAccept(const size_t seed_index, const std::vector<size_t> &cluster_index) {
-    auto [aftercluster, safe_to_rotate] = find_cluster->findCluster(seed_index);
+void Cluster::calculateBias(const size_t seed_index, const std::vector<size_t>& cluster_index) {
+    [[maybe_unused]] auto [aftercluster, safe_to_rotate] = find_cluster->findCluster(seed_index);
     if (aftercluster == cluster_index) {
-        _bias = 0.0;
+        bias_energy = 0.0;
     } else {
-        _bias = pc::infty; // bias is infinite --> reject
+        bias_energy = pc::infty; // bias is infinite --> reject
         bias_rejected++;   // count how many times we reject due to bias
     }
 }
@@ -341,34 +305,91 @@ void Cluster::biasRejectOrAccept(const size_t seed_index, const std::vector<size
 /**
  * Update change object with changed molecules
  */
-Change Cluster::createChangeObject(const std::vector<size_t> &cluster_index) const {
-    Change change;
-    change.groups.reserve(cluster_index.size());
-    std::for_each(cluster_index.begin(), cluster_index.end(), [&](auto index) { // register changes
-        change.groups.emplace_back();
-        auto &change_data = change.groups.back();
+void Cluster::setChange(Change& change, const std::vector<size_t>& group_indices) const {
+    change.groups.reserve(group_indices.size());
+    std::for_each(group_indices.begin(), group_indices.end(), [&](auto index) { // register changes
+        auto& change_data = change.groups.emplace_back();
         change_data.all = true;
         change_data.internal = false;
-        change_data.index = index;
+        change_data.group_index = index;
     });
-    change.moved2moved = false; // do not calc. internal cluster energy
-    return change;
+    change.moved_to_moved_interactions = false; // do not calc. internal cluster energy
 }
 
-double Cluster::bias(Change &, double, double) { return _bias; }
-
-void Cluster::_reject(Change &) {
-    translational_mean_square_displacement += 0.0;
-    rotational_mean_square_displacement += 0.0;
-}
-void Cluster::_accept(Change &) {
-    translational_mean_square_displacement += translation_displacement.squaredNorm();
-    rotational_mean_square_displacement += rotation_angle * rotation_angle;
+double Cluster::bias([[maybe_unused]] Change& change, [[maybe_unused]] double old_energy,
+                     [[maybe_unused]] double new_energy) {
+    return bias_energy;
 }
 
-Cluster::Cluster(Space &spc, std::string name, std::string cite) : MoveBase(spc, name, cite) { repeat = -1; }
+void Cluster::_reject([[maybe_unused]] Change& change) {
+    translate->mean_square_displacement += 0.0;
+    rotate->mean_square_displacement += 0.0;
+}
 
-Cluster::Cluster(Space &spc) : Cluster(spc, "cluster", "doi:10/cj9gnn") {}
+void Cluster::_accept([[maybe_unused]] Change& change) {
+    translate->mean_square_displacement += translate->current_displacement.squaredNorm();
+    rotate->mean_square_displacement += std::pow(rotate->current_displacement, 2);
+}
+
+Cluster::Cluster(Space& spc, std::string_view name, std::string_view cite)
+    : MoveBase(spc, name, cite) {
+    repeat = -1;
+}
+
+Cluster::Cluster(Space& spc)
+    : Cluster(spc, "cluster", "doi:10/cj9gnn") {
+    index_to_group = [&](auto index) -> Group& { return this->spc.groups.at(index); };
+}
+
+// -------------------------------------------
+
+GroupMover::GroupMover(double displacement_factor, const Point& direction)
+    : displacement_factor(displacement_factor)
+    , direction(direction) {}
+
+// -------------------------------------------
+
+GroupTranslator::GroupTranslator(double displacement_factor, const Point& direction)
+    : GroupMover(displacement_factor, direction) {}
+
+/** Lambda to translate group in cluster. Will set a random displacement */
+std::function<void(Group&)> GroupTranslator::getLambda(Geometry::BoundaryFunction boundary, Random& slump) {
+    current_displacement = randomUnitVector(slump, direction) * displacement_factor * slump();
+    if (std::fabs(displacement_factor) <= pc::epsilon_dbl) { // if zero displacement...
+        return [](auto&) {};                                 // ...then return NOP lambda
+    }
+    return [&, boundary](Group& group) { group.translate(current_displacement, boundary); };
+}
+
+// -------------------------------------------
+
+GroupRotator::GroupRotator(double displacement_factor, const Point& rotation_axis)
+    : GroupMover(displacement_factor,
+                 (rotation_axis.squaredNorm() > pc::epsilon_dbl) ? rotation_axis.normalized() : Point::Zero()) {}
+
+Eigen::Quaterniond GroupRotator::setRandomRotation(Random& random) {
+    Point axis = (direction.squaredNorm() > pc::epsilon_dbl) ? direction : randomUnitVector(random);
+    current_displacement = displacement_factor * (random() - 0.5);
+    return static_cast<Eigen::Quaterniond>(Eigen::AngleAxisd(current_displacement, axis));
+}
+
+/** Lambda to rotate a group. Will set a random rotation axis and angle. */
+std::function<void(Group&)> GroupRotator::getLambda(Geometry::BoundaryFunction boundary, const Point& rotation_origin,
+                                                    Random& random) {
+    if (std::fabs(displacement_factor) <= pc::epsilon_dbl) { // if zero displacement...
+        return [](auto&) {};                                 // ...then return NOP lambda
+    }
+    auto quaternion = setRandomRotation(random);
+    return [=](Group& group) {
+        Geometry::rotate(group.begin(), group.end(), quaternion, boundary, -rotation_origin);
+        group.mass_center = group.mass_center - rotation_origin;
+        boundary(group.mass_center);
+        group.mass_center = quaternion * group.mass_center + rotation_origin;
+        boundary(group.mass_center);
+    };
+}
+
+// -------------------------------------------
 
 } // namespace Move
 } // namespace Faunus

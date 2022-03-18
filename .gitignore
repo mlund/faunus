@@ -75,6 +75,7 @@ out.cereal
 .idea/**/dictionaries
 .idea/**/shelf
 .idea/deployment.xml
+.idea/other.xml
 
 # Generated files
 .idea/**/contentModel.xml

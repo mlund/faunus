@@ -27,8 +27,8 @@ class ClusterShapeAnalysis {
         const Range &groups, const Point &mass_center_of_groups,
         const Geometry::BoundaryFunction boundary = [](auto &) {}) {
         using namespace ranges::cpp20::views;
-        auto positions = groups | transform([](const auto &group) { return group.cm; });
-        auto masses = groups | transform([](const auto &group) { return group.mass(); });
+        auto positions = groups | transform(&Group::mass_center);
+        auto masses = groups | transform(&Group::mass);
         return Geometry::gyration(positions.begin(), positions.end(), masses.begin(), mass_center_of_groups, boundary);
     }
 
@@ -38,8 +38,8 @@ class ClusterShapeAnalysis {
         const Range &groups, const Point &mass_center_of_groups,
         const Geometry::BoundaryFunction boundary = [](auto &) {}) {
         using namespace ranges::cpp20::views;
-        auto positions = groups | join | transform([](const auto &particle) { return particle.pos; });
-        auto masses = groups | join | transform([](const auto &particle) { return particle.traits().mw; });
+        auto positions = groups | join | transform(&Particle::pos);
+        auto masses = groups | join | transform(&Particle::traits) | transform(&AtomData::mw);
         return Geometry::gyration(positions.begin(), positions.end(), masses.begin(), mass_center_of_groups, boundary);
     }
 
@@ -50,9 +50,11 @@ class ClusterShapeAnalysis {
         const auto cluster_size = std::distance(groups.begin(), groups.end());
         Tensor gyration_tensor;
         if (shape_anisotropy_use_com) {
-            gyration_tensor = gyrationFromMassCenterPositions(groups, mass_center_of_groups, spc.geo.getBoundaryFunc());
+            gyration_tensor =
+                gyrationFromMassCenterPositions(groups, mass_center_of_groups, spc.geometry.getBoundaryFunc());
         } else {
-            gyration_tensor = gyrationFromParticlePositions(groups, mass_center_of_groups, spc.geo.getBoundaryFunc());
+            gyration_tensor =
+                gyrationFromParticlePositions(groups, mass_center_of_groups, spc.geometry.getBoundaryFunc());
         }
         const auto shape = Geometry::ShapeDescriptors(gyration_tensor);
         size_distribution[cluster_size]++;
@@ -66,8 +68,9 @@ class ClusterShapeAnalysis {
             it->second << fmt::format("REMARK   0 Sample number = {}\n", number_of_samples)
                        << fmt::format("REMARK   0 Relative shape anisotropy = {:.3f}\n",
                                       shape.relative_shape_anisotropy);
-
-            FormatPQR::save(it->second, groups, spc.geo.getLength(), FormatPQR::Style::PQR);
+            PQRWriter pqr;
+            pqr.style = PQRWriter::Style::PQR;
+            pqr.save(it->second, groups, spc.geometry.getLength());
         }
         ++number_of_samples;
     }
@@ -84,8 +87,7 @@ void to_json(json &j, const ClusterShapeAnalysis &shape);
  */
 class FindCluster {
   private:
-    typedef typename Space::Tgroup Tgroup;
-    Space &spc;
+    const Space& spc;
     bool single_layer = false;               //!< stop cluster search after first layer of neighbors
     std::vector<std::string> molecule_names; //!< names of molecules to be considered
     std::vector<int> molids;                 //!< molecule id's of molecules to be considered (must be sorted!)
@@ -93,7 +95,7 @@ class FindCluster {
     PairMatrix<double, true> thresholds_squared; //!< Cluster thresholds for pairs of groups
 
     void parseThresholds(const json &j); //!< Read thresholds from json input
-    double clusterProbability(const Tgroup &group1, const Tgroup &group2) const;
+    double clusterProbability(const Group& group1, const Group& group2) const;
     void registerSatellites(const std::vector<std::string> &); //!< Register satellites
     void updateMoleculeIndex();                                //!< update `molecule_index`
     friend void to_json(json &j, const FindCluster &cluster);
@@ -102,46 +104,73 @@ class FindCluster {
     std::vector<size_t> molecule_index;             //!< index of all possible molecules to be considered
     std::optional<size_t> findSeed(Random &random); //!< Find first group; exclude satellites
     std::pair<std::vector<size_t>, bool> findCluster(size_t seed_index); //!< Find cluster
-    FindCluster(Space &spc, const json &j);
+    FindCluster(const Space& spc, const json& j);
 };
 
 void to_json(json &j, const FindCluster &cluster); //!< Serialize to json
+
+/** @brief Helper base class for translating and rotating groups */
+class GroupMover {
+  public:
+    Average<double> mean_square_displacement; //!< Must be updated manually
+    const double displacement_factor;         //!< Displacement to be scaled by a random number
+    const Point direction;                    //!< Directions or axis of translation or rotation
+    GroupMover(double displacement_factor, const Point& direction);
+};
+
+/** @brief Helper class to translate a group */
+class GroupTranslator : public GroupMover {
+  public:
+    Point current_displacement = Point::Zero(); //!< Currently set displacement
+    GroupTranslator(double displacement_factor, const Point& direction = Point::Ones());
+    std::function<void(Group&)> getLambda(Geometry::BoundaryFunction boundary, Random& slump);
+};
+
+/** @brief Helper class to translate a group
+ *
+ * If `direction` is zero, then generate random rotation axis
+ */
+class GroupRotator : public GroupMover {
+  private:
+    Eigen::Quaterniond setRandomRotation(Random& random);
+
+  public:
+    double current_displacement = 0.0; //!< Current displacement angle
+    GroupRotator(double displacement_factor, const Point& rotation_axis = Point::Zero());
+    std::function<void(Group&)> getLambda(Geometry::BoundaryFunction boundary, const Point& rotation_origin,
+                                          Random& random); //!< Lambda to rotate group in cluster
+};
 
 /**
  * @brief Molecular cluster move
  */
 class Cluster : public MoveBase {
   private:
-    typedef typename Space::Tgroup Tgroup;
-    std::shared_ptr<FindCluster> find_cluster;
-    std::shared_ptr<ClusterShapeAnalysis> shape_analysis;
+    std::unique_ptr<FindCluster> find_cluster;
+    std::unique_ptr<ClusterShapeAnalysis> shape_analysis;
+    std::unique_ptr<GroupTranslator> translate; //!< Helper to translate group in cluster
+    std::unique_ptr<GroupRotator> rotate;       //!< Helper to rotate group in cluster
+
+    std::function<Group&(size_t)> index_to_group;
     Average<double> average_cluster_size;
-    Average<double> translational_mean_square_displacement;
-    Average<double> rotational_mean_square_displacement;
-    double _bias = 0;                           //!< Current bias energy (currently zero or infinity)
-    double translation_displacement_factor = 0; //!< User defined scaling of translation
-    double rotation_displacement_factor = 0;    //!< User defined scaling of rotation
-    double rotation_angle = 0;                  //!< Current rotation angle
+    double bias_energy = 0;                     //!< Current bias energy (currently zero or infinity)
     unsigned int bias_rejected = 0;             //!< Number of times rejection occurred due to bias rejection
     unsigned int shape_analysis_interval = 0;   //!< Number of sample events between shape analysis
-    Point translation_direction = {1, 1, 1};    //!< Directions which to translate
-    Point translation_displacement = {0, 0, 0}; //!< Current translational displacement
-    Point rotation_axis = {0, 0, 0};            //! predefined axis of rotation (if zero, generate randomly)
 
-    Point clusterMassCenter(const std::vector<size_t> &) const; //!< Calculates cluster mass center
-    Eigen::Quaterniond setRandomRotation();                     //!< Sets random rotation angle and axis
-    void _move(Change &change) override;                        //!< Performs the move
-    double bias(Change &, double, double) override; //!< adds extra energy change not captured by the Hamiltonian
-    void _reject(Change &) override;
-    void _accept(Change &) override;
-    void _to_json(json &j) const override;
-    void _from_json(const json &molid) override;
-    Change createChangeObject(const std::vector<size_t> &cluster_index) const;
-    void biasRejectOrAccept(const size_t seed_index, const std::vector<size_t> &cluster_index);
+    Point clusterMassCenter(const std::vector<size_t>& indices) const; //!< Calculates cluster mass center
+    void _move(Change& change) override;                               //!< Performs the move
+    double bias(Change& change, double old_energy,
+                double new_energy) override; //!< adds extra energy change not captured by the Hamiltonian
+    void _reject(Change& change) override;
+    void _accept(Change& change) override;
+    void _to_json(json& j) const override;
+    void _from_json(const json& j) override;
+    void setChange(Change& change, const std::vector<size_t>& group_indices) const;
+    void calculateBias(size_t seed_index, const std::vector<size_t>& cluster_index);
+    void clearForMove(); //!< Clear displacements and bias
 
   protected:
-    using MoveBase::spc;
-    Cluster(Space &spc, std::string name, std::string cite);
+    Cluster(Space& spc, std::string_view name, std::string_view cite);
 
   public:
     explicit Cluster(Space &spc);

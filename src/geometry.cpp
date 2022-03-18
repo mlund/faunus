@@ -4,8 +4,10 @@
 #include "average.h"
 #include "aux/eigensupport.h"
 #include <spdlog/spdlog.h>
+#include <cereal/types/memory.hpp>
 #include <cereal/archives/binary.hpp>
 #include <Eigen/Eigenvalues>
+#include <doctest/doctest.h>
 
 namespace Faunus::Geometry {
 
@@ -22,7 +24,8 @@ Eigen::Matrix<bool, 3, 1> BoundaryCondition::isPeriodic() const {
 GeometryImplementation::~GeometryImplementation() = default;
 
 Cuboid::Cuboid(const Point &side_length) {
-    boundary_conditions = BoundaryCondition(ORTHOGONAL, {Boundary::PERIODIC, Boundary::PERIODIC, Boundary::PERIODIC});
+    boundary_conditions =
+        BoundaryCondition(Coordinates::ORTHOGONAL, {Boundary::PERIODIC, Boundary::PERIODIC, Boundary::PERIODIC});
     setLength(side_length);
 }
 
@@ -41,21 +44,22 @@ double Cuboid::getVolume(int) const { return box.x() * box.y() * box.z(); }
 Point Cuboid::setVolume(double volume, const VolumeMethod method) {
     const double old_volume = getVolume();
     double alpha;
-    Point new_box, box_scaling;
+    Point new_box;
+    Point box_scaling;
     switch (method) {
-    case ISOTROPIC:
+    case VolumeMethod::ISOTROPIC:
         alpha = std::cbrt(volume / old_volume);
         box_scaling = {alpha, alpha, alpha};
         break;
-    case XY:
+    case VolumeMethod::XY:
         alpha = std::sqrt(volume / old_volume);
         box_scaling = {alpha, alpha, 1.0};
         break;
-    case Z:
+    case VolumeMethod::Z:
         alpha = volume / old_volume;
         box_scaling = {1.0, 1.0, alpha};
         break;
-    case ISOCHORIC:
+    case VolumeMethod::ISOCHORIC:
         // z is scaled by 1/alpha/alpha, x and y are scaled by alpha
         alpha = std::cbrt(volume / old_volume);
         box_scaling = {alpha, alpha, 1 / (alpha * alpha)};
@@ -138,7 +142,8 @@ void Cuboid::to_json(json &j) const { j = {{"length", box}}; }
 // =============== Slit ===============
 
 Slit::Slit(const Point &p) : Tbase(p) {
-    boundary_conditions = BoundaryCondition(ORTHOGONAL, {Boundary::PERIODIC, Boundary::PERIODIC, Boundary::FIXED});
+    boundary_conditions =
+        BoundaryCondition(Coordinates::ORTHOGONAL, {Boundary::PERIODIC, Boundary::PERIODIC, Boundary::FIXED});
 }
 
 Slit::Slit(double x, double y, double z) : Slit(Point(x, y, z)) {}
@@ -147,7 +152,8 @@ Slit::Slit(double x) : Slit(x, x, x) {}
 // =============== Sphere ===============
 
 Sphere::Sphere(double radius) : radius(radius) {
-    boundary_conditions = BoundaryCondition(ORTHOGONAL, {Boundary::FIXED, Boundary::FIXED, Boundary::FIXED});
+    boundary_conditions =
+        BoundaryCondition(Coordinates::ORTHOGONAL, {Boundary::FIXED, Boundary::FIXED, Boundary::FIXED});
 }
 
 Point Sphere::getLength() const { return {2.0 * radius, 2.0 * radius, 2.0 * radius}; }
@@ -173,7 +179,7 @@ double Sphere::getVolume(int dim) const {
 Point Sphere::setVolume(double volume, const VolumeMethod method) {
     const double old_radius = radius;
     Point box_scaling;
-    if (method == ISOTROPIC) {
+    if (method == VolumeMethod::ISOTROPIC) {
         radius = std::cbrt(volume / (4.0 / 3.0 * pc::pi));
         assert(std::fabs(getVolume() - volume) < 1e-6 && "error setting sphere volume");
     } else {
@@ -210,7 +216,9 @@ double Sphere::getRadius() const { return radius; }
 
 // =============== Hypersphere 2D ===============
 
-Hypersphere2d::Hypersphere2d(double radius) : Sphere(radius) { boundary_conditions = BoundaryCondition(NON3D); }
+Hypersphere2d::Hypersphere2d(double radius) : Sphere(radius) {
+    boundary_conditions = BoundaryCondition(Coordinates::NON3D);
+}
 
 Point Hypersphere2d::vdist(const Point &a, const Point &b) const {
     // ugly but works, needs fixing though...
@@ -240,7 +248,8 @@ const Eigen::Matrix3d HexagonalPrism::cartesian2rhombic = rhombic2cartesian.inve
 
 HexagonalPrism::HexagonalPrism(double side, double height) {
     // the current implementation is hardcoded as bellow and ignores other periodic_directions settings
-    boundary_conditions = BoundaryCondition(ORTHOHEXAGONAL, {Boundary::PERIODIC, Boundary::PERIODIC, Boundary::FIXED});
+    boundary_conditions =
+        BoundaryCondition(Coordinates::ORTHOHEXAGONAL, {Boundary::PERIODIC, Boundary::PERIODIC, Boundary::FIXED});
     set_box(side, height);
 }
 
@@ -258,19 +267,19 @@ Point HexagonalPrism::setVolume(double volume, const VolumeMethod method) {
     Point box_scaling;
 
     switch (method) {
-    case ISOTROPIC:
+    case VolumeMethod::ISOTROPIC:
         alpha = std::cbrt(volume / old_volume);
         box_scaling = {alpha, alpha, alpha};
         break;
-    case XY:
+    case VolumeMethod::XY:
         alpha = std::sqrt(volume / old_volume);
         box_scaling = {alpha, alpha, 1.0};
         break;
-    case Z:
+    case VolumeMethod::Z:
         alpha = volume / old_volume;
         box_scaling = {1.0, 1.0, alpha};
         break;
-    case ISOCHORIC:
+    case VolumeMethod::ISOCHORIC:
         // radius is scaled by alpha, z is scaled by 1/alpha/alpha
         alpha = std::cbrt(volume / old_volume);
         box_scaling = {alpha, alpha, 1.0 / (alpha * alpha)};
@@ -358,7 +367,8 @@ double HexagonalPrism::height() const { return box.z(); }
 // =============== Cylinder ===============
 
 Cylinder::Cylinder(double radius, double height) : radius(radius), height(height) {
-    boundary_conditions = BoundaryCondition(ORTHOGONAL, {Boundary::FIXED, Boundary::FIXED, Boundary::PERIODIC});
+    boundary_conditions =
+        BoundaryCondition(Coordinates::ORTHOGONAL, {Boundary::FIXED, Boundary::FIXED, Boundary::PERIODIC});
 }
 
 Point Cylinder::getLength() const { return {2.0 * radius, 2.0 * radius, height}; }
@@ -371,23 +381,23 @@ Point Cylinder::setVolume(double volume, const VolumeMethod method) {
     Point box_scaling;
 
     switch (method) {
-    case ISOTROPIC:
+    case VolumeMethod::ISOTROPIC:
         alpha = std::cbrt(volume / old_volume);
         radius *= alpha;
         height *= alpha;
         box_scaling = {alpha, alpha, alpha};
         break;
-    case XY: // earlier wrongly named ISOTROPIC!
+    case VolumeMethod::XY: // earlier wrongly named ISOTROPIC!
         alpha = std::sqrt(volume / old_volume);
         radius *= alpha;
         box_scaling = {alpha, alpha, 1.0};
         break;
-    case Z:
+    case VolumeMethod::Z:
         alpha = volume / old_volume;
         height *= alpha;
         box_scaling = {1.0, 1.0, alpha};
         break;
-    case ISOCHORIC:
+    case VolumeMethod::ISOCHORIC:
         // height is scaled by 1/alpha/alpha, radius is scaled by alpha
         alpha = std::cbrt(volume / old_volume);
         radius *= alpha;
@@ -442,7 +452,8 @@ void Cylinder::to_json(json &j) const { j = {{"radius", radius}, {"length", heig
 
 TruncatedOctahedron::TruncatedOctahedron(double side) : side(side) {
     // the current implementation is hardcoded as bellow and ignores other periodic_directions settings
-    boundary_conditions = BoundaryCondition(TRUNC_OCTAHEDRAL, {Boundary::PERIODIC, Boundary::PERIODIC, Boundary::PERIODIC});
+    boundary_conditions =
+        BoundaryCondition(Coordinates::TRUNC_OCTAHEDRAL, {Boundary::PERIODIC, Boundary::PERIODIC, Boundary::PERIODIC});
 }
 
 Point TruncatedOctahedron::getLength() const {
@@ -456,7 +467,7 @@ Point TruncatedOctahedron::setVolume(double volume, const VolumeMethod method) {
     const double old_side = side;
     Point box_scaling;
 
-    if (method == ISOTROPIC) {
+    if (method == VolumeMethod::ISOTROPIC) {
         side = std::cbrt(volume / std::sqrt(128.0));
         assert(std::fabs(getVolume() - volume) < 1e-6 && "error setting sphere volume");
     } else {
@@ -559,15 +570,13 @@ void TruncatedOctahedron::to_json(json &j) const { j = {{"radius", side}}; }
 
 // =============== Chameleon==============
 
-const std::map<std::string, Variant> Chameleon::names = {{
-    {"cuboid", CUBOID},
-    {"cylinder", CYLINDER},
-    {"slit", SLIT},
-    {"sphere", SPHERE},
-    {"hexagonal", HEXAGONAL},
-    {"octahedron", OCTAHEDRON},
-    {"hypersphere2d", HYPERSPHERE2D}
-}};
+const std::map<std::string, Variant> Chameleon::names = {{{"cuboid", Variant::CUBOID},
+                                                          {"cylinder", Variant::CYLINDER},
+                                                          {"slit", Variant::SLIT},
+                                                          {"sphere", Variant::SPHERE},
+                                                          {"hexagonal", Variant::HEXAGONAL},
+                                                          {"octahedron", Variant::OCTAHEDRON},
+                                                          {"hypersphere2d", Variant::HYPERSPHERE2D}}};
 
 void from_json(const json &j, Chameleon &g) {
     try {
@@ -659,7 +668,7 @@ TEST_CASE("[Faunus] ShapeDescriptors") {
     CHECK(shape.relative_shape_anisotropy == Approx(0.0));
 }
 
-TEST_CASE("[Faunus] HexagonalPrismToCuboid") {
+TEST_CASE("[Faunus] hexagonalPrismToCuboid") {
     using doctest::Approx;
     double radius = 2.0, height = 20.0;
     double side = 2.0 / std::sqrt(3.0) * radius;
@@ -671,7 +680,7 @@ TEST_CASE("[Faunus] HexagonalPrismToCuboid") {
     p[3].pos = {0, -1, 0};
     p[4].pos = {-0.866, -0.5, 0};
     p[5].pos = {-0.866, 0.5, 0};
-    auto [cuboid, p_new] = HexagonalPrismToCuboid(hexagonal_prism, p);
+    auto [cuboid, p_new] = hexagonalPrismToCuboid(hexagonal_prism, p);
     CHECK(p_new.size() == 12);
     CHECK(cuboid.getLength().x() == Approx(radius * 2.0));
     CHECK(cuboid.getLength().y() == Approx(side * 3.0));
@@ -708,7 +717,7 @@ void Chameleon::setLength(const Point &l) {
     assert(geometry);
     _setLength(l);
     // ugly
-    if (type == CUBOID) {
+    if (type == Variant::CUBOID) {
         Cuboid &cuboid = dynamic_cast<Cuboid &>(*geometry);
         cuboid.setLength(l);
     } else {
@@ -718,25 +727,25 @@ void Chameleon::setLength(const Point &l) {
 
 void Chameleon::makeGeometry(const Variant type) {
     switch (type) {
-    case CUBOID:
+    case Variant::CUBOID:
         geometry = std::make_unique<Cuboid>();
         break;
-    case SLIT:
+    case Variant::SLIT:
         geometry = std::make_unique<Slit>();
         break;
-    case SPHERE:
+    case Variant::SPHERE:
         geometry = std::make_unique<Sphere>();
         break;
-    case CYLINDER:
+    case Variant::CYLINDER:
         geometry = std::make_unique<Cylinder>();
         break;
-    case HEXAGONAL:
+    case Variant::HEXAGONAL:
         geometry = std::make_unique<HexagonalPrism>();
         break;
-    case OCTAHEDRON:
+    case Variant::OCTAHEDRON:
         geometry = std::make_unique<TruncatedOctahedron>();
         break;
-    case HYPERSPHERE2D:
+    case Variant::HYPERSPHERE2D:
         geometry = std::make_unique<Hypersphere2d>();
         break;
     default:
@@ -767,7 +776,7 @@ void Chameleon::_setLength(const Point &l) {
     // this is to speed up the `sqdist()` by avoiding branching when testing
     // for PBC in each direction. The variable `len_or_zero` either equals
     // `len` for PBC or zero if not.
-    if (geometry->boundary_conditions.coordinates == ORTHOGONAL)
+    if (geometry->boundary_conditions.coordinates == Coordinates::ORTHOGONAL)
         for (size_t i = 0; i < 3; i++)
             len_or_zero[i] = len[i] * (geometry->boundary_conditions.direction[i] == Boundary::PERIODIC);
 }
@@ -813,7 +822,7 @@ Chameleon::Chameleon(const Chameleon &geo)
     : GeometryBase(geo), len(geo.len), len_half(geo.len_half), len_inv(geo.len_inv),
       geometry(geo.geometry != nullptr ? geo.geometry->clone() : nullptr), _type(geo._type), _name(geo._name) {}
 
-std::shared_ptr<GeometryImplementation> Chameleon::asSimpleGeometry() { return geometry->clone(); }
+std::shared_ptr<GeometryImplementation> Chameleon::asSimpleGeometry() const { return geometry->clone(); }
 
 TEST_CASE("[Faunus] spherical coordinates") {
     using doctest::Approx;
@@ -938,7 +947,7 @@ TEST_CASE("[Faunus] Geometry") {
 
         // volume scaling
         double sf = 2.;
-        auto scaling = geo.setVolume(sf * sf * x * y * z, XY);
+        auto scaling = geo.setVolume(sf * sf * x * y * z, VolumeMethod::XY);
         CHECK(geo.getVolume() == doctest::Approx(sf * sf * x * y * z));
         CHECK(geo.getLength().x() == Approx(sf * x));
         CHECK(geo.getLength().y() == Approx(sf * y));
@@ -990,8 +999,8 @@ TEST_CASE("[Faunus] Geometry") {
         // volume scaling
         geo.setVolume(123.4);
         CHECK(geo.getVolume() == Approx(123.4));
-        CHECK_THROWS_AS(geo.setVolume(100., ISOCHORIC), std::invalid_argument);
-        CHECK_THROWS_AS(geo.setVolume(100., XY), std::invalid_argument);
+        CHECK_THROWS_AS(geo.setVolume(100., VolumeMethod::ISOCHORIC), std::invalid_argument);
+        CHECK_THROWS_AS(geo.setVolume(100., VolumeMethod::XY), std::invalid_argument);
 
         // check json
         geo.from_json(R"( { "type": "sphere", "radius": 2.0 } )"_json);
@@ -1029,7 +1038,7 @@ TEST_CASE("[Faunus] Geometry") {
         CHECK(container_overlap == false);
 
         // volume scaling
-        geo.setVolume(9.0, XY);
+        geo.setVolume(9.0, VolumeMethod::XY);
         CHECK(geo.getVolume() == Approx(9.0));
         box = geo.getLength();
         CHECK(box.x() == Approx(3 * 2 * radius));
@@ -1124,7 +1133,7 @@ TEST_CASE("[Faunus] Chameleon") {
         Point box_size = std::cbrt(2.0) * Point(x, y, z);
         Cuboid box(box_size);
         Cuboid geo({x, y, z});
-        Chameleon chameleon(geo, CUBOID);
+        Chameleon chameleon(geo, Variant::CUBOID);
         compare_boundary(chameleon, geo, box);
         compare_vdist(chameleon, geo, box);
         CHECK(geo.boundary_conditions.isPeriodic()[0] == true);
@@ -1137,7 +1146,7 @@ TEST_CASE("[Faunus] Chameleon") {
         Point box_size = std::cbrt(2.0) * Point(x, y, z);
         Cuboid box(box_size);
         Slit geo(x, y, z);
-        Chameleon chameleon(geo, SLIT);
+        Chameleon chameleon(geo, Variant::SLIT);
         compare_boundary(chameleon, geo, box);
         compare_vdist(chameleon, geo, box);
         CHECK(geo.boundary_conditions.isPeriodic()[0] == true);
@@ -1151,7 +1160,7 @@ TEST_CASE("[Faunus] Chameleon") {
         box_size.setConstant(std::cbrt(2.0) * 2 * radius);
         Cuboid box(box_size);
         Sphere geo(radius);
-        Chameleon chameleon(geo, SPHERE);
+        Chameleon chameleon(geo, Variant::SPHERE);
         compare_boundary(chameleon, geo, box);
         compare_vdist(chameleon, geo, box);
         CHECK(geo.boundary_conditions.isPeriodic()[0] == false);
@@ -1164,7 +1173,7 @@ TEST_CASE("[Faunus] Chameleon") {
         Point box_size = std::cbrt(2.0) * Point(2 * radius, 2 * radius, height);
         Cuboid box(box_size);
         Cylinder geo(radius, height);
-        Chameleon chameleon(geo, CYLINDER);
+        Chameleon chameleon(geo, Variant::CYLINDER);
         compare_boundary(chameleon, geo, box);
         compare_vdist(chameleon, geo, box);
         CHECK(geo.boundary_conditions.isPeriodic()[0] == false);
@@ -1177,7 +1186,7 @@ TEST_CASE("[Faunus] Chameleon") {
         Point box_size = std::cbrt(2.0) * Point(2 * edge, 2 * edge, height); // a bit larger in x-direction
         Cuboid box(box_size);
         HexagonalPrism geo(edge, height);
-        Chameleon chameleon(geo, HEXAGONAL);
+        Chameleon chameleon(geo, Variant::HEXAGONAL);
         compare_boundary(chameleon, geo, box);
         compare_vdist(chameleon, geo, box);
     }
@@ -1188,7 +1197,7 @@ TEST_CASE("[Faunus] Chameleon") {
         box_size.setConstant(std::cbrt(2.0) * edge * std::sqrt(5.0 / 2.0)); // enlarged circumradius
         Cuboid box(box_size);
         TruncatedOctahedron geo(edge);
-        Chameleon chameleon(geo, OCTAHEDRON);
+        Chameleon chameleon(geo, Variant::OCTAHEDRON);
         compare_boundary(chameleon, geo, box);
         compare_vdist(chameleon, geo, box);
     }
@@ -1214,7 +1223,7 @@ TEST_CASE("[Faunus] Chameleon") {
     }
 }
 
-TEST_CASE("[Faunus] anyCenter") {
+TEST_CASE("[Faunus] weightedCenter") {
     Chameleon cyl = json({{"type", "cuboid"}, {"length", 100}, {"radius", 20}});
     std::vector<Particle> p;
 
@@ -1229,6 +1238,68 @@ TEST_CASE("[Faunus] anyCenter") {
     CHECK(cm.x() == doctest::Approx(12.5));
     CHECK(cm.y() == doctest::Approx(0));
     CHECK(cm.z() == doctest::Approx(0));
+}
+
+TEST_CASE("[Faunus] gyration") {
+    std::vector<Point> positions = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
+    std::vector<double> weights = {0.6, 1.5, 2.2};
+    auto boundary = [](auto&) {};
+
+    Faunus::atoms.resize(3);
+    Faunus::atoms.at(0).mw = weights.at(0);
+    Faunus::atoms.at(1).mw = weights.at(1);
+    Faunus::atoms.at(2).mw = weights.at(2);
+    ParticleVector particles(3);
+    particles.at(0).id = 0;
+    particles.at(1).id = 1;
+    particles.at(2).id = 2;
+    particles.at(0).pos = positions.at(0);
+    particles.at(1).pos = positions.at(1);
+    particles.at(2).pos = positions.at(2);
+
+    auto mass_center = Geometry::massCenter(particles.begin(), particles.end(), boundary);
+
+    SUBCASE("mass center") {
+        CHECK(mass_center.x() == doctest::Approx(5.1162790698));
+        CHECK(mass_center.y() == doctest::Approx(6.1162790698));
+        CHECK(mass_center.z() == doctest::Approx(7.1162790698));
+    }
+
+    SUBCASE("position based") {
+        auto gyration = Geometry::gyration(positions.begin(), positions.end(), weights.begin(), mass_center, boundary);
+        CHECK(gyration.trace() == doctest::Approx(13.843158464));
+        CHECK(gyration.diagonal().x() == doctest::Approx(4.6143861547));
+        CHECK(gyration.diagonal().y() == doctest::Approx(4.6143861547));
+        CHECK(gyration.diagonal().z() == doctest::Approx(4.6143861547));
+
+        // check symmetry
+        CHECK(gyration(0, 1) == doctest::Approx(gyration(1, 0)));
+        CHECK(gyration(0, 2) == doctest::Approx(gyration(2, 0)));
+        CHECK(gyration(1, 2) == doctest::Approx(gyration(2, 1)));
+
+        // principal moment
+        Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(gyration);
+        auto eigen_values = esf.eigenvalues().eval();
+        std::ptrdiff_t i_eival;
+        eigen_values.minCoeff(&i_eival);
+        auto principle_axis = esf.eigenvectors().col(i_eival).real().eval();
+        CHECK(principle_axis.x() == doctest::Approx(-0.8164965809));
+        CHECK(principle_axis.y() == doctest::Approx(0.4082482905));
+        CHECK(principle_axis.z() == doctest::Approx(0.4082482905));
+    }
+
+    SUBCASE("particle based") {
+        auto gyration = Geometry::gyration(particles.begin(), particles.end(), mass_center, boundary);
+        CHECK(gyration.trace() == doctest::Approx(13.843158464));
+        CHECK(gyration.diagonal().x() == doctest::Approx(4.6143861547));
+        CHECK(gyration.diagonal().y() == doctest::Approx(4.6143861547));
+        CHECK(gyration.diagonal().z() == doctest::Approx(4.6143861547));
+
+        // check symmetry
+        CHECK(gyration(0, 1) == doctest::Approx(gyration(1, 0)));
+        CHECK(gyration(0, 2) == doctest::Approx(gyration(2, 0)));
+        CHECK(gyration(1, 2) == doctest::Approx(gyration(2, 1)));
+    }
 }
 
 TEST_CASE("[Faunus] rootMeanSquareDeviation") {

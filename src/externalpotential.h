@@ -19,16 +19,16 @@ namespace Energy {
  */
 class Energybase {
   public:
-    enum keys { ACCEPTED_MONTE_CARLO_STATE, TRIAL_MONTE_CARLO_STATE, NONE };
-    keys key = NONE;
+    enum class MonteCarloState { ACCEPTED, TRIAL, NONE };
+    MonteCarloState state = MonteCarloState::NONE;
     std::string name;                                     //!< Meaningful name
     std::string citation_information;                     //!< Possible reference. May be left empty
     TimeRelativeOfTotal<std::chrono::microseconds> timer; //!< Timer for measure speed of each term
     virtual double energy(Change &) = 0;                  //!< energy due to change
     virtual void to_json(json &) const;                   //!< json output
-    virtual void sync(Energybase *other_energy, Change &change); //!< Sync (copy from) another energy instance
+    virtual void sync(Energybase* other_energy, const Change& change); //!< Sync (copy from) another energy instance
     virtual void init();                                  //!< reset and initialize
-    virtual inline void force(PointVector &){};           //!< update forces on all particles
+    virtual void force(PointVector& forces);              //!< update forces on all particles
     inline virtual ~Energybase() = default;
 };
 
@@ -48,7 +48,7 @@ class ExternalPotential : public Energybase {
     bool act_on_mass_center = false;                   //!< apply only on center-of-mass
     std::set<int> molecule_ids;                        //!< ids of molecules to act on
     std::vector<std::string> molecule_names;           //!< corresponding names of molecules to act on
-    double groupEnergy(const Group<Particle> &) const; //!< external potential on a single group
+    double groupEnergy(const Group&) const;            //!< external potential on a single group
   protected:
     Space &space;                                                            //!< reference to simulation space
     std::function<double(const Particle &)> externalPotentialFunc = nullptr; //!< energy of single particle
@@ -121,7 +121,7 @@ class ExternalAkesson : public ExternalPotential {
     void save_rho();                      //!< save charge density profile to disk
     void load_rho();                      //!< load charge density profile from disk
     void to_json(json &) const override;
-    void sync(Energybase *, Change &) override;
+    void sync(Energybase*, const Change&) override;
 
   public:
     ExternalAkesson(const json &, Space &);

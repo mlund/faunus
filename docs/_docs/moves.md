@@ -145,6 +145,66 @@ are distributed on a sphere then $\kappa^2=0$, while if on a straight line, $\ka
 `interval=10` | Interval between samples
 
 
+### Smarter Monte Carlo
+
+Preferential selction of particles can be enabled via the `region` keyword which instructs
+some moves to pick particles or groups preferentially from a given _region_. As described
+in [doi:10/frvx8j](https://doi.org/frvx8j) a bias is introduced which is automatically
+accounted for. The preference for sampling inside the region is controlled by `p` which
+can be regarded as an outside update probability.
+If $p=1$ no preferential sampling is performed, whereas if
+$p<1$, more sampling is done inside the region.
+
+For example:
+
+~~~ yaml
+- moltransrot:
+    ...
+    ...
+    region:
+      policy: ellipsoid
+      parallel_radius: 5.0
+      perpendicular_radius: 4.0
+      index1: 10
+      index2: 12
+      p: 0.2
+~~~
+
+The available regions are:
+
+#### Ellipsoid
+
+The connection vector between two (moving) reference particles defines an ellipsoid
+centered at the midpoint between the reference particles.
+The reference particle separation is unimportant, only the direction is used.
+
+`policy=ellipsoid`     | Description
+---------------------- | ----------------------------------------------------------------
+`p`                    | Number (0,1] where a lower number means higher regional sampling
+`index1`               | Index of first reference particle
+`index2`               | Index of second reference particle
+`parallel_radius`      | Radius parallel to axis connecting the two references
+`perpendicular_radius` | Radius perpendicular to axis connecting the two references
+`group_com=false`      | Test only mass center of molecular groups
+
+
+#### Within Molecule (experimental)
+
+Samples from within a threshold from a molecule type. This can be useful to _e.g._
+preferentially sample solvent molecules around dilute solute molecules.
+The `com` keyword is available if the selected `molecule` has a well-defined mass-center,
+_i.e._ if `is_atomic=false`.
+It is also possible to use only the mass center for the moved groups by setting `group_com`.
+
+`policy=within_molid`  | Description
+---------------------- | ----------------------------------------------------------------
+`p`                    | Number (0,1] where a lower number means higher regional sampling
+`molecule`             | Name of molecule to search around
+`threshold`            | Distance threshold to any particle in `molecule`
+`com=false`            | Use `threshold` with respect to mass-center of `molecule`
+`group_com=false`      | Test with respect to mass center of molecular groups
+
+
 ## Internal Degrees of Freedom
 
 ### Charge Move
@@ -153,8 +213,16 @@ are distributed on a sphere then $\kappa^2=0$, while if on a straight line, $\ka
 ---------------- | ---------------------------------
 `index`          | Atom index to operate on
 `dq`             | Charge displacement
+`quadratic=true` | Displace linearly along q^2 instead of q
 
-This performs a fractional charge move on a specific atom.
+This performs a fractional charge move on a specific atom. The charge
+displacement can be performed linerly along $q$ or linearly along $q^2$.
+For the latter the following bias energy will be added to ensure
+uniform sampling of $q$,
+
+$$
+u = k\_BT\ln \left ( \left | q^{\prime} / q \right |\right )
+$$
 
 Limitations:
 This move changes the particle charge and therefore cannot be used with
@@ -234,9 +302,12 @@ The default value of `repeat` is the number of atoms in the `molecule` minus two
 
 ## Parallel Tempering
 
-`temper`         | Description
----------------- | --------------------------------------------
-`format=XYZQI`   | Particle properties to copy between replicas
+`temper`                 | Description
+------------------------ | ----------------------------------------------------------------------
+`format=xyzqi`           | Particle properties to copy between replicas (`xyzqi`, `xyzq`, `xyz`)
+`volume_scale=isotropic` | How to apply exchanged volumes: `z`, `xy`, `isotropic`, `isochoric`
+`nstep=1`                | Number of sweeps between samples.
+`partner_policy=oddeven` | Policy used to create partner pairs (currently only `oddeven`)
 
 We consider an extended ensemble, consisting of _n_
 sub-systems or replicas, each in a distinct thermodynamic state (different
@@ -260,10 +331,13 @@ Parallel tempering requires compilation with MPI and the number
 of replicas, _n_, exactly matches the number of processes. Each
 replica prefixes input and output files with `mpi0.`, `mpi1.`,
 etc. and only exchange between neighboring processes is performed.
+The move is is performed exactly every `nstep` Monte Carlo cycle.
+By default, particle positions (`xyz`), charge (`q`), and atom id (`i`) are exchanged
+between replicas and can be controlled with `format`.
 
-Parallel tempering is currently limited to systems with
-constant number of particles, $N$, and the move is performed exactly
-once per Monte Carlo cycle.
+Support for fluctuating number of particles, i.e.
+grand canonical moves is currently untested and should be
+considered experimental.
 
 
 ## Volume Move

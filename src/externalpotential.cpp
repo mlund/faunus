@@ -16,9 +16,10 @@ void Energybase::to_json(json &) const {}
  * @param other_energy Other energy instance to copy data from
  * @param change Describes the difference with the other energy term
  */
-void Energybase::sync([[maybe_unused]] Energybase* other_energy, [[maybe_unused]] Change& change) {}
+void Energybase::sync([[maybe_unused]] Energybase* other_energy, [[maybe_unused]] const Change& change) {}
 
 void Energybase::init() {}
+void Energybase::force([[maybe_unused]] PointVector& forces) {}
 
 void to_json(json &j, const Energybase &base) {
     assert(not base.name.empty());
@@ -40,14 +41,14 @@ void to_json(json &j, const Energybase &base) {
  * - If `act_on_mass_center` is true, the external potential is applied on a
  *   fictitious particle placed at the COM and with a net-charge of the group.
  */
-double ExternalPotential::groupEnergy(const Group<Particle> &group) const {
+double ExternalPotential::groupEnergy(const Group& group) const {
     double u = 0;
     if (molecule_ids.find(group.id) != molecule_ids.end()) {
-        if (act_on_mass_center and not group.atomic) { // apply only to center of mass
+        if (act_on_mass_center && group.isMolecular()) { // apply only to center of mass
             if (group.size() == group.capacity()) {    // only apply if group is active
                 Particle mass_center;                  // temp. particle representing molecule
                 mass_center.charge = Faunus::monopoleMoment(group.begin(), group.end());
-                mass_center.pos = group.cm;
+                mass_center.pos = group.mass_center;
                 return externalPotentialFunc(mass_center);
             }
         } else {
@@ -75,7 +76,7 @@ ExternalPotential::ExternalPotential(const json &j, Space &spc) : space(spc) {
 double ExternalPotential::energy(Change &change) {
     assert(externalPotentialFunc != nullptr);
     double energy = 0.0;
-    if (change.dV or change.all or change.dN) {
+    if (change.volume_change or change.everything or change.matter_change) {
         for (auto &group : space.groups) { // loop over all groups
             energy += groupEnergy(group);
             if (not std::isfinite(energy)) {
@@ -84,12 +85,12 @@ double ExternalPotential::energy(Change &change) {
         }
     } else {
         for (auto &group_change : change.groups) {             // loop over all changed groups
-            auto &group = space.groups.at(group_change.index); // check specified groups
+            auto& group = space.groups.at(group_change.group_index); // check specified groups
             if (group_change.all or act_on_mass_center) {      // check all atoms in group
                 energy += groupEnergy(group);                  // groupEnergy also checks for molecule id
             } else {                                           // only specified atoms in group
                 if (molecule_ids.find(group.id) != molecule_ids.end()) {
-                    for (int index : group_change.atoms) { // loop over changed atoms in group
+                    for (int index : group_change.relative_atom_indices) { // loop over changed atoms in group
                         energy += externalPotentialFunc(group[index]);
                     }
                 }
@@ -126,16 +127,16 @@ TEST_CASE("[Faunus] ExternalPotential") {
         Space spc = j;
         ParticleSelfEnergy pot(spc, [](const Particle &) { return 0.5; });
         Change change;
-        change.all = true; // if both particles have changed
+        change.everything = true; // if both particles have changed
         CHECK(pot.energy(change) == Approx(0.5 + 0.5));
     }
 }
 
 // ------------ Confine -------------
 
-Confine::Confine(const json &j, Tspace &spc) : ExternalPotential(j, spc) {
+Confine::Confine(const json& j, Space& spc) : ExternalPotential(j, spc) {
     name = "confine";
-    k = value_inf(j, "k") * 1.0_kJmol; // get floating point; allow inf/-inf
+    k = getValueInfinity(j, "k") * 1.0_kJmol; // get floating point; allow inf/-inf
     type = m.at(j.at("type"));
 
     if (type == sphere or type == cylinder) {
@@ -153,9 +154,10 @@ Confine::Confine(const json &j, Tspace &spc) : ExternalPotential(j, spc) {
 
         // If volume is scaled, also scale the confining radius by adding a trigger
         // to `Space::scaleVolume()`
-        if (scale)
-            spc.scaleVolumeTriggers.push_back(
-                [&radius = radius](Tspace &, double Vold, double Vnew) { radius *= std::cbrt(Vnew / Vold); });
+        if (scale) {
+            spc.scaleVolumeTriggers.push_back([&radius = radius]([[maybe_unused]] Space& spc, double Vold,
+                                                                 double Vnew) { radius *= std::cbrt(Vnew / Vold); });
+        }
     }
 
     if (type == cuboid) {
@@ -189,12 +191,12 @@ void Confine::to_json(json &j) const {
             j["type"] = i.first;
     j["k"] = k / 1.0_kJmol;
     ExternalPotential::to_json(j);
-    _roundjson(j, 5);
+    roundJSON(j, 5);
 }
 
 // ------------ ExternalAkesson -------------
 
-ExternalAkesson::ExternalAkesson(const json &j, Tspace &spc) : ExternalPotential(j, spc) {
+ExternalAkesson::ExternalAkesson(const json& j, Space& spc) : ExternalPotential(j, spc) {
     name = "akesson";
     citation_information = "doi:10/dhb9mj";
     nstep = j.at("nstep").get<unsigned int>();
@@ -202,7 +204,7 @@ ExternalAkesson::ExternalAkesson(const json &j, Tspace &spc) : ExternalPotential
     fixed_potential = j.value("fixed", false);
     phi_update_interval = j.value("nphi", 10);
 
-    half_box_length_z = 0.5 * spc.geo.getLength().z();
+    half_box_length_z = 0.5 * spc.geometry.getLength().z();
     bjerrum_length = pc::bjerrumLength(dielectric_constant);
 
     dz = j.value("dz", 0.2); // read z resolution
@@ -212,12 +214,12 @@ ExternalAkesson::ExternalAkesson(const json &j, Tspace &spc) : ExternalPotential
 
     filename = j.value("file", "mfcorr.dat"s);
     load_rho();
-    externalPotentialFunc = [&phi = phi](const typename Tspace::Tparticle &p) { return p.charge * phi(p.pos.z()); };
+    externalPotentialFunc = [&phi = phi](const Particle& particle) { return particle.charge * phi(particle.pos.z()); };
 }
 
 double ExternalAkesson::energy(Change &change) {
     if (not fixed_potential) {              // phi(z) unconverged, keep sampling
-        if (key == ACCEPTED_MONTE_CARLO_STATE) { // only sample on accepted configs
+        if (state == MonteCarloState::ACCEPTED) { // only sample on accepted configs
             num_density_updates++;
             if (num_density_updates % nstep == 0) {
                 update_rho();
@@ -233,7 +235,7 @@ double ExternalAkesson::energy(Change &change) {
 ExternalAkesson::~ExternalAkesson() {
     // save only if still updating and if energy type is `ACCEPTED_MONTE_CARLO_STATE`,
     // that is, accepted configurations (not trial)
-    if (not fixed_potential and key == ACCEPTED_MONTE_CARLO_STATE) {
+    if (not fixed_potential and state == MonteCarloState::ACCEPTED) {
         save_rho();
     }
 }
@@ -242,7 +244,7 @@ void ExternalAkesson::to_json(json &j) const {
     j = {{"lB", bjerrum_length}, {"dz", dz},       {"nphi", phi_update_interval}, {"epsr", dielectric_constant},
          {"file", filename},     {"nstep", nstep}, {"Nupdates", num_rho_updates}, {"fixed", fixed_potential}};
     ExternalPotential::to_json(j);
-    _roundjson(j, 5);
+    roundJSON(j, 5);
 }
 
 void ExternalAkesson::save_rho() {
@@ -272,12 +274,12 @@ double ExternalAkesson::phi_ext(double z, double a) const {
            2 * z * (0.5 * pc::pi + std::asin((a2 * a2 - z2 * z2 - 2 * a2 * z2) / std::pow(a2 + z2, 2)));
 }
 
-void ExternalAkesson::sync(Energybase* energybase, Change&) {
+void ExternalAkesson::sync(Energybase* energybase, const Change&) {
     if (fixed_potential) {
         return;
     }
     if (auto* other = dynamic_cast<ExternalAkesson*>(energybase)) {
-        if (other->key == ACCEPTED_MONTE_CARLO_STATE) { // only trial energy (new) requires sync
+        if (other->state == MonteCarloState::ACCEPTED) { // only trial energy (new) requires sync
             if (num_density_updates != other->num_density_updates) {
                 assert(num_density_updates < other->num_density_updates);
                 num_density_updates = other->num_density_updates;
@@ -292,7 +294,7 @@ void ExternalAkesson::sync(Energybase* energybase, Change&) {
 
 void ExternalAkesson::update_rho() {
     num_rho_updates++;
-    Point L = space.geo.getLength();
+    Point L = space.geometry.getLength();
     if (L.x() not_eq L.y() or 0.5 * L.z() != half_box_length_z) {
         throw std::runtime_error("Requires box Lx=Ly and Lz=const.");
     }
@@ -309,12 +311,12 @@ void ExternalAkesson::update_rho() {
 }
 
 void ExternalAkesson::update_phi() {
-    auto L = space.geo.getLength();
+    auto L = space.geometry.getLength();
     double a = 0.5 * L.x();
     for (double z = -half_box_length_z; z <= half_box_length_z; z += dz) {
         double s = 0;
         for (double zn = -half_box_length_z; zn <= half_box_length_z; zn += dz) {
-            if (rho(zn).cnt > 0) {
+            if (!rho(zn).empty()) {
                 s += rho(zn).avg() * phi_ext(std::fabs(z - zn), a); // Eq. 14 in Greberg's paper
             }
         }
@@ -366,7 +368,7 @@ std::function<double(const Particle &)> createGouyChapmanPotential(const json &j
 TEST_CASE("[Faunus] Gouy-Chapman") {
     using doctest::Approx;
     Geometry::Slit slit(50, 50, 50);
-    Geometry::Chameleon geometry(slit, Geometry::SLIT);
+    Geometry::Chameleon geometry(slit, Geometry::Variant::SLIT);
     json j = {{"molarity", 0.1}, {"epsr", 80}, {"linearise", false}, {"rhoinv", 100.0}};
     auto phi = Energy::createGouyChapmanPotential(j, geometry);
     Particle p;
@@ -396,7 +398,7 @@ CustomExternal::CustomExternal(const json &j, Space &spc) : ExternalPotential(j,
     name = "customexternal";
     auto &constants = json_input_backup["constants"];
     if (std::string function = j.at("function"); function == "gouychapman") {
-        externalPotentialFunc = createGouyChapmanPotential(constants, spc.geo);
+        externalPotentialFunc = createGouyChapmanPotential(constants, spc.geometry);
     } else if (function == "some-new-potential") { // add new potentials here
         // func = createSomeNewPotential(...);
     } else { // nothing found above; assume `function` is an expression

@@ -11,7 +11,7 @@ import warnings
 
 try:
     jsonschema = True
-    from jsonschema import Draft7Validator
+    from jsonschema import Draft201909Validator
     from jsonschema.exceptions import best_match
 except ImportError:
     jsonschema = False
@@ -109,7 +109,7 @@ def validate_input(instance):
             if os.path.exists(schemafile):
                 with open(schemafile, "r") as f:
                     _schema = yaml.safe_load(f)
-                    error = best_match(Draft7Validator(_schema).iter_errors(instance))
+                    error = best_match(Draft201909Validator(_schema).iter_errors(instance))
                     if error!=None:
                         eprint( "{}{}\n".format(human_readable_path(error.path), error.message) )
                         print_table(error.schema)

@@ -272,7 +272,8 @@ properties:
         electrolyte:
             type: object
             properties:
-                molarity: {type: number, description: "Molar salt concentreation (mol/l)"}
+                molarity: {type: number, description: "Molar salt concentration (mol/l)"}
+                salt: {type: number, description: "Molar salt concentration (mol/l) - deprecated; prefer 'molarity'"}
                 valencies:
                     type: array
                     items: {type: integer}

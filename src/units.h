@@ -37,36 +37,6 @@ namespace Faunus {
 
     namespace pc = PhysicalConstants;
 
-    //! Calculates the ionic strength of arbitrary salts
-    double ionicStrength(const double concentration, const std::vector<int>& valencies);
-
-    //! Calculates the Debye screening length
-    double debyeLength(const double molar_ionic_strength, const double bjerrum_length);
-
-    //! Calculates the Debye screening length for a salt
-    double debyeLength(const double molarity, const std::vector<int>& valencies, const double bjerrum_length);
-
-    /**
-     * @brief Stores information about an salts for calculation of Debye screening length etc.
-     *
-     * In this context a "salt" is an arbitrary set of cations and anions, combined to form
-     * a net-neutral compound.
-     */
-    class IonicSalt {
-        double molar_ionic_strength;
-
-      public:
-        IonicSalt(const double molarity, const std::vector<int>& valencies);
-        double ionicStrength() const;                          //!< Molar ionic strength
-        double debyeLength(const double bjerrum_length) const; //!< Debye screening length in Ångstrom
-        const double molarity;                                 //!< Molar salt concentration
-        const std::vector<int>& valencies;                     //!< Charges of each participating ion in the salt
-    };
-
-    IonicSalt makeIonicSalt(const nlohmann::json& j);
-
-    double getDebyeLength(const nlohmann::json& j, const double bjerrum_length);
-
     /**
      * @brief Chemistry units
      *

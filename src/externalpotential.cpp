@@ -332,7 +332,7 @@ std::function<double(const Particle &)> createGouyChapmanPotential(const json &j
     double rho = 0; // surface charge density (charge per area)
     double bjerrum_length = pc::bjerrumLength(j.at("epsr").get<double>());
     double molarity = j.at("molarity").get<double>();
-    double kappa = 1.0 / Faunus::debyeLength(molarity, {1, 1}, bjerrum_length);
+    double kappa = 1.0 / Faunus::Electrolyte(molarity, {1, -1}).debyeLength(bjerrum_length);
     double phi0 = j.value("phi0", 0.0); // Unitless potential = beta*e*phi0
     if (std::fabs(phi0) > 0) {
         rho = std::sqrt(2.0 * molarity / (pc::pi * bjerrum_length)) *

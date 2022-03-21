@@ -1199,8 +1199,9 @@ TEST_CASE("[Faunus] NewCoulombGalore") {
 
 void NewCoulombGalore::from_json(const json &j) {
     using namespace ::CoulombGalore; // namespace for external CoulombGalore library
-    const auto relative_dielectric_constant = j.at("epsr");
+    const auto relative_dielectric_constant = j.at("epsr").get<double>();
     bjerrum_length = pc::bjerrumLength(relative_dielectric_constant);
+    const auto electrolyte = Faunus::makeElectrolyte(j);
     pot.setTolerance(j.value("utol", 0.005 / bjerrum_length));
     const auto method = j.at("type").get<std::string>();
     if (method == "yukawa") {
@@ -1209,12 +1210,14 @@ void NewCoulombGalore::from_json(const json &j) {
             _j["type"] = "poisson";
             _j["C"] = 1;
             _j["D"] = 1;
+            _j["debyelength"] = electrolyte.value().debyeLength(bjerrum_length);
             pot.spline<::CoulombGalore::Poisson>(_j);
         } else { // non-shifted yukawa equals `plain` with exponential screening
             if (_j.contains("cutoff")) {
                 throw ConfigurationError("unexpected 'cutoff' for non-shifted yukawa which is always infinity");
             }
             _j["type"] = "plain";
+            _j["debyelength"] = electrolyte.value().debyeLength(bjerrum_length);
             pot.spline<::CoulombGalore::Plain>(_j);
         }
     } else if (method == "plain") {
@@ -1237,7 +1240,11 @@ void NewCoulombGalore::from_json(const json &j) {
     } else if (method == "zerodipole") {
         pot.spline<::CoulombGalore::ZeroDipole>(j);
     } else if (method == "ewald") {
-        pot.spline<::CoulombGalore::Ewald>(j);
+        auto _j(j);
+        if (electrolyte) {
+            _j["debyelength"] = electrolyte.value().debyeLength(bjerrum_length);
+        }
+        pot.spline<::CoulombGalore::Ewald>(_j);
     } else if (method == "reactionfield") {
         pot.spline<::CoulombGalore::ReactionField>(j);
     } else {

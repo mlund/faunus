@@ -416,7 +416,7 @@ void loadState(docopt::Options& args, MetropolisMonteCarlo& simulation) {
         }
     }
     if (args["--positions"]) {
-        const auto positionfile = MPI::prefix + args["--positions"].asString();
+        const auto positionfile = Faunus::MPI::prefix + args["--positions"].asString();
         loadCoordinates(positionfile, simulation);
     }
 }

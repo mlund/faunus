@@ -5,6 +5,7 @@
 #include <functional>
 #include <range/v3/view/zip.hpp>
 #include <range/v3/algorithm/for_each.hpp>
+#include <numeric>
 #if __cplusplus > 201703L
 #include <span> // c++20
 #endif
@@ -757,16 +758,11 @@ void Bonded::updateInternalBonds() {
 }
 
 double Bonded::sumBondEnergy(const Bonded::BondVector& bonds) const {
-#if (defined(__clang__) && __clang_major__ >= 10) || (defined(__GNUC__) && __GNUC__ >= 10)
-    auto bond_energy = [&](const auto& bond) { return bond->energyFunc(spc.geometry.getDistanceFunc()); };
-    return std::transform_reduce(bonds.begin(), bonds.end(), 0.0, std::plus<>(), bond_energy);
-#else
     double energy = 0.0;
     for (const auto& bond : bonds) {
         energy += bond->energyFunc(spc.geometry.getDistanceFunc());
     }
     return energy;
-#endif
 }
 
 Bonded::Bonded(const Space& spc, const BondVector& external_bonds = BondVector())
@@ -1470,15 +1466,23 @@ TEST_CASE_TEMPLATE("[Faunus] SASAEnergy_updates", EnergyTemplate, SASAEnergyRefe
     }
 
     SUBCASE("Partial update") {
-        spc.particles.at(3).pos = {14.0, 0.0, 0.0}; // update last particle in last group
         Change change;
-        //change.everything = true; // accidentally set to `true` in master branch --> test passes
+        change.everything = true;
+        EnergyTemplate sasa_energy(spc, 1.5_molar, 1.0_angstrom, 20);
+        FreeSASAEnergy ref_energy(spc, 1.5_molar, 1.0_angstrom);
+
+        // we must caclulate SASAs of all 4 particles before updating position of one of them
+        // since all SASAs are needed in the final energy calculation.
+        // these are usually obtained from previous MC step in simulations so here we need to calculate them explicitly
+        sasa_energy.energy(change);
+        ref_energy.energy(change);
+
+        spc.particles.at(3).pos = {14.0, 0.0, 0.0}; // update last particle in last group
+        change.everything = false;
         auto& changed_data = change.groups.emplace_back();
         changed_data.group_index = 1;
         changed_data.relative_atom_indices = {1};
 
-        EnergyTemplate sasa_energy(spc, 1.5_molar, 1.0_angstrom, 20);
-        FreeSASAEnergy ref_energy(spc, 1.5_molar, 1.0_angstrom);
         CHECK(sasa_energy.energy(change) == Approx(105.7104501023));
         CHECK(ref_energy.energy(change) == Approx(105.7104501023));
 

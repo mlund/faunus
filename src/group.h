@@ -133,6 +133,7 @@ class Group : public ElasticRange<Particle> {
 
     inline bool isAtomic() const { return traits().atomic; }     //!< Is it an atomic group?
     inline bool isMolecular() const { return !traits().atomic; } //!< is it a molecular group?
+    bool isFull() const;                                         //!< True of all particles are active
 
     std::optional<std::reference_wrapper<Point>> massCenter();             //!< Optional reference to mass center
     std::optional<std::reference_wrapper<const Point>> massCenter() const; //!< Optional ref. to mass center

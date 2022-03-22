@@ -18,8 +18,6 @@
       <file path="$PROJECT_DIR$/cmake-build-relwithdebinfo---mpi" />
       <file path="$PROJECT_DIR$/cmake-build-relwithdebinfo-gcc10" />
       <file path="$PROJECT_DIR$/cmake-build-relwithdebinfo/_deps" />
-      <file path="$PROJECT_DIR$/docs" />
-      <file path="$PROJECT_DIR$/examples" />
       <file path="$PROJECT_DIR$/include" />
       <file path="$PROJECT_DIR$/include/faunus/sasa" />
       <file path="$PROJECT_DIR$/scripts" />

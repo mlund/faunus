@@ -24,10 +24,15 @@ class Group;
 #define CPLUSPLUS
 #endif
 
-namespace XDRfile {
+namespace XdrFile {
 #include <xdrfile_trr.h>
 #include <xdrfile_xtc.h>
-} // namespace XDRfile
+
+struct XdrFileDeleter {
+    void operator()(XdrFile::XDRFILE* xdrfile); //!< Custom deleter for XDRFILE pointer that closes file
+};
+using XDRFILE_unique = std::unique_ptr<XDRFILE, XdrFileDeleter>; //!< Safe XDRFILE pointer with cleanup
+} // namespace XdrFile
 
 namespace IO {
 
@@ -307,8 +312,8 @@ struct TrajectoryFrame;
  * variable number of coordinates (atoms) between frames.
  */
 struct XTCTrajectoryFrame {
-    XDRfile::matrix xtc_box;                          //!< box tensor; only diagonal elements are used
-    std::unique_ptr<XDRfile::rvec[]> xtc_coordinates; //!< C-style array of particle coordinates
+    XdrFile::matrix xtc_box;                          //!< box tensor; only diagonal elements are used
+    std::unique_ptr<XdrFile::rvec[]> xtc_coordinates; //!< C-style array of particle coordinates
     int xtc_step = 0;                                 //!< current frame number
     float xtc_time = 0.0;                             //!< current time (unit?)
     int number_of_atoms = 0;                          //!< number of coordinates (atoms) in each frame
@@ -529,8 +534,8 @@ struct TrajectoryFrame {
  * is responsible for I/O operations, not data conversion. For details about data conversion XTCTrajectoryFrame.
  */
 class XTCReader {
-    int return_code = XDRfile::exdrOK;   //!< last return code of a C function
-    XDRfile::XDRFILE* xdrfile = nullptr; //!< file handle
+    int return_code = XdrFile::exdrOK; //!< last return code of a C function
+    XdrFile::XDRFILE_unique xdrfile;   //!< file handle
     //! data structure for C functions; the number of coordinates is immutable
     std::unique_ptr<XTCTrajectoryFrame> xtc_frame;
 
@@ -540,7 +545,7 @@ class XTCReader {
      * @param filename  a name of the XTC file to open
      */
     explicit XTCReader(const std::string& filename);
-    ~XTCReader();
+
     /**
      * @brief Returns number of coordinates (atoms) in each frame. Immutable during object lifetime.
      * @return number of coordinates (atoms)
@@ -591,8 +596,8 @@ class XTCReader {
  * is responsible for I/O operations, not data conversion.
  */
 class XTCWriter {
-    int return_code = XDRfile::exdrOK;             //!< last return code of a C function
-    XDRfile::XDRFILE* xdrfile = nullptr;           //!< file handle
+    int return_code = XdrFile::exdrOK;             //!< last return code of a C function
+    XdrFile::XDRFILE_unique xdrfile;               //!< file handle
     std::unique_ptr<XTCTrajectoryFrame> xtc_frame; //!< data structure for C functions;
                                                    //!< the number of coordinates is immutable
     int step_counter = 0;                          //!< frame counter for automatic increments
@@ -604,7 +609,6 @@ class XTCWriter {
      * @param filename  a name of the XTC file to open
      */
     explicit XTCWriter(const std::string& filename);
-    ~XTCWriter();
     /**
      * @brief Writes a frame into the file.
      * @param[in] frame  frame to be written

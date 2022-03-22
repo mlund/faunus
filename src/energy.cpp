@@ -5,9 +5,6 @@
 #include <functional>
 #include <range/v3/view/zip.hpp>
 #include <range/v3/algorithm/for_each.hpp>
-#if __cplusplus > 201703L
-#include <span> // c++20
-#endif
 
 #ifdef ENABLE_FREESASA
 #include <freesasa.h>

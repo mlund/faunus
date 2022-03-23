@@ -1,24 +1,21 @@
-# Copyright (c) Jupyter Development Team.
-# Distributed under the terms of the Modified BSD License.
+# Build and run:
+#
+#   docker build -t faunus - < Dockerfile
+#   docker run -it -p 8888:8888 faunus
+#   (copy-paste generated url into webbrowser)
 #
 # What is installed?
 #
-# - https://jupyter-docker-stacks.readthedocs.io/en/latest/using/selecting.html
-# - GCC 11, CMake, OpenMPI, parmed, nglview, mdtraj
-# - Faunus from main branch 
+# - Based on jupyter/scipy - https://jupyter-docker-stacks.readthedocs.io/en/latest/using/selecting.html
+# - gcc11, cmake, openmpi, parmed, nglview, mdtraj, faunus
+# - faunus main branch compiled w. openmp, mpi, python 
 # - clone of mlund/chemistry-notebooks
-#
-# Build and run:
-#
-#   docker build -t faunuslab - < Dockerfile
-#   docker run -it -p 8888:8888 faunuslab
-#   (copy notebook url and paste in browser)
 #
 ARG OWNER=jupyter
 ARG BASE_CONTAINER=jupyter/scipy-notebook:lab-3.3.2
 FROM $BASE_CONTAINER
 
-LABEL maintainer="Faunus Project"
+LABEL maintainer="the faun"
 
 # Fix: https://github.com/hadolint/hadolint/wiki/DL4006
 # Fix: https://github.com/koalaman/shellcheck/wiki/SC3014
@@ -37,7 +34,6 @@ RUN add-apt-repository -y ppa:ubuntu-toolchain-r/test && \
     cmake \
     libopenmpi-dev openmpi-bin openmpi-common \
     vim \
-    gawk \
     zlib1g-dev && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
@@ -58,7 +54,6 @@ RUN pip install --no-input mdtraj
 
 RUN git clone https://github.com/mlund/chemistry-notebooks.git
 
-# download; build; and install faunus
 USER root
 RUN git clone https://github.com/mlund/faunus.git && \
     export CXX=g++-11 && \

@@ -58,6 +58,25 @@ properties:
               then:
                   required: [radius, length]
 
+    optional_electrolyte:
+        properties:
+            molarity: {type: number, description: "Molar salt concentration (mol/l)"}
+            salt: {type: number, description: "Molar salt concentration (mol/l)", deprecated: true}
+            epsr: {type: number, description: "Relative dielectric constant"}
+            debyelength: {type: number, description: "Debye screening length (Å)"}
+            valencies:
+                type: array
+                items: {type: integer}
+                minItems: 2
+                default: [1,-1]
+                description: "Valencies of participating ions: [1,-1] ~ NaCl; [2,-1] ~ CaCl2; [1,3,-2] ~ KAl(SO4)2)"
+
+    require_electrolyte:
+        "$ref": "#/properties/optional_electrolyte"
+        oneOf:
+            - required: [molarity]
+            - required: [debyelength, epsr]
+     
     insertmolecules:
         type: array
         minItems: 1
@@ -242,7 +261,7 @@ properties:
                       properties:
                           C: {type: integer, default: 3}
                           D: {type: integer, default: 3}
-                          debyelength: {type: number, description: Debye screening length (Å)}
+                          "$ref": "#/properties/optional_electrolyte"
                       required: [cutoff, C, D]
                 - if:
                       properties: {type: {const: "fanourgakis"}}
@@ -259,30 +278,17 @@ properties:
                           ipbc: {type: boolean, default: false}
                           spherical_sum: {type: boolean, default: false}
                           ewaldscheme: {type: string, enum: [PBC, PBCEigen, IPBC], default: PBCEigen}
-                          debyelength: {type: number, description: Debye screening length (Å)}
                       required: [cutoff, epss, alpha, ncutoff]
+                      "$ref": "#/properties/optional_electrolyte"
                 - if:
                       properties: {type: {const: "yukawa"}}
                   then:
+                      "$ref": "#/properties/require_electrolyte"
                       properties:
-                          debyelength: {type: number, description: Debye screening length (Å)}
-                          shift: {type: boolean, description: Zero potential and force at cutoff, default: false}
-                      required: [debyelength]
+                          shift: {type: boolean, description: "Zero potential and force at cutoff", default: false}
+            unevaluatedProperties: false
+              #additionalProperties: false
                       
-        electrolyte:
-            type: object
-            properties:
-                molarity: {type: number, description: "Molar salt concentreation (mol/l)"}
-                valency:
-                    type: array
-                    items: {type: integer}
-                    minItems: 2
-                    maxItems: 2
-                    default: [1,1]
-                    description: "Salt valencies (1:1, 2:1, 2:2 etc.)"
-                required: [molarity]
-                additionalProperties: false
-
         mixing_rule:
             description: Sigma and Epsilon Mixing rule
             type: object

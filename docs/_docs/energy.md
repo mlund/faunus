@@ -232,9 +232,17 @@ A background screening due to implicit ions can be added by specifying the keywo
 - `ewald`
 - `poisson`
 
-The `yukawa` scheme has simple exponential screening, $\exp{-\kappa r}$ and, like `plain`, an infinite cutoff.
+The `yukawa` scheme has simple exponential screening and, like `plain`, an _infinite_ cutoff.
 If `shift: true` is passed to the yukawa scheme, the potential is shifted to give zero potential and force 
-at the now finite `cutoff` distance (simply an alias for `poisson` with C=1 and D=1).
+at the now _finite_ `cutoff` distance (simply an alias for `poisson` with C=1 and D=1).
+The list below shows alternative ways to specify the background electrolyte, and will automatically deduce
+the salt stoichiometry based on valencies:
+
+~~~ yaml
+    debyelength: 30.0, epsr: 79.8       # assuming 1:1 salt, e.g. NaCl
+    molarity: 0.02                      # 0.02 M 1:1 salt, e.g. NaCl
+    molarity: 0.01, valencies: [2,3,-2] # 0.01 M Ca₂Al₂(SO₄)₅
+~~~
 
 
 ### Multipoles

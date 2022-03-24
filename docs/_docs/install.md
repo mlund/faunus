@@ -21,11 +21,25 @@ conda upgrade faunus
 ~~~
 
 Starting from version 2.1, we adhere to [semantic versioning](https://semver.org).
+**Note:** Updating to a newer version is often delayed, and if the version you're after
+is not on Conda, consider an alternative method below.
+
+
+## Using Docker
+
+We provide a [`Dockerfile`](https://github.com/mlund/faunus/blob/master/scripts/Dockerfile)
+that builds the main branch in a [Jupyter](https://jupyter.org) environment:
+
+~~~ bash
+curl -s https://raw.githubusercontent.com/mlund/faunus/master/scripts/Dockerfile | docker build -t faunus -
+docker run -it -p 8888:8888 faunus # paste generated url into webbrowser
+~~~
+
 
 ## Building from source code
 
 Faunus is continuously [tested](https://travis-ci.org/mlund/faunus) on macOS/Linux,
-but should compile on most unix operating systems and possibly under Cygwin (Windows).
+but should compile on most unix operating systems.
 
 ### Requirements
 

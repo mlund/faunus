@@ -179,7 +179,7 @@ void XTCTrajectoryFrame::initNumberOfAtoms(int new_number_of_atoms) {
     assert(new_number_of_atoms >= 0);
     if (number_of_atoms != new_number_of_atoms) {
         number_of_atoms = new_number_of_atoms;
-        xtc_coordinates = std::unique_ptr<XDRfile::rvec[]>(new XDRfile::rvec[number_of_atoms]);
+        xtc_coordinates = std::make_unique<XdrFile::rvec[]>(number_of_atoms);
     }
 }
 
@@ -242,26 +242,25 @@ TEST_CASE("XTCFrame") {
 
 XTCReader::XTCReader(const std::string& filename) : filename(filename) {
     int number_of_atoms;
-    if (XDRfile::read_xtc_natoms(filename.c_str(), &number_of_atoms) == XDRfile::exdrOK) {
+    if (XdrFile::read_xtc_natoms(filename.c_str(), &number_of_atoms) == XdrFile::exdrOK) {
         xtc_frame = std::make_unique<XTCTrajectoryFrame>(number_of_atoms);
-        xdrfile = XDRfile::xdrfile_open(filename.c_str(), "r");
+        xdrfile = XdrFile::XDRFILE_unique(XdrFile::xdrfile_open(filename.c_str(), "r"));
     }
-    if (!xtc_frame || (xdrfile == nullptr)) {
+    if (!xtc_frame || !xdrfile) {
         throw std::runtime_error(fmt::format("xtc file {} could not be opened", filename));
     }
 }
 
-XTCReader::~XTCReader() { XDRfile::xdrfile_close(xdrfile); }
-
 int XTCReader::getNumberOfCoordinates() { return xtc_frame->number_of_atoms; }
 
 bool XTCReader::readFrame() {
-    return_code = XDRfile::read_xtc(xdrfile, xtc_frame->number_of_atoms, &xtc_frame->xtc_step, &xtc_frame->xtc_time,
-                                    xtc_frame->xtc_box, xtc_frame->xtc_coordinates.get(), &xtc_frame->precision);
-    if (return_code != XDRfile::exdrENDOFFILE && return_code != XDRfile::exdrOK) {
+    return_code =
+        XdrFile::read_xtc(xdrfile.get(), xtc_frame->number_of_atoms, &xtc_frame->xtc_step, &xtc_frame->xtc_time,
+                          xtc_frame->xtc_box, xtc_frame->xtc_coordinates.get(), &xtc_frame->precision);
+    if (return_code != XdrFile::exdrENDOFFILE && return_code != XdrFile::exdrOK) {
         throw std::runtime_error(fmt::format("xtc file {} could not be read (error code {})", filename, return_code));
     }
-    return return_code == XDRfile::exdrOK;
+    return return_code == XdrFile::exdrOK;
 }
 
 bool XTCReader::read(TrajectoryFrame& frame) {
@@ -274,27 +273,28 @@ bool XTCReader::read(TrajectoryFrame& frame) {
 
 // ========== XTCWriter ==========
 
-XTCWriter::XTCWriter(const std::string& filename) : xdrfile(XDRfile::xdrfile_open(filename.c_str(), "w")), filename(filename) {
+XTCWriter::XTCWriter(const std::string& filename)
+    : xdrfile(XdrFile::xdrfile_open(filename.c_str(), "w"))
+    , filename(filename) {
     if (!xdrfile) {
         throw std::runtime_error(fmt::format("xtc file {} could not be opened", filename));
     }
 }
 
-XTCWriter::~XTCWriter() { XDRfile::xdrfile_close(xdrfile); }
-
 void XTCWriter::writeFrameAt(int step, float time) {
-    return_code = XDRfile::write_xtc(xdrfile, xtc_frame->number_of_atoms, step, time, xtc_frame->xtc_box,
+    return_code = XdrFile::write_xtc(xdrfile.get(), xtc_frame->number_of_atoms, step, time, xtc_frame->xtc_box,
                                      xtc_frame->xtc_coordinates.get(), xtc_frame->precision);
-    if (return_code != XDRfile::exdrOK) {
+    if (return_code != XdrFile::exdrOK) {
         throw std::runtime_error(
             fmt::format("xtc file {} could not be written (error code {})", filename, return_code));
     }
 }
 
 void XTCWriter::writeFrame() {
-    return_code = XDRfile::write_xtc(xdrfile, xtc_frame->number_of_atoms, xtc_frame->xtc_step, xtc_frame->xtc_time,
-                                     xtc_frame->xtc_box, xtc_frame->xtc_coordinates.get(), xtc_frame->precision);
-    if (return_code != XDRfile::exdrOK) {
+    return_code =
+        XdrFile::write_xtc(xdrfile.get(), xtc_frame->number_of_atoms, xtc_frame->xtc_step, xtc_frame->xtc_time,
+                           xtc_frame->xtc_box, xtc_frame->xtc_coordinates.get(), xtc_frame->precision);
+    if (return_code != XdrFile::exdrOK) {
         throw std::runtime_error(
             fmt::format("xtc file {} could not be written (error code {})", filename, return_code));
     }
@@ -1080,4 +1080,5 @@ TEST_CASE("[Faunus] CoarseGrainedFastaFileReader") {
 
 // -----------------------
 
+void XdrFile::XdrFileDeleter::operator()(XdrFile::XDRFILE* xdrfile) { XdrFile::xdrfile_close(xdrfile); }
 } // namespace Faunus

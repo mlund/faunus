@@ -39,7 +39,7 @@ docker run -it -p 8888:8888 faunus # paste generated url into webbrowser
 ## Building from source code
 
 Faunus is continuously [tested](https://travis-ci.org/mlund/faunus) on macOS/Linux,
-but should compile on most unix operating systems and possibly under Cygwin (Windows).
+but should compile on most unix operating systems.
 
 ### Requirements
 

@@ -505,6 +505,16 @@ properties:
                         radius: {type: number, default: 1.4, description: Probe radius for SASA calculation (Å)}
                         molarity: {type: number, description: Molar concentration of co-solute}
                         dense: {type: boolean, default: true, description: True if the dense container for cell lists is desired}
+                        slices: {type: integer, description: "Slices per particle", default: 25}
+                    required: [molarity]
+                    additionalProperties: false
+
+                freesasa:
+                    description: "Manybody solvent accessible surface area using the FreeSASA implementation"
+                    type: object
+                    properties:
+                        radius: {type: number, default: 1.4, description: Probe radius for SASA calculation (Å)}
+                        molarity: {type: number, description: Molar concentration of co-solute}
                     required: [molarity]
                     additionalProperties: false
 

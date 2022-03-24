@@ -79,7 +79,7 @@ class TestSASA(unittest.TestCase):
         np.testing.assert_almost_equal(np.divide(u, [87.3576,100.4613,127.3487,138.4422,138.4422]), 1., 4)
 
     def test_freesasa_hamiltonian(self):
-        H = Hamiltonian(spc, [ {'sasa' : {'molarity': 1.5, 'radius': 1.4}} ] )
+        H = Hamiltonian(spc, [ {'sasa' : {'slices': 300, 'molarity': 1.5, 'radius': 1.4}} ] )
         spc.particles[0].pos = [0,0,0] # fix 1st particle in origin
         c = Change()           # change object telling that a full energy calculation
         c.everything = True;   # should be performed when calling `energy()`
@@ -88,7 +88,7 @@ class TestSASA(unittest.TestCase):
         for i in r:   #         loop over particle-particle distances
             spc.particles[1].pos = [0,0,i]
             u.append( H.energy(c) )
-        np.testing.assert_almost_equal(np.divide(u, np.multiply(1.26, [87.3576,100.4613,127.3487,138.4422,138.4422])), 1/1.26, 2) # 2.5% error
+        np.testing.assert_almost_equal(np.divide(u,  [87.3576,100.4613,127.3487,138.4422,138.4422]), 1., 2)
 
 # Geometry
 

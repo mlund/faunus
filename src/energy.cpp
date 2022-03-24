@@ -758,11 +758,16 @@ void Bonded::updateInternalBonds() {
 }
 
 double Bonded::sumBondEnergy(const Bonded::BondVector& bonds) const {
+#if (defined(__clang__) && __clang_major__ >= 10) || (defined(__GNUC__) && __GNUC__ >= 10)
+    auto bond_energy = [&](const auto& bond) { return bond->energyFunc(spc.geometry.getDistanceFunc()); };
+    return std::transform_reduce(bonds.begin(), bonds.end(), 0.0, std::plus<>(), bond_energy);
+#else
     double energy = 0.0;
     for (const auto& bond : bonds) {
         energy += bond->energyFunc(spc.geometry.getDistanceFunc());
     }
     return energy;
+#endif
 }
 
 Bonded::Bonded(const Space& spc, const BondVector& external_bonds = BondVector())

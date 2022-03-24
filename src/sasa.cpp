@@ -135,7 +135,7 @@ const std::vector<double>& SASABase::getAreas() const { return areas; }
  * @param probe_radius in angstrom
  * @param slices_per_atom number of slices of each sphere in sasa calculations
  */
-SASABase::SASABase(Space& spc, double probe_radius, int slices_per_atom)
+SASABase::SASABase(const Space& spc, double probe_radius, int slices_per_atom)
     : probe_radius(probe_radius), slices_per_atom(slices_per_atom),
       first_particle(std::addressof(spc.particles.at(0))) {}
 
@@ -143,7 +143,7 @@ SASABase::SASABase(Space& spc, double probe_radius, int slices_per_atom)
  * @brief resizes areas buffer to size of ParticleVector and fill radii buffer with radii
  * @param space
  */
-void SASA::init(Space& spc) {
+void SASA::init(const Space& spc) {
     using namespace ranges::cpp20::views;
     auto sasa_radius_l = [this](const Particle& particle) { return 0.5 * particle.traits().sigma + probe_radius; };
     sasa_radii = spc.particles | ranges::cpp20::views::transform(sasa_radius_l) | ranges::to<std::vector>;
@@ -156,7 +156,7 @@ void SASA::init(Space& spc) {
  * @param space
  * @param target_index indicex of target particle in ParticleVector
  */
-SASA::Neighbours SASA::calcNeighbourDataOfParticle(Space& spc, const index_type target_index) const {
+SASA::Neighbours SASA::calcNeighbourDataOfParticle(const Space& spc, const index_type target_index) const {
 
     SASA::Neighbours neighbour;
 
@@ -183,7 +183,7 @@ SASA::Neighbours SASA::calcNeighbourDataOfParticle(Space& spc, const index_type 
  * @param space
  * @param target_indices absolute indicies of target particles in ParticleVector
  */
-std::vector<SASA::Neighbours> SASA::calcNeighbourData(Space& spc, const std::vector<index_type>& target_indices) const {
+std::vector<SASA::Neighbours> SASA::calcNeighbourData(const Space& spc, const std::vector<index_type>& target_indices) const {
 
     return target_indices |
            ranges::views::transform([&](auto index) { return calcNeighbourDataOfParticle(spc, index); }) |
@@ -195,7 +195,7 @@ std::vector<SASA::Neighbours> SASA::calcNeighbourData(Space& spc, const std::vec
  * @param probe_radius in angstrom
  * @param slices_per_atom number of slices of each sphere in sasa calculations
  */
-SASA::SASA(Space& spc, double probe_radius, int slices_per_atom) : SASABase(spc, probe_radius, slices_per_atom) {}
+SASA::SASA(const Space& spc, double probe_radius, int slices_per_atom) : SASABase(spc, probe_radius, slices_per_atom) {}
 SASA::SASA(const json& j, Space& spc) : SASABase(spc, j.value("radius", 1.4) * 1.0_angstrom, j.value("slices", 20)) {}
 
 /**
@@ -203,7 +203,7 @@ SASA::SASA(const json& j, Space& spc) : SASABase(spc, j.value("radius", 1.4) * 1
  * @param space
  * @param change
  */
-void SASA::update([[maybe_unused]] Space& spc, [[maybe_unused]] const Change& change) {}
+void SASA::update([[maybe_unused]] const Space& spc, [[maybe_unused]] const Change& change) {}
 
 TEST_CASE("[Faunus] SASAPBC") {
     using doctest::Approx;
@@ -283,7 +283,7 @@ TEST_CASE("[Faunus] SASAPBC") {
  * @param slices_per_atom number of slices of each sphere in sasa calculations
  */
 template <typename CellList>
-SASACellList<CellList>::SASACellList(Space& spc, double probe_radius, int slices_per_atom)
+SASACellList<CellList>::SASACellList(const Space& spc, double probe_radius, int slices_per_atom)
     : SASABase(spc, probe_radius, slices_per_atom) {}
 
 template <typename CellList>
@@ -294,7 +294,7 @@ SASACellList<CellList>::SASACellList(const json& j, Space& spc)
  * @brief constructs cell_list with appropriate cell_length and fills it with particles from space
  * @param space
  */
-template <typename CellList> void SASACellList<CellList>::init(Space& spc) {
+template <typename CellList> void SASACellList<CellList>::init(const Space& spc) {
     cell_offsets.clear();
     for (auto i = -1; i <= 1; ++i) {
         for (auto j = -1; j <= 1; ++j) {
@@ -322,7 +322,7 @@ template <typename CellList> void SASACellList<CellList>::init(Space& spc) {
  * @param target_index indicex of target particle in ParticleVector
  */
 template <typename CellList>
-SASABase::Neighbours SASACellList<CellList>::calcNeighbourDataOfParticle(Space& spc,
+SASABase::Neighbours SASACellList<CellList>::calcNeighbourDataOfParticle(const Space& spc,
                                                                          const index_type target_index) const {
 
     SASABase::Neighbours neighbours;
@@ -362,7 +362,7 @@ SASABase::Neighbours SASACellList<CellList>::calcNeighbourDataOfParticle(Space& 
  */
 template <typename CellList>
 std::vector<SASABase::Neighbours>
-SASACellList<CellList>::calcNeighbourData(Space& spc, const std::vector<index_type>& target_indices) const {
+SASACellList<CellList>::calcNeighbourData(const Space& spc, const std::vector<index_type>& target_indices) const {
     return target_indices |
            ranges::views::transform([&](auto index) { return calcNeighbourDataOfParticle(spc, index); }) |
            ranges::to<std::vector>;
@@ -374,7 +374,7 @@ SASACellList<CellList>::calcNeighbourData(Space& spc, const std::vector<index_ty
  * @param space
  * @param change
  */
-template <typename CellList> void SASACellList<CellList>::update(Space& spc, const Change& change) {
+template <typename CellList> void SASACellList<CellList>::update(const Space& spc, const Change& change) {
     if (change.everything || change.volume_change) {
         const auto active_particles = spc.activeParticles();
         createCellList(active_particles.begin(), active_particles.end(), spc.geometry);
@@ -391,7 +391,7 @@ template <typename CellList> void SASACellList<CellList>::update(Space& spc, con
  */
 template <typename CellList>
 template <typename TBegin, typename TEnd>
-void SASACellList<CellList>::createCellList(TBegin begin, TEnd end, GeometryType& geometry) {
+void SASACellList<CellList>::createCellList(TBegin begin, TEnd end, const GeometryType& geometry) {
     if (cell_list.get()) {
         delete cell_list.release();
         cell_list = std::make_unique<CellList>(geometry.getLength(), cell_length);
@@ -408,7 +408,7 @@ void SASACellList<CellList>::createCellList(TBegin begin, TEnd end, GeometryType
  * @param space
  * @param change
  */
-template <typename CellList> void SASACellList<CellList>::updateMatterChange(Space& spc, const Change& change) {
+template <typename CellList> void SASACellList<CellList>::updateMatterChange(const Space& spc, const Change& change) {
     for (const auto& group_change : change.groups) {
         const auto& group = spc.groups.at(group_change.group_index);
         const auto offset = spc.getFirstParticleIndex(group);
@@ -429,7 +429,7 @@ template <typename CellList> void SASACellList<CellList>::updateMatterChange(Spa
  * @param space
  * @param change
  */
-template <typename CellList> void SASACellList<CellList>::updatePositionsChange(Space& spc, const Change& change) {
+template <typename CellList> void SASACellList<CellList>::updatePositionsChange(const Space& spc, const Change& change) {
     for (const auto& group_change : change.groups) {
         const auto& group = spc.groups.at(group_change.group_index);
         const auto offset = spc.getFirstParticleIndex(group);

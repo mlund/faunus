@@ -657,7 +657,7 @@ FileReactionCoordinate::FileReactionCoordinate(
 
 FileReactionCoordinate::FileReactionCoordinate(const json& j, const Space& spc)
     : FileReactionCoordinate(
-          spc, j.value("filename", ""s),
+          spc, j.value("file", ""s),
           ReactionCoordinate::createReactionCoordinate({{j.at("type").get<std::string>(), j}}, spc)) {
     from_json(j);
 }

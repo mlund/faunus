@@ -1,6 +1,6 @@
 # Installing
 
-## Using Conda
+## Conda
 
 For macOS and Linux x86-64, precompiled binary packages are available
 via [(mini)conda](https://conda.io/docs/user-guide/install/index.html):
@@ -25,26 +25,33 @@ Starting from version 2.1, we adhere to [semantic versioning](https://semver.org
 is not on Conda, consider an alternative method below.
 
 
-## Using Docker
+## Docker
 
 We provide a [`Dockerfile`](https://github.com/mlund/faunus/blob/master/scripts/Dockerfile)
 that builds the main branch in a [Jupyter](https://jupyter.org) environment:
 
 ~~~ bash
-curl -s https://raw.githubusercontent.com/mlund/faunus/master/scripts/Dockerfile | docker build -t faunus -
-docker run -it -p 8888:8888 faunus # paste generated url into webbrowser
+curl -s https://raw.githubusercontent.com/mlund/faunus/master/scripts/Dockerfile | docker build -t faunuslab -
+docker run -it -p 8888:8888 faunuslab # open url in webbrowser
+~~~
+
+Once running, you may alias the Docker-side faunus command:
+
+~~~ bash
+alias faunus='docker exec --interactive -u 1000 faunuslab faunus'
+faunus < input.json # piping input to docker
 ~~~
 
 
-## Building from source code
+## Build from source code
 
 Faunus is continuously [tested](https://travis-ci.org/mlund/faunus) on macOS/Linux,
-but should compile on most unix operating systems.
+but compile on most unix operating systems, including the Windows Subsystem for Linus (WSL).
 
 ### Requirements
 
 - CMake 3.16+
-- C/C++17 compiler (Clang 5+, GCC 7+, etc.)
+- C++20 compiler (clang, g++, intel ixpc, ...)
 - Python 3.6+ with the following packages:
   - `jinja2`, `ruamel_yaml` or `yaml`
 
@@ -55,13 +62,6 @@ The following are optional:
 - `pypandoc` (for building manual)
 - `BeautifulSoup4` (for building manual)
 - Message Passing Interface (MPI)
-
-**macOS tip:**
-Apple's developer tools, Xcode, include clang;
-CMake can be installed with an
-[Installer package](https://cmake.org/download) from Kitware, or using
-[Homebrew](https://brew.sh), or
-[(mini)conda](https://conda.io/docs/user-guide/install/index.html)
 
 ### Compiling
 
@@ -137,6 +137,9 @@ otool -L pyfaunus.so
 install_name_tool -change libpython3.6.dylib \
   $HOME/miniconda/lib/libpython3.6.dylib pyfaunus.so
 ~~~
+
+For further help with compiling with python bindings, see
+[here](https://pybind11.readthedocs.io/en/stable/faq.html#cmake-doesn-t-detect-the-right-python-version).
 
 ### Resetting the build system
 

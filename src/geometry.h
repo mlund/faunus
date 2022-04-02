@@ -4,6 +4,8 @@
 #include "core.h"
 #include "particle.h"
 #include "tensor.h"
+#include <iterator>
+#include <concepts>
 #include <Eigen/Geometry>
 #include <cereal/types/base_class.hpp>
 #include <spdlog/spdlog.h>
@@ -470,7 +472,7 @@ enum class weight { MASS, CHARGE, GEOMETRIC };
  * @param boundary Used to remove periodic boundaries
  * @param shift Shift with this value before and after center calculation. To e.g. remove PBC
  */
-template <typename Positions, typename Weights>
+template <ranges::cpp20::range Positions, ranges::cpp20::range Weights>
 Point weightedCenter(
     const Positions& positions, const Weights& weights, Geometry::BoundaryFunction boundary = [](auto&) {},
     const Point& shift = Point::Zero()) {
@@ -502,7 +504,7 @@ Point weightedCenter(
  * @return Center position; (0,0,0) if the sum of weights is zero
  * @throw warning if the sum of weights is zero, thereby hampering normalization
  */
-template <typename iterator> //, typename weightFunc>
+template <RequireParticleIterator iterator> //, typename weightFunc>
 Point weightedCenter(iterator begin, iterator end, BoundaryFunction boundary,
                      std::function<double(const Particle&)> weight_function, const Point& shift = Point::Zero()) {
     namespace rv = ranges::cpp20::views;
@@ -521,7 +523,7 @@ Point weightedCenter(iterator begin, iterator end, BoundaryFunction boundary,
  * @return Mass center position
  * @throws if the sum of masses is zero, thereby hampering normalization
  */
-template <typename iterator>
+template <RequireParticleIterator iterator>
 Point massCenter(
     iterator begin, iterator end, BoundaryFunction apply_boundary = [](Point&) {},
     const Point& shift = {0.0, 0.0, 0.0}) {
@@ -535,7 +537,7 @@ Point massCenter(
  * @param displacement Displacement vector
  * @param apply_boundary Boundary function to apply PBC (default: no PBC)
  */
-template <typename iterator>
+template <RequireParticleIterator iterator>
 void translate(
     iterator begin, iterator end, const Point& displacement, BoundaryFunction apply_boundary = [](auto&) {}) {
     std::for_each(begin, end, [&](auto& particle) {
@@ -550,7 +552,7 @@ void translate(
  * @param end End iterator
  * @param apply_boundary Boundary function to apply PBC (default: none)
  */
-template <typename iterator>
+template <RequireParticleIterator iterator>
 void translateToOrigin(
     iterator begin, iterator end, BoundaryFunction apply_boundary = [](auto&) {}) {
     Point cm = massCenter(begin, end, apply_boundary);
@@ -559,8 +561,8 @@ void translateToOrigin(
 
 /**
  * @brief Rotate range of particles using a Quaternion
- * @param begin Begin iterator
- * @param end End iterator
+ * @param begin Begin particle iterator
+ * @param end End particle iterator
  * @param quaternion Quaternion used for rotation
  * @param apply_boundary Boundary function to apply PBC (default: none)
  * @param shift This value is added before rotation to aid PBC remove (default: 0,0,0)
@@ -568,7 +570,7 @@ void translateToOrigin(
  *
  * This will rotate both positions and internal coordinates in the particle (dipole moments, tensors etc.)
  */
-template <typename iterator>
+template <RequireParticleIterator iterator>
 void rotate(
     iterator begin, iterator end, const Eigen::Quaterniond& quaternion, BoundaryFunction apply_boundary = [](auto&) {},
     const Point& shift = Point::Zero()) {
@@ -637,7 +639,7 @@ Point trigoCom(const Tspace& spc, const GroupIndex& indices, const std::vector<i
  * @return gyration tensor; or zero tensor if empty particle range
  * @throw If total mass is non-positive
  */
-template <typename position_iterator, typename mass_iterator>
+template <RequirePointIterator position_iterator, std::forward_iterator mass_iterator>
 Tensor gyration(
     position_iterator begin, position_iterator end, mass_iterator mass, const Point& mass_center,
     const BoundaryFunction boundary = [](auto&) {}) {
@@ -667,7 +669,7 @@ Tensor gyration(
  * Before the calculation, the molecule is made whole to moving it to the center or the
  * simulation box (0,0,0), then apply the given boundary function.
  *
- * @tparam particle_iterator Iterator to `Particle` range
+ * @tparam iterator Iterator to `Particle` range
  * @param begin Iterator to first particle
  * @param end Iterator to end
  * @param mass_center The mass center used as reference and to remove PBC
@@ -675,10 +677,9 @@ Tensor gyration(
  * @return gyration tensor; or zero tensor if empty particle range
  * @throws If total mass is non-positive
  */
-template <typename particle_iterator>
+template <RequireParticleIterator iterator>
 Tensor gyration(
-    particle_iterator begin, particle_iterator end, const Point& mass_center,
-    const BoundaryFunction boundary = [](auto&) {}) {
+    iterator begin, iterator end, const Point& mass_center, const BoundaryFunction boundary = [](auto&) {}) {
     namespace rv = ranges::cpp20::views;
     auto particles = ranges::make_subrange(begin, end);
     auto positions = particles | rv::transform(&Particle::pos);
@@ -715,10 +716,9 @@ void to_json(json &j, const ShapeDescriptors &shape); //!< Store Shape as json o
  * @param origin a reference point
  * @return inertia tensor (a zero tensor for an empty group)
  */
-template <typename particle_iter>
+template <RequireParticleIterator iterator>
 Tensor inertia(
-    particle_iter begin, particle_iter end, const Point origin = Point::Zero(),
-    const BoundaryFunction boundary = [](auto&) {}) {
+    iterator begin, iterator end, const Point origin = Point::Zero(), const BoundaryFunction boundary = [](auto&) {}) {
     Tensor I = Tensor::Zero();
     std::for_each(begin, end, [&](const Particle& particle) {
         Point t = particle.pos - origin;
@@ -734,7 +734,7 @@ Tensor inertia(
  * A binary function must be given that returns the difference between data points
  * in the two sets, for example `[](int a, int b){return a-b;}`.
  */
-template <typename InputIt1, typename InputIt2, typename BinaryOperation>
+template <std::forward_iterator InputIt1, std::forward_iterator InputIt2, typename BinaryOperation>
 double rootMeanSquareDeviation(InputIt1 begin, InputIt1 end, InputIt2 d_begin, BinaryOperation diff_squared_func) {
     assert(std::distance(begin, end) > 0);
     double sq_sum = 0;
@@ -770,8 +770,8 @@ ParticleVector mapParticlesOnSphere(const ParticleVector &);
  * side-lengths [2 * inner_radius, 3 * outer_radius, height] and also twice
  * the number of particles
  */
-template <typename Particles>
-std::pair<Cuboid, ParticleVector> hexagonalPrismToCuboid(const HexagonalPrism& hexagon, const Particles& particles) {
+std::pair<Cuboid, ParticleVector> hexagonalPrismToCuboid(const HexagonalPrism& hexagon,
+                                                         const RequireParticles auto& particles) {
     Cuboid cuboid({2.0 * hexagon.innerRadius(), 3.0 * hexagon.outerRadius(), hexagon.height()});
     ParticleVector cuboid_particles;
     cuboid_particles.reserve(2 * std::distance(particles.begin(), particles.end()));

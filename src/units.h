@@ -2,32 +2,30 @@
 #include <limits>
 #include <string>
 #include <cmath>
-#include <array>
+#include <numbers>
 
 namespace Faunus {
 
     /** @brief Physical constants */
     namespace PhysicalConstants {
-        typedef double T; //!< Float size
-        constexpr T
-            infty = std::numeric_limits<T>::infinity(),      //!< Numerical infinity
-            neg_infty = -std::numeric_limits<T>::infinity(), //!< Numerical negative infinity
-            epsilon_dbl = std::numeric_limits<T>::epsilon(), //!< Numerical precision
-            max_value = std::numeric_limits<T>::max(),       //!< Maximal (finite) representable value
-            max_exp_argument =
-                709.782712893384,    //!< Largest value exp() can take before overflow (hard-coded for double)
-            pi = 3.141592653589793,  //!< Pi
-            e0 = 8.85419e-12,        //!< Permittivity of vacuum [C^2/(J*m)]
-            e = 1.602177e-19,        //!< Absolute electronic unit charge [C]
-            kB = 1.380658e-23,       //!< Boltzmann's constant [J/K]
-            Nav = 6.022137e23,       //!< Avogadro's number [1/mol]
-            c = 299792458.0,         //!< Speed of light [m/s]
-            R = kB * Nav;            //!< Molar gas constant [J/(K*mol)]
-        extern T temperature;        //!< Temperature [K]
-        static inline T kT() { return temperature * kB; } //!< Thermal energy [J]
-        static inline T RT() { return temperature * R; }  //!< Thermal energy [J/mol]
-        static inline T bjerrumLength(T epsilon_r) {
-            return e * e / ( 4 * pi * e0 * epsilon_r * 1e-10 * kT());
+    using T = double;                                       //!< floating point type
+    constexpr T infty = std::numeric_limits<T>::infinity(), //!< Numerical infinity
+        neg_infty = -std::numeric_limits<T>::infinity(),    //!< Numerical negative infinity
+        epsilon_dbl = std::numeric_limits<T>::epsilon(),    //!< Numerical precision
+        max_value = std::numeric_limits<T>::max(),          //!< Maximal (finite) representable value
+        max_exp_argument = 709.782712893384, //!< Largest value exp() can take before overflow (hard-coded for double)
+        pi = std::numbers::pi,               //!< Pi
+        e0 = 8.85419e-12,                    //!< Permittivity of vacuum [C^2/(J*m)]
+        e = 1.602177e-19,                    //!< Absolute electronic unit charge [C]
+        kB = 1.380658e-23,                   //!< Boltzmann's constant [J/K]
+        Nav = 6.022137e23,                   //!< Avogadro's number [1/mol]
+        c = 299792458.0,                     //!< Speed of light [m/s]
+        R = kB * Nav;                        //!< Molar gas constant [J/(K*mol)]
+    extern T temperature;                    //!< Temperature [K]
+    static inline T kT() { return temperature * kB; } //!< Thermal energy [J]
+    static inline T RT() { return temperature * R; }  //!< Thermal energy [J/mol]
+    static inline T bjerrumLength(T epsilon_r) {
+        return e * e / (4 * pi * e0 * epsilon_r * 1e-10 * kT());
         } //!< Bjerrum length [Å]
 
         static inline T relativeDielectricFromBjerrumLength(T bjerrumlength) {

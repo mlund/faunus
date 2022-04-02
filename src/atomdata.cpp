@@ -41,26 +41,26 @@ void InteractionData::insert_or_assign(const key_type& name, const double value)
 }
 
 void from_json(const json& j, InteractionData& a) {
-    for (const auto& j_it : j.items()) {
-        if (j_it.value().is_number()) {
-            a.insert_or_assign(j_it.key(), j_it.value());
+    for (const auto& [key, value] : j.items()) {
+        if (value.is_number()) {
+            a.insert_or_assign(key, value);
         }
     }
 }
 
 void from_single_use_json(SingleUseJSON& j, InteractionData& a) {
     auto j_copy = j;
-    for (const auto& j_it : j_copy.items()) {
-        if (j_it.value().is_number()) {
-            a.insert_or_assign(j_it.key(), j_it.value());
-            j.erase(j_it.key());
+    for (const auto& [key, value] : j_copy.items()) {
+        if (value.is_number()) {
+            a.insert_or_assign(key, value);
+            j.erase(key);
         }
     }
 }
 
 void to_json(json& j, const InteractionData& a) {
-    for (const auto& kv : a.data) {
-        j[kv.first] = kv.second;
+    for (const auto& [key, value] : a.data) {
+        j[key] = value;
     }
 }
 
@@ -84,15 +84,18 @@ void to_json(json& j, const AtomData& a) {
           {"psc", a.sphero_cylinder},
           {"id", a.id()}};
     to_json(_j, a.interaction); // append other interactions
-    if (a.hydrophobic)
+    if (a.hydrophobic) {
         _j["hydrophobic"] = a.hydrophobic;
-    if (a.implicit)
+    }
+    if (a.implicit) {
         _j["implicit"] = a.implicit;
+    }
 }
 
 void from_json(const json& j, AtomData& a) {
-    if (j.is_object() == false || j.size() != 1)
+    if (!j.is_object() || j.size() != 1) {
         throw std::runtime_error("Invalid JSON data for AtomData");
+    }
     for (auto atom_iter : j.items()) {
         a.name = atom_iter.key();
         SingleUseJSON val = atom_iter.value();
@@ -106,10 +109,11 @@ void from_json(const json& j, AtomData& a) {
         a.id() = val.value("id", a.id());
         a.mu = val.value("mu", a.mu);
         a.mulen = val.value("mulen", a.mulen);
-        if (a.mu.norm() > 1e-6) {          // if mu is given...
-            if (std::fabs(a.mulen) < 1e-6) // if mulen is not given ...
-                a.mulen = a.mu.norm();     // ... then set mulen
-            a.mu = a.mu / a.mu.norm();     // normalize mu
+        if (a.mu.norm() > 1e-6) {            // if mu is given...
+            if (std::fabs(a.mulen) < 1e-6) { // if mulen is not given ...
+                a.mulen = a.mu.norm();       // ... then set mulen
+            }
+            a.mu = a.mu / a.mu.norm(); // normalize mu
         }
         a.sphero_cylinder = val.value("psc", SpheroCylinderData());
         a.mw = val.value("mw", a.mw);
@@ -117,21 +121,23 @@ void from_json(const json& j, AtomData& a) {
         a.tfe = val.value("tfe", a.tfe) * 1.0_kJmol / (1.0_angstrom * 1.0_angstrom * 1.0_molar);
         a.hydrophobic = val.value("hydrophobic", false);
         a.implicit = val.value("implicit", false);
-        if (val.count("activity") == 1)
+        if (val.contains("activity")) {
             a.activity = val.at("activity").get<double>() * 1.0_molar;
-        if (val.count("pactivity") == 1) {
-            if (val.count("activity") == 1) {
+        }
+        if (val.contains("pactivity")) {
+            if (val.contains("activity")) {
                 throw std::runtime_error("Specify either activity or pactivity for atom '"s + a.name + "'!");
             }
             a.activity = std::pow(10, -val.at("pactivity").get<double>()) * 1.0_molar;
         }
 
-        if (val.count("r") == 1) {
+        if (val.contains("r")) {
             faunus_logger->warn("Atom property `r` is obsolete; use `sigma = 2*r` instead on atom {}", a.name);
         }
         a.interaction.insert_or_assign("sigma", val.value("sigma", 0.0) * 1.0_angstrom);
-        if (fabs(a.interaction.at("sigma")) < 1e-20)
+        if (fabs(a.interaction.at("sigma")) < 1e-20) {
             a.interaction.insert_or_assign("sigma", 2.0 * val.value("r", 0.0) * 1.0_angstrom);
+        }
         // an ugly temporal hack needed until the refactorization is finished
         // as sigma is unfortunately accessed in loops
         a.sigma = a.interaction.at("sigma");
@@ -142,8 +148,9 @@ void from_json(const json& j, AtomData& a) {
             throw ConfigurationError("unused key(s) for atom '{}':\n{}", a.name, val.items().begin().key());
         }
 
-        if (std::isnan(a.interaction.at("sigma")))
+        if (std::isnan(a.interaction.at("sigma"))) {
             throw ConfigurationError("no sigma parameter defined");
+        }
     }
 }
 

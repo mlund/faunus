@@ -107,7 +107,6 @@ class ReplayMove : public MoveBase {
  */
 class AtomicSwapCharge : public MoveBase {
     int molid = -1;
-    double ln10 = log(10);
     double pKa, pH;
     Average<double> msqd; // mean squared displacement
     double _sqd, _bias;   // squared displament

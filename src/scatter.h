@@ -14,7 +14,7 @@ enum Algorithm { SIMD, EIGEN, GENERIC }; //!< Selections for math algorithms
 
 /** @brief Form factor, `F(q)`, for a hard sphere of radius `R`.
  */
-template <class T = float> class FormFactorSphere {
+template <std::floating_point T = float> class FormFactorSphere {
   private:
     T j1(T x) const { // spherical Bessel function
         T xinv = 1 / x;
@@ -39,7 +39,7 @@ template <class T = float> class FormFactorSphere {
 /**
  * @brief Unity form factor (q independent).
  */
-template <class T = float> struct FormFactorUnity {
+template <std::floating_point T = float> struct FormFactorUnity {
     template <class Tparticle> T operator()(T, const Tparticle &) const { return 1; }
 };
 
@@ -61,7 +61,7 @@ template <class T = float> struct FormFactorUnity {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdouble-promotion"
 
-template <class Tformfactor, class T = float> class DebyeFormula {
+template <class Tformfactor, std::floating_point T = float> class DebyeFormula {
     static constexpr T r_cutoff_infty = 1e9; //<! a cutoff distance in angstrom considered to be infinity
     T q_mesh_min, q_mesh_max, q_mesh_step; //<! q_mesh parameters in inverse angstrom; used for inline lambda-functions
 
@@ -209,7 +209,7 @@ template <class Tformfactor, class T = float> class DebyeFormula {
  *
  * @tparam T float or double
  */
-template <typename T> class SamplingPolicy {
+template <std::floating_point T> class SamplingPolicy {
   public:
     struct sampled_value {
         T value;
@@ -240,7 +240,6 @@ template <typename T> class SamplingPolicy {
         samples[key].weight += weight;
     }
 };
-
 
 /**
  * @brief Calculate structure factor using explicit q averaging.
@@ -274,7 +273,7 @@ class StructureFactorPBC : private TSamplingPolicy {
      * https://gcc.gnu.org/gcc-9/porting_to.html#ompdatasharing
      * #pragma omp parallel for collapse(2) default(none) shared(directions, p_max, boxlength) shared(positions)
      */
-    template <typename Tpositions> void sample(const Tpositions& positions, const Point& boxlength) {
+    template <RequirePoints Tpositions> void sample(const Tpositions& positions, const Point& boxlength) {
 #pragma omp parallel for collapse(2) default(shared)
         for (size_t i = 0; i < directions.size(); ++i) {                                   // openmp req. tradional loop
             for (int p = 1; p <= p_max; ++p) {                                             // loop over multiples of q
@@ -286,7 +285,7 @@ class StructureFactorPBC : private TSamplingPolicy {
         }
     }
 
-    template <typename Tpositions> T calculateStructureFactor(const Tpositions& positions, const Point& q) const {
+    template <RequirePoints Tpositions> T calculateStructureFactor(const Tpositions& positions, const Point& q) const {
         T sum_cos = 0.0;
         T sum_sin = 0.0;
         if constexpr (method == SIMD) {
@@ -328,7 +327,8 @@ class StructureFactorPBC : private TSamplingPolicy {
  * The sample directions reduce to 3 compared to 13 in regular periodic boundary conditions. Overall simplification
  * shall yield roughly 10 times faster computation.
  */
-template <typename T = float, typename TSamplingPolicy = SamplingPolicy<T>> class StructureFactorIPBC : private TSamplingPolicy {
+template <std::floating_point T = float, typename TSamplingPolicy = SamplingPolicy<T>>
+class StructureFactorIPBC : private TSamplingPolicy {
     //! Sample directions (h,k,l).
     //! Due to the symmetry in IPBC we need not consider permutations of directions.
     std::vector<Point> directions = {{1, 0, 0}, {1, 1, 0}, {1, 1, 1}};
@@ -339,7 +339,7 @@ template <typename T = float, typename TSamplingPolicy = SamplingPolicy<T>> clas
   public:
     explicit StructureFactorIPBC(int q_multiplier) : p_max(q_multiplier) {}
 
-    template <class Tpositions> void sample(const Tpositions &positions, const Point &boxlength) {
+    template <RequirePoints Tpositions> void sample(const Tpositions& positions, const Point& boxlength) {
         // https://gcc.gnu.org/gcc-9/porting_to.html#ompdatasharing
         // #pragma omp parallel for collapse(2) default(none) shared(directions, p_max, positions, boxlength)
         #pragma omp parallel for collapse(2) default(shared)

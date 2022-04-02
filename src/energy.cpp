@@ -6,9 +6,6 @@
 #include <range/v3/view/zip.hpp>
 #include <range/v3/algorithm/for_each.hpp>
 #include <numeric>
-#if __cplusplus > 201703L
-#include <span> // c++20
-#endif
 
 #ifdef ENABLE_FREESASA
 #include <freesasa.h>
@@ -225,9 +222,9 @@ TEST_CASE("[Faunus] Ewald - IonIonPolicy") {
     Group g(0, spc.particles.begin(), spc.particles.end());
     spc.groups.push_back(g);
 
-    EwaldData data = R"({
+    auto data = static_cast<EwaldData>(R"({
                 "epsr": 1.0, "alpha": 0.894427190999916, "epss": 1.0,
-                "ncutoff": 11.0, "spherical_sum": true, "cutoff": 5.0})"_json;
+                "ncutoff": 11.0, "spherical_sum": true, "cutoff": 5.0})"_json);
     Change c;
     c.everything = true;
     data.policy = EwaldData::PBC;
@@ -743,7 +740,7 @@ void Bonded::updateGroupBonds(const Space::GroupType& group) {
     const auto group_index = spc.getGroupIndex(group);
     auto& bonds = internal_bonds[group_index];              // access or insert
     for (const auto& generic_bond : group.traits().bonds) { // generic bonds defined in topology
-        const auto& bond = bonds.template push_back<Potential::BondData>(generic_bond->clone());
+        const auto& bond = bonds.push_back(generic_bond->clone());
         bond->shiftIndices(first_particle_index); // shift to absolute particle index
         bond->setEnergyFunction(spc.particles);
     }
@@ -824,7 +821,7 @@ double Bonded::internalGroupEnergy(const Change::GroupChange& changed) {
             const auto first_particle_index = spc.getFirstParticleIndex(group);
             auto particle_indices = changed.relative_atom_indices |
                                     transform([first_particle_index](auto i) { return i + first_particle_index; });
-            energy += sum_energy(bonds, particle_indices);
+            energy += sumEnergy(bonds, particle_indices);
         }
     }
     return energy;
@@ -1214,12 +1211,12 @@ TEST_CASE("[Faunus] FreeSASA") {
  * @param slices_per_atom number of slices of spheres in SASA calculation
  * @param dense_container flag specifying if a fast memory heavy version of cell_list container is used
  */
-SASAEnergyReference::SASAEnergyReference(const Space& spc, double cosolute_molarity, double probe_radius, int slices_per_atom,
-                               bool dense_container)
-    : spc(spc), cosolute_molarity(cosolute_molarity) {
+SASAEnergyReference::SASAEnergyReference(const Space& spc, double cosolute_molarity, double probe_radius,
+                                         int slices_per_atom, bool dense_container)
+    : spc(spc)
+    , cosolute_molarity(cosolute_molarity) {
     using SASA::SASACellList;
-    const auto periodic_dimensions =
-        spc.geometry.asSimpleGeometry()->boundary_conditions.isPeriodic().count();
+    const auto periodic_dimensions = spc.geometry.asSimpleGeometry()->boundary_conditions.isPeriodic().count();
     switch (periodic_dimensions) {
     case 3: // PBC in all directions
         if (dense_container) {
@@ -1247,7 +1244,7 @@ SASAEnergyReference::SASAEnergyReference(const Space& spc, double cosolute_molar
 
 SASAEnergyReference::SASAEnergyReference(const json& j, const Space& spc)
     : SASAEnergyReference(spc, j.at("molarity").get<double>() * 1.0_molar, j.value("radius", 1.4) * 1.0_angstrom,
-                     j.value("slices", 25), j.value("dense", true)) {}
+                          j.value("slices", 25), j.value("dense", true)) {}
 
 void SASAEnergyReference::init() {
     sasa->init(spc);
@@ -1275,7 +1272,6 @@ SASAEnergy::SASAEnergy(const Space& spc, double cosolute_molarity, double probe_
 SASAEnergy::SASAEnergy(const json& j, const Space& spc)
     : SASAEnergy(spc, j.at("molarity").get<double>() * 1.0_molar, j.value("radius", 1.4) * 1.0_angstrom,
                  j.value("slices", 25), j.value("dense", true)) {}
-
 
 void SASAEnergy::init() {
     areas.resize(spc.particles.size(), 0.0);
@@ -1404,7 +1400,7 @@ double SASAEnergy::energy(Change& change) {
     }
 
     auto accumulate_energy = [this, &energy](const auto& particle) {
-      energy += areas.at(indexOf(particle)) * (particle.traits().tension + cosolute_molarity * particle.traits().tfe);
+        energy += areas.at(indexOf(particle)) * (particle.traits().tension + cosolute_molarity * particle.traits().tfe);
     };
     ranges::cpp20::for_each(particles, accumulate_energy);
     return energy;
@@ -1536,7 +1532,8 @@ void from_json(const json& j, GroupCutoff& cutoff) {
                     continue;
                 }
                 try {
-                    if (const auto molecules_names = words2vec<std::string>(named_pair); molecules_names.size() == 2) {
+                    if (const auto molecules_names = splitConvert<std::string>(named_pair);
+                        molecules_names.size() == 2) {
                         const auto& molecule1 = findMoleculeByName(molecules_names[0]);
                         const auto& molecule2 = findMoleculeByName(molecules_names[1]);
                         cutoff.cutoff_squared.set(molecule1.id(), molecule2.id(),

@@ -20,6 +20,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 #pragma once
 #include <cmath>
+#include <concepts>
 #include <range/v3/view/iota.hpp>
 #include <range/v3/view/transform.hpp>
 

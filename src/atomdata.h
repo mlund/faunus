@@ -1,5 +1,9 @@
 #pragma once
 #include "core.h"
+#include <range/v3/range/concepts.hpp>
+#include <range/v3/view/transform.hpp>
+#include <range/v3/algorithm/any_of.hpp>
+#include <range/v3/range/conversion.hpp>
 
 namespace Faunus {
 
@@ -104,16 +108,28 @@ void from_json(const json& j, std::vector<AtomData>& atom_vector);
 
 extern std::vector<AtomData> atoms; //!< Global instance of atom list
 
+/** Concept for named database such as vector<AtomData>, vector<MoleculeData> etc. */
+template <typename T>
+concept RequireNamedElements = requires(T db) {
+    {db.begin()};
+    { db.begin()->name } -> std::convertible_to<std::string>;
+    {std::is_integral_v<typename ranges::cpp20::range_value_t<T>::index_type>};
+};
+
 /**
  * @brief Finds the first element with a member attribute `name` matching the input.
  *
- * @param rng  a range of elements
+ * @param range  a range of elements
  * @param name  a name to look for
  * @return an iterator to the first element, or `last` if not found
  * @see findAtomByName(), findMoleculeByName()
  */
-template <class Trange> auto findName(Trange& rng, std::string_view name) {
-    return std::find_if(rng.begin(), rng.end(), [&name](auto& i) { return i.name == name; });
+auto findName(RequireNamedElements auto& range, std::string_view name) {
+    return std::find_if(range.begin(), range.end(), [&](auto& i) { return i.name == name; });
+}
+
+auto findName(const RequireNamedElements auto& range, std::string_view name) {
+    return std::find_if(range.begin(), range.end(), [&](const auto& i) { return i.name == name; });
 }
 
 /**
@@ -136,7 +152,7 @@ AtomData& findAtomByName(std::string_view name);
 
 /**
  * @brief Search for `name` in `database` and return `id()`
- * @tparam Trange Container of object having `.name` and `.id()` data members
+ * @tparam T Container of object having `.name` and `.id()` data members
  * @param database Iterable range having `.name` and `.id()` members
  * @param names Container with names to convert to id
  * @throw if names not found
@@ -148,23 +164,21 @@ AtomData& findAtomByName(std::string_view name);
  * a sequence containing all id's of the database, i.e.
  * `0, ..., database.size()-1`.
  */
-template <class Trange> auto names2ids(Trange& database, const std::vector<std::string>& names) {
-    using id_type = typename Trange::value_type::index_type;
-    std::vector<id_type> index;
-    index.reserve(names.size());
-    for (const auto& name : names) {
-        if (name == "*") { // wildcard selecting all id's
-            index.resize(database.size());
-            std::iota(index.begin(), index.end(), id_type(0));
-            return index;
-        }
-        if (auto it = findName(database, name); it != database.end()) {
-            index.template emplace_back(it->id());
-        } else {
-            throw std::out_of_range("name '" + name + "' not found");
-        }
+template <RequireNamedElements T> auto names2ids(const T& database, const std::vector<std::string>& names) {
+    namespace rv = ranges::cpp20::views;
+
+    auto is_wildcard = [](auto& name) { return name == "*"; };
+    if (ranges::cpp20::any_of(names, is_wildcard)) { // return all id's from database
+        return database | rv::transform([](auto& i) { return i.id(); }) | ranges::to_vector;
     }
-    return index;
+
+    auto name_to_id = [&](auto& name) {
+        if (auto iter = findName(database, name); iter != database.end()) {
+            return iter->id();
+        }
+        throw std::out_of_range("name '" + name + "' not found");
+    };
+    return names | rv::transform(name_to_id) | ranges::to_vector;
 }
 
 } // namespace Faunus

@@ -108,16 +108,16 @@ void to_json(json &, const MetropolisMonteCarlo &);
  */
 class TranslationalEntropy {
   private:
-    Space &trial_spc;                              //!< Space after proposed MC move ("trial")
-    Space &spc;                                    //!< Space before MC move ("default")
+    const Space& trial_spc;                        //!< Space after proposed MC move ("trial")
+    const Space& spc;                              //!< Space before MC move ("default")
     double bias(int trial_count, int count) const; //!< Bias due to change in atom/molecule numbers
-    double atomSwapEnergy(const Change::GroupChange&); //!< Contribution from atomic swap move
-    double atomChangeEnergy(int molid);            //!< Contribution from size-change of atomic group
-    double moleculeChangeEnergy(int molid);        //!< Contribution frin change in number of molecular groups
+    double atomSwapEnergy(const Change::GroupChange& group_change) const; //!< Contribution from atomic swap move
+    double atomChangeEnergy(int molid) const;     //!< Contribution from size-change of atomic group
+    double moleculeChangeEnergy(int molid) const; //!< Contribution frin change in number of molecular groups
 
   public:
-    TranslationalEntropy(Space &trial_space, Space &space);
-    double energy(const Change &); //!< Entropic contribution to MC trial energy
+    TranslationalEntropy(const Space& trial_space, const Space& space);
+    double energy(const Change& change); //!< Entropic contribution to MC trial energy
 };
 
 } // namespace Faunus

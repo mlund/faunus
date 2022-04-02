@@ -82,15 +82,15 @@ double SASABase::calcSASAOfParticle(const SASABase::Neighbours& neighbour) const
                 auto beginning_arc_angle = intersection_midpoint_angle - intersected_arc_halfsize;
                 auto end_arc_angle = intersection_midpoint_angle + intersected_arc_halfsize;
                 if (beginning_arc_angle < 0) {
-                    beginning_arc_angle += TWOPI;
+                    beginning_arc_angle += two_pi;
                 }
-                if (end_arc_angle > TWOPI) {
-                    end_arc_angle -= TWOPI;
+                if (end_arc_angle > two_pi) {
+                    end_arc_angle -= two_pi;
                 }
                 /* store the arc, if arc passes 2*PI split into two */
                 if (end_arc_angle < beginning_arc_angle) {
                     /* store arcs as pairs of angles */
-                    arcs.insert(arcs.end(), {{0.0, end_arc_angle}, {beginning_arc_angle, TWOPI}});
+                    arcs.insert(arcs.end(), {{0.0, end_arc_angle}, {beginning_arc_angle, two_pi}});
                 } else {
                     arcs.emplace_back(beginning_arc_angle, end_arc_angle);
                 }
@@ -109,7 +109,7 @@ double SASABase::calcSASAOfParticle(const SASABase::Neighbours& neighbour) const
  */
 double SASABase::exposedArcLength(std::vector<std::pair<double, double>>& arcs) const {
     if (arcs.empty()) {
-        return TWOPI;
+        return two_pi;
     }
 
     std::sort(arcs.begin(), arcs.end(), [](auto& a, auto& b) { return a.first < b.first; });
@@ -125,7 +125,7 @@ double SASABase::exposedArcLength(std::vector<std::pair<double, double>>& arcs) 
             end_arc_angle = arc.second;
         }
     });
-    return total_arc_angle + TWOPI - end_arc_angle;
+    return total_arc_angle + two_pi - end_arc_angle;
 }
 
 const std::vector<double>& SASABase::getAreas() const { return areas; }
@@ -136,8 +136,9 @@ const std::vector<double>& SASABase::getAreas() const { return areas; }
  * @param slices_per_atom number of slices of each sphere in sasa calculations
  */
 SASABase::SASABase(const Space& spc, double probe_radius, int slices_per_atom)
-    : probe_radius(probe_radius), slices_per_atom(slices_per_atom),
-      first_particle(std::addressof(spc.particles.at(0))) {}
+    : probe_radius(probe_radius)
+    , slices_per_atom(slices_per_atom)
+    , first_particle(std::addressof(spc.particles.at(0))) {}
 
 /**
  * @brief resizes areas buffer to size of ParticleVector and fill radii buffer with radii
@@ -183,7 +184,8 @@ SASA::Neighbours SASA::calcNeighbourDataOfParticle(const Space& spc, const index
  * @param space
  * @param target_indices absolute indicies of target particles in ParticleVector
  */
-std::vector<SASA::Neighbours> SASA::calcNeighbourData(const Space& spc, const std::vector<index_type>& target_indices) const {
+std::vector<SASA::Neighbours> SASA::calcNeighbourData(const Space& spc,
+                                                      const std::vector<index_type>& target_indices) const {
 
     return target_indices |
            ranges::views::transform([&](auto index) { return calcNeighbourDataOfParticle(spc, index); }) |
@@ -195,7 +197,8 @@ std::vector<SASA::Neighbours> SASA::calcNeighbourData(const Space& spc, const st
  * @param probe_radius in angstrom
  * @param slices_per_atom number of slices of each sphere in sasa calculations
  */
-SASA::SASA(const Space& spc, double probe_radius, int slices_per_atom) : SASABase(spc, probe_radius, slices_per_atom) {}
+SASA::SASA(const Space& spc, double probe_radius, int slices_per_atom)
+    : SASABase(spc, probe_radius, slices_per_atom) {}
 SASA::SASA(const json& j, Space& spc) : SASABase(spc, j.value("radius", 1.4) * 1.0_angstrom, j.value("slices", 20)) {}
 
 /**
@@ -429,7 +432,8 @@ template <typename CellList> void SASACellList<CellList>::updateMatterChange(con
  * @param space
  * @param change
  */
-template <typename CellList> void SASACellList<CellList>::updatePositionsChange(const Space& spc, const Change& change) {
+template <typename CellList>
+void SASACellList<CellList>::updatePositionsChange(const Space& spc, const Change& change) {
     for (const auto& group_change : change.groups) {
         const auto& group = spc.groups.at(group_change.group_index);
         const auto offset = spc.getFirstParticleIndex(group);

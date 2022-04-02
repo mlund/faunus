@@ -3,7 +3,7 @@
 #include <exprtk.hpp> // https://github.com/ArashPartow/exprtk
 #include <nlohmann/json.hpp>
 
-template<typename T>
+template<std::floating_point T>
 void ExprFunction<T>::set(const std::string &exprstr, const Tvarvec &vars, const Tconstvec &consts) {
     if (not parser) {
         parser = std::make_shared<exprtk::parser<T>>();
@@ -21,7 +21,7 @@ void ExprFunction<T>::set(const std::string &exprstr, const Tvarvec &vars, const
         throw std::runtime_error("error passing function/expression");
 }
 
-template<typename T>
+template<std::floating_point T>
 void ExprFunction<T>::set(const nlohmann::json &j, const Tvarvec &vars) {
     Tconstvec consts;
     auto it = j.find("constants");
@@ -31,11 +31,11 @@ void ExprFunction<T>::set(const nlohmann::json &j, const Tvarvec &vars) {
     set(j.at("function"), vars, consts);
 }
 
-template<typename T>
+template<std::floating_point T>
 T ExprFunction<T>::operator()() const {
     return expression->value();
 }
-template <typename T> T ExprFunction<T>::derivative(T& variable) const {
+template <std::floating_point T> T ExprFunction<T>::derivative(T& variable) const {
     return exprtk::derivative(*expression, variable);
 }
 

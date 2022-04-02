@@ -167,7 +167,7 @@ TEST_CASE("[Faunus] qPochhammerSymbol") {
  * @param begin First particle
  * @param end Last particle
  */
-template <class Titer> double monopoleMoment(Titer begin, Titer end) {
+template <std::forward_iterator Titer> double monopoleMoment(Titer begin, Titer end) {
     return std::accumulate(begin, end, 0.0, [](auto sum, auto& particle) { return sum + particle.charge; });
 } //!< Calculates dipole moment vector for a set of particles
 
@@ -181,7 +181,7 @@ template <class Titer> double monopoleMoment(Titer begin, Titer end) {
  *
  * If the particle has extended properties, point dipole moments will be added as well
  */
-template <class Titer, class BoundaryFunction = std::function<void(Point&)>>
+template <std::forward_iterator Titer, class BoundaryFunction = std::function<void(Point&)>>
 Point dipoleMoment(
     Titer begin, Titer end, BoundaryFunction boundary = [](Point&) {}, const Point origin = {0, 0, 0},
     double cutoff = pc::infty) {
@@ -232,9 +232,10 @@ TEST_CASE("[Faunus] dipoleMoment") {
  * @param origin Origin for quadrupole-moment, default (0,0,0)
  * @param cutoff Cut-off for included particles with regard to origin, default value is infinite
  */
-template <class Titer, class BoundaryFunction>
-Tensor quadrupoleMoment(Titer begin, Titer end, BoundaryFunction boundary = [](const Point &) {}, Point origin={0,0,0},
-                        double cutoff = pc::infty) {
+template <std::forward_iterator Titer, class BoundaryFunction>
+Tensor quadrupoleMoment(
+    Titer begin, Titer end, BoundaryFunction boundary = [](const Point&) {}, Point origin = {0, 0, 0},
+    double cutoff = pc::infty) {
     Tensor theta;
     theta.setZero();
     for (auto it = begin; it != end; ++it) {

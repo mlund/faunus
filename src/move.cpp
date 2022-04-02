@@ -945,7 +945,7 @@ void AtomicSwapCharge::_move(Change& change) {
         p->charge = fabs(oldcharge - 1);
         _sqd = fabs(oldcharge - 1) - oldcharge;
         change.groups.push_back(cdata);   // add to list of moved groups
-        _bias = _sqd * (pH - pKa) * ln10; // one may add bias here...
+        _bias = _sqd * (pH - pKa) * std::numbers::ln10; // one may add bias here...
     }
 }
 double AtomicSwapCharge::bias(Change&, double, double) { return _bias; }

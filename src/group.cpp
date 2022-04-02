@@ -184,6 +184,8 @@ std::optional<std::reference_wrapper<const Point>> Group::massCenter() const {
     return std::nullopt;
 }
 
+bool Group::isFull() const { return size() == capacity(); }
+
 /**
  * @param mask Bitmask based on enum `Group::Selectors`
  * @return Lambda function that returns true if group matches mask

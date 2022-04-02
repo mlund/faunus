@@ -459,7 +459,7 @@ void MoleculeBuilder::readFastaBonds(const json& j) {
     bond.from_json(j.at("structure")); // read 'k' and 'req' from json
     for (int i = 1; i < (int)particles.size(); ++i) {
         bond.indices = {i - 1, i};
-        bonds.push_back<Potential::HarmonicBond>(bond.clone());
+        bonds.push_back(bond.clone());
     }
 }
 
@@ -906,7 +906,7 @@ void from_json(const json &j, ReactionData &a) {
         if (val.contains("lnK")) {
             a.lnK_unmodified = val.at("lnK").get<double>();
         } else if (val.contains("pK")) {
-            a.lnK_unmodified = -std::log(10) * val.at("pK").get<double>();
+            a.lnK_unmodified = -std::numbers::ln10 * val.at("pK").get<double>();
         } else {
             a.lnK_unmodified = 0.0;
         }
@@ -947,10 +947,10 @@ void to_json(json &j, const ReactionData &reaction) {
     // we want lnK to show for LEFT-->RIGHT direction
     a.setDirection(ReactionData::Direction::RIGHT);
     j[a.getReactionString()] = {{"lnK", a.lnK_unmodified},
-                         {"pK", -a.lnK_unmodified / std::log(10)},
-                         {"swap_move", a.containsAtomicSwap()},
-                         {"neutral", a.only_neutral_molecules},
-                         {"pK'", a.freeEnergy() / std::log(10)}};
+                                {"pK", -a.lnK_unmodified / std::numbers::ln10},
+                                {"swap_move", a.containsAtomicSwap()},
+                                {"neutral", a.only_neutral_molecules},
+                                {"pK'", a.freeEnergy() / std::numbers::ln10}};
 }
 
 std::pair<decltype(Faunus::atoms)::const_iterator, decltype(Faunus::molecules)::const_iterator>

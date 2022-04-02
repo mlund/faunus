@@ -155,24 +155,20 @@ if (ENABLE_PYTHON)
     endif()
 
     if (PYTHONLIBS_FOUND)
-        FetchContent_GetProperties(pybind11)
-        if(NOT pybind11_POPULATED)
-            FetchContent_Populate(pybind11)
-            add_subdirectory(${pybind11_SOURCE_DIR} ${pybind11_BINARY_DIR})
-            pybind11_add_module(pyfaunus pyfaunus.cpp ${objs})
-            target_link_libraries(pyfaunus PRIVATE
-                    project_options
-                    cereal
-                    Eigen
-                    functionparser
-                    nlohmann_json
-                    range-v3
-                    spdlog
-                    xdrfile
-                    zstr)
-            target_compile_definitions(pyfaunus PUBLIC SPDLOG_COMPILED_LIB)
-            target_compile_definitions(pyfaunus PRIVATE DOCTEST_CONFIG_DISABLE)
-        endif()
+        pybind11_add_module(pyfaunus pyfaunus.cpp ${objs})
+        target_link_libraries(pyfaunus PRIVATE
+            project_options
+            cereal
+            Eigen
+            functionparser
+            nlohmann_json
+            pybind11_json
+            range-v3
+            spdlog
+            xdrfile
+            zstr)
+        target_compile_definitions(pyfaunus PUBLIC SPDLOG_COMPILED_LIB)
+        target_compile_definitions(pyfaunus PRIVATE DOCTEST_CONFIG_DISABLE)
     endif ()
 endif ()
 

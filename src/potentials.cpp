@@ -141,11 +141,11 @@ void from_json(const json &j, CustomInteractionData &c) {
     }
     auto j_item = j.items().begin();
     try {
-        const auto atom_names = words2vec<std::string>(j_item.key());
+        const auto atom_names = splitConvert<std::string>(j_item.key());
         const auto atom_ids = names2ids(atoms, atom_names);
         if (atom_ids.size() != c.atom_id.size()) {
             faunus_logger->error("Custom interaction parameters require exactly {} space-separated atoms: {}.",
-                                 c.atom_id.size(), vec2words(atom_names));
+                                 c.atom_id.size(), joinToString(atom_names));
             throw ConfigurationError("wrong number of atoms in custom interaction parameters");
         }
         std::copy(atom_ids.begin(), atom_ids.end(), c.atom_id.begin());
@@ -161,7 +161,7 @@ void to_json(json &j, const CustomInteractionData &interaction) {
     for(auto atom_id : interaction.atom_id) {
         atom_names.push_back(atoms[atom_id].name);
     }
-    j = {{vec2words(atom_names), interaction.interaction}};
+    j = {{joinToString(atom_names), interaction.interaction}};
 }
 
 void from_json(const json& j, std::vector<CustomInteractionData>& interactions) {
@@ -235,7 +235,7 @@ void MixerPairPotentialBase::init() {
 
 void MixerPairPotentialBase::from_json(const json &j) {
     try {
-        if (j.count("mixing") == 1) {
+        if (j.contains("mixing")) {
             json mixing = j.at("mixing");
             combination_rule = mixing.get<CombinationRuleType>();
             if (combination_rule == CombinationRuleType::UNDEFINED && mixing != "undefined") {
@@ -243,7 +243,7 @@ void MixerPairPotentialBase::from_json(const json &j) {
                 throw PairPotentialException("unknown combination rule " + mixing.get<std::string>());
             }
         }
-        if (j.count("custom") == 1) {
+        if (j.contains("custom")) {
             // *custom_pairs = j["custom"]; // does not work, perhaps as from_json is also a method (a namespace conflict)
             Potential::from_json(j["custom"], *custom_pairs);
         }
@@ -310,7 +310,8 @@ TEST_CASE("[Faunus] CosAttract") {
                  { "A": { "eps": 1.0, "rc": 0.5, "wc": 2.1 } },
                  { "B": { "eps": 1.0, "rc": 0.5, "wc": 2.1 } }]})"_json;
         Faunus::atoms = j["atomlist"].get<decltype(atoms)>();
-        CosAttract pairpot = R"({ "cos2": {"eps": 1.0, "rc": 0.5, "wc": 2.1}})"_json;
+        CosAttract pairpot;
+        Potential::from_json(R"({ "cos2": {"eps": 1.0, "rc": 0.5, "wc": 2.1}})"_json, pairpot);
 
         CHECK(pairpot(a, b, r1.squaredNorm(), r1) == doctest::Approx(-0.4033930777));
         CHECK(pairpot(a, b, r2.squaredNorm(), r2) == doctest::Approx(0));
@@ -332,7 +333,8 @@ TEST_CASE("[Faunus] CosAttract") {
                  { "A": { "eps": 1.0, "rc": 0.5, "wc": 2.1 } },
                  { "B": { "eps": 1.0, "rc": 0.5, "wc": 2.1 } }]})"_json;
         Faunus::atoms = j["atomlist"].get<decltype(atoms)>();
-        CosAttractMixed pairpot = R"({ "cos2mix": {"mixing": "LB"}})"_json;
+        CosAttractMixed pairpot;
+        Potential::from_json(R"({ "cos2mix": {"mixing": "LB"}})"_json, pairpot);
         CHECK(pairpot(a, b, r1.squaredNorm(), r1) == doctest::Approx(-0.4033930777));
         CHECK(pairpot(a, b, r2.squaredNorm(), r2) == doctest::Approx(0));
         CHECK(pairpot(a, b, r3.squaredNorm(), r3) == doctest::Approx(-0.3495505642));
@@ -354,7 +356,8 @@ TEST_CASE("[Faunus] CosAttract") {
                  { "A": { "eps": 1.0, "rc": 0.5, "wc": 2.1 } },
                  { "B": { "eps": 0.5, "rc": 0.6, "wc": 1.9 } }]})"_json;
         Faunus::atoms = j["atomlist"].get<decltype(atoms)>();
-        CosAttractMixed pairpot = R"({ "cos2mix": {"mixing": "LB"}})"_json;
+        CosAttractMixed pairpot;
+        Potential::from_json(R"({ "cos2mix": {"mixing": "LB"}})"_json, pairpot);
         CHECK(pairpot(a, b, r1.squaredNorm(), r1) == doctest::Approx(-0.2852419807));
         CHECK(pairpot(a, b, r2.squaredNorm(), r2) == doctest::Approx(0));
         CHECK(pairpot(a, b, r3.squaredNorm(), r3) == doctest::Approx(-0.2510708423));
@@ -383,11 +386,11 @@ Coulomb::Coulomb(const std::string &name) : PairPotentialBase(name) {}
 // =============== DipoleDipole (old) ===============
 
 void DipoleDipole::to_json(json &j) const {
-    j["epsr"] = pc::relativeDielectricFromBjerrumLength(lB);
-    j["lB"] = lB;
+    j["epsr"] = pc::relativeDielectricFromBjerrumLength(bjerrum_length);
+    j["lB"] = bjerrum_length;
 }
 
-void DipoleDipole::from_json(const json &j) { lB = pc::bjerrumLength(j.at("epsr")); }
+void DipoleDipole::from_json(const json& j) { bjerrum_length = pc::bjerrumLength(j.at("epsr")); }
 DipoleDipole::DipoleDipole(const std::string& name, const std::string& cite)
     :
     PairPotentialBase(name, cite, false) {}
@@ -406,21 +409,39 @@ FENE::FENE(const std::string& name)
 
 // =============== SASApotential ===============
 
-double SASApotential::area(double R, double r, double d_squared) const {
+/**
+ *
+ * @param R Radius of first sphere
+ * @param r Readius of second sphere
+ * @param center_center_distance_squared Distance between spheres centers
+ * @return Total surface area. If `shift=true` then the areas of the two individual
+ *         spheres are subtracted, meaning that the returned surface area is always
+ *         smaller than or equal to zero. I.e. the surface area is relative to the
+ *         maximum surface area (fully separated).
+ *
+ * Used formulas:
+ * - https://mathworld.wolfram.com/Sphere-SphereIntersection.html
+ * - https://mathworld.wolfram.com/SphericalCap.html
+ */
+double SASApotential::area(double R, double r, double center_center_distance_squared) const {
     R += proberadius;
     r += proberadius;
-    double area = 4 * pc::pi * (R * R + r * r); // full volume of both spheres
-    double offset = (shift ? area : 0);
-    if (d_squared > (R + r) * (R + r))
-        return area - offset;
-    if (r > R)
+    const auto spheres_area = 4.0 * pc::pi * (R * R + r * r); // full surface area of both spheres
+    const auto offset = shift ? spheres_area : 0.0;
+    if (center_center_distance_squared > (R + r) * (R + r)) {
+        return spheres_area - offset; // spheres do not overlap
+    }
+    if (r > R) { // always make R the bigger sphere
         std::swap(r, R);
-    double d = sqrt(d_squared);
-    if (d + r <= R)
-        return 4 * pc::pi * R * R - offset;          // full volume of biggest sphere
-    double h1 = (r - R + d) * (r + R - d) / (2 * d); // height of spherical caps
-    double h2 = (R - r + d) * (R + r - d) / (2 * d); // comprising intersecting lens
-    return area - 2 * pc::pi * (R * h1 + r * h2) - offset;
+    }
+    const auto d = sqrt(center_center_distance_squared);
+    if (d + r <= R) {
+        return 4.0 * pc::pi * R * R - offset; // full volume of biggest sphere
+    }
+    auto h1 = (r - R + d) * (r + R - d) / (2.0 * d);         // height of first spherical cap
+    auto h2 = (R - r + d) * (R + r - d) / (2.0 * d);         // height of second spherical cap
+    const auto lens_area = 2.0 * pc::pi * (R * h1 + r * h2); // area of lens defined by caps
+    return spheres_area - lens_area - offset;
 }
 
 void SASApotential::from_json(const json &j) {
@@ -450,9 +471,9 @@ TEST_CASE("[Faunus] SASApotential") {
     b.id = 1;
     SASApotential pot;
     json in = R"({ "sasa": {"molarity": 1.0, "radius": 0.0, "shift":false}})"_json;
-    pot = in["sasa"];
+    Potential::from_json(in["sasa"], pot);
     double conc = 1.0 * 1.0_molar;
-    double tension = atoms[a.id].tension / 2;
+    double tension = atoms.at(a.id).tension / 2;
     double tfe = atoms[b.id].tfe / 2;
     double f = tension + conc * tfe;
     CHECK(tension > 0.0);
@@ -507,15 +528,18 @@ TEST_CASE("[Faunus] CustomPairPotential") {
     b = Faunus::atoms[1];
 
     SUBCASE("energy") {
-        CustomPairPotential pot = R"({
-                "constants": { "kappa": 30, "lB": 7},
-                "function": "lB * charge1 * charge2 / (s1+s2) * exp(-kappa/r) * kT + pi"})"_json;
+        CustomPairPotential pot;
+        Potential::from_json(R"({"constants": { "kappa": 30, "lB": 7},
+                              "function": "lB * charge1 * charge2 / (s1+s2) * exp(-kappa/r) * kT + pi"})"_json,
+                             pot);
         CHECK(pot(a, b, 2 * 2, {0, 0, 2}) == Approx(-7.0 / (3.0 + 4.0) * std::exp(-30.0 / 2.0) * pc::kT() + pc::pi));
     }
     SUBCASE("force") {
-        CustomPairPotential pot =
-            R"({"constants": { "lB": 7.0056973292 }, "function": "lB * charge1 * charge2 / r"})"_json;
-        NewCoulombGalore coulomb = R"({ "coulomb": {"epsr": 80.0, "type": "plain"} } )"_json;
+        CustomPairPotential pot;
+        Potential::from_json(R"({"constants": { "lB": 7.0056973292 }, "function": "lB * charge1 * charge2 / r"})"_json,
+                             pot);
+        NewCoulombGalore coulomb;
+        Potential::from_json(R"({ "coulomb": {"epsr": 80.0, "type": "plain"} } )"_json, coulomb);
         Point r = {coulomb.bjerrum_length, 0.2, -0.1};
         auto r2 = r.squaredNorm();
         auto force_ref = coulomb.force(a, b, r2, r);
@@ -529,10 +553,6 @@ TEST_CASE("[Faunus] CustomPairPotential") {
 }
 
 // =============== Dummy ===============
-
-Dummy::Dummy() { name = "dummy"; }
-void Dummy::from_json([[maybe_unused]] const json &j) {}
-void Dummy::to_json([[maybe_unused]] json &j) const {}
 
 // =============== LennardJones ===============
 
@@ -566,23 +586,25 @@ TEST_CASE("[Faunus] LennardJones") {
     atoms = R"([{"A": {"sigma":2.0, "eps":0.9}},
                 {"B": {"sigma":8.0, "eps":0.1}},
                 {"C": {"sigma":5.0, "eps":1.1}}])"_json.get<decltype(atoms)>();
-    Particle a = atoms[0], b = atoms[1];
+    Particle a = atoms[0];
+    Particle b = atoms[1];
 
-    double d = 0.9_nm;
+    const auto d = 0.9_nm;
     auto lj_func = [d](double sigma, double eps) -> double {
         return 4 * eps * (std::pow(sigma / d, 12) - std::pow(sigma / d, 6));
     };
 
     SUBCASE("JSON initilization") {
-        CHECK_THROWS_AS(LennardJones lj = R"({"mixing": "unknown"})"_json, std::runtime_error);
-        CHECK_NOTHROW(LennardJones lj = R"({})"_json);
+        CHECK_THROWS_AS(makePairPotential<LennardJones>(R"({"mixing": "unknown"})"_json), std::runtime_error);
+        CHECK_NOTHROW(makePairPotential<LennardJones>(R"({})"_json));
         // alternative notation for custom as an array: custom: []
-        CHECK_NOTHROW(LennardJones lj = R"({"mixing": "LB", "custom": [{"A B": {"eps": 0.5, "sigma": 8}}]})"_json);
+        CHECK_NOTHROW(
+            makePairPotential<LennardJones>(R"({"mixing": "LB", "custom": [{"A B": {"eps": 0.5, "sigma": 8}}]})"_json));
     }
     SUBCASE("JSON output custom") {
         json j_in = R"({"mixing": "LB", "sigma": "sigma", "eps": "eps",
             "custom": [{"A B": {"eps": 0.5, "sigma": 8}}, {"A C": {"eps": 1.0, "sigma": 5}}]})"_json;
-        LennardJones lj = j_in;
+        auto lj = makePairPotential<LennardJones>(j_in);
         json j_out = lj;
         // The custom pair data in the output contain a lot of ballast among the original data.
         // If the original data match the output data, patching of the output shall not change it.
@@ -593,30 +615,32 @@ TEST_CASE("[Faunus] LennardJones") {
     }
     SUBCASE("Lorentz-Berthelot mixing") {
         using doctest::Approx;
-        LennardJones lj = R"({"mixing": "LB"})"_json;
+        auto lj = makePairPotential<LennardJones>(R"({"mixing": "LB"})"_json);
         CHECK(lj(a, a, d * d, {0, 0, d}) == Approx(lj_func(0.2_nm, 0.9_kJmol)));
         CHECK(lj(a, b, d * d, {0, 0, d}) == Approx(lj_func(0.5_nm, 0.3_kJmol)));
     }
     SUBCASE("Geometric mixing") {
         using doctest::Approx;
-        LennardJones lj = R"({"mixing": "geometric"})"_json;
+        auto lj = makePairPotential<LennardJones>(R"({"mixing": "geometric"})"_json);
         CHECK(lj(a, a, d * d, {0, 0, d}) == Approx(lj_func(0.2_nm, 0.9_kJmol)));
         CHECK(lj(a, b, d * d, {0, 0, d}) == Approx(lj_func(0.4_nm, 0.3_kJmol)));
     }
     SUBCASE("Custom pairs") {
         using doctest::Approx;
-        LennardJones lj = R"({"mixing": "LB", "custom": [{"A B": {"eps": 0.5, "sigma": 8}}]})"_json;
+        auto lj =
+            makePairPotential<LennardJones>(R"({"mixing": "LB", "custom": [{"A B": {"eps": 0.5, "sigma": 8}}]})"_json);
         CHECK(lj(a, b, d * d, {0, 0, d}) == Approx(lj_func(0.8_nm, 0.5_kJmol)));
         CHECK(lj(a, a, d * d, {0, 0, d}) == Approx(lj_func(0.2_nm, 0.9_kJmol)));
     }
 
     SUBCASE("Force") {
         using doctest::Approx;
-        LennardJones pot = R"({"mixing": "LB", "custom": [{"A B": {"eps": 2.0, "sigma": 8}}]})"_json;
+        auto lj =
+            makePairPotential<LennardJones>(R"({"mixing": "LB", "custom": [{"A B": {"eps": 2.0, "sigma": 8}}]})"_json);
         a.pos = {0, 0, 0};
         b.pos = {9, 0, 0};
         Point b_towards_a = a.pos - b.pos;
-        Point force = pot.force(a, b, b_towards_a.squaredNorm(), b_towards_a);
+        Point force = lj.force(a, b, b_towards_a.squaredNorm(), b_towards_a);
         CHECK(force.x() == Approx(0.0142838474)); // force on particle a
     }
 }
@@ -643,25 +667,25 @@ TEST_CASE("[Faunus] HardSphere") {
     Particle a = atoms[0], b = atoms[1];
 
     SUBCASE("JSON initialization") {
-        CHECK_NOTHROW(HardSphere hs_default = R"({})"_json);
-        CHECK_THROWS_AS(HardSphere hs_unknown = R"({"mixing": "unknown"})"_json, std::runtime_error);
+        CHECK_NOTHROW(makePairPotential<HardSphere>(R"({})"_json));
+        CHECK_THROWS_AS(makePairPotential<HardSphere>(R"({"mixing": "unknown"})"_json), std::runtime_error);
     }
     SUBCASE("Undefined mixing") {
-        HardSphere hs = R"({"mixing": "undefined"})"_json;
+        auto hs = makePairPotential<HardSphere>(R"({"mixing": "undefined"})"_json);
         CHECK(hs(a, a, 1.99 * 1.99, {0, 0, 1.99}) == pc::infty);
         CHECK(hs(a, a, 2.01 * 2.01, {0, 0, 2.01}) == 0.0);
         // CHECK(std::isnan(hs(a, b, {0, 0, 4.99}))); // fails
         // CHECK(std::isnan(hs(a, b, {0, 0, 5.01}))); // fails
     }
     SUBCASE("Arithmetic mixing") {
-        HardSphere hs = R"({"mixing": "arithmetic"})"_json;
+        auto hs = makePairPotential<HardSphere>(R"({"mixing": "arithmetic"})"_json);
         CHECK(hs(a, a, 2.01_angstrom * 2.01_angstrom, {0, 0, 2.01_angstrom}) == 0);
         CHECK(hs(a, a, 1.99_angstrom * 1.99_angstrom, {0, 0, 1.99_angstrom}) == pc::infty);
         CHECK(hs(a, b, 5.01_angstrom * 5.01_angstrom, {0, 0, 5.01_angstrom}) == 0);
         CHECK(hs(a, b, 4.99_angstrom * 4.99_angstrom, {0, 0, 4.99_angstrom}) == pc::infty);
     }
     SUBCASE("Custom pairs with implicit mixing") {
-        HardSphere hs = R"({"custom": [{"A B": {"sigma": 6}}]})"_json;
+        auto hs = makePairPotential<HardSphere>(R"({"custom": [{"A B": {"sigma": 6}}]})"_json);
         CHECK(hs(a, a, 2.01_angstrom * 2.01_angstrom, {0, 0, 2.01_angstrom}) == 0);
         CHECK(hs(a, a, 1.99_angstrom * 1.99_angstrom, {0, 0, 1.99_angstrom}) == pc::infty);
         CHECK(hs(a, b, 6.01_angstrom * 6.01_angstrom, {0, 0, 6.01_angstrom}) == 0);
@@ -706,13 +730,13 @@ TEST_CASE("[Faunus] Hertz") {
 
     SUBCASE("JSON serialization") {
         json hertz_json = R"({ "hertz": {"mixing": "lorentz_berthelot", "eps": "eps", "sigma": "sigma"}})"_json;
-        Hertz hertz = hertz_json;
+        auto hertz = makePairPotential<Hertz>(hertz_json);
         CHECK(hertz_json == json(hertz));
     }
     SUBCASE("Lorentz-Berthelot mixing") {
         using doctest::Approx;
         pc::temperature = 298.15_K;
-        Hertz hertz = R"({"mixing": "lorentz_berthelot"})"_json;
+        auto hertz = makePairPotential<Hertz>(R"({"mixing": "lorentz_berthelot"})"_json);
         CHECK(hertz(a, b, 0.7 * 0.7, {0.7, 0, 0}) == Approx(0.0546424449)); // within cut-off
         CHECK(hertz(a, b, 1.15 * 1.15, {1.15, 0, 0}) == Approx(0.0));       // at cut-off
         CHECK(hertz(a, b, 2.0 * 2.0, {2.0, 0, 0}) == Approx(0.0));          // outside of cut-off
@@ -748,15 +772,16 @@ SquareWell::SquareWell(const std::string& name)
 TEST_CASE("[Faunus] SquareWell") {
     atoms = R"([{"A": { "r":5,  "sigma":4, "eps":0.2 }},
                 {"B": { "r":10, "sigma":2, "eps":0.1 }} ])"_json.get<decltype(atoms)>();
-    Particle a = atoms[0], b = atoms[1];
+    Particle a = atoms[0];
+    Particle b = atoms[1];
 
     SUBCASE("JSON initilization") {
-        CHECK_THROWS_AS(SquareWell sw = R"({"mixing": "unknown"})"_json, std::runtime_error);
-        CHECK_NOTHROW(SquareWell sw = R"({})"_json);
+        CHECK_THROWS_AS(makePairPotential<SquareWell>(R"({"mixing": "unknown"})"_json), std::runtime_error);
+        CHECK_NOTHROW(makePairPotential<SquareWell>(R"({})"_json));
     }
     SUBCASE("Undefined mixing") {
         using doctest::Approx;
-        SquareWell sw = R"({"mixing": "undefined"})"_json;
+        auto sw = makePairPotential<SquareWell>(R"({"mixing": "undefined"})"_json);
         CHECK(sw(a, a, 3.99 * 3.99, {0, 0, 0}) == Approx(-0.2_kJmol));
         CHECK(sw(a, a, 4.01 * 4.01, {0, 0, 0}) == Approx(0.0));
         // CHECK(std::isnan(sw(a, b, {0, 0, 5.99}))); // fails
@@ -764,7 +789,7 @@ TEST_CASE("[Faunus] SquareWell") {
     }
     SUBCASE("Lorentz-Berthelot mixing") {
         using doctest::Approx;
-        SquareWell sw = R"({"mixing": "LB"})"_json;
+        auto sw = makePairPotential<SquareWell>(R"({"mixing": "LB"})"_json);
         CHECK(sw(a, b, 2.99 * 2.99, {0, 0, 0}) == Approx(-std::sqrt(0.2_kJmol * 0.1_kJmol)));
         CHECK(sw(a, b, 3.01 * 3.01, {0, 0, 0}) == Approx(0));
     }
@@ -810,104 +835,102 @@ void FunctorPotential::registerSelfEnergy(PairPotentialBase* pot) {
     }
 }
 
-FunctorPotential::uFunc FunctorPotential::combineFunc(json &j) {
-    uFunc u = [](const Particle &, const Particle &, double, const Point &) { return 0.0; };
-    if (j.is_array()) {
-        for (auto &i : j) { // loop over all defined potentials in array
-            if (i.is_object() and (i.size() == 1)) {
-                for (const auto& [key, j_val] : i.items()) {
-                    uFunc _u = nullptr;
-                    try {
-                        if (key == "custom") {
-                            _u = CustomPairPotential() = j_val;
-                        }
-
-                        // add Coulomb potential and self-energy
-                        // terms if not already added
-                        else if (key == "coulomb") {               // temporary key
-                            std::get<0>(potlist).from_json(j_val); // initialize w. json object
-                            std::get<0>(potlist).to_json(j_val);   // write back to json object with added values
-                            _u = std::get<0>(potlist);
-                            if (not have_monopole_self_energy) {
-                                registerSelfEnergy(&std::get<0>(potlist));
-                                have_monopole_self_energy = true;
-                            }
-                        } else if (key == "cos2")
-                            _u = std::get<1>(potlist) = i;
-                        else if (key == "polar")
-                            _u = std::get<2>(potlist) = i;
-                        else if (key == "hardsphere")
-                            _u = std::get<3>(potlist) = i;
-                        else if (key == "lennardjones")
-                            _u = std::get<4>(potlist) = i;
-                        else if (key == "repulsionr3")
-                            _u = std::get<5>(potlist) = i;
-                        else if (key == "sasa")
-                            _u = std::get<6>(potlist) = i;
-                        else if (key == "wca")
-                            _u = std::get<7>(potlist) = i;
-                        else if (key == "pm")
-                            _u = std::get<8>(potlist) = j_val;
-                        else if (key == "pmwca")
-                            _u = std::get<9>(potlist) = j_val;
-                        else if (key == "hertz")
-                            _u = std::get<10>(potlist) = i;
-                        else if (key == "squarewell")
-                            _u = std::get<11>(potlist) = i;
-                        else if (key == "dipoledipole") {
-                            faunus_logger->error("'{}' is deprecated, use 'multipole' instead", key);
-                        } else if (key == "stockmayer") {
-                            faunus_logger->error("'{}' is deprecated, use 'lennardjones'+'multipole' instead", key);
-                        } else if (key == "multipole") {
-                            std::get<12>(potlist).from_json(j_val); // init from json
-                            std::get<12>(potlist).to_json(j_val);   // write back added info to json
-                            _u = std::get<12>(potlist);
-                            isotropic = false; // potential is now angular dependent
-                            if (not have_dipole_self_energy) {
-                                registerSelfEnergy(&std::get<12>(potlist));
-                                have_dipole_self_energy = true;
-                            }
-                        } else if (key == "hs-cigar") {
-                            _u = std::get<13>(potlist) = j_val;
-                        } else if (key == "coswca-psc") {
-                            _u = std::get<14>(potlist) = j_val;
-                        }
-                        // place additional potentials here...
-                    } catch (std::exception &e) {
-                        usageTip.pick(key);
-                        throw ConfigurationError("{} -> {}", key, e.what());
-                    }
-
-                    if (_u != nullptr) // if found, sum them into new function object
-                        u = [u, _u](const Particle &a, const Particle &b, double r2, const Point &r) {
-                            return u(a, b, r2, r) + _u(a, b, r2, r);
-                        };
-                    else
-                        throw ConfigurationError("potential '{}': unknown potential", key);
-                }
-            }
+FunctorPotential::EnergyFunctor FunctorPotential::combinePairPotentials(json& potential_array) {
+    if (!potential_array.is_array()) {
+        throw std::runtime_error("potential array required");
+    }
+    EnergyFunctor func = [](auto&, auto&, auto, auto&) { return 0.0; };
+    for (auto& single_record : potential_array) { // loop over all defined potentials in array
+        if (!single_record.is_object() || single_record.size() != 1) {
+            continue;
         }
-    } else
-        throw std::runtime_error("dictionary of potentials required");
-
-    return u;
+        for (auto& [name, j_config] : single_record.items()) {
+            EnergyFunctor new_func = nullptr;
+            try {
+                if (name == "custom") {
+                    new_func = makePairPotential<CustomPairPotential>(j_config);
+                }
+                // add Coulomb potential and self-energy
+                // terms if not already added
+                else if (name == "coulomb") { // temporary key
+                    auto coulomb = makePairPotential<NewCoulombGalore>(j_config);
+                    Potential::to_json(j_config, coulomb); // store output
+                    if (!have_monopole_self_energy) {
+                        registerSelfEnergy(&coulomb);
+                        have_monopole_self_energy = true;
+                    }
+                    new_func = coulomb;
+                } else if (name == "cos2") {
+                    new_func = makePairPotential<Potential::CosAttract>(single_record);
+                } else if (name == "polar") {
+                    new_func = makePairPotential<Potential::Polarizability>(single_record);
+                } else if (name == "hardsphere") {
+                    new_func = makePairPotential<Potential::HardSphere>(single_record);
+                } else if (name == "lennardjones") {
+                    new_func = makePairPotential<LennardJones>(single_record);
+                } else if (name == "repulsionr3") {
+                    new_func = makePairPotential<RepulsionR3>(single_record);
+                } else if (name == "sasa") {
+                    new_func = makePairPotential<SASApotential>(single_record);
+                } else if (name == "wca") {
+                    new_func = makePairPotential<WeeksChandlerAndersen>(single_record);
+                } else if (name == "pm") {
+                    new_func = makePairPotential<PrimitiveModel>(j_config);
+                } else if (name == "pmwca") {
+                    new_func = makePairPotential<PrimitiveModelWCA>(j_config);
+                } else if (name == "hertz") {
+                    new_func = makePairPotential<Hertz>(single_record);
+                } else if (name == "squarewell") {
+                    new_func = makePairPotential<SquareWell>(single_record);
+                } else if (name == "dipoledipole") {
+                    faunus_logger->error("'{}' is deprecated, use 'multipole' instead", name);
+                } else if (name == "stockmayer") {
+                    faunus_logger->error("'{}' is deprecated, use 'lennardjones'+'multipole' instead", name);
+                } else if (name == "multipole") {
+                    auto multipole = makePairPotential<Multipole>(j_config);
+                    Potential::to_json(j_config, multipole);
+                    isotropic = false; // potential is now angular dependent
+                    if (!have_dipole_self_energy) {
+                        registerSelfEnergy(&multipole);
+                        have_dipole_self_energy = true;
+                    }
+                    new_func = multipole;
+                } else if (name == "hs-cigar") {
+                    new_func = makePairPotential<HardSpheroCylinder>(j_config);
+                } else if (name == "coswca-psc") {
+                    new_func = makePairPotential<CigarCosAttractWCA>(j_config);
+                }
+                // place additional potentials here...
+            } catch (std::exception& e) {
+                usageTip.pick(name);
+                throw ConfigurationError("{} -> {}", name, e.what());
+            }
+            if (new_func == nullptr) {
+                throw ConfigurationError("potential '{}': unknown potential", name);
+            }
+            func = [func, new_func](const auto& a, const auto& b, auto r2, auto& r) {
+                return func(a, b, r2, r) + new_func(a, b, r2, r);
+            };
+        }
+    }
+    return func;
 }
 
 void FunctorPotential::to_json(json &j) const {
-    j["functor potential"] = _j;
+    j["functor potential"] = backed_up_json_input;
     j["selfenergy"] = {{"monopole", have_monopole_self_energy}, {"dipole", have_dipole_self_energy}};
 }
 
 void FunctorPotential::from_json(const json &j) {
     have_monopole_self_energy = false;
     have_dipole_self_energy = false;
-    _j = j;
-    umatrix = decltype(umatrix)(atoms.size(), combineFunc(_j.at("default")));
-    for (auto it = _j.begin(); it != _j.end(); ++it) {
-        auto atompair = words2vec<std::string>(it.key()); // is this for a pair of atoms?
+    backed_up_json_input = j;
+    umatrix = decltype(umatrix)(atoms.size(), combinePairPotentials(backed_up_json_input.at("default")));
+    for (const auto& [key, value] : backed_up_json_input.items()) {
+        auto atompair = splitConvert<std::string>(key); // is this for a pair of atoms?
         if (atompair.size() == 2) {
             auto ids = names2ids(atoms, atompair);
-            umatrix.set(ids[0], ids[1], combineFunc(it.value()));
+            umatrix.set(ids[0], ids[1], combinePairPotentials(value));
         }
     }
 }
@@ -924,43 +947,49 @@ TEST_CASE("[Faunus] FunctorPotential") {
 
     atoms = j["atomlist"].get<decltype(atoms)>();
 
-    FunctorPotential u = R"(
+    auto u = Potential::makePairPotential<FunctorPotential>(R"(
                 { "default": [ { "coulomb" : {"epsr": 80.0, "type": "plain"} } ],
                   "A B" : [
                     { "coulomb" : {"epsr": 80.0, "type": "plain"} },
                     { "wca" : {"mixing": "LB"} }
                   ],
-                  "C C" : [ { "hardsphere" : {} } ] })"_json;
+                  "C C" : [ { "hardsphere" : {} } ] })"_json);
 
-    Coulomb coulomb = R"({ "coulomb": {"epsr": 80.0} } )"_json;
-    WeeksChandlerAndersen wca = R"({ "wca" : {"mixing": "LB"} })"_json;
+    auto coulomb = Potential::makePairPotential<Coulomb>(R"({ "coulomb": {"epsr": 80.0} } )"_json);
+    auto wca = Potential::makePairPotential<WeeksChandlerAndersen>(R"({ "wca" : {"mixing": "LB"} })"_json);
 
     Particle a = atoms[0];
     Particle b = atoms[1];
     Particle c = atoms[2];
     Point r = {2, 0, 0};
-    double r2 = r.squaredNorm();
+    auto r2 = r.squaredNorm();
     CHECK(u(a, a, r2, r) == Approx(coulomb(a, a, r2, r)));
     CHECK(u(b, b, r2, r) == Approx(coulomb(b, b, r2, r)));
     CHECK(u(a, b, r2, r) == Approx(coulomb(a, b, r2, r) + wca(a, b, r2, r)));
     CHECK(u(c, c, (r * 1.01).squaredNorm(), r * 1.01) == 0);
     CHECK(u(c, c, (r * 0.99).squaredNorm(), r * 0.99) == pc::infty);
 
-    SUBCASE("selfEnergy()") {
+    SUBCASE("selfEnergy() - monopole") {
         // let's check that the self energy gets properly transferred to the functor potential
-        json j = R"(
+        const auto j = R"(
                 {"default": [{ "coulomb" : {"epsr": 80.0, "type": "qpotential", "cutoff":20, "order":4} }]})"_json;
 
-        FunctorPotential functor = j;
-        NewCoulombGalore galore = j["default"][0];
+        auto functor = Potential::makePairPotential<FunctorPotential>(j);
+        auto galore = Potential::makePairPotential<NewCoulombGalore>(j["default"].at(0));
+        CHECK(functor.selfEnergy != nullptr);
+        CHECK(galore.selfEnergy != nullptr);
         CHECK(functor.selfEnergy(a) == Approx(galore.selfEnergy(a)));
+    }
 
+    SUBCASE("selfEnergy() - multipole") {
         // now test w. dipolar particles
-        j = R"(
+        const auto j = R"(
                 {"default": [{ "multipole" : {"epsr": 80.0, "type": "qpotential", "cutoff":20, "order":4} }]})"_json;
 
-        functor = j;
-        Multipole multipole = j["default"][0];
+        auto functor = Potential::makePairPotential<FunctorPotential>(j);
+        auto multipole = Potential::makePairPotential<Multipole>(j["default"].at(0));
+        CHECK(functor.selfEnergy != nullptr);
+        CHECK(multipole.selfEnergy != nullptr);
         CHECK(functor.selfEnergy(a) == Approx(multipole.selfEnergy(a))); // q=1, mu=0
         CHECK(functor.selfEnergy(c) == Approx(multipole.selfEnergy(c))); // q=0, mu=2
     }
@@ -977,7 +1006,7 @@ SplinedPotential::KnotData::KnotData(const base &b) : base(b) {}
  *
  * Stream splined and exact energy as a function of particle-particle separation to output stream
  */
-void SplinedPotential::stream_pair_potential(std::ostream& stream, const size_t id1, const size_t id2) {
+void SplinedPotential::streamPairPotential(std::ostream& stream, const size_t id1, const size_t id2) {
     if (!stream || atoms.at(id1).implicit || atoms.at(id2).implicit) {
         return;
     }
@@ -995,12 +1024,12 @@ void SplinedPotential::stream_pair_potential(std::ostream& stream, const size_t 
  * For each pair of atom types a file is created containing
  * the exact and splined pair potential as a function of distance
  */
-void SplinedPotential::save_potentials() {
+void SplinedPotential::savePotentials() {
     for (size_t i = 0; i < Faunus::atoms.size(); ++i) { // loop over atom types
         for (size_t j = 0; j <= i; ++j) {               // and build matrix of spline data (knots) for each pair
             auto filename = fmt::format("{}-{}_tabulated.dat", Faunus::atoms.at(i).name, Faunus::atoms.at(j).name);
             if (auto stream = std::ofstream(filename); stream) {
-                stream_pair_potential(stream, i, j);
+                streamPairPotential(stream, i, j);
             }
         }
     }
@@ -1101,7 +1130,7 @@ void SplinedPotential::from_json(const json &js) {
         }
     }
     if (js.value("to_disk", false)) {
-        save_potentials();
+        savePotentials();
     }
 }
 
@@ -1154,18 +1183,6 @@ void NewCoulombGalore::setSelfEnergy() {
 
 NewCoulombGalore::NewCoulombGalore(const std::string &name) : PairPotentialBase(name) { setSelfEnergy(); }
 
-/**
- * @param particle_a Particle a
- * @param particle_b Particle b
- * @param squared_distance Squared norm |𝐚-𝐛|²
- * @param b_towards_a Distance vector 𝐛 -> 𝐚 = 𝐚 - 𝐛
- * @return Force on particle a due to particle b
- */
-Point NewCoulombGalore::force(const Particle& particle_a, const Particle& particle_b,
-                              [[maybe_unused]] double squared_distance, const Point& b_towards_a) const {
-    return bjerrum_length * pot.ion_ion_force(particle_a.charge, particle_b.charge, b_towards_a); // force on "a"
-}
-
 TEST_CASE("[Faunus] NewCoulombGalore") {
     Particle a, b;
     a.charge = 1.0;
@@ -1173,8 +1190,7 @@ TEST_CASE("[Faunus] NewCoulombGalore") {
     a.pos = {0, 0, 0};
     b.pos = {0, 0, 7};
     Point b_towards_a = a.pos - b.pos;
-    auto pot = NewCoulombGalore("dummy");
-    pot.from_json(R"({"epsr": 80, "type": "plain"})"_json);
+    auto pot = makePairPotential<NewCoulombGalore>(R"({"epsr": 80, "type": "plain"})"_json);
     Point force_on_a = pot.force(a, b, b_towards_a.squaredNorm(), b_towards_a);
     CHECK(force_on_a.x() == doctest::Approx(0));
     CHECK(force_on_a.y() == doctest::Approx(0));
@@ -1183,7 +1199,7 @@ TEST_CASE("[Faunus] NewCoulombGalore") {
 
 void NewCoulombGalore::from_json(const json &j) {
     using namespace ::CoulombGalore; // namespace for external CoulombGalore library
-    double relative_dielectric_constant = j.at("epsr").get<double>();
+    const auto relative_dielectric_constant = j.at("epsr").get<double>();
     bjerrum_length = pc::bjerrumLength(relative_dielectric_constant);
     const auto electrolyte = Faunus::makeElectrolyte(j);
     pot.setTolerance(j.value("utol", 0.005 / bjerrum_length));
@@ -1253,22 +1269,13 @@ Multipole::Multipole(const std::string &name) : NewCoulombGalore(name) {
 }
 
 void Multipole::setSelfEnergy() {
-    selfEnergy = [lB = bjerrum_length, self_energy = pot.selfEnergyFunctor](const Particle &p) {
-        double mu_x_mu = 0;   // dipole-dipole product
-        if (p.hasExtension()) // only access dipole if the particle has extended properties
+    selfEnergy = [lB = bjerrum_length, self_energy = pot.selfEnergyFunctor](const Particle& p) {
+        double mu_x_mu = 0;     // dipole-dipole product
+        if (p.hasExtension()) { // only access dipole if the particle has extended properties
             mu_x_mu = p.getExt().mulen * p.getExt().mulen;
+        }
         return lB * self_energy({p.charge * p.charge, mu_x_mu});
     }; // expose self-energy as a functor in potential base class
-}
-
-Point Multipole::force(const Faunus::Particle& a, const Faunus::Particle& b, [[maybe_unused]] double squared_distance,
-                       const Faunus::Point& r) const {
-    Point mua = a.getExt().mu * a.getExt().mulen;
-    Point mub = b.getExt().mu * b.getExt().mulen;
-    Point ionion = pot.ion_ion_force(a.charge, b.charge, r);
-    Point iondip = pot.ion_dipole_force(a.charge, mub, r) + pot.ion_dipole_force(b.charge, mua, r);
-    Point dipdip = pot.dipole_dipole_force(mua, mub, r);
-    return bjerrum_length * (ionion + iondip + dipdip);
 }
 
 TEST_CASE("[Faunus] Dipole-dipole interactions") {
@@ -1279,10 +1286,10 @@ TEST_CASE("[Faunus] Dipole-dipole interactions") {
                  {"C": { "mu":[1.0,1.0,0.0] }} ]})"_json;
     atoms = j["atomlist"].get<decltype(atoms)>();
 
-    FunctorPotential u = R"(
-                { "default": [ { "multipole" : {"epsr": 1.0, "type": "plain"} } ] } )"_json;
+    auto u = Potential::makePairPotential<FunctorPotential>(R"(
+                { "default": [ { "multipole" : {"epsr": 1.0, "type": "plain"} } ] } )"_json);
 
-    Multipole dipoledipole = R"({"epsr": 1.0, "type": "plain"})"_json;
+    auto dipoledipole = Potential::makePairPotential<Multipole>(R"({"epsr": 1.0, "type": "plain"})"_json);
 
     Particle a = atoms[0];
     Particle b = atoms[1];
@@ -1330,13 +1337,13 @@ TEST_CASE("[Faunus] WeeksChandlerAndersen") {
                     {"B": {"sigma":8.0, "eps":0.1}}])"_json.get<decltype(atoms)>();
         Particle a = atoms[0], b = atoms[1];
 
-        CHECK_THROWS_AS(WeeksChandlerAndersen wca = R"({"mixing": "unknown"})"_json, std::runtime_error);
-        CHECK_NOTHROW(WeeksChandlerAndersen wca = R"({})"_json);
-        CHECK_NOTHROW(WeeksChandlerAndersen wca =
-                          R"({"mixing": "LB", "custom": [{"A B": {"eps": 0.5, "sigma": 8}}]})"_json);
+        CHECK_THROWS_AS(makePairPotential<WeeksChandlerAndersen>(R"({"mixing": "unknown"})"_json), std::runtime_error);
+        CHECK_NOTHROW(makePairPotential<WeeksChandlerAndersen>(R"({})"_json));
+        CHECK_NOTHROW(makePairPotential<WeeksChandlerAndersen>(
+            R"({"mixing": "LB", "custom": [{"A B": {"eps": 0.5, "sigma": 8}}]})"_json));
 
         SUBCASE("Missing coefficient") {
-            WeeksChandlerAndersen wca = R"({"mixing": "LB", "sigma": "sigma_wca"})"_json;
+            auto wca = makePairPotential<WeeksChandlerAndersen>(R"({"mixing": "LB", "sigma": "sigma_wca"})"_json);
             CHECK_EQ(std::isnan(wca(a, a, 10.0 * 10.0, {0, 0, 10.0})), true);
             CHECK_EQ(std::isnan(wca(a, a, 1.0 * 1.0, {0, 0, 1.0})), true);
         }
@@ -1346,7 +1353,7 @@ TEST_CASE("[Faunus] WeeksChandlerAndersen") {
                     {"B": {"sigma_wca":8.0, "eps":0.1}}])"_json.get<decltype(atoms)>();
         Particle a = atoms[0], b = atoms[1];
 
-        CHECK_NOTHROW(WeeksChandlerAndersen wca = R"({"mixing": "LB", "sigma": "sigma_wca"})"_json);
+        CHECK_NOTHROW(makePairPotential<WeeksChandlerAndersen>(R"({"mixing": "LB", "sigma": "sigma_wca"})"_json));
         // Shall throw after non-default potentials are created properly,
         // i.e., not needed pairs are not evaluated at all for the matrices
         // CHECK_THROWS_AS_MESSAGE(WeeksChandlerAndersen wca = R"({"mixing": "LB"})"_json, std::runtime_error,
@@ -1360,8 +1367,8 @@ TEST_CASE("[Faunus] WeeksChandlerAndersen") {
         //     std::runtime_error, "unknown atom property");
     }
     SUBCASE("JSON serialization") {
-        WeeksChandlerAndersen wca;
-        wca = R"({"mixing": "LB", "sigma": "sigma_wca"})"_json;
+        auto wca =
+            Potential::makePairPotential<WeeksChandlerAndersen>(R"({"mixing": "LB", "sigma": "sigma_wca"})"_json);
         json j = wca;
         json &j_wca(j["wca"]);
         CHECK_EQ(j_wca["mixing"], "lorentz_berthelot");

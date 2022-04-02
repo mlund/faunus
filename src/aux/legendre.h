@@ -20,7 +20,7 @@ namespace Faunus {
  * @tparam use_table Use lookup table for 1+1/i? Default = false
  * @todo Benchmark `use_table`
  */
-template <typename T, std::size_t max_order, bool use_table = false> class Legendre {
+template <std::floating_point T, std::size_t max_order, bool use_table = false> class Legendre {
   private:
     std::array<T, max_order + 1> y; //!< Lookup table for 1+1/i (overkill?)
     std::array<T, max_order + 1> P; //!< Legendre terms stored here

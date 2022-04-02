@@ -5,6 +5,7 @@
 
 #include "celllistimpl.h"
 #include "particle.h"
+#include <numbers>
 
 namespace Faunus {
 

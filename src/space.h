@@ -181,14 +181,13 @@ class Space {
     }
 
     //! Mutable iterable range of all particle positions
-    auto positions() {
-        return ranges::cpp20::views::transform(particles, [](auto& particle) -> Point& { return particle.pos; });
-    }
+    auto positions() { return ranges::cpp20::views::transform(particles, &Particle::pos); }
 
-    static std::function<bool(const GroupType&)> getGroupFilter(int molid, const Selection& selection) {
+    static std::function<bool(const GroupType&)> getGroupFilter(MoleculeData::index_type molid,
+                                                                const Selection& selection) {
         auto is_active = [](const GroupType& group) { return group.size() == group.capacity(); };
 
-        auto is_neutral = [](auto begin, auto end) {
+        auto is_neutral = [](RequireParticleIterator auto begin, RequireParticleIterator auto end) {
             auto charge =
                 std::accumulate(begin, end, 0.0, [](auto sum, auto& particle) { return sum + particle.charge; });
             return (fabs(charge) < 1e-6);

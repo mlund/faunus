@@ -657,7 +657,7 @@ FileReactionCoordinate::FileReactionCoordinate(
 
 FileReactionCoordinate::FileReactionCoordinate(const json& j, const Space& spc)
     : FileReactionCoordinate(
-          spc, j.value("filename", ""s),
+          spc, j.value("file", ""s),
           ReactionCoordinate::createReactionCoordinate({{j.at("type").get<std::string>(), j}}, spc)) {
     from_json(j);
 }
@@ -1023,6 +1023,8 @@ void MoleculeRDF::sampleDifferent() {
 }
 
 void MoleculeRDF::sampleDistance(const Group& group_i, const Group& group_j) {
+    assert(group_i.massCenter().has_value());
+    assert(group_j.massCenter().has_value());
     const auto distance = sqrt(spc.geometry.sqdist(group_i.mass_center, group_j.mass_center));
     histogram(distance)++;
 }
@@ -1030,6 +1032,9 @@ void MoleculeRDF::sampleDistance(const Group& group_i, const Group& group_j) {
 MoleculeRDF::MoleculeRDF(const json& j, const Space& spc) : PairFunctionBase(spc, j, "molrdf") {
     id1 = findMoleculeByName(name1).id();
     id2 = findMoleculeByName(name2).id();
+    if (!Faunus::molecules.at(id1).isMolecular() || !Faunus::molecules.at(id2).isMolecular()) {
+        throw ConfigurationError("{}: molecular groups required", name);
+    }
 }
 
 void AtomDipDipCorr::_sample() {

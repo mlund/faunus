@@ -141,11 +141,11 @@ void from_json(const json &j, CustomInteractionData &c) {
     }
     auto j_item = j.items().begin();
     try {
-        const auto atom_names = words2vec<std::string>(j_item.key());
+        const auto atom_names = splitConvert<std::string>(j_item.key());
         const auto atom_ids = names2ids(atoms, atom_names);
         if (atom_ids.size() != c.atom_id.size()) {
             faunus_logger->error("Custom interaction parameters require exactly {} space-separated atoms: {}.",
-                                 c.atom_id.size(), vec2words(atom_names));
+                                 c.atom_id.size(), joinToString(atom_names));
             throw ConfigurationError("wrong number of atoms in custom interaction parameters");
         }
         std::copy(atom_ids.begin(), atom_ids.end(), c.atom_id.begin());
@@ -161,7 +161,7 @@ void to_json(json &j, const CustomInteractionData &interaction) {
     for(auto atom_id : interaction.atom_id) {
         atom_names.push_back(atoms[atom_id].name);
     }
-    j = {{vec2words(atom_names), interaction.interaction}};
+    j = {{joinToString(atom_names), interaction.interaction}};
 }
 
 void from_json(const json& j, std::vector<CustomInteractionData>& interactions) {
@@ -927,7 +927,7 @@ void FunctorPotential::from_json(const json &j) {
     backed_up_json_input = j;
     umatrix = decltype(umatrix)(atoms.size(), combinePairPotentials(backed_up_json_input.at("default")));
     for (const auto& [key, value] : backed_up_json_input.items()) {
-        auto atompair = words2vec<std::string>(key); // is this for a pair of atoms?
+        auto atompair = splitConvert<std::string>(key); // is this for a pair of atoms?
         if (atompair.size() == 2) {
             auto ids = names2ids(atoms, atompair);
             umatrix.set(ids[0], ids[1], combinePairPotentials(value));

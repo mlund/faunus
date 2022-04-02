@@ -43,7 +43,7 @@ TEST_CASE("[Faunus] openCompressedOutputStream") {
 }
 
 bool PQRTrajectoryReader::readAtomRecord(const std::string& record, Particle& particle, double& radius) {
-    std::stringstream o(record);
+    std::istringstream o(record);
     std::string key;
     o >> key;
     if (key == "ATOM" or key == "HETATM") {
@@ -124,16 +124,13 @@ void XTCTrajectoryFrame::importTimestamp(const int step, const float time) {
 }
 
 void XTCTrajectoryFrame::importBox(const Point& box) {
-    // empty box tensor
-    XTCMatrix xtc_box_matrix = XTCMatrix::Zero();
-    // only XYZ dimensions in nanometers on diagonal, as floats
-    xtc_box_matrix.diagonal() = (box / 1.0_nm).cast<XTCFloat>();
-    // copy underlaying eigen structure (1D array, row-major) to the C-style 2D array
-    std::copy(xtc_box_matrix.data(), xtc_box_matrix.data() + DIM * DIM, &(xtc_box[0][0]));
+    XTCMatrix xtc_box_matrix = XTCMatrix::Zero();                // empty box tensor
+    xtc_box_matrix.diagonal() = (box / 1.0_nm).cast<XTCFloat>(); // only XYZ dimensions in nm on diagonal, as floats
+    std::copy(xtc_box_matrix.data(), xtc_box_matrix.data() + DIM * DIM,
+              &(xtc_box[0][0])); // eigen 1D, row-major -> C-style 2D array
 }
 
 void XTCTrajectoryFrame::importCoordinates(const PointVector& coordinates, const Point& offset) {
-    // setNumberOfAtoms(coordinates.size());
     if (coordinates.size() != number_of_atoms) {
         // to avoid mistakes, the number_of_atoms is immutable
         throw std::runtime_error("wrong number of particles to be saved in the XTC frame");
@@ -648,7 +645,7 @@ void AminoAcidModelReader::loadHeader(std::istream& stream) {
 Particle AminoAcidModelReader::loadParticle(std::istream& stream) {
     std::string line;
     getNextLine(stream, line, "#");
-    std::stringstream record(line);
+    std::istringstream record(line);
     record.exceptions(std::ios::failbit);
     std::string particle_name;
     record >> particle_name;
@@ -719,7 +716,7 @@ void XYZReader::loadHeader(std::istream& stream) {
 Particle XYZReader::loadParticle(std::istream& stream) {
     std::string line;
     getNextLine(stream, line, ";#");
-    std::stringstream record(line);
+    std::istringstream record(line);
     record.exceptions(std::ios::failbit);
     std::string atom_name;
     record >> atom_name;
@@ -742,7 +739,7 @@ void SpheroCylinderXYZReader::loadHeader(std::istream& stream) {
 Particle SpheroCylinderXYZReader::loadParticle(std::istream& stream) {
     std::string line;
     getNextLine(stream, line, ";#");
-    std::stringstream record(line);
+    std::istringstream record(line);
     record.exceptions(std::ios::failbit);
     std::string atom_name;
     record >> atom_name;
@@ -766,7 +763,7 @@ Particle PQRReader::loadParticle(std::istream& stream) {
     std::string type;
     while (true) {
         std::getline(stream, line); // throws if eof or empty
-        std::stringstream record(line);
+        std::istringstream record(line);
         record.exceptions(std::ios::failbit); // throws if syntax error
         record >> type;
         if (type == "ATOM" || type == "HETATM") {
@@ -800,7 +797,7 @@ void PQRReader::loadHeader(std::istream& stream) {
             std::getline(stream, line);
         } catch (std::istream::failure& e) { return; }
         if (!line.empty()) {
-            std::stringstream record(line);
+            std::istringstream record(line);
             record.exceptions(std::ios::failbit); // throws if error
             try {
                 record >> type;
@@ -929,8 +926,8 @@ void GromacsReader::loadBoxInformation(std::istream& stream) {
             stream.get(); // gobble newline
             std::string line;
             std::getline(stream, line);
-            std::stringstream o(line);
-            o.exceptions(std::stringstream::failbit);
+            std::istringstream o(line);
+            o.exceptions(std::istringstream::failbit);
             try {
                 o >> box_length.x() >> box_length.y() >> box_length.z();
                 box_length *= 1.0_nm;
@@ -1029,7 +1026,7 @@ TEST_CASE("[Faunus] CoarseGrainedFastaFileReader") {
 
     SUBCASE("single sequence") {
         CoarseGrainedFastaFileReader reader(bond_length, {10, 20, 30});
-        std::stringstream stream(">MCHU - Calmodulin\n; another comment\nKR\n");
+        std::istringstream stream(">MCHU - Calmodulin\n; another comment\nKR\n");
         reader.load(stream);
         CHECK(reader.particles.size() == 2);
         CHECK(reader.particles[0].id == 1);
@@ -1045,7 +1042,7 @@ TEST_CASE("[Faunus] CoarseGrainedFastaFileReader") {
     }
     SUBCASE("single sequence - end by star") {
         CoarseGrainedFastaFileReader reader(bond_length);
-        std::stringstream stream(">MCHU - Calmodulin\nR*K\n");
+        std::istringstream stream(">MCHU - Calmodulin\nR*K\n");
         reader.load(stream);
         CHECK(reader.particles.size() == 1);
         CHECK(reader.comments.size() == 1);
@@ -1053,7 +1050,7 @@ TEST_CASE("[Faunus] CoarseGrainedFastaFileReader") {
     }
     SUBCASE("multisequence") {
         CoarseGrainedFastaFileReader reader(bond_length);
-        std::stringstream stream(">MCHU - Calmodulin\nKKK\n>RK*\n");
+        std::istringstream stream(">MCHU - Calmodulin\nKKK\n>RK*\n");
         reader.load(stream);
         CHECK(reader.particles.size() == 3);
         CHECK(reader.comments.size() == 1);
@@ -1061,17 +1058,17 @@ TEST_CASE("[Faunus] CoarseGrainedFastaFileReader") {
     }
     SUBCASE("unknown particle") {
         CoarseGrainedFastaFileReader reader(bond_length);
-        std::stringstream stream(">MCHU - Calmodulin\nRKE*\n");
+        std::istringstream stream(">MCHU - Calmodulin\nRKE*\n");
         CHECK_THROWS(reader.load(stream));
     }
     SUBCASE("unknown fasta letter") {
         CoarseGrainedFastaFileReader reader(bond_length);
-        std::stringstream stream(">MCHU - Calmodulin\nRKx*\n");
+        std::istringstream stream(">MCHU - Calmodulin\nRKx*\n");
         CHECK_THROWS(reader.load(stream));
     }
     SUBCASE("no comment") {
         CoarseGrainedFastaFileReader reader(bond_length);
-        std::stringstream stream("RKK*\n");
+        std::istringstream stream("RKK*\n");
         reader.load(stream);
         CHECK(reader.particles.size() == 3);
         CHECK(reader.comments.empty());

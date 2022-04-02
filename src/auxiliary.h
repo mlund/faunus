@@ -3,6 +3,7 @@
 #include <nlohmann/json.hpp>
 #include <range/v3/range/concepts.hpp>
 #include <functional>
+#include <iterator>
 #include <fstream>
 #include <vector>
 #include <string>
@@ -169,40 +170,40 @@ template <std::floating_point Tfloat = double> class Quantize {
     }
 };
 
+template <class T>
+concept StringStreamable = requires(T a) {
+    {std::istringstream() >> a};
+    {std::ostringstream() << a};
+};
+
 /**
- * @brief Convert whitespace separated words into vector of given type
+ * @brief Convert space separated words into vector of type T
  *
  * Example:
  *
- * ~~~~
- * auto v = textio::words2vec<double>( "0.2 1 100" );
- * for (auto i : v)
- *   cout << 2*i << " "; // -> 0.4 2 200
- * ~~~~
+ *     textio::splitConvert<double>("0.2 1 100"); // -> {0.2, 1.0, 100.0}
+ *
+ * @returns std::vector of type T
  */
-template <class T> std::vector<T> words2vec(const std::string &string_of_words) {
-    auto number_of_words =
-        std::distance(std::istream_iterator<std::string>(std::istringstream(string_of_words) >> std::ws),
-                      std::istream_iterator<std::string>());
-    std::vector<T> vector_of_T(number_of_words);
-    std::stringstream stream(string_of_words);
-    size_t i = 0;
-    while (i < vector_of_T.size()) {
-        stream >> vector_of_T[i++];
-    }
-    return vector_of_T;
-} // space separated string to vector
+template <StringStreamable T> auto splitConvert(const std::string& words) {
+    auto stream = std::istringstream(words);
+    return std::vector<T>(std::istream_iterator<T>(stream), std::istream_iterator<T>());
+} // space separated string to vector of values
 
-template <class T> std::string vec2words(const std::vector<T> &v) {
+/**
+ * @brief Convert range of values into space separated string
+ * @param values Range (vector, set, ...) of values to convert
+ * @return String with space sepatated values
+ */
+template <ranges::cpp20::range Range>
+std::string joinToString(const Range& values) requires StringStreamable<ranges::cpp20::range_value_t<Range>> {
     std::ostringstream o;
-    if (!v.empty()) {
-        o << v.front();
-        for (size_t i = 1; i < v.size(); i++) {
-            o << " " << v[i];
-        }
+    if (!values.empty()) {
+        o << *values.begin();
+        std::for_each(std::next(values.begin()), values.end(), [&](auto& val) { o << " " << val; });
     }
     return o.str();
-} // vector to space separated string w values
+}
 
 template <typename T> struct BasePointerVector {
     using value_type = std::shared_ptr<T>;

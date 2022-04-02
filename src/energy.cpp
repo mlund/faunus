@@ -6,9 +6,6 @@
 #include <range/v3/view/zip.hpp>
 #include <range/v3/algorithm/for_each.hpp>
 #include <numeric>
-#if __cplusplus > 201703L
-#include <span> // c++20
-#endif
 
 #ifdef ENABLE_FREESASA
 #include <freesasa.h>
@@ -1535,7 +1532,8 @@ void from_json(const json& j, GroupCutoff& cutoff) {
                     continue;
                 }
                 try {
-                    if (const auto molecules_names = words2vec<std::string>(named_pair); molecules_names.size() == 2) {
+                    if (const auto molecules_names = splitConvert<std::string>(named_pair);
+                        molecules_names.size() == 2) {
                         const auto& molecule1 = findMoleculeByName(molecules_names[0]);
                         const auto& molecule2 = findMoleculeByName(molecules_names[1]);
                         cutoff.cutoff_squared.set(molecule1.id(), molecule2.id(),

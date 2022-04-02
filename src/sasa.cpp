@@ -82,15 +82,15 @@ double SASABase::calcSASAOfParticle(const SASABase::Neighbours& neighbour) const
                 auto beginning_arc_angle = intersection_midpoint_angle - intersected_arc_halfsize;
                 auto end_arc_angle = intersection_midpoint_angle + intersected_arc_halfsize;
                 if (beginning_arc_angle < 0) {
-                    beginning_arc_angle += TWOPI;
+                    beginning_arc_angle += two_pi;
                 }
-                if (end_arc_angle > TWOPI) {
-                    end_arc_angle -= TWOPI;
+                if (end_arc_angle > two_pi) {
+                    end_arc_angle -= two_pi;
                 }
                 /* store the arc, if arc passes 2*PI split into two */
                 if (end_arc_angle < beginning_arc_angle) {
                     /* store arcs as pairs of angles */
-                    arcs.insert(arcs.end(), {{0.0, end_arc_angle}, {beginning_arc_angle, TWOPI}});
+                    arcs.insert(arcs.end(), {{0.0, end_arc_angle}, {beginning_arc_angle, two_pi}});
                 } else {
                     arcs.emplace_back(beginning_arc_angle, end_arc_angle);
                 }
@@ -109,7 +109,7 @@ double SASABase::calcSASAOfParticle(const SASABase::Neighbours& neighbour) const
  */
 double SASABase::exposedArcLength(std::vector<std::pair<double, double>>& arcs) const {
     if (arcs.empty()) {
-        return TWOPI;
+        return two_pi;
     }
 
     std::sort(arcs.begin(), arcs.end(), [](auto& a, auto& b) { return a.first < b.first; });
@@ -125,7 +125,7 @@ double SASABase::exposedArcLength(std::vector<std::pair<double, double>>& arcs) 
             end_arc_angle = arc.second;
         }
     });
-    return total_arc_angle + TWOPI - end_arc_angle;
+    return total_arc_angle + two_pi - end_arc_angle;
 }
 
 const std::vector<double>& SASABase::getAreas() const { return areas; }

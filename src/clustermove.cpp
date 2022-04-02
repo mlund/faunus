@@ -114,7 +114,7 @@ void FindCluster::parseThresholds(const json &j) {
                 threshold_combinations);
         }
         for (const auto &[key, value] : j.items()) {
-            if (auto name_pair = Faunus::words2vec<std::string>(key); name_pair.size() == 2) {
+            if (auto name_pair = Faunus::splitConvert<std::string>(key); name_pair.size() == 2) {
                 const auto molecule1 = findMoleculeByName(name_pair[0]);
                 const auto molecule2 = findMoleculeByName(name_pair[1]);
                 thresholds_squared.set(molecule1.id(), molecule2.id(), std::pow(value.get<double>(), 2));

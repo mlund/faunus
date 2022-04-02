@@ -32,8 +32,8 @@ TEST_CASE("[Faunus] ordered_pair") {
 }
 
 TEST_CASE("[Faunus] Text manipulation") {
-    CHECK(vec2words<double>({1.0, -1.2, 0}) == "1 -1.2 0");
-    CHECK(words2vec<double>("1 -1.2 0") == std::vector<double>({1.0, -1.2, 0}));
+    CHECK(joinToString(std::vector<double>{1.0, -1.2, 0}) == "1 -1.2 0");
+    CHECK(splitConvert<double>("1 -1.2 0") == std::vector<double>{1.0, -1.2, 0});
 }
 
 TEST_CASE("numeric_cast") {

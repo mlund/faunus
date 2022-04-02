@@ -21,6 +21,7 @@ template <std::floating_point T = double> class SparseHistogram {
 
   public:
     explicit SparseHistogram(T resolution) : resolution(resolution) {}
+    const T getResolution() const { return resolution; }
     void add(const T value) {
         if (std::isfinite(value)) {
             const auto index = static_cast<map_type::key_type>(std::round(value / resolution));

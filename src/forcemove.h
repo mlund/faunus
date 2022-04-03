@@ -93,7 +93,6 @@ class ForceMoveBase : public MoveBase {
   protected:
     std::shared_ptr<IntegratorBase> integrator;
     unsigned int number_of_steps; //!< number of integration steps to perform during a single MC move
-    using MoveBase::spc;          //!< space with particles and their positions
     PointVector velocities;       //!< Vector of velocities matching each active particle in Space
     PointVector forces;           //!< Vector of forces matching each active particle in Space
 
@@ -102,8 +101,8 @@ class ForceMoveBase : public MoveBase {
     void _to_json(json &j) const override;
     void _from_json(const json &j) override;
     void _move(Change &change) override;
-    ForceMoveBase(Space &, std::string name, std::string cite,
-                  std::shared_ptr<IntegratorBase> integrator, unsigned int nsteps);
+    ForceMoveBase(Space& spc, std::string name, std::string cite, std::shared_ptr<IntegratorBase> integrator,
+                  unsigned int nsteps);
     virtual ~ForceMoveBase() = default;
 
   public:
@@ -117,13 +116,13 @@ class ForceMoveBase : public MoveBase {
  */
 class LangevinDynamics : public ForceMoveBase {
   protected:
-    LangevinDynamics(Space &, std::string name, std::string cite,
-                     std::shared_ptr<IntegratorBase> integrator, unsigned int nsteps);
+    LangevinDynamics(Space& spc, std::string name, std::string cite, std::shared_ptr<IntegratorBase> integrator,
+                     unsigned int nsteps);
 
   public:
-    LangevinDynamics(Space &, std::shared_ptr<IntegratorBase> integrator, unsigned int nsteps);
-    LangevinDynamics(Space &, Energy::Energybase &, const json &);
-    LangevinDynamics(Space &, Energy::Energybase &);
+    LangevinDynamics(Space& spc, std::shared_ptr<IntegratorBase> integrator, unsigned int nsteps);
+    LangevinDynamics(Space& spc, Energy::Energybase&, const json&);
+    LangevinDynamics(Space& spc, Energy::Energybase&);
     void _to_json(json &j) const override;
     void _from_json(const json &j) override;
 };

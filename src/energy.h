@@ -76,7 +76,7 @@ class ContainerOverlap : public Energybase {
 
   public:
     explicit ContainerOverlap(const Space& spc);
-    double energy(Change& change) override;
+    double energy(const Change& change) override;
 };
 
 /**
@@ -130,15 +130,16 @@ class EwaldPolicyBase {
     std::string cite; //!< Optional reference, preferably DOI, to further information
     virtual ~EwaldPolicyBase() = default;
     virtual void updateBox(EwaldData &, const Point &) const = 0; //!< Prepare k-vectors according to given box vector
-    virtual void updateComplex(EwaldData&,
-                               Space::GroupVector&) const = 0; //!< Update all k vectors
-    virtual void updateComplex(EwaldData&, Change&, Space::GroupVector&,
-                               Space::GroupVector&) const = 0; //!< Update subset of k vectors. Require `old` pointer
-    virtual double selfEnergy(const EwaldData&, Change&,
-                              Space::GroupVector&) = 0; //!< Self energy contribution due to a change
-    virtual double surfaceEnergy(const EwaldData&, Change&,
-                                 Space::GroupVector&) = 0;  //!< Surface energy contribution due to a change
-    virtual double reciprocalEnergy(const EwaldData &) = 0; //!< Total reciprocal energy
+    virtual void updateComplex(EwaldData& d,
+                               Space::GroupVector& groups) const = 0; //!< Update all k vectors
+    virtual void
+    updateComplex(EwaldData& d, const Change& change, Space::GroupVector& groups,
+                  Space::GroupVector& oldgroups) const = 0; //!< Update subset of k vectors. Require `old` pointer
+    virtual double selfEnergy(const EwaldData& d, Change& change,
+                              Space::GroupVector& groups) = 0; //!< Self energy contribution due to a change
+    virtual double surfaceEnergy(const EwaldData& d, const Change& change,
+                                 Space::GroupVector& groups) = 0; //!< Surface energy contribution due to a change
+    virtual double reciprocalEnergy(const EwaldData& d) = 0;      //!< Total reciprocal energy
 
     /**
      * @brief Represent charges and positions using an Eigen facade (Map)
@@ -172,10 +173,10 @@ struct PolicyIonIon : public EwaldPolicyBase {
     PolicyIonIon();
     void updateBox(EwaldData& d, const Point& box) const override;
     void updateComplex(EwaldData& d, Space::GroupVector& groups) const override;
-    void updateComplex(EwaldData& d, Change& change, Space::GroupVector& groups,
+    void updateComplex(EwaldData& d, const Change& change, Space::GroupVector& groups,
                        Space::GroupVector& oldgroups) const override;
     double selfEnergy(const EwaldData& d, Change& change, Space::GroupVector& groups) override;
-    double surfaceEnergy(const EwaldData& d, Change& change, Space::GroupVector& groups) override;
+    double surfaceEnergy(const EwaldData& d, const Change& change, Space::GroupVector& groups) override;
     double reciprocalEnergy(const EwaldData& d) override;
 };
 
@@ -204,7 +205,7 @@ struct PolicyIonIonIPBC : public PolicyIonIon {
     PolicyIonIonIPBC();
     void updateBox(EwaldData &, const Point &) const override;
     void updateComplex(EwaldData&, Space::GroupVector&) const override;
-    void updateComplex(EwaldData&, Change&, Space::GroupVector&, Space::GroupVector&) const override;
+    void updateComplex(EwaldData&, const Change&, Space::GroupVector&, Space::GroupVector&) const override;
 };
 
 /**
@@ -227,7 +228,7 @@ class Ewald : public Energybase {
   public:
     Ewald(const json& j, Space& spc);
     void init() override;
-    double energy(Change& change) override;
+    double energy(const Change& change) override;
     void sync(Energybase* energybase,
               const Change& change) override; //!< Called after a move is rejected/accepted
                                               //! as well as before simulation
@@ -245,7 +246,7 @@ class Isobaric : public Energybase {
     static const std::map<std::string, double> pressure_units; //!< Possible ways pressure can be given
   public:
     Isobaric(const json& j, const Space& spc);
-    double energy(Change& change) override;
+    double energy(const Change& change) override;
     void to_json(json& j) const override;
 };
 
@@ -261,7 +262,7 @@ class Constrain : public Energybase {
 
   public:
     Constrain(const json& j, Space& space);
-    double energy(Change& change) override;
+    double energy(const Change& change) override;
     void to_json(json& j) const override;
 };
 
@@ -289,7 +290,7 @@ class Bonded : public Energybase {
     Bonded(const Space& spc, const BondVector& external_bonds);
     Bonded(const json& j, const Space& spc);
     void to_json(json& j) const override;
-    double energy(Change& change) override;          //!< brute force -- refine this!
+    double energy(const Change& change) override;    //!< brute force -- refine this!
     void force(std::vector<Point>& forces) override; //!< Calculates the forces on all particles
 };
 
@@ -1334,7 +1335,7 @@ template <RequirePairEnergy TPairEnergy, typename TPairingPolicy> class Nonbonde
         energy_accumulator->to_json(j);
     }
 
-    double energy(Change& change) override {
+    double energy(const Change& change) override {
         energy_accumulator->clear();
         // down-cast to avoid slow, virtual function calls:
         if (auto ptr = std::dynamic_pointer_cast<InstantEnergyAccumulator<TPairEnergy>>(energy_accumulator)) {
@@ -1427,7 +1428,7 @@ class NonbondedCached : public Nonbonded<TPairEnergy, TPairingPolicy> {
         }
     }
 
-    double energy(Change &change) override {
+    double energy(const Change& change) override {
         // Only g2g may be called there to compute (and cache) energy!
         double energy_sum = 0.0;
         if (change) {
@@ -1572,7 +1573,7 @@ class FreeSASAEnergy : public Energybase {
      */
     FreeSASAEnergy(const Space& spc, double cosolute_molarity, double probe_radius);
     FreeSASAEnergy(const json& j, const Space& spc);
-    double energy(Change& change) override;
+    double energy(const Change& change) override;
     const std::vector<double>& getAreas() const { return sasa; }
 }; //!< SASA energy from transfer free energies
 #endif
@@ -1607,7 +1608,7 @@ class SASAEnergyReference : public Energybase {
                         bool dense_container = true);
     SASAEnergyReference(const json& j, const Space& spc);
     const std::vector<double>& getAreas() const;
-    double energy(Change& change) override;
+    double energy(const Change& change) override;
 };
 
 /**
@@ -1629,7 +1630,7 @@ class SASAEnergy : public SASAEnergyReference {
     SASAEnergy(const Space& spc, double cosolute_molarity, double probe_radius, int slices_per_atom = 25,
                bool dense_container = true);
     SASAEnergy(const json& j, const Space& spc);
-    double energy(Change& change) override;
+    double energy(const Change& change) override;
 };
 
 /**
@@ -1648,7 +1649,7 @@ class Example2D : public Energybase {
 
   public:
     Example2D(const json &j, Space &spc);
-    double energy(Change &change) override;
+    double energy(const Change& change) override;
 };
 
 /**
@@ -1669,7 +1670,7 @@ class Hamiltonian : public Energybase, public BasePointerVector<Energybase> {
     Hamiltonian(Space& spc, const json& j);
     void init() override;
     void sync(Energybase* other_hamiltonian, const Change& change) override;
-    double energy(Change& change) override;            //!< Energy due to changes
+    double energy(const Change& change) override;      //!< Energy due to changes
     const std::vector<double>& latestEnergies() const; //!< Energies for each term from the latest call to `energy()`
 };
 } // namespace Energy

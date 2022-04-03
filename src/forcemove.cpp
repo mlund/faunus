@@ -108,7 +108,7 @@ void LangevinVelocityVerlet::to_json(json &j) const {
 
 TEST_CASE("[Faunus] Integrator") {
     class DummyEnergy : public Energy::Energybase {
-        double energy(Change &) override { return 0.0; }
+        double energy([[maybe_unused]] const Change& change) override { return 0.0; }
     };
     Space spc;
     DummyEnergy energy;
@@ -209,7 +209,7 @@ void LangevinDynamics::_from_json(const json &j) { ForceMoveBase::_from_json(j);
 
 TEST_CASE("[Faunus] LangevinDynamics") {
     class DummyEnergy : public Energy::Energybase {
-        double energy(Change &) override { return 0.0; }
+        double energy([[maybe_unused]] const Change& change) override { return 0.0; }
     };
     Space spc;
     DummyEnergy energy;

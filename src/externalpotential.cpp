@@ -72,7 +72,7 @@ ExternalPotential::ExternalPotential(const json& j, const Space& spc)
         throw std::runtime_error(name + ": molecule list is empty");
     }
 }
-double ExternalPotential::energy(Change &change) {
+double ExternalPotential::energy(const Change& change) {
     assert(externalPotentialFunc != nullptr);
     double energy = 0.0;
     if (change.volume_change or change.everything or change.matter_change) {
@@ -225,7 +225,7 @@ ExternalAkesson::ExternalAkesson(const json& j, const Space& spc)
     externalPotentialFunc = [&](const Particle& particle) { return particle.charge * phi(particle.pos.z()); };
 }
 
-double ExternalAkesson::energy(Change &change) {
+double ExternalAkesson::energy(const Change& change) {
     if (not fixed_potential) {              // phi(z) unconverged, keep sampling
         if (state == MonteCarloState::ACCEPTED) { // only sample on accepted configs
             num_density_updates++;

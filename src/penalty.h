@@ -48,7 +48,7 @@ class Penalty : public Energybase {
   public:
     Penalty(const json& j, const Space& spc);
     virtual ~Penalty(); //!< destruct and save to disk (!)
-    double energy(Change& change) override;
+    double energy(const Change& change) override;
     void sync(Energybase* other, const Change& change) override;
     void streamPenaltyFunction(std::ostream &stream) const;
     void streamHistogram(std::ostream &stream) const;

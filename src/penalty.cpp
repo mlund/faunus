@@ -110,7 +110,7 @@ void Penalty::to_json(json& j) const {
         coordinates_j.emplace_back(*reaction_coordinate); // `ReactionCoordinateBase` --> `json`
     }
 }
-double Penalty::energy(Change& change) {
+double Penalty::energy(const Change& change) {
     double energy = 0.0;
     if (change) {
         for (size_t i = 0; i < number_of_reaction_coordinates; i++) {

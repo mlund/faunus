@@ -185,7 +185,7 @@ void PolicyIonIonEigen::updateComplex(EwaldData& data, Space::GroupVector& group
     data.Q_ion.imag() = kr.array().sin().colwise().sum(); // imaginary part of 'Q^q', see eq. 25 in ref.
 }
 
-void PolicyIonIon::updateComplex(EwaldData& d, Change& change, Space::GroupVector& groups,
+void PolicyIonIon::updateComplex(EwaldData& d, const Change& change, Space::GroupVector& groups,
                                  Space::GroupVector& oldgroups) const {
     assert(groups.size() == oldgroups.size());
     for (int k = 0; k < d.k_vectors.cols(); k++) {
@@ -381,7 +381,7 @@ void PolicyIonIonIPBCEigen::updateComplex(EwaldData& d, Space::GroupVector& grou
                          .sum(); // see eq. 2 in doi:10/css8
 }
 
-void PolicyIonIonIPBC::updateComplex(EwaldData& d, Change& change, Space::GroupVector& groups,
+void PolicyIonIonIPBC::updateComplex(EwaldData& d, const Change& change, Space::GroupVector& groups,
                                      Space::GroupVector& oldgroups) const {
     assert(d.policy == EwaldData::IPBC or d.policy == EwaldData::IPBCEigen);
     assert(groups.size() == oldgroups.size());
@@ -402,7 +402,7 @@ void PolicyIonIonIPBC::updateComplex(EwaldData& d, Change& change, Space::GroupV
     }
 }
 
-double PolicyIonIon::surfaceEnergy(const EwaldData& d, Change& change, Space::GroupVector& groups) {
+double PolicyIonIon::surfaceEnergy(const EwaldData& d, const Change& change, Space::GroupVector& groups) {
     if (d.const_inf < 0.5)
         return 0;
     Point qr(0, 0, 0);
@@ -484,7 +484,7 @@ void Ewald::init() {
     policy->updateComplex(data, spc.groups); // brute force. todo: be selective
 }
 
-double Ewald::energy(Change &change) {
+double Ewald::energy(const Change& change) {
     double u = 0;
     if (change) {
         // If the state is NEW_MONTE_CARLO_STATE (trial state), then update all k-vectors
@@ -570,7 +570,7 @@ void Ewald::sync(Energybase* energybase, const Change& change) {
 
 void Ewald::to_json(json &j) const { j = data; }
 
-double Example2D::energy(Change &) {
+double Example2D::energy(const Change&) {
     double s =
         1 + std::sin(2.0 * pc::pi * particle.x()) + std::cos(2.0 * pc::pi * particle.y()) * static_cast<double>(use_2d);
     s *= scale_energy;
@@ -597,7 +597,7 @@ void Example2D::to_json(json &j) const {
     j["2D"] = use_2d;
 }
 
-double ContainerOverlap::energy(Change& change) {
+double ContainerOverlap::energy(const Change& change) {
     if (change && spc.geometry.type != Geometry::Variant::CUBOID) { // no need to check in PBC systems
         // *all* groups
         if (change.volume_change or change.everything) {
@@ -672,7 +672,7 @@ void Isobaric::to_json(json& j) const {
  * @brief Calculates the energy contribution p × V / kT - (N + 1) × ln(V)
  * @return energy in kT
  */
-double Isobaric::energy(Change& change) {
+double Isobaric::energy(const Change& change) {
     if (change.volume_change || change.everything || change.matter_change) {
         auto group_is_active = [](const auto& group) { return !group.empty(); };
         auto count_particles = [](const auto& group) { return group.isAtomic() ? group.size() : 1; };
@@ -721,7 +721,7 @@ Constrain::Constrain(const json &j, Space &spc) {
     coordinate = ReactionCoordinate::createReactionCoordinate({{type, j}}, spc);
 }
 
-double Constrain::energy(Change& change) {
+double Constrain::energy(const Change& change) {
     if (change) {
         const auto value = (*coordinate)(); // calculate reaction coordinate
         if (not coordinate->inRange(value)) // is it within allowed range?
@@ -790,7 +790,7 @@ void Bonded::to_json(json& j) const {
     }
 }
 
-double Bonded::energy(Change &change) {
+double Bonded::energy(const Change& change) {
     double energy = 0.0;
     if (change) {
         energy += sumBondEnergy(external_bonds);
@@ -948,7 +948,7 @@ void Hamiltonian::checkBondedMolecules() const {
     }
 }
 
-double Hamiltonian::energy(Change& change) {
+double Hamiltonian::energy(const Change& change) {
     latest_energies.clear();
     for (auto& energy_ptr : energy_terms) {
         energy_ptr->state = state; // is this needed?
@@ -1121,7 +1121,7 @@ void FreeSASAEnergy::init() {
     updateSASA(change);
 }
 
-double FreeSASAEnergy::energy(Change& change) {
+double FreeSASAEnergy::energy(const Change& change) {
     double energy = 0.0;
     double surface_area = 0.0;
     updateSASA(change);
@@ -1279,7 +1279,7 @@ void SASAEnergy::init() {
     changed_indices.reserve(spc.particles.size());
 }
 
-double SASAEnergyReference::energy(Change& change) {
+double SASAEnergyReference::energy(const Change& change) {
     double energy = 0.;
     if (state != MonteCarloState::ACCEPTED) {
         sasa->update(spc, change);
@@ -1371,7 +1371,7 @@ void SASAEnergy::insertChangedNeighboursOf(const index_type index, std::set<inde
     target_indices.insert(current_neighbour.begin(), current_neighbour.end());
 }
 
-double SASAEnergy::energy(Change& change) {
+double SASAEnergy::energy(const Change& change) {
     double energy(0.);
 
     //! update not needed when the state is already accepted

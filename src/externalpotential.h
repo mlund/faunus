@@ -22,10 +22,10 @@ class Energybase {
     enum class MonteCarloState { ACCEPTED, TRIAL, NONE };
     MonteCarloState state = MonteCarloState::NONE;
     std::string name;                                     //!< Meaningful name
-    std::string citation_information;                     //!< Possible reference. May be left empty
-    TimeRelativeOfTotal<std::chrono::microseconds> timer; //!< Timer for measure speed of each term
-    virtual double energy(Change &) = 0;                  //!< energy due to change
-    virtual void to_json(json &) const;                   //!< json output
+    std::string citation_information;                     //!< Possible reference; may be left empty
+    TimeRelativeOfTotal<std::chrono::microseconds> timer; //!< Timer for measuring speed
+    virtual double energy(const Change& change) = 0;      //!< energy due to change
+    virtual void to_json(json& j) const;                  //!< json output
     virtual void sync(Energybase* other_energy, const Change& change); //!< Sync (copy from) another energy instance
     virtual void init();                                  //!< reset and initialize
     virtual void force(PointVector& forces);              //!< update forces on all particles
@@ -54,7 +54,7 @@ class ExternalPotential : public Energybase {
     std::function<double(const Particle&)> externalPotentialFunc; //!< energy of single particle
   public:
     ExternalPotential(const json& j, const Space& spc);
-    double energy(Change& j) override;
+    double energy(const Change& j) override;
     void to_json(json& j) const override;
 };
 
@@ -127,7 +127,7 @@ class ExternalAkesson : public ExternalPotential {
 
   public:
     ExternalAkesson(const json& j, const Space& spc);
-    double energy(Change& change) override;
+    double energy(const Change& change) override;
     ~ExternalAkesson();
 };
 

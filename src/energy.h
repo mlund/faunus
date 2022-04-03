@@ -190,7 +190,7 @@ struct PolicyIonIon : public EwaldPolicyBase {
     void updateComplex(EwaldData& d, const Change& change, const Space::GroupVector& groups,
                        const Space::GroupVector& oldgroups) const override;
     double selfEnergy(const EwaldData& d, Change& change, Space::GroupVector& groups) override;
-    double surfaceEnergy(const EwaldData& d, const Change& change, const Space::GroupVector& groups) override;
+    double surfaceEnergy(const EwaldData& data, const Change& change, const Space::GroupVector& groups) override;
     double reciprocalEnergy(const EwaldData& d) override;
 };
 
@@ -247,6 +247,8 @@ class Ewald : public Energybase {
     Ewald(const Space& spc, const EwaldData& data);
     Ewald(const json& j, const Space& spc);
     void init() override;
+    void setOldGroups(const Space::GroupVector& old_groups); //!< Optimization if old groups are available (optional)
+    void updateState(const Change& change) override;
     double energy(const Change& change) override;
     void sync(Energybase* energybase, const Change& change) override;
     void to_json(json& j) const override;

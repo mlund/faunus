@@ -4,7 +4,9 @@
 #include "externalpotential.h"
 #include <functional>
 #include <range/v3/view/zip.hpp>
+#include <range/v3/view/iota.hpp>
 #include <range/v3/algorithm/for_each.hpp>
+#include <range/v3/numeric/accumulate.hpp>
 #include <numeric>
 
 #ifdef ENABLE_FREESASA
@@ -195,7 +197,11 @@ void PolicyIonIon::updateComplex(EwaldData& d, const Change& change, const Space
         for (auto &changed_group : change.groups) {
             auto& g_new = groups.at(changed_group.group_index);
             auto& g_old = oldgroups.at(changed_group.group_index);
-            for (auto i : changed_group.relative_atom_indices) {
+            const auto max_group_size = std::max(g_new.size(), g_old.size());
+            auto indices = (changed_group.all) ? ranges::cpp20::views::iota(0u, max_group_size) |
+                                                     ranges::to<std::vector<Change::index_type>>
+                                               : changed_group.relative_atom_indices;
+            for (auto i : indices) {
                 if (i < g_new.size()) {
                     double qr = q.dot(g_new[i].pos);
                     Q += g_new[i].charge * EwaldData::Tcomplex(std::cos(qr), std::sin(qr));
@@ -402,29 +408,22 @@ void PolicyIonIonIPBC::updateComplex(EwaldData& d, const Change& change, const S
     }
 }
 
-double PolicyIonIon::surfaceEnergy(const EwaldData& d, const Change& change, const Space::GroupVector& groups) {
-    if (d.const_inf < 0.5)
-        return 0;
-    Point qr(0, 0, 0);
-    if (change.everything or change.volume_change) {
-        for (auto &g : groups) {
-            for (auto &particle : g) {
-                qr += particle.charge * particle.pos;
-            }
-        }
-    } else if (change.groups.size() > 0) {
-        for (auto &changed_group : change.groups) {
-            auto& g = groups.at(changed_group.group_index);
-            for (auto i : changed_group.relative_atom_indices) {
-                if (i < g.size()) {
-                    qr += g[i].charge * g[i].pos;
-                }
-            }
-        }
+/**
+ * @note The surface energy cannot be calculated for a partial change due to
+ *       the squared `qr`. Hence the `change` object is ignored.
+ */
+double PolicyIonIon::surfaceEnergy(const EwaldData& data, [[maybe_unused]] const Change& change,
+                                   const Space::GroupVector& groups) {
+    namespace rv = ranges::cpp20::views;
+    if (data.const_inf < 0.5 || change.empty()) {
+        return 0.0;
     }
-    double volume = d.box_length.prod();
-    return d.const_inf * 2 * pc::pi / ((2 * d.surface_dielectric_constant + 1) * volume) * qr.dot(qr) *
-           d.bjerrum_length;
+    const auto volume = data.box_length.prod();
+    auto charge_x_position = [](const Particle& particle) -> Point { return particle.charge * particle.pos; };
+    auto qr_range = groups | rv::join | rv::transform(charge_x_position);
+    const auto qr_squared = ranges::accumulate(qr_range, Point(0, 0, 0)).squaredNorm();
+    return data.const_inf * 2.0 * pc::pi / ((2.0 * data.surface_dielectric_constant + 1.0) * volume) * qr_squared *
+           data.bjerrum_length;
 }
 
 double PolicyIonIon::selfEnergy(const EwaldData& d, Change& change, Space::GroupVector& groups) {
@@ -489,26 +488,30 @@ void Ewald::init() {
     policy->updateComplex(data, spc.groups); // brute force. todo: be selective
 }
 
-double Ewald::energy(const Change& change) {
-    double u = 0;
+/**
+ * If `old_groups` have been set and if the change object is only partial, this will attempt
+ * to perform a faster, partial update of the k-vectors. Otherwise perform a full (slower) update.
+ */
+void Ewald::updateState(const Change& change) {
     if (change) {
-        // If the state is NEW_MONTE_CARLO_STATE (trial state), then update all k-vectors
-        if (state == MonteCarloState::TRIAL) {
-            if (change.everything or change.volume_change) { // everything changes
-                policy->updateBox(data, spc.geometry.getLength());
-                policy->updateComplex(data, spc.groups); // update all (expensive!)
-            } else {                                     // much cheaper partial update
-                if (change.groups.size() > 0) {
-                    assert(old_groups != nullptr);
-                    policy->updateComplex(data, change, spc.groups, *old_groups);
-                }
-            }
+        if (!change.groups.empty() && old_groups && !change.everything && !change.volume_change) {
+            policy->updateComplex(data, change, spc.groups, *old_groups); // partial update (fast)
+        } else {                                                          // full update (slow)
+            policy->updateBox(data, spc.geometry.getLength());
+            policy->updateComplex(data, spc.groups);
         }
-        // the selfEnergy() is omitted as this is added as a separate term in `Hamiltonian`
-        // (The pair-potential is responsible for this)
-        u = policy->surfaceEnergy(data, change, spc.groups) + policy->reciprocalEnergy(data);
     }
-    return u;
+}
+
+/**
+ * the selfEnergy() is omitted as this is added as a separate term in `Hamiltonian`
+ * (The pair-potential is responsible for this)
+ */
+double Ewald::energy(const Change& change) {
+    if (change) {
+        return policy->surfaceEnergy(data, change, spc.groups) + policy->reciprocalEnergy(data);
+    }
+    return 0.0;
 }
 
 /**
@@ -550,17 +553,20 @@ void Ewald::force(std::vector<Point> &forces) {
     }
 }
 
-void Ewald::sync(Energybase* energybase, const Change& change) {
-    if (auto* other = dynamic_cast<Ewald*>(energybase)) {
-        if (other->state == MonteCarloState::ACCEPTED) {
-            old_groups = &(
-                other->spc
-                    .groups); // give NEW_MONTE_CARLO_STATE access to OLD_MONTE_CARLO_STATE space for optimized updates
-        }
+/**
+ * When updating k-vectors an optimization can be performed if the old group positions
+ * are known. Use this function to set a pointer to the old groups (usually from the accepted Space)
+ */
+void Ewald::setOldGroups(const Space::GroupVector& old_groups) { this->old_groups = &old_groups; }
 
+void Ewald::sync(Energybase* energybase, const Change& change) {
+    if (auto* other = dynamic_cast<const Ewald*>(energybase)) {
+        if (!old_groups && other->state == MonteCarloState::ACCEPTED) {
+            setOldGroups(other->spc.groups);
+        }
         // hard-coded sync; should be expanded when dipolar ewald is supported
         if (change.everything or change.volume_change) {
-            other->data.Q_dipole.resize(0); // dipoles are currently unsupported
+            data.Q_dipole.resize(0); // dipoles are currently unsupported
             data = other->data;
         } else {
             data.Q_ion = other->data.Q_ion;
@@ -576,27 +582,81 @@ TEST_CASE("[Faunus] Energy::Ewald") {
     EwaldData data(R"({
                 "epsr": 1.0, "alpha": 0.894427190999916, "epss": 1.0,
                 "ncutoff": 11.0, "spherical_sum": true, "cutoff": 5.0})"_json);
+    data.policy = EwaldData::PBC;
+
+    auto copy_position = [](auto& pos, auto& particle) { particle.pos = pos; };
+
     Space space;
-    SpaceFactory::makeNaCl(space, 4, R"( {"type": "cuboid", "length": 20} )"_json);
-    PointVector positions = {{0, 0, 0}, {4, 0, 0}, {0, 4, 0}, {0, 0, 4}};
-    space.updateParticles(positions.begin(), positions.end(), space.particles.begin(),
-                          [](auto& pos, auto& particle) { particle.pos = pos; });
+    SpaceFactory::makeNaCl(space, 1, R"( {"type": "cuboid", "length": 10} )"_json);
+    PointVector positions = {{0, 0, 0}, {1, 0, 0}};
+    space.updateParticles(positions.begin(), positions.end(), space.particles.begin(), copy_position);
     auto ewald = Ewald(space, data);
     Change change;
+    change.everything = true;
+    // reference energy from IonIonPolicy:
+    const auto reference_energy = (0.0020943951023931952 + 0.21303063979675319) * data.bjerrum_length;
+    const auto energy_change = -16.8380445846; // move first position (0,0,0) --> (0.1, 0.1, 0.1)
 
-    SUBCASE("energy") {
-        change.everything = true;
+    SUBCASE("energy") { CHECK(ewald.energy(change) == doctest::Approx(reference_energy)); }
+
+    SUBCASE("update and restore (full update)") {
+        positions[0] = {0.1, 0.1, 0.1};
+        space.updateParticles(positions.begin(), positions.end(), space.particles.begin(), copy_position);
         ewald.updateState(change);
-        CHECK(ewald.energy(change) == doctest::Approx(1883.9965623498));
+        CHECK(ewald.energy(change) == doctest::Approx(103.7300260099));
+        CHECK(ewald.energy(change) - reference_energy == doctest::Approx(energy_change));
+
+        positions[0] = {0.0, 0.0, 0.0};
+        space.updateParticles(positions.begin(), positions.end(), space.particles.begin(), copy_position);
+        CHECK(ewald.energy(change) != doctest::Approx(reference_energy)); // no match since k-vectors not updated
+        ewald.updateState(change);
+        CHECK(ewald.energy(change) == doctest::Approx(reference_energy)); // that's better
     }
 
-    SUBCASE("update position") {
-        change.everything = true;
-        positions[0] += Point(-0.5, 0.0, 0.5);
-        space.updateParticles(positions.begin(), positions.begin() + 1, space.particles.begin(),
-                              [](auto& pos, auto& particle) { particle.pos = pos; });
+    Space trial_space;
+    SpaceFactory::makeNaCl(trial_space, 1, R"( {"type": "cuboid", "length": 10} )"_json);
+    positions = {{0, 0, 0}, {1, 0, 0}};
+    trial_space.updateParticles(positions.begin(), positions.end(), trial_space.particles.begin(), copy_position);
+    auto trial_ewald = Ewald(trial_space, data);
+    CHECK(trial_ewald.energy(change) == doctest::Approx(reference_energy));
 
-        CHECK(ewald.energy(change) == doctest::Approx(1848.9654162524));
+    auto check_energy_change = [&](const Change& change) { // perturb from (0,0,0) --> (0.1, 0.1, 0.1)
+        positions[0] = {0.0, 0.0, 0.0};
+        trial_space.updateParticles(positions.begin(), positions.end(), trial_space.particles.begin(), copy_position);
+        trial_ewald.updateState(change);
+        ewald.sync(&trial_ewald, change);
+        space.sync(trial_space, change);
+        const auto old_energy = trial_ewald.energy(change);
+
+        positions[0] = {0.1, 0.1, 0.1};
+        trial_space.updateParticles(positions.begin(), positions.end(), trial_space.particles.begin(), copy_position);
+        trial_ewald.updateState(change);
+        ewald.sync(&trial_ewald, change);
+        space.sync(trial_space, change);
+        const auto new_energy = trial_ewald.energy(change); // position (0.1,0.1,0.1)
+        CHECK(energy_change == doctest::Approx(new_energy - old_energy));
+    };
+
+    trial_ewald.setOldGroups(space.groups); // give access to positions in accepted state
+
+    SUBCASE("update and restore (trial ewald)") {
+        change.everything = true;
+        check_energy_change(change);
+    }
+    SUBCASE("update and restore (partial using `all`)") {
+        change.clear();
+        auto& group_change = change.groups.emplace_back();
+        group_change.group_index = 0;
+        group_change.all = true;
+        check_energy_change(change);
+    }
+    SUBCASE("update and restore (partial using `relative_atom_indices`)") {
+        change.clear();
+        auto& group_change = change.groups.emplace_back();
+        group_change.group_index = 0;
+        group_change.all = false;
+        group_change.relative_atom_indices.push_back(0);
+        check_energy_change(change);
     }
 }
 

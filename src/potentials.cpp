@@ -1170,7 +1170,7 @@ void SplinedPotential::createKnots(int i, int j, double rmin, double rmax) {
     }
     faunus_logger->trace(
         "{}-{} interaction splined between [{:6.2f}:{:6.2f}] {} using {} knots w. maximum absolute error of {:.1E} kT",
-        Faunus::atoms[i].name, Faunus::atoms[j].name, rmin, rmax, u8::angstrom, knotdata.numKnots(), max_error);
+        Faunus::atoms[i].name, Faunus::atoms[j].name, rmin, rmax, unicode::angstrom, knotdata.numKnots(), max_error);
 }
 
 // =============== NewCoulombGalore ===============

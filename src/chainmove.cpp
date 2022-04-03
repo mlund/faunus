@@ -12,10 +12,10 @@ void ChainRotationMoveBase::_from_json(const json &j) {
 }
 
 void ChainRotationMoveBase::_to_json(json &j) const {
-    using namespace u8;
+    using namespace unicode;
     j = {{"molecule", molname},
          {"dprot", dprot},
-         {u8::rootof + u8::bracket("r_cm" + u8::squared), std::sqrt(msqdispl.avg())}};
+         {unicode::rootof + unicode::bracket("r_cm" + unicode::squared), std::sqrt(msqdispl.avg())}};
     if (small_box_encountered > 0) {
         j["skipped"] = double(small_box_encountered) / number_of_attempted_moves; // todo rename the json attribute
     }

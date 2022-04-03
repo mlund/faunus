@@ -532,7 +532,7 @@ void VirtualVolumeMove::_to_json(json& j) const {
              {"-ln\u27e8exp(-dU)\u27e9", meanFreeEnergy()},
              {"Pex/mM", excess_pressure / 1.0_millimolar},
              {"Pex/Pa", excess_pressure / 1.0_Pa},
-             {"Pex/kT/" + u8::angstrom + u8::cubed, excess_pressure}};
+             {"Pex/kT/" + unicode::angstrom + unicode::cubed, excess_pressure}};
         roundJSON(j, 5);
     }
 }
@@ -544,12 +544,13 @@ VirtualVolumeMove::VirtualVolumeMove(const json& j, Space& spc, Energy::Energyba
     change.volume_change = true;
     change.everything = true;
     if (stream) {
-        *stream << "# steps dV/" + u8::angstrom + u8::cubed + " du/kT exp(-du/kT) <Pex>/kT/" + u8::angstrom + u8::cubed;
+        *stream << "# steps dV/" + unicode::angstrom + unicode::cubed + " du/kT exp(-du/kT) <Pex>/kT/" +
+                       unicode::angstrom + unicode::cubed;
         // if non-isotropic scaling, add another column with dA or dL
         if (volume_scaling_method == Geometry::VolumeMethod::XY) {
-            *stream << " dA/" + u8::angstrom + u8::squared;
+            *stream << " dA/" + unicode::angstrom + unicode::squared;
         } else if (volume_scaling_method == Geometry::VolumeMethod::Z) {
-            *stream << " dL/" + u8::angstrom;
+            *stream << " dL/" + unicode::angstrom;
         }
         *stream << "\n"; // trailing newline
     }
@@ -823,7 +824,7 @@ void WidomInsertion::_to_json(json& j) const {
              {"insertions", mean_exponentiated_energy_change.size()},
              {"absz", absolute_z_coords},
              {"insertscheme", *inserter},
-             {u8::mu + "/kT", {{"excess", excess_chemical_potential}}}};
+             {unicode::mu + "/kT", {{"excess", excess_chemical_potential}}}};
     }
 }
 
@@ -1775,8 +1776,8 @@ void Multipole::_to_json(json& j) const {
         molecules_json[molecule_name] = {{"Z", average.charge.avg()},
                                          {"Z2", average.charge_squared.avg()},
                                          {"C", average.charge_squared.avg() - std::pow(average.charge.avg(), 2)},
-                                         {u8::mu, average.dipole_moment.avg()},
-                                         {u8::mu + u8::squared, average.dipole_moment_squared.avg()}};
+                                         {unicode::mu, average.dipole_moment.avg()},
+                                         {unicode::mu + unicode::squared, average.dipole_moment_squared.avg()}};
     }
 }
 Multipole::Multipole(const json& j, const Space& spc) : Analysisbase(spc, "multipole") { from_json(j); }

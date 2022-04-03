@@ -145,7 +145,7 @@ double ReplayMove::bias(Change&, double, double) {
 void AtomicTranslateRotate::_to_json(json& j) const {
     j = {{"dir", directions},
          {"molid", molid},
-         {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(mean_square_displacement.avg())},
+         {unicode::rootof + unicode::bracket("r" + unicode::squared), std::sqrt(mean_square_displacement.avg())},
          {"molecule", molecule_name}};
     roundJSON(j, 3);
 }
@@ -624,7 +624,7 @@ QuadraticChargeMove::QuadraticChargeMove(Space& spc) : ChargeMove(spc) {}
 // -----------------------------------
 
 void ChargeTransfer::_to_json(json& j) const {
-    using namespace u8;
+    using namespace unicode;
     j = {{"dq", dq},
          {rootof + bracket(Delta + "q" + squared), std::sqrt(msqd.avg())},
          {cuberoot + rootof + bracket(Delta + "q" + squared), std::cbrt(std::sqrt(msqd.avg()))}};
@@ -842,7 +842,7 @@ ChargeTransfer::ChargeTransfer(Space& spc) : ChargeTransfer(spc, "chargetransfer
 void QuadrantJump::_to_json(json& j) const {
     j = {{"dir", dir},
          {"molid", molid},
-         {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(msqd.avg())},
+         {unicode::rootof + unicode::bracket("r" + unicode::squared), std::sqrt(msqd.avg())},
          {"molecule", molecules[molid].name}};
     roundJSON(j, 3);
 }
@@ -904,7 +904,7 @@ void AtomicSwapCharge::_to_json(json& j) const {
     j = {{"pH", pH},
          {"pka", pKa},
          {"molid", molid},
-         {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(msqd.avg())},
+         {unicode::rootof + unicode::bracket("r" + unicode::squared), std::sqrt(msqd.avg())},
          {"molecule", molname}};
     roundJSON(j, 3);
 }
@@ -966,7 +966,7 @@ void TranslateRotate::_to_json(json& j) const {
          {"dprot", rotational_displacement / 1.0_rad},
          {"dirrot", fixed_rotation_axis},
          {"molid", molid},
-         {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(mean_squared_displacement.avg())},
+         {unicode::rootof + unicode::bracket("r" + unicode::squared), std::sqrt(mean_squared_displacement.avg())},
          {"√⟨θ²⟩/°", std::sqrt(mean_squared_rotation_angle.avg()) / 1.0_deg},
          {"molecule", Faunus::molecules[molid].name}};
     roundJSON(j, 3);

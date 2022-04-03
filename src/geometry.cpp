@@ -612,7 +612,7 @@ ParticleVector mapParticlesOnSphere(const ParticleVector &source) {
 
     faunus_logger->info("{} particles mapped on sphere of radius {} with RMSD {} {}; the first particle ({}) is a "
                         "dummy and COM placeholder",
-                        destination.size(), radius.avg(), _rmsd, u8::angstrom,
+                        destination.size(), radius.avg(), _rmsd, unicode::angstrom,
                         Faunus::atoms.at(destination.at(0).id).name);
     return destination;
 }

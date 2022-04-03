@@ -1161,7 +1161,7 @@ void FreeSASAEnergy::sync(Energybase* energybase_ptr, const Change& change) {
 void FreeSASAEnergy::to_json(json& j) const {
     j["molarity"] = cosolute_molarity / 1.0_molar;
     j["radius"] = parameters->probe_radius / 1.0_angstrom;
-    j[u8::bracket("SASA") + "/" + u8::angstrom + u8::squared] = mean_surface_area.avg() / 1.0_angstrom;
+    j[unicode::bracket("SASA") + "/" + unicode::angstrom + unicode::squared] = mean_surface_area.avg() / 1.0_angstrom;
     roundJSON(j, 5); // set json output precision
 }
 

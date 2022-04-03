@@ -6,9 +6,7 @@
 
 double Faunus::PhysicalConstants::temperature = 298.15;
 
-std::string Faunus::u8::bracket(std::string_view sv) {
-    return fmt::format("\u27e8{}\u27e9", sv);
-}
+std::string Faunus::unicode::bracket(std::string_view sv) { return fmt::format("\u27e8{}\u27e9", sv); }
 
 TEST_CASE("[Faunus] infinite math") {
     using namespace Faunus;

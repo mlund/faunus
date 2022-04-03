@@ -127,7 +127,7 @@ inline T operator"" _kcalmol(long double u) { return u * 4.1868_kJmol; }
 
 using namespace ChemistryUnits;
 
-namespace u8 {
+namespace unicode {
 const std::string angstrom = "\u00c5";   //!< Angstrom symbol
 const std::string beta = "\u03b2";       //!< Greek beta
 const std::string cubed = "\u00b3";      //!< Superscript 3
@@ -153,6 +153,6 @@ const std::string subr = "\u1D63";       //!< Subscript "r"
 const std::string theta = "\u03b8";      //!< Greek theta
 
 std::string bracket(std::string_view sv);
-} // namespace u8
+} // namespace unicode
 
 } // namespace Faunus

@@ -1686,6 +1686,7 @@ class Hamiltonian : public Energybase, public BasePointerVector<Energybase> {
   public:
     Hamiltonian(Space& spc, const json& j);
     void init() override;
+    void updateState(const Change& change) override;
     void sync(Energybase* other_hamiltonian, const Change& change) override;
     double energy(const Change& change) override;      //!< Energy due to changes
     const std::vector<double>& latestEnergies() const; //!< Energies for each term from the latest call to `energy()`

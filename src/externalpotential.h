@@ -28,6 +28,7 @@ class Energybase {
     virtual void to_json(json& j) const;                  //!< json output
     virtual void sync(Energybase* other_energy, const Change& change); //!< Sync (copy from) another energy instance
     virtual void init();                                  //!< reset and initialize
+    virtual void updateState(const Change& change);       //!< Update internal state to reflect change in e.g. Space
     virtual void force(PointVector& forces);              //!< update forces on all particles
     inline virtual ~Energybase() = default;
 };

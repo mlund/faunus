@@ -136,6 +136,7 @@ void MetropolisMonteCarlo::performMove(Move::MoveBase& move) {
 #endif
     if (change) {
         latest_move_name = move.getName();
+        trial_state->pot->updateState(change);                    // update energy terms to reflect change
         const auto new_energy = trial_state->pot->energy(change); // trial potential energy (kT)
         const auto old_energy = state->pot->energy(change);       // potential energy before move (kT)
 

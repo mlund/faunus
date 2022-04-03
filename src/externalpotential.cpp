@@ -21,6 +21,13 @@ void Energybase::sync([[maybe_unused]] Energybase* other_energy, [[maybe_unused]
 void Energybase::init() {}
 void Energybase::force([[maybe_unused]] PointVector& forces) {}
 
+/**
+ * This should be called whenever the Space is modified (particles, volume, etc)
+ * as some energy terms may depend on this. One example is Ewald summation that
+ * needs to update k-vectors before calculating the energy.
+ */
+void Energybase::updateState([[maybe_unused]] const Change& change) {}
+
 void to_json(json &j, const Energybase &base) {
     assert(not base.name.empty());
     if (base.timer)

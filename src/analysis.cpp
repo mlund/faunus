@@ -1605,7 +1605,7 @@ void AtomProfile::_to_disk() {
             }
 
             N = N / double(number_of_samples); // average number of particles/charges
-            o << fmt::format("{:.6E} {:.6E} {:.6E}\n", r, N, N / Vr * 1e27 / pc::Nav); // ... and molar concentration
+            o << fmt::format("{:.6E} {:.6E} {:.6E}\n", r, N, N / Vr * 1e27 / pc::avogadro); // ... and molar concentration
         };
         f << "# r N rho/M\n" << table;
     }

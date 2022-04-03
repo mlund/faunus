@@ -417,10 +417,10 @@ CustomExternal::CustomExternal(const json &j, Space &spc) : ExternalPotential(j,
         if (constants == nullptr) {
             constants = json::object();
         }
-        constants["e0"] = pc::e0;
-        constants["kB"] = pc::kB;
+        constants["e0"] = pc::vacuum_permittivity;
+        constants["kB"] = pc::boltzmann_constant;
         constants["kT"] = pc::kT();
-        constants["Nav"] = pc::Nav;
+        constants["Nav"] = pc::avogadro;
         constants["T"] = pc::temperature;
         expr = std::make_unique<ExprFunction<double>>();
         expr->set(

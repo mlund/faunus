@@ -495,10 +495,10 @@ void CustomPairPotential::from_json(const json& j) {
     if (constants == nullptr) {
         constants = json::object();
     }
-    constants["e0"] = pc::e0;
-    constants["kB"] = pc::kB;
+    constants["e0"] = pc::vacuum_permittivity;
+    constants["kB"] = pc::boltzmann_constant;
     constants["kT"] = pc::kT();
-    constants["Nav"] = pc::Nav;
+    constants["Nav"] = pc::avogadro;
     constants["Rc"] = std::sqrt(squared_cutoff_distance);
     constants["T"] = pc::temperature;
     expression.set(original_input, {{"r", &symbols->distance},

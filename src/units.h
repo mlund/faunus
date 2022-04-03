@@ -14,21 +14,24 @@ namespace Faunus {
         epsilon_dbl = std::numeric_limits<T>::epsilon(),    //!< Numerical precision
         max_value = std::numeric_limits<T>::max(),          //!< Maximal (finite) representable value
         max_exp_argument = 709.782712893384, //!< Largest value exp() can take before overflow (hard-coded for double)
-        pi = std::numbers::pi,               //!< Pi
-        e0 = 8.85419e-12,                    //!< Permittivity of vacuum [C^2/(J*m)]
-        e = 1.602177e-19,                    //!< Absolute electronic unit charge [C]
-        kB = 1.380658e-23,                   //!< Boltzmann's constant [J/K]
-        Nav = 6.022137e23,                   //!< Avogadro's number [1/mol]
-        c = 299792458.0,                     //!< Speed of light [m/s]
-        R = kB * Nav;                        //!< Molar gas constant [J/(K*mol)]
-    extern T temperature;                    //!< Temperature [K]
-    static inline T kT() { return temperature * kB; } //!< Thermal energy [J]
-    static inline T RT() { return temperature * R; }  //!< Thermal energy [J/mol]
-    static inline T bjerrumLength(T epsilon_r) {
-        return e * e / (4 * pi * e0 * epsilon_r * 1e-10 * kT());
-        } //!< Bjerrum length [Å]
+        pi = std::numbers::pi,
+        vacuum_permittivity = 8.85419e-12,  //!< Permittivity of vacuum [C^2/(J*m)]
+        elementary_charge = 1.602177e-19,   //!< Absolute electronic unit charge [C]
+        boltzmann_constant = 1.380658e-23,  //!< Boltzmann's constant [J/K]
+        avogadro = 6.022137e23,             //!< Avogadro's number [1/mol]
+        speed_of_light = 299792458.0,       //!< Speed of light [m/s]
+        molar_gas_constant = boltzmann_constant * avogadro; //!< Molar gas constant [J/(K*mol)]
+    extern T temperature; //!< Temperature [K]
 
-        static inline T relativeDielectricFromBjerrumLength(T bjerrumlength) {
+    static inline T kT() { return temperature * boltzmann_constant; } //!< Thermal energy [J]
+    static inline T RT() { return temperature * molar_gas_constant; } //!< Thermal energy [J/mol]
+
+    static inline T bjerrumLength(T relative_dielectric_constant) {
+        return elementary_charge * elementary_charge /
+               (4 * pi * vacuum_permittivity * relative_dielectric_constant * 1e-10 * kT());
+    } //!< Bjerrum length [Å]
+
+    static inline T relativeDielectricFromBjerrumLength(T bjerrumlength) {
             return bjerrumLength(bjerrumlength);
         } //!< Bjerrum length to a relative dielectric constant
     }
@@ -75,12 +78,12 @@ namespace Faunus {
     constexpr T operator"" _liter(long double v) { return v * 1e27; } //!< volume in liters (to cubic ångströms)
     constexpr T operator"" _gmol(long double m) { return m; }         //!< mass in grams per mole
     constexpr T operator"" _kg(long double m) {
-        return m * 1e3 * pc::Nav;
+        return m * 1e3 * pc::avogadro;
     }                                                       //!< mass in kilograms per particle (to grams per mole)
     constexpr T operator"" _Da(long double m) { return m; } //!< mass in daltons per particle (to grams per mole)
 
     //! amount of substance in moles (to number of particles)
-    constexpr T operator"" _mol(long double n) { return n * pc::Nav; }
+    constexpr T operator"" _mol(long double n) { return n * pc::avogadro; }
 
     //! molar concentration (to particle density in number of particles per cubic ångström)
     constexpr T operator"" _molar(long double c) { return c * 1.0_mol / 1.0_liter; }
@@ -117,7 +120,7 @@ namespace Faunus {
     inline T operator"" _hartree(long double u) { return u * 4.35974434e-18_J; }
 
     //! energy in kilojoules per mole (to kT per particle)
-    inline T operator"" _kJmol(long double u) { return u / pc::kT() / pc::Nav * 1e3; }
+    inline T operator"" _kJmol(long double u) { return u / pc::kT() / pc::avogadro * 1e3; }
 
     //! energy in kilocalories per mole (to kT per particle)
     inline T operator"" _kcalmol(long double u) { return u * 4.1868_kJmol; }

@@ -472,14 +472,17 @@ double PolicyIonIonEigen::reciprocalEnergy(const EwaldData &d) {
     return 2 * pc::pi * d.bjerrum_length * energy / d.box_length.prod();
 }
 
-Ewald::Ewald(const json& j, const Space& spc)
-    : data(j)
-    , spc(spc) {
+Ewald::Ewald(const Space& spc, const EwaldData& data)
+    : spc(spc)
+    , data(data) {
     name = "ewald";
     policy = EwaldPolicyBase::makePolicy(data.policy);
     citation_information = policy->cite;
     init();
 }
+
+Ewald::Ewald(const json& j, const Space& spc)
+    : Ewald(spc, static_cast<EwaldData>(j)) {}
 
 void Ewald::init() {
     policy->updateBox(data, spc.geometry.getLength());
@@ -547,9 +550,6 @@ void Ewald::force(std::vector<Point> &forces) {
     }
 }
 
-/**
- * @todo Implement a sync() function in EwaldData to selectively copy information
- */
 void Ewald::sync(Energybase* energybase, const Change& change) {
     if (auto* other = dynamic_cast<Ewald*>(energybase)) {
         if (other->state == MonteCarloState::ACCEPTED) {
@@ -571,6 +571,34 @@ void Ewald::sync(Energybase* energybase, const Change& change) {
 }
 
 void Ewald::to_json(json &j) const { j = data; }
+
+TEST_CASE("[Faunus] Energy::Ewald") {
+    EwaldData data(R"({
+                "epsr": 1.0, "alpha": 0.894427190999916, "epss": 1.0,
+                "ncutoff": 11.0, "spherical_sum": true, "cutoff": 5.0})"_json);
+    Space space;
+    SpaceFactory::makeNaCl(space, 4, R"( {"type": "cuboid", "length": 20} )"_json);
+    PointVector positions = {{0, 0, 0}, {4, 0, 0}, {0, 4, 0}, {0, 0, 4}};
+    space.updateParticles(positions.begin(), positions.end(), space.particles.begin(),
+                          [](auto& pos, auto& particle) { particle.pos = pos; });
+    auto ewald = Ewald(space, data);
+    Change change;
+
+    SUBCASE("energy") {
+        change.everything = true;
+        ewald.updateState(change);
+        CHECK(ewald.energy(change) == doctest::Approx(1883.9965623498));
+    }
+
+    SUBCASE("update position") {
+        change.everything = true;
+        positions[0] += Point(-0.5, 0.0, 0.5);
+        space.updateParticles(positions.begin(), positions.begin() + 1, space.particles.begin(),
+                              [](auto& pos, auto& particle) { particle.pos = pos; });
+
+        CHECK(ewald.energy(change) == doctest::Approx(1848.9654162524));
+    }
+}
 
 double Example2D::energy(const Change&) {
     double s =

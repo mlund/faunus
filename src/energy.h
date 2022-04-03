@@ -238,17 +238,17 @@ struct PolicyIonIonIPBCEigen : public PolicyIonIonIPBC {
  */
 class Ewald : public Energybase {
   private:
+    const Space& spc;
     EwaldData data;
     std::shared_ptr<EwaldPolicyBase> policy; //!< Policy for updating k-space
-    const Space& spc;
     const Space::GroupVector* old_groups = nullptr;
 
   public:
+    Ewald(const Space& spc, const EwaldData& data);
     Ewald(const json& j, const Space& spc);
     void init() override;
     double energy(const Change& change) override;
     void sync(Energybase* energybase, const Change& change) override;
-    //! as well as before simulation
     void to_json(json& j) const override;
     void force(std::vector<Point>& forces) override; // update forces on all particles
 };

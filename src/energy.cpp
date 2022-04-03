@@ -163,7 +163,7 @@ void PolicyIonIon::updateBox(EwaldData &d, const Point &box) const {
 /**
  * @todo Add OpenMP pragma to first loop
  */
-void PolicyIonIon::updateComplex(EwaldData& data, Space::GroupVector& groups) const {
+void PolicyIonIon::updateComplex(EwaldData& data, const Space::GroupVector& groups) const {
     for (int k = 0; k < data.k_vectors.cols(); k++) {
         const Point &q = data.k_vectors.col(k);
         EwaldData::Tcomplex Q(0, 0);
@@ -178,15 +178,15 @@ void PolicyIonIon::updateComplex(EwaldData& data, Space::GroupVector& groups) co
     }
 }
 
-void PolicyIonIonEigen::updateComplex(EwaldData& data, Space::GroupVector& groups) const {
+void PolicyIonIonEigen::updateComplex(EwaldData& data, const Space::GroupVector& groups) const {
     auto [pos, charge] = mapGroupsToEigen(groups);                             // throws if inactive particles
     Eigen::MatrixXd kr = pos.matrix() * data.k_vectors;                        // ( N x 3 ) * ( 3 x K ) = N x K
     data.Q_ion.real() = (kr.array().cos().colwise() * charge).colwise().sum(); // real part of 'Q^q', see eq. 25 in ref.
     data.Q_ion.imag() = kr.array().sin().colwise().sum(); // imaginary part of 'Q^q', see eq. 25 in ref.
 }
 
-void PolicyIonIon::updateComplex(EwaldData& d, const Change& change, Space::GroupVector& groups,
-                                 Space::GroupVector& oldgroups) const {
+void PolicyIonIon::updateComplex(EwaldData& d, const Change& change, const Space::GroupVector& groups,
+                                 const Space::GroupVector& oldgroups) const {
     assert(groups.size() == oldgroups.size());
     for (int k = 0; k < d.k_vectors.cols(); k++) {
         auto &Q = d.Q_ion[k];
@@ -359,7 +359,7 @@ void PolicyIonIonIPBC::updateBox(EwaldData &data, const Point &box) const {
     }
 }
 
-void PolicyIonIonIPBC::updateComplex(EwaldData& d, Space::GroupVector& groups) const {
+void PolicyIonIonIPBC::updateComplex(EwaldData& d, const Space::GroupVector& groups) const {
     assert(d.policy == EwaldData::IPBC or d.policy == EwaldData::IPBCEigen);
     for (int k = 0; k < d.k_vectors.cols(); k++) {
         const Point &q = d.k_vectors.col(k);
@@ -373,7 +373,7 @@ void PolicyIonIonIPBC::updateComplex(EwaldData& d, Space::GroupVector& groups) c
     }
 }
 
-void PolicyIonIonIPBCEigen::updateComplex(EwaldData& d, Space::GroupVector& groups) const {
+void PolicyIonIonIPBCEigen::updateComplex(EwaldData& d, const Space::GroupVector& groups) const {
     assert(d.policy == EwaldData::IPBC or d.policy == EwaldData::IPBCEigen);
     auto [pos, charge] = mapGroupsToEigen(groups); // throws if inactive particles
     d.Q_ion.real() = (d.k_vectors.array().cwiseProduct(pos).array().cos().prod() * charge)
@@ -381,8 +381,8 @@ void PolicyIonIonIPBCEigen::updateComplex(EwaldData& d, Space::GroupVector& grou
                          .sum(); // see eq. 2 in doi:10/css8
 }
 
-void PolicyIonIonIPBC::updateComplex(EwaldData& d, const Change& change, Space::GroupVector& groups,
-                                     Space::GroupVector& oldgroups) const {
+void PolicyIonIonIPBC::updateComplex(EwaldData& d, const Change& change, const Space::GroupVector& groups,
+                                     const Space::GroupVector& oldgroups) const {
     assert(d.policy == EwaldData::IPBC or d.policy == EwaldData::IPBCEigen);
     assert(groups.size() == oldgroups.size());
 
@@ -402,7 +402,7 @@ void PolicyIonIonIPBC::updateComplex(EwaldData& d, const Change& change, Space::
     }
 }
 
-double PolicyIonIon::surfaceEnergy(const EwaldData& d, const Change& change, Space::GroupVector& groups) {
+double PolicyIonIon::surfaceEnergy(const EwaldData& d, const Change& change, const Space::GroupVector& groups) {
     if (d.const_inf < 0.5)
         return 0;
     Point qr(0, 0, 0);
@@ -472,7 +472,9 @@ double PolicyIonIonEigen::reciprocalEnergy(const EwaldData &d) {
     return 2 * pc::pi * d.bjerrum_length * energy / d.box_length.prod();
 }
 
-Ewald::Ewald(const json &j, Space &spc) : data(j), spc(spc) {
+Ewald::Ewald(const json& j, const Space& spc)
+    : data(j)
+    , spc(spc) {
     name = "ewald";
     policy = EwaldPolicyBase::makePolicy(data.policy);
     citation_information = policy->cite;

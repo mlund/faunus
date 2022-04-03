@@ -129,17 +129,17 @@ class EwaldPolicyBase {
   public:
     std::string cite; //!< Optional reference, preferably DOI, to further information
     virtual ~EwaldPolicyBase() = default;
-    virtual void updateBox(EwaldData &, const Point &) const = 0; //!< Prepare k-vectors according to given box vector
+    virtual void updateBox(EwaldData&, const Point&) const = 0; //!< Prepare k-vectors according to given box vector
     virtual void updateComplex(EwaldData& d,
-                               Space::GroupVector& groups) const = 0; //!< Update all k vectors
+                               const Space::GroupVector& groups) const = 0; //!< Update all k vectors
     virtual void
-    updateComplex(EwaldData& d, const Change& change, Space::GroupVector& groups,
-                  Space::GroupVector& oldgroups) const = 0; //!< Update subset of k vectors. Require `old` pointer
+    updateComplex(EwaldData& d, const Change& change, const Space::GroupVector& groups,
+                  const Space::GroupVector& oldgroups) const = 0; //!< Update subset of k vectors. Require `old` pointer
     virtual double selfEnergy(const EwaldData& d, Change& change,
                               Space::GroupVector& groups) = 0; //!< Self energy contribution due to a change
     virtual double surfaceEnergy(const EwaldData& d, const Change& change,
-                                 Space::GroupVector& groups) = 0; //!< Surface energy contribution due to a change
-    virtual double reciprocalEnergy(const EwaldData& d) = 0;      //!< Total reciprocal energy
+                                 const Space::GroupVector& groups) = 0; //!< Surface energy contribution due to a change
+    virtual double reciprocalEnergy(const EwaldData& d) = 0;            //!< Total reciprocal energy
 
     /**
      * @brief Represent charges and positions using an Eigen facade (Map)
@@ -163,6 +163,20 @@ class EwaldPolicyBase {
         return std::make_tuple(pos, charge);
     }
 
+    static auto mapGroupsToEigen(const Space::GroupVector& groups) {
+        auto is_partially_inactive = [](const Group& group) { return group.size() != group.capacity(); };
+        if (ranges::cpp20::any_of(groups, is_partially_inactive)) {
+            throw std::runtime_error("Eigen optimized Ewald not available with inactive groups");
+        }
+        auto first_particle = groups.front().begin();
+        auto last_particle = groups.back().end();
+        auto pos = asEigenMatrix(first_particle, last_particle,
+                                 &Particle::pos); // N x 3
+        auto charge = asEigenVector(first_particle, last_particle,
+                                    &Particle::charge); // N x 1
+        return std::make_tuple(pos, charge);
+    }
+
     static std::unique_ptr<EwaldPolicyBase> makePolicy(EwaldData::Policies); //!< Policy factory
 };
 
@@ -172,11 +186,11 @@ class EwaldPolicyBase {
 struct PolicyIonIon : public EwaldPolicyBase {
     PolicyIonIon();
     void updateBox(EwaldData& d, const Point& box) const override;
-    void updateComplex(EwaldData& d, Space::GroupVector& groups) const override;
-    void updateComplex(EwaldData& d, const Change& change, Space::GroupVector& groups,
-                       Space::GroupVector& oldgroups) const override;
+    void updateComplex(EwaldData& data, const Space::GroupVector& groups) const override;
+    void updateComplex(EwaldData& d, const Change& change, const Space::GroupVector& groups,
+                       const Space::GroupVector& oldgroups) const override;
     double selfEnergy(const EwaldData& d, Change& change, Space::GroupVector& groups) override;
-    double surfaceEnergy(const EwaldData& d, const Change& change, Space::GroupVector& groups) override;
+    double surfaceEnergy(const EwaldData& d, const Change& change, const Space::GroupVector& groups) override;
     double reciprocalEnergy(const EwaldData& d) override;
 };
 
@@ -193,7 +207,7 @@ struct PolicyIonIon : public EwaldPolicyBase {
  */
 struct PolicyIonIonEigen : public PolicyIonIon {
     using PolicyIonIon::updateComplex;
-    void updateComplex(EwaldData&, Space::GroupVector&) const override;
+    void updateComplex(EwaldData&, const Space::GroupVector&) const override;
     double reciprocalEnergy(const EwaldData &) override;
 };
 
@@ -204,8 +218,8 @@ struct PolicyIonIonIPBC : public PolicyIonIon {
     using PolicyIonIon::updateComplex;
     PolicyIonIonIPBC();
     void updateBox(EwaldData &, const Point &) const override;
-    void updateComplex(EwaldData&, Space::GroupVector&) const override;
-    void updateComplex(EwaldData&, const Change&, Space::GroupVector&, Space::GroupVector&) const override;
+    void updateComplex(EwaldData&, const Space::GroupVector&) const override;
+    void updateComplex(EwaldData&, const Change&, const Space::GroupVector&, const Space::GroupVector&) const override;
 };
 
 /**
@@ -214,24 +228,27 @@ struct PolicyIonIonIPBC : public PolicyIonIon {
  */
 struct PolicyIonIonIPBCEigen : public PolicyIonIonIPBC {
     using PolicyIonIonIPBC::updateComplex;
-    void updateComplex(EwaldData&, Space::GroupVector&) const override;
+    void updateComplex(EwaldData&, const Space::GroupVector&) const override;
 };
 
-/** @brief Ewald summation reciprocal energy */
+/**
+ * @brief Ewald summation reciprocal energy
+ * @todo energy() currently has the responsibility to update k-vectors.
+ *       This is error prone and should be handled *before* this step.
+ */
 class Ewald : public Energybase {
   private:
     EwaldData data;
     std::shared_ptr<EwaldPolicyBase> policy; //!< Policy for updating k-space
-    Space &spc;
-    Space::GroupVector* old_groups = nullptr;
+    const Space& spc;
+    const Space::GroupVector* old_groups = nullptr;
 
   public:
-    Ewald(const json& j, Space& spc);
+    Ewald(const json& j, const Space& spc);
     void init() override;
     double energy(const Change& change) override;
-    void sync(Energybase* energybase,
-              const Change& change) override; //!< Called after a move is rejected/accepted
-                                              //! as well as before simulation
+    void sync(Energybase* energybase, const Change& change) override;
+    //! as well as before simulation
     void to_json(json& j) const override;
     void force(std::vector<Point>& forces) override; // update forces on all particles
 };

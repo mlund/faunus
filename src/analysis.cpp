@@ -936,7 +936,8 @@ std::map<DensityBase::id_type, int> AtomDensity::count() const {
     return map;
 }
 
-AtomDensity::AtomDensity(const json& j, Space& spc) : DensityBase(spc, Faunus::atoms, "atom_density") {
+AtomDensity::AtomDensity(const json& j, const Space& spc)
+    : DensityBase(spc, Faunus::atoms, "atom_density") {
     from_json(j);
     for (const auto& reaction : Faunus::reactions) { // in case of reactions involving atoms (swap moves)
         const auto reactive_atomic_species = reaction.participatingAtomsAndMolecules().first;
@@ -974,7 +975,8 @@ std::map<DensityBase::id_type, int> MoleculeDensity::count() const {
     return molecular_group_count;
 }
 
-MoleculeDensity::MoleculeDensity(const json& j, Space& spc) : DensityBase(spc, Faunus::molecules, "molecule_density") {
+MoleculeDensity::MoleculeDensity(const json& j, const Space& spc)
+    : DensityBase(spc, Faunus::molecules, "molecule_density") {
     from_json(j);
 }
 

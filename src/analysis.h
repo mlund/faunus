@@ -195,9 +195,7 @@ class Displacement : public Analysisbase {
 /**
  * @brief Excess chemical potential of molecules
  *
- * @todo While `inserter` is currently limited to random
- * insertion, the code is designed for arbitrary insertion
- * schemes inheriting from `MoleculeInserter`.
+ * @todo Migrate `absolute_z_coords` into new `MoleculeInserter` policy
  */
 class WidomInsertion : public PerturbationAnalysisBase {
     std::shared_ptr<MoleculeInserter> inserter; //!< Insertion method
@@ -327,8 +325,9 @@ class DensityBase : public Analysisbase {
     double updateVolumeStatistics();
 
   public:
-    template <typename Range>
-    DensityBase(Space& spc, const Range& atoms_or_molecules, std::string_view name) : Analysisbase(spc, name) {
+    template <RequireNamedElements Range>
+    DensityBase(const Space& spc, const Range& atoms_or_molecules, std::string_view name)
+        : Analysisbase(spc, name) {
         for (const auto& data : atoms_or_molecules) {
             names[data.id()] = data.name;
             probability_density[data.id()].setResolution(1, 0);
@@ -343,7 +342,7 @@ class MoleculeDensity : public DensityBase {
   private:
     std::map<id_type, int> count() const override;
   public:
-    MoleculeDensity(const json& j, Space& spc);
+    MoleculeDensity(const json& j, const Space& spc);
 };
 
 /**
@@ -357,7 +356,7 @@ class AtomDensity : public DensityBase {
     std::map<id_type, int> count() const override;
 
   public:
-    AtomDensity(const json& j, Space& spc);
+    AtomDensity(const json& j, const Space& spc);
 };
 
 /**

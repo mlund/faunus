@@ -24,7 +24,7 @@ class Penalty : public Energybase {
     void toDisk(); //!< Save penalty function and histogram to disk
     void initializePenaltyFunction(const json& j);
     void to_json(json& j) const override;
-    virtual void update(const std::vector<double>& coordinate);
+    virtual void updatePenalty(const std::vector<double>& coordinate);
 
   protected:
     typedef typename std::shared_ptr<ReactionCoordinate::ReactionCoordinateBase> Tcoord;
@@ -63,7 +63,7 @@ class PenaltyMPI : public Penalty {
     const MPI::Controller& mpi;
     Eigen::VectorXi weights;                                     //!< array w. mininum histogram counts
     Eigen::VectorXd buffer;                                      //!< receive buffer for penalty functions
-    void update(const std::vector<double>& coordinate) override; //!< Average penalty function across all nodes
+    void updatePenalty(const std::vector<double>& coordinate) override; //!< Average penalty function across all nodes
     void averagePenaltyFunctions();                              //!< Average penalty functions over all MPI nodes
   public:
     PenaltyMPI(const json& j, Space& spc, const MPI::Controller& mpi);

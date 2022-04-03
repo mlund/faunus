@@ -133,7 +133,7 @@ double Penalty::energy(const Change& change) {
  * @todo: If this is called before `energy()`, the latest_coordinate
  * is never calculated and causes undefined behavior
  */
-void Penalty::update(const std::vector<double>& coordinate) {
+void Penalty::updatePenalty(const std::vector<double>& coordinate) {
     update_counter++;
     if (update_counter % number_of_steps_between_updates == 0 and energy_increment > 0.0) {
         if (histogram.minCoeff() >= (int)samplings) {
@@ -167,8 +167,8 @@ void Penalty::sync(Energybase* other, [[maybe_unused]] const Change& change) {
     if (other_penalty == nullptr) {
         throw std::runtime_error("error in Penalty::sync - please report");
     }
-    update(other_penalty->latest_coordinate);
-    other_penalty->update(other_penalty->latest_coordinate); // keep update_counter and samplings in sync
+    updatePenalty(other_penalty->latest_coordinate);
+    other_penalty->updatePenalty(other_penalty->latest_coordinate); // keep update_counter and samplings in sync
     assert(samplings == other_penalty->samplings);
     assert(latest_coordinate == other_penalty->latest_coordinate);
     assert(update_counter == other_penalty->update_counter);
@@ -186,7 +186,7 @@ PenaltyMPI::PenaltyMPI(const json& j, Space& spc, const MPI::Controller& mpi) : 
  *
  * MPI_Allgather(&least_sampled_in_histogram, 1, MPI_INT, weights.data(), 1, MPI_INT, mpi.comm);
  */
-void PenaltyMPI::update(const std::vector<double>& coordinate) {
+void PenaltyMPI::updatePenalty(const std::vector<double>& coordinate) {
     const auto old_penalty_energy = penalty_energy[coordinate];
     update_counter++;
     if (update_counter % number_of_steps_between_updates == 0 and energy_increment > 0.0) {

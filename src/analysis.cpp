@@ -1177,7 +1177,7 @@ AtomDipDipCorr::AtomDipDipCorr(const json& j, const Space& spc) : PairAngleFunct
  * @param filename Output xtc file name
  * @param molecule_names Save only a subset of molecules with matching names (default empty = all)
  */
-XTCtraj::XTCtraj(Space& spc, const std::string& filename, const std::vector<std::string>& molecule_names)
+XTCtraj::XTCtraj(const Space& spc, const std::string& filename, const std::vector<std::string>& molecule_names)
     : Analysisbase(spc, "xtcfile") {
     namespace rv = ranges::cpp20::views;
     writer = std::make_unique<XTCWriter>(filename);
@@ -1193,7 +1193,7 @@ XTCtraj::XTCtraj(Space& spc, const std::string& filename, const std::vector<std:
     }
 }
 
-XTCtraj::XTCtraj(const json& j, Space& spc)
+XTCtraj::XTCtraj(const json& j, const Space& spc)
     : XTCtraj(spc, MPI::prefix + j.at("file").get<std::string>(), j.value("molecules", std::vector<std::string>())) {
     Analysisbase::from_json(j);
 }

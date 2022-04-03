@@ -572,10 +572,10 @@ class XTCtraj : public Analysisbase {
     std::unique_ptr<XTCWriter> writer;
     void _to_json(json& j) const override;
     void _sample() override;
-    XTCtraj(Space& spc, const std::string& filename, const std::vector<std::string>& molecule_names);
+    XTCtraj(const Space& spc, const std::string& filename, const std::vector<std::string>& molecule_names);
 
   public:
-    XTCtraj(const json& j, Space& spc);
+    XTCtraj(const json& j, const Space& spc);
 };
 
 /**

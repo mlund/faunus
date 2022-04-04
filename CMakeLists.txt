@@ -22,7 +22,7 @@ include(cmake/CompilerWarnings.cmake)
 set_project_warnings(project_warnings)
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
-find_package(PythonInterp 3 REQUIRED)
+find_package(Python 3 COMPONENTS Interpreter REQUIRED)
 find_package(Threads REQUIRED)
 find_package(ZLIB REQUIRED)
 enable_testing()

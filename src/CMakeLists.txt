@@ -115,11 +115,9 @@ if (ENABLE_SID)
         include_directories(SYSTEM ${SDL2_INCLUDE_DIRS})
         target_link_libraries(faunus PRIVATE ${SDL2_LIBRARIES} cppsid)
         target_compile_definitions(faunus PRIVATE ENABLE_SID)
-        if (PYTHONINTERP_FOUND)
-            execute_process(
-                    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/extractsids.py ${CMAKE_SOURCE_DIR}/scripts/music.yml
-                    WORKING_DIRECTORY ${CMAKE_BINARY_DIR} ERROR_QUIET OUTPUT_QUIET)
-        endif ()
+        execute_process(
+            COMMAND ${Python_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/extractsids.py ${CMAKE_SOURCE_DIR}/scripts/music.yml
+            WORKING_DIRECTORY ${CMAKE_BINARY_DIR} ERROR_QUIET OUTPUT_QUIET)
     endif ()
 endif ()
 
@@ -141,51 +139,21 @@ INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
 
 option(ENABLE_PYTHON "Try to compile python bindings (experimental!)" off)
 if (ENABLE_PYTHON)
-    find_package(PythonLibs 3 REQUIRED)
-
-    if (PYTHONINTERP_FOUND)
-        execute_process(
-            COMMAND ${PYTHON_EXECUTABLE} scripts/yason.py -h
-            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-            ERROR_QUIET OUTPUT_QUIET
-            RESULT_VARIABLE yasontest)
-        if (${yasontest} EQUAL 1)
-            message("missing required python modules 'yaml' or 'ruamel_yaml'")
-        endif()
+    find_package(Python 3 COMPONENTS Interpreter Development REQUIRED)
+    execute_process(COMMAND ${Python_EXECUTABLE} scripts/yason.py -h
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} ERROR_QUIET OUTPUT_QUIET RESULT_VARIABLE yasontest)
+    if (${yasontest} EQUAL 1)
+        message("missing required python modules 'yaml' or 'ruamel_yaml'")
     endif()
 
-    if (PYTHONLIBS_FOUND)
-        pybind11_add_module(pyfaunus pyfaunus.cpp ${objs})
-        target_link_libraries(pyfaunus PRIVATE
-            project_options
-            cereal
-            Eigen
-            functionparser
-            nlohmann_json
-            pybind11_json
-            range-v3
-            spdlog
-            xdrfile
-            zstr)
-        target_compile_definitions(pyfaunus PUBLIC SPDLOG_COMPILED_LIB)
-        target_compile_definitions(pyfaunus PRIVATE DOCTEST_CONFIG_DISABLE)
-    endif ()
-endif ()
+    pybind11_add_module(pyfaunus pyfaunus.cpp ${objs})
+    target_link_libraries(pyfaunus PRIVATE
+        project_options cereal Eigen functionparser nlohmann_json pybind11_json range-v3 spdlog xdrfile zstr)
+    target_compile_definitions(pyfaunus PUBLIC SPDLOG_COMPILED_LIB)
+    target_compile_definitions(pyfaunus PRIVATE DOCTEST_CONFIG_DISABLE)
 
-if (PYTHONINTERP_FOUND)
-    # find _relative_ path of python library and thus respect CMAKE_INSTALL_PREFIX.
-    # could be replaced by FindPython() but req. cmake 3.12
-    # https://stackoverflow.com/questions/1242904/finding-python-site-packages-directory-with-cmake
-    execute_process(
-        COMMAND "${PYTHON_EXECUTABLE}" -c "if True:
-        from distutils import sysconfig as sc
-        print(sc.get_python_lib(prefix='', plat_specific=True))"
-        OUTPUT_VARIABLE PYTHON_SITE
-        OUTPUT_STRIP_TRAILING_WHITESPACE)
-endif()
-
-if (TARGET pyfaunus)
-    install(TARGETS pyfaunus DESTINATION ${PYTHON_SITE} OPTIONAL)
+    message("Python site-packages: ${Python_SITELIB}")
+    install(TARGETS pyfaunus DESTINATION ${Python_SITELIB} OPTIONAL)
 endif()
 
 # ========== assorted installation targets ==========
@@ -200,5 +168,5 @@ install(FILES
     ${CMAKE_SOURCE_DIR}/scripts/faunus-manual
     DESTINATION bin
     PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/scripts/faunustools DESTINATION ${PYTHON_SITE} OPTIONAL
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/scripts/faunustools DESTINATION ${Python_SITELIB} OPTIONAL
     PATTERN ${CMAKE_SOURCE_DIR}/scripts/faunustool/__pycache__ EXCLUDE)

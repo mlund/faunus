@@ -57,7 +57,7 @@ RUN git clone https://github.com/mlund/faunus.git && \
     export CXX=g++-11 && \
     export CC=gcc-11 && \
     cd faunus && \
-    cmake -DCMAKE_INSTALL_PREFIX=${CONDA_DIR} -DENABLE_PYTHON=on -DENABLE_OPENMP=on -DENABLE_MPI=on -DCMAKE_BUILD_TYPE=RelWithDebInfo -DPYBIND11_FINDPYTHON=on . && \
+    cmake -DENABLE_PYTHON=on -DENABLE_OPENMP=on -DENABLE_MPI=on -DCMAKE_BUILD_TYPE=RelWithDebInfo -DPYBIND11_FINDPYTHON=on . && \
     make faunus && \
     make pyfaunus && \
     make install && \

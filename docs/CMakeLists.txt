@@ -1,22 +1,18 @@
 # MANUAL
 
-# Check for python packages required to build manual and parse yaml files
-if (PYTHONINTERP_FOUND)
-    # optional packages
-    execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "from bs4 import BeautifulSoup" RESULT_VARIABLE HAS_BS ERROR_QUIET)
-    execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import pypandoc" RESULT_VARIABLE HAS_PYPANDOC ERROR_QUIET)
+execute_process(COMMAND ${Python_EXECUTABLE} -c "from bs4 import BeautifulSoup" RESULT_VARIABLE HAS_BS ERROR_QUIET)
+execute_process(COMMAND ${Python_EXECUTABLE} -c "import pypandoc" RESULT_VARIABLE HAS_PYPANDOC ERROR_QUIET)
 
-    execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "from jsonschema import Draft7Validator" RESULT_VARIABLE HAS_JSONSCHEMA ERROR_QUIET)
-    if (HAS_JSONSCHEMA EQUAL 1)
-        message("python: missing `jsonschema` package is highly recommended")
-    endif()
+execute_process(COMMAND ${Python_EXECUTABLE} -c "from jsonschema import Draft7Validator" RESULT_VARIABLE HAS_JSONSCHEMA ERROR_QUIET)
+if (HAS_JSONSCHEMA EQUAL 1)
+    message("python: missing `jsonschema` package is highly recommended")
+endif()
 
-    execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import ruamel_yaml as yaml" RESULT_VARIABLE HAS_YAML1 ERROR_QUIET)
-    execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import ruamel.yaml as yaml" RESULT_VARIABLE HAS_YAML2 ERROR_QUIET)
-    execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import yaml" RESULT_VARIABLE HAS_YAML3 ERROR_QUIET)
-    if ((HAS_YAML1 EQUAL 1) AND (HAS_YAML2 EQUAL 1) AND (HAS_YAML3 EQUAL 1))
-        message("python: missing `ruamel_yaml` (preferred) or `yaml` packages are highly recommended")
-    endif()
+execute_process(COMMAND ${Python_EXECUTABLE} -c "import ruamel_yaml as yaml" RESULT_VARIABLE HAS_YAML1 ERROR_QUIET)
+execute_process(COMMAND ${Python_EXECUTABLE} -c "import ruamel.yaml as yaml" RESULT_VARIABLE HAS_YAML2 ERROR_QUIET)
+execute_process(COMMAND ${Python_EXECUTABLE} -c "import yaml" RESULT_VARIABLE HAS_YAML3 ERROR_QUIET)
+if ((HAS_YAML1 EQUAL 1) AND (HAS_YAML2 EQUAL 1) AND (HAS_YAML3 EQUAL 1))
+    message("python: missing `ruamel_yaml` (preferred) or `yaml` packages are highly recommended")
 endif()
 
 find_program(PANDOC pandoc)
@@ -77,17 +73,15 @@ if (PANDOC)
         -N --toc -o ${CMAKE_BINARY_DIR}/manual.html
         )
 
-    if (PYTHONINTERP_FOUND)
-        if (HAS_BS EQUAL 0)
-            if (HAS_PYPANDOC EQUAL 0)
-                add_custom_target(
-                    usagetips
-                    ALL
-                    COMMENT "extracting tips from manual"
-                    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-                    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/extracttips.py)
-                add_dependencies(usagetips manual_html)
-            endif()
+    if (HAS_BS EQUAL 0)
+        if (HAS_PYPANDOC EQUAL 0)
+            add_custom_target(
+                usagetips
+                ALL
+                COMMENT "extracting tips from manual"
+                WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+                COMMAND ${Python_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/extracttips.py)
+            add_dependencies(usagetips manual_html)
         endif()
     endif()
 endif()

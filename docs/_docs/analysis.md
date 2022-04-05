@@ -715,9 +715,34 @@ python2 psc2vmd.py -i tracjectory.dat -o movie.pdb --psf movie.psf
 vmd -e vmd.script
 ~~~
 
-`psctraj`  |  Description
+`psctraj`  | Description
 ---------- | -----------------------------------
-`file=`    |  Output filename (.dat|.gz)
-`nstep`    |  Interval between samples
+`file`     | Output filename (.dat|.gz)
+`nstep`    | Interval between samples
 `nskip=0`  | Number of initial steps excluded from the analysis
+
+
+### Displacement
+
+This tracks atom or molecule mass center displacements with respect to a (dynamic)
+reference position that can be updated at given intervals.
+To access distances larger than the box dimensions, jumps across periodic boundaries
+are detected whereby the position enters a new unit cell. A boundary jump is defined
+as a particle movement larger than `max_displacement` which by default is set to one
+fourth of the box length.
+A histogram of the squared displacements in a given time interval (𝜏) is saved to disk.
+The variant `displacement_com` expects a molecular `molecule` and analyses mass centers instead
+of single particle positions.
+
+`displacement`             | Description
+-------------------------- | ---------------------------------
+`nstep`                    | Interval between samples
+`nskip=0`                  | Number of initial steps excluded from the analysis
+`molecule`                 | Atomic group to analyse
+`reset_interval`           | Interval beween reference position resets, 𝜏 (steps)
+`file`                     | x y z trajectory of first particle (optional, `.dat.gz`)
+`histogram_resolution=1.0` | P(r) resolution (Å)
+`max_displacement=L/4`     | Used to detect PBC jumps. Default: min. box length / 4
+`histogram_file`           | Default: `displacement_histogram_{molname}.dat`
+
 

@@ -120,7 +120,9 @@ std::unique_ptr<Analysisbase> createAnalysis(const std::string& name, const json
         if (name == "atomprofile") {
             return std::make_unique<AtomProfile>(j, spc);
         } else if (name == "displacement") {
-            return std::make_unique<Displacement>(j, spc);
+            return std::make_unique<AtomicDisplacement>(j, spc);
+        } else if (name == "displacement_com") {
+            return std::make_unique<MassCenterDisplacement>(j, spc);
         } else if (name == "atomrdf") {
             return std::make_unique<AtomRDF>(j, spc);
         } else if (name == "atomdipdipcorr") {
@@ -671,7 +673,7 @@ void FileReactionCoordinate::_to_disk() {
     }
 }
 
-Displacement::Displacement(const json& j, const Space& spc, std::string_view name)
+AtomicDisplacement::AtomicDisplacement(const json& j, const Space& spc, std::string_view name)
     : Analysisbase(spc, name)
     , displacement_histogram(j.value("histogram_resolution", 1.0))
     , reference_reset_interval(j.value("reset_interval", std::numeric_limits<int>::max())) {
@@ -698,7 +700,11 @@ Displacement::Displacement(const json& j, const Space& spc, std::string_view nam
     mean_squared_displacement.resize(num_positions);
 }
 
-void Displacement::resetReferencePosition(const Point& position, const int index) {
+/**
+ * @param position New reference position
+ * @param index Index of reference position
+ */
+void AtomicDisplacement::resetReferencePosition(const Point& position, const int index) {
     reference_positions.at(index) = position;
 }
 
@@ -711,7 +717,7 @@ void Displacement::resetReferencePosition(const Point& position, const int index
  * @param cell Stored unit cell information for the particle (will be updated)
  * @returns Offset used to shift currrent position to correct unit-cell
  */
-Point Displacement::getOffset(const Point& diff, Eigen::Vector3i& cell) const {
+Point AtomicDisplacement::getOffset(const Point& diff, Eigen::Vector3i& cell) const {
     for (int i = 0; i < 3; i++) {
         if (-diff[i] > max_possible_displacement) { // dx < 0
             cell[i]++;
@@ -724,7 +730,7 @@ Point Displacement::getOffset(const Point& diff, Eigen::Vector3i& cell) const {
     return box.cwiseProduct(cell.cast<double>());
 }
 
-void Displacement::_sample() {
+void AtomicDisplacement::_sample() {
     auto current_positions = getPositions();
     auto zipped = ranges::views::zip(previous_positions, current_positions, cell_indices);
     const auto time_to_reset = getNumberOfSteps() % reference_reset_interval == 0;
@@ -742,7 +748,13 @@ void Displacement::_sample() {
     previous_positions = current_positions | ranges::to_vector;
 }
 
-void Displacement::sampleDisplacementFromReference(const Point& position, const int index) {
+/**
+ * @param position Position to sample
+ * @param index Reference position index
+ *
+ * The first position (index=0) will be streamed to `single_position_stream` if open.
+ */
+void AtomicDisplacement::sampleDisplacementFromReference(const Point& position, const int index) {
     const Point total_displacement = position - reference_positions.at(index);
     mean_squared_displacement.at(index) += total_displacement.squaredNorm();
     displacement_histogram.add(total_displacement.norm());
@@ -752,20 +764,49 @@ void Displacement::sampleDisplacementFromReference(const Point& position, const 
     }
 }
 
-void Displacement::_to_json(json& j) const {
+void AtomicDisplacement::_to_json(json& j) const {
     j["max_displacement"] = max_possible_displacement;
     j["reset interval (steps)"] = reference_reset_interval;
     j["histogram_file"] = displacement_histogram_filename;
     j["histogram_resolution"] = displacement_histogram.getResolution();
 }
 
-void Displacement::_to_disk() {
+void AtomicDisplacement::_to_disk() {
     if (!displacement_histogram_filename.empty()) {
         if (auto stream = std::ofstream(displacement_histogram_filename)) {
             stream << "# distance count\n" << displacement_histogram;
         }
     }
 }
+
+/**
+ * @return Positions of all active particles in groups matching `molid`
+ */
+PointVector AtomicDisplacement::getPositions() const {
+    auto active_and_inactive = [&](const Group& group) {
+        return ranges::make_subrange(group.begin(), group.trueend());
+    };
+    namespace rv = ranges::cpp20::views;
+    return spc.findMolecules(molid, Space::Selection::ALL) | rv::transform(active_and_inactive) | rv::join |
+           rv::transform(&Particle::pos) | ranges::to<PointVector>;
+}
+
+//----------------------------
+
+MassCenterDisplacement::MassCenterDisplacement(const json& j, const Space& spc, std::string_view name)
+    : AtomicDisplacement(j, spc, name) {
+    if (!Faunus::molecules.at(molid).isMolecular()) {
+        throw ConfigurationError("molecular group required");
+    }
+}
+
+PointVector MassCenterDisplacement::getPositions() const {
+    namespace rv = ranges::cpp20::views;
+    return spc.findMolecules(molid, Space::Selection::ACTIVE) | rv::transform(&Group::mass_center) |
+           ranges::to<PointVector>;
+}
+
+//----------------------------
 
 /**
  * This searches for an inactive group of type `molid`

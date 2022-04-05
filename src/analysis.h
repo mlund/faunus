@@ -148,48 +148,54 @@ class FileReactionCoordinate : public Analysisbase {
 };
 
 /**
- * @brief Tracks displacements of particles
+ * @brief Tracks displacements of particle positions
  *
- * This tracks particle displacements relative to a (dynamic) reference position. For
- * first particle only, a trajectory file and histogram can be saved to disk.
+ * This tracks particle position displacements relative to a (dynamic) reference position. For
+ * the first particle only, a trajectory file can be saved to disk.
+ * Positions are tracked across periodic boundaries to enable large displacements relative
+ * to initial reference positions.
  *
- * @todo So far an atomic group is assumed
+ * @warning Will not work if `molid` is grand canonical
  */
-class Displacement : public Analysisbase {
+class AtomicDisplacement : public Analysisbase {
   protected:
     MoleculeData::index_type molid;
 
   private:
-    std::unique_ptr<std::ostream> single_position_stream; //!< Stream x, y, z, displacement
     using average_type = Average<double>;
-    std::vector<Point> reference_positions;
-    std::vector<Point> previous_positions;
-    std::vector<Eigen::Vector3i> cell_indices;
-    std::vector<average_type> mean_squared_displacement;
-    double max_possible_displacement;
+    std::unique_ptr<std::ostream> single_position_stream; //!< Stream x, y, z, displacement for first position only
+    std::vector<Point> reference_positions;               //!< Positions used as references
+    std::vector<Point> previous_positions;                //!< Positions from previous analysis event
+    std::vector<Eigen::Vector3i> cell_indices;            //!< Tracks in which unit cell the particles are in
+    std::vector<average_type> mean_squared_displacement;  //!< Mean squared displacement for each position
+    double max_possible_displacement; //!< If any displacement is larger than this, assume unit cell jump
 
     SparseHistogram<double> displacement_histogram;                 //!< P(r) where r is distance from reference
     std::string displacement_histogram_filename;                    //!< Name of P(r) histogram file
     int reference_reset_interval = std::numeric_limits<int>::max(); //!< Renew reference at given interval
 
-    auto getPositions() {
-        auto active_and_inactive = [&](const Group& group) {
-            return ranges::make_subrange(group.begin(), group.trueend());
-        };
-        namespace rv = ranges::cpp20::views;
-        return spc.findMolecules(molid, Space::Selection::ALL) | rv::transform(active_and_inactive) | rv::join |
-               rv::transform(&Particle::pos);
-    } // @todo Make this injectable to support e.g. molecular groups
-
+    virtual PointVector getPositions() const;                        //!< Extract current positions from `molid`
     void resetReferencePosition(const Point& position, int index);   //!< Store current positions as reference
     Point getOffset(const Point& diff, Eigen::Vector3i& cell) const; //!< Offset to other cells
-    void sampleDisplacementFromReference(const Point& position, const int index);
+    void sampleDisplacementFromReference(const Point& position, int index);
     void _sample() override;
     void _to_json(json& j) const override;
     void _to_disk() override;
 
   public:
-    Displacement(const json& j, const Space& spc, std::string_view name = "displacement");
+    AtomicDisplacement(const json& j, const Space& spc, std::string_view name = "displacement");
+};
+
+/**
+ * @brief Tracks displacements of molecular group mass centers
+ *
+ * Based on `AtomicDisplacement`.
+ */
+class MassCenterDisplacement : public AtomicDisplacement {
+  private:
+    PointVector getPositions() const override; //!< Extracts mass centers from all active `molid` groups
+  public:
+    MassCenterDisplacement(const json& j, const Space& spc, std::string_view name = "displacement_com");
 };
 
 /**

@@ -2,8 +2,8 @@
 
 ## Conda
 
-For macOS and Linux x86-64, precompiled binary packages are available
-via [(mini)conda](https://conda.io/docs/user-guide/install/index.html):
+For macOS and Linux, precompiled binary packages are available
+via [(mini)conda](https://docs.conda.io/en/latest/miniconda.html):
 
 ~~~ bash
 conda config --add channels conda-forge
@@ -32,7 +32,7 @@ that builds the main branch in a [Jupyter](https://jupyter.org) environment:
 
 ~~~ bash
 curl -s https://raw.githubusercontent.com/mlund/faunus/master/scripts/Dockerfile | docker build -t faunuslab -
-docker run -it -p 8888:8888 faunuslab # open url in webbrowser
+docker run -it -p 8888:8888 faunuslab # open generated url in a browser
 ~~~
 
 Once running, you may alias the Docker-side faunus command:
@@ -45,7 +45,7 @@ faunus < input.json # piping input to docker
 
 ## Build from source code
 
-Faunus is continuously [tested](https://travis-ci.org/mlund/faunus) on macOS/Linux,
+Faunus is continuously [tested](https://app.travis-ci.com/github/mlund/faunus) on macOS/Linux,
 but compile on most unix operating systems, including the Windows Subsystem for Linus (WSL).
 
 ### Requirements
@@ -94,9 +94,7 @@ CMake Option                         | Description
 `-DCMAKE_CXX_FLAGS_RELEASE="..."`    | Compiler options for Release mode
 `-DCMAKE_CXX_FLAGS_DEBUG="..."`      | Compiler options for Debug mode
 `-DCMAKE_INSTALL_PREFIX:PATH="..."`  | Install location (default: `/usr/local`)
-`-DPYTHON_EXECUTABLE="..."`          | Full path to Python executable
-`-DPYTHON_INCLUDE_DIR="..."`         | Full path to python headers
-`-DPYTHON_LIBRARY="..."`             | Full path to python library, i.e. libpythonX.dylib/so
+`-DPython_EXECUTABLE="..."`          | Full path to Python executable
 
 ### Compiling the Manual
 
@@ -118,24 +116,23 @@ in the `header.md` file.
 make manual
 ~~~
 
-### Python libraries in odd locations
+### Selecting compilers and python
 
 Should there be multiple compilers or python distributions, be specific:
 
 ~~~ bash
-CC=/opt/bin/clang CXX=/opt/bin/clang++ cmake . \
-  -DPYTHON_EXECUTABLE=/opt/bin/python3 \
-  -DPYTHON_INCLUDE_DIR=/opt/include/python3.6 \
-  -DPYTHON_LIBRARY=/opt/lib/libpython3.6.dylib
+export CC=/opt/bin/clang
+export CXX=/opt/bin/clang++
+cmake -DPython_EXECUTABLE=/opt/bin/python3 .
 ~~~
 
-For solving python issues on macOS, the linked python library can be probed and,
+For solving rare python issues on macOS, the linked python library can be probed and,
 if needed, renamed:
 
 ~~~ bash
 otool -L pyfaunus.so
-install_name_tool -change libpython3.6.dylib \
-  $HOME/miniconda/lib/libpython3.6.dylib pyfaunus.so
+install_name_tool -change libpython3.8.dylib \
+  $HOME/miniconda/lib/libpython3.8.dylib pyfaunus.so
 ~~~
 
 For further help with compiling with python bindings, see

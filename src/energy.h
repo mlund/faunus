@@ -1320,13 +1320,19 @@ class GroupPairing {
     }
 };
 
+class NonbondedBase : public Energybase {
+  public:
+    virtual double particleParticleEnergy(const Particle &particle1, const Particle &particle2) = 0;
+    virtual double groupGroupEnergy(const Group& group1, const Group& group2) = 0;
+};
+
 /**
  * @brief Computes change in the non-bonded energy, assuming pairwise additive energy terms.
  *
  * @tparam TPairEnergy  a functor to compute non-bonded energy between two particles
  * @tparam TPairingPolicy  pairing policy to effectively sum up the pairwise additive non-bonded energy
  */
-template <RequirePairEnergy TPairEnergy, typename TPairingPolicy> class Nonbonded : public Energybase {
+template <RequirePairEnergy TPairEnergy, typename TPairingPolicy> class Nonbonded : public NonbondedBase {
   protected:
     const Space& spc;        //!< space to operate on
     TPairEnergy pair_energy; //!< a functor to compute non-bonded energy between two particles, see PairEnergy
@@ -1341,6 +1347,16 @@ template <RequirePairEnergy TPairEnergy, typename TPairingPolicy> class Nonbonde
         from_json(j);
         energy_accumulator = createEnergyAccumulator(j, pair_energy, 0.0);
         energy_accumulator->reserve(spc.numParticles()); // attempt to reduce memory fragmentation
+    }
+
+    double particleParticleEnergy(const Particle& particle1, const Particle& particle2) override {
+        return pair_energy(particle1, particle2);
+    }
+
+    double groupGroupEnergy(const Group &group1, const Group& group2) override {
+        InstantEnergyAccumulator<TPairEnergy> accumulator(pair_energy);
+        pairing.group2group(accumulator, group1, group2);
+        return static_cast<double>(accumulator);
     }
 
     void from_json(const json &j) {

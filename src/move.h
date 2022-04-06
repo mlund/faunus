@@ -284,7 +284,7 @@ class SmarterTranslateRotate : public TranslateRotate {
  */
 class ConformationSwap : public MoveBase {
   public:
-    enum class CopyPolicy { ALL, POSITIONS, CHARGES, INVALID }; //!< What to copy from conformation library
+    enum class CopyPolicy { ALL, POSITIONS, CHARGES, PATCHES, INVALID }; //!< What to copy from conformation library
   private:
     CopyPolicy copy_policy;
     RandomInserter inserter;
@@ -305,6 +305,7 @@ class ConformationSwap : public MoveBase {
 
 NLOHMANN_JSON_SERIALIZE_ENUM(ConformationSwap::CopyPolicy, {{ConformationSwap::CopyPolicy::INVALID, nullptr},
                                                             {ConformationSwap::CopyPolicy::ALL, "all"},
+                                                            {ConformationSwap::CopyPolicy::PATCHES, "patches"},
                                                             {ConformationSwap::CopyPolicy::POSITIONS, "positions"},
                                                             {ConformationSwap::CopyPolicy::CHARGES, "charges"}})
 

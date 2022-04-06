@@ -1212,6 +1212,15 @@ void ConformationSwap::copyConformation(ParticleVector& particles, ParticleVecto
     case CopyPolicy::ALL:
         copy_function = [](const Particle& src, Particle& dst) { dst = src; };
         break;
+    case CopyPolicy::PATCHES:
+        // Copy only PSC patch and length information but keep directions and position
+        copy_function = [](const Particle& src, Particle& dst) {
+            if (src.hasExtension() && src.getExt().isCylindrical()) {
+                auto &psc_dst = dst.getExt();
+                psc_dst.half_length = src.getExt().half_length;
+                psc_dst.setDirections(src.traits().sphero_cylinder, psc_dst.scdir, psc_dst.patchdir);
+            }
+        };
     case CopyPolicy::POSITIONS:
         copy_function = [](const Particle& src, Particle& dst) { dst.pos = src.pos; };
         break;

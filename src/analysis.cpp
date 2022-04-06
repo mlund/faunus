@@ -283,6 +283,82 @@ void SystemEnergy::_to_disk() {
 
 // --------------------------------
 
+void GroupGroupCluster::to_json([[maybe_unused]] json &j) const {};
+
+GroupGroupEnergyThreshold::GroupGroupEnergyThreshold(Energy::Hamiltonian& hamiltonian, double energy_threshold)
+    : hamiltonian(hamiltonian)
+    , energy_threshold(energy_threshold) {}
+
+GroupGroupEnergyThreshold::GroupGroupEnergyThreshold(Energy::Hamiltonian& hamiltonian, const json& j)
+    : GroupGroupEnergyThreshold(hamiltonian, j.at("threshold").get<double>()) {}
+
+double GroupGroupEnergyThreshold::probability(const Group& group1, const Group& group2) const {
+    double energy = 0.0; // in kT
+    for (auto& energy_term : hamiltonian) {
+        if (auto nonbonded = std::dynamic_pointer_cast<Energy::NonbondedBase>(energy_term)) {
+            energy += nonbonded->groupGroupEnergy(group1, group2);
+        }
+    }
+    return static_cast<double>(energy < energy_threshold * 1.0_kJmol);
+}
+
+void GroupGroupEnergyThreshold::to_json(json& j) const {
+    j["energy threshold"] = {{"threshold (kJ/mol)", energy_threshold}};
+};
+
+// --------------------------------
+
+ClusterAnalysis::ClusterAnalysis(const json& j, const Space& spc, Energy::Hamiltonian& hamiltonian)
+    : Analysisbase(spc, "cluster"), spc(spc) {
+    from_json(j);
+    const auto policy_name = j.at("policy").get<std::string>();
+    if (policy_name == "energy") {
+        policy = std::make_unique<GroupGroupEnergyThreshold>(hamiltonian, j);
+    } else {
+        throw ConfigurationError("unknown cluster policy");
+    }
+    cluster_probability_matrix.resize(spc.groups.size(), spc.groups.size());
+    auto molecule_names = j.at("molecules").get<std::vector<std::string>>();
+    molids = Faunus::names2ids(Faunus::molecules, molecule_names);
+    std::sort(molids.begin(), molids.end()); // must be sorted for binary search
+}
+
+void ClusterAnalysis::_to_json(json& j) const {
+    auto &_j = j["policy"];
+    policy->to_json(_j);
+}
+
+void ClusterAnalysis::_from_json([[maybe_unused]] const json& j) {}
+
+void ClusterAnalysis::_sample() {
+    namespace rv = ranges::cpp20::views;
+    auto is_selected = [&](const auto& group) { return std::binary_search(molids.begin(), molids.end(), group.id); };
+    auto to_index = [&](const auto& group) { return spc.getGroupIndex(group); };
+    auto not_empty = [&](const auto& group) { return !group.empty(); };
+    auto group_indices = spc.groups | rv::filter(not_empty) | rv::filter(is_selected) | rv::transform(to_index) |
+                         ranges::to<std::vector<int>>;
+
+    // generate a matrix of probabilities (true/false) of clustering for each group pair i,j
+    cluster_probability_matrix.setZero();
+    for (auto i : group_indices) {
+        for (auto j : group_indices) {
+            if (i > j) {
+                const auto probability = policy->probability(spc.groups.at(i), spc.groups.at(j));
+                if (probability > 0.0) {
+                    cluster_probability_matrix.insert(i, j) = probability;
+                    cluster_probability_matrix.insert(j, i) = probability;
+                }
+            }
+        }
+    }
+
+    // we now have a matrix of double indicating the cluster probability for each molecule pair
+    // add cluster size analysis here...
+}
+void ClusterAnalysis::_to_disk() {}
+
+// --------------------------------
+
 void SaveState::_to_json(json& j) const { j["file"] = filename; }
 
 void SaveState::_sample() {

@@ -8,6 +8,8 @@
 #include "aux/table_2d.h"
 #include "aux/equidistant_table.h"
 #include <aux/sparsehistogram.h>
+#include <aux/pairmatrix.h>
+#include <Eigen/SparseCore>
 #include <set>
 
 namespace cereal {
@@ -357,6 +359,59 @@ class AtomDensity : public DensityBase {
 
   public:
     AtomDensity(const json& j, const Space& spc);
+};
+
+/**
+ * Base class for determining of two groups are in a cluster
+ */
+class GroupGroupCluster {
+  public:
+    virtual double probability(const Group &group1, const Group &group2) const = 0;
+    virtual ~GroupGroupCluster() = default;
+    virtual void to_json(json &j) const;
+};
+
+/**
+ * @brief Cluster groups based an their interaction energy
+ *
+ * If the energy is lower than a threshold, they are assumed a cluster.
+ */
+class GroupGroupEnergyThreshold : public GroupGroupCluster {
+  private:
+    Energy::Hamiltonian &hamiltonian;
+    double energy_threshold = 0.0; //!< If group energy is lower than this, then cluster (kJ/mol)
+  public:
+    double probability(const Group& group1, const Group& group2) const override;
+    GroupGroupEnergyThreshold(Energy::Hamiltonian& hamiltonian, double energy_threshold);
+    GroupGroupEnergyThreshold(Energy::Hamiltonian& hamiltonian, const json &j);
+    void to_json(json &j) const override;
+};
+
+/**
+ * @brief Group cluster analysis
+ *
+ * This analyses the size distribution of clusters formed by
+ * molecular groups listed in `molid`. The criterion `policy`
+ * is flexible and currently set to an energy threshold.
+ *
+ * @todo Use bool in SparseMatrix?
+ */
+class ClusterAnalysis : public Analysisbase {
+  private:
+    const Space& spc;
+    std::unique_ptr<GroupGroupCluster> policy;              //!< Determines if two groups are clustered
+    std::unique_ptr<std::ostream> single_position_stream;   //!< Cluster fraction vs. steps
+    std::vector<MoleculeData::index_type> molids;           //!< Molecule types to analyse
+    std::map<int, int> size_distribution;                   //!< observed cluster sizes (key=size, val=counts)
+    Eigen::SparseMatrix<double> cluster_probability_matrix; //!< Matrix probability to cluster each pair (0 or 1)
+    std::string filename;                                   //!< cluster fraction filename
+    void _to_json(json& j) const override;
+    void _from_json(const json& j) override;
+    void _sample() override;
+    void _to_disk() override;
+  public:
+    ClusterAnalysis(const json& j, const Space& spc, Energy::Hamiltonian &pot);
+    virtual ~ClusterAnalysis() = default;
 };
 
 /**

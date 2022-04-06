@@ -64,6 +64,17 @@ template <class T, bool triangular = false> class PairMatrix {
         }
         matrix[i][j] = val;
     }
+
+    /** Set a uniform value */
+    void set(T val) {
+        for (size_t i = 0; i < matrix.size(); i++) {
+            for (size_t j = 0; j < matrix.size(); j++) {
+                set(i, j, val);
+            }
+        }
+    }
+
+    void setZero() { set(T()); }
 };
 
 TEST_CASE("[Faunus] PairMatrix") {

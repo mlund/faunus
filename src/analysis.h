@@ -362,7 +362,7 @@ class AtomDensity : public DensityBase {
 };
 
 /**
- * Base class for determining of two groups are in a cluster
+ * Base class for determining if two groups are in a cluster
  */
 class GroupGroupCluster {
   public:

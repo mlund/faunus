@@ -137,6 +137,8 @@ std::unique_ptr<Analysisbase> createAnalysis(const std::string& name, const json
             return std::make_unique<ElectricPotential>(j, spc);
         } else if (name == "chargefluctuations") {
             return std::make_unique<ChargeFluctuations>(j, spc);
+        } else if (name == "cluster") {
+            return std::make_unique<ClusterAnalysis>(j, spc, pot);
         } else if (name == "molrdf") {
             return std::make_unique<MoleculeRDF>(j, spc);
         } else if (name == "multipole") {
@@ -311,16 +313,16 @@ void GroupGroupEnergyThreshold::to_json(json& j) const {
 ClusterAnalysis::ClusterAnalysis(const json& j, const Space& spc, Energy::Hamiltonian& hamiltonian)
     : Analysisbase(spc, "cluster"), spc(spc) {
     from_json(j);
+    molids = Faunus::names2ids(Faunus::molecules, j.at("molecules").get<std::vector<std::string>>());
+    std::sort(molids.begin(), molids.end()); // must be sorted for binary search
+    cluster_probability_matrix.resize(spc.groups.size(), spc.groups.size());
+
     const auto policy_name = j.at("policy").get<std::string>();
     if (policy_name == "energy") {
         policy = std::make_unique<GroupGroupEnergyThreshold>(hamiltonian, j);
     } else {
         throw ConfigurationError("unknown cluster policy");
     }
-    cluster_probability_matrix.resize(spc.groups.size(), spc.groups.size());
-    auto molecule_names = j.at("molecules").get<std::vector<std::string>>();
-    molids = Faunus::names2ids(Faunus::molecules, molecule_names);
-    std::sort(molids.begin(), molids.end()); // must be sorted for binary search
 }
 
 void ClusterAnalysis::_to_json(json& j) const {

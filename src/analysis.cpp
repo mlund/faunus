@@ -286,22 +286,30 @@ void SystemEnergy::_to_disk() {
 
 // --------------------------------
 
-void GroupGroupProperty::to_json([[maybe_unused]] json& j) const {};
-
-// --------------------------------
-
-GroupGroupEnergy::GroupGroupEnergy(Energy::Hamiltonian& hamiltonian)
-    : hamiltonian(hamiltonian) {}
-
-double GroupGroupEnergy::value(const Group& group1, const Group& group2) const {
-    double energy = 0.0; // in kT
-    for (auto& energy_term : hamiltonian) {
-        if (auto nonbonded = std::dynamic_pointer_cast<Energy::NonbondedBase>(energy_term)) {
-            energy += nonbonded->groupGroupEnergy(group1, group2);
-        }
+std::function<double(const Group&, const Group&)> createGroupGroupProperty(const json& j, const Space& spc,
+                                                                           Energy::Hamiltonian& hamiltonian) {
+    const auto name = j.at("property").get<std::string>();
+    if (name == "energy") { // total nonbonded energy
+        return [&](auto& group_1, auto& group_2) {
+            double energy = 0.0; // in kT
+            for (auto& energy_term : hamiltonian) {
+                if (auto nonbonded = std::dynamic_pointer_cast<Energy::NonbondedBase>(energy_term)) {
+                    energy += nonbonded->groupGroupEnergy(group_1, group_2);
+                }
+            }
+            return energy; // kT
+        };
     }
-    return energy; // kT
+    if (name == "com_distance") { // mass-center distance
+        return [&](const Group& group_1, const Group& group_2) {
+            assert(group_1.massCenter().has_value() && group_2.massCenter().has_value());
+            return std::sqrt(spc.geometry.sqdist(group_1.mass_center, group_2.mass_center));
+        };
+    }
+    throw ConfigurationError("unknown property: {}", name);
 }
+
+;
 
 // --------------------------------
 
@@ -309,29 +317,14 @@ GroupMatrixAnalysis::GroupMatrixAnalysis(const json& j, const Space& spc, Energy
     : Analysisbase(spc, "cluster")
     , spc(spc) {
     from_json(j);
-    filename = j.at("file").get<std::string>();
-    stream = IO::openCompressedOutputStream(filename, true);
     molids = Faunus::names2ids(Faunus::molecules, j.at("molecules").get<std::vector<std::string>>());
     std::sort(molids.begin(), molids.end()); // must be sorted for binary search
+
+    filename = j.at("file").get<std::string>();
+    matrix_stream = IO::openCompressedOutputStream(filename, true);
     pair_matrix.resize(spc.groups.size(), spc.groups.size());
-
+    property = createGroupGroupProperty(j, spc, hamiltonian);
     setIncludeCriterion(j);
-    setProperty(j, hamiltonian);
-}
-
-void GroupMatrixAnalysis::setProperty(const json& j, Energy::Hamiltonian& hamiltonian) {
-    const auto name = j.at("property").get<std::string>();
-    if (name == "energy") {
-        property = [energy = GroupGroupEnergy(hamiltonian)](auto& group1, auto& group2) {
-            return energy.value(group1, group2);
-        };
-    } else if (name == "com_distance") {
-        property = [&](auto& group1, auto& group2) {
-            return std::sqrt(spc.geometry.sqdist(group1.mass_center, group2.mass_center));
-        };
-    } else {
-        throw ConfigurationError("unknown property: {}", name);
-    }
 }
 
 /**
@@ -344,6 +337,8 @@ void GroupMatrixAnalysis::setIncludeCriterion(const json& j) {
         const auto& [name, object] = jsonSingleItem(j["criterion"]);
         if (name == "smaller_than") {
             include_value = [threshold = object.get<double>()](auto value) { return value < threshold; };
+        } else if (name == "larger_than") {
+            include_value = [threshold = object.get<double>()](auto value) { return value > threshold; };
         } else if (name == "absolute_larger_than") {
             include_value = [threshold = object.get<double>()](auto value) { return std::fabs(value) > threshold; };
         } else {
@@ -364,7 +359,7 @@ void GroupMatrixAnalysis::_sample() {
     auto group_indices = spc.groups | rv::filter(not_empty) | rv::filter(is_selected) | rv::transform(to_index) |
                          ranges::to<std::vector<int>>;
 
-    // generate a matrix of values for each group pair i,j
+    // zero, then fill matrix
     pair_matrix.setZero();
     for (auto i : group_indices) {
         for (auto j : group_indices) {
@@ -377,11 +372,10 @@ void GroupMatrixAnalysis::_sample() {
             }
         }
     }
-    Faunus::streamMarket(pair_matrix, *stream, true);
-    //*stream << "%%\n";
+    Faunus::streamMarket(pair_matrix, *matrix_stream, true);
 }
 
-void GroupMatrixAnalysis::_to_disk() {}
+void GroupMatrixAnalysis::_to_disk() { matrix_stream->flush(); }
 
 // --------------------------------
 

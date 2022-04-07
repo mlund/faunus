@@ -306,9 +306,10 @@ and can be further reduced by applying an optional `criterion`:
 `criterion`            | What is included
 ---------------------- | ----------------------
 `smaller_than`         | Values smaller than a threshold
+`larger_than`          | Values larger than a threshold
 `absolute_larger_than` | Absolute values larger than a threshold
 
-In the following example we analyse the nonbonded `energy` between molecules of
+In the following example we analyse the nonbonded `energy` between _active_ molecules of
 type `colloid` and only values smaller than -1.0 _kT_ are stored:
 
 ~~~ yaml

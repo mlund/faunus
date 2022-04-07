@@ -288,6 +288,63 @@ creates a histogram of observed conformations for a given molecule type.
 `molecule`             | Molecule name to sample
 
 
+### Group Matrix
+
+As a function of steps, this stores a matrix of group to group properties.
+The generated matrix is square, symmetric, and with dimensions of the total number
+of groups in the system (active and inactive).
+
+`property`     | Description
+-------------- | -----------------------------------------------------------------
+`energy`       | Nonbonded energy (all nonbonded terms from Hamiltonian), kT units
+`com_distance` | Mass center distance
+
+The data is streamed in the sparse [Matrix Market format](https://math.nist.gov/MatrixMarket/formats.html)
+and can be further reduced by applying a `criterion`:
+
+`criterion`            | What is included
+---------------------- | ----------------------
+`smaller_than`         | Values smaller than a threshold
+`absolute_larger_than` | Absolute values larger than a threshold
+
+In the following example we analyse the nonbonded `energy` between molecules of
+type `colloid` and only values smaller than -1.0 $kT$ are stored:
+
+~~~ yaml
+analysis:
+  - groupmatrix:
+      nstep: 20
+      molecules: [colloid]
+      property: energy
+      criterion: {smaller_than: -1.0} # in kT
+      file: matrices.dat.gz
+~~~
+
+The generated stream of sparse matrices can be loaded into Python
+for further analysis of e.g. clustering:
+
+~~~ python
+from scipy.io import mmread
+from io import StringIO
+import gzip
+def to_matrix(lines):
+    ''' convert list of lines to dense matrix '''
+    stream = StringIO('\n'.join(lines))
+    return mmread(stream).todense()
+
+with gzip.open('matrices.dat.gz', 'rt') as f:
+    lines = []
+    for line in f:
+        if line.startswith('%') and len(lines) > 0:
+            print(to_matrix(lines))
+            lines = [line]
+        else:
+            lines.append(line)
+~~~
+
+
+
+
 ## Charge Properties
 
 ### Molecular Multipoles

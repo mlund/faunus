@@ -8,6 +8,7 @@
 #include "aux/iteratorsupport.h"
 #include "aux/eigensupport.h"
 #include "aux/arange.h"
+#include "aux/matrixmarket.h"
 #include <range/v3/numeric/accumulate.hpp>
 #include <range/v3/algorithm/for_each.hpp>
 #include <range/v3/view/cache1.hpp>
@@ -137,8 +138,8 @@ std::unique_ptr<Analysisbase> createAnalysis(const std::string& name, const json
             return std::make_unique<ElectricPotential>(j, spc);
         } else if (name == "chargefluctuations") {
             return std::make_unique<ChargeFluctuations>(j, spc);
-        } else if (name == "cluster") {
-            return std::make_unique<ClusterAnalysis>(j, spc, pot);
+        } else if (name == "groupmatrix") {
+            return std::make_unique<GroupMatrixAnalysis>(j, spc, pot);
         } else if (name == "molrdf") {
             return std::make_unique<MoleculeRDF>(j, spc);
         } else if (name == "multipole") {
@@ -285,54 +286,77 @@ void SystemEnergy::_to_disk() {
 
 // --------------------------------
 
-void GroupGroupCluster::to_json([[maybe_unused]] json &j) const {};
+void GroupGroupProperty::to_json([[maybe_unused]] json& j) const {};
 
-GroupGroupEnergyThreshold::GroupGroupEnergyThreshold(Energy::Hamiltonian& hamiltonian, double energy_threshold)
-    : hamiltonian(hamiltonian)
-    , energy_threshold(energy_threshold) {}
+// --------------------------------
 
-GroupGroupEnergyThreshold::GroupGroupEnergyThreshold(Energy::Hamiltonian& hamiltonian, const json& j)
-    : GroupGroupEnergyThreshold(hamiltonian, j.at("threshold").get<double>()) {}
+GroupGroupEnergy::GroupGroupEnergy(Energy::Hamiltonian& hamiltonian)
+    : hamiltonian(hamiltonian) {}
 
-double GroupGroupEnergyThreshold::probability(const Group& group1, const Group& group2) const {
+double GroupGroupEnergy::value(const Group& group1, const Group& group2) const {
     double energy = 0.0; // in kT
     for (auto& energy_term : hamiltonian) {
         if (auto nonbonded = std::dynamic_pointer_cast<Energy::NonbondedBase>(energy_term)) {
             energy += nonbonded->groupGroupEnergy(group1, group2);
         }
     }
-    return static_cast<double>(energy < energy_threshold * 1.0_kJmol);
+    return energy; // kT
 }
-
-void GroupGroupEnergyThreshold::to_json(json& j) const {
-    j["energy threshold"] = {{"threshold (kJ/mol)", energy_threshold}};
-};
 
 // --------------------------------
 
-ClusterAnalysis::ClusterAnalysis(const json& j, const Space& spc, Energy::Hamiltonian& hamiltonian)
-    : Analysisbase(spc, "cluster"), spc(spc) {
+GroupMatrixAnalysis::GroupMatrixAnalysis(const json& j, const Space& spc, Energy::Hamiltonian& hamiltonian)
+    : Analysisbase(spc, "cluster")
+    , spc(spc) {
     from_json(j);
+    filename = j.at("file").get<std::string>();
+    stream = IO::openCompressedOutputStream(filename, true);
     molids = Faunus::names2ids(Faunus::molecules, j.at("molecules").get<std::vector<std::string>>());
     std::sort(molids.begin(), molids.end()); // must be sorted for binary search
-    cluster_probability_matrix.resize(spc.groups.size(), spc.groups.size());
+    pair_matrix.resize(spc.groups.size(), spc.groups.size());
 
-    const auto policy_name = j.at("policy").get<std::string>();
-    if (policy_name == "energy") {
-        policy = std::make_unique<GroupGroupEnergyThreshold>(hamiltonian, j);
+    setIncludeCriterion(j);
+    setProperty(j, hamiltonian);
+}
+
+void GroupMatrixAnalysis::setProperty(const json& j, Energy::Hamiltonian& hamiltonian) {
+    const auto name = j.at("property").get<std::string>();
+    if (name == "energy") {
+        property = [energy = GroupGroupEnergy(hamiltonian)](auto& group1, auto& group2) {
+            return energy.value(group1, group2);
+        };
+    } else if (name == "com_distance") {
+        property = [&](auto& group1, auto& group2) {
+            return std::sqrt(spc.geometry.sqdist(group1.mass_center, group2.mass_center));
+        };
     } else {
-        throw ConfigurationError("unknown cluster policy");
+        throw ConfigurationError("unknown property: {}", name);
     }
 }
 
-void ClusterAnalysis::_to_json(json& j) const {
-    auto &_j = j["policy"];
-    policy->to_json(_j);
+/**
+ * @brief Sets the criterion for including a value in the output pair matrix
+ */
+void GroupMatrixAnalysis::setIncludeCriterion(const json& j) {
+    if (!j.contains("criterion")) {
+        include_value = [](auto) { return true; }; // include everything
+    } else {
+        const auto& [name, object] = jsonSingleItem(j["criterion"]);
+        if (name == "smaller_than") {
+            include_value = [threshold = object.get<double>()](auto value) { return value < threshold; };
+        } else if (name == "absolute_larger_than") {
+            include_value = [threshold = object.get<double>()](auto value) { return std::fabs(value) > threshold; };
+        } else {
+            throw ConfigurationError("unknown criterion");
+        }
+    }
 }
 
-void ClusterAnalysis::_from_json([[maybe_unused]] const json& j) {}
+void GroupMatrixAnalysis::_to_json([[maybe_unused]] json& j) const {}
 
-void ClusterAnalysis::_sample() {
+void GroupMatrixAnalysis::_from_json([[maybe_unused]] const json& j) {}
+
+void GroupMatrixAnalysis::_sample() {
     namespace rv = ranges::cpp20::views;
     auto is_selected = [&](const auto& group) { return std::binary_search(molids.begin(), molids.end(), group.id); };
     auto to_index = [&](const auto& group) { return spc.getGroupIndex(group); };
@@ -340,24 +364,24 @@ void ClusterAnalysis::_sample() {
     auto group_indices = spc.groups | rv::filter(not_empty) | rv::filter(is_selected) | rv::transform(to_index) |
                          ranges::to<std::vector<int>>;
 
-    // generate a matrix of probabilities (true/false) of clustering for each group pair i,j
-    cluster_probability_matrix.setZero();
+    // generate a matrix of values for each group pair i,j
+    pair_matrix.setZero();
     for (auto i : group_indices) {
         for (auto j : group_indices) {
             if (i > j) {
-                const auto probability = policy->probability(spc.groups.at(i), spc.groups.at(j));
-                if (probability > 0.0) {
-                    cluster_probability_matrix.insert(i, j) = probability;
-                    cluster_probability_matrix.insert(j, i) = probability;
+                const auto value = property(spc.groups.at(i), spc.groups.at(j));
+                if (include_value(value)) {
+                    pair_matrix.insert(i, j) = value;
+                    pair_matrix.insert(j, i) = value;
                 }
             }
         }
     }
-
-    // we now have a matrix of double indicating the cluster probability for each molecule pair
-    // add cluster size analysis here...
+    Faunus::streamMarket(pair_matrix, *stream, true);
+    //*stream << "%%\n";
 }
-void ClusterAnalysis::_to_disk() {}
+
+void GroupMatrixAnalysis::_to_disk() {}
 
 // --------------------------------
 

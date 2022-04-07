@@ -291,16 +291,17 @@ creates a histogram of observed conformations for a given molecule type.
 ### Group Matrix
 
 As a function of steps, this stores a matrix of group to group properties.
-The generated matrix is square, symmetric, and with dimensions of the total number
+The generated matrix is square, symmetric, and with dimensions of the _total number_
 of groups in the system (active and inactive).
+Note that inactive groups are always excluded from the analysis.
 
 `property`     | Description
--------------- | -----------------------------------------------------------------
-`energy`       | Nonbonded energy (all nonbonded terms from Hamiltonian), kT units
+-------------- | -----------------------------------------------------------------------------
+`energy`       | Nonbonded energy (sum of all nonbonded terms from Hamiltonian); units of _kT_
 `com_distance` | Mass center distance
 
 The data is streamed in the sparse [Matrix Market format](https://math.nist.gov/MatrixMarket/formats.html)
-and can be further reduced by applying a `criterion`:
+and can be further reduced by applying an optional `criterion`:
 
 `criterion`            | What is included
 ---------------------- | ----------------------
@@ -308,7 +309,7 @@ and can be further reduced by applying a `criterion`:
 `absolute_larger_than` | Absolute values larger than a threshold
 
 In the following example we analyse the nonbonded `energy` between molecules of
-type `colloid` and only values smaller than -1.0 $kT$ are stored:
+type `colloid` and only values smaller than -1.0 _kT_ are stored:
 
 ~~~ yaml
 analysis:
@@ -321,7 +322,7 @@ analysis:
 ~~~
 
 The generated stream of sparse matrices can be loaded into Python
-for further analysis of e.g. clustering:
+for further analysis of _e.g._ clustering:
 
 ~~~ python
 from scipy.io import mmread
@@ -336,7 +337,8 @@ with gzip.open('matrices.dat.gz', 'rt') as f:
     lines = []
     for line in f:
         if line.startswith('%') and len(lines) > 0:
-            print(to_matrix(lines))
+            pair_matrix = to_matrix(lines)
+            print(pair_matrix) # do something useful here...
             lines = [line]
         else:
             lines.append(line)

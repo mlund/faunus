@@ -329,24 +329,16 @@ for further analysis of _e.g._ clustering:
 from scipy.io import mmread
 from io import StringIO
 import gzip
-def to_matrix(lines):
-    ''' convert list of lines to dense matrix '''
-    stream = StringIO('\n'.join(lines))
-    return mmread(stream).todense()
 
 with gzip.open('matrices.dat.gz', 'rt') as f:
-    lines = []
+    lines = ''
     for line in f:
-        if line.startswith('%') and len(lines) > 0:
-            pair_matrix = to_matrix(lines)
-            print(pair_matrix) # do something useful here...
-            lines = [line]
-        else:
-            lines.append(line)
+        lines += line
+        if line == '\n':
+            pair_matrix = mmread(StringIO(lines)).todense()
+            lines = ''
+            print(pair_matrix) # do something w. matrix
 ~~~
-
-
-
 
 ## Charge Properties
 

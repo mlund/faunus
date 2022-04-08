@@ -373,6 +373,7 @@ void GroupMatrixAnalysis::_sample() {
         }
     }
     Faunus::streamMarket(pair_matrix, *matrix_stream, true);
+    *matrix_stream << "\n"; // separare frames w. blank line
 }
 
 void GroupMatrixAnalysis::_to_disk() { matrix_stream->flush(); }

@@ -295,10 +295,10 @@ The generated matrix is square, symmetric, and with dimensions of the _total num
 of groups in the system (active and inactive).
 Note that inactive groups are always excluded from the analysis.
 
-`property`     | Description
--------------- | -----------------------------------------------------------------------------
-`energy`       | Nonbonded energy (sum of all nonbonded terms from Hamiltonian); units of _kT_
-`com_distance` | Mass center distance
+`property`     | What is reported
+-------------- | ---------------------------------------
+`energy`       | Sum of nonbonded energy terms in (_kT_)
+`com_distance` | Mass center distance (Å)
 
 The data is streamed in the sparse [Matrix Market format](https://math.nist.gov/MatrixMarket/formats.html)
 and can be further reduced by applying an optional `criterion`:
@@ -309,8 +309,8 @@ and can be further reduced by applying an optional `criterion`:
 `larger_than`          | Values larger than a threshold
 `absolute_larger_than` | Absolute values larger than a threshold
 
-In the following example we analyse the nonbonded `energy` between _active_ molecules of
-type `colloid` and only values smaller than -1.0 _kT_ are stored:
+In the following example we analyse the nonbonded energy between _active_ molecules of
+type _colloid_ and only values smaller than -1.0 _kT_ are stored:
 
 ~~~ yaml
 analysis:
@@ -318,7 +318,7 @@ analysis:
       nstep: 20
       molecules: [colloid]
       property: energy
-      criterion: {smaller_than: -1.0} # in kT
+      criterion: {smaller_than: -1.0}
       file: matrices.dat.gz
 ~~~
 
@@ -326,18 +326,16 @@ The generated stream of sparse matrices can be loaded into Python
 for further analysis of _e.g._ clustering:
 
 ~~~ python
+from itertools import groupby
 from scipy.io import mmread
 from io import StringIO
 import gzip
 
-with gzip.open('matrices.dat.gz', 'rt') as f:
-    lines = ''
-    for line in f:
-        lines += line
-        if line == '\n':
-            pair_matrix = mmread(StringIO(lines)).todense()
-            lines = ''
-            print(pair_matrix) # do something w. matrix
+with gzip.open('matrix.dat.gz', 'rt') as f:
+    for frame, lines in groupby(f, lambda line: line != '\n'):
+        if frame:
+            pair_matrix = mmread(StringIO(''.join(lines))).todense()
+            # do something with pair_matrix...
 ~~~
 
 ## Charge Properties

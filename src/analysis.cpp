@@ -324,27 +324,50 @@ GroupMatrixAnalysis::GroupMatrixAnalysis(const json& j, const Space& spc, Energy
     matrix_stream = IO::openCompressedOutputStream(filename, true);
     pair_matrix.resize(spc.groups.size(), spc.groups.size());
     property = createGroupGroupProperty(j, spc, hamiltonian);
-    setIncludeCriterion(j);
+
+    if (auto it = j.find("criterion"); it != j.end()) {
+        include_value = createValueCriterion("function", *it, true);
+    } else {
+        include_value = [](auto) { return true; }; // no filtering by default
+    }
 }
 
 /**
- * @brief Sets the criterion for including a value in the output pair matrix
+ * @brief Generate lambda to filter values
+ * @param name the policy to use: `all`, `smaller_than`, `function`, ...
+ * @param j json object with data matching policy
+ * @param throw_on_error Throw if key is an unknown criterion
+ * @return Unary predicate to determine if a value is selected or not; `nullptr` or throw if unknown name.
+ * @throw if unknown name and `throw_on_error` is true
+ * @todo Split out of this class; convert to template
  */
-void GroupMatrixAnalysis::setIncludeCriterion(const json& j) {
-    if (!j.contains("criterion")) {
-        include_value = [](auto) { return true; }; // include everything
-    } else {
-        const auto& [name, object] = jsonSingleItem(j["criterion"]);
-        if (name == "smaller_than") {
-            include_value = [threshold = object.get<double>()](auto value) { return value < threshold; };
-        } else if (name == "larger_than") {
-            include_value = [threshold = object.get<double>()](auto value) { return value > threshold; };
-        } else if (name == "absolute_larger_than") {
-            include_value = [threshold = object.get<double>()](auto value) { return std::fabs(value) > threshold; };
-        } else {
-            throw ConfigurationError("unknown criterion");
-        }
+std::function<bool(double)> GroupMatrixAnalysis::createValueCriterion(const std::string& name, const json& j,
+                                                                      bool throw_on_error) {
+    if (name == "absolute_larger_than") {
+        return [threshold = j.get<double>()](auto value) { return std::fabs(value) > threshold; };
     }
+    if (name == "all") {
+        return [](auto) { return true; };
+    }
+    if (name == "function") {
+        ExprFunction<double> expr_function;
+        auto value_storage = std::make_shared<double>();
+        expr_function.set(j.get<std::string>(), {{"value", value_storage.get()}});
+        return [=](auto value) -> bool {
+            *value_storage = value;
+            return static_cast<bool>(expr_function());
+        };
+    }
+    if (name == "larger_than") {
+        return [threshold = j.get<double>()](auto value) { return value > threshold; };
+    }
+    if (name == "smaller_than") {
+        return [threshold = j.get<double>()](auto value) { return value < threshold; };
+    }
+    if (throw_on_error) {
+        throw ConfigurationError("criterion {} not found", name);
+    }
+    return nullptr;
 }
 
 void GroupMatrixAnalysis::_to_json([[maybe_unused]] json& j) const {}

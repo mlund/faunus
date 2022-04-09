@@ -301,14 +301,8 @@ Note that inactive groups are always excluded from the analysis.
 `com_distance` | Mass center distance (Å)
 
 The data is streamed in the sparse [Matrix Market format](https://math.nist.gov/MatrixMarket/formats.html)
-and can be further reduced by applying an optional `criterion`:
-
-`criterion`            | What is included
----------------------- | ----------------------
-`smaller_than`         | Values smaller than a threshold
-`larger_than`          | Values larger than a threshold
-`absolute_larger_than` | Absolute values larger than a threshold
-
+and can be further reduced by applying an optional `criterion` defined by an
+[ExprTk](http://www.partow.net/programming/exprtk/index.html) expression.
 In the following example we analyse the nonbonded energy between _active_ molecules of
 type _colloid_ and only values smaller than -1.0 _kT_ are stored:
 
@@ -318,7 +312,7 @@ analysis:
       nstep: 20
       molecules: [colloid]
       property: energy
-      criterion: {smaller_than: -1.0}
+      criterion: "value < -1.0"
       file: matrices.dat.gz
 ~~~
 
@@ -331,11 +325,9 @@ from scipy.io import mmread
 from io import StringIO
 import gzip
 
-with gzip.open('matrix.dat.gz', 'rt') as f:
-    for frame, lines in groupby(f, lambda line: line != '\n'):
-        if frame:
-            pair_matrix = mmread(StringIO(''.join(lines))).todense()
-            # do something with pair_matrix...
+with gzip.open('matrices.dat.gz', 'rt') as f:
+    for lines in (lines for frame, lines in groupby(f, lambda line: line != '\n') if frame):
+        pair_matrix = mmread(StringIO(''.join(lines))).todense()
 ~~~
 
 ## Charge Properties

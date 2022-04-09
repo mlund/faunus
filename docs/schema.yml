@@ -946,8 +946,8 @@ properties:
                             enum: [energy, com_distance]
                             description: "Property to report"
                         criterion:
-                            type: object
-                            description: "Filter values according to a criterion"
+                            type: string
+                            description: "exprtk function to filter `value`"
                         molecules:
                             type: array
                             items: {type: string}

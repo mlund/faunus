@@ -391,7 +391,8 @@ class GroupMatrixAnalysis : public Analysisbase {
     void _from_json(const json& j) override;
     void _sample() override;
     void _to_disk() override;
-    void setIncludeCriterion(const json& j);
+    static std::function<bool(double)> createValueCriterion(const std::string& name, const json& j,
+                                                            bool throw_on_error);
 
   public:
     GroupMatrixAnalysis(const json& j, const Space& spc, Energy::Hamiltonian& pot);

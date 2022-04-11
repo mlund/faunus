@@ -309,28 +309,7 @@ std::function<double(const Group&, const Group&)> createGroupGroupProperty(const
     throw ConfigurationError("unknown property: {}", name);
 }
 
-;
-
 // --------------------------------
-
-GroupMatrixAnalysis::GroupMatrixAnalysis(const json& j, const Space& spc, Energy::Hamiltonian& hamiltonian)
-    : Analysisbase(spc, "cluster")
-    , spc(spc) {
-    from_json(j);
-    molids = Faunus::names2ids(Faunus::molecules, j.at("molecules").get<std::vector<std::string>>());
-    std::sort(molids.begin(), molids.end()); // must be sorted for binary search
-
-    filename = j.at("file").get<std::string>();
-    matrix_stream = IO::openCompressedOutputStream(filename, true);
-    pair_matrix.resize(spc.groups.size(), spc.groups.size());
-    property = createGroupGroupProperty(j, spc, hamiltonian);
-
-    if (auto it = j.find("criterion"); it != j.end()) {
-        include_value = createValueCriterion("function", *it, true);
-    } else {
-        include_value = [](auto) { return true; }; // no filtering by default
-    }
-}
 
 /**
  * @brief Generate lambda to filter values
@@ -339,10 +318,8 @@ GroupMatrixAnalysis::GroupMatrixAnalysis(const json& j, const Space& spc, Energy
  * @param throw_on_error Throw if key is an unknown criterion
  * @return Unary predicate to determine if a value is selected or not; `nullptr` or throw if unknown name.
  * @throw if unknown name and `throw_on_error` is true
- * @todo Split out of this class; convert to template
  */
-std::function<bool(double)> GroupMatrixAnalysis::createValueCriterion(const std::string& name, const json& j,
-                                                                      bool throw_on_error) {
+std::function<bool(double)> createValueFilter(const std::string& name, const json& j, bool throw_on_error) {
     if (name == "absolute_larger_than") {
         return [threshold = j.get<double>()](auto value) { return std::fabs(value) > threshold; };
     }
@@ -370,6 +347,26 @@ std::function<bool(double)> GroupMatrixAnalysis::createValueCriterion(const std:
     return nullptr;
 }
 
+// --------------------------------
+
+GroupMatrixAnalysis::GroupMatrixAnalysis(const json& j, const Space& spc, Energy::Hamiltonian& hamiltonian)
+    : Analysisbase(spc, "cluster")
+    , spc(spc) {
+    namespace rv = ranges::cpp20::views;
+    from_json(j);
+    auto molids = Faunus::names2ids(Faunus::molecules, j.at("molecules").get<std::vector<std::string>>());
+    std::sort(molids.begin(), molids.end()); // must be sorted for binary search
+
+    filename = j.at("file").get<std::string>();
+    matrix_stream = IO::openCompressedOutputStream(filename, true);
+    pair_matrix.resize(spc.groups.size(), spc.groups.size());
+    property = createGroupGroupProperty(j, spc, hamiltonian);
+
+    if (auto it = j.find("filter"); it != j.end()) {
+        value_filter = createValueFilter("function", *it, true);
+    }
+}
+
 void GroupMatrixAnalysis::_to_json([[maybe_unused]] json& j) const {}
 
 void GroupMatrixAnalysis::_from_json([[maybe_unused]] const json& j) {}
@@ -388,7 +385,7 @@ void GroupMatrixAnalysis::_sample() {
         for (auto j : group_indices) {
             if (i > j) {
                 const auto value = property(spc.groups.at(i), spc.groups.at(j));
-                if (include_value(value)) {
+                if (!value_filter || value_filter(value)) { // no lambda defined -> all values
                     pair_matrix.insert(i, j) = value;
                     pair_matrix.insert(j, i) = value;
                 }

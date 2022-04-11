@@ -301,7 +301,7 @@ Note that inactive groups are always excluded from the analysis.
 `com_distance` | Mass center distance (Å)
 
 The data is streamed in the sparse [Matrix Market format](https://math.nist.gov/MatrixMarket/formats.html)
-and can be further reduced by applying an optional `criterion` defined by an
+and can be further reduced by applying an optional `filter` defined by an
 [ExprTk](http://www.partow.net/programming/exprtk/index.html) expression.
 In the following example we analyse the nonbonded energy between _active_ molecules of
 type _colloid_ and only values smaller than -1.0 _kT_ are stored:
@@ -312,7 +312,7 @@ analysis:
       nstep: 20
       molecules: [colloid]
       property: energy
-      criterion: "value < -1.0"
+      filter: "value < -1.0"
       file: matrices.dat.gz
 ~~~
 

@@ -349,54 +349,72 @@ std::function<bool(double)> createValueFilter(const std::string& name, const jso
 
 // --------------------------------
 
-GroupMatrixAnalysis::GroupMatrixAnalysis(const json& j, const Space& spc, Energy::Hamiltonian& hamiltonian)
+PairMatrixAnalysis::PairMatrixAnalysis(const json& j, const Space& spc)
     : Analysisbase(spc, "cluster")
     , spc(spc) {
-    namespace rv = ranges::cpp20::views;
     from_json(j);
-    auto molids = Faunus::names2ids(Faunus::molecules, j.at("molecules").get<std::vector<std::string>>());
-    std::sort(molids.begin(), molids.end()); // must be sorted for binary search
-
     filename = j.at("file").get<std::string>();
     matrix_stream = IO::openCompressedOutputStream(filename, true);
-    pair_matrix.resize(spc.groups.size(), spc.groups.size());
-    property = createGroupGroupProperty(j, spc, hamiltonian);
 
     if (auto it = j.find("filter"); it != j.end()) {
         value_filter = createValueFilter("function", *it, true);
+    } else {
+        value_filter = [](auto) { return true; };
     }
 }
 
-void GroupMatrixAnalysis::_to_json([[maybe_unused]] json& j) const {}
+void PairMatrixAnalysis::_to_json([[maybe_unused]] json& j) const {}
 
-void GroupMatrixAnalysis::_from_json([[maybe_unused]] const json& j) {}
+void PairMatrixAnalysis::_from_json([[maybe_unused]] const json& j) {}
 
-void GroupMatrixAnalysis::_sample() {
+void PairMatrixAnalysis::_sample() {
+    assert(matrix_stream);
+    setPairMatrix();
+    Faunus::streamMarket(pair_matrix, *matrix_stream, true);
+    *matrix_stream << "\n"; // separare frames w. blank line
+}
+
+void PairMatrixAnalysis::_to_disk() { matrix_stream->flush(); }
+
+// --------------------------------
+
+GroupMatrixAnalysis::GroupMatrixAnalysis(const json& j, const Space& spc, Energy::Hamiltonian& hamiltonian)
+    : PairMatrixAnalysis(j, spc) {
     namespace rv = ranges::cpp20::views;
+    // finds the molecule ids and store their indices
+    auto molids = Faunus::parseMolecules(j.at("molecules"));
     auto is_selected = [&](const auto& group) { return std::binary_search(molids.begin(), molids.end(), group.id); };
     auto to_index = [&](const auto& group) { return spc.getGroupIndex(group); };
-    auto not_empty = [&](const auto& group) { return !group.empty(); };
-    auto group_indices = spc.groups | rv::filter(not_empty) | rv::filter(is_selected) | rv::transform(to_index) |
-                         ranges::to<std::vector<int>>;
+    group_indices =
+        spc.groups | rv::filter(is_selected) | rv::transform(to_index) | ranges::to<decltype(group_indices)>;
 
-    // zero, then fill matrix
+    property = createGroupGroupProperty(j, spc, hamiltonian);
+    pair_matrix.resize(spc.groups.size(), spc.groups.size());
+}
+
+/**
+ * Calculates the value of the selected property for each pair of groups
+ * and fills in the sparse matrix `pair_matrix`. This also filters out
+ * values (if a filter is given)
+ */
+void GroupMatrixAnalysis::setPairMatrix() {
+    auto is_active = [&](auto index) { return !spc.groups.at(index).empty(); };
+    const auto indices = group_indices | ranges::cpp20::views::filter(is_active) | ranges::to_vector;
+
+    // zero matrix, then fill it
     pair_matrix.setZero();
-    for (auto i : group_indices) {
-        for (auto j : group_indices) {
+    for (auto i : indices) {
+        for (auto j : indices) {
             if (i > j) {
                 const auto value = property(spc.groups.at(i), spc.groups.at(j));
-                if (!value_filter || value_filter(value)) { // no lambda defined -> all values
+                if (value_filter(value)) {
                     pair_matrix.insert(i, j) = value;
                     pair_matrix.insert(j, i) = value;
                 }
             }
         }
     }
-    Faunus::streamMarket(pair_matrix, *matrix_stream, true);
-    *matrix_stream << "\n"; // separare frames w. blank line
 }
-
-void GroupMatrixAnalysis::_to_disk() { matrix_stream->flush(); }
 
 // --------------------------------
 

@@ -696,7 +696,7 @@ properties:
                         copy_policy:
                             type: string
                             default: all
-                            enum: [all, positions, charges]
+                            enum: [all, positions, charges, patches]
                             description: "Data to copy from library: all, positions, charges"
                     additionalProperties: false
 

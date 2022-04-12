@@ -237,7 +237,7 @@ Instead, use a hard-coded variant like `nonbonded_coulomblj` etc.
 `molecule`          | Molecule name to operate on
 `repeat=N`          | Number of repeats per MC sweep
 `keeppos=False`     | Keep original positions of `traj`
-`copy_policy=all`   | What to copy from library: `all`, `positions`, `charges`
+`copy_policy=all`   | What to copy from library. See table below.
 
 This will swap between different molecular conformations
 as defined in the [Molecule Properties](topology.html#molecule-properties) with `traj` and `trajweight`
@@ -251,6 +251,13 @@ is used, i.e. no rotation and no mass-center overlay.
 
 By default all information from the conformation is copied (`copy_policy=all`), including charges and particle type.
 To for example copy only positions, use `copy_policy=positions`. This can be useful when using speciation moves.
+
+`copy_policy`  | What is copied
+-------------- | ----------------------------------------------------
+`all`          | All particle properties
+`positions`    | Positions, only
+`charges`      | Charges, only
+`patches`      | Spherocylinder patch and length, but keep directions
 
 
 ### Pivot

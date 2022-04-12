@@ -1,11 +1,4 @@
-//
-// Created by Mikael Lund on 2022-04-07.
-//
-
-#ifndef FAUNUS_MATRIXMARKET_H
-#define FAUNUS_MATRIXMARKET_H
-
-#include <iostream>
+#pragma once
 #include <ostream>
 #include <spdlog/fmt/fmt.h>
 #include <Eigen/SparseCore>
@@ -43,4 +36,3 @@ bool streamMarket(const SparseMatrixType& mat, std::ostream& out, bool symmetric
     return true;
 }
 } // namespace Faunus
-#endif // FAUNUS_MATRIXMARKET_H

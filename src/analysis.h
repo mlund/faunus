@@ -8,7 +8,6 @@
 #include "aux/table_2d.h"
 #include "aux/equidistant_table.h"
 #include <aux/sparsehistogram.h>
-#include <aux/pairmatrix.h>
 #include <Eigen/SparseCore>
 #include <set>
 

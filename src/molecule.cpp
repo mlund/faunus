@@ -1063,4 +1063,18 @@ std::pair<std::vector<std::string>, std::vector<std::string>> parseReactionStrin
     return {Tvec(names.begin(), it), Tvec(it + 1, names.end())};
 }
 
+/**
+ * @param j Json object with a `molecules` list of strings
+ * @return vector of corresponding molecule ids (sorted)
+ * @throw if unknown molecule name or not a list of strings
+ */
+std::vector<MoleculeData::index_type> parseMolecules(const json& j) {
+    if (!j.is_array()) {
+        throw ConfigurationError("array of molecules expected");
+    }
+    auto molids = Faunus::names2ids(Faunus::molecules, j.get<std::vector<std::string>>());
+    std::sort(molids.begin(), molids.end());
+    return molids;
+}
+
 } // namespace Faunus

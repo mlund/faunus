@@ -288,6 +288,48 @@ creates a histogram of observed conformations for a given molecule type.
 `molecule`             | Molecule name to sample
 
 
+### Group Matrix
+
+As a function of steps, this stores a matrix of group to group properties.
+The generated matrix is square, symmetric, and with dimensions of the _total number_
+of groups in the system (active and inactive).
+Note that inactive groups are always excluded from the analysis.
+
+`property`     | What is reported
+-------------- | ---------------------------------------
+`energy`       | Sum of nonbonded energy terms in (_kT_)
+`com_distance` | Mass center distance (Å)
+
+The data is streamed in the sparse [Matrix Market format](https://math.nist.gov/MatrixMarket/formats.html)
+and can be further reduced by applying an optional `filter` defined by an
+[ExprTk](http://www.partow.net/programming/exprtk/index.html) expression.
+In the following example we analyse the nonbonded energy between _active_ molecules of
+type _colloid_ and only values smaller than -1.0 _kT_ are stored:
+
+~~~ yaml
+analysis:
+  - groupmatrix:
+      nstep: 20
+      molecules: [colloid]
+      property: energy
+      filter: "value < -1.0"
+      file: matrices.dat.gz
+~~~
+
+The generated stream of sparse matrices can be loaded into Python
+for further analysis of _e.g._ clustering:
+
+~~~ python
+from itertools import groupby
+from scipy.io import mmread
+from io import StringIO
+import gzip
+
+with gzip.open('matrices.dat.gz', 'rt') as f:
+    for lines in (lines for frame, lines in groupby(f, lambda line: line != '\n') if frame):
+        pair_matrix = mmread(StringIO(''.join(lines))).todense()
+~~~
+
 ## Charge Properties
 
 ### Molecular Multipoles

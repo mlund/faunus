@@ -273,6 +273,8 @@ struct UnknownMoleculeError: public GenericError {
  */
 MoleculeData& findMoleculeByName(std::string_view name);
 
+std::vector<MoleculeData::index_type> parseMolecules(const json& j);
+
 /**
  * @brief Constructs MoleculeData from JSON.
  *

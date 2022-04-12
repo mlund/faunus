@@ -936,6 +936,27 @@ properties:
                     type: object
                     additionalProperties: false
 
+                groupmatrix:
+                    properties:
+                        nstep: {type: integer}
+                        nskip: {type: integer, default: 0, description: Initial steps to skip}
+                        file: {type: string, description: "Stream of matrices with group properties"}
+                        property:
+                            type: string
+                            enum: [energy, com_distance]
+                            description: "Property to report"
+                        filter:
+                            type: string
+                            description: "ExprTk function to filter `value`"
+                        molecules:
+                            type: array
+                            items: {type: string}
+                            minItems: 1
+                            description: Array of molecules to operate on
+                    required: [nstep, molecules, file, property]
+                    type: object
+                    additionalProperties: false
+
                 polymershape:
                     properties:
                         nstep: {type: integer}

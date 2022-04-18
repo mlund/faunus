@@ -8,6 +8,7 @@
 #include "aux/iteratorsupport.h"
 #include "aux/eigensupport.h"
 #include "aux/arange.h"
+#include "aux/matrixmarket.h"
 #include <range/v3/numeric/accumulate.hpp>
 #include <range/v3/algorithm/for_each.hpp>
 #include <range/v3/view/cache1.hpp>
@@ -139,6 +140,8 @@ std::unique_ptr<Analysisbase> createAnalysis(const std::string& name, const json
             return std::make_unique<ElectricPotential>(j, spc);
         } else if (name == "chargefluctuations") {
             return std::make_unique<ChargeFluctuations>(j, spc);
+        } else if (name == "groupmatrix") {
+            return std::make_unique<GroupMatrixAnalysis>(j, spc, pot);
         } else if (name == "molrdf") {
             return std::make_unique<MoleculeRDF>(j, spc);
         } else if (name == "multipole") {
@@ -281,6 +284,138 @@ std::vector<double> SystemEnergy::calculateEnergies() const {
 
 void SystemEnergy::_to_disk() {
     output_stream->flush(); // empty buffer
+}
+
+// --------------------------------
+
+std::function<double(const Group&, const Group&)> createGroupGroupProperty(const json& j, const Space& spc,
+                                                                           Energy::Hamiltonian& hamiltonian) {
+    const auto name = j.at("property").get<std::string>();
+    if (name == "energy") { // total nonbonded energy
+        return [&](auto& group_1, auto& group_2) {
+            double energy = 0.0; // in kT
+            for (auto& energy_term : hamiltonian) {
+                if (auto nonbonded = std::dynamic_pointer_cast<Energy::NonbondedBase>(energy_term)) {
+                    energy += nonbonded->groupGroupEnergy(group_1, group_2);
+                }
+            }
+            return energy; // kT
+        };
+    }
+    if (name == "com_distance") { // mass-center distance
+        return [&](const Group& group_1, const Group& group_2) {
+            assert(group_1.massCenter().has_value() && group_2.massCenter().has_value());
+            return std::sqrt(spc.geometry.sqdist(group_1.mass_center, group_2.mass_center));
+        };
+    }
+    throw ConfigurationError("unknown property: {}", name);
+}
+
+// --------------------------------
+
+/**
+ * @brief Generate lambda to filter values
+ * @param name the policy to use: `all`, `smaller_than`, `function`, ...
+ * @param j json object with data matching policy
+ * @param throw_on_error Throw if key is an unknown criterion
+ * @return Unary predicate to determine if a value is selected or not; `nullptr` or throw if unknown name.
+ * @throw if unknown name and `throw_on_error` is true
+ */
+std::function<bool(double)> createValueFilter(const std::string& name, const json& j, bool throw_on_error) {
+    if (name == "absolute_larger_than") {
+        return [threshold = j.get<double>()](auto value) { return std::fabs(value) > threshold; };
+    }
+    if (name == "all") {
+        return [](auto) { return true; };
+    }
+    if (name == "function") {
+        ExprFunction<double> expr_function;
+        auto value_storage = std::make_shared<double>();
+        expr_function.set(j.get<std::string>(), {{"value", value_storage.get()}});
+        return [=](auto value) -> bool {
+            *value_storage = value;
+            return static_cast<bool>(expr_function());
+        };
+    }
+    if (name == "larger_than") {
+        return [threshold = j.get<double>()](auto value) { return value > threshold; };
+    }
+    if (name == "smaller_than") {
+        return [threshold = j.get<double>()](auto value) { return value < threshold; };
+    }
+    if (throw_on_error) {
+        throw ConfigurationError("criterion {} not found", name);
+    }
+    return nullptr;
+}
+
+// --------------------------------
+
+PairMatrixAnalysis::PairMatrixAnalysis(const json& j, const Space& spc)
+    : Analysisbase(spc, "cluster")
+    , spc(spc) {
+    from_json(j);
+    filename = j.at("file").get<std::string>();
+    matrix_stream = IO::openCompressedOutputStream(filename, true);
+
+    if (auto it = j.find("filter"); it != j.end()) {
+        value_filter = createValueFilter("function", *it, true);
+    } else {
+        value_filter = [](auto) { return true; };
+    }
+}
+
+void PairMatrixAnalysis::_to_json([[maybe_unused]] json& j) const {}
+
+void PairMatrixAnalysis::_from_json([[maybe_unused]] const json& j) {}
+
+void PairMatrixAnalysis::_sample() {
+    assert(matrix_stream);
+    setPairMatrix();
+    Faunus::streamMarket(pair_matrix, *matrix_stream, true);
+    *matrix_stream << "\n"; // separare frames w. blank line
+}
+
+void PairMatrixAnalysis::_to_disk() { matrix_stream->flush(); }
+
+// --------------------------------
+
+GroupMatrixAnalysis::GroupMatrixAnalysis(const json& j, const Space& spc, Energy::Hamiltonian& hamiltonian)
+    : PairMatrixAnalysis(j, spc) {
+    namespace rv = ranges::cpp20::views;
+    // finds the molecule ids and store their indices
+    auto molids = Faunus::parseMolecules(j.at("molecules"));
+    auto is_selected = [&](const auto& group) { return std::binary_search(molids.begin(), molids.end(), group.id); };
+    auto to_index = [&](const auto& group) { return spc.getGroupIndex(group); };
+    group_indices =
+        spc.groups | rv::filter(is_selected) | rv::transform(to_index) | ranges::to<decltype(group_indices)>;
+
+    property = createGroupGroupProperty(j, spc, hamiltonian);
+    pair_matrix.resize(spc.groups.size(), spc.groups.size());
+}
+
+/**
+ * Calculates the value of the selected property for each pair of groups
+ * and fills in the sparse matrix `pair_matrix`. This also filters out
+ * values (if a filter is given)
+ */
+void GroupMatrixAnalysis::setPairMatrix() {
+    auto is_active = [&](auto index) { return !spc.groups.at(index).empty(); };
+    const auto indices = group_indices | ranges::cpp20::views::filter(is_active) | ranges::to_vector;
+
+    // zero matrix, then fill it
+    pair_matrix.setZero();
+    for (auto i : indices) {
+        for (auto j : indices) {
+            if (i > j) {
+                const auto value = property(spc.groups.at(i), spc.groups.at(j));
+                if (value_filter(value)) {
+                    pair_matrix.insert(i, j) = value;
+                    pair_matrix.insert(j, i) = value;
+                }
+            }
+        }
+    }
 }
 
 // --------------------------------

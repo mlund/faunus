@@ -1221,6 +1221,7 @@ void ConformationSwap::copyConformation(ParticleVector& particles, ParticleVecto
                 psc_dst.setDirections(src.traits().sphero_cylinder, psc_dst.scdir, psc_dst.patchdir);
             }
         };
+        break;
     case CopyPolicy::POSITIONS:
         copy_function = [](const Particle& src, Particle& dst) { dst.pos = src.pos; };
         break;

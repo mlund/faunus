@@ -961,6 +961,11 @@ AtomicSwapCharge::AtomicSwapCharge(Space& spc, std::string name, std::string cit
 AtomicSwapCharge::AtomicSwapCharge(Space& spc) : AtomicSwapCharge(spc, "swapcharge", "") {}
 
 void TranslateRotate::_to_json(json& j) const {
+    // For a spherical sphere of radius R, the ratio between mean squared translation (t)
+    // and mean squared rotation (r) is approximately MSD_r * 4R^2 = MSD_t.
+    const auto should_approach_radius =
+        std::sqrt(mean_squared_displacement.avg() / mean_squared_rotation_angle.avg() / 4.0);
+
     j = {{"dir", translational_direction},
          {"dp", translational_displacement / 1.0_angstrom},
          {"dprot", rotational_displacement / 1.0_rad},
@@ -968,7 +973,9 @@ void TranslateRotate::_to_json(json& j) const {
          {"molid", molid},
          {unicode::rootof + unicode::bracket("r" + unicode::squared), std::sqrt(mean_squared_displacement.avg())},
          {"√⟨θ²⟩/°", std::sqrt(mean_squared_rotation_angle.avg()) / 1.0_deg},
-         {"molecule", Faunus::molecules[molid].name}};
+         {"√⟨θ²⟩", std::sqrt(mean_squared_rotation_angle.avg()) / 1.0_rad},
+         {"molecule", Faunus::molecules.at(molid).name},
+         {"R/Å ≈ √(⟨r²⟩/4⟨θ²⟩)", should_approach_radius}};
     roundJSON(j, 3);
 }
 void TranslateRotate::_from_json(const json& j) {

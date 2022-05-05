@@ -107,7 +107,7 @@ struct EwaldData {
     bool use_spherical_sum = true;
     int num_kvectors = 0;
     Point box_length = {0.0, 0.0, 0.0};                        //!< Box dimensions
-    enum Policies { PBC, PBCEigen, IPBC, IPBCEigen, INVALID }; //!< Possible k-space updating schemes
+    enum Policies { PBC, PBCEigen, IPBC, IPBCEigen, METALSLIT, INVALID }; //!< Possible k-space updating schemes
     Policies policy = PBC;                                     //!< Policy for updating k-space
     explicit EwaldData(const json& j);                         //!< Initialize from json
 };
@@ -117,6 +117,7 @@ NLOHMANN_JSON_SERIALIZE_ENUM(EwaldData::Policies, {
                                                       {EwaldData::PBC, "PBC"},
                                                       {EwaldData::PBCEigen, "PBCEigen"},
                                                       {EwaldData::IPBC, "IPBC"},
+                                                      {EwaldData::METALSLIT, "METALSLIT"},
                                                       {EwaldData::IPBCEigen, "IPBCEigen"},
                                                   })
 
@@ -195,6 +196,21 @@ struct PolicyIonIon : public EwaldPolicyBase {
 };
 
 /**
+ * Add documentation here...
+ * @todo register image particles when updating k-vectors
+ */
+struct PolicyIonIonMetalSlit : public PolicyIonIon {
+    PolicyIonIonMetalSlit();
+    void updateBox(EwaldData& d, const Point& box) const override;
+    void updateComplex(EwaldData& data, const Space::GroupVector& groups) const override;
+    void updateComplex(EwaldData& d, const Change& change, const Space::GroupVector& groups,
+                       const Space::GroupVector& oldgroups) const override;
+    double selfEnergy(const EwaldData& d, Change& change, Space::GroupVector& groups) override;
+    double surfaceEnergy(const EwaldData& data, const Change& change, const Space::GroupVector& groups) override;
+    double reciprocalEnergy(const EwaldData& d) override;
+};
+
+/**
  * @brief Ion-Ion Ewald with periodic boundary conditions (PBC) using Eigen
  * operations
  * @warning Will not work with Space with inactive particles (GCMC, for example)
@@ -237,7 +253,7 @@ struct PolicyIonIonIPBCEigen : public PolicyIonIonIPBC {
  *       This is error prone and should be handled *before* this step.
  */
 class Ewald : public Energybase {
-  private:
+  protected:
     const Space& spc;
     EwaldData data;
     std::shared_ptr<EwaldPolicyBase> policy; //!< Policy for updating k-space
@@ -253,6 +269,19 @@ class Ewald : public Energybase {
     void sync(Energybase* energybase, const Change& change) override;
     void to_json(json& j) const override;
     void force(std::vector<Point>& forces) override; // update forces on all particles
+};
+
+/**
+ * @todo Add documentation
+ *
+ * The only thing we need to do here, is to add the real <-> imaginary interaction.
+ * The reciprocal part is fully captured by the base class
+ */
+class MetallicEwald : public Ewald {
+  public:
+    MetallicEwald(const json& j, const Space& spc);
+
+    double energy(const Change& change) override;
 };
 
 /**

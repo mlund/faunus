@@ -99,6 +99,8 @@ std::unique_ptr<EwaldPolicyBase> EwaldPolicyBase::makePolicy(EwaldData::Policies
         return std::make_unique<PolicyIonIonIPBC>();
     case EwaldData::IPBCEigen:
         return std::make_unique<PolicyIonIonIPBCEigen>();
+    case EwaldData::METALSLIT:
+        return std::make_unique<PolicyIonIonMetalSlit>();
     default:
         throw std::runtime_error("invalid Ewald policy");
     }
@@ -1734,5 +1736,48 @@ void EnergyAccumulatorBase::from_json(const json& j) {
 }
 
 void EnergyAccumulatorBase::to_json(json& j) const { j["summation_policy"] = scheme; }
+
+void PolicyIonIonMetalSlit::updateBox(EwaldData& d, const Point& box) const {
+    Point expanded_box = box;
+    // expand box here...
+    PolicyIonIon::updateBox(d, expanded_box);
+}
+void PolicyIonIonMetalSlit::updateComplex(EwaldData& data, const Space::GroupVector& groups) const {
+    PolicyIonIon::updateComplex(data, groups);
+}
+void PolicyIonIonMetalSlit::updateComplex(EwaldData& d, const Change& change, const Space::GroupVector& groups,
+                                             const Space::GroupVector& oldgroups) const {
+    PolicyIonIon::updateComplex(d, change, groups, oldgroups);
+}
+double PolicyIonIonMetalSlit::selfEnergy(const EwaldData& d, Change& change, Space::GroupVector& groups) {
+    return PolicyIonIon::selfEnergy(d, change, groups);
+}
+double PolicyIonIonMetalSlit::surfaceEnergy(const EwaldData& data, const Change& change,
+                                               const Space::GroupVector& groups) {
+    return PolicyIonIon::surfaceEnergy(data, change, groups);
+}
+double PolicyIonIonMetalSlit::reciprocalEnergy(const EwaldData& d) { return PolicyIonIon::reciprocalEnergy(d); }
+
+PolicyIonIonMetalSlit::PolicyIonIonMetalSlit()
+    : PolicyIonIon() {}
+
+MetallicEwald::MetallicEwald(const json& j, const Space& spc)
+    : Ewald(j, spc) {
+    policy = std::make_unique<PolicyIonIonMetalSlit>();
+}
+
+/**
+ * Adds the reciprocal energy as well as real <-> mirror charges
+ * @param change
+ * @return
+ */
+double MetallicEwald::energy(const Change& change) {
+    auto energy = Ewald::energy(change); // reciprocal contribution
+    namespace rv = ranges::cpp20::views;
+    auto mirror = [&](const Point& pos) { return pos - 10.0; }; // lambda to get mirror position
+    auto real_positions = spc.groups | rv::join | rv::transform(&Particle::pos);
+    auto real_charges = spc.groups | rv::join | rv::transform(&Particle::charge);
+    return energy;
+}
 
 } // end of namespace Faunus::Energy

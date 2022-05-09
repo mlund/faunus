@@ -278,6 +278,15 @@ class Group : public ElasticRange<Particle> {
     }
 
     /**
+     * @brief Reference to subset of given indices, where 0 is the start of the group
+     * @param indices Range of indices relative to group
+     * @warning Do not change `indices` to `const&` which would create a dangling reference
+     */
+    template <std::integral Tint = size_t> auto operator[](std::vector<Tint>& indices) const {
+        return indices | ranges::cpp20::views::transform([this](auto i) -> const Particle& { return *(begin() + i); });
+    }
+
+    /**
      * @brief Remove PBC for molecular groups w. respect to mass center
      * @tparam TdistanceFunc
      * @param vector_distance Distance calculation function

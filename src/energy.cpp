@@ -189,27 +189,27 @@ void PolicyIonIonEigen::updateComplex(EwaldData& data, const Space::GroupVector&
 void PolicyIonIon::updateComplex(EwaldData& d, const Change& change, const Space::GroupVector& groups,
                                  const Space::GroupVector& oldgroups) const {
     assert(groups.size() == oldgroups.size());
+    namespace rv = ranges::cpp20::views;
     for (int k = 0; k < d.k_vectors.cols(); k++) {
-        auto &Q = d.Q_ion[k];
-        const Point &q = d.k_vectors.col(k);
+        auto& Q = d.Q_ion[k];
+        const Point& wavevector = d.k_vectors.col(k);
 
         for (const auto& changed_group : change.groups) {
             const auto& g_new = groups.at(changed_group.group_index);
             const auto& g_old = oldgroups.at(changed_group.group_index);
             const auto max_group_size = std::max(g_new.size(), g_old.size());
-            auto indices = (changed_group.all) ? ranges::cpp20::views::iota(0u, max_group_size) |
+            auto indices = (changed_group.all) ? ranges::cpp20::views::iota(0U, max_group_size) |
                                                      ranges::to<std::vector<Change::index_type>>
                                                : changed_group.relative_atom_indices;
-            for (auto i : indices) {
-                if (i < g_new.size()) {
-                    const auto qr = q.dot(g_new[i].pos);
-                    Q += g_new[i].charge * EwaldData::Tcomplex(std::cos(qr), std::sin(qr));
-                }
-                if (i < g_old.size()) {
-                    const auto qr = q.dot(g_old[i].pos);
-                    Q -= g_old[i].charge * EwaldData::Tcomplex(std::cos(qr), std::sin(qr));
-                }
-            }
+
+            auto new_indices = indices | rv::filter([&](auto i) { return i < g_new.size(); }) | ranges::to_vector;
+            auto old_indices = indices | rv::filter([&](auto i) { return i < g_old.size(); }) | ranges::to_vector;
+
+            Q += sumq(wavevector, ranges::view::zip(g_new[new_indices] | rv::transform(&Particle::pos),
+                                                    g_new[new_indices] | rv::transform(&Particle::charge)));
+
+            Q -= sumq(wavevector, ranges::view::zip(g_old[old_indices] | rv::transform(&Particle::pos),
+                                                    g_old[old_indices] | rv::transform(&Particle::charge)));
         }
     }
 }

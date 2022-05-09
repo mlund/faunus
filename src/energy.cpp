@@ -65,6 +65,8 @@ bool EwaldData::tinfoilSurrounding() const {
     return surface_dielectric_constant < 1.0 || std::isinf(surface_dielectric_constant);
 }
 
+double EwaldData::volume() const { return box_length.prod(); }
+
 void to_json(json& j, const EwaldData& ewald_data) {
     j = {{"lB", ewald_data.bjerrum_length},
          {"epss", ewald_data.surface_dielectric_constant},
@@ -443,8 +445,7 @@ double PolicyIonIon::surfaceEnergy(const EwaldData& ewald_data, const Change& ch
     auto qr_range = groups | rv::join | rv::transform(charge_x_position);
     const auto qr_squared = ranges::accumulate(qr_range, Point(0.0, 0.0, 0.0)).squaredNorm();
 
-    const auto volume = ewald_data.box_length.prod();
-    return 2.0 * pc::pi / ((2.0 * ewald_data.surface_dielectric_constant + 1.0) * volume) * qr_squared *
+    return 2.0 * pc::pi / ((2.0 * ewald_data.surface_dielectric_constant + 1.0) * ewald_data.volume()) * qr_squared *
            ewald_data.bjerrum_length;
 }
 
@@ -471,7 +472,7 @@ double PolicyIonIon::selfEnergy(const EwaldData& ewald_data, Change& change, Spa
 }
 
 double PolicyIonIon::selfEnergyFromChargeSums(const EwaldData& d, double charges_squared, double charge_total) const {
-    auto Vcc = -pc::pi / 2.0 / d.alpha / d.alpha / d.box_length.prod() * charge_total *
+    auto Vcc = -pc::pi / 2.0 / d.alpha / d.alpha / d.volume() * charge_total *
                charge_total; // compensate with neutralizing background (if non-zero total charge in system)
     const auto beta = d.kappa / (2.0 * d.alpha);
     if (beta > 1e-6) {
@@ -490,12 +491,12 @@ double PolicyIonIon::reciprocalEnergy(const EwaldData& ewald_data) {
     for (int k = 0; k < ewald_data.Q_ion.size(); k++) {
         energy += ewald_data.Aks[k] * std::norm(ewald_data.Q_ion[k]);
     }
-    return 2.0 * pc::pi * energy * ewald_data.bjerrum_length / ewald_data.box_length.prod();
+    return 2.0 * pc::pi * energy * ewald_data.bjerrum_length / ewald_data.volume();
 }
 
 double PolicyIonIonEigen::reciprocalEnergy(const EwaldData& ewald_data) {
     double energy = ewald_data.Aks.cwiseProduct(ewald_data.Q_ion.cwiseAbs2()).sum();
-    return 2.0 * pc::pi * ewald_data.bjerrum_length * energy / ewald_data.box_length.prod();
+    return 2.0 * pc::pi * ewald_data.bjerrum_length * energy / ewald_data.volume();
 }
 
 Ewald::Ewald(const Space& spc, const EwaldData& data)
@@ -1904,10 +1905,7 @@ double MetalSlitEwald::completeMirrorEnergy() const {
     namespace rv = ranges::cpp20::views;
     double energy = 0.0;
 
-    auto mirror_z = [z_length = spc.geometry.getLength().z()](const Point& pos) {
-        const auto mirrored_z_pos = pos.z() + (pos.z() > 0.0 ? z_length : -z_length);
-        return Point(pos.x(), pos.y(), mirrored_z_pos);
-    };
+    auto mirror_z = std::dynamic_pointer_cast<PolicyIonIonMetalSlit>(policy)->getMirrorLambda(data);
     auto all_particles = spc.groups | rv::join;
     auto mirror_positions = all_particles | rv::transform(&Particle::pos) | rv::transform(mirror_z);
     auto mirror_charges = all_particles | rv::transform(&Particle::charge);
@@ -1933,10 +1931,7 @@ double MetalSlitEwald::completeMirrorEnergy() const {
 double MetalSlitEwald::singleParticleMirrorEnergy(const Particle& particle) const {
     namespace rv = ranges::cpp20::views;
     double energy = 0.0;
-    auto mirror_z = [z_length = spc.geometry.getLength().z()](const Point& pos) {
-        const auto mirrored_z_pos = pos.z() + (pos.z() > 0.0 ? z_length : -z_length);
-        return Point(pos.x(), pos.y(), mirrored_z_pos);
-    };
+    auto mirror_z = std::dynamic_pointer_cast<PolicyIonIonMetalSlit>(policy)->getMirrorLambda(data);
     auto all_particles = spc.groups | rv::join;
     auto mirror_positions = all_particles | rv::transform(&Particle::pos) | rv::transform(mirror_z);
     auto mirror_charges = all_particles | rv::transform(&Particle::charge);

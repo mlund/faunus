@@ -62,6 +62,7 @@ class PairPotentialBase;
 namespace Energy {
 
 class Hamiltonian;
+class MetalSlitEwald;
 
 /**
  * @brief Check if particles are outside the simulation container
@@ -112,6 +113,7 @@ struct EwaldData {
     Policies policy = PBC;                                                //!< Policy for updating k-space
     explicit EwaldData(const json& j);                                    //!< Initialize from json
     void sync(const EwaldData& other, const Change& change);              //!< Sync with another dataset
+    double volume() const;                                                //!< Volume of registered unit-cell
     bool tinfoilSurrounding() const; //!< Check for metallic or "tinfoil" surroundings (inf. dielectric)
 };
 
@@ -166,10 +168,8 @@ class EwaldPolicyBase {
         }
         auto first_particle = groups.front().begin();
         auto last_particle = groups.back().end();
-        auto pos = asEigenMatrix(first_particle, last_particle,
-                                 &Particle::pos); // N x 3
-        auto charge = asEigenVector(first_particle, last_particle,
-                                    &Particle::charge); // N x 1
+        auto pos = asEigenMatrix(first_particle, last_particle, &Particle::pos);       // N x 3
+        auto charge = asEigenVector(first_particle, last_particle, &Particle::charge); // N x 1
         return std::make_tuple(pos, charge);
     }
 
@@ -180,10 +180,8 @@ class EwaldPolicyBase {
         }
         auto first_particle = groups.front().begin();
         auto last_particle = groups.back().end();
-        auto pos = asEigenMatrix(first_particle, last_particle,
-                                 &Particle::pos); // N x 3
-        auto charge = asEigenVector(first_particle, last_particle,
-                                    &Particle::charge); // N x 1
+        auto pos = asEigenMatrix(first_particle, last_particle, &Particle::pos);       // N x 3
+        auto charge = asEigenVector(first_particle, last_particle, &Particle::charge); // N x 1
         return std::make_tuple(pos, charge);
     }
 
@@ -203,8 +201,7 @@ class PolicyIonIon : public EwaldPolicyBase {
         EwaldData::Tcomplex Q(0.0, 0.0);
         for (auto [position, charge] : zipped_position_charge) { // loop over molecules
             const auto qr = wavevector.dot(position);
-            Q += charge * EwaldData::Tcomplex(std::cos(qr),
-                                              std::sin(qr)); // 'Q^q', see eq. 25 in ref.
+            Q += charge * EwaldData::Tcomplex(std::cos(qr), std::sin(qr)); // 'Q^q', see eq. 25 in ref.
         }
         return Q;
     }
@@ -246,6 +243,7 @@ class PolicyIonIonMetalSlit : public PolicyIonIon {
             return Point(pos.x(), pos.y(), mirrored_z_pos);
         };
     }
+    friend class MetalSlitEwald;
 
   protected:
     EwaldData::Tcomplex sumWavevectorGroups(const Point& wavevector, const Group& group,

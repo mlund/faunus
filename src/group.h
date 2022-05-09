@@ -240,9 +240,27 @@ class Group : public ElasticRange<Particle> {
      * @note No range-checking and i must be in interval `[0:size[`
      */
     inline auto& operator[](size_t index) { return *(begin() + index); }
+
+    /**
+     * @brief Returns i'th element in group
+     * @param i index starting at zero
+     * @return reference to value at i'th element
+     * @note No range-checking and i must be in interval `[0:size[`
+     */
     inline const auto& operator[](size_t index) const { return *(begin() + index); }
 
+    /**
+     * @brief Returns i'th element in group
+     * @param i index starting at zero
+     * @return reference to value at i'th element
+     */
     Particle& at(size_t index);
+
+    /**
+     * @brief Returns i'th element in group
+     * @param i index starting at zero
+     * @return reference to value at i'th element
+     */
     const Particle& at(size_t index) const;
 
     /**

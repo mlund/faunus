@@ -277,7 +277,7 @@ properties:
                           kcutoff: {type: number}
                           ipbc: {type: boolean, default: false}
                           spherical_sum: {type: boolean, default: false}
-                          ewaldscheme: {type: string, enum: [PBC, PBCEigen, IPBC], default: PBCEigen}
+                          ewaldscheme: {type: string, enum: [PBC, PBCEigen, IPBC, METALSLIT], default: PBCEigen}
                       required: [cutoff, epss, alpha, ncutoff]
                       "$ref": "#/properties/optional_electrolyte"
                 - if:

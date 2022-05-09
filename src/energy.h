@@ -17,6 +17,7 @@
 #include <numeric>
 #include <algorithm>
 #include <concepts>
+#include <coulombgalore.h>
 
 struct freesasa_parameters_fwd; // workaround for freesasa unnamed struct that cannot be forward declared
 
@@ -198,6 +199,7 @@ struct PolicyIonIon : public EwaldPolicyBase {
 /**
  * Add documentation here...
  * @todo register image particles when updating k-vectors
+ *       does it make sence to inherit from "PolicyIonIon"?
  */
 struct PolicyIonIonMetalSlit : public PolicyIonIon {
     PolicyIonIonMetalSlit();
@@ -279,12 +281,14 @@ class Ewald : public Energybase {
  */
 class MetalSlitEwald : public Ewald {
   private:
-    double mirrorEnergy(const Change& change); //!< Sum mirror charges <-> real charges interaction
-    Geometry::Slit enlarged_geometry;          //!< Geometry expanded twice in z-direction (to incl. mirror charges
+    Geometry::Slit enlarged_geometry; //!< Geometry expanded twice in z-direction (to incl. mirror charges
+    double mirrorEnergy(const Change& change) const; //!< Sum mirror charges <-> real charges interaction
+    static Point getSlitDimensions(const Space& spc);
+    CoulombGalore::Splined pair_potential; //!< Splined real space pair-potential
+
   public:
     MetalSlitEwald(const json& j, const Space& spc);
     double energy(const Change& change) override;
-    void sync(Energybase* energybase, const Change& change) override;
 };
 
 /**

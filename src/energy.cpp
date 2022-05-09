@@ -1741,6 +1741,8 @@ void EnergyAccumulatorBase::from_json(const json& j) {
 
 void EnergyAccumulatorBase::to_json(json& j) const { j["summation_policy"] = scheme; }
 
+// -----------------------------------------
+
 void PolicyIonIonMetalSlit::updateBox(EwaldData& d, const Point& box) const {
     Point expanded_box = box;
     // expand box here...
@@ -1765,56 +1767,100 @@ double PolicyIonIonMetalSlit::reciprocalEnergy(const EwaldData& d) { return Poli
 PolicyIonIonMetalSlit::PolicyIonIonMetalSlit()
     : PolicyIonIon() {}
 
+TEST_CASE("[Faunus] Ewald - PolicyIonIonMetalSlit") {
+    using doctest::Approx;
+    Space spc;
+    spc.particles.resize(2);
+    spc.geometry = R"( {"type": "slit", "length": 10} )"_json;
+    spc.particles.at(0) = R"( {"id": 0, "pos": [0,0,0], "q": 1.0} )"_json;
+    spc.particles.at(1) = R"( {"id": 0, "pos": [1,0,0], "q": -1.0} )"_json;
+    if (Faunus::molecules.empty()) {
+        Faunus::molecules.resize(1);
+    }
+    Group g(0, spc.particles.begin(), spc.particles.end());
+    spc.groups.push_back(g);
+
+    auto data = static_cast<EwaldData>(R"({
+                "epsr": 1.0, "alpha": 0.894427190999916, "epss": 1.0,
+                "ncutoff": 11.0, "spherical_sum": true, "cutoff": 5.0})"_json);
+    Change c;
+    c.everything = true;
+    data.policy = EwaldData::METALSLIT;
+    auto box_length = spc.geometry.getLength();
+    box_length.z() *= 2.0;
+
+    PolicyIonIonMetalSlit policy;
+    policy.updateBox(data, box_length);
+    policy.updateComplex(data, spc.groups);
+    //    CHECK(policy.selfEnergy(data, c, spc.groups) == Approx(-1.0092530088080642 * data.bjerrum_length));
+    //    CHECK(policy.surfaceEnergy(data, c, spc.groups) == Approx(0.0020943951023931952 * data.bjerrum_length));
+    //    CHECK(policy.reciprocalEnergy(data) == Approx(0.21303063979675319 * data.bjerrum_length));
+}
+
+// -----------------------------------------
+
 MetalSlitEwald::MetalSlitEwald(const json& j, const Space& spc)
     : Ewald(j, spc) {
+    name = "metal slit " + name;
+
+    auto coulomb_galore = Potential::NewCoulombGalore();
+    from_json(j, coulomb_galore);
+    pair_potential = coulomb_galore.getCoulombGalore();
+
     if (data.policy != EwaldData::METALSLIT) {
         faunus_logger->warn("{}: Invalid Ewald policy -- setting this to required METALSLIT", name);
         policy = std::make_unique<PolicyIonIonMetalSlit>();
     }
+
+    auto slit_dimensions = getSlitDimensions(spc);
+    slit_dimensions.z() *= 2.0;
+    enlarged_geometry.setLength(slit_dimensions);
+    policy->updateBox(data, slit_dimensions); // Ewald data must have enlarged box information
+}
+
+/**
+ * @return Dimensions of slit of the geometry of `spc`
+ * @throw is the Space geometry is not Geometry::Slit
+ */
+Point MetalSlitEwald::getSlitDimensions(const Space& spc) {
     if (auto slit_ptr = std::dynamic_pointer_cast<Geometry::Slit>(spc.geometry.asSimpleGeometry())) {
-        auto new_length = slit_ptr->getLength();
-        new_length.z() *= 2.0;
-        enlarged_geometry.setLength(new_length);
-        data.box_length = new_length;
-    } else {
-        throw std::runtime_error("slit geometry required by metallic ewald");
+        return slit_ptr->getLength();
     }
+    throw std::runtime_error("slit geometry required by metallic ewald");
 }
 
 /**
  * Adds the reciprocal energy as well as real <-> mirror charges
- * @param change
- * @return
  */
-double MetalSlitEwald::energy(const Change& change) { return Ewald::energy(change) + mirrorEnergy(change); }
+double MetalSlitEwald::energy(const Change& change) {
+    if (change.volume_change) {
+        faunus_logger->error("{}: volume changes currently not permitted", name);
+    }
+    return Ewald::energy(change) + mirrorEnergy(change);
+}
 
 /**
  * @todo add ewald splitting function
- *       use change object (currently everything is recalculated -> expensive)
+ *       optimize by using change object (currently everything is recalculated -> expensive)
  */
-double MetalSlitEwald::mirrorEnergy([[maybe_unused]] const Change& change) {
+double MetalSlitEwald::mirrorEnergy([[maybe_unused]] const Change& change) const {
     namespace rv = ranges::cpp20::views;
+    double energy = 0.0;
 
     const auto z_length = enlarged_geometry.getLength().z();
     auto mirror_z = [&](const Point& pos) {
         const auto mirrored_z_pos = pos.z() + (pos.z() > 0.0 ? z_length : -z_length);
         return Point(pos.x(), pos.y(), mirrored_z_pos);
     };
-    auto mirror_positions =
-        spc.groups | rv::join | rv::transform(&Particle::pos) | rv::transform(mirror_z) | ranges::to_vector;
+    auto mirrored_positions = spc.groups | rv::join | rv::transform(&Particle::pos) | rv::transform(mirror_z);
 
-    double energy = 0.0;
-    for (const auto& particle : spc.groups | rv::join) {
-        for (const auto& mirror_position : mirror_positions) {
+    for (const auto& mirror_position : mirrored_positions) {
+        for (const auto& particle : spc.groups | rv::join) {
             const auto distance = enlarged_geometry.vdist(particle.pos, mirror_position).norm();
-            if (distance < data.r_cutoff) {
-                energy += particle.charge * particle.charge / distance * 1.0; // @todo add ewald stuff
-            }
+            energy += pair_potential.ion_ion_energy(particle.charge, particle.charge, distance);
         }
     }
     return energy;
 }
-
-void MetalSlitEwald::sync(Energybase* energybase, const Change& change) { Ewald::sync(energybase, change); }
 
 } // end of namespace Faunus::Energy

@@ -95,23 +95,24 @@ struct EwaldData {
     using Tcomplex = std::complex<double>;
     Eigen::Matrix3Xd k_vectors;             //!< k-vectors, 3xK
     Eigen::VectorXd Aks;                    //!< 1xK for update optimization (see Eq.24, DOI:10.1063/1.481216)
-    Eigen::VectorXcd Q_ion, Q_dipole;       //!< Complex 1xK vectors
-    double r_cutoff = 0;                    //!< Real-space cutoff
-    double n_cutoff = 0;                    //!< Inverse space cutoff
+    Eigen::VectorXcd Q_ion;                 //!< Complex 1xK vectors
+    Eigen::VectorXcd Q_dipole;              //!< Complex 1xK vectors
+    double realspace_cutoff = 0;            //!< Real-space cutoff
+    double invspace_cutoff = 0;             //!< Inverse space cutoff
     double surface_dielectric_constant = 0; //!< Surface dielectric constant;
     double bjerrum_length = 0;              //!< Bjerrum length
     double kappa = 0;                       //!< Inverse Debye screening length
     double kappa_squared = 0;               //!< Squared inverse Debye screening length
     double alpha = 0;
-    double const_inf = 0;
-    double check_k2_zero = 0;
+    double check_k2_zero = 0; //!< @todo coule be calc. on the fly
     bool use_spherical_sum = true;
-    int num_kvectors = 0;
-    Point box_length = {0.0, 0.0, 0.0};                        //!< Box dimensions
+    int num_kvectors = 0;                                                 //!< @todo is this really needed?
+    Point box_length = {0.0, 0.0, 0.0};                                   //!< Box dimensions
     enum Policies { PBC, PBCEigen, IPBC, IPBCEigen, METALSLIT, INVALID }; //!< Possible k-space updating schemes
-    Policies policy = PBC;                                     //!< Policy for updating k-space
-    explicit EwaldData(const json& j);                         //!< Initialize from json
-    void sync(const EwaldData& other, const Change& change);   //!< Sync with another dataset
+    Policies policy = PBC;                                                //!< Policy for updating k-space
+    explicit EwaldData(const json& j);                                    //!< Initialize from json
+    void sync(const EwaldData& other, const Change& change);              //!< Sync with another dataset
+    bool tinfoilSurrounding() const; //!< Check for metallic or "tinfoil" surroundings (inf. dielectric)
 };
 
 NLOHMANN_JSON_SERIALIZE_ENUM(EwaldData::Policies, {
@@ -132,17 +133,23 @@ class EwaldPolicyBase {
   public:
     std::string cite; //!< Optional reference, preferably DOI, to further information
     virtual ~EwaldPolicyBase() = default;
-    virtual void updateBox(EwaldData&, const Point&) const = 0; //!< Prepare k-vectors according to given box vector
-    virtual void updateComplex(EwaldData& d,
+    virtual void updateBox(EwaldData& ewald_data,
+                           const Point&) const = 0; //!< Prepare k-vectors according to given box vector
+
+    virtual void updateComplex(EwaldData& ewald_data,
                                const Space::GroupVector& groups) const = 0; //!< Update all k vectors
+
     virtual void updateComplexOptimized(
-        EwaldData& d, const Change& change, const Space::GroupVector& groups,
+        EwaldData& ewald_data, const Change& change, const Space::GroupVector& groups,
         const Space::GroupVector& oldgroups) const = 0; //!< Update subset of k vectors. Require `old` pointer
-    virtual double selfEnergy(const EwaldData& d, Change& change,
+
+    virtual double selfEnergy(const EwaldData& ewald_data, Change& change,
                               Space::GroupVector& groups) = 0; //!< Self energy contribution due to a change
-    virtual double surfaceEnergy(const EwaldData& d, const Change& change,
+
+    virtual double surfaceEnergy(const EwaldData& ewald_data, const Change& change,
                                  const Space::GroupVector& groups) = 0; //!< Surface energy contribution due to a change
-    virtual double reciprocalEnergy(const EwaldData& d) = 0;            //!< Total reciprocal energy
+
+    virtual double reciprocalEnergy(const EwaldData& ewald_data) = 0; //!< Total reciprocal energy
 
     /**
      * @brief Represent charges and positions using an Eigen facade (Map)

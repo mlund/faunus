@@ -24,21 +24,19 @@ namespace Faunus::Energy {
 
 EwaldData::EwaldData(const json &j) {
     alpha = j.at("alpha");                          // damping-parameter
-    r_cutoff = j.at("cutoff");                      // real space cut-off
-    n_cutoff = j.at("ncutoff");                     // reciprocal space cut-off
+    realspace_cutoff = j.at("cutoff");              // real space cut-off
+    invspace_cutoff = j.at("ncutoff");              // reciprocal space cut-off
     use_spherical_sum = j.value("spherical_sum", true); // Using spherical summation of k-vectors in reciprocal space?
-    bjerrum_length = pc::bjerrumLength(j.at("epsr"));
+    bjerrum_length = pc::bjerrumLength(j.at("epsr").get<double>());
     surface_dielectric_constant = j.value("epss", 0.0); // dielectric constant of surrounding medium
-    const_inf =
-        (surface_dielectric_constant < 1) ? 0 : 1; // if unphysical (<1) use epsr infinity for surrounding medium
     kappa = j.value("kappa", 0.0);
     kappa_squared = kappa * kappa;
 
     if (j.count("kcutoff")) {
         faunus_logger->warn("`kcutoff` is deprecated, use `ncutoff` instead");
-        n_cutoff = j.at("kcutoff");
+        invspace_cutoff = j.at("kcutoff").get<double>();
     } else {
-        n_cutoff = j.at("ncutoff");
+        invspace_cutoff = j.at("ncutoff").get<double>();
     }
     if (j.value("ipbc", false)) { // look for legacy bool `ipbc`
         faunus_logger->warn("key `ipbc` is deprecated, use `ewaldscheme: ipbc` instead");
@@ -63,12 +61,16 @@ void EwaldData::sync(const EwaldData& other, const Change& change) {
     }
 }
 
+bool EwaldData::tinfoilSurrounding() const {
+    return surface_dielectric_constant < 1.0 || std::isinf(surface_dielectric_constant);
+}
+
 void to_json(json& j, const EwaldData& ewald_data) {
     j = {{"lB", ewald_data.bjerrum_length},
          {"epss", ewald_data.surface_dielectric_constant},
          {"alpha", ewald_data.alpha},
-         {"cutoff", ewald_data.r_cutoff},
-         {"ncutoff", ewald_data.n_cutoff},
+         {"cutoff", ewald_data.realspace_cutoff},
+         {"ncutoff", ewald_data.invspace_cutoff},
          {"wavefunctions", ewald_data.k_vectors.cols()},
          {"spherical_sum", ewald_data.use_spherical_sum},
          {"kappa", ewald_data.kappa},
@@ -84,7 +86,7 @@ TEST_CASE("[Faunus] Ewald - EwaldData") {
                 "ncutoff": 11.0, "spherical_sum": true, "cutoff": 5.0})"_json);
 
     CHECK(data.policy == EwaldData::PBC);
-    CHECK(data.const_inf == 1);
+    CHECK(data.tinfoilSurrounding() == false);
     CHECK(data.alpha == 0.894427190999916);
 
     // Check number of wave-vectors using PBC
@@ -130,7 +132,7 @@ PolicyIonIonIPBC::PolicyIonIonIPBC() { cite = "doi:10/css8"; }
 void PolicyIonIon::updateBox(EwaldData& ewald_data, const Point& box) const {
     assert(d.policy == EwaldData::PBC or d.policy == EwaldData::PBCEigen);
     ewald_data.box_length = box;
-    int n_cutoff_ceil = ceil(ewald_data.n_cutoff);
+    int n_cutoff_ceil = ceil(ewald_data.invspace_cutoff);
     ewald_data.check_k2_zero = 0.1 * std::pow(2 * pc::pi / ewald_data.box_length.maxCoeff(), 2);
     int k_vector_size = (2 * n_cutoff_ceil + 1) * (2 * n_cutoff_ceil + 1) * (2 * n_cutoff_ceil + 1) - 1;
     if (k_vector_size == 0) {
@@ -142,7 +144,7 @@ void PolicyIonIon::updateBox(EwaldData& ewald_data, const Point& box) const {
         ewald_data.Q_ion.resize(1);
         ewald_data.Q_dipole.resize(1);
     } else {
-        double nc2 = ewald_data.n_cutoff * ewald_data.n_cutoff;
+        double nc2 = ewald_data.invspace_cutoff * ewald_data.invspace_cutoff;
         ewald_data.k_vectors.resize(3, k_vector_size);
         ewald_data.Aks.resize(k_vector_size);
         ewald_data.num_kvectors = 0;
@@ -331,7 +333,7 @@ TEST_CASE("[Faunus] Ewald - IonIonPolicy Benchmarks") {
 void PolicyIonIonIPBC::updateBox(EwaldData &data, const Point &box) const {
     assert(data.policy == EwaldData::IPBC or data.policy == EwaldData::IPBCEigen);
     data.box_length = box;
-    int ncc = std::ceil(data.n_cutoff);
+    int ncc = std::ceil(data.invspace_cutoff);
     data.check_k2_zero = 0.1 * std::pow(2 * pc::pi / data.box_length.maxCoeff(), 2);
     int k_vector_size = (2 * ncc + 1) * (2 * ncc + 1) * (2 * ncc + 1) - 1;
     if (k_vector_size == 0) {
@@ -343,7 +345,7 @@ void PolicyIonIonIPBC::updateBox(EwaldData &data, const Point &box) const {
         data.Q_ion.resize(1);
         data.Q_dipole.resize(1);
     } else {
-        double nc2 = data.n_cutoff * data.n_cutoff;
+        double nc2 = data.invspace_cutoff * data.invspace_cutoff;
         data.k_vectors.resize(3, k_vector_size);
         data.Aks.resize(k_vector_size);
         data.num_kvectors = 0;
@@ -429,21 +431,21 @@ void PolicyIonIonIPBC::updateComplexOptimized(EwaldData& d, const Change& change
 }
 
 /**
- * @note The surface energy cannot be calculated for a partial change due to
- *       the squared `qr`. Hence the `change` object is ignored.
+ * @note The surface energy cannot be calculated for a partial change due to the squared `qr`.
  */
-double PolicyIonIon::surfaceEnergy(const EwaldData& data, [[maybe_unused]] const Change& change,
+double PolicyIonIon::surfaceEnergy(const EwaldData& ewald_data, const Change& change,
                                    const Space::GroupVector& groups) {
-    namespace rv = ranges::cpp20::views;
-    if (data.const_inf < 0.5 || change.empty()) {
+    if (change.empty() || ewald_data.tinfoilSurrounding()) {
         return 0.0;
     }
-    const auto volume = data.box_length.prod();
+    namespace rv = ranges::cpp20::views;
     auto charge_x_position = [](const Particle& particle) -> Point { return particle.charge * particle.pos; };
     auto qr_range = groups | rv::join | rv::transform(charge_x_position);
-    const auto qr_squared = ranges::accumulate(qr_range, Point(0, 0, 0)).squaredNorm();
-    return data.const_inf * 2.0 * pc::pi / ((2.0 * data.surface_dielectric_constant + 1.0) * volume) * qr_squared *
-           data.bjerrum_length;
+    const auto qr_squared = ranges::accumulate(qr_range, Point(0.0, 0.0, 0.0)).squaredNorm();
+
+    const auto volume = ewald_data.box_length.prod();
+    return 2.0 * pc::pi / ((2.0 * ewald_data.surface_dielectric_constant + 1.0) * volume) * qr_squared *
+           ewald_data.bjerrum_length;
 }
 
 double PolicyIonIon::selfEnergy(const EwaldData& ewald_data, Change& change, Space::GroupVector& groups) {

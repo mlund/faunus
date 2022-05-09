@@ -136,20 +136,22 @@ void PolicyIonIon::updateBox(EwaldData &d, const Point &box) const {
         d.Aks.setZero();
         int start_value = 1;
         for (int nx = 0; nx <= n_cutoff_ceil; nx++) {
-            double dnx2 = double(nx * nx);
-            double factor = (nx > 0) ? 2.0 : 1.0; // optimization of PBC Ewald (and
-                                                  // always the case for IPBC Ewald)
+            const auto dnx2 = double(nx * nx);
+            const auto factor = (nx > 0) ? 2.0 : 1.0; // optimization of PBC Ewald (and
+                                                      // always the case for IPBC Ewald)
             for (int ny = -n_cutoff_ceil * start_value; ny <= n_cutoff_ceil; ny++) {
-                double dny2 = double(ny * ny);
+                const auto dny2 = double(ny * ny);
                 for (int nz = -n_cutoff_ceil * start_value; nz <= n_cutoff_ceil; nz++) {
                     Point kv = 2 * pc::pi * Point(nx, ny, nz).cwiseQuotient(d.box_length);
-                    double k2 = kv.squaredNorm() + d.kappa_squared; // last term is only for Yukawa-Ewald
-                    if (k2 < d.check_k2_zero)                       // Check if k2 != 0
+                    const auto k2 = kv.squaredNorm() + d.kappa_squared; // last term is only for Yukawa-Ewald
+                    if (k2 < d.check_k2_zero) {                         // Check if k2 != 0
                         continue;
+                    }
                     if (d.use_spherical_sum) {
-                        double dnz2 = double(nz * nz);
-                        if ((dnx2 + dny2 + dnz2) / nc2 > 1)
+                        const auto dnz2 = double(nz * nz);
+                        if ((dnx2 + dny2 + dnz2) / nc2 > 1) {
                             continue;
+                        }
                     }
                     d.k_vectors.col(d.num_kvectors) = kv;
                     d.Aks[d.num_kvectors] = factor * exp(-k2 / (4 * d.alpha * d.alpha)) / k2;
@@ -168,17 +170,12 @@ void PolicyIonIon::updateBox(EwaldData &d, const Point &box) const {
  * @todo Add OpenMP pragma to first loop
  */
 void PolicyIonIon::updateComplex(EwaldData& data, const Space::GroupVector& groups) const {
+    namespace rv = ranges::cpp20::views;
     for (int k = 0; k < data.k_vectors.cols(); k++) {
         const Point &q = data.k_vectors.col(k);
-        EwaldData::Tcomplex Q(0, 0);
-        for (auto &g : groups) {       // loop over molecules
-            for (auto &particle : g) { // loop over active particles
-                double qr = q.dot(particle.pos);
-                Q += particle.charge * EwaldData::Tcomplex(std::cos(qr),
-                                                           std::sin(qr)); // 'Q^q', see eq. 25 in ref.
-            }
-        }
-        data.Q_ion[k] = Q;
+        auto positions = groups | rv::join | rv::transform(&Particle::pos);
+        auto charge = groups | rv::join | rv::transform(&Particle::charge);
+        data.Q_ion[k] = sumq(q, ranges::view::zip(positions, charge));
     }
 }
 
@@ -196,20 +193,20 @@ void PolicyIonIon::updateComplex(EwaldData& d, const Change& change, const Space
         auto &Q = d.Q_ion[k];
         const Point &q = d.k_vectors.col(k);
 
-        for (auto &changed_group : change.groups) {
-            auto& g_new = groups.at(changed_group.group_index);
-            auto& g_old = oldgroups.at(changed_group.group_index);
+        for (const auto& changed_group : change.groups) {
+            const auto& g_new = groups.at(changed_group.group_index);
+            const auto& g_old = oldgroups.at(changed_group.group_index);
             const auto max_group_size = std::max(g_new.size(), g_old.size());
             auto indices = (changed_group.all) ? ranges::cpp20::views::iota(0u, max_group_size) |
                                                      ranges::to<std::vector<Change::index_type>>
                                                : changed_group.relative_atom_indices;
             for (auto i : indices) {
                 if (i < g_new.size()) {
-                    double qr = q.dot(g_new[i].pos);
+                    const auto qr = q.dot(g_new[i].pos);
                     Q += g_new[i].charge * EwaldData::Tcomplex(std::cos(qr), std::sin(qr));
                 }
                 if (i < g_old.size()) {
-                    double qr = q.dot(g_old[i].pos);
+                    const auto qr = q.dot(g_old[i].pos);
                     Q -= g_old[i].charge * EwaldData::Tcomplex(std::cos(qr), std::sin(qr));
                 }
             }
@@ -233,16 +230,16 @@ TEST_CASE("[Faunus] Ewald - IonIonPolicy") {
     auto data = static_cast<EwaldData>(R"({
                 "epsr": 1.0, "alpha": 0.894427190999916, "epss": 1.0,
                 "ncutoff": 11.0, "spherical_sum": true, "cutoff": 5.0})"_json);
-    Change c;
-    c.everything = true;
+    Change change;
+    change.everything = true;
     data.policy = EwaldData::PBC;
 
     SUBCASE("PBC") {
         PolicyIonIon ionion;
         ionion.updateBox(data, spc.geometry.getLength());
         ionion.updateComplex(data, spc.groups);
-        CHECK(ionion.selfEnergy(data, c, spc.groups) == Approx(-1.0092530088080642 * data.bjerrum_length));
-        CHECK(ionion.surfaceEnergy(data, c, spc.groups) == Approx(0.0020943951023931952 * data.bjerrum_length));
+        CHECK(ionion.selfEnergy(data, change, spc.groups) == Approx(-1.0092530088080642 * data.bjerrum_length));
+        CHECK(ionion.surfaceEnergy(data, change, spc.groups) == Approx(0.0020943951023931952 * data.bjerrum_length));
         CHECK(ionion.reciprocalEnergy(data) == Approx(0.21303063979675319 * data.bjerrum_length));
     }
 
@@ -250,8 +247,8 @@ TEST_CASE("[Faunus] Ewald - IonIonPolicy") {
         PolicyIonIonEigen ionion;
         ionion.updateBox(data, spc.geometry.getLength());
         ionion.updateComplex(data, spc.groups);
-        CHECK(ionion.selfEnergy(data, c, spc.groups) == Approx(-1.0092530088080642 * data.bjerrum_length));
-        CHECK(ionion.surfaceEnergy(data, c, spc.groups) == Approx(0.0020943951023931952 * data.bjerrum_length));
+        CHECK(ionion.selfEnergy(data, change, spc.groups) == Approx(-1.0092530088080642 * data.bjerrum_length));
+        CHECK(ionion.surfaceEnergy(data, change, spc.groups) == Approx(0.0020943951023931952 * data.bjerrum_length));
         CHECK(ionion.reciprocalEnergy(data) == Approx(0.21303063979675319 * data.bjerrum_length));
     }
 
@@ -260,8 +257,8 @@ TEST_CASE("[Faunus] Ewald - IonIonPolicy") {
         data.policy = EwaldData::IPBC;
         ionion.updateBox(data, spc.geometry.getLength());
         ionion.updateComplex(data, spc.groups);
-        CHECK(ionion.selfEnergy(data, c, spc.groups) == Approx(-1.0092530088080642 * data.bjerrum_length));
-        CHECK(ionion.surfaceEnergy(data, c, spc.groups) == Approx(0.0020943951023931952 * data.bjerrum_length));
+        CHECK(ionion.selfEnergy(data, change, spc.groups) == Approx(-1.0092530088080642 * data.bjerrum_length));
+        CHECK(ionion.surfaceEnergy(data, change, spc.groups) == Approx(0.0020943951023931952 * data.bjerrum_length));
         CHECK(ionion.reciprocalEnergy(data) == Approx(0.0865107467 * data.bjerrum_length));
     }
 
@@ -281,18 +278,18 @@ TEST_CASE("[Faunus] Ewald - IonIonPolicy Benchmarks") {
     Space spc;
     spc.geometry = R"( {"type": "cuboid", "length": 80} )"_json;
     spc.particles.resize(200);
-    for (auto& p : spc.particles) {
-        p.charge = 1.0;
-        p.pos = (random() - 0.5) * spc.geometry.getLength();
+    for (auto& particle : spc.particles) {
+        particle.charge = 1.0;
+        particle.pos = (random() - 0.5) * spc.geometry.getLength();
     }
-    Group g(0, spc.particles.begin(), spc.particles.end());
-    spc.groups.push_back(g);
+    Group group(0, spc.particles.begin(), spc.particles.end());
+    spc.groups.push_back(group);
 
     EwaldData data(R"({
                 "epsr": 1.0, "alpha": 0.894427190999916, "epss": 1.0,
                 "ncutoff": 11.0, "spherical_sum": true, "cutoff": 9.0})"_json);
-    Change c;
-    c.everything = true;
+    Change change;
+    change.everything = true;
     data.policy = EwaldData::PBC;
 
     {
@@ -336,23 +333,26 @@ void PolicyIonIonIPBC::updateBox(EwaldData &data, const Point &box) const {
         data.Aks.setZero();
         int start_value = 0;
         for (int nx = 0; nx <= ncc; nx++) {
-            double dnx2 = double(nx * nx);
+            const auto dnx2 = double(nx * nx);
             double xfactor = (nx > 0) ? 2.0 : 1.0; // optimization of PBC Ewald
             for (int ny = -ncc * start_value; ny <= ncc; ny++) {
-                double dny2 = double(ny * ny);
-                double yfactor = (ny > 0) ? 2.0 : 1.0; // optimization of PBC Ewald
+                const auto dny2 = double(ny * ny);
+                const auto yfactor = (ny > 0) ? 2.0 : 1.0; // optimization of PBC Ewald
                 for (int nz = -ncc * start_value; nz <= ncc; nz++) {
                     double factor = xfactor * yfactor;
-                    if (nz > 0)
-                        factor *= 2;
-                    Point kv = 2 * pc::pi * Point(nx, ny, nz).cwiseQuotient(data.box_length);
-                    double k2 = kv.squaredNorm() + data.kappa_squared; // last term is only for Yukawa-Ewald
-                    if (k2 < data.check_k2_zero)                       // Check if k2 != 0
+                    if (nz > 0) {
+                        factor *= 2.0;
+                    }
+                    Point kv = 2.0 * pc::pi * Point(nx, ny, nz).cwiseQuotient(data.box_length);
+                    const auto k2 = kv.squaredNorm() + data.kappa_squared; // last term is only for Yukawa-Ewald
+                    if (k2 < data.check_k2_zero) {                         // Check if k2 != 0
                         continue;
+                    }
                     if (data.use_spherical_sum) {
-                        double dnz2 = double(nz * nz);
-                        if ((dnx2 + dny2 + dnz2) / nc2 > 1)
+                        const auto dnz2 = double(nz * nz);
+                        if ((dnx2 + dny2 + dnz2) / nc2 > 1) {
                             continue;
+                        }
                     }
                     data.k_vectors.col(data.num_kvectors) = kv;
                     data.Aks[data.num_kvectors] = factor * exp(-k2 / (4 * data.alpha * data.alpha)) / k2;
@@ -372,10 +372,8 @@ void PolicyIonIonIPBC::updateComplex(EwaldData& d, const Space::GroupVector& gro
     for (int k = 0; k < d.k_vectors.cols(); k++) {
         const Point &q = d.k_vectors.col(k);
         EwaldData::Tcomplex Q(0, 0);
-        for (auto &g : groups) {
-            for (auto &particle : g) {
-                Q += q.cwiseProduct(particle.pos).array().cos().prod() * particle.charge; // see eq. 2 in doi:10/css8
-            }
+        for (const auto& particle : groups | ranges::cpp20::views::join) {
+            Q += q.cwiseProduct(particle.pos).array().cos().prod() * particle.charge; // see eq. 2 in doi:10/css8
         }
         d.Q_ion[k] = Q;
     }
@@ -397,14 +395,16 @@ void PolicyIonIonIPBC::updateComplex(EwaldData& d, const Change& change, const S
     for (int k = 0; k < d.k_vectors.cols(); k++) {
         auto &Q = d.Q_ion[k];
         const Point &q = d.k_vectors.col(k);
-        for (auto &changed_group : change.groups) {
-            auto& g_new = groups.at(changed_group.group_index);
-            auto& g_old = oldgroups.at(changed_group.group_index);
+        for (const auto& changed_group : change.groups) {
+            const auto& g_new = groups.at(changed_group.group_index);
+            const auto& g_old = oldgroups.at(changed_group.group_index);
             for (auto i : changed_group.relative_atom_indices) {
-                if (i < g_new.size())
+                if (i < g_new.size()) {
                     Q += q.cwiseProduct(g_new[i].pos).array().cos().prod() * g_new[i].charge;
-                if (i < g_old.size())
+                }
+                if (i < g_old.size()) {
                     Q -= q.cwiseProduct(g_old[i].pos).array().cos().prod() * g_old[i].charge;
+                }
             }
         }
     }
@@ -432,28 +432,32 @@ double PolicyIonIon::selfEnergy(const EwaldData& d, Change& change, Space::Group
     double charges_squared = 0;
     double charge_total = 0;
     if (change.matter_change) {
-        for (auto &changed_group : change.groups) {
-            auto& g = groups.at(changed_group.group_index);
-            for (auto i : changed_group.relative_atom_indices) {
-                if (i < g.size()) {
-                    charges_squared += std::pow(g[i].charge, 2);
-                    charge_total += g[i].charge;
+        for (const auto& changed_group : change.groups) {
+            const auto& group = groups.at(changed_group.group_index);
+            for (auto index : changed_group.relative_atom_indices) {
+                if (index < group.size()) {
+                    charges_squared += std::pow(group[index].charge, 2);
+                    charge_total += group[index].charge;
                 }
             }
         }
     } else if (change.everything and not change.volume_change) {
-        for (auto &g : groups) {
-            for (auto &particle : g) {
-                charges_squared += particle.charge * particle.charge;
-                charge_total += particle.charge;
-            }
+        for (const auto& particle : groups | ranges::cpp20::views::join) {
+            charges_squared += particle.charge * particle.charge;
+            charge_total += particle.charge;
         }
     }
-    double Vcc = -pc::pi / 2.0 / d.alpha / d.alpha / ( d.box_length[0] * d.box_length[1] * d.box_length[2] ) * charge_total * charge_total; // compensate with neutralizing background (if non-zero total charge in system)
-    double beta = d.kappa / (2.0 * d.alpha);
-    if( beta > 1e-6 )
-        Vcc *= ( 1.0 - exp( -beta * beta ) ) / beta / beta; // same as above but for Yukawa-systems
-    return ( -d.alpha * charges_squared / std::sqrt(pc::pi) * (std::exp(-beta*beta) + std::sqrt(pc::pi) * beta * std::erf(beta)) + Vcc) * d.bjerrum_length;
+    auto Vcc = -pc::pi / 2.0 / d.alpha / d.alpha / (d.box_length[0] * d.box_length[1] * d.box_length[2]) *
+               charge_total *
+               charge_total; // compensate with neutralizing background (if non-zero total charge in system)
+    const auto beta = d.kappa / (2.0 * d.alpha);
+    if (beta > 1e-6) {
+        Vcc *= (1.0 - exp(-beta * beta)) / beta / beta;
+    } // same as above but for Yukawa-systems
+    return (-d.alpha * charges_squared / std::sqrt(pc::pi) *
+                (std::exp(-beta * beta) + std::sqrt(pc::pi) * beta * std::erf(beta)) +
+            Vcc) *
+           d.bjerrum_length;
 }
 
 /**

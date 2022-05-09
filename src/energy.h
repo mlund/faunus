@@ -185,7 +185,19 @@ class EwaldPolicyBase {
 /**
  * @brief Ion-Ion Ewald using periodic boundary conditions (PBC)
  */
-struct PolicyIonIon : public EwaldPolicyBase {
+class PolicyIonIon : public EwaldPolicyBase {
+  private:
+    EwaldData::Tcomplex sumq(const Point& wavevector, ranges::cpp20::range auto zipped_position_charge) const {
+        EwaldData::Tcomplex Q(0.0, 0.0);
+        for (auto [position, charge] : zipped_position_charge) { // loop over molecules
+            const auto qr = wavevector.dot(position);
+            Q += charge * EwaldData::Tcomplex(std::cos(qr),
+                                              std::sin(qr)); // 'Q^q', see eq. 25 in ref.
+        }
+        return Q;
+    }
+
+  public:
     PolicyIonIon();
     void updateBox(EwaldData& d, const Point& box) const override;
     void updateComplex(EwaldData& data, const Space::GroupVector& groups) const override;

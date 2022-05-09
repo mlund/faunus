@@ -1836,29 +1836,77 @@ double MetalSlitEwald::energy(const Change& change) {
     if (change.volume_change) {
         faunus_logger->error("{}: volume changes currently not permitted", name);
     }
-    return Ewald::energy(change) + mirrorEnergy(change);
+
+    // optimize if only a single particle has been updated
+    if (auto index_pair = change.singleParticleChange()) {
+        const auto& particle = spc.groups.at(index_pair->first).at(index_pair->second);
+        return Ewald::energy(change) + singleParticleMirrorEnergy(particle);
+    }
+
+    if (!change.everything) {
+        faunus_logger->debug("{}: partial particle update not specialized - this may be slow", name);
+    }
+    return Ewald::energy(change) + completeMirrorEnergy();
 }
 
 /**
- * @todo add ewald splitting function
- *       optimize by using change object (currently everything is recalculated -> expensive)
+ * @todo optimize by using change object (currently everything is recalculated -> expensive)
  */
-double MetalSlitEwald::mirrorEnergy([[maybe_unused]] const Change& change) const {
+double MetalSlitEwald::completeMirrorEnergy() const {
     namespace rv = ranges::cpp20::views;
     double energy = 0.0;
 
-    const auto z_length = enlarged_geometry.getLength().z();
-    auto mirror_z = [&](const Point& pos) {
+    auto mirror_z = [z_length = enlarged_geometry.getLength().z()](const Point& pos) {
         const auto mirrored_z_pos = pos.z() + (pos.z() > 0.0 ? z_length : -z_length);
         return Point(pos.x(), pos.y(), mirrored_z_pos);
     };
-    auto mirrored_positions = spc.groups | rv::join | rv::transform(&Particle::pos) | rv::transform(mirror_z);
+    auto all_particles = spc.groups | rv::join;
+    auto mirror_positions = all_particles | rv::transform(&Particle::pos) | rv::transform(mirror_z);
+    auto mirror_charges = all_particles | rv::transform(&Particle::charge);
 
-    for (const auto& mirror_position : mirrored_positions) {
-        for (const auto& particle : spc.groups | rv::join) {
-            const auto distance = enlarged_geometry.vdist(particle.pos, mirror_position).norm();
-            energy += pair_potential.ion_ion_energy(particle.charge, particle.charge, distance);
+    for (const auto [mirror_pos, mirror_charge] : ranges::view::zip(mirror_positions, mirror_charges)) {
+        for (const auto& particle : all_particles) {
+            const auto distance = enlarged_geometry.vdist(particle.pos, mirror_pos).norm();
+            energy += pair_potential.ion_ion_energy(particle.charge, mirror_charge, distance);
         }
+    }
+    return energy;
+}
+
+/**
+ * Calculates the energy of a single particle:
+ * - Particle <-> all mirror charges
+ * - all other particles <-> mirror charge of particle
+ *
+ * @param particle Changed particle
+ * @return Energy in kT
+ */
+double MetalSlitEwald::singleParticleMirrorEnergy(const Particle& particle) const {
+    namespace rv = ranges::cpp20::views;
+    double energy = 0.0;
+    auto mirror_z = [z_length = enlarged_geometry.getLength().z()](const Point& pos) {
+        const auto mirrored_z_pos = pos.z() + (pos.z() > 0.0 ? z_length : -z_length);
+        return Point(pos.x(), pos.y(), mirrored_z_pos);
+    };
+    auto all_particles = spc.groups | rv::join;
+    auto mirror_positions = all_particles | rv::transform(&Particle::pos) | rv::transform(mirror_z);
+    auto mirror_charges = all_particles | rv::transform(&Particle::charge);
+
+    // particle with all mirror charges
+    for (const auto [mirror_position, mirror_charge] : ranges::views::zip(mirror_positions, mirror_charges)) {
+        const auto distance = enlarged_geometry.vdist(particle.pos, mirror_position).norm();
+        energy += pair_potential.ion_ion_energy(particle.charge, mirror_charge, distance);
+    }
+
+    // all other particles with new mirror charge from updated particle
+    const auto mirror_position = mirror_z(particle.pos);
+    const auto mirror_charge = particle.charge;
+    for (const auto& other_particle : all_particles) {
+        if (&other_particle == &particle) {
+            continue; // interaction w. self reflection already captured in above loop
+        }
+        const auto distance = enlarged_geometry.vdist(other_particle.pos, mirror_position).norm();
+        energy += pair_potential.ion_ion_energy(other_particle.charge, mirror_charge, distance);
     }
     return energy;
 }

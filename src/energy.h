@@ -281,10 +281,11 @@ class Ewald : public Energybase {
  */
 class MetalSlitEwald : public Ewald {
   private:
-    Geometry::Slit enlarged_geometry; //!< Geometry expanded twice in z-direction (to incl. mirror charges
-    double mirrorEnergy(const Change& change) const; //!< Sum mirror charges <-> real charges interaction
-    static Point getSlitDimensions(const Space& spc);
-    CoulombGalore::Splined pair_potential; //!< Splined real space pair-potential
+    CoulombGalore::Splined pair_potential;            //!< Splined real space pair-potential
+    Geometry::Slit enlarged_geometry;                 //!< Geometry that incl. mirror charges (expanded to 2 x z)
+    static Point getSlitDimensions(const Space& spc); //!< Get box dimensions from Space
+    double completeMirrorEnergy() const;              //!< Sum mirror charges <-> real charges interaction
+    double singleParticleMirrorEnergy(const Particle& particle) const; //!< Mirror energy of single particle
 
   public:
     MetalSlitEwald(const json& j, const Space& spc);

@@ -111,6 +111,7 @@ struct EwaldData {
     enum Policies { PBC, PBCEigen, IPBC, IPBCEigen, METALSLIT, INVALID }; //!< Possible k-space updating schemes
     Policies policy = PBC;                                     //!< Policy for updating k-space
     explicit EwaldData(const json& j);                         //!< Initialize from json
+    void sync(const EwaldData& other, const Change& change);   //!< Sync with another dataset
 };
 
 NLOHMANN_JSON_SERIALIZE_ENUM(EwaldData::Policies, {
@@ -122,7 +123,7 @@ NLOHMANN_JSON_SERIALIZE_ENUM(EwaldData::Policies, {
                                                       {EwaldData::IPBCEigen, "IPBCEigen"},
                                                   })
 
-void to_json(json& j, const EwaldData& d);
+void to_json(json& j, const EwaldData& ewald_data);
 
 /**
  * @brief Base class for Ewald k-space updates policies
@@ -134,9 +135,9 @@ class EwaldPolicyBase {
     virtual void updateBox(EwaldData&, const Point&) const = 0; //!< Prepare k-vectors according to given box vector
     virtual void updateComplex(EwaldData& d,
                                const Space::GroupVector& groups) const = 0; //!< Update all k vectors
-    virtual void
-    updateComplex(EwaldData& d, const Change& change, const Space::GroupVector& groups,
-                  const Space::GroupVector& oldgroups) const = 0; //!< Update subset of k vectors. Require `old` pointer
+    virtual void updateComplexOptimized(
+        EwaldData& d, const Change& change, const Space::GroupVector& groups,
+        const Space::GroupVector& oldgroups) const = 0; //!< Update subset of k vectors. Require `old` pointer
     virtual double selfEnergy(const EwaldData& d, Change& change,
                               Space::GroupVector& groups) = 0; //!< Self energy contribution due to a change
     virtual double surfaceEnergy(const EwaldData& d, const Change& change,
@@ -186,8 +187,12 @@ class EwaldPolicyBase {
  * @brief Ion-Ion Ewald using periodic boundary conditions (PBC)
  */
 class PolicyIonIon : public EwaldPolicyBase {
-  private:
-    EwaldData::Tcomplex sumq(const Point& wavevector, ranges::cpp20::range auto zipped_position_charge) const {
+  protected:
+    /**
+     * @param wavevector q-vector
+     * @param zipped_position_charge A zipped up range with positions and charges
+     */
+    EwaldData::Tcomplex sumWavevector(const Point& wavevector, ranges::cpp20::range auto zipped_position_charge) const {
         EwaldData::Tcomplex Q(0.0, 0.0);
         for (auto [position, charge] : zipped_position_charge) { // loop over molecules
             const auto qr = wavevector.dot(position);
@@ -197,15 +202,27 @@ class PolicyIonIon : public EwaldPolicyBase {
         return Q;
     }
 
+    /**
+     * @param wavevector q-vector
+     * @param group Group of particles to sum
+     * @param indices Relative indices in group to include
+     * @param ewald_data Ewald data object
+     */
+    virtual EwaldData::Tcomplex sumWavevectorGroups(const Point& wavevector, const Group& group,
+                                                    const std::vector<Change::index_type>& indices,
+                                                    EwaldData& ewald_data) const;
+
+    virtual double selfEnergyFromChargeSums(const EwaldData& d, double charges_squared, double charge_total) const;
+
   public:
     PolicyIonIon();
-    void updateBox(EwaldData& d, const Point& box) const override;
-    void updateComplex(EwaldData& data, const Space::GroupVector& groups) const override;
-    void updateComplex(EwaldData& d, const Change& change, const Space::GroupVector& groups,
-                       const Space::GroupVector& oldgroups) const override;
-    double selfEnergy(const EwaldData& d, Change& change, Space::GroupVector& groups) override;
-    double surfaceEnergy(const EwaldData& data, const Change& change, const Space::GroupVector& groups) override;
-    double reciprocalEnergy(const EwaldData& d) override;
+    void updateBox(EwaldData& ewald_data, const Point& box) const override;
+    void updateComplex(EwaldData& ewald_data, const Space::GroupVector& groups) const override;
+    void updateComplexOptimized(EwaldData& ewald_data, const Change& change, const Space::GroupVector& groups,
+                                const Space::GroupVector& oldgroups) const override;
+    double selfEnergy(const EwaldData& ewald_data, Change& change, Space::GroupVector& groups) override;
+    double surfaceEnergy(const EwaldData& ewald_data, const Change& change, const Space::GroupVector& groups) override;
+    double reciprocalEnergy(const EwaldData& ewald_data) override;
 };
 
 /**
@@ -213,15 +230,29 @@ class PolicyIonIon : public EwaldPolicyBase {
  * @todo register image particles when updating k-vectors
  *       does it make sence to inherit from "PolicyIonIon"?
  */
-struct PolicyIonIonMetalSlit : public PolicyIonIon {
+class PolicyIonIonMetalSlit : public PolicyIonIon {
+  private:
+    /** Creates a lambda function to convert a position to it's reflection (mirror charge position) */
+    auto getMirrorLambda(const EwaldData& ewald_data) const {
+        return [z_length = ewald_data.box_length.z() * 0.5](const Point& pos) {
+            const auto mirrored_z_pos = pos.z() + (pos.z() > 0.0 ? z_length : -z_length);
+            return Point(pos.x(), pos.y(), mirrored_z_pos);
+        };
+    }
+
+  protected:
+    EwaldData::Tcomplex sumWavevectorGroups(const Point& wavevector, const Group& group,
+                                            const std::vector<Change::index_type>& indices,
+                                            EwaldData& ewald_data) const override;
+
+    double selfEnergyFromChargeSums(const EwaldData& ewald_data, double charges_squared,
+                                    double charge_total) const override;
+
+  public:
     PolicyIonIonMetalSlit();
-    void updateBox(EwaldData& d, const Point& box) const override;
-    void updateComplex(EwaldData& data, const Space::GroupVector& groups) const override;
-    void updateComplex(EwaldData& d, const Change& change, const Space::GroupVector& groups,
-                       const Space::GroupVector& oldgroups) const override;
-    double selfEnergy(const EwaldData& d, Change& change, Space::GroupVector& groups) override;
-    double surfaceEnergy(const EwaldData& data, const Change& change, const Space::GroupVector& groups) override;
-    double reciprocalEnergy(const EwaldData& d) override;
+    void updateBox(EwaldData& ewald_data, const Point& box) const override;
+    void updateComplex(EwaldData& ewald_data, const Space::GroupVector& groups) const override;
+    double surfaceEnergy(const EwaldData& ewald_data, const Change& change, const Space::GroupVector& groups) override;
 };
 
 /**
@@ -236,9 +267,9 @@ struct PolicyIonIonMetalSlit : public PolicyIonIon {
  * - GCC9: Eigen is 4-5 times faster on x86 linux; ~1.5 times *lower on macos.
  */
 struct PolicyIonIonEigen : public PolicyIonIon {
-    using PolicyIonIon::updateComplex;
-    void updateComplex(EwaldData&, const Space::GroupVector&) const override;
-    double reciprocalEnergy(const EwaldData &) override;
+    using PolicyIonIon::updateComplexOptimized;
+    void updateComplex(EwaldData& ewald_data, const Space::GroupVector& groups) const override;
+    double reciprocalEnergy(const EwaldData& ewald_data) override;
 };
 
 /**
@@ -247,9 +278,10 @@ struct PolicyIonIonEigen : public PolicyIonIon {
 struct PolicyIonIonIPBC : public PolicyIonIon {
     using PolicyIonIon::updateComplex;
     PolicyIonIonIPBC();
-    void updateBox(EwaldData &, const Point &) const override;
-    void updateComplex(EwaldData&, const Space::GroupVector&) const override;
-    void updateComplex(EwaldData&, const Change&, const Space::GroupVector&, const Space::GroupVector&) const override;
+    void updateBox(EwaldData& ewald_data, const Point&) const override;
+    void updateComplex(EwaldData& ewald_data, const Space::GroupVector& groups) const override;
+    void updateComplexOptimized(EwaldData& ewald_data, const Change& change, const Space::GroupVector& groups,
+                                const Space::GroupVector& oldgroups) const override;
 };
 
 /**
@@ -257,8 +289,8 @@ struct PolicyIonIonIPBC : public PolicyIonIon {
  * @warning Incomplete and under construction
  */
 struct PolicyIonIonIPBCEigen : public PolicyIonIonIPBC {
-    using PolicyIonIonIPBC::updateComplex;
-    void updateComplex(EwaldData&, const Space::GroupVector&) const override;
+    using PolicyIonIonIPBC::updateComplexOptimized;
+    void updateComplex(EwaldData& ewald_data, const Space::GroupVector& groups) const override;
 };
 
 /**

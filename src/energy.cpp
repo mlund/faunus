@@ -1812,10 +1812,17 @@ MetalSlitEwald::MetalSlitEwald(const json& j, const Space& spc)
         policy = std::make_unique<PolicyIonIonMetalSlit>();
     }
 
+    updateEnlargedGeometry(spc);
+    policy->updateBox(data, enlarged_geometry.getLength()); // Ewald data must have enlarged box information
+}
+
+/**
+ * The `enlarged_geometry` is set to 2 x the z-direction of the given Space
+ */
+void MetalSlitEwald::updateEnlargedGeometry(const Space& spc) {
     auto slit_dimensions = getSlitDimensions(spc);
     slit_dimensions.z() *= 2.0;
     enlarged_geometry.setLength(slit_dimensions);
-    policy->updateBox(data, slit_dimensions); // Ewald data must have enlarged box information
 }
 
 /**
@@ -1875,6 +1882,7 @@ double MetalSlitEwald::completeMirrorEnergy() const {
 
 /**
  * Calculates the energy of a single particle:
+ *
  * - Particle <-> all mirror charges
  * - all other particles <-> mirror charge of particle
  *
@@ -1909,6 +1917,18 @@ double MetalSlitEwald::singleParticleMirrorEnergy(const Particle& particle) cons
         energy += pair_potential.ion_ion_energy(other_particle.charge, mirror_charge, distance);
     }
     return energy;
+}
+
+void MetalSlitEwald::updateState(const Change& change) {
+    if (change) {
+        if (!change.groups.empty() && old_groups && !change.everything && !change.volume_change) {
+            policy->updateComplex(data, change, spc.groups, *old_groups); // partial update (fast)
+        } else {                                                          // full update (slow)
+            updateEnlargedGeometry(spc);
+            policy->updateBox(data, enlarged_geometry.getLength());
+            policy->updateComplex(data, spc.groups);
+        }
+    }
 }
 
 } // end of namespace Faunus::Energy

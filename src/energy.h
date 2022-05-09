@@ -277,11 +277,14 @@ class Ewald : public Energybase {
  * The only thing we need to do here, is to add the real <-> imaginary interaction.
  * The reciprocal part is fully captured by the base class
  */
-class MetallicEwald : public Ewald {
+class MetalSlitEwald : public Ewald {
+  private:
+    double mirrorEnergy(const Change& change); //!< Sum mirror charges <-> real charges interaction
+    Geometry::Slit enlarged_geometry;          //!< Geometry expanded twice in z-direction (to incl. mirror charges
   public:
-    MetallicEwald(const json& j, const Space& spc);
-
+    MetalSlitEwald(const json& j, const Space& spc);
     double energy(const Change& change) override;
+    void sync(Energybase* energybase, const Change& change) override;
 };
 
 /**

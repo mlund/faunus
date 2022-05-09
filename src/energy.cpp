@@ -132,7 +132,7 @@ PolicyIonIonIPBC::PolicyIonIonIPBC() { cite = "doi:10/css8"; }
  * Resize k-vectors according to current variables and box length
  */
 void PolicyIonIon::updateBox(EwaldData& ewald_data, const Point& box) const {
-    assert(d.policy == EwaldData::PBC or d.policy == EwaldData::PBCEigen);
+    assert(ewald_data.policy == EwaldData::PBC or ewald_data.policy == EwaldData::PBCEigen);
     ewald_data.box_length = box;
     int n_cutoff_ceil = ceil(ewald_data.invspace_cutoff);
     ewald_data.check_k2_zero = 0.1 * std::pow(2 * pc::pi / ewald_data.box_length.maxCoeff(), 2);
@@ -194,7 +194,7 @@ void PolicyIonIon::updateComplex(EwaldData& ewald_data, const Space::GroupVector
         const Point& q = ewald_data.k_vectors.col(k);
         auto positions = groups | rv::join | rv::transform(&Particle::pos);
         auto charge = groups | rv::join | rv::transform(&Particle::charge);
-        ewald_data.Q_ion[k] = sumWavevector(q, ranges::view::zip(positions, charge));
+        ewald_data.Q_ion[k] = sumWavevector(q, ranges::views::zip(positions, charge));
     }
 }
 
@@ -211,8 +211,8 @@ EwaldData::Tcomplex PolicyIonIon::sumWavevectorGroups(const Point& wavevector, c
                                                       [[maybe_unused]] EwaldData& ewald_data) const {
     namespace rv = ranges::cpp20::views;
     auto new_indices = indices | rv::filter([&](auto i) { return i < group.size(); }) | ranges::to_vector;
-    return sumWavevector(wavevector, ranges::view::zip(group[new_indices] | rv::transform(&Particle::pos),
-                                                       group[new_indices] | rv::transform(&Particle::charge)));
+    return sumWavevector(wavevector, ranges::views::zip(group[new_indices] | rv::transform(&Particle::pos),
+                                                        group[new_indices] | rv::transform(&Particle::charge)));
 }
 
 void PolicyIonIon::updateComplexOptimized(EwaldData& ewald_data, const Change& change, const Space::GroupVector& groups,
@@ -1778,8 +1778,8 @@ void PolicyIonIonMetalSlit::updateComplex(EwaldData& ewald_data, const Space::Gr
         auto mirror_positions = positions | rv::transform(mirror_z);
         auto charges = groups | rv::join | rv::transform(&Particle::charge);
         // Operate on both original and mirrored positions (concatenated) and zip with charges
-        ewald_data.Q_ion[k] = sumWavevector(q, ranges::view::zip(ranges::views::concat(positions, mirror_positions),
-                                                                 ranges::views::concat(charges, charges)));
+        ewald_data.Q_ion[k] = sumWavevector(q, ranges::views::zip(ranges::views::concat(positions, mirror_positions),
+                                                                  ranges::views::concat(charges, charges)));
     }
 }
 
@@ -1803,8 +1803,8 @@ EwaldData::Tcomplex PolicyIonIonMetalSlit::sumWavevectorGroups(const Point& wave
     auto charges = group[new_indices] | rv::transform(&Particle::charge);
     auto mirror_positions = positions | rv::transform(mirror_z);
 
-    return sumWavevector(wavevector, ranges::view::zip(ranges::views::concat(positions, mirror_positions),
-                                                       ranges::views::concat(charges, charges)));
+    return sumWavevector(wavevector, ranges::views::zip(ranges::views::concat(positions, mirror_positions),
+                                                        ranges::views::concat(charges, charges)));
 }
 
 /** Overrides to include mirror charges (i.e. double up) */
@@ -1910,7 +1910,7 @@ double MetalSlitEwald::completeMirrorEnergy() const {
     auto mirror_positions = all_particles | rv::transform(&Particle::pos) | rv::transform(mirror_z);
     auto mirror_charges = all_particles | rv::transform(&Particle::charge);
 
-    for (const auto [mirror_pos, mirror_charge] : ranges::view::zip(mirror_positions, mirror_charges)) {
+    for (const auto [mirror_pos, mirror_charge] : ranges::views::zip(mirror_positions, mirror_charges)) {
         for (const auto& particle : all_particles) {
             const auto distance = enlarged_geometry.vdist(particle.pos, mirror_pos).norm();
             energy += pair_potential.ion_ion_energy(particle.charge, mirror_charge, distance);

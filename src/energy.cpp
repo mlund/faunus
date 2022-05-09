@@ -1744,24 +1744,28 @@ void EnergyAccumulatorBase::to_json(json& j) const { j["summation_policy"] = sch
 // -----------------------------------------
 
 void PolicyIonIonMetalSlit::updateBox(EwaldData& d, const Point& box) const {
-    Point expanded_box = box;
-    // expand box here...
-    PolicyIonIon::updateBox(d, expanded_box);
+    // Double up z-direction to hold mirror charges
+    PolicyIonIon::updateBox(d, Point(box.x(), box.y(), 2.0 * box.z()));
 }
+
 void PolicyIonIonMetalSlit::updateComplex(EwaldData& data, const Space::GroupVector& groups) const {
     PolicyIonIon::updateComplex(data, groups);
 }
+
 void PolicyIonIonMetalSlit::updateComplex(EwaldData& d, const Change& change, const Space::GroupVector& groups,
                                              const Space::GroupVector& oldgroups) const {
     PolicyIonIon::updateComplex(d, change, groups, oldgroups);
 }
+
 double PolicyIonIonMetalSlit::selfEnergy(const EwaldData& d, Change& change, Space::GroupVector& groups) {
     return PolicyIonIon::selfEnergy(d, change, groups);
 }
+
 double PolicyIonIonMetalSlit::surfaceEnergy(const EwaldData& data, const Change& change,
                                                const Space::GroupVector& groups) {
     return PolicyIonIon::surfaceEnergy(data, change, groups);
 }
+
 double PolicyIonIonMetalSlit::reciprocalEnergy(const EwaldData& d) { return PolicyIonIon::reciprocalEnergy(d); }
 
 PolicyIonIonMetalSlit::PolicyIonIonMetalSlit()
@@ -1840,10 +1844,6 @@ Point MetalSlitEwald::getSlitDimensions(const Space& spc) {
  * Adds the reciprocal energy as well as real <-> mirror charges
  */
 double MetalSlitEwald::energy(const Change& change) {
-    if (change.volume_change) {
-        faunus_logger->error("{}: volume changes currently not permitted", name);
-    }
-
     // optimize if only a single particle has been updated
     if (auto index_pair = change.singleParticleChange()) {
         const auto& particle = spc.groups.at(index_pair->first).at(index_pair->second);
@@ -1917,18 +1917,6 @@ double MetalSlitEwald::singleParticleMirrorEnergy(const Particle& particle) cons
         energy += pair_potential.ion_ion_energy(other_particle.charge, mirror_charge, distance);
     }
     return energy;
-}
-
-void MetalSlitEwald::updateState(const Change& change) {
-    if (change) {
-        if (!change.groups.empty() && old_groups && !change.everything && !change.volume_change) {
-            policy->updateComplex(data, change, spc.groups, *old_groups); // partial update (fast)
-        } else {                                                          // full update (slow)
-            updateEnlargedGeometry(spc);
-            policy->updateBox(data, enlarged_geometry.getLength());
-            policy->updateComplex(data, spc.groups);
-        }
-    }
 }
 
 } // end of namespace Faunus::Energy

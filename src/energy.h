@@ -288,9 +288,6 @@ class MetalSlitEwald : public Ewald {
     void updateEnlargedGeometry(const Space& spc);    //!< Set enlarged slit geometry from Space
     double singleParticleMirrorEnergy(const Particle& particle) const; //!< all mirror charges <-> single particle
   public:
-    void updateState(const Change& change) override; //!< Specialized since the box-length must be 2 times z
-
-  public:
     MetalSlitEwald(const json& j, const Space& spc);
     double energy(const Change& change) override;
 };

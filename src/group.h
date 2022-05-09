@@ -235,7 +235,7 @@ class Group : public ElasticRange<Particle> {
 
     /**
      * @brief Returns i'th element in group
-     * @param i index starting at zero
+     * @param index index starting at zero
      * @return reference to value at i'th element
      * @note No range-checking and i must be in interval `[0:size[`
      */
@@ -243,7 +243,7 @@ class Group : public ElasticRange<Particle> {
 
     /**
      * @brief Returns i'th element in group
-     * @param i index starting at zero
+     * @param index index starting at zero
      * @return reference to value at i'th element
      * @note No range-checking and i must be in interval `[0:size[`
      */
@@ -251,14 +251,14 @@ class Group : public ElasticRange<Particle> {
 
     /**
      * @brief Returns i'th element in group
-     * @param i index starting at zero
+     * @param index index starting at zero
      * @return reference to value at i'th element
      */
     Particle& at(size_t index);
 
     /**
      * @brief Returns i'th element in group
-     * @param i index starting at zero
+     * @param index index starting at zero
      * @return reference to value at i'th element
      */
     const Particle& at(size_t index) const;

@@ -38,9 +38,10 @@ void to_json(json &j, const ClusterShapeAnalysis &shape) {
 FindCluster::FindCluster(const Space& spc, const json& j)
     : spc(spc) {
     single_layer = j.value("single_layer", false);
-    if (j.count("spread")) {
+    if (j.contains("spread")) {
         faunus_logger->error("cluster: 'spread' is deprecated, use 'single_layer' instead");
     }
+    use_mass_center_threshold = j.value("com", true);
     molecule_names = j.at("molecules").get<decltype(molecule_names)>(); // molecule names
     molids = Faunus::names2ids(Faunus::molecules, molecule_names);      // names --> molids
     std::sort(molids.begin(), molids.end());
@@ -52,9 +53,20 @@ FindCluster::FindCluster(const Space& spc, const json& j)
 }
 
 double FindCluster::clusterProbability(const Group& group1, const Group& group2) const {
-    if (!group1.empty() and !group2.empty()) {
-        if (spc.geometry.sqdist(group1.mass_center, group2.mass_center) <= thresholds_squared(group1.id, group2.id)) {
-            return 1.0;
+    if (group1.empty() || group2.empty()) {
+        return 0.0;
+    }
+
+    if (use_mass_center_threshold) {
+        const auto mass_center_sepatation_squared = spc.geometry.sqdist(group1.mass_center, group2.mass_center);
+        return static_cast<double>(mass_center_sepatation_squared <= thresholds_squared(group1.id, group2.id));
+    }
+
+    for (auto& particle_1 : group1) {
+        for (auto& particle_2 : group2) {
+            if (spc.geometry.sqdist(particle_1.pos, particle_2.pos) <= thresholds_squared(group1.id, group2.id)) {
+                return 1.0;
+            }
         }
     }
     return 0.0;
@@ -196,6 +208,7 @@ std::pair<std::vector<size_t>, bool> FindCluster::findCluster(size_t seed_index)
 
 void to_json(json &j, const FindCluster &cluster) {
     j["single_layer"] = cluster.single_layer;
+    j["com"] = cluster.use_mass_center_threshold;
     auto &_j = j["threshold"];
     for (const auto k : cluster.molids) {
         for (const auto l : cluster.molids) {

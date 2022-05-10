@@ -782,6 +782,7 @@ properties:
                             items: {type: string}
                             type: array
                         spread: {type: boolean}
+                        com: {type: boolean, default: true, description: "use mass-center distance threshold"}
                         analysis:
                             type: object
                             description: "Shape analysis"

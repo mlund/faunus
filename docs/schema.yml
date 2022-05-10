@@ -940,7 +940,7 @@ properties:
                     properties:
                         nstep: {type: integer}
                         nskip: {type: integer, default: 0, description: Initial steps to skip}
-                        file: {type: string, description: "Stream of matrices with group properties"}
+                        file: {type: string, description: "Stream of matrices with group properties", pattern: "(.*?)\\.(mtx|mtx.gz)$"}
                         property:
                             type: string
                             enum: [energy, com_distance]

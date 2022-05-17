@@ -308,6 +308,12 @@ std::function<double(const Group&, const Group&)> createGroupGroupProperty(const
             return std::sqrt(spc.geometry.sqdist(group_1.mass_center, group_2.mass_center));
         };
     }
+    if (name == "com_distance") { // mass-center distance
+        return [&](const Group& group_1, const Group& group_2) {
+            assert(group_1.massCenter().has_value() && group_2.massCenter().has_value());
+            return std::sqrt(spc.geometry.sqdist(group_1.mass_center, group_2.mass_center));
+        };
+    }    
     throw ConfigurationError("unknown property: {}", name);
 }
 

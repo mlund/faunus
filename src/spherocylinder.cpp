@@ -682,6 +682,41 @@ CigarWithCigar<PatchPotential, CylinderPotential>::CigarWithCigar()
 
 template class CigarWithCigar<CosAttractMixed, WeeksChandlerAndersen>; // explicit initialization
 
+TEST_CASE("[Faunus] CigarWithCigar") {
+    using CigarCigar = CigarWithCigar<CosAttractMixed, WeeksChandlerAndersen>;
+
+    // Check that we use same temperature as R. Vacha. Note also that the epsilon value
+    // in his code is in kT per nanometer.
+    CHECK(1.4_kT / 1.0_kJmol == doctest::Approx(3.47056));
+
+    // the Faunus epsilon value is in kJ/mol/Å
+    Faunus::atoms = R"([
+             { "A": { "sigma": 10.0, "eps": 0.347056, "rc": 11.2246205, "wc": 10.0, "psc": {"length": 60, "type": "capped", "patch_angle": 80, "patch_angle_switch": 5.0} } },
+             { "B": { "sigma": 10.0, "eps": 0.347056 } }
+             ])"_json.get<decltype(atoms)>();
+
+    Particle a;
+    Particle b;
+    a.createExtension();
+    b.createExtension();
+    a = Faunus::atoms.at(0);
+    b = Faunus::atoms.at(0);
+
+    SUBCASE("maximum contact attraction") {
+        // place two parallel CPSC in contact and with patches facing each other
+        auto pairpot = CigarCigar(R"( {"cos2": {"mixing": "LB"}, "wca": {"mixing": "LB"}} )"_json);
+        const auto& atom_data = Faunus::atoms.at(0); // atom type "A"
+        Point psc_dir = {0.0, 1.0, 0.0};             // ↑
+        Point patch_dir = {1.0, 0.0, 0.0};           // →
+        a.getExt().setDirections(atom_data.sphero_cylinder, psc_dir, patch_dir);
+        b.getExt().setDirections(atom_data.sphero_cylinder, psc_dir, -patch_dir);
+        a.pos = {0.0, 0.0, 0.0};
+        b.pos = {atom_data.sigma, 0.0, 0.0}; // place a and b at contact
+        Point separation = a.pos - b.pos;
+        CHECK(pairpot(a, b, separation.squaredNorm(), separation) == doctest::Approx(-8.26)); // kT
+    }
+}
+
 // -----------------------------
 
 template <RequirePairPotential PatchPotential, RequirePairPotential CylinderPotential,

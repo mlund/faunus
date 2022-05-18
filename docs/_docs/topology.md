@@ -122,6 +122,8 @@ or a capped variant where the patch stops before the caps (○◼○).
 The `coswca-psc` potential can handle mixtures of PSCs and spherical particles.
 When a spherical particle interacts with the PSC, the closest distances to the patch and excluded volume
 are used to evaluate the attractive and repulsive energy.
+For the patch-patch interaction, the `eps` value is is regarded as `kJ/mol/Å` whereby longer patch contacts
+will automatically interact stronger.
 
 `psc`                  | Description
 ---------------------- | -------------------------------------------------

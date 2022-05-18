@@ -1763,6 +1763,17 @@ void EnergyAccumulatorBase::to_json(json& j) const { j["summation_policy"] = sch
 
 // -----------------------------------------
 
+/*
+* The only difference from ordinary Ewald is that the reciprocal energy is divided by 2
+*/
+double PolicyIonIonMetalSlit::reciprocalEnergy(const EwaldData& ewald_data) {
+    double energy = 0.0;
+    for (int k = 0; k < ewald_data.Q_ion.size(); k++) {
+        energy += ewald_data.Aks[k] * std::norm(ewald_data.Q_ion[k]);
+    }
+    return pc::pi * energy * ewald_data.bjerrum_length / ewald_data.volume();
+}
+
 void PolicyIonIonMetalSlit::updateBox(EwaldData& ewald_data, const Point& box) const {
     // Double up z-direction to hold mirror charges
     PolicyIonIon::updateBox(ewald_data, {box.x(), box.y(), 2.0 * box.z()});
@@ -1777,9 +1788,11 @@ void PolicyIonIonMetalSlit::updateComplex(EwaldData& ewald_data, const Space::Gr
         auto positions = groups | rv::join | rv::transform(&Particle::pos);
         auto mirror_positions = positions | rv::transform(mirror_z);
         auto charges = groups | rv::join | rv::transform(&Particle::charge);
+        //Mirror charges should be inverted
+        auto mirror_charges = charges | rv::transform([](auto charge){ return -charge; });
         // Operate on both original and mirrored positions (concatenated) and zip with charges
         ewald_data.Q_ion[k] = sumWavevector(q, ranges::views::zip(ranges::views::concat(positions, mirror_positions),
-                                                                  ranges::views::concat(charges, charges)));
+                                                                  ranges::views::concat(charges, mirror_charges)));
     }
 }
 
@@ -1801,25 +1814,32 @@ EwaldData::Tcomplex PolicyIonIonMetalSlit::sumWavevectorGroups(const Point& wave
     auto mirror_z = getMirrorLambda(ewald_data);
     auto positions = group[new_indices] | rv::transform(&Particle::pos);
     auto charges = group[new_indices] | rv::transform(&Particle::charge);
+    auto mirror_charges = charges | rv::transform([](auto charge){ return -charge; });
     auto mirror_positions = positions | rv::transform(mirror_z);
 
     return sumWavevector(wavevector, ranges::views::zip(ranges::views::concat(positions, mirror_positions),
-                                                        ranges::views::concat(charges, charges)));
+                                                        ranges::views::concat(charges, mirror_charges)));
 }
 
-/** Overrides to include mirror charges (i.e. double up) */
+/*
+* charge_total is always zero due to image charges
+* Only the "real" self terms should be included, hence maybe no override is needed?
+*/
 double PolicyIonIonMetalSlit::selfEnergyFromChargeSums(const EwaldData& ewald_data, double charges_squared,
                                                        double charge_total) const {
-    return PolicyIonIon::selfEnergyFromChargeSums(ewald_data, 2.0 * charges_squared, 2.0 * charge_total);
+    return PolicyIonIon::selfEnergyFromChargeSums(ewald_data, charges_squared, 0.0);
 }
 
 TEST_CASE("[Faunus] Ewald - PolicyIonIonMetalSlit") {
     using doctest::Approx;
     Space spc;
-    spc.particles.resize(2);
-    spc.geometry = R"( {"type": "slit", "length": 10} )"_json;
-    spc.particles.at(0) = R"( {"id": 0, "pos": [0,0,0], "q": 1.0} )"_json;
-    spc.particles.at(1) = R"( {"id": 0, "pos": [1,0,0], "q": -1.0} )"_json;
+    spc.particles.resize(4);
+    spc.geometry = R"( {"type": "slit", "length": [10, 10, 10]} )"_json;
+    spc.particles.at(0) = R"( {"id": 0, "pos": [0, 0,0], "q":  1.0} )"_json;
+    spc.particles.at(1) = R"( {"id": 0, "pos": [1, 0,0], "q": -1.0} )"_json;
+    spc.particles.at(2) = R"( {"id": 0, "pos": [0, 1,1], "q":  1.0} )"_json;
+    spc.particles.at(3) = R"( {"id": 0, "pos": [0,-1,0], "q":  1.0} )"_json;
+
     if (Faunus::molecules.empty()) {
         Faunus::molecules.resize(1);
     }
@@ -1827,20 +1847,19 @@ TEST_CASE("[Faunus] Ewald - PolicyIonIonMetalSlit") {
     spc.groups.push_back(g);
 
     auto data = static_cast<EwaldData>(R"({
-                "epsr": 1.0, "alpha": 0.894427190999916, "epss": 1.0,
-                "ncutoff": 11.0, "spherical_sum": true, "cutoff": 5.0})"_json);
+                "epsr": 1.0, "alpha": 0.628258, "epss": 0.0,
+                "ncutoff": 11.0, "spherical_sum": false, "cutoff": 5.0})"_json);
     Change c;
     c.everything = true;
     data.policy = EwaldData::METALSLIT;
     auto box_length = spc.geometry.getLength();
-    box_length.z() *= 2.0;
-
     PolicyIonIonMetalSlit policy;
     policy.updateBox(data, box_length);
     policy.updateComplex(data, spc.groups);
-    //    CHECK(policy.selfEnergy(data, c, spc.groups) == Approx(-1.0092530088080642 * data.bjerrum_length));
-    //    CHECK(policy.surfaceEnergy(data, c, spc.groups) == Approx(0.0020943951023931952 * data.bjerrum_length));
-    //    CHECK(policy.reciprocalEnergy(data) == Approx(0.21303063979675319 * data.bjerrum_length));
+
+    CHECK(policy.surfaceEnergy(data, c, spc.groups) / data.bjerrum_length == Approx(0.0));
+    CHECK(policy.selfEnergy(data, c, spc.groups) / data.bjerrum_length == Approx(-1.417826477522185));
+    CHECK(policy.reciprocalEnergy(data) / data.bjerrum_length == Approx(1.1742208217440058));
 }
 
 // -----------------------------------------
@@ -1916,7 +1935,7 @@ double MetalSlitEwald::completeMirrorEnergy() const {
             energy += pair_potential.ion_ion_energy(particle.charge, mirror_charge, distance);
         }
     }
-    return energy;
+    return 0.5 * energy;
 }
 
 /**
@@ -1941,9 +1960,11 @@ double MetalSlitEwald::singleParticleMirrorEnergy(const Particle& particle) cons
         const auto distance = enlarged_geometry.vdist(particle.pos, mirror_position).norm();
         energy += pair_potential.ion_ion_energy(particle.charge, mirror_charge, distance);
     }
-
+    const auto dist = enlarged_geometry.vdist(particle.pos, mirror_z(particle.pos)).norm();
+    energy += 0.5 * pair_potential.ion_ion_energy(particle.charge, -particle.charge, dist);
     // all other particles with new mirror charge from updated particle
-    const auto mirror_position = mirror_z(particle.pos);
+
+    /*const auto mirror_position = mirror_z(particle.pos);
     const auto mirror_charge = particle.charge;
     for (const auto& other_particle : all_particles) {
         if (&other_particle == &particle) {
@@ -1951,7 +1972,7 @@ double MetalSlitEwald::singleParticleMirrorEnergy(const Particle& particle) cons
         }
         const auto distance = enlarged_geometry.vdist(other_particle.pos, mirror_position).norm();
         energy += pair_potential.ion_ion_energy(other_particle.charge, mirror_charge, distance);
-    }
+    }*/
     return energy;
 }
 

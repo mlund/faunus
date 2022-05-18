@@ -239,7 +239,7 @@ class PolicyIonIonMetalSlit : public PolicyIonIon {
     /** Creates a lambda function to convert a position to it's reflection (mirror charge position) */
     auto getMirrorLambda(const EwaldData& ewald_data) const {
         return [z_length = ewald_data.box_length.z() * 0.5](const Point& pos) {
-            const auto mirrored_z_pos = pos.z() + (pos.z() > 0.0 ? z_length : -z_length);
+            const auto mirrored_z_pos = (pos.z() > 0.0 ? z_length : -z_length) - pos.z();
             return Point(pos.x(), pos.y(), mirrored_z_pos);
         };
     }
@@ -258,6 +258,7 @@ class PolicyIonIonMetalSlit : public PolicyIonIon {
     void updateBox(EwaldData& ewald_data, const Point& box) const override;
     void updateComplex(EwaldData& ewald_data, const Space::GroupVector& groups) const override;
     double surfaceEnergy(const EwaldData& ewald_data, const Change& change, const Space::GroupVector& groups) override;
+    double reciprocalEnergy(const EwaldData& ewald_data) override;
 };
 
 /**

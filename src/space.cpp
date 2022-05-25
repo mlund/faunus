@@ -150,38 +150,41 @@ Space::GroupType& Space::addGroup(MoleculeData::index_type molid, const Particle
  * - implicit molecules
  */
 void Space::sync(const Space &other, const Change &change) {
-    if (&other != this && !change.empty()) {
-        assert(!groups.empty());
-        assert(particles.size() == other.particles.size());
-        assert(groups.size() == other.groups.size());
-        assert(implicit_reservoir.size() == other.implicit_reservoir.size());
-        if (change.volume_change or change.everything) {
-            geometry = other.geometry; // copy simulation geometry
-        }
-        if (change.everything) {                                            // deep copy *everything*
-            implicit_reservoir = other.implicit_reservoir;                  // copy all implicit molecules
-            particles = other.particles;                                    // copy all positions
-            groups = other.groups;                                          // copy all groups
-            assert(particles.begin() != other.particles.begin());           // check deep copy problem
-            assert(groups.front().begin() != other.groups.front().begin()); // check deep copy problem
-        } else {
-            for (const auto &changed : change.groups) {             // look over changed groups
-                auto& group = groups.at(changed.group_index);       // old group
-                auto& other_group = other.groups.at(changed.group_index); // new group
-                assert(group.id == other_group.id);
-                if (group.traits().isImplicit()) { // the molecule is implicit
-                    implicit_reservoir[group.id] = other.implicit_reservoir.at(group.id);
-                } else if (changed.all) {
-                    group = other_group;            // copy everything
-                } else {                            // copy only a subset
-                    group.shallowCopy(other_group); // copy group data but *not* particles
-                    for (auto i : changed.relative_atom_indices) { // loop over atom index (rel. to group)
-                        group.at(i) = other_group.at(i); // deep copy select particles
-                    }
+    if (&other == this || change.empty()) {
+        return;
+    }
+    if (particles.size() != other.particles.size() || groups.size() != other.groups.size() ||
+        implicit_reservoir.size() != other.implicit_reservoir.size()) {
+        throw std::runtime_error("space sync error");
+    }
+    if (change.volume_change or change.everything) {
+        geometry = other.geometry; // copy simulation geometry
+    }
+    if (change.everything) {                                            // deep copy *everything*
+        implicit_reservoir = other.implicit_reservoir;                  // copy all implicit molecules
+        particles = other.particles;                                    // copy all positions
+        groups = other.groups;                                          // copy all groups
+        assert(particles.begin() != other.particles.begin());           // check deep copy problem
+        assert(groups.front().begin() != other.groups.front().begin()); // check deep copy problem
+    } else {
+        for (const auto& changed : change.groups) {                   // look over changed groups
+            auto& group = groups.at(changed.group_index);             // old group
+            auto& other_group = other.groups.at(changed.group_index); // new group
+            assert(group.id == other_group.id);
+            if (group.traits().isImplicit()) { // the molecule is implicit
+                implicit_reservoir[group.id] = other.implicit_reservoir.at(group.id);
+            } else if (changed.all) {
+                group = other_group;                           // copy everything
+            } else {                                           // copy only a subset
+                group.shallowCopy(other_group);                // copy group data but *not* particles
+                for (auto i : changed.relative_atom_indices) { // loop over atom index (rel. to group)
+                    group.at(i) = other_group.at(i);           // deep copy select particles
                 }
             }
         }
     }
+    // apply registered triggers
+    ranges::cpp20::for_each(onSyncTriggers, [&](auto& trigger) { trigger(*this, other, change); });
 }
 
 /**
@@ -341,6 +344,10 @@ std::size_t Space::getFirstActiveParticleIndex(const GroupType& group) const {
 
 size_t Space::countAtoms(AtomData::index_type atomid) const {
     return ranges::cpp20::count_if(activeParticles(), [&](auto& particle) { return particle.id == atomid; });
+}
+
+void Space::updateInternalState(const Change& change) {
+    std::for_each(changeTriggers.begin(), changeTriggers.end(), [&](auto& trigger) { trigger(*this, change); });
 }
 
 TEST_CASE("Space::numParticles") {

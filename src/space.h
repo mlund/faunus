@@ -98,7 +98,7 @@ class Space {
     std::map<MoleculeData::index_type, std::size_t> implicit_reservoir;
 
     std::vector<ChangeTrigger> changeTriggers; //!< Call when a Change object is applied (unused)
-    std::vector<SyncTrigger> onSyncTriggers;   //!< Call when two Space objects are synched (unused)
+    std::vector<SyncTrigger> onSyncTriggers; //!< Every element called after two Space objects are synched with `sync()`
 
   public:
     ParticleVector particles;                            //!< All particles are stored here!
@@ -174,6 +174,19 @@ class Space {
         std::for_each(affected_groups.begin(), affected_groups.end(),
                       [&](Group& group) { group.updateMassCenter(geometry.getBoundaryFunc(), group.begin()->pos); });
     }
+
+    /**
+     * @brief This will make sure that the internal state is updated to reflect a change.
+     *
+     * Typically this is called after a modification of the system, e.g. a MC move and will update the following:
+     *
+     * - mass centers;
+     * - particle trackers
+     * - cell lists
+     *
+     * @todo Under construction and currently not in use
+     */
+    void updateInternalState(const Change& change);
 
     //! Iterable range of all particle positions
     auto positions() const {

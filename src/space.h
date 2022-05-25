@@ -251,6 +251,19 @@ class Space {
     auto activeParticles() const { return groups | ranges::cpp20::views::join; } //!< Range with all active particles
 
     /**
+     * @brief Get the index of a given particle, if it belongs to Space
+     * @param particle Particle to get index of
+     * @return Optional index if particle is part of space
+     */
+    std::optional<ParticleVector::size_type> toIndex(const Particle& particle) const {
+        const auto index = std::addressof(particle) - std::addressof(particles.at(0));
+        if (index < 0 || index >= particles.size()) {
+            return std::nullopt;
+        }
+        return static_cast<ParticleVector::size_type>(index);
+    }
+
+    /**
      * @brief Get vector of indices of given range of particles
      * @returns std::vector of indices pointing to Space::particles
      * @throw std::out_of_range if any particle in range does not belong to Space::particles

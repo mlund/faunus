@@ -1735,4 +1735,9 @@ void EnergyAccumulatorBase::from_json(const json& j) {
 
 void EnergyAccumulatorBase::to_json(json& j) const { j["summation_policy"] = scheme; }
 
+void EnergyAccumulatorBase::updateState([[maybe_unused]] const Change& change) {}
+
+void EnergyAccumulatorBase::sync([[maybe_unused]] const EnergyAccumulatorBase& other,
+                                 [[maybe_unused]] const Change& change) {}
+
 } // end of namespace Faunus::Energy

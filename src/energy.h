@@ -371,6 +371,8 @@ class PairEnergy {
         , spc(spc)
         , potentials(potentials) {}
 
+    const Space& getSpace() const { return spc; }
+
     /**
      * @brief Computes pair potential energy.
      *
@@ -465,6 +467,8 @@ class EnergyAccumulatorBase {
     virtual EnergyAccumulatorBase& operator=(double new_value) = 0;
     virtual EnergyAccumulatorBase& operator+=(double new_value) = 0;
     virtual EnergyAccumulatorBase& operator+=(ParticlePair&& pair) = 0;
+    virtual void updateState(const Change& change); //!< If internal state needs updating with a system change
+    virtual void sync(const EnergyAccumulatorBase& other, const Change& change); //!< Sync state with other accumulator
 
     template <typename TOtherAccumulator> inline EnergyAccumulatorBase& operator+=(TOtherAccumulator& acc) {
         value += static_cast<double>(acc);
@@ -527,7 +531,7 @@ template <RequirePairEnergy PairEnergy> class InstantEnergyAccumulator : public 
  * using OpenMP; or using C++17 parallel algorithms if available.
  */
 template <RequirePairEnergy PairEnergy> class DelayedEnergyAccumulator : public EnergyAccumulatorBase {
-  private:
+  protected:
     std::vector<ParticlePair> particle_pairs;
     const PairEnergy& pair_energy; //!< recipe to compute non-bonded energy between two particles, see PairEnergy
     const size_t max_particles_in_buffer = 10000; //!< this can be modified to suit memory requirements
@@ -618,6 +622,55 @@ template <RequirePairEnergy PairEnergy> class DelayedEnergyAccumulator : public 
         return sum;
     }
 };
+
+/**
+ * @brief Energy accumulator with cell list to determine if particles are close enough to interact
+ *
+ * This is based on the delayed accumulator and will only register particles that are neighbors according to a
+ * cell list.
+ */
+template <RequirePairEnergy PairEnergy> class CellListEnergyAccumulator : public DelayedEnergyAccumulator<PairEnergy> {
+  private:
+    const Space& space; //!< Space we operate on
+
+    inline bool areNeighbors(const Particle& particle_1, const Particle& particle_2) const {
+        const auto index_1 = space.toIndex(particle_1);
+        const auto index_2 = space.toIndex(particle_2);
+        if (index_1 && index_2) {
+            // @todo if the particles are *not* in neighboring cells, return false
+        }
+        return true;
+    }
+
+  public:
+    using typename DelayedEnergyAccumulator<PairEnergy>::ParticlePair;
+
+    explicit CellListEnergyAccumulator(const PairEnergy& pair_energy, const double initial_energy = 0.0)
+        : DelayedEnergyAccumulator<PairEnergy>(pair_energy, initial_energy)
+        , space(pair_energy.getSpace()) {}
+
+    inline CellListEnergyAccumulator& operator+=(ParticlePair&& pair) override {
+        if (areNeighbors(pair.first, pair.second)) {
+            DelayedEnergyAccumulator<PairEnergy>::operator+=(pair);
+        }
+        return *this;
+    }
+
+    void updateState(const Change& change) override;
+    void sync(const EnergyAccumulatorBase& other, const Change& change) override;
+};
+
+template <RequirePairEnergy PairEnergy> void CellListEnergyAccumulator<PairEnergy>::updateState(const Change& change) {
+    // @todo Here we need to update cell list
+}
+
+template <RequirePairEnergy PairEnergy>
+void CellListEnergyAccumulator<PairEnergy>::sync(const EnergyAccumulatorBase& other,
+                                                 [[maybe_unused]] const Change& change) {
+    if (auto other_ref = dynamic_cast<decltype(*this)&>(other)) {
+        // @todo copy cell list
+    }
+}
 
 template <RequirePairEnergy TPairEnergy>
 std::unique_ptr<EnergyAccumulatorBase> createEnergyAccumulator(const json& j, const TPairEnergy& pair_energy,
@@ -1353,6 +1406,10 @@ template <RequirePairEnergy TPairEnergy, typename TPairingPolicy> class Nonbonde
         return pair_energy(particle1, particle2);
     }
 
+    void updateState(const Change& change) override;
+
+    void sync(Energybase* other_energy, const Change& change) override;
+
     double groupGroupEnergy(const Group &group1, const Group& group2) override {
         InstantEnergyAccumulator<TPairEnergy> accumulator(pair_energy);
         pairing.group2group(accumulator, group1, group2);
@@ -1400,6 +1457,22 @@ template <RequirePairEnergy TPairEnergy, typename TPairingPolicy> class Nonbonde
         }
     }
 };
+template <RequirePairEnergy TPairEnergy, typename TPairingPolicy>
+void Nonbonded<TPairEnergy, TPairingPolicy>::updateState(const Change& change) {
+    energy_accumulator->updateState(change);
+}
+
+/**
+ * If the energy accumulator depends on the system state (e.g. cell lists) then we need to sync this.
+ */
+template <RequirePairEnergy TPairEnergy, typename TPairingPolicy>
+void Nonbonded<TPairEnergy, TPairingPolicy>::sync(Energybase* other_energy, const Change& change) {
+    if (auto ptr = dynamic_cast<decltype(this)>(other_energy)) {
+        energy_accumulator->sync(*(ptr->energy_accumulator), change);
+    } else {
+        throw std::runtime_error("sync error");
+    }
+}
 
 /**
  * @brief Computes non-bonded energy contribution from changed particles. Cache group2group energy once calculated,

@@ -5,6 +5,7 @@
 #include "potentials_base.h"
 #include "sasa.h"
 #include "space.h"
+#include "celllistimpl.h"
 #include "aux/iteratorsupport.h"
 #include "aux/pairmatrix.h"
 #include "smart_montecarlo.h"
@@ -623,64 +624,15 @@ template <RequirePairEnergy PairEnergy> class DelayedEnergyAccumulator : public 
     }
 };
 
-/**
- * @brief Energy accumulator with cell list to determine if particles are close enough to interact
- *
- * This is based on the delayed accumulator and will only register particles that are neighbors according to a
- * cell list.
- */
-template <RequirePairEnergy PairEnergy> class CellListEnergyAccumulator : public DelayedEnergyAccumulator<PairEnergy> {
-  private:
-    const Space& space; //!< Space we operate on
-
-    inline bool areNeighbors(const Particle& particle_1, const Particle& particle_2) const {
-        const auto index_1 = space.toIndex(particle_1);
-        const auto index_2 = space.toIndex(particle_2);
-        if (index_1 && index_2) {
-            // @todo if the particles are *not* in neighboring cells, return false
-        }
-        return true;
-    }
-
-  public:
-    using typename DelayedEnergyAccumulator<PairEnergy>::ParticlePair;
-
-    explicit CellListEnergyAccumulator(const PairEnergy& pair_energy, const double initial_energy = 0.0)
-        : DelayedEnergyAccumulator<PairEnergy>(pair_energy, initial_energy)
-        , space(pair_energy.getSpace()) {}
-
-    inline CellListEnergyAccumulator& operator+=(ParticlePair&& pair) override {
-        if (areNeighbors(pair.first, pair.second)) {
-            DelayedEnergyAccumulator<PairEnergy>::operator+=(pair);
-        }
-        return *this;
-    }
-
-    void updateState(const Change& change) override;
-    void sync(const EnergyAccumulatorBase& other, const Change& change) override;
-};
-
-template <RequirePairEnergy PairEnergy> void CellListEnergyAccumulator<PairEnergy>::updateState(const Change& change) {
-    // @todo Here we need to update cell list
-}
-
-template <RequirePairEnergy PairEnergy>
-void CellListEnergyAccumulator<PairEnergy>::sync(const EnergyAccumulatorBase& other,
-                                                 [[maybe_unused]] const Change& change) {
-    if (auto other_ref = dynamic_cast<decltype(*this)&>(other)) {
-        // @todo copy cell list
-    }
-}
-
 template <RequirePairEnergy TPairEnergy>
 std::unique_ptr<EnergyAccumulatorBase> createEnergyAccumulator(const json& j, const TPairEnergy& pair_energy,
-                                                               double initial_value) {
+                                                               double initial_energy) {
     std::unique_ptr<EnergyAccumulatorBase> accumulator;
     if (j.value("summation_policy", EnergyAccumulatorBase::Scheme::SERIAL) != EnergyAccumulatorBase::Scheme::SERIAL) {
-        accumulator = std::make_unique<DelayedEnergyAccumulator<TPairEnergy>>(pair_energy, initial_value);
+        accumulator = std::make_unique<DelayedEnergyAccumulator<TPairEnergy>>(pair_energy, initial_energy);
         faunus_logger->debug("activated delayed energy summation");
     } else {
-        accumulator = std::make_unique<InstantEnergyAccumulator<TPairEnergy>>(pair_energy, initial_value);
+        accumulator = std::make_unique<InstantEnergyAccumulator<TPairEnergy>>(pair_energy, initial_energy);
         faunus_logger->debug("activated instant energy summation");
     }
     accumulator->from_json(j);

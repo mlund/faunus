@@ -184,10 +184,11 @@ template <typename TGridType> class GridBase : public virtual AbstractGrid<TGrid
         updateCellGrid(box);
     }
 
-  protected:
-    const CellCoord& getCellListEnd() const { return cell_list_end; }
     const Point& getBox() const { return box; }
     const Point& getCell() const { return cell; }
+
+  protected:
+    const CellCoord& getCellListEnd() const { return cell_list_end; }
 
   private:
     CellCoord cell_list_end; //!< last adressable coordinates in each direction, i.e., (last_x+1, last_y+1, …)

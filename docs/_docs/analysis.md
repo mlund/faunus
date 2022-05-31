@@ -299,6 +299,7 @@ Note that inactive groups are always excluded from the analysis.
 -------------- | ---------------------------------------
 `energy`       | Sum of nonbonded energy terms in (_kT_)
 `com_distance` | Mass center distance (Å)
+`min_distance` | Minimum distance between particles (Å)
 
 The data is streamed in the sparse [Matrix Market format](https://math.nist.gov/MatrixMarket/formats.html)
 and can be further reduced by applying an optional `filter` defined by an

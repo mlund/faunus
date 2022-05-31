@@ -308,10 +308,16 @@ std::function<double(const Group&, const Group&)> createGroupGroupProperty(const
             return std::sqrt(spc.geometry.sqdist(group_1.mass_center, group_2.mass_center));
         };
     }
-    if (name == "com_distance") { // mass-center distance
+    if (name == "min_distance") { // mass-center distance
         return [&](const Group& group_1, const Group& group_2) {
-            assert(group_1.massCenter().has_value() && group_2.massCenter().has_value());
-            return std::sqrt(spc.geometry.sqdist(group_1.mass_center, group_2.mass_center));
+            double min_dist = 1e9;
+            for (auto &particle1 : group_1) {
+                for (auto &particle2 : group_2) {
+                    auto dist = spc.geometry.sqdist(particle1.pos, particle2.pos);
+                    min_dist = std::min(min_dist, dist);
+                }
+            }
+            return std::sqrt(min_dist));
         };
     }    
     throw ConfigurationError("unknown property: {}", name);

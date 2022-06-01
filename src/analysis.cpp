@@ -288,6 +288,10 @@ void SystemEnergy::_to_disk() {
 
 // --------------------------------
 
+/**
+ * Returns a lambda function that calculates a scalar property for a pair of groups.
+ * This can be their interaction energy; mass-center distance etc.
+ */
 std::function<double(const Group&, const Group&)> createGroupGroupProperty(const json& j, const Space& spc,
                                                                            Energy::Hamiltonian& hamiltonian) {
     const auto name = j.at("property").get<std::string>();
@@ -303,11 +307,23 @@ std::function<double(const Group&, const Group&)> createGroupGroupProperty(const
         };
     }
     if (name == "com_distance") { // mass-center distance
-        return [&](const Group& group_1, const Group& group_2) {
+        return [&geometry = spc.geometry](auto& group_1, auto& group_2) {
             assert(group_1.massCenter().has_value() && group_2.massCenter().has_value());
-            return std::sqrt(spc.geometry.sqdist(group_1.mass_center, group_2.mass_center));
+            return std::sqrt(geometry.sqdist(group_1.mass_center, group_2.mass_center));
         };
     }
+    if (name == "min_distance") { // minimum distance between two groups
+        return [&geometry = spc.geometry](auto& group_1, auto& group_2) {
+            auto minimum = pc::infty;
+            for (auto &particle_i : group_1) {
+                for (auto &particle_j : group_2) {
+                    auto squared_distance = geometry.sqdist(particle_i.pos, particle_j.pos);
+                    minimum = std::min(minimum, squared_distance);
+                }
+            }
+            return std::sqrt(minimum);
+        };
+    }    
     throw ConfigurationError("unknown property: {}", name);
 }
 

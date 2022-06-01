@@ -944,7 +944,7 @@ properties:
                         file: {type: string, description: "Stream of matrices with group properties", pattern: "(.*?)\\.(mtx|mtx.gz)$"}
                         property:
                             type: string
-                            enum: [energy, com_distance]
+                            enum: [energy, com_distance, min_distance]
                             description: "Property to report"
                         filter:
                             type: string

@@ -1,6 +1,7 @@
 #include "analysis.h"
 #include "move.h"
 #include "energy.h"
+#include "nonbonded/nonbonded.h"
 #include "penalty.h"
 #include "reactioncoordinate.h"
 #include "multipole.h"

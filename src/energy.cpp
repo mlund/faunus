@@ -1,4 +1,5 @@
 #include "energy.h"
+#include "nonbonded/nonbonded.h"
 #include "penalty.h"
 #include "potentials.h"
 #include "externalpotential.h"

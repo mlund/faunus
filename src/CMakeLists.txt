@@ -67,6 +67,7 @@ set(hdrs analysis.h average.h atomdata.h auxiliary.h bonds.h celllist.h celllist
 	molecule.h montecarlo.h move.h mpicontroller.h particle.h penalty.h potentials_base.h potentials.h
 	reactioncoordinate.h rotate.h sasa.h smart_montecarlo.h space.h speciation.h spherocylinder.h
         random.h regions.h tensor.h units.h aux/arange.h
+        nonbonded/accumulate.h nonbonded/nonbonded.h nonbonded/sum_by_group_policy.h
 	aux/eigen_cerealisation.h aux/eigensupport.h aux/iteratorsupport.h aux/matrixmarket.h aux/multimatrix.h
 	aux/eigen_cerealisation.h aux/eigensupport.h aux/equidistant_table.h aux/error_function.h
 	aux/exp_function.h aux/invsqrt_function.h aux/iteratorsupport.h aux/legendre.h aux/multimatrix.h

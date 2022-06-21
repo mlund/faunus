@@ -61,6 +61,24 @@ void Change::sanityCheck(const std::vector<Group>& group_vector) const {
     }
 }
 
+/**
+ * @brief Determines if the change reflects a single particle change
+ * @return Optional pair with index of group (first) and relative particle index (second) in the group
+ *
+ * Since single particle updates are frequently used, this convenience function helps
+ * to establish if this is the case.
+ */
+std::optional<std::pair<Change::index_type, Change::index_type>> Change::singleParticleChange() const {
+    if (!everything || !volume_change) {
+        if (groups.size() == 1 && groups.front().relative_atom_indices.size() == 1) {
+            const auto group_index = groups.front().group_index;
+            const auto particle_index = groups.front().relative_atom_indices.front();
+            return std::make_pair(group_index, particle_index);
+        }
+    }
+    return std::nullopt;
+}
+
 void to_json(json& j, const Change::GroupChange& group_change) {
     j = {{"all", group_change.all},           {"internal", group_change.internal},
          {"dNswap", group_change.dNswap},     {"dNatomic", group_change.dNatomic},

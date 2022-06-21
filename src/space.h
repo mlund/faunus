@@ -48,6 +48,8 @@ struct Change {
 
     std::vector<GroupChange> groups; //!< Touched groups by index in group vector
 
+    std::optional<std::pair<index_type, index_type>> singleParticleChange() const;
+
     //! List of moved groups (index)
     inline auto touchedGroupIndex() const { return ranges::cpp20::views::transform(groups, &GroupChange::group_index); }
 

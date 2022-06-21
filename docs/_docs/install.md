@@ -28,14 +28,17 @@ is not on Conda, consider an alternative method below.
 ## Docker
 
 We provide a [`Dockerfile`](https://github.com/mlund/faunus/blob/master/scripts/Dockerfile)
-that builds the main branch in a [Jupyter](https://jupyter.org) environment:
+that builds the main branch in a [Jupyter](https://jupyter.org) environment.
+The following downloads the Dockerfile; builds the image; and startup a JupyterLab
+session in Docker on port 8888:
 
 ~~~ bash
 curl -s https://raw.githubusercontent.com/mlund/faunus/master/scripts/Dockerfile | docker build -t faunuslab -
 docker run -it -p 8888:8888 faunuslab # open generated url in a browser
 ~~~
 
-Once running, you may alias the Docker-side faunus command:
+Once running, you may alias the Docker-side faunus command so that it can be accessed from
+the host side:
 
 ~~~ bash
 alias faunus='docker exec --interactive -u 1000 faunuslab faunus'
@@ -46,13 +49,13 @@ faunus < input.json # piping input to docker
 ## Build from source code
 
 Faunus is continuously [tested](https://app.travis-ci.com/github/mlund/faunus) on macOS/Linux,
-but compile on most unix operating systems, including the Windows Subsystem for Linus (WSL).
+but compile on most unix operating systems, including the Windows Subsystem for Linux (WSL).
 
 ### Requirements
 
 - CMake 3.16+
 - C++20 compiler (clang, g++, intel ixpc, ...)
-- Python 3.6+ with the following packages:
+- Python 3.7+ with the following packages:
   - `jinja2`, `ruamel_yaml` or `yaml`
 
 The following are optional:
@@ -72,7 +75,7 @@ and build using cmake:
 ~~~ bash
 cd faunus
 cmake . [OPTIONS]
-make faunus
+make faunus -j
 make usagetips # requires `pandoc`, `pypandoc`, `BeautifulSoup4`
 ~~~
 

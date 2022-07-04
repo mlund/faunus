@@ -150,18 +150,19 @@ make clean
 rm -fR CMakeCache.txt CMakeFiles _deps
 ~~~
 
-### Intel Threading Building Blocks
+### Intel Threading Building Blocks (TBB)
 
-If `ENABLE_TBB=on`, TBB may be used for threaded simulations which may or may not be
-advantageous, depending on the system.
-By default, an unspecified and possibly outdated version of TBB will be downloaded and build.
-Alternatively you can use an existing installation _via_ `TBB_DIR`:
+To use C++ parallel algorithms, some compilers require linkage with TBB.
+If so, an error may occur during linking.
+To fix this, install TBB with `apt`, `brew`, `conda` etc. and pass it
+to CMake like this:
 
 ~~~ bash
 cmake -DENABLE_TBB=on -DTBB_DIR={tbb-root}/lib/cmake/TBB
 ~~~
 
-where `{tbb-root}` is the installation directory of TBB, _e.g._ `/usr/local`.
+where `{tbb-root}` is the installation directory of TBB, _e.g._
+`/usr/local` or `/opt/homebrew`.
 
 # Development
 

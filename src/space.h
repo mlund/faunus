@@ -258,14 +258,14 @@ class Space {
      * @throw std::out_of_range if any particle in range does not belong to Space::particles
      */
     template <std::integral index_type = int> auto toIndices(const RequireParticles auto& particle_range) const {
-        return particle_range | ranges::cpp20::views::transform([&](const Particle& particle) {
-                   const auto index = std::addressof(particle) - std::addressof(particles.at(0));
-                   if (index < 0 || index >= particles.size()) {
-                       throw std::out_of_range("particle range outside Space");
-                   }
-                   return static_cast<index_type>(index);
-               }) |
-               ranges::to_vector;
+        auto to_index = [&](auto& particle) {
+            const auto index = std::addressof(particle) - std::addressof(particles.at(0));
+            if (index < 0 || index >= particles.size()) {
+                throw std::out_of_range("particle range outside Space");
+            }
+            return static_cast<index_type>(index);
+        };
+        return particle_range | ranges::cpp20::views::transform(to_index) | ranges::to_vector;
     }
 
     /**

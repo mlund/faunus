@@ -1,33 +1,48 @@
 #!/usr/bin/env yason.py
-temperature: 300
+temperature: 298
 random: {seed: fixed}
-geometry: {type: slit, length: [20.0, 20.0, 20.0]}
-mcloop: {macro: 10, micro: 100}
+geometry: {type: slit, length: [200.0, 200.0, 145.0]}
+mcloop: {macro: 20, micro: 100}
 
 atomlist:
-  - na+: {q: 1.0, sigma: 4.0, eps: 1.0, mw: 1.0, dp: 10}
-  - cl-: {q: -1.0,  sigma: 4.0, eps: 1.0, mw: 1.0, dp: 10}
+  - na+: {q:  2.0,  sigma: 5.0, eps: 1.0, mw: 1.0, dp: 10}
+  - cl-: {q: -1.0,  sigma: 5.0, eps: 1.0, mw: 1.0, dp: 10}
 
 moleculelist:
-  - salt: {atoms: [na+, cl-], atomic: true}
+  - Na+: {atoms: [na+], atomic: true}
+  - Cl-: {atoms: [cl-], atomic: true}
 
 insertmolecules:
-    - salt: {N: 50}
+    - Na+: {N: 164}
+    - Cl-: {N: 257}
 
 energy:
-    - nonbonded_coulomblj:
-        lennardjones: {mixing: LB}
-        coulomb: {type: ewald, epsr: 20, cutoff: 9, ncutoff: 7.3, epss: 0, alpha: 0.2, ewaldscheme: METALSLIT}
-        cutoff_g2g: 10
+    - nonbonded:
+        default:
+        - hardsphere: {}
+        - coulomb: {type: ewald, epsr: 78.3, cutoff: 72.5, ncutoff: 5, epss: 0, alpha: 0.045, ewaldscheme: METALSLIT}
+    - customexternal:
+        molecules: [Na+, Cl-]
+        com: false
+        constants: {boxwidth: 145, radius: 2.5}
+        function: >
+            if ( z - radius < -0.5 * boxwidth )
+              inf;
+            else if ( z + radius > 0.5 * boxwidth)
+              inf;
+            else
+              0;
 
 moves:
-    - transrot: {molecule: salt}
+    - transrot: {molecule: Na+}
+    - transrot: {molecule: Cl-}
 
 analysis:
     - sanity: {nstep: 100}
     - savestate: {file: confout.pqr}
     - savestate: {file: state.json}
     - systemenergy: {file: energy.dat.gz, nstep: 50}
+    - sliceddensity: {file: densP.dat, atoms: [na+], dz: 0.1, nstep: 2}
+    - sliceddensity: {file: densN.dat, atoms: [cl-], dz: 0.1, nstep: 2}
    #- atomrdf: {file: rdf.dat, nstep: 10, dr: 0.15, name1: OW, name2: OW}
    #- xtcfile: {file: traj.xtc, nstep: 10}
-

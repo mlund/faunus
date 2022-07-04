@@ -334,11 +334,11 @@ class MetalSlitEwald : public Ewald {
     CoulombGalore::Splined pair_potential;            //!< Splined pair-potential for real <-> mirror interactions
     Geometry::Slit enlarged_geometry;                 //!< Geometry that incl. mirror charges (expanded to 2 times z)
     static Point getSlitDimensions(const Space& spc); //!< Get box dimensions from Space
-    double completeMirrorEnergy() const;              //!< all mirror charges <-> all real charges
     void updateEnlargedGeometry(const Space& spc);    //!< Set enlarged slit geometry from Space
     double singleParticleMirrorEnergy(const Particle& particle) const; //!< all mirror charges <-> single particle
   public:
     MetalSlitEwald(const json& j, const Space& spc);
+    double completeMirrorEnergy() const;              //!< all mirror charges <-> all real charges
     double energy(const Change& change) override;
 };
 

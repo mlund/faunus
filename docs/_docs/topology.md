@@ -260,9 +260,11 @@ The following keywords for each molecule type are available:
 `translate=[0,0,0]`  | Displace loaded `positions` with vector
 
 A filename with positions for the `N` molecules can be given with `positions`.
-The file must contain exactly `N`-times molecular
+The trajectory-like file must contain exactly `N` frames with molecular
 positions that must all fit within the simulation box. Only _positions_ from
 the file are copied; all other information is ignored.
+When using `positions`, `keepos` should be set to true. See also
+[this issue](https://github.com/mlund/faunus/issues/268#issuecomment-618904639) on github.
 
 For `implicit` molecules, only `N` should be given and the molecules are never
 inserted into the simulation box.

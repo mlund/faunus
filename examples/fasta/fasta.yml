@@ -1,4 +1,9 @@
 #!/usr/bin/env yason.py
+#
+# A peptide chain is generated from a FASTA sequence and
+# then titrated using a constant pH / constant salt ensemble
+# with explicit salt particles and counter-ions.
+# 
 {% set eps = 0.05 %}
 {% set pH = 7.0 %}
 {% set Cs = 0.010 %}

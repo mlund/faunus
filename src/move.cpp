@@ -1029,7 +1029,7 @@ TranslateRotate::OptionalGroup TranslateRotate::findRandomMolecule() {
 double TranslateRotate::translateMolecule(Space::GroupType& group) {
     if (translational_displacement > 0.0) { // translate
         const auto old_mass_center = group.mass_center;
-        const auto displacement_vector =
+        const Point displacement_vector =
             Faunus::randomUnitVector(slump, translational_direction) * translational_displacement * slump();
 
         group.translate(displacement_vector, spc.geometry.getBoundaryFunc());

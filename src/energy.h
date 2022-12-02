@@ -593,7 +593,7 @@ template <RequirePairEnergy PairEnergy> class DelayedEnergyAccumulator : public 
   private:
     double accumulateSerial() const {
         double sum = 0.0;
-        for (const auto [particle1, particle2] : particle_pairs) {
+        for (const auto& [particle1, particle2] : particle_pairs) {
             sum += pair_energy.potential(particle1.get(), particle2.get());
         }
         return sum;

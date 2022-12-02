@@ -139,7 +139,8 @@ scheme via different random seeds (provided that your system equilibrates quickl
 ### OpenMP
 
 Some routines in Faunus can run in parallel using multiple threads. The only prerequisite is that Faunus was
-compiled with OpenMP support (which is default). The number of threads is controlled with an environment variable.
+compiled with OpenMP support, see installation instructions.
+The number of threads is controlled with an environment variable.
 The following example demonstrates how to run Faunus using 4 threads:  
 
 ~~~ bash

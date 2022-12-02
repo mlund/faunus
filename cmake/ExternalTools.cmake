@@ -5,12 +5,12 @@ include(FetchContent)
 # CPM Packages
 ###############
 
-CPMAddPackage("gh:gabime/spdlog@1.10.0")
+CPMAddPackage("gh:gabime/spdlog@1.11.0")
 CPMAddPackage("gh:ericniebler/range-v3#d800a032132512a54c291ce55a2a43e0460591c7")
 CPMAddPackage("gh:docopt/docopt.cpp#v0.6.3")
-CPMAddPackage("gh:onqtam/doctest#v2.4.9")
+CPMAddPackage("gh:doctest/doctest#v2.4.9")
 CPMAddPackage("gh:mateidavid/zstr#v1.0.6")
-CPMAddPackage("gh:pybind/pybind11#v2.9.2")
+CPMAddPackage("gh:pybind/pybind11#v2.10.1")
 CPMAddPackage("gh:imneme/pcg-cpp#ffd522e7188bef30a00c74dc7eb9de5faff90092")
 CPMAddPackage("gh:ArashPartow/exprtk#93a9f44f99b910bfe07cd1e933371e83cea3841c")
 
@@ -20,8 +20,8 @@ CPMAddPackage(
 )
 
 CPMAddPackage(
-    NAME nlohmann_json VERSION 3.10.5
-    URL https://github.com/nlohmann/json/releases/download/v3.10.5/include.zip
+    NAME nlohmann_json VERSION 3.11.2
+    URL https://github.com/nlohmann/json/releases/download/v3.11.2/include.zip
     OPTIONS "JSON_BuildTests OFF"
 )
 
@@ -35,7 +35,7 @@ CPMAddPackage(
     OPTIONS "SKIP_PORTABILITY_TEST ON" "JUST_INSTALL_CEREAL ON"
 )
 
-CPMAddPackage("gh:pybind/pybind11_json#0.2.12")
+CPMAddPackage("gh:pybind/pybind11_json#0.2.13")
 
 
 ###################################

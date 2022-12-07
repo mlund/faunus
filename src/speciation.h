@@ -112,11 +112,16 @@ namespace Faunus::Move {
  *    - deactivate reactants
  *    - activate products
  *
+ * To avoid touching the state of MoveBase::slump, we use an internal
+ * random number generator. This is crusial for e.g. the Parallel temper
+ * move that relies MoveBase::slump to be in sync across MPI ranks.
+ *
  * @todo Split atom-swap functionality to separate helper class
  */
 class SpeciationMove : public MoveBase {
   private:
     using reaction_iterator = decltype(Faunus::reactions)::iterator;
+    Random random_internal; //!< Private generator so as not to touch MoveBase::slump
     reaction_iterator reaction;                                            //!< Randomly selected reaction
     double bias_energy = 0.0;                                              //!< Group (de)activators may add bias
     Speciation::ReactionValidator reaction_validator;                      //!< Helper to check if reaction is doable

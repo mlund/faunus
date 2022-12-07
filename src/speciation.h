@@ -147,7 +147,7 @@ class SpeciationMove : public MoveBase {
     void deactivateMolecularGroups(Change& change);
     void activateMolecularGroups(Change& change);
     void updateGroupMassCenters(const Change& change) const; //!< Update affected molecular mass centers
-    void swapParticleProperties(Particle& particle, int new_atomid) const;
+    static void swapParticleProperties(Particle& particle, int new_atomid);
     SpeciationMove(Space& spc, Space& old_spc, std::string_view name, std::string_view cite);
 
   public:

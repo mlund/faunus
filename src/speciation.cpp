@@ -180,13 +180,13 @@ void MolecularGroupDeActivator::setPositionAndOrientation(Group& group) const {
     // translate to random position within simulation cell
     Point new_mass_center;
     geometry.randompos(new_mass_center, random); // place COM randomly in simulation box
-    Point displacement = geometry.vdist(new_mass_center, group.massCenter()->get());
+    const Point displacement = geometry.vdist(new_mass_center, group.massCenter()->get());
     group.translate(displacement, geometry.getBoundaryFunc());
 
     // generate random orientation
     const auto rotation_angle = 2.0 * pc::pi * (random() - 0.5); // -pi to pi
     const auto random_unit_vector = randomUnitVector(random);
-    Eigen::Quaterniond quaternion(Eigen::AngleAxisd(rotation_angle, random_unit_vector));
+    const Eigen::Quaterniond quaternion(Eigen::AngleAxisd(rotation_angle, random_unit_vector));
     group.rotate(quaternion, geometry.getBoundaryFunc());
 }
 
@@ -389,7 +389,7 @@ void SpeciationMove::atomicSwap(Change& change) {
  *
  * @todo This could make use of policies to customize how particles should be updated. Split to helper class.
  */
-void SpeciationMove::swapParticleProperties(Particle& particle, const int new_atomid) const {
+void SpeciationMove::swapParticleProperties(Particle& particle, const int new_atomid) {
     Particle new_particle(atoms.at(new_atomid), particle.pos);    // new particle with old position
     if (new_particle.hasExtension() || particle.hasExtension()) { // keep also other orientational data
         auto& source_ext = new_particle.getExt();

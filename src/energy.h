@@ -17,6 +17,7 @@
 #include <numeric>
 #include <algorithm>
 #include <concepts>
+#include <coulombgalore.h>
 
 struct freesasa_parameters_fwd; // workaround for freesasa unnamed struct that cannot be forward declared
 
@@ -61,6 +62,7 @@ class PairPotentialBase;
 namespace Energy {
 
 class Hamiltonian;
+class MetalSlitEwald;
 
 /**
  * @brief Check if particles are outside the simulation container
@@ -94,22 +96,25 @@ struct EwaldData {
     using Tcomplex = std::complex<double>;
     Eigen::Matrix3Xd k_vectors;             //!< k-vectors, 3xK
     Eigen::VectorXd Aks;                    //!< 1xK for update optimization (see Eq.24, DOI:10.1063/1.481216)
-    Eigen::VectorXcd Q_ion, Q_dipole;       //!< Complex 1xK vectors
-    double r_cutoff = 0;                    //!< Real-space cutoff
-    double n_cutoff = 0;                    //!< Inverse space cutoff
+    Eigen::VectorXcd Q_ion;                 //!< Complex 1xK vectors
+    Eigen::VectorXcd Q_dipole;              //!< Complex 1xK vectors
+    double realspace_cutoff = 0;            //!< Real-space cutoff
+    double invspace_cutoff = 0;             //!< Inverse space cutoff
     double surface_dielectric_constant = 0; //!< Surface dielectric constant;
     double bjerrum_length = 0;              //!< Bjerrum length
     double kappa = 0;                       //!< Inverse Debye screening length
     double kappa_squared = 0;               //!< Squared inverse Debye screening length
     double alpha = 0;
-    double const_inf = 0;
-    double check_k2_zero = 0;
+    double check_k2_zero = 0; //!< @todo coule be calc. on the fly
     bool use_spherical_sum = true;
-    int num_kvectors = 0;
-    Point box_length = {0.0, 0.0, 0.0};                        //!< Box dimensions
-    enum Policies { PBC, PBCEigen, IPBC, IPBCEigen, INVALID }; //!< Possible k-space updating schemes
-    Policies policy = PBC;                                     //!< Policy for updating k-space
-    explicit EwaldData(const json& j);                         //!< Initialize from json
+    int num_kvectors = 0;                                                 //!< @todo is this really needed?
+    Point box_length = {0.0, 0.0, 0.0};                                   //!< Box dimensions
+    enum Policies { PBC, PBCEigen, IPBC, IPBCEigen, METALSLIT, INVALID }; //!< Possible k-space updating schemes
+    Policies policy = PBC;                                                //!< Policy for updating k-space
+    explicit EwaldData(const json& j);                                    //!< Initialize from json
+    void sync(const EwaldData& other, const Change& change);              //!< Sync with another dataset
+    double volume() const;                                                //!< Volume of registered unit-cell
+    bool tinfoilSurrounding() const; //!< Check for metallic or "tinfoil" surroundings (inf. dielectric)
 };
 
 NLOHMANN_JSON_SERIALIZE_ENUM(EwaldData::Policies, {
@@ -117,10 +122,11 @@ NLOHMANN_JSON_SERIALIZE_ENUM(EwaldData::Policies, {
                                                       {EwaldData::PBC, "PBC"},
                                                       {EwaldData::PBCEigen, "PBCEigen"},
                                                       {EwaldData::IPBC, "IPBC"},
+                                                      {EwaldData::METALSLIT, "METALSLIT"},
                                                       {EwaldData::IPBCEigen, "IPBCEigen"},
                                                   })
 
-void to_json(json& j, const EwaldData& d);
+void to_json(json& j, const EwaldData& ewald_data);
 
 /**
  * @brief Base class for Ewald k-space updates policies
@@ -129,17 +135,23 @@ class EwaldPolicyBase {
   public:
     std::string cite; //!< Optional reference, preferably DOI, to further information
     virtual ~EwaldPolicyBase() = default;
-    virtual void updateBox(EwaldData&, const Point&) const = 0; //!< Prepare k-vectors according to given box vector
-    virtual void updateComplex(EwaldData& d,
+    virtual void updateBox(EwaldData& ewald_data,
+                           const Point&) const = 0; //!< Prepare k-vectors according to given box vector
+
+    virtual void updateComplex(EwaldData& ewald_data,
                                const Space::GroupVector& groups) const = 0; //!< Update all k vectors
-    virtual void
-    updateComplex(EwaldData& d, const Change& change, const Space::GroupVector& groups,
-                  const Space::GroupVector& oldgroups) const = 0; //!< Update subset of k vectors. Require `old` pointer
-    virtual double selfEnergy(const EwaldData& d, Change& change,
+
+    virtual void updateComplexOptimized(
+        EwaldData& ewald_data, const Change& change, const Space::GroupVector& groups,
+        const Space::GroupVector& oldgroups) const = 0; //!< Update subset of k vectors. Require `old` pointer
+
+    virtual double selfEnergy(const EwaldData& ewald_data, Change& change,
                               Space::GroupVector& groups) = 0; //!< Self energy contribution due to a change
-    virtual double surfaceEnergy(const EwaldData& d, const Change& change,
+
+    virtual double surfaceEnergy(const EwaldData& ewald_data, const Change& change,
                                  const Space::GroupVector& groups) = 0; //!< Surface energy contribution due to a change
-    virtual double reciprocalEnergy(const EwaldData& d) = 0;            //!< Total reciprocal energy
+
+    virtual double reciprocalEnergy(const EwaldData& ewald_data) = 0; //!< Total reciprocal energy
 
     /**
      * @brief Represent charges and positions using an Eigen facade (Map)
@@ -156,10 +168,8 @@ class EwaldPolicyBase {
         }
         auto first_particle = groups.front().begin();
         auto last_particle = groups.back().end();
-        auto pos = asEigenMatrix(first_particle, last_particle,
-                                 &Particle::pos); // N x 3
-        auto charge = asEigenVector(first_particle, last_particle,
-                                    &Particle::charge); // N x 1
+        auto pos = asEigenMatrix(first_particle, last_particle, &Particle::pos);       // N x 3
+        auto charge = asEigenVector(first_particle, last_particle, &Particle::charge); // N x 1
         return std::make_tuple(pos, charge);
     }
 
@@ -170,10 +180,8 @@ class EwaldPolicyBase {
         }
         auto first_particle = groups.front().begin();
         auto last_particle = groups.back().end();
-        auto pos = asEigenMatrix(first_particle, last_particle,
-                                 &Particle::pos); // N x 3
-        auto charge = asEigenVector(first_particle, last_particle,
-                                    &Particle::charge); // N x 1
+        auto pos = asEigenMatrix(first_particle, last_particle, &Particle::pos);       // N x 3
+        auto charge = asEigenVector(first_particle, last_particle, &Particle::charge); // N x 1
         return std::make_tuple(pos, charge);
     }
 
@@ -183,15 +191,74 @@ class EwaldPolicyBase {
 /**
  * @brief Ion-Ion Ewald using periodic boundary conditions (PBC)
  */
-struct PolicyIonIon : public EwaldPolicyBase {
+class PolicyIonIon : public EwaldPolicyBase {
+  protected:
+    /**
+     * @param wavevector q-vector
+     * @param zipped_position_charge A zipped up range with positions and charges
+     */
+    EwaldData::Tcomplex sumWavevector(const Point& wavevector, ranges::cpp20::range auto zipped_position_charge) const {
+        EwaldData::Tcomplex Q(0.0, 0.0);
+        for (auto [position, charge] : zipped_position_charge) { // loop over molecules
+            const auto qr = wavevector.dot(position);
+            Q += charge * EwaldData::Tcomplex(std::cos(qr), std::sin(qr)); // 'Q^q', see eq. 25 in ref.
+        }
+        return Q;
+    }
+
+    /**
+     * @param wavevector q-vector
+     * @param group Group of particles to sum
+     * @param indices Relative indices in group to include
+     * @param ewald_data Ewald data object
+     */
+    virtual EwaldData::Tcomplex sumWavevectorGroups(const Point& wavevector, const Group& group,
+                                                    const std::vector<Change::index_type>& indices,
+                                                    EwaldData& ewald_data) const;
+
+    virtual double selfEnergyFromChargeSums(const EwaldData& d, double charges_squared, double charge_total) const;
+
+  public:
     PolicyIonIon();
-    void updateBox(EwaldData& d, const Point& box) const override;
-    void updateComplex(EwaldData& data, const Space::GroupVector& groups) const override;
-    void updateComplex(EwaldData& d, const Change& change, const Space::GroupVector& groups,
-                       const Space::GroupVector& oldgroups) const override;
-    double selfEnergy(const EwaldData& d, Change& change, Space::GroupVector& groups) override;
-    double surfaceEnergy(const EwaldData& data, const Change& change, const Space::GroupVector& groups) override;
-    double reciprocalEnergy(const EwaldData& d) override;
+    void updateBox(EwaldData& ewald_data, const Point& box) const override;
+    void updateComplex(EwaldData& ewald_data, const Space::GroupVector& groups) const override;
+    void updateComplexOptimized(EwaldData& ewald_data, const Change& change, const Space::GroupVector& groups,
+                                const Space::GroupVector& oldgroups) const override;
+    double selfEnergy(const EwaldData& ewald_data, Change& change, Space::GroupVector& groups) override;
+    double surfaceEnergy(const EwaldData& ewald_data, const Change& change, const Space::GroupVector& groups) override;
+    double reciprocalEnergy(const EwaldData& ewald_data) override;
+};
+
+/**
+ * Add documentation here...
+ * @todo register image particles when updating k-vectors
+ *       does it make sence to inherit from "PolicyIonIon"?
+ */
+class PolicyIonIonMetalSlit : public PolicyIonIon {
+  private:
+    /** Creates a lambda function to convert a position to it's reflection (mirror charge position) */
+    auto getMirrorLambda(const EwaldData& ewald_data) const {
+        return [z_length = ewald_data.box_length.z() * 0.5](const Point& pos) {
+            const auto mirrored_z_pos = (pos.z() > 0.0 ? z_length : -z_length) - pos.z();
+            return Point(pos.x(), pos.y(), mirrored_z_pos);
+        };
+    }
+    friend class MetalSlitEwald;
+
+  protected:
+    EwaldData::Tcomplex sumWavevectorGroups(const Point& wavevector, const Group& group,
+                                            const std::vector<Change::index_type>& indices,
+                                            EwaldData& ewald_data) const override;
+
+    double selfEnergyFromChargeSums(const EwaldData& ewald_data, double charges_squared,
+                                    double charge_total) const override;
+
+  public:
+    PolicyIonIonMetalSlit();
+    void updateBox(EwaldData& ewald_data, const Point& box) const override;
+    void updateComplex(EwaldData& ewald_data, const Space::GroupVector& groups) const override;
+    double surfaceEnergy(const EwaldData& ewald_data, const Change& change, const Space::GroupVector& groups) override;
+    double reciprocalEnergy(const EwaldData& ewald_data) override;
 };
 
 /**
@@ -206,9 +273,9 @@ struct PolicyIonIon : public EwaldPolicyBase {
  * - GCC9: Eigen is 4-5 times faster on x86 linux; ~1.5 times *lower on macos.
  */
 struct PolicyIonIonEigen : public PolicyIonIon {
-    using PolicyIonIon::updateComplex;
-    void updateComplex(EwaldData&, const Space::GroupVector&) const override;
-    double reciprocalEnergy(const EwaldData &) override;
+    using PolicyIonIon::updateComplexOptimized;
+    void updateComplex(EwaldData& ewald_data, const Space::GroupVector& groups) const override;
+    double reciprocalEnergy(const EwaldData& ewald_data) override;
 };
 
 /**
@@ -217,9 +284,10 @@ struct PolicyIonIonEigen : public PolicyIonIon {
 struct PolicyIonIonIPBC : public PolicyIonIon {
     using PolicyIonIon::updateComplex;
     PolicyIonIonIPBC();
-    void updateBox(EwaldData &, const Point &) const override;
-    void updateComplex(EwaldData&, const Space::GroupVector&) const override;
-    void updateComplex(EwaldData&, const Change&, const Space::GroupVector&, const Space::GroupVector&) const override;
+    void updateBox(EwaldData& ewald_data, const Point&) const override;
+    void updateComplex(EwaldData& ewald_data, const Space::GroupVector& groups) const override;
+    void updateComplexOptimized(EwaldData& ewald_data, const Change& change, const Space::GroupVector& groups,
+                                const Space::GroupVector& oldgroups) const override;
 };
 
 /**
@@ -227,8 +295,8 @@ struct PolicyIonIonIPBC : public PolicyIonIon {
  * @warning Incomplete and under construction
  */
 struct PolicyIonIonIPBCEigen : public PolicyIonIonIPBC {
-    using PolicyIonIonIPBC::updateComplex;
-    void updateComplex(EwaldData&, const Space::GroupVector&) const override;
+    using PolicyIonIonIPBC::updateComplexOptimized;
+    void updateComplex(EwaldData& ewald_data, const Space::GroupVector& groups) const override;
 };
 
 /**
@@ -237,7 +305,7 @@ struct PolicyIonIonIPBCEigen : public PolicyIonIonIPBC {
  *       This is error prone and should be handled *before* this step.
  */
 class Ewald : public Energybase {
-  private:
+  protected:
     const Space& spc;
     EwaldData data;
     std::shared_ptr<EwaldPolicyBase> policy; //!< Policy for updating k-space
@@ -253,6 +321,25 @@ class Ewald : public Energybase {
     void sync(Energybase* energybase, const Change& change) override;
     void to_json(json& j) const override;
     void force(std::vector<Point>& forces) override; // update forces on all particles
+};
+
+/**
+ * @todo Add documentation
+ *
+ * The only thing we need to do here, is to add the real <-> imaginary interaction.
+ * The reciprocal part is fully captured by the base class
+ */
+class MetalSlitEwald : public Ewald {
+  private:
+    CoulombGalore::Splined pair_potential;            //!< Splined pair-potential for real <-> mirror interactions
+    Geometry::Slit enlarged_geometry;                 //!< Geometry that incl. mirror charges (expanded to 2 times z)
+    static Point getSlitDimensions(const Space& spc); //!< Get box dimensions from Space
+    void updateEnlargedGeometry(const Space& spc);    //!< Set enlarged slit geometry from Space
+    double singleParticleMirrorEnergy(const Particle& particle) const; //!< all mirror charges <-> single particle
+  public:
+    MetalSlitEwald(const json& j, const Space& spc);
+    double completeMirrorEnergy() const;              //!< all mirror charges <-> all real charges
+    double energy(const Change& change) override;
 };
 
 /**

@@ -126,8 +126,8 @@ TEST_CASE("[Faunus] Integrator") {
 
 // =============== ForceMoveBase ===============
 
-ForceMoveBase::ForceMoveBase(Space& spc, std::string name, std::string cite, std::shared_ptr<IntegratorBase> integrator,
-                             unsigned int nsteps)
+ForceMove::ForceMove(Space& spc, std::string name, std::string cite, std::shared_ptr<IntegratorBase> integrator,
+                     unsigned int nsteps)
     : Move(spc, name, cite)
     , integrator(integrator)
     , number_of_steps(nsteps) {
@@ -142,14 +142,14 @@ ForceMoveBase::ForceMoveBase(Space& spc, std::string name, std::string cite, std
  *
  * Upon resizing, new elements in `forces` and `velocities` are zeroed.
  */
-size_t ForceMoveBase::resizeForcesAndVelocities() {
+size_t ForceMove::resizeForcesAndVelocities() {
     const auto num_active_particles = spc.numParticles(Space::Selection::ACTIVE);
     forces.resize(num_active_particles, Point::Zero());
     velocities.resize(num_active_particles, Point::Zero());
     return num_active_particles;
 }
 
-void ForceMoveBase::_move(Change &change) {
+void ForceMove::_move(Change& change) {
     change.clear();
     change.everything = true;
     resizeForcesAndVelocities();
@@ -161,18 +161,18 @@ void ForceMoveBase::_move(Change &change) {
     }
 }
 
-void ForceMoveBase::_to_json(json &j) const {
+void ForceMove::_to_json(json& j) const {
     j = {{"nsteps", number_of_steps}};
     j["integrator"] = *integrator;
 }
 
-void ForceMoveBase::_from_json(const json &j) {
+void ForceMove::_from_json(const json& j) {
     number_of_steps = j.at("nsteps").get<unsigned int>();
     integrator->from_json(j["integrator"]);
     generateVelocities();
 }
 
-double ForceMoveBase::bias(Change &, double, double) {
+double ForceMove::bias(Change&, double, double) {
     return pc::neg_infty; // always accept the move
 }
 
@@ -181,7 +181,7 @@ double ForceMoveBase::bias(Change &, double, double) {
  *        a dangling Point& reference being returned. Observed with Clang10/RelWithDebInfo, but not in Debug, or
  *        with GCC.
  */
-void ForceMoveBase::generateVelocities() {
+void ForceMove::generateVelocities() {
     NormalRandomVector random_vector; // generator of random 3d vector from a normal distribution
     const auto particles = spc.activeParticles();
     resizeForcesAndVelocities();
@@ -191,14 +191,14 @@ void ForceMoveBase::generateVelocities() {
     std::fill(forces.begin(), forces.end(), Point::Zero());
 }
 
-const PointVector &ForceMoveBase::getForces() const { return forces; }
-const PointVector &ForceMoveBase::getVelocities() const { return velocities; }
+const PointVector& ForceMove::getForces() const { return forces; }
+const PointVector& ForceMove::getVelocities() const { return velocities; }
 
 // =============== LangevinMove ===============
 
-LangevinDynamics::LangevinDynamics(Space &spc, std::string name, std::string cite,
+LangevinDynamics::LangevinDynamics(Space& spc, std::string name, std::string cite,
                                    std::shared_ptr<IntegratorBase> integrator, unsigned int nsteps)
-    : ForceMoveBase(spc, name, cite, integrator, nsteps) {}
+    : ForceMove(spc, name, cite, integrator, nsteps) {}
 
 LangevinDynamics::LangevinDynamics(Space &spc, std::shared_ptr<IntegratorBase> integrator, unsigned int nsteps)
     : LangevinDynamics(spc, "langevin_dynamics", "", integrator, nsteps) {}
@@ -211,8 +211,8 @@ LangevinDynamics::LangevinDynamics(Space& spc, Energy::EnergyTerm& energy, const
     from_json(j);
 }
 
-void LangevinDynamics::_to_json(json &j) const { ForceMoveBase::_to_json(j); }
-void LangevinDynamics::_from_json(const json &j) { ForceMoveBase::_from_json(j); }
+void LangevinDynamics::_to_json(json& j) const { ForceMove::_to_json(j); }
+void LangevinDynamics::_from_json(const json& j) { ForceMove::_from_json(j); }
 
 TEST_CASE("[Faunus] LangevinDynamics") {
     class DummyEnergy : public Energy::EnergyTerm {

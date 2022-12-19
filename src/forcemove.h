@@ -89,7 +89,7 @@ void to_json(json &j, const IntegratorBase &i);
  * Orchestrate execution of integrators, thermostats, etc. Store vectors for velocities and forces, which are not part
  * of the particle vector in the space.
  */
-class ForceMoveBase : public Move {
+class ForceMove : public Move {
   protected:
     std::shared_ptr<IntegratorBase> integrator;
     unsigned int number_of_steps; //!< number of integration steps to perform during a single MC move
@@ -101,9 +101,9 @@ class ForceMoveBase : public Move {
     void _to_json(json &j) const override;
     void _from_json(const json &j) override;
     void _move(Change &change) override;
-    ForceMoveBase(Space& spc, std::string name, std::string cite, std::shared_ptr<IntegratorBase> integrator,
-                  unsigned int nsteps);
-    virtual ~ForceMoveBase() = default;
+    ForceMove(Space& spc, std::string name, std::string cite, std::shared_ptr<IntegratorBase> integrator,
+              unsigned int nsteps);
+    virtual ~ForceMove() = default;
 
   public:
     double bias(Change &, double, double) override;
@@ -114,7 +114,7 @@ class ForceMoveBase : public Move {
 /**
  * @brief Langevin dynamics move using Langevin equation of motion
  */
-class LangevinDynamics : public ForceMoveBase {
+class LangevinDynamics : public ForceMove {
   protected:
     LangevinDynamics(Space& spc, std::string name, std::string cite, std::shared_ptr<IntegratorBase> integrator,
                      unsigned int nsteps);

@@ -146,7 +146,7 @@ class GroupRotator : public GroupMover {
 /**
  * @brief Molecular cluster move
  */
-class Cluster : public MoveBase {
+class Cluster : public Move {
   private:
     std::unique_ptr<FindCluster> find_cluster;
     std::unique_ptr<ClusterShapeAnalysis> shape_analysis;

@@ -18,7 +18,7 @@ bool MetropolisMonteCarlo::metropolisCriterion(const double energy_change) {
     if (std::isnan(energy_change)) {
         throw std::runtime_error("Metropolis error: energy cannot be NaN");
     }
-    const auto random_number_between_zero_and_one = move::MoveBase::slump(); // engine *must* be propagated!
+    const auto random_number_between_zero_and_one = move::Move::slump();     // engine *must* be propagated!
     if (std::isinf(energy_change) && energy_change < 0.0) {                  // if negative infinity -> quietly accept
         return true;
     }
@@ -110,7 +110,7 @@ void MetropolisMonteCarlo::restore(const json &j) {
         from_json(j, *state->spc);       // default, accepted state
         from_json(j, *trial_state->spc); // trial state
         if (j.contains("random-move")) {
-            move::MoveBase::slump = j["random-move"]; // restore move random number generator
+            move::Move::slump = j["random-move"]; // restore move random number generator
         }
         if (j.contains("random-global")) {
             Faunus::random = j["random-global"]; // restore global random number generator
@@ -124,7 +124,7 @@ void MetropolisMonteCarlo::restore(const json &j) {
     }
 }
 
-void MetropolisMonteCarlo::performMove(move::MoveBase& move) {
+void MetropolisMonteCarlo::performMove(move::Move& move) {
     Change change;
     move.move(change);
 #ifndef NDEBUG
@@ -164,7 +164,7 @@ void MetropolisMonteCarlo::performMove(move::MoveBase& move) {
     } else {
         // The `metropolis()` function propagates the engine and we need to stay in sync
         // Alternatively, we could use `engine.discard()`
-        move::MoveBase::slump();
+        move::Move::slump();
     }
 }
 

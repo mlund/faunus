@@ -176,7 +176,7 @@ std::pair<std::vector<size_t>, bool> FindCluster::findCluster(size_t seed_index)
     for (auto it1 = cluster.begin(); it1 != cluster.end(); it1++) {
         for (auto it2 = pool.begin(); it2 != pool.end();) {
             const auto p = clusterProbability(spc.groups.at(*it1), spc.groups.at(*it2)); // probability to cluster
-            if (MoveBase::slump() <= p) {                                                // is group part of cluster?
+            if (Move::slump() <= p) {                                                    // is group part of cluster?
                 cluster.push_back(*it2);                                                 // yes, expand cluster...
                 it2 = pool.erase(it2);                                                   // ...and remove from pool
             } else {
@@ -345,7 +345,7 @@ void Cluster::_accept([[maybe_unused]] Change& change) {
 }
 
 Cluster::Cluster(Space& spc, std::string_view name, std::string_view cite)
-    : MoveBase(spc, name, cite) {
+    : Move(spc, name, cite) {
     repeat = -1;
 }
 

@@ -17,9 +17,9 @@
 
 namespace Faunus::move {
 
-Random MoveBase::slump; // static instance of Random (shared for all moves)
+Random Move::slump; // static instance of Random (shared for all moves)
 
-void MoveBase::from_json(const json& j) {
+void Move::from_json(const json& j) {
     if (const auto it = j.find("repeat"); it != j.end()) {
         if (it->is_number()) {
             repeat = it->get<int>();
@@ -39,7 +39,7 @@ void MoveBase::from_json(const json& j) {
     }
 }
 
-void MoveBase::to_json(json& j) const {
+void Move::to_json(json& j) const {
     _to_json(j);
     if (timer_move.result() > 0.01) { // only print if more than 1% of the time
         j["relative time (without energy calc)"] = timer_move.result();
@@ -57,7 +57,7 @@ void MoveBase::to_json(json& j) const {
     roundJSON(j, 3);
 }
 
-void MoveBase::move(Change& change) {
+void Move::move(Change& change) {
     timer.start();
     timer_move.start();
     number_of_attempted_moves++;
@@ -69,13 +69,13 @@ void MoveBase::move(Change& change) {
     timer_move.stop();
 }
 
-void MoveBase::accept(Change& change) {
+void Move::accept(Change& change) {
     number_of_accepted_moves++;
     _accept(change);
     timer.stop();
 }
 
-void MoveBase::reject(Change& change) {
+void Move::reject(Change& change) {
     number_of_rejected_moves++;
     _reject(change);
     timer.stop();
@@ -91,32 +91,36 @@ void MoveBase::reject(Change& change) {
  * @param new_energy Energy from hamiltonian after the change (kT)
  * @return Energy due to custom bias from the particular move (kT)
  */
-double MoveBase::bias([[maybe_unused]] Change& change, [[maybe_unused]] double old_energy,
-                      [[maybe_unused]] double new_energy) {
+double Move::bias([[maybe_unused]] Change& change, [[maybe_unused]] double old_energy,
+                  [[maybe_unused]] double new_energy) {
     return 0.0;
 }
 
-void MoveBase::_accept([[maybe_unused]] Change& change) {}
+void Move::_accept([[maybe_unused]] Change& change) {}
 
-void MoveBase::_reject([[maybe_unused]] Change& change) {}
+void Move::_reject([[maybe_unused]] Change& change) {}
 
-MoveBase::MoveBase(Space& spc, std::string_view name, std::string_view cite) : cite(cite), name(name), spc(spc) {}
+Move::Move(Space& spc, std::string_view name, std::string_view cite)
+    : cite(cite)
+    , name(name)
+    , spc(spc) {}
 
-void MoveBase::setRepeat(const int new_repeat) { repeat = new_repeat; }
-bool MoveBase::isStochastic() const { return repeat != 0; }
+void Move::setRepeat(const int new_repeat) { repeat = new_repeat; }
+bool Move::isStochastic() const { return repeat != 0; }
 
-void from_json(const json &j, MoveBase &move) { move.from_json(j); }
+void from_json(const json& j, Move& move) { move.from_json(j); }
 
-void to_json(json& j, const MoveBase& move) { move.to_json(j[move.getName()]); }
+void to_json(json& j, const Move& move) { move.to_json(j[move.getName()]); }
 
-const std::string& MoveBase::getName() const {
+const std::string& Move::getName() const {
     assert(!name.empty());
     return name;
 }
 
 // -----------------------------------
 
-ReplayMove::ReplayMove(Space& spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {}
+ReplayMove::ReplayMove(Space& spc, std::string name, std::string cite)
+    : Move(spc, name, cite) {}
 
 ReplayMove::ReplayMove(Space& spc) : ReplayMove(spc, "replay", "") {}
 
@@ -239,7 +243,8 @@ void AtomicTranslateRotate::_reject(Change&) { mean_square_displacement += 0; }
 
 AtomicTranslateRotate::AtomicTranslateRotate(Space& spc, const Energy::Hamiltonian& hamiltonian, std::string name,
                                              std::string cite)
-    : MoveBase(spc, name, cite), hamiltonian(hamiltonian) {
+    : Move(spc, name, cite)
+    , hamiltonian(hamiltonian) {
     repeat = -1; // meaning repeat N times
     cdata.relative_atom_indices.resize(1);
     cdata.internal = true;
@@ -306,10 +311,10 @@ AtomicTranslateRotate::~AtomicTranslateRotate() { saveHistograms(); }
  * @param hamiltonian Hamiltonian used for trial space
  * @param old_spc Reference to "old" space (rarely used by any move, except Speciation)
  */
-std::unique_ptr<MoveBase> createMove(const std::string& name, const json& properties, Space& spc,
-                                     Energy::Hamiltonian& hamiltonian, Space &old_spc) {
+std::unique_ptr<Move> createMove(const std::string& name, const json& properties, Space& spc,
+                                 Energy::Hamiltonian& hamiltonian, Space& old_spc) {
     try {
-        std::unique_ptr<MoveBase> move;
+        std::unique_ptr<Move> move;
         if (name == "moltransrot") {
             if (properties.contains("region")) {
                 return std::make_unique<SmarterTranslateRotate>(spc, properties);
@@ -359,7 +364,7 @@ std::unique_ptr<MoveBase> createMove(const std::string& name, const json& proper
     } catch (std::exception& e) { throw ConfigurationError("error creating move -> {}", e.what()); }
 }
 
-void MoveCollection::addMove(std::shared_ptr<MoveBase>&& move) {
+void MoveCollection::addMove(std::shared_ptr<Move>&& move) {
     if (!move) {
         throw std::runtime_error("invalid move");
     }
@@ -384,7 +389,7 @@ MoveCollection::MoveCollection(const json& list_of_moves, Space& spc, Energy::Ha
 
 void to_json(json& j, const MoveCollection& propagator) { j = propagator.moves; }
 
-const BasePointerVector<MoveBase>& MoveCollection::getMoves() const { return moves; }
+const BasePointerVector<Move>& MoveCollection::getMoves() const { return moves; }
 
 MoveCollection::move_iterator MoveCollection::sample() {
 #ifdef ENABLE_MPI
@@ -437,11 +442,11 @@ void ParallelTempering::exchangeState(Change& change) {
 
 void ParallelTempering::_move(Change& change) {
     mpi.world.barrier(); // wait until all ranks reach here
-    if (!MPI::checkRandomEngineState(mpi.world, MoveBase::slump)) {
+    if (!MPI::checkRandomEngineState(mpi.world, Move::slump)) {
         faunus_logger->error("Random numbers out of sync across MPI nodes. Do not use 'hardware' seed.");
         mpi.world.abort(1); // neighbor search *requires* that random engines are in sync
     }
-    partner->generate(mpi.world, MoveBase::slump);
+    partner->generate(mpi.world, Move::slump);
     if (partner->rank.has_value()) {
         exchangeState(change);
     }
@@ -486,7 +491,8 @@ void ParallelTempering::_from_json(const json& j) {
 }
 
 ParallelTempering::ParallelTempering(Space& spc, const MPI::Controller& mpi)
-    : MoveBase(spc, "temper", "doi:10/b3vcw7"), mpi(mpi) {
+    : Move(spc, "temper", "doi:10/b3vcw7")
+    , mpi(mpi) {
     if (mpi.world.size() < 2) {
         throw std::runtime_error(name + " requires two or more MPI processes");
     }
@@ -527,7 +533,10 @@ void VolumeMove::_accept([[maybe_unused]] Change& change) {
     assert(std::fabs(spc.geometry.getVolume() - new_volume) < 1.0e-9);
 }
 
-VolumeMove::VolumeMove(Space& spc) : MoveBase(spc, "volume"s, ""s) { repeat = 1; }
+VolumeMove::VolumeMove(Space& spc)
+    : Move(spc, "volume"s, ""s) {
+    repeat = 1;
+}
 
 void VolumeMove::_reject([[maybe_unused]] Change& change) {
     mean_square_volume_change += 0.0;
@@ -573,7 +582,7 @@ void ChargeMove::_accept(Change&) { mean_squared_charge_displacement += charge_d
 void ChargeMove::_reject(Change&) { mean_squared_charge_displacement += 0.0; }
 
 ChargeMove::ChargeMove(Space& spc, std::string_view name, std::string_view cite)
-    : MoveBase(spc, name, cite) {
+    : Move(spc, name, cite) {
     repeat = 1;
     group_change.internal = true;                 // the group is internally changed
     group_change.relative_atom_indices.resize(1); // we change exactly one atom
@@ -829,7 +838,8 @@ void ChargeTransfer::_move(Change& change) {
 void ChargeTransfer::_accept(Change&) { msqd += deltaq * deltaq; }
 void ChargeTransfer::_reject(Change&) { msqd += 0; }
 
-ChargeTransfer::ChargeTransfer(Space& spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {
+ChargeTransfer::ChargeTransfer(Space& spc, std::string name, std::string cite)
+    : Move(spc, name, cite) {
     repeat = -1; // meaning repeat N times
     mol1.cdata.internal = true;
     mol2.cdata.internal = true;
@@ -894,7 +904,8 @@ void QuadrantJump::_move(Change& change) {
         faunus_logger->warn("{0}: no molecules found", name);
 }
 
-QuadrantJump::QuadrantJump(Space& spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {
+QuadrantJump::QuadrantJump(Space& spc, std::string name, std::string cite)
+    : Move(spc, name, cite) {
     repeat = -1; // meaning repeat N times
 }
 
@@ -952,7 +963,8 @@ double AtomicSwapCharge::bias(Change&, double, double) { return _bias; }
 void AtomicSwapCharge::_accept(Change&) { msqd += _sqd; }
 void AtomicSwapCharge::_reject(Change&) { msqd += 0; }
 
-AtomicSwapCharge::AtomicSwapCharge(Space& spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {
+AtomicSwapCharge::AtomicSwapCharge(Space& spc, std::string name, std::string cite)
+    : Move(spc, name, cite) {
     repeat = -1; // meaning repeat N times
     cdata.relative_atom_indices.resize(1);
     cdata.internal = true;
@@ -1098,7 +1110,8 @@ void TranslateRotate::_reject(Change&) {
     mean_squared_rotation_angle += 0.0;
 }
 
-TranslateRotate::TranslateRotate(Space& spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {
+TranslateRotate::TranslateRotate(Space& spc, std::string name, std::string cite)
+    : Move(spc, name, cite) {
     repeat = -1; // meaning repeat N times
 }
 
@@ -1270,7 +1283,7 @@ void ConformationSwap::checkMassCenterDrift(const Point& old_mass_center, const 
 }
 
 ConformationSwap::ConformationSwap(Space& spc, const std::string& name, const std::string& cite)
-    : MoveBase(spc, name, cite) {}
+    : Move(spc, name, cite) {}
 
 ConformationSwap::ConformationSwap(Space& spc) : ConformationSwap(spc, "conformationswap", "doi:10/dmc3") {
     repeat = -1; // meaning repeat n times

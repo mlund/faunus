@@ -126,9 +126,11 @@ TEST_CASE("[Faunus] Integrator") {
 
 // =============== ForceMoveBase ===============
 
-ForceMoveBase::ForceMoveBase(Space &spc, std::string name, std::string cite,
-                             std::shared_ptr<IntegratorBase> integrator, unsigned int nsteps)
-    : MoveBase(spc, name, cite), integrator(integrator), number_of_steps(nsteps) {
+ForceMoveBase::ForceMoveBase(Space& spc, std::string name, std::string cite, std::shared_ptr<IntegratorBase> integrator,
+                             unsigned int nsteps)
+    : Move(spc, name, cite)
+    , integrator(integrator)
+    , number_of_steps(nsteps) {
     forces.reserve(spc.particles.size());
     velocities.reserve(spc.particles.size());
     resizeForcesAndVelocities();

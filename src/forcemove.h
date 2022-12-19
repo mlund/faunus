@@ -89,7 +89,7 @@ void to_json(json &j, const IntegratorBase &i);
  * Orchestrate execution of integrators, thermostats, etc. Store vectors for velocities and forces, which are not part
  * of the particle vector in the space.
  */
-class ForceMoveBase : public MoveBase {
+class ForceMoveBase : public Move {
   protected:
     std::shared_ptr<IntegratorBase> integrator;
     unsigned int number_of_steps; //!< number of integration steps to perform during a single MC move

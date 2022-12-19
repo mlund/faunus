@@ -125,7 +125,7 @@ int main(int argc, const char** argv) {
 }
 void setRandomNumberGenerator(const json& input) {
     if (auto it = input.find("random"); it != input.end()) {
-        from_json(*it, move::MoveBase::slump); // static --> shared for all moves
+        from_json(*it, move::Move::slump); // static --> shared for all moves
         from_json(*it, Faunus::random);
     }
 }

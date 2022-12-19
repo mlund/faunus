@@ -8,9 +8,9 @@ namespace move {
 /**
  * @brief An abstract base class for rotational movements of a polymer chain
  */
-class ChainRotationMoveBase : public MoveBase {
+class ChainRotationMoveBase : public Move {
   protected:
-    using MoveBase::spc;
+    using Move::spc;
     std::string molname;
     size_t molid;
     double dprot;             //!< maximal angle of rotation, ±0.5*dprot

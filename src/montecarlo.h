@@ -12,7 +12,7 @@ class Hamiltonian;
 }
 
 namespace move {
-class MoveBase;
+class Move;
 class MoveCollection;
 } // namespace Move
 
@@ -65,7 +65,7 @@ class MetropolisMonteCarlo {
     double initial_energy = 0.0;                  //!< Initial potential energy
     Average<double> average_energy;               //!< Average potential energy of the system
     void init();                                  //!< Reset state
-    void performMove(move::MoveBase& move);       //!< Perform move using given move implementation
+    void performMove(move::Move& move);           //!< Perform move using given move implementation
     double getEnergyChange(double new_energy, double old_energy) const;
     friend void to_json(json&, const MetropolisMonteCarlo&); //!< Write information to JSON object
     unsigned int number_of_sweeps = 0;                       //!< Number of MC sweeps, e.g. calls to sweep()

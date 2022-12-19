@@ -586,7 +586,7 @@ void SpeciationMove::_reject([[maybe_unused]] Change& change) {
 }
 
 SpeciationMove::SpeciationMove(Space& spc, Space& old_spc, std::string_view name, std::string_view cite)
-    : MoveBase(spc, name, cite)
+    : Move(spc, name, cite)
     , random_internal(slump)
     , reaction_validator(spc) {
     molecular_group_bouncer = std::make_unique<Speciation::MolecularGroupDeActivator>(spc, random_internal, true);

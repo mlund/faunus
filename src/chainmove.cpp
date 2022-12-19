@@ -38,8 +38,8 @@ void ChainRotationMoveBase::_accept(Change &) { msqdispl += sqdispl; }
 void ChainRotationMoveBase::_reject(Change &) { msqdispl += 0; }
 double ChainRotationMoveBase::bias(Change &, double, double) { return permit_move ? 0 : pc::infty; }
 
-ChainRotationMoveBase::ChainRotationMoveBase(Space &spc, std::string name, std::string cite)
-    : MoveBase(spc, name, cite) {}
+ChainRotationMoveBase::ChainRotationMoveBase(Space& spc, std::string name, std::string cite)
+    : Move(spc, name, cite) {}
 
 ChainRotationMove::ChainRotationMove(Space &spc, std::string name, std::string cite)
     : ChainRotationMoveBase(spc, name, cite) {

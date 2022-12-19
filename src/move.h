@@ -34,7 +34,7 @@ class MoveCollection;
  *
  * @todo Privatize and rename members
  */
-class MoveBase {
+class Move {
   private:
     virtual void _move(Change& change) = 0;                    //!< Perform move and modify change object
     virtual void _accept(Change& change);                      //!< Call after move is accepted
@@ -67,14 +67,14 @@ class MoveBase {
     void setRepeat(int repeat);
     virtual double bias(Change& change, double old_energy,
                         double new_energy); //!< Extra energy not captured by the Hamiltonian
-    MoveBase(Space& spc, std::string_view name, std::string_view cite);
-    inline virtual ~MoveBase() = default;
+    Move(Space& spc, std::string_view name, std::string_view cite);
+    inline virtual ~Move() = default;
     bool isStochastic() const; //!< True if move should be called stochastically
     const std::string& getName() const;
 };
 
-void from_json(const json&, MoveBase&); //!< Configure any move via json
-void to_json(json&, const MoveBase&);
+void from_json(const json&, Move&); //!< Configure any move via json
+void to_json(json&, const Move&);
 
 /**
  * @brief Replay simulation from a trajectory
@@ -82,7 +82,7 @@ void to_json(json&, const MoveBase&);
  * Particles' positions are updated in every step based on coordinates read from the trajectory. Currently only
  * XTCReader is supported.
  */
-class ReplayMove : public MoveBase {
+class ReplayMove : public Move {
     std::unique_ptr<XTCReader> reader = nullptr; //!< trajectory reader
     TrajectoryFrame frame;                       //!< recently read frame (w/o coordinates)
     bool end_of_trajectory = false;              //!< flag raised when end of trajectory was reached
@@ -95,7 +95,7 @@ class ReplayMove : public MoveBase {
     double bias(Change&, double, double) override;
 
   protected:
-    using MoveBase::spc;
+    using Move::spc;
     ReplayMove(Space& spc, std::string name, std::string cite);
 
   public:
@@ -105,7 +105,7 @@ class ReplayMove : public MoveBase {
 /**
  * @brief Swap the charge of a single atom
  */
-class AtomicSwapCharge : public MoveBase {
+class AtomicSwapCharge : public Move {
     int molid = -1;
     double pKa, pH;
     Average<double> msqd; // mean squared displacement
@@ -122,7 +122,7 @@ class AtomicSwapCharge : public MoveBase {
     void _reject(Change&) override;
 
   protected:
-    using MoveBase::spc;
+    using Move::spc;
     AtomicSwapCharge(Space& spc, std::string name, std::string cite);
 
   public:
@@ -132,7 +132,7 @@ class AtomicSwapCharge : public MoveBase {
 /**
  * @brief Translate and rotate a molecular group
  */
-class AtomicTranslateRotate : public MoveBase {
+class AtomicTranslateRotate : public Move {
     ParticleVector::const_iterator latest_particle;        //!< Iterator to last moved particle
     const Energy::Hamiltonian& hamiltonian;                //!< Reference to Hamiltonian
     std::map<int, SparseHistogram<>> energy_histogram;     //!< Energy histogram (value) for each particle type (key)
@@ -217,7 +217,7 @@ spc.geo.getBoundaryFunc()); #endif
 /**
  * @brief Translate and rotate a molecular group
  */
-class TranslateRotate : public MoveBase {
+class TranslateRotate : public Move {
   protected:
     using OptionalGroup = std::optional<std::reference_wrapper<Space::GroupType>>;
     int molid = -1; //!< Molecule ID of the molecule(s) to move
@@ -282,7 +282,7 @@ class SmarterTranslateRotate : public TranslateRotate {
  *
  * @todo Add feature to align molecule on top of an exiting one
  */
-class ConformationSwap : public MoveBase {
+class ConformationSwap : public Move {
   public:
     enum class CopyPolicy { ALL, POSITIONS, CHARGES, PATCHES, INVALID }; //!< What to copy from conformation library
   private:
@@ -309,7 +309,7 @@ NLOHMANN_JSON_SERIALIZE_ENUM(ConformationSwap::CopyPolicy, {{ConformationSwap::C
                                                             {ConformationSwap::CopyPolicy::POSITIONS, "positions"},
                                                             {ConformationSwap::CopyPolicy::CHARGES, "charges"}})
 
-class VolumeMove : public MoveBase {
+class VolumeMove : public Move {
   private:
     Geometry::VolumeMethod volume_scaling_method = Geometry::VolumeMethod::ISOTROPIC;
     Average<double> mean_volume;
@@ -331,7 +331,7 @@ class VolumeMove : public MoveBase {
 /**
  * @brief Displaces charge on a single atom
  */
-class ChargeMove : public MoveBase {
+class ChargeMove : public Move {
   private:
     Average<double> mean_squared_charge_displacement;
     Change::GroupChange group_change;
@@ -373,7 +373,7 @@ class QuadraticChargeMove : public ChargeMove {
 /**
  * @brief Transfers charge between two molecules
  */
-class ChargeTransfer : public MoveBase {
+class ChargeTransfer : public Move {
   private:
     Average<double> msqd; // mean squared displacement
     double dq = 0, deltaq = 0;
@@ -403,7 +403,7 @@ class ChargeTransfer : public MoveBase {
     void _reject(Change&) override;
 
   protected:
-    using MoveBase::spc;
+    using Move::spc;
     ChargeTransfer(Space& spc, std::string name, std::string cite);
 
   public:
@@ -415,7 +415,7 @@ class ChargeTransfer : public MoveBase {
  * considering as the origin the center of the box or the center of mass
  * of a range of atomic indexes specified by "index": [start:stop].
  */
-class QuadrantJump : public MoveBase {
+class QuadrantJump : public Move {
   private:
     int molid = -1;
     Point dir = {1, 1, 1};
@@ -430,7 +430,7 @@ class QuadrantJump : public MoveBase {
     void _reject(Change&) override { msqd += 0; }
 
   protected:
-    using MoveBase::spc;
+    using Move::spc;
     QuadrantJump(Space& spc, std::string name, std::string cite);
 
   public:
@@ -450,7 +450,7 @@ class QuadrantJump : public MoveBase {
  *
  * @date Lund 2012, 2018
  */
-class ParallelTempering : public MoveBase {
+class ParallelTempering : public Move {
   private:
     const MPI::Controller& mpi;
     MPI::ExchangeParticles exchange_particles; //!< Helper class to exchange particles
@@ -480,8 +480,8 @@ class ParallelTempering : public MoveBase {
  * @returns unique pointer to move
  * @throw if invalid name or input parameters
  */
-std::unique_ptr<MoveBase> createMove(const std::string& name, const json& properties, Space& spc,
-                                     Energy::Hamiltonian& hamiltonian);
+std::unique_ptr<Move> createMove(const std::string& name, const json& properties, Space& spc,
+                                 Energy::Hamiltonian& hamiltonian);
 
 /**
  * @brief Class storing a list of MC moves with their probability weights and
@@ -490,7 +490,7 @@ std::unique_ptr<MoveBase> createMove(const std::string& name, const json& proper
 class MoveCollection {
   private:
     unsigned int number_of_moves_per_sweep;                //!< Sum of all weights
-    BasePointerVector<MoveBase> moves;                     //!< list of moves
+    BasePointerVector<Move> moves;                         //!< list of moves
     std::vector<double> repeats;                           //!< list of repeats (weights) for `moves`
     std::discrete_distribution<unsigned int> distribution; //!< Probability distribution for `moves`
     using move_iterator = decltype(moves.vec)::iterator;   //!< Iterator to move pointer
@@ -498,8 +498,8 @@ class MoveCollection {
 
   public:
     MoveCollection(const json& list_of_moves, Space& spc, Energy::Hamiltonian& hamiltonian, Space &old_spc);
-    void addMove(std::shared_ptr<MoveBase>&& move);                 //!< Register new move with correct weight
-    const BasePointerVector<MoveBase>& getMoves() const;            //!< Get list of moves
+    void addMove(std::shared_ptr<Move>&& move);                     //!< Register new move with correct weight
+    const BasePointerVector<Move>& getMoves() const;                //!< Get list of moves
     friend void to_json(json& j, const MoveCollection& propagator); //!< Generate json output
 
     /**

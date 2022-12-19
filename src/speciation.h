@@ -118,7 +118,7 @@ namespace Faunus::move {
  *
  * @todo Split atom-swap functionality to separate helper class
  */
-class SpeciationMove : public MoveBase {
+class SpeciationMove : public Move {
   private:
     using reaction_iterator = decltype(Faunus::reactions)::iterator;
     Random random_internal; //!< Private generator so as not to touch MoveBase::slump

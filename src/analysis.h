@@ -34,7 +34,7 @@ namespace Faunus {
  * 3. Recommended: add the required json input format to `docs/schema.yml`
  * 4. Recommended: add documentation to `docs/_docs/analysis.md`
  */
-namespace Analysis {
+namespace analysis {
 
 /**
  * @brief Base class for all analysis functions
@@ -934,6 +934,6 @@ class SavePenaltyEnergy : public Analysisbase {
     SavePenaltyEnergy(const json &j, const Space &spc, const Energy::Hamiltonian &pot);
 };
 
-} // namespace Analysis
+} // namespace analysis
 
 } // namespace Faunus

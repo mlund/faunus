@@ -241,30 +241,30 @@ PYBIND11_MODULE(pyfaunus, m) {
     }));
 
     // Analysisbase
-    py::class_<Analysis::Analysisbase>(m, "Analysisbase")
-        .def_readonly("name", &Analysis::Analysisbase::name)
-        .def_readwrite("cite", &Analysis::Analysisbase::cite)
-        .def("to_disk", &Analysis::Analysisbase::to_disk)
-        .def("sample", &Analysis::Analysisbase::sample)
-        .def("to_dict", [](Analysis::Analysisbase& self) {
+    py::class_<analysis::Analysisbase>(m, "Analysisbase")
+        .def_readonly("name", &analysis::Analysisbase::name)
+        .def_readwrite("cite", &analysis::Analysisbase::cite)
+        .def("to_disk", &analysis::Analysisbase::to_disk)
+        .def("sample", &analysis::Analysisbase::sample)
+        .def("to_dict", [](analysis::Analysisbase& self) {
             json j;
-            Analysis::to_json(j, self);
+            analysis::to_json(j, self);
             return py::dict(j);
         });
 
-    py::bind_vector<std::vector<std::shared_ptr<Analysis::Analysisbase>>>(m, "AnalysisVector");
+    py::bind_vector<std::vector<std::shared_ptr<analysis::Analysisbase>>>(m, "AnalysisVector");
 
     // CombinedAnalysis
-    py::class_<Analysis::CombinedAnalysis>(m, "Analysis")
+    py::class_<analysis::CombinedAnalysis>(m, "Analysis")
         .def(py::init([](Space& spc, Thamiltonian& pot, py::list list) {
-            return std::make_unique<Analysis::CombinedAnalysis>(list, spc, pot);
+            return std::make_unique<analysis::CombinedAnalysis>(list, spc, pot);
         }))
-        .def_readwrite("vector", &Analysis::CombinedAnalysis::vec)
+        .def_readwrite("vector", &analysis::CombinedAnalysis::vec)
         .def("to_dict",
-             [](Analysis::CombinedAnalysis& self) {
+             [](analysis::CombinedAnalysis& self) {
                  json j;
                  Faunus::to_json(j, self);
                  return py::dict(j);
              })
-        .def("sample", &Analysis::CombinedAnalysis::sample);
+        .def("sample", &analysis::CombinedAnalysis::sample);
 }

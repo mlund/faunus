@@ -22,7 +22,7 @@
 #include <iostream>
 #include <memory>
 
-namespace Faunus::Analysis {
+namespace Faunus::analysis {
 
 void to_json(json& j, const Analysisbase& base) { base.to_json(j); }
 
@@ -2365,4 +2365,4 @@ void SavePenaltyEnergy::_sample() {
     }
 }
 
-} // namespace Faunus::Analysis
+} // namespace Faunus::analysis

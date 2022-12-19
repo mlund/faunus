@@ -43,11 +43,10 @@ void showProgress(std::shared_ptr<ProgressIndicator::ProgressTracker>& progress_
 void playRetroMusic();
 template <typename TimePoint>
 void saveOutput(TimePoint& starting_time, docopt::Options& args, MetropolisMonteCarlo& simulation,
-                const Analysis::CombinedAnalysis& analysis);
+                const analysis::CombinedAnalysis& analysis);
 
 void mainLoop(bool show_progress, const json& json_in, MetropolisMonteCarlo& simulation,
-              Analysis::CombinedAnalysis& analysis);
-
+              analysis::CombinedAnalysis& analysis);
 
 static const char USAGE[] =
     R"(Faunus - the Monte Carlo code you're looking for!
@@ -103,7 +102,7 @@ int main(int argc, const char** argv) {
         MetropolisMonteCarlo simulation(input);
         loadState(args, simulation);
         checkElectroNeutrality(simulation);
-        Analysis::CombinedAnalysis analysis(input.at("analysis"), simulation.getSpace(), simulation.getHamiltonian());
+        analysis::CombinedAnalysis analysis(input.at("analysis"), simulation.getSpace(), simulation.getHamiltonian());
 
         bool show_progress = !quiet && !args["--nobar"].asBool();
 #ifdef ENABLE_MPI
@@ -204,7 +203,7 @@ int runUnittests(int argc, const char* const* argv) {
 }
 
 void mainLoop(bool show_progress, const json& json_in, MetropolisMonteCarlo& simulation,
-              Analysis::CombinedAnalysis& analysis) {
+              analysis::CombinedAnalysis& analysis) {
     const auto& loop = json_in.at("mcloop");
     const auto macro = loop.at("macro").get<int>();
     const auto micro = loop.at("micro").get<int>();
@@ -423,7 +422,7 @@ void loadState(docopt::Options& args, MetropolisMonteCarlo& simulation) {
 
 template <typename TimePoint>
 void saveOutput(TimePoint& starting_time, docopt::Options& args, MetropolisMonteCarlo& simulation,
-                const Analysis::CombinedAnalysis& analysis) {
+                const analysis::CombinedAnalysis& analysis) {
 
     if (std::ofstream stream(Faunus::MPI::prefix + args["--output"].asString()); stream) {
         json j;

@@ -24,17 +24,17 @@
 
 namespace Faunus::analysis {
 
-void to_json(json& j, const Analysisbase& base) { base.to_json(j); }
+void to_json(json& j, const Analysis& base) { base.to_json(j); }
 
 /**
  * This is virtual and can be overridden in derived classes
  */
-void Analysisbase::_to_disk() {}
+void Analysis::_to_disk() {}
 
 /**
  * Wrapper function used for non-intrusive future padding around _to_disk().
  */
-void Analysisbase::to_disk() { _to_disk(); }
+void Analysis::to_disk() { _to_disk(); }
 
 /**
  * For each call:
@@ -45,7 +45,7 @@ void Analysisbase::to_disk() { _to_disk(); }
  *
  * The call to the sampling function is timed.
  */
-void Analysisbase::sample() {
+void Analysis::sample() {
     try {
         number_of_steps++;
         if (sample_interval > 0 && number_of_steps > number_of_skipped_steps) {
@@ -61,7 +61,7 @@ void Analysisbase::sample() {
     }
 }
 
-void Analysisbase::from_json(const json& j) {
+void Analysis::from_json(const json& j) {
     try {
         number_of_skipped_steps = j.value("nskip", 0);
         sample_interval = j.value("nstep", 0);
@@ -71,7 +71,7 @@ void Analysisbase::from_json(const json& j) {
     }
 }
 
-void Analysisbase::to_json(json& json_output) const {
+void Analysis::to_json(json& json_output) const {
     try {
         auto& j = json_output[name];
         _to_json(j); // fill in info from derived classes
@@ -93,15 +93,19 @@ void Analysisbase::to_json(json& json_output) const {
     }
 }
 
-void Analysisbase::_to_json(json&) const {}
+void Analysis::_to_json(json&) const {}
 
-void Analysisbase::_from_json(const json&) {}
+void Analysis::_from_json(const json&) {}
 
-int Analysisbase::getNumberOfSteps() const { return number_of_steps; }
+int Analysis::getNumberOfSteps() const { return number_of_steps; }
 
-Analysisbase::Analysisbase(const Space& spc, std::string_view name) : spc(spc), name(name) { assert(!name.empty()); }
+Analysis::Analysis(const Space& spc, std::string_view name)
+    : spc(spc)
+    , name(name) {
+    assert(!name.empty());
+}
 
-Analysisbase::Analysisbase(const Space& spc, std::string_view name, int sample_interval, int number_of_skipped_steps)
+Analysis::Analysis(const Space& spc, std::string_view name, int sample_interval, int number_of_skipped_steps)
     : number_of_skipped_steps(number_of_skipped_steps)
     , spc(spc)
     , sample_interval(sample_interval)
@@ -115,8 +119,7 @@ Analysisbase::Analysisbase(const Space& spc, std::string_view name, int sample_i
  * @param pot Hamiltonian
  * @return shared pointer to created analysis base class
  */
-std::unique_ptr<Analysisbase> createAnalysis(const std::string& name, const json& j, Space& spc,
-                                             Energy::Hamiltonian& pot) {
+std::unique_ptr<Analysis> createAnalysis(const std::string& name, const json& j, Space& spc, Energy::Hamiltonian& pot) {
     try {
         if (name == "atomprofile") {
             return std::make_unique<AtomProfile>(j, spc);
@@ -270,7 +273,8 @@ void SystemEnergy::createOutputStream() {
 }
 
 SystemEnergy::SystemEnergy(const json& j, const Space& spc, Energy::Hamiltonian& hamiltonian)
-    : Analysisbase(spc, "systemenergy"), hamiltonian(hamiltonian) {
+    : Analysis(spc, "systemenergy")
+    , hamiltonian(hamiltonian) {
     from_json(j);
     energy_histogram.setResolution(0.25);
     initial_energy = ranges::accumulate(calculateEnergies(), 0.0);
@@ -368,7 +372,7 @@ std::function<bool(double)> createValueFilter(const std::string& name, const jso
 // --------------------------------
 
 PairMatrixAnalysis::PairMatrixAnalysis(const json& j, const Space& spc)
-    : Analysisbase(spc, "cluster")
+    : Analysis(spc, "cluster")
     , spc(spc) {
     from_json(j);
     filename = j.at("file").get<std::string>();
@@ -455,7 +459,8 @@ SaveState::~SaveState() {
     }
 }
 
-SaveState::SaveState(json j, const Space& spc) : Analysisbase(spc, "savestate") {
+SaveState::SaveState(json j, const Space& spc)
+    : Analysis(spc, "savestate") {
     if (j.count("nstep") == 0) { // by default, disable _sample() and
         j["nstep"] = -1;         // store only when _to_disk() is called
     }
@@ -522,7 +527,8 @@ void SaveState::saveAsCuboid(const std::string& filename, const Space& spc, Stru
     }
 }
 
-PairFunctionBase::PairFunctionBase(const Space& spc, const json& j, const std::string_view name) : Analysisbase(spc, name) {
+PairFunctionBase::PairFunctionBase(const Space& spc, const json& j, const std::string_view name)
+    : Analysis(spc, name) {
     from_json(j);
 }
 
@@ -600,7 +606,7 @@ void PerturbationAnalysisBase::_to_disk() {
 }
 PerturbationAnalysisBase::PerturbationAnalysisBase(const std::string& name, Energy::EnergyTerm& pot, Space& spc,
                                                    const std::string& filename)
-    : Analysisbase(spc, name)
+    : Analysis(spc, name)
     , mutable_space(spc)
     , pot(pot)
     , filename(filename) {
@@ -721,7 +727,7 @@ void MolecularConformationID::_sample() {
 void MolecularConformationID::_to_json(json& j) const { j["histogram"] = histogram; }
 
 MolecularConformationID::MolecularConformationID(const json& j, const Space& spc)
-    : Analysisbase(spc, "moleculeconformation") {
+    : Analysis(spc, "moleculeconformation") {
     from_json(j);
     const auto molname = j.at("molecule").get<std::string>();
     molid = Faunus::findMoleculeByName(molname).id();
@@ -731,7 +737,8 @@ void QRtraj::_sample() { write_to_file(); }
 
 void QRtraj::_to_json(json& j) const { j = {{"file", filename}}; }
 
-QRtraj::QRtraj(const json& j, const Space& spc, const std::string &name) : Analysisbase(spc, name) {
+QRtraj::QRtraj(const json& j, const Space& spc, const std::string& name)
+    : Analysis(spc, name) {
     from_json(j);
     filename = MPI::prefix + j.value("file", "qrtraj.dat"s);
     stream = IO::openCompressedOutputStream(filename, true);
@@ -804,7 +811,7 @@ void FileReactionCoordinate::_sample() {
 FileReactionCoordinate::FileReactionCoordinate(
     const Space& spc, const std::string& filename,
     std::unique_ptr<ReactionCoordinate::ReactionCoordinateBase> reaction_coordinate)
-    : Analysisbase(spc, "reactioncoordinate")
+    : Analysis(spc, "reactioncoordinate")
     , filename(filename)
     , reaction_coordinate(std::move(reaction_coordinate)) {
     if (filename.empty()) {
@@ -828,7 +835,7 @@ void FileReactionCoordinate::_to_disk() {
 }
 
 AtomicDisplacement::AtomicDisplacement(const json& j, const Space& spc, std::string_view name)
-    : Analysisbase(spc, name)
+    : Analysis(spc, name)
     , displacement_histogram(j.value("histogram_resolution", 1.0))
     , reference_reset_interval(j.value("reset_interval", std::numeric_limits<int>::max())) {
 
@@ -1246,7 +1253,8 @@ void SanityCheck::checkMassCenter(const Space::GroupType& group) {
     }
 }
 
-SanityCheck::SanityCheck(const json& j, const Space& spc) : Analysisbase(spc, "sanity") {
+SanityCheck::SanityCheck(const json& j, const Space& spc)
+    : Analysis(spc, "sanity") {
     from_json(j);
     sample_interval = j.value("nstep", -1);
 }
@@ -1374,7 +1382,7 @@ AtomDipDipCorr::AtomDipDipCorr(const json& j, const Space& spc) : PairAngleFunct
  * @param molecule_names Save only a subset of molecules with matching names (default empty = all)
  */
 XTCtraj::XTCtraj(const Space& spc, const std::string& filename, const std::vector<std::string>& molecule_names)
-    : Analysisbase(spc, "xtcfile") {
+    : Analysis(spc, "xtcfile") {
     namespace rv = ranges::cpp20::views;
     writer = std::make_unique<XTCWriter>(filename);
     if (!molecule_names.empty()) {
@@ -1391,7 +1399,7 @@ XTCtraj::XTCtraj(const Space& spc, const std::string& filename, const std::vecto
 
 XTCtraj::XTCtraj(const json& j, const Space& spc)
     : XTCtraj(spc, MPI::prefix + j.at("file").get<std::string>(), j.value("molecules", std::vector<std::string>())) {
-    Analysisbase::from_json(j);
+    Analysis::from_json(j);
 }
 
 void XTCtraj::_to_json(json& j) const {
@@ -1475,7 +1483,8 @@ void MultipoleDistribution::_sample() {
 
 void MultipoleDistribution::_to_json(json& j) const { j = {{"molecules", names}, {"file", filename}, {"dr", dr}}; }
 
-MultipoleDistribution::MultipoleDistribution(const json& j, const Space& spc) : Analysisbase(spc, "Multipole Distribution") {
+MultipoleDistribution::MultipoleDistribution(const json& j, const Space& spc)
+    : Analysis(spc, "Multipole Distribution") {
     from_json(j);
     dr = j.at("dr").get<double>();
     filename = j.at("file").get<std::string>();
@@ -1505,7 +1514,8 @@ void AtomInertia::_sample() {
         output_stream << getNumberOfSteps() << " " << compute().transpose() << "\n";
     }
 }
-AtomInertia::AtomInertia(const json& j, const Space& spc) : Analysisbase(spc, "Atomic Inertia Eigenvalues") {
+AtomInertia::AtomInertia(const json& j, const Space& spc)
+    : Analysis(spc, "Atomic Inertia Eigenvalues") {
     from_json(j);
     filename = MPI::prefix + j.at("file").get<std::string>();
     output_stream.open(filename);
@@ -1546,7 +1556,7 @@ void InertiaTensor::_sample() {
 }
 
 InertiaTensor::InertiaTensor(const json& j, const Space& spc)
-    : Analysisbase(spc, "Inertia Tensor") {
+    : Analysis(spc, "Inertia Tensor") {
     from_json(j);
     group_index = j.at("index").get<size_t>();
     const auto& group = spc.groups.at(group_index);
@@ -1611,7 +1621,8 @@ void MultipoleMoments::_sample() {
                       << multipole.eivec.transpose() << "\n";
     }
 }
-MultipoleMoments::MultipoleMoments(const json& j, const Space& spc) : Analysisbase(spc, "Multipole Moments") {
+MultipoleMoments::MultipoleMoments(const json& j, const Space& spc)
+    : Analysis(spc, "Multipole Moments") {
     from_json(j);
     try {
         use_molecular_mass_center = j.value("mol_cm", true); // use the mass center of the whole molecule
@@ -1711,7 +1722,8 @@ void PolymerShape::_to_disk() {
     }
 }
 
-PolymerShape::PolymerShape(const json& j, const Space& spc) : Analysisbase(spc, "Polymer Shape") {
+PolymerShape::PolymerShape(const json& j, const Space& spc)
+    : Analysis(spc, "Polymer Shape") {
     from_json(j);
     cite = "https://dx.doi.org/10/d6ff";
     if (j.count("molecules") > 0) {
@@ -1775,7 +1787,10 @@ double AtomProfile::distanceToOrigin(const Point& position) const {
     return distance.cwiseProduct(dir.cast<double>()).norm();
 }
 
-AtomProfile::AtomProfile(const json& j, const Space& spc) : Analysisbase(spc, "atomprofile") { from_json(j); }
+AtomProfile::AtomProfile(const json& j, const Space& spc)
+    : Analysis(spc, "atomprofile") {
+    from_json(j);
+}
 
 void AtomProfile::_to_disk() {
     std::ofstream f(MPI::prefix + file);
@@ -1842,7 +1857,10 @@ void SlicedDensity::_sample() {
         histogram(particle.pos.z() - z_offset)++;
     }
 }
-SlicedDensity::SlicedDensity(const json& j, const Space& spc) : Analysisbase(spc, "sliceddensity") { from_json(j); }
+SlicedDensity::SlicedDensity(const json& j, const Space& spc)
+    : Analysis(spc, "sliceddensity") {
+    from_json(j);
+}
 
 void SlicedDensity::_to_disk() {
     if (number_of_samples == 0) {
@@ -1936,7 +1954,8 @@ ParticleVector ChargeFluctuations::averageChargeParticles(const Space::GroupType
 /**
  * @todo replace `mol_iter` with simple molid integer
  */
-ChargeFluctuations::ChargeFluctuations(const json& j, const Space& spc) : Analysisbase(spc, "chargefluctuations") {
+ChargeFluctuations::ChargeFluctuations(const json& j, const Space& spc)
+    : Analysis(spc, "chargefluctuations") {
     from_json(j);
     filename = j.value("pqrfile", ""s);
     verbose = j.value("verbose", true);
@@ -1975,7 +1994,10 @@ void Multipole::_to_json(json& j) const {
                                          {unicode::mu + unicode::squared, average.dipole_moment_squared.avg()}};
     }
 }
-Multipole::Multipole(const json& j, const Space& spc) : Analysisbase(spc, "multipole") { from_json(j); }
+Multipole::Multipole(const json& j, const Space& spc)
+    : Analysis(spc, "multipole") {
+    from_json(j);
+}
 
 void ScatteringFunction::_sample() {
     namespace rv = ranges::cpp20::views;
@@ -2035,7 +2057,8 @@ void ScatteringFunction::_to_json(json& j) const {
     }
 }
 
-ScatteringFunction::ScatteringFunction(const json& j, const Space& spc) try : Analysisbase(spc, "scatter") {
+ScatteringFunction::ScatteringFunction(const json& j, const Space& spc) try
+    : Analysis(spc, "scatter") {
     from_json(j);
 
     mass_center_scattering = j.value("com", true);
@@ -2160,7 +2183,8 @@ VirtualTranslate::VirtualTranslate(const json& j, Space& spc, Energy::EnergyTerm
 }
 
 SpaceTrajectory::SpaceTrajectory(const json& j, const Space& spc)
-    : Analysisbase(spc, "space trajectory"), groups(spc.groups) {
+    : Analysis(spc, "space trajectory")
+    , groups(spc.groups) {
     from_json(j);
     filename = j.at("file").get<std::string>();
 
@@ -2205,7 +2229,8 @@ void SpaceTrajectory::_to_disk() { stream->flush(); }
 // -----------------------------
 
 ElectricPotential::ElectricPotential(const json& j, const Space& spc)
-    : Analysisbase(spc, "electricpotential"), potential_correlation_histogram(histogram_resolution) {
+    : Analysis(spc, "electricpotential")
+    , potential_correlation_histogram(histogram_resolution) {
     from_json(j);
     coulomb = std::make_unique<Potential::NewCoulombGalore>();
     Potential::from_json(j, *coulomb);
@@ -2343,10 +2368,10 @@ bool ElectricPotential::overlapWithParticles(const Point& position) const {
 }
 
 SavePenaltyEnergy::SavePenaltyEnergy(const json& j, const Space& spc, const Energy::Hamiltonian& pot)
-    : Analysisbase(spc, "penaltyfunction")
+    : Analysis(spc, "penaltyfunction")
     , filename(j.at("file").get<std::string>())
     , penalty_energy(pot.findFirstOf<Energy::Penalty>()) {
-    Analysisbase::from_json(j);
+    Analysis::from_json(j);
     if (!penalty_energy) {
         faunus_logger->warn("{}: analysis disabled as no penalty function found", name);
     }

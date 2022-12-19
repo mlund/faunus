@@ -241,18 +241,18 @@ PYBIND11_MODULE(pyfaunus, m) {
     }));
 
     // Analysisbase
-    py::class_<analysis::Analysisbase>(m, "Analysisbase")
-        .def_readonly("name", &analysis::Analysisbase::name)
-        .def_readwrite("cite", &analysis::Analysisbase::cite)
-        .def("to_disk", &analysis::Analysisbase::to_disk)
-        .def("sample", &analysis::Analysisbase::sample)
-        .def("to_dict", [](analysis::Analysisbase& self) {
+    py::class_<analysis::Analysis>(m, "Analysisbase")
+        .def_readonly("name", &analysis::Analysis::name)
+        .def_readwrite("cite", &analysis::Analysis::cite)
+        .def("to_disk", &analysis::Analysis::to_disk)
+        .def("sample", &analysis::Analysis::sample)
+        .def("to_dict", [](analysis::Analysis& self) {
             json j;
             analysis::to_json(j, self);
             return py::dict(j);
         });
 
-    py::bind_vector<std::vector<std::shared_ptr<analysis::Analysisbase>>>(m, "AnalysisVector");
+    py::bind_vector<std::vector<std::shared_ptr<analysis::Analysis>>>(m, "AnalysisVector");
 
     // CombinedAnalysis
     py::class_<analysis::CombinedAnalysis>(m, "Analysis")

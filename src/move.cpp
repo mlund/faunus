@@ -395,7 +395,7 @@ MoveCollection::move_iterator MoveCollection::sample() {
 #ifdef ENABLE_MPI
     auto& random_engine = MPI::mpi.random.engine; // parallel processes (tempering) must be in sync
 #else
-    auto& random_engine = Move::MoveBase::slump.engine;
+    auto& random_engine = move::Move::slump.engine;
 #endif
     if (!moves.empty()) {
         return moves.begin() + distribution(random_engine);

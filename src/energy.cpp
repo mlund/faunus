@@ -1769,7 +1769,7 @@ double CustomGroupGroup::energy([[maybe_unused]] const Change& change) {
     auto group_group_energy = [&](auto index1, auto index2) -> double {
         const Group& group1 = spc.groups[index1];
         const Group& group2 = spc.groups[index2];
-        if ((group1.id == molid1 & group2.id == molid2) | (group1.id == molid2 & group2.id == molid1)) {
+        if (((group1.id == molid1) & (group2.id == molid2)) | ((group1.id == molid2) & (group2.id == molid1))) {
             setExprParameters(group1, group2);
             return expr->operator()();
         }

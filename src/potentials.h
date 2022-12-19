@@ -6,7 +6,7 @@
 #include "spherocylinder.h"
 #include <coulombgalore.h>
 
-namespace Faunus::Potential {
+namespace Faunus::pairpotential {
 
 /**
  * @brief Lennard-Jones potential with an arbitrary combination rule.
@@ -169,7 +169,7 @@ class SquareWell : public MixerPairPotentialBase {
     }
 };
 
-class RepulsionR3 : public PairPotentialBase {
+class RepulsionR3 : public PairPotential {
   private:
     double f = 0, s = 0, e = 0;
     void from_json(const json& j) override;
@@ -177,7 +177,7 @@ class RepulsionR3 : public PairPotentialBase {
 
   public:
     explicit RepulsionR3(const std::string& name = "repulsionr3")
-        : PairPotentialBase(name){};
+        : PairPotential(name){};
 
     inline double operator()(const Particle&, const Particle&, double squared_distance, const Point&) const override {
         const auto r = sqrt(squared_distance);
@@ -204,7 +204,7 @@ class RepulsionR3 : public PairPotentialBase {
  * `wc`    | Decay range, w_c [angstrom]
  *
  */
-class CosAttract : public PairPotentialBase {
+class CosAttract : public PairPotential {
     double eps = 0.0;
     double wc = 0.0;
     double rc = 0.0;
@@ -316,7 +316,7 @@ class CosAttractMixed : public MixerPairPotentialBase {
 /**
  * @brief Pairwise SASA potential calculating the surface area of inter-secting spheres
  */
-class SASApotential : public PairPotentialBase {
+class SASApotential : public PairPotential {
   private:
     bool shift = true; // shift potential to zero at large separations?
     double proberadius = 0, conc = 0;
@@ -341,7 +341,7 @@ class SASApotential : public PairPotentialBase {
 /**
  * @brief Plain Coulomb potential
  */
-class Coulomb : public PairPotentialBase {
+class Coulomb : public PairPotential {
   private:
     void from_json(const json& j) override;
 
@@ -356,7 +356,7 @@ class Coulomb : public PairPotentialBase {
     void to_json(json& j) const override;
 };
 
-class DipoleDipole : public PairPotentialBase {
+class DipoleDipole : public PairPotential {
   private:
     void from_json(const json& j) override;
 
@@ -418,7 +418,7 @@ class Polarizability : public Coulomb {
  *
  * More info: doi:10.1103/PhysRevE.59.4248
  */
-class FENE : public PairPotentialBase {
+class FENE : public PairPotential {
     double k = 0;
     double r02 = 0;
     double r02inv = 0;
@@ -442,7 +442,7 @@ class FENE : public PairPotentialBase {
 /**
  * @brief Wrapper for external CoulombGalore library
  */
-class NewCoulombGalore : public PairPotentialBase {
+class NewCoulombGalore : public PairPotential {
   protected:
     ::CoulombGalore::Splined pot;
     virtual void setSelfEnergy();
@@ -504,7 +504,7 @@ class Multipole : public NewCoulombGalore {
  * @note `symbols` is a shared_ptr as this allows it to be modified by `operator() const`.
  *       A hack, but would otherwise require const-removal in all pair-potentials.
  */
-class CustomPairPotential : public PairPotentialBase {
+class CustomPairPotential : public PairPotential {
   private:
     // Only ExprFunction<double> is explicitly instantiated in functionparser.cpp. Other types as well as
     // the implicit template instantiation is disabled to save reasources during the compilation/build.
@@ -566,12 +566,12 @@ using CigarCosAttractWCA = CompleteCigarPotential<CosAttractMixed, WeeksChandler
  * @warning Each atom pair will be assigned an instance of a pair-potential. This *could* be
  *          problematic if these have large memory requirements.
  */
-class FunctorPotential : public PairPotentialBase {
+class FunctorPotential : public PairPotential {
     using EnergyFunctor = std::function<double(const Particle&, const Particle&, double, const Point&)>;
     json backed_up_json_input; // storage for input json
     bool have_monopole_self_energy = false;
     bool have_dipole_self_energy = false;
-    void registerSelfEnergy(PairPotentialBase*); //!< helper func to add to selv_energy_vector
+    void registerSelfEnergy(PairPotential*); //!< helper func to add to selv_energy_vector
     EnergyFunctor
     combinePairPotentials(json& potential_array); // parse json array of potentials to a single pair-energy functor
 

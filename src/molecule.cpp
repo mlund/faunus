@@ -23,9 +23,10 @@ TEST_SUITE_BEGIN("Molecule");
 std::vector<MoleculeData> molecules; //!< List of molecule types
 std::vector<ReactionData> reactions; //!< List of reactions
 
-MoleculeData::MoleculeData(const std::string &name, const ParticleVector &particles,
-                           const BasePointerVector<Potential::BondData> &bonds)
-    : name(name), bonds(bonds) {
+MoleculeData::MoleculeData(const std::string& name, const ParticleVector& particles,
+                           const BasePointerVector<pairpotential::BondData>& bonds)
+    : name(name)
+    , bonds(bonds) {
     for (const auto& particle : particles) {
         atoms.push_back(particle.id);
     }
@@ -198,7 +199,7 @@ NeighboursGenerator::NeighboursGenerator(const BondVector &bonds) {
 }
 
 void NeighboursGenerator::createBondMap(const BondVector &bonds) {
-    for (auto &bond : bonds.find<Potential::StretchData>()) {
+    for (auto& bond : bonds.find<pairpotential::StretchData>()) {
         auto add_bond = [this, &bond](auto i, auto j) {
             auto atom_emplaced = bond_map.emplace(bond->indices.at(i), AtomList{}); // find or create empty vector
             atom_emplaced.first->second.push_back(
@@ -251,7 +252,7 @@ void NeighboursGenerator::generatePairs(AtomPairList& pairs, int bond_distance) 
 }
 
 TEST_CASE("NeighboursGenerator") {
-    BasePointerVector<Potential::BondData> bonds;
+    BasePointerVector<pairpotential::BondData> bonds;
     std::vector<std::pair<int, int>> pairs;
 
     SUBCASE("Linear Chain") {
@@ -259,7 +260,7 @@ TEST_CASE("NeighboursGenerator") {
         const auto mer = 10;
         for (auto i = 0; i < mer - 1; ++i) {
             const auto j = i + 1;
-            bonds.emplace_back<Potential::HarmonicBond>(0.0, 0.0, std::vector<int>{i, j});
+            bonds.emplace_back<pairpotential::HarmonicBond>(0.0, 0.0, std::vector<int>{i, j});
         }
 
         const int distance = 3;
@@ -285,7 +286,7 @@ TEST_CASE("NeighboursGenerator") {
         const auto mer = 6;
         for (auto i = 0; i < mer; ++i) {
             auto const j = (i + 1) % mer;
-            bonds.emplace_back<Potential::HarmonicBond>(0., 0., std::vector<int>{i, j});
+            bonds.emplace_back<pairpotential::HarmonicBond>(0., 0., std::vector<int>{i, j});
         }
 
         const auto distance = 3; // up to dihedrals
@@ -318,7 +319,7 @@ TEST_CASE("NeighboursGenerator") {
         // isopentane like structure
         std::vector<std::vector<int>> bonds_ndxs = {{0, 1}, {1, 2}, {1, 3}, {3, 4}};
         for (const auto& bond_ndxs : bonds_ndxs) {
-            bonds.emplace_back<Potential::HarmonicBond>(0., 0., bond_ndxs);
+            bonds.emplace_back<pairpotential::HarmonicBond>(0., 0., bond_ndxs);
         }
         NeighboursGenerator generator(bonds);
         generator.generatePairs(pairs, 2);
@@ -326,10 +327,10 @@ TEST_CASE("NeighboursGenerator") {
     }
 
     SUBCASE("Harmonic and FENE") {
-        bonds.emplace_back<Potential::HarmonicBond>(0., 0., std::vector<int>{1, 2});
-        bonds.emplace_back<Potential::FENEBond>(0., 0., std::vector<int>{2, 3});
-        bonds.emplace_back<Potential::FENEBond>(0., 0., std::vector<int>{4, 5});
-        bonds.emplace_back<Potential::HarmonicBond>(0., 0., std::vector<int>{4, 5});
+        bonds.emplace_back<pairpotential::HarmonicBond>(0., 0., std::vector<int>{1, 2});
+        bonds.emplace_back<pairpotential::FENEBond>(0., 0., std::vector<int>{2, 3});
+        bonds.emplace_back<pairpotential::FENEBond>(0., 0., std::vector<int>{4, 5});
+        bonds.emplace_back<pairpotential::HarmonicBond>(0., 0., std::vector<int>{4, 5});
         NeighboursGenerator generator(bonds);
         generator.generatePairs(pairs, 7);
     }
@@ -444,7 +445,7 @@ void MoleculeBuilder::readBonds(const json& j) {
     using namespace ranges::cpp20;
     bonds = j.value("bondlist", bonds);
     auto is_invalid_index = [size = particles.size()](auto& i) { return i >= size || i < 0; };
-    auto indices = bonds | views::transform(&Potential::BondData::indices) | views::join;
+    auto indices = bonds | views::transform(&pairpotential::BondData::indices) | views::join;
     if (any_of(indices, is_invalid_index)) {
         throw ConfigurationError("bonded index out of range");
     }
@@ -455,7 +456,7 @@ void MoleculeBuilder::readFastaBonds(const json& j) {
         return;
     }
     bonds.vec.reserve(bonds.size() + particles.size() - 1);
-    Potential::HarmonicBond bond;
+    pairpotential::HarmonicBond bond;
     bond.from_json(j.at("structure")); // read 'k' and 'req' from json
     for (int i = 1; i < (int)particles.size(); ++i) {
         bond.indices = {i - 1, i};
@@ -536,7 +537,7 @@ void MoleculeStructureReader::readArray(ParticleVector& particles, const json& j
 
 void MoleculeStructureReader::readFasta(ParticleVector& particles, const json& j) {
     if (auto it = j.find("fasta"); it != j.end()) {
-        Potential::HarmonicBond bond; // harmonic bond
+        pairpotential::HarmonicBond bond; // harmonic bond
         bond.from_json(j);            // read 'k' and 'req' from json
 
         auto fasta = it->get<std::string>(); // fasta sequence or filename

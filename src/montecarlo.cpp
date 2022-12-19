@@ -18,7 +18,7 @@ bool MetropolisMonteCarlo::metropolisCriterion(const double energy_change) {
     if (std::isnan(energy_change)) {
         throw std::runtime_error("Metropolis error: energy cannot be NaN");
     }
-    const auto random_number_between_zero_and_one = Move::MoveBase::slump(); // engine *must* be propagated!
+    const auto random_number_between_zero_and_one = move::Move::slump();     // engine *must* be propagated!
     if (std::isinf(energy_change) && energy_change < 0.0) {                  // if negative infinity -> quietly accept
         return true;
     }
@@ -41,8 +41,8 @@ void MetropolisMonteCarlo::init() {
     Change change;
     change.everything = true;
 
-    state->pot->state = Energy::Energybase::MonteCarloState::ACCEPTED;    // this is the old energy (current, accepted)
-    trial_state->pot->state = Energy::Energybase::MonteCarloState::TRIAL; // this is the new energy (trial)
+    state->pot->state = Energy::EnergyTerm::MonteCarloState::ACCEPTED;    // this is the old energy (current, accepted)
+    trial_state->pot->state = Energy::EnergyTerm::MonteCarloState::TRIAL; // this is the new energy (trial)
 
     state->pot->init();
     auto energy = state->pot->energy(change);
@@ -96,7 +96,7 @@ MetropolisMonteCarlo::MetropolisMonteCarlo(const json &j)
     faunus_logger->set_level(spdlog::level::off); // do not duplicate log info
     trial_state = std::make_unique<State>(j);     // ...for the trial state
     faunus_logger->set_level(original_log_level); // restore original log level
-    moves = std::make_unique<Move::MoveCollection>(j.at("moves"), *trial_state->spc, *trial_state->pot, *state->spc);
+    moves = std::make_unique<move::MoveCollection>(j.at("moves"), *trial_state->spc, *trial_state->pot, *state->spc);
     init();
 }
 
@@ -110,7 +110,7 @@ void MetropolisMonteCarlo::restore(const json &j) {
         from_json(j, *state->spc);       // default, accepted state
         from_json(j, *trial_state->spc); // trial state
         if (j.contains("random-move")) {
-            Move::MoveBase::slump = j["random-move"]; // restore move random number generator
+            move::Move::slump = j["random-move"]; // restore move random number generator
         }
         if (j.contains("random-global")) {
             Faunus::random = j["random-global"]; // restore global random number generator
@@ -124,7 +124,7 @@ void MetropolisMonteCarlo::restore(const json &j) {
     }
 }
 
-void MetropolisMonteCarlo::performMove(Move::MoveBase& move) {
+void MetropolisMonteCarlo::performMove(move::Move& move) {
     Change change;
     move.move(change);
 #ifndef NDEBUG
@@ -164,7 +164,7 @@ void MetropolisMonteCarlo::performMove(Move::MoveBase& move) {
     } else {
         // The `metropolis()` function propagates the engine and we need to stay in sync
         // Alternatively, we could use `engine.discard()`
-        Move::MoveBase::slump();
+        move::Move::slump();
     }
 }
 

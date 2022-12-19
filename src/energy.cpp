@@ -299,7 +299,7 @@ TEST_CASE("[Faunus] Ewald - IonIonPolicy Benchmarks") {
         pbc.updateBox(data, spc.geometry.getLength());
         pbc_eigen.updateBox(data, spc.geometry.getLength());
 
-        ankerl::nanobench::Config bench;
+        ankerl::nanobench::Bench bench;
         bench.minEpochIterations(20);
         bench.run("PBC", [&] { pbc.updateComplex(data, spc.groups); }).doNotOptimizeAway();
         bench.run("PBCEigen", [&] { pbc_eigen.updateComplex(data, spc.groups); }).doNotOptimizeAway();

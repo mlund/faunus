@@ -10,6 +10,7 @@ CPMAddPackage("gh:ericniebler/range-v3#0.12.0")
 CPMAddPackage("gh:docopt/docopt.cpp#v0.6.3")
 CPMAddPackage("gh:doctest/doctest#v2.4.9")
 CPMAddPackage("gh:mateidavid/zstr#v1.0.6")
+CPMAddPackage("gh:martinus/nanobench#v4.3.9")
 CPMAddPackage("gh:pybind/pybind11#v2.10.1")
 CPMAddPackage("gh:imneme/pcg-cpp#ffd522e7188bef30a00c74dc7eb9de5faff90092")
 CPMAddPackage("gh:ArashPartow/exprtk#93a9f44f99b910bfe07cd1e933371e83cea3841c")
@@ -134,19 +135,6 @@ if (ENABLE_TBB)
     find_package(TBB REQUIRED COMPONENTS tbb)
     target_link_libraries(project_options INTERFACE TBB::tbb)
 endif ()
-
-############
-# NANOBENCH
-############
-
-FetchContent_Declare(
-    nanobench
-    URL "https://github.com/martinus/nanobench/archive/v3.1.0.tar.gz"
-    URL_HASH MD5=e646fb61164a60921c1a1834fbca24bc DOWNLOAD_EXTRACT_TIMESTAMP true)
-FetchContent_GetProperties(nanobench)
-if(NOT nanobench_POPULATED)
-    FetchContent_Populate(nanobench)
-endif()
 
 ##########
 # XRDFILE

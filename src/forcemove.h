@@ -2,7 +2,7 @@
 #include "move.h"
 #include "energy.h"
 
-namespace Faunus::Move {
+namespace Faunus::move {
 
 /** @section Force moves
  *

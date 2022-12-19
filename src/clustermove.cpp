@@ -5,7 +5,7 @@
 #include <range/v3/algorithm/for_each.hpp>
 
 namespace Faunus {
-namespace Move {
+namespace move {
 
 ClusterShapeAnalysis::ClusterShapeAnalysis(bool shape_anisotropy_use_com, const std::string &filename,
                                            bool dump_pqr_files)
@@ -240,7 +240,7 @@ void Cluster::_to_json(json &j) const {
          {"⟨N⟩", average_cluster_size.avg()},
          {"cluster analysis", *shape_analysis},
          {"cluster analysis interval", shape_analysis_interval}};
-    Move::to_json(j, *find_cluster);
+    move::to_json(j, *find_cluster);
     roundJSON(j, 3);
 }
 
@@ -404,5 +404,5 @@ std::function<void(Group&)> GroupRotator::getLambda(Geometry::BoundaryFunction b
 
 // -------------------------------------------
 
-} // namespace Move
+} // namespace move
 } // namespace Faunus

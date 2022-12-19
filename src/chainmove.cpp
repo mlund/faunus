@@ -3,7 +3,7 @@
 #include "bonds.h"
 
 namespace Faunus {
-namespace Move {
+namespace move {
 
 void ChainRotationMoveBase::_from_json(const json &j) {
     molname = j.at("molecule");
@@ -205,5 +205,5 @@ size_t PivotMove::select_segment() {
     return segment_size;
 }
 
-} // end of namespace Move
+} // namespace move
 } // namespace Faunus

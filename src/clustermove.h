@@ -5,7 +5,7 @@
 #include <map>
 
 namespace Faunus {
-namespace Move {
+namespace move {
 
 /**
  * @brief Helper class for Cluster move for analysing shape and size of found clusters
@@ -178,5 +178,5 @@ class Cluster : public MoveBase {
     explicit Cluster(Space &spc);
 };
 
-} // namespace Move
+} // namespace move
 } // namespace Faunus

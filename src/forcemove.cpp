@@ -3,7 +3,7 @@
 #include "energy.h"
 #include <range/v3/view/zip.hpp>
 
-namespace Faunus::Move {
+namespace Faunus::move {
 
 TEST_SUITE_BEGIN("ForceMove");
 
@@ -240,4 +240,4 @@ TEST_CASE("[Faunus] LangevinDynamics") {
 
 TEST_SUITE_END();
 
-} // namespace Faunus::Move
+} // namespace Faunus::move

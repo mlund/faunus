@@ -496,7 +496,7 @@ void SaveState::saveBinaryJsonStateFile(const std::string& filename, const Space
         json j;
         Faunus::to_json(j, spc);
         if (save_random_number_generator_state) {
-            j["random-move"] = Move::MoveBase::slump;
+            j["random-move"] = move::MoveBase::slump;
             j["random-global"] = random;
         }
         auto buffer = json::to_ubjson(j); // json --> binary
@@ -509,7 +509,7 @@ void SaveState::saveJsonStateFile(const std::string& filename, const Space& spc)
         Faunus::to_json(j, spc);
         j.erase("reactionlist");
         if (save_random_number_generator_state) {
-            j["random-move"] = Move::MoveBase::slump;
+            j["random-move"] = move::MoveBase::slump;
             j["random-global"] = random;
         }
         f << std::setw(1) << j;

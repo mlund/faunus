@@ -96,7 +96,7 @@ class ReactionDirectionRatio {
 
 } // end of namespace Faunus::Speciation
 
-namespace Faunus::Move {
+namespace Faunus::move {
 
 /**
  * @brief Generalised Grand Canonical Monte Carlo Move
@@ -155,4 +155,4 @@ class SpeciationMove : public MoveBase {
     double bias(Change& change, double old_energy, double new_energy) override;
 };
 
-} // namespace Faunus::Move
+} // namespace Faunus::move

@@ -336,7 +336,7 @@ GroupDeActivator::ChangeAndBias AtomicGroupDeActivator::deactivate(Group& group,
 
 // ----------------------------------
 
-namespace Faunus::Move {
+namespace Faunus::move {
 
 void SpeciationMove::_to_json(json& j) const {
     direction_ratio.to_json(j);
@@ -598,4 +598,4 @@ SpeciationMove::SpeciationMove(Space& spc, Space& old_spc)
 
 void SpeciationMove::_from_json([[maybe_unused]] const json& j) {}
 
-} // namespace Faunus::Move
+} // namespace Faunus::move

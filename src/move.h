@@ -21,7 +21,7 @@ namespace Energy {
 class Hamiltonian;
 }
 
-namespace Move {
+namespace move {
 
 class MoveCollection;
 
@@ -538,5 +538,5 @@ class MoveCollection {
 
 void to_json(json& j, const MoveCollection& propagator);
 
-} // namespace Move
+} // namespace move
 } // namespace Faunus

@@ -11,7 +11,7 @@ namespace Energy {
 class Hamiltonian;
 }
 
-namespace Move {
+namespace move {
 class MoveBase;
 class MoveCollection;
 } // namespace Move
@@ -59,13 +59,13 @@ class MetropolisMonteCarlo {
     spdlog::level::level_enum original_log_level; //!< Storage for original loglevel
     std::unique_ptr<State> state;                 //!< The accepted MC state
     std::unique_ptr<State> trial_state;           //!< Proposed or trial MC state
-    std::unique_ptr<Move::MoveCollection> moves;  //!< Storage for all registered MC moves
+    std::unique_ptr<move::MoveCollection> moves;  //!< Storage for all registered MC moves
     std::string latest_move_name;                 //!< Name of latest MC move
     double sum_of_energy_changes = 0.0;           //!< Sum of all potential energy changes
     double initial_energy = 0.0;                  //!< Initial potential energy
     Average<double> average_energy;               //!< Average potential energy of the system
     void init();                                  //!< Reset state
-    void performMove(Move::MoveBase& move);       //!< Perform move using given move implementation
+    void performMove(move::MoveBase& move);       //!< Perform move using given move implementation
     double getEnergyChange(double new_energy, double old_energy) const;
     friend void to_json(json&, const MetropolisMonteCarlo&); //!< Write information to JSON object
     unsigned int number_of_sweeps = 0;                       //!< Number of MC sweeps, e.g. calls to sweep()

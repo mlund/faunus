@@ -4,7 +4,7 @@
 #include "bonds.h"
 
 namespace Faunus {
-namespace Move {
+namespace move {
 /**
  * @brief An abstract base class for rotational movements of a polymer chain
  */
@@ -132,5 +132,5 @@ class PivotMove : public ChainRotationMove {
     size_t select_segment() override;
 };
 
-} // namespace Move
+} // namespace move
 } // namespace Faunus

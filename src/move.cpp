@@ -15,7 +15,7 @@
 #include <range/v3/algorithm/count.hpp>
 #include <range/v3/view/transform.hpp>
 
-namespace Faunus::Move {
+namespace Faunus::move {
 
 Random MoveBase::slump; // static instance of Random (shared for all moves)
 
@@ -1131,7 +1131,7 @@ SmarterTranslateRotate::SmarterTranslateRotate(Space& spc, const json& j)
     , smartmc(spc, j.at("region")) {
     this->from_json(j);
 }
-} // namespace Faunus::Move
+} // namespace Faunus::move
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
 TEST_CASE("[Faunus] TranslateRotate") {
@@ -1140,7 +1140,7 @@ TEST_CASE("[Faunus] TranslateRotate") {
     CHECK(!molecules.empty()); // set in a previous test
 
     Space spc;
-    Move::TranslateRotate mv(spc);
+    move::TranslateRotate mv(spc);
     json j = R"( {"molecule":"A", "dp":1.0, "dprot":0.5, "dir":[0,1,0], "repeat":2 })"_json;
     mv.from_json(j);
 
@@ -1153,8 +1153,7 @@ TEST_CASE("[Faunus] TranslateRotate") {
 }
 #endif
 
-namespace Faunus::Move {
-
+namespace Faunus::move {
 
 void ConformationSwap::_to_json(json& j) const {
     j = {{"molid", molid},
@@ -1319,4 +1318,4 @@ void ConformationSwap::checkConformationSize() const {
     }
 }
 
-} // namespace Faunus::Move
+} // namespace Faunus::move

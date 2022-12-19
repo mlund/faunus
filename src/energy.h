@@ -1715,7 +1715,7 @@ class CustomGroupGroup : public EnergyTerm {
     Properties properties;
 
     void to_json(json& j) const override;
-    void setExprParameters(const Group& group1, const Group& group2);
+    void setParameters(const Group& group1, const Group& group2);
 
   public:
     CustomGroupGroup(const json& j, const Space& spc);

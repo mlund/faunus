@@ -1742,9 +1742,15 @@ CustomGroupGroup::CustomGroupGroup(const json& j, const Space& spc)
     : spc(spc)
     , json_input_backup(j) {
     name = "custom-groupgroup";
-    molid1 = findMoleculeByName(j.at("name1").get<std::string>()).id();
-    molid2 = findMoleculeByName(j.at("name2").get<std::string>()).id();
-    std::string function = j.at("function");
+
+    const auto& molecule1 = findMoleculeByName(j.at("name1").get<std::string>());
+    const auto& molecule2 = findMoleculeByName(j.at("name2").get<std::string>());
+    if (molecule1.isAtomic() | molecule2.isAtomic()) {
+        throw ConfigurationError("molecular groups required");
+    }
+    molid1 = molecule1.id();
+    molid2 = molecule2.id();
+
     auto& constants = json_input_backup["constants"];
     if (constants == nullptr) {
         constants = json::object();
@@ -1763,14 +1769,14 @@ CustomGroupGroup::CustomGroupGroup(const json& j, const Space& spc)
 double CustomGroupGroup::energy([[maybe_unused]] const Change& change) {
     // matches active groups with either molid1 or molid2
     auto match_groups = [&](const auto& group) -> bool {
-        return group.isFull() & (group.id == molid1 | group.id == molid2);
+        return group.isFull() & ((group.id == molid1) | (group.id == molid2));
     };
 
     auto group_group_energy = [&](auto index1, auto index2) -> double {
         const Group& group1 = spc.groups[index1];
         const Group& group2 = spc.groups[index2];
         if (((group1.id == molid1) & (group2.id == molid2)) | ((group1.id == molid2) & (group2.id == molid1))) {
-            setExprParameters(group1, group2);
+            setParameters(group1, group2);
             return expr->operator()();
         }
         return 0.0;
@@ -1784,7 +1790,7 @@ double CustomGroupGroup::energy([[maybe_unused]] const Change& change) {
     return for_each_unique_pair(indices.begin(), indices.end(), group_group_energy, std::plus<double>());
 }
 
-void CustomGroupGroup::setExprParameters(const Group& group1, const Group& group2) {
+void CustomGroupGroup::setParameters(const Group& group1, const Group& group2) {
     auto& mean_charge1 = mean_charges[group1.id];
     auto& mean_charge2 = mean_charges[group2.id];
     mean_charge1 += monopoleMoment(group1.begin(), group1.end());

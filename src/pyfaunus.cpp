@@ -177,20 +177,20 @@ PYBIND11_MODULE(pyfaunus, m) {
     // --------- Pair Potentials ---------
 
     // Base
-    py::class_<Potential::PairPotential>(m, "PairPotentialBase")
-        .def_readwrite("name", &Potential::PairPotential::name)
-        .def_readwrite("cite", &Potential::PairPotential::cite)
-        .def_readwrite("isotropic", &Potential::PairPotential::isotropic)
-        .def_readwrite("selfEnergy", &Potential::PairPotential::selfEnergy)
-        .def("force", &Potential::PairPotential::force)
-        .def("energy", [](Potential::PairPotential& pot, const Particle& a, const Particle& b, double r2,
+    py::class_<pairpotential::PairPotential>(m, "PairPotentialBase")
+        .def_readwrite("name", &pairpotential::PairPotential::name)
+        .def_readwrite("cite", &pairpotential::PairPotential::cite)
+        .def_readwrite("isotropic", &pairpotential::PairPotential::isotropic)
+        .def_readwrite("selfEnergy", &pairpotential::PairPotential::selfEnergy)
+        .def("force", &pairpotential::PairPotential::force)
+        .def("energy", [](pairpotential::PairPotential& pot, const Particle& a, const Particle& b, double r2,
                           const Point& r) { return pot(a, b, r2, r); });
 
     // Potentials::FunctorPotential
-    py::class_<Potential::FunctorPotential, Potential::PairPotential>(m, "FunctorPotential")
+    py::class_<pairpotential::FunctorPotential, pairpotential::PairPotential>(m, "FunctorPotential")
         .def(py::init([](py::dict dict) {
-            auto pairpot = Potential::makePairPotential<Potential::FunctorPotential>(dict);
-            return std::make_unique<Potential::FunctorPotential>(pairpot);
+            auto pairpot = pairpotential::makePairPotential<pairpotential::FunctorPotential>(dict);
+            return std::make_unique<pairpotential::FunctorPotential>(pairpot);
         }));
 
     // Change::Data

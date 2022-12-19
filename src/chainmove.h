@@ -113,7 +113,7 @@ class PivotMove : public ChainRotationMove {
     using TBase = ChainRotationMove;
 
   private:
-    BasePointerVector<Potential::HarmonicBond> bonds;
+    BasePointerVector<pairpotential::HarmonicBond> bonds;
 
   public:
     explicit PivotMove(Space &spc);

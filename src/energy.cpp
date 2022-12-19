@@ -1086,7 +1086,7 @@ void Hamiltonian::sync(EnergyTerm* other_hamiltonian, const Change& change) {
  * New energy terms should be added to the if-else chain in the function
  */
 std::unique_ptr<EnergyTerm> Hamiltonian::createEnergy(Space& spc, const std::string& name, const json& j) {
-    using namespace Potential;
+    using namespace pairpotential;
     using CoulombLJ = CombinedPairPotential<NewCoulombGalore, LennardJones>;
     using CoulombWCA = CombinedPairPotential<NewCoulombGalore, WeeksChandlerAndersen>;
     using PrimitiveModelWCA = CombinedPairPotential<Coulomb, WeeksChandlerAndersen>;
@@ -1103,15 +1103,15 @@ std::unique_ptr<EnergyTerm> Hamiltonian::createEnergy(Space& spc, const std::str
             return std::make_unique<NonbondedCached<PairEnergy<CoulombLJ, false>, PairingPolicy>>(j, spc, *this);
         }
         if (name == "nonbonded_splined") {
-            return std::make_unique<Nonbonded<PairEnergy<Potential::SplinedPotential, false>, PairingPolicy>>(j, spc,
+            return std::make_unique<Nonbonded<PairEnergy<pairpotential::SplinedPotential, false>, PairingPolicy>>(j, spc,
                                                                                                               *this);
         }
         if (name == "nonbonded" || name == "nonbonded_exact") {
-            return std::make_unique<Nonbonded<PairEnergy<Potential::FunctorPotential, true>, PairingPolicy>>(j, spc,
+            return std::make_unique<Nonbonded<PairEnergy<pairpotential::FunctorPotential, true>, PairingPolicy>>(j, spc,
                                                                                                              *this);
         }
         if (name == "nonbonded_cached") {
-            return std::make_unique<NonbondedCached<PairEnergy<Potential::SplinedPotential>, PairingPolicy>>(j, spc,
+            return std::make_unique<NonbondedCached<PairEnergy<pairpotential::SplinedPotential>, PairingPolicy>>(j, spc,
                                                                                                              *this);
         }
         if (name == "nonbonded_coulombwca") {

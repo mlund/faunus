@@ -7,7 +7,7 @@
 #include "smart_montecarlo.h"
 #include <coulombgalore.h>
 
-namespace Faunus::Potential {
+namespace Faunus::pairpotential {
 
 // =============== PairMixer ===============
 
@@ -244,7 +244,7 @@ void MixerPairPotentialBase::from_json(const json &j) {
         }
         if (j.contains("custom")) {
             // *custom_pairs = j["custom"]; // does not work, perhaps as from_json is also a method (a namespace conflict)
-            Potential::from_json(j["custom"], *custom_pairs);
+            pairpotential::from_json(j["custom"], *custom_pairs);
         }
     } catch (const ConfigurationError &e) {
         faunus_logger->error(std::string(e.what()) + " in potential " + name);
@@ -311,7 +311,7 @@ TEST_CASE("[Faunus] CosAttract") {
                  { "B": { "eps": 1.0, "rc": 0.5, "wc": 2.1 } }]})"_json;
         Faunus::atoms = j["atomlist"].get<decltype(atoms)>();
         CosAttract pairpot;
-        Potential::from_json(R"({ "cos2": {"eps": 1.0, "rc": 0.5, "wc": 2.1}})"_json, pairpot);
+        pairpotential::from_json(R"({ "cos2": {"eps": 1.0, "rc": 0.5, "wc": 2.1}})"_json, pairpot);
 
         CHECK(pairpot(a, b, r1.squaredNorm(), r1) == doctest::Approx(-0.4033930777));
         CHECK(pairpot(a, b, r2.squaredNorm(), r2) == doctest::Approx(0));
@@ -334,7 +334,7 @@ TEST_CASE("[Faunus] CosAttract") {
                  { "B": { "eps": 1.0, "rc": 0.5, "wc": 2.1 } }]})"_json;
         Faunus::atoms = j["atomlist"].get<decltype(atoms)>();
         CosAttractMixed pairpot;
-        Potential::from_json(R"({ "cos2mix": {"mixing": "LB"}})"_json, pairpot);
+        pairpotential::from_json(R"({ "cos2mix": {"mixing": "LB"}})"_json, pairpot);
         CHECK(pairpot(a, b, r1.squaredNorm(), r1) == doctest::Approx(-0.4033930777));
         CHECK(pairpot(a, b, r2.squaredNorm(), r2) == doctest::Approx(0));
         CHECK(pairpot(a, b, r3.squaredNorm(), r3) == doctest::Approx(-0.3495505642));
@@ -357,7 +357,7 @@ TEST_CASE("[Faunus] CosAttract") {
                  { "B": { "eps": 0.5, "rc": 0.6, "wc": 1.9 } }]})"_json;
         Faunus::atoms = j["atomlist"].get<decltype(atoms)>();
         CosAttractMixed pairpot;
-        Potential::from_json(R"({ "cos2mix": {"mixing": "LB"}})"_json, pairpot);
+        pairpotential::from_json(R"({ "cos2mix": {"mixing": "LB"}})"_json, pairpot);
         CHECK(pairpot(a, b, r1.squaredNorm(), r1) == doctest::Approx(-0.2852419807));
         CHECK(pairpot(a, b, r2.squaredNorm(), r2) == doctest::Approx(0));
         CHECK(pairpot(a, b, r3.squaredNorm(), r3) == doctest::Approx(-0.2510708423));
@@ -470,7 +470,7 @@ TEST_CASE("[Faunus] SASApotential") {
     b.id = 1;
     SASApotential pot;
     json in = R"({ "sasa": {"molarity": 1.0, "radius": 0.0, "shift":false}})"_json;
-    Potential::from_json(in["sasa"], pot);
+    pairpotential::from_json(in["sasa"], pot);
     double conc = 1.0 * 1.0_molar;
     double tension = atoms.at(a.id).tension / 2;
     double tfe = atoms[b.id].tfe / 2;
@@ -529,17 +529,17 @@ TEST_CASE("[Faunus] CustomPairPotential") {
 
     SUBCASE("energy") {
         CustomPairPotential pot;
-        Potential::from_json(R"({"constants": { "kappa": 30, "lB": 7},
+        pairpotential::from_json(R"({"constants": { "kappa": 30, "lB": 7},
                               "function": "lB * charge1 * charge2 / (s1+s2) * exp(-kappa/r) * kT + pi"})"_json,
-                             pot);
+                                 pot);
         CHECK(pot(a, b, 2 * 2, {0, 0, 2}) == Approx(-7.0 / (3.0 + 4.0) * std::exp(-30.0 / 2.0) * pc::kT() + pc::pi));
     }
     SUBCASE("force") {
         CustomPairPotential pot;
-        Potential::from_json(R"({"constants": { "lB": 7.0056973292 }, "function": "lB * charge1 * charge2 / r"})"_json,
-                             pot);
+        pairpotential::from_json(
+            R"({"constants": { "lB": 7.0056973292 }, "function": "lB * charge1 * charge2 / r"})"_json, pot);
         NewCoulombGalore coulomb;
-        Potential::from_json(R"({ "coulomb": {"epsr": 80.0, "type": "plain"} } )"_json, coulomb);
+        pairpotential::from_json(R"({ "coulomb": {"epsr": 80.0, "type": "plain"} } )"_json, coulomb);
         Point r = {coulomb.bjerrum_length, 0.2, -0.1};
         auto r2 = r.squaredNorm();
         auto force_ref = coulomb.force(a, b, r2, r);
@@ -854,18 +854,18 @@ FunctorPotential::EnergyFunctor FunctorPotential::combinePairPotentials(json& po
                 // terms if not already added
                 else if (name == "coulomb") { // temporary key
                     auto coulomb = makePairPotential<NewCoulombGalore>(j_config);
-                    Potential::to_json(j_config, coulomb); // store output
+                    pairpotential::to_json(j_config, coulomb); // store output
                     if (!have_monopole_self_energy) {
                         registerSelfEnergy(&coulomb);
                         have_monopole_self_energy = true;
                     }
                     new_func = coulomb;
                 } else if (name == "cos2") {
-                    new_func = makePairPotential<Potential::CosAttract>(single_record);
+                    new_func = makePairPotential<pairpotential::CosAttract>(single_record);
                 } else if (name == "polar") {
-                    new_func = makePairPotential<Potential::Polarizability>(single_record);
+                    new_func = makePairPotential<pairpotential::Polarizability>(single_record);
                 } else if (name == "hardsphere") {
-                    new_func = makePairPotential<Potential::HardSphere>(single_record);
+                    new_func = makePairPotential<pairpotential::HardSphere>(single_record);
                 } else if (name == "lennardjones") {
                     new_func = makePairPotential<LennardJones>(single_record);
                 } else if (name == "repulsionr3") {
@@ -888,7 +888,7 @@ FunctorPotential::EnergyFunctor FunctorPotential::combinePairPotentials(json& po
                     faunus_logger->error("'{}' is deprecated, use 'lennardjones'+'multipole' instead", name);
                 } else if (name == "multipole") {
                     auto multipole = makePairPotential<Multipole>(j_config);
-                    Potential::to_json(j_config, multipole);
+                    pairpotential::to_json(j_config, multipole);
                     isotropic = false; // potential is now angular dependent
                     if (!have_dipole_self_energy) {
                         registerSelfEnergy(&multipole);
@@ -948,7 +948,7 @@ TEST_CASE("[Faunus] FunctorPotential") {
 
     atoms = j["atomlist"].get<decltype(atoms)>();
 
-    auto u = Potential::makePairPotential<FunctorPotential>(R"(
+    auto u = pairpotential::makePairPotential<FunctorPotential>(R"(
                 { "default": [ { "coulomb" : {"epsr": 80.0, "type": "plain"} } ],
                   "A B" : [
                     { "coulomb" : {"epsr": 80.0, "type": "plain"} },
@@ -956,8 +956,8 @@ TEST_CASE("[Faunus] FunctorPotential") {
                   ],
                   "C C" : [ { "hardsphere" : {} } ] })"_json);
 
-    auto coulomb = Potential::makePairPotential<Coulomb>(R"({ "coulomb": {"epsr": 80.0} } )"_json);
-    auto wca = Potential::makePairPotential<WeeksChandlerAndersen>(R"({ "wca" : {"mixing": "LB"} })"_json);
+    auto coulomb = pairpotential::makePairPotential<Coulomb>(R"({ "coulomb": {"epsr": 80.0} } )"_json);
+    auto wca = pairpotential::makePairPotential<WeeksChandlerAndersen>(R"({ "wca" : {"mixing": "LB"} })"_json);
 
     Particle a = atoms[0];
     Particle b = atoms[1];
@@ -975,8 +975,8 @@ TEST_CASE("[Faunus] FunctorPotential") {
         const auto j = R"(
                 {"default": [{ "coulomb" : {"epsr": 80.0, "type": "qpotential", "cutoff":20, "order":4} }]})"_json;
 
-        auto functor = Potential::makePairPotential<FunctorPotential>(j);
-        auto galore = Potential::makePairPotential<NewCoulombGalore>(j["default"].at(0));
+        auto functor = pairpotential::makePairPotential<FunctorPotential>(j);
+        auto galore = pairpotential::makePairPotential<NewCoulombGalore>(j["default"].at(0));
         CHECK(functor.selfEnergy != nullptr);
         CHECK(galore.selfEnergy != nullptr);
         CHECK(functor.selfEnergy(a) == Approx(galore.selfEnergy(a)));
@@ -987,8 +987,8 @@ TEST_CASE("[Faunus] FunctorPotential") {
         const auto j = R"(
                 {"default": [{ "multipole" : {"epsr": 80.0, "type": "qpotential", "cutoff":20, "order":4} }]})"_json;
 
-        auto functor = Potential::makePairPotential<FunctorPotential>(j);
-        auto multipole = Potential::makePairPotential<Multipole>(j["default"].at(0));
+        auto functor = pairpotential::makePairPotential<FunctorPotential>(j);
+        auto multipole = pairpotential::makePairPotential<Multipole>(j["default"].at(0));
         CHECK(functor.selfEnergy != nullptr);
         CHECK(multipole.selfEnergy != nullptr);
         CHECK(functor.selfEnergy(a) == Approx(multipole.selfEnergy(a))); // q=1, mu=0
@@ -1290,10 +1290,10 @@ TEST_CASE("[Faunus] Dipole-dipole interactions") {
                  {"C": { "mu":[1.0,1.0,0.0] }} ]})"_json;
     atoms = j["atomlist"].get<decltype(atoms)>();
 
-    auto u = Potential::makePairPotential<FunctorPotential>(R"(
+    auto u = pairpotential::makePairPotential<FunctorPotential>(R"(
                 { "default": [ { "multipole" : {"epsr": 1.0, "type": "plain"} } ] } )"_json);
 
-    auto dipoledipole = Potential::makePairPotential<Multipole>(R"({"epsr": 1.0, "type": "plain"})"_json);
+    auto dipoledipole = pairpotential::makePairPotential<Multipole>(R"({"epsr": 1.0, "type": "plain"})"_json);
 
     Particle a = atoms[0];
     Particle b = atoms[1];
@@ -1372,7 +1372,7 @@ TEST_CASE("[Faunus] WeeksChandlerAndersen") {
     }
     SUBCASE("JSON serialization") {
         auto wca =
-            Potential::makePairPotential<WeeksChandlerAndersen>(R"({"mixing": "LB", "sigma": "sigma_wca"})"_json);
+            pairpotential::makePairPotential<WeeksChandlerAndersen>(R"({"mixing": "LB", "sigma": "sigma_wca"})"_json);
         json j = wca;
         json &j_wca(j["wca"]);
         CHECK_EQ(j_wca["mixing"], "lorentz_berthelot");
@@ -1418,4 +1418,4 @@ double CosAttractMixed::cutOffSquared(AtomData::index_type id1, AtomData::index_
     const auto wc = (*switching_width)(id1, id2);
     return (rc + wc) * (rc + wc);
 }
-} // namespace Faunus::Potential
+} // namespace Faunus::pairpotential

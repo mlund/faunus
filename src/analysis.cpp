@@ -2232,8 +2232,8 @@ ElectricPotential::ElectricPotential(const json& j, const Space& spc)
     : Analysis(spc, "electricpotential")
     , potential_correlation_histogram(histogram_resolution) {
     from_json(j);
-    coulomb = std::make_unique<Potential::NewCoulombGalore>();
-    Potential::from_json(j, *coulomb);
+    coulomb = std::make_unique<pairpotential::NewCoulombGalore>();
+    pairpotential::from_json(j, *coulomb);
     getTargets(j);
     setPolicy(j);
     calculations_per_sample_event = j.value("ncalc", 1);

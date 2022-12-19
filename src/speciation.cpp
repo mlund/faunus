@@ -255,7 +255,7 @@ MolecularGroupDeActivator::MolecularGroupDeActivator(Space& spc, Random& random,
 double MolecularGroupDeActivator::getBondEnergy(const Group& group) const {
     double energy = 0.0;
     if (apply_bond_bias) {
-        auto bonds = group.traits().bonds | ranges::views::transform(&Potential::BondData::clone);
+        auto bonds = group.traits().bonds | ranges::views::transform(&pairpotential::BondData::clone);
         ranges::cpp20::for_each(bonds, [&](auto bond) {
             bond->shiftIndices(spc.getFirstParticleIndex(group));
             bond->setEnergyFunction(spc.particles);

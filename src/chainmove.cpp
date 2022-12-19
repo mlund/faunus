@@ -161,7 +161,7 @@ PivotMove::PivotMove(Space &spc) : PivotMove(spc, "pivot", "") {}
 
 void PivotMove::_from_json(const json &j) {
     TBase::_from_json(j);
-    bonds = molecules[this->molid].bonds.find<Potential::HarmonicBond>();
+    bonds = molecules[this->molid].bonds.find<pairpotential::HarmonicBond>();
     if (bonds.empty()) {
         throw ConfigurationError("no harmonic bonds found for pivot move");
     }

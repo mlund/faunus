@@ -66,7 +66,7 @@ double q2quad(double qA, const Tmat &quadB, double qB, const Tmat &quadA, const 
     return (qA * WAB + qB * WBA);
 }
 
-namespace Potential {
+namespace pairpotential {
 
 /**
  * @brief Returns the factorial of 'n'. Note that 'n' must be positive semidefinite.
@@ -160,7 +160,7 @@ TEST_CASE("[Faunus] qPochhammerSymbol") {
     // add tests...
 }
 
-} // namespace Potential
+} // namespace pairpotential
 
 /**
  * @brief Returns the total charge for a set of particles

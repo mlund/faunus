@@ -6,7 +6,7 @@
 #include <functional>
 
 /** Namespace for particle pair-potentials */
-namespace Faunus::Potential {
+namespace Faunus::pairpotential {
 
 //! type of a matrix containing pair potential coefficients
 using TPairMatrix = Eigen::MatrixXd;
@@ -151,12 +151,12 @@ void from_json(const json& j, PairPotential& base); //!< Serialize any pair pote
  * Concept matching a particle pair potential derived from `Potential::PairPotentialBase`
  */
 template <class T>
-concept RequirePairPotential = std::derived_from<T, Potential::PairPotential>;
+concept RequirePairPotential = std::derived_from<T, pairpotential::PairPotential>;
 
 /** @brief Convenience function to generate a pair potential initialized from JSON object */
 template <RequirePairPotential T> auto makePairPotential(const json& j) {
     T pair_potential;
-    Potential::from_json(j, pair_potential);
+    pairpotential::from_json(j, pair_potential);
     return pair_potential;
 }
 
@@ -217,8 +217,8 @@ template <RequirePairPotential T1, RequirePairPotential T2> struct CombinedPairP
     } //!< Combine force
 
     void from_json(const json& j) override {
-        Faunus::Potential::from_json(j, first);
-        Faunus::Potential::from_json(j, second);
+        Faunus::pairpotential::from_json(j, first);
+        Faunus::pairpotential::from_json(j, second);
         name = first.name + "/" + second.name;
         if (first.selfEnergy or second.selfEnergy) { // combine self-energies
             selfEnergy = [u1 = first.selfEnergy, u2 = second.selfEnergy](const Particle& p) {

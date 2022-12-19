@@ -6,7 +6,7 @@
 #include "spherocylinder.h"
 #include <coulombgalore.h>
 
-namespace Faunus::Potential {
+namespace Faunus::pairpotential {
 
 /**
  * @brief Lennard-Jones potential with an arbitrary combination rule.

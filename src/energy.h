@@ -35,7 +35,7 @@ namespace ReactionCoordinate {
 class ReactionCoordinateBase;
 }
 
-namespace Potential {
+namespace pairpotential {
 class PairPotential;
 }
 
@@ -295,7 +295,7 @@ class Constrain : public EnergyTerm {
  */
 class Bonded : public EnergyTerm {
   private:
-    using BondVector = BasePointerVector<Potential::BondData>;
+    using BondVector = BasePointerVector<pairpotential::BondData>;
     const Space& spc;
     BondVector external_bonds;                                      //!< inter-molecular bonds
     std::map<int, BondVector> internal_bonds;                       //!< intra-molecular bonds; key is group index
@@ -355,7 +355,7 @@ auto indexComplement(std::integral auto size, const ranges::cpp20::range auto& r
  * @tparam TPairPotential  a pair potential to compute with
  * @tparam allow_anisotropic_pair_potential  pass also a distance vector to the pair potential, slower
  */
-template <Potential::RequirePairPotential TPairPotential, bool allow_anisotropic_pair_potential = true>
+template <pairpotential::RequirePairPotential TPairPotential, bool allow_anisotropic_pair_potential = true>
 class PairEnergy {
     const Space::GeometryType& geometry;       //!< geometry to operate with
     TPairPotential pair_potential;             //!< pair potential function/functor
@@ -415,7 +415,7 @@ class PairEnergy {
     }
 
     void from_json(const json& j) {
-        Potential::from_json(j, pair_potential);
+        pairpotential::from_json(j, pair_potential);
         if (!pair_potential.isotropic && !allow_anisotropic_pair_potential) {
             throw std::logic_error("Only isotropic pair potentials are allowed.");
         }

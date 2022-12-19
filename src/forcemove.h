@@ -38,8 +38,8 @@ class NormalRandomVector {
 class IntegratorBase {
   protected:
     Space &spc;
-    Energy::Energybase &energy;
-    IntegratorBase(Space &, Energy::Energybase &);
+    Energy::EnergyTerm& energy;
+    IntegratorBase(Space&, Energy::EnergyTerm&);
     virtual ~IntegratorBase() = default;
 
   public:
@@ -72,9 +72,9 @@ class LangevinVelocityVerlet : public IntegratorBase {
     inline Point velocityFluctuationDissipation(const Point &velocity, const double mass);
 
   public:
-    LangevinVelocityVerlet(Space &spc, Energy::Energybase &energy);
-    LangevinVelocityVerlet(Space &spc, Energy::Energybase &energy, double time_step, double friction_coefficient);
-    LangevinVelocityVerlet(Space &spc, Energy::Energybase &energy, const json &j);
+    LangevinVelocityVerlet(Space& spc, Energy::EnergyTerm& energy);
+    LangevinVelocityVerlet(Space& spc, Energy::EnergyTerm& energy, double time_step, double friction_coefficient);
+    LangevinVelocityVerlet(Space& spc, Energy::EnergyTerm& energy, const json& j);
     void step(PointVector &velocities, PointVector &forces) override;
     void from_json(const json &j) override;
     void to_json(json &j) const override;
@@ -121,8 +121,8 @@ class LangevinDynamics : public ForceMoveBase {
 
   public:
     LangevinDynamics(Space& spc, std::shared_ptr<IntegratorBase> integrator, unsigned int nsteps);
-    LangevinDynamics(Space& spc, Energy::Energybase&, const json&);
-    LangevinDynamics(Space& spc, Energy::Energybase&);
+    LangevinDynamics(Space& spc, Energy::EnergyTerm&, const json&);
+    LangevinDynamics(Space& spc, Energy::EnergyTerm&);
     void _to_json(json &j) const override;
     void _from_json(const json &j) override;
 };

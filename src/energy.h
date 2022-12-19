@@ -68,7 +68,7 @@ class Hamiltonian;
  * If any particles is ouside, infinite energy is returned; zero otherwirse.
  * This is not needed for cuboidal geometry as particles are always wrapped using PBC.
  */
-class ContainerOverlap : public Energybase {
+class ContainerOverlap : public EnergyTerm {
   private:
     const Space& spc;
     bool groupIsOutsideContainer(const Change::GroupChange& group_change) const;
@@ -236,7 +236,7 @@ struct PolicyIonIonIPBCEigen : public PolicyIonIonIPBC {
  * @todo energy() currently has the responsibility to update k-vectors.
  *       This is error prone and should be handled *before* this step.
  */
-class Ewald : public Energybase {
+class Ewald : public EnergyTerm {
   private:
     const Space& spc;
     EwaldData data;
@@ -250,7 +250,7 @@ class Ewald : public Energybase {
     void setOldGroups(const Space::GroupVector& old_groups); //!< Optimization if old groups are available (optional)
     void updateState(const Change& change) override;
     double energy(const Change& change) override;
-    void sync(Energybase* energybase, const Change& change) override;
+    void sync(EnergyTerm* energybase, const Change& change) override;
     void to_json(json& j) const override;
     void force(std::vector<Point>& forces) override; // update forces on all particles
 };
@@ -258,7 +258,7 @@ class Ewald : public Energybase {
 /**
  * @brief Pressure term for NPT ensemble
  */
-class Isobaric : public Energybase {
+class Isobaric : public EnergyTerm {
   private:
     const Space& spc;
     double pressure = 0.0;                                     //!< Applied pressure
@@ -274,7 +274,7 @@ class Isobaric : public Energybase {
  *
  * If outside specified `range`, infinity energy is returned, causing rejection.
  */
-class Constrain : public Energybase {
+class Constrain : public EnergyTerm {
   private:
     std::string type;
     std::unique_ptr<ReactionCoordinate::ReactionCoordinateBase> coordinate;
@@ -293,7 +293,7 @@ class Constrain : public Energybase {
  *
  * @todo Optimize.
  */
-class Bonded : public Energybase {
+class Bonded : public EnergyTerm {
   private:
     using BondVector = BasePointerVector<Potential::BondData>;
     const Space& spc;
@@ -360,13 +360,13 @@ class PairEnergy {
     const Space::GeometryType& geometry;       //!< geometry to operate with
     TPairPotential pair_potential;             //!< pair potential function/functor
     Space& spc;                                //!< space to init ParticleSelfEnergy with addPairPotentialSelfEnergy
-    BasePointerVector<Energybase>& potentials; //!< registered non-bonded potentials, see addPairPotentialSelfEnergy
+    BasePointerVector<EnergyTerm>& potentials; //!< registered non-bonded potentials, see addPairPotentialSelfEnergy
   public:
     /**
      * @param spc
      * @param potentials  registered non-bonded potentials
      */
-    PairEnergy(Space& spc, BasePointerVector<Energybase>& potentials)
+    PairEnergy(Space& spc, BasePointerVector<EnergyTerm>& potentials)
         : geometry(spc.geometry)
         , spc(spc)
         , potentials(potentials) {}
@@ -1320,7 +1320,7 @@ class GroupPairing {
     }
 };
 
-class NonbondedBase : public Energybase {
+class NonbondedBase : public EnergyTerm {
   public:
     virtual double particleParticleEnergy(const Particle &particle1, const Particle &particle2) = 0;
     virtual double groupGroupEnergy(const Group& group1, const Group& group2) = 0;
@@ -1341,8 +1341,10 @@ template <RequirePairEnergy TPairEnergy, typename TPairingPolicy> class Nonbonde
         energy_accumulator; //!< energy accumulator used for storing and summing pair-wise energies
 
   public:
-    Nonbonded(const json& j, Space& spc, BasePointerVector<Energybase>& pot)
-        : spc(spc), pair_energy(spc, pot), pairing(spc) {
+    Nonbonded(const json& j, Space& spc, BasePointerVector<EnergyTerm>& pot)
+        : spc(spc)
+        , pair_energy(spc, pot)
+        , pairing(spc) {
         name = "nonbonded";
         from_json(j);
         energy_accumulator = createEnergyAccumulator(j, pair_energy, 0.0);
@@ -1426,7 +1428,7 @@ class NonbondedCached : public Nonbonded<TPairEnergy, TPairingPolicy> {
         if (j < i) {
             std::swap(i, j);
         }
-        if (Energybase::state == Energybase::MonteCarloState::TRIAL) { // if this is from the trial system
+        if (EnergyTerm::state == EnergyTerm::MonteCarloState::TRIAL) { // if this is from the trial system
             TAccumulator energy_accumulator(Base::pair_energy);
             Base::pairing.group2group(energy_accumulator, g1, g2);
             energy_cache(i, j) = static_cast<double>(energy_accumulator);  // update the cache
@@ -1441,7 +1443,8 @@ class NonbondedCached : public Nonbonded<TPairEnergy, TPairingPolicy> {
     }
 
   public:
-    NonbondedCached(const json &j, Space &spc, BasePointerVector<Energybase> &pot) : Base(j, spc, pot) {
+    NonbondedCached(const json& j, Space& spc, BasePointerVector<EnergyTerm>& pot)
+        : Base(j, spc, pot) {
         Base::name += "EM";
         init();
     }
@@ -1525,7 +1528,7 @@ class NonbondedCached : public Nonbonded<TPairEnergy, TPairingPolicy> {
      * @param base_ptr
      * @param change
      */
-    void sync(Energybase* base_ptr, const Change& change) override {
+    void sync(EnergyTerm* base_ptr, const Change& change) override {
         auto other = dynamic_cast<decltype(this)>(base_ptr);
         assert(other);
         if (change.everything || change.volume_change) {
@@ -1552,7 +1555,7 @@ class NonbondedCached : public Nonbonded<TPairEnergy, TPairingPolicy> {
  * @todo - Implement partial evaluation refelcting `change` object
  *       - Average volume currently mixes accepted/rejected states
  */
-class FreeSASAEnergy : public Energybase {
+class FreeSASAEnergy : public EnergyTerm {
   private:
     std::vector<double> positions; //!< Flattened position buffer for all particles
     std::vector<double> radii;     //!< Radii buffer for all particles
@@ -1564,7 +1567,7 @@ class FreeSASAEnergy : public Energybase {
     Average<double> mean_surface_area;
 
     void to_json(json &j) const override;
-    void sync(Energybase* energybase_ptr, const Change& change) override;
+    void sync(EnergyTerm* energybase_ptr, const Change& change) override;
     void updateSASA(const Change& change);
     void init() override;
 
@@ -1620,10 +1623,10 @@ class FreeSASAEnergy : public Energybase {
  * (and slow) system update is performed on each call to `energy()`. This class is used as
  * a reference and base class for more clever implementations.
  */
-class SASAEnergyReference : public Energybase {
+class SASAEnergyReference : public EnergyTerm {
   private:
     void to_json(json& j) const override;
-    void sync(Energybase* energybase_ptr, const Change& change) override;
+    void sync(EnergyTerm* energybase_ptr, const Change& change) override;
 
   protected:
     void init() override;
@@ -1655,7 +1658,7 @@ class SASAEnergy : public SASAEnergyReference {
         current_neighbours; //!< holds cached neighbour indices for each particle in ParticleVector
     std::vector<index_type> changed_indices; //!< paritcle indices whose SASA changed based on change object
 
-    void sync(Energybase* energybase_ptr, const Change& change) override;
+    void sync(EnergyTerm* energybase_ptr, const Change& change) override;
     void init() override;
 
     void updateChangedIndices(const Change& change);
@@ -1675,7 +1678,7 @@ class SASAEnergy : public SASAEnergyReference {
  * to illustrate parallel tempering in the book
  * "Understanding Molecular Simulation" by D. Frenkel.
  */
-class Example2D : public Energybase {
+class Example2D : public EnergyTerm {
   private:
     bool use_2d = true;        // Set to false to apply energy only along x (as by the book)
     double scale_energy = 1.0; // effective temperature
@@ -1696,7 +1699,7 @@ class Example2D : public Energybase {
  * - "R" Mass center separation
  * - "Z1" and "Z2" mean charges of the two molecules
  */
-class CustomGroupGroup : public Energybase {
+class CustomGroupGroup : public EnergyTerm {
   private:
     const Space& spc;
     MoleculeData::index_type molid1;
@@ -1722,7 +1725,7 @@ class CustomGroupGroup : public Energybase {
 /**
  * @brief Aggregate and sum energy terms
  */
-class Hamiltonian : public Energybase, public BasePointerVector<Energybase> {
+class Hamiltonian : public EnergyTerm, public BasePointerVector<EnergyTerm> {
   private:
     double maximum_allowed_energy = pc::infty; //!< Maximum allowed energy change
     std::vector<double> latest_energies;       //!< Placeholder for the lastest energies for each energy term
@@ -1731,13 +1734,13 @@ class Hamiltonian : public Energybase, public BasePointerVector<Energybase> {
     void checkBondedMolecules() const;         //!< Warn if bonded molecules and no bonded energy term
     void to_json(json& j) const override;
     void force(PointVector& forces) override;
-    std::unique_ptr<Energybase> createEnergy(Space& spc, const std::string& name, const json& j);
+    std::unique_ptr<EnergyTerm> createEnergy(Space& spc, const std::string& name, const json& j);
 
   public:
     Hamiltonian(Space& spc, const json& j);
     void init() override;
     void updateState(const Change& change) override;
-    void sync(Energybase* other_hamiltonian, const Change& change) override;
+    void sync(EnergyTerm* other_hamiltonian, const Change& change) override;
     double energy(const Change& change) override;      //!< Energy due to changes
     const std::vector<double>& latestEnergies() const; //!< Energies for each term from the latest call to `energy()`
 };

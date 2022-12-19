@@ -559,7 +559,7 @@ void Ewald::force(std::vector<Point> &forces) {
  */
 void Ewald::setOldGroups(const Space::GroupVector& old_groups) { this->old_groups = &old_groups; }
 
-void Ewald::sync(Energybase* energybase, const Change& change) {
+void Ewald::sync(EnergyTerm* energybase, const Change& change) {
     if (auto* other = dynamic_cast<const Ewald*>(energybase)) {
         if (!old_groups && other->state == MonteCarloState::ACCEPTED) {
             setOldGroups(other->spc.groups);
@@ -1060,7 +1060,7 @@ void Hamiltonian::updateState(const Change& change) {
     std::for_each(energy_terms.begin(), energy_terms.end(), [&](auto& energy) { energy->updateState(change); });
 }
 
-void Hamiltonian::sync(Energybase* other_hamiltonian, const Change& change) {
+void Hamiltonian::sync(EnergyTerm* other_hamiltonian, const Change& change) {
     if (auto* other = dynamic_cast<Hamiltonian*>(other_hamiltonian)) {
         if (other->size() == size()) {
             latest_energies = other->latestEnergies();
@@ -1085,7 +1085,7 @@ void Hamiltonian::sync(Energybase* other_hamiltonian, const Change& change) {
  *
  * New energy terms should be added to the if-else chain in the function
  */
-std::unique_ptr<Energybase> Hamiltonian::createEnergy(Space& spc, const std::string& name, const json& j) {
+std::unique_ptr<EnergyTerm> Hamiltonian::createEnergy(Space& spc, const std::string& name, const json& j) {
     using namespace Potential;
     using CoulombLJ = CombinedPairPotential<NewCoulombGalore, LennardJones>;
     using CoulombWCA = CombinedPairPotential<NewCoulombGalore, WeeksChandlerAndersen>;
@@ -1230,7 +1230,7 @@ double FreeSASAEnergy::energy(const Change& change) {
     return energy;
 }
 
-void FreeSASAEnergy::sync(Energybase* energybase_ptr, const Change& change) {
+void FreeSASAEnergy::sync(EnergyTerm* energybase_ptr, const Change& change) {
     // since the full SASA is calculated in each energy evaluation, this is
     // currently not needed.
     if (auto* other = dynamic_cast<FreeSASAEnergy*>(energybase_ptr); other != nullptr) {
@@ -1404,7 +1404,7 @@ double SASAEnergyReference::energy(const Change& change) {
     return energy;
 }
 
-void SASAEnergyReference::sync(Energybase* energybase_ptr, const Change& change) {
+void SASAEnergyReference::sync(EnergyTerm* energybase_ptr, const Change& change) {
     if (auto* other = dynamic_cast<SASAEnergyReference*>(energybase_ptr)) {
         areas = other->areas;
         if (sasa->needs_syncing) {
@@ -1503,7 +1503,7 @@ double SASAEnergy::energy(const Change& change) {
     return energy;
 }
 
-void SASAEnergy::sync(Energybase* energybase_ptr, const Change& change) {
+void SASAEnergy::sync(EnergyTerm* energybase_ptr, const Change& change) {
     if (auto* other = dynamic_cast<SASAEnergy*>(energybase_ptr)) {
         const auto sync_data = [this, other](const size_t changed_index) {
             this->current_neighbours.at(changed_index) = other->current_neighbours.at(changed_index);

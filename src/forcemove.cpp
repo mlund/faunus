@@ -23,20 +23,25 @@ static inline double meanSquareSpeedComponent(T mass) {
 
 // =============== IntegratorBase  ===============
 
-IntegratorBase::IntegratorBase(Space &spc, Energy::Energybase &energy) : spc(spc), energy(energy) {}
+IntegratorBase::IntegratorBase(Space& spc, Energy::EnergyTerm& energy)
+    : spc(spc)
+    , energy(energy) {}
 
 void from_json(const json &j, IntegratorBase &i) { i.from_json(j); }
 void to_json(json &j, const IntegratorBase &i) { i.to_json(j); }
 
 // =============== LangevinVelocityVerlet ===============
 
-LangevinVelocityVerlet::LangevinVelocityVerlet(Space &spc, Energy::Energybase &energy) : IntegratorBase(spc, energy) {}
+LangevinVelocityVerlet::LangevinVelocityVerlet(Space& spc, Energy::EnergyTerm& energy)
+    : IntegratorBase(spc, energy) {}
 
-LangevinVelocityVerlet::LangevinVelocityVerlet(Space &spc, Energy::Energybase &energy, double time_step,
+LangevinVelocityVerlet::LangevinVelocityVerlet(Space& spc, Energy::EnergyTerm& energy, double time_step,
                                                double friction_coefficient)
-    : IntegratorBase(spc, energy), time_step(time_step), friction_coefficient(friction_coefficient) {}
+    : IntegratorBase(spc, energy)
+    , time_step(time_step)
+    , friction_coefficient(friction_coefficient) {}
 
-LangevinVelocityVerlet::LangevinVelocityVerlet(Space &spc, Energy::Energybase &energy, const json &j)
+LangevinVelocityVerlet::LangevinVelocityVerlet(Space& spc, Energy::EnergyTerm& energy, const json& j)
     : LangevinVelocityVerlet::LangevinVelocityVerlet(spc, energy) {
     from_json(j);
 }
@@ -107,7 +112,7 @@ void LangevinVelocityVerlet::to_json(json &j) const {
 }
 
 TEST_CASE("[Faunus] Integrator") {
-    class DummyEnergy : public Energy::Energybase {
+    class DummyEnergy : public Energy::EnergyTerm {
         double energy([[maybe_unused]] const Change& change) override { return 0.0; }
     };
     Space spc;
@@ -196,10 +201,10 @@ LangevinDynamics::LangevinDynamics(Space &spc, std::string name, std::string cit
 LangevinDynamics::LangevinDynamics(Space &spc, std::shared_ptr<IntegratorBase> integrator, unsigned int nsteps)
     : LangevinDynamics(spc, "langevin_dynamics", "", integrator, nsteps) {}
 
-LangevinDynamics::LangevinDynamics(Space &spc, Energy::Energybase &energy)
+LangevinDynamics::LangevinDynamics(Space& spc, Energy::EnergyTerm& energy)
     : LangevinDynamics::LangevinDynamics(spc, std::make_shared<LangevinVelocityVerlet>(spc, energy), 0) {}
 
-LangevinDynamics::LangevinDynamics(Space &spc, Energy::Energybase &energy, const json &j)
+LangevinDynamics::LangevinDynamics(Space& spc, Energy::EnergyTerm& energy, const json& j)
     : LangevinDynamics::LangevinDynamics(spc, energy) {
     from_json(j);
 }
@@ -208,7 +213,7 @@ void LangevinDynamics::_to_json(json &j) const { ForceMoveBase::_to_json(j); }
 void LangevinDynamics::_from_json(const json &j) { ForceMoveBase::_from_json(j); }
 
 TEST_CASE("[Faunus] LangevinDynamics") {
-    class DummyEnergy : public Energy::Energybase {
+    class DummyEnergy : public Energy::EnergyTerm {
         double energy([[maybe_unused]] const Change& change) override { return 0.0; }
     };
     Space spc;

@@ -21,7 +21,7 @@ class NewCoulombGalore;
 
 namespace Faunus::Energy {
 class Hamiltonian;
-class Energybase;
+class EnergyTerm;
 class Penalty;
 } // namespace Faunus::Energy
 
@@ -117,13 +117,13 @@ class PerturbationAnalysisBase : public Analysisbase {
 
   protected:
     Space& mutable_space; //!< This reference to space can be changed
-    Energy::Energybase& pot;
+    Energy::EnergyTerm& pot;
     std::string filename;                                 //!< output filename (optional)
     std::unique_ptr<std::ostream> stream = nullptr;       //!< output file stream if filename given
     Change change;                                        //!< Change object to describe perturbation
     Average<double> mean_exponentiated_energy_change;     //!< < exp(-du/kT) >
     bool collectWidomAverage(const double energy_change); //!< add to exp(-du/kT) incl. safety checks
-    PerturbationAnalysisBase(const std::string& name, Energy::Energybase& pot, Space& spc,
+    PerturbationAnalysisBase(const std::string& name, Energy::EnergyTerm& pot, Space& spc,
                              const std::string& filename = ""s);
     double meanFreeEnergy() const; //!< Average perturbation free energy, `-ln(<exp(-du/kT)>)`
 };
@@ -652,7 +652,7 @@ class VirtualVolumeMove : public PerturbationAnalysisBase {
     void writeToFileStream(const Point& scale, double energy_change) const;
 
   public:
-    VirtualVolumeMove(const json& j, Space& spc, Energy::Energybase& pot);
+    VirtualVolumeMove(const json& j, Space& spc, Energy::EnergyTerm& pot);
 };
 
 /**
@@ -689,7 +689,7 @@ class VirtualTranslate : public PerturbationAnalysisBase {
     void writeToFileStream(double energy_change) const;
 
   public:
-    VirtualTranslate(const json& j, Space& spc, Energy::Energybase& pot);
+    VirtualTranslate(const json& j, Space& spc, Energy::EnergyTerm& pot);
 };
 
 /**

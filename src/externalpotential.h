@@ -17,7 +17,7 @@ namespace Energy {
 /**
  * All energies inherit from this class
  */
-class Energybase {
+class EnergyTerm {
   public:
     enum class MonteCarloState { ACCEPTED, TRIAL, NONE };
     MonteCarloState state = MonteCarloState::NONE;
@@ -26,14 +26,14 @@ class Energybase {
     TimeRelativeOfTotal<std::chrono::microseconds> timer; //!< Timer for measuring speed
     virtual double energy(const Change& change) = 0;      //!< energy due to change
     virtual void to_json(json& j) const;                  //!< json output
-    virtual void sync(Energybase* other_energy, const Change& change); //!< Sync (copy from) another energy instance
+    virtual void sync(EnergyTerm* other_energy, const Change& change); //!< Sync (copy from) another energy instance
     virtual void init();                                  //!< reset and initialize
     virtual void updateState(const Change& change);       //!< Update internal state to reflect change in e.g. Space
     virtual void force(PointVector& forces);              //!< update forces on all particles
-    inline virtual ~Energybase() = default;
+    inline virtual ~EnergyTerm() = default;
 };
 
-void to_json(json &j, const Energybase &base); //!< Converts any energy class to json object
+void to_json(json& j, const EnergyTerm& base); //!< Converts any energy class to json object
 
 /**
  * @brief Base class for external potentials
@@ -44,7 +44,7 @@ void to_json(json &j, const Energybase &base); //!< Converts any energy class to
  *
  * @todo The `dN` check is inefficient as it calculates the external potential on *all* particles.
  */
-class ExternalPotential : public Energybase {
+class ExternalPotential : public EnergyTerm {
   private:
     bool act_on_mass_center = false;              //!< apply only on center-of-mass
     std::set<int> molecule_ids;                   //!< ids of molecules to act on
@@ -124,7 +124,7 @@ class ExternalAkesson : public ExternalPotential {
     void saveChargeDensity();                       //!< save charge density profile to disk
     void loadChargeDensity();                       //!< load charge density profile from disk
     void to_json(json &) const override;
-    void sync(Energybase*, const Change&) override;
+    void sync(EnergyTerm*, const Change&) override;
 
   public:
     ExternalAkesson(const json& j, const Space& spc);

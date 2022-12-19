@@ -598,9 +598,12 @@ void PerturbationAnalysisBase::_to_disk() {
         stream->flush(); // empty buffer
     }
 }
-PerturbationAnalysisBase::PerturbationAnalysisBase(const std::string& name, Energy::Energybase& pot, Space& spc,
+PerturbationAnalysisBase::PerturbationAnalysisBase(const std::string& name, Energy::EnergyTerm& pot, Space& spc,
                                                    const std::string& filename)
-    : Analysisbase(spc, name), mutable_space(spc), pot(pot), filename(filename) {
+    : Analysisbase(spc, name)
+    , mutable_space(spc)
+    , pot(pot)
+    , filename(filename) {
     if (!filename.empty()) {
         this->filename = MPI::prefix + filename;
         stream = IO::openCompressedOutputStream(this->filename, true); // throws if error
@@ -690,7 +693,7 @@ void VirtualVolumeMove::_to_json(json& j) const {
     }
 }
 
-VirtualVolumeMove::VirtualVolumeMove(const json& j, Space& spc, Energy::Energybase& pot)
+VirtualVolumeMove::VirtualVolumeMove(const json& j, Space& spc, Energy::EnergyTerm& pot)
     : PerturbationAnalysisBase("virtualvolume", pot, spc, j.value("file", ""s)) {
     cite = "doi:10.1063/1.472721";
     from_json(j);
@@ -2149,7 +2152,7 @@ void VirtualTranslate::_to_json(json& j) const {
              {"dir", perturbation_direction}};
     }
 }
-VirtualTranslate::VirtualTranslate(const json& j, Space& spc, Energy::Energybase& pot)
+VirtualTranslate::VirtualTranslate(const json& j, Space& spc, Energy::EnergyTerm& pot)
     : PerturbationAnalysisBase("virtualtranslate", pot, spc, j.value("file", ""s)) {
     change.groups.resize(1);
     change.groups.front().internal = false;

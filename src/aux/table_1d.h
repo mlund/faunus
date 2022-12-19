@@ -8,12 +8,12 @@ namespace Faunus {
 
 /**
  * @brief Dynamic table for 1d data
- * @todo This needs refactoring for readability and should be documented!
+ * @todo This really needs documentation and general refactoring!
  */
 template <typename Tcoeff = double, typename base = Eigen::Matrix<Tcoeff, Eigen::Dynamic, Eigen::Dynamic>>
 class Table : public base {
   private:
-    typedef std::vector<double> Tvec;
+    using Tvec = std::vector<double>;
     Tvec _bw, _lo, _hi;
     using index_t = typename base::Index;
     static_assert(std::is_integral_v<index_t> && std::is_signed_v<index_t>, "signed integral value expected");
@@ -21,15 +21,21 @@ class Table : public base {
     index_t _cols;
 
   public:
-    Table(const Tvec &bw = {1, 1}, const Tvec &lo = {0, 0}, const Tvec &hi = {2, 2}) { reInitializer(bw, lo, hi); }
+    explicit Table(const Tvec& bw = {1, 1}, const Tvec& lo = {0, 0}, const Tvec& hi = {2, 2}) {
+        reInitializer(bw, lo, hi);
+    }
 
     // required for assignment from Eigen::Matrix and Eigen::Array objects
-    template <typename OtherDerived> Table(const Eigen::MatrixBase<OtherDerived> &other) : base(other) {}
+    template <typename OtherDerived>
+    explicit Table(const Eigen::MatrixBase<OtherDerived>& other)
+        : base(other) {}
     template <typename OtherDerived> Table &operator=(const Eigen::MatrixBase<OtherDerived> &other) {
         this->base::operator=(other);
         return *this;
     }
-    template <typename OtherDerived> Table(const Eigen::ArrayBase<OtherDerived> &other) : base(other) {}
+    template <typename OtherDerived>
+    explicit Table(const Eigen::ArrayBase<OtherDerived>& other)
+        : base(other) {}
     template <typename OtherDerived> Table &operator=(const Eigen::ArrayBase<OtherDerived> &other) {
         this->base::operator=(other);
         return *this;
@@ -102,26 +108,26 @@ class Table : public base {
         }
     }
 
-    base getBlock(const Tvec &v) { // {xmin,xmax} or {xmin,xmax,ymin,ymax}
+    base getBlock(const Tvec& slice) { // {xmin,xmax} or {xmin,xmax,ymin,ymax}
         Tvec w(4, 0);
-        switch (v.size()) {
-        case (1):
-            w[0] = w[1] = (v[0] - _lo[0]) / _bw[0];
+        switch (slice.size()) {
+        case 1:
+            w[0] = w[1] = (slice[0] - _lo[0]) / _bw[0];
             w[3] = _cols - 1;
             break;
-        case (2):
-            w[0] = (v[0] - _lo[0]) / _bw[0];
-            w[1] = (v[1] - _lo[0]) / _bw[0];
+        case 2:
+            w[0] = (slice[0] - _lo[0]) / _bw[0];
+            w[1] = (slice[1] - _lo[0]) / _bw[0];
             break;
-        case (3):
+        case 3:
             w[0] = w[1] = _rows - 1;
             w[2] = w[3] = _cols - 1;
             break;
-        case (4):
-            w[0] = (v[0] - _lo[0]) / _bw[0];
-            w[1] = (v[1] - _lo[0]) / _bw[0];
-            w[2] = (v[2] - _lo[1]) / _bw[1];
-            w[3] = (v[3] - _lo[1]) / _bw[1];
+        case 4:
+            w[0] = (slice[0] - _lo[0]) / _bw[0];
+            w[1] = (slice[1] - _lo[0]) / _bw[0];
+            w[2] = (slice[2] - _lo[1]) / _bw[1];
+            w[3] = (slice[3] - _lo[1]) / _bw[1];
         }
         return this->block(w[0], w[2], w[1] - w[0] + 1, w[3] - w[2] + 1); // xmin,ymin,rows,cols
     }
@@ -129,7 +135,8 @@ class Table : public base {
     Tcoeff avg(const Tvec &v) const { return this->getBlock(v).mean(); }
 
     void save(const std::string &filename, Tcoeff scale = 1, Tcoeff translate = 0) const {
-        Eigen::VectorXd v1(_cols + 1), v2(_rows + 1);
+        Eigen::VectorXd v1(_cols + 1);
+        Eigen::VectorXd v2(_rows + 1);
         v1(0) = v2(0) = base::size();
         for (index_t i = 1; i != _cols + 1; ++i) {
             v1(i) = (i - 1) * _bw[1] + _lo[1];
@@ -147,38 +154,39 @@ class Table : public base {
         if (translate != 0) {
             m.bottomRightCorner(_rows, _cols) += base::Constant(_rows, _cols, translate);
         }
-        std::ofstream f(filename.c_str());
-        if (_cols == 1) {
-            f << "#";
-        }
-        f.precision(10);
-        if (f) {
-            f << m;
+        std::ofstream stream(filename.c_str());
+        if (stream) {
+            stream.precision(10);
+            if (_cols == 1) {
+                stream << "#";
+            }
+            stream << m;
         }
     }
 
     void saveRow(const std::string &filename, const Tvec &v, Tcoeff scale = 1, Tcoeff translate = 0) {
-        if (this->isInRange(v)) {
-            auto b = this->getBlock(v);
-            auto size = b.size();
-            Eigen::VectorXd w(size);
-            for (index_t i = 0; i != size; ++i) {
-                w(i) = i * _bw[1] + _lo[1];
-            }
-            base m(size, 2);
-            m.leftCols(1) = w;
-            m.bottomRightCorner(size, 1) = b.transpose();
-            if (scale != 1) {
-                m.bottomRightCorner(size, 1) *= scale;
-            }
-            if (translate != 0) {
-                m.bottomRightCorner(size, 1) += base::Constant(size, 1, translate);
-            }
-            std::ofstream output_stream(filename.c_str());
-            output_stream.precision(10);
-            if (output_stream) {
-                output_stream << m;
-            }
+        if (!this->isInRange(v)) {
+            return;
+        }
+        auto b = this->getBlock(v);
+        auto size = b.size();
+        Eigen::VectorXd w(size);
+        for (index_t i = 0; i != size; ++i) {
+            w(i) = i * _bw[1] + _lo[1];
+        }
+        base m(size, 2);
+        m.leftCols(1) = w;
+        m.bottomRightCorner(size, 1) = b.transpose();
+        if (scale != 1) {
+            m.bottomRightCorner(size, 1) *= scale;
+        }
+        if (translate != 0) {
+            m.bottomRightCorner(size, 1) += base::Constant(size, 1, translate);
+        }
+        std::ofstream stream(filename.c_str());
+        if (stream) {
+            stream.precision(10);
+            stream << m;
         }
     }
 

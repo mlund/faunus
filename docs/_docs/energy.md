@@ -635,9 +635,9 @@ the keywords `rho`, `rhoinv`, and `phi0` are mutually exclusive.
 ## Custom Group-Group Potential
 
 For two different or equal molecule types (`name1`, `name2`), this adds a user-defined energy function
-given at run-time. In addition to physical constants, the following varibles are available:
+given at run-time. The following variables are available:
 
-`constants`        | Description
+`variable`        | Description
 -----------------  | --------------------------------
 `R`                | Mass center separation (Å)
 `Z1`               | Average net-charge of group 1
@@ -656,6 +656,17 @@ custom-groupgroup:
         -bjerrum_length * Z1 * Z2 / R * exp(-R / debye_length)
 ~~~
 
+The function is passed using the efficient
+[ExprTk library](http://www.partow.net/programming/exprtk/index.html) and
+a rich set of mathematical functions and logic is available.
+In addition to user-defined `constants`, the following symbols are also defined:
+
+`symbol`   | Description
+---------- | ---------------------------------------------
+`e0`       | Vacuum permittivity [C²/J/m]
+`kB`       | Boltzmann constant [J/K]
+`kT`       | Boltzmann constant × temperature [J]
+`Nav`      | Avogadro's number [1/mol]
 
 ## Bonded Interactions
 

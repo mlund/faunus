@@ -1692,7 +1692,7 @@ class Example2D : public Energybase {
  *
  * For two different or equal molecule ids, this adds a user defined
  * energy in a function given at run-time. In addition to physical
- * constants, the the following parameters are exposed:
+ * constants, the following parameters are exposed:
  * - "R" Mass center separation
  * - "Z1" and "Z2" mean charges of the two molecules
  */

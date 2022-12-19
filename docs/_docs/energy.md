@@ -632,6 +632,31 @@ the keywords `rho`, `rhoinv`, and `phi0` are mutually exclusive.
 `linearise=false`  | Use linearised Poisson-Boltzmann approximation?
 
 
+## Custom Group-Group Potential
+
+For two different or equal molecule types (`name1`, `name2`), this adds a user-defined energy function
+given at run-time. In addition to physical constants, the following varibles are available:
+
+`constants`        | Description
+-----------------  | --------------------------------
+`R`                | Mass center separation (Å)
+`Z1`               | Average net-charge of group 1
+`Z2`               | Average net-charge of group 2
+
+When used together with regular non-bonded interactions, this can e.g. be used to bias simulations.
+In the following example, we _subtract_ a Yukawa potential and the bias can later be removed by
+re-weighting using information from the `systemenergy` analysis output.
+
+~~~ yaml
+custom-groupgroup:
+    name1: charged_colloid
+    name2: charged_colloid
+    constants: { bjerrum_length: 7.1, debye_length: 50 }
+    function: >
+        -bjerrum_length * Z1 * Z2 / R * exp(-R / debye_length)
+~~~
+
+
 ## Bonded Interactions
 
 Bonds and angular potentials are added via the keyword `bondlist` either directly

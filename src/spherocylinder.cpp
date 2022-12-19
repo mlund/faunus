@@ -555,7 +555,7 @@ int cpsc_intersect(const Cigar& cigar1, const Cigar& cigar2, const Point& r_cm, 
 namespace Faunus::Potential {
 
 HardSpheroCylinder::HardSpheroCylinder()
-    : PairPotentialBase("hardspherocylinder", "", false) {}
+    : PairPotential("hardspherocylinder", "", false) {}
 
 void HardSpheroCylinder::to_json([[maybe_unused]] json& j) const {}
 
@@ -678,7 +678,7 @@ void CigarWithCigar<PatchPotential, CylinderPotential>::from_json(const json& j)
 
 template <RequirePairPotential PatchPotential, RequirePairPotential CylinderPotential>
 CigarWithCigar<PatchPotential, CylinderPotential>::CigarWithCigar()
-    : PairPotentialBase("cigar-cigar", ""s, false) {}
+    : PairPotential("cigar-cigar", ""s, false) {}
 
 template class CigarWithCigar<CosAttractMixed, WeeksChandlerAndersen>; // explicit initialization
 
@@ -736,7 +736,7 @@ void CompleteCigarPotential<PatchPotential, CylinderPotential, SphereWithSphere>
 template <RequirePairPotential PatchPotential, RequirePairPotential CylinderPotential,
           RequirePairPotential SphereWithSphere>
 CompleteCigarPotential<PatchPotential, CylinderPotential, SphereWithSphere>::CompleteCigarPotential()
-    : PairPotentialBase("complete cigar", ""s, false) {}
+    : PairPotential("complete cigar", ""s, false) {}
 
 template class CompleteCigarPotential<CosAttractMixed, WeeksChandlerAndersen>; // explicit initialization
 
@@ -744,7 +744,7 @@ template class CompleteCigarPotential<CosAttractMixed, WeeksChandlerAndersen>; /
 
 template <RequirePairPotential PatchPotential, RequirePairPotential CylinderPotential>
 CigarWithSphere<PatchPotential, CylinderPotential>::CigarWithSphere()
-    : PairPotentialBase("cigar-sphere", ""s, false) {}
+    : PairPotential("cigar-sphere", ""s, false) {}
 
 template <RequirePairPotential PatchPotential, RequirePairPotential CylinderPotential>
 void CigarWithSphere<PatchPotential, CylinderPotential>::to_json(json& j) const {

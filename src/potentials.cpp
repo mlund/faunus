@@ -188,8 +188,10 @@ void from_json(const json& j, std::vector<CustomInteractionData>& interactions) 
 
 // =============== PairPotentialBase ===============
 
-PairPotentialBase::PairPotentialBase(const std::string &name, const std::string &cite, bool isotropic)
-    : name(name), cite(cite), isotropic(isotropic) {}
+PairPotential::PairPotential(const std::string& name, const std::string& cite, bool isotropic)
+    : name(name)
+    , cite(cite)
+    , isotropic(isotropic) {}
 
 /**
  * @brief Calculates force on particle a due to another particle, b
@@ -199,17 +201,14 @@ PairPotentialBase::PairPotentialBase(const std::string &name, const std::string 
  * @param b_towards_a Distance vector 𝐛 -> 𝐚 = 𝐚 - 𝐛
  * @return Force on particle a due to particle b
  */
-Point PairPotentialBase::force([[maybe_unused]] const Particle& a, [[maybe_unused]] const Particle& b,
-                               [[maybe_unused]] double squared_distance,
-                               [[maybe_unused]] const Point& b_towards_a) const {
+Point PairPotential::force([[maybe_unused]] const Particle& a, [[maybe_unused]] const Particle& b,
+                           [[maybe_unused]] double squared_distance, [[maybe_unused]] const Point& b_towards_a) const {
     throw(std::logic_error("Force computation not implemented for this setup!"));
 }
 
-void to_json(json &j, const PairPotentialBase &base) {
-    base.name.empty() ? base.to_json(j) : base.to_json(j[base.name]);
-}
+void to_json(json& j, const PairPotential& base) { base.name.empty() ? base.to_json(j) : base.to_json(j[base.name]); }
 
-void from_json(const json &j, PairPotentialBase &base) {
+void from_json(const json& j, PairPotential& base) {
     try {
         if (not base.name.empty()) {
             if (j.count(base.name) == 1) {
@@ -265,7 +264,8 @@ void MixerPairPotentialBase::to_json(json &j) const {
 void MixerPairPotentialBase::extractorsFromJson(const json&) {}
 MixerPairPotentialBase::MixerPairPotentialBase(const std::string& name, const std::string& cite,
                                                CombinationRuleType combination_rule, bool isotropic)
-    : PairPotentialBase(name, cite, isotropic), combination_rule(combination_rule){}
+    : PairPotential(name, cite, isotropic)
+    , combination_rule(combination_rule) {}
 
 // =============== RepulsionR3 ===============
 
@@ -295,7 +295,7 @@ double CosAttract::cutOffSquared() const {
     return rcwc2;
 }
 CosAttract::CosAttract(const std::string& name)
-    : PairPotentialBase(name) {}
+    : PairPotential(name) {}
 
 TEST_CASE("[Faunus] CosAttract") {
     Particle a, b;
@@ -381,7 +381,8 @@ void Coulomb::from_json(const json &j) {
         throw ConfigurationError("Plain Coulomb potential expects 'epsr' key (only)");
     }
 }
-Coulomb::Coulomb(const std::string &name) : PairPotentialBase(name) {}
+Coulomb::Coulomb(const std::string& name)
+    : PairPotential(name) {}
 
 // =============== DipoleDipole (old) ===============
 
@@ -392,8 +393,7 @@ void DipoleDipole::to_json(json &j) const {
 
 void DipoleDipole::from_json(const json& j) { bjerrum_length = pc::bjerrumLength(j.at("epsr")); }
 DipoleDipole::DipoleDipole(const std::string& name, const std::string& cite)
-    :
-    PairPotentialBase(name, cite, false) {}
+    : PairPotential(name, cite, false) {}
 
 // =============== FENE ===============
 
@@ -405,7 +405,7 @@ void FENE::from_json(const json &j) {
 
 void FENE::to_json(json &j) const { j = {{"stiffness", k}, {"maxsep", std::sqrt(r02)}}; }
 FENE::FENE(const std::string& name)
-    : PairPotentialBase(name) {}
+    : PairPotential(name) {}
 
 // =============== SASApotential ===============
 
@@ -456,8 +456,7 @@ void SASApotential::to_json(json &j) const {
     j["shift"] = shift;
 }
 SASApotential::SASApotential(const std::string& name, const std::string& cite)
-    :
-    PairPotentialBase(name, cite) {}
+    : PairPotential(name, cite) {}
 
 TEST_CASE("[Faunus] SASApotential") {
     using doctest::Approx;
@@ -515,7 +514,8 @@ void CustomPairPotential::to_json(json& j) const {
     }
 }
 CustomPairPotential::CustomPairPotential(const std::string& name)
-    : PairPotentialBase(name), symbols(std::make_shared<Symbols>()) {}
+    : PairPotential(name)
+    , symbols(std::make_shared<Symbols>()) {}
 
 TEST_CASE("[Faunus] CustomPairPotential") {
     using doctest::Approx;
@@ -819,7 +819,7 @@ void Polarizability::to_json(json& j) const { j = {{"epsr", epsr}}; }
 
 // =============== FunctorPotential ===============
 
-void FunctorPotential::registerSelfEnergy(PairPotentialBase* pot) {
+void FunctorPotential::registerSelfEnergy(PairPotential* pot) {
     if (pot->selfEnergy) {
         if (not selfEnergy) { // no self energy is defined
             selfEnergy = pot->selfEnergy;
@@ -935,7 +935,8 @@ void FunctorPotential::from_json(const json &j) {
     }
 }
 
-FunctorPotential::FunctorPotential(const std::string &name) : PairPotentialBase(name) {}
+FunctorPotential::FunctorPotential(const std::string& name)
+    : PairPotential(name) {}
 
 TEST_CASE("[Faunus] FunctorPotential") {
     using doctest::Approx;
@@ -1181,7 +1182,10 @@ void NewCoulombGalore::setSelfEnergy() {
     }; // expose self-energy as a functor in potential base class
 }
 
-NewCoulombGalore::NewCoulombGalore(const std::string &name) : PairPotentialBase(name) { setSelfEnergy(); }
+NewCoulombGalore::NewCoulombGalore(const std::string& name)
+    : PairPotential(name) {
+    setSelfEnergy();
+}
 
 TEST_CASE("[Faunus] NewCoulombGalore") {
     Particle a, b;

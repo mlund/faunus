@@ -180,13 +180,13 @@ void MolecularGroupDeActivator::setPositionAndOrientation(Group& group) const {
     // translate to random position within simulation cell
     Point new_mass_center;
     geometry.randompos(new_mass_center, random); // place COM randomly in simulation box
-    Point displacement = geometry.vdist(new_mass_center, group.massCenter()->get());
+    const Point displacement = geometry.vdist(new_mass_center, group.massCenter()->get());
     group.translate(displacement, geometry.getBoundaryFunc());
 
     // generate random orientation
     const auto rotation_angle = 2.0 * pc::pi * (random() - 0.5); // -pi to pi
     const auto random_unit_vector = randomUnitVector(random);
-    Eigen::Quaterniond quaternion(Eigen::AngleAxisd(rotation_angle, random_unit_vector));
+    const Eigen::Quaterniond quaternion(Eigen::AngleAxisd(rotation_angle, random_unit_vector));
     group.rotate(quaternion, geometry.getBoundaryFunc());
 }
 
@@ -366,7 +366,7 @@ void SpeciationMove::atomicSwap(Change& change) {
     assert(atomic_products.size() == 1 and atomic_reactants.size() == 1);
 
     auto atomlist = spc.findAtoms(atomic_reactants.begin()->first);          // search all active molecules
-    auto& target_particle = *slump.sample(atomlist.begin(), atomlist.end()); // target particle to swap
+    auto& target_particle = *random_internal.sample(atomlist.begin(), atomlist.end()); // target particle to swap
     auto& group = *spc.findGroupContaining(target_particle);                 // find enclosing group
 
     auto& group_change = change.groups.emplace_back();
@@ -389,7 +389,7 @@ void SpeciationMove::atomicSwap(Change& change) {
  *
  * @todo This could make use of policies to customize how particles should be updated. Split to helper class.
  */
-void SpeciationMove::swapParticleProperties(Particle& particle, const int new_atomid) const {
+void SpeciationMove::swapParticleProperties(Particle& particle, const int new_atomid) {
     Particle new_particle(atoms.at(new_atomid), particle.pos);    // new particle with old position
     if (new_particle.hasExtension() || particle.hasExtension()) { // keep also other orientational data
         auto& source_ext = new_particle.getExt();
@@ -417,7 +417,8 @@ void SpeciationMove::activateMolecularGroups(Change& change) {
                               rv::filter(ReactionData::is_molecular_group);
 
     for (auto [molid, number_to_insert] : molecular_products) {
-        auto inactive = spc.findMolecules(molid, selection) | ranges::views::sample(number_to_insert, slump.engine) |
+        auto inactive = spc.findMolecules(molid, selection) |
+                        ranges::views::sample(number_to_insert, random_internal.engine) |
                         ranges::to<std::vector<std::reference_wrapper<Group>>>;
 
         ranges::for_each(inactive, [&](auto& group) {
@@ -458,7 +459,8 @@ void SpeciationMove::deactivateMolecularGroups(Change& change) {
                                rv::filter(nonzero_stoichiometric_coeff) | rv::filter(ReactionData::is_molecular_group);
 
     for (const auto& [molid, number_to_delete] : molecular_reactants) {
-        auto groups = spc.findMolecules(molid, selection) | ranges::views::sample(number_to_delete, slump.engine) |
+        auto groups = spc.findMolecules(molid, selection) |
+                      ranges::views::sample(number_to_delete, random_internal.engine) |
                       ranges::to<std::vector<std::reference_wrapper<Group>>>;
         std::for_each(groups.begin(), groups.end(), [&](auto& group) {
             auto [change_data, bias] = molecular_group_bouncer->deactivate(group);
@@ -519,8 +521,8 @@ void SpeciationMove::_move(Change& change) {
 }
 
 void SpeciationMove::setRandomReactionAndDirection() {
-    reaction = slump.sample(reactions.begin(), reactions.end());
-    reaction->setRandomDirection(slump);
+    reaction = random_internal.sample(reactions.begin(), reactions.end());
+    reaction->setRandomDirection(random_internal);
 }
 
 /**
@@ -585,9 +587,10 @@ void SpeciationMove::_reject([[maybe_unused]] Change& change) {
 
 SpeciationMove::SpeciationMove(Space& spc, Space& old_spc, std::string_view name, std::string_view cite)
     : MoveBase(spc, name, cite)
+    , random_internal(slump)
     , reaction_validator(spc) {
-    molecular_group_bouncer = std::make_unique<Speciation::MolecularGroupDeActivator>(spc, slump, true);
-    atomic_group_bouncer = std::make_unique<Speciation::AtomicGroupDeActivator>(spc, old_spc, slump);
+    molecular_group_bouncer = std::make_unique<Speciation::MolecularGroupDeActivator>(spc, random_internal, true);
+    atomic_group_bouncer = std::make_unique<Speciation::AtomicGroupDeActivator>(spc, old_spc, random_internal);
 }
 
 SpeciationMove::SpeciationMove(Space& spc, Space& old_spc)

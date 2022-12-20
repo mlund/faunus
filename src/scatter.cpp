@@ -36,9 +36,9 @@ TEST_CASE("Benchmark") {
         p = Eigen::Vector3d::Random() * box.x();
     ankerl::nanobench::Bench bench;
     bench.minEpochIterations(100);
-    bench.run("SIMD", [&] { StructureFactorPBC<double, SIMD>(10).sample(pos, box); }).doNotOptimizeAway();
-    bench.run("EIGEN", [&] { StructureFactorPBC<double, EIGEN>(10).sample(pos, box); }).doNotOptimizeAway();
-    bench.run("GENERIC", [&] { StructureFactorPBC<double, GENERIC>(10).sample(pos, box); }).doNotOptimizeAway();
+    bench.run("SIMD", [&] { StructureFactorPBC<double, SIMD>(10).sample(pos, box); });
+    bench.run("EIGEN", [&] { StructureFactorPBC<double, EIGEN>(10).sample(pos, box); });
+    bench.run("GENERIC", [&] { StructureFactorPBC<double, GENERIC>(10).sample(pos, box); });
 }
 #endif
 

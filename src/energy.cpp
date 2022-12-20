@@ -301,8 +301,8 @@ TEST_CASE("[Faunus] Ewald - IonIonPolicy Benchmarks") {
 
         ankerl::nanobench::Bench bench;
         bench.minEpochIterations(20);
-        bench.run("PBC", [&] { pbc.updateComplex(data, spc.groups); }).doNotOptimizeAway();
-        bench.run("PBCEigen", [&] { pbc_eigen.updateComplex(data, spc.groups); }).doNotOptimizeAway();
+        bench.run("PBC", [&] { pbc.updateComplex(data, spc.groups); });
+        bench.run("PBCEigen", [&] { pbc_eigen.updateComplex(data, spc.groups); });
     }
 }
 

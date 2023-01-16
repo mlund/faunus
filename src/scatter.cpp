@@ -31,14 +31,15 @@ TEST_CASE_TEMPLATE("[Faunus] StructureFactorPBC", T, StructureFactorPBC<float, S
 #ifdef ANKERL_NANOBENCH_H_INCLUDED
 TEST_CASE("Benchmark") {
     Point box = {80.0, 80.0, 80.0};
-    std::vector<Point> pos(1000);
-    for (auto &p : pos)
-        p = Eigen::Vector3d::Random() * box.x();
-    ankerl::nanobench::Config bench;
+    std::vector<Point> positions(1000);
+    for (auto& position : positions) {
+        position = Eigen::Vector3d::Random() * box.x();
+    }
+    ankerl::nanobench::Bench bench;
     bench.minEpochIterations(100);
-    bench.run("SIMD", [&] { StructureFactorPBC<double, SIMD>(10).sample(pos, box); }).doNotOptimizeAway();
-    bench.run("EIGEN", [&] { StructureFactorPBC<double, EIGEN>(10).sample(pos, box); }).doNotOptimizeAway();
-    bench.run("GENERIC", [&] { StructureFactorPBC<double, GENERIC>(10).sample(pos, box); }).doNotOptimizeAway();
+    bench.run("SIMD", [&] { StructureFactorPBC<double, SIMD>(10).sample(positions, box); });
+    bench.run("EIGEN", [&] { StructureFactorPBC<double, EIGEN>(10).sample(positions, box); });
+    bench.run("GENERIC", [&] { StructureFactorPBC<double, GENERIC>(10).sample(positions, box); });
 }
 #endif
 
@@ -59,4 +60,4 @@ TEST_CASE("[Faunus] StructureFactorIPBC") {
     CHECK(cnt == result.size());
 }
 
-} // namespace
+} // namespace Faunus::Scatter

@@ -16,20 +16,21 @@
 
 namespace Faunus {
 
-double roundValue(double value, const int number_of_digits) {
+double roundValue(const double value, const int number_of_digits) {
     std::stringstream o;
     o << std::setprecision(number_of_digits) << value;
     return std::stod(o.str());
 }
 
-void roundJSON(json& j, int number_of_digits) {
-    if (j.is_object()) {
-        for (auto& value : j) {
-            if (value.is_number_float()) {
-                value = roundValue(value, number_of_digits);
-            } else if (value.is_object() && !value.empty()) {
-                roundJSON(value, number_of_digits);
-            }
+void roundJSON(json& j, const int number_of_digits) {
+    if (!j.is_object()) {
+        return;
+    }
+    for (auto& value : j) {
+        if (value.is_number_float()) {
+            value = roundValue(value, number_of_digits);
+        } else if (value.is_object() && !value.empty()) {
+            roundJSON(value, number_of_digits);
         }
     }
 }
@@ -46,7 +47,7 @@ double getValueInfinity(const json& j, const std::string& key) {
         if (*value == "-inf" || *value == "-oo") {
             return -std::numeric_limits<double>::infinity();
         }
-        throw std::runtime_error("value must be number or 'inf'");
+        throw std::runtime_error("value must be number, 'inf', '-inf', 'oo', '-oo'");
     }
     return static_cast<double>(*value);
 }
@@ -67,7 +68,10 @@ json loadJSON(const std::string& filename) {
     throw IOError("cannot open file '{}'", filename);
 }
 
-TipFromTheManual::TipFromTheManual() : random(std::make_shared<Random>()) { random->seed(); }
+TipFromTheManual::TipFromTheManual()
+    : random(std::make_unique<Random>()) {
+    random->seed();
+}
 
 /**
  * @brief Load JSON tips database
@@ -92,25 +96,25 @@ void TipFromTheManual::load(const std::vector<std::string>& files) {
  */
 std::string TipFromTheManual::operator[](std::string_view key) {
     std::string tip;
-    if (not tip_already_given) {
-        // look for help for the given `key`
-        if (auto it = database.find(key); it != database.end()) {
-            tip = "\nNeed help, my young apprentice?\n\n" + it->get<std::string>();
-            if (key == "coulomb") { // for the Coulomb potential, add additional table w. types
-                tip += "\n" + database.at("coulomb types").get<std::string>();
-            } else if (key == "custom") { // for the custom potential, add also list of symbols
-                tip += "\n" + database.at("symbol").get<std::string>();
-            }
-            tip_already_given = true;
-            if (asciiart) { // add ascii art?
-                if (it = database.find("ascii"); it != database.end() && !it->empty() && it->is_array()) {
-                    tip += random->sample(it->begin(), it->end())->get<std::string>() + "\n";
-                }
+    if (tip_already_given || quiet) {
+        return tip;
+    }
+    if (auto it = database.find(key); it != database.end()) {
+        tip = "\nNeed help, my young apprentice?\n\n" + it->get<std::string>();
+        if (key == "coulomb") { // for the Coulomb potential, add additional table w. types
+            tip += "\n" + database.at("coulomb types").get<std::string>();
+        } else if (key == "custom") { // for the custom potential, add also list of symbols
+            tip += "\n" + database.at("symbol").get<std::string>();
+        }
+        if (asciiart) {
+            if (it = database.find("ascii"); it != database.end() && !it->empty() && it->is_array()) {
+                tip += random->sample(it->begin(), it->end())->get<std::string>() + "\n";
             }
         }
-        buffer = tip;
+        output_buffer = tip;
+        tip_already_given = true;
     }
-    return (quiet) ? std::string() : tip;
+    return tip;
 }
 
 void TipFromTheManual::pick(const std::string& key) { operator[](key); }
@@ -147,7 +151,7 @@ bool SingleUseJSON::empty() const { return json::empty(); }
 
 SingleUseJSON::SingleUseJSON(const json& j) : json(j) {}
 
-std::string SingleUseJSON::dump(int w) const { return json::dump(w); }
+std::string SingleUseJSON::dump(const int width) const { return json::dump(width); }
 
 void SingleUseJSON::clear() { json::clear(); }
 
@@ -336,10 +340,10 @@ Electrolyte::Electrolyte(const double molarity, const std::vector<int>& valencie
 }
 
 /**
- * Back calculates the molarity, assuming 1:-1 salt charges. Note that the all stored properties
+ * Back calculates the molarity, assuming 1:-1 salt charges. Note that stored properties
  * are temperature dependent which is why the bjerrum_length is required.
  */
-Electrolyte::Electrolyte(double debye_length, double bjerrum_length) {
+Electrolyte::Electrolyte(const double debye_length, const double bjerrum_length) {
     valencies = {1, -1};
     ionic_strength = molarity =
         std::pow(1.0 / debye_length, 2) / (8.0 * pc::pi * bjerrum_length * 1.0_angstrom * 1.0_molar);
@@ -388,7 +392,7 @@ std::optional<Electrolyte> makeElectrolyte(const json& j) {
         const auto bjerrum_length = pc::bjerrumLength(relative_dielectric_constant);
         return Electrolyte(debye_length, bjerrum_length);
     }
-    auto molarity = j.value("molarity", j.value("salt", 0.0));
+    const auto molarity = j.value("molarity", j.value("salt", 0.0));
     if (molarity > 0.0) {
         auto valencies = j.value("valencies", std::vector<int>{1, -1});
         return Electrolyte(molarity, valencies);

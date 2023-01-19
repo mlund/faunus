@@ -139,11 +139,11 @@ void showErrorMessage(std::exception& exception) {
         config_error != nullptr && !config_error->attachedJson().empty()) {
         faunus_logger->debug("json snippet:\n{}", config_error->attachedJson().dump(4));
     }
-    if (!usageTip.buffer.empty()) {
+    if (!usageTip.output_buffer.empty()) {
         // Use the srderr stream directly for more elaborated output of usage tip, optionally containing an ASCII
         // art. Level info seems appropriate.
         if (faunus_logger->should_log(spdlog::level::info)) {
-            std::cerr << usageTip.buffer << std::endl;
+            std::cerr << usageTip.output_buffer << std::endl;
         }
     }
 }

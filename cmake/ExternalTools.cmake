@@ -167,9 +167,9 @@ set_target_properties(xdrfile PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 
 FetchContent_Declare(
     trompeloeil
-    URL "https://github.com/rollbear/trompeloeil/archive/v41.tar.gz"
     DOWNLOAD_EXTRACT_TIMESTAMP true
-    URL_HASH SHA256=48986b507497f027e4fa1144a08c2d0b6d81fb476fad024956f8104448ca9ad8 DOWNLOAD_EXTRACT_TIMESTAMP true)
+    URL "https://github.com/rollbear/trompeloeil/archive/v41.tar.gz"
+    URL_HASH SHA256=48986b507497f027e4fa1144a08c2d0b6d81fb476fad024956f8104448ca9ad8)
 FetchContent_GetProperties(trompeloeil)
 if(NOT trompeloeil_POPULATED)
     FetchContent_Populate(trompeloeil)
@@ -208,9 +208,9 @@ endif ()
 
 FetchContent_Declare(
     coulombgalore
+    DOWNLOAD_EXTRACT_TIMESTAMP true
     URL https://github.com/mlund/coulombgalore/archive/4055f58538d781acccb2937ab4580855fcba31f8.tar.gz
-    URL_HASH MD5=922f0c5988c0f70c887d65b7cf2762ac
-    DOWNLOAD_EXTRACT_TIMESTAMP true)
+    URL_HASH MD5=922f0c5988c0f70c887d65b7cf2762ac)
 FetchContent_GetProperties(coulombgalore)
 if(NOT coulombgalore_POPULATED)
     FetchContent_Populate(coulombgalore)

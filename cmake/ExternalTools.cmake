@@ -203,7 +203,6 @@ endif ()
 
 FetchContent_Declare(
     coulombgalore
-    DOWNLOAD_EXTRACT_TIMESTAMP true
     URL https://github.com/mlund/coulombgalore/archive/4055f58538d781acccb2937ab4580855fcba31f8.tar.gz
     URL_HASH MD5=922f0c5988c0f70c887d65b7cf2762ac)
 FetchContent_GetProperties(coulombgalore)

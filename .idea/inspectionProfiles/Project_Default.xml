@@ -13,9 +13,10 @@
     <inspection_tool class="CheckTagEmptyBody" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="CheckValidXmlInScriptTagBody" enabled="false" level="ERROR" enabled_by_default="false" />
     <inspection_tool class="CheckXmlFileWithXercesValidator" enabled="false" level="ERROR" enabled_by_default="false" />
-    <inspection_tool class="ClangTidy" enabled="true" level="WARNING" enabled_by_default="true">
-      <scope name="Project Source Files" level="WARNING" enabled="true" />
+    <inspection_tool class="ClangTidy" enabled="false" level="WARNING" enabled_by_default="false">
+      <scope name="Project Source Files" level="WARNING" enabled="false" />
     </inspection_tool>
+    <inspection_tool class="ClangdErrorsAndWarnings" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="Clazy" enabled="true" level="WARNING" enabled_by_default="true">
       <scope name="Project Source Files" level="WARNING" enabled="true" />
     </inspection_tool>
@@ -189,28 +190,28 @@
     <inspection_tool class="OCNotReleasedIvar" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="OCUnusedClass" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="OCUnusedConcept" enabled="true" level="WARNING" enabled_by_default="true">
-      <scope name="Project Source Files" level="WARNING" enabled="true" />
+      <scope name="Project Source Files" level="WARNING" enabled="true" editorAttributes="NOT_USED_ELEMENT_ATTRIBUTES" />
     </inspection_tool>
     <inspection_tool class="OCUnusedGlobalDeclaration" enabled="true" level="WARNING" enabled_by_default="true">
-      <scope name="Project Source Files" level="WARNING" enabled="true" />
+      <scope name="Project Source Files" level="WARNING" enabled="true" editorAttributes="NOT_USED_ELEMENT_ATTRIBUTES" />
     </inspection_tool>
     <inspection_tool class="OCUnusedIncludeDirective" enabled="true" level="WARNING" enabled_by_default="true">
       <scope name="Project Source Files" level="WARNING" enabled="true" />
     </inspection_tool>
     <inspection_tool class="OCUnusedInstanceVariable" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="OCUnusedMacro" enabled="true" level="WARNING" enabled_by_default="true">
-      <scope name="Project Source Files" level="WARNING" enabled="true" />
+      <scope name="Project Source Files" level="WARNING" enabled="true" editorAttributes="NOT_USED_ELEMENT_ATTRIBUTES" />
     </inspection_tool>
     <inspection_tool class="OCUnusedMethod" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="OCUnusedProperty" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="OCUnusedStruct" enabled="true" level="WARNING" enabled_by_default="true">
-      <scope name="Project Source Files" level="WARNING" enabled="true" />
+      <scope name="Project Source Files" level="WARNING" enabled="true" editorAttributes="NOT_USED_ELEMENT_ATTRIBUTES" />
     </inspection_tool>
     <inspection_tool class="OCUnusedTemplateParameter" enabled="true" level="WARNING" enabled_by_default="true">
-      <scope name="Project Source Files" level="WARNING" enabled="true" />
+      <scope name="Project Source Files" level="WARNING" enabled="true" editorAttributes="NOT_USED_ELEMENT_ATTRIBUTES" />
     </inspection_tool>
     <inspection_tool class="OCUnusedTypeAlias" enabled="true" level="WARNING" enabled_by_default="true">
-      <scope name="Project Source Files" level="WARNING" enabled="true" />
+      <scope name="Project Source Files" level="WARNING" enabled="true" editorAttributes="NOT_USED_ELEMENT_ATTRIBUTES" />
     </inspection_tool>
     <inspection_tool class="OraDeprecateTypeInspection" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="OraMissingBodyInspection" enabled="false" level="WARNING" enabled_by_default="false" />

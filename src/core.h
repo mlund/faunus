@@ -91,11 +91,11 @@ std::tuple<const std::string&, const json&> jsonSingleItem(const json& j);
 class TipFromTheManual {
   private:
     json database; // database
-    std::shared_ptr<Random> random;
+    std::unique_ptr<Random> random;
     bool tip_already_given = false;
 
   public:
-    std::string buffer; // accumulate output here
+    std::string output_buffer; // accumulate output here
     bool quiet = true;  // if true, operator[] returns empty string
     bool asciiart = true;
     TipFromTheManual();

@@ -12,7 +12,7 @@ This is a display of systems Faunus can be used to simulate.
 This is a minimalistic example of a simple Monte Carlo simulation of charged Lennard-Jones particles in
 a high-dielectric continuum solvent.
 
-<script src="http://gist-it.appspot.com/github/mlund/faunus/blob/master/examples/minimal.yml"></script>
+<a href="https://github.com/mlund/faunus/blob/master/examples/minimal/minimal.yml" class="btn btn--primary">Input</a>
 
 ## Liquid Water
 
@@ -33,5 +33,5 @@ Here, a bilayer is assembled from a three-bead lipid model with zero tension usi
 of the simulation contained dimensions under constant volume. This example also illustrated how to
 set up intra-molecular bonds.
 
-<a href="https://github.com/mlund/faunus/blob/master/examples/membrane.yml" class="btn btn--primary">Input</a>
+<a href="https://github.com/mlund/faunus/blob/master/examples/membrane/membrane.yml" class="btn btn--primary">Input</a>
 

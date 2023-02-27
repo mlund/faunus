@@ -8,7 +8,7 @@ header:
   #overlay_image: https://www.wired.com/images_blogs/dangerroom/2013/02/hoth-atat.jpg
   overlay_image: https://www.dropbox.com/s/1z50m9qxhroj0qh/dices.jpg?raw=1
   cta_label: "Install Now"
-  cta_url: "https://github.com/mlund/faunus/releases"
+  cta_url: "https://anaconda.org/conda-forge/faunus"
   caption: # image credit:
 excerpt: "_...the Monte Carlo code you're looking for!_"
 
@@ -24,7 +24,7 @@ feature_row:
     excerpt: "Faunus is public, open source software and freely available."
 ---
 [![GitHub release](https://img.shields.io/github/release/mlund/faunus/all.svg)](https://github.com/mlund/faunus/releases)
-[![Anaconda-Server Badge](https://anaconda.org/conda-forge/faunus/badges/installer/conda.svg)](https://anaconda.org/conda-forge/faunus)
+[![Anaconda-Server Badge](https://anaconda.org/conda-forge/faunus/badges/platforms.svg)](https://anaconda.org/conda-forge/faunus)
 [![DOI](https://img.shields.io/badge/DOI-10%2Fnvn-orange.svg)](http://dx.doi.org/10/nvn)
 [![DOI](https://img.shields.io/badge/DOI-10%2Fdfqgch-orange.svg)](http://dx.doi.org/10/dfqgch)
 

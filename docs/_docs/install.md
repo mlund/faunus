@@ -45,6 +45,9 @@ alias faunus='docker exec --interactive -u 1000 faunuslab faunus'
 faunus < input.json # piping input to docker
 ~~~
 
+For development using VSC, we also provide a `devcontainer` configuration for setting
+up a Linux development environment, see description below.
+
 
 ## Build from source code
 
@@ -166,10 +169,18 @@ where `{tbb-root}` is the installation directory of TBB, _e.g._
 
 # Development
 
-The development of Faunus is done mainly in Jetbrain's [CLion](https://www.jetbrains.com/clion)
-(free academic license) but any other IDE or merely a text editor can be used.
-We recommend to use tools that respect the provided `.clang-format` which will ease merging
+We recommend to use an IDE or text editor that respect the provided `.clang-format` which will ease merging
 changes into the codebase, see below.
+For Visual Studio Code (VSC) users, it is very easy to setup a development environment using Docker and
+[Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers):
+
+~~~ bash
+cd faunus
+code .
+~~~
+
+(when asked, select "open in devcontainer", assuming you have Docker running)
+
 
 ## Code Style
 

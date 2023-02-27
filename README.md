@@ -1,3 +1,4 @@
+[![Open in Dev Containers](https://img.shields.io/static/v1?label=Dev%20Containers&message=Open&color=blue&logo=visualstudiocode)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/mlund/faunus)
 [![Documentation](https://readthedocs.org/projects/faunus/badge/?version=latest)](https://faunus.readthedocs.io/en/latest/?badge=latest)
 [![Build Status](https://app.travis-ci.com/mlund/faunus.svg?branch=master)](https://app.travis-ci.com/mlund/faunus)
 [![License: MIT](https://img.shields.io/badge/License-MIT-brightgreen.svg)](https://opensource.org/licenses/MIT)
@@ -29,6 +30,8 @@ On macOS or Linux, install latest release using [conda](https://conda.io/minicon
     conda install -c conda-forge faunus
 
 Or [build from source](https://faunus.readthedocs.io/en/latest/_docs/install.html#building-from-source-code).
+You may also click the _Dev Containers Open_ banner at the top of this page to load the project in a Linux
+environment in Visual Studio Code.
 
 Documentation
 =============
@@ -39,7 +42,7 @@ Documentation
 Licence
 =======
 
-Copyright 2002-2022 Mikael Lund
+Copyright 2002-2023 Mikael Lund
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software
 and associated documentation files (the "Software"), to deal in the Software without restriction,

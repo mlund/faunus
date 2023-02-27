@@ -1745,7 +1745,7 @@ CustomGroupGroup::CustomGroupGroup(const json& j, const Space& spc)
 
     const auto& molecule1 = findMoleculeByName(j.at("name1").get<std::string>());
     const auto& molecule2 = findMoleculeByName(j.at("name2").get<std::string>());
-    if (molecule1.isAtomic() | molecule2.isAtomic()) {
+    if (molecule1.isAtomic() || molecule2.isAtomic()) {
         throw ConfigurationError("molecular groups required");
     }
     molid1 = molecule1.id();

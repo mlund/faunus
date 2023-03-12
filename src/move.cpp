@@ -344,6 +344,8 @@ std::unique_ptr<Move> createMove(const std::string& name, const json& properties
             move = std::make_unique<QuadrantJump>(spc);
         } else if (name == "cluster") {
             move = std::make_unique<Cluster>(spc);
+        } else if (name == "grid") {
+            move = std::make_unique<RegularGrid>(spc);
         } else if (name == "replay") {
             move = std::make_unique<ReplayMove>(spc);
         } else if (name == "langevin_dynamics") {
@@ -1144,6 +1146,176 @@ SmarterTranslateRotate::SmarterTranslateRotate(Space& spc, const json& j)
     , smartmc(spc, j.at("region")) {
     this->from_json(j);
 }
+
+std::vector<Point> RegularGrid::points_on_sphere = RegularGrid::fibonacciSphere(10);
+
+/**
+ * @brief Generates points on a sphereGenerates points on a sphere
+ *
+ * Related information:
+ * - https://stackoverflow.com/questions/9600801/evenly-distributing-n-points-on-a-sphere
+ * - https://en.wikipedia.org/wiki/Geodesic_polyhedron
+ * - c++: https://github.com/caosdoar/spheres
+ */
+std::vector<Point> RegularGrid::fibonacciSphere(const int samples) {
+    int cnt = 0;
+    const auto phi = pc::pi * (3.0 - std::sqrt(5.0));  // golden angle in radians
+    std::vector<Point> unit_points_on_sphere;
+    unit_points_on_sphere.resize(samples);
+    for (auto &point: unit_points_on_sphere) {
+        point.y() = 1.0 - 2.0 * (cnt / double(samples - 1));        // y goes from 1 to -1
+        const auto radius = std::sqrt(1.0 - point.y() * point.y()); // radius at y
+        const auto theta = phi * double(cnt);                       // golden angle increment
+        point.x() = std::cos(theta) * radius;
+        point.z() = std::sin(theta) * radius;
+        point.normalize(); // make sure it's really normalized (perhaps redundant)
+        cnt++;
+    };
+    return unit_points_on_sphere;
+}
+
+RegularGrid::RegularGrid(Space &spc) : Move(spc, "grid", "todo") {
+    repeat = 0; // this cause this to run at specific interval instead of stochastically
+}
+
+void RegularGrid::_move(Change &change) {
+    const auto& group1 = spc.groups.at(molecules.first.index);
+    auto& group2 = spc.groups.at(molecules.second.index);
+    const Point connection_line =
+            spc.geometry.vdist(group2.mass_center, group1.mass_center).normalized();
+
+    const auto q1 = molecules.first.alignToAxis(spc, connection_line);
+    const auto q2 = molecules.second.alignToAxis(spc, -connection_line);
+
+    // rotate second molecule around connection line
+    const auto q_dihedral = Eigen::Quaterniond(Eigen::AngleAxisd(dihedral_angle, connection_line));
+    group2.rotate(q_dihedral, spc.geometry.getBoundaryFunc());
+
+    if (stream) {
+        *stream << q1.coeffs().transpose() << " " << q2.coeffs().transpose() << " " << dihedral_angle << " "
+                << group2.mass_center.transpose() << "\n";
+    }
+
+    advancePose();
+
+    // we need to add the two groups to the change object so
+    // that their change in energy is calculated
+    Change::GroupChange group_change;
+    group_change.all = true;
+    group_change.group_index = molecules.first.index;
+    change.groups.push_back(group_change);
+    group_change.group_index = molecules.second.index;
+    change.groups.push_back(group_change);
+}
+
+void RegularGrid::advancePose() {
+    dihedral_angle += angular_resolution;
+    bool complete_dihedral_round = (dihedral_angle >= 2.0 * pc::pi);
+    if (complete_dihedral_round) {
+        dihedral_angle = 0.0;
+        if (molecules.first.nextAxis()) {
+            // first molecule did one round and has reset to first point
+            if (molecules.second.nextAxis()) {
+                // second molecule did a full round and we're done!
+                std::cout << "# = " << number_of_attempted_moves << std::endl;
+                throw std::runtime_error("Done!");
+            }
+        };
+    }
+}
+
+/**
+ * This will align the molecule to given axis
+ * @param spc Space to operate on
+ * @param target Axis to align to (typically [0,0,1] or COM connection line)
+ * @return Quaternion corresponding to the alignment operation
+ */
+Eigen::Quaterniond RegularGrid::Molecule::alignToAxis(Space &spc, const Point &target) {
+    namespace rv = ::ranges::cpp20::views;
+    auto& group = spc.groups.at(index);
+    const auto quaternion = Eigen::Quaterniond::FromTwoVectors(*current_rot_axis, target);
+    //const auto quaternion = getAlignQuaternion(target);
+    auto positions = ref_positions |
+            rv::transform([&](auto &pos) -> Point { return (quaternion * pos) + group.mass_center; });
+    std::copy(positions.begin(), positions.end(), group.positions().begin());
+    return quaternion;
+}
+
+/// Calculates quaternion to transform `axis` to align with `target`
+/// See https://stackoverflow.com/questions/21483999/using-atan2-to-find-angle-between-two-vectors
+Eigen::Quaterniond RegularGrid::Molecule::getAlignQuaternion(const Point &target) {
+    //return Eigen::Quaterniond::FromTwoVectors(*current_rot_axis, target);
+    const Point cross = (*current_rot_axis).cross(target);
+    const double dot = (*current_rot_axis).dot(target);
+    const double cross_norm = cross.norm();
+    const double angle = std::atan2(cross_norm, dot);
+    return Eigen::Quaterniond(Eigen::AngleAxisd(angle, cross / cross_norm));
+}
+
+/**
+ * @brief Move to next rotation axis and perform rotation in Space (cyclic)
+ * @return True if we wrapped around the end of the pool of points
+ */
+bool RegularGrid::Molecule::nextAxis() {
+    current_rot_axis++;
+    if (current_rot_axis >= points_on_sphere.end()) {
+        current_rot_axis = points_on_sphere.begin();
+        return true;
+    }
+    return false;
+}
+
+void RegularGrid::Molecule::setMoleculeIndex(const Space &spc, int molecule_index) {
+    namespace rv = ranges::cpp20::views;
+    index = molecule_index;
+    const auto& group = spc.groups.at(index);
+    if (group.isAtomic()) {
+        throw ConfigurationError("invalid group index");
+    }
+    auto positions = group | rv::transform([&](auto &particle) { return particle.pos - group.mass_center; });
+    ref_positions.reserve(group.size());
+    std::copy(positions.begin(), positions.end(), std::back_inserter(ref_positions));
+    current_rot_axis = points_on_sphere.begin();
+}
+
+void RegularGrid::_from_json(const json &j) {
+    angular_resolution = j.value("resolution", 0.1);
+    const auto number_of_samples = size_t(std::round(4.0 * pc::pi / angular_resolution));
+    points_on_sphere = fibonacciSphere(number_of_samples);
+
+    stream = IO::openCompressedOutputStream(j.value("file", "poses.gz"s));
+    if (stream) {
+        *stream << fmt::format("# Rotation points per molecule = {}\n", number_of_samples)
+                << "# column 0-3:  Quaternion for molecule 1 (x y z w)\n"
+                << "# column 4-7:  Quaternion for molecule 2 (x y z w) [excl. rotation on next line]\n"
+                << "# column 8:    Additionl rotation of molecule 2 around COM connection line (rad)\n"
+                << "# column 9-11: Molecule 2 mass center (x y z)\n";
+    }
+    faunus_logger->debug("{}: rotation points per molecule = {}", name, number_of_samples);
+    faunus_logger->debug("{}: number of poses = {}", name,
+                         number_of_samples * number_of_samples * std::round(2.0 * pc::pi / angular_resolution));
+
+    std::ofstream f("fibonacci_points.xyz");
+    if (f) {
+        f << points_on_sphere.size() << "\n# fibonacci\n";
+        for (auto &point : points_on_sphere) {
+            f << "C " << point.transpose() << "\n";
+        };
+    }
+
+    molecules.first.setMoleculeIndex(spc, j.at("index1").get<size_t>());
+    molecules.second.setMoleculeIndex(spc, j.at("index2").get<size_t>());
+}
+
+void RegularGrid::_to_json([[maybe_unused]] json &j) const {
+    j["points per molecule"] = points_on_sphere.size(),
+    j["resolution (rad)"] = angular_resolution;
+}
+
+double RegularGrid::bias([[maybe_unused]] Change &change, [[maybe_unused]] double old_energy, [[maybe_unused]] double new_energy) {
+    return pc::neg_infty; // always accept!
+}
+
 } // namespace Faunus::move
 
 #ifdef DOCTEST_LIBRARY_INCLUDED

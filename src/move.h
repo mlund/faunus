@@ -270,6 +270,51 @@ class SmarterTranslateRotate : public TranslateRotate {
 };
 
 /**
+ * @brief Rotate and translate two molecules to explore all poses
+ *
+ * Operates on two molecules 1 and 2 in the following way:
+ * 1. A set if evenly distributed points on a sphere are generated. These
+ *    serve as rotation axis.
+ * 2. Molecule 2 gets a new pose from (1)
+ * 3. Molecule 1 gets a new pose from (1)
+ * 4. Molecule 2 is rotated around the connection line in dΘ steps
+ * 5. When all angles in (4) are done, go back to (3)
+ * 6. When all poses in (3) are done, go back to (2)
+ * 7. When all poses in (2) are done, we are done!
+ */
+class RegularGrid : public Move {
+public:
+    static std::vector<Point> points_on_sphere; //!< Points evenly on sphere
+    static std::vector<Point> fibonacciSphere(int);
+private:
+    struct Molecule {
+        int index; //!< Group index in `Space::groups`
+        Point mass_center; //!< Current mass center position
+        decltype(points_on_sphere)::const_iterator current_rot_axis;
+        std::vector<Point> ref_positions; //!< Original reference positions of particles
+        bool nextAxis(); //!< Move to next rotation axis
+        void setMoleculeIndex(const Space &spc, int); //!< Set molecule index and reset
+        Eigen::Quaterniond getAlignQuaternion(const Point &);
+
+        Eigen::Quaterniond alignToAxis(Space &spc, const Point &);
+    };
+
+    std::unique_ptr<std::ostream> stream; //!< Output file with poses
+    std::pair<Molecule, Molecule> molecules; //!< The two molecules to scan
+    double dihedral_angle = 0; //!< Angle around connection line [0,2π]
+    double angular_resolution = 0; //!< 4π / number of points on sphere
+
+    void _move(Change &change) override;
+    void _to_json(json &j) const override;
+    void _from_json(const json &j) override;
+    void advancePose(); //!< Advances to next pose but doesn't touch molecules in space
+
+public:
+    RegularGrid(Space& spc);
+    double bias(Change &change, double old_energy, double new_energy) override;
+};
+
+/**
  * @brief Move that will swap conformation of a molecule
  *
  * This will swap between different molecular conformations

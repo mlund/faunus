@@ -1188,8 +1188,8 @@ void RegularGrid::_move(Change &change) {
     const auto q2 = molecules.second.alignToAxis(spc, -connection_line);
 
     // rotate second molecule around connection line
-    const auto q_dihedral = Eigen::Quaterniond(Eigen::AngleAxisd(dihedral_angle, connection_line));
-    group2.rotate(q_dihedral, spc.geometry.getBoundaryFunc());
+    const auto q2_dihedral = Eigen::Quaterniond(Eigen::AngleAxisd(dihedral_angle, connection_line));
+    group2.rotate(q2_dihedral, spc.geometry.getBoundaryFunc());
 
     if (stream) {
         *stream << q1.coeffs().transpose() << " " << q2.coeffs().transpose() << " " << dihedral_angle << " "
@@ -1197,18 +1197,20 @@ void RegularGrid::_move(Change &change) {
     }
 
     advancePose();
-
-    // we need to add the two groups to the change object so
-    // that their change in energy is calculated
-    Change::GroupChange group_change;
-    group_change.all = true;
-    group_change.group_index = molecules.first.index;
-    change.groups.push_back(group_change);
-    group_change.group_index = molecules.second.index;
-    change.groups.push_back(group_change);
+    setChange(change);
 }
 
-void RegularGrid::advancePose() {
+    void RegularGrid::setChange(Change &change) const {// we need to add the two groups to the change object so
+// that their change in energy is calculated
+        Change::GroupChange group_change;
+        group_change.all = true;
+        group_change.group_index = molecules.first.index;
+        change.groups.push_back(group_change);
+        group_change.group_index = molecules.second.index;
+        change.groups.push_back(group_change);
+    }
+
+    void RegularGrid::advancePose() {
     dihedral_angle += angular_resolution;
     bool complete_dihedral_round = (dihedral_angle >= 2.0 * pc::pi);
     if (complete_dihedral_round) {
@@ -1233,7 +1235,7 @@ void RegularGrid::advancePose() {
 Eigen::Quaterniond RegularGrid::Molecule::alignToAxis(Space &spc, const Point &target) {
     namespace rv = ::ranges::cpp20::views;
     auto& group = spc.groups.at(index);
-    const auto quaternion = Eigen::Quaterniond::FromTwoVectors(*current_rot_axis, target);
+    const auto quaternion = Eigen::Quaterniond::FromTwoVectors(*rotation_axis, target);
     //const auto quaternion = getAlignQuaternion(target);
     auto positions = ref_positions |
             rv::transform([&](auto &pos) -> Point { return (quaternion * pos) + group.mass_center; });
@@ -1241,25 +1243,14 @@ Eigen::Quaterniond RegularGrid::Molecule::alignToAxis(Space &spc, const Point &t
     return quaternion;
 }
 
-/// Calculates quaternion to transform `axis` to align with `target`
-/// See https://stackoverflow.com/questions/21483999/using-atan2-to-find-angle-between-two-vectors
-Eigen::Quaterniond RegularGrid::Molecule::getAlignQuaternion(const Point &target) {
-    //return Eigen::Quaterniond::FromTwoVectors(*current_rot_axis, target);
-    const Point cross = (*current_rot_axis).cross(target);
-    const double dot = (*current_rot_axis).dot(target);
-    const double cross_norm = cross.norm();
-    const double angle = std::atan2(cross_norm, dot);
-    return Eigen::Quaterniond(Eigen::AngleAxisd(angle, cross / cross_norm));
-}
-
 /**
  * @brief Move to next rotation axis and perform rotation in Space (cyclic)
  * @return True if we wrapped around the end of the pool of points
  */
 bool RegularGrid::Molecule::nextAxis() {
-    current_rot_axis++;
-    if (current_rot_axis >= points_on_sphere.end()) {
-        current_rot_axis = points_on_sphere.begin();
+    rotation_axis++;
+    if (rotation_axis >= points_on_sphere.end()) {
+        rotation_axis = points_on_sphere.begin();
         return true;
     }
     return false;
@@ -1275,7 +1266,7 @@ void RegularGrid::Molecule::setMoleculeIndex(const Space &spc, int molecule_inde
     auto positions = group | rv::transform([&](auto &particle) { return particle.pos - group.mass_center; });
     ref_positions.reserve(group.size());
     std::copy(positions.begin(), positions.end(), std::back_inserter(ref_positions));
-    current_rot_axis = points_on_sphere.begin();
+    rotation_axis = points_on_sphere.begin();
 }
 
 void RegularGrid::_from_json(const json &j) {
@@ -1297,7 +1288,7 @@ void RegularGrid::_from_json(const json &j) {
 
     std::ofstream f("fibonacci_points.xyz");
     if (f) {
-        f << points_on_sphere.size() << "\n# fibonacci\n";
+        f << points_on_sphere.size() << "\n# points on sphere used for angular scan\n";
         for (auto &point : points_on_sphere) {
             f << "C " << point.transpose() << "\n";
         };

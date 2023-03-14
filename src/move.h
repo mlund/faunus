@@ -285,6 +285,9 @@ class SmarterTranslateRotate : public TranslateRotate {
 class RegularGrid : public Move {
     static std::vector<Point> points_on_sphere; //!< Points evenly on sphere
     static std::vector<Point> fibonacciSphere(int);
+    std::vector<Eigen::Quaterniond> quaternions_1; //!< Quaternions to explore all Euler angles
+    std::vector<Eigen::Quaterniond> quaternions_2; //!< Quaternions to explore all Euler angles
+    std::vector<Eigen::Quaterniond> dihedrals;     //!< Quaternions to explore all dihedral angles
 
     struct Molecule {
         Space::GroupVector::size_type index; //!< Group index in `Space::groups`

@@ -10,6 +10,7 @@
 #include "regions.h"
 #include "aux/iteratorsupport.h"
 #include "aux/eigensupport.h"
+#include "aux/arange.h"
 #include "spdlog/spdlog.h"
 #include <range/v3/view/counted.hpp>
 #include <range/v3/algorithm/count.hpp>
@@ -1270,9 +1271,26 @@ void RegularGrid::Molecule::setMoleculeIndex(const Space &spc, int molecule_inde
 }
 
 void RegularGrid::_from_json(const json &j) {
+    namespace rv = ranges::cpp20::views;
     angular_resolution = j.value("resolution", 0.1);
-    const auto number_of_samples = size_t(std::round(4.0 * pc::pi / angular_resolution));
+    const auto number_of_samples = size_t(std::round(4.0 * pc::pi / std::pow(angular_resolution, 2)));
     points_on_sphere = fibonacciSphere(number_of_samples);
+
+    quaternions_1 = points_on_sphere | rv::transform([&](const auto &axis) {
+        return Eigen::Quaterniond::FromTwoVectors(axis, Point::UnitX());
+    }) | ::ranges::to_vector;
+
+    quaternions_2 = points_on_sphere | rv::transform([&](const auto &axis) {
+        return Eigen::Quaterniond::FromTwoVectors(axis, -Point::UnitX());
+    }) | ::ranges::to_vector;
+
+    dihedrals = arange(0.0, 2.0 * pc::pi, angular_resolution) | rv::transform([&](auto angle) {
+        return Eigen::Quaterniond(Eigen::AngleAxisd(angle, Point::UnitX()));
+    }) | ::ranges::to_vector;
+
+    faunus_logger->debug("{}: rotation points per molecule = {}", name, quaternions_1.size());
+    faunus_logger->debug("{}: dihedral angles = {}", name, dihedrals.size());
+    faunus_logger->debug("{}: number of poses = {}", name, quaternions_1.size() * quaternions_2.size() * dihedrals.size());
 
     stream = IO::openCompressedOutputStream(j.value("file", "poses.gz"s));
     if (stream) {
@@ -1282,9 +1300,6 @@ void RegularGrid::_from_json(const json &j) {
                 << "# column 8:    Additionl rotation of molecule 2 around COM connection line (rad)\n"
                 << "# column 9-11: Molecule 2 mass center (x y z)\n";
     }
-    faunus_logger->debug("{}: rotation points per molecule = {}", name, number_of_samples);
-    faunus_logger->debug("{}: number of poses = {}", name,
-                         number_of_samples * number_of_samples * std::round(2.0 * pc::pi / angular_resolution));
 
     std::ofstream f("fibonacci_points.xyz");
     if (f) {
@@ -1300,7 +1315,7 @@ void RegularGrid::_from_json(const json &j) {
 
 void RegularGrid::_to_json([[maybe_unused]] json &j) const {
     j["points per molecule"] = points_on_sphere.size(),
-    j["resolution (rad)"] = angular_resolution;
+    j["Δ⍺/°"] = angular_resolution / 1.0_deg;
 }
 
 double RegularGrid::bias([[maybe_unused]] Change &change, [[maybe_unused]] double old_energy, [[maybe_unused]] double new_energy) {

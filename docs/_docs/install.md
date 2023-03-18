@@ -56,7 +56,7 @@ but compile on most unix operating systems, including the Windows Subsystem for 
 
 ### Requirements
 
-- CMake 3.25+
+- CMake 3.24+
 - C++20 compiler (clang, g++, intel ixpc, ...)
 - Python 3.7+ with the following packages:
   - `jinja2`, `ruamel_yaml` or `yaml`

@@ -12,6 +12,7 @@
 #include <range/v3/view/filter.hpp>
 #include <range/v3/view/iota.hpp>
 #include <range/v3/view/indirect.hpp>
+#include <range/v3/view/cartesian_product.hpp>
 #include <range/v3/algorithm/count_if.hpp>
 #include <optional>
 
@@ -270,6 +271,64 @@ class SmarterTranslateRotate : public TranslateRotate {
 };
 
 /**
+ * @brief Structure for exploring the full angular space between two rigid bodies
+ * 
+ * Quaternions for visiting all poses in angular space can be generated like this:
+ * ~~~ cpp
+ * for (auto& [euler1, euler2, dihedral] : ranges::views::zip(quaternions1, quaternions2, dihedrals) {
+ *    // rotate points in rigid body 1 with `euler1 * position'
+ *    // rotate points in rigid body 2 with `dihedral * euler2 * position`
+ * }
+ * ~~~
+ */
+class TwobodyAngles {
+    static std::vector<Point> fibonacciSphere(int);
+    public:
+    std::vector<Eigen::Quaterniond> quaternions_1; //!< Quaternions to explore all Euler angles
+    std::vector<Eigen::Quaterniond> quaternions_2; //!< Quaternions to explore all Euler angles
+    std::vector<Eigen::Quaterniond> dihedrals;     //!< Quaternions to explore all dihedral angles
+
+    template <RequirePoints Tpositions1, RequirePoints Tpositions2, class T>
+    void rotate(Tpositions1 &positions1, Tpositions2 &positions2, const T &q_triplet) {
+        ranges::cpp20::for_each(positions1, [=](auto &pos){pos = q_triplet.template get<0>() * pos;});
+        ranges::cpp20::for_each(positions2, [=](auto &pos){pos = q_triplet.template get<2>() * q_triplet.template get<1>() * pos;});
+    }
+
+    TwobodyAngles() = default;
+    TwobodyAngles(double angle_resolution);
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
+    /**
+     * @brief Iterator to loop over pairs of quaternions to rotate two rigid bodies against each other
+     * 
+     * The second quaternion in the pair includes dihedral rotations, i.e. the pair is `q1, q_dihedral * q2`.
+     */
+    auto getQuaternions() const {
+        namespace rv = ranges::views;
+        return rv::cartesian_product(quaternions_1,
+           rv::cartesian_product(quaternions_2, dihedrals) | rv::transform([](const auto &pair) -> Eigen::Quaterniond {
+          return pair.template get<1>() * pair.template get<0>();
+        }));
+    }
+};
+
+/**
+ * @brief Describes an angular state consisting of three quaternions
+ * 
+ * This is in essence an iterator and should be rewritten as such.
+ */
+class TwobodyAngleState {
+  private:
+    using QuaternionIter = std::vector<Eigen::Quaterniond>::const_iterator;
+    QuaternionIter q_euler1;
+    QuaternionIter q_euler2;
+    QuaternionIter q_dihedral;
+  public:
+    TwobodyAngleState(const TwobodyAngles &angles);
+    std::optional<std::pair<QuaternionIter, QuaternionIter>> next();
+};
+
+
+/**
  * @brief Rotate and translate two molecules to explore all poses
  *
  * Operates on two molecules 1 and 2 in the following way:
@@ -283,36 +342,33 @@ class SmarterTranslateRotate : public TranslateRotate {
  * 7. When all poses in (2) are done, we are done!
  */
 class RegularGrid : public Move {
-    static std::vector<Point> points_on_sphere; //!< Points evenly on sphere
-    static std::vector<Point> fibonacciSphere(int);
-    std::vector<Eigen::Quaterniond> quaternions_1; //!< Quaternions to explore all Euler angles
-    std::vector<Eigen::Quaterniond> quaternions_2; //!< Quaternions to explore all Euler angles
-    std::vector<Eigen::Quaterniond> dihedrals;     //!< Quaternions to explore all dihedral angles
+    TwobodyAngles angles;
+    using QuaternionIter = std::vector<Eigen::Quaterniond>::const_iterator;
+    QuaternionIter q_euler1;
+    QuaternionIter q_euler2;
+    QuaternionIter q_dihedral;
+    Energy::Hamiltonian& hamiltonian;
+    bool all_angles_scanned = false;
 
     struct Molecule {
         Space::GroupVector::size_type index; //!< Group index in `Space::groups`
-        decltype(points_on_sphere)::const_iterator rotation_axis;
         std::vector<Point> ref_positions; //!< Original reference positions of particles
-        bool nextAxis(); //!< Advance to next rotation axis
         void setMoleculeIndex(const Space &spc, int); //!< Set molecule index and reset
-        Eigen::Quaterniond alignToAxis(Space &spc, const Point &target_axis);
+        void alignMolecule(Space &spc, const Eigen::Quaterniond &quaternion);
     };
 
     friend Molecule;
 
     std::pair<Molecule, Molecule> molecules; //!< The two molecules to scan
     std::unique_ptr<std::ostream> stream; //!< Output file with poses
-    double dihedral_angle = 0; //!< Angle around connection line [0,2π]
-    double angular_resolution = 0; //!< 4π / number of points on sphere
 
     void _move(Change &change) override;
     void _to_json(json &j) const override;
     void _from_json(const json &j) override;
-    void advancePose(); //!< Advances to next pose but do not yet touch molecules in `Space`
-    void setChange(Change &change) const; //!< Communicate changes made to system
+    void advanceQuaternions(); //!< Advances to next pose but do not yet touch molecules in `Space`
 
 public:
-    RegularGrid(Space& spc);
+    RegularGrid(Space& spc, Energy::Hamiltonian &hamiltonian);
     double bias(Change &change, double old_energy, double new_energy) override;
 };
 

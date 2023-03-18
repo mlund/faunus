@@ -346,7 +346,7 @@ std::unique_ptr<Move> createMove(const std::string& name, const json& properties
         } else if (name == "cluster") {
             move = std::make_unique<Cluster>(spc);
         } else if (name == "grid") {
-            move = std::make_unique<RegularGrid>(spc);
+            move = std::make_unique<RegularGrid>(spc, hamiltonian);
         } else if (name == "replay") {
             move = std::make_unique<ReplayMove>(spc);
         } else if (name == "langevin_dynamics") {
@@ -1148,8 +1148,6 @@ SmarterTranslateRotate::SmarterTranslateRotate(Space& spc, const json& j)
     this->from_json(j);
 }
 
-std::vector<Point> RegularGrid::points_on_sphere = RegularGrid::fibonacciSphere(10);
-
 /**
  * @brief Generates points on a sphereGenerates points on a sphere
  *
@@ -1158,7 +1156,7 @@ std::vector<Point> RegularGrid::points_on_sphere = RegularGrid::fibonacciSphere(
  * - https://en.wikipedia.org/wiki/Geodesic_polyhedron
  * - c++: https://github.com/caosdoar/spheres
  */
-std::vector<Point> RegularGrid::fibonacciSphere(const int samples) {
+std::vector<Point> TwobodyAngles::fibonacciSphere(const int samples) {
     int cnt = 0;
     const auto phi = pc::pi * (3.0 - std::sqrt(5.0));  // golden angle in radians
     std::vector<Point> unit_points_on_sphere;
@@ -1175,86 +1173,109 @@ std::vector<Point> RegularGrid::fibonacciSphere(const int samples) {
     return unit_points_on_sphere;
 }
 
-RegularGrid::RegularGrid(Space &spc) : Move(spc, "grid", "todo") {
-    repeat = 0; // this cause this to run at specific interval instead of stochastically
-}
+TwobodyAngles::TwobodyAngles(const double angle_resolution) {
+    const auto number_of_samples = size_t(std::round(4.0 * pc::pi / std::pow(angle_resolution, 2)));
+    const auto points_on_sphere = fibonacciSphere(number_of_samples);
 
-void RegularGrid::_move(Change &change) {
-    const auto& group1 = spc.groups.at(molecules.first.index);
-    auto& group2 = spc.groups.at(molecules.second.index);
-    const Point connection_line =
-            spc.geometry.vdist(group2.mass_center, group1.mass_center).normalized();
+    namespace rv = ranges::cpp20::views;
 
-    const auto q1 = molecules.first.alignToAxis(spc, connection_line);
-    const auto q2 = molecules.second.alignToAxis(spc, -connection_line);
+    quaternions_1 = points_on_sphere | rv::transform([&](const auto &axis) {
+        return Eigen::Quaterniond::FromTwoVectors(axis, Point::UnitZ());
+    }) | ::ranges::to_vector;
 
-    // rotate second molecule around connection line
-    const auto q2_dihedral = Eigen::Quaterniond(Eigen::AngleAxisd(dihedral_angle, connection_line));
-    group2.rotate(q2_dihedral, spc.geometry.getBoundaryFunc());
+    quaternions_2 = points_on_sphere | rv::transform([&](const auto &axis) {
+        return Eigen::Quaterniond::FromTwoVectors(axis, -Point::UnitZ());
+    }) | ::ranges::to_vector;
 
-    if (stream) {
-        *stream << q1.coeffs().transpose() << " " << q2.coeffs().transpose() << " " << dihedral_angle << " "
-                << group2.mass_center.transpose() << "\n";
-    }
+    dihedrals = arange(0.0, 2.0 * pc::pi, angle_resolution) | rv::transform([&](auto angle) {
+        return Eigen::Quaterniond(Eigen::AngleAxisd(angle, Point::UnitZ()));
+    }) | ::ranges::to_vector;
 
-    advancePose();
-    setChange(change);
-}
+    faunus_logger->debug("rotation points per molecule = {}", quaternions_1.size());
+    faunus_logger->debug("dihedral angles = {}", dihedrals.size());
+    faunus_logger->debug("number of poses = {}", quaternions_1.size() * quaternions_2.size() * dihedrals.size());
 
-    void RegularGrid::setChange(Change &change) const {// we need to add the two groups to the change object so
-// that their change in energy is calculated
-        Change::GroupChange group_change;
-        group_change.all = true;
-        group_change.group_index = molecules.first.index;
-        change.groups.push_back(group_change);
-        group_change.group_index = molecules.second.index;
-        change.groups.push_back(group_change);
-    }
-
-    void RegularGrid::advancePose() {
-    dihedral_angle += angular_resolution;
-    bool complete_dihedral_round = (dihedral_angle >= 2.0 * pc::pi);
-    if (complete_dihedral_round) {
-        dihedral_angle = 0.0;
-        if (molecules.first.nextAxis()) {
-            // first molecule did one round and has reset to first point
-            if (molecules.second.nextAxis()) {
-                // second molecule did a full round and we're done!
-                std::cout << "# = " << number_of_attempted_moves << std::endl;
-                throw std::runtime_error("Done!");
-            }
+    std::ofstream f("fibonacci_points.xyz");
+    if (f) {
+        f << points_on_sphere.size() << "\n# points on sphere used for angular scan\n";
+        for (const auto &point : points_on_sphere) {
+            f << "C " << point.transpose() << "\n";
         };
     }
 }
 
-/**
- * This will align the molecule to given axis
- * @param spc Space to operate on
- * @param target Axis to align to (typically [0,0,1] or COM connection line)
- * @return Quaternion corresponding to the alignment operation
- */
-Eigen::Quaterniond RegularGrid::Molecule::alignToAxis(Space &spc, const Point &target) {
-    namespace rv = ::ranges::cpp20::views;
-    auto& group = spc.groups.at(index);
-    const auto quaternion = Eigen::Quaterniond::FromTwoVectors(*rotation_axis, target);
-    //const auto quaternion = getAlignQuaternion(target);
-    auto positions = ref_positions |
-            rv::transform([&](auto &pos) -> Point { return (quaternion * pos) + group.mass_center; });
-    std::copy(positions.begin(), positions.end(), group.positions().begin());
-    return quaternion;
+TwobodyAngleState::TwobodyAngleState(const TwobodyAngles &angles) {
+    q_euler1 = angles.quaternions_1.begin();
+    q_euler2 = angles.quaternions_1.begin();
+    q_dihedral = angles.dihedrals.begin();
+}
+
+std::optional<std::pair<QuaternionIter, QuaternionIter>> TwobodyAngleState::next() {
+    q_dihedral++;
+    if (q_dihedral >= angles.dihedrals.end()) {
+        q_dihedral = angles.dihedrals.begin();
+        q_euler2++;
+    }
+    if (q_euler2 >= angles.quaternions_2.end()) {
+        q_euler2 = angles.quaternions_2.begin();
+        q_euler1++;
+    }
+    if (q_euler1 >= angles.quaternions_1.end()) {
+        return std::nullopt;
+    }
+    return {*q_euler1, (*q_dihedral) * (*q_euler2)}
+}
+
+
+RegularGrid::RegularGrid(Space &spc, Energy::Hamiltonian &hamiltonian) : Move(spc, "grid", "todo"), hamiltonian(hamiltonian) {
+    repeat = 0; // this cause this to run at specific interval instead of stochastically
+}
+
+void RegularGrid::_move(Change &change) {
+    assert(stream);
+    if (all_angles_scanned) {
+        return;
+    }
+    change.everything = true;
+    molecules.first.alignMolecule(spc, *q_euler1);
+    molecules.second.alignMolecule(spc, (*q_dihedral) * (*q_euler2));
+
+    const auto& group2 = spc.groups.at(molecules.second.index);
+    auto format = [](const auto &q){
+        return fmt::format("{:9.4f}{:9.4f}{:9.4f}{:9.4f}", q.x(), q.y(), q.z(), q.w());
+    };
+
+    *stream << format(*q_euler1) << format((*q_dihedral) * (*q_euler2))
+            << fmt::format("{:9.4f}", group2.mass_center.z()) << "\n";
+
+    advanceQuaternions();
+}
+
+void RegularGrid::advanceQuaternions() {
+    q_dihedral++;
+    if (q_dihedral >= angles.dihedrals.end()) {
+        q_dihedral = angles.dihedrals.begin();
+        q_euler2++;
+    }
+    if (q_euler2 >= angles.quaternions_2.end()) {
+        q_euler2 = angles.quaternions_2.begin();
+        q_euler1++;
+    }
+    if (q_euler1 >= angles.quaternions_1.end()) {
+        all_angles_scanned = true;
+        faunus_logger->info("{}: angular scan complete", name);
+    }
 }
 
 /**
- * @brief Move to next rotation axis and perform rotation in Space (cyclic)
- * @return True if we wrapped around the end of the pool of points
+ * This will rotate the molecule using given quaternion
  */
-bool RegularGrid::Molecule::nextAxis() {
-    rotation_axis++;
-    if (rotation_axis >= points_on_sphere.end()) {
-        rotation_axis = points_on_sphere.begin();
-        return true;
-    }
-    return false;
+void RegularGrid::Molecule::alignMolecule(Space &spc, const Eigen::Quaterniond &quaternion) {
+    namespace rv = ::ranges::cpp20::views;
+    auto& group = spc.groups.at(index);
+    auto positions = ref_positions |
+            rv::transform([&](auto &pos) -> Point { return (quaternion * pos) + group.mass_center; });
+    std::copy(positions.begin(), positions.end(), group.positions().begin());
 }
 
 void RegularGrid::Molecule::setMoleculeIndex(const Space &spc, int molecule_index) {
@@ -1267,46 +1288,23 @@ void RegularGrid::Molecule::setMoleculeIndex(const Space &spc, int molecule_inde
     auto positions = group | rv::transform([&](auto &particle) { return particle.pos - group.mass_center; });
     ref_positions.reserve(group.size());
     std::copy(positions.begin(), positions.end(), std::back_inserter(ref_positions));
-    rotation_axis = points_on_sphere.begin();
 }
 
 void RegularGrid::_from_json(const json &j) {
     namespace rv = ranges::cpp20::views;
-    angular_resolution = j.value("resolution", 0.1);
-    const auto number_of_samples = size_t(std::round(4.0 * pc::pi / std::pow(angular_resolution, 2)));
-    points_on_sphere = fibonacciSphere(number_of_samples);
-
-    quaternions_1 = points_on_sphere | rv::transform([&](const auto &axis) {
-        return Eigen::Quaterniond::FromTwoVectors(axis, Point::UnitX());
-    }) | ::ranges::to_vector;
-
-    quaternions_2 = points_on_sphere | rv::transform([&](const auto &axis) {
-        return Eigen::Quaterniond::FromTwoVectors(axis, -Point::UnitX());
-    }) | ::ranges::to_vector;
-
-    dihedrals = arange(0.0, 2.0 * pc::pi, angular_resolution) | rv::transform([&](auto angle) {
-        return Eigen::Quaterniond(Eigen::AngleAxisd(angle, Point::UnitX()));
-    }) | ::ranges::to_vector;
-
-    faunus_logger->debug("{}: rotation points per molecule = {}", name, quaternions_1.size());
-    faunus_logger->debug("{}: dihedral angles = {}", name, dihedrals.size());
-    faunus_logger->debug("{}: number of poses = {}", name, quaternions_1.size() * quaternions_2.size() * dihedrals.size());
+    angles = TwobodyAngles(j.value("resolution", 0.1));
+    all_angles_scanned = false;
+    q_euler1 = angles.quaternions_1.begin();
+    q_euler2 = angles.quaternions_2.begin();
+    q_dihedral = angles.dihedrals.begin();
 
     stream = IO::openCompressedOutputStream(j.value("file", "poses.gz"s));
     if (stream) {
-        *stream << fmt::format("# Rotation points per molecule = {}\n", number_of_samples)
-                << "# column 0-3:  Quaternion for molecule 1 (x y z w)\n"
-                << "# column 4-7:  Quaternion for molecule 2 (x y z w) [excl. rotation on next line]\n"
-                << "# column 8:    Additionl rotation of molecule 2 around COM connection line (rad)\n"
-                << "# column 9-11: Molecule 2 mass center (x y z)\n";
-    }
-
-    std::ofstream f("fibonacci_points.xyz");
-    if (f) {
-        f << points_on_sphere.size() << "\n# points on sphere used for angular scan\n";
-        for (auto &point : points_on_sphere) {
-            f << "C " << point.transpose() << "\n";
-        };
+        *stream << fmt::format("# Rotation points per molecule = {}\n", angles.quaternions_1.size())
+                << "# column 0-3: Quaternion for molecule 1 (x y z w)\n"
+                << "# column 4-7: Quaternion for molecule 2 (x y z w)\n"
+                << "# column 8:   z displacement of molecule 2 (COM separation)\n"
+                << "# column 9:   Energy (kJ/mol)\n";
     }
 
     molecules.first.setMoleculeIndex(spc, j.at("index1").get<size_t>());
@@ -1314,8 +1312,8 @@ void RegularGrid::_from_json(const json &j) {
 }
 
 void RegularGrid::_to_json([[maybe_unused]] json &j) const {
-    j["points per molecule"] = points_on_sphere.size(),
-    j["Δ⍺/°"] = angular_resolution / 1.0_deg;
+    j["points per molecule"] = angles.quaternions_1.size();
+    //j["Δ⍺/°"] = angular_resolution / 1.0_deg;
 }
 
 double RegularGrid::bias([[maybe_unused]] Change &change, [[maybe_unused]] double old_energy, [[maybe_unused]] double new_energy) {

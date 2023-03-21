@@ -10,7 +10,6 @@
 #include "regions.h"
 #include "aux/iteratorsupport.h"
 #include "aux/eigensupport.h"
-#include "aux/arange.h"
 #include "spdlog/spdlog.h"
 #include <range/v3/view/counted.hpp>
 #include <range/v3/algorithm/count.hpp>
@@ -1148,123 +1147,28 @@ SmarterTranslateRotate::SmarterTranslateRotate(Space& spc, const json& j)
     this->from_json(j);
 }
 
-/**
- * @brief Generates points on a sphereGenerates points on a sphere
- *
- * Related information:
- * - https://stackoverflow.com/questions/9600801/evenly-distributing-n-points-on-a-sphere
- * - https://en.wikipedia.org/wiki/Geodesic_polyhedron
- * - c++: https://github.com/caosdoar/spheres
- */
-std::vector<Point> TwobodyAngles::fibonacciSphere(const int samples) {
-    int cnt = 0;
-    const auto phi = pc::pi * (3.0 - std::sqrt(5.0));  // golden angle in radians
-    std::vector<Point> unit_points_on_sphere;
-    unit_points_on_sphere.resize(samples);
-    for (auto &point: unit_points_on_sphere) {
-        point.y() = 1.0 - 2.0 * (cnt / double(samples - 1));        // y goes from 1 to -1
-        const auto radius = std::sqrt(1.0 - point.y() * point.y()); // radius at y
-        const auto theta = phi * double(cnt);                       // golden angle increment
-        point.x() = std::cos(theta) * radius;
-        point.z() = std::sin(theta) * radius;
-        point.normalize(); // make sure it's really normalized (perhaps redundant)
-        cnt++;
-    };
-    return unit_points_on_sphere;
-}
-
-TwobodyAngles::TwobodyAngles(const double angle_resolution) {
-    const auto number_of_samples = size_t(std::round(4.0 * pc::pi / std::pow(angle_resolution, 2)));
-    const auto points_on_sphere = fibonacciSphere(number_of_samples);
-
-    namespace rv = ranges::cpp20::views;
-
-    quaternions_1 = points_on_sphere | rv::transform([&](const auto &axis) {
-        return Eigen::Quaterniond::FromTwoVectors(axis, Point::UnitZ());
-    }) | ::ranges::to_vector;
-
-    quaternions_2 = points_on_sphere | rv::transform([&](const auto &axis) {
-        return Eigen::Quaterniond::FromTwoVectors(axis, -Point::UnitZ());
-    }) | ::ranges::to_vector;
-
-    dihedrals = arange(0.0, 2.0 * pc::pi, angle_resolution) | rv::transform([&](auto angle) {
-        return Eigen::Quaterniond(Eigen::AngleAxisd(angle, Point::UnitZ()));
-    }) | ::ranges::to_vector;
-
-    faunus_logger->debug("rotation points per molecule = {}", quaternions_1.size());
-    faunus_logger->debug("dihedral angles = {}", dihedrals.size());
-    faunus_logger->debug("number of poses = {}", quaternions_1.size() * quaternions_2.size() * dihedrals.size());
-
-    std::ofstream f("fibonacci_points.xyz");
-    if (f) {
-        f << points_on_sphere.size() << "\n# points on sphere used for angular scan\n";
-        for (const auto &point : points_on_sphere) {
-            f << "C " << point.transpose() << "\n";
-        };
-    }
-}
-
-TwobodyAngleState::TwobodyAngleState(const TwobodyAngles &angles) {
-    q_euler1 = angles.quaternions_1.begin();
-    q_euler2 = angles.quaternions_1.begin();
-    q_dihedral = angles.dihedrals.begin();
-}
-
-std::optional<std::pair<QuaternionIter, QuaternionIter>> TwobodyAngleState::next() {
-    q_dihedral++;
-    if (q_dihedral >= angles.dihedrals.end()) {
-        q_dihedral = angles.dihedrals.begin();
-        q_euler2++;
-    }
-    if (q_euler2 >= angles.quaternions_2.end()) {
-        q_euler2 = angles.quaternions_2.begin();
-        q_euler1++;
-    }
-    if (q_euler1 >= angles.quaternions_1.end()) {
-        return std::nullopt;
-    }
-    return {*q_euler1, (*q_dihedral) * (*q_euler2)}
-}
-
-
 RegularGrid::RegularGrid(Space &spc, Energy::Hamiltonian &hamiltonian) : Move(spc, "grid", "todo"), hamiltonian(hamiltonian) {
     repeat = 0; // this cause this to run at specific interval instead of stochastically
 }
 
 void RegularGrid::_move(Change &change) {
-    assert(stream);
-    if (all_angles_scanned) {
+    auto quaternion_pair = angles.get();
+    if (!quaternion_pair) {
         return;
     }
     change.everything = true;
-    molecules.first.alignMolecule(spc, *q_euler1);
-    molecules.second.alignMolecule(spc, (*q_dihedral) * (*q_euler2));
+    molecules.first.alignMolecule(spc, (*quaternion_pair).first);
+    molecules.second.alignMolecule(spc, (*quaternion_pair).second);
 
-    const auto& group2 = spc.groups.at(molecules.second.index);
     auto format = [](const auto &q){
         return fmt::format("{:9.4f}{:9.4f}{:9.4f}{:9.4f}", q.x(), q.y(), q.z(), q.w());
     };
-
-    *stream << format(*q_euler1) << format((*q_dihedral) * (*q_euler2))
+    const auto& group2 = spc.groups.at(molecules.second.index);
+    assert(*stream);
+    *stream << format((*quaternion_pair).first) << format((*quaternion_pair).second)
             << fmt::format("{:9.4f}", group2.mass_center.z()) << "\n";
 
-    advanceQuaternions();
-}
-
-void RegularGrid::advanceQuaternions() {
-    q_dihedral++;
-    if (q_dihedral >= angles.dihedrals.end()) {
-        q_dihedral = angles.dihedrals.begin();
-        q_euler2++;
-    }
-    if (q_euler2 >= angles.quaternions_2.end()) {
-        q_euler2 = angles.quaternions_2.begin();
-        q_euler1++;
-    }
-    if (q_euler1 >= angles.quaternions_1.end()) {
-        all_angles_scanned = true;
-        faunus_logger->info("{}: angular scan complete", name);
-    }
+    angles.advance();
 }
 
 /**
@@ -1292,11 +1196,7 @@ void RegularGrid::Molecule::setMoleculeIndex(const Space &spc, int molecule_inde
 
 void RegularGrid::_from_json(const json &j) {
     namespace rv = ranges::cpp20::views;
-    angles = TwobodyAngles(j.value("resolution", 0.1));
-    all_angles_scanned = false;
-    q_euler1 = angles.quaternions_1.begin();
-    q_euler2 = angles.quaternions_2.begin();
-    q_dihedral = angles.dihedrals.begin();
+    angles = Geometry::TwobodyAnglesState(j.value("resolution", 0.1));
 
     stream = IO::openCompressedOutputStream(j.value("file", "poses.gz"s));
     if (stream) {

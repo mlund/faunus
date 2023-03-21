@@ -12,7 +12,6 @@
 #include <range/v3/view/filter.hpp>
 #include <range/v3/view/iota.hpp>
 #include <range/v3/view/indirect.hpp>
-#include <range/v3/view/cartesian_product.hpp>
 #include <range/v3/algorithm/count_if.hpp>
 #include <optional>
 
@@ -271,64 +270,6 @@ class SmarterTranslateRotate : public TranslateRotate {
 };
 
 /**
- * @brief Structure for exploring the full angular space between two rigid bodies
- * 
- * Quaternions for visiting all poses in angular space can be generated like this:
- * ~~~ cpp
- * for (auto& [euler1, euler2, dihedral] : ranges::views::zip(quaternions1, quaternions2, dihedrals) {
- *    // rotate points in rigid body 1 with `euler1 * position'
- *    // rotate points in rigid body 2 with `dihedral * euler2 * position`
- * }
- * ~~~
- */
-class TwobodyAngles {
-    static std::vector<Point> fibonacciSphere(int);
-    public:
-    std::vector<Eigen::Quaterniond> quaternions_1; //!< Quaternions to explore all Euler angles
-    std::vector<Eigen::Quaterniond> quaternions_2; //!< Quaternions to explore all Euler angles
-    std::vector<Eigen::Quaterniond> dihedrals;     //!< Quaternions to explore all dihedral angles
-
-    template <RequirePoints Tpositions1, RequirePoints Tpositions2, class T>
-    void rotate(Tpositions1 &positions1, Tpositions2 &positions2, const T &q_triplet) {
-        ranges::cpp20::for_each(positions1, [=](auto &pos){pos = q_triplet.template get<0>() * pos;});
-        ranges::cpp20::for_each(positions2, [=](auto &pos){pos = q_triplet.template get<2>() * q_triplet.template get<1>() * pos;});
-    }
-
-    TwobodyAngles() = default;
-    TwobodyAngles(double angle_resolution);
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
-    /**
-     * @brief Iterator to loop over pairs of quaternions to rotate two rigid bodies against each other
-     * 
-     * The second quaternion in the pair includes dihedral rotations, i.e. the pair is `q1, q_dihedral * q2`.
-     */
-    auto getQuaternions() const {
-        namespace rv = ranges::views;
-        return rv::cartesian_product(quaternions_1,
-           rv::cartesian_product(quaternions_2, dihedrals) | rv::transform([](const auto &pair) -> Eigen::Quaterniond {
-          return pair.template get<1>() * pair.template get<0>();
-        }));
-    }
-};
-
-/**
- * @brief Describes an angular state consisting of three quaternions
- * 
- * This is in essence an iterator and should be rewritten as such.
- */
-class TwobodyAngleState {
-  private:
-    using QuaternionIter = std::vector<Eigen::Quaterniond>::const_iterator;
-    QuaternionIter q_euler1;
-    QuaternionIter q_euler2;
-    QuaternionIter q_dihedral;
-  public:
-    TwobodyAngleState(const TwobodyAngles &angles);
-    std::optional<std::pair<QuaternionIter, QuaternionIter>> next();
-};
-
-
-/**
  * @brief Rotate and translate two molecules to explore all poses
  *
  * Operates on two molecules 1 and 2 in the following way:
@@ -342,13 +283,8 @@ class TwobodyAngleState {
  * 7. When all poses in (2) are done, we are done!
  */
 class RegularGrid : public Move {
-    TwobodyAngles angles;
-    using QuaternionIter = std::vector<Eigen::Quaterniond>::const_iterator;
-    QuaternionIter q_euler1;
-    QuaternionIter q_euler2;
-    QuaternionIter q_dihedral;
+    Geometry::TwobodyAnglesState angles;
     Energy::Hamiltonian& hamiltonian;
-    bool all_angles_scanned = false;
 
     struct Molecule {
         Space::GroupVector::size_type index; //!< Group index in `Space::groups`
@@ -365,7 +301,6 @@ class RegularGrid : public Move {
     void _move(Change &change) override;
     void _to_json(json &j) const override;
     void _from_json(const json &j) override;
-    void advanceQuaternions(); //!< Advances to next pose but do not yet touch molecules in `Space`
 
 public:
     RegularGrid(Space& spc, Energy::Hamiltonian &hamiltonian);

@@ -3,6 +3,7 @@
 #include "random.h"
 #include "average.h"
 #include "aux/eigensupport.h"
+#include "aux/arange.h"
 #include <spdlog/spdlog.h>
 #include <cereal/types/memory.hpp>
 #include <cereal/archives/binary.hpp>
@@ -1308,6 +1309,103 @@ TEST_CASE("[Faunus] rootMeanSquareDeviation") {
     auto f = [](double a, double b) { return std::pow(a - b, 2); };
     double rmsd = Geometry::rootMeanSquareDeviation(v1.begin(), v1.end(), v2.begin(), f);
     CHECK(rmsd == doctest::Approx(0.17320508075688745));
+}
+
+/**
+ * @brief Generates n points uniformly distributed on a sphere
+ *
+ * Related information:
+ * - https://stackoverflow.com/questions/9600801/evenly-distributing-n-points-on-a-sphere
+ * - https://en.wikipedia.org/wiki/Geodesic_polyhedron
+ * - c++: https://github.com/caosdoar/spheres
+ */
+std::vector<Point> TwobodyAngles::fibonacciSphere(const int samples) {
+    int cnt = 0;
+    const auto phi = pc::pi * (3.0 - std::sqrt(5.0));  // golden angle in radians
+    std::vector<Point> unit_points_on_sphere;
+    unit_points_on_sphere.resize(samples);
+    
+    for (auto &point: unit_points_on_sphere) {
+        point.y() = 1.0 - 2.0 * (cnt / double(samples - 1));        // y goes from 1 to -1
+        const auto radius = std::sqrt(1.0 - point.y() * point.y()); // radius at y
+        const auto theta = phi * double(cnt);                       // golden angle increment
+        point.x() = std::cos(theta) * radius;
+        point.z() = std::sin(theta) * radius;
+        point.normalize(); // make sure it's really normalized (perhaps redundant)
+        cnt++;
+    };
+    return unit_points_on_sphere;
+}
+
+TwobodyAngles::TwobodyAngles(const double angle_resolution) {
+    namespace rv = ranges::cpp20::views;
+
+    const auto number_of_samples = size_t(std::round(4.0 * pc::pi / std::pow(angle_resolution, 2)));
+    const auto points_on_sphere = fibonacciSphere(number_of_samples);
+
+    quaternions_1 =
+        points_on_sphere |
+        rv::transform([](const auto& axis) { return Eigen::Quaterniond::FromTwoVectors(axis, Point::UnitZ()); }) |
+        ::ranges::to_vector;
+
+    quaternions_2 =
+        points_on_sphere |
+        rv::transform([](const auto& axis) { return Eigen::Quaterniond::FromTwoVectors(axis, -Point::UnitZ()); }) |
+        ::ranges::to_vector;
+
+    dihedrals =
+        arange(0.0, 2.0 * pc::pi, angle_resolution) |
+        rv::transform([](auto angle) { return Eigen::Quaterniond(Eigen::AngleAxisd(angle, Point::UnitZ())); }) |
+        ::ranges::to_vector;
+
+    const auto n1 = quaternions_1.size();
+    const auto n2 = quaternions_2.size();
+    const auto n3 = dihedrals.size();
+    faunus_logger->debug(fmt::format("rigid body: Δ⍺ = {:.1f}° -> {} x {} x {} = {} poses", angle_resolution / 1.0_deg,
+                                     n1, n2, n3, n1 * n2 * n3));
+
+    std::ofstream f("fibonacci_points.xyz");
+    if (f) {
+        f << points_on_sphere.size() << "\n# points on sphere used for angular scan\n";
+        for (const auto& point : points_on_sphere) {
+            f << "C " << point.transpose() << "\n";
+        };
+    }
+}
+
+size_t TwobodyAngles::size() const {
+    return quaternions_1.size() * quaternions_2.size() * dihedrals.size();
+}
+
+TwobodyAnglesState::TwobodyAnglesState(const double angle_resolution) : TwobodyAngles(angle_resolution) {
+    q_euler1 = quaternions_1.begin();
+    q_euler2 = quaternions_1.begin();
+    q_dihedral = dihedrals.begin();
+}
+
+TwobodyAnglesState& TwobodyAnglesState::advance() {
+    if (q_euler1 < quaternions_1.end()) {
+        q_dihedral++;
+        if (q_dihedral >= dihedrals.end()) {
+            q_dihedral = dihedrals.begin();
+            q_euler2++;
+        }
+        if (q_euler2 >= quaternions_2.end()) {
+            q_euler2 = quaternions_2.begin();
+            q_euler1++;
+        }
+    }
+    return *this;
+}
+
+/**
+ * @return Pair of quaternions, one for each body, or `std::nullopt` of all angles have been explored.
+ */
+std::optional<std::pair<Eigen::Quaterniond, Eigen::Quaterniond>> TwobodyAnglesState::get() {
+    if (q_euler1 < quaternions_1.end()) {
+        return std::make_pair(*q_euler1, (*q_dihedral) * (*q_euler2));
+    }
+    return std::nullopt;
 }
 
 } // namespace Faunus::Geometry

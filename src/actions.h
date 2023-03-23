@@ -1,15 +1,14 @@
 #pragma once
 
-#include "molecule.h"
 #include "geometry.h"
 #include "space.h"
-#include "io.h"
 
 namespace Faunus {
 
 namespace Energy {
 class Hamiltonian;
 }
+class XTCWriter;
 
 /**
  * @brief Performs a task or "action" on the system, typically before or after a simulation

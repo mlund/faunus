@@ -7,7 +7,8 @@ namespace Faunus {
 
 namespace Energy {
 class Hamiltonian;
-}
+class NonbondedBase;
+} // namespace Energy
 class XTCWriter;
 
 /**
@@ -22,8 +23,8 @@ struct SystemAction {
  * @brief Rotate and translate two molecules to explore all poses
  *
  * For each pose, the energy is calculated and streamed to a file
- * along with two quaternions that describe the rotation from the initial
- * orientation. A trajectory with the poses can be optionally saved.
+ * along with two quaternions that describe rotations from the initial
+ * orientations. A trajectory with the poses can be optionally saved.
  */
 class AngularScan : public SystemAction {
     struct Molecule {
@@ -33,15 +34,33 @@ class AngularScan : public SystemAction {
         ParticleVector getRotatedReference(const Space::GroupVector& groups, const Eigen::Quaterniond& q);
     };
 
-    double zmin = 0;                         //!< Minimum mass center separation (along z)
-    double zmax = 0;                         //!< Maximum mass center separation (along z)
-    double dz = 0;                           //!< z resolution
-    double max_energy = pc::infty;           //!< Skip poses with energies higher than this
+    /// @brief Helper class to analyse (free) energies
+    class EnergyAnalysis {
+        double partition_sum = 0;    //!< Partition function (per COM separation)
+        double thermal_energy = 0;   //!< Thermal energy sum for each COM separation run
+        Average<double> free_energy; //!< Free energy
+      public:
+        void clear();                    //!< Zeros all data
+        void add(double energy);         //!< Add sample point
+        double getFreeEnergy() const;    //!< w = -ln < exp(-energy/kT) >
+        double getThermalEnergy() const; //!< <u> = ∑ u * exp(-energy/kT) / Q
+        void info() const;               //!< Print to global logger
+    };
+
+    double zmin = 0;               //!< Minimum mass center separation (along z)
+    double zmax = 0;               //!< Maximum mass center separation (along z)
+    double dz = 0;                 //!< z resolution
+    double max_energy = pc::infty; //!< Skip poses with energies higher than this
+    EnergyAnalysis energy_analysis;
+
     std::pair<Molecule, Molecule> molecules; //!< The two molecules to scan
     std::unique_ptr<std::ostream> stream;    //!< Output file with poses
     std::unique_ptr<XTCWriter> trajectory;   //!< Output each pose to Gromacs trajectory file
     Geometry::TwobodyAnglesState angles;     //!< Helper class handling angular space
-                                             // void initialize(const Space& spc, int molecule_index);
+
+    /// Calculate energy and report to stream and trajectory
+    void report(const Group& group1, const Group& group2, const Eigen::Quaterniond& q1, const Eigen::Quaterniond& q2,
+                Energy::NonbondedBase& nonbonded);
 
   public:
     AngularScan(const json& input, const Space& spc);

@@ -27,6 +27,9 @@ AngularScan::AngularScan(const json& j, const Space& spc) {
 
     if (auto it = j.find("traj"); it != j.end()) {
         trajectory = std::make_unique<XTCWriter>(*it);
+        if (angles.size() > 1e5) {
+            faunus_logger->warn("angular scan: large trajectory with {} frames will be generated", angles.size());
+        }
     }
 
     faunus_logger->debug("angular scan: COM distance range = [{:.1f}, {:.1f}) max energy = {:.1f} kJ/mol", zmin, zmax,
@@ -59,6 +62,27 @@ ParticleVector AngularScan::Molecule::getRotatedReference(const Space::GroupVect
     return particles;
 }
 
+void AngularScan::report(const Group& group1, const Group& group2, const Eigen::Quaterniond& q1,
+                         const Eigen::Quaterniond& q2, Energy::NonbondedBase& nonbonded) {
+    namespace rv = ranges::cpp20::views;
+
+    auto format = [](const auto& q) { return fmt::format("{:9.4f}{:9.4f}{:9.4f}{:9.4f}", q.x(), q.y(), q.z(), q.w()); };
+    const auto energy = nonbonded.groupGroupEnergy(group1, group2);
+
+#pragma omp critical
+    {
+        if (energy < max_energy) {
+            energy_analysis.add(energy);
+            *stream << format(q1) << format(q2)
+                    << fmt::format("{:9.4f} {:9.4E}\n", group2.mass_center.z(), energy / 1.0_kJmol);
+            if (trajectory) {
+                auto positions = ranges::views::concat(group1, group2) | rv::transform(&Particle::pos);
+                trajectory->writeNext({500, 500, 500}, positions.begin(), positions.end());
+            }
+        }
+    }
+}
+
 void AngularScan::operator()(Space& spc, Energy::Hamiltonian& hamiltonian) {
     namespace rv = ranges::cpp20::views;
 
@@ -67,50 +91,37 @@ void AngularScan::operator()(Space& spc, Energy::Hamiltonian& hamiltonian) {
         throw std::runtime_error("No nonbonded energy!");
     }
 
-    auto format = [](const auto& q) { return fmt::format("{:9.4f}{:9.4f}{:9.4f}{:9.4f}", q.x(), q.y(), q.z(), q.w()); };
-
     for (const auto z_pos : arange(zmin, zmax, dz)) {
-
         faunus_logger->info("angular scan: separation = {}", z_pos);
         auto translate = [=](auto& particle) { particle.pos.z() += z_pos; };
         auto progress_tracker =
             std::make_unique<ProgressIndicator::ProgressBar>(angles.quaternions_1.size() * angles.quaternions_2.size());
         assert(progress_tracker);
+        energy_analysis.clear();
 
 #pragma omp parallel for
         for (const auto& q1 : angles.quaternions_1) {
-
             auto particles1 = molecules.second.getRotatedReference(spc.groups, q1);
             auto group1 = Group(0, particles1.begin(), particles1.end());
             group1.updateMassCenter(spc.geometry.getBoundaryFunc(), {0, 0, 0});
 
             for (const auto& q_body2 : angles.quaternions_2) {
                 for (const auto& q_dihedral : angles.dihedrals) {
-
                     const auto q2 = q_dihedral * q_body2; // simulataneous rotations (noncummutative)
                     auto particles2 = molecules.second.getRotatedReference(spc.groups, q2);
                     ranges::cpp20::for_each(particles2, translate);
                     auto group2 = Group(0, particles2.begin(), particles2.end());
                     group2.mass_center = {0.0, 0.0, z_pos};
-                    const auto energy = nonbonded->groupGroupEnergy(group1, group2);
-#pragma omp critical
-                    {
-                        if (energy < max_energy) {
-                            *stream << format(q1) << format(q2) << fmt::format("{:9.4f} {:9.4E}\n", z_pos, energy);
-                            if (trajectory) {
-                                auto positions = ranges::views::concat(group1, group2) | rv::transform(&Particle::pos);
-                                trajectory->writeNext(spc.geometry.getLength(), positions.begin(), positions.end());
-                            }
-                        }
-                    }
-                } // dihedral loop
+                    report(group1, group2, q1, q2, *nonbonded);
+                }
 #pragma omp critical
                 if (progress_tracker && (++(*progress_tracker) % 10 == 0)) {
                     progress_tracker->display();
                 }
-            } // second body quaternion loop
-        }     // first body quaternions loop
-    }         // separation loop
+            }
+        }
+        energy_analysis.info();
+    } // separation loop
 }
 
 std::unique_ptr<SystemAction> createAction(std::string_view name, const json& j, Space& spc) {
@@ -140,6 +151,28 @@ std::vector<std::unique_ptr<SystemAction>> createActionList(const json& input, S
         }
     }
     return actions;
+}
+
+void AngularScan::EnergyAnalysis::clear() {
+    free_energy.clear();
+    partition_sum = 0;
+    thermal_energy = 0;
+}
+
+void AngularScan::EnergyAnalysis::add(double energy) {
+    const auto exp_energy = std::exp(-energy);
+    free_energy += exp_energy;
+    partition_sum += exp_energy;
+    thermal_energy += energy * exp_energy;
+}
+
+double AngularScan::EnergyAnalysis::getFreeEnergy() const { return -std::log(free_energy.avg()); }
+
+double AngularScan::EnergyAnalysis::getThermalEnergy() const { return thermal_energy / partition_sum; }
+
+void AngularScan::EnergyAnalysis::info() const {
+    faunus_logger->info("angular scan: free energy <w/kT> = {:.3f} thermal energy <u/kT> = {:.3f}", getFreeEnergy(),
+                        getThermalEnergy());
 }
 
 } // namespace Faunus

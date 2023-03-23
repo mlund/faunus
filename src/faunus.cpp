@@ -8,6 +8,7 @@
 #include "progress_tracker.h"
 #include "spdlog/spdlog.h"
 #include "move.h"
+#include "actions.h"
 #include <spdlog/sinks/null_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
@@ -37,6 +38,7 @@ void setInformationLevelAndLoggers(bool quiet, docopt::Options& args);
 json getUserInput(docopt::Options& args);
 void setRandomNumberGenerator(const json& input);
 void loadState(docopt::Options& args, MetropolisMonteCarlo& simulation);
+void prefaceActions(const json& input, Space& space, Energy::Hamiltonian& hamiltonian);
 void checkElectroNeutrality(MetropolisMonteCarlo& simulation);
 void showErrorMessage(std::exception& exception);
 void showProgress(std::shared_ptr<ProgressIndicator::ProgressTracker>& progress_tracker);
@@ -54,7 +56,7 @@ static const char USAGE[] =
     https://faunus.readthedocs.io
 
     Usage:
-      faunus [-q] [--verbosity <N>] [--nobar] [--nopfx] [--notips] [--nofun] [--state=<file>] [--input=<file>] [--output=<file>] [--positions=<file>]
+      faunus [-q] [--verbosity <N>] [--nobar] [--nopfx] [--notips] [--nofun] [--norun] [--state=<file>] [--input=<file>] [--output=<file>] [--positions=<file>]
       faunus (-h | --help)
       faunus --version
       faunus test <doctest-options>...
@@ -71,6 +73,7 @@ static const char USAGE[] =
       --nopfx                          Do not prefix input file with MPI rank.
       --notips                         Do not give input assistance
       --nofun                          No fun
+      --norun                          Setup system and run preface actions, but no simulation
       --version                        Show version.
 
     Multiple processes using MPI:
@@ -101,6 +104,7 @@ int main(int argc, const char** argv) {
 
         MetropolisMonteCarlo simulation(input);
         loadState(args, simulation);
+        prefaceActions(input.at("preface"), simulation.getSpace(), simulation.getHamiltonian());
         checkElectroNeutrality(simulation);
         analysis::CombinedAnalysis analysis(input.at("analysis"), simulation.getSpace(), simulation.getHamiltonian());
 
@@ -110,9 +114,10 @@ int main(int argc, const char** argv) {
             show_progress = false; // show progress only for root rank
         }
 #endif
-        mainLoop(show_progress, input, simulation, analysis); // run simulation!
-
-        saveOutput(starting_time, args, simulation, analysis);
+        if (!args["--norun"].asBool()) {
+            mainLoop(show_progress, input, simulation, analysis); // run simulation!
+            saveOutput(starting_time, args, simulation, analysis);
+        }
         return EXIT_SUCCESS;
 
     } catch (std::exception& e) {
@@ -417,6 +422,12 @@ void loadState(docopt::Options& args, MetropolisMonteCarlo& simulation) {
     if (args["--positions"]) {
         const auto positionfile = Faunus::MPI::prefix + args["--positions"].asString();
         loadCoordinates(positionfile, simulation);
+    }
+}
+
+void prefaceActions(const json& input, Space& spc, Energy::Hamiltonian& hamiltonian) {
+    for (auto& action : createActionList(input, spc)) {
+        action->operator()(spc, hamiltonian);
     }
 }
 

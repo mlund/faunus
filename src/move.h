@@ -270,44 +270,6 @@ class SmarterTranslateRotate : public TranslateRotate {
 };
 
 /**
- * @brief Rotate and translate two molecules to explore all poses
- *
- * Operates on two molecules 1 and 2 in the following way:
- * 1. A set if evenly distributed points on a sphere are generated. These
- *    serve as rotation axis.
- * 2. Molecule 2 gets a new pose from (1)
- * 3. Molecule 1 gets a new pose from (1)
- * 4. Molecule 2 is rotated around the connection line in dΘ steps
- * 5. When all angles in (4) are done, go back to (3)
- * 6. When all poses in (3) are done, go back to (2)
- * 7. When all poses in (2) are done, we are done!
- */
-class RegularGrid : public Move {
-    Geometry::TwobodyAnglesState angles;
-    Energy::Hamiltonian& hamiltonian;
-
-    struct Molecule {
-        Space::GroupVector::size_type index; //!< Group index in `Space::groups`
-        std::vector<Point> ref_positions; //!< Original reference positions of particles
-        void setMoleculeIndex(const Space &spc, int); //!< Set molecule index and reset
-        void alignMolecule(Space &spc, const Eigen::Quaterniond &quaternion);
-    };
-
-    friend Molecule;
-
-    std::pair<Molecule, Molecule> molecules; //!< The two molecules to scan
-    std::unique_ptr<std::ostream> stream; //!< Output file with poses
-
-    void _move(Change &change) override;
-    void _to_json(json &j) const override;
-    void _from_json(const json &j) override;
-
-public:
-    RegularGrid(Space& spc, Energy::Hamiltonian &hamiltonian);
-    double bias(Change &change, double old_energy, double new_energy) override;
-};
-
-/**
  * @brief Move that will swap conformation of a molecule
  *
  * This will swap between different molecular conformations

@@ -344,8 +344,6 @@ std::unique_ptr<Move> createMove(const std::string& name, const json& properties
             move = std::make_unique<QuadrantJump>(spc);
         } else if (name == "cluster") {
             move = std::make_unique<Cluster>(spc);
-        } else if (name == "grid") {
-            move = std::make_unique<RegularGrid>(spc, hamiltonian);
         } else if (name == "replay") {
             move = std::make_unique<ReplayMove>(spc);
         } else if (name == "langevin_dynamics") {
@@ -1146,80 +1144,6 @@ SmarterTranslateRotate::SmarterTranslateRotate(Space& spc, const json& j)
     , smartmc(spc, j.at("region")) {
     this->from_json(j);
 }
-
-RegularGrid::RegularGrid(Space &spc, Energy::Hamiltonian &hamiltonian) : Move(spc, "grid", "todo"), hamiltonian(hamiltonian) {
-    repeat = 0; // this cause this to run at specific interval instead of stochastically
-}
-
-void RegularGrid::_move(Change &change) {
-    auto quaternion_pair = angles.get();
-    if (!quaternion_pair) {
-        return;
-    }
-    change.everything = true;
-    molecules.first.alignMolecule(spc, (*quaternion_pair).first);
-    molecules.second.alignMolecule(spc, (*quaternion_pair).second);
-
-    auto format = [](const auto &q){
-        return fmt::format("{:9.4f}{:9.4f}{:9.4f}{:9.4f}", q.x(), q.y(), q.z(), q.w());
-    };
-    const auto& group2 = spc.groups.at(molecules.second.index);
-    assert(*stream);
-    *stream << format((*quaternion_pair).first) << format((*quaternion_pair).second)
-            << fmt::format("{:9.4f}", group2.mass_center.z()) << "\n";
-
-    angles.advance();
-}
-
-/**
- * This will rotate the molecule using given quaternion
- */
-void RegularGrid::Molecule::alignMolecule(Space &spc, const Eigen::Quaterniond &quaternion) {
-    namespace rv = ::ranges::cpp20::views;
-    auto& group = spc.groups.at(index);
-    auto positions = ref_positions |
-            rv::transform([&](auto &pos) -> Point { return (quaternion * pos) + group.mass_center; });
-    std::copy(positions.begin(), positions.end(), group.positions().begin());
-}
-
-void RegularGrid::Molecule::setMoleculeIndex(const Space &spc, int molecule_index) {
-    namespace rv = ranges::cpp20::views;
-    index = molecule_index;
-    const auto& group = spc.groups.at(index);
-    if (group.isAtomic()) {
-        throw ConfigurationError("invalid group index");
-    }
-    auto positions = group | rv::transform([&](auto &particle) { return particle.pos - group.mass_center; });
-    ref_positions.reserve(group.size());
-    std::copy(positions.begin(), positions.end(), std::back_inserter(ref_positions));
-}
-
-void RegularGrid::_from_json(const json &j) {
-    namespace rv = ranges::cpp20::views;
-    angles = Geometry::TwobodyAnglesState(j.value("resolution", 0.1));
-
-    stream = IO::openCompressedOutputStream(j.value("file", "poses.gz"s));
-    if (stream) {
-        *stream << fmt::format("# Rotation points per molecule = {}\n", angles.quaternions_1.size())
-                << "# column 0-3: Quaternion for molecule 1 (x y z w)\n"
-                << "# column 4-7: Quaternion for molecule 2 (x y z w)\n"
-                << "# column 8:   z displacement of molecule 2 (COM separation)\n"
-                << "# column 9:   Energy (kJ/mol)\n";
-    }
-
-    molecules.first.setMoleculeIndex(spc, j.at("index1").get<size_t>());
-    molecules.second.setMoleculeIndex(spc, j.at("index2").get<size_t>());
-}
-
-void RegularGrid::_to_json([[maybe_unused]] json &j) const {
-    j["points per molecule"] = angles.quaternions_1.size();
-    //j["Δ⍺/°"] = angular_resolution / 1.0_deg;
-}
-
-double RegularGrid::bias([[maybe_unused]] Change &change, [[maybe_unused]] double old_energy, [[maybe_unused]] double new_energy) {
-    return pc::neg_infty; // always accept!
-}
-
 } // namespace Faunus::move
 
 #ifdef DOCTEST_LIBRARY_INCLUDED

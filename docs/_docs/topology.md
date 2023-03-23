@@ -280,6 +280,46 @@ Random insertion is repeated until there is no overlap with the simulation
 container boundaries. Overlap between particles is ignored and for
 i.e. hard-sphere potentials the initial energy may be infinite.
 
+### Preface Actions
+
+Just before starting the simulation, it is possible to trigger a list
+if _actions_ that can manipulate the system; perform analysis; save to disk etc.
+Actions are specified in a separate `preface` section.
+Below is a list of available actions.
+
+#### Angular energy scan
+
+This iterates over all intermolecular poses between two rigid molecules.
+For each pose, defined by two quaternions and a mass center separation, the
+intermolecular interaction energy is calculated.
+The system state is left untouched and the scan is typically run with the `--norun`
+argument to skip simulation.
+To visualise the sampled poses, use the `traj` keyword which shows that the mass
+center separation scan, `[zmin, zmax)`, is done along the _z_-axis and the first
+molecule is placed at the origin.
+Additional notes:
+
+- How the molecules are initially placed in the simulation box is unimportant.
+- While calculating the energy, only the first _nonbonded_ energy term is considered.
+- The reported quaternions and mass center offset are with respect to the initial
+  structures of the two molecules.
+- The initial reference structures are saved as two `.xyz` files.
+- For best performance it is highly recommended to compile with OpenMP.
+- Use a higher verbosity level to see more information (e.g. `-v 5`)
+
+~~~ yaml
+preface:
+    - angular_scan:
+        index1: 0
+        index2: 1
+        zmin: 70.0              # angstrom
+        zmax: 74.0
+        dz: 5.0
+        max_energy: 10.0        # kJ/mol (optional)
+        angular_resolution: 0.6 # radians
+        file: poses.dat.gz
+        traj: poses.xtc         # Optional
+~~~
 
 ## Equilibrium Reactions
 

@@ -22,9 +22,9 @@ preface:
     - angular_scan:
         index1: 0
         index2: 1
-        zmin: 43
+        zmin: 41
         zmax: 60
-        dz: 100
+        dz: 2
         angular_resolution: 0.3
         file: poses.dat.gz
         #max_energy: 10000.0 # kJ/mol

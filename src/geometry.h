@@ -12,6 +12,7 @@
 #include <range/v3/view/zip.hpp>
 #include <range/v3/view/join.hpp>
 #include <range/v3/view/transform.hpp>
+#include <range/v3/view/cartesian_product.hpp>
 
 /** @brief Faunus main namespace */
 namespace Faunus {
@@ -786,6 +787,91 @@ std::pair<Cuboid, ParticleVector> hexagonalPrismToCuboid(const HexagonalPrism& h
     assert(std::fabs(cuboid.getVolume() - 2.0 * hexagon.getVolume()) <= pc::epsilon_dbl);
     return {cuboid, cuboid_particles};
 }
+
+/**
+ * @brief Structure for exploring a discrete, uniform angular space between two rigid bodies
+ * 
+ * Quaternions for visiting all poses in angular space can be generated in several ways:
+ * ~~~ cpp
+ * TwobodyAngles angles(0.1);
+ * 
+ * // Visit all poses via pairs of iterators
+ * for (const auto& [q1, q2] : angles.quaternionPairs()) {
+ *     pos1 = q1 * pos1; // first body
+ *     pos2 = q2 * pos2; // second body
+ * }
+ * 
+ * // Visit all poses via triplets of iterators. May be useful for parallel execution
+ * // Note that quaternion multiplication is noncommutative so keep the shown order.
+ * for (const auto &q_euler1 : angles.quaternions1) {
+ *     for (const auto &q_euler2 : angles.quaternions2) {
+ *         for (const auto &q_dihedral : angles.dihedrals) {
+ *             pos1 = q_euler1 * pos1;                // first body
+ *             pos2 = (q_dihedral * q_euler2) * pos2; // second body 
+ *         }
+ *     }
+ * }
+ * ~~~
+ */
+class TwobodyAngles {
+    static std::vector<Point> fibonacciSphere(int);
+
+  public:
+    std::vector<Eigen::Quaterniond> quaternions_1; //!< Quaternions to explore all Euler angles
+    std::vector<Eigen::Quaterniond> quaternions_2; //!< Quaternions to explore all Euler angles
+    std::vector<Eigen::Quaterniond> dihedrals;     //!< Quaternions to explore all dihedral angles
+
+    TwobodyAngles() = default;
+    TwobodyAngles(double angle_resolution);
+
+    /**
+     * @brief Iterator to loop over pairs of quaternions to rotate two rigid bodies against each other
+     *
+     * The second quaternion in the pair includes dihedral rotations, i.e. the pair is `q1, q_dihedral * q2`.
+     */
+    auto quaternionPairs() const {
+        namespace rv = ranges::views;
+        auto product = [](const auto& pair) -> Eigen::Quaterniond {
+            const auto& [q2, q_dihedral] = pair;
+            return q_dihedral * q2; // noncommutative
+        };
+        auto second_body_quaternions = rv::cartesian_product(quaternions_2, dihedrals) | rv::transform(product);
+        return rv::cartesian_product(quaternions_1, second_body_quaternions);
+    }
+
+    size_t size() const; //!< Total number of points in angular space (i.e. the number of unique poses)
+};
+
+/**
+ * @brief Structure for exploring a discrete, uniform angular space between two rigid bodies
+ * 
+ * This version includes an iterator-like _state_ that can be used to step through
+ * angular space.
+ * 
+ * Example:
+ * ~~~ cpp
+ * TwobodyAnglesState angles(0.1);
+ * if (const auto quaternions = angles.get(); quaternions) {
+ *     pos1 = quaternions->first * pos1;  // first body
+ *     pos2 = quaternions->second * pos2; // second body
+ *     angles.advance();
+ * } else {
+ *     // all angles have been explored
+ * }
+ * ~~~
+ */
+class TwobodyAnglesState : public TwobodyAngles {
+  private:
+    using QuaternionIter = std::vector<Eigen::Quaterniond>::const_iterator;
+    QuaternionIter q_euler1;
+    QuaternionIter q_euler2;
+    QuaternionIter q_dihedral;
+  public:
+    TwobodyAnglesState() = default;
+    TwobodyAnglesState(double angle_resolution);
+    TwobodyAnglesState& advance(); //!< Advance to next angle
+    std::optional<std::pair<Eigen::Quaterniond, Eigen::Quaterniond>> get(); //!< Get current pair of quaternions
+};
 
 } // namespace Geometry
 } // namespace Faunus

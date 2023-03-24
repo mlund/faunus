@@ -280,6 +280,49 @@ Random insertion is repeated until there is no overlap with the simulation
 container boundaries. Overlap between particles is ignored and for
 i.e. hard-sphere potentials the initial energy may be infinite.
 
+### Preface Actions
+
+Just before starting the simulation, it is possible to trigger a list
+if _actions_ that can manipulate the system; perform analysis; save to disk etc.
+Actions are specified in a separate `preface` section.
+Below is a list of available actions.
+
+#### Angular energy scan
+
+This iterates over all intermolecular poses between two rigid molecules.
+For each pose, defined by two quaternions and a mass center separation, the
+intermolecular interaction energy is calculated.
+The system state is left untouched and the scan is typically run with the `--norun`
+argument to skip simulation.
+To visualise the sampled poses, use the `traj` keyword which shows that the mass
+center separation `zrange` (half open), is done along the _z_-axis and the first
+molecule is placed at the origin.
+
+For each mass center separation, _r_, the partition function,
+$Q(r) = \sum e^{-\beta u(r)}$, is explicitly
+evaluated, whereby we can obtain the free energy, $w(r) = -kT \ln \langle e^{-\beta u(r)} \rangle$ and
+the thermally averaged energy, $u(r) = \sum u(r)e^{-\beta u(r)} / Q$.
+
+~~~ yaml
+preface:
+    - angular_scan:
+        indices: [0, 1]           # select exactly two molecules
+        zrange: [40.0, 60.0, 4.0] # mass center z separation as [min, max), step (Å)
+        angular_resolution: 0.5   # radians
+        max_energy: 50.0          # kJ/mol (optional)
+        file: poses.dat.gz        # Can be large; gz compression recommended
+        traj: poses.xtc           # save poses as trajectory (optional)
+~~~
+
+Notes:
+
+- How the molecules are initially placed in the simulation box is unimportant.
+- While calculating the energy, only the first _nonbonded_ energy term is considered.
+- The reported quaternions and mass center offset are with respect to the initial
+  structures of the two molecules.
+- The initial reference structures are saved as two `.xyz` files.
+- For best performance it is highly recommended to compile with OpenMP.
+- Use a higher verbosity level to see more information, e.g. `--verbosity 5`.
 
 ## Equilibrium Reactions
 

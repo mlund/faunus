@@ -56,13 +56,13 @@ target_link_libraries(functionparser PRIVATE nlohmann_json exprtk)
 
 # ========== faunus cpp and header files ==========
 
-set(objs analysis.cpp average.cpp atomdata.cpp auxiliary.cpp bonds.cpp celllistimpl.cpp
+set(objs actions.cpp analysis.cpp average.cpp atomdata.cpp auxiliary.cpp bonds.cpp celllistimpl.cpp
 	chainmove.cpp clustermove.cpp core.cpp forcemove.cpp units.cpp energy.cpp externalpotential.cpp
 	geometry.cpp group.cpp io.cpp molecule.cpp montecarlo.cpp move.cpp mpicontroller.cpp
 	particle.cpp penalty.cpp potentials.cpp random.cpp reactioncoordinate.cpp regions.cpp rotate.cpp sasa.cpp
         scatter.cpp smart_montecarlo.cpp space.cpp speciation.cpp spherocylinder.cpp tensor.cpp)
 
-set(hdrs analysis.h average.h atomdata.h auxiliary.h bonds.h celllist.h celllistimpl.h
+set(hdrs actions.h analysis.h average.h atomdata.h auxiliary.h bonds.h celllist.h celllistimpl.h
 	chainmove.h clustermove.h core.h forcemove.h energy.h externalpotential.h geometry.h group.h io.h
 	molecule.h montecarlo.h move.h mpicontroller.h particle.h penalty.h potentials_base.h potentials.h
 	reactioncoordinate.h rotate.h sasa.h smart_montecarlo.h space.h speciation.h spherocylinder.h

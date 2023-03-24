@@ -858,6 +858,23 @@ properties:
                     additionalProperties: false
                     type: object
 
+    preface:
+        type: array
+        items:
+            type: object
+            properties:
+                angular_scan:
+                    description: "Scan all angles between two rigid bodies (molecule 1 and 2)"
+                    type: object
+                    properties:
+                        indices: {type: array, items: {type: integer}, minItems: 2, maxItems: 2, description: "Two molecule indices"}
+                        zrange: {type: array, items: {type: number}, minItems: 3, maxItems: 3, description: "COM interval min, max, step (Å)"}
+                        max_energy: {type: number, description: "Skip energies above this value"}
+                        angular_resolution: {type: number, description: "Angular spacing (rad)"}
+                        file: {type: string, description: "Output for energies and quaternions", pattern: "(.*?)\\.(dat|dat.gz)$"}
+                        traj: {type: string, description: "Output trajectory (xtc)", pattern: "(.*?)\\.(xtc)$"}
+                    required: [indices, zrange, file, angular_resolution]
+                    additionalProperties: false
          
     analysis:
         type: array

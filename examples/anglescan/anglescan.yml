@@ -1,0 +1,40 @@
+#!/usr/bin/env yason.py
+temperature: 300
+random: {seed: fixed}
+geometry: {type: sphere, radius: 80}
+mcloop: {macro: 10, micro: 40000}
+
+atomlist:
+    - MP: {eps: 2.479, mw: 10000000, q: 0, sigma: 40} # mid-particle
+    - NP: {eps: 2.479, mw: 0.001, q: -1, sigma: 4.0}  # negative particle
+    - PP: {eps: 2.479, mw: 0.001, q: 1, sigma: 4.0}   # positive particle
+    - UP: {eps: 2.479, mw: 0.001, q: 0, sigma: 4.0}   # uncharged particle
+
+moleculelist:
+    - body1: {structure: anglescan.xyz, insdir: [0,0,0], rotate: false, rigid: true}
+    - body2: {structure: anglescan.xyz, insdir: [0,0,0], insoffset: [0, 0, 58], rotate: false, rigid: true}
+
+insertmolecules:
+    - body1: {N: 1}
+    - body2: {N: 1}
+
+preface:
+    - angular_scan:
+        indices: [0, 1]           # exactly two molecules
+        zrange: [41.0, 45.0, 2.0] # mass center z separation as min, max, step
+        angular_resolution: 0.3   # radians
+        file: poses.dat.gz        # can be large; gz compression recommended
+
+energy:
+    - nonbonded_coulombwca:
+        wca: {mixing: LB}
+        coulomb: {type: yukawa, epsr: 80, debyelength: 20.0, shift: true, cutoff: 40}
+
+moves:
+    - moltransrot: {molecule: body1, dp: 0, dprot: 2}
+    - moltransrot: {molecule: body2, dp: 10, dprot: 2, dir: [0,0,1]}
+
+analysis:
+    - savestate: {file: confout.pqr}
+    - molrdf: {nstep: 1, dim: 1, dr: 1.0, file: rdf.dat, name1: body1, name2: body2}
+    - systemenergy: {nstep: 10, file: energy.dat.gz}

@@ -1361,8 +1361,8 @@ TwobodyAngles::TwobodyAngles(const double angle_resolution) {
     const auto n1 = quaternions_1.size();
     const auto n2 = quaternions_2.size();
     const auto n3 = dihedrals.size();
-    faunus_logger->debug(fmt::format("rigid body: Δ⍺ = {:.1f}° -> {} x {} x {} = {} poses", angle_resolution / 1.0_deg,
-                                     n1, n2, n3, n1 * n2 * n3));
+    faunus_logger->info(fmt::format("rigid body: Δ⍺ = {:.1f}° -> {} x {} x {} = {} poses 💃🏽🕺🏼",
+                                    angle_resolution / 1.0_deg, n1, n2, n3, n1 * n2 * n3));
 
     std::ofstream f("fibonacci_points.xyz");
     if (f) {

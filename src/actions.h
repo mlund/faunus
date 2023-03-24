@@ -27,12 +27,7 @@ struct SystemAction {
  * orientations. A trajectory with the poses can be optionally saved.
  */
 class AngularScan : public SystemAction {
-    struct Molecule {
-        Space::GroupVector::size_type index;                          //!< Group index in `Space::groups`
-        std::vector<Point> ref_positions;                             //!< Original reference positions of particles
-        void initialize(const Space::GroupVector& groups, int index); //!< Set molecule index and reset
-        ParticleVector getRotatedReference(const Space::GroupVector& groups, const Eigen::Quaterniond& q);
-    };
+    inline static const std::string name = "angular scan"; //!< Name used for logging
 
     /// @brief Helper class to analyse (free) energies
     class EnergyAnalysis {
@@ -47,16 +42,24 @@ class AngularScan : public SystemAction {
         void info() const;               //!< Print to global logger
     };
 
-    double zmin = 0;               //!< Minimum mass center separation (along z)
-    double zmax = 0;               //!< Maximum mass center separation (along z)
-    double dz = 0;                 //!< z resolution
-    double max_energy = pc::infty; //!< Skip poses with energies higher than this
-    EnergyAnalysis energy_analysis;
+    /// @brief Helper class for store information about each of the two rigid bodies
+    struct Molecule {
+        Space::GroupVector::size_type index;                          //!< Group index in `Space::groups`
+        std::vector<Point> ref_positions;                             //!< Original reference positions of particles
+        void initialize(const Space::GroupVector& groups, int index); //!< Set molecule index and reset
+        ParticleVector getRotatedReference(const Space::GroupVector& groups, const Eigen::Quaterniond& q);
+    };
+
+    double zmin = 0;                //!< Minimum mass center separation (along z)
+    double zmax = 0;                //!< Maximum mass center separation (along z)
+    double dz = 0;                  //!< z resolution
+    double max_energy = pc::infty;  //!< Skip poses with energies higher than this
+    EnergyAnalysis energy_analysis; //!< Helper to calculate the (free) energy
 
     std::pair<Molecule, Molecule> molecules; //!< The two molecules to scan
     std::unique_ptr<std::ostream> stream;    //!< Output file with poses
     std::unique_ptr<XTCWriter> trajectory;   //!< Output each pose to Gromacs trajectory file
-    Geometry::TwobodyAnglesState angles;     //!< Helper class handling angular space
+    Geometry::TwobodyAngles angles;          //!< Helper class handling angular space
 
     /// Calculate energy and report to stream and trajectory
     void report(const Group& group1, const Group& group2, const Eigen::Quaterniond& q1, const Eigen::Quaterniond& q2,

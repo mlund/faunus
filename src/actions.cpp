@@ -21,12 +21,12 @@ AngularScan::AngularScan(const json& j, const Space& spc) {
     if (j.contains("traj")) {
         trajectory = std::make_unique<XTCWriter>(j["traj"]);
         if (angles.size() > 1e5) {
-            faunus_logger->warn("angular scan: large trajectory with {} frames will be generated", angles.size());
+            faunus_logger->warn("{}: large trajectory with {} frames will be generated", name, angles.size());
         }
     }
 
     stream = IO::openCompressedOutputStream(j.value("file", "poses.gz"s), true);
-    *stream << fmt::format("# Δ⍺ = {:.1f}° -> {} x {} x {} = {} poses\n", angular_resolution / 1.0_deg,
+    *stream << fmt::format("# Δ⍺ = {:.1f}° -> {} x {} x {} = {} poses 💃🏽🕺🏼\n", angular_resolution / 1.0_deg,
                            angles.quaternions_1.size(), angles.quaternions_2.size(), angles.dihedrals.size(),
                            angles.size())
             << fmt::format("# Mass center separation range along z: [{}, {}) with dz = {} Å\n", zmin, zmax, dz)
@@ -36,8 +36,8 @@ AngularScan::AngularScan(const json& j, const Space& spc) {
             << "# Column 8:   Mass center z displacement of molecule 2\n"
             << "# Column 9:   Energy (kJ/mol)\n";
 
-    faunus_logger->debug("angular scan: COM distance range = [{:.1f}, {:.1f}) max energy = {:.1f} kJ/mol", zmin, zmax,
-                         max_energy / 1.0_kJmol);
+    faunus_logger->info("{}: COM distance range = [{:.1f}, {:.1f}) max energy = {:.1f} kJ/mol", name, zmin, zmax,
+                        max_energy / 1.0_kJmol);
 }
 
 /**
@@ -48,7 +48,7 @@ void AngularScan::Molecule::initialize(const Space::GroupVector& groups, int mol
     index = molecule_index;
     const auto& group = groups.at(index);
     if (group.isAtomic()) {
-        throw ConfigurationError("group {} is not molecular", index);
+        throw ConfigurationError("{}: group {} is not molecular", name, index);
     }
     auto as_centered_position = [&](auto& particle) -> Point { return particle.pos - group.mass_center; };
     ref_positions = group | rv::transform(as_centered_position) | ranges::to_vector;
@@ -70,7 +70,7 @@ void AngularScan::report(const Group& group1, const Group& group2, const Eigen::
                          const Eigen::Quaterniond& q2, Energy::NonbondedBase& nonbonded) {
     namespace rv = ranges::cpp20::views;
 
-    auto format = [](const auto& q) { return fmt::format("{:9.4f}{:9.4f}{:9.4f}{:9.4f}", q.x(), q.y(), q.z(), q.w()); };
+    auto format = [](const auto& q) { return fmt::format("{:8.4f}{:8.4f}{:8.4f}{:8.4f}", q.x(), q.y(), q.z(), q.w()); };
     const auto energy = nonbonded.groupGroupEnergy(group1, group2);
 
 #pragma omp critical
@@ -78,7 +78,7 @@ void AngularScan::report(const Group& group1, const Group& group2, const Eigen::
         if (energy < max_energy) {
             energy_analysis.add(energy);
             *stream << format(q1) << format(q2)
-                    << fmt::format("{:9.4f} {:>10.3E}\n", group2.mass_center.z(), energy / 1.0_kJmol);
+                    << fmt::format("{:8.4f} {:>10.3E}\n", group2.mass_center.z(), energy / 1.0_kJmol);
             if (trajectory) {
                 auto positions = ranges::views::concat(group1, group2) | rv::transform(&Particle::pos);
                 trajectory->writeNext({500, 500, 500}, positions.begin(), positions.end());
@@ -92,11 +92,11 @@ void AngularScan::operator()(Space& spc, Energy::Hamiltonian& hamiltonian) {
 
     auto nonbonded = hamiltonian.findFirstOf<Energy::NonbondedBase>();
     if (!nonbonded) {
-        throw std::runtime_error("No nonbonded energy!");
+        throw ConfigurationError("{}: at least one nonbonded energy term required", name);
     }
 
     for (const auto z_pos : arange(zmin, zmax, dz)) {
-        faunus_logger->info("angular scan: separation = {}", z_pos);
+        faunus_logger->info("{}: separation = {}", name, z_pos);
         auto translate = [=](auto& particle) { particle.pos.z() += z_pos; };
         auto progress_tracker =
             std::make_unique<ProgressIndicator::ProgressBar>(angles.quaternions_1.size() * angles.quaternions_2.size());
@@ -175,7 +175,7 @@ double AngularScan::EnergyAnalysis::getFreeEnergy() const { return -std::log(fre
 double AngularScan::EnergyAnalysis::getThermalEnergy() const { return thermal_energy / partition_sum; }
 
 void AngularScan::EnergyAnalysis::info() const {
-    faunus_logger->info("angular scan: free energy <w/kT> = {:.3f} thermal energy <u/kT> = {:.3f}", getFreeEnergy(),
+    faunus_logger->info("{}: free energy <w/kT> = {:.3f} thermal energy <u/kT> = {:.3f}", name, getFreeEnergy(),
                         getThermalEnergy());
 }
 

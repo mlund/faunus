@@ -104,7 +104,7 @@ int main(int argc, const char** argv) {
 
         MetropolisMonteCarlo simulation(input);
         loadState(args, simulation);
-        prefaceActions(input.at("preface"), simulation.getSpace(), simulation.getHamiltonian());
+        prefaceActions(input["preface"], simulation.getSpace(), simulation.getHamiltonian());
         checkElectroNeutrality(simulation);
         analysis::CombinedAnalysis analysis(input.at("analysis"), simulation.getSpace(), simulation.getHamiltonian());
 
@@ -426,6 +426,9 @@ void loadState(docopt::Options& args, MetropolisMonteCarlo& simulation) {
 }
 
 void prefaceActions(const json& input, Space& spc, Energy::Hamiltonian& hamiltonian) {
+    if (!input.is_array()) {
+        return;
+    }
     for (auto& action : createActionList(input, spc)) {
         action->operator()(spc, hamiltonian);
     }

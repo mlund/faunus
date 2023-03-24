@@ -295,9 +295,26 @@ intermolecular interaction energy is calculated.
 The system state is left untouched and the scan is typically run with the `--norun`
 argument to skip simulation.
 To visualise the sampled poses, use the `traj` keyword which shows that the mass
-center separation scan, `[zmin, zmax)`, is done along the _z_-axis and the first
+center separation `zrange` (half open), is done along the _z_-axis and the first
 molecule is placed at the origin.
-Additional notes:
+
+For each mass center separation, _r_, the partition function,
+$Q(r) = \sum e^{-\beta u(r)}$, is explicitly
+evaluated, whereby we can obtain the free energy, $w(r) = -kT \ln \langle e^{-\beta u(r)} \rangle$ and
+the thermally averaged energy, $u(r) = \sum u(r)e^{-\beta u(r)} / Q$.
+
+~~~ yaml
+preface:
+    - angular_scan:
+        indices: [0, 1]           # select exactly two molecules
+        zrange: [40.0, 60.0, 4.0] # mass center z separation as [min, max), step (Å)
+        angular_resolution: 0.5   # radians
+        max_energy: 50.0          # kJ/mol (optional)
+        file: poses.dat.gz        # Can be large; gz compression recommended
+        traj: poses.xtc           # save poses as trajectory (optional)
+~~~
+
+Notes:
 
 - How the molecules are initially placed in the simulation box is unimportant.
 - While calculating the energy, only the first _nonbonded_ energy term is considered.
@@ -306,17 +323,6 @@ Additional notes:
 - The initial reference structures are saved as two `.xyz` files.
 - For best performance it is highly recommended to compile with OpenMP.
 - Use a higher verbosity level to see more information, e.g. `--verbosity 5`.
-
-~~~ yaml
-preface:
-    - angular_scan:
-        indices: [0, 1]           # select exactly two molecules
-        zrange: [40.0, 60.0, 5.0] # mass center z separation as min, max, step
-        angular_resolution: 0.5   # radians
-        max_energy: 50.0          # kJ/mol (optional)
-        file: poses.dat.gz        # Can be large; gz compression recommended
-        traj: poses.xtc           # save poses as trajectory (optional)
-~~~
 
 ## Equilibrium Reactions
 

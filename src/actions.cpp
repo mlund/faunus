@@ -17,12 +17,17 @@ AngularScan::AngularScan(const json& j, const Space& spc) {
             << "# column 8:   mass center z displacement of molecule 2\n"
             << "# column 9:   Energy (kJ/mol)\n";
 
-    molecules.first.initialize(spc.groups, j.at("index1").get<size_t>());
-    molecules.second.initialize(spc.groups, j.at("index2").get<size_t>());
+    const auto indices = j.at("indices").get<std::vector<size_t>>();
+    assert(indices.size() == 2);
+    molecules.first.initialize(spc.groups, indices.at(0));
+    molecules.second.initialize(spc.groups, indices.at(1));
 
-    zmin = j.at("zmin").get<double>();
-    zmax = j.at("zmax").get<double>();
-    dz = j.at("dz").get<double>();
+    const auto zrange = j.at("zrange").get<std::vector<double>>();
+    assert(zrange.size() == 3);
+    zmin = zrange.at(0);
+    zmax = zrange.at(1);
+    dz = zrange.at(2);
+
     max_energy = j.value("max_energy", pc::infty) * 1.0_kJmol;
 
     if (auto it = j.find("traj"); it != j.end()) {

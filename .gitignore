@@ -13,6 +13,9 @@ sids/
 unittests.log
 a.out
 
+# VSC
+.vscode/settings.json
+
 # CMake
 CMakeCache.txt
 CMakeFiles

@@ -305,20 +305,17 @@ Additional notes:
   structures of the two molecules.
 - The initial reference structures are saved as two `.xyz` files.
 - For best performance it is highly recommended to compile with OpenMP.
-- Use a higher verbosity level to see more information (e.g. `-v 5`)
+- Use a higher verbosity level to see more information, e.g. `--verbosity 5`.
 
 ~~~ yaml
 preface:
     - angular_scan:
-        index1: 0
-        index2: 1
-        zmin: 70.0              # angstrom
-        zmax: 74.0
-        dz: 5.0
-        max_energy: 10.0        # kJ/mol (optional)
-        angular_resolution: 0.6 # radians
-        file: poses.dat.gz
-        traj: poses.xtc         # Optional
+        indices: [0, 1]           # select exactly two molecules
+        zrange: [40.0, 60.0, 5.0] # mass center z separation as min, max, step
+        angular_resolution: 0.5   # radians
+        max_energy: 50.0          # kJ/mol (optional)
+        file: poses.dat.gz        # Can be large; gz compression recommended
+        traj: poses.xtc           # save poses as trajectory (optional)
 ~~~
 
 ## Equilibrium Reactions

@@ -20,15 +20,10 @@ insertmolecules:
 
 preface:
     - angular_scan:
-        index1: 0
-        index2: 1
-        zmin: 41
-        zmax: 60
-        dz: 2
-        angular_resolution: 0.3
-        file: poses.dat.gz
-        #max_energy: 10000.0 # kJ/mol
-        #traj: poses.xtc
+        indices: [0, 1]           # exactly two molecules
+        zrange: [41.0, 60.0, 2.0] # mass center z separation as min, max, step
+        angular_resolution: 0.3   # radians
+        file: poses.dat.gz        # can be large; gz compression recommended
 
 energy:
     - nonbonded_coulombwca:

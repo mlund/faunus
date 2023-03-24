@@ -867,16 +867,13 @@ properties:
                     description: "Scan all angles between two rigid bodies (molecule 1 and 2)"
                     type: object
                     properties:
-                        zmin: {type: number, description: "Minimum mass center sepatation (Å)"}
-                        zmax: {type: number, description: "Maximum mass center sepatation (Å)"}
-                        dz: {type: number, description: "Mass center sepatation resolution (Å)"}
+                        indices: {type: array, items: {type: integer}, minItems: 2, maxItems: 2, description: "Two molecule indices"}
+                        zrange: {type: array, items: {type: number}, minItems: 3, maxItems: 3, description: "COM interval min, max, step (Å)"}
                         max_energy: {type: number, description: "Skip energies above this value"}
                         angular_resolution: {type: number, description: "Angular spacing (rad)"}
                         file: {type: string, description: "Output for energies and quaternions", pattern: "(.*?)\\.(dat|dat.gz)$"}
                         traj: {type: string, description: "Output trajectory (xtc)", pattern: "(.*?)\\.(xtc)$"}
-                        index1: {type: integer, minimum: 0}
-                        index2: {type: integer, minimum: 0}
-                    required: [zmin, zmax, dz, file, index1, index2, angular_resolution]
+                    required: [indices, zrange, file, angular_resolution]
                     additionalProperties: false
          
     analysis:

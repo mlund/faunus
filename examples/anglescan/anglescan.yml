@@ -21,7 +21,7 @@ insertmolecules:
 preface:
     - angular_scan:
         indices: [0, 1]           # exactly two molecules
-        zrange: [41.0, 60.0, 2.0] # mass center z separation as min, max, step
+        zrange: [41.0, 45.0, 2.0] # mass center z separation as min, max, step
         angular_resolution: 0.3   # radians
         file: poses.dat.gz        # can be large; gz compression recommended
 

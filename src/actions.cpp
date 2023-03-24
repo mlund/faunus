@@ -9,33 +9,32 @@
 namespace Faunus {
 
 AngularScan::AngularScan(const json& j, const Space& spc) {
-    angles = Geometry::TwobodyAnglesState(j.value("angular_resolution", 0.1));
-    stream = IO::openCompressedOutputStream(j.value("file", "poses.gz"s), true);
-    *stream << fmt::format("# Rotation points per molecule = {}\n", angles.quaternions_1.size())
-            << "# column 0-3: Quaternion for molecule 1 (x y z w)\n"
-            << "# column 4-7: Quaternion for molecule 2 (x y z w)\n"
-            << "# column 8:   mass center z displacement of molecule 2\n"
-            << "# column 9:   Energy (kJ/mol)\n";
-
-    const auto indices = j.at("indices").get<std::vector<size_t>>();
-    assert(indices.size() == 2);
-    molecules.first.initialize(spc.groups, indices.at(0));
-    molecules.second.initialize(spc.groups, indices.at(1));
-
-    const auto zrange = j.at("zrange").get<std::vector<double>>();
-    assert(zrange.size() == 3);
-    zmin = zrange.at(0);
-    zmax = zrange.at(1);
-    dz = zrange.at(2);
-
+    const auto angular_resolution = j.at("angular_resolution").get<double>();
+    angles = Geometry::TwobodyAnglesState(angular_resolution);
     max_energy = j.value("max_energy", pc::infty) * 1.0_kJmol;
+    std::tie(zmin, zmax, dz) = j.at("zrange").get<std::tuple<double, double, double>>();
 
-    if (auto it = j.find("traj"); it != j.end()) {
-        trajectory = std::make_unique<XTCWriter>(*it);
+    const auto [ndx1, ndx2] = j.at("indices").get<std::tuple<size_t, size_t>>();
+    molecules.first.initialize(spc.groups, ndx1);
+    molecules.second.initialize(spc.groups, ndx2);
+
+    if (j.contains("traj")) {
+        trajectory = std::make_unique<XTCWriter>(j["traj"]);
         if (angles.size() > 1e5) {
             faunus_logger->warn("angular scan: large trajectory with {} frames will be generated", angles.size());
         }
     }
+
+    stream = IO::openCompressedOutputStream(j.value("file", "poses.gz"s), true);
+    *stream << fmt::format("# Δ⍺ = {:.1f}° -> {} x {} x {} = {} poses\n", angular_resolution / 1.0_deg,
+                           angles.quaternions_1.size(), angles.quaternions_2.size(), angles.dihedrals.size(),
+                           angles.size())
+            << fmt::format("# Mass center separation range along z: [{}, {}) with dz = {} Å\n", zmin, zmax, dz)
+            << fmt::format("# Max energy threshold: {} kJ/mol\n", max_energy / 1.0_kJmol)
+            << "# Column 0-3: Quaternion for molecule 1 (x y z w)\n"
+            << "# Column 4-7: Quaternion for molecule 2 (x y z w)\n"
+            << "# Column 8:   Mass center z displacement of molecule 2\n"
+            << "# Column 9:   Energy (kJ/mol)\n";
 
     faunus_logger->debug("angular scan: COM distance range = [{:.1f}, {:.1f}) max energy = {:.1f} kJ/mol", zmin, zmax,
                          max_energy / 1.0_kJmol);
@@ -79,7 +78,7 @@ void AngularScan::report(const Group& group1, const Group& group2, const Eigen::
         if (energy < max_energy) {
             energy_analysis.add(energy);
             *stream << format(q1) << format(q2)
-                    << fmt::format("{:9.4f} {:9.4E}\n", group2.mass_center.z(), energy / 1.0_kJmol);
+                    << fmt::format("{:9.4f} {:>10.3E}\n", group2.mass_center.z(), energy / 1.0_kJmol);
             if (trajectory) {
                 auto positions = ranges::views::concat(group1, group2) | rv::transform(&Particle::pos);
                 trajectory->writeNext({500, 500, 500}, positions.begin(), positions.end());

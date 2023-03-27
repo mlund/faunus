@@ -2,8 +2,8 @@
 #include "energy.h"
 #include "potentials.h"
 #include "io.h"
-#include "progress_tracker.h"
 #include "aux/arange.h"
+#include <progress_tracker.h>
 #include <range/v3/view/concat.hpp>
 
 namespace Faunus {

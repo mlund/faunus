@@ -86,6 +86,7 @@ target_link_libraries(libfaunus PUBLIC
         functionparser
         nlohmann_json
         pcg-cpp
+        progresstracker
         range-v3
         spdlog
         xdrfile
@@ -148,7 +149,7 @@ if (ENABLE_PYTHON)
 
     pybind11_add_module(pyfaunus pyfaunus.cpp ${objs})
     target_link_libraries(pyfaunus PRIVATE
-        project_options cereal Eigen functionparser nlohmann_json pybind11_json range-v3 spdlog xdrfile zstr)
+        project_options cereal Eigen functionparser nlohmann_json progresstracker pybind11_json range-v3 spdlog xdrfile zstr)
     target_compile_definitions(pyfaunus PUBLIC SPDLOG_COMPILED_LIB)
     target_compile_definitions(pyfaunus PRIVATE DOCTEST_CONFIG_DISABLE)
 

@@ -59,10 +59,9 @@ ParticleVector AngularScan::Molecule::getRotatedReference(const Space::GroupVect
                                                           const Eigen::Quaterniond& q) {
     namespace rv = ranges::cpp20::views;
     const auto& group = groups.at(index);
-    auto as_mut_position = [](auto& particle) -> Point& { return particle.pos; };
     auto particles = ParticleVector(group.begin(), group.end()); // copy particles from Space
     auto positions = ref_positions | rv::transform([&](const auto& pos) -> Point { return q * pos; });
-    std::copy(positions.begin(), positions.end(), (particles | rv::transform(as_mut_position)).begin());
+    std::copy(positions.begin(), positions.end(), (particles | rv::transform(&Particle::pos)).begin());
     return particles;
 }
 

@@ -67,21 +67,21 @@ ParticleVector AngularScan::Molecule::getRotatedReference(const Space::GroupVect
 
 void AngularScan::report(const Group& group1, const Group& group2, const Eigen::Quaterniond& q1,
                          const Eigen::Quaterniond& q2, Energy::NonbondedBase& nonbonded) {
-    namespace rv = ranges::cpp20::views;
+    const auto energy = nonbonded.groupGroupEnergy(group1, group2);
+    if (energy >= max_energy) {
+        return;
+    }
 
     auto format = [](const auto& q) { return fmt::format("{:8.4f}{:8.4f}{:8.4f}{:8.4f}", q.x(), q.y(), q.z(), q.w()); };
-    const auto energy = nonbonded.groupGroupEnergy(group1, group2);
 
 #pragma omp critical
     {
-        if (energy < max_energy) {
-            energy_analysis.add(energy);
-            *stream << format(q1) << format(q2)
-                    << fmt::format("{:8.4f} {:>10.3E}\n", group2.mass_center.z(), energy / 1.0_kJmol);
-            if (trajectory) {
-                auto positions = ranges::views::concat(group1, group2) | rv::transform(&Particle::pos);
-                trajectory->writeNext({500, 500, 500}, positions.begin(), positions.end());
-            }
+        energy_analysis.add(energy);
+        *stream << format(q1) << format(q2)
+                << fmt::format("{:8.4f} {:>10.3E}\n", group2.mass_center.z(), energy / 1.0_kJmol);
+        if (trajectory) {
+            auto positions = ranges::views::concat(group1, group2) | ranges::cpp20::views::transform(&Particle::pos);
+            trajectory->writeNext({500, 500, 500}, positions.begin(), positions.end());
         }
     }
 }

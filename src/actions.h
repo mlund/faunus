@@ -31,15 +31,15 @@ class AngularScan : public SystemAction {
 
     /// @brief Helper class to analyse (free) energies
     class EnergyAnalysis {
-        double partition_sum = 0;    //!< Partition function (per COM separation)
-        double thermal_energy = 0;   //!< Thermal energy sum for each COM separation run
-        Average<double> free_energy; //!< Free energy
+        double partition_sum = 0;        //!< Partition function (per COM separation)
+        double energy_sum = 0;           //!< Thermal energy sum for each COM separation run
+        Average<double> mean_exp_energy; //!< Free energy
       public:
-        void clear();                    //!< Zeros all data
-        void add(double energy);         //!< Add sample point
-        double getFreeEnergy() const;    //!< w = -ln < exp(-energy/kT) >
-        double getThermalEnergy() const; //!< <u> = ∑ u * exp(-energy/kT) / Q
-        void info() const;               //!< Print to global logger
+        void clear();                 //!< Zeros all data
+        void add(double energy);      //!< Add energy (in kT)
+        double getFreeEnergy() const; //!< w = -kT ln < exp(-energy/kT) > (in kT)
+        double getMeanEnergy() const; //!< <u> = ∑ u * exp(-energy/kT) / Q (in kT)
+        void info() const;            //!< Print to global logger
     };
 
     /// @brief Helper class for store information about each of the two rigid bodies

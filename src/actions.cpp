@@ -157,25 +157,25 @@ std::vector<std::unique_ptr<SystemAction>> createActionList(const json& input, S
 }
 
 void AngularScan::EnergyAnalysis::clear() {
-    free_energy.clear();
+    mean_exp_energy.clear();
     partition_sum = 0;
-    thermal_energy = 0;
+    energy_sum = 0;
 }
 
-void AngularScan::EnergyAnalysis::add(double energy) {
+void AngularScan::EnergyAnalysis::add(const double energy) {
     const auto exp_energy = std::exp(-energy);
-    free_energy += exp_energy;
+    mean_exp_energy += exp_energy;
     partition_sum += exp_energy;
-    thermal_energy += energy * exp_energy;
+    energy_sum += energy * exp_energy;
 }
 
-double AngularScan::EnergyAnalysis::getFreeEnergy() const { return -std::log(free_energy.avg()); }
+double AngularScan::EnergyAnalysis::getFreeEnergy() const { return -std::log(mean_exp_energy.avg()); }
 
-double AngularScan::EnergyAnalysis::getThermalEnergy() const { return thermal_energy / partition_sum; }
+double AngularScan::EnergyAnalysis::getMeanEnergy() const { return energy_sum / partition_sum; }
 
 void AngularScan::EnergyAnalysis::info() const {
-    faunus_logger->info("{}: free energy <w/kT> = {:.3f} thermal energy <u/kT> = {:.3f}", name, getFreeEnergy(),
-                        getThermalEnergy());
+    faunus_logger->info("{}: free energy <w/kT> = {:.3f} mean energy <u/kT> = {:.3f}", name, getFreeEnergy(),
+                        getMeanEnergy());
 }
 
 } // namespace Faunus

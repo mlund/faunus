@@ -26,6 +26,11 @@ add_test(
         WORKING_DIRECTORY ${EXAMPLES_DIR}/swapconf)
 
 add_test(
+        NAME anglescan
+        COMMAND sh -c "${Python_EXECUTABLE} ${YASON} anglescan.yml | $<TARGET_FILE:faunus> --norun"
+        WORKING_DIRECTORY ${EXAMPLES_DIR}/anglescan)
+
+add_test(
         NAME chargemove
         COMMAND sh -c "${Python_EXECUTABLE} ${YASON} chargemove.yml | $<TARGET_FILE:faunus> --nobar\
     && ${Python_EXECUTABLE} ${JSON_COMPARE} chargemove.out.json out.json --tol 0.05"
@@ -267,6 +272,11 @@ add_test(
 
 install(FILES
         ${EXAMPLES_DIR}/README.md
+        ${EXAMPLES_DIR}/anglescan.ipynb
+        ${EXAMPLES_DIR}/anglescan.xyz
+        ${EXAMPLES_DIR}/anglescan.yml
+        ${EXAMPLES_DIR}/anglescan_energies.dat
+        ${EXAMPLES_DIR}/anglescan_rdf.dat
         ${EXAMPLES_DIR}/bulk/bulk.yml
         ${EXAMPLES_DIR}/bulk-replay/bulk-replay.yml
         ${EXAMPLES_DIR}/chargemove/chargemove.yml

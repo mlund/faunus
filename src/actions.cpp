@@ -87,8 +87,6 @@ void AngularScan::report(const Group& group1, const Group& group2, const Eigen::
 }
 
 void AngularScan::operator()(Space& spc, Energy::Hamiltonian& hamiltonian) {
-    namespace rv = ranges::cpp20::views;
-
     auto nonbonded = hamiltonian.findFirstOf<Energy::NonbondedBase>();
     if (!nonbonded) {
         throw ConfigurationError("{}: at least one nonbonded energy term required", name);
@@ -123,7 +121,7 @@ void AngularScan::operator()(Space& spc, Energy::Hamiltonian& hamiltonian) {
                 }
             }
         }
-        energy_analysis.info();
+        energy_analysis.printLog();
     } // separation loop
 }
 
@@ -173,7 +171,7 @@ double AngularScan::EnergyAnalysis::getFreeEnergy() const { return -std::log(mea
 
 double AngularScan::EnergyAnalysis::getMeanEnergy() const { return energy_sum / partition_sum; }
 
-void AngularScan::EnergyAnalysis::info() const {
+void AngularScan::EnergyAnalysis::printLog() const {
     faunus_logger->info("{}: free energy <w/kT> = {:.3f} mean energy <u/kT> = {:.3f}", name, getFreeEnergy(),
                         getMeanEnergy());
 }

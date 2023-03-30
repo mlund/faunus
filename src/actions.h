@@ -39,7 +39,7 @@ class AngularScan : public SystemAction {
         void add(double energy);      //!< Add energy (in kT)
         double getFreeEnergy() const; //!< w = -kT ln < exp(-energy/kT) > (in kT)
         double getMeanEnergy() const; //!< <u> = ∑ u * exp(-energy/kT) / Q (in kT)
-        void info() const;            //!< Print to global logger
+        void printLog() const;        //!< Print to global logger
     };
 
     /// @brief Helper class for store information about each of the two rigid bodies

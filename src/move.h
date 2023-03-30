@@ -314,6 +314,7 @@ class VolumeMove : public Move {
     double logarithmic_volume_displacement_factor = 0.0;
     double old_volume = 0.0;
     double new_volume = 0.0;
+    void _move(Change& change) override;
 
   private:
     Geometry::VolumeMethod volume_scaling_method = Geometry::VolumeMethod::ISOTROPIC;
@@ -323,7 +324,6 @@ class VolumeMove : public Move {
     virtual void setNewVolume();
     void _to_json(json& j) const override;
     void _from_json(const json& j) override;
-    void _move(Change& change) override;
     void _accept(Change& change) override;
     void _reject(Change& change) override;
 
@@ -459,21 +459,20 @@ class GibbsEnsembleHelper {
     double total_volume = 0;                                        //!< Total volume of both containers, V1 + V2
     std::vector<MoleculeData::index_type> molids;                   //!< Molecule id's to exchange. Must be molecular.
     std::map<MoleculeData::index_type, size_t> total_num_particles; //! Total number of particles per species, N1 + N2
-    double exchangeEnergy(double energy_change) const;              //!< Exchange energy change with partner
+    double exchange(double value) const;                            //!< MPI exchange a double with partner
     GibbsEnsembleHelper(const Space& spc, const MPI::Controller& mpi);
 };
 
 /**
  * @brief Volume exchange move for the Gibbs ensemble (doi:10/cvzgw9)
- *
- * @todo
- * - We must disable `TranslationalEntropy()` from `MetropolisMonteCarlo::performMove()`
- *   Somehow this should to be made controlable, for example via the `Change` class(?)
  */
 class GibbsVolumeMove : public VolumeMove {
   private:
     GibbsEnsembleHelper gibbs;
     void setNewVolume() override;
+
+  protected:
+    void _move(Change& change) override;
 
   public:
     GibbsVolumeMove(Space& spc, const MPI::Controller& mpi);

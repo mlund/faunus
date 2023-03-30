@@ -13,7 +13,9 @@
 #include "spdlog/spdlog.h"
 #include <range/v3/view/counted.hpp>
 #include <range/v3/algorithm/count.hpp>
+#include <range/v3/algorithm/fold_left.hpp>
 #include <range/v3/view/transform.hpp>
+#include <range/v3/view/map.hpp>
 
 namespace Faunus::move {
 
@@ -423,33 +425,44 @@ GibbsEnsembleHelper::GibbsEnsembleHelper(const Space& spc, const MPI::Controller
     // exchange total number of particles for each molid
     for (const auto molid : molids) {
         const int n_self = spc.numMolecules<Group::Selectors::ACTIVE>(molid);
-        int n_partner = 0;
-        mpi.world.sendrecv(n_self, partner_rank, tag, n_partner, partner_rank, tag);
+        int n_partner = exchange(n_self);
         total_num_particles[molid] = n_self + n_partner;
     }
 }
 
-// in fact this can exchange any double value between ranks...
-double GibbsEnsembleHelper::exchangeEnergy(const double energy_change) const {
+double GibbsEnsembleHelper::exchange(const double value) const {
     const auto tag = mpl::tag_t(0);
-    double partner_energy_change = 0.0;
-    mpi.world.sendrecv(energy_change, partner_rank, tag, partner_energy_change, partner_rank, tag);
-    return partner_energy_change; // return partner energy change
+    double partner_value = 0.0;
+    mpi.world.sendrecv(value, partner_rank, tag, partner_value, partner_rank, tag);
+    return partner_value;
 }
+
+// -----------------------------------
 
 GibbsVolumeMove::GibbsVolumeMove(Space& spc, const MPI::Controller& mpi)
     : VolumeMove(spc, "gibbs_volume"s)
     , gibbs(spc, mpi) {}
 
+/**
+ * Here `1` is self and `2` is the partner. Note that the `u1` is captured by the normal trial energy
+ * and is excluded from the bias.
+ */
 double GibbsVolumeMove::bias([[maybe_unused]] Change& change, const double old_energy, const double new_energy) {
-    const auto partner_volume = gibbs.total_volume - spc.geometry.getVolume();
-    const auto self_energy_change = new_energy - old_energy;
-    const auto partner_energy_change = gibbs.exchangeEnergy(self_energy_change);
-    return partner_energy_change; // @todo + f(N, V) ...
+    namespace rv = ranges::cpp20::views;
+    auto molcount = [&](auto molid) { return spc.numMolecules<Group::Selectors::ACTIVE>(molid); };
+    const int total_num_particles = ranges::fold_left(gibbs.total_num_particles | rv::values, 0, std::plus<int>());
+    const double dV = 0; // @todo get volume change
+    const int n1 = ranges::fold_left(gibbs.molids | rv::transform(molcount), 0, std::plus<int>());
+    const int n2 = total_num_particles - n1;
+    const auto v1 = spc.geometry.getVolume();
+    const auto v2 = gibbs.total_volume - v1;
+    const auto u1 = new_energy - old_energy;
+    const auto u2 = gibbs.exchange(u1);
+    return u2 + n1 * std::log((v1 + dV) / v1) - n2 * std::log((v2 - dV) / v2);
 }
 
 /**
- * Expand volume in one cell, while contracting in the other
+ * Expand volume in one randomly picked cell, while contracting the other
  * @todo Check that we really keep the total volume constant(?) Read more in Frenkel+Smith about lnV displacement.
  */
 void GibbsVolumeMove::setNewVolume() {
@@ -459,6 +472,18 @@ void GibbsVolumeMove::setNewVolume() {
     }
     old_volume = spc.geometry.getVolume();
     new_volume = std::exp(std::log(old_volume) + sign * (slump() - 0.5) * logarithmic_volume_displacement_factor);
+}
+
+/**
+ * The MC routine includes a (trivial) contribution from translational
+ * entropy, e.g. the ideal gas contribution. For NVT simulations this has no effect,
+ * but for moves that perturb the density (V or N) this gives a contribution. In the
+ * Gibbs ensemble we handle this specially via the `bias()` function, and
+ * we therefore want to skip any calls to `TranslationalEnergy::energy()`.
+ */
+void GibbsVolumeMove::_move(Change& change) {
+    change.disable_translational_entropy = true;
+    VolumeMove::_move(change);
 }
 
 // -----------------------------------

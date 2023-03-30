@@ -310,14 +310,17 @@ NLOHMANN_JSON_SERIALIZE_ENUM(ConformationSwap::CopyPolicy, {{ConformationSwap::C
                                                             {ConformationSwap::CopyPolicy::CHARGES, "charges"}})
 
 class VolumeMove : public Move {
+  protected:
+    double logarithmic_volume_displacement_factor = 0.0;
+    double old_volume = 0.0;
+    double new_volume = 0.0;
+
   private:
     Geometry::VolumeMethod volume_scaling_method = Geometry::VolumeMethod::ISOTROPIC;
     Average<double> mean_volume;
     Average<double> mean_square_volume_change;
-    double old_volume = 0.0;
-    double new_volume = 0.0;
-    double logarithmic_volume_displacement_factor = 0.0;
 
+    virtual void setNewVolume();
     void _to_json(json& j) const override;
     void _from_json(const json& j) override;
     void _move(Change& change) override;
@@ -325,6 +328,7 @@ class VolumeMove : public Move {
     void _reject(Change& change) override;
 
   public:
+    VolumeMove(Space& spc, std::string_view name);
     explicit VolumeMove(Space& spc);
 }; // end of VolumeMove
 
@@ -438,6 +442,43 @@ class QuadrantJump : public Move {
 };
 
 #ifdef ENABLE_MPI
+
+/**
+ * @brief Helper class for the Gibbs ensemble generalized for multi-component systems
+ *
+ * This is the base used for volume and matter exchange in order to determine phase
+ * co-existence. Additional information:
+ *
+ * - [_Phase equilibria by simulation in the Gibbs ensemble_](https://dx.doi.org/10/cvzgw9)
+ * - Frenkel and Smith, 2nd Ed., Chapter 8
+ */
+class GibbsEnsembleHelper {
+  public:
+    const MPI::Controller& mpi;
+    int partner_rank;                                               //!< Either rank 0 or 1
+    double total_volume = 0;                                        //!< Total volume of both containers, V1 + V2
+    std::vector<MoleculeData::index_type> molids;                   //!< Molecule id's to exchange. Must be molecular.
+    std::map<MoleculeData::index_type, size_t> total_num_particles; //! Total number of particles per species, N1 + N2
+    double exchangeEnergy(double energy_change) const;              //!< Exchange energy change with partner
+    GibbsEnsembleHelper(const Space& spc, const MPI::Controller& mpi);
+};
+
+/**
+ * @brief Volume exchange move for the Gibbs ensemble (doi:10/cvzgw9)
+ *
+ * @todo
+ * - We must disable `TranslationalEntropy()` from `MetropolisMonteCarlo::performMove()`
+ *   Somehow this should to be made controlable, for example via the `Change` class(?)
+ */
+class GibbsVolumeMove : public VolumeMove {
+  private:
+    GibbsEnsembleHelper gibbs;
+    void setNewVolume() override;
+
+  public:
+    GibbsVolumeMove(Space& spc, const MPI::Controller& mpi);
+    double bias(Change& change, double old_energy, double new_energy) override;
+};
 
 /**
  * @brief Class for parallel tempering (aka replica exchange) using MPI

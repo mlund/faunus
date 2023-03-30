@@ -405,6 +405,64 @@ MoveCollection::move_iterator MoveCollection::sample() {
 
 #ifdef ENABLE_MPI
 
+GibbsEnsembleHelper::GibbsEnsembleHelper(const Space& spc, const MPI::Controller& mpi)
+    : mpi(mpi) {
+    if (mpi.world.size() != 2) {
+        throw ConfigurationError("Exactly two MPI processes required");
+    }
+    if (mpi.world.rank() == 0) {
+        partner_rank = 1;
+    } else {
+        partner_rank = 0;
+    }
+    // exchange total volume
+    const auto tag = mpl::tag_t(0);
+    mpi.world.sendrecv(spc.geometry.getVolume(), partner_rank, tag, total_volume, partner_rank, tag);
+    total_volume += spc.geometry.getVolume();
+
+    // exchange total number of particles for each molid
+    for (const auto molid : molids) {
+        const int n_self = spc.numMolecules<Group::Selectors::ACTIVE>(molid);
+        int n_partner = 0;
+        mpi.world.sendrecv(n_self, partner_rank, tag, n_partner, partner_rank, tag);
+        total_num_particles[molid] = n_self + n_partner;
+    }
+}
+
+// in fact this can exchange any double value between ranks...
+double GibbsEnsembleHelper::exchangeEnergy(const double energy_change) const {
+    const auto tag = mpl::tag_t(0);
+    double partner_energy_change = 0.0;
+    mpi.world.sendrecv(energy_change, partner_rank, tag, partner_energy_change, partner_rank, tag);
+    return partner_energy_change; // return partner energy change
+}
+
+GibbsVolumeMove::GibbsVolumeMove(Space& spc, const MPI::Controller& mpi)
+    : VolumeMove(spc, "gibbs_volume"s)
+    , gibbs(spc, mpi) {}
+
+double GibbsVolumeMove::bias([[maybe_unused]] Change& change, const double old_energy, const double new_energy) {
+    const auto partner_volume = gibbs.total_volume - spc.geometry.getVolume();
+    const auto self_energy_change = new_energy - old_energy;
+    const auto partner_energy_change = gibbs.exchangeEnergy(self_energy_change);
+    return partner_energy_change; // @todo + f(N, V) ...
+}
+
+/**
+ * Expand volume in one cell, while contracting in the other
+ * @todo Check that we really keep the total volume constant(?) Read more in Frenkel+Smith about lnV displacement.
+ */
+void GibbsVolumeMove::setNewVolume() {
+    double sign = static_cast<bool>(random.range(0, 1)) ? 1.0 : -1.0;
+    if (gibbs.mpi.isMaster()) {
+        sign = -sign;
+    }
+    old_volume = spc.geometry.getVolume();
+    new_volume = std::exp(std::log(old_volume) + sign * (slump() - 0.5) * logarithmic_volume_displacement_factor);
+}
+
+// -----------------------------------
+
 void ParallelTempering::_to_json(json& j) const {
     j = {{"replicas", mpi.world.size()},
          {"format", exchange_particles.getFormat()},
@@ -518,12 +576,17 @@ void VolumeMove::_from_json(const json& j) {
         throw ConfigurationError("invalid volume scaling method");
     }
 }
+
+void VolumeMove::setNewVolume() {
+    old_volume = spc.geometry.getVolume();
+    new_volume = std::exp(std::log(old_volume) + (slump() - 0.5) * logarithmic_volume_displacement_factor);
+}
+
 void VolumeMove::_move(Change& change) {
     if (logarithmic_volume_displacement_factor > 0.0) {
         change.volume_change = true;
         change.everything = true;
-        old_volume = spc.geometry.getVolume();
-        new_volume = std::exp(std::log(old_volume) + (slump() - 0.5) * logarithmic_volume_displacement_factor);
+        setNewVolume();
         spc.scaleVolume(new_volume, volume_scaling_method);
     }
 }
@@ -533,10 +596,13 @@ void VolumeMove::_accept([[maybe_unused]] Change& change) {
     assert(std::fabs(spc.geometry.getVolume() - new_volume) < 1.0e-9);
 }
 
-VolumeMove::VolumeMove(Space& spc)
-    : Move(spc, "volume"s, ""s) {
+VolumeMove::VolumeMove(Space& spc, std::string_view name)
+    : Move(spc, name, ""s) {
     repeat = 1;
 }
+
+VolumeMove::VolumeMove(Space& spc)
+    : VolumeMove(spc, "volume"s) {}
 
 void VolumeMove::_reject([[maybe_unused]] Change& change) {
     mean_square_volume_change += 0.0;
@@ -1144,6 +1210,7 @@ SmarterTranslateRotate::SmarterTranslateRotate(Space& spc, const json& j)
     , smartmc(spc, j.at("region")) {
     this->from_json(j);
 }
+
 } // namespace Faunus::move
 
 #ifdef DOCTEST_LIBRARY_INCLUDED

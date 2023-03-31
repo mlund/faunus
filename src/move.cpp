@@ -465,7 +465,13 @@ double GibbsVolumeMove::bias([[maybe_unused]] Change& change, const double old_e
 
 /**
  * Expand volume in one randomly picked cell, while contracting the other
- * @todo Check that we really keep the total volume constant(?) Read more in Frenkel+Smith about lnV displacement.
+ *
+ * Here we perform a move in ln(v1/v2) as described in the book of Frenkel and Smith, Section 8.3.2
+ *
+ *     v1(n) / v2(n) = exp{ ln( v1_o / v2_o ) + 𝝳 } = f
+ *     => v1(n) = v_tot / ( 1 / f + 1)
+ *
+ * @todo check this and ensure total volume is conserved in both cells
  */
 void GibbsVolumeMove::setNewVolume() {
     double sign = static_cast<bool>(random.range(0, 1)) ? 1.0 : -1.0;
@@ -473,7 +479,10 @@ void GibbsVolumeMove::setNewVolume() {
         sign = -sign;
     }
     old_volume = spc.geometry.getVolume();
-    new_volume = std::exp(std::log(old_volume) + sign * (slump() - 0.5) * logarithmic_volume_displacement_factor);
+    const auto partner_old_volume = gibbs.total_volume - old_volume;
+    const auto f = std::exp(std::log(old_volume / partner_old_volume)
+            + sign * (slump() - 0.5) * logarithmic_volume_displacement_factor);
+    new_volume = gibbs.total_volume / (1.0 / f + 1.0);
 }
 
 /**

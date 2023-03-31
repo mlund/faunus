@@ -458,7 +458,9 @@ double GibbsVolumeMove::bias([[maybe_unused]] Change& change, const double old_e
     const auto v2 = gibbs.total_volume - v1;
     const auto u1 = new_energy - old_energy;
     const auto u2 = gibbs.exchange(u1);
-    return u2 + n1 * std::log((v1 + dV) / v1) - n2 * std::log((v2 - dV) / v2);
+    // note that this is for direct volume displacement:
+    // @todo Implement for ln V displacement
+    return u2 - n1 * std::log((v1 + dV) / v1) - n2 * std::log((v2 - dV) / v2);
 }
 
 /**

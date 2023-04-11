@@ -471,7 +471,7 @@ class GibbsVolumeMove : public VolumeMove {
   private:
     const MPI::Controller& mpi;
     std::unique_ptr<GibbsEnsembleHelper> gibbs;
-    const bool direct_volume_displacement = true;
+    bool direct_volume_displacement = true; //!< True if direct displacement in V; false if lnV displacement
     void setNewVolume() override;
     void _from_json(const json& j) override;
 

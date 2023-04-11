@@ -761,6 +761,22 @@ properties:
                     additionalProperties: false
                     type: object
 
+                gibbs_volume:
+                    properties:
+                        dV: {type: number}
+                        method:
+                            type: string
+                            enum: [isotropic]
+                        repeat: {type: integer}
+                        molecules:
+                            type: array
+                            items: {type: string}
+                            minItems: 1
+                            description: Array of molecules at constant chemical potential
+                    required: [dV, molecules]
+                    additionalProperties: false
+                    type: object
+
                 crankshaft:
                     properties:
                         dprot: {type: number}

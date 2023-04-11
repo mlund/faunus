@@ -13,7 +13,9 @@
 #include "spdlog/spdlog.h"
 #include <range/v3/view/counted.hpp>
 #include <range/v3/algorithm/count.hpp>
+#include <range/v3/algorithm/fold_left.hpp>
 #include <range/v3/view/transform.hpp>
+#include <range/v3/view/map.hpp>
 
 namespace Faunus::move {
 
@@ -355,6 +357,12 @@ std::unique_ptr<Move> createMove(const std::string& name, const json& properties
 #else
             throw ConfigurationError("{} requires that Faunus is compiled with MPI", name);
 #endif
+        } else if (name == "gibbs_volume") {
+#ifdef ENABLE_MPI
+            move = std::make_unique<GibbsVolumeMove>(spc, MPI::mpi);
+#else
+            throw ConfigurationError("{} requires that Faunus is compiled with MPI", name);
+#endif
         }
         if (!move) {
             throw ConfigurationError("unknown move '{}'", name);
@@ -404,6 +412,139 @@ MoveCollection::move_iterator MoveCollection::sample() {
 }
 
 #ifdef ENABLE_MPI
+
+GibbsEnsembleHelper::GibbsEnsembleHelper(const Space& spc, const MPI::Controller& mpi, const VectorOfMolIds& molids)
+    : mpi(mpi)
+    , molids(molids) {
+    if (molids.empty()) {
+        throw ConfigurationError("At least one molecule type requred");
+    }
+    if (mpi.world.size() != 2) {
+        throw ConfigurationError("Exactly two MPI processes required");
+    }
+    if (mpi.world.rank() == 0) {
+        partner_rank = 1;
+    } else {
+        partner_rank = 0;
+    }
+    // exchange and sum up total volume
+    const double volume_self = spc.geometry.getVolume();
+    const double volume_partner = exchange(volume_self);
+    total_volume = volume_self + volume_partner;
+
+    // sum up and exchange total number of particles
+    total_num_particles = 0;
+    for (const auto id : molids) {
+        total_num_particles += spc.numMolecules<Group::Selectors::ACTIVE>(id);
+    }
+    const int total_num_particles_partner = static_cast<int>(exchange(static_cast<double>(total_num_particles)));
+    total_num_particles += total_num_particles_partner;
+}
+
+double GibbsEnsembleHelper::exchange(const double value) const {
+    const auto tag = mpl::tag_t(0);
+    double partner_value = 0.0;
+    mpi.world.sendrecv(value, partner_rank, tag, partner_value, partner_rank, tag);
+    return partner_value;
+}
+
+// -----------------------------------
+
+GibbsVolumeMove::GibbsVolumeMove(Space& spc, const MPI::Controller& mpi)
+    : VolumeMove(spc, "gibbs_volume"s)
+    , mpi(mpi) {
+    faunus_logger->warn("{}: This move is marked UNSTABLE - carefully check your output ⚠️", name);
+}
+
+/**
+ * Here `1` is self and `2` is the partner. Note that the `du1` is captured by the normal trial energy
+ * and is excluded from the bias.
+ */
+double GibbsVolumeMove::bias([[maybe_unused]] Change& change, const double old_energy, const double new_energy) {
+    namespace rv = ranges::cpp20::views;
+    auto to_num_molecules = [&](auto id) { return spc.numMolecules<Group::Selectors::ACTIVE>(id); };
+    const int n1 = ranges::fold_left(gibbs->molids | rv::transform(to_num_molecules), 0, std::plus<int>());
+    const int n2 = gibbs->total_num_particles - n1;
+    const auto dv = new_volume - old_volume;
+    const auto v1 = old_volume;
+    const auto v2 = gibbs->total_volume - v1;
+    const auto du1 = new_energy - old_energy;
+    const auto du2 = gibbs->exchange(du1);
+
+    double gibbs_bias = 0.0;
+    if (direct_volume_displacement) {
+        gibbs_bias = -n1 * std::log((v1 + dv) / v1) - n2 * std::log((v2 - dv) / v2);
+    } else {
+        // @todo implement for ln V displacement
+        throw std::runtime_error("unimplemented");
+    }
+    faunus_logger->trace("{}: n1={} n2={} v1={:.1f} v2={:.1f} du1={:.2f} du2={:.2f} dv={:.1f} bias={:.2E}", name, n1,
+                         n2, v1, v2, du1, du2, dv, gibbs_bias);
+    return du2 + gibbs_bias;
+}
+
+/**
+ * Expand volume in one randomly picked cell, while contracting the other
+ *
+ * Here we perform a move in ln(v1/v2) as described in the book of Frenkel and Smith, Section 8.3.2
+ *
+ *     v1(n) / v2(n) = exp{ ln( v1_o / v2_o ) + 𝝳 } = f
+ *     => v1(n) = v_tot / ( 1 / f + 1)
+ */
+void GibbsVolumeMove::setNewVolume() {
+    double sign = static_cast<bool>(slump.range(0, 1)) ? -1.0 : 1.0;
+    if (gibbs->mpi.isMaster()) {
+        sign = -sign;
+    }
+    old_volume = spc.geometry.getVolume();
+    const auto partner_old_volume = gibbs->total_volume - old_volume;
+
+    if (direct_volume_displacement) {
+        new_volume = old_volume + sign * (slump() - 0.5) * logarithmic_volume_displacement_factor;
+    } else {
+        // ln(V) displacement - see Frenkel and Smith, Section 8.3.2
+        const auto f = std::exp(std::log(old_volume / partner_old_volume) +
+                                sign * (slump() - 0.5) * logarithmic_volume_displacement_factor);
+        new_volume = gibbs->total_volume / (1.0 / f + 1.0);
+    }
+
+    // debug info to verify volume conservation
+    if (faunus_logger->level() <= spdlog::level::trace) {
+        const auto dV = new_volume - old_volume;
+        const auto dV_other = gibbs->exchange(dV);
+        if (mpi.isMaster()) {
+            faunus_logger->trace("dV1 = {:.3f} dV2 = {:.3f}", dV, dV_other);
+        }
+    }
+}
+
+/**
+ * The MC routine includes a (trivial) contribution from translational
+ * entropy, e.g. the ideal gas contribution. For NVT simulations this has no effect,
+ * but for moves that perturb the density (V or N) this gives a contribution. In the
+ * Gibbs ensemble we handle this specially via the `bias()` function, and
+ * we therefore want to skip any calls to `TranslationalEnergy::energy()`.
+ */
+void GibbsVolumeMove::_move(Change& change) {
+    change.disable_translational_entropy = true;
+    VolumeMove::_move(change);
+}
+
+void GibbsVolumeMove::_from_json(const json& j) {
+    VolumeMove::_from_json(j);
+    if (volume_scaling_method != Geometry::VolumeMethod::ISOTROPIC) {
+        throw ConfigurationError("Gibbs ensemble currently requires isotropic volume scaling");
+    }
+    direct_volume_displacement = j.value("direct_volume_displacement", true);
+    const auto names = j.at("molecules").get<std::vector<std::string>>();
+    const auto molids = Faunus::names2ids(Faunus::molecules, names);
+    gibbs = std::make_unique<GibbsEnsembleHelper>(spc, mpi, molids);
+    if (!gibbs) {
+        throw std::runtime_error("Gibbs ensemble error - please file a bug report");
+    }
+}
+
+// -----------------------------------
 
 void ParallelTempering::_to_json(json& j) const {
     j = {{"replicas", mpi.world.size()},
@@ -518,13 +659,25 @@ void VolumeMove::_from_json(const json& j) {
         throw ConfigurationError("invalid volume scaling method");
     }
 }
+
+void VolumeMove::setNewVolume() {
+    old_volume = spc.geometry.getVolume();
+    new_volume = std::exp(std::log(old_volume) + (slump() - 0.5) * logarithmic_volume_displacement_factor);
+}
+
 void VolumeMove::_move(Change& change) {
+    const double minimum_volume_threshold = 10.0; // Å^3
     if (logarithmic_volume_displacement_factor > 0.0) {
         change.volume_change = true;
         change.everything = true;
-        old_volume = spc.geometry.getVolume();
-        new_volume = std::exp(std::log(old_volume) + (slump() - 0.5) * logarithmic_volume_displacement_factor);
-        spc.scaleVolume(new_volume, volume_scaling_method);
+        setNewVolume();
+        if (new_volume >= minimum_volume_threshold) {
+            spc.scaleVolume(new_volume, volume_scaling_method);
+        } else {
+            faunus_logger->warn("{}: minimum volume of {} Å³ reached", name, minimum_volume_threshold);
+            new_volume = old_volume;
+            change.clear();
+        }
     }
 }
 void VolumeMove::_accept([[maybe_unused]] Change& change) {
@@ -533,10 +686,13 @@ void VolumeMove::_accept([[maybe_unused]] Change& change) {
     assert(std::fabs(spc.geometry.getVolume() - new_volume) < 1.0e-9);
 }
 
-VolumeMove::VolumeMove(Space& spc)
-    : Move(spc, "volume"s, ""s) {
+VolumeMove::VolumeMove(Space& spc, std::string_view name)
+    : Move(spc, name, ""s) {
     repeat = 1;
 }
+
+VolumeMove::VolumeMove(Space& spc)
+    : VolumeMove(spc, "volume"s) {}
 
 void VolumeMove::_reject([[maybe_unused]] Change& change) {
     mean_square_volume_change += 0.0;
@@ -1144,6 +1300,7 @@ SmarterTranslateRotate::SmarterTranslateRotate(Space& spc, const json& j)
     , smartmc(spc, j.at("region")) {
     this->from_json(j);
 }
+
 } // namespace Faunus::move
 
 #ifdef DOCTEST_LIBRARY_INCLUDED

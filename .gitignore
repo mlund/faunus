@@ -13,8 +13,13 @@ sids/
 unittests.log
 a.out
 
-# VSC
+# VisualStudioCode
 .vscode/settings.json
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
 
 # CMake
 CMakeCache.txt

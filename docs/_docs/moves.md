@@ -388,6 +388,16 @@ where $d=3$ for `isotropic`, $d=2$ for `xy`, and $d=1$ for `z`.
 
 _Warning:_ Untested for cylinders, slits.
 
+## Gibbs Ensemble (experimental)
+
+To exchange volume between two cells in the _Gibbs Ensemble_, use `gibbs_volume` which takes the same input
+as `volume` and is available only if Faunus was compiled with MPI support.
+In addition, a list of `molecules` at constant chemical potential is required:
+
+~~~ yaml
+gibbs_volume: { dV: 1.0, molecules: ["caffeine"] }
+~~~
+
 
 ## Reactive Canonical Monte Carlo
 

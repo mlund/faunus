@@ -302,7 +302,7 @@ double TranslationalEntropy::moleculeChangeEnergy(const int molid) const {
  */
 double TranslationalEntropy::energy(const Change& change) {
     double energy_change = 0.0;
-    if (!change.matter_change) {
+    if (!change.matter_change || change.disable_translational_entropy) {
         return energy_change;
     }
     std::set<MoleculeData::index_type> already_processed;   // ignore future encounters of these molid's

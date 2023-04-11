@@ -32,6 +32,7 @@ struct Change {
     bool volume_change = false;              //!< The volume has changed
     bool matter_change = false;              //!< The number of atomic or molecular species has changed
     bool moved_to_moved_interactions = true; //!< If several groups are moved, should they interact with each other?
+    bool disable_translational_entropy = false; //!< Force exclusion of translational entropy
 
     //! Properties of changed groups
     struct GroupChange {

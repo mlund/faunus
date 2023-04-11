@@ -311,19 +311,19 @@ NLOHMANN_JSON_SERIALIZE_ENUM(ConformationSwap::CopyPolicy, {{ConformationSwap::C
 
 class VolumeMove : public Move {
   protected:
+    Geometry::VolumeMethod volume_scaling_method = Geometry::VolumeMethod::ISOTROPIC;
     double logarithmic_volume_displacement_factor = 0.0;
     double old_volume = 0.0;
     double new_volume = 0.0;
     void _move(Change& change) override;
+    void _from_json(const json& j) override;
 
   private:
-    Geometry::VolumeMethod volume_scaling_method = Geometry::VolumeMethod::ISOTROPIC;
     Average<double> mean_volume;
     Average<double> mean_square_volume_change;
 
     virtual void setNewVolume();
     void _to_json(json& j) const override;
-    void _from_json(const json& j) override;
     void _accept(Change& change) override;
     void _reject(Change& change) override;
 
@@ -454,13 +454,14 @@ class QuadrantJump : public Move {
  */
 class GibbsEnsembleHelper {
   public:
+    using VectorOfMolIds = std::vector<MoleculeData::index_type>;
     const MPI::Controller& mpi;
-    int partner_rank;                                               //!< Either rank 0 or 1
-    double total_volume = 0;                                        //!< Total volume of both containers, V1 + V2
-    std::vector<MoleculeData::index_type> molids;                   //!< Molecule id's to exchange. Must be molecular.
-    std::map<MoleculeData::index_type, size_t> total_num_particles; //! Total number of particles per species, N1 + N2
+    int partner_rank = -1;                                          //!< Either rank 0 or 1
+    double total_volume = 0;                                        //!< Total volume of both cells
+    int total_num_particles = 0;                                    //! Total number of particles in both cells
+    VectorOfMolIds molids;                                          //!< Molecule id's to exchange. Must be molecular.
     double exchange(double value) const;                            //!< MPI exchange a double with partner
-    GibbsEnsembleHelper(const Space& spc, const MPI::Controller& mpi);
+    GibbsEnsembleHelper(const Space& spc, const MPI::Controller& mpi, const VectorOfMolIds& molids);
 };
 
 /**
@@ -468,8 +469,11 @@ class GibbsEnsembleHelper {
  */
 class GibbsVolumeMove : public VolumeMove {
   private:
-    GibbsEnsembleHelper gibbs;
+    const MPI::Controller& mpi;
+    std::unique_ptr<GibbsEnsembleHelper> gibbs;
+    const bool direct_volume_displacement = true;
     void setNewVolume() override;
+    void _from_json(const json& j) override;
 
   protected:
     void _move(Change& change) override;

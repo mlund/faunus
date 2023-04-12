@@ -459,7 +459,9 @@ double GibbsEnsembleHelper::exchange(const double value) const {
 GibbsVolumeMove::GibbsVolumeMove(Space& spc, const MPI::Controller& mpi)
     : VolumeMove(spc, "gibbs_volume"s)
     , mpi(mpi) {
-    faunus_logger->warn("{}: This move is marked UNSTABLE - carefully check your output ⚠️", name);
+    if (mpi.isMaster()) {
+        faunus_logger->warn("{}: This move is marked UNSTABLE - carefully check your output ⚠️", name);
+    }
 }
 
 /**
@@ -556,20 +558,29 @@ GibbsMatterMove::GibbsMatterMove(Space& spc, const MPI::Controller& mpi)
     : Move(spc, "gibbs_matter"s, "")
     , mpi(mpi) {
     molecule_bouncer = std::make_unique<Speciation::MolecularGroupDeActivator>(spc, random, true);
-    faunus_logger->warn("{}: This move is marked UNSTABLE - carefully check your output ⚠️", name);
+    if (mpi.isMaster()) {
+        faunus_logger->warn("{}: This move is marked UNSTABLE - carefully check your output ⚠️", name);
+    }
 }
 
-void GibbsMatterMove::_to_json(json& j) const {}
+void GibbsMatterMove::_to_json([[maybe_unused]] json& j) const {}
 
 void GibbsMatterMove::_from_json(const json& j) {
-    const auto name = j.at("molecule").get<std::string>();
-    const auto molids = Faunus::names2ids(Faunus::molecules, {name});
+    const auto molname = j.at("molecule").get<std::string>();
+    const auto molids = Faunus::names2ids(Faunus::molecules, {molname});
     gibbs = std::make_unique<GibbsEnsembleHelper>(spc, mpi, molids);
     if (!gibbs) {
         throw std::runtime_error("Gibbs ensemble error - please file a bug report");
     }
     assert(gibbs->molids.size() == 1);
     molid = gibbs->molids.front();
+
+    const auto capacity1 = spc.numMolecules<Group::Selectors::ANY>(molid);
+    const auto capacity2 = gibbs->exchange(capacity1);
+    if ((capacity1 < gibbs->total_num_particles) || (capacity2 < gibbs->total_num_particles)) {
+        throw ConfigurationError("{}: '{}' must have a capacity of at least {} molecules", name, molname,
+                                 gibbs->total_num_particles);
+    }
 }
 
 void GibbsMatterMove::_move(Change& change) {
@@ -578,16 +589,20 @@ void GibbsMatterMove::_move(Change& change) {
         insert = !insert;                          // delete in one cell; remove from the other
     }
 
+    const auto selection = (insert) ? Space::Selection::INACTIVE : Space::Selection::ACTIVE;
+    const auto group = spc.randomMolecule(molid, random, selection);
+
+    const bool no_group = (group == spc.groups.end());
+    const bool cell_is_full = (spc.numMolecules<Space::GroupType::ACTIVE>(molid) == gibbs->total_num_particles);
+    if (no_group || (insert && cell_is_full)) {
+        change.clear();
+        return;
+    }
+
     change.disable_translational_entropy = true;
     change.matter_change = true;
     double _bias;
     auto& group_change = change.groups.emplace_back();
-
-    const auto selection = (insert) ? Space::Selection::INACTIVE : Space::Selection::ACTIVE;
-    const auto group = spc.randomMolecule(molid, random, selection);
-    if (group == spc.groups.end()) {
-        throw std::runtime_error("{}: particle depletion or overflow not yet handled");
-    }
     if (insert) {
         std::tie(group_change, _bias) = molecule_bouncer->activate(*group);
     } else {

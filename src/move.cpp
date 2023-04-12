@@ -363,6 +363,12 @@ std::unique_ptr<Move> createMove(const std::string& name, const json& properties
 #else
             throw ConfigurationError("{} requires that Faunus is compiled with MPI", name);
 #endif
+        } else if (name == "gibbs_matter") {
+#ifdef ENABLE_MPI
+            move = std::make_unique<GibbsMatterMove>(spc, MPI::mpi);
+#else
+            throw ConfigurationError("{} requires that Faunus is compiled with MPI", name);
+#endif
         }
         if (!move) {
             throw ConfigurationError("unknown move '{}'", name);
@@ -542,6 +548,81 @@ void GibbsVolumeMove::_from_json(const json& j) {
     if (!gibbs) {
         throw std::runtime_error("Gibbs ensemble error - please file a bug report");
     }
+}
+
+// -----------------------------------
+
+GibbsMatterMove::GibbsMatterMove(Space& spc, const MPI::Controller& mpi)
+    : Move(spc, "gibbs_matter"s, "")
+    , mpi(mpi) {
+    molecule_bouncer = std::make_unique<Speciation::MolecularGroupDeActivator>(spc, random, true);
+    faunus_logger->warn("{}: This move is marked UNSTABLE - carefully check your output ⚠️", name);
+}
+
+void GibbsMatterMove::_to_json(json& j) const {}
+
+void GibbsMatterMove::_from_json(const json& j) {
+    const auto name = j.at("molecule").get<std::string>();
+    const auto molids = Faunus::names2ids(Faunus::molecules, {name});
+    gibbs = std::make_unique<GibbsEnsembleHelper>(spc, mpi, molids);
+    if (!gibbs) {
+        throw std::runtime_error("Gibbs ensemble error - please file a bug report");
+    }
+    assert(gibbs->molids.size() == 1);
+    molid = gibbs->molids.front();
+}
+
+void GibbsMatterMove::_move(Change& change) {
+    insert = static_cast<bool>(slump.range(0, 1)); // note internal random generator!
+    if (gibbs->mpi.isMaster()) {
+        insert = !insert;                          // delete in one cell; remove from the other
+    }
+
+    change.disable_translational_entropy = true;
+    change.matter_change = true;
+    double _bias;
+    auto& group_change = change.groups.emplace_back();
+
+    const auto selection = (insert) ? Space::Selection::INACTIVE : Space::Selection::ACTIVE;
+    const auto group = spc.randomMolecule(molid, random, selection);
+    if (group == spc.groups.end()) {
+        throw std::runtime_error("{}: particle depletion or overflow not yet handled");
+    }
+    if (insert) {
+        std::tie(group_change, _bias) = molecule_bouncer->activate(*group);
+    } else {
+        std::tie(group_change, _bias) = molecule_bouncer->deactivate(*group);
+    }
+}
+
+/**
+ * Note that `du1` is captured by the normal trial energy and is excluded from the bias.
+ *
+ * See Eq. 8 of Panagiotopoulus, Quirke, Stapleton, Tildesley, Mol. Phys. 1988:63:527
+ */
+double GibbsMatterMove::bias([[maybe_unused]] Change& change, double old_energy, double new_energy) {
+    const auto n1_new = spc.numMolecules<Group::Selectors::ACTIVE>(molid);
+    const auto n2_new = gibbs->total_num_particles - n1_new;
+    const auto v1 = spc.geometry.getVolume();
+    const auto v2 = gibbs->total_volume - v1;
+    const auto du1 = new_energy - old_energy;
+    const auto du2 = gibbs->exchange(du1);
+
+    double gibbs_bias;
+    if (insert) {
+        gibbs_bias = std::log(v2 * n1_new / (v1 * (n2_new - 1.0)));
+    } else {
+        gibbs_bias = std::log(v1 * n2_new / (v2 * (n1_new - 1.0)));
+    }
+
+    if (faunus_logger->level() <= spdlog::level::trace) {
+        const auto gibbs_bias_other = gibbs->exchange(gibbs_bias);
+        if (mpi.isMaster()) {
+            faunus_logger->trace("{}: bias={:.2E} other_bias={:.2E}", name, gibbs_bias, gibbs_bias_other);
+        }
+    }
+
+    return du2 + gibbs_bias; // note that du1 is added by the normal MC move
 }
 
 // -----------------------------------

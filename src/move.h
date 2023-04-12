@@ -17,6 +17,10 @@
 
 namespace Faunus {
 
+namespace Speciation {
+class GroupDeActivator;
+}
+
 namespace Energy {
 class Hamiltonian;
 }
@@ -480,6 +484,27 @@ class GibbsVolumeMove : public VolumeMove {
 
   public:
     GibbsVolumeMove(Space& spc, const MPI::Controller& mpi);
+    double bias(Change& change, double old_energy, double new_energy) override;
+};
+
+/**
+ * @brief Matter (particle) exchange move for the Gibbs ensemble (doi:10/cvzgw9)
+ */
+class GibbsMatterMove : public Move {
+  private:
+    bool insert;                    //!< Insert or delete particle?
+    MoleculeData::index_type molid; //!< Molid to insert or delete
+    const MPI::Controller& mpi;
+    std::unique_ptr<GibbsEnsembleHelper> gibbs;
+    std::unique_ptr<Speciation::GroupDeActivator> molecule_bouncer;
+    void _from_json(const json& j) override;
+    void _to_json(json& j) const override;
+
+  protected:
+    void _move(Change& change) override;
+
+  public:
+    GibbsMatterMove(Space& spc, const MPI::Controller& mpi);
     double bias(Change& change, double old_energy, double new_energy) override;
 };
 

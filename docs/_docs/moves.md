@@ -388,15 +388,30 @@ where $d=3$ for `isotropic`, $d=2$ for `xy`, and $d=1$ for `z`.
 
 _Warning:_ Untested for cylinders, slits.
 
-## Gibbs Ensemble (experimental)
+## Gibbs Ensemble (unstable)
 
 To exchange volume between two cells in the _Gibbs Ensemble_, use `gibbs_volume` which takes the same input
-as `volume` and is available only if Faunus was compiled with MPI support.
-In addition, a list of `molecules` at constant chemical potential is required:
+as `volume` and is available only if Faunus is compiled with MPI support.
+Multi-component mixtures are supported via the required `molecules` and `molecule` keywords which indicate which species
+are to be affected. Matter exchange is done in separate moves, per species:
 
 ~~~ yaml
-gibbs_volume: { dV: 1.0, molecules: ["caffeine"] }
+moves:
+  - gibbs_volume: { dV: 1.0, molecules: ["A", "B"] } # exchange volume
+  - gibbs_matter: { molecule: "A" } # exchange A molecules
+  - gibbs_matter: { molecule: "B" } # exchange B molecules
 ~~~
+
+### Running
+
+Faunus must be compiled with MPI support, check with `faunus --version`, and _exactly two_ processes must be given.
+
+- If the starting conditions for each cell are identical, use `--nopfx` and a single `input.json` file:
+  ~~~ bash
+  mpirun -np 2 faunus --nopfx --input input.json
+  ~~~
+- If the input differs, e.g. different initial volumes or number of particles, create two input files, prefixed with `mpi0.` and `mpi1.`,
+  and skip the `--nopfx` flag.
 
 
 ## Reactive Canonical Monte Carlo

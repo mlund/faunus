@@ -464,6 +464,8 @@ class GibbsEnsembleHelper {
     double total_volume = 0;                                        //!< Total volume of both cells
     int total_num_particles = 0;                                    //! Total number of particles in both cells
     VectorOfMolIds molids;                                          //!< Molecule id's to exchange. Must be molecular.
+    std::pair<int, int> currentNumParticles(const Space& spc) const;  //!< Current number of particles in cell 1 and 2
+    std::pair<double, double> currentVolumes(const Space& spc) const; //!< Current volumes in cell 1 and 2
     double exchange(double value) const;                            //!< MPI exchange a double with partner
     GibbsEnsembleHelper(const Space& spc, const MPI::Controller& mpi, const VectorOfMolIds& molids);
 };
@@ -478,6 +480,7 @@ class GibbsVolumeMove : public VolumeMove {
     bool direct_volume_displacement = true; //!< True if direct displacement in V; false if lnV displacement
     void setNewVolume() override;
     void _from_json(const json& j) override;
+    bool volumeTooExtreme() const; //!< Check if volume is too small or too large
 
   protected:
     void _move(Change& change) override;
@@ -489,6 +492,9 @@ class GibbsVolumeMove : public VolumeMove {
 
 /**
  * @brief Matter (particle) exchange move for the Gibbs ensemble (doi:10/cvzgw9)
+ *
+ * - Each of the two cells runs as a separate MPI process
+ * - Multi-component systems are supported; just add a move instance for each species
  */
 class GibbsMatterMove : public Move {
   private:

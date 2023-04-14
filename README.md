@@ -13,7 +13,7 @@ Welcome to Faunus
 Faunus is a molecular simulation package for Metropolis Monte Carlo simulations of
 molecular systems. Below is a brief overview of features:
 
-- Canonical, Grand Canonical, Isobaric-Isothermal statistical mechanical ensembles
+- Canonical, Grand Canonical, Isobaric-Isothermal, Gibbs statistical mechanical ensembles
 - General hamiltonian parallel tempering (temperature, screening length, bonds etc.)
 - Anisotropic atoms (multipoles, sphero-cylinders, capped particles)
 - Speciation moves (pKa prediction, Hofmeister effects, general equilibrium reactions etc.)

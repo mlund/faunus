@@ -761,9 +761,17 @@ properties:
                     additionalProperties: false
                     type: object
 
+                gibbs_matter:
+                    properties:
+                        repeat: {type: integer}
+                        molecule: {type: string, description: "Molecule type to exchange"}
+                    required: [molecule]
+                    additionalProperties: false
+                    type: object
+
                 gibbs_volume:
                     properties:
-                        dV: {type: number}
+                        dV: {type: number, description: "Volume displacement parameter (Å³)"}
                         method:
                             type: string
                             enum: [isotropic]
@@ -772,7 +780,7 @@ properties:
                             type: array
                             items: {type: string}
                             minItems: 1
-                            description: Array of molecules at constant chemical potential
+                            description: "Array of molecules at constant chemical potential"
                     required: [dV, molecules]
                     additionalProperties: false
                     type: object

@@ -306,6 +306,8 @@ install(FILES
         ${EXAMPLES_DIR}/bend/bend.yml
         ${EXAMPLES_DIR}/bend/bend.out.json
         ${EXAMPLES_DIR}/bend/mc_vs_md.agr
+        ${EXAMPLES_DIR}/gibbs-ensemble/gibbs-ensemble.yml
+        ${EXAMPLES_DIR}/gibbs-ensemble/gibbs-ensemble.ipynb
         ${EXAMPLES_DIR}/gromos_bend/gromos_bend.yml
         ${EXAMPLES_DIR}/gromos_bend/gromos_bend.out.json
         ${EXAMPLES_DIR}/gromos_bend/gromos_bend_plot.py

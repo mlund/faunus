@@ -363,6 +363,12 @@ std::unique_ptr<Move> createMove(const std::string& name, const json& properties
 #else
             throw ConfigurationError("{} requires that Faunus is compiled with MPI", name);
 #endif
+        } else if (name == "gibbs_matter") {
+#ifdef ENABLE_MPI
+            move = std::make_unique<GibbsMatterMove>(spc, MPI::mpi);
+#else
+            throw ConfigurationError("{} requires that Faunus is compiled with MPI", name);
+#endif
         }
         if (!move) {
             throw ConfigurationError("unknown move '{}'", name);
@@ -417,10 +423,12 @@ GibbsEnsembleHelper::GibbsEnsembleHelper(const Space& spc, const MPI::Controller
     : mpi(mpi)
     , molids(molids) {
     if (molids.empty()) {
-        throw ConfigurationError("At least one molecule type requred");
+        faunus_logger->error("Gibbs ensemble: At least one molecule type required");
+        mpi.world.abort(1);
     }
     if (mpi.world.size() != 2) {
-        throw ConfigurationError("Exactly two MPI processes required");
+        faunus_logger->error("Gibbs ensemble: Exactly two MPI processes required; use e.g. `mpirun -np 2`");
+        mpi.world.abort(1);
     }
     if (mpi.world.rank() == 0) {
         partner_rank = 1;
@@ -448,12 +456,36 @@ double GibbsEnsembleHelper::exchange(const double value) const {
     return partner_value;
 }
 
+/**
+ * @return Pair with total particle counts in cell 1 and 2
+ * @note No MPI exchange needed
+ */
+std::pair<int, int> GibbsEnsembleHelper::currentNumParticles(const Space& spc) const {
+    namespace rv = ranges::cpp20::views;
+    auto to_num_molecules = [&](auto molid) { return spc.numMolecules<Group::Selectors::ACTIVE>(molid); };
+    const int n1 = ranges::fold_left(molids | rv::transform(to_num_molecules), 0, std::plus<>());
+    const int n2 = total_num_particles - n1;
+    return {n1, n2};
+}
+
+/**
+ * @return Pair with volumes of cell 1 and 2
+ * @note No MPI exchange needed
+ */
+std::pair<double, double> GibbsEnsembleHelper::currentVolumes(const Space& spc) const {
+    const double v1 = spc.geometry.getVolume();
+    const double v2 = total_volume - v1;
+    return {v1, v2};
+}
+
 // -----------------------------------
 
-GibbsVolumeMove::GibbsVolumeMove(Space& spc, const MPI::Controller& mpi)
+GibbsVolumeMove::GibbsVolumeMove(Space& spc, MPI::Controller& mpi)
     : VolumeMove(spc, "gibbs_volume"s)
     , mpi(mpi) {
-    faunus_logger->warn("{}: This move is marked UNSTABLE - carefully check your output ⚠️", name);
+    if (mpi.isMaster()) {
+        faunus_logger->warn("{}: This move is marked UNSTABLE - carefully check your output ⚠️", name);
+    }
 }
 
 /**
@@ -461,26 +493,40 @@ GibbsVolumeMove::GibbsVolumeMove(Space& spc, const MPI::Controller& mpi)
  * and is excluded from the bias.
  */
 double GibbsVolumeMove::bias([[maybe_unused]] Change& change, const double old_energy, const double new_energy) {
-    namespace rv = ranges::cpp20::views;
-    auto to_num_molecules = [&](auto id) { return spc.numMolecules<Group::Selectors::ACTIVE>(id); };
-    const int n1 = ranges::fold_left(gibbs->molids | rv::transform(to_num_molecules), 0, std::plus<int>());
-    const int n2 = gibbs->total_num_particles - n1;
+    if (volumeTooExtreme()) {
+        return pc::infty; // reject move attempt
+    }
+
     const auto dv = new_volume - old_volume;
-    const auto v1 = old_volume;
-    const auto v2 = gibbs->total_volume - v1;
+    const auto v1_old = old_volume;
+    const auto v2_old = gibbs->total_volume - v1_old;
+    const auto [n1, n2] = gibbs->currentNumParticles(spc);
     const auto du1 = new_energy - old_energy;
-    const auto du2 = gibbs->exchange(du1);
+    const auto du2 = gibbs->exchange(du1); // MPI call
 
     double gibbs_bias = 0.0;
     if (direct_volume_displacement) {
-        gibbs_bias = -n1 * std::log((v1 + dv) / v1) - n2 * std::log((v2 - dv) / v2);
+        // Panagiotopoulos et al., Eq. 5
+        gibbs_bias = -n1 * std::log((v1_old + dv) / v1_old) - n2 * std::log((v2_old - dv) / v2_old);
     } else {
-        // @todo implement for ln V displacement
-        throw std::runtime_error("unimplemented");
+        // @todo implement for ln V displacement - see Frenkel & Smith Eq. 8.3.3
+        faunus_logger->error("{}: lnV displacement is unimplemented", name);
+        mpi.world.abort(1);
     }
-    faunus_logger->trace("{}: n1={} n2={} v1={:.1f} v2={:.1f} du1={:.2f} du2={:.2f} dv={:.1f} bias={:.2E}", name, n1,
-                         n2, v1, v2, du1, du2, dv, gibbs_bias);
-    return du2 + gibbs_bias;
+    faunus_logger->trace("{}: n1={} n2={} v1={:.1f} v2={:.1f} du1={:.2E} du2={:.2E} dv={:.1f} bias={:.2E}", name, n1,
+                         n2, v1_old, v2_old, du1, du2, dv, gibbs_bias);
+    return du2 + gibbs_bias; // du1 is automatically added in `MetropolisMonteCarlo::performMove()`
+}
+
+/**
+ * We need this to trigger in both cells hence check for both too large and too small volumes.
+ *
+ * @warning Hard-coded volume threshold
+ */
+bool GibbsVolumeMove::volumeTooExtreme() const {
+    const double min_volume = 1.0 * 1.0 * 1.0; // Å3
+    const double max_volume = gibbs->total_volume - min_volume;
+    return ((new_volume < min_volume) || (new_volume > max_volume));
 }
 
 /**
@@ -492,19 +538,23 @@ double GibbsVolumeMove::bias([[maybe_unused]] Change& change, const double old_e
  *     => v1(n) = v_tot / ( 1 / f + 1)
  */
 void GibbsVolumeMove::setNewVolume() {
-    double sign = static_cast<bool>(slump.range(0, 1)) ? -1.0 : 1.0;
+    auto& random_engine = mpi.random;
+
+    // either expand or contract volume; do the opposite in the other cell
+    double sign = static_cast<bool>(random_engine.range(0, 1)) ? -1.0 : 1.0;
     if (gibbs->mpi.isMaster()) {
         sign = -sign;
     }
+
     old_volume = spc.geometry.getVolume();
     const auto partner_old_volume = gibbs->total_volume - old_volume;
 
     if (direct_volume_displacement) {
-        new_volume = old_volume + sign * (slump() - 0.5) * logarithmic_volume_displacement_factor;
+        new_volume = old_volume + sign * (random_engine() - 0.5) * logarithmic_volume_displacement_factor;
     } else {
         // ln(V) displacement - see Frenkel and Smith, Section 8.3.2
         const auto f = std::exp(std::log(old_volume / partner_old_volume) +
-                                sign * (slump() - 0.5) * logarithmic_volume_displacement_factor);
+                                sign * (random_engine() - 0.5) * logarithmic_volume_displacement_factor);
         new_volume = gibbs->total_volume / (1.0 / f + 1.0);
     }
 
@@ -513,7 +563,7 @@ void GibbsVolumeMove::setNewVolume() {
         const auto dV = new_volume - old_volume;
         const auto dV_other = gibbs->exchange(dV);
         if (mpi.isMaster()) {
-            faunus_logger->trace("dV1 = {:.3f} dV2 = {:.3f}", dV, dV_other);
+            faunus_logger->trace("{}: dV1 = {:.3f} dV2 = {:.3f}", name, dV, dV_other);
         }
     }
 }
@@ -540,8 +590,100 @@ void GibbsVolumeMove::_from_json(const json& j) {
     const auto molids = Faunus::names2ids(Faunus::molecules, names);
     gibbs = std::make_unique<GibbsEnsembleHelper>(spc, mpi, molids);
     if (!gibbs) {
-        throw std::runtime_error("Gibbs ensemble error - please file a bug report");
+        faunus_logger->error("{}: Error - please file a bug report", name);
+        mpi.world.abort(1);
     }
+}
+
+// -----------------------------------
+
+GibbsMatterMove::GibbsMatterMove(Space& spc, MPI::Controller& mpi)
+    : Move(spc, "gibbs_matter"s, "doi:10/cvzgw9")
+    , mpi(mpi) {
+    molecule_bouncer = std::make_unique<Speciation::MolecularGroupDeActivator>(spc, random, true);
+    if (mpi.isMaster()) {
+        faunus_logger->warn("{}: This move is marked UNSTABLE - carefully check your output ⚠️", name);
+    }
+}
+
+void GibbsMatterMove::_to_json([[maybe_unused]] json& j) const {}
+
+void GibbsMatterMove::_from_json(const json& j) {
+    const auto molname = j.at("molecule").get<std::string>();
+    const auto molids = Faunus::names2ids(Faunus::molecules, {molname});
+    gibbs = std::make_unique<GibbsEnsembleHelper>(spc, mpi, molids);
+    if (!gibbs) {
+        faunus_logger->error("{}: Error - please file a bug report", name);
+        mpi.world.abort(1);
+    }
+    assert(gibbs->molids.size() == 1);
+    molid = gibbs->molids.front();
+
+    // check that either cell can hold *all* particles
+    const int capacity1 = spc.numMolecules<Group::Selectors::ANY>(molid);
+    const int capacity2 = static_cast<int>(gibbs->exchange(static_cast<double>(capacity1)));
+    if ((capacity1 < gibbs->total_num_particles) || (capacity2 < gibbs->total_num_particles)) {
+        faunus_logger->error("{}: '{}' must have a capacity of at least {} molecules", name, molname,
+                             gibbs->total_num_particles);
+        mpi.world.abort(1);
+    }
+}
+
+void GibbsMatterMove::_move(Change& change) {
+    auto& random_engine = mpi.random;
+    // insert or delete; do the opposite in the other cell
+    insert = static_cast<bool>(random_engine.range(0, 1)); // note internal random generator!
+    if (gibbs->mpi.isMaster()) {
+        insert = !insert;                          // delete in one cell; remove from the other
+    }
+
+    // find a molecule to insert or delete
+    const auto selection = (insert) ? Space::Selection::INACTIVE : Space::Selection::ACTIVE;
+    const auto group = spc.randomMolecule(molid, random_engine, selection);
+
+    // boundary check
+    const bool no_group = (group == spc.groups.end());
+    const bool cell_is_full = (spc.numMolecules<Space::GroupType::ACTIVE>(molid) == gibbs->total_num_particles);
+    if (no_group || (insert && cell_is_full)) {
+        change.clear();
+        return;
+    }
+
+    // do the move
+    change.disable_translational_entropy = true;
+    change.matter_change = true;
+    [[maybe_unused]] double _bias;
+    auto& group_change = change.groups.emplace_back();
+    if (insert) {
+        std::tie(group_change, _bias) = molecule_bouncer->activate(*group);
+    } else {
+        std::tie(group_change, _bias) = molecule_bouncer->deactivate(*group);
+    }
+}
+
+/**
+ * Note that `du1` is captured by the normal trial energy and is excluded from the bias.
+ *
+ * See Eq. 8 of Panagiotopoulus, Quirke, Stapleton, Tildesley, Mol. Phys. 1988:63:527
+ */
+double GibbsMatterMove::bias([[maybe_unused]] Change& change, const double old_energy, const double new_energy) {
+    const auto [n1_new, n2_new] = gibbs->currentNumParticles(spc);
+    const auto [v1, v2] = gibbs->currentVolumes(spc);
+    const auto du1 = new_energy - old_energy;
+    const auto du2 = gibbs->exchange(du1); // MPI call
+
+    // Eq. 8 in https://dx.doi.org/10/cvzgw9
+    const double gibbs_bias =
+        (insert) ? std::log(v2 * n1_new / (v1 * (n2_new - 1.0))) : std::log(v1 * n2_new / (v2 * (n1_new - 1.0)));
+
+    if (faunus_logger->level() <= spdlog::level::trace) {
+        const auto gibbs_bias_other = gibbs->exchange(gibbs_bias);
+        if (mpi.isMaster()) {
+            faunus_logger->trace("{}: bias={:.2E} other_bias={:.2E}", name, gibbs_bias, gibbs_bias_other);
+        }
+    }
+
+    return du2 + gibbs_bias; // du1 is automatically added elsewhere
 }
 
 // -----------------------------------
@@ -666,18 +808,11 @@ void VolumeMove::setNewVolume() {
 }
 
 void VolumeMove::_move(Change& change) {
-    const double minimum_volume_threshold = 10.0; // Å^3
     if (logarithmic_volume_displacement_factor > 0.0) {
         change.volume_change = true;
         change.everything = true;
         setNewVolume();
-        if (new_volume >= minimum_volume_threshold) {
-            spc.scaleVolume(new_volume, volume_scaling_method);
-        } else {
-            faunus_logger->warn("{}: minimum volume of {} Å³ reached", name, minimum_volume_threshold);
-            new_volume = old_volume;
-            change.clear();
-        }
+        spc.scaleVolume(new_volume, volume_scaling_method);
     }
 }
 void VolumeMove::_accept([[maybe_unused]] Change& change) {
@@ -1183,7 +1318,7 @@ void TranslateRotate::_from_json(const json& j) {
  */
 TranslateRotate::OptionalGroup TranslateRotate::findRandomMolecule() {
     if (auto mollist = spc.findMolecules(molid, Space::Selection::ACTIVE); not ranges::cpp20::empty(mollist)) {
-        if (auto group_it = slump.sample(mollist.begin(), mollist.end()); not group_it->empty()) {
+        if (auto group_it = random.sample(mollist.begin(), mollist.end()); not group_it->empty()) {
             return *group_it;
         }
     }

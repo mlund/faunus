@@ -475,7 +475,7 @@ class GibbsEnsembleHelper {
  */
 class GibbsVolumeMove : public VolumeMove {
   private:
-    const MPI::Controller& mpi;
+    MPI::Controller& mpi;
     std::unique_ptr<GibbsEnsembleHelper> gibbs;
     bool direct_volume_displacement = true; //!< True if direct displacement in V; false if lnV displacement
     void setNewVolume() override;
@@ -486,7 +486,7 @@ class GibbsVolumeMove : public VolumeMove {
     void _move(Change& change) override;
 
   public:
-    GibbsVolumeMove(Space& spc, const MPI::Controller& mpi);
+    GibbsVolumeMove(Space& spc, MPI::Controller& mpi);
     double bias(Change& change, double old_energy, double new_energy) override;
 };
 
@@ -500,7 +500,7 @@ class GibbsMatterMove : public Move {
   private:
     bool insert;                    //!< Insert or delete particle?
     MoleculeData::index_type molid; //!< Molid to insert or delete
-    const MPI::Controller& mpi;
+    MPI::Controller& mpi;
     std::unique_ptr<GibbsEnsembleHelper> gibbs;
     std::unique_ptr<Speciation::GroupDeActivator> molecule_bouncer;
     void _from_json(const json& j) override;
@@ -510,7 +510,7 @@ class GibbsMatterMove : public Move {
     void _move(Change& change) override;
 
   public:
-    GibbsMatterMove(Space& spc, const MPI::Controller& mpi);
+    GibbsMatterMove(Space& spc, MPI::Controller& mpi);
     double bias(Change& change, double old_energy, double new_energy) override;
 };
 

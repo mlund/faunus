@@ -480,7 +480,7 @@ std::pair<double, double> GibbsEnsembleHelper::currentVolumes(const Space& spc) 
 
 // -----------------------------------
 
-GibbsVolumeMove::GibbsVolumeMove(Space& spc, const MPI::Controller& mpi)
+GibbsVolumeMove::GibbsVolumeMove(Space& spc, MPI::Controller& mpi)
     : VolumeMove(spc, "gibbs_volume"s)
     , mpi(mpi) {
     if (mpi.isMaster()) {
@@ -538,8 +538,10 @@ bool GibbsVolumeMove::volumeTooExtreme() const {
  *     => v1(n) = v_tot / ( 1 / f + 1)
  */
 void GibbsVolumeMove::setNewVolume() {
+    auto& random_engine = mpi.random;
+
     // either expand or contract volume; do the opposite in the other cell
-    double sign = static_cast<bool>(slump.range(0, 1)) ? -1.0 : 1.0;
+    double sign = static_cast<bool>(random_engine.range(0, 1)) ? -1.0 : 1.0;
     if (gibbs->mpi.isMaster()) {
         sign = -sign;
     }
@@ -548,11 +550,11 @@ void GibbsVolumeMove::setNewVolume() {
     const auto partner_old_volume = gibbs->total_volume - old_volume;
 
     if (direct_volume_displacement) {
-        new_volume = old_volume + sign * (slump() - 0.5) * logarithmic_volume_displacement_factor;
+        new_volume = old_volume + sign * (random_engine() - 0.5) * logarithmic_volume_displacement_factor;
     } else {
         // ln(V) displacement - see Frenkel and Smith, Section 8.3.2
         const auto f = std::exp(std::log(old_volume / partner_old_volume) +
-                                sign * (slump() - 0.5) * logarithmic_volume_displacement_factor);
+                                sign * (random_engine() - 0.5) * logarithmic_volume_displacement_factor);
         new_volume = gibbs->total_volume / (1.0 / f + 1.0);
     }
 
@@ -595,7 +597,7 @@ void GibbsVolumeMove::_from_json(const json& j) {
 
 // -----------------------------------
 
-GibbsMatterMove::GibbsMatterMove(Space& spc, const MPI::Controller& mpi)
+GibbsMatterMove::GibbsMatterMove(Space& spc, MPI::Controller& mpi)
     : Move(spc, "gibbs_matter"s, "doi:10/cvzgw9")
     , mpi(mpi) {
     molecule_bouncer = std::make_unique<Speciation::MolecularGroupDeActivator>(spc, random, true);
@@ -628,15 +630,16 @@ void GibbsMatterMove::_from_json(const json& j) {
 }
 
 void GibbsMatterMove::_move(Change& change) {
+    auto& random_engine = mpi.random;
     // insert or delete; do the opposite in the other cell
-    insert = static_cast<bool>(slump.range(0, 1)); // note internal random generator!
+    insert = static_cast<bool>(random_engine.range(0, 1)); // note internal random generator!
     if (gibbs->mpi.isMaster()) {
         insert = !insert;                          // delete in one cell; remove from the other
     }
 
     // find a molecule to insert or delete
     const auto selection = (insert) ? Space::Selection::INACTIVE : Space::Selection::ACTIVE;
-    const auto group = spc.randomMolecule(molid, random, selection);
+    const auto group = spc.randomMolecule(molid, random_engine, selection);
 
     // boundary check
     const bool no_group = (group == spc.groups.end());
@@ -1315,7 +1318,7 @@ void TranslateRotate::_from_json(const json& j) {
  */
 TranslateRotate::OptionalGroup TranslateRotate::findRandomMolecule() {
     if (auto mollist = spc.findMolecules(molid, Space::Selection::ACTIVE); not ranges::cpp20::empty(mollist)) {
-        if (auto group_it = slump.sample(mollist.begin(), mollist.end()); not group_it->empty()) {
+        if (auto group_it = random.sample(mollist.begin(), mollist.end()); not group_it->empty()) {
             return *group_it;
         }
     }

@@ -52,7 +52,7 @@ endif ()
 add_library(functionparser STATIC ${CMAKE_SOURCE_DIR}/src/functionparser.cpp ${CMAKE_SOURCE_DIR}/src/functionparser.h)
 set_target_properties(functionparser PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_definitions(functionparser PRIVATE DOCTEST_CONFIG_DISABLE)
-target_link_libraries(functionparser PRIVATE nlohmann_json exprtk)
+target_link_libraries(functionparser PRIVATE nlohmann_json exprtk doctest::doctest)
 
 # ========== faunus cpp and header files ==========
 
@@ -82,7 +82,7 @@ target_link_libraries(libfaunus PUBLIC
         project_options
         project_warnings
         cereal
-        Eigen
+        Eigen3::Eigen
         functionparser
         nlohmann_json
         pcg-cpp
@@ -97,9 +97,9 @@ target_link_libraries(libfaunus PUBLIC
 add_executable(faunus faunus.cpp)
 target_link_libraries(faunus PRIVATE
     docopt_s
-    Eigen
+    Eigen3::Eigen
     libfaunus
-    doctest
+    doctest::doctest
     progresstracker
     project_options
     range-v3
@@ -149,7 +149,7 @@ if (ENABLE_PYTHON)
 
     pybind11_add_module(pyfaunus pyfaunus.cpp ${objs})
     target_link_libraries(pyfaunus PRIVATE
-        project_options cereal Eigen functionparser nlohmann_json progresstracker pybind11_json range-v3 spdlog xdrfile zstr)
+        project_options cereal::cereal Eigen3::Eigen functionparser nlohmann_json progresstracker pybind11_json range-v3 spdlog xdrfile zstr)
     target_compile_definitions(pyfaunus PUBLIC SPDLOG_COMPILED_LIB)
     target_compile_definitions(pyfaunus PRIVATE DOCTEST_CONFIG_DISABLE)
 

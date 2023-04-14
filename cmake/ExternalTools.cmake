@@ -5,10 +5,15 @@ include(FetchContent)
 # CPM Packages
 ###############
 
+find_package(docopt CONFIG REQUIRED)
+find_package(cereal CONFIG REQUIRED)
+find_package(doctest CONFIG REQUIRED)
+find_package(Eigen3 CONFIG REQUIRED)
+
 CPMAddPackage("gh:gabime/spdlog@1.11.0")
 CPMAddPackage("gh:ericniebler/range-v3#0.12.0")
-CPMAddPackage("gh:docopt/docopt.cpp#v0.6.3")
-CPMAddPackage("gh:doctest/doctest#v2.4.9")
+#CPMAddPackage("gh:docopt/docopt.cpp#v0.6.3")
+#CPMAddPackage("gh:doctest/doctest#v2.4.9")
 CPMAddPackage("gh:mateidavid/zstr#v1.0.6")
 CPMAddPackage("gh:martinus/nanobench#v4.3.9")
 CPMAddPackage("gh:pybind/pybind11#v2.10.1")
@@ -26,15 +31,15 @@ CPMAddPackage(
     OPTIONS "JSON_BuildTests OFF"
 )
 
-CPMAddPackage(
-    NAME Eigen VERSION 3.4.0 DOWNLOAD_ONLY YES 
-    URL https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz
-)
+#CPMAddPackage(
+#    NAME Eigen VERSION 3.4.0 DOWNLOAD_ONLY YES
+#    URL https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz
+#)
 
-CPMAddPackage(
-    NAME cereal VERSION 1.3.2 GITHUB_REPOSITORY USCiLab/cereal
-    OPTIONS "SKIP_PORTABILITY_TEST ON" "JUST_INSTALL_CEREAL ON"
-)
+#CPMAddPackage(
+#    NAME cereal VERSION 1.3.2 GITHUB_REPOSITORY USCiLab/cereal
+#    OPTIONS "SKIP_PORTABILITY_TEST ON" "JUST_INSTALL_CEREAL ON"
+#)
 
 CPMAddPackage("gh:pybind/pybind11_json#0.2.13")
 
@@ -44,7 +49,7 @@ CPMAddPackage("gh:pybind/pybind11_json#0.2.13")
 ###################################
 
 set_property(TARGET spdlog PROPERTY POSITION_INDEPENDENT_CODE ON)
-set_property(TARGET docopt PROPERTY POSITION_INDEPENDENT_CODE ON)
+#set_property(TARGET docopt PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 if (nlohmann_json_ADDED)
     add_library(nlohmann_json INTERFACE IMPORTED)
@@ -58,10 +63,10 @@ if(mpl_ADDED)
     target_include_directories(mpl INTERFACE ${mpl_SOURCE_DIR})
 endif()
 
-if(Eigen_ADDED)
-    add_library(Eigen INTERFACE IMPORTED)
-    target_include_directories(Eigen INTERFACE ${Eigen_SOURCE_DIR})
-endif()
+#if(Eigen_ADDED)
+#    add_library(Eigen INTERFACE IMPORTED)
+#    target_include_directories(Eigen INTERFACE ${Eigen_SOURCE_DIR})
+#endif()
 
 if (pcg-cpp_ADDED)
     add_library(pcg-cpp INTERFACE)
@@ -221,4 +226,4 @@ include_directories(SYSTEM ${coulombgalore_SOURCE_DIR})
 # to disable potential compiler warnings
 
 include_directories(SYSTEM ${trompeloeil_SOURCE_DIR}/include ${nanobench_SOURCE_DIR}/src/include
-    ${Pybind11IncludeDir} ${CppsidIncludeDir} ${XdrfileIncludeDir} ${ProgressTrackerIncludeDir} ${doctest_SOURCE_DIR})
+    ${Pybind11IncludeDir} ${CppsidIncludeDir} ${XdrfileIncludeDir} ${ProgressTrackerIncludeDir})

@@ -290,6 +290,16 @@ TEST_CASE("[Faunus] Andrea") {
     spline.setTolerance(2e-6, 1e-4); // ftol carries no meaning
     auto d = spline.generate(f, 0, 10);
 
+    CHECK(d.r2.size() == 19);
+    CHECK(d.c.size() == 108);
+    CHECK(d.numKnots() == 19);
+    CHECK(d.rmin2 == Approx(0.0));
+    CHECK(d.rmax2 == Approx(10.0));
+    CHECK(d.r2.at(0) == Approx(0.0));
+    CHECK(d.r2.at(1) == Approx(0.212991));
+    CHECK(d.r2.at(2) == Approx(0.782554));
+    CHECK(d.r2.back() == Approx(10.0));
+
     CHECK(spline.eval(d, 1e-9) == Approx(f(1e-9)));
     CHECK(spline.eval(d, 5) == Approx(f(5)));
     CHECK(spline.eval(d, 10) == Approx(f(10)));

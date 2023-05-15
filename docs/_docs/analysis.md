@@ -351,6 +351,45 @@ Calculates average molecular multipolar moments and their fluctuations.
 -------------- | ----------------------
 `nstep`        | Interval between samples.
 
+The output from the multipole analysis gives the following:
+`multipole`    | Description
+-------------- | ----------------------
+` C    `       | Capacitance  
+ `Z    `       | Charge/Valency 
+ `Z2    `      | Squared charge/valency
+ `μ     `      | Dipole moment 
+ `μ2    `      | Squared dipole moment
+
+ The capacitance, C, is defined accordingly: 
+ 
+ $$ 
+ c = < z² > - < z >² 
+ $$
+ 
+ Where Z is defined as the average charge/valency: 
+ 
+ $$ 
+ < z > = < \sum_i z_i > 
+ $$
+ 
+ This gives that Z2 is just the squared average charge/valency:
+ 
+ $$
+ < z² > = < \sum_i z²_i >
+ $$
+ 
+ Continuing, the dipole moment, μ , is defined as:
+ 
+ $$
+ μ  =  < \mu > = < | \sum_i z_i (r_i - r_{cm}) | >
+ $$
+ 
+ Lastly, the μ2 is defined as the squared dipole moment:
+ 
+ $$
+ μ2 = < \mu² >
+ $$
+ 
 ### Multipole Moments
 
 For a range of atoms within a molecular group of given index, 

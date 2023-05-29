@@ -360,31 +360,31 @@ The output from the multipole analysis gives the following:
  `μ`           | Dipole moment, eÅ 
  `μ2`          | Squared dipole moment, (eÅ)²
 
- The capacitance, "C", is defined accordingly: 
+ The capacitance, $C$, is defined accordingly: 
  
  $$ 
  c = < z² > - < z >² 
  $$
  
- Where "Z" is defined as the average charge/valency: 
+ Where $Z$ is defined as the average charge/valency: 
  
  $$ 
  < z > = < \sum_i z_i > 
  $$
  
- This gives that "Z2" is just the squared average charge/valency:
+ This gives that $Z2$ is just the squared average charge/valency:
  
  $$
  < z² > = < \sum_i z²_i >
  $$
  
- Continuing, the dipole moment, "μ" , is defined as:
+ Continuing, the dipole moment, $μ$ , is defined as:
  
  $$
  μ  =  < \mu > = < | \sum_i z_i (r_i - r_{cm}) | >
  $$
  
- Lastly, the "μ2" is defined as the mean squared dipole moment:
+ Lastly, the $μ2$ is defined as the mean squared dipole moment:
  
  $$
  μ2 = < \mu² >

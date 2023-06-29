@@ -228,7 +228,7 @@ class ElectricPotential : public Analysis {
     enum class Policies { FIXED, RANDOM_WALK, RANDOM_WALK_NO_OVERLAP, INVALID };
 
   private:
-    double histogram_resolution = 0.05; //!< Angstrom
+    double histogram_resolution = 0.01; //!< Potential resolution
     unsigned int calculations_per_sample_event = 1;
     struct Target {
         Point position;                                               //!< Target position

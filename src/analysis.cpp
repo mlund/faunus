@@ -2263,13 +2263,26 @@ void ElectricPotential::setPolicy(const json& j) {
         stride = j.at("stride").get<double>();
         output_information["stride"] = stride;
         applyPolicy = [&, stride] {
+            unsigned int cnt = 0;
             auto origin = targets.begin();
             do {
                 spc.geometry.randompos(origin->position, random);
+                cnt++;
+                if (cnt > max_overlap_trials) {
+                    faunus_logger->warn("{}: Max number of overlaps reached. Using overlapping point", name);
+                    break;
+                }
             } while (overlapWithParticles(origin->position));
+
+            cnt = 0;
             std::for_each(std::next(origin), targets.end(), [&](Target& target) {
                 do {
                     target.position = origin->position + stride * randomUnitVector(random);
+                    cnt++;
+                    if (cnt > max_overlap_trials) {
+                        faunus_logger->warn("{}: Max number of overlaps reached. Using overlapping point", name);
+                        break;
+                    }
                 } while (overlapWithParticles(target.position));
                 std::advance(origin, 1);
             });

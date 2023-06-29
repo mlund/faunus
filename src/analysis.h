@@ -228,6 +228,7 @@ class ElectricPotential : public Analysis {
     enum class Policies { FIXED, RANDOM_WALK, RANDOM_WALK_NO_OVERLAP, INVALID };
 
   private:
+    unsigned int max_overlap_trials = 100; //!< Maximum number of overlap checks before bailing out
     double histogram_resolution = 0.01; //!< Potential resolution
     unsigned int calculations_per_sample_event = 1;
     struct Target {

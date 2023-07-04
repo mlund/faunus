@@ -699,9 +699,9 @@ void ParallelTempering::_to_json(json& j) const {
         exchange_json[id] = {{"attempts", acceptance.size()}, {"acceptance", acceptance.avg()}};
     }
     auto& exchange_json2 = j["exchanges mpi"] = json::object();
-    for (const auto& [pair, exchange] : exchange_map) {
-        auto id = fmt::format("{} <-> {}", pair.first, pair.second);
-        exchange_json2[id] = {{"exchanges", for (auto i; i< exchange.size(); i++) {exchange[i];}}};
+    for (const auto& [mpI, exchange] : exchange_map) {
+        auto id = fmt::format("{}", mpI);
+        exchange_json2[id] = {{"exchanges", exchange }};
     }
 }
 
@@ -767,11 +767,12 @@ double ParallelTempering::bias([[maybe_unused]] Change& change, double uold, dou
 
 void ParallelTempering::_accept([[maybe_unused]] Change& change) {
     acceptance_map[partner->getPair(mpi.world)] += 1.0;
-    exchange_map[partner->getPair(mpi.world)].push_back(1);
+    exchange_map[mpi.world.rank()].push_back(partner->getPair(mpi.world));
+    
 }
 void ParallelTempering::_reject([[maybe_unused]] Change& change) {
     acceptance_map[partner->getPair(mpi.world)] += 0.0;
-    exchange_map[partner->getPair(mpi.world)].push_back(0);
+    exchange_map[mpi.world.rank()].push_back(std::minmax({-1, -1}));
 }
 
 void ParallelTempering::_from_json(const json& j) {

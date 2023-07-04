@@ -701,7 +701,7 @@ void ParallelTempering::_to_json(json& j) const {
     auto& exchange_json2 = j["exchanges mpi"] = json::object();
     for (const auto& [pair, exchange] : exchange_map) {
         auto id = fmt::format("{} <-> {}", pair.first, pair.second);
-        exchange_json2[id] = {{"exchanges", exchange.size()}};
+        exchange_json2[id] = {{"exchanges", for (auto i; i< exchange.size(); i++) {exchange[i];}}};
     }
 }
 

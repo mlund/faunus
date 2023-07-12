@@ -272,11 +272,11 @@ add_test(
 
 install(FILES
         ${EXAMPLES_DIR}/README.md
-        ${EXAMPLES_DIR}/anglescan.ipynb
-        ${EXAMPLES_DIR}/anglescan.xyz
-        ${EXAMPLES_DIR}/anglescan.yml
-        ${EXAMPLES_DIR}/anglescan_energies.dat
-        ${EXAMPLES_DIR}/anglescan_rdf.dat
+        ${EXAMPLES_DIR}/anglescan/anglescan.ipynb
+        ${EXAMPLES_DIR}/anglescan/anglescan.xyz
+        ${EXAMPLES_DIR}/anglescan/anglescan.yml
+        ${EXAMPLES_DIR}/anglescan/anglescan_energies.dat
+        ${EXAMPLES_DIR}/anglescan/anglescan_rdf.dat
         ${EXAMPLES_DIR}/bulk/bulk.yml
         ${EXAMPLES_DIR}/bulk-replay/bulk-replay.yml
         ${EXAMPLES_DIR}/chargemove/chargemove.yml

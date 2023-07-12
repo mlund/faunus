@@ -532,7 +532,7 @@ class ParallelTempering : public Move {
     std::unique_ptr<MPI::Partner> partner;     //!< Policy for finding MPI partners
     Geometry::VolumeMethod volume_scaling_method = Geometry::VolumeMethod::ISOTROPIC; //!< How to scale volumes
     std::map<MPI::Partner::PartnerPair, Average<double>> acceptance_map;              //!< Exchange statistics
-
+    Random slump; // static instance of Random (shared for all in ParallelTempering)
     void _to_json(json& j) const override;
     void _from_json(const json& j) override;
     void _move(Change& change) override;

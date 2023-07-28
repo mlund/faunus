@@ -505,6 +505,7 @@ atomic species can be saved.
 `nstep`               | Interval between samples
 `nskip=0`             | Number of initial steps excluded from the analysis
 `epsr`                | Dielectric constant
+`file=potential`      | Filename prefix for output files
 `type`                | Coulomb type, `plain` etc. -- see energies
 `structure`           | Either a _filename_ (pqr, aam, gro etc) or a _list_ of positions
 `policy=fixed`        | Policy used to augment positions before each sample event, see below

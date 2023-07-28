@@ -2237,6 +2237,7 @@ ElectricPotential::ElectricPotential(const json& j, const Space& spc)
     getTargets(j);
     setPolicy(j);
     calculations_per_sample_event = j.value("ncalc", 1);
+    file_prefix = j.value("file", "potential"s);
 }
 
 void ElectricPotential::setPolicy(const json& j) {
@@ -2344,6 +2345,7 @@ void ElectricPotential::_to_json(json& j) const {
     j = output_information;
     coulomb->to_json(j["coulomb"]);
     j["policy"] = policy;
+    j["file"] = file_prefix;
     j["number of targets"] = targets.size();
     j["calculations per sample"] = calculations_per_sample_event;
     if (number_of_samples > 0) {
@@ -2354,12 +2356,14 @@ void ElectricPotential::_to_json(json& j) const {
     }
 }
 void ElectricPotential::_to_disk() {
-    if (auto stream = std::ofstream(MPI::prefix + "potential_correlation_histogram.dat")) {
+    auto filename = fmt::format("{}{}_correlation_histogram.dat", MPI::prefix, file_prefix);
+    if (auto stream = std::ofstream(filename)) {
         stream << potential_correlation_histogram;
     }
-    int filenumber = 1;
+    unsigned int file_number = 1;
     for (const auto& target : targets) {
-        if (auto stream = std::ofstream(fmt::format("{}potential_histogram{}.dat", MPI::prefix, filenumber++))) {
+        auto filename = fmt::format("{}{}_histogram{}.dat", MPI::prefix, file_prefix, file_number++);
+        if (auto stream = std::ofstream(filename)) {
             stream << *(target.potential_histogram);
         }
     }

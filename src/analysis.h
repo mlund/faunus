@@ -231,6 +231,7 @@ class ElectricPotential : public Analysis {
     unsigned int max_overlap_trials = 100; //!< Maximum number of overlap checks before bailing out
     double histogram_resolution = 0.01; //!< Potential resolution
     unsigned int calculations_per_sample_event = 1;
+    std::string file_prefix; //!< Output filename prefix for potential histogram and correlation
     struct Target {
         Point position;                                               //!< Target position
         Average<double> mean_potential;                               //!< mean potential at position

@@ -352,6 +352,7 @@ Calculates average molecular multipolar moments and their fluctuations.
 `nstep`        | Interval between samples.
 
 The output from the multipole analysis gives the following:
+
 `multipole`    | Description
 -------------- | ----------------------
  `C`           | Capacitance, eV⁻¹  
@@ -360,34 +361,34 @@ The output from the multipole analysis gives the following:
  `μ`           | Dipole moment, eÅ 
  `μ2`          | Squared dipole moment, (eÅ)²
 
- The capacitance, $C$, is defined accordingly: 
+ The capacitance, `C`, is defined accordingly: 
  
  $$ 
- c = < z² > - < z >² 
+ C = \langle z^2 \rangle - \langle z \rangle^2 
  $$
  
- Where $Z$ is defined as the average charge/valency: 
+ Where `Z` is defined as the average charge/valency: 
  
  $$ 
- < z > = < \sum_i z_i > 
+ Z = \langle \sum_i z_i \rangle 
  $$
  
- This gives that $Z2$ is just the squared average charge/valency:
+ This gives that `Z2` is just the squared average charge/valency:
  
  $$
- < z² > = < \sum_i z²_i >
+ \text{Z2} = \langle \sum_i z^2_i \rangle
  $$
  
- Continuing, the dipole moment, $μ$ , is defined as:
+ Continuing, the dipole moment, `μ`, is defined as:
  
  $$
- μ  =  < \mu > = < | \sum_i z_i (r_i - r_{cm}) | >
+ \mu  =  \langle | \sum_i z_i (r_i - r_{cm}) | \rangle
  $$
  
- Lastly, the $μ2$ is defined as the mean squared dipole moment:
+ Lastly, the `μ2` is defined as the mean squared dipole moment:
  
  $$
- μ2 = < \mu² >
+ \mu^2 = \langle \mu^2 \rangle
  $$
  
 ### Multipole Moments
@@ -457,7 +458,7 @@ $$
 $$
 
 $$
-    u_{\text{ion-quad}} =  \frac{ q_a \boldsymbol{R}^T \boldsymbol{Q}_b \boldsymbol{R} }{R^5}-\frac{q_a \mbox{tr}(\boldsymbol{Q}_b) }{R^3}+ ...
+    u_{\text{ion-quad}} =  \frac{ q_a \boldsymbol{R}^T \boldsymbol{Q}_b \boldsymbol{R} }{R^5}-\frac{q_a \text{tr}(\boldsymbol{Q}_b) }{R^3}+ ...
 $$
 
 $$

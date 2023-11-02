@@ -144,7 +144,7 @@ if (ENABLE_PYTHON)
     execute_process(COMMAND ${Python_EXECUTABLE} scripts/yason.py -h
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} ERROR_QUIET OUTPUT_QUIET RESULT_VARIABLE yasontest)
     if (${yasontest} EQUAL 1)
-        message("missing required python modules 'yaml' or 'ruamel_yaml'")
+        message("missing required python modules 'yaml' or 'ruamel.yaml'")
     endif()
 
     pybind11_add_module(pyfaunus pyfaunus.cpp ${objs})

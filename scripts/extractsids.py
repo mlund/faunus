@@ -11,9 +11,12 @@ if sys.version_info < (3, 0):
 
 import os, json, urllib.request
 try:
-    import ruamel.yaml as yaml
+    import ruamel.yaml
 except ImportError:
-    import yaml
+    from yaml import safe_load as yaml_safe_load
+else:
+    def yaml_safe_load(stream):
+        return ruamel.yaml.YAML(typ="safe").load(stream)
 
 if len(sys.argv)!=2:
     print("usage: {} music.yml".format(sys.argv[0]))
@@ -22,7 +25,7 @@ if len(sys.argv)!=2:
 filename = sys.argv[1]
 
 with open(filename) as f:
-    sidlist = yaml.safe_load(f)
+    sidlist = yaml_safe_load(f)
     server = sidlist['server'] + '/'
     dstdir = 'sids/'
     if not os.path.exists(dstdir):

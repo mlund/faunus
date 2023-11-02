@@ -26,11 +26,7 @@ except ImportError:
 # API compatibility between pyyaml and ruamel.yaml might break in the future
 # https://yaml.readthedocs.io/en/latest/api.html
 try:
-    try:
-        import ruamel.yaml as yaml
-    except ImportError:
-        # anaconda packs it as a standalone module (underscore instead of dot)
-        import ruamel_yaml as yaml
+    import ruamel.yaml as yaml
 except ImportError:
     import yaml
 

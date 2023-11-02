@@ -10,7 +10,10 @@ if sys.version_info < (3, 0):
     sys.exit(1)
 
 import os, json, urllib.request
-import ruamel_yaml as yaml
+try:
+    import ruamel.yaml as yaml
+except ImportError:
+    import yaml
 
 if len(sys.argv)!=2:
     print("usage: {} music.yml".format(sys.argv[0]))

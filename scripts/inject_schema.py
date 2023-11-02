@@ -18,10 +18,7 @@ if sys.version_info < (3, 0):
 
 from jinja2 import Template
 try:
-    try:
-        import ruamel.yaml as yaml
-    except ImportError:
-        import ruamel_yaml as yaml
+    import ruamel.yaml as yaml
 except ImportError:
     import yaml
 

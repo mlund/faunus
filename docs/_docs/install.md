@@ -59,7 +59,7 @@ but compile on most unix operating systems, including the Windows Subsystem for 
 - CMake 3.24+
 - C++20 compiler (clang, g++, intel ixpc, ...)
 - Python 3.7+ with the following packages:
-  - `jinja2`, `ruamel_yaml` or `yaml`
+  - `jinja2`, `ruamel.yaml` or `yaml`
 
 The following are optional:
 

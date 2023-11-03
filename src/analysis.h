@@ -220,8 +220,26 @@ class WidomInsertion : public PerturbationAnalysisBase {
 };
 
 /**
+ * @brief Samples the electric potential correlation as a function of distance, <Φ₁Φ₂>(r)
+ */
+class PotentialCorrelation : public Analysis {
+  private:
+    std::unique_ptr<pairpotential::NewCoulombGalore> coulomb;     //!< Class for calculating the potential
+    Equidistant2DTable<double, Average<double>> mean_correlation; //!< <Φ₁Φ₂>(r)
+    std::string filename;                                         //!< Filename of output <Φ₁Φ₂>(r) table
+    std::pair<double, double> range;                              //!< Distance range
+    double dr = 0;                                                //!< Distance resolution
+    unsigned int calculations_per_sample_event = 1;
+    void _to_json(json& j) const override;
+    void _sample() override;
+    void _to_disk() override;
+
+  public:
+    PotentialCorrelation(const json& j, const Space& spc);
+};
+
+/**
  * @brief Samples the electric potential at arbitrary positions in the simulation box
- * @todo Add policies for random mass-center position and orientation
  */
 class ElectricPotential : public Analysis {
   public:

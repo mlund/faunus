@@ -5,19 +5,19 @@ include(FetchContent)
 # CPM Packages
 ###############
 
-CPMAddPackage("gh:gabime/spdlog@1.11.0")
+CPMAddPackage("gh:gabime/spdlog@1.12.0")
 CPMAddPackage("gh:ericniebler/range-v3#0.12.0")
 CPMAddPackage("gh:docopt/docopt.cpp#v0.6.3")
-CPMAddPackage("gh:doctest/doctest#v2.4.9")
-CPMAddPackage("gh:mateidavid/zstr#v1.0.6")
-CPMAddPackage("gh:martinus/nanobench#v4.3.9")
-CPMAddPackage("gh:pybind/pybind11#v2.10.1")
+CPMAddPackage("gh:doctest/doctest#v2.4.11")
+CPMAddPackage("gh:mateidavid/zstr#v1.0.7")
+CPMAddPackage("gh:martinus/nanobench#v4.3.11")
+CPMAddPackage("gh:pybind/pybind11#v2.11.1")
 CPMAddPackage("gh:imneme/pcg-cpp#ffd522e7188bef30a00c74dc7eb9de5faff90092")
 CPMAddPackage("gh:ArashPartow/exprtk#93a9f44f99b910bfe07cd1e933371e83cea3841c")
 
 CPMAddPackage(
     NAME mpl GITHUB_REPOSITORY rabauke/mpl DOWNLOAD_ONLY YES
-    GIT_TAG ff9512fc61195b6c7e643e234789b0b937d28ee3
+    GIT_TAG v0.3.0
 )
 
 CPMAddPackage(

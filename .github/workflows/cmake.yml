@@ -12,7 +12,8 @@ jobs:
     # well on Windows or Mac.  You can convert this to a matrix build if you need
     # cross-platform coverage.
     # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
-    runs-on: ubuntu-22.04
+    # runs-on: ubuntu-22.04 Uncommented due to https://github.com/actions/runner-images/issues/8659#issuecomment-1823087636
+    runs-on: ubuntu-20.04
 
     steps:
 

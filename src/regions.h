@@ -1,33 +1,25 @@
 #pragma once
 #include "core.h"
 #include "molecule.h"
+#include "group.h"
+#include "space.h"
 #include <range/v3/view/filter.hpp>
 #include <range/v3/view/transform.hpp>
 
-/**
-Possible layout:
-
-regions:
-    subspace1:
-        type: within
-        radius: 7
-        molecules: [membrane]
-        com: true
-*/
-
 namespace Faunus {
-class Space; // forward declare Space
+class Space;
 
 /**
  * Subspaces around particles, molecules etc.
  */
 namespace Region {
 
-enum class RegionType { WITHIN_MOLID, WITHIN_PARTICLE, INVALID };
+enum class RegionType { WITHIN_MOLID, WITHIN_PARTICLE, WITHIN_ELLIPSOID, INVALID };
 
 NLOHMANN_JSON_SERIALIZE_ENUM(RegionType, {{RegionType::INVALID, nullptr},
-                                          {RegionType::WITHIN_MOLID, "within_molecule_type"},
-                                          {RegionType::WITHIN_PARTICLE, "within_particle"}})
+                                          {RegionType::WITHIN_MOLID, "within_molid"},
+                                          {RegionType::WITHIN_PARTICLE, "around_particle"},
+                                          {RegionType::WITHIN_ELLIPSOID, "ellipsoid"}})
 
 /**
  * @brief Base class for defining sub-spaces of a simulation
@@ -38,13 +30,18 @@ NLOHMANN_JSON_SERIALIZE_ENUM(RegionType, {{RegionType::INVALID, nullptr},
  * follow molecules. A region may or may not have a well-defined volume.
  */
 class RegionBase {
+  private:
+    virtual bool isInside(const Point& position) const = 0; //!< true if point is inside region
   public:
     const RegionType type;
-    virtual bool isInside(const Point& position) const = 0; //!< true if point is inside region
-    virtual std::optional<double> volume() const = 0;       //!< Volume of region if applicable
+    bool use_group_mass_center = false;           //!< Use group mass-center to check if inside region
+    virtual std::optional<double> volume() const; //!< Volume of region if applicable
     virtual void to_json(json& j) const = 0;
     virtual ~RegionBase() = default;
     explicit RegionBase(RegionType type);
+
+    bool inside(const Particle& particle) const; //!< Determines if particle is inside region
+    bool inside(const Group& group) const;       //!< Determines of groups is inside region
 
     /** Selects particles within the region */
     template <typename ParticleRange> auto filterInside(const ParticleRange& particles) const {
@@ -53,7 +50,7 @@ class RegionBase {
     }
 };
 
-/*
+/**
  * @brief Factory function to generate all known regions from json
  */
 std::unique_ptr<RegionBase> createRegion(const Space& spc, const json& j);
@@ -73,12 +70,15 @@ class WithinMoleculeType : public RegionBase {
   private:
     const Space& spc;                     //!< reference to space
     const MoleculeData::index_type molid; //!< molid to target
-    const bool use_mass_center = false;   //!< true = with respect to center of mass
+    const bool use_region_mass_center;    //!< true = with respect to center of mass of `molid`
     const double threshold_squared;       //!< squared distance threshold from other particles or com
-    bool within_threshold(const Point& position1, const Point& position2) const;
+    inline bool within_threshold(const Point& position1, const Point& position2) const {
+        return spc.geometry.sqdist(position1, position2) < threshold_squared;
+    }
 
   public:
-    WithinMoleculeType(const Space& spc, std::string_view molecule_name, double threshold, bool use_mass_center);
+    WithinMoleculeType(const Space& spc, std::string_view molecule_name, double threshold, bool use_region_mass_center,
+                       bool use_group_mass_center);
     WithinMoleculeType(const Space& spc, const json& j);
     bool isInside(const Point& position) const override;
     std::optional<double> volume() const override;
@@ -99,6 +99,32 @@ class SphereAroundParticle : public RegionBase {
     SphereAroundParticle(const Space& spc, const json& j);
     bool isInside(const Point& position) const override;
     std::optional<double> volume() const override;
+    void to_json(json& j) const override;
+};
+
+/**
+ * An ellipsoid defined by two (moving) particles
+ */
+class MovingEllipsoid : public RegionBase {
+  private:
+    const Space& spc;
+    const ParticleVector::size_type particle_index_1; //!< Index of first reference particle
+    const ParticleVector::size_type particle_index_2; //!< Index of second reference particle
+    const double parallel_radius;                     //!< radius along axis connecting reference atoms
+    const double perpendicular_radius;                //!< radius perpendicular to axis connecting reference atoms
+    const double parallel_radius_squared;
+
+    const Point& reference_position_1; //!< Reference to first reference particle position
+    const Point& reference_position_2; //!< Reference to second reference particle position
+
+    std::pair<Point, Point> getEllipsoidPositionAndDirection() const;
+
+  public:
+    MovingEllipsoid(const Space& spc, ParticleVector::size_type particle_index1,
+                    ParticleVector::size_type particle_index2, double parallel_radius, double perpendicular_radius,
+                    bool use_group_mass_center);
+    MovingEllipsoid(const Space& spc, const json& j);
+    bool isInside(const Point& position) const override;
     void to_json(json& j) const override;
 };
 

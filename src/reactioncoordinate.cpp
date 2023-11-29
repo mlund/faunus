@@ -7,6 +7,7 @@
 #include "aux/eigensupport.h"
 #include <range/v3/view/filter.hpp>
 #include <range/v3/algorithm/count_if.hpp>
+#include <range/v3/algorithm/for_each.hpp>
 #include <range/v3/view/join.hpp>
 #include "spdlog/spdlog.h"
 
@@ -87,6 +88,7 @@ std::unique_ptr<ReactionCoordinateBase> createReactionCoordinate(const json& j, 
 void SystemProperty::_to_json(json &j) const { j["property"] = property; }
 
 SystemProperty::SystemProperty(const json &j, const Space &spc) : ReactionCoordinateBase(j) {
+    namespace rv = ranges::cpp20::views;
     name = "system";
     property = j.at("property").get<std::string>();
     if (property == "V") {
@@ -104,33 +106,33 @@ SystemProperty::SystemProperty(const json &j, const Space &spc) : ReactionCoordi
             function = [&geometry = spc.geometry]() { return 0.5 * geometry.getLength().x(); };
         }
     } else if (property == "Q") { // system net charge
-        function = [&groups = spc.groups]() {
-            auto charges = groups | ranges::cpp20::views::join | ranges::cpp20::views::transform(&Particle::charge);
+        function = [&spc] {
+            auto charges = spc.groups | rv::join | rv::transform(&Particle::charge);
             return std::accumulate(charges.begin(), charges.end(), 0.0);
         };
     } else if (property == "mu") { // system dipole moment
-        function = [&groups = spc.groups]() {
-            auto particles = groups | ranges::cpp20::views::join;
+        function = [&spc]() {
+            auto particles = spc.groups | rv::join;
             return Faunus::dipoleMoment(particles.begin(), particles.end()).norm();
         };
     } else if (property == "mu_x") { // system dipole moment
-        function = [&groups = spc.groups]() {
-            auto particles = groups | ranges::cpp20::views::join;
+        function = [&spc]() {
+            auto particles = spc.groups | rv::join;
             return Faunus::dipoleMoment(particles.begin(), particles.end()).x();
         };
     } else if (property == "mu_y") { // system dipole moment
-        function = [&groups = spc.groups]() {
-            auto particles = groups | ranges::cpp20::views::join;
+        function = [&spc]() {
+            auto particles = spc.groups | rv::join;
             return Faunus::dipoleMoment(particles.begin(), particles.end()).y();
         };
     } else if (property == "mu_z") { // system dipole moment
-        function = [&groups = spc.groups]() {
-            auto particles = groups | ranges::cpp20::views::join;
+        function = [&spc]() {
+            auto particles = spc.groups | rv::join;
             return Faunus::dipoleMoment(particles.begin(), particles.end()).z();
         };
     } else if (property == "N") { // number of particles
-        function = [&groups = spc.groups]() {
-            auto sizes = groups | ranges::cpp20::views::transform(&Space::GroupType::size);
+        function = [&spc]() {
+            auto sizes = spc.groups | rv::transform(&Space::GroupType::size);
             return static_cast<double>(std::accumulate(sizes.begin(), sizes.end(), 0U));
         };
     }
@@ -148,6 +150,11 @@ void AtomProperty::_to_json(json &j) const {
     }
 }
 
+/**
+ * @warning For the lambda capture, always capture "Space&" and not unerlying objects like `particles` or `groups`.
+ *          This is because the memory location of the latter may be modified after the lambda cration, thus
+ *          leading to undefined dereferencing.
+ */
 AtomProperty::AtomProperty(const json &j, const Space &spc) : ReactionCoordinateBase(j) {
     name = "atom";
     index = j.at("index");
@@ -156,20 +163,19 @@ AtomProperty::AtomProperty(const json &j, const Space &spc) : ReactionCoordinate
     }
     property = j.at("property").get<std::string>();
     if (property == "x") {
-        function = [&particle = spc.particles.at(index)]() { return particle.pos.x(); };
+        function = [&spc, i = index]() { return spc.particles.at(i).pos.x(); };
     } else if (property == "y") {
-        function = [&particle = spc.particles.at(index)]() { return particle.pos.y(); };
+        function = [&spc, i = index]() { return spc.particles.at(i).pos.y(); };
     } else if (property == "z") {
-        function = [&particle = spc.particles.at(index)]() { return particle.pos.z(); };
+        function = [&spc, i = index]() { return spc.particles.at(i).pos.z(); };
     } else if (property == "R") {
-        function = [&particle = spc.particles.at(index)]() { return particle.pos.norm(); };
+        function = [&spc, i = index]() { return spc.particles.at(i).pos.norm(); };
     } else if (property == "q") {
-        function = [&particle = spc.particles.at(index)]() { return particle.charge; };
+        function = [&spc, i = index]() { return spc.particles.at(i).charge; };
     } else if (property == "N") {
-        function = [&groups = spc.groups, id = index]() {
-            auto particles = groups | ranges::cpp20::views::join;
-            return static_cast<double>(
-                ranges::cpp20::count_if(particles, [&](const auto& particle) { return particle.id == id; }));
+        function = [&spc, id = index]() {
+            return static_cast<double>(ranges::cpp20::count_if(
+                spc.activeParticles(), [&](const Particle& particle) { return particle.id == id; }));
         };
     }
 
@@ -190,6 +196,11 @@ void MoleculeProperty::_to_json(json& j) const {
     }
 }
 
+/**
+ * @warning For the lambda capture, always capture "Space&" and not unerlying objects like `particle` or `group`.
+ *          This is because the memory location of the latter may be modified after the lambda cration, thus
+ *          leading to undefined dereferencing.
+ */
 MoleculeProperty::MoleculeProperty(const json &j, const Space &spc) : ReactionCoordinateBase(j) {
     name = "molecule";
     index = j.value("index", 0);
@@ -197,35 +208,43 @@ MoleculeProperty::MoleculeProperty(const json &j, const Space &spc) : ReactionCo
         throw ConfigurationError("invalid index");
     }
     auto b = spc.geometry.getBoundaryFunc();
-    const auto& group = spc.groups.at(index);
 
     property = j.at("property").get<std::string>();
 
     if (property == "active") { // if molecule is active (1) or not (0)
-        function = [&group]() { return static_cast<double>(!group.empty()); };
+        function = [&spc, i = index]() { return static_cast<double>(!spc.groups.at(i).empty()); };
     } else if (property == "confid") {
-        function = [&group]() { return static_cast<double>(group.conformation_id); };
+        function = [&spc, i = index]() { return static_cast<double>(spc.groups.at(i).conformation_id); };
     } else if (property == "com_x") {
-        function = [&group]() { return group.mass_center.x(); };
+        function = [&spc, i = index]() { return spc.groups.at(i).mass_center.x(); };
     } else if (property == "com_y") {
-        function = [&group]() { return group.mass_center.y(); };
+        function = [&spc, i = index]() { return spc.groups.at(i).mass_center.y(); };
     } else if (property == "com_z") {
-        function = [&group]() { return group.mass_center.z(); };
+        function = [&spc, i = index]() { return spc.groups.at(i).mass_center.z(); };
     } else if (property == "N") {
-        function = [&group]() { return static_cast<double>(group.size()); };
+        function = [&spc, i = index]() { return static_cast<double>(spc.groups.at(i).size()); };
     } else if (property == "Q") {
-        function = [&group]() { return monopoleMoment(group.begin(), group.end()); };
+        function = [&spc, i = index]() { return monopoleMoment(spc.groups.at(i).begin(), spc.groups.at(i).end()); };
     } else if (property == "mu_x") {
-        function = [&group, b]() { return dipoleMoment(group.begin(), group.end(), b).x(); };
+        function = [&spc, i = index, b]() {
+            return dipoleMoment(spc.groups.at(i).begin(), spc.groups.at(i).end(), b).x();
+        };
     } else if (property == "mu_y") {
-        function = [&group, b]() { return dipoleMoment(group.begin(), group.end(), b).y(); };
+        function = [&spc, i = index, b]() {
+            return dipoleMoment(spc.groups.at(i).begin(), spc.groups.at(i).end(), b).y();
+        };
     } else if (property == "mu_z") {
-        function = [&group, b]() { return dipoleMoment(group.begin(), group.end(), b).z(); };
+        function = [&spc, i = index, b]() {
+            return dipoleMoment(spc.groups.at(i).begin(), spc.groups.at(i).end(), b).z();
+        };
     } else if (property == "mu") {
-        function = [&group, b]() { return dipoleMoment(group.begin(), group.end(), b).norm(); };
+        function = [&spc, i = index, b]() {
+            return dipoleMoment(spc.groups.at(i).begin(), spc.groups.at(i).end(), b).norm();
+        };
     } else if (property == "end2end") {
-        function = [&spc, &group]() {
-            return std::sqrt(spc.geometry.sqdist(group.begin()->pos, std::prev(group.end())->pos));
+        function = [&spc, i = index]() {
+            return std::sqrt(
+                spc.geometry.sqdist(spc.groups.at(i).begin()->pos, std::prev(spc.groups.at(i).end())->pos));
         };
     } else if (property == "Rg") {
         selectGyrationRadius(spc);
@@ -254,15 +273,17 @@ MoleculeProperty::MoleculeProperty(const json &j, const Space &spc) : ReactionCo
 void MoleculeProperty::selectLengthOverRadiusRatio(const json& j, const Space& spc) {
     direction = j.at("dir");
     indexes = j.value("indexes", decltype(indexes)());
-    assert(indexes.size() == 2 && "An array of 2 indexes should be specified.");
+    if (indexes.size() != 2) {
+        ConfigurationError("An array of 2 indexes should be specified");
+    }
     function = [&spc, &dir = direction, i = indexes[0], j = indexes[1]]() {
         Average<double> mean_radius_j;
         Average<double> Rin;
         Average<double> Rout;
         auto particles_i = spc.findAtoms(i);
-        auto mass_center_i =
+        Point mass_center_i =
             Geometry::massCenter(particles_i.begin(), particles_i.end(), spc.geometry.getBoundaryFunc());
-        for (const auto& particle : spc.findAtoms(j)) {
+        for (const Particle& particle : spc.findAtoms(j)) {
             mean_radius_j += spc.geometry.vdist(particle.pos, mass_center_i).cwiseProduct(dir.cast<double>()).norm();
         }
         const auto Rjavg = mean_radius_j.avg();
@@ -280,21 +301,20 @@ void MoleculeProperty::selectLengthOverRadiusRatio(const json& j, const Space& s
 }
 void MoleculeProperty::selectMassCenterDistanceZ(const json& j, const Space& spc) {
     indexes = j.value("indexes", decltype(indexes)());
-    assert(indexes.size() > 1 && "An array of 2 or 4 indexes should be specified.");
     if (indexes.size() == 4) {
         function = [&spc, i = indexes[0], j = indexes[1] + 1, k = indexes[2], l = indexes[3] + 1]() {
-            auto cm1 = Geometry::massCenter(spc.particles.begin() + i, spc.particles.begin() + j,
-                                            spc.geometry.getBoundaryFunc());
-            auto cm2 = Geometry::massCenter(spc.particles.begin() + k, spc.particles.begin() + l,
-                                            spc.geometry.getBoundaryFunc());
+            Point cm1 = Geometry::massCenter(spc.particles.begin() + i, spc.particles.begin() + j,
+                                             spc.geometry.getBoundaryFunc());
+            Point cm2 = Geometry::massCenter(spc.particles.begin() + k, spc.particles.begin() + l,
+                                             spc.geometry.getBoundaryFunc());
             return spc.geometry.vdist(cm1, cm2).z();
         };
     } else if (indexes.size() == 2) {
-        function = [&geometry = spc.geometry, &group1 = spc.groups.at(indexes[0]),
-                    &group2 = spc.groups.at(indexes[1])]() {
-            return geometry.vdist(group1.mass_center, group2.mass_center).z();
+        function = [&spc, i = indexes[0], j = indexes[1]]() {
+            return spc.geometry.vdist(spc.groups.at(i).mass_center, spc.groups.at(j).mass_center).z();
         };
     }
+    throw ConfigurationError("An array of 2 or 4 indexes should be specified.");
 }
 void MoleculeProperty::selectAtomAtomDistance(const json& j, const Space& spc) {
     direction = j.at("dir");
@@ -309,17 +329,18 @@ void MoleculeProperty::selectAtomAtomDistance(const json& j, const Space& spc) {
     };
 }
 void MoleculeProperty::selectGyrationRadius(const Space& spc) {
-    function = [&spc, &group = spc.groups.at(index)]() {
-        assert(group.size() > 1);
-        auto S = Geometry::gyration(group.begin(), group.end(), group.mass_center, spc.geometry.getBoundaryFunc());
+    function = [&spc, i = index]() {
+        assert(spc.groups.at(i).size() > 1);
+        Tensor S = Geometry::gyration(spc.groups.at(i).begin(), spc.groups.at(i).end(), spc.groups.at(i).mass_center,
+                                      spc.geometry.getBoundaryFunc());
         return sqrt(S.trace()); // S.trace() == S.eigenvalues().sum() but faster
     };
 }
 void MoleculeProperty::selectDipoleAngle(const json& j, const Space& spc, Geometry::BoundaryFunction& b) {
     direction = j.at("dir").get<Point>().normalized();
     if (spc.groups.at(index).isMolecular()) {
-        function = [&group = spc.groups.at(index), b, &dir = direction]() {
-            const auto dot_product = dipoleMoment(group.begin(), group.end(), b).dot(dir);
+        function = [&spc, i = index, b, &dir = direction]() {
+            const auto dot_product = dipoleMoment(spc.groups.at(i).begin(), spc.groups.at(i).end(), b).dot(dir);
             return acos(dot_product) * 180.0 / pc::pi;
         };
     }
@@ -330,25 +351,28 @@ void MoleculeProperty::selectMassCenterDistance(const json& j, const Space& spc)
     indexes = j.value("indexes", decltype(indexes)());
     assert(indexes.size() > 1 && "An array of 2 or 4 indexes should be specified.");
     if (indexes.size() == 4) {
-        function = [&spc, dir = direction, i = indexes[0], j = indexes[1] + 1, k = indexes[2], l = indexes[3] + 1]() {
-            auto cm1 = Geometry::massCenter(spc.particles.begin() + i, spc.particles.begin() + j,
-                                            spc.geometry.getBoundaryFunc());
-            auto cm2 = Geometry::massCenter(spc.particles.begin() + k, spc.particles.begin() + l,
-                                            spc.geometry.getBoundaryFunc());
-            return spc.geometry.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).norm();
+        function = [&spc, dir = direction.cast<double>(), i = indexes[0], j = indexes[1] + 1, k = indexes[2],
+                    l = indexes[3] + 1]() {
+            Point cm1 = Geometry::massCenter(spc.particles.begin() + i, spc.particles.begin() + j,
+                                             spc.geometry.getBoundaryFunc());
+            Point cm2 = Geometry::massCenter(spc.particles.begin() + k, spc.particles.begin() + l,
+                                             spc.geometry.getBoundaryFunc());
+            return spc.geometry.vdist(cm1, cm2).cwiseProduct(dir).norm();
         };
     } else if (indexes.size() == 2) {
-        function = [&spc, dir = direction, i = indexes[0], j = indexes[1]]() {
-            auto& cm1 = spc.groups.at(i).mass_center;
-            auto& cm2 = spc.groups.at(j).mass_center;
-            return spc.geometry.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).norm();
+        function = [&spc, dir = direction.cast<double>(), i = indexes[0], j = indexes[1]]() {
+            const auto& cm1 = spc.groups.at(i).mass_center;
+            const auto& cm2 = spc.groups.at(j).mass_center;
+            return spc.geometry.vdist(cm1, cm2).cwiseProduct(dir).norm();
         };
     }
 }
 void MoleculeProperty::selectMinimumGroupDistance(const json& j, const Space& spc) {
     indexes = j.value("indexes", decltype(indexes)());
-    assert(indexes.size() == 2 && "An array of 2 indexes should be specified.");
-    function = [&spc, i = indexes[0], j = indexes[1]]() {
+    if (indexes.size() != 2) {
+        throw ConfigurationError("indexes must have two elements");
+    }
+    function = [&spc, i = indexes.at(0), j = indexes.at(1)]() {
         auto minimum_distance_squared = spc.geometry.getLength().norm();
         for (const auto& particle_i : spc.findAtoms(i)) {
             for (const auto& particle_j : spc.findAtoms(j)) {
@@ -362,36 +386,40 @@ void MoleculeProperty::selectMinimumGroupDistance(const json& j, const Space& sp
 void MoleculeProperty::selectRinner(const json& j, const Space& spc) {
     direction = j.at("dir");
     indexes = j.value("indexes", decltype(indexes)());
-    if (indexes.size() != 3) {
-        throw ConfigurationError("An array of at least 3 indexes should be specified.");
+    if (indexes.size() != 4) {
+        throw ConfigurationError("indexes must have four elements");
     }
-    function = [&spc, &dir = direction, i = indexes[0], j = indexes[1], k = indexes[2], l = indexes[3]]() {
-        Average<double> mean_radius_j;
-        Average<double> mean_radius_i;
+    function = [&spc, &dir = direction, i = indexes.at(0), j = indexes.at(1), k = indexes.at(2), l = indexes.at(3)]() {
+        namespace rv = ranges::cpp20::views;
         auto slicei = spc.findAtoms(i);
         const auto mass_center = Geometry::massCenter(slicei.begin(), slicei.end(), spc.geometry.getBoundaryFunc());
-        for (const auto& particle : spc.findAtoms(j)) {
-            mean_radius_j += spc.geometry.vdist(particle.pos, mass_center).cwiseProduct(dir.cast<double>()).norm();
-        }
-        const auto mean_radius = mean_radius_j.avg();
-        for (const auto& particle : spc.activeParticles()) {
-            if ((particle.id == k) or (particle.id == l)) {
-                const auto radius =
-                    spc.geometry.vdist(particle.pos, mass_center).cwiseProduct(dir.cast<double>()).norm();
-                if (radius < mean_radius) {
-                    mean_radius_i += radius;
-                }
-            }
-        }
-        return mean_radius_i.avg();
+
+        // filter and transform lambdas
+        auto k_or_l = [k, l](auto& particle) { return (particle.id == k) or (particle.id == l); };
+        auto radius = [&, dir = dir.cast<double>()](auto& particle) {
+            return spc.geometry.vdist(particle.pos, mass_center).cwiseProduct(dir).norm();
+        };
+        auto mean = [](auto& radii) {
+            Average<double> mean;
+            ranges::cpp20::for_each(radii, [&](auto radius) { mean += radius; });
+            return mean.avg();
+        };
+
+        auto radii_j = spc.findAtoms(j) | rv::transform(radius);
+        auto mean_radii_j = mean(radii_j);
+
+        auto radii = spc.activeParticles() | rv::filter(k_or_l) | rv::transform(radius) |
+                     rv::filter([mean_radii_j](auto radius) { return radius < mean_radii_j; });
+        return mean(radii);
     };
 }
 void MoleculeProperty::selectAngleWithVector(const json& j, const Space& spc) {
     direction = j.at("dir").get<Point>().normalized();
     if (spc.groups.at(index).isMolecular()) {
-        function = [&spc, &dir = direction, &group = spc.groups.at(index)]() {
+        function = [&spc, &dir = direction, i = index]() {
+            auto& group = spc.groups.at(i);
             auto& cm = group.mass_center;
-            auto S = Geometry::gyration(group.begin(), group.end(), cm, spc.geometry.getBoundaryFunc());
+            Tensor S = Geometry::gyration(group.begin(), group.end(), cm, spc.geometry.getBoundaryFunc());
             Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(S);
             Point eivals = esf.eigenvalues();
             ptrdiff_t i_eival;

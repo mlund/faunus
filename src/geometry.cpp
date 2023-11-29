@@ -3,10 +3,12 @@
 #include "random.h"
 #include "average.h"
 #include "aux/eigensupport.h"
+#include "aux/arange.h"
 #include <spdlog/spdlog.h>
 #include <cereal/types/memory.hpp>
 #include <cereal/archives/binary.hpp>
 #include <Eigen/Eigenvalues>
+#include <doctest/doctest.h>
 
 namespace Faunus::Geometry {
 
@@ -611,7 +613,7 @@ ParticleVector mapParticlesOnSphere(const ParticleVector &source) {
 
     faunus_logger->info("{} particles mapped on sphere of radius {} with RMSD {} {}; the first particle ({}) is a "
                         "dummy and COM placeholder",
-                        destination.size(), radius.avg(), _rmsd, u8::angstrom,
+                        destination.size(), radius.avg(), _rmsd, unicode::angstrom,
                         Faunus::atoms.at(destination.at(0).id).name);
     return destination;
 }
@@ -667,7 +669,7 @@ TEST_CASE("[Faunus] ShapeDescriptors") {
     CHECK(shape.relative_shape_anisotropy == Approx(0.0));
 }
 
-TEST_CASE("[Faunus] HexagonalPrismToCuboid") {
+TEST_CASE("[Faunus] hexagonalPrismToCuboid") {
     using doctest::Approx;
     double radius = 2.0, height = 20.0;
     double side = 2.0 / std::sqrt(3.0) * radius;
@@ -679,7 +681,7 @@ TEST_CASE("[Faunus] HexagonalPrismToCuboid") {
     p[3].pos = {0, -1, 0};
     p[4].pos = {-0.866, -0.5, 0};
     p[5].pos = {-0.866, 0.5, 0};
-    auto [cuboid, p_new] = HexagonalPrismToCuboid(hexagonal_prism, p);
+    auto [cuboid, p_new] = hexagonalPrismToCuboid(hexagonal_prism, p);
     CHECK(p_new.size() == 12);
     CHECK(cuboid.getLength().x() == Approx(radius * 2.0));
     CHECK(cuboid.getLength().y() == Approx(side * 3.0));
@@ -1222,7 +1224,7 @@ TEST_CASE("[Faunus] Chameleon") {
     }
 }
 
-TEST_CASE("[Faunus] anyCenter") {
+TEST_CASE("[Faunus] weightedCenter") {
     Chameleon cyl = json({{"type", "cuboid"}, {"length", 100}, {"radius", 20}});
     std::vector<Particle> p;
 
@@ -1239,12 +1241,171 @@ TEST_CASE("[Faunus] anyCenter") {
     CHECK(cm.z() == doctest::Approx(0));
 }
 
+TEST_CASE("[Faunus] gyration") {
+    std::vector<Point> positions = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
+    std::vector<double> weights = {0.6, 1.5, 2.2};
+    auto boundary = [](auto&) {};
+
+    Faunus::atoms.resize(3);
+    Faunus::atoms.at(0).mw = weights.at(0);
+    Faunus::atoms.at(1).mw = weights.at(1);
+    Faunus::atoms.at(2).mw = weights.at(2);
+    ParticleVector particles(3);
+    particles.at(0).id = 0;
+    particles.at(1).id = 1;
+    particles.at(2).id = 2;
+    particles.at(0).pos = positions.at(0);
+    particles.at(1).pos = positions.at(1);
+    particles.at(2).pos = positions.at(2);
+
+    auto mass_center = Geometry::massCenter(particles.begin(), particles.end(), boundary);
+
+    SUBCASE("mass center") {
+        CHECK(mass_center.x() == doctest::Approx(5.1162790698));
+        CHECK(mass_center.y() == doctest::Approx(6.1162790698));
+        CHECK(mass_center.z() == doctest::Approx(7.1162790698));
+    }
+
+    SUBCASE("position based") {
+        auto gyration = Geometry::gyration(positions.begin(), positions.end(), weights.begin(), mass_center, boundary);
+        CHECK(gyration.trace() == doctest::Approx(13.843158464));
+        CHECK(gyration.diagonal().x() == doctest::Approx(4.6143861547));
+        CHECK(gyration.diagonal().y() == doctest::Approx(4.6143861547));
+        CHECK(gyration.diagonal().z() == doctest::Approx(4.6143861547));
+
+        // check symmetry
+        CHECK(gyration(0, 1) == doctest::Approx(gyration(1, 0)));
+        CHECK(gyration(0, 2) == doctest::Approx(gyration(2, 0)));
+        CHECK(gyration(1, 2) == doctest::Approx(gyration(2, 1)));
+
+        // principal moment
+        Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(gyration);
+        auto eigen_values = esf.eigenvalues().eval();
+        std::ptrdiff_t i_eival;
+        eigen_values.minCoeff(&i_eival);
+        auto principle_axis = esf.eigenvectors().col(i_eival).real().eval();
+        CHECK(principle_axis.x() == doctest::Approx(-0.8164965809));
+        CHECK(principle_axis.y() == doctest::Approx(0.4082482905));
+        CHECK(principle_axis.z() == doctest::Approx(0.4082482905));
+    }
+
+    SUBCASE("particle based") {
+        auto gyration = Geometry::gyration(particles.begin(), particles.end(), mass_center, boundary);
+        CHECK(gyration.trace() == doctest::Approx(13.843158464));
+        CHECK(gyration.diagonal().x() == doctest::Approx(4.6143861547));
+        CHECK(gyration.diagonal().y() == doctest::Approx(4.6143861547));
+        CHECK(gyration.diagonal().z() == doctest::Approx(4.6143861547));
+
+        // check symmetry
+        CHECK(gyration(0, 1) == doctest::Approx(gyration(1, 0)));
+        CHECK(gyration(0, 2) == doctest::Approx(gyration(2, 0)));
+        CHECK(gyration(1, 2) == doctest::Approx(gyration(2, 1)));
+    }
+}
+
 TEST_CASE("[Faunus] rootMeanSquareDeviation") {
     std::vector<double> v1 = {1.3, 4.4, -1.1};
     std::vector<double> v2 = {1.1, 4.6, -1.0};
     auto f = [](double a, double b) { return std::pow(a - b, 2); };
     double rmsd = Geometry::rootMeanSquareDeviation(v1.begin(), v1.end(), v2.begin(), f);
     CHECK(rmsd == doctest::Approx(0.17320508075688745));
+}
+
+/**
+ * @brief Generates n points uniformly distributed on a sphere
+ *
+ * Related information:
+ * - https://stackoverflow.com/questions/9600801/evenly-distributing-n-points-on-a-sphere
+ * - https://en.wikipedia.org/wiki/Geodesic_polyhedron
+ * - c++: https://github.com/caosdoar/spheres
+ */
+std::vector<Point> TwobodyAngles::fibonacciSphere(const int samples) {
+    int cnt = 0;
+    const auto phi = pc::pi * (3.0 - std::sqrt(5.0));  // golden angle in radians
+    std::vector<Point> unit_points_on_sphere;
+    unit_points_on_sphere.resize(samples);
+    
+    for (auto &point: unit_points_on_sphere) {
+        point.y() = 1.0 - 2.0 * (cnt / double(samples - 1));        // y goes from 1 to -1
+        const auto radius = std::sqrt(1.0 - point.y() * point.y()); // radius at y
+        const auto theta = phi * double(cnt);                       // golden angle increment
+        point.x() = std::cos(theta) * radius;
+        point.z() = std::sin(theta) * radius;
+        point.normalize(); // make sure it's really normalized (perhaps redundant)
+        cnt++;
+    };
+    return unit_points_on_sphere;
+}
+
+TwobodyAngles::TwobodyAngles(const double angle_resolution) {
+    namespace rv = ranges::cpp20::views;
+
+    const auto number_of_samples = size_t(std::round(4.0 * pc::pi / std::pow(angle_resolution, 2)));
+    const auto points_on_sphere = fibonacciSphere(number_of_samples);
+
+    quaternions_1 =
+        points_on_sphere |
+        rv::transform([](const auto& axis) { return Eigen::Quaterniond::FromTwoVectors(axis, Point::UnitZ()); }) |
+        ::ranges::to_vector;
+
+    quaternions_2 =
+        points_on_sphere |
+        rv::transform([](const auto& axis) { return Eigen::Quaterniond::FromTwoVectors(axis, -Point::UnitZ()); }) |
+        ::ranges::to_vector;
+
+    dihedrals =
+        arange(0.0, 2.0 * pc::pi, angle_resolution) |
+        rv::transform([](auto angle) { return Eigen::Quaterniond(Eigen::AngleAxisd(angle, Point::UnitZ())); }) |
+        ::ranges::to_vector;
+
+    const auto n1 = quaternions_1.size();
+    const auto n2 = quaternions_2.size();
+    const auto n3 = dihedrals.size();
+    faunus_logger->info(fmt::format("rigid body: Δ⍺ = {:.1f}° -> {} x {} x {} = {} poses 💃🏽🕺🏼",
+                                    angle_resolution / 1.0_deg, n1, n2, n3, n1 * n2 * n3));
+
+    std::ofstream f("fibonacci_points.xyz");
+    if (f) {
+        f << points_on_sphere.size() << "\n# points on sphere used for angular scan\n";
+        for (const auto& point : points_on_sphere) {
+            f << "C " << point.transpose() << "\n";
+        };
+    }
+}
+
+size_t TwobodyAngles::size() const {
+    return quaternions_1.size() * quaternions_2.size() * dihedrals.size();
+}
+
+TwobodyAnglesState::TwobodyAnglesState(const double angle_resolution) : TwobodyAngles(angle_resolution) {
+    q_euler1 = quaternions_1.begin();
+    q_euler2 = quaternions_1.begin();
+    q_dihedral = dihedrals.begin();
+}
+
+TwobodyAnglesState& TwobodyAnglesState::advance() {
+    if (q_euler1 < quaternions_1.end()) {
+        q_dihedral++;
+        if (q_dihedral >= dihedrals.end()) {
+            q_dihedral = dihedrals.begin();
+            q_euler2++;
+        }
+        if (q_euler2 >= quaternions_2.end()) {
+            q_euler2 = quaternions_2.begin();
+            q_euler1++;
+        }
+    }
+    return *this;
+}
+
+/**
+ * @return Pair of quaternions, one for each body, or `std::nullopt` of all angles have been explored.
+ */
+std::optional<std::pair<Eigen::Quaterniond, Eigen::Quaterniond>> TwobodyAnglesState::get() {
+    if (q_euler1 < quaternions_1.end()) {
+        return std::make_pair(*q_euler1, (*q_dihedral) * (*q_euler2));
+    }
+    return std::nullopt;
 }
 
 } // namespace Faunus::Geometry

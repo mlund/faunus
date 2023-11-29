@@ -3,7 +3,7 @@
 #include "bonds.h"
 
 namespace Faunus {
-namespace Move {
+namespace move {
 
 void ChainRotationMoveBase::_from_json(const json &j) {
     molname = j.at("molecule");
@@ -12,10 +12,10 @@ void ChainRotationMoveBase::_from_json(const json &j) {
 }
 
 void ChainRotationMoveBase::_to_json(json &j) const {
-    using namespace u8;
+    using namespace unicode;
     j = {{"molecule", molname},
          {"dprot", dprot},
-         {u8::rootof + u8::bracket("r_cm" + u8::squared), std::sqrt(msqdispl.avg())}};
+         {unicode::rootof + unicode::bracket("r_cm" + unicode::squared), std::sqrt(msqdispl.avg())}};
     if (small_box_encountered > 0) {
         j["skipped"] = double(small_box_encountered) / number_of_attempted_moves; // todo rename the json attribute
     }
@@ -38,8 +38,8 @@ void ChainRotationMoveBase::_accept(Change &) { msqdispl += sqdispl; }
 void ChainRotationMoveBase::_reject(Change &) { msqdispl += 0; }
 double ChainRotationMoveBase::bias(Change &, double, double) { return permit_move ? 0 : pc::infty; }
 
-ChainRotationMoveBase::ChainRotationMoveBase(Space &spc, std::string name, std::string cite)
-    : MoveBase(spc, name, cite) {}
+ChainRotationMoveBase::ChainRotationMoveBase(Space& spc, std::string name, std::string cite)
+    : Move(spc, name, cite) {}
 
 ChainRotationMove::ChainRotationMove(Space &spc, std::string name, std::string cite)
     : ChainRotationMoveBase(spc, name, cite) {
@@ -161,7 +161,7 @@ PivotMove::PivotMove(Space &spc) : PivotMove(spc, "pivot", "") {}
 
 void PivotMove::_from_json(const json &j) {
     TBase::_from_json(j);
-    bonds = molecules[this->molid].bonds.find<Potential::HarmonicBond>();
+    bonds = molecules[this->molid].bonds.find<pairpotential::HarmonicBond>();
     if (bonds.empty()) {
         throw ConfigurationError("no harmonic bonds found for pivot move");
     }
@@ -205,5 +205,5 @@ size_t PivotMove::select_segment() {
     return segment_size;
 }
 
-} // end of namespace Move
+} // namespace move
 } // namespace Faunus

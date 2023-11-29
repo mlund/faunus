@@ -32,6 +32,7 @@ struct Change {
     bool volume_change = false;              //!< The volume has changed
     bool matter_change = false;              //!< The number of atomic or molecular species has changed
     bool moved_to_moved_interactions = true; //!< If several groups are moved, should they interact with each other?
+    bool disable_translational_entropy = false; //!< Force exclusion of translational entropy
 
     //! Properties of changed groups
     struct GroupChange {
@@ -43,9 +44,12 @@ struct Change {
         std::vector<index_type> relative_atom_indices; //!< A subset of particles changed (sorted; empty if `all`=true)
 
         bool operator<(const GroupChange& other) const; //!< Comparison operator based on `group_index`
+        void sort(); //!< Sort group indices
     };
 
     std::vector<GroupChange> groups; //!< Touched groups by index in group vector
+
+    std::optional<std::pair<index_type, index_type>> singleParticleChange() const;
 
     //! List of moved groups (index)
     inline auto touchedGroupIndex() const { return ranges::cpp20::views::transform(groups, &GroupChange::group_index); }
@@ -57,7 +61,7 @@ struct Change {
     bool empty() const;                                                       //!< Check if change object is empty
     explicit operator bool() const;                                           //!< True if object is not empty
     void sanityCheck(const std::vector<Group>& group_vector) const;           //!< Sanity check on contained object data
-};
+} __attribute__((aligned(32)));
 
 void to_json(json& j, const Change::GroupChange& group_change); //!< Serialize Change data to json
 void to_json(json& j, const Change& change);                    //!< Serialise Change object to json
@@ -79,6 +83,8 @@ class Space {
     using GeometryType = Geometry::Chameleon;
     using GroupType = Group; //!< Continuous range of particles defining molecules
     using GroupVector = std::vector<GroupType>;
+    using GroupRefVector = std::vector<std::reference_wrapper<Group>>;
+    using ConstGroupRefVector = std::vector<std::reference_wrapper<const Group>>;
     using ScaleVolumeTrigger = std::function<void(Space&, double, double)>;
     using ChangeTrigger = std::function<void(Space&, const Change&)>;
     using SyncTrigger = std::function<void(Space&, const Space&, const Change&)>;
@@ -95,7 +101,7 @@ class Space {
     std::map<MoleculeData::index_type, std::size_t> implicit_reservoir;
 
     std::vector<ChangeTrigger> changeTriggers; //!< Call when a Change object is applied (unused)
-    std::vector<SyncTrigger> onSyncTriggers;   //!< Call when two Space objects are synched (unused)
+    std::vector<SyncTrigger> onSyncTriggers; //!< Every element called after two Space objects are synched with `sync()`
 
   public:
     ParticleVector particles;                            //!< All particles are stored here!
@@ -151,10 +157,10 @@ class Space {
      *
      * @todo Since Space::groups is ordered, binary search could be used to filter
      */
-    template <class iterator, class copy_operation = std::function<void(const Particle &, Particle &)>>
+    template <std::forward_iterator iterator, class copy_operation = std::function<void(const Particle&, Particle&)>>
     void updateParticles(
         const iterator begin, const iterator end, ParticleVector::iterator destination,
-        copy_operation copy_function = [](const Particle &src, Particle &dst) { dst = src; }) {
+        copy_operation copy_function = [](const Particle& src, Particle& dst) { dst = src; }) {
 
         const auto size = std::distance(begin, end); // number of affected particles
 
@@ -168,10 +174,22 @@ class Space {
         // copy data from source range (this modifies `destination`)
         std::for_each(begin, end, [&](const auto &source) { copy_function(source, *destination++); });
 
-        for (auto& group : affected_groups) { // update affected mass centers
-            group.updateMassCenter(geometry.getBoundaryFunc(), group.begin()->pos);
-        }
+        std::for_each(affected_groups.begin(), affected_groups.end(),
+                      [&](Group& group) { group.updateMassCenter(geometry.getBoundaryFunc(), group.begin()->pos); });
     }
+
+    /**
+     * @brief This will make sure that the internal state is updated to reflect a change.
+     *
+     * Typically this is called after a modification of the system, e.g. a MC move and will update the following:
+     *
+     * - mass centers;
+     * - particle trackers
+     * - cell lists
+     *
+     * @todo Under construction and currently not in use
+     */
+    void updateInternalState(const Change& change);
 
     //! Iterable range of all particle positions
     auto positions() const {
@@ -179,14 +197,13 @@ class Space {
     }
 
     //! Mutable iterable range of all particle positions
-    auto positions() {
-        return ranges::cpp20::views::transform(particles, [](auto& particle) -> Point& { return particle.pos; });
-    }
+    auto positions() { return ranges::cpp20::views::transform(particles, &Particle::pos); }
 
-    std::function<bool(const GroupType&)> getGroupFiler(int molid, const Selection& selection) const {
+    static std::function<bool(const GroupType&)> getGroupFilter(MoleculeData::index_type molid,
+                                                                const Selection& selection) {
         auto is_active = [](const GroupType& group) { return group.size() == group.capacity(); };
 
-        auto is_neutral = [](auto begin, auto end) {
+        auto is_neutral = [](RequireParticleIterator auto begin, RequireParticleIterator auto end) {
             auto charge =
                 std::accumulate(begin, end, 0.0, [](auto sum, auto& particle) { return sum + particle.charge; });
             return (fabs(charge) < 1e-6);
@@ -214,8 +231,7 @@ class Space {
             f = [=](auto& group) { return is_active(group) && is_neutral(group.begin(), group.end()); };
             break;
         }
-        f = [f, molid](auto& group) { return group.id == molid && f(group); };
-        return f;
+        return [f, molid](auto& group) { return group.id == molid && f(group); };
     }
 
     /**
@@ -225,12 +241,12 @@ class Space {
      * @return range with all groups of molid
      */
     auto findMolecules(MoleculeData::index_type molid, Selection selection = Selection::ACTIVE) {
-        auto group_filter = getGroupFiler(molid, selection);
+        auto group_filter = getGroupFilter(molid, selection);
         return groups | ranges::cpp20::views::filter(group_filter);
     }
 
     auto findMolecules(MoleculeData::index_type molid, Selection selection = Selection::ACTIVE) const {
-        auto group_filter = getGroupFiler(molid, selection);
+        auto group_filter = getGroupFilter(molid, selection);
         return groups | ranges::cpp20::views::filter(group_filter);
     }
 
@@ -242,16 +258,15 @@ class Space {
      * @returns std::vector of indices pointing to Space::particles
      * @throw std::out_of_range if any particle in range does not belong to Space::particles
      */
-    template <typename index_type = int, typename ParticleRange>
-    auto toIndices(const ParticleRange& particle_range) const {
-        return particle_range | ranges::cpp20::views::transform([&](const Particle& particle) {
-                   const auto index = std::addressof(particle) - std::addressof(particles.at(0));
-                   if (index < 0 || index >= particles.size()) {
-                       throw std::out_of_range("particle range outside Space");
-                   }
-                   return static_cast<index_type>(index);
-               }) |
-               ranges::to_vector;
+    template <std::integral index_type = int> auto toIndices(const RequireParticles auto& particle_range) const {
+        auto to_index = [&](auto& particle) {
+            const auto index = std::addressof(particle) - std::addressof(particles.at(0));
+            if (index < 0 || index >= particles.size()) {
+                throw std::out_of_range("particle range outside Space");
+            }
+            return static_cast<index_type>(index);
+        };
+        return particle_range | ranges::cpp20::views::transform(to_index) | ranges::to_vector;
     }
 
     /**

@@ -1,4 +1,9 @@
 #!/usr/bin/env yason.py
+#
+# A peptide chain is generated from a FASTA sequence and
+# then titrated using a constant pH / constant salt ensemble
+# with explicit salt particles and counter-ions.
+# 
 {% set eps = 0.05 %}
 {% set pH = 7.0 %}
 {% set Cs = 0.010 %}
@@ -6,7 +11,7 @@
 {% set dpsalt = 20 %}
 
 temperature: 298
-random: {seed: default}
+random: {seed: fixed}
 geometry: {type: cuboid, length: [200,200,200]}
 mcloop: {macro: 10, micro: 100}
 
@@ -101,7 +106,7 @@ energy:
                 - "cl HNTR": {sigma: 4.7,  eps: 0.01}
                 - "cl HLYS": {sigma: 4.7,  eps: 0.01}
                 - "cl HARG": {sigma: 3.5,  eps: 0.01}
-        coulomb: {epsr: 80, type: yukawa, debyelength: {{ debyelength }}, cutoff: 30}
+        coulomb: {epsr: 80, type: yukawa, debyelength: {{ debyelength }}}
 moves:
     - rcmc:  {}
     - transrot:    {molecule: Na+, repeat: N}

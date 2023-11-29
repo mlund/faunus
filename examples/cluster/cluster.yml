@@ -39,4 +39,9 @@ analysis:
     - savestate: {file: confout.pqr}
     - savestate: {file: state.json}
     - sanity: {nstep: 200}
+    - groupmatrix:
+        nstep: 20
+        molecules: [water]
+        property: com_distance
+        file: distances.mtx.gz
 

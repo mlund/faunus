@@ -58,6 +58,25 @@ properties:
               then:
                   required: [radius, length]
 
+    optional_electrolyte:
+        properties:
+            molarity: {type: number, description: "Molar salt concentration (mol/l)"}
+            salt: {type: number, description: "Molar salt concentration (mol/l)", deprecated: true}
+            epsr: {type: number, description: "Relative dielectric constant"}
+            debyelength: {type: number, description: "Debye screening length (Å)"}
+            valencies:
+                type: array
+                items: {type: integer}
+                minItems: 2
+                default: [1,-1]
+                description: "Valencies of participating ions: [1,-1] ~ NaCl; [2,-1] ~ CaCl2; [1,3,-2] ~ KAl(SO4)2)"
+
+    require_electrolyte:
+        "$ref": "#/properties/optional_electrolyte"
+        oneOf:
+            - required: [molarity]
+            - required: [debyelength, epsr]
+     
     insertmolecules:
         type: array
         minItems: 1
@@ -87,7 +106,7 @@ properties:
                           activity: {type: number, default: 0.0}
                           alphax: {type: number, default: 0.0}
                           dp: {type: number, default: 0.0, minimum: 0.0}
-                          dprot: {type: number, default: 0.0, description: "Rotational displacement parameter"}
+                          dprot: {type: number, default: 0.0, description: "Rotational displacement (radians)", minimum: 0.0, maximum: 6.283185}
                           eps: {type: number, default: 0.0}
                           implicit: {type: boolean, default: false, description: "True if atom is implicit"}
                           mu:
@@ -105,6 +124,19 @@ properties:
                           sigma: {type: number, default: 0.0, description: "Diameter (Å)"}
                           tension: {type: number, default: 0.0, description: "Surface tension (kJ/mol/Å²)"}
                           tfe: {type: number, default: 0.0, description: "Transfer free energy (kJ/mol/Å²/M)"}
+                          rc: {type: number, description: "Cosine attraction"}
+                          wc: {type: number, description: "Cosine attraction"}
+                          psc:
+                              type: object
+                              description: "Patchy spherocylinder properties"
+                              required: [type, length]
+                              additionalProperties: false
+                              properties:
+                                  type: {type: string, enum: [none, full, capped], description: "patchtype"}
+                                  length: {type: number, description: "length of spherocylinder"}
+                                  patch_angle: {type: number, description: "patch opening angle (degrees)"}
+                                  patch_angle_switch: {type: number}
+                                  chiral_angle: {type: number, default: 0.0, description: "rotate patch w. respect to length axis (degrees)"}
                 - type: string
 
     moleculelist:
@@ -229,7 +261,7 @@ properties:
                       properties:
                           C: {type: integer, default: 3}
                           D: {type: integer, default: 3}
-                          debyelength: {type: number, description: Debye screening length (Å)}
+                          "$ref": "#/properties/optional_electrolyte"
                       required: [cutoff, C, D]
                 - if:
                       properties: {type: {const: "fanourgakis"}}
@@ -246,30 +278,17 @@ properties:
                           ipbc: {type: boolean, default: false}
                           spherical_sum: {type: boolean, default: false}
                           ewaldscheme: {type: string, enum: [PBC, PBCEigen, IPBC], default: PBCEigen}
-                          debyelength: {type: number, description: Debye screening length (Å)}
                       required: [cutoff, epss, alpha, ncutoff]
+                      "$ref": "#/properties/optional_electrolyte"
                 - if:
                       properties: {type: {const: "yukawa"}}
                   then:
+                      "$ref": "#/properties/require_electrolyte"
                       properties:
-                          debyelength: {type: number, description: Debye screening length (Å)}
-                          shift: {type: boolean, description: Zero potential and force at cutoff, default: false}
-                      required: [debyelength]
+                          shift: {type: boolean, description: "Zero potential and force at cutoff", default: false}
+            unevaluatedProperties: false
+              #additionalProperties: false
                       
-        electrolyte:
-            type: object
-            properties:
-                molarity: {type: number, description: "Molar salt concentreation (mol/l)"}
-                valency:
-                    type: array
-                    items: {type: integer}
-                    minItems: 2
-                    maxItems: 2
-                    default: [1,1]
-                    description: "Salt valencies (1:1, 2:1, 2:2 etc.)"
-                required: [molarity]
-                additionalProperties: false
-
         mixing_rule:
             description: Sigma and Epsilon Mixing rule
             type: object
@@ -486,6 +505,16 @@ properties:
                         radius: {type: number, default: 1.4, description: Probe radius for SASA calculation (Å)}
                         molarity: {type: number, description: Molar concentration of co-solute}
                         dense: {type: boolean, default: true, description: True if the dense container for cell lists is desired}
+                        slices: {type: integer, description: "Slices per particle", default: 25}
+                    required: [molarity]
+                    additionalProperties: false
+
+                freesasa:
+                    description: "Manybody solvent accessible surface area using the FreeSASA implementation"
+                    type: object
+                    properties:
+                        radius: {type: number, default: 1.4, description: Probe radius for SASA calculation (Å)}
+                        molarity: {type: number, description: Molar concentration of co-solute}
                     required: [molarity]
                     additionalProperties: false
 
@@ -531,6 +560,17 @@ properties:
                                             resolution: {type: number, description: "Resolution along the coordinate"}
                                             additionalProperties: false
                                         required: [range, resolution]
+
+                custom-groupgroup:
+                    description: "Custom group-group energy"
+                    type: object
+                    properties:
+                        constants: {type: object, description: User-defined constants}
+                        function: {type: string, description: Mathematical expression for the potential (units of kT)}
+                        name1: {type: string, description: "First molecule type"}
+                        name2: {type: string, description: "Second molecule type"}
+                    required: [function, name1, name2]
+                    additionalProperties: false
 
                 customexternal:
                     description: "External Custom Potential"
@@ -647,6 +687,16 @@ properties:
             type: object
             properties:
 
+                charge:
+                    description: "Displaces charge of selected particle"
+                    type: object
+                    properties:
+                        dq: {type: number, description: "Max displacement parameter"}
+                        index: {type: integer, description: "Index of particle to affect"}
+                        quadratic: {type: boolean, default: true, description: "Displace squared charge"}
+                    required: [dq, index]
+                    additionalProperties: false
+
                 conformationswap:
                     description: Swap molecular configurations from loaded library of structures
                     type: object
@@ -657,7 +707,7 @@ properties:
                         copy_policy:
                             type: string
                             default: all
-                            enum: [all, positions, charges]
+                            enum: [all, positions, charges, patches]
                             description: "Data to copy from library: all, positions, charges"
                     additionalProperties: false
 
@@ -665,9 +715,10 @@ properties:
                     description: "Molecular translation and rotation"
                     properties:
                         dp: {type: number}
-                        dprot: {type: number}
+                        dprot: {type: number, default: 0.0, description: "Rotational displacement (radians)", minimum: 0.0, maximum: 6.283185}
                         molecule: {type: string}
                         repeat: {type: [integer, string]}
+                        region: {type: object, description: "Enable smart MC region search"}
                         dir:
                             type: array
                             items: {type: number}
@@ -710,6 +761,30 @@ properties:
                     additionalProperties: false
                     type: object
 
+                gibbs_matter:
+                    properties:
+                        repeat: {type: integer}
+                        molecule: {type: string, description: "Molecule type to exchange"}
+                    required: [molecule]
+                    additionalProperties: false
+                    type: object
+
+                gibbs_volume:
+                    properties:
+                        dV: {type: number, description: "Volume displacement parameter (Å³)"}
+                        method:
+                            type: string
+                            enum: [isotropic]
+                        repeat: {type: integer}
+                        molecules:
+                            type: array
+                            items: {type: string}
+                            minItems: 1
+                            description: "Array of molecules at constant chemical potential"
+                    required: [dV, molecules]
+                    additionalProperties: false
+                    type: object
+
                 crankshaft:
                     properties:
                         dprot: {type: number}
@@ -733,7 +808,7 @@ properties:
                             minItems: 3
                             maxItems: 3
                         dp: {type: number}
-                        dprot: {type: number}
+                        dprot: {type: number, default: 0.0, description: "Rotational displacement (radians)", minimum: 0.0, maximum: 6.283185}
                         molecules:
                             items: {type: string}
                             type: array
@@ -742,6 +817,7 @@ properties:
                             items: {type: string}
                             type: array
                         spread: {type: boolean}
+                        com: {type: boolean, default: true, description: "use mass-center distance threshold"}
                         analysis:
                             type: object
                             description: "Shape analysis"
@@ -806,6 +882,23 @@ properties:
                     additionalProperties: false
                     type: object
 
+    preface:
+        type: array
+        items:
+            type: object
+            properties:
+                angular_scan:
+                    description: "Scan all angles between two rigid bodies (molecule 1 and 2)"
+                    type: object
+                    properties:
+                        indices: {type: array, items: {type: integer}, minItems: 2, maxItems: 2, description: "Two molecule indices"}
+                        zrange: {type: array, items: {type: number}, minItems: 3, maxItems: 3, description: "COM interval min, max, step (Å)"}
+                        max_energy: {type: number, description: "Skip energies above this value"}
+                        angular_resolution: {type: number, description: "Angular spacing (rad)"}
+                        file: {type: string, description: "Output for energies and quaternions", pattern: "(.*?)\\.(dat|dat.gz)$"}
+                        traj: {type: string, description: "Output trajectory (xtc)", pattern: "(.*?)\\.(xtc)$"}
+                    required: [indices, zrange, file, angular_resolution]
+                    additionalProperties: false
          
     analysis:
         type: array
@@ -878,6 +971,42 @@ properties:
                         nstep: {type: integer}
                         nskip: {type: integer, default: 0, description: Initial steps to skip}
                     required: [nstep]
+                    type: object
+                    additionalProperties: false
+
+                displacement:
+                    properties:
+                        nstep: {type: integer}
+                        nskip: {type: integer, default: 0, description: Initial steps to skip}
+                        molecule: {type: string, description: "Molecule type to operate on"}
+                        reset_interval: {type: integer, default: 0, description: "Steps between resetting reference positions"}
+                        max_displacement: {type: number, default: 0, description: "Mox. possible displacement between samples"}
+                        histogram_file: {type: string, default: "displacement_histogram.dat", description: "Name of P(r) histogram file"}
+                        histogram_resolution: {type: number, default: 1.0, description: "Resolution of saved histogram (Å)"}
+                        file: {type: string, description: "Name of steps-x-y-z-r file", pattern: "(.*?)\\.(dat|dat.gz)$"}
+
+                    required: [molecule, nstep]
+                    type: object
+                    additionalProperties: false
+
+                groupmatrix:
+                    properties:
+                        nstep: {type: integer}
+                        nskip: {type: integer, default: 0, description: Initial steps to skip}
+                        file: {type: string, description: "Stream of matrices with group properties", pattern: "(.*?)\\.(mtx|mtx.gz)$"}
+                        property:
+                            type: string
+                            enum: [energy, com_distance, min_distance]
+                            description: "Property to report"
+                        filter:
+                            type: string
+                            description: "ExprTk function to filter `value`"
+                        molecules:
+                            type: array
+                            items: {type: string}
+                            minItems: 1
+                            description: Array of molecules to operate on
+                    required: [nstep, molecules, file, property]
                     type: object
                     additionalProperties: false
 
@@ -954,7 +1083,7 @@ properties:
                         nstep: {type: integer}
                         nskip: {type: integer, default: 0, description: Initial steps to skip}
                         type: {type: string, enum: [atom, molecule, system], description: Reaction coordinate type}
-                    required: [file, nstep, type]
+                    required: [nstep, type]
                     allOf:
                         - if:
                               properties: {type: {const: "atom"}}
@@ -980,7 +1109,7 @@ properties:
                 savestate:
                     description: "Save particle positions to file"
                     properties:
-                        file: {type: string, description: "Output filename", pattern: "(.*?)\\.(aam|pqr|state|ubj|gro|xyz|json|pdb)$"}
+                        file: {type: string, description: "Output filename", pattern: "(.*?)\\.(aam|pqr|state|ubj|gro|xyz|json|pdb|xyz_psc)$"}
                         nstep: {type: integer, default: -1, description: "Sample interval; -1 = end of simulation only"}
                         nskip: {type: integer, default: 0, description: "Initial steps to skip"}
                         saverandom: {type: boolean, default: false, description: "Include random number state"}
@@ -1046,6 +1175,15 @@ properties:
                 systemenergy:
                     properties:
                         file: {type: string}
+                        nstep: {type: integer}
+                        nskip: {type: integer, default: 0, description: Initial steps to skip}
+                    required: [file, nstep]
+                    additionalProperties: false
+                    type: object
+
+                penaltyfunction:
+                    properties:
+                        file: {type: string, description: "Base output filename (.dat|.dat.gz)"}
                         nstep: {type: integer}
                         nskip: {type: integer, default: 0, description: Initial steps to skip}
                     required: [file, nstep]
@@ -1118,6 +1256,16 @@ properties:
                         nstep: {type: integer, description: "Interval between samples"}
                         nskip: {type: integer, default: 0, description: "Initial steps to skip"}
                     required: [nstep]
+                    additionalProperties: false
+                    type: object
+
+                psctraj:
+                    description: "Write trajectory with sphero-cylindrical information"
+                    properties:
+                        file: {type: string, pattern: "(.*?)\\.(dat|gz)$", description: "Output file (.dat, .gz)"}
+                        nstep: {type: integer, description: "Interval between samples"}
+                        nskip: {type: integer, default: 0, description: "Initial steps to skip"}
+                    required: [nstep, file]
                     additionalProperties: false
                     type: object
 

@@ -1,9 +1,9 @@
 # Installing
 
-## Using Conda
+## Conda
 
-For macOS and Linux x86-64, precompiled binary packages are available
-via [(mini)conda](https://conda.io/docs/user-guide/install/index.html):
+For macOS and Linux, precompiled binary packages are available
+via [(mini)conda](https://docs.conda.io/en/latest/miniconda.html):
 
 ~~~ bash
 conda config --add channels conda-forge
@@ -21,18 +21,45 @@ conda upgrade faunus
 ~~~
 
 Starting from version 2.1, we adhere to [semantic versioning](https://semver.org).
+**Note:** Updating to a newer version is often delayed, and if the version you're after
+is not on Conda, consider an alternative method below.
 
-## Building from source code
 
-Faunus is continuously [tested](https://travis-ci.org/mlund/faunus) on macOS/Linux,
-but should compile on most unix operating systems and possibly under Cygwin (Windows).
+## Docker
+
+We provide a [`Dockerfile`](https://github.com/mlund/faunus/blob/master/scripts/Dockerfile)
+that builds the main branch in a [Jupyter](https://jupyter.org) environment.
+The following downloads the Dockerfile; builds the image; and startup a JupyterLab
+session in Docker on port 8888:
+
+~~~ bash
+curl -s https://raw.githubusercontent.com/mlund/faunus/master/scripts/Dockerfile | docker build -t faunuslab -
+docker run -it -p 8888:8888 faunuslab # open generated url in a browser
+~~~
+
+Once running, you may alias the Docker-side faunus command so that it can be accessed from
+the host side:
+
+~~~ bash
+alias faunus='docker exec --interactive -u 1000 faunuslab faunus'
+faunus < input.json # piping input to docker
+~~~
+
+For development using VSC, we also provide a `devcontainer` configuration for setting
+up a Linux development environment, see description below.
+
+
+## Build from source code
+
+Faunus is continuously [tested](https://app.travis-ci.com/github/mlund/faunus) on macOS/Linux,
+but compile on most unix operating systems, including the Windows Subsystem for Linux (WSL).
 
 ### Requirements
 
-- CMake 3.16+
-- C/C++17 compiler (Clang 5+, GCC 7+, etc.)
-- Python 3.6+ with the following packages:
-  - `jinja2`, `ruamel_yaml` or `yaml`
+- CMake 3.24+
+- C++20 compiler (clang, g++, intel ixpc, ...)
+- Python 3.7+ with the following packages:
+  - `jinja2`, `ruamel.yaml` or `yaml`
 
 The following are optional:
 
@@ -41,13 +68,6 @@ The following are optional:
 - `pypandoc` (for building manual)
 - `BeautifulSoup4` (for building manual)
 - Message Passing Interface (MPI)
-
-**macOS tip:**
-Apple's developer tools, Xcode, include clang;
-CMake can be installed with an
-[Installer package](https://cmake.org/download) from Kitware, or using
-[Homebrew](https://brew.sh), or
-[(mini)conda](https://conda.io/docs/user-guide/install/index.html)
 
 ### Compiling
 
@@ -58,7 +78,7 @@ and build using cmake:
 ~~~ bash
 cd faunus
 cmake . [OPTIONS]
-make faunus
+make faunus -j
 make usagetips # requires `pandoc`, `pypandoc`, `BeautifulSoup4`
 ~~~
 
@@ -69,7 +89,7 @@ The following options are available:
 CMake Option                         | Description
 ------------------------------------ | ---------------------------------------
 `-DENABLE_MPI=OFF`                   | Enable MPI
-`-DENABLE_OPENMP=ON`                 | Enable OpenMP support
+`-DENABLE_OPENMP=OFF`                | Enable OpenMP support
 `-DENABLE_TESTS=ON`                  | Enable unittesting
 `-DENABLE_PYTHON=OFF`                | Build python bindings (experimental)
 `-DENABLE_FREESASA=ON`               | Enable SASA routines (external download)
@@ -80,9 +100,7 @@ CMake Option                         | Description
 `-DCMAKE_CXX_FLAGS_RELEASE="..."`    | Compiler options for Release mode
 `-DCMAKE_CXX_FLAGS_DEBUG="..."`      | Compiler options for Debug mode
 `-DCMAKE_INSTALL_PREFIX:PATH="..."`  | Install location (default: `/usr/local`)
-`-DPYTHON_EXECUTABLE="..."`          | Full path to Python executable
-`-DPYTHON_INCLUDE_DIR="..."`         | Full path to python headers
-`-DPYTHON_LIBRARY="..."`             | Full path to python library, i.e. libpythonX.dylib/so
+`-DPython_EXECUTABLE="..."`          | Full path to Python executable
 
 ### Compiling the Manual
 
@@ -104,25 +122,27 @@ in the `header.md` file.
 make manual
 ~~~
 
-### Python libraries in odd locations
+### Selecting compilers and python
 
 Should there be multiple compilers or python distributions, be specific:
 
 ~~~ bash
-CC=/opt/bin/clang CXX=/opt/bin/clang++ cmake . \
-  -DPYTHON_EXECUTABLE=/opt/bin/python3 \
-  -DPYTHON_INCLUDE_DIR=/opt/include/python3.6 \
-  -DPYTHON_LIBRARY=/opt/lib/libpython3.6.dylib
+export CC=/opt/bin/clang
+export CXX=/opt/bin/clang++
+cmake -DPython_EXECUTABLE=/opt/bin/python3 .
 ~~~
 
-For solving python issues on macOS, the linked python library can be probed and,
+For solving rare python issues on macOS, the linked python library can be probed and,
 if needed, renamed:
 
 ~~~ bash
 otool -L pyfaunus.so
-install_name_tool -change libpython3.6.dylib \
-  $HOME/miniconda/lib/libpython3.6.dylib pyfaunus.so
+install_name_tool -change libpython3.8.dylib \
+  $HOME/miniconda/lib/libpython3.8.dylib pyfaunus.so
 ~~~
+
+For further help with compiling with python bindings, see
+[here](https://pybind11.readthedocs.io/en/stable/faq.html#cmake-doesn-t-detect-the-right-python-version).
 
 ### Resetting the build system
 
@@ -133,25 +153,34 @@ make clean
 rm -fR CMakeCache.txt CMakeFiles _deps
 ~~~
 
-### Intel Threading Building Blocks
+### Intel Threading Building Blocks (TBB)
 
-If `ENABLE_TBB=on`, TBB may be used for threaded simulations which may or may not be
-advantageous, depending on the system.
-By default, an unspecified and possibly outdated version of TBB will be downloaded and build.
-Alternatively you can use an existing installation _via_ `TBB_DIR`:
+To use C++ parallel algorithms, some compilers require linkage with TBB.
+If so, an error may occur during linking.
+To fix this, install TBB with `apt`, `brew`, `conda` etc. and pass it
+to CMake like this:
 
 ~~~ bash
 cmake -DENABLE_TBB=on -DTBB_DIR={tbb-root}/lib/cmake/TBB
 ~~~
 
-where `{tbb-root}` is the installation directory of TBB, _e.g._ `/usr/local`.
+where `{tbb-root}` is the installation directory of TBB, _e.g._
+`/usr/local` or `/opt/homebrew`.
 
 # Development
 
-The development of Faunus is done mainly in Jetbrain's [CLion](https://www.jetbrains.com/clion)
-(free academic license) but any other IDE or merely a text editor can be used.
-We recommend to use tools that respect the provided `.clang-format` which will ease merging
+We recommend to use an IDE or text editor that respect the provided `.clang-format` which will ease merging
 changes into the codebase, see below.
+For Visual Studio Code (VSC) users, it is very easy to setup a development environment using Docker and
+[Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers):
+
+~~~ bash
+cd faunus
+code .
+~~~
+
+(when asked, select "open in devcontainer", assuming you have Docker running)
+
 
 ## Code Style
 

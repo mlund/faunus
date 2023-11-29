@@ -4,9 +4,15 @@
 #include "core.h"
 #include "particle.h"
 #include "tensor.h"
+#include <iterator>
+#include <concepts>
 #include <Eigen/Geometry>
 #include <cereal/types/base_class.hpp>
 #include <spdlog/spdlog.h>
+#include <range/v3/view/zip.hpp>
+#include <range/v3/view/join.hpp>
+#include <range/v3/view/transform.hpp>
+#include <range/v3/view/cartesian_product.hpp>
 
 /** @brief Faunus main namespace */
 namespace Faunus {
@@ -461,35 +467,52 @@ void from_json(const json &, Chameleon &);
 enum class weight { MASS, CHARGE, GEOMETRIC };
 
 /**
+ * @brief Calculates the (weighted) center for a set of positions
+ * @param positions Positions
+ * @param weights Weights (ones, masses, charges etc.)
+ * @param boundary Used to remove periodic boundaries
+ * @param shift Shift with this value before and after center calculation. To e.g. remove PBC
+ */
+template <ranges::cpp20::range Positions, ranges::cpp20::range Weights>
+Point weightedCenter(
+    const Positions& positions, const Weights& weights, Geometry::BoundaryFunction boundary = [](auto&) {},
+    const Point& shift = Point::Zero()) {
+    double weight_sum = 0.0;
+    Point center(0.0, 0.0, 0.0);
+    for (const auto& [position, weight] : ranges::views::zip(positions, weights)) {
+        Point shifted_position = position + shift;
+        boundary(shifted_position);
+        center += weight * shifted_position;
+        weight_sum += weight;
+    }
+    if (std::fabs(weight_sum) > pc::epsilon_dbl) {
+        center = center / weight_sum - shift; // translate back
+        boundary(center);
+        return center;
+    } else {
+        faunus_logger->warn("warning: sum of weights is zero! setting center to (0,0,0)");
+        return Point::Zero();
+    }
+}
+
+/**
  * @brief Calculate Center of particle range using arbitrary weight functions applied to each particle
  * @param begin Begin particle iterator
  * @param end End parti cle iterator
- * @param apply_boundary Boundary function to apply PBC (default: no PBC)
+ * @param boundary Boundary function to apply PBC (default: no PBC)
  * @param weight_function Functor return weight for a given particle
  * @param shift Shift by this vector before calculating center, then add again. For PBC removal; default: 0,0,0
  * @return Center position; (0,0,0) if the sum of weights is zero
  * @throw warning if the sum of weights is zero, thereby hampering normalization
  */
-template <typename iterator, typename weightFunc>
-Point anyCenter(iterator begin, iterator end, BoundaryFunction apply_boundary, const weightFunc &weight_function,
-                const Point &shift = {0, 0, 0}) {
-    double weight_sum = 0.0;
-    Point center(0.0, 0.0, 0.0);
-    std::for_each(begin, end, [&](const auto &particle) {
-        const auto weight = weight_function(particle);
-        Point pos = particle.pos + shift; // translate
-        apply_boundary(pos);
-        center += weight * pos;
-        weight_sum += weight;
-    });
-    if (weight_sum > pc::epsilon_dbl) {
-        center = center / weight_sum - shift; // translate back
-        apply_boundary(center);
-        return center;
-    } else {
-        faunus_logger->warn("warning: sum of weights is 0! setting center to (0,0,0)");
-        return Point::Zero();
-    }
+template <RequireParticleIterator iterator> //, typename weightFunc>
+Point weightedCenter(iterator begin, iterator end, BoundaryFunction boundary,
+                     std::function<double(const Particle&)> weight_function, const Point& shift = Point::Zero()) {
+    namespace rv = ranges::cpp20::views;
+    auto particles = ranges::make_subrange(begin, end);
+    auto positions = particles | rv::transform(&Particle::pos);
+    auto weights = particles | rv::transform(weight_function);
+    return weightedCenter(positions, weights, boundary, shift);
 } //!< Mass, charge, or geometric center of a collection of particles
 
 /**
@@ -501,12 +524,12 @@ Point anyCenter(iterator begin, iterator end, BoundaryFunction apply_boundary, c
  * @return Mass center position
  * @throws if the sum of masses is zero, thereby hampering normalization
  */
-template <typename iterator>
+template <RequireParticleIterator iterator>
 Point massCenter(
-    iterator begin, iterator end, BoundaryFunction apply_boundary = [](Point &) {},
-    const Point &shift = {0.0, 0.0, 0.0}) {
-    auto particle_mass = [](const auto &particle) { return particle.traits().mw; };
-    return anyCenter(begin, end, apply_boundary, particle_mass, shift);
+    iterator begin, iterator end, BoundaryFunction apply_boundary = [](Point&) {},
+    const Point& shift = {0.0, 0.0, 0.0}) {
+    auto particle_mass = [](const auto& particle) -> double { return particle.traits().mw; };
+    return weightedCenter(begin, end, apply_boundary, particle_mass, shift);
 }
 
 /**
@@ -515,10 +538,10 @@ Point massCenter(
  * @param displacement Displacement vector
  * @param apply_boundary Boundary function to apply PBC (default: no PBC)
  */
-template <typename iterator>
+template <RequireParticleIterator iterator>
 void translate(
-    iterator begin, iterator end, const Point &displacement, BoundaryFunction apply_boundary = [](Point &) {}) {
-    std::for_each(begin, end, [&](auto &particle) {
+    iterator begin, iterator end, const Point& displacement, BoundaryFunction apply_boundary = [](auto&) {}) {
+    std::for_each(begin, end, [&](auto& particle) {
         particle.pos += displacement;
         apply_boundary(particle.pos);
     });
@@ -530,17 +553,17 @@ void translate(
  * @param end End iterator
  * @param apply_boundary Boundary function to apply PBC (default: none)
  */
-template <typename iterator>
+template <RequireParticleIterator iterator>
 void translateToOrigin(
-    iterator begin, iterator end, BoundaryFunction apply_boundary = [](Point &) {}) {
+    iterator begin, iterator end, BoundaryFunction apply_boundary = [](auto&) {}) {
     Point cm = massCenter(begin, end, apply_boundary);
     translate(begin, end, -cm, apply_boundary);
 }
 
 /**
  * @brief Rotate range of particles using a Quaternion
- * @param begin Begin iterator
- * @param end End iterator
+ * @param begin Begin particle iterator
+ * @param end End particle iterator
  * @param quaternion Quaternion used for rotation
  * @param apply_boundary Boundary function to apply PBC (default: none)
  * @param shift This value is added before rotation to aid PBC remove (default: 0,0,0)
@@ -548,12 +571,12 @@ void translateToOrigin(
  *
  * This will rotate both positions and internal coordinates in the particle (dipole moments, tensors etc.)
  */
-template <typename iterator>
+template <RequireParticleIterator iterator>
 void rotate(
-    iterator begin, iterator end, const Eigen::Quaterniond &quaternion,
-    BoundaryFunction apply_boundary = [](Point &) {}, const Point &shift = Point::Zero()) {
+    iterator begin, iterator end, const Eigen::Quaterniond& quaternion, BoundaryFunction apply_boundary = [](auto&) {},
+    const Point& shift = Point::Zero()) {
     const auto rotation_matrix = quaternion.toRotationMatrix(); // rotation matrix
-    std::for_each(begin, end, [&](auto &particle) {
+    std::for_each(begin, end, [&](auto& particle) {
         particle.rotate(quaternion, rotation_matrix); // rotate internal coordinates
         particle.pos += shift;
         apply_boundary(particle.pos);
@@ -562,30 +585,78 @@ void rotate(
     });
 } //!< Rotate particle pos and internal coordinates
 
-/*
+/**
  * @brief Calculate mass center of cluster of particles in unbounded environment
  *
  * [More info](http://dx.doi.org/10.1080/2151237X.2008.10129266)
  */
 template <class Tspace, class GroupIndex>
-Point trigoCom(const Tspace &spc, const GroupIndex &groups, const std::vector<int> &dir = {0, 1, 2}) {
-    assert(!dir.empty() && dir.size() <= 3);
-    Point xhi(0, 0, 0), zeta(0, 0, 0), theta(0, 0, 0), com(0, 0, 0);
+Point trigoCom(const Tspace& spc, const GroupIndex& indices, const std::vector<int>& dir = {0, 1, 2}) {
+    if (dir.empty() || dir.size() > 3) {
+        throw std::out_of_range("invalid directions");
+    }
+    namespace rv = ranges::cpp20::views;
+    auto positions =
+        indices | rv::transform([&](auto i) { return spc.groups.at(i); }) | rv::join | rv::transform(&Particle::pos);
+    Point xhi(0, 0, 0);
+    Point zeta(0, 0, 0);
+    Point theta(0, 0, 0);
+    Point com(0, 0, 0);
     for (auto k : dir) {
-        double q = 2 * pc::pi / spc.geometry.getLength()[k];
-        size_t N = 0;
-        for (auto i : groups)
-            for (auto &particle : spc.groups[i]) {
-                theta[k] = particle.pos[k] * q;
-                zeta[k] += std::sin(theta[k]);
-                xhi[k] += std::cos(theta[k]);
-                N++;
-            }
-        theta[k] = std::atan2(-zeta[k] / N, -xhi[k] / N) + pc::pi;
-        com[k] = spc.geometry.getLength()[k] * theta[k] / (2 * pc::pi);
+        const auto q = 2.0 * pc::pi / spc.geometry.getLength()[k];
+        int cnt = 0;
+        std::for_each(positions.begin(), positions.end(), [&](auto& position) {
+            theta[k] = position[k] * q;
+            zeta[k] += std::sin(theta[k]);
+            xhi[k] += std::cos(theta[k]);
+            cnt++;
+        });
+        theta[k] = std::atan2(-zeta[k] / static_cast<double>(cnt), -xhi[k] / static_cast<double>(cnt)) + pc::pi;
+        com[k] = spc.geometry.getLength()[k] * theta[k] / (2.0 * pc::pi);
     }
     spc.geometry.boundary(com); // is this really needed?
     return com;
+}
+
+/**
+ * @brief Calculates a gyration tensor of a range of particles
+ *
+ * The gyration tensor is computed from the atomic position vectors with respect to the reference point
+ * which is always a center of mass,
+ *
+ * S = (1 / \sum m_i) \sum m_i t_i t_i^T where t_i = r_i - r_cm
+ *
+ * Before the calculation, the molecule is made whole to moving it to the center or the
+ * simulation box (0,0,0), then apply the given boundary function.
+ *
+ * @Note This is the polymer science definition of the gyration tensor which is
+ *       mass-weighted. In physics, the gyration tensor is normally defined by positions only.
+ *
+ * @param begin Iterator to first position
+ * @param end Iterator to past last position
+ * @param mass Iterator to first mass
+ * @param mass_center The mass center used as reference and to remove PBC
+ * @param boundary Function to apply periodic boundary functions (default: none)
+ * @return gyration tensor; or zero tensor if empty particle range
+ * @throw If total mass is non-positive
+ */
+template <RequirePointIterator position_iterator, std::forward_iterator mass_iterator>
+Tensor gyration(
+    position_iterator begin, position_iterator end, mass_iterator mass, const Point& mass_center,
+    const BoundaryFunction boundary = [](auto&) {}) {
+    Tensor S = Tensor::Zero();
+    double total_mass = 0.0;
+    std::for_each(begin, end, [&](const Point& position) {
+        Point r = position - mass_center; // get rid...
+        boundary(r);                      // ...of PBC (if any)
+        S += (*mass) * r * r.transpose();
+        total_mass += (*mass);
+        std::advance(mass, 1);
+    });
+    if (total_mass > pc::epsilon_dbl) {
+        return S / total_mass;
+    }
+    throw std::runtime_error("gyration tensor: total mass must be positive");
 }
 
 /**
@@ -607,62 +678,14 @@ Point trigoCom(const Tspace &spc, const GroupIndex &groups, const std::vector<in
  * @return gyration tensor; or zero tensor if empty particle range
  * @throws If total mass is non-positive
  */
-template <typename iterator>
+template <RequireParticleIterator iterator>
 Tensor gyration(
-    iterator begin, iterator end, const Point &mass_center, const BoundaryFunction boundary = [](auto &) {}) {
-    Tensor S = Tensor::Zero();
-    double total_mass = 0.0;
-    std::for_each(begin, end, [&](const auto &particle) {
-        const auto mass = particle.traits().mw;
-        Point r = particle.pos - mass_center; // get rid...
-        boundary(r);                          // ...of PBC (if any)
-        S += mass * r * r.transpose();
-        total_mass += mass;
-    });
-    if (total_mass > 0.0) {
-        return S / total_mass;
-    } else {
-        throw std::runtime_error("gyration tensor: total mass must be positive");
-    }
-}
-
-/**
- * @brief Calculates a gyration tensor of a range of particles
- *
- * The gyration tensor is computed from the atomic position vectors with respect to the reference point
- * which is always a center of mass,
- * \f$ t_{i} = r_{i} - r_\mathrm{cm} \f$:
- * \f$ S = (1 / \sum_{i=1}^{N} m_{i}) \sum_{i=1}^{N} m_{i} t_{i} t_{i}^{T} \f$
- *
- * Before the calculation, the molecule is made whole to moving it to the center or the
- * simulation box (0,0,0), then apply the given boundary function.
- *
- * @param begin Iterator to first position
- * @param end Iterator to past last position
- * @param mass Iterator to first mass
- * @param mass_center The mass center used as reference and to remove PBC
- * @param boundary Function to apply periodic boundary functions (default: none)
- * @return gyration tensor; or zero tensor if empty particle range
- * @throws If total mass is non-positive
- */
-template <typename position_iterator, typename mass_iterator>
-Tensor gyration(
-    position_iterator begin, position_iterator end, mass_iterator mass, const Point &mass_center,
-    const BoundaryFunction boundary = [](auto &) {}) {
-    Tensor S = Tensor::Zero();
-    double total_mass = 0.0;
-    std::for_each(begin, end, [&](const auto &position) {
-        Point r = position - mass_center; // get rid...
-        boundary(r);                      // ...of PBC (if any)
-        S += (*mass) * r * r.transpose();
-        total_mass += (*mass);
-        std::advance(mass, 1);
-    });
-    if (total_mass > 0.0) {
-        return S / total_mass;
-    } else {
-        throw std::runtime_error("gyration tensor: total mass must be positive");
-    }
+    iterator begin, iterator end, const Point& mass_center, const BoundaryFunction boundary = [](auto&) {}) {
+    namespace rv = ranges::cpp20::views;
+    auto particles = ranges::make_subrange(begin, end);
+    auto positions = particles | rv::transform(&Particle::pos);
+    auto masses = particles | rv::transform(&Particle::traits) | rv::transform(&AtomData::mw);
+    return gyration(positions.begin(), positions.end(), masses.begin(), mass_center, boundary);
 }
 
 /**
@@ -694,15 +717,15 @@ void to_json(json &j, const ShapeDescriptors &shape); //!< Store Shape as json o
  * @param origin a reference point
  * @return inertia tensor (a zero tensor for an empty group)
  */
-template <typename iter>
+template <RequireParticleIterator iterator>
 Tensor inertia(
-    iter begin, iter end, const Point origin = {0, 0, 0}, const BoundaryFunction boundary = [](const Point &) {}) {
+    iterator begin, iterator end, const Point origin = Point::Zero(), const BoundaryFunction boundary = [](auto&) {}) {
     Tensor I = Tensor::Zero();
-    for (auto it = begin; it != end; ++it) {
-        Point t = it->pos - origin;
+    std::for_each(begin, end, [&](const Particle& particle) {
+        Point t = particle.pos - origin;
         boundary(t);
-        I += atoms.at(it->id).mw * (t.squaredNorm() * Tensor::Identity() - t * t.transpose());
-    }
+        I += particle.traits().mw * (t.squaredNorm() * Tensor::Identity() - t * t.transpose());
+    });
     return I;
 }
 
@@ -712,7 +735,7 @@ Tensor inertia(
  * A binary function must be given that returns the difference between data points
  * in the two sets, for example `[](int a, int b){return a-b;}`.
  */
-template <typename InputIt1, typename InputIt2, typename BinaryOperation>
+template <std::forward_iterator InputIt1, std::forward_iterator InputIt2, typename BinaryOperation>
 double rootMeanSquareDeviation(InputIt1 begin, InputIt1 end, InputIt2 d_begin, BinaryOperation diff_squared_func) {
     assert(std::distance(begin, end) > 0);
     double sq_sum = 0;
@@ -748,8 +771,8 @@ ParticleVector mapParticlesOnSphere(const ParticleVector &);
  * side-lengths [2 * inner_radius, 3 * outer_radius, height] and also twice
  * the number of particles
  */
-template <typename Particles>
-std::pair<Cuboid, ParticleVector> HexagonalPrismToCuboid(const HexagonalPrism &hexagon, const Particles &particles) {
+std::pair<Cuboid, ParticleVector> hexagonalPrismToCuboid(const HexagonalPrism& hexagon,
+                                                         const RequireParticles auto& particles) {
     Cuboid cuboid({2.0 * hexagon.innerRadius(), 3.0 * hexagon.outerRadius(), hexagon.height()});
     ParticleVector cuboid_particles;
     cuboid_particles.reserve(2 * std::distance(particles.begin(), particles.end()));
@@ -764,6 +787,91 @@ std::pair<Cuboid, ParticleVector> HexagonalPrismToCuboid(const HexagonalPrism &h
     assert(std::fabs(cuboid.getVolume() - 2.0 * hexagon.getVolume()) <= pc::epsilon_dbl);
     return {cuboid, cuboid_particles};
 }
+
+/**
+ * @brief Structure for exploring a discrete, uniform angular space between two rigid bodies
+ * 
+ * Quaternions for visiting all poses in angular space can be generated in several ways:
+ * ~~~ cpp
+ * TwobodyAngles angles(0.1);
+ * 
+ * // Visit all poses via pairs of iterators
+ * for (const auto& [q1, q2] : angles.quaternionPairs()) {
+ *     pos1 = q1 * pos1; // first body
+ *     pos2 = q2 * pos2; // second body
+ * }
+ * 
+ * // Visit all poses via triplets of iterators. May be useful for parallel execution
+ * // Note that quaternion multiplication is noncommutative so keep the shown order.
+ * for (const auto &q_euler1 : angles.quaternions1) {
+ *     for (const auto &q_euler2 : angles.quaternions2) {
+ *         for (const auto &q_dihedral : angles.dihedrals) {
+ *             pos1 = q_euler1 * pos1;                // first body
+ *             pos2 = (q_dihedral * q_euler2) * pos2; // second body 
+ *         }
+ *     }
+ * }
+ * ~~~
+ */
+class TwobodyAngles {
+    static std::vector<Point> fibonacciSphere(int);
+
+  public:
+    std::vector<Eigen::Quaterniond> quaternions_1; //!< Quaternions to explore all Euler angles
+    std::vector<Eigen::Quaterniond> quaternions_2; //!< Quaternions to explore all Euler angles
+    std::vector<Eigen::Quaterniond> dihedrals;     //!< Quaternions to explore all dihedral angles
+
+    TwobodyAngles() = default;
+    TwobodyAngles(double angle_resolution);
+
+    /**
+     * @brief Iterator to loop over pairs of quaternions to rotate two rigid bodies against each other
+     *
+     * The second quaternion in the pair includes dihedral rotations, i.e. the pair is `q1, q_dihedral * q2`.
+     */
+    auto quaternionPairs() const {
+        namespace rv = ranges::views;
+        auto product = [](const auto& pair) -> Eigen::Quaterniond {
+            const auto& [q2, q_dihedral] = pair;
+            return q_dihedral * q2; // noncommutative
+        };
+        auto second_body_quaternions = rv::cartesian_product(quaternions_2, dihedrals) | rv::transform(product);
+        return rv::cartesian_product(quaternions_1, second_body_quaternions);
+    }
+
+    size_t size() const; //!< Total number of points in angular space (i.e. the number of unique poses)
+};
+
+/**
+ * @brief Structure for exploring a discrete, uniform angular space between two rigid bodies
+ * 
+ * This version includes an iterator-like _state_ that can be used to step through
+ * angular space.
+ * 
+ * Example:
+ * ~~~ cpp
+ * TwobodyAnglesState angles(0.1);
+ * if (const auto quaternions = angles.get(); quaternions) {
+ *     pos1 = quaternions->first * pos1;  // first body
+ *     pos2 = quaternions->second * pos2; // second body
+ *     angles.advance();
+ * } else {
+ *     // all angles have been explored
+ * }
+ * ~~~
+ */
+class TwobodyAnglesState : public TwobodyAngles {
+  private:
+    using QuaternionIter = std::vector<Eigen::Quaterniond>::const_iterator;
+    QuaternionIter q_euler1;
+    QuaternionIter q_euler2;
+    QuaternionIter q_dihedral;
+  public:
+    TwobodyAnglesState() = default;
+    TwobodyAnglesState(double angle_resolution);
+    TwobodyAnglesState& advance(); //!< Advance to next angle
+    std::optional<std::pair<Eigen::Quaterniond, Eigen::Quaterniond>> get(); //!< Get current pair of quaternions
+};
 
 } // namespace Geometry
 } // namespace Faunus

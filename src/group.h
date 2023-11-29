@@ -133,6 +133,7 @@ class Group : public ElasticRange<Particle> {
 
     inline bool isAtomic() const { return traits().atomic; }     //!< Is it an atomic group?
     inline bool isMolecular() const { return !traits().atomic; } //!< is it a molecular group?
+    bool isFull() const;                                         //!< True of all particles are active
 
     std::optional<std::reference_wrapper<Point>> massCenter();             //!< Optional reference to mass center
     std::optional<std::reference_wrapper<const Point>> massCenter() const; //!< Optional ref. to mass center
@@ -166,7 +167,7 @@ class Group : public ElasticRange<Particle> {
         }
         if constexpr (mask & ACTIVE) {
             static_assert(!(mask & INACTIVE), "don't mix ACTIVE and INACTIVE");
-            if (size() == 0) {
+            if (empty()) {
                 return false;
             }
         } else if constexpr (mask & INACTIVE) {
@@ -215,12 +216,13 @@ class Group : public ElasticRange<Particle> {
     double mass() const;                                                          //!< Sum of all active masses
 
     auto positions() {
-        return ranges::cpp20::views::transform(*this, [&](auto& particle) -> Point& { return particle.pos; });
+        return ranges::make_subrange(begin(), end()) |
+               ranges::cpp20::views::transform([&](Particle& particle) -> Point& { return particle.pos; });
     } //!< Range of positions of active particles
 
     auto positions() const {
-        return ranges::cpp20::views::transform(*this,
-                                               [&](const auto& particle) -> const Point& { return particle.pos; });
+        return ranges::make_subrange(begin(), end()) |
+               ranges::cpp20::views::transform([&](const Particle& particle) -> const Point& { return particle.pos; });
     } //!< Range of positions of active particles
 
     AtomData::index_type getParticleIndex(
@@ -248,8 +250,7 @@ class Group : public ElasticRange<Particle> {
      * @param indices Range of indices relative to group
      * @warning Do not change `indices` to `const&` which would create a dangling reference
      */
-    template <class Tint = size_t> auto operator[](std::vector<Tint>& indices) {
-        static_assert(std::is_integral<Tint>::value, "integer indices expected");
+    template <std::integral Tint = size_t> auto operator[](std::vector<Tint>& indices) {
 #ifndef NDEBUG
         if (not indices.empty()) {
             assert(*std::max_element(indices.begin(), indices.end()) < size());
@@ -332,5 +333,9 @@ template <class Archive> void load(Archive& archive, Group& group, std::uint32_t
         throw std::runtime_error("unknown serialisation version");
     }
 } //!< Cereal serialisation
+
+/** Concept for a range of groups */
+template <typename T>
+concept RequireGroups = ranges::cpp20::range<T> && std::is_convertible_v<ranges::cpp20::range_value_t<T>, Group>;
 
 } // namespace Faunus

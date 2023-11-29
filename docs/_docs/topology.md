@@ -62,7 +62,7 @@ Atoms are the smallest possible particle entities with properties defined below.
 `pactivity`   | −log10 of chemical activity (will be converted to activity)
 `alphax=0`    | Excess polarizability (unit-less)
 `dp=0`        | Translational displacement parameter [Å]
-`dprot=0`     | Rotational displacement parameter [degrees] (will be converted to radians)
+`dprot=0`     | Rotational displacement parameter [radians]
 `eps=0`       | Lennard-Jones/WCA energy parameter [kJ/mol]
 `mu=[0,0,0]`  | Dipole moment vector [eÅ]
 `mulen=|mu|`  | Dipole moment scalar [eÅ]
@@ -72,6 +72,7 @@ Atoms are the smallest possible particle entities with properties defined below.
 `sigma=0`     | `2r` [Å] (overrides radius)
 `tension=0`   | Surface tension [kJ/mol/Å$^2$]
 `tfe=0`       | Transfer free energy [kJ/mol/Å$^2$/M]
+`psc`         | Patchy sphero-cylinders properties (object)
 
 A filename (`.json`) may be given instead of an atom definition to load
 from an external atom list. Atoms are loaded in the given order, and if it occurs
@@ -86,6 +87,51 @@ atomlist:
   - my-external-atomlist.json
   - ...
 ~~~
+
+### Anisotropic particles (experimental)
+
+Faunus supports anisotropic particles such as dipoles, spherocylinders, and quadrupoles.
+While the implementation is pretty stable, it is not well optimized and should be considered experimental.
+
+#### Patchy Sphero-cylinders
+
+Sphero-cylinders are activated using the `psc` keyword. Currently only a single pair-potential is readily available, namely
+a cosine attraction for patch-patch interactions, mixed with Weeks-Chandler-Andersen for excluded volume.
+
+~~~ yaml
+atomlist:
+  - mycigar:
+      psc: {type: capped, length: 40, patch_angle: 80}
+      eps: 2.4  # used for both wca and the cosine attraction
+      sigma: 10 # cylinder and cap radius
+      rc: 11.2  # cosine attraction switch distance
+      wc: 6.0   # cosine attraction switch width
+
+energy:
+  - nonbonded:
+      default:
+        - coswca-psc:          # cosine attraction + WCA pair potential
+            cos2: {mixing: LB} # used for interactions with patch
+            wca: {mixing: LB}  # used for interactions with cylinder
+~~~
+
+Possible patch types are `none`, `full` and `capped` signifying
+no patch (○◻○);
+a patch that runs the full length including the end caps (●◼●);
+or a capped variant where the patch stops before the caps (○◼○).
+The `coswca-psc` potential can handle mixtures of PSCs and spherical particles.
+When a spherical particle interacts with the PSC, the closest distances to the patch and excluded volume
+are used to evaluate the attractive and repulsive energy.
+For the patch-patch interaction, the `eps` value is is regarded as `kJ/mol/Å` whereby longer patch contacts
+will automatically interact stronger.
+
+`psc`                  | Description
+---------------------- | -------------------------------------------------
+`type=none`            | `none` (○◻○), `full` (●◼●), `capped` (○◼○)
+`length=0`             | Length of cylinder (Å)
+`chiral_angle=0`       | Patch angle with respect to length axis (degrees)
+`patch_angle=0`        | Opening angle of patch (degrees), ◔ (degrees)
+`patch_angle_switch=0` | (degrees)
 
 
 ## Molecule Properties
@@ -214,9 +260,11 @@ The following keywords for each molecule type are available:
 `translate=[0,0,0]`  | Displace loaded `positions` with vector
 
 A filename with positions for the `N` molecules can be given with `positions`.
-The file must contain exactly `N`-times molecular
+The trajectory-like file must contain exactly `N` frames with molecular
 positions that must all fit within the simulation box. Only _positions_ from
 the file are copied; all other information is ignored.
+When using `positions`, `keepos` should be set to true. See also
+[this issue](https://github.com/mlund/faunus/issues/268#issuecomment-618904639) on github.
 
 For `implicit` molecules, only `N` should be given and the molecules are never
 inserted into the simulation box.
@@ -232,13 +280,56 @@ Random insertion is repeated until there is no overlap with the simulation
 container boundaries. Overlap between particles is ignored and for
 i.e. hard-sphere potentials the initial energy may be infinite.
 
+### Preface Actions
+
+Just before starting the simulation, it is possible to trigger a list
+if _actions_ that can manipulate the system; perform analysis; save to disk etc.
+Actions are specified in a separate `preface` section.
+Below is a list of available actions.
+
+#### Angular energy scan
+
+This iterates over all intermolecular poses between two rigid molecules.
+For each pose, defined by two quaternions and a mass center separation, the
+intermolecular interaction energy is calculated.
+The system state is left untouched and the scan is typically run with the `--norun`
+argument to skip simulation.
+To visualise the sampled poses, use the `traj` keyword which shows that the mass
+center separation `zrange` (half open), is done along the _z_-axis and the first
+molecule is placed at the origin.
+
+For each mass center separation, _r_, the partition function,
+$Q(r) = \sum e^{-\beta u(r)}$, is explicitly
+evaluated, whereby we can obtain the free energy, $w(r) = -kT \ln \langle e^{-\beta u(r)} \rangle$ and
+the thermally averaged energy, $u(r) = \sum u(r)e^{-\beta u(r)} / Q$.
+
+~~~ yaml
+preface:
+    - angular_scan:
+        indices: [0, 1]           # select exactly two molecules
+        zrange: [40.0, 60.0, 4.0] # mass center z separation as [min, max), step (Å)
+        angular_resolution: 0.5   # radians
+        max_energy: 50.0          # kJ/mol (optional)
+        file: poses.dat.gz        # Can be large; gz compression recommended
+        traj: poses.xtc           # save poses as trajectory (optional)
+~~~
+
+Notes:
+
+- How the molecules are initially placed in the simulation box is unimportant.
+- While calculating the energy, only the first _nonbonded_ energy term is considered.
+- The reported quaternions and mass center offset are with respect to the initial
+  structures of the two molecules.
+- The initial reference structures are saved as two `.xyz` files.
+- For best performance it is highly recommended to compile with OpenMP.
+- Use a higher verbosity level to see more information, e.g. `--verbosity 5`.
 
 ## Equilibrium Reactions
 
 Faunus supports density fluctuations, coupled to chemical equilibria with
 explicit and/or implicit particles via their chemical potentials as
 defined in the `reactionlist` detailed below, as well as in `atomlist` and
-`moleculelist`. The level of flexibility is very high and reactions can be
+`moleculelist`. The level of flexibility is high and reactions can be
 freely composed.
 
 The move involves deletion and insertion of reactants and products and it is
@@ -253,7 +344,7 @@ into products (right of `=`) that may be a mix of atomic and molecular species.
 
 - all species, `+`, and `=` must be surrounded by white-space
 - atom and molecule names cannot overlap
-- species can be repeated to match the desired stoichiometry, e.g. `A + A = C`
+- species can be repeated to match the desired stoichiometry, _e.g._ `A + A = C`
 
 Available keywords:
 
@@ -278,7 +369,7 @@ moleculelist:
   - Na+: {atoms: [na], atomic: true, activity: 0.1}
   - Cl-: {atoms: [cl], atomic: true, activity: 0.1}
 reactionlist:
-  - = Na+ + Cl+: {} # note: molecules, not atoms
+  - "= Na+ + Cl+": {} # note: molecules, not atoms
 moves:
   - rcmc: {} # activate speciation move
 ~~~
@@ -286,7 +377,7 @@ moves:
 The same setup can be used also for molecular molecules, _i.e._ molecules with `atomic: false`.
 
 
-### Example: Acid/base titration with _implicit_ protons
+### Example: Acid-base titration with _implicit_ protons
 
 An _implicit_ atomic reactant or product is included in the reaction but not 
 explicitly in the simulation cell.
@@ -312,7 +403,7 @@ only with Hamiltonians where this is allowed. This could for example be in syste
 Yukawa interactions. 
 
 
-### Example: Acid/base titration coupled with Grand Canonical Salt
+### Example: Acid-base titration coupled with Grand Canonical Salt
 
 To respect electroneutrality when swapping species, we can associate the titration move with
 an artificial insertion or deletion of salt ions. These ions should be present under constant
@@ -329,9 +420,9 @@ moleculelist:
   - Na+: {atoms: [na], atomic: true, activity: 0.1}
   - Cl-: {atoms: [cl], atomic: true, activity: 0.1}
 reactionlist:
-  - COOH + Cl- = COO- + H+: {pK: 4.8} # electroneutral!
-  - COOH = Na+ + COO- + H+: {pK: 4.8} # electroneutral!
-  - = Na+ + Cl-: {} # grand canonical salt
+  - "COOH + Cl- = COO- + H+": {pK: 4.8} # electroneutral!
+  - "COOH = Na+ + COO- + H+": {pK: 4.8} # electroneutral!
+  - "= Na+ + Cl-": {} # grand canonical salt
 ~~~
 
 For the first reaction, $K$ is divided by both $a_{\mathrm{H^+}}$ and $a_{\mathrm{Cl^-}}$, so that the final equilibrium constant
@@ -345,11 +436,14 @@ since the Grand Canonical ensemble ensures constant salt activity.
 
 ### Example: Precipitation of Calcium Hydroxide using _implicit_ molecules
 
-Here we introduce a solid phase of Ca(OH)2 and its solubility product
+Here we introduce a solid phase of Ca(OH)₂ and its solubility product
 to predict the amount of dissolved calcium and hydroxide ions. Note that
 we start from an empty simulation box (both ions are inactive) and the solid
-phase is treated _implicitly_, i.e. it never inters the simulation box.
-Additional coupled reactions can naturally be introduced in order to study complex
+phase is treated _implicitly_, _i.e._ it never inters the simulation box.
+If a forward reaction is made, one implicit molecule (out 200 in total) will
+be converted into explicit molecules.
+Once all 200 have been consumed, only backward reactions are possible.
+Additional, coupled reactions can be introduced to study complex
 equilibrium systems under influence of intermolecular interactions.
 
 ~~~ yaml
@@ -368,12 +462,20 @@ reactionlist:
 
 ### Example: Swapping between molecular conformations
 
-The following can be used to alternate between different molecular conformations
+The following can be used to alternate between different molecular conformations.
+When swapping, the mass center position and orientation are randomly generated.
 
 ~~~ yaml
 moleculelist:
-  - A: {atomic: false, structure: ...}
-  - B: {atomic: false, structure: ...}
+  - A: {structure: "conformationA.xyz", ...}
+  - B: {structure: "conformationB.xyz", ...}
 reactionlist:
-  - A = B: {lnK: 0.69} # K=2, "B" twice as likely as "A"
+  - "A = B": {lnK: 0.69} # K=2, "B" twice as likely as "A"
 ~~~
+
+### Internal degrees of freedom (experimental)
+
+If a fluctuating molecule has internal degreees of freedom, the internal bond energy is included
+as a bias so that the internal state does not affect the acceptance.
+To disable this behavior, a minor code modification is currently required (see `MolecularGroupDeActivator::apply_bond_bias`).
+

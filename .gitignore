@@ -13,6 +13,14 @@ sids/
 unittests.log
 a.out
 
+# VisualStudioCode
+.vscode/settings.json
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
 # CMake
 CMakeCache.txt
 CMakeFiles
@@ -75,6 +83,7 @@ out.cereal
 .idea/**/dictionaries
 .idea/**/shelf
 .idea/deployment.xml
+.idea/other.xml
 
 # Generated files
 .idea/**/contentModel.xml
@@ -134,3 +143,13 @@ fabric.properties
 
 # Android studio 3.1+ serialized cache file
 .idea/caches/build_file_checksums.ser
+
+.cmake/
+CMakeDoxyfile.in
+CMakeDoxygenDefaults.cmake
+CPM_modules/
+CPackConfig.cmake
+CPackSourceConfig.cmake
+build/
+cpm-package-lock.cmake
+

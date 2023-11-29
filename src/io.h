@@ -3,9 +3,14 @@
 #include "particle.h"
 #include "spdlog/spdlog.h"
 #include "units.h"
+#include "group.h"
 #include <fstream>
+#include <type_traits>
+#include <concepts>
+#include <iterator>
 #include <range/v3/iterator/operations.hpp>
 #include <range/v3/algorithm/for_each.hpp>
+#include <numeric>
 
 namespace cereal {
 class BinaryOutputArchive;
@@ -24,17 +29,22 @@ class Group;
 #define CPLUSPLUS
 #endif
 
-namespace XDRfile {
+namespace XdrFile {
 #include <xdrfile_trr.h>
 #include <xdrfile_xtc.h>
-} // namespace XDRfile
+
+struct XdrFileDeleter {
+    void operator()(XdrFile::XDRFILE* xdrfile); //!< Custom deleter for XDRFILE pointer that closes file
+};
+using XDRFILE_unique = std::unique_ptr<XDRFILE, XdrFileDeleter>; //!< Safe XDRFILE pointer with cleanup
+} // namespace XdrFile
 
 namespace IO {
 
 /**
  * @brief Open (gzip compressed) output stream
  */
-std::unique_ptr<std::ostream> openCompressedOutputStream(const std::string&, bool throw_on_error = false);
+std::unique_ptr<std::ostream> openCompressedOutputStream(const std::string& filename, bool throw_on_error = false);
 
 /**
  * Write a map to an output stream as key-value pairs
@@ -97,7 +107,7 @@ class StructureFileReader {
     bool prefer_charges_from_file = true; //!< If applicable, prefer charges from AAM file over `AtomData`
 
     ParticleVector& load(std::istream& stream); //!< Load entire stream and populate data
-    ParticleVector& load(const std::string& filename);
+    ParticleVector& load(std::string_view filename);
     virtual ~StructureFileReader() = default;
 
     bool box_dimension_support = false;
@@ -163,6 +173,13 @@ class XYZReader : public StructureFileReader {
     Particle loadParticle(std::istream& stream) override;
 };
 
+class SpheroCylinderXYZReader : public StructureFileReader {
+  private:
+    void loadHeader(std::istream& stream) override;
+    Particle loadParticle(std::istream& stream) override;
+};
+
+
 class GromacsReader : public StructureFileReader {
   private:
     void loadBoxInformation(std::istream& stream); //!< Load box dimensions (stream position is preserved)
@@ -201,7 +218,7 @@ class StructureFileWriter {
     Point box_dimensions = Point::Zero();
 
   public:
-    template <class ParticleIter>
+    template <std::forward_iterator ParticleIter>
     void save(std::ostream& stream, ParticleIter begin, ParticleIter end, const Point& box_length) {
         if (auto number_of_particles = std::distance(begin, end); number_of_particles > 0) {
             box_dimensions = box_length;
@@ -211,17 +228,16 @@ class StructureFileWriter {
         }
     }
 
-    template <typename Range> void save(std::ostream& stream, const Range& groups, const Point& box_length) {
+    void save(std::ostream& stream, const RequireGroups auto& groups, const Point& box_length) {
         group_index = 0;
         particle_index = 0;
         box_dimensions = box_length;
 
-        int number_of_particles = 0;
-        std::for_each(groups.begin(), groups.end(),
-                      [&](const auto& group) { number_of_particles += group.capacity(); });
+        auto group_sizes = groups | ranges::cpp20::views::transform(&Group::capacity);
+        const auto number_of_particles = std::accumulate(group_sizes.begin(), group_sizes.end(), 0u);
         saveHeader(stream, number_of_particles);
 
-        std::for_each(groups.begin(), groups.end(), [&](const auto& group) { saveGroup(stream, group); });
+        ranges::cpp20::for_each(groups, [&](const auto& group) { saveGroup(stream, group); });
         saveFooter(stream);
     }
 
@@ -248,6 +264,17 @@ class XYZWriter : public StructureFileWriter {
     void saveHeader(std::ostream& stream, int number_of_particles) const override;
     void saveParticle(std::ostream& stream, const Particle& particle) override;
 };
+
+/**
+ * Modified XYZ format that also saves spherocylinder direction and patch
+ * (ported from Faunus v1)
+ */
+class SpheroCylinderXYZWriter : public StructureFileWriter {
+  private:
+    void saveHeader(std::ostream& stream, int number_of_particles) const override;
+    void saveParticle(std::ostream& stream, const Particle& particle) override;
+};
+
 
 class PQRWriter : public StructureFileWriter {
   private:
@@ -289,8 +316,8 @@ struct TrajectoryFrame;
  * variable number of coordinates (atoms) between frames.
  */
 struct XTCTrajectoryFrame {
-    XDRfile::matrix xtc_box;                          //!< box tensor; only diagonal elements are used
-    std::unique_ptr<XDRfile::rvec[]> xtc_coordinates; //!< C-style array of particle coordinates
+    XdrFile::matrix xtc_box;                          //!< box tensor; only diagonal elements are used
+    std::unique_ptr<XdrFile::rvec[]> xtc_coordinates; //!< C-style array of particle coordinates
     int xtc_step = 0;                                 //!< current frame number
     float xtc_time = 0.0;                             //!< current time (unit?)
     int number_of_atoms = 0;                          //!< number of coordinates (atoms) in each frame
@@ -315,7 +342,7 @@ struct XTCTrajectoryFrame {
      * @param[in] coordinates_begin  input iterator with coordinates in nanometers
      * @param[in] coordinates_end  input iterator's end
      */
-    template <class begin_iterator, class end_iterator>
+    template <RequirePointIterator begin_iterator, class end_iterator>
     XTCTrajectoryFrame(int step, float time, const Point& box, begin_iterator coordinates_begin,
                        end_iterator coordinates_end) {
         initNumberOfAtoms(std::distance(coordinates_begin, coordinates_end));
@@ -346,7 +373,7 @@ struct XTCTrajectoryFrame {
      * @param[in] coordinates_end  input iterator's end
      * @throw std::runtime_error when the number of coordinates does not match
      */
-    template <class begin_iterator, class end_iterator>
+    template <RequirePointIterator begin_iterator, class end_iterator>
     void importFrame(const int step, const float time, const Point& box, begin_iterator coordinates_begin,
                      end_iterator coordinates_end) {
         importTimestamp(step, time);
@@ -370,7 +397,7 @@ struct XTCTrajectoryFrame {
      * @param[out] coordinates_end  output iterator's end
      * @throw std::runtime_error  when the number of coordinates does not match
      */
-    template <class begin_iterator, class end_iterator>
+    template <RequirePointIterator begin_iterator, RequirePointIterator end_iterator>
     void exportFrame(int& step, float& time, Point& box, begin_iterator coordinates_begin,
                      end_iterator coordinates_end) const {
         exportTimestamp(step, time);
@@ -409,7 +436,7 @@ struct XTCTrajectoryFrame {
      * @param[in] end  input iterator's end
      * @param[in] offset  offset in nanometers to add to all coordinates upon conversion
      */
-    template <class begin_iterator, class end_iterator>
+    template <RequirePointIterator begin_iterator, typename end_iterator>
     void importCoordinates(begin_iterator begin, end_iterator end, const Point& offset) const {
         int i = 0;
         ranges::cpp20::for_each(begin, end, [&](const auto& position) {
@@ -452,7 +479,7 @@ struct XTCTrajectoryFrame {
      * @param[out] end  output iterator's end
      * @param[in] offset  offset in nanometers to subtract from all coordinates upon conversion
      */
-    template <class begin_iterator, class end_iterator>
+    template <RequirePointIterator begin_iterator, typename end_iterator>
     void exportCoordinates(begin_iterator begin, end_iterator end, const Point& offset) const {
         // comparison of i is probably faster than prior call of std::distance
         int i = 0;
@@ -511,8 +538,8 @@ struct TrajectoryFrame {
  * is responsible for I/O operations, not data conversion. For details about data conversion XTCTrajectoryFrame.
  */
 class XTCReader {
-    int return_code = XDRfile::exdrOK;   //!< last return code of a C function
-    XDRfile::XDRFILE* xdrfile = nullptr; //!< file handle
+    int return_code = XdrFile::exdrOK; //!< last return code of a C function
+    XdrFile::XDRFILE_unique xdrfile;   //!< file handle
     //! data structure for C functions; the number of coordinates is immutable
     std::unique_ptr<XTCTrajectoryFrame> xtc_frame;
 
@@ -522,7 +549,7 @@ class XTCReader {
      * @param filename  a name of the XTC file to open
      */
     explicit XTCReader(const std::string& filename);
-    ~XTCReader();
+
     /**
      * @brief Returns number of coordinates (atoms) in each frame. Immutable during object lifetime.
      * @return number of coordinates (atoms)
@@ -547,7 +574,7 @@ class XTCReader {
      * @return true on success, false at the end of file
      * @throw std::runtime_error  when other I/O error occures
      */
-    template <class begin_iterator, class end_iterator>
+    template <RequirePointIterator begin_iterator, typename end_iterator>
     bool read(int& step, float& time, Point& box, begin_iterator coordinates_begin, end_iterator coordinates_end) {
         if (readFrame()) {
             xtc_frame->exportFrame(step, time, box, coordinates_begin, coordinates_end);
@@ -573,8 +600,8 @@ class XTCReader {
  * is responsible for I/O operations, not data conversion.
  */
 class XTCWriter {
-    int return_code = XDRfile::exdrOK;             //!< last return code of a C function
-    XDRfile::XDRFILE* xdrfile = nullptr;           //!< file handle
+    int return_code = XdrFile::exdrOK;             //!< last return code of a C function
+    XdrFile::XDRFILE_unique xdrfile;               //!< file handle
     std::unique_ptr<XTCTrajectoryFrame> xtc_frame; //!< data structure for C functions;
                                                    //!< the number of coordinates is immutable
     int step_counter = 0;                          //!< frame counter for automatic increments
@@ -586,7 +613,6 @@ class XTCWriter {
      * @param filename  a name of the XTC file to open
      */
     explicit XTCWriter(const std::string& filename);
-    ~XTCWriter();
     /**
      * @brief Writes a frame into the file.
      * @param[in] frame  frame to be written
@@ -608,7 +634,7 @@ class XTCWriter {
      * @param[in] coordinates_begin  input iterator with coordinates (not particles)
      * @param[in] coordinates_end  input iterator's end
      */
-    template <class begin_iterator, class end_iterator>
+    template <RequirePointIterator begin_iterator, typename end_iterator>
     void writeNext(const Point& box, begin_iterator coordinates_begin, end_iterator coordinates_end) {
         if (!xtc_frame) {
             auto number_of_atoms = ranges::cpp20::distance(coordinates_begin, coordinates_end);
@@ -654,14 +680,14 @@ ParticleVector fastaToParticles(std::string_view fasta_sequence, double bond_len
  * @throws Throws exception if nothing was loaded or if unknown suffix
  * @returns particles destination particle vector (will be overwritten)
  */
-ParticleVector loadStructure(const std::string& filename, bool prefer_charges_from_file = true);
+ParticleVector loadStructure(std::string_view filename, bool prefer_charges_from_file = true);
 
 /**
  * @brief Create structure writer
  * @param suffix Filename suffix (pqr, pdb, aam, xyz, gro)
  * @return Shared pointer to write instance; empty if unknown suffix
  */
-std::shared_ptr<StructureFileWriter> createStructureFileWriter(const std::string& suffix);
+std::unique_ptr<StructureFileWriter> createStructureFileWriter(const std::string& suffix);
 
 /**
  * @brief Placeholder for Space Trajectory

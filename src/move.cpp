@@ -6,16 +6,22 @@
 #include "chainmove.h"
 #include "forcemove.h"
 #include "montecarlo.h"
+#include "smart_montecarlo.h"
+#include "regions.h"
 #include "aux/iteratorsupport.h"
 #include "aux/eigensupport.h"
 #include "spdlog/spdlog.h"
 #include <range/v3/view/counted.hpp>
+#include <range/v3/algorithm/count.hpp>
+#include <range/v3/algorithm/fold_left.hpp>
+#include <range/v3/view/transform.hpp>
+#include <range/v3/view/map.hpp>
 
-namespace Faunus::Move {
+namespace Faunus::move {
 
-Random MoveBase::slump; // static instance of Random (shared for all moves)
+Random Move::slump; // static instance of Random (shared for all moves)
 
-void MoveBase::from_json(const json& j) {
+void Move::from_json(const json& j) {
     if (const auto it = j.find("repeat"); it != j.end()) {
         if (it->is_number()) {
             repeat = it->get<int>();
@@ -35,7 +41,7 @@ void MoveBase::from_json(const json& j) {
     }
 }
 
-void MoveBase::to_json(json& j) const {
+void Move::to_json(json& j) const {
     _to_json(j);
     if (timer_move.result() > 0.01) { // only print if more than 1% of the time
         j["relative time (without energy calc)"] = timer_move.result();
@@ -53,7 +59,7 @@ void MoveBase::to_json(json& j) const {
     roundJSON(j, 3);
 }
 
-void MoveBase::move(Change& change) {
+void Move::move(Change& change) {
     timer.start();
     timer_move.start();
     number_of_attempted_moves++;
@@ -65,13 +71,13 @@ void MoveBase::move(Change& change) {
     timer_move.stop();
 }
 
-void MoveBase::accept(Change& change) {
+void Move::accept(Change& change) {
     number_of_accepted_moves++;
     _accept(change);
     timer.stop();
 }
 
-void MoveBase::reject(Change& change) {
+void Move::reject(Change& change) {
     number_of_rejected_moves++;
     _reject(change);
     timer.stop();
@@ -87,32 +93,36 @@ void MoveBase::reject(Change& change) {
  * @param new_energy Energy from hamiltonian after the change (kT)
  * @return Energy due to custom bias from the particular move (kT)
  */
-double MoveBase::bias([[maybe_unused]] Change& change, [[maybe_unused]] double old_energy,
-                      [[maybe_unused]] double new_energy) {
+double Move::bias([[maybe_unused]] Change& change, [[maybe_unused]] double old_energy,
+                  [[maybe_unused]] double new_energy) {
     return 0.0;
 }
 
-void MoveBase::_accept([[maybe_unused]] Change& change) {}
+void Move::_accept([[maybe_unused]] Change& change) {}
 
-void MoveBase::_reject([[maybe_unused]] Change& change) {}
+void Move::_reject([[maybe_unused]] Change& change) {}
 
-MoveBase::MoveBase(Space& spc, std::string_view name, std::string_view cite) : cite(cite), name(name), spc(spc) {}
+Move::Move(Space& spc, std::string_view name, std::string_view cite)
+    : cite(cite)
+    , name(name)
+    , spc(spc) {}
 
-void MoveBase::setRepeat(const int new_repeat) { repeat = new_repeat; }
-bool MoveBase::isStochastic() const { return repeat != 0; }
+void Move::setRepeat(const int new_repeat) { repeat = new_repeat; }
+bool Move::isStochastic() const { return repeat != 0; }
 
-void from_json(const json &j, MoveBase &move) { move.from_json(j); }
+void from_json(const json& j, Move& move) { move.from_json(j); }
 
-void to_json(json& j, const MoveBase& move) { move.to_json(j[move.getName()]); }
+void to_json(json& j, const Move& move) { move.to_json(j[move.getName()]); }
 
-const std::string& MoveBase::getName() const {
+const std::string& Move::getName() const {
     assert(!name.empty());
     return name;
 }
 
 // -----------------------------------
 
-ReplayMove::ReplayMove(Space& spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {}
+ReplayMove::ReplayMove(Space& spc, std::string name, std::string cite)
+    : Move(spc, name, cite) {}
 
 ReplayMove::ReplayMove(Space& spc) : ReplayMove(spc, "replay", "") {}
 
@@ -141,7 +151,7 @@ double ReplayMove::bias(Change&, double, double) {
 void AtomicTranslateRotate::_to_json(json& j) const {
     j = {{"dir", directions},
          {"molid", molid},
-         {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(mean_square_displacement.avg())},
+         {unicode::rootof + unicode::bracket("r" + unicode::squared), std::sqrt(mean_square_displacement.avg())},
          {"molecule", molecule_name}};
     roundJSON(j, 3);
 }
@@ -235,7 +245,8 @@ void AtomicTranslateRotate::_reject(Change&) { mean_square_displacement += 0; }
 
 AtomicTranslateRotate::AtomicTranslateRotate(Space& spc, const Energy::Hamiltonian& hamiltonian, std::string name,
                                              std::string cite)
-    : MoveBase(spc, name, cite), hamiltonian(hamiltonian) {
+    : Move(spc, name, cite)
+    , hamiltonian(hamiltonian) {
     repeat = -1; // meaning repeat N times
     cdata.relative_atom_indices.resize(1);
     cdata.internal = true;
@@ -295,14 +306,22 @@ void AtomicTranslateRotate::saveHistograms() {
 
 AtomicTranslateRotate::~AtomicTranslateRotate() { saveHistograms(); }
 
-std::unique_ptr<MoveBase> createMove(const std::string& name, const json& properties, Space& spc,
-                                     Energy::Hamiltonian& hamiltonian) {
+/**
+ * @param name Name of move to create
+ * @param properties json configuration for move
+ * @param spc Reference to trial or "new" space
+ * @param hamiltonian Hamiltonian used for trial space
+ * @param old_spc Reference to "old" space (rarely used by any move, except Speciation)
+ */
+std::unique_ptr<Move> createMove(const std::string& name, const json& properties, Space& spc,
+                                 Energy::Hamiltonian& hamiltonian, Space& old_spc) {
     try {
-        std::unique_ptr<MoveBase> move;
+        std::unique_ptr<Move> move;
         if (name == "moltransrot") {
+            if (properties.contains("region")) {
+                return std::make_unique<SmarterTranslateRotate>(spc, properties);
+            }
             move = std::make_unique<TranslateRotate>(spc);
-        } else if (name == "smartmoltransrot") {
-            move = std::make_unique<SmartTranslateRotate>(spc);
         } else if (name == "conformationswap") {
             move = std::make_unique<ConformationSwap>(spc);
         } else if (name == "transrot") {
@@ -314,11 +333,15 @@ std::unique_ptr<MoveBase> createMove(const std::string& name, const json& proper
         } else if (name == "volume") {
             move = std::make_unique<VolumeMove>(spc);
         } else if (name == "charge") {
-            move = std::make_unique<ChargeMove>(spc);
+            if (properties.value("quadratic", true)) {
+                move = std::make_unique<QuadraticChargeMove>(spc);
+            } else {
+                move = std::make_unique<ChargeMove>(spc);
+            }
         } else if (name == "chargetransfer") {
             move = std::make_unique<ChargeTransfer>(spc);
         } else if (name == "rcmc") {
-            move = std::make_unique<SpeciationMove>(spc);
+            move = std::make_unique<SpeciationMove>(spc, old_spc);
         } else if (name == "quadrantjump") {
             move = std::make_unique<QuadrantJump>(spc);
         } else if (name == "cluster") {
@@ -334,6 +357,18 @@ std::unique_ptr<MoveBase> createMove(const std::string& name, const json& proper
 #else
             throw ConfigurationError("{} requires that Faunus is compiled with MPI", name);
 #endif
+        } else if (name == "gibbs_volume") {
+#ifdef ENABLE_MPI
+            move = std::make_unique<GibbsVolumeMove>(spc, MPI::mpi);
+#else
+            throw ConfigurationError("{} requires that Faunus is compiled with MPI", name);
+#endif
+        } else if (name == "gibbs_matter") {
+#ifdef ENABLE_MPI
+            move = std::make_unique<GibbsMatterMove>(spc, MPI::mpi);
+#else
+            throw ConfigurationError("{} requires that Faunus is compiled with MPI", name);
+#endif
         }
         if (!move) {
             throw ConfigurationError("unknown move '{}'", name);
@@ -343,7 +378,7 @@ std::unique_ptr<MoveBase> createMove(const std::string& name, const json& proper
     } catch (std::exception& e) { throw ConfigurationError("error creating move -> {}", e.what()); }
 }
 
-void MoveCollection::addMove(std::shared_ptr<MoveBase>&& move) {
+void MoveCollection::addMove(std::shared_ptr<Move>&& move) {
     if (!move) {
         throw std::runtime_error("invalid move");
     }
@@ -353,12 +388,12 @@ void MoveCollection::addMove(std::shared_ptr<MoveBase>&& move) {
     number_of_moves_per_sweep = static_cast<unsigned int>(std::accumulate(repeats.begin(), repeats.end(), 0.0));
 }
 
-MoveCollection::MoveCollection(const json& list_of_moves, Space& spc, Energy::Hamiltonian& hamiltonian) {
+MoveCollection::MoveCollection(const json& list_of_moves, Space& spc, Energy::Hamiltonian& hamiltonian, Space &old_spc) {
     assert(list_of_moves.is_array());
     for (const auto& j : list_of_moves) { // loop over move list
         const auto& [name, parameters] = jsonSingleItem(j);
         try {
-            addMove(createMove(name, parameters, spc, hamiltonian));
+            addMove(createMove(name, parameters, spc, hamiltonian, old_spc));
         } catch (std::exception& e) {
             usageTip.pick(name);
             throw ConfigurationError("{}", e.what()).attachJson(j);
@@ -368,13 +403,13 @@ MoveCollection::MoveCollection(const json& list_of_moves, Space& spc, Energy::Ha
 
 void to_json(json& j, const MoveCollection& propagator) { j = propagator.moves; }
 
-const BasePointerVector<MoveBase>& MoveCollection::getMoves() const { return moves; }
+const BasePointerVector<Move>& MoveCollection::getMoves() const { return moves; }
 
 MoveCollection::move_iterator MoveCollection::sample() {
 #ifdef ENABLE_MPI
     auto& random_engine = MPI::mpi.random.engine; // parallel processes (tempering) must be in sync
 #else
-    auto& random_engine = Move::MoveBase::slump.engine;
+    auto& random_engine = move::Move::slump.engine;
 #endif
     if (!moves.empty()) {
         return moves.begin() + distribution(random_engine);
@@ -383,6 +418,275 @@ MoveCollection::move_iterator MoveCollection::sample() {
 }
 
 #ifdef ENABLE_MPI
+
+GibbsEnsembleHelper::GibbsEnsembleHelper(const Space& spc, const MPI::Controller& mpi, const VectorOfMolIds& molids)
+    : mpi(mpi)
+    , molids(molids) {
+    if (molids.empty()) {
+        faunus_logger->error("Gibbs ensemble: At least one molecule type required");
+        mpi.world.abort(1);
+    }
+    if (mpi.world.size() != 2) {
+        faunus_logger->error("Gibbs ensemble: Exactly two MPI processes required; use e.g. `mpirun -np 2`");
+        mpi.world.abort(1);
+    }
+    if (mpi.world.rank() == 0) {
+        partner_rank = 1;
+    } else {
+        partner_rank = 0;
+    }
+    // exchange and sum up total volume
+    const double volume_self = spc.geometry.getVolume();
+    const double volume_partner = exchange(volume_self);
+    total_volume = volume_self + volume_partner;
+
+    // sum up and exchange total number of particles
+    total_num_particles = 0;
+    for (const auto id : molids) {
+        total_num_particles += spc.numMolecules<Group::Selectors::ACTIVE>(id);
+    }
+    const int total_num_particles_partner = static_cast<int>(exchange(static_cast<double>(total_num_particles)));
+    total_num_particles += total_num_particles_partner;
+}
+
+double GibbsEnsembleHelper::exchange(const double value) const {
+    const auto tag = mpl::tag_t(0);
+    double partner_value = 0.0;
+    mpi.world.sendrecv(value, partner_rank, tag, partner_value, partner_rank, tag);
+    return partner_value;
+}
+
+/**
+ * @return Pair with total particle counts in cell 1 and 2
+ * @note No MPI exchange needed
+ */
+std::pair<int, int> GibbsEnsembleHelper::currentNumParticles(const Space& spc) const {
+    namespace rv = ranges::cpp20::views;
+    auto to_num_molecules = [&](auto molid) { return spc.numMolecules<Group::Selectors::ACTIVE>(molid); };
+    const int n1 = ranges::fold_left(molids | rv::transform(to_num_molecules), 0, std::plus<>());
+    const int n2 = total_num_particles - n1;
+    return {n1, n2};
+}
+
+/**
+ * @return Pair with volumes of cell 1 and 2
+ * @note No MPI exchange needed
+ */
+std::pair<double, double> GibbsEnsembleHelper::currentVolumes(const Space& spc) const {
+    const double v1 = spc.geometry.getVolume();
+    const double v2 = total_volume - v1;
+    return {v1, v2};
+}
+
+// -----------------------------------
+
+GibbsVolumeMove::GibbsVolumeMove(Space& spc, MPI::Controller& mpi)
+    : VolumeMove(spc, "gibbs_volume"s)
+    , mpi(mpi) {
+    if (mpi.isMaster()) {
+        faunus_logger->warn("{}: This move is marked UNSTABLE - carefully check your output ⚠️", name);
+    }
+}
+
+/**
+ * Here `1` is self and `2` is the partner. Note that the `du1` is captured by the normal trial energy
+ * and is excluded from the bias.
+ */
+double GibbsVolumeMove::bias([[maybe_unused]] Change& change, const double old_energy, const double new_energy) {
+    if (volumeTooExtreme()) {
+        return pc::infty; // reject move attempt
+    }
+
+    const auto dv = new_volume - old_volume;
+    const auto v1_old = old_volume;
+    const auto v2_old = gibbs->total_volume - v1_old;
+    const auto [n1, n2] = gibbs->currentNumParticles(spc);
+    const auto du1 = new_energy - old_energy;
+    const auto du2 = gibbs->exchange(du1); // MPI call
+
+    double gibbs_bias = 0.0;
+    if (direct_volume_displacement) {
+        // Panagiotopoulos et al., Eq. 5
+        gibbs_bias = -n1 * std::log((v1_old + dv) / v1_old) - n2 * std::log((v2_old - dv) / v2_old);
+    } else {
+        // @todo implement for ln V displacement - see Frenkel & Smith Eq. 8.3.3
+        faunus_logger->error("{}: lnV displacement is unimplemented", name);
+        mpi.world.abort(1);
+    }
+    faunus_logger->trace("{}: n1={} n2={} v1={:.1f} v2={:.1f} du1={:.2E} du2={:.2E} dv={:.1f} bias={:.2E}", name, n1,
+                         n2, v1_old, v2_old, du1, du2, dv, gibbs_bias);
+    return du2 + gibbs_bias; // du1 is automatically added in `MetropolisMonteCarlo::performMove()`
+}
+
+/**
+ * We need this to trigger in both cells hence check for both too large and too small volumes.
+ *
+ * @warning Hard-coded volume threshold
+ */
+bool GibbsVolumeMove::volumeTooExtreme() const {
+    const double min_volume = 1.0 * 1.0 * 1.0; // Å3
+    const double max_volume = gibbs->total_volume - min_volume;
+    return ((new_volume < min_volume) || (new_volume > max_volume));
+}
+
+/**
+ * Expand volume in one randomly picked cell, while contracting the other
+ *
+ * Here we perform a move in ln(v1/v2) as described in the book of Frenkel and Smith, Section 8.3.2
+ *
+ *     v1(n) / v2(n) = exp{ ln( v1_o / v2_o ) + 𝝳 } = f
+ *     => v1(n) = v_tot / ( 1 / f + 1)
+ */
+void GibbsVolumeMove::setNewVolume() {
+    auto& random_engine = mpi.random;
+
+    // either expand or contract volume; do the opposite in the other cell
+    double sign = static_cast<bool>(random_engine.range(0, 1)) ? -1.0 : 1.0;
+    if (gibbs->mpi.isMaster()) {
+        sign = -sign;
+    }
+
+    old_volume = spc.geometry.getVolume();
+    const auto partner_old_volume = gibbs->total_volume - old_volume;
+
+    if (direct_volume_displacement) {
+        new_volume = old_volume + sign * (random_engine() - 0.5) * logarithmic_volume_displacement_factor;
+    } else {
+        // ln(V) displacement - see Frenkel and Smith, Section 8.3.2
+        const auto f = std::exp(std::log(old_volume / partner_old_volume) +
+                                sign * (random_engine() - 0.5) * logarithmic_volume_displacement_factor);
+        new_volume = gibbs->total_volume / (1.0 / f + 1.0);
+    }
+
+    // debug info to verify volume conservation
+    if (faunus_logger->level() <= spdlog::level::trace) {
+        const auto dV = new_volume - old_volume;
+        const auto dV_other = gibbs->exchange(dV);
+        if (mpi.isMaster()) {
+            faunus_logger->trace("{}: dV1 = {:.3f} dV2 = {:.3f}", name, dV, dV_other);
+        }
+    }
+}
+
+/**
+ * The MC routine includes a (trivial) contribution from translational
+ * entropy, e.g. the ideal gas contribution. For NVT simulations this has no effect,
+ * but for moves that perturb the density (V or N) this gives a contribution. In the
+ * Gibbs ensemble we handle this specially via the `bias()` function, and
+ * we therefore want to skip any calls to `TranslationalEnergy::energy()`.
+ */
+void GibbsVolumeMove::_move(Change& change) {
+    change.disable_translational_entropy = true;
+    VolumeMove::_move(change);
+}
+
+void GibbsVolumeMove::_from_json(const json& j) {
+    VolumeMove::_from_json(j);
+    if (volume_scaling_method != Geometry::VolumeMethod::ISOTROPIC) {
+        throw ConfigurationError("Gibbs ensemble currently requires isotropic volume scaling");
+    }
+    direct_volume_displacement = j.value("direct_volume_displacement", true);
+    const auto names = j.at("molecules").get<std::vector<std::string>>();
+    const auto molids = Faunus::names2ids(Faunus::molecules, names);
+    gibbs = std::make_unique<GibbsEnsembleHelper>(spc, mpi, molids);
+    if (!gibbs) {
+        faunus_logger->error("{}: Error - please file a bug report", name);
+        mpi.world.abort(1);
+    }
+}
+
+// -----------------------------------
+
+GibbsMatterMove::GibbsMatterMove(Space& spc, MPI::Controller& mpi)
+    : Move(spc, "gibbs_matter"s, "doi:10/cvzgw9")
+    , mpi(mpi) {
+    molecule_bouncer = std::make_unique<Speciation::MolecularGroupDeActivator>(spc, random, true);
+    if (mpi.isMaster()) {
+        faunus_logger->warn("{}: This move is marked UNSTABLE - carefully check your output ⚠️", name);
+    }
+}
+
+void GibbsMatterMove::_to_json([[maybe_unused]] json& j) const {}
+
+void GibbsMatterMove::_from_json(const json& j) {
+    const auto molname = j.at("molecule").get<std::string>();
+    const auto molids = Faunus::names2ids(Faunus::molecules, {molname});
+    gibbs = std::make_unique<GibbsEnsembleHelper>(spc, mpi, molids);
+    if (!gibbs) {
+        faunus_logger->error("{}: Error - please file a bug report", name);
+        mpi.world.abort(1);
+    }
+    assert(gibbs->molids.size() == 1);
+    molid = gibbs->molids.front();
+
+    // check that either cell can hold *all* particles
+    const int capacity1 = spc.numMolecules<Group::Selectors::ANY>(molid);
+    const int capacity2 = static_cast<int>(gibbs->exchange(static_cast<double>(capacity1)));
+    if ((capacity1 < gibbs->total_num_particles) || (capacity2 < gibbs->total_num_particles)) {
+        faunus_logger->error("{}: '{}' must have a capacity of at least {} molecules", name, molname,
+                             gibbs->total_num_particles);
+        mpi.world.abort(1);
+    }
+}
+
+void GibbsMatterMove::_move(Change& change) {
+    auto& random_engine = mpi.random;
+    // insert or delete; do the opposite in the other cell
+    insert = static_cast<bool>(random_engine.range(0, 1)); // note internal random generator!
+    if (gibbs->mpi.isMaster()) {
+        insert = !insert;                          // delete in one cell; remove from the other
+    }
+
+    // find a molecule to insert or delete
+    const auto selection = (insert) ? Space::Selection::INACTIVE : Space::Selection::ACTIVE;
+    const auto group = spc.randomMolecule(molid, random_engine, selection);
+
+    // boundary check
+    const bool no_group = (group == spc.groups.end());
+    const bool cell_is_full = (spc.numMolecules<Space::GroupType::ACTIVE>(molid) == gibbs->total_num_particles);
+    if (no_group || (insert && cell_is_full)) {
+        change.clear();
+        return;
+    }
+
+    // do the move
+    change.disable_translational_entropy = true;
+    change.matter_change = true;
+    [[maybe_unused]] double _bias;
+    auto& group_change = change.groups.emplace_back();
+    if (insert) {
+        std::tie(group_change, _bias) = molecule_bouncer->activate(*group);
+    } else {
+        std::tie(group_change, _bias) = molecule_bouncer->deactivate(*group);
+    }
+}
+
+/**
+ * Note that `du1` is captured by the normal trial energy and is excluded from the bias.
+ *
+ * See Eq. 8 of Panagiotopoulus, Quirke, Stapleton, Tildesley, Mol. Phys. 1988:63:527
+ */
+double GibbsMatterMove::bias([[maybe_unused]] Change& change, const double old_energy, const double new_energy) {
+    const auto [n1_new, n2_new] = gibbs->currentNumParticles(spc);
+    const auto [v1, v2] = gibbs->currentVolumes(spc);
+    const auto du1 = new_energy - old_energy;
+    const auto du2 = gibbs->exchange(du1); // MPI call
+
+    // Eq. 8 in https://dx.doi.org/10/cvzgw9
+    const double gibbs_bias =
+        (insert) ? std::log(v2 * n1_new / (v1 * (n2_new - 1.0))) : std::log(v1 * n2_new / (v2 * (n1_new - 1.0)));
+
+    if (faunus_logger->level() <= spdlog::level::trace) {
+        const auto gibbs_bias_other = gibbs->exchange(gibbs_bias);
+        if (mpi.isMaster()) {
+            faunus_logger->trace("{}: bias={:.2E} other_bias={:.2E}", name, gibbs_bias, gibbs_bias_other);
+        }
+    }
+
+    return du2 + gibbs_bias; // du1 is automatically added elsewhere
+}
+
+// -----------------------------------
 
 void ParallelTempering::_to_json(json& j) const {
     j = {{"replicas", mpi.world.size()},
@@ -421,11 +725,11 @@ void ParallelTempering::exchangeState(Change& change) {
 
 void ParallelTempering::_move(Change& change) {
     mpi.world.barrier(); // wait until all ranks reach here
-    if (!MPI::checkRandomEngineState(mpi.world, MoveBase::slump)) {
+    if (!MPI::checkRandomEngineState(mpi.world, slump)) {
         faunus_logger->error("Random numbers out of sync across MPI nodes. Do not use 'hardware' seed.");
         mpi.world.abort(1); // neighbor search *requires* that random engines are in sync
     }
-    partner->generate(mpi.world, MoveBase::slump);
+    partner->generate(mpi.world, slump);
     if (partner->rank.has_value()) {
         exchangeState(change);
     }
@@ -470,7 +774,8 @@ void ParallelTempering::_from_json(const json& j) {
 }
 
 ParallelTempering::ParallelTempering(Space& spc, const MPI::Controller& mpi)
-    : MoveBase(spc, "temper", "doi:10/b3vcw7"), mpi(mpi) {
+    : Move(spc, "temper", "doi:10/b3vcw7")
+    , mpi(mpi) {
     if (mpi.world.size() < 2) {
         throw std::runtime_error(name + " requires two or more MPI processes");
     }
@@ -496,12 +801,17 @@ void VolumeMove::_from_json(const json& j) {
         throw ConfigurationError("invalid volume scaling method");
     }
 }
+
+void VolumeMove::setNewVolume() {
+    old_volume = spc.geometry.getVolume();
+    new_volume = std::exp(std::log(old_volume) + (slump() - 0.5) * logarithmic_volume_displacement_factor);
+}
+
 void VolumeMove::_move(Change& change) {
     if (logarithmic_volume_displacement_factor > 0.0) {
         change.volume_change = true;
         change.everything = true;
-        old_volume = spc.geometry.getVolume();
-        new_volume = std::exp(std::log(old_volume) + (slump() - 0.5) * logarithmic_volume_displacement_factor);
+        setNewVolume();
         spc.scaleVolume(new_volume, volume_scaling_method);
     }
 }
@@ -511,7 +821,13 @@ void VolumeMove::_accept([[maybe_unused]] Change& change) {
     assert(std::fabs(spc.geometry.getVolume() - new_volume) < 1.0e-9);
 }
 
-VolumeMove::VolumeMove(Space& spc) : MoveBase(spc, "volume"s, ""s) { repeat = 1; }
+VolumeMove::VolumeMove(Space& spc, std::string_view name)
+    : Move(spc, name, ""s) {
+    repeat = 1;
+}
+
+VolumeMove::VolumeMove(Space& spc)
+    : VolumeMove(spc, "volume"s) {}
 
 void VolumeMove::_reject([[maybe_unused]] Change& change) {
     mean_square_volume_change += 0.0;
@@ -522,7 +838,6 @@ void VolumeMove::_reject([[maybe_unused]] Change& change) {
 // ------------------------------------------------
 
 void ChargeMove::_to_json(json& j) const {
-    using namespace u8;
     j = {{"index", particle_index}, {"dq", max_charge_displacement}};
     if (!mean_squared_charge_displacement.empty()) {
         j["√⟨Δq²⟩"] = std::sqrt(mean_squared_charge_displacement.avg());
@@ -542,18 +857,23 @@ void ChargeMove::_from_json(const json& j) {
 }
 
 void ChargeMove::_move(Change& change) {
-    if (std::fabs(max_charge_displacement) > 0.0) {
+    if (std::fabs(max_charge_displacement) > pc::epsilon_dbl) {
         auto& particle = spc.particles.at(particle_index); // refence to particle
-        charge_displacement = max_charge_displacement * (slump() - 0.5);
+        charge_displacement = getChargeDisplacement(particle);
         particle.charge += charge_displacement;
         change.groups.push_back(group_change); // add to list of moved groups
-    } else
-        charge_displacement = 0.0;
+    }
 }
+
+double ChargeMove::getChargeDisplacement([[maybe_unused]] const Particle& particle) const {
+    return max_charge_displacement * (slump() - 0.5);
+}
+
 void ChargeMove::_accept(Change&) { mean_squared_charge_displacement += charge_displacement * charge_displacement; }
 void ChargeMove::_reject(Change&) { mean_squared_charge_displacement += 0.0; }
 
-ChargeMove::ChargeMove(Space& spc, std::string_view name, std::string_view cite) : MoveBase(spc, name, cite) {
+ChargeMove::ChargeMove(Space& spc, std::string_view name, std::string_view cite)
+    : Move(spc, name, cite) {
     repeat = 1;
     group_change.internal = true;                 // the group is internally changed
     group_change.relative_atom_indices.resize(1); // we change exactly one atom
@@ -561,8 +881,50 @@ ChargeMove::ChargeMove(Space& spc, std::string_view name, std::string_view cite)
 
 ChargeMove::ChargeMove(Space& spc) : ChargeMove(spc, "charge", "") {}
 
+// -----------------------------------
+
+/**
+ * Displacement in q^2 (bias energy required)
+ *
+ * @returns dq = q' - q
+ */
+double QuadraticChargeMove::getChargeDisplacement(const Particle& particle) const {
+    const auto old_charge = particle.charge;
+    const auto sign = (old_charge < 0.0) ? -1.0 : 1.0;
+    auto new_charge = sign * old_charge * old_charge + max_charge_displacement * (slump() - 0.5);
+    new_charge = (new_charge < 0.0) ? -std::sqrt(-new_charge) : std::sqrt(new_charge);
+    return new_charge - old_charge;
+}
+
+/**
+ * @return Bias energy/kT = ln( |q'/q| )
+ */
+double QuadraticChargeMove::bias(Change& change, [[maybe_unused]] double old_energy,
+                                 [[maybe_unused]] double new_energy) {
+    if (change.empty()) {
+        return 0.0;
+    }
+    const auto new_charge = spc.particles.at(particle_index).charge;
+    const auto old_charge = new_charge - charge_displacement;
+    const auto bias_energy = std::log(std::fabs(new_charge / old_charge)); // @todo derive this!
+    mean_bias += bias_energy;
+    return bias_energy;
+}
+
+void QuadraticChargeMove::_to_json(json& j) const {
+    ChargeMove::_to_json(j);
+    j["quadratic"] = true;
+    if (!mean_bias.empty()) {
+        j["mean bias energy"] = mean_bias.avg();
+    }
+}
+
+QuadraticChargeMove::QuadraticChargeMove(Space& spc) : ChargeMove(spc) {}
+
+// -----------------------------------
+
 void ChargeTransfer::_to_json(json& j) const {
-    using namespace u8;
+    using namespace unicode;
     j = {{"dq", dq},
          {rootof + bracket(Delta + "q" + squared), std::sqrt(msqd.avg())},
          {cuberoot + rootof + bracket(Delta + "q" + squared), std::cbrt(std::sqrt(msqd.avg()))}};
@@ -767,7 +1129,8 @@ void ChargeTransfer::_move(Change& change) {
 void ChargeTransfer::_accept(Change&) { msqd += deltaq * deltaq; }
 void ChargeTransfer::_reject(Change&) { msqd += 0; }
 
-ChargeTransfer::ChargeTransfer(Space& spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {
+ChargeTransfer::ChargeTransfer(Space& spc, std::string name, std::string cite)
+    : Move(spc, name, cite) {
     repeat = -1; // meaning repeat N times
     mol1.cdata.internal = true;
     mol2.cdata.internal = true;
@@ -780,7 +1143,7 @@ ChargeTransfer::ChargeTransfer(Space& spc) : ChargeTransfer(spc, "chargetransfer
 void QuadrantJump::_to_json(json& j) const {
     j = {{"dir", dir},
          {"molid", molid},
-         {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(msqd.avg())},
+         {unicode::rootof + unicode::bracket("r" + unicode::squared), std::sqrt(msqd.avg())},
          {"molecule", molecules[molid].name}};
     roundJSON(j, 3);
 }
@@ -832,7 +1195,8 @@ void QuadrantJump::_move(Change& change) {
         faunus_logger->warn("{0}: no molecules found", name);
 }
 
-QuadrantJump::QuadrantJump(Space& spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {
+QuadrantJump::QuadrantJump(Space& spc, std::string name, std::string cite)
+    : Move(spc, name, cite) {
     repeat = -1; // meaning repeat N times
 }
 
@@ -842,7 +1206,7 @@ void AtomicSwapCharge::_to_json(json& j) const {
     j = {{"pH", pH},
          {"pka", pKa},
          {"molid", molid},
-         {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(msqd.avg())},
+         {unicode::rootof + unicode::bracket("r" + unicode::squared), std::sqrt(msqd.avg())},
          {"molecule", molname}};
     roundJSON(j, 3);
 }
@@ -883,14 +1247,15 @@ void AtomicSwapCharge::_move(Change& change) {
         p->charge = fabs(oldcharge - 1);
         _sqd = fabs(oldcharge - 1) - oldcharge;
         change.groups.push_back(cdata);   // add to list of moved groups
-        _bias = _sqd * (pH - pKa) * ln10; // one may add bias here...
+        _bias = _sqd * (pH - pKa) * std::numbers::ln10; // one may add bias here...
     }
 }
 double AtomicSwapCharge::bias(Change&, double, double) { return _bias; }
 void AtomicSwapCharge::_accept(Change&) { msqd += _sqd; }
 void AtomicSwapCharge::_reject(Change&) { msqd += 0; }
 
-AtomicSwapCharge::AtomicSwapCharge(Space& spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {
+AtomicSwapCharge::AtomicSwapCharge(Space& spc, std::string name, std::string cite)
+    : Move(spc, name, cite) {
     repeat = -1; // meaning repeat N times
     cdata.relative_atom_indices.resize(1);
     cdata.internal = true;
@@ -899,14 +1264,21 @@ AtomicSwapCharge::AtomicSwapCharge(Space& spc, std::string name, std::string cit
 AtomicSwapCharge::AtomicSwapCharge(Space& spc) : AtomicSwapCharge(spc, "swapcharge", "") {}
 
 void TranslateRotate::_to_json(json& j) const {
+    // For a spherical sphere of radius R, the ratio between mean squared translation (t)
+    // and mean squared rotation (r) is approximately MSD_r * 4R^2 = MSD_t.
+    const auto should_approach_radius =
+        std::sqrt(mean_squared_displacement.avg() / mean_squared_rotation_angle.avg() / 4.0);
+
     j = {{"dir", translational_direction},
-         {"dp", translational_displacement},
-         {"dprot", rotational_displacement},
+         {"dp", translational_displacement / 1.0_angstrom},
+         {"dprot", rotational_displacement / 1.0_rad},
          {"dirrot", fixed_rotation_axis},
          {"molid", molid},
-         {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(mean_squared_displacement.avg())},
+         {unicode::rootof + unicode::bracket("r" + unicode::squared), std::sqrt(mean_squared_displacement.avg())},
          {"√⟨θ²⟩/°", std::sqrt(mean_squared_rotation_angle.avg()) / 1.0_deg},
-         {"molecule", Faunus::molecules[molid].name}};
+         {"√⟨θ²⟩", std::sqrt(mean_squared_rotation_angle.avg()) / 1.0_rad},
+         {"molecule", Faunus::molecules.at(molid).name},
+         {"R/Å ≈ √(⟨r²⟩/4⟨θ²⟩)", should_approach_radius}};
     roundJSON(j, 3);
 }
 void TranslateRotate::_from_json(const json& j) {
@@ -917,10 +1289,15 @@ void TranslateRotate::_from_json(const json& j) {
     }
     molid = molecule.id();
     translational_direction = j.value("dir", Point(1, 1, 1));
-    translational_displacement = j.at("dp").get<double>();
-    rotational_displacement = j.at("dprot").get<double>();
+    translational_displacement = j.at("dp").get<double>() * 1.0_angstrom;
+
+    rotational_displacement = std::fabs(j.at("dprot").get<double>() * 1.0_rad);
+    if (rotational_displacement > 2.0 * pc::pi) {
+        faunus_logger->warn("rotational displacement should be between [0:2π]");
+    }
+
     fixed_rotation_axis = j.value("dirrot", Point(0.0, 0.0, 0.0)); // predefined axis of rotation
-    if (fixed_rotation_axis.count() > 0.0) {
+    if (fixed_rotation_axis.count() > 0) {
         fixed_rotation_axis.normalize();
         faunus_logger->debug("{}: fixed rotation axis [{:.3f},{:.3f},{:.3f}]", name, fixed_rotation_axis.x(),
                              fixed_rotation_axis.y(), fixed_rotation_axis.z());
@@ -939,9 +1316,9 @@ void TranslateRotate::_from_json(const json& j) {
 /**
  * @todo `mollist` scales linearly w. system size -- implement look-up-table in Space?
  */
-std::optional<std::reference_wrapper<Space::GroupType>> TranslateRotate::findRandomMolecule() const {
+TranslateRotate::OptionalGroup TranslateRotate::findRandomMolecule() {
     if (auto mollist = spc.findMolecules(molid, Space::Selection::ACTIVE); not ranges::cpp20::empty(mollist)) {
-        if (auto group_it = slump.sample(mollist.begin(), mollist.end()); not group_it->empty()) {
+        if (auto group_it = random.sample(mollist.begin(), mollist.end()); not group_it->empty()) {
             return *group_it;
         }
     }
@@ -955,7 +1332,7 @@ std::optional<std::reference_wrapper<Space::GroupType>> TranslateRotate::findRan
 double TranslateRotate::translateMolecule(Space::GroupType& group) {
     if (translational_displacement > 0.0) { // translate
         const auto old_mass_center = group.mass_center;
-        const auto displacement_vector =
+        const Point displacement_vector =
             Faunus::randomUnitVector(slump, translational_direction) * translational_displacement * slump();
 
         group.translate(displacement_vector, spc.geometry.getBoundaryFunc());
@@ -974,7 +1351,7 @@ double TranslateRotate::rotateMolecule(Space::GroupType& group) {
         return 0.0;
     }
     Point rotation_axis;
-    if (fixed_rotation_axis.count() > 0.0) { // fixed user-defined axis
+    if (fixed_rotation_axis.count() > 0) { // fixed user-defined axis
         rotation_axis = fixed_rotation_axis;
     } else {
         rotation_axis = Faunus::randomUnitVector(slump);
@@ -1024,13 +1401,42 @@ void TranslateRotate::_reject(Change&) {
     mean_squared_rotation_angle += 0.0;
 }
 
-TranslateRotate::TranslateRotate(Space& spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {
+TranslateRotate::TranslateRotate(Space& spc, std::string name, std::string cite)
+    : Move(spc, name, cite) {
     repeat = -1; // meaning repeat N times
 }
 
 TranslateRotate::TranslateRotate(Space& spc) : TranslateRotate(spc, "moltransrot", "") {}
 
-} // namespace Faunus::Move
+/**
+ * This is called *after* the move and the `bias()` function will determine if the move
+ * resulted in a flux over the region boundary and return the appropriate bias.
+ */
+double SmarterTranslateRotate::bias(Change& change, double old_energy, double new_energy) {
+    return TranslateRotate::bias(change, old_energy, new_energy) + smartmc.bias();
+}
+
+/**
+ * Upon calling `select()`, the `outside_rejection_probability` is used to exclude particles
+ * outside and may thus often return `std::nullopt`.
+ */
+TranslateRotate::OptionalGroup SmarterTranslateRotate::findRandomMolecule() {
+    auto mollist = spc.findMolecules(molid, Space::Selection::ACTIVE);
+    return smartmc.select(mollist, slump);
+}
+
+void SmarterTranslateRotate::_to_json(json& j) const {
+    TranslateRotate::_to_json(j);
+    smartmc.to_json(j["smartmc"]);
+}
+
+SmarterTranslateRotate::SmarterTranslateRotate(Space& spc, const json& j)
+    : TranslateRotate(spc, "moltransrot", "doi:10/frvx8j")
+    , smartmc(spc, j.at("region")) {
+    this->from_json(j);
+}
+
+} // namespace Faunus::move
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
 TEST_CASE("[Faunus] TranslateRotate") {
@@ -1039,7 +1445,7 @@ TEST_CASE("[Faunus] TranslateRotate") {
     CHECK(!molecules.empty()); // set in a previous test
 
     Space spc;
-    Move::TranslateRotate mv(spc);
+    move::TranslateRotate mv(spc);
     json j = R"( {"molecule":"A", "dp":1.0, "dprot":0.5, "dir":[0,1,0], "repeat":2 })"_json;
     mv.from_json(j);
 
@@ -1052,202 +1458,7 @@ TEST_CASE("[Faunus] TranslateRotate") {
 }
 #endif
 
-namespace Faunus::Move {
-
-void SmartTranslateRotate::_to_json(json& j) const {
-    j = {{"Number of counts inside geometry", cntInner},
-         {"Number of counts outside geometry", cnt - cntInner},
-         {"dir", dir},
-         {"dp", dptrans},
-         {"dprot", dprot},
-         {"p", p},
-         {"origo", origo},
-         {"rx", r_x},
-         {"ry", r_y},
-         {"molid", molid},
-         {"refid", refid1},
-         {"refid", refid2},
-         {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(msqd.avg())},
-         {"molecule", molecules[molid].name},
-         {"ref1", atoms[refid1].name},
-         {"ref2", atoms[refid2].name}};
-    roundJSON(j, 3);
-}
-void SmartTranslateRotate::_from_json(const json& j) {
-    assert(!molecules.empty());
-    const std::string molname = j.at("molecule");
-    const std::string refname1 = j.at("ref1");
-    const std::string refname2 = j.at("ref2");
-    molid = findMoleculeByName(molname).id();
-    refid1 = findAtomByName(refname1).id();
-    refid2 = findAtomByName(refname2).id();
-    ;
-    dir = j.value("dir", Point(1, 1, 1));
-    dprot = j.at("dprot");
-    dptrans = j.at("dp");
-    p = j.at("p");
-    r_x = j.at("rx");  // length of ellipsoidal radius along axis connecting reference atoms (in Å)
-    r_y = j.at("ry");  // length of ellipsoidal radius perpendicular to axis connecting reference atoms (in Å)
-    rsd = j.at("rsd"); // threshold for relative standard deviation of molecules inside geometry. When it goes below
-    // this value, a constant bias is used
-
-    if (repeat < 0) {
-        auto v = spc.findMolecules(molid);
-        repeat = std::distance(v.begin(), v.end());
-    }
-}
-
-void SmartTranslateRotate::_move(Change& change) {
-    assert(molid >= 0);
-    assert(!spc.groups.empty());
-    assert(spc.geometry.getVolume() > 0);
-    _bias = 0.0;
-    _sqd = 0.0;
-
-    // pick random group from the system matching molecule type
-    // TODO: This can be slow -- implement look-up-table in Space
-    auto mollist = spc.findMolecules(molid, Space::Selection::ACTIVE); // list of molecules w. 'molid'
-    auto reflist1 = spc.findAtoms(refid1);                             // list of atoms w. 'refid1'
-    auto reflist2 = spc.findAtoms(refid2);                             // list of atoms w. 'refid2'
-    if (not ranges::cpp20::empty(mollist)) {
-        auto it = slump.sample(mollist.begin(), mollist.end()); // chosing random molecule in group of type molname
-        auto ref1 = slump.sample(reflist1.begin(), reflist1.end());
-        auto ref2 = slump.sample(reflist2.begin(), reflist2.end());
-        cylAxis = spc.geometry.vdist(ref2->pos, ref1->pos) * 0.5; // half vector between reference atoms
-        origo = ref2->pos - cylAxis; // coordinates of middle point between reference atoms: new origo
-        if (r_x < cylAxis.norm())    // checking so that a is larger than length of cylAxis
-            throw std::runtime_error(
-                "specified radius of ellipsoid along the axis connecting reference atoms (rx) must be larger or equal "
-                "to half the distance between reference atoms. Specified radius is " +
-                std::to_string(r_x) + " Å whereas half the distance between reference atoms is " +
-                std::to_string(cylAxis.norm()) + "Å");
-
-        if (not it->empty()) { // checking so that molecule exists
-            assert(it->id == molid);
-
-            randNbr = slump(); // assigning random number in range [0,1]
-            molV =
-                spc.geometry.vdist(it->mass_center, origo); // vector between selected molecule and center of geometry
-            cosTheta = molV.dot(cylAxis) / molV.norm() / cylAxis.norm(); // cosinus of angle between coordinate vector
-                                                                         // of selected molecule and axis connecting
-                                                                         // reference atoms
-            theta = acos(cosTheta);       // angle between coordinate vector of selected molecule and axis connecting
-                                          // reference atoms
-            x = cosTheta * molV.norm();   // x coordinate of selected molecule with respect to center of geometry
-                                          // (in plane including vectors molV and cylAxis)
-            y = sin(theta) * molV.norm(); // y coordinate of selected molecule with respect to center of geometry
-                                          // (in plane including vectors molV and cylAxis)
-            coord = x * x / (r_x * r_x) + y * y / (r_y * r_y); // calculating normalized coordinate with respect to
-                                                               // dimensions of geometry (>1.0 → outside, <1.0 → inside)
-            if (not(coord > 1.0 && p < randNbr)) {
-
-                if (coord <= 1.0)
-                    cntInner += 1; // counting number of times a molecule is found inside geometry
-
-                cnt += 1; // total number of counts
-
-                if (findBias ==
-                    true) { // continuing to adjust bias according to number of molecules inside and outside geometry
-                    countNin = 0.0;  // counter keeping track of number of molecules inside geometry
-                    countNout = 0.0; // counter keeping track of number of molecules outside geometry
-                    Ntot = 0.0;      // total number of particles
-                    for (auto& g : mollist) {
-                        Ntot += 1.0;
-                        molV = spc.geometry.vdist(g.mass_center, origo);
-                        cosTheta = molV.dot(cylAxis) / molV.norm() / cylAxis.norm();
-                        theta = acos(cosTheta);
-                        x = cosTheta * molV.norm();
-                        y = sin(theta) * molV.norm();
-                        coordTemp = x * x / (r_x * r_x) + y * y / (r_y * r_y);
-                        if (coordTemp <= 1.0)
-                            countNin += 1.0;
-                        else
-                            countNout += 1.0;
-                    }
-
-                    countNin_avg += countNin;   // appending number of molecules inside geometry
-                                                // (since it has type Average)
-                    countNout_avg += countNout; // appending number of molecules outside geometry
-                                                // (since it has type Average)
-
-                    if (cnt % 100 == 0) {
-                        countNin_avgBlocks += countNin_avg.avg();   // appending average number of molecules inside
-                                                                    // geometry (type Average)
-                        countNout_avgBlocks += countNout_avg.avg(); // appending average number of molecules outside
-                                                                    // geometry (type Average)
-                    }
-
-                    if (cnt % 100000 == 0) {
-                        Nin = countNin_avgBlocks.avg(); // block average number of molecules inside geometry
-                        if (countNin_avgBlocks.stdev() / Nin < rsd) {
-                            // if block standard deviation is below specified threshold
-                            std::cout << "Bias found with rsd = " << countNin_avgBlocks.stdev() / Nin << " < " << rsd
-                                      << "\n\n";
-                            std::cout << "Average # of water molecules inside sphere: " << Nin << "\n";
-                            findBias = false; // stop updating bias, use constant value
-                        }
-                    }
-                }
-                if (dptrans > 0) { // translate
-                    Point oldcm = it->mass_center;
-                    Point dp = randomUnitVector(slump, dir) * dptrans * slump();
-
-                    it->translate(dp, spc.geometry.getBoundaryFunc());
-                    _sqd = spc.geometry.sqdist(oldcm, it->mass_center); // squared displacement
-                }
-
-                if (dprot > 0) { // rotate
-                    Point u = randomUnitVector(slump);
-                    double angle = dprot * (slump() - 0.5);
-                    Eigen::Quaterniond Q(Eigen::AngleAxisd(angle, u));
-                    it->rotate(Q, spc.geometry.getBoundaryFunc());
-                }
-
-                if (dptrans > 0 || dprot > 0) { // define changes
-                    Change::GroupChange d;
-                    d.group_index = Faunus::distance(spc.groups.begin(), it); // integer *index* of moved group
-                    d.all = true;                                             // *all* atoms in group were moved
-                    change.groups.push_back(d);                               // add to list of moved groups
-                }
-                assert(spc.geometry.sqdist(it->mass_center,
-                                           Geometry::massCenter(it->begin(), it->end(), spc.geometry.getBoundaryFunc(),
-                                                                -it->mass_center)) < 1e-6);
-                molV = spc.geometry.vdist(it->mass_center, origo);
-                cosTheta = molV.dot(cylAxis) / molV.norm() / cylAxis.norm();
-                theta = acos(cosTheta);
-                x = cosTheta * molV.norm();
-                y = sin(theta) * molV.norm();
-                coordNew = x * x / (r_x * r_x) + y * y / (r_y * r_y);
-
-                if (findBias == true) {                 // if using constantly updated bias
-                    if (coord <= 1.0 && coordNew > 1.0) // if molecule goes from inside to outside geometry
-                        // use corresponding bias, based on this cycle's number of molecules inside
-                        _bias = -log(p / (1 - (1 - p) / (p * Ntot + (1 - p) * countNin)));
-                    else if (coord > 1.0 && coordNew <= 1.0) // if molecules goes from outside to inside geometry
-                        // use corresponding bias, based on this cycle's number of molecules inside
-                        _bias = -log(1 / (1 + (1 - p) / (p * Ntot + (1 - p) * countNin)));
-                }
-
-                else {                                  // if constant bias has been found
-                    if (coord <= 1.0 && coordNew > 1.0) // if molecule goes from inside to outside geometry
-                        // use corresponding bias based on average, constant value Nin
-                        _bias = -log(p / (1 - (1 - p) / (p * Ntot + (1 - p) * Nin)));
-                    else if (coord > 1.0 && coordNew <= 1.0) // if molecule goes from outside to inside geometry
-                        // use corresponding bias based on average, constant value Nin
-                        _bias = -log(1 / (1 + (1 - p) / (p * Ntot + (1 - p) * Nin)));
-                }
-            }
-        }
-    }
-}
-
-double SmartTranslateRotate::bias(Change&, double, double) { return _bias; }
-
-SmartTranslateRotate::SmartTranslateRotate(Space& spc, std::string name, std::string cite) : MoveBase(spc, name, cite) {
-    repeat = -1; // meaning repeat N times
-}
-
-SmartTranslateRotate::SmartTranslateRotate(Space& spc) : SmartTranslateRotate(spc, "smartmoltransrot", "") {}
+namespace Faunus::move {
 
 void ConformationSwap::_to_json(json& j) const {
     j = {{"molid", molid},
@@ -1312,6 +1523,16 @@ void ConformationSwap::copyConformation(ParticleVector& particles, ParticleVecto
     case CopyPolicy::ALL:
         copy_function = [](const Particle& src, Particle& dst) { dst = src; };
         break;
+    case CopyPolicy::PATCHES:
+        // Copy only PSC patch and length information but keep directions and position
+        copy_function = [](const Particle& src, Particle& dst) {
+            if (src.hasExtension() && src.getExt().isCylindrical()) {
+                auto &psc_dst = dst.getExt();
+                psc_dst.half_length = src.getExt().half_length;
+                psc_dst.setDirections(src.traits().sphero_cylinder, psc_dst.scdir, psc_dst.patchdir);
+            }
+        };
+        break;
     case CopyPolicy::POSITIONS:
         copy_function = [](const Particle& src, Particle& dst) { dst.pos = src.pos; };
         break;
@@ -1354,7 +1575,7 @@ void ConformationSwap::checkMassCenterDrift(const Point& old_mass_center, const 
 }
 
 ConformationSwap::ConformationSwap(Space& spc, const std::string& name, const std::string& cite)
-    : MoveBase(spc, name, cite) {}
+    : Move(spc, name, cite) {}
 
 ConformationSwap::ConformationSwap(Space& spc) : ConformationSwap(spc, "conformationswap", "doi:10/dmc3") {
     repeat = -1; // meaning repeat n times
@@ -1402,4 +1623,4 @@ void ConformationSwap::checkConformationSize() const {
     }
 }
 
-} // namespace Faunus::Move
+} // namespace Faunus::move

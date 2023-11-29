@@ -1,9 +1,11 @@
 #pragma once
 
+#include <optional>
 #include <vector>
 #include <Eigen/Core>
 #include <nlohmann/json.hpp>
 #include <spdlog/fmt/fmt.h>
+#include <range/v3/range/concepts.hpp>
 
 // forward declare logger
 namespace spdlog {
@@ -20,6 +22,14 @@ using PointVector = std::vector<Point>; //!< Vector of 3D vectors
 using json = nlohmann::json;            //!< JSON object
 class Random;
 
+/** Concept for a range of points */
+template <class T>
+concept RequirePoints = ranges::cpp20::range<T> && std::is_same_v<ranges::cpp20::range_value_t<T>, Point>;
+
+/** Concept for an iterator to a `Point` */
+template <class T>
+concept RequirePointIterator = std::is_convertible_v<ranges::cpp20::iter_value_t<T>, Point>;
+
 using namespace std::string_literals;
 
 json loadJSON(const std::string& filename); //!< Read json filename into json object (w. syntax check)
@@ -32,6 +42,8 @@ json loadJSON(const std::string& filename); //!< Read json filename into json ob
  * can be used only once. This can be used to check for unknown
  * keys as the object should be zero after being processed by
  * i.e. `from_json` or similar.
+ *
+ * @todo This class should be retired and handled by JSON schema instead
  */
 struct SingleUseJSON : public json {
     SingleUseJSON(const json&);
@@ -48,7 +60,7 @@ struct SingleUseJSON : public json {
     template <class T> T value(const std::string& key, const T& fallback) {
         return (count(key) > 0) ? at(key).get<T>() : fallback;
     }
-}; //!< Like json, but delete entries after access
+};
 
 double roundValue(double value, int number_of_digits = 3); //!< Round to n number of significant digits
 void roundJSON(json& j, int number_of_digits = 3);         //!< Round float objects to n number of significant digits
@@ -79,11 +91,11 @@ std::tuple<const std::string&, const json&> jsonSingleItem(const json& j);
 class TipFromTheManual {
   private:
     json database; // database
-    std::shared_ptr<Random> random;
+    std::unique_ptr<Random> random;
     bool tip_already_given = false;
 
   public:
-    std::string buffer; // accumulate output here
+    std::string output_buffer; // accumulate output here
     bool quiet = true;  // if true, operator[] returns empty string
     bool asciiart = true;
     TipFromTheManual();
@@ -190,4 +202,29 @@ struct IOError : public GenericError {
  * @param level  internal counter for recursion
  */
 void displayError(spdlog::logger& logger, const std::exception& e, int level = 0);
+
+/**
+ * @brief Stores information about salts for calculation of Debye screening length etc.
+ *
+ * In this context a "salt" is an arbitrary set of cations and anions, combined to form
+ * a net-neutral compound. The object state is _temperature independent_.
+ */
+class Electrolyte {
+  private:
+    double ionic_strength;
+    double molarity;
+    std::vector<int> valencies;
+
+  public:
+    Electrolyte(double molarity, const std::vector<int>& valencies);
+    Electrolyte(double debye_length, double bjerrum_length); //!< Initialize from existing Debye and Bjerrum length
+    double ionicStrength() const;                            //!< Molar ionic strength (mol/l)
+    double debyeLength(double bjerrum_length) const;         //!< Debye screening length in Ångstrom
+    double getMolarity() const;                              //!< Input salt molarity (mol/l)
+    const std::vector<int>& getValencies() const;            //!< Charges of each participating ion in the salt
+};
+
+void to_json(json& j, const Electrolyte& electrolyte);
+std::optional<Electrolyte> makeElectrolyte(const json& j); //!< Create ionic salt object from json
+
 } // namespace Faunus

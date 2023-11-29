@@ -1,0 +1,21 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "faunus",
+  "version-string": "2.7.0",
+  "dependencies": [
+    { "name": "cereal", "version>=": "1.3"},
+    { "name": "docopt", "version>=": "0.6"},
+    { "name": "doctest", "version>=": "2.4"},
+    { "name": "eigen", "version>=": "3.4"},
+    { "name": "exprtk", "version>=": "2022-01-01"},
+    { "name": "nanobench", "version>=": "4.3"},
+    { "name": "nlogmann-json", "version>=": "3.11"},
+    { "name": "pcg", "version>=": "2021-04-06"},
+    { "name": "pybind11", "version>=": "2.10"},
+    { "name": "range-v3", "version>=": "0.12"},
+    { "name": "sdl2", "version>=": "2.24"},
+    { "name": "spdlog", "version>=": "1.11"},
+    { "name": "trompeloeil", "version>=": "41"},
+    { "name": "zstr", "version>=": "1.0"}
+  ]
+}

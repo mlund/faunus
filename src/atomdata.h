@@ -1,5 +1,9 @@
 #pragma once
 #include "core.h"
+#include <range/v3/range/concepts.hpp>
+#include <range/v3/view/transform.hpp>
+#include <range/v3/algorithm/any_of.hpp>
+#include <range/v3/range/conversion.hpp>
 
 namespace Faunus {
 
@@ -27,6 +31,36 @@ void from_json(const json& j, InteractionData& a);
 void from_single_use_json(SingleUseJSON& j, InteractionData& a);
 
 /**
+ * @brief Static properties for patchy sphero cylinders (PSC)
+ */
+class SpheroCylinderData {
+  protected:
+    friend void from_json(const json&, SpheroCylinderData&);
+    friend void to_json(json&, const SpheroCylinderData&);
+
+  public:
+    enum class PatchType {
+        None = 0,                     //!< No patch
+        Full = 1,                     //!< Patch runs the full length of the SC
+        Capped = 2,                   //!< Patch stops before the end caps
+        Invalid = 3                   //!< Used to detect invalid input
+    };                                //!< Type of PSC particle
+    double chiral_angle = 0.0;        //!< Rotation of patch relative to direction (radians)
+    double length = 0.0;              //!< Sphere-cylinder length
+    double patch_angle = 0.0;         //!< Opening angle of attrative patch (radians)
+    double patch_angle_switch = 0.0;  //!< Gradually switch on patch interaction over angular interval (radians)
+    PatchType type = PatchType::None; //!< Patch type of spherocylinder
+};
+
+void from_json(const json& j, SpheroCylinderData& psc);
+void to_json(json& j, const SpheroCylinderData& psc);
+
+NLOHMANN_JSON_SERIALIZE_ENUM(SpheroCylinderData::PatchType, {{SpheroCylinderData::PatchType::Invalid, nullptr},
+                                                             {SpheroCylinderData::PatchType::Full, "full"},
+                                                             {SpheroCylinderData::PatchType::Capped, "capped"},
+                                                             {SpheroCylinderData::PatchType::None, "none"}})
+
+/**
  * @brief General properties for atoms
  */
 class AtomData { // has to be a class when a constant reference is used
@@ -39,24 +73,23 @@ class AtomData { // has to be a class when a constant reference is used
     friend void from_json(const json&, AtomData&);
 
   public:
-    std::string name;            //!< Name
-    double charge = 0;           //!< Particle charge [e]
-    double mw = 1;               //!< Weight
-    double sigma = 0;            //!< Diameter for e.g Lennard-Jones etc. [angstrom]
-                                 //!< Do not set! Only a temporal class member during the refactorization
-    double activity = 0;         //!< Chemical activity [mol/l]
-    double alphax = 0;           //!< Excess polarisability (unit-less)
-    double dp = 0;               //!< Translational displacement parameter [angstrom]
-    double dprot = 0;            //!< Rotational displacement parameter [degrees]
-    double mulen = 0;            //!< Dipole moment scalar [eÃ]
-    double sclen = 0;            //!< Sphere-cylinder length [angstrom]
-    double tension = 0;          //!< Surface tension [kT/Å^2]
-    double tfe = 0;              //!< Transfer free energy [J/mol/angstrom^2/M]
-    Point mu = {0, 0, 0};        //!< Dipole moment unit vector
-    Point scdir = {0, 0, 0};     //!< Sphero-cylinder direction
-    bool hydrophobic = false;    //!< Is the particle hydrophobic?
-    bool implicit = false;       //!< Is the particle implicit (e.g. proton)?
-    InteractionData interaction; //!< Arbitrary interaction parameters, e.g., epsilons in various potentials
+    std::string name;                   //!< Name
+    double charge = 0;                  //!< Particle charge [e]
+    double mw = 1;                      //!< Weight
+    double sigma = 0;                   //!< Diameter for e.g Lennard-Jones etc. [angstrom]
+                                        //!< Do not set! Only a temporal class member during the refactorization
+    double activity = 0;                //!< Chemical activity [mol/l]
+    double alphax = 0;                  //!< Excess polarisability (unit-less)
+    double dp = 0;                      //!< Translational displacement parameter [angstrom]
+    double dprot = 0;                   //!< Rotational displacement parameter [degrees]
+    double tension = 0;                 //!< Surface tension [kT/Å^2]
+    double tfe = 0;                     //!< Transfer free energy [J/mol/angstrom^2/M]
+    Point mu = {0, 0, 0};               //!< Dipole moment unit vector
+    double mulen = 0;                   //!< Dipole moment length
+    bool hydrophobic = false;           //!< Is the particle hydrophobic?
+    bool implicit = false;              //!< Is the particle implicit (e.g. proton)?
+    InteractionData interaction;        //!< Arbitrary interaction parameters, e.g., epsilons in various potentials
+    SpheroCylinderData sphero_cylinder; //!< Data for patchy sphero cylinders (PSCs)
 
     index_type& id();             //!< Type id
     const index_type& id() const; //!< Type id
@@ -75,16 +108,28 @@ void from_json(const json& j, std::vector<AtomData>& atom_vector);
 
 extern std::vector<AtomData> atoms; //!< Global instance of atom list
 
+/** Concept for named database such as vector<AtomData>, vector<MoleculeData> etc. */
+template <typename T>
+concept RequireNamedElements = requires(T db) {
+    {db.begin()};
+    { db.begin()->name } -> std::convertible_to<std::string>;
+    {std::is_integral_v<typename ranges::cpp20::range_value_t<T>::index_type>};
+};
+
 /**
  * @brief Finds the first element with a member attribute `name` matching the input.
  *
- * @param rng  a range of elements
+ * @param range  a range of elements
  * @param name  a name to look for
  * @return an iterator to the first element, or `last` if not found
  * @see findAtomByName(), findMoleculeByName()
  */
-template <class Trange> auto findName(Trange& rng, std::string_view name) {
-    return std::find_if(rng.begin(), rng.end(), [&name](auto& i) { return i.name == name; });
+auto findName(RequireNamedElements auto& range, std::string_view name) {
+    return std::find_if(range.begin(), range.end(), [&](auto& i) { return i.name == name; });
+}
+
+auto findName(const RequireNamedElements auto& range, std::string_view name) {
+    return std::find_if(range.begin(), range.end(), [&](const auto& i) { return i.name == name; });
 }
 
 /**
@@ -107,7 +152,7 @@ AtomData& findAtomByName(std::string_view name);
 
 /**
  * @brief Search for `name` in `database` and return `id()`
- * @tparam Trange Container of object having `.name` and `.id()` data members
+ * @tparam T Container of object having `.name` and `.id()` data members
  * @param database Iterable range having `.name` and `.id()` members
  * @param names Container with names to convert to id
  * @throw if names not found
@@ -119,23 +164,21 @@ AtomData& findAtomByName(std::string_view name);
  * a sequence containing all id's of the database, i.e.
  * `0, ..., database.size()-1`.
  */
-template <class Trange> auto names2ids(Trange& database, const std::vector<std::string>& names) {
-    using id_type = typename Trange::value_type::index_type;
-    std::vector<id_type> index;
-    index.reserve(names.size());
-    for (const auto& name : names) {
-        if (name == "*") { // wildcard selecting all id's
-            index.resize(database.size());
-            std::iota(index.begin(), index.end(), id_type(0));
-            return index;
-        }
-        if (auto it = findName(database, name); it != database.end()) {
-            index.template emplace_back(it->id());
-        } else {
-            throw std::out_of_range("name '" + name + "' not found");
-        }
+template <RequireNamedElements T> auto names2ids(const T& database, const std::vector<std::string>& names) {
+    namespace rv = ranges::cpp20::views;
+
+    auto is_wildcard = [](auto& name) { return name == "*"; };
+    if (ranges::cpp20::any_of(names, is_wildcard)) { // return all id's from database
+        return database | rv::transform([](auto& i) { return i.id(); }) | ranges::to_vector;
     }
-    return index;
+
+    auto name_to_id = [&](auto& name) {
+        if (auto iter = findName(database, name); iter != database.end()) {
+            return iter->id();
+        }
+        throw std::out_of_range("name '" + name + "' not found");
+    };
+    return names | rv::transform(name_to_id) | ranges::to_vector;
 }
 
 } // namespace Faunus

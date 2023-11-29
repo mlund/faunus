@@ -5,6 +5,7 @@
 
 #include "celllistimpl.h"
 #include "particle.h"
+#include <numbers>
 
 namespace Faunus {
 
@@ -41,7 +42,7 @@ class SASABase {
     std::vector<double> areas;      //!< vector holding SASA area of each atom
     std::vector<double> sasa_radii; //!< Radii buffer for all particles
     int slices_per_atom = 20;       //!< number of slices of each sphere in SASA calculation
-    const double TWOPI = 2. * M_PI; //!< 2 PI
+    const double two_pi = 2.0 * std::numbers::pi;
     const Particle* first_particle; //! first particle in ParticleVector
 
     /**
@@ -76,15 +77,14 @@ class SASABase {
     double calcSASAOf(Space& spc, const TSpecies& species) const;
 
     void updateSASA(const std::vector<SASABase::Neighbours>& neighbours_data,
-                    const std::vector<index_type>& target_indices);
 
-    virtual void init(Space& spc) = 0;
+    virtual void init(const Space& spc) = 0;
     virtual std::vector<SASABase::Neighbours>
-    calcNeighbourData(Space& spc, const std::vector<index_type>& target_indices) const = 0;
-    virtual SASABase::Neighbours calcNeighbourDataOfParticle(Space& spc, const index_type target_index) const = 0;
-    virtual void update(Space& spc, const Change& change) = 0;
+    calcNeighbourData(const Space& spc, const std::vector<index_type>& target_indices) const = 0;
+    virtual SASABase::Neighbours calcNeighbourDataOfParticle(const Space& spc, index_type target_index) const = 0;
+    virtual void update(const Space& spc, const Change& change) = 0;
     const std::vector<double>& getAreas() const;
-    SASABase(Space& spc, double probe_radius, int slices_per_atom);
+    SASABase(const Space& spc, double probe_radius, int slices_per_atom);
     virtual ~SASABase() = default;
 };
 
@@ -94,12 +94,12 @@ class SASABase {
  **/
 class SASA : public SASABase {
   public:
-    void init(Space& spc) override;
-    std::vector<SASABase::Neighbours> calcNeighbourData(Space& spc,
+    void init(const Space& spc) override;
+    std::vector<SASABase::Neighbours> calcNeighbourData(const Space& spc,
                                                         const std::vector<index_type>& target_indices) const override;
-    SASA::Neighbours calcNeighbourDataOfParticle(Space& spc, const index_type target_index) const override;
-    void update([[maybe_unused]] Space& spc, [[maybe_unused]] const Change& change) override;
-    SASA(Space& spc, double probe_radius, int slices_per_atom);
+    SASA::Neighbours calcNeighbourDataOfParticle(const Space& spc, index_type target_index) const override;
+    void update([[maybe_unused]] const Space& spc, [[maybe_unused]] const Change& change) override;
+    SASA(const Space& spc, double probe_radius, int slices_per_atom);
     SASA(const json& j, Space& spc);
 };
 
@@ -118,19 +118,19 @@ template <typename CellList> class SASACellList : public SASABase {
     std::vector<CellCoord> cell_offsets; //!< holds offsets which define a 3x3x3 cube around central cell
 
   public:
-    SASACellList(Space& spc, double probe_radius, int slices_per_atom);
+    SASACellList(const Space& spc, double probe_radius, int slices_per_atom);
     SASACellList(const json& j, Space& spc);
     virtual ~SASACellList() = default;
-    void init(Space& spc) override;
-    SASABase::Neighbours calcNeighbourDataOfParticle(Space& spc, const index_type target_index) const override;
-    std::vector<SASABase::Neighbours> calcNeighbourData(Space& spc,
+    void init(const Space& spc) override;
+    SASABase::Neighbours calcNeighbourDataOfParticle(const Space& spc, index_type target_index) const override;
+    std::vector<SASABase::Neighbours> calcNeighbourData(const Space& spc,
                                                         const std::vector<index_type>& target_indices) const override;
-    void update(Space& spc, const Change& change) override;
+    void update(const Space& spc, const Change& change) override;
 
   private:
-    template <typename TBegin, typename TEnd> void createCellList(TBegin begin, TEnd end, GeometryType& geometry);
-    void updateMatterChange(Space& spc, const Change& change);
-    void updatePositionsChange(Space& spc, const Change& change);
+    template <typename TBegin, typename TEnd> void createCellList(TBegin begin, TEnd end, const GeometryType& geometry);
+    void updateMatterChange(const Space& spc, const Change& change);
+    void updatePositionsChange(const Space& spc, const Change& change);
 };
 using PeriodicGrid = CellList::Grid::Grid3DPeriodic;
 using FixedGrid = CellList::Grid::Grid3DFixed;

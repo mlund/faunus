@@ -5,7 +5,7 @@
 #include "aux/equidistant_table.h"
 #include <set>
 
-template<typename T> class ExprFunction;
+template <std::floating_point T> class ExprFunction;
 
 namespace Faunus {
 
@@ -17,22 +17,23 @@ namespace Energy {
 /**
  * All energies inherit from this class
  */
-class Energybase {
+class EnergyTerm {
   public:
     enum class MonteCarloState { ACCEPTED, TRIAL, NONE };
     MonteCarloState state = MonteCarloState::NONE;
     std::string name;                                     //!< Meaningful name
-    std::string citation_information;                     //!< Possible reference. May be left empty
-    TimeRelativeOfTotal<std::chrono::microseconds> timer; //!< Timer for measure speed of each term
-    virtual double energy(Change &) = 0;                  //!< energy due to change
-    virtual void to_json(json &) const;                   //!< json output
-    virtual void sync(Energybase* other_energy, const Change& change); //!< Sync (copy from) another energy instance
+    std::string citation_information;                     //!< Possible reference; may be left empty
+    TimeRelativeOfTotal<std::chrono::microseconds> timer; //!< Timer for measuring speed
+    virtual double energy(const Change& change) = 0;      //!< energy due to change
+    virtual void to_json(json& j) const;                  //!< json output
+    virtual void sync(EnergyTerm* other_energy, const Change& change); //!< Sync (copy from) another energy instance
     virtual void init();                                  //!< reset and initialize
+    virtual void updateState(const Change& change);       //!< Update internal state to reflect change in e.g. Space
     virtual void force(PointVector& forces);              //!< update forces on all particles
-    inline virtual ~Energybase() = default;
+    inline virtual ~EnergyTerm() = default;
 };
 
-void to_json(json &j, const Energybase &base); //!< Converts any energy class to json object
+void to_json(json& j, const EnergyTerm& base); //!< Converts any energy class to json object
 
 /**
  * @brief Base class for external potentials
@@ -43,19 +44,19 @@ void to_json(json &j, const Energybase &base); //!< Converts any energy class to
  *
  * @todo The `dN` check is inefficient as it calculates the external potential on *all* particles.
  */
-class ExternalPotential : public Energybase {
+class ExternalPotential : public EnergyTerm {
   private:
-    bool act_on_mass_center = false;                   //!< apply only on center-of-mass
-    std::set<int> molecule_ids;                        //!< ids of molecules to act on
-    std::vector<std::string> molecule_names;           //!< corresponding names of molecules to act on
-    double groupEnergy(const Group&) const;            //!< external potential on a single group
+    bool act_on_mass_center = false;              //!< apply only on center-of-mass
+    std::set<int> molecule_ids;                   //!< ids of molecules to act on
+    std::vector<std::string> molecule_names;      //!< corresponding names of molecules to act on
+    double groupEnergy(const Group& group) const; //!< external potential on a single group
   protected:
-    Space &space;                                                            //!< reference to simulation space
-    std::function<double(const Particle &)> externalPotentialFunc = nullptr; //!< energy of single particle
+    const Space& space;                                           //!< reference to simulation space
+    std::function<double(const Particle&)> externalPotentialFunc; //!< energy of single particle
   public:
-    ExternalPotential(const json &, Space &);
-    double energy(Change &) override;
-    void to_json(json &) const override;
+    ExternalPotential(const json& j, const Space& spc);
+    double energy(const Change& j) override;
+    void to_json(json& j) const override;
 };
 
 /**
@@ -90,7 +91,6 @@ class CustomExternal : public ExternalPotential {
 
 /**
  * @brief Mean field electric potential from outside rectangular simulation box.
- * @date Asljunga, December 2010.
  *
  * Calculates the average potential outside a simulation box due to ion
  * densities inside the box, extended to infinity.
@@ -98,6 +98,9 @@ class CustomExternal : public ExternalPotential {
  * and with a spacing dz. This is used to evaluate the electric potential along
  * the z-axis by using the method by Torbjorn and CO (Mol. Phys. 1996, 87:407). To avoid
  * energy drifts, update() returns the energy change brought about by updating the charge profile.
+ *
+ * @date Asljunga, December 2010.
+ * @todo Split this into two classes; one with a static rho, and a derived that updates rho
  */
 class ExternalAkesson : public ExternalPotential {
   private:
@@ -115,22 +118,23 @@ class ExternalAkesson : public ExternalPotential {
     Equidistant2DTable<double, Average<double>> rho; //!< Charge density at z (unit A^-2)
     Equidistant2DTable<double> phi;                  //!< External potential at z (unit: beta*e)
 
-    double phi_ext(double, double) const; //!< Calculate external potential
-    void update_rho();                    //!< update average charge density
-    void update_phi();                    //!< update average external potential
-    void save_rho();                      //!< save charge density profile to disk
-    void load_rho();                      //!< load charge density profile from disk
+    double evalPotential(double z, double a) const; //!< Calculate external potential
+    void updateChargeDensity();                     //!< update average charge density
+    void updatePotential();                         //!< update average external potential
+    void saveChargeDensity();                       //!< save charge density profile to disk
+    void loadChargeDensity();                       //!< load charge density profile from disk
     void to_json(json &) const override;
-    void sync(Energybase*, const Change&) override;
+    void sync(EnergyTerm*, const Change&) override;
 
   public:
-    ExternalAkesson(const json &, Space &);
-    double energy(Change &) override;
+    ExternalAkesson(const json& j, const Space& spc);
+    double energy(const Change& change) override;
     ~ExternalAkesson();
 };
 
 /**
  * @brief Confines molecules inside geometric shapes
+ * @todo enum class; get rid of map; is non-const space needed?
  */
 class Confine : public ExternalPotential {
   public:
@@ -138,15 +142,18 @@ class Confine : public ExternalPotential {
     Variant type = none;
 
   private:
-    Point origo = {0, 0, 0}, dir = {1, 1, 1};
-    Point low, high;
-    double radius, k;
+    Point origo = {0.0, 0.0, 0.0};
+    Point dir = {1.0, 1.0, 1.0};
+    Point low;
+    Point high;
+    double radius = 0.0;
+    double spring_constant = 0.0;
     bool scale = false;
     std::map<std::string, Variant> m = {{"sphere", sphere}, {"cylinder", cylinder}, {"cuboid", cuboid}};
 
   public:
-    Confine(const json &, Space &);
-    void to_json(json &) const override;
+    Confine(const json& j, Space& spc);
+    void to_json(json& j) const override;
 }; //!< Confine particles to a sub-region of the simulation container
 
 /**

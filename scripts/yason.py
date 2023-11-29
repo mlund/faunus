@@ -11,7 +11,7 @@ import warnings
 
 try:
     jsonschema = True
-    from jsonschema import Draft7Validator
+    from jsonschema import Draft201909Validator
     from jsonschema.exceptions import best_match
 except ImportError:
     jsonschema = False
@@ -26,13 +26,19 @@ except ImportError:
 # API compatibility between pyyaml and ruamel.yaml might break in the future
 # https://yaml.readthedocs.io/en/latest/api.html
 try:
-    try:
-        import ruamel.yaml as yaml
-    except ImportError:
-        # anaconda packs it as a standalone module (underscore instead of dot)
-        import ruamel_yaml as yaml
+    import ruamel.yaml as yaml
 except ImportError:
     import yaml
+    from yaml import (
+        safe_load as yaml_safe_load,
+        safe_dump as yaml_safe_dump,
+    )
+else:
+    def yaml_safe_load(stream):
+        return yaml.YAML(typ="safe").load(stream)
+
+    def yaml_safe_dump(data, stream=None, **kwargs):
+        return yaml.YAML(typ="safe").dump(data, stream=stream, **kwargs)
 
 try:
     pygments = True
@@ -108,8 +114,8 @@ def validate_input(instance):
             schemafile = os.path.abspath(pathname+subdir) + '/schema.yml'
             if os.path.exists(schemafile):
                 with open(schemafile, "r") as f:
-                    _schema = yaml.safe_load(f)
-                    error = best_match(Draft7Validator(_schema).iter_errors(instance))
+                    _schema = yaml_safe_load(f)
+                    error = best_match(Draft201909Validator(_schema).iter_errors(instance))
                     if error!=None:
                         eprint( "{}{}\n".format(human_readable_path(error.path), error.message) )
                         print_table(error.schema)
@@ -134,13 +140,13 @@ try:  # ... to read json
             i = highlight(out, JsonLexer(), formatter())
         print(i)
     else:
-        out = yaml.safe_dump(d, indent=args.indent, allow_unicode=True)
+        out = yaml_safe_dump(d, indent=args.indent, allow_unicode=True)
         if pygments:
             out = highlight(out, YamlLexer(), formatter())
         print(out)
 except json.decoder.JSONDecodeError:
     try:  # ... to read yaml
-        d = yaml.safe_load(i)  # plain load was deprecated in PyYAML
+        d = yaml_safe_load(i)  # plain load was deprecated in PyYAML
         if "mcloop" in d or "version" in d: 
             validate_input(d)
         out = json.dumps(d, indent=args.indent)

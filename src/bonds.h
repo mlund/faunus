@@ -7,7 +7,7 @@ namespace Faunus::Geometry {
 typedef std::function<Point(const Point&, const Point&)> DistanceFunction;
 } // namespace Faunus::Geometry
 
-namespace Faunus::Potential {
+namespace Faunus::pairpotential {
 
 /**
  * @brief Base class for bonded potentials

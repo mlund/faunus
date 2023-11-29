@@ -3,7 +3,7 @@
 #include "energy.h"
 #include <range/v3/view/zip.hpp>
 
-namespace Faunus::Move {
+namespace Faunus::move {
 
 TEST_SUITE_BEGIN("ForceMove");
 
@@ -23,20 +23,25 @@ static inline double meanSquareSpeedComponent(T mass) {
 
 // =============== IntegratorBase  ===============
 
-IntegratorBase::IntegratorBase(Space &spc, Energy::Energybase &energy) : spc(spc), energy(energy) {}
+IntegratorBase::IntegratorBase(Space& spc, Energy::EnergyTerm& energy)
+    : spc(spc)
+    , energy(energy) {}
 
 void from_json(const json &j, IntegratorBase &i) { i.from_json(j); }
 void to_json(json &j, const IntegratorBase &i) { i.to_json(j); }
 
 // =============== LangevinVelocityVerlet ===============
 
-LangevinVelocityVerlet::LangevinVelocityVerlet(Space &spc, Energy::Energybase &energy) : IntegratorBase(spc, energy) {}
+LangevinVelocityVerlet::LangevinVelocityVerlet(Space& spc, Energy::EnergyTerm& energy)
+    : IntegratorBase(spc, energy) {}
 
-LangevinVelocityVerlet::LangevinVelocityVerlet(Space &spc, Energy::Energybase &energy, double time_step,
+LangevinVelocityVerlet::LangevinVelocityVerlet(Space& spc, Energy::EnergyTerm& energy, double time_step,
                                                double friction_coefficient)
-    : IntegratorBase(spc, energy), time_step(time_step), friction_coefficient(friction_coefficient) {}
+    : IntegratorBase(spc, energy)
+    , time_step(time_step)
+    , friction_coefficient(friction_coefficient) {}
 
-LangevinVelocityVerlet::LangevinVelocityVerlet(Space &spc, Energy::Energybase &energy, const json &j)
+LangevinVelocityVerlet::LangevinVelocityVerlet(Space& spc, Energy::EnergyTerm& energy, const json& j)
     : LangevinVelocityVerlet::LangevinVelocityVerlet(spc, energy) {
     from_json(j);
 }
@@ -107,8 +112,8 @@ void LangevinVelocityVerlet::to_json(json &j) const {
 }
 
 TEST_CASE("[Faunus] Integrator") {
-    class DummyEnergy : public Energy::Energybase {
-        double energy(Change &) override { return 0.0; }
+    class DummyEnergy : public Energy::EnergyTerm {
+        double energy([[maybe_unused]] const Change& change) override { return 0.0; }
     };
     Space spc;
     DummyEnergy energy;
@@ -121,9 +126,11 @@ TEST_CASE("[Faunus] Integrator") {
 
 // =============== ForceMoveBase ===============
 
-ForceMoveBase::ForceMoveBase(Space &spc, std::string name, std::string cite,
-                             std::shared_ptr<IntegratorBase> integrator, unsigned int nsteps)
-    : MoveBase(spc, name, cite), integrator(integrator), number_of_steps(nsteps) {
+ForceMove::ForceMove(Space& spc, std::string name, std::string cite, std::shared_ptr<IntegratorBase> integrator,
+                     unsigned int nsteps)
+    : Move(spc, name, cite)
+    , integrator(integrator)
+    , number_of_steps(nsteps) {
     forces.reserve(spc.particles.size());
     velocities.reserve(spc.particles.size());
     resizeForcesAndVelocities();
@@ -135,14 +142,14 @@ ForceMoveBase::ForceMoveBase(Space &spc, std::string name, std::string cite,
  *
  * Upon resizing, new elements in `forces` and `velocities` are zeroed.
  */
-size_t ForceMoveBase::resizeForcesAndVelocities() {
+size_t ForceMove::resizeForcesAndVelocities() {
     const auto num_active_particles = spc.numParticles(Space::Selection::ACTIVE);
     forces.resize(num_active_particles, Point::Zero());
     velocities.resize(num_active_particles, Point::Zero());
     return num_active_particles;
 }
 
-void ForceMoveBase::_move(Change &change) {
+void ForceMove::_move(Change& change) {
     change.clear();
     change.everything = true;
     resizeForcesAndVelocities();
@@ -154,18 +161,18 @@ void ForceMoveBase::_move(Change &change) {
     }
 }
 
-void ForceMoveBase::_to_json(json &j) const {
+void ForceMove::_to_json(json& j) const {
     j = {{"nsteps", number_of_steps}};
     j["integrator"] = *integrator;
 }
 
-void ForceMoveBase::_from_json(const json &j) {
+void ForceMove::_from_json(const json& j) {
     number_of_steps = j.at("nsteps").get<unsigned int>();
     integrator->from_json(j["integrator"]);
     generateVelocities();
 }
 
-double ForceMoveBase::bias(Change &, double, double) {
+double ForceMove::bias(Change&, double, double) {
     return pc::neg_infty; // always accept the move
 }
 
@@ -174,7 +181,7 @@ double ForceMoveBase::bias(Change &, double, double) {
  *        a dangling Point& reference being returned. Observed with Clang10/RelWithDebInfo, but not in Debug, or
  *        with GCC.
  */
-void ForceMoveBase::generateVelocities() {
+void ForceMove::generateVelocities() {
     NormalRandomVector random_vector; // generator of random 3d vector from a normal distribution
     const auto particles = spc.activeParticles();
     resizeForcesAndVelocities();
@@ -184,32 +191,32 @@ void ForceMoveBase::generateVelocities() {
     std::fill(forces.begin(), forces.end(), Point::Zero());
 }
 
-const PointVector &ForceMoveBase::getForces() const { return forces; }
-const PointVector &ForceMoveBase::getVelocities() const { return velocities; }
+const PointVector& ForceMove::getForces() const { return forces; }
+const PointVector& ForceMove::getVelocities() const { return velocities; }
 
 // =============== LangevinMove ===============
 
-LangevinDynamics::LangevinDynamics(Space &spc, std::string name, std::string cite,
+LangevinDynamics::LangevinDynamics(Space& spc, std::string name, std::string cite,
                                    std::shared_ptr<IntegratorBase> integrator, unsigned int nsteps)
-    : ForceMoveBase(spc, name, cite, integrator, nsteps) {}
+    : ForceMove(spc, name, cite, integrator, nsteps) {}
 
 LangevinDynamics::LangevinDynamics(Space &spc, std::shared_ptr<IntegratorBase> integrator, unsigned int nsteps)
     : LangevinDynamics(spc, "langevin_dynamics", "", integrator, nsteps) {}
 
-LangevinDynamics::LangevinDynamics(Space &spc, Energy::Energybase &energy)
+LangevinDynamics::LangevinDynamics(Space& spc, Energy::EnergyTerm& energy)
     : LangevinDynamics::LangevinDynamics(spc, std::make_shared<LangevinVelocityVerlet>(spc, energy), 0) {}
 
-LangevinDynamics::LangevinDynamics(Space &spc, Energy::Energybase &energy, const json &j)
+LangevinDynamics::LangevinDynamics(Space& spc, Energy::EnergyTerm& energy, const json& j)
     : LangevinDynamics::LangevinDynamics(spc, energy) {
     from_json(j);
 }
 
-void LangevinDynamics::_to_json(json &j) const { ForceMoveBase::_to_json(j); }
-void LangevinDynamics::_from_json(const json &j) { ForceMoveBase::_from_json(j); }
+void LangevinDynamics::_to_json(json& j) const { ForceMove::_to_json(j); }
+void LangevinDynamics::_from_json(const json& j) { ForceMove::_from_json(j); }
 
 TEST_CASE("[Faunus] LangevinDynamics") {
-    class DummyEnergy : public Energy::Energybase {
-        double energy(Change &) override { return 0.0; }
+    class DummyEnergy : public Energy::EnergyTerm {
+        double energy([[maybe_unused]] const Change& change) override { return 0.0; }
     };
     Space spc;
     DummyEnergy energy;
@@ -235,4 +242,4 @@ TEST_CASE("[Faunus] LangevinDynamics") {
 
 TEST_SUITE_END();
 
-} // namespace Faunus::Move
+} // namespace Faunus::move

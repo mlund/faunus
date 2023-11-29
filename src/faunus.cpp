@@ -8,6 +8,7 @@
 #include "progress_tracker.h"
 #include "spdlog/spdlog.h"
 #include "move.h"
+#include "actions.h"
 #include <spdlog/sinks/null_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
@@ -37,17 +38,17 @@ void setInformationLevelAndLoggers(bool quiet, docopt::Options& args);
 json getUserInput(docopt::Options& args);
 void setRandomNumberGenerator(const json& input);
 void loadState(docopt::Options& args, MetropolisMonteCarlo& simulation);
+void prefaceActions(const json& input, Space& space, Energy::Hamiltonian& hamiltonian);
 void checkElectroNeutrality(MetropolisMonteCarlo& simulation);
 void showErrorMessage(std::exception& exception);
 void showProgress(std::shared_ptr<ProgressIndicator::ProgressTracker>& progress_tracker);
 void playRetroMusic();
 template <typename TimePoint>
 void saveOutput(TimePoint& starting_time, docopt::Options& args, MetropolisMonteCarlo& simulation,
-                const Analysis::CombinedAnalysis& analysis);
+                const analysis::CombinedAnalysis& analysis);
 
 void mainLoop(bool show_progress, const json& json_in, MetropolisMonteCarlo& simulation,
-              Analysis::CombinedAnalysis& analysis);
-
+              analysis::CombinedAnalysis& analysis);
 
 static const char USAGE[] =
     R"(Faunus - the Monte Carlo code you're looking for!
@@ -55,23 +56,25 @@ static const char USAGE[] =
     https://faunus.readthedocs.io
 
     Usage:
-      faunus [-q] [--verbosity <N>] [--nobar] [--nopfx] [--notips] [--nofun] [--state=<file>] [--input=<file>] [--output=<file>]
+      faunus [-q] [--verbosity <N>] [--nobar] [--nopfx] [--notips] [--nofun] [--norun] [--state=<file>] [--input=<file>] [--output=<file>] [--positions=<file>]
       faunus (-h | --help)
       faunus --version
       faunus test <doctest-options>...
 
     Options:
-      -i <file> --input <file>   Input file [default: /dev/stdin].
-      -o <file> --output <file>  Output file [default: out.json].
-      -s <file> --state <file>   State file to start from (.json/.ubj).
-      -v <N> --verbosity <N>     Log verbosity level (0 = off, 1 = critical, ..., 6 = trace) [default: 4]
-      -q --quiet                 Less verbose output. It implicates -v0 --nobar --notips --nofun.
-      -h --help                  Show this screen.
-      --nobar                    No progress bar.
-      --nopfx                    Do not prefix input file with MPI rank.
-      --notips                   Do not give input assistance
-      --nofun                    No fun
-      --version                  Show version.
+      -i <file> --input <file>         Input file [default: /dev/stdin].
+      -o <file> --output <file>        Output file [default: out.json].
+      -s <file> --state <file>         State file to start from (.json/.ubj).
+      -p <file> --positions <file>     Overwrite initial positions (xyz, gro, etc.).
+      -v <N> --verbosity <N>           Log verbosity level (0 = off, 1 = critical, ..., 6 = trace) [default: 4]
+      -q --quiet                       Less verbose output. It implicates -v0 --nobar --notips --nofun.
+      -h --help                        Show this screen.
+      --nobar                          No progress bar.
+      --nopfx                          Do not prefix input file with MPI rank.
+      --notips                         Do not give input assistance
+      --nofun                          No fun
+      --norun                          Setup system and run preface actions, but no simulation
+      --version                        Show version.
 
     Multiple processes using MPI:
 
@@ -101,18 +104,20 @@ int main(int argc, const char** argv) {
 
         MetropolisMonteCarlo simulation(input);
         loadState(args, simulation);
+        prefaceActions(input["preface"], simulation.getSpace(), simulation.getHamiltonian());
         checkElectroNeutrality(simulation);
-        Analysis::CombinedAnalysis analysis(input.at("analysis"), simulation.getSpace(), simulation.getHamiltonian());
+        analysis::CombinedAnalysis analysis(input.at("analysis"), simulation.getSpace(), simulation.getHamiltonian());
 
         bool show_progress = !quiet && !args["--nobar"].asBool();
 #ifdef ENABLE_MPI
-        if (!MPI::mpi.isMaster()) {
+        if (!Faunus::MPI::mpi.isMaster()) {
             show_progress = false; // show progress only for root rank
         }
 #endif
-        mainLoop(show_progress, input, simulation, analysis); // run simulation!
-
-        saveOutput(starting_time, args, simulation, analysis);
+        if (!args["--norun"].asBool()) {
+            mainLoop(show_progress, input, simulation, analysis); // run simulation!
+            saveOutput(starting_time, args, simulation, analysis);
+        }
         return EXIT_SUCCESS;
 
     } catch (std::exception& e) {
@@ -125,7 +130,7 @@ int main(int argc, const char** argv) {
 }
 void setRandomNumberGenerator(const json& input) {
     if (auto it = input.find("random"); it != input.end()) {
-        from_json(*it, Move::MoveBase::slump); // static --> shared for all moves
+        from_json(*it, move::Move::slump); // static --> shared for all moves
         from_json(*it, Faunus::random);
     }
 }
@@ -139,18 +144,18 @@ void showErrorMessage(std::exception& exception) {
         config_error != nullptr && !config_error->attachedJson().empty()) {
         faunus_logger->debug("json snippet:\n{}", config_error->attachedJson().dump(4));
     }
-    if (!usageTip.buffer.empty()) {
+    if (!usageTip.output_buffer.empty()) {
         // Use the srderr stream directly for more elaborated output of usage tip, optionally containing an ASCII
         // art. Level info seems appropriate.
         if (faunus_logger->should_log(spdlog::level::info)) {
-            std::cerr << usageTip.buffer << std::endl;
+            std::cerr << usageTip.output_buffer << std::endl;
         }
     }
 }
 
 void playRetroMusic() {
 #ifdef ENABLE_MPI
-    if (!MPI::mpi.isMaster()) {
+    if (!Faunus::MPI::mpi.isMaster()) {
         return;
     }
 #endif
@@ -203,7 +208,7 @@ int runUnittests(int argc, const char* const* argv) {
 }
 
 void mainLoop(bool show_progress, const json& json_in, MetropolisMonteCarlo& simulation,
-              Analysis::CombinedAnalysis& analysis) {
+              analysis::CombinedAnalysis& analysis) {
     const auto& loop = json_in.at("mcloop");
     const auto macro = loop.at("macro").get<int>();
     const auto micro = loop.at("micro").get<int>();
@@ -344,7 +349,7 @@ json getUserInput(docopt::Options& args) {
             std::cin >> j;
         } else {
             if (!args["--nopfx"].asBool()) {
-                filename = MPI::prefix + filename;
+                filename = Faunus::MPI::prefix + filename;
             }
             j = loadJSON(filename);
         }
@@ -355,40 +360,85 @@ json getUserInput(docopt::Options& args) {
     }
 }
 
+/**
+ * @brief Overwrites all coordinates in the given simulation object (space and trial_space).
+ *
+ * The given file name should be one of the known type (xyz, pqr, gro, ...) and only
+ * the _coordinates_ will be copied. All other properties are unused.
+ */
+void loadCoordinates(std::string_view filename, MetropolisMonteCarlo& simulation) {
+    auto& space = simulation.getSpace();
+    auto& trial_space = simulation.getTrialSpace();
+    auto source = Faunus::loadStructure(filename, false);
+    if (source.size() > space.particles.size()) {
+        throw ConfigurationError("too many particles in {}", filename);
+    }
+    faunus_logger->info("overwriting {} of {} positions using {}", source.size(), space.particles.size(), filename);
+    auto copy_f = [](const Particle& source, Particle& destination) {
+        destination.pos = source.pos;
+        if (source.hasExtension()) {
+            auto& ext = destination.getExt();
+            if (source.getExt().isCylindrical() > pc::epsilon_dbl) {
+                ext.scdir = source.getExt().scdir;
+                ext.patchdir = source.getExt().patchdir;
+                ext.mu = source.getExt().mu;
+                ext.mulen = source.getExt().mulen;
+                ext.Q = source.getExt().Q;
+                ext.setDirections(destination.traits().sphero_cylinder, source.getExt().scdir,
+                                  source.getExt().patchdir);
+            }
+        }
+    };
+    space.updateParticles(source.begin(), source.end(), space.particles.begin(), copy_f);
+    trial_space.updateParticles(source.begin(), source.end(), trial_space.particles.begin(), copy_f);
+}
+
 void loadState(docopt::Options& args, MetropolisMonteCarlo& simulation) {
-    if (not args["--state"]) {
+    if (args["--state"]) {
+        const auto statefile = Faunus::MPI::prefix + args["--state"].asString();
+        const auto suffix = statefile.substr(statefile.find_last_of('.') + 1);
+        const bool binary = (suffix == "ubj");
+        auto mode = std::ios_base::in;
+        if (binary) {
+            mode = std::ios_base::ate | std::ios_base::binary; // ate = open at end
+        }
+        if (auto stream = std::ifstream(statefile, mode)) {
+            json j;
+            faunus_logger->info("loading state file {}", statefile);
+            if (binary) {
+                const auto size = stream.tellg(); // get file size
+                std::vector<std::uint8_t> buffer(size / sizeof(std::uint8_t));
+                stream.seekg(0, stream.beg);             // go back to start...
+                stream.read((char*)buffer.data(), size); // ...and read into buffer
+                j = json::from_ubjson(buffer);
+            } else {
+                stream >> j;
+            }
+            simulation.restore(j);
+        } else {
+            throw std::runtime_error("state file error -> "s + statefile);
+        }
+    }
+    if (args["--positions"]) {
+        const auto positionfile = Faunus::MPI::prefix + args["--positions"].asString();
+        loadCoordinates(positionfile, simulation);
+    }
+}
+
+void prefaceActions(const json& input, Space& spc, Energy::Hamiltonian& hamiltonian) {
+    if (!input.is_array()) {
         return;
     }
-    const auto statefile = MPI::prefix + args["--state"].asString();
-    const auto suffix = statefile.substr(statefile.find_last_of('.') + 1);
-    const bool binary = (suffix == "ubj");
-    auto mode = std::ios_base::in;
-    if (binary) {
-        mode = std::ios_base::ate | std::ios_base::binary; // ate = open at end
-    }
-    if (auto stream = std::ifstream(statefile, mode)) {
-        json j;
-        faunus_logger->info("loading state file {}", statefile);
-        if (binary) {
-            const auto size = stream.tellg(); // get file size
-            std::vector<std::uint8_t> buffer(size / sizeof(std::uint8_t));
-            stream.seekg(0, stream.beg);             // go back to start...
-            stream.read((char*)buffer.data(), size); // ...and read into buffer
-            j = json::from_ubjson(buffer);
-        } else {
-            stream >> j;
-        }
-        simulation.restore(j);
-    } else {
-        throw std::runtime_error("state file error -> "s + statefile);
+    for (auto& action : createActionList(input, spc)) {
+        action->operator()(spc, hamiltonian);
     }
 }
 
 template <typename TimePoint>
 void saveOutput(TimePoint& starting_time, docopt::Options& args, MetropolisMonteCarlo& simulation,
-                const Analysis::CombinedAnalysis& analysis) {
+                const analysis::CombinedAnalysis& analysis) {
 
-    if (std::ofstream stream(MPI::prefix + args["--output"].asString()); stream) {
+    if (std::ofstream stream(Faunus::MPI::prefix + args["--output"].asString()); stream) {
         json j;
         to_json(j, simulation);
         j["relative drift"] = simulation.relativeEnergyDrift();

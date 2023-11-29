@@ -11,8 +11,8 @@ namespace Energy {
 class Hamiltonian;
 }
 
-namespace Move {
-class MoveBase;
+namespace move {
+class Move;
 class MoveCollection;
 } // namespace Move
 
@@ -59,26 +59,27 @@ class MetropolisMonteCarlo {
     spdlog::level::level_enum original_log_level; //!< Storage for original loglevel
     std::unique_ptr<State> state;                 //!< The accepted MC state
     std::unique_ptr<State> trial_state;           //!< Proposed or trial MC state
-    std::unique_ptr<Move::MoveCollection> moves;  //!< Storage for all registered MC moves
+    std::unique_ptr<move::MoveCollection> moves;  //!< Storage for all registered MC moves
     std::string latest_move_name;                 //!< Name of latest MC move
     double sum_of_energy_changes = 0.0;           //!< Sum of all potential energy changes
     double initial_energy = 0.0;                  //!< Initial potential energy
     Average<double> average_energy;               //!< Average potential energy of the system
     void init();                                  //!< Reset state
-    void performMove(Move::MoveBase& move);       //!< Perform move using given move implementation
+    void performMove(move::Move& move);           //!< Perform move using given move implementation
     double getEnergyChange(double new_energy, double old_energy) const;
     friend void to_json(json&, const MetropolisMonteCarlo&); //!< Write information to JSON object
     unsigned int number_of_sweeps = 0;                       //!< Number of MC sweeps, e.g. calls to sweep()
 
   public:
     MetropolisMonteCarlo(const json& j);
-    Energy::Hamiltonian &getHamiltonian();                     //!< Get Hamiltonian of accepted (default) state
-    Space &getSpace();                                         //!< Access to space in accepted (default) state
-    double relativeEnergyDrift();                              //!< Relative energy drift from initial configuration
-    void sweep();                                              //!< Perform all moves (stochastic and static)
-    void restore(const json& j);                               //!< Restores system from previously store json object
-    static bool metropolisCriterion(double energy_change);     //!< Metropolis criterion
-    ~MetropolisMonteCarlo();                                   //!< Required due to unique_ptr to incomplete type
+    Energy::Hamiltonian& getHamiltonian();                 //!< Get Hamiltonian of accepted (default) state
+    Space& getSpace();                                     //!< Access to space in accepted (default) state
+    Space& getTrialSpace();                                //!< Access to trial space
+    double relativeEnergyDrift();                          //!< Relative energy drift from initial configuration
+    void sweep();                                          //!< Perform all moves (stochastic and static)
+    void restore(const json& j);                           //!< Restores system from previously store json object
+    static bool metropolisCriterion(double energy_change); //!< Metropolis criterion
+    ~MetropolisMonteCarlo();                               //!< Required due to unique_ptr to incomplete type
 };
 
 void from_json(const json &, MetropolisMonteCarlo::State &); //!< Build state from json object
@@ -107,16 +108,16 @@ void to_json(json &, const MetropolisMonteCarlo &);
  */
 class TranslationalEntropy {
   private:
-    Space &trial_spc;                              //!< Space after proposed MC move ("trial")
-    Space &spc;                                    //!< Space before MC move ("default")
+    const Space& trial_spc;                        //!< Space after proposed MC move ("trial")
+    const Space& spc;                              //!< Space before MC move ("default")
     double bias(int trial_count, int count) const; //!< Bias due to change in atom/molecule numbers
-    double atomSwapEnergy(const Change::GroupChange&); //!< Contribution from atomic swap move
-    double atomChangeEnergy(int molid);            //!< Contribution from size-change of atomic group
-    double moleculeChangeEnergy(int molid);        //!< Contribution frin change in number of molecular groups
+    double atomSwapEnergy(const Change::GroupChange& group_change) const; //!< Contribution from atomic swap move
+    double atomChangeEnergy(int molid) const;     //!< Contribution from size-change of atomic group
+    double moleculeChangeEnergy(int molid) const; //!< Contribution frin change in number of molecular groups
 
   public:
-    TranslationalEntropy(Space &trial_space, Space &space);
-    double energy(const Change &); //!< Entropic contribution to MC trial energy
+    TranslationalEntropy(const Space& trial_space, const Space& space);
+    double energy(const Change& change); //!< Entropic contribution to MC trial energy
 };
 
 } // namespace Faunus

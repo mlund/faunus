@@ -2,8 +2,7 @@
 
 #include <map>
 #include <fstream>
-#include <range/v3/view/transform.hpp>
-#if __cplusplus > 201703L
+#if __cplusplus >= 202002L
 #include <concepts>
 #endif
 
@@ -15,17 +14,14 @@ namespace Faunus {
  * Builds a histogram by binning given values to a specified resolution. Values are stored
  * in a memory efficient map-structure with log(N) lookup complexity.
  */
-#if __cplusplus > 201703L
 template <std::floating_point T = double> class SparseHistogram {
-#else
-template <typename T = double> class SparseHistogram {
-#endif
     const T resolution;
     using map_type = std::map<int, unsigned int>;
     map_type data;
 
   public:
     explicit SparseHistogram(T resolution) : resolution(resolution) {}
+    const T getResolution() const { return resolution; }
     void add(const T value) {
         if (std::isfinite(value)) {
             const auto index = static_cast<map_type::key_type>(std::round(value / resolution));

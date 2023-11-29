@@ -244,6 +244,7 @@ $\bf{I}$ is the identity matrix and $N$ is the number of atoms.
 `nstep`          | Interval with which to sample
 `indexes`        | Array defining a range of indexes within the molecule 
 `index`          | Index of the molecular group
+`file`           | Output filename (.dat|.dat.gz)
 
 ### Polymer Shape
 
@@ -287,6 +288,59 @@ creates a histogram of observed conformations for a given molecule type.
 `molecule`             | Molecule name to sample
 
 
+### Group Matrix
+
+As a function of steps, this stores a matrix of group to group properties.
+The generated matrix is square, symmetric, and with dimensions of the _total number_
+of groups in the system (active and inactive).
+Note that inactive groups are always excluded from the analysis.
+
+`property`     | What is reported
+-------------- | ---------------------------------------
+`energy`       | Sum of nonbonded energy terms in (_kT_)
+`com_distance` | Mass center distance (Å)
+`min_distance` | Minimum distance between particles (Å)
+
+The data is streamed in the sparse [Matrix Market format](https://math.nist.gov/MatrixMarket/formats.html)
+and can be further reduced by applying an optional `filter` defined by an
+[ExprTk](http://www.partow.net/programming/exprtk/index.html) expression.
+In the following example we analyse the nonbonded energy between _active_ molecules of
+type _colloid_ and only values smaller than -1.0 _kT_ are stored:
+
+~~~ yaml
+analysis:
+  - groupmatrix:
+      nstep: 20
+      molecules: [colloid]
+      property: energy
+      filter: "value < -1.0"
+      file: energies.mtx.gz
+~~~
+
+The generated stream of sparse matrices can be loaded into Python
+for further analysis of _e.g._ clustering:
+
+~~~ python
+from itertools import groupby
+import gzip, numpy as np
+from scipy.io import mmread
+from io import StringIO
+from scipy.cluster.hierarchy import linkage, fcluster
+from scipy.spatial.distance import squareform
+
+def iterateMarketFile(file_like):
+    ''' generator expression for iterating over Matrix Market file '''
+    return (mmread(StringIO(''.join(lines))).todense() for frame, lines in
+            groupby(file_like, lambda line: line != '\n') if frame)
+
+with gzip.open('distances.mtx.gz', 'rt') as f:
+    for matrix in iterateMarketFile(f):
+        Z = linkage(squareform(matrix), 'single')
+        cluster = fcluster(Z, 10.0, criterion='distance') # threshold = 10 Å
+        _, counts = np.unique(cluster, return_counts=True)
+        print(np.sort(counts)) # cluster size distribution
+~~~
+
 ## Charge Properties
 
 ### Molecular Multipoles
@@ -297,6 +351,46 @@ Calculates average molecular multipolar moments and their fluctuations.
 -------------- | ----------------------
 `nstep`        | Interval between samples.
 
+The output from the multipole analysis gives the following:
+
+`multipole`    | Description
+-------------- | ----------------------
+ `C`           | Capacitance, eV⁻¹  
+ `Z`           | Charge/Valency, e 
+ `Z2`          | Squared charge/valency, e²
+ `μ`           | Dipole moment, eÅ 
+ `μ2`          | Squared dipole moment, (eÅ)²
+
+ The capacitance, `C`, is defined accordingly: 
+ 
+ $$ 
+ C = \langle z^2 \rangle - \langle z \rangle^2 
+ $$
+ 
+ Where `Z` is defined as the average charge/valency: 
+ 
+ $$ 
+ Z = \langle \sum_i z_i \rangle 
+ $$
+ 
+ This gives that `Z2` is just the squared average charge/valency:
+ 
+ $$
+ \text{Z2} = \langle \sum_i z^2_i \rangle
+ $$
+ 
+ Continuing, the dipole moment, `μ`, is defined as:
+ 
+ $$
+ \mu  =  \langle | \sum_i z_i (r_i - r_{cm}) | \rangle
+ $$
+ 
+ Lastly, the `μ2` is defined as the mean squared dipole moment:
+ 
+ $$
+ \mu^2 = \langle \mu^2 \rangle
+ $$
+ 
 ### Multipole Moments
 
 For a range of atoms within a molecular group of given index, 
@@ -364,7 +458,7 @@ $$
 $$
 
 $$
-    u_{\text{ion-quad}} =  \frac{ q_a \boldsymbol{R}^T \boldsymbol{Q}_b \boldsymbol{R} }{R^5}-\frac{q_a \mbox{tr}(\boldsymbol{Q}_b) }{R^3}+ ...
+    u_{\text{ion-quad}} =  \frac{ q_a \boldsymbol{R}^T \boldsymbol{Q}_b \boldsymbol{R} }{R^5}-\frac{q_a \text{tr}(\boldsymbol{Q}_b) }{R^3}+ ...
 $$
 
 $$
@@ -412,6 +506,7 @@ atomic species can be saved.
 `nstep`               | Interval between samples
 `nskip=0`             | Number of initial steps excluded from the analysis
 `epsr`                | Dielectric constant
+`file=potential`      | Filename prefix for output files
 `type`                | Coulomb type, `plain` etc. -- see energies
 `structure`           | Either a _filename_ (pqr, aam, gro etc) or a _list_ of positions
 `policy=fixed`        | Policy used to augment positions before each sample event, see below
@@ -496,7 +591,9 @@ Further, the command line tools `zcat`, `zless` etc. are useful for handling
 compressed files.
 
 
-## System Sanity
+## System
+
+### System Sanity
 
 It is wise to always assert that the simulation
 is internally sane. This analysis checks the following and aborts if insane:
@@ -511,7 +608,7 @@ This is not a particularly time-consuming analysis and we recommend that it is e
 for all simulations.
 
 
-## System Energy
+### System Energy
 
 Calculates the energy contributions from all terms in the Hamiltonian and
 outputs to a file as a function of steps.
@@ -524,6 +621,19 @@ All units in $k\_BT$.
 -------------- | -------------------------------------------
 `file`         | Output filename (`.dat`, `.csv`, `.dat.gz`)
 `nstep`        | Interval between samples
+
+
+### Penalty function
+
+If a penalty function is added to the hamiltonian, this can dump it to disk at a specified interval. At each sample event,
+the filename counter is incremented and follows the convention. In addition to the penalty energy, this will also
+save the current (numbered) histogram.
+
+`penaltyfunction` | Description
+----------------- | -------------------------------------------
+`file`            | Output filename (`.dat`, `.dat.gz`)
+`nstep`           | Interval between samples
+`nskip=0`         | Number of initial steps excluded from the analysis
 
 
 ## Perturbations
@@ -662,6 +772,7 @@ saved.
 -------------- | ---------------------------------------------------------
 `file`         |  Filename of output xtc file
 `nstep`        |  Interval between samples.
+`nskip=0`      | Number of initial steps excluded from the analysis
 `molecules=*`  |  Array of molecules to save (default: all)
 
 
@@ -683,5 +794,49 @@ vmd confout.pqr traj.xtc -e scripts/vmd-qrtraj.tcl
 
 `qrfile`          |  Description
 ----------------- | -----------------------------------
-`file=qrtraj.dat` |  Output filename (.dat, .gz)
+`file=qrtraj.dat` |  Output filename (.dat|.gz)
 `nstep`           |  Interval between samples
+`nskip=0`         | Number of initial steps excluded from the analysis
+
+### Patchy Sphero-Cylinder trajectory
+
+This will save a text trajectory containing the number of particles, box dimensions, midpoint positions,
+direction, and patch direction of PSCs. Using the provided **python 2** script, this can be used 
+to visualise a simulation in Visual Molecular Dynamics (VMD):
+
+~~~ bash
+python2 psc2vmd.py -i tracjectory.dat -o movie.pdb --psf movie.psf
+vmd -e vmd.script
+~~~
+
+`psctraj`  | Description
+---------- | -----------------------------------
+`file`     | Output filename (.dat|.gz)
+`nstep`    | Interval between samples
+`nskip=0`  | Number of initial steps excluded from the analysis
+
+
+### Displacement
+
+This tracks atom or molecule mass center displacements with respect to a (dynamic)
+reference position that can be updated at given intervals.
+To access distances larger than the box dimensions, jumps across periodic boundaries
+are detected whereby the position enters a new unit cell. A boundary jump is defined
+as a particle movement larger than `max_displacement` which by default is set to one
+fourth of the box length.
+A histogram of the squared displacements in a given time interval (𝜏) is saved to disk.
+The variant `displacement_com` expects a molecular `molecule` and analyses mass centers instead
+of single particle positions.
+
+`displacement`             | Description
+-------------------------- | ---------------------------------
+`nstep`                    | Interval between samples
+`nskip=0`                  | Number of initial steps excluded from the analysis
+`molecule`                 | Atomic group to analyse
+`reset_interval`           | Interval beween reference position resets, 𝜏 (steps)
+`file`                     | x y z trajectory of first particle (optional, `.dat.gz`)
+`histogram_resolution=1.0` | P(r) resolution (Å)
+`max_displacement=L/4`     | Used to detect PBC jumps. Default: min. box length / 4
+`histogram_file`           | Default: `displacement_histogram_{molname}.dat`
+
+

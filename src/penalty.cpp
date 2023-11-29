@@ -68,20 +68,30 @@ void Penalty::loadPenaltyFunction(const std::string& filename) {
 /**
  * @todo Foul to let constructor be responsible for i/o...
  */
-Penalty::~Penalty() { savePenaltyFunction(); }
+Penalty::~Penalty() { toDisk(); }
 
-void Penalty::savePenaltyFunction() {
+/**
+ * @brief Stream penalty function, offset with the minimum observed energy
+ */
+void Penalty::streamPenaltyFunction(std::ostream& stream) const {
+    stream.precision(16);
+    stream << fmt::format("# {} {} {}\n", energy_increment, samplings, penalty_function_exchange_counter)
+           << penalty_energy.array() - penalty_energy.minCoeff() << "\n";
+}
+
+void Penalty::streamHistogram(std::ostream& stream) const {
+    stream << histogram;
+}
+
+void Penalty::toDisk() {
     if (overwrite_penalty) {
         if (std::ofstream stream(MPI::prefix + penalty_function_filename); stream) {
-            stream.precision(16);
-            stream << "# " << energy_increment << " " << samplings << " " << penalty_function_exchange_counter << "\n"
-                   << penalty_energy.array() - penalty_energy.minCoeff() << "\n";
+            streamPenaltyFunction(stream);
         }
     }
     if (std::ofstream stream(MPI::prefix + histogram_filename); stream) {
         stream << histogram << "\n";
     }
-    // add function to save to numpy-friendly file...?
 }
 
 void Penalty::to_json(json& j) const {
@@ -100,7 +110,7 @@ void Penalty::to_json(json& j) const {
         coordinates_j.emplace_back(*reaction_coordinate); // `ReactionCoordinateBase` --> `json`
     }
 }
-double Penalty::energy(Change& change) {
+double Penalty::energy(const Change& change) {
     double energy = 0.0;
     if (change) {
         for (size_t i = 0; i < number_of_reaction_coordinates; i++) {
@@ -123,7 +133,7 @@ double Penalty::energy(Change& change) {
  * @todo: If this is called before `energy()`, the latest_coordinate
  * is never calculated and causes undefined behavior
  */
-void Penalty::update(const std::vector<double>& coordinate) {
+void Penalty::updatePenalty(const std::vector<double>& coordinate) {
     update_counter++;
     if (update_counter % number_of_steps_between_updates == 0 and energy_increment > 0.0) {
         if (histogram.minCoeff() >= (int)samplings) {
@@ -152,13 +162,13 @@ void Penalty::logBarrierInformation() const {
  *  Called when a move is accepted or rejected, as well as when initializing the system
  *  @todo: this doubles the MPI communication
  */
-void Penalty::sync(Energybase* other, [[maybe_unused]] const Change& change) {
+void Penalty::sync(EnergyTerm* other, [[maybe_unused]] const Change& change) {
     auto* other_penalty = dynamic_cast<decltype(this)>(other);
     if (other_penalty == nullptr) {
         throw std::runtime_error("error in Penalty::sync - please report");
     }
-    update(other_penalty->latest_coordinate);
-    other_penalty->update(other_penalty->latest_coordinate); // keep update_counter and samplings in sync
+    updatePenalty(other_penalty->latest_coordinate);
+    other_penalty->updatePenalty(other_penalty->latest_coordinate); // keep update_counter and samplings in sync
     assert(samplings == other_penalty->samplings);
     assert(latest_coordinate == other_penalty->latest_coordinate);
     assert(update_counter == other_penalty->update_counter);
@@ -176,7 +186,7 @@ PenaltyMPI::PenaltyMPI(const json& j, Space& spc, const MPI::Controller& mpi) : 
  *
  * MPI_Allgather(&least_sampled_in_histogram, 1, MPI_INT, weights.data(), 1, MPI_INT, mpi.comm);
  */
-void PenaltyMPI::update(const std::vector<double>& coordinate) {
+void PenaltyMPI::updatePenalty(const std::vector<double>& coordinate) {
     const auto old_penalty_energy = penalty_energy[coordinate];
     update_counter++;
     if (update_counter % number_of_steps_between_updates == 0 and energy_increment > 0.0) {

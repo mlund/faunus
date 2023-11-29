@@ -23,8 +23,7 @@ namespace Faunus {
  *
  * @warning Needs modification if x < 0
  */
-template <typename T> inline T erfc_x(T x) {
-    static_assert(std::is_floating_point<T>::value);
+template <std::floating_point T> inline T erfc_x(T x) {
     T t = 1.0 / (1.0 + 0.3275911 * x);
     const T a1 = 0.254829592;
     const T a2 = -0.284496736;

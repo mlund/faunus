@@ -1,27 +1,34 @@
 #include "externalpotential.h"
 #include "multipole.h"
+#include "aux/arange.h"
 #include "aux/eigensupport.h"
 #include "functionparser.h"
 #include "space.h"
 #include "spdlog/spdlog.h"
 
-namespace Faunus {
-namespace Energy {
+namespace Faunus::Energy {
 
 // ------------ Energybase -------------
 
-void Energybase::to_json(json &) const {}
+void EnergyTerm::to_json(json&) const {}
 
 /**
  * @param other_energy Other energy instance to copy data from
  * @param change Describes the difference with the other energy term
  */
-void Energybase::sync([[maybe_unused]] Energybase* other_energy, [[maybe_unused]] const Change& change) {}
+void EnergyTerm::sync([[maybe_unused]] EnergyTerm* other_energy, [[maybe_unused]] const Change& change) {}
 
-void Energybase::init() {}
-void Energybase::force([[maybe_unused]] PointVector& forces) {}
+void EnergyTerm::init() {}
+void EnergyTerm::force([[maybe_unused]] PointVector& forces) {}
 
-void to_json(json &j, const Energybase &base) {
+/**
+ * This should be called whenever the Space is modified (particles, volume, etc)
+ * as some energy terms may depend on this. One example is Ewald summation that
+ * needs to update k-vectors before calculating the energy.
+ */
+void EnergyTerm::updateState([[maybe_unused]] const Change& change) {}
+
+void to_json(json& j, const EnergyTerm& base) {
     assert(not base.name.empty());
     if (base.timer)
         j[base.name]["relative time"] = base.timer.result();
@@ -42,28 +49,27 @@ void to_json(json &j, const Energybase &base) {
  *   fictitious particle placed at the COM and with a net-charge of the group.
  */
 double ExternalPotential::groupEnergy(const Group& group) const {
-    double u = 0;
-    if (molecule_ids.find(group.id) != molecule_ids.end()) {
-        if (act_on_mass_center && group.isMolecular()) { // apply only to center of mass
-            if (group.size() == group.capacity()) {    // only apply if group is active
-                Particle mass_center;                  // temp. particle representing molecule
-                mass_center.charge = Faunus::monopoleMoment(group.begin(), group.end());
-                mass_center.pos = group.mass_center;
-                return externalPotentialFunc(mass_center);
-            }
-        } else {
-            for (auto &particle : group) { // loop over active particles
-                u += externalPotentialFunc(particle);
-                if (std::isnan(u)) {
-                    break;
-                }
-            }
+    if (group.empty() || !molecule_ids.contains(group.id)) {
+        return 0.0;
+    }
+    if (act_on_mass_center && group.massCenter().has_value()) { // apply only to center of mass
+        Particle mass_center;                                   // temp. particle representing molecule
+        mass_center.charge = Faunus::monopoleMoment(group.begin(), group.end());
+        mass_center.pos = group.mass_center;
+        return externalPotentialFunc(mass_center);
+    }
+    double energy = 0.0;
+    for (const auto& particle : group) { // loop over active particles
+        energy += externalPotentialFunc(particle);
+        if (std::isnan(energy)) {
+            break;
         }
     }
-    return u;
+    return energy;
 }
 
-ExternalPotential::ExternalPotential(const json &j, Space &spc) : space(spc) {
+ExternalPotential::ExternalPotential(const json& j, const Space& spc)
+    : space(spc) {
     name = "external";
     act_on_mass_center = j.value("com", false);
     molecule_names = j.at("molecules").get<decltype(molecule_names)>(); // molecule names
@@ -73,31 +79,32 @@ ExternalPotential::ExternalPotential(const json &j, Space &spc) : space(spc) {
         throw std::runtime_error(name + ": molecule list is empty");
     }
 }
-double ExternalPotential::energy(Change &change) {
+double ExternalPotential::energy(const Change& change) {
     assert(externalPotentialFunc != nullptr);
     double energy = 0.0;
     if (change.volume_change or change.everything or change.matter_change) {
-        for (auto &group : space.groups) { // loop over all groups
+        for (const auto& group : space.groups) { // loop over all groups
             energy += groupEnergy(group);
             if (not std::isfinite(energy)) {
                 break; // stop summing if not finite
             }
         }
-    } else {
-        for (auto &group_change : change.groups) {             // loop over all changed groups
-            auto& group = space.groups.at(group_change.group_index); // check specified groups
-            if (group_change.all or act_on_mass_center) {      // check all atoms in group
-                energy += groupEnergy(group);                  // groupEnergy also checks for molecule id
-            } else {                                           // only specified atoms in group
-                if (molecule_ids.find(group.id) != molecule_ids.end()) {
-                    for (int index : group_change.relative_atom_indices) { // loop over changed atoms in group
-                        energy += externalPotentialFunc(group[index]);
-                    }
-                }
+        return energy;
+    }
+    for (auto& group_change : change.groups) {                   // loop over all changed groups
+        auto& group = space.groups.at(group_change.group_index); // check specified groups
+        if (not molecule_ids.contains(group.id)) {
+            continue; // skip non-registered groups
+        }
+        if (group_change.all or act_on_mass_center) {               // check all atoms in group
+            energy += groupEnergy(group);                           // groupEnergy also checks for molecule id
+        } else {                                                    // only specified atoms in group
+            for (auto index : group_change.relative_atom_indices) { // loop over changed atoms in group
+                energy += externalPotentialFunc(group.at(index));
             }
-            if (not std::isfinite(energy)) {
-                break; // stop summing if not finite
-            }
+        }
+        if (not std::isfinite(energy)) {
+            break; // stop summing if not finite
         }
     }
     return energy; // in kT
@@ -136,67 +143,75 @@ TEST_CASE("[Faunus] ExternalPotential") {
 
 Confine::Confine(const json& j, Space& spc) : ExternalPotential(j, spc) {
     name = "confine";
-    k = getValueInfinity(j, "k") * 1.0_kJmol; // get floating point; allow inf/-inf
+    spring_constant = getValueInfinity(j, "k") * 1.0_kJmol; // get floating point; allow inf/-inf
     type = m.at(j.at("type"));
 
     if (type == sphere or type == cylinder) {
         radius = j.at("radius");
         origo = j.value("origo", origo);
         scale = j.value("scale", scale);
-        if (type == cylinder)
+        if (type == cylinder) {
             dir = {1, 1, 0};
-        externalPotentialFunc = [&radius = radius, origo = origo, k = k, dir = dir](const Particle &p) {
-            double d2 = (origo - p.pos).cwiseProduct(dir).squaredNorm() - radius * radius;
-            if (d2 > 0)
-                return 0.5 * k * d2;
-            return 0.0;
+        }
+        externalPotentialFunc = [&](const Particle& particle) {
+            const auto squared_distance = (origo - particle.pos).cwiseProduct(dir).squaredNorm() - radius * radius;
+            return (squared_distance > 0.0) ? 0.5 * spring_constant * squared_distance : 0.0;
         };
 
         // If volume is scaled, also scale the confining radius by adding a trigger
         // to `Space::scaleVolume()`
         if (scale) {
-            spc.scaleVolumeTriggers.push_back([&radius = radius]([[maybe_unused]] Space& spc, double Vold,
-                                                                 double Vnew) { radius *= std::cbrt(Vnew / Vold); });
+            spc.scaleVolumeTriggers.push_back(
+                [&]([[maybe_unused]] Space& spc, double Vold, double Vnew) { radius *= std::cbrt(Vnew / Vold); });
         }
     }
 
     if (type == cuboid) {
         low = j.at("low").get<Point>();
         high = j.at("high").get<Point>();
-        externalPotentialFunc = [low = low, high = high, k = k](const Particle &p) {
-            double u = 0;
-            Point d = low - p.pos;
-            for (int i = 0; i < 3; ++i)
-                if (d[i] > 0)
+        externalPotentialFunc = [&](const Particle& particle) {
+            double u = 0.0;
+            Point d = low - particle.pos;
+            for (int i = 0; i < 3; ++i) {
+                if (d[i] > 0) {
                     u += d[i] * d[i];
-            d = p.pos - high;
-            for (int i = 0; i < 3; ++i)
-                if (d[i] > 0)
+                }
+            }
+            d = particle.pos - high;
+            for (int i = 0; i < 3; ++i) {
+                if (d[i] > 0) {
                     u += d[i] * d[i];
-            return 0.5 * k * u;
+                }
+            }
+            return 0.5 * spring_constant * u;
         };
     }
 }
 void Confine::to_json(json &j) const {
-    if (type == cuboid)
+    if (type == cuboid) {
         j = {{"low", low}, {"high", high}};
-    if (type == sphere or type == cylinder)
+    }
+    if (type == sphere or type == cylinder) {
         j = {{"radius", radius}};
+    }
     if (type == sphere) {
         j["origo"] = origo;
         j["scale"] = scale;
     }
-    for (auto &i : m)
-        if (i.second == type)
+    for (const auto& i : m) {
+        if (i.second == type) {
             j["type"] = i.first;
-    j["k"] = k / 1.0_kJmol;
+        };
+    }
+    j["k"] = spring_constant / 1.0_kJmol;
     ExternalPotential::to_json(j);
     roundJSON(j, 5);
 }
 
 // ------------ ExternalAkesson -------------
 
-ExternalAkesson::ExternalAkesson(const json& j, Space& spc) : ExternalPotential(j, spc) {
+ExternalAkesson::ExternalAkesson(const json& j, const Space& spc)
+    : ExternalPotential(j, spc) {
     name = "akesson";
     citation_information = "doi:10/dhb9mj";
     nstep = j.at("nstep").get<unsigned int>();
@@ -213,19 +228,19 @@ ExternalAkesson::ExternalAkesson(const json& j, Space& spc) : ExternalPotential(
     phi.setResolution(dz, -half_box_length_z, half_box_length_z);
 
     filename = j.value("file", "mfcorr.dat"s);
-    load_rho();
-    externalPotentialFunc = [&phi = phi](const Particle& particle) { return particle.charge * phi(particle.pos.z()); };
+    loadChargeDensity();
+    externalPotentialFunc = [&](const Particle& particle) { return particle.charge * phi(particle.pos.z()); };
 }
 
-double ExternalAkesson::energy(Change &change) {
+double ExternalAkesson::energy(const Change& change) {
     if (not fixed_potential) {              // phi(z) unconverged, keep sampling
         if (state == MonteCarloState::ACCEPTED) { // only sample on accepted configs
             num_density_updates++;
             if (num_density_updates % nstep == 0) {
-                update_rho();
+                updateChargeDensity();
             }
             if (num_density_updates % nstep * phi_update_interval == 0) {
-                update_phi();
+                updatePotential();
             }
         }
     }
@@ -236,7 +251,7 @@ ExternalAkesson::~ExternalAkesson() {
     // save only if still updating and if energy type is `ACCEPTED_MONTE_CARLO_STATE`,
     // that is, accepted configurations (not trial)
     if (not fixed_potential and state == MonteCarloState::ACCEPTED) {
-        save_rho();
+        saveChargeDensity();
     }
 }
 
@@ -247,38 +262,44 @@ void ExternalAkesson::to_json(json &j) const {
     roundJSON(j, 5);
 }
 
-void ExternalAkesson::save_rho() {
+void ExternalAkesson::saveChargeDensity() {
     if (auto stream = std::ofstream(filename); stream) {
         stream.precision(16);
         stream << rho;
-    } else
+    } else {
         throw std::runtime_error("cannot save file '"s + filename + "'");
+    }
 }
 
-void ExternalAkesson::load_rho() {
+void ExternalAkesson::loadChargeDensity() {
     if (auto stream = std::ifstream(filename); stream) {
         rho << stream;
-        update_phi();
+        updatePotential();
+        faunus_logger->info("{}: density file '{}' loaded", name, filename);
     } else {
-        faunus_logger->warn("density file {} not loaded", filename);
+        faunus_logger->warn("{}: density file '{}' not loaded", name, filename);
     }
 }
 
 /**
  * This is Eq. 15 of the mol. phys. 1996 paper by Greberg et al.
  * (sign typo in manuscript: phi^infty(z) should be "-2*pi*z" on page 413, middle)
+ *
+ * @param z z-position where to evaluate the electric potential
+ * @param a Half box length in x or y direction (x == y assumed)
  */
-double ExternalAkesson::phi_ext(double z, double a) const {
-    double a2 = a * a, z2 = z * z;
+double ExternalAkesson::evalPotential(const double z, const double a) const {
+    const auto a2 = a * a;
+    const auto z2 = z * z;
     return -2 * pc::pi * z - 8 * a * std::log((std::sqrt(2 * a2 + z2) + a) / std::sqrt(a2 + z2)) +
            2 * z * (0.5 * pc::pi + std::asin((a2 * a2 - z2 * z2 - 2 * a2 * z2) / std::pow(a2 + z2, 2)));
 }
 
-void ExternalAkesson::sync(Energybase* energybase, const Change&) {
+void ExternalAkesson::sync(EnergyTerm* source, const Change&) {
     if (fixed_potential) {
         return;
     }
-    if (auto* other = dynamic_cast<ExternalAkesson*>(energybase)) {
+    if (auto* other = dynamic_cast<ExternalAkesson*>(source)) {
         if (other->state == MonteCarloState::ACCEPTED) { // only trial energy (new) requires sync
             if (num_density_updates != other->num_density_updates) {
                 assert(num_density_updates < other->num_density_updates);
@@ -292,32 +313,30 @@ void ExternalAkesson::sync(Energybase* energybase, const Change&) {
     }
 }
 
-void ExternalAkesson::update_rho() {
+void ExternalAkesson::updateChargeDensity() {
     num_rho_updates++;
-    Point L = space.geometry.getLength();
-    if (L.x() not_eq L.y() or 0.5 * L.z() != half_box_length_z) {
+    const Point box_length = space.geometry.getLength();
+    if (box_length.x() != box_length.y() || 0.5 * box_length.z() != half_box_length_z) {
         throw std::runtime_error("Requires box Lx=Ly and Lz=const.");
     }
     charge_profile.clear();
-    for (auto &group : space.groups) { // loop over all groups
-        for (auto &particle : group) { // ...and their active particles
-            charge_profile(particle.pos.z()) += particle.charge;
-        }
+    for (const auto& particle : space.groups | ranges::cpp20::views::join) {
+        charge_profile(particle.pos.z()) += particle.charge;
     }
-    double area = L.x() * L.y();
+    const auto area = box_length.x() * box_length.y();
     for (double z = -half_box_length_z; z <= half_box_length_z; z += dz) {
         rho(z) += charge_profile(z) / area;
     }
 }
 
-void ExternalAkesson::update_phi() {
+void ExternalAkesson::updatePotential() {
     auto L = space.geometry.getLength();
     double a = 0.5 * L.x();
     for (double z = -half_box_length_z; z <= half_box_length_z; z += dz) {
         double s = 0;
         for (double zn = -half_box_length_z; zn <= half_box_length_z; zn += dz) {
             if (!rho(zn).empty()) {
-                s += rho(zn).avg() * phi_ext(std::fabs(z - zn), a); // Eq. 14 in Greberg's paper
+                s += rho(zn).avg() * evalPotential(std::fabs(z - zn), a); // Eq. 14 in Greberg's paper
             }
         }
         phi(z) = bjerrum_length * s;
@@ -333,7 +352,7 @@ std::function<double(const Particle &)> createGouyChapmanPotential(const json &j
     double rho = 0; // surface charge density (charge per area)
     double bjerrum_length = pc::bjerrumLength(j.at("epsr").get<double>());
     double molarity = j.at("molarity").get<double>();
-    double kappa = 1.0 / Faunus::debyeLength(molarity, {1, 1}, bjerrum_length);
+    double kappa = 1.0 / Faunus::Electrolyte(molarity, {1, -1}).debyeLength(bjerrum_length);
     double phi0 = j.value("phi0", 0.0); // Unitless potential = beta*e*phi0
     if (std::fabs(phi0) > 0) {
         rho = std::sqrt(2.0 * molarity / (pc::pi * bjerrum_length)) *
@@ -405,10 +424,10 @@ CustomExternal::CustomExternal(const json &j, Space &spc) : ExternalPotential(j,
         if (constants == nullptr) {
             constants = json::object();
         }
-        constants["e0"] = pc::e0;
-        constants["kB"] = pc::kB;
+        constants["e0"] = pc::vacuum_permittivity;
+        constants["kB"] = pc::boltzmann_constant;
         constants["kT"] = pc::kT();
-        constants["Nav"] = pc::Nav;
+        constants["Nav"] = pc::avogadro;
         constants["T"] = pc::temperature;
         expr = std::make_unique<ExprFunction<double>>();
         expr->set(
@@ -451,5 +470,4 @@ ParticleSelfEnergy::ParticleSelfEnergy(Space &spc, std::function<double(const Pa
     name = "particle-self-energy";
 }
 
-} // namespace Energy
-} // namespace Faunus
+} // namespace Faunus::Energy

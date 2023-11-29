@@ -232,9 +232,17 @@ A background screening due to implicit ions can be added by specifying the keywo
 - `ewald`
 - `poisson`
 
-The `yukawa` scheme has simple exponential screening, $\exp{-\kappa r}$ and, like `plain`, an infinite cutoff.
+The `yukawa` scheme has simple exponential screening and, like `plain`, an _infinite_ cutoff.
 If `shift: true` is passed to the yukawa scheme, the potential is shifted to give zero potential and force 
-at the now finite `cutoff` distance (simply an alias for `poisson` with C=1 and D=1).
+at the now _finite_ `cutoff` distance (simply an alias for `poisson` with C=1 and D=1).
+The list below shows alternative ways to specify the background electrolyte, and will automatically deduce
+the salt stoichiometry based on valencies:
+
+~~~ yaml
+    debyelength: 30.0, epsr: 79.8       # assuming 1:1 salt, e.g. NaCl
+    molarity: 0.02                      # 0.02 M 1:1 salt, e.g. NaCl
+    molarity: 0.01, valencies: [2,3,-2] # 0.01 M Ca₂Al₂(SO₄)₅
+~~~
 
 
 ### Multipoles
@@ -624,6 +632,42 @@ the keywords `rho`, `rhoinv`, and `phi0` are mutually exclusive.
 `linearise=false`  | Use linearised Poisson-Boltzmann approximation?
 
 
+## Custom Group-Group Potential
+
+For two different or equal molecule types (`name1`, `name2`), this adds a user-defined energy function
+given at run-time. The following variables are available:
+
+`variable`        | Description
+-----------------  | --------------------------------
+`R`                | Mass center separation (Å)
+`Z1`               | Average net-charge of group 1
+`Z2`               | Average net-charge of group 2
+
+When used together with regular non-bonded interactions, this can e.g. be used to bias simulations.
+In the following example, we _subtract_ a Yukawa potential and the bias can later be removed by
+re-weighting using information from the `systemenergy` analysis output.
+
+~~~ yaml
+custom-groupgroup:
+    name1: charged_colloid
+    name2: charged_colloid
+    constants: { bjerrum_length: 7.1, debye_length: 50 }
+    function: >
+        -bjerrum_length * Z1 * Z2 / R * exp(-R / debye_length)
+~~~
+
+The function is passed using the efficient
+[ExprTk library](http://www.partow.net/programming/exprtk/index.html) and
+a rich set of mathematical functions and logic is available.
+In addition to user-defined `constants`, the following symbols are also defined:
+
+`symbol`   | Description
+---------- | ---------------------------------------------
+`e0`       | Vacuum permittivity [C²/J/m]
+`kB`       | Boltzmann constant [J/K]
+`kT`       | Boltzmann constant × temperature [J]
+`Nav`      | Avogadro's number [1/mol]
+
 ## Bonded Interactions
 
 Bonds and angular potentials are added via the keyword `bondlist` either directly
@@ -817,35 +861,40 @@ elements of `high`.
 
 ## Solvent Accessible Surface Area
 
-Note that the implementation of Solvent Accessible Surface Area potential is considered _experimental_;
-the code is untested, unoptimized, and the configuration syntax below can change.
-The FreeSASA library option has to be enabled when compiling.
-
 `sasa`       | SASA Transfer Free Energy
 ------------ | --------------------------------------------
 `radius=1.4` | Probe radius for SASA calculation (Å)
 `molarity`   | Molar concentration of co-solute
 `dense=true` | Flag specifying if a dense or a sparse version of a cell list container is used
+`slices=25`  | Number of slices per particle when calculating SASA (the more, the more precise)
 
 Calculates the free energy contribution due to
 
 1. atomic surface tension
 2. co-solute concentration (typically electrolytes)
 
-via a [SASA calculation](http://dx.doi.org/10/dbjh) for each atom, as implemented in
-the [FreeSASA library](https://freesasa.github.io/). 
-
+via a [SASA calculation](http://dx.doi.org/10/dbjh) for each particle.
 The energy term is:
 
 $$
     U = \sum_i^N A_{\text{sasa},i} \left ( \gamma_i + c_s \varepsilon_{\text{tfe},i} \right )
 $$
 
-where $c_s$ is the molar concentration of the co-solute;
-$\gamma_i$ is the atomic surface tension; and $\varepsilon_{\text{tfe},i}$ the atomic transfer free energy,
+where $c\_s$ is the molar concentration of the co-solute;
+$\gamma\_i$ is the atomic surface tension; and $\varepsilon_{\text{tfe},i}$ the atomic transfer free energy,
 both specified in the atom topology with `tension` and `tfe`, respectively.
-Will use cell lists if a geometry is either `cuboid` or `sphere`. The `dense` option specifies if a dense implementation 
+Will use cell lists if a geometry is either `cuboid` or `sphere`.
+The `dense` option specifies if a dense implementation 
 (memory heavy but faster) or a sparse one (slightly slower but light) of a cell list container will be used.
+
+### Alternative schemes
+
+Scheme           | PBC | Cell list | Note
+-----------------|:---:|:---------:|-----------------------------
+`sasa`           |  ✓  |     ✓     | Default
+`sasa_reference` |  ✓  |     ✓     | Use for debugging
+`freesasa`       |     |           | Uses [FreeSASA](https://freesasa.github.io/)
+
 
 ## Penalty Function
 

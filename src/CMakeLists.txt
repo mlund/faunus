@@ -56,18 +56,18 @@ target_link_libraries(functionparser PRIVATE nlohmann_json exprtk)
 
 # ========== faunus cpp and header files ==========
 
-set(objs analysis.cpp average.cpp atomdata.cpp auxiliary.cpp bonds.cpp celllistimpl.cpp
+set(objs actions.cpp analysis.cpp average.cpp atomdata.cpp auxiliary.cpp bonds.cpp celllistimpl.cpp
 	chainmove.cpp clustermove.cpp core.cpp forcemove.cpp units.cpp energy.cpp externalpotential.cpp
 	geometry.cpp group.cpp io.cpp molecule.cpp montecarlo.cpp move.cpp mpicontroller.cpp
 	particle.cpp penalty.cpp potentials.cpp random.cpp reactioncoordinate.cpp regions.cpp rotate.cpp sasa.cpp
-        scatter.cpp space.cpp speciation.cpp tensor.cpp)
+        scatter.cpp smart_montecarlo.cpp space.cpp speciation.cpp spherocylinder.cpp tensor.cpp)
 
-set(hdrs analysis.h average.h atomdata.h auxiliary.h bonds.h celllist.h celllistimpl.h
+set(hdrs actions.h analysis.h average.h atomdata.h auxiliary.h bonds.h celllist.h celllistimpl.h
 	chainmove.h clustermove.h core.h forcemove.h energy.h externalpotential.h geometry.h group.h io.h
-	molecule.h montecarlo.h move.h mpicontroller.h particle.h penalty.h potentials.h
-	reactioncoordinate.h rotate.h sasa.h space.h speciation.h random.h regions.h tensor.h units.h
-        aux/arange.h
-	aux/eigen_cerealisation.h aux/eigensupport.h aux/iteratorsupport.h aux/multimatrix.h
+	molecule.h montecarlo.h move.h mpicontroller.h particle.h penalty.h potentials_base.h potentials.h
+	reactioncoordinate.h rotate.h sasa.h smart_montecarlo.h space.h speciation.h spherocylinder.h
+        random.h regions.h tensor.h units.h aux/arange.h
+	aux/eigen_cerealisation.h aux/eigensupport.h aux/iteratorsupport.h aux/matrixmarket.h aux/multimatrix.h
 	aux/eigen_cerealisation.h aux/eigensupport.h aux/equidistant_table.h aux/error_function.h
 	aux/exp_function.h aux/invsqrt_function.h aux/iteratorsupport.h aux/legendre.h aux/multimatrix.h
 	aux/pairmatrix.h aux/pow_function.h aux/table_1d.h aux/table_2d.h aux/timers.h aux/typeerasure.h aux/sparsehistogram.h)
@@ -86,6 +86,7 @@ target_link_libraries(libfaunus PUBLIC
         functionparser
         nlohmann_json
         pcg-cpp
+        progresstracker
         range-v3
         spdlog
         xdrfile
@@ -115,11 +116,9 @@ if (ENABLE_SID)
         include_directories(SYSTEM ${SDL2_INCLUDE_DIRS})
         target_link_libraries(faunus PRIVATE ${SDL2_LIBRARIES} cppsid)
         target_compile_definitions(faunus PRIVATE ENABLE_SID)
-        if (PYTHONINTERP_FOUND)
-            execute_process(
-                    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/extractsids.py ${CMAKE_SOURCE_DIR}/scripts/music.yml
-                    WORKING_DIRECTORY ${CMAKE_BINARY_DIR} ERROR_QUIET OUTPUT_QUIET)
-        endif ()
+        execute_process(
+            COMMAND ${Python_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/extractsids.py ${CMAKE_SOURCE_DIR}/scripts/music.yml
+            WORKING_DIRECTORY ${CMAKE_BINARY_DIR} ERROR_QUIET OUTPUT_QUIET)
     endif ()
 endif ()
 
@@ -141,55 +140,21 @@ INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
 
 option(ENABLE_PYTHON "Try to compile python bindings (experimental!)" off)
 if (ENABLE_PYTHON)
-    find_package(PythonLibs 3 REQUIRED)
-
-    if (PYTHONINTERP_FOUND)
-        execute_process(
-            COMMAND ${PYTHON_EXECUTABLE} scripts/yason.py -h
-            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-            ERROR_QUIET OUTPUT_QUIET
-            RESULT_VARIABLE yasontest)
-        if (${yasontest} EQUAL 1)
-            message("missing required python modules 'yaml' or 'ruamel_yaml'")
-        endif()
+    find_package(Python 3 COMPONENTS Interpreter Development REQUIRED)
+    execute_process(COMMAND ${Python_EXECUTABLE} scripts/yason.py -h
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} ERROR_QUIET OUTPUT_QUIET RESULT_VARIABLE yasontest)
+    if (${yasontest} EQUAL 1)
+        message("missing required python modules 'yaml' or 'ruamel.yaml'")
     endif()
 
-    if (PYTHONLIBS_FOUND)
-        FetchContent_GetProperties(pybind11)
-        if(NOT pybind11_POPULATED)
-            FetchContent_Populate(pybind11)
-            add_subdirectory(${pybind11_SOURCE_DIR} ${pybind11_BINARY_DIR})
-            pybind11_add_module(pyfaunus pyfaunus.cpp ${objs})
-            target_link_libraries(pyfaunus PRIVATE
-                    project_options
-                    cereal
-                    Eigen
-                    functionparser
-                    nlohmann_json
-                    range-v3
-                    spdlog
-                    xdrfile
-                    zstr)
-            target_compile_definitions(pyfaunus PUBLIC SPDLOG_COMPILED_LIB)
-            target_compile_definitions(pyfaunus PRIVATE DOCTEST_CONFIG_DISABLE)
-        endif()
-    endif ()
-endif ()
+    pybind11_add_module(pyfaunus pyfaunus.cpp ${objs})
+    target_link_libraries(pyfaunus PRIVATE
+        project_options cereal Eigen functionparser nlohmann_json progresstracker pybind11_json range-v3 spdlog xdrfile zstr)
+    target_compile_definitions(pyfaunus PUBLIC SPDLOG_COMPILED_LIB)
+    target_compile_definitions(pyfaunus PRIVATE DOCTEST_CONFIG_DISABLE)
 
-if (PYTHONINTERP_FOUND)
-    # find _relative_ path of python library and thus respect CMAKE_INSTALL_PREFIX.
-    # could be replaced by FindPython() but req. cmake 3.12
-    # https://stackoverflow.com/questions/1242904/finding-python-site-packages-directory-with-cmake
-    execute_process(
-        COMMAND "${PYTHON_EXECUTABLE}" -c "if True:
-        from distutils import sysconfig as sc
-        print(sc.get_python_lib(prefix='', plat_specific=True))"
-        OUTPUT_VARIABLE PYTHON_SITE
-        OUTPUT_STRIP_TRAILING_WHITESPACE)
-endif()
-
-if (TARGET pyfaunus)
-    install(TARGETS pyfaunus DESTINATION ${PYTHON_SITE} OPTIONAL)
+    message("Python site-packages: ${Python_SITELIB}")
+    install(TARGETS pyfaunus DESTINATION ${Python_SITELIB} OPTIONAL)
 endif()
 
 # ========== assorted installation targets ==========
@@ -200,8 +165,9 @@ install(DIRECTORY ${CMAKE_BINARY_DIR}/sids DESTINATION share/faunus OPTIONAL)
 install(FILES
     ${CMAKE_SOURCE_DIR}/scripts/yason.py
     ${CMAKE_SOURCE_DIR}/scripts/ob2aam.py
+    ${CMAKE_SOURCE_DIR}/scripts/psc2vmd.py
     ${CMAKE_SOURCE_DIR}/scripts/faunus-manual
     DESTINATION bin
     PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/scripts/faunustools DESTINATION ${PYTHON_SITE} OPTIONAL
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/scripts/faunustools DESTINATION ${Python_SITELIB} OPTIONAL
     PATTERN ${CMAKE_SOURCE_DIR}/scripts/faunustool/__pycache__ EXCLUDE)

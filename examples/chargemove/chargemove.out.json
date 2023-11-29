@@ -1,0 +1,86 @@
+{
+  "analysis": [
+    {
+      "reactioncoordinate": {
+        "average": -0.25,
+        "file": "q.dat.gz",
+        "index": 0,
+        "nstep": 2,
+        "property": "q",
+        "samples": 1000000,
+        "type": "atom"
+      }
+    },
+    {
+      "sanity": {
+        "nstep": 10000,
+        "samples": 200
+      }
+    }
+  ],
+  "compiler": "Apple LLVM 13.0.0 (clang-1300.0.29.30)",
+  "energy": [
+    {
+      "hamiltonian": [
+        {
+          "ContainerOverlap": {
+            "relative time": 8.512891710383912e-05
+          }
+        },
+        {
+          "constrain": {
+            "index": 0,
+            "property": "q",
+            "range": [
+              -1.5,
+              1.0
+            ],
+            "type": "atom"
+          }
+        }
+      ]
+    }
+  ],
+  "geometry": {
+    "radius": 2.0,
+    "type": "sphere"
+  },
+  "git revision": "5e172049 (2022-01-10)",
+  "groups": [
+    {
+      "ref": {
+        "compressible": false,
+        "index": [
+          0,
+          0
+        ],
+        "size": 1
+      }
+    }
+  ],
+  "montecarlo": {
+    "average potential energy (kT)": 0.0,
+    "last move": "charge"
+  },
+  "moves": [
+    {
+      "charge": {
+        "acceptance": 0.812,
+        "dq": 0.5,
+        "index": 0,
+        "mean bias energy": 0.204,
+        "moves": 2000000,
+        "quadratic": true,
+        "repeat": 1,
+        "stochastic": true,
+        "√⟨Δq²⟩": 0.176
+      }
+    }
+  ],
+  "number of groups": 1,
+  "number of particles": 1,
+  "number of sweeps": 2000000,
+  "reactionlist": null,
+  "relative drift": 0.0,
+  "temperature": 300.0
+}

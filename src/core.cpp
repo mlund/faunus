@@ -1,6 +1,7 @@
 #define _USE_MATH_DEFINES
 #include <doctest/doctest.h>
 #include "core.h"
+#include "units.h"
 #include "aux/iteratorsupport.h"
 #include "random.h"
 #include "particle.h"
@@ -10,23 +11,26 @@
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/null_sink.h>
 #include <range/v3/view/filter.hpp>
+#include <range/v3/view/transform.hpp>
+#include <range/v3/numeric/accumulate.hpp>
 
 namespace Faunus {
 
-double roundValue(double value, const int number_of_digits) {
+double roundValue(const double value, const int number_of_digits) {
     std::stringstream o;
     o << std::setprecision(number_of_digits) << value;
     return std::stod(o.str());
 }
 
-void roundJSON(json& j, int number_of_digits) {
-    if (j.is_object()) {
-        for (auto& value : j) {
-            if (value.is_number_float()) {
-                value = roundValue(value, number_of_digits);
-            } else if (value.is_object() && !value.empty()) {
-                roundJSON(value, number_of_digits);
-            }
+void roundJSON(json& j, const int number_of_digits) {
+    if (!j.is_object()) {
+        return;
+    }
+    for (auto& value : j) {
+        if (value.is_number_float()) {
+            value = roundValue(value, number_of_digits);
+        } else if (value.is_object() && !value.empty()) {
+            roundJSON(value, number_of_digits);
         }
     }
 }
@@ -43,7 +47,7 @@ double getValueInfinity(const json& j, const std::string& key) {
         if (*value == "-inf" || *value == "-oo") {
             return -std::numeric_limits<double>::infinity();
         }
-        throw std::runtime_error("value must be number or 'inf'");
+        throw std::runtime_error("value must be number, 'inf', '-inf', 'oo', '-oo'");
     }
     return static_cast<double>(*value);
 }
@@ -64,7 +68,10 @@ json loadJSON(const std::string& filename) {
     throw IOError("cannot open file '{}'", filename);
 }
 
-TipFromTheManual::TipFromTheManual() : random(std::make_shared<Random>()) { random->seed(); }
+TipFromTheManual::TipFromTheManual()
+    : random(std::make_unique<Random>()) {
+    random->seed();
+}
 
 /**
  * @brief Load JSON tips database
@@ -89,25 +96,25 @@ void TipFromTheManual::load(const std::vector<std::string>& files) {
  */
 std::string TipFromTheManual::operator[](std::string_view key) {
     std::string tip;
-    if (not tip_already_given) {
-        // look for help for the given `key`
-        if (auto it = database.find(key); it != database.end()) {
-            tip = "\nNeed help, my young apprentice?\n\n" + it->get<std::string>();
-            if (key == "coulomb") { // for the Coulomb potential, add additional table w. types
-                tip += "\n" + database.at("coulomb types").get<std::string>();
-            } else if (key == "custom") { // for the custom potential, add also list of symbols
-                tip += "\n" + database.at("symbol").get<std::string>();
-            }
-            tip_already_given = true;
-            if (asciiart) { // add ascii art?
-                if (it = database.find("ascii"); it != database.end() && !it->empty() && it->is_array()) {
-                    tip += random->sample(it->begin(), it->end())->get<std::string>() + "\n";
-                }
+    if (tip_already_given || quiet) {
+        return tip;
+    }
+    if (auto it = database.find(key); it != database.end()) {
+        tip = "\nNeed help, my young apprentice?\n\n" + it->get<std::string>();
+        if (key == "coulomb") { // for the Coulomb potential, add additional table w. types
+            tip += "\n" + database.at("coulomb types").get<std::string>();
+        } else if (key == "custom") { // for the custom potential, add also list of symbols
+            tip += "\n" + database.at("symbol").get<std::string>();
+        }
+        if (asciiart) {
+            if (it = database.find("ascii"); it != database.end() && !it->empty() && it->is_array()) {
+                tip += random->sample(it->begin(), it->end())->get<std::string>() + "\n";
             }
         }
-        buffer = tip;
+        output_buffer = tip;
+        tip_already_given = true;
     }
-    return (quiet) ? std::string() : tip;
+    return tip;
 }
 
 void TipFromTheManual::pick(const std::string& key) { operator[](key); }
@@ -144,7 +151,7 @@ bool SingleUseJSON::empty() const { return json::empty(); }
 
 SingleUseJSON::SingleUseJSON(const json& j) : json(j) {}
 
-std::string SingleUseJSON::dump(int w) const { return json::dump(w); }
+std::string SingleUseJSON::dump(const int width) const { return json::dump(width); }
 
 void SingleUseJSON::clear() { json::clear(); }
 
@@ -308,6 +315,129 @@ TEST_CASE("[Faunus] asEigenMatrix") {
 }
 
 TEST_SUITE_END();
+
+/**
+ * @param molarity Molar salt concentration
+ * @param valencies valencies for participating ions {1,-1} ~ NaCl, {2,-1} ~ MgCl2, {1,3,-2} ~ KAl(SO4)2
+ * @throw If stoichiometry cannot be resolved
+ */
+Electrolyte::Electrolyte(const double molarity, const std::vector<int>& valencies)
+    : molarity(molarity)
+    , valencies(valencies) {
+    namespace rv = ranges::cpp20::views;
+    const auto sum_positive = ranges::accumulate(valencies | rv::filter([](auto v) { return v > 0; }), 0);
+    const auto sum_negative = ranges::accumulate(valencies | rv::filter([](auto v) { return v < 0; }), 0);
+    const auto gcd = std::gcd(sum_positive, sum_negative);
+    if (sum_positive == 0 || sum_negative == 0 || gcd == 0) {
+        throw std::runtime_error("cannot resolve stoichiometry; did you provide both + and - ions?");
+    }
+    auto nu_times_squared_valency = valencies | rv::transform([&](const auto valency) {
+                                        const auto nu = (valency > 0 ? -sum_negative : sum_positive) / gcd;
+                                        return nu * valency * valency;
+                                    });
+    ionic_strength = 0.5 * molarity * static_cast<double>(ranges::accumulate(nu_times_squared_valency, 0));
+    faunus_logger->debug("salt molarity {} --> ionic strength = {:.3f} mol/l", molarity, ionic_strength);
+}
+
+/**
+ * Back calculates the molarity, assuming 1:-1 salt charges. Note that stored properties
+ * are temperature dependent which is why the bjerrum_length is required.
+ */
+Electrolyte::Electrolyte(const double debye_length, const double bjerrum_length) {
+    valencies = {1, -1};
+    ionic_strength = molarity =
+        std::pow(1.0 / debye_length, 2) / (8.0 * pc::pi * bjerrum_length * 1.0_angstrom * 1.0_molar);
+    faunus_logger->debug("debyelength {} Å --> 1:1 salt molarity = {:.3f}", debye_length, molarity);
+}
+
+/**
+ * The salt composition is automatically resolved, and the ionic strength, I, is calculated according to
+ * I = 0.5 * concentration * sum( nu_i * valency_i^2 )
+ * where `nu` are the minimum stoichiometric coefficients, deduced by assuming a net-neutral salt.
+ */
+double Electrolyte::ionicStrength() const { return ionic_strength; }
+
+double Electrolyte::getMolarity() const { return molarity; }
+
+const std::vector<int>& Electrolyte::getValencies() const { return valencies; }
+
+/**
+ * @param bjerrum_length Bjerrum length in Angstrom
+ * @return Debye screening length in Angstrom
+ */
+double Electrolyte::debyeLength(const double bjerrum_length) const {
+    return 1.0 / std::sqrt(8.0 * pc::pi * bjerrum_length * 1.0_angstrom * ionic_strength * 1.0_molar);
+}
+
+/**
+ * Create a salt object using either:
+ *
+ * 1. `debyelength` and `epsr` pair (throws if the latter is absent)
+ * 2. `molarity` and `valencies` pair (the latter has default value of [1,-1])
+ *
+ * ~~~ yaml
+ *     debyelength: 30, epsr: 80
+ *     molarity: 0.1, valencies: [1:-2]
+ *     salt: 0.1, valencies: [1:-2]    # ok, but deprecated
+ *     debyelength: 30                 # throws due to missing 'epsr'
+ *     molarity: 0.1, valencies: [1:2] # throws due to violated electroneutrality
+ * ~~~
+ *
+ * @throw if `debyelength` is found but no dielectric constant, `epsr`.
+ */
+std::optional<Electrolyte> makeElectrolyte(const json& j) {
+    if (auto it = j.find("debyelength"); it != j.end()) {
+        const auto debye_length = it->get<double>() * 1.0_angstrom;
+        const auto relative_dielectric_constant = j.at("epsr").get<double>(); // may throw!
+        const auto bjerrum_length = pc::bjerrumLength(relative_dielectric_constant);
+        return Electrolyte(debye_length, bjerrum_length);
+    }
+    const auto molarity = j.value("molarity", j.value("salt", 0.0));
+    if (molarity > 0.0) {
+        auto valencies = j.value("valencies", std::vector<int>{1, -1});
+        return Electrolyte(molarity, valencies);
+    }
+    return std::nullopt;
+}
+
+TEST_CASE("[Faunus] Electrolyte") {
+    using doctest::Approx;
+    CHECK(Electrolyte(0.1, {1, -1}).ionicStrength() == Approx(0.1));                       // NaCl
+    CHECK(Electrolyte(0.1, {2, -2}).ionicStrength() == Approx(0.5 * (0.1 * 4 + 0.1 * 4))); // CaSO₄
+    CHECK(Electrolyte(0.1, {2, -1}).ionicStrength() == Approx(0.5 * (0.1 * 4 + 0.2)));     // CaCl₂
+    CHECK(Electrolyte(0.1, {1, -2}).ionicStrength() == Approx(0.5 * (0.2 + 0.1 * 4)));     // K₂SO₄
+    CHECK(Electrolyte(0.1, {1, -3}).ionicStrength() == Approx(0.5 * (0.3 + 0.1 * 9)));     // Na₃Cit
+    CHECK(Electrolyte(0.1, {3, -1}).ionicStrength() == Approx(0.5 * (0.3 + 0.1 * 9)));     // LaCl₃
+    CHECK(Electrolyte(0.1, {2, -3}).ionicStrength() == Approx(0.5 * (0.3 * 4 + 0.2 * 9))); // Ca₃(PO₄)₂
+    CHECK(Electrolyte(0.1, {1, 3, -2}).ionicStrength() == Approx(0.5 * (0.1 * 1 + 0.1 * 9 + 0.1 * 2 * 4))); // KAl(SO₄)₂
+    CHECK(Electrolyte(1.0, {2, 3, -2}).ionicStrength() == Approx(0.5 * (2 * 4 + 2 * 9 + 5 * 4))); // Ca₂Al₂(SO₄)₅
+    CHECK_THROWS(Electrolyte(0.1, {1, 1}));
+    CHECK_THROWS(Electrolyte(0.1, {-1, -1}));
+    CHECK_THROWS(Electrolyte(0.1, {0, 0}));
+
+    SUBCASE("debyeLength") {
+        CHECK(Electrolyte(0.03, {1, -1}).debyeLength(7.0) == Approx(17.7376102214));
+        CHECK_THROWS(makeElectrolyte(R"({"debyelength": 30.0"})"_json)); // 'epsr' is missing
+        const auto bjerrum_length = pc::bjerrumLength(80);
+        CHECK(makeElectrolyte(R"({"debyelength": 30.0, "epsr": 80})"_json).value().debyeLength(bjerrum_length) ==
+              Approx(30));
+    }
+
+    SUBCASE("debye length input") {
+        const auto bjerrum_length = 7.0;
+        CHECK(Electrolyte(30, bjerrum_length).debyeLength(bjerrum_length) == Approx(30));
+        CHECK(Electrolyte(30, bjerrum_length).getMolarity() == Approx(0.0104874272));
+        CHECK(Electrolyte(30, bjerrum_length).ionicStrength() == Approx(0.0104874272));
+    }
+}
+
+void to_json(json& j, const Electrolyte& electrolyte) {
+    const auto bjerrum_length = pc::bjerrumLength(pc::T());
+    j = {{"molarity", electrolyte.getMolarity()},
+         {"valencies", electrolyte.getValencies()},
+         {"molar ionic strength", electrolyte.ionicStrength()},
+         {"debyelength", electrolyte.debyeLength(bjerrum_length)}};
+}
 
 } // namespace Faunus
 

@@ -18,12 +18,12 @@ if sys.version_info < (3, 0):
 
 from jinja2 import Template
 try:
-    try:
-        import ruamel.yaml as yaml
-    except ImportError:
-        import ruamel_yaml as yaml
+    import ruamel.yaml
 except ImportError:
-    import yaml
+    from yaml import safe_load as yaml_safe_load
+else:
+    def yaml_safe_load(stream):
+        return ruamel.yaml.YAML(typ="safe").load(stream)
 
 def extract_as_lists(schema):
     '''
@@ -59,7 +59,7 @@ def print_table(schema, label='Keyword'):
 
 template = Template(sys.stdin.read()) # load template from stdin
 with open('schema.yml') as schema_file:
-    d = yaml.safe_load(schema_file)["properties"] # read schema file
+    d = yaml_safe_load(schema_file)["properties"] # read schema file
     atomlist = d["atomlist"]["items"]["additionalProperties"]
     out = template.render(topology_atomlist = print_table(atomlist, '`atomlist`'))
     print(out)

@@ -12,9 +12,15 @@ jobs:
     # well on Windows or Mac.  You can convert this to a matrix build if you need
     # cross-platform coverage.
     # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
+
+    - name: Set up Clang
+      uses: egor-tensin/setup-clang@v1
+      with:
+        version: latest
+
     - uses: actions/checkout@v2
 
     - name: Create Build Environment
@@ -30,7 +36,8 @@ jobs:
       # Note the current convention is to use the -S and -B options here to specify source 
       # and build directories, but this is only available with CMake 3.13 and higher.  
       # The CMake binaries on the Github Actions machines are (as of this writing) 3.12
-      run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DENABLE_OPENMP=off -DENABLE_PYTHON=off -DENABLE_TBB=on
+      # Force libc++ due to https://github.com/actions/runner-images/issues/8659
+      run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DENABLE_OPENMP=on -DENABLE_PYTHON=off -DENABLE_TBB=off -DCMAKE_CXX_FLAGS="-stdlib=libc++"
 
     - name: Build
       working-directory: ${{github.workspace}}/build

@@ -8,7 +8,7 @@
 namespace Faunus {
 
 /**
- * @param energy_change Energy change in units of kT
+ * @param energy_change Energy change, (new minus old) in units of kT
  * @return True if accepted, false of rejected
  * @note Regardless of outcome the random number generator should be incremented. This is important
  *       when using some MPI schemes where the simulations must be in sync.
@@ -18,7 +18,7 @@ bool MetropolisMonteCarlo::metropolisCriterion(const double energy_change) {
     if (std::isnan(energy_change)) {
         throw std::runtime_error("Metropolis error: energy cannot be NaN");
     }
-    const auto random_number_between_zero_and_one = Move::MoveBase::slump(); // engine *must* be propagated!
+    const auto random_number_between_zero_and_one = move::Move::slump();     // engine *must* be propagated!
     if (std::isinf(energy_change) && energy_change < 0.0) {                  // if negative infinity -> quietly accept
         return true;
     }
@@ -41,8 +41,8 @@ void MetropolisMonteCarlo::init() {
     Change change;
     change.everything = true;
 
-    state->pot->state = Energy::Energybase::MonteCarloState::ACCEPTED;    // this is the old energy (current, accepted)
-    trial_state->pot->state = Energy::Energybase::MonteCarloState::TRIAL; // this is the new energy (trial)
+    state->pot->state = Energy::EnergyTerm::MonteCarloState::ACCEPTED;    // this is the old energy (current, accepted)
+    trial_state->pot->state = Energy::EnergyTerm::MonteCarloState::TRIAL; // this is the new energy (trial)
 
     state->pot->init();
     auto energy = state->pot->energy(change);
@@ -60,12 +60,6 @@ void MetropolisMonteCarlo::init() {
             faunus_logger->error("u/kT = {}, u_trial/kT = {}", energy, trial_energy);
             throw std::runtime_error("error aligning energies - this could be a bug...");
         }
-    }
-
-    // Inject reference to Space into `SpeciationMove`
-    // Needed to calc. differences in ideal excess chem. potentials
-    for (auto& speciation_move : moves->getMoves().find<Move::SpeciationMove>()) {
-        speciation_move->setOther(*state->spc);
     }
 }
 
@@ -102,7 +96,7 @@ MetropolisMonteCarlo::MetropolisMonteCarlo(const json &j)
     faunus_logger->set_level(spdlog::level::off); // do not duplicate log info
     trial_state = std::make_unique<State>(j);     // ...for the trial state
     faunus_logger->set_level(original_log_level); // restore original log level
-    moves = std::make_unique<Move::MoveCollection>(j.at("moves"), *trial_state->spc, *trial_state->pot);
+    moves = std::make_unique<move::MoveCollection>(j.at("moves"), *trial_state->spc, *trial_state->pot, *state->spc);
     init();
 }
 
@@ -116,7 +110,7 @@ void MetropolisMonteCarlo::restore(const json &j) {
         from_json(j, *state->spc);       // default, accepted state
         from_json(j, *trial_state->spc); // trial state
         if (j.contains("random-move")) {
-            Move::MoveBase::slump = j["random-move"]; // restore move random number generator
+            move::Move::slump = j["random-move"]; // restore move random number generator
         }
         if (j.contains("random-global")) {
             Faunus::random = j["random-global"]; // restore global random number generator
@@ -130,7 +124,7 @@ void MetropolisMonteCarlo::restore(const json &j) {
     }
 }
 
-void MetropolisMonteCarlo::performMove(Move::MoveBase& move) {
+void MetropolisMonteCarlo::performMove(move::Move& move) {
     Change change;
     move.move(change);
 #ifndef NDEBUG
@@ -142,6 +136,7 @@ void MetropolisMonteCarlo::performMove(Move::MoveBase& move) {
 #endif
     if (change) {
         latest_move_name = move.getName();
+        trial_state->pot->updateState(change);                    // update energy terms to reflect change
         const auto new_energy = trial_state->pot->energy(change); // trial potential energy (kT)
         const auto old_energy = state->pot->energy(change);       // potential energy before move (kT)
 
@@ -169,7 +164,7 @@ void MetropolisMonteCarlo::performMove(Move::MoveBase& move) {
     } else {
         // The `metropolis()` function propagates the engine and we need to stay in sync
         // Alternatively, we could use `engine.discard()`
-        Move::MoveBase::slump();
+        move::Move::slump();
     }
 }
 
@@ -215,6 +210,8 @@ Energy::Hamiltonian &MetropolisMonteCarlo::getHamiltonian() { return *state->pot
 
 Space &MetropolisMonteCarlo::getSpace() { return *state->spc; }
 
+Space& MetropolisMonteCarlo::getTrialSpace() { return *trial_state->spc; }
+
 void from_json(const json &j, MetropolisMonteCarlo::State &state) {
     state.spc = std::make_unique<Space>(j);
     state.pot = std::make_unique<Energy::Hamiltonian>(*state.spc, j.at("energy"));
@@ -239,7 +236,9 @@ void to_json(json& j, const MetropolisMonteCarlo& monte_carlo) {
     }
 }
 
-TranslationalEntropy::TranslationalEntropy(Space &trial_space, Space &space) : trial_spc(trial_space), spc(space) {}
+TranslationalEntropy::TranslationalEntropy(const Space& trial_space, const Space& space)
+    : trial_spc(trial_space)
+    , spc(space) {}
 
 /**
  * @param trial_count Number of atoms or molecules after move
@@ -262,12 +261,12 @@ double TranslationalEntropy::bias(int trial_count, int count) const {
     return energy; // kT
 }
 
-double TranslationalEntropy::atomSwapEnergy(const Change::GroupChange& data) {
-    assert(data.dNswap);
-    assert(data.relative_atom_indices.size() == 1);
+double TranslationalEntropy::atomSwapEnergy(const Change::GroupChange& group_change) const {
+    assert(group_change.dNswap);
+    assert(group_change.relative_atom_indices.size() == 1);
     double energy = 0.0;
-    int id1 = trial_spc.groups.at(data.group_index).at(data.relative_atom_indices.front()).id;
-    int id2 = spc.groups.at(data.group_index).at(data.relative_atom_indices.front()).id;
+    int id1 = trial_spc.groups.at(group_change.group_index).at(group_change.relative_atom_indices.front()).id;
+    int id2 = spc.groups.at(group_change.group_index).at(group_change.relative_atom_indices.front()).id;
     for (auto atomid : {id1, id2}) {
         auto atoms_new = trial_spc.findAtoms(atomid);
         auto atoms_old = spc.findAtoms(atomid);
@@ -278,7 +277,7 @@ double TranslationalEntropy::atomSwapEnergy(const Change::GroupChange& data) {
     return energy; // kT
 }
 
-double TranslationalEntropy::atomChangeEnergy(int molid) {
+double TranslationalEntropy::atomChangeEnergy(const int molid) const {
     auto mollist_new = trial_spc.findMolecules(molid, Space::Selection::ALL); // "ALL" because "ACTIVE"
     auto mollist_old = spc.findMolecules(molid, Space::Selection::ALL);       // ...returns only full groups
     if (range_size(mollist_new) > 1 || range_size(mollist_old) > 1) {
@@ -289,7 +288,7 @@ double TranslationalEntropy::atomChangeEnergy(int molid) {
     return bias(N_new, N_old);
 }
 
-double TranslationalEntropy::moleculeChangeEnergy(int molid) {
+double TranslationalEntropy::moleculeChangeEnergy(const int molid) const {
     auto mollist_new = trial_spc.findMolecules(molid, Space::Selection::ACTIVE);
     auto mollist_old = spc.findMolecules(molid, Space::Selection::ACTIVE);
     int N_new = range_size(mollist_new); // number of molecules after move
@@ -301,25 +300,26 @@ double TranslationalEntropy::moleculeChangeEnergy(int molid) {
  * @param change Change due to latest Monte Carlo move
  * @return Logarithm of the bias for the Metropolis criterion (units of kT)
  */
-double TranslationalEntropy::energy(const Change &change) {
+double TranslationalEntropy::energy(const Change& change) {
     double energy_change = 0.0;
-    if (change.matter_change) {
-        std::set<int> already_processed;                 // ignore future encounters of these molid's
-        for (const Change::GroupChange& data : change.groups) { // loop over each change group
-            if (data.dNswap) {                           // number of atoms has changed as a result of a swap move
-                energy_change += atomSwapEnergy(data);
-            } else { // it is not a swap move
-                int molid = trial_spc.groups.at(data.group_index).id;
-                assert(molid == spc.groups.at(data.group_index).id);
-                if (data.dNatomic and Faunus::molecules[molid].atomic) { // an atomic group has been changed
-                    energy_change += atomChangeEnergy(molid);
-                } else if (already_processed.count(molid) == 0) { // a molecule has been inserted or deleted
-                    energy_change += moleculeChangeEnergy(molid);
-                    already_processed.insert(molid); // ignore future encounters of molid
-                }
+    if (!change.matter_change || change.disable_translational_entropy) {
+        return energy_change;
+    }
+    std::set<MoleculeData::index_type> already_processed;   // ignore future encounters of these molid's
+    for (const Change::GroupChange& data : change.groups) { // loop over each change group
+        if (data.dNswap) {                                  // number of atoms has changed as a result of a swap move
+            energy_change += atomSwapEnergy(data);
+        } else { // it is not a swap move
+            const auto molid = trial_spc.groups.at(data.group_index).id;
+            assert(molid == spc.groups.at(data.group_index).id);
+            if (data.dNatomic and Faunus::molecules.at(molid).isAtomic()) { // an atomic group has been changed
+                energy_change += atomChangeEnergy(molid);
+            } else if (!already_processed.contains(molid)) { // a molecule has been inserted or deleted
+                energy_change += moleculeChangeEnergy(molid);
+                already_processed.insert(molid); // ignore future encounters of molid
             }
         }
     }
-    return energy_change; // kT
+    return energy_change;
 }
 } // namespace Faunus

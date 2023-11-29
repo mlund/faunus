@@ -15,7 +15,7 @@ namespace Faunus {
  * compression is enabled, otherwise a standard `std::ostream` is created.
  *
  * @param filename Name of output file
- * @param throw_on_error Throw exception if file cannot be opened (default: false)
+ * @param throw_on_error Throw `std::runtime_error` if file cannot be opened (default: false)
  * @return pointer to stream; nullptr if it could not be created
  */
 std::unique_ptr<std::ostream> IO::openCompressedOutputStream(const std::string& filename, bool throw_on_error) {
@@ -25,9 +25,9 @@ std::unique_ptr<std::ostream> IO::openCompressedOutputStream(const std::string& 
         f.open(filename);
     } catch (std::exception& e) { // reaching here, file cannot be created
         if (throw_on_error) {
-            throw std::runtime_error("could not writeKeyValuePairs to file "s + filename);
+            throw std::runtime_error("could not open file "s + filename);
         }
-        return std::make_unique<std::ofstream>(); // empty object
+        return nullptr;
     }
     if (filename.substr(filename.find_last_of('.') + 1) == "gz") {
         faunus_logger->trace("enabling gzip compression for {}", filename);
@@ -43,7 +43,7 @@ TEST_CASE("[Faunus] openCompressedOutputStream") {
 }
 
 bool PQRTrajectoryReader::readAtomRecord(const std::string& record, Particle& particle, double& radius) {
-    std::stringstream o(record);
+    std::istringstream o(record);
     std::string key;
     o >> key;
     if (key == "ATOM" or key == "HETATM") {
@@ -124,16 +124,13 @@ void XTCTrajectoryFrame::importTimestamp(const int step, const float time) {
 }
 
 void XTCTrajectoryFrame::importBox(const Point& box) {
-    // empty box tensor
-    XTCMatrix xtc_box_matrix = XTCMatrix::Zero();
-    // only XYZ dimensions in nanometers on diagonal, as floats
-    xtc_box_matrix.diagonal() = (box / 1.0_nm).cast<XTCFloat>();
-    // copy underlaying eigen structure (1D array, row-major) to the C-style 2D array
-    std::copy(xtc_box_matrix.data(), xtc_box_matrix.data() + DIM * DIM, &(xtc_box[0][0]));
+    XTCMatrix xtc_box_matrix = XTCMatrix::Zero();                // empty box tensor
+    xtc_box_matrix.diagonal() = (box / 1.0_nm).cast<XTCFloat>(); // only XYZ dimensions in nm on diagonal, as floats
+    std::copy(xtc_box_matrix.data(), xtc_box_matrix.data() + DIM * DIM,
+              &(xtc_box[0][0])); // eigen 1D, row-major -> C-style 2D array
 }
 
 void XTCTrajectoryFrame::importCoordinates(const PointVector& coordinates, const Point& offset) {
-    // setNumberOfAtoms(coordinates.size());
     if (coordinates.size() != number_of_atoms) {
         // to avoid mistakes, the number_of_atoms is immutable
         throw std::runtime_error("wrong number of particles to be saved in the XTC frame");
@@ -179,7 +176,7 @@ void XTCTrajectoryFrame::initNumberOfAtoms(int new_number_of_atoms) {
     assert(new_number_of_atoms >= 0);
     if (number_of_atoms != new_number_of_atoms) {
         number_of_atoms = new_number_of_atoms;
-        xtc_coordinates = std::unique_ptr<XDRfile::rvec[]>(new XDRfile::rvec[number_of_atoms]);
+        xtc_coordinates = std::make_unique<XdrFile::rvec[]>(number_of_atoms);
     }
 }
 
@@ -242,26 +239,25 @@ TEST_CASE("XTCFrame") {
 
 XTCReader::XTCReader(const std::string& filename) : filename(filename) {
     int number_of_atoms;
-    if (XDRfile::read_xtc_natoms(filename.c_str(), &number_of_atoms) == XDRfile::exdrOK) {
+    if (XdrFile::read_xtc_natoms(filename.c_str(), &number_of_atoms) == XdrFile::exdrOK) {
         xtc_frame = std::make_unique<XTCTrajectoryFrame>(number_of_atoms);
-        xdrfile = XDRfile::xdrfile_open(filename.c_str(), "r");
+        xdrfile = XdrFile::XDRFILE_unique(XdrFile::xdrfile_open(filename.c_str(), "r"));
     }
-    if (!xtc_frame || (xdrfile == nullptr)) {
+    if (!xtc_frame || !xdrfile) {
         throw std::runtime_error(fmt::format("xtc file {} could not be opened", filename));
     }
 }
 
-XTCReader::~XTCReader() { XDRfile::xdrfile_close(xdrfile); }
-
 int XTCReader::getNumberOfCoordinates() { return xtc_frame->number_of_atoms; }
 
 bool XTCReader::readFrame() {
-    return_code = XDRfile::read_xtc(xdrfile, xtc_frame->number_of_atoms, &xtc_frame->xtc_step, &xtc_frame->xtc_time,
-                                    xtc_frame->xtc_box, xtc_frame->xtc_coordinates.get(), &xtc_frame->precision);
-    if (return_code != XDRfile::exdrENDOFFILE && return_code != XDRfile::exdrOK) {
+    return_code =
+        XdrFile::read_xtc(xdrfile.get(), xtc_frame->number_of_atoms, &xtc_frame->xtc_step, &xtc_frame->xtc_time,
+                          xtc_frame->xtc_box, xtc_frame->xtc_coordinates.get(), &xtc_frame->precision);
+    if (return_code != XdrFile::exdrENDOFFILE && return_code != XdrFile::exdrOK) {
         throw std::runtime_error(fmt::format("xtc file {} could not be read (error code {})", filename, return_code));
     }
-    return return_code == XDRfile::exdrOK;
+    return return_code == XdrFile::exdrOK;
 }
 
 bool XTCReader::read(TrajectoryFrame& frame) {
@@ -274,27 +270,28 @@ bool XTCReader::read(TrajectoryFrame& frame) {
 
 // ========== XTCWriter ==========
 
-XTCWriter::XTCWriter(const std::string& filename) : xdrfile(XDRfile::xdrfile_open(filename.c_str(), "w")), filename(filename) {
+XTCWriter::XTCWriter(const std::string& filename)
+    : xdrfile(XdrFile::xdrfile_open(filename.c_str(), "w"))
+    , filename(filename) {
     if (!xdrfile) {
         throw std::runtime_error(fmt::format("xtc file {} could not be opened", filename));
     }
 }
 
-XTCWriter::~XTCWriter() { XDRfile::xdrfile_close(xdrfile); }
-
 void XTCWriter::writeFrameAt(int step, float time) {
-    return_code = XDRfile::write_xtc(xdrfile, xtc_frame->number_of_atoms, step, time, xtc_frame->xtc_box,
+    return_code = XdrFile::write_xtc(xdrfile.get(), xtc_frame->number_of_atoms, step, time, xtc_frame->xtc_box,
                                      xtc_frame->xtc_coordinates.get(), xtc_frame->precision);
-    if (return_code != XDRfile::exdrOK) {
+    if (return_code != XdrFile::exdrOK) {
         throw std::runtime_error(
             fmt::format("xtc file {} could not be written (error code {})", filename, return_code));
     }
 }
 
 void XTCWriter::writeFrame() {
-    return_code = XDRfile::write_xtc(xdrfile, xtc_frame->number_of_atoms, xtc_frame->xtc_step, xtc_frame->xtc_time,
-                                     xtc_frame->xtc_box, xtc_frame->xtc_coordinates.get(), xtc_frame->precision);
-    if (return_code != XDRfile::exdrOK) {
+    return_code =
+        XdrFile::write_xtc(xdrfile.get(), xtc_frame->number_of_atoms, xtc_frame->xtc_step, xtc_frame->xtc_time,
+                           xtc_frame->xtc_box, xtc_frame->xtc_coordinates.get(), xtc_frame->precision);
+    if (return_code != XdrFile::exdrOK) {
         throw std::runtime_error(
             fmt::format("xtc file {} could not be written (error code {})", filename, return_code));
     }
@@ -329,25 +326,31 @@ ParticleVector fastaToParticles(std::string_view fasta_sequence, double bond_len
     return particles;
 }
 
-std::shared_ptr<StructureFileWriter> createStructureFileWriter(const std::string& suffix) {
-    std::shared_ptr<StructureFileWriter> writer;
+std::unique_ptr<StructureFileWriter> createStructureFileWriter(const std::string& suffix) {
     if (suffix == "pqr") {
-        writer = std::make_shared<PQRWriter>();
-    } else if (suffix == "aam") {
-        writer = std::make_shared<AminoAcidModelWriter>();
-    } else if (suffix == "xyz") {
-        writer = std::make_shared<XYZWriter>();
-    } else if (suffix == "gro") {
-        writer = std::make_shared<GromacsWriter>();
-    } else if (suffix == "pdb") {
-        writer = std::make_shared<PQRWriter>(PQRWriter::Style::PDB);
+        return std::make_unique<PQRWriter>();
     }
-    return writer;
+    if (suffix == "aam") {
+        return std::make_unique<AminoAcidModelWriter>();
+    }
+    if (suffix == "xyz") {
+        return std::make_unique<XYZWriter>();
+    }
+    if (suffix == "xyz_psc") {
+        return std::make_unique<SpheroCylinderXYZWriter>();
+    }
+    if (suffix == "gro") {
+        return std::make_unique<GromacsWriter>();
+    }
+    if (suffix == "pdb") {
+        return std::make_unique<PQRWriter>(PQRWriter::Style::PDB);
+    }
+    return nullptr;
 }
 
 // -----------------------------
 
-ParticleVector loadStructure(const std::string& filename, bool prefer_charges_from_file) {
+ParticleVector loadStructure(std::string_view filename, bool prefer_charges_from_file) {
     ParticleVector particles;
     std::unique_ptr<StructureFileReader> reader;
     const auto suffix = filename.substr(filename.find_last_of('.') + 1);
@@ -359,6 +362,8 @@ ParticleVector loadStructure(const std::string& filename, bool prefer_charges_fr
         reader = std::make_unique<XYZReader>();
     } else if (suffix == "gro") {
         reader = std::make_unique<GromacsReader>();
+    } else if (suffix == "xyz_psc") {
+        reader = std::make_unique<SpheroCylinderXYZReader>();
     }
     try {
         if (reader) {
@@ -524,9 +529,9 @@ void StructureFileReader::checkLoadedParticles() const {
     }
 }
 
-ParticleVector& StructureFileReader::load(const std::string& filename) {
+ParticleVector& StructureFileReader::load(std::string_view filename) {
     try {
-        if (std::ifstream stream(filename); stream) {
+        if (auto stream = std::ifstream(std::string(filename)); stream) {
             return load(stream);
         }
         throw std::runtime_error("cannot open file");
@@ -640,7 +645,7 @@ void AminoAcidModelReader::loadHeader(std::istream& stream) {
 Particle AminoAcidModelReader::loadParticle(std::istream& stream) {
     std::string line;
     getNextLine(stream, line, "#");
-    std::stringstream record(line);
+    std::istringstream record(line);
     record.exceptions(std::ios::failbit);
     std::string particle_name;
     record >> particle_name;
@@ -676,6 +681,21 @@ void XYZWriter::saveParticle(std::ostream& stream, const Particle& particle) {
 
 // -----------------------------
 
+void SpheroCylinderXYZWriter::saveHeader(std::ostream& stream, [[maybe_unused]] int number_of_particles) const {
+    // @todo we currently have no access to the "sweep" and is now fixed to "0"
+    stream << fmt::format("sweep {}; box ", 0) << box_dimensions.transpose() << "\n";
+}
+void SpheroCylinderXYZWriter::saveParticle(std::ostream& stream, const Particle& particle) {
+    if (particle.hasExtension()) {
+        const auto scale = static_cast<double>(particle_is_active);
+        stream << particle.traits().name << " " << scale * particle.pos.transpose() << " "
+               << scale * particle.getExt().scdir.transpose() << " " << scale * particle.getExt().patchdir.transpose()
+               << "\n";
+    }
+}
+
+// -----------------------------
+
 void XYZReader::loadHeader(std::istream& stream) {
     std::string line;
     try {
@@ -696,7 +716,7 @@ void XYZReader::loadHeader(std::istream& stream) {
 Particle XYZReader::loadParticle(std::istream& stream) {
     std::string line;
     getNextLine(stream, line, ";#");
-    std::stringstream record(line);
+    std::istringstream record(line);
     record.exceptions(std::ios::failbit);
     std::string atom_name;
     record >> atom_name;
@@ -706,6 +726,32 @@ Particle XYZReader::loadParticle(std::istream& stream) {
     particle.pos *= 1.0_angstrom; // xyz files are commonly in Ångstroms
     return particle;
 }
+
+// -----------------------------
+
+void SpheroCylinderXYZReader::loadHeader(std::istream& stream) {
+    std::string line;
+    try {
+        std::getline(stream, line);
+    } catch (std::exception& e) { throw std::invalid_argument("cannot load comment"); }
+}
+
+Particle SpheroCylinderXYZReader::loadParticle(std::istream& stream) {
+    std::string line;
+    getNextLine(stream, line, ";#");
+    std::istringstream record(line);
+    record.exceptions(std::ios::failbit);
+    std::string atom_name;
+    record >> atom_name;
+    const auto& atom = Faunus::findAtomByName(atom_name);
+    auto particle = Particle(atom);
+    auto& extension = particle.createExtension();
+    record >> particle.pos.x() >> particle.pos.y() >> particle.pos.z() >> extension.scdir.x() >> extension.scdir.y() >>
+        extension.scdir.z() >> extension.patchdir.x() >> extension.patchdir.y() >> extension.patchdir.z();
+    particle.pos *= 1.0_angstrom; // xyz files are commonly in Ångstroms
+    return particle;
+}
+
 // -----------------------------
 
 /**
@@ -717,7 +763,7 @@ Particle PQRReader::loadParticle(std::istream& stream) {
     std::string type;
     while (true) {
         std::getline(stream, line); // throws if eof or empty
-        std::stringstream record(line);
+        std::istringstream record(line);
         record.exceptions(std::ios::failbit); // throws if syntax error
         record >> type;
         if (type == "ATOM" || type == "HETATM") {
@@ -751,7 +797,7 @@ void PQRReader::loadHeader(std::istream& stream) {
             std::getline(stream, line);
         } catch (std::istream::failure& e) { return; }
         if (!line.empty()) {
-            std::stringstream record(line);
+            std::istringstream record(line);
             record.exceptions(std::ios::failbit); // throws if error
             try {
                 record >> type;
@@ -880,8 +926,8 @@ void GromacsReader::loadBoxInformation(std::istream& stream) {
             stream.get(); // gobble newline
             std::string line;
             std::getline(stream, line);
-            std::stringstream o(line);
-            o.exceptions(std::stringstream::failbit);
+            std::istringstream o(line);
+            o.exceptions(std::istringstream::failbit);
             try {
                 o >> box_length.x() >> box_length.y() >> box_length.z();
                 box_length *= 1.0_nm;
@@ -980,7 +1026,7 @@ TEST_CASE("[Faunus] CoarseGrainedFastaFileReader") {
 
     SUBCASE("single sequence") {
         CoarseGrainedFastaFileReader reader(bond_length, {10, 20, 30});
-        std::stringstream stream(">MCHU - Calmodulin\n; another comment\nKR\n");
+        std::istringstream stream(">MCHU - Calmodulin\n; another comment\nKR\n");
         reader.load(stream);
         CHECK(reader.particles.size() == 2);
         CHECK(reader.particles[0].id == 1);
@@ -996,7 +1042,7 @@ TEST_CASE("[Faunus] CoarseGrainedFastaFileReader") {
     }
     SUBCASE("single sequence - end by star") {
         CoarseGrainedFastaFileReader reader(bond_length);
-        std::stringstream stream(">MCHU - Calmodulin\nR*K\n");
+        std::istringstream stream(">MCHU - Calmodulin\nR*K\n");
         reader.load(stream);
         CHECK(reader.particles.size() == 1);
         CHECK(reader.comments.size() == 1);
@@ -1004,7 +1050,7 @@ TEST_CASE("[Faunus] CoarseGrainedFastaFileReader") {
     }
     SUBCASE("multisequence") {
         CoarseGrainedFastaFileReader reader(bond_length);
-        std::stringstream stream(">MCHU - Calmodulin\nKKK\n>RK*\n");
+        std::istringstream stream(">MCHU - Calmodulin\nKKK\n>RK*\n");
         reader.load(stream);
         CHECK(reader.particles.size() == 3);
         CHECK(reader.comments.size() == 1);
@@ -1012,17 +1058,17 @@ TEST_CASE("[Faunus] CoarseGrainedFastaFileReader") {
     }
     SUBCASE("unknown particle") {
         CoarseGrainedFastaFileReader reader(bond_length);
-        std::stringstream stream(">MCHU - Calmodulin\nRKE*\n");
+        std::istringstream stream(">MCHU - Calmodulin\nRKE*\n");
         CHECK_THROWS(reader.load(stream));
     }
     SUBCASE("unknown fasta letter") {
         CoarseGrainedFastaFileReader reader(bond_length);
-        std::stringstream stream(">MCHU - Calmodulin\nRKx*\n");
+        std::istringstream stream(">MCHU - Calmodulin\nRKx*\n");
         CHECK_THROWS(reader.load(stream));
     }
     SUBCASE("no comment") {
         CoarseGrainedFastaFileReader reader(bond_length);
-        std::stringstream stream("RKK*\n");
+        std::istringstream stream("RKK*\n");
         reader.load(stream);
         CHECK(reader.particles.size() == 3);
         CHECK(reader.comments.empty());
@@ -1031,4 +1077,5 @@ TEST_CASE("[Faunus] CoarseGrainedFastaFileReader") {
 
 // -----------------------
 
+void XdrFile::XdrFileDeleter::operator()(XdrFile::XDRFILE* xdrfile) { XdrFile::xdrfile_close(xdrfile); }
 } // namespace Faunus

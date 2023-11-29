@@ -101,6 +101,7 @@ essentially for free as the energies are already known from the move.
 `dp`            | Translational displacement (Å)
 `single_layer=false` | If `true`, stop cluster-growth after one layer around centered molecule (experimental)
 `satellites`    | Subset of `molecules` that cannot be cluster centers
+`com=true`      | Use distance threshold between mass-centers instead of particles when finding clusters
 `com_shape=true`| Use mass centers for shape analysis instead of particle positions (affects analysis only)
 `analysis`      | See below
 
@@ -109,7 +110,8 @@ between mass centers.
 The `threshold` can be specified as a single distance or as a complete list of combinations, see example below.
 For simulations where small molecules cluster around large macro-molecules, it can be useful to use the `satellites`
 keyword which denotes a list of molecules that can be part of a cluster, but cannot be the cluster nucleus or
-starting point. All molecules listed in `satellites` must be part of `molecules`.
+starting point.
+All molecules listed in `satellites` must be part of `molecules`.
 A predefined axis of rotation can be specified as `dirrot`. For example, setting `dirrot` to [1,0,0], [0,1,0] or [0,0,1] 
 results in rotations about the $x-$, $y-$, or $z-$axis, respectively.
 
@@ -145,6 +147,66 @@ are distributed on a sphere then $\kappa^2=0$, while if on a straight line, $\ka
 `interval=10` | Interval between samples
 
 
+### Smarter Monte Carlo
+
+Preferential selction of particles can be enabled via the `region` keyword which instructs
+some moves to pick particles or groups preferentially from a given _region_. As described
+in [doi:10/frvx8j](https://doi.org/frvx8j) a bias is introduced which is automatically
+accounted for. The preference for sampling inside the region is controlled by `p` which
+can be regarded as an outside update probability.
+If $p=1$ no preferential sampling is performed, whereas if
+$p<1$, more sampling is done inside the region.
+
+For example:
+
+~~~ yaml
+- moltransrot:
+    ...
+    ...
+    region:
+      policy: ellipsoid
+      parallel_radius: 5.0
+      perpendicular_radius: 4.0
+      index1: 10
+      index2: 12
+      p: 0.2
+~~~
+
+The available regions are:
+
+#### Ellipsoid
+
+The connection vector between two (moving) reference particles defines an ellipsoid
+centered at the midpoint between the reference particles.
+The reference particle separation is unimportant, only the direction is used.
+
+`policy=ellipsoid`     | Description
+---------------------- | ----------------------------------------------------------------
+`p`                    | Number (0,1] where a lower number means higher regional sampling
+`index1`               | Index of first reference particle
+`index2`               | Index of second reference particle
+`parallel_radius`      | Radius parallel to axis connecting the two references
+`perpendicular_radius` | Radius perpendicular to axis connecting the two references
+`group_com=false`      | Test only mass center of molecular groups
+
+
+#### Within Molecule (experimental)
+
+Samples from within a threshold from a molecule type. This can be useful to _e.g._
+preferentially sample solvent molecules around dilute solute molecules.
+The `com` keyword is available if the selected `molecule` has a well-defined mass-center,
+_i.e._ if `is_atomic=false`.
+It is also possible to use only the mass center for the moved groups by setting `group_com`.
+
+`policy=within_molid`  | Description
+---------------------- | ----------------------------------------------------------------
+`p`                    | Number (0,1] where a lower number means higher regional sampling
+`molecule`             | Name of molecule to search around
+`threshold`            | Distance threshold to any particle in `molecule`
+`com=false`            | Use `threshold` with respect to mass-center of `molecule`
+`group_com=false`      | Test with respect to mass center of molecular groups
+
+
 ## Internal Degrees of Freedom
 
 ### Charge Move
@@ -153,8 +215,16 @@ are distributed on a sphere then $\kappa^2=0$, while if on a straight line, $\ka
 ---------------- | ---------------------------------
 `index`          | Atom index to operate on
 `dq`             | Charge displacement
+`quadratic=true` | Displace linearly along q^2 instead of q
 
-This performs a fractional charge move on a specific atom.
+This performs a fractional charge move on a specific atom. The charge
+displacement can be performed linerly along $q$ or linearly along $q^2$.
+For the latter the following bias energy will be added to ensure
+uniform sampling of $q$,
+
+$$
+u = k\_BT\ln \left ( \left | q^{\prime} / q \right |\right )
+$$
 
 Limitations:
 This move changes the particle charge and therefore cannot be used with
@@ -169,7 +239,7 @@ Instead, use a hard-coded variant like `nonbonded_coulomblj` etc.
 `molecule`          | Molecule name to operate on
 `repeat=N`          | Number of repeats per MC sweep
 `keeppos=False`     | Keep original positions of `traj`
-`copy_policy=all`   | What to copy from library: `all`, `positions`, `charges`
+`copy_policy=all`   | What to copy from library. See table below.
 
 This will swap between different molecular conformations
 as defined in the [Molecule Properties](topology.html#molecule-properties) with `traj` and `trajweight`
@@ -183,6 +253,13 @@ is used, i.e. no rotation and no mass-center overlay.
 
 By default all information from the conformation is copied (`copy_policy=all`), including charges and particle type.
 To for example copy only positions, use `copy_policy=positions`. This can be useful when using speciation moves.
+
+`copy_policy`  | What is copied
+-------------- | ----------------------------------------------------
+`all`          | All particle properties
+`positions`    | Positions, only
+`charges`      | Charges, only
+`patches`      | Spherocylinder patch and length, but keep directions
 
 
 ### Pivot
@@ -310,6 +387,47 @@ For cuboidal geometries, the scaling in each of the specified dimensions is $(V^
 where $d=3$ for `isotropic`, $d=2$ for `xy`, and $d=1$ for `z`.
 
 _Warning:_ Untested for cylinders, slits.
+
+## Gibbs Ensemble (unstable)
+
+_Note: this is marked unstable or experimental, meaning that it is still being tested and
+may see significant changes over time._
+
+[Gibbs ensemble](https://dx.doi.org/10/cvzgw9)
+can be used to investigate phase transitions by _matter_ and _volume_ exchange between two cells.
+The `examples/gibbs-ensemble/` directory contains a Jupyter Notebook with a worked example of a simple Lennard-Jones system.
+Multi-component mixtures are supported via the required `molecules` and `molecule` keywords which indicate which species
+are to be affected.
+Volume and matter exchange are done in separate moves, the latter _per_ species:
+
+~~~ yaml
+insertmolecule:
+  - A: 100, inactive: 50} # note inactive species
+  - B: 100, inactive: 50}
+moves:
+  - gibbs_volume: { dV: 1.0, molecules: ["A", "B"] } # exchange volume
+  - gibbs_matter: { molecule: "A" } # exchange A molecules
+  - gibbs_matter: { molecule: "B" } # exchange B molecules
+~~~
+
+In addition, you will likely also want to add translational and rotational moves.
+It is important that each cell can accommodate _all_ particles in the system.
+This is done by reserving an appropriate number of `inactive` particles in the initial
+configuration, see above example.
+An error is thrown if this criterion is neglected.
+
+### Running
+
+Gibbs ensemble requires that Faunus is compiled with MPI support, check with `faunus --version`,
+and _exactly two_ processes must be give with e.g. `mpirun -np 2`.
+
+- If starting conditions for each cell are identical, use `--nopfx` and a single `input.json` file:
+  ~~~ bash
+  mpirun -np 2 faunus --nopfx --input input.json
+  ~~~
+- If input differs, e.g. different initial volumes or number of particles, create two input files, prefixed with `mpi0.` and `mpi1.`,
+  and skip the `--nopfx` flag.
+- Reload from existing states by using the `--state` flag. `mpi` prefix are automatically added.
 
 
 ## Reactive Canonical Monte Carlo

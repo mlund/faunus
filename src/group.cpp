@@ -6,6 +6,7 @@
 #include <cereal/archives/binary.hpp>
 #include <cereal/types/memory.hpp>
 #include <nlohmann/json.hpp>
+#include <doctest/doctest.h>
 
 namespace Faunus {
 
@@ -182,6 +183,8 @@ std::optional<std::reference_wrapper<const Point>> Group::massCenter() const {
     }
     return std::nullopt;
 }
+
+bool Group::isFull() const { return size() == capacity(); }
 
 /**
  * @param mask Bitmask based on enum `Group::Selectors`

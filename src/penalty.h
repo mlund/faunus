@@ -14,17 +14,17 @@ namespace Faunus::Energy {
  * same in both the trial and old state energies it will not affect
  * MC move acceptance.
  */
-class Penalty : public Energybase {
+class Penalty : public EnergyTerm {
   private:
     const Space& spc;
     std::string penalty_function_filename;
     std::string histogram_filename;
     bool overwrite_penalty = true; // overwrite input penalty function?
     void loadPenaltyFunction(const std::string& filename);
-    void savePenaltyFunction(); //!< Save penalty function and histogram to disk
+    void toDisk(); //!< Save penalty function and histogram to disk
     void initializePenaltyFunction(const json& j);
     void to_json(json& j) const override;
-    virtual void update(const std::vector<double>& coordinate);
+    virtual void updatePenalty(const std::vector<double>& coordinate);
 
   protected:
     typedef typename std::shared_ptr<ReactionCoordinate::ReactionCoordinateBase> Tcoord;
@@ -48,8 +48,10 @@ class Penalty : public Energybase {
   public:
     Penalty(const json& j, const Space& spc);
     virtual ~Penalty(); //!< destruct and save to disk (!)
-    double energy(Change& change) override;
-    void sync(Energybase* other, const Change& change) override;
+    double energy(const Change& change) override;
+    void sync(EnergyTerm* other, const Change& change) override;
+    void streamPenaltyFunction(std::ostream &stream) const;
+    void streamHistogram(std::ostream &stream) const;
 };
 
 #ifdef ENABLE_MPI
@@ -61,7 +63,7 @@ class PenaltyMPI : public Penalty {
     const MPI::Controller& mpi;
     Eigen::VectorXi weights;                                     //!< array w. mininum histogram counts
     Eigen::VectorXd buffer;                                      //!< receive buffer for penalty functions
-    void update(const std::vector<double>& coordinate) override; //!< Average penalty function across all nodes
+    void updatePenalty(const std::vector<double>& coordinate) override; //!< Average penalty function across all nodes
     void averagePenaltyFunctions();                              //!< Average penalty functions over all MPI nodes
   public:
     PenaltyMPI(const json& j, Space& spc, const MPI::Controller& mpi);

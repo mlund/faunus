@@ -4,13 +4,13 @@
 #include "bonds.h"
 
 namespace Faunus {
-namespace Move {
+namespace move {
 /**
  * @brief An abstract base class for rotational movements of a polymer chain
  */
-class ChainRotationMoveBase : public MoveBase {
+class ChainRotationMoveBase : public Move {
   protected:
-    using MoveBase::spc;
+    using Move::spc;
     std::string molname;
     size_t molid;
     double dprot;             //!< maximal angle of rotation, ±0.5*dprot
@@ -113,7 +113,7 @@ class PivotMove : public ChainRotationMove {
     using TBase = ChainRotationMove;
 
   private:
-    BasePointerVector<Potential::HarmonicBond> bonds;
+    BasePointerVector<pairpotential::HarmonicBond> bonds;
 
   public:
     explicit PivotMove(Space &spc);
@@ -132,5 +132,5 @@ class PivotMove : public ChainRotationMove {
     size_t select_segment() override;
 };
 
-} // namespace Move
+} // namespace move
 } // namespace Faunus

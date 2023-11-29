@@ -1,18 +1,18 @@
 #include "space.h"
 #include "io.h"
-#include "aux/iteratorsupport.h"
 #include "spdlog/spdlog.h"
 #include "aux/eigensupport.h"
 #include <range/v3/algorithm/for_each.hpp>
-#include <range/v3/algorithm/transform.hpp>
 #include <range/v3/algorithm/count_if.hpp>
-#include <memory>
-#include <stdexcept>
+#include <doctest/doctest.h>
 
 namespace Faunus {
 
 bool Change::GroupChange::operator<(const Faunus::Change::GroupChange& other) const {
     return group_index < other.group_index;
+}
+void Change::GroupChange::sort() {
+    std::sort(relative_atom_indices.begin(), relative_atom_indices.end());
 }
 
 void Change::clear() {
@@ -59,6 +59,24 @@ void Change::sanityCheck(const std::vector<Group>& group_vector) const {
             }
         }
     }
+}
+
+/**
+ * @brief Determines if the change reflects a single particle change
+ * @return Optional pair with index of group (first) and relative particle index (second) in the group
+ *
+ * Since single particle updates are frequently used, this convenience function helps
+ * to establish if this is the case.
+ */
+std::optional<std::pair<Change::index_type, Change::index_type>> Change::singleParticleChange() const {
+    if (!everything || !volume_change) {
+        if (groups.size() == 1 && groups.front().relative_atom_indices.size() == 1) {
+            const auto group_index = groups.front().group_index;
+            const auto particle_index = groups.front().relative_atom_indices.front();
+            return std::make_pair(group_index, particle_index);
+        }
+    }
+    return std::nullopt;
 }
 
 void to_json(json& j, const Change::GroupChange& group_change) {
@@ -150,38 +168,41 @@ Space::GroupType& Space::addGroup(MoleculeData::index_type molid, const Particle
  * - implicit molecules
  */
 void Space::sync(const Space &other, const Change &change) {
-    if (&other != this && !change.empty()) {
-        assert(!groups.empty());
-        assert(particles.size() == other.particles.size());
-        assert(groups.size() == other.groups.size());
-        assert(implicit_reservoir.size() == other.implicit_reservoir.size());
-        if (change.volume_change or change.everything) {
-            geometry = other.geometry; // copy simulation geometry
-        }
-        if (change.everything) {                                            // deep copy *everything*
-            implicit_reservoir = other.implicit_reservoir;                  // copy all implicit molecules
-            particles = other.particles;                                    // copy all positions
-            groups = other.groups;                                          // copy all groups
-            assert(particles.begin() != other.particles.begin());           // check deep copy problem
-            assert(groups.front().begin() != other.groups.front().begin()); // check deep copy problem
-        } else {
-            for (const auto &changed : change.groups) {             // look over changed groups
-                auto& group = groups.at(changed.group_index);       // old group
-                auto& other_group = other.groups.at(changed.group_index); // new group
-                assert(group.id == other_group.id);
-                if (group.traits().isImplicit()) { // the molecule is implicit
-                    implicit_reservoir[group.id] = other.implicit_reservoir.at(group.id);
-                } else if (changed.all) {
-                    group = other_group;            // copy everything
-                } else {                            // copy only a subset
-                    group.shallowCopy(other_group); // copy group data but *not* particles
-                    for (auto i : changed.relative_atom_indices) { // loop over atom index (rel. to group)
-                        group.at(i) = other_group.at(i); // deep copy select particles
-                    }
+    if (&other == this || change.empty()) {
+        return;
+    }
+    if (particles.size() != other.particles.size() || groups.size() != other.groups.size() ||
+        implicit_reservoir.size() != other.implicit_reservoir.size()) {
+        throw std::runtime_error("space sync error");
+    }
+    if (change.volume_change or change.everything) {
+        geometry = other.geometry; // copy simulation geometry
+    }
+    if (change.everything) {                                            // deep copy *everything*
+        implicit_reservoir = other.implicit_reservoir;                  // copy all implicit molecules
+        particles = other.particles;                                    // copy all positions
+        groups = other.groups;                                          // copy all groups
+        assert(particles.begin() != other.particles.begin());           // check deep copy problem
+        assert(groups.front().begin() != other.groups.front().begin()); // check deep copy problem
+    } else {
+        for (const auto& changed : change.groups) {                   // look over changed groups
+            auto& group = groups.at(changed.group_index);             // old group
+            auto& other_group = other.groups.at(changed.group_index); // new group
+            assert(group.id == other_group.id);
+            if (group.traits().isImplicit()) { // the molecule is implicit
+                implicit_reservoir[group.id] = other.implicit_reservoir.at(group.id);
+            } else if (changed.all) {
+                group = other_group;                           // copy everything
+            } else {                                           // copy only a subset
+                group.shallowCopy(other_group);                // copy group data but *not* particles
+                for (auto i : changed.relative_atom_indices) { // loop over atom index (rel. to group)
+                    group.at(i) = other_group.at(i);           // deep copy select particles
                 }
             }
         }
     }
+    // apply registered triggers
+    ranges::cpp20::for_each(onSyncTriggers, [&](auto& trigger) { trigger(*this, other, change); });
 }
 
 /**
@@ -341,6 +362,10 @@ std::size_t Space::getFirstActiveParticleIndex(const GroupType& group) const {
 
 size_t Space::countAtoms(AtomData::index_type atomid) const {
     return ranges::cpp20::count_if(activeParticles(), [&](auto& particle) { return particle.id == atomid; });
+}
+
+void Space::updateInternalState(const Change& change) {
+    std::for_each(changeTriggers.begin(), changeTriggers.end(), [&](auto& trigger) { trigger(*this, change); });
 }
 
 TEST_CASE("Space::numParticles") {

@@ -341,6 +341,20 @@ with gzip.open('distances.mtx.gz', 'rt') as f:
         print(np.sort(counts)) # cluster size distribution
 ~~~
 
+### Surface Area
+
+Calculates the surface area of atoms, groups, or the entire system.
+
+`sasa`         | Description
+-------------- | ---------------------------
+`nstep`        | Interval between samples
+`file`         | Stream sampled area for each `nstep` to file (optiomal)
+`radius=1.4`   | Probe radius (Å)
+`policy`       | Sample policy: `atomic`, `molecular`, `atoms_in_molecule`
+`molecule`     | Molecule name to sample if `molecular` or `atoms_in_molecule` policies
+`atom`         | Atom name to sample if `atomic` policy
+`atomlist`     | List of atom ids if `atoms_in_molecule` policy
+
 ## Charge Properties
 
 ### Molecular Multipoles

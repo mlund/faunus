@@ -1748,7 +1748,7 @@ PolymerShape::PolymerShape(const json& j, const Space& spc)
 }
 
 void SASAAnalysis::_to_disk() {
-    if (auto stream = std::ofstream(filename + "_histogram.dat")) {
+    if (auto stream = std::ofstream(MPI::prefix + "sasa_histogram.dat")) {
         stream << sasa_histogram;
     }
     if (output_stream) {
@@ -1793,7 +1793,7 @@ SASAAnalysis::SASAAnalysis(const json& j, const Space& spc)
                    j.value("policy", Policies::INVALID), spc) {
     from_json(j);
     policy->from_json(j);
-    cite = "doi:10.12688/f1000research.7931.1";
+    cite = "doi:10/dbjh";
 }
 
 void SASAAnalysis::_to_json(json& json_ouput) const {
@@ -1814,6 +1814,9 @@ void SASAAnalysis::takeSample(const double area) {
     average_data.area += area;
     average_data.area_squared += std::pow(area, 2);
     sasa_histogram(area)++;
+    if (output_stream) {
+        *output_stream << this->getNumberOfSteps() << " " << area << "\n";
+    }
 }
 
 /** @brief constructs a SamplingPolicy object based on json input and loads it with data

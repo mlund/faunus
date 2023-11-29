@@ -981,8 +981,7 @@ class SASAAnalysis : public Analysis {
 
   public:
     SASAAnalysis(const json& j, const Space& spc);
-    SASAAnalysis(const double probe_radius, const int slices_per_atom, const double resolution, const Policies policy,
-                 const Space& spc);
+    SASAAnalysis(double probe_radius, int slices_per_atom, double resolution, Policies policy, const Space& spc);
 };
 
 NLOHMANN_JSON_SERIALIZE_ENUM(SASAAnalysis::Policies, {{SASAAnalysis::Policies::ATOMIC, "atomic"},

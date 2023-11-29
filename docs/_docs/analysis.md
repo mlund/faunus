@@ -348,12 +348,13 @@ Calculates the surface area of atoms, groups, or the entire system.
 `sasa`         | Description
 -------------- | ---------------------------
 `nstep`        | Interval between samples
-`file`         | Stream sampled area for each `nstep` to file (optiomal)
+`nskip=0`      | Number of initial steps excluded from the analysis
+`file`         | Optionally stream area for each `nstep` to file (`.dat|.dat.gz`)
 `radius=1.4`   | Probe radius (Å)
 `policy`       | Sample policy: `atomic`, `molecular`, `atoms_in_molecule`
 `molecule`     | Molecule name to sample if `molecular` or `atoms_in_molecule` policies
 `atom`         | Atom name to sample if `atomic` policy
-`atomlist`     | List of atom ids if `atoms_in_molecule` policy
+`atomlist`     | List of atom names if `atoms_in_molecule` policy
 
 ## Charge Properties
 

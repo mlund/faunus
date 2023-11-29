@@ -1,6 +1,8 @@
 
 #include "sasa.h"
+#include "particle.h"
 #include "space.h"
+#include <cmath>
 #include <range/v3/view/zip.hpp>
 #include <range/v3/view/iota.hpp>
 #include <range/v3/algorithm/for_each.hpp>
@@ -12,7 +14,7 @@ namespace SASA {
 
 /**
  * @brief updates sasa of target particles
- * @param neighbours_data array of NeighbourData objects
+ * @param neighbours array of NeighbourData objects
  * @param target_indices absolute indicies of target particles in ParticleVector
  */
 void SASABase::updateSASA(const std::vector<SASA::Neighbours>& neighbours,
@@ -26,7 +28,7 @@ void SASABase::updateSASA(const std::vector<SASA::Neighbours>& neighbours,
     //}
 }
 
-double SASABase::calcSASAOfParticle(Space& spc, const Particle& particle) const {
+double SASABase::calcSASAOfParticle(const Space& spc, const Particle& particle) const {
     const auto neighbours = calcNeighbourDataOfParticle(spc, indexOf(particle));
     return calcSASAOfParticle(neighbours);
 }
@@ -37,7 +39,7 @@ double SASABase::calcSASAOfParticle(Space& spc, const Particle& particle) const 
    calculated
  * then for each neighbour, calculate the overlaping part of circle_i with neighbouring circle_j and add these
  * arcs into vector, finally from this vector, calculate the exposed part of circle_i
- * @param neighbours NeighbourData object of given particle
+ * @param neighbour NeighbourData object of given particle
  */
 double SASABase::calcSASAOfParticle(const SASABase::Neighbours& neighbour) const {
     const auto sasa_radius_i = sasa_radii.at(neighbour.index);
@@ -204,7 +206,8 @@ std::vector<SASA::Neighbours> SASA::calcNeighbourData(const Space& spc,
  */
 SASA::SASA(const Space& spc, double probe_radius, int slices_per_atom)
     : SASABase(spc, probe_radius, slices_per_atom) {}
-SASA::SASA(const json& j, Space& spc) : SASABase(spc, j.value("radius", 1.4) * 1.0_angstrom, j.value("slices", 20)) {}
+SASA::SASA(const json& j, const Space& spc)
+    : SASABase(spc, j.value("radius", 1.4) * 1.0_angstrom, j.value("slices", 20)) {}
 
 /**
  * @brief updates radii vector in case of matter change
@@ -295,7 +298,7 @@ SASACellList<CellList>::SASACellList(const Space& spc, double probe_radius, int 
     : SASABase(spc, probe_radius, slices_per_atom) {}
 
 template <typename CellList>
-SASACellList<CellList>::SASACellList(const json& j, Space& spc)
+SASACellList<CellList>::SASACellList(const json& j, const Space& spc)
     : SASABase(spc, j.value("radius", 1.4) * 1.0_angstrom, j.value("slices", 20)) {}
 
 /**
@@ -470,8 +473,7 @@ template class SASACellList<SparseFixedCellList>;
  *
  * @return total sasa of a given group
  */
-template<>
-double SASABase::calcSASAOf<Group>(Space& spc, const Group& group) const{
+template <> double SASABase::calcSASAOf<Group>(const Space& spc, const Group& group) const {
     return calcSASA(spc, group.begin(), group.end());
 }
 
@@ -482,8 +484,7 @@ double SASABase::calcSASAOf<Group>(Space& spc, const Group& group) const{
  *
  * @return total sasa of a given particle
  */
-template<>
-double SASABase::calcSASAOf<Particle>(Space& spc, const Particle& particle) const{
+template <> double SASABase::calcSASAOf<Particle>(const Space& spc, const Particle& particle) const {
     return calcSASAOfParticle(spc, particle);
 }
 

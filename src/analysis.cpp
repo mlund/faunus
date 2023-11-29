@@ -171,9 +171,9 @@ std::unique_ptr<Analysis> createAnalysis(const std::string& name, const json& j,
         } else if (name == "reactioncoordinate") {
             return std::make_unique<FileReactionCoordinate>(j, spc);
         } else if (name == "sanity") {
-            return std::make_shared<SanityCheck>(j, spc);
+            return std::make_unique<SanityCheck>(j, spc);
         } else if (name == "sasa") {
-            return std::make_shared<SASAAnalysis>(j, spc);
+            return std::make_unique<SASAAnalysis>(j, spc);
         } else if (name == "savestate") {
             return std::make_unique<SaveState>(j, spc);
         } else if (name == "penaltyfunction") {
@@ -1764,9 +1764,11 @@ void SASAAnalysis::_from_json(const json& input) {
 }
 
 SASAAnalysis::SASAAnalysis(const double probe_radius, const int slices_per_atom, const double resolution,
-                           const Policies selected_policy, Space& spc)
-    : Analysisbase(spc, "sasa"), probe_radius(probe_radius), slices_per_atom(slices_per_atom),
-      sasa_histogram(resolution, 0.) {
+                           const Policies selected_policy, const Space& spc)
+    : Analysis(spc, "sasa")
+    , probe_radius(probe_radius)
+    , slices_per_atom(slices_per_atom)
+    , sasa_histogram(resolution, 0.) {
 
     using Faunus::SASA::SASACellList;
     const auto periodic_dimensions =
@@ -1786,7 +1788,7 @@ SASAAnalysis::SASAAnalysis(const double probe_radius, const int slices_per_atom,
     setPolicy(selected_policy);
 }
 
-SASAAnalysis::SASAAnalysis(const json& j, Space& spc)
+SASAAnalysis::SASAAnalysis(const json& j, const Space& spc)
     : SASAAnalysis(j.value("radius", 1.4_angstrom), j.value("slices", 20), j.value("resolution", 50.0),
                    j.value("policy", Policies::INVALID), spc) {
     from_json(j);
@@ -1872,7 +1874,7 @@ void SamplingPolicyBase::sampleTotalSASA(TBegin first, TEnd last, SASAAnalysis& 
     }
 }
 
-void AtomicPolicy::sample(Space& spc, SASAAnalysis& analysis) {
+void AtomicPolicy::sample(const Space& spc, SASAAnalysis& analysis) {
     auto atoms = spc.findAtoms(atom_id);
     sampleIndividualSASA(atoms.begin(), atoms.end(), analysis);
 }
@@ -1882,7 +1884,7 @@ void AtomicPolicy::from_json(const json& input) {
     atom_id = findAtomByName(atom_name).id();
 }
 
-void MolecularPolicy::sample(Space& spc, SASAAnalysis& analysis) {
+void MolecularPolicy::sample(const Space& spc, SASAAnalysis& analysis) {
     auto molecules = spc.findMolecules(molecule_id);
     sampleIndividualSASA(molecules.begin(), molecules.end(), analysis);
 }
@@ -1892,7 +1894,7 @@ void MolecularPolicy::from_json(const json& input) {
     molecule_id = findMoleculeByName(molecule_name).id();
 }
 
-void AtomsInMoleculePolicy::sample(Space& spc, SASAAnalysis& analysis) {
+void AtomsInMoleculePolicy::sample(const Space& spc, SASAAnalysis& analysis) {
 
     auto molecules = spc.findMolecules(molecule_id);
     ranges::for_each(molecules, [&](const auto& molecule) {

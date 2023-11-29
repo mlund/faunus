@@ -943,7 +943,7 @@ class SamplingPolicyBase;
  * Holds a policy which defines type of sampling to be used and
  * is chosen by the user input
  */
-class SASAAnalysis : public Analysisbase {
+class SASAAnalysis : public Analysis {
     using index_type = Faunus::AtomData::index_type;
     using count_type = size_t;
     using table_type = Equidistant2DTable<double, count_type>;
@@ -980,9 +980,9 @@ class SASAAnalysis : public Analysisbase {
     friend class SamplingPolicyBase;
 
   public:
-    SASAAnalysis(const json& j, Space& spc);
+    SASAAnalysis(const json& j, const Space& spc);
     SASAAnalysis(const double probe_radius, const int slices_per_atom, const double resolution, const Policies policy,
-                 Space& spc);
+                 const Space& spc);
 };
 
 NLOHMANN_JSON_SERIALIZE_ENUM(SASAAnalysis::Policies, {{SASAAnalysis::Policies::ATOMIC, "atomic"},
@@ -999,7 +999,7 @@ class SamplingPolicyBase {
     template <typename TBegin, typename TEnd> void sampleTotalSASA(TBegin first, TEnd last, SASAAnalysis& analysis);
 
   public:
-    virtual void sample(Space& spc, SASAAnalysis& analysis) = 0;
+    virtual void sample(const Space& spc, SASAAnalysis& analysis) = 0;
     virtual void to_json(json& input) const = 0;
     virtual void from_json(const json& input) = 0;
 
@@ -1013,7 +1013,7 @@ class AtomicPolicy : public SamplingPolicyBase {
     AtomData::index_type atom_id; //!< id of atom type to be sampled
     std::string atom_name;        //!< name of the atom type to be sampled
 
-    void sample(Space& spc, SASAAnalysis& analysis) override;
+    void sample(const Space& spc, SASAAnalysis& analysis) override;
     void to_json(json& input) const override;
     void from_json(const json& input) override;
 
@@ -1027,7 +1027,7 @@ class MolecularPolicy : public SamplingPolicyBase {
     MoleculeData::index_type molecule_id; //!< id of molecule to be sampled
     std::string molecule_name;  //!< name of the molecule to be sampled
 
-    void sample(Space& spc, SASAAnalysis& analysis) override;
+    void sample(const Space& spc, SASAAnalysis& analysis) override;
     void to_json(json& input) const override;
     void from_json(const json& input) override;
 
@@ -1047,7 +1047,7 @@ class AtomsInMoleculePolicy : public SamplingPolicyBase {
     std::string molecule_name;          //!<  selected molecule name to be sampled
     std::set<std::string> atom_names;   //!< selected names of atoms in the chosen molecule
 
-    void sample(Space& spc, SASAAnalysis& analysis) override;
+    void sample(const Space& spc, SASAAnalysis& analysis) override;
     void to_json(json& input) const override;
     void from_json(const json& input) override;
 

@@ -733,7 +733,7 @@ class VirtualTranslate : public PerturbationAnalysis {
 class MultipoleDistribution : public Analysis {
     struct Data {
         using average_type = Average<double>;
-        average_type exact;
+        average_type exact; //!< Exact electrostatic energy
         average_type ion_ion;
         average_type ion_dipole;
         average_type ion_quadrupole;
@@ -746,16 +746,15 @@ class MultipoleDistribution : public Analysis {
     std::string filename;                                 //!< output file name
     double dr = 0.0;                                      //!< distance resolution
 
-    double g2g(const Space::GroupType& group1,
-               const Space::GroupType& group2); //<! exact ion-ion energy between particles
-    void save() const;                          //!< save to disk
     void _sample() override;
     void _to_json(json& j) const override;
     void _to_disk() override;
+    void sampleGroupGroup(const Space::GroupType& group1, const Space::GroupType& group2);
+    double groupGroupExactEnergy(const Space::GroupType& group1,
+                                 const Space::GroupType& group2) const; //<! exact ion-ion energy between particles
 
   public:
     MultipoleDistribution(const json& j, const Space& spc);
-
 }; // end of multipole distribution
 
 /**

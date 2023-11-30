@@ -1,4 +1,5 @@
 #include "analysis.h"
+#include "auxiliary.h"
 #include "core.h"
 #include "move.h"
 #include "energy.h"
@@ -1472,57 +1473,62 @@ void XTCtraj::_sample() {
 
 // =============== MultipoleDistribution ===============
 
-double MultipoleDistribution::g2g(const Space::GroupType& group1, const Space::GroupType& group2) {
+double MultipoleDistribution::groupGroupExactEnergy(const Space::GroupType& group1,
+                                                    const Space::GroupType& group2) const {
     double energy = 0.0;
-    for (const auto& particle_i : group1) {
-        for (const auto& particle_j : group2) {
-            energy += particle_i.charge * particle_j.charge / spc.geometry.vdist(particle_i.pos, particle_j.pos).norm();
+    for (const auto& a : group1) {
+        for (const auto& b : group2) {
+            energy += a.charge * b.charge / spc.geometry.vdist(a.pos, b.pos).norm();
         }
     }
     return energy;
 }
 
-/**
- * @note `fmt` is currently included w. spdlog but has been accepted into c++20.
- */
-void MultipoleDistribution::save() const {
-    if (number_of_samples > 0) {
-        if (std::ofstream stream(MPI::prefix + filename.c_str()); stream) {
-            stream << "# Multipolar energies (kT/lB)\n"
-                   << fmt::format("# {:>8}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}\n", "R", "exact", "tot", "ii",
-                                  "id", "dd", "iq", "mucorr");
-            for (auto [r_bin, energy] : mean_energy) {
-                const auto distance = r_bin * dr;
-                const auto u_tot = energy.ion_ion.avg() + energy.ion_dipole.avg() + energy.dipole_dipole.avg() +
-                                   energy.ion_quadrupole.avg();
-                stream << fmt::format("{:10.4f}{:10.4f}{:10.4f}{:10.4f}{:10.4f}{:10.4f}{:10.4f}{:10.4f}\n", distance,
-                                      energy.exact.avg(), u_tot, energy.ion_ion.avg(), energy.ion_dipole.avg(),
-                                      energy.dipole_dipole.avg(), energy.ion_quadrupole.avg(),
-                                      energy.dipole_dipole_correlation.avg());
+/// Calculate multipole energies between two groups and update averages at given separation
+void MultipoleDistribution::sampleGroupGroup(const Space::GroupType& group1, const Space::GroupType& group2) {
+    const auto a = Faunus::toMultipole(group1, spc.geometry.getBoundaryFunc());
+    const auto b = Faunus::toMultipole(group2, spc.geometry.getBoundaryFunc());
+    const auto distance = spc.geometry.vdist(group1.mass_center, group2.mass_center);
+    auto& data = mean_energy[to_bin(distance.norm(), dr)];
+    data.exact += groupGroupExactEnergy(group1, group2);
+    data.ion_ion += a.charge * b.charge / distance.norm();
+    data.ion_dipole +=
+        q2mu(a.charge * b.getExt().mulen, b.getExt().mu, b.charge * a.getExt().mulen, a.getExt().mu, distance);
+    data.dipole_dipole += mu2mu(a.getExt().mu, b.getExt().mu, a.getExt().mulen * b.getExt().mulen, distance);
+    data.ion_quadrupole += q2quad(a.charge, b.getExt().Q, b.charge, a.getExt().Q, distance);
+    data.dipole_dipole_correlation += a.getExt().mu.dot(b.getExt().mu);
+}
+
+void MultipoleDistribution::_sample() {
+    // loop over active molecules
+    for (const auto& group1 : spc.findMolecules(ids.at(0))) {
+        for (const auto& group2 : spc.findMolecules(ids.at(1))) {
+            if (&group1 != &group2) {
+                sampleGroupGroup(group1, group2);
             }
         }
     }
 }
 
-void MultipoleDistribution::_sample() {
-    for (auto& group1 : spc.findMolecules(ids[0])) {
-        // find active molecules
-        for (auto& group2 : spc.findMolecules(ids[1])) {
-            // find active molecules
-            if (&group1 != &group2) {
-                const auto a = Faunus::toMultipole(group1, spc.geometry.getBoundaryFunc());
-                const auto b = Faunus::toMultipole(group2, spc.geometry.getBoundaryFunc());
-                const auto distance = spc.geometry.vdist(group1.mass_center, group2.mass_center);
-                auto& data = mean_energy[to_bin(distance.norm(), dr)];
-                data.exact += g2g(group1, group2);
-                data.ion_ion += a.charge * b.charge / distance.norm();
-                data.ion_dipole += q2mu(a.charge * b.getExt().mulen, b.getExt().mu, b.charge * a.getExt().mulen,
-                                        a.getExt().mu, distance);
-                data.dipole_dipole +=
-                    mu2mu(a.getExt().mu, b.getExt().mu, a.getExt().mulen * b.getExt().mulen, distance);
-                data.ion_quadrupole += q2quad(a.charge, b.getExt().Q, b.charge, a.getExt().Q, distance);
-                data.dipole_dipole_correlation += a.getExt().mu.dot(b.getExt().mu);
-            }
+/**
+ * @note `fmt` is currently included w. spdlog but has been accepted into c++20.
+ */
+void MultipoleDistribution::_to_disk() {
+    if (number_of_samples == 0) {
+        return;
+    }
+    if (std::ofstream stream(MPI::prefix + filename.c_str()); stream) {
+        stream << "# Multipolar energies (kT/lB)\n"
+               << fmt::format("# {:>8}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}\n", "R", "exact", "tot", "ii", "id",
+                              "dd", "iq", "mucorr");
+        for (auto [r_bin, energy] : mean_energy) {
+            const auto distance = r_bin * dr;
+            const auto u_tot = energy.ion_ion.avg() + energy.ion_dipole.avg() + energy.dipole_dipole.avg() +
+                               energy.ion_quadrupole.avg();
+            stream << fmt::format("{:10.4f}{:10.4f}{:10.4f}{:10.4f}{:10.4f}{:10.4f}{:10.4f}{:10.4f}\n", distance,
+                                  energy.exact.avg(), u_tot, energy.ion_ion.avg(), energy.ion_dipole.avg(),
+                                  energy.dipole_dipole.avg(), energy.ion_quadrupole.avg(),
+                                  energy.dipole_dipole_correlation.avg());
         }
     }
 }
@@ -1540,8 +1546,6 @@ MultipoleDistribution::MultipoleDistribution(const json& j, const Space& spc)
         throw std::runtime_error("specify exactly two molecules");
     }
 }
-
-void MultipoleDistribution::_to_disk() { save(); }
 
 // =============== AtomInertia ===============
 

@@ -341,6 +341,29 @@ with gzip.open('distances.mtx.gz', 'rt') as f:
         print(np.sort(counts)) # cluster size distribution
 ~~~
 
+### Surface Area
+
+Calculates surface areas using different sample policies
+that selects by:
+
+1. atoms types (`atomic`)
+2. molecule types (`molecular`)
+3. atom types in specific molecules (`atoms_in_molecule`)
+
+In addition to the optional `file` streaming, a histogram of observed areas
+is filed to disk, `sasa_histogram.dat`.
+
+`sasa`         | Description
+-------------- | ---------------------------
+`nstep`        | Interval between samples
+`nskip=0`      | Number of initial steps excluded from the analysis
+`policy`       | Sample policy: `atomic`, `molecular`, `atoms_in_molecule`
+`molecule`     | Molecule name to sample if `molecular` or `atoms_in_molecule` policies
+`atom`         | Atom name to sample if `atomic` policy
+`atomlist`     | List of atom names if `atoms_in_molecule` policy
+`file`         | Optionally stream area for each `nstep` to file (`.dat|.dat.gz`)
+`radius=1.4`   | Probe radius (Å)
+
 ## Charge Properties
 
 ### Molecular Multipoles

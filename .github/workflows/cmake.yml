@@ -37,13 +37,17 @@ jobs:
       # and build directories, but this is only available with CMake 3.13 and higher.  
       # The CMake binaries on the Github Actions machines are (as of this writing) 3.12
       # Force libc++ due to https://github.com/actions/runner-images/issues/8659
-      run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DENABLE_OPENMP=on -DENABLE_PYTHON=off -DENABLE_TBB=off -DCMAKE_CXX_FLAGS="-stdlib=libc++"
+      run: |
+        export LDFLAGS="-fuse-ld=lld"
+        cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DENABLE_OPENMP=on -DENABLE_PYTHON=off -DENABLE_TBB=off -DCMAKE_CXX_FLAGS="-stdlib=libc++"
 
     - name: Build
       working-directory: ${{github.workspace}}/build
       shell: bash
       # Execute the build.  You can specify a specific target with "--target <NAME>"
-      run: cmake --build . --config $BUILD_TYPE --target faunus -j 2
+      run: |
+        export LDFLAGS="-fuse-ld=lld"
+        cmake --build . --config $BUILD_TYPE --target faunus -j 2
 
     - name: Test
       working-directory: ${{github.workspace}}/build

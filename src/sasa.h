@@ -5,14 +5,17 @@
 
 #include "celllistimpl.h"
 #include "particle.h"
+#include <range/v3/numeric.hpp>
 #include <numbers>
 
 namespace Faunus {
 
 class Space;
+
 namespace Geometry {
 class Chameleon;
 }
+
 struct Change;
 
 namespace SASA {
@@ -33,9 +36,10 @@ class SASABase {
         index_type index;                //!< index of particle whose neighbours are in indices
     };
 
-    bool needs_syncing = false; //!< flag indicating if syncing of cell_lists is needed
-                                //!< this is important  in case there is a particle insertion
-                                //!< which is rejected due to containerOverlap, because the sasa->update is not called
+    bool needs_syncing = false;
+    //!< flag indicating if syncing of cell_lists is needed
+    //!< this is important  in case there is a particle insertion
+    //!< which is rejected due to containerOverlap, because the sasa->update is not called
 
   protected:
     double probe_radius = 1.4;      //!< radius of the probe sphere
@@ -57,8 +61,27 @@ class SASABase {
     double exposedArcLength(std::vector<std::pair<double, double>>& arcs) const;
 
   public:
+    double calcSASAOfParticle(const Space& spc, const Particle& particle) const;
+
+    /**
+ * @brief calculates total sasa of either particles or groups between given iterators
+ * @param spc
+ * @param begin iterator to either a first particle or group in a range
+ * @param end  iterator to either end of particle or group in a range
+ * @tparam TBegin
+ * @tparam TEnd
+     */
+    template <typename TBegin, typename TEnd> double calcSASA(const Space& spc, TBegin begin, TEnd end) const {
+        return ranges::accumulate(begin, end, 0.0, [&spc, this](auto& area, const auto& species) {
+            return area + this->calcSASAOf(spc, species);
+        });
+    }
+
+    template <typename TSpecies> double calcSASAOf(const Space& spc, const TSpecies& species) const;
+
     void updateSASA(const std::vector<SASABase::Neighbours>& neighbours_data,
                     const std::vector<index_type>& target_indices);
+
     virtual void init(const Space& spc) = 0;
     virtual std::vector<SASABase::Neighbours>
     calcNeighbourData(const Space& spc, const std::vector<index_type>& target_indices) const = 0;
@@ -81,7 +104,7 @@ class SASA : public SASABase {
     SASA::Neighbours calcNeighbourDataOfParticle(const Space& spc, index_type target_index) const override;
     void update([[maybe_unused]] const Space& spc, [[maybe_unused]] const Change& change) override;
     SASA(const Space& spc, double probe_radius, int slices_per_atom);
-    SASA(const json& j, Space& spc);
+    SASA(const json& j, const Space& spc);
 };
 
 /**
@@ -100,7 +123,7 @@ template <typename CellList> class SASACellList : public SASABase {
 
   public:
     SASACellList(const Space& spc, double probe_radius, int slices_per_atom);
-    SASACellList(const json& j, Space& spc);
+    SASACellList(const json& j, const Space& spc);
     virtual ~SASACellList() = default;
     void init(const Space& spc) override;
     SASABase::Neighbours calcNeighbourDataOfParticle(const Space& spc, index_type target_index) const override;
@@ -113,6 +136,7 @@ template <typename CellList> class SASACellList : public SASABase {
     void updateMatterChange(const Space& spc, const Change& change);
     void updatePositionsChange(const Space& spc, const Change& change);
 };
+
 using PeriodicGrid = CellList::Grid::Grid3DPeriodic;
 using FixedGrid = CellList::Grid::Grid3DFixed;
 

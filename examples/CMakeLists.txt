@@ -137,6 +137,13 @@ add_test(
         WORKING_DIRECTORY ${EXAMPLES_DIR}/polymers)
 
 add_test(
+        NAME sasa
+        COMMAND sh -c "${Python_EXECUTABLE} ${YASON} sasa.yml\
+    | $<TARGET_FILE:faunus> --quiet\
+    && ${Python_EXECUTABLE} ${JSON_COMPARE} sasa.out.json out.json --tol 0.01"
+        WORKING_DIRECTORY ${EXAMPLES_DIR}/sasa)
+
+add_test(
         NAME smartmc
         COMMAND sh -c "${Python_EXECUTABLE} ${YASON} smartmc.yml\
     | $<TARGET_FILE:faunus> --quiet\

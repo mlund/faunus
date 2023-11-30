@@ -5,6 +5,7 @@
 #include "reactioncoordinate.h"
 #include "multipole.h"
 #include "potentials.h"
+#include "sasa.h"
 #include "aux/iteratorsupport.h"
 #include "aux/eigensupport.h"
 #include "aux/arange.h"
@@ -17,6 +18,8 @@
 #include <zstr.hpp>
 #include <cereal/types/memory.hpp>
 #include <cereal/archives/binary.hpp>
+#include <range/v3/numeric/accumulate.hpp>
+#include <range/v3/view/zip.hpp>
 
 #include <iomanip>
 #include <iostream>
@@ -169,6 +172,8 @@ std::unique_ptr<Analysis> createAnalysis(const std::string& name, const json& j,
             return std::make_unique<FileReactionCoordinate>(j, spc);
         } else if (name == "sanity") {
             return std::make_unique<SanityCheck>(j, spc);
+        } else if (name == "sasa") {
+            return std::make_unique<SASAAnalysis>(j, spc);
         } else if (name == "savestate") {
             return std::make_unique<SaveState>(j, spc);
         } else if (name == "penaltyfunction") {
@@ -1740,6 +1745,189 @@ PolymerShape::PolymerShape(const json& j, const Space& spc)
         tensor_output_stream = IO::openCompressedOutputStream(MPI::prefix + filename, true);
         *tensor_output_stream << "# step Rg xx xy xz xy yy yz xz yz zz\n";
     }
+}
+
+void SASAAnalysis::_to_disk() {
+    if (auto stream = std::ofstream(MPI::prefix + "sasa_histogram.dat")) {
+        stream << sasa_histogram;
+    }
+    if (output_stream) {
+        output_stream->flush();
+    }
+}
+
+void SASAAnalysis::_from_json(const json& input) {
+    if (filename = input.value("file", ""s); !filename.empty()) {
+        output_stream = IO::openCompressedOutputStream(MPI::prefix + filename);
+        *output_stream << "# step SASA\n";
+    }
+}
+
+SASAAnalysis::SASAAnalysis(const double probe_radius, const int slices_per_atom, const double resolution,
+                           const Policies selected_policy, const Space& spc)
+    : Analysis(spc, "sasa")
+    , probe_radius(probe_radius)
+    , slices_per_atom(slices_per_atom)
+    , sasa_histogram(resolution, 0.) {
+
+    using Faunus::SASA::SASACellList;
+    const auto periodic_dimensions =
+        spc.geometry.asSimpleGeometry()->boundary_conditions.isPeriodic().cast<int>().sum();
+    switch (periodic_dimensions) {
+    case 3: // PBC in all directions
+        sasa = std::make_unique<SASACellList<Faunus::SASA::SparsePeriodicCellList>>(spc, probe_radius, slices_per_atom);
+        break;
+    case 0:
+        sasa = std::make_unique<SASACellList<Faunus::SASA::SparseFixedCellList>>(spc, probe_radius, slices_per_atom);
+        break;
+    default:
+        faunus_logger->warn("CellList neighbour search not available yet for current geometry");
+        sasa = std::make_unique<Faunus::SASA::SASA>(spc, probe_radius, slices_per_atom);
+        break;
+    }
+    setPolicy(selected_policy);
+}
+
+SASAAnalysis::SASAAnalysis(const json& j, const Space& spc)
+    : SASAAnalysis(j.value("radius", 1.4_angstrom), j.value("slices", 20), j.value("resolution", 50.0),
+                   j.value("policy", Policies::INVALID), spc) {
+    from_json(j);
+    policy->from_json(j);
+    cite = "doi:10/dbjh";
+}
+
+void SASAAnalysis::_to_json(json& json_ouput) const {
+    if (!average_data.area.empty()) {
+        json_ouput = {{"⟨SASA⟩", average_data.area.avg()},
+                      {"⟨SASA²⟩-⟨SASA⟩²", average_data.area_squared.avg() - std::pow(average_data.area.avg(), 2)}};
+    }
+    json_ouput["radius"] = (probe_radius);
+    json_ouput["slices_per_atom"] = (slices_per_atom);
+    policy->to_json(json_ouput);
+}
+
+/** @brief puts a sample of sasa area into histogram and updates average
+ *
+ * @param area
+ */
+void SASAAnalysis::takeSample(const double area) {
+    average_data.area += area;
+    average_data.area_squared += std::pow(area, 2);
+    sasa_histogram(area)++;
+    if (output_stream) {
+        *output_stream << this->getNumberOfSteps() << " " << area << "\n";
+    }
+}
+
+/** @brief constructs a SamplingPolicy object based on json input and loads it with data
+ *
+ * @param selected_policy selected policy
+ */
+void SASAAnalysis::setPolicy(const Policies selected_policy) {
+    switch(selected_policy) {
+    case Policies::ATOMIC:
+        policy = std::make_unique<AtomicPolicy>();
+        break;
+    case Policies::MOLECULAR:
+        policy = std::make_unique<MolecularPolicy>();
+        break;
+    case Policies::ATOMS_IN_MOLECULE:
+        policy = std::make_unique<AtomsInMoleculePolicy>();
+        break;
+    default:
+        throw ConfigurationError("Invalid or no sasa policy chosen!");
+        break;
+    }
+}
+
+void SASAAnalysis::_sample() { policy->sample(spc, *this); }
+
+/** @brief samples sasa of each object (either a whole group or a particle)
+ * by sampling each sasa between first and last individually
+ * @param first iterator at first particle or group
+ * @param last iterator at last particle or group
+ * @param analysis SASAanalysis object to insert samples into
+ *
+ * @tparam TBegin
+ * @tparam TEnd
+ * */
+template <typename TBegin, typename TEnd>
+void SamplingPolicyBase::sampleIndividualSASA(TBegin first, TEnd last, SASAAnalysis& analysis) {
+    analysis.sasa->init(analysis.spc);
+    std::for_each(first, last, [&analysis](const auto& species) {
+        auto area = analysis.sasa->calcSASAOf(analysis.spc, species);
+        analysis.takeSample(area);
+    });
+}
+
+/** @brief samples a sum of SASAs of objects (either a whole group or a particle)
+ *         between first and last
+ * @param first iterator at first particle or group
+ * @param last iterator at last particle or group
+ * @param analysis SASAanalysis object to insert samples into
+ *
+ * */
+template <typename TBegin, typename TEnd>
+void SamplingPolicyBase::sampleTotalSASA(TBegin first, TEnd last, SASAAnalysis& analysis) {
+    analysis.sasa->init(analysis.spc);
+    auto area = analysis.sasa->calcSASA(analysis.spc, first, last);
+    analysis.takeSample(area);
+    if (analysis.output_stream) {
+        *analysis.output_stream << fmt::format("{} {:.3f}\n", analysis.getNumberOfSteps(), area);
+    }
+}
+
+void AtomicPolicy::sample(const Space& spc, SASAAnalysis& analysis) {
+    auto atoms = spc.findAtoms(atom_id);
+    sampleIndividualSASA(atoms.begin(), atoms.end(), analysis);
+}
+void AtomicPolicy::to_json(json& output) const { output["atom_name"] = atom_name; }
+void AtomicPolicy::from_json(const json& input) {
+    atom_name = input.at("atom").get<std::string>();
+    atom_id = findAtomByName(atom_name).id();
+}
+
+void MolecularPolicy::sample(const Space& spc, SASAAnalysis& analysis) {
+    auto molecules = spc.findMolecules(molecule_id);
+    sampleIndividualSASA(molecules.begin(), molecules.end(), analysis);
+}
+void MolecularPolicy::to_json(json& output) const { output["molecule"] = molecule_name; }
+void MolecularPolicy::from_json(const json& input) {
+    molecule_name = input.at("molecule").get<std::string>();
+    molecule_id = findMoleculeByName(molecule_name).id();
+}
+
+void AtomsInMoleculePolicy::sample(const Space& spc, SASAAnalysis& analysis) {
+
+    auto molecules = spc.findMolecules(molecule_id);
+    ranges::for_each(molecules, [&](const auto& molecule) {
+        auto is_selected = [&](const Particle& particle) {
+            return selected_indices.count(molecule.getParticleIndex(particle)) > 0;
+        };
+        auto selected_atoms = molecule | ranges::cpp20::views::filter(is_selected);
+        sampleTotalSASA(selected_atoms.begin(), selected_atoms.end(), analysis);
+    });
+}
+
+void AtomsInMoleculePolicy::to_json(json& output) const {
+    output["molecule"] = molecule_name;
+    output["atomlist"] = atom_names;
+}
+void AtomsInMoleculePolicy::from_json(const json& input) {
+    if (const auto atomlist = input.at("atomlist"); !atomlist.empty()) {
+        for (const auto& atom_specifier : atomlist) {
+            if(atom_specifier.is_string()) {
+                atom_names.insert(static_cast<const std::string>(atom_specifier));
+                selected_indices.insert(findAtomByName(static_cast<const std::string>(atom_specifier)).id());
+            }
+            else if(atom_specifier.is_number_integer()){
+                selected_indices.insert(static_cast<AtomData::index_type>(atom_specifier));
+            }
+        }
+    } else {
+        ConfigurationError("you must choose at least one atom in atomlist");
+    }
+    molecule_name = input.at("molecule").get<std::string>();
 }
 
 void AtomProfile::_from_json(const json& j) {

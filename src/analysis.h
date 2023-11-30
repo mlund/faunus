@@ -343,7 +343,7 @@ class SlicedDensity : public Analysis {
 /**
  * Abstract base class for analysing atomic and molecular densities
  */
-class DensityBase : public Analysis {
+class Density : public Analysis {
   protected:
     using Table = Equidistant2DTable<unsigned int, double>;
     using id_type = size_t;
@@ -364,7 +364,7 @@ class DensityBase : public Analysis {
 
   public:
     template <RequireNamedElements Range>
-    DensityBase(const Space& spc, const Range& atoms_or_molecules, std::string_view name)
+    Density(const Space& spc, const Range& atoms_or_molecules, const std::string_view name)
         : Analysis(spc, name) {
         for (const auto& data : atoms_or_molecules) {
             names[data.id()] = data.name;
@@ -376,7 +376,7 @@ class DensityBase : public Analysis {
 /**
  * @brief Analysis of molecular group densities
  */
-class MoleculeDensity final : public DensityBase {
+class MoleculeDensity final : public Density {
   private:
     std::map<id_type, int> count() const override;
 
@@ -387,7 +387,7 @@ class MoleculeDensity final : public DensityBase {
 /**
  * @brief Analysis of single atom densities
  */
-class AtomDensity final : public DensityBase {
+class AtomDensity final : public Density {
   private:
     std::map<id_type, Table> atomswap_probability_density;
     void _sample() override;
@@ -559,7 +559,7 @@ class SaveState : public Analysis {
 
     void _to_json(json& j) const override;
     void _sample() override;
-    void saveAsCuboid(const std::string& filename, const Space& spc, StructureFileWriter& writer) const;
+    static void saveAsCuboid(const std::string& filename, const Space& spc, StructureFileWriter& writer);
     void saveJsonStateFile(const std::string& filename, const Space& spc) const;
     void saveBinaryJsonStateFile(const std::string& filename, const Space& spc) const;
 
@@ -946,7 +946,7 @@ class SpaceTrajectory : public Analysis {
     SpaceTrajectory(const json& j, const Space& spc);
 };
 
-class SamplingPolicyBase;
+class AreaSamplingPolicy;
 /**
  * @brief Analysis class for sasa calculations
  *
@@ -977,17 +977,17 @@ class SASAAnalysis : public Analysis {
     std::string filename;                         //!< output file name
     table_type sasa_histogram;                    //!< histogram of sasa values
     std::unique_ptr<Faunus::SASA::SASABase> sasa; //!< sasa object for calculating solute areas
-    std::unique_ptr<SamplingPolicyBase> policy;   //!< policy specyfing how sampling will be performed
+    std::unique_ptr<AreaSamplingPolicy> policy;   //!< policy specyfing how sampling will be performed
 
     virtual void _to_json(json& j) const override;
     virtual void _from_json(const json& input) override;
     virtual void _to_disk() override;
     virtual void _sample() override;
 
-    void setPolicy(const Policies);
-    void takeSample(const double area);
+    void setPolicy(Policies);
+    void takeSample(double area);
 
-    friend class SamplingPolicyBase;
+    friend class AreaSamplingPolicy;
 
   public:
     SASAAnalysis(const json& j, const Space& spc);
@@ -1000,8 +1000,7 @@ NLOHMANN_JSON_SERIALIZE_ENUM(SASAAnalysis::Policies, {{SASAAnalysis::Policies::A
                                                       {SASAAnalysis::Policies::INVALID, nullptr}})
 
 /** @brief abstract base class for different SASA sampling policies*/
-class SamplingPolicyBase {
-
+class AreaSamplingPolicy {
   protected:
     template <typename TBegin, typename TEnd>
     void sampleIndividualSASA(TBegin first, TEnd last, SASAAnalysis& analysis);
@@ -1012,12 +1011,12 @@ class SamplingPolicyBase {
     virtual void to_json(json& input) const = 0;
     virtual void from_json(const json& input) = 0;
 
-    SamplingPolicyBase() = default;
-    virtual ~SamplingPolicyBase() = default;
+    inline AreaSamplingPolicy() = default;
+    inline virtual ~AreaSamplingPolicy() = default;
 };
 
 /** @brief SASA sampling policy which samples individually atoms selected by atom type name*/
-class AtomicPolicy : public SamplingPolicyBase {
+class AtomicPolicy final : public AreaSamplingPolicy {
 
     AtomData::index_type atom_id; //!< id of atom type to be sampled
     std::string atom_name;        //!< name of the atom type to be sampled
@@ -1027,11 +1026,11 @@ class AtomicPolicy : public SamplingPolicyBase {
     void from_json(const json& input) override;
 
   public:
-    AtomicPolicy() = default;
+    inline AtomicPolicy() = default;
 };
 
 /** @brief SASA sampling policy which samples individually molecules selected by molecules name*/
-class MolecularPolicy : public SamplingPolicyBase {
+class MolecularPolicy final : public AreaSamplingPolicy {
 
     MoleculeData::index_type molecule_id; //!< id of molecule to be sampled
     std::string molecule_name;            //!< name of the molecule to be sampled
@@ -1041,7 +1040,7 @@ class MolecularPolicy : public SamplingPolicyBase {
     void from_json(const json& input) override;
 
   public:
-    MolecularPolicy() = default;
+    inline MolecularPolicy() = default;
 };
 
 /** @brief SASA sampling policy which samples as a whole atom in a selected molecule
@@ -1049,7 +1048,7 @@ class MolecularPolicy : public SamplingPolicyBase {
  *          it samples sum of their SASAs in a given molecule
  *          if single atom name is selected, it samples just the selected atom SASA in a selected molecule
  *          */
-class AtomsInMoleculePolicy : public SamplingPolicyBase {
+class AtomsInMoleculePolicy final : public AreaSamplingPolicy {
 
     MoleculeData::index_type molecule_id; //!< id of molecule to be sampled
     std::set<size_t> selected_indices;    //!< selected indices of atoms in the chosen molecule
@@ -1061,7 +1060,7 @@ class AtomsInMoleculePolicy : public SamplingPolicyBase {
     void from_json(const json& input) override;
 
   public:
-    AtomsInMoleculePolicy() = default;
+    inline AtomsInMoleculePolicy() = default;
 };
 
 /** @brief Example analysis */

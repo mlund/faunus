@@ -1,4 +1,5 @@
 #include "analysis.h"
+#include "core.h"
 #include "move.h"
 #include "energy.h"
 #include "penalty.h"
@@ -10,6 +11,8 @@
 #include "aux/eigensupport.h"
 #include "aux/arange.h"
 #include "aux/matrixmarket.h"
+#include <exception>
+#include <iterator>
 #include <range/v3/numeric/accumulate.hpp>
 #include <range/v3/algorithm/for_each.hpp>
 #include <range/v3/view/cache1.hpp>
@@ -205,13 +208,13 @@ std::unique_ptr<Analysis> createAnalysis(const std::string& name, const json& j,
 }
 
 void CombinedAnalysis::sample() {
-    for (auto& analysis : this->vec) {
+    for (const auto& analysis : this->vec) {
         analysis->sample();
     }
 }
 
 void CombinedAnalysis::to_disk() {
-    for (auto& analysis : this->vec) {
+    for (const auto& analysis : this->vec) {
         analysis->to_disk();
     }
 }
@@ -249,7 +252,6 @@ void SystemEnergy::_sample() {
         *output_stream << fmt::format("{}{:.6E}", separator, energy);
     }
     *output_stream << "\n";
-    // ehist(tot)++;
 }
 
 void SystemEnergy::_to_json(json& j) const {
@@ -259,15 +261,13 @@ void SystemEnergy::_to_json(json& j) const {
         j["Cv/kB"] = mean_squared_energy.avg() - std::pow(mean_energy.avg(), 2);
     }
     roundJSON(j, 5);
-    // normalize();
-    // ehist.save( "distofstates.dat" );
 }
 
 void SystemEnergy::_from_json(const json& j) { file_name = MPI::prefix + j.at("file").get<std::string>(); }
 
 void SystemEnergy::createOutputStream() {
     output_stream = IO::openCompressedOutputStream(file_name, true);
-    if (auto suffix = file_name.substr(file_name.find_last_of('.') + 1); suffix == "csv") {
+    if (const auto suffix = file_name.substr(file_name.find_last_of('.') + 1); suffix == "csv") {
         separator = ",";
     } else {
         separator = " ";
@@ -409,8 +409,6 @@ void PairMatrixAnalysis::_sample() {
 
 void PairMatrixAnalysis::_to_disk() { matrix_stream->flush(); }
 
-// --------------------------------
-
 GroupMatrixAnalysis::GroupMatrixAnalysis(const json& j, const Space& spc, Energy::Hamiltonian& hamiltonian)
     : PairMatrixAnalysis(j, spc) {
     namespace rv = ranges::cpp20::views;
@@ -534,7 +532,7 @@ void SaveState::saveJsonStateFile(const std::string& filename, const Space& spc)
     }
 }
 
-void SaveState::saveAsCuboid(const std::string& filename, const Space& spc, StructureFileWriter& writer) const {
+void SaveState::saveAsCuboid(const std::string& filename, const Space& spc, StructureFileWriter& writer) {
     auto hexagonal_prism = std::dynamic_pointer_cast<Geometry::HexagonalPrism>(spc.geometry.asSimpleGeometry());
     if (hexagonal_prism) {
         faunus_logger->debug("creating cuboid from hexagonal prism");
@@ -584,7 +582,8 @@ double PairFunction::volumeElement(double r) const {
     case 3:
         return 4.0 * pc::pi * r * r * dr;
     case 2:
-        if (auto hypersphere = std::dynamic_pointer_cast<Geometry::Hypersphere2d>(spc.geometry.asSimpleGeometry())) {
+        if (const auto hypersphere =
+                std::dynamic_pointer_cast<Geometry::Hypersphere2d>(spc.geometry.asSimpleGeometry())) {
             faunus_logger->trace("{}: hypersphere detected; radius set", name);
             const auto radius = hypersphere->getRadius();
             return 2.0 * pc::pi * radius * std::sin(r / radius) * dr;
@@ -1079,7 +1078,7 @@ WidomInsertion::WidomInsertion(const json& j, Space& spc, Energy::Hamiltonian& p
     from_json(j);
 }
 
-double DensityBase::updateVolumeStatistics() {
+double Density::updateVolumeStatistics() {
     const auto volume = spc.geometry.getVolume();
     mean_volume += volume;
     mean_cubic_root_of_volume += std::cbrt(volume);
@@ -1087,7 +1086,7 @@ double DensityBase::updateVolumeStatistics() {
     return volume;
 }
 
-void DensityBase::_sample() {
+void Density::_sample() {
     const auto volume = updateVolumeStatistics();
     for (auto [id, number] : count()) {
         mean_density[id] += number / volume;
@@ -1095,7 +1094,7 @@ void DensityBase::_sample() {
     }
 }
 
-void DensityBase::_to_json(json& j) const {
+void Density::_to_json(json& j) const {
     j["<V>"] = mean_volume.avg();
     j["<∛V>"] = mean_cubic_root_of_volume.avg();
     j["∛<V>"] = std::cbrt(mean_volume.avg());
@@ -1113,7 +1112,7 @@ void DensityBase::_to_json(json& j) const {
 /**
  * Write histograms to disk
  */
-void DensityBase::writeTable(std::string_view name, Table& table) {
+void Density::writeTable(std::string_view name, Table& table) {
     if (table.size() <= 1) {
         // do not save non-existent or non-fluctuating groups
         return;
@@ -1131,7 +1130,7 @@ void DensityBase::writeTable(std::string_view name, Table& table) {
     }
 }
 
-void DensityBase::_to_disk() {
+void Density::_to_disk() {
     for (auto [id, table] : probability_density) {
         // atomic molecules
         writeTable(names.at(id), table);
@@ -1139,7 +1138,7 @@ void DensityBase::_to_disk() {
 }
 
 void AtomDensity::_sample() {
-    DensityBase::_sample();
+    Density::_sample();
     std::set<id_type> unique_reactive_atoms;
     for (const auto& reaction : reactions) {
         // in case of reactions involving atoms (swap moves)
@@ -1155,7 +1154,7 @@ void AtomDensity::_sample() {
 /**
  * @brief Counts atoms in atomic groups
  */
-std::map<DensityBase::id_type, int> AtomDensity::count() const {
+std::map<Density::id_type, int> AtomDensity::count() const {
     namespace rv = ranges::cpp20::views;
 
     // All ids incl. inactive are counted; std::vector ensures constant lookup (index = id)
@@ -1174,7 +1173,7 @@ std::map<DensityBase::id_type, int> AtomDensity::count() const {
 }
 
 AtomDensity::AtomDensity(const json& j, const Space& spc)
-    : DensityBase(spc, Faunus::atoms, "atom_density") {
+    : Density(spc, Faunus::atoms, "atom_density") {
     from_json(j);
     for (const auto& reaction : Faunus::reactions) {
         // in case of reactions involving atoms (swap moves)
@@ -1186,7 +1185,7 @@ AtomDensity::AtomDensity(const json& j, const Space& spc)
 }
 
 void AtomDensity::_to_disk() {
-    DensityBase::_to_disk();
+    Density::_to_disk();
     for (const auto& reaction : Faunus::reactions) {
         const auto reactive_atomic_species = reaction.participatingAtomsAndMolecules().first;
         for (auto atomid : reactive_atomic_species) {
@@ -1198,7 +1197,7 @@ void AtomDensity::_to_disk() {
 /**
  * @brief Counts active, molecular groups
  */
-std::map<DensityBase::id_type, int> MoleculeDensity::count() const {
+std::map<Density::id_type, int> MoleculeDensity::count() const {
     using namespace ranges::cpp20;
     std::map<id_type, int> molecular_group_count;
 
@@ -1214,7 +1213,7 @@ std::map<DensityBase::id_type, int> MoleculeDensity::count() const {
 }
 
 MoleculeDensity::MoleculeDensity(const json& j, const Space& spc)
-    : DensityBase(spc, Faunus::molecules, "molecule_density") {
+    : Density(spc, Faunus::molecules, "molecule_density") {
     from_json(j);
 }
 
@@ -1659,7 +1658,7 @@ MultipoleMoments::Data MultipoleMoments::calculateMultipoleMoment() const {
     quadrupole = 0.5 * quadrupole;
     Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(quadrupole);
     multipole.eivals = esf.eigenvalues();
-    std::ptrdiff_t i_eival;
+    std::ptrdiff_t i_eival = 0;
     multipole.eivals.minCoeff(&i_eival);
     multipole.eivec = esf.eigenvectors().col(i_eival).real(); // eigenvector corresponding to the smallest eigenvalue
     multipole.center = mass_center;
@@ -1781,7 +1780,7 @@ void PolymerShape::_to_disk() {
 PolymerShape::PolymerShape(const json& j, const Space& spc)
     : Analysis(spc, "Polymer Shape") {
     from_json(j);
-    cite = "https://dx.doi.org/10/d6ff";
+    cite = "doi:10/d6ff";
     if (j.count("molecules") > 0) {
         throw ConfigurationError("{}: 'molecules' is deprecated, use a single 'molecule' instead.", name);
     }
@@ -1819,7 +1818,7 @@ SASAAnalysis::SASAAnalysis(const double probe_radius, const int slices_per_atom,
     : Analysis(spc, "sasa")
     , probe_radius(probe_radius)
     , slices_per_atom(slices_per_atom)
-    , sasa_histogram(resolution, 0.) {
+    , sasa_histogram(resolution, 0.0) {
 
     using Faunus::SASA::SASACellList;
     const auto periodic_dimensions =
@@ -1903,7 +1902,7 @@ void SASAAnalysis::_sample() { policy->sample(spc, *this); }
  * @tparam TEnd
  * */
 template <typename TBegin, typename TEnd>
-void SamplingPolicyBase::sampleIndividualSASA(TBegin first, TEnd last, SASAAnalysis& analysis) {
+void AreaSamplingPolicy::sampleIndividualSASA(TBegin first, TEnd last, SASAAnalysis& analysis) {
     analysis.sasa->init(analysis.spc);
     std::for_each(first, last, [&analysis](const auto& species) {
         auto area = analysis.sasa->calcSASAOf(analysis.spc, species);
@@ -1919,7 +1918,7 @@ void SamplingPolicyBase::sampleIndividualSASA(TBegin first, TEnd last, SASAAnaly
  *
  * */
 template <typename TBegin, typename TEnd>
-void SamplingPolicyBase::sampleTotalSASA(TBegin first, TEnd last, SASAAnalysis& analysis) {
+void AreaSamplingPolicy::sampleTotalSASA(TBegin first, TEnd last, SASAAnalysis& analysis) {
     analysis.sasa->init(analysis.spc);
     auto area = analysis.sasa->calcSASA(analysis.spc, first, last);
     analysis.takeSample(area);
@@ -2038,8 +2037,8 @@ AtomProfile::AtomProfile(const json& j, const Space& spc)
 }
 
 void AtomProfile::_to_disk() {
-    std::ofstream f(MPI::prefix + file);
-    if (f) {
+    std::ofstream stream(MPI::prefix + file);
+    if (stream) {
         table.stream_decorator = [&](std::ostream& o, double r, double N) {
             double Vr = 1.0;
             auto dimensions = dir.sum();
@@ -2065,7 +2064,7 @@ void AtomProfile::_to_disk() {
             o << fmt::format("{:.6E} {:.6E} {:.6E}\n", r, N, N / Vr * 1e27 / pc::avogadro);
             // ... and molar concentration
         };
-        f << "# r N rho/M\n" << table;
+        stream << "# r N rho/M\n" << table;
     }
 }
 
@@ -2090,7 +2089,6 @@ void SlicedDensity::_to_json(json& j) const {
 
 void SlicedDensity::_sample() {
     double z_offset = 0.0;
-
     if (center_of_mass_atom_id >= 0) {
         // calc. mass center of selected atoms
         auto mass_center_particles = spc.findAtoms(center_of_mass_atom_id);
@@ -2119,9 +2117,9 @@ void SlicedDensity::_to_disk() {
     }
     if (std::ofstream stream(MPI::prefix + file); stream) {
         const auto box = spc.geometry.getLength();
-        const auto slice_volume = box.x() * box.y() * dz;
-        const auto normalize = slice_volume * number_of_samples * 1.0_molar;
-        const auto zhalf = 0.5 * box.z();
+        const double slice_volume = box.x() * box.y() * dz;
+        const double normalize = slice_volume * number_of_samples * 1.0_molar;
+        const double zhalf = 0.5 * box.z();
         stream << "# z rho/M\n";
         for (auto z : arange(-zhalf, zhalf + dz, dz)) {
             // interval [-Lz/2, Lz/2]
@@ -2406,7 +2404,7 @@ void VirtualTranslate::_sample() {
 void VirtualTranslate::writeToFileStream(const double energy_change) const {
     if (stream) {
         // file to disk?
-        const auto mean_force = -meanFreeEnergy() / perturbation_distance;
+        const double mean_force = -meanFreeEnergy() / perturbation_distance;
         *stream << fmt::format("{:d} {:.3E} {:.6E} {:.6E}\n", getNumberOfSteps(), perturbation_distance, energy_change,
                                mean_force);
     }
@@ -2487,8 +2485,6 @@ void SpaceTrajectory::_sample() {
 void SpaceTrajectory::_to_json(json& j) const { j = {{"file", filename}}; }
 
 void SpaceTrajectory::_to_disk() { stream->flush(); }
-
-// -----------------------------
 
 ElectricPotential::ElectricPotential(const json& j, const Space& spc)
     : Analysis(spc, "electricpotential")
@@ -2587,7 +2583,7 @@ void ElectricPotential::_sample() {
         auto potential_correlation = 1.0; // phi1 * phi2 * ...
         for (auto& target : targets) {
             // loop over each target point
-            auto potential = calcPotentialOnTarget(target);
+            const double potential = calcPotentialOnTarget(target);
             target.potential_histogram->add(potential);
             target.mean_potential += potential;
             potential_correlation *= potential;
@@ -2628,7 +2624,7 @@ void ElectricPotential::_to_disk() {
     }
     unsigned int file_number = 1;
     for (const auto& target : targets) {
-        auto filename = fmt::format("{}{}_histogram{}.dat", MPI::prefix, file_prefix, file_number++);
+        filename = fmt::format("{}{}_histogram{}.dat", MPI::prefix, file_prefix, file_number++);
         if (auto stream = std::ofstream(filename)) {
             stream << *(target.potential_histogram);
         }
@@ -2663,11 +2659,11 @@ SavePenaltyEnergy::SavePenaltyEnergy(const json& j, const Space& spc, const Ener
 void SavePenaltyEnergy::_sample() {
     if (penalty_energy) {
         auto name = fmt::format("{}{:06d}.{}", MPI::prefix, filenumber++, filename);
-        if (auto stream = IO::openCompressedOutputStream(name, true); stream) {
+        if (const auto stream = IO::openCompressedOutputStream(name, true); stream) {
             penalty_energy->streamPenaltyFunction(*stream);
         }
         name = fmt::format("{}{:06d}-histogram.{}", MPI::prefix, filenumber++, filename);
-        if (auto stream = IO::openCompressedOutputStream(name, true); stream) {
+        if (const auto stream = IO::openCompressedOutputStream(name, true); stream) {
             penalty_energy->streamHistogram(*stream);
         }
     }

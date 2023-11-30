@@ -105,15 +105,15 @@ int Analysis::getNumberOfSteps() const { return number_of_steps; }
 
 Analysis::Analysis(const Space& spc, std::string_view name)
     : spc(spc)
-      , name(name) {
+    , name(name) {
     assert(!name.empty());
 }
 
 Analysis::Analysis(const Space& spc, std::string_view name, int sample_interval, int number_of_skipped_steps)
     : number_of_skipped_steps(number_of_skipped_steps)
-      , spc(spc)
-      , sample_interval(sample_interval)
-      , name(name) {}
+    , spc(spc)
+    , sample_interval(sample_interval)
+    , name(name) {}
 
 /**
  * @brief Factory function for generating analysis based on name
@@ -137,7 +137,7 @@ std::unique_ptr<Analysis> createAnalysis(const std::string& name, const json& j,
             return std::make_unique<AtomDipDipCorr>(j, spc);
         } else if (name == "density") {
             faunus_logger->warn("`density` is replaced by `molecule_density` and `atom_density`. "
-                "Activating the latter...");
+                                "Activating the latter...");
             return std::make_unique<AtomDensity>(j, spc);
         } else if (name == "molecule_density") {
             return std::make_unique<MoleculeDensity>(j, spc);
@@ -281,7 +281,7 @@ void SystemEnergy::createOutputStream() {
 
 SystemEnergy::SystemEnergy(const json& j, const Space& spc, Energy::Hamiltonian& hamiltonian)
     : Analysis(spc, "systemenergy")
-      , hamiltonian(hamiltonian) {
+    , hamiltonian(hamiltonian) {
     from_json(j);
     energy_histogram.setResolution(0.25);
     initial_energy = ranges::accumulate(calculateEnergies(), 0.0);
@@ -384,7 +384,7 @@ std::function<bool(double)> createValueFilter(const std::string& name, const jso
 
 PairMatrixAnalysis::PairMatrixAnalysis(const json& j, const Space& spc)
     : Analysis(spc, "cluster")
-      , spc(spc) {
+    , spc(spc) {
     from_json(j);
     filename = j.at("file").get<std::string>();
     matrix_stream = IO::openCompressedOutputStream(filename, true);
@@ -545,17 +545,17 @@ void SaveState::saveAsCuboid(const std::string& filename, const Space& spc, Stru
     }
 }
 
-PairFunctionBase::PairFunctionBase(const Space& spc, const json& j, const std::string_view name)
+PairFunction::PairFunction(const Space& spc, const json& j, const std::string_view name)
     : Analysis(spc, name) {
     from_json(j);
 }
 
-void PairFunctionBase::_to_json(json& j) const {
-    j = {{"dr", dr / 1.0_angstrom}, {"name1", name1}, {"name2", name2}, {"file", file},
-         {"dim", dimensions}, {"slicedir", slicedir}, {"thickness", thickness}};
+void PairFunction::_to_json(json& j) const {
+    j = {{"dr", dr / 1.0_angstrom}, {"name1", name1},       {"name2", name2},        {"file", file},
+         {"dim", dimensions},       {"slicedir", slicedir}, {"thickness", thickness}};
 }
 
-void PairFunctionBase::_from_json(const json& j) {
+void PairFunction::_from_json(const json& j) {
     file = j.at("file").get<std::string>();
     name1 = j.at("name1").get<std::string>();
     name2 = j.at("name2").get<std::string>();
@@ -566,7 +566,7 @@ void PairFunctionBase::_from_json(const json& j) {
     histogram.setResolution(dr, 0);
 }
 
-void PairFunctionBase::_to_disk() {
+void PairFunction::_to_disk() {
     if (std::ofstream f(MPI::prefix + file); f) {
         histogram.stream_decorator = [&](std::ostream& o, double r, double N) {
             const auto volume_at_r = volumeElement(r);
@@ -579,7 +579,7 @@ void PairFunctionBase::_to_disk() {
     }
 }
 
-double PairFunctionBase::volumeElement(double r) const {
+double PairFunction::volumeElement(double r) const {
     switch (dimensions) {
     case 3:
         return 4.0 * pc::pi * r * r * dr;
@@ -597,8 +597,8 @@ double PairFunctionBase::volumeElement(double r) const {
     }
 }
 
-PairAngleFunctionBase::PairAngleFunctionBase(const Space& spc, const json& j, const std::string& name)
-    : PairFunctionBase(spc, j, name) {
+PairAngleFunction::PairAngleFunction(const Space& spc, const json& j, const std::string& name)
+    : PairFunction(spc, j, name) {
     from_json(j);
     correlation_filename = MPI::prefix + file;
     average_correlation_vs_distance.stream_decorator = [&](auto& stream, double distance, Average<double> N) {
@@ -611,33 +611,33 @@ PairAngleFunctionBase::PairAngleFunctionBase(const Space& spc, const json& j, co
     file = fmt::format("{}{}.dummy", MPI::prefix, file);
 }
 
-void PairAngleFunctionBase::_to_disk() {
+void PairAngleFunction::_to_disk() {
     if (auto f = std::ofstream(correlation_filename)) {
         f << average_correlation_vs_distance;
     }
 }
 
-void PairAngleFunctionBase::_from_json(const json&) { average_correlation_vs_distance.setResolution(dr, 0); }
+void PairAngleFunction::_from_json(const json&) { average_correlation_vs_distance.setResolution(dr, 0); }
 
-void PerturbationAnalysisBase::_to_disk() {
+void PerturbationAnalysis::_to_disk() {
     if (stream) {
         stream->flush(); // empty buffer
     }
 }
 
-PerturbationAnalysisBase::PerturbationAnalysisBase(const std::string& name, Energy::EnergyTerm& pot, Space& spc,
-                                                   const std::string& filename)
+PerturbationAnalysis::PerturbationAnalysis(const std::string& name, Energy::EnergyTerm& pot, Space& spc,
+                                           const std::string& filename)
     : Analysis(spc, name)
-      , mutable_space(spc)
-      , pot(pot)
-      , filename(filename) {
+    , mutable_space(spc)
+    , pot(pot)
+    , filename(filename) {
     if (!filename.empty()) {
         this->filename = MPI::prefix + filename;
         stream = IO::openCompressedOutputStream(this->filename, true); // throws if error
     }
 }
 
-bool PerturbationAnalysisBase::collectWidomAverage(const double energy_change) {
+bool PerturbationAnalysis::collectWidomAverage(const double energy_change) {
     if (-energy_change > pc::max_exp_argument) {
         faunus_logger->warn(
             "{}: skipping sample event due to too negative energy; consider decreasing the perturbation", name);
@@ -648,7 +648,7 @@ bool PerturbationAnalysisBase::collectWidomAverage(const double energy_change) {
     return true;
 }
 
-double PerturbationAnalysisBase::meanFreeEnergy() const { return -std::log(mean_exponentiated_energy_change.avg()); }
+double PerturbationAnalysis::meanFreeEnergy() const { return -std::log(mean_exponentiated_energy_change.avg()); }
 
 void VirtualVolumeMove::_sample() {
     if (std::fabs(volume_displacement) <= pc::epsilon_dbl) {
@@ -723,14 +723,14 @@ void VirtualVolumeMove::_to_json(json& j) const {
 }
 
 VirtualVolumeMove::VirtualVolumeMove(const json& j, Space& spc, Energy::EnergyTerm& pot)
-    : PerturbationAnalysisBase("virtualvolume", pot, spc, j.value("file", ""s)) {
+    : PerturbationAnalysis("virtualvolume", pot, spc, j.value("file", ""s)) {
     cite = "doi:10.1063/1.472721";
     from_json(j);
     change.volume_change = true;
     change.everything = true;
     if (stream) {
         *stream << "# steps dV/" + unicode::angstrom + unicode::cubed + " du/kT exp(-du/kT) <Pex>/kT/" +
-            unicode::angstrom + unicode::cubed;
+                       unicode::angstrom + unicode::cubed;
         // if non-isotropic scaling, add another column with dA or dL
         if (volume_scaling_method == Geometry::VolumeMethod::XY) {
             *stream << " dA/" + unicode::angstrom + unicode::squared;
@@ -797,14 +797,14 @@ PatchySpheroCylinderTrajectory::PatchySpheroCylinderTrajectory(const json& j, co
     write_to_file = [&]() {
         assert(stream);
         *stream << fmt::format("{}\nsweep {}; box ", spc.particles.size(), getNumberOfSteps())
-            << spc.geometry.getLength().transpose() << "\n";
+                << spc.geometry.getLength().transpose() << "\n";
 
         for (const auto& group : spc.groups) {
             for (auto it = group.begin(); it != group.trueend(); ++it) {
                 const auto particle_is_active = it < group.end();
                 const auto scale = static_cast<double>(particle_is_active);
                 *stream << scale * it->pos.transpose() << " " << scale * it->getExt().scdir.transpose() << " "
-                    << scale * it->getExt().patchdir.transpose() << "\n";
+                        << scale * it->getExt().patchdir.transpose() << "\n";
             }
         }
     };
@@ -839,8 +839,8 @@ FileReactionCoordinate::FileReactionCoordinate(
     const Space& spc, const std::string& filename,
     std::unique_ptr<ReactionCoordinate::ReactionCoordinateBase> reaction_coordinate)
     : Analysis(spc, "reactioncoordinate")
-      , filename(filename)
-      , reaction_coordinate(std::move(reaction_coordinate)) {
+    , filename(filename)
+    , reaction_coordinate(std::move(reaction_coordinate)) {
     if (filename.empty()) {
         faunus_logger->warn("{}: no filename given - only the mean coordinate will be saved", name);
     } else {
@@ -850,8 +850,8 @@ FileReactionCoordinate::FileReactionCoordinate(
 
 FileReactionCoordinate::FileReactionCoordinate(const json& j, const Space& spc)
     : FileReactionCoordinate(
-        spc, j.value("file", ""s),
-        ReactionCoordinate::createReactionCoordinate({{j.at("type").get<std::string>(), j}}, spc)) {
+          spc, j.value("file", ""s),
+          ReactionCoordinate::createReactionCoordinate({{j.at("type").get<std::string>(), j}}, spc)) {
     from_json(j);
 }
 
@@ -863,8 +863,8 @@ void FileReactionCoordinate::_to_disk() {
 
 AtomicDisplacement::AtomicDisplacement(const json& j, const Space& spc, std::string_view name)
     : Analysis(spc, name)
-      , displacement_histogram(j.value("histogram_resolution", 1.0))
-      , reference_reset_interval(j.value("reset_interval", std::numeric_limits<int>::max())) {
+    , displacement_histogram(j.value("histogram_resolution", 1.0))
+    , reference_reset_interval(j.value("reset_interval", std::numeric_limits<int>::max())) {
 
     from_json(j);
     const auto molecule_name = j.at("molecule").get<std::string>();
@@ -1027,8 +1027,7 @@ void WidomInsertion::_sample() {
         group.resize(group.capacity());                                         // activate ghost
         ParticleVector particles;                                               // particles to insert
         for (int cnt = 0; cnt < number_of_insertions; ++cnt) {
-            particles =
-                inserter->operator()(mutable_space.geometry, Faunus::molecules[molid], spc.particles);
+            particles = inserter->operator()(mutable_space.geometry, Faunus::molecules[molid], spc.particles);
             // random pos&orientation
             updateGroup(group, particles);
             const auto energy_change = pot.energy(change); // in kT
@@ -1074,7 +1073,7 @@ void WidomInsertion::_from_json(const json& j) {
 }
 
 WidomInsertion::WidomInsertion(const json& j, Space& spc, Energy::Hamiltonian& pot)
-    : PerturbationAnalysisBase("widom", pot, spc) {
+    : PerturbationAnalysis("widom", pot, spc) {
     cite = "doi:10/dkv4s6";
     inserter = std::make_shared<RandomInserter>();
     from_json(j);
@@ -1257,8 +1256,8 @@ void SanityCheck::checkGroupsCoverParticles() {
 void SanityCheck::checkWithinContainer(const Space::GroupType& group) {
     bool outside_simulation_cell = false;
     auto outside_particles = group | ranges::cpp20::views::filter([&](const Particle& particle) {
-        return spc.geometry.collision(particle.pos);
-    });
+                                 return spc.geometry.collision(particle.pos);
+                             });
 
     std::for_each(outside_particles.begin(), outside_particles.end(), [&](const auto& particle) {
         outside_simulation_cell = true;
@@ -1336,7 +1335,7 @@ void AtomRDF::sampleDifferent() {
 }
 
 AtomRDF::AtomRDF(const json& j, const Space& spc)
-    : PairFunctionBase(spc, j, "atomrdf") {
+    : PairFunction(spc, j, "atomrdf") {
     id1 = Faunus::findAtomByName(name1).id();
     id2 = Faunus::findAtomByName(name2).id();
 }
@@ -1377,7 +1376,7 @@ void MoleculeRDF::sampleDistance(const Group& group_i, const Group& group_j) {
 }
 
 MoleculeRDF::MoleculeRDF(const json& j, const Space& spc)
-    : PairFunctionBase(spc, j, "molrdf") {
+    : PairFunction(spc, j, "molrdf") {
     id1 = findMoleculeByName(name1).id();
     id2 = findMoleculeByName(name2).id();
     if (!Faunus::molecules.at(id1).isMolecular() || !Faunus::molecules.at(id2).isMolecular()) {
@@ -1415,7 +1414,7 @@ void AtomDipDipCorr::_sample() {
 }
 
 AtomDipDipCorr::AtomDipDipCorr(const json& j, const Space& spc)
-    : PairAngleFunctionBase(spc, j, "atomdipdipcorr") {
+    : PairAngleFunction(spc, j, "atomdipdipcorr") {
     id1 = findAtomByName(name1).id();
     id2 = findAtomByName(name2).id();
 }
@@ -1491,8 +1490,8 @@ void MultipoleDistribution::save() const {
     if (number_of_samples > 0) {
         if (std::ofstream stream(MPI::prefix + filename.c_str()); stream) {
             stream << "# Multipolar energies (kT/lB)\n"
-                << fmt::format("# {:>8}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}\n", "R", "exact", "tot", "ii",
-                               "id", "dd", "iq", "mucorr");
+                   << fmt::format("# {:>8}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}\n", "R", "exact", "tot", "ii",
+                                  "id", "dd", "iq", "mucorr");
             for (auto [r_bin, energy] : mean_energy) {
                 const auto distance = r_bin * dr;
                 const auto u_tot = energy.ion_ion.avg() + energy.ion_dipole.avg() + energy.dipole_dipole.avg() +
@@ -1642,10 +1641,9 @@ void MultipoleMoments::_to_json(json& j) const {
 MultipoleMoments::Data MultipoleMoments::calculateMultipoleMoment() const {
     const auto& group = spc.groups.at(group_index);
     Space::GroupType subgroup(group.id, group.begin() + particle_range[0], group.begin() + particle_range[1] + 1);
-    const auto mass_center = use_molecular_mass_center
-                                 ? group.mass_center
-                                 : Geometry::massCenter(subgroup.begin(), subgroup.end(),
-                                                        spc.geometry.getBoundaryFunc());
+    const auto mass_center = use_molecular_mass_center ? group.mass_center
+                                                       : Geometry::massCenter(subgroup.begin(), subgroup.end(),
+                                                                              spc.geometry.getBoundaryFunc());
 
     MultipoleMoments::Data multipole;
     Tensor quadrupole; // quadrupole tensor
@@ -1672,8 +1670,8 @@ void MultipoleMoments::_sample() {
     if (output_stream) {
         const auto multipole = calculateMultipoleMoment();
         output_stream << getNumberOfSteps() << " " << multipole.charge << " " << multipole.dipole_moment.transpose()
-            << " " << multipole.center.transpose() << " " << multipole.eivals.transpose() << " "
-            << multipole.eivec.transpose() << "\n";
+                      << " " << multipole.center.transpose() << " " << multipole.eivals.transpose() << " "
+                      << multipole.eivec.transpose() << "\n";
     }
 }
 
@@ -1819,9 +1817,9 @@ void SASAAnalysis::_from_json(const json& input) {
 SASAAnalysis::SASAAnalysis(const double probe_radius, const int slices_per_atom, const double resolution,
                            const Policies selected_policy, const Space& spc)
     : Analysis(spc, "sasa")
-      , probe_radius(probe_radius)
-      , slices_per_atom(slices_per_atom)
-      , sasa_histogram(resolution, 0.) {
+    , probe_radius(probe_radius)
+    , slices_per_atom(slices_per_atom)
+    , sasa_histogram(resolution, 0.) {
 
     using Faunus::SASA::SASACellList;
     const auto periodic_dimensions =
@@ -2020,8 +2018,8 @@ void AtomProfile::_sample() {
     }
 
     auto selected_particles = spc.activeParticles() | ranges::cpp20::views::filter([&](const Particle& particle) {
-        return atom_id_selection.count(particle.id) > 0;
-    });
+                                  return atom_id_selection.count(particle.id) > 0;
+                              });
 
     for (const auto& particle : selected_particles) {
         const auto distance = distanceToOrigin(particle.pos);
@@ -2098,12 +2096,12 @@ void SlicedDensity::_sample() {
         auto mass_center_particles = spc.findAtoms(center_of_mass_atom_id);
         z_offset = Geometry::massCenter(mass_center_particles.begin(), mass_center_particles.end(),
                                         spc.geometry.getBoundaryFunc())
-            .z();
+                       .z();
     }
 
     auto filtered_particles = spc.activeParticles() | ranges::cpp20::views::filter([&](const auto& particle) {
-        return std::find(atom_ids.begin(), atom_ids.end(), particle.id) != atom_ids.end();
-    });
+                                  return std::find(atom_ids.begin(), atom_ids.end(), particle.id) != atom_ids.end();
+                              });
 
     for (const auto& particle : filtered_particles) {
         histogram(particle.pos.z() - z_offset)++;
@@ -2440,7 +2438,7 @@ void VirtualTranslate::_to_json(json& j) const {
 }
 
 VirtualTranslate::VirtualTranslate(const json& j, Space& spc, Energy::EnergyTerm& pot)
-    : PerturbationAnalysisBase("virtualtranslate", pot, spc, j.value("file", ""s)) {
+    : PerturbationAnalysis("virtualtranslate", pot, spc, j.value("file", ""s)) {
     change.groups.resize(1);
     change.groups.front().internal = false;
     from_json(j);
@@ -2448,7 +2446,7 @@ VirtualTranslate::VirtualTranslate(const json& j, Space& spc, Energy::EnergyTerm
 
 SpaceTrajectory::SpaceTrajectory(const json& j, const Space& spc)
     : Analysis(spc, "space trajectory")
-      , groups(spc.groups) {
+    , groups(spc.groups) {
     from_json(j);
     filename = j.at("file").get<std::string>();
 
@@ -2494,7 +2492,7 @@ void SpaceTrajectory::_to_disk() { stream->flush(); }
 
 ElectricPotential::ElectricPotential(const json& j, const Space& spc)
     : Analysis(spc, "electricpotential")
-      , potential_correlation_histogram(histogram_resolution) {
+    , potential_correlation_histogram(histogram_resolution) {
     from_json(j);
     coulomb = std::make_unique<pairpotential::NewCoulombGalore>();
     pairpotential::from_json(j, *coulomb);
@@ -2654,8 +2652,8 @@ bool ElectricPotential::overlapWithParticles(const Point& position) const {
 
 SavePenaltyEnergy::SavePenaltyEnergy(const json& j, const Space& spc, const Energy::Hamiltonian& pot)
     : Analysis(spc, "penaltyfunction")
-      , filename(j.at("file").get<std::string>())
-      , penalty_energy(pot.findFirstOf<Energy::Penalty>()) {
+    , filename(j.at("file").get<std::string>())
+    , penalty_energy(pot.findFirstOf<Energy::Penalty>()) {
     Analysis::from_json(j);
     if (!penalty_energy) {
         faunus_logger->warn("{}: analysis disabled as no penalty function found", name);

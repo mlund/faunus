@@ -1,4 +1,3 @@
-
 #include "sasa.h"
 #include "particle.h"
 #include "space.h"
@@ -70,14 +69,17 @@ double SASABase::calcSASAOfParticle(const SASABase::Neighbours& neighbour) const
                 const auto sqrd_circle_radius_j = sasa_radius_j * sasa_radius_j - z_distance * z_distance;
                 const auto circle_radius_j = std::sqrt(sqrd_circle_radius_j);
                 const auto xy_distance = std::sqrt(d_r.x() * d_r.x() + d_r.y() * d_r.y());
-                if (xy_distance >= circle_radius_i + circle_radius_j) { /* atoms aren't in contact */
+                if (xy_distance >= circle_radius_i + circle_radius_j) {
+                    /* atoms aren't in contact */
                     continue;
                 }
-                if (xy_distance + circle_radius_i < circle_radius_j) { /* circle i is completely inside j */
+                if (xy_distance + circle_radius_i < circle_radius_j) {
+                    /* circle i is completely inside j */
                     is_buried = true;
                     break;
                 }
-                if (xy_distance + circle_radius_j < circle_radius_i) { /* circle j is completely inside i */
+                if (xy_distance + circle_radius_j < circle_radius_i) {
+                    /* circle j is completely inside i */
                     continue;
                 }
                 /* arc of circle i intersected by circle j */
@@ -144,8 +146,8 @@ const std::vector<double>& SASABase::getAreas() const { return areas; }
  */
 SASABase::SASABase(const Space& spc, double probe_radius, int slices_per_atom)
     : probe_radius(probe_radius)
-    , slices_per_atom(slices_per_atom)
-    , first_particle(std::addressof(spc.particles.at(0))) {}
+      , slices_per_atom(slices_per_atom)
+      , first_particle(std::addressof(spc.particles.at(0))) {}
 
 /**
  * @brief resizes areas buffer to size of ParticleVector and fill radii buffer with radii
@@ -206,6 +208,7 @@ std::vector<SASA::Neighbours> SASA::calcNeighbourData(const Space& spc,
  */
 SASA::SASA(const Space& spc, double probe_radius, int slices_per_atom)
     : SASABase(spc, probe_radius, slices_per_atom) {}
+
 SASA::SASA(const json& j, const Space& spc)
     : SASABase(spc, j.value("radius", 1.4) * 1.0_angstrom, j.value("slices", 20)) {}
 
@@ -425,7 +428,8 @@ template <typename CellList> void SASACellList<CellList>::updateMatterChange(con
         const auto offset = spc.getFirstParticleIndex(group);
         for (const auto relative_index : group_change.relative_atom_indices) {
             const auto absolute_index = relative_index + offset;
-            if (relative_index >= group.size()) { // if index lies behind last active index
+            if (relative_index >= group.size()) {
+                // if index lies behind last active index
                 cell_list->removeMember(absolute_index);
             } else if (relative_index < group.size()) {
                 cell_list->insertMember(absolute_index,
@@ -553,7 +557,6 @@ TEST_CASE("[Faunus] SASA_CellList") {
         CHECK(neighbours[1].indices.empty());
     }
 }
-
 
 
 } // namespace Faunus

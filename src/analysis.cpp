@@ -12,6 +12,7 @@
 #include "aux/eigensupport.h"
 #include "aux/arange.h"
 #include "aux/matrixmarket.h"
+#include <cmath>
 #include <exception>
 #include <iterator>
 #include <range/v3/numeric/accumulate.hpp>
@@ -241,12 +242,33 @@ void SystemEnergy::normalize() {
     }
 }
 
+/**
+ * @brief Checks if the current energy is the lowest so far and saves the configuration if so.
+ *
+ * The output is hardcoded to PQR format, tagged with the step number and energy.
+ *
+ * @return True if a new minimum energy was encountered
+ */
+bool SystemEnergy::updateMinimumEnergy(const double current_energy) {
+    if (!dump_minimum_energy_configuration || current_energy >= minimum_energy) {
+        return false;
+    }
+    minimum_energy = current_energy;
+    const auto filename = MPI::prefix + "mininum_energy.pqr";
+    faunus_logger->debug(name + ": saving {} ({:2f} kT) at step {}", filename, minimum_energy, getNumberOfSteps());
+    PQRWriter(PQRWriter::Style::PQR).save(filename, spc.groups, spc.geometry.getLength());
+    return true;
+}
+
 void SystemEnergy::_sample() {
     const auto energies = calculateEnergies(); // current energy from all terms in Hamiltonian
     const auto total_energy = ranges::accumulate(energies, 0.0);
+    updateMinimumEnergy(total_energy);
     if (std::isfinite(total_energy)) {
         mean_energy += total_energy;
         mean_squared_energy += total_energy * total_energy;
+    } else {
+        faunus_logger->warn("{}: non-finite energy excluded from averages at step {}", name, getNumberOfSteps());
     }
     *output_stream << fmt::format("{:10d}{}{:.6E}", getNumberOfSteps(), separator, total_energy);
     for (auto energy : energies) {
@@ -256,7 +278,10 @@ void SystemEnergy::_sample() {
 }
 
 void SystemEnergy::_to_json(json& j) const {
-    j = {{"file", file_name}, {"init", initial_energy}, {"final", calculateEnergies()}};
+    j = {{"file", file_name},
+         {"init", initial_energy},
+         {"final", calculateEnergies()},
+         {"save_min_conf", dump_minimum_energy_configuration}};
     if (!mean_energy.empty()) {
         j["mean"] = mean_energy.avg();
         j["Cv/kB"] = mean_squared_energy.avg() - std::pow(mean_energy.avg(), 2);
@@ -264,11 +289,15 @@ void SystemEnergy::_to_json(json& j) const {
     roundJSON(j, 5);
 }
 
-void SystemEnergy::_from_json(const json& j) { file_name = MPI::prefix + j.at("file").get<std::string>(); }
+void SystemEnergy::_from_json(const json& j) {
+    file_name = MPI::prefix + j.at("file").get<std::string>();
+    dump_minimum_energy_configuration = j.value("save_min_conf", false);
+}
 
 void SystemEnergy::createOutputStream() {
     output_stream = IO::openCompressedOutputStream(file_name, true);
-    if (const auto suffix = file_name.substr(file_name.find_last_of('.') + 1); suffix == "csv") {
+    const bool is_csv_file = file_name.substr(file_name.find_last_of('.') + 1) == "csv";
+    if (is_csv_file) {
         separator = ",";
     } else {
         separator = " ";

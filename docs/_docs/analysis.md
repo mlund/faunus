@@ -644,6 +644,8 @@ All units in $k\_BT$.
 -------------- | -------------------------------------------
 `file`         | Output filename (`.dat`, `.csv`, `.dat.gz`)
 `nstep`        | Interval between samples
+`nskip=0`      | Number of initial steps excluded from the analysis
+`save_min_conf=false` | Dump minimum energy configuration to `PQR` file
 
 
 ### Penalty function

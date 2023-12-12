@@ -510,7 +510,10 @@ class SystemEnergy : public Analysis {
     Average<double> mean_squared_energy;
     Table2D<double, double> energy_histogram; // Density histograms
     double initial_energy = 0.0;
+    double minimum_energy = std::numeric_limits<double>::infinity(); //!< Tracks minimum energy
+    bool dump_minimum_energy_configuration = false;                  //!< Dump minimum energy config to disk
 
+    bool updateMinimumEnergy(double current_energy);
     void createOutputStream();
     void normalize();
     void _sample() override;

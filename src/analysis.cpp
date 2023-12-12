@@ -255,7 +255,7 @@ bool SystemEnergy::updateMinimumEnergy(const double current_energy) {
     }
     minimum_energy = current_energy;
     const auto filename = MPI::prefix + "mininum_energy.pqr";
-    faunus_logger->debug(name + ": saving {} ({:2f} kT) at step {}", filename, minimum_energy, getNumberOfSteps());
+    faunus_logger->debug(name + ": saving {} ({:.2f} kT) at step {}", filename, minimum_energy, getNumberOfSteps());
     PQRWriter(PQRWriter::Style::PQR).save(filename, spc.groups, spc.geometry.getLength());
     return true;
 }

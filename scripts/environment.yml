@@ -15,7 +15,7 @@ dependencies:
     - pandoc=2
     - pypandoc=1
     - beautifulsoup4=4.7
-    - ruamel_yaml=0.15
+    - ruamel.yaml=0.15
     - scipy=1.2
     - pygments=2.4
     - jinja2=2.10
@@ -25,5 +25,5 @@ dependencies:
     - jupyter_contrib_nbextensions=0.5
     - sdl2=2
     - jsonschema=3
-    - ruamel_yaml
+    - ruamel.yaml
 

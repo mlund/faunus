@@ -1106,6 +1106,35 @@ properties:
                     additionalProperties: false
                     type: object
 
+                sasa:
+                    type: object
+                    properties:
+                        nstep: {type: integer, description: "Interval between samples"}
+                        nskip: {type: integer, default: 0, description: "Initial steps to skip"}
+                        molecule:
+                            type: string
+                            description: "Molecule name to sample if `molecular` or `atoms_in_molecule` policies"
+                        atom: {type: string, description: "Atom to sample if `atomic` policy"}
+                        atomlist:
+                            type: array
+                            items: string
+                            minItems: 1
+                            description: "List of atom names if `atoms_in_molecule` policy"
+                        radius:
+                            type: number
+                            default: 1.4
+                            description: "Probe radius for SASA calculation (Å)"
+                        file:
+                            type: string
+                            pattern: "(.*?)\\.(dat|dat.gz)$"
+                            description: "Streaming filename (.dat|.dat.gz)"
+                        policy:
+                            type: string
+                            enum: ["atomic", "molecular", "atoms_in_molecule"]
+                            description: "Area calculation policy"
+                    required: [nstep, policy]
+                    additionalProperties: false
+
                 savestate:
                     description: "Save particle positions to file"
                     properties:
@@ -1177,6 +1206,10 @@ properties:
                         file: {type: string}
                         nstep: {type: integer}
                         nskip: {type: integer, default: 0, description: Initial steps to skip}
+                        save_min_conf:
+                            type: boolean
+                            default: false
+                            description: "Save minimum energy configuration to PQR file"
                     required: [file, nstep]
                     additionalProperties: false
                     type: object

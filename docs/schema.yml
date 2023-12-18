@@ -1203,7 +1203,7 @@ properties:
 
                 systemenergy:
                     properties:
-                        file: {type: string}
+                        file: {type: string, pattern: "(.*?)\\.(dat|dat.gz|csv)$", description: "Output filename (.dat|.dat.gz|.csv)"}
                         nstep: {type: integer}
                         nskip: {type: integer, default: 0, description: Initial steps to skip}
                         save_min_conf:

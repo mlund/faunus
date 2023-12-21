@@ -851,7 +851,7 @@ properties:
                             type: string
                             enum: [xyzqi, xyzq, xyz]
                             default: xyzqi
-                            description: "Which particle properties to exchange (I=atom id, Q=charge)"
+                            description: "Which particle properties to exchange (i=atom id, q=charge)"
 
                     additionalProperties: false
                     type: object

@@ -341,6 +341,29 @@ with gzip.open('distances.mtx.gz', 'rt') as f:
         print(np.sort(counts)) # cluster size distribution
 ~~~
 
+### Surface Area
+
+Calculates surface areas using different sample policies
+that selects by:
+
+1. atoms types (`atomic`)
+2. molecule types (`molecular`)
+3. atom types in specific molecules (`atoms_in_molecule`)
+
+In addition to the optional `file` streaming, a histogram of observed areas
+is filed to disk, `sasa_histogram.dat`.
+
+`sasa`         | Description
+-------------- | ---------------------------
+`nstep`        | Interval between samples
+`nskip=0`      | Number of initial steps excluded from the analysis
+`policy`       | Sample policy: `atomic`, `molecular`, `atoms_in_molecule`
+`molecule`     | Molecule name to sample if `molecular` or `atoms_in_molecule` policies
+`atom`         | Atom name to sample if `atomic` policy
+`atomlist`     | List of atom names if `atoms_in_molecule` policy
+`file`         | Optionally stream area for each `nstep` to file (`.dat|.dat.gz`)
+`radius=1.4`   | Probe radius (Å)
+
 ## Charge Properties
 
 ### Molecular Multipoles
@@ -352,6 +375,7 @@ Calculates average molecular multipolar moments and their fluctuations.
 `nstep`        | Interval between samples.
 
 The output from the multipole analysis gives the following:
+
 `multipole`    | Description
 -------------- | ----------------------
  `C`           | Capacitance, eV⁻¹  
@@ -360,34 +384,34 @@ The output from the multipole analysis gives the following:
  `μ`           | Dipole moment, eÅ 
  `μ2`          | Squared dipole moment, (eÅ)²
 
- The capacitance, $C$, is defined accordingly: 
+ The capacitance, `C`, is defined accordingly: 
  
  $$ 
- c = < z² > - < z >² 
+ C = \langle z^2 \rangle - \langle z \rangle^2 
  $$
  
- Where $Z$ is defined as the average charge/valency: 
+ Where `Z` is defined as the average charge/valency: 
  
  $$ 
- < z > = < \sum_i z_i > 
+ Z = \langle \sum_i z_i \rangle 
  $$
  
- This gives that $Z2$ is just the squared average charge/valency:
+ This gives that `Z2` is just the squared average charge/valency:
  
  $$
- < z² > = < \sum_i z²_i >
+ \text{Z2} = \langle \sum_i z^2_i \rangle
  $$
  
- Continuing, the dipole moment, $μ$ , is defined as:
+ Continuing, the dipole moment, `μ`, is defined as:
  
  $$
- μ  =  < \mu > = < | \sum_i z_i (r_i - r_{cm}) | >
+ \mu  =  \langle | \sum_i z_i (r_i - r_{cm}) | \rangle
  $$
  
- Lastly, the $μ2$ is defined as the mean squared dipole moment:
+ Lastly, the `μ2` is defined as the mean squared dipole moment:
  
  $$
- μ2 = < \mu² >
+ \mu^2 = \langle \mu^2 \rangle
  $$
  
 ### Multipole Moments
@@ -457,7 +481,7 @@ $$
 $$
 
 $$
-    u_{\text{ion-quad}} =  \frac{ q_a \boldsymbol{R}^T \boldsymbol{Q}_b \boldsymbol{R} }{R^5}-\frac{q_a \mbox{tr}(\boldsymbol{Q}_b) }{R^3}+ ...
+    u_{\text{ion-quad}} =  \frac{ q_a \boldsymbol{R}^T \boldsymbol{Q}_b \boldsymbol{R} }{R^5}-\frac{q_a \text{tr}(\boldsymbol{Q}_b) }{R^3}+ ...
 $$
 
 $$
@@ -505,6 +529,7 @@ atomic species can be saved.
 `nstep`               | Interval between samples
 `nskip=0`             | Number of initial steps excluded from the analysis
 `epsr`                | Dielectric constant
+`file=potential`      | Filename prefix for output files
 `type`                | Coulomb type, `plain` etc. -- see energies
 `structure`           | Either a _filename_ (pqr, aam, gro etc) or a _list_ of positions
 `policy=fixed`        | Policy used to augment positions before each sample event, see below
@@ -619,6 +644,8 @@ All units in $k\_BT$.
 -------------- | -------------------------------------------
 `file`         | Output filename (`.dat`, `.csv`, `.dat.gz`)
 `nstep`        | Interval between samples
+`nskip=0`      | Number of initial steps excluded from the analysis
+`save_min_conf=false` | Dump minimum energy configuration to `PQR` file
 
 
 ### Penalty function

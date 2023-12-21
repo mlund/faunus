@@ -137,6 +137,13 @@ add_test(
         WORKING_DIRECTORY ${EXAMPLES_DIR}/polymers)
 
 add_test(
+        NAME sasa
+        COMMAND sh -c "${Python_EXECUTABLE} ${YASON} sasa.yml\
+    | $<TARGET_FILE:faunus> --quiet\
+    && ${Python_EXECUTABLE} ${JSON_COMPARE} sasa.out.json out.json --tol 0.01"
+        WORKING_DIRECTORY ${EXAMPLES_DIR}/sasa)
+
+add_test(
         NAME smartmc
         COMMAND sh -c "${Python_EXECUTABLE} ${YASON} smartmc.yml\
     | $<TARGET_FILE:faunus> --quiet\
@@ -272,11 +279,11 @@ add_test(
 
 install(FILES
         ${EXAMPLES_DIR}/README.md
-        ${EXAMPLES_DIR}/anglescan.ipynb
-        ${EXAMPLES_DIR}/anglescan.xyz
-        ${EXAMPLES_DIR}/anglescan.yml
-        ${EXAMPLES_DIR}/anglescan_energies.dat
-        ${EXAMPLES_DIR}/anglescan_rdf.dat
+        ${EXAMPLES_DIR}/anglescan/anglescan.ipynb
+        ${EXAMPLES_DIR}/anglescan/anglescan.xyz
+        ${EXAMPLES_DIR}/anglescan/anglescan.yml
+        ${EXAMPLES_DIR}/anglescan/anglescan_energies.dat
+        ${EXAMPLES_DIR}/anglescan/anglescan_rdf.dat
         ${EXAMPLES_DIR}/bulk/bulk.yml
         ${EXAMPLES_DIR}/bulk-replay/bulk-replay.yml
         ${EXAMPLES_DIR}/chargemove/chargemove.yml

@@ -393,6 +393,9 @@ _Warning:_ Untested for cylinders, slits.
 
 ## Gibbs Ensemble (unstable)
 
+_Note: this is marked unstable or experimental, meaning that it is still being tested and
+may see significant changes over time._
+
 [Gibbs ensemble](https://dx.doi.org/10/cvzgw9)
 can be used to investigate phase transitions by _matter_ and _volume_ exchange between two cells.
 The `examples/gibbs-ensemble/` directory contains a Jupyter Notebook with a worked example of a simple Lennard-Jones system.

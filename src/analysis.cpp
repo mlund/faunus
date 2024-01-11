@@ -245,7 +245,8 @@ void SystemEnergy::normalize() {
 /**
  * @brief Checks if the current energy is the lowest so far and saves the configuration if so.
  *
- * The output is hardcoded to PQR format, tagged with the step number and energy.
+ * The output is hardcoded to PQR format, tagged with the step number and energy. In addition,
+ * we dump Space to a state file that can be used to restart a simulation.
  *
  * @return True if a new minimum energy was encountered
  */
@@ -254,9 +255,18 @@ bool SystemEnergy::updateMinimumEnergy(const double current_energy) {
         return false;
     }
     minimum_energy = current_energy;
-    const auto filename = MPI::prefix + "mininum_energy.pqr";
+
+    auto filename = MPI::prefix + "mininum_energy.pqr";
     faunus_logger->debug("{}: saving {} ({:.2f} kT) at step {}", name, filename, minimum_energy, getNumberOfSteps());
     PQRWriter(PQRWriter::Style::PQR).save(filename, spc.groups, spc.geometry.getLength());
+
+    filename = MPI::prefix + "mininum_energy.state";
+    if (std::ofstream file(filename); file) {
+        faunus_logger->debug("{}: saving {} ({:.2f} kT) at step {}", name, filename, minimum_energy, getNumberOfSteps());
+        json j;
+        Faunus::to_json(j, spc);
+        file << std::setw(1) << j;
+    }
     return true;
 }
 

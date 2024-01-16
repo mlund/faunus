@@ -61,7 +61,7 @@ class Penalty : public EnergyTerm {
 class PenaltyMPI : public Penalty {
   private:
     const MPI::Controller& mpi;
-    Eigen::VectorXi weights;                                     //!< array w. mininum histogram counts
+    Eigen::VectorXi weights;                                     //!< array w. minimum histogram counts
     Eigen::VectorXd buffer;                                      //!< receive buffer for penalty functions
     void updatePenalty(const std::vector<double>& coordinate) override; //!< Average penalty function across all nodes
     void averagePenaltyFunctions();                              //!< Average penalty functions over all MPI nodes

@@ -256,11 +256,11 @@ bool SystemEnergy::updateMinimumEnergy(const double current_energy) {
     }
     minimum_energy = current_energy;
 
-    auto filename = MPI::prefix + "mininum_energy.pqr";
+    auto filename = MPI::prefix + "minimum_energy.pqr";
     faunus_logger->debug("{}: saving {} ({:.2f} kT) at step {}", name, filename, minimum_energy, getNumberOfSteps());
     PQRWriter(PQRWriter::Style::PQR).save(filename, spc.groups, spc.geometry.getLength());
 
-    filename = MPI::prefix + "mininum_energy.state";
+    filename = MPI::prefix + "minimum_energy.state";
     if (std::ofstream file(filename); file) {
         faunus_logger->debug("{}: saving {} ({:.2f} kT) at step {}", name, filename, minimum_energy, getNumberOfSteps());
         json j;

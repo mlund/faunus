@@ -348,6 +348,9 @@ Support for fluctuating number of particles, i.e.
 grand canonical moves is currently untested and should be
 considered experimental.
 
+#Exchange statistics
+In the output file, the acceptance and attempts of an exchange direction can be found under exchange in temper;moves. Next, the first tap under  exchangempi gives which mpi box the outfile represents (ex. 0, 1,...). Under this number the tab exchanges all executed temper movements are listed. For each movement two placeholders  are given, which represents the mpi's the tempering algorithm tries to switch. If the tempering move was not accepted, both the placeholders will be -1. When the tempering move is accepted do the placeholders contain the numbers of the interchanged mpi's. In faunus/examples/temper there is a notebook "temper\_exchange\_statistics.ipynb" illustrating how this aquired data can be used to study how the mpi's are exchanged.  
+
 
 ## Volume Move
 

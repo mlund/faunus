@@ -849,9 +849,9 @@ properties:
                             default: isotropic
                         format:
                             type: string
-                            enum: [XYZQI, XYZQ, XYZ]
-                            default: XYZQI
-                            description: "Which particle properties to exchange (I=atom id, Q=charge)"
+                            enum: [xyzqi, xyzq, xyz]
+                            default: xyzqi
+                            description: "Which particle properties to exchange (i=atom id, q=charge)"
 
                     additionalProperties: false
                     type: object

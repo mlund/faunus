@@ -1319,8 +1319,8 @@ TEST_CASE("[Faunus] rootMeanSquareDeviation") {
  * - https://en.wikipedia.org/wiki/Geodesic_polyhedron
  * - c++: https://github.com/caosdoar/spheres
  */
-std::vector<Point> TwobodyAngles::fibonacciSphere(const int samples) {
-    int cnt = 0;
+std::vector<Point> TwobodyAngles::fibonacciSphere(const size_t samples) {
+    unsigned int cnt = 0;
     const auto phi = pc::pi * (3.0 - std::sqrt(5.0));  // golden angle in radians
     std::vector<Point> unit_points_on_sphere;
     unit_points_on_sphere.resize(samples);

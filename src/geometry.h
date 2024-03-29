@@ -814,7 +814,7 @@ std::pair<Cuboid, ParticleVector> hexagonalPrismToCuboid(const HexagonalPrism& h
  * ~~~
  */
 class TwobodyAngles {
-    static std::vector<Point> fibonacciSphere(int);
+    static std::vector<Point> fibonacciSphere(size_t);
 
   public:
     std::vector<Eigen::Quaterniond> quaternions_1; //!< Quaternions to explore all Euler angles

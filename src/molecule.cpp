@@ -223,7 +223,7 @@ void NeighboursGenerator::generatePaths(int bonded_distance) {
     // continue wherever the last path generation ended
     for (int distance = (int)paths.size(); distance <= bonded_distance; ++distance) {
         paths.emplace_back();
-        const auto& base_paths = paths.rbegin()[1]; // last but one: a set of paths of length (distance - 1)
+        const auto base_paths = paths.rbegin()[1]; // last but one: a set of paths of length (distance - 1)
         for (const auto& base_path : base_paths) {
             // try to extend the path with every atom bonded to the tail
             for (const auto& appending : bond_map.at(base_path.back())) {

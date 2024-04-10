@@ -199,11 +199,10 @@ the style configuration file [`.clang-format`](https://github.com/mlund/faunus/b
 Also, adhere to the following naming conventions:
 
 Style        | Elements
------------- | -------------------------
-`CamelCase`  | classes, namespaces
-`camelBack`  | functions
-`snake_case` | variables
-
+------------ | --------------------------
+`CamelCase`  | classes, namespaces, enums
+`lower_case` | functions, variables, enum constants
+`UPPER_CASE` | constexpr variable
 
 ## Creating a conda package (development usage)
 

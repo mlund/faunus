@@ -1086,32 +1086,27 @@ class SavePenaltyEnergy : public Analysis {
     SavePenaltyEnergy(const json& j, const Space& spc, const Energy::Hamiltonian& pot);
 };
 
+/**
+ * @brief Analysis of Vorononoi tessellation using the Voronota-LT library
+ *
+ * https://doi.org/10.1093/bioinformatics/btab448
+ */
 class Voronota : public Analysis {
   private:
-    using average_type = Average<double>;
-    struct Ball {
-        double x;
-        double y;
-        double z;
-        double r;
-    };
     struct Averages {
-        average_type area;
-        average_type area_squared;
-    };                     //!< Placeholder class for average properties
+        Average<double> area;
+        Average<double> area_squared;
+    }; //!< Placeholder class for average properties
     Averages average_data; //!< Stores all averages for the selected molecule
 
     std::unique_ptr<std::ostream> output_stream; //!< output stream
+    double probe_radius;                         //!< radius of the probe sphere
+    std::string filename;                        //!< output file name
 
-    double probe_radius; //!< radius of the probe sphere
-    int slices_per_atom; //!< number of slices of each sphere in SASA calculation
-
-    std::string filename;                         //!< output file name
-
-    virtual void _to_json(json& j) const override;
-    virtual void _from_json(const json& input) override;
-    virtual void _to_disk() override;
-    virtual void _sample() override;
+    void _to_json(json& j) const override;
+    void _from_json(const json& input) override;
+    void _to_disk() override;
+    void _sample() override;
 
   public:
     Voronota(const json& j, const Space& spc);

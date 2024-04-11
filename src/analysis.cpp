@@ -25,9 +25,6 @@
 #include <cereal/archives/binary.hpp>
 #include <range/v3/numeric/accumulate.hpp>
 #include <range/v3/view/zip.hpp>
-
-#include "voronotalt/voronotalt.h" // assuming that the "voronotalt" directory is in the include path
-
 #include <iomanip>
 #include <iostream>
 #include <memory>
@@ -196,6 +193,8 @@ std::unique_ptr<Analysis> createAnalysis(const std::string& name, const json& j,
             return std::make_unique<VirtualVolumeMove>(j, spc, pot);
         } else if (name == "virtualtranslate") {
             return std::make_unique<VirtualTranslate>(j, spc, pot);
+        } else if (name == "voronoi") {
+            return std::make_unique<Voronota>(j, spc);
         } else if (name == "widom") {
             return std::make_unique<WidomInsertion>(j, spc, pot);
         } else if (name == "xtcfile") {
@@ -1881,6 +1880,7 @@ SASAAnalysis::SASAAnalysis(const double probe_radius, const int slices_per_atom,
         break;
     }
     setPolicy(selected_policy);
+    cite = "doi:10/dbjh";
 }
 
 SASAAnalysis::SASAAnalysis(const json& j, const Space& spc)
@@ -1888,7 +1888,6 @@ SASAAnalysis::SASAAnalysis(const json& j, const Space& spc)
                    j.value("policy", Policies::INVALID), spc) {
     from_json(j);
     policy->from_json(j);
-    cite = "doi:10/dbjh";
 }
 
 void SASAAnalysis::_to_json(json& json_ouput) const {
@@ -2712,10 +2711,6 @@ void SavePenaltyEnergy::_sample() {
             penalty_energy->streamHistogram(*stream);
         }
     }
-}
-
-void Voronota::_sample() {
-    voronotalt::RadicalTessellation::Result result;
 }
 
 } // namespace Faunus::analysis

@@ -1,6 +1,6 @@
 #include "analysis.h"
 #include "mpicontroller.h"
-#include "voronotalt/voronotalt.h"
+#include <voronotalt/voronotalt.h>
 #include <numeric>
 
 namespace Faunus::analysis {

@@ -8,6 +8,8 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 target_link_libraries(project_options INTERFACE ZLIB::ZLIB)
 target_link_libraries(project_options INTERFACE ${CMAKE_THREAD_LIBS_INIT})
 
+include_directories(SYSTEM ${CMAKE_SOURCE_DIR}/voronotalt)
+
 # ========== pre-compiler system headers ==========
 
 option(ENABLE_PCH "Enable Precompiled Headers" OFF)

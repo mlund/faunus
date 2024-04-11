@@ -26,6 +26,8 @@
 #include <range/v3/numeric/accumulate.hpp>
 #include <range/v3/view/zip.hpp>
 
+#include "voronotalt/voronotalt.h" // assuming that the "voronotalt" directory is in the include path
+
 #include <iomanip>
 #include <iostream>
 #include <memory>
@@ -2710,6 +2712,10 @@ void SavePenaltyEnergy::_sample() {
             penalty_energy->streamHistogram(*stream);
         }
     }
+}
+
+void Voronota::_sample() {
+    voronotalt::RadicalTessellation::Result result;
 }
 
 } // namespace Faunus::analysis

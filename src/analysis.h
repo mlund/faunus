@@ -262,7 +262,7 @@ class ElectricPotential : public Analysis {
     unsigned int calculations_per_sample_event = 1;
     std::string file_prefix; //!< Output filename prefix for potential histogram and correlation
     struct Target {
-        Point position;                                               //!< Target position
+        Point position;                                                //!< Target position
         Average<double> mean_potential;                               //!< mean potential at position
         std::unique_ptr<SparseHistogram<double>> potential_histogram; //!< Histogram of observed potentials
     };
@@ -1084,6 +1084,38 @@ class SavePenaltyEnergy : public Analysis {
 
   public:
     SavePenaltyEnergy(const json& j, const Space& spc, const Energy::Hamiltonian& pot);
+};
+
+class Voronota : public Analysis {
+  private:
+    using average_type = Average<double>;
+    struct Ball {
+        double x;
+        double y;
+        double z;
+        double r;
+    };
+    struct Averages {
+        average_type area;
+        average_type area_squared;
+    };                     //!< Placeholder class for average properties
+    Averages average_data; //!< Stores all averages for the selected molecule
+
+    std::unique_ptr<std::ostream> output_stream; //!< output stream
+
+    double probe_radius; //!< radius of the probe sphere
+    int slices_per_atom; //!< number of slices of each sphere in SASA calculation
+
+    std::string filename;                         //!< output file name
+
+    virtual void _to_json(json& j) const override;
+    virtual void _from_json(const json& input) override;
+    virtual void _to_disk() override;
+    virtual void _sample() override;
+
+  public:
+    Voronota(const json& j, const Space& spc);
+    Voronota(double probe_radius, const Space& spc);
 };
 
 } // namespace analysis

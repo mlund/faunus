@@ -8,7 +8,7 @@ namespace Faunus::analysis {
 Voronota::Voronota(double probe_radius, const Faunus::Space& spc)
     : Analysis(spc, "voronota")
     , probe_radius(probe_radius) {
-    cite = "doi:10.1093/bioinformatics/btab448";
+    cite = "doi:10/mq8k";
     if (spc.geometry.asSimpleGeometry()->boundary_conditions.isPeriodic().count() != 0) {
         faunus_logger->warn("PBC is currently ignored by the `voronoi` analysis - be careful!");
     }

@@ -367,7 +367,7 @@ is filed to disk, `sasa_histogram.dat`.
 ### Voronoi Tessellation (experimental)
 
 Performs Voronoi tessellation to detect contacts and surface areas using
-the [Voronota-LT library](https://doi.org/10/gpfkwh).
+the [Voronota-LT library](https://doi.org/10/mq8k).
 Only the total surface is currently reported, but more is planned for future
 releases.
 The algorithm is significantly faster than the above `sasa` analysis.

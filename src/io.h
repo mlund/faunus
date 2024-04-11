@@ -1,13 +1,13 @@
 #pragma once
 
 #include "particle.h"
-#include "spdlog/spdlog.h"
 #include "units.h"
 #include "group.h"
 #include <fstream>
 #include <type_traits>
 #include <concepts>
 #include <iterator>
+#include <spdlog/spdlog.h>
 #include <range/v3/iterator/operations.hpp>
 #include <range/v3/algorithm/for_each.hpp>
 #include <numeric>

@@ -3,9 +3,9 @@
 #include "units.h"
 #include "auxiliary.h"
 #include "aux/arange.h"
-#include "spdlog/spdlog.h"
 #include "smart_montecarlo.h"
 #include <coulombgalore.h>
+#include <spdlog/spdlog.h>
 
 namespace Faunus::pairpotential {
 

@@ -4,7 +4,7 @@
 #include "aux/eigensupport.h"
 #include "functionparser.h"
 #include "space.h"
-#include "spdlog/spdlog.h"
+#include <spdlog/spdlog.h>
 
 namespace Faunus::Energy {
 

@@ -1,14 +1,14 @@
 #define DOCTEST_CONFIG_IMPLEMENT
-#include <doctest/doctest.h>
 #include "mpicontroller.h"
 #include "montecarlo.h"
 #include "analysis.h"
 #include "multipole.h"
 #include "docopt.h"
-#include "progress_tracker.h"
-#include "spdlog/spdlog.h"
 #include "move.h"
 #include "actions.h"
+#include <doctest/doctest.h>
+#include <progress_tracker.h>
+#include <spdlog/spdlog.h>
 #include <spdlog/sinks/null_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>

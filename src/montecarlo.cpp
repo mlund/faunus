@@ -2,7 +2,7 @@
 #include "speciation.h"
 #include "energy.h"
 #include "move.h"
-#include "spdlog/spdlog.h"
+#include <spdlog/spdlog.h>
 #include <range/v3/algorithm/for_each.hpp>
 
 namespace Faunus {

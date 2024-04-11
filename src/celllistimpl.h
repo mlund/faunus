@@ -19,7 +19,7 @@
 #include <range/v3/view/transform.hpp>
 #include "celllist.h"
 #include "core.h"
-#include "spdlog/spdlog.h"
+#include <spdlog/spdlog.h>
 
 namespace Faunus {
 

@@ -3,7 +3,7 @@
 #include "io.h"
 
 //#define ANKERL_NANOBENCH_IMPLEMENT
-#include "nanobench.h"
+#include <nanobench.h>
 
 namespace Faunus::Scatter {
 

@@ -1,7 +1,7 @@
 #include "space.h"
 #include "io.h"
-#include "spdlog/spdlog.h"
 #include "aux/eigensupport.h"
+#include <spdlog/spdlog.h>
 #include <range/v3/algorithm/for_each.hpp>
 #include <range/v3/algorithm/count_if.hpp>
 #include <doctest/doctest.h>

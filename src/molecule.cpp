@@ -3,9 +3,9 @@
 #include "geometry.h"
 #include "rotate.h"
 #include "bonds.h"
-#include "spdlog/spdlog.h"
 #include "aux/eigensupport.h"
 #include <functional>
+#include <spdlog/spdlog.h>
 #include <range/v3/view/transform.hpp>
 #include <range/v3/view/join.hpp>
 #include <range/v3/view/filter.hpp>

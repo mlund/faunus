@@ -2,7 +2,6 @@
 
 #include <Eigen/Core>
 #include <nlohmann/json.hpp>
-
 #include "aux/eigen_cerealisation.h"
 
 // Eigen<->JSON (de)serialization

@@ -371,6 +371,7 @@ the [Voronota-LT library](https://doi.org/10/gpfkwh).
 Only the total surface is currently reported, but more is planned for future
 releases.
 The algorithm is significantly faster than the above `sasa` analysis.
+Note that the the analysis is currently limited to non-periodic cells!
 
 `voronoi`      | Description
 -------------- | ---------------------------

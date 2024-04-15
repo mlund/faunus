@@ -368,10 +368,9 @@ is filed to disk, `sasa_histogram.dat`.
 
 Performs Voronoi tessellation to detect contacts and surface areas using
 the [Voronota-LT library](https://doi.org/10/mq8k).
-Only the total surface is currently reported, but more is planned for future
+Only the total surface area is currently reported, but more options are planned for future
 releases.
 The algorithm is significantly faster than the above `sasa` analysis.
-Note that the the analysis is currently limited to non-periodic cells!
 
 `voronoi`      | Description
 -------------- | ---------------------------

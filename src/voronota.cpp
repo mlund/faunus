@@ -9,8 +9,19 @@ Voronota::Voronota(double probe_radius, const Faunus::Space& spc)
     : Analysis(spc, "voronota")
     , probe_radius(probe_radius) {
     cite = "doi:10/mq8k";
-    if (spc.geometry.asSimpleGeometry()->boundary_conditions.isPeriodic().count() != 0) {
-        faunus_logger->warn("PBC is currently ignored by the `voronoi` analysis - be careful!");
+    auto n_pbc = spc.geometry.asSimpleGeometry()->boundary_conditions.isPeriodic().count();
+    switch (n_pbc) {
+        case 0:
+            faunus_logger->debug("{}: No PBC detected", name);
+            use_pbc = false;
+            break;
+        case 3:
+            faunus_logger->debug("{}: 3D PBC detected", name);
+            use_pbc = true;
+            break;
+        default:
+            faunus_logger->warn("{}: Non-uniform PBC is currently ignored - be careful!", name);
+            use_pbc = false;
     }
 }
 

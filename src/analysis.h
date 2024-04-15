@@ -1102,6 +1102,7 @@ class Voronota : public Analysis {
     std::unique_ptr<std::ostream> output_stream; //!< output stream
     double probe_radius;                         //!< radius of the probe sphere
     std::string filename;                        //!< output file name
+    bool use_pbc = false;                        //!< Is the cell periodic?
 
     void _to_json(json& j) const override;
     void _from_json(const json& input) override;

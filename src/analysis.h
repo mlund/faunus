@@ -262,7 +262,7 @@ class ElectricPotential : public Analysis {
     unsigned int calculations_per_sample_event = 1;
     std::string file_prefix; //!< Output filename prefix for potential histogram and correlation
     struct Target {
-        Point position;                                               //!< Target position
+        Point position;                                                //!< Target position
         Average<double> mean_potential;                               //!< mean potential at position
         std::unique_ptr<SparseHistogram<double>> potential_histogram; //!< Histogram of observed potentials
     };
@@ -1084,6 +1084,36 @@ class SavePenaltyEnergy : public Analysis {
 
   public:
     SavePenaltyEnergy(const json& j, const Space& spc, const Energy::Hamiltonian& pot);
+};
+
+/**
+ * @brief Analysis of Vorononoi tessellation using the Voronota-LT library
+ *
+ * @todo Currently only SASA information is reported in the output. Add more information!
+ *
+ * https://doi.org/10/mq8k
+ */
+class Voronota : public Analysis {
+  private:
+    struct Averages {
+        Average<double> area;
+        Average<double> area_squared;
+    }; //!< Placeholder class for average properties
+    Averages average_data; //!< Stores all averages for the selected molecule
+
+    std::unique_ptr<std::ostream> output_stream; //!< output stream
+    double probe_radius;                         //!< radius of the probe sphere
+    std::string filename;                        //!< output file name
+    bool use_pbc = false;                        //!< Is the cell periodic?
+
+    void _to_json(json& j) const override;
+    void _from_json(const json& input) override;
+    void _to_disk() override;
+    void _sample() override;
+
+  public:
+    Voronota(const json& j, const Space& spc);
+    Voronota(double probe_radius, const Space& spc);
 };
 
 } // namespace analysis

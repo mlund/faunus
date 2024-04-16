@@ -1263,6 +1263,23 @@ properties:
                         nskip: {type: integer, default: 0, description: Number of steps to initially skip}
                     required: [dL, molecule, nstep]
                     additionalProperties: false
+
+                voronoi:
+                    description: "Voronoi tessellation using Voronota"
+                    type: object
+                    properties:
+                        nstep: {type: integer, description: "Interval between samples"}
+                        nskip: {type: integer, default: 0, description: "Initial steps to skip"}
+                        radius:
+                            type: number
+                            default: 1.4
+                            description: "Probe radius (Å)"
+                        file:
+                            type: string
+                            pattern: "(.*?)\\.(dat|dat.gz)$"
+                            description: "Streaming filename (.dat|.dat.gz)"
+                    required: [nstep]
+                    additionalProperties: false
  
                 widom:
                     description: "Widom ghost particle insertion"

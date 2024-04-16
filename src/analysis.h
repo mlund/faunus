@@ -1089,7 +1089,9 @@ class SavePenaltyEnergy : public Analysis {
 /**
  * @brief Analysis of Vorononoi tessellation using the Voronota-LT library
  *
- * https://doi.org/10.1093/bioinformatics/btab448
+ * @todo Currently only SASA information is reported in the output. Add more information!
+ *
+ * https://doi.org/10/mq8k
  */
 class Voronota : public Analysis {
   private:

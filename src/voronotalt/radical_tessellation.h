@@ -227,6 +227,8 @@ public:
 		TotalContactDescriptorsSummary total_contacts_summary;
 		std::vector<CellContactDescriptorsSummary> cells_summaries;
 		TotalCellContactDescriptorsSummary total_cells_summary;
+		std::vector<ContactDescriptorSummary> contacts_with_redundancy_summaries_in_periodic_box;
+		std::vector<UnsignedInt> contacts_with_redundancy_canonical_ids_in_periodic_box;
 
 		Result() : total_spheres(0), total_collisions(0), total_relevant_collisions(0)
 		{
@@ -247,17 +249,28 @@ public:
 	};
 
 	static void construct_full_tessellation(
-			const std::vector<SimpleSphere>& spheres,
+			const std::vector<SimpleSphere>& input_spheres,
 			Result& result)
 	{
 		TimeRecorder time_recorder;
 		ResultGraphics result_graphics;
-		construct_full_tessellation(spheres, std::vector<int>(), false, true, result, result_graphics, time_recorder);
+		construct_full_tessellation(input_spheres, std::vector<int>(), std::vector<SimplePoint>(), false, true, result, result_graphics, time_recorder);
 	}
 
 	static void construct_full_tessellation(
-			const std::vector<SimpleSphere>& spheres,
+			const std::vector<SimpleSphere>& input_spheres,
+			const std::vector<SimplePoint>& periodic_box_corners,
+			Result& result)
+	{
+		TimeRecorder time_recorder;
+		ResultGraphics result_graphics;
+		construct_full_tessellation(input_spheres, std::vector<int>(), periodic_box_corners, false, true, result, result_graphics, time_recorder);
+	}
+
+	static void construct_full_tessellation(
+			const std::vector<SimpleSphere>& input_spheres,
 			const std::vector<int>& grouping_of_spheres,
+			const std::vector<SimplePoint>& periodic_box_corners,
 			const bool with_graphics,
 			const bool summarize_cells,
 			Result& result,
@@ -265,25 +278,16 @@ public:
 			TimeRecorder& time_recorder)
 	{
 		PreparationForTessellation::Result preparation_result;
-		PreparationForTessellation::prepare_for_tessellation(spheres, grouping_of_spheres, preparation_result, time_recorder);
-		construct_full_tessellation(spheres, preparation_result, with_graphics, summarize_cells, result, result_graphics, time_recorder);
-	}
+		PreparationForTessellation::prepare_for_tessellation(input_spheres, grouping_of_spheres, periodic_box_corners, preparation_result, time_recorder);
 
-	static void construct_full_tessellation(
-			const std::vector<SimpleSphere>& spheres,
-			const PreparationForTessellation::Result& preparation_result,
-			const bool with_graphics,
-			const bool summarize_cells,
-			Result& result,
-			ResultGraphics& result_graphics,
-			TimeRecorder& time_recorder)
-	{
+		const std::vector<SimpleSphere>& spheres=(preparation_result.spheres_with_periodic_instances.empty() ? input_spheres : preparation_result.spheres_with_periodic_instances);
+
 		time_recorder.reset();
 
 		result=Result();
 		result_graphics=ResultGraphics();
 
-		result.total_spheres=preparation_result.total_spheres;
+		result.total_spheres=preparation_result.total_input_spheres;
 		result.total_collisions=preparation_result.total_collisions;
 		result.total_relevant_collisions=preparation_result.relevant_collision_ids.size();
 
@@ -358,13 +362,6 @@ public:
 
 		time_recorder.record_elapsed_miliseconds_and_reset("copy valid contact summaries");
 
-		for(UnsignedInt i=0;i<result.contacts_summaries.size();i++)
-		{
-			result.total_contacts_summary.add(result.contacts_summaries[i]);
-		}
-
-		time_recorder.record_elapsed_miliseconds_and_reset("accumulate total contacts summary");
-
 		if(with_graphics)
 		{
 			result_graphics.contacts_graphics.resize(ids_of_valid_pairs.size());
@@ -379,13 +376,19 @@ public:
 
 		if(summarize_cells)
 		{
-			result.cells_summaries.resize(preparation_result.total_spheres);
+			result.cells_summaries.resize(result.total_spheres);
 
 			for(UnsignedInt i=0;i<result.contacts_summaries.size();i++)
 			{
 				const ContactDescriptorSummary& cds=result.contacts_summaries[i];
-				result.cells_summaries[cds.id_a].add(cds.id_a, cds);
-				result.cells_summaries[cds.id_b].add(cds.id_b, cds);
+				if(cds.id_a<result.total_spheres)
+				{
+					result.cells_summaries[cds.id_a].add(cds.id_a, cds);
+				}
+				if(cds.id_b<result.total_spheres)
+				{
+					result.cells_summaries[cds.id_b].add(cds.id_b, cds);
+				}
 			}
 
 			time_recorder.record_elapsed_miliseconds_and_reset("accumulate cell summaries");
@@ -408,6 +411,97 @@ public:
 
 			time_recorder.record_elapsed_miliseconds_and_reset("accumulate total cells summary");
 		}
+
+		if(!preparation_result.periodic_links_of_spheres.empty())
+		{
+			std::vector< std::vector<UnsignedInt> > map_of_spheres_to_boundary_contacts(result.total_spheres);
+
+			for(UnsignedInt i=0;i<result.contacts_summaries.size();i++)
+			{
+				const ContactDescriptorSummary& cds=result.contacts_summaries[i];
+				if((cds.id_a>=result.total_spheres || cds.id_b>=result.total_spheres) && cds.id_a<preparation_result.periodic_links_of_spheres.size() && cds.id_b<preparation_result.periodic_links_of_spheres.size())
+				{
+					map_of_spheres_to_boundary_contacts[preparation_result.periodic_links_of_spheres[cds.id_a]].push_back(i);
+					map_of_spheres_to_boundary_contacts[preparation_result.periodic_links_of_spheres[cds.id_b]].push_back(i);
+				}
+			}
+
+			result.contacts_with_redundancy_canonical_ids_in_periodic_box.resize(result.contacts_summaries.size());
+
+			UnsignedInt count_of_redundant_contacts_in_periodic_box=0;
+
+			for(UnsignedInt i=0;i<result.contacts_summaries.size();i++)
+			{
+				result.contacts_with_redundancy_canonical_ids_in_periodic_box[i]=i;
+				const ContactDescriptorSummary& cds=result.contacts_summaries[i];
+				if((cds.id_a>=result.total_spheres || cds.id_b>=result.total_spheres)
+						&& cds.id_a<preparation_result.periodic_links_of_spheres.size() && cds.id_b<preparation_result.periodic_links_of_spheres.size())
+				{
+					const UnsignedInt sphere_id_a=preparation_result.periodic_links_of_spheres[cds.id_a];
+					const UnsignedInt sphere_id_b=preparation_result.periodic_links_of_spheres[cds.id_b];
+					const std::vector<UnsignedInt>& candidate_ids_a=map_of_spheres_to_boundary_contacts[sphere_id_a];
+					const std::vector<UnsignedInt>& candidate_ids_b=map_of_spheres_to_boundary_contacts[sphere_id_b];
+					const std::vector<UnsignedInt>& candidate_ids=(candidate_ids_a.size()<=candidate_ids_b.size() ? candidate_ids_a : candidate_ids_b);
+					UnsignedInt selected_id=result.contacts_summaries.size();
+					for(UnsignedInt j=0;j<candidate_ids.size() && selected_id>=result.contacts_summaries.size();j++)
+					{
+						const UnsignedInt candidate_id=candidate_ids[j];
+						const ContactDescriptorSummary& candidate_cds=result.contacts_summaries[candidate_id];
+						if(candidate_cds.id_a<preparation_result.periodic_links_of_spheres.size()
+								&& candidate_cds.id_b<preparation_result.periodic_links_of_spheres.size())
+						{
+							const UnsignedInt candidate_sphere_id_a=preparation_result.periodic_links_of_spheres[candidate_cds.id_a];
+							const UnsignedInt candidate_sphere_id_b=preparation_result.periodic_links_of_spheres[candidate_cds.id_b];
+							if((candidate_sphere_id_a==sphere_id_a && candidate_sphere_id_b==sphere_id_b)
+									|| (candidate_sphere_id_a==sphere_id_b && candidate_sphere_id_b==sphere_id_a))
+							{
+								selected_id=candidate_id;
+							}
+						}
+					}
+					if(selected_id<result.contacts_summaries.size())
+					{
+						result.contacts_with_redundancy_canonical_ids_in_periodic_box[i]=selected_id;
+						if(i!=selected_id)
+						{
+							count_of_redundant_contacts_in_periodic_box++;
+						}
+					}
+				}
+			}
+
+			if(count_of_redundant_contacts_in_periodic_box>0)
+			{
+				result.contacts_with_redundancy_summaries_in_periodic_box.swap(result.contacts_summaries);
+				result.contacts_summaries.reserve(result.contacts_with_redundancy_summaries_in_periodic_box.size()+1-count_of_redundant_contacts_in_periodic_box);
+				for(UnsignedInt i=0;i<result.contacts_with_redundancy_summaries_in_periodic_box.size();i++)
+				{
+					ContactDescriptorSummary& cds=result.contacts_with_redundancy_summaries_in_periodic_box[i];
+					if(cds.id_a<preparation_result.periodic_links_of_spheres.size())
+					{
+						cds.id_a=preparation_result.periodic_links_of_spheres[cds.id_a];
+					}
+					if(cds.id_b<preparation_result.periodic_links_of_spheres.size())
+					{
+						cds.id_b=preparation_result.periodic_links_of_spheres[cds.id_b];
+					}
+					cds.ensure_ids_ordered();
+					if(i>=result.contacts_with_redundancy_canonical_ids_in_periodic_box.size() || result.contacts_with_redundancy_canonical_ids_in_periodic_box[i]==i)
+					{
+						result.contacts_summaries.push_back(cds);
+					}
+				}
+			}
+
+			time_recorder.record_elapsed_miliseconds_and_reset("reassign ids in contacts at boundaries");
+		}
+
+		for(UnsignedInt i=0;i<result.contacts_summaries.size();i++)
+		{
+			result.total_contacts_summary.add(result.contacts_summaries[i]);
+		}
+
+		time_recorder.record_elapsed_miliseconds_and_reset("accumulate total contacts summary");
 	}
 
 	static bool group_results(

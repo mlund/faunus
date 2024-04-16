@@ -83,6 +83,7 @@ public:
 	{
 		std::vector<SimplePoint> outer_points;
 		SimplePoint barycenter;
+		SimplePoint plane_normal;
 
 		ContactDescriptorGraphics()
 		{
@@ -223,6 +224,7 @@ public:
 		result_contact_descriptor_graphics.clear();
 		if(contact_descriptor.area>FLOATCONST(0.0))
 		{
+			result_contact_descriptor_graphics.plane_normal=contact_descriptor.intersection_circle_axis;
 			const Float angle_step=std::max(std::min(length_step/contact_descriptor.intersection_circle_sphere.r, PIVALUE/FLOATCONST(3.0)), PIVALUE/FLOATCONST(36.0));
 			if(contact_descriptor.contour.empty())
 			{

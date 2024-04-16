@@ -11,17 +11,17 @@ Voronota::Voronota(double probe_radius, const Faunus::Space& spc)
     cite = "doi:10/mq8k";
     auto n_pbc = spc.geometry.asSimpleGeometry()->boundary_conditions.isPeriodic().count();
     switch (n_pbc) {
-        case 0:
-            faunus_logger->debug("{}: No PBC detected", name);
-            use_pbc = false;
-            break;
-        case 3:
-            faunus_logger->debug("{}: 3D PBC detected", name);
-            use_pbc = true;
-            break;
-        default:
-            faunus_logger->warn("{}: Non-uniform PBC is currently ignored - be careful!", name);
-            use_pbc = false;
+    case 0:
+        faunus_logger->debug("{}: No PBC detected", name);
+        use_pbc = false;
+        break;
+    case 3:
+        faunus_logger->debug("{}: 3D PBC detected", name);
+        use_pbc = true;
+        break;
+    default:
+        faunus_logger->warn("{}: Non-uniform PBC is currently ignored - be careful!", name);
+        use_pbc = false;
     }
 }
 
@@ -52,6 +52,7 @@ void Voronota::_to_disk() {
 }
 
 void Voronota::_sample() {
+    using voronotalt::SimplePoint;
     using namespace ranges::cpp20::views;
 
     // Convert single `Particle` to Voronota's `SimpleSphere`
@@ -61,7 +62,15 @@ void Voronota::_sample() {
     const auto spheres = spc.activeParticles() | transform(to_sphere) | ranges::to_vector;
 
     voronotalt::RadicalTessellation::Result result;
-    voronotalt::RadicalTessellation::construct_full_tessellation(spheres, result);
+
+    if (use_pbc) {
+        auto to_point = [](const Point& p) -> SimplePoint { return {p.x(), p.y(), p.z()}; };
+        const auto corner = 0.5 * spc.geometry.getLength();
+        const std::vector<SimplePoint> box_corners = {to_point(-corner), to_point(corner)};
+        voronotalt::RadicalTessellation::construct_full_tessellation(spheres, box_corners, result);
+    } else {
+        voronotalt::RadicalTessellation::construct_full_tessellation(spheres, result);
+    }
 
     auto areas = result.cells_summaries | transform([](auto& s) { return s.sas_area; });
     const auto total_area = std::accumulate(areas.begin(), areas.end(), 0.0);

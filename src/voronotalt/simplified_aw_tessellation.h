@@ -121,17 +121,7 @@ public:
 	{
 		PreparationForTessellation::Result preparation_result;
 		PreparationForTessellation::prepare_for_tessellation(spheres, grouping_of_spheres, preparation_result, time_recorder);
-		construct_full_tessellation(spheres, preparation_result, with_graphics, result, result_graphics, time_recorder);
-	}
 
-	static void construct_full_tessellation(
-			const std::vector<SimpleSphere>& spheres,
-			const PreparationForTessellation::Result& preparation_result,
-			const bool with_graphics,
-			Result& result,
-			ResultGraphics& result_graphics,
-			TimeRecorder& time_recorder)
-	{
 		time_recorder.reset();
 
 		result=Result();

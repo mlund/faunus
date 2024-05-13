@@ -17,6 +17,7 @@
 #include <numeric>
 #include <algorithm>
 #include <concepts>
+#include <optional>
 
 struct freesasa_parameters_fwd; // workaround for freesasa unnamed struct that cannot be forward declared
 

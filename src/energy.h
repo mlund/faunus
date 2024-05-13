@@ -278,6 +278,7 @@ class Constrain : public EnergyTerm {
   private:
     std::string type;
     std::unique_ptr<ReactionCoordinate::ReactionCoordinateBase> coordinate;
+    std::optional<Faunus::pairpotential::HarmonicBond> harmonic;
 
   public:
     Constrain(const json& j, Space& space);

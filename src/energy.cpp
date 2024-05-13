@@ -808,14 +808,24 @@ TEST_CASE("Energy::Isobaric") {
 Constrain::Constrain(const json &j, Space &spc) {
     name = "constrain";
     type = j.at("type").get<std::string>();
+    if (j.contains("harmonic")) {
+        auto bond = Faunus::pairpotential::HarmonicBond() ;
+	bond.from_json(j["harmonic"]);
+	harmonic = bond;
+    }
     coordinate = ReactionCoordinate::createReactionCoordinate({{type, j}}, spc);
 }
 
 double Constrain::energy(const Change& change) {
     if (change) {
         const auto value = (*coordinate)(); // calculate reaction coordinate
-        if (not coordinate->inRange(value)) // is it within allowed range?
+	if (harmonic) {
+	    const double k = harmonic.value().half_force_constant;
+	    const double eq = harmonic.value().equilibrium_distance;
+	    return k * std::pow(eq - value, 2);
+	} else if (not coordinate->inRange(value)) { // is it within allowed range?
             return pc::infty;               // if not, return infinite energy
+	}
     }
     return 0.0;
 }

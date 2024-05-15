@@ -17,6 +17,7 @@
 #include <numeric>
 #include <algorithm>
 #include <concepts>
+#include <optional>
 
 struct freesasa_parameters_fwd; // workaround for freesasa unnamed struct that cannot be forward declared
 
@@ -278,6 +279,7 @@ class Constrain : public EnergyTerm {
   private:
     std::string type;
     std::unique_ptr<ReactionCoordinate::ReactionCoordinateBase> coordinate;
+    std::optional<Faunus::pairpotential::HarmonicBond> harmonic;
 
   public:
     Constrain(const json& j, Space& space);

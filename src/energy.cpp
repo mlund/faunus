@@ -805,24 +805,37 @@ TEST_CASE("Energy::Isobaric") {
     }
 }
 
-Constrain::Constrain(const json &j, Space &spc) {
+Constrain::Constrain(const json& j, Space& spc) {
     name = "constrain";
     type = j.at("type").get<std::string>();
+    if (const auto it = j.find("harmonic"); it != j.end()) {
+        harmonic = std::make_optional<Faunus::pairpotential::HarmonicBond>();
+        harmonic->from_json(*it);
+    }
     coordinate = ReactionCoordinate::createReactionCoordinate({{type, j}}, spc);
 }
 
 double Constrain::energy(const Change& change) {
     if (change) {
         const auto value = (*coordinate)(); // calculate reaction coordinate
-        if (not coordinate->inRange(value)) // is it within allowed range?
-            return pc::infty;               // if not, return infinite energy
+        if (harmonic) {
+            return harmonic->half_force_constant * std::pow(harmonic->equilibrium_distance - value, 2);
+        }
+        if (not coordinate->inRange(value)) { // if outside allowed range ...
+            return pc::infty;                 // ... return infinite energy
+        }
     }
     return 0.0;
 }
-void Constrain::to_json(json &j) const {
+void Constrain::to_json(json& j) const {
     j = json(*coordinate).at(type);
     j.erase("resolution");
     j["type"] = type;
+    if (harmonic) {
+        harmonic->to_json(j["harmonic"]);
+        j["harmonic"].erase("index");
+        j.erase("range");
+    }
 }
 
 void Bonded::updateGroupBonds(const Space::GroupType& group) {

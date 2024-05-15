@@ -809,9 +809,8 @@ Constrain::Constrain(const json &j, Space &spc) {
     name = "constrain";
     type = j.at("type").get<std::string>();
     if (const auto b = j.find("harmonic"); b != j.end()) {
-        auto bond = Faunus::pairpotential::HarmonicBond();
-	bond.from_json(*b);
-	harmonic = bond;
+        harmonic = std::make_optional<Faunus::pairpotential::HarmonicBond>();
+        harmonic->from_json(*b);
     }
     coordinate = ReactionCoordinate::createReactionCoordinate({{type, j}}, spc);
 }

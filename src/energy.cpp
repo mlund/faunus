@@ -805,7 +805,7 @@ TEST_CASE("Energy::Isobaric") {
     }
 }
 
-Constrain::Constrain(const json &j, Space &spc) {
+Constrain::Constrain(const json& j, Space& spc) {
     name = "constrain";
     type = j.at("type").get<std::string>();
     if (const auto b = j.find("harmonic"); b != j.end()) {
@@ -818,16 +818,16 @@ Constrain::Constrain(const json &j, Space &spc) {
 double Constrain::energy(const Change& change) {
     if (change) {
         const auto value = (*coordinate)(); // calculate reaction coordinate
-	if (harmonic) {
+        if (harmonic) {
             return (*harmonic).half_force_constant * std::pow((*harmonic).equilibrium_distance - value, 2);
-	}
+        }
         if (not coordinate->inRange(value)) { // if outside allowed range ...
             return pc::infty;                 // ... return infinite energy
-	}
+        }
     }
     return 0.0;
 }
-void Constrain::to_json(json &j) const {
+void Constrain::to_json(json& j) const {
     j = json(*coordinate).at(type);
     j.erase("resolution");
     j["type"] = type;

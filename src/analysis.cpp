@@ -1646,7 +1646,8 @@ std::pair<Point, Point> InertiaTensor::compute() const {
 
 void InertiaTensor::_sample() {
     const auto [eigen_values, principle_axis] = compute();
-    *stream << fmt::format("{} {} {}\n", getNumberOfSteps(), eigen_values.transpose(), principle_axis.transpose());
+    *stream << fmt::format("{} {} {} {} {} {} {} \n", getNumberOfSteps(), eigen_values[0], eigen_values[1],
+                           eigen_values[2], principle_axis[0], principle_axis[1], principle_axis[2]);
 }
 
 InertiaTensor::InertiaTensor(const json& j, const Space& spc)

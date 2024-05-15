@@ -65,7 +65,7 @@ void Voronota::_sample() {
 
     if (use_pbc) {
         auto to_point = [](const Point& p) -> SimplePoint { return {p.x(), p.y(), p.z()}; };
-        const auto corner = 0.5 * spc.geometry.getLength();
+        const Point corner = 0.5 * spc.geometry.getLength();
         const std::vector<SimplePoint> box_corners = {to_point(-corner), to_point(corner)};
         voronotalt::RadicalTessellation::construct_full_tessellation(spheres, box_corners, result);
     } else {

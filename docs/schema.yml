@@ -434,6 +434,35 @@ properties:
                             items: {type: object}
                     additionalProperties: false
 
+                constrain:
+                    description: "Constrain via a reaction coordinate"
+                    type: object
+                    properties:
+                        type:
+                            description: "Reaction coordinate class"
+                            type: string
+                            items: {"system", "molecule", "atom"}
+                        property:
+                            description: "Reaction coordinate property"
+                            type: string
+                        range:
+                            description: "Allowed range of reaction coord. value"
+                            type: array
+                            minItems: 2
+                            maxItems: 2
+                        harmonic:
+                            description: "Alternatively, use a hamonic potential to constain reaction coord. value"
+                            type: object
+                            properties:
+                                req: {type: number, description: "Equilibrium value for reaction coordinate"}
+                                k: {type: number, description: "Spring constant in kJ/mol"}
+                            additionalProperties: false
+                    required: [type, property]
+                    oneOf:
+                        - required: [range]
+                        - required: [harmonic]
+                    additionalProperties: false
+
                 nonbonded:
                     description: "Nonbonded interactions"
                     type: object

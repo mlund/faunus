@@ -32,14 +32,18 @@ void QuaternionRotate::set(double angle, Point axis) {
  * @param shift Shift used to aid in boundary removal
  * @return Rotated vector
  */
-QuaternionRotate::Point QuaternionRotate::operator()(Point vector, std::function<void(Point &)> boundary,
-                                                     const Point &shift) const {
-    vector = vector - shift;
-    boundary(vector);
-    vector = quaternion * vector + shift;
-    boundary(vector);
-    return vector;
-    // https://www.cc.gatech.edu/classes/AY2015/cs4496_spring/Eigen.html
+QuaternionRotate::Point QuaternionRotate::operator()(Point r, std::function<void(Point&)> boundary,
+                                                     const Point& shift) const {
+    r = r - shift;
+    boundary(r);
+    // Note that the Eigen * operator secretly converts to a rotation matrix which is
+    // why this notation works (normally one would use 𝒓ʹ= 𝑞𝒓𝑞⁻¹). This also means
+    // that this approach is inefficient if applied to many points, see
+    // - https://stackoverflow.com/questions/50507665/eigen-rotate-a-vector3d-with-a-quaternion
+    // - https://www.cc.gatech.edu/classes/AY2015/cs4496_spring/Eigen.html
+    r = quaternion * r + shift;
+    boundary(r);
+    return r;
 }
 
 /**

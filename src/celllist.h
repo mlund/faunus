@@ -57,7 +57,7 @@ class GridOffsets3D {
     /**
      * @param distance  maximal distance of neighbours (1 for the nearest neighbors)
      */
-    GridOffsets3D(CellIndex distance);
+    explicit GridOffsets3D(CellIndex distance);
 
   private:
     void initNeighbors();

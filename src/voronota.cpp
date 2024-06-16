@@ -37,12 +37,12 @@ void Voronota::_from_json(const Faunus::json& input) {
     }
 }
 
-void Voronota::_to_json(json& json_ouput) const {
+void Voronota::_to_json(json& json_output) const {
     if (!average_data.area.empty()) {
-        json_ouput = {{"⟨SASA⟩", average_data.area.avg()},
+        json_output = {{"⟨SASA⟩", average_data.area.avg()},
                       {"⟨SASA²⟩-⟨SASA⟩²", average_data.area_squared.avg() - std::pow(average_data.area.avg(), 2)}};
     }
-    json_ouput["radius"] = probe_radius;
+    json_output["radius"] = probe_radius;
 }
 
 void Voronota::_to_disk() {
@@ -57,7 +57,7 @@ void Voronota::_sample() {
 
     // Convert single `Particle` to Voronota's `SimpleSphere`
     auto to_sphere = [&](const Particle& p) -> voronotalt::SimpleSphere {
-        return {{p.pos.x(), p.pos.y(), p.pos.z()}, 0.5 * p.traits().sigma + probe_radius};
+        return {{p.pos.x(), p.pos.y(), p.pos.z()}, (0.5 * p.traits().sigma) + probe_radius};
     };
     const auto spheres = spc.activeParticles() | transform(to_sphere) | ranges::to_vector;
 
@@ -72,7 +72,7 @@ void Voronota::_sample() {
         voronotalt::RadicalTessellation::construct_full_tessellation(spheres, result);
     }
 
-    auto areas = result.cells_summaries | transform([](auto& s) { return s.sas_area; });
+    auto areas = result.cells_summaries | transform([](auto& summary) { return summary.sas_area; });
     const auto total_area = std::accumulate(areas.begin(), areas.end(), 0.0);
     average_data.area.add(total_area);
     average_data.area_squared.add(total_area * total_area);

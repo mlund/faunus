@@ -23,7 +23,7 @@ bool Change::empty() const { return not(volume_change || everything || matter_ch
 
 Change::operator bool() const { return !empty(); }
 
-std::vector<Change::index_type> Change::touchedParticleIndex(const std::vector<Group>& group_vector) const {
+[[maybe_unused]] std::vector<Change::index_type> Change::touchedParticleIndex(const std::vector<Group>& group_vector) const {
     std::vector<index_type> indices;                 // atom index rel. to first particle in system
     auto begin_first = group_vector.front().begin(); // first particle, first group
     for (const auto& changed : groups) {             // loop over changed groups
@@ -255,7 +255,7 @@ Point Space::scaleVolume(double Vnew, Geometry::VolumeMethod method) {
     if (method == Geometry::VolumeMethod::ISOCHORIC) { // ? not used for anything...
         Vold = std::pow(Vold, 1.0 / 3.0);              // ?
     }
-    for (auto trigger_function : scaleVolumeTriggers) { // external clients may have added function
+    for (const auto& trigger_function : scaleVolumeTriggers) { // external clients may have added function
         trigger_function(*this, Vold, Vnew);            // to be triggered upon each volume change
     }
     return scale;
@@ -371,14 +371,14 @@ void Space::updateInternalState(const Change& change) {
 TEST_CASE("Space::numParticles") {
     Space spc;
     spc.particles.resize(10);
-    CHECK(spc.particles.size() == spc.numParticles(Space::Selection::ALL));
-    CHECK(spc.numParticles(Space::Selection::ACTIVE) == 0);  // zero as there are still no groups
+    CHECK_EQ(spc.particles.size(), spc.numParticles(Space::Selection::ALL));
+    CHECK_EQ(spc.numParticles(Space::Selection::ACTIVE), 0);  // zero as there are still no groups
     spc.groups.emplace_back(0, spc.particles.begin(), spc.particles.end() - 2); // enclose first 8 particles in group
-    CHECK(spc.numParticles(Space::Selection::ACTIVE) == 8);
+    CHECK_EQ(spc.numParticles(Space::Selection::ACTIVE), 8);
     spc.groups.emplace_back(0, spc.particles.end() - 2, spc.particles.end()); // enclose last 2 particles in group
-    CHECK(spc.numParticles(Space::Selection::ACTIVE) == 10);
+    CHECK_EQ(spc.numParticles(Space::Selection::ACTIVE), 10);
     spc.groups.front().resize(0); // deactivate first group with 8 particles
-    CHECK(spc.numParticles(Space::Selection::ACTIVE) == 2);
+    CHECK_EQ(spc.numParticles(Space::Selection::ACTIVE), 2);
 }
 
 void to_json(json& j, const Space& spc) {
@@ -456,27 +456,27 @@ TEST_CASE("[Faunus] Space") {
     Faunus::molecules.at(0).atomic = false;
     REQUIRE_EQ(Faunus::molecules.at(0).atomic, false);
     Faunus::molecules.at(0).atoms.resize(2);
-    CHECK(Faunus::molecules.at(0).atoms.size() == 2);
+    CHECK_EQ(Faunus::molecules.at(0).atoms.size(), 2);
 
     Faunus::atoms.resize(2);
-    CHECK(Faunus::atoms.at(0).mw == 1);
+    CHECK_EQ(Faunus::atoms.at(0).mw, 1);
 
     Particle a;
     a.id = 0;
     a.pos.setZero();
     ParticleVector p(2, a);
-    CHECK(p[0].traits().mw == 1);
+    CHECK_EQ(p[0].traits().mw, 1);
     p[0].pos.x() = 2;
     p[1].pos.x() = 3;
     spc1.addGroup(0, p); // insert molecular group
-    CHECK(spc1.particles.size() == 2);
-    CHECK(spc1.groups.size() == 1);
+    CHECK_EQ(spc1.particles.size(), 2);
+    CHECK_EQ(spc1.groups.size(), 1);
     CHECK(spc1.groups.back().isMolecular());
-    CHECK(spc1.groups.front().id == 0);
-    CHECK(spc1.groups.front().mass_center.x() == doctest::Approx(2.5));
+    CHECK_EQ(spc1.groups.front().id, 0);
+    CHECK_EQ(spc1.groups.front().mass_center.x(), doctest::Approx(2.5));
 
     // check `positions()`
-    CHECK(&spc1.positions()[0] == &spc1.particles[0].pos);
+    CHECK_EQ(&spc1.positions()[0], &spc1.particles[0].pos);
 
     SUBCASE("ActiveParticles") {
         // add three groups to space
@@ -500,33 +500,33 @@ TEST_CASE("[Faunus] Space") {
         for (size_t i = 0; i < spc.particles.size(); i++)
             spc.particles[i].charge = double(i);
 
-        CHECK(spc.particles.size() == 9);
-        CHECK(spc.groups.size() == 3);
+        CHECK_EQ(spc.particles.size(), 9);
+        CHECK_EQ(spc.groups.size(), 3);
 
-        CHECK(spc.numMolecules<Space::GroupType::ANY>(0) == 2);
-        CHECK(spc.numMolecules<Space::GroupType::ANY>(1) == 1);
+        CHECK_EQ(spc.numMolecules<Space::GroupType::ANY>(0), 2);
+        CHECK_EQ(spc.numMolecules<Space::GroupType::ANY>(1), 1);
 
         spc.groups[0].deactivate(spc.particles.begin(), spc.particles.begin() + 1);
         spc.groups[1].deactivate(spc.groups[1].begin(), spc.groups[1].end());
 
-        CHECK(spc.groups[0].size() == 2);
-        CHECK(spc.groups[1].size() == 0);
-        CHECK(spc.groups[2].size() == 3);
+        CHECK_EQ(spc.groups[0].size(), 2);
+        CHECK_EQ(spc.groups[1].size(), 0);
+        CHECK_EQ(spc.groups[2].size(), 3);
 
-        CHECK(spc.numMolecules<Space::GroupType::ACTIVE>(0) == 2);
-        CHECK(spc.numMolecules<Space::GroupType::ACTIVE | Space::GroupType::NEUTRAL>(0) == 0);
-        CHECK(spc.numMolecules<Space::GroupType::ACTIVE>(1) == 0);
-        CHECK(spc.numMolecules<Space::GroupType::INACTIVE>(1) == 1);
-        CHECK(spc.numMolecules<Space::GroupType::INACTIVE | Space::GroupType::NEUTRAL>(1) == 0);
+        CHECK_EQ(spc.numMolecules<Space::GroupType::ACTIVE>(0), 2);
+        CHECK_EQ(spc.numMolecules<Space::GroupType::ACTIVE | Space::GroupType::NEUTRAL>(0), 0);
+        CHECK_EQ(spc.numMolecules<Space::GroupType::ACTIVE>(1), 0);
+        CHECK_EQ(spc.numMolecules<Space::GroupType::INACTIVE>(1), 1);
+        CHECK_EQ(spc.numMolecules<Space::GroupType::INACTIVE | Space::GroupType::NEUTRAL>(1), 0);
 
         // check the rangev3 implementation in `activeParticles()`:
         auto p2 = spc.activeParticles();
-        CHECK(std::distance(p2.begin(), p2.end()) == 5);
+        CHECK_EQ(std::distance(p2.begin(), p2.end()), 5);
         std::vector<int> vals;
         for (const auto& particle : p2) {
             vals.push_back(static_cast<int>(particle.charge));
         }
-        CHECK(vals == std::vector<int>({1, 2, 6, 7, 8}));
+        CHECK_EQ(vals, std::vector<int>({1, 2, 6, 7, 8}));
     }
 }
 
@@ -536,9 +536,9 @@ TEST_CASE("[Faunus] Space::toIndices") {
 
     auto subrange = ranges::make_subrange(spc.particles.begin() + 1, spc.particles.end()); // p1, p2
     auto indices = spc.toIndices(subrange);
-    CHECK(indices.size() == 2);
-    CHECK(indices.at(0) == 1);
-    CHECK(indices.at(1) == 2);
+    CHECK_EQ(indices.size(), 2);
+    CHECK_EQ(indices.at(0), 1);
+    CHECK_EQ(indices.at(1), 2);
 
     ParticleVector particles(2); // invalid particles outside Space
     CHECK_THROWS(spc.toIndices(particles));
@@ -557,19 +557,19 @@ TEST_CASE("[Faunus] Space::updateParticles") {
     p[1].pos = {2, 0, 0};
 
     spc.updateParticles(p.begin(), p.end(), spc.particles.begin());
-    CHECK(spc.particles[0].pos.x() == p[0].pos.x());
-    CHECK(spc.particles[1].pos.x() == p[1].pos.x());
+    CHECK_EQ(spc.particles[0].pos.x(), p[0].pos.x());
+    CHECK_EQ(spc.particles[1].pos.x(), p[1].pos.x());
 
     std::vector<Point> positions = {{2.1, 0, 0}, {0.9, 0, 0}};
     spc.updateParticles(positions.begin(), positions.end(), spc.particles.begin(),
                         [](const auto& pos, auto& particle) { particle.pos = pos; });
-    CHECK(spc.particles[0].pos.x() == 2.1);
-    CHECK(spc.particles[1].pos.x() == 0.9);
+    CHECK_EQ(spc.particles[0].pos.x(), 2.1);
+    CHECK_EQ(spc.particles[1].pos.x(), 0.9);
 
     SUBCASE("Group update") {
         Space spc;
         SpaceFactory::makeWater(spc, 2, R"( {"type": "cuboid", "length": 20} )"_json);
-        CHECK(spc.groups.size() == 2);
+        CHECK_EQ(spc.groups.size(), 2);
 
         auto copy_function = [](const auto &pos, auto &particle) { particle.pos = pos; };
         std::vector<Point> positions = {{0, 0, 0}, {3, 3, 3}, {6, 6, 6}};
@@ -578,21 +578,21 @@ TEST_CASE("[Faunus] Space::updateParticles") {
         spc.groups[0].mass_center.x() = -1;
         spc.groups[1].mass_center.x() = -1;
         spc.updateParticles(positions.begin(), positions.end(), spc.groups[1].begin(), copy_function);
-        CHECK(spc.groups[0].mass_center.x() == Approx(-1));
-        CHECK(spc.groups[1].mass_center.x() == Approx(0.5031366235));
+        CHECK_EQ(spc.groups[0].mass_center.x(), Approx(-1));
+        CHECK_EQ(spc.groups[1].mass_center.x(), Approx(0.5031366235));
 
         // second group affected
         spc.groups[1].mass_center.x() = -1;
         spc.updateParticles(positions.begin(), positions.end(), spc.groups[0].begin(), copy_function);
-        CHECK(spc.groups[0].mass_center.x() == Approx(0.5031366235));
-        CHECK(spc.groups[1].mass_center.x() == Approx(-1));
+        CHECK_EQ(spc.groups[0].mass_center.x(), Approx(0.5031366235));
+        CHECK_EQ(spc.groups[1].mass_center.x(), Approx(-1));
 
         // both groups affected
         spc.groups[0].mass_center.x() = -1;
         spc.groups[1].mass_center.x() = -1;
         spc.updateParticles(positions.begin(), positions.end(), spc.groups[0].begin() + 1, copy_function);
-        CHECK(spc.groups[0].mass_center.x() == Approx(0.1677122078));
-        CHECK(spc.groups[1].mass_center.x() == Approx(5.8322877922));
+        CHECK_EQ(spc.groups[0].mass_center.x(), Approx(0.1677122078));
+        CHECK_EQ(spc.groups[1].mass_center.x(), Approx(5.8322877922));
     }
 }
 
@@ -659,12 +659,12 @@ void makeWater(Space& space, size_t num_particles, const Geometry::Chameleon& ge
 TEST_CASE("SpaceFactory") {
     Space spc;
     SpaceFactory::makeNaCl(spc, 10, R"( {"type": "cuboid", "length": 20} )"_json);
-    CHECK(spc.numParticles() == 20);
+    CHECK_EQ(spc.numParticles(), 20);
 
     SUBCASE("makeWater") {
         Space spc;
         SpaceFactory::makeWater(spc, 2, R"( {"type": "cuboid", "length": 20} )"_json);
-        CHECK(spc.numParticles() == 6);
+        CHECK_EQ(spc.numParticles(), 6);
     }
 }
 

@@ -49,16 +49,16 @@ struct Change {
 
     std::vector<GroupChange> groups; //!< Touched groups by index in group vector
 
-    std::optional<std::pair<index_type, index_type>> singleParticleChange() const;
+    [[nodiscard]] std::optional<std::pair<index_type, index_type>> singleParticleChange() const;
 
     //! List of moved groups (index)
-    inline auto touchedGroupIndex() const { return ranges::cpp20::views::transform(groups, &GroupChange::group_index); }
+    [[nodiscard]] inline auto touchedGroupIndex() const { return ranges::cpp20::views::transform(groups, &GroupChange::group_index); }
 
     //! List of changed atom index relative to first particle in system
-    std::vector<index_type> touchedParticleIndex(const std::vector<Group>&) const;
+    [[maybe_unused]] [[nodiscard]] std::vector<index_type> touchedParticleIndex(const std::vector<Group>&) const;
 
     void clear();                                                             //!< Clear all change data
-    bool empty() const;                                                       //!< Check if change object is empty
+    [[nodiscard]] bool empty() const;                                                       //!< Check if change object is empty
     explicit operator bool() const;                                           //!< True if object is not empty
     void sanityCheck(const std::vector<Group>& group_vector) const;           //!< Sanity check on contained object data
 } __attribute__((aligned(32)));
@@ -109,7 +109,7 @@ class Space {
     GeometryType geometry;                               //!< Container geometry (boundaries, shape, volume)
     std::vector<ScaleVolumeTrigger> scaleVolumeTriggers; //!< Functions triggered whenever the volume is scaled
 
-    const std::map<MoleculeData::index_type, std::size_t>& getImplicitReservoir() const; //!< Implicit molecules
+    [[nodiscard]] const std::map<MoleculeData::index_type, std::size_t>& getImplicitReservoir() const; //!< Implicit molecules
     std::map<MoleculeData::index_type, std::size_t>& getImplicitReservoir();             //!< Implicit molecules
 
     //!< Keywords to select particles based on the their active/inactive state and charge neutrality
@@ -119,7 +119,7 @@ class Space {
     GroupType& addGroup(MoleculeData::index_type molid, const ParticleVector& particles); //!< Append a group
     GroupVector::iterator findGroupContaining(const Particle& particle, bool include_inactive = false); //!< Finds the group containing the given atom
     GroupVector::iterator findGroupContaining(AtomData::index_type atom_index); //!< Find group containing atom index
-    size_t numParticles(Selection selection = Selection::ACTIVE) const;         //!< Number of (active) particles
+    [[nodiscard]] size_t numParticles(Selection selection = Selection::ACTIVE) const;         //!< Number of (active) particles
 
     Point scaleVolume(
         double new_volume,
@@ -130,9 +130,9 @@ class Space {
 
     json info();
 
-    std::size_t getGroupIndex(const GroupType& group) const;         //!< Get index of given group in the group vector
-    std::size_t getFirstParticleIndex(const GroupType& group) const; //!< Index of first particle in group
-    std::size_t getFirstActiveParticleIndex(
+    [[nodiscard]] std::size_t getGroupIndex(const GroupType& group) const;         //!< Get index of given group in the group vector
+    [[nodiscard]] std::size_t getFirstParticleIndex(const GroupType& group) const; //!< Index of first particle in group
+    [[nodiscard]] std::size_t getFirstActiveParticleIndex(
         const GroupType& group) const; //!< Index of first particle w. respect to active particles
 
     /**
@@ -192,7 +192,7 @@ class Space {
     void updateInternalState(const Change& change);
 
     //! Iterable range of all particle positions
-    auto positions() const {
+    [[nodiscard]] auto positions() const {
         return ranges::cpp20::views::transform(particles, [](auto& particle) -> const Point& { return particle.pos; });
     }
 
@@ -245,13 +245,13 @@ class Space {
         return groups | ranges::cpp20::views::filter(group_filter);
     }
 
-    auto findMolecules(MoleculeData::index_type molid, Selection selection = Selection::ACTIVE) const {
+    [[nodiscard]] auto findMolecules(MoleculeData::index_type molid, Selection selection = Selection::ACTIVE) const {
         auto group_filter = getGroupFilter(molid, selection);
         return groups | ranges::cpp20::views::filter(group_filter);
     }
 
     auto activeParticles() { return groups | ranges::cpp20::views::join; }       //!< Range with all active particles
-    auto activeParticles() const { return groups | ranges::cpp20::views::join; } //!< Range with all active particles
+    [[nodiscard]] auto activeParticles() const { return groups | ranges::cpp20::views::join; } //!< Range with all active particles
 
     /**
      * @brief Get vector of indices of given range of particles
@@ -284,12 +284,12 @@ class Space {
      * @param atomid Atom id to look for
      * @return Range of filtered particles
      */
-    auto findAtoms(AtomData::index_type atomid) const {
+    [[nodiscard]] auto findAtoms(AtomData::index_type atomid) const {
         return activeParticles() |
         ranges::cpp20::views::filter([atomid](const Particle& particle) { return particle.id == atomid; });
     }
 
-    size_t countAtoms(AtomData::index_type atomid) const; //!< Count active particles
+    [[nodiscard]] size_t countAtoms(AtomData::index_type atomid) const; //!< Count active particles
 
     /**
      * @brief Count number of molecules matching criteria

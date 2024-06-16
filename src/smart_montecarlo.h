@@ -35,7 +35,9 @@ Selection<T>::Selection(T& item, int number_total, int number_inside, bool item_
     : item(&item)
     , n_total(number_total)
     , n_inside(number_inside)
-    , is_inside(item_is_inside) {}
+    , is_inside(item_is_inside)
+{
+}
 
 enum class BiasDirection { ENTER_REGION, EXIT_REGION, NO_CROSSING }; //!< Controls the bias direction
 
@@ -53,7 +55,7 @@ double bias(double outside_acceptance, int n_total, int n_inside,
 class RegionSampler {
   private:
     const double outside_acceptance = 1.0; //!< Or "p" between ]0:1]; 1 --> uniform sampling (no regional preference)
-    static BiasDirection getDirection(bool inside_before, bool inside_after) ;
+    static BiasDirection getDirection(bool inside_before, bool inside_after);
     template <ranges::cpp20::range Range> double getNumberInside(Range& range) const;
 
   protected:
@@ -77,7 +79,8 @@ class RegionSampler {
  *
  * @returns (mean) number of elements inside region
  */
-template <ranges::cpp20::range Range> double RegionSampler::getNumberInside(Range& range) const {
+template <ranges::cpp20::range Range> double RegionSampler::getNumberInside(Range& range) const
+{
     if (fixed_number_inside) {
         return fixed_number_inside.value();
     }
@@ -97,7 +100,8 @@ template <ranges::cpp20::range Range> double RegionSampler::getNumberInside(Rang
  * number of attempts is currently set to 10x the size of the given range.
  */
 template <GroupOrParticle T, ranges::cpp20::range Range>
-std::optional<Selection<T>> RegionSampler::select(Range& range, Random& random) {
+std::optional<Selection<T>> RegionSampler::select(Range& range, Random& random)
+{
     const auto n_total = ranges::distance(range.begin(), range.end());
     int max_selection_attempts = 10 * n_total;
     do {
@@ -123,7 +127,8 @@ std::optional<Selection<T>> RegionSampler::select(Range& range, Random& random) 
  * bias due to non-uniform sampling which depends on the transition directions,
  * i.e. if an element is moved from _inside_ of the region to the _outside_ etc.
  */
-template <GroupOrParticle T> double RegionSampler::bias(const Selection<T>& selection) {
+template <GroupOrParticle T> double RegionSampler::bias(const Selection<T>& selection)
+{
     const auto is_inside_after = region->inside(*(selection.item)); // may have changed due to move
     const auto direction = getDirection(selection.is_inside, is_inside_after);
     return SmarterMonteCarlo::bias(outside_acceptance, selection.n_total, selection.n_inside, direction);
@@ -152,7 +157,9 @@ template <GroupOrParticle T> class MoveSupport {
 
 template <GroupOrParticle T>
 MoveSupport<T>::MoveSupport(const Space& spc, const json& j)
-    : region_sampler(j.at("p").get<double>(), Region::createRegion(spc, j)) {}
+    : region_sampler(j.at("p").get<double>(), Region::createRegion(spc, j))
+{
+}
 
 /**
  * This is used to sample and analyse the average number of groups inside the region.
@@ -161,7 +168,8 @@ MoveSupport<T>::MoveSupport(const Space& spc, const json& j)
  *
  * @todo convergence thresholds currently hardcoded; bootstrapping would be better...
  */
-template <GroupOrParticle T> void MoveSupport<T>::analyseSelection(int count_inside) {
+template <GroupOrParticle T> void MoveSupport<T>::analyseSelection(int count_inside)
+{
     assert(selection);
     mean_selected_inside += static_cast<double>(selection->is_inside);
 
@@ -188,7 +196,8 @@ template <GroupOrParticle T> void MoveSupport<T>::analyseSelection(int count_ins
  *
  * @return Bias energy (kT)
  */
-template <GroupOrParticle T> double MoveSupport<T>::bias() {
+template <GroupOrParticle T> double MoveSupport<T>::bias()
+{
     auto bias_energy(0.0);
     if (selection) {
         analyseSelection(selection->n_inside);
@@ -198,7 +207,8 @@ template <GroupOrParticle T> double MoveSupport<T>::bias() {
     return bias_energy;
 }
 
-template <GroupOrParticle T> void MoveSupport<T>::to_json(json& j) const {
+template <GroupOrParticle T> void MoveSupport<T>::to_json(json& j) const
+{
     region_sampler.to_json(j);
     if (mean_number_inside) {
         j["mean number inside"] = mean_number_inside.avg();
@@ -219,7 +229,8 @@ template <GroupOrParticle T> void MoveSupport<T>::to_json(json& j) const {
  */
 template <GroupOrParticle T>
 template <ranges::cpp20::range Range>
-typename MoveSupport<T>::OptionalElement MoveSupport<T>::select(Range& mollist, Random& random) {
+typename MoveSupport<T>::OptionalElement MoveSupport<T>::select(Range& mollist, Random& random)
+{
     selection = region_sampler.select<T>(mollist, random);
     if (selection) {
         return *(selection->item);

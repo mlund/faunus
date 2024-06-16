@@ -109,7 +109,8 @@ template <typename TGridType> class GridBase : public virtual AbstractGrid<TGrid
      * @param index
      * @return  cell coordinates
      */
-    CellCoord coordinates(const CellIndex index) const override {
+    CellCoord coordinates(const CellIndex index) const override
+    {
         assert(index < size());
         return cell_index_to_coordinates.unaryExpr([index](const auto modulo) { return index % modulo; }) /
                cell_coordinates_to_index;
@@ -120,7 +121,8 @@ template <typename TGridType> class GridBase : public virtual AbstractGrid<TGrid
      * @param coordinates  cell coordinates
      * @return  cell index
      */
-    CellIndex index(const CellCoord& coordinates) const override {
+    CellIndex index(const CellCoord& coordinates) const override
+    {
         assert(isCell(coordinates));
         return (coordinates * cell_coordinates_to_index).sum();
     }
@@ -133,7 +135,8 @@ template <typename TGridType> class GridBase : public virtual AbstractGrid<TGrid
      * @param position
      * @return  cell coordinates
      */
-    CellCoord coordinatesAt(const Point& position) const override {
+    CellCoord coordinatesAt(const Point& position) const override
+    {
         assert(isCellAt(position));
         return (position / cell).floor().template cast<CellIndex>();
     }
@@ -153,7 +156,8 @@ template <typename TGridType> class GridBase : public virtual AbstractGrid<TGrid
      * @param coordinates
      * @return  true if cell coordinates are valid, false otherwise
      */
-    bool isCell(const CellCoord& coordinates) const override {
+    bool isCell(const CellCoord& coordinates) const override
+    {
         return (coordinates < this->getCellListEnd()).all() && (coordinates >= CellCoord::Zero()).all();
     }
 
@@ -165,7 +169,8 @@ template <typename TGridType> class GridBase : public virtual AbstractGrid<TGrid
      * @param point
      * @return  true if spatial coordinates are valid, false otherwise
      */
-    bool isCellAt(const Point& point) const override {
+    bool isCellAt(const Point& point) const override
+    {
         return (point < this->getBox()).all() && (point >= Point::Zero()).all();
     }
 
@@ -178,7 +183,9 @@ template <typename TGridType> class GridBase : public virtual AbstractGrid<TGrid
      * @param box  a box to be divided into cells, e.g., a simulation box
      * @param minimal_cell_dimension  minimal cell dimension, e.g., a cut off distance
      */
-    GridBase(const Point& box, SpaceAxis minimal_cell_dimension) : minimal_cell_dimension(minimal_cell_dimension) {
+    GridBase(const Point& box, SpaceAxis minimal_cell_dimension)
+        : minimal_cell_dimension(minimal_cell_dimension)
+    {
         updateCellGrid(box);
     }
 
@@ -204,7 +211,8 @@ template <typename TGridType> class GridBase : public virtual AbstractGrid<TGrid
      * @brief Setup immutable parameters based on the box dimensions. To be called in constructors only.
      * @param new_box
      */
-    void updateCellGrid(const Point& new_box) {
+    void updateCellGrid(const Point& new_box)
+    {
         box = new_box;
         cell_list_end = (box / box.min(minimal_cell_dimension)).floor().template cast<CellIndex>();
         cell = box / cell_list_end.template cast<SpaceAxis>();
@@ -241,7 +249,8 @@ class FixedBoundaryGrid : public GridBase<TGridType>, virtual public AbstractNei
      * @param offset
      * @return  true if cell coordinates are valid, false otherwise
      */
-    bool isNeighborCell(const CellCoord& coordinates, const CellCoord& offset) const {
+    bool isNeighborCell(const CellCoord& coordinates, const CellCoord& offset) const
+    {
         return Base::isCell(coordinates + offset);
     }
 
@@ -289,13 +298,15 @@ class PeriodicBoundaryGrid : public GridBase<TGridType>, virtual public Abstract
      * @param coordinates  cell coordinates
      * @return  cell index
      */
-    CellIndex index(const CellCoord& coordinates) const override {
+    CellIndex index(const CellCoord& coordinates) const override
+    {
         auto pbc_coordinates = coordinates;
         auto& boundary_coords = this->getCellListEnd();
         for (auto i = 0; i < pbc_coordinates.size(); ++i) {
             if (coordinates[i] < 0) {
                 pbc_coordinates[i] += boundary_coords[i] * (std::abs(coordinates[i]) / boundary_coords[i] + 1);
-            } else if (coordinates[i] >= boundary_coords[i]) {
+            }
+            else if (coordinates[i] >= boundary_coords[i]) {
                 pbc_coordinates[i] -= boundary_coords[i] * (coordinates[i] / boundary_coords[i]);
             }
         }
@@ -310,7 +321,8 @@ class PeriodicBoundaryGrid : public GridBase<TGridType>, virtual public Abstract
      * @param position
      * @return  cell coordinates
      */
-    CellCoord coordinatesAt(const Point& position) const override {
+    CellCoord coordinatesAt(const Point& position) const override
+    {
         assert(isCellAt(position));
         return (position / this->getCell()).floor().template cast<CellIndex>();
     }
@@ -352,11 +364,16 @@ class PeriodicBoundaryGrid : public GridBase<TGridType>, virtual public Abstract
      * @param offset
      * @return  true if cell coordinates are valid, false otherwise
      */
-    bool isNeighborCell([[maybe_unused]] const CellCoord& coordinates, const CellCoord& offset) const override {
+    bool isNeighborCell([[maybe_unused]] const CellCoord& coordinates, const CellCoord& offset) const override
+    {
         return (offset >= neighbours_cell_offset_min).all() && (offset <= neighbours_cell_offset_max).all();
     }
 
-    PeriodicBoundaryGrid(const Point& box, SpaceAxis cell_dimension) : Base(box, cell_dimension) { updateCellGrid(); }
+    PeriodicBoundaryGrid(const Point& box, SpaceAxis cell_dimension)
+        : Base(box, cell_dimension)
+    {
+        updateCellGrid();
+    }
 
   private:
     CellCoord neighbours_cell_offset_min; //!< utmost negative offset of neighbours to prevent circular match in PBC
@@ -366,7 +383,8 @@ class PeriodicBoundaryGrid : public GridBase<TGridType>, virtual public Abstract
      * @brief Setup immutable parameters based on the box dimensions. To be called in constructors only.
      * @param new_box
      */
-    void updateCellGrid() {
+    void updateCellGrid()
+    {
         const auto cell_list_middle = (this->getCellListEnd() - 1).template cast<double>() * 0.5;
         neighbours_cell_offset_min = -cell_list_middle.floor().template cast<CellIndex>();
         neighbours_cell_offset_max = cell_list_middle.ceil().template cast<CellIndex>();
@@ -411,12 +429,14 @@ template <typename TMember, typename TIndex> class DenseContainer : virtual publ
     using typename ContainerType::Index;
     using typename ContainerType::Members;
 
-    const Members& get(Index index) const override {
+    const Members& get(Index index) const override
+    {
         assert(index >= 0 && index < indexEnd());
         return container[index];
     }
 
-    Members& get(Index index) override {
+    Members& get(Index index) override
+    {
         assert(index >= 0 && index < indexEnd());
         return container[index];
     }
@@ -430,7 +450,8 @@ template <typename TMember, typename TIndex> class DenseContainer : virtual publ
      *
      * @return  vector of cell indices
      */
-    std::vector<Index> indices() const override {
+    std::vector<Index> indices() const override
+    {
         std::vector<Index> indices;
         indices.reserve(std::distance(container.begin(), container.end()));
         auto iterator = container.begin();
@@ -442,7 +463,8 @@ template <typename TMember, typename TIndex> class DenseContainer : virtual publ
         return indices;
     }
 
-    explicit DenseContainer(std::size_t size) {
+    explicit DenseContainer(std::size_t size)
+    {
         if (size >= max_container_size) {
             faunus_logger->error("Size of the cell list container is too large! \n"
                                  "Try using a sparse version (i.e. dense: false)");
@@ -456,8 +478,8 @@ template <typename TMember, typename TIndex> class DenseContainer : virtual publ
 
   private:
     const std::size_t max_container_size = 1000000000; //!< maximum container size
-    const Members empty_set;        //!< an empty set, e.g., for out of boundary conditions
-    std::vector<Members> container; //!< container itself
+    const Members empty_set;                           //!< an empty set, e.g., for out of boundary conditions
+    std::vector<Members> container;                    //!< container itself
 };
 
 /**
@@ -474,18 +496,24 @@ template <typename TMember, typename TIndex> class SparseContainer : virtual pub
     using typename ContainerType::Index;
     using typename ContainerType::Members;
 
-    const Members& get(Index index) const override {
+    const Members& get(Index index) const override
+    {
         assert(index >= 0 && index < indexEnd());
         try {
             return container.at(index);
-        } catch (std::out_of_range& e) { return empty_set; }
+        }
+        catch (std::out_of_range& e) {
+            return empty_set;
+        }
     }
 
-    Members& get(Index index) override {
+    Members& get(Index index) override
+    {
         assert(index >= 0 && index < indexEnd());
         try {
             return container.at(index);
-        } catch (std::out_of_range& e) {
+        }
+        catch (std::out_of_range& e) {
             [[maybe_unused]] auto [iterator, flag] = container.emplace(index, Members{});
             return iterator->second;
         }
@@ -500,7 +528,8 @@ template <typename TMember, typename TIndex> class SparseContainer : virtual pub
      *
      * @return  vector of cell indices
      */
-    std::vector<Index> indices() const override {
+    std::vector<Index> indices() const override
+    {
         std::vector<Index> indices;
         indices.reserve(std::distance(container.begin(), container.end()));
         std::transform(container.begin(), container.end(), back_inserter(indices),
@@ -508,14 +537,17 @@ template <typename TMember, typename TIndex> class SparseContainer : virtual pub
         return indices;
     }
 
-    explicit SparseContainer(std::size_t size) : index_end(size) {}
+    explicit SparseContainer(std::size_t size)
+        : index_end(size)
+    {
+    }
 
   protected:
     Index indexEnd() const { return index_end; }
 
   private:
-    Index index_end;                    //!< the lowest index not allowed to appear, i.e., the grid size
-    const Members empty_set;            //!< an empty set, e.g., for out of boundary conditions
+    Index index_end;                              //!< the lowest index not allowed to appear, i.e., the grid size
+    const Members empty_set;                      //!< an empty set, e.g., for out of boundary conditions
     std::unordered_map<Index, Members> container; //!< container itself
 };
 
@@ -531,12 +563,14 @@ template <class TContainer> class Container : public TContainer {
     using Member = MemberOf<ContainerType>;
     using Index = IndexOf<ContainerType>;
 
-    void insert(const Member& member, const Index index_new) {
+    void insert(const Member& member, const Index index_new)
+    {
         assert(index_new < this->indexEnd());
         this->get(index_new).push_back(member);
     }
 
-    void erase(const Member& member, const Index index_old) {
+    void erase(const Member& member, const Index index_old)
+    {
         assert(index_old < this->indexEnd());
         auto& members = this->get(index_old);
         // std::erase_if available in C++20
@@ -545,7 +579,8 @@ template <class TContainer> class Container : public TContainer {
         // end of std::erase_if
     }
 
-    void move(const Member& member, const Index index_old, const Index index_new) {
+    void move(const Member& member, const Index index_old, const Index index_new)
+    {
         erase(member, index_old);
         insert(member, index_new);
     }
@@ -582,7 +617,8 @@ class CellListBase : protected TGrid,
      * @param cell_coordinates
      * @return  vector of cell members
      */
-    const Members& getMembers(const CellCoord& cell_coordinates) override {
+    const Members& getMembers(const CellCoord& cell_coordinates) override
+    {
         return this->get(this->index(cell_coordinates));
     }
 
@@ -591,10 +627,12 @@ class CellListBase : protected TGrid,
      * @param cell_coordinates
      * @return  vector of cell members or empty vector if cell does not exist
      */
-    const Members& getNeighborMembers(const CellCoord& cell_coordinates, const CellCoord& cell_offset) override {
+    const Members& getNeighborMembers(const CellCoord& cell_coordinates, const CellCoord& cell_offset) override
+    {
         if (this->isNeighborCell(cell_coordinates, cell_offset)) {
             return getMembers(cell_coordinates + cell_offset);
-        } else {
+        }
+        else {
             return getEmpty();
         }
     }
@@ -602,7 +640,8 @@ class CellListBase : protected TGrid,
     /**
      * @return  range of containg coordinates of all possibly non-empty cells
      */
-    std::vector<CellCoord> getCells() const override {
+    std::vector<CellCoord> getCells() const override
+    {
         const auto indices = this->indices();
         return ranges::cpp20::views::all(indices) |
                ranges::cpp20::views::transform([this](auto index) { return this->coordinates(index); }) |
@@ -627,7 +666,11 @@ class CellListBase : protected TGrid,
      *  @brief Construct an empty cell list from a grid.
      *  @param cell_grid
      */
-    explicit CellListBase(const TGrid& cell_grid) : Grid(cell_grid), Container(cell_grid.size()) {}
+    explicit CellListBase(const TGrid& cell_grid)
+        : Grid(cell_grid)
+        , Container(cell_grid.size())
+    {
+    }
 
     /**
      *  @brief Construct an empty cell list knowing a box dimension and minimal cell dimension.
@@ -635,7 +678,10 @@ class CellListBase : protected TGrid,
      *  @param cell_dimension  minimal length of the cell's edge
      */
     CellListBase(const typename TGrid::Point& box, const typename TGrid::SpaceAxis cell_dimension)
-        : Grid(box, cell_dimension), Container(Grid::size()) {}
+        : Grid(box, cell_dimension)
+        , Container(Grid::size())
+    {
+    }
 
   protected:
     //    const auto& getMembers(const CellIndex cell_index) const { return this->get(cell_index); }
@@ -683,7 +729,8 @@ class SortableCellList : public CellListBase<TContainer, TGrid>,
      * @param cell_coordinates
      * @return  sorted members
      */
-    const Members& getSortedMembers(const CellCoord& cell_coordinates) override {
+    const Members& getSortedMembers(const CellCoord& cell_coordinates) override
+    {
         return getSorted(this->index(cell_coordinates));
     }
 
@@ -693,10 +740,12 @@ class SortableCellList : public CellListBase<TContainer, TGrid>,
      * @param cell_offset
      * @return  sorted members
      */
-    const Members& getNeighborSortedMembers(const CellCoord& cell_coordinates, const CellCoord& cell_offset) override {
+    const Members& getNeighborSortedMembers(const CellCoord& cell_coordinates, const CellCoord& cell_offset) override
+    {
         if (this->isNeighborCell(cell_coordinates, cell_offset)) {
             return getSortedMembers(cell_coordinates + cell_offset);
-        } else {
+        }
+        else {
             return this->getEmpty();
         }
     }
@@ -705,7 +754,11 @@ class SortableCellList : public CellListBase<TContainer, TGrid>,
      *  @brief Construct an empty cell list from a grid.
      *  @param cell_grid
      */
-    explicit SortableCellList(const GridOf<TBase>& cell_grid) : TBase(cell_grid) { is_sorted.resize(this->size(), false); }
+    explicit SortableCellList(const GridOf<TBase>& cell_grid)
+        : TBase(cell_grid)
+    {
+        is_sorted.resize(this->size(), false);
+    }
 
     /**
      *  @brief Construct an empty cell list knowing a box dimension and minimal cell dimension.
@@ -713,19 +766,22 @@ class SortableCellList : public CellListBase<TContainer, TGrid>,
      *  @param cell_dimension  minimal length of the cell's edge
      */
     SortableCellList(const typename GridOf<TBase>::Point& box, const typename GridOf<TBase>::SpaceAxis cell_dimension)
-        : TBase(box, cell_dimension) {
+        : TBase(box, cell_dimension)
+    {
         is_sorted.resize(this->size(), false);
     }
 
   protected:
-    void insert(const Member& member, const CellIndex& new_cell_index) {
+    void insert(const Member& member, const CellIndex& new_cell_index)
+    {
         TBase::insert(member, new_cell_index);
         if (is_sorted[new_cell_index]) {
             is_sorted[new_cell_index] = false;
         }
     }
 
-    void remove(const Member& member, const CellIndex& old_cell_index) {
+    void remove(const Member& member, const CellIndex& old_cell_index)
+    {
         TBase::remove(member, old_cell_index);
         if (is_sorted[old_cell_index]) {
             is_sorted[old_cell_index] = false;
@@ -737,7 +793,8 @@ class SortableCellList : public CellListBase<TContainer, TGrid>,
      * @param cell_index
      * @return  sorted members
      */
-    const Members& getSorted(const CellIndex cell_index) {
+    const Members& getSorted(const CellIndex cell_index)
+    {
         auto& members = this->get(cell_index);
         if (!is_sorted[cell_index]) {
             std::sort(members.begin(), members.end());
@@ -760,24 +817,27 @@ class SortableCellList : public CellListBase<TContainer, TGrid>,
  */
 template <class TBase> class CellListReverseMap : public TBase {
   public:
-    using typename TBase::AbstractCellList;     //!< a structure with types definitions
     using typename AbstractCellList::CellCoord; //!< grid (cell) coordinates type
     using typename AbstractCellList::CellIndex; //!< grid (cell) index type
     using typename AbstractCellList::Member;    //!< member type
+    using typename TBase::AbstractCellList;     //!< a structure with types definitions
     using typename TBase::Container;
     using typename TBase::Grid;
 
-    void addMember(const Member& member, const CellCoord& new_cell_coordinates) {
+    void addMember(const Member& member, const CellCoord& new_cell_coordinates)
+    {
         this->insert(member, this->index(new_cell_coordinates));
     }
 
-    void removeMember(const Member& member) {
+    void removeMember(const Member& member)
+    {
         const auto old_cell_index = member2cell.at(member);
         this->erase(member, old_cell_index);
         member2cell.erase(member);
     }
 
-    void updateMember(const Member& member, const CellCoord& new_cell_coordinates) {
+    void updateMember(const Member& member, const CellCoord& new_cell_coordinates)
+    {
         this->update(member, this->index(new_cell_coordinates));
     }
 
@@ -793,7 +853,8 @@ template <class TBase> class CellListReverseMap : public TBase {
      * @param source
      * @param members
      */
-    template <typename T> void importMembers(CellListReverseMap& source, const T& members) {
+    template <typename T> void importMembers(CellListReverseMap& source, const T& members)
+    {
         for (const auto& member : members) {
             insert(member, source.member2cell[member]);
         }
@@ -802,13 +863,15 @@ template <class TBase> class CellListReverseMap : public TBase {
     using TBase::TBase;
 
   protected:
-    void insert(const Member& member, const CellIndex& new_cell_index) {
+    void insert(const Member& member, const CellIndex& new_cell_index)
+    {
         assert(member2cell.count(member) == 0); // FIXME C++20 contains
         TBase::insert(member, new_cell_index);
         member2cell.insert({member, new_cell_index});
     }
 
-    void update(const Member& member, const CellIndex& new_cell_index) {
+    void update(const Member& member, const CellIndex& new_cell_index)
+    {
         const auto old_cell_index = member2cell.at(member);
         if (new_cell_index != old_cell_index) {
             TBase::move(member, old_cell_index, new_cell_index);
@@ -834,12 +897,14 @@ template <class TBase> class CellListSpatial : public CellListReverseMap<TBase> 
     using typename AbstractCellList::Member;          //!< member type
     using typename AbstractCellList::GridType::Point; //!< point
 
-    void insertMember(const Member& member, const Point& new_position) {
+    void insertMember(const Member& member, const Point& new_position)
+    {
         const auto new_cell_index = this->indexAt(new_position);
         this->insert(member, new_cell_index);
     }
 
-    void updateMemberAt(const Member& member, const Point& new_position) {
+    void updateMemberAt(const Member& member, const Point& new_position)
+    {
         const auto new_cell_index = this->indexAt(new_position);
         this->update(member, new_cell_index);
     }
@@ -871,12 +936,14 @@ class CellListDifference : virtual public AbstractSortableCellList<ContainerType
     using typename AbstractCellList::Member;    //!< member type
     using typename AbstractCellList::Members;   //!< members type
 
-    const Members& getSortedMembers(const CellCoord& cell_coordinates) override {
+    const Members& getSortedMembers(const CellCoord& cell_coordinates) override
+    {
         const auto subtrahend_cell = subtrahend->getSortedMembers(cell_coordinates);
         if (std::size(subtrahend_cell) == 0) {
             // nothing to subtract
             return minuend->getSortedMembers(cell_coordinates);
-        } else {
+        }
+        else {
             const auto cell_index = minuend->getGrid().index(cell_coordinates);
             auto difference_cell_it = difference_cache.find(cell_index);
             if (difference_cell_it == difference_cache.end()) {
@@ -890,28 +957,34 @@ class CellListDifference : virtual public AbstractSortableCellList<ContainerType
         }
     }
 
-    const Members& getMembers(const CellCoord& cell_coordinates) override {
+    const Members& getMembers(const CellCoord& cell_coordinates) override
+    {
         if (subtrahend->getMembers(cell_coordinates).empty()) {
             // avoid difference and soring when not necessary
             return minuend->getMembers(cell_coordinates);
-        } else {
+        }
+        else {
             return getSortedMembers(cell_coordinates);
         }
     }
 
-    const Members& getNeighborSortedMembers(const CellCoord& cell_coordinates, const CellCoord& cell_offset) override {
+    const Members& getNeighborSortedMembers(const CellCoord& cell_coordinates, const CellCoord& cell_offset) override
+    {
         if (minuend->getGrid().isNeighborCell(cell_coordinates, cell_offset)) {
             // avoid difference and soring when not necessary
             return getSortedMembers(cell_coordinates + cell_offset);
-        } else {
+        }
+        else {
             return minuend->getNeighborMembers(cell_coordinates, cell_offset);
         }
     }
 
-    const Members& getNeighborMembers(const CellCoord& cell_coordinates, const CellCoord& cell_offset) override {
+    const Members& getNeighborMembers(const CellCoord& cell_coordinates, const CellCoord& cell_offset) override
+    {
         if (minuend->getGrid().isNeighborCell(cell_coordinates, cell_offset)) {
             return getMembers(cell_coordinates + cell_offset);
-        } else {
+        }
+        else {
             return minuend->getNeighborMembers(cell_coordinates, cell_offset);
         }
     }
@@ -923,7 +996,10 @@ class CellListDifference : virtual public AbstractSortableCellList<ContainerType
     std::vector<CellCoord> getCells() const override { return minuend->getCells(); }
 
     CellListDifference(std::shared_ptr<TCellListMinuend> minuend, std::shared_ptr<TCellListSubtrahend> subtrahend)
-        : minuend(minuend), subtrahend(subtrahend) {}
+        : minuend(minuend)
+        , subtrahend(subtrahend)
+    {
+    }
 
   private:
     std::shared_ptr<CellListMinuend> minuend;
@@ -932,4 +1008,3 @@ class CellListDifference : virtual public AbstractSortableCellList<ContainerType
 };
 
 } // namespace Faunus::CellList
-

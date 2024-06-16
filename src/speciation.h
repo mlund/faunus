@@ -121,11 +121,11 @@ namespace Faunus::move {
 class SpeciationMove : public Move {
   private:
     using reaction_iterator = decltype(Faunus::reactions)::iterator;
-    Random random_internal; //!< Private generator so as not to touch MoveBase::slump
-    reaction_iterator reaction;                                            //!< Randomly selected reaction
-    double bias_energy = 0.0;                                              //!< Group (de)activators may add bias
-    Speciation::ReactionValidator reaction_validator;                      //!< Helper to check if reaction is doable
-    Speciation::ReactionDirectionRatio direction_ratio;                    //!< Track acceptance in each direction
+    Random random_internal;                             //!< Private generator so as not to touch MoveBase::slump
+    reaction_iterator reaction;                         //!< Randomly selected reaction
+    double bias_energy = 0.0;                           //!< Group (de)activators may add bias
+    Speciation::ReactionValidator reaction_validator;   //!< Helper to check if reaction is doable
+    Speciation::ReactionDirectionRatio direction_ratio; //!< Track acceptance in each direction
     std::unique_ptr<Speciation::GroupDeActivator> molecular_group_bouncer; //!< (de)activator for molecular groups
     std::unique_ptr<Speciation::GroupDeActivator> atomic_group_bouncer;    //!< (de)activator for atomic groups
 
@@ -138,7 +138,7 @@ class SpeciationMove : public Move {
     void _accept(Change& change) override;
     void _reject(Change& change) override;
 
-    void setRandomReactionAndDirection();                       //!< Set random reaction and direction
+    void setRandomReactionAndDirection();     //!< Set random reaction and direction
     void atomicSwap(Change& change);          //!< Swap atom type
     void deactivateReactants(Change& change); //!< Delete all reactants
     void activateProducts(Change& change);    //!< Insert all products

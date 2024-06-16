@@ -3,7 +3,8 @@
 
 namespace Faunus {
 
-TEST_CASE("[Faunus] Average") {
+TEST_CASE("[Faunus] Average")
+{
     Faunus::Average<double> a;
     a += 1.0;
     a += 2.0;
@@ -25,7 +26,8 @@ TEST_CASE("[Faunus] Average") {
     b = 1.0; // assign from double
     CHECK_EQ(b.size(), 1);
 
-    SUBCASE("overflow") {
+    SUBCASE("overflow")
+    {
         Average<double, std::uint8_t> a;
         const auto max_number_of_samples = std::numeric_limits<std::uint8_t>::max();
         for (std::uint8_t i = 0; i < max_number_of_samples; i++) {
@@ -36,7 +38,8 @@ TEST_CASE("[Faunus] Average") {
     }
 }
 
-TEST_CASE("[Faunus] AverageStd") {
+TEST_CASE("[Faunus] AverageStd")
+{
     Faunus::AverageStdev<double> a;
     a += 1.0;
     a += 2.0;
@@ -59,7 +62,8 @@ TEST_CASE("[Faunus] AverageStd") {
     CHECK_EQ(b.size(), 1);
 }
 
-TEST_CASE("[Faunus] AverageObj") {
+TEST_CASE("[Faunus] AverageObj")
+{
     using doctest::Approx;
     Faunus::AverageObj<double> a;
     a += 1.0;
@@ -69,11 +73,13 @@ TEST_CASE("[Faunus] AverageObj") {
 
     struct MyClass {
         double x;
-        MyClass& operator+=(const MyClass& other) {
+        MyClass& operator+=(const MyClass& other)
+        {
             x += other.x;
             return *this;
         } // required
-        MyClass operator*(double value) const {
+        MyClass operator*(double value) const
+        {
             MyClass scaled;
             scaled.x = x * value;
             return scaled;

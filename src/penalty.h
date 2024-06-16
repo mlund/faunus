@@ -50,8 +50,8 @@ class Penalty : public EnergyTerm {
     ~Penalty() override; //!< destruct and save to disk (!)
     double energy(const Change& change) override;
     void sync(EnergyTerm* other, const Change& change) override;
-    void streamPenaltyFunction(std::ostream &stream) const;
-    void streamHistogram(std::ostream &stream) const;
+    void streamPenaltyFunction(std::ostream& stream) const;
+    void streamHistogram(std::ostream& stream) const;
 };
 
 #ifdef ENABLE_MPI
@@ -61,10 +61,10 @@ class Penalty : public EnergyTerm {
 class PenaltyMPI : public Penalty {
   private:
     const MPI::Controller& mpi;
-    Eigen::VectorXi weights;                                     //!< array w. minimum histogram counts
-    Eigen::VectorXd buffer;                                      //!< receive buffer for penalty functions
+    Eigen::VectorXi weights;                                            //!< array w. minimum histogram counts
+    Eigen::VectorXd buffer;                                             //!< receive buffer for penalty functions
     void updatePenalty(const std::vector<double>& coordinate) override; //!< Average penalty function across all nodes
-    void averagePenaltyFunctions();                              //!< Average penalty functions over all MPI nodes
+    void averagePenaltyFunctions(); //!< Average penalty functions over all MPI nodes
   public:
     PenaltyMPI(const json& j, Space& spc, const MPI::Controller& mpi);
 };

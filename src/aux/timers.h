@@ -16,7 +16,11 @@ template <typename Tunit = std::chrono::microseconds> class TimeRelativeOfTotal 
     std::chrono::steady_clock::time_point t0, tx;
 
   public:
-    TimeRelativeOfTotal() : delta(0) { t0 = std::chrono::steady_clock::now(); }
+    TimeRelativeOfTotal()
+        : delta(0)
+    {
+        t0 = std::chrono::steady_clock::now();
+    }
 
     operator bool() const { return delta.count() != 0 ? true : false; }
 
@@ -24,7 +28,8 @@ template <typename Tunit = std::chrono::microseconds> class TimeRelativeOfTotal 
 
     void stop() { delta += std::chrono::duration_cast<Tunit>(std::chrono::steady_clock::now() - tx); }
 
-    double result() const {
+    double result() const
+    {
         auto now = std::chrono::steady_clock::now();
         auto total = std::chrono::duration_cast<Tunit>(now - t0);
         return delta.count() / double(total.count());

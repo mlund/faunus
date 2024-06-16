@@ -23,14 +23,14 @@ class ReactionCoordinateBase {
     std::function<double()> function = nullptr; //!< returns reaction coordinate
                                                 //!< Default 1.0; currently unused
   public:
-    explicit ReactionCoordinateBase(const json& j);  //!< constructor reads resolution, min, max
-    double resolution = 0.0;                //!< Resolution used when binning (histograms etc.)
-    double minimum_value = 0.0;             //!< Minimum allowed value
-    double maximum_value = 0.0;             //!< Maximum allowed value
-    std::string name;                       //!< Meaningful, short name. Don't use spaces or weird characters
+    explicit ReactionCoordinateBase(const json& j); //!< constructor reads resolution, min, max
+    double resolution = 0.0;                        //!< Resolution used when binning (histograms etc.)
+    double minimum_value = 0.0;                     //!< Minimum allowed value
+    double maximum_value = 0.0;                     //!< Maximum allowed value
+    std::string name;                               //!< Meaningful, short name. Don't use spaces or weird characters
 
-    double operator()(); //!< Calculates reaction coordinate
-    virtual void _to_json(json &j) const;   //!< json serialization
+    double operator()();                            //!< Calculates reaction coordinate
+    virtual void _to_json(json& j) const;           //!< json serialization
     [[nodiscard]] bool inRange(double coord) const; //!< Determines if coordinate is within [min,max]
     virtual ~ReactionCoordinateBase() = default;
 };
@@ -45,8 +45,8 @@ class SystemProperty : public ReactionCoordinateBase {
     std::string property;
 
   public:
-    SystemProperty(const json &j, const Space &spc);
-    void _to_json(json &j) const override;
+    SystemProperty(const json& j, const Space& spc);
+    void _to_json(json& j) const override;
 };
 
 class AtomProperty : public ReactionCoordinateBase {
@@ -56,8 +56,8 @@ class AtomProperty : public ReactionCoordinateBase {
 
   public:
     std::string property;
-    AtomProperty(const json &j, const Space &spc);
-    void _to_json(json &j) const override;
+    AtomProperty(const json& j, const Space& spc);
+    void _to_json(json& j) const override;
 };
 
 /**
@@ -82,8 +82,8 @@ struct MoleculeProperty : public ReactionCoordinateBase {
     void selectLengthOverRadiusRatio(const json& j, const Space& spc);
 
   public:
-    MoleculeProperty(const json &j, const Space &spc);
-    void _to_json(json &j) const override;
+    MoleculeProperty(const json& j, const Space& spc);
+    void _to_json(json& j) const override;
 };
 
 } // namespace ReactionCoordinate

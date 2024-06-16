@@ -14,7 +14,7 @@ class Hamiltonian;
 namespace move {
 class Move;
 class MoveCollection;
-} // namespace Move
+} // namespace move
 
 /**
  * @brief Class to handle Monte Carlo moves
@@ -82,8 +82,8 @@ class MetropolisMonteCarlo {
     ~MetropolisMonteCarlo();                               //!< Required due to unique_ptr to incomplete type
 };
 
-void from_json(const json &, MetropolisMonteCarlo::State &); //!< Build state from json object
-void to_json(json &, const MetropolisMonteCarlo &);
+void from_json(const json&, MetropolisMonteCarlo::State&); //!< Build state from json object
+void to_json(json&, const MetropolisMonteCarlo&);
 
 /**
  * @brief Entropy change due to particle fluctuations

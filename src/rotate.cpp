@@ -17,7 +17,8 @@ QuaternionRotate::QuaternionRotate(double angle, Point axis) { set(angle, std::m
  * @param angle rotation angle (radians)
  * @param axis rotation axis
  */
-void QuaternionRotate::set(double angle, Point axis) {
+void QuaternionRotate::set(double angle, Point axis)
+{
     this->angle = angle;
     axis.normalize(); // make unit vector
     quaternion = Eigen::AngleAxisd(angle, axis);
@@ -35,7 +36,8 @@ void QuaternionRotate::set(double angle, Point axis) {
  * @return Rotated vector
  */
 QuaternionRotate::Point QuaternionRotate::operator()(Point r, std::function<void(Point&)> boundary,
-                                                     const Point& shift) const {
+                                                     const Point& shift) const
+{
     r = r - shift;
     boundary(r);
     // Note that the Eigen * operator secretly converts to a rotation matrix which is
@@ -52,32 +54,36 @@ QuaternionRotate::Point QuaternionRotate::operator()(Point r, std::function<void
  * @param matrix Matrix or tensor to rotate
  * @return Rotated matrix or tensor
  */
-auto QuaternionRotate::operator()(const Eigen::Matrix3d &matrix) const {
+auto QuaternionRotate::operator()(const Eigen::Matrix3d& matrix) const
+{
     return rotation_matrix * matrix * rotation_matrix.transpose();
 }
 
-const Eigen::Quaterniond &QuaternionRotate::getQuaternion() const { return quaternion; }
-const Eigen::Matrix3d &QuaternionRotate::getRotationMatrix() const { return rotation_matrix; }
+const Eigen::Quaterniond& QuaternionRotate::getQuaternion() const { return quaternion; }
+const Eigen::Matrix3d& QuaternionRotate::getRotationMatrix() const { return rotation_matrix; }
 
 } // namespace Faunus
 
 using namespace Faunus;
 
-TEST_CASE("[Faunus] QuaternionRotate") {
+TEST_CASE("[Faunus] QuaternionRotate")
+{
     using doctest::Approx;
     QuaternionRotate qrot;
     Point a = {1, 0, 0};
     qrot.set(pc::pi / 2, {0, 1, 0}); // rotate around y-axis
     CHECK_EQ(qrot.angle, Approx(pc::pi / 2));
 
-    SUBCASE("rotate using quaternion") {
+    SUBCASE("rotate using quaternion")
+    {
         a = qrot(a); // rot. 90 deg.
         CHECK_EQ(a.x(), Approx(0.0));
         a = qrot(a); // rot. 90 deg.
         CHECK_EQ(a.x(), Approx(-1.0));
     }
 
-    SUBCASE("rotate using rotation matrix") {
+    SUBCASE("rotate using rotation matrix")
+    {
         a = qrot.getRotationMatrix() * a;
         CHECK_EQ(a.x(), Approx(0.0));
         a = qrot.getRotationMatrix() * a;

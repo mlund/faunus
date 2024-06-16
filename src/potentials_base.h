@@ -83,7 +83,8 @@ class PairMixer {
                                          CoefficientType coefficient = CoefficientType::ANY);
 
     // when explicit custom pairs are the only option
-    inline static constexpr double combUndefined(double = 0.0, double = 0.0) {
+    inline static constexpr double combUndefined(double = 0.0, double = 0.0)
+    {
         return std::numeric_limits<double>::signaling_NaN();
     };
     inline static double combArithmetic(double a, double b) { return 0.5 * (a + b); }
@@ -126,7 +127,8 @@ class PairPotential {
      * @param b_towards_a Distance vector 𝐛 -> 𝐚 = 𝐚 - 𝐛
      * @return Force acting on a dur to b in units of kT/Å
      */
-    [[nodiscard]] virtual Point force(const Particle& a, const Particle& b, double squared_distance, const Point& b_towards_a) const;
+    [[nodiscard]] virtual Point force(const Particle& a, const Particle& b, double squared_distance,
+                                      const Point& b_towards_a) const;
 
     /**
      * @brief Pair energy between two particles
@@ -140,8 +142,7 @@ class PairPotential {
                               const Point& b_towards_a) const = 0;
 
   protected:
-    explicit PairPotential(std::string  name = std::string(), std::string  cite = std::string(),
-                           bool isotropic = true);
+    explicit PairPotential(std::string name = std::string(), std::string cite = std::string(), bool isotropic = true);
 };
 
 void to_json(json& j, const PairPotential& base);   //!< Serialize any pair potential to json
@@ -154,7 +155,8 @@ template <class T>
 concept RequirePairPotential = std::derived_from<T, pairpotential::PairPotential>;
 
 /** @brief Convenience function to generate a pair potential initialized from JSON object */
-template <RequirePairPotential T> auto makePairPotential(const json& j) {
+template <RequirePairPotential T> auto makePairPotential(const json& j)
+{
     T pair_potential;
     pairpotential::from_json(j, pair_potential);
     return pair_potential;
@@ -195,9 +197,10 @@ template <RequirePairPotential T1, RequirePairPotential T2> struct CombinedPairP
     T1 first;  //!< First pair potential of type T1
     T2 second; //!< Second pair potential of type T2
     explicit CombinedPairPotential(const std::string& name = "")
-        : PairPotential(name){};
+        : PairPotential(name) {};
     inline double operator()(const Particle& particle_a, const Particle& particle_b, const double squared_distance,
-                             const Point& b_towards_a = {0, 0, 0}) const override {
+                             const Point& b_towards_a = {0, 0, 0}) const override
+    {
         return first(particle_a, particle_b, squared_distance, b_towards_a) +
                second(particle_a, particle_b, squared_distance, b_towards_a);
     } //!< Combine pair energy
@@ -210,13 +213,15 @@ template <RequirePairPotential T1, RequirePairPotential T2> struct CombinedPairP
      * @param b_towards_a Distance vector 𝐛 -> 𝐚 = 𝐚 - 𝐛
      * @return Force on particle a due to particle b
      */
-    [[nodiscard]] inline Point force(const Particle& particle_a, const Particle& particle_b, const double squared_distance,
-                       const Point& b_towards_a) const override {
+    [[nodiscard]] inline Point force(const Particle& particle_a, const Particle& particle_b,
+                                     const double squared_distance, const Point& b_towards_a) const override
+    {
         return first.force(particle_a, particle_b, squared_distance, b_towards_a) +
                second.force(particle_a, particle_b, squared_distance, b_towards_a);
     } //!< Combine force
 
-    void from_json(const json& j) override {
+    void from_json(const json& j) override
+    {
         Faunus::pairpotential::from_json(j, first);
         Faunus::pairpotential::from_json(j, second);
         name = first.name + "/" + second.name;
@@ -230,11 +235,13 @@ template <RequirePairPotential T1, RequirePairPotential T2> struct CombinedPairP
                 }
                 return u2(p);
             };
-        } else {
+        }
+        else {
             selfEnergy = nullptr;
         }
     }
-    void to_json(json& j) const override {
+    void to_json(json& j) const override
+    {
         assert(j.is_object());
         auto& _j = j["default"] = json::array();
         _j.push_back(first);
@@ -242,4 +249,4 @@ template <RequirePairPotential T1, RequirePairPotential T2> struct CombinedPairP
     }
 };
 
-} // namespace Faunus::Potential
+} // namespace Faunus::pairpotential

@@ -163,7 +163,8 @@ class AtomicTranslateRotate : public Move {
     void _accept(Change&) override;
     void _reject(Change&) override;
 
-    AtomicTranslateRotate(Space& spc, const Energy::Hamiltonian& hamiltonian, const std::string& name, const std::string& cite);
+    AtomicTranslateRotate(Space& spc, const Energy::Hamiltonian& hamiltonian, const std::string& name,
+                          const std::string& cite);
 
   public:
     AtomicTranslateRotate(Space& spc, const Energy::Hamiltonian& hamiltonian);
@@ -460,13 +461,13 @@ class GibbsEnsembleHelper {
   public:
     using VectorOfMolIds = std::vector<MoleculeData::index_type>;
     const MPI::Controller& mpi;
-    int partner_rank = -1;                                          //!< Either rank 0 or 1
-    double total_volume = 0;                                        //!< Total volume of both cells
-    int total_num_particles = 0;                                    //! Total number of particles in both cells
-    VectorOfMolIds molids;                                          //!< Molecule id's to exchange. Must be molecular.
+    int partner_rank = -1;                                            //!< Either rank 0 or 1
+    double total_volume = 0;                                          //!< Total volume of both cells
+    int total_num_particles = 0;                                      //! Total number of particles in both cells
+    VectorOfMolIds molids;                                            //!< Molecule id's to exchange. Must be molecular.
     std::pair<int, int> currentNumParticles(const Space& spc) const;  //!< Current number of particles in cell 1 and 2
     std::pair<double, double> currentVolumes(const Space& spc) const; //!< Current volumes in cell 1 and 2
-    double exchange(double value) const;                            //!< MPI exchange a double with partner
+    double exchange(double value) const;                              //!< MPI exchange a double with partner
     GibbsEnsembleHelper(const Space& spc, const MPI::Controller& mpi, const VectorOfMolIds& molids);
 };
 
@@ -556,7 +557,7 @@ class ParallelTempering : public Move {
  * @throw if invalid name or input parameters
  */
 [[maybe_unused]] std::unique_ptr<Move> createMove(const std::string& name, const json& properties, Space& spc,
-                                 Energy::Hamiltonian& hamiltonian);
+                                                  Energy::Hamiltonian& hamiltonian);
 
 /**
  * @brief Class storing a list of MC moves with their probability weights and
@@ -572,10 +573,10 @@ class MoveCollection {
     move_iterator sample();                                //!< Pick move from a weighted, random distribution
 
   public:
-    MoveCollection(const json& list_of_moves, Space& spc, Energy::Hamiltonian& hamiltonian, Space &old_spc);
-    void addMove(std::shared_ptr<Move>&& move);                     //!< Register new move with correct weight
-    [[maybe_unused]] [[nodiscard]] const BasePointerVector<Move>& getMoves() const;                //!< Get list of moves
-    friend void to_json(json& j, const MoveCollection& propagator); //!< Generate json output
+    MoveCollection(const json& list_of_moves, Space& spc, Energy::Hamiltonian& hamiltonian, Space& old_spc);
+    void addMove(std::shared_ptr<Move>&& move); //!< Register new move with correct weight
+    [[maybe_unused]] [[nodiscard]] const BasePointerVector<Move>& getMoves() const; //!< Get list of moves
+    friend void to_json(json& j, const MoveCollection& propagator);                 //!< Generate json output
 
     /**
      * Generates a range of repeated, randomized move pointers guaranteed to be valid.
@@ -585,7 +586,8 @@ class MoveCollection {
      *
      * @returns Range of valid move pointers
      */
-    auto repeatedStochasticMoves() {
+    auto repeatedStochasticMoves()
+    {
         auto is_valid_and_stochastic = [&](auto move) { return move < moves.end() && (*move)->isStochastic(); };
         return ranges::cpp20::views::iota(0U, number_of_moves_per_sweep) |
                ranges::cpp20::views::transform([&]([[maybe_unused]] auto count) { return sample(); }) |
@@ -603,7 +605,8 @@ class MoveCollection {
      * @param sweep_number Current sweep count to decide if move should be included based on `sweep_interval`
      * @returns Range of valid move pointers to be run at given sweep number, i.e. non-stochastically
      */
-    auto constantIntervalMoves(const unsigned int sweep_number = 1) {
+    auto constantIntervalMoves(const unsigned int sweep_number = 1)
+    {
         auto is_static_and_time_to_sample = [&, sweep_number](const auto& move) {
             return (!move->isStochastic()) && (sweep_number % move->sweep_interval == 0);
         };

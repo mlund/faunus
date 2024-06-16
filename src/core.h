@@ -57,7 +57,8 @@ struct SingleUseJSON : public json {
     json operator[](const std::string&);
     void erase(const std::string&);
 
-    template <class T> T value(const std::string& key, const T& fallback) {
+    template <class T> T value(const std::string& key, const T& fallback)
+    {
         return (count(key) > 0) ? at(key).get<T>() : fallback;
     }
 };
@@ -96,7 +97,7 @@ class TipFromTheManual {
 
   public:
     std::string output_buffer; // accumulate output here
-    bool quiet = true;  // if true, operator[] returns empty string
+    bool quiet = true;         // if true, operator[] returns empty string
     bool asciiart = true;
     TipFromTheManual();
     void load(const std::vector<std::string>&);
@@ -122,7 +123,8 @@ extern std::shared_ptr<spdlog::logger> mcloop_logger; // global instance
  *
  * @warning Be careful that objects are properly aligned and divisible with `sizeof<double>`
  */
-template <typename dbl = double, class iter, class memberptr> auto asEigenMatrix(iter begin, iter end, memberptr m) {
+template <typename dbl = double, class iter, class memberptr> auto asEigenMatrix(iter begin, iter end, memberptr m)
+{
     using T = typename std::iterator_traits<iter>::value_type;
     static_assert(sizeof(T) % sizeof(dbl) == 0, "value_type size must multiples of double");
     constexpr size_t s = sizeof(T) / sizeof(dbl);
@@ -131,7 +133,8 @@ template <typename dbl = double, class iter, class memberptr> auto asEigenMatrix
     return Eigen::Map<Tmatrix, 0, Eigen::Stride<1, s>>((dbl*)&(*begin.*m), end - begin, cols).array();
 }
 
-template <typename dbl = double, class iter, class memberptr> auto asEigenVector(iter begin, iter end, memberptr m) {
+template <typename dbl = double, class iter, class memberptr> auto asEigenVector(iter begin, iter end, memberptr m)
+{
     using T = typename std::iterator_traits<iter>::value_type;
     static_assert(std::is_same<dbl&, decltype((static_cast<T*>(0))->*m)>::value, "member must be a scalar");
     return asEigenMatrix<dbl>(begin, end, m).col(0);
@@ -160,7 +163,8 @@ Point xyz2rtp(const Point&, const Point& origin = {0, 0, 0});
  */
 Point rtp2xyz(const Point& rtp, const Point& origin = {0, 0, 0});
 
-[[maybe_unused]] std::string addGrowingSuffix(const std::string&); //!< Add growing suffix filename until non-existing name is found
+[[maybe_unused]] std::string
+addGrowingSuffix(const std::string&); //!< Add growing suffix filename until non-existing name is found
 
 Point randomUnitVector(
     Random& rand,
@@ -176,7 +180,9 @@ struct GenericError : public std::runtime_error {
     explicit GenericError(const char* msg);
     template <class... Args>
     explicit GenericError(std::string_view fmt, const Args&... args)
-        : std::runtime_error(fmt::vformat(fmt, fmt::make_format_args(args...))) {}
+        : std::runtime_error(fmt::vformat(fmt, fmt::make_format_args(args...)))
+    {
+    }
 };
 
 //! Exception to be thrown when parsing json configuration
@@ -218,10 +224,10 @@ class Electrolyte {
   public:
     Electrolyte(double molarity, const std::vector<int>& valencies);
     Electrolyte(double debye_length, double bjerrum_length); //!< Initialize from existing Debye and Bjerrum length
-    [[nodiscard]] double ionicStrength() const;                            //!< Molar ionic strength (mol/l)
-    [[nodiscard]] double debyeLength(double bjerrum_length) const;         //!< Debye screening length in Ångstrom
-    [[nodiscard]] double getMolarity() const;                              //!< Input salt molarity (mol/l)
-    [[nodiscard]] const std::vector<int>& getValencies() const;            //!< Charges of each participating ion in the salt
+    [[nodiscard]] double ionicStrength() const;              //!< Molar ionic strength (mol/l)
+    [[nodiscard]] double debyeLength(double bjerrum_length) const; //!< Debye screening length in Ångstrom
+    [[nodiscard]] double getMolarity() const;                      //!< Input salt molarity (mol/l)
+    [[nodiscard]] const std::vector<int>& getValencies() const;    //!< Charges of each participating ion in the salt
 };
 
 void to_json(json& j, const Electrolyte& electrolyte);

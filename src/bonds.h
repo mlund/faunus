@@ -43,13 +43,13 @@ struct BondData {
 
     virtual void from_json(const json&) = 0;
     virtual void to_json(json&) const = 0;
-    [[nodiscard]] virtual int numindex() const = 0;                                    //!< Required number of atom indices for bond
-    [[nodiscard]] virtual Variant type() const = 0;                                    //!< Returns bond type (sett `Variant` enum)
-    [[nodiscard]] virtual std::shared_ptr<BondData> clone() const = 0;                 //!< Make shared pointer *copy* of data
+    [[nodiscard]] virtual int numindex() const = 0;                      //!< Required number of atom indices for bond
+    [[nodiscard]] virtual Variant type() const = 0;                      //!< Returns bond type (sett `Variant` enum)
+    [[nodiscard]] virtual std::shared_ptr<BondData> clone() const = 0;   //!< Make shared pointer *copy* of data
     virtual void setEnergyFunction(const ParticleVector& particles) = 0; //!< Set energy function; store particles ref.
-    [[nodiscard]] bool hasEnergyFunction() const;                                      //!< test if energy function has been set
-    [[nodiscard]] bool hasForceFunction() const;                                       //!< test if force function has been set
-    void shiftIndices(int offset);                                 //!< Add offset to particle indices
+    [[nodiscard]] bool hasEnergyFunction() const;                        //!< test if energy function has been set
+    [[nodiscard]] bool hasForceFunction() const;                         //!< test if force function has been set
+    void shiftIndices(int offset);                                       //!< Add offset to particle indices
     BondData() = default;
     explicit BondData(const std::vector<int>& indices);
     virtual ~BondData() = default;
@@ -203,4 +203,4 @@ void from_json(const json& j, std::shared_ptr<BondData>& bond);
 void to_json(json& j, const std::shared_ptr<const BondData>& bond);
 void to_json(json& j, const BondData& bond);
 
-} // namespace Faunus::Potential
+} // namespace Faunus::pairpotential

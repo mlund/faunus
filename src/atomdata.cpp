@@ -9,40 +9,47 @@
 
 namespace Faunus {
 
-bool InteractionData::contains(const key_type& name) const {
+bool InteractionData::contains(const key_type& name) const
+{
     if (auto it = data.find(name); it != data.end()) {
         return !std::isnan(it->second);
     }
     return false;
 }
 
-double InteractionData::at(const key_type& name) const {
+double InteractionData::at(const key_type& name) const
+{
     try {
         return data.at(name);
-    } catch (const std::out_of_range& e) {
+    }
+    catch (const std::out_of_range& e) {
         // cannot throw until non-used atomic pairs are eliminated from the potential matrices
         faunus_logger->error("Unknown/unset atom property {} required.", name);
         return std::numeric_limits<double>::signaling_NaN();
     }
 }
 
-double& InteractionData::at(const key_type& name) {
+double& InteractionData::at(const key_type& name)
+{
     if (data.find(name) == data.end()) {
         insert_or_assign(name, std::numeric_limits<double>::signaling_NaN());
     }
     return data.at(name);
 }
 
-void InteractionData::insert_or_assign(const key_type& name, const double value) {
+void InteractionData::insert_or_assign(const key_type& name, const double value)
+{
     auto it = data.find(name);
     if (it != data.end()) {
         it->second = value;
-    } else {
+    }
+    else {
         data.insert({name, value});
     }
 }
 
-void from_json(const json& j, InteractionData& a) {
+void from_json(const json& j, InteractionData& a)
+{
     for (const auto& [key, value] : j.items()) {
         if (value.is_number()) {
             a.insert_or_assign(key, value);
@@ -50,7 +57,8 @@ void from_json(const json& j, InteractionData& a) {
     }
 }
 
-void from_single_use_json(SingleUseJSON& j, InteractionData& a) {
+void from_single_use_json(SingleUseJSON& j, InteractionData& a)
+{
     auto j_copy = j;
     for (const auto& [key, value] : j_copy.items()) {
         if (value.is_number()) {
@@ -60,7 +68,8 @@ void from_single_use_json(SingleUseJSON& j, InteractionData& a) {
     }
 }
 
-void to_json(json& j, const InteractionData& a) {
+void to_json(json& j, const InteractionData& a)
+{
     for (const auto& [key, value] : a.data) {
         j[key] = value;
     }
@@ -70,7 +79,8 @@ AtomData::index_type& AtomData::id() { return _id; }
 
 const AtomData::index_type& AtomData::id() const { return _id; }
 
-void to_json(json& j, const AtomData& a) {
+void to_json(json& j, const AtomData& a)
+{
     auto& _j = j[a.name];
     _j = {{"activity", a.activity / 1.0_molar},
           {"pactivity", -std::log10(a.activity / 1.0_molar)},
@@ -94,7 +104,8 @@ void to_json(json& j, const AtomData& a) {
     }
 }
 
-void from_json(const json& j, AtomData& a) {
+void from_json(const json& j, AtomData& a)
+{
     if (!j.is_object() || j.size() != 1) {
         throw std::runtime_error("Invalid JSON data for AtomData");
     }
@@ -156,7 +167,8 @@ void from_json(const json& j, AtomData& a) {
     }
 }
 
-void from_json(const json& j, std::vector<Faunus::AtomData>& atom_vector) {
+void from_json(const json& j, std::vector<Faunus::AtomData>& atom_vector)
+{
     // List of atoms can be provided as an array or wrapped in an object containing an array – {"atomlist": […], …}.
     // Here we attempt to unwrap the object envelope.
     auto j_atomlist = j.find("atomlist");
@@ -173,14 +185,17 @@ void from_json(const json& j, std::vector<Faunus::AtomData>& atom_vector) {
                 if (auto it = Faunus::findName(atom_vector, atomdata.name); it != atom_vector.end()) {
                     faunus_logger->warn("overwriting existing properties of {}", it->name);
                     *it = atomdata;
-                } else { // add new atom
+                }
+                else { // add new atom
                     atom_vector.push_back(atomdata);
                 }
-            } else if (element.is_string()) { // treat element as filename
+            }
+            else if (element.is_string()) { // treat element as filename
                 const auto filename = element.get<std::string>();
                 faunus_logger->info("reading atoms from external file '{}'", filename);
                 from_json(Faunus::loadJSON(filename), atom_vector);
-            } else {
+            }
+            else {
                 throw ConfigurationError("atom entry must be string or object").attachJson(element);
             }
         }
@@ -189,7 +204,8 @@ void from_json(const json& j, std::vector<Faunus::AtomData>& atom_vector) {
         for (size_t i = 0; i < atom_vector.size(); ++i) {
             atom_vector[i].id() = i;
         }
-    } catch (std::exception& e) {
+    }
+    catch (std::exception& e) {
         std::throw_with_nested(ConfigurationError("error in atoms definition").attachJson(new_atoms));
     }
 }
@@ -198,7 +214,8 @@ std::vector<Faunus::AtomData> atoms;
 
 TEST_SUITE_BEGIN("AtomData");
 
-TEST_CASE("[Faunus] AtomData") {
+TEST_CASE("[Faunus] AtomData")
+{
     using doctest::Approx;
 
     json j = R"({ "atomlist" : [
@@ -243,9 +260,12 @@ TEST_CASE("[Faunus] AtomData") {
 TEST_SUITE_END();
 
 UnknownAtomError::UnknownAtomError(std::string_view atom_name)
-    : GenericError("unknown atom: '{}'", atom_name) {}
+    : GenericError("unknown atom: '{}'", atom_name)
+{
+}
 
-AtomData& findAtomByName(std::string_view name) {
+AtomData& findAtomByName(std::string_view name)
+{
     const auto iter = findName(Faunus::atoms, name);
     if (iter == Faunus::atoms.end()) {
         throw UnknownAtomError(name);
@@ -253,7 +273,8 @@ AtomData& findAtomByName(std::string_view name) {
     return *iter;
 }
 
-void from_json(const json& j, SpheroCylinderData& psc) {
+void from_json(const json& j, SpheroCylinderData& psc)
+{
     psc.length = j.value("length", 0.0) * 1.0_angstrom;
     psc.type = j.value("type", SpheroCylinderData::PatchType::None);
     psc.patch_angle = j.value("patch_angle", 0.0) * 1.0_deg;
@@ -261,7 +282,8 @@ void from_json(const json& j, SpheroCylinderData& psc) {
     psc.chiral_angle = j.value("chiral_angle", 0.0) * 1.0_deg;
 }
 
-void to_json(json& j, const SpheroCylinderData& psc) {
+void to_json(json& j, const SpheroCylinderData& psc)
+{
     j = {{"length", psc.length / 1.0_angstrom},
          {"patch_angle", psc.patch_angle / 1.0_deg},
          {"patch_angle_switch", psc.patch_angle_switch / 1.0_deg},

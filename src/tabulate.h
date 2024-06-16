@@ -36,7 +36,8 @@ template <std::floating_point T = double> class TabulatorBase {
     // Second derivative with respect to x
     T f2(std::function<T(T)> f, T x) const { return (f1(f, x + numdr * 0.5) - f1(f, x - numdr * 0.5)) / (numdr); }
 
-    void check() const {
+    void check() const
+    {
         if (ftol != -1 && ftol <= 0.0) {
             std::cerr << "ftol=" << ftol << " too small\n" << std::endl;
             abort();
@@ -60,7 +61,8 @@ template <std::floating_point T = double> class TabulatorBase {
         inline size_t numKnots() const { return r2.size(); }
     };
 
-    void setTolerance(T _utol, T _ftol = -1, T _umaxtol = -1, T _fmaxtol = -1) {
+    void setTolerance(T _utol, T _ftol = -1, T _umaxtol = -1, T _fmaxtol = -1)
+    {
         utol = _utol;
         ftol = _ftol;
         umaxtol = _umaxtol;
@@ -87,7 +89,8 @@ template <std::floating_point T = double> class Andrea : public TabulatorBase<T>
     int ndr = 100;                 // Max number of trials to decr dr
     T drfrac = 0.9;                // Multiplicative factor to decr dr
 
-    std::vector<T> SetUBuffer(T, T zlow, T, T zupp, T u0low, T u1low, T u2low, T u0upp, T u1upp, T u2upp) {
+    std::vector<T> SetUBuffer(T, T zlow, T, T zupp, T u0low, T u1low, T u2low, T u0upp, T u1upp, T u2upp)
+    {
 
         // Zero potential and force return no coefficients
         if (std::fabs(u0low) < 1e-9)
@@ -121,7 +124,8 @@ template <std::floating_point T = double> class Andrea : public TabulatorBase<T>
      * - `[0]==true`: tolerance is approved,
      * - `[1]==true` Repulsive part is found.
      */
-    std::vector<bool> CheckUBuffer(std::vector<T>& ubuft, T rlow, T rupp, std::function<T(T)> f) const {
+    std::vector<bool> CheckUBuffer(std::vector<T>& ubuft, T rlow, T rupp, std::function<T(T)> f) const
+    {
 
         // Number of points to control
         int ncheck = 11;
@@ -161,7 +165,8 @@ template <std::floating_point T = double> class Andrea : public TabulatorBase<T>
      * @param r2 value
      * @note Auto-vectorization in Clang: https://llvm.org/docs/Vectorizers.html
      */
-    inline T eval(const typename base::data& d, T r2) const {
+    inline T eval(const typename base::data& d, T r2) const
+    {
         size_t pos = std::lower_bound(d.r2.begin(), d.r2.end(), r2) - d.r2.begin() - 1;
         size_t pos6 = 6 * pos;
         assert((pos6 + 5) < d.c.size());
@@ -172,7 +177,8 @@ template <std::floating_point T = double> class Andrea : public TabulatorBase<T>
             for (size_t i = 5; i > 0; i--)
                 sum = dz * (sum + d.c[pos6 + i]);
             return sum + d.c[pos6];
-        } else // manually unrolled version
+        }
+        else // manually unrolled version
             return d.c[pos6] +
                    dz * (d.c[pos6 + 1] +
                          dz * (d.c[pos6 + 2] + dz * (d.c[pos6 + 3] + dz * (d.c[pos6 + 4] + dz * (d.c[pos6 + 5])))));
@@ -183,7 +189,8 @@ template <std::floating_point T = double> class Andrea : public TabulatorBase<T>
      * @param d Table data
      * @param r2 value
      */
-    T evalDer(const typename base::data& d, T r2) const {
+    T evalDer(const typename base::data& d, T r2) const
+    {
         size_t pos = std::lower_bound(d.r2.begin(), d.r2.end(), r2) - d.r2.begin() - 1;
         size_t pos6 = 6 * pos;
         T dz = r2 - d.r2[pos];
@@ -195,7 +202,8 @@ template <std::floating_point T = double> class Andrea : public TabulatorBase<T>
     /**
      * @brief Tabulate f(x) in interval ]min,max]
      */
-    typename base::data generate(std::function<T(T)> f, double rmin, double rmax) {
+    typename base::data generate(std::function<T(T)> f, double rmin, double rmax)
+    {
         rmin = std::sqrt(rmin);
         rmax = std::sqrt(rmax);
         base::check();
@@ -281,7 +289,8 @@ template <std::floating_point T = double> class Andrea : public TabulatorBase<T>
 } // namespace Faunus
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
-TEST_CASE("[Faunus] Andrea") {
+TEST_CASE("[Faunus] Andrea")
+{
     using doctest::Approx;
     using namespace Faunus::Tabulate;
 

@@ -16,26 +16,30 @@
 
 namespace Faunus {
 
-double roundValue(const double value, const int number_of_digits) {
+double roundValue(const double value, const int number_of_digits)
+{
     std::stringstream o;
     o << std::setprecision(number_of_digits) << value;
     return std::stod(o.str());
 }
 
-void roundJSON(json& j, const int number_of_digits) {
+void roundJSON(json& j, const int number_of_digits)
+{
     if (!j.is_object()) {
         return;
     }
     for (auto& value : j) {
         if (value.is_number_float()) {
             value = roundValue(value, number_of_digits);
-        } else if (value.is_object() && !value.empty()) {
+        }
+        else if (value.is_object() && !value.empty()) {
             roundJSON(value, number_of_digits);
         }
     }
 }
 
-double getValueInfinity(const json& j, const std::string& key) {
+double getValueInfinity(const json& j, const std::string& key)
+{
     auto value = j.find(key);
     if (value == j.end()) {
         throw std::runtime_error("unknown json key '" + key + "'");
@@ -59,7 +63,8 @@ double getValueInfinity(const json& j, const std::string& key) {
  * @throw IOError when file cannot be read
  * @throw json::parse_error when json ill-formatted
  */
-json loadJSON(const std::string& filename) {
+json loadJSON(const std::string& filename)
+{
     if (std::ifstream stream(filename); stream) {
         json j;
         stream >> j;
@@ -69,7 +74,8 @@ json loadJSON(const std::string& filename) {
 }
 
 TipFromTheManual::TipFromTheManual()
-    : random(std::make_unique<Random>()) {
+    : random(std::make_unique<Random>())
+{
     random->seed();
 }
 
@@ -81,20 +87,24 @@ TipFromTheManual::TipFromTheManual()
  * file must consist of objects with `key`s and markdown formatted
  * tips. If no file can be opened, the database is left empty.
  */
-void TipFromTheManual::load(const std::vector<std::string>& files) {
+void TipFromTheManual::load(const std::vector<std::string>& files)
+{
     for (const auto& file : files) {
         try {
             if (database = loadJSON(file); !database.empty()) {
                 break;
             }
-        } catch (...) {}
+        }
+        catch (...) {
+        }
     }
 }
 
 /**
  * @brief If possible, give help based on short keys/tags
  */
-std::string TipFromTheManual::operator[](std::string_view key) {
+std::string TipFromTheManual::operator[](std::string_view key)
+{
     std::string tip;
     if (tip_already_given || quiet) {
         return tip;
@@ -103,7 +113,8 @@ std::string TipFromTheManual::operator[](std::string_view key) {
         tip = "\nNeed help, my young apprentice?\n\n" + it->get<std::string>();
         if (key == "coulomb") { // for the Coulomb potential, add additional table w. types
             tip += "\n" + database.at("coulomb types").get<std::string>();
-        } else if (key == "custom") { // for the custom potential, add also list of symbols
+        }
+        else if (key == "custom") { // for the custom potential, add also list of symbols
             tip += "\n" + database.at("symbol").get<std::string>();
         }
         if (asciiart) {
@@ -126,7 +137,8 @@ TipFromTheManual usageTip; // Global instance
 std::shared_ptr<spdlog::logger> faunus_logger = spdlog::create<spdlog::sinks::null_sink_st>("null");
 std::shared_ptr<spdlog::logger> mcloop_logger = faunus_logger;
 
-[[maybe_unused]] std::string addGrowingSuffix(const std::string& file) {
+[[maybe_unused]] std::string addGrowingSuffix(const std::string& file)
+{
     // using std::experimental::filesystem; // exp. c++17 feature, not available on MacOS (Dec. 2018)
     int cnt = 0;
     std::string newfile;
@@ -137,7 +149,8 @@ std::shared_ptr<spdlog::logger> mcloop_logger = faunus_logger;
     return newfile;
 }
 
-std::tuple<const std::string&, const json&> jsonSingleItem(const json& j) {
+std::tuple<const std::string&, const json&> jsonSingleItem(const json& j)
+{
     if (j.is_object() && j.size() == 1) {
         const auto it = j.cbegin();
         return {it.key(), it.value()};
@@ -149,13 +162,17 @@ json::size_type SingleUseJSON::count(const std::string& key) const { return json
 
 bool SingleUseJSON::empty() const { return json::empty(); }
 
-SingleUseJSON::SingleUseJSON(const json& j) : json(j) {}
+SingleUseJSON::SingleUseJSON(const json& j)
+    : json(j)
+{
+}
 
 std::string SingleUseJSON::dump(const int width) const { return json::dump(width); }
 
 void SingleUseJSON::clear() { json::clear(); }
 
-json SingleUseJSON::at(const std::string& key) {
+json SingleUseJSON::at(const std::string& key)
+{
     json val = json::at(key);
     json::erase(key);
     return val;
@@ -166,7 +183,8 @@ json SingleUseJSON::operator[](const std::string& key) { return at(key); }
 void SingleUseJSON::erase(const std::string& key) { json::erase(key); }
 bool SingleUseJSON::is_object() const { return json::is_object(); }
 
-Point xyz2rth(const Point& p, const Point& origin, const Point& dir, const Point& dir2) {
+Point xyz2rth(const Point& p, const Point& origin, const Point& dir, const Point& dir2)
+{
     assert(fabs(dir.norm() - 1.0) < 1e-6);
     assert(fabs(dir2.norm() - 1.0) < 1e-6);
     assert(fabs(dir.dot(dir2)) < 1e-6); // check if unit-vectors are perpendicular
@@ -180,13 +198,15 @@ Point xyz2rth(const Point& p, const Point& origin, const Point& dir, const Point
     return {radius, theta, h};
 }
 
-Point xyz2rtp(const Point& p, const Point& origin) {
+Point xyz2rtp(const Point& p, const Point& origin)
+{
     Point xyz = p - origin;
     const auto radius = xyz.norm();
     return {radius, std::atan2(xyz.y(), xyz.x()), std::acos(xyz.z() / radius)};
 }
 
-Point rtp2xyz(const Point& rtp, const Point& origin) {
+Point rtp2xyz(const Point& rtp, const Point& origin)
+{
     return origin + rtp.x() * Point(std::cos(rtp.y()) * std::sin(rtp.z()), std::sin(rtp.y()) * std::sin(rtp.z()),
                                     std::cos(rtp.z()));
 }
@@ -195,7 +215,8 @@ Point rtp2xyz(const Point& rtp, const Point& origin) {
  * Generates random points on a cube with side-lengths 1 and origin at [0,0,0].
  * Keep going until inside embedded sphere of radius 0.5, then return normalized vector.
  */
-Point randomUnitVector(Random& rand, const Point& directions) {
+Point randomUnitVector(Random& rand, const Point& directions)
+{
     constexpr double squared_radius = 0.25; // 0.5^2
     double squared_norm;
     Point position;
@@ -208,7 +229,8 @@ Point randomUnitVector(Random& rand, const Point& directions) {
     return position / std::sqrt(squared_norm);
 }
 
-TEST_CASE("[Faunus] randomUnitVector") {
+TEST_CASE("[Faunus] randomUnitVector")
+{
     Random r;
     int n = 4e5;
     Point rtp(0, 0, 0);
@@ -223,7 +245,8 @@ TEST_CASE("[Faunus] randomUnitVector") {
 
 Point randomUnitVectorPolar(Random& rand) { return rtp2xyz({1.0, 2.0 * M_PI * rand(), std::acos(2.0 * rand() - 1.0)}); }
 
-TEST_CASE("[Faunus] randomUnitVectorPolar") {
+TEST_CASE("[Faunus] randomUnitVectorPolar")
+{
     Random r;
     int n = 2e5;
     Point rtp(0, 0, 0);
@@ -236,19 +259,33 @@ TEST_CASE("[Faunus] randomUnitVectorPolar") {
     CHECK_EQ(rtp.z(), doctest::Approx(0.5 * M_PI).epsilon(0.005)); // phi [0:pi] --> <phi>=pi/2
 }
 
-GenericError::GenericError(const std::exception& e) : GenericError(e.what()) {}
-GenericError::GenericError(const std::runtime_error& e) : std::runtime_error(e) {}
-GenericError::GenericError(const std::string& msg) : std::runtime_error(msg) {}
-GenericError::GenericError(const char* msg) : std::runtime_error(msg) {}
+GenericError::GenericError(const std::exception& e)
+    : GenericError(e.what())
+{
+}
+GenericError::GenericError(const std::runtime_error& e)
+    : std::runtime_error(e)
+{
+}
+GenericError::GenericError(const std::string& msg)
+    : std::runtime_error(msg)
+{
+}
+GenericError::GenericError(const char* msg)
+    : std::runtime_error(msg)
+{
+}
 
 const json& ConfigurationError::attachedJson() const { return attached_json; }
 
-ConfigurationError& ConfigurationError::attachJson(const json& j) {
+ConfigurationError& ConfigurationError::attachJson(const json& j)
+{
     attached_json = j;
     return *this;
 }
 
-void displayError(spdlog::logger& logger, const std::exception& e, int level) {
+void displayError(spdlog::logger& logger, const std::exception& e, int level)
+{
     const std::string padding = level > 0 ? "... " : "";
     logger.error(padding + e.what());
 
@@ -257,7 +294,8 @@ void displayError(spdlog::logger& logger, const std::exception& e, int level) {
         config_error != nullptr && !config_error->attachedJson().empty()) {
         if (level > 0) {
             logger.debug("... JSON snippet:\n{}", config_error->attachedJson().dump(4));
-        } else {
+        }
+        else {
             logger.debug("JSON snippet:\n{}", config_error->attachedJson().dump(4));
         }
     }
@@ -265,12 +303,16 @@ void displayError(spdlog::logger& logger, const std::exception& e, int level) {
     // Process nested exceptions in a tail recursion.
     try {
         std::rethrow_if_nested(e);
-    } catch (const std::exception& e) { displayError(logger, e, level + 1); }
+    }
+    catch (const std::exception& e) {
+        displayError(logger, e, level + 1);
+    }
 }
 
 TEST_SUITE_BEGIN("Core");
 
-TEST_CASE("[Faunus] infinite/nan") {
+TEST_CASE("[Faunus] infinite/nan")
+{
     CHECK(std::isnan(0.0 / 0.0));
     CHECK(std::isnan(0.0 / 0.0 * 1.0));
     CHECK(std::isinf(std::numeric_limits<double>::infinity()));
@@ -281,7 +323,8 @@ TEST_CASE("[Faunus] infinite/nan") {
     CHECK(std::isnan(std::numeric_limits<double>::signaling_NaN() * 1.0));
 }
 
-TEST_CASE("[Faunus] distance") {
+TEST_CASE("[Faunus] distance")
+{
     std::vector<long long int> v = {10, 20, 30, 40, 30};
     auto rng = v | ranges::cpp20::views::filter([](auto i) { return i == 30; });
     CHECK_EQ(Faunus::distance(v.begin(), rng.begin()), 2);
@@ -289,7 +332,8 @@ TEST_CASE("[Faunus] distance") {
     CHECK_EQ(Faunus::distance(v.begin(), ++it), 4);
 }
 
-TEST_CASE("[Faunus] asEigenMatrix") {
+TEST_CASE("[Faunus] asEigenMatrix")
+{
     using doctest::Approx;
     std::vector<Particle> v(4);
     v[0].pos.x() = 5;
@@ -323,7 +367,8 @@ TEST_SUITE_END();
  */
 Electrolyte::Electrolyte(const double molarity, const std::vector<int>& valencies)
     : molarity(molarity)
-    , valencies(valencies) {
+    , valencies(valencies)
+{
     namespace rv = ranges::cpp20::views;
     const auto sum_positive = ranges::accumulate(valencies | rv::filter([](auto v) { return v > 0; }), 0);
     const auto sum_negative = ranges::accumulate(valencies | rv::filter([](auto v) { return v < 0; }), 0);
@@ -343,7 +388,8 @@ Electrolyte::Electrolyte(const double molarity, const std::vector<int>& valencie
  * Back calculates the molarity, assuming 1:-1 salt charges. Note that stored properties
  * are temperature dependent which is why the bjerrum_length is required.
  */
-Electrolyte::Electrolyte(const double debye_length, const double bjerrum_length) {
+Electrolyte::Electrolyte(const double debye_length, const double bjerrum_length)
+{
     valencies = {1, -1};
     ionic_strength = molarity =
         std::pow(1.0 / debye_length, 2) / (8.0 * pc::pi * bjerrum_length * 1.0_angstrom * 1.0_molar);
@@ -365,7 +411,8 @@ const std::vector<int>& Electrolyte::getValencies() const { return valencies; }
  * @param bjerrum_length Bjerrum length in Angstrom
  * @return Debye screening length in Angstrom
  */
-double Electrolyte::debyeLength(const double bjerrum_length) const {
+double Electrolyte::debyeLength(const double bjerrum_length) const
+{
     return 1.0 / std::sqrt(8.0 * pc::pi * bjerrum_length * 1.0_angstrom * ionic_strength * 1.0_molar);
 }
 
@@ -385,7 +432,8 @@ double Electrolyte::debyeLength(const double bjerrum_length) const {
  *
  * @throw if `debyelength` is found but no dielectric constant, `epsr`.
  */
-std::optional<Electrolyte> makeElectrolyte(const json& j) {
+std::optional<Electrolyte> makeElectrolyte(const json& j)
+{
     if (auto it = j.find("debyelength"); it != j.end()) {
         const auto debye_length = it->get<double>() * 1.0_angstrom;
         const auto relative_dielectric_constant = j.at("epsr").get<double>(); // may throw!
@@ -400,7 +448,8 @@ std::optional<Electrolyte> makeElectrolyte(const json& j) {
     return std::nullopt;
 }
 
-TEST_CASE("[Faunus] Electrolyte") {
+TEST_CASE("[Faunus] Electrolyte")
+{
     using doctest::Approx;
     CHECK_EQ(Electrolyte(0.1, {1, -1}).ionicStrength(), Approx(0.1));                       // NaCl
     CHECK_EQ(Electrolyte(0.1, {2, -2}).ionicStrength(), Approx(0.5 * (0.1 * 4 + 0.1 * 4))); // CaSO₄
@@ -409,21 +458,24 @@ TEST_CASE("[Faunus] Electrolyte") {
     CHECK_EQ(Electrolyte(0.1, {1, -3}).ionicStrength(), Approx(0.5 * (0.3 + 0.1 * 9)));     // Na₃Cit
     CHECK_EQ(Electrolyte(0.1, {3, -1}).ionicStrength(), Approx(0.5 * (0.3 + 0.1 * 9)));     // LaCl₃
     CHECK_EQ(Electrolyte(0.1, {2, -3}).ionicStrength(), Approx(0.5 * (0.3 * 4 + 0.2 * 9))); // Ca₃(PO₄)₂
-    CHECK_EQ(Electrolyte(0.1, {1, 3, -2}).ionicStrength(), Approx(0.5 * (0.1 * 1 + 0.1 * 9 + 0.1 * 2 * 4))); // KAl(SO₄)₂
+    CHECK_EQ(Electrolyte(0.1, {1, 3, -2}).ionicStrength(),
+             Approx(0.5 * (0.1 * 1 + 0.1 * 9 + 0.1 * 2 * 4)));                                     // KAl(SO₄)₂
     CHECK_EQ(Electrolyte(1.0, {2, 3, -2}).ionicStrength(), Approx(0.5 * (2 * 4 + 2 * 9 + 5 * 4))); // Ca₂Al₂(SO₄)₅
     CHECK_THROWS(Electrolyte(0.1, {1, 1}));
     CHECK_THROWS(Electrolyte(0.1, {-1, -1}));
     CHECK_THROWS(Electrolyte(0.1, {0, 0}));
 
-    SUBCASE("debyeLength") {
+    SUBCASE("debyeLength")
+    {
         CHECK_EQ(Electrolyte(0.03, {1, -1}).debyeLength(7.0), Approx(17.7376102214));
         CHECK_THROWS(makeElectrolyte(R"({"debyelength": 30.0"})"_json)); // 'epsr' is missing
         const auto bjerrum_length = pc::bjerrumLength(80);
         CHECK_EQ(makeElectrolyte(R"({"debyelength": 30.0, "epsr": 80})"_json).value().debyeLength(bjerrum_length),
-              Approx(30));
+                 Approx(30));
     }
 
-    SUBCASE("debye length input") {
+    SUBCASE("debye length input")
+    {
         const auto bjerrum_length = 7.0;
         CHECK_EQ(Electrolyte(30, bjerrum_length).debyeLength(bjerrum_length), Approx(30));
         CHECK_EQ(Electrolyte(30, bjerrum_length).getMolarity(), Approx(0.0104874272));
@@ -431,7 +483,8 @@ TEST_CASE("[Faunus] Electrolyte") {
     }
 }
 
-void to_json(json& j, const Electrolyte& electrolyte) {
+void to_json(json& j, const Electrolyte& electrolyte)
+{
     const auto bjerrum_length = pc::bjerrumLength(pc::T());
     j = {{"molarity", electrolyte.getMolarity()},
          {"valencies", electrolyte.getValencies()},

@@ -17,7 +17,8 @@ namespace Faunus {
  * @warning Untested for symmetric matrices with non-zero diagonal
  */
 template <typename SparseMatrixType>
-bool streamMarket(const SparseMatrixType& mat, std::ostream& out, bool symmetric = false) {
+bool streamMarket(const SparseMatrixType& mat, std::ostream& out, bool symmetric = false)
+{
     using Scalar = Eigen::SparseMatrix<double>::Scalar;
     if (!out) {
         return false;

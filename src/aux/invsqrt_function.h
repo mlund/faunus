@@ -21,16 +21,17 @@ namespace Faunus {
  * @remarks Code comments supposedly from the original Quake III Arena code
  * @see https://en.wikipedia.org/wiki/Fast_inverse_square_root
  */
-template <typename float_t = double, char iterations = 1> inline float_t inv_sqrt(float_t x) {
+template <typename float_t = double, char iterations = 1> inline float_t inv_sqrt(float_t x)
+{
     static_assert(iterations == 1 or iterations == 2);
     static_assert(std::is_floating_point<float_t>::value);
     typedef typename std::conditional<sizeof(float_t) == 8, std::int64_t, std::int32_t>::type int_t;
     static_assert(sizeof(float_t) == sizeof(int_t));
     float_t x_half = x * 0.5;
     float_t y = x;
-    int_t i = *reinterpret_cast<int_t *>(&y);                                // evil floating point bit level hacking
+    int_t i = *reinterpret_cast<int_t*>(&y);                                 // evil floating point bit level hacking
     i = (sizeof(float_t) == 8 ? 0x5fe6eb50c7b537a9 : 0x5f3759df) - (i >> 1); // what the fuck?
-    y = *reinterpret_cast<float_t *>(&i);
+    y = *reinterpret_cast<float_t*>(&i);
     y = y * (1.5 - x_half * y * y); // 1st iteration
     if constexpr (iterations == 2) {
         y = y * (1.5 - x_half * y * y); // 2nd iteration, this can be removed
@@ -39,7 +40,8 @@ template <typename float_t = double, char iterations = 1> inline float_t inv_sqr
 }
 } // namespace Faunus
 
-TEST_CASE_TEMPLATE("inv_sqrt", T, double, float) {
+TEST_CASE_TEMPLATE("inv_sqrt", T, double, float)
+{
     std::vector<T> vals = {0.23, 3.3, 10.2, 100.45, 512.06};
     for (auto x : vals) {
         CHECK_EQ(Faunus::inv_sqrt<T, 2>(x), doctest::Approx(1.0 / std::sqrt(x)));

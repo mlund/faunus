@@ -22,18 +22,18 @@ class ChainRotationMoveBase : public Move {
   private:
     virtual size_t select_segment() = 0;           //!< selects a chain segment and return the number of atoms in it
     virtual void rotate_segment(double angle) = 0; //!< rotates the selected chain segment
-    virtual void store_change(Change &change) = 0; //!< stores changes made to atoms
-    void _move(Change &change) override;
-    void _accept(Change &change) override;
-    void _reject(Change &change) override;
+    virtual void store_change(Change& change) = 0; //!< stores changes made to atoms
+    void _move(Change& change) override;
+    void _accept(Change& change) override;
+    void _reject(Change& change) override;
 
   protected:
-    ChainRotationMoveBase(Space &spc, const std::string& name, const std::string& cite);
-    void _from_json(const json &j) override;
-    void _to_json(json &j) const override;
+    ChainRotationMoveBase(Space& spc, const std::string& name, const std::string& cite);
+    void _from_json(const json& j) override;
+    void _to_json(json& j) const override;
 
   public:
-    double bias(Change &, double uold, double unew) override;
+    double bias(Change&, double uold, double unew) override;
 };
 
 /**
@@ -50,9 +50,9 @@ class ChainRotationMove : public ChainRotationMoveBase {
     //! Indices of atoms in the spc.p vector that shall be rotated.
     std::vector<size_t> segment_ndx;
 
-    ChainRotationMove(Space &spc, const std::string& name, const std::string& cite);
+    ChainRotationMove(Space& spc, const std::string& name, const std::string& cite);
 
-    void _from_json(const json &j) override;
+    void _from_json(const json& j) override;
 
   private:
     /**
@@ -65,7 +65,7 @@ class ChainRotationMove : public ChainRotationMoveBase {
      * Stores changes of atoms after the move attempt.
      * @param change
      */
-    void store_change(Change &change) override;
+    void store_change(Change& change) override;
 
     /** In periodic systems (cuboid, slit, etc.) a chain rotational move can cause the molecule to be larger
      *  than half the box length which we catch here.
@@ -85,11 +85,11 @@ class CrankshaftMove : public ChainRotationMove {
     using TBase = ChainRotationMove;
 
   public:
-    explicit CrankshaftMove(Space &spc);
+    explicit CrankshaftMove(Space& spc);
 
   protected:
-    CrankshaftMove(Space &spc, const std::string& name, const std::string& cite);
-    void _from_json(const json &j) override;
+    CrankshaftMove(Space& spc, const std::string& name, const std::string& cite);
+    void _from_json(const json& j) override;
 
   private:
     size_t joint_max; //!< maximum number of bonds between the joints of a crankshaft
@@ -116,12 +116,12 @@ class PivotMove : public ChainRotationMove {
     BasePointerVector<pairpotential::HarmonicBond> bonds;
 
   public:
-    explicit PivotMove(Space &spc);
+    explicit PivotMove(Space& spc);
 
   protected:
-    PivotMove(Space &spc, const std::string& name, const std::string& cite);
+    PivotMove(Space& spc, const std::string& name, const std::string& cite);
 
-    void _from_json(const json &j) override;
+    void _from_json(const json& j) override;
 
     /** Selects a random harmonic bond of a random polymer chain which atoms then create an axis of rotation.
      *  Atoms between the randomly selected chain's end and the bond atom compose a segment to be rotated.

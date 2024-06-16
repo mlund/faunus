@@ -7,7 +7,7 @@ namespace exprtk { // exprtk.hpp
 template <typename T> class parser;
 template <typename T> class expression;
 template <typename T> class symbol_table;
-}
+} // namespace exprtk
 
 /**
  * Since parser<T> is non-copyable we instantiate it
@@ -22,11 +22,10 @@ template <std::floating_point T = double> class ExprFunction {
     typedef std::vector<std::pair<std::string, T>> Tconstvec;
 
   public:
-    void set(const std::string &exprstr, const Tvarvec &vars = {}, const Tconstvec &consts = {});
-    void set(const nlohmann::json &, const Tvarvec &vars = {});
+    void set(const std::string& exprstr, const Tvarvec& vars = {}, const Tconstvec& consts = {});
+    void set(const nlohmann::json&, const Tvarvec& vars = {});
     T operator()() const;
     T derivative(T& variable) const;
 };
 
 extern template class ExprFunction<double>;
-

@@ -26,12 +26,14 @@ extern T temperature;                                   //!< Temperature [K]
 static inline T kT() { return temperature * boltzmann_constant; } //!< Thermal energy [J]
 static inline T RT() { return temperature * molar_gas_constant; } //!< Thermal energy [J/mol]
 
-static inline T bjerrumLength(T relative_dielectric_constant) {
+static inline T bjerrumLength(T relative_dielectric_constant)
+{
     return elementary_charge * elementary_charge /
            (4 * pi * vacuum_permittivity * relative_dielectric_constant * 1e-10 * kT());
 } //!< Bjerrum length [Å]
 
-static inline T relativeDielectricFromBjerrumLength(T bjerrumlength) {
+static inline T relativeDielectricFromBjerrumLength(T bjerrumlength)
+{
     return bjerrumLength(bjerrumlength);
 } //!< Bjerrum length to a relative dielectric constant
 } // namespace PhysicalConstants
@@ -75,7 +77,8 @@ constexpr T operator"" _angstrom3(long double l) { return l; }            //!< v
 constexpr T operator"" _m3(long double v) { return v * 1e30; }    //!< volume in cubic meters (to cubic ångströms)
 constexpr T operator"" _liter(long double v) { return v * 1e27; } //!< volume in liters (to cubic ångströms)
 constexpr T operator"" _gmol(long double m) { return m; }         //!< mass in grams per mole
-constexpr T operator"" _kg(long double m) {
+constexpr T operator"" _kg(long double m)
+{
     return m * 1e3 * pc::avogadro;
 } //!< mass in kilograms per particle (to grams per mole)
 constexpr T operator"" _Da(long double m) { return m; } //!< mass in daltons per particle (to grams per mole)

@@ -23,8 +23,10 @@ class NormalRandomVector {
     std::normal_distribution<double> normal_distribution;
 
   public:
-    explicit NormalRandomVector(double mean = 0.0, double stddev = 1.0) : normal_distribution(mean, stddev){};
-    template <typename random_engine> Point operator()(random_engine &engine) {
+    explicit NormalRandomVector(double mean = 0.0, double stddev = 1.0)
+        : normal_distribution(mean, stddev) {};
+    template <typename random_engine> Point operator()(random_engine& engine)
+    {
         return {normal_distribution(engine), normal_distribution(engine), normal_distribution(engine)};
     }
 };
@@ -37,7 +39,7 @@ class NormalRandomVector {
  */
 class IntegratorBase {
   protected:
-    Space &spc;
+    Space& spc;
     Energy::EnergyTerm& energy;
     IntegratorBase(Space&, Energy::EnergyTerm&);
     virtual ~IntegratorBase() = default;
@@ -48,13 +50,13 @@ class IntegratorBase {
      * @param velocities  a vector of particles' velocities
      * @param forces  a vector of particles' forces
      */
-    virtual void step(PointVector &velocities, PointVector &forces) = 0; // todo shall we return real time progress?
-    virtual void from_json(const json &j) = 0;
-    virtual void to_json(json &j) const = 0;
+    virtual void step(PointVector& velocities, PointVector& forces) = 0; // todo shall we return real time progress?
+    virtual void from_json(const json& j) = 0;
+    virtual void to_json(json& j) const = 0;
 };
 
-void from_json(const json &j, IntegratorBase &i);
-void to_json(json &j, const IntegratorBase &i);
+void from_json(const json& j, IntegratorBase& i);
+void to_json(json& j, const IntegratorBase& i);
 
 /**
  * @brief Symmetric Langevin velocity-Verlet method (BAOAB)
@@ -65,23 +67,24 @@ class LangevinVelocityVerlet : public IntegratorBase {
     double time_step;                 //!< integration time step (picoseconds)
     double friction_coefficient;      //!< friction coefficient (inverse picoseconds)
     NormalRandomVector random_vector; //!< generator of random 3d vectors from the normal distribution
-    [[nodiscard]] inline Point positionIncrement(const Point &velocity) const; //!< increment particle's position in an A semi-step
-    [[nodiscard]] inline Point velocityIncrement(const Point &force,
-                                   double mass) const; //!< increment particle's velocity in a B semi-step
+    [[nodiscard]] inline Point
+    positionIncrement(const Point& velocity) const; //!< increment particle's position in an A semi-step
+    [[nodiscard]] inline Point velocityIncrement(const Point& force,
+                                                 double mass) const; //!< increment particle's velocity in a B semi-step
     //! apply fluctuation-dissipation to particle's velocity by solving of Ornstein-Uhlenbeck process in an O-step
-    inline Point velocityFluctuationDissipation(const Point &velocity, double mass);
+    inline Point velocityFluctuationDissipation(const Point& velocity, double mass);
 
   public:
     LangevinVelocityVerlet(Space& spc, Energy::EnergyTerm& energy);
     LangevinVelocityVerlet(Space& spc, Energy::EnergyTerm& energy, double time_step, double friction_coefficient);
     LangevinVelocityVerlet(Space& spc, Energy::EnergyTerm& energy, const json& j);
-    void step(PointVector &velocities, PointVector &forces) override;
-    void from_json(const json &j) override;
-    void to_json(json &j) const override;
+    void step(PointVector& velocities, PointVector& forces) override;
+    void from_json(const json& j) override;
+    void to_json(json& j) const override;
 };
 
-void from_json(const json &j, IntegratorBase &i);
-void to_json(json &j, const IntegratorBase &i);
+void from_json(const json& j, IntegratorBase& i);
+void to_json(json& j, const IntegratorBase& i);
 
 /**
  * @brief Base class for force moves, e.g., molecular dynamics or Langevin dynamics.
@@ -98,17 +101,17 @@ class ForceMove : public Move {
 
     size_t resizeForcesAndVelocities(); //!< Resize velocities and forces to match number of active particles
     void generateVelocities();          //!< Generate initial velocities and zero forces
-    void _to_json(json &j) const override;
-    void _from_json(const json &j) override;
-    void _move(Change &change) override;
+    void _to_json(json& j) const override;
+    void _from_json(const json& j) override;
+    void _move(Change& change) override;
     ForceMove(Space& spc, const std::string& name, const std::string& cite, std::shared_ptr<IntegratorBase> integrator,
               unsigned int nsteps);
     ~ForceMove() override = default;
 
   public:
-    double bias(Change &, double, double) override;
-    [[nodiscard]] const PointVector &getForces() const;
-    [[nodiscard]] const PointVector &getVelocities() const;
+    double bias(Change&, double, double) override;
+    [[nodiscard]] const PointVector& getForces() const;
+    [[nodiscard]] const PointVector& getVelocities() const;
 };
 
 /**
@@ -116,15 +119,15 @@ class ForceMove : public Move {
  */
 class LangevinDynamics : public ForceMove {
   protected:
-    LangevinDynamics(Space& spc, const std::string& name, const std::string& cite, std::shared_ptr<IntegratorBase> integrator,
-                     unsigned int nsteps);
+    LangevinDynamics(Space& spc, const std::string& name, const std::string& cite,
+                     std::shared_ptr<IntegratorBase> integrator, unsigned int nsteps);
 
   public:
     LangevinDynamics(Space& spc, std::shared_ptr<IntegratorBase> integrator, unsigned int nsteps);
     LangevinDynamics(Space& spc, Energy::EnergyTerm&, const json&);
     LangevinDynamics(Space& spc, Energy::EnergyTerm&);
-    void _to_json(json &j) const override;
-    void _from_json(const json &j) override;
+    void _to_json(json& j) const override;
+    void _from_json(const json& j) override;
 };
 
-} // namespace Faunus::Move
+} // namespace Faunus::move

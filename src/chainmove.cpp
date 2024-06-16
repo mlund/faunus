@@ -2,27 +2,30 @@
 #include "aux/iteratorsupport.h"
 #include "bonds.h"
 
-
 namespace Faunus::move {
 
-void ChainRotationMoveBase::_from_json(const json &j) {
+void ChainRotationMoveBase::_from_json(const json& j)
+{
     molname = j.at("molecule");
     dprot = j.at("dprot");
     allow_small_box = j.value("skiplarge", true); // todo rename the json attribute and make false default
 }
 
-void ChainRotationMoveBase::_to_json(json &j) const {
+void ChainRotationMoveBase::_to_json(json& j) const
+{
     using namespace unicode;
     j = {{"molecule", molname},
          {"dprot", dprot},
          {unicode::rootof + unicode::bracket("r_cm" + unicode::squared), std::sqrt(msqdispl.avg())}};
     if (small_box_encountered > 0) {
-        j["skipped"] = double(small_box_encountered) / double(number_of_attempted_moves); // todo rename the json attribute
+        j["skipped"] =
+            double(small_box_encountered) / double(number_of_attempted_moves); // todo rename the json attribute
     }
     roundJSON(j, 3);
 }
 
-void ChainRotationMoveBase::_move(Change &change) {
+void ChainRotationMoveBase::_move(Change& change)
+{
     permit_move = true;
     sqdispl = 0;
     if (std::fabs(dprot) > 1e-9) {
@@ -34,26 +37,31 @@ void ChainRotationMoveBase::_move(Change &change) {
     }
 }
 
-void ChainRotationMoveBase::_accept(Change &) { msqdispl += sqdispl; }
-void ChainRotationMoveBase::_reject(Change &) { msqdispl += 0; }
-double ChainRotationMoveBase::bias(Change &, double, double) { return permit_move ? 0 : pc::infty; }
+void ChainRotationMoveBase::_accept(Change&) { msqdispl += sqdispl; }
+void ChainRotationMoveBase::_reject(Change&) { msqdispl += 0; }
+double ChainRotationMoveBase::bias(Change&, double, double) { return permit_move ? 0 : pc::infty; }
 
 ChainRotationMoveBase::ChainRotationMoveBase(Space& spc, const std::string& name, const std::string& cite)
-    : Move(spc, name, cite) {}
+    : Move(spc, name, cite)
+{
+}
 
-ChainRotationMove::ChainRotationMove(Space &spc, const std::string& name, const std::string& cite)
-    : ChainRotationMoveBase(spc, name, cite) {
+ChainRotationMove::ChainRotationMove(Space& spc, const std::string& name, const std::string& cite)
+    : ChainRotationMoveBase(spc, name, cite)
+{
     repeat = -1;
 }
 
-void ChainRotationMove::_from_json(const json &j) {
+void ChainRotationMove::_from_json(const json& j)
+{
     TBase::_from_json(j);
     molid = findMoleculeByName(molname).id();
 }
 
-void ChainRotationMove::rotate_segment(double angle) {
+void ChainRotationMove::rotate_segment(double angle)
+{
     if (!segment_ndx.empty()) {
-        auto &chain = *molecule_iter;
+        auto& chain = *molecule_iter;
         auto old_cm = chain.mass_center;
         // Uses an implementation from the old Pivot class. The translation of the chain might be unnecessary.
         auto shift_pos = spc.particles.at(axis_ndx[0]).pos;
@@ -76,9 +84,10 @@ void ChainRotationMove::rotate_segment(double angle) {
         }
     }
 }
-void ChainRotationMove::store_change(Change &change) {
+void ChainRotationMove::store_change(Change& change)
+{
     if (!segment_ndx.empty()) {
-        auto &chain = *molecule_iter;
+        auto& chain = *molecule_iter;
         auto offset = std::distance(spc.particles.begin(), chain.begin());
         Change::GroupChange change_data;
         for (auto i : segment_ndx) {
@@ -90,8 +99,9 @@ void ChainRotationMove::store_change(Change &change) {
         change.groups.push_back(change_data); // add to list of moved groups
     }
 }
-bool ChainRotationMove::box_big_enough() {
-    auto &chain = *molecule_iter;
+bool ChainRotationMove::box_big_enough()
+{
+    auto& chain = *molecule_iter;
     auto cm_pbc = Geometry::massCenter(chain.begin(), chain.end(), spc.geometry.getBoundaryFunc(), -chain.mass_center);
     double cm_diff = spc.geometry.sqdist(chain.mass_center, cm_pbc);
     if (cm_diff > 1e-6) {
@@ -105,27 +115,35 @@ bool ChainRotationMove::box_big_enough() {
     return true;
 }
 
-CrankshaftMove::CrankshaftMove(Space &spc, const std::string& name, const std::string& cite) : ChainRotationMove(spc, name, cite) {}
+CrankshaftMove::CrankshaftMove(Space& spc, const std::string& name, const std::string& cite)
+    : ChainRotationMove(spc, name, cite)
+{
+}
 
-CrankshaftMove::CrankshaftMove(Space &spc) : CrankshaftMove(spc, "crankshaft", "") {}
+CrankshaftMove::CrankshaftMove(Space& spc)
+    : CrankshaftMove(spc, "crankshaft", "")
+{
+}
 
-void CrankshaftMove::_from_json(const json &j) {
+void CrankshaftMove::_from_json(const json& j)
+{
     TBase::_from_json(j);
     // maximum number of bonds between the joints of a crankshaft
     joint_max = j.value("joint_max", std::numeric_limits<decltype(joint_max)>::max());
     if (this->repeat < 0) {
         // set the number of repetitions to the length of the chain (minus 2) times the number of the chains
         auto moliter = this->spc.findMolecules(this->molid);
-        auto &molecule = *moliter.begin();
+        auto& molecule = *moliter.begin();
         this->repeat = std::distance(moliter.begin(), moliter.end()) * (molecule.size() - 2);
     }
 }
-size_t CrankshaftMove::select_segment() {
+size_t CrankshaftMove::select_segment()
+{
     size_t segment_size = 0;
     this->segment_ndx.clear();
     this->molecule_iter = this->spc.randomMolecule(this->molid, Faunus::move::CrankshaftMove::slump); // a random chain
     if (this->molecule_iter != this->spc.groups.end()) {
-        auto &molecule = *this->molecule_iter;
+        auto& molecule = *this->molecule_iter;
         if (molecule.size() > 2) { // must have at least three atoms
             auto joint0 = Faunus::move::CrankshaftMove::slump.sample(molecule.begin(), molecule.end());
             assert(joint0 >= molecule.begin() && joint0 < molecule.end());
@@ -155,11 +173,18 @@ size_t CrankshaftMove::select_segment() {
     return segment_size;
 }
 
-PivotMove::PivotMove(Space &spc, const std::string& name, const std::string& cite) : ChainRotationMove(spc, name, cite) {}
+PivotMove::PivotMove(Space& spc, const std::string& name, const std::string& cite)
+    : ChainRotationMove(spc, name, cite)
+{
+}
 
-PivotMove::PivotMove(Space &spc) : PivotMove(spc, "pivot", "") {}
+PivotMove::PivotMove(Space& spc)
+    : PivotMove(spc, "pivot", "")
+{
+}
 
-void PivotMove::_from_json(const json &j) {
+void PivotMove::_from_json(const json& j)
+{
     TBase::_from_json(j);
     bonds = molecules[this->molid].bonds.find<pairpotential::HarmonicBond>();
     if (bonds.empty()) {
@@ -174,13 +199,14 @@ void PivotMove::_from_json(const json &j) {
         }
     }
 }
-size_t PivotMove::select_segment() {
+size_t PivotMove::select_segment()
+{
     size_t segment_size = 0;
     this->segment_ndx.clear();
     this->molecule_iter = this->spc.randomMolecule(this->molid, Faunus::move::PivotMove::slump);
     if (this->molecule_iter != this->spc.groups.end()) {
-        auto &chain = *this->molecule_iter;
-        if (chain.size() > 2) {                                         // must have at least three atoms
+        auto& chain = *this->molecule_iter;
+        if (chain.size() > 2) { // must have at least three atoms
             auto bond = Faunus::move::PivotMove::slump.sample(bonds.begin(), bonds.end()); // a random harmonic bond
             if (bond != bonds.end()) {
                 auto chain_offset = std::distance(this->spc.particles.begin(), chain.begin());
@@ -193,7 +219,8 @@ size_t PivotMove::select_segment() {
                     for (size_t i = atom1_ndx + 1; i < chain_offset + chain.size(); i++)
                         this->segment_ndx.push_back(i);
                     std::swap(atom0_ndx, atom1_ndx); // the second atom is the origin
-                } else {
+                }
+                else {
                     for (size_t i = chain_offset; i < atom0_ndx; i++)
                         this->segment_ndx.push_back(i);
                 }
@@ -206,4 +233,3 @@ size_t PivotMove::select_segment() {
 }
 
 } // namespace Faunus::move
-

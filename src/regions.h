@@ -34,7 +34,7 @@ class RegionBase {
     [[nodiscard]] virtual bool isInside(const Point& position) const = 0; //!< true if point is inside region
   public:
     const RegionType type;
-    bool use_group_mass_center = false;           //!< Use group mass-center to check if inside region
+    bool use_group_mass_center = false;                         //!< Use group mass-center to check if inside region
     [[nodiscard]] virtual std::optional<double> volume() const; //!< Volume of region if applicable
     virtual void to_json(json& j) const = 0;
     virtual ~RegionBase() = default;
@@ -44,7 +44,8 @@ class RegionBase {
     [[nodiscard]] bool inside(const Group& group) const;       //!< Determines of groups is inside region
 
     /** Selects particles within the region */
-    template <typename ParticleRange> auto filterInside(const ParticleRange& particles) const {
+    template <typename ParticleRange> auto filterInside(const ParticleRange& particles) const
+    {
         namespace rv = ranges::cpp20::views;
         return particles | rv::transform(&Particle::pos) | rv::filter(&RegionBase::isInside);
     }
@@ -72,7 +73,8 @@ class WithinMoleculeType : public RegionBase {
     const MoleculeData::index_type molid; //!< molid to target
     const bool use_region_mass_center;    //!< true = with respect to center of mass of `molid`
     const double threshold_squared;       //!< squared distance threshold from other particles or com
-    [[nodiscard]] inline bool within_threshold(const Point& position1, const Point& position2) const {
+    [[nodiscard]] inline bool within_threshold(const Point& position1, const Point& position2) const
+    {
         return spc.geometry.sqdist(position1, position2) < threshold_squared;
     }
 

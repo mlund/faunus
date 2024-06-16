@@ -13,7 +13,8 @@ namespace Faunus::SpheroCylinder {
  * @return
  */
 Point mindist_segment2segment(const Point& dir1, const double half_length1, const Point& dir2,
-                              const double half_length2, const Point& r_cm) {
+                              const double half_length2, const Point& r_cm)
+{
     constexpr auto very_small_number = 0.00000001;
     Point u = dir1 * (half_length1 * 2);                        // S1.P1 - S1.P0;
     Point v = dir2 * (half_length2 * 2);                        // S2.P1 - S2.P0;
@@ -37,14 +38,16 @@ Point mindist_segment2segment(const Point& dir1, const double half_length1, cons
         sD = 1.0;                // to prevent possible division by 0.0 later
         tN = e;
         tD = c;
-    } else { // get the closest points on the infinite lines
+    }
+    else { // get the closest points on the infinite lines
         sN = (b * e - c * d);
         tN = (a * e - b * d);
         if (sN < 0.0) { // sc < 0 => the s=0 edge is visible
             sN = 0.0;
             tN = e;
             tD = c;
-        } else if (sN > sD) { // sc > 1 => the s=1 edge is visible
+        }
+        else if (sN > sD) { // sc > 1 => the s=1 edge is visible
             sN = sD;
             tN = e + b;
             tD = c;
@@ -55,20 +58,25 @@ Point mindist_segment2segment(const Point& dir1, const double half_length1, cons
         // recompute sc for this edge
         if (-d < 0.0) {
             sN = 0.0;
-        } else if (-d > a) {
+        }
+        else if (-d > a) {
             sN = sD;
-        } else {
+        }
+        else {
             sN = -d;
             sD = a;
         }
-    } else if (tN > tD) { // tc > 1 => the t=1 edge is visible
+    }
+    else if (tN > tD) { // tc > 1 => the t=1 edge is visible
         tN = tD;
         // recompute sc for this edge
         if ((-d + b) < 0.0) {
             sN = 0;
-        } else if ((-d + b) > a) {
+        }
+        else if ((-d + b) > a) {
             sN = sD;
-        } else {
+        }
+        else {
             sN = (-d + b);
             sD = a;
         }
@@ -92,7 +100,8 @@ Point mindist_segment2segment(const Point& dir1, const double half_length1, cons
  * @return
  */
 int find_intersect_plane(const Cigar& part1, const Cigar& part2, const Point& r_cm, const Point& w_vec,
-                         const double cutoff_squared, const double cospatch, std::array<double, 5>& intersections) {
+                         const double cutoff_squared, const double cospatch, std::array<double, 5>& intersections)
+{
     Point nplane = part1.scdir.cross(w_vec).normalized();
     const auto a = nplane.dot(part2.scdir);
     if (std::fabs(a) <= pc::epsilon_dbl) {
@@ -134,7 +143,8 @@ int find_intersect_plane(const Cigar& part1, const Cigar& part2, const Point& r_
  * @param intersections
  * @return
  */
-int test_intrpatch(const Cigar& part1, Point& vec, double cospatch, double ti, std::array<double, 5>& intersections) {
+int test_intrpatch(const Cigar& part1, Point& vec, double cospatch, double ti, std::array<double, 5>& intersections)
+{
     /*test if we have intersection*/
     /* do projection to patch plane*/
     vec = vec_perpproject(vec, part1.scdir).normalized();
@@ -168,7 +178,8 @@ int test_intrpatch(const Cigar& part1, Point& vec, double cospatch, double ti, s
  * @return
  */
 int find_intersect_planec(const Cigar& part1, const Cigar& part2, const Point& r_cm, const Point& w_vec, double rcut2,
-                          double cospatch, std::array<double, 5>& intersections) {
+                          double cospatch, std::array<double, 5>& intersections)
+{
     Point nplane = part1.scdir.cross(w_vec).normalized();
     auto a = nplane.dot(part2.scdir);
     if (std::fabs(a) <= pc::epsilon_dbl) {
@@ -215,7 +226,8 @@ int find_intersect_planec(const Cigar& part1, const Cigar& part2, const Point& r
  * @todo Add documentation and split into smaller parts(!)
  */
 int psc_intersect(const Cigar& particle1, const Cigar& particle2, const Point& r_cm,
-                  std::array<double, 5>& intersections, const double cutoff_squared) {
+                  std::array<double, 5>& intersections, const double cutoff_squared)
+{
     double a, b, c, d, e, x1, x2;
     Point cm21, vec1, vec2, vec3, vec4;
 
@@ -408,7 +420,8 @@ int psc_intersect(const Cigar& particle1, const Cigar& particle2, const Point& r
  * @return
  */
 int cpsc_intersect(const Cigar& cigar1, const Cigar& cigar2, const Point& r_cm, std::array<double, 5>& intersections,
-                   const double cutoff_squared) {
+                   const double cutoff_squared)
+{
     int intrs;
     double a, b, c, d, e, x1, x2;
     Point cm21, vec1, vec2, vec3, vec4;
@@ -461,7 +474,8 @@ int cpsc_intersect(const Cigar& cigar1, const Cigar& cigar2, const Point& r_cm, 
                 x2 = (-b - sqrt(d)) * 0.5 / a; /*parameter on line of SC2 determining intersection*/
                 if ((x2 >= cigar2.half_length) || (x2 <= -cigar2.half_length)) {
                     intrs += 0; /*intersection is outside sc2*/
-                } else {
+                }
+                else {
                     vec2 = cigar2.scdir * x2 - r_cm;
                     e = cigar1.scdir.dot(vec2);
                     if ((e >= cigar1.half_length) || (e <= -cigar1.half_length)) {
@@ -555,7 +569,9 @@ int cpsc_intersect(const Cigar& cigar1, const Cigar& cigar2, const Point& r_cm, 
 namespace Faunus::pairpotential {
 
 HardSpheroCylinder::HardSpheroCylinder()
-    : PairPotential("hardspherocylinder", "", false) {}
+    : PairPotential("hardspherocylinder", "", false)
+{
+}
 
 void HardSpheroCylinder::to_json([[maybe_unused]] json& j) const {}
 
@@ -568,9 +584,10 @@ void HardSpheroCylinder::from_json([[maybe_unused]] const json& j) {}
  * @return
  */
 template <pairpotential::RequirePairPotential PatchPotential, pairpotential::RequirePairPotential CylinderPotential>
-double CigarWithCigar<PatchPotential, CylinderPotential>::patchyPatchyEnergy(
-    const Particle& particle1, const Particle& particle2,
-    const Point& center_separation) const { // patchy sc with patchy sc
+double CigarWithCigar<PatchPotential, CylinderPotential>::patchyPatchyEnergy(const Particle& particle1,
+                                                                             const Particle& particle2,
+                                                                             const Point& center_separation) const
+{ // patchy sc with patchy sc
     const auto cutoff_squared = patch_potential.cutOffSquared(particle1.id, particle1.id);
     std::array<double, 5> intersections;
 
@@ -586,11 +603,13 @@ double CigarWithCigar<PatchPotential, CylinderPotential>::patchyPatchyEnergy(
     if (particle1.traits().sphero_cylinder.type == SpheroCylinderData::PatchType::Full) {
         intrs = SpheroCylinder::psc_intersect(particle1.getExt(), particle2.getExt(), center_separation, intersections,
                                               cutoff_squared);
-    } else {
+    }
+    else {
         if (particle1.traits().sphero_cylinder.type == SpheroCylinderData::PatchType::Capped) {
             intrs = SpheroCylinder::cpsc_intersect(particle1.getExt(), particle2.getExt(), center_separation,
                                                    intersections, cutoff_squared);
-        } else {
+        }
+        else {
             throw std::runtime_error("unimplemented");
         }
     }
@@ -606,12 +625,14 @@ double CigarWithCigar<PatchPotential, CylinderPotential>::patchyPatchyEnergy(
         SpheroCylinderData::PatchType::Full) { //!< @warning should this not be b.traits()?
         intrs = SpheroCylinder::psc_intersect(particle2.getExt(), particle1.getExt(), -center_separation, intersections,
                                               cutoff_squared);
-    } else {
+    }
+    else {
         if (particle1.traits().sphero_cylinder.type ==
             SpheroCylinderData::PatchType::Capped) { //!< @warning should this not be particle2.traits()?
             intrs = SpheroCylinder::cpsc_intersect(particle2.getExt(), particle1.getExt(), -center_separation,
                                                    intersections, cutoff_squared);
-        } else {
+        }
+        else {
             throw std::runtime_error("unimplemented");
         }
     }
@@ -653,9 +674,10 @@ double CigarWithCigar<PatchPotential, CylinderPotential>::patchyPatchyEnergy(
 }
 
 template <pairpotential::RequirePairPotential PatchPotential, pairpotential::RequirePairPotential CylinderPotential>
-double CigarWithCigar<PatchPotential, CylinderPotential>::isotropicIsotropicEnergy(
-    const Particle& particle1, const Particle& particle2,
-    const Point& center_separation) const { // isotropic sc with isotropic sc
+double CigarWithCigar<PatchPotential, CylinderPotential>::isotropicIsotropicEnergy(const Particle& particle1,
+                                                                                   const Particle& particle2,
+                                                                                   const Point& center_separation) const
+{ // isotropic sc with isotropic sc
     const auto mindist =
         SpheroCylinder::mindist_segment2segment(particle1.ext->scdir, particle1.ext->half_length, particle2.ext->scdir,
                                                 particle2.ext->half_length, center_separation)
@@ -665,24 +687,29 @@ double CigarWithCigar<PatchPotential, CylinderPotential>::isotropicIsotropicEner
 }
 
 template <RequirePairPotential PatchPotential, RequirePairPotential CylinderPotential>
-void CigarWithCigar<PatchPotential, CylinderPotential>::to_json(json& j) const {
+void CigarWithCigar<PatchPotential, CylinderPotential>::to_json(json& j) const
+{
     j["patch"] = static_cast<json>(patch_potential);
     j["cylinder"] = static_cast<json>(cylinder_potential);
 }
 
 template <RequirePairPotential PatchPotential, RequirePairPotential CylinderPotential>
-void CigarWithCigar<PatchPotential, CylinderPotential>::from_json(const json& j) {
+void CigarWithCigar<PatchPotential, CylinderPotential>::from_json(const json& j)
+{
     pairpotential::from_json(j, patch_potential);
     pairpotential::from_json(j, cylinder_potential);
 }
 
 template <RequirePairPotential PatchPotential, RequirePairPotential CylinderPotential>
 CigarWithCigar<PatchPotential, CylinderPotential>::CigarWithCigar()
-    : PairPotential("cigar-cigar", ""s, false) {}
+    : PairPotential("cigar-cigar", ""s, false)
+{
+}
 
 template class CigarWithCigar<CosAttractMixed, WeeksChandlerAndersen>; // explicit initialization
 
-TEST_CASE("[Faunus] CigarWithCigar") {
+TEST_CASE("[Faunus] CigarWithCigar")
+{
     using CigarCigar = CigarWithCigar<CosAttractMixed, WeeksChandlerAndersen>;
 
     // Check that we use same temperature as R. Vacha. Note also that the epsilon value
@@ -702,7 +729,8 @@ TEST_CASE("[Faunus] CigarWithCigar") {
     a = Faunus::atoms.at(0);
     b = Faunus::atoms.at(0);
 
-    SUBCASE("maximum contact attraction") {
+    SUBCASE("maximum contact attraction")
+    {
         // place two parallel CPSC in contact and with patches facing each other
         auto pairpot = CigarCigar(R"( {"cos2": {"mixing": "LB"}, "wca": {"mixing": "LB"}} )"_json);
         const auto& atom_data = Faunus::atoms.at(0); // atom type "A"
@@ -721,13 +749,15 @@ TEST_CASE("[Faunus] CigarWithCigar") {
 
 template <RequirePairPotential PatchPotential, RequirePairPotential CylinderPotential,
           RequirePairPotential SphereWithSphere>
-void CompleteCigarPotential<PatchPotential, CylinderPotential, SphereWithSphere>::to_json(json& j) const {
+void CompleteCigarPotential<PatchPotential, CylinderPotential, SphereWithSphere>::to_json(json& j) const
+{
     j = {sphere_sphere, cigar_cigar, cigar_sphere};
 }
 
 template <RequirePairPotential PatchPotential, RequirePairPotential CylinderPotential,
           RequirePairPotential SphereWithSphere>
-void CompleteCigarPotential<PatchPotential, CylinderPotential, SphereWithSphere>::from_json(const json& j) {
+void CompleteCigarPotential<PatchPotential, CylinderPotential, SphereWithSphere>::from_json(const json& j)
+{
     pairpotential::from_json(j, sphere_sphere);
     pairpotential::from_json(j, cigar_cigar);
     pairpotential::from_json(j, cigar_sphere);
@@ -736,7 +766,9 @@ void CompleteCigarPotential<PatchPotential, CylinderPotential, SphereWithSphere>
 template <RequirePairPotential PatchPotential, RequirePairPotential CylinderPotential,
           RequirePairPotential SphereWithSphere>
 CompleteCigarPotential<PatchPotential, CylinderPotential, SphereWithSphere>::CompleteCigarPotential()
-    : PairPotential("complete cigar", ""s, false) {}
+    : PairPotential("complete cigar", ""s, false)
+{
+}
 
 template class CompleteCigarPotential<CosAttractMixed, WeeksChandlerAndersen>; // explicit initialization
 
@@ -744,20 +776,24 @@ template class CompleteCigarPotential<CosAttractMixed, WeeksChandlerAndersen>; /
 
 template <RequirePairPotential PatchPotential, RequirePairPotential CylinderPotential>
 CigarWithSphere<PatchPotential, CylinderPotential>::CigarWithSphere()
-    : PairPotential("cigar-sphere", ""s, false) {}
+    : PairPotential("cigar-sphere", ""s, false)
+{
+}
 
 template <RequirePairPotential PatchPotential, RequirePairPotential CylinderPotential>
-void CigarWithSphere<PatchPotential, CylinderPotential>::to_json(json& j) const {
+void CigarWithSphere<PatchPotential, CylinderPotential>::to_json(json& j) const
+{
     j["patch"] = static_cast<json>(patch_potential);
     j["cylinder"] = static_cast<json>(cylinder_potential);
 }
 
 template <RequirePairPotential PatchPotential, RequirePairPotential CylinderPotential>
-void CigarWithSphere<PatchPotential, CylinderPotential>::from_json(const json& j) {
+void CigarWithSphere<PatchPotential, CylinderPotential>::from_json(const json& j)
+{
     pairpotential::from_json(j, patch_potential);
     pairpotential::from_json(j, cylinder_potential);
 }
 
 template class CigarWithSphere<CosAttractMixed, WeeksChandlerAndersen>; // explicit initialization
 
-} // namespace Faunus::Potential
+} // namespace Faunus::pairpotential

@@ -23,13 +23,15 @@ using Tgroup = typename Space::GroupType;
 using Thamiltonian = Energy::Hamiltonian;
 using Tmcsimulation = MetropolisMonteCarlo;
 
-template <class T> std::unique_ptr<T> from_dict(py::dict dict) {
+template <class T> std::unique_ptr<T> from_dict(py::dict dict)
+{
     auto ptr = std::make_unique<T>();
     *ptr = static_cast<T>(json(dict));
     return ptr;
 } // convert py::dict to T through Faunus::json
 
-PYBIND11_MODULE(pyfaunus, m) {
+PYBIND11_MODULE(pyfaunus, m)
+{
     using namespace pybind11::literals;
 
     // Random

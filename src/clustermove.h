@@ -25,7 +25,8 @@ class ClusterShapeAnalysis {
     template <RequireGroups Range>
     Tensor gyrationFromMassCenterPositions(
         const Range& groups, const Point& mass_center_of_groups,
-        const Geometry::BoundaryFunction boundary = [](auto&) {}) {
+        const Geometry::BoundaryFunction boundary = [](auto&) {})
+    {
         using namespace ranges::cpp20::views;
         auto positions = groups | transform(&Group::mass_center);
         auto masses = groups | transform(&Group::mass);
@@ -36,24 +37,27 @@ class ClusterShapeAnalysis {
     template <RequireGroups Range>
     Tensor gyrationFromParticlePositions(
         const Range& groups, const Point& mass_center_of_groups,
-        const Geometry::BoundaryFunction boundary = [](auto&) {}) {
+        const Geometry::BoundaryFunction boundary = [](auto&) {})
+    {
         using namespace ranges::cpp20::views;
         auto positions = groups | join | transform(&Particle::pos);
         auto masses = groups | join | transform(&Particle::traits) | transform(&AtomData::mw);
         return Geometry::gyration(positions.begin(), positions.end(), masses.begin(), mass_center_of_groups, boundary);
     }
 
-    friend void to_json(json &, const ClusterShapeAnalysis &);
+    friend void to_json(json&, const ClusterShapeAnalysis&);
 
   public:
     template <RequireGroups Range>
-    void sample(const Range& groups, const Point& mass_center_of_groups, const Space& spc) {
+    void sample(const Range& groups, const Point& mass_center_of_groups, const Space& spc)
+    {
         const auto cluster_size = std::distance(groups.begin(), groups.end());
         Tensor gyration_tensor;
         if (shape_anisotropy_use_com) {
             gyration_tensor =
                 gyrationFromMassCenterPositions(groups, mass_center_of_groups, spc.geometry.getBoundaryFunc());
-        } else {
+        }
+        else {
             gyration_tensor =
                 gyrationFromParticlePositions(groups, mass_center_of_groups, spc.geometry.getBoundaryFunc());
         }
@@ -75,11 +79,11 @@ class ClusterShapeAnalysis {
         }
         ++number_of_samples;
     }
-    ClusterShapeAnalysis(bool shape_anisotropy_use_com, const std::string &filename, bool dump_pqr_files);
-    ClusterShapeAnalysis(const json &j);
+    ClusterShapeAnalysis(bool shape_anisotropy_use_com, const std::string& filename, bool dump_pqr_files);
+    ClusterShapeAnalysis(const json& j);
 };
 
-void to_json(json &j, const ClusterShapeAnalysis &shape);
+void to_json(json& j, const ClusterShapeAnalysis& shape);
 
 /**
  * @brief Helper class for Cluster move for finding clusters
@@ -96,20 +100,20 @@ class FindCluster {
     std::set<int> satellites; //!< subset of molecule id's to cluster, but NOT act as nuclei (cluster centers)
     PairMatrix<double, true> thresholds_squared; //!< Cluster thresholds for pairs of groups
 
-    void parseThresholds(const json &j); //!< Read thresholds from json input
+    void parseThresholds(const json& j); //!< Read thresholds from json input
     double clusterProbability(const Group& group1, const Group& group2) const;
-    void registerSatellites(const std::vector<std::string> &); //!< Register satellites
-    void updateMoleculeIndex();                                //!< update `molecule_index`
-    friend void to_json(json &j, const FindCluster &cluster);
+    void registerSatellites(const std::vector<std::string>&); //!< Register satellites
+    void updateMoleculeIndex();                               //!< update `molecule_index`
+    friend void to_json(json& j, const FindCluster& cluster);
 
   public:
     std::vector<size_t> molecule_index;             //!< index of all possible molecules to be considered
-    std::optional<size_t> findSeed(Random &random); //!< Find first group; exclude satellites
+    std::optional<size_t> findSeed(Random& random); //!< Find first group; exclude satellites
     std::pair<std::vector<size_t>, bool> findCluster(size_t seed_index); //!< Find cluster
     FindCluster(const Space& spc, const json& j);
 };
 
-void to_json(json &j, const FindCluster &cluster); //!< Serialize to json
+void to_json(json& j, const FindCluster& cluster); //!< Serialize to json
 
 /** @brief Helper base class for translating and rotating groups */
 class GroupMover {
@@ -155,9 +159,9 @@ class Cluster : public Move {
 
     std::function<Group&(size_t)> index_to_group;
     Average<double> average_cluster_size;
-    double bias_energy = 0;                     //!< Current bias energy (currently zero or infinity)
-    unsigned int bias_rejected = 0;             //!< Number of times rejection occurred due to bias rejection
-    unsigned int shape_analysis_interval = 0;   //!< Number of sample events between shape analysis
+    double bias_energy = 0;                   //!< Current bias energy (currently zero or infinity)
+    unsigned int bias_rejected = 0;           //!< Number of times rejection occurred due to bias rejection
+    unsigned int shape_analysis_interval = 0; //!< Number of sample events between shape analysis
 
     Point clusterMassCenter(const std::vector<size_t>& indices) const; //!< Calculates cluster mass center
     void _move(Change& change) override;                               //!< Performs the move
@@ -175,7 +179,7 @@ class Cluster : public Move {
     Cluster(Space& spc, std::string_view name, std::string_view cite);
 
   public:
-    explicit Cluster(Space &spc);
+    explicit Cluster(Space& spc);
 };
 
 } // namespace move

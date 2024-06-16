@@ -2,7 +2,7 @@
 #include "analysis.h"
 #include "io.h"
 
-//#define ANKERL_NANOBENCH_IMPLEMENT
+// #define ANKERL_NANOBENCH_IMPLEMENT
 #include <nanobench.h>
 
 namespace Faunus::Scatter {
@@ -10,7 +10,8 @@ namespace Faunus::Scatter {
 using doctest::Approx;
 
 TEST_CASE_TEMPLATE("[Faunus] StructureFactorPBC", T, StructureFactorPBC<float, SIMD>, StructureFactorPBC<float, EIGEN>,
-                   StructureFactorPBC<float, GENERIC>) {
+                   StructureFactorPBC<float, GENERIC>)
+{
     size_t cnt = 0;
     Point box = {80.0, 80.0, 80.0};
     const std::vector<Point> positions = {
@@ -29,7 +30,8 @@ TEST_CASE_TEMPLATE("[Faunus] StructureFactorPBC", T, StructureFactorPBC<float, S
 }
 
 #ifdef ANKERL_NANOBENCH_H_INCLUDED
-TEST_CASE("Benchmark") {
+TEST_CASE("Benchmark")
+{
     Point box = {80.0, 80.0, 80.0};
     std::vector<Point> positions(1000);
     for (auto& position : positions) {
@@ -43,7 +45,8 @@ TEST_CASE("Benchmark") {
 }
 #endif
 
-TEST_CASE("[Faunus] StructureFactorIPBC") {
+TEST_CASE("[Faunus] StructureFactorIPBC")
+{
     size_t cnt = 0;
     Point box = {80.0, 80.0, 80.0};
     const std::vector<Point> positions = {

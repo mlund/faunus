@@ -21,15 +21,15 @@ class EnergyTerm {
   public:
     enum class MonteCarloState { ACCEPTED, TRIAL, NONE };
     MonteCarloState state = MonteCarloState::NONE;
-    std::string name;                                     //!< Meaningful name
-    std::string citation_information;                     //!< Possible reference; may be left empty
-    TimeRelativeOfTotal<std::chrono::microseconds> timer; //!< Timer for measuring speed
-    virtual double energy(const Change& change) = 0;      //!< energy due to change
-    virtual void to_json(json& j) const;                  //!< json output
+    std::string name;                                                  //!< Meaningful name
+    std::string citation_information;                                  //!< Possible reference; may be left empty
+    TimeRelativeOfTotal<std::chrono::microseconds> timer;              //!< Timer for measuring speed
+    virtual double energy(const Change& change) = 0;                   //!< energy due to change
+    virtual void to_json(json& j) const;                               //!< json output
     virtual void sync(EnergyTerm* other_energy, const Change& change); //!< Sync (copy from) another energy instance
-    virtual void init();                                  //!< reset and initialize
-    virtual void updateState(const Change& change);       //!< Update internal state to reflect change in e.g. Space
-    virtual void force(PointVector& forces);              //!< update forces on all particles
+    virtual void init();                                               //!< reset and initialize
+    virtual void updateState(const Change& change); //!< Update internal state to reflect change in e.g. Space
+    virtual void force(PointVector& forces);        //!< update forces on all particles
     inline virtual ~EnergyTerm() = default;
 };
 
@@ -70,7 +70,7 @@ class ExternalPotential : public EnergyTerm {
  *
  * @warning: under construction
  */
-std::function<double(const Particle &)> createGouyChapmanPotential(const json &j, const Geometry::Chameleon &);
+std::function<double(const Particle&)> createGouyChapmanPotential(const json& j, const Geometry::Chameleon&);
 
 /**
  * @brief Custom external potential on molecules
@@ -85,8 +85,8 @@ class CustomExternal : public ExternalPotential {
     json json_input_backup; // initial json input
 
   public:
-    CustomExternal(const json &, Space &);
-    void to_json(json &) const override;
+    CustomExternal(const json&, Space&);
+    void to_json(json&) const override;
 };
 
 /**
@@ -118,12 +118,12 @@ class ExternalAkesson : public ExternalPotential {
     Equidistant2DTable<double, Average<double>> rho; //!< Charge density at z (unit A^-2)
     Equidistant2DTable<double> phi;                  //!< External potential at z (unit: beta*e)
 
-    static double evalPotential(double z, double a) ; //!< Calculate external potential
-    void updateChargeDensity();                     //!< update average charge density
-    void updatePotential();                         //!< update average external potential
-    void saveChargeDensity();                       //!< save charge density profile to disk
-    void loadChargeDensity();                       //!< load charge density profile from disk
-    void to_json(json &) const override;
+    static double evalPotential(double z, double a); //!< Calculate external potential
+    void updateChargeDensity();                      //!< update average charge density
+    void updatePotential();                          //!< update average external potential
+    void saveChargeDensity();                        //!< save charge density profile to disk
+    void loadChargeDensity();                        //!< load charge density profile from disk
+    void to_json(json&) const override;
     void sync(EnergyTerm*, const Change&) override;
 
   public:
@@ -168,7 +168,7 @@ class Confine : public ExternalPotential {
  */
 class ParticleSelfEnergy : public ExternalPotential {
   public:
-    ParticleSelfEnergy(Space &, std::function<double(const Particle &)>);
+    ParticleSelfEnergy(Space&, std::function<double(const Particle&)>);
 };
 
 } // namespace Energy

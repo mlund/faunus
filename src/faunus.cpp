@@ -83,7 +83,8 @@ static const char USAGE[] =
     3. Input prefixing can be suppressed with --nopfx
 )";
 
-int main(int argc, const char** argv) {
+int main(int argc, const char** argv)
+{
     if (argc > 1 && std::string(argv[1]) == "test") { // run unittests if the first argument equals "test"
         return runUnittests(argc, argv);
     }
@@ -119,8 +120,8 @@ int main(int argc, const char** argv) {
             saveOutput(starting_time, args, simulation, analysis);
         }
         return EXIT_SUCCESS;
-
-    } catch (std::exception& e) {
+    }
+    catch (std::exception& e) {
         showErrorMessage(e);
         if (!quiet && fun) {
             playRetroMusic();
@@ -128,14 +129,16 @@ int main(int argc, const char** argv) {
         return EXIT_FAILURE;
     }
 }
-void setRandomNumberGenerator(const json& input) {
+void setRandomNumberGenerator(const json& input)
+{
     if (auto it = input.find("random"); it != input.end()) {
         from_json(*it, move::Move::slump); // static --> shared for all moves
         from_json(*it, Faunus::random);
     }
 }
 
-void showErrorMessage(std::exception& exception) {
+void showErrorMessage(std::exception& exception)
+{
     faunus_logger->error(exception.what());
     std::cerr << exception.what() << std::endl;
 
@@ -153,7 +156,8 @@ void showErrorMessage(std::exception& exception) {
     }
 }
 
-void playRetroMusic() {
+void playRetroMusic()
+{
 #ifdef ENABLE_MPI
     if (!Faunus::MPI::mpi.isMaster()) {
         return;
@@ -175,7 +179,8 @@ void playRetroMusic() {
 #endif
 }
 
-std::string versionString() {
+std::string versionString()
+{
     std::string version = "Faunus";
 #ifdef GIT_LATEST_TAG
     version += " "s + QUOTE(GIT_LATEST_TAG);
@@ -195,7 +200,8 @@ std::string versionString() {
     return version;
 }
 
-int runUnittests(int argc, const char* const* argv) {
+int runUnittests(int argc, const char* const* argv)
+{
 #ifdef DOCTEST_CONFIG_DISABLE
     std::cerr << "this version of faunus does not include unittests" << std::endl;
     return EXIT_FAILURE;
@@ -208,7 +214,8 @@ int runUnittests(int argc, const char* const* argv) {
 }
 
 void mainLoop(bool show_progress, const json& json_in, MetropolisMonteCarlo& simulation,
-              analysis::CombinedAnalysis& analysis) {
+              analysis::CombinedAnalysis& analysis)
+{
     const auto& loop = json_in.at("mcloop");
     const auto macro = loop.at("macro").get<int>();
     const auto micro = loop.at("micro").get<int>();
@@ -218,9 +225,9 @@ void mainLoop(bool show_progress, const json& json_in, MetropolisMonteCarlo& sim
             simulation.sweep();
             analysis.sample();
             showProgress(progress_tracker);
-        }                   // end of micro steps
+        } // end of micro steps
         analysis.to_disk(); // save analysis to disk
-    }                       // end of macro steps
+    } // end of macro steps
     if (progress_tracker) {
         progress_tracker->done();
     }
@@ -229,13 +236,15 @@ void mainLoop(bool show_progress, const json& json_in, MetropolisMonteCarlo& sim
     faunus_logger->log(level, "relative energy drift = {:.3E}", simulation.relativeEnergyDrift());
 }
 
-void showProgress(std::shared_ptr<ProgressIndicator::ProgressTracker>& progress_tracker) {
+void showProgress(std::shared_ptr<ProgressIndicator::ProgressTracker>& progress_tracker)
+{
     if (progress_tracker && (++(*progress_tracker) % 10 == 0)) {
         progress_tracker->display();
     }
 }
 
-void checkElectroNeutrality(MetropolisMonteCarlo& simulation) {
+void checkElectroNeutrality(MetropolisMonteCarlo& simulation)
+{
     auto particles = simulation.getSpace().activeParticles();
     const auto system_charge = Faunus::monopoleMoment(particles.begin(), particles.end());
     const double max_allowed_charge = 1e-6;
@@ -244,7 +253,8 @@ void checkElectroNeutrality(MetropolisMonteCarlo& simulation) {
     }
 }
 
-void setInformationLevelAndLoggers(bool quiet, docopt::Options& args) {
+void setInformationLevelAndLoggers(bool quiet, docopt::Options& args)
+{
     // @todo refactor to use cmd line options for different sinks, etc.
     faunus_logger = spdlog::stderr_color_mt("faunus");
     faunus_logger->set_pattern("[%n %P] %^%L: %v%$");
@@ -276,7 +286,8 @@ void setInformationLevelAndLoggers(bool quiet, docopt::Options& args) {
  * - BINARY_DIR/sids/
  * - INSTALL_PREFIX/share/faunus/sids
  */
-std::pair<std::string, int> findSIDsong() {
+std::pair<std::string, int> findSIDsong()
+{
     std::string filename;
     int subsong = -1;
     try {
@@ -291,7 +302,8 @@ std::pair<std::string, int> findSIDsong() {
                     pfx = dir + "/";
                     break;
                 }
-            } catch (...) {
+            }
+            catch (...) {
                 // ignore any error
             }
         }
@@ -309,13 +321,15 @@ std::pair<std::string, int> findSIDsong() {
             subsong = *(Faunus::random.sample(subsongs.begin(), subsongs.end())) - 1;  // random subsong
             filename = pfx + random_song->at("file").get<std::string>();
         }
-    } catch (const std::exception&) {
+    }
+    catch (const std::exception&) {
         // silently ignore if something fails; it's just for fun!
     }
     return {filename, subsong};
 }
 
-std::shared_ptr<CPPSID::Player> createLoadedSIDplayer() {
+std::shared_ptr<CPPSID::Player> createLoadedSIDplayer()
+{
     std::shared_ptr<CPPSID::Player> player;
     if (static_cast<bool>(isatty(fileno(stdout)))) {         // only play music if on console
         if (!static_cast<bool>(std::getenv("SSH_CLIENT"))) { // and not through a ssh connection
@@ -328,7 +342,8 @@ std::shared_ptr<CPPSID::Player> createLoadedSIDplayer() {
 }
 #endif
 
-std::shared_ptr<ProgressIndicator::ProgressTracker> createProgressTracker(bool show_progress, unsigned int steps) {
+std::shared_ptr<ProgressIndicator::ProgressTracker> createProgressTracker(bool show_progress, unsigned int steps)
+{
     if (!show_progress) {
         return nullptr;
     }
@@ -342,19 +357,22 @@ std::shared_ptr<ProgressIndicator::ProgressTracker> createProgressTracker(bool s
         std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::minutes(10)), 0.005);
 }
 
-json getUserInput(docopt::Options& args) {
+json getUserInput(docopt::Options& args)
+{
     try {
         json j;
         if (auto filename = args["--input"].asString(); filename == "/dev/stdin") {
             std::cin >> j;
-        } else {
+        }
+        else {
             if (!args["--nopfx"].asBool()) {
                 filename = Faunus::MPI::prefix + filename;
             }
             j = loadJSON(filename);
         }
         return j;
-    } catch (json::parse_error& e) {
+    }
+    catch (json::parse_error& e) {
         faunus_logger->error(e.what());
         throw ConfigurationError("invalid input -> {}", e.what());
     }
@@ -366,7 +384,8 @@ json getUserInput(docopt::Options& args) {
  * The given file name should be one of the known type (xyz, pqr, gro, ...) and only
  * the _coordinates_ will be copied. All other properties are unused.
  */
-void loadCoordinates(std::string_view filename, MetropolisMonteCarlo& simulation) {
+void loadCoordinates(std::string_view filename, MetropolisMonteCarlo& simulation)
+{
     auto& space = simulation.getSpace();
     auto& trial_space = simulation.getTrialSpace();
     auto source = Faunus::loadStructure(filename, false);
@@ -393,7 +412,8 @@ void loadCoordinates(std::string_view filename, MetropolisMonteCarlo& simulation
     trial_space.updateParticles(source.begin(), source.end(), trial_space.particles.begin(), copy_f);
 }
 
-void loadState(docopt::Options& args, MetropolisMonteCarlo& simulation) {
+void loadState(docopt::Options& args, MetropolisMonteCarlo& simulation)
+{
     if (args["--state"]) {
         const auto statefile = Faunus::MPI::prefix + args["--state"].asString();
         const auto suffix = statefile.substr(statefile.find_last_of('.') + 1);
@@ -408,14 +428,16 @@ void loadState(docopt::Options& args, MetropolisMonteCarlo& simulation) {
             if (binary) {
                 const auto size = stream.tellg(); // get file size
                 std::vector<std::uint8_t> buffer(size / sizeof(std::uint8_t));
-                stream.seekg(0, std::ifstream::beg);             // go back to start...
+                stream.seekg(0, std::ifstream::beg);     // go back to start...
                 stream.read((char*)buffer.data(), size); // ...and read into buffer
                 j = json::from_ubjson(buffer);
-            } else {
+            }
+            else {
                 stream >> j;
             }
             simulation.restore(j);
-        } else {
+        }
+        else {
             throw std::runtime_error("state file error -> "s + statefile);
         }
     }
@@ -425,7 +447,8 @@ void loadState(docopt::Options& args, MetropolisMonteCarlo& simulation) {
     }
 }
 
-void prefaceActions(const json& input, Space& spc, Energy::Hamiltonian& hamiltonian) {
+void prefaceActions(const json& input, Space& spc, Energy::Hamiltonian& hamiltonian)
+{
     if (!input.is_array()) {
         return;
     }
@@ -436,7 +459,8 @@ void prefaceActions(const json& input, Space& spc, Energy::Hamiltonian& hamilton
 
 template <typename TimePoint>
 void saveOutput(TimePoint& starting_time, docopt::Options& args, MetropolisMonteCarlo& simulation,
-                const analysis::CombinedAnalysis& analysis) {
+                const analysis::CombinedAnalysis& analysis)
+{
 
     if (std::ofstream stream(Faunus::MPI::prefix + args["--output"].asString()); stream) {
         json j;

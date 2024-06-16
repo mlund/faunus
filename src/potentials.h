@@ -28,7 +28,8 @@ class LennardJones : public MixerPairPotentialBase {
                           CombinationRuleType combination_rule = CombinationRuleType::LORENTZ_BERTHELOT);
 
     inline Point force(const Particle& particle_a, const Particle& particle_b, double squared_distance,
-                       const Point& b_towards_a) const override {
+                       const Point& b_towards_a) const override
+    {
         const auto s6 = powi((*sigma_squared)(particle_a.id, particle_b.id), 3);
         const auto r6 = squared_distance * squared_distance * squared_distance;
         const auto r14 = r6 * r6 * squared_distance;
@@ -37,7 +38,8 @@ class LennardJones : public MixerPairPotentialBase {
     }
 
     inline double operator()(const Particle& particle_a, const Particle& particle_b, double squared_distance,
-                             [[maybe_unused]] const Point& b_towards_a) const override {
+                             [[maybe_unused]] const Point& b_towards_a) const override
+    {
         auto x = (*sigma_squared)(particle_a.id, particle_b.id) / squared_distance; // s2/r2
         x = x * x * x;                                                              // s6/r6
         return (*epsilon_quadruple)(particle_a.id, particle_b.id) * (x * x - x);
@@ -60,7 +62,8 @@ class LennardJones : public MixerPairPotentialBase {
 class WeeksChandlerAndersen : public LennardJones {
     static constexpr double onefourth = 0.25, twototwosixth = 1.2599210498948732;
 
-    inline double operator()(const Particle& a, const Particle& b, double squared_distance) const {
+    inline double operator()(const Particle& a, const Particle& b, double squared_distance) const
+    {
         auto x = (*sigma_squared)(a.id, b.id); // s^2
         if (squared_distance > x * twototwosixth) {
             return 0;
@@ -75,12 +78,14 @@ class WeeksChandlerAndersen : public LennardJones {
                                    CombinationRuleType combination_rule = CombinationRuleType::LORENTZ_BERTHELOT);
 
     inline double operator()(const Particle& a, const Particle& b, double squared_distance,
-                             [[maybe_unused]] const Point& b_towards_a) const override {
+                             [[maybe_unused]] const Point& b_towards_a) const override
+    {
         return operator()(a, b, squared_distance);
     }
 
     inline Point force(const Particle& a, const Particle& b, const double squared_distance,
-                       const Point& b_towards_a) const override {
+                       const Point& b_towards_a) const override
+    {
         auto x = (*sigma_squared)(a.id, b.id); // s^2
         if (squared_distance > x * twototwosixth) {
             return {0.0, 0.0, 0.0};
@@ -107,7 +112,8 @@ class HardSphere : public MixerPairPotentialBase {
     explicit HardSphere(const std::string& name = "hardsphere");
 
     inline double operator()(const Particle& particle_a, const Particle& particle_b, double squared_distance,
-                             const Point&) const override {
+                             const Point&) const override
+    {
         return squared_distance < (*sigma_squared)(particle_a.id, particle_b.id) ? pc::infty : 0.0;
     }
 };
@@ -136,7 +142,8 @@ class Hertz : public MixerPairPotentialBase {
     explicit Hertz(const std::string& name = "hertz");
 
     inline double operator()(const Particle& a, const Particle& b, double squared_distance,
-                             [[maybe_unused]] const Point& b_towards_a) const override {
+                             [[maybe_unused]] const Point& b_towards_a) const override
+    {
         if (squared_distance <= (*sigma_squared)(a.id, b.id)) {
             return (*epsilon)(a.id, b.id) * pow((1 - (sqrt(squared_distance / (*sigma_squared)(a.id, b.id)))), 2.5);
         }
@@ -163,8 +170,8 @@ class SquareWell : public MixerPairPotentialBase {
 
   public:
     explicit SquareWell(const std::string& name = "squarewell");
-    inline double operator()(const Particle& a, const Particle& b, double squared_distance,
-                             const Point&) const override {
+    inline double operator()(const Particle& a, const Particle& b, double squared_distance, const Point&) const override
+    {
         return (squared_distance < (*sigma_squared)(a.id, b.id)) ? -(*epsilon)(a.id, b.id) : 0.0;
     }
 };
@@ -177,9 +184,10 @@ class RepulsionR3 : public PairPotential {
 
   public:
     explicit RepulsionR3(const std::string& name = "repulsionr3")
-        : PairPotential(name){};
+        : PairPotential(name) {};
 
-    inline double operator()(const Particle&, const Particle&, double squared_distance, const Point&) const override {
+    inline double operator()(const Particle&, const Particle&, double squared_distance, const Point&) const override
+    {
         const auto r = sqrt(squared_distance);
         return f / (r * squared_distance) + e * std::pow(s / r, 12);
     }
@@ -231,7 +239,8 @@ class CosAttract : public PairPotential {
      * C(%, resultname = "x")
      * ~~~
      */
-    inline double operator()(const Particle&, const Particle&, double squared_distance, const Point&) const override {
+    inline double operator()(const Particle&, const Particle&, double squared_distance, const Point&) const override
+    {
         if (squared_distance < rc2) {
             return -eps;
         }
@@ -243,7 +252,8 @@ class CosAttract : public PairPotential {
     }
 
     inline Point force(const Particle&, const Particle&, double squared_distance,
-                       const Point& b_towards_a) const override {
+                       const Point& b_towards_a) const override
+    {
         if (squared_distance > rcwc2 || squared_distance < rc2) {
             return {0.0, 0.0, 0.0};
         }
@@ -282,7 +292,8 @@ class CosAttractMixed : public MixerPairPotentialBase {
     double cutOffSquared(AtomData::index_type id1, AtomData::index_type id2) const; //!< (r_c+w_c)^2
 
     inline Point force(const Particle& a, const Particle& b, double squared_distance,
-                       const Point& b_towards_a) const override {
+                       const Point& b_towards_a) const override
+    {
         const auto rc = (*switching_distance)(a.id, b.id);
         const auto wc = (*switching_width)(a.id, b.id);
         const auto cutoff_squared = (rc + wc) * (rc + wc);
@@ -297,7 +308,8 @@ class CosAttractMixed : public MixerPairPotentialBase {
     }
 
     inline double operator()(const Particle& a, const Particle& b, const double squared_distance,
-                             [[maybe_unused]] const Point& b_towards_a) const override {
+                             [[maybe_unused]] const Point& b_towards_a) const override
+    {
         const auto rc = (*switching_distance)(a.id, b.id);
         if (squared_distance < (rc * rc)) {
             return -(*epsilon)(a.id, b.id);
@@ -327,7 +339,8 @@ class SASApotential : public PairPotential {
 
   public:
     inline double operator()(const Particle& a, const Particle& b, const double squared_distance,
-                             [[maybe_unused]] const Point& b_towards_a) const override {
+                             [[maybe_unused]] const Point& b_towards_a) const override
+    {
         const auto tfe = 0.5 * (atoms[a.id].tfe + atoms[b.id].tfe);
         const auto tension = 0.5 * (atoms[a.id].tension + atoms[b.id].tension);
         if (fabs(tfe) > 1e-6 or fabs(tension) > 1e-6)
@@ -350,7 +363,8 @@ class Coulomb : public PairPotential {
     double bjerrum_length = 0.0; //!< Bjerrum length
 
     inline double operator()(const Particle& a, const Particle& b, const double squared_distance,
-                             const Point&) const override {
+                             const Point&) const override
+    {
         return bjerrum_length * a.charge * b.charge / std::sqrt(squared_distance);
     }
     void to_json(json& j) const override;
@@ -364,7 +378,8 @@ class DipoleDipole : public PairPotential {
     explicit DipoleDipole(const std::string& name = "dipoledipole", const std::string& cite = std::string());
     double bjerrum_length{};
 
-    inline double operator()(const Particle& a, const Particle& b, double, const Point& b_towards_a) const override {
+    inline double operator()(const Particle& a, const Particle& b, double, const Point& b_towards_a) const override
+    {
         return bjerrum_length *
                mu2mu(a.getExt().mu, b.getExt().mu, a.getExt().mulen * b.getExt().mulen, b_towards_a, 1.0, 0.0);
     }
@@ -386,7 +401,8 @@ class Polarizability : public Coulomb {
     void to_json(json& j) const override;
 
     inline double operator()(const Particle& a, const Particle& b, double squared_distance,
-                             [[maybe_unused]] const Point& b_towards_a) const override {
+                             [[maybe_unused]] const Point& b_towards_a) const override
+    {
         double r4inv = 1 / (squared_distance * squared_distance);
         if (fabs(a.charge) > 1e-9 or fabs(b.charge) > 1e-9) {
             return (*m_charged)(a.id, b.id) * r4inv;
@@ -395,7 +411,8 @@ class Polarizability : public Coulomb {
     }
 
     inline Point force(const Particle& a, const Particle& b, double squared_distance,
-                       const Point& b_towards_a) const override {
+                       const Point& b_towards_a) const override
+    {
         double r6inv = 1 / (squared_distance * squared_distance * squared_distance);
         if (fabs(a.charge) > 1e-9 or fabs(b.charge) > 1e-9) {
             return 4 * m_charged->operator()(a.id, b.id) * r6inv * b_towards_a;
@@ -429,12 +446,14 @@ class FENE : public PairPotential {
     void to_json(json& j) const override;
 
     inline double operator()([[maybe_unused]] const Particle& particle1, [[maybe_unused]] const Particle& particle2,
-                             double r2, [[maybe_unused]] const Point& b_towards_a) const override {
+                             double r2, [[maybe_unused]] const Point& b_towards_a) const override
+    {
         return (r2 > r02) ? pc::infty : -0.5 * k * r02 * std::log(1 - r2 * r02inv);
     }
 
     inline Point force([[maybe_unused]] const Particle& particle_a, [[maybe_unused]] const Particle& particle_b,
-                       double squared_distance, const Point& b_towards_a) const override {
+                       double squared_distance, const Point& b_towards_a) const override
+    {
         return (squared_distance > r02) ? -pc::infty * b_towards_a : -k * r02 / (r02 - squared_distance) * b_towards_a;
     }
 };
@@ -452,13 +471,15 @@ class NewCoulombGalore : public PairPotential {
     explicit NewCoulombGalore(const std::string& = "coulomb");
 
     inline double operator()(const Particle& particle_a, const Particle& particle_b, const double squared_distance,
-                             [[maybe_unused]] const Point& b_towards_a) const override {
+                             [[maybe_unused]] const Point& b_towards_a) const override
+    {
         return bjerrum_length * pot.ion_ion_energy(particle_a.charge, particle_b.charge,
                                                    sqrt(squared_distance) + std::numeric_limits<double>::epsilon());
     }
 
     inline Point force(const Particle& particle_a, const Particle& particle_b, [[maybe_unused]] double squared_distance,
-                       const Point& b_towards_a) const override {
+                       const Point& b_towards_a) const override
+    {
         return bjerrum_length * pot.ion_ion_force(particle_a.charge, particle_b.charge, b_towards_a); // force on "a"
     }
 
@@ -480,7 +501,8 @@ class Multipole : public NewCoulombGalore {
     explicit Multipole(const std::string& = "multipole");
 
     inline double operator()(const Particle& particle_a, const Particle& particle_b,
-                             [[maybe_unused]] double squared_distance, const Point& b_towards_a) const override {
+                             [[maybe_unused]] double squared_distance, const Point& b_towards_a) const override
+    {
         // Only dipole-dipole for now!
         Point mua = particle_a.getExt().mu * particle_a.getExt().mulen;
         Point mub = particle_b.getExt().mu * particle_b.getExt().mulen;
@@ -488,7 +510,8 @@ class Multipole : public NewCoulombGalore {
     }
 
     inline Point force(const Faunus::Particle& particle1, const Faunus::Particle& particle2,
-                       [[maybe_unused]] double squared_distance, const Faunus::Point& b_towards_a) const override {
+                       [[maybe_unused]] double squared_distance, const Faunus::Point& b_towards_a) const override
+    {
         Point mua = particle1.getExt().mu * particle1.getExt().mulen;
         Point mub = particle2.getExt().mu * particle2.getExt().mulen;
         Point ionion = pot.ion_ion_force(particle1.charge, particle2.charge, b_towards_a);
@@ -521,7 +544,8 @@ class CustomPairPotential : public PairPotential {
     json original_input;
     void from_json(const json& j) override;
 
-    inline void setSymbols(const Particle& particle1, const Particle& particle2, double squared_distance) const {
+    inline void setSymbols(const Particle& particle1, const Particle& particle2, double squared_distance) const
+    {
         symbols->distance = std::sqrt(squared_distance);
         symbols->charge1 = particle1.charge;
         symbols->charge2 = particle2.charge;
@@ -531,7 +555,8 @@ class CustomPairPotential : public PairPotential {
 
   public:
     inline double operator()(const Particle& particle1, const Particle& particle2, double squared_distance,
-                             [[maybe_unused]] const Point& b_towards_a) const override {
+                             [[maybe_unused]] const Point& b_towards_a) const override
+    {
         if (squared_distance < squared_cutoff_distance) {
             setSymbols(particle1, particle2, squared_distance);
             return expression();
@@ -540,7 +565,8 @@ class CustomPairPotential : public PairPotential {
     }
 
     inline Point force(const Particle& particle_a, const Particle& particle_b, double squared_distance,
-                       const Point& b_towards_b) const override {
+                       const Point& b_towards_b) const override
+    {
         if (squared_distance < squared_cutoff_distance) {
             setSymbols(particle_a, particle_b, squared_distance);
             return -expression.derivative(symbols->distance) / symbols->distance * b_towards_b;
@@ -584,7 +610,8 @@ class FunctorPotential : public PairPotential {
     void to_json(json& j) const override;
 
     inline double operator()(const Particle& particle_a, const Particle& particle_b, const double squared_distance,
-                             const Point& b_towards_a = {0, 0, 0}) const override {
+                             const Point& b_towards_a = {0, 0, 0}) const override
+    {
         return umatrix(particle_a.id, particle_b.id)(particle_a, particle_b, squared_distance, b_towards_a);
     }
 };
@@ -637,7 +664,8 @@ class SplinedPotential : public FunctorPotential {
      * 4. return exact energy if r<=rmin
      */
     inline double operator()(const Particle& particle_a, const Particle& particle_b, double squared_distance,
-                             [[maybe_unused]] const Point& b_towards_a) const override {
+                             [[maybe_unused]] const Point& b_towards_a) const override
+    {
         const auto& knots = matrix_of_knots(particle_a.id, particle_b.id);
         if (squared_distance >= knots.rmax2) {
             return 0.0;
@@ -652,4 +680,4 @@ class SplinedPotential : public FunctorPotential {
     }
 };
 
-} // namespace Faunus::Potential
+} // namespace Faunus::pairpotential

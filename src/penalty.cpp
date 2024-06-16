@@ -4,7 +4,9 @@
 
 namespace Faunus::Energy {
 
-Penalty::Penalty(const json& j, const Space& spc) : spc(spc) {
+Penalty::Penalty(const json& j, const Space& spc)
+    : spc(spc)
+{
     name = "penalty";
     overwrite_penalty = j.value("overwrite", true);
     energy_increment = j.at("f0").get<double>();
@@ -23,7 +25,8 @@ Penalty::Penalty(const json& j, const Space& spc) : spc(spc) {
     initializePenaltyFunction(j.at("coords"));
     loadPenaltyFunction(MPI::prefix + penalty_function_filename);
 }
-void Penalty::initializePenaltyFunction(const json& j) {
+void Penalty::initializePenaltyFunction(const json& j)
+{
     if (!j.is_array()) {
         throw ConfigurationError("array of reaction coordinates required");
     }
@@ -49,7 +52,8 @@ void Penalty::initializePenaltyFunction(const json& j) {
     penalty_energy.reInitializer(resolutions, minimum_values, maximum_values);
 }
 
-void Penalty::loadPenaltyFunction(const std::string& filename) {
+void Penalty::loadPenaltyFunction(const std::string& filename)
+{
     if (std::ifstream stream(filename); stream) {
         faunus_logger->info("Loading penalty function {}", filename);
         std::string ignore;
@@ -73,17 +77,17 @@ Penalty::~Penalty() { toDisk(); }
 /**
  * @brief Stream penalty function, offset with the minimum observed energy
  */
-void Penalty::streamPenaltyFunction(std::ostream& stream) const {
+void Penalty::streamPenaltyFunction(std::ostream& stream) const
+{
     stream.precision(16);
     stream << fmt::format("# {} {} {}\n", energy_increment, samplings, penalty_function_exchange_counter)
            << penalty_energy.array() - penalty_energy.minCoeff() << "\n";
 }
 
-void Penalty::streamHistogram(std::ostream& stream) const {
-    stream << histogram;
-}
+void Penalty::streamHistogram(std::ostream& stream) const { stream << histogram; }
 
-void Penalty::toDisk() {
+void Penalty::toDisk()
+{
     if (overwrite_penalty) {
         if (std::ofstream stream(MPI::prefix + penalty_function_filename); stream) {
             streamPenaltyFunction(stream);
@@ -94,7 +98,8 @@ void Penalty::toDisk() {
     }
 }
 
-void Penalty::to_json(json& j) const {
+void Penalty::to_json(json& j) const
+{
     j["file"] = penalty_function_filename;
     j["scale"] = energy_increment_scaling_factor;
     j["update"] = number_of_steps_between_updates;
@@ -110,7 +115,8 @@ void Penalty::to_json(json& j) const {
         coordinates_j.emplace_back(*reaction_coordinate); // `ReactionCoordinateBase` --> `json`
     }
 }
-double Penalty::energy(const Change& change) {
+double Penalty::energy(const Change& change)
+{
     double energy = 0.0;
     if (change) {
         for (size_t i = 0; i < number_of_reaction_coordinates; i++) {
@@ -133,7 +139,8 @@ double Penalty::energy(const Change& change) {
  * @todo: If this is called before `energy()`, the latest_coordinate
  * is never calculated and causes undefined behavior
  */
-void Penalty::updatePenalty(const std::vector<double>& coordinate) {
+void Penalty::updatePenalty(const std::vector<double>& coordinate)
+{
     update_counter++;
     if (update_counter % number_of_steps_between_updates == 0 and energy_increment > 0.0) {
         if (histogram.minCoeff() >= (int)samplings) {
@@ -153,7 +160,8 @@ void Penalty::updatePenalty(const std::vector<double>& coordinate) {
     penalty_energy[coordinate] += energy_increment;
     sum_of_energy_increments += energy_increment;
 }
-void Penalty::logBarrierInformation() const {
+void Penalty::logBarrierInformation() const
+{
     faunus_logger->info("energy barriers: penalty function = {} kT, histogram = {} kT", penalty_energy.maxCoeff(),
                         std::log(double(histogram.maxCoeff()) / histogram.minCoeff()));
 }
@@ -162,7 +170,8 @@ void Penalty::logBarrierInformation() const {
  *  Called when a move is accepted or rejected, as well as when initializing the system
  *  @todo: this doubles the MPI communication
  */
-void Penalty::sync(EnergyTerm* other, [[maybe_unused]] const Change& change) {
+void Penalty::sync(EnergyTerm* other, [[maybe_unused]] const Change& change)
+{
     auto* other_penalty = dynamic_cast<decltype(this)>(other);
     if (other_penalty == nullptr) {
         throw std::runtime_error("error in Penalty::sync - please report");
@@ -177,7 +186,10 @@ void Penalty::sync(EnergyTerm* other, [[maybe_unused]] const Change& change) {
 
 #ifdef ENABLE_MPI
 
-PenaltyMPI::PenaltyMPI(const json& j, Space& spc, const MPI::Controller& mpi) : Penalty(j, spc), mpi(mpi) {
+PenaltyMPI::PenaltyMPI(const json& j, Space& spc, const MPI::Controller& mpi)
+    : Penalty(j, spc)
+    , mpi(mpi)
+{
     weights.resize(mpi.world.size());
 }
 
@@ -186,7 +198,8 @@ PenaltyMPI::PenaltyMPI(const json& j, Space& spc, const MPI::Controller& mpi) : 
  *
  * MPI_Allgather(&least_sampled_in_histogram, 1, MPI_INT, weights.data(), 1, MPI_INT, mpi.comm);
  */
-void PenaltyMPI::updatePenalty(const std::vector<double>& coordinate) {
+void PenaltyMPI::updatePenalty(const std::vector<double>& coordinate)
+{
     const auto old_penalty_energy = penalty_energy[coordinate];
     update_counter++;
     if (update_counter % number_of_steps_between_updates == 0 and energy_increment > 0.0) {
@@ -216,7 +229,8 @@ void PenaltyMPI::updatePenalty(const std::vector<double>& coordinate) {
  * 3. Master broadcasts average to all nodes
  * 4. When done, all penalty functions shall be identical
  */
-void PenaltyMPI::averagePenaltyFunctions() {
+void PenaltyMPI::averagePenaltyFunctions()
+{
     penalty_function_exchange_counter += 1;
     const auto layout = mpl::contiguous_layout<double>(penalty_energy.size());
     buffer.resize(penalty_energy.size() * mpi.world.size());

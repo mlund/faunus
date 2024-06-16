@@ -16,14 +16,17 @@ struct SpeciationMoveException : public std::exception {};
 
 // ----------------------------------
 
-void ReactionDirectionRatio::AcceptanceData::update(ReactionData::Direction direction, bool accept) {
+void ReactionDirectionRatio::AcceptanceData::update(ReactionData::Direction direction, bool accept)
+{
     if (direction == ReactionData::Direction::RIGHT) {
         right += static_cast<double>(accept);
-    } else {
+    }
+    else {
         left += static_cast<double>(accept);
     }
 }
-void ReactionDirectionRatio::to_json(json& j) const {
+void ReactionDirectionRatio::to_json(json& j) const
+{
     auto& _j = j["reactions"] = json::object();
     for (const auto& [reaction, data] : acceptance) {
         _j[reaction->getReactionString()] = {{"attempts", data.left.size() + data.right.size()},
@@ -33,25 +36,30 @@ void ReactionDirectionRatio::to_json(json& j) const {
 }
 
 ReactionDirectionRatio::AcceptanceData&
-ReactionDirectionRatio::operator[](ReactionDirectionRatio::reaction_iterator iter) {
+ReactionDirectionRatio::operator[](ReactionDirectionRatio::reaction_iterator iter)
+{
     return acceptance[iter];
 }
 
 // -----------------------------------------
 
 ReactionValidator::ReactionValidator(const Space& spc)
-    : spc(spc) {}
+    : spc(spc)
+{
+}
 
 /**
  * @param reaction Reaction to check
  * @return If true, it is guarantied that reactants/products are available and no further checks are needed
  */
-bool ReactionValidator::isPossible(const ReactionData& reaction) const {
+bool ReactionValidator::isPossible(const ReactionData& reaction) const
+{
     return canReduceImplicitGroups(reaction) && canSwapAtoms(reaction) && canReduceMolecularGroups(reaction) &&
            canProduceMolecularGroups(reaction) && canReduceAtomicGroups(reaction) && canProduceAtomicGroups(reaction);
 }
 
-bool ReactionValidator::canReduceImplicitGroups(const ReactionData& reaction) const {
+bool ReactionValidator::canReduceImplicitGroups(const ReactionData& reaction) const
+{
     auto has_enough = [&](const auto& key_value) {
         const auto& [molid, number_to_delete] = key_value;
         return spc.getImplicitReservoir().at(molid) >= number_to_delete;
@@ -61,7 +69,8 @@ bool ReactionValidator::canReduceImplicitGroups(const ReactionData& reaction) co
     return ranges::cpp20::all_of(implicit_reactants, has_enough);
 }
 
-bool ReactionValidator::canSwapAtoms(const ReactionData& reaction) const {
+bool ReactionValidator::canSwapAtoms(const ReactionData& reaction) const
+{
     namespace rv = ranges::cpp20::views;
     if (reaction.containsAtomicSwap()) {
         auto reactive_atoms = reaction.getReactants().first | rv::filter(ReactionData::not_implicit_atom);
@@ -75,7 +84,8 @@ bool ReactionValidator::canSwapAtoms(const ReactionData& reaction) const {
     return true;
 }
 
-bool ReactionValidator::canReduceMolecularGroups(const ReactionData& reaction) const {
+bool ReactionValidator::canReduceMolecularGroups(const ReactionData& reaction) const
+{
     namespace rv = ranges::cpp20::views;
     auto selection = reaction.only_neutral_molecules ? Space::Selection::ACTIVE_NEUTRAL : Space::Selection::ACTIVE;
 
@@ -100,7 +110,8 @@ bool ReactionValidator::canReduceMolecularGroups(const ReactionData& reaction) c
     return ranges::cpp20::all_of(molecular_groups, can_reduce);
 }
 
-bool ReactionValidator::canReduceAtomicGroups(const ReactionData& reaction) const {
+bool ReactionValidator::canReduceAtomicGroups(const ReactionData& reaction) const
+{
     namespace rv = ranges::cpp20::views;
     auto can_reduce = [&](auto key_value) {
         const auto [molid, number_to_delete] = key_value;
@@ -124,7 +135,8 @@ bool ReactionValidator::canReduceAtomicGroups(const ReactionData& reaction) cons
     return ranges::cpp20::all_of(atomic_groups, can_reduce);
 }
 
-bool ReactionValidator::canProduceMolecularGroups(const ReactionData& reaction) const {
+bool ReactionValidator::canProduceMolecularGroups(const ReactionData& reaction) const
+{
     namespace rv = ranges::cpp20::views;
     auto selection = reaction.only_neutral_molecules ? Space::Selection::INACTIVE_NEUTRAL : Space::Selection::INACTIVE;
 
@@ -147,7 +159,8 @@ bool ReactionValidator::canProduceMolecularGroups(const ReactionData& reaction) 
     return ranges::cpp20::all_of(molecular_groups, can_create);
 }
 
-bool ReactionValidator::canProduceAtomicGroups(const ReactionData& reaction) const {
+bool ReactionValidator::canProduceAtomicGroups(const ReactionData& reaction) const
+{
     namespace rv = ranges::cpp20::views;
     auto can_expand = [&](auto key_value) {
         const auto [molid, number_to_insert] = key_value;
@@ -174,7 +187,8 @@ bool ReactionValidator::canProduceAtomicGroups(const ReactionData& reaction) con
 /**
  * Randomly assign a new mass center and random orientation
  */
-void MolecularGroupDeActivator::setPositionAndOrientation(Group& group) const {
+void MolecularGroupDeActivator::setPositionAndOrientation(Group& group) const
+{
     auto& geometry = spc.geometry;
 
     // translate to random position within simulation cell
@@ -190,7 +204,6 @@ void MolecularGroupDeActivator::setPositionAndOrientation(Group& group) const {
     group.rotate(quaternion, geometry.getBoundaryFunc());
 }
 
-
 /**
  * Activates a number of particles in an atomic group. Before calling this, make sure that there's
  * sufficient capacity.
@@ -199,7 +212,8 @@ void MolecularGroupDeActivator::setPositionAndOrientation(Group& group) const {
  * @param num_particles Number of particles to expand with
  */
 MolecularGroupDeActivator::ChangeAndBias
-MolecularGroupDeActivator::activate(Group& group, GroupDeActivator::OptionalInt num_particles) {
+MolecularGroupDeActivator::activate(Group& group, GroupDeActivator::OptionalInt num_particles)
+{
     assert(group.isMolecular());                                      // must be a molecule group
     assert(group.empty());                                            // must be inactive
     group.activate(group.inactive().begin(), group.inactive().end()); // activate all particles
@@ -225,7 +239,8 @@ MolecularGroupDeActivator::activate(Group& group, GroupDeActivator::OptionalInt 
 }
 
 MolecularGroupDeActivator::ChangeAndBias
-MolecularGroupDeActivator::deactivate(Group& group, GroupDeActivator::OptionalInt num_particles) {
+MolecularGroupDeActivator::deactivate(Group& group, GroupDeActivator::OptionalInt num_particles)
+{
     assert(group.isMolecular());
     assert(!group.empty());
     assert(group.size() == group.capacity());
@@ -250,9 +265,12 @@ MolecularGroupDeActivator::deactivate(Group& group, GroupDeActivator::OptionalIn
 MolecularGroupDeActivator::MolecularGroupDeActivator(Space& spc, Random& random, bool apply_bond_bias)
     : spc(spc)
     , random(random)
-    , apply_bond_bias(apply_bond_bias) {}
+    , apply_bond_bias(apply_bond_bias)
+{
+}
 
-double MolecularGroupDeActivator::getBondEnergy(const Group& group) const {
+double MolecularGroupDeActivator::getBondEnergy(const Group& group) const
+{
     double energy = 0.0;
     if (apply_bond_bias) {
         auto bonds = group.traits().bonds | ranges::views::transform(&pairpotential::BondData::clone);
@@ -270,10 +288,13 @@ double MolecularGroupDeActivator::getBondEnergy(const Group& group) const {
 AtomicGroupDeActivator::AtomicGroupDeActivator(Space& spc, Space& old_spc, Random& random)
     : spc(spc)
     , old_spc(old_spc)
-    , random(random) {}
+    , random(random)
+{
+}
 
 GroupDeActivator::ChangeAndBias AtomicGroupDeActivator::activate(Group& group,
-                                                                 GroupDeActivator::OptionalInt number_to_insert) {
+                                                                 GroupDeActivator::OptionalInt number_to_insert)
+{
     if (!group.isAtomic() || !number_to_insert || number_to_insert.value() + group.size() > group.capacity()) {
         throw std::runtime_error("atomic group expansion bug");
     }
@@ -302,7 +323,8 @@ GroupDeActivator::ChangeAndBias AtomicGroupDeActivator::activate(Group& group,
  *          a future neighbour list implementation.
  */
 GroupDeActivator::ChangeAndBias AtomicGroupDeActivator::deactivate(Group& group,
-                                                                   GroupDeActivator::OptionalInt number_to_delete) {
+                                                                   GroupDeActivator::OptionalInt number_to_delete)
+{
     if (!group.isAtomic() || !number_to_delete || number_to_delete.value() > group.size()) {
         throw std::runtime_error("atomic group expansion bug");
     }
@@ -338,7 +360,8 @@ GroupDeActivator::ChangeAndBias AtomicGroupDeActivator::deactivate(Group& group,
 
 namespace Faunus::move {
 
-void SpeciationMove::_to_json(json& j) const {
+void SpeciationMove::_to_json(json& j) const
+{
     direction_ratio.to_json(j);
     for (auto [molid, size] : average_reservoir_size) {
         j["implicit_reservoir"][molecules.at(molid).name] = size.avg();
@@ -356,7 +379,8 @@ void SpeciationMove::_to_json(json& j) const {
  *
  * @todo If particle has extended properties, make sure to copy the state of those
  */
-void SpeciationMove::atomicSwap(Change& change) {
+void SpeciationMove::atomicSwap(Change& change)
+{
     if (!reaction->containsAtomicSwap()) {
         return;
     }
@@ -365,9 +389,9 @@ void SpeciationMove::atomicSwap(Change& change) {
 
     assert(atomic_products.size() == 1 and atomic_reactants.size() == 1);
 
-    auto atomlist = spc.findAtoms(atomic_reactants.begin()->first);          // search all active molecules
+    auto atomlist = spc.findAtoms(atomic_reactants.begin()->first);                    // search all active molecules
     auto& target_particle = *random_internal.sample(atomlist.begin(), atomlist.end()); // target particle to swap
-    auto& group = *spc.findGroupContaining(target_particle);                 // find enclosing group
+    auto& group = *spc.findGroupContaining(target_particle);                           // find enclosing group
 
     auto& group_change = change.groups.emplace_back();
     group_change.relative_atom_indices.push_back(group.getParticleIndex(target_particle));
@@ -389,7 +413,8 @@ void SpeciationMove::atomicSwap(Change& change) {
  *
  * @todo This could make use of policies to customize how particles should be updated. Split to helper class.
  */
-void SpeciationMove::swapParticleProperties(Particle& particle, const int new_atomid) {
+void SpeciationMove::swapParticleProperties(Particle& particle, const int new_atomid)
+{
     Particle new_particle(atoms.at(new_atomid), particle.pos);    // new particle with old position
     if (new_particle.hasExtension() || particle.hasExtension()) { // keep also other orientational data
         auto& source_ext = new_particle.getExt();
@@ -404,12 +429,14 @@ void SpeciationMove::swapParticleProperties(Particle& particle, const int new_at
     particle = new_particle; // deep copy
 }
 
-void SpeciationMove::activateProducts(Change& change) {
+void SpeciationMove::activateProducts(Change& change)
+{
     activateAtomicGroups(change);
     activateMolecularGroups(change);
 }
 
-void SpeciationMove::activateMolecularGroups(Change& change) {
+void SpeciationMove::activateMolecularGroups(Change& change)
+{
     namespace rv = ranges::cpp20::views;
     auto selection = reaction->only_neutral_molecules ? Space::Selection::INACTIVE_NEUTRAL : Space::Selection::INACTIVE;
 
@@ -429,7 +456,8 @@ void SpeciationMove::activateMolecularGroups(Change& change) {
     }
 }
 
-void SpeciationMove::activateAtomicGroups(Change& change) {
+void SpeciationMove::activateAtomicGroups(Change& change)
+{
     namespace rv = ranges::cpp20::views;
     auto atomic_products = reaction->getProducts().second | rv::filter(ReactionData::not_implicit_group) |
                            rv::filter(ReactionData::is_atomic_group);
@@ -445,12 +473,14 @@ void SpeciationMove::activateAtomicGroups(Change& change) {
 /**
  * @brief Deactivate all atomic and molecular reactants.
  */
-void SpeciationMove::deactivateReactants(Change& change) {
+void SpeciationMove::deactivateReactants(Change& change)
+{
     deactivateAtomicGroups(change);
     deactivateMolecularGroups(change);
 }
 
-void SpeciationMove::deactivateMolecularGroups(Change& change) {
+void SpeciationMove::deactivateMolecularGroups(Change& change)
+{
     namespace rv = ranges::cpp20::views;
     auto nonzero_stoichiometric_coeff = [](auto key_value) { return key_value.second > 0; };
     auto selection = (reaction->only_neutral_molecules) ? Space::Selection::ACTIVE_NEUTRAL : Space::Selection::ACTIVE;
@@ -470,7 +500,8 @@ void SpeciationMove::deactivateMolecularGroups(Change& change) {
     }
 }
 
-void SpeciationMove::deactivateAtomicGroups(Change& change) {
+void SpeciationMove::deactivateAtomicGroups(Change& change)
+{
     namespace rv = ranges::cpp20::views;
     auto nonzero_stoichiometric_coeff = [](auto key_value) { return key_value.second > 0; };
 
@@ -487,7 +518,8 @@ void SpeciationMove::deactivateAtomicGroups(Change& change) {
     }
 }
 
-TEST_CASE("[Faunus] Speciation - Ranges::sample") {
+TEST_CASE("[Faunus] Speciation - Ranges::sample")
+{
     std::vector<int> vec = {1, 2, 3, 4};
     auto take_nothing = vec | ranges::views::sample(0);
     auto take_less = vec | ranges::views::sample(2);
@@ -500,7 +532,8 @@ TEST_CASE("[Faunus] Speciation - Ranges::sample") {
     CHECK_EQ(range_size(take_too_much), 4);
 }
 
-void SpeciationMove::_move(Change& change) {
+void SpeciationMove::_move(Change& change)
+{
     if (Faunus::reactions.empty()) {
         return;
     }
@@ -517,10 +550,14 @@ void SpeciationMove::_move(Change& change) {
                 updateGroupMassCenters(change);
             }
         }
-    } catch (Speciation::SpeciationMoveException&) { change.clear(); }
+    }
+    catch (Speciation::SpeciationMoveException&) {
+        change.clear();
+    }
 }
 
-void SpeciationMove::setRandomReactionAndDirection() {
+void SpeciationMove::setRandomReactionAndDirection()
+{
     reaction = random_internal.sample(reactions.begin(), reactions.end());
     reaction->setRandomDirection(random_internal);
 }
@@ -531,7 +568,8 @@ void SpeciationMove::setRandomReactionAndDirection() {
  *
  * - Swap moves (as the swapped atom may have a different mass)
  */
-void SpeciationMove::updateGroupMassCenters(const Change& change) const {
+void SpeciationMove::updateGroupMassCenters(const Change& change) const
+{
     namespace rv = ranges::cpp20::views;
 
     auto atomic_or_swap = [](const Change::GroupChange& c) { return c.dNatomic || c.dNswap; };
@@ -549,11 +587,13 @@ void SpeciationMove::updateGroupMassCenters(const Change& change) const {
  * but unaffected by the change in internal bond energy
  */
 double SpeciationMove::bias([[maybe_unused]] Change& change, [[maybe_unused]] double old_energy,
-                            [[maybe_unused]] double new_energy) {
+                            [[maybe_unused]] double new_energy)
+{
     return reaction->freeEnergy() + bias_energy;
 }
 
-void SpeciationMove::_accept([[maybe_unused]] Change &change) {
+void SpeciationMove::_accept([[maybe_unused]] Change& change)
+{
     namespace rv = ranges::cpp20::views;
     direction_ratio[reaction].update(reaction->getDirection(), true);
 
@@ -570,7 +610,8 @@ void SpeciationMove::_accept([[maybe_unused]] Change &change) {
     }
 }
 
-void SpeciationMove::_reject([[maybe_unused]] Change& change) {
+void SpeciationMove::_reject([[maybe_unused]] Change& change)
+{
     namespace rv = ranges::cpp20::views;
     direction_ratio[reaction].update(reaction->getDirection(), false);
 
@@ -588,13 +629,16 @@ void SpeciationMove::_reject([[maybe_unused]] Change& change) {
 SpeciationMove::SpeciationMove(Space& spc, Space& old_spc, std::string_view name, std::string_view cite)
     : Move(spc, name, cite)
     , random_internal(slump)
-    , reaction_validator(spc) {
+    , reaction_validator(spc)
+{
     molecular_group_bouncer = std::make_unique<Speciation::MolecularGroupDeActivator>(spc, random_internal, true);
     atomic_group_bouncer = std::make_unique<Speciation::AtomicGroupDeActivator>(spc, old_spc, random_internal);
 }
 
 SpeciationMove::SpeciationMove(Space& spc, Space& old_spc)
-    : SpeciationMove(spc, old_spc, "rcmc", "doi:10/fqcpg3") {}
+    : SpeciationMove(spc, old_spc, "rcmc", "doi:10/fqcpg3")
+{
+}
 
 void SpeciationMove::_from_json([[maybe_unused]] const json& j) {}
 

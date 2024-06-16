@@ -11,28 +11,37 @@ std::string prefix;
 
 bool Controller::isMaster() const { return world.rank() == master_rank; }
 
-Controller::Controller() : world(mpl::environment::comm_world()) {
+Controller::Controller()
+    : world(mpl::environment::comm_world())
+{
     if (world.size() > 1) {
         prefix = fmt::format("mpi{}.", world.rank());
         stream.open((prefix + "stdout"));
-    } else {
+    }
+    else {
         prefix.clear();
     }
 }
 
-void Controller::to_json(json& j) const {
+void Controller::to_json(json& j) const
+{
     j = {{"rank", world.rank()}, {"nproc", world.size()}, {"prefix", prefix}, {"master", master_rank}};
 }
 
 std::ostream& Controller::cout() { return stream.is_open() ? stream : std::cout; }
 
-Partner::Partner(PartnerPolicy policy) : policy(policy) {}
+Partner::Partner(PartnerPolicy policy)
+    : policy(policy)
+{
+}
 
-bool Partner::isValid(const mpl::communicator& mpi, int partner) {
+bool Partner::isValid(const mpl::communicator& mpi, int partner)
+{
     return (partner >= 0 && partner < mpi.size() && partner != mpi.rank());
 }
 
-Partner::PartnerPair Partner::getPair(const mpl::communicator& mpi) const {
+Partner::PartnerPair Partner::getPair(const mpl::communicator& mpi) const
+{
     if (rank.has_value()) {
         // note `std::minmax(a,b)` takes _references_; the initializer list (used here) takes a _copy_
         return std::minmax({mpi.rank(), rank.value()});
@@ -40,16 +49,21 @@ Partner::PartnerPair Partner::getPair(const mpl::communicator& mpi) const {
     throw std::runtime_error("bad partner");
 }
 
-OddEvenPartner::OddEvenPartner() : Partner(PartnerPolicy::ODDEVEN) {}
+OddEvenPartner::OddEvenPartner()
+    : Partner(PartnerPolicy::ODDEVEN)
+{
+}
 
 /**
  * If true is returned, a valid partner was found
  */
-bool OddEvenPartner::generate(const mpl::communicator& mpi, Random& random) {
+bool OddEvenPartner::generate(const mpl::communicator& mpi, Random& random)
+{
     int rank_increment = static_cast<bool>(random.range(0, 1)) ? 1 : -1;
     if (mpi.rank() % 2 == 0) { // even replica
         rank = mpi.rank() + rank_increment;
-    } else { // odd replica
+    }
+    else { // odd replica
         rank = mpi.rank() - rank_increment;
     }
     if (!isValid(mpi, rank.value())) {
@@ -58,7 +72,8 @@ bool OddEvenPartner::generate(const mpl::communicator& mpi, Random& random) {
     return rank.has_value();
 }
 
-std::unique_ptr<Partner> createMPIPartnerPolicy(PartnerPolicy policy) {
+std::unique_ptr<Partner> createMPIPartnerPolicy(PartnerPolicy policy)
+{
     switch (policy) {
     case PartnerPolicy::ODDEVEN:
         return std::make_unique<OddEvenPartner>();
@@ -67,7 +82,8 @@ std::unique_ptr<Partner> createMPIPartnerPolicy(PartnerPolicy policy) {
     }
 }
 
-void ParticleBuffer::setFormat(ParticleBuffer::Format data_format) {
+void ParticleBuffer::setFormat(ParticleBuffer::Format data_format)
+{
     format = data_format;
     switch (format) {
     case Format::XYZ:
@@ -114,7 +130,8 @@ void ParticleBuffer::setFormat(ParticleBuffer::Format data_format) {
     }
 }
 
-void ParticleBuffer::copyToBuffer(const ParticleVector& particles) {
+void ParticleBuffer::copyToBuffer(const ParticleVector& particles)
+{
     buffer.resize(packet_size * particles.size());
     auto destination = buffer.begin(); // set *after* buffer resize
     ranges::cpp20::for_each(particles, std::bind(from_particle, std::placeholders::_1, std::ref(destination)));
@@ -123,7 +140,8 @@ void ParticleBuffer::copyToBuffer(const ParticleVector& particles) {
     }
 }
 
-void ParticleBuffer::copyFromBuffer(ParticleVector& particles) {
+void ParticleBuffer::copyFromBuffer(ParticleVector& particles)
+{
     if (buffer.size() != particles.size() * packet_size) {
         throw std::out_of_range("particles out of range");
     }
@@ -146,7 +164,8 @@ ParticleBuffer::buffer_iterator ParticleBuffer::end() { return buffer.end(); }
  * @todo This involves a lot of copying...
  */
 const ParticleVector& ExchangeParticles::operator()(const Controller& mpi, int partner_rank,
-                                                    const ParticleVector& particles) {
+                                                    const ParticleVector& particles)
+{
     if (!partner_particles) {
         partner_particles = std::make_unique<ParticleVector>();
     }
@@ -164,10 +183,11 @@ const ParticleVector& ExchangeParticles::operator()(const Controller& mpi, int p
  * @param partner_rank Destination and source
  * @param particles Particle vector to send/recieve
  */
-void ExchangeParticles::replace(const mpl::communicator& comm, int partner_rank, ParticleVector& particles) {
+void ExchangeParticles::replace(const mpl::communicator& comm, int partner_rank, ParticleVector& particles)
+{
     particle_buffer.copyToBuffer(particles); // particle data -> vector of doubles
-    comm.sendrecv_replace(particle_buffer.begin(), particle_buffer.end(), partner_rank, mpl::tag_t(0),
-                               partner_rank, mpl::tag_t(0));
+    comm.sendrecv_replace(particle_buffer.begin(), particle_buffer.end(), partner_rank, mpl::tag_t(0), partner_rank,
+                          mpl::tag_t(0));
     particle_buffer.copyFromBuffer(particles);
 }
 
@@ -176,7 +196,8 @@ ParticleBuffer::Format ExchangeParticles::getFormat() const { return particle_bu
 void ExchangeParticles::setFormat(ParticleBuffer::Format format) { particle_buffer.setFormat(format); }
 
 bool exchangeVolume(const Controller& mpi, int partner_rank, Geometry::GeometryBase& geometry,
-                    Geometry::VolumeMethod& volume_scaling_method) {
+                    Geometry::VolumeMethod& volume_scaling_method)
+{
     const auto old_volume = geometry.getVolume();
     auto new_volume = 0.0;
     mpi.world.sendrecv(old_volume, partner_rank, mpl::tag_t(0), new_volume, partner_rank, mpl::tag_t(0));
@@ -195,7 +216,8 @@ bool exchangeVolume(const Controller& mpi, int partner_rank, Geometry::GeometryB
  * @param random Random number object to test. Will be propagated.
  * @return True if all random number engines are in sync, i.e. returns the same values
  */
-bool checkRandomEngineState(const mpl::communicator& comm, Random& random) {
+bool checkRandomEngineState(const mpl::communicator& comm, Random& random)
+{
     double random_number = random();
     std::vector<double> buffer(comm.size(), 0.0);
     comm.gather(0, random_number, buffer.data());

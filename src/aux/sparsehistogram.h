@@ -20,17 +20,23 @@ template <std::floating_point T = double> class SparseHistogram {
     map_type data;
 
   public:
-    explicit SparseHistogram(T resolution) : resolution(resolution) {}
+    explicit SparseHistogram(T resolution)
+        : resolution(resolution)
+    {
+    }
     const T getResolution() const { return resolution; }
-    void add(const T value) {
+    void add(const T value)
+    {
         if (std::isfinite(value)) {
             const auto index = static_cast<map_type::key_type>(std::round(value / resolution));
             data[index]++;
-        } else {
+        }
+        else {
             faunus_logger->warn("histogram: skipping inf/nan number");
         }
     }
-    friend auto& operator<<(std::ostream& stream, const SparseHistogram& histogram) {
+    friend auto& operator<<(std::ostream& stream, const SparseHistogram& histogram)
+    {
         std::for_each(histogram.data.begin(), histogram.data.end(), [&](const auto& sample) {
             stream << fmt::format("{:.6E} {}\n", static_cast<T>(sample.first) * histogram.resolution, sample.second);
         });

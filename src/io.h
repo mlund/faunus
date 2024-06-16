@@ -55,7 +55,8 @@ std::unique_ptr<std::ostream> openCompressedOutputStream(const std::string& file
  */
 template <typename TKey, typename TValue>
 void writeKeyValuePairs(std::ostream& stream, const std::map<TKey, TValue>& data, const std::string& sep = " ",
-                        const std::string& end = "\n") {
+                        const std::string& end = "\n")
+{
     if (stream) {
         for (const auto& [key, value] : data) {
             stream << key << sep << value << end;
@@ -71,7 +72,8 @@ void writeKeyValuePairs(std::ostream& stream, const std::map<TKey, TValue>& data
  * @param data
  */
 template <typename TKey, typename TValue>
-void writeKeyValuePairs(const std::string& filename, const std::map<TKey, TValue>& data) {
+void writeKeyValuePairs(const std::string& filename, const std::map<TKey, TValue>& data)
+{
     if (!data.empty()) {
         std::ofstream file(filename);
         writeKeyValuePairs(file, data);
@@ -179,7 +181,6 @@ class SpheroCylinderXYZReader : public StructureFileReader {
     Particle loadParticle(std::istream& stream) override;
 };
 
-
 class GromacsReader : public StructureFileReader {
   private:
     void loadBoxInformation(std::istream& stream); //!< Load box dimensions (stream position is preserved)
@@ -200,7 +201,8 @@ class StructureFileWriter {
     virtual void saveParticle(std::ostream& stream, const Particle& particle) = 0; //!< Write single particle
     void saveGroup(std::ostream& stream, const Group& group);                      //!< Write entire group
 
-    template <class ParticleIter> void saveParticles(std::ostream& stream, ParticleIter begin, ParticleIter end) {
+    template <class ParticleIter> void saveParticles(std::ostream& stream, ParticleIter begin, ParticleIter end)
+    {
         group_index = 0;
         particle_index = 0;
         std::for_each(begin, end, [&](const auto& particle) {
@@ -219,7 +221,8 @@ class StructureFileWriter {
 
   public:
     template <std::forward_iterator ParticleIter>
-    void save(std::ostream& stream, ParticleIter begin, ParticleIter end, const Point& box_length) {
+    void save(std::ostream& stream, ParticleIter begin, ParticleIter end, const Point& box_length)
+    {
         if (auto number_of_particles = std::distance(begin, end); number_of_particles > 0) {
             box_dimensions = box_length;
             saveHeader(stream, number_of_particles);
@@ -228,7 +231,8 @@ class StructureFileWriter {
         }
     }
 
-    void save(std::ostream& stream, const RequireGroups auto& groups, const Point& box_length) {
+    void save(std::ostream& stream, const RequireGroups auto& groups, const Point& box_length)
+    {
         group_index = 0;
         particle_index = 0;
         box_dimensions = box_length;
@@ -241,11 +245,13 @@ class StructureFileWriter {
         saveFooter(stream);
     }
 
-    template <class... Args> void save(const std::string& filename, const Args&... args) {
+    template <class... Args> void save(const std::string& filename, const Args&... args)
+    {
         if (std::ofstream stream(filename); stream) {
             faunus_logger->debug("writing to {}", filename);
             save(stream, args...);
-        } else {
+        }
+        else {
             throw std::runtime_error("writeKeyValuePairs error: "s + filename);
         }
     }
@@ -274,7 +280,6 @@ class SpheroCylinderXYZWriter : public StructureFileWriter {
     void saveHeader(std::ostream& stream, int number_of_particles) const override;
     void saveParticle(std::ostream& stream, const Particle& particle) override;
 };
-
 
 class PQRWriter : public StructureFileWriter {
   private:
@@ -344,7 +349,8 @@ struct XTCTrajectoryFrame {
      */
     template <RequirePointIterator begin_iterator, class end_iterator>
     XTCTrajectoryFrame(int step, float time, const Point& box, begin_iterator coordinates_begin,
-                       end_iterator coordinates_end) {
+                       end_iterator coordinates_end)
+    {
         initNumberOfAtoms(std::distance(coordinates_begin, coordinates_end));
         importFrame(step, time, box, coordinates_begin, coordinates_end);
     }
@@ -375,7 +381,8 @@ struct XTCTrajectoryFrame {
      */
     template <RequirePointIterator begin_iterator, class end_iterator>
     void importFrame(const int step, const float time, const Point& box, begin_iterator coordinates_begin,
-                     end_iterator coordinates_end) {
+                     end_iterator coordinates_end)
+    {
         importTimestamp(step, time);
         importBox(box);
         importCoordinates(coordinates_begin, coordinates_end, 0.5 * box);
@@ -399,7 +406,8 @@ struct XTCTrajectoryFrame {
      */
     template <RequirePointIterator begin_iterator, RequirePointIterator end_iterator>
     void exportFrame(int& step, float& time, Point& box, begin_iterator coordinates_begin,
-                     end_iterator coordinates_end) const {
+                     end_iterator coordinates_end) const
+    {
         exportTimestamp(step, time);
         exportBox(box);
         exportCoordinates(coordinates_begin, coordinates_end, 0.5 * box);
@@ -437,7 +445,8 @@ struct XTCTrajectoryFrame {
      * @param[in] offset  offset in nanometers to add to all coordinates upon conversion
      */
     template <RequirePointIterator begin_iterator, typename end_iterator>
-    void importCoordinates(begin_iterator begin, end_iterator end, const Point& offset) const {
+    void importCoordinates(begin_iterator begin, end_iterator end, const Point& offset) const
+    {
         int i = 0;
         ranges::cpp20::for_each(begin, end, [&](const auto& position) {
             if (i >= number_of_atoms) {
@@ -480,7 +489,8 @@ struct XTCTrajectoryFrame {
      * @param[in] offset  offset in nanometers to subtract from all coordinates upon conversion
      */
     template <RequirePointIterator begin_iterator, typename end_iterator>
-    void exportCoordinates(begin_iterator begin, end_iterator end, const Point& offset) const {
+    void exportCoordinates(begin_iterator begin, end_iterator end, const Point& offset) const
+    {
         // comparison of i is probably faster than prior call of std::distance
         int i = 0;
         for (auto coordinates_it = begin; coordinates_it != end; ++coordinates_it) {
@@ -575,7 +585,8 @@ class XTCReader {
      * @throw std::runtime_error  when other I/O error occures
      */
     template <RequirePointIterator begin_iterator, typename end_iterator>
-    bool read(int& step, float& time, Point& box, begin_iterator coordinates_begin, end_iterator coordinates_end) {
+    bool read(int& step, float& time, Point& box, begin_iterator coordinates_begin, end_iterator coordinates_end)
+    {
         if (readFrame()) {
             xtc_frame->exportFrame(step, time, box, coordinates_begin, coordinates_end);
             return true;
@@ -635,7 +646,8 @@ class XTCWriter {
      * @param[in] coordinates_end  input iterator's end
      */
     template <RequirePointIterator begin_iterator, typename end_iterator>
-    void writeNext(const Point& box, begin_iterator coordinates_begin, end_iterator coordinates_end) {
+    void writeNext(const Point& box, begin_iterator coordinates_begin, end_iterator coordinates_end)
+    {
         if (!xtc_frame) {
             auto number_of_atoms = ranges::cpp20::distance(coordinates_begin, coordinates_end);
             faunus_logger->trace("preparing xtc output for {} particles", number_of_atoms);

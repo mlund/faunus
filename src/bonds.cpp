@@ -7,14 +7,16 @@ namespace Faunus::pairpotential {
 
 void to_json(Faunus::json& j, const std::shared_ptr<const BondData>& bond) { to_json(j, *bond); }
 
-void to_json(Faunus::json& j, const BondData& bond) {
+void to_json(Faunus::json& j, const BondData& bond)
+{
     json val;
     bond.to_json(val);
     val["index"] = bond.indices;
     j = {{bond.type(), val}};
 }
 
-void from_json(const json& j, std::shared_ptr<BondData>& bond) {
+void from_json(const json& j, std::shared_ptr<BondData>& bond)
+{
     try {
         const auto& [bondtype, parameters] = jsonSingleItem(j);
         const BondData::Variant variant = json(bondtype);
@@ -50,15 +52,18 @@ void from_json(const json& j, std::shared_ptr<BondData>& bond) {
                 usageTip.pick(bondtype);
                 throw ConfigurationError("exactly {} indices required", bond->numindex());
             }
-        } catch (std::exception& e) {
+        }
+        catch (std::exception& e) {
             throw ConfigurationError("{} -> {}", bondtype, e.what());
         }
-    } catch (std::exception& e) {
+    }
+    catch (std::exception& e) {
         throw ConfigurationError("bond making: {}", e.what()).attachJson(j);
     }
 }
 
-void BondData::shiftIndices(const int offset) {
+void BondData::shiftIndices(const int offset)
+{
     for (auto& i : indices) {
         i += offset;
     }
@@ -68,17 +73,26 @@ bool BondData::hasEnergyFunction() const { return energyFunc != nullptr; }
 
 bool BondData::hasForceFunction() const { return forceFunc != nullptr; }
 
-BondData::BondData(const std::vector<int>& indices) : indices(indices) {}
+BondData::BondData(const std::vector<int>& indices)
+    : indices(indices)
+{
+}
 
 HarmonicBond::HarmonicBond(double force_constant, double equilibrium_distance, const std::vector<int>& indices)
-    : StretchData(indices), half_force_constant(force_constant / 2.0), equilibrium_distance(equilibrium_distance) {}
+    : StretchData(indices)
+    , half_force_constant(force_constant / 2.0)
+    , equilibrium_distance(equilibrium_distance)
+{
+}
 
-void HarmonicBond::from_json(const Faunus::json& j) {
+void HarmonicBond::from_json(const Faunus::json& j)
+{
     half_force_constant = j.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2) / 2.0; // k
     equilibrium_distance = j.at("req").get<double>() * 1.0_angstrom;                             // req
 }
 
-void HarmonicBond::to_json(Faunus::json& j) const {
+void HarmonicBond::to_json(Faunus::json& j) const
+{
     j = {{"k", 2.0 * half_force_constant / 1.0_kJmol * 1.0_angstrom * 1.0_angstrom},
          {"req", equilibrium_distance / 1.0_angstrom}};
 }
@@ -94,7 +108,8 @@ BondData::Variant HarmonicBond::type() const { return BondData::Variant::HARMONI
  * for calculating the potential energy and the forces on the
  * participating atoms
  */
-void HarmonicBond::setEnergyFunction(const ParticleVector& particles) {
+void HarmonicBond::setEnergyFunction(const ParticleVector& particles)
+{
     energyFunc = [&](Geometry::DistanceFunction calculateDistance) -> double {
         const auto& particle1 = particles[indices[0]];
         const auto& particle2 = particles[indices[1]];
@@ -112,24 +127,30 @@ void HarmonicBond::setEnergyFunction(const ParticleVector& particles) {
 }
 
 FENEBond::FENEBond(double force_constant, double max_distance, const std::vector<int>& indices)
-    : StretchData(indices), half_force_constant(0.5 * force_constant),
-      max_squared_distance(max_distance * max_distance) {}
+    : StretchData(indices)
+    , half_force_constant(0.5 * force_constant)
+    , max_squared_distance(max_distance * max_distance)
+{
+}
 
 std::shared_ptr<BondData> FENEBond::clone() const { return std::make_shared<FENEBond>(*this); }
 
 BondData::Variant FENEBond::type() const { return BondData::Variant::FENE; }
 
-void FENEBond::from_json(const Faunus::json& j) {
+void FENEBond::from_json(const Faunus::json& j)
+{
     half_force_constant = 0.5 * j.at("k").get<double>() * 1.0_kJmol / (1.0_angstrom * 1.0_angstrom);
     max_squared_distance = std::pow(j.at("rmax").get<double>() * 1.0_angstrom, 2);
 }
 
-void FENEBond::to_json(Faunus::json& j) const {
+void FENEBond::to_json(Faunus::json& j) const
+{
     j = {{"k", 2.0 * half_force_constant / (1.0_kJmol / std::pow(1.0_angstrom, 2))},
          {"rmax", std::sqrt(max_squared_distance) / 1.0_angstrom}};
 }
 
-void FENEBond::setEnergyFunction(const ParticleVector& particles) {
+void FENEBond::setEnergyFunction(const ParticleVector& particles)
+{
     energyFunc = [&](Geometry::DistanceFunction calcDistance) {
         const auto squared_distance = calcDistance(particles[indices[0]].pos, particles[indices[1]].pos).squaredNorm();
         if (squared_distance >= max_squared_distance) {
@@ -153,28 +174,36 @@ void FENEBond::setEnergyFunction(const ParticleVector& particles) {
 
 FENEWCABond::FENEWCABond(double force_constant, double max_distance, double epsilon, double sigma,
                          const std::vector<int>& indices)
-    : StretchData(indices), half_force_constant(force_constant / 2.0),
-      max_distance_squared(max_distance * max_distance), epsilon(epsilon), sigma_squared(sigma * sigma) {}
+    : StretchData(indices)
+    , half_force_constant(force_constant / 2.0)
+    , max_distance_squared(max_distance * max_distance)
+    , epsilon(epsilon)
+    , sigma_squared(sigma * sigma)
+{
+}
 
 std::shared_ptr<BondData> FENEWCABond::clone() const { return std::make_shared<FENEWCABond>(*this); }
 
 BondData::Variant FENEWCABond::type() const { return BondData::Variant::FENEWCA; }
 
-void FENEWCABond::from_json(const Faunus::json& j) {
+void FENEWCABond::from_json(const Faunus::json& j)
+{
     half_force_constant = j.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2) / 2.0;
     max_distance_squared = std::pow(j.at("rmax").get<double>() * 1.0_angstrom, 2);
     epsilon = j.at("eps").get<double>() * 1.0_kJmol;
     sigma_squared = std::pow(j.at("sigma").get<double>() * 1.0_angstrom, 2);
 }
 
-void FENEWCABond::to_json(Faunus::json& j) const {
+void FENEWCABond::to_json(Faunus::json& j) const
+{
     j = {{"k", 2.0 * half_force_constant / (1.0_kJmol / std::pow(1.0_angstrom, 2))},
          {"rmax", std::sqrt(max_distance_squared) / 1.0_angstrom},
          {"eps", epsilon / 1.0_kJmol},
          {"sigma", std::sqrt(sigma_squared) / 1.0_angstrom}};
 }
 
-void FENEWCABond::setEnergyFunction(const ParticleVector& particles) {
+void FENEWCABond::setEnergyFunction(const ParticleVector& particles)
+{
     energyFunc = [&](Geometry::DistanceFunction calculateDistance) {
         double wca = 0.0;
         constexpr auto two_to_the_power_of_two_sixths = 1.01944064370214482816981563263103378007648819; // 2^((1/6)^2)
@@ -213,24 +242,31 @@ void FENEWCABond::setEnergyFunction(const ParticleVector& particles) {
     };
 }
 
-void HarmonicTorsion::from_json(const Faunus::json& j) {
+void HarmonicTorsion::from_json(const Faunus::json& j)
+{
     half_force_constant = j.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_rad, 2) / 2.0;
     equilibrium_angle = j.at("aeq").get<double>() * 1.0_deg;
 }
 
-void HarmonicTorsion::to_json(Faunus::json& j) const {
+void HarmonicTorsion::to_json(Faunus::json& j) const
+{
     j = {{"k", 2 * half_force_constant / (1.0_kJmol / std::pow(1.0_rad, 2))}, {"aeq", equilibrium_angle / 1.0_deg}};
     roundJSON(j, 6);
 }
 
 HarmonicTorsion::HarmonicTorsion(double force_constant, double equilibrium_angle, const std::vector<int>& indices)
-    : TorsionData(indices), half_force_constant(force_constant / 2.0), equilibrium_angle(equilibrium_angle) {}
+    : TorsionData(indices)
+    , half_force_constant(force_constant / 2.0)
+    , equilibrium_angle(equilibrium_angle)
+{
+}
 
 BondData::Variant HarmonicTorsion::type() const { return BondData::Variant::HARMONIC_TORSION; }
 
 std::shared_ptr<BondData> HarmonicTorsion::clone() const { return std::make_shared<HarmonicTorsion>(*this); }
 
-void HarmonicTorsion::setEnergyFunction(const ParticleVector& particles) {
+void HarmonicTorsion::setEnergyFunction(const ParticleVector& particles)
+{
     energyFunc = [&](Geometry::DistanceFunction calculateDistance) -> double {
         const auto vec1 = calculateDistance(particles[indices[0]].pos, particles[indices[1]].pos).normalized();
         const auto vec2 = calculateDistance(particles[indices[2]].pos, particles[indices[1]].pos).normalized();
@@ -254,7 +290,8 @@ void HarmonicTorsion::setEnergyFunction(const ParticleVector& particles) {
             Point force2 = prefactor * inverse_norm2 * (vec1 - vec2 * cosine_angle);
             Point force1 = -(force0 + force2); // no net force
             return {{indices[0], force0}, {indices[1], force1}, {indices[2], force2}};
-        } else { // @todo which is faster?
+        }
+        else { // @todo which is faster?
             const Point ba = calculateDistance(particles[indices[0]].pos, particles[indices[1]].pos); // b->a
             const Point bc = calculateDistance(particles[indices[2]].pos, particles[indices[1]].pos); // b->c
             const auto inverse_norm_ba = 1.0 / ba.norm();
@@ -270,24 +307,30 @@ void HarmonicTorsion::setEnergyFunction(const ParticleVector& particles) {
     };
 }
 
-void GromosTorsion::from_json(const Faunus::json& j) {
+void GromosTorsion::from_json(const Faunus::json& j)
+{
     half_force_constant = 0.5 * j.at("k").get<double>() * 1.0_kJmol;
     cosine_equilibrium_angle = std::cos(j.at("aeq").get<double>() * 1.0_deg);
 }
 
-void GromosTorsion::to_json(Faunus::json& j) const {
+void GromosTorsion::to_json(Faunus::json& j) const
+{
     j = {{"k", 2.0 * half_force_constant / 1.0_kJmol}, {"aeq", std::acos(cosine_equilibrium_angle) / 1.0_deg}};
 }
 
 GromosTorsion::GromosTorsion(double force_constant, double cosine_equilibrium_angle, const std::vector<int>& indices)
-    : TorsionData(indices), half_force_constant(0.5 * force_constant),
-      cosine_equilibrium_angle(cosine_equilibrium_angle) {}
+    : TorsionData(indices)
+    , half_force_constant(0.5 * force_constant)
+    , cosine_equilibrium_angle(cosine_equilibrium_angle)
+{
+}
 
 BondData::Variant GromosTorsion::type() const { return BondData::Variant::GROMOS_TORSION; }
 
 std::shared_ptr<BondData> GromosTorsion::clone() const { return std::make_shared<GromosTorsion>(*this); }
 
-void GromosTorsion::setEnergyFunction(const ParticleVector& particles) {
+void GromosTorsion::setEnergyFunction(const ParticleVector& particles)
+{
     energyFunc = [&](Geometry::DistanceFunction calculateDistance) {
         auto vec1 = calculateDistance(particles[indices[0]].pos, particles[indices[1]].pos).normalized();
         auto vec2 = calculateDistance(particles[indices[2]].pos, particles[indices[1]].pos).normalized();
@@ -315,23 +358,31 @@ int PeriodicDihedral::numindex() const { return 4; }
 
 std::shared_ptr<BondData> PeriodicDihedral::clone() const { return std::make_shared<PeriodicDihedral>(*this); }
 
-void PeriodicDihedral::from_json(const Faunus::json& j) {
+void PeriodicDihedral::from_json(const Faunus::json& j)
+{
     force_constant = j.at("k").get<double>() * 1.0_kJmol;
     periodicity = j.at("n").get<double>();
     phase_angle = j.at("phi").get<double>() * 1.0_deg;
 }
 
-void PeriodicDihedral::to_json(Faunus::json& j) const {
+void PeriodicDihedral::to_json(Faunus::json& j) const
+{
     j = {{"k", force_constant / 1.0_kJmol}, {"n", periodicity}, {"phi", phase_angle / 1.0_deg}};
 }
 
 PeriodicDihedral::PeriodicDihedral(double force_constant, double phase_angle, double periodicity,
                                    const std::vector<int>& indices)
-    : BondData(indices), force_constant(force_constant), phase_angle(phase_angle), periodicity(periodicity) {}
+    : BondData(indices)
+    , force_constant(force_constant)
+    , phase_angle(phase_angle)
+    , periodicity(periodicity)
+{
+}
 
 BondData::Variant PeriodicDihedral::type() const { return BondData::Variant::PERIODIC_DIHEDRAL; }
 
-void PeriodicDihedral::setEnergyFunction(const ParticleVector& particles) {
+void PeriodicDihedral::setEnergyFunction(const ParticleVector& particles)
+{
     // Torsion on the form a(0) - b(1) - c(2) - d(3)
     energyFunc = [&](Geometry::DistanceFunction distance) {
         auto ab = distance(particles[indices[1]].pos, particles[indices[0]].pos); // a->b
@@ -383,12 +434,14 @@ void PeriodicDihedral::setEnergyFunction(const ParticleVector& particles) {
     };
 }
 
-void HarmonicDihedral::from_json(const Faunus::json& j) {
+void HarmonicDihedral::from_json(const Faunus::json& j)
+{
     half_force_constant = j.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_rad, 2) / 2.0;
     equilibrium_dihedral = j.at("deq").get<double>() * 1.0_deg;
 }
 
-void HarmonicDihedral::to_json(Faunus::json& j) const {
+void HarmonicDihedral::to_json(Faunus::json& j) const
+{
     j = {{"k", 2 * half_force_constant / (1.0_kJmol / std::pow(1.0_rad, 2))}, {"deq", equilibrium_dihedral / 1.0_deg}};
     roundJSON(j, 6);
 }
@@ -396,13 +449,18 @@ void HarmonicDihedral::to_json(Faunus::json& j) const {
 int HarmonicDihedral::numindex() const { return 4; }
 
 HarmonicDihedral::HarmonicDihedral(double force_constant, double equilibrium_dihedral, const std::vector<int>& indices)
-    : BondData(indices), half_force_constant(force_constant / 2.0), equilibrium_dihedral(equilibrium_dihedral) {}
+    : BondData(indices)
+    , half_force_constant(force_constant / 2.0)
+    , equilibrium_dihedral(equilibrium_dihedral)
+{
+}
 
 BondData::Variant HarmonicDihedral::type() const { return BondData::Variant::HARMONIC_DIHEDRAL; }
 
 std::shared_ptr<BondData> HarmonicDihedral::clone() const { return std::make_shared<HarmonicDihedral>(*this); }
 
-void HarmonicDihedral::setEnergyFunction(const ParticleVector& particles) {
+void HarmonicDihedral::setEnergyFunction(const ParticleVector& particles)
+{
     // Torsion on the form a(0) - b(1) - c(2) - d(3)
     energyFunc = [&](Geometry::DistanceFunction distance) {
         auto ab = distance(particles[indices[1]].pos, particles[indices[0]].pos); // a->b
@@ -454,15 +512,22 @@ void HarmonicDihedral::setEnergyFunction(const ParticleVector& particles) {
     };
 }
 
-StretchData::StretchData(const std::vector<int>& indices) : BondData(indices) {}
+StretchData::StretchData(const std::vector<int>& indices)
+    : BondData(indices)
+{
+}
 int StretchData::numindex() const { return 2; }
 
-TorsionData::TorsionData(const std::vector<int>& indices) : BondData(indices) {}
+TorsionData::TorsionData(const std::vector<int>& indices)
+    : BondData(indices)
+{
+}
 int TorsionData::numindex() const { return 3; }
 
 TEST_SUITE_BEGIN("Bonds");
 
-TEST_CASE("[Faunus] BondData") {
+TEST_CASE("[Faunus] BondData")
+{
     using doctest::Approx;
 
     ParticleVector p_4a(2, Particle());
@@ -484,15 +549,18 @@ TEST_CASE("[Faunus] BondData") {
     typedef std::shared_ptr<BondData> BondDataPtr;
     BondDataPtr bond_ptr;
 
-    SUBCASE("HarmonicBond") {
-        SUBCASE("HarmonicBond Energy") {
+    SUBCASE("HarmonicBond")
+    {
+        SUBCASE("HarmonicBond Energy")
+        {
             HarmonicBond bond(100.0, 5.0, {0, 1});
             bond.setEnergyFunction(p_4a);
             CHECK_EQ(bond.energyFunc(distance_5a), Approx(0));
             CHECK_EQ(bond.energyFunc(distance_3a), Approx(200));
             CHECK_EQ(bond.energyFunc(distance), Approx(50));
         }
-        SUBCASE("HarmonicBond Force") {
+        SUBCASE("HarmonicBond Force")
+        {
             HarmonicBond bond(100.0, 4, {0, 1});
             bond.setEnergyFunction(p_4a);
             auto forces = bond.forceFunc(distance_3a);
@@ -502,14 +570,16 @@ TEST_CASE("[Faunus] BondData") {
             CHECK_EQ(forces[0].second.y(), Approx(-forces[1].second.y()));
             CHECK_EQ(forces[0].second.z(), Approx(0));
         }
-        SUBCASE("HarmonicBond JSON") {
+        SUBCASE("HarmonicBond JSON")
+        {
             json j = R"({"harmonic": {"index":[1,2], "k":10.0, "req":2.0}})"_json;
             bond_ptr = j;
             CHECK_EQ(json(bond_ptr), j);
             std::dynamic_pointer_cast<HarmonicBond>(bond_ptr)->setEnergyFunction(p_60deg_4a);
             CHECK_EQ(bond_ptr->energyFunc(distance), Approx(10.0_kJmol / 2 * 4));
         }
-        SUBCASE("HarmonicBond JSON Invalid") {
+        SUBCASE("HarmonicBond JSON Invalid")
+        {
             CHECK_NOTHROW((R"({"harmonic": {"index":[0,9], "k":0.5, "req":2.1}})"_json).get<BondDataPtr>());
             CHECK_THROWS((R"({"harmoNIC": {"index":[2,3], "k":0.5, "req":2.1}})"_json)
                              .get<BondDataPtr>()); // exact match required
@@ -520,15 +590,18 @@ TEST_CASE("[Faunus] BondData") {
         }
     }
 
-    SUBCASE("FENEBond") {
-        SUBCASE("FENEBond Energy") {
+    SUBCASE("FENEBond")
+    {
+        SUBCASE("FENEBond Energy")
+        {
             FENEBond bond(100.0, 5.0, {0, 1});
             bond.setEnergyFunction(p_4a);
             CHECK_EQ(bond.energyFunc(distance_5a), pc::infty);
             CHECK_EQ(bond.energyFunc(distance_3a), Approx(557.86));
             CHECK_EQ(bond.energyFunc(distance), Approx(1277.06));
         }
-        SUBCASE("FENEBond Force") {
+        SUBCASE("FENEBond Force")
+        {
             FENEBond bond(100.0, 5.0, {0, 1});
             bond.setEnergyFunction(p_4a);
             auto forces = bond.forceFunc(distance_3a);
@@ -542,7 +615,8 @@ TEST_CASE("[Faunus] BondData") {
             CHECK_EQ(forces[1].second.y(), Approx(468.75));
             CHECK_EQ(forces[1].second.z(), Approx(0.0));
         }
-        SUBCASE("FENEBond JSON") {
+        SUBCASE("FENEBond JSON")
+        {
             json j = R"({"fene": {"index":[1,2], "k":8, "rmax":6.0 }})"_json;
             bond_ptr = j;                      // json --> object
             json j_roundtrip = json(bond_ptr); // object --> json
@@ -551,7 +625,8 @@ TEST_CASE("[Faunus] BondData") {
             std::dynamic_pointer_cast<FENEBond>(bond_ptr)->setEnergyFunction(p_60deg_4a);
             CHECK_EQ(bond_ptr->energyFunc(distance), Approx(84.641_kJmol));
         }
-        SUBCASE("FENEBond JSON Invalid") {
+        SUBCASE("FENEBond JSON Invalid")
+        {
             CHECK_NOTHROW((R"({"fene": {"index":[0,9], "k":0.5, "rmax":2.1}})"_json).get<BondDataPtr>());
             CHECK_THROWS((R"({"FENE": {"index":[0,9], "k":0.5, "rmax":2.1}})"_json).get<BondDataPtr>());
             CHECK_THROWS((R"({"fene": {"index":[2,3,4], "k":1, "rmax":2.1}})"_json).get<BondDataPtr>());
@@ -560,15 +635,18 @@ TEST_CASE("[Faunus] BondData") {
         }
     }
 
-    SUBCASE("FENEWCABond") {
-        SUBCASE("FENEWCABond Energy") {
+    SUBCASE("FENEWCABond")
+    {
+        SUBCASE("FENEWCABond Energy")
+        {
             FENEWCABond bond(100.0, 5.0, 20.0, 3.2, {0, 1});
             bond.setEnergyFunction(p_4a);
             CHECK_EQ(bond.energyFunc(distance_5a), pc::infty);
             CHECK_EQ(bond.energyFunc(distance_3a), Approx(557.86 + 18.931));
             CHECK_EQ(bond.energyFunc(distance), Approx(1277.06));
         }
-        SUBCASE("FENEWCABond Force") {
+        SUBCASE("FENEWCABond Force")
+        {
             FENEWCABond bond(100, 5.0, 20.0, 3.2, {0, 1});
             bond.setEnergyFunction(p_4a);
             auto forces = bond.forceFunc(distance_3a);
@@ -582,7 +660,8 @@ TEST_CASE("[Faunus] BondData") {
             CHECK_EQ(forces[1].second.y(), Approx(10.1974323155));
             CHECK_EQ(forces[1].second.z(), Approx(0.0));
         }
-        SUBCASE("FENEWCABond JSON") {
+        SUBCASE("FENEWCABond JSON")
+        {
             json j = R"({"fene+wca": {"index":[1,2], "k":8, "rmax":6.0, "eps":3.5, "sigma":4.5}})"_json;
             bond_ptr = j;                      // json --> object
             json j_roundtrip = json(bond_ptr); // object --> json
@@ -591,7 +670,8 @@ TEST_CASE("[Faunus] BondData") {
             std::dynamic_pointer_cast<FENEWCABond>(bond_ptr)->setEnergyFunction(p_60deg_4a);
             CHECK_EQ(bond_ptr->energyFunc(distance), Approx(92.805_kJmol));
         }
-        SUBCASE("FENEWCABond JSON Invalid") {
+        SUBCASE("FENEWCABond JSON Invalid")
+        {
             CHECK_NOTHROW(
                 (R"({"fene+wca": {"index":[0,9], "k":1, "rmax":2.1, "eps":2.48, "sigma":2}})"_json).get<BondDataPtr>());
             CHECK_THROWS((R"({"fene+wca": {"index":[2,3,4], "k":1, "rmax":2.1, "eps":2.48, "sigma":2}})"_json)
@@ -604,13 +684,16 @@ TEST_CASE("[Faunus] BondData") {
         }
     }
 
-    SUBCASE("HarmonicTorsion") {
-        SUBCASE("HarmonicTorsion Energy") {
+    SUBCASE("HarmonicTorsion")
+    {
+        SUBCASE("HarmonicTorsion Energy")
+        {
             HarmonicTorsion bond(100.0, 45.0_deg, {0, 1, 2});
             bond.setEnergyFunction(p_60deg_4a);
             CHECK_EQ(bond.energyFunc(distance), Approx(100.0 / 2 * std::pow(15.0_deg, 2)));
         }
-        SUBCASE("HarmonicTorsion Force") {
+        SUBCASE("HarmonicTorsion Force")
+        {
             HarmonicTorsion bond(1, 45.0_deg, {0, 1, 2});
             bond.setEnergyFunction(p_90deg_4a);
             auto forces = bond.forceFunc(distance);
@@ -628,14 +711,16 @@ TEST_CASE("[Faunus] BondData") {
             CHECK_EQ(forces[2].second.y(), Approx(0.78539816));
             CHECK_EQ(forces[2].second.z(), Approx(0.0));
         }
-        SUBCASE("HarmonicTorsion JSON") {
+        SUBCASE("HarmonicTorsion JSON")
+        {
             json j = R"({"harmonic_torsion": {"index":[0,1,2], "k":0.5, "aeq":65}})"_json;
             bond_ptr = j;
             CHECK_EQ(json(bond_ptr), j);
             std::dynamic_pointer_cast<HarmonicTorsion>(bond_ptr)->setEnergyFunction(p_60deg_4a);
             CHECK_EQ(bond_ptr->energyFunc(distance), Approx(0.5_kJmol / 2 * std::pow(5.0_deg, 2)));
         }
-        SUBCASE("HarmonicTorsion JSON Invalid") {
+        SUBCASE("HarmonicTorsion JSON Invalid")
+        {
             CHECK_NOTHROW((R"({"harmonic_torsion": {"index":[0,1,9], "k":0.5, "aeq":30.5}})"_json).get<BondDataPtr>());
             CHECK_THROWS((R"({"harmonic_torsion": {"index":[2], "k":0.5, "aeq":30.5}})"_json).get<BondDataPtr>());
             CHECK_THROWS((R"({"harmonic_torsion": {"index":[0,1,2], "aeq":30.5}})"_json).get<BondDataPtr>());
@@ -643,31 +728,35 @@ TEST_CASE("[Faunus] BondData") {
         }
     }
 
-    SUBCASE("GromosTorsion") {
-        SUBCASE("GromosTorsion Energy") {
+    SUBCASE("GromosTorsion")
+    {
+        SUBCASE("GromosTorsion Energy")
+        {
             GromosTorsion bond(100.0, std::cos(45.0_deg), {0, 1, 2});
             bond.setEnergyFunction(p_60deg_4a);
             CHECK_EQ(bond.energyFunc(distance), Approx(100.0 / 2 * std::pow(cos(60.0_deg) - cos(45.0_deg), 2)));
         }
-        SUBCASE("GromosTorsion Force") {
+        SUBCASE("GromosTorsion Force")
+        {
             GromosTorsion bond(100.0, std::cos(45.0_deg), {0, 1, 2});
             bond.setEnergyFunction(p_90deg_4a);
             auto forces = bond.forceFunc(distance);
-                CHECK_EQ(forces.size(), 3);
-                CHECK_EQ(forces[0].first, 0);
-                CHECK_EQ(forces[1].first, 1);
-                CHECK_EQ(forces[2].first, 2);
-                CHECK_EQ(forces[0].second.x(), Approx(-70.7106781187));
-                CHECK_EQ(forces[0].second.y(), Approx(0.0));
-                CHECK_EQ(forces[0].second.z(), Approx(0.0));
-                CHECK_EQ(forces[1].second.x(), Approx(70.7106781187));
-                CHECK_EQ(forces[1].second.y(), Approx(70.7106781187));
-                CHECK_EQ(forces[1].second.z(), Approx(0.0));
-                CHECK_EQ(forces[2].second.x(), Approx(0.0));
-                CHECK_EQ(forces[2].second.y(), Approx(-70.7106781187));
-                CHECK_EQ(forces[2].second.z(), Approx(0.0));
+            CHECK_EQ(forces.size(), 3);
+            CHECK_EQ(forces[0].first, 0);
+            CHECK_EQ(forces[1].first, 1);
+            CHECK_EQ(forces[2].first, 2);
+            CHECK_EQ(forces[0].second.x(), Approx(-70.7106781187));
+            CHECK_EQ(forces[0].second.y(), Approx(0.0));
+            CHECK_EQ(forces[0].second.z(), Approx(0.0));
+            CHECK_EQ(forces[1].second.x(), Approx(70.7106781187));
+            CHECK_EQ(forces[1].second.y(), Approx(70.7106781187));
+            CHECK_EQ(forces[1].second.z(), Approx(0.0));
+            CHECK_EQ(forces[2].second.x(), Approx(0.0));
+            CHECK_EQ(forces[2].second.y(), Approx(-70.7106781187));
+            CHECK_EQ(forces[2].second.z(), Approx(0.0));
         }
-        SUBCASE("GromosTorsion JSON") {
+        SUBCASE("GromosTorsion JSON")
+        {
             json j = R"({"gromos_torsion": {"index":[0,1,2], "k":0.5, "aeq":65}})"_json;
             bond_ptr = j;                      // json --> object
             json j_roundtrip = json(bond_ptr); // object --> json
@@ -677,7 +766,8 @@ TEST_CASE("[Faunus] BondData") {
             CHECK_EQ(bond_ptr->energyFunc(distance),
                      Approx(0.5_kJmol / 2 * std::pow(cos(60.0_deg) - cos(65.0_deg), 2)));
         }
-        SUBCASE("GromosTorsion JSON Invalid") {
+        SUBCASE("GromosTorsion JSON Invalid")
+        {
             CHECK_NOTHROW((R"({"gromos_torsion": {"index":[0,1,9], "k":0.5, "aeq":30.5}})"_json).get<BondDataPtr>());
             CHECK_THROWS((R"({"gromos_torsion": {"index":[2], "k":0.5, "aeq":30.5}})"_json).get<BondDataPtr>());
             CHECK_THROWS((R"({"gromos_torsion": {"index":[0,1,2], "aeq":30.5}})"_json).get<BondDataPtr>());
@@ -685,7 +775,8 @@ TEST_CASE("[Faunus] BondData") {
         }
     }
 
-    SUBCASE("PeriodicDihedral") {
+    SUBCASE("PeriodicDihedral")
+    {
         ParticleVector p_45deg(4);
         p_45deg[1].pos = {0.0, 0.0, 0.0};
         p_45deg[2].pos = {0.0, 0.0, 2.0};
@@ -699,7 +790,8 @@ TEST_CASE("[Faunus] BondData") {
         ParticleVector p_120deg(p_60deg);
         p_120deg[3].pos[0] *= -1.0;
 
-        SUBCASE("PeriodicDihedral Energy") {
+        SUBCASE("PeriodicDihedral Energy")
+        {
             PeriodicDihedral bond(100.0, 0.0_deg, 3, {0, 1, 2, 3});
             bond.setEnergyFunction(p_120deg);
             CHECK_EQ(bond.energyFunc(distance), Approx(200.0));
@@ -708,7 +800,8 @@ TEST_CASE("[Faunus] BondData") {
             bond.setEnergyFunction(p_90deg);
             CHECK_EQ(bond.energyFunc(distance), Approx(100.0));
         }
-        SUBCASE("PeriodicDihedral Forces") {
+        SUBCASE("PeriodicDihedral Forces")
+        {
             PeriodicDihedral bond(100.0, 0.0_deg, 3, {0, 1, 2, 3});
             bond.setEnergyFunction(p_90deg);
             auto forces = bond.forceFunc(distance);
@@ -730,14 +823,16 @@ TEST_CASE("[Faunus] BondData") {
             CHECK_EQ(forces[3].second.y(), Approx(0));
             CHECK_EQ(forces[3].second.z(), Approx(0));
         }
-        SUBCASE("PeriodicDihedral JSON") {
+        SUBCASE("PeriodicDihedral JSON")
+        {
             json j = R"({"periodic_dihedral": {"index":[0,1,2,3], "k":10, "phi":0.0, "n": 3}})"_json;
             bond_ptr = j;
             CHECK_EQ(json(bond_ptr), j);
             std::dynamic_pointer_cast<PeriodicDihedral>(bond_ptr)->setEnergyFunction(p_90deg);
             CHECK_EQ(bond_ptr->energyFunc(distance), Approx(10.0_kJmol));
         }
-        SUBCASE("PeriodicDihedral JSON Invalid") {
+        SUBCASE("PeriodicDihedral JSON Invalid")
+        {
             CHECK_NOTHROW(
                 (R"({"periodic_dihedral": {"index":[0,1,2,9], "k":0.5, "phi":2.1, "n": 2}})"_json).get<BondDataPtr>());
             CHECK_THROWS(
@@ -748,7 +843,8 @@ TEST_CASE("[Faunus] BondData") {
         }
     }
 
-        SUBCASE("HarmonicDihedral") {
+    SUBCASE("HarmonicDihedral")
+    {
         ParticleVector p_45deg(4);
         p_45deg[1].pos = {0.0, 0.0, 0.0};
         p_45deg[2].pos = {0.0, 0.0, 2.0};
@@ -762,55 +858,58 @@ TEST_CASE("[Faunus] BondData") {
         ParticleVector p_120deg(p_60deg);
         p_120deg[3].pos[0] *= -1.0;
 
-            SUBCASE("HarmonicDihedral Energy") {
+        SUBCASE("HarmonicDihedral Energy")
+        {
             HarmonicDihedral bond(100.0, 90.0_deg, {0, 1, 2, 3});
             bond.setEnergyFunction(p_120deg);
-                CHECK_EQ(bond.energyFunc(distance), Approx(13.7077838904));
+            CHECK_EQ(bond.energyFunc(distance), Approx(13.7077838904));
             bond.setEnergyFunction(p_60deg);
-                CHECK_EQ(bond.energyFunc(distance), Approx(13.7077838904));
+            CHECK_EQ(bond.energyFunc(distance), Approx(13.7077838904));
             bond.setEnergyFunction(p_90deg);
-                CHECK_EQ(bond.energyFunc(distance), Approx(0.0));
+            CHECK_EQ(bond.energyFunc(distance), Approx(0.0));
         }
-            SUBCASE("HarmonicDihedral Forces") {
+        SUBCASE("HarmonicDihedral Forces")
+        {
             HarmonicDihedral bond(100.0, 90.0_deg, {0, 1, 2, 3});
             bond.setEnergyFunction(p_120deg);
             auto forces = bond.forceFunc(distance);
-                CHECK_EQ(forces.size(), 4);
-                CHECK_EQ(forces[0].first, 0);
-                CHECK_EQ(forces[1].first, 1);
-                CHECK_EQ(forces[2].first, 2);
-                CHECK_EQ(forces[3].first, 3);
-                CHECK_EQ(forces[0].second.x(), Approx(0));
-                CHECK_EQ(forces[0].second.y(), Approx(10.471975512));
-                CHECK_EQ(forces[0].second.z(), Approx(0));
-                CHECK_EQ(forces[1].second.x(), Approx(0));
-                CHECK_EQ(forces[1].second.y(), Approx(-10.471975512));
-                CHECK_EQ(forces[1].second.z(), Approx(0));
-                CHECK_EQ(forces[2].second.x(), Approx(-2.2672492053));
-                CHECK_EQ(forces[2].second.y(), Approx(-1.308996939));
-                CHECK_EQ(forces[2].second.z(), Approx(0));
-                CHECK_EQ(forces[3].second.x(), Approx(2.2672492053));
-                CHECK_EQ(forces[3].second.y(), Approx(1.308996939));
-                CHECK_EQ(forces[3].second.z(), Approx(0));
+            CHECK_EQ(forces.size(), 4);
+            CHECK_EQ(forces[0].first, 0);
+            CHECK_EQ(forces[1].first, 1);
+            CHECK_EQ(forces[2].first, 2);
+            CHECK_EQ(forces[3].first, 3);
+            CHECK_EQ(forces[0].second.x(), Approx(0));
+            CHECK_EQ(forces[0].second.y(), Approx(10.471975512));
+            CHECK_EQ(forces[0].second.z(), Approx(0));
+            CHECK_EQ(forces[1].second.x(), Approx(0));
+            CHECK_EQ(forces[1].second.y(), Approx(-10.471975512));
+            CHECK_EQ(forces[1].second.z(), Approx(0));
+            CHECK_EQ(forces[2].second.x(), Approx(-2.2672492053));
+            CHECK_EQ(forces[2].second.y(), Approx(-1.308996939));
+            CHECK_EQ(forces[2].second.z(), Approx(0));
+            CHECK_EQ(forces[3].second.x(), Approx(2.2672492053));
+            CHECK_EQ(forces[3].second.y(), Approx(1.308996939));
+            CHECK_EQ(forces[3].second.z(), Approx(0));
         }
-            SUBCASE("HarmonicDihedral JSON") {
+        SUBCASE("HarmonicDihedral JSON")
+        {
             json j = R"({"harmonic_dihedral": {"index":[0,1,2,3], "k":100.0, "deq":90}})"_json;
             bond_ptr = j;
-                CHECK_EQ(json(bond_ptr), j);
+            CHECK_EQ(json(bond_ptr), j);
             std::dynamic_pointer_cast<HarmonicDihedral>(bond_ptr)->setEnergyFunction(p_120deg);
-                CHECK_EQ(bond_ptr->energyFunc(distance), Approx(100.0_kJmol / 2.0 * std::pow(30.0_deg, 2)));
+            CHECK_EQ(bond_ptr->energyFunc(distance), Approx(100.0_kJmol / 2.0 * std::pow(30.0_deg, 2)));
         }
-            SUBCASE("HarmonicDihedral JSON Invalid") {
-                CHECK_NOTHROW(
-                (R"({"harmonic_dihedral": {"index":[0,1,2,3], "k":0.5, "deq":90}})"_json).get<BondDataPtr>());
-                CHECK_THROWS(
-                (R"({"harmonic_dihedral": {"index":[0,1,2], "k":0.5, "deq":90}})"_json).get<BondDataPtr>());
-                CHECK_THROWS((R"({"harmonic_dihedral": {"index":[0,1,2,3], "deq":90}})"_json).get<BondDataPtr>());
-                CHECK_THROWS((R"({"harmonic_dihedral": {"index":[0,1,2,3], "k":0.5}})"_json).get<BondDataPtr>());
+        SUBCASE("HarmonicDihedral JSON Invalid")
+        {
+            CHECK_NOTHROW((R"({"harmonic_dihedral": {"index":[0,1,2,3], "k":0.5, "deq":90}})"_json).get<BondDataPtr>());
+            CHECK_THROWS((R"({"harmonic_dihedral": {"index":[0,1,2], "k":0.5, "deq":90}})"_json).get<BondDataPtr>());
+            CHECK_THROWS((R"({"harmonic_dihedral": {"index":[0,1,2,3], "deq":90}})"_json).get<BondDataPtr>());
+            CHECK_THROWS((R"({"harmonic_dihedral": {"index":[0,1,2,3], "k":0.5}})"_json).get<BondDataPtr>());
         }
     }
 
-    SUBCASE("Find") {
+    SUBCASE("Find")
+    {
         BasePointerVector<BondData> bonds;
         bonds.emplace_back<FENEBond>(1.0, 2.1, std::vector<int>{2, 3});
         bonds.emplace_back<HarmonicBond>(1.0, 2.1, std::vector<int>{2, 3});

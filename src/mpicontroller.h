@@ -101,7 +101,8 @@ std::unique_ptr<Partner> createMPIPartnerPolicy(PartnerPolicy policy);
  * This returns a pair with the first and last
  * item for the current rank.
  */
-template <class T = int> std::pair<T, T> splitEven(const mpl::communicator& communicator, T N) {
+template <class T = int> std::pair<T, T> splitEven(const mpl::communicator& communicator, T N)
+{
     static_assert(std::is_integral_v<T>());
     auto M = static_cast<T>(communicator.size());
     auto i = static_cast<T>(communicator.rank());
@@ -192,7 +193,8 @@ class ExchangeParticles {
  * @details Slave processes send histograms to the master. The master computes the
  * average and sends it back to the slaves. Ttable can be Table, Table2D or Table3D in auxiliary.h.
  */
-template <class Ttable> void avgTables(const mpl::communicator& communicator, Ttable& table, int& size) {
+template <class Ttable> void avgTables(const mpl::communicator& communicator, Ttable& table, int& size)
+{
     std::vector<double> send_buffer; // data to be sent
     std::vector<double> recv_buffer; // buffer for recieving data
     if (!mpi.isMaster()) {
@@ -203,7 +205,8 @@ template <class Ttable> void avgTables(const mpl::communicator& communicator, Tt
         communicator.sendrecv(send_buffer.data(), layout, mpi.master_rank, tag, recv_buffer.data(), layout,
                               mpi.master_rank, tag);
         table.buf2hist(recv_buffer);
-    } else {
+    }
+    else {
         send_buffer = table.hist2buf(size);
         recv_buffer.resize(size);
         auto slaves = ranges::cpp20::views::iota(0, communicator.size()) |

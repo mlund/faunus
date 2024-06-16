@@ -11,7 +11,8 @@ namespace Faunus {
  * - https://martin.ankerl.com/2012/01/25/optimized-approximative-pow-in-c-and-cpp
  * - https://martin.ankerl.com/2007/10/04/optimized-pow-approximation-for-java-and-c-c/
  */
-template <class T> inline constexpr T powi(T x, unsigned int n) {
+template <class T> inline constexpr T powi(T x, unsigned int n)
+{
 #if defined(__GNUG__)
     return __builtin_powi(x, n);
 #else
@@ -19,7 +20,8 @@ template <class T> inline constexpr T powi(T x, unsigned int n) {
 #endif
 }
 
-TEST_CASE("[Faunus] powi") {
+TEST_CASE("[Faunus] powi")
+{
     using doctest::Approx;
     double x = 3.1;
     CHECK_EQ(powi(x, 0), Approx(1));

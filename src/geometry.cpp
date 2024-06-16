@@ -17,24 +17,29 @@ GeometryBase::~GeometryBase() = default;
 /**
  * @return Boolean matrix with true for each periodic direction
  */
-Eigen::Matrix<bool, 3, 1> BoundaryCondition::isPeriodic() const {
-    return direction.cwiseEqual(
-        BoundaryXYZ(Boundary::PERIODIC, Boundary::PERIODIC, Boundary::PERIODIC));
+Eigen::Matrix<bool, 3, 1> BoundaryCondition::isPeriodic() const
+{
+    return direction.cwiseEqual(BoundaryXYZ(Boundary::PERIODIC, Boundary::PERIODIC, Boundary::PERIODIC));
 }
 
 GeometryImplementation::~GeometryImplementation() = default;
 
-Cuboid::Cuboid(const Point &side_length) {
+Cuboid::Cuboid(const Point& side_length)
+{
     boundary_conditions =
         BoundaryCondition(Coordinates::ORTHOGONAL, {Boundary::PERIODIC, Boundary::PERIODIC, Boundary::PERIODIC});
     setLength(side_length);
 }
 
-Cuboid::Cuboid() : Cuboid(Point::Zero()) {}
+Cuboid::Cuboid()
+    : Cuboid(Point::Zero())
+{
+}
 
 Point Cuboid::getLength() const { return box; }
 
-void Cuboid::setLength(const Point &len) {
+void Cuboid::setLength(const Point& len)
+{
     box = len;
     box_half = 0.5 * box;
     box_inv = box.cwiseInverse();
@@ -42,7 +47,8 @@ void Cuboid::setLength(const Point &len) {
 
 double Cuboid::getVolume(int) const { return box.x() * box.y() * box.z(); }
 
-Point Cuboid::setVolume(double volume, const VolumeMethod method) {
+Point Cuboid::setVolume(double volume, const VolumeMethod method)
+{
     const double old_volume = getVolume();
     double alpha;
     Point new_box;
@@ -75,7 +81,8 @@ Point Cuboid::setVolume(double volume, const VolumeMethod method) {
     return box_scaling; // this will scale any point to new volume
 }
 
-void Cuboid::boundary(Point &a) const {
+void Cuboid::boundary(Point& a) const
+{
     if (boundary_conditions.direction.x() == Boundary::PERIODIC) {
         if (std::fabs(a.x()) > box_half.x())
             a.x() -= box.x() * anint(a.x() * box_inv.x());
@@ -90,7 +97,8 @@ void Cuboid::boundary(Point &a) const {
     }
 }
 
-Point Cuboid::vdist(const Point &a, const Point &b) const {
+Point Cuboid::vdist(const Point& a, const Point& b) const
+{
     Point distance(a - b);
     if (boundary_conditions.direction.x() == Boundary::PERIODIC) {
         if (distance.x() > box_half.x())
@@ -113,23 +121,27 @@ Point Cuboid::vdist(const Point &a, const Point &b) const {
     return distance;
 }
 
-void Cuboid::randompos(Point &m, Random &rand) const {
+void Cuboid::randompos(Point& m, Random& rand) const
+{
     m.x() = (rand() - 0.5) * box.x();
     m.y() = (rand() - 0.5) * box.y();
     m.z() = (rand() - 0.5) * box.z();
 }
 
-bool Cuboid::collision(const Point &a) const {
+bool Cuboid::collision(const Point& a) const
+{
     return (std::fabs(a.x()) > box_half.x() || std::fabs(a.y()) > box_half.y() || std::fabs(a.z()) > box_half.z());
 }
 
-void Cuboid::from_json(const json &j) {
+void Cuboid::from_json(const json& j)
+{
     box.setZero();
     if (const auto& length_ = j.at("length"); length_.is_number()) {
         auto l = length_.get<double>();
         setLength({l, l, l});
         return;
-    } else if (length_.is_array()) {
+    }
+    else if (length_.is_array()) {
         if (length_.size() == 3) {
             setLength(length_.get<Point>());
             return;
@@ -138,35 +150,42 @@ void Cuboid::from_json(const json &j) {
     throw ConfigurationError("sidelength syntax error");
 }
 
-void Cuboid::to_json(json &j) const { j = {{"length", box}}; }
+void Cuboid::to_json(json& j) const { j = {{"length", box}}; }
 
-std::unique_ptr<GeometryImplementation> Cuboid::clone() const {
-    return std::make_unique<Cuboid>(*this);
-}
+std::unique_ptr<GeometryImplementation> Cuboid::clone() const { return std::make_unique<Cuboid>(*this); }
 
 // =============== Slit ===============
 
-Slit::Slit(const Point &p) : Tbase(p) {
+Slit::Slit(const Point& p)
+    : Tbase(p)
+{
     boundary_conditions =
         BoundaryCondition(Coordinates::ORTHOGONAL, {Boundary::PERIODIC, Boundary::PERIODIC, Boundary::FIXED});
 }
 
-Slit::Slit(double x, double y, double z) : Slit(Point(x, y, z)) {}
-Slit::Slit(double x) : Slit(x, x, x) {}
-std::unique_ptr<GeometryImplementation> Slit::clone() const {
-    return std::make_unique<Slit>(*this);
+Slit::Slit(double x, double y, double z)
+    : Slit(Point(x, y, z))
+{
 }
+Slit::Slit(double x)
+    : Slit(x, x, x)
+{
+}
+std::unique_ptr<GeometryImplementation> Slit::clone() const { return std::make_unique<Slit>(*this); }
 
 // =============== Sphere ===============
 
-Sphere::Sphere(double radius) : radius(radius) {
+Sphere::Sphere(double radius)
+    : radius(radius)
+{
     boundary_conditions =
         BoundaryCondition(Coordinates::ORTHOGONAL, {Boundary::FIXED, Boundary::FIXED, Boundary::FIXED});
 }
 
 Point Sphere::getLength() const { return {2.0 * radius, 2.0 * radius, 2.0 * radius}; }
 
-double Sphere::getVolume(int dim) const {
+double Sphere::getVolume(int dim) const
+{
     double result;
     switch (dim) {
     case 3:
@@ -184,30 +203,34 @@ double Sphere::getVolume(int dim) const {
     return result;
 }
 
-Point Sphere::setVolume(double volume, const VolumeMethod method) {
+Point Sphere::setVolume(double volume, const VolumeMethod method)
+{
     const double old_radius = radius;
     Point box_scaling;
     if (method == VolumeMethod::ISOTROPIC) {
         radius = std::cbrt(volume / (4.0 / 3.0 * pc::pi));
         assert(std::fabs(getVolume() - volume) < 1e-6 && "error setting sphere volume");
-    } else {
+    }
+    else {
         throw std::invalid_argument("unsupported volume scaling method for the spherical geometry");
     }
     box_scaling.setConstant(radius / old_radius);
     return box_scaling;
 }
 
-void Sphere::boundary(Point &) const {} // no PBC
+void Sphere::boundary(Point&) const {} // no PBC
 
-bool Sphere::collision(const Point &point) const { return point.squaredNorm() > radius * radius; }
+bool Sphere::collision(const Point& point) const { return point.squaredNorm() > radius * radius; }
 
-Point Sphere::vdist(const Point &a, const Point &b) const {
+Point Sphere::vdist(const Point& a, const Point& b) const
+{
     // no pbc; shall we check points coordinates?
     Point distance(a - b);
     return distance;
 }
 
-void Sphere::randompos(Point &m, Random &rand) const {
+void Sphere::randompos(Point& m, Random& rand) const
+{
     double r2 = radius * radius, d = 2 * radius;
     do {
         m.x() = (rand() - 0.5) * d;
@@ -216,22 +239,23 @@ void Sphere::randompos(Point &m, Random &rand) const {
     } while (m.squaredNorm() > r2);
 }
 
-void Sphere::from_json(const json &j) { radius = j.at("radius").get<double>(); }
+void Sphere::from_json(const json& j) { radius = j.at("radius").get<double>(); }
 
-void Sphere::to_json(json &j) const { j = {{"radius", radius}}; }
+void Sphere::to_json(json& j) const { j = {{"radius", radius}}; }
 
 double Sphere::getRadius() const { return radius; }
-std::unique_ptr<GeometryImplementation> Sphere::clone() const {
-    return std::make_unique<Sphere>(*this);
-}
+std::unique_ptr<GeometryImplementation> Sphere::clone() const { return std::make_unique<Sphere>(*this); }
 
 // =============== Hypersphere 2D ===============
 
-Hypersphere2d::Hypersphere2d(double radius) : Sphere(radius) {
+Hypersphere2d::Hypersphere2d(double radius)
+    : Sphere(radius)
+{
     boundary_conditions = BoundaryCondition(Coordinates::NON3D);
 }
 
-Point Hypersphere2d::vdist(const Point &a, const Point &b) const {
+Point Hypersphere2d::vdist(const Point& a, const Point& b) const
+{
     // ugly but works, needs fixing though...
     Point distance3d(a - b);
     double angle = std::acos(a.dot(b) / (radius * radius));
@@ -239,18 +263,18 @@ Point Hypersphere2d::vdist(const Point &a, const Point &b) const {
     return distance3d / distance3d.norm() * distance;
 }
 
-void Hypersphere2d::randompos(Point &m, Random &rand) const {
+void Hypersphere2d::randompos(Point& m, Random& rand) const
+{
     Sphere::randompos(m, rand);
     m = m / m.norm() * radius;
 }
 
-bool Hypersphere2d::collision(const Point &a) const {
+bool Hypersphere2d::collision(const Point& a) const
+{
     bool collision = std::fabs(a.norm() - radius) > 1e-6;
     return collision;
 }
-std::unique_ptr<GeometryImplementation> Hypersphere2d::clone() const {
-    return std::make_unique<Hypersphere2d>(*this);
-}
+std::unique_ptr<GeometryImplementation> Hypersphere2d::clone() const { return std::make_unique<Hypersphere2d>(*this); }
 
 // =============== Hexagonal Prism ===============
 
@@ -260,7 +284,8 @@ const Eigen::Matrix3d HexagonalPrism::rhombic2cartesian =
 
 const Eigen::Matrix3d HexagonalPrism::cartesian2rhombic = rhombic2cartesian.inverse();
 
-HexagonalPrism::HexagonalPrism(double side, double height) {
+HexagonalPrism::HexagonalPrism(double side, double height)
+{
     // the current implementation is hardcoded as bellow and ignores other periodic_directions settings
     boundary_conditions =
         BoundaryCondition(Coordinates::ORTHOHEXAGONAL, {Boundary::PERIODIC, Boundary::PERIODIC, Boundary::FIXED});
@@ -269,13 +294,15 @@ HexagonalPrism::HexagonalPrism(double side, double height) {
 
 Point HexagonalPrism::getLength() const { return box; }
 
-double HexagonalPrism::getVolume(int) const {
+double HexagonalPrism::getVolume(int) const
+{
     return 3.0 / 4.0 * box.x() * box.y() * box.z(); // 3 * inner_radius * outer_radius * height
 }
 
 void HexagonalPrism::set_box(double side, double height) { box = {std::sqrt(3.0) * side, 2.0 * side, height}; }
 
-Point HexagonalPrism::setVolume(double volume, const VolumeMethod method) {
+Point HexagonalPrism::setVolume(double volume, const VolumeMethod method)
+{
     const double old_volume = getVolume();
     double alpha;
     Point box_scaling;
@@ -307,13 +334,15 @@ Point HexagonalPrism::setVolume(double volume, const VolumeMethod method) {
     return box_scaling;
 }
 
-Point HexagonalPrism::vdist(const Point &a, const Point &b) const {
+Point HexagonalPrism::vdist(const Point& a, const Point& b) const
+{
     Point distance(a - b);
     boundary(distance);
     return distance;
 }
 
-bool HexagonalPrism::collision(const Point &a) const {
+bool HexagonalPrism::collision(const Point& a) const
+{
     const double height = box.z();
     const double outer_radius = 0.5 * box.y();
 
@@ -325,7 +354,8 @@ bool HexagonalPrism::collision(const Point &a) const {
     return collision;
 }
 
-void HexagonalPrism::boundary(Point &a) const {
+void HexagonalPrism::boundary(Point& a) const
+{
     // TODO optimise and add documentation
     const double sqrtThreeByTwo = sqrt(3.0) / 2.0;
     const Point unitvX = {1.0, 0.0, 0.0};
@@ -354,7 +384,8 @@ void HexagonalPrism::boundary(Point &a) const {
         a.z() -= box.z() * anint(a.z() / box.z());
 }
 
-void HexagonalPrism::randompos(Point &m, Random &rand) const {
+void HexagonalPrism::randompos(Point& m, Random& rand) const
+{
     // Generating random points in hexagonal-prism coordinates is not feasible as the space coverage
     // will not be homogeneous back in the cartesian coordinates.
     m.z() = (rand() - 0.5) * box.z();
@@ -365,26 +396,31 @@ void HexagonalPrism::randompos(Point &m, Random &rand) const {
     } while (collision(m));
 }
 
-void HexagonalPrism::from_json(const json &j) {
+void HexagonalPrism::from_json(const json& j)
+{
     auto radius = j.at("radius").get<double>(); // inner radius
     auto height = j.at("length").get<double>();
     auto edge = 2.0 / std::sqrt(3.0) * radius;
     set_box(edge, height);
 }
 
-void HexagonalPrism::to_json(json &j) const { j = {{"radius", 0.5 * box.x()}, {"length", box.z()}}; }
+void HexagonalPrism::to_json(json& j) const { j = {{"radius", 0.5 * box.x()}, {"length", box.z()}}; }
 
 double HexagonalPrism::innerRadius() const { return 0.5 * box.x(); }
 double HexagonalPrism::outerRadius() const { return 0.5 * box.y(); }
 double HexagonalPrism::height() const { return box.z(); }
 
-std::unique_ptr<GeometryImplementation> HexagonalPrism::clone() const {
+std::unique_ptr<GeometryImplementation> HexagonalPrism::clone() const
+{
     return std::make_unique<HexagonalPrism>(*this);
 }
 
 // =============== Cylinder ===============
 
-Cylinder::Cylinder(double radius, double height) : radius(radius), height(height) {
+Cylinder::Cylinder(double radius, double height)
+    : radius(radius)
+    , height(height)
+{
     boundary_conditions =
         BoundaryCondition(Coordinates::ORTHOGONAL, {Boundary::FIXED, Boundary::FIXED, Boundary::PERIODIC});
 }
@@ -393,7 +429,8 @@ Point Cylinder::getLength() const { return {2.0 * radius, 2.0 * radius, height};
 
 double Cylinder::getVolume(int) const { return pc::pi * radius * radius * height; }
 
-Point Cylinder::setVolume(double volume, const VolumeMethod method) {
+Point Cylinder::setVolume(double volume, const VolumeMethod method)
+{
     const double old_volume = getVolume();
     double alpha;
     Point box_scaling;
@@ -430,17 +467,20 @@ Point Cylinder::setVolume(double volume, const VolumeMethod method) {
     return box_scaling;
 }
 
-void Cylinder::boundary(Point &a) const {
+void Cylinder::boundary(Point& a) const
+{
     // z-pbc
     if (std::fabs(a.z()) > 0.5 * height)
         a.z() -= height * anint(a.z() / height);
 }
 
-bool Cylinder::collision(const Point &a) const {
+bool Cylinder::collision(const Point& a) const
+{
     return std::fabs(a.z()) > 0.5 * height || a.x() * a.x() + a.y() * a.y() > radius * radius;
 }
 
-Point Cylinder::vdist(const Point &a, const Point &b) const {
+Point Cylinder::vdist(const Point& a, const Point& b) const
+{
     Point distance(a - b);
     if (distance.z() > 0.5 * height)
         distance.z() -= height;
@@ -449,7 +489,8 @@ Point Cylinder::vdist(const Point &a, const Point &b) const {
     return distance;
 }
 
-void Cylinder::randompos(Point &m, Random &rand) const {
+void Cylinder::randompos(Point& m, Random& rand) const
+{
     double r2 = radius * radius, d = 2.0 * radius;
     m.z() = (rand() - 0.5) * height;
     do {
@@ -459,40 +500,44 @@ void Cylinder::randompos(Point &m, Random &rand) const {
     } while (m.x() * m.x() + m.y() * m.y() > r2);
 }
 
-void Cylinder::from_json(const json &j) {
+void Cylinder::from_json(const json& j)
+{
     radius = j.at("radius").get<double>();
     height = j.at("length").get<double>();
 }
 
-void Cylinder::to_json(json &j) const { j = {{"radius", radius}, {"length", height}}; }
+void Cylinder::to_json(json& j) const { j = {{"radius", radius}, {"length", height}}; }
 
-std::unique_ptr<GeometryImplementation> Cylinder::clone() const {
-    return std::make_unique<Cylinder>(*this);
-}
+std::unique_ptr<GeometryImplementation> Cylinder::clone() const { return std::make_unique<Cylinder>(*this); }
 
 // =============== Truncated Octahedron ===============
 
-TruncatedOctahedron::TruncatedOctahedron(double side) : side(side) {
+TruncatedOctahedron::TruncatedOctahedron(double side)
+    : side(side)
+{
     // the current implementation is hardcoded as bellow and ignores other periodic_directions settings
     boundary_conditions =
         BoundaryCondition(Coordinates::TRUNC_OCTAHEDRAL, {Boundary::PERIODIC, Boundary::PERIODIC, Boundary::PERIODIC});
 }
 
-Point TruncatedOctahedron::getLength() const {
+Point TruncatedOctahedron::getLength() const
+{
     // todo check orientation in xyz
     return Point::Constant(2.0 * std::sqrt(2.0) * side); // distance between opposite square faces
 }
 
 double TruncatedOctahedron::getVolume(int) const { return std::sqrt(128.0) * side * side * side; }
 
-Point TruncatedOctahedron::setVolume(double volume, const VolumeMethod method) {
+Point TruncatedOctahedron::setVolume(double volume, const VolumeMethod method)
+{
     const double old_side = side;
     Point box_scaling;
 
     if (method == VolumeMethod::ISOTROPIC) {
         side = std::cbrt(volume / std::sqrt(128.0));
         assert(std::fabs(getVolume() - volume) < 1e-6 && "error setting sphere volume");
-    } else {
+    }
+    else {
         throw std::invalid_argument("unsupported volume scaling method for the truncated-octahedral geometry");
     }
     box_scaling.setConstant(side / old_side);
@@ -500,13 +545,15 @@ Point TruncatedOctahedron::setVolume(double volume, const VolumeMethod method) {
     return box_scaling;
 }
 
-Point TruncatedOctahedron::vdist(const Point &a, const Point &b) const {
+Point TruncatedOctahedron::vdist(const Point& a, const Point& b) const
+{
     Point distance(a - b);
     boundary(distance);
     return distance;
 }
 
-bool TruncatedOctahedron::collision(const Point &a) const {
+bool TruncatedOctahedron::collision(const Point& a) const
+{
     const double sqrtThreeI = 1.0 / std::sqrt(3.0);
     const double origin_to_square_face = std::sqrt(2.0) * side;
     const double origin_to_hexagonal_face = std::sqrt(1.5) * side;
@@ -529,7 +576,8 @@ bool TruncatedOctahedron::collision(const Point &a) const {
     return false;
 }
 
-void TruncatedOctahedron::boundary(Point &a) const {
+void TruncatedOctahedron::boundary(Point& a) const
+{
     const double sqrtThreeI = 1.0 / std::sqrt(3.0);
     const double square_face_distance = std::sqrt(8.0) * side;
     const double hexagonal_face_distance = std::sqrt(6.0) * side;
@@ -574,7 +622,8 @@ void TruncatedOctahedron::boundary(Point &a) const {
         a.z() -= square_face_distance * anint(a.z() / square_face_distance);
 }
 
-void TruncatedOctahedron::randompos(Point &pos, Random &rand) const {
+void TruncatedOctahedron::randompos(Point& pos, Random& rand) const
+{
     const double d = std::sqrt(10.0) * side; // use circumdiameter
     const double r2 = d * d / 4.0;
     do {
@@ -586,11 +635,12 @@ void TruncatedOctahedron::randompos(Point &pos, Random &rand) const {
     } while (collision(pos));
 }
 
-void TruncatedOctahedron::from_json(const json &j) { side = j.at("radius").get<double>(); }
+void TruncatedOctahedron::from_json(const json& j) { side = j.at("radius").get<double>(); }
 
-void TruncatedOctahedron::to_json(json &j) const { j = {{"radius", side}}; }
+void TruncatedOctahedron::to_json(json& j) const { j = {{"radius", side}}; }
 
-std::unique_ptr<GeometryImplementation> TruncatedOctahedron::clone() const {
+std::unique_ptr<GeometryImplementation> TruncatedOctahedron::clone() const
+{
     return std::make_unique<TruncatedOctahedron>(*this);
 }
 
@@ -604,19 +654,21 @@ const std::map<std::string, Variant> Chameleon::names = {{{"cuboid", Variant::CU
                                                           {"octahedron", Variant::OCTAHEDRON},
                                                           {"hypersphere2d", Variant::HYPERSPHERE2D}}};
 
-void from_json(const json &j, Chameleon &g) {
+void from_json(const json& j, Chameleon& g)
+{
     try {
         g.from_json(j);
     }
-    catch (std::exception &e) {
+    catch (std::exception& e) {
         usageTip.pick("geometry");
         throw ConfigurationError("geometry construction error: {}", e.what());
     }
 }
 
-void to_json(json &j, const Chameleon &g) { g.to_json(j); }
+void to_json(json& j, const Chameleon& g) { g.to_json(j); }
 
-ParticleVector mapParticlesOnSphere(const ParticleVector &source) {
+ParticleVector mapParticlesOnSphere(const ParticleVector& source)
+{
     assert(source.size() > 1);
     Average<double> radius; // average radial distance
     ParticleVector destination = source;
@@ -625,16 +677,16 @@ ParticleVector mapParticlesOnSphere(const ParticleVector &source) {
         destination[i].pos = source[i].pos - COM; // make COM origin
         double r = destination[i].pos.norm();     // radial distance
         destination[i].pos /= r;                  // normalize to unit vector
-        radius += r;                         // radius is the average r
+        radius += r;                              // radius is the average r
     }
     destination[0].pos.setZero();
-    for (auto &i : destination) // scale positions to surface of sphere
+    for (auto& i : destination) // scale positions to surface of sphere
         i.pos = i.pos * radius.avg() + COM;
 
     // rmsd, skipping the first particle
     double _rmsd =
         rootMeanSquareDeviation(destination.begin() + 1, destination.end(), source.begin() + 1,
-                                [](const Particle &a, const Particle &b) { return (a.pos - b.pos).squaredNorm(); });
+                                [](const Particle& a, const Particle& b) { return (a.pos - b.pos).squaredNorm(); });
 
     faunus_logger->info("{} particles mapped on sphere of radius {} with RMSD {} {}; the first particle ({}) is a "
                         "dummy and COM placeholder",
@@ -643,7 +695,8 @@ ParticleVector mapParticlesOnSphere(const ParticleVector &source) {
     return destination;
 }
 
-ShapeDescriptors::ShapeDescriptors(const Tensor &gyration_tensor) {
+ShapeDescriptors::ShapeDescriptors(const Tensor& gyration_tensor)
+{
     const auto principal_moment = Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d>(gyration_tensor).eigenvalues();
     gyration_radius_squared = gyration_tensor.trace();
     asphericity = 3.0 / 2.0 * principal_moment.z() - gyration_radius_squared / 2.0;
@@ -652,7 +705,8 @@ ShapeDescriptors::ShapeDescriptors(const Tensor &gyration_tensor) {
                                 (gyration_radius_squared * gyration_radius_squared);
 }
 
-ShapeDescriptors &ShapeDescriptors::operator+=(const ShapeDescriptors &other) {
+ShapeDescriptors& ShapeDescriptors::operator+=(const ShapeDescriptors& other)
+{
     gyration_radius_squared += other.gyration_radius_squared;
     asphericity += other.asphericity;
     acylindricity += other.acylindricity;
@@ -660,7 +714,8 @@ ShapeDescriptors &ShapeDescriptors::operator+=(const ShapeDescriptors &other) {
     return *this;
 }
 
-ShapeDescriptors ShapeDescriptors::operator*(const double scale) const {
+ShapeDescriptors ShapeDescriptors::operator*(const double scale) const
+{
     auto scaled = *this;
     scaled.gyration_radius_squared *= scale;
     scaled.asphericity *= scale;
@@ -669,14 +724,16 @@ ShapeDescriptors ShapeDescriptors::operator*(const double scale) const {
     return scaled;
 }
 
-void to_json(json &j, const ShapeDescriptors &shape) {
+void to_json(json& j, const ShapeDescriptors& shape)
+{
     j = {{"Rg = √⟨s²⟩", std::sqrt(shape.gyration_radius_squared)},
          {"asphericity (b)", shape.asphericity},
          {"acylindricity (c)", shape.acylindricity},
          {"relative shape anisotropy (𝜅²)", shape.relative_shape_anisotropy}};
 }
 
-TEST_CASE("[Faunus] ShapeDescriptors") {
+TEST_CASE("[Faunus] ShapeDescriptors")
+{
     using doctest::Approx;
     std::vector<Point> positions = {{0, 0, 0}, {1, 0, 0}};
     std::vector<double> masses = {1, 1};
@@ -694,7 +751,8 @@ TEST_CASE("[Faunus] ShapeDescriptors") {
     CHECK_EQ(shape.relative_shape_anisotropy, Approx(0.0));
 }
 
-TEST_CASE("[Faunus] hexagonalPrismToCuboid") {
+TEST_CASE("[Faunus] hexagonalPrismToCuboid")
+{
     using doctest::Approx;
     double radius = 2.0, height = 20.0;
     double side = 2.0 / std::sqrt(3.0) * radius;
@@ -717,7 +775,7 @@ TEST_CASE("[Faunus] hexagonalPrismToCuboid") {
                                     {-0.866, -0.5, 0},   {-0.866, 0.5, 0}, {2, -2.4641, 0},    {-1.134, -2.9641, 0},
                                     {-1.134, 2.9641, 0}, {2, 2.4641, 0},   {1.134, 2.9641, 0}, {1.134, -2.9641, 0}};
     size_t i = 0;
-    for (auto &particle : p_new) { // compared actual positions w. expected positions
+    for (auto& particle : p_new) { // compared actual positions w. expected positions
         CHECK_EQ(particle.pos.x(), Approx(positions[i].x()));
         CHECK_EQ(particle.pos.y(), Approx(positions[i].y()));
         CHECK_EQ(particle.pos.z(), Approx(positions[i].z()));
@@ -725,33 +783,41 @@ TEST_CASE("[Faunus] hexagonalPrismToCuboid") {
     }
 }
 
-Chameleon::Chameleon(const Variant type) {
+Chameleon::Chameleon(const Variant type)
+{
     makeGeometry(type);
     _setLength(geometry->getLength());
 }
 
-Chameleon::Chameleon(const GeometryImplementation &geo, const Variant type) : geometry(geo.clone()), _type(type) {
+Chameleon::Chameleon(const GeometryImplementation& geo, const Variant type)
+    : geometry(geo.clone())
+    , _type(type)
+{
     _setLength(geometry->getLength());
 }
 
-Point Chameleon::getLength() const {
+Point Chameleon::getLength() const
+{
     assert(geometry);
     return geometry->getLength();
 }
 
-void Chameleon::setLength(const Point &l) {
+void Chameleon::setLength(const Point& l)
+{
     assert(geometry);
     _setLength(l);
     // ugly
     if (type == Variant::CUBOID) {
-        auto &cuboid = dynamic_cast<Cuboid &>(*geometry);
+        auto& cuboid = dynamic_cast<Cuboid&>(*geometry);
         cuboid.setLength(l);
-    } else {
+    }
+    else {
         throw std::runtime_error("setLength allowed only for the Cuboid geometry");
     }
 }
 
-void Chameleon::makeGeometry(const Variant type) {
+void Chameleon::makeGeometry(const Variant type)
+{
     switch (type) {
     case Variant::CUBOID:
         geometry = std::make_unique<Cuboid>();
@@ -780,20 +846,23 @@ void Chameleon::makeGeometry(const Variant type) {
     _type = type;
 }
 
-void Chameleon::from_json(const json &j) {
+void Chameleon::from_json(const json& j)
+{
     std::tie(_name, _type) = variantName(j);
     makeGeometry(_type);
     geometry->from_json(j);
     _setLength(geometry->getLength());
 }
 
-void Chameleon::to_json(json &j) const {
+void Chameleon::to_json(json& j) const
+{
     assert(geometry);
     geometry->to_json(j);
     j["type"] = name;
 }
 
-void Chameleon::_setLength(const Point &l) {
+void Chameleon::_setLength(const Point& l)
+{
     len = l;
     len_half = l * 0.5;
     len_inv = l.cwiseInverse();
@@ -807,28 +876,33 @@ void Chameleon::_setLength(const Point &l) {
             len_or_zero[i] = len[i] * (geometry->boundary_conditions.direction[i] == Boundary::PERIODIC);
 }
 
-double Chameleon::getVolume(int dim) const {
+double Chameleon::getVolume(int dim) const
+{
     assert(geometry);
     return geometry->getVolume(dim);
 }
 
-Point Chameleon::setVolume(double V, VolumeMethod method) {
+Point Chameleon::setVolume(double V, VolumeMethod method)
+{
     auto scale = geometry->setVolume(V, method);
     _setLength(geometry->getLength());
     return scale;
 }
 
-Chameleon::VariantName Chameleon::variantName(const std::string &name) {
+Chameleon::VariantName Chameleon::variantName(const std::string& name)
+{
     if (auto it = names.find(name); it == names.end()) {
         throw std::runtime_error("unknown geometry: " + name);
-    } else {
+    }
+    else {
         return *it;
     }
 }
 
-Chameleon::VariantName Chameleon::variantName(const json &j) { return variantName(j.at("type").get<std::string>()); }
+Chameleon::VariantName Chameleon::variantName(const json& j) { return variantName(j.at("type").get<std::string>()); }
 
-Chameleon &Chameleon::operator=(const Chameleon &geo) {
+Chameleon& Chameleon::operator=(const Chameleon& geo)
+{
     if (&geo != this) {
         GeometryBase::operator=(geo);
         len = geo.len;
@@ -842,15 +916,23 @@ Chameleon &Chameleon::operator=(const Chameleon &geo) {
     return *this;
 }
 
-const BoundaryCondition &Chameleon::boundaryConditions() const { return geometry->boundary_conditions; }
+const BoundaryCondition& Chameleon::boundaryConditions() const { return geometry->boundary_conditions; }
 
-Chameleon::Chameleon(const Chameleon &geo)
-    : GeometryBase(geo), len(geo.len), len_half(geo.len_half), len_inv(geo.len_inv),
-      geometry(geo.geometry != nullptr ? geo.geometry->clone() : nullptr), _type(geo._type), _name(geo._name) {}
+Chameleon::Chameleon(const Chameleon& geo)
+    : GeometryBase(geo)
+    , len(geo.len)
+    , len_half(geo.len_half)
+    , len_inv(geo.len_inv)
+    , geometry(geo.geometry != nullptr ? geo.geometry->clone() : nullptr)
+    , _type(geo._type)
+    , _name(geo._name)
+{
+}
 
 std::shared_ptr<GeometryImplementation> Chameleon::asSimpleGeometry() const { return geometry->clone(); }
 
-TEST_CASE("[Faunus] spherical coordinates") {
+TEST_CASE("[Faunus] spherical coordinates")
+{
     using doctest::Approx;
 
     Point sph1 = {2, 0.5, -0.3};
@@ -863,11 +945,13 @@ TEST_CASE("[Faunus] spherical coordinates") {
     // CHECK_EQ( sph1.z(), Approx(sph2.z()));
 }
 
-TEST_CASE("[Faunus] Geometry") {
+TEST_CASE("[Faunus] Geometry")
+{
     using doctest::Approx;
     Random slump;
 
-    SUBCASE("cuboid") {
+    SUBCASE("cuboid")
+    {
         double x = 2, y = 3, z = 4;
         Cuboid geo({x, y, z});
         CHECK_EQ(geo.getVolume(), doctest::Approx(x * y * z));
@@ -880,10 +964,10 @@ TEST_CASE("[Faunus] Geometry") {
         CHECK_EQ(a.x(), Approx(-0.9));  // x has been wrapped
         CHECK_EQ(a.y(), Approx(1.5));   // y is unchanged
         CHECK_EQ(a.z(), Approx(1.999)); // z has been wrapped
-        a.y() = 1.51;                  // move y out of box
-        geo.getBoundaryFunc()(a);      // wrap around boundary
+        a.y() = 1.51;                   // move y out of box
+        geo.getBoundaryFunc()(a);       // wrap around boundary
         CHECK_EQ(a.y(), Approx(-1.49)); // check y-boundary
-        a.y() = 1.5;                   // restore
+        a.y() = 1.5;                    // restore
 
         // check distances
         Point distance = geo.vdist({0.1, 0.5, -1.001}, a);
@@ -924,7 +1008,8 @@ TEST_CASE("[Faunus] Geometry") {
         CHECK_EQ(geo.getVolume(), doctest::Approx(2.5 * 3.5 * 4.5));
     }
 
-    SUBCASE("slit") {
+    SUBCASE("slit")
+    {
         double x = 2, y = 4, z = 3;
         Slit geo(x, y, z);
         CHECK_EQ(geo.getVolume(), doctest::Approx(x * y * z));
@@ -987,7 +1072,8 @@ TEST_CASE("[Faunus] Geometry") {
         CHECK_EQ(geo.getVolume(), doctest::Approx(2.5 * 3.5 * 4.5));
     }
 
-    SUBCASE("sphere") {
+    SUBCASE("sphere")
+    {
         double radius = 5.;
         Sphere geo(radius);
         CHECK_EQ(geo.getVolume(), doctest::Approx(4. / 3. * pc::pi * radius * radius * radius));
@@ -1033,7 +1119,8 @@ TEST_CASE("[Faunus] Geometry") {
         CHECK_EQ(geo.getVolume(), doctest::Approx(4. / 3. * pc::pi * 2.0 * 2.0 * 2.0));
     }
 
-    SUBCASE("cylinder") {
+    SUBCASE("cylinder")
+    {
         double radius = 1., volume = 1.;
         double height = volume / (pc::pi * radius * radius);
         Point box;
@@ -1077,7 +1164,8 @@ TEST_CASE("[Faunus] Geometry") {
         CHECK_EQ(geo.getVolume(), doctest::Approx(8.0));
     }
 
-    SUBCASE("hexagonal prism") {
+    SUBCASE("hexagonal prism")
+    {
         double side = 1., volume = 1.;
         double outer_radius = side, inner_radius = side * std::sqrt(3.0) / 2.;
         double height = volume / (3. * outer_radius * inner_radius);
@@ -1090,9 +1178,9 @@ TEST_CASE("[Faunus] Geometry") {
         CHECK_EQ(geo.collision({0.0, -1.01 * outer_radius, 0}), true);
         CHECK_EQ(geo.collision({0.0, 0.99 * outer_radius, 0}), false);
         CHECK((geo.collision({0.99 * std::cos(pc::pi / 3.) * inner_radius, 0.99 * std::sin(pc::pi / 3.) * inner_radius,
-                             0}) == false));
+                              0}) == false));
         CHECK((geo.collision({1.01 * std::cos(pc::pi / 3.) * inner_radius, 1.01 * std::sin(pc::pi / 3.) * inner_radius,
-                             0}) == true));
+                              0}) == true));
         CHECK_EQ(geo.collision({0, 0, -0.51 * height}), true);
         CHECK_EQ(geo.collision({0, 0, 0.49 * height}), false);
 
@@ -1118,14 +1206,15 @@ TEST_CASE("[Faunus] Geometry") {
     }
 }
 
-TEST_CASE("[Faunus] Chameleon") {
+TEST_CASE("[Faunus] Chameleon")
+{
 
     using doctest::Approx;
     Random slump;
 
     //! function compares if Chamelon's and Geometry's boundary methods produce the same result
     //! using n random points
-    auto compare_boundary = [&slump](Chameleon &chameleon, GeometryImplementation &geo, Cuboid &box, int n = 100) {
+    auto compare_boundary = [&slump](Chameleon& chameleon, GeometryImplementation& geo, Cuboid& box, int n = 100) {
         Point a, b;
         for (int i = 0; i < n; i++) {
             box.randompos(a, slump);
@@ -1140,7 +1229,7 @@ TEST_CASE("[Faunus] Chameleon") {
 
     //! function compares if Chamelon's and Geometry's vdist methods produce the same result
     //! using n random points
-    auto compare_vdist = [&slump](Chameleon &chameleon, GeometryImplementation &geo, Cuboid &box, int n = 100) {
+    auto compare_vdist = [&slump](Chameleon& chameleon, GeometryImplementation& geo, Cuboid& box, int n = 100) {
         Point a, b, d_cham, d_geo;
         for (int i = 0; i < n; i++) {
             box.randompos(a, slump);
@@ -1154,7 +1243,8 @@ TEST_CASE("[Faunus] Chameleon") {
         }
     };
 
-    SUBCASE("cuboid") {
+    SUBCASE("cuboid")
+    {
         double x = 2.0, y = 3.0, z = 4.0;
         Point box_size = std::cbrt(2.0) * Point(x, y, z);
         Cuboid box(box_size);
@@ -1167,7 +1257,8 @@ TEST_CASE("[Faunus] Chameleon") {
         CHECK_EQ(geo.boundary_conditions.isPeriodic()[2], true);
     }
 
-    SUBCASE("slit") {
+    SUBCASE("slit")
+    {
         double x = 2.0, y = 3.0, z = 4.0;
         Point box_size = std::cbrt(2.0) * Point(x, y, z);
         Cuboid box(box_size);
@@ -1180,7 +1271,8 @@ TEST_CASE("[Faunus] Chameleon") {
         CHECK_EQ(geo.boundary_conditions.isPeriodic()[2], false);
     }
 
-    SUBCASE("sphere") {
+    SUBCASE("sphere")
+    {
         double radius = 10.0;
         Point box_size;
         box_size.setConstant(std::cbrt(2.0) * 2 * radius);
@@ -1194,7 +1286,8 @@ TEST_CASE("[Faunus] Chameleon") {
         CHECK_EQ(geo.boundary_conditions.isPeriodic()[2], false);
     }
 
-    SUBCASE("cylinder") {
+    SUBCASE("cylinder")
+    {
         double radius = 2.0, height = 10.0;
         Point box_size = std::cbrt(2.0) * Point(2 * radius, 2 * radius, height);
         Cuboid box(box_size);
@@ -1207,7 +1300,8 @@ TEST_CASE("[Faunus] Chameleon") {
         CHECK_EQ(geo.boundary_conditions.isPeriodic()[2], true);
     }
 
-    SUBCASE("hexagonal prism") {
+    SUBCASE("hexagonal prism")
+    {
         double edge = 5.0, height = 20.0;
         Point box_size = std::cbrt(2.0) * Point(2 * edge, 2 * edge, height); // a bit larger in x-direction
         Cuboid box(box_size);
@@ -1217,7 +1311,8 @@ TEST_CASE("[Faunus] Chameleon") {
         compare_vdist(chameleon, geo, box);
     }
 
-    SUBCASE("truncated octahedron") {
+    SUBCASE("truncated octahedron")
+    {
         double edge = 5.0;
         Point box_size;
         box_size.setConstant(std::cbrt(2.0) * edge * std::sqrt(5.0 / 2.0)); // enlarged circumradius
@@ -1228,7 +1323,8 @@ TEST_CASE("[Faunus] Chameleon") {
         compare_vdist(chameleon, geo, box);
     }
 
-    SUBCASE("Cereal serialisation") {
+    SUBCASE("Cereal serialisation")
+    {
         double x = 2.0, y = 3.0, z = 4.0;
         std::ostringstream os(std::stringstream::binary);
         { // write
@@ -1249,7 +1345,8 @@ TEST_CASE("[Faunus] Chameleon") {
     }
 }
 
-TEST_CASE("[Faunus] weightedCenter") {
+TEST_CASE("[Faunus] weightedCenter")
+{
     Chameleon cyl = json({{"type", "cuboid"}, {"length", 100}, {"radius", 20}});
     std::vector<Particle> p;
 
@@ -1266,7 +1363,8 @@ TEST_CASE("[Faunus] weightedCenter") {
     CHECK_EQ(cm.z(), doctest::Approx(0));
 }
 
-TEST_CASE("[Faunus] gyration") {
+TEST_CASE("[Faunus] gyration")
+{
     std::vector<Point> positions = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
     std::vector<double> weights = {0.6, 1.5, 2.2};
     auto boundary = [](auto&) {};
@@ -1285,13 +1383,15 @@ TEST_CASE("[Faunus] gyration") {
 
     auto mass_center = Geometry::massCenter(particles.begin(), particles.end(), boundary);
 
-    SUBCASE("mass center") {
+    SUBCASE("mass center")
+    {
         CHECK_EQ(mass_center.x(), doctest::Approx(5.1162790698));
         CHECK_EQ(mass_center.y(), doctest::Approx(6.1162790698));
         CHECK_EQ(mass_center.z(), doctest::Approx(7.1162790698));
     }
 
-    SUBCASE("position based") {
+    SUBCASE("position based")
+    {
         auto gyration = Geometry::gyration(positions.begin(), positions.end(), weights.begin(), mass_center, boundary);
         CHECK_EQ(gyration.trace(), doctest::Approx(13.843158464));
         CHECK_EQ(gyration.diagonal().x(), doctest::Approx(4.6143861547));
@@ -1314,7 +1414,8 @@ TEST_CASE("[Faunus] gyration") {
         CHECK_EQ(principle_axis.z(), doctest::Approx(0.4082482905));
     }
 
-    SUBCASE("particle based") {
+    SUBCASE("particle based")
+    {
         auto gyration = Geometry::gyration(particles.begin(), particles.end(), mass_center, boundary);
         CHECK_EQ(gyration.trace(), doctest::Approx(13.843158464));
         CHECK_EQ(gyration.diagonal().x(), doctest::Approx(4.6143861547));
@@ -1328,7 +1429,8 @@ TEST_CASE("[Faunus] gyration") {
     }
 }
 
-TEST_CASE("[Faunus] rootMeanSquareDeviation") {
+TEST_CASE("[Faunus] rootMeanSquareDeviation")
+{
     std::vector<double> v1 = {1.3, 4.4, -1.1};
     std::vector<double> v2 = {1.1, 4.6, -1.0};
     auto f = [](double a, double b) { return std::pow(a - b, 2); };
@@ -1344,13 +1446,14 @@ TEST_CASE("[Faunus] rootMeanSquareDeviation") {
  * - https://en.wikipedia.org/wiki/Geodesic_polyhedron
  * - c++: https://github.com/caosdoar/spheres
  */
-std::vector<Point> TwobodyAngles::fibonacciSphere(const size_t samples) {
+std::vector<Point> TwobodyAngles::fibonacciSphere(const size_t samples)
+{
     unsigned int cnt = 0;
-    const auto phi = pc::pi * (3.0 - std::sqrt(5.0));  // golden angle in radians
+    const auto phi = pc::pi * (3.0 - std::sqrt(5.0)); // golden angle in radians
     std::vector<Point> unit_points_on_sphere;
     unit_points_on_sphere.resize(samples);
-    
-    for (auto &point: unit_points_on_sphere) {
+
+    for (auto& point : unit_points_on_sphere) {
         point.y() = 1.0 - 2.0 * (cnt / double(samples - 1));        // y goes from 1 to -1
         const auto radius = std::sqrt(1.0 - point.y() * point.y()); // radius at y
         const auto theta = phi * double(cnt);                       // golden angle increment
@@ -1362,7 +1465,8 @@ std::vector<Point> TwobodyAngles::fibonacciSphere(const size_t samples) {
     return unit_points_on_sphere;
 }
 
-TwobodyAngles::TwobodyAngles(const double angle_resolution) {
+TwobodyAngles::TwobodyAngles(const double angle_resolution)
+{
     namespace rv = ranges::cpp20::views;
 
     const auto number_of_samples = size_t(std::round(4.0 * pc::pi / std::pow(angle_resolution, 2)));
@@ -1378,10 +1482,9 @@ TwobodyAngles::TwobodyAngles(const double angle_resolution) {
         rv::transform([](const auto& axis) { return Eigen::Quaterniond::FromTwoVectors(axis, -Point::UnitZ()); }) |
         ::ranges::to_vector;
 
-    dihedrals =
-        arange(0.0, 2.0 * pc::pi, angle_resolution) |
-        rv::transform([](auto angle) { return Eigen::Quaterniond(Eigen::AngleAxisd(angle, Point::UnitZ())); }) |
-        ::ranges::to_vector;
+    dihedrals = arange(0.0, 2.0 * pc::pi, angle_resolution) |
+                rv::transform([](auto angle) { return Eigen::Quaterniond(Eigen::AngleAxisd(angle, Point::UnitZ())); }) |
+                ::ranges::to_vector;
 
     const auto n1 = quaternions_1.size();
     const auto n2 = quaternions_2.size();
@@ -1398,17 +1501,18 @@ TwobodyAngles::TwobodyAngles(const double angle_resolution) {
     }
 }
 
-size_t TwobodyAngles::size() const {
-    return quaternions_1.size() * quaternions_2.size() * dihedrals.size();
-}
+size_t TwobodyAngles::size() const { return quaternions_1.size() * quaternions_2.size() * dihedrals.size(); }
 
-TwobodyAnglesState::TwobodyAnglesState(const double angle_resolution) : TwobodyAngles(angle_resolution) {
+TwobodyAnglesState::TwobodyAnglesState(const double angle_resolution)
+    : TwobodyAngles(angle_resolution)
+{
     q_euler1 = quaternions_1.begin();
     q_euler2 = quaternions_1.begin();
     q_dihedral = dihedrals.begin();
 }
 
-TwobodyAnglesState& TwobodyAnglesState::advance() {
+TwobodyAnglesState& TwobodyAnglesState::advance()
+{
     if (q_euler1 < quaternions_1.end()) {
         q_dihedral++;
         if (q_dihedral >= dihedrals.end()) {
@@ -1426,7 +1530,8 @@ TwobodyAnglesState& TwobodyAnglesState::advance() {
 /**
  * @return Pair of quaternions, one for each body, or `std::nullopt` of all angles have been explored.
  */
-std::optional<std::pair<Eigen::Quaterniond, Eigen::Quaterniond>> TwobodyAnglesState::get() {
+std::optional<std::pair<Eigen::Quaterniond, Eigen::Quaterniond>> TwobodyAnglesState::get()
+{
     if (q_euler1 < quaternions_1.end()) {
         return std::make_pair(*q_euler1, (*q_dihedral) * (*q_euler2));
     }

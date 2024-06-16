@@ -27,14 +27,16 @@ struct ParticlePropertyBase {
 
 template <typename... Ts>
 auto to_json(json&) -> typename std::enable_if<sizeof...(Ts) == 0>::type {} //!< Particle to JSON
-template <typename T, typename... Ts> void to_json(json& j, const ParticlePropertyBase& a, const Ts&... rest) {
+template <typename T, typename... Ts> void to_json(json& j, const ParticlePropertyBase& a, const Ts&... rest)
+{
     a.to_json(j);
     to_json<Ts...>(j, rest...);
 } //!< Particle to JSON
 
 // JSON --> Particle
 template <typename... Ts> auto from_json(const json&) -> typename std::enable_if<sizeof...(Ts) == 0>::type {}
-template <typename T, typename... Ts> void from_json(const json& j, ParticlePropertyBase& a, Ts&... rest) {
+template <typename T, typename... Ts> void from_json(const json& j, ParticlePropertyBase& a, Ts&... rest)
+{
     a.from_json(j);
     from_json<Ts...>(j, rest...);
 }
@@ -103,12 +105,14 @@ class Cigar : public ParticlePropertyBase {
     double half_length = 0.0; //!< Half end-to-end distace
     double pcanglsw = 0.0;    //!< Cosine of switch angle from AtomData (speed optimization)
     double pcangl = 0.0;      //!< Cosine of AtomData::patch_angle (speed optimization)
-    void rotate(const Eigen::Quaterniond& quaternion, const Eigen::Matrix3d& rotation_matrix); //!< Rotate sphero-cylinder
+    void rotate(const Eigen::Quaterniond& quaternion,
+                const Eigen::Matrix3d& rotation_matrix); //!< Rotate sphero-cylinder
     void to_json(json& j) const override;
     void from_json(const json& j) override;
     void setDirections(const SpheroCylinderData& psc_data, const Point& new_direction,
-                       const Point& new_patch_direction);  // initialize; run at start and after patch changes
-    template <class Archive> void serialize(Archive& archive) {
+                       const Point& new_patch_direction); // initialize; run at start and after patch changes
+    template <class Archive> void serialize(Archive& archive)
+    {
         archive(scdir, patchdir, patchsides.at(0), patchsides.at(1));
     }
     bool isCylindrical() const; //!< True of non-zero length
@@ -129,10 +133,12 @@ template <typename... Properties> class ParticleTemplate : public Properties... 
   private:
     // rotate internal coordinates
     template <typename... Ts>
-    auto _rotate(const Eigen::Quaterniond&, const Eigen::Matrix3d&) ->
-        typename std::enable_if<sizeof...(Ts) == 0>::type {}
+    auto _rotate(const Eigen::Quaterniond&, const Eigen::Matrix3d&) -> typename std::enable_if<sizeof...(Ts) == 0>::type
+    {
+    }
     template <typename T, typename... Ts>
-    void _rotate(const Eigen::Quaterniond& q, const Eigen::Matrix3d& m, T& a, Ts&... rest) {
+    void _rotate(const Eigen::Quaterniond& q, const Eigen::Matrix3d& m, T& a, Ts&... rest)
+    {
         a.rotate(q, m);
         _rotate<Ts...>(q, m, rest...);
     }
@@ -140,34 +146,46 @@ template <typename... Properties> class ParticleTemplate : public Properties... 
     // Cereal serialisation
 
     template <typename... Ts, class Archive>
-    auto __serialize(Archive&) -> typename std::enable_if<sizeof...(Ts) == 0>::type {}
+    auto __serialize(Archive&) -> typename std::enable_if<sizeof...(Ts) == 0>::type
+    {
+    }
 
-    template <typename T, typename... Ts, class Archive> void __serialize(Archive& archive, T& a, Ts&... rest) {
+    template <typename T, typename... Ts, class Archive> void __serialize(Archive& archive, T& a, Ts&... rest)
+    {
         a.serialize(archive);
         __serialize<Ts...>(archive, rest...);
     }
 
   public:
-    ParticleTemplate() : Properties()... {};
+    ParticleTemplate()
+        : Properties()... {};
 
-    explicit ParticleTemplate(const AtomData& a) : Properties()... { *this = json(a).front(); }
+    explicit ParticleTemplate(const AtomData& a)
+        : Properties()...
+    {
+        *this = json(a).front();
+    }
 
-    void rotate(const Eigen::Quaterniond& q, const Eigen::Matrix3d& m) {
+    void rotate(const Eigen::Quaterniond& q, const Eigen::Matrix3d& m)
+    {
         _rotate<Properties...>(q, m, dynamic_cast<Properties&>(*this)...);
     } //!< Rotate all internal coordinates if needed
 
-    template <class Archive> void serialize(Archive& archive) {
+    template <class Archive> void serialize(Archive& archive)
+    {
         __serialize<Properties...>(archive, dynamic_cast<Properties&>(*this)...);
     }
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
 
-template <typename... Properties> void to_json(json& j, const ParticleTemplate<Properties...>& a) {
+template <typename... Properties> void to_json(json& j, const ParticleTemplate<Properties...>& a)
+{
     to_json<Properties...>(j, Properties(a)...);
 }
 
-template <typename... Properties> void from_json(const json& j, ParticleTemplate<Properties...>& a) {
+template <typename... Properties> void from_json(const json& j, ParticleTemplate<Properties...>& a)
+{
     from_json<Properties...>(j, dynamic_cast<Properties&>(a)...);
 }
 
@@ -199,7 +217,8 @@ class Particle {
     bool hasExtension() const;            //!< check if particle has extensions (dipole etc.)
     ParticleExtension& createExtension(); //!< Create extension
     inline ParticleExtension& getExt() { return ext ? *ext : createExtension(); } //!< get/create extension
-    inline const ParticleExtension& getExt() const {
+    inline const ParticleExtension& getExt() const
+    {
         assert(ext);
         return *ext;
     } //!< Get extended particle properties;
@@ -209,7 +228,8 @@ class Particle {
      * @param archive Archive to serialize to/from
      * @warning Still under construction
      */
-    template <class Archive> void serialize(Archive& archive) {
+    template <class Archive> void serialize(Archive& archive)
+    {
         archive(ext, id, charge, pos);
         // if (ext != nullptr)
         //    ext->serialize(archive);
@@ -236,7 +256,8 @@ void to_json(json&, const Particle&);
  * @param max_difference Apply only if charge mismatch is larger than this, then log
  */
 template <RequireParticleIterator Iterator>
-void applyAtomDataCharges(Iterator first, Iterator last, const double max_difference = 1e-9) {
+void applyAtomDataCharges(Iterator first, Iterator last, const double max_difference = 1e-9)
+{
     size_t mismatch_counter = 0;
     std::for_each(first, last, [&](Particle& particle) {
         const auto topology_charge = Faunus::atoms.at(particle.id).charge;

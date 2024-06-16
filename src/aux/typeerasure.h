@@ -67,10 +67,13 @@ template <class TImplementation> class Holder {
   public:
     using Implementation = TImplementation;
 
-    Holder(TImplementation implementation) : implementation(std::move(implementation)) {}
+    Holder(TImplementation implementation)
+        : implementation(std::move(implementation))
+    {
+    }
     virtual ~Holder() = default;
-    TImplementation &get() { return implementation; }
-    const TImplementation &get() const { return implementation; }
+    TImplementation& get() { return implementation; }
+    const TImplementation& get() const { return implementation; }
 
   private:
     TImplementation implementation;
@@ -84,13 +87,16 @@ template <class TImplementation> class ReferenceHolder {
   public:
     using Implementation = TImplementation;
 
-    ReferenceHolder(TImplementation &implementation) : implementation(implementation) {}
+    ReferenceHolder(TImplementation& implementation)
+        : implementation(implementation)
+    {
+    }
     virtual ~ReferenceHolder() = default;
-    TImplementation &get() { return implementation; }
-    const TImplementation &get() const { return implementation; }
+    TImplementation& get() { return implementation; }
+    const TImplementation& get() const { return implementation; }
 
   private:
-    TImplementation &implementation;
+    TImplementation& implementation;
 };
 
 /**
@@ -109,8 +115,10 @@ class Container {
      * @param implementation  an implementation as an r-value, e.g., std::move(implementation)
      */
     template <class TImplementation>
-    Container(TImplementation &&implementation)
-        : self_ptr(std::make_shared<TModel<Holder<TImplementation>>>(std::move(implementation))) {}
+    Container(TImplementation&& implementation)
+        : self_ptr(std::make_shared<TModel<Holder<TImplementation>>>(std::move(implementation)))
+    {
+    }
 
     /**
      * @brief Passes the implementation instance to the storage as an l-value reference.
@@ -118,15 +126,17 @@ class Container {
      * @param implementation  an implementation as an l-value
      */
     template <class TImplementation>
-    Container(TImplementation &implementation)
-        : self_ptr(std::make_shared<TModel<ReferenceHolder<TImplementation>>>(implementation)) {}
+    Container(TImplementation& implementation)
+        : self_ptr(std::make_shared<TModel<ReferenceHolder<TImplementation>>>(implementation))
+    {
+    }
 
-    const Concept &get() const { return *self_ptr; }
-    Concept &get() { return *self_ptr; }
+    const Concept& get() const { return *self_ptr; }
+    Concept& get() { return *self_ptr; }
 
   private:
     std::shared_ptr<Concept> self_ptr;
-    //std::shared_ptr<const Concept> self_ptr;
+    // std::shared_ptr<const Concept> self_ptr;
 };
 
 /**

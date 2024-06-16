@@ -7,18 +7,23 @@
 namespace Faunus {
 namespace move {
 
-ClusterShapeAnalysis::ClusterShapeAnalysis(bool shape_anisotropy_use_com, const std::string &filename,
+ClusterShapeAnalysis::ClusterShapeAnalysis(bool shape_anisotropy_use_com, const std::string& filename,
                                            bool dump_pqr_files)
-    : save_pqr_files(dump_pqr_files), shape_anisotropy_use_com(shape_anisotropy_use_com) {
+    : save_pqr_files(dump_pqr_files)
+    , shape_anisotropy_use_com(shape_anisotropy_use_com)
+{
     if (!filename.empty()) {
         stream = IO::openCompressedOutputStream(MPI::prefix + filename, true);
         *stream << "# size seed shape_anisotropy\n";
     }
 }
-ClusterShapeAnalysis::ClusterShapeAnalysis(const json &j)
-    : ClusterShapeAnalysis(j.value("com", true), j.value("file", std::string()), j.value("save_pqr", false)) {}
+ClusterShapeAnalysis::ClusterShapeAnalysis(const json& j)
+    : ClusterShapeAnalysis(j.value("com", true), j.value("file", std::string()), j.value("save_pqr", false))
+{
+}
 
-decltype(ClusterShapeAnalysis::pqr_distribution)::iterator ClusterShapeAnalysis::findPQRstream(size_t cluster_size) {
+decltype(ClusterShapeAnalysis::pqr_distribution)::iterator ClusterShapeAnalysis::findPQRstream(size_t cluster_size)
+{
     auto it = pqr_distribution.find(cluster_size);
     if (it == pqr_distribution.end()) {
         const std::string file = MPI::prefix + fmt::format("clustersize{}.pqr", cluster_size);
@@ -27,16 +32,18 @@ decltype(ClusterShapeAnalysis::pqr_distribution)::iterator ClusterShapeAnalysis:
     return it;
 }
 
-void to_json(json &j, const ClusterShapeAnalysis &shape) {
+void to_json(json& j, const ClusterShapeAnalysis& shape)
+{
     j["size distribution"] = shape.size_distribution;
-    auto &json_shape = j["shape distribution"] = json::array();
-    for (const auto &[size, shape_anisotropy] : shape.shape_distribution) {
+    auto& json_shape = j["shape distribution"] = json::array();
+    for (const auto& [size, shape_anisotropy] : shape.shape_distribution) {
         json_shape.push_back({size, shape_anisotropy.avg()});
     }
 }
 
 FindCluster::FindCluster(const Space& spc, const json& j)
-    : spc(spc) {
+    : spc(spc)
+{
     single_layer = j.value("single_layer", false);
     if (j.contains("spread")) {
         faunus_logger->error("cluster: 'spread' is deprecated, use 'single_layer' instead");
@@ -52,7 +59,8 @@ FindCluster::FindCluster(const Space& spc, const json& j)
     parseThresholds(j.at("threshold"));
 }
 
-double FindCluster::clusterProbability(const Group& group1, const Group& group2) const {
+double FindCluster::clusterProbability(const Group& group1, const Group& group2) const
+{
     if (group1.empty() || group2.empty()) {
         return 0.0;
     }
@@ -80,7 +88,8 @@ double FindCluster::clusterProbability(const Group& group1, const Group& group2)
  *
  * Atomic groups and inactive groups are ignored.
  */
-void FindCluster::updateMoleculeIndex() {
+void FindCluster::updateMoleculeIndex()
+{
     namespace rv = ranges::cpp20::views;
     auto group_to_index = [&](auto& group) { return &group - &spc.groups.front(); };
     auto matching_molid = [&](auto& group) {
@@ -93,7 +102,8 @@ void FindCluster::updateMoleculeIndex() {
                      ranges::to<decltype(molecule_index)>();
 }
 
-void FindCluster::registerSatellites(const std::vector<std::string> &satellite_names) {
+void FindCluster::registerSatellites(const std::vector<std::string>& satellite_names)
+{
     const auto ids = Faunus::names2ids(Faunus::molecules, satellite_names); // names --> molids
     satellites = std::set<int>(ids.begin(), ids.end());
 
@@ -113,28 +123,32 @@ void FindCluster::registerSatellites(const std::vector<std::string> &satellite_n
  * This reads the cluster threshold(s) either as a single number, or
  * as a matrix of molecule-molecule thresholds.
  */
-void FindCluster::parseThresholds(const json &j) {
+void FindCluster::parseThresholds(const json& j)
+{
     if (j.is_number()) { // threshold is given as a single number
         for (auto [id1, id2] : ranges::views::cartesian_product(molids, molids)) {
             thresholds_squared.set(id1, id2, std::pow(j.get<double>(), 2));
         }
-    } else if (j.is_object()) { // threshold is given as pairs of clustering molecules
+    }
+    else if (j.is_object()) { // threshold is given as pairs of clustering molecules
         const auto threshold_combinations = molids.size() * (molids.size() + 1) / 2; // N*(N+1)/2
         if (j.size() != threshold_combinations) {
             throw ConfigurationError(
                 "exactly {} molecule pairs must be given in threshold matrix to cover all combinations",
                 threshold_combinations);
         }
-        for (const auto &[key, value] : j.items()) {
+        for (const auto& [key, value] : j.items()) {
             if (auto name_pair = Faunus::splitConvert<std::string>(key); name_pair.size() == 2) {
                 const auto molecule1 = findMoleculeByName(name_pair[0]);
                 const auto molecule2 = findMoleculeByName(name_pair[1]);
                 thresholds_squared.set(molecule1.id(), molecule2.id(), std::pow(value.get<double>(), 2));
-            } else {
+            }
+            else {
                 throw ConfigurationError("threshold requires exactly two space-separated molecules");
             }
         }
-    } else {
+    }
+    else {
         throw ConfigurationError("cluster threshold must be a number or object");
     }
 }
@@ -144,7 +158,8 @@ void FindCluster::parseThresholds(const json &j) {
  * part of it, i.e. rotated and translated. Here we therefore filter out any
  * satellite molecules, and pick a random molecule index of what remains.
  */
-std::optional<size_t> FindCluster::findSeed(Random &random) {
+std::optional<size_t> FindCluster::findSeed(Random& random)
+{
     updateMoleculeIndex();
     auto avoid_satellites = [&](auto index) { return (satellites.count(spc.groups.at(index).id) == 0); };
     auto not_satellites = molecule_index | ranges::cpp20::views::filter(avoid_satellites);
@@ -161,7 +176,8 @@ std::optional<size_t> FindCluster::findSeed(Random &random) {
  * @returns Pair w. vector for group indices in cluster and a bool if the cluster
  *          can be safely rotated in a PBC environment
  */
-std::pair<std::vector<size_t>, bool> FindCluster::findCluster(size_t seed_index) {
+std::pair<std::vector<size_t>, bool> FindCluster::findCluster(size_t seed_index)
+{
     namespace rv = ranges::cpp20::views;
     assert(seed_index < spc.particles.size());
     std::set<size_t> pool(molecule_index.begin(), molecule_index.end()); // decreasing pool of candidate groups
@@ -179,7 +195,8 @@ std::pair<std::vector<size_t>, bool> FindCluster::findCluster(size_t seed_index)
             if (Move::slump() <= p) {                                                    // is group part of cluster?
                 cluster.push_back(*it2);                                                 // yes, expand cluster...
                 it2 = pool.erase(it2);                                                   // ...and remove from pool
-            } else {
+            }
+            else {
                 ++it2; // not part of cluster, move along to next group in pool
             }
         }
@@ -206,10 +223,11 @@ std::pair<std::vector<size_t>, bool> FindCluster::findCluster(size_t seed_index)
     return {cluster, safe_to_rotate};
 }
 
-void to_json(json &j, const FindCluster &cluster) {
+void to_json(json& j, const FindCluster& cluster)
+{
     j["single_layer"] = cluster.single_layer;
     j["com"] = cluster.use_mass_center_threshold;
-    auto &_j = j["threshold"];
+    auto& _j = j["threshold"];
     for (const auto k : cluster.molids) {
         for (const auto l : cluster.molids) {
             if (k >= l) {
@@ -222,14 +240,15 @@ void to_json(json &j, const FindCluster &cluster) {
 
     // print satellite molecules
     if (not cluster.satellites.empty()) {
-        auto &satellites_json = j["satellites"] = json::array();
+        auto& satellites_json = j["satellites"] = json::array();
         for (auto id : cluster.satellites) {
             satellites_json.push_back(Faunus::molecules[id].name);
         }
     }
 }
 
-void Cluster::_to_json(json &j) const {
+void Cluster::_to_json(json& j) const
+{
     j = {{"dir", translate->direction},
          {"dp", translate->displacement_factor},
          {"dprot", rotate->displacement_factor},
@@ -244,7 +263,8 @@ void Cluster::_to_json(json &j) const {
     roundJSON(j, 3);
 }
 
-void Cluster::_from_json(const json &j) {
+void Cluster::_from_json(const json& j)
+{
     translate = std::make_unique<GroupTranslator>(j.at("dp").get<double>(), j.value("dir", Point(1.0, 1.0, 1.0)));
     rotate = std::make_unique<GroupRotator>(j.at("dprot"), j.value("dirrot", Point(0, 0, 0)));
     find_cluster = std::make_unique<FindCluster>(spc, j);
@@ -259,7 +279,8 @@ void Cluster::_from_json(const json &j) {
  * @param indices Indices of groups in cluster
  * @return Mass center of the cluster
  */
-Point Cluster::clusterMassCenter(const std::vector<size_t>& indices) const {
+Point Cluster::clusterMassCenter(const std::vector<size_t>& indices) const
+{
     assert(!indices.empty());
     namespace rv = ranges::cpp20::views;
     auto groups = indices | rv::transform(index_to_group);
@@ -268,7 +289,8 @@ Point Cluster::clusterMassCenter(const std::vector<size_t>& indices) const {
     return Geometry::weightedCenter(positions, masses, spc.geometry.getBoundaryFunc(), -groups.begin()->mass_center);
 }
 
-void Cluster::_move(Change& change) {
+void Cluster::_move(Change& change)
+{
     clearForMove();
     auto seed_index = find_cluster->findSeed(slump);
     if (!seed_index) {
@@ -294,7 +316,8 @@ void Cluster::_move(Change& change) {
     setChange(change, cluster);
 }
 
-void Cluster::clearForMove() {
+void Cluster::clearForMove()
+{
     translate->current_displacement.setZero();
     rotate->current_displacement = 0.0;
     bias_energy = 0.0;
@@ -305,20 +328,23 @@ void Cluster::clearForMove() {
  * Current implementation works only for the binary 0/1 probability function
  * currently implemented in `findCluster()`.
  */
-void Cluster::calculateBias(const size_t seed_index, const std::vector<size_t>& cluster_index) {
+void Cluster::calculateBias(const size_t seed_index, const std::vector<size_t>& cluster_index)
+{
     [[maybe_unused]] auto [aftercluster, safe_to_rotate] = find_cluster->findCluster(seed_index);
     if (aftercluster == cluster_index) {
         bias_energy = 0.0;
-    } else {
+    }
+    else {
         bias_energy = pc::infty; // bias is infinite --> reject
-        bias_rejected++;   // count how many times we reject due to bias
+        bias_rejected++;         // count how many times we reject due to bias
     }
 }
 
 /**
  * Update change object with changed molecules
  */
-void Cluster::setChange(Change& change, const std::vector<size_t>& group_indices) const {
+void Cluster::setChange(Change& change, const std::vector<size_t>& group_indices) const
+{
     change.groups.reserve(group_indices.size());
     std::for_each(group_indices.begin(), group_indices.end(), [&](auto index) { // register changes
         auto& change_data = change.groups.emplace_back();
@@ -330,27 +356,32 @@ void Cluster::setChange(Change& change, const std::vector<size_t>& group_indices
 }
 
 double Cluster::bias([[maybe_unused]] Change& change, [[maybe_unused]] double old_energy,
-                     [[maybe_unused]] double new_energy) {
+                     [[maybe_unused]] double new_energy)
+{
     return bias_energy;
 }
 
-void Cluster::_reject([[maybe_unused]] Change& change) {
+void Cluster::_reject([[maybe_unused]] Change& change)
+{
     translate->mean_square_displacement += 0.0;
     rotate->mean_square_displacement += 0.0;
 }
 
-void Cluster::_accept([[maybe_unused]] Change& change) {
+void Cluster::_accept([[maybe_unused]] Change& change)
+{
     translate->mean_square_displacement += translate->current_displacement.squaredNorm();
     rotate->mean_square_displacement += std::pow(rotate->current_displacement, 2);
 }
 
 Cluster::Cluster(Space& spc, std::string_view name, std::string_view cite)
-    : Move(spc, name, cite) {
+    : Move(spc, name, cite)
+{
     repeat = -1;
 }
 
 Cluster::Cluster(Space& spc)
-    : Cluster(spc, "cluster", "doi:10/cj9gnn") {
+    : Cluster(spc, "cluster", "doi:10/cj9gnn")
+{
     index_to_group = [&](auto index) -> Group& { return this->spc.groups.at(index); };
 }
 
@@ -358,15 +389,20 @@ Cluster::Cluster(Space& spc)
 
 GroupMover::GroupMover(double displacement_factor, const Point& direction)
     : displacement_factor(displacement_factor)
-    , direction(direction) {}
+    , direction(direction)
+{
+}
 
 // -------------------------------------------
 
 GroupTranslator::GroupTranslator(double displacement_factor, const Point& direction)
-    : GroupMover(displacement_factor, direction) {}
+    : GroupMover(displacement_factor, direction)
+{
+}
 
 /** Lambda to translate group in cluster. Will set a random displacement */
-std::function<void(Group&)> GroupTranslator::getLambda(Geometry::BoundaryFunction boundary, Random& slump) {
+std::function<void(Group&)> GroupTranslator::getLambda(Geometry::BoundaryFunction boundary, Random& slump)
+{
     current_displacement = randomUnitVector(slump, direction) * displacement_factor * slump();
     if (std::fabs(displacement_factor) <= pc::epsilon_dbl) { // if zero displacement...
         return [](auto&) {};                                 // ...then return NOP lambda
@@ -378,9 +414,12 @@ std::function<void(Group&)> GroupTranslator::getLambda(Geometry::BoundaryFunctio
 
 GroupRotator::GroupRotator(double displacement_factor, const Point& rotation_axis)
     : GroupMover(displacement_factor,
-                 (rotation_axis.squaredNorm() > pc::epsilon_dbl) ? rotation_axis.normalized() : Point::Zero()) {}
+                 (rotation_axis.squaredNorm() > pc::epsilon_dbl) ? rotation_axis.normalized() : Point::Zero())
+{
+}
 
-Eigen::Quaterniond GroupRotator::setRandomRotation(Random& random) {
+Eigen::Quaterniond GroupRotator::setRandomRotation(Random& random)
+{
     Point axis = (direction.squaredNorm() > pc::epsilon_dbl) ? direction : randomUnitVector(random);
     current_displacement = displacement_factor * (random() - 0.5);
     return static_cast<Eigen::Quaterniond>(Eigen::AngleAxisd(current_displacement, axis));
@@ -388,7 +427,8 @@ Eigen::Quaterniond GroupRotator::setRandomRotation(Random& random) {
 
 /** Lambda to rotate a group. Will set a random rotation axis and angle. */
 std::function<void(Group&)> GroupRotator::getLambda(Geometry::BoundaryFunction boundary, const Point& rotation_origin,
-                                                    Random& random) {
+                                                    Random& random)
+{
     if (std::fabs(displacement_factor) <= pc::epsilon_dbl) { // if zero displacement...
         return [](auto&) {};                                 // ...then return NOP lambda
     }

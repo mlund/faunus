@@ -8,11 +8,14 @@ namespace Faunus {
 namespace Region {
 
 RegionBase::RegionBase(RegionType type)
-    : type(type) {}
+    : type(type)
+{
+}
 std::optional<double> RegionBase::volume() const { return std::nullopt; }
 bool RegionBase::inside(const Particle& particle) const { return isInside(particle.pos); }
 
-bool RegionBase::inside(const Group& group) const {
+bool RegionBase::inside(const Group& group) const
+{
     if (use_group_mass_center) {
         if (auto mass_center = group.massCenter()) {
             return isInside(mass_center.value());
@@ -34,7 +37,8 @@ bool RegionBase::inside(const Group& group) const {
  *     com: true
  * ~~~
  */
-std::unique_ptr<RegionBase> createRegion(const Space& spc, const json& j) {
+std::unique_ptr<RegionBase> createRegion(const Space& spc, const json& j)
+{
     const auto type = j.at("policy").get<RegionType>();
     switch (type) {
     case RegionType::WITHIN_MOLID:
@@ -48,12 +52,14 @@ std::unique_ptr<RegionBase> createRegion(const Space& spc, const json& j) {
     }
 }
 
-void to_json(json& j, const RegionBase& region) {
+void to_json(json& j, const RegionBase& region)
+{
     region.to_json(j);
     j["policy"] = region.type;
 }
 
-void WithinMoleculeType::to_json(json& j) const {
+void WithinMoleculeType::to_json(json& j) const
+{
     j = {{"threshold", sqrt(threshold_squared)},
          {"com", use_region_mass_center},
          {"molecule", molecules.at(molid).name},
@@ -74,7 +80,8 @@ WithinMoleculeType::WithinMoleculeType(const Space& spc, std::string_view molecu
     , spc(spc)
     , molid(findMoleculeByName(molecule_name).id())
     , use_region_mass_center(use_region_mass_center)
-    , threshold_squared(threshold * threshold) {
+    , threshold_squared(threshold * threshold)
+{
     if (use_region_mass_center && !Faunus::molecules.at(molid).isMolecular()) {
         throw ConfigurationError("center of mass threshold ill-defined for `{}`", molecule_name);
     }
@@ -83,9 +90,12 @@ WithinMoleculeType::WithinMoleculeType(const Space& spc, std::string_view molecu
 
 WithinMoleculeType::WithinMoleculeType(const Space& spc, const json& j)
     : WithinMoleculeType(spc, j.at("molname").get<std::string>(), j.at("threshold").get<double>(),
-                         j.value("com", false), j.value("group_com", false)) {}
+                         j.value("com", false), j.value("group_com", false))
+{
+}
 
-bool WithinMoleculeType::isInside(const Point& position) const {
+bool WithinMoleculeType::isInside(const Point& position) const
+{
     using ranges::cpp20::any_of;
     auto has_position_inside = [&](const Group& group) {
         if (use_region_mass_center) {
@@ -98,7 +108,8 @@ bool WithinMoleculeType::isInside(const Point& position) const {
     return any_of(groups, has_position_inside);
 }
 
-std::optional<double> WithinMoleculeType::volume() const {
+std::optional<double> WithinMoleculeType::volume() const
+{
     if (use_region_mass_center) {
         return 4.0 * pc::pi / 3.0 * std::pow(threshold_squared, 1.5);
     }
@@ -114,24 +125,32 @@ SphereAroundParticle::SphereAroundParticle(const Space& spc, ParticleVector::siz
     : RegionBase(RegionType::WITHIN_PARTICLE)
     , spc(spc)
     , particle_index(index)
-    , radius_squared(radius * radius) {}
+    , radius_squared(radius * radius)
+{
+}
 
 SphereAroundParticle::SphereAroundParticle(const Space& spc, const json& j)
-    : SphereAroundParticle(spc, j.at("index").get<double>(), j.at("radius").get<double>()) {}
+    : SphereAroundParticle(spc, j.at("index").get<double>(), j.at("radius").get<double>())
+{
+}
 
-bool SphereAroundParticle::isInside(const Point& position) const {
+bool SphereAroundParticle::isInside(const Point& position) const
+{
     return spc.geometry.sqdist(position, spc.particles.at(particle_index).pos) < radius_squared;
 }
 
-std::optional<double> SphereAroundParticle::volume() const {
+std::optional<double> SphereAroundParticle::volume() const
+{
     return 4.0 * pc::pi / 3.0 * std::pow(radius_squared, 1.5);
 }
 
-void SphereAroundParticle::to_json(json& j) const {
+void SphereAroundParticle::to_json(json& j) const
+{
     j = {{"index", particle_index}, {"threshold", std::sqrt(radius_squared)}};
 }
 
-bool MovingEllipsoid::isInside(const Point& position) const {
+bool MovingEllipsoid::isInside(const Point& position) const
+{
     const auto [midpoint, direction] = getEllipsoidPositionAndDirection();
     Point midpoint_pos = spc.geometry.vdist(position, midpoint);         // midpoint -> pos
     const auto midpoint_pos_len = midpoint_pos.norm() + pc::epsilon_dbl; // must not be *exactly* zero
@@ -147,7 +166,8 @@ bool MovingEllipsoid::isInside(const Point& position) const {
 /**
  * @return Center of ellipsoid and it's normalized direction
  */
-std::pair<Point, Point> MovingEllipsoid::getEllipsoidPositionAndDirection() const {
+std::pair<Point, Point> MovingEllipsoid::getEllipsoidPositionAndDirection() const
+{
     Point direction = 0.5 * spc.geometry.vdist(reference_position_2, reference_position_1);
     const auto distance = direction.norm();
     if (parallel_radius < distance) { // is this check needed?
@@ -180,7 +200,8 @@ MovingEllipsoid::MovingEllipsoid(const Space& spc, ParticleVector::size_type par
     , perpendicular_radius(perpendicular_radius)
     , parallel_radius_squared(parallel_radius * parallel_radius)
     , reference_position_1(spc.particles.at(particle_index_1).pos)
-    , reference_position_2(spc.particles.at(particle_index_2).pos) {
+    , reference_position_2(spc.particles.at(particle_index_2).pos)
+{
     this->use_group_mass_center = use_group_mass_center;
     if (particle_index_1 == particle_index_2) {
         throw ConfigurationError("reference indices must differ");
@@ -189,9 +210,12 @@ MovingEllipsoid::MovingEllipsoid(const Space& spc, ParticleVector::size_type par
 
 MovingEllipsoid::MovingEllipsoid(const Space& spc, const json& j)
     : MovingEllipsoid(spc, j.at("index1").get<int>(), j.at("index2").get<int>(), j.at("parallel_radius").get<double>(),
-                      j.at("perpendicular_radius").get<double>(), j.value("group_com", false)) {}
+                      j.at("perpendicular_radius").get<double>(), j.value("group_com", false))
+{
+}
 
-void MovingEllipsoid::to_json(json& j) const {
+void MovingEllipsoid::to_json(json& j) const
+{
     j["index1"] = particle_index_1;
     j["index2"] = particle_index_2;
     j["perpendicular_radius"] = perpendicular_radius;
@@ -199,7 +223,8 @@ void MovingEllipsoid::to_json(json& j) const {
     j["group_com"] = use_group_mass_center;
 }
 
-TEST_CASE("[Faunus] Region::MovingEllipsoid") {
+TEST_CASE("[Faunus] Region::MovingEllipsoid")
+{
     const auto delta = 1e-6; // spatial resolution
     const auto parallel_radius = 4.0;
     const auto perpendilar_radius = 5.0;
@@ -210,14 +235,16 @@ TEST_CASE("[Faunus] Region::MovingEllipsoid") {
     spc.particles.at(1).pos = {1.0, 0.0, 0.0};  // second reference
     MovingEllipsoid region(spc, 0, 1, parallel_radius, perpendilar_radius, false);
 
-    SUBCASE("parallel axis") {
+    SUBCASE("parallel axis")
+    {
         CHECK_EQ(region.isInside({parallel_radius + delta, 0.0, 0.0}), false);
         CHECK(region.isInside({parallel_radius - delta, 0.0, 0.0}));
         CHECK_EQ(region.isInside({-(parallel_radius + delta), 0.0, 0.0}), false);
         CHECK(region.isInside({-(parallel_radius - delta), 0.0, 0.0}));
     }
 
-    SUBCASE("perpendicular axis") {
+    SUBCASE("perpendicular axis")
+    {
         CHECK_EQ(region.isInside({0.0, perpendilar_radius + delta, 0.0}), false);
         CHECK(region.isInside({0.0, perpendilar_radius - delta, 0.0}));
         CHECK_EQ(region.isInside({0.0, -(perpendilar_radius + delta), 0.0}), false);

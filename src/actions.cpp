@@ -8,7 +8,8 @@
 
 namespace Faunus {
 
-AngularScan::AngularScan(const json& j, const Space& spc) {
+AngularScan::AngularScan(const json& j, const Space& spc)
+{
     const auto angular_resolution = j.at("angular_resolution").get<double>();
     angles = Geometry::TwobodyAnglesState(angular_resolution);
     max_energy = j.value("max_energy", pc::infty) * 1.0_kJmol;
@@ -43,7 +44,8 @@ AngularScan::AngularScan(const json& j, const Space& spc) {
 /**
  * @brief Set molecular index; back up original positions, centered on the origin; save reference structure to disk
  */
-void AngularScan::Molecule::initialize(const Space::GroupVector& groups, int molecule_index) {
+void AngularScan::Molecule::initialize(const Space::GroupVector& groups, int molecule_index)
+{
     namespace rv = ranges::cpp20::views;
     index = molecule_index;
     const auto& group = groups.at(index);
@@ -55,8 +57,8 @@ void AngularScan::Molecule::initialize(const Space::GroupVector& groups, int mol
     XYZWriter().save(fmt::format("molecule{}_reference.xyz", index), group.begin(), group.end(), Point::Zero());
 }
 
-ParticleVector AngularScan::Molecule::getRotatedReference(const Space::GroupVector& groups,
-                                                          const Eigen::Quaterniond& q) {
+ParticleVector AngularScan::Molecule::getRotatedReference(const Space::GroupVector& groups, const Eigen::Quaterniond& q)
+{
     namespace rv = ranges::cpp20::views;
     const auto& group = groups.at(index);
     auto particles = ParticleVector(group.begin(), group.end()); // copy particles from Space
@@ -66,7 +68,8 @@ ParticleVector AngularScan::Molecule::getRotatedReference(const Space::GroupVect
 }
 
 void AngularScan::report(const Group& group1, const Group& group2, const Eigen::Quaterniond& q1,
-                         const Eigen::Quaterniond& q2, Energy::NonbondedBase& nonbonded) {
+                         const Eigen::Quaterniond& q2, Energy::NonbondedBase& nonbonded)
+{
     const auto energy = nonbonded.groupGroupEnergy(group1, group2);
     if (energy >= max_energy) {
         return;
@@ -86,7 +89,8 @@ void AngularScan::report(const Group& group1, const Group& group2, const Eigen::
     }
 }
 
-void AngularScan::operator()(Space& spc, Energy::Hamiltonian& hamiltonian) {
+void AngularScan::operator()(Space& spc, Energy::Hamiltonian& hamiltonian)
+{
     auto nonbonded = hamiltonian.findFirstOf<Energy::NonbondedBase>();
     if (!nonbonded) {
         throw ConfigurationError("{}: at least one nonbonded energy term required", name);
@@ -125,18 +129,21 @@ void AngularScan::operator()(Space& spc, Energy::Hamiltonian& hamiltonian) {
     } // separation loop
 }
 
-std::unique_ptr<SystemAction> createAction(std::string_view name, const json& j, Space& spc) {
+std::unique_ptr<SystemAction> createAction(std::string_view name, const json& j, Space& spc)
+{
     try {
         if (name == "angular_scan") {
             return std::make_unique<AngularScan>(j, spc);
         }
         throw ConfigurationError("'{}' unknown", name);
-    } catch (std::exception& e) {
+    }
+    catch (std::exception& e) {
         throw std::runtime_error("error creating action -> "s + e.what());
     }
 }
 
-std::vector<std::unique_ptr<SystemAction>> createActionList(const json& input, Space& spc) {
+std::vector<std::unique_ptr<SystemAction>> createActionList(const json& input, Space& spc)
+{
     if (!input.is_array()) {
         throw ConfigurationError("json array expected");
     }
@@ -147,20 +154,23 @@ std::vector<std::unique_ptr<SystemAction>> createActionList(const json& input, S
         try {
             const auto& [name, params] = jsonSingleItem(j);
             actions.emplace_back(createAction(name, params, spc));
-        } catch (std::exception& e) {
+        }
+        catch (std::exception& e) {
             throw ConfigurationError("actions: {}", e.what()).attachJson(j);
         }
     }
     return actions;
 }
 
-void AngularScan::EnergyAnalysis::clear() {
+void AngularScan::EnergyAnalysis::clear()
+{
     mean_exp_energy.clear();
     partition_sum = 0;
     energy_sum = 0;
 }
 
-void AngularScan::EnergyAnalysis::add(const double energy) {
+void AngularScan::EnergyAnalysis::add(const double energy)
+{
     const auto exp_energy = std::exp(-energy);
     mean_exp_energy += exp_energy;
     partition_sum += exp_energy;
@@ -171,7 +181,8 @@ double AngularScan::EnergyAnalysis::getFreeEnergy() const { return -std::log(mea
 
 double AngularScan::EnergyAnalysis::getMeanEnergy() const { return energy_sum / partition_sum; }
 
-void AngularScan::EnergyAnalysis::printLog() const {
+void AngularScan::EnergyAnalysis::printLog() const
+{
     faunus_logger->info("{}: free energy <w/kT> = {:.3f} mean energy <u/kT> = {:.3f}", name, getFreeEnergy(),
                         getMeanEnergy());
 }

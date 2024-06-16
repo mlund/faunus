@@ -40,11 +40,11 @@ class SpheroCylinderData {
 
   public:
     enum class PatchType {
-        None = 0,                     //!< No patch
-        Full = 1,                     //!< Patch runs the full length of the SC
-        Capped = 2,                   //!< Patch stops before the end caps
-        Invalid = 3                   //!< Used to detect invalid input
-    };                                //!< Type of PSC particle
+        None = 0,   //!< No patch
+        Full = 1,   //!< Patch runs the full length of the SC
+        Capped = 2, //!< Patch stops before the end caps
+        Invalid = 3 //!< Used to detect invalid input
+    }; //!< Type of PSC particle
     double chiral_angle = 0.0;        //!< Rotation of patch relative to direction (radians)
     double length = 0.0;              //!< Sphere-cylinder length
     double patch_angle = 0.0;         //!< Opening angle of attrative patch (radians)
@@ -111,9 +111,9 @@ extern std::vector<AtomData> atoms; //!< Global instance of atom list
 /** Concept for named database such as vector<AtomData>, vector<MoleculeData> etc. */
 template <typename T>
 concept RequireNamedElements = requires(T db) {
-    {db.begin()};
+    { db.begin() };
     { db.begin()->name } -> std::convertible_to<std::string>;
-    {std::is_integral_v<typename ranges::cpp20::range_value_t<T>::index_type>};
+    { std::is_integral_v<typename ranges::cpp20::range_value_t<T>::index_type> };
 };
 
 /**
@@ -124,11 +124,13 @@ concept RequireNamedElements = requires(T db) {
  * @return an iterator to the first element, or `last` if not found
  * @see findAtomByName(), findMoleculeByName()
  */
-auto findName(RequireNamedElements auto& range, std::string_view name) {
+auto findName(RequireNamedElements auto& range, std::string_view name)
+{
     return std::find_if(range.begin(), range.end(), [&](auto& i) { return i.name == name; });
 }
 
-auto findName(const RequireNamedElements auto& range, std::string_view name) {
+auto findName(const RequireNamedElements auto& range, std::string_view name)
+{
     return std::find_if(range.begin(), range.end(), [&](const auto& i) { return i.name == name; });
 }
 
@@ -164,7 +166,8 @@ AtomData& findAtomByName(std::string_view name);
  * a sequence containing all id's of the database, i.e.
  * `0, ..., database.size()-1`.
  */
-template <RequireNamedElements T> auto names2ids(const T& database, const std::vector<std::string>& names) {
+template <RequireNamedElements T> auto names2ids(const T& database, const std::vector<std::string>& names)
+{
     namespace rv = ranges::cpp20::views;
 
     auto is_wildcard = [](auto& name) { return name == "*"; };

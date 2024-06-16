@@ -36,7 +36,6 @@ namespace Faunus::SASA {
 class SASABase;
 }
 
-
 /**
  * Adding a new analysis requires the following steps:
  *
@@ -72,13 +71,13 @@ class Analysis {
     int number_of_samples = 0; //!< counter for number of samples
 
   public:
-    const std::string name;        //!< descriptive name
-    std::string cite;              //!< url, doi etc. describing the analysis
-    void to_json(json& j) const;   //!< JSON report w. statistics, output etc.
-    void from_json(const json& j); //!< configure from json object
-    void to_disk();                //!< Save data to disk (if defined)
-    void sample();                 //!< Increase step count and sample
-    [[nodiscard]] int getNumberOfSteps() const;  //!< Number of steps
+    const std::string name;                     //!< descriptive name
+    std::string cite;                           //!< url, doi etc. describing the analysis
+    void to_json(json& j) const;                //!< JSON report w. statistics, output etc.
+    void from_json(const json& j);              //!< configure from json object
+    void to_disk();                             //!< Save data to disk (if defined)
+    void sample();                              //!< Increase step count and sample
+    [[nodiscard]] int getNumberOfSteps() const; //!< Number of steps
     Analysis(const Space& spc, std::string_view name);
     Analysis(const Space& spc, std::string_view name, int sample_interval, int number_of_skipped_steps);
     virtual ~Analysis() = default;
@@ -185,7 +184,7 @@ class AtomicDisplacement : public Analysis {
     std::string displacement_histogram_filename;                    //!< Name of P(r) histogram file
     int reference_reset_interval = std::numeric_limits<int>::max(); //!< Renew reference at given interval
 
-    [[nodiscard]] virtual PointVector getPositions() const;                        //!< Extract current positions from `molid`
+    [[nodiscard]] virtual PointVector getPositions() const;          //!< Extract current positions from `molid`
     void resetReferencePosition(const Point& position, int index);   //!< Store current positions as reference
     Point getOffset(const Point& diff, Eigen::Vector3i& cell) const; //!< Offset to other cells
     void sampleDisplacementFromReference(const Point& position, int index);
@@ -262,7 +261,7 @@ class ElectricPotential : public Analysis {
     unsigned int calculations_per_sample_event = 1;
     std::string file_prefix; //!< Output filename prefix for potential histogram and correlation
     struct Target {
-        Point position;                                                //!< Target position
+        Point position;                                               //!< Target position
         Average<double> mean_potential;                               //!< mean potential at position
         std::unique_ptr<SparseHistogram<double>> potential_histogram; //!< Histogram of observed potentials
     };
@@ -274,9 +273,10 @@ class ElectricPotential : public Analysis {
     void getTargets(const json& j);                           //!< Get user defined target positions
     void setPolicy(const json& j);                            //!< Set user defined position setting policy
     double calcPotentialOnTarget(const Target& target);       //!< Evaluate net potential of target position
-    [[nodiscard]] bool overlapWithParticles(const Point& position) const; //!< Check if position is within the radius of any particle
-    std::function<void()> applyPolicy;                      //!< Lambda for position setting policy
-    json output_information;                                //!< json output generated during construction
+    [[nodiscard]] bool
+    overlapWithParticles(const Point& position) const; //!< Check if position is within the radius of any particle
+    std::function<void()> applyPolicy;                 //!< Lambda for position setting policy
+    json output_information;                           //!< json output generated during construction
     void _to_json(json& j) const override;
     void _sample() override;
     void _to_disk() override;
@@ -365,7 +365,8 @@ class Density : public Analysis {
   public:
     template <RequireNamedElements Range>
     Density(const Space& spc, const Range& atoms_or_molecules, const std::string_view name)
-        : Analysis(spc, name) {
+        : Analysis(spc, name)
+    {
         for (const auto& data : atoms_or_molecules) {
             names[data.id()] = data.name;
             probability_density[data.id()].setResolution(1, 0);
@@ -753,8 +754,9 @@ class MultipoleDistribution : public Analysis {
     void _to_json(json& j) const override;
     void _to_disk() override;
     void sampleGroupGroup(const Space::GroupType& group1, const Space::GroupType& group2);
-    [[nodiscard]] double groupGroupExactEnergy(const Space::GroupType& group1,
-                                 const Space::GroupType& group2) const; //<! exact ion-ion energy between particles
+    [[nodiscard]] double
+    groupGroupExactEnergy(const Space::GroupType& group1,
+                          const Space::GroupType& group2) const; //<! exact ion-ion energy between particles
 
   public:
     MultipoleDistribution(const json& j, const Space& spc);
@@ -809,10 +811,10 @@ class AtomInertia : public Analysis {
  */
 class InertiaTensor : public Analysis {
   private:
-    std::string filename;                    //!< file to stream to
-    std::unique_ptr<std::ostream> stream;    //!< file output stream
-    MoleculeData::index_type group_index;    //!< Group to analyse
-    std::vector<size_t> particle_range;      //!< range of indexes within the group
+    std::string filename;                                  //!< file to stream to
+    std::unique_ptr<std::ostream> stream;                  //!< file output stream
+    MoleculeData::index_type group_index;                  //!< Group to analyse
+    std::vector<size_t> particle_range;                    //!< range of indexes within the group
     [[nodiscard]] std::pair<Point, Point> compute() const; //!< Compute eigen values and principal axis
     void _to_json(json& j) const override;
     void _sample() override;
@@ -968,7 +970,7 @@ class SASAAnalysis : public Analysis {
         using average_type = Average<double>;
         average_type area;
         average_type area_squared;
-    };                     //!< Placeholder class for average properties
+    }; //!< Placeholder class for average properties
     Averages average_data; //!< Stores all averages for the selected molecule
 
     std::unique_ptr<std::ostream> output_stream; //!< output stream
@@ -1068,12 +1070,13 @@ class AtomsInMoleculePolicy final : public AreaSamplingPolicy {
 /** @brief Example analysis */
 template <class T, class Enable = void> struct [[maybe_unused]] _analyse {
     void sample(T&) { std::cout << "not a dipole!" << std::endl; } //!< Sample
-};                                                                 // primary template
+}; // primary template
 
 /** @brief Example analysis */
-template <class T> struct [[maybe_unused]] _analyse<T, typename std::enable_if<std::is_base_of<Dipole, T>::value>::type> {
+template <class T>
+struct [[maybe_unused]] _analyse<T, typename std::enable_if<std::is_base_of<Dipole, T>::value>::type> {
     void sample(T&) { std::cout << "dipole!" << std::endl; } //!< Sample
-};                                                           // specialized template
+}; // specialized template
 
 class SavePenaltyEnergy : public Analysis {
   private:
@@ -1117,5 +1120,3 @@ class Voronota : public Analysis {
 };
 
 } // namespace Faunus::analysis
-
-

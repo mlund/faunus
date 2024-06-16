@@ -59,56 +59,56 @@ TEST_CASE("[Faunus] arange") {
     SUBCASE("Step = 1 (float)") {
         auto r = arange(4.0, 10.0, 1.0); // --> 4 5 6 7 8 9
         auto pos = r.begin();
-        CHECK(ranges::size(r) == 6);
-        CHECK(*(pos++) == doctest::Approx(4.0));
-        CHECK(*(pos++) == doctest::Approx(5.0));
-        CHECK(*(pos++) == doctest::Approx(6.0));
-        CHECK(*(pos++) == doctest::Approx(7.0));
-        CHECK(*(pos++) == doctest::Approx(8.0));
-        CHECK(*(pos++) == doctest::Approx(9.0));
+        CHECK_EQ(ranges::size(r), 6);
+        CHECK_EQ(*(pos++), doctest::Approx(4.0));
+        CHECK_EQ(*(pos++), doctest::Approx(5.0));
+        CHECK_EQ(*(pos++), doctest::Approx(6.0));
+        CHECK_EQ(*(pos++), doctest::Approx(7.0));
+        CHECK_EQ(*(pos++), doctest::Approx(8.0));
+        CHECK_EQ(*(pos++), doctest::Approx(9.0));
     }
     SUBCASE("Step = 1 (int)") {
         auto r = arange(4, 10, 1); // --> 4 5 6 7 8 9
         auto pos = r.begin();
-        CHECK(ranges::size(r) == 6);
-        CHECK(*(pos++) == 4);
-        CHECK(*(pos++) == 5);
-        CHECK(*(pos++) == 6);
-        CHECK(*(pos++) == 7);
-        CHECK(*(pos++) == 8);
-        CHECK(*(pos++) == 9);
+        CHECK_EQ(ranges::size(r), 6);
+        CHECK_EQ(*(pos++), 4);
+        CHECK_EQ(*(pos++), 5);
+        CHECK_EQ(*(pos++), 6);
+        CHECK_EQ(*(pos++), 7);
+        CHECK_EQ(*(pos++), 8);
+        CHECK_EQ(*(pos++), 9);
     }
     SUBCASE("Step > 1 (float)") {
         auto r = arange(4.0, 20.0, 3.0); // --> 4 7 10 13 16 19
         auto pos = r.begin();
-        CHECK(ranges::size(r) == 6);
-        CHECK(*(pos++) == doctest::Approx(4.0));
-        CHECK(*(pos++) == doctest::Approx(7.0));
-        CHECK(*(pos++) == doctest::Approx(10.0));
-        CHECK(*(pos++) == doctest::Approx(13.0));
-        CHECK(*(pos++) == doctest::Approx(16.0));
-        CHECK(*(pos++) == doctest::Approx(19.0));
+        CHECK_EQ(ranges::size(r), 6);
+        CHECK_EQ(*(pos++), doctest::Approx(4.0));
+        CHECK_EQ(*(pos++), doctest::Approx(7.0));
+        CHECK_EQ(*(pos++), doctest::Approx(10.0));
+        CHECK_EQ(*(pos++), doctest::Approx(13.0));
+        CHECK_EQ(*(pos++), doctest::Approx(16.0));
+        CHECK_EQ(*(pos++), doctest::Approx(19.0));
     }
     SUBCASE("Step > 1 (int)") {
         auto r = arange(4, 20, 3); // --> 4 7 10 13 16 19
         auto pos = r.begin();
-        CHECK(ranges::size(r) == 6);
-        CHECK(*(pos++) == 4);
-        CHECK(*(pos++) == 7);
-        CHECK(*(pos++) == 10);
-        CHECK(*(pos++) == 13);
-        CHECK(*(pos++) == 16);
-        CHECK(*(pos++) == 19);
+        CHECK_EQ(ranges::size(r), 6);
+        CHECK_EQ(*(pos++), 4);
+        CHECK_EQ(*(pos++), 7);
+        CHECK_EQ(*(pos++), 10);
+        CHECK_EQ(*(pos++), 13);
+        CHECK_EQ(*(pos++), 16);
+        CHECK_EQ(*(pos++), 19);
     }
 
     SUBCASE("Step < 1") {
         auto r = arange(-1.0, 1.0, 0.5); // --> -1 -0.5 0 0.5
         auto pos = r.begin();
-        CHECK(ranges::size(r) == 4);
-        CHECK(*(pos++) == doctest::Approx(-1.0));
-        CHECK(*(pos++) == doctest::Approx(-0.5));
-        CHECK(*(pos++) == doctest::Approx(0.0));
-        CHECK(*(pos++) == doctest::Approx(0.5));
+        CHECK_EQ(ranges::size(r), 4);
+        CHECK_EQ(*(pos++), doctest::Approx(-1.0));
+        CHECK_EQ(*(pos++), doctest::Approx(-0.5));
+        CHECK_EQ(*(pos++), doctest::Approx(0.0));
+        CHECK_EQ(*(pos++), doctest::Approx(0.5));
     }
 }
 

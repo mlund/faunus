@@ -192,32 +192,32 @@ TEST_CASE("[Faunus] Equidistant2DTable") {
 
     SUBCASE("centered") {
         Equidistant2DTable<double, double, true> y(0.5, -3.0);
-        CHECK(y.xmin() == Approx(-3.0));
-        CHECK(y.dx() == Approx(0.5));
+        CHECK_EQ(y.xmin(), Approx(-3.0));
+        CHECK_EQ(y.dx(), Approx(0.5));
         y(-2.51) = 0.15;
-        CHECK(y(-2.5) == Approx(0.15));
+        CHECK_EQ(y(-2.5), Approx(0.15));
         y(-2.76) = 0.11;
-        CHECK(y(-3) == Approx(0.11));
+        CHECK_EQ(y(-3), Approx(0.11));
         y(0.4) = 0.3;
-        CHECK(y(0.5) == Approx(0.3));
+        CHECK_EQ(y(0.5), Approx(0.3));
         y(1.3) = 0.5;
-        CHECK(y(1.5) == Approx(0.5));
-        CHECK(y.xmax() == Approx(1.5));
+        CHECK_EQ(y(1.5), Approx(0.5));
+        CHECK_EQ(y.xmax(), Approx(1.5));
     }
 
     SUBCASE("lower bound") {
         Equidistant2DTable<double> y(0.5, -3.0);
-        CHECK(y.xmin() == Approx(-3.0));
-        CHECK(y.dx() == Approx(0.5));
+        CHECK_EQ(y.xmin(), Approx(-3.0));
+        CHECK_EQ(y.dx(), Approx(0.5));
         y(-2.51) = 0.15;
-        CHECK(y(-3.0) == Approx(0.15));
+        CHECK_EQ(y(-3.0), Approx(0.15));
         y(-2.76) = 0.11;
-        CHECK(y(-3) == Approx(0.11));
+        CHECK_EQ(y(-3), Approx(0.11));
         y(0.4) = 0.3;
-        CHECK(y(0.0) == Approx(0.3));
+        CHECK_EQ(y(0.0), Approx(0.3));
         y(1.3) = 0.5;
-        CHECK(y(1.0) == Approx(0.5));
-        CHECK(y.xmax() == Approx(1.0));
+        CHECK_EQ(y(1.0), Approx(0.5));
+        CHECK_EQ(y.xmax(), Approx(1.0));
     }
 }
 

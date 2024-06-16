@@ -65,14 +65,14 @@ TEST_CASE("[Faunus] RowMajor3DMatrix") {
     Eigen::Vector3i one = {1, 1, 1};
     matrix.resize(dim);
     matrix({2, 3, 1}) = 0.1;
-    CHECK(matrix.data[matrix.index({2, 3, 1})] == 0.1); // access element via index
-    CHECK(&matrix({0, 0, 0}) == &matrix.data.front());  // access first element
-    CHECK(&matrix(dim - one) == &matrix.data.back());   // access last element
+    CHECK_EQ(matrix.data[matrix.index({2, 3, 1})], 0.1); // access element via index
+    CHECK_EQ(&matrix({0, 0, 0}), &matrix.data.front());  // access first element
+    CHECK_EQ(&matrix(dim - one), &matrix.data.back());   // access last element
 
     RowMajorOffset<3, Eigen::Vector3i> offset;
-    CHECK(matrix.index(dim - one) == matrix.data.size() - 1); // index of last element
-    CHECK(matrix.index(dim - one) == offset(dim, dim - one)); // index of last element
-    CHECK(matrix.index(dim) == offset(dim, dim));             // index beyond last element
+    CHECK_EQ(matrix.index(dim - one), matrix.data.size() - 1); // index of last element
+    CHECK_EQ(matrix.index(dim - one), offset(dim, dim - one)); // index of last element
+    CHECK_EQ(matrix.index(dim), offset(dim, dim));             // index beyond last element
     int cnt = 0;
     for (int k = 0; k < dim[0]; k++) {
         for (int l = 0; l < dim[1]; l++) {
@@ -81,6 +81,6 @@ TEST_CASE("[Faunus] RowMajor3DMatrix") {
             }
         }
     }
-    CHECK(cnt == matrix.data.size()); // count number of elements
+    CHECK_EQ(cnt, matrix.data.size()); // count number of elements
 }
 } // namespace Faunus

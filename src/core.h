@@ -46,11 +46,11 @@ json loadJSON(const std::string& filename); //!< Read json filename into json ob
  * @todo This class should be retired and handled by JSON schema instead
  */
 struct SingleUseJSON : public json {
-    SingleUseJSON(const json&);
-    bool empty() const;
-    size_type count(const std::string&) const;
-    std::string dump(int = -1) const;
-    bool is_object() const;
+    explicit SingleUseJSON(const json&);
+    [[nodiscard]] bool empty() const;
+    [[nodiscard]] size_type count(const std::string&) const;
+    [[nodiscard]] std::string dump(int = -1) const;
+    [[nodiscard]] bool is_object() const;
 
     void clear();
     json at(const std::string&);
@@ -160,7 +160,7 @@ Point xyz2rtp(const Point&, const Point& origin = {0, 0, 0});
  */
 Point rtp2xyz(const Point& rtp, const Point& origin = {0, 0, 0});
 
-std::string addGrowingSuffix(const std::string&); //!< Add growing suffix filename until non-existing name is found
+[[maybe_unused]] std::string addGrowingSuffix(const std::string&); //!< Add growing suffix filename until non-existing name is found
 
 Point randomUnitVector(
     Random& rand,
@@ -182,7 +182,7 @@ struct GenericError : public std::runtime_error {
 //! Exception to be thrown when parsing json configuration
 struct ConfigurationError : public GenericError {
     using GenericError::GenericError;
-    const json& attachedJson() const;
+    [[nodiscard]] const json& attachedJson() const;
     ConfigurationError& attachJson(const json& j);
 
   private:
@@ -218,10 +218,10 @@ class Electrolyte {
   public:
     Electrolyte(double molarity, const std::vector<int>& valencies);
     Electrolyte(double debye_length, double bjerrum_length); //!< Initialize from existing Debye and Bjerrum length
-    double ionicStrength() const;                            //!< Molar ionic strength (mol/l)
-    double debyeLength(double bjerrum_length) const;         //!< Debye screening length in Ångstrom
-    double getMolarity() const;                              //!< Input salt molarity (mol/l)
-    const std::vector<int>& getValencies() const;            //!< Charges of each participating ion in the salt
+    [[nodiscard]] double ionicStrength() const;                            //!< Molar ionic strength (mol/l)
+    [[nodiscard]] double debyeLength(double bjerrum_length) const;         //!< Debye screening length in Ångstrom
+    [[nodiscard]] double getMolarity() const;                              //!< Input salt molarity (mol/l)
+    [[nodiscard]] const std::vector<int>& getValencies() const;            //!< Charges of each participating ion in the salt
 };
 
 void to_json(json& j, const Electrolyte& electrolyte);

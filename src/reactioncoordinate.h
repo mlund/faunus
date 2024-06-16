@@ -23,7 +23,7 @@ class ReactionCoordinateBase {
     std::function<double()> function = nullptr; //!< returns reaction coordinate
                                                 //!< Default 1.0; currently unused
   public:
-    ReactionCoordinateBase(const json& j);  //!< constructor reads resolution, min, max
+    explicit ReactionCoordinateBase(const json& j);  //!< constructor reads resolution, min, max
     double resolution = 0.0;                //!< Resolution used when binning (histograms etc.)
     double minimum_value = 0.0;             //!< Minimum allowed value
     double maximum_value = 0.0;             //!< Maximum allowed value
@@ -31,7 +31,7 @@ class ReactionCoordinateBase {
 
     double operator()(); //!< Calculates reaction coordinate
     virtual void _to_json(json &j) const;   //!< json serialization
-    bool inRange(double coord) const; //!< Determines if coordinate is within [min,max]
+    [[nodiscard]] bool inRange(double coord) const; //!< Determines if coordinate is within [min,max]
     virtual ~ReactionCoordinateBase() = default;
 };
 

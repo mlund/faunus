@@ -308,7 +308,7 @@ class Bonded : public EnergyTerm {
     void updateInternalBonds(); //!< finds and adds all intra-molecular bonds of active molecules
 
   public:
-    Bonded(const Space& spc, const BondVector& external_bonds);
+    Bonded(const Space& spc, BondVector  external_bonds);
     Bonded(const json& j, const Space& spc);
     void to_json(json& j) const override;
     double energy(const Change& change) override;    //!< brute force -- refine this!

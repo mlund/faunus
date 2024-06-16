@@ -98,7 +98,6 @@ template <class Tformfactor, std::floating_point T = float> class DebyeFormula {
         }
     }
 
-    Geometry::Sphere geo = Geometry::Sphere(r_cutoff_infty / 2); //!< geometry to use for distance calculations
     T r_cutoff;                   //!< cut-off distance for scattering contributions (angstrom)
     Tformfactor form_factor;      //!< scattering from a single particle
     std::vector<T> intensity;     //!< sampled average I(q)
@@ -135,7 +134,7 @@ template <class Tformfactor, std::floating_point T = float> class DebyeFormula {
         // Allow parallelization with a hand-written reduction of intensity_sum at the end.
         // https://gcc.gnu.org/gcc-9/porting_to.html#ompdatasharing
         // #pragma omp parallel default(none) shared(N, M) shared(geo, r_cutoff, p) shared(intensity_sum)
-        #pragma omp parallel default(none) shared(intensity_sum)
+        #pragma omp parallel default(shared) shared(intensity_sum)
         {
             std::vector<T> intensity_sum_private(M, 0.0); // a temporal private intensity_sum
             #pragma omp for schedule(dynamic)
@@ -274,7 +273,7 @@ class StructureFactorPBC : private TSamplingPolicy {
      * #pragma omp parallel for collapse(2) default(none) shared(directions, p_max, boxlength) shared(positions)
      */
     template <RequirePoints Tpositions> void sample(const Tpositions& positions, const Point& boxlength) {
-#pragma omp parallel for collapse(2) default(none)
+#pragma omp parallel for collapse(2) default(shared)
         for (size_t i = 0; i < directions.size(); ++i) {                                   // openmp req. tradional loop
             for (int p = 1; p <= p_max; ++p) {                                             // loop over multiples of q
                 const Point q = 2.0 * pc::pi * p * directions[i].cwiseQuotient(boxlength); // scattering vector
@@ -342,7 +341,7 @@ class StructureFactorIPBC : private TSamplingPolicy {
     template <RequirePoints Tpositions> void sample(const Tpositions& positions, const Point& boxlength) {
         // https://gcc.gnu.org/gcc-9/porting_to.html#ompdatasharing
         // #pragma omp parallel for collapse(2) default(none) shared(directions, p_max, positions, boxlength)
-        #pragma omp parallel for collapse(2) default(none)
+        #pragma omp parallel for collapse(2) default(shared)
         for (size_t i = 0; i < directions.size(); ++i) {
             for (int p = 1; p <= p_max; ++p) {                                             // loop over multiples of q
                 const Point q = 2.0 * pc::pi * p * directions[i].cwiseQuotient(boxlength); // scattering vector

@@ -23,7 +23,7 @@ class NormalRandomVector {
     std::normal_distribution<double> normal_distribution;
 
   public:
-    NormalRandomVector(double mean = 0.0, double stddev = 1.0) : normal_distribution(mean, stddev){};
+    explicit NormalRandomVector(double mean = 0.0, double stddev = 1.0) : normal_distribution(mean, stddev){};
     template <typename random_engine> Point operator()(random_engine &engine) {
         return {normal_distribution(engine), normal_distribution(engine), normal_distribution(engine)};
     }
@@ -65,11 +65,11 @@ class LangevinVelocityVerlet : public IntegratorBase {
     double time_step;                 //!< integration time step (picoseconds)
     double friction_coefficient;      //!< friction coefficient (inverse picoseconds)
     NormalRandomVector random_vector; //!< generator of random 3d vectors from the normal distribution
-    inline Point positionIncrement(const Point &velocity); //!< increment particle's position in an A semi-step
-    inline Point velocityIncrement(const Point &force,
-                                   const double mass); //!< increment particle's velocity in a B semi-step
+    [[nodiscard]] inline Point positionIncrement(const Point &velocity) const; //!< increment particle's position in an A semi-step
+    [[nodiscard]] inline Point velocityIncrement(const Point &force,
+                                   double mass) const; //!< increment particle's velocity in a B semi-step
     //! apply fluctuation-dissipation to particle's velocity by solving of Ornstein-Uhlenbeck process in an O-step
-    inline Point velocityFluctuationDissipation(const Point &velocity, const double mass);
+    inline Point velocityFluctuationDissipation(const Point &velocity, double mass);
 
   public:
     LangevinVelocityVerlet(Space& spc, Energy::EnergyTerm& energy);
@@ -101,14 +101,14 @@ class ForceMove : public Move {
     void _to_json(json &j) const override;
     void _from_json(const json &j) override;
     void _move(Change &change) override;
-    ForceMove(Space& spc, std::string name, std::string cite, std::shared_ptr<IntegratorBase> integrator,
+    ForceMove(Space& spc, const std::string& name, const std::string& cite, std::shared_ptr<IntegratorBase> integrator,
               unsigned int nsteps);
-    virtual ~ForceMove() = default;
+    ~ForceMove() override = default;
 
   public:
     double bias(Change &, double, double) override;
-    const PointVector &getForces() const;
-    const PointVector &getVelocities() const;
+    [[nodiscard]] const PointVector &getForces() const;
+    [[nodiscard]] const PointVector &getVelocities() const;
 };
 
 /**
@@ -116,7 +116,7 @@ class ForceMove : public Move {
  */
 class LangevinDynamics : public ForceMove {
   protected:
-    LangevinDynamics(Space& spc, std::string name, std::string cite, std::shared_ptr<IntegratorBase> integrator,
+    LangevinDynamics(Space& spc, const std::string& name, const std::string& cite, std::shared_ptr<IntegratorBase> integrator,
                      unsigned int nsteps);
 
   public:

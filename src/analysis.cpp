@@ -23,7 +23,6 @@
 #include <zstr.hpp>
 #include <cereal/types/memory.hpp>
 #include <cereal/archives/binary.hpp>
-#include <range/v3/numeric/accumulate.hpp>
 #include <range/v3/view/zip.hpp>
 #include <iomanip>
 #include <iostream>
@@ -236,7 +235,7 @@ CombinedAnalysis::CombinedAnalysis(const json& json_array, Space& spc, Energy::H
     }
 }
 
-void SystemEnergy::normalize() {
+[[maybe_unused]] void SystemEnergy::normalize() {
     const auto sum = energy_histogram.sumy();
     for (auto& i : energy_histogram.getMap()) {
         i.second = i.second / sum;
@@ -1557,7 +1556,7 @@ void MultipoleDistribution::_to_disk() {
     if (number_of_samples == 0) {
         return;
     }
-    if (std::ofstream stream(MPI::prefix + filename.c_str()); stream) {
+    if (std::ofstream stream(MPI::prefix + filename); stream) {
         stream << "# Multipolar energies (kT/lB)\n"
                << fmt::format("# {:>8}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}\n", "R", "exact", "tot", "ii", "id",
                               "dd", "iq", "mucorr");
@@ -2014,7 +2013,7 @@ void AtomsInMoleculePolicy::to_json(json& output) const {
 }
 
 void AtomsInMoleculePolicy::from_json(const json& input) {
-    if (const auto atomlist = input.at("atomlist"); !atomlist.empty()) {
+    if (const auto& atomlist = input.at("atomlist"); !atomlist.empty()) {
         for (const auto& atom_specifier : atomlist) {
             if (atom_specifier.is_string()) {
                 atom_names.insert(static_cast<const std::string>(atom_specifier));

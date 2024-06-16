@@ -52,7 +52,7 @@ NLOHMANN_JSON_SERIALIZE_ENUM(CombinationRuleType, {{CombinationRuleType::UNDEFIN
  * @brief Exception for handling pair potential initialization.
  */
 struct PairPotentialException : public std::runtime_error {
-    explicit PairPotentialException(const std::string msg);
+    explicit PairPotentialException(const std::string& msg);
 };
 
 /**
@@ -126,7 +126,7 @@ class PairPotential {
      * @param b_towards_a Distance vector 𝐛 -> 𝐚 = 𝐚 - 𝐛
      * @return Force acting on a dur to b in units of kT/Å
      */
-    virtual Point force(const Particle& a, const Particle& b, double squared_distance, const Point& b_towards_a) const;
+    [[nodiscard]] virtual Point force(const Particle& a, const Particle& b, double squared_distance, const Point& b_towards_a) const;
 
     /**
      * @brief Pair energy between two particles
@@ -140,7 +140,7 @@ class PairPotential {
                               const Point& b_towards_a) const = 0;
 
   protected:
-    explicit PairPotential(const std::string& name = std::string(), const std::string& cite = std::string(),
+    explicit PairPotential(std::string  name = std::string(), std::string  cite = std::string(),
                            bool isotropic = true);
 };
 
@@ -180,7 +180,7 @@ class MixerPairPotentialBase : public PairPotential {
     explicit MixerPairPotentialBase(const std::string& name = std::string(), const std::string& cite = std::string(),
                                     CombinationRuleType combination_rule = CombinationRuleType::UNDEFINED,
                                     bool isotropic = true);
-    virtual ~MixerPairPotentialBase() = default;
+    ~MixerPairPotentialBase() override = default;
     void from_json(const json& j) override;
     void to_json(json& j) const override;
 };
@@ -210,7 +210,7 @@ template <RequirePairPotential T1, RequirePairPotential T2> struct CombinedPairP
      * @param b_towards_a Distance vector 𝐛 -> 𝐚 = 𝐚 - 𝐛
      * @return Force on particle a due to particle b
      */
-    inline Point force(const Particle& particle_a, const Particle& particle_b, const double squared_distance,
+    [[nodiscard]] inline Point force(const Particle& particle_a, const Particle& particle_b, const double squared_distance,
                        const Point& b_towards_a) const override {
         return first.force(particle_a, particle_b, squared_distance, b_towards_a) +
                second.force(particle_a, particle_b, squared_distance, b_towards_a);

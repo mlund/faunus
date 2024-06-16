@@ -53,15 +53,15 @@ protected:
      * @brief returns absolute index of particle in ParticleVector
      * @param particle
      */
-    inline index_type indexOf(const Particle& particle) const {
+    [[nodiscard]] inline index_type indexOf(const Particle& particle) const {
         return static_cast<index_type>(std::addressof(particle) - first_particle);
     }
 
-    double calcSASAOfParticle(const Neighbours& neighbour) const;
+    [[nodiscard]] double calcSASAOfParticle(const Neighbours& neighbour) const;
     double exposedArcLength(std::vector<std::pair<double, double>>& arcs) const;
 
 public:
-    double calcSASAOfParticle(const Space& spc, const Particle& particle) const;
+    [[nodiscard]] double calcSASAOfParticle(const Space& spc, const Particle& particle) const;
 
     /**
  * @brief calculates total sasa of either particles or groups between given iterators
@@ -83,11 +83,11 @@ public:
                     const std::vector<index_type>& target_indices);
 
     virtual void init(const Space& spc) = 0;
-    virtual std::vector<SASABase::Neighbours>
+    [[nodiscard]] virtual std::vector<SASABase::Neighbours>
     calcNeighbourData(const Space& spc, const std::vector<index_type>& target_indices) const = 0;
-    virtual SASABase::Neighbours calcNeighbourDataOfParticle(const Space& spc, index_type target_index) const = 0;
+    [[nodiscard]] virtual SASABase::Neighbours calcNeighbourDataOfParticle(const Space& spc, index_type target_index) const = 0;
     virtual void update(const Space& spc, const Change& change) = 0;
-    const std::vector<double>& getAreas() const;
+    [[nodiscard]] const std::vector<double>& getAreas() const;
     SASABase(const Space& spc, double probe_radius, int slices_per_atom);
     virtual ~SASABase() = default;
 };
@@ -99,9 +99,9 @@ public:
 class SASA : public SASABase {
 public:
     void init(const Space& spc) override;
-    std::vector<SASABase::Neighbours> calcNeighbourData(const Space& spc,
+    [[nodiscard]] std::vector<SASABase::Neighbours> calcNeighbourData(const Space& spc,
                                                         const std::vector<index_type>& target_indices) const override;
-    SASA::Neighbours calcNeighbourDataOfParticle(const Space& spc, index_type target_index) const override;
+    [[nodiscard]] SASA::Neighbours calcNeighbourDataOfParticle(const Space& spc, index_type target_index) const override;
     void update([[maybe_unused]] const Space& spc, [[maybe_unused]] const Change& change) override;
     SASA(const Space& spc, double probe_radius, int slices_per_atom);
     SASA(const json& j, const Space& spc);
@@ -124,10 +124,10 @@ private:
 public:
     SASACellList(const Space& spc, double probe_radius, int slices_per_atom);
     SASACellList(const json& j, const Space& spc);
-    virtual ~SASACellList() = default;
+    ~SASACellList() override = default;
     void init(const Space& spc) override;
-    SASABase::Neighbours calcNeighbourDataOfParticle(const Space& spc, index_type target_index) const override;
-    std::vector<SASABase::Neighbours> calcNeighbourData(const Space& spc,
+    [[nodiscard]] SASABase::Neighbours calcNeighbourDataOfParticle(const Space& spc, index_type target_index) const override;
+    [[nodiscard]] std::vector<SASABase::Neighbours> calcNeighbourData(const Space& spc,
                                                         const std::vector<index_type>& target_indices) const override;
     void update(const Space& spc, const Change& change) override;
 

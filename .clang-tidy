@@ -3,6 +3,7 @@ Checks:          '*,-fuchsia-*,-google-*,-zircon-*,-abseil-*,-modernize-use-trai
 WarningsAsErrors: '*'
 HeaderFilterRegex: ''
 FormatStyle:     none
+MinimumVariableNameLength: 1
 
 CheckOptions:
     - { key: readability-identifier-naming.NamespaceCase, value: CamelCase }

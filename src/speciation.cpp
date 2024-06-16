@@ -48,7 +48,7 @@ ReactionValidator::ReactionValidator(const Space& spc)
  */
 bool ReactionValidator::isPossible(const ReactionData& reaction) const {
     return canReduceImplicitGroups(reaction) && canSwapAtoms(reaction) && canReduceMolecularGroups(reaction) &&
-           canProduceMolecularGroups(reaction) && canReduceAtomicGrups(reaction) && canProduceAtomicGroups(reaction);
+           canProduceMolecularGroups(reaction) && canReduceAtomicGroups(reaction) && canProduceAtomicGroups(reaction);
 }
 
 bool ReactionValidator::canReduceImplicitGroups(const ReactionData& reaction) const {
@@ -100,7 +100,7 @@ bool ReactionValidator::canReduceMolecularGroups(const ReactionData& reaction) c
     return ranges::cpp20::all_of(molecular_groups, can_reduce);
 }
 
-bool ReactionValidator::canReduceAtomicGrups(const ReactionData& reaction) const {
+bool ReactionValidator::canReduceAtomicGroups(const ReactionData& reaction) const {
     namespace rv = ranges::cpp20::views;
     auto can_reduce = [&](auto key_value) {
         const auto [molid, number_to_delete] = key_value;
@@ -494,10 +494,10 @@ TEST_CASE("[Faunus] Speciation - Ranges::sample") {
     auto take_all = vec | ranges::views::sample(4);
     auto take_too_much = vec | ranges::views::sample(10);
 
-    CHECK(range_size(take_nothing) == 0);
-    CHECK(range_size(take_less) == 2);
-    CHECK(range_size(take_all) == 4);
-    CHECK(range_size(take_too_much) == 4);
+    CHECK_EQ(range_size(take_nothing), 0);
+    CHECK_EQ(range_size(take_less), 2);
+    CHECK_EQ(range_size(take_all), 4);
+    CHECK_EQ(range_size(take_too_much), 4);
 }
 
 void SpeciationMove::_move(Change& change) {

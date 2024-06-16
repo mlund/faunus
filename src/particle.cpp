@@ -227,13 +227,13 @@ TEST_CASE("[Faunus] Particle") {
     p1.pos = {1, 2, 3};
     p1.charge = -0.8;
 
-    CHECK(p1.hasExtension() == false);
-    CHECK(p2.hasExtension() == false);
+    CHECK_EQ(p1.hasExtension(), false);
+    CHECK_EQ(p2.hasExtension(), false);
 
     p1.createExtension();
     [[maybe_unused]] auto& newly_created_extension = p2.getExt();
-    CHECK(p1.hasExtension() == true);
-    CHECK(p2.hasExtension() == true);
+    CHECK_EQ(p1.hasExtension(), true);
+    CHECK_EQ(p2.hasExtension(), true);
 
     p1.getExt().mu = {0, 0, 1};
     p1.getExt().mulen = 2.8;
@@ -247,36 +247,36 @@ TEST_CASE("[Faunus] Particle") {
     p1.getExt().Q = Tensor(1, 2, 3, 4, 5, 6);
 
     p2 = json(p1); // p1 --> json --> p2
-    CHECK(p2.hasExtension() == true);
+    CHECK_EQ(p2.hasExtension(), true);
 
-    CHECK(json(p1) == json(p2)); // p1 --> json == json <-- p2 ?
+    CHECK_EQ(json(p1), json(p2)); // p1 --> json == json <-- p2 ?
 
-    CHECK(p2.id == 1);
-    CHECK(p2.pos == Point(1, 2, 3));
-    CHECK(p2.charge == -0.8);
-    CHECK(p2.getExt().mu == Point(0, 0, 1));
-    CHECK(p2.getExt().mulen == 2.8);
-    CHECK(p2.getExt().Q == Tensor(1, 2, 3, 4, 5, 6));
+    CHECK_EQ(p2.id, 1);
+    CHECK_EQ(p2.pos, Point(1, 2, 3));
+    CHECK_EQ(p2.charge, -0.8);
+    CHECK_EQ(p2.getExt().mu, Point(0, 0, 1));
+    CHECK_EQ(p2.getExt().mulen, 2.8);
+    CHECK_EQ(p2.getExt().Q, Tensor(1, 2, 3, 4, 5, 6));
 
     SUBCASE("Cigar") {
         const auto& cigar = p2.getExt();
-        CHECK(cigar.scdir == Point(-0.1, 0.3, 1.9).normalized());
-        CHECK(cigar.scdir.x() == Approx(-0.0519174));
-        CHECK(cigar.scdir.y() == Approx(0.155752));
-        CHECK(cigar.scdir.z() == Approx(0.986431));
+        CHECK_EQ(cigar.scdir, Point(-0.1, 0.3, 1.9).normalized());
+        CHECK_EQ(cigar.scdir.x(), Approx(-0.0519174));
+        CHECK_EQ(cigar.scdir.y(), Approx(0.155752));
+        CHECK_EQ(cigar.scdir.z(), Approx(0.986431));
         CHECK(cigar.scdir.dot(p2.getExt().patchdir) < 1e-9);
-        CHECK(cigar.patchdir.x() == Approx(0.7850810157));
-        CHECK(cigar.patchdir.y() == Approx(0.6168493695));
-        CHECK(cigar.patchdir.z() == Approx(-0.0560772154));
-        CHECK(cigar.half_length == Approx(4.5));
-        CHECK(cigar.patchsides.at(0).x() == Approx(0.5981493663));
-        CHECK(cigar.patchsides.at(0).y() == Approx(0.7970822805));
-        CHECK(cigar.patchsides.at(0).z() == Approx(-0.0829287266));
-        CHECK(cigar.patchsides.at(1).x() == Approx(0.9185106913));
-        CHECK(cigar.patchsides.at(1).y() == Approx(0.3945791934));
-        CHECK(cigar.patchsides.at(1).z() == Approx(-0.0254041347));
-        CHECK(p2.traits().sphero_cylinder.patch_angle == 30.0 * 1.0_deg);
-        CHECK(p2.traits().sphero_cylinder.chiral_angle == 5.0 * 1.0_deg);
+        CHECK_EQ(cigar.patchdir.x(), Approx(0.7850810157));
+        CHECK_EQ(cigar.patchdir.y(), Approx(0.6168493695));
+        CHECK_EQ(cigar.patchdir.z(), Approx(-0.0560772154));
+        CHECK_EQ(cigar.half_length, Approx(4.5));
+        CHECK_EQ(cigar.patchsides.at(0).x(), Approx(0.5981493663));
+        CHECK_EQ(cigar.patchsides.at(0).y(), Approx(0.7970822805));
+        CHECK_EQ(cigar.patchsides.at(0).z(), Approx(-0.0829287266));
+        CHECK_EQ(cigar.patchsides.at(1).x(), Approx(0.9185106913));
+        CHECK_EQ(cigar.patchsides.at(1).y(), Approx(0.3945791934));
+        CHECK_EQ(cigar.patchsides.at(1).z(), Approx(-0.0254041347));
+        CHECK_EQ(p2.traits().sphero_cylinder.patch_angle, 30.0 * 1.0_deg);
+        CHECK_EQ(p2.traits().sphero_cylinder.chiral_angle, 5.0 * 1.0_deg);
     }
 
     SUBCASE("rotate") {
@@ -285,17 +285,17 @@ TEST_CASE("[Faunus] Particle") {
         p1.getExt().mu = p1.getExt().scdir = {1, 0, 0};
         p1.rotate(qrot.getQuaternion(), qrot.getRotationMatrix());
 
-        CHECK(p1.getExt().mu.x() == Approx(0));
-        CHECK(p1.getExt().mu.z() == Approx(-1));
-        CHECK(p1.getExt().scdir.x() == Approx(0));
-        CHECK(p1.getExt().scdir.z() == Approx(-1));
+        CHECK_EQ(p1.getExt().mu.x(), Approx(0));
+        CHECK_EQ(p1.getExt().mu.z(), Approx(-1));
+        CHECK_EQ(p1.getExt().scdir.x(), Approx(0));
+        CHECK_EQ(p1.getExt().scdir.z(), Approx(-1));
 
-        CHECK(p1.getExt().Q(0, 0) == Approx(6));
-        CHECK(p1.getExt().Q(0, 1) == Approx(5));
-        CHECK(p1.getExt().Q(0, 2) == Approx(-3));
-        CHECK(p1.getExt().Q(1, 1) == Approx(4));
-        CHECK(p1.getExt().Q(1, 2) == Approx(-2));
-        CHECK(p1.getExt().Q(2, 2) == Approx(1));
+        CHECK_EQ(p1.getExt().Q(0, 0), Approx(6));
+        CHECK_EQ(p1.getExt().Q(0, 1), Approx(5));
+        CHECK_EQ(p1.getExt().Q(0, 2), Approx(-3));
+        CHECK_EQ(p1.getExt().Q(1, 1), Approx(4));
+        CHECK_EQ(p1.getExt().Q(1, 2), Approx(-2));
+        CHECK_EQ(p1.getExt().Q(2, 2), Approx(1));
     }
 
     SUBCASE("Cereal serialisation") {
@@ -324,15 +324,15 @@ TEST_CASE("[Faunus] Particle") {
             std::ifstream is("out.cereal", std::ios::binary);
             cereal::BinaryInputArchive archive(is);
             archive(p);
-            CHECK(p.id == 8);
-            CHECK(p.charge == -1);
-            CHECK(p.pos.x() == 10);
-            CHECK(p.pos.y() == 20);
-            CHECK(p.pos.z() == 30);
-            CHECK(p.getExt().mu.x() == 0.1);
-            CHECK(p.getExt().mu.y() == 0.2);
-            CHECK(p.getExt().mu.z() == 0.3);
-            CHECK(p.getExt().mulen == 104);
+            CHECK_EQ(p.id, 8);
+            CHECK_EQ(p.charge, -1);
+            CHECK_EQ(p.pos.x(), 10);
+            CHECK_EQ(p.pos.y(), 20);
+            CHECK_EQ(p.pos.z(), 30);
+            CHECK_EQ(p.getExt().mu.x(), 0.1);
+            CHECK_EQ(p.getExt().mu.y(), 0.2);
+            CHECK_EQ(p.getExt().mu.z(), 0.3);
+            CHECK_EQ(p.getExt().mulen, 104);
         }
     }
 }

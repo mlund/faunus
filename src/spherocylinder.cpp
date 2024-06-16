@@ -222,7 +222,7 @@ int psc_intersect(const Cigar& particle1, const Cigar& particle2, const Point& r
     /*1- do intersections of spherocylinder2 with patch of spherocylinder1 at
       cut distance C*/
     /*1a- test intersection with half planes of patch and look how far they are
-      from spherocylinder. If closer then C  we got itersection*/
+      from spherocylinder. If closer than C  we got itersection*/
 
     /* plane1 */
     /* find intersections of part2 with plane by par1 and patchsides[0] */
@@ -417,7 +417,7 @@ int cpsc_intersect(const Cigar& cigar1, const Cigar& cigar2, const Point& r_cm, 
     /*1- do intersections of spherocylinder2 with patch of spherocylinder1 at
       cut distance C*/
     /*1a- test intersection with half planes of patch and look how far they are
-      from spherocylinder. If closer then C  we got itersection*/
+      from spherocylinder. If closer than C  we got itersection*/
 
     /* plane1 */
     /* find intersections of part2 with plane by par1 and part1.patchsides[0] */
@@ -687,7 +687,7 @@ TEST_CASE("[Faunus] CigarWithCigar") {
 
     // Check that we use same temperature as R. Vacha. Note also that the epsilon value
     // in his code is in kT per nanometer.
-    CHECK(1.4_kT / 1.0_kJmol == doctest::Approx(3.47056));
+    CHECK_EQ(1.4_kT / 1.0_kJmol, doctest::Approx(3.47056));
 
     // the Faunus epsilon value is in kJ/mol/Å
     Faunus::atoms = R"([
@@ -713,7 +713,7 @@ TEST_CASE("[Faunus] CigarWithCigar") {
         a.pos = {0.0, 0.0, 0.0};
         b.pos = {atom_data.sigma, 0.0, 0.0}; // place a and b at contact
         Point separation = a.pos - b.pos;
-        CHECK(pairpot(a, b, separation.squaredNorm(), separation) == doctest::Approx(-8.26)); // kT
+        CHECK_EQ(pairpot(a, b, separation.squaredNorm(), separation), doctest::Approx(-8.26)); // kT
     }
 }
 

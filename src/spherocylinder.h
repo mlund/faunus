@@ -46,7 +46,7 @@ Point mindist_segment2segment(const Point& dir1, double halfl1, const Point& dir
  * @param half_length Half length of segment
  * @param separation Distance vector between the middle segment to point
  */
-inline Point mindist_segment2point(const Point& segment_direction, const double half_length, const Point& separation) {
+[[maybe_unused]] inline Point mindist_segment2point(const Point& segment_direction, const double half_length, const Point& separation) {
     const auto c = segment_direction.dot(separation);
     double d;
     if (c > half_length) {
@@ -149,7 +149,7 @@ class CigarWithSphere : public PairPotential {
                              const Point& center_separation) const override {
         assert(cigar.hasExtension());
         const auto c = cigar.getExt().scdir.dot(center_separation);
-        double contt = 0;
+        double contt;
         if (c > cigar.ext->half_length) {
             contt = cigar.ext->half_length;
         } else {
@@ -209,10 +209,10 @@ class CigarWithCigar : public PairPotential {
     PatchPotential patch_potential;       //!< Isotropic pair-potential for patchy parts
     CylinderPotential cylinder_potential; //!< Isotropic pair-potential for cylindrical parts
 
-    double patchyPatchyEnergy(const Particle& particle1, const Particle& particle2,
+    [[nodiscard]] double patchyPatchyEnergy(const Particle& particle1, const Particle& particle2,
                               const Point& center_separation) const;
 
-    double isotropicIsotropicEnergy(const Particle& particle1, const Particle& particle2,
+    [[nodiscard]] double isotropicIsotropicEnergy(const Particle& particle1, const Particle& particle2,
                                     const Point& center_separation) const;
 
   public:

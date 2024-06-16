@@ -6,6 +6,8 @@
 #include "space.h"
 #include <spdlog/spdlog.h>
 
+#include <utility>
+
 namespace Faunus::Energy {
 
 // ------------ Energybase -------------
@@ -135,7 +137,7 @@ TEST_CASE("[Faunus] ExternalPotential") {
         ParticleSelfEnergy pot(spc, [](const Particle &) { return 0.5; });
         Change change;
         change.everything = true; // if both particles have changed
-        CHECK(pot.energy(change) == Approx(0.5 + 0.5));
+        CHECK_EQ(pot.energy(change), Approx(0.5 + 0.5));
     }
 }
 
@@ -161,8 +163,7 @@ Confine::Confine(const json& j, Space& spc) : ExternalPotential(j, spc) {
         // If volume is scaled, also scale the confining radius by adding a trigger
         // to `Space::scaleVolume()`
         if (scale) {
-            spc.scaleVolumeTriggers.push_back(
-                [&]([[maybe_unused]] Space& spc, double Vold, double Vnew) { radius *= std::cbrt(Vnew / Vold); });
+            spc.scaleVolumeTriggers.emplace_back([&]([[maybe_unused]] Space& spc, double Vold, double Vnew) { radius *= std::cbrt(Vnew / Vold); });
         }
     }
 
@@ -288,7 +289,7 @@ void ExternalAkesson::loadChargeDensity() {
  * @param z z-position where to evaluate the electric potential
  * @param a Half box length in x or y direction (x == y assumed)
  */
-double ExternalAkesson::evalPotential(const double z, const double a) const {
+double ExternalAkesson::evalPotential(const double z, const double a) {
     const auto a2 = a * a;
     const auto z2 = z * z;
     return -2 * pc::pi * z - 8 * a * std::log((std::sqrt(2 * a2 + z2) + a) / std::sqrt(a2 + z2)) +
@@ -393,22 +394,22 @@ TEST_CASE("[Faunus] Gouy-Chapman") {
     Particle p;
     p.charge = 1.0;
     p.pos = {0, 0, -25};                            // potential at charged surface
-    CHECK(phi(p) == doctest::Approx(0.2087776151)); // = phi_0
+    CHECK_EQ(phi(p), doctest::Approx(0.2087776151)); // = phi_0
 
     p.pos = {0, 0, 0}; // potential at mid-plane
-    CHECK(phi(p) == doctest::Approx(0.0160227029));
+    CHECK_EQ(phi(p), doctest::Approx(0.0160227029));
 
     j = {{"molarity", 0.1}, {"epsr", 80}, {"linearise", false}, {"phi0", 0.2087776151}};
     phi = Energy::createGouyChapmanPotential(j, geometry);
-    CHECK(phi(p) == doctest::Approx(0.0160227029));
+    CHECK_EQ(phi(p), doctest::Approx(0.0160227029));
 
     j = {{"molarity", 0.1}, {"epsr", 80}, {"linearise", false}, {"rho", 0.01}};
     phi = Energy::createGouyChapmanPotential(j, geometry);
-    CHECK(phi(p) == doctest::Approx(0.0160227029));
+    CHECK_EQ(phi(p), doctest::Approx(0.0160227029));
 
     j = {{"molarity", 0.1}, {"epsr", 80}, {"linearise", true}, {"rho", 0.01}};
     phi = Energy::createGouyChapmanPotential(j, geometry);
-    CHECK(phi(p) == doctest::Approx(0.0160371645));
+    CHECK_EQ(phi(p), doctest::Approx(0.0160371645));
 }
 
 // ------------ CustomExternal -------------
@@ -456,7 +457,7 @@ void CustomExternal::to_json(json &j) const {
 ParticleSelfEnergy::ParticleSelfEnergy(Space &spc, std::function<double(const Particle &)> selfEnergy)
     : ExternalPotential({{"molecules", {"*"}}, {"com", false}}, spc) {
     assert(selfEnergy && "selfEnergy is not callable");
-    externalPotentialFunc = selfEnergy;
+    externalPotentialFunc = std::move(selfEnergy);
 #ifndef NDEBUG
     // test if self energy can be called
     assert(not Faunus::atoms.empty());

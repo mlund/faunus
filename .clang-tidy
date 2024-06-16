@@ -2,7 +2,7 @@
 Checks:          '*,-fuchsia-*,-google-*,-zircon-*,-abseil-*,-modernize-use-trailing-return-type,-llvm-*,-modernize-use-nodiscard,-llvmlibc-callee-namespace,-cppcoreguidelines-avoid-magic-numbers,-readability-magic-numbers'
 WarningsAsErrors: '*'
 HeaderFilterRegex: ''
-FormatStyle:     none
+FormatStyle:     file
 MinimumVariableNameLength: 1
 
 CheckOptions:

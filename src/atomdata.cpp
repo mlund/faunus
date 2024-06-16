@@ -100,7 +100,7 @@ void from_json(const json& j, AtomData& a) {
     }
     for (const auto& atom_iter : j.items()) {
         a.name = atom_iter.key();
-        SingleUseJSON val = atom_iter.value();
+        auto val = SingleUseJSON(atom_iter.value());
         a.alphax = val.value("alphax", a.alphax);
         a.charge = val.value("q", a.charge);
         a.dp = val.value("dp", a.dp) * 1.0_angstrom;

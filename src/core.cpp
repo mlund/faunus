@@ -126,7 +126,7 @@ TipFromTheManual usageTip; // Global instance
 std::shared_ptr<spdlog::logger> faunus_logger = spdlog::create<spdlog::sinks::null_sink_st>("null");
 std::shared_ptr<spdlog::logger> mcloop_logger = faunus_logger;
 
-std::string addGrowingSuffix(const std::string& file) {
+[[maybe_unused]] std::string addGrowingSuffix(const std::string& file) {
     // using std::experimental::filesystem; // exp. c++17 feature, not available on MacOS (Dec. 2018)
     int cnt = 0;
     std::string newfile;
@@ -216,9 +216,9 @@ TEST_CASE("[Faunus] randomUnitVector") {
         rtp += xyz2rtp(randomUnitVector(r));
     }
     rtp = rtp / n;
-    CHECK(rtp.x() == doctest::Approx(1));
-    CHECK(rtp.y() == doctest::Approx(0).epsilon(0.005));          // theta [-pi:pi] --> <theta>=0
-    CHECK(rtp.z() == doctest::Approx(M_PI / 2.0).epsilon(0.005)); // phi [0:pi] --> <phi>=pi/2
+    CHECK_EQ(rtp.x(), doctest::Approx(1));
+    CHECK_EQ(rtp.y(), doctest::Approx(0).epsilon(0.005));          // theta [-pi:pi] --> <theta>=0
+    CHECK_EQ(rtp.z(), doctest::Approx(M_PI / 2.0).epsilon(0.005)); // phi [0:pi] --> <phi>=pi/2
 }
 
 Point randomUnitVectorPolar(Random& rand) { return rtp2xyz({1.0, 2.0 * M_PI * rand(), std::acos(2.0 * rand() - 1.0)}); }
@@ -231,9 +231,9 @@ TEST_CASE("[Faunus] randomUnitVectorPolar") {
         rtp += xyz2rtp(randomUnitVectorPolar(r));
     }
     rtp = rtp / n;
-    CHECK(rtp.x() == doctest::Approx(1));
-    CHECK(rtp.y() == doctest::Approx(0).epsilon(0.005));          // theta [-pi:pi] --> <theta>=0
-    CHECK(rtp.z() == doctest::Approx(0.5 * M_PI).epsilon(0.005)); // phi [0:pi] --> <phi>=pi/2
+    CHECK_EQ(rtp.x(), doctest::Approx(1));
+    CHECK_EQ(rtp.y(), doctest::Approx(0).epsilon(0.005));          // theta [-pi:pi] --> <theta>=0
+    CHECK_EQ(rtp.z(), doctest::Approx(0.5 * M_PI).epsilon(0.005)); // phi [0:pi] --> <phi>=pi/2
 }
 
 GenericError::GenericError(const std::exception& e) : GenericError(e.what()) {}
@@ -284,9 +284,9 @@ TEST_CASE("[Faunus] infinite/nan") {
 TEST_CASE("[Faunus] distance") {
     std::vector<long long int> v = {10, 20, 30, 40, 30};
     auto rng = v | ranges::cpp20::views::filter([](auto i) { return i == 30; });
-    CHECK(Faunus::distance(v.begin(), rng.begin()) == 2);
+    CHECK_EQ(Faunus::distance(v.begin(), rng.begin()), 2);
     auto it = rng.begin();
-    CHECK(Faunus::distance(v.begin(), ++it) == 4);
+    CHECK_EQ(Faunus::distance(v.begin(), ++it), 4);
 }
 
 TEST_CASE("[Faunus] asEigenMatrix") {
@@ -297,21 +297,21 @@ TEST_CASE("[Faunus] asEigenMatrix") {
     v[2].pos.z() = 2;
     auto m = asEigenMatrix(v.begin(), v.end(), &Particle::pos);
 
-    CHECK(m.cols() == 3);
-    CHECK(m.rows() == 4);
-    CHECK(m.row(0).x() == 5);
-    CHECK(m.row(1).y() == 10);
-    CHECK(m.row(2).z() == 2);
-    CHECK(m.sum() == 17);
+    CHECK_EQ(m.cols(), 3);
+    CHECK_EQ(m.rows(), 4);
+    CHECK_EQ(m.row(0).x(), 5);
+    CHECK_EQ(m.row(1).y(), 10);
+    CHECK_EQ(m.row(2).z(), 2);
+    CHECK_EQ(m.sum(), 17);
     m.row(0).z() += 0.5;
-    CHECK(v[0].pos.z() == Approx(0.5));
+    CHECK_EQ(v[0].pos.z(), Approx(0.5));
 
     v[2].charge = 2;
     v[3].charge = -12;
     auto m2 = asEigenVector(v.begin() + 1, v.end(), &Particle::charge);
-    CHECK(m2.cols() == 1);
-    CHECK(m2.rows() == 3);
-    CHECK(m2.col(0).sum() == Approx(-10));
+    CHECK_EQ(m2.cols(), 1);
+    CHECK_EQ(m2.rows(), 3);
+    CHECK_EQ(m2.col(0).sum(), Approx(-10));
 }
 
 TEST_SUITE_END();
@@ -402,32 +402,32 @@ std::optional<Electrolyte> makeElectrolyte(const json& j) {
 
 TEST_CASE("[Faunus] Electrolyte") {
     using doctest::Approx;
-    CHECK(Electrolyte(0.1, {1, -1}).ionicStrength() == Approx(0.1));                       // NaCl
-    CHECK(Electrolyte(0.1, {2, -2}).ionicStrength() == Approx(0.5 * (0.1 * 4 + 0.1 * 4))); // CaSO₄
-    CHECK(Electrolyte(0.1, {2, -1}).ionicStrength() == Approx(0.5 * (0.1 * 4 + 0.2)));     // CaCl₂
-    CHECK(Electrolyte(0.1, {1, -2}).ionicStrength() == Approx(0.5 * (0.2 + 0.1 * 4)));     // K₂SO₄
-    CHECK(Electrolyte(0.1, {1, -3}).ionicStrength() == Approx(0.5 * (0.3 + 0.1 * 9)));     // Na₃Cit
-    CHECK(Electrolyte(0.1, {3, -1}).ionicStrength() == Approx(0.5 * (0.3 + 0.1 * 9)));     // LaCl₃
-    CHECK(Electrolyte(0.1, {2, -3}).ionicStrength() == Approx(0.5 * (0.3 * 4 + 0.2 * 9))); // Ca₃(PO₄)₂
-    CHECK(Electrolyte(0.1, {1, 3, -2}).ionicStrength() == Approx(0.5 * (0.1 * 1 + 0.1 * 9 + 0.1 * 2 * 4))); // KAl(SO₄)₂
-    CHECK(Electrolyte(1.0, {2, 3, -2}).ionicStrength() == Approx(0.5 * (2 * 4 + 2 * 9 + 5 * 4))); // Ca₂Al₂(SO₄)₅
+    CHECK_EQ(Electrolyte(0.1, {1, -1}).ionicStrength(), Approx(0.1));                       // NaCl
+    CHECK_EQ(Electrolyte(0.1, {2, -2}).ionicStrength(), Approx(0.5 * (0.1 * 4 + 0.1 * 4))); // CaSO₄
+    CHECK_EQ(Electrolyte(0.1, {2, -1}).ionicStrength(), Approx(0.5 * (0.1 * 4 + 0.2)));     // CaCl₂
+    CHECK_EQ(Electrolyte(0.1, {1, -2}).ionicStrength(), Approx(0.5 * (0.2 + 0.1 * 4)));     // K₂SO₄
+    CHECK_EQ(Electrolyte(0.1, {1, -3}).ionicStrength(), Approx(0.5 * (0.3 + 0.1 * 9)));     // Na₃Cit
+    CHECK_EQ(Electrolyte(0.1, {3, -1}).ionicStrength(), Approx(0.5 * (0.3 + 0.1 * 9)));     // LaCl₃
+    CHECK_EQ(Electrolyte(0.1, {2, -3}).ionicStrength(), Approx(0.5 * (0.3 * 4 + 0.2 * 9))); // Ca₃(PO₄)₂
+    CHECK_EQ(Electrolyte(0.1, {1, 3, -2}).ionicStrength(), Approx(0.5 * (0.1 * 1 + 0.1 * 9 + 0.1 * 2 * 4))); // KAl(SO₄)₂
+    CHECK_EQ(Electrolyte(1.0, {2, 3, -2}).ionicStrength(), Approx(0.5 * (2 * 4 + 2 * 9 + 5 * 4))); // Ca₂Al₂(SO₄)₅
     CHECK_THROWS(Electrolyte(0.1, {1, 1}));
     CHECK_THROWS(Electrolyte(0.1, {-1, -1}));
     CHECK_THROWS(Electrolyte(0.1, {0, 0}));
 
     SUBCASE("debyeLength") {
-        CHECK(Electrolyte(0.03, {1, -1}).debyeLength(7.0) == Approx(17.7376102214));
+        CHECK_EQ(Electrolyte(0.03, {1, -1}).debyeLength(7.0), Approx(17.7376102214));
         CHECK_THROWS(makeElectrolyte(R"({"debyelength": 30.0"})"_json)); // 'epsr' is missing
         const auto bjerrum_length = pc::bjerrumLength(80);
-        CHECK(makeElectrolyte(R"({"debyelength": 30.0, "epsr": 80})"_json).value().debyeLength(bjerrum_length) ==
+        CHECK_EQ(makeElectrolyte(R"({"debyelength": 30.0, "epsr": 80})"_json).value().debyeLength(bjerrum_length),
               Approx(30));
     }
 
     SUBCASE("debye length input") {
         const auto bjerrum_length = 7.0;
-        CHECK(Electrolyte(30, bjerrum_length).debyeLength(bjerrum_length) == Approx(30));
-        CHECK(Electrolyte(30, bjerrum_length).getMolarity() == Approx(0.0104874272));
-        CHECK(Electrolyte(30, bjerrum_length).ionicStrength() == Approx(0.0104874272));
+        CHECK_EQ(Electrolyte(30, bjerrum_length).debyeLength(bjerrum_length), Approx(30));
+        CHECK_EQ(Electrolyte(30, bjerrum_length).getMolarity(), Approx(0.0104874272));
+        CHECK_EQ(Electrolyte(30, bjerrum_length).ionicStrength(), Approx(0.0104874272));
     }
 }
 

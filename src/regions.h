@@ -31,17 +31,17 @@ NLOHMANN_JSON_SERIALIZE_ENUM(RegionType, {{RegionType::INVALID, nullptr},
  */
 class RegionBase {
   private:
-    virtual bool isInside(const Point& position) const = 0; //!< true if point is inside region
+    [[nodiscard]] virtual bool isInside(const Point& position) const = 0; //!< true if point is inside region
   public:
     const RegionType type;
     bool use_group_mass_center = false;           //!< Use group mass-center to check if inside region
-    virtual std::optional<double> volume() const; //!< Volume of region if applicable
+    [[nodiscard]] virtual std::optional<double> volume() const; //!< Volume of region if applicable
     virtual void to_json(json& j) const = 0;
     virtual ~RegionBase() = default;
     explicit RegionBase(RegionType type);
 
-    bool inside(const Particle& particle) const; //!< Determines if particle is inside region
-    bool inside(const Group& group) const;       //!< Determines of groups is inside region
+    [[nodiscard]] bool inside(const Particle& particle) const; //!< Determines if particle is inside region
+    [[nodiscard]] bool inside(const Group& group) const;       //!< Determines of groups is inside region
 
     /** Selects particles within the region */
     template <typename ParticleRange> auto filterInside(const ParticleRange& particles) const {
@@ -72,7 +72,7 @@ class WithinMoleculeType : public RegionBase {
     const MoleculeData::index_type molid; //!< molid to target
     const bool use_region_mass_center;    //!< true = with respect to center of mass of `molid`
     const double threshold_squared;       //!< squared distance threshold from other particles or com
-    inline bool within_threshold(const Point& position1, const Point& position2) const {
+    [[nodiscard]] inline bool within_threshold(const Point& position1, const Point& position2) const {
         return spc.geometry.sqdist(position1, position2) < threshold_squared;
     }
 
@@ -80,8 +80,8 @@ class WithinMoleculeType : public RegionBase {
     WithinMoleculeType(const Space& spc, std::string_view molecule_name, double threshold, bool use_region_mass_center,
                        bool use_group_mass_center);
     WithinMoleculeType(const Space& spc, const json& j);
-    bool isInside(const Point& position) const override;
-    std::optional<double> volume() const override;
+    [[nodiscard]] bool isInside(const Point& position) const override;
+    [[nodiscard]] std::optional<double> volume() const override;
     void to_json(json& j) const override;
 };
 
@@ -97,8 +97,8 @@ class SphereAroundParticle : public RegionBase {
   public:
     SphereAroundParticle(const Space& spc, ParticleVector::size_type index, double radius);
     SphereAroundParticle(const Space& spc, const json& j);
-    bool isInside(const Point& position) const override;
-    std::optional<double> volume() const override;
+    [[nodiscard]] bool isInside(const Point& position) const override;
+    [[nodiscard]] std::optional<double> volume() const override;
     void to_json(json& j) const override;
 };
 
@@ -117,14 +117,14 @@ class MovingEllipsoid : public RegionBase {
     const Point& reference_position_1; //!< Reference to first reference particle position
     const Point& reference_position_2; //!< Reference to second reference particle position
 
-    std::pair<Point, Point> getEllipsoidPositionAndDirection() const;
+    [[nodiscard]] std::pair<Point, Point> getEllipsoidPositionAndDirection() const;
 
   public:
     MovingEllipsoid(const Space& spc, ParticleVector::size_type particle_index1,
                     ParticleVector::size_type particle_index2, double parallel_radius, double perpendicular_radius,
                     bool use_group_mass_center);
     MovingEllipsoid(const Space& spc, const json& j);
-    bool isInside(const Point& position) const override;
+    [[nodiscard]] bool isInside(const Point& position) const override;
     void to_json(json& j) const override;
 };
 

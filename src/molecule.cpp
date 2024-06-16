@@ -187,8 +187,8 @@ TEST_CASE("[Faunus] MoleculeData") {
         CHECK_EQ(m.id(), 0);
         CHECK_EQ(m.activity, Approx(0.2_molar));
         CHECK_EQ(m.atomic, true);
-        // CHECK(m.insdir == Point(0.5, 0, 0));
-        // CHECK(m.insoffset == Point(-1.1, 0.5, 10));
+        // CHECK_EQ(m.insdir, Point(0.5, 0, 0));
+        // CHECK_EQ(m.insoffset, Point(-1.1, 0.5, 10));
     }
 }
 
@@ -509,7 +509,7 @@ TEST_CASE("[Faunus] MoleculeBuilder") {
 
 // ============ MoleculeStructureReader ============
 
-void MoleculeStructureReader::readJson(ParticleVector &particles, const json &j) {
+void MoleculeStructureReader::readJson(ParticleVector &particles, const json &j) const {
     if (j.is_string()) {
         auto filename = j.get<std::string>();
         readFile(particles, filename);
@@ -746,7 +746,7 @@ ParticleVector RandomInserter::operator()(const Geometry::GeometryBase &geo, Mol
         if (allow_overlap || ranges::cpp20::none_of(particles, container_overlap)) {
             return particles;
         }
-    };
+    }
     throw std::runtime_error("Max. # of overlap checks reached upon insertion.");
 }
 
@@ -821,7 +821,7 @@ TEST_CASE("[Faunus] Conformation") {
     Conformation conformation;
     CHECK(conformation.empty());
 
-    conformation.positions.push_back({1, 2, 3});
+    conformation.positions.emplace_back(1, 2, 3);
     conformation.charges.push_back(0.5);
     CHECK(not conformation.empty());
 
@@ -829,8 +829,8 @@ TEST_CASE("[Faunus] Conformation") {
     CHECK_THROWS(conformation.copyTo(particles));
     particles.resize(1);
     conformation.copyTo(particles);
-    CHECK(particles[0].pos == Point(1, 2, 3));
-    CHECK(particles[0].charge == 0.5);
+    CHECK_EQ(particles[0].pos, Point(1, 2, 3));
+    CHECK_EQ(particles[0].charge, 0.5);
 }
 
 ReactionData::Direction ReactionData::getDirection() const { return direction; }
@@ -841,9 +841,9 @@ void ReactionData::setDirection(ReactionData::Direction new_direction) {
     }
 }
 
-void ReactionData::setRandomDirection(Random& random) {
-    auto direction = static_cast<ReactionData::Direction>((char)random.range(0, 1)); // random direction
-    setDirection(direction);
+void ReactionData::setRandomDirection(Random& rng) {
+    auto dir = static_cast<ReactionData::Direction>((char)rng.range(0, 1)); // random direction
+    setDirection(dir);
 }
 
 ReactionData::AtomicAndMolecularPair ReactionData::getProducts() const {
@@ -1017,9 +1017,9 @@ TEST_CASE("[Faunus] ReactionData") {
     auto &r = reactions; // reference to global reaction list
     r = j["reactionlist"].get<decltype(reactions)>();
 
-    CHECK(r.size() == 1);
-    CHECK(r.front().getReactionString() == "A = B");
-    CHECK(r.front().freeEnergy() == Approx(10.051 + std::log(0.2)));
+    CHECK_EQ(r.size(), 1);
+    CHECK_EQ(r.front().getReactionString(), "A = B");
+    CHECK_EQ(r.front().freeEnergy(), Approx(10.051 + std::log(0.2)));
 }
 
 void MoleculeInserter::from_json(const json &) {}

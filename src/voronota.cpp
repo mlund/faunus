@@ -7,7 +7,8 @@ namespace Faunus::analysis {
 
 Voronota::Voronota(double probe_radius, const Faunus::Space& spc)
     : Analysis(spc, "voronota")
-    , probe_radius(probe_radius) {
+    , probe_radius(probe_radius)
+{
     cite = "doi:10/mq8k";
     auto n_pbc = spc.geometry.asSimpleGeometry()->boundary_conditions.isPeriodic().count();
     switch (n_pbc) {
@@ -26,32 +27,38 @@ Voronota::Voronota(double probe_radius, const Faunus::Space& spc)
 }
 
 Voronota::Voronota(const Faunus::json& input, const Faunus::Space& spc)
-    : Voronota(input.value("radius", 1.4_angstrom), spc) {
+    : Voronota(input.value("radius", 1.4_angstrom), spc)
+{
     from_json(input);
 }
 
-void Voronota::_from_json(const Faunus::json& input) {
+void Voronota::_from_json(const Faunus::json& input)
+{
     if (filename = input.value("file", ""s); !filename.empty()) {
         output_stream = IO::openCompressedOutputStream(MPI::prefix + filename);
         *output_stream << "# step SASA\n";
     }
 }
 
-void Voronota::_to_json(json& json_output) const {
+void Voronota::_to_json(json& json_output) const
+{
     if (!average_data.area.empty()) {
         json_output = {{"⟨SASA⟩", average_data.area.avg()},
-                      {"⟨SASA²⟩-⟨SASA⟩²", average_data.area_squared.avg() - std::pow(average_data.area.avg(), 2)}};
+                       {"⟨SASA²⟩-⟨SASA⟩²",
+                        average_data.area_squared.avg() - std::pow(average_data.area.avg(), 2)}};
     }
     json_output["radius"] = probe_radius;
 }
 
-void Voronota::_to_disk() {
+void Voronota::_to_disk()
+{
     if (output_stream) {
         output_stream->flush();
     }
 }
 
-void Voronota::_sample() {
+void Voronota::_sample()
+{
     using voronotalt::SimplePoint;
     using namespace ranges::cpp20::views;
 
@@ -68,7 +75,8 @@ void Voronota::_sample() {
         const Point corner = 0.5 * spc.geometry.getLength();
         const std::vector<SimplePoint> box_corners = {to_point(-corner), to_point(corner)};
         voronotalt::RadicalTessellation::construct_full_tessellation(spheres, box_corners, result);
-    } else {
+    }
+    else {
         voronotalt::RadicalTessellation::construct_full_tessellation(spheres, result);
     }
 

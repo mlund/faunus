@@ -26,7 +26,8 @@ std::vector<ReactionData> reactions; //!< List of reactions
 MoleculeData::MoleculeData(const std::string& name, const ParticleVector& particles,
                            const BasePointerVector<pairpotential::BondData>& bonds)
     : name(name)
-    , bonds(bonds) {
+    , bonds(bonds)
+{
     for (const auto& particle : particles) {
         atoms.push_back(particle.id);
     }
@@ -35,26 +36,50 @@ MoleculeData::MoleculeData(const std::string& name, const ParticleVector& partic
     }
 }
 
-MoleculeData::index_type& MoleculeData::id() { return _id; }
+MoleculeData::index_type& MoleculeData::id()
+{
+    return _id;
+}
 
-const MoleculeData::index_type& MoleculeData::id() const { return _id; }
+const MoleculeData::index_type& MoleculeData::id() const
+{
+    return _id;
+}
 
-bool MoleculeData::isImplicit() const { return implicit; }
+bool MoleculeData::isImplicit() const
+{
+    return implicit;
+}
 
-bool MoleculeData::isMolecular() const { return !atomic; }
+bool MoleculeData::isMolecular() const
+{
+    return !atomic;
+}
 
-bool MoleculeData::isAtomic() const { return atomic; }
+bool MoleculeData::isAtomic() const
+{
+    return atomic;
+}
 
-ParticleVector MoleculeData::getRandomConformation(Geometry::GeometryBase& geo, const ParticleVector& otherparticles) {
+ParticleVector MoleculeData::getRandomConformation(Geometry::GeometryBase& geo,
+                                                   const ParticleVector& otherparticles)
+{
     assert(inserter != nullptr);
     return (*inserter)(geo, *this, otherparticles);
 }
 
-void MoleculeData::setInserter(std::shared_ptr<MoleculeInserter> ins) { inserter = std::move(ins); }
+void MoleculeData::setInserter(std::shared_ptr<MoleculeInserter> ins)
+{
+    inserter = std::move(ins);
+}
 
-MoleculeData::MoleculeData() { setInserter(std::make_shared<RandomInserter>()); }
+MoleculeData::MoleculeData()
+{
+    setInserter(std::make_shared<RandomInserter>());
+}
 
-void to_json(json &j, const MoleculeData &a) {
+void to_json(json& j, const MoleculeData& a)
+{
     j[a.name] = {
         {"id", a.id()},
         {"atomic", a.atomic},
@@ -65,7 +90,7 @@ void to_json(json &j, const MoleculeData &a) {
     };
     j[a.name].update(a.json_cfg);
 
-    if(a.inserter != nullptr) {
+    if (a.inserter != nullptr) {
         a.inserter->to_json(j[a.name]);
     }
     j[a.name]["atoms"] = json::array();
@@ -80,19 +105,23 @@ void to_json(json &j, const MoleculeData &a) {
     }
 }
 
-void MoleculeData::createMolecularConformations(const json &j) {
+void MoleculeData::createMolecularConformations(const json& j)
+{
     assert(j.is_object());
     if (auto trajfile = j.value("traj", ""s); not trajfile.empty()) {
-        conformations.clear();                                  // remove all previous conformations
+        conformations.clear(); // remove all previous conformations
         if (j.contains("structure")) {
             throw ConfigurationError("`structure` and `traj` are mutually exclusive");
         }
         try {
-            PQRTrajectoryReader::loadTrajectory(trajfile, conformations.data); // read traj. from disk
+            PQRTrajectoryReader::loadTrajectory(trajfile,
+                                                conformations.data); // read traj. from disk
             if (bool read_charges = j.value("keepcharges", true); read_charges) {
                 faunus_logger->debug("charges in {} preferred over `atomlist` values", trajfile);
-            } else {
-                faunus_logger->debug("replacing all charges from {} with atomlist values", trajfile);
+            }
+            else {
+                faunus_logger->debug("replacing all charges from {} with atomlist values",
+                                     trajfile);
                 auto all_particles = conformations.data | ranges::cpp20::views::join;
                 Faunus::applyAtomDataCharges(all_particles.begin(), all_particles.end());
             }
@@ -101,7 +130,8 @@ void MoleculeData::createMolecularConformations(const json &j) {
             for (ParticleVector& conformation : conformations.data) {
                 Geometry::translateToOrigin(conformation.begin(), conformation.end());
             }
-        } catch (std::exception& e) {
+        }
+        catch (std::exception& e) {
             throw ConfigurationError("error loading {}: {}", trajfile, e.what());
         }
         if (conformations.empty()) {
@@ -127,7 +157,9 @@ void MoleculeData::createMolecularConformations(const json &j) {
         setConformationWeights(j);
     }
 }
-void MoleculeData::setConformationWeights(const json& j) {
+
+void MoleculeData::setConformationWeights(const json& j)
+{
     std::vector<float> weights(conformations.size(), 1.0); // default uniform weight
 
     if (auto filename = j.value("trajweight", ""s); !filename.empty()) {
@@ -143,31 +175,35 @@ void MoleculeData::setConformationWeights(const json& j) {
         }
         stream.close();
         if (weights.size() != conformations.size()) {
-            throw ConfigurationError("{} conformation weights found while expecting {}", weights.size(),
-                                     conformations.size());
+            throw ConfigurationError("{} conformation weights found while expecting {}",
+                                     weights.size(), conformations.size());
         }
         faunus_logger->info("{} weights loaded from {}", weights.size(), filename);
     }
     conformations.setWeight(weights.begin(), weights.end());
 }
 
-TEST_CASE("[Faunus] MoleculeData") {
+TEST_CASE("[Faunus] MoleculeData")
+{
     //    json j = R"(
     //            { "moleculelist": [
-    //                { "B": {"activity":0.2, "atomic":true, "insdir": [0.5,0,0], "insoffset": [-1.1, 0.5, 10],
-    //                "atoms":["a"] } }, { "A": { "atomic":false, "structure": [{"a": [0.1, 0.1, 0.1]}] } }
+    //                { "B": {"activity":0.2, "atomic":true, "insdir": [0.5,0,0], "insoffset":
+    //                [-1.1, 0.5, 10], "atoms":["a"] } }, { "A": { "atomic":false, "structure":
+    //                [{"a": [0.1, 0.1, 0.1]}] } }
     //            ]})"_json;
     json j = R"([
                 { "B": {"activity": 0.2, "atomic": true, "atoms": ["a"] } },
                 { "A": { "atomic": false, "structure": [{"a": [0.1, 0.1, 0.1]}] } }
             ])"_json;
 
-    SUBCASE("Unknown atom") {
+    SUBCASE("Unknown atom")
+    {
         atoms.clear();
         CHECK_THROWS_AS_MESSAGE(j.get<decltype(molecules)>(), std::runtime_error,
                                 "JSON->molecule B: unknown atom in atomic molecule");
     }
-    SUBCASE("Construction") {
+    SUBCASE("Construction")
+    {
         using doctest::Approx;
         json ja = R"([{"a": {}}])"_json;
         atoms = ja.get<decltype(atoms)>();
@@ -194,14 +230,17 @@ TEST_CASE("[Faunus] MoleculeData") {
 
 // ============ NeighboursGenerator ============
 
-NeighboursGenerator::NeighboursGenerator(const BondVector &bonds) {
+NeighboursGenerator::NeighboursGenerator(const BondVector& bonds)
+{
     createBondMap(bonds);
 }
 
-void NeighboursGenerator::createBondMap(const BondVector &bonds) {
+void NeighboursGenerator::createBondMap(const BondVector& bonds)
+{
     for (auto& bond : bonds.find<pairpotential::StretchData>()) {
         auto add_bond = [this, &bond](auto i, auto j) {
-            auto atom_emplaced = bond_map.emplace(bond->indices.at(i), AtomList{}); // find or create empty vector
+            auto atom_emplaced =
+                bond_map.emplace(bond->indices.at(i), AtomList{}); // find or create empty vector
             atom_emplaced.first->second.push_back(
                 bond->indices.at(j)); // atom_emplaced.<iterator>-><vector>.push_back()
         };
@@ -212,8 +251,9 @@ void NeighboursGenerator::createBondMap(const BondVector &bonds) {
     }
 }
 
-void NeighboursGenerator::generatePaths(int bonded_distance) {
-    if(paths.empty()) {
+void NeighboursGenerator::generatePaths(int bonded_distance)
+{
+    if (paths.empty()) {
         // starting with a path of length 0 bonds which are just separated atoms
         paths.emplace_back();
         for (const auto& bonded_atoms : bond_map) {
@@ -223,7 +263,8 @@ void NeighboursGenerator::generatePaths(int bonded_distance) {
     // continue wherever the last path generation ended
     for (int distance = (int)paths.size(); distance <= bonded_distance; ++distance) {
         paths.emplace_back();
-        const auto base_paths = paths.rbegin()[1]; // last but one: a set of paths of length (distance - 1)
+        const auto base_paths =
+            paths.rbegin()[1]; // last but one: a set of paths of length (distance - 1)
         for (const auto& base_path : base_paths) {
             // try to extend the path with every atom bonded to the tail
             for (const auto& appending : bond_map.at(base_path.back())) {
@@ -238,24 +279,29 @@ void NeighboursGenerator::generatePaths(int bonded_distance) {
     }
 }
 
-void NeighboursGenerator::generatePairs(AtomPairList& pairs, int bond_distance) {
+void NeighboursGenerator::generatePairs(AtomPairList& pairs, int bond_distance)
+{
     using namespace ranges::cpp20::views;
     generatePaths(bond_distance);
     auto is_valid_pair = [](const auto& pair) { return pair.first != pair.second; };
     auto make_ordered_pair = [](const auto& path) {
-        return path.front() < path.back() ? AtomPair(path.front(), path.back()) : AtomPair(path.back(), path.front());
+        return path.front() < path.back() ? AtomPair(path.front(), path.back())
+                                          : AtomPair(path.back(), path.front());
     };
     auto excluded_pairs = // temp. conversion to std::set is avoid duplicates
-        paths | join | transform(make_ordered_pair) | filter(is_valid_pair) | ranges::to<std::set<AtomPair>>;
+        paths | join | transform(make_ordered_pair) | filter(is_valid_pair) |
+        ranges::to<std::set<AtomPair>>;
     pairs.reserve(pairs.size() + excluded_pairs.size());
     std::copy(excluded_pairs.begin(), excluded_pairs.end(), std::back_inserter(pairs));
 }
 
-TEST_CASE("NeighboursGenerator") {
+TEST_CASE("NeighboursGenerator")
+{
     BasePointerVector<pairpotential::BondData> bonds;
     std::vector<std::pair<int, int>> pairs;
 
-    SUBCASE("Linear Chain") {
+    SUBCASE("Linear Chain")
+    {
         // decamer connected with harmonic bonds
         const auto mer = 10;
         for (auto i = 0; i < mer - 1; ++i) {
@@ -271,7 +317,8 @@ TEST_CASE("NeighboursGenerator") {
             int match_cnt = 0;
             for (auto dist = 1; dist <= distance; ++dist) {
                 for (auto n = 0; n < mer - dist; ++n) {
-                    if (std::find(pairs.begin(), pairs.end(), std::make_pair(n, n + dist)) != pairs.end()) {
+                    if (std::find(pairs.begin(), pairs.end(), std::make_pair(n, n + dist)) !=
+                        pairs.end()) {
                         ++match_cnt;
                     }
                 }
@@ -281,7 +328,8 @@ TEST_CASE("NeighboursGenerator") {
         CHECK_EQ(pairs_matched(), pairs.size());
     }
 
-    SUBCASE("Cycle") {
+    SUBCASE("Cycle")
+    {
         // cyclic hexamer connected with harmonic bonds
         const auto mer = 6;
         for (auto i = 0; i < mer; ++i) {
@@ -292,7 +340,8 @@ TEST_CASE("NeighboursGenerator") {
         const auto distance = 3; // up to dihedrals
         NeighboursGenerator generator(bonds);
         generator.generatePairs(pairs, distance);
-        CHECK_EQ(pairs.size(), mer + mer + mer / 2); // 1-4 pairs in the cyclic hexamer are double degenerated
+        CHECK_EQ(pairs.size(),
+                 mer + mer + mer / 2); // 1-4 pairs in the cyclic hexamer are double degenerated
         auto pairs_matched = [pairs]() {
             int match_cnt = 0;
             for (auto dist = 1; dist <= distance; ++dist) {
@@ -302,10 +351,12 @@ TEST_CASE("NeighboursGenerator") {
                     if (i > j) {
                         std::swap(i, j);
                         if (j - i == 3) {
-                            continue; // skip the pair doubles in the cyclic hexamer, e.g., 1-4 and 4-1
+                            continue; // skip the pair doubles in the cyclic hexamer, e.g., 1-4 and
+                                      // 4-1
                         }
                     }
-                    if (std::find(pairs.begin(), pairs.end(), std::make_pair(i, j)) != pairs.end()) {
+                    if (std::find(pairs.begin(), pairs.end(), std::make_pair(i, j)) !=
+                        pairs.end()) {
                         ++match_cnt;
                     }
                 }
@@ -315,7 +366,8 @@ TEST_CASE("NeighboursGenerator") {
         CHECK_EQ(pairs_matched(), pairs.size());
     }
 
-    SUBCASE("Branched") {
+    SUBCASE("Branched")
+    {
         // isopentane like structure
         std::vector<std::vector<int>> bonds_ndxs = {{0, 1}, {1, 2}, {1, 3}, {3, 4}};
         for (const auto& bond_ndxs : bonds_ndxs) {
@@ -326,7 +378,8 @@ TEST_CASE("NeighboursGenerator") {
         CHECK_EQ(pairs.size(), 4 + 4);
     }
 
-    SUBCASE("Harmonic and FENE") {
+    SUBCASE("Harmonic and FENE")
+    {
         bonds.emplace_back<pairpotential::HarmonicBond>(0., 0., std::vector<int>{1, 2});
         bonds.emplace_back<pairpotential::FENEBond>(0., 0., std::vector<int>{2, 3});
         bonds.emplace_back<pairpotential::FENEBond>(0., 0., std::vector<int>{4, 5});
@@ -338,7 +391,8 @@ TEST_CASE("NeighboursGenerator") {
 
 // ============ MoleculeBuilder ============
 
-void MoleculeBuilder::from_json(const json &j, MoleculeData &molecule) {
+void MoleculeBuilder::from_json(const json& j, MoleculeData& molecule)
+{
     if (is_used) {
         throw std::logic_error("MoleculeBuilder cannot be used twice");
     }
@@ -350,7 +404,8 @@ void MoleculeBuilder::from_json(const json &j, MoleculeData &molecule) {
         molecule.atomic = j_properties.value("atomic", molecule.atomic);
         molecule.rigid = j_properties.value("rigid", molecule.rigid);
         molecule.compressible = j_properties.value("compressible", molecule.compressible);
-        molecule.activity = j_properties.value("activity", molecule.activity / 1.0_molar) * 1.0_molar;
+        molecule.activity =
+            j_properties.value("activity", molecule.activity / 1.0_molar) * 1.0_molar;
         molecule.implicit = j_properties.value("implicit", false);
         if (molecule.implicit and molecule.atomic) {
             throw std::runtime_error("atomic molecules cannot be implicit");
@@ -379,23 +434,28 @@ void MoleculeBuilder::from_json(const json &j, MoleculeData &molecule) {
         // at this stage all given keys should have been accessed or "spend". If any are
         // left, an exception will be thrown.
         //        if (! val.empty()) {
-        //            throw std::runtime_error("unused key(s):\n"s + val.dump() + usageTip["moleculelist"]);
+        //            throw std::runtime_error("unused key(s):\n"s + val.dump() +
+        //            usageTip["moleculelist"]);
         //        }
-    } catch (std::exception &e) {
+    }
+    catch (std::exception& e) {
         usageTip.pick("moleculelist");
         throw ConfigurationError("molecule '{}': {}", molecule_name, e.what());
     }
 }
 
-std::shared_ptr<MoleculeInserter> MoleculeBuilder::createInserter(const json& j) {
+std::shared_ptr<MoleculeInserter> MoleculeBuilder::createInserter(const json& j)
+{
     return std::make_shared<RandomInserter>(j);
 }
 
-void MoleculeBuilder::readCompoundValues(const json &j) {
+void MoleculeBuilder::readCompoundValues(const json& j)
+{
     auto is_atomic = j.value("atomic", false);
     if (is_atomic) {
         readAtomic(j);
-    } else {
+    }
+    else {
         readParticles(j);
         readBonds(j);
         if (isFasta(j)) {
@@ -405,7 +465,8 @@ void MoleculeBuilder::readCompoundValues(const json &j) {
     }
 }
 
-void MoleculeBuilder::readAtomic(const json& j) {
+void MoleculeBuilder::readAtomic(const json& j)
+{
     if (const auto atomlist = j.find("atoms"); atomlist != j.end()) {
         if (!atomlist->is_array()) {
             throw ConfigurationError("`atoms` must be an array");
@@ -416,13 +477,15 @@ void MoleculeBuilder::readAtomic(const json& j) {
                 const auto& atomdata = findAtomByName(atomname.get<std::string>());
                 particles.emplace_back(atomdata);
             }
-        } catch (std::exception& e) {
+        }
+        catch (std::exception& e) {
             throw ConfigurationError("molecule '{}': {}", molecule_name, e.what());
         }
     }
 }
 
-void MoleculeBuilder::readParticles(const json& j) {
+void MoleculeBuilder::readParticles(const json& j)
+{
     auto structure = j.find("structure");
     if (structure != j.end()) {
         bool read_charges = j.value("keepcharges", true);
@@ -432,16 +495,19 @@ void MoleculeBuilder::readParticles(const json& j) {
             particles = Geometry::mapParticlesOnSphere(particles);
         }
         if (j.value("to_disk", false)) {
-            PQRWriter().save(molecule_name + "-initial.pqr", particles.begin(), particles.end(), Point(0, 0, 0));
+            PQRWriter().save(molecule_name + "-initial.pqr", particles.begin(), particles.end(),
+                             Point(0, 0, 0));
         }
-    } else {
+    }
+    else {
         // allow virtual molecules :-/
         // shall we rather try to fallback on readAtomic()?
         // throw ConfigurationError("structure of the molecule not given");
     }
 }
 
-void MoleculeBuilder::readBonds(const json& j) {
+void MoleculeBuilder::readBonds(const json& j)
+{
     using namespace ranges::cpp20;
     bonds = j.value("bondlist", bonds);
     auto is_invalid_index = [size = particles.size()](auto& i) { return i >= size || i < 0; };
@@ -451,7 +517,8 @@ void MoleculeBuilder::readBonds(const json& j) {
     }
 }
 
-void MoleculeBuilder::readFastaBonds(const json& j) {
+void MoleculeBuilder::readFastaBonds(const json& j)
+{
     if (particles.size() < 2) {
         return;
     }
@@ -464,7 +531,8 @@ void MoleculeBuilder::readFastaBonds(const json& j) {
     }
 }
 
-void MoleculeBuilder::readExclusions(const json& j) {
+void MoleculeBuilder::readExclusions(const json& j)
+{
     auto excluded_neighbours_distance = j.value("excluded_neighbours", 0);
     if (excluded_neighbours_distance > 0) {
         NeighboursGenerator generator(bonds);
@@ -478,12 +546,14 @@ void MoleculeBuilder::readExclusions(const json& j) {
     }
 }
 
-bool MoleculeBuilder::isFasta(const json& j) {
+bool MoleculeBuilder::isFasta(const json& j)
+{
     auto structure = j.find("structure");
     return structure != j.end() && structure->find("fasta") != structure->end();
 }
 
-TEST_CASE("[Faunus] MoleculeBuilder") {
+TEST_CASE("[Faunus] MoleculeBuilder")
+{
     atoms = R"([{"ALA": {}}, {"GLY": {}}, {"NTR": {}}, {"CTR": {}}])"_json.get<decltype(atoms)>();
     auto j = R"(
         {"peptide": { "excluded_neighbours": 2,
@@ -509,25 +579,31 @@ TEST_CASE("[Faunus] MoleculeBuilder") {
 
 // ============ MoleculeStructureReader ============
 
-void MoleculeStructureReader::readJson(ParticleVector &particles, const json &j) const {
+void MoleculeStructureReader::readJson(ParticleVector& particles, const json& j) const
+{
     if (j.is_string()) {
         auto filename = j.get<std::string>();
         readFile(particles, filename);
-    } else if (j.is_array()) {
+    }
+    else if (j.is_array()) {
         readArray(particles, j);
-    } else if (j.is_object() && j.find("fasta") != j.end()) {
+    }
+    else if (j.is_object() && j.find("fasta") != j.end()) {
         readFasta(particles, j);
-    } else {
+    }
+    else {
         throw ConfigurationError("unrecognized structure format");
     }
 }
 
-void MoleculeStructureReader::readFile(ParticleVector& particles, const std::string& filename) const {
+void MoleculeStructureReader::readFile(ParticleVector& particles, const std::string& filename) const
+{
     faunus_logger->info("Reading molecule configuration from file: {}", filename);
     particles = Faunus::loadStructure(filename, read_charges); // throws if nothing is loaded!
 }
 
-void MoleculeStructureReader::readArray(ParticleVector& particles, const json& j) {
+void MoleculeStructureReader::readArray(ParticleVector& particles, const json& j)
+{
     particles.reserve(j.size());
     for (const auto& particle : j) {
         const auto& [atomname, position] = jsonSingleItem(particle);
@@ -535,10 +611,11 @@ void MoleculeStructureReader::readArray(ParticleVector& particles, const json& j
     }
 }
 
-void MoleculeStructureReader::readFasta(ParticleVector& particles, const json& j) {
+void MoleculeStructureReader::readFasta(ParticleVector& particles, const json& j)
+{
     if (auto it = j.find("fasta"); it != j.end()) {
         pairpotential::HarmonicBond bond; // harmonic bond
-        bond.from_json(j);            // read 'k' and 'req' from json
+        bond.from_json(j);                // read 'k' and 'req' from json
 
         auto fasta = it->get<std::string>(); // fasta sequence or filename
 
@@ -547,39 +624,53 @@ void MoleculeStructureReader::readFasta(ParticleVector& particles, const json& j
             if (auto stream = std::ifstream(fasta)) {
                 fasta = CoarseGrainedFastaFileReader(0.0).loadSequence(stream);
                 stream.close();
-            } else {
+            }
+            else {
                 throw ConfigurationError("could not open fasta file: {}", fasta);
             }
         }
         particles = Faunus::fastaToParticles(fasta, bond.equilibrium_distance);
         faunus_logger->debug("fasta sequence parsed with {} letters", particles.size());
-    } else {
+    }
+    else {
         throw ConfigurationError("invalid FASTA format");
     }
 }
-MoleculeStructureReader::MoleculeStructureReader(bool read_charges) : read_charges(read_charges) {}
 
-void from_json(const json &j, MoleculeData &a) {
+MoleculeStructureReader::MoleculeStructureReader(bool read_charges)
+    : read_charges(read_charges)
+{
+}
+
+void from_json(const json& j, MoleculeData& a)
+{
     MoleculeBuilder builder;
     builder.from_json(j, a);
 }
 
-size_t MoleculeData::numConformations() const { return conformations.data.size(); }
+size_t MoleculeData::numConformations() const
+{
+    return conformations.data.size();
+}
 
-void from_json(const json &j, std::vector<MoleculeData> &v) {
+void from_json(const json& j, std::vector<MoleculeData>& v)
+{
     v.reserve(v.size() + j.size());
     for (const auto& i : j) {
         v.push_back(i);
-        v.back().id() = static_cast<MoleculeData::index_type>(v.size() - 1); // id always match vector index
+        v.back().id() =
+            static_cast<MoleculeData::index_type>(v.size() - 1); // id always match vector index
     }
 }
 
-TEST_CASE("[Faunus] MoleculeStructureReader") {
+TEST_CASE("[Faunus] MoleculeStructureReader")
+{
     using doctest::Approx;
     MoleculeStructureReader sf;
     ParticleVector particles;
 
-    SUBCASE("[Faunus] Structure JSON") {
+    SUBCASE("[Faunus] Structure JSON")
+    {
         atoms = R"([{"Na": {}}, {"Cl": {}}, {"M": {}}])"_json.get<decltype(atoms)>();
         auto j = R"([ {"Na": [0,0,0]}, {"Cl": [1,0,0]}, {"M": [0,4.2,0]} ])"_json;
         particles.clear();
@@ -589,8 +680,10 @@ TEST_CASE("[Faunus] MoleculeStructureReader") {
         CHECK_EQ(particles.back().pos, Point{0, 4.2, 0});
     }
 
-    SUBCASE("[Faunus] Structure FASTA") {
-        atoms = R"([{"ALA": {}}, {"GLY": {}}, {"NTR": {}}, {"CTR": {}}])"_json.get<decltype(atoms)>();
+    SUBCASE("[Faunus] Structure FASTA")
+    {
+        atoms =
+            R"([{"ALA": {}}, {"GLY": {}}, {"NTR": {}}, {"CTR": {}}])"_json.get<decltype(atoms)>();
         auto j = R"({"fasta": "nAAAAGGc", "k": 3, "req": 7})"_json;
         particles.clear();
         sf.readJson(particles, j);
@@ -602,37 +695,45 @@ TEST_CASE("[Faunus] MoleculeStructureReader") {
 
 // ============ ExclusionsSimple ============
 
-ExclusionsSimple ExclusionsSimple::create(int atoms_cnt, const std::vector<std::pair<int, int>> &pairs) {
+ExclusionsSimple ExclusionsSimple::create(int atoms_cnt,
+                                          const std::vector<std::pair<int, int>>& pairs)
+{
     ExclusionsSimple exclusions(atoms_cnt);
     exclusions.add(pairs);
     return exclusions;
 }
 
 ExclusionsSimple::ExclusionsSimple(int size)
-    : size(size), excluded_pairs(std::make_shared<std::vector<unsigned char>>()) {
+    : size(size)
+    , excluded_pairs(std::make_shared<std::vector<unsigned char>>())
+{
     faunus_logger->log(size < 1000 ? spdlog::level::trace : spdlog::level::warn,
                        "creating exclusion matrix {}×{} for {} atoms", size, size, size);
     excluded_pairs->resize(size * size, false);
 }
 
-void ExclusionsSimple::add(const std::vector<AtomPair>& exclusions) {
-    for (const auto &pair : exclusions) {
+void ExclusionsSimple::add(const std::vector<AtomPair>& exclusions)
+{
+    for (const auto& pair : exclusions) {
         add(pair.first, pair.second);
     }
 }
 
-inline void ExclusionsSimple::add(int i, int j) {
-    if(i >= size || j >= size) {
+inline void ExclusionsSimple::add(int i, int j)
+{
+    if (i >= size || j >= size) {
         throw std::range_error("exclusion index out of range");
     }
-//    if (i > j) {
-//        std::swap(i, j);
-//    }
+    //    if (i > j) {
+    //        std::swap(i, j);
+    //    }
     any_exclusions = true;
-    excluded_pairs->at(i * size + j) = excluded_pairs->at(j * size + i) = static_cast<char_bool>(true);
+    excluded_pairs->at(i * size + j) = excluded_pairs->at(j * size + i) =
+        static_cast<char_bool>(true);
 }
 
-void from_json(const json &j, ExclusionsSimple &exclusions) {
+void from_json(const json& j, ExclusionsSimple& exclusions)
+{
     auto is_invalid_pair = [](auto& pair) { return !pair.is_array() || pair.size() != 2; };
     if (!j.is_array() || std::any_of(j.begin(), j.end(), is_invalid_pair)) {
         throw ConfigurationError("invalid exclusion: {}", j.dump());
@@ -640,7 +741,8 @@ void from_json(const json &j, ExclusionsSimple &exclusions) {
     std::for_each(j.begin(), j.end(), [&](auto& pair) { exclusions.add(pair[0], pair[1]); });
 }
 
-void to_json(json &j, const ExclusionsSimple &exclusions) {
+void to_json(json& j, const ExclusionsSimple& exclusions)
+{
     j = json::array();
     for (auto m = 0; m < exclusions.size; ++m) {
         for (auto n = m + 1; n < exclusions.size; ++n) {
@@ -653,9 +755,12 @@ void to_json(json &j, const ExclusionsSimple &exclusions) {
 
 // ============ ExclusionsVicinity ============
 
-ExclusionsVicinity ExclusionsVicinity::create(int atoms_cnt, const std::vector<AtomPair>& pairs) {
+ExclusionsVicinity ExclusionsVicinity::create(int atoms_cnt, const std::vector<AtomPair>& pairs)
+{
     auto max_neighbours_distance = 0;
-    auto compare = [](auto &a, auto &b) { return std::abs(a.first - a.second) < std::abs(b.first - b.second); };
+    auto compare = [](auto& a, auto& b) {
+        return std::abs(a.first - a.second) < std::abs(b.first - b.second);
+    };
     if (auto it = std::max_element(pairs.begin(), pairs.end(), compare); it != pairs.end()) {
         max_neighbours_distance = std::abs(it->first - it->second);
     }
@@ -665,16 +770,20 @@ ExclusionsVicinity ExclusionsVicinity::create(int atoms_cnt, const std::vector<A
 }
 
 ExclusionsVicinity::ExclusionsVicinity(int atoms_cnt, int max_difference)
-    : atoms_cnt(atoms_cnt), max_bond_distance(max_difference),
-      excluded_pairs(std::make_shared<std::vector<char_bool>>()) {
-    faunus_logger->log(atoms_cnt * max_difference < 1'000'000 ? spdlog::level::trace : spdlog::level::warn,
-                       "creating exclusion matrix {}×{} for {} atoms within distance {}", atoms_cnt, max_difference,
-                       atoms_cnt, max_difference);
+    : atoms_cnt(atoms_cnt)
+    , max_bond_distance(max_difference)
+    , excluded_pairs(std::make_shared<std::vector<char_bool>>())
+{
+    faunus_logger->log(atoms_cnt * max_difference < 1'000'000 ? spdlog::level::trace
+                                                              : spdlog::level::warn,
+                       "creating exclusion matrix {}×{} for {} atoms within distance {}", atoms_cnt,
+                       max_difference, atoms_cnt, max_difference);
 
     excluded_pairs->resize(atoms_cnt * max_difference, static_cast<char_bool>(false));
 }
 
-void ExclusionsVicinity::add(int i, int j) {
+void ExclusionsVicinity::add(int i, int j)
+{
     if (i > j) {
         std::swap(i, j);
     }
@@ -684,15 +793,18 @@ void ExclusionsVicinity::add(int i, int j) {
     excluded_pairs->at(toIndex(i, j)) = static_cast<unsigned char>(true);
 }
 
-void ExclusionsVicinity::add(const std::vector<AtomPair>& pairs) {
+void ExclusionsVicinity::add(const std::vector<AtomPair>& pairs)
+{
     for (const auto& pair : pairs) {
         add(pair.first, pair.second);
     }
 }
 
-void to_json(json &j, const ExclusionsVicinity &exclusions) {
+void to_json(json& j, const ExclusionsVicinity& exclusions)
+{
     j = json::array();
-    for (auto it = exclusions.excluded_pairs->begin(); it != exclusions.excluded_pairs->end(); ++it) {
+    for (auto it = exclusions.excluded_pairs->begin(); it != exclusions.excluded_pairs->end();
+         ++it) {
         if (static_cast<bool>(*it)) {
             const auto n = std::distance(exclusions.excluded_pairs->begin(), it);
             j.push_back(exclusions.fromIndex(n));
@@ -700,7 +812,8 @@ void to_json(json &j, const ExclusionsVicinity &exclusions) {
     }
 }
 
-TEST_CASE("[Faunus] ExclusionsVicinity") {
+TEST_CASE("[Faunus] ExclusionsVicinity")
+{
     std::vector<ExclusionsVicinity::AtomPair> pairs{{0, 1}, {1, 2}, {1, 3}, {6, 7}};
     auto exclusions = ExclusionsVicinity::create(10, pairs);
 
@@ -711,8 +824,15 @@ TEST_CASE("[Faunus] ExclusionsVicinity") {
     CHECK_FALSE(exclusions.isExcluded(8, 9));
 }
 
-void from_json(const json &j, MoleculeInserter &inserter) { inserter.from_json(j); }
-void to_json(json &j, const MoleculeInserter &inserter) { inserter.to_json(j); }
+void from_json(const json& j, MoleculeInserter& inserter)
+{
+    inserter.from_json(j);
+}
+
+void to_json(json& j, const MoleculeInserter& inserter)
+{
+    inserter.to_json(j);
+}
 
 /**
  * @param geo Geometry to use for PBC and container overlap check
@@ -720,8 +840,10 @@ void to_json(json &j, const MoleculeInserter &inserter) { inserter.to_json(j); }
  * @param ignored_other_particles Other particles in the system (ignored for this inserter!)
  * @return Inserted particle vector
  */
-ParticleVector RandomInserter::operator()(const Geometry::GeometryBase &geo, MoleculeData &molecule,
-                                          [[maybe_unused]] const ParticleVector &ignored_other_particles) {
+ParticleVector
+RandomInserter::operator()(const Geometry::GeometryBase& geo, MoleculeData& molecule,
+                           [[maybe_unused]] const ParticleVector& ignored_other_particles)
+{
     auto particles = molecule.conformations.sample(random.engine); // random, weighted conformation
     if (particles.empty()) {
         throw std::runtime_error("nothing to insert for molecule '"s + molecule.name + "'");
@@ -740,7 +862,8 @@ ParticleVector RandomInserter::operator()(const Geometry::GeometryBase &geo, Mol
     for (auto attempts = 0; attempts < max_trials; attempts++) {
         if (molecule.atomic) {
             translateRotateAtomicGroup(geo, rotator, particles);
-        } else {
+        }
+        else {
             translateRotateMolecularGroup(geo, rotator, particles);
         }
         if (allow_overlap || ranges::cpp20::none_of(particles, container_overlap)) {
@@ -750,22 +873,29 @@ ParticleVector RandomInserter::operator()(const Geometry::GeometryBase &geo, Mol
     throw std::runtime_error("Max. # of overlap checks reached upon insertion.");
 }
 
-void RandomInserter::translateRotateMolecularGroup(const Geometry::GeometryBase& geo, QuaternionRotate& rotator,
-                                                   ParticleVector& particles) const {
+void RandomInserter::translateRotateMolecularGroup(const Geometry::GeometryBase& geo,
+                                                   QuaternionRotate& rotator,
+                                                   ParticleVector& particles) const
+{
     Geometry::translateToOrigin(particles.begin(), particles.end()); // translate to origin
     if (rotate) {
-        rotator.set(2.0 * pc::pi * random(), randomUnitVector(random)); // random rot around random vector
+        rotator.set(2.0 * pc::pi * random(),
+                    randomUnitVector(random)); // random rot around random vector
         Geometry::rotate(particles.begin(), particles.end(), rotator.getQuaternion());
-        assert(Geometry::massCenter(particles.begin(), particles.end()).norm() < 1e-6); // cm shouldn't move
+        assert(Geometry::massCenter(particles.begin(), particles.end()).norm() <
+               1e-6); // cm shouldn't move
     }
     Point new_mass_center;
-    geo.randompos(new_mass_center, random);                       // random point in container
-    new_mass_center = new_mass_center.cwiseProduct(dir) + offset; // add defined dirs (default: 1,1,1)
+    geo.randompos(new_mass_center, random); // random point in container
+    new_mass_center =
+        new_mass_center.cwiseProduct(dir) + offset; // add defined dirs (default: 1,1,1)
     Geometry::translate(particles.begin(), particles.end(), new_mass_center, geo.getBoundaryFunc());
 }
 
-void RandomInserter::translateRotateAtomicGroup(const Geometry::GeometryBase& geo, QuaternionRotate& rotator,
-                                                ParticleVector& particles) const {
+void RandomInserter::translateRotateAtomicGroup(const Geometry::GeometryBase& geo,
+                                                QuaternionRotate& rotator,
+                                                ParticleVector& particles) const
+{
     for (auto& particle : particles) { // for each atom type id
         if (rotate) {                  // internal rotation of atomic particles
             rotator.set(2.0 * pc::pi * random(), randomUnitVector(random));
@@ -777,14 +907,16 @@ void RandomInserter::translateRotateAtomicGroup(const Geometry::GeometryBase& ge
     }
 }
 
-void RandomInserter::from_json(const json &j) {
+void RandomInserter::from_json(const json& j)
+{
     dir = j.value("insdir", dir);
     offset = j.value("insoffset", offset);
     rotate = j.value("rotate", rotate);
     keep_positions = j.value("keeppos", keep_positions);
 }
 
-void RandomInserter::to_json(json &j) const {
+void RandomInserter::to_json(json& j) const
+{
     j["insdir"] = dir;
     j["insoffset"] = offset;
     j["rotate"] = rotate;
@@ -792,7 +924,8 @@ void RandomInserter::to_json(json &j) const {
     j["allow overlap"] = allow_overlap;
 }
 
-bool Conformation::empty() const {
+bool Conformation::empty() const
+{
     return positions.empty() && charges.empty();
 }
 
@@ -802,7 +935,8 @@ bool Conformation::empty() const {
  *
  * Overwrites positions and charges; remaining properties are untouched
  */
-void Conformation::copyTo(ParticleVector &particles) const {
+void Conformation::copyTo(ParticleVector& particles) const
+{
     if (positions.size() != particles.size() or charges.size() != particles.size()) {
         throw std::runtime_error("conformation size mismatch for positions and/or charges");
     }
@@ -817,7 +951,8 @@ void Conformation::copyTo(ParticleVector &particles) const {
     std::copy(charges.begin(), charges.end(), particle_charges.begin());
 }
 
-TEST_CASE("[Faunus] Conformation") {
+TEST_CASE("[Faunus] Conformation")
+{
     Conformation conformation;
     CHECK(conformation.empty());
 
@@ -833,27 +968,34 @@ TEST_CASE("[Faunus] Conformation") {
     CHECK_EQ(particles[0].charge, 0.5);
 }
 
-ReactionData::Direction ReactionData::getDirection() const { return direction; }
+ReactionData::Direction ReactionData::getDirection() const
+{
+    return direction;
+}
 
-void ReactionData::setDirection(ReactionData::Direction new_direction) {
+void ReactionData::setDirection(ReactionData::Direction new_direction)
+{
     if (new_direction != direction) {
         direction = new_direction;
     }
 }
 
-void ReactionData::setRandomDirection(Random& rng) {
+void ReactionData::setRandomDirection(Random& rng)
+{
     auto dir = static_cast<ReactionData::Direction>((char)rng.range(0, 1)); // random direction
     setDirection(dir);
 }
 
-ReactionData::AtomicAndMolecularPair ReactionData::getProducts() const {
+ReactionData::AtomicAndMolecularPair ReactionData::getProducts() const
+{
     if (direction == Direction::RIGHT) {
         return {right_atoms, right_molecules};
     }
     return {left_atoms, left_molecules};
 }
 
-ReactionData::AtomicAndMolecularPair ReactionData::getReactants() const {
+ReactionData::AtomicAndMolecularPair ReactionData::getReactants() const
+{
     if (direction == Direction::RIGHT) {
         return {left_atoms, left_molecules};
     }
@@ -861,11 +1003,14 @@ ReactionData::AtomicAndMolecularPair ReactionData::getReactants() const {
 }
 
 /**
- * @return Pair of sets with id's for atoms and molecules participating in the reaction (i.e. reactants & products)
+ * @return Pair of sets with id's for atoms and molecules participating in the reaction (i.e.
+ * reactants & products)
  */
-std::pair<std::set<int>, std::set<int>> ReactionData::participatingAtomsAndMolecules() const {
-    auto extract_keys = [](const auto &map, std::set<int> &keys) { // map keys --> set
-        std::transform(map.begin(), map.end(), std::inserter(keys, keys.end()), [](auto &pair) { return pair.first; });
+std::pair<std::set<int>, std::set<int>> ReactionData::participatingAtomsAndMolecules() const
+{
+    auto extract_keys = [](const auto& map, std::set<int>& keys) { // map keys --> set
+        std::transform(map.begin(), map.end(), std::inserter(keys, keys.end()),
+                       [](auto& pair) { return pair.first; });
     };
     std::set<int> atomic;
     std::set<int> molecular;
@@ -878,15 +1023,18 @@ std::pair<std::set<int>, std::set<int>> ReactionData::participatingAtomsAndMolec
     return {atomic, molecular};
 }
 
-void ReactionData::reverseDirection() {
+void ReactionData::reverseDirection()
+{
     if (direction == Direction::RIGHT) {
         setDirection(Direction::LEFT);
-    } else {
+    }
+    else {
         setDirection(Direction::RIGHT);
     }
 }
 
-void from_json(const json &j, ReactionData &a) {
+void from_json(const json& j, ReactionData& a)
+{
     if (!j.is_object() || j.size() != 1) {
         throw ConfigurationError("Invalid JSON data for ReactionData");
     }
@@ -906,44 +1054,54 @@ void from_json(const json &j, ReactionData &a) {
         a.only_neutral_molecules = val.value("neutral", false);
         if (val.contains("lnK")) {
             a.lnK_unmodified = val.at("lnK").get<double>();
-        } else if (val.contains("pK")) {
+        }
+        else if (val.contains("pK")) {
             a.lnK_unmodified = -std::numbers::ln10 * val.at("pK").get<double>();
-        } else {
+        }
+        else {
             a.lnK_unmodified = 0.0;
         }
         a.lnK = a.lnK_unmodified;
 
         // helper function used to parse and register atom and molecule names; updates lnK
         auto registerNames = [&](auto& names, auto&& atom_map, auto& mol_map, double sign) {
-            for (const auto& atom_or_molecule_name : names) { // loop over species on reactant side (left)
+            for (const auto& atom_or_molecule_name :
+                 names) { // loop over species on reactant side (left)
                 auto [atom, molecule] = a.findAtomOrMolecule(atom_or_molecule_name);
                 if (atom != Faunus::atoms.end()) { // atomic reactants
-                    if (atom->implicit) {          // if atom is implicit, multiply K by its activity
+                    if (atom->implicit) { // if atom is implicit, multiply K by its activity
                         if (atom->activity > 0.0) {
                             a.lnK += sign * std::log(atom->activity / 1.0_molar);
                         }
-                    } else {
+                    }
+                    else {
                         assert(std::fabs(atom->activity) <= pc::epsilon_dbl);
                         atom_map[atom->id()]++; // increment stoichiometric number
                     }
-                } else if (molecule != Faunus::molecules.end()) { // molecular reactants (incl. "atomic" groups)
-                    mol_map[molecule->id()]++;                    // increment stoichiometric number
-                    if (molecule->activity > 0) { // assume activity not part of K -> divide by activity
+                }
+                else if (molecule !=
+                         Faunus::molecules.end()) { // molecular reactants (incl. "atomic" groups)
+                    mol_map[molecule->id()]++;      // increment stoichiometric number
+                    if (molecule->activity >
+                        0) { // assume activity not part of K -> divide by activity
                         a.lnK -= sign * std::log(molecule->activity / 1.0_molar);
                     }
-                } else {
+                }
+                else {
                     assert(false); // we should never reach here
                 }
             }
         }; // end of lambda function
 
-        std::tie(a.left_names, a.right_names) = parseReactionString(a.reaction_str); // lists of species
-        registerNames(a.left_names, a.left_atoms, a.left_molecules, 1.0);            // reactants
-        registerNames(a.right_names, a.right_atoms, a.right_molecules, -1.0);        // products
+        std::tie(a.left_names, a.right_names) =
+            parseReactionString(a.reaction_str);                              // lists of species
+        registerNames(a.left_names, a.left_atoms, a.left_molecules, 1.0);     // reactants
+        registerNames(a.right_names, a.right_atoms, a.right_molecules, -1.0); // products
     }
 }
 
-void to_json(json &j, const ReactionData &reaction) {
+void to_json(json& j, const ReactionData& reaction)
+{
     ReactionData a = reaction;
     // we want lnK to show for LEFT-->RIGHT direction
     a.setDirection(ReactionData::Direction::RIGHT);
@@ -955,7 +1113,8 @@ void to_json(json &j, const ReactionData &reaction) {
 }
 
 std::pair<decltype(Faunus::atoms)::const_iterator, decltype(Faunus::molecules)::const_iterator>
-ReactionData::findAtomOrMolecule(const std::string& atom_or_molecule_name) {
+ReactionData::findAtomOrMolecule(const std::string& atom_or_molecule_name)
+{
     auto atom_iter = findName(Faunus::atoms, atom_or_molecule_name);
     auto molecule_iter = findName(Faunus::molecules, atom_or_molecule_name);
     if (molecule_iter == Faunus::molecules.end() and atom_iter == Faunus::atoms.end()) {
@@ -967,11 +1126,18 @@ ReactionData::findAtomOrMolecule(const std::string& atom_or_molecule_name) {
 /**
  * @return Reaction free energy in the current direction, i.e. products minus reactants (kT)
  */
-double ReactionData::freeEnergy() const { return (direction == Direction::RIGHT) ? -lnK : lnK; }
+double ReactionData::freeEnergy() const
+{
+    return (direction == Direction::RIGHT) ? -lnK : lnK;
+}
 
-const std::string& ReactionData::getReactionString() const { return reaction_str; }
+const std::string& ReactionData::getReactionString() const
+{
+    return reaction_str;
+}
 
-bool ReactionData::containsAtomicSwap() const {
+bool ReactionData::containsAtomicSwap() const
+{
     // If exactly one atomic reactant and one atomic products, it's a swap move!
     return (left_atoms.size() == 1 && right_atoms.size() == 1);
 }
@@ -996,7 +1162,8 @@ const ReactionData::MapFilter ReactionData::is_molecular_group = [](const auto& 
     return Faunus::molecules.at(pair.first).isMolecular();
 };
 
-TEST_CASE("[Faunus] ReactionData") {
+TEST_CASE("[Faunus] ReactionData")
+{
     using doctest::Approx;
     json j = R"(
             {
@@ -1014,7 +1181,7 @@ TEST_CASE("[Faunus] ReactionData") {
     Faunus::atoms = j["atomlist"].get<decltype(atoms)>();
     molecules = j["moleculelist"].get<decltype(molecules)>(); // fill global instance
 
-    auto &r = reactions; // reference to global reaction list
+    auto& r = reactions; // reference to global reaction list
     r = j["reactionlist"].get<decltype(reactions)>();
 
     CHECK_EQ(r.size(), 1);
@@ -1022,18 +1189,22 @@ TEST_CASE("[Faunus] ReactionData") {
     CHECK_EQ(r.front().freeEnergy(), Approx(10.051 + std::log(0.2)));
 }
 
-void MoleculeInserter::from_json(const json &) {}
-void MoleculeInserter::to_json(json &) const {}
+void MoleculeInserter::from_json(const json&) {}
+
+void MoleculeInserter::to_json(json&) const {}
 
 TEST_SUITE_END();
 
 UnknownMoleculeError::UnknownMoleculeError(std::string_view molecule_name)
-    : GenericError("unknown molecule: '{}'", molecule_name) {}
+    : GenericError("unknown molecule: '{}'", molecule_name)
+{
+}
 
 /**
  * @throw if molecule not found
  */
-MoleculeData& findMoleculeByName(std::string_view name) {
+MoleculeData& findMoleculeByName(std::string_view name)
+{
     const auto result = findName(Faunus::molecules, name);
     if (result == Faunus::molecules.end()) {
         throw UnknownMoleculeError(name);
@@ -1046,7 +1217,9 @@ MoleculeData& findMoleculeByName(std::string_view name) {
  * @return Pair with reactants (first) and products (second) as atomic or molecule names
  * @throws std::runtime_error if unknown atom or molecule, or syntax error
  */
-std::pair<std::vector<std::string>, std::vector<std::string>> parseReactionString(const std::string& process_string) {
+std::pair<std::vector<std::string>, std::vector<std::string>>
+parseReactionString(const std::string& process_string)
+{
     using Tvec = std::vector<std::string>;
     Tvec names; // vector of atom/molecule names
     std::string atom_or_molecule_name;
@@ -1069,7 +1242,8 @@ std::pair<std::vector<std::string>, std::vector<std::string>> parseReactionStrin
  * @return vector of corresponding molecule ids (sorted)
  * @throw if unknown molecule name or not a list of strings
  */
-std::vector<MoleculeData::index_type> parseMolecules(const json& j) {
+std::vector<MoleculeData::index_type> parseMolecules(const json& j)
+{
     if (!j.is_array()) {
         throw ConfigurationError("array of molecules expected");
     }

@@ -5,9 +5,13 @@
 
 double Faunus::PhysicalConstants::temperature = 298.15;
 
-std::string Faunus::unicode::bracket(std::string_view sv) { return fmt::format("\u27e8{}\u27e9", sv); }
+std::string Faunus::unicode::bracket(std::string_view sv)
+{
+    return fmt::format("\u27e8{}\u27e9", sv);
+}
 
-TEST_CASE("[Faunus] infinite math") {
+TEST_CASE("[Faunus] infinite math")
+{
     using namespace Faunus;
     CHECK_EQ(std::isfinite(1.0 + pc::infty), false);
     CHECK(std::isinf(1.0 + pc::infty));
@@ -26,7 +30,8 @@ TEST_CASE("[Faunus] infinite math") {
     CHECK(std::isnan(std::sqrt(-1.0))); // is this needed?
 }
 
-TEST_CASE("[Faunus] Units and string literals") {
+TEST_CASE("[Faunus] Units and string literals")
+{
     using doctest::Approx;
     using namespace Faunus;
     pc::temperature = 298.15_K;

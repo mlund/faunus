@@ -10,8 +10,9 @@
 #include <spdlog/spdlog.h>
 #include <doctest/doctest.h>
 #include <range/v3/view/counted.hpp>
-#include <range/v3/algorithm/count.hpp>
 #include <range/v3/view/transform.hpp>
+#include <range/v3/algorithm/count.hpp>
+#include <range/v3/algorithm/fold_left.hpp>
 
 namespace Faunus::move {
 

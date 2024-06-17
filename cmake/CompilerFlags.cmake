@@ -25,7 +25,7 @@ if (ENABLE_APPROXMATH)
     add_definitions(-DFAU_APPROXMATH)
 endif ()
 
-option(ENABLE_OPENMP "Try to use OpenMP parallisation" on)
+option(ENABLE_OPENMP "Try to use OpenMP parallisation" off)
 if (ENABLE_OPENMP)
     find_package(OpenMP)
     if (OPENMP_FOUND)

@@ -86,7 +86,7 @@ The following options are available:
 CMake Option                         | Description
 ------------------------------------ | ---------------------------------------
 `-DENABLE_MPI=OFF`                   | Enable MPI
-`-DENABLE_OPENMP=ON`                 | Enable OpenMP support
+`-DENABLE_OPENMP=OFF`                | Enable OpenMP support
 `-DENABLE_TESTS=ON`                  | Enable unittesting
 `-DENABLE_PYTHON=OFF`                | Build python bindings (experimental)
 `-DENABLE_FREESASA=ON`               | Enable SASA routines (external download)

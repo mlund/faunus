@@ -25,18 +25,26 @@ namespace Faunus {
 namespace Tabulate {
 
 /* base class for all tabulators - no dependencies */
-template <std::floating_point T = double> class TabulatorBase {
+template <std::floating_point T = double> class TabulatorBase
+{
   protected:
     T utol = 1e-5, ftol = -1, umaxtol = -1, fmaxtol = -1;
     T numdr = 0.0001; // dr for derivative evaluation
 
     // First derivative with respect to x
-    T f1(std::function<T(T)> f, T x) const { return (f(x + numdr * 0.5) - f(x - numdr * 0.5)) / (numdr); }
+    T f1(std::function<T(T)> f, T x) const
+    {
+        return (f(x + numdr * 0.5) - f(x - numdr * 0.5)) / (numdr);
+    }
 
     // Second derivative with respect to x
-    T f2(std::function<T(T)> f, T x) const { return (f1(f, x + numdr * 0.5) - f1(f, x - numdr * 0.5)) / (numdr); }
+    T f2(std::function<T(T)> f, T x) const
+    {
+        return (f1(f, x + numdr * 0.5) - f1(f, x - numdr * 0.5)) / (numdr);
+    }
 
-    void check() const {
+    void check() const
+    {
         if (ftol != -1 && ftol <= 0.0) {
             std::cerr << "ftol=" << ftol << " too small\n" << std::endl;
             abort();
@@ -52,15 +60,19 @@ template <std::floating_point T = double> class TabulatorBase {
     }
 
   public:
-    struct data {
+    struct data
+    {
         std::vector<T> r2;      // r2 for intervals
         std::vector<T> c;       // c for coefficents
         T rmin2 = 0, rmax2 = 0; // useful to save these with table
+
         bool empty() const { return r2.empty() && c.empty(); }
+
         inline size_t numKnots() const { return r2.size(); }
     };
 
-    void setTolerance(T _utol, T _ftol = -1, T _umaxtol = -1, T _fmaxtol = -1) {
+    void setTolerance(T _utol, T _ftol = -1, T _umaxtol = -1, T _fmaxtol = -1)
+    {
         utol = _utol;
         ftol = _ftol;
         umaxtol = _umaxtol;
@@ -80,14 +92,17 @@ template <std::floating_point T = double> class TabulatorBase {
  * @note Slow on Intel compiler
  * @todo Hide data and functions; clean up r vs r2 mess.
  */
-template <std::floating_point T = double> class Andrea : public TabulatorBase<T> {
+template <std::floating_point T = double> class Andrea : public TabulatorBase<T>
+{
   private:
     typedef TabulatorBase<T> base; // for convenience
     int mngrid = 1200;             // Max number of controlpoints
     int ndr = 100;                 // Max number of trials to decr dr
     T drfrac = 0.9;                // Multiplicative factor to decr dr
 
-    std::vector<T> SetUBuffer(T, T zlow, T, T zupp, T u0low, T u1low, T u2low, T u0upp, T u1upp, T u2upp) {
+    std::vector<T> SetUBuffer(T, T zlow, T, T zupp, T u0low, T u1low, T u2low, T u0upp, T u1upp,
+                              T u2upp)
+    {
 
         // Zero potential and force return no coefficients
         if (std::fabs(u0low) < 1e-9)
@@ -121,7 +136,9 @@ template <std::floating_point T = double> class Andrea : public TabulatorBase<T>
      * - `[0]==true`: tolerance is approved,
      * - `[1]==true` Repulsive part is found.
      */
-    std::vector<bool> CheckUBuffer(std::vector<T>& ubuft, T rlow, T rupp, std::function<T(T)> f) const {
+    std::vector<bool> CheckUBuffer(std::vector<T>& ubuft, T rlow, T rupp,
+                                   std::function<T(T)> f) const
+    {
 
         // Number of points to control
         int ncheck = 11;
@@ -134,12 +151,15 @@ template <std::floating_point T = double> class Andrea : public TabulatorBase<T>
             T u0 = f(r2);
             T u1 = base::f1(f, r2);
             T dz = r2 - rlow * rlow;
-            T usum =
-                ubuft.at(1) +
-                dz * (ubuft.at(2) + dz * (ubuft.at(3) + dz * (ubuft.at(4) + dz * (ubuft.at(5) + dz * ubuft.at(6)))));
+            T usum = ubuft.at(1) +
+                     dz * (ubuft.at(2) +
+                           dz * (ubuft.at(3) +
+                                 dz * (ubuft.at(4) + dz * (ubuft.at(5) + dz * ubuft.at(6)))));
 
-            T fsum = ubuft.at(2) +
-                     dz * (2 * ubuft.at(3) + dz * (3 * ubuft.at(4) + dz * (4 * ubuft.at(5) + dz * (5 * ubuft.at(6)))));
+            T fsum =
+                ubuft.at(2) +
+                dz * (2 * ubuft.at(3) +
+                      dz * (3 * ubuft.at(4) + dz * (4 * ubuft.at(5) + dz * (5 * ubuft.at(6)))));
 
             if (std::fabs(usum - u0) > base::utol)
                 return vb;
@@ -161,7 +181,8 @@ template <std::floating_point T = double> class Andrea : public TabulatorBase<T>
      * @param r2 value
      * @note Auto-vectorization in Clang: https://llvm.org/docs/Vectorizers.html
      */
-    inline T eval(const typename base::data& d, T r2) const {
+    inline T eval(const typename base::data& d, T r2) const
+    {
         size_t pos = std::lower_bound(d.r2.begin(), d.r2.end(), r2) - d.r2.begin() - 1;
         size_t pos6 = 6 * pos;
         assert((pos6 + 5) < d.c.size());
@@ -172,10 +193,12 @@ template <std::floating_point T = double> class Andrea : public TabulatorBase<T>
             for (size_t i = 5; i > 0; i--)
                 sum = dz * (sum + d.c[pos6 + i]);
             return sum + d.c[pos6];
-        } else // manually unrolled version
+        }
+        else // manually unrolled version
             return d.c[pos6] +
                    dz * (d.c[pos6 + 1] +
-                         dz * (d.c[pos6 + 2] + dz * (d.c[pos6 + 3] + dz * (d.c[pos6 + 4] + dz * (d.c[pos6 + 5])))));
+                         dz * (d.c[pos6 + 2] +
+                               dz * (d.c[pos6 + 3] + dz * (d.c[pos6 + 4] + dz * (d.c[pos6 + 5])))));
     }
 
     /**
@@ -183,19 +206,22 @@ template <std::floating_point T = double> class Andrea : public TabulatorBase<T>
      * @param d Table data
      * @param r2 value
      */
-    T evalDer(const typename base::data& d, T r2) const {
+    T evalDer(const typename base::data& d, T r2) const
+    {
         size_t pos = std::lower_bound(d.r2.begin(), d.r2.end(), r2) - d.r2.begin() - 1;
         size_t pos6 = 6 * pos;
         T dz = r2 - d.r2[pos];
         return (d.c[pos6 + 1] +
                 dz * (2.0 * d.c[pos6 + 2] +
-                      dz * (3.0 * d.c[pos6 + 3] + dz * (4.0 * d.c[pos6 + 4] + dz * (5.0 * d.c[pos6 + 5])))));
+                      dz * (3.0 * d.c[pos6 + 3] +
+                            dz * (4.0 * d.c[pos6 + 4] + dz * (5.0 * d.c[pos6 + 5])))));
     }
 
     /**
      * @brief Tabulate f(x) in interval ]min,max]
      */
-    typename base::data generate(std::function<T(T)> f, double rmin, double rmax) {
+    typename base::data generate(std::function<T(T)> f, double rmin, double rmax)
+    {
         rmin = std::sqrt(rmin);
         rmax = std::sqrt(rmax);
         base::check();
@@ -236,7 +262,8 @@ template <std::floating_point T = double> class Andrea : public TabulatorBase<T>
                 T u1upp = base::f1(f, zupp);
                 T u2upp = base::f2(f, zupp);
 
-                ubuft = SetUBuffer(rlow, zlow, rupp, zupp, u0low, u1low, u2low, u0upp, u1upp, u2upp);
+                ubuft =
+                    SetUBuffer(rlow, zlow, rupp, zupp, u0low, u1low, u2low, u0upp, u1upp, u2upp);
                 std::vector<bool> vb = CheckUBuffer(ubuft, rlow, rupp, f);
                 repul = vb[1];
                 if (vb[0]) {
@@ -249,7 +276,8 @@ template <std::floating_point T = double> class Andrea : public TabulatorBase<T>
             if (j >= ndr)
                 throw std::runtime_error("Andrea spline: try to increase utol/ftol");
             if (ubuft.size() != 7)
-                throw std::runtime_error("Andrea spline: wrong size of ubuft, min value + 6 coefficients");
+                throw std::runtime_error(
+                    "Andrea spline: wrong size of ubuft, min value + 6 coefficients");
 
             td.r2.push_back(zlow);
             for (size_t k = 1; k < ubuft.size(); k++)
@@ -273,7 +301,8 @@ template <std::floating_point T = double> class Andrea : public TabulatorBase<T>
         assert(std::is_sorted(td.r2.rbegin(), td.r2.rend()));
         std::reverse(td.r2.begin(), td.r2.end());       // reverse all elements
         for (size_t i = 0; i < td.c.size() / 2; i += 6) // reverse knot order in packets of six
-            std::swap_ranges(td.c.begin() + i, td.c.begin() + i + 6, td.c.end() - i - 6); // c++17 only
+            std::swap_ranges(td.c.begin() + i, td.c.begin() + i + 6,
+                             td.c.end() - i - 6); // c++17 only
         return td;
     }
 };
@@ -281,7 +310,8 @@ template <std::floating_point T = double> class Andrea : public TabulatorBase<T>
 } // namespace Faunus
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
-TEST_CASE("[Faunus] Andrea") {
+TEST_CASE("[Faunus] Andrea")
+{
     using doctest::Approx;
     using namespace Faunus::Tabulate;
 
@@ -323,7 +353,9 @@ TEST_CASE("[Faunus] Andrea") {
 
     // Check if analytical spline derivative matches
     // derivative of original function
-    auto f_prime_exact = [&](double x, double dx = 1e-10) { return (f(x + dx) - f(x - dx)) / (2 * dx); };
+    auto f_prime_exact = [&](double x, double dx = 1e-10) {
+        return (f(x + dx) - f(x - dx)) / (2 * dx);
+    };
     x = 1e-9;
     CHECK(spline.evalDer(d, x) == Approx(f_prime_exact(x)));
     x = 1;

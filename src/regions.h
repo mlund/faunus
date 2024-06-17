@@ -14,7 +14,13 @@ class Space;
  */
 namespace Region {
 
-enum class RegionType { WITHIN_MOLID, WITHIN_PARTICLE, WITHIN_ELLIPSOID, INVALID };
+enum class RegionType
+{
+    WITHIN_MOLID,
+    WITHIN_PARTICLE,
+    WITHIN_ELLIPSOID,
+    INVALID
+};
 
 NLOHMANN_JSON_SERIALIZE_ENUM(RegionType, {{RegionType::INVALID, nullptr},
                                           {RegionType::WITHIN_MOLID, "within_molid"},
@@ -29,22 +35,26 @@ NLOHMANN_JSON_SERIALIZE_ENUM(RegionType, {{RegionType::INVALID, nullptr},
  * is inside the region. A region need not be static and can
  * follow molecules. A region may or may not have a well-defined volume.
  */
-class RegionBase {
+class RegionBase
+{
   private:
-    [[nodiscard]] virtual bool isInside(const Point& position) const = 0; //!< true if point is inside region
+    [[nodiscard]] virtual bool
+    isInside(const Point& position) const = 0; //!< true if point is inside region
   public:
     const RegionType type;
-    bool use_group_mass_center = false;           //!< Use group mass-center to check if inside region
+    bool use_group_mass_center = false; //!< Use group mass-center to check if inside region
     [[nodiscard]] virtual std::optional<double> volume() const; //!< Volume of region if applicable
     virtual void to_json(json& j) const = 0;
     virtual ~RegionBase() = default;
     explicit RegionBase(RegionType type);
 
-    [[nodiscard]] bool inside(const Particle& particle) const; //!< Determines if particle is inside region
-    [[nodiscard]] bool inside(const Group& group) const;       //!< Determines of groups is inside region
+    [[nodiscard]] bool
+    inside(const Particle& particle) const; //!< Determines if particle is inside region
+    [[nodiscard]] bool inside(const Group& group) const; //!< Determines of groups is inside region
 
     /** Selects particles within the region */
-    template <typename ParticleRange> auto filterInside(const ParticleRange& particles) const {
+    template <typename ParticleRange> auto filterInside(const ParticleRange& particles) const
+    {
         namespace rv = ranges::cpp20::views;
         return particles | rv::transform(&Particle::pos) | rv::filter(&RegionBase::isInside);
     }
@@ -66,19 +76,22 @@ void to_json(json& j, const RegionBase& region);
  * volume around the mass center. If so, `volume()` returns the
  * spherical volume, otherwise `nullopt`
  */
-class WithinMoleculeType : public RegionBase {
+class WithinMoleculeType : public RegionBase
+{
   private:
     const Space& spc;                     //!< reference to space
     const MoleculeData::index_type molid; //!< molid to target
     const bool use_region_mass_center;    //!< true = with respect to center of mass of `molid`
-    const double threshold_squared;       //!< squared distance threshold from other particles or com
-    [[nodiscard]] inline bool within_threshold(const Point& position1, const Point& position2) const {
+    const double threshold_squared; //!< squared distance threshold from other particles or com
+
+    [[nodiscard]] inline bool within_threshold(const Point& position1, const Point& position2) const
+    {
         return spc.geometry.sqdist(position1, position2) < threshold_squared;
     }
 
   public:
-    WithinMoleculeType(const Space& spc, std::string_view molecule_name, double threshold, bool use_region_mass_center,
-                       bool use_group_mass_center);
+    WithinMoleculeType(const Space& spc, std::string_view molecule_name, double threshold,
+                       bool use_region_mass_center, bool use_group_mass_center);
     WithinMoleculeType(const Space& spc, const json& j);
     [[nodiscard]] bool isInside(const Point& position) const override;
     [[nodiscard]] std::optional<double> volume() const override;
@@ -88,11 +101,13 @@ class WithinMoleculeType : public RegionBase {
 /**
  * Spherical region centered on a particle
  */
-class SphereAroundParticle : public RegionBase {
+class SphereAroundParticle : public RegionBase
+{
   private:
-    const Space& spc;                               //!< reference to space
-    const ParticleVector::size_type particle_index; //!< Index of particle that defines the center of the region
-    const double radius_squared;                    //!< squared distance threshold from other particles or com
+    const Space& spc; //!< reference to space
+    const ParticleVector::size_type
+        particle_index;          //!< Index of particle that defines the center of the region
+    const double radius_squared; //!< squared distance threshold from other particles or com
 
   public:
     SphereAroundParticle(const Space& spc, ParticleVector::size_type index, double radius);
@@ -105,13 +120,14 @@ class SphereAroundParticle : public RegionBase {
 /**
  * An ellipsoid defined by two (moving) particles
  */
-class MovingEllipsoid : public RegionBase {
+class MovingEllipsoid : public RegionBase
+{
   private:
     const Space& spc;
     const ParticleVector::size_type particle_index_1; //!< Index of first reference particle
     const ParticleVector::size_type particle_index_2; //!< Index of second reference particle
-    const double parallel_radius;                     //!< radius along axis connecting reference atoms
-    const double perpendicular_radius;                //!< radius perpendicular to axis connecting reference atoms
+    const double parallel_radius;      //!< radius along axis connecting reference atoms
+    const double perpendicular_radius; //!< radius perpendicular to axis connecting reference atoms
     const double parallel_radius_squared;
 
     const Point& reference_position_1; //!< Reference to first reference particle position
@@ -121,8 +137,8 @@ class MovingEllipsoid : public RegionBase {
 
   public:
     MovingEllipsoid(const Space& spc, ParticleVector::size_type particle_index1,
-                    ParticleVector::size_type particle_index2, double parallel_radius, double perpendicular_radius,
-                    bool use_group_mass_center);
+                    ParticleVector::size_type particle_index2, double parallel_radius,
+                    double perpendicular_radius, bool use_group_mass_center);
     MovingEllipsoid(const Space& spc, const json& j);
     [[nodiscard]] bool isInside(const Point& position) const override;
     void to_json(json& j) const override;

@@ -29,14 +29,15 @@ using RandomNumberEngine = std::mt19937;
  *     r1.seed();                                     // non-deterministic seed
  * ```
  */
-class Random {
+class Random
+{
   private:
     std::uniform_real_distribution<double> dist01; //!< Uniform real distribution [0,1)
   public:
     RandomNumberEngine engine; //!< Random number engine used for all operations
-    Random();            //!< Constructor with deterministic seed
-    void seed();         //!< Set a non-deterministic ("hardware") seed
-    double operator()(); //!< Random double in uniform range [0,1)
+    Random();                  //!< Constructor with deterministic seed
+    void seed();               //!< Set a non-deterministic ("hardware") seed
+    double operator()();       //!< Random double in uniform range [0,1)
 
     /**
      * @brief Integer in closed interval [min:max]
@@ -44,7 +45,8 @@ class Random {
      * @param max maximum value (included)
      * @return random integer in [min:max] range
      */
-    auto range(std::integral auto min, std::integral auto max) {
+    auto range(std::integral auto min, std::integral auto max)
+    {
         return std::uniform_int_distribution<>(min, max)(engine);
     }
 
@@ -54,14 +56,15 @@ class Random {
      * @param end End iterator
      * @return Iterator to random element
      */
-    template <typename Iterator> Iterator sample(Iterator begin, Iterator end) {
+    template <typename Iterator> Iterator sample(Iterator begin, Iterator end)
+    {
         std::advance(begin, range<>(0, std::distance(begin, end) - 1));
         return begin;
     }
 };
 
-void to_json(nlohmann::json &, const Random &);   //!< Random to json conversion
-void from_json(const nlohmann::json &, Random &); //!< json to Random conversion
+void to_json(nlohmann::json&, const Random&);   //!< Random to json conversion
+void from_json(const nlohmann::json&, Random&); //!< json to Random conversion
 
 extern Random random; //!< global instance of Random
 
@@ -75,21 +78,27 @@ extern Random random; //!< global instance of Random
  *
  * @tparam T Data type to store
  */
-template <typename T> class WeightedDistribution {
+template <typename T> class WeightedDistribution
+{
   private:
     std::discrete_distribution<> distribution;
     std::vector<double> weights; //!< weights for each data point
     size_t latest_index;         //!< index from latest element access via addGroup or get
   public:
-    std::vector<T> data;                        //!< raw vector of T
-    auto size() const { return data.size(); }   //!< Number of data points
+    std::vector<T> data; //!< raw vector of T
+
+    auto size() const { return data.size(); } //!< Number of data points
+
     [[nodiscard]] bool empty() const { return data.empty(); } //!< True if no data points
-    [[nodiscard]] size_t getLastIndex() const {
+
+    [[nodiscard]] size_t getLastIndex() const
+    {
         assert(!data.empty());
         return latest_index;
     } //!< index of last `get()` or `addGroup()` element
 
-    void clear() {
+    void clear()
+    {
         data.clear();
         weights.clear();
     } //!< Clear all data
@@ -102,14 +111,16 @@ template <typename T> class WeightedDistribution {
      * The iterable range must match the `size()` of the stored data,
      * otherwise an exception is thrown.
      */
-    template <typename Iterator> void setWeight(Iterator begin, Iterator end) {
+    template <typename Iterator> void setWeight(Iterator begin, Iterator end)
+    {
         static_assert(std::is_convertible_v<ranges::cpp20::iter_value_t<Iterator>, double>);
         if (auto size = std::distance(begin, end); size == data.size()) {
             weights.resize(size);
             std::copy(begin, end, weights.begin());
             distribution = std::discrete_distribution(weights.begin(), weights.end());
             assert(size_t(distribution.max()) == data.size() - 1);
-        } else {
+        }
+        else {
             throw std::runtime_error("number of weights must match data");
         }
     }
@@ -119,7 +130,8 @@ template <typename T> class WeightedDistribution {
      * @param value data
      * @param weight weight (default: 1.0)
      */
-    void push_back(const T &value, double weight = 1.0) {
+    void push_back(const T& value, double weight = 1.0)
+    {
         data.push_back(value);
         weights.push_back(weight);
         setWeight(weights.begin(), weights.end());
@@ -131,10 +143,11 @@ template <typename T> class WeightedDistribution {
      * @param engine Random number engine
      * @return Reference to data point
      */
-    template <typename RandomGenerator> const T &sample(RandomGenerator &engine) {
+    template <typename RandomGenerator> const T& sample(RandomGenerator& engine)
+    {
         assert(not empty());
         latest_index = distribution(engine);
         return data.at(latest_index);
     }
 };
-} // namespace
+} // namespace Faunus

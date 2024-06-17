@@ -18,53 +18,60 @@ namespace ReactionCoordinate {
  * the penalty's energy function and can also be used to probe the system
  * during analysis.
  */
-class ReactionCoordinateBase {
+class ReactionCoordinateBase
+{
   protected:
     std::function<double()> function = nullptr; //!< returns reaction coordinate
                                                 //!< Default 1.0; currently unused
   public:
-    explicit ReactionCoordinateBase(const json& j);  //!< constructor reads resolution, min, max
-    double resolution = 0.0;                //!< Resolution used when binning (histograms etc.)
-    double minimum_value = 0.0;             //!< Minimum allowed value
-    double maximum_value = 0.0;             //!< Maximum allowed value
-    std::string name;                       //!< Meaningful, short name. Don't use spaces or weird characters
+    explicit ReactionCoordinateBase(const json& j); //!< constructor reads resolution, min, max
+    double resolution = 0.0;    //!< Resolution used when binning (histograms etc.)
+    double minimum_value = 0.0; //!< Minimum allowed value
+    double maximum_value = 0.0; //!< Maximum allowed value
+    std::string name;           //!< Meaningful, short name. Don't use spaces or weird characters
 
-    double operator()(); //!< Calculates reaction coordinate
-    virtual void _to_json(json &j) const;   //!< json serialization
-    [[nodiscard]] bool inRange(double coord) const; //!< Determines if coordinate is within [min,max]
+    double operator()();                  //!< Calculates reaction coordinate
+    virtual void _to_json(json& j) const; //!< json serialization
+    [[nodiscard]] bool
+    inRange(double coord) const; //!< Determines if coordinate is within [min,max]
     virtual ~ReactionCoordinateBase() = default;
 };
 
-void to_json(json& j, const ReactionCoordinateBase& reaction_coordinate); //!< Serialize any reaction coordinate to json
+void to_json(json& j, const ReactionCoordinateBase&
+                          reaction_coordinate); //!< Serialize any reaction coordinate to json
 
 std::unique_ptr<ReactionCoordinateBase>
-createReactionCoordinate(const json&, const Space&); //!< Factory function to create all known penalty functions
+createReactionCoordinate(const json&,
+                         const Space&); //!< Factory function to create all known penalty functions
 
-class SystemProperty : public ReactionCoordinateBase {
+class SystemProperty : public ReactionCoordinateBase
+{
   protected:
     std::string property;
 
   public:
-    SystemProperty(const json &j, const Space &spc);
-    void _to_json(json &j) const override;
+    SystemProperty(const json& j, const Space& spc);
+    void _to_json(json& j) const override;
 };
 
-class AtomProperty : public ReactionCoordinateBase {
+class AtomProperty : public ReactionCoordinateBase
+{
   protected:
     size_t index; // atom index
     Point dir = {0.0, 0.0, 0.0};
 
   public:
     std::string property;
-    AtomProperty(const json &j, const Space &spc);
-    void _to_json(json &j) const override;
+    AtomProperty(const json& j, const Space& spc);
+    void _to_json(json& j) const override;
 };
 
 /**
  * @todo Refactor so that each scheme is a derived class implementing
  *       a virtual energy function instead of the std::function object
  */
-struct MoleculeProperty : public ReactionCoordinateBase {
+struct MoleculeProperty : public ReactionCoordinateBase
+{
   private:
     size_t index; //!< Group index
     Point direction = {0.0, 0.0, 0.0};
@@ -82,8 +89,8 @@ struct MoleculeProperty : public ReactionCoordinateBase {
     void selectLengthOverRadiusRatio(const json& j, const Space& spc);
 
   public:
-    MoleculeProperty(const json &j, const Space &spc);
-    void _to_json(json &j) const override;
+    MoleculeProperty(const json& j, const Space& spc);
+    void _to_json(json& j) const override;
 };
 
 } // namespace ReactionCoordinate

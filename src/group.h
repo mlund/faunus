@@ -11,32 +11,46 @@
 
 namespace Faunus {
 
-template <typename T> void inline swap_to_back(T first, T last, T end) {
+template <typename T> void inline swap_to_back(T first, T last, T end)
+{
     while (end-- > last) {
         std::iter_swap(first++, end);
     }
 } //!< Move range [first:last] to [end] by swapping elements
 
-template <class T> struct IterRange : std::pair<T, T> {
+template <class T> struct IterRange : std::pair<T, T>
+{
     using std::pair<T, T>::pair;
+
     T& begin() { return this->first; }
+
     T& end() { return this->second; }
+
     [[nodiscard]] const T& begin() const { return this->first; }
+
     [[nodiscard]] const T& end() const { return this->second; }
+
     [[nodiscard]] size_t size() const { return std::distance(this->first, this->second); }
-    void resize(size_t n) {
+
+    void resize(size_t n)
+    {
         end() += n - size();
         assert(size() == n);
     }
+
     [[nodiscard]] bool empty() const { return this->first == this->second; }
-    void clear() {
+
+    void clear()
+    {
         this->second = this->first;
         assert(empty());
     }
-    [[nodiscard]] std::pair<int, int> to_index(T reference) const {
+
+    [[nodiscard]] std::pair<int, int> to_index(T reference) const
+    {
         return {std::distance(reference, begin()), std::distance(reference, end() - 1)};
     } //!< Returns particle index pair relative to given reference
-};    //!< Turns a pair of iterators into a range
+}; //!< Turns a pair of iterators into a range
 
 /**
  * @brief Turns a pair of iterators into an elastic range
@@ -48,7 +62,8 @@ template <class T> struct IterRange : std::pair<T, T> {
  * - Just activated elements are placed at `end()-n`.
  * - The true size is given by `capacity()`
  */
-template <class T> class ElasticRange : public IterRange<typename std::vector<T>::iterator> {
+template <class T> class ElasticRange : public IterRange<typename std::vector<T>::iterator>
+{
   public:
     using Titer = typename std::vector<T>::iterator;
     using const_iterator = typename std::vector<T>::const_iterator;
@@ -66,18 +81,24 @@ template <class T> class ElasticRange : public IterRange<typename std::vector<T>
     virtual ~ElasticRange() = default;
     [[nodiscard]] size_t capacity() const;
     [[nodiscard]] auto inactive() const; //!< Range of inactive elements
-    void deactivate(Titer first,
-                    Titer last);            //!< Deactivate particles by moving to end, reducing the effective size
+    void
+    deactivate(Titer first,
+               Titer last); //!< Deactivate particles by moving to end, reducing the effective size
     void activate(Titer first, Titer last); //!< Activate previously deactivated elements
     Titer& trueend();
     [[nodiscard]] const Titer& trueend() const;
     void relocate(const_iterator oldorigin,
-                  Titer neworigin); //!< Shift all iterators to new underlying container; useful when resizing vectors
+                  Titer neworigin); //!< Shift all iterators to new underlying container; useful
+                                    //!< when resizing vectors
     [[nodiscard]] [[nodiscard]] virtual bool isFull() const;
     [[maybe_unused]] [[nodiscard]] auto numInactive() const; //!< Number of inactive elements
-    //!< Determines if the given number (positive or negative) of particles can be inserted or deleted
 
-    [[maybe_unused]] [[nodiscard]] inline bool resizeIsPossible(int number_to_insert_or_delete) const {
+    //!< Determines if the given number (positive or negative) of particles can be inserted or
+    //!< deleted
+
+    [[maybe_unused]] [[nodiscard]] inline bool
+    resizeIsPossible(int number_to_insert_or_delete) const
+    {
         auto new_size = static_cast<int>(size()) + number_to_insert_or_delete;
         return (new_size >= 0 && new_size <= capacity());
     }
@@ -87,18 +108,42 @@ template <class T> class ElasticRange : public IterRange<typename std::vector<T>
      *       `make_subrange()`. With GCC `cpp20::subrange()` can be used. More info here:
      *       https://stackoverflow.com/questions/58316189/in-ranges-v3-how-do-i-create-a-range-from-a-pair-of-iterators
      */
-    inline auto all() { return ranges::make_subrange(begin(), trueend()); }       //!< Active and inactive elements
-    [[nodiscard]] inline auto all() const { return ranges::make_subrange(begin(), trueend()); } //!< Active and inactive elements
+    inline auto all()
+    {
+        return ranges::make_subrange(begin(), trueend());
+    } //!< Active and inactive elements
+
+    [[nodiscard]] inline auto all() const
+    {
+        return ranges::make_subrange(begin(), trueend());
+    } //!< Active and inactive elements
 };
-template <class T> bool ElasticRange<T>::isFull() const { return end() == trueend(); }
+
+template <class T> bool ElasticRange<T>::isFull() const
+{
+    return end() == trueend();
+}
 
 template <class T>
-ElasticRange<T>::ElasticRange(ElasticRange::Titer begin, ElasticRange::Titer end) : base({begin, end}), _trueend(end) {}
+ElasticRange<T>::ElasticRange(ElasticRange::Titer begin, ElasticRange::Titer end)
+    : base({begin, end})
+    , _trueend(end)
+{
+}
 
-template <class T> size_t ElasticRange<T>::capacity() const { return std::distance(begin(), _trueend); }
-template <class T> auto ElasticRange<T>::inactive() const { return base({end(), _trueend}); }
+template <class T> size_t ElasticRange<T>::capacity() const
+{
+    return std::distance(begin(), _trueend);
+}
 
-template <class T> void ElasticRange<T>::deactivate(ElasticRange::Titer first, ElasticRange::Titer last) {
+template <class T> auto ElasticRange<T>::inactive() const
+{
+    return base({end(), _trueend});
+}
+
+template <class T>
+void ElasticRange<T>::deactivate(ElasticRange::Titer first, ElasticRange::Titer last)
+{
     size_t n = std::distance(first, last);
     assert(first >= begin() && last <= end());
     std::rotate(begin(), last, end());
@@ -106,26 +151,41 @@ template <class T> void ElasticRange<T>::deactivate(ElasticRange::Titer first, E
     assert(size() + inactive().size() == capacity());
 }
 
-template <class T> void ElasticRange<T>::activate(ElasticRange::Titer first, ElasticRange::Titer last) {
+template <class T>
+void ElasticRange<T>::activate(ElasticRange::Titer first, ElasticRange::Titer last)
+{
     size_t n = std::distance(first, last);
     std::rotate(end(), first, _trueend);
     end() += n;
     assert(size() + inactive().size() == capacity());
 }
 
-template <class T> typename ElasticRange<T>::Titer& ElasticRange<T>::trueend() { return _trueend; }
-template <class T> const typename ElasticRange<T>::Titer& ElasticRange<T>::trueend() const { return _trueend; }
+template <class T> typename ElasticRange<T>::Titer& ElasticRange<T>::trueend()
+{
+    return _trueend;
+}
+
+template <class T> const typename ElasticRange<T>::Titer& ElasticRange<T>::trueend() const
+{
+    return _trueend;
+}
 
 template <class T>
-void ElasticRange<T>::relocate(ElasticRange::const_iterator oldorigin, ElasticRange::Titer neworigin) {
+void ElasticRange<T>::relocate(ElasticRange::const_iterator oldorigin,
+                               ElasticRange::Titer neworigin)
+{
     begin() = neworigin + std::distance(oldorigin, const_iterator(begin()));
     end() = neworigin + std::distance(oldorigin, const_iterator(end()));
     trueend() = neworigin + std::distance(oldorigin, const_iterator(trueend()));
 }
 
-template <class T> [[maybe_unused]] auto ElasticRange<T>::numInactive() const { return inactive().size(); }
+template <class T> [[maybe_unused]] auto ElasticRange<T>::numInactive() const
+{
+    return inactive().size();
+}
 
-class Group : public ElasticRange<Particle> {
+class Group : public ElasticRange<Particle>
+{
   public:
     ~Group() override = default;
     using base = ElasticRange<Particle>;
@@ -134,15 +194,26 @@ class Group : public ElasticRange<Particle> {
     int conformation_id = 0;             //!< Conformation index / id
     Point mass_center = {0.0, 0.0, 0.0}; //!< Mass center
 
-    [[nodiscard]] inline bool isAtomic() const { return traits().atomic; }     //!< Is it an atomic group?
-    [[nodiscard]] inline bool isMolecular() const { return !traits().atomic; } //!< is it a molecular group?
-    [[nodiscard]] bool isFull() const override;                                //!< True of all particles are active
+    [[nodiscard]] inline bool isAtomic() const
+    {
+        return traits().atomic;
+    } //!< Is it an atomic group?
 
-    std::optional<std::reference_wrapper<Point>> massCenter();             //!< Optional reference to mass center
-    [[nodiscard]] std::optional<std::reference_wrapper<const Point>> massCenter() const; //!< Optional ref. to mass center
+    [[nodiscard]] inline bool isMolecular() const
+    {
+        return !traits().atomic;
+    } //!< is it a molecular group?
+
+    [[nodiscard]] bool isFull() const override; //!< True of all particles are active
+
+    std::optional<std::reference_wrapper<Point>>
+    massCenter(); //!< Optional reference to mass center
+    [[nodiscard]] std::optional<std::reference_wrapper<const Point>>
+    massCenter() const; //!< Optional ref. to mass center
 
     //! Selections to filter groups using `getSelectionFilter()`
-    enum Selectors : unsigned int {
+    enum Selectors : unsigned int
+    {
         ANY = (1U << 1U),       //!< Match any group (disregards all other flags)
         ACTIVE = (1U << 2U),    //!< Only active groups (non-zero size)
         INACTIVE = (1U << 3U),  //!< Only inactive groups (zero size)
@@ -162,7 +233,9 @@ class Group : public ElasticRange<Particle> {
      */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wc++11-narrowing"
-    template <unsigned int mask> [[nodiscard]] bool match() const {
+
+    template <unsigned int mask> [[nodiscard]] bool match() const
+    {
         static_assert(mask >= ANY && mask <= FULL);
         if constexpr (mask & ANY) {
             static_assert(mask == ANY, "don't mix ANY with other flags");
@@ -173,7 +246,8 @@ class Group : public ElasticRange<Particle> {
             if (empty()) {
                 return false;
             }
-        } else if constexpr (mask & INACTIVE) {
+        }
+        else if constexpr (mask & INACTIVE) {
             if (!empty()) {
                 return false;
             }
@@ -188,24 +262,28 @@ class Group : public ElasticRange<Particle> {
             if (isMolecular()) {
                 return false;
             }
-        } else if constexpr (mask & MOLECULAR) {
+        }
+        else if constexpr (mask & MOLECULAR) {
             if (isAtomic()) {
                 return false;
             }
         }
         if constexpr (mask & NEUTRAL) {
             auto _end = (mask & INACTIVE) ? trueend() : end();
-            auto _charge = std::accumulate(begin(), _end, 0.0,
-                                           [](auto sum, const auto& particle) { return sum + particle.charge; });
+            auto _charge = std::accumulate(begin(), _end, 0.0, [](auto sum, const auto& particle) {
+                return sum + particle.charge;
+            });
             if (std::fabs(_charge) > pc::epsilon_dbl) {
                 return false;
             }
         }
         return true;
     }
+
 #pragma clang diagnostic pop
 
-    [[nodiscard]] inline const MoleculeData& traits() const {
+    [[nodiscard]] inline const MoleculeData& traits() const
+    {
         assert(id >= 0 && id < Faunus::molecules.size());
         return Faunus::molecules[id];
     } //!< Convenient access to molecule properties
@@ -213,27 +291,34 @@ class Group : public ElasticRange<Particle> {
     Group(Group& other);
     Group(const Group& other);
     Group(MoleculeData::index_type molid, iter begin, iter end); //!< Constructor
-    Group& operator=(const Group& other);                        //!< Deep copy contents from another Group
-    Group& shallowCopy(const Group& other);                      //!< copy from `other` but *not* particle data
-    [[nodiscard]] bool contains(const Particle& particle, bool include_inactive = false) const; //!< Does particle belong?
-    [[nodiscard]] double mass() const;                                                          //!< Sum of all active masses
+    Group& operator=(const Group& other);   //!< Deep copy contents from another Group
+    Group& shallowCopy(const Group& other); //!< copy from `other` but *not* particle data
+    [[nodiscard]] bool contains(const Particle& particle,
+                                bool include_inactive = false) const; //!< Does particle belong?
+    [[nodiscard]] double mass() const;                                //!< Sum of all active masses
 
-    auto positions() {
+    auto positions()
+    {
         return ranges::make_subrange(begin(), end()) |
-               ranges::cpp20::views::transform([&](Particle& particle) -> Point& { return particle.pos; });
+               ranges::cpp20::views::transform(
+                   [&](Particle& particle) -> Point& { return particle.pos; });
     } //!< Range of positions of active particles
 
-    [[nodiscard]] auto positions() const {
+    [[nodiscard]] auto positions() const
+    {
         return ranges::make_subrange(begin(), end()) |
-               ranges::cpp20::views::transform([&](const Particle& particle) -> const Point& { return particle.pos; });
+               ranges::cpp20::views::transform(
+                   [&](const Particle& particle) -> const Point& { return particle.pos; });
     } //!< Range of positions of active particles
 
-    [[nodiscard]] AtomData::index_type getParticleIndex(
-        const Particle& particle,
-        bool include_inactive = false) const; //!< Finds index of particle within group. Throws if not part of group
+    [[nodiscard]] AtomData::index_type getParticleIndex(const Particle& particle,
+                                                        bool include_inactive = false)
+        const; //!< Finds index of particle within group. Throws if not part of group
 
-    [[nodiscard]] auto findAtomID(AtomData::index_type atomid) const {
-        return *this | ranges::cpp20::views::filter([atomid](auto& particle) { return (particle.id == atomid); });
+    [[nodiscard]] auto findAtomID(AtomData::index_type atomid) const
+    {
+        return *this | ranges::cpp20::views::filter(
+                           [atomid](auto& particle) { return (particle.id == atomid); });
     } //!< Range of all (active) elements with matching particle id
 
     /**
@@ -243,6 +328,7 @@ class Group : public ElasticRange<Particle> {
      * @note No range-checking and i must be in interval `[0:size[`
      */
     inline auto& operator[](size_t index) { return *(begin() + index); }
+
     inline const auto& operator[](size_t index) const { return *(begin() + index); }
 
     Particle& at(size_t index);
@@ -253,13 +339,15 @@ class Group : public ElasticRange<Particle> {
      * @param indices Range of indices relative to group
      * @warning Do not change `indices` to `const&` which would create a dangling reference
      */
-    template <std::integral Tint = size_t> auto operator[](std::vector<Tint>& indices) {
+    template <std::integral Tint = size_t> auto operator[](std::vector<Tint>& indices)
+    {
 #ifndef NDEBUG
         if (not indices.empty()) {
             assert(*std::max_element(indices.begin(), indices.end()) < size());
         }
 #endif
-        return indices | ranges::cpp20::views::transform([this](auto i) -> Particle& { return *(begin() + i); });
+        return indices | ranges::cpp20::views::transform(
+                             [this](auto i) -> Particle& { return *(begin() + i); });
     }
 
     /**
@@ -269,7 +357,8 @@ class Group : public ElasticRange<Particle> {
      * @remarks Atomic groups are not touched
      * @warning Is this fit for use?
      */
-    template <typename TdistanceFunc> void unwrap(const TdistanceFunc& vector_distance) {
+    template <typename TdistanceFunc> void unwrap(const TdistanceFunc& vector_distance)
+    {
         if (isMolecular()) {
             for (auto& particle : *this) {
                 particle.pos = mass_center + vector_distance(particle.pos, mass_center);
@@ -277,15 +366,16 @@ class Group : public ElasticRange<Particle> {
         }
     }
 
-    [[maybe_unused]] void wrap(Geometry::BoundaryFunction boundary); //!< Apply periodic boundaries (Order N complexity).
+    [[maybe_unused]] void
+    wrap(Geometry::BoundaryFunction boundary); //!< Apply periodic boundaries (Order N complexity).
 
     void translate(
-        const Point& displacement,
-        Geometry::BoundaryFunction boundary = [](Point&) {}); //!< Translate particle positions and mass center
+        const Point& displacement, Geometry::BoundaryFunction boundary = [](Point&) {
+        }); //!< Translate particle positions and mass center
 
-    void
-    rotate(const Eigen::Quaterniond& quaternion,
-           Geometry::BoundaryFunction boundary); //!< Rotate particles incl. internal coordinates (dipole moment etc.)
+    void rotate(const Eigen::Quaterniond& quaternion,
+                Geometry::BoundaryFunction
+                    boundary); //!< Rotate particles incl. internal coordinates (dipole moment etc.)
 
     void updateMassCenter(Geometry::BoundaryFunction boundary,
                           const Point& approximate_mass_center); //!< Calculates mass center
@@ -298,7 +388,8 @@ void to_json(json& j, const Group& group);
 void from_json(const json& j, Group& group);
 
 //! Get lambda function matching given enum Select mask
-template <unsigned int mask> std::function<bool(const Group&)> getGroupFilter() {
+template <unsigned int mask> std::function<bool(const Group&)> getGroupFilter()
+{
     return [](const Group& group) { return group.match<mask>(); };
 }
 
@@ -309,18 +400,22 @@ template <unsigned int mask> std::function<bool(const Group&)> getGroupFilter() 
  * is thrown.
  */
 
-template <class Archive> void save(Archive& archive, const Group& group, std::uint32_t const version) {
+template <class Archive>
+void save(Archive& archive, const Group& group, std::uint32_t const version)
+{
     switch (version) {
     case 0:
         archive(group.id, group.conformation_id, group.mass_center, group.size(), group.capacity());
-        std::for_each(group.begin(), group.trueend(), [&archive](auto& particle) { archive(particle); });
+        std::for_each(group.begin(), group.trueend(),
+                      [&archive](auto& particle) { archive(particle); });
         break;
     default:
         throw std::runtime_error("unknown serialisation version");
     };
 } //!< Cereal serialisation
 
-template <class Archive> void load(Archive& archive, Group& group, std::uint32_t const version) {
+template <class Archive> void load(Archive& archive, Group& group, std::uint32_t const version)
+{
     size_t size = 0;
     size_t capacity = 0;
     switch (version) {
@@ -330,7 +425,8 @@ template <class Archive> void load(Archive& archive, Group& group, std::uint32_t
             throw std::runtime_error("capacity mismatch of archived group");
         }
         group.resize(size);
-        std::for_each(group.begin(), group.trueend(), [&archive](auto& particle) { archive(particle); });
+        std::for_each(group.begin(), group.trueend(),
+                      [&archive](auto& particle) { archive(particle); });
         break;
     default:
         throw std::runtime_error("unknown serialisation version");
@@ -339,6 +435,7 @@ template <class Archive> void load(Archive& archive, Group& group, std::uint32_t
 
 /** Concept for a range of groups */
 template <typename T>
-concept RequireGroups = ranges::cpp20::range<T> && std::is_convertible_v<ranges::cpp20::range_value_t<T>, Group>;
+concept RequireGroups =
+    ranges::cpp20::range<T> && std::is_convertible_v<ranges::cpp20::range_value_t<T>, Group>;
 
 } // namespace Faunus

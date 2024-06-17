@@ -33,10 +33,14 @@ namespace XdrFile {
 #include <xdrfile_trr.h>
 #include <xdrfile_xtc.h>
 
-struct XdrFileDeleter {
-    void operator()(XdrFile::XDRFILE* xdrfile); //!< Custom deleter for XDRFILE pointer that closes file
+struct XdrFileDeleter
+{
+    void
+    operator()(XdrFile::XDRFILE* xdrfile); //!< Custom deleter for XDRFILE pointer that closes file
 };
-using XDRFILE_unique = std::unique_ptr<XDRFILE, XdrFileDeleter>; //!< Safe XDRFILE pointer with cleanup
+
+using XDRFILE_unique =
+    std::unique_ptr<XDRFILE, XdrFileDeleter>; //!< Safe XDRFILE pointer with cleanup
 } // namespace XdrFile
 
 namespace IO {
@@ -44,7 +48,8 @@ namespace IO {
 /**
  * @brief Open (gzip compressed) output stream
  */
-std::unique_ptr<std::ostream> openCompressedOutputStream(const std::string& filename, bool throw_on_error = false);
+std::unique_ptr<std::ostream> openCompressedOutputStream(const std::string& filename,
+                                                         bool throw_on_error = false);
 
 /**
  * Write a map to an output stream as key-value pairs
@@ -54,8 +59,9 @@ std::unique_ptr<std::ostream> openCompressedOutputStream(const std::string& file
  * @param data
  */
 template <typename TKey, typename TValue>
-void writeKeyValuePairs(std::ostream& stream, const std::map<TKey, TValue>& data, const std::string& sep = " ",
-                        const std::string& end = "\n") {
+void writeKeyValuePairs(std::ostream& stream, const std::map<TKey, TValue>& data,
+                        const std::string& sep = " ", const std::string& end = "\n")
+{
     if (stream) {
         for (const auto& [key, value] : data) {
             stream << key << sep << value << end;
@@ -71,7 +77,8 @@ void writeKeyValuePairs(std::ostream& stream, const std::map<TKey, TValue>& data
  * @param data
  */
 template <typename TKey, typename TValue>
-void writeKeyValuePairs(const std::string& filename, const std::map<TKey, TValue>& data) {
+void writeKeyValuePairs(const std::string& filename, const std::map<TKey, TValue>& data)
+{
     if (!data.empty()) {
         std::ofstream file(filename);
         writeKeyValuePairs(file, data);
@@ -83,12 +90,13 @@ void writeKeyValuePairs(const std::string& filename, const std::map<TKey, TValue
 /**
  * Base class to load simple structure files such as XYZ, AAM, PQR etc.
  */
-class StructureFileReader {
+class StructureFileReader
+{
   private:
     virtual void loadHeader(std::istream& stream) = 0;       //!< Gobble entire header
     virtual void loadFooter(std::istream& stream);           //!< Gobble entire header
     virtual Particle loadParticle(std::istream& stream) = 0; //!< Load single particle
-    void checkLoadedParticles() const;                       //!< Checks if expected number of particles were loaded
+    void checkLoadedParticles() const; //!< Checks if expected number of particles were loaded
 
   protected:
     static size_t getNumberOfAtoms(const std::string& line); //!< Helper function to extract N
@@ -96,7 +104,8 @@ class StructureFileReader {
                      const std::string& comment_identifiers); //!< Helper function to forward stream
     size_t expected_number_of_particles = 0;
 
-    void handleChargeMismatch(Particle& particle, int atom_index) const; //!< Policy if charge mismatch
+    void handleChargeMismatch(Particle& particle,
+                              int atom_index) const; //!< Policy if charge mismatch
     static void handleRadiusMismatch(const Particle& particle, double radius,
                                      int atom_index); //!< Policy if radius mismatch
 
@@ -104,7 +113,8 @@ class StructureFileReader {
     ParticleVector particles;
     Point box_length = Point::Zero();
     std::vector<std::string> comments;
-    bool prefer_charges_from_file = true; //!< If applicable, prefer charges from AAM file over `AtomData`
+    bool prefer_charges_from_file =
+        true; //!< If applicable, prefer charges from AAM file over `AtomData`
 
     ParticleVector& load(std::istream& stream); //!< Load entire stream and populate data
     ParticleVector& load(std::string_view filename);
@@ -121,7 +131,8 @@ class StructureFileReader {
  * Positions are generated as a random walk beginning from the
  * given `initial_particle_position`, advancing in steps of `bond_length`
  */
-class CoarseGrainedFastaFileReader : public StructureFileReader {
+class CoarseGrainedFastaFileReader : public StructureFileReader
+{
   private:
     void loadHeader(std::istream& stream) override;
     Particle loadParticle(std::istream& stream) override;
@@ -129,13 +140,15 @@ class CoarseGrainedFastaFileReader : public StructureFileReader {
     Point new_particle_position = Point::Zero();
 
   public:
-    explicit CoarseGrainedFastaFileReader(double bond_length, const Point& initial_particle_position = Point(0, 0, 0));
+    explicit CoarseGrainedFastaFileReader(double bond_length,
+                                          const Point& initial_particle_position = Point(0, 0, 0));
     void setBondLength(double bond_length);
     std::string loadSequence(std::istream& stream);
     static char getFastaLetter(std::istream& stream);
 };
 
-class AminoAcidModelReader : public StructureFileReader {
+class AminoAcidModelReader : public StructureFileReader
+{
   private:
     void loadHeader(std::istream& stream) override;
     Particle loadParticle(std::istream& stream) override;
@@ -144,7 +157,8 @@ class AminoAcidModelReader : public StructureFileReader {
     AminoAcidModelReader();
 };
 
-class PQRReader : public StructureFileReader {
+class PQRReader : public StructureFileReader
+{
   private:
     void loadHeader(std::istream& stream) override;
     Particle loadParticle(std::istream& stream) override;
@@ -167,22 +181,25 @@ class PQRReader : public StructureFileReader {
  *     HW  1.37  6.26  1.50
  *     HW  2.31  5.89  0.21
  */
-class XYZReader : public StructureFileReader {
+class XYZReader : public StructureFileReader
+{
   private:
     void loadHeader(std::istream& stream) override;
     Particle loadParticle(std::istream& stream) override;
 };
 
-class SpheroCylinderXYZReader : public StructureFileReader {
+class SpheroCylinderXYZReader : public StructureFileReader
+{
   private:
     void loadHeader(std::istream& stream) override;
     Particle loadParticle(std::istream& stream) override;
 };
 
-
-class GromacsReader : public StructureFileReader {
+class GromacsReader : public StructureFileReader
+{
   private:
-    void loadBoxInformation(std::istream& stream); //!< Load box dimensions (stream position is preserved)
+    void loadBoxInformation(
+        std::istream& stream); //!< Load box dimensions (stream position is preserved)
     void loadHeader(std::istream& stream) override;
     Particle loadParticle(std::istream& stream) override;
 
@@ -193,14 +210,20 @@ class GromacsReader : public StructureFileReader {
 /**
  * Base class to writeKeyValuePairs simple structure files such as XYZ, AAM, PQR etc.
  */
-class StructureFileWriter {
+class StructureFileWriter
+{
   private:
-    virtual void saveHeader(std::ostream& stream, int number_of_particles) const = 0; //!< Write header
-    virtual void saveFooter(std::ostream& stream) const; //!< Called when all particles have been written
-    virtual void saveParticle(std::ostream& stream, const Particle& particle) = 0; //!< Write single particle
-    void saveGroup(std::ostream& stream, const Group& group);                      //!< Write entire group
+    virtual void saveHeader(std::ostream& stream,
+                            int number_of_particles) const = 0; //!< Write header
+    virtual void
+    saveFooter(std::ostream& stream) const; //!< Called when all particles have been written
+    virtual void saveParticle(std::ostream& stream,
+                              const Particle& particle) = 0;  //!< Write single particle
+    void saveGroup(std::ostream& stream, const Group& group); //!< Write entire group
 
-    template <class ParticleIter> void saveParticles(std::ostream& stream, ParticleIter begin, ParticleIter end) {
+    template <class ParticleIter>
+    void saveParticles(std::ostream& stream, ParticleIter begin, ParticleIter end)
+    {
         group_index = 0;
         particle_index = 0;
         std::for_each(begin, end, [&](const auto& particle) {
@@ -219,7 +242,8 @@ class StructureFileWriter {
 
   public:
     template <std::forward_iterator ParticleIter>
-    void save(std::ostream& stream, ParticleIter begin, ParticleIter end, const Point& box_length) {
+    void save(std::ostream& stream, ParticleIter begin, ParticleIter end, const Point& box_length)
+    {
         if (auto number_of_particles = std::distance(begin, end); number_of_particles > 0) {
             box_dimensions = box_length;
             saveHeader(stream, number_of_particles);
@@ -228,24 +252,28 @@ class StructureFileWriter {
         }
     }
 
-    void save(std::ostream& stream, const RequireGroups auto& groups, const Point& box_length) {
+    void save(std::ostream& stream, const RequireGroups auto& groups, const Point& box_length)
+    {
         group_index = 0;
         particle_index = 0;
         box_dimensions = box_length;
 
         auto group_sizes = groups | ranges::cpp20::views::transform(&Group::capacity);
-        const auto number_of_particles = std::accumulate(group_sizes.begin(), group_sizes.end(), 0u);
+        const auto number_of_particles =
+            std::accumulate(group_sizes.begin(), group_sizes.end(), 0u);
         saveHeader(stream, number_of_particles);
 
         ranges::cpp20::for_each(groups, [&](const auto& group) { saveGroup(stream, group); });
         saveFooter(stream);
     }
 
-    template <class... Args> void save(const std::string& filename, const Args&... args) {
+    template <class... Args> void save(const std::string& filename, const Args&... args)
+    {
         if (std::ofstream stream(filename); stream) {
             faunus_logger->debug("writing to {}", filename);
             save(stream, args...);
-        } else {
+        }
+        else {
             throw std::runtime_error("writeKeyValuePairs error: "s + filename);
         }
     }
@@ -253,13 +281,15 @@ class StructureFileWriter {
     virtual ~StructureFileWriter() = default;
 };
 
-class AminoAcidModelWriter : public StructureFileWriter {
+class AminoAcidModelWriter : public StructureFileWriter
+{
   private:
     void saveHeader(std::ostream& stream, int number_of_particles) const override;
     void saveParticle(std::ostream& stream, const Particle& particle) override;
 };
 
-class XYZWriter : public StructureFileWriter {
+class XYZWriter : public StructureFileWriter
+{
   private:
     void saveHeader(std::ostream& stream, int number_of_particles) const override;
     void saveParticle(std::ostream& stream, const Particle& particle) override;
@@ -269,26 +299,33 @@ class XYZWriter : public StructureFileWriter {
  * Modified XYZ format that also saves spherocylinder direction and patch
  * (ported from Faunus v1)
  */
-class SpheroCylinderXYZWriter : public StructureFileWriter {
+class SpheroCylinderXYZWriter : public StructureFileWriter
+{
   private:
     void saveHeader(std::ostream& stream, int number_of_particles) const override;
     void saveParticle(std::ostream& stream, const Particle& particle) override;
 };
 
-
-class PQRWriter : public StructureFileWriter {
+class PQRWriter : public StructureFileWriter
+{
   private:
     void saveHeader(std::ostream& stream, int number_of_particles) const override;
     void saveFooter(std::ostream& stream) const override;
     void saveParticle(std::ostream& stream, const Particle& particle) override;
 
   public:
-    enum class Style { PQR_LEGACY, PDB, PQR }; //!< PQR style (for ATOM records)
+    enum class Style
+    {
+        PQR_LEGACY,
+        PDB,
+        PQR
+    }; //!< PQR style (for ATOM records)
     Style style = Style::PQR_LEGACY;
     explicit PQRWriter(Style style = Style::PQR_LEGACY);
 };
 
-class GromacsWriter : public StructureFileWriter {
+class GromacsWriter : public StructureFileWriter
+{
   private:
     void saveHeader(std::ostream& stream, int number_of_particles) const override;
     void saveFooter(std::ostream& stream) const override;
@@ -296,32 +333,37 @@ class GromacsWriter : public StructureFileWriter {
 };
 
 namespace PQRTrajectoryReader {
-bool readAtomRecord(const std::string& record, Particle& particle, double& radius); //!< Read ATOM or HETATOM record
-void loadTrajectory(const std::string& filename, std::vector<ParticleVector>& destination); //!< Load trajectory
+bool readAtomRecord(const std::string& record, Particle& particle,
+                    double& radius); //!< Read ATOM or HETATOM record
+void loadTrajectory(const std::string& filename,
+                    std::vector<ParticleVector>& destination); //!< Load trajectory
 } // namespace PQRTrajectoryReader
 
 struct TrajectoryFrame;
 
 /**
- * @brief Base data structure for native XTC format as used in Gromacs and supported by the C library. Import methods
- * do the data conversion from the Faunus native format to the XTC format, and export methods do the oposite.
+ * @brief Base data structure for native XTC format as used in Gromacs and supported by the C
+ * library. Import methods do the data conversion from the Faunus native format to the XTC format,
+ * and export methods do the oposite.
  *
- * By convention, XTC has coordinates' origin in a corner (main box's coordinates are always positive), while Faunus
- * has coordinates' origin in the center of the simulation box. During conversion the corresponding offset is
- * subtracted, or added, respectively.
+ * By convention, XTC has coordinates' origin in a corner (main box's coordinates are always
+ * positive), while Faunus has coordinates' origin in the center of the simulation box. During
+ * conversion the corresponding offset is subtracted, or added, respectively.
  *
- * XTC format uses floats (Faunus doubles) and dimensions are in nanometers (Faunus ångströms). XTC library requires
- * raw 2D C-style arrays for coordinates in row-major format. XTC tensor of the simulation box is converted
- * to an XYZ point pressuming orthogonal geometry bacause of current limitation of Faunus. XTC format does not support
- * variable number of coordinates (atoms) between frames.
+ * XTC format uses floats (Faunus doubles) and dimensions are in nanometers (Faunus ångströms). XTC
+ * library requires raw 2D C-style arrays for coordinates in row-major format. XTC tensor of the
+ * simulation box is converted to an XYZ point pressuming orthogonal geometry bacause of current
+ * limitation of Faunus. XTC format does not support variable number of coordinates (atoms) between
+ * frames.
  */
-struct XTCTrajectoryFrame {
-    XdrFile::matrix xtc_box;                          //!< box tensor; only diagonal elements are used
+struct XTCTrajectoryFrame
+{
+    XdrFile::matrix xtc_box; //!< box tensor; only diagonal elements are used
     std::unique_ptr<XdrFile::rvec[]> xtc_coordinates; //!< C-style array of particle coordinates
     int xtc_step = 0;                                 //!< current frame number
     float xtc_time = 0.0;                             //!< current time (unit?)
-    int number_of_atoms = 0;                          //!< number of coordinates (atoms) in each frame
-    float precision = 1000.0;                         //!< output precision
+    int number_of_atoms = 0;  //!< number of coordinates (atoms) in each frame
+    float precision = 1000.0; //!< output precision
     /**
      * @brief Creates an empty XTC trajectory frame for given number of coordinates (atoms).
      * @param number_of_atoms  number of coordinates (atoms)
@@ -332,8 +374,10 @@ struct XTCTrajectoryFrame {
      * @param frame  source trajectory frame
      */
     XTCTrajectoryFrame(const TrajectoryFrame& frame);
+
     /**
-     * @brief Creates an XTC trajectory frame from scalar parameters and input iterator and converts data accordingly.
+     * @brief Creates an XTC trajectory frame from scalar parameters and input iterator and converts
+     * data accordingly.
      * @tparam begin_iterator
      * @tparam end_iterator
      * @param[in] step  frame step
@@ -344,10 +388,12 @@ struct XTCTrajectoryFrame {
      */
     template <RequirePointIterator begin_iterator, class end_iterator>
     XTCTrajectoryFrame(int step, float time, const Point& box, begin_iterator coordinates_begin,
-                       end_iterator coordinates_end) {
+                       end_iterator coordinates_end)
+    {
         initNumberOfAtoms(std::distance(coordinates_begin, coordinates_end));
         importFrame(step, time, box, coordinates_begin, coordinates_end);
     }
+
     /**
      * @brief Copies TrajectoryFrame and converts data. Calls importFrame.
      *
@@ -362,6 +408,7 @@ struct XTCTrajectoryFrame {
      * @throw std::runtime_error  when the number of coordinates does not match
      */
     void importFrame(const TrajectoryFrame& frame);
+
     /**
      * @brief Imports data from scalar parameters and an input iterator over coordinates.
      * @tparam begin_iterator
@@ -374,18 +421,21 @@ struct XTCTrajectoryFrame {
      * @throw std::runtime_error when the number of coordinates does not match
      */
     template <RequirePointIterator begin_iterator, class end_iterator>
-    void importFrame(const int step, const float time, const Point& box, begin_iterator coordinates_begin,
-                     end_iterator coordinates_end) {
+    void importFrame(const int step, const float time, const Point& box,
+                     begin_iterator coordinates_begin, end_iterator coordinates_end)
+    {
         importTimestamp(step, time);
         importBox(box);
         importCoordinates(coordinates_begin, coordinates_end, 0.5 * box);
     }
+
     /**
      * @brief Exports data from a TrajectoryFrame.
      * @param frame  target frame
      * @throw std::runtime_error  when the number of coordinates does not match
      */
     void exportFrame(TrajectoryFrame& frame) const;
+
     /**
      * @brief Exports data to scalar paramers and output iterator over atomic coordinates.
      * @tparam begin_iterator
@@ -399,7 +449,8 @@ struct XTCTrajectoryFrame {
      */
     template <RequirePointIterator begin_iterator, RequirePointIterator end_iterator>
     void exportFrame(int& step, float& time, Point& box, begin_iterator coordinates_begin,
-                     end_iterator coordinates_end) const {
+                     end_iterator coordinates_end) const
+    {
         exportTimestamp(step, time);
         exportBox(box);
         exportCoordinates(coordinates_begin, coordinates_end, 0.5 * box);
@@ -407,8 +458,10 @@ struct XTCTrajectoryFrame {
 
   protected:
     using XTCFloat = float;
-    using XTCMatrix = Eigen::Matrix<XTCFloat, 3, 3, Eigen::RowMajor>; //<! eigen equivalent of the box tensor
-    using XTCVector = Eigen::Matrix<XTCFloat, 3, 1>; //<! eigen equivalent of the single set of coordinates
+    using XTCMatrix =
+        Eigen::Matrix<XTCFloat, 3, 3, Eigen::RowMajor>; //<! eigen equivalent of the box tensor
+    using XTCVector =
+        Eigen::Matrix<XTCFloat, 3, 1>; //<! eigen equivalent of the single set of coordinates
     /**
      * @brief Imports and converts step and timestamp.
      * @param[in] step  frame step
@@ -421,15 +474,16 @@ struct XTCTrajectoryFrame {
      */
     void importBox(const Point& box);
     /**
-     * @brief Imports and converts atomic coordinates. Offset is added to all coordinates to account different
-     * coordinates' origin.
+     * @brief Imports and converts atomic coordinates. Offset is added to all coordinates to account
+     * different coordinates' origin.
      * @param[in] coordinates  atomic coordinates in nanometers
      * @param[in] offset  offset in nanometers to add to all coordinates upon conversion
      */
     void importCoordinates(const PointVector& coordinates, const Point& offset);
+
     /**
-     * @brief Imports and converts atomic coordinates. Offset is added to all coordinates to account different
-     * coordinates' origin.
+     * @brief Imports and converts atomic coordinates. Offset is added to all coordinates to account
+     * different coordinates' origin.
      * @tparam begin_iterator
      * @tparam end_iterator
      * @param[in] begin  input iterator with coordinates in nanometers
@@ -437,7 +491,8 @@ struct XTCTrajectoryFrame {
      * @param[in] offset  offset in nanometers to add to all coordinates upon conversion
      */
     template <RequirePointIterator begin_iterator, typename end_iterator>
-    void importCoordinates(begin_iterator begin, end_iterator end, const Point& offset) const {
+    void importCoordinates(begin_iterator begin, end_iterator end, const Point& offset) const
+    {
         int i = 0;
         ranges::cpp20::for_each(begin, end, [&](const auto& position) {
             if (i >= number_of_atoms) {
@@ -463,16 +518,17 @@ struct XTCTrajectoryFrame {
      */
     void exportBox(Point& box) const;
     /**
-     * @brief Exports and converts atomic coordinates. Offset is subtracted from all coordinates to account different
-     * coordinates' origin.
+     * @brief Exports and converts atomic coordinates. Offset is subtracted from all coordinates to
+     * account different coordinates' origin.
      * @param[out] coordinates  atomic coordinates in nanometers
      * @param[in] offset  offset in nanometers to subtract from all coordinates upon conversion
      * @throw std::runtime_error  when the source box is not orthogonal
      */
     void exportCoordinates(PointVector& coordinates, const Point& offset) const;
+
     /**
-     * @brief Exports and converts atomic coordinates. Offset is subtracted to all coordinates to account different
-     * coordinates' origin.
+     * @brief Exports and converts atomic coordinates. Offset is subtracted to all coordinates to
+     * account different coordinates' origin.
      * @tparam begin_iterator
      * @tparam end_iterator
      * @param[out] begin  output iterator with coordinates in nanometers
@@ -480,7 +536,8 @@ struct XTCTrajectoryFrame {
      * @param[in] offset  offset in nanometers to subtract from all coordinates upon conversion
      */
     template <RequirePointIterator begin_iterator, typename end_iterator>
-    void exportCoordinates(begin_iterator begin, end_iterator end, const Point& offset) const {
+    void exportCoordinates(begin_iterator begin, end_iterator end, const Point& offset) const
+    {
         // comparison of i is probably faster than prior call of std::distance
         int i = 0;
         for (auto coordinates_it = begin; coordinates_it != end; ++coordinates_it) {
@@ -505,10 +562,11 @@ struct XTCTrajectoryFrame {
 /**
  * @brief Simple data structure to store a trajectory frame in native Faunus format.
  *
- * All coordinates are in ånström, origin is placed into the geometric center of the simulation box and timestamps are
- * in picoseconds.
+ * All coordinates are in ånström, origin is placed into the geometric center of the simulation box
+ * and timestamps are in picoseconds.
  */
-struct TrajectoryFrame {
+struct TrajectoryFrame
+{
     Point box;               //!< simulation box
     PointVector coordinates; //!< coordinates of particles
     int step = 0;            //!< frame number
@@ -517,27 +575,30 @@ struct TrajectoryFrame {
     TrajectoryFrame() = default;
     TrajectoryFrame(const Point& box, const PointVector& coordinates, int step, float timestamp);
     /**
-     * @brief Creates a new trajectory frame based on an XTC frame. Data are converted as necessary. Convenient wrapper
-     * around XTCTrajectoryFrame::exportFrame.
+     * @brief Creates a new trajectory frame based on an XTC frame. Data are converted as necessary.
+     * Convenient wrapper around XTCTrajectoryFrame::exportFrame.
      * @param xtc_frame  source XTC trajectory frame
      */
     explicit TrajectoryFrame(const XTCTrajectoryFrame& xtc_frame);
     /**
-     * @brief Assignes an XTC frame. Data are converted as necessary. However, the number of coordinates has to be
-     * the same in both (source and target) frames. Convinient wrapper around XTCTrajectoryFrame::exportFrame.
+     * @brief Assignes an XTC frame. Data are converted as necessary. However, the number of
+     * coordinates has to be the same in both (source and target) frames. Convinient wrapper around
+     * XTCTrajectoryFrame::exportFrame.
      * @param xtc_frame  source XTC trajectory frame
      */
     void operator=(const XTCTrajectoryFrame& xtc_frame);
 };
 
 /**
- * @brief Reads frames from an XTC file (GROMACS compressed trajectory file format). It is a wrapper around
- * C function calls.
+ * @brief Reads frames from an XTC file (GROMACS compressed trajectory file format). It is a wrapper
+ * around C function calls.
  *
- * Frames are stored into a TrajectoryFrame structure or as a list of positions in an output iterator. The class
- * is responsible for I/O operations, not data conversion. For details about data conversion XTCTrajectoryFrame.
+ * Frames are stored into a TrajectoryFrame structure or as a list of positions in an output
+ * iterator. The class is responsible for I/O operations, not data conversion. For details about
+ * data conversion XTCTrajectoryFrame.
  */
-class XTCReader {
+class XTCReader
+{
     int return_code = XdrFile::exdrOK; //!< last return code of a C function
     XdrFile::XDRFILE_unique xdrfile;   //!< file handle
     //! data structure for C functions; the number of coordinates is immutable
@@ -562,6 +623,7 @@ class XTCReader {
      * @throw std::runtime_error  when other I/O error occures
      */
     bool read(TrajectoryFrame& frame);
+
     /**
      * @brief Reads the next frame in the trajectory.
      * @tparam begin_iterator
@@ -575,7 +637,9 @@ class XTCReader {
      * @throw std::runtime_error  when other I/O error occures
      */
     template <RequirePointIterator begin_iterator, typename end_iterator>
-    bool read(int& step, float& time, Point& box, begin_iterator coordinates_begin, end_iterator coordinates_end) {
+    bool read(int& step, float& time, Point& box, begin_iterator coordinates_begin,
+              end_iterator coordinates_end)
+    {
         if (readFrame()) {
             xtc_frame->exportFrame(step, time, box, coordinates_begin, coordinates_end);
             return true;
@@ -593,19 +657,20 @@ class XTCReader {
 };
 
 /**
- * @brief Writes frames into an XTC file (GROMACS compressed trajectory file format). It is a wrapper around
- * C function calls.
+ * @brief Writes frames into an XTC file (GROMACS compressed trajectory file format). It is a
+ * wrapper around C function calls.
  *
- * The frames can be provided as a TrajectoryFrame structure or as a list of positions in an input iterator. The class
- * is responsible for I/O operations, not data conversion.
+ * The frames can be provided as a TrajectoryFrame structure or as a list of positions in an input
+ * iterator. The class is responsible for I/O operations, not data conversion.
  */
-class XTCWriter {
+class XTCWriter
+{
     int return_code = XdrFile::exdrOK;             //!< last return code of a C function
     XdrFile::XDRFILE_unique xdrfile;               //!< file handle
     std::unique_ptr<XTCTrajectoryFrame> xtc_frame; //!< data structure for C functions;
                                                    //!< the number of coordinates is immutable
     int step_counter = 0;                          //!< frame counter for automatic increments
-    float time_delta = 1.0_ps;                     //!< timestamp of a frame is computed as step * time_delta
+    float time_delta = 1.0_ps; //!< timestamp of a frame is computed as step * time_delta
 
   public:
     const std::string filename; //!< name of the trajectory file, mainly for error reporting
@@ -626,6 +691,7 @@ class XTCWriter {
      * @throw std::runtime_error  when other I/O error occures
      */
     void writeNext(const TrajectoryFrame& frame);
+
     /**
      * @brief Writes a next frame into the file using own automatic counter for step and timestamp.
      * @tparam begin_iterator
@@ -635,14 +701,15 @@ class XTCWriter {
      * @param[in] coordinates_end  input iterator's end
      */
     template <RequirePointIterator begin_iterator, typename end_iterator>
-    void writeNext(const Point& box, begin_iterator coordinates_begin, end_iterator coordinates_end) {
+    void writeNext(const Point& box, begin_iterator coordinates_begin, end_iterator coordinates_end)
+    {
         if (!xtc_frame) {
             auto number_of_atoms = ranges::cpp20::distance(coordinates_begin, coordinates_end);
             faunus_logger->trace("preparing xtc output for {} particles", number_of_atoms);
             xtc_frame = std::make_unique<XTCTrajectoryFrame>(number_of_atoms);
         }
-        xtc_frame->importFrame(step_counter, static_cast<float>(step_counter) * time_delta, box, coordinates_begin,
-                               coordinates_end);
+        xtc_frame->importFrame(step_counter, static_cast<float>(step_counter) * time_delta, box,
+                               coordinates_begin, coordinates_end);
         writeFrame();
         ++step_counter;
     }
@@ -654,8 +721,8 @@ class XTCWriter {
      */
     void writeFrame();
     /**
-     * @brief Actual wrapper around C function that writes the current frame into xtc_frame overriding step
-     * and timestamp.
+     * @brief Actual wrapper around C function that writes the current frame into xtc_frame
+     * overriding step and timestamp.
      * @throw std::runtime_error  when other I/O error occures
      */
     void writeFrameAt(int step, float time);
@@ -695,7 +762,8 @@ std::unique_ptr<StructureFileWriter> createStructureFileWriter(const std::string
  * The idea is that the format handles both input and
  * output streams that may of may not be compressed.
  */
-class FormatSpaceTrajectory {
+class FormatSpaceTrajectory
+{
   private:
     std::unique_ptr<cereal::BinaryOutputArchive> output_archive;
     std::unique_ptr<cereal::BinaryInputArchive> input_archive;

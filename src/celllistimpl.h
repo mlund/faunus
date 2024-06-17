@@ -60,7 +60,8 @@ namespace Grid {
  * @brief Interface of a grid
  * @tparam TGridType  a cell grid types declaration
  */
-template <typename TGridType> struct AbstractGrid : private TGridType {
+template <typename TGridType> struct AbstractGrid : private TGridType
+{
     using GridType = TGridType;
     using typename GridType::CellCoord;
     using typename GridType::CellIndex;
@@ -77,7 +78,8 @@ template <typename TGridType> struct AbstractGrid : private TGridType {
     virtual ~AbstractGrid() = default;
 };
 
-template <typename TGridType> struct AbstractNeighborGrid : public virtual AbstractGrid<TGridType> {
+template <typename TGridType> struct AbstractNeighborGrid : public virtual AbstractGrid<TGridType>
+{
     using GridType = TGridType;
     using typename TGridType::CellCoord;
 
@@ -143,7 +145,10 @@ template <typename TGridType> class GridBase : public virtual AbstractGrid<TGrid
      * @param position   spatial position
      * @return  cell index
      */
-    CellIndex indexAt(const Point& position) const override { return index(coordinatesAt(position)); }
+    CellIndex indexAt(const Point& position) const override
+    {
+        return index(coordinatesAt(position));
+    }
 
     /**
      * @brief Verifies if coordinates are valid in the grid.

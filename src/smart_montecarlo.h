@@ -53,7 +53,7 @@ double bias(double outside_acceptance, int n_total, int n_inside,
 class RegionSampler {
   private:
     const double outside_acceptance = 1.0; //!< Or "p" between ]0:1]; 1 --> uniform sampling (no regional preference)
-    BiasDirection getDirection(bool inside_before, bool inside_after) const;
+    static BiasDirection getDirection(bool inside_before, bool inside_after) ;
     template <ranges::cpp20::range Range> double getNumberInside(Range& range) const;
 
   protected:

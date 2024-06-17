@@ -83,35 +83,35 @@ TEST_CASE("[Faunus] PairMatrix") {
     SUBCASE("full matrix") {
         PairMatrix<double, false> m;
         m.set(i, j, 12.1);
-        CHECK(m.size() == 4);
-        CHECK(m(i, j) == 12.1);
-        CHECK(m(i, j) == m(j, i));
-        CHECK(m(0, 2) == 0);
-        CHECK(m(2, 0) == 0);
+        CHECK_EQ(m.size(), 4);
+        CHECK_EQ(m(i, j), 12.1);
+        CHECK_EQ(m(i, j), m(j, i));
+        CHECK_EQ(m(0, 2), 0);
+        CHECK_EQ(m(2, 0), 0);
     }
 
     SUBCASE("full matrix - default value") {
         PairMatrix<double, false> m(5, 3.1);
         for (size_t i = 0; i < 5; i++)
             for (size_t j = 0; j < 5; j++)
-                CHECK(m(i, j) == 3.1);
+                CHECK_EQ(m(i, j), 3.1);
     }
 
     SUBCASE("triangular matrix - default value") {
         PairMatrix<double, true> m(5, 3.1);
         for (size_t i = 0; i < 5; i++)
             for (size_t j = 0; j < 5; j++)
-                CHECK(m(i, j) == 3.1);
+                CHECK_EQ(m(i, j), 3.1);
     }
 
     SUBCASE("triangular matrix") {
         PairMatrix<double, true> m;
         m.set(i, j, 12.1);
-        CHECK(m.size() == 4);
-        CHECK(m(i, j) == 12.1);
-        CHECK(m(i, j) == m(j, i));
-        CHECK(m(0, 2) == 0);
-        CHECK(m(2, 0) == 0);
+        CHECK_EQ(m.size(), 4);
+        CHECK_EQ(m(i, j), 12.1);
+        CHECK_EQ(m(i, j), m(j, i));
+        CHECK_EQ(m(0, 2), 0);
+        CHECK_EQ(m(2, 0), 0);
     }
 }
 

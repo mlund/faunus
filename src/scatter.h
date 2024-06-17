@@ -98,7 +98,6 @@ template <class Tformfactor, std::floating_point T = float> class DebyeFormula {
         }
     }
 
-    Geometry::Sphere geo = Geometry::Sphere(r_cutoff_infty / 2); //!< geometry to use for distance calculations
     T r_cutoff;                   //!< cut-off distance for scattering contributions (angstrom)
     Tformfactor form_factor;      //!< scattering from a single particle
     std::vector<T> intensity;     //!< sampled average I(q)
@@ -132,7 +131,7 @@ template <class Tformfactor, std::floating_point T = float> class DebyeFormula {
         const int M = (int) intensity.size(); // number of mesh points
         std::vector<T> intensity_sum(M, 0.0);
 
-        // Allow parallelization with a hand written reduction of intensity_sum at the end.
+        // Allow parallelization with a hand-written reduction of intensity_sum at the end.
         // https://gcc.gnu.org/gcc-9/porting_to.html#ompdatasharing
         // #pragma omp parallel default(none) shared(N, M) shared(geo, r_cutoff, p) shared(intensity_sum)
         #pragma omp parallel default(shared) shared(intensity_sum)
@@ -141,7 +140,7 @@ template <class Tformfactor, std::floating_point T = float> class DebyeFormula {
             #pragma omp for schedule(dynamic)
             for (int i = 0; i < N - 1; ++i) {
                 for (int j = i + 1; j < N; ++j) {
-                    T r = T(geo.sqdist(p[i], p[j])); // the square root follows
+                    T r = T(Faunus::Geometry::Sphere::sqdist(p[i], p[j])); // the square root follows
                     if (r < r_cutoff * r_cutoff) {
                         r = std::sqrt(r);
                         // Black magic: The q_mesh function must be inlineable otherwise the loop cannot be unrolled

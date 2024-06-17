@@ -496,11 +496,11 @@ TEST_CASE("[Faunus] BondData") {
             HarmonicBond bond(100.0, 4, {0, 1});
             bond.setEnergyFunction(p_4a);
             auto forces = bond.forceFunc(distance_3a);
-            CHECK(forces.size() == 2);
-            CHECK(forces[0].second.x() == Approx(0));
-            CHECK(forces[0].second.y() == Approx(100));
-            CHECK(forces[0].second.y() == Approx(-forces[1].second.y()));
-            CHECK(forces[0].second.z() == Approx(0));
+            CHECK_EQ(forces.size(), 2);
+            CHECK_EQ(forces[0].second.x(), Approx(0));
+            CHECK_EQ(forces[0].second.y(), Approx(100));
+            CHECK_EQ(forces[0].second.y(), Approx(-forces[1].second.y()));
+            CHECK_EQ(forces[0].second.z(), Approx(0));
         }
         SUBCASE("HarmonicBond JSON") {
             json j = R"({"harmonic": {"index":[1,2], "k":10.0, "req":2.0}})"_json;
@@ -532,15 +532,15 @@ TEST_CASE("[Faunus] BondData") {
             FENEBond bond(100.0, 5.0, {0, 1});
             bond.setEnergyFunction(p_4a);
             auto forces = bond.forceFunc(distance_3a);
-            CHECK(forces.size() == 2);
-            CHECK(forces[0].first == 0);
-            CHECK(forces[1].first == 1);
-            CHECK(forces[0].second.x() == Approx(0.0));
-            CHECK(forces[0].second.y() == Approx(-468.75));
-            CHECK(forces[0].second.z() == Approx(0.0));
-            CHECK(forces[1].second.x() == Approx(0.0));
-            CHECK(forces[1].second.y() == Approx(468.75));
-            CHECK(forces[1].second.z() == Approx(0.0));
+            CHECK_EQ(forces.size(), 2);
+            CHECK_EQ(forces[0].first, 0);
+            CHECK_EQ(forces[1].first, 1);
+            CHECK_EQ(forces[0].second.x(), Approx(0.0));
+            CHECK_EQ(forces[0].second.y(), Approx(-468.75));
+            CHECK_EQ(forces[0].second.z(), Approx(0.0));
+            CHECK_EQ(forces[1].second.x(), Approx(0.0));
+            CHECK_EQ(forces[1].second.y(), Approx(468.75));
+            CHECK_EQ(forces[1].second.z(), Approx(0.0));
         }
         SUBCASE("FENEBond JSON") {
             json j = R"({"fene": {"index":[1,2], "k":8, "rmax":6.0 }})"_json;
@@ -572,15 +572,15 @@ TEST_CASE("[Faunus] BondData") {
             FENEWCABond bond(100, 5.0, 20.0, 3.2, {0, 1});
             bond.setEnergyFunction(p_4a);
             auto forces = bond.forceFunc(distance_3a);
-            CHECK(forces.size() == 2);
-            CHECK(forces[0].first == 0);
-            CHECK(forces[1].first == 1);
-            CHECK(forces[0].second.x() == Approx(0.0));
-            CHECK(forces[0].second.y() == Approx(-10.1974323155));
-            CHECK(forces[0].second.z() == Approx(0.0));
-            CHECK(forces[1].second.x() == Approx(0.0));
-            CHECK(forces[1].second.y() == Approx(10.1974323155));
-            CHECK(forces[1].second.z() == Approx(0.0));
+            CHECK_EQ(forces.size(), 2);
+            CHECK_EQ(forces[0].first, 0);
+            CHECK_EQ(forces[1].first, 1);
+            CHECK_EQ(forces[0].second.x(), Approx(0.0));
+            CHECK_EQ(forces[0].second.y(), Approx(-10.1974323155));
+            CHECK_EQ(forces[0].second.z(), Approx(0.0));
+            CHECK_EQ(forces[1].second.x(), Approx(0.0));
+            CHECK_EQ(forces[1].second.y(), Approx(10.1974323155));
+            CHECK_EQ(forces[1].second.z(), Approx(0.0));
         }
         SUBCASE("FENEWCABond JSON") {
             json j = R"({"fene+wca": {"index":[1,2], "k":8, "rmax":6.0, "eps":3.5, "sigma":4.5}})"_json;
@@ -614,19 +614,19 @@ TEST_CASE("[Faunus] BondData") {
             HarmonicTorsion bond(1, 45.0_deg, {0, 1, 2});
             bond.setEnergyFunction(p_90deg_4a);
             auto forces = bond.forceFunc(distance);
-            CHECK(forces.size() == 3);
-            CHECK(forces[0].first == 0);
-            CHECK(forces[1].first == 1);
-            CHECK(forces[2].first == 2);
-            CHECK(forces[0].second.x() == Approx(0.78539816));
-            CHECK(forces[0].second.y() == Approx(0.0));
-            CHECK(forces[0].second.z() == Approx(0.0));
-            CHECK(forces[1].second.x() == Approx(-0.78539816));
-            CHECK(forces[1].second.y() == Approx(-0.78539816));
-            CHECK(forces[1].second.z() == Approx(0.0));
-            CHECK(forces[2].second.x() == Approx(0.0));
-            CHECK(forces[2].second.y() == Approx(0.78539816));
-            CHECK(forces[2].second.z() == Approx(0.0));
+            CHECK_EQ(forces.size(), 3);
+            CHECK_EQ(forces[0].first, 0);
+            CHECK_EQ(forces[1].first, 1);
+            CHECK_EQ(forces[2].first, 2);
+            CHECK_EQ(forces[0].second.x(), Approx(0.78539816));
+            CHECK_EQ(forces[0].second.y(), Approx(0.0));
+            CHECK_EQ(forces[0].second.z(), Approx(0.0));
+            CHECK_EQ(forces[1].second.x(), Approx(-0.78539816));
+            CHECK_EQ(forces[1].second.y(), Approx(-0.78539816));
+            CHECK_EQ(forces[1].second.z(), Approx(0.0));
+            CHECK_EQ(forces[2].second.x(), Approx(0.0));
+            CHECK_EQ(forces[2].second.y(), Approx(0.78539816));
+            CHECK_EQ(forces[2].second.z(), Approx(0.0));
         }
         SUBCASE("HarmonicTorsion JSON") {
             json j = R"({"harmonic_torsion": {"index":[0,1,2], "k":0.5, "aeq":65}})"_json;
@@ -653,19 +653,19 @@ TEST_CASE("[Faunus] BondData") {
             GromosTorsion bond(100.0, std::cos(45.0_deg), {0, 1, 2});
             bond.setEnergyFunction(p_90deg_4a);
             auto forces = bond.forceFunc(distance);
-                CHECK(forces.size() == 3);
-                CHECK(forces[0].first == 0);
-                CHECK(forces[1].first == 1);
-                CHECK(forces[2].first == 2);
-                CHECK(forces[0].second.x() == Approx(-70.7106781187));
-                CHECK(forces[0].second.y() == Approx(0.0));
-                CHECK(forces[0].second.z() == Approx(0.0));
-                CHECK(forces[1].second.x() == Approx(70.7106781187));
-                CHECK(forces[1].second.y() == Approx(70.7106781187));
-                CHECK(forces[1].second.z() == Approx(0.0));
-                CHECK(forces[2].second.x() == Approx(0.0));
-                CHECK(forces[2].second.y() == Approx(-70.7106781187));
-                CHECK(forces[2].second.z() == Approx(0.0));
+                CHECK_EQ(forces.size(), 3);
+                CHECK_EQ(forces[0].first, 0);
+                CHECK_EQ(forces[1].first, 1);
+                CHECK_EQ(forces[2].first, 2);
+                CHECK_EQ(forces[0].second.x(), Approx(-70.7106781187));
+                CHECK_EQ(forces[0].second.y(), Approx(0.0));
+                CHECK_EQ(forces[0].second.z(), Approx(0.0));
+                CHECK_EQ(forces[1].second.x(), Approx(70.7106781187));
+                CHECK_EQ(forces[1].second.y(), Approx(70.7106781187));
+                CHECK_EQ(forces[1].second.z(), Approx(0.0));
+                CHECK_EQ(forces[2].second.x(), Approx(0.0));
+                CHECK_EQ(forces[2].second.y(), Approx(-70.7106781187));
+                CHECK_EQ(forces[2].second.z(), Approx(0.0));
         }
         SUBCASE("GromosTorsion JSON") {
             json j = R"({"gromos_torsion": {"index":[0,1,2], "k":0.5, "aeq":65}})"_json;
@@ -712,23 +712,23 @@ TEST_CASE("[Faunus] BondData") {
             PeriodicDihedral bond(100.0, 0.0_deg, 3, {0, 1, 2, 3});
             bond.setEnergyFunction(p_90deg);
             auto forces = bond.forceFunc(distance);
-            CHECK(forces.size() == 4);
-            CHECK(forces[0].first == 0);
-            CHECK(forces[1].first == 1);
-            CHECK(forces[2].first == 2);
-            CHECK(forces[3].first == 3);
-            CHECK(forces[0].second.x() == Approx(0));
-            CHECK(forces[0].second.y() == Approx(60));
-            CHECK(forces[0].second.z() == Approx(0));
-            CHECK(forces[1].second.x() == Approx(0));
-            CHECK(forces[1].second.y() == Approx(-60));
-            CHECK(forces[1].second.z() == Approx(0));
-            CHECK(forces[2].second.x() == Approx(-30));
-            CHECK(forces[2].second.y() == Approx(0));
-            CHECK(forces[2].second.z() == Approx(0));
-            CHECK(forces[3].second.x() == Approx(30));
-            CHECK(forces[3].second.y() == Approx(0));
-            CHECK(forces[3].second.z() == Approx(0));
+            CHECK_EQ(forces.size(), 4);
+            CHECK_EQ(forces[0].first, 0);
+            CHECK_EQ(forces[1].first, 1);
+            CHECK_EQ(forces[2].first, 2);
+            CHECK_EQ(forces[3].first, 3);
+            CHECK_EQ(forces[0].second.x(), Approx(0));
+            CHECK_EQ(forces[0].second.y(), Approx(60));
+            CHECK_EQ(forces[0].second.z(), Approx(0));
+            CHECK_EQ(forces[1].second.x(), Approx(0));
+            CHECK_EQ(forces[1].second.y(), Approx(-60));
+            CHECK_EQ(forces[1].second.z(), Approx(0));
+            CHECK_EQ(forces[2].second.x(), Approx(-30));
+            CHECK_EQ(forces[2].second.y(), Approx(0));
+            CHECK_EQ(forces[2].second.z(), Approx(0));
+            CHECK_EQ(forces[3].second.x(), Approx(30));
+            CHECK_EQ(forces[3].second.y(), Approx(0));
+            CHECK_EQ(forces[3].second.z(), Approx(0));
         }
         SUBCASE("PeriodicDihedral JSON") {
             json j = R"({"periodic_dihedral": {"index":[0,1,2,3], "k":10, "phi":0.0, "n": 3}})"_json;
@@ -775,23 +775,23 @@ TEST_CASE("[Faunus] BondData") {
             HarmonicDihedral bond(100.0, 90.0_deg, {0, 1, 2, 3});
             bond.setEnergyFunction(p_120deg);
             auto forces = bond.forceFunc(distance);
-                CHECK(forces.size() == 4);
-                CHECK(forces[0].first == 0);
-                CHECK(forces[1].first == 1);
-                CHECK(forces[2].first == 2);
-                CHECK(forces[3].first == 3);
-                CHECK(forces[0].second.x() == Approx(0));
-                CHECK(forces[0].second.y() == Approx(10.471975512));
-                CHECK(forces[0].second.z() == Approx(0));
-                CHECK(forces[1].second.x() == Approx(0));
-                CHECK(forces[1].second.y() == Approx(-10.471975512));
-                CHECK(forces[1].second.z() == Approx(0));
-                CHECK(forces[2].second.x() == Approx(-2.2672492053));
-                CHECK(forces[2].second.y() == Approx(-1.308996939));
-                CHECK(forces[2].second.z() == Approx(0));
-                CHECK(forces[3].second.x() == Approx(2.2672492053));
-                CHECK(forces[3].second.y() == Approx(1.308996939));
-                CHECK(forces[3].second.z() == Approx(0));
+                CHECK_EQ(forces.size(), 4);
+                CHECK_EQ(forces[0].first, 0);
+                CHECK_EQ(forces[1].first, 1);
+                CHECK_EQ(forces[2].first, 2);
+                CHECK_EQ(forces[3].first, 3);
+                CHECK_EQ(forces[0].second.x(), Approx(0));
+                CHECK_EQ(forces[0].second.y(), Approx(10.471975512));
+                CHECK_EQ(forces[0].second.z(), Approx(0));
+                CHECK_EQ(forces[1].second.x(), Approx(0));
+                CHECK_EQ(forces[1].second.y(), Approx(-10.471975512));
+                CHECK_EQ(forces[1].second.z(), Approx(0));
+                CHECK_EQ(forces[2].second.x(), Approx(-2.2672492053));
+                CHECK_EQ(forces[2].second.y(), Approx(-1.308996939));
+                CHECK_EQ(forces[2].second.z(), Approx(0));
+                CHECK_EQ(forces[3].second.x(), Approx(2.2672492053));
+                CHECK_EQ(forces[3].second.y(), Approx(1.308996939));
+                CHECK_EQ(forces[3].second.z(), Approx(0));
         }
             SUBCASE("HarmonicDihedral JSON") {
             json j = R"({"harmonic_dihedral": {"index":[0,1,2,3], "k":100.0, "deq":90}})"_json;
@@ -815,9 +815,9 @@ TEST_CASE("[Faunus] BondData") {
         bonds.emplace_back<FENEBond>(1.0, 2.1, std::vector<int>{2, 3});
         bonds.emplace_back<HarmonicBond>(1.0, 2.1, std::vector<int>{2, 3});
         auto harmonic_bonds = bonds.find<HarmonicBond>();
-        CHECK(harmonic_bonds.size() == 1);
-        CHECK(harmonic_bonds.front()->type() == BondData::Variant::HARMONIC);
-        CHECK(harmonic_bonds.front() == bonds.back()); // harmonic_bonds should contain references to bonds
+        CHECK_EQ(harmonic_bonds.size(), 1);
+        CHECK_EQ(harmonic_bonds.front()->type(), BondData::Variant::HARMONIC);
+        CHECK_EQ(harmonic_bonds.front(), bonds.back()); // harmonic_bonds should contain references to bonds
     }
 }
 TEST_SUITE_END();

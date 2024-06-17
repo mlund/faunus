@@ -12,6 +12,8 @@
 #include <range/v3/view/zip.hpp>
 #include <range/v3/view/join.hpp>
 #include <range/v3/view/transform.hpp>
+#include <range/v3/view/cartesian_product.hpp>
+#include <utility>
 
 /** @brief Faunus main namespace */
 namespace Faunus {
@@ -73,11 +75,11 @@ class BoundaryCondition {
         archive(coordinates, direction);
     } //!< Cereal serialisation
 
-    Eigen::Matrix<bool, 3, 1> isPeriodic() const;
+    [[nodiscard]] Eigen::Matrix<bool, 3, 1> isPeriodic() const;
 
-    BoundaryCondition(Coordinates coordinates = Coordinates::ORTHOGONAL,
+    explicit BoundaryCondition(Coordinates coordinates = Coordinates::ORTHOGONAL,
                       BoundaryXYZ boundary = {Boundary::FIXED, Boundary::FIXED, Boundary::FIXED})
-        : coordinates(coordinates), direction(boundary){};
+        : coordinates(coordinates), direction(std::move(boundary)){};
 };
 
 /**
@@ -85,26 +87,26 @@ class BoundaryCondition {
  */
 struct GeometryBase {
     virtual Point setVolume(double, VolumeMethod = VolumeMethod::ISOTROPIC) = 0; //!< Set volume
-    virtual double getVolume(int = 3) const = 0;                   //!< Get volume
+    [[nodiscard]] virtual double getVolume(int = 3) const = 0;                   //!< Get volume
     virtual void boundary(Point &) const = 0;                      //!< Apply boundary conditions
-    virtual bool collision(const Point &) const = 0;               //!< Overlap with boundaries
+    [[nodiscard]] virtual bool collision(const Point &) const = 0;               //!< Overlap with boundaries
     virtual void randompos(Point &, Random &) const = 0;           //!< Generate random position
-    virtual Point vdist(const Point& a, const Point& b) const = 0; //!< Minimum distance vector b->a
-    virtual Point getLength() const = 0;                           //!< Side lengths
+    [[nodiscard]] virtual Point vdist(const Point& a, const Point& b) const = 0; //!< Minimum distance vector b->a
+    [[nodiscard]] virtual Point getLength() const = 0;                           //!< Side lengths
     virtual ~GeometryBase();
     virtual void to_json(json &j) const = 0;
     virtual void from_json(const json &j) = 0;
 
-    inline BoundaryFunction getBoundaryFunc() const {
+    [[nodiscard]] inline BoundaryFunction getBoundaryFunc() const {
         return [this](Point &i) { boundary(i); };
     } //!< Lambda for applying boundary conditions on a point
 
-    inline DistanceFunction getDistanceFunc() const {
+    [[nodiscard]] inline DistanceFunction getDistanceFunc() const {
         return [this](const Point &i, const Point &j) { return vdist(i, j); };
     } //!< Lambda for calculating the (minimum) distance vector between two positions
 
   protected:
-    template <typename T = double> inline int anint(T x) const {
+    template <typename T = double> [[nodiscard]] inline int anint(T x) const {
         return int(x > 0.0 ? x + 0.5 : x - 0.5);
     } //!< Round to int
 
@@ -117,10 +119,10 @@ class GeometryImplementation : public GeometryBase {
   public:
     BoundaryCondition boundary_conditions;
 
-    virtual ~GeometryImplementation();
+    ~GeometryImplementation() override;
 
     //! A unique pointer to a copy of self. To be used in copy constructors.
-    virtual std::unique_ptr<GeometryImplementation> clone() const = 0;
+    [[nodiscard]] virtual std::unique_ptr<GeometryImplementation> clone() const = 0;
 
     //! Cereal serialisation
     template <class Archive> void serialize(Archive &archive) { archive(boundary_conditions); }
@@ -144,12 +146,10 @@ class Cuboid : public GeometryImplementation {
     void randompos(Point &m, Random &rand) const override;
     void from_json(const json &j) override;
     void to_json(json &j) const override;
-    Cuboid(const Point &side_length);
+    explicit Cuboid(const Point &side_length);
     Cuboid();
 
-    std::unique_ptr<GeometryImplementation> clone() const override {
-        return std::make_unique<Cuboid>(*this);
-    }; //!< A unique pointer to a copy of self.
+    [[nodiscard]] std::unique_ptr<GeometryImplementation> clone() const override; //!< A unique pointer to a copy of self.
 
     //! Cereal serialisation
     template <class Archive> void serialize(Archive &archive) {
@@ -166,13 +166,11 @@ class Slit : public Cuboid {
     using Tbase = Cuboid;
 
   public:
-    Slit(const Point &p);
+    explicit Slit(const Point &p);
     Slit(double x, double y, double z);
-    Slit(double x = 0.0);
+    explicit Slit(double x = 0.0);
 
-    std::unique_ptr<GeometryImplementation> clone() const override {
-        return std::make_unique<Slit>(*this);
-    }; //!< A unique pointer to a copy of itself.
+    [[nodiscard]] std::unique_ptr<GeometryImplementation> clone() const override; //!< A unique pointer to a copy of itself.
 };
 
 /**
@@ -187,18 +185,16 @@ class Sphere : public GeometryImplementation {
     double getVolume(int dim = 3) const override;
     Point setVolume(double volume, VolumeMethod method = VolumeMethod::ISOTROPIC) override;
     Point vdist(const Point& a, const Point& b) const override; //!< Minimum distance vector b->a
-    double sqdist(const Point &a, const Point &b) const { return (a - b).squaredNorm(); };
+    inline static double sqdist(const Point &a, const Point &b) { return (a - b).squaredNorm(); };
     void boundary(Point &a) const override;
     bool collision(const Point &point) const override;
     void randompos(Point &m, Random &rand) const override;
     void from_json(const json &j) override;
     void to_json(json &j) const override;
-    Sphere(double radius = 0.0);
+    explicit Sphere(double radius = 0.0);
     double getRadius() const;
 
-    std::unique_ptr<GeometryImplementation> clone() const override {
-        return std::make_unique<Sphere>(*this);
-    }; //!< A unique pointer to a copy of self.
+    std::unique_ptr<GeometryImplementation> clone() const override; //!< A unique pointer to a copy of self.
 
     //! Cereal serialisation
     template <class Archive> void serialize(Archive &archive) {
@@ -211,11 +207,9 @@ class Hypersphere2d : public Sphere {
     Point vdist(const Point &a, const Point &b) const override;
     bool collision(const Point &a) const override;
     void randompos(Point &m, Random &rand) const override;
-    Hypersphere2d(double radius = 0.0);
+    explicit Hypersphere2d(double radius = 0.0);
 
-    std::unique_ptr<GeometryImplementation> clone() const override {
-        return std::make_unique<Hypersphere2d>(*this);
-    }; //!< A unique pointer to a copy of self.
+    std::unique_ptr<GeometryImplementation> clone() const override; //!< A unique pointer to a copy of self.
 };
 
 /**
@@ -235,11 +229,9 @@ class Cylinder : public GeometryImplementation {
     void randompos(Point &m, Random &rand) const override;
     void from_json(const json &j) override;
     void to_json(json &j) const override;
-    Cylinder(double radius = 0.0, double height = 0.0);
+    explicit Cylinder(double radius = 0.0, double height = 0.0);
 
-    std::unique_ptr<GeometryImplementation> clone() const override {
-        return std::make_unique<Cylinder>(*this);
-    }; //!< A unique pointer to a copy of self.
+    [[nodiscard]] std::unique_ptr<GeometryImplementation> clone() const override; //!< A unique pointer to a copy of self.
 
     //! Cereal serialisation
     template <class Archive> void serialize(Archive &archive) {
@@ -274,20 +266,18 @@ class HexagonalPrism : public GeometryImplementation {
     void randompos(Point &m, Random &rand) const override;
     void from_json(const json &j) override;
     void to_json(json &j) const override;
-    HexagonalPrism(double side = 0.0, double height = 0.0);
+    explicit HexagonalPrism(double side = 0.0, double height = 0.0);
 
-    std::unique_ptr<GeometryImplementation> clone() const override {
-        return std::make_unique<HexagonalPrism>(*this);
-    }; //!< A unique pointer to a copy of self.
+    [[nodiscard]] std::unique_ptr<GeometryImplementation> clone() const override; //!< A unique pointer to a copy of self.
 
     //! Cereal serialisation
     template <class Archive> void serialize(Archive &archive) {
         archive(cereal::base_class<GeometryImplementation>(this), box);
     }
 
-    double innerRadius() const; //!< Inner hexagonal radius
-    double outerRadius() const; //!< Outer radius / side-length
-    double height() const;      //!< Prism height
+    [[nodiscard]] double innerRadius() const; //!< Inner hexagonal radius
+    [[nodiscard]] double outerRadius() const; //!< Outer radius / side-length
+    [[nodiscard]] double height() const;      //!< Prism height
 };
 
 /**
@@ -306,11 +296,9 @@ class TruncatedOctahedron : public GeometryImplementation {
     void randompos(Point &pos, Random &rand) const override;
     void from_json(const json &j) override;
     void to_json(json &j) const override;
-    TruncatedOctahedron(double side = 0.0);
+    explicit TruncatedOctahedron(double side = 0.0);
 
-    std::unique_ptr<GeometryImplementation> clone() const override {
-        return std::make_unique<TruncatedOctahedron>(*this);
-    }; //!< A unique pointer to a copy of self.
+    [[nodiscard]] std::unique_ptr<GeometryImplementation> clone() const override; //!< A unique pointer to a copy of self.
 
     //! Cereal serialisation
     template <class Archive> void serialize(Archive &archive) {
@@ -371,8 +359,8 @@ class Chameleon : public GeometryBase {
 
     static VariantName variantName(const json &j);
 
-    Chameleon(const Variant type = Variant::CUBOID);
-    Chameleon(const GeometryImplementation &geo, const Variant type);
+    explicit Chameleon(const Variant type = Variant::CUBOID);
+    Chameleon(const GeometryImplementation &geo, Variant type);
 
     //! Copy everything, but clone the geometry.
     Chameleon(const Chameleon &geo);
@@ -380,7 +368,7 @@ class Chameleon : public GeometryBase {
     //! During the assignment copy everything, but clone the geometry.
     Chameleon &operator=(const Chameleon &geo);
 
-    std::shared_ptr<GeometryImplementation> asSimpleGeometry() const;
+    [[nodiscard]] std::shared_ptr<GeometryImplementation> asSimpleGeometry() const;
 };
 
 inline void Chameleon::randompos(Point &m, Random &rand) const {
@@ -786,6 +774,91 @@ std::pair<Cuboid, ParticleVector> hexagonalPrismToCuboid(const HexagonalPrism& h
     assert(std::fabs(cuboid.getVolume() - 2.0 * hexagon.getVolume()) <= pc::epsilon_dbl);
     return {cuboid, cuboid_particles};
 }
+
+/**
+ * @brief Structure for exploring a discrete, uniform angular space between two rigid bodies
+ * 
+ * Quaternions for visiting all poses in angular space can be generated in several ways:
+ * ~~~ cpp
+ * TwobodyAngles angles(0.1);
+ * 
+ * // Visit all poses via pairs of iterators
+ * for (const auto& [q1, q2] : angles.quaternionPairs()) {
+ *     pos1 = q1 * pos1; // first body
+ *     pos2 = q2 * pos2; // second body
+ * }
+ * 
+ * // Visit all poses via triplets of iterators. May be useful for parallel execution
+ * // Note that quaternion multiplication is noncommutative so keep the shown order.
+ * for (const auto &q_euler1 : angles.quaternions1) {
+ *     for (const auto &q_euler2 : angles.quaternions2) {
+ *         for (const auto &q_dihedral : angles.dihedrals) {
+ *             pos1 = q_euler1 * pos1;                // first body
+ *             pos2 = (q_dihedral * q_euler2) * pos2; // second body 
+ *         }
+ *     }
+ * }
+ * ~~~
+ */
+class TwobodyAngles {
+    static std::vector<Point> fibonacciSphere(size_t);
+
+  public:
+    std::vector<Eigen::Quaterniond> quaternions_1; //!< Quaternions to explore all Euler angles
+    std::vector<Eigen::Quaterniond> quaternions_2; //!< Quaternions to explore all Euler angles
+    std::vector<Eigen::Quaterniond> dihedrals;     //!< Quaternions to explore all dihedral angles
+
+    TwobodyAngles() = default;
+    TwobodyAngles(double angle_resolution);
+
+    /**
+     * @brief Iterator to loop over pairs of quaternions to rotate two rigid bodies against each other
+     *
+     * The second quaternion in the pair includes dihedral rotations, i.e. the pair is `q1, q_dihedral * q2`.
+     */
+    auto quaternionPairs() const {
+        namespace rv = ranges::views;
+        auto product = [](const auto& pair) -> Eigen::Quaterniond {
+            const auto& [q2, q_dihedral] = pair;
+            return q_dihedral * q2; // noncommutative
+        };
+        auto second_body_quaternions = rv::cartesian_product(quaternions_2, dihedrals) | rv::transform(product);
+        return rv::cartesian_product(quaternions_1, second_body_quaternions);
+    }
+
+    size_t size() const; //!< Total number of points in angular space (i.e. the number of unique poses)
+};
+
+/**
+ * @brief Structure for exploring a discrete, uniform angular space between two rigid bodies
+ * 
+ * This version includes an iterator-like _state_ that can be used to step through
+ * angular space.
+ * 
+ * Example:
+ * ~~~ cpp
+ * TwobodyAnglesState angles(0.1);
+ * if (const auto quaternions = angles.get(); quaternions) {
+ *     pos1 = quaternions->first * pos1;  // first body
+ *     pos2 = quaternions->second * pos2; // second body
+ *     angles.advance();
+ * } else {
+ *     // all angles have been explored
+ * }
+ * ~~~
+ */
+class TwobodyAnglesState : public TwobodyAngles {
+  private:
+    using QuaternionIter = std::vector<Eigen::Quaterniond>::const_iterator;
+    QuaternionIter q_euler1;
+    QuaternionIter q_euler2;
+    QuaternionIter q_dihedral;
+  public:
+    TwobodyAnglesState() = default;
+    TwobodyAnglesState(double angle_resolution);
+    TwobodyAnglesState& advance(); //!< Advance to next angle
+    std::optional<std::pair<Eigen::Quaterniond, Eigen::Quaterniond>> get(); //!< Get current pair of quaternions
+};
 
 } // namespace Geometry
 } // namespace Faunus

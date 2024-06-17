@@ -121,7 +121,7 @@ template <std::floating_point T = double> class Andrea : public TabulatorBase<T>
      * - `[0]==true`: tolerance is approved,
      * - `[1]==true` Repulsive part is found.
      */
-    std::vector<bool> CheckUBuffer(std::vector<T> &ubuft, T rlow, T rupp, std::function<T(T)> f) const {
+    std::vector<bool> CheckUBuffer(std::vector<T>& ubuft, T rlow, T rupp, std::function<T(T)> f) const {
 
         // Number of points to control
         int ncheck = 11;
@@ -161,7 +161,7 @@ template <std::floating_point T = double> class Andrea : public TabulatorBase<T>
      * @param r2 value
      * @note Auto-vectorization in Clang: https://llvm.org/docs/Vectorizers.html
      */
-    inline T eval(const typename base::data &d, T r2) const {
+    inline T eval(const typename base::data& d, T r2) const {
         size_t pos = std::lower_bound(d.r2.begin(), d.r2.end(), r2) - d.r2.begin() - 1;
         size_t pos6 = 6 * pos;
         assert((pos6 + 5) < d.c.size());
@@ -183,13 +183,13 @@ template <std::floating_point T = double> class Andrea : public TabulatorBase<T>
      * @param d Table data
      * @param r2 value
      */
-    T evalDer(const typename base::data &d, T r2) const {
+    T evalDer(const typename base::data& d, T r2) const {
         size_t pos = std::lower_bound(d.r2.begin(), d.r2.end(), r2) - d.r2.begin() - 1;
         size_t pos6 = 6 * pos;
         T dz = r2 - d.r2[pos];
         return (d.c[pos6 + 1] +
-                  dz * (2.0 * d.c[pos6 + 2] +
-                        dz * (3.0 * d.c[pos6 + 3] + dz * (4.0 * d.c[pos6 + 4] + dz * (5.0 * d.c[pos6 + 5])))));
+                dz * (2.0 * d.c[pos6 + 2] +
+                      dz * (3.0 * d.c[pos6 + 3] + dz * (4.0 * d.c[pos6 + 4] + dz * (5.0 * d.c[pos6 + 5])))));
     }
 
     /**
@@ -268,12 +268,12 @@ template <std::floating_point T = double> class Andrea : public TabulatorBase<T>
             throw std::runtime_error("Andrea spline: try to increase utol/ftol");
 
         // create final reversed c and r2
-        assert( td.c.size() % 6 == 0 );
-        assert( td.c.size() / (td.r2.size()-1) == 6 );
-        assert( std::is_sorted(td.r2.rbegin(), td.r2.rend()));
-        std::reverse(td.r2.begin(), td.r2.end());                               // reverse all elements
-        for (size_t i = 0; i < td.c.size() / 2; i += 6)                         // reverse knot order in packets of six
-            std::swap_ranges(td.c.begin()+i, td.c.begin()+i+6, td.c.end()-i-6); // c++17 only
+        assert(td.c.size() % 6 == 0);
+        assert(td.c.size() / (td.r2.size() - 1) == 6);
+        assert(std::is_sorted(td.r2.rbegin(), td.r2.rend()));
+        std::reverse(td.r2.begin(), td.r2.end());       // reverse all elements
+        for (size_t i = 0; i < td.c.size() / 2; i += 6) // reverse knot order in packets of six
+            std::swap_ranges(td.c.begin() + i, td.c.begin() + i + 6, td.c.end() - i - 6); // c++17 only
         return td;
     }
 };
@@ -289,6 +289,21 @@ TEST_CASE("[Faunus] Andrea") {
     Andrea<double> spline;
     spline.setTolerance(2e-6, 1e-4); // ftol carries no meaning
     auto d = spline.generate(f, 0, 10);
+
+    CHECK(d.r2.size() == 19);
+    CHECK(d.c.size() == 108);
+    CHECK(d.numKnots() == 19);
+    CHECK(d.rmin2 == Approx(0.0));
+    CHECK(d.rmax2 == Approx(10.0));
+    CHECK(d.r2.at(0) == Approx(0.0));
+    CHECK(d.r2.at(1) == Approx(0.212991));
+    CHECK(d.r2.at(2) == Approx(0.782554));
+    CHECK(d.r2.back() == Approx(10.0));
+
+    CHECK(d.c.at(0) == Approx(2.0));
+    CHECK(d.c.at(1) == Approx(0.0));
+    CHECK(d.c.at(2) == Approx(0.5));
+    CHECK(d.c.back() == Approx(-0.0441931));
 
     CHECK(spline.eval(d, 1e-9) == Approx(f(1e-9)));
     CHECK(spline.eval(d, 5) == Approx(f(5)));
@@ -317,4 +332,3 @@ TEST_CASE("[Faunus] Andrea") {
     CHECK(spline.evalDer(d, x) == Approx(f_prime_exact(x)));
 }
 #endif
-

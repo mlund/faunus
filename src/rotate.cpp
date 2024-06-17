@@ -1,4 +1,6 @@
 #include <doctest/doctest.h>
+
+#include <utility>
 #include "rotate.h"
 #include "core.h"
 #include "units.h"
@@ -9,7 +11,7 @@ namespace Faunus {
  * @param angle rotation angle (radians)
  * @param axis rotation axis
  */
-QuaternionRotate::QuaternionRotate(double angle, Point axis) { set(angle, axis); }
+QuaternionRotate::QuaternionRotate(double angle, Point axis) { set(angle, std::move(axis)); }
 
 /**
  * @param angle rotation angle (radians)
@@ -32,14 +34,18 @@ void QuaternionRotate::set(double angle, Point axis) {
  * @param shift Shift used to aid in boundary removal
  * @return Rotated vector
  */
-QuaternionRotate::Point QuaternionRotate::operator()(Point vector, std::function<void(Point &)> boundary,
-                                                     const Point &shift) const {
-    vector = vector - shift;
-    boundary(vector);
-    vector = quaternion * vector + shift;
-    boundary(vector);
-    return vector;
-    // https://www.cc.gatech.edu/classes/AY2015/cs4496_spring/Eigen.html
+QuaternionRotate::Point QuaternionRotate::operator()(Point r, std::function<void(Point&)> boundary,
+                                                     const Point& shift) const {
+    r = r - shift;
+    boundary(r);
+    // Note that the Eigen * operator secretly converts to a rotation matrix which is
+    // why this notation works (normally one would use 𝒓ʹ= 𝑞𝒓𝑞⁻¹). This also means
+    // that this approach is inefficient if applied to many points, see
+    // - https://stackoverflow.com/questions/50507665/eigen-rotate-a-vector3d-with-a-quaternion
+    // - https://www.cc.gatech.edu/classes/AY2015/cs4496_spring/Eigen.html
+    r = quaternion._transformVector(r) + shift;
+    boundary(r);
+    return r;
 }
 
 /**
@@ -62,19 +68,19 @@ TEST_CASE("[Faunus] QuaternionRotate") {
     QuaternionRotate qrot;
     Point a = {1, 0, 0};
     qrot.set(pc::pi / 2, {0, 1, 0}); // rotate around y-axis
-    CHECK(qrot.angle == Approx(pc::pi / 2));
+    CHECK_EQ(qrot.angle, Approx(pc::pi / 2));
 
     SUBCASE("rotate using quaternion") {
         a = qrot(a); // rot. 90 deg.
-        CHECK(a.x() == Approx(0));
+        CHECK_EQ(a.x(), Approx(0.0));
         a = qrot(a); // rot. 90 deg.
-        CHECK(a.x() == Approx(-1));
+        CHECK_EQ(a.x(), Approx(-1.0));
     }
 
     SUBCASE("rotate using rotation matrix") {
         a = qrot.getRotationMatrix() * a;
-        CHECK(a.x() == Approx(0));
+        CHECK_EQ(a.x(), Approx(0.0));
         a = qrot.getRotationMatrix() * a;
-        CHECK(a.x() == Approx(-1));
+        CHECK_EQ(a.x(), Approx(-1.0));
     }
 }

@@ -17,6 +17,10 @@
 
 namespace Faunus {
 
+namespace Speciation {
+class GroupDeActivator;
+}
+
 namespace Energy {
 class Hamiltonian;
 }
@@ -69,8 +73,8 @@ class Move {
                         double new_energy); //!< Extra energy not captured by the Hamiltonian
     Move(Space& spc, std::string_view name, std::string_view cite);
     inline virtual ~Move() = default;
-    bool isStochastic() const; //!< True if move should be called stochastically
-    const std::string& getName() const;
+    [[nodiscard]] bool isStochastic() const; //!< True if move should be called stochastically
+    [[nodiscard]] const std::string& getName() const;
 };
 
 void from_json(const json&, Move&); //!< Configure any move via json
@@ -96,7 +100,7 @@ class ReplayMove : public Move {
 
   protected:
     using Move::spc;
-    ReplayMove(Space& spc, std::string name, std::string cite);
+    ReplayMove(Space& spc, const std::string& name, const std::string& cite);
 
   public:
     explicit ReplayMove(Space& spc);
@@ -105,7 +109,7 @@ class ReplayMove : public Move {
 /**
  * @brief Swap the charge of a single atom
  */
-class AtomicSwapCharge : public Move {
+class [[maybe_unused]] AtomicSwapCharge : public Move {
     int molid = -1;
     double pKa, pH;
     Average<double> msqd; // mean squared displacement
@@ -123,7 +127,7 @@ class AtomicSwapCharge : public Move {
 
   protected:
     using Move::spc;
-    AtomicSwapCharge(Space& spc, std::string name, std::string cite);
+    AtomicSwapCharge(Space& spc, const std::string& name, const std::string& cite);
 
   public:
     explicit AtomicSwapCharge(Space& spc);
@@ -159,7 +163,7 @@ class AtomicTranslateRotate : public Move {
     void _accept(Change&) override;
     void _reject(Change&) override;
 
-    AtomicTranslateRotate(Space& spc, const Energy::Hamiltonian& hamiltonian, std::string name, std::string cite);
+    AtomicTranslateRotate(Space& spc, const Energy::Hamiltonian& hamiltonian, const std::string& name, const std::string& cite);
 
   public:
     AtomicTranslateRotate(Space& spc, const Energy::Hamiltonian& hamiltonian);
@@ -310,21 +314,25 @@ NLOHMANN_JSON_SERIALIZE_ENUM(ConformationSwap::CopyPolicy, {{ConformationSwap::C
                                                             {ConformationSwap::CopyPolicy::CHARGES, "charges"}})
 
 class VolumeMove : public Move {
-  private:
+  protected:
     Geometry::VolumeMethod volume_scaling_method = Geometry::VolumeMethod::ISOTROPIC;
-    Average<double> mean_volume;
-    Average<double> mean_square_volume_change;
+    double logarithmic_volume_displacement_factor = 0.0;
     double old_volume = 0.0;
     double new_volume = 0.0;
-    double logarithmic_volume_displacement_factor = 0.0;
-
-    void _to_json(json& j) const override;
-    void _from_json(const json& j) override;
     void _move(Change& change) override;
+    void _from_json(const json& j) override;
+
+  private:
+    Average<double> mean_volume;
+    Average<double> mean_square_volume_change;
+
+    virtual void setNewVolume();
+    void _to_json(json& j) const override;
     void _accept(Change& change) override;
     void _reject(Change& change) override;
 
   public:
+    VolumeMove(Space& spc, std::string_view name);
     explicit VolumeMove(Space& spc);
 }; // end of VolumeMove
 
@@ -340,7 +348,7 @@ class ChargeMove : public Move {
     void _accept(Change&) override;
     void _reject(Change&) override;
     void _from_json(const json& j) override;
-    virtual double getChargeDisplacement(const Particle& particle) const;
+    [[nodiscard]] virtual double getChargeDisplacement(const Particle& particle) const;
     ChargeMove(Space& spc, std::string_view name, std::string_view cite);
 
   protected:
@@ -363,7 +371,7 @@ class QuadraticChargeMove : public ChargeMove {
   private:
     Average<double> mean_bias;
     void _to_json(json& j) const override;
-    double getChargeDisplacement(const Particle& particle) const override;
+    [[nodiscard]] double getChargeDisplacement(const Particle& particle) const override;
     double bias(Change& change, double old_energy, double new_energy) override;
 
   public:
@@ -381,7 +389,7 @@ class ChargeTransfer : public Move {
     struct moldata {
         double charges = 0;
         double moves = 0;
-        int numOfAtoms = 0;
+        size_t numOfAtoms = 0;
         int id = 0;
         std::string molname;
         std::vector<double> min, max;
@@ -404,7 +412,7 @@ class ChargeTransfer : public Move {
 
   protected:
     using Move::spc;
-    ChargeTransfer(Space& spc, std::string name, std::string cite);
+    ChargeTransfer(Space& spc, const std::string& name, const std::string& cite);
 
   public:
     explicit ChargeTransfer(Space& spc);
@@ -431,13 +439,80 @@ class QuadrantJump : public Move {
 
   protected:
     using Move::spc;
-    QuadrantJump(Space& spc, std::string name, std::string cite);
+    QuadrantJump(Space& spc, const std::string& name, const std::string& cite);
 
   public:
     explicit QuadrantJump(Space& spc);
 };
 
 #ifdef ENABLE_MPI
+
+/**
+ * @brief Helper class for the Gibbs ensemble generalized for multi-component systems
+ *
+ * This is the base used for volume and matter exchange in order to determine phase
+ * co-existence. Additional information:
+ *
+ * - [_Phase equilibria by simulation in the Gibbs ensemble_](https://dx.doi.org/10/cvzgw9)
+ * - Frenkel and Smith, 2nd Ed., Chapter 8
+ */
+class GibbsEnsembleHelper {
+  public:
+    using VectorOfMolIds = std::vector<MoleculeData::index_type>;
+    const MPI::Controller& mpi;
+    int partner_rank = -1;                                          //!< Either rank 0 or 1
+    double total_volume = 0;                                        //!< Total volume of both cells
+    int total_num_particles = 0;                                    //! Total number of particles in both cells
+    VectorOfMolIds molids;                                          //!< Molecule id's to exchange. Must be molecular.
+    std::pair<int, int> currentNumParticles(const Space& spc) const;  //!< Current number of particles in cell 1 and 2
+    std::pair<double, double> currentVolumes(const Space& spc) const; //!< Current volumes in cell 1 and 2
+    double exchange(double value) const;                            //!< MPI exchange a double with partner
+    GibbsEnsembleHelper(const Space& spc, const MPI::Controller& mpi, const VectorOfMolIds& molids);
+};
+
+/**
+ * @brief Volume exchange move for the Gibbs ensemble (doi:10/cvzgw9)
+ */
+class GibbsVolumeMove : public VolumeMove {
+  private:
+    MPI::Controller& mpi;
+    std::unique_ptr<GibbsEnsembleHelper> gibbs;
+    bool direct_volume_displacement = true; //!< True if direct displacement in V; false if lnV displacement
+    void setNewVolume() override;
+    void _from_json(const json& j) override;
+    bool volumeTooExtreme() const; //!< Check if volume is too small or too large
+
+  protected:
+    void _move(Change& change) override;
+
+  public:
+    GibbsVolumeMove(Space& spc, MPI::Controller& mpi);
+    double bias(Change& change, double old_energy, double new_energy) override;
+};
+
+/**
+ * @brief Matter (particle) exchange move for the Gibbs ensemble (doi:10/cvzgw9)
+ *
+ * - Each of the two cells runs as a separate MPI process
+ * - Multi-component systems are supported; just add a move instance for each species
+ */
+class GibbsMatterMove : public Move {
+  private:
+    bool insert;                    //!< Insert or delete particle?
+    MoleculeData::index_type molid; //!< Molid to insert or delete
+    MPI::Controller& mpi;
+    std::unique_ptr<GibbsEnsembleHelper> gibbs;
+    std::unique_ptr<Speciation::GroupDeActivator> molecule_bouncer;
+    void _from_json(const json& j) override;
+    void _to_json(json& j) const override;
+
+  protected:
+    void _move(Change& change) override;
+
+  public:
+    GibbsMatterMove(Space& spc, MPI::Controller& mpi);
+    double bias(Change& change, double old_energy, double new_energy) override;
+};
 
 /**
  * @brief Class for parallel tempering (aka replica exchange) using MPI
@@ -457,7 +532,7 @@ class ParallelTempering : public Move {
     std::unique_ptr<MPI::Partner> partner;     //!< Policy for finding MPI partners
     Geometry::VolumeMethod volume_scaling_method = Geometry::VolumeMethod::ISOTROPIC; //!< How to scale volumes
     std::map<MPI::Partner::PartnerPair, Average<double>> acceptance_map;              //!< Exchange statistics
-
+    Random slump; // static instance of Random (shared for all in ParallelTempering)
     void _to_json(json& j) const override;
     void _from_json(const json& j) override;
     void _move(Change& change) override;
@@ -480,7 +555,7 @@ class ParallelTempering : public Move {
  * @returns unique pointer to move
  * @throw if invalid name or input parameters
  */
-std::unique_ptr<Move> createMove(const std::string& name, const json& properties, Space& spc,
+[[maybe_unused]] std::unique_ptr<Move> createMove(const std::string& name, const json& properties, Space& spc,
                                  Energy::Hamiltonian& hamiltonian);
 
 /**
@@ -499,7 +574,7 @@ class MoveCollection {
   public:
     MoveCollection(const json& list_of_moves, Space& spc, Energy::Hamiltonian& hamiltonian, Space &old_spc);
     void addMove(std::shared_ptr<Move>&& move);                     //!< Register new move with correct weight
-    const BasePointerVector<Move>& getMoves() const;                //!< Get list of moves
+    [[maybe_unused]] [[nodiscard]] const BasePointerVector<Move>& getMoves() const;                //!< Get list of moves
     friend void to_json(json& j, const MoveCollection& propagator); //!< Generate json output
 
     /**

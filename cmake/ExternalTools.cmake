@@ -5,22 +5,23 @@ include(FetchContent)
 # CPM Packages
 ###############
 
-CPMAddPackage("gh:gabime/spdlog@1.11.0")
+CPMAddPackage("gh:gabime/spdlog@1.14.1")
 CPMAddPackage("gh:ericniebler/range-v3#0.12.0")
 CPMAddPackage("gh:docopt/docopt.cpp#v0.6.3")
-CPMAddPackage("gh:doctest/doctest#v2.4.9")
-CPMAddPackage("gh:mateidavid/zstr#v1.0.6")
-CPMAddPackage("gh:pybind/pybind11#v2.10.1")
+CPMAddPackage("gh:doctest/doctest#v2.4.11")
+CPMAddPackage("gh:mateidavid/zstr#v1.0.7")
+CPMAddPackage("gh:martinus/nanobench#v4.3.11")
+CPMAddPackage("gh:pybind/pybind11#v2.12.0")
 CPMAddPackage("gh:imneme/pcg-cpp#ffd522e7188bef30a00c74dc7eb9de5faff90092")
 CPMAddPackage("gh:ArashPartow/exprtk#93a9f44f99b910bfe07cd1e933371e83cea3841c")
 
 CPMAddPackage(
     NAME mpl GITHUB_REPOSITORY rabauke/mpl DOWNLOAD_ONLY YES
-    GIT_TAG ff9512fc61195b6c7e643e234789b0b937d28ee3
+    GIT_TAG v0.3.0
 )
 
 CPMAddPackage(
-    NAME nlohmann_json VERSION 3.11.2
+    NAME nlohmann_json VERSION 3.11.3
     URL https://github.com/nlohmann/json/releases/download/v3.11.2/include.zip
     OPTIONS "JSON_BuildTests OFF"
 )
@@ -134,19 +135,6 @@ if (ENABLE_TBB)
     find_package(TBB REQUIRED COMPONENTS tbb)
     target_link_libraries(project_options INTERFACE TBB::tbb)
 endif ()
-
-############
-# NANOBENCH
-############
-
-FetchContent_Declare(
-    nanobench
-    URL "https://github.com/martinus/nanobench/archive/v3.1.0.tar.gz"
-    URL_HASH MD5=e646fb61164a60921c1a1834fbca24bc DOWNLOAD_EXTRACT_TIMESTAMP true)
-FetchContent_GetProperties(nanobench)
-if(NOT nanobench_POPULATED)
-    FetchContent_Populate(nanobench)
-endif()
 
 ##########
 # XRDFILE

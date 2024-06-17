@@ -11,12 +11,12 @@ namespace Faunus::Speciation {
 class ReactionValidator {
   private:
     const Space& spc;
-    bool canSwapAtoms(const ReactionData& reaction) const;
-    bool canReduceImplicitGroups(const ReactionData& reaction) const;
-    bool canReduceMolecularGroups(const ReactionData& reaction) const;
-    bool canProduceMolecularGroups(const ReactionData& reaction) const;
-    bool canReduceAtomicGrups(const ReactionData& reaction) const;
-    bool canProduceAtomicGroups(const ReactionData& reaction) const;
+    [[nodiscard]] bool canSwapAtoms(const ReactionData& reaction) const;
+    [[nodiscard]] bool canReduceImplicitGroups(const ReactionData& reaction) const;
+    [[nodiscard]] bool canReduceMolecularGroups(const ReactionData& reaction) const;
+    [[nodiscard]] bool canProduceMolecularGroups(const ReactionData& reaction) const;
+    [[nodiscard]] bool canReduceAtomicGroups(const ReactionData& reaction) const;
+    [[nodiscard]] bool canProduceAtomicGroups(const ReactionData& reaction) const;
 
   public:
     explicit ReactionValidator(const Space& spc);
@@ -67,7 +67,7 @@ class MolecularGroupDeActivator : public GroupDeActivator {
     Space& spc;
     Random& random;
     const bool apply_bond_bias; //!< Set to true to use internal bond energy as bias
-    double getBondEnergy(const Group& group) const;
+    [[nodiscard]] double getBondEnergy(const Group& group) const;
     virtual void setPositionAndOrientation(Group& group) const; //!< Applied to newly activated groups
 
   public:
@@ -113,7 +113,7 @@ namespace Faunus::move {
  *    - activate products
  *
  * To avoid touching the state of MoveBase::slump, we use an internal
- * random number generator. This is crusial for e.g. the Parallel temper
+ * random number generator. This is ß for e.g. the Parallel temper
  * move that relies MoveBase::slump to be in sync across MPI ranks.
  *
  * @todo Split atom-swap functionality to separate helper class

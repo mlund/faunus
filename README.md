@@ -1,5 +1,6 @@
+[![Open in Dev Containers](https://img.shields.io/static/v1?label=Dev%20Containers&message=Open&color=blue&logo=visualstudiocode)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/mlund/faunus)
 [![Documentation](https://readthedocs.org/projects/faunus/badge/?version=latest)](https://faunus.readthedocs.io/en/latest/?badge=latest)
-[![Build Status](https://app.travis-ci.com/mlund/faunus.svg?branch=master)](https://app.travis-ci.com/mlund/faunus)
+[![CMake](https://github.com/mlund/faunus/actions/workflows/cmake.yml/badge.svg)](https://github.com/mlund/faunus/actions/workflows/cmake.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-brightgreen.svg)](https://opensource.org/licenses/MIT)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/2ac7217d373a4f34a2dae2d912c9d1a1)](https://www.codacy.com/app/mlund/faunus?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=mlund/faunus&amp;utm_campaign=Badge_Grade)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5235137.svg)](https://doi.org/10.5281/zenodo.5235137)
@@ -12,7 +13,7 @@ Welcome to Faunus
 Faunus is a molecular simulation package for Metropolis Monte Carlo simulations of
 molecular systems. Below is a brief overview of features:
 
-- Canonical, Grand Canonical, Isobaric-Isothermal statistical mechanical ensembles
+- Canonical, Grand Canonical, Isobaric-Isothermal, Gibbs statistical mechanical ensembles
 - General hamiltonian parallel tempering (temperature, screening length, bonds etc.)
 - Anisotropic atoms (multipoles, sphero-cylinders, capped particles)
 - Speciation moves (pKa prediction, Hofmeister effects, general equilibrium reactions etc.)
@@ -29,6 +30,8 @@ On macOS or Linux, install latest release using [conda](https://conda.io/minicon
     conda install -c conda-forge faunus
 
 Or [build from source](https://faunus.readthedocs.io/en/latest/_docs/install.html#building-from-source-code).
+You may also click the _Dev Containers Open_ banner at the top of this page to load the project in a Linux
+environment in Visual Studio Code.
 
 Documentation
 =============
@@ -39,7 +42,7 @@ Documentation
 Licence
 =======
 
-Copyright 2002-2022 Mikael Lund
+Copyright 2002-2024 Mikael Lund
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software
 and associated documentation files (the "Software"), to deal in the Software without restriction,

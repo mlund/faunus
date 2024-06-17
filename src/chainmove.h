@@ -28,7 +28,7 @@ class ChainRotationMoveBase : public Move {
     void _reject(Change &change) override;
 
   protected:
-    ChainRotationMoveBase(Space &spc, std::string name, std::string cite);
+    ChainRotationMoveBase(Space &spc, const std::string& name, const std::string& cite);
     void _from_json(const json &j) override;
     void _to_json(json &j) const override;
 
@@ -50,7 +50,7 @@ class ChainRotationMove : public ChainRotationMoveBase {
     //! Indices of atoms in the spc.p vector that shall be rotated.
     std::vector<size_t> segment_ndx;
 
-    ChainRotationMove(Space &spc, std::string name, std::string cite);
+    ChainRotationMove(Space &spc, const std::string& name, const std::string& cite);
 
     void _from_json(const json &j) override;
 
@@ -88,7 +88,7 @@ class CrankshaftMove : public ChainRotationMove {
     explicit CrankshaftMove(Space &spc);
 
   protected:
-    CrankshaftMove(Space &spc, std::string name, std::string cite);
+    CrankshaftMove(Space &spc, const std::string& name, const std::string& cite);
     void _from_json(const json &j) override;
 
   private:
@@ -119,7 +119,7 @@ class PivotMove : public ChainRotationMove {
     explicit PivotMove(Space &spc);
 
   protected:
-    PivotMove(Space &spc, std::string name, std::string cite);
+    PivotMove(Space &spc, const std::string& name, const std::string& cite);
 
     void _from_json(const json &j) override;
 

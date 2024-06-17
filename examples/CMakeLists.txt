@@ -26,6 +26,11 @@ add_test(
         WORKING_DIRECTORY ${EXAMPLES_DIR}/swapconf)
 
 add_test(
+        NAME anglescan
+        COMMAND sh -c "${Python_EXECUTABLE} ${YASON} anglescan.yml | $<TARGET_FILE:faunus> --norun"
+        WORKING_DIRECTORY ${EXAMPLES_DIR}/anglescan)
+
+add_test(
         NAME chargemove
         COMMAND sh -c "${Python_EXECUTABLE} ${YASON} chargemove.yml | $<TARGET_FILE:faunus> --nobar\
     && ${Python_EXECUTABLE} ${JSON_COMPARE} chargemove.out.json out.json --tol 0.05"
@@ -130,6 +135,13 @@ add_test(
     | $<TARGET_FILE:faunus> --nobar --state polymers.state.json\
     && ${Python_EXECUTABLE} ${JSON_COMPARE} polymers.out.json out.json --tol 0.05"
         WORKING_DIRECTORY ${EXAMPLES_DIR}/polymers)
+
+add_test(
+        NAME sasa
+        COMMAND sh -c "${Python_EXECUTABLE} ${YASON} sasa.yml\
+    | $<TARGET_FILE:faunus> --quiet\
+    && ${Python_EXECUTABLE} ${JSON_COMPARE} sasa.out.json out.json --tol 0.01"
+        WORKING_DIRECTORY ${EXAMPLES_DIR}/sasa)
 
 add_test(
         NAME smartmc
@@ -267,6 +279,11 @@ add_test(
 
 install(FILES
         ${EXAMPLES_DIR}/README.md
+        ${EXAMPLES_DIR}/anglescan/anglescan.ipynb
+        ${EXAMPLES_DIR}/anglescan/anglescan.xyz
+        ${EXAMPLES_DIR}/anglescan/anglescan.yml
+        ${EXAMPLES_DIR}/anglescan/anglescan_energies.dat
+        ${EXAMPLES_DIR}/anglescan/anglescan_rdf.dat
         ${EXAMPLES_DIR}/bulk/bulk.yml
         ${EXAMPLES_DIR}/bulk-replay/bulk-replay.yml
         ${EXAMPLES_DIR}/chargemove/chargemove.yml
@@ -296,6 +313,8 @@ install(FILES
         ${EXAMPLES_DIR}/bend/bend.yml
         ${EXAMPLES_DIR}/bend/bend.out.json
         ${EXAMPLES_DIR}/bend/mc_vs_md.agr
+        ${EXAMPLES_DIR}/gibbs-ensemble/gibbs-ensemble.yml
+        ${EXAMPLES_DIR}/gibbs-ensemble/gibbs-ensemble.ipynb
         ${EXAMPLES_DIR}/gromos_bend/gromos_bend.yml
         ${EXAMPLES_DIR}/gromos_bend/gromos_bend.out.json
         ${EXAMPLES_DIR}/gromos_bend/gromos_bend_plot.py

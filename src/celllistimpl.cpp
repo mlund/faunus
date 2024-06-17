@@ -1,5 +1,4 @@
 #include <doctest/doctest.h>
-#include <type_traits>
 #include "celllistimpl.h"
 namespace Faunus {
 namespace CellList {
@@ -20,7 +19,7 @@ void GridOffsets3D::initNeighbors() {
                 if (i == 0 && j == 0 && k == 0) {
                     continue;
                 }
-                neighbors.emplace_back(CellCoord(i, j, k));
+                neighbors.emplace_back(i, j, k);
             }
         }
     }

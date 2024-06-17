@@ -19,9 +19,7 @@
 #include <range/v3/view/transform.hpp>
 #include "celllist.h"
 #include "core.h"
-#include "spdlog/spdlog.h"
-
-namespace Faunus {
+#include <spdlog/spdlog.h>
 
 /**
  * @namespace CellList
@@ -51,7 +49,7 @@ namespace Faunus {
  * Containers holds the members and allow a simple manipulation (insertion and deletion). A dense (using a vector) and
  * sparse (using a map) implementations are provided.
  */
-namespace CellList {
+namespace Faunus::CellList {
 
 /**
  * @namespace Grid
@@ -69,7 +67,7 @@ template <typename TGridType> struct AbstractGrid : private TGridType {
     using typename GridType::Point;
     using typename GridType::SpaceAxis;
 
-    virtual CellCoord coordinates(const CellIndex index) const = 0;
+    virtual CellCoord coordinates(CellIndex index) const = 0;
     virtual CellIndex index(const CellCoord& coordinates) const = 0;
     virtual CellCoord coordinatesAt(const Point& position) const = 0;
     virtual CellIndex indexAt(const Point& position) const = 0;
@@ -444,7 +442,7 @@ template <typename TMember, typename TIndex> class DenseContainer : virtual publ
         return indices;
     }
 
-    DenseContainer(std::size_t size) {
+    explicit DenseContainer(std::size_t size) {
         if (size >= max_container_size) {
             faunus_logger->error("Size of the cell list container is too large! \n"
                                  "Try using a sparse version (i.e. dense: false)");
@@ -454,7 +452,7 @@ template <typename TMember, typename TIndex> class DenseContainer : virtual publ
     }
 
   protected:
-    const Index indexEnd() const { return container.size(); }
+    Index indexEnd() const { return container.size(); }
 
   private:
     const std::size_t max_container_size = 1000000000; //!< maximum container size
@@ -510,10 +508,10 @@ template <typename TMember, typename TIndex> class SparseContainer : virtual pub
         return indices;
     }
 
-    SparseContainer(std::size_t size) : index_end(size) {}
+    explicit SparseContainer(std::size_t size) : index_end(size) {}
 
   protected:
-    const Index indexEnd() const { return index_end; }
+    Index indexEnd() const { return index_end; }
 
   private:
     Index index_end;                    //!< the lowest index not allowed to appear, i.e., the grid size
@@ -629,7 +627,7 @@ class CellListBase : protected TGrid,
      *  @brief Construct an empty cell list from a grid.
      *  @param cell_grid
      */
-    CellListBase(const TGrid& cell_grid) : Grid(cell_grid), Container(cell_grid.size()) {}
+    explicit CellListBase(const TGrid& cell_grid) : Grid(cell_grid), Container(cell_grid.size()) {}
 
     /**
      *  @brief Construct an empty cell list knowing a box dimension and minimal cell dimension.
@@ -707,7 +705,7 @@ class SortableCellList : public CellListBase<TContainer, TGrid>,
      *  @brief Construct an empty cell list from a grid.
      *  @param cell_grid
      */
-    SortableCellList(const GridOf<TBase>& cell_grid) : TBase(cell_grid) { is_sorted.resize(this->size(), false); }
+    explicit SortableCellList(const GridOf<TBase>& cell_grid) : TBase(cell_grid) { is_sorted.resize(this->size(), false); }
 
     /**
      *  @brief Construct an empty cell list knowing a box dimension and minimal cell dimension.
@@ -933,5 +931,5 @@ class CellListDifference : virtual public AbstractSortableCellList<ContainerType
     std::map<CellIndex, Members> difference_cache;
 };
 
-} // namespace CellList
-} // namespace Faunus
+} // namespace Faunus::CellList
+

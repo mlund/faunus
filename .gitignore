@@ -9,9 +9,17 @@ include/
 examples/
 _deps/
 sids/
-
+docs/html/
 unittests.log
 a.out
+
+# VisualStudioCode
+.vscode/settings.json
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
 
 # CMake
 CMakeCache.txt

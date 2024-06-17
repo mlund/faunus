@@ -3,6 +3,7 @@
 #include "random.h"
 #include "average.h"
 #include "aux/eigensupport.h"
+#include "aux/arange.h"
 #include <spdlog/spdlog.h>
 #include <cereal/types/memory.hpp>
 #include <cereal/archives/binary.hpp>
@@ -124,7 +125,7 @@ bool Cuboid::collision(const Point &a) const {
 
 void Cuboid::from_json(const json &j) {
     box.setZero();
-    if (auto length_ = j.at("length"); length_.is_number()) {
+    if (const auto& length_ = j.at("length"); length_.is_number()) {
         auto l = length_.get<double>();
         setLength({l, l, l});
         return;
@@ -139,6 +140,10 @@ void Cuboid::from_json(const json &j) {
 
 void Cuboid::to_json(json &j) const { j = {{"length", box}}; }
 
+std::unique_ptr<GeometryImplementation> Cuboid::clone() const {
+    return std::make_unique<Cuboid>(*this);
+}
+
 // =============== Slit ===============
 
 Slit::Slit(const Point &p) : Tbase(p) {
@@ -148,6 +153,9 @@ Slit::Slit(const Point &p) : Tbase(p) {
 
 Slit::Slit(double x, double y, double z) : Slit(Point(x, y, z)) {}
 Slit::Slit(double x) : Slit(x, x, x) {}
+std::unique_ptr<GeometryImplementation> Slit::clone() const {
+    return std::make_unique<Slit>(*this);
+}
 
 // =============== Sphere ===============
 
@@ -213,6 +221,9 @@ void Sphere::from_json(const json &j) { radius = j.at("radius").get<double>(); }
 void Sphere::to_json(json &j) const { j = {{"radius", radius}}; }
 
 double Sphere::getRadius() const { return radius; }
+std::unique_ptr<GeometryImplementation> Sphere::clone() const {
+    return std::make_unique<Sphere>(*this);
+}
 
 // =============== Hypersphere 2D ===============
 
@@ -236,6 +247,9 @@ void Hypersphere2d::randompos(Point &m, Random &rand) const {
 bool Hypersphere2d::collision(const Point &a) const {
     bool collision = std::fabs(a.norm() - radius) > 1e-6;
     return collision;
+}
+std::unique_ptr<GeometryImplementation> Hypersphere2d::clone() const {
+    return std::make_unique<Hypersphere2d>(*this);
 }
 
 // =============== Hexagonal Prism ===============
@@ -364,6 +378,10 @@ double HexagonalPrism::innerRadius() const { return 0.5 * box.x(); }
 double HexagonalPrism::outerRadius() const { return 0.5 * box.y(); }
 double HexagonalPrism::height() const { return box.z(); }
 
+std::unique_ptr<GeometryImplementation> HexagonalPrism::clone() const {
+    return std::make_unique<HexagonalPrism>(*this);
+}
+
 // =============== Cylinder ===============
 
 Cylinder::Cylinder(double radius, double height) : radius(radius), height(height) {
@@ -447,6 +465,10 @@ void Cylinder::from_json(const json &j) {
 }
 
 void Cylinder::to_json(json &j) const { j = {{"radius", radius}, {"length", height}}; }
+
+std::unique_ptr<GeometryImplementation> Cylinder::clone() const {
+    return std::make_unique<Cylinder>(*this);
+}
 
 // =============== Truncated Octahedron ===============
 
@@ -568,6 +590,10 @@ void TruncatedOctahedron::from_json(const json &j) { side = j.at("radius").get<d
 
 void TruncatedOctahedron::to_json(json &j) const { j = {{"radius", side}}; }
 
+std::unique_ptr<GeometryImplementation> TruncatedOctahedron::clone() const {
+    return std::make_unique<TruncatedOctahedron>(*this);
+}
+
 // =============== Chameleon==============
 
 const std::map<std::string, Variant> Chameleon::names = {{{"cuboid", Variant::CUBOID},
@@ -656,16 +682,16 @@ TEST_CASE("[Faunus] ShapeDescriptors") {
     std::vector<double> masses = {1, 1};
     Point origin = {0, 0, 0};
     auto gyration_tensor = gyration(positions.begin(), positions.end(), masses.begin(), origin);
-    CHECK(gyration_tensor(0, 0) == Approx(0.5));
+    CHECK_EQ(gyration_tensor(0, 0), Approx(0.5));
 
     auto shape = ShapeDescriptors(gyration_tensor);
-    CHECK(shape.relative_shape_anisotropy == Approx(1.0));
+    CHECK_EQ(shape.relative_shape_anisotropy, Approx(1.0));
 
     positions = {{0, 1, 0}, {1, 0, 0}, {-1, 0, 0}, {0, -1, 0}, {0, 1, 1}, {1, 0, 1}, {-1, 0, 1}, {0, -1, 1}};
     masses = {1, 1, 1, 1, 1, 1, 1, 1};
     gyration_tensor = gyration(positions.begin(), positions.end(), masses.begin(), origin);
     shape = ShapeDescriptors(gyration_tensor);
-    CHECK(shape.relative_shape_anisotropy == Approx(0.0));
+    CHECK_EQ(shape.relative_shape_anisotropy, Approx(0.0));
 }
 
 TEST_CASE("[Faunus] hexagonalPrismToCuboid") {
@@ -681,20 +707,20 @@ TEST_CASE("[Faunus] hexagonalPrismToCuboid") {
     p[4].pos = {-0.866, -0.5, 0};
     p[5].pos = {-0.866, 0.5, 0};
     auto [cuboid, p_new] = hexagonalPrismToCuboid(hexagonal_prism, p);
-    CHECK(p_new.size() == 12);
-    CHECK(cuboid.getLength().x() == Approx(radius * 2.0));
-    CHECK(cuboid.getLength().y() == Approx(side * 3.0));
-    CHECK(cuboid.getLength().z() == Approx(height));
-    CHECK(cuboid.getVolume() == Approx(2.0 * hexagonal_prism.getVolume()));
+    CHECK_EQ(p_new.size(), 12);
+    CHECK_EQ(cuboid.getLength().x(), Approx(radius * 2.0));
+    CHECK_EQ(cuboid.getLength().y(), Approx(side * 3.0));
+    CHECK_EQ(cuboid.getLength().z(), Approx(height));
+    CHECK_EQ(cuboid.getVolume(), Approx(2.0 * hexagonal_prism.getVolume()));
 
     std::vector<Point> positions = {{0, 1, 0},           {0.866, 0.5, 0},  {0.866, -0.5, 0},   {0, -1, 0},
                                     {-0.866, -0.5, 0},   {-0.866, 0.5, 0}, {2, -2.4641, 0},    {-1.134, -2.9641, 0},
                                     {-1.134, 2.9641, 0}, {2, 2.4641, 0},   {1.134, 2.9641, 0}, {1.134, -2.9641, 0}};
     size_t i = 0;
     for (auto &particle : p_new) { // compared actual positions w. expected positions
-        CHECK(particle.pos.x() == Approx(positions[i].x()));
-        CHECK(particle.pos.y() == Approx(positions[i].y()));
-        CHECK(particle.pos.z() == Approx(positions[i].z()));
+        CHECK_EQ(particle.pos.x(), Approx(positions[i].x()));
+        CHECK_EQ(particle.pos.y(), Approx(positions[i].y()));
+        CHECK_EQ(particle.pos.z(), Approx(positions[i].z()));
         i++;
     }
 }
@@ -718,7 +744,7 @@ void Chameleon::setLength(const Point &l) {
     _setLength(l);
     // ugly
     if (type == Variant::CUBOID) {
-        Cuboid &cuboid = dynamic_cast<Cuboid &>(*geometry);
+        auto &cuboid = dynamic_cast<Cuboid &>(*geometry);
         cuboid.setLength(l);
     } else {
         throw std::runtime_error("setLength allowed only for the Cuboid geometry");
@@ -777,7 +803,7 @@ void Chameleon::_setLength(const Point &l) {
     // for PBC in each direction. The variable `len_or_zero` either equals
     // `len` for PBC or zero if not.
     if (geometry->boundary_conditions.coordinates == Coordinates::ORTHOGONAL)
-        for (size_t i = 0; i < 3; i++)
+        for (int i = 0; i < 3; i++)
             len_or_zero[i] = len[i] * (geometry->boundary_conditions.direction[i] == Boundary::PERIODIC);
 }
 
@@ -831,10 +857,10 @@ TEST_CASE("[Faunus] spherical coordinates") {
     auto pnt1 = rtp2xyz(sph1); // sph --> cart
     auto sph2 = xyz2rtp(pnt1); // cart --> sph
 
-    CHECK(pnt1.norm() == Approx(2));
-    CHECK(sph1.x() == Approx(sph2.x()));
-    // CHECK( sph1.y() == Approx(sph2.y()));
-    // CHECK( sph1.z() == Approx(sph2.z()));
+    CHECK_EQ(pnt1.norm(), Approx(2));
+    CHECK_EQ(sph1.x(), Approx(sph2.x()));
+    // CHECK_EQ( sph1.y(), Approx(sph2.y()));
+    // CHECK_EQ( sph1.z(), Approx(sph2.z()));
 }
 
 TEST_CASE("[Faunus] Geometry") {
@@ -844,33 +870,33 @@ TEST_CASE("[Faunus] Geometry") {
     SUBCASE("cuboid") {
         double x = 2, y = 3, z = 4;
         Cuboid geo({x, y, z});
-        CHECK(geo.getVolume() == doctest::Approx(x * y * z));
+        CHECK_EQ(geo.getVolume(), doctest::Approx(x * y * z));
 
         // check boundaries and pbc
         Point a(1.1, 1.5, -2.001);
-        CHECK(geo.collision(a) == true);
+        CHECK_EQ(geo.collision(a), true);
         geo.getBoundaryFunc()(a);
-        CHECK(geo.collision(a) == false);
-        CHECK(a.x() == Approx(-0.9));  // x has been wrapped
-        CHECK(a.y() == Approx(1.5));   // y is unchanged
-        CHECK(a.z() == Approx(1.999)); // z has been wrapped
+        CHECK_EQ(geo.collision(a), false);
+        CHECK_EQ(a.x(), Approx(-0.9));  // x has been wrapped
+        CHECK_EQ(a.y(), Approx(1.5));   // y is unchanged
+        CHECK_EQ(a.z(), Approx(1.999)); // z has been wrapped
         a.y() = 1.51;                  // move y out of box
         geo.getBoundaryFunc()(a);      // wrap around boundary
-        CHECK(a.y() == Approx(-1.49)); // check y-boundary
+        CHECK_EQ(a.y(), Approx(-1.49)); // check y-boundary
         a.y() = 1.5;                   // restore
 
         // check distances
         Point distance = geo.vdist({0.1, 0.5, -1.001}, a);
-        CHECK(distance.x() == Approx(1.0));
-        CHECK(distance.y() == Approx(-1.0));
-        CHECK(distance.z() == Approx(1.0));
-        CHECK(geo.vdist({1, 2, 3}, a) == geo.getDistanceFunc()({1, 2, 3}, a));
+        CHECK_EQ(distance.x(), Approx(1.0));
+        CHECK_EQ(distance.y(), Approx(-1.0));
+        CHECK_EQ(distance.z(), Approx(1.0));
+        CHECK_EQ(geo.vdist({1, 2, 3}, a), geo.getDistanceFunc()({1, 2, 3}, a));
 
         // check that geometry is properly inscribed in a cuboid
         Point box = geo.getLength();
-        CHECK(box.x() == Approx(x));
-        CHECK(box.y() == Approx(y));
-        CHECK(box.z() == Approx(z));
+        CHECK_EQ(box.x(), Approx(x));
+        CHECK_EQ(box.y(), Approx(y));
+        CHECK_EQ(box.z(), Approx(z));
 
         // check random position
         Point c(x + 1, y + 1, z + 1); // out of the box
@@ -880,60 +906,60 @@ TEST_CASE("[Faunus] Geometry") {
             if (geo.collision(c))
                 container_overlap = true;
         }
-        CHECK(container_overlap == false);
+        CHECK_EQ(container_overlap, false);
 
         // volume scaling
         double sf = 2.;
         auto scaling = geo.setVolume(sf * sf * sf * x * y * z);
-        CHECK(geo.getVolume() == doctest::Approx(sf * sf * sf * x * y * z));
-        CHECK(geo.getLength().x() == Approx(sf * x));
-        CHECK(geo.getLength().y() == Approx(sf * y));
-        CHECK(geo.getLength().z() == Approx(sf * z));
-        CHECK(scaling.x() == Approx(sf));
-        CHECK(scaling.y() == Approx(sf));
-        CHECK(scaling.z() == Approx(sf));
+        CHECK_EQ(geo.getVolume(), doctest::Approx(sf * sf * sf * x * y * z));
+        CHECK_EQ(geo.getLength().x(), Approx(sf * x));
+        CHECK_EQ(geo.getLength().y(), Approx(sf * y));
+        CHECK_EQ(geo.getLength().z(), Approx(sf * z));
+        CHECK_EQ(scaling.x(), Approx(sf));
+        CHECK_EQ(scaling.y(), Approx(sf));
+        CHECK_EQ(scaling.z(), Approx(sf));
 
         // check json
         geo.from_json(R"( {"type": "cuboid", "length": [2.5,3.5,4.5]} )"_json);
-        CHECK(geo.getVolume() == doctest::Approx(2.5 * 3.5 * 4.5));
+        CHECK_EQ(geo.getVolume(), doctest::Approx(2.5 * 3.5 * 4.5));
     }
 
     SUBCASE("slit") {
         double x = 2, y = 4, z = 3;
         Slit geo(x, y, z);
-        CHECK(geo.getVolume() == doctest::Approx(x * y * z));
+        CHECK_EQ(geo.getVolume(), doctest::Approx(x * y * z));
 
         // check boundaries and pbc
         Point a(1.1, -2.001, 1.499);
-        CHECK(geo.collision(a) == true);
+        CHECK_EQ(geo.collision(a), true);
         geo.getBoundaryFunc()(a);
-        CHECK(geo.collision(a) == false);
-        CHECK(a.x() == Approx(-0.9));
-        CHECK(a.y() == Approx(1.999));
-        CHECK(a.z() == Approx(1.499));
+        CHECK_EQ(geo.collision(a), false);
+        CHECK_EQ(a.x(), Approx(-0.9));
+        CHECK_EQ(a.y(), Approx(1.999));
+        CHECK_EQ(a.z(), Approx(1.499));
         Point b = a;
         geo.boundary(b);
-        CHECK(a == b);
+        CHECK_EQ(a, b);
 
         Point outsize_z = {1.1, -2.001, 1.5001};
-        CHECK(geo.collision(outsize_z) == true);
+        CHECK_EQ(geo.collision(outsize_z), true);
         geo.boundary(outsize_z);
-        CHECK(geo.collision(outsize_z) == true);
+        CHECK_EQ(geo.collision(outsize_z), true);
 
         Point c(0, 0, -0.51 * z);
 
         // check distances
         Point distance = geo.vdist({0.1, -1.001, -0.501}, a);
-        CHECK(distance.x() == Approx(1.0));
-        CHECK(distance.y() == Approx(1.0));
-        CHECK(distance.z() == Approx(-2.0));
-        CHECK(geo.vdist({1, 2, 3}, a) == geo.getDistanceFunc()({1, 2, 3}, a));
+        CHECK_EQ(distance.x(), Approx(1.0));
+        CHECK_EQ(distance.y(), Approx(1.0));
+        CHECK_EQ(distance.z(), Approx(-2.0));
+        CHECK_EQ(geo.vdist({1, 2, 3}, a), geo.getDistanceFunc()({1, 2, 3}, a));
 
         // check that geometry is properly enscribed in a cuboid
         Point box = geo.getLength();
-        CHECK(box.x() == Approx(x));
-        CHECK(box.y() == Approx(y));
-        CHECK(box.z() == Approx(z));
+        CHECK_EQ(box.x(), Approx(x));
+        CHECK_EQ(box.y(), Approx(y));
+        CHECK_EQ(box.z(), Approx(z));
 
         // check random position
         Point d(x + 1, y + 1, z + 1); // out of the box
@@ -943,48 +969,48 @@ TEST_CASE("[Faunus] Geometry") {
             if (geo.collision(d))
                 containerOverlap = true;
         }
-        CHECK(containerOverlap == false);
+        CHECK_EQ(containerOverlap, false);
 
         // volume scaling
         double sf = 2.;
         auto scaling = geo.setVolume(sf * sf * x * y * z, VolumeMethod::XY);
-        CHECK(geo.getVolume() == doctest::Approx(sf * sf * x * y * z));
-        CHECK(geo.getLength().x() == Approx(sf * x));
-        CHECK(geo.getLength().y() == Approx(sf * y));
-        CHECK(geo.getLength().z() == Approx(z));
-        CHECK(scaling.x() == Approx(sf));
-        CHECK(scaling.y() == Approx(sf));
-        CHECK(scaling.z() == Approx(1.0));
+        CHECK_EQ(geo.getVolume(), doctest::Approx(sf * sf * x * y * z));
+        CHECK_EQ(geo.getLength().x(), Approx(sf * x));
+        CHECK_EQ(geo.getLength().y(), Approx(sf * y));
+        CHECK_EQ(geo.getLength().z(), Approx(z));
+        CHECK_EQ(scaling.x(), Approx(sf));
+        CHECK_EQ(scaling.y(), Approx(sf));
+        CHECK_EQ(scaling.z(), Approx(1.0));
 
         // check json
         geo.from_json(R"( {"type": "cuboid", "length": [2.5,3.5,4.5]} )"_json);
-        CHECK(geo.getVolume() == doctest::Approx(2.5 * 3.5 * 4.5));
+        CHECK_EQ(geo.getVolume(), doctest::Approx(2.5 * 3.5 * 4.5));
     }
 
     SUBCASE("sphere") {
         double radius = 5.;
         Sphere geo(radius);
-        CHECK(geo.getVolume() == doctest::Approx(4. / 3. * pc::pi * radius * radius * radius));
+        CHECK_EQ(geo.getVolume(), doctest::Approx(4. / 3. * pc::pi * radius * radius * radius));
 
         // check boundaries
-        CHECK(geo.collision({5.01, 0, 0}) == true);
-        CHECK(geo.collision({4.99, 0, 0}) == false);
+        CHECK_EQ(geo.collision({5.01, 0, 0}), true);
+        CHECK_EQ(geo.collision({4.99, 0, 0}), false);
         Point a(radius - 1, 0, -0.5 * radius);
         Point b = a;
         geo.boundary(a);
-        CHECK(a == b);
+        CHECK_EQ(a, b);
 
         // check distances
         Point distance = geo.vdist({3.0, 1.0, -2.0}, {-3.0, -1.0, 2.0});
-        CHECK(distance.x() == Approx(6.0));
-        CHECK(distance.y() == Approx(2.0));
-        CHECK(distance.z() == Approx(-4.0));
+        CHECK_EQ(distance.x(), Approx(6.0));
+        CHECK_EQ(distance.y(), Approx(2.0));
+        CHECK_EQ(distance.z(), Approx(-4.0));
 
         // check that geometry is properly enscribed in a cuboid
         Point box = geo.getLength();
-        CHECK(box.x() == Approx(10));
-        CHECK(box.y() == Approx(10));
-        CHECK(box.z() == Approx(10));
+        CHECK_EQ(box.x(), Approx(10));
+        CHECK_EQ(box.y(), Approx(10));
+        CHECK_EQ(box.z(), Approx(10));
 
         // check random position
         Point c(radius + 1, radius + 1, radius + 1); // out of the box
@@ -994,17 +1020,17 @@ TEST_CASE("[Faunus] Geometry") {
             if (geo.collision(c))
                 container_overlap = true;
         }
-        CHECK(container_overlap == false);
+        CHECK_EQ(container_overlap, false);
 
         // volume scaling
         geo.setVolume(123.4);
-        CHECK(geo.getVolume() == Approx(123.4));
+        CHECK_EQ(geo.getVolume(), Approx(123.4));
         CHECK_THROWS_AS(geo.setVolume(100., VolumeMethod::ISOCHORIC), std::invalid_argument);
         CHECK_THROWS_AS(geo.setVolume(100., VolumeMethod::XY), std::invalid_argument);
 
         // check json
         geo.from_json(R"( { "type": "sphere", "radius": 2.0 } )"_json);
-        CHECK(geo.getVolume() == doctest::Approx(4. / 3. * pc::pi * 2.0 * 2.0 * 2.0));
+        CHECK_EQ(geo.getVolume(), doctest::Approx(4. / 3. * pc::pi * 2.0 * 2.0 * 2.0));
     }
 
     SUBCASE("cylinder") {
@@ -1014,18 +1040,18 @@ TEST_CASE("[Faunus] Geometry") {
         Cylinder geo(radius, height);
 
         // check boundaries
-        CHECK(geo.getVolume() == Approx(volume));
-        CHECK(geo.collision({-1.01 * radius, 0, 0}) == true);
-        CHECK(geo.collision({0.99 * radius, 0, 0}) == false);
-        CHECK(geo.collision({-0.99 * radius, 0.15 * radius, 0}) == true);
-        CHECK(geo.collision({0, 0, -0.51 * height}) == true);
-        CHECK(geo.collision({0, 0, 0.49 * height}) == false);
+        CHECK_EQ(geo.getVolume(), Approx(volume));
+        CHECK_EQ(geo.collision({-1.01 * radius, 0, 0}), true);
+        CHECK_EQ(geo.collision({0.99 * radius, 0, 0}), false);
+        CHECK_EQ(geo.collision({-0.99 * radius, 0.15 * radius, 0}), true);
+        CHECK_EQ(geo.collision({0, 0, -0.51 * height}), true);
+        CHECK_EQ(geo.collision({0, 0, 0.49 * height}), false);
 
         // check that geometry is properly enscribed in a cuboid
         box = geo.getLength();
-        CHECK(box.x() == Approx(2 * radius));
-        CHECK(box.y() == Approx(2 * radius));
-        CHECK(box.z() == Approx(height));
+        CHECK_EQ(box.x(), Approx(2 * radius));
+        CHECK_EQ(box.y(), Approx(2 * radius));
+        CHECK_EQ(box.z(), Approx(height));
 
         // check random position
         Point a(2. * radius, 0, 0); // out of the box
@@ -1035,20 +1061,20 @@ TEST_CASE("[Faunus] Geometry") {
             if (geo.collision(a))
                 container_overlap = true;
         }
-        CHECK(container_overlap == false);
+        CHECK_EQ(container_overlap, false);
 
         // volume scaling
         geo.setVolume(9.0, VolumeMethod::XY);
-        CHECK(geo.getVolume() == Approx(9.0));
+        CHECK_EQ(geo.getVolume(), Approx(9.0));
         box = geo.getLength();
-        CHECK(box.x() == Approx(3 * 2 * radius));
-        CHECK(box.y() == Approx(3 * 2 * radius));
-        CHECK(box.z() == Approx(height));
+        CHECK_EQ(box.x(), Approx(3 * 2 * radius));
+        CHECK_EQ(box.y(), Approx(3 * 2 * radius));
+        CHECK_EQ(box.z(), Approx(height));
 
         // check json
         json j = {{"type", "cylinder"}, {"radius", 2.0}, {"length", 2 / pc::pi}};
         geo.from_json(j);
-        CHECK(geo.getVolume() == doctest::Approx(8.0));
+        CHECK_EQ(geo.getVolume(), doctest::Approx(8.0));
     }
 
     SUBCASE("hexagonal prism") {
@@ -1058,23 +1084,23 @@ TEST_CASE("[Faunus] Geometry") {
         Point box;
         HexagonalPrism geo(side, height);
 
-        CHECK(geo.getVolume() == Approx(volume));
-        CHECK(geo.collision({-1.01 * inner_radius, 0, 0}) == true);
-        CHECK(geo.collision({0.99 * inner_radius, 0, 0}) == false);
-        CHECK(geo.collision({0.0, -1.01 * outer_radius, 0}) == true);
-        CHECK(geo.collision({0.0, 0.99 * outer_radius, 0}) == false);
-        CHECK(geo.collision({0.99 * std::cos(pc::pi / 3.) * inner_radius, 0.99 * std::sin(pc::pi / 3.) * inner_radius,
-                             0}) == false);
-        CHECK(geo.collision({1.01 * std::cos(pc::pi / 3.) * inner_radius, 1.01 * std::sin(pc::pi / 3.) * inner_radius,
-                             0}) == true);
-        CHECK(geo.collision({0, 0, -0.51 * height}) == true);
-        CHECK(geo.collision({0, 0, 0.49 * height}) == false);
+        CHECK_EQ(geo.getVolume(), Approx(volume));
+        CHECK_EQ(geo.collision({-1.01 * inner_radius, 0, 0}), true);
+        CHECK_EQ(geo.collision({0.99 * inner_radius, 0, 0}), false);
+        CHECK_EQ(geo.collision({0.0, -1.01 * outer_radius, 0}), true);
+        CHECK_EQ(geo.collision({0.0, 0.99 * outer_radius, 0}), false);
+        CHECK((geo.collision({0.99 * std::cos(pc::pi / 3.) * inner_radius, 0.99 * std::sin(pc::pi / 3.) * inner_radius,
+                             0}) == false));
+        CHECK((geo.collision({1.01 * std::cos(pc::pi / 3.) * inner_radius, 1.01 * std::sin(pc::pi / 3.) * inner_radius,
+                             0}) == true));
+        CHECK_EQ(geo.collision({0, 0, -0.51 * height}), true);
+        CHECK_EQ(geo.collision({0, 0, 0.49 * height}), false);
 
         // check that geometry is properly inscribed in a cuboid
         box = geo.getLength();
-        CHECK(box.x() == Approx(2 * inner_radius));
-        CHECK(box.y() == Approx(2 * outer_radius));
-        CHECK(box.z() == Approx(height));
+        CHECK_EQ(box.x(), Approx(2 * inner_radius));
+        CHECK_EQ(box.y(), Approx(2 * outer_radius));
+        CHECK_EQ(box.z(), Approx(height));
 
         // check random position
         Point a;
@@ -1084,11 +1110,11 @@ TEST_CASE("[Faunus] Geometry") {
             if (geo.collision(a))
                 container_overlap = true;
         }
-        CHECK(container_overlap == false);
+        CHECK_EQ(container_overlap, false);
 
         json j = {{"type", "hexagonal"}, {"radius", 3 * inner_radius}, {"length", 5 * height}};
         geo.from_json(j);
-        CHECK(geo.getVolume() == Approx(9 * 5 * volume));
+        CHECK_EQ(geo.getVolume(), Approx(9 * 5 * volume));
     }
 }
 
@@ -1106,9 +1132,9 @@ TEST_CASE("[Faunus] Chameleon") {
             b = a;
             chameleon.boundary(a);
             geo.boundary(b);
-            CHECK(a.x() == Approx(b.x()));
-            CHECK(a.y() == Approx(b.y()));
-            CHECK(a.z() == Approx(b.z()));
+            CHECK_EQ(a.x(), Approx(b.x()));
+            CHECK_EQ(a.y(), Approx(b.y()));
+            CHECK_EQ(a.z(), Approx(b.z()));
         }
     };
 
@@ -1121,10 +1147,10 @@ TEST_CASE("[Faunus] Chameleon") {
             box.randompos(b, slump);
             d_cham = chameleon.vdist(a, b);
             d_geo = geo.vdist(a, b);
-            CHECK(d_cham.x() == Approx(d_geo.x()));
-            CHECK(d_cham.y() == Approx(d_geo.y()));
-            CHECK(d_cham.z() == Approx(d_geo.z()));
-            CHECK(chameleon.sqdist(a, b) == Approx(d_cham.squaredNorm()));
+            CHECK_EQ(d_cham.x(), Approx(d_geo.x()));
+            CHECK_EQ(d_cham.y(), Approx(d_geo.y()));
+            CHECK_EQ(d_cham.z(), Approx(d_geo.z()));
+            CHECK_EQ(chameleon.sqdist(a, b), Approx(d_cham.squaredNorm()));
         }
     };
 
@@ -1136,9 +1162,9 @@ TEST_CASE("[Faunus] Chameleon") {
         Chameleon chameleon(geo, Variant::CUBOID);
         compare_boundary(chameleon, geo, box);
         compare_vdist(chameleon, geo, box);
-        CHECK(geo.boundary_conditions.isPeriodic()[0] == true);
-        CHECK(geo.boundary_conditions.isPeriodic()[1] == true);
-        CHECK(geo.boundary_conditions.isPeriodic()[2] == true);
+        CHECK_EQ(geo.boundary_conditions.isPeriodic()[0], true);
+        CHECK_EQ(geo.boundary_conditions.isPeriodic()[1], true);
+        CHECK_EQ(geo.boundary_conditions.isPeriodic()[2], true);
     }
 
     SUBCASE("slit") {
@@ -1149,9 +1175,9 @@ TEST_CASE("[Faunus] Chameleon") {
         Chameleon chameleon(geo, Variant::SLIT);
         compare_boundary(chameleon, geo, box);
         compare_vdist(chameleon, geo, box);
-        CHECK(geo.boundary_conditions.isPeriodic()[0] == true);
-        CHECK(geo.boundary_conditions.isPeriodic()[1] == true);
-        CHECK(geo.boundary_conditions.isPeriodic()[2] == false);
+        CHECK_EQ(geo.boundary_conditions.isPeriodic()[0], true);
+        CHECK_EQ(geo.boundary_conditions.isPeriodic()[1], true);
+        CHECK_EQ(geo.boundary_conditions.isPeriodic()[2], false);
     }
 
     SUBCASE("sphere") {
@@ -1163,9 +1189,9 @@ TEST_CASE("[Faunus] Chameleon") {
         Chameleon chameleon(geo, Variant::SPHERE);
         compare_boundary(chameleon, geo, box);
         compare_vdist(chameleon, geo, box);
-        CHECK(geo.boundary_conditions.isPeriodic()[0] == false);
-        CHECK(geo.boundary_conditions.isPeriodic()[1] == false);
-        CHECK(geo.boundary_conditions.isPeriodic()[2] == false);
+        CHECK_EQ(geo.boundary_conditions.isPeriodic()[0], false);
+        CHECK_EQ(geo.boundary_conditions.isPeriodic()[1], false);
+        CHECK_EQ(geo.boundary_conditions.isPeriodic()[2], false);
     }
 
     SUBCASE("cylinder") {
@@ -1176,9 +1202,9 @@ TEST_CASE("[Faunus] Chameleon") {
         Chameleon chameleon(geo, Variant::CYLINDER);
         compare_boundary(chameleon, geo, box);
         compare_vdist(chameleon, geo, box);
-        CHECK(geo.boundary_conditions.isPeriodic()[0] == false);
-        CHECK(geo.boundary_conditions.isPeriodic()[1] == false);
-        CHECK(geo.boundary_conditions.isPeriodic()[2] == true);
+        CHECK_EQ(geo.boundary_conditions.isPeriodic()[0], false);
+        CHECK_EQ(geo.boundary_conditions.isPeriodic()[1], false);
+        CHECK_EQ(geo.boundary_conditions.isPeriodic()[2], true);
     }
 
     SUBCASE("hexagonal prism") {
@@ -1216,9 +1242,9 @@ TEST_CASE("[Faunus] Chameleon") {
             std::istringstream in(os.str());
             cereal::BinaryInputArchive archive(in);
             archive(geo);
-            CHECK(geo.getLength().x() == Approx(x));
-            CHECK(geo.getLength().y() == Approx(y));
-            CHECK(geo.getLength().z() == Approx(z));
+            CHECK_EQ(geo.getLength().x(), Approx(x));
+            CHECK_EQ(geo.getLength().y(), Approx(y));
+            CHECK_EQ(geo.getLength().z(), Approx(z));
         }
     }
 }
@@ -1228,16 +1254,16 @@ TEST_CASE("[Faunus] weightedCenter") {
     std::vector<Particle> p;
 
     CHECK(!atoms.empty()); // set in a previous test
-    p.push_back(atoms[0]);
-    p.push_back(atoms[0]);
+    p.emplace_back(atoms[0]);
+    p.emplace_back(atoms[0]);
 
     p.front().pos = {10, 10, -10};
     p.back().pos = {15, -10, 10};
 
     Point cm = Geometry::massCenter(p.begin(), p.end(), cyl.getBoundaryFunc());
-    CHECK(cm.x() == doctest::Approx(12.5));
-    CHECK(cm.y() == doctest::Approx(0));
-    CHECK(cm.z() == doctest::Approx(0));
+    CHECK_EQ(cm.x(), doctest::Approx(12.5));
+    CHECK_EQ(cm.y(), doctest::Approx(0));
+    CHECK_EQ(cm.z(), doctest::Approx(0));
 }
 
 TEST_CASE("[Faunus] gyration") {
@@ -1260,22 +1286,22 @@ TEST_CASE("[Faunus] gyration") {
     auto mass_center = Geometry::massCenter(particles.begin(), particles.end(), boundary);
 
     SUBCASE("mass center") {
-        CHECK(mass_center.x() == doctest::Approx(5.1162790698));
-        CHECK(mass_center.y() == doctest::Approx(6.1162790698));
-        CHECK(mass_center.z() == doctest::Approx(7.1162790698));
+        CHECK_EQ(mass_center.x(), doctest::Approx(5.1162790698));
+        CHECK_EQ(mass_center.y(), doctest::Approx(6.1162790698));
+        CHECK_EQ(mass_center.z(), doctest::Approx(7.1162790698));
     }
 
     SUBCASE("position based") {
         auto gyration = Geometry::gyration(positions.begin(), positions.end(), weights.begin(), mass_center, boundary);
-        CHECK(gyration.trace() == doctest::Approx(13.843158464));
-        CHECK(gyration.diagonal().x() == doctest::Approx(4.6143861547));
-        CHECK(gyration.diagonal().y() == doctest::Approx(4.6143861547));
-        CHECK(gyration.diagonal().z() == doctest::Approx(4.6143861547));
+        CHECK_EQ(gyration.trace(), doctest::Approx(13.843158464));
+        CHECK_EQ(gyration.diagonal().x(), doctest::Approx(4.6143861547));
+        CHECK_EQ(gyration.diagonal().y(), doctest::Approx(4.6143861547));
+        CHECK_EQ(gyration.diagonal().z(), doctest::Approx(4.6143861547));
 
         // check symmetry
-        CHECK(gyration(0, 1) == doctest::Approx(gyration(1, 0)));
-        CHECK(gyration(0, 2) == doctest::Approx(gyration(2, 0)));
-        CHECK(gyration(1, 2) == doctest::Approx(gyration(2, 1)));
+        CHECK_EQ(gyration(0, 1), doctest::Approx(gyration(1, 0)));
+        CHECK_EQ(gyration(0, 2), doctest::Approx(gyration(2, 0)));
+        CHECK_EQ(gyration(1, 2), doctest::Approx(gyration(2, 1)));
 
         // principal moment
         Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(gyration);
@@ -1283,22 +1309,22 @@ TEST_CASE("[Faunus] gyration") {
         std::ptrdiff_t i_eival;
         eigen_values.minCoeff(&i_eival);
         auto principle_axis = esf.eigenvectors().col(i_eival).real().eval();
-        CHECK(principle_axis.x() == doctest::Approx(-0.8164965809));
-        CHECK(principle_axis.y() == doctest::Approx(0.4082482905));
-        CHECK(principle_axis.z() == doctest::Approx(0.4082482905));
+        CHECK_EQ(principle_axis.x(), doctest::Approx(-0.8164965809));
+        CHECK_EQ(principle_axis.y(), doctest::Approx(0.4082482905));
+        CHECK_EQ(principle_axis.z(), doctest::Approx(0.4082482905));
     }
 
     SUBCASE("particle based") {
         auto gyration = Geometry::gyration(particles.begin(), particles.end(), mass_center, boundary);
-        CHECK(gyration.trace() == doctest::Approx(13.843158464));
-        CHECK(gyration.diagonal().x() == doctest::Approx(4.6143861547));
-        CHECK(gyration.diagonal().y() == doctest::Approx(4.6143861547));
-        CHECK(gyration.diagonal().z() == doctest::Approx(4.6143861547));
+        CHECK_EQ(gyration.trace(), doctest::Approx(13.843158464));
+        CHECK_EQ(gyration.diagonal().x(), doctest::Approx(4.6143861547));
+        CHECK_EQ(gyration.diagonal().y(), doctest::Approx(4.6143861547));
+        CHECK_EQ(gyration.diagonal().z(), doctest::Approx(4.6143861547));
 
         // check symmetry
-        CHECK(gyration(0, 1) == doctest::Approx(gyration(1, 0)));
-        CHECK(gyration(0, 2) == doctest::Approx(gyration(2, 0)));
-        CHECK(gyration(1, 2) == doctest::Approx(gyration(2, 1)));
+        CHECK_EQ(gyration(0, 1), doctest::Approx(gyration(1, 0)));
+        CHECK_EQ(gyration(0, 2), doctest::Approx(gyration(2, 0)));
+        CHECK_EQ(gyration(1, 2), doctest::Approx(gyration(2, 1)));
     }
 }
 
@@ -1307,7 +1333,104 @@ TEST_CASE("[Faunus] rootMeanSquareDeviation") {
     std::vector<double> v2 = {1.1, 4.6, -1.0};
     auto f = [](double a, double b) { return std::pow(a - b, 2); };
     double rmsd = Geometry::rootMeanSquareDeviation(v1.begin(), v1.end(), v2.begin(), f);
-    CHECK(rmsd == doctest::Approx(0.17320508075688745));
+    CHECK_EQ(rmsd, doctest::Approx(0.17320508075688745));
+}
+
+/**
+ * @brief Generates n points uniformly distributed on a sphere
+ *
+ * Related information:
+ * - https://stackoverflow.com/questions/9600801/evenly-distributing-n-points-on-a-sphere
+ * - https://en.wikipedia.org/wiki/Geodesic_polyhedron
+ * - c++: https://github.com/caosdoar/spheres
+ */
+std::vector<Point> TwobodyAngles::fibonacciSphere(const size_t samples) {
+    unsigned int cnt = 0;
+    const auto phi = pc::pi * (3.0 - std::sqrt(5.0));  // golden angle in radians
+    std::vector<Point> unit_points_on_sphere;
+    unit_points_on_sphere.resize(samples);
+    
+    for (auto &point: unit_points_on_sphere) {
+        point.y() = 1.0 - 2.0 * (cnt / double(samples - 1));        // y goes from 1 to -1
+        const auto radius = std::sqrt(1.0 - point.y() * point.y()); // radius at y
+        const auto theta = phi * double(cnt);                       // golden angle increment
+        point.x() = std::cos(theta) * radius;
+        point.z() = std::sin(theta) * radius;
+        point.normalize(); // make sure it's really normalized (perhaps redundant)
+        cnt++;
+    };
+    return unit_points_on_sphere;
+}
+
+TwobodyAngles::TwobodyAngles(const double angle_resolution) {
+    namespace rv = ranges::cpp20::views;
+
+    const auto number_of_samples = size_t(std::round(4.0 * pc::pi / std::pow(angle_resolution, 2)));
+    const auto points_on_sphere = fibonacciSphere(number_of_samples);
+
+    quaternions_1 =
+        points_on_sphere |
+        rv::transform([](const auto& axis) { return Eigen::Quaterniond::FromTwoVectors(axis, Point::UnitZ()); }) |
+        ::ranges::to_vector;
+
+    quaternions_2 =
+        points_on_sphere |
+        rv::transform([](const auto& axis) { return Eigen::Quaterniond::FromTwoVectors(axis, -Point::UnitZ()); }) |
+        ::ranges::to_vector;
+
+    dihedrals =
+        arange(0.0, 2.0 * pc::pi, angle_resolution) |
+        rv::transform([](auto angle) { return Eigen::Quaterniond(Eigen::AngleAxisd(angle, Point::UnitZ())); }) |
+        ::ranges::to_vector;
+
+    const auto n1 = quaternions_1.size();
+    const auto n2 = quaternions_2.size();
+    const auto n3 = dihedrals.size();
+    faunus_logger->info(fmt::format("rigid body: Δ⍺ = {:.1f}° -> {} x {} x {} = {} poses 💃🏽🕺🏼",
+                                    angle_resolution / 1.0_deg, n1, n2, n3, n1 * n2 * n3));
+
+    std::ofstream f("fibonacci_points.xyz");
+    if (f) {
+        f << points_on_sphere.size() << "\n# points on sphere used for angular scan\n";
+        for (const auto& point : points_on_sphere) {
+            f << "C " << point.transpose() << "\n";
+        };
+    }
+}
+
+size_t TwobodyAngles::size() const {
+    return quaternions_1.size() * quaternions_2.size() * dihedrals.size();
+}
+
+TwobodyAnglesState::TwobodyAnglesState(const double angle_resolution) : TwobodyAngles(angle_resolution) {
+    q_euler1 = quaternions_1.begin();
+    q_euler2 = quaternions_1.begin();
+    q_dihedral = dihedrals.begin();
+}
+
+TwobodyAnglesState& TwobodyAnglesState::advance() {
+    if (q_euler1 < quaternions_1.end()) {
+        q_dihedral++;
+        if (q_dihedral >= dihedrals.end()) {
+            q_dihedral = dihedrals.begin();
+            q_euler2++;
+        }
+        if (q_euler2 >= quaternions_2.end()) {
+            q_euler2 = quaternions_2.begin();
+            q_euler1++;
+        }
+    }
+    return *this;
+}
+
+/**
+ * @return Pair of quaternions, one for each body, or `std::nullopt` of all angles have been explored.
+ */
+std::optional<std::pair<Eigen::Quaterniond, Eigen::Quaterniond>> TwobodyAnglesState::get() {
+    if (q_euler1 < quaternions_1.end()) {
+        return std::make_pair(*q_euler1, (*q_dihedral) * (*q_euler2));
+    }
+    return std::nullopt;
 }
 
 } // namespace Faunus::Geometry

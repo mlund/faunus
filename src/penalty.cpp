@@ -1,6 +1,6 @@
 #include "penalty.h"
 #include "space.h"
-#include "spdlog/spdlog.h"
+#include <spdlog/spdlog.h>
 
 namespace Faunus::Energy {
 
@@ -9,7 +9,7 @@ Penalty::Penalty(const json& j, const Space& spc) : spc(spc) {
     overwrite_penalty = j.value("overwrite", true);
     energy_increment = j.at("f0").get<double>();
     verbose = !j.value("quiet", true);
-    number_of_steps_between_updates = j.at("update").get<double>();
+    number_of_steps_between_updates = j.at("update").get<size_t>();
     samplings = j.value("samplings", 1);
     avoid_energy_drift = j.value("nodrift", true);
     penalty_function_filename = j.at("file").get<std::string>();
@@ -106,7 +106,7 @@ void Penalty::to_json(json& j) const {
         j["mpi exchanges"] = penalty_function_exchange_counter;
     }
     auto& coordinates_j = j["coords"] = json::array();
-    for (auto reaction_coordinate : reaction_coordinates_functions) {
+    for (const auto& reaction_coordinate : reaction_coordinates_functions) {
         coordinates_j.emplace_back(*reaction_coordinate); // `ReactionCoordinateBase` --> `json`
     }
 }
@@ -144,7 +144,7 @@ void Penalty::updatePenalty(const std::vector<double>& coordinate) {
                 logBarrierInformation();
             }
             energy_increment *= energy_increment_scaling_factor; // reduce penalty energy
-            samplings = std::ceil(samplings / energy_increment_scaling_factor);
+            samplings = std::ceil(double(samplings) / energy_increment_scaling_factor);
             histogram.setZero(); // reset histogram
         }
     }

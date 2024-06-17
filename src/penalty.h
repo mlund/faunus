@@ -47,7 +47,7 @@ class Penalty : public EnergyTerm {
 
   public:
     Penalty(const json& j, const Space& spc);
-    virtual ~Penalty(); //!< destruct and save to disk (!)
+    ~Penalty() override; //!< destruct and save to disk (!)
     double energy(const Change& change) override;
     void sync(EnergyTerm* other, const Change& change) override;
     void streamPenaltyFunction(std::ostream &stream) const;
@@ -61,7 +61,7 @@ class Penalty : public EnergyTerm {
 class PenaltyMPI : public Penalty {
   private:
     const MPI::Controller& mpi;
-    Eigen::VectorXi weights;                                     //!< array w. mininum histogram counts
+    Eigen::VectorXi weights;                                     //!< array w. minimum histogram counts
     Eigen::VectorXd buffer;                                      //!< receive buffer for penalty functions
     void updatePenalty(const std::vector<double>& coordinate) override; //!< Average penalty function across all nodes
     void averagePenaltyFunctions();                              //!< Average penalty functions over all MPI nodes

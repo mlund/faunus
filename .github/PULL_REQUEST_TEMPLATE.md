@@ -17,7 +17,7 @@ Please edit this text to include a summary of the change and which issue is fixe
 - [ ] code naming scheme follows the convention:
 
   Style        | Elements
-  ------------ | ---------------------
-  `PascalCase` | classes, namespaces
-  `camelCase`  | functions
-  `snake_case` | variables
+  ------------ | --------------------------
+  `CamelCase`  | classes, namespaces, enums
+  `lower_case` | functions, variables, enum constants
+  `UPPER_CASE` | constexpr variables

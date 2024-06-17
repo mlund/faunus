@@ -42,6 +42,6 @@ template <typename float_t = double, char iterations = 1> inline float_t inv_sqr
 TEST_CASE_TEMPLATE("inv_sqrt", T, double, float) {
     std::vector<T> vals = {0.23, 3.3, 10.2, 100.45, 512.06};
     for (auto x : vals) {
-        CHECK(Faunus::inv_sqrt<T, 2>(x) == doctest::Approx(1.0 / std::sqrt(x)));
+        CHECK_EQ(Faunus::inv_sqrt<T, 2>(x), doctest::Approx(1.0 / std::sqrt(x)));
     }
 }

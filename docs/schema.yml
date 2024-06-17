@@ -434,6 +434,35 @@ properties:
                             items: {type: object}
                     additionalProperties: false
 
+                constrain:
+                    description: "Constrain via a reaction coordinate"
+                    type: object
+                    properties:
+                        type:
+                            description: "Reaction coordinate class"
+                            type: string
+                            items: {"system", "molecule", "atom"}
+                        property:
+                            description: "Reaction coordinate property"
+                            type: string
+                        range:
+                            description: "Allowed range of reaction coord. value"
+                            type: array
+                            minItems: 2
+                            maxItems: 2
+                        harmonic:
+                            description: "Alternatively, use a hamonic potential to constain reaction coord. value"
+                            type: object
+                            properties:
+                                req: {type: number, description: "Equilibrium value for reaction coordinate"}
+                                k: {type: number, description: "Spring constant in kJ/mol"}
+                            additionalProperties: false
+                    required: [type, property]
+                    oneOf:
+                        - required: [range]
+                        - required: [harmonic]
+                    additionalProperties: false
+
                 nonbonded:
                     description: "Nonbonded interactions"
                     type: object
@@ -761,6 +790,30 @@ properties:
                     additionalProperties: false
                     type: object
 
+                gibbs_matter:
+                    properties:
+                        repeat: {type: integer}
+                        molecule: {type: string, description: "Molecule type to exchange"}
+                    required: [molecule]
+                    additionalProperties: false
+                    type: object
+
+                gibbs_volume:
+                    properties:
+                        dV: {type: number, description: "Volume displacement parameter (Å³)"}
+                        method:
+                            type: string
+                            enum: [isotropic]
+                        repeat: {type: integer}
+                        molecules:
+                            type: array
+                            items: {type: string}
+                            minItems: 1
+                            description: "Array of molecules at constant chemical potential"
+                    required: [dV, molecules]
+                    additionalProperties: false
+                    type: object
+
                 crankshaft:
                     properties:
                         dprot: {type: number}
@@ -858,6 +911,23 @@ properties:
                     additionalProperties: false
                     type: object
 
+    preface:
+        type: array
+        items:
+            type: object
+            properties:
+                angular_scan:
+                    description: "Scan all angles between two rigid bodies (molecule 1 and 2)"
+                    type: object
+                    properties:
+                        indices: {type: array, items: {type: integer}, minItems: 2, maxItems: 2, description: "Two molecule indices"}
+                        zrange: {type: array, items: {type: number}, minItems: 3, maxItems: 3, description: "COM interval min, max, step (Å)"}
+                        max_energy: {type: number, description: "Skip energies above this value"}
+                        angular_resolution: {type: number, description: "Angular spacing (rad)"}
+                        file: {type: string, description: "Output for energies and quaternions", pattern: "(.*?)\\.(dat|dat.gz)$"}
+                        traj: {type: string, description: "Output trajectory (xtc)", pattern: "(.*?)\\.(xtc)$"}
+                    required: [indices, zrange, file, angular_resolution]
+                    additionalProperties: false
          
     analysis:
         type: array
@@ -1065,6 +1135,35 @@ properties:
                     additionalProperties: false
                     type: object
 
+                sasa:
+                    type: object
+                    properties:
+                        nstep: {type: integer, description: "Interval between samples"}
+                        nskip: {type: integer, default: 0, description: "Initial steps to skip"}
+                        molecule:
+                            type: string
+                            description: "Molecule name to sample if `molecular` or `atoms_in_molecule` policies"
+                        atom: {type: string, description: "Atom to sample if `atomic` policy"}
+                        atomlist:
+                            type: array
+                            items: string
+                            minItems: 1
+                            description: "List of atom names if `atoms_in_molecule` policy"
+                        radius:
+                            type: number
+                            default: 1.4
+                            description: "Probe radius for SASA calculation (Å)"
+                        file:
+                            type: string
+                            pattern: "(.*?)\\.(dat|dat.gz)$"
+                            description: "Streaming filename (.dat|.dat.gz)"
+                        policy:
+                            type: string
+                            enum: ["atomic", "molecular", "atoms_in_molecule"]
+                            description: "Area calculation policy"
+                    required: [nstep, policy]
+                    additionalProperties: false
+
                 savestate:
                     description: "Save particle positions to file"
                     properties:
@@ -1133,9 +1232,13 @@ properties:
 
                 systemenergy:
                     properties:
-                        file: {type: string}
+                        file: {type: string, pattern: "(.*?)\\.(dat|dat.gz|csv)$", description: "Output filename (.dat|.dat.gz|.csv)"}
                         nstep: {type: integer}
                         nskip: {type: integer, default: 0, description: Initial steps to skip}
+                        save_min_conf:
+                            type: boolean
+                            default: false
+                            description: "Save minimum energy configuration to PQR file"
                     required: [file, nstep]
                     additionalProperties: false
                     type: object
@@ -1188,6 +1291,23 @@ properties:
                         nstep: {type: integer, description: Interval between samples}
                         nskip: {type: integer, default: 0, description: Number of steps to initially skip}
                     required: [dL, molecule, nstep]
+                    additionalProperties: false
+
+                voronoi:
+                    description: "Voronoi tessellation using Voronota"
+                    type: object
+                    properties:
+                        nstep: {type: integer, description: "Interval between samples"}
+                        nskip: {type: integer, default: 0, description: "Initial steps to skip"}
+                        radius:
+                            type: number
+                            default: 1.4
+                            description: "Probe radius (Å)"
+                        file:
+                            type: string
+                            pattern: "(.*?)\\.(dat|dat.gz)$"
+                            description: "Streaming filename (.dat|.dat.gz)"
+                    required: [nstep]
                     additionalProperties: false
  
                 widom:

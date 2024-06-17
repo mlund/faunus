@@ -46,13 +46,13 @@ void to_json(json& j, const ReactionCoordinateBase& reaction_coordinate) {
 TEST_CASE("[Faunus] ReactionCoordinateBase") {
     using doctest::Approx;
     Faunus::ReactionCoordinate::ReactionCoordinateBase c(R"({"range":[-1.5, 2.1], "resolution":0.2})"_json);
-    CHECK(c.minimum_value == Approx(-1.5));
-    CHECK(c.maximum_value == Approx(2.1));
-    CHECK(c.resolution == Approx(0.2));
-    CHECK(c.inRange(-1.5) == true);
-    CHECK(c.inRange(-1.51) == false);
-    CHECK(c.inRange(2.11) == false);
-    CHECK(c.inRange(2.1) == true);
+    CHECK_EQ(c.minimum_value, Approx(-1.5));
+    CHECK_EQ(c.maximum_value, Approx(2.1));
+    CHECK_EQ(c.resolution, Approx(0.2));
+    CHECK_EQ(c.inRange(-1.5), true);
+    CHECK_EQ(c.inRange(-1.51), false);
+    CHECK_EQ(c.inRange(2.11), false);
+    CHECK_EQ(c.inRange(2.1), true);
 }
 #endif
 
@@ -133,7 +133,7 @@ SystemProperty::SystemProperty(const json &j, const Space &spc) : ReactionCoordi
     } else if (property == "N") { // number of particles
         function = [&spc]() {
             auto sizes = spc.groups | rv::transform(&Space::GroupType::size);
-            return static_cast<double>(std::accumulate(sizes.begin(), sizes.end(), 0U));
+            return static_cast<double>(std::accumulate(sizes.begin(), sizes.end(), size_t(0)));
         };
     }
     if (function == nullptr) {
@@ -274,7 +274,7 @@ void MoleculeProperty::selectLengthOverRadiusRatio(const json& j, const Space& s
     direction = j.at("dir");
     indexes = j.value("indexes", decltype(indexes)());
     if (indexes.size() != 2) {
-        ConfigurationError("An array of 2 indexes should be specified");
+        throw ConfigurationError("An array of 2 indexes should be specified");
     }
     function = [&spc, &dir = direction, i = indexes[0], j = indexes[1]]() {
         Average<double> mean_radius_j;
@@ -421,7 +421,7 @@ void MoleculeProperty::selectAngleWithVector(const json& j, const Space& spc) {
             auto& cm = group.mass_center;
             Tensor S = Geometry::gyration(group.begin(), group.end(), cm, spc.geometry.getBoundaryFunc());
             Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(S);
-            Point eivals = esf.eigenvalues();
+            const Point& eivals = esf.eigenvalues();
             ptrdiff_t i_eival;
             eivals.minCoeff(&i_eival);
             Point vec = esf.eigenvectors().col(i_eival).real();

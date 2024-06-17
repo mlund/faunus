@@ -388,6 +388,47 @@ where $d=3$ for `isotropic`, $d=2$ for `xy`, and $d=1$ for `z`.
 
 _Warning:_ Untested for cylinders, slits.
 
+## Gibbs Ensemble (unstable)
+
+_Note: this is marked unstable or experimental, meaning that it is still being tested and
+may see significant changes over time._
+
+[Gibbs ensemble](https://dx.doi.org/10/cvzgw9)
+can be used to investigate phase transitions by _matter_ and _volume_ exchange between two cells.
+The `examples/gibbs-ensemble/` directory contains a Jupyter Notebook with a worked example of a simple Lennard-Jones system.
+Multi-component mixtures are supported via the required `molecules` and `molecule` keywords which indicate which species
+are to be affected.
+Volume and matter exchange are done in separate moves, the latter _per_ species:
+
+~~~ yaml
+insertmolecule:
+  - A: 100, inactive: 50} # note inactive species
+  - B: 100, inactive: 50}
+moves:
+  - gibbs_volume: { dV: 1.0, molecules: ["A", "B"] } # exchange volume
+  - gibbs_matter: { molecule: "A" } # exchange A molecules
+  - gibbs_matter: { molecule: "B" } # exchange B molecules
+~~~
+
+In addition, you will likely also want to add translational and rotational moves.
+It is important that each cell can accommodate _all_ particles in the system.
+This is done by reserving an appropriate number of `inactive` particles in the initial
+configuration, see above example.
+An error is thrown if this criterion is neglected.
+
+### Running
+
+Gibbs ensemble requires that Faunus is compiled with MPI support, check with `faunus --version`,
+and _exactly two_ processes must be give with e.g. `mpirun -np 2`.
+
+- If starting conditions for each cell are identical, use `--nopfx` and a single `input.json` file:
+  ~~~ bash
+  mpirun -np 2 faunus --nopfx --input input.json
+  ~~~
+- If input differs, e.g. different initial volumes or number of particles, create two input files, prefixed with `mpi0.` and `mpi1.`,
+  and skip the `--nopfx` flag.
+- Reload from existing states by using the `--state` flag. `mpi` prefix are automatically added.
+
 
 ## Reactive Canonical Monte Carlo
 

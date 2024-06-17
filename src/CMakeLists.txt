@@ -8,6 +8,8 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 target_link_libraries(project_options INTERFACE ZLIB::ZLIB)
 target_link_libraries(project_options INTERFACE ${CMAKE_THREAD_LIBS_INIT})
 
+include_directories(SYSTEM ${CMAKE_SOURCE_DIR}/voronotalt)
+
 # ========== pre-compiler system headers ==========
 
 option(ENABLE_PCH "Enable Precompiled Headers" OFF)
@@ -56,13 +58,13 @@ target_link_libraries(functionparser PRIVATE nlohmann_json exprtk)
 
 # ========== faunus cpp and header files ==========
 
-set(objs analysis.cpp average.cpp atomdata.cpp auxiliary.cpp bonds.cpp celllistimpl.cpp
+set(objs actions.cpp analysis.cpp average.cpp atomdata.cpp auxiliary.cpp bonds.cpp celllistimpl.cpp
 	chainmove.cpp clustermove.cpp core.cpp forcemove.cpp units.cpp energy.cpp externalpotential.cpp
 	geometry.cpp group.cpp io.cpp molecule.cpp montecarlo.cpp move.cpp mpicontroller.cpp
 	particle.cpp penalty.cpp potentials.cpp random.cpp reactioncoordinate.cpp regions.cpp rotate.cpp sasa.cpp
-        scatter.cpp smart_montecarlo.cpp space.cpp speciation.cpp spherocylinder.cpp tensor.cpp)
+        scatter.cpp smart_montecarlo.cpp space.cpp speciation.cpp spherocylinder.cpp tensor.cpp voronota.cpp)
 
-set(hdrs analysis.h average.h atomdata.h auxiliary.h bonds.h celllist.h celllistimpl.h
+set(hdrs actions.h analysis.h average.h atomdata.h auxiliary.h bonds.h celllist.h celllistimpl.h
 	chainmove.h clustermove.h core.h forcemove.h energy.h externalpotential.h geometry.h group.h io.h
 	molecule.h montecarlo.h move.h mpicontroller.h particle.h penalty.h potentials_base.h potentials.h
 	reactioncoordinate.h rotate.h sasa.h smart_montecarlo.h space.h speciation.h spherocylinder.h
@@ -86,6 +88,7 @@ target_link_libraries(libfaunus PUBLIC
         functionparser
         nlohmann_json
         pcg-cpp
+        progresstracker
         range-v3
         spdlog
         xdrfile
@@ -143,12 +146,12 @@ if (ENABLE_PYTHON)
     execute_process(COMMAND ${Python_EXECUTABLE} scripts/yason.py -h
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} ERROR_QUIET OUTPUT_QUIET RESULT_VARIABLE yasontest)
     if (${yasontest} EQUAL 1)
-        message("missing required python modules 'yaml' or 'ruamel_yaml'")
+        message("missing required python modules 'yaml' or 'ruamel.yaml'")
     endif()
 
     pybind11_add_module(pyfaunus pyfaunus.cpp ${objs})
     target_link_libraries(pyfaunus PRIVATE
-        project_options cereal Eigen functionparser nlohmann_json pybind11_json range-v3 spdlog xdrfile zstr)
+        project_options cereal Eigen functionparser nlohmann_json progresstracker pybind11_json range-v3 spdlog xdrfile zstr)
     target_compile_definitions(pyfaunus PUBLIC SPDLOG_COMPILED_LIB)
     target_compile_definitions(pyfaunus PRIVATE DOCTEST_CONFIG_DISABLE)
 

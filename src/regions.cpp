@@ -211,20 +211,20 @@ TEST_CASE("[Faunus] Region::MovingEllipsoid") {
     MovingEllipsoid region(spc, 0, 1, parallel_radius, perpendilar_radius, false);
 
     SUBCASE("parallel axis") {
-        CHECK(region.isInside({parallel_radius + delta, 0.0, 0.0}) == false);
+        CHECK_EQ(region.isInside({parallel_radius + delta, 0.0, 0.0}), false);
         CHECK(region.isInside({parallel_radius - delta, 0.0, 0.0}));
-        CHECK(region.isInside({-(parallel_radius + delta), 0.0, 0.0}) == false);
+        CHECK_EQ(region.isInside({-(parallel_radius + delta), 0.0, 0.0}), false);
         CHECK(region.isInside({-(parallel_radius - delta), 0.0, 0.0}));
     }
 
     SUBCASE("perpendicular axis") {
-        CHECK(region.isInside({0.0, perpendilar_radius + delta, 0.0}) == false);
+        CHECK_EQ(region.isInside({0.0, perpendilar_radius + delta, 0.0}), false);
         CHECK(region.isInside({0.0, perpendilar_radius - delta, 0.0}));
-        CHECK(region.isInside({0.0, -(perpendilar_radius + delta), 0.0}) == false);
+        CHECK_EQ(region.isInside({0.0, -(perpendilar_radius + delta), 0.0}), false);
         CHECK(region.isInside({0.0, -(perpendilar_radius - delta), 0.0}));
-        CHECK(region.isInside({0.0, 0.0, perpendilar_radius + delta}) == false);
+        CHECK_EQ(region.isInside({0.0, 0.0, perpendilar_radius + delta}), false);
         CHECK(region.isInside({0.0, 0.0, perpendilar_radius - delta}));
-        CHECK(region.isInside({0.0, 0.0, -(perpendilar_radius + delta)}) == false);
+        CHECK_EQ(region.isInside({0.0, 0.0, -(perpendilar_radius + delta)}), false);
         CHECK(region.isInside({0.0, 0.0, -(perpendilar_radius - delta)}));
     }
     SUBCASE("exactly on midpoint") { CHECK(region.isInside({0.0, 0.0, 0.0})); }

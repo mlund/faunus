@@ -1,13 +1,14 @@
 #define DOCTEST_CONFIG_IMPLEMENT
-#include <doctest/doctest.h>
 #include "mpicontroller.h"
 #include "montecarlo.h"
 #include "analysis.h"
 #include "multipole.h"
 #include "docopt.h"
-#include "progress_tracker.h"
-#include "spdlog/spdlog.h"
 #include "move.h"
+#include "actions.h"
+#include <doctest/doctest.h>
+#include <progress_tracker.h>
+#include <spdlog/spdlog.h>
 #include <spdlog/sinks/null_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
@@ -37,6 +38,7 @@ void setInformationLevelAndLoggers(bool quiet, docopt::Options& args);
 json getUserInput(docopt::Options& args);
 void setRandomNumberGenerator(const json& input);
 void loadState(docopt::Options& args, MetropolisMonteCarlo& simulation);
+void prefaceActions(const json& input, Space& spc, Energy::Hamiltonian& hamiltonian);
 void checkElectroNeutrality(MetropolisMonteCarlo& simulation);
 void showErrorMessage(std::exception& exception);
 void showProgress(std::shared_ptr<ProgressIndicator::ProgressTracker>& progress_tracker);
@@ -54,7 +56,7 @@ static const char USAGE[] =
     https://faunus.readthedocs.io
 
     Usage:
-      faunus [-q] [--verbosity <N>] [--nobar] [--nopfx] [--notips] [--nofun] [--state=<file>] [--input=<file>] [--output=<file>] [--positions=<file>]
+      faunus [-q] [--verbosity <N>] [--nobar] [--nopfx] [--notips] [--nofun] [--norun] [--state=<file>] [--input=<file>] [--output=<file>] [--positions=<file>]
       faunus (-h | --help)
       faunus --version
       faunus test <doctest-options>...
@@ -71,6 +73,7 @@ static const char USAGE[] =
       --nopfx                          Do not prefix input file with MPI rank.
       --notips                         Do not give input assistance
       --nofun                          No fun
+      --norun                          Setup system and run preface actions, but no simulation
       --version                        Show version.
 
     Multiple processes using MPI:
@@ -101,6 +104,7 @@ int main(int argc, const char** argv) {
 
         MetropolisMonteCarlo simulation(input);
         loadState(args, simulation);
+        prefaceActions(input["preface"], simulation.getSpace(), simulation.getHamiltonian());
         checkElectroNeutrality(simulation);
         analysis::CombinedAnalysis analysis(input.at("analysis"), simulation.getSpace(), simulation.getHamiltonian());
 
@@ -110,9 +114,10 @@ int main(int argc, const char** argv) {
             show_progress = false; // show progress only for root rank
         }
 #endif
-        mainLoop(show_progress, input, simulation, analysis); // run simulation!
-
-        saveOutput(starting_time, args, simulation, analysis);
+        if (!args["--norun"].asBool()) {
+            mainLoop(show_progress, input, simulation, analysis); // run simulation!
+            saveOutput(starting_time, args, simulation, analysis);
+        }
         return EXIT_SUCCESS;
 
     } catch (std::exception& e) {
@@ -139,11 +144,11 @@ void showErrorMessage(std::exception& exception) {
         config_error != nullptr && !config_error->attachedJson().empty()) {
         faunus_logger->debug("json snippet:\n{}", config_error->attachedJson().dump(4));
     }
-    if (!usageTip.buffer.empty()) {
+    if (!usageTip.output_buffer.empty()) {
         // Use the srderr stream directly for more elaborated output of usage tip, optionally containing an ASCII
         // art. Level info seems appropriate.
         if (faunus_logger->should_log(spdlog::level::info)) {
-            std::cerr << usageTip.buffer << std::endl;
+            std::cerr << usageTip.output_buffer << std::endl;
         }
     }
 }
@@ -403,7 +408,7 @@ void loadState(docopt::Options& args, MetropolisMonteCarlo& simulation) {
             if (binary) {
                 const auto size = stream.tellg(); // get file size
                 std::vector<std::uint8_t> buffer(size / sizeof(std::uint8_t));
-                stream.seekg(0, stream.beg);             // go back to start...
+                stream.seekg(0, std::ifstream::beg);             // go back to start...
                 stream.read((char*)buffer.data(), size); // ...and read into buffer
                 j = json::from_ubjson(buffer);
             } else {
@@ -417,6 +422,15 @@ void loadState(docopt::Options& args, MetropolisMonteCarlo& simulation) {
     if (args["--positions"]) {
         const auto positionfile = Faunus::MPI::prefix + args["--positions"].asString();
         loadCoordinates(positionfile, simulation);
+    }
+}
+
+void prefaceActions(const json& input, Space& spc, Energy::Hamiltonian& hamiltonian) {
+    if (!input.is_array()) {
+        return;
+    }
+    for (auto& action : createActionList(input, spc)) {
+        action->operator()(spc, hamiltonian);
     }
 }
 

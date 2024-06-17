@@ -782,6 +782,7 @@ properties:
                             items: {type: string}
                             type: array
                         spread: {type: boolean}
+                        com: {type: boolean, default: true, description: "use mass-center distance threshold"}
                         analysis:
                             type: object
                             description: "Shape analysis"
@@ -940,10 +941,10 @@ properties:
                     properties:
                         nstep: {type: integer}
                         nskip: {type: integer, default: 0, description: Initial steps to skip}
-                        file: {type: string, description: "Stream of matrices with group properties"}
+                        file: {type: string, description: "Stream of matrices with group properties", pattern: "(.*?)\\.(mtx|mtx.gz)$"}
                         property:
                             type: string
-                            enum: [energy, com_distance]
+                            enum: [energy, com_distance, min_distance]
                             description: "Property to report"
                         filter:
                             type: string

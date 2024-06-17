@@ -65,7 +65,7 @@ bool ReactionValidator::canSwapAtoms(const ReactionData& reaction) const {
     namespace rv = ranges::cpp20::views;
     if (reaction.containsAtomicSwap()) {
         auto reactive_atoms = reaction.getReactants().first | rv::filter(ReactionData::not_implicit_atom);
-        for (const auto [atomid, number_to_swap] : reactive_atoms) {
+        for (const auto& [atomid, number_to_swap] : reactive_atoms) {
             auto particles = spc.findAtoms(atomid) | rv::take(number_to_swap);
             if (range_size(particles) != number_to_swap) {
                 return false;
@@ -457,7 +457,7 @@ void SpeciationMove::deactivateMolecularGroups(Change& change) {
     auto molecular_reactants = reaction->getReactants().second | rv::filter(ReactionData::not_implicit_group) |
                                rv::filter(nonzero_stoichiometric_coeff) | rv::filter(ReactionData::is_molecular_group);
 
-    for (const auto [molid, number_to_delete] : molecular_reactants) {
+    for (const auto& [molid, number_to_delete] : molecular_reactants) {
         auto groups = spc.findMolecules(molid, selection) | ranges::views::sample(number_to_delete, slump.engine) |
                       ranges::to<std::vector<std::reference_wrapper<Group>>>;
         std::for_each(groups.begin(), groups.end(), [&](auto& group) {
@@ -556,13 +556,13 @@ void SpeciationMove::_accept([[maybe_unused]] Change &change) {
     direction_ratio[reaction].update(reaction->getDirection(), true);
 
     auto implicit_reactants = reaction->getReactants().second | rv::filter(ReactionData::is_implicit_group);
-    for (const auto [molid, nu] : implicit_reactants) {
+    for (const auto& [molid, nu] : implicit_reactants) {
         spc.getImplicitReservoir()[molid] -= nu;
         average_reservoir_size[molid] += spc.getImplicitReservoir().at(molid);
     }
 
     auto implicit_products = reaction->getProducts().second | rv::filter(ReactionData::is_implicit_group);
-    for (const auto [molid, nu] : implicit_products) {
+    for (const auto& [molid, nu] : implicit_products) {
         spc.getImplicitReservoir()[molid] += nu;
         average_reservoir_size[molid] += spc.getImplicitReservoir().at(molid);
     }

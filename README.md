@@ -18,6 +18,7 @@ molecular systems. Below is a brief overview of features:
 - Anisotropic atoms (multipoles, sphero-cylinders, capped particles)
 - Speciation moves (pKa prediction, Hofmeister effects, general equilibrium reactions etc.)
 - Parallelise flat histogram method for sampling free energies along 1D/2D reaction coordinates
+- Support for Langevin dynamics
 - Highy modular
 - Free and open source
 
@@ -28,14 +29,13 @@ On macOS or Linux, install latest release using [conda](https://conda.io/minicon
 
     conda install -c conda-forge faunus
 
-Or [build development branch from source](https://faunus.readthedocs.io/en/latest/_docs/install.html#building-from-source-code).
+Or [build from source](https://faunus.readthedocs.io/en/latest/_docs/install.html#building-from-source-code).
 
 Documentation
 =============
 
-- [latest release](https://github.com/mlund/faunus/releases/latest)
-- [development branch](https://faunus.readthedocs.io/en/latest/?badge=latest)
-- installed version: type `faunus-manual`
+- [Online version](https://faunus.readthedocs.io/en/latest/?badge=latest)
+- Locally installed version: type `faunus-manual`
 
 Licence
 =======

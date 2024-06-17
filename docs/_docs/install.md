@@ -28,14 +28,17 @@ is not on Conda, consider an alternative method below.
 ## Docker
 
 We provide a [`Dockerfile`](https://github.com/mlund/faunus/blob/master/scripts/Dockerfile)
-that builds the main branch in a [Jupyter](https://jupyter.org) environment:
+that builds the main branch in a [Jupyter](https://jupyter.org) environment.
+The following downloads the Dockerfile; builds the image; and startup a JupyterLab
+session in Docker on port 8888:
 
 ~~~ bash
 curl -s https://raw.githubusercontent.com/mlund/faunus/master/scripts/Dockerfile | docker build -t faunuslab -
 docker run -it -p 8888:8888 faunuslab # open generated url in a browser
 ~~~
 
-Once running, you may alias the Docker-side faunus command:
+Once running, you may alias the Docker-side faunus command so that it can be accessed from
+the host side:
 
 ~~~ bash
 alias faunus='docker exec --interactive -u 1000 faunuslab faunus'
@@ -46,13 +49,13 @@ faunus < input.json # piping input to docker
 ## Build from source code
 
 Faunus is continuously [tested](https://app.travis-ci.com/github/mlund/faunus) on macOS/Linux,
-but compile on most unix operating systems, including the Windows Subsystem for Linus (WSL).
+but compile on most unix operating systems, including the Windows Subsystem for Linux (WSL).
 
 ### Requirements
 
 - CMake 3.16+
 - C++20 compiler (clang, g++, intel ixpc, ...)
-- Python 3.6+ with the following packages:
+- Python 3.7+ with the following packages:
   - `jinja2`, `ruamel_yaml` or `yaml`
 
 The following are optional:
@@ -72,7 +75,7 @@ and build using cmake:
 ~~~ bash
 cd faunus
 cmake . [OPTIONS]
-make faunus
+make faunus -j
 make usagetips # requires `pandoc`, `pypandoc`, `BeautifulSoup4`
 ~~~
 
@@ -147,18 +150,19 @@ make clean
 rm -fR CMakeCache.txt CMakeFiles _deps
 ~~~
 
-### Intel Threading Building Blocks
+### Intel Threading Building Blocks (TBB)
 
-If `ENABLE_TBB=on`, TBB may be used for threaded simulations which may or may not be
-advantageous, depending on the system.
-By default, an unspecified and possibly outdated version of TBB will be downloaded and build.
-Alternatively you can use an existing installation _via_ `TBB_DIR`:
+To use C++ parallel algorithms, some compilers require linkage with TBB.
+If so, an error may occur during linking.
+To fix this, install TBB with `apt`, `brew`, `conda` etc. and pass it
+to CMake like this:
 
 ~~~ bash
 cmake -DENABLE_TBB=on -DTBB_DIR={tbb-root}/lib/cmake/TBB
 ~~~
 
-where `{tbb-root}` is the installation directory of TBB, _e.g._ `/usr/local`.
+where `{tbb-root}` is the installation directory of TBB, _e.g._
+`/usr/local` or `/opt/homebrew`.
 
 # Development
 

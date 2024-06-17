@@ -299,6 +299,7 @@ Note that inactive groups are always excluded from the analysis.
 -------------- | ---------------------------------------
 `energy`       | Sum of nonbonded energy terms in (_kT_)
 `com_distance` | Mass center distance (Å)
+`min_distance` | Minimum distance between particles (Å)
 
 The data is streamed in the sparse [Matrix Market format](https://math.nist.gov/MatrixMarket/formats.html)
 and can be further reduced by applying an optional `filter` defined by an
@@ -313,7 +314,7 @@ analysis:
       molecules: [colloid]
       property: energy
       filter: "value < -1.0"
-      file: matrices.dat.gz
+      file: energies.mtx.gz
 ~~~
 
 The generated stream of sparse matrices can be loaded into Python
@@ -321,13 +322,23 @@ for further analysis of _e.g._ clustering:
 
 ~~~ python
 from itertools import groupby
+import gzip, numpy as np
 from scipy.io import mmread
 from io import StringIO
-import gzip
+from scipy.cluster.hierarchy import linkage, fcluster
+from scipy.spatial.distance import squareform
 
-with gzip.open('matrices.dat.gz', 'rt') as f:
-    for lines in (lines for frame, lines in groupby(f, lambda line: line != '\n') if frame):
-        pair_matrix = mmread(StringIO(''.join(lines))).todense()
+def iterateMarketFile(file_like):
+    ''' generator expression for iterating over Matrix Market file '''
+    return (mmread(StringIO(''.join(lines))).todense() for frame, lines in
+            groupby(file_like, lambda line: line != '\n') if frame)
+
+with gzip.open('distances.mtx.gz', 'rt') as f:
+    for matrix in iterateMarketFile(f):
+        Z = linkage(squareform(matrix), 'single')
+        cluster = fcluster(Z, 10.0, criterion='distance') # threshold = 10 Å
+        _, counts = np.unique(cluster, return_counts=True)
+        print(np.sort(counts)) # cluster size distribution
 ~~~
 
 ## Charge Properties

@@ -50,6 +50,8 @@ struct Change {
 
     std::vector<GroupChange> groups; //!< Touched groups by index in group vector
 
+    std::optional<std::pair<index_type, index_type>> singleParticleChange() const;
+
     //! List of moved groups (index)
     inline auto touchedGroupIndex() const { return ranges::cpp20::views::transform(groups, &GroupChange::group_index); }
 
@@ -100,7 +102,7 @@ class Space {
     std::map<MoleculeData::index_type, std::size_t> implicit_reservoir;
 
     std::vector<ChangeTrigger> changeTriggers; //!< Call when a Change object is applied (unused)
-    std::vector<SyncTrigger> onSyncTriggers;   //!< Call when two Space objects are synched (unused)
+    std::vector<SyncTrigger> onSyncTriggers; //!< Every element called after two Space objects are synched with `sync()`
 
   public:
     ParticleVector particles;                            //!< All particles are stored here!
@@ -177,6 +179,19 @@ class Space {
                       [&](Group& group) { group.updateMassCenter(geometry.getBoundaryFunc(), group.begin()->pos); });
     }
 
+    /**
+     * @brief This will make sure that the internal state is updated to reflect a change.
+     *
+     * Typically this is called after a modification of the system, e.g. a MC move and will update the following:
+     *
+     * - mass centers;
+     * - particle trackers
+     * - cell lists
+     *
+     * @todo Under construction and currently not in use
+     */
+    void updateInternalState(const Change& change);
+
     //! Iterable range of all particle positions
     auto positions() const {
         return ranges::cpp20::views::transform(particles, [](auto& particle) -> const Point& { return particle.pos; });
@@ -245,14 +260,14 @@ class Space {
      * @throw std::out_of_range if any particle in range does not belong to Space::particles
      */
     template <std::integral index_type = int> auto toIndices(const RequireParticles auto& particle_range) const {
-        return particle_range | ranges::cpp20::views::transform([&](const Particle& particle) {
-                   const auto index = std::addressof(particle) - std::addressof(particles.at(0));
-                   if (index < 0 || index >= particles.size()) {
-                       throw std::out_of_range("particle range outside Space");
-                   }
-                   return static_cast<index_type>(index);
-               }) |
-               ranges::to_vector;
+        auto to_index = [&](auto& particle) {
+            const auto index = std::addressof(particle) - std::addressof(particles.at(0));
+            if (index < 0 || index >= particles.size()) {
+                throw std::out_of_range("particle range outside Space");
+            }
+            return static_cast<index_type>(index);
+        };
+        return particle_range | ranges::cpp20::views::transform(to_index) | ranges::to_vector;
     }
 
     /**

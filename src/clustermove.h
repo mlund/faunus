@@ -89,6 +89,7 @@ void to_json(json &j, const ClusterShapeAnalysis &shape);
 class FindCluster {
   private:
     const Space& spc;
+    bool use_mass_center_threshold = true;   //!< use distance threshold between mass-centers instead of particles
     bool single_layer = false;               //!< stop cluster search after first layer of neighbors
     std::vector<std::string> molecule_names; //!< names of molecules to be considered
     std::vector<int> molids;                 //!< molecule id's of molecules to be considered (must be sorted!)

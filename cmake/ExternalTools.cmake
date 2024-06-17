@@ -5,23 +5,23 @@ include(FetchContent)
 # CPM Packages
 ###############
 
-CPMAddPackage("gh:gabime/spdlog@1.9.2")
-CPMAddPackage("gh:ericniebler/range-v3#d800a032132512a54c291ce55a2a43e0460591c7")
+CPMAddPackage("gh:gabime/spdlog@1.11.0")
+CPMAddPackage("gh:ericniebler/range-v3#0.12.0")
 CPMAddPackage("gh:docopt/docopt.cpp#v0.6.3")
-CPMAddPackage("gh:onqtam/doctest#2.4.6")
-CPMAddPackage("gh:mateidavid/zstr#v1.0.5")
-CPMAddPackage("gh:pybind/pybind11#v2.9.1")
+CPMAddPackage("gh:doctest/doctest#v2.4.9")
+CPMAddPackage("gh:mateidavid/zstr#v1.0.6")
+CPMAddPackage("gh:pybind/pybind11#v2.10.1")
 CPMAddPackage("gh:imneme/pcg-cpp#ffd522e7188bef30a00c74dc7eb9de5faff90092")
 CPMAddPackage("gh:ArashPartow/exprtk#93a9f44f99b910bfe07cd1e933371e83cea3841c")
 
 CPMAddPackage(
     NAME mpl GITHUB_REPOSITORY rabauke/mpl DOWNLOAD_ONLY YES
-    GIT_TAG afb2fd7525ecd43e5a52d5624f3a4998a4eac52c
+    GIT_TAG ff9512fc61195b6c7e643e234789b0b937d28ee3
 )
 
 CPMAddPackage(
-    NAME nlohmann_json VERSION 3.10.5
-    URL https://github.com/nlohmann/json/releases/download/v3.10.5/include.zip
+    NAME nlohmann_json VERSION 3.11.2
+    URL https://github.com/nlohmann/json/releases/download/v3.11.2/include.zip
     OPTIONS "JSON_BuildTests OFF"
 )
 
@@ -35,7 +35,7 @@ CPMAddPackage(
     OPTIONS "SKIP_PORTABILITY_TEST ON" "JUST_INSTALL_CEREAL ON"
 )
 
-CPMAddPackage("gh:pybind/pybind11_json#0.2.12")
+CPMAddPackage("gh:pybind/pybind11_json#0.2.13")
 
 
 ###################################
@@ -89,6 +89,7 @@ ExternalProject_Add(
     BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} progresstracker
     INSTALL_COMMAND ""
     LOG_DOWNLOAD ON
+    DOWNLOAD_EXTRACT_TIMESTAMP true
     URL https://github.com/mlund/progress-cpp/archive/74c33b1eb21417fef9e5fc2b02c7dbe1d533010c.zip
     URL_HASH SHA256=45e2e83a351d44fc1723aecdf1fbf7cee1afc5d44b7190128d8fd6b4437d15b4
 )
@@ -114,6 +115,7 @@ if(ENABLE_SID)
         INSTALL_COMMAND "" LOG_DOWNLOAD ON
         UPDATE_DISCONNECTED ON
         URL_MD5 b420c4c114e00a147c2c9a974249f0d4
+        DOWNLOAD_EXTRACT_TIMESTAMP true
         URL "https://github.com/mlund/cppsid/archive/v0.2.1.tar.gz")
     ExternalProject_Get_Property(project_cppsid binary_dir)
     ExternalProject_Get_Property(project_cppsid source_dir)
@@ -129,22 +131,8 @@ endif()
 
 option(ENABLE_TBB "Enable Intel TBB" off)
 if (ENABLE_TBB)
-    if (DEFINED TBB_DIR)
-        find_package(TBB REQUIRED COMPONENTS tbb)
-        target_link_libraries(project_options INTERFACE TBB::tbb)
-    else ()
-        FetchContent_Declare(
-            tbb URL https://github.com/wjakob/tbb/archive/9e219e24fe223b299783200f217e9d27790a87b0.tar.gz
-            URL_HASH MD5=9bccf5863c6deee08732e69fa3310675
-            )
-        if (NOT tbb_POPULATED)
-            FetchContent_Populate(tbb)
-            add_subdirectory(${tbb_SOURCE_DIR} ${tbb_BINARY_DIR})
-            set_target_properties(tbb_static PROPERTIES COMPILE_FLAGS "-w")
-            include_directories(SYSTEM ${tbb_SOURCE_DIR}/include)
-            target_link_libraries(project_options INTERFACE tbb_static)
-        endif ()
-    endif ()
+    find_package(TBB REQUIRED COMPONENTS tbb)
+    target_link_libraries(project_options INTERFACE TBB::tbb)
 endif ()
 
 ############
@@ -154,7 +142,7 @@ endif ()
 FetchContent_Declare(
     nanobench
     URL "https://github.com/martinus/nanobench/archive/v3.1.0.tar.gz"
-    URL_HASH MD5=e646fb61164a60921c1a1834fbca24bc)
+    URL_HASH MD5=e646fb61164a60921c1a1834fbca24bc DOWNLOAD_EXTRACT_TIMESTAMP true)
 FetchContent_GetProperties(nanobench)
 if(NOT nanobench_POPULATED)
     FetchContent_Populate(nanobench)
@@ -171,6 +159,7 @@ ExternalProject_Add(
     URL_HASH SHA256=a5530703fd07a5baadc9ba75d806fe0844d7b3da0e16f5adbb966660a1cd6828
     PATCH_COMMAND patch -p1 < ${CMAKE_SOURCE_DIR}/cmake/patches/xdrfile-01.patch
     BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} xdrfile-static
+    DOWNLOAD_EXTRACT_TIMESTAMP true
     UPDATE_DISCONNECTED ON
     CMAKE_ARGS -Wno-dev -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER} -DCMAKE_POSITION_INDEPENDENT_CODE=on
     LOG_DOWNLOAD ON INSTALL_COMMAND "")
@@ -191,7 +180,8 @@ set_target_properties(xdrfile PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 FetchContent_Declare(
     trompeloeil
     URL "https://github.com/rollbear/trompeloeil/archive/v41.tar.gz"
-    URL_HASH SHA256=48986b507497f027e4fa1144a08c2d0b6d81fb476fad024956f8104448ca9ad8)
+    DOWNLOAD_EXTRACT_TIMESTAMP true
+    URL_HASH SHA256=48986b507497f027e4fa1144a08c2d0b6d81fb476fad024956f8104448ca9ad8 DOWNLOAD_EXTRACT_TIMESTAMP true)
 FetchContent_GetProperties(trompeloeil)
 if(NOT trompeloeil_POPULATED)
     FetchContent_Populate(trompeloeil)
@@ -207,6 +197,7 @@ if (ENABLE_FREESASA)
             project_freesasa
             PREFIX "${CMAKE_CURRENT_BINARY_DIR}/_deps"
             LOG_DOWNLOAD ON
+            DOWNLOAD_EXTRACT_TIMESTAMP true
             URL https://github.com/mittinatten/freesasa/releases/download/2.0.3/freesasa-2.0.3.tar.gz
             URL_HASH SHA256=ba1d4f7e9dd51ae2452b5c3a80ac34039d51da4826dae1dbe173cd7a1d6aca94
             # -fPIC flag is needed to link with pyfaunus
@@ -230,7 +221,8 @@ endif ()
 FetchContent_Declare(
     coulombgalore
     URL https://github.com/mlund/coulombgalore/archive/4055f58538d781acccb2937ab4580855fcba31f8.tar.gz
-    URL_HASH MD5=922f0c5988c0f70c887d65b7cf2762ac)
+    URL_HASH MD5=922f0c5988c0f70c887d65b7cf2762ac
+    DOWNLOAD_EXTRACT_TIMESTAMP true)
 FetchContent_GetProperties(coulombgalore)
 if(NOT coulombgalore_POPULATED)
     FetchContent_Populate(coulombgalore)

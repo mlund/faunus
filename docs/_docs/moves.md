@@ -101,6 +101,7 @@ essentially for free as the energies are already known from the move.
 `dp`            | Translational displacement (Å)
 `single_layer=false` | If `true`, stop cluster-growth after one layer around centered molecule (experimental)
 `satellites`    | Subset of `molecules` that cannot be cluster centers
+`com=true`      | Use distance threshold between mass-centers instead of particles when finding clusters
 `com_shape=true`| Use mass centers for shape analysis instead of particle positions (affects analysis only)
 `analysis`      | See below
 
@@ -109,7 +110,8 @@ between mass centers.
 The `threshold` can be specified as a single distance or as a complete list of combinations, see example below.
 For simulations where small molecules cluster around large macro-molecules, it can be useful to use the `satellites`
 keyword which denotes a list of molecules that can be part of a cluster, but cannot be the cluster nucleus or
-starting point. All molecules listed in `satellites` must be part of `molecules`.
+starting point.
+All molecules listed in `satellites` must be part of `molecules`.
 A predefined axis of rotation can be specified as `dirrot`. For example, setting `dirrot` to [1,0,0], [0,1,0] or [0,0,1] 
 results in rotations about the $x-$, $y-$, or $z-$axis, respectively.
 

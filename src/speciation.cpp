@@ -255,7 +255,7 @@ MolecularGroupDeActivator::MolecularGroupDeActivator(Space& spc, Random& random,
 double MolecularGroupDeActivator::getBondEnergy(const Group& group) const {
     double energy = 0.0;
     if (apply_bond_bias) {
-        auto bonds = group.traits().bonds | ranges::views::transform(&Potential::BondData::clone);
+        auto bonds = group.traits().bonds | ranges::views::transform(&pairpotential::BondData::clone);
         ranges::cpp20::for_each(bonds, [&](auto bond) {
             bond->shiftIndices(spc.getFirstParticleIndex(group));
             bond->setEnergyFunction(spc.particles);
@@ -336,7 +336,7 @@ GroupDeActivator::ChangeAndBias AtomicGroupDeActivator::deactivate(Group& group,
 
 // ----------------------------------
 
-namespace Faunus::Move {
+namespace Faunus::move {
 
 void SpeciationMove::_to_json(json& j) const {
     direction_ratio.to_json(j);
@@ -586,7 +586,7 @@ void SpeciationMove::_reject([[maybe_unused]] Change& change) {
 }
 
 SpeciationMove::SpeciationMove(Space& spc, Space& old_spc, std::string_view name, std::string_view cite)
-    : MoveBase(spc, name, cite)
+    : Move(spc, name, cite)
     , random_internal(slump)
     , reaction_validator(spc) {
     molecular_group_bouncer = std::make_unique<Speciation::MolecularGroupDeActivator>(spc, random_internal, true);
@@ -598,4 +598,4 @@ SpeciationMove::SpeciationMove(Space& spc, Space& old_spc)
 
 void SpeciationMove::_from_json([[maybe_unused]] const json& j) {}
 
-} // namespace Faunus::Move
+} // namespace Faunus::move

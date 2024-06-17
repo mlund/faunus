@@ -105,10 +105,10 @@ inline double fanglscale(const double a, const Cigar& cigar) {
 
 // --------------------
 
-namespace Faunus::Potential {
+namespace Faunus::pairpotential {
 
 /** @brief Hard-sphere pair potential for spherocylinders */
-class HardSpheroCylinder : public PairPotentialBase {
+class HardSpheroCylinder : public PairPotential {
   public:
     double operator()(const Particle& particle1, const Particle& particle2, [[maybe_unused]] double d,
                       const Point& center_to_center_distance) const override {
@@ -134,8 +134,8 @@ class HardSpheroCylinder : public PairPotentialBase {
  * @tparam PatchPotential Pair potential between sphere and point on patch (isotropic)
  * @tparam CylinderPotential Pair potential between sphere and closest cylinder part (isotropic)
  */
-template <Potential::RequirePairPotential PatchPotential, Potential::RequirePairPotential CylinderPotential>
-class CigarWithSphere : public PairPotentialBase {
+template <pairpotential::RequirePairPotential PatchPotential, pairpotential::RequirePairPotential CylinderPotential>
+class CigarWithSphere : public PairPotential {
   private:
     PatchPotential patch_potential;       //!< Isotropic pair-potential between patches
     CylinderPotential cylinder_potential; //!< Isotropic pair-potential between non-patchy parts
@@ -203,8 +203,8 @@ class CigarWithSphere : public PairPotentialBase {
  * @tparam CylinderPotential Pair potential between closest cylinder parts (isotropic, e.g. WCA)
  * @todo Energy calculation badly needs refactoring!
  */
-template <Potential::RequirePairPotential PatchPotential, Potential::RequirePairPotential CylinderPotential>
-class CigarWithCigar : public PairPotentialBase {
+template <pairpotential::RequirePairPotential PatchPotential, pairpotential::RequirePairPotential CylinderPotential>
+class CigarWithCigar : public PairPotential {
   private:
     PatchPotential patch_potential;       //!< Isotropic pair-potential for patchy parts
     CylinderPotential cylinder_potential; //!< Isotropic pair-potential for cylindrical parts
@@ -243,9 +243,9 @@ class CigarWithCigar : public PairPotentialBase {
  * @tparam CylinderPotential Pair potential used for cylindrical path (isotropic, e.g. WCA)
  * @tparam CylinderPotential Pair potential used sphere-sphere interaction (isotropic, e.g. WCA)
  */
-template <Potential::RequirePairPotential PatchPotential, Potential::RequirePairPotential CylinderPotential,
-          Potential::RequirePairPotential SphereWithSphere = CylinderPotential>
-class CompleteCigarPotential : public PairPotentialBase {
+template <pairpotential::RequirePairPotential PatchPotential, pairpotential::RequirePairPotential CylinderPotential,
+          pairpotential::RequirePairPotential SphereWithSphere = CylinderPotential>
+class CompleteCigarPotential : public PairPotential {
   private:
     SphereWithSphere sphere_sphere;                                  // pair potential between spheres
     CigarWithCigar<PatchPotential, CylinderPotential> cigar_cigar;   // pair potential between cigars

@@ -3,7 +3,7 @@
 #include "geometry.h"
 #include "auxiliary.h"
 
-namespace Faunus::Potential {
+namespace Faunus::pairpotential {
 
 void to_json(Faunus::json& j, const std::shared_ptr<const BondData>& bond) { to_json(j, *bond); }
 
@@ -822,4 +822,4 @@ TEST_CASE("[Faunus] BondData") {
 }
 TEST_SUITE_END();
 
-} // namespace Faunus::Potential
+} // namespace Faunus::pairpotential

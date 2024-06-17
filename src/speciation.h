@@ -96,7 +96,7 @@ class ReactionDirectionRatio {
 
 } // end of namespace Faunus::Speciation
 
-namespace Faunus::Move {
+namespace Faunus::move {
 
 /**
  * @brief Generalised Grand Canonical Monte Carlo Move
@@ -118,7 +118,7 @@ namespace Faunus::Move {
  *
  * @todo Split atom-swap functionality to separate helper class
  */
-class SpeciationMove : public MoveBase {
+class SpeciationMove : public Move {
   private:
     using reaction_iterator = decltype(Faunus::reactions)::iterator;
     Random random_internal; //!< Private generator so as not to touch MoveBase::slump
@@ -155,4 +155,4 @@ class SpeciationMove : public MoveBase {
     double bias(Change& change, double old_energy, double new_energy) override;
 };
 
-} // namespace Faunus::Move
+} // namespace Faunus::move

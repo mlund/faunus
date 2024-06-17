@@ -587,7 +587,7 @@ void Ewald::force(std::vector<Point> &forces) {
  */
 void Ewald::setOldGroups(const Space::GroupVector& old_groups) { this->old_groups = &old_groups; }
 
-void Ewald::sync(Energybase* energybase, const Change& change) {
+void Ewald::sync(EnergyTerm* energybase, const Change& change) {
     if (auto* other = dynamic_cast<const Ewald*>(energybase)) {
         if (!old_groups && other->state == MonteCarloState::ACCEPTED) {
             setOldGroups(other->spc.groups);
@@ -1086,7 +1086,7 @@ void Hamiltonian::updateState(const Change& change) {
     std::for_each(energy_terms.begin(), energy_terms.end(), [&](auto& energy) { energy->updateState(change); });
 }
 
-void Hamiltonian::sync(Energybase* other_hamiltonian, const Change& change) {
+void Hamiltonian::sync(EnergyTerm* other_hamiltonian, const Change& change) {
     if (auto* other = dynamic_cast<Hamiltonian*>(other_hamiltonian)) {
         if (other->size() == size()) {
             latest_energies = other->latestEnergies();
@@ -1111,8 +1111,8 @@ void Hamiltonian::sync(Energybase* other_hamiltonian, const Change& change) {
  *
  * New energy terms should be added to the if-else chain in the function
  */
-std::unique_ptr<Energybase> Hamiltonian::createEnergy(Space& spc, const std::string& name, const json& j) {
-    using namespace Potential;
+std::unique_ptr<EnergyTerm> Hamiltonian::createEnergy(Space& spc, const std::string& name, const json& j) {
+    using namespace pairpotential;
     using CoulombLJ = CombinedPairPotential<NewCoulombGalore, LennardJones>;
     using CoulombWCA = CombinedPairPotential<NewCoulombGalore, WeeksChandlerAndersen>;
     using PrimitiveModelWCA = CombinedPairPotential<Coulomb, WeeksChandlerAndersen>;
@@ -1129,15 +1129,15 @@ std::unique_ptr<Energybase> Hamiltonian::createEnergy(Space& spc, const std::str
             return std::make_unique<NonbondedCached<PairEnergy<CoulombLJ, false>, PairingPolicy>>(j, spc, *this);
         }
         if (name == "nonbonded_splined") {
-            return std::make_unique<Nonbonded<PairEnergy<Potential::SplinedPotential, false>, PairingPolicy>>(j, spc,
+            return std::make_unique<Nonbonded<PairEnergy<pairpotential::SplinedPotential, false>, PairingPolicy>>(j, spc,
                                                                                                               *this);
         }
         if (name == "nonbonded" || name == "nonbonded_exact") {
-            return std::make_unique<Nonbonded<PairEnergy<Potential::FunctorPotential, true>, PairingPolicy>>(j, spc,
+            return std::make_unique<Nonbonded<PairEnergy<pairpotential::FunctorPotential, true>, PairingPolicy>>(j, spc,
                                                                                                              *this);
         }
         if (name == "nonbonded_cached") {
-            return std::make_unique<NonbondedCached<PairEnergy<Potential::SplinedPotential>, PairingPolicy>>(j, spc,
+            return std::make_unique<NonbondedCached<PairEnergy<pairpotential::SplinedPotential>, PairingPolicy>>(j, spc,
                                                                                                              *this);
         }
         if (name == "nonbonded_coulombwca") {
@@ -1256,7 +1256,7 @@ double FreeSASAEnergy::energy(const Change& change) {
     return energy;
 }
 
-void FreeSASAEnergy::sync(Energybase* energybase_ptr, const Change& change) {
+void FreeSASAEnergy::sync(EnergyTerm* energybase_ptr, const Change& change) {
     // since the full SASA is calculated in each energy evaluation, this is
     // currently not needed.
     if (auto* other = dynamic_cast<FreeSASAEnergy*>(energybase_ptr); other != nullptr) {
@@ -1430,7 +1430,7 @@ double SASAEnergyReference::energy(const Change& change) {
     return energy;
 }
 
-void SASAEnergyReference::sync(Energybase* energybase_ptr, const Change& change) {
+void SASAEnergyReference::sync(EnergyTerm* energybase_ptr, const Change& change) {
     if (auto* other = dynamic_cast<SASAEnergyReference*>(energybase_ptr)) {
         areas = other->areas;
         if (sasa->needs_syncing) {
@@ -1529,7 +1529,7 @@ double SASAEnergy::energy(const Change& change) {
     return energy;
 }
 
-void SASAEnergy::sync(Energybase* energybase_ptr, const Change& change) {
+void SASAEnergy::sync(EnergyTerm* energybase_ptr, const Change& change) {
     if (auto* other = dynamic_cast<SASAEnergy*>(energybase_ptr)) {
         const auto sync_data = [this, other](const size_t changed_index) {
             this->current_neighbours.at(changed_index) = other->current_neighbours.at(changed_index);
@@ -1880,7 +1880,7 @@ MetalSlitEwald::MetalSlitEwald(const json& j, const Space& spc)
 
     auto jcopy = j;
     jcopy["type"] = "ewald";
-    auto coulomb_galore = Potential::NewCoulombGalore();
+    auto coulomb_galore = pairpotential::NewCoulombGalore();
     from_json(jcopy, coulomb_galore);
     pair_potential = coulomb_galore.getCoulombGalore();
 
@@ -2000,9 +2000,15 @@ CustomGroupGroup::CustomGroupGroup(const json& j, const Space& spc)
     : spc(spc)
     , json_input_backup(j) {
     name = "custom-groupgroup";
-    molid1 = findMoleculeByName(j.at("name1").get<std::string>()).id();
-    molid2 = findMoleculeByName(j.at("name2").get<std::string>()).id();
-    std::string function = j.at("function");
+
+    const auto& molecule1 = findMoleculeByName(j.at("name1").get<std::string>());
+    const auto& molecule2 = findMoleculeByName(j.at("name2").get<std::string>());
+    if (molecule1.isAtomic() | molecule2.isAtomic()) {
+        throw ConfigurationError("molecular groups required");
+    }
+    molid1 = molecule1.id();
+    molid2 = molecule2.id();
+
     auto& constants = json_input_backup["constants"];
     if (constants == nullptr) {
         constants = json::object();
@@ -2021,14 +2027,14 @@ CustomGroupGroup::CustomGroupGroup(const json& j, const Space& spc)
 double CustomGroupGroup::energy([[maybe_unused]] const Change& change) {
     // matches active groups with either molid1 or molid2
     auto match_groups = [&](const auto& group) -> bool {
-        return group.isFull() & (group.id == molid1 | group.id == molid2);
+        return group.isFull() & ((group.id == molid1) | (group.id == molid2));
     };
 
     auto group_group_energy = [&](auto index1, auto index2) -> double {
         const Group& group1 = spc.groups[index1];
         const Group& group2 = spc.groups[index2];
-        if ((group1.id == molid1 & group2.id == molid2) | (group1.id == molid2 & group2.id == molid1)) {
-            setExprParameters(group1, group2);
+        if (((group1.id == molid1) & (group2.id == molid2)) | ((group1.id == molid2) & (group2.id == molid1))) {
+            setParameters(group1, group2);
             return expr->operator()();
         }
         return 0.0;
@@ -2042,7 +2048,7 @@ double CustomGroupGroup::energy([[maybe_unused]] const Change& change) {
     return for_each_unique_pair(indices.begin(), indices.end(), group_group_energy, std::plus<double>());
 }
 
-void CustomGroupGroup::setExprParameters(const Group& group1, const Group& group2) {
+void CustomGroupGroup::setParameters(const Group& group1, const Group& group2) {
     auto& mean_charge1 = mean_charges[group1.id];
     auto& mean_charge2 = mean_charges[group2.id];
     mean_charge1 += monopoleMoment(group1.begin(), group1.end());

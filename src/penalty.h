@@ -14,7 +14,7 @@ namespace Faunus::Energy {
  * same in both the trial and old state energies it will not affect
  * MC move acceptance.
  */
-class Penalty : public Energybase {
+class Penalty : public EnergyTerm {
   private:
     const Space& spc;
     std::string penalty_function_filename;
@@ -49,7 +49,7 @@ class Penalty : public Energybase {
     Penalty(const json& j, const Space& spc);
     virtual ~Penalty(); //!< destruct and save to disk (!)
     double energy(const Change& change) override;
-    void sync(Energybase* other, const Change& change) override;
+    void sync(EnergyTerm* other, const Change& change) override;
     void streamPenaltyFunction(std::ostream &stream) const;
     void streamHistogram(std::ostream &stream) const;
 };

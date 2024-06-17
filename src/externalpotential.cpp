@@ -10,25 +10,25 @@ namespace Faunus::Energy {
 
 // ------------ Energybase -------------
 
-void Energybase::to_json(json &) const {}
+void EnergyTerm::to_json(json&) const {}
 
 /**
  * @param other_energy Other energy instance to copy data from
  * @param change Describes the difference with the other energy term
  */
-void Energybase::sync([[maybe_unused]] Energybase* other_energy, [[maybe_unused]] const Change& change) {}
+void EnergyTerm::sync([[maybe_unused]] EnergyTerm* other_energy, [[maybe_unused]] const Change& change) {}
 
-void Energybase::init() {}
-void Energybase::force([[maybe_unused]] PointVector& forces) {}
+void EnergyTerm::init() {}
+void EnergyTerm::force([[maybe_unused]] PointVector& forces) {}
 
 /**
  * This should be called whenever the Space is modified (particles, volume, etc)
  * as some energy terms may depend on this. One example is Ewald summation that
  * needs to update k-vectors before calculating the energy.
  */
-void Energybase::updateState([[maybe_unused]] const Change& change) {}
+void EnergyTerm::updateState([[maybe_unused]] const Change& change) {}
 
-void to_json(json &j, const Energybase &base) {
+void to_json(json& j, const EnergyTerm& base) {
     assert(not base.name.empty());
     if (base.timer)
         j[base.name]["relative time"] = base.timer.result();
@@ -295,7 +295,7 @@ double ExternalAkesson::evalPotential(const double z, const double a) const {
            2 * z * (0.5 * pc::pi + std::asin((a2 * a2 - z2 * z2 - 2 * a2 * z2) / std::pow(a2 + z2, 2)));
 }
 
-void ExternalAkesson::sync(Energybase* source, const Change&) {
+void ExternalAkesson::sync(EnergyTerm* source, const Change&) {
     if (fixed_potential) {
         return;
     }

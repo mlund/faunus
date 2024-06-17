@@ -6,7 +6,7 @@
 #include <functional>
 
 /** Namespace for particle pair-potentials */
-namespace Faunus::Potential {
+namespace Faunus::pairpotential {
 
 //! type of a matrix containing pair potential coefficients
 using TPairMatrix = Eigen::MatrixXd;
@@ -105,9 +105,9 @@ class PairMixer {
  *       convenience as we in this way can register the self energy during processing
  *       of the pair potential input.
  */
-class PairPotentialBase {
+class PairPotential {
   private:
-    friend void from_json(const json&, PairPotentialBase&);
+    friend void from_json(const json&, PairPotential&);
 
   public:
     std::string name;      //!< unique name per polymorphic call; used in FunctorPotential::combinePairPotentials
@@ -116,7 +116,7 @@ class PairPotentialBase {
     std::function<double(const Particle&)> selfEnergy = nullptr; //!< self energy of particle (kT)
     virtual void to_json(json&) const = 0;
     virtual void from_json(const json&) = 0;
-    virtual ~PairPotentialBase() = default;
+    virtual ~PairPotential() = default;
 
     /**
      * @brief Force on particle a due to particle b
@@ -140,23 +140,23 @@ class PairPotentialBase {
                               const Point& b_towards_a) const = 0;
 
   protected:
-    explicit PairPotentialBase(const std::string& name = std::string(), const std::string& cite = std::string(),
-                               bool isotropic = true);
+    explicit PairPotential(const std::string& name = std::string(), const std::string& cite = std::string(),
+                           bool isotropic = true);
 };
 
-void to_json(json& j, const PairPotentialBase& base);   //!< Serialize any pair potential to json
-void from_json(const json& j, PairPotentialBase& base); //!< Serialize any pair potential from json
+void to_json(json& j, const PairPotential& base);   //!< Serialize any pair potential to json
+void from_json(const json& j, PairPotential& base); //!< Serialize any pair potential from json
 
 /**
  * Concept matching a particle pair potential derived from `Potential::PairPotentialBase`
  */
 template <class T>
-concept RequirePairPotential = std::derived_from<T, Potential::PairPotentialBase>;
+concept RequirePairPotential = std::derived_from<T, pairpotential::PairPotential>;
 
 /** @brief Convenience function to generate a pair potential initialized from JSON object */
 template <RequirePairPotential T> auto makePairPotential(const json& j) {
     T pair_potential;
-    Potential::from_json(j, pair_potential);
+    pairpotential::from_json(j, pair_potential);
     return pair_potential;
 }
 
@@ -167,7 +167,7 @@ template <RequirePairPotential T> auto makePairPotential(const json& j) {
  * The class and their descendants have now also a responsibility to create themselves from a json object
  * and store back. This is gradually becoming a complex task which shall be moved into other class.
  */
-class MixerPairPotentialBase : public PairPotentialBase {
+class MixerPairPotentialBase : public PairPotential {
   protected:
     CombinationRuleType combination_rule;
     std::shared_ptr<std::vector<CustomInteractionData>> custom_pairs =
@@ -191,11 +191,11 @@ class MixerPairPotentialBase : public PairPotentialBase {
  * This is the most efficient way to combining pair-potentials due
  * to the possibility for compile-time optimisation.
  */
-template <RequirePairPotential T1, RequirePairPotential T2> struct CombinedPairPotential : public PairPotentialBase {
+template <RequirePairPotential T1, RequirePairPotential T2> struct CombinedPairPotential : public PairPotential {
     T1 first;  //!< First pair potential of type T1
     T2 second; //!< Second pair potential of type T2
     explicit CombinedPairPotential(const std::string& name = "")
-        : PairPotentialBase(name){};
+        : PairPotential(name){};
     inline double operator()(const Particle& particle_a, const Particle& particle_b, const double squared_distance,
                              const Point& b_towards_a = {0, 0, 0}) const override {
         return first(particle_a, particle_b, squared_distance, b_towards_a) +
@@ -217,8 +217,8 @@ template <RequirePairPotential T1, RequirePairPotential T2> struct CombinedPairP
     } //!< Combine force
 
     void from_json(const json& j) override {
-        Faunus::Potential::from_json(j, first);
-        Faunus::Potential::from_json(j, second);
+        Faunus::pairpotential::from_json(j, first);
+        Faunus::pairpotential::from_json(j, second);
         name = first.name + "/" + second.name;
         if (first.selfEnergy or second.selfEnergy) { // combine self-energies
             selfEnergy = [u1 = first.selfEnergy, u2 = second.selfEnergy](const Particle& p) {

@@ -552,10 +552,10 @@ int cpsc_intersect(const Cigar& cigar1, const Cigar& cigar2, const Point& r_cm, 
 }
 } // namespace Faunus::SpheroCylinder
 
-namespace Faunus::Potential {
+namespace Faunus::pairpotential {
 
 HardSpheroCylinder::HardSpheroCylinder()
-    : PairPotentialBase("hardspherocylinder", "", false) {}
+    : PairPotential("hardspherocylinder", "", false) {}
 
 void HardSpheroCylinder::to_json([[maybe_unused]] json& j) const {}
 
@@ -567,7 +567,7 @@ void HardSpheroCylinder::from_json([[maybe_unused]] const json& j) {}
  * @param center_separation
  * @return
  */
-template <Potential::RequirePairPotential PatchPotential, Potential::RequirePairPotential CylinderPotential>
+template <pairpotential::RequirePairPotential PatchPotential, pairpotential::RequirePairPotential CylinderPotential>
 double CigarWithCigar<PatchPotential, CylinderPotential>::patchyPatchyEnergy(
     const Particle& particle1, const Particle& particle2,
     const Point& center_separation) const { // patchy sc with patchy sc
@@ -652,7 +652,7 @@ double CigarWithCigar<PatchPotential, CylinderPotential>::patchyPatchyEnergy(
            cylinder_potential(particle1, particle2, rclose_squared, Point::Zero());
 }
 
-template <Potential::RequirePairPotential PatchPotential, Potential::RequirePairPotential CylinderPotential>
+template <pairpotential::RequirePairPotential PatchPotential, pairpotential::RequirePairPotential CylinderPotential>
 double CigarWithCigar<PatchPotential, CylinderPotential>::isotropicIsotropicEnergy(
     const Particle& particle1, const Particle& particle2,
     const Point& center_separation) const { // isotropic sc with isotropic sc
@@ -672,13 +672,13 @@ void CigarWithCigar<PatchPotential, CylinderPotential>::to_json(json& j) const {
 
 template <RequirePairPotential PatchPotential, RequirePairPotential CylinderPotential>
 void CigarWithCigar<PatchPotential, CylinderPotential>::from_json(const json& j) {
-    Potential::from_json(j, patch_potential);
-    Potential::from_json(j, cylinder_potential);
+    pairpotential::from_json(j, patch_potential);
+    pairpotential::from_json(j, cylinder_potential);
 }
 
 template <RequirePairPotential PatchPotential, RequirePairPotential CylinderPotential>
 CigarWithCigar<PatchPotential, CylinderPotential>::CigarWithCigar()
-    : PairPotentialBase("cigar-cigar", ""s, false) {}
+    : PairPotential("cigar-cigar", ""s, false) {}
 
 template class CigarWithCigar<CosAttractMixed, WeeksChandlerAndersen>; // explicit initialization
 
@@ -728,15 +728,15 @@ void CompleteCigarPotential<PatchPotential, CylinderPotential, SphereWithSphere>
 template <RequirePairPotential PatchPotential, RequirePairPotential CylinderPotential,
           RequirePairPotential SphereWithSphere>
 void CompleteCigarPotential<PatchPotential, CylinderPotential, SphereWithSphere>::from_json(const json& j) {
-    Potential::from_json(j, sphere_sphere);
-    Potential::from_json(j, cigar_cigar);
-    Potential::from_json(j, cigar_sphere);
+    pairpotential::from_json(j, sphere_sphere);
+    pairpotential::from_json(j, cigar_cigar);
+    pairpotential::from_json(j, cigar_sphere);
 }
 
 template <RequirePairPotential PatchPotential, RequirePairPotential CylinderPotential,
           RequirePairPotential SphereWithSphere>
 CompleteCigarPotential<PatchPotential, CylinderPotential, SphereWithSphere>::CompleteCigarPotential()
-    : PairPotentialBase("complete cigar", ""s, false) {}
+    : PairPotential("complete cigar", ""s, false) {}
 
 template class CompleteCigarPotential<CosAttractMixed, WeeksChandlerAndersen>; // explicit initialization
 
@@ -744,7 +744,7 @@ template class CompleteCigarPotential<CosAttractMixed, WeeksChandlerAndersen>; /
 
 template <RequirePairPotential PatchPotential, RequirePairPotential CylinderPotential>
 CigarWithSphere<PatchPotential, CylinderPotential>::CigarWithSphere()
-    : PairPotentialBase("cigar-sphere", ""s, false) {}
+    : PairPotential("cigar-sphere", ""s, false) {}
 
 template <RequirePairPotential PatchPotential, RequirePairPotential CylinderPotential>
 void CigarWithSphere<PatchPotential, CylinderPotential>::to_json(json& j) const {
@@ -754,8 +754,8 @@ void CigarWithSphere<PatchPotential, CylinderPotential>::to_json(json& j) const 
 
 template <RequirePairPotential PatchPotential, RequirePairPotential CylinderPotential>
 void CigarWithSphere<PatchPotential, CylinderPotential>::from_json(const json& j) {
-    Potential::from_json(j, patch_potential);
-    Potential::from_json(j, cylinder_potential);
+    pairpotential::from_json(j, patch_potential);
+    pairpotential::from_json(j, cylinder_potential);
 }
 
 template class CigarWithSphere<CosAttractMixed, WeeksChandlerAndersen>; // explicit initialization

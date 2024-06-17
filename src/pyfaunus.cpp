@@ -177,20 +177,20 @@ PYBIND11_MODULE(pyfaunus, m) {
     // --------- Pair Potentials ---------
 
     // Base
-    py::class_<Potential::PairPotentialBase>(m, "PairPotentialBase")
-        .def_readwrite("name", &Potential::PairPotentialBase::name)
-        .def_readwrite("cite", &Potential::PairPotentialBase::cite)
-        .def_readwrite("isotropic", &Potential::PairPotentialBase::isotropic)
-        .def_readwrite("selfEnergy", &Potential::PairPotentialBase::selfEnergy)
-        .def("force", &Potential::PairPotentialBase::force)
-        .def("energy", [](Potential::PairPotentialBase& pot, const Particle& a, const Particle& b, double r2,
+    py::class_<pairpotential::PairPotential>(m, "PairPotentialBase")
+        .def_readwrite("name", &pairpotential::PairPotential::name)
+        .def_readwrite("cite", &pairpotential::PairPotential::cite)
+        .def_readwrite("isotropic", &pairpotential::PairPotential::isotropic)
+        .def_readwrite("selfEnergy", &pairpotential::PairPotential::selfEnergy)
+        .def("force", &pairpotential::PairPotential::force)
+        .def("energy", [](pairpotential::PairPotential& pot, const Particle& a, const Particle& b, double r2,
                           const Point& r) { return pot(a, b, r2, r); });
 
     // Potentials::FunctorPotential
-    py::class_<Potential::FunctorPotential, Potential::PairPotentialBase>(m, "FunctorPotential")
+    py::class_<pairpotential::FunctorPotential, pairpotential::PairPotential>(m, "FunctorPotential")
         .def(py::init([](py::dict dict) {
-            auto pairpot = Potential::makePairPotential<Potential::FunctorPotential>(dict);
-            return std::make_unique<Potential::FunctorPotential>(pairpot);
+            auto pairpot = pairpotential::makePairPotential<pairpotential::FunctorPotential>(dict);
+            return std::make_unique<pairpotential::FunctorPotential>(pairpot);
         }));
 
     // Change::Data
@@ -241,30 +241,30 @@ PYBIND11_MODULE(pyfaunus, m) {
     }));
 
     // Analysisbase
-    py::class_<Analysis::Analysisbase>(m, "Analysisbase")
-        .def_readonly("name", &Analysis::Analysisbase::name)
-        .def_readwrite("cite", &Analysis::Analysisbase::cite)
-        .def("to_disk", &Analysis::Analysisbase::to_disk)
-        .def("sample", &Analysis::Analysisbase::sample)
-        .def("to_dict", [](Analysis::Analysisbase& self) {
+    py::class_<analysis::Analysis>(m, "Analysisbase")
+        .def_readonly("name", &analysis::Analysis::name)
+        .def_readwrite("cite", &analysis::Analysis::cite)
+        .def("to_disk", &analysis::Analysis::to_disk)
+        .def("sample", &analysis::Analysis::sample)
+        .def("to_dict", [](analysis::Analysis& self) {
             json j;
-            Analysis::to_json(j, self);
+            analysis::to_json(j, self);
             return py::dict(j);
         });
 
-    py::bind_vector<std::vector<std::shared_ptr<Analysis::Analysisbase>>>(m, "AnalysisVector");
+    py::bind_vector<std::vector<std::shared_ptr<analysis::Analysis>>>(m, "AnalysisVector");
 
     // CombinedAnalysis
-    py::class_<Analysis::CombinedAnalysis>(m, "Analysis")
+    py::class_<analysis::CombinedAnalysis>(m, "Analysis")
         .def(py::init([](Space& spc, Thamiltonian& pot, py::list list) {
-            return std::make_unique<Analysis::CombinedAnalysis>(list, spc, pot);
+            return std::make_unique<analysis::CombinedAnalysis>(list, spc, pot);
         }))
-        .def_readwrite("vector", &Analysis::CombinedAnalysis::vec)
+        .def_readwrite("vector", &analysis::CombinedAnalysis::vec)
         .def("to_dict",
-             [](Analysis::CombinedAnalysis& self) {
+             [](analysis::CombinedAnalysis& self) {
                  json j;
                  Faunus::to_json(j, self);
                  return py::dict(j);
              })
-        .def("sample", &Analysis::CombinedAnalysis::sample);
+        .def("sample", &analysis::CombinedAnalysis::sample);
 }

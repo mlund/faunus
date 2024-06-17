@@ -8,7 +8,7 @@
 
 namespace Faunus {
 
-namespace Potential {
+namespace pairpotential {
 struct BondData;
 }
 
@@ -210,13 +210,13 @@ class MoleculeData {
     double activity = 0.0;       //!< Chemical activity (mol/l)
 
     std::vector<AtomData::index_type> atoms; //!< Sequence of atoms in molecule (atom id's)
-    BasePointerVector<Potential::BondData> bonds;
+    BasePointerVector<pairpotential::BondData> bonds;
     WeightedDistribution<ParticleVector> conformations; //!< Conformations of molecule
     size_t numConformations() const;                    //!< Number of conformations
 
     MoleculeData();
     MoleculeData(const std::string& name, const ParticleVector& particles,
-                 const BasePointerVector<Potential::BondData>& bonds);
+                 const BasePointerVector<pairpotential::BondData>& bonds);
 
     bool isImplicit() const; //!< Is molecule implicit and explicitly absent from simulation cell?
     bool isPairExcluded(int i, int j) const;

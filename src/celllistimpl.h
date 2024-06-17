@@ -90,12 +90,13 @@ template <typename TGridType> struct AbstractNeighborGrid : public virtual Abstr
 /**
  * @brief A cell grid core class assuming fixed boundary conditions.
  *
- * The grid converts spatial coordinates to cell coordinates and cell coordinates to the scalar cell index. The grid
- * is designed for arbitrary number of dimensions.
+ * The grid converts spatial coordinates to cell coordinates and cell coordinates to the scalar cell
+ * index. The grid is designed for arbitrary number of dimensions.
  *
  * @tparam TGridType  a cell grid type declaration
  */
-template <typename TGridType> class GridBase : public virtual AbstractGrid<TGridType> {
+template <typename TGridType> class GridBase : public virtual AbstractGrid<TGridType>
+{
   public:
     using GridType = typename AbstractGrid<TGridType>::GridType;
     using typename GridType::CellCoord;
@@ -111,10 +112,12 @@ template <typename TGridType> class GridBase : public virtual AbstractGrid<TGrid
      * @param index
      * @return  cell coordinates
      */
-    CellCoord coordinates(const CellIndex index) const override {
+    CellCoord coordinates(const CellIndex index) const override
+    {
         assert(index < size());
-        return cell_index_to_coordinates.unaryExpr([index](const auto modulo) { return index % modulo; }) /
-               cell_coordinates_to_index;
+        return cell_index_to_coordinates.unaryExpr([index](const auto modulo) {
+            return index % modulo;
+        }) / cell_coordinates_to_index;
     }
 
     /**
@@ -122,7 +125,8 @@ template <typename TGridType> class GridBase : public virtual AbstractGrid<TGrid
      * @param coordinates  cell coordinates
      * @return  cell index
      */
-    CellIndex index(const CellCoord& coordinates) const override {
+    CellIndex index(const CellCoord& coordinates) const override
+    {
         assert(isCell(coordinates));
         return (coordinates * cell_coordinates_to_index).sum();
     }
@@ -135,7 +139,8 @@ template <typename TGridType> class GridBase : public virtual AbstractGrid<TGrid
      * @param position
      * @return  cell coordinates
      */
-    CellCoord coordinatesAt(const Point& position) const override {
+    CellCoord coordinatesAt(const Point& position) const override
+    {
         assert(isCellAt(position));
         return (position / cell).floor().template cast<CellIndex>();
     }
@@ -158,8 +163,10 @@ template <typename TGridType> class GridBase : public virtual AbstractGrid<TGrid
      * @param coordinates
      * @return  true if cell coordinates are valid, false otherwise
      */
-    bool isCell(const CellCoord& coordinates) const override {
-        return (coordinates < this->getCellListEnd()).all() && (coordinates >= CellCoord::Zero()).all();
+    bool isCell(const CellCoord& coordinates) const override
+    {
+        return (coordinates < this->getCellListEnd()).all() &&
+               (coordinates >= CellCoord::Zero()).all();
     }
 
     /**
@@ -170,7 +177,8 @@ template <typename TGridType> class GridBase : public virtual AbstractGrid<TGrid
      * @param point
      * @return  true if spatial coordinates are valid, false otherwise
      */
-    bool isCellAt(const Point& point) const override {
+    bool isCellAt(const Point& point) const override
+    {
         return (point < this->getBox()).all() && (point >= Point::Zero()).all();
     }
 
@@ -183,17 +191,22 @@ template <typename TGridType> class GridBase : public virtual AbstractGrid<TGrid
      * @param box  a box to be divided into cells, e.g., a simulation box
      * @param minimal_cell_dimension  minimal cell dimension, e.g., a cut off distance
      */
-    GridBase(const Point& box, SpaceAxis minimal_cell_dimension) : minimal_cell_dimension(minimal_cell_dimension) {
+    GridBase(const Point& box, SpaceAxis minimal_cell_dimension)
+        : minimal_cell_dimension(minimal_cell_dimension)
+    {
         updateCellGrid(box);
     }
 
   protected:
     const CellCoord& getCellListEnd() const { return cell_list_end; }
+
     const Point& getBox() const { return box; }
+
     const Point& getCell() const { return cell; }
 
   private:
-    CellCoord cell_list_end; //!< last adressable coordinates in each direction, i.e., (last_x+1, last_y+1, …)
+    CellCoord cell_list_end; //!< last adressable coordinates in each direction, i.e., (last_x+1,
+                             //!< last_y+1, …)
     SpaceAxis minimal_cell_dimension; //!< minimal cell dimension, e.g., a cut off distance
     Point box;                        //!< dimensions of covered cubic box
     Point cell;                       //!< current dimensions of the cell
@@ -201,15 +214,17 @@ template <typename TGridType> class GridBase : public virtual AbstractGrid<TGrid
     //! transformation from CDIM-dimension coordinates space to 1D index space; e.g., [1, i, i×j, …]
     //! index = (coordinates × cell_coordinates_to_index).sum()
     CellCoord cell_coordinates_to_index;
-    //! transformation from 1D index space to CDIM-dimension coordinates space, e.g. [i, i×j, i×j×k, …]
-    //! coordinates = ⌊ (index mod cell_index_to_coordinates) / cell_coordinates_to_index ⌋
+    //! transformation from 1D index space to CDIM-dimension coordinates space, e.g. [i, i×j, i×j×k,
+    //! …] coordinates = ⌊ (index mod cell_index_to_coordinates) / cell_coordinates_to_index ⌋
     CellCoord cell_index_to_coordinates;
 
     /**
-     * @brief Setup immutable parameters based on the box dimensions. To be called in constructors only.
+     * @brief Setup immutable parameters based on the box dimensions. To be called in constructors
+     * only.
      * @param new_box
      */
-    void updateCellGrid(const Point& new_box) {
+    void updateCellGrid(const Point& new_box)
+    {
         box = new_box;
         cell_list_end = (box / box.min(minimal_cell_dimension)).floor().template cast<CellIndex>();
         cell = box / cell_list_end.template cast<SpaceAxis>();
@@ -383,8 +398,8 @@ class PeriodicBoundaryGrid : public GridBase<TGridType>, virtual public Abstract
  * @tparam PBC  if periodic boundary condition shall be employed
  */
 template <bool PBC, class TGridType>
-using GridBoundary =
-    typename std::conditional<PBC, PeriodicBoundaryGrid<TGridType>, FixedBoundaryGrid<TGridType>>::type;
+using GridBoundary = typename std::conditional<PBC, PeriodicBoundaryGrid<TGridType>,
+                                               FixedBoundaryGrid<TGridType>>::type;
 /**
  * @brief Provides a 3D cell grid.
  * @tparam PBC  if periodic boundary condition shall be employed
@@ -410,18 +425,22 @@ namespace Container {
  * @tparam TMember  member (value)
  * @tparam TIndex  index (key); corresponds do the CellIndex of GridType
  */
-template <typename TMember, typename TIndex> class DenseContainer : virtual public AbstractContainer<TMember, TIndex> {
+template <typename TMember, typename TIndex>
+class DenseContainer : virtual public AbstractContainer<TMember, TIndex>
+{
   public:
     using ContainerType = AbstractContainer<TMember, TIndex>;
     using typename ContainerType::Index;
     using typename ContainerType::Members;
 
-    const Members& get(Index index) const override {
+    const Members& get(Index index) const override
+    {
         assert(index >= 0 && index < indexEnd());
         return container[index];
     }
 
-    Members& get(Index index) override {
+    Members& get(Index index) override
+    {
         assert(index >= 0 && index < indexEnd());
         return container[index];
     }
@@ -431,16 +450,19 @@ template <typename TMember, typename TIndex> class DenseContainer : virtual publ
     /**
      * @brief Return all cell indices that may contain members.
      *
-     * It is not guaranteed that all returned cells are non-empty though. However all non-empty cells are returned.
+     * It is not guaranteed that all returned cells are non-empty though. However all non-empty
+     * cells are returned.
      *
      * @return  vector of cell indices
      */
-    std::vector<Index> indices() const override {
+    std::vector<Index> indices() const override
+    {
         std::vector<Index> indices;
         indices.reserve(std::distance(container.begin(), container.end()));
         auto iterator = container.begin();
-        while ((iterator = std::find_if(iterator, container.end(),
-                                        [](const auto& members) { return !members.empty(); })) != container.end()) {
+        while ((iterator = std::find_if(iterator, container.end(), [](const auto& members) {
+                    return !members.empty();
+                })) != container.end()) {
             indices.push_back(std::distance(iterator, container.begin()));
             std::advance(iterator, 1);
         }
@@ -473,24 +495,32 @@ template <typename TMember, typename TIndex> class DenseContainer : virtual publ
  * @tparam TMember  member (value)
  * @tparam TIndex  index (key); corresponds do CellIndex of GridBase
  */
-template <typename TMember, typename TIndex> class SparseContainer : virtual public AbstractContainer<TMember, TIndex> {
+template <typename TMember, typename TIndex>
+class SparseContainer : virtual public AbstractContainer<TMember, TIndex>
+{
   public:
     using ContainerType = AbstractContainer<TMember, TIndex>;
     using typename ContainerType::Index;
     using typename ContainerType::Members;
 
-    const Members& get(Index index) const override {
+    const Members& get(Index index) const override
+    {
         assert(index >= 0 && index < indexEnd());
         try {
             return container.at(index);
-        } catch (std::out_of_range& e) { return empty_set; }
+        }
+        catch (std::out_of_range& e) {
+            return empty_set;
+        }
     }
 
-    Members& get(Index index) override {
+    Members& get(Index index) override
+    {
         assert(index >= 0 && index < indexEnd());
         try {
             return container.at(index);
-        } catch (std::out_of_range& e) {
+        }
+        catch (std::out_of_range& e) {
             [[maybe_unused]] auto [iterator, flag] = container.emplace(index, Members{});
             return iterator->second;
         }
@@ -505,7 +535,8 @@ template <typename TMember, typename TIndex> class SparseContainer : virtual pub
      *
      * @return  vector of cell indices
      */
-    std::vector<Index> indices() const override {
+    std::vector<Index> indices() const override
+    {
         std::vector<Index> indices;
         indices.reserve(std::distance(container.begin(), container.end()));
         std::transform(container.begin(), container.end(), back_inserter(indices),
@@ -513,14 +544,17 @@ template <typename TMember, typename TIndex> class SparseContainer : virtual pub
         return indices;
     }
 
-    explicit SparseContainer(std::size_t size) : index_end(size) {}
+    explicit SparseContainer(std::size_t size)
+        : index_end(size)
+    {
+    }
 
   protected:
     Index indexEnd() const { return index_end; }
 
   private:
-    Index index_end;                    //!< the lowest index not allowed to appear, i.e., the grid size
-    const Members empty_set;            //!< an empty set, e.g., for out of boundary conditions
+    Index index_end;         //!< the lowest index not allowed to appear, i.e., the grid size
+    const Members empty_set; //!< an empty set, e.g., for out of boundary conditions
     std::unordered_map<Index, Members> container; //!< container itself
 };
 
@@ -569,11 +603,14 @@ template <class TContainer> class Container : public TContainer {
  * @tparam TGrid
  */
 template <class TContainer, class TGrid>
-class CellListBase : protected TGrid,
-                     protected TContainer,
-                     virtual public AbstractImmutableCellList<ContainerTypeOf<TContainer>, GridTypeOf<TGrid>> {
+class CellListBase
+    : protected TGrid,
+      protected TContainer,
+      virtual public AbstractImmutableCellList<ContainerTypeOf<TContainer>, GridTypeOf<TGrid>>
+{
   public:
-    using AbstractCellList = AbstractImmutableCellList<ContainerTypeOf<TContainer>, GridTypeOf<TGrid>>;
+    using AbstractCellList =
+        AbstractImmutableCellList<ContainerTypeOf<TContainer>, GridTypeOf<TGrid>>;
     using Grid = TGrid;
     using Container = TContainer;
     using typename AbstractCellList::CellCoord; //!< grid (cell) coordinates type
@@ -587,19 +624,24 @@ class CellListBase : protected TGrid,
      * @param cell_coordinates
      * @return  vector of cell members
      */
-    const Members& getMembers(const CellCoord& cell_coordinates) override {
+    const Members& getMembers(const CellCoord& cell_coordinates) override
+    {
         return this->get(this->index(cell_coordinates));
     }
 
     /**
-     * @brief Get cell members at given offseted cell coordinates, or empty if offseted dcoordinates do not exist.
+     * @brief Get cell members at given offseted cell coordinates, or empty if offseted dcoordinates
+     * do not exist.
      * @param cell_coordinates
      * @return  vector of cell members or empty vector if cell does not exist
      */
-    const Members& getNeighborMembers(const CellCoord& cell_coordinates, const CellCoord& cell_offset) override {
+    const Members& getNeighborMembers(const CellCoord& cell_coordinates,
+                                      const CellCoord& cell_offset) override
+    {
         if (this->isNeighborCell(cell_coordinates, cell_offset)) {
             return getMembers(cell_coordinates + cell_offset);
-        } else {
+        }
+        else {
             return getEmpty();
         }
     }
@@ -607,10 +649,12 @@ class CellListBase : protected TGrid,
     /**
      * @return  range of containg coordinates of all possibly non-empty cells
      */
-    std::vector<CellCoord> getCells() const override {
+    std::vector<CellCoord> getCells() const override
+    {
         const auto indices = this->indices();
         return ranges::cpp20::views::all(indices) |
-               ranges::cpp20::views::transform([this](auto index) { return this->coordinates(index); }) |
+               ranges::cpp20::views::transform(
+                   [this](auto index) { return this->coordinates(index); }) |
                ranges::to_vector;
     }
 
@@ -632,7 +676,11 @@ class CellListBase : protected TGrid,
      *  @brief Construct an empty cell list from a grid.
      *  @param cell_grid
      */
-    explicit CellListBase(const TGrid& cell_grid) : Grid(cell_grid), Container(cell_grid.size()) {}
+    explicit CellListBase(const TGrid& cell_grid)
+        : Grid(cell_grid)
+        , Container(cell_grid.size())
+    {
+    }
 
     /**
      *  @brief Construct an empty cell list knowing a box dimension and minimal cell dimension.
@@ -640,7 +688,10 @@ class CellListBase : protected TGrid,
      *  @param cell_dimension  minimal length of the cell's edge
      */
     CellListBase(const typename TGrid::Point& box, const typename TGrid::SpaceAxis cell_dimension)
-        : Grid(box, cell_dimension), Container(Grid::size()) {}
+        : Grid(box, cell_dimension)
+        , Container(Grid::size())
+    {
+    }
 
   protected:
     //    const auto& getMembers(const CellIndex cell_index) const { return this->get(cell_index); }

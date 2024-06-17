@@ -561,6 +561,17 @@ properties:
                                             additionalProperties: false
                                         required: [range, resolution]
 
+                custom-groupgroup:
+                    description: "Custom group-group energy"
+                    type: object
+                    properties:
+                        constants: {type: object, description: User-defined constants}
+                        function: {type: string, description: Mathematical expression for the potential (units of kT)}
+                        name1: {type: string, description: "First molecule type"}
+                        name2: {type: string, description: "Second molecule type"}
+                    required: [function, name1, name2]
+                    additionalProperties: false
+
                 customexternal:
                     description: "External Custom Potential"
                     type: object

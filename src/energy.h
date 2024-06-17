@@ -1775,6 +1775,38 @@ class Example2D : public Energybase {
 };
 
 /**
+ * @brief Custom energy between pair of molecules
+ *
+ * For two different or equal molecule ids, this adds a user defined
+ * energy in a function given at run-time. In addition to physical
+ * constants, the following parameters are exposed:
+ * - "R" Mass center separation
+ * - "Z1" and "Z2" mean charges of the two molecules
+ */
+class CustomGroupGroup : public Energybase {
+  private:
+    const Space& spc;
+    MoleculeData::index_type molid1;
+    MoleculeData::index_type molid2;
+    std::map<MoleculeData::index_type, Average<double>> mean_charges;
+    std::unique_ptr<ExprFunction<double>> expr;
+    json json_input_backup; // initial json input
+    struct Properties {     // storage for particle properties
+        double mean_charge1 = 0;
+        double mean_charge2 = 0;
+        double mass_center_separation = 0;
+    };
+    Properties properties;
+
+    void to_json(json& j) const override;
+    void setExprParameters(const Group& group1, const Group& group2);
+
+  public:
+    CustomGroupGroup(const json& j, const Space& spc);
+    double energy(const Change& change) override;
+};
+
+/**
  * @brief Aggregate and sum energy terms
  */
 class Hamiltonian : public Energybase, public BasePointerVector<Energybase> {

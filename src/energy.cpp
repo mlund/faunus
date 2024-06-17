@@ -1164,6 +1164,9 @@ std::unique_ptr<Energybase> Hamiltonian::createEnergy(Space& spc, const std::str
         if (name == "constrain") {
             return std::make_unique<Constrain>(j, spc);
         }
+        if (name == "custom-groupgroup") {
+            return std::make_unique<CustomGroupGroup>(j, spc);
+        }
         if (name == "example2d") {
             return std::make_unique<Example2D>(j, spc);
         }
@@ -1761,8 +1764,6 @@ void EnergyAccumulatorBase::from_json(const json& j) {
 
 void EnergyAccumulatorBase::to_json(json& j) const { j["summation_policy"] = scheme; }
 
-// -----------------------------------------
-
 /*
 * The only difference from ordinary Ewald is that the reciprocal energy is divided by 2
 */
@@ -1994,5 +1995,66 @@ double MetalSlitEwald::singleParticleMirrorEnergy(const Particle& particle) cons
 
     return energy;
 }
+
+CustomGroupGroup::CustomGroupGroup(const json& j, const Space& spc)
+    : spc(spc)
+    , json_input_backup(j) {
+    name = "custom-groupgroup";
+    molid1 = findMoleculeByName(j.at("name1").get<std::string>()).id();
+    molid2 = findMoleculeByName(j.at("name2").get<std::string>()).id();
+    std::string function = j.at("function");
+    auto& constants = json_input_backup["constants"];
+    if (constants == nullptr) {
+        constants = json::object();
+    }
+    constants["e0"] = pc::vacuum_permittivity;
+    constants["kB"] = pc::boltzmann_constant;
+    constants["kT"] = pc::kT();
+    constants["Nav"] = pc::avogadro;
+    constants["T"] = pc::temperature;
+    expr = std::make_unique<ExprFunction<double>>();
+    expr->set(json_input_backup, {{"R", &properties.mass_center_separation},
+                                  {"Z1", &properties.mean_charge1},
+                                  {"Z2", &properties.mean_charge2}});
+}
+
+double CustomGroupGroup::energy([[maybe_unused]] const Change& change) {
+    // matches active groups with either molid1 or molid2
+    auto match_groups = [&](const auto& group) -> bool {
+        return group.isFull() & (group.id == molid1 | group.id == molid2);
+    };
+
+    auto group_group_energy = [&](auto index1, auto index2) -> double {
+        const Group& group1 = spc.groups[index1];
+        const Group& group2 = spc.groups[index2];
+        if ((group1.id == molid1 & group2.id == molid2) | (group1.id == molid2 & group2.id == molid1)) {
+            setExprParameters(group1, group2);
+            return expr->operator()();
+        }
+        return 0.0;
+    };
+
+    // all indices matching either molid1 or molid2
+    auto indices = spc.groups | ranges::cpp20::views::filter(match_groups) |
+                   ranges::cpp20::views::transform([&](const auto& group) { return spc.getGroupIndex(group); }) |
+                   ranges::to_vector;
+
+    return for_each_unique_pair(indices.begin(), indices.end(), group_group_energy, std::plus<double>());
+}
+
+void CustomGroupGroup::setExprParameters(const Group& group1, const Group& group2) {
+    auto& mean_charge1 = mean_charges[group1.id];
+    auto& mean_charge2 = mean_charges[group2.id];
+    mean_charge1 += monopoleMoment(group1.begin(), group1.end());
+    mean_charge2 += monopoleMoment(group2.begin(), group2.end());
+    properties.mean_charge1 = mean_charge1.avg();
+    properties.mean_charge2 = mean_charge2.avg();
+    properties.mass_center_separation = sqrt(spc.geometry.sqdist(group1.mass_center, group2.mass_center));
+}
+
+void CustomGroupGroup::to_json(json& j) const {
+    j = json_input_backup;
+    j["mean_charges"] = {{"Z1", mean_charges.at(molid1).avg()}, {"Z2", mean_charges.at(molid2).avg()}};
+};
 
 } // end of namespace Faunus::Energy

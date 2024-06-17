@@ -14,7 +14,8 @@ class XTCWriter;
 /**
  * @brief Performs a task or "action" on the system, typically before or after a simulation
  */
-struct SystemAction {
+struct SystemAction
+{
     virtual void operator()(Space& space, Energy::Hamiltonian& hamiltonian) = 0;
     virtual ~SystemAction() = default;
 };
@@ -26,11 +27,13 @@ struct SystemAction {
  * along with two quaternions that describe rotations from the initial
  * orientations. A trajectory with the poses can be optionally saved.
  */
-class AngularScan : public SystemAction {
+class AngularScan : public SystemAction
+{
     inline static const std::string name = "angular scan"; //!< Name used for logging
 
     /// @brief Helper class to analyse (free) energies
-    class EnergyAnalysis {
+    class EnergyAnalysis
+    {
         double partition_sum = 0;        //!< Partition function (per COM separation)
         double energy_sum = 0;           //!< Thermal energy sum for each COM separation run
         Average<double> mean_exp_energy; //!< Free energy
@@ -43,11 +46,14 @@ class AngularScan : public SystemAction {
     };
 
     /// @brief Helper class for store information about each of the two rigid bodies
-    struct Molecule {
-        Space::GroupVector::size_type index;                          //!< Group index in `Space::groups`
-        std::vector<Point> ref_positions;                             //!< Original reference positions of particles
-        void initialize(const Space::GroupVector& groups, int index); //!< Set molecule index and reset
-        ParticleVector getRotatedReference(const Space::GroupVector& groups, const Eigen::Quaterniond& q);
+    struct Molecule
+    {
+        Space::GroupVector::size_type index; //!< Group index in `Space::groups`
+        std::vector<Point> ref_positions;    //!< Original reference positions of particles
+        void initialize(const Space::GroupVector& groups,
+                        int index); //!< Set molecule index and reset
+        ParticleVector getRotatedReference(const Space::GroupVector& groups,
+                                           const Eigen::Quaterniond& q);
     };
 
     double zmin = 0;                //!< Minimum mass center separation (along z)
@@ -62,8 +68,8 @@ class AngularScan : public SystemAction {
     Geometry::TwobodyAngles angles;          //!< Helper class handling angular space
 
     /// Calculate energy and report to stream and trajectory
-    void report(const Group& group1, const Group& group2, const Eigen::Quaterniond& q1, const Eigen::Quaterniond& q2,
-                Energy::NonbondedBase& nonbonded);
+    void report(const Group& group1, const Group& group2, const Eigen::Quaterniond& q1,
+                const Eigen::Quaterniond& q2, Energy::NonbondedBase& nonbonded);
 
   public:
     AngularScan(const json& input, const Space& spc);
@@ -71,7 +77,8 @@ class AngularScan : public SystemAction {
 };
 
 /// @brief Create single action from JSON input
-std::unique_ptr<SystemAction> createAction(std::string_view name, const json& properties, Space& spc);
+std::unique_ptr<SystemAction> createAction(std::string_view name, const json& properties,
+                                           Space& spc);
 
 /// @brief Create vector of actions from JSON list input
 std::vector<std::unique_ptr<SystemAction>> createActionList(const json& input, Space& spc);

@@ -17,12 +17,14 @@ namespace Faunus {
  * @warning Untested for symmetric matrices with non-zero diagonal
  */
 template <typename SparseMatrixType>
-bool streamMarket(const SparseMatrixType& mat, std::ostream& out, bool symmetric = false) {
+bool streamMarket(const SparseMatrixType& mat, std::ostream& out, bool symmetric = false)
+{
     using Scalar = Eigen::SparseMatrix<double>::Scalar;
     if (!out) {
         return false;
     }
-    out << fmt::format("%%MatrixMarket matrix coordinate  {} {}\n", "real", symmetric ? "symmetric" : "general")
+    out << fmt::format("%%MatrixMarket matrix coordinate  {} {}\n", "real",
+                       symmetric ? "symmetric" : "general")
         << mat.rows() << " " << mat.cols() << " " << mat.nonZeros() / (symmetric ? 2 : 1) << "\n";
 
     for (int col = 0; col < mat.outerSize(); ++col) {

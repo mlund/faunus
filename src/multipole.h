@@ -14,7 +14,9 @@ namespace Faunus {
  * @param muB Unit dipole moment vector of particel B
  * @param r Direction \f$ r_A - r_B \f$
  */
-template <class Tvec> double q2mu(double QBxMuA, const Tvec &muA, double QAxMuB, const Tvec &muB, const Tvec &r) {
+template <class Tvec>
+double q2mu(double QBxMuA, const Tvec& muA, double QAxMuB, const Tvec& muB, const Tvec& r)
+{
     double r2i = 1 / r.squaredNorm(); // B = sol(dip), A = ch(charge)
     double r1i = sqrt(r2i);
     double r3i = r1i * r2i;
@@ -32,7 +34,9 @@ template <class Tvec> double q2mu(double QBxMuA, const Tvec &muA, double QAxMuB,
  * @param r Direction \f$ r_A - r_B \f$
  */
 template <class Tvec>
-double mu2mu(const Tvec &muA, const Tvec &muB, double muAxmuB, const Tvec &r, double a = 1.0, double b = 0.0) {
+double mu2mu(const Tvec& muA, const Tvec& muB, double muAxmuB, const Tvec& r, double a = 1.0,
+             double b = 0.0)
+{
 #ifdef FAU_APPROXMATH
     double r1i = invsqrtQuake(r.squaredNorm());
     double r2i = r1i * r1i;
@@ -54,7 +58,8 @@ double mu2mu(const Tvec &muA, const Tvec &muB, double muAxmuB, const Tvec &r, do
  * @param r Direction \f$ r_A - r_B \f$
  */
 template <class Tvec, class Tmat>
-double q2quad(double qA, const Tmat &quadB, double qB, const Tmat &quadA, const Tvec &r) {
+double q2quad(double qA, const Tmat& quadB, double qB, const Tmat& quadA, const Tvec& r)
+{
     double r2i = 1 / r.squaredNorm();
     double r1i = sqrt(r2i);
     double r3i = r1i * r2i;
@@ -72,9 +77,13 @@ namespace pairpotential {
  * @brief Returns the factorial of 'n'. Note that 'n' must be positive semidefinite.
  * @note Calculated at compile time and thus have no run-time overhead.
  */
-constexpr unsigned int factorial(unsigned int n) { return n <= 1 ? 1 : n * factorial(n - 1); }
+constexpr unsigned int factorial(unsigned int n)
+{
+    return n <= 1 ? 1 : n * factorial(n - 1);
+}
 
-TEST_CASE("[Faunus] Factorial") {
+TEST_CASE("[Faunus] Factorial")
+{
     CHECK(factorial(0) == 1);
     CHECK(factorial(1) == 1);
     CHECK(factorial(2) == 2);
@@ -84,9 +93,10 @@ TEST_CASE("[Faunus] Factorial") {
 
 /**
  * @brief Help-function for `sfQpotential` using order 3.
-*/
-inline void dipoleDipoleQ2Help_3(double &a3, double &b3, double q) {
-    double q2 = q*q;
+ */
+inline void dipoleDipoleQ2Help_3(double& a3, double& b3, double q)
+{
+    double q2 = q * q;
     constexpr double one_third = 1.0 / 3.0, two_third = 2.0 / 3.0, eight_third = 8.0 / 3.0;
     a3 = (((-5.0 * q2 + eight_third * q) * q + q) * q + one_third) * q2 + 1.0;
     b3 = -two_third * ((15.0 * q2 - 10.0 * q - 5.0) * q2 + 1.0) * q2;
@@ -94,43 +104,45 @@ inline void dipoleDipoleQ2Help_3(double &a3, double &b3, double q) {
 
 /**
  * @brief Help-function for `sfQpotential` using order 4.
-*/
-inline void dipoleDipoleQ2Help_4(double &a4, double &b4, double q) {
-    double q2 = q*q;
-    double q3 = q2*q;
-    a4 = ( ( (10.0 * q2 - 9.0 * q - 8.0 )*q3 + 10.0 )*q3 - 2.0 )*q - 1.0;
-    b4 = ( ( ( 21.0 * q2 - 16.0 * q - 35.0 / 3.0 )*q3 + 16.0 / 3.0 )*q3 + 1.0 / 3.0 )*q2 + 1.0;
+ */
+inline void dipoleDipoleQ2Help_4(double& a4, double& b4, double q)
+{
+    double q2 = q * q;
+    double q3 = q2 * q;
+    a4 = (((10.0 * q2 - 9.0 * q - 8.0) * q3 + 10.0) * q3 - 2.0) * q - 1.0;
+    b4 = (((21.0 * q2 - 16.0 * q - 35.0 / 3.0) * q3 + 16.0 / 3.0) * q3 + 1.0 / 3.0) * q2 + 1.0;
 }
 
 /**
-* @brief Help-function for `sfQ0potential`.
-*/
-inline double dipoleDipoleQ2Help(double q, int l=0, int P=300, bool a=true) {
-    if(q >= 1.0 - (1.0/2400.0))
+ * @brief Help-function for `sfQ0potential`.
+ */
+inline double dipoleDipoleQ2Help(double q, int l = 0, int P = 300, bool a = true)
+{
+    if (q >= 1.0 - (1.0 / 2400.0))
         return 0.0;
-    if(q <= (1.0/2400.0) && a)
+    if (q <= (1.0 / 2400.0) && a)
         return 1.0;
-    if(q <= (1.0/2400.0) && !a)
+    if (q <= (1.0 / 2400.0) && !a)
         return 0.0;
 
     double qP = 1.0; // Will end as q-Pochhammer Symbol, (q^l;q)_P
     double fac = Faunus::powi(q, l);
     double sum1 = 0.0, sum2 = 0.0, sum4 = 0.0;
 
-    for( int n = 1; n <= P; n++) {
+    for (int n = 1; n <= P; n++) {
         fac *= q; // q^(l+n)
         qP *= (1.0 - fac);
 
-        double tmp0 = (l+n)*fac/(1.0 - fac);
+        double tmp0 = (l + n) * fac / (1.0 - fac);
         sum2 += tmp0;
-        sum1 += tmp0*(fac + l + n - 1.0)/(1.0 - fac);
-        sum4 += tmp0*(4.0*fac + l + n - 4.0)/(1.0 - fac);
+        sum1 += tmp0 * (fac + l + n - 1.0) / (1.0 - fac);
+        sum4 += tmp0 * (4.0 * fac + l + n - 4.0) / (1.0 - fac);
     }
-    sum2 = sum2*sum2;
-    double ac = qP/3.0*(3.0 - sum4 + sum2);
-    double bc = qP/3.0*(sum2 - sum1);
+    sum2 = sum2 * sum2;
+    double ac = qP / 3.0 * (3.0 - sum4 + sum2);
+    double bc = qP / 3.0 * (sum2 - sum1);
 
-    if(a)
+    if (a)
         return ac;
     return bc;
 }
@@ -141,7 +153,8 @@ inline double dipoleDipoleQ2Help(double q, int l=0, int P=300, bool a=true) {
  * More information here: http://mathworld.wolfram.com/q-PochhammerSymbol.html
  * P = 300 gives an error of about 10^-17 for k < 4
  */
-inline double qPochhammerSymbol(double q, int k = 1, int P = 300) {
+inline double qPochhammerSymbol(double q, int k = 1, int P = 300)
+{
     double value = 1.0;
     double temp = Faunus::powi(q, k);
     for (int i = 0; i < P; i++) {
@@ -151,7 +164,8 @@ inline double qPochhammerSymbol(double q, int k = 1, int P = 300) {
     return value;
 }
 
-TEST_CASE("[Faunus] qPochhammerSymbol") {
+TEST_CASE("[Faunus] qPochhammerSymbol")
+{
     double q = 0.5;
     CHECK(qPochhammerSymbol(q, 0, 0) == 1);
     CHECK(qPochhammerSymbol(0, 0, 1) == 0);
@@ -167,8 +181,10 @@ TEST_CASE("[Faunus] qPochhammerSymbol") {
  * @param begin First particle
  * @param end Last particle
  */
-template <std::forward_iterator Titer> double monopoleMoment(Titer begin, Titer end) {
-    return std::accumulate(begin, end, 0.0, [](auto sum, auto& particle) { return sum + particle.charge; });
+template <std::forward_iterator Titer> double monopoleMoment(Titer begin, Titer end)
+{
+    return std::accumulate(begin, end, 0.0,
+                           [](auto sum, auto& particle) { return sum + particle.charge; });
 } //!< Calculates dipole moment vector for a set of particles
 
 /**
@@ -183,16 +199,17 @@ template <std::forward_iterator Titer> double monopoleMoment(Titer begin, Titer 
  */
 template <std::forward_iterator Titer, class BoundaryFunction = std::function<void(Point&)>>
 Point dipoleMoment(
-    Titer begin, Titer end, BoundaryFunction boundary = [](Point&) {}, const Point origin = {0, 0, 0},
-    double cutoff = pc::infty) {
+    Titer begin, Titer end, BoundaryFunction boundary = [](Point&) {},
+    const Point origin = {0, 0, 0}, double cutoff = pc::infty)
+{
     Point dipole_moment(0, 0, 0);
-    std::for_each(begin, end, [&](const Particle &particle) {
+    std::for_each(begin, end, [&](const Particle& particle) {
         Point position = particle.pos - origin;
         boundary(position); // at this stage, positions should be unwrapped
         if (position.squaredNorm() < cutoff * cutoff) {
             dipole_moment += position * particle.charge;
             if (particle.hasExtension()) {
-                const auto &extended_properties = particle.getExt();
+                const auto& extended_properties = particle.getExt();
                 dipole_moment += extended_properties.mu * extended_properties.mulen;
             }
         }
@@ -200,7 +217,8 @@ Point dipoleMoment(
     return dipole_moment;
 } //!< Calculates dipole moment vector
 
-TEST_CASE("[Faunus] dipoleMoment") {
+TEST_CASE("[Faunus] dipoleMoment")
+{
     using doctest::Approx;
     ParticleVector p(2);
     p[0].pos = {10, 20, 30};
@@ -208,16 +226,18 @@ TEST_CASE("[Faunus] dipoleMoment") {
     p[0].charge = -0.5;
     p[1].charge = 0.5;
 
-    SUBCASE("Neutral molecule") {
-        auto mu = dipoleMoment(p.begin(), p.end(), [](auto &) {}, {2, 3, 4}); // some origin
+    SUBCASE("Neutral molecule")
+    {
+        auto mu = dipoleMoment(p.begin(), p.end(), [](auto&) {}, {2, 3, 4}); // some origin
         CHECK(mu.squaredNorm() == Approx(10 * 10 + 10 * 10 + 30 * 30));
-        mu = dipoleMoment(p.begin(), p.end(), [](auto &) {}, {20, 30, 40}); // another origin
+        mu = dipoleMoment(p.begin(), p.end(), [](auto&) {}, {20, 30, 40}); // another origin
         CHECK(mu.squaredNorm() == Approx(10 * 10 + 10 * 10 + 30 * 30));
     }
 
-    SUBCASE("Charged molecule") {
+    SUBCASE("Charged molecule")
+    {
         p[0].charge *= -1.0; // give molecule a net charge
-        auto mu = dipoleMoment(p.begin(), p.end(), [](auto &) {}, {2, 3, 4});
+        auto mu = dipoleMoment(p.begin(), p.end(), [](auto&) {}, {2, 3, 4});
         CHECK(mu.x() == Approx(-2));
         CHECK(mu.y() == Approx(7));
         CHECK(mu.z() == Approx(-4));
@@ -234,8 +254,9 @@ TEST_CASE("[Faunus] dipoleMoment") {
  */
 template <std::forward_iterator Titer, class BoundaryFunction>
 Tensor quadrupoleMoment(
-    Titer begin, Titer end, BoundaryFunction boundary = [](const Point&) {}, Point origin = {0, 0, 0},
-    double cutoff = pc::infty) {
+    Titer begin, Titer end, BoundaryFunction boundary = [](const Point&) {},
+    Point origin = {0, 0, 0}, double cutoff = pc::infty)
+{
     Tensor theta;
     theta.setZero();
     for (auto it = begin; it != end; ++it) {
@@ -248,17 +269,18 @@ Tensor quadrupoleMoment(
     return 0.5 * theta;
 } //!< Calculates quadrupole moment tensor (with trace)
 
-TEST_CASE("[Faunus] quadrupoleMoment") {
+TEST_CASE("[Faunus] quadrupoleMoment")
+{
     using doctest::Approx;
     ParticleVector p(2);
     p[0].pos = {10, 20, 30};
     p[1].pos = {-10, 0, -30};
     p[0].charge = -0.5;
     p[1].charge = 0.3;
-    auto mu = quadrupoleMoment(p.begin(), p.end(), [](auto &) {}, {2, 3, 4});
+    auto mu = quadrupoleMoment(p.begin(), p.end(), [](auto&) {}, {2, 3, 4});
     CHECK(mu.trace() == Approx(-60.9));
     p[0].charge *= -1.0;
-    mu = quadrupoleMoment(p.begin(), p.end(), [](auto &) {}, {2, 3, 4});
+    mu = quadrupoleMoment(p.begin(), p.end(), [](auto&) {}, {2, 3, 4});
     CHECK(mu.trace() == Approx(453.6));
 }
 
@@ -269,12 +291,15 @@ TEST_CASE("[Faunus] quadrupoleMoment") {
  * @param cutoff Cut-off for included particles with regard to origin, default value is infinite
  */
 template <class Tgroup, class BoundaryFunction>
-auto toMultipole(const Tgroup &g, BoundaryFunction boundary = [](const Point &) {}, double cutoff = pc::infty) {
+auto toMultipole(
+    const Tgroup& g, BoundaryFunction boundary = [](const Point&) {}, double cutoff = pc::infty)
+{
     Particle m;
     m.pos = g.mass_center;
-    m.charge = Faunus::monopoleMoment(g.begin(), g.end());                                // monopole
-    m.getExt().mu = Faunus::dipoleMoment(g.begin(), g.end(), boundary, m.pos, cutoff);    // dipole
-    m.getExt().Q = Faunus::quadrupoleMoment(g.begin(), g.end(), boundary, m.pos, cutoff); // quadrupole
+    m.charge = Faunus::monopoleMoment(g.begin(), g.end());                             // monopole
+    m.getExt().mu = Faunus::dipoleMoment(g.begin(), g.end(), boundary, m.pos, cutoff); // dipole
+    m.getExt().Q =
+        Faunus::quadrupoleMoment(g.begin(), g.end(), boundary, m.pos, cutoff); // quadrupole
     m.getExt().mulen = m.getExt().mu.norm();
     if (m.getExt().mulen > 1e-9)
         m.getExt().mu.normalize();

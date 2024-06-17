@@ -1,15 +1,19 @@
 #include <doctest/doctest.h>
 #include "celllistimpl.h"
+
 namespace Faunus {
 namespace CellList {
 namespace Grid {
 
-GridOffsets3D::GridOffsets3D(CellIndex distance) : distance(distance) {
+GridOffsets3D::GridOffsets3D(CellIndex distance)
+    : distance(distance)
+{
     initNeighbors();
     initForwardNeighbors();
 }
 
-void GridOffsets3D::initNeighbors() {
+void GridOffsets3D::initNeighbors()
+{
     const auto number_of_neighbors = std::pow(1 + 2 * distance, 3) - 1;
     neighbors.clear();
     neighbors.reserve(number_of_neighbors);
@@ -26,20 +30,21 @@ void GridOffsets3D::initNeighbors() {
     assert(neighbors.size() == number_of_neighbors);
 }
 
-void GridOffsets3D::initForwardNeighbors() {
+void GridOffsets3D::initForwardNeighbors()
+{
     const auto forward_neighbors_count = neighbors.size() / 2;
     forward_neighbors.clear();
     forward_neighbors.reserve(forward_neighbors_count);
-    std::copy_if(neighbors.begin(), neighbors.end(), std::back_inserter(forward_neighbors), [](auto& offset) {
-        return (offset > CellCoord{0, 0, 0}).all();
-    });
+    std::copy_if(neighbors.begin(), neighbors.end(), std::back_inserter(forward_neighbors),
+                 [](auto& offset) { return (offset > CellCoord{0, 0, 0}).all(); });
     assert(forward_neighbors.size() == forward_neighbors_count);
 }
 
 /**
  * Tests
  */
-TEST_CASE("Grid3DFixed") {
+TEST_CASE("Grid3DFixed")
+{
     using TestGridBase = Grid3DFixed;
     using CellCoord = TestGridBase::CellCoord;
     TestGridBase grid({20., 30., 40.}, 1.5);
@@ -50,7 +55,8 @@ TEST_CASE("Grid3DFixed") {
 
     REQUIRE_EQ(grid.size(), end.prod());
 
-    SUBCASE("Cell coordinates are limited to [origin, last]") {
+    SUBCASE("Cell coordinates are limited to [origin, last]")
+    {
         CHECK(grid.isCell(first));
         CHECK_FALSE(grid.isCell(first - CellCoord{1, 0, 0}));
         CHECK_FALSE(grid.isCell(first - CellCoord{0, 1, 0}));
@@ -73,7 +79,8 @@ TEST_CASE("Grid3DFixed") {
         CHECK((grid.coordinates(grid.index(coord1)) == coord1).all());
         CHECK_NE(grid.index(coord1.reverse()), grid.index(coord1));
 
-        SUBCASE("Offsets cannot wrap around") {
+        SUBCASE("Offsets cannot wrap around")
+        {
             CHECK(grid.isNeighborCell(first, {0, 0, 0}));
             CHECK(grid.isNeighborCell(first, {0, 0, 1}));
             CHECK_FALSE(grid.isNeighborCell(first, {0, 0, -1}));
@@ -82,7 +89,8 @@ TEST_CASE("Grid3DFixed") {
             CHECK_FALSE(grid.isNeighborCell(last, {0, 0, 1}));
         }
 
-        SUBCASE("Spatial coordinates has to be inside the box") {
+        SUBCASE("Spatial coordinates has to be inside the box")
+        {
             CHECK(grid.isCellAt({0., 0., 0.}));
             CHECK(grid.isCellAt({1., 1., 1.}));
             CHECK(grid.isCellAt({19., 29., 39.}));
@@ -97,7 +105,8 @@ TEST_CASE("Grid3DFixed") {
     }
 }
 
-TEST_CASE("Grid3DPeriodic") {
+TEST_CASE("Grid3DPeriodic")
+{
     using TestGridBase = Grid3DPeriodic;
     using CellCoord = TestGridBase::CellCoord;
     TestGridBase grid({20., 30., 40.}, 1.5);
@@ -108,7 +117,8 @@ TEST_CASE("Grid3DPeriodic") {
 
     REQUIRE_EQ(grid.size(), end.prod());
 
-    SUBCASE("All cell coordinates are allowed") {
+    SUBCASE("All cell coordinates are allowed")
+    {
         CHECK(grid.isCell(first));
         CHECK(grid.isCell(first - CellCoord{1, 0, 0}));
         CHECK(grid.isCell(first - CellCoord{0, 1, 0}));
@@ -131,7 +141,8 @@ TEST_CASE("Grid3DPeriodic") {
         CHECK((grid.coordinates(grid.index(coord1)) == coord1).all());
         CHECK_NE(grid.index(coord1.reverse()), grid.index(coord1));
 
-        SUBCASE("Offsets wrap around, but not double around") {
+        SUBCASE("Offsets wrap around, but not double around")
+        {
             CHECK(grid.isNeighborCell(first, {0, 0, 0}));
             CHECK(grid.isNeighborCell(first, {0, 0, 1}));
             CHECK(grid.isNeighborCell(first, {0, 0, -1}));
@@ -143,7 +154,8 @@ TEST_CASE("Grid3DPeriodic") {
             CHECK_FALSE(grid.isNeighborCell(first, {0, 0, 1 + 200 / 15}));
         }
 
-        SUBCASE("Spatial coordinates wrap around the box") {
+        SUBCASE("Spatial coordinates wrap around the box")
+        {
             CHECK(grid.isCellAt({0., 0., 0.}));
             CHECK(grid.isCellAt({1., 1., 1.}));
             CHECK(grid.isCellAt({19., 29., 39.}));
@@ -164,27 +176,32 @@ TEST_CASE("Grid3DPeriodic") {
 
 namespace Container {
 TEST_CASE_TEMPLATE("Cell List Container", TContainer, Container<DenseContainer<int, int>>,
-                   Container<SparseContainer<int, int>>) {
+                   Container<SparseContainer<int, int>>)
+{
     const int max = 1000;
     const int cell_ndx = 20;
     TContainer container(max);
 
-    SUBCASE("Empty cell") {
+    SUBCASE("Empty cell")
+    {
         CHECK_EQ(container.indices().size(), 0);
         CHECK_EQ(container.get(cell_ndx).size(), 0);
 
-        SUBCASE("Add two elements to a single cell") {
+        SUBCASE("Add two elements to a single cell")
+        {
             container.insert(1, cell_ndx);
             container.insert(2, cell_ndx);
             CHECK_EQ(container.indices().size(), 1);
             CHECK_EQ(container.get(cell_ndx).size(), 2);
 
-            SUBCASE("Remove elements from the cell") {
+            SUBCASE("Remove elements from the cell")
+            {
                 container.erase(1, cell_ndx);
                 CHECK_EQ(container.get(cell_ndx).size(), 1);
             }
 
-            SUBCASE("Remove non-existing element") {
+            SUBCASE("Remove non-existing element")
+            {
                 container.erase(-1, cell_ndx);
                 CHECK_EQ(container.get(cell_ndx).size(), 2);
             }
@@ -193,24 +210,28 @@ TEST_CASE_TEMPLATE("Cell List Container", TContainer, Container<DenseContainer<i
 }
 } // namespace Container
 
-TEST_CASE("CellListReverseMap") {
+TEST_CASE("CellListReverseMap")
+{
     CellListReverseMap<CellListType<int, Grid::Grid3DFixed>> cell_list({10., 10., 10.}, 1.);
     using CellCoord = GridOf<decltype(cell_list)>::CellCoord;
     const CellCoord cell{2, 3, 2};
 
     REQUIRE_EQ(cell_list.getMembers(cell).size(), 0);
-    SUBCASE("when insert") {
+    SUBCASE("when insert")
+    {
         cell_list.addMember(10, cell);
         cell_list.addMember(11, cell);
         CHECK_EQ(cell_list.getMembers(cell).size(), 2);
-        SUBCASE("when removed") {
+        SUBCASE("when removed")
+        {
             cell_list.removeMember(10);
             CHECK_EQ(cell_list.getMembers(cell).size(), 1);
         }
     }
 }
 
-TEST_CASE("CellListSpatial") {
+TEST_CASE("CellListSpatial")
+{
     CellListSpatial<CellListType<int, Grid::Grid3DFixed>> cell_list({10., 10., 10.}, 1.);
     using CellCoord = GridOf<decltype(cell_list)>::CellCoord;
     using Point = GridOf<decltype(cell_list)>::Point;
@@ -218,18 +239,21 @@ TEST_CASE("CellListSpatial") {
     const CellCoord cell{2, 3, 2};
 
     REQUIRE_EQ(cell_list.getMembers(cell).size(), 0);
-    SUBCASE("when insert") {
+    SUBCASE("when insert")
+    {
         cell_list.insertMember(10, pos);
         cell_list.insertMember(11, pos);
         CHECK_EQ(cell_list.getMembers(cell).size(), 2);
-        SUBCASE("when removed") {
+        SUBCASE("when removed")
+        {
             cell_list.removeMember(10);
             CHECK_EQ(cell_list.getMembers(cell).size(), 1);
         }
     }
 }
 
-TEST_CASE("CellListDifference") {
+TEST_CASE("CellListDifference")
+{
     using CellList = CellListReverseMap<CellListType<int, Grid::Grid3DFixed, SortableCellList>>;
     CellList x({10., 10., 10.}, 1.);
     auto minuend = std::make_shared<CellList>(PointOf<CellList>{10., 10., 10.}, 1.);

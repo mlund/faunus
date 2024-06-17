@@ -39,7 +39,8 @@ extern std::string prefix;
  *
  * A global instance is available.
  */
-class Controller {
+class Controller
+{
   private:
     std::ofstream stream; //!< Redirect stdout to here for rank-based file output
   public:
@@ -57,8 +58,13 @@ extern Controller mpi;
 /** @brief Check if all random number generators are in sync */
 bool checkRandomEngineState(const mpl::communicator& comm, Random& random);
 
-enum class PartnerPolicy { ODDEVEN, INVALID }; //!< Policies for MPI partner search
-NLOHMANN_JSON_SERIALIZE_ENUM(PartnerPolicy, {{PartnerPolicy::INVALID, nullptr}, {PartnerPolicy::ODDEVEN, "oddeven"}})
+enum class PartnerPolicy
+{
+    ODDEVEN,
+    INVALID
+}; //!< Policies for MPI partner search
+NLOHMANN_JSON_SERIALIZE_ENUM(PartnerPolicy, {{PartnerPolicy::INVALID, nullptr},
+                                             {PartnerPolicy::ODDEVEN, "oddeven"}})
 
 /**
  * Base class for finding MPI partners
@@ -66,15 +72,18 @@ NLOHMANN_JSON_SERIALIZE_ENUM(PartnerPolicy, {{PartnerPolicy::INVALID, nullptr}, 
  * Finds pairs of MPI ranks for use with e.g. parallel tempering moves.
  * The partner rank is contained in `rank`
  */
-class Partner {
+class Partner
+{
   protected:
     static bool isValid(const mpl::communicator& mpi, int partner); //!< Is current partner valid?
   public:
     using PartnerPair = std::pair<int, int>; //!< Pair of partner MPI ranks
     const PartnerPolicy policy;              //!< Partner generation policy
     std::optional<int> rank = std::nullopt;  //!< Rank of partner MPI process if available
-    virtual bool generate(const mpl::communicator& mpi, Random& random) = 0; //!< Generate partner according to policy
-    PartnerPair getPair(const mpl::communicator& mpi) const;                 //!< Get ordered pair of current partners
+    virtual bool generate(const mpl::communicator& mpi,
+                          Random& random) = 0; //!< Generate partner according to policy
+    PartnerPair
+    getPair(const mpl::communicator& mpi) const; //!< Get ordered pair of current partners
     explicit Partner(PartnerPolicy policy);
     virtual ~Partner() = default;
 };
@@ -82,7 +91,8 @@ class Partner {
 /**
  * @brief Odd ranks pairs with neighboring even rank (left or right)
  */
-class OddEvenPartner : public Partner {
+class OddEvenPartner : public Partner
+{
   public:
     OddEvenPartner();
     bool generate(const mpl::communicator& mpi, Random& random) override;
@@ -101,7 +111,8 @@ std::unique_ptr<Partner> createMPIPartnerPolicy(PartnerPolicy policy);
  * This returns a pair with the first and last
  * item for the current rank.
  */
-template <class T = int> std::pair<T, T> splitEven(const mpl::communicator& communicator, T N) {
+template <class T = int> std::pair<T, T> splitEven(const mpl::communicator& communicator, T N)
+{
     static_assert(std::is_integral_v<T>());
     auto M = static_cast<T>(communicator.size());
     auto i = static_cast<T>(communicator.rank());
@@ -125,7 +136,8 @@ double reduceDouble(const mpl::communicator& communicator, double local);
  * continuous block of memory (std::vector<double>) for use with MPI
  * communication.
  */
-class ParticleBuffer {
+class ParticleBuffer
+{
   public:
     /**
      * @brief Particle information to be copied
@@ -134,24 +146,33 @@ class ParticleBuffer {
      * XYZQ -> positions, charge.
      * XYZQI -> positions, charge, atom id.
      */
-    enum class Format { XYZ, XYZQ, XYZQI, INVALID };
+    enum class Format
+    {
+        XYZ,
+        XYZQ,
+        XYZQI,
+        INVALID
+    };
 
   private:
     std::vector<double> buffer;
     using buffer_iterator = decltype(buffer)::iterator;
     Format format;
-    int packet_size = 0;                                                  //!< Number of doubles per particle
-    std::function<void(const Particle&, buffer_iterator&)> from_particle; //!< Copy particle -> buffer
-    std::function<void(buffer_iterator&, Particle&)> to_particle;         //!< Copy buffer -> particle
+    int packet_size = 0; //!< Number of doubles per particle
+    std::function<void(const Particle&, buffer_iterator&)>
+        from_particle;                                            //!< Copy particle -> buffer
+    std::function<void(buffer_iterator&, Particle&)> to_particle; //!< Copy buffer -> particle
 
   public:
     ParticleBuffer();
-    void setFormat(Format data_format);                 //!< Set format from case-insensitive string
-    Format getFormat() const;                           //!< Data format to send/receive - default is XYZQ
-    void copyToBuffer(const ParticleVector& particles); //!< Copy source particle vector to send buffer
-    void copyFromBuffer(ParticleVector& particles);     //!< Copy receive buffer to target particle vector
-    buffer_iterator begin();                            //!< Begin iterator to `buffer`
-    buffer_iterator end();                              //!< End iterator to `buffer`
+    void setFormat(Format data_format); //!< Set format from case-insensitive string
+    Format getFormat() const;           //!< Data format to send/receive - default is XYZQ
+    void
+    copyToBuffer(const ParticleVector& particles); //!< Copy source particle vector to send buffer
+    void
+    copyFromBuffer(ParticleVector& particles); //!< Copy receive buffer to target particle vector
+    buffer_iterator begin();                   //!< Begin iterator to `buffer`
+    buffer_iterator end();                     //!< End iterator to `buffer`
 };
 
 NLOHMANN_JSON_SERIALIZE_ENUM(ParticleBuffer::Format, {
@@ -175,12 +196,14 @@ bool exchangeVolume(const Controller& mpi, int partner_rank, Geometry::GeometryB
 /**
  * Helper class to exchange a range of particles between two MPI nodes
  */
-class ExchangeParticles {
+class ExchangeParticles
+{
   private:
     std::unique_ptr<ParticleVector> partner_particles; //!< Storage for recieved particles
     ParticleBuffer particle_buffer;                    //!< Class for serializing particles
   public:
-    const ParticleVector& operator()(const Controller& mpi, int partner_rank, const ParticleVector& particles);
+    const ParticleVector& operator()(const Controller& mpi, int partner_rank,
+                                     const ParticleVector& particles);
     void replace(const mpl::communicator& comm, int partner_rank, ParticleVector& particles);
     ParticleBuffer::Format getFormat() const;
     void setFormat(ParticleBuffer::Format format);
@@ -192,7 +215,9 @@ class ExchangeParticles {
  * @details Slave processes send histograms to the master. The master computes the
  * average and sends it back to the slaves. Ttable can be Table, Table2D or Table3D in auxiliary.h.
  */
-template <class Ttable> void avgTables(const mpl::communicator& communicator, Ttable& table, int& size) {
+template <class Ttable>
+void avgTables(const mpl::communicator& communicator, Ttable& table, int& size)
+{
     std::vector<double> send_buffer; // data to be sent
     std::vector<double> recv_buffer; // buffer for recieving data
     if (!mpi.isMaster()) {
@@ -200,14 +225,16 @@ template <class Ttable> void avgTables(const mpl::communicator& communicator, Tt
         recv_buffer.resize(send_buffer.size());
         const auto tag = mpl::tag_t(0);
         const auto layout = mpl::contiguous_layout<double>(send_buffer.size());
-        communicator.sendrecv(send_buffer.data(), layout, mpi.master_rank, tag, recv_buffer.data(), layout,
-                              mpi.master_rank, tag);
+        communicator.sendrecv(send_buffer.data(), layout, mpi.master_rank, tag, recv_buffer.data(),
+                              layout, mpi.master_rank, tag);
         table.buf2hist(recv_buffer);
-    } else {
+    }
+    else {
         send_buffer = table.hist2buf(size);
         recv_buffer.resize(size);
-        auto slaves = ranges::cpp20::views::iota(0, communicator.size()) |
-                      ranges::cpp20::views::filter([&](auto rank) { return rank != mpi.master_rank; });
+        auto slaves =
+            ranges::cpp20::views::iota(0, communicator.size()) |
+            ranges::cpp20::views::filter([&](auto rank) { return rank != mpi.master_rank; });
 
         ranges::cpp20::for_each(slaves, [&](auto rank) {
             communicator.recv(recv_buffer, rank);

@@ -10,13 +10,20 @@ namespace Faunus {
  */
 namespace Scatter {
 
-enum Algorithm { SIMD, EIGEN, GENERIC }; //!< Selections for math algorithms
+enum Algorithm
+{
+    SIMD,
+    EIGEN,
+    GENERIC
+}; //!< Selections for math algorithms
 
 /** @brief Form factor, `F(q)`, for a hard sphere of radius `R`.
  */
-template <std::floating_point T = float> class FormFactorSphere {
+template <std::floating_point T = float> class FormFactorSphere
+{
   private:
-    T j1(T x) const { // spherical Bessel function
+    T j1(T x) const
+    { // spherical Bessel function
         T xinv = 1 / x;
         return xinv * (sin(x) * xinv - cos(x));
     }
@@ -28,7 +35,8 @@ template <std::floating_point T = float> class FormFactorSphere {
      * @returns
      * @f$I(q)=\left [\frac{3}{(qR)^3}\left (\sin{qR}-qR\cos{qR}\right )\right ]^2@f$
      */
-    template <class Tparticle> T operator()(T q, const Tparticle &a) const {
+    template <class Tparticle> T operator()(T q, const Tparticle& a) const
+    {
         assert(q > 0 && a.radius > 0 && "Particle radius and q must be positive");
         T qR = q * a.radius;
         qR = 3. / (qR * qR * qR) * (sin(qR) - qR * cos(qR));
@@ -39,15 +47,16 @@ template <std::floating_point T = float> class FormFactorSphere {
 /**
  * @brief Unity form factor (q independent).
  */
-template <std::floating_point T = float> struct FormFactorUnity {
-    template <class Tparticle> T operator()(T, const Tparticle &) const { return 1; }
+template <std::floating_point T = float> struct FormFactorUnity
+{
+    template <class Tparticle> T operator()(T, const Tparticle&) const { return 1; }
 };
 
 /**
  * @brief Calculate scattering intensity, I(q), on a mesh using the Debye formula.
  *
- * It is important to note that distances should be calculated without periodicity and if molecules cross
- * periodic boundaries, these must be made whole before performing the analysis.
+ * It is important to note that distances should be calculated without periodicity and if molecules
+ * cross periodic boundaries, these must be made whole before performing the analysis.
  *
  * The JSON object is scanned for the following keywords:
  *
@@ -61,18 +70,20 @@ template <std::floating_point T = float> struct FormFactorUnity {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdouble-promotion"
 
-template <class Tformfactor, std::floating_point T = float> class DebyeFormula {
-    static constexpr T r_cutoff_infty = 1e9; //<! a cutoff distance in angstrom considered to be infinity
-    T q_mesh_min, q_mesh_max, q_mesh_step; //<! q_mesh parameters in inverse angstrom; used for inline lambda-functions
+template <class Tformfactor, std::floating_point T = float> class DebyeFormula
+{
+    static constexpr T r_cutoff_infty =
+        1e9; //<! a cutoff distance in angstrom considered to be infinity
+    T q_mesh_min, q_mesh_max,
+        q_mesh_step; //<! q_mesh parameters in inverse angstrom; used for inline lambda-functions
 
-    /**
-     * @param m mesh point index
-     * @return the scattering vector magnitude q at the mesh point m
-     */
-    #pragma omp declare simd uniform(this) linear(m:1)
-    inline T q_mesh(int m) {
-        return q_mesh_min + m * q_mesh_step;
-    }
+/**
+ * @param m mesh point index
+ * @return the scattering vector magnitude q at the mesh point m
+ */
+#pragma omp declare simd uniform(this) linear(m : 1)
+
+    inline T q_mesh(int m) { return q_mesh_min + m * q_mesh_step; }
 
     /**
      * @brief Initialize mesh for intensity and sampling.
@@ -80,7 +91,8 @@ template <class Tformfactor, std::floating_point T = float> class DebyeFormula {
      * @param q_max Maximum q-value to sample (1/A)
      * @param q_step Spacing between mesh points (1/A)
      */
-    void init_mesh(T q_min, T q_max, T q_step) {
+    void init_mesh(T q_min, T q_max, T q_step)
+    {
         if (q_step <= 0 || q_min <= 0 || q_max <= 0 || q_min > q_max ||
             q_step / q_max < 4 * std::numeric_limits<T>::epsilon()) {
             throw std::range_error("DebyeFormula: Invalid mesh parameters for q");
@@ -93,24 +105,30 @@ template <class Tformfactor, std::floating_point T = float> class DebyeFormula {
             const int q_resolution = numeric_cast<int>(1.0 + std::floor((q_max - q_min) / q_step));
             intensity.resize(q_resolution, 0.0);
             sampling.resize(q_resolution, 0.0);
-        } catch (std::overflow_error &e) {
+        }
+        catch (std::overflow_error& e) {
             throw std::range_error("DebyeFormula: Too many samples");
         }
     }
 
-    T r_cutoff;                   //!< cut-off distance for scattering contributions (angstrom)
-    Tformfactor form_factor;      //!< scattering from a single particle
-    std::vector<T> intensity;     //!< sampled average I(q)
-    std::vector<T> sampling;      //!< weighted number of samplings
+    T r_cutoff;               //!< cut-off distance for scattering contributions (angstrom)
+    Tformfactor form_factor;  //!< scattering from a single particle
+    std::vector<T> intensity; //!< sampled average I(q)
+    std::vector<T> sampling;  //!< weighted number of samplings
 
   public:
-    DebyeFormula(T q_min, T q_max, T q_step, T r_cutoff) : r_cutoff(r_cutoff) { init_mesh(q_min, q_max, q_step); };
+    DebyeFormula(T q_min, T q_max, T q_step, T r_cutoff)
+        : r_cutoff(r_cutoff)
+    {
+        init_mesh(q_min, q_max, q_step);
+    };
 
-    DebyeFormula(T q_min, T q_max, T q_step) : DebyeFormula(r_cutoff_infty, q_min, q_max, q_step) {};
+    DebyeFormula(T q_min, T q_max, T q_step)
+        : DebyeFormula(r_cutoff_infty, q_min, q_max, q_step) {};
 
-    explicit DebyeFormula(const json &j)
-        : DebyeFormula(j.at("qmin").get<double>(), j.at("qmax").get<double>(), j.at("dq").get<double>(),
-                       j.value("cutoff", r_cutoff_infty)){};
+    explicit DebyeFormula(const json& j)
+        : DebyeFormula(j.at("qmin").get<double>(), j.at("qmax").get<double>(),
+                       j.at("dq").get<double>(), j.value("cutoff", r_cutoff_infty)) {};
 
     /**
      * @brief Sample I(q) and add to average.
@@ -118,54 +136,62 @@ template <class Tformfactor, std::floating_point T = float> class DebyeFormula {
      * @param weight weight of sampled configuration in biased simulations
      * @param volume simulation volume (angstrom cubed) used only for cut-off correction
      *
-     * An isotropic correction is added beyond a given cut-off distance. For physics details see for example
+     * An isotropic correction is added beyond a given cut-off distance. For physics details see for
+     * example
      * @see https://debyer.readthedocs.org/en/latest/.
      *
-     * O(N^2) * O(M) complexity where N is the number of particles and M the number of mesh points. The quadratic
-     * complexity in N comes from the fact that the radial distribution function has to be computed.
-     * The current implementation supports OpenMP parallelization. Roughly half of the execution time is spend
-     * on computing sin values, e.g., in sinf_avx2.
+     * O(N^2) * O(M) complexity where N is the number of particles and M the number of mesh points.
+     * The quadratic complexity in N comes from the fact that the radial distribution function has
+     * to be computed. The current implementation supports OpenMP parallelization. Roughly half of
+     * the execution time is spend on computing sin values, e.g., in sinf_avx2.
      */
-    template <class Tpvec> void sample(const Tpvec &p, const T weight = 1, const T volume = -1) {
-        const int N = (int) p.size(); // number of particles
-        const int M = (int) intensity.size(); // number of mesh points
+    template <class Tpvec> void sample(const Tpvec& p, const T weight = 1, const T volume = -1)
+    {
+        const int N = (int)p.size();         // number of particles
+        const int M = (int)intensity.size(); // number of mesh points
         std::vector<T> intensity_sum(M, 0.0);
 
-        // Allow parallelization with a hand-written reduction of intensity_sum at the end.
-        // https://gcc.gnu.org/gcc-9/porting_to.html#ompdatasharing
-        // #pragma omp parallel default(none) shared(N, M) shared(geo, r_cutoff, p) shared(intensity_sum)
-        #pragma omp parallel default(shared) shared(intensity_sum)
+// Allow parallelization with a hand-written reduction of intensity_sum at the end.
+// https://gcc.gnu.org/gcc-9/porting_to.html#ompdatasharing
+// #pragma omp parallel default(none) shared(N, M) shared(geo, r_cutoff, p) shared(intensity_sum)
+#pragma omp parallel default(shared) shared(intensity_sum)
         {
             std::vector<T> intensity_sum_private(M, 0.0); // a temporal private intensity_sum
-            #pragma omp for schedule(dynamic)
+#pragma omp for schedule(dynamic)
             for (int i = 0; i < N - 1; ++i) {
                 for (int j = i + 1; j < N; ++j) {
-                    T r = T(Faunus::Geometry::Sphere::sqdist(p[i], p[j])); // the square root follows
+                    T r =
+                        T(Faunus::Geometry::Sphere::sqdist(p[i], p[j])); // the square root follows
                     if (r < r_cutoff * r_cutoff) {
                         r = std::sqrt(r);
-                        // Black magic: The q_mesh function must be inlineable otherwise the loop cannot be unrolled
-                        // using advanced SIMD instructions leading to a huge performance penalty (a factor of 4).
-                        // The unrolled loop uses a different sin implementation, which may be spotted when profiling.
-                        // TODO: Optimize also for other compilers than GCC by using a vector math library, e.g.,
+                        // Black magic: The q_mesh function must be inlineable otherwise the loop
+                        // cannot be unrolled using advanced SIMD instructions leading to a huge
+                        // performance penalty (a factor of 4). The unrolled loop uses a different
+                        // sin implementation, which may be spotted when profiling.
+                        // TODO: Optimize also for other compilers than GCC by using a vector math
+                        // library, e.g.,
                         // TODO: https://github.com/vectorclass/version2
-                        // #pragma GCC unroll 16 // for diagnostics, GCC issues warning when cannot unroll
+                        // #pragma GCC unroll 16 // for diagnostics, GCC issues warning when cannot
+                        // unroll
                         for (int m = 0; m < M; ++m) {
                             const T q = q_mesh(m);
-                            intensity_sum_private[m] +=
-                                form_factor(q, p[i]) * form_factor(q, p[j]) * std::sin(q * r) / (q * r);
+                            intensity_sum_private[m] += form_factor(q, p[i]) *
+                                                        form_factor(q, p[j]) * std::sin(q * r) /
+                                                        (q * r);
                         }
                     }
                 }
             }
-            // reduce intensity_sum_private into intensity_sum
-            #pragma omp critical
-            std::transform(intensity_sum.begin(), intensity_sum.end(), intensity_sum_private.begin(),
-                           intensity_sum.begin(), std::plus<T>());
+// reduce intensity_sum_private into intensity_sum
+#pragma omp critical
+            std::transform(intensity_sum.begin(), intensity_sum.end(),
+                           intensity_sum_private.begin(), intensity_sum.begin(), std::plus<T>());
         }
 
-        // https://gcc.gnu.org/gcc-9/porting_to.html#ompdatasharing
-        // #pragma omp parallel for default(none) shared(N, M, weight, volume) shared(p, r_cutoff, intensity_sum) shared(sampling, intensity)
-        #pragma omp parallel for shared(sampling, intensity)
+// https://gcc.gnu.org/gcc-9/porting_to.html#ompdatasharing
+// #pragma omp parallel for default(none) shared(N, M, weight, volume) shared(p, r_cutoff,
+// intensity_sum) shared(sampling, intensity)
+#pragma omp parallel for shared(sampling, intensity)
         for (int m = 0; m < M; ++m) {
             const T q = q_mesh(m);
             T intensity_self_sum = 0;
@@ -175,24 +201,24 @@ template <class Tformfactor, std::floating_point T = float> class DebyeFormula {
             T intensity_corr = 0;
             if (r_cutoff < r_cutoff_infty && volume > 0) {
                 intensity_corr = 4 * pc::pi * N / (volume * std::pow(q, 3)) *
-                         (q * r_cutoff * std::cos(q * r_cutoff) - std::sin(q * r_cutoff));
+                                 (q * r_cutoff * std::cos(q * r_cutoff) - std::sin(q * r_cutoff));
             }
             sampling[m] += weight;
-            intensity[m] += ((2 * intensity_sum[m] + intensity_self_sum) / N + intensity_corr) * weight;
+            intensity[m] +=
+                ((2 * intensity_sum[m] + intensity_self_sum) / N + intensity_corr) * weight;
         }
     }
 
     /**
      * @return a tuple of min, max, and step parameters of a q-mash
      */
-    auto getQMeshParameters() {
-        return std::make_tuple(q_mesh_min, q_mesh_max, q_mesh_step);
-    }
+    auto getQMeshParameters() { return std::make_tuple(q_mesh_min, q_mesh_max, q_mesh_step); }
 
     /**
      * @return a map containing q (key) and average intensity (value)
      */
-    auto getIntensity() {
+    auto getIntensity()
+    {
         std::map<T, T> averaged_intensity;
         for (size_t m = 0; m < intensity.size(); ++m) {
             const T average = intensity[m] / (sampling[m] != T(0.0) ? sampling[m] : T(1.0));
@@ -201,6 +227,7 @@ template <class Tformfactor, std::floating_point T = float> class DebyeFormula {
         return averaged_intensity;
     }
 };
+
 #pragma GCC diagnostic pop
 
 /**
@@ -208,19 +235,24 @@ template <class Tformfactor, std::floating_point T = float> class DebyeFormula {
  *
  * @tparam T float or double
  */
-template <std::floating_point T> class SamplingPolicy {
+template <std::floating_point T> class SamplingPolicy
+{
   public:
-    struct sampled_value {
+    struct sampled_value
+    {
         T value;
         T weight;
     };
+
     typedef std::map<T, sampled_value> TSampledValueMap;
+
   private:
     TSampledValueMap samples;
     const T precision = 10000.0; //!< precision of the key for better binning
 
   public:
-    std::map<T, T> getSampling() const {
+    std::map<T, T> getSampling() const
+    {
         std::map<T, T> average;
         for (auto [key, sample] : samples) {
             average.emplace(key, sample.value / sample.weight);
@@ -233,8 +265,10 @@ template <std::floating_point T> class SamplingPolicy {
      * @param value
      * @param weight
      */
-    void addSampling(T key_approx, T value, T weight = 1.0) {
-        const T key = std::round(key_approx * precision) / precision; // round |q| for better binning
+    void addSampling(T key_approx, T value, T weight = 1.0)
+    {
+        const T key =
+            std::round(key_approx * precision) / precision; // round |q| for better binning
         samples[key].value += value * weight;
         samples[key].weight += weight;
     }
@@ -253,8 +287,10 @@ template <std::floating_point T> class SamplingPolicy {
  *
  * For more information, see @see http://doi.org/d8zgw5 and @see http://doi.org/10.1063/1.449987.
  */
-template <typename T = double, Algorithm method = SIMD, typename TSamplingPolicy = SamplingPolicy<T>>
-class StructureFactorPBC : private TSamplingPolicy {
+template <typename T = double, Algorithm method = SIMD,
+          typename TSamplingPolicy = SamplingPolicy<T>>
+class StructureFactorPBC : private TSamplingPolicy
+{
     //! sample directions (h,k,l)
     const std::vector<Point> directions = {
         {1, 0, 0}, {0, 1, 0},  {0, 0, 1},                                      // 3 permutations
@@ -262,21 +298,28 @@ class StructureFactorPBC : private TSamplingPolicy {
         {1, 1, 1}, {-1, 1, 1}, {1, -1, 1}, {1, 1, -1}                          // 4 permutations
     };
 
-    const int p_max;  //!< multiples of q to be sampled
+    const int p_max; //!< multiples of q to be sampled
     using TSamplingPolicy::addSampling;
 
   public:
-    StructureFactorPBC(int q_multiplier) : p_max(q_multiplier){}
+    StructureFactorPBC(int q_multiplier)
+        : p_max(q_multiplier)
+    {
+    }
 
     /**
      * https://gcc.gnu.org/gcc-9/porting_to.html#ompdatasharing
-     * #pragma omp parallel for collapse(2) default(none) shared(directions, p_max, boxlength) shared(positions)
+     * #pragma omp parallel for collapse(2) default(none) shared(directions, p_max, boxlength)
+     * shared(positions)
      */
-    template <RequirePoints Tpositions> void sample(const Tpositions& positions, const Point& boxlength) {
+    template <RequirePoints Tpositions>
+    void sample(const Tpositions& positions, const Point& boxlength)
+    {
 #pragma omp parallel for collapse(2) default(shared)
-        for (size_t i = 0; i < directions.size(); ++i) {                                   // openmp req. tradional loop
-            for (int p = 1; p <= p_max; ++p) {                                             // loop over multiples of q
-                const Point q = 2.0 * pc::pi * p * directions[i].cwiseQuotient(boxlength); // scattering vector
+        for (size_t i = 0; i < directions.size(); ++i) { // openmp req. tradional loop
+            for (int p = 1; p <= p_max; ++p) {           // loop over multiples of q
+                const Point q =
+                    2.0 * pc::pi * p * directions[i].cwiseQuotient(boxlength); // scattering vector
                 const auto s_of_q = calculateStructureFactor(positions, q);
 #pragma omp critical // avoid race conditions when updating the map
                 addSampling(q.norm(), s_of_q, 1.0);
@@ -284,26 +327,34 @@ class StructureFactorPBC : private TSamplingPolicy {
         }
     }
 
-    template <RequirePoints Tpositions> T calculateStructureFactor(const Tpositions& positions, const Point& q) const {
+    template <RequirePoints Tpositions>
+    T calculateStructureFactor(const Tpositions& positions, const Point& q) const
+    {
         T sum_cos = 0.0;
         T sum_sin = 0.0;
         if constexpr (method == SIMD) {
             // When sine and cosine is computed in separate loops, sine and cosine SIMD
             // instructions may be used to get at least 4 times performance boost.
-            // Note January 2020: only GCC exploits this using libmvec library if --ffast-math is enabled.
+            // Note January 2020: only GCC exploits this using libmvec library if --ffast-math is
+            // enabled.
             auto dot_product = [q](const auto& pos) { return static_cast<T>(q.dot(pos)); };
-            auto qdotr = positions | ranges::cpp20::views::transform(dot_product) | ranges::to<std::vector>;
+            auto qdotr =
+                positions | ranges::cpp20::views::transform(dot_product) | ranges::to<std::vector>;
             std::for_each(qdotr.begin(), qdotr.end(), [&](auto qr) { sum_cos += cos(qr); });
             std::for_each(qdotr.begin(), qdotr.end(), [&](auto qr) { sum_sin += sin(qr); });
-        } else if constexpr (method == EIGEN) {
+        }
+        else if constexpr (method == EIGEN) {
             // Map is a Nx3 matrix facade into original positions (std::vector)
             using namespace Eigen;
             static_assert(std::is_same_v<Tpositions, std::vector<Point>>);
             auto qdotr =
-                (Map<MatrixXd, 0, Stride<1, 3>>((double*)positions.data(), positions.size(), 3) * q).array().eval();
+                (Map<MatrixXd, 0, Stride<1, 3>>((double*)positions.data(), positions.size(), 3) * q)
+                    .array()
+                    .eval();
             sum_cos = qdotr.cast<T>().cos().sum();
             sum_sin = qdotr.cast<T>().sin().sum();
-        } else if constexpr (method == GENERIC) {
+        }
+        else if constexpr (method == GENERIC) {
             for (const auto& r : positions) {
                 const auto qr = static_cast<T>(q.dot(r));
                 sum_cos += cos(qr); // sine and cosine in same loop obstructs
@@ -313,41 +364,49 @@ class StructureFactorPBC : private TSamplingPolicy {
         return std::norm(std::complex<T>(sum_cos, sum_sin)) / static_cast<T>(positions.size());
     }
 
-    int getQMultiplier() {
-        return p_max;
-    }
+    int getQMultiplier() { return p_max; }
 
     using TSamplingPolicy::getSampling;
 };
 
 /**
- * @brief Calculate structure factor using explicit q averaging in isotropic periodic boundary conditions (IPBC).
+ * @brief Calculate structure factor using explicit q averaging in isotropic periodic boundary
+ * conditions (IPBC).
  *
- * The sample directions reduce to 3 compared to 13 in regular periodic boundary conditions. Overall simplification
- * shall yield roughly 10 times faster computation.
+ * The sample directions reduce to 3 compared to 13 in regular periodic boundary conditions. Overall
+ * simplification shall yield roughly 10 times faster computation.
  */
 template <std::floating_point T = float, typename TSamplingPolicy = SamplingPolicy<T>>
-class StructureFactorIPBC : private TSamplingPolicy {
+class StructureFactorIPBC : private TSamplingPolicy
+{
     //! Sample directions (h,k,l).
     //! Due to the symmetry in IPBC we need not consider permutations of directions.
     std::vector<Point> directions = {{1, 0, 0}, {1, 1, 0}, {1, 1, 1}};
 
-    int p_max;  //!< multiples of q to be sampled
+    int p_max; //!< multiples of q to be sampled
     using TSamplingPolicy::addSampling;
 
   public:
-    explicit StructureFactorIPBC(int q_multiplier) : p_max(q_multiplier) {}
+    explicit StructureFactorIPBC(int q_multiplier)
+        : p_max(q_multiplier)
+    {
+    }
 
-    template <RequirePoints Tpositions> void sample(const Tpositions& positions, const Point& boxlength) {
-        // https://gcc.gnu.org/gcc-9/porting_to.html#ompdatasharing
-        // #pragma omp parallel for collapse(2) default(none) shared(directions, p_max, positions, boxlength)
-        #pragma omp parallel for collapse(2) default(shared)
+    template <RequirePoints Tpositions>
+    void sample(const Tpositions& positions, const Point& boxlength)
+    {
+// https://gcc.gnu.org/gcc-9/porting_to.html#ompdatasharing
+// #pragma omp parallel for collapse(2) default(none) shared(directions, p_max, positions,
+// boxlength)
+#pragma omp parallel for collapse(2) default(shared)
         for (size_t i = 0; i < directions.size(); ++i) {
-            for (int p = 1; p <= p_max; ++p) {                                             // loop over multiples of q
-                const Point q = 2.0 * pc::pi * p * directions[i].cwiseQuotient(boxlength); // scattering vector
+            for (int p = 1; p <= p_max; ++p) { // loop over multiples of q
+                const Point q =
+                    2.0 * pc::pi * p * directions[i].cwiseQuotient(boxlength); // scattering vector
                 T sum_cos = 0;
-                for (auto &r : positions) { // loop over positions
-                    // if q[i] == 0 then its cosine == 1 hence we can avoid cosine computation for performance reasons
+                for (auto& r : positions) { // loop over positions
+                    // if q[i] == 0 then its cosine == 1 hence we can avoid cosine computation for
+                    // performance reasons
                     T product = std::cos(T(q[0] * r[0]));
                     if (q[1] != 0)
                         product *= std::cos(T(q[1] * r[1]));
@@ -356,18 +415,17 @@ class StructureFactorIPBC : private TSamplingPolicy {
                     sum_cos += product;
                 }
                 // collect average, `norm()` gives the scattering vector length
-                const T ipbc_factor = std::pow(2, directions[i].count()); // 2 ^ number of non-zero elements
+                const T ipbc_factor =
+                    std::pow(2, directions[i].count()); // 2 ^ number of non-zero elements
                 const T sf = (sum_cos * sum_cos) / (float)(positions.size()) * ipbc_factor;
-                #pragma omp critical
+#pragma omp critical
                 // avoid race conditions when updating the map
                 addSampling(q.norm(), sf, 1.0);
             }
         }
     }
 
-    int getQMultiplier() {
-        return p_max;
-    }
+    int getQMultiplier() { return p_max; }
 
     using TSamplingPolicy::getSampling;
 };

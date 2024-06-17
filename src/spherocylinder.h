@@ -18,7 +18,10 @@ namespace Faunus::SpheroCylinder {
  * @param a the first vector
  * @param b the second vector
  */
-inline Point vec_perpproject(const Point& a, const Point& b) { return a - b * a.dot(b); }
+inline Point vec_perpproject(const Point& a, const Point& b)
+{
+    return a - b * a.dot(b);
+}
 
 /**
  * @brief Calculate minimum distance between two line segments
@@ -39,19 +42,24 @@ inline Point vec_perpproject(const Point& a, const Point& b) { return a - b * a.
  * @param halfl2 Half length of second segment
  * @param r_cm Distance vector between the middle of the two segments
  */
-Point mindist_segment2segment(const Point& dir1, double halfl1, const Point& dir2, double halfl2, const Point& r_cm);
+Point mindist_segment2segment(const Point& dir1, double halfl1, const Point& dir2, double halfl2,
+                              const Point& r_cm);
 
 /**
  * @param segment_direction Direction of segment
  * @param half_length Half length of segment
  * @param separation Distance vector between the middle segment to point
  */
-[[maybe_unused]] inline Point mindist_segment2point(const Point& segment_direction, const double half_length, const Point& separation) {
+[[maybe_unused]] inline Point mindist_segment2point(const Point& segment_direction,
+                                                    const double half_length,
+                                                    const Point& separation)
+{
     const auto c = segment_direction.dot(separation);
     double d;
     if (c > half_length) {
         d = half_length;
-    } else {
+    }
+    else {
         d = (c > -half_length) ? c : -half_length;
     }
     return -separation + (segment_direction * d);
@@ -61,13 +69,15 @@ Point mindist_segment2segment(const Point& dir1, double halfl1, const Point& dir
  * Finds intersections of spherocylinder and plane defined by vector
  * "w_vec" and if they are in all-way patch then returns number of them (PSC)
  */
-int find_intersect_plane(const Cigar& part1, const Cigar& part2, const Point& r_cm, const Point& w_vec,
-                         double cutoff_squared, double cospatch, std::array<double, 5>& intersections);
+int find_intersect_plane(const Cigar& part1, const Cigar& part2, const Point& r_cm,
+                         const Point& w_vec, double cutoff_squared, double cospatch,
+                         std::array<double, 5>& intersections);
 
 /**
  * @brief Finds if vector "vec" has angular intersection w. patch of part1
  */
-int test_intrpatch(const Cigar& part1, Point& vec, double cospatch, double ti, std::array<double, 5>& intersections);
+int test_intrpatch(const Cigar& part1, Point& vec, double cospatch, double ti,
+                   std::array<double, 5>& intersections);
 
 /**
  * @brief Intersect of plane
@@ -75,11 +85,13 @@ int test_intrpatch(const Cigar& part1, Point& vec, double cospatch, double ti, s
  * Finds intersections of plane defined by vector "w_vec"
  * and if they are in cylindrical patch then returns number of them (CPSC)
  */
-int find_intersect_planec(const Cigar& part1, const Cigar& part2, const Point& r_cm, const Point& w_vec, double rcut2,
-                          double cospatch, std::array<double, 5>& intersections);
+int find_intersect_planec(const Cigar& part1, const Cigar& part2, const Point& r_cm,
+                          const Point& w_vec, double rcut2, double cospatch,
+                          std::array<double, 5>& intersections);
 
 /**
- * @brief Intersections of spherocylinder2 with a all-way patch of spherocylinder1 and return them (PSC)
+ * @brief Intersections of spherocylinder2 with a all-way patch of spherocylinder1 and return them
+ * (PSC)
  */
 int psc_intersect(const Cigar& particle1, const Cigar& particle2, const Point& r_cm,
                   std::array<double, 5>& intersections, double cutoff_squared);
@@ -87,10 +99,11 @@ int psc_intersect(const Cigar& particle1, const Cigar& particle2, const Point& r
 /**
  * @brief Intersection of PSC2 with cylindrical patch of PSC1 and return them (CPSC)
  */
-int cpsc_intersect(const Cigar& part1, const Cigar& part2, const Point& r_cm, std::array<double, 5>& intersections,
-                   double rcut2);
+int cpsc_intersect(const Cigar& part1, const Cigar& part2, const Point& r_cm,
+                   std::array<double, 5>& intersections, double rcut2);
 
-inline double fanglscale(const double a, const Cigar& cigar) {
+inline double fanglscale(const double a, const Cigar& cigar)
+{
     // a = r_ij * n_i
     if (a <= cigar.pcanglsw) {
         return 0.0;
@@ -108,15 +121,19 @@ inline double fanglscale(const double a, const Cigar& cigar) {
 namespace Faunus::pairpotential {
 
 /** @brief Hard-sphere pair potential for spherocylinders */
-class HardSpheroCylinder : public PairPotential {
+class HardSpheroCylinder : public PairPotential
+{
   public:
-    double operator()(const Particle& particle1, const Particle& particle2, [[maybe_unused]] double d,
-                      const Point& center_to_center_distance) const override {
+    double operator()(const Particle& particle1, const Particle& particle2,
+                      [[maybe_unused]] double d,
+                      const Point& center_to_center_distance) const override
+    {
         assert(particle1.hasExtension() && particle2.hasExtension());
-        auto minimum_distance_squared = SpheroCylinder::mindist_segment2segment(
-                                            particle1.ext->scdir, particle1.ext->half_length, particle2.ext->scdir,
-                                            particle1.ext->half_length, center_to_center_distance)
-                                            .squaredNorm();
+        auto minimum_distance_squared =
+            SpheroCylinder::mindist_segment2segment(
+                particle1.ext->scdir, particle1.ext->half_length, particle2.ext->scdir,
+                particle1.ext->half_length, center_to_center_distance)
+                .squaredNorm();
         const auto contact_distance = 0.5 * (particle1.traits().sigma + particle2.traits().sigma);
         if (minimum_distance_squared < contact_distance * contact_distance) {
             return pc::infty;
@@ -130,12 +147,15 @@ class HardSpheroCylinder : public PairPotential {
 };
 
 /**
- * @brief Pair potential between a patchy sphero-cylinder (first particle) and a sphere (second particle)
+ * @brief Pair potential between a patchy sphero-cylinder (first particle) and a sphere (second
+ * particle)
  * @tparam PatchPotential Pair potential between sphere and point on patch (isotropic)
  * @tparam CylinderPotential Pair potential between sphere and closest cylinder part (isotropic)
  */
-template <pairpotential::RequirePairPotential PatchPotential, pairpotential::RequirePairPotential CylinderPotential>
-class CigarWithSphere : public PairPotential {
+template <pairpotential::RequirePairPotential PatchPotential,
+          pairpotential::RequirePairPotential CylinderPotential>
+class CigarWithSphere : public PairPotential
+{
   private:
     PatchPotential patch_potential;       //!< Isotropic pair-potential between patches
     CylinderPotential cylinder_potential; //!< Isotropic pair-potential between non-patchy parts
@@ -145,17 +165,21 @@ class CigarWithSphere : public PairPotential {
     void to_json(json& j) const override;
     void from_json(const json& j) override;
 
-    inline double operator()(const Particle& cigar, const Particle& sphere, [[maybe_unused]] double distance_squared,
-                             const Point& center_separation) const override {
+    inline double operator()(const Particle& cigar, const Particle& sphere,
+                             [[maybe_unused]] double distance_squared,
+                             const Point& center_separation) const override
+    {
         assert(cigar.hasExtension());
         const auto c = cigar.getExt().scdir.dot(center_separation);
         double contt;
         if (c > cigar.ext->half_length) {
             contt = cigar.ext->half_length;
-        } else {
+        }
+        else {
             if (c > -cigar.ext->half_length) {
                 contt = c;
-            } else {
+            }
+            else {
                 contt = -cigar.ext->half_length;
             }
         }
@@ -178,12 +202,14 @@ class CigarWithSphere : public PairPotential {
         double f0;
         if (contt + t > cigar.ext->half_length) {
             f0 = cigar.ext->half_length;
-        } else {
+        }
+        else {
             f0 = contt + t;
         }
         if (contt - t < -cigar.ext->half_length) {
             f0 -= -cigar.ext->half_length;
-        } else {
+        }
+        else {
             f0 -= contt - t;
         }
         return f1 * (f0 + 1.0) * patch_potential(cigar, sphere, ndist_squared, Point::Zero()) +
@@ -199,21 +225,25 @@ class CigarWithSphere : public PairPotential {
  * PSCs withn their patches. f0 is for size of overlapping segment
  * whicle f1 anf f2 are scaling fators for orientation of pacthes.
  *
- * @tparam PatchPotential Pair potential between two points on the patches (isotropic, e.g. CosAttract)
+ * @tparam PatchPotential Pair potential between two points on the patches (isotropic, e.g.
+ * CosAttract)
  * @tparam CylinderPotential Pair potential between closest cylinder parts (isotropic, e.g. WCA)
  * @todo Energy calculation badly needs refactoring!
  */
-template <pairpotential::RequirePairPotential PatchPotential, pairpotential::RequirePairPotential CylinderPotential>
-class CigarWithCigar : public PairPotential {
+template <pairpotential::RequirePairPotential PatchPotential,
+          pairpotential::RequirePairPotential CylinderPotential>
+class CigarWithCigar : public PairPotential
+{
   private:
     PatchPotential patch_potential;       //!< Isotropic pair-potential for patchy parts
     CylinderPotential cylinder_potential; //!< Isotropic pair-potential for cylindrical parts
 
     [[nodiscard]] double patchyPatchyEnergy(const Particle& particle1, const Particle& particle2,
-                              const Point& center_separation) const;
+                                            const Point& center_separation) const;
 
-    [[nodiscard]] double isotropicIsotropicEnergy(const Particle& particle1, const Particle& particle2,
-                                    const Point& center_separation) const;
+    [[nodiscard]] double isotropicIsotropicEnergy(const Particle& particle1,
+                                                  const Particle& particle2,
+                                                  const Point& center_separation) const;
 
   public:
     CigarWithCigar();
@@ -222,7 +252,8 @@ class CigarWithCigar : public PairPotential {
 
     inline double operator()(const Particle& particle1, const Particle& particle2,
                              [[maybe_unused]] double center_separation_squared,
-                             const Point& center_separation) const override {
+                             const Point& center_separation) const override
+    {
         assert(particle1.hasExtension() && particle2.hasExtension());
         if (particle1.traits().sphero_cylinder.type != SpheroCylinderData::PatchType::None &&
             particle2.traits().sphero_cylinder.type != SpheroCylinderData::PatchType::None) {
@@ -243,17 +274,22 @@ class CigarWithCigar : public PairPotential {
  * @tparam CylinderPotential Pair potential used for cylindrical path (isotropic, e.g. WCA)
  * @tparam CylinderPotential Pair potential used sphere-sphere interaction (isotropic, e.g. WCA)
  */
-template <pairpotential::RequirePairPotential PatchPotential, pairpotential::RequirePairPotential CylinderPotential,
+template <pairpotential::RequirePairPotential PatchPotential,
+          pairpotential::RequirePairPotential CylinderPotential,
           pairpotential::RequirePairPotential SphereWithSphere = CylinderPotential>
-class CompleteCigarPotential : public PairPotential {
+class CompleteCigarPotential : public PairPotential
+{
   private:
-    SphereWithSphere sphere_sphere;                                  // pair potential between spheres
-    CigarWithCigar<PatchPotential, CylinderPotential> cigar_cigar;   // pair potential between cigars
-    CigarWithSphere<PatchPotential, CylinderPotential> cigar_sphere; // pair potential cigar <-> sphere
+    SphereWithSphere sphere_sphere;                                // pair potential between spheres
+    CigarWithCigar<PatchPotential, CylinderPotential> cigar_cigar; // pair potential between cigars
+    CigarWithSphere<PatchPotential, CylinderPotential>
+        cigar_sphere; // pair potential cigar <-> sphere
 
   public:
-    inline double operator()(const Particle& a, const Particle& b, [[maybe_unused]] double distance_squared,
-                             const Point& distance) const override {
+    inline double operator()(const Particle& a, const Particle& b,
+                             [[maybe_unused]] double distance_squared,
+                             const Point& distance) const override
+    {
         const double small_number = 1e-6;
         const auto a_is_sphere = !a.hasExtension() || a.ext->half_length < small_number;
         const auto b_is_sphere = !a.hasExtension() || b.ext->half_length < small_number;
@@ -275,4 +311,4 @@ class CompleteCigarPotential : public PairPotential {
     CompleteCigarPotential();
 };
 
-} // namespace Faunus::Potential
+} // namespace Faunus::pairpotential

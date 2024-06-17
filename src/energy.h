@@ -19,13 +19,14 @@
 #include <concepts>
 #include <optional>
 
-struct freesasa_parameters_fwd; // workaround for freesasa unnamed struct that cannot be forward declared
+struct freesasa_parameters_fwd; // workaround for freesasa unnamed struct that cannot be forward
+                                // declared
 
 #if defined(__cpp_lib_parallel_algorithm) && __has_include(<tbb/tbb.h>)
 #include <execution>
 #endif
 
-#if defined(__cpp_lib_parallel_algorithm) &&                                                                           \
+#if defined(__cpp_lib_parallel_algorithm) &&                                                       \
     __has_include(<tbb/tbb.h>) && ((defined(__clang__) && __clang_major__ >= 10) || (defined(__GNUC__) && __GNUC__ >= 10))
 #define HAS_PARALLEL_TRANSFORM_REDUCE
 #endif
@@ -43,19 +44,20 @@ class PairPotential;
 /**
  *  @par Non-bonded energy
  *
- *  Several classes (class templates) are used together to allow computation in change of the non-bonded energy upon
- *  a MC move.
+ *  Several classes (class templates) are used together to allow computation in change of the
+ * non-bonded energy upon a MC move.
  *
- *  The energy change is calculated by the Nonbonded class. It internally uses one of the pairing policies
- *  to efficiently get all pair interactions affected by the MC move (as described by the Change object).
+ *  The energy change is calculated by the Nonbonded class. It internally uses one of the pairing
+ * policies to efficiently get all pair interactions affected by the MC move (as described by the
+ * Change object).
  *
- *  Pairing policies allow efficient summation of pair energies over the whole system, between groups, inside a group,
- *  etc. The pairing policy is optimized for performance in a different execution environment, e.g., sequential or
- *  OMP parallelism.
+ *  Pairing policies allow efficient summation of pair energies over the whole system, between
+ * groups, inside a group, etc. The pairing policy is optimized for performance in a different
+ * execution environment, e.g., sequential or OMP parallelism.
  *
- *  Policies have direct access to the pair interaction energy functor represented by a simple PairEnergy template.
- *  Furthermore, the GroupCutoff object is provided to limit free energy computation using a cutoff distance between
- *  respective groups.
+ *  Policies have direct access to the pair interaction energy functor represented by a simple
+ * PairEnergy template. Furthermore, the GroupCutoff object is provided to limit free energy
+ * computation using a cutoff distance between respective groups.
  *
  *  @see Nonbonded, PairingBasePolicy, PairEnergy, GroupCutoff
  */
@@ -69,7 +71,8 @@ class Hamiltonian;
  * If any particles is ouside, infinite energy is returned; zero otherwirse.
  * This is not needed for cuboidal geometry as particles are always wrapped using PBC.
  */
-class ContainerOverlap : public EnergyTerm {
+class ContainerOverlap : public EnergyTerm
+{
   private:
     const Space& spc;
     bool groupIsOutsideContainer(const Change::GroupChange& group_change) const;
@@ -91,10 +94,11 @@ class ContainerOverlap : public EnergyTerm {
  * - IPBC Ewald (DOI:10/css8)
  * - Update optimization (DOI:10.1063/1.481216, Eq. 24)
  */
-struct EwaldData {
+struct EwaldData
+{
     using Tcomplex = std::complex<double>;
-    Eigen::Matrix3Xd k_vectors;             //!< k-vectors, 3xK
-    Eigen::VectorXd Aks;                    //!< 1xK for update optimization (see Eq.24, DOI:10.1063/1.481216)
+    Eigen::Matrix3Xd k_vectors; //!< k-vectors, 3xK
+    Eigen::VectorXd Aks;        //!< 1xK for update optimization (see Eq.24, DOI:10.1063/1.481216)
     Eigen::VectorXcd Q_ion, Q_dipole;       //!< Complex 1xK vectors
     double r_cutoff = 0;                    //!< Real-space cutoff
     double n_cutoff = 0;                    //!< Inverse space cutoff
@@ -107,10 +111,19 @@ struct EwaldData {
     double check_k2_zero = 0;
     bool use_spherical_sum = true;
     int num_kvectors = 0;
-    Point box_length = {0.0, 0.0, 0.0};                        //!< Box dimensions
-    enum Policies { PBC, PBCEigen, IPBC, IPBCEigen, INVALID }; //!< Possible k-space updating schemes
-    Policies policy = PBC;                                     //!< Policy for updating k-space
-    explicit EwaldData(const json& j);                         //!< Initialize from json
+    Point box_length = {0.0, 0.0, 0.0}; //!< Box dimensions
+
+    enum Policies
+    {
+        PBC,
+        PBCEigen,
+        IPBC,
+        IPBCEigen,
+        INVALID
+    }; //!< Possible k-space updating schemes
+
+    Policies policy = PBC;             //!< Policy for updating k-space
+    explicit EwaldData(const json& j); //!< Initialize from json
 };
 
 NLOHMANN_JSON_SERIALIZE_ENUM(EwaldData::Policies, {
@@ -126,21 +139,27 @@ void to_json(json& j, const EwaldData& d);
 /**
  * @brief Base class for Ewald k-space updates policies
  */
-class EwaldPolicyBase {
+class EwaldPolicyBase
+{
   public:
     std::string cite; //!< Optional reference, preferably DOI, to further information
     virtual ~EwaldPolicyBase() = default;
-    virtual void updateBox(EwaldData&, const Point&) const = 0; //!< Prepare k-vectors according to given box vector
-    virtual void updateComplex(EwaldData& d,
-                               const Space::GroupVector& groups) const = 0; //!< Update all k vectors
     virtual void
-    updateComplex(EwaldData& d, const Change& change, const Space::GroupVector& groups,
-                  const Space::GroupVector& oldgroups) const = 0; //!< Update subset of k vectors. Require `old` pointer
-    virtual double selfEnergy(const EwaldData& d, Change& change,
-                              Space::GroupVector& groups) = 0; //!< Self energy contribution due to a change
-    virtual double surfaceEnergy(const EwaldData& d, const Change& change,
-                                 const Space::GroupVector& groups) = 0; //!< Surface energy contribution due to a change
-    virtual double reciprocalEnergy(const EwaldData& d) = 0;            //!< Total reciprocal energy
+    updateBox(EwaldData&,
+              const Point&) const = 0; //!< Prepare k-vectors according to given box vector
+    virtual void
+    updateComplex(EwaldData& d,
+                  const Space::GroupVector& groups) const = 0; //!< Update all k vectors
+    virtual void updateComplex(EwaldData& d, const Change& change, const Space::GroupVector& groups,
+                               const Space::GroupVector& oldgroups)
+        const = 0; //!< Update subset of k vectors. Require `old` pointer
+    virtual double
+    selfEnergy(const EwaldData& d, Change& change,
+               Space::GroupVector& groups) = 0; //!< Self energy contribution due to a change
+    virtual double surfaceEnergy(
+        const EwaldData& d, const Change& change,
+        const Space::GroupVector& groups) = 0; //!< Surface energy contribution due to a change
+    virtual double reciprocalEnergy(const EwaldData& d) = 0; //!< Total reciprocal energy
 
     /**
      * @brief Represent charges and positions using an Eigen facade (Map)
@@ -150,8 +169,11 @@ class EwaldPolicyBase {
      * @param groups Vector of groups to represent
      * @return tuple with positions, charges
      */
-    static auto mapGroupsToEigen(Space::GroupVector& groups) {
-        auto is_partially_inactive = [](const Group& group) { return group.size() != group.capacity(); };
+    static auto mapGroupsToEigen(Space::GroupVector& groups)
+    {
+        auto is_partially_inactive = [](const Group& group) {
+            return group.size() != group.capacity();
+        };
         if (ranges::cpp20::any_of(groups, is_partially_inactive)) {
             throw std::runtime_error("Eigen optimized Ewald not available with inactive groups");
         }
@@ -164,8 +186,11 @@ class EwaldPolicyBase {
         return std::make_tuple(pos, charge);
     }
 
-    static auto mapGroupsToEigen(const Space::GroupVector& groups) {
-        auto is_partially_inactive = [](const Group& group) { return group.size() != group.capacity(); };
+    static auto mapGroupsToEigen(const Space::GroupVector& groups)
+    {
+        auto is_partially_inactive = [](const Group& group) {
+            return group.size() != group.capacity();
+        };
         if (ranges::cpp20::any_of(groups, is_partially_inactive)) {
             throw std::runtime_error("Eigen optimized Ewald not available with inactive groups");
         }
@@ -184,14 +209,16 @@ class EwaldPolicyBase {
 /**
  * @brief Ion-Ion Ewald using periodic boundary conditions (PBC)
  */
-struct PolicyIonIon : public EwaldPolicyBase {
+struct PolicyIonIon : public EwaldPolicyBase
+{
     PolicyIonIon();
     void updateBox(EwaldData& d, const Point& box) const override;
     void updateComplex(EwaldData& data, const Space::GroupVector& groups) const override;
     void updateComplex(EwaldData& d, const Change& change, const Space::GroupVector& groups,
                        const Space::GroupVector& oldgroups) const override;
     double selfEnergy(const EwaldData& d, Change& change, Space::GroupVector& groups) override;
-    double surfaceEnergy(const EwaldData& data, const Change& change, const Space::GroupVector& groups) override;
+    double surfaceEnergy(const EwaldData& data, const Change& change,
+                         const Space::GroupVector& groups) override;
     double reciprocalEnergy(const EwaldData& d) override;
 };
 
@@ -206,28 +233,32 @@ struct PolicyIonIon : public EwaldPolicyBase {
  * - Clang9: Eigen version is slower than generic version (macos/ubuntu)
  * - GCC9: Eigen is 4-5 times faster on x86 linux; ~1.5 times *lower on macos.
  */
-struct PolicyIonIonEigen : public PolicyIonIon {
+struct PolicyIonIonEigen : public PolicyIonIon
+{
     using PolicyIonIon::updateComplex;
     void updateComplex(EwaldData&, const Space::GroupVector&) const override;
-    double reciprocalEnergy(const EwaldData &) override;
+    double reciprocalEnergy(const EwaldData&) override;
 };
 
 /**
  * @brief Ion-Ion Ewald with isotropic periodic boundary conditions (IPBC)
  */
-struct PolicyIonIonIPBC : public PolicyIonIon {
+struct PolicyIonIonIPBC : public PolicyIonIon
+{
     using PolicyIonIon::updateComplex;
     PolicyIonIonIPBC();
-    void updateBox(EwaldData &, const Point &) const override;
+    void updateBox(EwaldData&, const Point&) const override;
     void updateComplex(EwaldData&, const Space::GroupVector&) const override;
-    void updateComplex(EwaldData&, const Change&, const Space::GroupVector&, const Space::GroupVector&) const override;
+    void updateComplex(EwaldData&, const Change&, const Space::GroupVector&,
+                       const Space::GroupVector&) const override;
 };
 
 /**
  * @brief Ion-Ion Ewald with isotropic periodic boundary conditions (IPBC) using Eigen operations
  * @warning Incomplete and under construction
  */
-struct PolicyIonIonIPBCEigen : public PolicyIonIonIPBC {
+struct PolicyIonIonIPBCEigen : public PolicyIonIonIPBC
+{
     using PolicyIonIonIPBC::updateComplex;
     void updateComplex(EwaldData&, const Space::GroupVector&) const override;
 };
@@ -237,7 +268,8 @@ struct PolicyIonIonIPBCEigen : public PolicyIonIonIPBC {
  * @todo energy() currently has the responsibility to update k-vectors.
  *       This is error prone and should be handled *before* this step.
  */
-class Ewald : public EnergyTerm {
+class Ewald : public EnergyTerm
+{
   private:
     const Space& spc;
     EwaldData data;
@@ -248,7 +280,8 @@ class Ewald : public EnergyTerm {
     Ewald(const Space& spc, const EwaldData& data);
     Ewald(const json& j, const Space& spc);
     void init() override;
-    void setOldGroups(const Space::GroupVector& old_groups); //!< Optimization if old groups are available (optional)
+    void setOldGroups(const Space::GroupVector&
+                          old_groups); //!< Optimization if old groups are available (optional)
     void updateState(const Change& change) override;
     double energy(const Change& change) override;
     void sync(EnergyTerm* energybase, const Change& change) override;
@@ -259,11 +292,13 @@ class Ewald : public EnergyTerm {
 /**
  * @brief Pressure term for NPT ensemble
  */
-class Isobaric : public EnergyTerm {
+class Isobaric : public EnergyTerm
+{
   private:
     const Space& spc;
-    double pressure = 0.0;                                     //!< Applied pressure
-    static const std::map<std::string, double> pressure_units; //!< Possible ways pressure can be given
+    double pressure = 0.0; //!< Applied pressure
+    static const std::map<std::string, double>
+        pressure_units; //!< Possible ways pressure can be given
   public:
     Isobaric(const json& j, const Space& spc);
     double energy(const Change& change) override;
@@ -275,7 +310,8 @@ class Isobaric : public EnergyTerm {
  *
  * If outside specified `range`, infinity energy is returned, causing rejection.
  */
-class Constrain : public EnergyTerm {
+class Constrain : public EnergyTerm
+{
   private:
     std::string type;
     std::unique_ptr<ReactionCoordinate::ReactionCoordinateBase> coordinate;
@@ -295,20 +331,22 @@ class Constrain : public EnergyTerm {
  *
  * @todo Optimize.
  */
-class Bonded : public EnergyTerm {
+class Bonded : public EnergyTerm
+{
   private:
     using BondVector = BasePointerVector<pairpotential::BondData>;
     const Space& spc;
-    BondVector external_bonds;                                      //!< inter-molecular bonds
-    std::map<int, BondVector> internal_bonds;                       //!< intra-molecular bonds; key is group index
-    void updateGroupBonds(const Space::GroupType& group);           //!< Update/set bonds internally in group
-    double sumBondEnergy(const BondVector& bonds) const;            //!< sum energy in vector of BondData
+    BondVector external_bonds;                //!< inter-molecular bonds
+    std::map<int, BondVector> internal_bonds; //!< intra-molecular bonds; key is group index
+    void updateGroupBonds(const Space::GroupType& group); //!< Update/set bonds internally in group
+    double sumBondEnergy(const BondVector& bonds) const;  //!< sum energy in vector of BondData
     double internalGroupEnergy(const Change::GroupChange& changed); //!< Energy from internal bonds
-    double sumEnergy(const BondVector& bonds, const ranges::cpp20::range auto& particle_indices) const;
+    double sumEnergy(const BondVector& bonds,
+                     const ranges::cpp20::range auto& particle_indices) const;
     void updateInternalBonds(); //!< finds and adds all intra-molecular bonds of active molecules
 
   public:
-    Bonded(const Space& spc, BondVector  external_bonds);
+    Bonded(const Space& spc, BondVector external_bonds);
     Bonded(const json& j, const Space& spc);
     void to_json(json& j) const override;
     double energy(const Change& change) override;    //!< brute force -- refine this!
@@ -324,7 +362,9 @@ class Bonded : public EnergyTerm {
  * for binary search which on large systems provides superior performance compared
  * to simplistic search which scales as number_of_bonds x number_of_moved_particles
  */
-double Bonded::sumEnergy(const Bonded::BondVector& bonds, const ranges::cpp20::range auto& particle_indices) const {
+double Bonded::sumEnergy(const Bonded::BondVector& bonds,
+                         const ranges::cpp20::range auto& particle_indices) const
+{
     assert(std::is_sorted(particle_indices.begin(), particle_indices.end()));
 
     auto index_is_included = [&](auto index) {
@@ -333,8 +373,11 @@ double Bonded::sumEnergy(const Bonded::BondVector& bonds, const ranges::cpp20::r
     auto affected_bonds = bonds | ranges::cpp20::views::filter([&](const auto& bond) {
                               return ranges::cpp20::any_of(bond->indices, index_is_included);
                           });
-    auto bond_energy = [dist = spc.geometry.getDistanceFunc()](const auto& bond) { return bond->energyFunc(dist); };
-    return std::transform_reduce(affected_bonds.begin(), affected_bonds.end(), 0.0, std::plus<>(), bond_energy);
+    auto bond_energy = [dist = spc.geometry.getDistanceFunc()](const auto& bond) {
+        return bond->energyFunc(dist);
+    };
+    return std::transform_reduce(affected_bonds.begin(), affected_bonds.end(), 0.0, std::plus<>(),
+                                 bond_energy);
 }
 
 /**
@@ -345,7 +388,8 @@ double Bonded::sumEnergy(const Bonded::BondVector& bonds, const ranges::cpp20::r
  * @param range an original set of integers (must be sorted)
  * @return a set of ints complementary to the original set
  */
-auto indexComplement(std::integral auto size, const ranges::cpp20::range auto& range) {
+auto indexComplement(std::integral auto size, const ranges::cpp20::range auto& range)
+{
     namespace rv = ranges::cpp20::views;
     return rv::iota(0, static_cast<int>(size)) |
            rv::filter([&](auto i) { return !std::binary_search(range.begin(), range.end(), i); });
@@ -355,14 +399,18 @@ auto indexComplement(std::integral auto size, const ranges::cpp20::range auto& r
  * @brief Provides a fast inlineable interface for non-bonded pair potential energy computation.
  *
  * @tparam TPairPotential  a pair potential to compute with
- * @tparam allow_anisotropic_pair_potential  pass also a distance vector to the pair potential, slower
+ * @tparam allow_anisotropic_pair_potential  pass also a distance vector to the pair potential,
+ * slower
  */
-template <pairpotential::RequirePairPotential TPairPotential, bool allow_anisotropic_pair_potential = true>
-class PairEnergy {
-    const Space::GeometryType& geometry;       //!< geometry to operate with
-    TPairPotential pair_potential;             //!< pair potential function/functor
-    Space& spc;                                //!< space to init ParticleSelfEnergy with addPairPotentialSelfEnergy
-    BasePointerVector<EnergyTerm>& potentials; //!< registered non-bonded potentials, see addPairPotentialSelfEnergy
+template <pairpotential::RequirePairPotential TPairPotential,
+          bool allow_anisotropic_pair_potential = true>
+class PairEnergy
+{
+    const Space::GeometryType& geometry; //!< geometry to operate with
+    TPairPotential pair_potential;       //!< pair potential function/functor
+    Space& spc; //!< space to init ParticleSelfEnergy with addPairPotentialSelfEnergy
+    BasePointerVector<EnergyTerm>&
+        potentials; //!< registered non-bonded potentials, see addPairPotentialSelfEnergy
   public:
     /**
      * @param spc
@@ -371,7 +419,9 @@ class PairEnergy {
     PairEnergy(Space& spc, BasePointerVector<EnergyTerm>& potentials)
         : geometry(spc.geometry)
         , spc(spc)
-        , potentials(potentials) {}
+        , potentials(potentials)
+    {
+    }
 
     /**
      * @brief Computes pair potential energy.
@@ -380,19 +430,23 @@ class PairEnergy {
      * @param b  particle
      * @return pair potential energy between particles a and b
      */
-    template <typename T> inline double potential(const T& a, const T& b) const {
+    template <typename T> inline double potential(const T& a, const T& b) const
+    {
         assert(&a != &b); // a and b cannot be the same particle
         if constexpr (allow_anisotropic_pair_potential) {
             const Point r = geometry.vdist(a.pos, b.pos);
             return pair_potential(a, b, r.squaredNorm(), r);
-        } else {
+        }
+        else {
             return pair_potential(a, b, geometry.sqdist(a.pos, b.pos), {0, 0, 0});
         }
     }
 
     // just a temporary placement until PairForce class template will be implemented
-    template <typename ParticleType> inline Point force(const ParticleType& a, const ParticleType& b) const {
-        assert(&a != &b);                                       // a and b cannot be the same particle
+    template <typename ParticleType>
+    inline Point force(const ParticleType& a, const ParticleType& b) const
+    {
+        assert(&a != &b); // a and b cannot be the same particle
         const Point b_towards_a = geometry.vdist(a.pos, b.pos); // vector b -> a = a - b
         return pair_potential.force(a, b, b_towards_a.squaredNorm(), b_towards_a);
     }
@@ -401,7 +455,8 @@ class PairEnergy {
      * @brief A functor alias for potential().
      * @see potential()
      */
-    template <typename... Args> inline auto operator()(Args&&... args) {
+    template <typename... Args> inline auto operator()(Args&&... args)
+    {
         return potential(std::forward<Args>(args)...);
     }
 
@@ -409,14 +464,16 @@ class PairEnergy {
      * @brief Registers the potential self-energy to hamiltonian if needed.
      * @see Hamiltonian::Hamiltonian
      */
-    void addPairPotentialSelfEnergy() {
+    void addPairPotentialSelfEnergy()
+    {
         if (pair_potential.selfEnergy) { // only add if self energy is defined
             faunus_logger->debug("Adding self-energy from {} to hamiltonian", pair_potential.name);
             potentials.emplace_back<Energy::ParticleSelfEnergy>(spc, pair_potential.selfEnergy);
         }
     }
 
-    void from_json(const json& j) {
+    void from_json(const json& j)
+    {
         pairpotential::from_json(j, pair_potential);
         if (!pair_potential.isotropic && !allow_anisotropic_pair_potential) {
             throw std::logic_error("Only isotropic pair potentials are allowed.");
@@ -446,76 +503,97 @@ concept RequirePairEnergy = requires(T instance) {
  *       where a custom `struct Tpair { const Particle &first, second; };`
  *       outperforms `std::pair` due to missed compiler optimization.
  */
-class EnergyAccumulatorBase {
+class EnergyAccumulatorBase
+{
   protected:
     double value = 0.0;                                               //!< accumulated energy
     using ParticleRef = const std::reference_wrapper<const Particle>; //!< Particle reference
-    using ParticlePair = std::pair<ParticleRef, ParticleRef>;         //!< References to two particles
+    using ParticlePair = std::pair<ParticleRef, ParticleRef>; //!< References to two particles
 
   public:
-    enum class Scheme { SERIAL, OPENMP, PARALLEL, INVALID };
+    enum class Scheme
+    {
+        SERIAL,
+        OPENMP,
+        PARALLEL,
+        INVALID
+    };
     Scheme scheme = Scheme::SERIAL;
 
     EnergyAccumulatorBase(double value);
     virtual ~EnergyAccumulatorBase() = default;
     virtual void reserve(size_t number_of_particles);
     virtual void clear();
-    virtual void from_json(const json &j);
-    virtual void to_json(json &j) const;
+    virtual void from_json(const json& j);
+    virtual void to_json(json& j) const;
 
     virtual explicit operator double();
     virtual EnergyAccumulatorBase& operator=(double new_value) = 0;
     virtual EnergyAccumulatorBase& operator+=(double new_value) = 0;
     virtual EnergyAccumulatorBase& operator+=(ParticlePair&& pair) = 0;
 
-    template <typename TOtherAccumulator> inline EnergyAccumulatorBase& operator+=(TOtherAccumulator& acc) {
+    template <typename TOtherAccumulator>
+    inline EnergyAccumulatorBase& operator+=(TOtherAccumulator& acc)
+    {
         value += static_cast<double>(acc);
         return *this;
     }
 };
 
-NLOHMANN_JSON_SERIALIZE_ENUM(EnergyAccumulatorBase::Scheme, {{EnergyAccumulatorBase::Scheme::INVALID, nullptr},
-                                                             {EnergyAccumulatorBase::Scheme::SERIAL, "serial"},
-                                                             {EnergyAccumulatorBase::Scheme::OPENMP, "openmp"},
-                                                             {EnergyAccumulatorBase::Scheme::PARALLEL, "parallel"}})
+NLOHMANN_JSON_SERIALIZE_ENUM(EnergyAccumulatorBase::Scheme,
+                             {{EnergyAccumulatorBase::Scheme::INVALID, nullptr},
+                              {EnergyAccumulatorBase::Scheme::SERIAL, "serial"},
+                              {EnergyAccumulatorBase::Scheme::OPENMP, "openmp"},
+                              {EnergyAccumulatorBase::Scheme::PARALLEL, "parallel"}})
 
 template <class T>
 concept RequireEnergyAccumulator = std::is_base_of_v<EnergyAccumulatorBase, T>;
 
 /**
- * @brief A basic accumulator which immediately computes and adds energy of a pair of particles upon addition using
- * the PairEnergy templated class.
+ * @brief A basic accumulator which immediately computes and adds energy of a pair of particles upon
+ * addition using the PairEnergy templated class.
  *
- * Generally this is the original way how the pairwise nonbonded energy has been computed in Faunus. Due to compiler
- * optimization, templated class method 'PairEnergy.potential' may be inlined to significantly improve performance.
+ * Generally this is the original way how the pairwise nonbonded energy has been computed in Faunus.
+ * Due to compiler optimization, templated class method 'PairEnergy.potential' may be inlined to
+ * significantly improve performance.
  *
  * @tparam PairEnergy  pair energy implementing a potential(a, b) method for particles a and b
  */
-template <RequirePairEnergy PairEnergy> class InstantEnergyAccumulator : public EnergyAccumulatorBase {
+template <RequirePairEnergy PairEnergy>
+class InstantEnergyAccumulator : public EnergyAccumulatorBase
+{
   private:
-    const PairEnergy& pair_energy; //!< recipe to compute non-bonded energy between two particles, see PairEnergy
+    const PairEnergy&
+        pair_energy; //!< recipe to compute non-bonded energy between two particles, see PairEnergy
 
   public:
     InstantEnergyAccumulator(const PairEnergy& pair_energy, const double value = 0.0)
-        : EnergyAccumulatorBase(value), pair_energy(pair_energy) {}
+        : EnergyAccumulatorBase(value)
+        , pair_energy(pair_energy)
+    {
+    }
 
-    inline InstantEnergyAccumulator& operator=(const double new_value) override {
+    inline InstantEnergyAccumulator& operator=(const double new_value) override
+    {
         value = new_value;
         return *this;
     }
 
-    inline InstantEnergyAccumulator& operator+=(const double new_value) override {
+    inline InstantEnergyAccumulator& operator+=(const double new_value) override
+    {
         value += new_value;
         return *this;
     }
 
-    inline InstantEnergyAccumulator& operator+=(ParticlePair&& pair) override {
+    inline InstantEnergyAccumulator& operator+=(ParticlePair&& pair) override
+    {
         // keep this short to get inlined
         value += pair_energy.potential(pair.first.get(), pair.second.get());
         return *this;
     }
 
-    void from_json(const json &j) override {
+    void from_json(const json& j) override
+    {
         EnergyAccumulatorBase::from_json(j);
         if (scheme != Scheme::SERIAL) {
             faunus_logger->warn("unsupported summation scheme; falling back to 'serial'");
@@ -528,47 +606,62 @@ template <RequirePairEnergy PairEnergy> class InstantEnergyAccumulator : public 
  * `operator double()` is called. Looping over the vector can be done in serial (as a fallback);
  * using OpenMP; or using C++17 parallel algorithms if available.
  */
-template <RequirePairEnergy PairEnergy> class DelayedEnergyAccumulator : public EnergyAccumulatorBase {
+template <RequirePairEnergy PairEnergy>
+class DelayedEnergyAccumulator : public EnergyAccumulatorBase
+{
   private:
     std::vector<ParticlePair> particle_pairs;
-    const PairEnergy& pair_energy; //!< recipe to compute non-bonded energy between two particles, see PairEnergy
-    const size_t max_particles_in_buffer = 10000; //!< this can be modified to suit memory requirements
+    const PairEnergy&
+        pair_energy; //!< recipe to compute non-bonded energy between two particles, see PairEnergy
+    const size_t max_particles_in_buffer =
+        10000; //!< this can be modified to suit memory requirements
 
   public:
     explicit DelayedEnergyAccumulator(const PairEnergy& pair_energy, const double value = 0.0)
-        : EnergyAccumulatorBase(value), pair_energy(pair_energy) {}
+        : EnergyAccumulatorBase(value)
+        , pair_energy(pair_energy)
+    {
+    }
 
     /** Reserve memory for (N-1)*N/2 interaction pairs */
-    void reserve(size_t number_of_particles) override {
+    void reserve(size_t number_of_particles) override
+    {
         try {
             number_of_particles = std::min(number_of_particles, max_particles_in_buffer);
             const auto number_of_pairs = (number_of_particles - 1U) * number_of_particles / 2U;
-            faunus_logger->debug(fmt::format("reserving memory for {} energy pairs ({} MB)", number_of_pairs,
-                                             number_of_pairs * sizeof(ParticlePair) / (1024U * 1024U)));
+            faunus_logger->debug(
+                fmt::format("reserving memory for {} energy pairs ({} MB)", number_of_pairs,
+                            number_of_pairs * sizeof(ParticlePair) / (1024U * 1024U)));
             particle_pairs.reserve(number_of_pairs);
-        } catch (std::exception& e) {
-            throw std::runtime_error(
-                fmt::format("cannot allocate memory for energy pairs: {}. Use another summation policy.", e.what()));
+        }
+        catch (std::exception& e) {
+            throw std::runtime_error(fmt::format(
+                "cannot allocate memory for energy pairs: {}. Use another summation policy.",
+                e.what()));
         }
     }
 
-    void clear() override {
+    void clear() override
+    {
         value = 0.0;
         particle_pairs.clear();
     }
 
-    DelayedEnergyAccumulator& operator=(const double new_value) override {
+    DelayedEnergyAccumulator& operator=(const double new_value) override
+    {
         clear();
         value = new_value;
         return *this;
     }
 
-    inline DelayedEnergyAccumulator& operator+=(const double new_value) override {
+    inline DelayedEnergyAccumulator& operator+=(const double new_value) override
+    {
         value += new_value;
         return *this;
     }
 
-    inline DelayedEnergyAccumulator& operator+=(ParticlePair&& pair) override {
+    inline DelayedEnergyAccumulator& operator+=(ParticlePair&& pair) override
+    {
         assert(particle_pairs.capacity() > 0);
         if (particle_pairs.size() == particle_pairs.capacity()) {
             operator double(); // sum stored pairs and reset buffer
@@ -577,7 +670,8 @@ template <RequirePairEnergy PairEnergy> class DelayedEnergyAccumulator : public 
         return *this;
     }
 
-    explicit operator double() override {
+    explicit operator double() override
+    {
         switch (scheme) {
         case Scheme::OPENMP:
             value += accumulateOpenMP();
@@ -593,7 +687,8 @@ template <RequirePairEnergy PairEnergy> class DelayedEnergyAccumulator : public 
     }
 
   private:
-    double accumulateSerial() const {
+    double accumulateSerial() const
+    {
         double sum = 0.0;
         for (const auto& [particle1, particle2] : particle_pairs) {
             sum += pair_energy.potential(particle1.get(), particle2.get());
@@ -601,17 +696,21 @@ template <RequirePairEnergy PairEnergy> class DelayedEnergyAccumulator : public 
         return sum;
     }
 
-    double accumulateParallel() const {
+    double accumulateParallel() const
+    {
 #if defined(HAS_PARALLEL_TRANSFORM_REDUCE)
         return std::transform_reduce(
             std::execution::par, particle_pairs.cbegin(), particle_pairs.cend(), 0.0, std::plus<>(),
-            [&](const auto& pair) { return pair_energy.potential(pair.first.get(), pair.second.get()); });
+            [&](const auto& pair) {
+                return pair_energy.potential(pair.first.get(), pair.second.get());
+            });
 #else
         return accumulateSerial(); // fallback
 #endif
     }
 
-    double accumulateOpenMP() const {
+    double accumulateOpenMP() const
+    {
         double sum = 0.0;
 #pragma omp parallel for reduction(+ : sum)
         for (const auto& pair : particle_pairs) {
@@ -622,14 +721,19 @@ template <RequirePairEnergy PairEnergy> class DelayedEnergyAccumulator : public 
 };
 
 template <RequirePairEnergy TPairEnergy>
-std::unique_ptr<EnergyAccumulatorBase> createEnergyAccumulator(const json& j, const TPairEnergy& pair_energy,
-                                                               double initial_value) {
+std::unique_ptr<EnergyAccumulatorBase>
+createEnergyAccumulator(const json& j, const TPairEnergy& pair_energy, double initial_value)
+{
     std::unique_ptr<EnergyAccumulatorBase> accumulator;
-    if (j.value("summation_policy", EnergyAccumulatorBase::Scheme::SERIAL) != EnergyAccumulatorBase::Scheme::SERIAL) {
-        accumulator = std::make_unique<DelayedEnergyAccumulator<TPairEnergy>>(pair_energy, initial_value);
+    if (j.value("summation_policy", EnergyAccumulatorBase::Scheme::SERIAL) !=
+        EnergyAccumulatorBase::Scheme::SERIAL) {
+        accumulator =
+            std::make_unique<DelayedEnergyAccumulator<TPairEnergy>>(pair_energy, initial_value);
         faunus_logger->debug("activated delayed energy summation");
-    } else {
-        accumulator = std::make_unique<InstantEnergyAccumulator<TPairEnergy>>(pair_energy, initial_value);
+    }
+    else {
+        accumulator =
+            std::make_unique<InstantEnergyAccumulator<TPairEnergy>>(pair_energy, initial_value);
         faunus_logger->debug("activated instant energy summation");
     }
     accumulator->from_json(j);
@@ -639,15 +743,17 @@ std::unique_ptr<EnergyAccumulatorBase> createEnergyAccumulator(const json& j, co
 /**
  * @brief Determines if two groups are separated beyond the cutoff distance.
  *
- * The distance between centers of mass is considered. The cutoff distance can be specified independently for each
- * group pair to override the default value.
+ * The distance between centers of mass is considered. The cutoff distance can be specified
+ * independently for each group pair to override the default value.
  *
  * @see GroupPairingPolicy
  */
-class GroupCutoff {
+class GroupCutoff
+{
     double default_cutoff_squared = pc::max_value;
-    PairMatrix<double> cutoff_squared;    //!< matrix with group-to-group cutoff distances squared in angstrom squared
-    Space::GeometryType& geometry;        //!< geometry to compute the inter group distance with
+    PairMatrix<double>
+        cutoff_squared; //!< matrix with group-to-group cutoff distances squared in angstrom squared
+    Space::GeometryType& geometry; //!< geometry to compute the inter group distance with
     friend void from_json(const json&, GroupCutoff&);
     friend void to_json(json&, const GroupCutoff&);
     void setSingleCutoff(double cutoff);
@@ -657,11 +763,13 @@ class GroupCutoff {
      * @brief Determines if two groups are separated beyond the cutoff distance.
      * @return true if the group-to-group distance is beyond the cutoff distance, false otherwise
      */
-    inline bool cut(const Group& group1, const Group& group2) {
+    inline bool cut(const Group& group1, const Group& group2)
+    {
         if (group1.isAtomic() || group2.isAtomic()) {
             return false; // atomic groups have ill-defined mass centers
         }
-        return geometry.sqdist(group1.mass_center, group2.mass_center) >= cutoff_squared(group1.id, group2.id);
+        return geometry.sqdist(group1.mass_center, group2.mass_center) >=
+               cutoff_squared(group1.id, group2.id);
     }
 
     double getCutoff(size_t id1, size_t id2) const;
@@ -670,8 +778,10 @@ class GroupCutoff {
      * @brief A functor alias for cut().
      * @see cut()
      */
-    template <typename... Args>
-    inline auto operator()(Args &&... args) { return cut(std::forward<Args>(args)...); }
+    template <typename... Args> inline auto operator()(Args&&... args)
+    {
+        return cut(std::forward<Args>(args)...);
+    }
 
     /**
      * @brief Sets the geometry.
@@ -680,26 +790,27 @@ class GroupCutoff {
     explicit GroupCutoff(Space::GeometryType& geometry);
 };
 
-void from_json(const json&, GroupCutoff &);
-void to_json(json&, const GroupCutoff &);
+void from_json(const json&, GroupCutoff&);
+void to_json(json&, const GroupCutoff&);
 
 /**
- * @brief Particle pairing to calculate pairẃise interaction using particles' groups internally. Depending on
- * the accumulator provided, raw particle pairs, energy sum, etc. can be obtained.
+ * @brief Particle pairing to calculate pairẃise interaction using particles' groups internally.
+ * Depending on the accumulator provided, raw particle pairs, energy sum, etc. can be obtained.
  *
- * Accumulator is used as the first argument in all methods. Accumulator shall overload '+=' operator to accept a pair
- * of particle references as used in particle2particle method.
+ * Accumulator is used as the first argument in all methods. Accumulator shall overload '+='
+ * operator to accept a pair of particle references as used in particle2particle method.
  *
- * @remark Method arguments are generally not checked for correctness because of performance reasons.
+ * @remark Method arguments are generally not checked for correctness because of performance
+ * reasons.
  *
  * @tparam TCutoff  a cutoff scheme between groups
  * @see InstantEnergyAccumulator, GroupCutoff
  */
-template <typename TCutoff>
-class GroupPairingPolicy {
+template <typename TCutoff> class GroupPairingPolicy
+{
   protected:
-    const Space &spc; //!< a space to operate on
-    TCutoff cut;      //!< a cutoff functor that determines if energy between two groups can be ignored
+    const Space& spc; //!< a space to operate on
+    TCutoff cut; //!< a cutoff functor that determines if energy between two groups can be ignored
 
   public:
     /**
@@ -707,49 +818,49 @@ class GroupPairingPolicy {
      */
     explicit GroupPairingPolicy(Space& spc)
         : spc(spc)
-        , cut(spc.geometry) {}
-
-    void from_json(const json &j) {
-        Energy::from_json(j, cut);
+        , cut(spc.geometry)
+    {
     }
 
-    void to_json(json &j) const {
-        Energy::to_json(j, cut);
-    }
+    void from_json(const json& j) { Energy::from_json(j, cut); }
+
+    void to_json(json& j) const { Energy::to_json(j, cut); }
 
     /**
      * @brief Add two interacting particles to the accumulator.
      *
-     * Due to compiler optimization, the '+=' operator and this function itself may be inlined to significantly
-     * improve performance.
+     * Due to compiler optimization, the '+=' operator and this function itself may be inlined to
+     * significantly improve performance.
      *
-     * @tparam TAccumulator  an accumulator with '+=' operator overloaded to add a pair of particles as references
-     *                       {T&, T&}
+     * @tparam TAccumulator  an accumulator with '+=' operator overloaded to add a pair of particles
+     * as references {T&, T&}
      * @tparam T  an interacting particle
      * @param pair_accumulator  accumulator of interacting pairs of particles
      * @param a  first particle
      * @param b  second particle
      */
     template <RequireEnergyAccumulator TAccumulator, typename T>
-    inline void particle2particle(TAccumulator& pair_accumulator, const T& a, const T& b) const {
+    inline void particle2particle(TAccumulator& pair_accumulator, const T& a, const T& b) const
+    {
         pair_accumulator += {std::cref(a), std::cref(b)};
     }
 
     /**
      * @brief All pairings within a group.
      *
-     * All pair interaction within the group are accumulated. The pair exclusions defined in the molecule
-     * topology are honoured.
+     * All pair interaction within the group are accumulated. The pair exclusions defined in the
+     * molecule topology are honoured.
      *
-     * @tparam TAccumulator  an accumulator with '+=' operator overloaded to add a pair of particles as references
-     *                       {T&, T&}
+     * @tparam TAccumulator  an accumulator with '+=' operator overloaded to add a pair of particles
+     * as references {T&, T&}
      * @tparam TGroup
      * @param group
      * @param pair_accumulator  accumulator of interacting pairs of particles
      */
     template <RequireEnergyAccumulator TAccumulator, typename TGroup>
-    void groupInternal(TAccumulator& pair_accumulator, const TGroup& group) {
-        const auto &moldata = group.traits();
+    void groupInternal(TAccumulator& pair_accumulator, const TGroup& group)
+    {
+        const auto& moldata = group.traits();
         if (!moldata.rigid) {
             const int group_size = group.size();
             for (int i = 0; i < group_size - 1; ++i) {
@@ -769,26 +880,29 @@ class GroupPairingPolicy {
      *
      * The pair exclusions defined in the molecule topology are honoured.
      *
-     * @tparam TAccumulator  an accumulator with '+=' operator overloaded to add a pair of particles as references
-     *                       {T&, T&}
+     * @tparam TAccumulator  an accumulator with '+=' operator overloaded to add a pair of particles
+     * as references {T&, T&}
      * @tparam TGroup
      * @param pair_accumulator  accumulator of interacting pairs of particles
      * @param group
      * @param index  internal index of the selected particle within the group
      */
     template <RequireEnergyAccumulator TAccumulator, typename TGroup>
-    void groupInternal(TAccumulator& pair_accumulator, const TGroup& group, const std::size_t index) {
-        const auto &moldata = group.traits();
+    void groupInternal(TAccumulator& pair_accumulator, const TGroup& group, const std::size_t index)
+    {
+        const auto& moldata = group.traits();
         if (!moldata.rigid) {
             if (group.isAtomic()) {
-                // speed optimization: non-bonded interaction exclusions do not need to be checked for atomic groups
+                // speed optimization: non-bonded interaction exclusions do not need to be checked
+                // for atomic groups
                 for (int i = 0; i < index; ++i) {
                     particle2particle(pair_accumulator, group[index], group[i]);
                 }
                 for (int i = index + 1; i < group.size(); ++i) {
                     particle2particle(pair_accumulator, group[index], group[i]);
                 }
-            } else {
+            }
+            else {
                 // molecular group
                 for (int i = 0; i < index; ++i) {
                     if (!moldata.isPairExcluded(index, i)) {
@@ -807,11 +921,12 @@ class GroupPairingPolicy {
     /**
      * @brief Pairing in the group involving only the particles present in the index.
      *
-     * Only such non-bonded pair interactions within the group are considered if at least one particle is present
-     * in the index. The pair exclusions defined in the molecule topology are honoured.
+     * Only such non-bonded pair interactions within the group are considered if at least one
+     * particle is present in the index. The pair exclusions defined in the molecule topology are
+     * honoured.
      *
-     * @tparam TAccumulator  an accumulator with '+=' operator overloaded to add a pair of particles as references
-     *                       {T&, T&}
+     * @tparam TAccumulator  an accumulator with '+=' operator overloaded to add a pair of particles
+     * as references {T&, T&}
      * @tparam TGroup
      * @tparam TIndex
      * @param pair_accumulator  accumulator of interacting pairs of particles
@@ -819,12 +934,14 @@ class GroupPairingPolicy {
      * @param index  internal indices of particles within the group
      */
     template <RequireEnergyAccumulator TAccumulator, typename TGroup, typename TIndex>
-    void groupInternal(TAccumulator& pair_accumulator, const TGroup& group, const TIndex& index) {
-        auto &moldata = group.traits();
+    void groupInternal(TAccumulator& pair_accumulator, const TGroup& group, const TIndex& index)
+    {
+        auto& moldata = group.traits();
         if (!moldata.rigid) {
             if (index.size() == 1) {
                 groupInternal(pair_accumulator, group, index[0]);
-            } else {
+            }
+            else {
                 // TODO investigate overhead of `index_complement` filtering;
                 // TODO perhaps allow different strategies based on the index-size/group-size ratio
                 auto index_complement = indexComplement(group.size(), index);
@@ -853,22 +970,23 @@ class GroupPairingPolicy {
      *
      * group1 × group2
      *
-     * If the distance between the groups is greater or equal to the group cutoff distance, no calculation is performed.
-     * The group intersection must be an empty set, i.e., no particle is included in both groups. This is not verified
-     * for performance reason.
+     * If the distance between the groups is greater or equal to the group cutoff distance, no
+     * calculation is performed. The group intersection must be an empty set, i.e., no particle is
+     * included in both groups. This is not verified for performance reason.
      *
-     * @tparam TAccumulator  an accumulator with '+=' operator overloaded to add a pair of particles as references
-     *                       {T&, T&}
+     * @tparam TAccumulator  an accumulator with '+=' operator overloaded to add a pair of particles
+     * as references {T&, T&}
      * @tparam TGroup
      * @param pair_accumulator  accumulator of interacting pairs of particles
      * @param group1
      * @param group2
      */
     template <RequireEnergyAccumulator TAccumulator, typename TGroup>
-    void group2group(TAccumulator& pair_accumulator, const TGroup& group1, const TGroup& group2) {
+    void group2group(TAccumulator& pair_accumulator, const TGroup& group1, const TGroup& group2)
+    {
         if (!cut(group1, group2)) {
-            for (auto &particle1 : group1) {
-                for (auto &particle2 : group2) {
+            for (auto& particle1 : group1) {
+                for (auto& particle2 : group2) {
                     particle2particle(pair_accumulator, particle1, particle2);
                 }
             }
@@ -876,17 +994,22 @@ class GroupPairingPolicy {
     }
 
     /**
-     * @brief Cross pairing of particles in two groups. Only a cartesian subset of the complete cartesian product is
-     * considered as the particles in the first group must be also present in the index. The aim is to capture only
+     * @brief Cross pairing of particles in two groups. Only a cartesian subset of the complete
+     cartesian product is
+     * considered as the particles in the first group must be also present in the index. The aim is
+     to capture only
      * interactions that involve changing (indexed) particles.
      *
      * ⊕group1 × group2, where ⊕ denotes a filter by an index
      *
-     * If the distance between the groups is greater or equal to the group cutoff distance, no calculation is performed.
-     * The group intersection must be an empty set, i.e., no particle is included in both groups. This is not verified
+     * If the distance between the groups is greater or equal to the group cutoff distance, no
+     calculation is performed.
+     * The group intersection must be an empty set, i.e., no particle is included in both groups.
+     This is not verified
      * for performance reason.
 
-     * @tparam TAccumulator  an accumulator with '+=' operator overloaded to add a pair of particles as references
+     * @tparam TAccumulator  an accumulator with '+=' operator overloaded to add a pair of particles
+     as references
      *                       {T&, T&}
      * @tparam TGroup
      * @param pair_accumulator  accumulator of interacting pairs of particles
@@ -896,31 +1019,34 @@ class GroupPairingPolicy {
      */
     template <RequireEnergyAccumulator TAccumulator, typename TGroup>
     void group2group(TAccumulator& pair_accumulator, const TGroup& group1, const TGroup& group2,
-                     const std::vector<std::size_t>& index1) {
+                     const std::vector<std::size_t>& index1)
+    {
         if (!cut(group1, group2)) {
             for (auto particle1_ndx : index1) {
-                for (auto &particle2 : group2) {
-                    particle2particle(pair_accumulator, *(group1.begin() + particle1_ndx), particle2);
+                for (auto& particle2 : group2) {
+                    particle2particle(pair_accumulator, *(group1.begin() + particle1_ndx),
+                                      particle2);
                 }
             }
         }
     }
 
     /**
-     * @brief Cross pairing of particles in two groups. Only a non-cartesian subset of the complete cartesian product
-     * is considered as at least one particles in the pair must be also present in the respective index. The aim is
-     * to capture only interactions that involve changing (indexed) particles, i.e., to avoid pairs containing only
-     * non-indexed particles.
+     * @brief Cross pairing of particles in two groups. Only a non-cartesian subset of the complete
+     * cartesian product is considered as at least one particles in the pair must be also present in
+     * the respective index. The aim is to capture only interactions that involve changing (indexed)
+     * particles, i.e., to avoid pairs containing only non-indexed particles.
      *
      * (⊕group1 × ∁⊕group2) + (∁⊕group1 × ⊕group2) + (⊕group1 × ⊕group2) =
-     * = group1 × group2 − (∁⊕group2 × ∁⊕group2), where ⊕ denotes a filter by an index and ∁ a complement
+     * = group1 × group2 − (∁⊕group2 × ∁⊕group2), where ⊕ denotes a filter by an index and ∁ a
+     * complement
      *
-     * If the distance between the groups is greater or equal to the group cutoff distance, no calculation is performed.
-     * The group intersection must be an empty set, i.e., no particle is included in both groups. This is not verified
-     * for performance reason.
+     * If the distance between the groups is greater or equal to the group cutoff distance, no
+     * calculation is performed. The group intersection must be an empty set, i.e., no particle is
+     * included in both groups. This is not verified for performance reason.
      *
-     * @tparam TAccumulator  an accumulator with '+=' operator overloaded to add a pair of particles as references
-     *                       {T&, T&}
+     * @tparam TAccumulator  an accumulator with '+=' operator overloaded to add a pair of particles
+     * as references {T&, T&}
      * @tparam TGroup
      * @param pair_accumulator  accumulator of interacting pairs of particles
      * @param group1
@@ -930,7 +1056,8 @@ class GroupPairingPolicy {
      */
     template <RequireEnergyAccumulator TAccumulator, typename TGroup>
     void group2group(TAccumulator& pair_accumulator, const TGroup& group1, const TGroup& group2,
-                     const std::vector<std::size_t>& index1, const std::vector<std::size_t>& index2) {
+                     const std::vector<std::size_t>& index1, const std::vector<std::size_t>& index2)
+    {
         if (!cut(group1, group2)) {
             if (!index2.empty()) {
                 // (∁⊕group1 × ⊕group2) + (⊕group1 × ⊕group2) = group1 × ⊕group2
@@ -939,14 +1066,17 @@ class GroupPairingPolicy {
                 auto index2_complement = indexComplement(group2.size(), index2);
                 for (auto particle1_ndx : index1) {
                     for (auto particle2_ndx : index2_complement) {
-                        particle2particle(pair_accumulator, group2[particle2_ndx], group1[particle1_ndx]);
+                        particle2particle(pair_accumulator, group2[particle2_ndx],
+                                          group1[particle1_ndx]);
                     }
                 }
-            } else if (!index1.empty()) {
+            }
+            else if (!index1.empty()) {
                 // (⊕group1 × ∁⊕group2) + (⊕group1 × ⊕group2) = ⊕group1 × group2
                 group2group(pair_accumulator, group1, group2, index1);
                 // + (∁⊕group1 × ⊕group2) = Ø as ⊕group2 is empty
-            } else {
+            }
+            else {
                 // both indices empty hence nothing to do
             }
         }
@@ -957,12 +1087,12 @@ class GroupPairingPolicy {
      *
      * group × (∪ groups)
      *
-     * If the distance between the groups is greater or equal to the group cutoff distance, the particle pairing between
-     * them is skipped. The internal energy of the group is not computed even if the group is also present in the union
-     * of groups.
+     * If the distance between the groups is greater or equal to the group cutoff distance, the
+     * particle pairing between them is skipped. The internal energy of the group is not computed
+     * even if the group is also present in the union of groups.
      *
-     * @tparam TAccumulator  an accumulator with '+=' operator overloaded to add a pair of particles as references
-     *                       {T&, T&}
+     * @tparam TAccumulator  an accumulator with '+=' operator overloaded to add a pair of particles
+     * as references {T&, T&}
      * @tparam TGroup
      * @tparam TGroups
      * @param pair_accumulator  accumulator of interacting pairs of particles
@@ -970,8 +1100,9 @@ class GroupPairingPolicy {
      * @param groups
      */
     template <RequireEnergyAccumulator TAccumulator, typename TGroup, typename TGroups>
-    void group2groups(TAccumulator& pair_accumulator, const TGroup& group, const TGroups& groups) {
-        for (auto &other_group : groups) {
+    void group2groups(TAccumulator& pair_accumulator, const TGroup& group, const TGroups& groups)
+    {
+        for (auto& other_group : groups) {
             if (&other_group != &group) {
                 group2group(pair_accumulator, group, other_group);
             }
@@ -979,18 +1110,19 @@ class GroupPairingPolicy {
     }
 
     /**
-     * @brief Cross pairing of particles in a group and a union of groups. Only a cartesian subset of the complete
-     * cartesian product is considered as the particles of the first group must be also present in the index. The aim
-     * is to capture only interactions that involve changing (indexed) particles.
+     * @brief Cross pairing of particles in a group and a union of groups. Only a cartesian subset
+     * of the complete cartesian product is considered as the particles of the first group must be
+     * also present in the index. The aim is to capture only interactions that involve changing
+     * (indexed) particles.
      *
      * ⊕group × (∪ groups), where ⊕ denotes a filter by an index
      *
-     * If the distance between the groups is greater or equal to the group cutoff distance, the particle pairing
-     * between them is skipped. The internal energy of the group is not computed even if the group is also present
-     * in the union of groups.
+     * If the distance between the groups is greater or equal to the group cutoff distance, the
+     * particle pairing between them is skipped. The internal energy of the group is not computed
+     * even if the group is also present in the union of groups.
      *
-     * @tparam TAccumulator  an accumulator with '+=' operator overloaded to add a pair of particles as references
-     *                       {T&, T&}
+     * @tparam TAccumulator  an accumulator with '+=' operator overloaded to add a pair of particles
+     * as references {T&, T&}
      * @tparam TGroup
      * @tparam TGroups
      * @param pair_accumulator  accumulator of interacting pairs of particles
@@ -999,10 +1131,11 @@ class GroupPairingPolicy {
      * @param index  list of particle indices in the group relative to the group beginning
      */
     template <RequireEnergyAccumulator TAccumulator, typename TGroup, typename TGroups>
-    void group2groups(TAccumulator& pair_accumulator, const TGroup& group, const TGroups& group_index,
-                      const std::vector<std::size_t>& index) {
+    void group2groups(TAccumulator& pair_accumulator, const TGroup& group,
+                      const TGroups& group_index, const std::vector<std::size_t>& index)
+    {
         for (auto other_group_ndx : group_index) {
-            const auto &other_group = spc.groups[other_group_ndx];
+            const auto& other_group = spc.groups[other_group_ndx];
             if (&other_group != &group) {
                 group2group(pair_accumulator, group, other_group, index);
             }
@@ -1010,22 +1143,24 @@ class GroupPairingPolicy {
     }
 
     /**
-     * @brief Complete cartesian pairing between particles in a group and particles in other groups in space.
+     * @brief Complete cartesian pairing between particles in a group and particles in other groups
+     * in space.
      *
      * group × (space ∖ group)
      *
-     * If the distance between the groups is greater or equal to the group cutoff distance, the particle pairing
-     * between them is skipped.
+     * If the distance between the groups is greater or equal to the group cutoff distance, the
+     * particle pairing between them is skipped.
      *
-     * @tparam TAccumulator  an accumulator with '+=' operator overloaded to add a pair of particles as references
-     *                       {T&, T&}
+     * @tparam TAccumulator  an accumulator with '+=' operator overloaded to add a pair of particles
+     * as references {T&, T&}
      * @tparam TGroup
      * @param pair_accumulator  accumulator of interacting pairs of particles
      * @param group
      */
     template <RequireEnergyAccumulator TAccumulator, typename Tgroup>
-    void group2all(TAccumulator& pair_accumulator, const Tgroup& group) {
-        for (auto &other_group : spc.groups) {
+    void group2all(TAccumulator& pair_accumulator, const Tgroup& group)
+    {
+        for (auto& other_group : spc.groups) {
             if (&other_group != &group) {
                 group2group(pair_accumulator, group, other_group);
             }
@@ -1033,27 +1168,30 @@ class GroupPairingPolicy {
     }
 
     /**
-     * @brief Complete cartesian pairing between a single particle in a group and particles in other groups in space.
+     * @brief Complete cartesian pairing between a single particle in a group and particles in other
+     * groups in space.
      *
      * ⊕group × (space ∖ group), where ⊕ denotes a filter by an index (here a single particle)
      *
-     * If the distance between the groups is greater or equal to the group cutoff distance, the particle pairing
-     * between them is skipped. This method is performance-optimized version of the multiple indices method.
+     * If the distance between the groups is greater or equal to the group cutoff distance, the
+     * particle pairing between them is skipped. This method is performance-optimized version of the
+     * multiple indices method.
      *
-     * @tparam TAccumulator  an accumulator with '+=' operator overloaded to add a pair of particles as references
-     *                       {T&, T&}
+     * @tparam TAccumulator  an accumulator with '+=' operator overloaded to add a pair of particles
+     * as references {T&, T&}
      * @tparam TGroup
      * @param pair_accumulator  accumulator of interacting pairs of particles
      * @param group
      * @param index  a particle index relative to the group beginning
      */
     template <RequireEnergyAccumulator TAccumulator, typename TGroup>
-    void group2all(TAccumulator& pair_accumulator, const TGroup& group, const int index) {
-        const auto &particle = group[index];
-        for (auto &other_group : spc.groups) {
+    void group2all(TAccumulator& pair_accumulator, const TGroup& group, const int index)
+    {
+        const auto& particle = group[index];
+        for (auto& other_group : spc.groups) {
             if (&other_group != &group) {                      // avoid self-interaction
                 if (!cut(other_group, group)) {                // check g2g cut-off
-                    for (auto &other_particle : other_group) { // loop over particles in other group
+                    for (auto& other_particle : other_group) { // loop over particles in other group
                         particle2particle(pair_accumulator, particle, other_particle);
                     }
                 }
@@ -1062,25 +1200,29 @@ class GroupPairingPolicy {
     }
 
     /**
-     * @brief Complete cartesian pairing between selected particles in a group and particles in other groups in space.
+     * @brief Complete cartesian pairing between selected particles in a group and particles in
+     * other groups in space.
      *
      * ⊕group × (space ∖ group), where ⊕ denotes a filter by an index
      *
-     * If the distance between the groups is greater or equal to the group cutoff distance, the particle pairing
-     * between them is skipped.
+     * If the distance between the groups is greater or equal to the group cutoff distance, the
+     * particle pairing between them is skipped.
      *
-     * @tparam TAccumulator  an accumulator with '+=' operator overloaded to add a pair of particles as references
-     *                       {T&, T&}
+     * @tparam TAccumulator  an accumulator with '+=' operator overloaded to add a pair of particles
+     * as references {T&, T&}
      * @param pair_accumulator  accumulator of interacting pairs of particles
      * @param group
      * @param index  list of particle indices in the group relative to the group beginning
      */
     template <RequireEnergyAccumulator TAccumulator, typename Tgroup>
-    void group2all(TAccumulator& pair_accumulator, const Tgroup& group, const std::vector<std::size_t>& index) {
+    void group2all(TAccumulator& pair_accumulator, const Tgroup& group,
+                   const std::vector<std::size_t>& index)
+    {
         if (index.size() == 1) {
             group2all(pair_accumulator, group, index[0]);
-        } else {
-            for (auto &other_group : spc.groups) {
+        }
+        else {
+            for (auto& other_group : spc.groups) {
                 if (&other_group != &group) {
                     group2group(pair_accumulator, group, other_group, index);
                 }
@@ -1089,24 +1231,29 @@ class GroupPairingPolicy {
     }
 
     /**
-     * @brief Cross pairing of particles among a union of groups. No internal pairs within any group are considered.
+     * @brief Cross pairing of particles among a union of groups. No internal pairs within any group
+     * are considered.
      *
-     * If the distance between any two groups is greater or equal to the group cutoff distance, the particle pairing
-     * between them is skipped.
+     * If the distance between any two groups is greater or equal to the group cutoff distance, the
+     * particle pairing between them is skipped.
      *
-     * @tparam TAccumulator  an accumulator with '+=' operator overloaded to add a pair of particles as references
-     *                       {T&, T&}
+     * @tparam TAccumulator  an accumulator with '+=' operator overloaded to add a pair of particles
+     * as references {T&, T&}
      * @tparam T
      * @param pair_accumulator  accumulator of interacting pairs of particles
      * @param group_index  list of groups
      */
     template <RequireEnergyAccumulator TAccumulator, typename T>
-    void groups2self(TAccumulator& pair_accumulator, const T& group_index) {
-        for (auto group1_ndx_it = group_index.begin(); group1_ndx_it < group_index.end(); ++group1_ndx_it) {
-            //no such move exists that the internal energy has to be recalculated
-            //groupInternal(pair_accumulator, spc.groups[*group1_ndx_it]);
-            for (auto group2_ndx_it = std::next(group1_ndx_it); group2_ndx_it < group_index.end(); group2_ndx_it++) {
-                group2group(pair_accumulator, spc.groups[*group1_ndx_it], spc.groups[*group2_ndx_it]);
+    void groups2self(TAccumulator& pair_accumulator, const T& group_index)
+    {
+        for (auto group1_ndx_it = group_index.begin(); group1_ndx_it < group_index.end();
+             ++group1_ndx_it) {
+            // no such move exists that the internal energy has to be recalculated
+            // groupInternal(pair_accumulator, spc.groups[*group1_ndx_it]);
+            for (auto group2_ndx_it = std::next(group1_ndx_it); group2_ndx_it < group_index.end();
+                 group2_ndx_it++) {
+                group2group(pair_accumulator, spc.groups[*group1_ndx_it],
+                            spc.groups[*group2_ndx_it]);
             }
         }
     }
@@ -1114,17 +1261,18 @@ class GroupPairingPolicy {
     /**
      * @brief Cross pairing of particles between a union of groups and its complement in space.
      *
-     * If the distance between any two groups is greater or equal to the group cutoff distance, the particle pairing
-     * between them is skipped.
+     * If the distance between any two groups is greater or equal to the group cutoff distance, the
+     * particle pairing between them is skipped.
      *
-     * @tparam TAccumulator  an accumulator with '+=' operator overloaded to add a pair of particles as references
-     *                       {T&, T&}
+     * @tparam TAccumulator  an accumulator with '+=' operator overloaded to add a pair of particles
+     * as references {T&, T&}
      * @tparam T
      * @param pair_accumulator  accumulator of interacting pairs of particles
      * @param group_index  list of groups
      */
     template <RequireEnergyAccumulator TAccumulator, typename T>
-    void groups2all(TAccumulator& pair_accumulator, const T& group_index) {
+    void groups2all(TAccumulator& pair_accumulator, const T& group_index)
+    {
         groups2self(pair_accumulator, group_index);
         auto index_complement = indexComplement(spc.groups.size(), group_index);
         for (auto group1_ndx : group_index) {
@@ -1137,17 +1285,19 @@ class GroupPairingPolicy {
     /**
      * @brief Cross pairing between all particles in the space.
      *
-     * If the distance between particles' groups is greater or equal to the group cutoff distance, no calculation is
-     * performed.
+     * If the distance between particles' groups is greater or equal to the group cutoff distance,
+     * no calculation is performed.
      *
-     * @tparam TAccumulator  an accumulator with '+=' operator overloaded to add a pair of particles as references
-     *                       {T&, T&}
+     * @tparam TAccumulator  an accumulator with '+=' operator overloaded to add a pair of particles
+     * as references {T&, T&}
      * @param pair_accumulator  accumulator of interacting pairs of particles
      */
-    template <RequireEnergyAccumulator TAccumulator> void all(TAccumulator& pair_accumulator) {
+    template <RequireEnergyAccumulator TAccumulator> void all(TAccumulator& pair_accumulator)
+    {
         for (auto group_it = spc.groups.begin(); group_it < spc.groups.end(); ++group_it) {
             groupInternal(pair_accumulator, *group_it);
-            for (auto other_group_it = std::next(group_it); other_group_it < spc.groups.end(); other_group_it++) {
+            for (auto other_group_it = std::next(group_it); other_group_it < spc.groups.end();
+                 other_group_it++) {
                 group2group(pair_accumulator, *group_it, *other_group_it);
             }
         }
@@ -1156,22 +1306,24 @@ class GroupPairingPolicy {
     /**
      * @brief Cross pairing between all particles in the space.
      *
-     * If the distance between particles' groups is greater or equal to the group cutoff distance, no calculation is
-     * performed.
+     * If the distance between particles' groups is greater or equal to the group cutoff distance,
+     * no calculation is performed.
      *
-     * @tparam TAccumulator  an accumulator with '+=' operator overloaded to add a pair of particles as references
-     *                       {T&, T&}
+     * @tparam TAccumulator  an accumulator with '+=' operator overloaded to add a pair of particles
+     * as references {T&, T&}
      * @tparam TCondition  a function returning bool and having a group as an argument
      * @param pair_accumulator  accumulator of interacting pairs of particles
      * @param condition  a group filter if internal energy of the group shall be added
      */
     template <RequireEnergyAccumulator TAccumulator, typename TCondition>
-    void all(TAccumulator& pair_accumulator, TCondition condition) {
+    void all(TAccumulator& pair_accumulator, TCondition condition)
+    {
         for (auto group_it = spc.groups.begin(); group_it < spc.groups.end(); ++group_it) {
             if (condition(*group_it)) {
                 groupInternal(pair_accumulator, *group_it);
             }
-            for (auto other_group_it = std::next(group_it); other_group_it < spc.groups.end(); other_group_it++) {
+            for (auto other_group_it = std::next(group_it); other_group_it < spc.groups.end();
+                 other_group_it++) {
                 group2group(pair_accumulator, *group_it, *other_group_it);
             }
         }
@@ -1179,14 +1331,14 @@ class GroupPairingPolicy {
 };
 
 /**
- * @brief Computes pair quantity difference for a systen perturbation. Such quantity can be energy using nonponded
- * pair potential
+ * @brief Computes pair quantity difference for a systen perturbation. Such quantity can be energy
+ * using nonponded pair potential
  * .
  * @tparam TPolicy  a pairing policy
  */
-template <typename TPolicy>
-class GroupPairing {
-    const Space &spc;
+template <typename TPolicy> class GroupPairing
+{
+    const Space& spc;
     TPolicy pairing;
 
   protected:
@@ -1198,26 +1350,32 @@ class GroupPairing {
      * @param change
      */
     template <RequireEnergyAccumulator TAccumulator>
-    void accumulateGroup(TAccumulator& pair_accumulator, const Change& change) {
-        const auto &change_data = change.groups.at(0);
+    void accumulateGroup(TAccumulator& pair_accumulator, const Change& change)
+    {
+        const auto& change_data = change.groups.at(0);
         const auto& group = spc.groups.at(change_data.group_index);
         if (change_data.relative_atom_indices.size() == 1) {
             // faster algorithm if only a single particle moves
             pairing.group2all(pair_accumulator, group, change_data.relative_atom_indices[0]);
             if (change_data.internal) {
-                pairing.groupInternal(pair_accumulator, group, change_data.relative_atom_indices[0]);
+                pairing.groupInternal(pair_accumulator, group,
+                                      change_data.relative_atom_indices[0]);
             }
-        } else {
-            const bool change_all = change_data.relative_atom_indices.empty(); // all particles or only their subset?
+        }
+        else {
+            const bool change_all =
+                change_data.relative_atom_indices.empty(); // all particles or only their subset?
             if (change_all) {
                 pairing.group2all(pair_accumulator, group);
                 if (change_data.internal) {
                     pairing.groupInternal(pair_accumulator, group);
                 }
-            } else {
+            }
+            else {
                 pairing.group2all(pair_accumulator, group, change_data.relative_atom_indices);
                 if (change_data.internal) {
-                    pairing.groupInternal(pair_accumulator, group, change_data.relative_atom_indices);
+                    pairing.groupInternal(pair_accumulator, group,
+                                          change_data.relative_atom_indices);
                 }
             }
         }
@@ -1226,38 +1384,46 @@ class GroupPairing {
     /**
      * @brief Computes pair quantity difference if the number of particles has changed.
      *
-     * Particles have to be explicitly enumerated in the atom indices of the changed group. Implicit addition of atoms
-     * with a group is not supported yet. Note that we do not have to care about missing (removed) particles at all.
-     * They are taken into account in the original (old) space where they are present.
+     * Particles have to be explicitly enumerated in the atom indices of the changed group. Implicit
+     * addition of atoms with a group is not supported yet. Note that we do not have to care about
+     * missing (removed) particles at all. They are taken into account in the original (old) space
+     * where they are present.
      *
      * @param pair_accumulator  accumulator of interacting pairs of particles
      * @param change
      */
     template <RequireEnergyAccumulator TAccumulator>
-    void accumulateSpeciation(TAccumulator& pair_accumulator, const Change& change) {
+    void accumulateSpeciation(TAccumulator& pair_accumulator, const Change& change)
+    {
         assert(change.matter_change);
-        const auto &moved = change.touchedGroupIndex(); // index of moved groups
-        const auto fixed =
-            indexComplement(spc.groups.size(), moved) | ranges::to<std::vector>; // index of static groups
-        auto filter_active = [](int size) { return ranges::views::filter([size](const auto i) { return i < size; }); };
+        const auto& moved = change.touchedGroupIndex(); // index of moved groups
+        const auto fixed = indexComplement(spc.groups.size(), moved) |
+                           ranges::to<std::vector>; // index of static groups
+        auto filter_active = [](int size) {
+            return ranges::views::filter([size](const auto i) { return i < size; });
+        };
 
         // loop over all changed groups
-        for (auto change_group1_it = change.groups.begin(); change_group1_it < change.groups.end(); ++change_group1_it) {
+        for (auto change_group1_it = change.groups.begin(); change_group1_it < change.groups.end();
+             ++change_group1_it) {
             const auto& group1 = spc.groups.at(change_group1_it->group_index);
             // filter only active particles
-            const auto index1 =
-                change_group1_it->relative_atom_indices | filter_active(group1.size()) | ranges::to<std::vector>;
+            const auto index1 = change_group1_it->relative_atom_indices |
+                                filter_active(group1.size()) | ranges::to<std::vector>;
             if (!index1.empty()) {
                 // particles added into the group: compute (changed group) <-> (static group)
                 pairing.group2groups(pair_accumulator, group1, fixed, index1);
             }
-            // loop over successor changed groups (hence avoid double counting group1×group2 and group2×group1)
-            for (auto change_group2_it = std::next(change_group1_it); change_group2_it < change.groups.end(); ++change_group2_it) {
+            // loop over successor changed groups (hence avoid double counting group1×group2 and
+            // group2×group1)
+            for (auto change_group2_it = std::next(change_group1_it);
+                 change_group2_it < change.groups.end(); ++change_group2_it) {
                 const auto& group2 = spc.groups.at(change_group2_it->group_index);
-                const auto index2 =
-                    change_group2_it->relative_atom_indices | filter_active(group2.size()) | ranges::to<std::vector>;
+                const auto index2 = change_group2_it->relative_atom_indices |
+                                    filter_active(group2.size()) | ranges::to<std::vector>;
                 if (!index1.empty() || !index2.empty()) {
-                    // particles added into one or other group: compute (changed group) <-> (changed group)
+                    // particles added into one or other group: compute (changed group) <-> (changed
+                    // group)
                     pairing.group2group(pair_accumulator, group1, group2, index1, index2);
                 }
             }
@@ -1265,7 +1431,8 @@ class GroupPairing {
                 // compute internal energy in the changed group
                 if (change_group1_it->all) {
                     pairing.groupInternal(pair_accumulator, group1);
-                } else {
+                }
+                else {
                     pairing.groupInternal(pair_accumulator, group1, index1);
                 };
             }
@@ -1276,55 +1443,67 @@ class GroupPairing {
     /**
      * @brief Computes pair quantity difference from changed particles.
      *
-     * The internal energy contribution, i.e., the contribution from the intra group interactions, is added
-     * only if a single group is changed or if all changed.
+     * The internal energy contribution, i.e., the contribution from the intra group interactions,
+     * is added only if a single group is changed or if all changed.
      *
      * @param change
      * @param pair_accumulator  accumulator of interacting pairs of particles
      */
     template <RequireEnergyAccumulator TAccumulator>
-    void accumulate(TAccumulator& pair_accumulator, const Change& change) {
+    void accumulate(TAccumulator& pair_accumulator, const Change& change)
+    {
         assert(std::is_sorted(change.groups.begin(), change.groups.end()));
         if (change.everything) {
             pairing.all(pair_accumulator);
-        } else if (change.volume_change) {
+        }
+        else if (change.volume_change) {
             // sum all interaction energies except the internal energies of incompressible molecules
-            pairing.all(pair_accumulator, [](auto& group) { return group.isAtomic() || group.traits().compressible; });
-        } else if (!change.matter_change) {
+            pairing.all(pair_accumulator, [](auto& group) {
+                return group.isAtomic() || group.traits().compressible;
+            });
+        }
+        else if (!change.matter_change) {
             if (change.groups.size() == 1) {
-                // if only a single group changes use faster algorithm and optionally add the internal energy
+                // if only a single group changes use faster algorithm and optionally add the
+                // internal energy
                 accumulateGroup(pair_accumulator, change);
-            } else {
+            }
+            else {
                 // if multiple groups move, no internal energies are computed
-                const auto &moved = change.touchedGroupIndex(); // index of moved groups
+                const auto& moved = change.touchedGroupIndex(); // index of moved groups
                 pairing.groups2all(pair_accumulator, moved);
             }
-        } else { // change.dN
+        }
+        else { // change.dN
             accumulateSpeciation(pair_accumulator, change);
         }
     }
 
-    GroupPairing(Space &spc) : spc(spc), pairing(spc) {}
-
-    void from_json(const json &j) {
-        pairing.from_json(j);
+    GroupPairing(Space& spc)
+        : spc(spc)
+        , pairing(spc)
+    {
     }
 
-    void to_json(json &j) const {
-        pairing.to_json(j);
-    }
+    void from_json(const json& j) { pairing.from_json(j); }
+
+    void to_json(json& j) const { pairing.to_json(j); }
 
     // FIXME a temporal fix for non-refactorized NonbondedCached
     template <typename Accumulator>
-    void group2group(Accumulator& pair_accumulator, const Space::GroupType& group1, const Space::GroupType& group2) {
-        pairing.group2group(std::forward<Accumulator&>(pair_accumulator), std::forward<const Space::GroupType&>(group1),
+    void group2group(Accumulator& pair_accumulator, const Space::GroupType& group1,
+                     const Space::GroupType& group2)
+    {
+        pairing.group2group(std::forward<Accumulator&>(pair_accumulator),
+                            std::forward<const Space::GroupType&>(group1),
                             std::forward<const Space::GroupType&>(group2));
     }
 };
 
-class NonbondedBase : public EnergyTerm {
+class NonbondedBase : public EnergyTerm
+{
   public:
-    virtual double particleParticleEnergy(const Particle &particle1, const Particle &particle2) = 0;
+    virtual double particleParticleEnergy(const Particle& particle1, const Particle& particle2) = 0;
     virtual double groupGroupEnergy(const Group& group1, const Group& group2) = 0;
 };
 
@@ -1332,13 +1511,18 @@ class NonbondedBase : public EnergyTerm {
  * @brief Computes change in the non-bonded energy, assuming pairwise additive energy terms.
  *
  * @tparam TPairEnergy  a functor to compute non-bonded energy between two particles
- * @tparam TPairingPolicy  pairing policy to effectively sum up the pairwise additive non-bonded energy
+ * @tparam TPairingPolicy  pairing policy to effectively sum up the pairwise additive non-bonded
+ * energy
  */
-template <RequirePairEnergy TPairEnergy, typename TPairingPolicy> class Nonbonded : public NonbondedBase {
+template <RequirePairEnergy TPairEnergy, typename TPairingPolicy>
+class Nonbonded : public NonbondedBase
+{
   protected:
     const Space& spc;        //!< space to operate on
-    TPairEnergy pair_energy; //!< a functor to compute non-bonded energy between two particles, see PairEnergy
-    TPairingPolicy pairing;  //!< pairing policy to effectively sum up the pairwise additive non-bonded energy
+    TPairEnergy pair_energy; //!< a functor to compute non-bonded energy between two particles, see
+                             //!< PairEnergy
+    TPairingPolicy
+        pairing; //!< pairing policy to effectively sum up the pairwise additive non-bonded energy
     std::shared_ptr<EnergyAccumulatorBase>
         energy_accumulator; //!< energy accumulator used for storing and summing pair-wise energies
 
@@ -1346,42 +1530,52 @@ template <RequirePairEnergy TPairEnergy, typename TPairingPolicy> class Nonbonde
     Nonbonded(const json& j, Space& spc, BasePointerVector<EnergyTerm>& pot)
         : spc(spc)
         , pair_energy(spc, pot)
-        , pairing(spc) {
+        , pairing(spc)
+    {
         name = "nonbonded";
         from_json(j);
         energy_accumulator = createEnergyAccumulator(j, pair_energy, 0.0);
         energy_accumulator->reserve(spc.numParticles()); // attempt to reduce memory fragmentation
     }
 
-    double particleParticleEnergy(const Particle& particle1, const Particle& particle2) override {
+    double particleParticleEnergy(const Particle& particle1, const Particle& particle2) override
+    {
         return pair_energy(particle1, particle2);
     }
 
-    double groupGroupEnergy(const Group &group1, const Group& group2) override {
+    double groupGroupEnergy(const Group& group1, const Group& group2) override
+    {
         InstantEnergyAccumulator<TPairEnergy> accumulator(pair_energy);
         pairing.group2group(accumulator, group1, group2);
         return static_cast<double>(accumulator);
     }
 
-    void from_json(const json &j) {
+    void from_json(const json& j)
+    {
         pair_energy.from_json(j);
         pairing.from_json(j);
     }
 
-    void to_json(json &j) const override {
+    void to_json(json& j) const override
+    {
         pair_energy.to_json(j);
         pairing.to_json(j);
         energy_accumulator->to_json(j);
     }
 
-    double energy(const Change& change) override {
+    double energy(const Change& change) override
+    {
         energy_accumulator->clear();
         // down-cast to avoid slow, virtual function calls:
-        if (auto ptr = std::dynamic_pointer_cast<InstantEnergyAccumulator<TPairEnergy>>(energy_accumulator)) {
+        if (auto ptr = std::dynamic_pointer_cast<InstantEnergyAccumulator<TPairEnergy>>(
+                energy_accumulator)) {
             pairing.accumulate(*ptr, change);
-        } else if (auto ptr = std::dynamic_pointer_cast<DelayedEnergyAccumulator<TPairEnergy>>(energy_accumulator)) {
+        }
+        else if (auto ptr = std::dynamic_pointer_cast<DelayedEnergyAccumulator<TPairEnergy>>(
+                     energy_accumulator)) {
             pairing.accumulate(*ptr, change);
-        } else {
+        }
+        else {
             pairing.accumulate(*energy_accumulator, change);
         }
         return static_cast<double>(*energy_accumulator);
@@ -1392,9 +1586,12 @@ template <RequirePairEnergy TPairEnergy, typename TPairingPolicy> class Nonbonde
      *
      * @todo A stub. Change to reflect only active particle, see Space::activeParticles().
      */
-    void force(std::vector<Point> &forces) override {
-        // just a temporary hack; perhaps better to allow PairForce instead of the PairEnergy template
-        assert(forces.size() == spc.particles.size() && "the forces size must match the particle size");
+    void force(std::vector<Point>& forces) override
+    {
+        // just a temporary hack; perhaps better to allow PairForce instead of the PairEnergy
+        // template
+        assert(forces.size() == spc.particles.size() &&
+               "the forces size must match the particle size");
         for (size_t i = 0; i < spc.particles.size() - 1; ++i) {
             for (size_t j = i + 1; j < spc.particles.size(); ++j) {
                 const Point f = pair_energy.force(spc.particles[i], spc.particles[j]);
@@ -1406,47 +1603,54 @@ template <RequirePairEnergy TPairEnergy, typename TPairingPolicy> class Nonbonde
 };
 
 /**
- * @brief Computes non-bonded energy contribution from changed particles. Cache group2group energy once calculated,
- * until a new trial configuration is provided. Not for general use as only partially implemented!
+ * @brief Computes non-bonded energy contribution from changed particles. Cache group2group energy
+ * once calculated, until a new trial configuration is provided. Not for general use as only
+ * partially implemented!
  *
- * Original implementation, only refurbished. Generally suboptimal as only PairingPolicy::group2group method
- * may be called.
- * No internal energy is ever computed. Cannot deal with particle count changes. And other unmentioned constrains.
+ * Original implementation, only refurbished. Generally suboptimal as only
+ * PairingPolicy::group2group method may be called. No internal energy is ever computed. Cannot deal
+ * with particle count changes. And other unmentioned constrains.
  *
  * @tparam TPairEnergy  a functor to compute non-bonded energy between two particles
- * @tparam TPairingPolicy  pairing policy to effectively sum up the pairwise additive non-bonded energy
+ * @tparam TPairingPolicy  pairing policy to effectively sum up the pairwise additive non-bonded
+ * energy
  */
 template <RequirePairEnergy TPairEnergy, typename TPairingPolicy>
-class NonbondedCached : public Nonbonded<TPairEnergy, TPairingPolicy> {
+class NonbondedCached : public Nonbonded<TPairEnergy, TPairingPolicy>
+{
     using Base = Nonbonded<TPairEnergy, TPairingPolicy>;
     using TAccumulator = InstantEnergyAccumulator<TPairEnergy>;
     Eigen::MatrixXf energy_cache;
     using Base::spc;
 
-    template <typename TGroup>
-    double g2g(const TGroup &g1, const TGroup &g2) {
+    template <typename TGroup> double g2g(const TGroup& g1, const TGroup& g2)
+    {
         int i = &g1 - spc.groups.data();
         int j = &g2 - spc.groups.data();
         if (j < i) {
             std::swap(i, j);
         }
-        if (EnergyTerm::state == EnergyTerm::MonteCarloState::TRIAL) { // if this is from the trial system
+        if (EnergyTerm::state ==
+            EnergyTerm::MonteCarloState::TRIAL) { // if this is from the trial system
             TAccumulator energy_accumulator(Base::pair_energy);
             Base::pairing.group2group(energy_accumulator, g1, g2);
-            energy_cache(i, j) = static_cast<double>(energy_accumulator);  // update the cache
+            energy_cache(i, j) = static_cast<double>(energy_accumulator); // update the cache
         }
         return energy_cache(i, j); // return (cached) value
     }
 
     template <typename TGroup>
-    double g2g(const TGroup& g1, const TGroup& g2, [[maybe_unused]] const std::vector<std::size_t>& index) {
+    double g2g(const TGroup& g1, const TGroup& g2,
+               [[maybe_unused]] const std::vector<std::size_t>& index)
+    {
         // index not implemented
         return g2g(g1, g2);
     }
 
   public:
     NonbondedCached(const json& j, Space& spc, BasePointerVector<EnergyTerm>& pot)
-        : Base(j, spc, pot) {
+        : Base(j, spc, pot)
+    {
         Base::name += "EM";
         init();
     }
@@ -1454,7 +1658,8 @@ class NonbondedCached : public Nonbonded<TPairEnergy, TPairingPolicy> {
     /**
      * @brief Cache pair interactions in matrix.
      */
-    void init() override {
+    void init() override
+    {
         const auto groups_size = spc.groups.size();
         energy_cache.resize(groups_size, groups_size);
         energy_cache.setZero();
@@ -1468,7 +1673,8 @@ class NonbondedCached : public Nonbonded<TPairEnergy, TPairingPolicy> {
         }
     }
 
-    double energy(const Change& change) override {
+    double energy(const Change& change) override
+    {
         if (!change) {
             return 0.0;
         }
@@ -1508,7 +1714,8 @@ class NonbondedCached : public Nonbonded<TPairEnergy, TPairingPolicy> {
         // moved<->static
 #if true
         // classic version
-        const auto fixed = indexComplement(spc.groups.size(), moved) | ranges::to_vector; // static groups
+        const auto fixed =
+            indexComplement(spc.groups.size(), moved) | ranges::to_vector; // static groups
         for (auto i : moved) {
             for (auto j : fixed) {
                 energy_sum += g2g(spc.groups[i], spc.groups[j]);
@@ -1516,7 +1723,8 @@ class NonbondedCached : public Nonbonded<TPairEnergy, TPairingPolicy> {
         }
 #else
         // OMP-ready version
-        auto fixed = indexComplement(spc.groups.size(), moved) | ranges::to<std::vector>; // index of static groups
+        auto fixed = indexComplement(spc.groups.size(), moved) |
+                     ranges::to<std::vector>; // index of static groups
         const size_t moved_size = moved.size();
         const size_t fixed_size = fixed.size();
         for (auto i = 0; i < moved_size; ++i) {
@@ -1533,13 +1741,15 @@ class NonbondedCached : public Nonbonded<TPairEnergy, TPairingPolicy> {
      * @param base_ptr
      * @param change
      */
-    void sync(EnergyTerm* base_ptr, const Change& change) override {
+    void sync(EnergyTerm* base_ptr, const Change& change) override
+    {
         auto other = dynamic_cast<decltype(this)>(base_ptr);
         assert(other);
         if (change.everything || change.volume_change) {
             energy_cache.triangularView<Eigen::StrictlyUpper>() =
                 (other->energy_cache).template triangularView<Eigen::StrictlyUpper>();
-        } else {
+        }
+        else {
             for (const auto& d : change.groups) {
                 for (int i = 0; i < d.group_index; i++) {
                     energy_cache(i, d.group_index) = other->energy_cache(i, d.group_index);
@@ -1560,7 +1770,8 @@ class NonbondedCached : public Nonbonded<TPairEnergy, TPairingPolicy> {
  * @todo - Implement partial evaluation refelcting `change` object
  *       - Average volume currently mixes accepted/rejected states
  */
-class FreeSASAEnergy : public EnergyTerm {
+class FreeSASAEnergy : public EnergyTerm
+{
   private:
     std::vector<double> positions; //!< Flattened position buffer for all particles
     std::vector<double> radii;     //!< Radii buffer for all particles
@@ -1571,7 +1782,7 @@ class FreeSASAEnergy : public EnergyTerm {
     std::unique_ptr<freesasa_parameters_fwd> parameters; //!< Parameters for freesasa
     Average<double> mean_surface_area;
 
-    void to_json(json &j) const override;
+    void to_json(json& j) const override;
     void sync(EnergyTerm* energybase_ptr, const Change& change) override;
     void updateSASA(const Change& change);
     void init() override;
@@ -1583,7 +1794,8 @@ class FreeSASAEnergy : public EnergyTerm {
      * @param change Change object (currently unused)
      */
     template <typename Tfirst, typename Tend>
-    void updateRadii(Tfirst begin, Tend end, [[maybe_unused]] const Change& change) {
+    void updateRadii(Tfirst begin, Tend end, [[maybe_unused]] const Change& change)
+    {
         const auto number_of_particles = std::distance(begin, end);
         radii.clear();
         radii.reserve(number_of_particles);
@@ -1598,7 +1810,8 @@ class FreeSASAEnergy : public EnergyTerm {
      * @param change Change object (currently unused)
      */
     template <typename Tfirst, typename Tend>
-    void updatePositions(Tfirst begin, Tend end, [[maybe_unused]] const Change& change) {
+    void updatePositions(Tfirst begin, Tend end, [[maybe_unused]] const Change& change)
+    {
         const auto number_of_particles = std::distance(begin, end);
         positions.clear();
         positions.reserve(3 * number_of_particles);
@@ -1617,6 +1830,7 @@ class FreeSASAEnergy : public EnergyTerm {
     FreeSASAEnergy(const Space& spc, double cosolute_molarity, double probe_radius);
     FreeSASAEnergy(const json& j, const Space& spc);
     double energy(const Change& change) override;
+
     const std::vector<double>& getAreas() const { return sasa; }
 }; //!< SASA energy from transfer free energies
 #endif
@@ -1628,7 +1842,8 @@ class FreeSASAEnergy : public EnergyTerm {
  * (and slow) system update is performed on each call to `energy()`. This class is used as
  * a reference and base class for more clever implementations.
  */
-class SASAEnergyReference : public EnergyTerm {
+class SASAEnergyReference : public EnergyTerm
+{
   private:
     void to_json(json& j) const override;
     void sync(EnergyTerm* energybase_ptr, const Change& change) override;
@@ -1636,32 +1851,38 @@ class SASAEnergyReference : public EnergyTerm {
   protected:
     void init() override;
     using index_type = size_t;
-    const Space& spc;                     //!< Space to operate on
-    std::vector<double> areas;            //!< Target buffer for calculated surface areas
-    double cosolute_molarity = 0.0;       //!< co-solute concentration (mol/l)
-    std::unique_ptr<SASA::SASABase> sasa; //!< performs neighbour searching and subsequent sasa calculation
+    const Space& spc;               //!< Space to operate on
+    std::vector<double> areas;      //!< Target buffer for calculated surface areas
+    double cosolute_molarity = 0.0; //!< co-solute concentration (mol/l)
+    std::unique_ptr<SASA::SASABase>
+        sasa; //!< performs neighbour searching and subsequent sasa calculation
 
     /** absolute index of particle in space particle vector */
-    inline auto indexOf(const Particle& particle) const {
-        return static_cast<index_type>(std::addressof(particle) - std::addressof(spc.particles.at(0)));
+    inline auto indexOf(const Particle& particle) const
+    {
+        return static_cast<index_type>(std::addressof(particle) -
+                                       std::addressof(spc.particles.at(0)));
     }
 
   public:
-    SASAEnergyReference(const Space& spc, double cosolute_molarity, double probe_radius, int slices_per_atom = 25,
-                        bool dense_container = true);
+    SASAEnergyReference(const Space& spc, double cosolute_molarity, double probe_radius,
+                        int slices_per_atom = 25, bool dense_container = true);
     SASAEnergyReference(const json& j, const Space& spc);
     const std::vector<double>& getAreas() const;
     double energy(const Change& change) override;
 };
 
 /**
- * @brief class for calculating SASA energies calculating SASA of particles based on change object every step
+ * @brief class for calculating SASA energies calculating SASA of particles based on change object
+ * every step
  */
-class SASAEnergy : public SASAEnergyReference {
+class SASAEnergy : public SASAEnergyReference
+{
   private:
     std::vector<std::vector<index_type>>
         current_neighbours; //!< holds cached neighbour indices for each particle in ParticleVector
-    std::vector<index_type> changed_indices; //!< paritcle indices whose SASA changed based on change object
+    std::vector<index_type>
+        changed_indices; //!< paritcle indices whose SASA changed based on change object
 
     void sync(EnergyTerm* energybase_ptr, const Change& change) override;
     void init() override;
@@ -1670,8 +1891,8 @@ class SASAEnergy : public SASAEnergyReference {
     void insertChangedNeighboursOf(index_type index, std::set<index_type>& target_indices) const;
 
   public:
-    SASAEnergy(const Space& spc, double cosolute_molarity, double probe_radius, int slices_per_atom = 25,
-               bool dense_container = true);
+    SASAEnergy(const Space& spc, double cosolute_molarity, double probe_radius,
+               int slices_per_atom = 25, bool dense_container = true);
     SASAEnergy(const json& j, const Space& spc);
     double energy(const Change& change) override;
 };
@@ -1683,15 +1904,16 @@ class SASAEnergy : public SASAEnergyReference {
  * to illustrate parallel tempering in the book
  * "Understanding Molecular Simulation" by D. Frenkel.
  */
-class Example2D : public EnergyTerm {
+class Example2D : public EnergyTerm
+{
   private:
     bool use_2d = true;        // Set to false to apply energy only along x (as by the book)
     double scale_energy = 1.0; // effective temperature
-    const Point &particle;     // reference to 1st particle in the system
-    void to_json(json &j) const override;
+    const Point& particle;     // reference to 1st particle in the system
+    void to_json(json& j) const override;
 
   public:
-    Example2D(const json &j, Space &spc);
+    Example2D(const json& j, Space& spc);
     double energy(const Change& change) override;
 };
 
@@ -1704,7 +1926,8 @@ class Example2D : public EnergyTerm {
  * - "R" Mass center separation
  * - "Z1" and "Z2" mean charges of the two molecules
  */
-class CustomGroupGroup : public EnergyTerm {
+class CustomGroupGroup : public EnergyTerm
+{
   private:
     const Space& spc;
     MoleculeData::index_type molid1;
@@ -1712,11 +1935,14 @@ class CustomGroupGroup : public EnergyTerm {
     std::map<MoleculeData::index_type, Average<double>> mean_charges;
     std::unique_ptr<ExprFunction<double>> expr;
     json json_input_backup; // initial json input
-    struct Properties {     // storage for particle properties
+
+    struct Properties
+    { // storage for particle properties
         double mean_charge1 = 0;
         double mean_charge2 = 0;
         double mass_center_separation = 0;
     };
+
     Properties properties;
 
     void to_json(json& j) const override;
@@ -1730,13 +1956,17 @@ class CustomGroupGroup : public EnergyTerm {
 /**
  * @brief Aggregate and sum energy terms
  */
-class Hamiltonian : public EnergyTerm, public BasePointerVector<EnergyTerm> {
+class Hamiltonian : public EnergyTerm, public BasePointerVector<EnergyTerm>
+{
   private:
     double maximum_allowed_energy = pc::infty; //!< Maximum allowed energy change
-    std::vector<double> latest_energies;       //!< Placeholder for the lastest energies for each energy term
-    decltype(vec)& energy_terms;               //!< Alias for `vec`
-    void addEwald(const json& j, Space& spc);  //!< Adds an instance of reciprocal space Ewald energies (if appropriate)
-    void checkBondedMolecules() const;         //!< Warn if bonded molecules and no bonded energy term
+    std::vector<double>
+        latest_energies;         //!< Placeholder for the lastest energies for each energy term
+    decltype(vec)& energy_terms; //!< Alias for `vec`
+    void
+    addEwald(const json& j,
+             Space& spc); //!< Adds an instance of reciprocal space Ewald energies (if appropriate)
+    void checkBondedMolecules() const; //!< Warn if bonded molecules and no bonded energy term
     void to_json(json& j) const override;
     void force(PointVector& forces) override;
     std::unique_ptr<EnergyTerm> createEnergy(Space& spc, const std::string& name, const json& j);
@@ -1746,8 +1976,9 @@ class Hamiltonian : public EnergyTerm, public BasePointerVector<EnergyTerm> {
     void init() override;
     void updateState(const Change& change) override;
     void sync(EnergyTerm* other_hamiltonian, const Change& change) override;
-    double energy(const Change& change) override;      //!< Energy due to changes
-    const std::vector<double>& latestEnergies() const; //!< Energies for each term from the latest call to `energy()`
+    double energy(const Change& change) override; //!< Energy due to changes
+    const std::vector<double>&
+    latestEnergies() const; //!< Energies for each term from the latest call to `energy()`
 };
 } // namespace Energy
 } // namespace Faunus

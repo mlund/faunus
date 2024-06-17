@@ -5,8 +5,8 @@ namespace Faunus {
 /**
  * @namespace Type Erasure
  *
- * Class templates to assist implementing the type erasure pattern. The pairwise composition of concepts is also
- * supported.
+ * Class templates to assist implementing the type erasure pattern. The pairwise composition of
+ * concepts is also supported.
  *
  * Type erasure pattern in general
  * https://www.modernescpp.com/index.php/c-core-guidelines-type-erasure-with-templates
@@ -49,7 +49,8 @@ namespace Faunus {
  * };
  * using PrintableType = TypeErasure::TypeErasure<PrintableSpecification>
  * using PrintableExportableType =
- *       TypeErasure::TypeErasure<TypeErasure::MergeSpecifications<PrintableSpecification, ExportableSpecification>>
+ *       TypeErasure::TypeErasure<TypeErasure::MergeSpecifications<PrintableSpecification,
+ * ExportableSpecification>>
  * @endcode
  *
  * @brief Class templates to assist implementing the type erasure pattern.
@@ -60,17 +61,25 @@ namespace TypeErasure {
  */
 namespace Internal {
 /**
- * @brief A universal storage of the concrete implementation with the move semantic in the constructor.
+ * @brief A universal storage of the concrete implementation with the move semantic in the
+ * constructor.
  * @tparam TImplementation  a concrete implementation of the required interface
  */
-template <class TImplementation> class Holder {
+template <class TImplementation> class Holder
+{
   public:
     using Implementation = TImplementation;
 
-    Holder(TImplementation implementation) : implementation(std::move(implementation)) {}
+    Holder(TImplementation implementation)
+        : implementation(std::move(implementation))
+    {
+    }
+
     virtual ~Holder() = default;
-    TImplementation &get() { return implementation; }
-    const TImplementation &get() const { return implementation; }
+
+    TImplementation& get() { return implementation; }
+
+    const TImplementation& get() const { return implementation; }
 
   private:
     TImplementation implementation;
@@ -80,17 +89,24 @@ template <class TImplementation> class Holder {
  * @brief A universal storage of a reference to the concrete implementation.
  * @tparam TImplementation  a concrete implementation of the required interface
  */
-template <class TImplementation> class ReferenceHolder {
+template <class TImplementation> class ReferenceHolder
+{
   public:
     using Implementation = TImplementation;
 
-    ReferenceHolder(TImplementation &implementation) : implementation(implementation) {}
+    ReferenceHolder(TImplementation& implementation)
+        : implementation(implementation)
+    {
+    }
+
     virtual ~ReferenceHolder() = default;
-    TImplementation &get() { return implementation; }
-    const TImplementation &get() const { return implementation; }
+
+    TImplementation& get() { return implementation; }
+
+    const TImplementation& get() const { return implementation; }
 
   private:
-    TImplementation &implementation;
+    TImplementation& implementation;
 };
 
 /**
@@ -99,18 +115,22 @@ template <class TImplementation> class ReferenceHolder {
  * @tparam TModel  model template
  */
 template <class TConcept, template <class> class TModel> // template template sytax for TModel<...>
-class Container {
+class Container
+{
   public:
     using Concept = TConcept;
 
     /**
-     * @brief Passes the implementation instance to the storage as an r-value reference using the move semantic.
+     * @brief Passes the implementation instance to the storage as an r-value reference using the
+     * move semantic.
      * @tparam TImplementation  a concrete implementation of the required interface
      * @param implementation  an implementation as an r-value, e.g., std::move(implementation)
      */
     template <class TImplementation>
-    Container(TImplementation &&implementation)
-        : self_ptr(std::make_shared<TModel<Holder<TImplementation>>>(std::move(implementation))) {}
+    Container(TImplementation&& implementation)
+        : self_ptr(std::make_shared<TModel<Holder<TImplementation>>>(std::move(implementation)))
+    {
+    }
 
     /**
      * @brief Passes the implementation instance to the storage as an l-value reference.
@@ -118,15 +138,18 @@ class Container {
      * @param implementation  an implementation as an l-value
      */
     template <class TImplementation>
-    Container(TImplementation &implementation)
-        : self_ptr(std::make_shared<TModel<ReferenceHolder<TImplementation>>>(implementation)) {}
+    Container(TImplementation& implementation)
+        : self_ptr(std::make_shared<TModel<ReferenceHolder<TImplementation>>>(implementation))
+    {
+    }
 
-    const Concept &get() const { return *self_ptr; }
-    Concept &get() { return *self_ptr; }
+    const Concept& get() const { return *self_ptr; }
+
+    Concept& get() { return *self_ptr; }
 
   private:
     std::shared_ptr<Concept> self_ptr;
-    //std::shared_ptr<const Concept> self_ptr;
+    // std::shared_ptr<const Concept> self_ptr;
 };
 
 /**
@@ -135,7 +158,8 @@ class Container {
 //! @brief Extracts the concept type from the specification.
 template <class TSpecification> using ConceptOf = typename TSpecification::Concept;
 //! @brief Extracts the model type (including its holder type) from the specification.
-template <class TSpecification, class THolder> using ModelOf = typename TSpecification::template Model<THolder>;
+template <class TSpecification, class THolder>
+using ModelOf = typename TSpecification::template Model<THolder>;
 //! @brief Extracts the interface type from the specification.
 template <class TSpecification, class TContainer>
 using InterfaceOf = typename TSpecification::template Interface<TContainer>;
@@ -150,7 +174,9 @@ using ContainerOf = Container<typename TSpecification::Concept, TSpecification::
  * @tparam TSpecification  specification of the concept, model and interface
  */
 template <class TSpecification>
-class TypeErasure : public Internal::InterfaceOf<TSpecification, Internal::ContainerOf<TSpecification>> {
+class TypeErasure
+    : public Internal::InterfaceOf<TSpecification, Internal::ContainerOf<TSpecification>>
+{
     using Base = Internal::InterfaceOf<TSpecification, Internal::ContainerOf<TSpecification>>;
 
   public:
@@ -163,22 +189,31 @@ class TypeErasure : public Internal::InterfaceOf<TSpecification, Internal::Conta
  * @tparam TSpecificationA the first specification
  * @tparam TSpecificationB the other specification
  */
-template <class TSpecificationA, class TSpecificationB> struct MergeSpecifications {
+template <class TSpecificationA, class TSpecificationB> struct MergeSpecifications
+{
     struct Concept : public virtual Internal::ConceptOf<TSpecificationA>,
-                     public virtual Internal::ConceptOf<TSpecificationB> {};
+                     public virtual Internal::ConceptOf<TSpecificationB>
+    {
+    };
 
     template <class THolder>
-    struct Model : public Internal::ModelOf<TSpecificationA, Internal::ModelOf<TSpecificationB, THolder>>,
-                   public virtual Concept {
-        using Base = Internal::ModelOf<TSpecificationA, Internal::ModelOf<TSpecificationB, THolder>>;
+    struct Model
+        : public Internal::ModelOf<TSpecificationA, Internal::ModelOf<TSpecificationB, THolder>>,
+          public virtual Concept
+    {
+        using Base =
+            Internal::ModelOf<TSpecificationA, Internal::ModelOf<TSpecificationB, THolder>>;
         using Base::Base; // include parent constructor
     };
 
     template <class Container>
     struct Interface
-        : public Internal::InterfaceOf<TSpecificationA, Internal::InterfaceOf<TSpecificationB, Container>> {
+        : public Internal::InterfaceOf<TSpecificationA,
+                                       Internal::InterfaceOf<TSpecificationB, Container>>
+    {
 
-        using Base = Internal::InterfaceOf<TSpecificationA, Internal::InterfaceOf<TSpecificationB, Container>>;
+        using Base = Internal::InterfaceOf<TSpecificationA,
+                                           Internal::InterfaceOf<TSpecificationB, Container>>;
         using Base::Base; // include parent constructor
     };
 };

@@ -13,7 +13,8 @@ constexpr T infty = std::numeric_limits<T>::infinity(), //!< Numerical infinity
     neg_infty = -std::numeric_limits<T>::infinity(),    //!< Numerical negative infinity
     epsilon_dbl = std::numeric_limits<T>::epsilon(),    //!< Numerical precision
     max_value = std::numeric_limits<T>::max(),          //!< Maximal (finite) representable value
-    max_exp_argument = 709.782712893384, //!< Largest value exp() can take before overflow (hard-coded for double)
+    max_exp_argument =
+        709.782712893384, //!< Largest value exp() can take before overflow (hard-coded for double)
     pi = std::numbers::pi,
             vacuum_permittivity = 8.85419e-12,          //!< Permittivity of vacuum [C^2/(J*m)]
     elementary_charge = 1.602177e-19,                   //!< Absolute electronic unit charge [C]
@@ -23,15 +24,24 @@ constexpr T infty = std::numeric_limits<T>::infinity(), //!< Numerical infinity
     molar_gas_constant = boltzmann_constant * avogadro; //!< Molar gas constant [J/(K*mol)]
 extern T temperature;                                   //!< Temperature [K]
 
-static inline T kT() { return temperature * boltzmann_constant; } //!< Thermal energy [J]
-static inline T RT() { return temperature * molar_gas_constant; } //!< Thermal energy [J/mol]
+static inline T kT()
+{
+    return temperature * boltzmann_constant;
+} //!< Thermal energy [J]
 
-static inline T bjerrumLength(T relative_dielectric_constant) {
+static inline T RT()
+{
+    return temperature * molar_gas_constant;
+} //!< Thermal energy [J/mol]
+
+static inline T bjerrumLength(T relative_dielectric_constant)
+{
     return elementary_charge * elementary_charge /
            (4 * pi * vacuum_permittivity * relative_dielectric_constant * 1e-10 * kT());
 } //!< Bjerrum length [Å]
 
-static inline T relativeDielectricFromBjerrumLength(T bjerrumlength) {
+static inline T relativeDielectricFromBjerrumLength(T bjerrumlength)
+{
     return bjerrumLength(bjerrumlength);
 } //!< Bjerrum length to a relative dielectric constant
 } // namespace PhysicalConstants
@@ -60,68 +70,173 @@ namespace pc = PhysicalConstants;
  */
 namespace ChemistryUnits {
 
-using T = double;                                                       //!< floating point size
-constexpr T operator"" _rad(long double a) { return a; }                //!< angle in radians
-constexpr T operator"" _deg(long double a) { return a * pc::pi / 180; } //!< angle in degrees (to radians)
-constexpr T operator"" _K(long double temp) { return temp; }            //!< temperature in kelvins
-constexpr T operator"" _C(long double temp) { return 273.15 + temp; }   //!< temperature in degrees Celcius (to kelvins)
-constexpr T operator"" _ps(long double tau) { return tau; }             //!< time in picoseconds
-constexpr T operator"" _s(long double tau) { return tau * 1e12; }       //!< time in seconds (to picoseconds)
-constexpr T operator"" _angstrom(long double l) { return l; }           //!< length in ångströms
-constexpr T operator"" _nm(long double l) { return l * 10; }            //!< length in nanometers (to ångströms)
-constexpr T operator"" _m(long double l) { return l * 1e10; }           //!< length in meters (to ångströms)
-constexpr T operator"" _bohr(long double l) { return l * 0.52917721092; } //!< length in Bohr radii (to ångströms)
-constexpr T operator"" _angstrom3(long double l) { return l; }            //!< volume in cubic ångströms
-constexpr T operator"" _m3(long double v) { return v * 1e30; }    //!< volume in cubic meters (to cubic ångströms)
-constexpr T operator"" _liter(long double v) { return v * 1e27; } //!< volume in liters (to cubic ångströms)
-constexpr T operator"" _gmol(long double m) { return m; }         //!< mass in grams per mole
-constexpr T operator"" _kg(long double m) {
+using T = double; //!< floating point size
+
+constexpr T operator"" _rad(long double a)
+{
+    return a;
+} //!< angle in radians
+
+constexpr T operator"" _deg(long double a)
+{
+    return a * pc::pi / 180;
+} //!< angle in degrees (to radians)
+
+constexpr T operator"" _K(long double temp)
+{
+    return temp;
+} //!< temperature in kelvins
+
+constexpr T operator"" _C(long double temp)
+{
+    return 273.15 + temp;
+} //!< temperature in degrees Celcius (to kelvins)
+
+constexpr T operator"" _ps(long double tau)
+{
+    return tau;
+} //!< time in picoseconds
+
+constexpr T operator"" _s(long double tau)
+{
+    return tau * 1e12;
+} //!< time in seconds (to picoseconds)
+
+constexpr T operator"" _angstrom(long double l)
+{
+    return l;
+} //!< length in ångströms
+
+constexpr T operator"" _nm(long double l)
+{
+    return l * 10;
+} //!< length in nanometers (to ångströms)
+
+constexpr T operator"" _m(long double l)
+{
+    return l * 1e10;
+} //!< length in meters (to ångströms)
+
+constexpr T operator"" _bohr(long double l)
+{
+    return l * 0.52917721092;
+} //!< length in Bohr radii (to ångströms)
+
+constexpr T operator"" _angstrom3(long double l)
+{
+    return l;
+} //!< volume in cubic ångströms
+
+constexpr T operator"" _m3(long double v)
+{
+    return v * 1e30;
+} //!< volume in cubic meters (to cubic ångströms)
+
+constexpr T operator"" _liter(long double v)
+{
+    return v * 1e27;
+} //!< volume in liters (to cubic ångströms)
+
+constexpr T operator"" _gmol(long double m)
+{
+    return m;
+} //!< mass in grams per mole
+
+constexpr T operator"" _kg(long double m)
+{
     return m * 1e3 * pc::avogadro;
 } //!< mass in kilograms per particle (to grams per mole)
-constexpr T operator"" _Da(long double m) { return m; } //!< mass in daltons per particle (to grams per mole)
+
+constexpr T operator"" _Da(long double m)
+{
+    return m;
+} //!< mass in daltons per particle (to grams per mole)
 
 //! amount of substance in moles (to number of particles)
-constexpr T operator"" _mol(long double n) { return n * pc::avogadro; }
+constexpr T operator"" _mol(long double n)
+{
+    return n * pc::avogadro;
+}
 
 //! molar concentration (to particle density in number of particles per cubic ångström)
-constexpr T operator"" _molar(long double c) { return c * 1.0_mol / 1.0_liter; }
+constexpr T operator"" _molar(long double c)
+{
+    return c * 1.0_mol / 1.0_liter;
+}
 
 //! millimolar concentration (to particle density in number of particles per cubic ångström)
-constexpr T operator"" _millimolar(long double c) { return c * 1.0e-3_mol / 1.0_liter; }
+constexpr T operator"" _millimolar(long double c)
+{
+    return c * 1.0e-3_mol / 1.0_liter;
+}
 
-//! pressure in pascals (to particle density in number of particles per cubic ångström – assuming the ideal gas law)
-inline T operator"" _Pa(long double p) { return p / pc::kT() / 1.0_m3; }
+//! pressure in pascals (to particle density in number of particles per cubic ångström – assuming
+//! the ideal gas law)
+inline T operator"" _Pa(long double p)
+{
+    return p / pc::kT() / 1.0_m3;
+}
 
-//! pressure in atmospheres (to particle density in number of particles per cubic ångström – assuming the ideal gas
-//! law)
-inline T operator"" _atm(long double p) { return p * 101325.0_Pa; }
+//! pressure in atmospheres (to particle density in number of particles per cubic ångström –
+//! assuming the ideal gas law)
+inline T operator"" _atm(long double p)
+{
+    return p * 101325.0_Pa;
+}
 
 //! pressure in bars (to particles per cubic ångström – assuming the ideal gas law)
-inline T operator"" _bar(long double p) { return p * 100000.0_Pa; }
+inline T operator"" _bar(long double p)
+{
+    return p * 100000.0_Pa;
+}
 
 //! dipole moment in electron—ångströms
-constexpr T operator"" _eA(long double mu) { return mu; }
+constexpr T operator"" _eA(long double mu)
+{
+    return mu;
+}
 
 //! dipole moment in debyes (to electron-ångströms)
-constexpr T operator"" _debye(long double mu) { return mu * 0.208194334424626; }
+constexpr T operator"" _debye(long double mu)
+{
+    return mu * 0.208194334424626;
+}
 
 //! dipole moment in coulomb-meters (to electron ångströms)
-constexpr T operator"" _Cm(long double mu) { return mu * 1.0_debye / 3.335640951981520e-30; }
+constexpr T operator"" _Cm(long double mu)
+{
+    return mu * 1.0_debye / 3.335640951981520e-30;
+}
 
 //! energy in kT (to kT)
-constexpr T operator"" _kT(long double u) { return u; }
+constexpr T operator"" _kT(long double u)
+{
+    return u;
+}
 
 //! energy in joules (to thermal energy units kT)
-inline T operator"" _J(long double u) { return u / pc::kT(); }
+inline T operator"" _J(long double u)
+{
+    return u / pc::kT();
+}
 
 //! energy in hartrees (to kT)
-inline T operator"" _hartree(long double u) { return u * 4.35974434e-18_J; }
+inline T operator"" _hartree(long double u)
+{
+    return u * 4.35974434e-18_J;
+}
 
 //! energy in kilojoules per mole (to kT per particle)
-inline T operator"" _kJmol(long double u) { return u / pc::kT() / pc::avogadro * 1e3; }
+inline T operator"" _kJmol(long double u)
+{
+    return u / pc::kT() / pc::avogadro * 1e3;
+}
 
 //! energy in kilocalories per mole (to kT per particle)
-inline T operator"" _kcalmol(long double u) { return u * 4.1868_kJmol; }
+inline T operator"" _kcalmol(long double u)
+{
+    return u * 4.1868_kJmol;
+}
 
 } // namespace ChemistryUnits
 

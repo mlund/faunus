@@ -27,13 +27,13 @@ double bias(double outside_acceptance, const int n_total, const int n_inside, Bi
 
 TEST_CASE("[Faunus] SmartMonteCarlo::bias") {
     using doctest::Approx;
-    CHECK(bias(1.0, 20, 5, BiasDirection::NO_CROSSING) == Approx(0.0));
-    CHECK(bias(1.0, 20, 5, BiasDirection::EXIT_REGION) == Approx(0.0));
-    CHECK(bias(1.0, 20, 5, BiasDirection::ENTER_REGION) == Approx(0.0));
+    CHECK_EQ(bias(1.0, 20, 5, BiasDirection::NO_CROSSING), Approx(0.0));
+    CHECK_EQ(bias(1.0, 20, 5, BiasDirection::EXIT_REGION), Approx(0.0));
+    CHECK_EQ(bias(1.0, 20, 5, BiasDirection::ENTER_REGION), Approx(0.0));
 
-    CHECK(bias(0.1, 20, 5, BiasDirection::NO_CROSSING) == Approx(0.0));
-    CHECK(bias(0.1, 20, 5, BiasDirection::EXIT_REGION) == Approx(2.1535495138));
-    CHECK(bias(0.1, 20, 5, BiasDirection::ENTER_REGION) == Approx(-2.1729072697));
+    CHECK_EQ(bias(0.1, 20, 5, BiasDirection::NO_CROSSING), Approx(0.0));
+    CHECK_EQ(bias(0.1, 20, 5, BiasDirection::EXIT_REGION), Approx(2.1535495138));
+    CHECK_EQ(bias(0.1, 20, 5, BiasDirection::ENTER_REGION), Approx(-2.1729072697));
 }
 
 /**
@@ -49,7 +49,7 @@ RegionSampler::RegionSampler(const double outside_acceptance, std::unique_ptr<Re
 }
 
 /** Determines the direction of a transition */
-BiasDirection RegionSampler::getDirection(const bool inside_before, const bool inside_after) const {
+BiasDirection RegionSampler::getDirection(const bool inside_before, const bool inside_after) {
     if (inside_before && (not inside_after)) {
         return BiasDirection::EXIT_REGION;
     } else if (inside_after && (not inside_before)) {

@@ -118,7 +118,7 @@ class ExternalAkesson : public ExternalPotential {
     Equidistant2DTable<double, Average<double>> rho; //!< Charge density at z (unit A^-2)
     Equidistant2DTable<double> phi;                  //!< External potential at z (unit: beta*e)
 
-    double evalPotential(double z, double a) const; //!< Calculate external potential
+    static double evalPotential(double z, double a) ; //!< Calculate external potential
     void updateChargeDensity();                     //!< update average charge density
     void updatePotential();                         //!< update average external potential
     void saveChargeDensity();                       //!< save charge density profile to disk
@@ -129,7 +129,7 @@ class ExternalAkesson : public ExternalPotential {
   public:
     ExternalAkesson(const json& j, const Space& spc);
     double energy(const Change& change) override;
-    ~ExternalAkesson();
+    ~ExternalAkesson() override;
 };
 
 /**

@@ -21,8 +21,8 @@ class QuaternionRotate {
     QuaternionRotate(double angle, Point axis);           //!< Set angle and rotation axis
     void set(double angle, Point axis);                   //!< Set angle and rotation axis
     auto operator()(const Eigen::Matrix3d &matrix) const; //!< Rotate matrix/tensor
-    const Eigen::Quaterniond &getQuaternion() const;      //!< Get current quaternion
-    const Eigen::Matrix3d &getRotationMatrix() const;     //!< Get current rotation matrix
+    [[nodiscard]] const Eigen::Quaterniond &getQuaternion() const;      //!< Get current quaternion
+    [[nodiscard]] const Eigen::Matrix3d &getRotationMatrix() const;     //!< Get current rotation matrix
     Point operator()(
         Point vector, std::function<void(Point &)> boundary = [](Point &) {},
         const Point &shift = {0, 0, 0}) const; //!< Rotate point w. optional PBC boundaries

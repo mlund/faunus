@@ -362,7 +362,7 @@ class DipoleDipole : public PairPotential {
 
   public:
     explicit DipoleDipole(const std::string& name = "dipoledipole", const std::string& cite = std::string());
-    double bjerrum_length;
+    double bjerrum_length{};
 
     inline double operator()(const Particle& a, const Particle& b, double, const Point& b_towards_a) const override {
         return bjerrum_length *
@@ -463,7 +463,7 @@ class NewCoulombGalore : public PairPotential {
     }
 
     void to_json(json& j) const override;
-    double dielectric_constant(double M2V);
+    [[maybe_unused]] double dielectric_constant(double M2V);
     double bjerrum_length;
     const CoulombGalore::Splined& getCoulombGalore() const; //!< Access to full coulomb galore class
 };

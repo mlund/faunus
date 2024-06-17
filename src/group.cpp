@@ -2,7 +2,6 @@
 #include "aux/eigensupport.h"
 #include <range/v3/view/sample.hpp>
 #include <range/v3/view/common.hpp>
-#include <range/v3/view/transform.hpp>
 #include <cereal/archives/binary.hpp>
 #include <cereal/types/memory.hpp>
 #include <nlohmann/json.hpp>
@@ -84,7 +83,7 @@ double Group::mass() const {
     return std::accumulate(begin(), end(), 0.0, [](double sum, auto& particle) { return sum + particle.traits().mw; });
 }
 
-void Group::wrap(Geometry::BoundaryFunction boundary) {
+[[maybe_unused]] void Group::wrap(Geometry::BoundaryFunction boundary) {
     boundary(mass_center);
     for (auto& particle : *this) {
         boundary(particle.pos);
@@ -226,59 +225,59 @@ using doctest::Approx;
 TEST_SUITE_BEGIN("Group");
 
 TEST_CASE("[Faunus] swap_to_back") {
-    using _T = std::vector<int>;
-    _T v = {1, 2, 3, 4};
+    using VecInt = std::vector<int>;
+    VecInt v = {1, 2, 3, 4};
 
     swap_to_back(v.begin(), v.end(), v.end());
-    CHECK(v == _T({1, 2, 3, 4}));
+    CHECK_EQ(v, VecInt({1, 2, 3, 4}));
 
     std::sort(v.begin(), v.end());
     swap_to_back(v.begin() + 1, v.begin() + 3, v.end());
-    CHECK(v == _T({1, 4, 3, 2}));
+    CHECK_EQ(v, VecInt({1, 4, 3, 2}));
 }
 
 TEST_CASE("[Faunus] ElasticRange") {
     std::vector<int> v = {10, 20, 30, 40, 50, 60};
     ElasticRange<int> r(v.begin(), v.end());
-    CHECK(r.size() == 6);
-    CHECK(r.empty() == false);
-    CHECK(r.size() == r.capacity());
+    CHECK_EQ(r.size(), 6);
+    CHECK_EQ(r.empty(), false);
+    CHECK_EQ(r.size(), r.capacity());
     *r.begin() += 1;
-    CHECK(v[0] == 11);
+    CHECK_EQ(v[0], 11);
 
     r.deactivate(r.begin(), r.end());
-    CHECK(r.size() == 0);
-    CHECK(r.empty() == true);
-    CHECK(r.capacity() == 6);
-    CHECK(r.inactive().size() == 6);
-    CHECK(r.begin() == r.end());
+    CHECK_EQ(r.size(), 0);
+    CHECK_EQ(r.empty(), true);
+    CHECK_EQ(r.capacity(), 6);
+    CHECK_EQ(r.inactive().size(), 6);
+    CHECK_EQ(r.begin(), r.end());
 
     r.activate(r.inactive().begin(), r.inactive().end());
-    CHECK(r.size() == 6);
-    CHECK(std::is_sorted(r.begin(), r.end()) == true); // back to original
+    CHECK_EQ(r.size(), 6);
+    CHECK_EQ(std::is_sorted(r.begin(), r.end()), true); // back to original
 
     r.deactivate(r.begin() + 1, r.begin() + 3);
-    CHECK(r.size() == 4);
-    CHECK(std::find(r.begin(), r.end(), 20) == r.end());
-    CHECK(std::find(r.begin(), r.end(), 30) == r.end());
-    CHECK(*r.end() == 20); // deactivated elements can be retrieved from `end()`
-    CHECK(*(r.end() + 1) == 30);
+    CHECK_EQ(r.size(), 4);
+    CHECK_EQ(std::find(r.begin(), r.end(), 20), r.end());
+    CHECK_EQ(std::find(r.begin(), r.end(), 30), r.end());
+    CHECK_EQ(*r.end(), 20); // deactivated elements can be retrieved from `end()`
+    CHECK_EQ(*(r.end() + 1), 30);
 
     auto ipair = r.to_index(v.begin());
-    CHECK(ipair.first == 0);
-    CHECK(ipair.second == 3);
+    CHECK_EQ(ipair.first, 0);
+    CHECK_EQ(ipair.second, 3);
 
     r.activate(r.end(), r.end() + 2);
-    CHECK(*(r.end() - 2) == 20); // activated elements can be retrieved from `end()-n`
-    CHECK(*(r.end() - 1) == 30);
-    CHECK(r.size() == 6);
+    CHECK_EQ(*(r.end() - 2), 20); // activated elements can be retrieved from `end()-n`
+    CHECK_EQ(*(r.end() - 1), 30);
+    CHECK_EQ(r.size(), 6);
 
     // check relocation
     auto v2 = v;
     v2.front() = -7;
-    CHECK(*r.begin() != -7);
+    CHECK((*r.begin() != -7));
     r.relocate(v.begin(), v2.begin());
-    CHECK(*r.begin() == -7);
+    CHECK_EQ(*r.begin(), -7);
 }
 
 TEST_CASE("[Faunus] Group") {
@@ -297,58 +296,58 @@ TEST_CASE("[Faunus] Group") {
         CHECK(g.contains(p[0]));
         CHECK(g.contains(p[1]));
         CHECK(g.contains(p[2]));
-        CHECK(g.size() == 3);
+        CHECK_EQ(g.size(), 3);
         g.deactivate(g.end() - 1, g.end());
-        CHECK(g.size() == 2);
-        CHECK(g.contains(p[2]) == false);
-        CHECK(g.contains(p[2], true) == true);
+        CHECK_EQ(g.size(), 2);
+        CHECK_EQ(g.contains(p[2]), false);
+        CHECK_EQ(g.contains(p[2], true), true);
         g.activate(g.end(), g.end() + 1);
-        CHECK(g.size() == 3);
+        CHECK_EQ(g.size(), 3);
     }
 
     SUBCASE("getParticleIndex()") {
         Group gg(0, p.begin(), p.end());
-        CHECK(gg.getParticleIndex(p[0]) == 0);
-        CHECK(gg.getParticleIndex(p[1]) == 1);
-        CHECK(gg.getParticleIndex(p[2]) == 2);
-        CHECK(gg.size() == 3);
+        CHECK_EQ(gg.getParticleIndex(p[0]), 0);
+        CHECK_EQ(gg.getParticleIndex(p[1]), 1);
+        CHECK_EQ(gg.getParticleIndex(p[2]), 2);
+        CHECK_EQ(gg.size(), 3);
         gg.deactivate(gg.end() - 1, gg.end());
-        CHECK(gg.size() == 2);
-        CHECK_THROWS(gg.getParticleIndex(p[2]));
+        CHECK_EQ(gg.size(), 2);
+        CHECK_THROWS(std::ignore = gg.getParticleIndex(p[2]));
         gg.resize(0);
-        CHECK_THROWS(gg.getParticleIndex(p[0]));
+        CHECK_THROWS(std::ignore = gg.getParticleIndex(p[0]));
     }
 
     SUBCASE("getGroupFilter(): complete group") {
         using T = Group;
         auto filter = getGroupFilter<T::Selectors::ACTIVE>();
-        CHECK(filter(g) == true);
+        CHECK_EQ(filter(g), true);
         filter = getGroupFilter<T::Selectors::FULL>();
-        CHECK(filter(g) == true);
+        CHECK_EQ(filter(g), true);
         filter = getGroupFilter<T::Selectors::INACTIVE>();
-        CHECK(filter(g) == false);
+        CHECK_EQ(filter(g), false);
         filter = getGroupFilter<T::Selectors::ACTIVE | T::Selectors::NEUTRAL>();
-        CHECK(filter(g) == true);
+        CHECK_EQ(filter(g), true);
         filter = getGroupFilter<T::Selectors::ACTIVE | T::Selectors::MOLECULAR>();
-        CHECK(filter(g) == g.isMolecular());
+        CHECK_EQ(filter(g), g.isMolecular());
         filter = getGroupFilter<T::Selectors::INACTIVE | T::Selectors::MOLECULAR>();
-        CHECK(filter(g) == g.isMolecular());
+        CHECK_EQ(filter(g), g.isMolecular());
         filter = getGroupFilter<T::Selectors::ACTIVE | T::Selectors::ATOMIC>();
-        CHECK(filter(g) == g.isAtomic());
+        CHECK_EQ(filter(g), g.isAtomic());
 
         g.begin()->charge = 0.1;
         filter = getGroupFilter<T::Selectors::ACTIVE | T::Selectors::NEUTRAL>();
-        CHECK(filter(g) == false);
+        CHECK_EQ(filter(g), false);
         g.begin()->charge = 0.0;
     }
 
     // find all elements with id=1
     auto slice1 = g.findAtomID(1);
-    CHECK(std::distance(slice1.begin(), slice1.end()) == 2);
+    CHECK_EQ(std::distance(slice1.begin(), slice1.end()), 2);
 
     // find *one* random value with id=1
     auto slice2 = slice1 | ranges::views::sample(1, rand.engine) | ranges::views::common;
-    CHECK(std::distance(slice2.begin(), slice2.end()) == 1);
+    CHECK_EQ(std::distance(slice2.begin(), slice2.end()), 1);
 
     // check rotation
     Eigen::Quaterniond q;
@@ -357,12 +356,12 @@ TEST_CASE("[Faunus] Group") {
 
     Geometry::Chameleon geo = R"({"type":"cuboid", "length": [2,2,2]})"_json;
     g.rotate(q, geo.getBoundaryFunc());
-    CHECK(p[0].pos.y() == doctest::Approx(0));
-    CHECK(p[0].pos.z() == doctest::Approx(1));
-    CHECK(p[0].getExt().mu.y() == doctest::Approx(0));
-    CHECK(p[0].getExt().mu.z() == doctest::Approx(1));
-    CHECK(p[0].getExt().scdir.y() == doctest::Approx(0));
-    CHECK(p[0].getExt().scdir.z() == doctest::Approx(1));
+    CHECK_EQ(p[0].pos.y(), doctest::Approx(0));
+    CHECK_EQ(p[0].pos.z(), doctest::Approx(1));
+    CHECK_EQ(p[0].getExt().mu.y(), doctest::Approx(0));
+    CHECK_EQ(p[0].getExt().mu.z(), doctest::Approx(1));
+    CHECK_EQ(p[0].getExt().scdir.y(), doctest::Approx(0));
+    CHECK_EQ(p[0].getExt().scdir.z(), doctest::Approx(1));
 
     p[0].pos = {1, 2, 3};
     p[1].pos = {4, 5, 6};
@@ -371,25 +370,25 @@ TEST_CASE("[Faunus] Group") {
     for (auto& pos : g.positions()) {
         pos *= 2.0;
     }
-    CHECK(p[1].pos.x() == doctest::Approx(8));
-    CHECK(p[1].pos.y() == doctest::Approx(10));
-    CHECK(p[1].pos.z() == doctest::Approx(12));
+    CHECK_EQ(p[1].pos.x(), doctest::Approx(8));
+    CHECK_EQ(p[1].pos.y(), doctest::Approx(10));
+    CHECK_EQ(p[1].pos.z(), doctest::Approx(12));
 
     SUBCASE("operator[]") {
-        CHECK(p.begin() == g.begin());
-        CHECK(p.end() == g.end());
+        CHECK_EQ(p.begin(), g.begin());
+        CHECK_EQ(p.end(), g.end());
 
         // a new range by using an index filter
         std::vector<size_t> index = {0, 1};
         auto subset = g[index];
-        CHECK(subset.size() == 2);
-        CHECK(&(*p.begin()) == &(*subset.begin()));
-        CHECK(&(*(p.begin() + 1)) == &(*(subset.begin() + 1)));
+        CHECK_EQ(subset.size(), 2);
+        CHECK_EQ(&(*p.begin()), &(*subset.begin()));
+        CHECK_EQ(&(*(p.begin() + 1)), &(*(subset.begin() + 1)));
         for (auto& i : subset)
             i.pos *= 2;
-        CHECK(p[1].pos.x() == doctest::Approx(16));
-        CHECK(p[1].pos.y() == doctest::Approx(20));
-        CHECK(p[1].pos.z() == doctest::Approx(24));
+        CHECK_EQ(p[1].pos.x(), doctest::Approx(16));
+        CHECK_EQ(p[1].pos.y(), doctest::Approx(20));
+        CHECK_EQ(p[1].pos.z(), doctest::Approx(24));
     }
 
     SUBCASE("deep copy and resizing") {
@@ -405,20 +404,20 @@ TEST_CASE("[Faunus] Group") {
         g2.conformation_id = 20;
         g1 = g2;
 
-        CHECK(g1.id == 100);
-        CHECK(g1.mass_center.x() == 1);
-        CHECK(g1.conformation_id == 20);
+        CHECK_EQ(g1.id, 100);
+        CHECK_EQ(g1.mass_center.x(), 1);
+        CHECK_EQ(g1.conformation_id, 20);
 
-        CHECK((*g1.begin()).id == -1);
-        CHECK((*g2.begin()).id == -1);
-        CHECK(g1.begin() != g2.begin());
-        CHECK(g1.size() == g2.size());
+        CHECK_EQ((*g1.begin()).id, -1);
+        CHECK_EQ((*g2.begin()).id, -1);
+        CHECK((g1.begin() != g2.begin()));
+        CHECK_EQ(g1.size(), g2.size());
         (*g2.begin()).id = 10;
         g2.resize(4);
         g1 = g2;
-        CHECK(g1.size() == 4);
-        CHECK(g1.capacity() == 5);
-        CHECK(p1.front().id == 10);
+        CHECK_EQ(g1.size(), 4);
+        CHECK_EQ(g1.capacity(), 5);
+        CHECK_EQ(p1.front().id, 10);
 
         g1.id = 0;
 
@@ -426,15 +425,15 @@ TEST_CASE("[Faunus] Group") {
             CHECK(!Faunus::molecules.empty());
             using Tgroup = Group;
             auto filter = getGroupFilter<Tgroup::FULL>();
-            CHECK(filter(g1) == false);
+            CHECK_EQ(filter(g1), false);
             filter = getGroupFilter<Tgroup::INACTIVE>();
-            CHECK(filter(g1) == false);
+            CHECK_EQ(filter(g1), false);
             filter = getGroupFilter<Tgroup::ACTIVE>();
-            CHECK(filter(g1) == true);
+            CHECK_EQ(filter(g1), true);
             filter = getGroupFilter<Tgroup::ACTIVE | Tgroup::ATOMIC>();
-            CHECK(filter(g1) == g1.isAtomic());
+            CHECK_EQ(filter(g1), g1.isAtomic());
             filter = getGroupFilter<Tgroup::ACTIVE | Tgroup::MOLECULAR>();
-            CHECK(filter(g1) == g1.isMolecular());
+            CHECK_EQ(filter(g1), g1.isMolecular());
         }
 
         std::vector<Group> gvec1, gvec2;
@@ -442,17 +441,17 @@ TEST_CASE("[Faunus] Group") {
         gvec2.push_back(g2);
         p2.front().id = 21;
 
-        CHECK((*(gvec1.front().begin())).id == 10);
-        CHECK((*(gvec2.front().begin())).id == 21);
+        CHECK_EQ((*(gvec1.front().begin())).id, 10);
+        CHECK_EQ((*(gvec2.front().begin())).id, 21);
 
         // existing groups point to existing particles when overwritten
         gvec1 = gvec2; // invoke *deep* copy of all contained groups
-        CHECK(gvec1[0].begin() != gvec2[0].begin());
-        CHECK(p1.front().id == 21);
+        CHECK((gvec1[0].begin() != gvec2[0].begin()));
+        CHECK_EQ(p1.front().id, 21);
 
         // new groups point to same particles as original
         auto gvec3 = gvec1;
-        CHECK((*gvec1[0].begin()).id == (*gvec3[0].begin()).id);
+        CHECK_EQ((*gvec1[0].begin()).id, (*gvec3[0].begin()).id);
     }
 
     SUBCASE("cerial serialisation") {
@@ -477,15 +476,15 @@ TEST_CASE("[Faunus] Group") {
             Group g1(0, p1.begin(), p1.end());
             archive(g1);
 
-            CHECK(g1.id == 100);
-            CHECK(g1.mass_center.x() == 1);
-            CHECK(g1.conformation_id == 20);
-            CHECK(g1.size() == 4);
-            CHECK(g1.capacity() == 5);
-            CHECK(g1.begin()->id == 8);
-            CHECK(p1.front().id == 8);
-            CHECK(p1.back().pos.x() == -10);
-            CHECK(p1.back().ext == nullptr);
+            CHECK_EQ(g1.id, 100);
+            CHECK_EQ(g1.mass_center.x(), 1);
+            CHECK_EQ(g1.conformation_id, 20);
+            CHECK_EQ(g1.size(), 4);
+            CHECK_EQ(g1.capacity(), 5);
+            CHECK_EQ(g1.begin()->id, 8);
+            CHECK_EQ(p1.front().id, 8);
+            CHECK_EQ(p1.back().pos.x(), -10);
+            CHECK_EQ(p1.back().ext, nullptr);
         }
     }
 }

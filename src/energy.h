@@ -17,6 +17,7 @@
 #include <numeric>
 #include <algorithm>
 #include <concepts>
+#include <optional>
 
 struct freesasa_parameters_fwd; // workaround for freesasa unnamed struct that cannot be forward declared
 
@@ -278,6 +279,7 @@ class Constrain : public EnergyTerm {
   private:
     std::string type;
     std::unique_ptr<ReactionCoordinate::ReactionCoordinateBase> coordinate;
+    std::optional<Faunus::pairpotential::HarmonicBond> harmonic;
 
   public:
     Constrain(const json& j, Space& space);
@@ -306,7 +308,7 @@ class Bonded : public EnergyTerm {
     void updateInternalBonds(); //!< finds and adds all intra-molecular bonds of active molecules
 
   public:
-    Bonded(const Space& spc, const BondVector& external_bonds);
+    Bonded(const Space& spc, BondVector  external_bonds);
     Bonded(const json& j, const Space& spc);
     void to_json(json& j) const override;
     double energy(const Change& change) override;    //!< brute force -- refine this!
@@ -1467,59 +1469,62 @@ class NonbondedCached : public Nonbonded<TPairEnergy, TPairingPolicy> {
     }
 
     double energy(const Change& change) override {
+        if (!change) {
+            return 0.0;
+        }
         // Only g2g may be called there to compute (and cache) energy!
         double energy_sum = 0.0;
-        if (change) {
-            if (change.everything || change.volume_change) {
-                for (auto i = spc.groups.begin(); i < spc.groups.end(); ++i) {
-                    for (auto j = std::next(i); j < Base::spc.groups.end(); ++j) {
-                        energy_sum += g2g(*i, *j);
-                    }
-                }
-            } else {
-                if (change.groups.size() == 1) { // if exactly ONE molecule is changed
-                    auto &d = change.groups[0];
-                    auto& g1 = spc.groups.at(d.group_index);
-                    for (auto g2_it = spc.groups.begin(); g2_it < spc.groups.end(); ++g2_it) {
-                        if (&g1 != &(*g2_it)) {
-                            energy_sum += g2g(g1, *g2_it, d.relative_atom_indices);
-                        }
-                    }
-                } else {                                     // many molecules are changed
-                    auto moved = change.touchedGroupIndex(); // index of moved groups
-                    // moved<->moved
-                    if (change.moved_to_moved_interactions) {
-                        for (auto i = moved.begin(); i < moved.end(); ++i) {
-                            for (auto j = std::next(i); j < moved.end(); ++j) {
-                                energy_sum += g2g(spc.groups[*i], spc.groups[*j]);
-                            }
-                        }
-                    }
-                    // moved<->static
-#if true
-                    // classic version
-                    const auto fixed = indexComplement(spc.groups.size(), moved) | ranges::to_vector; // static groups
-                    for (auto i : moved) {
-                        for (auto j : fixed) {
-                            energy_sum += g2g(spc.groups[i], spc.groups[j]);
-                        }
-                    }
-#else
-                    // OMP-ready version
-                    auto fixed =
-                        indexComplement(spc.groups.size(), moved) | ranges::to<std::vector>; // index of static groups
-                    const size_t moved_size = moved.size();
-                    const size_t fixed_size = fixed.size();
-                    for (auto i = 0; i < moved_size; ++i) {
-                        for (auto j = 0; j < fixed_size; ++j) {
-                            energy_sum += g2g(spc.groups[moved[i]], spc.groups[fixed[j]]);
-                        }
-                    }
-#endif
+        if (change.everything || change.volume_change) {
+            for (auto i = spc.groups.begin(); i < spc.groups.end(); ++i) {
+                for (auto j = std::next(i); j < Base::spc.groups.end(); ++j) {
+                    energy_sum += g2g(*i, *j);
                 }
             }
-            // more todo!
+            return energy_sum;
+        };
+
+        if (change.groups.size() == 1) { // if exactly ONE molecule is changed
+            const auto& d = change.groups[0];
+            const auto& g1 = spc.groups.at(d.group_index);
+            for (auto g2_it = spc.groups.begin(); g2_it < spc.groups.end(); ++g2_it) {
+                if (&g1 != &(*g2_it)) {
+                    energy_sum += g2g(g1, *g2_it, d.relative_atom_indices);
+                }
+            }
+            return energy_sum;
         }
+
+        // many molecules are changed:
+
+        auto moved = change.touchedGroupIndex(); // index of moved groups
+        // moved<->moved
+        if (change.moved_to_moved_interactions) {
+            for (auto i = moved.begin(); i < moved.end(); ++i) {
+                for (auto j = std::next(i); j < moved.end(); ++j) {
+                    energy_sum += g2g(spc.groups[*i], spc.groups[*j]);
+                }
+            }
+        }
+        // moved<->static
+#if true
+        // classic version
+        const auto fixed = indexComplement(spc.groups.size(), moved) | ranges::to_vector; // static groups
+        for (auto i : moved) {
+            for (auto j : fixed) {
+                energy_sum += g2g(spc.groups[i], spc.groups[j]);
+            }
+        }
+#else
+        // OMP-ready version
+        auto fixed = indexComplement(spc.groups.size(), moved) | ranges::to<std::vector>; // index of static groups
+        const size_t moved_size = moved.size();
+        const size_t fixed_size = fixed.size();
+        for (auto i = 0; i < moved_size; ++i) {
+            for (auto j = 0; j < fixed_size; ++j) {
+                energy_sum += g2g(spc.groups[moved[i]], spc.groups[fixed[j]]);
+            }
+        }
+#endif
         return energy_sum;
     }
 

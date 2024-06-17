@@ -20,7 +20,7 @@ struct Tensor : public Eigen::Matrix3d {
 
     void rotate(const base &); //!< Rotate using rotation matrix
 
-    void eye();
+    [[maybe_unused]] [[maybe_unused]] void eye();
 
     template <typename T> Tensor(const Eigen::MatrixBase<T> &other) : base(other) {}
 

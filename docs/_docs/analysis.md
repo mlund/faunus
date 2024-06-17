@@ -364,6 +364,22 @@ is filed to disk, `sasa_histogram.dat`.
 `file`         | Optionally stream area for each `nstep` to file (`.dat|.dat.gz`)
 `radius=1.4`   | Probe radius (Å)
 
+### Voronoi Tessellation (experimental)
+
+Performs Voronoi tessellation to detect contacts and surface areas using
+the [Voronota-LT library](https://doi.org/10/mq8k).
+Only the total surface area is currently reported, but more options are planned for future
+releases.
+The algorithm is significantly faster than the above `sasa` analysis.
+
+`voronoi`      | Description
+-------------- | ---------------------------
+`nstep`        | Interval between samples
+`nskip=0`      | Number of initial steps excluded from the analysis
+`file`         | Optionally stream surface area for each `nstep` to file (`.dat|.dat.gz`)
+`radius=1.4`   | Probe radius (Å)
+
+
 ## Charge Properties
 
 ### Molecular Multipoles
@@ -645,7 +661,7 @@ All units in $k\_BT$.
 `file`         | Output filename (`.dat`, `.csv`, `.dat.gz`)
 `nstep`        | Interval between samples
 `nskip=0`      | Number of initial steps excluded from the analysis
-`save_min_conf=false` | Dump minimum energy configuration to `PQR` file
+`save_min_conf=false` | Dump minimum energy configuration to a `PQR` and state file
 
 
 ### Penalty function

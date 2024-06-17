@@ -2,8 +2,8 @@
 #include "aux/iteratorsupport.h"
 #include "bonds.h"
 
-namespace Faunus {
-namespace move {
+
+namespace Faunus::move {
 
 void ChainRotationMoveBase::_from_json(const json &j) {
     molname = j.at("molecule");
@@ -17,7 +17,7 @@ void ChainRotationMoveBase::_to_json(json &j) const {
          {"dprot", dprot},
          {unicode::rootof + unicode::bracket("r_cm" + unicode::squared), std::sqrt(msqdispl.avg())}};
     if (small_box_encountered > 0) {
-        j["skipped"] = double(small_box_encountered) / number_of_attempted_moves; // todo rename the json attribute
+        j["skipped"] = double(small_box_encountered) / double(number_of_attempted_moves); // todo rename the json attribute
     }
     roundJSON(j, 3);
 }
@@ -38,10 +38,10 @@ void ChainRotationMoveBase::_accept(Change &) { msqdispl += sqdispl; }
 void ChainRotationMoveBase::_reject(Change &) { msqdispl += 0; }
 double ChainRotationMoveBase::bias(Change &, double, double) { return permit_move ? 0 : pc::infty; }
 
-ChainRotationMoveBase::ChainRotationMoveBase(Space& spc, std::string name, std::string cite)
+ChainRotationMoveBase::ChainRotationMoveBase(Space& spc, const std::string& name, const std::string& cite)
     : Move(spc, name, cite) {}
 
-ChainRotationMove::ChainRotationMove(Space &spc, std::string name, std::string cite)
+ChainRotationMove::ChainRotationMove(Space &spc, const std::string& name, const std::string& cite)
     : ChainRotationMoveBase(spc, name, cite) {
     repeat = -1;
 }
@@ -81,7 +81,7 @@ void ChainRotationMove::store_change(Change &change) {
         auto &chain = *molecule_iter;
         auto offset = std::distance(spc.particles.begin(), chain.begin());
         Change::GroupChange change_data;
-        for (int i : segment_ndx) {
+        for (auto i : segment_ndx) {
             change_data.relative_atom_indices.push_back(i - offset); // `atoms` index are relative to chain
         }
         change_data.group_index = Faunus::distance(spc.groups.begin(), &chain); // integer *index* of moved group
@@ -105,7 +105,7 @@ bool ChainRotationMove::box_big_enough() {
     return true;
 }
 
-CrankshaftMove::CrankshaftMove(Space &spc, std::string name, std::string cite) : ChainRotationMove(spc, name, cite) {}
+CrankshaftMove::CrankshaftMove(Space &spc, const std::string& name, const std::string& cite) : ChainRotationMove(spc, name, cite) {}
 
 CrankshaftMove::CrankshaftMove(Space &spc) : CrankshaftMove(spc, "crankshaft", "") {}
 
@@ -123,15 +123,15 @@ void CrankshaftMove::_from_json(const json &j) {
 size_t CrankshaftMove::select_segment() {
     size_t segment_size = 0;
     this->segment_ndx.clear();
-    this->molecule_iter = this->spc.randomMolecule(this->molid, this->slump); // a random chain
+    this->molecule_iter = this->spc.randomMolecule(this->molid, Faunus::move::CrankshaftMove::slump); // a random chain
     if (this->molecule_iter != this->spc.groups.end()) {
         auto &molecule = *this->molecule_iter;
         if (molecule.size() > 2) { // must have at least three atoms
-            auto joint0 = this->slump.sample(molecule.begin(), molecule.end());
+            auto joint0 = Faunus::move::CrankshaftMove::slump.sample(molecule.begin(), molecule.end());
             assert(joint0 >= molecule.begin() && joint0 < molecule.end());
             size_t range_begin = std::min(static_cast<size_t>(std::distance(molecule.begin(), joint0)), joint_max);
             size_t range_end = std::min(static_cast<size_t>(std::distance(joint0, molecule.end()) - 1), joint_max);
-            auto joint1 = joint0 + this->slump.range(-range_begin, range_end);
+            auto joint1 = joint0 + Faunus::move::CrankshaftMove::slump.range(-range_begin, range_end);
             assert(joint1 >= molecule.begin() && joint1 < molecule.end());
             auto joint_distance = std::distance(joint0, joint1);
             if (joint_distance < 0) {
@@ -155,7 +155,7 @@ size_t CrankshaftMove::select_segment() {
     return segment_size;
 }
 
-PivotMove::PivotMove(Space &spc, std::string name, std::string cite) : ChainRotationMove(spc, name, cite) {}
+PivotMove::PivotMove(Space &spc, const std::string& name, const std::string& cite) : ChainRotationMove(spc, name, cite) {}
 
 PivotMove::PivotMove(Space &spc) : PivotMove(spc, "pivot", "") {}
 
@@ -177,11 +177,11 @@ void PivotMove::_from_json(const json &j) {
 size_t PivotMove::select_segment() {
     size_t segment_size = 0;
     this->segment_ndx.clear();
-    this->molecule_iter = this->spc.randomMolecule(this->molid, this->slump);
+    this->molecule_iter = this->spc.randomMolecule(this->molid, Faunus::move::PivotMove::slump);
     if (this->molecule_iter != this->spc.groups.end()) {
         auto &chain = *this->molecule_iter;
         if (chain.size() > 2) {                                         // must have at least three atoms
-            auto bond = this->slump.sample(bonds.begin(), bonds.end()); // a random harmonic bond
+            auto bond = Faunus::move::PivotMove::slump.sample(bonds.begin(), bonds.end()); // a random harmonic bond
             if (bond != bonds.end()) {
                 auto chain_offset = std::distance(this->spc.particles.begin(), chain.begin());
                 auto atom0_ndx = (*bond)->indices.at(0) + chain_offset;
@@ -189,7 +189,7 @@ size_t PivotMove::select_segment() {
                 if (atom0_ndx < 0 || atom1_ndx < 0) {
                     throw std::range_error("A negative index of the atom occured.");
                 }
-                if (this->slump() > 0.5) {
+                if (Faunus::move::PivotMove::slump() > 0.5) {
                     for (size_t i = atom1_ndx + 1; i < chain_offset + chain.size(); i++)
                         this->segment_ndx.push_back(i);
                     std::swap(atom0_ndx, atom1_ndx); // the second atom is the origin
@@ -205,5 +205,5 @@ size_t PivotMove::select_segment() {
     return segment_size;
 }
 
-} // namespace move
-} // namespace Faunus
+} // namespace Faunus::move
+

@@ -23,9 +23,7 @@
 #include <zstr.hpp>
 #include <cereal/types/memory.hpp>
 #include <cereal/archives/binary.hpp>
-#include <range/v3/numeric/accumulate.hpp>
 #include <range/v3/view/zip.hpp>
-
 #include <iomanip>
 #include <iostream>
 #include <memory>
@@ -194,6 +192,8 @@ std::unique_ptr<Analysis> createAnalysis(const std::string& name, const json& j,
             return std::make_unique<VirtualVolumeMove>(j, spc, pot);
         } else if (name == "virtualtranslate") {
             return std::make_unique<VirtualTranslate>(j, spc, pot);
+        } else if (name == "voronoi") {
+            return std::make_unique<Voronota>(j, spc);
         } else if (name == "widom") {
             return std::make_unique<WidomInsertion>(j, spc, pot);
         } else if (name == "xtcfile") {
@@ -235,7 +235,7 @@ CombinedAnalysis::CombinedAnalysis(const json& json_array, Space& spc, Energy::H
     }
 }
 
-void SystemEnergy::normalize() {
+[[maybe_unused]] void SystemEnergy::normalize() {
     const auto sum = energy_histogram.sumy();
     for (auto& i : energy_histogram.getMap()) {
         i.second = i.second / sum;
@@ -245,7 +245,8 @@ void SystemEnergy::normalize() {
 /**
  * @brief Checks if the current energy is the lowest so far and saves the configuration if so.
  *
- * The output is hardcoded to PQR format, tagged with the step number and energy.
+ * The output is hardcoded to PQR format, tagged with the step number and energy. In addition,
+ * we dump Space to a state file that can be used to restart a simulation.
  *
  * @return True if a new minimum energy was encountered
  */
@@ -254,9 +255,18 @@ bool SystemEnergy::updateMinimumEnergy(const double current_energy) {
         return false;
     }
     minimum_energy = current_energy;
-    const auto filename = MPI::prefix + "mininum_energy.pqr";
+
+    auto filename = MPI::prefix + "minimum_energy.pqr";
     faunus_logger->debug("{}: saving {} ({:.2f} kT) at step {}", name, filename, minimum_energy, getNumberOfSteps());
     PQRWriter(PQRWriter::Style::PQR).save(filename, spc.groups, spc.geometry.getLength());
+
+    filename = MPI::prefix + "minimum_energy.state";
+    if (std::ofstream file(filename); file) {
+        faunus_logger->debug("{}: saving {} ({:.2f} kT) at step {}", name, filename, minimum_energy, getNumberOfSteps());
+        json j;
+        Faunus::to_json(j, spc);
+        file << std::setw(1) << j;
+    }
     return true;
 }
 
@@ -1546,7 +1556,7 @@ void MultipoleDistribution::_to_disk() {
     if (number_of_samples == 0) {
         return;
     }
-    if (std::ofstream stream(MPI::prefix + filename.c_str()); stream) {
+    if (std::ofstream stream(MPI::prefix + filename); stream) {
         stream << "# Multipolar energies (kT/lB)\n"
                << fmt::format("# {:>8}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}\n", "R", "exact", "tot", "ii", "id",
                               "dd", "iq", "mucorr");
@@ -1635,7 +1645,8 @@ std::pair<Point, Point> InertiaTensor::compute() const {
 
 void InertiaTensor::_sample() {
     const auto [eigen_values, principle_axis] = compute();
-    *stream << fmt::format("{} {} {}\n", getNumberOfSteps(), eigen_values.transpose(), principle_axis.transpose());
+    *stream << fmt::format("{} {} {} {} {} {} {} \n", getNumberOfSteps(), eigen_values[0], eigen_values[1],
+                           eigen_values[2], principle_axis[0], principle_axis[1], principle_axis[2]);
 }
 
 InertiaTensor::InertiaTensor(const json& j, const Space& spc)
@@ -1869,6 +1880,7 @@ SASAAnalysis::SASAAnalysis(const double probe_radius, const int slices_per_atom,
         break;
     }
     setPolicy(selected_policy);
+    cite = "doi:10/dbjh";
 }
 
 SASAAnalysis::SASAAnalysis(const json& j, const Space& spc)
@@ -1876,7 +1888,6 @@ SASAAnalysis::SASAAnalysis(const json& j, const Space& spc)
                    j.value("policy", Policies::INVALID), spc) {
     from_json(j);
     policy->from_json(j);
-    cite = "doi:10/dbjh";
 }
 
 void SASAAnalysis::_to_json(json& json_ouput) const {
@@ -2002,7 +2013,7 @@ void AtomsInMoleculePolicy::to_json(json& output) const {
 }
 
 void AtomsInMoleculePolicy::from_json(const json& input) {
-    if (const auto atomlist = input.at("atomlist"); !atomlist.empty()) {
+    if (const auto& atomlist = input.at("atomlist"); !atomlist.empty()) {
         for (const auto& atom_specifier : atomlist) {
             if (atom_specifier.is_string()) {
                 atom_names.insert(static_cast<const std::string>(atom_specifier));

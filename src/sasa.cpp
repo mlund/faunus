@@ -250,7 +250,7 @@ TEST_CASE("[Faunus] SASAPBC") {
         sasa.updateSASA(neighbours, {0, 1});
         const auto& areas = sasa.getAreas();
 
-        CHECK(areas[0] == Approx(3.4 * 3.4 * M_PI * 4.));
+        CHECK_EQ(areas[0], Approx(3.4 * 3.4 * M_PI * 4.));
     }
 
     SUBCASE("intersecting") {
@@ -262,7 +262,7 @@ TEST_CASE("[Faunus] SASAPBC") {
         sasa.updateSASA(neighbours, {0, 1});
         const auto& areas = sasa.getAreas();
 
-        CHECK(areas[0] == Approx(119.48260171150575));
+        CHECK_EQ(areas[0], Approx(119.48260171150575));
     }
 
     SUBCASE("intersecting accross boundary") {
@@ -274,7 +274,7 @@ TEST_CASE("[Faunus] SASAPBC") {
         sasa.updateSASA(neighbours, {0, 1});
         const auto& areas = sasa.getAreas();
 
-        CHECK(areas[0] == Approx(118.99710056237043));
+        CHECK_EQ(areas[0], Approx(118.99710056237043));
     }
 
     SUBCASE("smaller buried in larger") {
@@ -286,8 +286,8 @@ TEST_CASE("[Faunus] SASAPBC") {
         sasa.updateSASA(neighbours, {0, 1});
         const auto& areas = sasa.getAreas();
 
-        CHECK(areas[0] == Approx(3.4 * 3.4 * M_PI * 4));
-        CHECK(areas[1] == Approx(0.));
+        CHECK_EQ(areas[0], Approx(3.4 * 3.4 * M_PI * 4));
+        CHECK_EQ(areas[1], Approx(0.));
     }
 }
 
@@ -530,8 +530,8 @@ TEST_CASE("[Faunus] SASA_CellList") {
         changed_data.group_index = 0;
         changed_data.relative_atom_indices = {1};
         change.groups.push_back(changed_data);
-        change.matter_change = 1;
-        change.everything = 0;
+        change.matter_change = true;
+        change.everything = false;
 
         sasa.update(spc, change);
 

@@ -36,11 +36,11 @@ template <std::floating_point T> inline T erfc_x(T x) {
 TEST_CASE("[Faunus] erfc_x") {
     double infty = std::numeric_limits<double>::infinity();
     using doctest::Approx;
-    CHECK(erfc_x(infty) == Approx(0));
-    CHECK(std::erfc(-infty) == Approx(2 - erfc_x(infty)));
-    CHECK(erfc_x(0.0) == Approx(1.0));
-    CHECK(2 - erfc_x(0.2) == Approx(std::erfc(-0.2)));
-    CHECK(erfc_x(0.2) == Approx(std::erfc(0.2)));
+    CHECK_EQ(erfc_x(infty), Approx(0));
+    CHECK_EQ(std::erfc(-infty), Approx(2 - erfc_x(infty)));
+    CHECK_EQ(erfc_x(0.0), Approx(1.0));
+    CHECK_EQ(2 - erfc_x(0.2), Approx(std::erfc(-0.2)));
+    CHECK_EQ(erfc_x(0.2), Approx(std::erfc(0.2)));
 }
 
 /**

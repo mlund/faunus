@@ -3,9 +3,11 @@
 #include "units.h"
 #include "auxiliary.h"
 #include "aux/arange.h"
-#include "spdlog/spdlog.h"
 #include "smart_montecarlo.h"
 #include <coulombgalore.h>
+#include <spdlog/spdlog.h>
+
+#include <utility>
 
 namespace Faunus::pairpotential {
 
@@ -50,7 +52,7 @@ TPairMatrixPtr PairMixer::createPairMatrix(const std::vector<AtomData>& atoms) {
                 // implicit atoms are ignored as the missing properties, e.g., sigma and epsilon, might raise errors
                 (*matrix)(i.id(), j.id()) = combUndefined();
             } else if (i.id() == j.id()) {
-                // if the combinator is "undefined" the homogeneous interaction is still well defined
+                // if the combinator is "undefined" the homogeneous interaction is still well-defined
                 (*matrix)(i.id(), j.id()) = modifier(extractor(i.interaction));
             } else {
                 (*matrix)(i.id(), j.id()) = modifier(combinator(extractor(i.interaction), extractor(j.interaction)));
@@ -76,24 +78,24 @@ TPairMatrixPtr PairMixer::createPairMatrix(const std::vector<AtomData> &atoms,
     return matrix;
 }
 PairMixer::PairMixer(TExtractorFunc extractor, TCombinatorFunc combinator, TModifierFunc modifier)
-    : extractor(extractor), combinator(combinator), modifier(modifier){}
+    : extractor(std::move(extractor)), combinator(std::move(combinator)), modifier(std::move(modifier)){}
 
 TEST_CASE("[Faunus] PairMixer") {
     using namespace std::string_literals;
     using doctest::Approx;
     SUBCASE("Enumerated potential") {
-        REQUIRE(PairMixer::combArithmetic(2.0, 8.0) == Approx(5.0));
-        REQUIRE(PairMixer::combGeometric(2.0, 8.0) == Approx(4.0));
-        CHECK(PairMixer::getCombinator(CombinationRuleType::LORENTZ_BERTHELOT, PairMixer::CoefficientType::SIGMA)(
-                  2.0, 8.0) == PairMixer::combArithmetic(2.0, 8.0));
-        CHECK(PairMixer::getCombinator(CombinationRuleType::LORENTZ_BERTHELOT, PairMixer::CoefficientType::EPSILON)(
-                  2.0, 8.0) == PairMixer::combGeometric(2.0, 8.0));
+        REQUIRE((PairMixer::combArithmetic(2.0, 8.0) == Approx(5.0)));
+        REQUIRE((PairMixer::combGeometric(2.0, 8.0) == Approx(4.0)));
+        CHECK_EQ(PairMixer::getCombinator(CombinationRuleType::LORENTZ_BERTHELOT, PairMixer::CoefficientType::SIGMA)(
+                  2.0, 8.0), PairMixer::combArithmetic(2.0, 8.0));
+        CHECK_EQ(PairMixer::getCombinator(CombinationRuleType::LORENTZ_BERTHELOT, PairMixer::CoefficientType::EPSILON)(
+                  2.0, 8.0), PairMixer::combGeometric(2.0, 8.0));
         CHECK_THROWS_AS(PairMixer::getCombinator(CombinationRuleType::LORENTZ_BERTHELOT), std::logic_error);
 
         SUBCASE("") {
             atoms =
                 R"([{"A": {"sigma":2.0}}, {"B": {"sigma":8.0}}, {"C": {"sigma":18.0}}])"_json.get<decltype(atoms)>();
-            REQUIRE(atoms.front().interaction.at("sigma") == Approx(2.0));
+            REQUIRE((atoms.front().interaction.at("sigma") == Approx(2.0)));
             std::vector<CustomInteractionData> pairs = R"([{"A C": {"sigma": 9.5}}, {"C B": {"sigma": 12.5}}])"_json;
             TExtractorFunc sigma = [](InteractionData a) -> double { return a.at("sigma"); };
 
@@ -102,26 +104,26 @@ TEST_CASE("[Faunus] PairMixer") {
                 SUBCASE("Atom pairs") {
                     auto matrix = mixer.createPairMatrix(atoms);
                     CHECK(matrix->isApprox(matrix->transpose())); // symmetric
-                    CHECK((*matrix)(0, 0) == Approx(2.0));
-                    CHECK((*matrix)(0, 1) == Approx(5.0));
+                    CHECK_EQ((*matrix)(0, 0), Approx(2.0));
+                    CHECK_EQ((*matrix)(0, 1), Approx(5.0));
                 }
                 SUBCASE("Custom pairs") {
                     auto matrix = mixer.createPairMatrix(atoms, pairs);
                     CHECK(matrix->isApprox(matrix->transpose())); // symmetric
-                    CHECK((*matrix)(0, 0) == Approx(2.0));
-                    CHECK((*matrix)(0, 1) == Approx(5.0));
-                    CHECK((*matrix)(2, 0) == Approx(9.5));
-                    CHECK((*matrix)(2, 1) == Approx(12.5));
+                    CHECK_EQ((*matrix)(0, 0), Approx(2.0));
+                    CHECK_EQ((*matrix)(0, 1), Approx(5.0));
+                    CHECK_EQ((*matrix)(2, 0), Approx(9.5));
+                    CHECK_EQ((*matrix)(2, 1), Approx(12.5));
                 }
             }
             SUBCASE("Modifier") {
                 PairMixer mixer(sigma, &PairMixer::combArithmetic, [](double x) { return 10 * x; });
                 auto matrix = mixer.createPairMatrix(atoms, pairs);
                 CHECK(matrix->isApprox(matrix->transpose())); // symmetric
-                CHECK((*matrix)(0, 0) == Approx(20.0));
-                CHECK((*matrix)(0, 1) == Approx(50.0));
-                CHECK((*matrix)(2, 0) == Approx(95.0));
-                CHECK((*matrix)(2, 1) == Approx(125.0));
+                CHECK_EQ((*matrix)(0, 0), Approx(20.0));
+                CHECK_EQ((*matrix)(0, 1), Approx(50.0));
+                CHECK_EQ((*matrix)(2, 0), Approx(95.0));
+                CHECK_EQ((*matrix)(2, 1), Approx(125.0));
             }
             SUBCASE("Alternative JSON") {
                 CHECK_NOTHROW(R"({"A C": {"sigma": 9.5}})"_json.get<std::vector<CustomInteractionData>>());
@@ -188,9 +190,9 @@ void from_json(const json& j, std::vector<CustomInteractionData>& interactions) 
 
 // =============== PairPotentialBase ===============
 
-PairPotential::PairPotential(const std::string& name, const std::string& cite, bool isotropic)
-    : name(name)
-    , cite(cite)
+PairPotential::PairPotential(std::string name, std::string cite, bool isotropic)
+    : name(std::move(name))
+    , cite(std::move(cite))
     , isotropic(isotropic) {}
 
 /**
@@ -235,7 +237,7 @@ void MixerPairPotentialBase::init() {
 void MixerPairPotentialBase::from_json(const json &j) {
     try {
         if (j.contains("mixing")) {
-            json mixing = j.at("mixing");
+            const json& mixing = j.at("mixing");
             combination_rule = mixing.get<CombinationRuleType>();
             if (combination_rule == CombinationRuleType::UNDEFINED && mixing != "undefined") {
                 // an ugly hack because the first pair in the json ↔ enum mapping is silently selected by default
@@ -313,19 +315,19 @@ TEST_CASE("[Faunus] CosAttract") {
         CosAttract pairpot;
         pairpotential::from_json(R"({ "cos2": {"eps": 1.0, "rc": 0.5, "wc": 2.1}})"_json, pairpot);
 
-        CHECK(pairpot(a, b, r1.squaredNorm(), r1) == doctest::Approx(-0.4033930777));
-        CHECK(pairpot(a, b, r2.squaredNorm(), r2) == doctest::Approx(0));
-        CHECK(pairpot(a, b, r3.squaredNorm(), r3) == doctest::Approx(-0.3495505642));
+        CHECK_EQ(pairpot(a, b, r1.squaredNorm(), r1), doctest::Approx(-0.4033930777));
+        CHECK_EQ(pairpot(a, b, r2.squaredNorm(), r2), doctest::Approx(0));
+        CHECK_EQ(pairpot(a, b, r3.squaredNorm(), r3), doctest::Approx(-0.3495505642));
 
-        CHECK(pairpot.force(a, b, r1.squaredNorm(), r1).x() == doctest::Approx(0));
-        CHECK(pairpot.force(a, b, r1.squaredNorm(), r1).y() == doctest::Approx(0));
-        CHECK(pairpot.force(a, b, r1.squaredNorm(), r1).y() == doctest::Approx(0));
-        CHECK(pairpot.force(a, b, r2.squaredNorm(), r2).x() == doctest::Approx(0));
-        CHECK(pairpot.force(a, b, r2.squaredNorm(), r2).y() == doctest::Approx(0));
-        CHECK(pairpot.force(a, b, r2.squaredNorm(), r2).z() == doctest::Approx(0));
-        CHECK(pairpot.force(a, b, r3.squaredNorm(), r3).x() == doctest::Approx(-0.2052334967));
-        CHECK(pairpot.force(a, b, r3.squaredNorm(), r3).y() == doctest::Approx(0));
-        CHECK(pairpot.force(a, b, r3.squaredNorm(), r3).z() == doctest::Approx(0));
+        CHECK_EQ(pairpot.force(a, b, r1.squaredNorm(), r1).x(), doctest::Approx(0));
+        CHECK_EQ(pairpot.force(a, b, r1.squaredNorm(), r1).y(), doctest::Approx(0));
+        CHECK_EQ(pairpot.force(a, b, r1.squaredNorm(), r1).y(), doctest::Approx(0));
+        CHECK_EQ(pairpot.force(a, b, r2.squaredNorm(), r2).x(), doctest::Approx(0));
+        CHECK_EQ(pairpot.force(a, b, r2.squaredNorm(), r2).y(), doctest::Approx(0));
+        CHECK_EQ(pairpot.force(a, b, r2.squaredNorm(), r2).z(), doctest::Approx(0));
+        CHECK_EQ(pairpot.force(a, b, r3.squaredNorm(), r3).x(), doctest::Approx(-0.2052334967));
+        CHECK_EQ(pairpot.force(a, b, r3.squaredNorm(), r3).y(), doctest::Approx(0));
+        CHECK_EQ(pairpot.force(a, b, r3.squaredNorm(), r3).z(), doctest::Approx(0));
     }
 
     SUBCASE("mixed - symmetric") {
@@ -335,20 +337,20 @@ TEST_CASE("[Faunus] CosAttract") {
         Faunus::atoms = j["atomlist"].get<decltype(atoms)>();
         CosAttractMixed pairpot;
         pairpotential::from_json(R"({ "cos2mix": {"mixing": "LB"}})"_json, pairpot);
-        CHECK(pairpot(a, b, r1.squaredNorm(), r1) == doctest::Approx(-0.4033930777));
-        CHECK(pairpot(a, b, r2.squaredNorm(), r2) == doctest::Approx(0));
-        CHECK(pairpot(a, b, r3.squaredNorm(), r3) == doctest::Approx(-0.3495505642));
-        CHECK(pairpot.cutOffSquared(a.id, b.id) == doctest::Approx(std::pow(0.5 + 2.1, 2)));
+        CHECK_EQ(pairpot(a, b, r1.squaredNorm(), r1), doctest::Approx(-0.4033930777));
+        CHECK_EQ(pairpot(a, b, r2.squaredNorm(), r2), doctest::Approx(0));
+        CHECK_EQ(pairpot(a, b, r3.squaredNorm(), r3), doctest::Approx(-0.3495505642));
+        CHECK_EQ(pairpot.cutOffSquared(a.id, b.id), doctest::Approx(std::pow(0.5 + 2.1, 2)));
 
-        CHECK(pairpot.force(a, b, r1.squaredNorm(), r1).x() == doctest::Approx(0));
-        CHECK(pairpot.force(a, b, r1.squaredNorm(), r1).y() == doctest::Approx(0));
-        CHECK(pairpot.force(a, b, r1.squaredNorm(), r1).y() == doctest::Approx(0));
-        CHECK(pairpot.force(a, b, r2.squaredNorm(), r2).x() == doctest::Approx(0));
-        CHECK(pairpot.force(a, b, r2.squaredNorm(), r2).y() == doctest::Approx(0));
-        CHECK(pairpot.force(a, b, r2.squaredNorm(), r2).z() == doctest::Approx(0));
-        CHECK(pairpot.force(a, b, r3.squaredNorm(), r3).x() == doctest::Approx(-0.2052334967));
-        CHECK(pairpot.force(a, b, r3.squaredNorm(), r3).y() == doctest::Approx(0));
-        CHECK(pairpot.force(a, b, r3.squaredNorm(), r3).z() == doctest::Approx(0));
+        CHECK_EQ(pairpot.force(a, b, r1.squaredNorm(), r1).x(), doctest::Approx(0));
+        CHECK_EQ(pairpot.force(a, b, r1.squaredNorm(), r1).y(), doctest::Approx(0));
+        CHECK_EQ(pairpot.force(a, b, r1.squaredNorm(), r1).y(), doctest::Approx(0));
+        CHECK_EQ(pairpot.force(a, b, r2.squaredNorm(), r2).x(), doctest::Approx(0));
+        CHECK_EQ(pairpot.force(a, b, r2.squaredNorm(), r2).y(), doctest::Approx(0));
+        CHECK_EQ(pairpot.force(a, b, r2.squaredNorm(), r2).z(), doctest::Approx(0));
+        CHECK_EQ(pairpot.force(a, b, r3.squaredNorm(), r3).x(), doctest::Approx(-0.2052334967));
+        CHECK_EQ(pairpot.force(a, b, r3.squaredNorm(), r3).y(), doctest::Approx(0));
+        CHECK_EQ(pairpot.force(a, b, r3.squaredNorm(), r3).z(), doctest::Approx(0));
     }
 
     SUBCASE("mixed - asymmetric") {
@@ -358,11 +360,11 @@ TEST_CASE("[Faunus] CosAttract") {
         Faunus::atoms = j["atomlist"].get<decltype(atoms)>();
         CosAttractMixed pairpot;
         pairpotential::from_json(R"({ "cos2mix": {"mixing": "LB"}})"_json, pairpot);
-        CHECK(pairpot(a, b, r1.squaredNorm(), r1) == doctest::Approx(-0.2852419807));
-        CHECK(pairpot(a, b, r2.squaredNorm(), r2) == doctest::Approx(0));
-        CHECK(pairpot(a, b, r3.squaredNorm(), r3) == doctest::Approx(-0.2510708423));
-        CHECK(pairpot(a, b, std::pow(0.55 + 2.0 + 0.001, 2), Point::Zero()) == doctest::Approx(0));
-        CHECK(pairpot.cutOffSquared(a.id, b.id) == doctest::Approx(6.5025));
+        CHECK_EQ(pairpot(a, b, r1.squaredNorm(), r1), doctest::Approx(-0.2852419807));
+        CHECK_EQ(pairpot(a, b, r2.squaredNorm(), r2), doctest::Approx(0));
+        CHECK_EQ(pairpot(a, b, r3.squaredNorm(), r3), doctest::Approx(-0.2510708423));
+        CHECK_EQ(pairpot(a, b, std::pow(0.55 + 2.0 + 0.001, 2), Point::Zero()), doctest::Approx(0));
+        CHECK_EQ(pairpot.cutOffSquared(a.id, b.id), doctest::Approx(6.5025));
     }
 
 }
@@ -392,6 +394,7 @@ void DipoleDipole::to_json(json &j) const {
 }
 
 void DipoleDipole::from_json(const json& j) { bjerrum_length = pc::bjerrumLength(j.at("epsr")); }
+
 DipoleDipole::DipoleDipole(const std::string& name, const std::string& cite)
     : PairPotential(name, cite, false) {}
 
@@ -475,14 +478,14 @@ TEST_CASE("[Faunus] SASApotential") {
     double tension = atoms.at(a.id).tension / 2;
     double tfe = atoms[b.id].tfe / 2;
     double f = tension + conc * tfe;
-    CHECK(tension > 0.0);
-    CHECK(conc > 0.0);
-    CHECK(tfe > 0.0);
-    CHECK(f > 0.0);
-    CHECK(in == json(pot));
-    CHECK(pot(a, b, 0, {0, 0, 0}) == Approx(f * 4 * pc::pi * 2.1 * 2.1));                      // complete overlap
-    CHECK(pot(a, b, 10 * 10, {10, 0, 0}) == Approx(f * 4 * pc::pi * (2.1 * 2.1 + 1.5 * 1.5))); // far apart
-    CHECK(pot(a, b, 2.5 * 2.5, {2.5, 0, 0}) == Approx(f * 71.74894965974514));                 // partial overlap
+    CHECK((tension > 0.0));
+    CHECK((conc > 0.0));
+    CHECK((tfe > 0.0));
+    CHECK((f > 0.0));
+    CHECK_EQ(in, json(pot));
+    CHECK_EQ(pot(a, b, 0, {0, 0, 0}), Approx(f * 4 * pc::pi * 2.1 * 2.1));                      // complete overlap
+    CHECK_EQ(pot(a, b, 10 * 10, {10, 0, 0}), Approx(f * 4 * pc::pi * (2.1 * 2.1 + 1.5 * 1.5))); // far apart
+    CHECK_EQ(pot(a, b, 2.5 * 2.5, {2.5, 0, 0}), Approx(f * 71.74894965974514));                 // partial overlap
 }
 
 // =============== CustomPairPotential ===============
@@ -532,7 +535,7 @@ TEST_CASE("[Faunus] CustomPairPotential") {
         pairpotential::from_json(R"({"constants": { "kappa": 30, "lB": 7},
                               "function": "lB * charge1 * charge2 / (s1+s2) * exp(-kappa/r) * kT + pi"})"_json,
                                  pot);
-        CHECK(pot(a, b, 2 * 2, {0, 0, 2}) == Approx(-7.0 / (3.0 + 4.0) * std::exp(-30.0 / 2.0) * pc::kT() + pc::pi));
+        CHECK_EQ(pot(a, b, 2 * 2, {0, 0, 2}), Approx(-7.0 / (3.0 + 4.0) * std::exp(-30.0 / 2.0) * pc::kT() + pc::pi));
     }
     SUBCASE("force") {
         CustomPairPotential pot;
@@ -544,11 +547,11 @@ TEST_CASE("[Faunus] CustomPairPotential") {
         auto r2 = r.squaredNorm();
         auto force_ref = coulomb.force(a, b, r2, r);
         auto force = pot.force(a, b, r2, r);
-        CHECK(coulomb.bjerrum_length == Approx(7.0056973292));
-        CHECK(force.norm() == Approx(0.1425956964));
-        CHECK(force.x() == Approx(force_ref.x()));
-        CHECK(force.y() == Approx(force_ref.y()));
-        CHECK(force.z() == Approx(force_ref.z()));
+        CHECK_EQ(coulomb.bjerrum_length, Approx(7.0056973292));
+        CHECK_EQ(force.norm(), Approx(0.1425956964));
+        CHECK_EQ(force.x(), Approx(force_ref.x()));
+        CHECK_EQ(force.y(), Approx(force_ref.y()));
+        CHECK_EQ(force.z(), Approx(force_ref.z()));
     }
 }
 
@@ -616,21 +619,21 @@ TEST_CASE("[Faunus] LennardJones") {
     SUBCASE("Lorentz-Berthelot mixing") {
         using doctest::Approx;
         auto lj = makePairPotential<LennardJones>(R"({"mixing": "LB"})"_json);
-        CHECK(lj(a, a, d * d, {0, 0, d}) == Approx(lj_func(0.2_nm, 0.9_kJmol)));
-        CHECK(lj(a, b, d * d, {0, 0, d}) == Approx(lj_func(0.5_nm, 0.3_kJmol)));
+        CHECK_EQ(lj(a, a, d * d, {0, 0, d}), Approx(lj_func(0.2_nm, 0.9_kJmol)));
+        CHECK_EQ(lj(a, b, d * d, {0, 0, d}), Approx(lj_func(0.5_nm, 0.3_kJmol)));
     }
     SUBCASE("Geometric mixing") {
         using doctest::Approx;
         auto lj = makePairPotential<LennardJones>(R"({"mixing": "geometric"})"_json);
-        CHECK(lj(a, a, d * d, {0, 0, d}) == Approx(lj_func(0.2_nm, 0.9_kJmol)));
-        CHECK(lj(a, b, d * d, {0, 0, d}) == Approx(lj_func(0.4_nm, 0.3_kJmol)));
+        CHECK_EQ(lj(a, a, d * d, {0, 0, d}), Approx(lj_func(0.2_nm, 0.9_kJmol)));
+        CHECK_EQ(lj(a, b, d * d, {0, 0, d}), Approx(lj_func(0.4_nm, 0.3_kJmol)));
     }
     SUBCASE("Custom pairs") {
         using doctest::Approx;
         auto lj =
             makePairPotential<LennardJones>(R"({"mixing": "LB", "custom": [{"A B": {"eps": 0.5, "sigma": 8}}]})"_json);
-        CHECK(lj(a, b, d * d, {0, 0, d}) == Approx(lj_func(0.8_nm, 0.5_kJmol)));
-        CHECK(lj(a, a, d * d, {0, 0, d}) == Approx(lj_func(0.2_nm, 0.9_kJmol)));
+        CHECK_EQ(lj(a, b, d * d, {0, 0, d}), Approx(lj_func(0.8_nm, 0.5_kJmol)));
+        CHECK_EQ(lj(a, a, d * d, {0, 0, d}), Approx(lj_func(0.2_nm, 0.9_kJmol)));
     }
 
     SUBCASE("Force") {
@@ -641,7 +644,7 @@ TEST_CASE("[Faunus] LennardJones") {
         b.pos = {9, 0, 0};
         Point b_towards_a = a.pos - b.pos;
         Point force = lj.force(a, b, b_towards_a.squaredNorm(), b_towards_a);
-        CHECK(force.x() == Approx(0.0142838474)); // force on particle a
+        CHECK_EQ(force.x(), Approx(0.0142838474)); // force on particle a
     }
 }
 
@@ -672,24 +675,24 @@ TEST_CASE("[Faunus] HardSphere") {
     }
     SUBCASE("Undefined mixing") {
         auto hs = makePairPotential<HardSphere>(R"({"mixing": "undefined"})"_json);
-        CHECK(hs(a, a, 1.99 * 1.99, {0, 0, 1.99}) == pc::infty);
-        CHECK(hs(a, a, 2.01 * 2.01, {0, 0, 2.01}) == 0.0);
+        CHECK_EQ(hs(a, a, 1.99 * 1.99, {0, 0, 1.99}), pc::infty);
+        CHECK_EQ(hs(a, a, 2.01 * 2.01, {0, 0, 2.01}), 0.0);
         // CHECK(std::isnan(hs(a, b, {0, 0, 4.99}))); // fails
         // CHECK(std::isnan(hs(a, b, {0, 0, 5.01}))); // fails
     }
     SUBCASE("Arithmetic mixing") {
         auto hs = makePairPotential<HardSphere>(R"({"mixing": "arithmetic"})"_json);
-        CHECK(hs(a, a, 2.01_angstrom * 2.01_angstrom, {0, 0, 2.01_angstrom}) == 0);
-        CHECK(hs(a, a, 1.99_angstrom * 1.99_angstrom, {0, 0, 1.99_angstrom}) == pc::infty);
-        CHECK(hs(a, b, 5.01_angstrom * 5.01_angstrom, {0, 0, 5.01_angstrom}) == 0);
-        CHECK(hs(a, b, 4.99_angstrom * 4.99_angstrom, {0, 0, 4.99_angstrom}) == pc::infty);
+        CHECK_EQ(hs(a, a, 2.01_angstrom * 2.01_angstrom, {0, 0, 2.01_angstrom}), 0);
+        CHECK_EQ(hs(a, a, 1.99_angstrom * 1.99_angstrom, {0, 0, 1.99_angstrom}), pc::infty);
+        CHECK_EQ(hs(a, b, 5.01_angstrom * 5.01_angstrom, {0, 0, 5.01_angstrom}), 0);
+        CHECK_EQ(hs(a, b, 4.99_angstrom * 4.99_angstrom, {0, 0, 4.99_angstrom}), pc::infty);
     }
     SUBCASE("Custom pairs with implicit mixing") {
         auto hs = makePairPotential<HardSphere>(R"({"custom": [{"A B": {"sigma": 6}}]})"_json);
-        CHECK(hs(a, a, 2.01_angstrom * 2.01_angstrom, {0, 0, 2.01_angstrom}) == 0);
-        CHECK(hs(a, a, 1.99_angstrom * 1.99_angstrom, {0, 0, 1.99_angstrom}) == pc::infty);
-        CHECK(hs(a, b, 6.01_angstrom * 6.01_angstrom, {0, 0, 6.01_angstrom}) == 0);
-        CHECK(hs(a, b, 5.99_angstrom * 5.99_angstrom, {0, 0, 5.99_angstrom}) == pc::infty);
+        CHECK_EQ(hs(a, a, 2.01_angstrom * 2.01_angstrom, {0, 0, 2.01_angstrom}), 0);
+        CHECK_EQ(hs(a, a, 1.99_angstrom * 1.99_angstrom, {0, 0, 1.99_angstrom}), pc::infty);
+        CHECK_EQ(hs(a, b, 6.01_angstrom * 6.01_angstrom, {0, 0, 6.01_angstrom}), 0);
+        CHECK_EQ(hs(a, b, 5.99_angstrom * 5.99_angstrom, {0, 0, 5.99_angstrom}), pc::infty);
     }
 }
 
@@ -731,15 +734,15 @@ TEST_CASE("[Faunus] Hertz") {
     SUBCASE("JSON serialization") {
         json hertz_json = R"({ "hertz": {"mixing": "lorentz_berthelot", "eps": "eps", "sigma": "sigma"}})"_json;
         auto hertz = makePairPotential<Hertz>(hertz_json);
-        CHECK(hertz_json == json(hertz));
+        CHECK_EQ(hertz_json, json(hertz));
     }
     SUBCASE("Lorentz-Berthelot mixing") {
         using doctest::Approx;
         pc::temperature = 298.15_K;
         auto hertz = makePairPotential<Hertz>(R"({"mixing": "lorentz_berthelot"})"_json);
-        CHECK(hertz(a, b, 0.7 * 0.7, {0.7, 0, 0}) == Approx(0.0546424449)); // within cut-off
-        CHECK(hertz(a, b, 1.15 * 1.15, {1.15, 0, 0}) == Approx(0.0));       // at cut-off
-        CHECK(hertz(a, b, 2.0 * 2.0, {2.0, 0, 0}) == Approx(0.0));          // outside of cut-off
+        CHECK_EQ(hertz(a, b, 0.7 * 0.7, {0.7, 0, 0}), Approx(0.0546424449)); // within cut-off
+        CHECK_EQ(hertz(a, b, 1.15 * 1.15, {1.15, 0, 0}), Approx(0.0));       // at cut-off
+        CHECK_EQ(hertz(a, b, 2.0 * 2.0, {2.0, 0, 0}), Approx(0.0));          // outside of cut-off
     }
 }
 
@@ -782,16 +785,16 @@ TEST_CASE("[Faunus] SquareWell") {
     SUBCASE("Undefined mixing") {
         using doctest::Approx;
         auto sw = makePairPotential<SquareWell>(R"({"mixing": "undefined"})"_json);
-        CHECK(sw(a, a, 3.99 * 3.99, {0, 0, 0}) == Approx(-0.2_kJmol));
-        CHECK(sw(a, a, 4.01 * 4.01, {0, 0, 0}) == Approx(0.0));
+        CHECK_EQ(sw(a, a, 3.99 * 3.99, {0, 0, 0}), Approx(-0.2_kJmol));
+        CHECK_EQ(sw(a, a, 4.01 * 4.01, {0, 0, 0}), Approx(0.0));
         // CHECK(std::isnan(sw(a, b, {0, 0, 5.99}))); // fails
         // CHECK(std::isnan(sw(a, b, {0, 0, 6.01}))); // fails
     }
     SUBCASE("Lorentz-Berthelot mixing") {
         using doctest::Approx;
         auto sw = makePairPotential<SquareWell>(R"({"mixing": "LB"})"_json);
-        CHECK(sw(a, b, 2.99 * 2.99, {0, 0, 0}) == Approx(-std::sqrt(0.2_kJmol * 0.1_kJmol)));
-        CHECK(sw(a, b, 3.01 * 3.01, {0, 0, 0}) == Approx(0));
+        CHECK_EQ(sw(a, b, 2.99 * 2.99, {0, 0, 0}), Approx(-std::sqrt(0.2_kJmol * 0.1_kJmol)));
+        CHECK_EQ(sw(a, b, 3.01 * 3.01, {0, 0, 0}), Approx(0));
     }
 }
 
@@ -964,11 +967,11 @@ TEST_CASE("[Faunus] FunctorPotential") {
     Particle c = atoms[2];
     Point r = {2, 0, 0};
     auto r2 = r.squaredNorm();
-    CHECK(u(a, a, r2, r) == Approx(coulomb(a, a, r2, r)));
-    CHECK(u(b, b, r2, r) == Approx(coulomb(b, b, r2, r)));
-    CHECK(u(a, b, r2, r) == Approx(coulomb(a, b, r2, r) + wca(a, b, r2, r)));
-    CHECK(u(c, c, (r * 1.01).squaredNorm(), r * 1.01) == 0);
-    CHECK(u(c, c, (r * 0.99).squaredNorm(), r * 0.99) == pc::infty);
+    CHECK_EQ(u(a, a, r2, r), Approx(coulomb(a, a, r2, r)));
+    CHECK_EQ(u(b, b, r2, r), Approx(coulomb(b, b, r2, r)));
+    CHECK_EQ(u(a, b, r2, r), Approx(coulomb(a, b, r2, r) + wca(a, b, r2, r)));
+    CHECK_EQ(u(c, c, (r * 1.01).squaredNorm(), r * 1.01), 0);
+    CHECK_EQ(u(c, c, (r * 0.99).squaredNorm(), r * 0.99), pc::infty);
 
     SUBCASE("selfEnergy() - monopole") {
         // let's check that the self energy gets properly transferred to the functor potential
@@ -977,9 +980,9 @@ TEST_CASE("[Faunus] FunctorPotential") {
 
         auto functor = pairpotential::makePairPotential<FunctorPotential>(j);
         auto galore = pairpotential::makePairPotential<NewCoulombGalore>(j["default"].at(0));
-        CHECK(functor.selfEnergy != nullptr);
-        CHECK(galore.selfEnergy != nullptr);
-        CHECK(functor.selfEnergy(a) == Approx(galore.selfEnergy(a)));
+        CHECK((functor.selfEnergy != nullptr));
+        CHECK((galore.selfEnergy != nullptr));
+        CHECK_EQ(functor.selfEnergy(a), Approx(galore.selfEnergy(a)));
     }
 
     SUBCASE("selfEnergy() - multipole") {
@@ -989,10 +992,10 @@ TEST_CASE("[Faunus] FunctorPotential") {
 
         auto functor = pairpotential::makePairPotential<FunctorPotential>(j);
         auto multipole = pairpotential::makePairPotential<Multipole>(j["default"].at(0));
-        CHECK(functor.selfEnergy != nullptr);
-        CHECK(multipole.selfEnergy != nullptr);
-        CHECK(functor.selfEnergy(a) == Approx(multipole.selfEnergy(a))); // q=1, mu=0
-        CHECK(functor.selfEnergy(c) == Approx(multipole.selfEnergy(c))); // q=0, mu=2
+        CHECK((functor.selfEnergy != nullptr));
+        CHECK((multipole.selfEnergy != nullptr));
+        CHECK_EQ(functor.selfEnergy(a), Approx(multipole.selfEnergy(a))); // q=1, mu=0
+        CHECK_EQ(functor.selfEnergy(c), Approx(multipole.selfEnergy(c))); // q=0, mu=2
     }
 }
 
@@ -1196,9 +1199,9 @@ TEST_CASE("[Faunus] NewCoulombGalore") {
     Point b_towards_a = a.pos - b.pos;
     auto pot = makePairPotential<NewCoulombGalore>(R"({"epsr": 80, "type": "plain"})"_json);
     Point force_on_a = pot.force(a, b, b_towards_a.squaredNorm(), b_towards_a);
-    CHECK(force_on_a.x() == doctest::Approx(0));
-    CHECK(force_on_a.y() == doctest::Approx(0));
-    CHECK(force_on_a.z() == doctest::Approx(0.1429734149)); // attraction -> positive direction expected
+    CHECK_EQ(force_on_a.x(), doctest::Approx(0));
+    CHECK_EQ(force_on_a.y(), doctest::Approx(0));
+    CHECK_EQ(force_on_a.z(), doctest::Approx(0.1429734149)); // attraction -> positive direction expected
 }
 
 void NewCoulombGalore::from_json(const json &j) {
@@ -1263,7 +1266,7 @@ void NewCoulombGalore::to_json(json &j) const {
     j["lB"] = bjerrum_length;
 }
 const CoulombGalore::Splined& NewCoulombGalore::getCoulombGalore() const { return pot; }
-double NewCoulombGalore::dielectric_constant(double M2V) { return pot.calc_dielectric(M2V); }
+[[maybe_unused]] double NewCoulombGalore::dielectric_constant(double M2V) { return pot.calc_dielectric(M2V); }
 
 // =============== Multipole ===============
 
@@ -1300,33 +1303,33 @@ TEST_CASE("[Faunus] Dipole-dipole interactions") {
     Particle c = atoms[2];
     Point r = {2, 0, 0};
     double r2 = r.squaredNorm();
-    CHECK(u(a, a, r2, r) ==
+    CHECK_EQ(u(a, a, r2, r),
           Approx(dipoledipole(a, a, r2,
                               r))); // interaction between two parallell dipoles, directed parallell to their seperation
-    CHECK(u(b, b, r2, r) ==
+    CHECK_EQ(u(b, b, r2, r),
           Approx(dipoledipole(
               b, b, r2, r))); // interaction between two parallell dipoles, directed perpendicular to their seperation
-    CHECK(u(a, b, r2, r) == Approx(dipoledipole(a, b, r2, r))); // interaction between two perpendicular dipoles
-    CHECK(u(a, a, r2, r) == -2.25 * dipoledipole.bjerrum_length);
-    CHECK(u(b, b, r2, r) == 1.125 * dipoledipole.bjerrum_length);
-    CHECK(u(a, c, r2, r) == -0.75 * dipoledipole.bjerrum_length);
-    CHECK(u(b, c, r2, r) == 0.375 * dipoledipole.bjerrum_length);
-    CHECK(u(a, b, r2, r) == 0);
+    CHECK_EQ(u(a, b, r2, r), Approx(dipoledipole(a, b, r2, r))); // interaction between two perpendicular dipoles
+    CHECK_EQ(u(a, a, r2, r), -2.25 * dipoledipole.bjerrum_length);
+    CHECK_EQ(u(b, b, r2, r), 1.125 * dipoledipole.bjerrum_length);
+    CHECK_EQ(u(a, c, r2, r), -0.75 * dipoledipole.bjerrum_length);
+    CHECK_EQ(u(b, c, r2, r), 0.375 * dipoledipole.bjerrum_length);
+    CHECK_EQ(u(a, b, r2, r), 0);
 
     r = {3, 0, 0};
     r2 = 3 * 3;
-    CHECK(u(a, a, r2, r) ==
+    CHECK_EQ(u(a, a, r2, r),
           Approx(dipoledipole(a, a, r2,
                               r))); // interaction between two parallell dipoles, directed parallell to their seperation
-    CHECK(u(b, b, r2, r) ==
+    CHECK_EQ(u(b, b, r2, r),
           Approx(dipoledipole(
               b, b, r2, r))); // interaction between two parallell dipoles, directed perpendicular to their seperation
-    CHECK(u(a, b, r2, r) == Approx(dipoledipole(a, b, r2, r))); // interaction between two perpendicular dipoles
-    CHECK(u(a, a, r2, r) == Approx(-(2.0 / 3.0) * dipoledipole.bjerrum_length));
-    CHECK(u(b, b, r2, r) == (1.0 / 3.0) * dipoledipole.bjerrum_length);
-    CHECK(u(a, c, r2, r) == Approx(-2.0 / 9.0 * dipoledipole.bjerrum_length));
-    CHECK(u(b, c, r2, r) == 1.0 / 9.0 * dipoledipole.bjerrum_length);
-    CHECK(u(a, b, r2, r) == 0);
+    CHECK_EQ(u(a, b, r2, r), Approx(dipoledipole(a, b, r2, r))); // interaction between two perpendicular dipoles
+    CHECK_EQ(u(a, a, r2, r), Approx(-(2.0 / 3.0) * dipoledipole.bjerrum_length));
+    CHECK_EQ(u(b, b, r2, r), (1.0 / 3.0) * dipoledipole.bjerrum_length);
+    CHECK_EQ(u(a, c, r2, r), Approx(-2.0 / 9.0 * dipoledipole.bjerrum_length));
+    CHECK_EQ(u(b, c, r2, r), 1.0 / 9.0 * dipoledipole.bjerrum_length);
+    CHECK_EQ(u(a, b, r2, r), 0);
 }
 
 // =============== WeeksChandlerAndersen ===============
@@ -1381,7 +1384,7 @@ TEST_CASE("[Faunus] WeeksChandlerAndersen") {
     }
 }
 
-PairPotentialException::PairPotentialException(const std::string msg)
+PairPotentialException::PairPotentialException(const std::string& msg)
     : std::runtime_error(msg){}
 
 void CosAttractMixed::initPairMatrices() {

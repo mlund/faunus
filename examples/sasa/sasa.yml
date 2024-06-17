@@ -26,4 +26,8 @@ analysis:
         molecule: mymolecule
         radius: 2.0
         nstep: 1
+    - voronoi:
+        file: voronoi_sasa.dat
+        radius: 2.0
+        nstep: 1
 

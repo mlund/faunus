@@ -2,6 +2,7 @@
 #include "random.h"
 #include "energy.h"
 #include <range/v3/view/zip.hpp>
+#include <utility>
 
 namespace Faunus::move {
 
@@ -46,9 +47,9 @@ LangevinVelocityVerlet::LangevinVelocityVerlet(Space& spc, Energy::EnergyTerm& e
     from_json(j);
 }
 
-inline Point LangevinVelocityVerlet::positionIncrement(const Point &velocity) { return 0.5 * time_step * velocity; }
+inline Point LangevinVelocityVerlet::positionIncrement(const Point &velocity) const { return 0.5 * time_step * velocity; }
 
-inline Point LangevinVelocityVerlet::velocityIncrement(const Point &force, const double mass) {
+inline Point LangevinVelocityVerlet::velocityIncrement(const Point &force, const double mass) const {
     // As forces are in kT per ångström units (a hybrid between reduced energy units and absolute units), we use
     // the mean square speed to compute acceleration from the force and as a conversion factor.
     // Dimension analysis: (ps * 1 / Å) * (Å^2 / ps^2) = Å / ps.
@@ -126,10 +127,10 @@ TEST_CASE("[Faunus] Integrator") {
 
 // =============== ForceMoveBase ===============
 
-ForceMove::ForceMove(Space& spc, std::string name, std::string cite, std::shared_ptr<IntegratorBase> integrator,
+ForceMove::ForceMove(Space& spc, const std::string& name, const std::string& cite, std::shared_ptr<IntegratorBase> integrator,
                      unsigned int nsteps)
     : Move(spc, name, cite)
-    , integrator(integrator)
+    , integrator(std::move(integrator))
     , number_of_steps(nsteps) {
     forces.reserve(spc.particles.size());
     velocities.reserve(spc.particles.size());
@@ -196,12 +197,12 @@ const PointVector& ForceMove::getVelocities() const { return velocities; }
 
 // =============== LangevinMove ===============
 
-LangevinDynamics::LangevinDynamics(Space& spc, std::string name, std::string cite,
+LangevinDynamics::LangevinDynamics(Space& spc, const std::string& name, const std::string& cite,
                                    std::shared_ptr<IntegratorBase> integrator, unsigned int nsteps)
     : ForceMove(spc, name, cite, integrator, nsteps) {}
 
 LangevinDynamics::LangevinDynamics(Space &spc, std::shared_ptr<IntegratorBase> integrator, unsigned int nsteps)
-    : LangevinDynamics(spc, "langevin_dynamics", "", integrator, nsteps) {}
+    : LangevinDynamics(spc, "langevin_dynamics", "", std::move(integrator), nsteps) {}
 
 LangevinDynamics::LangevinDynamics(Space& spc, Energy::EnergyTerm& energy)
     : LangevinDynamics::LangevinDynamics(spc, std::make_shared<LangevinVelocityVerlet>(spc, energy), 0) {}
@@ -225,8 +226,8 @@ TEST_CASE("[Faunus] LangevinDynamics") {
         spc.particles.resize(10);                                                // 10 particles in total
         spc.groups.emplace_back(0, spc.particles.begin(), spc.particles.end() - 1); // 9 active particles
         LangevinDynamics ld(spc, energy);
-        CHECK(ld.getForces().capacity() >= 10);
-        CHECK(ld.getVelocities().capacity() >= 10);
+        CHECK((ld.getForces().capacity() >= 10));
+        CHECK((ld.getVelocities().capacity() >= 10));
         CHECK_EQ(ld.getForces().size(), 9);
         CHECK_EQ(ld.getVelocities().size(), 9);
     }

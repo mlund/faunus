@@ -8,6 +8,8 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 target_link_libraries(project_options INTERFACE ZLIB::ZLIB)
 target_link_libraries(project_options INTERFACE ${CMAKE_THREAD_LIBS_INIT})
 
+include_directories(SYSTEM ${CMAKE_SOURCE_DIR}/voronotalt)
+
 # ========== pre-compiler system headers ==========
 
 option(ENABLE_PCH "Enable Precompiled Headers" OFF)
@@ -60,7 +62,7 @@ set(objs actions.cpp analysis.cpp average.cpp atomdata.cpp auxiliary.cpp bonds.c
 	chainmove.cpp clustermove.cpp core.cpp forcemove.cpp units.cpp energy.cpp externalpotential.cpp
 	geometry.cpp group.cpp io.cpp molecule.cpp montecarlo.cpp move.cpp mpicontroller.cpp
 	particle.cpp penalty.cpp potentials.cpp random.cpp reactioncoordinate.cpp regions.cpp rotate.cpp sasa.cpp
-        scatter.cpp smart_montecarlo.cpp space.cpp speciation.cpp spherocylinder.cpp tensor.cpp)
+        scatter.cpp smart_montecarlo.cpp space.cpp speciation.cpp spherocylinder.cpp tensor.cpp voronota.cpp)
 
 set(hdrs actions.h analysis.h average.h atomdata.h auxiliary.h bonds.h celllist.h celllistimpl.h
 	chainmove.h clustermove.h core.h forcemove.h energy.h externalpotential.h geometry.h group.h io.h

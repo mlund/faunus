@@ -21,12 +21,12 @@ class Average {
     value_type value_sum = 0.0;         //!< Sum of all recorded values
   public:
     void clear() { *this = Average(); }                                                 //!< Clear all data
-    bool empty() const { return number_of_samples == 0; }                               //!< True if empty
+    [[nodiscard]] bool empty() const;                               //!< True if empty
     auto size() const { return number_of_samples; }                                     //!< Number of samples
     auto avg() const { return value_sum / static_cast<value_type>(number_of_samples); } //!< Average
     explicit operator value_type() const { return avg(); }                              //!< Static cast operator
     bool operator<(const Average& other) const { return avg() < other.avg(); }          //!< Compare means
-    operator bool() const { return number_of_samples > 0; }                             //!< Check if not empty
+    explicit operator bool() const { return number_of_samples > 0; }                             //!< Check if not empty
 
     /**
      * @brief Add value to average
@@ -91,6 +91,8 @@ class Average {
 
     template <class Archive> void serialize(Archive& archive) { archive(value_sum, number_of_samples); }
 };
+template <std::floating_point value_type, std::unsigned_integral counter_type>
+bool Average<value_type, counter_type>::empty() const { return number_of_samples == 0; }
 
 /**
  * @brief Class to collect averages and standard deviation
@@ -210,7 +212,7 @@ class Decorrelation {
             waiting_sample.push_back(0.0);
             waiting_sample_exists.push_back(false);
         }
-        auto carry = new_sample;
+        std::floating_point auto carry = new_sample;
         blocked_statistics.at(0) += new_sample;
 
         for (size_t i = 1; i < blocked_statistics.size(); i++) {
@@ -229,9 +231,9 @@ class Decorrelation {
     }
 
     auto size() const { return nsamples; }
-    bool empty() const { return nsamples == 0; }
+    [[nodiscard]] bool empty() const { return nsamples == 0; }
 
-    void to_disk(const std::string& filename) const {
+    [[maybe_unused]] void to_disk(const std::string& filename) const {
         if (auto stream = std::ofstream(filename); stream) {
             for (size_t i = 0; i < blocked_statistics.size(); i++) {
                 stream << fmt::format("{} {} {}\n", i, blocked_statistics[i].avg(), blocked_statistics[i].stdev());
@@ -271,7 +273,7 @@ template <Averageable T, typename counter_type = unsigned long int> class Averag
   public:
     AverageObj() : sum(T()){}; //!< Construct from empty object
 
-    AverageObj(const T& value) : number_of_samples(1), sum(value){};
+    explicit AverageObj(const T& value) : number_of_samples(1), sum(value){};
 
     //! Add to average
     AverageObj& operator+=(const T& value) {
@@ -297,7 +299,7 @@ template <Averageable T, typename counter_type = unsigned long int> class Averag
     bool operator<(const AverageObj& other) const { return avg() < other.avg(); }
 
     //! True if empty
-    bool empty() const { return number_of_samples == 0; }
+    [[nodiscard]] bool empty() const { return number_of_samples == 0; }
 
     //!< Clear all data
     void clear() { *this = AverageObj<T>(); }

@@ -8,6 +8,7 @@
 #include <range/v3/algorithm/for_each.hpp>
 #include <range/v3/numeric/accumulate.hpp>
 #include <numeric>
+#include <utility>
 
 #ifdef ENABLE_FREESASA
 #include <freesasa.h>
@@ -69,22 +70,22 @@ TEST_CASE("[Faunus] Ewald - EwaldData") {
                 "epsr": 1.0, "alpha": 0.894427190999916, "epss": 1.0,
                 "ncutoff": 11.0, "spherical_sum": true, "cutoff": 5.0})"_json);
 
-    CHECK(data.policy == EwaldData::PBC);
-    CHECK(data.const_inf == 1);
-    CHECK(data.alpha == 0.894427190999916);
+    CHECK_EQ(data.policy, EwaldData::PBC);
+    CHECK_EQ(data.const_inf, 1);
+    CHECK_EQ(data.alpha, 0.894427190999916);
 
     // Check number of wave-vectors using PBC
     PolicyIonIon ionion;
     ionion.updateBox(data, Point(10, 10, 10));
-    CHECK(data.k_vectors.cols() == 2975);
-    CHECK(data.Q_ion.size() == data.k_vectors.cols());
+    CHECK_EQ(data.k_vectors.cols(), 2975);
+    CHECK_EQ(data.Q_ion.size(), data.k_vectors.cols());
 
     // Check number of wave-vectors using IPBC
     data.policy = EwaldData::IPBC;
     PolicyIonIonIPBC ionionIPBC;
     ionionIPBC.updateBox(data, Point(10, 10, 10));
-    CHECK(data.k_vectors.cols() == 846);
-    CHECK(data.Q_ion.size() == data.k_vectors.cols());
+    CHECK_EQ(data.k_vectors.cols(), 846);
+    CHECK_EQ(data.Q_ion.size(), data.k_vectors.cols());
 }
 
 //----------------- Ewald Policies -------------------
@@ -134,18 +135,18 @@ void PolicyIonIon::updateBox(EwaldData &d, const Point &box) const {
         d.Aks.setZero();
         int start_value = 1;
         for (int nx = 0; nx <= n_cutoff_ceil; nx++) {
-            double dnx2 = double(nx * nx);
+            auto dnx2 = double(nx * nx);
             double factor = (nx > 0) ? 2.0 : 1.0; // optimization of PBC Ewald (and
                                                   // always the case for IPBC Ewald)
             for (int ny = -n_cutoff_ceil * start_value; ny <= n_cutoff_ceil; ny++) {
-                double dny2 = double(ny * ny);
+                auto dny2 = double(ny * ny);
                 for (int nz = -n_cutoff_ceil * start_value; nz <= n_cutoff_ceil; nz++) {
                     Point kv = 2 * pc::pi * Point(nx, ny, nz).cwiseQuotient(d.box_length);
                     double k2 = kv.squaredNorm() + d.kappa_squared; // last term is only for Yukawa-Ewald
                     if (k2 < d.check_k2_zero)                       // Check if k2 != 0
                         continue;
                     if (d.use_spherical_sum) {
-                        double dnz2 = double(nz * nz);
+                        auto dnz2 = double(nz * nz);
                         if ((dnx2 + dny2 + dnz2) / nc2 > 1)
                             continue;
                     }
@@ -239,18 +240,18 @@ TEST_CASE("[Faunus] Ewald - IonIonPolicy") {
         PolicyIonIon ionion;
         ionion.updateBox(data, spc.geometry.getLength());
         ionion.updateComplex(data, spc.groups);
-        CHECK(ionion.selfEnergy(data, c, spc.groups) == Approx(-1.0092530088080642 * data.bjerrum_length));
-        CHECK(ionion.surfaceEnergy(data, c, spc.groups) == Approx(0.0020943951023931952 * data.bjerrum_length));
-        CHECK(ionion.reciprocalEnergy(data) == Approx(0.21303063979675319 * data.bjerrum_length));
+        CHECK_EQ(ionion.selfEnergy(data, c, spc.groups), Approx(-1.0092530088080642 * data.bjerrum_length));
+        CHECK_EQ(ionion.surfaceEnergy(data, c, spc.groups), Approx(0.0020943951023931952 * data.bjerrum_length));
+        CHECK_EQ(ionion.reciprocalEnergy(data), Approx(0.21303063979675319 * data.bjerrum_length));
     }
 
     SUBCASE("PBCEigen") {
         PolicyIonIonEigen ionion;
         ionion.updateBox(data, spc.geometry.getLength());
         ionion.updateComplex(data, spc.groups);
-        CHECK(ionion.selfEnergy(data, c, spc.groups) == Approx(-1.0092530088080642 * data.bjerrum_length));
-        CHECK(ionion.surfaceEnergy(data, c, spc.groups) == Approx(0.0020943951023931952 * data.bjerrum_length));
-        CHECK(ionion.reciprocalEnergy(data) == Approx(0.21303063979675319 * data.bjerrum_length));
+        CHECK_EQ(ionion.selfEnergy(data, c, spc.groups), Approx(-1.0092530088080642 * data.bjerrum_length));
+        CHECK_EQ(ionion.surfaceEnergy(data, c, spc.groups), Approx(0.0020943951023931952 * data.bjerrum_length));
+        CHECK_EQ(ionion.reciprocalEnergy(data), Approx(0.21303063979675319 * data.bjerrum_length));
     }
 
     SUBCASE("IPBC") {
@@ -258,9 +259,9 @@ TEST_CASE("[Faunus] Ewald - IonIonPolicy") {
         data.policy = EwaldData::IPBC;
         ionion.updateBox(data, spc.geometry.getLength());
         ionion.updateComplex(data, spc.groups);
-        CHECK(ionion.selfEnergy(data, c, spc.groups) == Approx(-1.0092530088080642 * data.bjerrum_length));
-        CHECK(ionion.surfaceEnergy(data, c, spc.groups) == Approx(0.0020943951023931952 * data.bjerrum_length));
-        CHECK(ionion.reciprocalEnergy(data) == Approx(0.0865107467 * data.bjerrum_length));
+        CHECK_EQ(ionion.selfEnergy(data, c, spc.groups), Approx(-1.0092530088080642 * data.bjerrum_length));
+        CHECK_EQ(ionion.surfaceEnergy(data, c, spc.groups), Approx(0.0020943951023931952 * data.bjerrum_length));
+        CHECK_EQ(ionion.reciprocalEnergy(data), Approx(0.0865107467 * data.bjerrum_length));
     }
 
     // IPBCEigen is under construction
@@ -269,9 +270,9 @@ TEST_CASE("[Faunus] Ewald - IonIonPolicy") {
         data.type = EwaldData::IPBCEigen;
         ionion.updateBox(data, spc.geo.getLength());
         ionion.updateComplex(data, spc.groups);
-        CHECK(ionion.selfEnergy(data, c, spc.groups) == Approx(-1.0092530088080642 * data.lB));
-        CHECK(ionion.surfaceEnergy(data, c, spc.groups) == Approx(0.0020943951023931952 * data.lB));
-        CHECK(ionion.reciprocalEnergy(data) == Approx(0.0865107467 * data.lB));
+        CHECK_EQ(ionion.selfEnergy(data, c, spc.groups), Approx(-1.0092530088080642 * data.lB));
+        CHECK_EQ(ionion.surfaceEnergy(data, c, spc.groups), Approx(0.0020943951023931952 * data.lB));
+        CHECK_EQ(ionion.reciprocalEnergy(data), Approx(0.0865107467 * data.lB));
     }*/
 }
 
@@ -334,10 +335,10 @@ void PolicyIonIonIPBC::updateBox(EwaldData &data, const Point &box) const {
         data.Aks.setZero();
         int start_value = 0;
         for (int nx = 0; nx <= ncc; nx++) {
-            double dnx2 = double(nx * nx);
+            auto dnx2 = double(nx * nx);
             double xfactor = (nx > 0) ? 2.0 : 1.0; // optimization of PBC Ewald
             for (int ny = -ncc * start_value; ny <= ncc; ny++) {
-                double dny2 = double(ny * ny);
+                auto dny2 = double(ny * ny);
                 double yfactor = (ny > 0) ? 2.0 : 1.0; // optimization of PBC Ewald
                 for (int nz = -ncc * start_value; nz <= ncc; nz++) {
                     double factor = xfactor * yfactor;
@@ -348,7 +349,7 @@ void PolicyIonIonIPBC::updateBox(EwaldData &data, const Point &box) const {
                     if (k2 < data.check_k2_zero)                       // Check if k2 != 0
                         continue;
                     if (data.use_spherical_sum) {
-                        double dnz2 = double(nz * nz);
+                        auto dnz2 = double(nz * nz);
                         if ((dnx2 + dny2 + dnz2) / nc2 > 1)
                             continue;
                     }
@@ -597,20 +598,20 @@ TEST_CASE("[Faunus] Energy::Ewald") {
     const auto reference_energy = (0.0020943951023931952 + 0.21303063979675319) * data.bjerrum_length;
     const auto energy_change = -16.8380445846; // move first position (0,0,0) --> (0.1, 0.1, 0.1)
 
-    SUBCASE("energy") { CHECK(ewald.energy(change) == doctest::Approx(reference_energy)); }
+    SUBCASE("energy") { CHECK_EQ(ewald.energy(change), doctest::Approx(reference_energy)); }
 
     SUBCASE("update and restore (full update)") {
         positions[0] = {0.1, 0.1, 0.1};
         space.updateParticles(positions.begin(), positions.end(), space.particles.begin(), copy_position);
         ewald.updateState(change);
-        CHECK(ewald.energy(change) == doctest::Approx(103.7300260099));
-        CHECK(ewald.energy(change) - reference_energy == doctest::Approx(energy_change));
+        CHECK_EQ(ewald.energy(change), doctest::Approx(103.7300260099));
+        CHECK_EQ(ewald.energy(change) - reference_energy, doctest::Approx(energy_change));
 
         positions[0] = {0.0, 0.0, 0.0};
         space.updateParticles(positions.begin(), positions.end(), space.particles.begin(), copy_position);
-        CHECK(ewald.energy(change) != doctest::Approx(reference_energy)); // no match since k-vectors not updated
+        CHECK((ewald.energy(change) != doctest::Approx(reference_energy))); // no match since k-vectors not updated
         ewald.updateState(change);
-        CHECK(ewald.energy(change) == doctest::Approx(reference_energy)); // that's better
+        CHECK_EQ(ewald.energy(change), doctest::Approx(reference_energy)); // that's better
     }
 
     Space trial_space;
@@ -618,7 +619,7 @@ TEST_CASE("[Faunus] Energy::Ewald") {
     positions = {{0, 0, 0}, {1, 0, 0}};
     trial_space.updateParticles(positions.begin(), positions.end(), trial_space.particles.begin(), copy_position);
     auto trial_ewald = Ewald(trial_space, data);
-    CHECK(trial_ewald.energy(change) == doctest::Approx(reference_energy));
+    CHECK_EQ(trial_ewald.energy(change), doctest::Approx(reference_energy));
 
     auto check_energy_change = [&](const Change& change) { // perturb from (0,0,0) --> (0.1, 0.1, 0.1)
         positions[0] = {0.0, 0.0, 0.0};
@@ -634,7 +635,7 @@ TEST_CASE("[Faunus] Energy::Ewald") {
         ewald.sync(&trial_ewald, change);
         space.sync(trial_space, change);
         const auto new_energy = trial_ewald.energy(change); // position (0.1,0.1,0.1)
-        CHECK(energy_change == doctest::Approx(new_energy - old_energy));
+        CHECK_EQ(energy_change, doctest::Approx(new_energy - old_energy));
     };
 
     trial_ewald.setOldGroups(space.groups); // give access to positions in accepted state
@@ -793,36 +794,49 @@ TEST_CASE("Energy::Isobaric") {
     SUBCASE("to_json") {
         json j;
         Isobaric(json({{"P/atm", 0.5}}), spc).to_json(j);
-        CHECK(j.at("P/atm").get<double>() == doctest::Approx(0.5));
+        CHECK_EQ(j.at("P/atm").get<double>(), doctest::Approx(0.5));
         Isobaric(json({{"P/bar", 0.4}}), spc).to_json(j);
-        CHECK(j.at("P/bar").get<double>() == doctest::Approx(0.4));
+        CHECK_EQ(j.at("P/bar").get<double>(), doctest::Approx(0.4));
         Isobaric(json({{"P/kT", 0.3}}), spc).to_json(j);
-        CHECK(j.at("P/kT").get<double>() == doctest::Approx(0.3));
+        CHECK_EQ(j.at("P/kT").get<double>(), doctest::Approx(0.3));
         Isobaric(json({{"P/mM", 0.2}}), spc).to_json(j);
-        CHECK(j.at("P/mM").get<double>() == doctest::Approx(0.2));
+        CHECK_EQ(j.at("P/mM").get<double>(), doctest::Approx(0.2));
         Isobaric(json({{"P/Pa", 0.1}}), spc).to_json(j);
-        CHECK(j.at("P/Pa").get<double>() == doctest::Approx(0.1));
+        CHECK_EQ(j.at("P/Pa").get<double>(), doctest::Approx(0.1));
     }
 }
 
-Constrain::Constrain(const json &j, Space &spc) {
+Constrain::Constrain(const json& j, Space& spc) {
     name = "constrain";
     type = j.at("type").get<std::string>();
+    if (const auto it = j.find("harmonic"); it != j.end()) {
+        harmonic = std::make_optional<Faunus::pairpotential::HarmonicBond>();
+        harmonic->from_json(*it);
+    }
     coordinate = ReactionCoordinate::createReactionCoordinate({{type, j}}, spc);
 }
 
 double Constrain::energy(const Change& change) {
     if (change) {
         const auto value = (*coordinate)(); // calculate reaction coordinate
-        if (not coordinate->inRange(value)) // is it within allowed range?
-            return pc::infty;               // if not, return infinite energy
+        if (harmonic) {
+            return harmonic->half_force_constant * std::pow(harmonic->equilibrium_distance - value, 2);
+        }
+        if (not coordinate->inRange(value)) { // if outside allowed range ...
+            return pc::infty;                 // ... return infinite energy
+        }
     }
     return 0.0;
 }
-void Constrain::to_json(json &j) const {
+void Constrain::to_json(json& j) const {
     j = json(*coordinate).at(type);
     j.erase("resolution");
     j["type"] = type;
+    if (harmonic) {
+        harmonic->to_json(j["harmonic"]);
+        j["harmonic"].erase("index");
+        j.erase("range");
+    }
 }
 
 void Bonded::updateGroupBonds(const Space::GroupType& group) {
@@ -857,8 +871,8 @@ double Bonded::sumBondEnergy(const Bonded::BondVector& bonds) const {
 #endif
 }
 
-Bonded::Bonded(const Space& spc, const BondVector& external_bonds = BondVector())
-    : spc(spc), external_bonds(external_bonds) {
+Bonded::Bonded(const Space& spc, BondVector external_bonds = BondVector())
+    : spc(spc), external_bonds(std::move(external_bonds)) {
     name = "bonded";
     updateInternalBonds();
     for (auto& bond : this->external_bonds) {
@@ -1284,7 +1298,7 @@ TEST_CASE("[Faunus] FreeSASA") {
 
     SUBCASE("Separated atoms") {
         FreeSASAEnergy sasa(spc, 1.5_molar, 1.4_angstrom);
-        CHECK(sasa.energy(change) == Approx(4.0 * pc::pi * (3.4 * 3.4 + 2.6 * 2.6) * 1.5 * 1.0_kJmol));
+        CHECK_EQ(sasa.energy(change), Approx(4.0 * pc::pi * (3.4 * 3.4 + 2.6 * 2.6) * 1.5 * 1.0_kJmol));
     }
 
     SUBCASE("Intersecting atoms") {
@@ -1293,7 +1307,7 @@ TEST_CASE("[Faunus] FreeSASA") {
             {0.0, 87.3576}, {2.5, 100.4612}, {5.0, 127.3487}, {7.5, 138.4422}, {10.0, 138.4422}};
         for (const auto& [distance, energy] : distance_energy) {
             spc.particles.at(1).pos = {0.0, 0.0, distance};
-            CHECK(sasa.energy(change) == Approx(energy).epsilon(0.02));
+            CHECK_EQ(sasa.energy(change), Approx(energy).epsilon(0.02));
         }
     }
 
@@ -1555,11 +1569,11 @@ TEST_CASE_TEMPLATE("[Faunus] SASAEnergy_updates", EnergyTemplate, SASAEnergyRefe
 
         EnergyTemplate sasa_energy(spc, 1.5_molar, 1.0_angstrom, 20);
         FreeSASAEnergy ref_energy(spc, 1.5_molar, 1.0_angstrom);
-        CHECK(sasa_energy.energy(change) == Approx(98.0789260855));
-        CHECK(ref_energy.energy(change) == Approx(98.0789260855));
+        CHECK_EQ(sasa_energy.energy(change), Approx(98.0789260855));
+        CHECK_EQ(ref_energy.energy(change), Approx(98.0789260855));
 
         for (const auto& [area, ref_area] : ranges::views::zip(sasa_energy.getAreas(), ref_energy.getAreas())) {
-            CHECK(area == Approx(ref_area));
+            CHECK_EQ(area, Approx(ref_area));
         }
     }
 
@@ -1581,11 +1595,11 @@ TEST_CASE_TEMPLATE("[Faunus] SASAEnergy_updates", EnergyTemplate, SASAEnergyRefe
         changed_data.group_index = 1;
         changed_data.relative_atom_indices = {1};
 
-        CHECK(sasa_energy.energy(change) == Approx(105.7104501023));
-        CHECK(ref_energy.energy(change) == Approx(105.7104501023));
+        CHECK_EQ(sasa_energy.energy(change), Approx(105.7104501023));
+        CHECK_EQ(ref_energy.energy(change), Approx(105.7104501023));
 
         for (const auto& [area, ref_area] : ranges::views::zip(sasa_energy.getAreas(), ref_energy.getAreas())) {
-            CHECK(area == Approx(ref_area));
+            CHECK_EQ(area, Approx(ref_area));
         }
     }
 }
@@ -1681,33 +1695,33 @@ TEST_CASE("[Faunus] GroupCutoff") {
     SUBCASE("old style default") {
         GroupCutoff cutoff(geo);
         from_json(R"({"cutoff_g2g": 12.0})"_json, cutoff);
-        CHECK(cutoff.getCutoff(0, 0) == doctest::Approx(12.0));
-        CHECK(cutoff.getCutoff(0, 1) == doctest::Approx(12.0));
-        CHECK(cutoff.getCutoff(1, 1) == doctest::Approx(12.0));
+        CHECK_EQ(cutoff.getCutoff(0, 0), doctest::Approx(12.0));
+        CHECK_EQ(cutoff.getCutoff(0, 1), doctest::Approx(12.0));
+        CHECK_EQ(cutoff.getCutoff(1, 1), doctest::Approx(12.0));
     }
 
     SUBCASE("new style default") {
         GroupCutoff cutoff(geo);
         from_json(R"({"cutoff_g2g": {"default": 13.0}})"_json, cutoff);
-        CHECK(cutoff.getCutoff(0, 0) == doctest::Approx(13.0));
-        CHECK(cutoff.getCutoff(0, 1) == doctest::Approx(13.0));
-        CHECK(cutoff.getCutoff(1, 1) == doctest::Approx(13.0));
+        CHECK_EQ(cutoff.getCutoff(0, 0), doctest::Approx(13.0));
+        CHECK_EQ(cutoff.getCutoff(0, 1), doctest::Approx(13.0));
+        CHECK_EQ(cutoff.getCutoff(1, 1), doctest::Approx(13.0));
     }
 
     SUBCASE("custom") {
         GroupCutoff cutoff(geo);
         from_json(R"({"cutoff_g2g": {"default": 13.0, "M Q": 14.0}})"_json, cutoff);
-        CHECK(cutoff.getCutoff(0, 0) == doctest::Approx(13.0));
-        CHECK(cutoff.getCutoff(0, 1) == doctest::Approx(14.0));
-        CHECK(cutoff.getCutoff(1, 1) == doctest::Approx(13.0));
+        CHECK_EQ(cutoff.getCutoff(0, 0), doctest::Approx(13.0));
+        CHECK_EQ(cutoff.getCutoff(0, 1), doctest::Approx(14.0));
+        CHECK_EQ(cutoff.getCutoff(1, 1), doctest::Approx(13.0));
     }
 
     SUBCASE("custom - no default value") {
         GroupCutoff cutoff(geo);
         from_json(R"({"cutoff_g2g": {"M Q": 11.0}})"_json, cutoff);
-        CHECK(cutoff.getCutoff(0, 0) == doctest::Approx(std::sqrt(pc::max_value)));
-        CHECK(cutoff.getCutoff(0, 1) == doctest::Approx(11.0));
-        CHECK(cutoff.getCutoff(1, 1) == doctest::Approx(std::sqrt(pc::max_value)));
+        CHECK_EQ(cutoff.getCutoff(0, 0), doctest::Approx(std::sqrt(pc::max_value)));
+        CHECK_EQ(cutoff.getCutoff(0, 1), doctest::Approx(11.0));
+        CHECK_EQ(cutoff.getCutoff(1, 1), doctest::Approx(std::sqrt(pc::max_value)));
     }
 }
 
@@ -1787,7 +1801,7 @@ double CustomGroupGroup::energy([[maybe_unused]] const Change& change) {
                    ranges::cpp20::views::transform([&](const auto& group) { return spc.getGroupIndex(group); }) |
                    ranges::to_vector;
 
-    return for_each_unique_pair(indices.begin(), indices.end(), group_group_energy, std::plus<double>());
+    return for_each_unique_pair(indices.begin(), indices.end(), group_group_energy, std::plus<>());
 }
 
 void CustomGroupGroup::setParameters(const Group& group1, const Group& group2) {

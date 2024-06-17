@@ -1,12 +1,16 @@
 #!/usr/bin/env python
 
 import sys
+
 if sys.version_info < (3, 0):
-    sys.stdout.write("Sorry, Python 3 og higher required\n")
+    sys.stderr.write("Sorry, Python 3 og higher required\n")
     sys.exit(1)
 
 import os
-import json, sys, argparse
+import io
+import json
+import sys
+import argparse
 import warnings
 
 try:
@@ -23,22 +27,19 @@ except ImportError:
     jinja2 = None
 
 
-# API compatibility between pyyaml and ruamel.yaml might break in the future
-# https://yaml.readthedocs.io/en/latest/api.html
 try:
     import ruamel.yaml as yaml
 except ImportError:
-    import yaml
-    from yaml import (
-        safe_load as yaml_safe_load,
-        safe_dump as yaml_safe_dump,
-    )
+    print("ruame.yaml is required", file=sys.stderr)
+    sys.exit(1)
 else:
+
     def yaml_safe_load(stream):
         return yaml.YAML(typ="safe").load(stream)
 
     def yaml_safe_dump(data, stream=None, **kwargs):
         return yaml.YAML(typ="safe").dump(data, stream=stream, **kwargs)
+
 
 try:
     pygments = True
@@ -48,20 +49,32 @@ try:
 except ImportError:
     pygments = False
 
-parser = argparse.ArgumentParser(description='Convert json to yaml and vice versa')
-parser.add_argument('--indent', '-i', dest='indent', default=4, type=int, help='text indentation')
-parser.add_argument('--json', '-j', dest='alwaysjson', action='store_true', help='always output to json')
-parser.add_argument('infile', nargs='?', type=argparse.FileType('r'), default=sys.stdin, help='json/yaml input')
+parser = argparse.ArgumentParser(description="Convert json to yaml and vice versa")
+parser.add_argument(
+    "--indent", "-i", dest="indent", default=4, type=int, help="text indentation"
+)
+parser.add_argument(
+    "--json", "-j", dest="alwaysjson", action="store_true", help="always output to json"
+)
+parser.add_argument(
+    "infile",
+    nargs="?",
+    type=argparse.FileType("r"),
+    default=sys.stdin,
+    help="json/yaml input",
+)
 
 if pygments:
-    parser.add_argument('--color', '-c', dest='color', action='store_true', help='syntax colored output')
+    parser.add_argument(
+        "--color", "-c", dest="color", action="store_true", help="syntax colored output"
+    )
 
 args = parser.parse_args()
 
 terminal_red = "\033[91m"
 terminal_yellow = "\033[93m"
 terminal_default = "\033[39m"
- 
+
 if pygments:
     if args.color:
         formatter = Terminal256Formatter
@@ -70,25 +83,26 @@ if pygments:
 
 
 def human_readable_path(path):
-    out=str()
+    out = str()
     for i in path:
         if not isinstance(i, int):
-            out += str(i)+' -> '
+            out += str(i) + " -> "
     return out
 
+
 def eprint(*args, **kwargs):
-    ''' print to stderr '''
+    """print to stderr"""
     print(*args, file=sys.stderr, **kwargs)
 
 
 def print_table(schema):
-    ''' pretty print schema as markdown table '''
+    """pretty print schema as markdown table"""
     properties = schema.get("properties", "")
     if isinstance(properties, dict):
         eprint(terminal_yellow + "Need help, my young apprentice?\n" + terminal_red)
-        eprint("{:25} | {:7} | {:50}".format(25*"-", 7*"-", 50*"-"))
+        eprint("{:25} | {:7} | {:50}".format(25 * "-", 7 * "-", 50 * "-"))
         eprint("{:25} | {:7} | {:50}".format("Property", "Type", "Description"))
-        eprint("{:25} | {:7} | {:50}".format(25*"-", 7*"-", 50*"-"))
+        eprint("{:25} | {:7} | {:50}".format(25 * "-", 7 * "-", 50 * "-"))
         for key, value in properties.items():
             required = key in schema.get("required", [""])
             _property = key + str("*" if required else "")
@@ -96,64 +110,85 @@ def print_table(schema):
                 _description = value.get("description", "")
                 if "type" in value:
                     _default = value.get("default", "")
-                    if _default!="":
-                        _property = _property + '=' + str(_default)
+                    if _default != "":
+                        _property = _property + "=" + str(_default)
                     _type = value["type"]
                     if isinstance(_type, list):
-                        _type = '/'.join(_type)
-                    eprint("{:25} | {:7} | {}".format('`'+_property+'`', _type, _description))
+                        _type = "/".join(_type)
+                    eprint(
+                        "{:25} | {:7} | {}".format(
+                            "`" + _property + "`", _type, _description
+                        )
+                    )
                 else:
-                    eprint("{:25} | {:7} | {}".format('`'+_property+'`', 'n/a', _description))
-        eprint(terminal_default) # restore terminal color
+                    eprint(
+                        "{:25} | {:7} | {}".format(
+                            "`" + _property + "`", "n/a", _description
+                        )
+                    )
+        eprint(terminal_default)  # restore terminal color
+
 
 def validate_input(instance):
-    ''' JSON schema checker '''
+    """JSON schema checker"""
     if jsonschema:
-        pathname = os.path.dirname(sys.argv[0]) # location of yason.py
-        for subdir in ["/../docs", "/../share/faunus"]: # schema file can be in src or installed
-            schemafile = os.path.abspath(pathname+subdir) + '/schema.yml'
+        pathname = os.path.dirname(sys.argv[0])  # location of yason.py
+        for subdir in [
+            "/../docs",
+            "/../share/faunus",
+        ]:  # schema file can be in src or installed
+            schemafile = os.path.abspath(pathname + subdir) + "/schema.yml"
             if os.path.exists(schemafile):
                 with open(schemafile, "r") as f:
                     _schema = yaml_safe_load(f)
-                    error = best_match(Draft201909Validator(_schema).iter_errors(instance))
-                    if error!=None:
-                        eprint( "{}{}\n".format(human_readable_path(error.path), error.message) )
+                    error = best_match(
+                        Draft201909Validator(_schema).iter_errors(instance)
+                    )
+                    if error is not None:
+                        eprint(
+                            "{}{}\n".format(
+                                human_readable_path(error.path), error.message
+                            )
+                        )
                         print_table(error.schema)
                         sys.exit(1)
                 break
 
+
 try:  # ... to read json
-    i = args.infile.read()
+    file_as_str = args.infile.read()
     if jinja2:
         # additional files can be used with {% include "file" %}
         dirs = [os.getcwd(), os.path.dirname(os.path.realpath(__file__)) + "/../top"]
         loader = jinja2.FileSystemLoader(dirs)
         env = jinja2.Environment(loader=loader)
-        i = env.from_string(i).render()  # render jinja2
-        # i = jinja2.Template(i).render() # render jinja2
+        file_as_str = env.from_string(file_as_str).render()  # render jinja2
 
-    d = json.loads(i)
-    if "mcloop" in d or "version" in d: 
-        validate_input(d)
+    file_as_dict = json.loads(file_as_str)
+    if "mcloop" in file_as_dict or "version" in file_as_dict:
+        validate_input(file_as_dict)
     if args.alwaysjson:
         if pygments:
-            i = highlight(out, JsonLexer(), formatter())
-        print(i)
+            file_as_str = highlight(file_as_str, JsonLexer(), formatter())
+        print(file_as_str)
     else:
-        out = yaml_safe_dump(d, indent=args.indent, allow_unicode=True)
+        stream = io.StringIO()
+        yaml_safe_dump(file_as_dict, stream=stream)
         if pygments:
-            out = highlight(out, YamlLexer(), formatter())
-        print(out)
+            stream = highlight(stream.getvalue(), YamlLexer(), formatter())
+            print(stream)
+        else:
+            print(stream.getvalue())
 except json.decoder.JSONDecodeError:
     try:  # ... to read yaml
-        d = yaml_safe_load(i)  # plain load was deprecated in PyYAML
-        if "mcloop" in d or "version" in d: 
-            validate_input(d)
-        out = json.dumps(d, indent=args.indent)
+        file_as_dict = yaml_safe_load(file_as_str)
+        if "mcloop" in file_as_dict or "version" in file_as_dict:
+            validate_input(file_as_dict)
+        stream = json.dumps(file_as_dict, indent=args.indent)
         if pygments:
-            out = highlight(out, JsonLexer(), formatter())
-        print(out)
+            stream = highlight(stream, JsonLexer(), formatter())
+        print(stream)
     except yaml.parser.ParserError as exception:
-        print("input error: invalid json or yaml format", file=sys.stderr)
-        print(exception, file=sys.stderr)
+        eprint("input error: invalid json or yaml format")
+        eprint(exception)
         sys.exit(1)

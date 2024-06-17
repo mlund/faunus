@@ -83,8 +83,8 @@ template <typename T> class WeightedDistribution {
   public:
     std::vector<T> data;                        //!< raw vector of T
     auto size() const { return data.size(); }   //!< Number of data points
-    bool empty() const { return data.empty(); } //!< True if no data points
-    size_t getLastIndex() const {
+    [[nodiscard]] bool empty() const { return data.empty(); } //!< True if no data points
+    [[nodiscard]] size_t getLastIndex() const {
         assert(!data.empty());
         return latest_index;
     } //!< index of last `get()` or `addGroup()` element

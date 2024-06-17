@@ -3,7 +3,7 @@
 #include "io.h"
 
 //#define ANKERL_NANOBENCH_IMPLEMENT
-#include "nanobench.h"
+#include <nanobench.h>
 
 namespace Faunus::Scatter {
 
@@ -22,10 +22,10 @@ TEST_CASE_TEMPLATE("[Faunus] StructureFactorPBC", T, StructureFactorPBC<float, S
     T scatter(2);
     scatter.sample(positions, box);
     for (auto [q, S] : scatter.getSampling()) {
-        CHECK(q == Approx(result[cnt++]));
-        CHECK(S == Approx(result[cnt++]));
+        CHECK_EQ(q, Approx(result[cnt++]));
+        CHECK_EQ(S, Approx(result[cnt++]));
     }
-    CHECK(cnt == result.size());
+    CHECK_EQ(cnt, result.size());
 }
 
 #ifdef ANKERL_NANOBENCH_H_INCLUDED
@@ -54,10 +54,10 @@ TEST_CASE("[Faunus] StructureFactorIPBC") {
     StructureFactorIPBC scatter(2);
     scatter.sample(positions, box);
     for (auto [q, S] : scatter.getSampling()) {
-        CHECK(q == Approx(result[cnt++]));
-        CHECK(S == Approx(result[cnt++]));
+        CHECK_EQ(q, Approx(result[cnt++]));
+        CHECK_EQ(S, Approx(result[cnt++]));
     }
-    CHECK(cnt == result.size());
+    CHECK_EQ(cnt, result.size());
 }
 
 } // namespace Faunus::Scatter

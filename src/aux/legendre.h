@@ -55,10 +55,10 @@ TEST_CASE_TEMPLATE("[Faunus] Legendre", LegendreType, Legendre<double, 3, false>
     LegendreType l;
     double x = 2.2;
     auto P = l.eval(x);
-    CHECK(P[0] == Approx(1));
-    CHECK(P[1] == Approx(x));
-    CHECK(P[2] == Approx(0.5 * (3 * x * x - 1)));
-    CHECK(P[3] == Approx(0.5 * (5 * x * x * x - 3 * x)));
+    CHECK_EQ(P[0], Approx(1));
+    CHECK_EQ(P[1], Approx(x));
+    CHECK_EQ(P[2], Approx(0.5 * (3 * x * x - 1)));
+    CHECK_EQ(P[3], Approx(0.5 * (5 * x * x * x - 3 * x)));
 }
 #endif
 

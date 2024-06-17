@@ -1,21 +1,17 @@
-#include <doctest/doctest.h>
 #include "core.h"
 #include "move.h"
 #include "speciation.h"
 #include "clustermove.h"
 #include "chainmove.h"
 #include "forcemove.h"
-#include "montecarlo.h"
-#include "smart_montecarlo.h"
 #include "regions.h"
 #include "aux/iteratorsupport.h"
 #include "aux/eigensupport.h"
-#include "spdlog/spdlog.h"
+#include <spdlog/spdlog.h>
+#include <doctest/doctest.h>
 #include <range/v3/view/counted.hpp>
 #include <range/v3/algorithm/count.hpp>
-#include <range/v3/algorithm/fold_left.hpp>
 #include <range/v3/view/transform.hpp>
-#include <range/v3/view/map.hpp>
 
 namespace Faunus::move {
 
@@ -49,7 +45,7 @@ void Move::to_json(json& j) const {
     if (timer.result() > 0.01) { // only print if more than 1% of the time
         j["relative time"] = timer.result();
     }
-    j["acceptance"] = double(number_of_accepted_moves) / number_of_attempted_moves;
+    j["acceptance"] = double(number_of_accepted_moves) / double(number_of_attempted_moves);
     j["repeat"] = repeat;
     j["stochastic"] = isStochastic();
     j["moves"] = number_of_attempted_moves;
@@ -121,7 +117,7 @@ const std::string& Move::getName() const {
 
 // -----------------------------------
 
-ReplayMove::ReplayMove(Space& spc, std::string name, std::string cite)
+ReplayMove::ReplayMove(Space& spc, const std::string& name, const std::string& cite)
     : Move(spc, name, cite) {}
 
 ReplayMove::ReplayMove(Space& spc) : ReplayMove(spc, "replay", "") {}
@@ -243,8 +239,8 @@ void AtomicTranslateRotate::_accept(Change&) {
 
 void AtomicTranslateRotate::_reject(Change&) { mean_square_displacement += 0; }
 
-AtomicTranslateRotate::AtomicTranslateRotate(Space& spc, const Energy::Hamiltonian& hamiltonian, std::string name,
-                                             std::string cite)
+AtomicTranslateRotate::AtomicTranslateRotate(Space& spc, const Energy::Hamiltonian& hamiltonian, const std::string& name,
+                                             const std::string& cite)
     : Move(spc, name, cite)
     , hamiltonian(hamiltonian) {
     repeat = -1; // meaning repeat N times
@@ -403,7 +399,7 @@ MoveCollection::MoveCollection(const json& list_of_moves, Space& spc, Energy::Ha
 
 void to_json(json& j, const MoveCollection& propagator) { j = propagator.moves; }
 
-const BasePointerVector<Move>& MoveCollection::getMoves() const { return moves; }
+[[maybe_unused]] const BasePointerVector<Move>& MoveCollection::getMoves() const { return moves; }
 
 MoveCollection::move_iterator MoveCollection::sample() {
 #ifdef ENABLE_MPI
@@ -973,7 +969,7 @@ void ChargeTransfer::_from_json(const json& j) {
                                  mol1.min.size(), mol1.max.size());
     }
 
-    if (mol1.min.size() == 0 || mol1.max.size() == 0) {
+    if (mol1.min.empty() || mol1.max.empty()) {
         // checking so that mol1.min and mol1.max are not empty
         throw ConfigurationError("mol1.min and mol1.max both need to have nonzero number of entries. "
                                  "mol1.min has {} and mol1.max has {}  entries.",
@@ -987,7 +983,7 @@ void ChargeTransfer::_from_json(const json& j) {
                                  mol2.min.size(), mol2.max.size());
     }
 
-    if (mol2.min.size() == 0 || mol2.max.size() == 0) {
+    if (mol2.min.empty() || mol2.max.empty()) {
         // checking so that mol2.min and mol2.max are not empty
         throw ConfigurationError("mol2.min and mol2.max both need to have nonzero number of entries. "
                                  "mol2.min has {} and mol2.max has {} entries.",
@@ -1137,7 +1133,7 @@ void ChargeTransfer::_move(Change& change) {
 void ChargeTransfer::_accept(Change&) { msqd += deltaq * deltaq; }
 void ChargeTransfer::_reject(Change&) { msqd += 0; }
 
-ChargeTransfer::ChargeTransfer(Space& spc, std::string name, std::string cite)
+ChargeTransfer::ChargeTransfer(Space& spc, const std::string& name, const std::string& cite)
     : Move(spc, name, cite) {
     repeat = -1; // meaning repeat N times
     mol1.cdata.internal = true;
@@ -1203,7 +1199,7 @@ void QuadrantJump::_move(Change& change) {
         faunus_logger->warn("{0}: no molecules found", name);
 }
 
-QuadrantJump::QuadrantJump(Space& spc, std::string name, std::string cite)
+QuadrantJump::QuadrantJump(Space& spc, const std::string& name, const std::string& cite)
     : Move(spc, name, cite) {
     repeat = -1; // meaning repeat N times
 }
@@ -1262,7 +1258,7 @@ double AtomicSwapCharge::bias(Change&, double, double) { return _bias; }
 void AtomicSwapCharge::_accept(Change&) { msqd += _sqd; }
 void AtomicSwapCharge::_reject(Change&) { msqd += 0; }
 
-AtomicSwapCharge::AtomicSwapCharge(Space& spc, std::string name, std::string cite)
+AtomicSwapCharge::AtomicSwapCharge(Space& spc, const std::string& name, const std::string& cite)
     : Move(spc, name, cite) {
     repeat = -1; // meaning repeat N times
     cdata.relative_atom_indices.resize(1);
@@ -1458,11 +1454,11 @@ TEST_CASE("[Faunus] TranslateRotate") {
     mv.from_json(j);
 
     j = json(mv).at(mv.getName());
-    CHECK(j.at("molecule") == "A");
-    // CHECK(j.at("dir") == Point(0, 1, 0));
-    CHECK(j.at("dp") == 1.0);
-    CHECK(j.at("repeat") == 2);
-    CHECK(j.at("dprot") == 0.5);
+    CHECK_EQ(j.at("molecule"), "A");
+    // CHECK_EQ(j.at("dir"), Point(0, 1, 0));
+    CHECK_EQ(j.at("dp"), 1.0);
+    CHECK_EQ(j.at("repeat"), 2);
+    CHECK_EQ(j.at("dprot"), 0.5);
 }
 #endif
 
@@ -1603,7 +1599,7 @@ void ConformationSwap::checkConformationSize() const {
         return;                               // ... then no need to check further
     }
 
-    // find smallest periodic side-length
+    // find smallest periodic side length.
     const auto infinity = Point::Constant(pc::infty);
     const auto max_allowed_separation =
         (is_periodic.array() == true).select(spc.geometry.getLength(), infinity).minCoeff() * 0.5;

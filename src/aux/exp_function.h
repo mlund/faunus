@@ -38,18 +38,18 @@ TEST_CASE("[Faunus] exp_cawley") {
     double infty = std::numeric_limits<double>::infinity();
     using doctest::Approx;
     WARN(exp_cawley(-infty) == Approx(0)); // clang=OK; GCC=not OK
-    CHECK(exp_cawley(0) == Approx(0.9710078239));
-    CHECK(exp_cawley(2) == Approx(7.3096199036));
-    CHECK(exp_cawley(-2) == Approx(0.13207829));
+    CHECK_EQ(exp_cawley(0), Approx(0.9710078239));
+    CHECK_EQ(exp_cawley(2), Approx(7.3096199036));
+    CHECK_EQ(exp_cawley(-2), Approx(0.13207829));
 }
 
 TEST_CASE("[Faunus] exp_untested") {
     double infty = std::numeric_limits<double>::infinity();
     using doctest::Approx;
-    CHECK(exp_untested(-infty) == Approx(0)); // clang=OK; GCC=not OK
-    CHECK(exp_untested(0) == Approx(0.9710078239));
-    CHECK(exp_untested(2) == Approx(7.3096199036));
-    CHECK(exp_untested(-2) == Approx(0.13207829));
+    CHECK_EQ(exp_untested(-infty), Approx(0)); // clang=OK; GCC=not OK
+    CHECK_EQ(exp_untested(0), Approx(0.9710078239));
+    CHECK_EQ(exp_untested(2), Approx(7.3096199036));
+    CHECK_EQ(exp_untested(-2), Approx(0.13207829));
 }
 
 } // namespace Faunus

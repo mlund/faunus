@@ -73,8 +73,8 @@ class Move {
                         double new_energy); //!< Extra energy not captured by the Hamiltonian
     Move(Space& spc, std::string_view name, std::string_view cite);
     inline virtual ~Move() = default;
-    bool isStochastic() const; //!< True if move should be called stochastically
-    const std::string& getName() const;
+    [[nodiscard]] bool isStochastic() const; //!< True if move should be called stochastically
+    [[nodiscard]] const std::string& getName() const;
 };
 
 void from_json(const json&, Move&); //!< Configure any move via json
@@ -100,7 +100,7 @@ class ReplayMove : public Move {
 
   protected:
     using Move::spc;
-    ReplayMove(Space& spc, std::string name, std::string cite);
+    ReplayMove(Space& spc, const std::string& name, const std::string& cite);
 
   public:
     explicit ReplayMove(Space& spc);
@@ -109,7 +109,7 @@ class ReplayMove : public Move {
 /**
  * @brief Swap the charge of a single atom
  */
-class AtomicSwapCharge : public Move {
+class [[maybe_unused]] AtomicSwapCharge : public Move {
     int molid = -1;
     double pKa, pH;
     Average<double> msqd; // mean squared displacement
@@ -127,7 +127,7 @@ class AtomicSwapCharge : public Move {
 
   protected:
     using Move::spc;
-    AtomicSwapCharge(Space& spc, std::string name, std::string cite);
+    AtomicSwapCharge(Space& spc, const std::string& name, const std::string& cite);
 
   public:
     explicit AtomicSwapCharge(Space& spc);
@@ -163,7 +163,7 @@ class AtomicTranslateRotate : public Move {
     void _accept(Change&) override;
     void _reject(Change&) override;
 
-    AtomicTranslateRotate(Space& spc, const Energy::Hamiltonian& hamiltonian, std::string name, std::string cite);
+    AtomicTranslateRotate(Space& spc, const Energy::Hamiltonian& hamiltonian, const std::string& name, const std::string& cite);
 
   public:
     AtomicTranslateRotate(Space& spc, const Energy::Hamiltonian& hamiltonian);
@@ -348,7 +348,7 @@ class ChargeMove : public Move {
     void _accept(Change&) override;
     void _reject(Change&) override;
     void _from_json(const json& j) override;
-    virtual double getChargeDisplacement(const Particle& particle) const;
+    [[nodiscard]] virtual double getChargeDisplacement(const Particle& particle) const;
     ChargeMove(Space& spc, std::string_view name, std::string_view cite);
 
   protected:
@@ -371,7 +371,7 @@ class QuadraticChargeMove : public ChargeMove {
   private:
     Average<double> mean_bias;
     void _to_json(json& j) const override;
-    double getChargeDisplacement(const Particle& particle) const override;
+    [[nodiscard]] double getChargeDisplacement(const Particle& particle) const override;
     double bias(Change& change, double old_energy, double new_energy) override;
 
   public:
@@ -389,7 +389,7 @@ class ChargeTransfer : public Move {
     struct moldata {
         double charges = 0;
         double moves = 0;
-        int numOfAtoms = 0;
+        size_t numOfAtoms = 0;
         int id = 0;
         std::string molname;
         std::vector<double> min, max;
@@ -412,7 +412,7 @@ class ChargeTransfer : public Move {
 
   protected:
     using Move::spc;
-    ChargeTransfer(Space& spc, std::string name, std::string cite);
+    ChargeTransfer(Space& spc, const std::string& name, const std::string& cite);
 
   public:
     explicit ChargeTransfer(Space& spc);
@@ -439,7 +439,7 @@ class QuadrantJump : public Move {
 
   protected:
     using Move::spc;
-    QuadrantJump(Space& spc, std::string name, std::string cite);
+    QuadrantJump(Space& spc, const std::string& name, const std::string& cite);
 
   public:
     explicit QuadrantJump(Space& spc);
@@ -556,7 +556,7 @@ class ParallelTempering : public Move {
  * @returns unique pointer to move
  * @throw if invalid name or input parameters
  */
-std::unique_ptr<Move> createMove(const std::string& name, const json& properties, Space& spc,
+[[maybe_unused]] std::unique_ptr<Move> createMove(const std::string& name, const json& properties, Space& spc,
                                  Energy::Hamiltonian& hamiltonian);
 
 /**
@@ -575,7 +575,7 @@ class MoveCollection {
   public:
     MoveCollection(const json& list_of_moves, Space& spc, Energy::Hamiltonian& hamiltonian, Space &old_spc);
     void addMove(std::shared_ptr<Move>&& move);                     //!< Register new move with correct weight
-    const BasePointerVector<Move>& getMoves() const;                //!< Get list of moves
+    [[maybe_unused]] [[nodiscard]] const BasePointerVector<Move>& getMoves() const;                //!< Get list of moves
     friend void to_json(json& j, const MoveCollection& propagator); //!< Generate json output
 
     /**

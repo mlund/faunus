@@ -434,6 +434,35 @@ properties:
                             items: {type: object}
                     additionalProperties: false
 
+                constrain:
+                    description: "Constrain via a reaction coordinate"
+                    type: object
+                    properties:
+                        type:
+                            description: "Reaction coordinate class"
+                            type: string
+                            items: {"system", "molecule", "atom"}
+                        property:
+                            description: "Reaction coordinate property"
+                            type: string
+                        range:
+                            description: "Allowed range of reaction coord. value"
+                            type: array
+                            minItems: 2
+                            maxItems: 2
+                        harmonic:
+                            description: "Alternatively, use a hamonic potential to constain reaction coord. value"
+                            type: object
+                            properties:
+                                req: {type: number, description: "Equilibrium value for reaction coordinate"}
+                                k: {type: number, description: "Spring constant in kJ/mol"}
+                            additionalProperties: false
+                    required: [type, property]
+                    oneOf:
+                        - required: [range]
+                        - required: [harmonic]
+                    additionalProperties: false
+
                 nonbonded:
                     description: "Nonbonded interactions"
                     type: object
@@ -1203,7 +1232,7 @@ properties:
 
                 systemenergy:
                     properties:
-                        file: {type: string}
+                        file: {type: string, pattern: "(.*?)\\.(dat|dat.gz|csv)$", description: "Output filename (.dat|.dat.gz|.csv)"}
                         nstep: {type: integer}
                         nskip: {type: integer, default: 0, description: Initial steps to skip}
                         save_min_conf:
@@ -1262,6 +1291,23 @@ properties:
                         nstep: {type: integer, description: Interval between samples}
                         nskip: {type: integer, default: 0, description: Number of steps to initially skip}
                     required: [dL, molecule, nstep]
+                    additionalProperties: false
+
+                voronoi:
+                    description: "Voronoi tessellation using Voronota"
+                    type: object
+                    properties:
+                        nstep: {type: integer, description: "Interval between samples"}
+                        nskip: {type: integer, default: 0, description: "Initial steps to skip"}
+                        radius:
+                            type: number
+                            default: 1.4
+                            description: "Probe radius (Å)"
+                        file:
+                            type: string
+                            pattern: "(.*?)\\.(dat|dat.gz)$"
+                            description: "Streaming filename (.dat|.dat.gz)"
+                    required: [nstep]
                     additionalProperties: false
  
                 widom:

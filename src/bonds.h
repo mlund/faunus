@@ -43,13 +43,13 @@ struct BondData {
 
     virtual void from_json(const json&) = 0;
     virtual void to_json(json&) const = 0;
-    virtual int numindex() const = 0;                                    //!< Required number of atom indices for bond
-    virtual Variant type() const = 0;                                    //!< Returns bond type (sett `Variant` enum)
-    virtual std::shared_ptr<BondData> clone() const = 0;                 //!< Make shared pointer *copy* of data
+    [[nodiscard]] virtual int numindex() const = 0;                                    //!< Required number of atom indices for bond
+    [[nodiscard]] virtual Variant type() const = 0;                                    //!< Returns bond type (sett `Variant` enum)
+    [[nodiscard]] virtual std::shared_ptr<BondData> clone() const = 0;                 //!< Make shared pointer *copy* of data
     virtual void setEnergyFunction(const ParticleVector& particles) = 0; //!< Set energy function; store particles ref.
-    bool hasEnergyFunction() const;                                      //!< test if energy function has been set
-    bool hasForceFunction() const;                                       //!< test if force function has been set
-    void shiftIndices(const int offset);                                 //!< Add offset to particle indices
+    [[nodiscard]] bool hasEnergyFunction() const;                                      //!< test if energy function has been set
+    [[nodiscard]] bool hasForceFunction() const;                                       //!< test if force function has been set
+    void shiftIndices(int offset);                                 //!< Add offset to particle indices
     BondData() = default;
     explicit BondData(const std::vector<int>& indices);
     virtual ~BondData() = default;
@@ -65,15 +65,15 @@ NLOHMANN_JSON_SERIALIZE_ENUM(BondData::Variant, {{BondData::Variant::INVALID, nu
                                                  {BondData::Variant::HARMONIC_DIHEDRAL, "harmonic_dihedral"}})
 
 struct StretchData : public BondData {
-    int numindex() const override;
+    [[nodiscard]] int numindex() const override;
     StretchData() = default;
-    StretchData(const std::vector<int>& indices);
+    explicit StretchData(const std::vector<int>& indices);
 };
 
 struct TorsionData : public BondData {
-    int numindex() const override;
+    [[nodiscard]] int numindex() const override;
     TorsionData() = default;
-    TorsionData(const std::vector<int>& indices);
+    explicit TorsionData(const std::vector<int>& indices);
 };
 
 /**
@@ -84,8 +84,8 @@ struct TorsionData : public BondData {
 struct HarmonicBond : public StretchData {
     double half_force_constant = 0.0;
     double equilibrium_distance = 0.0;
-    Variant type() const override;
-    std::shared_ptr<BondData> clone() const override;
+    [[nodiscard]] Variant type() const override;
+    [[nodiscard]] std::shared_ptr<BondData> clone() const override;
     void from_json(const json& j) override;
     void to_json(json& j) const override;
     void setEnergyFunction(const ParticleVector& particles) override; //!< Set energy and force functors
@@ -101,8 +101,8 @@ struct HarmonicBond : public StretchData {
 struct FENEBond : public StretchData {
     double half_force_constant = 0.0;
     double max_squared_distance = 0.0;
-    Variant type() const override;
-    std::shared_ptr<BondData> clone() const override;
+    [[nodiscard]] Variant type() const override;
+    [[nodiscard]] std::shared_ptr<BondData> clone() const override;
     void from_json(const json& j) override;
     void to_json(json& j) const override;
     void setEnergyFunction(const ParticleVector& particles) override;
@@ -119,8 +119,8 @@ struct FENEWCABond : public StretchData {
     double epsilon = 0.0;
     double sigma_squared = 0.0;
     std::array<double, 4> k = {{0.0, 0.0, 0.0, 0.0}};
-    Variant type() const override;
-    std::shared_ptr<BondData> clone() const override;
+    [[nodiscard]] Variant type() const override;
+    [[nodiscard]] std::shared_ptr<BondData> clone() const override;
     void from_json(const json& j) override;
     void to_json(json& j) const override;
     void setEnergyFunction(const ParticleVector& calculateDistance) override;
@@ -136,10 +136,10 @@ struct FENEWCABond : public StretchData {
 struct HarmonicTorsion : public TorsionData {
     double half_force_constant = 0.0;
     double equilibrium_angle = 0.0;
-    std::shared_ptr<BondData> clone() const override;
+    [[nodiscard]] std::shared_ptr<BondData> clone() const override;
     void from_json(const json& j) override;
     void to_json(json& j) const override;
-    Variant type() const override;
+    [[nodiscard]] Variant type() const override;
     void setEnergyFunction(const ParticleVector& particles) override;
     HarmonicTorsion() = default;
     HarmonicTorsion(double k, double aeq, const std::vector<int>& indices);
@@ -153,10 +153,10 @@ struct HarmonicTorsion : public TorsionData {
 struct GromosTorsion : public TorsionData {
     double half_force_constant = 0.0;
     double cosine_equilibrium_angle = 0.0;
-    std::shared_ptr<BondData> clone() const override;
+    [[nodiscard]] std::shared_ptr<BondData> clone() const override;
     void from_json(const json& j) override;
     void to_json(json& j) const override;
-    Variant type() const override;
+    [[nodiscard]] Variant type() const override;
     void setEnergyFunction(const ParticleVector& calculateDistance) override;
     GromosTorsion() = default;
     GromosTorsion(double k, double cos_aeq, const std::vector<int>& indices);
@@ -171,11 +171,11 @@ struct PeriodicDihedral : public BondData {
     double force_constant = 0.0;
     double phase_angle = 0.0;
     double periodicity = 1.0;
-    int numindex() const override;
-    std::shared_ptr<BondData> clone() const override;
+    [[nodiscard]] int numindex() const override;
+    [[nodiscard]] std::shared_ptr<BondData> clone() const override;
     void from_json(const json& j) override;
     void to_json(json& j) const override;
-    Variant type() const override;
+    [[nodiscard]] Variant type() const override;
     void setEnergyFunction(const ParticleVector& particles) override;
     PeriodicDihedral() = default;
     PeriodicDihedral(double k, double phi, double n, const std::vector<int>& indices);
@@ -189,11 +189,11 @@ struct PeriodicDihedral : public BondData {
 struct HarmonicDihedral : public BondData {
     double half_force_constant = 0.0;
     double equilibrium_dihedral = 0.0;
-    int numindex() const override;
-    std::shared_ptr<BondData> clone() const override;
+    [[nodiscard]] int numindex() const override;
+    [[nodiscard]] std::shared_ptr<BondData> clone() const override;
     void from_json(const json& j) override;
     void to_json(json& j) const override;
-    Variant type() const override;
+    [[nodiscard]] Variant type() const override;
     void setEnergyFunction(const ParticleVector& particles) override;
     HarmonicDihedral() = default;
     HarmonicDihedral(double k, double deq, const std::vector<int>& indices);

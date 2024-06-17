@@ -2,7 +2,8 @@
 Checks:          '*,-fuchsia-*,-google-*,-zircon-*,-abseil-*,-modernize-use-trailing-return-type,-llvm-*,-modernize-use-nodiscard,-llvmlibc-callee-namespace,-cppcoreguidelines-avoid-magic-numbers,-readability-magic-numbers'
 WarningsAsErrors: '*'
 HeaderFilterRegex: ''
-FormatStyle:     none
+FormatStyle:     file
+MinimumVariableNameLength: 1
 
 CheckOptions:
     - { key: readability-identifier-naming.NamespaceCase, value: CamelCase }
@@ -10,13 +11,16 @@ CheckOptions:
     - { key: readability-identifier-naming.StructCase, value: CamelCase }
     - { key: readability-identifier-naming.VariableCase, value: lower_case}
     - { key: readability-identifier-naming.LocalVariableCase, value: lower_case}
-    - { key: readability-identifier-naming.FunctionCase, value: camelBack}
+    - { key: readability-identifier-naming.FunctionCase, value: lower_case}
     - { key: readability-identifier-naming.FunctionIgnoredRegexp, value: '^to_json$|^from_json$'}
-    - { key: readability-identifier-naming.ClassMethodCase, value: camelBack}
+    - { key: readability-identifier-naming.ClassMethodCase, value: lower_case}
     - { key: readability-identifier-naming.ClassMethodIgnoredRegexp, value: '^to_json$|^from_json$'}
     - { key: readability-identifier-naming.ParameterCase, value: lower_case}
     - { key: readability-identifier-naming.ParameterIgnoredRegexp, value: '^j$'}
+    - { key: readability-identifier-naming.EnumCase, value: CamelCase}
+    - { key: readability-identifier-naming.EnumConstantCase, value: CamelCase}
     - { key: readability-identifier-naming.ConstantParameterCase, value: lower_case}
+    - { key: readability-identifier-naming.ConstexprVariableCase,, value: UPPER_CASE}
     - { key: readability-identifier-naming.ConstantParameterIgnoredRegexp, value: lower_case}
     - { key: readability-identifier-naming.TypedefCase, value: CamelCase}
     - { key: misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic, value: 'true'}

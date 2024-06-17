@@ -1,14 +1,14 @@
 #define DOCTEST_CONFIG_IMPLEMENT
-#include <doctest/doctest.h>
 #include "mpicontroller.h"
 #include "montecarlo.h"
 #include "analysis.h"
 #include "multipole.h"
 #include "docopt.h"
-#include "progress_tracker.h"
-#include "spdlog/spdlog.h"
 #include "move.h"
 #include "actions.h"
+#include <doctest/doctest.h>
+#include <progress_tracker.h>
+#include <spdlog/spdlog.h>
 #include <spdlog/sinks/null_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
@@ -38,7 +38,7 @@ void setInformationLevelAndLoggers(bool quiet, docopt::Options& args);
 json getUserInput(docopt::Options& args);
 void setRandomNumberGenerator(const json& input);
 void loadState(docopt::Options& args, MetropolisMonteCarlo& simulation);
-void prefaceActions(const json& input, Space& space, Energy::Hamiltonian& hamiltonian);
+void prefaceActions(const json& input, Space& spc, Energy::Hamiltonian& hamiltonian);
 void checkElectroNeutrality(MetropolisMonteCarlo& simulation);
 void showErrorMessage(std::exception& exception);
 void showProgress(std::shared_ptr<ProgressIndicator::ProgressTracker>& progress_tracker);
@@ -408,7 +408,7 @@ void loadState(docopt::Options& args, MetropolisMonteCarlo& simulation) {
             if (binary) {
                 const auto size = stream.tellg(); // get file size
                 std::vector<std::uint8_t> buffer(size / sizeof(std::uint8_t));
-                stream.seekg(0, stream.beg);             // go back to start...
+                stream.seekg(0, std::ifstream::beg);             // go back to start...
                 stream.read((char*)buffer.data(), size); // ...and read into buffer
                 j = json::from_ubjson(buffer);
             } else {

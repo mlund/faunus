@@ -22,10 +22,8 @@
 #ifndef EIGENCEREALISATION_HPP_
 #define EIGENCEREALISATION_HPP_
 
-#include "cereal/cereal.hpp"
-
-#include "Eigen/Core"
-
+#include <cereal/cereal.hpp>
+#include <Eigen/Core>
 #include <cstdint>
 
 /**

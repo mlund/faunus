@@ -294,7 +294,7 @@ class MoleculeBuilder {
     void readBonds(const json& j);          //!< reads "bondlist"
     void readFastaBonds(const json& j);     //!< makes up harmonic bonds for a FASTA sequence
     void readExclusions(const json& j);     //!< reads "exclusionlist" and "excluded_neighbours"
-    std::shared_ptr<MoleculeInserter> createInserter(const json& j);
+    static std::shared_ptr<MoleculeInserter> createInserter(const json& j);
 
   public:
     //! initialize MoleculeData from JSON; shall be called only once during the instance lifetime
@@ -317,7 +317,7 @@ class MoleculeStructureReader {
     //! reads atom types, positions and optionally charges from a file
     void readFile(ParticleVector& particles, const std::string& filename) const;
     //! a director determining the executive method based on JSON content
-    void readJson(ParticleVector &particles, const json &j);
+    void readJson(ParticleVector &particles, const json &j) const;
 };
 
 /**

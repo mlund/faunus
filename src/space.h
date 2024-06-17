@@ -46,8 +46,6 @@ struct Change {
         void sort(); //!< Sort group indices
     };
 
-    std::optional<std::pair<index_type, index_type>> singleParticleChange() const;
-
     std::vector<GroupChange> groups; //!< Touched groups by index in group vector
 
     std::optional<std::pair<index_type, index_type>> singleParticleChange() const;

@@ -10,38 +10,52 @@ namespace Faunus {
  * @brief Dynamic table for 1d data
  * @todo This really needs documentation and general refactoring!
  */
-template <typename Tcoeff = double, typename base = Eigen::Matrix<Tcoeff, Eigen::Dynamic, Eigen::Dynamic>>
-class Table : public base {
+template <typename Tcoeff = double,
+          typename base = Eigen::Matrix<Tcoeff, Eigen::Dynamic, Eigen::Dynamic>>
+class Table : public base
+{
   private:
     using Tvec = std::vector<double>;
     Tvec _bw, _lo, _hi;
     using index_t = typename base::Index;
-    static_assert(std::is_integral_v<index_t> && std::is_signed_v<index_t>, "signed integral value expected");
+    static_assert(std::is_integral_v<index_t> && std::is_signed_v<index_t>,
+                  "signed integral value expected");
     index_t _rows;
     index_t _cols;
 
   public:
-    explicit Table(const Tvec& bw = {1, 1}, const Tvec& lo = {0, 0}, const Tvec& hi = {2, 2}) {
+    explicit Table(const Tvec& bw = {1, 1}, const Tvec& lo = {0, 0}, const Tvec& hi = {2, 2})
+    {
         reInitializer(bw, lo, hi);
     }
 
     // required for assignment from Eigen::Matrix and Eigen::Array objects
     template <typename OtherDerived>
     explicit Table(const Eigen::MatrixBase<OtherDerived>& other)
-        : base(other) {}
-    template <typename OtherDerived> Table &operator=(const Eigen::MatrixBase<OtherDerived> &other) {
-        this->base::operator=(other);
-        return *this;
+        : base(other)
+    {
     }
-    template <typename OtherDerived>
-    explicit Table(const Eigen::ArrayBase<OtherDerived>& other)
-        : base(other) {}
-    template <typename OtherDerived> Table &operator=(const Eigen::ArrayBase<OtherDerived> &other) {
+
+    template <typename OtherDerived> Table& operator=(const Eigen::MatrixBase<OtherDerived>& other)
+    {
         this->base::operator=(other);
         return *this;
     }
 
-    void reInitializer(const Tvec &bw, const Tvec &lo, const Tvec &hi) {
+    template <typename OtherDerived>
+    explicit Table(const Eigen::ArrayBase<OtherDerived>& other)
+        : base(other)
+    {
+    }
+
+    template <typename OtherDerived> Table& operator=(const Eigen::ArrayBase<OtherDerived>& other)
+    {
+        this->base::operator=(other);
+        return *this;
+    }
+
+    void reInitializer(const Tvec& bw, const Tvec& lo, const Tvec& hi)
+    {
         assert(bw.size() == 1 || bw.size() == 2);
         assert(bw.size() == lo.size() && lo.size() == hi.size());
         _bw = bw;
@@ -50,20 +64,24 @@ class Table : public base {
         _rows = (_hi[0] - _lo[0]) / _bw[0] + 1.;
         if (bw.size() == 2) {
             _cols = (_hi[1] - _lo[1]) / _bw[1] + 1;
-        } else {
+        }
+        else {
             _cols = 1;
         }
         base::resize(_rows, _cols);
         base::setZero();
     }
 
-    void round(Tvec &v) const {
+    void round(Tvec& v) const
+    {
         for (Tvec::size_type i = 0; i != v.size(); ++i) {
-            v[i] = (v[i] >= 0) ? int(v[i] / _bw[i] + 0.5) * _bw[i] : int(v[i] / _bw[i] - 0.5) * _bw[i];
+            v[i] =
+                (v[i] >= 0) ? int(v[i] / _bw[i] + 0.5) * _bw[i] : int(v[i] / _bw[i] - 0.5) * _bw[i];
         }
     }
 
-    void to_index(Tvec &v) const {
+    void to_index(Tvec& v) const
+    {
         for (Tvec::size_type i = 0; i != v.size(); ++i) {
             v[i] = (v[i] >= 0) ? int(v[i] / _bw[i] + 0.5) : int(v[i] / _bw[i] - 0.5);
             v[i] = v[i] - _lo[i] / _bw[i];
@@ -71,11 +89,13 @@ class Table : public base {
         v.resize(2, 0);
     }
 
-    Tcoeff& operator[](const Tvec& v) {
+    Tcoeff& operator[](const Tvec& v)
+    {
         return base::operator()(static_cast<index_t>(v[0]), static_cast<index_t>(v[1]));
     }
 
-    bool isInRange(const Tvec &v) const {
+    bool isInRange(const Tvec& v) const
+    {
         bool in_range = true;
         for (Tvec::size_type i = 0; i != v.size(); ++i) {
             in_range = in_range && v[i] >= _lo[i] && v[i] <= _hi[i];
@@ -83,7 +103,8 @@ class Table : public base {
         return in_range;
     }
 
-    Tvec hist2buf(int) const {
+    Tvec hist2buf(int) const
+    {
         Tvec sendBuf;
         for (index_t i = 0; i < _cols; ++i) {
             for (index_t j = 0; j < _rows; ++j) {
@@ -93,7 +114,8 @@ class Table : public base {
         return sendBuf;
     }
 
-    void buf2hist(const Tvec &v) {
+    void buf2hist(const Tvec& v)
+    {
         assert(!v.empty());
         base::setZero();
         auto p = static_cast<int>(v.size()) / this->size();
@@ -108,7 +130,8 @@ class Table : public base {
         }
     }
 
-    base getBlock(const Tvec& slice) { // {xmin,xmax} or {xmin,xmax,ymin,ymax}
+    base getBlock(const Tvec& slice)
+    { // {xmin,xmax} or {xmin,xmax,ymin,ymax}
         Tvec w(4, 0);
         switch (slice.size()) {
         case 1:
@@ -132,9 +155,10 @@ class Table : public base {
         return this->block(w[0], w[2], w[1] - w[0] + 1, w[3] - w[2] + 1); // xmin,ymin,rows,cols
     }
 
-    Tcoeff avg(const Tvec &v) const { return this->getBlock(v).mean(); }
+    Tcoeff avg(const Tvec& v) const { return this->getBlock(v).mean(); }
 
-    void save(const std::string &filename, Tcoeff scale = 1, Tcoeff translate = 0) const {
+    void save(const std::string& filename, Tcoeff scale = 1, Tcoeff translate = 0) const
+    {
         Eigen::VectorXd v1(_cols + 1);
         Eigen::VectorXd v2(_rows + 1);
         v1(0) = v2(0) = base::size();
@@ -164,7 +188,8 @@ class Table : public base {
         }
     }
 
-    void saveRow(const std::string &filename, const Tvec &v, Tcoeff scale = 1, Tcoeff translate = 0) {
+    void saveRow(const std::string& filename, const Tvec& v, Tcoeff scale = 1, Tcoeff translate = 0)
+    {
         if (!this->isInRange(v)) {
             return;
         }
@@ -190,7 +215,8 @@ class Table : public base {
         }
     }
 
-    void load(const std::string &filename) {
+    void load(const std::string& filename)
+    {
         if (std::ifstream f(filename.c_str()); f) {
             index_t i = 0;
             index_t j = -1;

@@ -254,4 +254,17 @@ class Electrolyte
 void to_json(json& j, const Electrolyte& electrolyte);
 std::optional<Electrolyte> makeElectrolyte(const json& j); //!< Create ionic salt object from json
 
+/// Extract JSON value associated with `key` into `std::optional`
+///
+/// If the value does not exist, return `std::nullopt`
+///
+/// @throws If value exists but cannot be extracted as `T`.
+template<typename T> 
+std::optional<T> get_optional(const json &j, std::string_view key) {
+    if (const auto it = j.find(key); it != j.end()) {
+        return it->get<T>(); // may throw exception
+    }
+    return std::nullopt;
+}
+
 } // namespace Faunus

@@ -1016,6 +1016,11 @@ Bonded::Bonded(const Space& spc, BondVector external_bonds = BondVector())
     name = "bonded";
     updateInternalBonds();
     for (auto& bond : this->external_bonds) {
+        std::stringstream indices;
+        std::copy(bond->indices.begin(), bond->indices.end(),
+                  std::ostream_iterator<int>(indices, " "));
+        faunus_logger->info("{}: adding inter-particle bonds involving indices [ {}]", name,
+                            indices.str());
         bond->setEnergyFunction(spc.particles);
     }
 }

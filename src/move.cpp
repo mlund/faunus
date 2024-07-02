@@ -189,6 +189,8 @@ void AtomicTranslateRotate::_to_json(json& j) const
 {
     j = {{"dir", directions},
          {"molid", molid},
+         {"dp", default_dp},
+         {"dprot", default_dprot},
          {unicode::rootof + unicode::bracket("r" + unicode::squared),
           std::sqrt(mean_square_displacement.avg())},
          {"molecule", molecule_name}};
@@ -214,6 +216,8 @@ void AtomicTranslateRotate::_from_json(const json& j)
         }
     }
     energy_resolution = j.value("energy_resolution", 0.0);
+    default_dp = j.value("dp", 0.0);
+    default_dprot = j.value("dprot", 0.0);
 }
 
 void AtomicTranslateRotate::translateParticle(ParticleVector::iterator particle,
@@ -262,8 +266,8 @@ void AtomicTranslateRotate::_move(Change& change)
 {
     if (auto particle = randomAtom(); particle != spc.particles.end()) {
         latest_particle = particle;
-        const double translational_displacement = particle->traits().dp.value_or(0.0);
-        const double rotational_displacement = particle->traits().dprot.value_or(0.0);
+        const double translational_displacement = particle->traits().dp.value_or(default_dp);
+        const double rotational_displacement = particle->traits().dprot.value_or(default_dprot);
 
         if (translational_displacement > 0.0) { // translate
             translateParticle(particle, translational_displacement);

@@ -80,21 +80,21 @@ class AtomData
     friend void from_json(const json&, AtomData&);
 
   public:
-    std::string name;     //!< Name
-    double charge = 0;    //!< Particle charge [e]
-    double mw = 1;        //!< Weight
-    double sigma = 0;     //!< Diameter for e.g Lennard-Jones etc. [angstrom]
-                          //!< Do not set! Only a temporal class member during the refactorization
-    double activity = 0;  //!< Chemical activity [mol/l]
-    double alphax = 0;    //!< Excess polarisability (unit-less)
-    std::optional<double> dp = std::nullopt; //!< Translational displacement parameter [angstrom]
+    std::string name;    //!< Name
+    double charge = 0;   //!< Particle charge [e]
+    double mw = 1;       //!< Weight
+    double sigma = 0;    //!< Diameter for e.g Lennard-Jones etc. [angstrom]
+                         //!< Do not set! Only a temporal class member during the refactorization
+    double activity = 0; //!< Chemical activity [mol/l]
+    double alphax = 0;   //!< Excess polarisability (unit-less)
+    std::optional<double> dp = std::nullopt;    //!< Translational displacement parameter [angstrom]
     std::optional<double> dprot = std::nullopt; //!< Rotational displacement parameter [degrees]
-    double tension = 0;   //!< Surface tension [kT/Å^2]
-    double tfe = 0;       //!< Transfer free energy [J/mol/angstrom^2/M]
-    Point mu = {0, 0, 0}; //!< Dipole moment unit vector
-    double mulen = 0;     //!< Dipole moment length
-    bool hydrophobic = false; //!< Is the particle hydrophobic?
-    bool implicit = false;    //!< Is the particle implicit (e.g. proton)?
+    double tension = 0;                         //!< Surface tension [kT/Å^2]
+    double tfe = 0;                             //!< Transfer free energy [J/mol/angstrom^2/M]
+    Point mu = {0, 0, 0};                       //!< Dipole moment unit vector
+    double mulen = 0;                           //!< Dipole moment length
+    bool hydrophobic = false;                   //!< Is the particle hydrophobic?
+    bool implicit = false;                      //!< Is the particle implicit (e.g. proton)?
     InteractionData
         interaction; //!< Arbitrary interaction parameters, e.g., epsilons in various potentials
     SpheroCylinderData sphero_cylinder; //!< Data for patchy sphero cylinders (PSCs)

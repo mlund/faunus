@@ -259,8 +259,8 @@ std::optional<Electrolyte> makeElectrolyte(const json& j); //!< Create ionic sal
 /// If the value does not exist, return `std::nullopt`
 ///
 /// @throws If value exists but cannot be extracted as `T`.
-template<typename T> 
-std::optional<T> get_optional(const json &j, std::string_view key) {
+template <typename T> std::optional<T> get_optional(const json& j, std::string_view key)
+{
     if (const auto it = j.find(key); it != j.end()) {
         return it->get<T>(); // may throw exception
     }

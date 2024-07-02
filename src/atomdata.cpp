@@ -115,7 +115,7 @@ void to_json(json& j, const AtomData& a)
 }
 
 /// Handles optional translational and rotational displacement
-void set_dp_and_dprot(const json &j, AtomData &a)
+void set_dp_and_dprot(const json& j, AtomData& a)
 {
     a.dp = get_optional<double>(j, "dp");
     if (a.dp.has_value()) { // Later use C++23 `and_then()`

@@ -93,20 +93,40 @@ void to_json(json& j, const AtomData& a)
           {"alphax", a.alphax},
           {"mw", a.mw},
           {"q", a.charge},
-          {"dp", a.dp / 1.0_angstrom},
-          {"dprot", a.dprot / 1.0_rad},
           {"tension", a.tension * 1.0_angstrom * 1.0_angstrom / 1.0_kJmol},
           {"tfe", a.tfe * 1.0_angstrom * 1.0_angstrom * 1.0_molar / 1.0_kJmol},
           {"mu", a.mu},
           {"mulen", a.mulen},
           {"psc", a.sphero_cylinder},
           {"id", a.id()}};
+    if (a.dp.has_value()) {
+        _j["dp"] = a.dp.value() / 1.0_angstrom;
+    }
+    if (a.dprot.has_value()) {
+        _j["dprot"] = a.dprot.value() / 1.0_rad;
+    }
     to_json(_j, a.interaction); // append other interactions
     if (a.hydrophobic) {
         _j["hydrophobic"] = a.hydrophobic;
     }
     if (a.implicit) {
         _j["implicit"] = a.implicit;
+    }
+}
+
+/// Handles optional translational and rotational displacement
+void set_dp_and_dprot(const json &j, AtomData &a)
+{
+    a.dp = get_optional<double>(j, "dp");
+    if (a.dp.has_value()) { // Later use C++23 `and_then()`
+        a.dp = a.dp.value() * 1.0_angstrom;
+    }
+    a.dprot = get_optional<double>(j, "dprot");
+    if (a.dprot.has_value()) { // Later use C++23 `and_then()`
+        a.dprot = a.dprot.value() * 1.0_rad;
+        if (std::fabs(a.dprot.value()) > 2.0 * pc::pi) {
+            faunus_logger->warn("rotational displacement should be between [0:2π]");
+        }
     }
 }
 
@@ -120,11 +140,6 @@ void from_json(const json& j, AtomData& a)
         auto val = SingleUseJSON(atom_iter.value());
         a.alphax = val.value("alphax", a.alphax);
         a.charge = val.value("q", a.charge);
-        a.dp = val.value("dp", a.dp) * 1.0_angstrom;
-        a.dprot = val.value("dprot", a.dprot) * 1.0_rad;
-        if (std::fabs(a.dprot) > 2.0 * pc::pi) {
-            faunus_logger->warn("rotational displacement should be between [0:2π]");
-        }
         a.id() = val.value("id", a.id());
         a.mu = val.value("mu", a.mu);
         a.mulen = val.value("mulen", a.mulen);
@@ -140,6 +155,7 @@ void from_json(const json& j, AtomData& a)
         a.tfe = val.value("tfe", a.tfe) * 1.0_kJmol / (1.0_angstrom * 1.0_angstrom * 1.0_molar);
         a.hydrophobic = val.value("hydrophobic", false);
         a.implicit = val.value("implicit", false);
+        set_dp_and_dprot(val, a);
         if (val.contains("activity")) {
             a.activity = val.at("activity").get<double>() * 1.0_molar;
         }

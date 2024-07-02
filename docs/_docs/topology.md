@@ -61,8 +61,8 @@ Atoms are the smallest possible particle entities with properties defined below.
 `activity=0`  | Chemical activity for grand canonical MC [mol/l]
 `pactivity`   | −log10 of chemical activity (will be converted to activity)
 `alphax=0`    | Excess polarizability (unit-less)
-`dp=0`        | Translational displacement parameter [Å]
-`dprot=0`     | Rotational displacement parameter [radians]
+`dp`          | Translational displacement parameter [Å] (optional)
+`dprot`       | Rotational displacement parameter [radians] (optional)
 `eps=0`       | Lennard-Jones/WCA energy parameter [kJ/mol]
 `mu=[0,0,0]`  | Dipole moment vector [eÅ]
 `mulen=|mu|`  | Dipole moment scalar [eÅ]

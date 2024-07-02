@@ -262,8 +262,8 @@ void AtomicTranslateRotate::_move(Change& change)
 {
     if (auto particle = randomAtom(); particle != spc.particles.end()) {
         latest_particle = particle;
-        const auto translational_displacement = particle->traits().dp;
-        const auto rotational_displacement = particle->traits().dprot;
+        const double translational_displacement = particle->traits().dp.value_or(0.0);
+        const double rotational_displacement = particle->traits().dprot.value_or(0.0);
 
         if (translational_displacement > 0.0) { // translate
             translateParticle(particle, translational_displacement);

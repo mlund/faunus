@@ -10,17 +10,16 @@ CheckOptions:
     - { key: readability-identifier-naming.ClassCase, value: CamelCase }
     - { key: readability-identifier-naming.StructCase, value: CamelCase }
     - { key: readability-identifier-naming.VariableCase, value: lower_case}
+    - { key: readability-identifier-naming.VariableIgnoredRegexp, value: 'TEST.*'}
     - { key: readability-identifier-naming.LocalVariableCase, value: lower_case}
     - { key: readability-identifier-naming.FunctionCase, value: lower_case}
-    - { key: readability-identifier-naming.FunctionIgnoredRegexp, value: '^to_json$|^from_json$'}
+    - { key: readability-identifier-naming.FunctionIgnoredRegexp, value: 'TEST_.*'}
     - { key: readability-identifier-naming.ClassMethodCase, value: lower_case}
-    - { key: readability-identifier-naming.ClassMethodIgnoredRegexp, value: '^to_json$|^from_json$'}
+    - { key: readability-identifier-naming.ClassIgnoredRegexp, value: 'TEST_.*'}
     - { key: readability-identifier-naming.ParameterCase, value: lower_case}
-    - { key: readability-identifier-naming.ParameterIgnoredRegexp, value: '^j$'}
     - { key: readability-identifier-naming.EnumCase, value: CamelCase}
     - { key: readability-identifier-naming.EnumConstantCase, value: CamelCase}
     - { key: readability-identifier-naming.ConstantParameterCase, value: lower_case}
-    - { key: readability-identifier-naming.ConstexprVariableCase,, value: UPPER_CASE}
-    - { key: readability-identifier-naming.ConstantParameterIgnoredRegexp, value: lower_case}
+    - { key: readability-identifier-naming.ConstexprVariableCase, value: UPPER_CASE}
     - { key: readability-identifier-naming.TypedefCase, value: CamelCase}
     - { key: misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic, value: 'true'}

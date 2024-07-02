@@ -77,11 +77,15 @@ Upon MC movement, the mean squared displacement will be tracked.
 `molecule`          |  Molecule name to operate on
 `dir=[1,1,1]`       |  Translational directions
 `energy_resolution` |  If set to a non-zero value (kT), an energy histogram will be generated.
+`dp=0`              |  Default translational displacement parameter (Å)
+`dprot=0`           |  Default rotational displacement parameter (radians)
 
 As `moltransrot` but instead of operating on the molecular mass center, this translates
-and rotates individual atoms in the group. The repeat is set to the number of atoms in the specified group and the
+and rotates individual atoms in the group.
+The repeat is set to the number of atoms in the specified group and the
 displacement parameters `dp` and `dprot` for the individual atoms are taken from
 the atom properties defined in the [topology](topology).
+If `dp` and `dprot` are not defined for an atom, the default values for the move are used.
 Atomic _rotation_ affects only anisotropic particles such as dipoles, spherocylinders, quadrupoles etc.
 
 An energy histogram of each participating species will be written to disk if the `energy_resolution`

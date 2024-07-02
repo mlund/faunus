@@ -139,7 +139,7 @@ class [[maybe_unused]] AtomicSwapCharge : public Move
 };
 
 /**
- * @brief Translate and rotate a molecular group
+ * @brief Translate and rotate individual atoms
  */
 class AtomicTranslateRotate : public Move
 {
@@ -149,6 +149,8 @@ class AtomicTranslateRotate : public Move
         energy_histogram;               //!< Energy histogram (value) for each particle type (key)
     double energy_resolution = 0.0;     //!< Resolution of sampled energy histogram
     double latest_displacement_squared; //!< temporary squared displacement
+    double default_dp = 0.0;            //!< Default translational displacement (Å)
+    double default_dprot = 0.0;         //!< Default rotational displacement (rad)
     void sampleEnergyHistogram();       //!< Update energy histogram based on latest move
     void saveHistograms();              //!< Write histograms for file
     void checkMassCenter(

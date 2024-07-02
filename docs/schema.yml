@@ -775,6 +775,8 @@ properties:
                             minItems: 3
                             maxItems: 3
                             default: [1,1,1]
+                        dp: {type: number, minimum: 0.0, description: "default translational displacement", default: 0.0}
+                        dprot: {type: number, minimum: 0.0, description: "default rotational displacement", default: 0.0}
                     required: [molecule]
                     additionalProperties: false
                     type: object

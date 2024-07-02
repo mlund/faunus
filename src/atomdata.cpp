@@ -115,16 +115,15 @@ void to_json(json& j, const AtomData& a)
 }
 
 /// Handles optional translational and rotational displacement
-void set_dp_and_dprot(const json& j, AtomData& a)
+void set_dp_and_dprot(const json& j, AtomData& atomdata)
 {
-    a.dp = get_optional<double>(j, "dp");
-    if (a.dp.has_value()) { // Later use C++23 `and_then()`
-        a.dp = a.dp.value() * 1.0_angstrom;
+    // todo: use `std::optional::and_then()` when C++23 is available
+    if (const auto dp = get_optional<double>(j, "dp")) {
+        atomdata.dp = dp.value() * 1.0_angstrom;
     }
-    a.dprot = get_optional<double>(j, "dprot");
-    if (a.dprot.has_value()) { // Later use C++23 `and_then()`
-        a.dprot = a.dprot.value() * 1.0_rad;
-        if (std::fabs(a.dprot.value()) > 2.0 * pc::pi) {
+    if (const auto dprot = get_optional<double>(j, "dprot")) {
+        atomdata.dprot = dprot.value() * 1.0_rad;
+        if (std::fabs(atomdata.dprot.value()) > 2.0 * pc::pi) {
             faunus_logger->warn("rotational displacement should be between [0:2π]");
         }
     }

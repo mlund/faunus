@@ -21,7 +21,7 @@ AngularScan::AngularScan(const json& j, const Space& spc)
 
     if (j.contains("traj")) {
         trajectory = std::make_unique<XTCWriter>(j["traj"]);
-        if (angles.size() > 1e5) {
+        if (angles.size() > 10000) {
             faunus_logger->warn("{}: large trajectory with {} frames will be generated", name,
                                 angles.size());
         }
@@ -125,7 +125,7 @@ void AngularScan::operator()(Space& spc, Energy::Hamiltonian& hamiltonian)
             for (const auto& q_body2 : angles.quaternions_2) {
                 for (const auto& q_dihedral : angles.dihedrals) {
                     const auto q2 =
-                        q_dihedral * q_body2; // simulataneous rotations (noncummutative)
+                        q_dihedral * q_body2; // simultaneous rotations (non-commutative)
                     auto particles2 = molecules.second.getRotatedReference(spc.groups, q2);
                     ranges::cpp20::for_each(particles2, translate);
                     auto group2 = Group(0, particles2.begin(), particles2.end());

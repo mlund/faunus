@@ -3,9 +3,7 @@
 #include "particle.h"
 #include "molecule.h"
 #include "geometry.h"
-#include <range/v3/view/filter.hpp>
-#include <range/v3/view/transform.hpp>
-#include <range/v3/view/subrange.hpp>
+#include <ranges>
 #include <nlohmann/json.hpp>
 #include <optional>
 
@@ -110,12 +108,12 @@ template <class T> class ElasticRange : public IterRange<typename std::vector<T>
      */
     inline auto all()
     {
-        return ranges::make_subrange(begin(), trueend());
+        return std::ranges::subrange(begin(), trueend());
     } //!< Active and inactive elements
 
     [[nodiscard]] inline auto all() const
     {
-        return ranges::make_subrange(begin(), trueend());
+        return std::ranges::subrange(begin(), trueend());
     } //!< Active and inactive elements
 };
 
@@ -299,15 +297,15 @@ class Group : public ElasticRange<Particle>
 
     auto positions()
     {
-        return ranges::make_subrange(begin(), end()) |
-               ranges::cpp20::views::transform(
+        return std::ranges::subrange(begin(), end()) |
+               std::views::transform(
                    [&](Particle& particle) -> Point& { return particle.pos; });
     } //!< Range of positions of active particles
 
     [[nodiscard]] auto positions() const
     {
-        return ranges::make_subrange(begin(), end()) |
-               ranges::cpp20::views::transform(
+        return std::ranges::subrange(begin(), end()) |
+               std::views::transform(
                    [&](const Particle& particle) -> const Point& { return particle.pos; });
     } //!< Range of positions of active particles
 
@@ -317,7 +315,7 @@ class Group : public ElasticRange<Particle>
 
     [[nodiscard]] auto findAtomID(AtomData::index_type atomid) const
     {
-        return *this | ranges::cpp20::views::filter(
+        return *this | std::views::filter(
                            [atomid](auto& particle) { return (particle.id == atomid); });
     } //!< Range of all (active) elements with matching particle id
 
@@ -346,7 +344,7 @@ class Group : public ElasticRange<Particle>
             assert(*std::max_element(indices.begin(), indices.end()) < size());
         }
 #endif
-        return indices | ranges::cpp20::views::transform(
+        return indices | std::views::transform(
                              [this](auto i) -> Particle& { return *(begin() + i); });
     }
 
@@ -436,6 +434,6 @@ template <class Archive> void load(Archive& archive, Group& group, std::uint32_t
 /** Concept for a range of groups */
 template <typename T>
 concept RequireGroups =
-    ranges::cpp20::range<T> && std::is_convertible_v<ranges::cpp20::range_value_t<T>, Group>;
+    std::ranges::range<T> && std::is_convertible_v<std::ranges::range_value_t<T>, Group>;
 
 } // namespace Faunus

@@ -9,9 +9,8 @@
 #include "aux/eigensupport.h"
 #include <spdlog/spdlog.h>
 #include <doctest/doctest.h>
-#include <range/v3/view/counted.hpp>
-#include <range/v3/view/transform.hpp>
-#include <range/v3/algorithm/count.hpp>
+#include <algorithm>
+#include <ranges>
 #include <range/v3/algorithm/fold_left.hpp>
 
 namespace Faunus::move {
@@ -257,7 +256,7 @@ void AtomicTranslateRotate::groupToDisk(const Space::GroupType& group) const
 {
     if (auto stream = std::ofstream("mass-center-failure.pqr"); stream) {
         const auto group_iter = spc.groups.cbegin() + spc.getGroupIndex(group);
-        auto groups = ranges::cpp20::views::counted(group_iter, 1); // slice out single group
+        auto groups = std::views::counted(group_iter, 1); // slice out single group
         PQRWriter().save(stream, groups, spc.geometry.getLength());
     }
 }
@@ -572,7 +571,7 @@ double GibbsEnsembleHelper::exchange(const double value) const
  */
 std::pair<int, int> GibbsEnsembleHelper::currentNumParticles(const Space& spc) const
 {
-    namespace rv = ranges::cpp20::views;
+    namespace rv = std::views;
     auto to_num_molecules = [&](auto molid) {
         return spc.numMolecules<Group::Selectors::ACTIVE>(molid);
     };
@@ -843,11 +842,11 @@ void ParallelTempering::_to_json(json& j) const
 void ParallelTempering::exchangeGroupSizes(Space::GroupVector& groups, int partner_rank)
 {
     std::vector<size_t> sizes =
-        groups | ranges::cpp20::views::transform(&Group::size) | ranges::to_vector;
+        groups | std::views::transform(&Group::size) | ranges::to_vector;
     mpi.world.sendrecv_replace(sizes.begin(), sizes.end(), partner_rank, mpl::tag_t(0),
                                partner_rank, mpl::tag_t(0));
     auto it = sizes.begin();
-    ranges::cpp20::for_each(groups, [&it](Group& group) { group.resize(*it++); });
+    std::ranges::for_each(groups, [&it](Group& group) { group.resize(*it++); });
 }
 
 /**
@@ -1184,7 +1183,7 @@ void ChargeTransfer::_move(Change& change)
 {
     auto mollist1 = spc.findMolecules(mol1.id, Space::Selection::ACTIVE);
     auto mollist2 = spc.findMolecules(mol2.id, Space::Selection::ACTIVE);
-    if ((not ranges::cpp20::empty(mollist1)) and (not ranges::cpp20::empty(mollist2))) {
+    if ((not std::ranges::empty(mollist1)) and (not std::ranges::empty(mollist2))) {
         auto git1 = slump.sample(mollist1.begin(),
                                  mollist1.end()); // selecting a random molecule of type molecule1
         auto git2 = slump.sample(mollist2.begin(),
@@ -1392,7 +1391,7 @@ void QuadrantJump::_move(Change& change)
     // TODO: This can be slow -- implement look-up-table in Space
     auto mollist =
         spc.findMolecules(molid, Space::Selection::ACTIVE); // list of molecules w. 'molid'
-    if (not ranges::cpp20::empty(mollist)) {
+    if (not std::ranges::empty(mollist)) {
         auto it = slump.sample(mollist.begin(), mollist.end());
         if (not it->empty()) {
             assert(it->id == molid);
@@ -1466,7 +1465,7 @@ ParticleVector::iterator AtomicSwapCharge::randomAtom()
 {
     assert(molid >= 0);
     auto mollist = spc.findMolecules(molid); // all `molid` groups
-    if (not ranges::cpp20::empty(mollist)) {
+    if (not std::ranges::empty(mollist)) {
         auto git = slump.sample(mollist.begin(), mollist.end()); // random molecule iterator
         if (!git->empty()) {
             auto p = slump.sample(git->begin(), git->end()); // random particle iterator
@@ -1584,7 +1583,7 @@ void TranslateRotate::_from_json(const json& j)
 TranslateRotate::OptionalGroup TranslateRotate::findRandomMolecule()
 {
     if (auto mollist = spc.findMolecules(molid, Space::Selection::ACTIVE);
-        not ranges::cpp20::empty(mollist)) {
+        not std::ranges::empty(mollist)) {
         if (auto group_it = random.sample(mollist.begin(), mollist.end()); not group_it->empty()) {
             return *group_it;
         }
@@ -1921,7 +1920,7 @@ void ConformationSwap::checkConformationSize() const
 
     size_t conformation_id = 0;
     for (const auto& conformation : Faunus::molecules.at(molid).conformations.data) {
-        const auto positions = conformation | ranges::cpp20::views::transform(&Particle::pos);
+        const auto positions = conformation | std::views::transform(&Particle::pos);
         const auto max_separation = find_max_distance(positions);
         if (max_separation > max_allowed_separation) {
             faunus_logger->warn(

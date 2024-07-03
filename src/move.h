@@ -664,7 +664,7 @@ class MoveCollection
         auto is_static_and_time_to_sample = [&, sweep_number](const auto& move) {
             return (!move->isStochastic()) && (sweep_number % move->sweep_interval == 0);
         };
-        return moves | ranges::cpp20::views::filter(is_static_and_time_to_sample);
+        return moves | std::views::filter(is_static_and_time_to_sample);
     }
 };
 

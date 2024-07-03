@@ -1,11 +1,10 @@
 #include "bonds.h"
 #include "speciation.h"
 #include "aux/iteratorsupport.h"
-#include <range/v3/range/conversion.hpp>
 #include <algorithm>
-#include <range/v3/algorithm/all_of.hpp>
-#include <range/v3/view/take.hpp>
+#include <ranges>
 #include <range/v3/view/sample.hpp>
+#include <range/v3/range/conversion.hpp>
 #include <doctest/doctest.h>
 
 namespace Faunus::Speciation {
@@ -70,13 +69,13 @@ bool ReactionValidator::canReduceImplicitGroups(const ReactionData& reaction) co
         return spc.getImplicitReservoir().at(molid) >= number_to_delete;
     };
     auto implicit_reactants = reaction.getReactants().second |
-                              ranges::cpp20::views::filter(ReactionData::is_implicit_group);
-    return ranges::cpp20::all_of(implicit_reactants, has_enough);
+                              std::views::filter(ReactionData::is_implicit_group);
+    return std::ranges::all_of(implicit_reactants, has_enough);
 }
 
 bool ReactionValidator::canSwapAtoms(const ReactionData& reaction) const
 {
-    namespace rv = ranges::cpp20::views;
+    namespace rv = std::views;
     if (reaction.containsAtomicSwap()) {
         auto reactive_atoms =
             reaction.getReactants().first | rv::filter(ReactionData::not_implicit_atom);
@@ -92,7 +91,7 @@ bool ReactionValidator::canSwapAtoms(const ReactionData& reaction) const
 
 bool ReactionValidator::canReduceMolecularGroups(const ReactionData& reaction) const
 {
-    namespace rv = ranges::cpp20::views;
+    namespace rv = std::views;
     auto selection = reaction.only_neutral_molecules ? Space::Selection::ACTIVE_NEUTRAL
                                                      : Space::Selection::ACTIVE;
 
@@ -116,12 +115,12 @@ bool ReactionValidator::canReduceMolecularGroups(const ReactionData& reaction) c
                             rv::filter(ReactionData::not_implicit_group) |
                             rv::filter(ReactionData::is_molecular_group);
 
-    return ranges::cpp20::all_of(molecular_groups, can_reduce);
+    return std::ranges::all_of(molecular_groups, can_reduce);
 }
 
 bool ReactionValidator::canReduceAtomicGroups(const ReactionData& reaction) const
 {
-    namespace rv = ranges::cpp20::views;
+    namespace rv = std::views;
     auto can_reduce = [&](auto key_value) {
         const auto [molid, number_to_delete] = key_value;
         if (number_to_delete > 0) {
@@ -143,12 +142,12 @@ bool ReactionValidator::canReduceAtomicGroups(const ReactionData& reaction) cons
     auto atomic_groups = reaction.getReactants().second |
                          rv::filter(ReactionData::not_implicit_group) |
                          rv::filter(ReactionData::is_atomic_group);
-    return ranges::cpp20::all_of(atomic_groups, can_reduce);
+    return std::ranges::all_of(atomic_groups, can_reduce);
 }
 
 bool ReactionValidator::canProduceMolecularGroups(const ReactionData& reaction) const
 {
-    namespace rv = ranges::cpp20::views;
+    namespace rv = std::views;
     auto selection = reaction.only_neutral_molecules ? Space::Selection::INACTIVE_NEUTRAL
                                                      : Space::Selection::INACTIVE;
 
@@ -169,12 +168,12 @@ bool ReactionValidator::canProduceMolecularGroups(const ReactionData& reaction) 
                             rv::filter(ReactionData::not_implicit_group) |
                             rv::filter(ReactionData::is_molecular_group);
 
-    return ranges::cpp20::all_of(molecular_groups, can_create);
+    return std::ranges::all_of(molecular_groups, can_create);
 }
 
 bool ReactionValidator::canProduceAtomicGroups(const ReactionData& reaction) const
 {
-    namespace rv = ranges::cpp20::views;
+    namespace rv = std::views;
     auto can_expand = [&](auto key_value) {
         const auto [molid, number_to_insert] = key_value;
         auto groups = spc.findMolecules(molid, Space::Selection::ALL) |
@@ -195,7 +194,7 @@ bool ReactionValidator::canProduceAtomicGroups(const ReactionData& reaction) con
                          rv::filter(ReactionData::not_implicit_group) |
                          rv::filter(ReactionData::is_atomic_group);
 
-    return ranges::cpp20::all_of(atomic_groups, can_expand);
+    return std::ranges::all_of(atomic_groups, can_expand);
 }
 
 // ----------------------------------------------
@@ -294,8 +293,8 @@ double MolecularGroupDeActivator::getBondEnergy(const Group& group) const
     double energy = 0.0;
     if (apply_bond_bias) {
         auto bonds =
-            group.traits().bonds | ranges::views::transform(&pairpotential::BondData::clone);
-        ranges::cpp20::for_each(bonds, [&](auto bond) {
+            group.traits().bonds | std::views::transform(&pairpotential::BondData::clone);
+        std::ranges::for_each(bonds, [&](auto bond) {
             bond->shiftIndices(spc.getFirstParticleIndex(group));
             bond->setEnergyFunction(spc.particles);
             energy += bond->energyFunc(spc.geometry.getDistanceFunc());
@@ -373,7 +372,7 @@ AtomicGroupDeActivator::deactivate(Group& group, GroupDeActivator::OptionalInt n
         group.deactivate(last_particle, group.end()); // deactivate one particle at the time
     };
 
-    ranges::for_each(ranges::cpp20::views::iota(0, number_to_delete), delete_particle);
+    std::ranges::for_each(std::views::iota(0, number_to_delete), delete_particle);
     change_data.sort();
     return {change_data, 0.0};
 }
@@ -465,7 +464,7 @@ void SpeciationMove::activateProducts(Change& change)
 
 void SpeciationMove::activateMolecularGroups(Change& change)
 {
-    namespace rv = ranges::cpp20::views;
+    namespace rv = std::views;
     auto selection = reaction->only_neutral_molecules ? Space::Selection::INACTIVE_NEUTRAL
                                                       : Space::Selection::INACTIVE;
 
@@ -478,7 +477,7 @@ void SpeciationMove::activateMolecularGroups(Change& change)
                         ranges::views::sample(number_to_insert, random_internal.engine) |
                         ranges::to<std::vector<std::reference_wrapper<Group>>>;
 
-        ranges::for_each(inactive, [&](auto& group) {
+        std::ranges::for_each(inactive, [&](auto& group) {
             auto [change_data, bias] = molecular_group_bouncer->activate(group);
             change.groups.emplace_back(change_data);
             bias_energy += bias;
@@ -488,7 +487,7 @@ void SpeciationMove::activateMolecularGroups(Change& change)
 
 void SpeciationMove::activateAtomicGroups(Change& change)
 {
-    namespace rv = ranges::cpp20::views;
+    namespace rv = std::views;
     auto atomic_products = reaction->getProducts().second |
                            rv::filter(ReactionData::not_implicit_group) |
                            rv::filter(ReactionData::is_atomic_group);
@@ -513,7 +512,7 @@ void SpeciationMove::deactivateReactants(Change& change)
 
 void SpeciationMove::deactivateMolecularGroups(Change& change)
 {
-    namespace rv = ranges::cpp20::views;
+    namespace rv = std::views;
     auto nonzero_stoichiometric_coeff = [](auto key_value) { return key_value.second > 0; };
     auto selection = (reaction->only_neutral_molecules) ? Space::Selection::ACTIVE_NEUTRAL
                                                         : Space::Selection::ACTIVE;
@@ -536,7 +535,7 @@ void SpeciationMove::deactivateMolecularGroups(Change& change)
 
 void SpeciationMove::deactivateAtomicGroups(Change& change)
 {
-    namespace rv = ranges::cpp20::views;
+    namespace rv = std::views;
     auto nonzero_stoichiometric_coeff = [](auto key_value) { return key_value.second > 0; };
 
     auto atomic_reactants =
@@ -555,11 +554,12 @@ void SpeciationMove::deactivateAtomicGroups(Change& change)
 
 TEST_CASE("[Faunus] Speciation - Ranges::sample")
 {
+    using ranges::views::sample;
     std::vector<int> vec = {1, 2, 3, 4};
-    auto take_nothing = vec | ranges::views::sample(0);
-    auto take_less = vec | ranges::views::sample(2);
-    auto take_all = vec | ranges::views::sample(4);
-    auto take_too_much = vec | ranges::views::sample(10);
+    auto take_nothing = vec | sample(0);
+    auto take_less = vec | sample(2);
+    auto take_all = vec | sample(4);
+    auto take_too_much = vec | sample(10);
 
     CHECK_EQ(range_size(take_nothing), 0);
     CHECK_EQ(range_size(take_less), 2);
@@ -616,7 +616,7 @@ void SpeciationMove::updateGroupMassCenters(const Change& change) const
     auto groups = change.groups | rv::filter(atomic_or_swap) | rv::transform(to_group) |
                   rv::filter(has_mass_center);
 
-    ranges::cpp20::for_each(groups, [&](Group& group) {
+    std::ranges::for_each(groups, [&](Group& group) {
         group.updateMassCenter(spc.geometry.getBoundaryFunc(), group.massCenter().value());
     });
 }
@@ -633,7 +633,7 @@ double SpeciationMove::bias([[maybe_unused]] Change& change, [[maybe_unused]] do
 
 void SpeciationMove::_accept([[maybe_unused]] Change& change)
 {
-    namespace rv = ranges::cpp20::views;
+    namespace rv = std::views;
     direction_ratio[reaction].update(reaction->getDirection(), true);
 
     auto implicit_reactants =
@@ -653,7 +653,7 @@ void SpeciationMove::_accept([[maybe_unused]] Change& change)
 
 void SpeciationMove::_reject([[maybe_unused]] Change& change)
 {
-    namespace rv = ranges::cpp20::views;
+    namespace rv = std::views;
     direction_ratio[reaction].update(reaction->getDirection(), false);
 
     auto implicit_reactants =

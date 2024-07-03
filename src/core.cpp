@@ -10,8 +10,7 @@
 #include <fstream>
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/null_sink.h>
-#include <range/v3/view/filter.hpp>
-#include <range/v3/view/transform.hpp>
+#include <ranges>
 #include <range/v3/numeric/accumulate.hpp>
 
 namespace Faunus {
@@ -362,7 +361,7 @@ TEST_CASE("[Faunus] infinite/nan")
 TEST_CASE("[Faunus] distance")
 {
     std::vector<long long int> v = {10, 20, 30, 40, 30};
-    auto rng = v | ranges::cpp20::views::filter([](auto i) { return i == 30; });
+    auto rng = v | std::views::filter([](auto i) { return i == 30; });
     CHECK_EQ(Faunus::distance(v.begin(), rng.begin()), 2);
     auto it = rng.begin();
     CHECK_EQ(Faunus::distance(v.begin(), ++it), 4);
@@ -406,7 +405,7 @@ Electrolyte::Electrolyte(const double molarity, const std::vector<int>& valencie
     : molarity(molarity)
     , valencies(valencies)
 {
-    namespace rv = ranges::cpp20::views;
+    namespace rv = std::views;
     const auto sum_positive =
         ranges::accumulate(valencies | rv::filter([](auto v) { return v > 0; }), 0);
     const auto sum_negative =

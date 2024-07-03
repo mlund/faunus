@@ -8,9 +8,8 @@
 #include <concepts>
 #include <iterator>
 #include <spdlog/spdlog.h>
-#include <range/v3/iterator/operations.hpp>
-#include <range/v3/algorithm/for_each.hpp>
 #include <numeric>
+#include <ranges>
 
 namespace cereal {
 class BinaryOutputArchive;
@@ -263,7 +262,7 @@ class StructureFileWriter
             std::accumulate(group_sizes.begin(), group_sizes.end(), 0u);
         saveHeader(stream, number_of_particles);
 
-        ranges::cpp20::for_each(groups, [&](const auto& group) { saveGroup(stream, group); });
+        std::ranges::for_each(groups, [&](const auto& group) { saveGroup(stream, group); });
         saveFooter(stream);
     }
 
@@ -494,7 +493,7 @@ struct XTCTrajectoryFrame
     void importCoordinates(begin_iterator begin, end_iterator end, const Point& offset) const
     {
         int i = 0;
-        ranges::cpp20::for_each(begin, end, [&](const auto& position) {
+        std::ranges::for_each(begin, end, [&](const auto& position) {
             if (i >= number_of_atoms) {
                 throw std::runtime_error("too many particles for XTC frame");
             }
@@ -704,7 +703,7 @@ class XTCWriter
     void writeNext(const Point& box, begin_iterator coordinates_begin, end_iterator coordinates_end)
     {
         if (!xtc_frame) {
-            auto number_of_atoms = ranges::cpp20::distance(coordinates_begin, coordinates_end);
+            auto number_of_atoms = std::ranges::distance(coordinates_begin, coordinates_end);
             faunus_logger->trace("preparing xtc output for {} particles", number_of_atoms);
             xtc_frame = std::make_unique<XTCTrajectoryFrame>(number_of_atoms);
         }

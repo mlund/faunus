@@ -6,6 +6,7 @@
 #include <nlohmann/json.hpp>
 #include <spdlog/fmt/fmt.h>
 #include <range/v3/range/concepts.hpp>
+#include <ranges>
 
 // forward declare logger
 namespace spdlog {
@@ -25,7 +26,7 @@ class Random;
 /** Concept for a range of points */
 template <class T>
 concept RequirePoints =
-    ranges::cpp20::range<T> && std::is_same_v<ranges::cpp20::range_value_t<T>, Point>;
+    std::ranges::range<T> && std::is_same_v<std::ranges::range_value_t<T>, Point>;
 
 /** Concept for an iterator to a `Point` */
 template <class T>

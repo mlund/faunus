@@ -203,7 +203,7 @@ class Space
         assert(size <= std::distance(destination, particles.end()));
 
         auto affected_groups =
-            groups | ranges::cpp20::views::filter([=](auto& group) {
+            groups | std::views::filter([=](auto& group) {
                 return (group.begin() < destination + size) && (group.end() > destination);
             }); // filtered group with affected groups only. Note we copy in org. `destination`
 
@@ -211,7 +211,7 @@ class Space
         std::for_each(begin, end,
                       [&](const auto& source) { copy_function(source, *destination++); });
 
-        std::for_each(affected_groups.begin(), affected_groups.end(), [&](Group& group) {
+        std::ranges::for_each(affected_groups, [&](Group& group) {
             group.updateMassCenter(geometry.getBoundaryFunc(), group.begin()->pos);
         });
     }

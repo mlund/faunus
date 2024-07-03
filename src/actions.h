@@ -29,20 +29,20 @@ struct SystemAction
  */
 class AngularScan : public SystemAction
 {
-    inline static const std::string name = "angular scan"; //!< Name used for logging
+    static constexpr std::string_view NAME = "angular scan"; //!< Name used for logging
 
     /// @brief Helper class to analyse (free) energies
     class EnergyAnalysis
     {
-        double partition_sum = 0;        //!< Partition function (per COM separation)
-        double energy_sum = 0;           //!< Thermal energy sum for each COM separation run
+        double partition_sum = 0.0;      //!< Partition function (per COM separation)
+        double energy_sum = 0.0;         //!< Thermal energy sum for each COM separation run
         Average<double> mean_exp_energy; //!< Free energy
       public:
-        void clear();                 //!< Zeros all data
-        void add(double energy);      //!< Add energy (in kT)
-        double getFreeEnergy() const; //!< w = -kT ln < exp(-energy/kT) > (in kT)
-        double getMeanEnergy() const; //!< <u> = ∑ u * exp(-energy/kT) / Q (in kT)
-        void printLog() const;        //!< Print to global logger
+        void clear();                               //!< Zeros all data
+        void add(double energy);                    //!< Add energy (in kT)
+        [[nodiscard]] double getFreeEnergy() const; //!< w = -kT ln < exp(-energy/kT) > (in kT)
+        [[nodiscard]] double getMeanEnergy() const; //!< <u> = ∑ u * exp(-energy/kT) / Q (in kT)
+        void printLog() const;                      //!< Print to global logger
     };
 
     /// @brief Helper class for store information about each of the two rigid bodies

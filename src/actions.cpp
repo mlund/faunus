@@ -22,7 +22,7 @@ AngularScan::AngularScan(const json& j, const Space& spc)
     if (j.contains("traj")) {
         trajectory = std::make_unique<XTCWriter>(j["traj"]);
         if (angles.size() > 10000) {
-            faunus_logger->warn("{}: large trajectory with {} frames will be generated", name,
+            faunus_logger->warn("{}: large trajectory with {} frames will be generated", NAME,
                                 angles.size());
         }
     }
@@ -40,7 +40,7 @@ AngularScan::AngularScan(const json& j, const Space& spc)
             << "# Column 9:   Energy (kJ/mol)\n";
 
     faunus_logger->info("{}: COM distance range = [{:.1f}, {:.1f}) max energy = {:.1f} kJ/mol",
-                        name, zmin, zmax, max_energy / 1.0_kJmol);
+                        NAME, zmin, zmax, max_energy / 1.0_kJmol);
 }
 
 /**
@@ -53,7 +53,7 @@ void AngularScan::Molecule::initialize(const Space::GroupVector& groups, int mol
     index = molecule_index;
     const auto& group = groups.at(index);
     if (group.isAtomic()) {
-        throw ConfigurationError("{}: group {} is not molecular", name, index);
+        throw ConfigurationError("{}: group {} is not molecular", NAME, index);
     }
     auto as_centered_position = [&](auto& particle) -> Point {
         return particle.pos - group.mass_center;
@@ -105,11 +105,11 @@ void AngularScan::operator()(Space& spc, Energy::Hamiltonian& hamiltonian)
 {
     auto nonbonded = hamiltonian.findFirstOf<Energy::NonbondedBase>();
     if (!nonbonded) {
-        throw ConfigurationError("{}: at least one nonbonded energy term required", name);
+        throw ConfigurationError("{}: at least one nonbonded energy term required", NAME);
     }
 
     for (const auto z_pos : arange(zmin, zmax, dz)) {
-        faunus_logger->info("{}: separation = {}", name, z_pos);
+        faunus_logger->info("{}: separation = {}", NAME, z_pos);
         auto translate = [=](auto& particle) { particle.pos.z() += z_pos; };
         auto progress_tracker = std::make_unique<ProgressIndicator::ProgressBar>(
             angles.quaternions_1.size() * angles.quaternions_2.size());
@@ -178,8 +178,8 @@ std::vector<std::unique_ptr<SystemAction>> createActionList(const json& input, S
 void AngularScan::EnergyAnalysis::clear()
 {
     mean_exp_energy.clear();
-    partition_sum = 0;
-    energy_sum = 0;
+    partition_sum = 0.0;
+    energy_sum = 0.0;
 }
 
 void AngularScan::EnergyAnalysis::add(const double energy)
@@ -202,7 +202,7 @@ double AngularScan::EnergyAnalysis::getMeanEnergy() const
 
 void AngularScan::EnergyAnalysis::printLog() const
 {
-    faunus_logger->info("{}: free energy <w/kT> = {:.3f} mean energy <u/kT> = {:.3f}", name,
+    faunus_logger->info("{}: free energy <w/kT> = {:.3f} mean energy <u/kT> = {:.3f}", NAME,
                         getFreeEnergy(), getMeanEnergy());
 }
 

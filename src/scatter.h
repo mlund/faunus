@@ -339,7 +339,7 @@ class StructureFactorPBC : private TSamplingPolicy
             // enabled.
             auto dot_product = [q](const auto& pos) { return static_cast<T>(q.dot(pos)); };
             auto qdotr =
-                positions | ranges::cpp20::views::transform(dot_product) | ranges::to<std::vector>;
+                positions | std::views::transform(dot_product) | ranges::to<std::vector>;
             std::for_each(qdotr.begin(), qdotr.end(), [&](auto qr) { sum_cos += cos(qr); });
             std::for_each(qdotr.begin(), qdotr.end(), [&](auto qr) { sum_sin += sin(qr); });
         }

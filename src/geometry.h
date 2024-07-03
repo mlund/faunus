@@ -945,7 +945,7 @@ class TwobodyAngles
             return q_dihedral * q2; // noncommutative
         };
         auto second_body_quaternions =
-            rv::cartesian_product(quaternions_2, dihedrals) | rv::transform(product);
+            rv::cartesian_product(quaternions_2, dihedrals) | std::views::transform(product);
         return rv::cartesian_product(quaternions_1, second_body_quaternions);
     }
 

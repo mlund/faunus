@@ -258,7 +258,7 @@ class StructureFileWriter
         particle_index = 0;
         box_dimensions = box_length;
 
-        auto group_sizes = groups | ranges::cpp20::views::transform(&Group::capacity);
+        auto group_sizes = groups | std::views::transform(&Group::capacity);
         const auto number_of_particles =
             std::accumulate(group_sizes.begin(), group_sizes.end(), 0u);
         saveHeader(stream, number_of_particles);

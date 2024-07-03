@@ -8,6 +8,7 @@
 #include <range/v3/view/filter.hpp>
 #include <range/v3/algorithm/count_if.hpp>
 #include <range/v3/algorithm/for_each.hpp>
+#include <range/v3/view/transform.hpp>
 #include <range/v3/view/join.hpp>
 #include "spdlog/spdlog.h"
 
@@ -132,7 +133,7 @@ SystemProperty::SystemProperty(const json& j, const Space& spc)
     }
     else if (property == "Q") { // system net charge
         function = [&spc] {
-            auto charges = spc.groups | rv::join | rv::transform(&Particle::charge);
+            auto charges = spc.groups | rv::join | std::views::transform(&Particle::charge);
             return std::accumulate(charges.begin(), charges.end(), 0.0);
         };
     }
@@ -162,7 +163,7 @@ SystemProperty::SystemProperty(const json& j, const Space& spc)
     }
     else if (property == "N") { // number of particles
         function = [&spc]() {
-            auto sizes = spc.groups | rv::transform(&Space::GroupType::size);
+            auto sizes = spc.groups | std::views::transform(&Space::GroupType::size);
             return static_cast<double>(std::accumulate(sizes.begin(), sizes.end(), size_t(0)));
         };
     }
@@ -500,7 +501,7 @@ void MoleculeProperty::selectRinner(const json& j, const Space& spc)
             return mean.avg();
         };
 
-        auto radii_j = spc.findAtoms(j) | rv::transform(radius);
+        auto radii_j = spc.findAtoms(j) | std::views::transform(radius);
         auto mean_radii_j = mean(radii_j);
 
         auto radii = spc.activeParticles() | rv::filter(k_or_l) | rv::transform(radius) |

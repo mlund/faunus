@@ -335,7 +335,7 @@ class Space
      */
     auto findAtoms(AtomData::index_type atomid)
     {
-        return activeParticles() | ranges::cpp20::views::filter([atomid](const Particle& particle) {
+        return activeParticles() | std::views::filter([atomid](const Particle& particle) {
                    return particle.id == atomid;
                });
     }
@@ -347,7 +347,7 @@ class Space
      */
     [[nodiscard]] auto findAtoms(AtomData::index_type atomid) const
     {
-        return activeParticles() | ranges::cpp20::views::filter([atomid](const Particle& particle) {
+        return activeParticles() | std::views::filter([atomid](const Particle& particle) {
                    return particle.id == atomid;
                });
     }

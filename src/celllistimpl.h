@@ -15,8 +15,7 @@
 #include <cassert>
 #include <Eigen/Core>
 #include <range/v3/range/conversion.hpp>
-#include <range/v3/view/join.hpp>
-#include <range/v3/view/transform.hpp>
+#include <ranges>
 #include "celllist.h"
 #include "core.h"
 #include <spdlog/spdlog.h>
@@ -682,8 +681,8 @@ class CellListBase
     std::vector<CellCoord> getCells() const override
     {
         const auto indices = this->indices();
-        return ranges::cpp20::views::all(indices) |
-               ranges::cpp20::views::transform(
+        return std::views::all(indices) |
+               std::views::transform(
                    [this](auto index) { return this->coordinates(index); }) |
                ranges::to_vector;
     }

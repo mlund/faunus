@@ -10,9 +10,11 @@
 #include <cereal/types/base_class.hpp>
 #include <spdlog/spdlog.h>
 #include <ranges>
-#include <range/v3/view/zip.hpp>
-#include <range/v3/view/join.hpp>
 #include <range/v3/view/cartesian_product.hpp>
+#include <range/v3/view/zip.hpp>
+#ifndef __cpp_lib_ranges_join_with
+#include <range/v3/view/join.hpp>
+#endif
 #include <utility>
 
 /** @brief Faunus main namespace */
@@ -685,8 +687,13 @@ Point trigoCom(const Tspace& spc, const GroupIndex& indices,
         throw std::out_of_range("invalid directions");
     }
     namespace rv = std::views;
-    auto positions = indices | rv::transform([&](auto i) { return spc.groups.at(i); }) |
-                     ranges::cpp20::views::join | rv::transform(&Particle::pos);
+#ifdef __cpp_lib_ranges_join_with
+    using std::views::join;
+#else
+    using ranges::cpp20::views::join;
+#endif
+    auto positions = indices | rv::transform([&](auto i) { return spc.groups.at(i); }) | join |
+                     rv::transform(&Particle::pos);
     Point xhi(0, 0, 0);
     Point zeta(0, 0, 0);
     Point theta(0, 0, 0);

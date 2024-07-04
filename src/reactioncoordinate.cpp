@@ -6,7 +6,9 @@
 #include <Eigen/Dense>
 #include "aux/eigensupport.h"
 #include <ranges>
+#ifndef __cpp_lib_ranges_join_with
 #include <range/v3/view/join.hpp>
+#endif
 #include "spdlog/spdlog.h"
 
 namespace Faunus::ReactionCoordinate {
@@ -105,7 +107,11 @@ SystemProperty::SystemProperty(const json& j, const Space& spc)
     : ReactionCoordinateBase(j)
 {
     namespace rv = std::views;
+#ifdef __cpp_lib_ranges_join_with
+    using std::views::join;
+#else
     using ranges::cpp20::views::join;
+#endif
     name = "system";
     property = j.at("property").get<std::string>();
     if (property == "V") {

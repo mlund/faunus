@@ -5,10 +5,7 @@
 #include "multipole.h"
 #include <Eigen/Dense>
 #include "aux/eigensupport.h"
-#include <range/v3/view/filter.hpp>
-#include <range/v3/algorithm/count_if.hpp>
-#include <range/v3/algorithm/for_each.hpp>
-#include <range/v3/view/transform.hpp>
+#include <ranges>
 #include <range/v3/view/join.hpp>
 #include "spdlog/spdlog.h"
 
@@ -107,7 +104,8 @@ void SystemProperty::_to_json(json& j) const
 SystemProperty::SystemProperty(const json& j, const Space& spc)
     : ReactionCoordinateBase(j)
 {
-    namespace rv = ranges::cpp20::views;
+    namespace rv = std::views;
+    using ranges::cpp20::views::join;
     name = "system";
     property = j.at("property").get<std::string>();
     if (property == "V") {
@@ -133,31 +131,31 @@ SystemProperty::SystemProperty(const json& j, const Space& spc)
     }
     else if (property == "Q") { // system net charge
         function = [&spc] {
-            auto charges = spc.groups | rv::join | std::views::transform(&Particle::charge);
+            auto charges = spc.groups | join | rv::transform(&Particle::charge);
             return std::accumulate(charges.begin(), charges.end(), 0.0);
         };
     }
     else if (property == "mu") { // system dipole moment
         function = [&spc]() {
-            auto particles = spc.groups | rv::join;
+            auto particles = spc.groups | join;
             return Faunus::dipoleMoment(particles.begin(), particles.end()).norm();
         };
     }
     else if (property == "mu_x") { // system dipole moment
         function = [&spc]() {
-            auto particles = spc.groups | rv::join;
+            auto particles = spc.groups | join;
             return Faunus::dipoleMoment(particles.begin(), particles.end()).x();
         };
     }
     else if (property == "mu_y") { // system dipole moment
         function = [&spc]() {
-            auto particles = spc.groups | rv::join;
+            auto particles = spc.groups | join;
             return Faunus::dipoleMoment(particles.begin(), particles.end()).y();
         };
     }
     else if (property == "mu_z") { // system dipole moment
         function = [&spc]() {
-            auto particles = spc.groups | rv::join;
+            auto particles = spc.groups | join;
             return Faunus::dipoleMoment(particles.begin(), particles.end()).z();
         };
     }
@@ -214,7 +212,7 @@ AtomProperty::AtomProperty(const json& j, const Space& spc)
     else if (property == "N") {
         function = [&spc, id = index]() {
             return static_cast<double>(
-                ranges::cpp20::count_if(spc.activeParticles(), [&](const Particle& particle) {
+                std::ranges::count_if(spc.activeParticles(), [&](const Particle& particle) {
                     return particle.id == id;
                 }));
         };
@@ -485,7 +483,7 @@ void MoleculeProperty::selectRinner(const json& j, const Space& spc)
     }
     function = [&spc, &dir = direction, i = indexes.at(0), j = indexes.at(1), k = indexes.at(2),
                 l = indexes.at(3)]() {
-        namespace rv = ranges::cpp20::views;
+        namespace rv = std::views;
         auto slicei = spc.findAtoms(i);
         const auto mass_center =
             Geometry::massCenter(slicei.begin(), slicei.end(), spc.geometry.getBoundaryFunc());
@@ -497,7 +495,7 @@ void MoleculeProperty::selectRinner(const json& j, const Space& spc)
         };
         auto mean = [](auto& radii) {
             Average<double> mean;
-            ranges::cpp20::for_each(radii, [&](auto radius) { mean += radius; });
+            std::ranges::for_each(radii, [&](auto radius) { mean += radius; });
             return mean.avg();
         };
 

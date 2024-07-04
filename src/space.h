@@ -234,8 +234,8 @@ class Space
     //! Iterable range of all particle positions
     [[nodiscard]] auto positions() const
     {
-        return std::views::transform(
-            particles, [](auto& particle) -> const Point& { return particle.pos; });
+        return std::views::transform(particles,
+                                     [](auto& particle) -> const Point& { return particle.pos; });
     }
 
     //! Mutable iterable range of all particle positions

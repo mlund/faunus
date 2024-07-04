@@ -641,8 +641,7 @@ class MoveCollection
         };
         using namespace ranges::cpp20;
         return views::iota(0U, number_of_moves_per_sweep) |
-               views::transform(
-                   [&]([[maybe_unused]] auto count) { return sample(); }) |
+               views::transform([&]([[maybe_unused]] auto count) { return sample(); }) |
                views::filter(is_valid_and_stochastic) |
                ranges::views::indirect; // dereference iterator
     }

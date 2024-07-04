@@ -682,8 +682,7 @@ class CellListBase
     {
         const auto indices = this->indices();
         return std::views::all(indices) |
-               std::views::transform(
-                   [this](auto index) { return this->coordinates(index); }) |
+               std::views::transform([this](auto index) { return this->coordinates(index); }) |
                ranges::to_vector;
     }
 

@@ -229,9 +229,8 @@ void avgTables(const mpl::communicator& communicator, Ttable& table, int& size)
     else {
         send_buffer = table.hist2buf(size);
         recv_buffer.resize(size);
-        auto slaves =
-            std::views::iota(0, communicator.size()) |
-            std::views::filter([&](auto rank) { return rank != mpi.master_rank; });
+        auto slaves = std::views::iota(0, communicator.size()) |
+                      std::views::filter([&](auto rank) { return rank != mpi.master_rank; });
 
         std::ranges::for_each(slaves, [&](auto rank) {
             communicator.recv(recv_buffer, rank);

@@ -293,8 +293,7 @@ class Group : public ElasticRange<Particle>
     auto positions()
     {
         return std::ranges::subrange(begin(), end()) |
-               std::views::transform(
-                   [&](Particle& particle) -> Point& { return particle.pos; });
+               std::views::transform([&](Particle& particle) -> Point& { return particle.pos; });
     } //!< Range of positions of active particles
 
     [[nodiscard]] auto positions() const
@@ -310,8 +309,8 @@ class Group : public ElasticRange<Particle>
 
     [[nodiscard]] auto findAtomID(AtomData::index_type atomid) const
     {
-        return *this | std::views::filter(
-                           [atomid](auto& particle) { return (particle.id == atomid); });
+        return *this |
+               std::views::filter([atomid](auto& particle) { return (particle.id == atomid); });
     } //!< Range of all (active) elements with matching particle id
 
     /**
@@ -339,8 +338,8 @@ class Group : public ElasticRange<Particle>
             assert(*std::max_element(indices.begin(), indices.end()) < size());
         }
 #endif
-        return indices | std::views::transform(
-                             [this](auto i) -> Particle& { return *(begin() + i); });
+        return indices |
+               std::views::transform([this](auto i) -> Particle& { return *(begin() + i); });
     }
 
     /**

@@ -101,11 +101,6 @@ template <class T> class ElasticRange : public IterRange<typename std::vector<T>
         return (new_size >= 0 && new_size <= capacity());
     }
 
-    /*
-     * @note On Apple Clang 12.0.5 (Nov. 2021) template deduction is unavailable, and we have to use
-     *       `make_subrange()`. With GCC `cpp20::subrange()` can be used. More info here:
-     *       https://stackoverflow.com/questions/58316189/in-ranges-v3-how-do-i-create-a-range-from-a-pair-of-iterators
-     */
     inline auto all()
     {
         return std::ranges::subrange(begin(), trueend());

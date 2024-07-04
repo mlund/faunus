@@ -65,7 +65,7 @@ class RegionSampler
     const double outside_acceptance =
         1.0; //!< Or "p" between ]0:1]; 1 --> uniform sampling (no regional preference)
     static BiasDirection getDirection(bool inside_before, bool inside_after);
-    template <ranges::cpp20::range Range> double getNumberInside(Range& range) const;
+    template <std::ranges::range Range> double getNumberInside(Range& range) const;
 
   protected:
     const std::unique_ptr<Region::RegionBase> region; //!< This defines the smart MC region
@@ -75,7 +75,7 @@ class RegionSampler
     virtual ~RegionSampler() = default;
     void to_json(json& j) const; //!< Serialise to json
 
-    template <GroupOrParticle T, ranges::cpp20::range Range>
+    template <GroupOrParticle T, std::ranges::range Range>
     std::optional<Selection<T>> select(Range& range, Random& random);
 
     template <GroupOrParticle T> double bias(const Selection<T>& selection);
@@ -88,7 +88,7 @@ class RegionSampler
  *
  * @returns (mean) number of elements inside region
  */
-template <ranges::cpp20::range Range> double RegionSampler::getNumberInside(Range& range) const
+template <std::ranges::range Range> double RegionSampler::getNumberInside(Range& range) const
 {
     if (fixed_number_inside) {
         return fixed_number_inside.value();
@@ -109,10 +109,10 @@ template <ranges::cpp20::range Range> double RegionSampler::getNumberInside(Rang
  * without any selection, an empty object is returned and a warning issued. The maximum
  * number of attempts is currently set to 10x the size of the given range.
  */
-template <GroupOrParticle T, ranges::cpp20::range Range>
+template <GroupOrParticle T, std::ranges::range Range>
 std::optional<Selection<T>> RegionSampler::select(Range& range, Random& random)
 {
-    const auto n_total = ranges::distance(range.begin(), range.end());
+    const auto n_total = std::ranges::distance(range.begin(), range.end());
     int max_selection_attempts = 10 * n_total;
     do {
         auto it = random.sample(range.begin(), range.end()); // random particle or group
@@ -166,7 +166,7 @@ template <GroupOrParticle T> class MoveSupport
     MoveSupport(const Space& spc, const json& j);
     double bias();
     void to_json(json& j) const;
-    template <ranges::cpp20::range Range> OptionalElement select(Range& mollist, Random& random);
+    template <std::ranges::range Range> OptionalElement select(Range& mollist, Random& random);
 };
 
 template <GroupOrParticle T>
@@ -245,7 +245,7 @@ template <GroupOrParticle T> void MoveSupport<T>::to_json(json& j) const
  * @return Optional reference to selected element
  */
 template <GroupOrParticle T>
-template <ranges::cpp20::range Range>
+template <std::ranges::range Range>
 typename MoveSupport<T>::OptionalElement MoveSupport<T>::select(Range& mollist, Random& random)
 {
     selection = region_sampler.select<T>(mollist, random);

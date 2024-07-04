@@ -10,8 +10,6 @@
 #include <range/v3/view/join.hpp>
 #include <range/v3/view/filter.hpp>
 #include <range/v3/range/conversion.hpp>
-#include <range/v3/algorithm/any_of.hpp>
-#include <range/v3/algorithm/none_of.hpp>
 #include <utility>
 #include <doctest/doctest.h>
 
@@ -292,7 +290,7 @@ void NeighboursGenerator::generatePairs(AtomPairList& pairs, int bond_distance)
         paths | join | transform(make_ordered_pair) | filter(is_valid_pair) |
         ranges::to<std::set<AtomPair>>;
     pairs.reserve(pairs.size() + excluded_pairs.size());
-    std::copy(excluded_pairs.begin(), excluded_pairs.end(), std::back_inserter(pairs));
+    std::ranges::copy(excluded_pairs, std::back_inserter(pairs));
 }
 
 TEST_CASE("NeighboursGenerator")
@@ -512,7 +510,7 @@ void MoleculeBuilder::readBonds(const json& j)
     bonds = j.value("bondlist", bonds);
     auto is_invalid_index = [size = particles.size()](auto& i) { return i >= size || i < 0; };
     auto indices = bonds | views::transform(&pairpotential::BondData::indices) | views::join;
-    if (any_of(indices, is_invalid_index)) {
+    if (std::ranges::any_of(indices, is_invalid_index)) {
         throw ConfigurationError("bonded index out of range");
     }
 }
@@ -853,7 +851,7 @@ RandomInserter::operator()(const Geometry::GeometryBase& geo, MoleculeData& mole
     auto container_overlap = [&geo](const auto& particle) { return geo.collision(particle.pos); };
 
     if (keep_positions) { // keep given positions
-        if (ranges::cpp20::none_of(particles, container_overlap)) {
+        if (std::ranges::none_of(particles, container_overlap)) {
             return particles;
         }
         throw std::runtime_error("inserted molecule does not fit in container");
@@ -866,7 +864,7 @@ RandomInserter::operator()(const Geometry::GeometryBase& geo, MoleculeData& mole
         else {
             translateRotateMolecularGroup(geo, rotator, particles);
         }
-        if (allow_overlap || ranges::cpp20::none_of(particles, container_overlap)) {
+        if (allow_overlap || std::ranges::none_of(particles, container_overlap)) {
             return particles;
         }
     }
@@ -944,10 +942,10 @@ void Conformation::copyTo(ParticleVector& particles) const
      * Note how `std::ranges::transform` accepts data member pointers like `&Particle::pos`
      * which are internally accessed using `std::invoke`.
      */
-    auto particle_positions = particles | ranges::cpp20::views::transform(&Particle::pos);
+    auto particle_positions = particles | std::views::transform(&Particle::pos);
     std::copy(positions.begin(), positions.end(), particle_positions.begin());
 
-    auto particle_charges = particles | ranges::cpp20::views::transform(&Particle::charge);
+    auto particle_charges = particles | std::views::transform(&Particle::charge);
     std::copy(charges.begin(), charges.end(), particle_charges.begin());
 }
 

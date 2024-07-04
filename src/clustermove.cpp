@@ -1,8 +1,8 @@
 #include "clustermove.h"
 #include "aux/eigensupport.h"
+#include <ranges>
 #include <range/v3/view/cartesian_product.hpp>
 #include <range/v3/range/conversion.hpp>
-#include <range/v3/algorithm/for_each.hpp>
 
 namespace Faunus {
 namespace move {
@@ -96,7 +96,7 @@ double FindCluster::clusterProbability(const Group& group1, const Group& group2)
  */
 void FindCluster::updateMoleculeIndex()
 {
-    namespace rv = ranges::cpp20::views;
+    namespace rv = std::views;
     auto group_to_index = [&](auto& group) { return &group - &spc.groups.front(); };
     auto matching_molid = [&](auto& group) {
         if (group.isAtomic() || group.end() != group.trueend()) {
@@ -174,8 +174,8 @@ std::optional<size_t> FindCluster::findSeed(Random& random)
     auto avoid_satellites = [&](auto index) {
         return (satellites.count(spc.groups.at(index).id) == 0);
     };
-    auto not_satellites = molecule_index | ranges::cpp20::views::filter(avoid_satellites);
-    if (ranges::cpp20::empty(not_satellites)) {
+    auto not_satellites = molecule_index | std::views::filter(avoid_satellites);
+    if (std::ranges::empty(not_satellites)) {
         return std::nullopt;
     }
     return *random.sample(not_satellites.begin(), not_satellites.end());
@@ -190,7 +190,7 @@ std::optional<size_t> FindCluster::findSeed(Random& random)
  */
 std::pair<std::vector<size_t>, bool> FindCluster::findCluster(size_t seed_index)
 {
-    namespace rv = ranges::cpp20::views;
+    namespace rv = std::views;
     assert(seed_index < spc.particles.size());
     std::set<size_t> pool(molecule_index.begin(),
                           molecule_index.end()); // decreasing pool of candidate groups
@@ -301,12 +301,12 @@ void Cluster::_from_json(const json& j)
 Point Cluster::clusterMassCenter(const std::vector<size_t>& indices) const
 {
     assert(!indices.empty());
-    namespace rv = ranges::cpp20::views;
-    auto groups = indices | rv::transform(index_to_group);
-    auto positions = groups | rv::transform(&Group::mass_center);
-    auto masses = groups | rv::transform(&Group::mass);
+    using std::views::transform;
+    auto groups = indices | transform(index_to_group);
+    auto positions = groups | transform(&Group::mass_center);
+    auto masses = groups | transform(&Group::mass);
     return Geometry::weightedCenter(positions, masses, spc.geometry.getBoundaryFunc(),
-                                    -groups.begin()->mass_center);
+                                    -((*groups.begin()).mass_center));
 }
 
 void Cluster::_move(Change& change)
@@ -318,14 +318,14 @@ void Cluster::_move(Change& change)
     }
     const auto [cluster, safe_to_rotate] = find_cluster->findCluster(seed_index.value());
     const Point cluster_mass_center = clusterMassCenter(cluster); // cluster mass center
-    auto groups = cluster | ranges::cpp20::views::transform(index_to_group);
+    auto groups = cluster | std::views::transform(index_to_group);
 
     average_cluster_size += cluster.size(); // average cluster size
     if (number_of_attempted_moves % shape_analysis_interval == 0) {
         shape_analysis->sample(groups, cluster_mass_center, spc);
     }
 
-    using ranges::cpp20::for_each;
+    using std::ranges::for_each;
     auto boundary = spc.geometry.getBoundaryFunc();
     if (safe_to_rotate) {
         for_each(groups, rotate->getLambda(boundary, cluster_mass_center, slump));

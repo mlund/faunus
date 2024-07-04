@@ -1,6 +1,5 @@
 #include "regions.h"
 #include "space.h"
-#include <range/v3/algorithm/any_of.hpp>
 #include <iostream>
 #include <doctest/doctest.h>
 
@@ -29,7 +28,7 @@ bool RegionBase::inside(const Group& group) const
             return isInside(mass_center.value());
         }
     }
-    return ranges::cpp20::any_of(group, [&](const Particle& particle) { return inside(particle); });
+    return std::ranges::any_of(group, [&](const Particle& particle) { return inside(particle); });
 }
 
 /**
@@ -107,7 +106,7 @@ WithinMoleculeType::WithinMoleculeType(const Space& spc, const json& j)
 
 bool WithinMoleculeType::isInside(const Point& position) const
 {
-    using ranges::cpp20::any_of;
+    using std::ranges::any_of;
     auto has_position_inside = [&](const Group& group) {
         if (use_region_mass_center) {
             return within_threshold(position, *group.massCenter());

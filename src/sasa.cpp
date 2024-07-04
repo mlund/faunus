@@ -3,8 +3,6 @@
 #include "space.h"
 #include <cmath>
 #include <range/v3/view/zip.hpp>
-#include <range/v3/view/iota.hpp>
-#include <range/v3/algorithm/for_each.hpp>
 #include <doctest/doctest.h>
 
 namespace Faunus {
@@ -172,8 +170,7 @@ void SASA::init(const Space& spc)
     auto sasa_radius_l = [this](const Particle& particle) {
         return 0.5 * particle.traits().sigma + probe_radius;
     };
-    sasa_radii =
-        spc.particles | ranges::cpp20::views::transform(sasa_radius_l) | ranges::to<std::vector>;
+    sasa_radii = spc.particles | std::views::transform(sasa_radius_l) | ranges::to<std::vector>;
     areas.resize(spc.particles.size());
 }
 
@@ -219,7 +216,7 @@ std::vector<SASA::Neighbours>
 SASA::calcNeighbourData(const Space& spc, const std::vector<index_type>& target_indices) const
 {
 
-    return target_indices | ranges::views::transform([&](auto index) {
+    return target_indices | std::views::transform([&](auto index) {
                return calcNeighbourDataOfParticle(spc, index);
            }) |
            ranges::to<std::vector>;
@@ -357,9 +354,8 @@ template <typename CellList> void SASACellList<CellList>::init(const Space& spc)
     }
 
     auto get_sasa_radius = [this](auto& i) { return 0.5 * i.traits().sigma + probe_radius; };
-    sasa_radii =
-        spc.particles | ranges::cpp20::views::transform(get_sasa_radius) | ranges::to<std::vector>;
-    const auto max_sasa_radius = ranges::cpp20::max(sasa_radii);
+    sasa_radii = spc.particles | std::views::transform(get_sasa_radius) | ranges::to<std::vector>;
+    const double max_sasa_radius = std::ranges::max(sasa_radii);
 
     cell_length = 2.0 * (max_sasa_radius);
     const auto active_particles = spc.activeParticles();
@@ -422,7 +418,7 @@ std::vector<SASABase::Neighbours>
 SASACellList<CellList>::calcNeighbourData(const Space& spc,
                                           const std::vector<index_type>& target_indices) const
 {
-    return target_indices | ranges::views::transform([&](auto index) {
+    return target_indices | std::views::transform([&](auto index) {
                return calcNeighbourDataOfParticle(spc, index);
            }) |
            ranges::to<std::vector>;
@@ -512,15 +508,14 @@ void SASACellList<CellList>::updatePositionsChange(const Space& spc, const Chang
         };
 
         if (group_change.relative_atom_indices.empty()) {
-            const auto changed_atom_indices =
-                ranges::cpp20::views::iota(offset, offset + group.size());
-            ranges::cpp20::for_each(changed_atom_indices, update);
+            const auto changed_atom_indices = std::views::iota(offset, offset + group.size());
+            std::ranges::for_each(changed_atom_indices, update);
         }
         else {
             const auto changed_atom_indices =
                 group_change.relative_atom_indices |
-                ranges::cpp20::views::transform([offset](auto i) { return i + offset; });
-            ranges::cpp20::for_each(changed_atom_indices, update);
+                std::views::transform([offset](auto i) { return i + offset; });
+            std::ranges::for_each(changed_atom_indices, update);
         }
     }
 }

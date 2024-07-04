@@ -7,13 +7,10 @@
 #include "core.h"
 #include "particle.h"
 #include "geometry.h"
-
 #include <vector>
 #include <fstream>
-#include <range/v3/view/iota.hpp>
-#include <range/v3/view/filter.hpp>
-#include <range/v3/algorithm/for_each.hpp>
 #include <mpl/mpl.hpp>
+#include <ranges>
 
 // Expose classes for MPI serialization
 MPL_REFLECTION(Faunus::Point, x(), y(), z())
@@ -232,18 +229,17 @@ void avgTables(const mpl::communicator& communicator, Ttable& table, int& size)
     else {
         send_buffer = table.hist2buf(size);
         recv_buffer.resize(size);
-        auto slaves =
-            ranges::cpp20::views::iota(0, communicator.size()) |
-            ranges::cpp20::views::filter([&](auto rank) { return rank != mpi.master_rank; });
+        auto slaves = std::views::iota(0, communicator.size()) |
+                      std::views::filter([&](auto rank) { return rank != mpi.master_rank; });
 
-        ranges::cpp20::for_each(slaves, [&](auto rank) {
+        std::ranges::for_each(slaves, [&](auto rank) {
             communicator.recv(recv_buffer, rank);
             send_buffer.insert(send_buffer.end(), recv_buffer.begin(), recv_buffer.end());
         });
 
         table.buf2hist(send_buffer);
         send_buffer = table.hist2buf(size);
-        ranges::cpp20::for_each(slaves, [&](auto rank) { communicator.send(send_buffer, rank); });
+        std::ranges::for_each(slaves, [&](auto rank) { communicator.send(send_buffer, rank); });
     }
 }
 #endif

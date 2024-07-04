@@ -1583,7 +1583,7 @@ std::vector<Point> TwobodyAngles::fibonacciSphere(const size_t samples)
 
 TwobodyAngles::TwobodyAngles(const double angle_resolution)
 {
-    namespace rv = ranges::cpp20::views;
+    namespace rv = std::views;
 
     const auto number_of_samples = size_t(std::round(4.0 * pc::pi / std::pow(angle_resolution, 2)));
     const auto points_on_sphere = fibonacciSphere(number_of_samples);

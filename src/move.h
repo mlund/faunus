@@ -11,8 +11,8 @@
 #include "aux/sparsehistogram.h"
 #include <range/v3/view/filter.hpp>
 #include <range/v3/view/iota.hpp>
+#include <range/v3/view/transform.hpp>
 #include <range/v3/view/indirect.hpp>
-#include <range/v3/algorithm/count_if.hpp>
 #include <optional>
 
 namespace Faunus {
@@ -639,10 +639,10 @@ class MoveCollection
         auto is_valid_and_stochastic = [&](auto move) {
             return move < moves.end() && (*move)->isStochastic();
         };
-        return ranges::cpp20::views::iota(0U, number_of_moves_per_sweep) |
-               ranges::cpp20::views::transform(
-                   [&]([[maybe_unused]] auto count) { return sample(); }) |
-               ranges::cpp20::views::filter(is_valid_and_stochastic) |
+        using namespace ranges::cpp20;
+        return views::iota(0U, number_of_moves_per_sweep) |
+               views::transform([&]([[maybe_unused]] auto count) { return sample(); }) |
+               views::filter(is_valid_and_stochastic) |
                ranges::views::indirect; // dereference iterator
     }
 
@@ -664,7 +664,7 @@ class MoveCollection
         auto is_static_and_time_to_sample = [&, sweep_number](const auto& move) {
             return (!move->isStochastic()) && (sweep_number % move->sweep_interval == 0);
         };
-        return moves | ranges::cpp20::views::filter(is_static_and_time_to_sample);
+        return moves | std::views::filter(is_static_and_time_to_sample);
     }
 };
 

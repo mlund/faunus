@@ -3,8 +3,7 @@
 #include "molecule.h"
 #include "group.h"
 #include "space.h"
-#include <range/v3/view/filter.hpp>
-#include <range/v3/view/transform.hpp>
+#include <ranges>
 
 namespace Faunus {
 class Space;
@@ -55,7 +54,7 @@ class RegionBase
     /** Selects particles within the region */
     template <typename ParticleRange> auto filterInside(const ParticleRange& particles) const
     {
-        namespace rv = ranges::cpp20::views;
+        namespace rv = std::views;
         return particles | rv::transform(&Particle::pos) | rv::filter(&RegionBase::isInside);
     }
 };

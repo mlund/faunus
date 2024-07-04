@@ -1,9 +1,7 @@
 #include "montecarlo.h"
-#include "speciation.h"
 #include "energy.h"
 #include "move.h"
 #include <spdlog/spdlog.h>
-#include <range/v3/algorithm/for_each.hpp>
 
 namespace Faunus {
 
@@ -221,8 +219,8 @@ void MetropolisMonteCarlo::sweep()
     assert(moves);
     number_of_sweeps++;
     auto perform_single_move = [&](auto& move) { performMove(*move); };
-    ranges::cpp20::for_each(moves->repeatedStochasticMoves(), perform_single_move);
-    ranges::cpp20::for_each(moves->constantIntervalMoves(number_of_sweeps), perform_single_move);
+    std::ranges::for_each(moves->repeatedStochasticMoves(), perform_single_move);
+    std::ranges::for_each(moves->constantIntervalMoves(number_of_sweeps), perform_single_move);
 }
 
 Energy::Hamiltonian& MetropolisMonteCarlo::getHamiltonian()

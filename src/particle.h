@@ -4,7 +4,7 @@
 #include "tensor.h"
 #include <iterator>
 #include <spdlog/spdlog.h>
-#include <range/v3/range/concepts.hpp>
+#include <ranges>
 
 namespace Eigen {
 using Matrix3d = Matrix<double, 3, 3>;
@@ -284,7 +284,7 @@ using ParticleVector = std::vector<Particle>;
 /** Concept for a range of particles */
 template <class T>
 concept RequireParticles =
-    ranges::cpp20::range<T> && std::is_convertible_v<ranges::cpp20::range_value_t<T>, Particle>;
+    std::ranges::range<T> && std::is_convertible_v<std::ranges::range_value_t<T>, Particle>;
 
 template <class T>
 concept RequireParticleIterator = std::is_convertible_v<std::iter_value_t<T>, Particle>;

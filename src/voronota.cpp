@@ -60,7 +60,7 @@ void Voronota::_to_disk()
 void Voronota::_sample()
 {
     using voronotalt::SimplePoint;
-    using namespace ranges::cpp20::views;
+    using namespace std::views;
 
     // Convert single `Particle` to Voronota's `SimpleSphere`
     auto to_sphere = [&](const Particle& p) -> voronotalt::SimpleSphere {

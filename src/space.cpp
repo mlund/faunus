@@ -2,9 +2,9 @@
 #include "io.h"
 #include "aux/eigensupport.h"
 #include <spdlog/spdlog.h>
-#include <range/v3/algorithm/for_each.hpp>
-#include <range/v3/algorithm/count_if.hpp>
 #include <doctest/doctest.h>
+#include <ranges>
+#include <algorithm>
 
 namespace Faunus {
 
@@ -235,7 +235,7 @@ void Space::sync(const Space& other, const Change& change)
         }
     }
     // apply registered triggers
-    ranges::cpp20::for_each(onSyncTriggers, [&](auto& trigger) { trigger(*this, other, change); });
+    std::ranges::for_each(onSyncTriggers, [&](auto& trigger) { trigger(*this, other, change); });
 }
 
 /**
@@ -330,7 +330,7 @@ Space::GroupVector::iterator Space::randomMolecule(MoleculeData::index_type moli
                                                    Space::Selection selection)
 {
     auto found_molecules = findMolecules(molid, selection);
-    if (ranges::cpp20::empty(found_molecules)) {
+    if (std::ranges::empty(found_molecules)) {
         return groups.end();
     }
     return groups.begin() +
@@ -419,8 +419,8 @@ std::size_t Space::getFirstActiveParticleIndex(const GroupType& group) const
 
 size_t Space::countAtoms(AtomData::index_type atomid) const
 {
-    return ranges::cpp20::count_if(activeParticles(),
-                                   [&](auto& particle) { return particle.id == atomid; });
+    return std::ranges::count_if(activeParticles(),
+                                 [&](auto& particle) { return particle.id == atomid; });
 }
 
 void Space::updateInternalState(const Change& change)
@@ -513,8 +513,8 @@ void from_json(const json& j, Space& spc)
         auto active_and_molecular = [](const auto& group) {
             return (!group.empty() && group.isMolecular());
         };
-        ranges::cpp20::for_each(spc.groups | ranges::cpp20::views::filter(active_and_molecular),
-                                check_mass_center);
+        std::ranges::for_each(spc.groups | std::views::filter(active_and_molecular),
+                              check_mass_center);
     }
     catch (const std::exception& e) {
         throw std::runtime_error("error building space -> "s + e.what());
@@ -613,7 +613,7 @@ TEST_CASE("[Faunus] Space::toIndices")
     Space spc;
     spc.particles.resize(3);
 
-    auto subrange = ranges::make_subrange(spc.particles.begin() + 1, spc.particles.end()); // p1, p2
+    auto subrange = std::ranges::subrange(spc.particles.begin() + 1, spc.particles.end()); // p1, p2
     auto indices = spc.toIndices(subrange);
     CHECK_EQ(indices.size(), 2);
     CHECK_EQ(indices.at(0), 1);

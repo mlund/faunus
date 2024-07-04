@@ -9,11 +9,9 @@
 #include "aux/pairmatrix.h"
 #include "smart_montecarlo.h"
 #include <range/v3/range/conversion.hpp>
-#include <range/v3/view/iota.hpp>
-#include <range/v3/view/subrange.hpp>
-#include <range/v3/algorithm/any_of.hpp>
 #include <Eigen/Dense>
 #include <spdlog/spdlog.h>
+#include <ranges>
 #include <numeric>
 #include <algorithm>
 #include <concepts>
@@ -174,7 +172,7 @@ class EwaldPolicyBase
         auto is_partially_inactive = [](const Group& group) {
             return group.size() != group.capacity();
         };
-        if (ranges::cpp20::any_of(groups, is_partially_inactive)) {
+        if (std::ranges::any_of(groups, is_partially_inactive)) {
             throw std::runtime_error("Eigen optimized Ewald not available with inactive groups");
         }
         auto first_particle = groups.front().begin();
@@ -191,7 +189,7 @@ class EwaldPolicyBase
         auto is_partially_inactive = [](const Group& group) {
             return group.size() != group.capacity();
         };
-        if (ranges::cpp20::any_of(groups, is_partially_inactive)) {
+        if (std::ranges::any_of(groups, is_partially_inactive)) {
             throw std::runtime_error("Eigen optimized Ewald not available with inactive groups");
         }
         auto first_particle = groups.front().begin();
@@ -342,7 +340,7 @@ class Bonded : public EnergyTerm
     double sumBondEnergy(const BondVector& bonds) const;  //!< sum energy in vector of BondData
     double internalGroupEnergy(const Change::GroupChange& changed); //!< Energy from internal bonds
     double sumEnergy(const BondVector& bonds,
-                     const ranges::cpp20::range auto& particle_indices) const;
+                     const std::ranges::range auto& particle_indices) const;
     void updateInternalBonds(); //!< finds and adds all intra-molecular bonds of active molecules
 
   public:
@@ -363,15 +361,15 @@ class Bonded : public EnergyTerm
  * to simplistic search which scales as number_of_bonds x number_of_moved_particles
  */
 double Bonded::sumEnergy(const Bonded::BondVector& bonds,
-                         const ranges::cpp20::range auto& particle_indices) const
+                         const std::ranges::range auto& particle_indices) const
 {
     assert(std::is_sorted(particle_indices.begin(), particle_indices.end()));
 
     auto index_is_included = [&](auto index) {
         return std::binary_search(particle_indices.begin(), particle_indices.end(), index);
     };
-    auto affected_bonds = bonds | ranges::cpp20::views::filter([&](const auto& bond) {
-                              return ranges::cpp20::any_of(bond->indices, index_is_included);
+    auto affected_bonds = bonds | std::views::filter([&](const auto& bond) {
+                              return std::ranges::any_of(bond->indices, index_is_included);
                           });
     auto bond_energy = [dist = spc.geometry.getDistanceFunc()](const auto& bond) {
         return bond->energyFunc(dist);
@@ -388,11 +386,11 @@ double Bonded::sumEnergy(const Bonded::BondVector& bonds,
  * @param range an original set of integers (must be sorted)
  * @return a set of ints complementary to the original set
  */
-auto indexComplement(std::integral auto size, const ranges::cpp20::range auto& range)
+auto indexComplement(std::integral auto size, const std::ranges::range auto& range)
 {
-    namespace rv = ranges::cpp20::views;
-    return rv::iota(0, static_cast<int>(size)) |
-           rv::filter([&](auto i) { return !std::binary_search(range.begin(), range.end(), i); });
+    using namespace std::views;
+    return iota(0, static_cast<int>(size)) |
+           filter([&](auto i) { return !std::binary_search(range.begin(), range.end(), i); });
 }
 
 /**
@@ -1400,7 +1398,7 @@ template <typename TPolicy> class GroupPairing
         const auto fixed = indexComplement(spc.groups.size(), moved) |
                            ranges::to<std::vector>; // index of static groups
         auto filter_active = [](int size) {
-            return ranges::views::filter([size](const auto i) { return i < size; });
+            return std::views::filter([size](const auto i) { return i < size; });
         };
 
         // loop over all changed groups

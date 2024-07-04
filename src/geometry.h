@@ -9,10 +9,12 @@
 #include <Eigen/Geometry>
 #include <cereal/types/base_class.hpp>
 #include <spdlog/spdlog.h>
-#include <range/v3/view/zip.hpp>
-#include <range/v3/view/join.hpp>
-#include <range/v3/view/transform.hpp>
+#include <ranges>
 #include <range/v3/view/cartesian_product.hpp>
+#include <range/v3/view/zip.hpp>
+#ifndef __cpp_lib_ranges_join_with
+#include <range/v3/view/join.hpp>
+#endif
 #include <utility>
 
 /** @brief Faunus main namespace */
@@ -548,7 +550,7 @@ enum class weight
  * @param boundary Used to remove periodic boundaries
  * @param shift Shift with this value before and after center calculation. To e.g. remove PBC
  */
-template <ranges::cpp20::range Positions, ranges::cpp20::range Weights>
+template <std::ranges::range Positions, std::ranges::range Weights>
 Point weightedCenter(
     const Positions& positions, const Weights& weights,
     Geometry::BoundaryFunction boundary = [](auto&) {}, const Point& shift = Point::Zero())
@@ -589,8 +591,8 @@ Point weightedCenter(iterator begin, iterator end, BoundaryFunction boundary,
                      std::function<double(const Particle&)> weight_function,
                      const Point& shift = Point::Zero())
 {
-    namespace rv = ranges::cpp20::views;
-    auto particles = ranges::make_subrange(begin, end);
+    namespace rv = std::views;
+    auto particles = std::ranges::subrange(begin, end);
     auto positions = particles | rv::transform(&Particle::pos);
     auto weights = particles | rv::transform(weight_function);
     return weightedCenter(positions, weights, boundary, shift);
@@ -684,8 +686,13 @@ Point trigoCom(const Tspace& spc, const GroupIndex& indices,
     if (dir.empty() || dir.size() > 3) {
         throw std::out_of_range("invalid directions");
     }
-    namespace rv = ranges::cpp20::views;
-    auto positions = indices | rv::transform([&](auto i) { return spc.groups.at(i); }) | rv::join |
+    namespace rv = std::views;
+#ifdef __cpp_lib_ranges_join_with
+    using std::views::join;
+#else
+    using ranges::cpp20::views::join;
+#endif
+    auto positions = indices | rv::transform([&](auto i) { return spc.groups.at(i); }) | join |
                      rv::transform(&Particle::pos);
     Point xhi(0, 0, 0);
     Point zeta(0, 0, 0);
@@ -774,8 +781,8 @@ Tensor gyration(
     iterator begin, iterator end, const Point& mass_center,
     const BoundaryFunction boundary = [](auto&) {})
 {
-    namespace rv = ranges::cpp20::views;
-    auto particles = ranges::make_subrange(begin, end);
+    namespace rv = std::views;
+    auto particles = std::ranges::subrange(begin, end);
     auto positions = particles | rv::transform(&Particle::pos);
     auto masses = particles | rv::transform(&Particle::traits) | rv::transform(&AtomData::mw);
     return gyration(positions.begin(), positions.end(), masses.begin(), mass_center, boundary);
@@ -945,7 +952,7 @@ class TwobodyAngles
             return q_dihedral * q2; // noncommutative
         };
         auto second_body_quaternions =
-            rv::cartesian_product(quaternions_2, dihedrals) | rv::transform(product);
+            rv::cartesian_product(quaternions_2, dihedrals) | std::views::transform(product);
         return rv::cartesian_product(quaternions_1, second_body_quaternions);
     }
 

@@ -847,8 +847,7 @@ void ParallelTempering::_to_json(json& j) const
  */
 void ParallelTempering::exchangeGroupSizes(Space::GroupVector& groups, int partner_rank)
 {
-    std::vector<size_t> sizes =
-        groups | std::views::transform(&Group::size) | ranges::to_vector;
+    std::vector<size_t> sizes = groups | std::views::transform(&Group::size) | ranges::to_vector;
     mpi.world.sendrecv_replace(sizes.begin(), sizes.end(), partner_rank, mpl::tag_t(0),
                                partner_rank, mpl::tag_t(0));
     auto it = sizes.begin();

@@ -144,7 +144,7 @@ void ParticleBuffer::copyToBuffer(const ParticleVector& particles)
     buffer.resize(packet_size * particles.size());
     auto destination = buffer.begin(); // set *after* buffer resize
     std::ranges::for_each(particles,
-                            std::bind(from_particle, std::placeholders::_1, std::ref(destination)));
+                          std::bind(from_particle, std::placeholders::_1, std::ref(destination)));
     if (destination != buffer.end()) {
         throw std::runtime_error("buffer mismatch");
     }
@@ -157,7 +157,7 @@ void ParticleBuffer::copyFromBuffer(ParticleVector& particles)
     }
     auto source = buffer.begin();
     std::ranges::for_each(particles,
-                            std::bind(to_particle, std::ref(source), std::placeholders::_1));
+                          std::bind(to_particle, std::ref(source), std::placeholders::_1));
     assert(source == buffer.end());
 }
 

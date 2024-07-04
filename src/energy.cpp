@@ -1074,9 +1074,10 @@ double Bonded::internalGroupEnergy(const Change::GroupChange& changed)
         }
         else { // only partial update of affected atoms
             const auto first_particle_index = spc.getFirstParticleIndex(group);
-            auto particle_indices =
-                changed.relative_atom_indices |
-                std::views::transform([first_particle_index](auto i) { return i + first_particle_index; });
+            auto particle_indices = changed.relative_atom_indices |
+                                    std::views::transform([first_particle_index](auto i) {
+                                        return i + first_particle_index;
+                                    });
             energy += sumEnergy(bonds, particle_indices);
         }
     }
@@ -1212,8 +1213,8 @@ void Hamiltonian::checkBondedMolecules() const
     if (find<Energy::Bonded>()
             .empty()) { // no bond potential added? issue warning if molecules w. bonds
         auto molecules_with_bonds =
-            Faunus::molecules | std::views::filter(
-                                    [](const auto& molecule) { return !molecule.bonds.empty(); });
+            Faunus::molecules |
+            std::views::filter([](const auto& molecule) { return !molecule.bonds.empty(); });
         for (const auto& molecule : molecules_with_bonds) {
             faunus_logger->warn("{} bonds specified in topology but missing in energy",
                                 molecule.name);
@@ -1632,8 +1633,7 @@ double SASAEnergyReference::energy(const Change& change)
 
     std::vector<index_type> target_indices;
     auto to_index = [this](const auto& particle) { return indexOf(particle); };
-    target_indices =
-        particles | std::views::transform(to_index) | ranges::to<std::vector>;
+    target_indices = particles | std::views::transform(to_index) | ranges::to<std::vector>;
 
     const auto neighbours = sasa->calcNeighbourData(spc, target_indices);
     sasa->updateSASA(neighbours, target_indices);
@@ -1701,9 +1701,8 @@ void SASAEnergy::updateChangedIndices(const Change& change)
             std::ranges::for_each(indices, insert_changed);
         }
         else {
-            const auto indices =
-                group_change.relative_atom_indices |
-                std::views::transform([offset](auto i) { return offset + i; });
+            const auto indices = group_change.relative_atom_indices |
+                                 std::views::transform([offset](auto i) { return offset + i; });
             std::ranges::for_each(indices, insert_changed);
         }
     }
@@ -1739,8 +1738,7 @@ double SASAEnergy::energy(const Change& change)
     changed_indices.clear();
     if (change.everything) { //! all the active particles will be used for SASA calculation
         auto to_index = [this](const auto& particle) { return indexOf(particle); };
-        changed_indices =
-            particles | std::views::transform(to_index) | ranges::to<std::vector>;
+        changed_indices = particles | std::views::transform(to_index) | ranges::to<std::vector>;
     }
     else {
         updateChangedIndices(change);
@@ -2089,10 +2087,10 @@ double CustomGroupGroup::energy([[maybe_unused]] const Change& change)
     };
 
     // all indices matching either molid1 or molid2
-    auto indices = spc.groups | std::views::filter(match_groups) |
-                   std::views::transform(
-                       [&](const auto& group) { return spc.getGroupIndex(group); }) |
-                   ranges::to_vector;
+    auto indices =
+        spc.groups | std::views::filter(match_groups) |
+        std::views::transform([&](const auto& group) { return spc.getGroupIndex(group); }) |
+        ranges::to_vector;
 
     return for_each_unique_pair(indices.begin(), indices.end(), group_group_energy, std::plus<>());
 }

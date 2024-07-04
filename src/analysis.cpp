@@ -562,8 +562,7 @@ GroupMatrixAnalysis::GroupMatrixAnalysis(const json& j, const Space& spc,
 void GroupMatrixAnalysis::setPairMatrix()
 {
     auto is_active = [&](auto index) { return !spc.groups.at(index).empty(); };
-    const auto indices =
-        group_indices | std::views::filter(is_active) | ranges::to_vector;
+    const auto indices = group_indices | std::views::filter(is_active) | ranges::to_vector;
 
     // zero matrix, then fill it
     pair_matrix.setZero();
@@ -1411,7 +1410,7 @@ std::map<Density::id_type, int> AtomDensity::count() const
     id_type id = 0U;
     std::map<id_type, int> map;
     std::ranges::for_each(atom_count,
-                            [&id, &map](auto count) { map.emplace_hint(map.end(), id++, count); });
+                          [&id, &map](auto count) { map.emplace_hint(map.end(), id++, count); });
     return map;
 }
 
@@ -1450,13 +1449,12 @@ std::map<Density::id_type, int> MoleculeDensity::count() const
 
     // ensure that also inactive groups are registered (as zero)
     std::ranges::for_each(Faunus::molecules | filter(&MoleculeData::isMolecular),
-             [&](auto& moldata) { molecular_group_count[moldata.id()] = 0; });
+                          [&](auto& moldata) { molecular_group_count[moldata.id()] = 0; });
 
     auto non_empty_molecular = [](const Group& group) {
         return group.isMolecular() && !group.empty();
     };
-    auto molecular_group_ids =
-        spc.groups | filter(non_empty_molecular) | transform(&Group::id);
+    auto molecular_group_ids = spc.groups | filter(non_empty_molecular) | transform(&Group::id);
 
     std::ranges::for_each(molecular_group_ids, [&](auto id) { molecular_group_count[id]++; });
     return molecular_group_count;
@@ -2561,15 +2559,13 @@ std::vector<std::string> ChargeFluctuations::getPredominantParticleNames() const
     }; // in a histogram, find the atom name with most counts
 
     auto atom_names = atom_histograms | std::views::transform(most_frequent_name);
-    return std::vector<std::string>(std::ranges::begin(atom_names),
-                                    std::ranges::end(atom_names));
+    return std::vector<std::string>(std::ranges::begin(atom_names), std::ranges::end(atom_names));
 }
 
 std::vector<double> ChargeFluctuations::getChargeStandardDeviation() const
 {
     using namespace std::ranges;
-    auto stdev =
-        atom_mean_charges | views::transform([](auto& i) { return i.stdev(); });
+    auto stdev = atom_mean_charges | views::transform([](auto& i) { return i.stdev(); });
     return std::vector<double>(begin(stdev), end(stdev));
 }
 
@@ -3013,8 +3009,7 @@ void ElectricPotential::getTargets(const json& j)
         if (structure->is_string()) {
             // load positions from chemical structure file
             auto particles = loadStructure(structure->get<std::string>(), false);
-            positions =
-                particles | std::views::transform(&Particle::pos) | ranges::to_vector;
+            positions = particles | std::views::transform(&Particle::pos) | ranges::to_vector;
         }
         else if (structure->is_array()) {
             // list of positions
@@ -3058,8 +3053,7 @@ double ElectricPotential::calcPotentialOnTarget(const ElectricPotential::Target&
             std::sqrt(spc.geometry.sqdist(particle.pos, target.position));
         return coulomb->getCoulombGalore().ion_potential(particle.charge, distance_to_target);
     };
-    auto potentials =
-        spc.activeParticles() | std::views::transform(potential_from_particle);
+    auto potentials = spc.activeParticles() | std::views::transform(potential_from_particle);
     return std::accumulate(potentials.begin(), potentials.end(), 0.0);
 }
 

@@ -218,9 +218,8 @@ AtomProperty::AtomProperty(const json& j, const Space& spc)
     else if (property == "N") {
         function = [&spc, id = index]() {
             return static_cast<double>(
-                std::ranges::count_if(spc.activeParticles(), [&](const Particle& particle) {
-                    return particle.id == id;
-                }));
+                std::ranges::count_if(spc.activeParticles(),
+                                      [&](const Particle& particle) { return particle.id == id; }));
         };
     }
 

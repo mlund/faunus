@@ -68,8 +68,8 @@ bool ReactionValidator::canReduceImplicitGroups(const ReactionData& reaction) co
         const auto& [molid, number_to_delete] = key_value;
         return spc.getImplicitReservoir().at(molid) >= number_to_delete;
     };
-    auto implicit_reactants = reaction.getReactants().second |
-                              std::views::filter(ReactionData::is_implicit_group);
+    auto implicit_reactants =
+        reaction.getReactants().second | std::views::filter(ReactionData::is_implicit_group);
     return std::ranges::all_of(implicit_reactants, has_enough);
 }
 
@@ -292,8 +292,7 @@ double MolecularGroupDeActivator::getBondEnergy(const Group& group) const
 {
     double energy = 0.0;
     if (apply_bond_bias) {
-        auto bonds =
-            group.traits().bonds | std::views::transform(&pairpotential::BondData::clone);
+        auto bonds = group.traits().bonds | std::views::transform(&pairpotential::BondData::clone);
         std::ranges::for_each(bonds, [&](auto bond) {
             bond->shiftIndices(spc.getFirstParticleIndex(group));
             bond->setEnergyFunction(spc.particles);

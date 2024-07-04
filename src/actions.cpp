@@ -95,8 +95,8 @@ void AngularScan::report(const Group& group1, const Group& group2, const Eigen::
         *stream << format(q1) << format(q2)
                 << fmt::format("{:8.4f} {:>10.3E}\n", group2.mass_center.z(), energy / 1.0_kJmol);
         if (trajectory) {
-            auto positions = ranges::views::concat(group1, group2) |
-                             std::views::transform(&Particle::pos);
+            auto positions =
+                ranges::views::concat(group1, group2) | std::views::transform(&Particle::pos);
             trajectory->writeNext({500, 500, 500}, positions.begin(), positions.end());
         }
     }

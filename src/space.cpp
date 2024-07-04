@@ -420,7 +420,7 @@ std::size_t Space::getFirstActiveParticleIndex(const GroupType& group) const
 size_t Space::countAtoms(AtomData::index_type atomid) const
 {
     return std::ranges::count_if(activeParticles(),
-                                   [&](auto& particle) { return particle.id == atomid; });
+                                 [&](auto& particle) { return particle.id == atomid; });
 }
 
 void Space::updateInternalState(const Change& change)
@@ -514,7 +514,7 @@ void from_json(const json& j, Space& spc)
             return (!group.empty() && group.isMolecular());
         };
         std::ranges::for_each(spc.groups | std::views::filter(active_and_molecular),
-                                check_mass_center);
+                              check_mass_center);
     }
     catch (const std::exception& e) {
         throw std::runtime_error("error building space -> "s + e.what());

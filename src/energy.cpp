@@ -4,8 +4,6 @@
 #include "externalpotential.h"
 #include <functional>
 #include <range/v3/view/zip.hpp>
-#include <range/v3/view/iota.hpp>
-#include <range/v3/algorithm/for_each.hpp>
 #include <range/v3/numeric/accumulate.hpp>
 #include <numeric>
 #include <utility>
@@ -229,7 +227,7 @@ void PolicyIonIon::updateComplex(EwaldData& d, const Change& change,
             auto& g_new = groups.at(changed_group.group_index);
             auto& g_old = oldgroups.at(changed_group.group_index);
             const auto max_group_size = std::max(g_new.size(), g_old.size());
-            auto indices = (changed_group.all) ? ranges::cpp20::views::iota(0u, max_group_size) |
+            auto indices = (changed_group.all) ? std::views::iota(0u, max_group_size) |
                                                      ranges::to<std::vector<Change::index_type>>
                                                : changed_group.relative_atom_indices;
             for (auto i : indices) {
@@ -466,7 +464,7 @@ void PolicyIonIonIPBC::updateComplex(EwaldData& d, const Change& change,
 double PolicyIonIon::surfaceEnergy(const EwaldData& data, [[maybe_unused]] const Change& change,
                                    const Space::GroupVector& groups)
 {
-    namespace rv = ranges::cpp20::views;
+    using ranges::cpp20::views::join;
     if (data.const_inf < 0.5 || change.empty()) {
         return 0.0;
     }
@@ -474,7 +472,7 @@ double PolicyIonIon::surfaceEnergy(const EwaldData& data, [[maybe_unused]] const
     auto charge_x_position = [](const Particle& particle) -> Point {
         return particle.charge * particle.pos;
     };
-    auto qr_range = groups | rv::join | rv::transform(charge_x_position);
+    auto qr_range = groups | join | std::views::transform(charge_x_position);
     const auto qr_squared = ranges::accumulate(qr_range, Point(0, 0, 0)).squaredNorm();
     return data.const_inf * 2.0 * pc::pi /
            ((2.0 * data.surface_dielectric_constant + 1.0) * volume) * qr_squared *
@@ -817,7 +815,7 @@ double ContainerOverlap::energy(const Change& change)
 double ContainerOverlap::energyOfAllGroups() const
 {
     auto positions =
-        spc.groups | ranges::cpp20::views::join | ranges::cpp20::views::transform(&Particle::pos);
+        spc.groups | ranges::cpp20::views::join | std::views::transform(&Particle::pos);
     bool outside = std::any_of(positions.begin(), positions.end(), [&](const auto& position) {
         return spc.geometry.collision(position);
     });
@@ -890,8 +888,8 @@ double Isobaric::energy(const Change& change)
         auto count_particles = [](const auto& group) {
             return group.isAtomic() ? group.size() : 1;
         };
-        auto particles_per_group = spc.groups | ranges::cpp20::views::filter(group_is_active) |
-                                   ranges::cpp20::views::transform(count_particles);
+        auto particles_per_group = spc.groups | std::views::filter(group_is_active) |
+                                   std::views::transform(count_particles);
         auto number_of_particles =
             std::accumulate(particles_per_group.begin(), particles_per_group.end(), 0);
         const auto volume = spc.geometry.getVolume();
@@ -1067,7 +1065,6 @@ double Bonded::energy(const Change& change)
 
 double Bonded::internalGroupEnergy(const Change::GroupChange& changed)
 {
-    using namespace ranges::cpp20::views; // @todo cpp20 --> std::ranges
     double energy = 0.0;
     const auto& group = spc.groups.at(changed.group_index);
     if (changed.internal && !group.empty()) {
@@ -1079,7 +1076,7 @@ double Bonded::internalGroupEnergy(const Change::GroupChange& changed)
             const auto first_particle_index = spc.getFirstParticleIndex(group);
             auto particle_indices =
                 changed.relative_atom_indices |
-                transform([first_particle_index](auto i) { return i + first_particle_index; });
+                std::views::transform([first_particle_index](auto i) { return i + first_particle_index; });
             energy += sumEnergy(bonds, particle_indices);
         }
     }
@@ -1215,7 +1212,7 @@ void Hamiltonian::checkBondedMolecules() const
     if (find<Energy::Bonded>()
             .empty()) { // no bond potential added? issue warning if molecules w. bonds
         auto molecules_with_bonds =
-            Faunus::molecules | ranges::cpp20::views::filter(
+            Faunus::molecules | std::views::filter(
                                     [](const auto& molecule) { return !molecule.bonds.empty(); });
         for (const auto& molecule : molecules_with_bonds) {
             faunus_logger->warn("{} bonds specified in topology but missing in energy",
@@ -1463,7 +1460,7 @@ void FreeSASAEnergy::sync(EnergyTerm* energybase_ptr, const Change& change)
                 const auto offset = spc.getFirstActiveParticleIndex(group);
                 auto absolute_atom_index =
                     group_change.relative_atom_indices |
-                    ranges::cpp20::views::transform([offset](auto i) { return i + offset; });
+                    std::views::transform([offset](auto i) { return i + offset; });
                 for (auto i : absolute_atom_index) {
                     radii.at(i) = other->radii.at(i);
                     for (size_t k = 0; k < 3; ++k) {
@@ -1636,13 +1633,13 @@ double SASAEnergyReference::energy(const Change& change)
     std::vector<index_type> target_indices;
     auto to_index = [this](const auto& particle) { return indexOf(particle); };
     target_indices =
-        particles | ranges::cpp20::views::transform(to_index) | ranges::to<std::vector>;
+        particles | std::views::transform(to_index) | ranges::to<std::vector>;
 
     const auto neighbours = sasa->calcNeighbourData(spc, target_indices);
     sasa->updateSASA(neighbours, target_indices);
 
     const auto& new_areas = sasa->getAreas();
-    ranges::cpp20::for_each(target_indices, [this, &new_areas](const auto index) {
+    std::ranges::for_each(target_indices, [this, &new_areas](const auto index) {
         areas.at(index) = new_areas.at(index);
     });
 
@@ -1650,7 +1647,7 @@ double SASAEnergyReference::energy(const Change& change)
         energy += areas.at(indexOf(particle)) *
                   (particle.traits().tension + cosolute_molarity * particle.traits().tfe);
     };
-    ranges::cpp20::for_each(particles, accumulate_energy);
+    std::ranges::for_each(particles, accumulate_energy);
     return energy;
 }
 
@@ -1700,14 +1697,14 @@ void SASAEnergy::updateChangedIndices(const Change& change)
         };
 
         if (group_change.relative_atom_indices.empty()) {
-            const auto indices = ranges::cpp20::views::iota(offset, group.size() + offset);
-            ranges::cpp20::for_each(indices, insert_changed);
+            const auto indices = std::views::iota(offset, group.size() + offset);
+            std::ranges::for_each(indices, insert_changed);
         }
         else {
             const auto indices =
                 group_change.relative_atom_indices |
-                ranges::cpp20::views::transform([offset](auto i) { return offset + i; });
-            ranges::cpp20::for_each(indices, insert_changed);
+                std::views::transform([offset](auto i) { return offset + i; });
+            std::ranges::for_each(indices, insert_changed);
         }
     }
     changed_indices.assign(target_indices.begin(), target_indices.end());
@@ -1743,7 +1740,7 @@ double SASAEnergy::energy(const Change& change)
     if (change.everything) { //! all the active particles will be used for SASA calculation
         auto to_index = [this](const auto& particle) { return indexOf(particle); };
         changed_indices =
-            particles | ranges::cpp20::views::transform(to_index) | ranges::to<std::vector>;
+            particles | std::views::transform(to_index) | ranges::to<std::vector>;
     }
     else {
         updateChangedIndices(change);
@@ -1765,7 +1762,7 @@ double SASAEnergy::energy(const Change& change)
         energy += areas.at(indexOf(particle)) *
                   (particle.traits().tension + cosolute_molarity * particle.traits().tfe);
     };
-    ranges::cpp20::for_each(particles, accumulate_energy);
+    std::ranges::for_each(particles, accumulate_energy);
     return energy;
 }
 
@@ -1780,10 +1777,10 @@ void SASAEnergy::sync(EnergyTerm* energybase_ptr, const Change& change)
 
         if (state == MonteCarloState::TRIAL) { //! changed_indices get updated only in TRIAL state
                                                //! for speedup
-            ranges::for_each(this->changed_indices, sync_data);
+            std::ranges::for_each(this->changed_indices, sync_data);
         }
         else {
-            ranges::for_each(other->changed_indices, sync_data);
+            std::ranges::for_each(other->changed_indices, sync_data);
         }
 
         if (sasa->needs_syncing) {
@@ -2092,8 +2089,8 @@ double CustomGroupGroup::energy([[maybe_unused]] const Change& change)
     };
 
     // all indices matching either molid1 or molid2
-    auto indices = spc.groups | ranges::cpp20::views::filter(match_groups) |
-                   ranges::cpp20::views::transform(
+    auto indices = spc.groups | std::views::filter(match_groups) |
+                   std::views::transform(
                        [&](const auto& group) { return spc.getGroupIndex(group); }) |
                    ranges::to_vector;
 

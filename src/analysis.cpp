@@ -385,7 +385,7 @@ void SystemEnergy::createOutputStream()
         *output_stream << "#";
     }
     *output_stream << fmt::format("{:>9}{}{:12}", "step", separator, "total");
-    ranges::for_each(hamiltonian, [&](auto& energy) {
+    std::ranges::for_each(hamiltonian, [&](auto& energy) {
         *output_stream << fmt::format("{}{:12}", separator, energy->name);
     });
     *output_stream << "\n";
@@ -405,7 +405,7 @@ std::vector<double> SystemEnergy::calculateEnergies() const
 {
     Change change;
     change.everything = true; // trigger full energy calculation
-    return hamiltonian | ranges::views::transform([&](auto& i) { return i->energy(change); }) |
+    return hamiltonian | std::views::transform([&](auto& i) { return i->energy(change); }) |
            ranges::to_vector;
 }
 
@@ -540,7 +540,7 @@ GroupMatrixAnalysis::GroupMatrixAnalysis(const json& j, const Space& spc,
                                          Energy::Hamiltonian& hamiltonian)
     : PairMatrixAnalysis(j, spc)
 {
-    namespace rv = ranges::cpp20::views;
+    namespace rv = std::views;
     // finds the molecule ids and store their indices
     auto molids = Faunus::parseMolecules(j.at("molecules"));
     auto is_selected = [&](const auto& group) {
@@ -563,7 +563,7 @@ void GroupMatrixAnalysis::setPairMatrix()
 {
     auto is_active = [&](auto index) { return !spc.groups.at(index).empty(); };
     const auto indices =
-        group_indices | ranges::cpp20::views::filter(is_active) | ranges::to_vector;
+        group_indices | std::views::filter(is_active) | ranges::to_vector;
 
     // zero matrix, then fill it
     pair_matrix.setZero();
@@ -1090,7 +1090,7 @@ AtomicDisplacement::AtomicDisplacement(const json& j, const Space& spc, std::str
     molid = molecule_data.id();
 
     auto positions = getPositions();
-    const auto num_positions = ranges::cpp20::distance(positions.begin(), positions.end());
+    const auto num_positions = std::ranges::distance(positions.begin(), positions.end());
     reference_positions = positions | ranges::to_vector;
     cell_indices.resize(num_positions, {0, 0, 0});
     mean_squared_displacement.resize(num_positions);
@@ -1191,7 +1191,7 @@ void AtomicDisplacement::_to_disk()
 PointVector AtomicDisplacement::getPositions() const
 {
     auto active_and_inactive = [&](const Group& group) {
-        return ranges::make_subrange(group.begin(), group.trueend());
+        return std::ranges::subrange(group.begin(), group.trueend());
     };
     namespace rv = ranges::cpp20::views;
     return spc.findMolecules(molid, Space::Selection::ALL) | rv::transform(active_and_inactive) |
@@ -1211,7 +1211,7 @@ MassCenterDisplacement::MassCenterDisplacement(const json& j, const Space& spc,
 
 PointVector MassCenterDisplacement::getPositions() const
 {
-    namespace rv = ranges::cpp20::views;
+    namespace rv = std::views;
     return spc.findMolecules(molid, Space::Selection::ACTIVE) | rv::transform(&Group::mass_center) |
            ranges::to<PointVector>;
 }
@@ -1227,7 +1227,7 @@ void WidomInsertion::selectGhostGroup()
 {
     change.clear();
     auto inactive_groups = spc.findMolecules(molid, Space::Selection::INACTIVE);
-    if (!ranges::cpp20::empty(inactive_groups)) {
+    if (!std::ranges::empty(inactive_groups)) {
         const auto& group = *inactive_groups.begin(); // select first group
         if (group.empty() && group.capacity() > 0) {
             // must be inactive and have a non-zero capacity
@@ -1384,7 +1384,7 @@ void AtomDensity::_sample()
         const auto& atomic_ids = reaction.participatingAtomsAndMolecules().first;
         unique_reactive_atoms.insert(atomic_ids.begin(), atomic_ids.end());
     }
-    ranges::cpp20::for_each(unique_reactive_atoms, [&](auto id) {
+    std::ranges::for_each(unique_reactive_atoms, [&](auto id) {
         const auto count = spc.countAtoms(id);
         atomswap_probability_density[id](count)++;
     });
@@ -1395,20 +1395,22 @@ void AtomDensity::_sample()
  */
 std::map<Density::id_type, int> AtomDensity::count() const
 {
-    namespace rv = ranges::cpp20::views;
+    using ranges::cpp20::views::filter;
+    using ranges::cpp20::views::join;
+    using ranges::cpp20::views::transform;
 
     // All ids incl. inactive are counted; std::vector ensures constant lookup (index = id)
     std::vector<int> atom_count(names.size(), 0);
 
     // Count number of active atoms in atomic groups
     auto particle_ids_in_atomic_groups =
-        spc.groups | rv::filter(&Group::isAtomic) | rv::join | rv::transform(&Particle::id);
-    ranges::cpp20::for_each(particle_ids_in_atomic_groups, [&](auto id) { atom_count.at(id)++; });
+        spc.groups | filter(&Group::isAtomic) | join | transform(&Particle::id);
+    std::ranges::for_each(particle_ids_in_atomic_groups, [&](auto id) { atom_count.at(id)++; });
 
     // Copy vector --> map
     id_type id = 0U;
     std::map<id_type, int> map;
-    ranges::cpp20::for_each(atom_count,
+    std::ranges::for_each(atom_count,
                             [&id, &map](auto count) { map.emplace_hint(map.end(), id++, count); });
     return map;
 }
@@ -1442,20 +1444,21 @@ void AtomDensity::_to_disk()
  */
 std::map<Density::id_type, int> MoleculeDensity::count() const
 {
-    using namespace ranges::cpp20;
+    using std::views::transform;
+    using std::views::filter;
     std::map<id_type, int> molecular_group_count;
 
     // ensure that also inactive groups are registered (as zero)
-    for_each(Faunus::molecules | views::filter(&MoleculeData::isMolecular),
+    std::ranges::for_each(Faunus::molecules | filter(&MoleculeData::isMolecular),
              [&](auto& moldata) { molecular_group_count[moldata.id()] = 0; });
 
     auto non_empty_molecular = [](const Group& group) {
         return group.isMolecular() && !group.empty();
     };
     auto molecular_group_ids =
-        spc.groups | views::filter(non_empty_molecular) | views::transform(&Group::id);
+        spc.groups | filter(non_empty_molecular) | transform(&Group::id);
 
-    for_each(molecular_group_ids, [&](auto id) { molecular_group_count[id]++; });
+    std::ranges::for_each(molecular_group_ids, [&](auto id) { molecular_group_count[id]++; });
     return molecular_group_count;
 }
 
@@ -1506,7 +1509,7 @@ void SanityCheck::checkGroupsCoverParticles()
 void SanityCheck::checkWithinContainer(const Space::GroupType& group)
 {
     bool outside_simulation_cell = false;
-    auto outside_particles = group | ranges::cpp20::views::filter([&](const Particle& particle) {
+    auto outside_particles = group | std::views::filter([&](const Particle& particle) {
                                  return spc.geometry.collision(particle.pos);
                              });
 
@@ -1703,15 +1706,19 @@ XTCtraj::XTCtraj(const Space& spc, const std::string& filename,
                  const std::vector<std::string>& molecule_names)
     : Analysis(spc, "xtcfile")
 {
-    namespace rv = ranges::cpp20::views;
+    using ranges::cpp20::views::filter;
+    using ranges::cpp20::views::join;
+    using ranges::cpp20::views::transform;
+    using ranges::views::cache1;
+
     writer = std::make_unique<XTCWriter>(filename);
     if (!molecule_names.empty()) {
         group_ids = Faunus::names2ids(Faunus::molecules, molecule_names); // molecule types to save
         group_indices =
             group_ids |
-            rv::transform([&](auto id) { return spc.findMolecules(id, Space::Selection::ALL); }) |
-            ranges::views::cache1 | rv::join |
-            rv::transform([&](const Group& group) { return spc.getGroupIndex(group); }) |
+            transform([&](auto id) { return spc.findMolecules(id, Space::Selection::ALL); }) |
+            cache1 | join |
+            transform([&](const Group& group) { return spc.getGroupIndex(group); }) |
             ranges::to_vector;
         if (group_indices.empty()) {
             throw ConfigurationError("xtc selection is empty - nothing to sample");
@@ -1732,7 +1739,7 @@ void XTCtraj::_to_json(json& j) const
     if (!group_ids.empty()) {
         j["molecules"] =
             group_ids |
-            ranges::cpp20::views::transform([](auto id) { return Faunus::molecules.at(id).name; }) |
+            std::views::transform([](auto id) { return Faunus::molecules.at(id).name; }) |
             ranges::to_vector;
     }
 }
@@ -1744,7 +1751,7 @@ void XTCtraj::_sample()
 {
     namespace rv = ranges::cpp20::views;
     if (group_ids.empty()) {
-        auto positions = spc.particles | rv::transform(&Particle::pos);
+        auto positions = spc.particles | std::views::transform(&Particle::pos);
         writer->writeNext(spc.geometry.getLength(), positions.begin(), positions.end());
     }
     else {
@@ -1895,7 +1902,7 @@ void InertiaTensor::_to_json(json& j) const
 std::pair<Point, Point> InertiaTensor::compute() const
 {
     const auto& group = spc.groups.at(group_index);
-    auto subgroup = ranges::make_subrange(group.begin() + particle_range.at(0),
+    auto subgroup = std::ranges::subrange(group.begin() + particle_range.at(0),
                                           group.begin() + particle_range.at(1) + 1);
 
     auto I = Geometry::inertia(subgroup.begin(), subgroup.end(), group.mass_center,
@@ -2323,11 +2330,11 @@ void AtomsInMoleculePolicy::sample(const Space& spc, SASAAnalysis& analysis)
 {
 
     auto molecules = spc.findMolecules(molecule_id);
-    ranges::for_each(molecules, [&](const auto& molecule) {
+    std::ranges::for_each(molecules, [&](const auto& molecule) {
         auto is_selected = [&](const Particle& particle) {
             return selected_indices.count(molecule.getParticleIndex(particle)) > 0;
         };
-        auto selected_atoms = molecule | ranges::cpp20::views::filter(is_selected);
+        auto selected_atoms = molecule | std::views::filter(is_selected);
         sampleTotalSASA(selected_atoms.begin(), selected_atoms.end(), analysis);
     });
 }
@@ -2396,7 +2403,7 @@ void AtomProfile::_sample()
     }
 
     auto selected_particles =
-        spc.activeParticles() | ranges::cpp20::views::filter([&](const Particle& particle) {
+        spc.activeParticles() | std::views::filter([&](const Particle& particle) {
             return atom_id_selection.count(particle.id) > 0;
         });
 
@@ -2485,7 +2492,7 @@ void SlicedDensity::_sample()
     }
 
     auto filtered_particles =
-        spc.activeParticles() | ranges::cpp20::views::filter([&](const auto& particle) {
+        spc.activeParticles() | std::views::filter([&](const auto& particle) {
             return std::find(atom_ids.begin(), atom_ids.end(), particle.id) != atom_ids.end();
         });
 
@@ -2553,29 +2560,30 @@ std::vector<std::string> ChargeFluctuations::getPredominantParticleNames() const
         return Faunus::atoms[atomid].name;
     }; // in a histogram, find the atom name with most counts
 
-    auto atom_names = atom_histograms | ranges::cpp20::views::transform(most_frequent_name);
-    return std::vector<std::string>(ranges::cpp20::begin(atom_names),
-                                    ranges::cpp20::end(atom_names));
+    auto atom_names = atom_histograms | std::views::transform(most_frequent_name);
+    return std::vector<std::string>(std::ranges::begin(atom_names),
+                                    std::ranges::end(atom_names));
 }
 
 std::vector<double> ChargeFluctuations::getChargeStandardDeviation() const
 {
+    using namespace std::ranges;
     auto stdev =
-        atom_mean_charges | ranges::cpp20::views::transform([](auto& i) { return i.stdev(); });
-    return std::vector<double>(ranges::cpp20::begin(stdev), ranges::cpp20::end(stdev));
+        atom_mean_charges | views::transform([](auto& i) { return i.stdev(); });
+    return std::vector<double>(begin(stdev), end(stdev));
 }
 
 std::vector<double> ChargeFluctuations::getMeanCharges() const
 {
-    return std::vector<double>(ranges::cpp20::begin(atom_mean_charges),
-                               ranges::cpp20::end(atom_mean_charges));
+    return std::vector<double>(std::ranges::begin(atom_mean_charges),
+                               std::ranges::end(atom_mean_charges));
 }
 
 void ChargeFluctuations::_to_disk()
 {
     if (not filename.empty()) {
         auto molecules = spc.findMolecules(mol_iter->id(), Space::Selection::ALL);
-        if (not ranges::cpp20::empty(molecules)) {
+        if (not std::ranges::empty(molecules)) {
             const auto particles_with_avg_charges = averageChargeParticles(*molecules.begin());
             PQRWriter().save(MPI::prefix + filename, particles_with_avg_charges.begin(),
                              particles_with_avg_charges.end(), spc.geometry.getLength());
@@ -2667,7 +2675,8 @@ void ScatteringFunction::_sample()
     scatter_positions.clear();
     auto groups =
         molecule_ids | rv::transform([&](auto id) { return spc.findMolecules(id); }) | rv::join;
-    ranges::cpp20::for_each(groups, [&](auto& group) {
+
+    std::ranges::for_each(groups, [&](auto& group) {
         if (mass_center_scattering && group.isMolecular()) {
             scatter_positions.push_back(group.mass_center);
         }
@@ -2809,8 +2818,8 @@ void VirtualTranslate::_sample()
         return;
     }
     if (auto mollist = mutable_space.findMolecules(molid, Space::Selection::ACTIVE);
-        !ranges::cpp20::empty(mollist)) {
-        if (ranges::distance(mollist.begin(), mollist.end()) > 1) {
+        !std::ranges::empty(mollist)) {
+        if (std::ranges::distance(mollist.begin(), mollist.end()) > 1) {
             throw std::runtime_error("exactly ONE active molecule expected");
         }
         if (auto group_it = random.sample(mollist.begin(), mollist.end()); not group_it->empty()) {
@@ -3005,7 +3014,7 @@ void ElectricPotential::getTargets(const json& j)
             // load positions from chemical structure file
             auto particles = loadStructure(structure->get<std::string>(), false);
             positions =
-                particles | ranges::cpp20::views::transform(&Particle::pos) | ranges::to_vector;
+                particles | std::views::transform(&Particle::pos) | ranges::to_vector;
         }
         else if (structure->is_array()) {
             // list of positions
@@ -3050,7 +3059,7 @@ double ElectricPotential::calcPotentialOnTarget(const ElectricPotential::Target&
         return coulomb->getCoulombGalore().ion_potential(particle.charge, distance_to_target);
     };
     auto potentials =
-        spc.activeParticles() | ranges::cpp20::views::transform(potential_from_particle);
+        spc.activeParticles() | std::views::transform(potential_from_particle);
     return std::accumulate(potentials.begin(), potentials.end(), 0.0);
 }
 

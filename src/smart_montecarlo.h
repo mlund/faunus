@@ -2,7 +2,7 @@
 
 #include "regions.h"
 #include <optional>
-#include <range/v3/algorithm/count_if.hpp>
+#include <ranges>
 
 namespace Faunus::SmarterMonteCarlo {
 
@@ -93,8 +93,8 @@ template <ranges::cpp20::range Range> double RegionSampler::getNumberInside(Rang
     if (fixed_number_inside) {
         return fixed_number_inside.value();
     }
-    return static_cast<double>(
-        ranges::count_if(range, [&](const auto& i) { return region->inside(i); })); // expensive
+    return static_cast<double>(std::ranges::count_if(
+        range, [&](const auto& i) { return region->inside(i); })); // expensive
 }
 
 /**

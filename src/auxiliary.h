@@ -1,7 +1,7 @@
 #pragma once
 #include "average.h"
 #include <nlohmann/json.hpp>
-#include <range/v3/range/concepts.hpp>
+#include <ranges>
 #include <functional>
 #include <iterator>
 #include <fstream>
@@ -66,7 +66,7 @@ T for_each_unique_pair(Titer begin, Titer end, Tfunction f,
 }
 
 /** @brief Erase from `target` range all values found in `values` range */
-template <ranges::cpp20::range T> T erase_range(T target, const T& values)
+template <std::ranges::range T> T erase_range(T target, const T& values)
 {
     target.erase(std::remove_if(target.begin(), target.end(),
                                 [&](auto i) {
@@ -222,9 +222,9 @@ template <StringStreamable T> auto splitConvert(const std::string& words)
  * @param values Range (vector, set, ...) of values to convert
  * @return String with space sepatated values
  */
-template <ranges::cpp20::range Range>
+template <std::ranges::range Range>
 std::string joinToString(const Range& values)
-    requires StringStreamable<ranges::cpp20::range_value_t<Range>>
+    requires StringStreamable<std::ranges::range_value_t<Range>>
 {
     std::ostringstream o;
     if (!values.empty()) {

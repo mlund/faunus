@@ -21,8 +21,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 #pragma once
 #include <cmath>
 #include <concepts>
-#include <range/v3/view/iota.hpp>
-#include <range/v3/view/transform.hpp>
+#include <ranges>
 #include <doctest/doctest.h>
 
 namespace Faunus {
@@ -54,8 +53,8 @@ template <typename T> constexpr auto arange(const T start, const T stop, const T
     using int_type = typename std::conditional<std::is_integral_v<T>, T, int>::type;
     const auto length =
         static_cast<int_type>(std::ceil((stop - start) / static_cast<float_type>(step)));
-    return ranges::cpp20::views::iota(int_type(0), length) |
-           ranges::cpp20::views::transform(
+    return std::views::iota(int_type(0), length) |
+           std::views::transform(
                [start, step](auto i) -> T { return start + static_cast<T>(i) * step; });
 }
 
@@ -65,7 +64,7 @@ TEST_CASE("[Faunus] arange")
     {
         auto r = arange(4.0, 10.0, 1.0); // --> 4 5 6 7 8 9
         auto pos = r.begin();
-        CHECK_EQ(ranges::size(r), 6);
+        CHECK_EQ(std::ranges::size(r), 6);
         CHECK_EQ(*(pos++), doctest::Approx(4.0));
         CHECK_EQ(*(pos++), doctest::Approx(5.0));
         CHECK_EQ(*(pos++), doctest::Approx(6.0));
@@ -77,7 +76,7 @@ TEST_CASE("[Faunus] arange")
     {
         auto r = arange(4, 10, 1); // --> 4 5 6 7 8 9
         auto pos = r.begin();
-        CHECK_EQ(ranges::size(r), 6);
+        CHECK_EQ(std::ranges::size(r), 6);
         CHECK_EQ(*(pos++), 4);
         CHECK_EQ(*(pos++), 5);
         CHECK_EQ(*(pos++), 6);
@@ -89,7 +88,7 @@ TEST_CASE("[Faunus] arange")
     {
         auto r = arange(4.0, 20.0, 3.0); // --> 4 7 10 13 16 19
         auto pos = r.begin();
-        CHECK_EQ(ranges::size(r), 6);
+        CHECK_EQ(std::ranges::size(r), 6);
         CHECK_EQ(*(pos++), doctest::Approx(4.0));
         CHECK_EQ(*(pos++), doctest::Approx(7.0));
         CHECK_EQ(*(pos++), doctest::Approx(10.0));
@@ -101,7 +100,7 @@ TEST_CASE("[Faunus] arange")
     {
         auto r = arange(4, 20, 3); // --> 4 7 10 13 16 19
         auto pos = r.begin();
-        CHECK_EQ(ranges::size(r), 6);
+        CHECK_EQ(std::ranges::size(r), 6);
         CHECK_EQ(*(pos++), 4);
         CHECK_EQ(*(pos++), 7);
         CHECK_EQ(*(pos++), 10);
@@ -114,7 +113,7 @@ TEST_CASE("[Faunus] arange")
     {
         auto r = arange(-1.0, 1.0, 0.5); // --> -1 -0.5 0 0.5
         auto pos = r.begin();
-        CHECK_EQ(ranges::size(r), 4);
+        CHECK_EQ(std::ranges::size(r), 4);
         CHECK_EQ(*(pos++), doctest::Approx(-1.0));
         CHECK_EQ(*(pos++), doctest::Approx(-0.5));
         CHECK_EQ(*(pos++), doctest::Approx(0.0));

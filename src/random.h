@@ -1,5 +1,4 @@
 #pragma once
-#include <range/v3/range/concepts.hpp>
 #include <random>
 #include <vector>
 #include <cassert>
@@ -113,7 +112,10 @@ template <typename T> class WeightedDistribution
      */
     template <typename Iterator> void setWeight(Iterator begin, Iterator end)
     {
-        static_assert(std::is_convertible_v<ranges::cpp20::iter_value_t<Iterator>, double>);
+        // Disable assert fow now
+        // see
+        // https://stackoverflow.com/questions/74496713/how-to-get-the-type-of-the-values-in-a-c20-stdranges-range
+        // static_assert(std::is_convertible_v<std::ranges::range_value_t<Iterator>, double>);
         if (auto size = std::distance(begin, end); size == data.size()) {
             weights.resize(size);
             std::copy(begin, end, weights.begin());

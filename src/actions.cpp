@@ -4,7 +4,6 @@
 #include "io.h"
 #include "aux/arange.h"
 #include <progress_tracker.h>
-#include <ranges>
 #include <range/v3/view/concat.hpp>
 
 namespace Faunus {
@@ -50,7 +49,7 @@ AngularScan::AngularScan(const json& j, const Space& spc)
  */
 void AngularScan::Molecule::initialize(const Space::GroupVector& groups, int molecule_index)
 {
-    namespace rv = std::views;
+    namespace rv = ranges::cpp20::views;
     index = molecule_index;
     const auto& group = groups.at(index);
     if (group.isAtomic()) {
@@ -67,7 +66,7 @@ void AngularScan::Molecule::initialize(const Space::GroupVector& groups, int mol
 ParticleVector AngularScan::Molecule::getRotatedReference(const Space::GroupVector& groups,
                                                           const Eigen::Quaterniond& q)
 {
-    namespace rv = std::views;
+    namespace rv = ranges::cpp20::views;
     const auto& group = groups.at(index);
     auto particles = ParticleVector(group.begin(), group.end()); // copy particles from Space
     auto positions =
@@ -96,7 +95,7 @@ void AngularScan::report(const Group& group1, const Group& group2, const Eigen::
                 << fmt::format("{:8.4f} {:>10.3E}\n", group2.mass_center.z(), energy / 1.0_kJmol);
         if (trajectory) {
             auto positions = ranges::views::concat(group1, group2) |
-                             std::views::transform(&Particle::pos);
+                             ranges::cpp20::views::transform(&Particle::pos);
             trajectory->writeNext({500, 500, 500}, positions.begin(), positions.end());
         }
     }
@@ -128,7 +127,7 @@ void AngularScan::operator()(Space& spc, Energy::Hamiltonian& hamiltonian)
                     const auto q2 =
                         q_dihedral * q_body2; // simultaneous rotations (non-commutative)
                     auto particles2 = molecules.second.getRotatedReference(spc.groups, q2);
-                    std::ranges::for_each(particles2, translate);
+                    ranges::cpp20::for_each(particles2, translate);
                     auto group2 = Group(0, particles2.begin(), particles2.end());
                     group2.mass_center = {0.0, 0.0, z_pos};
                     report(group1, group2, q1, q2, *nonbonded);

@@ -1,5 +1,4 @@
 #include "mpicontroller.h"
-#include <range/v3/algorithm/copy.hpp>
 #include <algorithm>
 #include <iostream>
 
@@ -99,7 +98,7 @@ void ParticleBuffer::setFormat(ParticleBuffer::Format data_format)
     case Format::XYZ:
         packet_size = 3;
         from_particle = [&](auto& particle, auto& destination) {
-            ranges::cpp20::copy(particle.pos, destination);
+            std::ranges::copy(particle.pos, destination);
             std::advance(destination, 3);
         };
         to_particle = [&](auto& source, auto& particle) {
@@ -110,7 +109,7 @@ void ParticleBuffer::setFormat(ParticleBuffer::Format data_format)
     case Format::XYZQ:
         packet_size = 4;
         from_particle = [&](auto& particle, auto& destination) {
-            ranges::cpp20::copy(particle.pos, destination);
+            std::ranges::copy(particle.pos, destination);
             std::advance(destination, 3);
             *(destination++) = particle.charge;
         };
@@ -123,7 +122,7 @@ void ParticleBuffer::setFormat(ParticleBuffer::Format data_format)
     case Format::XYZQI:
         packet_size = 5;
         from_particle = [&](auto& particle, auto& destination) {
-            ranges::cpp20::copy(particle.pos, destination);
+            std::ranges::copy(particle.pos, destination);
             std::advance(destination, 3);
             *(destination++) = particle.charge;
             *(destination++) = static_cast<double>(particle.id);
@@ -144,8 +143,8 @@ void ParticleBuffer::copyToBuffer(const ParticleVector& particles)
 {
     buffer.resize(packet_size * particles.size());
     auto destination = buffer.begin(); // set *after* buffer resize
-    ranges::cpp20::for_each(particles,
-                            std::bind(from_particle, std::placeholders::_1, std::ref(destination)));
+    std::ranges::for_each(particles,
+                          std::bind(from_particle, std::placeholders::_1, std::ref(destination)));
     if (destination != buffer.end()) {
         throw std::runtime_error("buffer mismatch");
     }
@@ -157,8 +156,8 @@ void ParticleBuffer::copyFromBuffer(ParticleVector& particles)
         throw std::out_of_range("particles out of range");
     }
     auto source = buffer.begin();
-    ranges::cpp20::for_each(particles,
-                            std::bind(to_particle, std::ref(source), std::placeholders::_1));
+    std::ranges::for_each(particles,
+                          std::bind(to_particle, std::ref(source), std::placeholders::_1));
     assert(source == buffer.end());
 }
 

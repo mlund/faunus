@@ -3,8 +3,9 @@
 #include "geometry.h"
 #include "group.h"
 #include "molecule.h"
+#include <ranges>
 #include <range/v3/view/join.hpp>
-#include <range/v3/view/transform.hpp>
+#include <range/v3/view/filter.hpp>
 #include <range/v3/range/conversion.hpp>
 
 namespace Faunus {
@@ -60,7 +61,7 @@ struct Change
     //! List of moved groups (index)
     [[nodiscard]] inline auto touchedGroupIndex() const
     {
-        return ranges::cpp20::views::transform(groups, &GroupChange::group_index);
+        return std::views::transform(groups, &GroupChange::group_index);
     }
 
     //! List of changed atom index relative to first particle in system
@@ -203,7 +204,7 @@ class Space
         assert(size <= std::distance(destination, particles.end()));
 
         auto affected_groups =
-            groups | ranges::cpp20::views::filter([=](auto& group) {
+            groups | std::views::filter([=](auto& group) {
                 return (group.begin() < destination + size) && (group.end() > destination);
             }); // filtered group with affected groups only. Note we copy in org. `destination`
 
@@ -211,7 +212,7 @@ class Space
         std::for_each(begin, end,
                       [&](const auto& source) { copy_function(source, *destination++); });
 
-        std::for_each(affected_groups.begin(), affected_groups.end(), [&](Group& group) {
+        std::ranges::for_each(affected_groups, [&](Group& group) {
             group.updateMassCenter(geometry.getBoundaryFunc(), group.begin()->pos);
         });
     }
@@ -233,12 +234,12 @@ class Space
     //! Iterable range of all particle positions
     [[nodiscard]] auto positions() const
     {
-        return ranges::cpp20::views::transform(
-            particles, [](auto& particle) -> const Point& { return particle.pos; });
+        return std::views::transform(particles,
+                                     [](auto& particle) -> const Point& { return particle.pos; });
     }
 
     //! Mutable iterable range of all particle positions
-    auto positions() { return ranges::cpp20::views::transform(particles, &Particle::pos); }
+    auto positions() { return std::views::transform(particles, &Particle::pos); }
 
     static std::function<bool(const GroupType&)> getGroupFilter(MoleculeData::index_type molid,
                                                                 const Selection& selection)
@@ -324,7 +325,7 @@ class Space
             }
             return static_cast<index_type>(index);
         };
-        return particle_range | ranges::cpp20::views::transform(to_index) | ranges::to_vector;
+        return particle_range | std::views::transform(to_index) | ranges::to_vector;
     }
 
     /**
@@ -334,7 +335,7 @@ class Space
      */
     auto findAtoms(AtomData::index_type atomid)
     {
-        return activeParticles() | ranges::cpp20::views::filter([atomid](const Particle& particle) {
+        return activeParticles() | std::views::filter([atomid](const Particle& particle) {
                    return particle.id == atomid;
                });
     }
@@ -346,7 +347,7 @@ class Space
      */
     [[nodiscard]] auto findAtoms(AtomData::index_type atomid) const
     {
-        return activeParticles() | ranges::cpp20::views::filter([atomid](const Particle& particle) {
+        return activeParticles() | std::views::filter([atomid](const Particle& particle) {
                    return particle.id == atomid;
                });
     }

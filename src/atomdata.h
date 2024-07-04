@@ -1,9 +1,8 @@
 #pragma once
 #include "core.h"
 #include <optional>
-#include <range/v3/range/concepts.hpp>
-#include <range/v3/view/transform.hpp>
-#include <range/v3/algorithm/any_of.hpp>
+#include <ranges>
+#include <algorithm>
 #include <range/v3/range/conversion.hpp>
 
 namespace Faunus {
@@ -121,7 +120,7 @@ template <typename T>
 concept RequireNamedElements = requires(T db) {
     { db.begin() };
     { db.begin()->name } -> std::convertible_to<std::string>;
-    { std::is_integral_v<typename ranges::cpp20::range_value_t<T>::index_type> };
+    { std::is_integral_v<typename std::ranges::range_value_t<T>::index_type> };
 };
 
 /**
@@ -178,10 +177,10 @@ AtomData& findAtomByName(std::string_view name);
 template <RequireNamedElements T>
 auto names2ids(const T& database, const std::vector<std::string>& names)
 {
-    namespace rv = ranges::cpp20::views;
+    namespace rv = std::views;
 
     auto is_wildcard = [](auto& name) { return name == "*"; };
-    if (ranges::cpp20::any_of(names, is_wildcard)) { // return all id's from database
+    if (std::ranges::any_of(names, is_wildcard)) { // return all id's from database
         return database | rv::transform([](auto& i) { return i.id(); }) | ranges::to_vector;
     }
 

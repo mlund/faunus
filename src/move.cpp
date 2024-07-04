@@ -11,8 +11,9 @@
 #include <doctest/doctest.h>
 #include <algorithm>
 #include <ranges>
+#ifndef __cpp_lib_ranges_fold
 #include <range/v3/algorithm/fold_left.hpp>
-
+#endif
 namespace Faunus::move {
 
 Random Move::slump; // static instance of Random (shared for all moves)
@@ -575,7 +576,12 @@ std::pair<int, int> GibbsEnsembleHelper::currentNumParticles(const Space& spc) c
     auto to_num_molecules = [&](auto molid) {
         return spc.numMolecules<Group::Selectors::ACTIVE>(molid);
     };
-    const int n1 = ranges::fold_left(molids | rv::transform(to_num_molecules), 0, std::plus<>());
+#ifdef __cpp_lib_ranges_fold
+    using std::ranges::fold_left;
+#else
+    using ranges::fold_left;
+#endif
+    const int n1 = fold_left(molids | rv::transform(to_num_molecules), 0, std::plus<>());
     const int n2 = total_num_particles - n1;
     return {n1, n2};
 }

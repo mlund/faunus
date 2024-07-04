@@ -5,7 +5,6 @@
 #include <iterator>
 #include <spdlog/spdlog.h>
 #include <ranges>
-#include <range/v3/range/concepts.hpp>
 
 namespace Eigen {
 using Matrix3d = Matrix<double, 3, 3>;

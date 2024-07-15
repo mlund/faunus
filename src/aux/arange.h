@@ -21,8 +21,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 #pragma once
 #include <cmath>
 #include <concepts>
-#include <range/v3/view/iota.hpp>
-#include <range/v3/view/transform.hpp>
+#include <ranges>
 #include <doctest/doctest.h>
 
 namespace Faunus {
@@ -46,69 +45,79 @@ namespace Faunus {
  * @param step Spacing between values
  * @return Range of lazily generated values
  */
-template <typename T> constexpr auto arange(const T start, const T stop, const T step) {
-    static_assert(std::is_floating_point_v<T> || std::is_integral_v<T>, "floating point or integral type required");
+template <typename T> constexpr auto arange(const T start, const T stop, const T step)
+{
+    static_assert(std::is_floating_point_v<T> || std::is_integral_v<T>,
+                  "floating point or integral type required");
     using float_type = typename std::conditional<std::is_floating_point_v<T>, T, long double>::type;
     using int_type = typename std::conditional<std::is_integral_v<T>, T, int>::type;
-    const auto length = static_cast<int_type>(std::ceil((stop - start) / static_cast<float_type>(step)));
-    return ranges::cpp20::views::iota(int_type(0), length) |
-           ranges::cpp20::views::transform([start, step](auto i) -> T { return start + static_cast<T>(i) * step; });
+    const auto length =
+        static_cast<int_type>(std::ceil((stop - start) / static_cast<float_type>(step)));
+    return std::views::iota(int_type(0), length) |
+           std::views::transform(
+               [start, step](auto i) -> T { return start + static_cast<T>(i) * step; });
 }
 
-TEST_CASE("[Faunus] arange") {
-    SUBCASE("Step = 1 (float)") {
+TEST_CASE("[Faunus] arange")
+{
+    SUBCASE("Step = 1 (float)")
+    {
         auto r = arange(4.0, 10.0, 1.0); // --> 4 5 6 7 8 9
         auto pos = r.begin();
-        CHECK(ranges::size(r) == 6);
-        CHECK(*(pos++) == doctest::Approx(4.0));
-        CHECK(*(pos++) == doctest::Approx(5.0));
-        CHECK(*(pos++) == doctest::Approx(6.0));
-        CHECK(*(pos++) == doctest::Approx(7.0));
-        CHECK(*(pos++) == doctest::Approx(8.0));
-        CHECK(*(pos++) == doctest::Approx(9.0));
+        CHECK_EQ(std::ranges::size(r), 6);
+        CHECK_EQ(*(pos++), doctest::Approx(4.0));
+        CHECK_EQ(*(pos++), doctest::Approx(5.0));
+        CHECK_EQ(*(pos++), doctest::Approx(6.0));
+        CHECK_EQ(*(pos++), doctest::Approx(7.0));
+        CHECK_EQ(*(pos++), doctest::Approx(8.0));
+        CHECK_EQ(*(pos++), doctest::Approx(9.0));
     }
-    SUBCASE("Step = 1 (int)") {
+    SUBCASE("Step = 1 (int)")
+    {
         auto r = arange(4, 10, 1); // --> 4 5 6 7 8 9
         auto pos = r.begin();
-        CHECK(ranges::size(r) == 6);
-        CHECK(*(pos++) == 4);
-        CHECK(*(pos++) == 5);
-        CHECK(*(pos++) == 6);
-        CHECK(*(pos++) == 7);
-        CHECK(*(pos++) == 8);
-        CHECK(*(pos++) == 9);
+        CHECK_EQ(std::ranges::size(r), 6);
+        CHECK_EQ(*(pos++), 4);
+        CHECK_EQ(*(pos++), 5);
+        CHECK_EQ(*(pos++), 6);
+        CHECK_EQ(*(pos++), 7);
+        CHECK_EQ(*(pos++), 8);
+        CHECK_EQ(*(pos++), 9);
     }
-    SUBCASE("Step > 1 (float)") {
+    SUBCASE("Step > 1 (float)")
+    {
         auto r = arange(4.0, 20.0, 3.0); // --> 4 7 10 13 16 19
         auto pos = r.begin();
-        CHECK(ranges::size(r) == 6);
-        CHECK(*(pos++) == doctest::Approx(4.0));
-        CHECK(*(pos++) == doctest::Approx(7.0));
-        CHECK(*(pos++) == doctest::Approx(10.0));
-        CHECK(*(pos++) == doctest::Approx(13.0));
-        CHECK(*(pos++) == doctest::Approx(16.0));
-        CHECK(*(pos++) == doctest::Approx(19.0));
+        CHECK_EQ(std::ranges::size(r), 6);
+        CHECK_EQ(*(pos++), doctest::Approx(4.0));
+        CHECK_EQ(*(pos++), doctest::Approx(7.0));
+        CHECK_EQ(*(pos++), doctest::Approx(10.0));
+        CHECK_EQ(*(pos++), doctest::Approx(13.0));
+        CHECK_EQ(*(pos++), doctest::Approx(16.0));
+        CHECK_EQ(*(pos++), doctest::Approx(19.0));
     }
-    SUBCASE("Step > 1 (int)") {
+    SUBCASE("Step > 1 (int)")
+    {
         auto r = arange(4, 20, 3); // --> 4 7 10 13 16 19
         auto pos = r.begin();
-        CHECK(ranges::size(r) == 6);
-        CHECK(*(pos++) == 4);
-        CHECK(*(pos++) == 7);
-        CHECK(*(pos++) == 10);
-        CHECK(*(pos++) == 13);
-        CHECK(*(pos++) == 16);
-        CHECK(*(pos++) == 19);
+        CHECK_EQ(std::ranges::size(r), 6);
+        CHECK_EQ(*(pos++), 4);
+        CHECK_EQ(*(pos++), 7);
+        CHECK_EQ(*(pos++), 10);
+        CHECK_EQ(*(pos++), 13);
+        CHECK_EQ(*(pos++), 16);
+        CHECK_EQ(*(pos++), 19);
     }
 
-    SUBCASE("Step < 1") {
+    SUBCASE("Step < 1")
+    {
         auto r = arange(-1.0, 1.0, 0.5); // --> -1 -0.5 0 0.5
         auto pos = r.begin();
-        CHECK(ranges::size(r) == 4);
-        CHECK(*(pos++) == doctest::Approx(-1.0));
-        CHECK(*(pos++) == doctest::Approx(-0.5));
-        CHECK(*(pos++) == doctest::Approx(0.0));
-        CHECK(*(pos++) == doctest::Approx(0.5));
+        CHECK_EQ(std::ranges::size(r), 4);
+        CHECK_EQ(*(pos++), doctest::Approx(-1.0));
+        CHECK_EQ(*(pos++), doctest::Approx(-0.5));
+        CHECK_EQ(*(pos++), doctest::Approx(0.0));
+        CHECK_EQ(*(pos++), doctest::Approx(0.5));
     }
 }
 

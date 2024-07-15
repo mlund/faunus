@@ -27,7 +27,11 @@ copyright = '{}, Mikael Lund'.format(getCurrentYear())
 author = 'Mikael Lund'
 source_suffix = ['.rst', '.md']
 master_doc = 'index'
-extensions = ['recommonmark', 'sphinx_markdown_tables', 'sphinx.ext.autosectionlabel']
+extensions = [
+        'recommonmark',
+        'sphinx_markdown_tables',
+        'sphinx.ext.autosectionlabel',
+        'sphinx_rtd_theme']
+html_theme = "sphinx_rtd_theme"
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
-
 autosectionlabel_prefix_document = True

@@ -1067,6 +1067,16 @@ energy:
     - constrain: {type: molecule, index: 0, property: end2end, range: [0,200]}
 ~~~
 
+Instead of a range, the constraint can be in the form of a harmonic potential
+where `req` is the value of the reaction coordinate at the minimum and `k` is
+the force constant. If `harmonic` is given, the `range` is ignored.
+The following constrains one box side length to 100 angstroms:
+
+~~~ yaml
+energy:
+    - constrain: {type: system, property: Lx, harmonic: {req: 100.0, k: 500.0}}
+~~~
+
 Tip: placing `constrain` at the _top_ of the energy list is more efficient as the remaining
 energy terms are skipped should an infinite energy arise.
 

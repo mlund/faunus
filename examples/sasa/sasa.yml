@@ -1,0 +1,33 @@
+#!/usr/bin/env yason.py
+
+temperature: 298.15
+geometry: {type: sphere, radius: 100}
+mcloop: {macro: 1, micro: 1}
+
+atomlist:
+    - bead: {sigma: 20.0, mw: 1} # bead with r=10 Å
+
+moleculelist:
+    - mymolecule:
+        structure:
+          - bead: [0.0, 0.0, 0.0]
+          - bead: [5.0, 0.0, 0.0]
+
+insertmolecules:
+    - mymolecule: {N: 1}
+
+energy: []
+moves: []
+
+analysis:
+    - sasa:
+        file: sasa.dat
+        policy: molecular
+        molecule: mymolecule
+        radius: 2.0
+        nstep: 1
+    - voronoi:
+        file: voronoi_sasa.dat
+        radius: 2.0
+        nstep: 1
+

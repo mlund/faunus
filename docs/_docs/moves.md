@@ -77,11 +77,15 @@ Upon MC movement, the mean squared displacement will be tracked.
 `molecule`          |  Molecule name to operate on
 `dir=[1,1,1]`       |  Translational directions
 `energy_resolution` |  If set to a non-zero value (kT), an energy histogram will be generated.
+`dp=0`              |  Default translational displacement parameter (Å)
+`dprot=0`           |  Default rotational displacement parameter (radians)
 
 As `moltransrot` but instead of operating on the molecular mass center, this translates
-and rotates individual atoms in the group. The repeat is set to the number of atoms in the specified group and the
+and rotates individual atoms in the group.
+The repeat is set to the number of atoms in the specified group and the
 displacement parameters `dp` and `dprot` for the individual atoms are taken from
 the atom properties defined in the [topology](topology).
+If `dp` and `dprot` are not defined for an atom, the default values for the move are used.
 Atomic _rotation_ affects only anisotropic particles such as dipoles, spherocylinders, quadrupoles etc.
 
 An energy histogram of each participating species will be written to disk if the `energy_resolution`
@@ -389,6 +393,9 @@ where $d=3$ for `isotropic`, $d=2$ for `xy`, and $d=1$ for `z`.
 _Warning:_ Untested for cylinders, slits.
 
 ## Gibbs Ensemble (unstable)
+
+_Note: this is marked unstable or experimental, meaning that it is still being tested and
+may see significant changes over time._
 
 [Gibbs ensemble](https://dx.doi.org/10/cvzgw9)
 can be used to investigate phase transitions by _matter_ and _volume_ exchange between two cells.

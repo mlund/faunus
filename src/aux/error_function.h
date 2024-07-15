@@ -23,7 +23,8 @@ namespace Faunus {
  *
  * @warning Needs modification if x < 0
  */
-template <std::floating_point T> inline T erfc_x(T x) {
+template <std::floating_point T> inline T erfc_x(T x)
+{
     T t = 1.0 / (1.0 + 0.3275911 * x);
     const T a1 = 0.254829592;
     const T a2 = -0.284496736;
@@ -33,20 +34,24 @@ template <std::floating_point T> inline T erfc_x(T x) {
     return t * (a1 + t * (a2 + t * (a3 + t * (a4 + t * a5)))) * std::exp(-x * x);
 }
 
-TEST_CASE("[Faunus] erfc_x") {
+TEST_CASE("[Faunus] erfc_x")
+{
     double infty = std::numeric_limits<double>::infinity();
     using doctest::Approx;
-    CHECK(erfc_x(infty) == Approx(0));
-    CHECK(std::erfc(-infty) == Approx(2 - erfc_x(infty)));
-    CHECK(erfc_x(0.0) == Approx(1.0));
-    CHECK(2 - erfc_x(0.2) == Approx(std::erfc(-0.2)));
-    CHECK(erfc_x(0.2) == Approx(std::erfc(0.2)));
+    CHECK_EQ(erfc_x(infty), Approx(0));
+    CHECK_EQ(std::erfc(-infty), Approx(2 - erfc_x(infty)));
+    CHECK_EQ(erfc_x(0.0), Approx(1.0));
+    CHECK_EQ(2 - erfc_x(0.2), Approx(std::erfc(-0.2)));
+    CHECK_EQ(erfc_x(0.2), Approx(std::erfc(0.2)));
 }
 
 /**
  * @brief Approximate 1 - erfc_x
  * @param x Value for which erf should be calculated
  */
-template <typename T> T inline erf_x(T x) { return (1 - erfc_x(x)); }
+template <typename T> T inline erf_x(T x)
+{
+    return (1 - erfc_x(x));
+}
 
 } // namespace Faunus

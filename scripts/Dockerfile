@@ -12,7 +12,7 @@
 # - clone of mlund/chemistry-notebooks
 #
 ARG OWNER=jupyter
-ARG BASE_CONTAINER=jupyter/scipy-notebook:lab-3.6.1
+ARG BASE_CONTAINER=jupyter/scipy-notebook:lab-4.0.7
 FROM $BASE_CONTAINER
 
 LABEL maintainer="the faun"

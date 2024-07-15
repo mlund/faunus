@@ -1,0 +1,11 @@
+# Run this command to always ignore formatting commits in `git blame`
+#
+# ~~~
+# git config blame.ignoreRevsFile .git-blame-ignore-revs
+# ~~~
+#
+# See: https://www.stefanjudis.com/today-i-learned/how-to-exclude-commits-from-git-blame/
+
+# Apply clang-format (17-jun-2024)
+62b6a50d47f6687d8a2e39d562e04c7b3fab0411
+

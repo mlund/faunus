@@ -23,13 +23,15 @@ using Tgroup = typename Space::GroupType;
 using Thamiltonian = Energy::Hamiltonian;
 using Tmcsimulation = MetropolisMonteCarlo;
 
-template <class T> std::unique_ptr<T> from_dict(py::dict dict) {
+template <class T> std::unique_ptr<T> from_dict(py::dict dict)
+{
     auto ptr = std::make_unique<T>();
     *ptr = static_cast<T>(json(dict));
     return ptr;
 } // convert py::dict to T through Faunus::json
 
-PYBIND11_MODULE(pyfaunus, m) {
+PYBIND11_MODULE(pyfaunus, m)
+{
     using namespace pybind11::literals;
 
     // Random
@@ -51,7 +53,8 @@ PYBIND11_MODULE(pyfaunus, m) {
         .def("getVolume", &Geometry::GeometryBase::getVolume, "Get container volume", "dim"_a = 3)
         .def("setVolume", &Geometry::GeometryBase::setVolume, "Set container volume", "volume"_a,
              "method"_a = Geometry::VolumeMethod::ISOTROPIC)
-        .def("collision", &Geometry::GeometryBase::collision, "pos"_a, "Checks if point is inside container")
+        .def("collision", &Geometry::GeometryBase::collision, "pos"_a,
+             "Checks if point is inside container")
         .def("getLength", &Geometry::GeometryBase::getLength, "Get cuboid sidelengths")
         .def("vdist", &Geometry::GeometryBase::vdist, "Minimum vector distance, a-b", "a"_a, "b"_a)
         .def("randompos",
@@ -87,7 +90,8 @@ PYBIND11_MODULE(pyfaunus, m) {
             Faunus::Geometry::from_json(dict, *ptr);
             return ptr;
         }))
-        .def("sqdist", &Geometry::Chameleon::sqdist, "Squared minimum distance, |a-b|^2", "a"_a, "b"_a);
+        .def("sqdist", &Geometry::Chameleon::sqdist, "Squared minimum distance, |a-b|^2", "a"_a,
+             "b"_a);
 
     // Particle properties
     py::class_<Charge>(m, "Charge")
@@ -108,9 +112,10 @@ PYBIND11_MODULE(pyfaunus, m) {
 
     auto _pvec = py::bind_vector<ParticleVector>(m, "ParticleVector");
     _pvec
-        .def(
-            "positions",
-            [](ParticleVector& particles) { return asEigenMatrix(particles.begin(), particles.end(), &Particle::pos); })
+        .def("positions",
+             [](ParticleVector& particles) {
+                 return asEigenMatrix(particles.begin(), particles.end(), &Particle::pos);
+             })
         .def("charges",
              [](ParticleVector& particles) {
                  return asEigenVector(particles.begin(), particles.end(), &Particle::charge);
@@ -120,13 +125,15 @@ PYBIND11_MODULE(pyfaunus, m) {
 
     // Group
     py::class_<Tgroup>(m, "Group")
-        .def(py::init<MoleculeData::index_type, ParticleVector::iterator, ParticleVector::iterator>())
+        .def(py::init<MoleculeData::index_type, ParticleVector::iterator,
+                      ParticleVector::iterator>())
         .def_readwrite("groups", &Tgroup::id, "Molecule id")
         .def_readwrite("id", &Tgroup::id, "Molecule id")
         .def_readwrite("cm", &Tgroup::mass_center, "Center of mass")
         .def("__len__", [](Tgroup& self) { return self.size(); })
         .def(
-            "__iter__", [](Tgroup& v) { return py::make_iterator(v.begin(), v.end()); }, py::keep_alive<0, 1>())
+            "__iter__", [](Tgroup& v) { return py::make_iterator(v.begin(), v.end()); },
+            py::keep_alive<0, 1>())
         .def("isAtomic", &Tgroup::isAtomic)
         .def("isMolecular", &Tgroup::isMolecular)
         .def("traits", &Tgroup::traits)
@@ -161,12 +168,14 @@ PYBIND11_MODULE(pyfaunus, m) {
             "sigma", [](const AtomData& a) { return a.interaction.at("sigma"); },
             [](AtomData& a, double val) { a.interaction.at("sigma") = val; })
         .def_readwrite("name", &AtomData::name)
-        .def_readwrite("activity", &AtomData::activity, "Activity = chemical potential in log scale (mol/l)")
+        .def_readwrite("activity", &AtomData::activity,
+                       "Activity = chemical potential in log scale (mol/l)")
         .def("id", (const AtomData::index_type& (AtomData::*)() const) &
                        AtomData::id); // explicit signature due to overload in c++
 
     auto _atomdatavec = py::bind_vector<std::vector<AtomData>>(m, "AtomDataVector");
-    _atomdatavec.def("from_list", [](std::vector<AtomData>& a, py::list list) { Faunus::from_json(list, a); });
+    _atomdatavec.def("from_list",
+                     [](std::vector<AtomData>& a, py::list list) { Faunus::from_json(list, a); });
 
     m.attr("atoms") = &Faunus::atoms; // global instance
 
@@ -183,8 +192,8 @@ PYBIND11_MODULE(pyfaunus, m) {
         .def_readwrite("isotropic", &pairpotential::PairPotential::isotropic)
         .def_readwrite("selfEnergy", &pairpotential::PairPotential::selfEnergy)
         .def("force", &pairpotential::PairPotential::force)
-        .def("energy", [](pairpotential::PairPotential& pot, const Particle& a, const Particle& b, double r2,
-                          const Point& r) { return pot(a, b, r2, r); });
+        .def("energy", [](pairpotential::PairPotential& pot, const Particle& a, const Particle& b,
+                          double r2, const Point& r) { return pot(a, b, r2, r); });
 
     // Potentials::FunctorPotential
     py::class_<pairpotential::FunctorPotential, pairpotential::PairPotential>(m, "FunctorPotential")
@@ -226,7 +235,8 @@ PYBIND11_MODULE(pyfaunus, m) {
     // Hamiltonian
     py::class_<Thamiltonian>(m, "Hamiltonian")
         .def(py::init<Space&, const json&>())
-        .def(py::init([](Space& spc, py::list list) { return std::make_unique<Thamiltonian>(spc, list); }))
+        .def(py::init(
+            [](Space& spc, py::list list) { return std::make_unique<Thamiltonian>(spc, list); }))
         .def("init", &Thamiltonian::init)
         .def("energy", &Thamiltonian::energy);
 

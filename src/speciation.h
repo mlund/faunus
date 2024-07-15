@@ -8,7 +8,8 @@ namespace Faunus::Speciation {
  * Helper class to check if a reaction is possible, i.e.
  * that there's sufficient reactant and product capacity
  */
-class ReactionValidator {
+class ReactionValidator
+{
   private:
     const Space& spc;
     [[nodiscard]] bool canSwapAtoms(const ReactionData& reaction) const;
@@ -26,7 +27,8 @@ class ReactionValidator {
 /**
  * Helper base class for (de)activating groups in speciation move
  */
-class GroupDeActivator {
+class GroupDeActivator
+{
   public:
     using ChangeAndBias = std::pair<Change::GroupChange, double>; //!< Group change and bias energy
     using OptionalInt = std::optional<int>;
@@ -38,7 +40,8 @@ class GroupDeActivator {
 /**
  * Helper class for contracting and expanding atomic groups
  */
-class AtomicGroupDeActivator : public GroupDeActivator {
+class AtomicGroupDeActivator : public GroupDeActivator
+{
   private:
     Space& spc;     //!< Trial space
     Space& old_spc; //!< Old (accepted) space
@@ -62,13 +65,15 @@ class AtomicGroupDeActivator : public GroupDeActivator {
  * - Remove PBC before deactivation
  * - Bias is set to *positive* internal bond energy
  */
-class MolecularGroupDeActivator : public GroupDeActivator {
+class MolecularGroupDeActivator : public GroupDeActivator
+{
   private:
     Space& spc;
     Random& random;
     const bool apply_bond_bias; //!< Set to true to use internal bond energy as bias
     [[nodiscard]] double getBondEnergy(const Group& group) const;
-    virtual void setPositionAndOrientation(Group& group) const; //!< Applied to newly activated groups
+    virtual void
+    setPositionAndOrientation(Group& group) const; //!< Applied to newly activated groups
 
   public:
     MolecularGroupDeActivator(Space& spc, Random& random, bool apply_bond_bias);
@@ -79,14 +84,18 @@ class MolecularGroupDeActivator : public GroupDeActivator {
 /**
  * Helper class to keep track of acceptance in left or right direction
  */
-class ReactionDirectionRatio {
+class ReactionDirectionRatio
+{
   private:
     using reaction_iterator = decltype(Faunus::reactions)::iterator;
-    struct AcceptanceData {
+
+    struct AcceptanceData
+    {
         Average<double> right; //!< Acceptance ratio left -> right
         Average<double> left;  //!< Acceptance ratio right -> left
         void update(ReactionData::Direction direction, bool accept);
     };
+
     std::map<reaction_iterator, AcceptanceData> acceptance;
 
   public:
@@ -118,16 +127,19 @@ namespace Faunus::move {
  *
  * @todo Split atom-swap functionality to separate helper class
  */
-class SpeciationMove : public Move {
+class SpeciationMove : public Move
+{
   private:
     using reaction_iterator = decltype(Faunus::reactions)::iterator;
-    Random random_internal; //!< Private generator so as not to touch MoveBase::slump
-    reaction_iterator reaction;                                            //!< Randomly selected reaction
-    double bias_energy = 0.0;                                              //!< Group (de)activators may add bias
-    Speciation::ReactionValidator reaction_validator;                      //!< Helper to check if reaction is doable
-    Speciation::ReactionDirectionRatio direction_ratio;                    //!< Track acceptance in each direction
-    std::unique_ptr<Speciation::GroupDeActivator> molecular_group_bouncer; //!< (de)activator for molecular groups
-    std::unique_ptr<Speciation::GroupDeActivator> atomic_group_bouncer;    //!< (de)activator for atomic groups
+    Random random_internal;     //!< Private generator so as not to touch MoveBase::slump
+    reaction_iterator reaction; //!< Randomly selected reaction
+    double bias_energy = 0.0;   //!< Group (de)activators may add bias
+    Speciation::ReactionValidator reaction_validator;   //!< Helper to check if reaction is doable
+    Speciation::ReactionDirectionRatio direction_ratio; //!< Track acceptance in each direction
+    std::unique_ptr<Speciation::GroupDeActivator>
+        molecular_group_bouncer; //!< (de)activator for molecular groups
+    std::unique_ptr<Speciation::GroupDeActivator>
+        atomic_group_bouncer; //!< (de)activator for atomic groups
 
     std::map<MoleculeData::index_type, Average<double>>
         average_reservoir_size; //!< Average number of implicit molecules
@@ -138,7 +150,7 @@ class SpeciationMove : public Move {
     void _accept(Change& change) override;
     void _reject(Change& change) override;
 
-    void setRandomReactionAndDirection();                       //!< Set random reaction and direction
+    void setRandomReactionAndDirection();     //!< Set random reaction and direction
     void atomicSwap(Change& change);          //!< Swap atom type
     void deactivateReactants(Change& change); //!< Delete all reactants
     void activateProducts(Change& change);    //!< Insert all products
@@ -146,7 +158,8 @@ class SpeciationMove : public Move {
     void activateAtomicGroups(Change& change);
     void deactivateMolecularGroups(Change& change);
     void activateMolecularGroups(Change& change);
-    void updateGroupMassCenters(const Change& change) const; //!< Update affected molecular mass centers
+    void
+    updateGroupMassCenters(const Change& change) const; //!< Update affected molecular mass centers
     static void swapParticleProperties(Particle& particle, int new_atomid);
     SpeciationMove(Space& spc, Space& old_spc, std::string_view name, std::string_view cite);
 

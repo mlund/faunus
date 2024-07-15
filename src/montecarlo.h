@@ -14,7 +14,7 @@ class Hamiltonian;
 namespace move {
 class Move;
 class MoveCollection;
-} // namespace Move
+} // namespace move
 
 /**
  * @brief Class to handle Monte Carlo moves
@@ -32,7 +32,8 @@ class MoveCollection;
  * The class has too many responsibilities, particularly in setting up the
  * system.
  */
-class MetropolisMonteCarlo {
+class MetropolisMonteCarlo
+{
   public:
     /**
      * @brief Class to describe a system state
@@ -48,11 +49,13 @@ class MetropolisMonteCarlo {
      * After the move, the two states can be synchronized using the
      * `sync()` function.
      */
-    struct State {
-        std::unique_ptr<Space> spc;               //!< Simulation space (positions, geometry, molecules)
+    struct State
+    {
+        std::unique_ptr<Space> spc; //!< Simulation space (positions, geometry, molecules)
         std::unique_ptr<Energy::Hamiltonian> pot; //!< Hamiltonian for calc. potential energy
-        void sync(const State& other,
-                  const Change& change); //!< Sync with another state (the other state is not modified)
+        void
+        sync(const State& other,
+             const Change& change); //!< Sync with another state (the other state is not modified)
     };
 
   private:
@@ -68,22 +71,22 @@ class MetropolisMonteCarlo {
     void performMove(move::Move& move);           //!< Perform move using given move implementation
     double getEnergyChange(double new_energy, double old_energy) const;
     friend void to_json(json&, const MetropolisMonteCarlo&); //!< Write information to JSON object
-    unsigned int number_of_sweeps = 0;                       //!< Number of MC sweeps, e.g. calls to sweep()
+    unsigned int number_of_sweeps = 0; //!< Number of MC sweeps, e.g. calls to sweep()
 
   public:
     MetropolisMonteCarlo(const json& j);
-    Energy::Hamiltonian& getHamiltonian();                 //!< Get Hamiltonian of accepted (default) state
-    Space& getSpace();                                     //!< Access to space in accepted (default) state
-    Space& getTrialSpace();                                //!< Access to trial space
-    double relativeEnergyDrift();                          //!< Relative energy drift from initial configuration
-    void sweep();                                          //!< Perform all moves (stochastic and static)
-    void restore(const json& j);                           //!< Restores system from previously store json object
+    Energy::Hamiltonian& getHamiltonian(); //!< Get Hamiltonian of accepted (default) state
+    Space& getSpace();                     //!< Access to space in accepted (default) state
+    Space& getTrialSpace();                //!< Access to trial space
+    double relativeEnergyDrift();          //!< Relative energy drift from initial configuration
+    void sweep();                          //!< Perform all moves (stochastic and static)
+    void restore(const json& j);           //!< Restores system from previously store json object
     static bool metropolisCriterion(double energy_change); //!< Metropolis criterion
-    ~MetropolisMonteCarlo();                               //!< Required due to unique_ptr to incomplete type
+    ~MetropolisMonteCarlo(); //!< Required due to unique_ptr to incomplete type
 };
 
-void from_json(const json &, MetropolisMonteCarlo::State &); //!< Build state from json object
-void to_json(json &, const MetropolisMonteCarlo &);
+void from_json(const json&, MetropolisMonteCarlo::State&); //!< Build state from json object
+void to_json(json&, const MetropolisMonteCarlo&);
 
 /**
  * @brief Entropy change due to particle fluctuations
@@ -106,14 +109,17 @@ void to_json(json &, const MetropolisMonteCarlo &);
  * - [ ] Move to Energy namespace?
  * - [ ] Verify with volume fluctuations which would make `Energy::Isobaric` redundant
  */
-class TranslationalEntropy {
+class TranslationalEntropy
+{
   private:
     const Space& trial_spc;                        //!< Space after proposed MC move ("trial")
     const Space& spc;                              //!< Space before MC move ("default")
     double bias(int trial_count, int count) const; //!< Bias due to change in atom/molecule numbers
-    double atomSwapEnergy(const Change::GroupChange& group_change) const; //!< Contribution from atomic swap move
-    double atomChangeEnergy(int molid) const;     //!< Contribution from size-change of atomic group
-    double moleculeChangeEnergy(int molid) const; //!< Contribution frin change in number of molecular groups
+    double atomSwapEnergy(
+        const Change::GroupChange& group_change) const; //!< Contribution from atomic swap move
+    double atomChangeEnergy(int molid) const; //!< Contribution from size-change of atomic group
+    double moleculeChangeEnergy(
+        int molid) const; //!< Contribution frin change in number of molecular groups
 
   public:
     TranslationalEntropy(const Space& trial_space, const Space& space);

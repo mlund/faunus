@@ -30,67 +30,76 @@ class MoleculeData;
  * All inserters are function objects, expecting a geometry, particle vector,
  * and molecule data.
  */
-struct MoleculeInserter {
-    virtual ParticleVector operator()(const Geometry::GeometryBase &geo, MoleculeData &mol,
-                                      const ParticleVector &other_particles) = 0;
+struct MoleculeInserter
+{
+    virtual ParticleVector operator()(const Geometry::GeometryBase& geo, MoleculeData& mol,
+                                      const ParticleVector& other_particles) = 0;
     virtual void from_json(const json& j);
     virtual void to_json(json& j) const;
     virtual ~MoleculeInserter() = default;
 };
 
-void from_json(const json &j, MoleculeInserter &inserter);
-void to_json(json &j, const MoleculeInserter &inserter);
+void from_json(const json& j, MoleculeInserter& inserter);
+void to_json(json& j, const MoleculeInserter& inserter);
 
 /**
  * @brief Inserts molecules into random positions in the container
  */
-class RandomInserter : public MoleculeInserter {
+class RandomInserter : public MoleculeInserter
+{
   private:
-    void translateRotateAtomicGroup(const Geometry::GeometryBase& geo, Faunus::QuaternionRotate& rotator,
+    void translateRotateAtomicGroup(const Geometry::GeometryBase& geo,
+                                    Faunus::QuaternionRotate& rotator,
                                     ParticleVector& particles) const;
     void translateRotateMolecularGroup(const Geometry::GeometryBase& geo, QuaternionRotate& rotator,
                                        ParticleVector& particles) const;
 
   public:
-    Point dir = {1, 1, 1};       //!< Scalars for random mass center position. Default (1,1,1)
-    Point offset = {0, 0, 0};    //!< Added to random position. Default (0,0,0)
-    bool rotate = true;          //!< Set to true to randomly rotate molecule when inserted. Default: true
+    Point dir = {1, 1, 1};    //!< Scalars for random mass center position. Default (1,1,1)
+    Point offset = {0, 0, 0}; //!< Added to random position. Default (0,0,0)
+    bool rotate = true; //!< Set to true to randomly rotate molecule when inserted. Default: true
     bool keep_positions = false; //!< Set to true to keep original positions (default: false)
     bool allow_overlap = false;  //!< Set to true to skip container overlap check
     int max_trials = 20'000;     //!< Maximum number of container overlap checks
 
-    ParticleVector operator()(const Geometry::GeometryBase &geo, MoleculeData &molecule,
-                              const ParticleVector &ignored_other_particles = ParticleVector()) override;
-    void from_json(const json &j) override;
-    void to_json(json &j) const override;
+    ParticleVector
+    operator()(const Geometry::GeometryBase& geo, MoleculeData& molecule,
+               const ParticleVector& ignored_other_particles = ParticleVector()) override;
+    void from_json(const json& j) override;
+    void to_json(json& j) const override;
 };
 
 /**
  * Possible structure for molecular conformations
  */
-struct Conformation {
+struct Conformation
+{
     std::vector<Point> positions;
     std::vector<double> charges;
     bool empty() const;
-    void copyTo(ParticleVector &particles) const; //!< Copy conformation into particle vector
+    void copyTo(ParticleVector& particles) const; //!< Copy conformation into particle vector
 };
 
 /**
- * @brief Determines if two particles within a group are excluded from mutual nonbonded interactions.
+ * @brief Determines if two particles within a group are excluded from mutual nonbonded
+ * interactions.
  *
  * Simple and naïve implementation storing all possible pairs in a matrix.
  * @internal Currently not used. MoleculeData can use this class internally.
  */
-class ExclusionsSimple {
-    bool any_exclusions = false;     //!< true if at least one excluded interaction is present
-    int size;                        //!< number of particles within the group; matrix = size × size
-    using char_bool = unsigned char; //!< obs: std::vector<bool> uses packing with performance implications
-    std::shared_ptr<std::vector<char_bool>> excluded_pairs; //!< 1D exclusion matrix; shared ptr saves copying
+class ExclusionsSimple
+{
+    bool any_exclusions = false; //!< true if at least one excluded interaction is present
+    int size;                    //!< number of particles within the group; matrix = size × size
+    using char_bool =
+        unsigned char; //!< obs: std::vector<bool> uses packing with performance implications
+    std::shared_ptr<std::vector<char_bool>>
+        excluded_pairs; //!< 1D exclusion matrix; shared ptr saves copying
 
   public:
     using AtomPair = std::pair<int, int>;
     //! Creates and populates exclusions.
-    static ExclusionsSimple create(int atoms_cnt, const std::vector<std::pair<int, int>> &pairs);
+    static ExclusionsSimple create(int atoms_cnt, const std::vector<std::pair<int, int>>& pairs);
     explicit ExclusionsSimple(int size = 0);
     //! @param i, j indices of atoms within molecule with excluded nonbonded interaction
     void add(int i, int j);
@@ -98,11 +107,12 @@ class ExclusionsSimple {
     //! @param i, j indices of atoms within molecule with excluded nonbonded interaction
     bool isExcluded(int i, int j) const;
     bool empty() const; //!< true if no excluded interactions at all
-    friend void from_json(const json &j, ExclusionsSimple &exclusions);
-    friend void to_json(json &j, const ExclusionsSimple &exclusions);
+    friend void from_json(const json& j, ExclusionsSimple& exclusions);
+    friend void to_json(json& j, const ExclusionsSimple& exclusions);
 };
 
-inline bool ExclusionsSimple::isExcluded(int i, int j) const {
+inline bool ExclusionsSimple::isExcluded(int i, int j) const
+{
     if (i > j) {
         std::swap(i, j);
     }
@@ -110,29 +120,36 @@ inline bool ExclusionsSimple::isExcluded(int i, int j) const {
     return any_exclusions && static_cast<bool>((*excluded_pairs)[i * size + j]);
 }
 
-inline bool ExclusionsSimple::empty() const { return !any_exclusions; }
+inline bool ExclusionsSimple::empty() const
+{
+    return !any_exclusions;
+}
 
-void from_json(const json &j, ExclusionsSimple &exclusions);
-void to_json(json &j, const ExclusionsSimple &exclusions);
+void from_json(const json& j, ExclusionsSimple& exclusions);
+void to_json(json& j, const ExclusionsSimple& exclusions);
 
 /**
- * @brief Determines if two particles within a group are excluded from mutual nonbonded interactions.
+ * @brief Determines if two particles within a group are excluded from mutual nonbonded
+ * interactions.
  *
- * This is a memory optimized implementation especially for linear molecules. The matrix of excluded pairs
- * has dimensions of number of atoms × maximal distance between excluded neighbours (in terms of atom indices
- * within the molecule).
+ * This is a memory optimized implementation especially for linear molecules. The matrix of excluded
+ * pairs has dimensions of number of atoms × maximal distance between excluded neighbours (in terms
+ * of atom indices within the molecule).
  *
  * @internal MoleculeData uses this class internally.
  */
-class ExclusionsVicinity {
+class ExclusionsVicinity
+{
   public:
-    using char_bool = unsigned char; //!< obs: std::vector<bool> uses packing with performance implications
+    using char_bool =
+        unsigned char; //!< obs: std::vector<bool> uses packing with performance implications
     using AtomPair = std::pair<int, int>;
 
   private:
     int atoms_cnt = 0;         //!< count of atoms in the molecule; unmutable
     int max_bond_distance = 0; //!< max distance (difference) between indices of excluded particles
-    std::shared_ptr<std::vector<char_bool>> excluded_pairs; //!< 1D exclusion matrix; shared ptr saves copying
+    std::shared_ptr<std::vector<char_bool>>
+        excluded_pairs; //!< 1D exclusion matrix; shared ptr saves copying
 
     int toIndex(int i, int j) const;
     AtomPair fromIndex(int n) const;
@@ -152,14 +169,16 @@ class ExclusionsVicinity {
 
     //! @param i, j indices of atoms within molecule with excluded nonbonded interaction
     void add(int i, int j);
-    void add(const std::vector<std::pair<int, int>> &pairs);
+    void add(const std::vector<std::pair<int, int>>& pairs);
     bool isExcluded(int i,
-                    int j) const; //!< @param i, j indices of atoms within molecule with excluded nonbonded interaction
+                    int j)
+        const; //!< @param i, j indices of atoms within molecule with excluded nonbonded interaction
     bool empty() const; //!< true if no excluded interactions at all
-    friend void to_json(json &j, const ExclusionsVicinity &exclusions);
+    friend void to_json(json& j, const ExclusionsVicinity& exclusions);
 };
 
-inline bool ExclusionsVicinity::isExcluded(int i, int j) const {
+inline bool ExclusionsVicinity::isExcluded(int i, int j) const
+{
     if (i > j) {
         std::swap(i, j);
     }
@@ -167,23 +186,31 @@ inline bool ExclusionsVicinity::isExcluded(int i, int j) const {
     return (j - i <= max_bond_distance && static_cast<bool>((*excluded_pairs)[toIndex(i, j)]));
 }
 
-inline bool ExclusionsVicinity::empty() const { return max_bond_distance == 0; }
+inline bool ExclusionsVicinity::empty() const
+{
+    return max_bond_distance == 0;
+}
 
-inline int ExclusionsVicinity::toIndex(int i, int j) const { return i * max_bond_distance + (j - i - 1); }
+inline int ExclusionsVicinity::toIndex(int i, int j) const
+{
+    return i * max_bond_distance + (j - i - 1);
+}
 
-inline ExclusionsVicinity::AtomPair ExclusionsVicinity::fromIndex(const int n) const {
+inline ExclusionsVicinity::AtomPair ExclusionsVicinity::fromIndex(const int n) const
+{
     auto i = n / max_bond_distance;
     auto j = n % max_bond_distance + i + 1;
     return {i, j};
 }
 
 // void from_json(const json &j, ExclusionsVicinity &exclusions);  // not implemented
-void to_json(json &j, const ExclusionsVicinity &exclusions);
+void to_json(json& j, const ExclusionsVicinity& exclusions);
 
 /**
  * @brief General properties for molecules
  */
-class MoleculeData {
+class MoleculeData
+{
   public:
     using index_type = int;
 
@@ -203,11 +230,12 @@ class MoleculeData {
     void createMolecularConformations(const json& j); //!< Add conformations if appropriate
     void setConformationWeights(const json& j);       //!< Add weights for conformations
 
-    std::string name;            //!< Molecule name
-    bool atomic = false;         //!< True if atomic group (salt etc.)
-    bool compressible = false;   //!< True if compressible group (scales internally upon volume change)
-    bool rigid = false;          //!< True if particle should be considered as rigid
-    double activity = 0.0;       //!< Chemical activity (mol/l)
+    std::string name;    //!< Molecule name
+    bool atomic = false; //!< True if atomic group (salt etc.)
+    bool compressible =
+        false;             //!< True if compressible group (scales internally upon volume change)
+    bool rigid = false;    //!< True if particle should be considered as rigid
+    double activity = 0.0; //!< Chemical activity (mol/l)
 
     std::vector<AtomData::index_type> atoms; //!< Sequence of atoms in molecule (atom id's)
     BasePointerVector<pairpotential::BondData> bonds;
@@ -225,7 +253,8 @@ class MoleculeData {
 
     /** @brief Specify function to be used when inserting into space.
      *
-     * By default a random position and orientation is generator and overlap with container is avoided.
+     * By default a random position and orientation is generator and overlap with container is
+     * avoided.
      */
     void setInserter(std::shared_ptr<MoleculeInserter> ins);
 
@@ -242,23 +271,27 @@ class MoleculeData {
                                          const ParticleVector& otherparticles = ParticleVector());
 
     friend class MoleculeBuilder;
-    friend void to_json(json &j, const MoleculeData &a);
-    friend void from_json(const json &j, MoleculeData &a);
+    friend void to_json(json& j, const MoleculeData& a);
+    friend void from_json(const json& j, MoleculeData& a);
 }; // end of class
 
-inline bool MoleculeData::isPairExcluded(int i, int j) const { return exclusions.isExcluded(i, j); }
-void to_json(json &j, const MoleculeData &a);
-void from_json(const json &j, MoleculeData &a);
-void from_json(const json &j, std::vector<MoleculeData> &v);
+inline bool MoleculeData::isPairExcluded(int i, int j) const
+{
+    return exclusions.isExcluded(i, j);
+}
+
+void to_json(json& j, const MoleculeData& a);
+void from_json(const json& j, MoleculeData& a);
+void from_json(const json& j, std::vector<MoleculeData>& v);
 
 // global instance of molecule vector
 extern std::vector<MoleculeData> molecules;
 
-
 /**
  * @brief An exception to indicate an unknown molecule name in the input.
  */
-struct UnknownMoleculeError: public GenericError {
+struct UnknownMoleculeError : public GenericError
+{
     explicit UnknownMoleculeError(std::string_view molecule_name);
 };
 
@@ -280,31 +313,37 @@ std::vector<MoleculeData::index_type> parseMolecules(const json& j);
  *
  * The instance is disposable: The method from_json() may be called only once.
  */
-class MoleculeBuilder {
-    bool is_used = false; //!< from_json may be called only once
+class MoleculeBuilder
+{
+    bool is_used = false;      //!< from_json may be called only once
     std::string molecule_name; //!< human readable name of the molecule
     ParticleVector particles;  //!< vector of particles; it unpacks to atoms and conformations[0]
     decltype(MoleculeData::bonds) bonds;
     std::vector<std::pair<int, int>> exclusion_pairs;
+
   protected:
-    static bool isFasta(const json& j);     //!< the structure is read in FASTA format with harmonic bonds
-    void readCompoundValues(const json &j); //!< a director method calling the executive methods in the right order
-    void readAtomic(const json& j);         //!< reads "atoms" : ["Na", "Cl"]
-    void readParticles(const json& j);      //!< reads "structure" in any format; uses MoleculeStructureReader
-    void readBonds(const json& j);          //!< reads "bondlist"
-    void readFastaBonds(const json& j);     //!< makes up harmonic bonds for a FASTA sequence
-    void readExclusions(const json& j);     //!< reads "exclusionlist" and "excluded_neighbours"
+    static bool
+    isFasta(const json& j); //!< the structure is read in FASTA format with harmonic bonds
+    void readCompoundValues(
+        const json& j); //!< a director method calling the executive methods in the right order
+    void readAtomic(const json& j); //!< reads "atoms" : ["Na", "Cl"]
+    void
+    readParticles(const json& j); //!< reads "structure" in any format; uses MoleculeStructureReader
+    void readBonds(const json& j);      //!< reads "bondlist"
+    void readFastaBonds(const json& j); //!< makes up harmonic bonds for a FASTA sequence
+    void readExclusions(const json& j); //!< reads "exclusionlist" and "excluded_neighbours"
     static std::shared_ptr<MoleculeInserter> createInserter(const json& j);
 
   public:
     //! initialize MoleculeData from JSON; shall be called only once during the instance lifetime
-    void from_json(const json &j, MoleculeData &molecule);
+    void from_json(const json& j, MoleculeData& molecule);
 };
 
 /**
  * @brief Fills the particle vector from various sources, e.g., files or JSON array.
  */
-class MoleculeStructureReader {
+class MoleculeStructureReader
+{
     bool read_charges; //!< shall we also read charges when available, e.g., in PQR
   protected:
     //! reads array with atom types and positions
@@ -317,16 +356,17 @@ class MoleculeStructureReader {
     //! reads atom types, positions and optionally charges from a file
     void readFile(ParticleVector& particles, const std::string& filename) const;
     //! a director determining the executive method based on JSON content
-    void readJson(ParticleVector &particles, const json &j) const;
+    void readJson(ParticleVector& particles, const json& j) const;
 };
 
 /**
- * @brief Generate all possible atom pairs within a given bond distance. Only 1-2 bonds (e.g., harmonic or FENE)
- * are considered.
+ * @brief Generate all possible atom pairs within a given bond distance. Only 1-2 bonds (e.g.,
+ * harmonic or FENE) are considered.
  *
  * @internal Used by MoleculeBuilder only to generate exclusions from excluded neighbours count.
  */
-class NeighboursGenerator {
+class NeighboursGenerator
+{
     //! a path created from 1-2 bonds (e.g., harmonic or FENE) as an ordered list of atoms involved;
     //! atoms are addressed by intramolecular indices
   public:
@@ -336,7 +376,8 @@ class NeighboursGenerator {
     using BondVector = decltype(MoleculeData::bonds);
 
   private:
-    std::map<int, AtomList> bond_map; //!< atom → list of directly bonded atoms with a 1-2 bond; addressing by indices
+    std::map<int, AtomList>
+        bond_map; //!< atom → list of directly bonded atoms with a 1-2 bond; addressing by indices
     //! paths indexed by a path length (starting with a zero distance for a single atom)
     //! a path is a sequence (without loops) of atoms connected by a 1-2 bond,
     std::vector<std::set<AtomList>> paths;
@@ -346,13 +387,13 @@ class NeighboursGenerator {
 
   public:
     //! atom pairs addressed by intramolecular indices
-    NeighboursGenerator(const BondVector &bonds);
+    NeighboursGenerator(const BondVector& bonds);
     /**
      * Append all atom pairs within a given bond distance to the pair list.
      * @param pairs atom pair list
      * @param bond_distance maximal number of 1-2 bonds between atoms to consider
      */
-    void generatePairs(AtomPairList &pairs, int bond_distance);
+    void generatePairs(AtomPairList& pairs, int bond_distance);
 };
 
 /**
@@ -377,13 +418,19 @@ class NeighboursGenerator {
  * - [x] `reservoir_size` should ideally be associated with an implicit molecule
  * - [ ] `direction` should be a member of ReactionData due to possible data races
  */
-class ReactionData {
+class ReactionData
+{
   public:
     using StoichiometryMap = std::map<int, int>; //!< key = id; value = stoichiometic coeff.
     using AtomicAndMolecularPair = std::pair<const StoichiometryMap&, const StoichiometryMap&>;
-    using StoichiometryPair = StoichiometryMap::value_type; //!< first = id; second = stoichiometic coeff.
+    using StoichiometryPair =
+        StoichiometryMap::value_type; //!< first = id; second = stoichiometic coeff.
     using MapFilter = std::function<bool(const ReactionData::StoichiometryPair&)>;
-    enum class Direction : char { LEFT = 0, RIGHT = 1 };
+    enum class Direction : char
+    {
+        LEFT = 0,
+        RIGHT = 1
+    };
 
     const static MapFilter is_implicit_group;
     const static MapFilter not_implicit_group;
@@ -392,8 +439,8 @@ class ReactionData {
     const static MapFilter is_molecular_group;
 
   private:
-    friend void from_json(const json &, ReactionData &);
-    friend void to_json(json &, const ReactionData &);
+    friend void from_json(const json&, ReactionData&);
+    friend void to_json(json&, const ReactionData&);
 
     Direction direction = Direction::RIGHT;           //!< Direction of reaction
     std::vector<std::string> left_names, right_names; //!< Names of reactants and products
@@ -401,7 +448,7 @@ class ReactionData {
     StoichiometryMap right_molecules;                 //!< Initial products (molecules)
     StoichiometryMap left_atoms;                      //!< Initial reactants (atoms)
     StoichiometryMap right_atoms;                     //!< Initial products (atoms)
-    double lnK = 0.0;                                 //!< Effective, natural logarithm of molar eq. const (left->right)
+    double lnK = 0.0;            //!< Effective, natural logarithm of molar eq. const (left->right)
     double lnK_unmodified = 0.0; //!< Natural logarithm of molar eq. const. (unmodified as in input)
     std::string reaction_str;    //!< Name of reaction
 
@@ -411,21 +458,23 @@ class ReactionData {
      *
      * Note that molecules and atoms *cannot* have the same name
      */
-    static std::pair<decltype(Faunus::atoms)::const_iterator, decltype(Faunus::molecules)::const_iterator>
+    static std::pair<decltype(Faunus::atoms)::const_iterator,
+                     decltype(Faunus::molecules)::const_iterator>
     findAtomOrMolecule(const std::string& atom_or_molecule_name);
 
   public:
-    void setDirection(Direction);                 //!< Set directions of the process
-    void setRandomDirection(Random &random);      //!< Set random direction (left or right)
-    Direction getDirection() const;               //!< Get direction of the process
-    void reverseDirection();                      //!< Reverse direction of reaction
-    AtomicAndMolecularPair getProducts() const;   //!< Pair with atomic and molecular products
-    AtomicAndMolecularPair getReactants() const;  //!< Pair with atomic and molecular reactants
-    double freeEnergy() const;                    //!< Free energy of reaction in current direction (kT)
-    bool containsAtomicSwap() const;              //!< True if a swap move is detected, i.e. atom_a <-> atom_b
+    void setDirection(Direction);                //!< Set directions of the process
+    void setRandomDirection(Random& random);     //!< Set random direction (left or right)
+    Direction getDirection() const;              //!< Get direction of the process
+    void reverseDirection();                     //!< Reverse direction of reaction
+    AtomicAndMolecularPair getProducts() const;  //!< Pair with atomic and molecular products
+    AtomicAndMolecularPair getReactants() const; //!< Pair with atomic and molecular reactants
+    double freeEnergy() const;       //!< Free energy of reaction in current direction (kT)
+    bool containsAtomicSwap() const; //!< True if a swap move is detected, i.e. atom_a <-> atom_b
     const std::string& getReactionString() const; //!< Reaction string
 
-    std::pair<std::set<int>, std::set<int>> participatingAtomsAndMolecules() const; //!< Atom and molecule id's affected
+    std::pair<std::set<int>, std::set<int>>
+    participatingAtomsAndMolecules() const; //!< Atom and molecule id's affected
 
     bool only_neutral_molecules = false; //!< Only neutral molecules are involved in the reaction
 }; //!< End of class
@@ -436,10 +485,11 @@ class ReactionData {
  * Reactants and products are split by a `=` sign. All elements in the string
  * must be separated by a white-space.
  */
-std::pair<std::vector<std::string>, std::vector<std::string>> parseReactionString(const std::string& process_string);
+std::pair<std::vector<std::string>, std::vector<std::string>>
+parseReactionString(const std::string& process_string);
 
-void from_json(const json &, ReactionData &);
-void to_json(json &, const ReactionData &);
+void from_json(const json&, ReactionData&);
+void to_json(json&, const ReactionData&);
 
 extern std::vector<ReactionData> reactions; // global instance
 

@@ -9,9 +9,17 @@
 
 namespace Faunus {
 
-Group::Group(Group& other) : base(other.begin(), other.trueend()) { *this = operator=(other); }
+Group::Group(Group& other)
+    : base(other.begin(), other.trueend())
+{
+    *this = operator=(other);
+}
 
-Group::Group(const Group& other) : base(other.begin(), other.trueend()) { *this = operator=(other); }
+Group::Group(const Group& other)
+    : base(other.begin(), other.trueend())
+{
+    *this = operator=(other);
+}
 
 /**
  * @param molid Molecule id the group points to, i.e. a valid index in global `Faunus::molecules`.
@@ -19,7 +27,10 @@ Group::Group(const Group& other) : base(other.begin(), other.trueend()) { *this 
  * @param end Iterator to (beyond) end particle
  * @throw if molid is out of range w. respect to `Faunus::molecules`
  */
-Group::Group(MoleculeData::index_type molid, Group::iter begin, Group::iter end) : base(begin, end), id(molid) {
+Group::Group(MoleculeData::index_type molid, Group::iter begin, Group::iter end)
+    : base(begin, end)
+    , id(molid)
+{
     if (id >= Faunus::molecules.size()) {
         throw std::range_error("invalid molecule id");
     }
@@ -30,7 +41,8 @@ Group::Group(MoleculeData::index_type molid, Group::iter begin, Group::iter end)
  *
  * @throw if the capacities of the two groups differ
  */
-Group& Group::operator=(const Group& other) {
+Group& Group::operator=(const Group& other)
+{
     if (&other != this) {
         shallowCopy(other);
         if (other.begin() != begin()) {
@@ -46,7 +58,8 @@ Group& Group::operator=(const Group& other) {
  *
  * @throw if the capacities of the two groups differ
  */
-Group& Group::shallowCopy(const Group& other) {
+Group& Group::shallowCopy(const Group& other)
+{
     if (&other != this) {
         if (capacity() != other.capacity()) {
             throw std::runtime_error("Group::shallowCopy: capacity mismatch");
@@ -59,7 +72,8 @@ Group& Group::shallowCopy(const Group& other) {
     return *this;
 }
 
-bool Group::contains(const Particle& particle, bool include_inactive) const {
+bool Group::contains(const Particle& particle, bool include_inactive) const
+{
     const auto size = (include_inactive ? capacity() : this->size());
     if (size > 0) {
         auto index = std::addressof(particle) - std::addressof(*begin());
@@ -68,7 +82,8 @@ bool Group::contains(const Particle& particle, bool include_inactive) const {
     return false;
 }
 
-AtomData::index_type Group::getParticleIndex(const Particle& particle, bool include_inactive) const {
+AtomData::index_type Group::getParticleIndex(const Particle& particle, bool include_inactive) const
+{
     if (!empty()) {
         const auto index = std::addressof(particle) - std::addressof(*begin()); // std::ptrdiff_t
         const auto group_size = (include_inactive ? capacity() : size());
@@ -79,22 +94,27 @@ AtomData::index_type Group::getParticleIndex(const Particle& particle, bool incl
     throw std::out_of_range("invalid particle index or group is empty");
 }
 
-double Group::mass() const {
-    return std::accumulate(begin(), end(), 0.0, [](double sum, auto& particle) { return sum + particle.traits().mw; });
+double Group::mass() const
+{
+    return std::accumulate(begin(), end(), 0.0,
+                           [](double sum, auto& particle) { return sum + particle.traits().mw; });
 }
 
-[[maybe_unused]] void Group::wrap(Geometry::BoundaryFunction boundary) {
+[[maybe_unused]] void Group::wrap(Geometry::BoundaryFunction boundary)
+{
     boundary(mass_center);
     for (auto& particle : *this) {
         boundary(particle.pos);
     }
 }
 
-void Group::rotate(const Eigen::Quaterniond& quaternion, Geometry::BoundaryFunction boundary) {
+void Group::rotate(const Eigen::Quaterniond& quaternion, Geometry::BoundaryFunction boundary)
+{
     Geometry::rotate(begin(), end(), quaternion, boundary, -mass_center);
 }
 
-void Group::translate(const Point& displacement, Geometry::BoundaryFunction boundary) {
+void Group::translate(const Point& displacement, Geometry::BoundaryFunction boundary)
+{
     mass_center += displacement;
     boundary(mass_center);
     for (auto& particle : *this) {
@@ -113,9 +133,12 @@ void Group::translate(const Point& displacement, Geometry::BoundaryFunction boun
  * The translation is done by subtracting / adding `approximate_mass_center`.
  * Safely handles empty groups.
  */
-void Group::updateMassCenter(Geometry::BoundaryFunction boundary_function, const Point& approximate_mass_center) {
+void Group::updateMassCenter(Geometry::BoundaryFunction boundary_function,
+                             const Point& approximate_mass_center)
+{
     if (isMolecular() && !empty()) {
-        mass_center = Geometry::massCenter(begin(), end(), boundary_function, -approximate_mass_center);
+        mass_center =
+            Geometry::massCenter(begin(), end(), boundary_function, -approximate_mass_center);
     }
 }
 
@@ -125,7 +148,8 @@ void Group::updateMassCenter(Geometry::BoundaryFunction boundary_function, const
  * This will approximate the existing mass center by the middle particle which for PBC systems
  * is generally safer then using the old mass center.
  */
-void Group::updateMassCenter(Geometry::BoundaryFunction boundary_function) {
+void Group::updateMassCenter(Geometry::BoundaryFunction boundary_function)
+{
     if (empty()) {
         return;
     }
@@ -139,7 +163,8 @@ void Group::updateMassCenter(Geometry::BoundaryFunction boundary_function) {
  * @return reference to value at i'th element
  * @throw if out of interval `[0:capacity[`
  */
-Particle& Group::at(size_t index) {
+Particle& Group::at(size_t index)
+{
     if (index >= capacity()) {
         throw std::out_of_range("group index out of range");
     }
@@ -152,7 +177,8 @@ Particle& Group::at(size_t index) {
  * @return reference to value at i'th element
  * @throw if out of interval `[0:capacity[`
  */
-const Particle& Group::at(size_t index) const {
+const Particle& Group::at(size_t index) const
+{
     if (index >= capacity()) {
         throw std::out_of_range("group index out of range");
     }
@@ -169,21 +195,26 @@ const Particle& Group::at(size_t index) const {
  *
  * @return Optional reference to stored group mass center
  */
-std::optional<std::reference_wrapper<Point>> Group::massCenter() {
+std::optional<std::reference_wrapper<Point>> Group::massCenter()
+{
     if (isMolecular()) {
         return std::ref(mass_center);
     }
     return std::nullopt;
 }
 
-std::optional<std::reference_wrapper<const Point>> Group::massCenter() const {
+std::optional<std::reference_wrapper<const Point>> Group::massCenter() const
+{
     if (isMolecular()) {
         return std::cref(mass_center);
     }
     return std::nullopt;
 }
 
-bool Group::isFull() const { return size() == capacity(); }
+bool Group::isFull() const
+{
+    return size() == capacity();
+}
 
 /**
  * @param mask Bitmask based on enum `Group::Selectors`
@@ -198,7 +229,8 @@ bool Group::isFull() const { return size() == capacity(); }
 //    return [mask = mask](const Group &g) { return g.match<mask>(); };
 //}
 
-void to_json(json& j, const Group& group) {
+void to_json(json& j, const Group& group)
+{
     j = {{"id", group.id},
          {"cm", group.mass_center},
          {"atomic", group.isAtomic()},
@@ -212,7 +244,8 @@ void to_json(json& j, const Group& group) {
     }
 }
 
-void from_json(const json& j, Group& group) {
+void from_json(const json& j, Group& group)
+{
     group.resize(j.at("size").get<size_t>());
     group.trueend() = group.begin() + j.value("capacity", group.size());
     group.id = j.at("id").get<decltype(group.id)>();
@@ -224,7 +257,8 @@ using doctest::Approx;
 
 TEST_SUITE_BEGIN("Group");
 
-TEST_CASE("[Faunus] swap_to_back") {
+TEST_CASE("[Faunus] swap_to_back")
+{
     using VecInt = std::vector<int>;
     VecInt v = {1, 2, 3, 4};
 
@@ -236,7 +270,8 @@ TEST_CASE("[Faunus] swap_to_back") {
     CHECK_EQ(v, VecInt({1, 4, 3, 2}));
 }
 
-TEST_CASE("[Faunus] ElasticRange") {
+TEST_CASE("[Faunus] ElasticRange")
+{
     std::vector<int> v = {10, 20, 30, 40, 50, 60};
     ElasticRange<int> r(v.begin(), v.end());
     CHECK_EQ(r.size(), 6);
@@ -280,7 +315,8 @@ TEST_CASE("[Faunus] ElasticRange") {
     CHECK_EQ(*r.begin(), -7);
 }
 
-TEST_CASE("[Faunus] Group") {
+TEST_CASE("[Faunus] Group")
+{
     Random rand;
     std::vector<Particle> p(3);
     p.reserve(10);
@@ -292,7 +328,8 @@ TEST_CASE("[Faunus] Group") {
     }
     Group g(0, p.begin(), p.end());
 
-    SUBCASE("contains()") {
+    SUBCASE("contains()")
+    {
         CHECK(g.contains(p[0]));
         CHECK(g.contains(p[1]));
         CHECK(g.contains(p[2]));
@@ -305,7 +342,8 @@ TEST_CASE("[Faunus] Group") {
         CHECK_EQ(g.size(), 3);
     }
 
-    SUBCASE("getParticleIndex()") {
+    SUBCASE("getParticleIndex()")
+    {
         Group gg(0, p.begin(), p.end());
         CHECK_EQ(gg.getParticleIndex(p[0]), 0);
         CHECK_EQ(gg.getParticleIndex(p[1]), 1);
@@ -318,7 +356,8 @@ TEST_CASE("[Faunus] Group") {
         CHECK_THROWS(std::ignore = gg.getParticleIndex(p[0]));
     }
 
-    SUBCASE("getGroupFilter(): complete group") {
+    SUBCASE("getGroupFilter(): complete group")
+    {
         using T = Group;
         auto filter = getGroupFilter<T::Selectors::ACTIVE>();
         CHECK_EQ(filter(g), true);
@@ -374,7 +413,8 @@ TEST_CASE("[Faunus] Group") {
     CHECK_EQ(p[1].pos.y(), doctest::Approx(10));
     CHECK_EQ(p[1].pos.z(), doctest::Approx(12));
 
-    SUBCASE("operator[]") {
+    SUBCASE("operator[]")
+    {
         CHECK_EQ(p.begin(), g.begin());
         CHECK_EQ(p.end(), g.end());
 
@@ -391,7 +431,8 @@ TEST_CASE("[Faunus] Group") {
         CHECK_EQ(p[1].pos.z(), doctest::Approx(24));
     }
 
-    SUBCASE("deep copy and resizing") {
+    SUBCASE("deep copy and resizing")
+    {
         std::vector<Particle> p1(5), p2(5);
         p1.front().id = 1;
         p2.front().id = -1;
@@ -421,7 +462,8 @@ TEST_CASE("[Faunus] Group") {
 
         g1.id = 0;
 
-        SUBCASE("getGroupFilter(): incomplete group") {
+        SUBCASE("getGroupFilter(): incomplete group")
+        {
             CHECK(!Faunus::molecules.empty());
             using Tgroup = Group;
             auto filter = getGroupFilter<Tgroup::FULL>();
@@ -454,7 +496,8 @@ TEST_CASE("[Faunus] Group") {
         CHECK_EQ((*gvec1[0].begin()).id, (*gvec3[0].begin()).id);
     }
 
-    SUBCASE("cerial serialisation") {
+    SUBCASE("cerial serialisation")
+    {
         std::ostringstream out(std::stringstream::binary);
         { // serialize g2
             std::vector<Particle> p2(5);

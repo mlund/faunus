@@ -15,56 +15,98 @@ namespace Faunus {
  * done since tensors are rotated using the latter. Could these be rotated using
  * quaternions?
  */
-void ParticlePropertyBase::rotate(const Eigen::Quaterniond &, const Eigen::Matrix3d &) {}
-void Radius::to_json(json &j) const { j["r"] = radius; }
-void Radius::from_json(const json &j) { radius = j.value("r", 0.0); }
-void Charge::to_json(json &j) const { j["q"] = charge; }
-void Charge::from_json(const json &j) { charge = j.value("q", 0.0); }
-void Dipole::rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &) { mu = q * mu; }
+void ParticlePropertyBase::rotate(const Eigen::Quaterniond&, const Eigen::Matrix3d&) {}
 
-void Dipole::to_json(json &j) const {
+void Radius::to_json(json& j) const
+{
+    j["r"] = radius;
+}
+
+void Radius::from_json(const json& j)
+{
+    radius = j.value("r", 0.0);
+}
+
+void Charge::to_json(json& j) const
+{
+    j["q"] = charge;
+}
+
+void Charge::from_json(const json& j)
+{
+    charge = j.value("q", 0.0);
+}
+
+void Dipole::rotate(const Eigen::Quaterniond& q, const Eigen::Matrix3d&)
+{
+    mu = q * mu;
+}
+
+void Dipole::to_json(json& j) const
+{
     j["mu"] = mu;
     j["mulen"] = mulen;
 }
 
-void Dipole::from_json(const json &j) {
+void Dipole::from_json(const json& j)
+{
     mu = j.value("mu", Point::Zero().eval());
     mulen = j.value("mulen", 0.0);
 }
-bool Dipole::isDipolar() const {
+
+bool Dipole::isDipolar() const
+{
     return mulen > pc::epsilon_dbl;
 }
 
-void Polarizable::rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &m) {
+void Polarizable::rotate(const Eigen::Quaterniond& q, const Eigen::Matrix3d& m)
+{
     mui = q * mui;
     alpha.rotate(m);
 }
 
-void Polarizable::to_json(json &j) const {
+void Polarizable::to_json(json& j) const
+{
     j["alpha"] = alpha;
     j["mui"] = mui;
     j["muilen"] = muilen;
 }
 
-void Polarizable::from_json(const json &j) {
+void Polarizable::from_json(const json& j)
+{
     alpha = j.value("alpha", alpha);
     mui = j.value("mui", Point(1, 0, 0));
     muilen = j.value("mulen", muilen);
 }
-bool Polarizable::isPolarizable() const {
+
+bool Polarizable::isPolarizable() const
+{
     return alpha.cwiseAbs().sum() > pc::epsilon_dbl;
 }
 
-void Quadrupole::rotate(const Eigen::Quaterniond &, const Eigen::Matrix3d &m) { Q.rotate(m); }
+void Quadrupole::rotate(const Eigen::Quaterniond&, const Eigen::Matrix3d& m)
+{
+    Q.rotate(m);
+}
 
-void Quadrupole::to_json(json &j) const { j["Q"] = Q; }
+void Quadrupole::to_json(json& j) const
+{
+    j["Q"] = Q;
+}
 
-void Quadrupole::from_json(const json& j) { Q = j.value("Q", Tensor(Tensor::Zero()));}
-bool Quadrupole::isQuadrupolar() const {
+void Quadrupole::from_json(const json& j)
+{
+    Q = j.value("Q", Tensor(Tensor::Zero()));
+}
+
+bool Quadrupole::isQuadrupolar() const
+{
     return Q.cwiseAbs().sum() > pc::epsilon_dbl;
 }
 
-void Cigar::rotate(const Eigen::Quaterniond& quaternion, [[maybe_unused]] const Eigen::Matrix3d& rotation_matrix) {
+void Cigar::rotate(const Eigen::Quaterniond& quaternion,
+                   [[maybe_unused]] const Eigen::Matrix3d& rotation_matrix)
+{
     scdir = quaternion * scdir;
     patchdir = quaternion * patchdir;
     patchsides.at(0) = quaternion * patchsides.at(0);
@@ -73,15 +115,18 @@ void Cigar::rotate(const Eigen::Quaterniond& quaternion, [[maybe_unused]] const 
     // after many rotations...will require access to AtomData.
 }
 
-void Cigar::to_json(json& j) const {
+void Cigar::to_json(json& j) const
+{
     j["scdir"] = scdir;
     j["pdir"] = patchdir;
 }
 
-void Cigar::from_json(const json& j) {
+void Cigar::from_json(const json& j)
+{
     assert(j.contains("id"));
     const auto& psc = Faunus::atoms.at(j.at("id").get<int>()).sphero_cylinder;
-    setDirections(psc, j.value("scdir", Point(1.0, 0.0, 0.0)), j.value("pdir", Point(0.0, 1.0, 0.0)));
+    setDirections(psc, j.value("scdir", Point(1.0, 0.0, 0.0)),
+                  j.value("pdir", Point(0.0, 1.0, 0.0)));
 }
 
 /**
@@ -92,7 +137,9 @@ void Cigar::from_json(const json& j) {
  * of patch properties.
  * It shall be also after a lot of moves to remove accumulated errors
  */
-void Cigar::setDirections(const SpheroCylinderData& psc_data, const Point& new_direction, const Point &new_patch_direction) {
+void Cigar::setDirections(const SpheroCylinderData& psc_data, const Point& new_direction,
+                          const Point& new_patch_direction)
+{
     constexpr auto very_small_number = 1e-9;
     half_length = 0.5 * psc_data.length;
     if (half_length < very_small_number) {
@@ -103,7 +150,8 @@ void Cigar::setDirections(const SpheroCylinderData& psc_data, const Point& new_d
     pcanglsw = std::cos(0.5 * psc_data.patch_angle + psc_data.patch_angle_switch);
 
     scdir = scdir.squaredNorm() < very_small_number ? Point(1, 0, 0) : new_direction.normalized();
-    patchdir = patchdir.squaredNorm() < very_small_number ? Point(0, 1, 0) : new_patch_direction.normalized();
+    patchdir = patchdir.squaredNorm() < very_small_number ? Point(0, 1, 0)
+                                                          : new_patch_direction.normalized();
     if (fabs(patchdir.dot(scdir)) > very_small_number) { // must be perpendicular
         faunus_logger->trace("straigthening patch direction");
         patchdir = (patchdir - scdir * patchdir.dot(scdir)).normalized(); // perp. project
@@ -128,24 +176,43 @@ void Cigar::setDirections(const SpheroCylinderData& psc_data, const Point& new_d
         throw std::runtime_error("patch side vector has zero size");
     }
 }
-bool Cigar::isCylindrical() const {
+
+bool Cigar::isCylindrical() const
+{
     return half_length > pc::epsilon_dbl;
 }
 
-const AtomData &Particle::traits() const { return atoms[id]; }
+const AtomData& Particle::traits() const
+{
+    return atoms[id];
+}
 
 /**
  * @warning Performance is sub-optimal as conversion is done through a json object
  */
-Particle::Particle(const AtomData &atomdata) {*this = static_cast<json>(atomdata).front(); }
-Particle::Particle(const AtomData &atomdata, const Point &pos) : Particle(atomdata) { this->pos = pos; }
-Particle::Particle(const Particle &other) : id(other.id), charge(other.charge), pos(other.pos) {
+Particle::Particle(const AtomData& atomdata)
+{
+    *this = static_cast<json>(atomdata).front();
+}
+
+Particle::Particle(const AtomData& atomdata, const Point& pos)
+    : Particle(atomdata)
+{
+    this->pos = pos;
+}
+
+Particle::Particle(const Particle& other)
+    : id(other.id)
+    , charge(other.charge)
+    , pos(other.pos)
+{
     if (other.hasExtension()) {
         ext = std::make_unique<Particle::ParticleExtension>(other.getExt()); // deep copy
     }
 }
 
-Particle &Particle::operator=(const Particle &other) {
+Particle& Particle::operator=(const Particle& other)
+{
     if (&other != this) {
         charge = other.charge;
         pos = other.pos;
@@ -153,10 +220,13 @@ Particle &Particle::operator=(const Particle &other) {
         if (other.hasExtension()) {    // if particle has
             if (ext) {                 // extension, then
                 *ext = other.getExt(); // deep copy
-            } else {                   // else if *this is empty, create new based on p
-                ext = std::make_unique<Particle::ParticleExtension>(other.getExt()); // create and deep copy
             }
-        } else { // other doesn't have extended properties
+            else { // else if *this is empty, create new based on p
+                ext = std::make_unique<Particle::ParticleExtension>(
+                    other.getExt()); // create and deep copy
+            }
+        }
+        else { // other doesn't have extended properties
             ext = nullptr;
         }
     }
@@ -171,22 +241,28 @@ Particle &Particle::operator=(const Particle &other) {
  * This has effect only on anisotropic particles and does no
  * positional rotation, only internal rotation
  */
-void Particle::rotate(const Eigen::Quaterniond &quaternion, const Eigen::Matrix3d &rotation_matrix) {
+void Particle::rotate(const Eigen::Quaterniond& quaternion, const Eigen::Matrix3d& rotation_matrix)
+{
     if (hasExtension()) {
         ext->rotate(quaternion, rotation_matrix);
     }
 }
 
-bool Particle::hasExtension() const { return ext != nullptr; }
+bool Particle::hasExtension() const
+{
+    return ext != nullptr;
+}
 
-Particle::ParticleExtension& Particle::createExtension() {
+Particle::ParticleExtension& Particle::createExtension()
+{
     if (!ext) {
         ext = std::make_unique<ParticleExtension>();
     }
     return *ext;
 }
 
-void from_json(const json &j, Particle &particle) {
+void from_json(const json& j, Particle& particle)
+{
     assert(j.contains("id"));
     particle.id = j.at("id").get<int>();
     particle.pos = j.value("pos", Point::Zero().eval());
@@ -194,13 +270,15 @@ void from_json(const json &j, Particle &particle) {
     if (j.contains("psc") || j.contains("mu") || j.contains("Q") || j.contains("scdir")) {
         particle.ext = std::make_unique<Particle::ParticleExtension>(j);
         // delete extension if not in use:
-        if (!particle.ext->isCylindrical() && !particle.ext->isDipolar() && !particle.ext->isQuadrupolar() &&
-            !particle.ext->isQuadrupolar()) {
+        if (!particle.ext->isCylindrical() && !particle.ext->isDipolar() &&
+            !particle.ext->isQuadrupolar() && !particle.ext->isQuadrupolar()) {
             particle.ext = nullptr;
         }
     }
 }
-void to_json(json &j, const Particle &particle) {
+
+void to_json(json& j, const Particle& particle)
+{
     if (particle.hasExtension()) {
         to_json(j, particle.getExt());
     }
@@ -211,7 +289,8 @@ void to_json(json &j, const Particle &particle) {
 
 TEST_SUITE_BEGIN("Particle");
 
-TEST_CASE("[Faunus] Particle") {
+TEST_CASE("[Faunus] Particle")
+{
     using doctest::Approx;
 
     json j = R"({ "atomlist" : [
@@ -241,7 +320,8 @@ TEST_CASE("[Faunus] Particle") {
     p1.getExt().scdir = Point(-0.1, 0.3, 1.9).normalized();
     p1.getExt().patchdir = Point::Ones().normalized();
     p1.getExt().patchdir =
-        (p1.getExt().patchdir - p1.getExt().scdir * p1.getExt().patchdir.dot(p1.getExt().scdir)).normalized();
+        (p1.getExt().patchdir - p1.getExt().scdir * p1.getExt().patchdir.dot(p1.getExt().scdir))
+            .normalized();
     CHECK(p1.getExt().patchdir.dot(p1.getExt().scdir) < 1e-9); // must be perpendicular
 
     p1.getExt().Q = Tensor(1, 2, 3, 4, 5, 6);
@@ -258,7 +338,8 @@ TEST_CASE("[Faunus] Particle") {
     CHECK_EQ(p2.getExt().mulen, 2.8);
     CHECK_EQ(p2.getExt().Q, Tensor(1, 2, 3, 4, 5, 6));
 
-    SUBCASE("Cigar") {
+    SUBCASE("Cigar")
+    {
         const auto& cigar = p2.getExt();
         CHECK_EQ(cigar.scdir, Point(-0.1, 0.3, 1.9).normalized());
         CHECK_EQ(cigar.scdir.x(), Approx(-0.0519174));
@@ -279,7 +360,8 @@ TEST_CASE("[Faunus] Particle") {
         CHECK_EQ(p2.traits().sphero_cylinder.chiral_angle, 5.0 * 1.0_deg);
     }
 
-    SUBCASE("rotate") {
+    SUBCASE("rotate")
+    {
         // check if all properties are rotated
         QuaternionRotate qrot(pc::pi / 2, {0, 1, 0});
         p1.getExt().mu = p1.getExt().scdir = {1, 0, 0};
@@ -298,7 +380,8 @@ TEST_CASE("[Faunus] Particle") {
         CHECK_EQ(p1.getExt().Q(2, 2), Approx(1));
     }
 
-    SUBCASE("Cereal serialisation") {
+    SUBCASE("Cereal serialisation")
+    {
         Particle p;
         p.pos = {10, 20, 30};
         p.charge = -1;

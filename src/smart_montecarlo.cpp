@@ -12,7 +12,9 @@ namespace Faunus::SmarterMonteCarlo {
  * - See Allen and Tildesley p. 318 (2017 ed.).
  * - Original reference: [doi:10/frvx8j](https://doi.org/frvx8j)
  */
-double bias(double outside_acceptance, const int n_total, const int n_inside, BiasDirection direction) {
+double bias(double outside_acceptance, const int n_total, const int n_inside,
+            BiasDirection direction)
+{
     const auto p = outside_acceptance;
     const auto n_prime = p * n_total + (1.0 - p) * n_inside;
     switch (direction) {
@@ -25,7 +27,8 @@ double bias(double outside_acceptance, const int n_total, const int n_inside, Bi
     }
 }
 
-TEST_CASE("[Faunus] SmartMonteCarlo::bias") {
+TEST_CASE("[Faunus] SmartMonteCarlo::bias")
+{
     using doctest::Approx;
     CHECK_EQ(bias(1.0, 20, 5, BiasDirection::NO_CROSSING), Approx(0.0));
     CHECK_EQ(bias(1.0, 20, 5, BiasDirection::EXIT_REGION), Approx(0.0));
@@ -40,25 +43,30 @@ TEST_CASE("[Faunus] SmartMonteCarlo::bias") {
  * @param outside_acceptance Probability to accept element outside the region
  * @param region Region to preferentially pick from
  */
-RegionSampler::RegionSampler(const double outside_acceptance, std::unique_ptr<Region::RegionBase> region)
+RegionSampler::RegionSampler(const double outside_acceptance,
+                             std::unique_ptr<Region::RegionBase> region)
     : outside_acceptance(outside_acceptance)
-    , region(std::move(region)) {
+    , region(std::move(region))
+{
     if (outside_acceptance <= pc::epsilon_dbl || outside_acceptance > 1.0) {
         throw ConfigurationError("outside_acceptance (p), must be in the range (0,1]");
     }
 }
 
 /** Determines the direction of a transition */
-BiasDirection RegionSampler::getDirection(const bool inside_before, const bool inside_after) {
+BiasDirection RegionSampler::getDirection(const bool inside_before, const bool inside_after)
+{
     if (inside_before && (not inside_after)) {
         return BiasDirection::EXIT_REGION;
-    } else if (inside_after && (not inside_before)) {
+    }
+    else if (inside_after && (not inside_before)) {
         return BiasDirection::ENTER_REGION;
     }
     return BiasDirection::NO_CROSSING;
 }
 
-void RegionSampler::to_json(json& j) const {
+void RegionSampler::to_json(json& j) const
+{
     j["region"] = static_cast<json>(*region);
     j["p"] = outside_acceptance;
     if (fixed_number_inside) {

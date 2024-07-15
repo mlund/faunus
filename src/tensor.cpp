@@ -7,21 +7,33 @@
 
 namespace Faunus {
 
-Tensor::Tensor() { base::setZero(); }
+Tensor::Tensor()
+{
+    base::setZero();
+}
 
-Tensor::Tensor(double xx, double xy, double xz, double yy, double yz, double zz) {
+Tensor::Tensor(double xx, double xy, double xz, double yy, double yz, double zz)
+{
     (*this) << xx, xy, xz, xy, yy, yz, xz, yz, zz;
 }
 
-void Tensor::rotate(const Tensor::base &rotation_matrix) {
+void Tensor::rotate(const Tensor::base& rotation_matrix)
+{
     (*this) = rotation_matrix * (*this) * rotation_matrix.transpose();
 }
 
-[[maybe_unused]] void Tensor::eye() { *this = base::Identity(3, 3); }
+[[maybe_unused]] void Tensor::eye()
+{
+    *this = base::Identity(3, 3);
+}
 
-void to_json(nlohmann::json &j, const Tensor &t) { j = {t(0, 0), t(0, 1), t(0, 2), t(1, 1), t(1, 2), t(2, 2)}; }
+void to_json(nlohmann::json& j, const Tensor& t)
+{
+    j = {t(0, 0), t(0, 1), t(0, 2), t(1, 1), t(1, 2), t(2, 2)};
+}
 
-void from_json(const nlohmann::json &j, Tensor &t) {
+void from_json(const nlohmann::json& j, Tensor& t)
+{
     if (j.size() == 6 and j.is_array())
         t = Tensor(j[0], j[1], j[2], j[3], j[4], j[5]);
     else
@@ -30,11 +42,12 @@ void from_json(const nlohmann::json &j, Tensor &t) {
 
 TEST_SUITE_BEGIN("Tensor");
 
-TEST_CASE("[Faunus] Tensor") {
+TEST_CASE("[Faunus] Tensor")
+{
     using doctest::Approx;
     using namespace nlohmann;
     Tensor Q1 = Tensor(1, 2, 3, 4, 5, 6);
-    Tensor Q2 = json(Q1);        // Q1 --> json --> Q2
+    Tensor Q2 = json(Q1);         // Q1 --> json --> Q2
     CHECK_EQ(json(Q1), json(Q2)); // Q1 --> json == json <-- Q2 ?
     CHECK_EQ(Q2, Tensor(1, 2, 3, 4, 5, 6));
 

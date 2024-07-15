@@ -1,9 +1,10 @@
 #pragma once
+
 /**
  * @brief Cell list class templates.
  *
- * Minimal interface to be used in other header file to avoid number of class templates. Full class templates
- * definitions are provided in "celllistimpl.h" file.
+ * Minimal interface to be used in other header file to avoid number of class templates. Full class
+ * templates definitions are provided in "celllistimpl.h" file.
  *
  * @author Richard Chudoba
  * @date 2021-02-01
@@ -30,11 +31,15 @@ template <typename T> using PointOf = typename T::Point;
  * @tparam TCellIndex  type of a single coordinate in cell space; also an absolute cell index
  * @tparam TSpaceAxis  type of a single coordinate in physical space
  */
-template <unsigned int VDimension, std::integral TCellIndex = int, std::floating_point TSpaceAxis = double>
-struct GridType {
-    constexpr static unsigned int Dimension = VDimension; //!< number of dimmensions, e.g., 3 for the real 3D world
-    using SpaceAxis = TSpaceAxis;                         //!< a single coordinate in physical space, e.g., double
-    using CellIndex = TCellIndex; //!< a single coordinate in cell space, e.g., int; also an absolute cell index
+template <unsigned int VDimension, std::integral TCellIndex = int,
+          std::floating_point TSpaceAxis = double>
+struct GridType
+{
+    constexpr static unsigned int Dimension =
+        VDimension;               //!< number of dimmensions, e.g., 3 for the real 3D world
+    using SpaceAxis = TSpaceAxis; //!< a single coordinate in physical space, e.g., double
+    using CellIndex =
+        TCellIndex; //!< a single coordinate in cell space, e.g., int; also an absolute cell index
     using Point = Eigen::Array<SpaceAxis, Dimension, 1>;     //!< a point in the VDimensional space
     using CellCoord = Eigen::Array<CellIndex, Dimension, 1>; //!< VDimensional cell coordinates
 };
@@ -43,16 +48,18 @@ struct GridType {
 using Grid3DType = GridType<3, int, double>;
 
 /**
- * @brief A simple data holder for common offsets in 3D grids, e.g., nearest neighbors or forward neighbors.
+ * @brief A simple data holder for common offsets in 3D grids, e.g., nearest neighbors or forward
+ * neighbors.
  */
-class GridOffsets3D {
+class GridOffsets3D
+{
     using CellCoord = CoordOf<Grid3DType>; //!< 3-dimension cell coordinates
     using CellIndex = IndexOf<Grid3DType>; //!< cell index
   public:
     const std::vector<CellCoord> self{{0, 0, 0}}; //!< the cell itself
-    std::vector<CellCoord> neighbors;             //!< all neighbors (excluding self); (1 + 2×distance)³ - 1
-    std::vector<CellCoord> forward_neighbors;     //!< only the preceding half of all neighbors
-    CellIndex distance;                           //!< maximal distance of neighbours (1 for the nearest neighbors)
+    std::vector<CellCoord> neighbors; //!< all neighbors (excluding self); (1 + 2×distance)³ - 1
+    std::vector<CellCoord> forward_neighbors; //!< only the preceding half of all neighbors
+    CellIndex distance; //!< maximal distance of neighbours (1 for the nearest neighbors)
 
     /**
      * @param distance  maximal distance of neighbours (1 for the nearest neighbors)
@@ -77,13 +84,14 @@ template <typename T> using MembersOf = typename ContainerTypeOf<T>::Members;
 /**
  * @brief An interface of a container.
  *
- * The container is responsible for storing (and retriving) members under a given cell index. Various storage policies
- * may be used in different implementations, e.g., a vector or a map.
+ * The container is responsible for storing (and retriving) members under a given cell index.
+ * Various storage policies may be used in different implementations, e.g., a vector or a map.
  *
  * @tparam TMember  a member type
  * @tparam TIndex  an index type, see GridType::CellIndex
  */
-template <typename TMember, typename TIndex> struct AbstractContainer {
+template <typename TMember, typename TIndex> struct AbstractContainer
+{
     using ContainerType = AbstractContainer<TMember, TIndex>;
     using Index = TIndex;                //!< the cell index (key) type
     using Member = TMember;              //!< the cell member (primitive value) type
@@ -109,26 +117,32 @@ template <typename T> using ContainerOf = typename T::Container;
 template <typename T> using GridOf = typename T::Grid;
 using Container::ContainerTypeOf;
 using Grid::GridTypeOf;
-template <typename T> using IndexOf = typename Grid::IndexOf<GridTypeOf<typename T::AbstractCellList>>;
-template <typename T> using CoordOf = typename Grid::CoordOf<GridTypeOf<typename T::AbstractCellList>>;
-template <typename T> using PointOf = typename Grid::PointOf<GridTypeOf<typename T::AbstractCellList>>;
-template <typename T> using SpaceAxisOf = typename Grid::SpaceAxisOf<GridTypeOf<typename T::AbstractCellList>>;
+template <typename T>
+using IndexOf = typename Grid::IndexOf<GridTypeOf<typename T::AbstractCellList>>;
+template <typename T>
+using CoordOf = typename Grid::CoordOf<GridTypeOf<typename T::AbstractCellList>>;
+template <typename T>
+using PointOf = typename Grid::PointOf<GridTypeOf<typename T::AbstractCellList>>;
+template <typename T>
+using SpaceAxisOf = typename Grid::SpaceAxisOf<GridTypeOf<typename T::AbstractCellList>>;
 template <typename T> using MemberOf = typename Container::MemberOf<typename T::AbstractCellList>;
 template <typename T> using MembersOf = typename Container::MembersOf<typename T::AbstractCellList>;
 
 /**
- * @brief An interface of a immutable cell list. No methods for manipulating (adding, removing) members are provided.
+ * @brief An interface of a immutable cell list. No methods for manipulating (adding, removing)
+ * members are provided.
  * @tparam TContainerType  a container type to obtain Member and Members subtypes
  * @tparam TGridType  a grid type to obtain index and coordinates subtypes
  */
-template <class TContainerType, class TGridType> struct AbstractImmutableCellList {
+template <class TContainerType, class TGridType> struct AbstractImmutableCellList
+{
     using AbstractCellList = AbstractImmutableCellList<TContainerType, TGridType>; //! self
-    using ContainerType = TContainerType;                                          //!< abstract container types
-    using GridType = TGridType;                                                    //!< abstract grid type
-    using Members = typename Container::MembersOf<ContainerType>;                  //!< members type
-    using Member = typename Container::MemberOf<ContainerType>;                    //!< member type
-    using CellIndex = typename Grid::IndexOf<GridType>;                            //!< grid (cell) index type
-    using CellCoord = typename Grid::CoordOf<GridType>;                            //!< grid (cell) coordinates type
+    using ContainerType = TContainerType;                         //!< abstract container types
+    using GridType = TGridType;                                   //!< abstract grid type
+    using Members = typename Container::MembersOf<ContainerType>; //!< members type
+    using Member = typename Container::MemberOf<ContainerType>;   //!< member type
+    using CellIndex = typename Grid::IndexOf<GridType>;           //!< grid (cell) index type
+    using CellCoord = typename Grid::CoordOf<GridType>;           //!< grid (cell) coordinates type
 
     //! @brief Gets cell members at given cell coordinates.
     virtual const Members& getMembers(const CellCoord&) = 0;
@@ -151,7 +165,9 @@ template <class TContainerType, class TGridType> struct AbstractImmutableCellLis
  * @tparam TGridType  a grid type to obtain index and coordinates subtypes
  */
 template <class TContainerType, class TGridType>
-struct AbstractSortableCellList : virtual public AbstractImmutableCellList<TContainerType, TGridType> {
+struct AbstractSortableCellList
+    : virtual public AbstractImmutableCellList<TContainerType, TGridType>
+{
     using typename AbstractImmutableCellList<TContainerType, TGridType>::AbstractCellList;
     using typename AbstractCellList::CellCoord;
     using typename AbstractCellList::Members;

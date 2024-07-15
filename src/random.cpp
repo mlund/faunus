@@ -7,53 +7,70 @@
 
 namespace Faunus {
 
-void from_json(const nlohmann::json &j, Random & rng) {
+void from_json(const nlohmann::json& j, Random& rng)
+{
     if (j.is_object()) {
         auto seed = j.value("seed", std::string());
         try {
             if (seed == "default" or seed == "fixed") { // use default seed, i.e. do nothing
                 return;
-            } else if (seed == "hardware") { // use hardware seed
+            }
+            else if (seed == "hardware") { // use hardware seed
                 rng.engine = decltype(rng.engine)(std::random_device()());
-            } else if (!seed.empty()) { // read engine state
+            }
+            else if (!seed.empty()) { // read engine state
                 std::stringstream stream(seed);
                 stream.exceptions(std::ios::badbit | std::ios::failbit);
                 stream >> rng.engine;
             }
-        } catch (std::exception &e) {
-            std::cerr << "could not initialize rng engine - falling back to fixed seed." << std::endl;
+        }
+        catch (std::exception& e) {
+            std::cerr << "could not initialize rng engine - falling back to fixed seed."
+                      << std::endl;
         }
     }
 }
 
-void to_json(nlohmann::json &j, const Random &random) {
+void to_json(nlohmann::json& j, const Random& random)
+{
     std::ostringstream stream;
     stream << random.engine; // dump engine state to stream
     j["seed"] = stream.str();
     if constexpr (std::is_same<RandomNumberEngine, std::mt19937>::value) {
         j["engine"] = "Mersenne Twister (std::mt19937)";
-    } else {
+    }
+    else {
         j["engine"] = "Permuted Congruential Generator (pcg32)";
     }
 }
 
-void Random::seed() { engine = RandomNumberEngine(std::random_device()()); }
+void Random::seed()
+{
+    engine = RandomNumberEngine(std::random_device()());
+}
 
-Random::Random() : dist01(0, 1) {}
+Random::Random()
+    : dist01(0, 1)
+{
+}
 
-double Random::operator()() { return dist01(engine); }
+double Random::operator()()
+{
+    return dist01(engine);
+}
 
 Random random; // Global instance
 } // namespace Faunus
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
-TEST_CASE("[Faunus] Random") {
+TEST_CASE("[Faunus] Random")
+{
     using namespace Faunus;
     Random slump, slump2; // local instances
 
-    CHECK_EQ(slump(), slump2()); // deterministic initialization by default; the global random variable cannot
-                                // be used for comparison as its state is not reset at the beginning of
-                                // each test case
+    CHECK_EQ(slump(), slump2()); // deterministic initialization by default; the global random
+                                 // variable cannot be used for comparison as its state is not reset
+                                 // at the beginning of each test case
 
     int min = 10, max = 0, N = 1e6;
     double x = 0;
@@ -83,7 +100,8 @@ TEST_CASE("[Faunus] Random") {
     CHECK((a() != b()));
 }
 
-TEST_CASE("[Faunus] WeightedDistribution") {
+TEST_CASE("[Faunus] WeightedDistribution")
+{
     using namespace Faunus;
     WeightedDistribution<double> v;
 

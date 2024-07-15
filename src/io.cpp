@@ -18,12 +18,15 @@ namespace Faunus {
  * @param throw_on_error Throw `std::runtime_error` if file cannot be opened (default: false)
  * @return pointer to stream; nullptr if it could not be created
  */
-std::unique_ptr<std::ostream> IO::openCompressedOutputStream(const std::string& filename, bool throw_on_error) {
+std::unique_ptr<std::ostream> IO::openCompressedOutputStream(const std::string& filename,
+                                                             bool throw_on_error)
+{
     try { // any neater way to check if path is writable?
         std::ofstream f;
         f.exceptions(std::ifstream::failbit | std::ifstream::badbit);
         f.open(filename);
-    } catch (std::exception& e) { // reaching here, file cannot be created
+    }
+    catch (std::exception& e) { // reaching here, file cannot be created
         if (throw_on_error) {
             throw std::runtime_error("could not open file "s + filename);
         }
@@ -32,17 +35,21 @@ std::unique_ptr<std::ostream> IO::openCompressedOutputStream(const std::string& 
     if (filename.substr(filename.find_last_of('.') + 1) == "gz") {
         faunus_logger->trace("enabling gzip compression for {}", filename);
         return std::make_unique<zstr::ofstream>(filename); // compressed
-    } else {
+    }
+    else {
         return std::make_unique<std::ofstream>(filename); // uncompressed
     }
 }
 
-TEST_CASE("[Faunus] openCompressedOutputStream") {
+TEST_CASE("[Faunus] openCompressedOutputStream")
+{
     CHECK_THROWS(IO::openCompressedOutputStream("/../file", true));
     CHECK_NOTHROW(IO::openCompressedOutputStream("/../file"));
 }
 
-bool PQRTrajectoryReader::readAtomRecord(const std::string& record, Particle& particle, double& radius) {
+bool PQRTrajectoryReader::readAtomRecord(const std::string& record, Particle& particle,
+                                         double& radius)
+{
     std::istringstream o(record);
     std::string key;
     o >> key;
@@ -54,8 +61,8 @@ bool PQRTrajectoryReader::readAtomRecord(const std::string& record, Particle& pa
         o >> atom_index >> atom_name;
         const auto atom = findAtomByName(atom_name);
         particle = atom;
-        o >> res_name >> res_index >> particle.pos.x() >> particle.pos.y() >> particle.pos.z() >> particle.charge >>
-            radius;
+        o >> res_name >> res_index >> particle.pos.x() >> particle.pos.y() >> particle.pos.z() >>
+            particle.charge >> radius;
         return true;
     }
     return false;
@@ -68,7 +75,9 @@ bool PQRTrajectoryReader::readAtomRecord(const std::string& record, Particle& pa
  * Each trajectory must be separated by an "END" record. Blank lines are
  * ignored.
  */
-void PQRTrajectoryReader::loadTrajectory(const std::string& filename, std::vector<ParticleVector>& destination) {
+void PQRTrajectoryReader::loadTrajectory(const std::string& filename,
+                                         std::vector<ParticleVector>& destination)
+{
     if (std::ifstream stream(filename); stream) {
         destination.clear();
         destination.resize(1); // prepare first frame
@@ -78,9 +87,10 @@ void PQRTrajectoryReader::loadTrajectory(const std::string& filename, std::vecto
             double radius = 0.0;
             if (readAtomRecord(record, particle, radius)) {
                 destination.back().push_back(particle);
-            } else if (record.find("END") == 0) {                       // if END record, advance to next frame
-                destination.back().shrink_to_fit();                     // attempt to clean up
-                destination.emplace_back();                             // prepare next frame
+            }
+            else if (record.find("END") == 0) {     // if END record, advance to next frame
+                destination.back().shrink_to_fit(); // attempt to clean up
+                destination.emplace_back();         // prepare next frame
                 destination.back().reserve(destination.front().size()); // reserve memory
             }
         }
@@ -90,21 +100,27 @@ void PQRTrajectoryReader::loadTrajectory(const std::string& filename, std::vecto
         if (destination.empty()) {
             faunus_logger->warn("pqr trajectory {} is empty", filename);
         }
-    } else {
+    }
+    else {
         throw std::runtime_error("cannot open file");
     }
 }
 
 // ========== XTCTrajectoryFrame ==========
 
-XTCTrajectoryFrame::XTCTrajectoryFrame(int number_of_atoms) { initNumberOfAtoms(number_of_atoms); }
+XTCTrajectoryFrame::XTCTrajectoryFrame(int number_of_atoms)
+{
+    initNumberOfAtoms(number_of_atoms);
+}
 
-XTCTrajectoryFrame::XTCTrajectoryFrame(const TrajectoryFrame& frame) {
+XTCTrajectoryFrame::XTCTrajectoryFrame(const TrajectoryFrame& frame)
+{
     initNumberOfAtoms(static_cast<int>(frame.coordinates.size()));
     importFrame(frame);
 }
 
-XTCTrajectoryFrame& XTCTrajectoryFrame::operator=(const TrajectoryFrame& frame) {
+XTCTrajectoryFrame& XTCTrajectoryFrame::operator=(const TrajectoryFrame& frame)
+{
     if (frame.coordinates.size() != number_of_atoms) {
         throw std::runtime_error("wrong number of particles to be assign into the XTC frame");
     }
@@ -112,25 +128,30 @@ XTCTrajectoryFrame& XTCTrajectoryFrame::operator=(const TrajectoryFrame& frame) 
     return *this;
 }
 
-void XTCTrajectoryFrame::importFrame(const TrajectoryFrame& frame) {
+void XTCTrajectoryFrame::importFrame(const TrajectoryFrame& frame)
+{
     importTimestamp(frame.step, frame.timestamp);
     importBox(frame.box);
     importCoordinates(frame.coordinates, 0.5 * frame.box);
 }
 
-void XTCTrajectoryFrame::importTimestamp(const int step, const float time) {
+void XTCTrajectoryFrame::importTimestamp(const int step, const float time)
+{
     xtc_step = step;
     xtc_time = time / static_cast<float>(1.0_ps);
 }
 
-void XTCTrajectoryFrame::importBox(const Point& box) {
-    XTCMatrix xtc_box_matrix = XTCMatrix::Zero();                // empty box tensor
-    xtc_box_matrix.diagonal() = (box / 1.0_nm).cast<XTCFloat>(); // only XYZ dimensions in nm on diagonal, as floats
+void XTCTrajectoryFrame::importBox(const Point& box)
+{
+    XTCMatrix xtc_box_matrix = XTCMatrix::Zero(); // empty box tensor
+    xtc_box_matrix.diagonal() =
+        (box / 1.0_nm).cast<XTCFloat>(); // only XYZ dimensions in nm on diagonal, as floats
     std::copy(xtc_box_matrix.data(), xtc_box_matrix.data() + DIM * DIM,
               &(xtc_box[0][0])); // eigen 1D, row-major -> C-style 2D array
 }
 
-void XTCTrajectoryFrame::importCoordinates(const PointVector& coordinates, const Point& offset) {
+void XTCTrajectoryFrame::importCoordinates(const PointVector& coordinates, const Point& offset)
+{
     if (coordinates.size() != number_of_atoms) {
         // to avoid mistakes, the number_of_atoms is immutable
         throw std::runtime_error("wrong number of particles to be saved in the XTC frame");
@@ -143,18 +164,21 @@ void XTCTrajectoryFrame::importCoordinates(const PointVector& coordinates, const
     }
 }
 
-void XTCTrajectoryFrame::exportFrame(TrajectoryFrame& frame) const {
+void XTCTrajectoryFrame::exportFrame(TrajectoryFrame& frame) const
+{
     exportTimestamp(frame.step, frame.timestamp);
     exportBox(frame.box);
     exportCoordinates(frame.coordinates, 0.5 * frame.box);
 }
 
-void XTCTrajectoryFrame::exportTimestamp(int& step, float& time) const {
+void XTCTrajectoryFrame::exportTimestamp(int& step, float& time) const
+{
     step = xtc_step;
     time = xtc_time * static_cast<float>(1.0_ps);
 }
 
-void XTCTrajectoryFrame::exportBox(Point& box) const {
+void XTCTrajectoryFrame::exportBox(Point& box) const
+{
     XTCMatrix xtc_box_matrix = Eigen::Map<const XTCTrajectoryFrame::XTCMatrix>(&(xtc_box[0][0]));
     if (xtc_box_matrix.diagonal().asDiagonal().toDenseMatrix() != xtc_box_matrix) {
         throw std::runtime_error("cannot load non-orthogonal box");
@@ -162,7 +186,8 @@ void XTCTrajectoryFrame::exportBox(Point& box) const {
     box = Point(xtc_box_matrix.diagonal().cast<double>() * 1.0_nm);
 }
 
-void XTCTrajectoryFrame::exportCoordinates(PointVector& coordinates, const Point& offset) const {
+void XTCTrajectoryFrame::exportCoordinates(PointVector& coordinates, const Point& offset) const
+{
     if (coordinates.size() != number_of_atoms) {
         throw std::runtime_error("wrong number of particles in the loaded XTC frame");
     }
@@ -172,7 +197,8 @@ void XTCTrajectoryFrame::exportCoordinates(PointVector& coordinates, const Point
     }
 }
 
-void XTCTrajectoryFrame::initNumberOfAtoms(int new_number_of_atoms) {
+void XTCTrajectoryFrame::initNumberOfAtoms(int new_number_of_atoms)
+{
     assert(new_number_of_atoms >= 0);
     if (number_of_atoms != new_number_of_atoms) {
         number_of_atoms = new_number_of_atoms;
@@ -182,21 +208,33 @@ void XTCTrajectoryFrame::initNumberOfAtoms(int new_number_of_atoms) {
 
 // ========== TrajectoryFrame ==========
 
-TrajectoryFrame::TrajectoryFrame(const Point& box, const PointVector& coordinates, int step, float timestamp)
-    : box(box), coordinates(coordinates), step(step), timestamp(timestamp) {}
+TrajectoryFrame::TrajectoryFrame(const Point& box, const PointVector& coordinates, int step,
+                                 float timestamp)
+    : box(box)
+    , coordinates(coordinates)
+    , step(step)
+    , timestamp(timestamp)
+{
+}
 
-TrajectoryFrame::TrajectoryFrame(const XTCTrajectoryFrame& xtc_frame) {
+TrajectoryFrame::TrajectoryFrame(const XTCTrajectoryFrame& xtc_frame)
+{
     coordinates.resize(xtc_frame.number_of_atoms);
     xtc_frame.exportFrame(*this);
 }
 
-void TrajectoryFrame::operator=(const XTCTrajectoryFrame& xtc_frame) { xtc_frame.exportFrame(*this); }
+void TrajectoryFrame::operator=(const XTCTrajectoryFrame& xtc_frame)
+{
+    xtc_frame.exportFrame(*this);
+}
 
-TEST_CASE("XTCFrame") {
+TEST_CASE("XTCFrame")
+{
     using doctest::Approx;
     TrajectoryFrame frame({10.0, 12.0, 8.0}, {{1.0, 2.0, -1.0}, {-4.0, 4.0, 2.0}}, 10, 0.2);
 
-    SUBCASE("To XTCFrame") {
+    SUBCASE("To XTCFrame")
+    {
         XTCTrajectoryFrame xtc_frame(frame);
         CHECK_EQ(xtc_frame.xtc_step, 10);
         CHECK_EQ(xtc_frame.xtc_time, Approx(0.2 / 1._ps));
@@ -205,7 +243,8 @@ TEST_CASE("XTCFrame") {
         REQUIRE_EQ(xtc_frame.number_of_atoms, 2);
         CHECK_EQ(xtc_frame.xtc_coordinates.get()[1][2], Approx((2.0 + 4.0) / 1._nm));
 
-        SUBCASE("From XTCFrame") {
+        SUBCASE("From XTCFrame")
+        {
             TrajectoryFrame new_frame(xtc_frame);
             CHECK_EQ(new_frame.step, frame.step);
             CHECK_EQ(new_frame.timestamp, Approx(frame.timestamp));
@@ -214,22 +253,25 @@ TEST_CASE("XTCFrame") {
             CHECK(new_frame.coordinates[1].isApprox(frame.coordinates[1], 1e-6));
         }
 
-        SUBCASE("From XTCFrame Iterator") {
+        SUBCASE("From XTCFrame Iterator")
+        {
             TrajectoryFrame new_frame;
             PointVector coordinates{2};
             REQUIRE_EQ(coordinates.size(), 2);
-            xtc_frame.exportFrame(new_frame.step, new_frame.timestamp, new_frame.box, coordinates.begin(),
-                                  coordinates.end());
+            xtc_frame.exportFrame(new_frame.step, new_frame.timestamp, new_frame.box,
+                                  coordinates.begin(), coordinates.end());
             CHECK(coordinates[0].isApprox(frame.coordinates[0], 1e-6));
             CHECK(coordinates[1].isApprox(frame.coordinates[1], 1e-6));
             PointVector coordinates_too_small{1}, coordinates_too_big{3};
             REQUIRE_LT(coordinates_too_small.size(), 2);
             REQUIRE_GT(coordinates_too_big.size(), 2);
-            CHECK_THROWS_AS(xtc_frame.exportFrame(new_frame.step, new_frame.timestamp, new_frame.box,
-                                                  coordinates_too_small.begin(), coordinates_too_small.end()),
+            CHECK_THROWS_AS(xtc_frame.exportFrame(new_frame.step, new_frame.timestamp,
+                                                  new_frame.box, coordinates_too_small.begin(),
+                                                  coordinates_too_small.end()),
                             std::runtime_error);
-            CHECK_THROWS_AS(xtc_frame.exportFrame(new_frame.step, new_frame.timestamp, new_frame.box,
-                                                  coordinates_too_big.begin(), coordinates_too_big.end()),
+            CHECK_THROWS_AS(xtc_frame.exportFrame(new_frame.step, new_frame.timestamp,
+                                                  new_frame.box, coordinates_too_big.begin(),
+                                                  coordinates_too_big.end()),
                             std::runtime_error);
         }
     }
@@ -237,7 +279,9 @@ TEST_CASE("XTCFrame") {
 
 // ========== XTCReader ==========
 
-XTCReader::XTCReader(const std::string& filename) : filename(filename) {
+XTCReader::XTCReader(const std::string& filename)
+    : filename(filename)
+{
     int number_of_atoms;
     if (XdrFile::read_xtc_natoms(filename.c_str(), &number_of_atoms) == XdrFile::exdrOK) {
         xtc_frame = std::make_unique<XTCTrajectoryFrame>(number_of_atoms);
@@ -248,19 +292,25 @@ XTCReader::XTCReader(const std::string& filename) : filename(filename) {
     }
 }
 
-int XTCReader::getNumberOfCoordinates() { return xtc_frame->number_of_atoms; }
+int XTCReader::getNumberOfCoordinates()
+{
+    return xtc_frame->number_of_atoms;
+}
 
-bool XTCReader::readFrame() {
-    return_code =
-        XdrFile::read_xtc(xdrfile.get(), xtc_frame->number_of_atoms, &xtc_frame->xtc_step, &xtc_frame->xtc_time,
-                          xtc_frame->xtc_box, xtc_frame->xtc_coordinates.get(), &xtc_frame->precision);
+bool XTCReader::readFrame()
+{
+    return_code = XdrFile::read_xtc(xdrfile.get(), xtc_frame->number_of_atoms, &xtc_frame->xtc_step,
+                                    &xtc_frame->xtc_time, xtc_frame->xtc_box,
+                                    xtc_frame->xtc_coordinates.get(), &xtc_frame->precision);
     if (return_code != XdrFile::exdrENDOFFILE && return_code != XdrFile::exdrOK) {
-        throw std::runtime_error(fmt::format("xtc file {} could not be read (error code {})", filename, return_code));
+        throw std::runtime_error(
+            fmt::format("xtc file {} could not be read (error code {})", filename, return_code));
     }
     return return_code == XdrFile::exdrOK;
 }
 
-bool XTCReader::read(TrajectoryFrame& frame) {
+bool XTCReader::read(TrajectoryFrame& frame)
+{
     if (readFrame()) {
         frame = *xtc_frame;
         return true;
@@ -272,14 +322,28 @@ bool XTCReader::read(TrajectoryFrame& frame) {
 
 XTCWriter::XTCWriter(const std::string& filename)
     : xdrfile(XdrFile::xdrfile_open(filename.c_str(), "w"))
-    , filename(filename) {
+    , filename(filename)
+{
     if (!xdrfile) {
         throw std::runtime_error(fmt::format("xtc file {} could not be opened", filename));
     }
 }
 
-void XTCWriter::writeFrameAt(int step, float time) {
-    return_code = XdrFile::write_xtc(xdrfile.get(), xtc_frame->number_of_atoms, step, time, xtc_frame->xtc_box,
+void XTCWriter::writeFrameAt(int step, float time)
+{
+    return_code = XdrFile::write_xtc(xdrfile.get(), xtc_frame->number_of_atoms, step, time,
+                                     xtc_frame->xtc_box, xtc_frame->xtc_coordinates.get(),
+                                     xtc_frame->precision);
+    if (return_code != XdrFile::exdrOK) {
+        throw std::runtime_error(
+            fmt::format("xtc file {} could not be written (error code {})", filename, return_code));
+    }
+}
+
+void XTCWriter::writeFrame()
+{
+    return_code = XdrFile::write_xtc(xdrfile.get(), xtc_frame->number_of_atoms, xtc_frame->xtc_step,
+                                     xtc_frame->xtc_time, xtc_frame->xtc_box,
                                      xtc_frame->xtc_coordinates.get(), xtc_frame->precision);
     if (return_code != XdrFile::exdrOK) {
         throw std::runtime_error(
@@ -287,17 +351,8 @@ void XTCWriter::writeFrameAt(int step, float time) {
     }
 }
 
-void XTCWriter::writeFrame() {
-    return_code =
-        XdrFile::write_xtc(xdrfile.get(), xtc_frame->number_of_atoms, xtc_frame->xtc_step, xtc_frame->xtc_time,
-                           xtc_frame->xtc_box, xtc_frame->xtc_coordinates.get(), xtc_frame->precision);
-    if (return_code != XdrFile::exdrOK) {
-        throw std::runtime_error(
-            fmt::format("xtc file {} could not be written (error code {})", filename, return_code));
-    }
-}
-
-void XTCWriter::write(const TrajectoryFrame& frame) {
+void XTCWriter::write(const TrajectoryFrame& frame)
+{
     if (!xtc_frame) {
         xtc_frame = std::make_unique<XTCTrajectoryFrame>(frame.coordinates.size());
     }
@@ -306,7 +361,8 @@ void XTCWriter::write(const TrajectoryFrame& frame) {
     step_counter = frame.step + 1;
 }
 
-void XTCWriter::writeNext(const TrajectoryFrame& frame) {
+void XTCWriter::writeNext(const TrajectoryFrame& frame)
+{
     if (!xtc_frame) {
         xtc_frame = std::make_unique<XTCTrajectoryFrame>(frame.coordinates.size());
     }
@@ -315,18 +371,23 @@ void XTCWriter::writeNext(const TrajectoryFrame& frame) {
     ++step_counter;
 }
 
-ParticleVector fastaToParticles(std::string_view fasta_sequence, double bond_length, const Point& origin) {
+ParticleVector fastaToParticles(std::string_view fasta_sequence, double bond_length,
+                                const Point& origin)
+{
     ParticleVector particles;                  // particle vector
     auto ids = fastaToAtomIds(fasta_sequence); // convert letters to atom ids
     std::transform(ids.begin(), ids.end(), std::back_inserter(particles), [&](auto& id) {
         Particle particle = Faunus::atoms.at(id);
-        particle.pos = particles.empty() ? origin : particles.back().pos + randomUnitVector(random) * bond_length;
+        particle.pos = particles.empty()
+                           ? origin
+                           : particles.back().pos + randomUnitVector(random) * bond_length;
         return particle;
     });
     return particles;
 }
 
-std::unique_ptr<StructureFileWriter> createStructureFileWriter(const std::string& suffix) {
+std::unique_ptr<StructureFileWriter> createStructureFileWriter(const std::string& suffix)
+{
     if (suffix == "pqr") {
         return std::make_unique<PQRWriter>();
     }
@@ -350,40 +411,50 @@ std::unique_ptr<StructureFileWriter> createStructureFileWriter(const std::string
 
 // -----------------------------
 
-ParticleVector loadStructure(std::string_view filename, bool prefer_charges_from_file) {
+ParticleVector loadStructure(std::string_view filename, bool prefer_charges_from_file)
+{
     ParticleVector particles;
     std::unique_ptr<StructureFileReader> reader;
     const auto suffix = filename.substr(filename.find_last_of('.') + 1);
     if (suffix == "aam") {
         reader = std::make_unique<AminoAcidModelReader>();
-    } else if (suffix == "pqr") {
+    }
+    else if (suffix == "pqr") {
         reader = std::make_unique<PQRReader>();
-    } else if (suffix == "xyz") {
+    }
+    else if (suffix == "xyz") {
         reader = std::make_unique<XYZReader>();
-    } else if (suffix == "gro") {
+    }
+    else if (suffix == "gro") {
         reader = std::make_unique<GromacsReader>();
-    } else if (suffix == "xyz_psc") {
+    }
+    else if (suffix == "xyz_psc") {
         reader = std::make_unique<SpheroCylinderXYZReader>();
     }
     try {
         if (reader) {
             reader->prefer_charges_from_file = prefer_charges_from_file;
             particles = reader->load(filename);
-        } else {
+        }
+        else {
             throw std::runtime_error("unknown format");
         }
         if (particles.empty()) {
             throw std::runtime_error("empty structure");
         }
         return particles;
-    } catch (std::exception& e) { throw std::runtime_error(fmt::format("{} load error -> {}", filename, e.what())); }
+    }
+    catch (std::exception& e) {
+        throw std::runtime_error(fmt::format("{} load error -> {}", filename, e.what()));
+    }
 }
 
 /**
  * @param fasta_sequence FASTA sequence, capital letters.
  * @return vector of verified and existing atom id's
  */
-std::vector<AtomData::index_type> fastaToAtomIds(std::string_view fasta_sequence) {
+std::vector<AtomData::index_type> fastaToAtomIds(std::string_view fasta_sequence)
+{
     const std::map<char, std::string> map = {{'A', "ALA"},
                                              {'R', "ARG"},
                                              {'N', "ASN"},
@@ -421,48 +492,69 @@ std::vector<AtomData::index_type> fastaToAtomIds(std::string_view fasta_sequence
         }
         if (auto it = map.find(letter); it != map.end()) { // is it in map?
             names.push_back(it->second);
-        } else {
+        }
+        else {
             throw std::runtime_error("invalid FASTA letter '" + std::string(1, letter) + "'");
         }
     }
     return Faunus::names2ids(Faunus::atoms, names);
 }
 
-FormatSpaceTrajectory::FormatSpaceTrajectory(std::ostream& ostream) {
+FormatSpaceTrajectory::FormatSpaceTrajectory(std::ostream& ostream)
+{
     if (ostream) {
         output_archive = std::make_unique<cereal::BinaryOutputArchive>(ostream);
     }
 }
-FormatSpaceTrajectory::FormatSpaceTrajectory(std::istream& istream) {
+
+FormatSpaceTrajectory::FormatSpaceTrajectory(std::istream& istream)
+{
     if (istream) {
         input_archive = std::make_unique<cereal::BinaryInputArchive>(istream);
     }
 }
-void FormatSpaceTrajectory::load([[maybe_unused]] Space& spc) { assert(input_archive != nullptr); }
-void FormatSpaceTrajectory::save([[maybe_unused]] const Space& spc) { assert(output_archive != nullptr); }
+
+void FormatSpaceTrajectory::load([[maybe_unused]] Space& spc)
+{
+    assert(input_archive != nullptr);
+}
+
+void FormatSpaceTrajectory::save([[maybe_unused]] const Space& spc)
+{
+    assert(output_archive != nullptr);
+}
 
 // ------------------------
 
-void StructureFileReader::handleChargeMismatch(Particle& particle, const int atom_index) const {
+void StructureFileReader::handleChargeMismatch(Particle& particle, const int atom_index) const
+{
     if (std::fabs(particle.traits().charge - particle.charge) > pc::epsilon_dbl) {
-        faunus_logger->warn("charge mismatch on atom {0} {1}: {2} atomlist value", atom_index, particle.traits().name,
+        faunus_logger->warn("charge mismatch on atom {0} {1}: {2} atomlist value", atom_index,
+                            particle.traits().name,
                             (prefer_charges_from_file) ? "ignoring" : "using");
         if (not prefer_charges_from_file) {
             particle.charge = particle.traits().charge; // let's use atomdata charge
         }
     }
 }
-void StructureFileReader::handleRadiusMismatch(const Particle& particle, const double radius, const int atom_index) {
+
+void StructureFileReader::handleRadiusMismatch(const Particle& particle, const double radius,
+                                               const int atom_index)
+{
     if (std::fabs(particle.traits().sigma - 2.0 * radius) > pc::epsilon_dbl) {
         faunus_logger->warn("radius mismatch on atom {0} {1}: using atomlist value", atom_index,
                             particle.traits().name);
     }
 }
 
-size_t StructureFileReader::getNumberOfAtoms(const std::string& line) {
+size_t StructureFileReader::getNumberOfAtoms(const std::string& line)
+{
     try {
         return std::stoul(line);
-    } catch (std::exception& e) { throw std::invalid_argument("invalid number of particles"); }
+    }
+    catch (std::exception& e) {
+        throw std::invalid_argument("invalid number of particles");
+    }
 }
 
 /**
@@ -471,19 +563,22 @@ size_t StructureFileReader::getNumberOfAtoms(const std::string& line) {
  * @param comment_identifiers Array of characters used to identify comment lines, e.g. "#", ";" etc.
  * @throw If line cannot be loaded
  *
- * If the *first* character in the loaded line matches any character in `comment_identifiers`, the line
- * will be ignored and the next will be loaded.
+ * If the *first* character in the loaded line matches any character in `comment_identifiers`, the
+ * line will be ignored and the next will be loaded.
  */
 void StructureFileReader::getNextLine(std::istream& stream, std::string& destination,
-                                      const std::string& comment_identifiers) {
+                                      const std::string& comment_identifiers)
+{
     assert(stream.exceptions() & std::ios::failbit); // check that we throw upon failure
     while (true) {
         std::getline(stream, destination);
         if (!destination.empty()) {
-            const bool is_comment = comment_identifiers.find_first_of(destination.front()) != std::string::npos;
+            const bool is_comment =
+                comment_identifiers.find_first_of(destination.front()) != std::string::npos;
             if (is_comment) {
                 const auto first_non_whitespace = destination.substr(1).find_first_not_of(' ') + 1;
-                comments.emplace_back(destination.begin() + first_non_whitespace, destination.end());
+                comments.emplace_back(destination.begin() + first_non_whitespace,
+                                      destination.end());
                 continue;
             }
             break;
@@ -491,7 +586,8 @@ void StructureFileReader::getNextLine(std::istream& stream, std::string& destina
     }
 }
 
-ParticleVector& StructureFileReader::load(std::istream& stream) {
+ParticleVector& StructureFileReader::load(std::istream& stream)
+{
     comments.clear();
     particles.clear();
     stream.exceptions(std::istream::failbit | std::istream::badbit);
@@ -504,9 +600,13 @@ ParticleVector& StructureFileReader::load(std::istream& stream) {
     while (true) {
         try {
             particles.emplace_back(loadParticle(stream));
-        } catch (std::istream::failure& e) {
+        }
+        catch (std::istream::failure& e) {
             break; // end of stream reached
-        } catch (std::exception& e) { throw std::runtime_error(e.what()); }
+        }
+        catch (std::exception& e) {
+            throw std::runtime_error(e.what());
+        }
     }
     particles.shrink_to_fit();
     loadFooter(stream);
@@ -518,10 +618,11 @@ ParticleVector& StructureFileReader::load(std::istream& stream) {
     return particles;
 }
 
-void StructureFileReader::checkLoadedParticles() const {
+void StructureFileReader::checkLoadedParticles() const
+{
     if (expected_number_of_particles > 0 && expected_number_of_particles != particles.size()) {
-        throw std::out_of_range(
-            fmt::format("expected {} particle records but found {}", expected_number_of_particles, particles.size()));
+        throw std::out_of_range(fmt::format("expected {} particle records but found {}",
+                                            expected_number_of_particles, particles.size()));
     }
     if (particles.empty()) {
         std::cout << "no particles loaded" << std::endl;
@@ -529,13 +630,17 @@ void StructureFileReader::checkLoadedParticles() const {
     }
 }
 
-ParticleVector& StructureFileReader::load(std::string_view filename) {
+ParticleVector& StructureFileReader::load(std::string_view filename)
+{
     try {
         if (auto stream = std::ifstream(std::string(filename)); stream) {
             return load(stream);
         }
         throw std::runtime_error("cannot open file");
-    } catch (std::exception& e) { throw std::runtime_error(e.what()); }
+    }
+    catch (std::exception& e) {
+        throw std::runtime_error(e.what());
+    }
 }
 
 void StructureFileReader::loadFooter([[maybe_unused]] std::istream& stream) {}
@@ -547,7 +652,8 @@ const std::string StructureFileWriter::generated_by_faunus_comment =
 
 void StructureFileWriter::saveFooter([[maybe_unused]] std::ostream& stream) const {}
 
-void StructureFileWriter::saveGroup(std::ostream& stream, const Group& group) {
+void StructureFileWriter::saveGroup(std::ostream& stream, const Group& group)
+{
     group_name = group.traits().name;
     for (auto particle = group.begin(); particle != group.trueend(); particle++) {
         particle_is_active = particle < group.end();
@@ -557,7 +663,8 @@ void StructureFileWriter::saveGroup(std::ostream& stream, const Group& group) {
     group_index++;
 }
 
-TEST_CASE("[Faunus] StructureFileReader and StructureFileWriter") {
+TEST_CASE("[Faunus] StructureFileReader and StructureFileWriter")
+{
     using doctest::Approx;
     // Space object with two salt pairs, i.e. four particles
     Space spc;
@@ -596,25 +703,29 @@ TEST_CASE("[Faunus] StructureFileReader and StructureFileWriter") {
         CHECK_EQ(reader.comments.front(), "Generated by Faunus - https://github.com/mlund/faunus");
     };
 
-    SUBCASE("PQR roundtrip") {
+    SUBCASE("PQR roundtrip")
+    {
         PQRReader reader;
         PQRWriter writer;
         io_roundtrip(reader, writer);
     }
 
-    SUBCASE("XYZ roundtrip") {
+    SUBCASE("XYZ roundtrip")
+    {
         XYZReader reader;
         XYZWriter writer;
         io_roundtrip(reader, writer);
     }
 
-    SUBCASE("AAM roundtrip") {
+    SUBCASE("AAM roundtrip")
+    {
         AminoAcidModelReader reader;
         AminoAcidModelWriter writer;
         io_roundtrip(reader, writer);
     }
 
-    SUBCASE("Gromacs roundtrip") {
+    SUBCASE("Gromacs roundtrip")
+    {
         GromacsReader reader;
         GromacsWriter writer;
         io_roundtrip(reader, writer);
@@ -623,26 +734,32 @@ TEST_CASE("[Faunus] StructureFileReader and StructureFileWriter") {
 
 // -----------------------------
 
-void AminoAcidModelWriter::saveHeader(std::ostream& stream, int number_of_particles) const {
+void AminoAcidModelWriter::saveHeader(std::ostream& stream, int number_of_particles) const
+{
     stream << fmt::format("# {}\n{}\n", generated_by_faunus_comment, number_of_particles);
 }
-void AminoAcidModelWriter::saveParticle(std::ostream& stream, const Particle& particle) {
+
+void AminoAcidModelWriter::saveParticle(std::ostream& stream, const Particle& particle)
+{
     const auto& traits = particle.traits();
     auto scale = static_cast<double>(particle_is_active) / 1.0_angstrom;
-    stream << fmt::format("{:7} {:7d} {:>13.6E} {:>13.6E} {:>13.6E} {:>13.6E} {:9.3f} {:9.3f}\n", traits.name,
-                          particle_index + 1, scale * particle.pos[0], scale * particle.pos[1], scale * particle.pos[2],
-                          scale * particle.charge, scale * traits.mw, 0.5 * traits.sigma);
+    stream << fmt::format("{:7} {:7d} {:>13.6E} {:>13.6E} {:>13.6E} {:>13.6E} {:9.3f} {:9.3f}\n",
+                          traits.name, particle_index + 1, scale * particle.pos[0],
+                          scale * particle.pos[1], scale * particle.pos[2], scale * particle.charge,
+                          scale * traits.mw, 0.5 * traits.sigma);
 }
 
 // -----------------------------
 
-void AminoAcidModelReader::loadHeader(std::istream& stream) {
+void AminoAcidModelReader::loadHeader(std::istream& stream)
+{
     std::string line;
     getNextLine(stream, line, "#"); // all lines starting w. "#" are skipped
     expected_number_of_particles = getNumberOfAtoms(line);
 }
 
-Particle AminoAcidModelReader::loadParticle(std::istream& stream) {
+Particle AminoAcidModelReader::loadParticle(std::istream& stream)
+{
     std::string line;
     getNextLine(stream, line, "#");
     std::istringstream record(line);
@@ -655,53 +772,68 @@ Particle AminoAcidModelReader::loadParticle(std::istream& stream) {
     const auto& atomdata = Faunus::findAtomByName(particle_name);
     auto particle = Particle(atomdata);
     try {
-        record >> particle_index >> particle.pos.x() >> particle.pos.y() >> particle.pos.z() >> particle.charge >>
-            molecular_weight >> radius;
-    } catch (std::exception& e) { throw std::runtime_error("syntax error in: " + line); }
+        record >> particle_index >> particle.pos.x() >> particle.pos.y() >> particle.pos.z() >>
+            particle.charge >> molecular_weight >> radius;
+    }
+    catch (std::exception& e) {
+        throw std::runtime_error("syntax error in: " + line);
+    }
     particle.pos *= 1.0_angstrom;
     handleChargeMismatch(particle, particle_index);
     handleRadiusMismatch(particle, radius, particle_index);
     return particle;
 }
 
-AminoAcidModelReader::AminoAcidModelReader() {
+AminoAcidModelReader::AminoAcidModelReader()
+{
     particle_charge_support = true;
     particle_radius_support = true;
 }
 
 // -----------------------------
 
-void XYZWriter::saveHeader(std::ostream& stream, int number_of_particles) const {
+void XYZWriter::saveHeader(std::ostream& stream, int number_of_particles) const
+{
     stream << fmt::format("{}\n{}\n", number_of_particles, generated_by_faunus_comment);
 }
-void XYZWriter::saveParticle(std::ostream& stream, const Particle& particle) {
+
+void XYZWriter::saveParticle(std::ostream& stream, const Particle& particle)
+{
     const auto scale = static_cast<double>(particle_is_active);
     stream << particle.traits().name << " " << scale * particle.pos.transpose() << "\n";
 }
 
 // -----------------------------
 
-void SpheroCylinderXYZWriter::saveHeader(std::ostream& stream, [[maybe_unused]] int number_of_particles) const {
+void SpheroCylinderXYZWriter::saveHeader(std::ostream& stream,
+                                         [[maybe_unused]] int number_of_particles) const
+{
     // @todo we currently have no access to the "sweep" and is now fixed to "0"
     stream << fmt::format("sweep {}; box ", 0) << box_dimensions.transpose() << "\n";
 }
-void SpheroCylinderXYZWriter::saveParticle(std::ostream& stream, const Particle& particle) {
+
+void SpheroCylinderXYZWriter::saveParticle(std::ostream& stream, const Particle& particle)
+{
     if (particle.hasExtension()) {
         const auto scale = static_cast<double>(particle_is_active);
         stream << particle.traits().name << " " << scale * particle.pos.transpose() << " "
-               << scale * particle.getExt().scdir.transpose() << " " << scale * particle.getExt().patchdir.transpose()
-               << "\n";
+               << scale * particle.getExt().scdir.transpose() << " "
+               << scale * particle.getExt().patchdir.transpose() << "\n";
     }
 }
 
 // -----------------------------
 
-void XYZReader::loadHeader(std::istream& stream) {
+void XYZReader::loadHeader(std::istream& stream)
+{
     std::string line;
     try {
         std::getline(stream, line);
         expected_number_of_particles = std::stoi(line);
-    } catch (std::exception& e) { throw std::invalid_argument("atom count expected on first line"); }
+    }
+    catch (std::exception& e) {
+        throw std::invalid_argument("atom count expected on first line");
+    }
     try {
         auto flags = stream.exceptions();     // backup state flags
         stream.exceptions(std::ios::goodbit); // do not throw if empty comment line
@@ -710,10 +842,14 @@ void XYZReader::loadHeader(std::istream& stream) {
         if (!line.empty()) {
             comments.push_back(line);
         }
-    } catch (std::exception& e) { throw std::invalid_argument("cannot load comment"); }
+    }
+    catch (std::exception& e) {
+        throw std::invalid_argument("cannot load comment");
+    }
 }
 
-Particle XYZReader::loadParticle(std::istream& stream) {
+Particle XYZReader::loadParticle(std::istream& stream)
+{
     std::string line;
     getNextLine(stream, line, ";#");
     std::istringstream record(line);
@@ -729,14 +865,19 @@ Particle XYZReader::loadParticle(std::istream& stream) {
 
 // -----------------------------
 
-void SpheroCylinderXYZReader::loadHeader(std::istream& stream) {
+void SpheroCylinderXYZReader::loadHeader(std::istream& stream)
+{
     std::string line;
     try {
         std::getline(stream, line);
-    } catch (std::exception& e) { throw std::invalid_argument("cannot load comment"); }
+    }
+    catch (std::exception& e) {
+        throw std::invalid_argument("cannot load comment");
+    }
 }
 
-Particle SpheroCylinderXYZReader::loadParticle(std::istream& stream) {
+Particle SpheroCylinderXYZReader::loadParticle(std::istream& stream)
+{
     std::string line;
     getNextLine(stream, line, ";#");
     std::istringstream record(line);
@@ -746,8 +887,9 @@ Particle SpheroCylinderXYZReader::loadParticle(std::istream& stream) {
     const auto& atom = Faunus::findAtomByName(atom_name);
     auto particle = Particle(atom);
     auto& extension = particle.createExtension();
-    record >> particle.pos.x() >> particle.pos.y() >> particle.pos.z() >> extension.scdir.x() >> extension.scdir.y() >>
-        extension.scdir.z() >> extension.patchdir.x() >> extension.patchdir.y() >> extension.patchdir.z();
+    record >> particle.pos.x() >> particle.pos.y() >> particle.pos.z() >> extension.scdir.x() >>
+        extension.scdir.y() >> extension.scdir.z() >> extension.patchdir.x() >>
+        extension.patchdir.y() >> extension.patchdir.z();
     particle.pos *= 1.0_angstrom; // xyz files are commonly in Ångstroms
     return particle;
 }
@@ -758,7 +900,8 @@ Particle SpheroCylinderXYZReader::loadParticle(std::istream& stream) {
  * Read line by line until ATOM or HETATM entry is found or EOF is reached
  * @throw if eof is reached or if syntax error in ATOM or HETATM entry
  */
-Particle PQRReader::loadParticle(std::istream& stream) {
+Particle PQRReader::loadParticle(std::istream& stream)
+{
     std::string line;
     std::string type;
     while (true) {
@@ -774,8 +917,8 @@ Particle PQRReader::loadParticle(std::istream& stream) {
             std::string residue_name;
             record >> atom_index >> atom_name;
             auto particle = Particle(Faunus::findAtomByName(atom_name));
-            record >> residue_name >> residue_index >> particle.pos.x() >> particle.pos.y() >> particle.pos.z() >>
-                particle.charge >> radius;
+            record >> residue_name >> residue_index >> particle.pos.x() >> particle.pos.y() >>
+                particle.pos.z() >> particle.charge >> radius;
             particle.pos = particle.pos * 1.0_angstrom - 0.5 * box_length;
             handleChargeMismatch(particle, atom_index);
             handleRadiusMismatch(particle, radius, atom_index);
@@ -788,14 +931,18 @@ Particle PQRReader::loadParticle(std::istream& stream) {
  * Load line by line until eof or first ATOM/HETATM is reached
  * @throw if eof
  */
-void PQRReader::loadHeader(std::istream& stream) {
+void PQRReader::loadHeader(std::istream& stream)
+{
     std::string line;
     std::string type;
     while (true) {
         const auto original_position = stream.tellg();
         try {
             std::getline(stream, line);
-        } catch (std::istream::failure& e) { return; }
+        }
+        catch (std::istream::failure& e) {
+            return;
+        }
         if (!line.empty()) {
             std::istringstream record(line);
             record.exceptions(std::ios::failbit); // throws if error
@@ -804,20 +951,27 @@ void PQRReader::loadHeader(std::istream& stream) {
                 if (type == "REMARK") {
                     const auto first_non_white_space = line.substr(6).find_first_not_of(' ') + 6;
                     comments.emplace_back(line.begin() + first_non_white_space, line.end());
-                } else if (type == "CRYST1") {
+                }
+                else if (type == "CRYST1") {
                     record >> box_length.x() >> box_length.y() >> box_length.z();
                     box_length *= 1.0_angstrom;
-                    faunus_logger->debug("read box dimensions: {} {} {}", box_length.x(), box_length.y(),
-                                         box_length.z());
-                } else if (type == "ATOM" || type == "HETATM") {
+                    faunus_logger->debug("read box dimensions: {} {} {}", box_length.x(),
+                                         box_length.y(), box_length.z());
+                }
+                else if (type == "ATOM" || type == "HETATM") {
                     stream.seekg(original_position); // rewind and stop
                     break;
                 }
-            } catch (std::exception& e) { throw std::runtime_error("header -> " + line + " ("s + e.what() + ")"s); }
+            }
+            catch (std::exception& e) {
+                throw std::runtime_error("header -> " + line + " ("s + e.what() + ")"s);
+            }
         }
     }
 }
-PQRReader::PQRReader() {
+
+PQRReader::PQRReader()
+{
     particle_charge_support = true;
     particle_radius_support = true;
     box_dimension_support = true;
@@ -825,7 +979,8 @@ PQRReader::PQRReader() {
 
 // -----------------------------
 
-void PQRWriter::saveParticle(std::ostream& stream, const Particle& particle) {
+void PQRWriter::saveParticle(std::ostream& stream, const Particle& particle)
+{
     const auto& atom_name = particle.traits().name;
     const auto scale = static_cast<double>(particle_is_active) / 1.0_angstrom;
     const auto position = scale * (particle.pos + 0.5 * box_dimensions); // origin to corner of box
@@ -843,71 +998,87 @@ void PQRWriter::saveParticle(std::ostream& stream, const Particle& particle) {
     case Style::PQR:
         stream << fmt::format("{:6s}{:5d} {:^4.4s}{:1s}{:3.3s} {:1s}{:4d}{:1s}   "
                               "{:8.3f}{:8.3f}{:8.3f}{:6.2f}{:6.2f}\n",
-                              "ATOM", particle_index + 1, atom_name, "A", group_name, chain, group_index + 1, "0",
-                              position.x(), position.y(), position.z(), scale * particle.charge,
-                              scale * particle.traits().sigma * 0.5);
+                              "ATOM", particle_index + 1, atom_name, "A", group_name, chain,
+                              group_index + 1, "0", position.x(), position.y(), position.z(),
+                              scale * particle.charge, scale * particle.traits().sigma * 0.5);
         break;
     case Style::PDB: // see https://cupnet.net/pdb-format
         stream << fmt::format("{:6s}{:5d} {:^4.4s}{:1s}{:3.3s} {:1s}{:4d}{:1s}   "
                               "{:8.3f}{:8.3f}{:8.3f}{:6.2f}{:6.2f}          {:>2.2s}{:2s}\n",
-                              "ATOM", particle_index + 1, atom_name, "A", group_name, chain, group_index + 1, "0",
-                              position.x(), position.y(), position.z(), occupancy, temperature_factor, element_symbol,
-                              charge);
+                              "ATOM", particle_index + 1, atom_name, "A", group_name, chain,
+                              group_index + 1, "0", position.x(), position.y(), position.z(),
+                              occupancy, temperature_factor, element_symbol, charge);
         break;
     case Style::PQR_LEGACY:
-        stream << fmt::format("ATOM  {:5d} {:4.4} {:4.3}{:5d}    {:8.3f} {:8.3f} {:8.3f} {:.3f} {:.3f}\n",
-                              particle_index + 1, atom_name, group_name, group_index + 1, position.x(), position.y(),
-                              position.z(), scale * particle.charge, scale * particle.traits().sigma * 0.5);
+        stream << fmt::format(
+            "ATOM  {:5d} {:4.4} {:4.3}{:5d}    {:8.3f} {:8.3f} {:8.3f} {:.3f} {:.3f}\n",
+            particle_index + 1, atom_name, group_name, group_index + 1, position.x(), position.y(),
+            position.z(), scale * particle.charge, scale * particle.traits().sigma * 0.5);
         break;
     default:
         throw std::runtime_error("unimplemented style");
     }
 }
 
-void PQRWriter::saveHeader(std::ostream& stream, [[maybe_unused]] int number_of_particles) const {
+void PQRWriter::saveHeader(std::ostream& stream, [[maybe_unused]] int number_of_particles) const
+{
     stream << "REMARK " << generated_by_faunus_comment << "\n";
     if (box_dimensions.squaredNorm() > pc::epsilon_dbl) {
         const Point angle = {90.0, 90.0, 90.0};
         const Point box = box_dimensions / 1.0_angstrom;
-        stream << fmt::format("CRYST1{:9.3f}{:9.3f}{:9.3f}{:7.2f}{:7.2f}{:7.2f} P 1           1\n", box.x(), box.y(),
-                              box.z(), angle.x(), angle.y(), angle.z());
+        stream << fmt::format("CRYST1{:9.3f}{:9.3f}{:9.3f}{:7.2f}{:7.2f}{:7.2f} P 1           1\n",
+                              box.x(), box.y(), box.z(), angle.x(), angle.y(), angle.z());
     }
 }
 
-void PQRWriter::saveFooter(std::ostream& stream) const { stream << "END\n"; }
+void PQRWriter::saveFooter(std::ostream& stream) const
+{
+    stream << "END\n";
+}
 
-PQRWriter::PQRWriter(PQRWriter::Style style) : style(style) {}
+PQRWriter::PQRWriter(PQRWriter::Style style)
+    : style(style)
+{
+}
 
 // -----------------------
 
-void GromacsWriter::saveHeader(std::ostream& stream, const int number_of_particles) const {
+void GromacsWriter::saveHeader(std::ostream& stream, const int number_of_particles) const
+{
     stream << fmt::format("{}\n{:5d}\n", generated_by_faunus_comment, number_of_particles);
 }
 
-void GromacsWriter::saveFooter(std::ostream& stream) const {
+void GromacsWriter::saveFooter(std::ostream& stream) const
+{
     if (box_dimensions.squaredNorm() > pc::epsilon_dbl) {
-        stream << fmt::format("{:10.5f}{:10.5f}{:10.5f}\n", box_dimensions.x() / 1.0_nm, box_dimensions.y() / 1.0_nm,
-                              box_dimensions.z() / 1.0_nm);
+        stream << fmt::format("{:10.5f}{:10.5f}{:10.5f}\n", box_dimensions.x() / 1.0_nm,
+                              box_dimensions.y() / 1.0_nm, box_dimensions.z() / 1.0_nm);
     }
 }
 
-void GromacsWriter::saveParticle(std::ostream& stream, const Particle& particle) {
+void GromacsWriter::saveParticle(std::ostream& stream, const Particle& particle)
+{
     const auto& atom_name = particle.traits().name;
     const auto scale = static_cast<double>(particle_is_active) / 1.0_nm; // zero if inactive
     Point position = scale * (particle.pos + 0.5 * box_dimensions);      // shift origin
-    stream << fmt::format("{:5d}{:5.5}{:>5.5}{:5d}{:8.3f}{:8.3f}{:8.3f}\n", group_index + 1, group_name, atom_name,
-                          particle_index + 1, position.x(), position.y(), position.z());
+    stream << fmt::format("{:5d}{:5.5}{:>5.5}{:5d}{:8.3f}{:8.3f}{:8.3f}\n", group_index + 1,
+                          group_name, atom_name, particle_index + 1, position.x(), position.y(),
+                          position.z());
 }
 
 // -----------------------
 
-GromacsReader::GromacsReader() { box_dimension_support = true; }
+GromacsReader::GromacsReader()
+{
+    box_dimension_support = true;
+}
 
 /**
  * This also loads the *footer* as box information is placed after the coordinates,
  * but we need it to offset while loading particles.
  */
-void GromacsReader::loadHeader(std::istream& stream) {
+void GromacsReader::loadHeader(std::istream& stream)
+{
     std::string line;
     std::getline(stream, line);
     comments.push_back(line);
@@ -916,13 +1087,15 @@ void GromacsReader::loadHeader(std::istream& stream) {
     loadBoxInformation(stream);
 }
 
-void GromacsReader::loadBoxInformation(std::istream& stream) {
+void GromacsReader::loadBoxInformation(std::istream& stream)
+{
     auto initial_position = stream.tellg();
     stream.seekg(-2, std::istream::end); // jump to end and skip possible newline and the very end
     while (stream.tellg() > 0) {         // read file backwards, letter by letter
         if (stream.peek() != '\n') {
             stream.seekg(-1, std::ios::cur); // one step backwards
-        } else {
+        }
+        else {
             stream.get(); // gobble newline
             std::string line;
             std::getline(stream, line);
@@ -931,14 +1104,18 @@ void GromacsReader::loadBoxInformation(std::istream& stream) {
             try {
                 o >> box_length.x() >> box_length.y() >> box_length.z();
                 box_length *= 1.0_nm;
-            } catch (...) { faunus_logger->debug("no box information found in gro file"); }
+            }
+            catch (...) {
+                faunus_logger->debug("no box information found in gro file");
+            }
             break;
         }
     }
     stream.seekg(initial_position);
 }
 
-Particle GromacsReader::loadParticle(std::istream& stream) {
+Particle GromacsReader::loadParticle(std::istream& stream)
+{
     if (particles.size() >= expected_number_of_particles) {
         throw std::istream::failure("cannot read beyond expected number of particles");
     }
@@ -962,14 +1139,17 @@ Particle GromacsReader::loadParticle(std::istream& stream) {
  * @brief Advance stream position past all initial lines starting with ";" or ">"
  * @todo See future literal `z`: https://en.cppreference.com/w/cpp/language/integer_literal
  */
-void CoarseGrainedFastaFileReader::loadHeader(std::istream& stream) {
+void CoarseGrainedFastaFileReader::loadHeader(std::istream& stream)
+{
     std::string non_comment_line;
     getNextLine(stream, non_comment_line, ">;");
-    const auto position_of_non_comment_line = -static_cast<std::ios::pos_type>(non_comment_line.size() + 1U);
+    const auto position_of_non_comment_line =
+        -static_cast<std::ios::pos_type>(non_comment_line.size() + 1U);
     stream.seekg(position_of_non_comment_line, std::ios::cur); // rewind
 }
 
-char CoarseGrainedFastaFileReader::getFastaLetter(std::istream& stream) {
+char CoarseGrainedFastaFileReader::getFastaLetter(std::istream& stream)
+{
     while (true) {
         const auto letter = static_cast<char>(stream.get());
         switch (letter) {
@@ -988,7 +1168,8 @@ char CoarseGrainedFastaFileReader::getFastaLetter(std::istream& stream) {
     }
 }
 
-Particle CoarseGrainedFastaFileReader::loadParticle(std::istream& stream) {
+Particle CoarseGrainedFastaFileReader::loadParticle(std::istream& stream)
+{
     assert(stream.exceptions() & std::ios::failbit); // check that we throw upon failure
     const auto letter = getFastaLetter(stream);
     const auto atomid = fastaToAtomIds(std::string(1, letter)).at(0);
@@ -1000,31 +1181,42 @@ Particle CoarseGrainedFastaFileReader::loadParticle(std::istream& stream) {
 
 CoarseGrainedFastaFileReader::CoarseGrainedFastaFileReader(const double bond_length,
                                                            const Point& initial_particle_position)
-    : bond_length(bond_length), new_particle_position(initial_particle_position) {}
+    : bond_length(bond_length)
+    , new_particle_position(initial_particle_position)
+{
+}
 
-void CoarseGrainedFastaFileReader::setBondLength(const double bond_length) {
+void CoarseGrainedFastaFileReader::setBondLength(const double bond_length)
+{
     CoarseGrainedFastaFileReader::bond_length = bond_length;
 }
 
-std::string CoarseGrainedFastaFileReader::loadSequence(std::istream& stream) {
+std::string CoarseGrainedFastaFileReader::loadSequence(std::istream& stream)
+{
     stream.exceptions(std::istream::failbit | std::istream::badbit);
     loadHeader(stream);
     std::string sequence;
     while (true) {
         try {
             sequence.push_back(getFastaLetter(stream));
-        } catch (std::istream::failure& e) {
+        }
+        catch (std::istream::failure& e) {
             break; // end of stream reached
-        } catch (std::exception& e) { throw std::runtime_error(e.what()); }
+        }
+        catch (std::exception& e) {
+            throw std::runtime_error(e.what());
+        }
     }
     return sequence;
 }
 
-TEST_CASE("[Faunus] CoarseGrainedFastaFileReader") {
+TEST_CASE("[Faunus] CoarseGrainedFastaFileReader")
+{
     Faunus::atoms = R"([{ "ARG": { } }, { "LYS": { } } ])"_json.get<decltype(atoms)>();
     const auto bond_length = 7.0;
 
-    SUBCASE("single sequence") {
+    SUBCASE("single sequence")
+    {
         CoarseGrainedFastaFileReader reader(bond_length, {10, 20, 30});
         std::istringstream stream(">MCHU - Calmodulin\n; another comment\nKR\n");
         reader.load(stream);
@@ -1040,7 +1232,8 @@ TEST_CASE("[Faunus] CoarseGrainedFastaFileReader") {
         CHECK_EQ(reader.comments.at(0), "MCHU - Calmodulin");
         CHECK_EQ(reader.comments.at(1), "another comment");
     }
-    SUBCASE("single sequence - end by star") {
+    SUBCASE("single sequence - end by star")
+    {
         CoarseGrainedFastaFileReader reader(bond_length);
         std::istringstream stream(">MCHU - Calmodulin\nR*K\n");
         reader.load(stream);
@@ -1048,7 +1241,8 @@ TEST_CASE("[Faunus] CoarseGrainedFastaFileReader") {
         CHECK_EQ(reader.comments.size(), 1);
         CHECK_EQ(reader.comments.at(0), "MCHU - Calmodulin");
     }
-    SUBCASE("multisequence") {
+    SUBCASE("multisequence")
+    {
         CoarseGrainedFastaFileReader reader(bond_length);
         std::istringstream stream(">MCHU - Calmodulin\nKKK\n>RK*\n");
         reader.load(stream);
@@ -1056,17 +1250,20 @@ TEST_CASE("[Faunus] CoarseGrainedFastaFileReader") {
         CHECK_EQ(reader.comments.size(), 1);
         CHECK_EQ(reader.comments.at(0), "MCHU - Calmodulin");
     }
-    SUBCASE("unknown particle") {
+    SUBCASE("unknown particle")
+    {
         CoarseGrainedFastaFileReader reader(bond_length);
         std::istringstream stream(">MCHU - Calmodulin\nRKE*\n");
         CHECK_THROWS(reader.load(stream));
     }
-    SUBCASE("unknown fasta letter") {
+    SUBCASE("unknown fasta letter")
+    {
         CoarseGrainedFastaFileReader reader(bond_length);
         std::istringstream stream(">MCHU - Calmodulin\nRKx*\n");
         CHECK_THROWS(reader.load(stream));
     }
-    SUBCASE("no comment") {
+    SUBCASE("no comment")
+    {
         CoarseGrainedFastaFileReader reader(bond_length);
         std::istringstream stream("RKK*\n");
         reader.load(stream);
@@ -1077,5 +1274,8 @@ TEST_CASE("[Faunus] CoarseGrainedFastaFileReader") {
 
 // -----------------------
 
-void XdrFile::XdrFileDeleter::operator()(XdrFile::XDRFILE* xdrfile) { XdrFile::xdrfile_close(xdrfile); }
+void XdrFile::XdrFileDeleter::operator()(XdrFile::XDRFILE* xdrfile)
+{
+    XdrFile::xdrfile_close(xdrfile);
+}
 } // namespace Faunus

@@ -12,7 +12,8 @@ namespace Faunus::pairpotential {
 using TPairMatrix = Eigen::MatrixXd;
 using TPairMatrixPtr = std::shared_ptr<TPairMatrix>;
 
-//! type of a function extracting a potential coefficient from the InteractionData, e.g., sigma or eps
+//! type of a function extracting a potential coefficient from the InteractionData, e.g., sigma or
+//! eps
 using TExtractorFunc = std::function<double(const InteractionData&)>;
 
 //! type of a function defining a combination rule of a heterogeneous pair interaction
@@ -26,7 +27,8 @@ using TModifierFunc = std::function<double(double)>;
  *
  * The very same format is used as for a homogeneous interaction specified directly on an atom type.
  */
-struct CustomInteractionData {
+struct CustomInteractionData
+{
     std::array<AtomData::index_type, 2> atom_id;
     InteractionData interaction;
 };
@@ -41,17 +43,25 @@ void from_json(const json& j, std::vector<CustomInteractionData>& interactions);
  * When adding a new one, add a json mapping. Also consider appending the PairMixer::getCombinator()
  * method to recognize the new rule.
  */
-enum class CombinationRuleType { UNDEFINED, ARITHMETIC, GEOMETRIC, LORENTZ_BERTHELOT };
-NLOHMANN_JSON_SERIALIZE_ENUM(CombinationRuleType, {{CombinationRuleType::UNDEFINED, "undefined"},
-                                                   {CombinationRuleType::ARITHMETIC, "arithmetic"},
-                                                   {CombinationRuleType::GEOMETRIC, "geometric"},
-                                                   {CombinationRuleType::LORENTZ_BERTHELOT, "lorentz_berthelot"},
-                                                   {CombinationRuleType::LORENTZ_BERTHELOT, "LB"}})
+enum class CombinationRuleType
+{
+    UNDEFINED,
+    ARITHMETIC,
+    GEOMETRIC,
+    LORENTZ_BERTHELOT
+};
+NLOHMANN_JSON_SERIALIZE_ENUM(CombinationRuleType,
+                             {{CombinationRuleType::UNDEFINED, "undefined"},
+                              {CombinationRuleType::ARITHMETIC, "arithmetic"},
+                              {CombinationRuleType::GEOMETRIC, "geometric"},
+                              {CombinationRuleType::LORENTZ_BERTHELOT, "lorentz_berthelot"},
+                              {CombinationRuleType::LORENTZ_BERTHELOT, "LB"}})
 
 /**
  * @brief Exception for handling pair potential initialization.
  */
-struct PairPotentialException : public std::runtime_error {
+struct PairPotentialException : public std::runtime_error
+{
     explicit PairPotentialException(const std::string& msg);
 };
 
@@ -59,18 +69,22 @@ struct PairPotentialException : public std::runtime_error {
  * @brief PairMixer creates a matrix of pair potential coefficients based on the atom properties
  * and/or custom values using an arbitrary combination rule.
  *
- * PairMixer holds three functions that are applied in order extractor → combinator → modifier to create
- * a coefficient matrix for all possible interactions. The function createPairMatrix applies the functions
- * on all atom type pairs, and optionally also on the list of custom pair parameters (not the combinator
- * function).
+ * PairMixer holds three functions that are applied in order extractor → combinator → modifier to
+ * create a coefficient matrix for all possible interactions. The function createPairMatrix applies
+ * the functions on all atom type pairs, and optionally also on the list of custom pair parameters
+ * (not the combinator function).
  */
-class PairMixer {
-    TExtractorFunc extractor;   //!< Function extracting the coefficient from the InteractionData structure
+class PairMixer
+{
+    TExtractorFunc
+        extractor; //!< Function extracting the coefficient from the InteractionData structure
     TCombinatorFunc combinator; //!< Function combining two values
-    TModifierFunc modifier;     //!< Function modifying the result for fast computations, e.g., a square of
+    TModifierFunc
+        modifier; //!< Function modifying the result for fast computations, e.g., a square of
 
   public:
-    PairMixer(TExtractorFunc extractor, TCombinatorFunc combinator, TModifierFunc modifier = &modIdentity);
+    PairMixer(TExtractorFunc extractor, TCombinatorFunc combinator,
+              TModifierFunc modifier = &modIdentity);
 
     //! @return a square matrix of atoms.size()
     TPairMatrixPtr createPairMatrix(const std::vector<AtomData>& atoms);
@@ -78,17 +92,27 @@ class PairMixer {
     TPairMatrixPtr createPairMatrix(const std::vector<AtomData>& atoms,
                                     const std::vector<CustomInteractionData>& interactions);
 
-    enum class CoefficientType { ANY, SIGMA, EPSILON };
+    enum class CoefficientType
+    {
+        ANY,
+        SIGMA,
+        EPSILON
+    };
     static TCombinatorFunc getCombinator(CombinationRuleType combination_rule,
                                          CoefficientType coefficient = CoefficientType::ANY);
 
     // when explicit custom pairs are the only option
-    inline static constexpr double combUndefined(double = 0.0, double = 0.0) {
+    inline static constexpr double combUndefined(double = 0.0, double = 0.0)
+    {
         return std::numeric_limits<double>::signaling_NaN();
     };
+
     inline static double combArithmetic(double a, double b) { return 0.5 * (a + b); }
+
     inline static double combGeometric(double a, double b) { return std::sqrt(a * b); }
+
     inline static double modIdentity(double x) { return x; }
+
     inline static double modSquared(double x) { return x * x; }
 };
 
@@ -105,12 +129,14 @@ class PairMixer {
  *       convenience as we in this way can register the self energy during processing
  *       of the pair potential input.
  */
-class PairPotential {
+class PairPotential
+{
   private:
     friend void from_json(const json&, PairPotential&);
 
   public:
-    std::string name;      //!< unique name per polymorphic call; used in FunctorPotential::combinePairPotentials
+    std::string
+        name; //!< unique name per polymorphic call; used in FunctorPotential::combinePairPotentials
     std::string cite;      //!< Typically a short-doi litterature reference
     bool isotropic = true; //!< true if pair-potential is independent of particle orientation
     std::function<double(const Particle&)> selfEnergy = nullptr; //!< self energy of particle (kT)
@@ -126,7 +152,8 @@ class PairPotential {
      * @param b_towards_a Distance vector 𝐛 -> 𝐚 = 𝐚 - 𝐛
      * @return Force acting on a dur to b in units of kT/Å
      */
-    [[nodiscard]] virtual Point force(const Particle& a, const Particle& b, double squared_distance, const Point& b_towards_a) const;
+    [[nodiscard]] virtual Point force(const Particle& a, const Particle& b, double squared_distance,
+                                      const Point& b_towards_a) const;
 
     /**
      * @brief Pair energy between two particles
@@ -136,11 +163,11 @@ class PairPotential {
      * @param b_towards_a Distance vector 𝐛 -> 𝐚 = 𝐚 - 𝐛
      * @return Interaction energy in units of kT
      */
-    virtual double operator()(const Particle& particle_a, const Particle& particle_b, double squared_distance,
-                              const Point& b_towards_a) const = 0;
+    virtual double operator()(const Particle& particle_a, const Particle& particle_b,
+                              double squared_distance, const Point& b_towards_a) const = 0;
 
   protected:
-    explicit PairPotential(std::string  name = std::string(), std::string  cite = std::string(),
+    explicit PairPotential(std::string name = std::string(), std::string cite = std::string(),
                            bool isotropic = true);
 };
 
@@ -154,7 +181,8 @@ template <class T>
 concept RequirePairPotential = std::derived_from<T, pairpotential::PairPotential>;
 
 /** @brief Convenience function to generate a pair potential initialized from JSON object */
-template <RequirePairPotential T> auto makePairPotential(const json& j) {
+template <RequirePairPotential T> auto makePairPotential(const json& j)
+{
     T pair_potential;
     pairpotential::from_json(j, pair_potential);
     return pair_potential;
@@ -164,22 +192,27 @@ template <RequirePairPotential T> auto makePairPotential(const json& j) {
  * @brief A common ancestor for potentials that use parameter matrices computed from atomic
  * properties and/or custom atom pair properties.
  *
- * The class and their descendants have now also a responsibility to create themselves from a json object
- * and store back. This is gradually becoming a complex task which shall be moved into other class.
+ * The class and their descendants have now also a responsibility to create themselves from a json
+ * object and store back. This is gradually becoming a complex task which shall be moved into other
+ * class.
  */
-class MixerPairPotentialBase : public PairPotential {
+class MixerPairPotentialBase : public PairPotential
+{
   protected:
     CombinationRuleType combination_rule;
     std::shared_ptr<std::vector<CustomInteractionData>> custom_pairs =
         std::make_shared<std::vector<CustomInteractionData>>();
-    json json_extra_params;              //!< pickled extra parameters like a coefficient names mapping
-    void init();                         //!< initialize the potential when data, e.g., atom parameters, are available
-    virtual void initPairMatrices() = 0; //!< potential-specific initialization of parameter matrices
-    virtual void extractorsFromJson(const json&); //!< potential-specific assignment of coefficient extracting functions
+    json json_extra_params; //!< pickled extra parameters like a coefficient names mapping
+    void init(); //!< initialize the potential when data, e.g., atom parameters, are available
+    virtual void
+    initPairMatrices() = 0; //!< potential-specific initialization of parameter matrices
+    virtual void extractorsFromJson(
+        const json&); //!< potential-specific assignment of coefficient extracting functions
   public:
-    explicit MixerPairPotentialBase(const std::string& name = std::string(), const std::string& cite = std::string(),
-                                    CombinationRuleType combination_rule = CombinationRuleType::UNDEFINED,
-                                    bool isotropic = true);
+    explicit MixerPairPotentialBase(
+        const std::string& name = std::string(), const std::string& cite = std::string(),
+        CombinationRuleType combination_rule = CombinationRuleType::UNDEFINED,
+        bool isotropic = true);
     ~MixerPairPotentialBase() override = default;
     void from_json(const json& j) override;
     void to_json(json& j) const override;
@@ -191,13 +224,18 @@ class MixerPairPotentialBase : public PairPotential {
  * This is the most efficient way to combining pair-potentials due
  * to the possibility for compile-time optimisation.
  */
-template <RequirePairPotential T1, RequirePairPotential T2> struct CombinedPairPotential : public PairPotential {
+template <RequirePairPotential T1, RequirePairPotential T2>
+struct CombinedPairPotential : public PairPotential
+{
     T1 first;  //!< First pair potential of type T1
     T2 second; //!< Second pair potential of type T2
     explicit CombinedPairPotential(const std::string& name = "")
-        : PairPotential(name){};
-    inline double operator()(const Particle& particle_a, const Particle& particle_b, const double squared_distance,
-                             const Point& b_towards_a = {0, 0, 0}) const override {
+        : PairPotential(name) {};
+
+    inline double operator()(const Particle& particle_a, const Particle& particle_b,
+                             const double squared_distance,
+                             const Point& b_towards_a = {0, 0, 0}) const override
+    {
         return first(particle_a, particle_b, squared_distance, b_towards_a) +
                second(particle_a, particle_b, squared_distance, b_towards_a);
     } //!< Combine pair energy
@@ -210,13 +248,16 @@ template <RequirePairPotential T1, RequirePairPotential T2> struct CombinedPairP
      * @param b_towards_a Distance vector 𝐛 -> 𝐚 = 𝐚 - 𝐛
      * @return Force on particle a due to particle b
      */
-    [[nodiscard]] inline Point force(const Particle& particle_a, const Particle& particle_b, const double squared_distance,
-                       const Point& b_towards_a) const override {
+    [[nodiscard]] inline Point force(const Particle& particle_a, const Particle& particle_b,
+                                     const double squared_distance,
+                                     const Point& b_towards_a) const override
+    {
         return first.force(particle_a, particle_b, squared_distance, b_towards_a) +
                second.force(particle_a, particle_b, squared_distance, b_towards_a);
     } //!< Combine force
 
-    void from_json(const json& j) override {
+    void from_json(const json& j) override
+    {
         Faunus::pairpotential::from_json(j, first);
         Faunus::pairpotential::from_json(j, second);
         name = first.name + "/" + second.name;
@@ -230,11 +271,14 @@ template <RequirePairPotential T1, RequirePairPotential T2> struct CombinedPairP
                 }
                 return u2(p);
             };
-        } else {
+        }
+        else {
             selfEnergy = nullptr;
         }
     }
-    void to_json(json& j) const override {
+
+    void to_json(json& j) const override
+    {
         assert(j.is_object());
         auto& _j = j["default"] = json::array();
         _j.push_back(first);
@@ -242,4 +286,4 @@ template <RequirePairPotential T1, RequirePairPotential T2> struct CombinedPairP
     }
 };
 
-} // namespace Faunus::Potential
+} // namespace Faunus::pairpotential

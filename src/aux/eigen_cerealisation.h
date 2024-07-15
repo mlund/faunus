@@ -47,9 +47,12 @@ namespace cereal {
  * @param[in] ar The archive to serialise to.
  * @param[in] matrix The matrix to serialise.
  */
-template <class Archive, class _Scalar, int _Rows, int _Cols, int _Options, int _MaxRows, int _MaxCols>
-inline typename std::enable_if<traits::is_output_serializable<BinaryData<_Scalar>, Archive>::value, void>::type
-save(Archive &ar, const Eigen::Matrix<_Scalar, _Rows, _Cols, _Options, _MaxRows, _MaxCols> &matrix) {
+template <class Archive, class _Scalar, int _Rows, int _Cols, int _Options, int _MaxRows,
+          int _MaxCols>
+inline typename std::enable_if<traits::is_output_serializable<BinaryData<_Scalar>, Archive>::value,
+                               void>::type
+save(Archive& ar, const Eigen::Matrix<_Scalar, _Rows, _Cols, _Options, _MaxRows, _MaxCols>& matrix)
+{
     const std::int32_t rows = static_cast<std::int32_t>(matrix.rows());
     const std::int32_t cols = static_cast<std::int32_t>(matrix.cols());
     ar(rows);
@@ -65,9 +68,12 @@ save(Archive &ar, const Eigen::Matrix<_Scalar, _Rows, _Cols, _Options, _MaxRows,
  * @param[in] ar The archive to deserialise from.
  * @param[in] matrix The matrix to deserialise into.
  */
-template <class Archive, class _Scalar, int _Rows, int _Cols, int _Options, int _MaxRows, int _MaxCols>
-inline typename std::enable_if<traits::is_input_serializable<BinaryData<_Scalar>, Archive>::value, void>::type
-load(Archive &ar, Eigen::Matrix<_Scalar, _Rows, _Cols, _Options, _MaxRows, _MaxCols> &matrix) {
+template <class Archive, class _Scalar, int _Rows, int _Cols, int _Options, int _MaxRows,
+          int _MaxCols>
+inline typename std::enable_if<traits::is_input_serializable<BinaryData<_Scalar>, Archive>::value,
+                               void>::type
+load(Archive& ar, Eigen::Matrix<_Scalar, _Rows, _Cols, _Options, _MaxRows, _MaxCols>& matrix)
+{
     std::int32_t rows;
     std::int32_t cols;
     ar(rows);

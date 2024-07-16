@@ -576,7 +576,7 @@ class ParallelTempering : public Move
     Geometry::VolumeMethod volume_scaling_method =
         Geometry::VolumeMethod::ISOTROPIC;                               //!< How to scale volumes
     std::map<MPI::Partner::PartnerPair, Average<double>> acceptance_map; //!< Exchange statistics
-    std::map<int, std::vector<MPI::Partner::PartnerPair>> exchange_map;              //!< Exchange statistics
+    
     Random slump; // static instance of Random (shared for all in ParallelTempering)
     void _to_json(json& j) const override;
     void _from_json(const json& j) override;
@@ -588,6 +588,11 @@ class ParallelTempering : public Move
     double exchangeEnergy(double energy_change); //!< Exchange energy with partner
     void exchangeState(Change& change);          //!< Exchange positions, charges, volume etc.
     void exchangeGroupSizes(Space::GroupVector& groups, int partner_rank);
+    
+    std::string filename;                           //file name for exchange statistics
+    std::unique_ptr<std::ostream> stream;    //log exchange statistics in file
+    int exchange = 0;  // if no exchange, this is 0              
+    void writeToFileStream(int exchange) const; //!< Write exchange statistics to file
 
   public:
     explicit ParallelTempering(Space& spc, const MPI::Controller& mpi);

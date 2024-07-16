@@ -883,7 +883,10 @@ properties:
                             enum: [xyzqi, xyzq, xyz]
                             default: xyzqi
                             description: "Which particle properties to exchange (i=atom id, q=charge)"
-
+                        file:
+                            type: string
+                            pattern: "(.*?)\\.(dat|dat.gz))$"
+                            description: "file with exchange statistics from tempering"
                     additionalProperties: false
                     type: object
          

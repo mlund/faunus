@@ -840,11 +840,6 @@ void ParallelTempering::_to_json(json& j) const
         auto id = fmt::format("{} <-> {}", pair.first, pair.second);
         exchange_json[id] = {{"attempts", acceptance.size()}, {"acceptance", acceptance.avg()}};
     }
-    auto& exchange_json2 = j["exchangesmpi"] = json::object();
-    for (const auto& [mpi_process, exchange] : exchange_map) {
-        auto id = fmt::format("{}", mpi_process);
-        exchange_json2[id] = {{"exchanges", exchange }};
-    }
 }
 
 /**
@@ -918,14 +913,14 @@ double ParallelTempering::bias([[maybe_unused]] Change& change, double uold, dou
 void ParallelTempering::_accept([[maybe_unused]] Change& change)
 {
     acceptance_map[partner->getPair(mpi.world)] += 1.0;
-    exchange_map[mpi.world.rank()].push_back(partner->getPair(mpi.world));
+    exchange = sum(partner->getPair(mpi.world));
     
 }
 
 void ParallelTempering::_reject([[maybe_unused]] Change& change)
 {
     acceptance_map[partner->getPair(mpi.world)] += 0.0;
-    exchange_map[mpi.world.rank()].push_back(-1);
+    exchange = -1;
 }
 
 void ParallelTempering::_from_json(const json& j)
@@ -933,6 +928,20 @@ void ParallelTempering::_from_json(const json& j)
     exchange_particles.setFormat(j.value("format", MPI::ParticleBuffer::Format::XYZQI));
     partner = createMPIPartnerPolicy(j.value("partner_policy", MPI::PartnerPolicy::ODDEVEN));
     volume_scaling_method = j.value("volume_scale", Geometry::VolumeMethod::ISOTROPIC);
+
+    if (filename = j.value("file", ""s); !filename.empty()) {
+        filename = MPI::prefix + filename;
+        stream = IO::openCompressedOutputStream(filename, true); // throws if error
+        *stream << "# steps exchange\n"s;
+}
+
+void ParallelTempering::writeToFileStream(const int exchange) const
+{
+    if (stream) {
+        // file to disk?
+        *stream << fmt::format("{:d} {:d}\n", getNumberOfSteps(),
+                             exchange);
+    }
 }
 
 ParallelTempering::ParallelTempering(Space& spc, const MPI::Controller& mpi)

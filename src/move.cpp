@@ -913,7 +913,7 @@ double ParallelTempering::bias([[maybe_unused]] Change& change, double uold, dou
 void ParallelTempering::_accept([[maybe_unused]] Change& change)
 {
     acceptance_map[partner->getPair(mpi.world)] += 1.0;
-    exchange = sum(partner->getPair(mpi.world));
+    exchange = 1;
     
 }
 
@@ -932,7 +932,7 @@ void ParallelTempering::_from_json(const json& j)
     if (filename = j.value("file", ""s); !filename.empty()) {
         filename = MPI::prefix + filename;
         stream = IO::openCompressedOutputStream(filename, true); // throws if error
-        *stream << "# steps exchange\n"s;
+        *stream << "# exchange\n"s;
     }
 }
 
@@ -940,8 +940,7 @@ void ParallelTempering::writeToFileStream(const int exchange) const
 {
     if (stream) {
         // file to disk?
-        *stream << fmt::format("{:d} {:d}\n", getNumberOfSteps(),
-                             exchange);
+        *stream << fmt::format("{:d}\n", exchange);
     }
 }
 

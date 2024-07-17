@@ -167,6 +167,11 @@ cmake -DENABLE_TBB=on -DTBB_DIR={tbb-root}/lib/cmake/TBB
 where `{tbb-root}` is the installation directory of TBB, _e.g._
 `/usr/local` or `/opt/homebrew`.
 
+### Issues with ZLIB
+
+CMake may complain if you have multiple ZLIB installations.
+To force a specific location, use `-DZLIB_ROOT=...` in a clean build directory.
+
 # Development
 
 We recommend to use an IDE or text editor that respect the provided `.clang-format` which will ease merging

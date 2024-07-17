@@ -920,7 +920,7 @@ void ParallelTempering::_accept([[maybe_unused]] Change& change)
 void ParallelTempering::_reject([[maybe_unused]] Change& change)
 {
     acceptance_map[partner->getPair(mpi.world)] += 0.0;
-    #exchange = -1;
+    //exchange = -1;
 }
 
 void ParallelTempering::_from_json(const json& j)

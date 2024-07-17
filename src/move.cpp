@@ -913,14 +913,14 @@ double ParallelTempering::bias([[maybe_unused]] Change& change, double uold, dou
 void ParallelTempering::_accept([[maybe_unused]] Change& change)
 {
     acceptance_map[partner->getPair(mpi.world)] += 1.0;
-    exchange = 1;
+    exchange = partner->rank.value();
     
 }
 
 void ParallelTempering::_reject([[maybe_unused]] Change& change)
 {
     acceptance_map[partner->getPair(mpi.world)] += 0.0;
-    exchange = -1;
+    #exchange = -1;
 }
 
 void ParallelTempering::_from_json(const json& j)
@@ -936,7 +936,7 @@ void ParallelTempering::_from_json(const json& j)
     }
 }
 
-void ParallelTempering::writeToFileStream(const int exchange) const
+void ParallelTempering::writeToFileStream(const double exchange) const
 {
     if (stream) {
         // file to disk?

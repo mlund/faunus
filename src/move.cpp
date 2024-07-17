@@ -936,11 +936,12 @@ void ParallelTempering::_from_json(const json& j)
     }
 }
 
-void ParallelTempering::writeToFileStream(const double exchange) const
+void ParallelTempering::writeToFileStream(Change& change) const
 {
     if (stream) {
         // file to disk?
-        *stream << fmt::format("{:d}\n", exchange);
+        *stream << fmt::format("{:.6E}\n", exchange);
+        *stream << "\n"; // trailing newline
     }
 }
 

@@ -934,7 +934,7 @@ void ParallelTempering::_from_json(const json& j)
     if (filename = j.value("file", ""s); !filename.empty()) {
         filename = MPI::prefix + filename;
         stream = IO::openCompressedOutputStream(filename, true); // throws if error
-        *stream << "# step exchange\n"s;
+        *stream << "step exchange\n"s;
     }
 }
 

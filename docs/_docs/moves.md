@@ -321,6 +321,7 @@ The default value of `repeat` is the number of atoms in the `molecule` minus two
 `volume_scale=isotropic` | How to apply exchanged volumes: `z`, `xy`, `isotropic`, `isochoric`
 `nstep=1`                | Number of sweeps between samples.
 `partner_policy=oddeven` | Policy used to create partner pairs (currently only `oddeven`)
+`file`                   | Exchange statistics from the tempering moves (.dat|.dat.gz)
 
 We consider an extended ensemble, consisting of _n_
 sub-systems or replicas, each in a distinct thermodynamic state (different
@@ -352,8 +353,8 @@ Support for fluctuating number of particles, i.e.
 grand canonical moves is currently untested and should be
 considered experimental.
 
-#Exchange statistics
-In the output file, the acceptance and attempts of an exchange direction can be found under exchange in temper;moves. Next, the first tap under  exchangempi gives which mpi box the outfile represents (ex. 0, 1,...). Under this number the tab exchanges all executed temper movements are listed. For each movement two placeholders  are given, which represents the mpi's the tempering algorithm tries to switch. If the tempering move was not accepted, both the placeholders will be -1. When the tempering move is accepted do the placeholders contain the numbers of the interchanged mpi's. In faunus/examples/temper there is a notebook "temper\_exchange\_statistics.ipynb" illustrating how this aquired data can be used to study how the mpi's are exchanged.  
+# Exchange statistics
+When a file name is provided as input, an exchange file for each mpi is created. For respective step accepted and rejected attempts of exchange direction are recorded. If the tempering move was not accepted, the number -1 is recorded. When the tempering move is accepted, the number of the interchanged mpi is recorded. For example, in the exchange file for mpi2 an accepted temper move with mpi3 will record a 3, meaning the mpi's `2 <-> 3` etc. In faunus/examples/temper there is a notebook "temper\_exchange\_statistics.ipynb" illustrating how this aquired data can be used to study how the mpi's are exchanged.  
 
 
 ## Volume Move

@@ -878,7 +878,7 @@ void ParallelTempering::_move(Change& change)
     }
     partner->generate(mpi.world, slump);
     if (partner->rank.has_value()) {
-        exchangeState(change);
+        exchangeState(change);        
     }
 }
 
@@ -914,13 +914,15 @@ void ParallelTempering::_accept([[maybe_unused]] Change& change)
 {
     acceptance_map[partner->getPair(mpi.world)] += 1.0;
     exchange = partner->rank.value();
+    writeToFileStream();
     
 }
 
 void ParallelTempering::_reject([[maybe_unused]] Change& change)
 {
     acceptance_map[partner->getPair(mpi.world)] += 0.0;
-    //exchange = -1;
+    exchange = -1.0;
+    writeToFileStream();
 }
 
 void ParallelTempering::_from_json(const json& j)
@@ -932,16 +934,15 @@ void ParallelTempering::_from_json(const json& j)
     if (filename = j.value("file", ""s); !filename.empty()) {
         filename = MPI::prefix + filename;
         stream = IO::openCompressedOutputStream(filename, true); // throws if error
-        *stream << "# exchange\n"s;
+        *stream << "# step exchange\n"s;
     }
 }
 
-void ParallelTempering::writeToFileStream(Change& change) const
+void ParallelTempering::writeToFileStream() const
 {
     if (stream) {
-        // file to disk?
-        *stream << fmt::format("{:.6E}\n", exchange);
-        *stream << "\n"; // trailing newline
+        // file to disk?:
+        *stream << fmt::format("{:d} {:.6E}\n", number_of_attempted_moves , exchange);
     }
 }
 

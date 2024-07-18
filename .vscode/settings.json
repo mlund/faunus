@@ -106,6 +106,9 @@
         "utility": "cpp",
         "stop_token": "cpp",
         "tensorsymmetry": "cpp",
-        "core": "cpp"
-    }
+        "core": "cpp",
+        "shared_mutex": "cpp",
+        "cfenv": "cpp"
+    },
+    "C_Cpp.errorSquiggles": "disabled"
 }

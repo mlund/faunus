@@ -353,8 +353,13 @@ Support for fluctuating number of particles, i.e.
 grand canonical moves is currently untested and should be
 considered experimental.
 
+
 # Exchange statistics
-When a file name is provided as input, an exchange file for each mpi is created. For respective step accepted and rejected attempts of exchange direction are recorded. If the tempering move was not accepted, the number -1 is recorded. When the tempering move is accepted, the number of the interchanged mpi is recorded. For example, in the exchange file for mpi2 an accepted temper move with mpi3 will record a 3, meaning the mpi's `2 <-> 3` etc. In faunus/examples/temper there is a notebook "temper\_exchange\_statistics.ipynb" illustrating how this aquired data can be used to study how the mpi's are exchanged.  
+When a file name is provided as input, an exchange file for each mpi is created. For respective step accepted and rejected attempts of exchange direction are recorded. 
+If the tempering move was not accepted, the number -1 is recorded. When the tempering move is accepted, the number of the interchanged mpi is recorded. 
+For example, in the exchange file for mpi2 an accepted temper move with mpi3 will record a 3, meaning the mpi's `2 <-> 3` etc. 
+In faunus/examples/temper there is a notebook "temper\_exchange\_statistics.ipynb" illustrating how this aquired data can be used to study how the mpi's are exchanged.  
+
 
 
 ## Volume Move

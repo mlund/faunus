@@ -321,7 +321,7 @@ The default value of `repeat` is the number of atoms in the `molecule` minus two
 `volume_scale=isotropic` | How to apply exchanged volumes: `z`, `xy`, `isotropic`, `isochoric`
 `nstep=1`                | Number of sweeps between samples.
 `partner_policy=oddeven` | Policy used to create partner pairs (currently only `oddeven`)
-`file`                   | Exchange statistics from the tempering moves (.dat|.dat.gz)
+`file`                   | Exchange statistics from the tempering moves (`.dat|.dat.gz`)
 
 We consider an extended ensemble, consisting of _n_
 sub-systems or replicas, each in a distinct thermodynamic state (different
@@ -356,7 +356,7 @@ considered experimental.
 
 # Exchange statistics
 
-When `file` is provided, an exchange file for each MPI rank is created.
+If `file` is provided, an exchange file for each MPI rank is created.
 For respective step accepted and rejected attempts of exchange direction are recorded. 
 If the tempering move was rejected, the number -1 is recorded.
 When the tempering move is accepted, the number of the interchanged mpi is recorded. 

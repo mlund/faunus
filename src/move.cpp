@@ -878,7 +878,7 @@ void ParallelTempering::_move(Change& change)
     }
     partner->generate(mpi.world, slump);
     if (partner->rank.has_value()) {
-        exchangeState(change);        
+        exchangeState(change);
     }
 }
 

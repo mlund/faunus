@@ -591,7 +591,7 @@ class ParallelTempering : public Move
 
     std::string filename;                 //!< File name for exchange statistics
     std::unique_ptr<std::ostream> stream; //!< Log exchange statistics in file
-    double exchange;                      //!< If no exchange, this is 0
+    std::optional<int> exchange;          //!< Rank of exchange partner, if any
     void writeToFileStream() const;       //!< Write exchange statistics to file
 
   public:

@@ -908,18 +908,19 @@ VirtualVolumeMove::VirtualVolumeMove(const json& j, Space& spc, Energy::EnergyTe
     from_json(j);
     change.volume_change = true;
     change.everything = true;
-    if (stream) {
-        *stream << "# steps dV/" + unicode::angstrom + unicode::cubed +
-                       " du/kT exp(-du/kT) <Pex>/kT/" + unicode::angstrom + unicode::cubed;
-        // if non-isotropic scaling, add another column with dA or dL
-        if (volume_scaling_method == Geometry::VolumeMethod::XY) {
-            *stream << " dA/" + unicode::angstrom + unicode::squared;
-        }
-        else if (volume_scaling_method == Geometry::VolumeMethod::Z) {
-            *stream << " dL/" + unicode::angstrom;
-        }
-        *stream << "\n"; // trailing newline
+    if (!stream) {
+        faunus_logger->debug("{}: no output file", name);
     }
+    *stream << "# steps dV/" + unicode::angstrom + unicode::cubed +
+                    " du/kT exp(-du/kT) <Pex>/kT/" + unicode::angstrom + unicode::cubed;
+    // if non-isotropic scaling, add another column with dA or dL
+    if (volume_scaling_method == Geometry::VolumeMethod::XY) {
+        *stream << " dA/" + unicode::angstrom + unicode::squared;
+    }
+    else if (volume_scaling_method == Geometry::VolumeMethod::Z) {
+        *stream << " dL/" + unicode::angstrom;
+    }
+    *stream << "\n"; // trailing newline
 }
 
 void MolecularConformationID::_sample()
@@ -1089,7 +1090,7 @@ AtomicDisplacement::AtomicDisplacement(const json& j, const Space& spc, std::str
     molid = molecule_data.id();
 
     auto positions = getPositions();
-    const auto num_positions = std::ranges::distance(positions.begin(), positions.end());
+    const auto num_positions = positions.size();;
     reference_positions = positions | ranges::to_vector;
     cell_indices.resize(num_positions, {0, 0, 0});
     mean_squared_displacement.resize(num_positions);
@@ -1226,15 +1227,16 @@ void WidomInsertion::selectGhostGroup()
 {
     change.clear();
     auto inactive_groups = spc.findMolecules(molid, Space::Selection::INACTIVE);
-    if (!std::ranges::empty(inactive_groups)) {
-        const auto& group = *inactive_groups.begin(); // select first group
-        if (group.empty() && group.capacity() > 0) {
-            // must be inactive and have a non-zero capacity
-            auto& group_changes = change.groups.emplace_back();
-            group_changes.group_index = spc.getGroupIndex(group); // group index in space
-            group_changes.all = true;
-            group_changes.internal = group.isAtomic(); // internal energy only if non-molecular
-        }
+    if (inactive_groups.empty()) {
+        return;
+    }
+    const auto& group = *inactive_groups.begin(); // select first group
+    if (group.empty() && group.capacity() > 0) {
+        // must be inactive and have a non-zero capacity
+        auto& group_changes = change.groups.emplace_back();
+        group_changes.group_index = spc.getGroupIndex(group); // group index in space
+        group_changes.all = true;
+        group_changes.internal = group.isAtomic(); // internal energy only if non-molecular
     }
 }
 
@@ -2068,39 +2070,40 @@ void PolymerShape::_sample()
     }
 
     for (const auto& group : molecules) {
-        if (group.size() >= 2) {
-            // two or more particles required to form a polymer
-            const auto gyration_tensor = Geometry::gyration(
-                group.begin(), group.end(), group.mass_center, spc.geometry.getBoundaryFunc());
-            const auto principal_moment =
-                Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d>(gyration_tensor).eigenvalues();
-            const auto gyration_radius_squared = gyration_tensor.trace();
-            const auto end_to_end_squared =
-                spc.geometry.sqdist(group.begin()->pos, std::prev(group.end())->pos);
+        if (group.size() < 2) {
+            return;
+        }
+        // two or more particles required to form a polymer
+        const auto gyration_tensor = Geometry::gyration(
+            group.begin(), group.end(), group.mass_center, spc.geometry.getBoundaryFunc());
+        const auto principal_moment =
+            Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d>(gyration_tensor).eigenvalues();
+        const auto gyration_radius_squared = gyration_tensor.trace();
+        const auto end_to_end_squared =
+            spc.geometry.sqdist(group.begin()->pos, std::prev(group.end())->pos);
 
-            data.end_to_end_squared += end_to_end_squared;
-            data.gyration_radius += std::sqrt(gyration_radius_squared);
-            data.gyration_radius_squared += gyration_radius_squared;
-            gyration_radius_histogram(std::sqrt(gyration_radius_squared))++;
+        data.end_to_end_squared += end_to_end_squared;
+        data.gyration_radius += std::sqrt(gyration_radius_squared);
+        data.gyration_radius_squared += gyration_radius_squared;
+        gyration_radius_histogram(std::sqrt(gyration_radius_squared))++;
 
-            const double asphericity =
-                3.0 / 2.0 * principal_moment.z() - gyration_radius_squared / 2.0;
-            const double acylindricity = principal_moment.y() - principal_moment.x();
-            const double relative_shape_anisotropy =
-                (asphericity * asphericity + 3.0 / 4.0 * acylindricity * acylindricity) /
-                (gyration_radius_squared * gyration_radius_squared);
+        const double asphericity =
+            3.0 / 2.0 * principal_moment.z() - gyration_radius_squared / 2.0;
+        const double acylindricity = principal_moment.y() - principal_moment.x();
+        const double relative_shape_anisotropy =
+            (asphericity * asphericity + 3.0 / 4.0 * acylindricity * acylindricity) /
+            (gyration_radius_squared * gyration_radius_squared);
 
-            data.aspherity += asphericity;
-            data.acylindricity += acylindricity;
-            data.relative_shape_anisotropy += relative_shape_anisotropy;
+        data.aspherity += asphericity;
+        data.acylindricity += acylindricity;
+        data.relative_shape_anisotropy += relative_shape_anisotropy;
 
-            if (tensor_output_stream) {
-                const auto& t = gyration_tensor;
-                *tensor_output_stream
-                    << fmt::format("{} {:.2f} {:5e} {:5e} {:5e} {:5e} {:5e} {:5e}\n",
-                                   this->getNumberOfSteps(), std::sqrt(gyration_radius_squared),
-                                   t(0, 0), t(0, 1), t(0, 2), t(1, 1), t(1, 2), t(2, 2));
-            }
+        if (tensor_output_stream) {
+            const auto& t = gyration_tensor;
+            *tensor_output_stream
+                << fmt::format("{} {:.2f} {:5e} {:5e} {:5e} {:5e} {:5e} {:5e}\n",
+                                this->getNumberOfSteps(), std::sqrt(gyration_radius_squared),
+                                t(0, 0), t(0, 1), t(0, 2), t(1, 1), t(1, 2), t(2, 2));
         }
     }
 }
@@ -2577,14 +2580,16 @@ std::vector<double> ChargeFluctuations::getMeanCharges() const
 
 void ChargeFluctuations::_to_disk()
 {
-    if (not filename.empty()) {
-        auto molecules = spc.findMolecules(mol_iter->id(), Space::Selection::ALL);
-        if (not std::ranges::empty(molecules)) {
-            const auto particles_with_avg_charges = averageChargeParticles(*molecules.begin());
-            PQRWriter().save(MPI::prefix + filename, particles_with_avg_charges.begin(),
-                             particles_with_avg_charges.end(), spc.geometry.getLength());
-        }
+    if (filename.empty()) {
+        return;
     }
+    auto molecules = spc.findMolecules(mol_iter->id(), Space::Selection::ALL);
+    if (molecules.empty()) {
+        return;
+    }
+    const auto particles_with_avg_charges = averageChargeParticles(*molecules.begin());
+    PQRWriter().save(MPI::prefix + filename, particles_with_avg_charges.begin(),
+                        particles_with_avg_charges.end(), spc.geometry.getLength());
 }
 
 ParticleVector ChargeFluctuations::averageChargeParticles(const Space::GroupType& group)
@@ -2814,7 +2819,7 @@ void VirtualTranslate::_sample()
         return;
     }
     if (auto mollist = mutable_space.findMolecules(molid, Space::Selection::ACTIVE);
-        !std::ranges::empty(mollist)) {
+        !mollist.empty()) {
         if (std::ranges::distance(mollist.begin(), mollist.end()) > 1) {
             throw std::runtime_error("exactly ONE active molecule expected");
         }

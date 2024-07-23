@@ -1,4 +1,5 @@
 #include "analysis.h"
+#include "core.h"
 #include "mpicontroller.h"
 #include <voronotalt/voronotalt.h>
 #include <numeric>
@@ -35,7 +36,7 @@ Voronota::Voronota(const Faunus::json& input, const Faunus::Space& spc)
 void Voronota::_from_json(const Faunus::json& input)
 {
     if (filename = input.value("file", ""s); !filename.empty()) {
-        output_stream = IO::openCompressedOutputStream(MPI::prefix + filename);
+        output_stream = IO::openCompressedOutputStream(MPI::prefix + filename, true);
         *output_stream << "# step SASA\n";
     }
 }

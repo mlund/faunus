@@ -234,7 +234,7 @@ class MassCenterDisplacement : public AtomicDisplacement
  */
 class WidomInsertion : public PerturbationAnalysis
 {
-    std::shared_ptr<MoleculeInserter> inserter; //!< Insertion method
+    std::unique_ptr<MoleculeInserter> inserter; //!< Insertion method
     int number_of_insertions;                   //!< Number of insertions per sample event
     MoleculeData::index_type molid;             //!< Molecule id
     bool absolute_z_coords = false;             //!< Apply abs() on all inserted z coordinates?

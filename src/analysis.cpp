@@ -1295,7 +1295,7 @@ void WidomInsertion::_from_json(const json& j)
 {
     number_of_insertions = j.at("ninsert").get<int>();
     absolute_z_coords = j.value("absz", false);
-    if (auto ptr = std::dynamic_pointer_cast<RandomInserter>(inserter); ptr) {
+    if (auto ptr = dynamic_cast<RandomInserter*>(inserter.get()); ptr) {
         ptr->dir = j.value("dir", Point({1, 1, 1}));
     } // set insert directions for RandomInserter
 
@@ -1307,7 +1307,7 @@ WidomInsertion::WidomInsertion(const json& j, Space& spc, Energy::Hamiltonian& p
     : PerturbationAnalysis("widom", pot, spc)
 {
     cite = "doi:10/dkv4s6";
-    inserter = std::make_shared<RandomInserter>();
+    inserter = std::make_unique<RandomInserter>();
     from_json(j);
 }
 

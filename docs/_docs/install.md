@@ -176,7 +176,7 @@ To force a specific location, use `-DZLIB_ROOT=...` in a clean build directory.
 
 We recommend to use an IDE or text editor that respect the provided `.clang-format` which will ease merging
 changes into the codebase, see below.
-For Visual Studio Code (VSC) users, it is very easy to setup a development environment using Docker and
+For Visual Studio Code (VSC) users, it is easy to setup a development environment using Docker and
 [Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers):
 
 ~~~ bash
@@ -186,6 +186,15 @@ code .
 
 (when asked, select "open in devcontainer", assuming you have Docker running)
 
+## Clangd
+
+For editors with `clangd` support, we provide a `.clangd` configuration file.
+This looks for a CMake generated `build` path that should contain
+`compile_commands.json`.
+If you use a custom build directory, simply create a symlink called `build`
+in the project root.
+If your build directory doesn't contain `compile_commands.json`, you can create
+one with the CMake argument `-DCMAKE_EXPORT_COMPILE_COMMANDS=on`.
 
 ## Code Style
 

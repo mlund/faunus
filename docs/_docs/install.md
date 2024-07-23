@@ -153,6 +153,14 @@ make clean
 rm -fR CMakeCache.txt CMakeFiles _deps
 ~~~
 
+### CMake Presets
+
+CMake presets are provided and can be used e.g. like this:
+~~~ bash
+cmake --preset debug # populates build/debug/
+cmake --build --preset faunus-debug
+~~~
+
 ### Intel Threading Building Blocks (TBB)
 
 To use C++ parallel algorithms, some compilers require linkage with TBB.
@@ -189,12 +197,9 @@ code .
 ## Clangd
 
 For editors with `clangd` support, we provide a `.clangd` configuration file.
-This looks for a CMake generated `build` path that should contain
+This looks for a CMake generated `build/debug` path that should contain
 `compile_commands.json`.
-If you use a custom build directory, simply create a symlink called `build`
-in the project root.
-If your build directory doesn't contain `compile_commands.json`, you can create
-one with the CMake argument `-DCMAKE_EXPORT_COMPILE_COMMANDS=on`.
+Use `cmake . --preset debug` to generate.
 
 ## Code Style
 

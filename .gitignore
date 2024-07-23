@@ -12,6 +12,8 @@ sids/
 docs/html/
 unittests.log
 a.out
+.clangd
+.zed/settings.json
 
 # VisualStudioCode
 .vscode/settings.json
@@ -113,6 +115,7 @@ out.cereal
 
 # CMake
 cmake-build-*/
+build/
 
 # Mongo Explorer plugin
 .idea/**/mongoSettings.xml

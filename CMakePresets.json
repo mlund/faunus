@@ -1,0 +1,66 @@
+{
+    "version": 6,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 24,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "config-base",
+            "hidden": true,
+            "displayName": "Base Configuration",
+            "description": "Default build using unix makefile generator",
+            "generator": "Unix Makefiles",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "on"
+            }
+        },
+        {
+            "name": "debug",
+            "displayName": "Config Debug",
+            "description": "Sets debug build type",
+            "inherits": "config-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "ENABLE_PYTHON": "off",
+                "ENABLE_CACHE": "off"
+            }
+        },
+        {
+            "name": "relwithdebinfo",
+            "displayName": "Config Release with Debug Info",
+            "description": "Sets release with debug info build type",
+            "inherits": "debug",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+            }
+        },
+        {
+            "name": "release",
+            "displayName": "Config Release",
+            "description": "Sets release build type",
+            "inherits": "debug",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "faunus-debug",
+            "displayName": "Faunus Debug Build",
+            "configurePreset": "debug",
+            "configuration": "Debug",
+            "targets": ["faunus"]
+        },
+        {
+            "name": "faunus-release",
+            "displayName": "Faunus Release Build",
+            "configurePreset": "release",
+            "configuration": "Release",
+            "targets": ["faunus"]
+        }
+    ]
+}

@@ -36,7 +36,7 @@ CPMAddPackage(
     OPTIONS "SKIP_PORTABILITY_TEST ON" "JUST_INSTALL_CEREAL ON"
 )
 
-CPMAddPackage("gh:pybind/pybind11_json#0.2.13")
+CPMAddPackage("gh:pybind/pybind11_json#0.2.14")
 
 
 ###################################

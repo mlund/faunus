@@ -110,7 +110,7 @@ class TipFromTheManual
     TipFromTheManual();
     void load(const std::vector<std::string>&);
     std::string operator[](std::string_view key);
-    void pick(const std::string&);
+    void pick(std::string_view);
 };
 
 extern TipFromTheManual usageTip;                     // global instance

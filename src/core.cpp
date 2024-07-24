@@ -128,7 +128,7 @@ std::string TipFromTheManual::operator[](std::string_view key)
     return tip;
 }
 
-void TipFromTheManual::pick(const std::string& key)
+void TipFromTheManual::pick(std::string_view key)
 {
     operator[](key);
 }

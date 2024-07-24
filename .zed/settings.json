@@ -6,6 +6,9 @@
   "languages": {
     "C++": {
       "tab_size": 4,
+      "enable_language_server": true,
+      "show_copilot_suggestions": true,
+      "indent_style": "space",
       "formatter": {
         "external": {
           "command": "clang-format",

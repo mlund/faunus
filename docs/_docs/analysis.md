@@ -377,6 +377,7 @@ The algorithm is significantly faster than the above `sasa` analysis.
 `nstep`        | Interval between samples
 `nskip=0`      | Number of initial steps excluded from the analysis
 `file`         | Optionally stream surface area for each `nstep` to file (`.dat|.dat.gz`)
+`mode=full`    | Running mode: `full`, `interchain`, `updateable`
 `radius=1.4`   | Probe radius (Å)
 
 

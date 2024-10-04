@@ -1,0 +1,57 @@
+#!/usr/bin/env yason.py
+{% set N = 50 %}
+
+temperature: 298
+random: {seed: hardware}
+geometry: {type: cuboid, length: [300, 350, 400]}
+mcloop: {macro: 10, micro: 1000}
+
+atomlist:
+    - GLN  :  { sigma: 6.0, mw: 54.0,  dp: 2.0, eps: 1.0 }
+
+moleculelist:
+    - peptide:
+        structure:
+          fasta: {% for i in range(N) %}Q{% endfor %}
+          k: 3.0
+          req: 7.0
+
+insertmolecules:
+    - peptide: {N: 5}
+
+energy:
+    - bonded: {}
+    - nonbonded:
+        default:
+          - wca: {mixing: LB}
+
+moves:
+    - transrot:    {molecule: peptide, repeat: N}
+    - pivot:       {molecule: peptide, dprot: 0.5, repeat: N}
+    - moltransrot: {molecule: peptide, dp: 20.0, dprot: 0.5, repeat: 10}
+
+analysis:
+    - sanity: {nstep: 10}
+    - xtcfile: {file: peptides_traj.xtc, nstep: 1}
+    - savestate: {file: peptides_structure.gro}
+    - sasa:
+        file: peptides_sasa.dat
+        policy: molecular
+        molecule: peptide
+        radius: 2.0
+        nstep: 1
+    - voronoi:
+        file: peptides_voronoi_full.dat
+        mode: full
+        radius: 2.0
+        nstep: 1
+    - voronoi:
+        file: peptides_voronoi_interchain.dat
+        mode: interchain
+        radius: 2.0
+        nstep: 1
+    - voronoi:
+        file: peptides_voronoi_updateable.dat
+        mode: updateable
+        radius: 2.0
+        nstep: 1

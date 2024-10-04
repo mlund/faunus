@@ -19,7 +19,7 @@ public:
 		UnsignedInt left_id;
 		UnsignedInt right_id;
 
-		ContourPoint(const SimplePoint& p, const UnsignedInt left_id, const UnsignedInt right_id) : p(p), left_id(left_id), right_id(right_id)
+		ContourPoint(const SimplePoint& p, const UnsignedInt left_id, const UnsignedInt right_id) noexcept : p(p), left_id(left_id), right_id(right_id)
 		{
 		}
 	};
@@ -31,11 +31,11 @@ public:
 		Float sort_value;
 		UnsignedInt neighbor_id;
 
-		NeighborDescriptor() : sort_value(FLOATCONST(0.0)), neighbor_id(0)
+		NeighborDescriptor() noexcept : sort_value(FLOATCONST(0.0)), neighbor_id(0)
 		{
 		}
 
-		bool operator<(const NeighborDescriptor& d) const
+		bool operator<(const NeighborDescriptor& d) const noexcept
 		{
 			return (sort_value<d.sort_value || (sort_value==d.sort_value && neighbor_id<d.neighbor_id));
 		}
@@ -51,11 +51,11 @@ public:
 	{
 		std::vector<ContourGraphics> contours_graphics;
 
-		ContactDescriptorGraphics()
+		ContactDescriptorGraphics() noexcept
 		{
 		}
 
-		void clear()
+		void clear() noexcept
 		{
 			contours_graphics.clear();
 		}
@@ -74,7 +74,7 @@ public:
 		UnsignedInt id_a;
 		UnsignedInt id_b;
 
-		ContactDescriptor() :
+		ContactDescriptor() noexcept :
 			area(FLOATCONST(0.0)),
 			arc_length(FLOATCONST(0.0)),
 			distance(FLOATCONST(0.0)),
@@ -83,7 +83,7 @@ public:
 		{
 		}
 
-		void clear()
+		void clear() noexcept
 		{
 			id_a=0;
 			id_b=0;
@@ -101,11 +101,11 @@ public:
 			const std::vector<int>& spheres_exclusion_statuses,
 			const UnsignedInt a_id,
 			const UnsignedInt b_id,
-			const std::vector<UnsignedInt>& a_neighbor_collisions,
+			const std::vector<ValuedID>& a_neighbor_collisions,
 			const Float step,
 			const int projections,
 			const bool record_graphics,
-			ContactDescriptor& result_contact_descriptor)
+			ContactDescriptor& result_contact_descriptor) noexcept
 	{
 		result_contact_descriptor.clear();
 		if(a_id<spheres.size() && b_id<spheres.size())
@@ -123,7 +123,7 @@ public:
 					{
 						for(UnsignedInt i=0;i<a_neighbor_collisions.size() && !discarded;i++)
 						{
-							const UnsignedInt neighbor_id=a_neighbor_collisions[i];
+							const UnsignedInt neighbor_id=a_neighbor_collisions[i].index;
 							if(neighbor_id!=b_id && (neighbor_id>=spheres_exclusion_statuses.size() || spheres_exclusion_statuses[neighbor_id]==0))
 							{
 								const SimpleSphere& c=spheres[neighbor_id];
@@ -302,7 +302,7 @@ private:
 	class HyperboloidBetweenTwoSpheres
 	{
 	public:
-		static inline SimplePoint project_point_on_hyperboloid(const SimplePoint& p, const SimpleSphere& s1, const SimpleSphere& s2)
+		static inline SimplePoint project_point_on_hyperboloid(const SimplePoint& p, const SimpleSphere& s1, const SimpleSphere& s2) noexcept
 		{
 			if(s1.r>s2.r)
 			{
@@ -321,7 +321,7 @@ private:
 			}
 		}
 
-		static inline Float intersect_vector_with_hyperboloid(const SimplePoint& a, const SimplePoint& b, const SimpleSphere& s1, const SimpleSphere& s2)
+		static inline Float intersect_vector_with_hyperboloid(const SimplePoint& a, const SimplePoint& b, const SimpleSphere& s1, const SimpleSphere& s2) noexcept
 		{
 			if(s1.r>s2.r)
 			{
@@ -350,7 +350,7 @@ private:
 		}
 
 	private:
-		static inline Float project_point_on_simple_hyperboloid(const Float x, const Float y, const Float d, const Float r1, const Float r2)
+		static inline Float project_point_on_simple_hyperboloid(const Float x, const Float y, const Float d, const Float r1, const Float r2) noexcept
 		{
 			if(r1>r2)
 			{
@@ -363,7 +363,7 @@ private:
 			}
 		}
 
-		static inline Float intersect_vector_with_simple_hyperboloid(const SimplePoint& a, const SimplePoint& b, const Float d, const Float r1, const Float r2)
+		static inline Float intersect_vector_with_simple_hyperboloid(const SimplePoint& a, const SimplePoint& b, const Float d, const Float r1, const Float r2) noexcept
 		{
 			if(r1>r2)
 			{
@@ -411,7 +411,7 @@ private:
 			const SimpleSphere& base,
 			const SimplePoint& axis,
 			const Float length_step,
-			Contour& result)
+			Contour& result) noexcept
 	{
 		const Float angle_step=std::max(std::min(length_step/base.r, PIVALUE/FLOATCONST(3.0)), PIVALUE/FLOATCONST(36.0));
 		const SimplePoint first_point=point_and_number_product(any_normal_of_vector(axis), base.r);
@@ -427,7 +427,7 @@ private:
 			const SimpleSphere& c,
 			const UnsignedInt c_id,
 			Contour& contour,
-			std::list<Contour>& segments)
+			std::list<Contour>& segments) noexcept
 	{
 		const UnsignedInt outsiders_count=mark_contour(a, c, c_id, contour);
 		if(outsiders_count>0)
@@ -458,7 +458,7 @@ private:
 			const SimpleSphere& a,
 			const SimpleSphere& c,
 			const UnsignedInt c_id,
-			Contour& contour)
+			Contour& contour) noexcept
 	{
 		UnsignedInt outsiders_count=0;
 		for(Contour::iterator it=contour.begin();it!=contour.end();++it)
@@ -478,7 +478,7 @@ private:
 			const SimpleSphere& c,
 			const UnsignedInt c_id,
 			Contour& contour,
-			std::list<Contour::iterator>& cuts)
+			std::list<Contour::iterator>& cuts) noexcept
 	{
 		UnsignedInt cuts_count=0;
 		Contour::iterator it=contour.begin();
@@ -517,7 +517,7 @@ private:
 		return cuts_count;
 	}
 
-	static void order_cuts(std::list<Contour::iterator>& cuts)
+	static void order_cuts(std::list<Contour::iterator>& cuts) noexcept
 	{
 		Float sums[2]={FLOATCONST(0.0), FLOATCONST(0.0)};
 		for(int i=0;i<2;i++)
@@ -552,7 +552,7 @@ private:
 	static UnsignedInt split_contour(
 			Contour& contour,
 			const std::list<Contour::iterator>& ordered_cuts,
-			std::list<Contour>& segments)
+			std::list<Contour>& segments) noexcept
 	{
 		UnsignedInt segments_count=0;
 		std::list<Contour::iterator>::const_iterator it=ordered_cuts.begin();
@@ -597,7 +597,7 @@ private:
 			const UnsignedInt c_id,
 			const Float step,
 			const int projections,
-			Contour& contour)
+			Contour& contour) noexcept
 	{
 		Contour::iterator it=contour.begin();
 		while(it!=contour.end())
@@ -642,7 +642,7 @@ private:
 		}
 	}
 
-	static bool check_contour_intersects_sphere(const SimpleSphere& shell, const Contour& contour)
+	static bool check_contour_intersects_sphere(const SimpleSphere& shell, const Contour& contour) noexcept
 	{
 		for(Contour::const_iterator it=contour.begin();it!=contour.end();++it)
 		{
@@ -654,7 +654,7 @@ private:
 		return false;
 	}
 
-	static void filter_contours_intersecting_sphere(const SimpleSphere& shell, std::list<Contour>& contours)
+	static void filter_contours_intersecting_sphere(const SimpleSphere& shell, std::list<Contour>& contours) noexcept
 	{
 		std::list<Contour>::iterator it=contours.begin();
 		while(it!=contours.end())
@@ -671,7 +671,7 @@ private:
 	}
 
 	template<typename List, typename Iterator>
-	static Iterator get_left_iterator(List& container, const Iterator& iterator)
+	static Iterator get_left_iterator(List& container, const Iterator& iterator) noexcept
 	{
 		Iterator left_it=iterator;
 		if(left_it==container.begin())
@@ -683,7 +683,7 @@ private:
 	}
 
 	template<typename List, typename Iterator>
-	static Iterator get_right_iterator(List& container, const Iterator& iterator)
+	static Iterator get_right_iterator(List& container, const Iterator& iterator) noexcept
 	{
 		Iterator right_it=iterator;
 		++right_it;
@@ -695,7 +695,7 @@ private:
 	}
 
 	template<typename List>
-	static void shift_list(List& list, const bool reverse)
+	static void shift_list(List& list, const bool reverse) noexcept
 	{
 		if(!reverse)
 		{
@@ -709,7 +709,7 @@ private:
 		}
 	}
 
-	static bool collect_points_from_contour(const Contour& contour, std::vector<SimplePoint>& contour_points)
+	static bool collect_points_from_contour(const Contour& contour, std::vector<SimplePoint>& contour_points) noexcept
 	{
 		contour_points.clear();
 		if(!contour.empty())
@@ -723,7 +723,7 @@ private:
 		return (!contour_points.empty());
 	}
 
-	static Float calculate_area_from_contour(const Contour& contour, const SimpleSphere& sphere1, const SimpleSphere& sphere2, SimplePoint& contour_barycenter)
+	static Float calculate_area_from_contour(const Contour& contour, const SimpleSphere& sphere1, const SimpleSphere& sphere2, SimplePoint& contour_barycenter) noexcept
 	{
 		Float area=FLOATCONST(0.0);
 		if(!contour.empty())
@@ -757,7 +757,7 @@ private:
 		return area;
 	}
 
-	static Float calculate_arc_length_from_contour(const UnsignedInt a_id, const Contour& contour)
+	static Float calculate_arc_length_from_contour(const UnsignedInt a_id, const Contour& contour) noexcept
 	{
 		Float arc_length=FLOATCONST(0.0);
 		for(Contour::const_iterator jt=contour.begin();jt!=contour.end();++jt)

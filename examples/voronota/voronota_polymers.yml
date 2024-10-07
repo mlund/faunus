@@ -1,0 +1,83 @@
+#!/usr/bin/env yason.py
+random: {seed: fixed}
+temperature: 298
+geometry: {type: sphere, radius: 75}
+mcloop: {macro: 10, micro: 1000}
+
+atomlist:
+    - MM: {sigma: 6, dp: 10,  q: 1.0, eps: 0.2}
+
+moleculelist:
+    - polymer:
+        structure:
+            - MM: [0.0, 0.0, 0.0]
+            - MM: [7.6, 0.0, 0.0]
+            - MM: [0.0, 7.6, 0.0]
+            - MM: [7.6, 7.6, 0.0]
+            - MM: [0.0, 0.0, 7.6]
+            - MM: [7.6, 0.0, 7.6]
+            - MM: [0.0, 7.6, 7.6]
+            - MM: [7.6, 7.6, 7.6]
+            - MM: [15.2, 7.6, 7.6]
+            - MM: [7.6, 15.2, 7.6]
+            - MM: [15.2, 15.2, 7.6]
+            - MM: [7.6, 7.6, 15.2]
+            - MM: [15.2, 7.6, 15.2]
+            - MM: [7.6, 15.2, 15.2]
+            - MM: [15.2, 15.2, 15.2]
+        bondlist:
+            - harmonic: {index: [0,1], k: 0.27583, req: 6}
+            - harmonic: {index: [1,2], k: 0.27583, req: 6}
+            - harmonic: {index: [2,3], k: 0.27583, req: 6}
+            - harmonic: {index: [3,4], k: 0.27583, req: 6}
+            - harmonic: {index: [4,5], k: 0.27583, req: 6}
+            - harmonic: {index: [5,6], k: 0.27583, req: 6}
+            - harmonic: {index: [6,7], k: 0.27583, req: 6}
+            - harmonic: {index: [7,8], k: 0.27583, req: 6}
+            - harmonic: {index: [8,9], k: 0.27583, req: 6}
+            - harmonic: {index: [9,10], k: 0.27583, req: 6}
+            - harmonic: {index: [10,11], k: 0.27583, req: 6}
+            - harmonic: {index: [11,12], k: 0.27583, req: 6}
+            - harmonic: {index: [12,13], k: 0.27583, req: 6}
+            - harmonic: {index: [13,14], k: 0.27583, req: 6}
+
+insertmolecules:
+    - polymer: {N: 8}
+
+energy:
+    - bonded: {}
+    - nonbonded:
+        default:
+          - lennardjones: {mixing: LB}
+
+moves:
+    - moltransrot: {molecule: polymer, dp: 10, dprot: 1, repeat: N}
+    - pivot: {molecule: polymer, dprot: 3, repeat: N}
+    - transrot: {molecule: polymer, repeat: N}
+
+analysis:
+    - sanity: {nstep: 10}
+    - xtcfile: {file: polymers_traj.xtc, nstep: 1}
+    - savestate: {file: polymers_structure.pqr}
+    - sasa:
+        file: polymers_sasa.dat
+        policy: molecular
+        molecule: polymer
+        radius: 2.0
+        nstep: 1
+    - voronoi:
+        file: polymers_voronoi_full.dat
+        mode: full
+        radius: 2.0
+        nstep: 1
+    - voronoi:
+        file: polymers_voronoi_interchain.dat
+        mode: interchain
+        radius: 2.0
+        nstep: 1
+    - voronoi:
+        file: polymers_voronoi_updateable.dat
+        mode: updateable
+        radius: 2.0
+        nstep: 1
+

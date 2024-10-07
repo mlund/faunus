@@ -11,15 +11,15 @@ public:
 	{
 	}
 
-	virtual ~TimeRecorder()
+	virtual ~TimeRecorder() noexcept
 	{
 	}
 
-	virtual void reset()
+	virtual void reset() noexcept
 	{
 	}
 
-	virtual void record_elapsed_miliseconds_and_reset(const char* /*message*/)
+	virtual void record_elapsed_miliseconds_and_reset(const char* /*message*/) noexcept
 	{
 	}
 };

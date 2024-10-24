@@ -56,6 +56,9 @@ void AngularScan::Molecule::initialize(const Space::GroupVector& groups, int mol
     if (group.isAtomic()) {
         throw ConfigurationError("{}: group {} is not molecular", NAME, index);
     }
+
+    faunus_logger->trace("{}: initizalizing group {}", NAME, index);
+
     auto as_centered_position = [&](auto& particle) -> Point {
         return particle.pos - group.mass_center;
     };

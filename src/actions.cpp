@@ -75,8 +75,7 @@ ParticleVector AngularScan::Molecule::getRotatedReference(const Space::GroupVect
     auto particles = ParticleVector(group.begin(), group.end()); // copy particles from Space
     auto positions =
         ref_positions | rv::transform([&](const auto& pos) -> Point { return q * pos; });
-    std::ranges::copy(positions,
-              (particles | rv::transform(&Particle::pos)).begin());
+    std::ranges::copy(positions, (particles | rv::transform(&Particle::pos)).begin());
     return particles;
 }
 

@@ -50,7 +50,8 @@ AngularScan::AngularScan(const json& j, const Space& spc)
  */
 void AngularScan::Molecule::initialize(const Space::GroupVector& groups, int molecule_index)
 {
-    namespace rv = std::views;
+    using std::views::transform;
+
     index = molecule_index;
     const auto& group = groups.at(index);
     if (group.isAtomic()) {
@@ -62,7 +63,7 @@ void AngularScan::Molecule::initialize(const Space::GroupVector& groups, int mol
     auto as_centered_position = [&](const auto& particle) -> Point {
         return particle.pos - group.mass_center;
     };
-    ref_positions = group | rv::transform(as_centered_position) | ranges::to_vector;
+    ref_positions = group | transform(as_centered_position) | ranges::to_vector;
     XYZWriter().save(fmt::format("molecule{}_reference.xyz", index), group.begin(), group.end(),
                      Point::Zero());
 }
@@ -70,12 +71,11 @@ void AngularScan::Molecule::initialize(const Space::GroupVector& groups, int mol
 ParticleVector AngularScan::Molecule::getRotatedReference(const Space::GroupVector& groups,
                                                           const Eigen::Quaterniond& q)
 {
-    namespace rv = std::views;
+    using std::views::transform;
     const auto& group = groups.at(index);
     auto particles = ParticleVector(group.begin(), group.end()); // copy particles from Space
-    auto positions =
-        ref_positions | rv::transform([&](const auto& pos) -> Point { return q * pos; });
-    std::ranges::copy(positions, (particles | rv::transform(&Particle::pos)).begin());
+    auto positions = ref_positions | transform([&](const auto& pos) -> Point { return q * pos; });
+    std::ranges::copy(positions, (particles | transform(&Particle::pos)).begin());
     return particles;
 }
 

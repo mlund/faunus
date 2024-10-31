@@ -50,16 +50,20 @@ AngularScan::AngularScan(const json& j, const Space& spc)
  */
 void AngularScan::Molecule::initialize(const Space::GroupVector& groups, int molecule_index)
 {
-    namespace rv = std::views;
+    using std::views::transform;
+
     index = molecule_index;
     const auto& group = groups.at(index);
     if (group.isAtomic()) {
         throw ConfigurationError("{}: group {} is not molecular", NAME, index);
     }
-    auto as_centered_position = [&](auto& particle) -> Point {
+
+    faunus_logger->trace("{}: initizalizing group {}", NAME, index);
+
+    auto as_centered_position = [&](const auto& particle) -> Point {
         return particle.pos - group.mass_center;
     };
-    ref_positions = group | rv::transform(as_centered_position) | ranges::to_vector;
+    ref_positions = group | transform(as_centered_position) | ranges::to_vector;
     XYZWriter().save(fmt::format("molecule{}_reference.xyz", index), group.begin(), group.end(),
                      Point::Zero());
 }
@@ -67,19 +71,20 @@ void AngularScan::Molecule::initialize(const Space::GroupVector& groups, int mol
 ParticleVector AngularScan::Molecule::getRotatedReference(const Space::GroupVector& groups,
                                                           const Eigen::Quaterniond& q)
 {
-    namespace rv = std::views;
+    using std::views::transform;
     const auto& group = groups.at(index);
     auto particles = ParticleVector(group.begin(), group.end()); // copy particles from Space
-    auto positions =
-        ref_positions | rv::transform([&](const auto& pos) -> Point { return q * pos; });
-    std::copy(positions.begin(), positions.end(),
-              (particles | rv::transform(&Particle::pos)).begin());
+    auto positions = ref_positions | transform([&](const auto& pos) -> Point { return q * pos; });
+    std::ranges::copy(positions, (particles | transform(&Particle::pos)).begin());
     return particles;
 }
 
 void AngularScan::report(const Group& group1, const Group& group2, const Eigen::Quaterniond& q1,
                          const Eigen::Quaterniond& q2, Energy::NonbondedBase& nonbonded)
 {
+    using ranges::views::concat;
+    using std::views::transform;
+
     const auto energy = nonbonded.groupGroupEnergy(group1, group2);
     if (energy >= max_energy) {
         return;
@@ -95,8 +100,7 @@ void AngularScan::report(const Group& group1, const Group& group2, const Eigen::
         *stream << format(q1) << format(q2)
                 << fmt::format("{:8.4f} {:>10.3E}\n", group2.mass_center.z(), energy / 1.0_kJmol);
         if (trajectory) {
-            auto positions = ranges::views::concat(group1, group2) |
-                             std::views::transform(&Particle::pos);
+            auto positions = concat(group1, group2) | transform(&Particle::pos);
             trajectory->writeNext({500, 500, 500}, positions.begin(), positions.end());
         }
     }
@@ -119,7 +123,7 @@ void AngularScan::operator()(Space& spc, Energy::Hamiltonian& hamiltonian)
 
 #pragma omp parallel for
         for (const auto& q1 : angles.quaternions_1) {
-            auto particles1 = molecules.second.getRotatedReference(spc.groups, q1);
+            auto particles1 = molecules.first.getRotatedReference(spc.groups, q1);
             auto group1 = Group(0, particles1.begin(), particles1.end());
             group1.updateMassCenter(spc.geometry.getBoundaryFunc(), {0, 0, 0});
 

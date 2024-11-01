@@ -172,7 +172,7 @@ FetchContent_Declare(
     URL_HASH SHA256=48986b507497f027e4fa1144a08c2d0b6d81fb476fad024956f8104448ca9ad8 DOWNLOAD_EXTRACT_TIMESTAMP true)
 FetchContent_GetProperties(trompeloeil)
 if(NOT trompeloeil_POPULATED)
-    FetchContent_Populate(trompeloeil)
+    FetchContent_MakeAvailable(trompeloeil)
 endif()
 
 ###########
@@ -213,7 +213,7 @@ FetchContent_Declare(
     DOWNLOAD_EXTRACT_TIMESTAMP true)
 FetchContent_GetProperties(coulombgalore)
 if(NOT coulombgalore_POPULATED)
-    FetchContent_Populate(coulombgalore)
+    FetchContent_MakeAvailable(coulombgalore)
 endif()
 include_directories(SYSTEM ${coulombgalore_SOURCE_DIR})
 

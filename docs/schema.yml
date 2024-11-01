@@ -1312,6 +1312,11 @@ properties:
                             type: string
                             pattern: "(.*?)\\.(dat|dat.gz)$"
                             description: "Streaming filename (.dat|.dat.gz)"
+                        mode:
+                            type: string
+                            enum: ["full", "interchain", "updateable"]
+                            default: "full"
+                            description: "Running mode"
                     required: [nstep]
                     additionalProperties: false
  

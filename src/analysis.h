@@ -1208,19 +1208,33 @@ class SavePenaltyEnergy : public Analysis
  */
 class Voronota : public Analysis
 {
+  public:
+    enum class Modes
+    {
+        FULL,
+        INTERCHAIN,
+        UPDATEABLE,
+        INVALID
+    };
+
   private:
     struct Averages
     {
-        Average<double> area;
-        Average<double> area_squared;
+        Average<double> area_of_contacts;
+        Average<double> volume_inside_sas;
+        Average<double> area_of_sas;
+        Average<double> area_of_sas_per_chain;
     }; //!< Placeholder class for average properties
 
-    Averages average_data; //!< Stores all averages for the selected molecule
-
-    std::unique_ptr<std::ostream> output_stream; //!< output stream
+    Modes mode = Modes::FULL;                    //!< running mode
     double probe_radius;                         //!< radius of the probe sphere
+    bool use_pbc = false;                        //!< is the cell periodic?
+    Averages average_data;                       //!< stores all averages for the selected molecule
+    std::unique_ptr<std::ostream> output_stream; //!< output stream
     std::string filename;                        //!< output file name
-    bool use_pbc = false;                        //!< Is the cell periodic?
+
+    class Impl;
+    std::unique_ptr<Impl> pimpl;
 
     void _to_json(json& json_output) const override;
     void _from_json(const json& input) override;
@@ -1229,7 +1243,8 @@ class Voronota : public Analysis
 
   public:
     Voronota(const json& j, const Space& spc);
-    Voronota(double probe_radius, const Space& spc);
+    Voronota(Modes mode, double probe_radius, const Space& spc);
+    ~Voronota();
 };
 
 } // namespace Faunus::analysis

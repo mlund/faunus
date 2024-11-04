@@ -167,9 +167,9 @@ set_target_properties(xdrfile PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 
 FetchContent_Declare(
     trompeloeil
-    URL "https://github.com/rollbear/trompeloeil/archive/v41.tar.gz"
+    URL "https://github.com/rollbear/trompeloeil/archive/v44.tar.gz"
     DOWNLOAD_EXTRACT_TIMESTAMP true
-    URL_HASH SHA256=48986b507497f027e4fa1144a08c2d0b6d81fb476fad024956f8104448ca9ad8 DOWNLOAD_EXTRACT_TIMESTAMP true)
+    URL_HASH MD5=ff32a8aa0f3138e24e3a5068015d3012 DOWNLOAD_EXTRACT_TIMESTAMP true)
 FetchContent_GetProperties(trompeloeil)
 if(NOT trompeloeil_POPULATED)
     FetchContent_MakeAvailable(trompeloeil)

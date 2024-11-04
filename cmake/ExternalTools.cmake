@@ -212,6 +212,7 @@ FetchContent_Declare(
     URL_HASH MD5=922f0c5988c0f70c887d65b7cf2762ac
     BUILD_COMMAND ""
     INSTALL_COMMAND ""
+    EXCLUDE_FROM_ALL
     DOWNLOAD_EXTRACT_TIMESTAMP true)
 FetchContent_GetProperties(coulombgalore)
 if(NOT coulombgalore_POPULATED)

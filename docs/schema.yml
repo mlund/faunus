@@ -680,7 +680,7 @@ properties:
                         low:
                             items: {type: number}
                             type: array
-                        k: {type: [integer, string]}
+                        k: {type: [number, string]}
                         molecules:
                             type: array
                             items: {type: string}

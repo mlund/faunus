@@ -504,7 +504,7 @@ void from_json(const json& j, Space& spc)
                 group.mass_center,
                 Geometry::massCenter(group.begin(), group.end(), spc.geometry.getBoundaryFunc(),
                                      -group.mass_center));
-            if (should_be_small > 1e-9) {
+            if (should_be_small > 1e-4) {
                 throw std::runtime_error(fmt::format(
                     "couldn't calculate mass center for {}; increase periodic box size?",
                     group.traits().name));

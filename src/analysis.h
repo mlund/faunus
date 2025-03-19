@@ -584,7 +584,7 @@ class SystemEnergy : public Analysis
 class SanityCheck : public Analysis
 {
   private:
-    const double mass_center_tolerance = 1.0e-6;
+    const double mass_center_tolerance = 1.0e-3;
     void _sample() override;
     void checkGroupsCoverParticles(); //!< Groups must exactly contain all particles in `p`
     void

@@ -40,7 +40,7 @@ jobs:
       run: |
         export CXX=clang++-20
         export CC=clang-20
-        cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DENABLE_OPENMP=on -DENABLE_PYTHON=off -DENABLE_TBB=off -DCMAKE_C_COMPILER=clang-17 -DCMAKE_CXX_COMPILER=clang++-17
+        cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DENABLE_OPENMP=on -DENABLE_PYTHON=off -DENABLE_TBB=off -DCMAKE_C_COMPILER=clang-20 -DCMAKE_CXX_COMPILER=clang++-20
 
     - name: Build
       working-directory: ${{github.workspace}}/build

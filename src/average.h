@@ -252,7 +252,7 @@ class Decorrelation
     {
         nsamples++;
         if (nsamples >= static_cast<unsigned int>(std::pow(2, blocked_statistics.size()))) {
-            blocked_statistics.template emplace_back();
+            blocked_statistics.emplace_back();
             waiting_sample.push_back(0.0);
             waiting_sample_exists.push_back(false);
         }

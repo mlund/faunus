@@ -19,7 +19,7 @@ jobs:
       run: |
         wget https://apt.llvm.org/llvm.sh
         chmod +x ./llvm.sh
-        sudo ./llvm.sh 17
+        sudo ./llvm.sh 20
 
     - uses: actions/checkout@v2
 
@@ -38,17 +38,17 @@ jobs:
       # The CMake binaries on the Github Actions machines are (as of this writing) 3.12
       # Force libc++ due to https://github.com/actions/runner-images/issues/8659
       run: |
-        export CXX=clang++-17
-        export CC=clang-17
-        cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DENABLE_OPENMP=on -DENABLE_PYTHON=off -DENABLE_TBB=off -DCMAKE_C_COMPILER=clang-17 -DCMAKE_CXX_COMPILER=clang++-17
+        export CXX=clang++-20
+        export CC=clang-20
+        cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DENABLE_OPENMP=on -DENABLE_PYTHON=off -DENABLE_TBB=off -DCMAKE_C_COMPILER=clang-20 -DCMAKE_CXX_COMPILER=clang++-20
 
     - name: Build
       working-directory: ${{github.workspace}}/build
       shell: bash
       # Execute the build.  You can specify a specific target with "--target <NAME>"
       run: |
-        export CXX=clang++-17
-        export CC=clang-17
+        export CXX=clang++-20
+        export CC=clang-20
         cmake --build . --config $BUILD_TYPE --target faunus -j 2
 
     - name: Test

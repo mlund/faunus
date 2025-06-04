@@ -17,12 +17,12 @@ CPMAddPackage("gh:ArashPartow/exprtk#ddf67a25eba469cba6bb1f6564478b89d7baffcd")
 
 CPMAddPackage(
     NAME mpl GITHUB_REPOSITORY rabauke/mpl DOWNLOAD_ONLY YES
-    GIT_TAG v0.3.0
+    GIT_TAG v0.4.0
 )
 
 CPMAddPackage(
-    NAME nlohmann_json VERSION 3.11.3
-    URL https://github.com/nlohmann/json/releases/download/v3.11.2/include.zip
+    NAME nlohmann_json VERSION 3.12.0
+    URL https://github.com/nlohmann/json/releases/download/v3.12.0/include.zip
     OPTIONS "JSON_BuildTests OFF"
 )
 

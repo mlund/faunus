@@ -127,6 +127,7 @@ class Cigar : public ParticlePropertyBase
 {
   private:
   public:
+    using string_t = nlohmann::basic_json<>::string_t;
     Point scdir = {1.0, 0.0, 0.0};    //!< Sphero-cylinder direction unit vector
     Point patchdir = {0.0, 1.0, 0.0}; //!< Patch direction
     std::array<Point, 2> patchsides;

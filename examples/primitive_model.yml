@@ -1,0 +1,33 @@
+#!/usr/bin/env yason.py
+temperature: 300
+random:   {seed: fixed}
+geometry: {type: cuboid, length: 100}
+mcloop:   {macro: 10, micro: 1000}
+energy:
+    # "pm" = primitive model, e.g Coulomb + Hard
+    - nonbonded_pm:
+        coulomb: {epsr: 80}
+atomlist:
+    - Na+ : {q:  1.0, sigma: 4.0, dp: 20}
+    - Cl- : {q: -1.0, sigma: 4.0, dp: 20}
+moleculelist:
+    - sodium:   {atoms: [Na+], atomic: true}
+    - chloride: {atoms: [Cl-], atomic: true}
+    # This is a "ghost" salt used for Widom insertion only
+    - NaCl: {atoms: [Na+, Cl-], atomic: true}
+insertmolecules:
+    - sodium:   {N: 50}
+    - chloride: {N: 50}
+    # The ghost salt is not in the box, but kept inactive
+    - NaCl: {N: 1, inactive: 1}
+moves:
+    - transrot: {molecule: sodium, repeat: N}
+    - transrot: {molecule: chloride, repeat: N}
+analysis:
+    - systemenergy: {file: energy.dat, nstep: 10}
+    - widom: {molecule: NaCl, ninsert: 10, nstep: 10}
+    - atomrdf: {name1: Na+, name2: Cl-, nstep: 10, file: rdf.dat, dr: 0.5}
+    - savestate: {file: state.json}
+    - savestate: {file: confout.pqr}
+    - xtcfile: {file: traj.xtc, nstep: 100}
+

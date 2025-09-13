@@ -442,6 +442,9 @@ properties:
                             description: "Reaction coordinate class"
                             type: string
                             items: {"system", "molecule", "atom"}
+                        index:
+                            description: "Molecule or atom index to operate on"
+                            type: number
                         property:
                             description: "Reaction coordinate property"
                             type: string

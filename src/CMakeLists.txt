@@ -84,7 +84,6 @@ target_link_libraries(libfaunus PUBLIC
         project_options
         project_warnings
         cereal
-        Eigen
         functionparser
         nlohmann_json
         pcg-cpp
@@ -94,12 +93,13 @@ target_link_libraries(libfaunus PUBLIC
         xdrfile
         zstr)
 
+target_include_directories(libfaunus INTERFACE ${Eigen_SOURCE_DIR})
+
 # ========== faunus (main executable) ==========
 
 add_executable(faunus faunus.cpp)
 target_link_libraries(faunus PRIVATE
     docopt_s
-    Eigen
     libfaunus
     doctest
     progresstracker

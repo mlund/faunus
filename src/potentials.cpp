@@ -4,7 +4,6 @@
 #include "auxiliary.h"
 #include "aux/arange.h"
 #include "smart_montecarlo.h"
-#include <coulombgalore.h>
 #include <spdlog/spdlog.h>
 
 #include <utility>

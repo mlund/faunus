@@ -7,23 +7,19 @@ include(FetchContent)
 
 CPMAddPackage("gh:gabime/spdlog@1.15.3")
 CPMAddPackage("gh:ericniebler/range-v3#0.12.0")
+CPMAddPackage("gh:nlohmann/json@3.12.0")
 CPMAddPackage("gh:docopt/docopt.cpp#v0.6.3")
 CPMAddPackage("gh:doctest/doctest#v2.4.11")
 CPMAddPackage("gh:mateidavid/zstr#v1.0.7")
 CPMAddPackage("gh:martinus/nanobench#v4.3.11")
 CPMAddPackage("gh:pybind/pybind11#v2.12.0")
+CPMAddPackage("gh:mlund/coulombgalore#a646d4d2467442175333307ff91048b6d777cb13")
 CPMAddPackage("gh:imneme/pcg-cpp#ffd522e7188bef30a00c74dc7eb9de5faff90092")
 CPMAddPackage("gh:ArashPartow/exprtk#cc1b800c2bd1ac3ac260478c915d2aec6f4eb41c")
 
 CPMAddPackage(
     NAME mpl GITHUB_REPOSITORY rabauke/mpl DOWNLOAD_ONLY YES
     GIT_TAG v0.4.0
-)
-
-CPMAddPackage(
-    NAME nlohmann_json VERSION 3.12.0
-    URL https://github.com/nlohmann/json/releases/download/v3.12.0/include.zip
-    OPTIONS "JSON_BuildTests OFF"
 )
 
 CPMAddPackage(
@@ -45,11 +41,6 @@ CPMAddPackage("gh:pybind/pybind11_json#0.2.14")
 
 set_property(TARGET spdlog PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_property(TARGET docopt PROPERTY POSITION_INDEPENDENT_CODE ON)
-
-if (nlohmann_json_ADDED)
-    add_library(nlohmann_json INTERFACE IMPORTED)
-    target_include_directories(nlohmann_json INTERFACE ${nlohmann_json_SOURCE_DIR}/include)
-endif()
 
 add_compile_definitions("NLOHMANN_JSON_HPP") # older versions used this macro. Now it's suffixed with "_"
 
@@ -202,26 +193,9 @@ if (ENABLE_FREESASA)
     add_dependencies(freesasa project_freesasa)
 endif ()
 
-################
-# COULOMBGALORE
-################
-
-FetchContent_Declare(
-    coulombgalore
-    URL https://github.com/mlund/coulombgalore/archive/4055f58538d781acccb2937ab4580855fcba31f8.tar.gz
-    URL_HASH MD5=922f0c5988c0f70c887d65b7cf2762ac
-    BUILD_COMMAND ""
-    INSTALL_COMMAND ""
-    EXCLUDE_FROM_ALL
-    DOWNLOAD_EXTRACT_TIMESTAMP true)
-FetchContent_GetProperties(coulombgalore)
-if(NOT coulombgalore_POPULATED)
-    FetchContent_MakeAvailable(coulombgalore)
-endif()
-include_directories(SYSTEM ${coulombgalore_SOURCE_DIR})
-
 # Add third-party headers to include path. Note this is done with SYSTEM
 # to disable potential compiler warnings
 
-include_directories(SYSTEM ${trompeloeil_SOURCE_DIR}/include ${nanobench_SOURCE_DIR}/src/include
+include_directories(SYSTEM ${trompeloeil_SOURCE_DIR}/include ${nanobench_SOURCE_DIR}/src/include ${Eigen_SOURCE_DIR}
+    ${coulombgalore_SOURCE_DIR}/include
     ${Pybind11IncludeDir} ${CppsidIncludeDir} ${XdrfileIncludeDir} ${ProgressTrackerIncludeDir} ${doctest_SOURCE_DIR})

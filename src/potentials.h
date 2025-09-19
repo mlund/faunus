@@ -4,7 +4,7 @@
 #include "functionparser.h"
 #include "multipole.h"
 #include "spherocylinder.h"
-#include <coulombgalore.h>
+#include <coulombgalore/all.hpp>
 
 namespace Faunus::pairpotential {
 

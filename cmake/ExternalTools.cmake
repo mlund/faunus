@@ -13,7 +13,7 @@ CPMAddPackage("gh:mateidavid/zstr#v1.0.7")
 CPMAddPackage("gh:martinus/nanobench#v4.3.11")
 CPMAddPackage("gh:pybind/pybind11#v2.12.0")
 CPMAddPackage("gh:imneme/pcg-cpp#ffd522e7188bef30a00c74dc7eb9de5faff90092")
-CPMAddPackage("gh:ArashPartow/exprtk#ddf67a25eba469cba6bb1f6564478b89d7baffcd")
+CPMAddPackage("gh:ArashPartow/exprtk#cc1b800c2bd1ac3ac260478c915d2aec6f4eb41c")
 
 CPMAddPackage(
     NAME mpl GITHUB_REPOSITORY rabauke/mpl DOWNLOAD_ONLY YES

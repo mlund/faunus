@@ -92,7 +92,8 @@ target_link_libraries(libfaunus PUBLIC
         range-v3
         spdlog
         xdrfile
-        zstr)
+        ZLIB::ZLIB
+	zstr)
 
 # ========== faunus (main executable) ==========
 
@@ -105,6 +106,7 @@ target_link_libraries(faunus PRIVATE
     progresstracker
     project_options
     range-v3
+    ZLIB::ZLIB
     spdlog)
 target_compile_definitions(faunus PRIVATE SPDLOG_COMPILED_LIB)
 set_target_properties(faunus PROPERTIES

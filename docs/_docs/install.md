@@ -101,6 +101,7 @@ CMake Option                         | Description
 `-DCMAKE_CXX_FLAGS_DEBUG="..."`      | Compiler options for Debug mode
 `-DCMAKE_INSTALL_PREFIX:PATH="..."`  | Install location (default: `/usr/local`)
 `-DPython_EXECUTABLE="..."`          | Full path to Python executable
+`-DZLIB_INCLUDE_DIR="..."`           | Path to zlib headers (useful with conda compilers)
 
 ### Compiling the Manual
 

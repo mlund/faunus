@@ -1,4 +1,4 @@
-option(ENABLE_CACHE "Enable cache if available" ON)
+option(ENABLE_CACHE "Enable cache if available" OFF)
 if(NOT ENABLE_CACHE)
   return()
 endif()

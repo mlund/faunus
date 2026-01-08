@@ -5,7 +5,7 @@ include(FetchContent)
 # CPM Packages
 ###############
 
-CPMAddPackage("gh:gabime/spdlog@1.15.3")
+CPMAddPackage("gh:gabime/spdlog@1.17.0")
 CPMAddPackage("gh:ericniebler/range-v3#0.12.0")
 CPMAddPackage("gh:docopt/docopt.cpp#v0.6.3")
 CPMAddPackage("gh:doctest/doctest#v2.4.12")

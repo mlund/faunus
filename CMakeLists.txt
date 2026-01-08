@@ -1,4 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
+set(CMAKE_POLICY_VERSION_MINIMUM "3.10" CACHE STRING "Suppress cmake_minimum_required deprecation warnings from dependencies")
+set(CMAKE_SUPPRESS_DEVELOPER_WARNINGS ON CACHE BOOL "Suppress developer warnings from dependencies")
 
 project(faunus)
 include(cmake/StandardProjectSettings.cmake)

@@ -81,6 +81,13 @@ add_test(
         WORKING_DIRECTORY ${EXAMPLES_DIR}/minimal)
 
 add_test(
+        NAME pairpotentials
+        COMMAND sh -c "${Python_EXECUTABLE} ${YASON} pairpotentials.yml\
+    | $<TARGET_FILE:faunus> --nobar --state pairpotentials.state.json\
+    && ${Python_EXECUTABLE} ${JSON_COMPARE} pairpotentials.out.json out.json --tol 0.05"
+        WORKING_DIRECTORY ${EXAMPLES_DIR}/pairpotentials)
+
+add_test(
         NAME bend
         COMMAND sh -c "${Python_EXECUTABLE} ${YASON} bend.yml\
     | $<TARGET_FILE:faunus> --nobar\
@@ -310,6 +317,9 @@ install(FILES
         ${EXAMPLES_DIR}/minimal/minimal.yml
         ${EXAMPLES_DIR}/minimal/minimal.out.json
         ${EXAMPLES_DIR}/minimal/minimal.state.json
+        ${EXAMPLES_DIR}/pairpotentials/pairpotentials.yml
+        ${EXAMPLES_DIR}/pairpotentials/pairpotentials.out.json
+        ${EXAMPLES_DIR}/pairpotentials/pairpotentials.state.json
         ${EXAMPLES_DIR}/bend/bend.yml
         ${EXAMPLES_DIR}/bend/bend.out.json
         ${EXAMPLES_DIR}/bend/mc_vs_md.agr

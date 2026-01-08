@@ -1,0 +1,32 @@
+#!/usr/bin/env yason.py
+#
+# Test various pair potentials including Ashbaugh-Hatch
+#
+temperature: 300
+random: {seed: fixed}
+geometry: {type: cuboid, length: 40}
+mcloop: {macro: 10, micro: 5000}
+
+atomlist:
+    - hydrophobic: {sigma: 4.0, eps: 0.5, lambda: 1.0, dp: 50}  # full LJ (lambda=1)
+    - hydrophilic: {sigma: 4.0, eps: 0.5, lambda: 0.0, dp: 50}  # WCA-like (lambda=0)
+    - intermediate: {sigma: 4.0, eps: 0.5, lambda: 0.5, dp: 50} # intermediate hydrophobicity
+
+moleculelist:
+    - solute: {atoms: [hydrophobic, hydrophilic, intermediate], atomic: true}
+
+insertmolecules:
+    - solute: {N: 30}
+
+energy:
+    - nonbonded:
+        default:
+            - ashbaugh-hatch: {mixing: LB}
+
+moves:
+    - transrot: {molecule: solute}
+
+analysis:
+    - systemenergy: {file: energy.dat, nstep: 100}
+    - savestate: {file: confout.pqr}
+    - savestate: {file: state.json}

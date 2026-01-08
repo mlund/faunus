@@ -777,6 +777,178 @@ TEST_CASE("[Faunus] LennardJones")
     }
 }
 
+// =============== AshbaughHatch ===============
+
+void AshbaughHatch::initPairMatrices()
+{
+    const TCombinatorFunc comb_sigma =
+        PairMixer::getCombinator(combination_rule, PairMixer::CoefficientType::SIGMA);
+    const TCombinatorFunc comb_epsilon =
+        PairMixer::getCombinator(combination_rule, PairMixer::CoefficientType::EPSILON);
+    // Lambda uses arithmetic mixing (same as sigma in Lorentz-Berthelot)
+    const TCombinatorFunc comb_lambda = &PairMixer::combArithmetic;
+
+    sigma_squared = PairMixer(extract_sigma, comb_sigma, &PairMixer::modSquared)
+                        .createPairMatrix(atoms, *custom_pairs);
+    epsilon_quadruple = PairMixer(extract_epsilon, comb_epsilon, [](double x) -> double {
+                            return 4 * x;
+                        }).createPairMatrix(atoms, *custom_pairs);
+    epsilon = PairMixer(extract_epsilon, comb_epsilon).createPairMatrix(atoms, *custom_pairs);
+    lambda = PairMixer(extract_lambda, comb_lambda).createPairMatrix(atoms, *custom_pairs);
+
+    faunus_logger->trace(
+        "Pair matrices for {} sigma ({}×{}), epsilon ({}×{}), lambda ({}×{}) created using {} "
+        "custom pairs.",
+        name, sigma_squared->rows(), sigma_squared->cols(), epsilon_quadruple->rows(),
+        epsilon_quadruple->cols(), lambda->rows(), lambda->cols(), custom_pairs->size());
+
+    // Log lambda values for each atom type pair
+    for (size_t i = 0; i < atoms.size(); ++i) {
+        for (size_t j = i; j < atoms.size(); ++j) {
+            faunus_logger->trace("{}: λ({},{}) = {:.4f}", name, atoms[i].name, atoms[j].name,
+                                 (*lambda)(i, j));
+        }
+    }
+}
+
+void AshbaughHatch::extractorsFromJson(const json& j)
+{
+    auto sigma_name = j.value("sigma", "sigma");
+    json_extra_params["sigma"] = sigma_name;
+    extract_sigma = [sigma_name](const InteractionData& a) -> double {
+        return a.at(sigma_name) * 1.0_angstrom;
+    };
+
+    auto epsilon_name = j.value("eps", "eps");
+    json_extra_params["eps"] = epsilon_name;
+    extract_epsilon = [epsilon_name](const InteractionData& a) -> double {
+        return a.at(epsilon_name) * 1.0_kJmol;
+    };
+
+    auto lambda_name = j.value("lambda", "lambda");
+    json_extra_params["lambda"] = lambda_name;
+    extract_lambda = [lambda_name](const InteractionData& a) -> double { return a.at(lambda_name); };
+}
+
+AshbaughHatch::AshbaughHatch(const std::string& name, const std::string& cite,
+                             CombinationRuleType combination_rule)
+    : MixerPairPotentialBase(name, cite, combination_rule)
+{
+}
+
+TEST_CASE("[Faunus] AshbaughHatch")
+{
+    using doctest::Approx;
+
+    // Test atoms with Ashbaugh-Hatch parameters
+    atoms = R"([{"A": {"sigma": 5.0, "eps": 1.0, "lambda": 1.0}},
+                {"B": {"sigma": 5.0, "eps": 1.0, "lambda": 0.5}},
+                {"C": {"sigma": 5.0, "eps": 1.0, "lambda": 0.0}}])"_json.get<decltype(atoms)>();
+    Particle a = atoms[0]; // lambda = 1.0 (full LJ)
+    Particle b = atoms[1]; // lambda = 0.5 (intermediate)
+    Particle c = atoms[2]; // lambda = 0.0 (WCA-like)
+
+    const auto sigma = 5.0_angstrom;
+    const auto epsilon = 1.0_kJmol;
+    const auto r_min = std::pow(2.0, 1.0 / 6.0) * sigma; // ~5.612 Å
+    const auto r_min_squared = r_min * r_min;
+
+    // Helper to compute standard LJ potential
+    auto lj_energy = [](double r2, double sigma2, double eps) -> double {
+        auto x = sigma2 / r2;  // (σ/r)²
+        x = x * x * x;         // (σ/r)^6
+        return 4.0 * eps * (x * x - x);
+    };
+
+    SUBCASE("JSON initialization")
+    {
+        CHECK_NOTHROW(makePairPotential<AshbaughHatch>(R"({})"_json));
+        CHECK_NOTHROW(makePairPotential<AshbaughHatch>(R"({"mixing": "LB"})"_json));
+        CHECK_THROWS_AS(makePairPotential<AshbaughHatch>(R"({"mixing": "unknown"})"_json),
+                        std::runtime_error);
+    }
+
+    SUBCASE("lambda=1 equals standard LJ")
+    {
+        auto ah = makePairPotential<AshbaughHatch>(R"({"mixing": "LB"})"_json);
+        // In attractive region (r > r_min)
+        const auto r = 10.0_angstrom;
+        const auto r2 = r * r;
+        const auto v_ah = ah(a, a, r2, {r, 0, 0});
+        const auto v_lj = lj_energy(r2, sigma * sigma, epsilon);
+        CHECK_EQ(v_ah, Approx(v_lj));
+
+        // In repulsive region (r < r_min)
+        const auto r_rep = 5.0_angstrom;
+        const auto r2_rep = r_rep * r_rep;
+        const auto v_ah_rep = ah(a, a, r2_rep, {r_rep, 0, 0});
+        const auto v_lj_rep = lj_energy(r2_rep, sigma * sigma, epsilon);
+        CHECK_EQ(v_ah_rep, Approx(v_lj_rep));
+    }
+
+    SUBCASE("lambda=0 gives WCA-like behavior")
+    {
+        auto ah = makePairPotential<AshbaughHatch>(R"({"mixing": "LB"})"_json);
+        // In attractive region: V_AH = λ * V_LJ = 0
+        const auto r = 10.0_angstrom;
+        const auto r2 = r * r;
+        CHECK_EQ(ah(c, c, r2, {r, 0, 0}), Approx(0.0));
+
+        // In repulsive region: V_AH = V_LJ + ε(1-λ) = V_LJ + ε
+        const auto r_rep = 5.0_angstrom;
+        const auto r2_rep = r_rep * r_rep;
+        const auto v_lj_rep = lj_energy(r2_rep, sigma * sigma, epsilon);
+        CHECK_EQ(ah(c, c, r2_rep, {r_rep, 0, 0}), Approx(v_lj_rep + epsilon));
+    }
+
+    SUBCASE("Continuity at r_min")
+    {
+        // The potential should be continuous at r = 2^(1/6) * sigma
+        auto ah = makePairPotential<AshbaughHatch>(R"({"mixing": "LB"})"_json);
+        const double delta = 1e-8;
+        const auto below = r_min_squared - delta;
+        const auto above = r_min_squared + delta;
+
+        // For lambda = 0.5 (mixed A-B pair gives lambda = (1.0 + 0.5)/2 = 0.75)
+        const auto v_below = ah(a, b, below, {std::sqrt(below), 0, 0});
+        const auto v_above = ah(a, b, above, {std::sqrt(above), 0, 0});
+        CHECK_EQ(v_below, Approx(v_above).epsilon(1e-4));
+    }
+
+    SUBCASE("Intermediate lambda")
+    {
+        auto ah = makePairPotential<AshbaughHatch>(R"({"mixing": "LB"})"_json);
+        // In attractive region: V_AH = λ * V_LJ
+        const auto r = 10.0_angstrom;
+        const auto r2 = r * r;
+        const auto v_lj = lj_energy(r2, sigma * sigma, epsilon);
+
+        // B-B interaction: lambda = 0.5
+        CHECK_EQ(ah(b, b, r2, {r, 0, 0}), Approx(0.5 * v_lj));
+    }
+
+    SUBCASE("Force calculation")
+    {
+        auto ah = makePairPotential<AshbaughHatch>(R"({"mixing": "LB"})"_json);
+        a.pos = {0, 0, 0};
+        b.pos = {10, 0, 0};
+        Point b_towards_a = a.pos - b.pos;
+        const auto r2 = b_towards_a.squaredNorm();
+
+        // For lambda=1 particles (A-A), force should match LJ
+        auto lj = makePairPotential<LennardJones>(R"({"mixing": "LB"})"_json);
+        Point force_ah = ah.force(a, a, r2, b_towards_a);
+        Point force_lj = lj.force(a, a, r2, b_towards_a);
+        CHECK_EQ(force_ah.x(), Approx(force_lj.x()));
+        CHECK_EQ(force_ah.y(), Approx(force_lj.y()));
+        CHECK_EQ(force_ah.z(), Approx(force_lj.z()));
+
+        // For lambda=0.5 particles (B-B), force should be 0.5 * LJ force (in attractive region)
+        Point force_ah_bb = ah.force(b, b, r2, b_towards_a);
+        CHECK_EQ(force_ah_bb.x(), Approx(0.5 * force_lj.x()));
+    }
+}
+
 // =============== HardSphere ===============
 
 void HardSphere::initPairMatrices()
@@ -1084,6 +1256,9 @@ FunctorPotential::EnergyFunctor FunctorPotential::combinePairPotentials(json& po
                 }
                 else if (name == "squarewell") {
                     new_func = makePairPotential<SquareWell>(single_record);
+                }
+                else if (name == "ashbaugh-hatch") {
+                    new_func = makePairPotential<AshbaughHatch>(single_record);
                 }
                 else if (name == "dipoledipole") {
                     faunus_logger->error("'{}' is deprecated, use 'multipole' instead", name);

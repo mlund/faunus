@@ -53,7 +53,7 @@ if (nlohmann_json_ADDED)
     include_directories(BEFORE SYSTEM ${nlohmann_json_SOURCE_DIR}/include)
 endif()
 
-add_compile_definitions("NLOHMANN_JSON_HPP") # older versions used this macro. Now it's suffixed with "_"
+add_compile_definitions("NLOHMANN_JSON_HPP") # legacy: prevent inclusion of older system-installed json headers
 
 if(mpl_ADDED)
     add_library(mpl INTERFACE IMPORTED)

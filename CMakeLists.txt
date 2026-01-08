@@ -6,9 +6,11 @@ project(faunus)
 include(cmake/StandardProjectSettings.cmake)
 include(cmake/CPM.cmake)
 
+# C++20 standard is set both globally and via project_options to ensure
+# consistent behavior for all targets, including those from dependencies
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
-set(CMAKE_CXX_EXTENSIONS YES)
+set(CMAKE_CXX_EXTENSIONS YES) # Use GNU extensions (-std=gnu++20) for better compatibility
 
 # Interface library for all Faunus targets
 add_library(project_options INTERFACE)

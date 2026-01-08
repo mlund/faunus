@@ -108,6 +108,7 @@ properties:
                           dp: {type: number, default: 0.0, minimum: 0.0}
                           dprot: {type: number, default: 0.0, description: "Rotational displacement (radians)", minimum: 0.0, maximum: 6.283185}
                           eps: {type: number, default: 0.0}
+                          lambda: {type: number, default: 1.0, minimum: 0.0, maximum: 1.0, description: "Hydrophobicity parameter for Ashbaugh-Hatch potential"}
                           implicit: {type: boolean, default: false, description: "True if atom is implicit"}
                           mu:
                               items: {type: number}
@@ -318,6 +319,28 @@ properties:
             description: Weeks-Chandler-Andersen pair potential
             allOf: [{"$ref": "#/properties/pairpotential/mixing_rule"}]
 
+        ashbaugh-hatch:
+            description: Ashbaugh-Hatch pair potential with hydrophobicity parameter
+            type: object
+            properties:
+                mixing:
+                    type: string
+                    enum: [arithmetic, geometric, lorentz_berthelot, LB]
+                    description: "Mixing rule for epsilon and sigma"
+                eps: {type: string, default: "eps"}
+                sigma: {type: string, default: "sigma"}
+                lambda: {type: string, default: "lambda", description: "Hydrophobicity parameter name"}
+                custom:
+                    type: array
+                    items:
+                        type: object
+                        additionalProperties:
+                            type: object
+                            minProperties: 3
+                            maxProperties: 3
+                            additionalProperties: {type: number, description: "Custom values for epsilon, sigma, and lambda"}
+            required: [mixing]
+
         all:
             description: All possible pair-potentials
             type: array
@@ -327,6 +350,7 @@ properties:
                     coulomb: {"$ref": "#/properties/pairpotential/coulomb"}
                     lennardjones: {"$ref": "#/properties/pairpotential/lennardjones"}
                     wca: {"$ref": "#/properties/pairpotential/wca"}
+                    ashbaugh-hatch: {"$ref": "#/properties/pairpotential/ashbaugh-hatch"}
                 additionalProperties: true # change to `false` when all pair-potentials are here...
 
     reactioncoordinate:

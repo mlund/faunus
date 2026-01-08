@@ -49,6 +49,8 @@ set_property(TARGET docopt PROPERTY POSITION_INDEPENDENT_CODE ON)
 if (nlohmann_json_ADDED)
     add_library(nlohmann_json INTERFACE IMPORTED)
     target_include_directories(nlohmann_json INTERFACE ${nlohmann_json_SOURCE_DIR}/include)
+    # Ensure CPM-downloaded json takes precedence over any system-installed version (e.g., in conda)
+    include_directories(BEFORE SYSTEM ${nlohmann_json_SOURCE_DIR}/include)
 endif()
 
 add_compile_definitions("NLOHMANN_JSON_HPP") # older versions used this macro. Now it's suffixed with "_"

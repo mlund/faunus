@@ -50,6 +50,88 @@ class LennardJones : public MixerPairPotentialBase
 };
 
 /**
+ * @brief Ashbaugh-Hatch pair potential
+ * @details The Ashbaugh-Hatch potential is a modified Lennard-Jones potential
+ * with a hydrophobicity parameter λ ∈ [0,1]:
+ * @f[
+ *     V_{AH}(r) = \begin{cases}
+ *         V_{LJ}(r) + \epsilon(1 - \lambda), & r \leq 2^{1/6}\sigma \\
+ *         \lambda V_{LJ}(r), & r > 2^{1/6}\sigma
+ *     \end{cases}
+ * @f]
+ * where @f$ V_{LJ}(r) = 4\epsilon[(\sigma/r)^{12} - (\sigma/r)^6] @f$.
+ *
+ * - λ = 0: purely repulsive WCA potential
+ * - λ = 1: standard Lennard-Jones potential
+ *
+ * Mixing rules (Lorentz-Berthelot + arithmetic for λ):
+ * - σ_ij = (σ_i + σ_j) / 2
+ * - ε_ij = √(ε_i · ε_j)
+ * - λ_ij = (λ_i + λ_j) / 2
+ *
+ * Reference: Ashbaugh & Hatch, J. Chem. Phys. 128, 154115 (2008)
+ * https://doi.org/10.1063/1.2895747
+ *
+ * @note Mixing data is _shared_ upon copying
+ */
+class AshbaughHatch : public MixerPairPotentialBase
+{
+  private:
+    TExtractorFunc extract_sigma;
+    TExtractorFunc extract_epsilon;
+    TExtractorFunc extract_lambda;
+
+    static constexpr double two_to_one_sixth_squared = 1.2599210498948732; // 2^(1/3)
+
+  protected:
+    TPairMatrixPtr sigma_squared;     //!< σ_ij²
+    TPairMatrixPtr epsilon_quadruple; //!< 4 * ε_ij
+    TPairMatrixPtr epsilon;           //!< ε_ij
+    TPairMatrixPtr lambda;            //!< λ_ij (hydrophobicity parameter)
+    void initPairMatrices() override;
+    void extractorsFromJson(const json& j) override;
+
+  public:
+    explicit AshbaughHatch(const std::string& name = "ashbaugh-hatch",
+                           const std::string& cite = "doi:10.1063/1.2895747",
+                           CombinationRuleType combination_rule = CombinationRuleType::LORENTZ_BERTHELOT);
+
+    inline double operator()(const Particle& a, const Particle& b, double squared_distance,
+                             [[maybe_unused]] const Point& b_towards_a) const override
+    {
+        const auto sigma2 = (*sigma_squared)(a.id, b.id);
+        const auto r_min_squared = sigma2 * two_to_one_sixth_squared;
+        auto x = sigma2 / squared_distance; // (σ/r)²
+        x = x * x * x;                       // (σ/r)^6
+        const auto v_lj = (*epsilon_quadruple)(a.id, b.id) * (x * x - x); // 4ε[(σ/r)^12 - (σ/r)^6]
+        if (squared_distance <= r_min_squared) {
+            // Repulsive region: V_LJ + ε(1 - λ)
+            return v_lj + (*epsilon)(a.id, b.id) * (1.0 - (*lambda)(a.id, b.id));
+        }
+        // Attractive region: λ * V_LJ
+        return (*lambda)(a.id, b.id) * v_lj;
+    }
+
+    inline Point force(const Particle& a, const Particle& b, double squared_distance,
+                       const Point& b_towards_a) const override
+    {
+        const auto sigma2 = (*sigma_squared)(a.id, b.id);
+        const auto r_min_squared = sigma2 * two_to_one_sixth_squared;
+        const auto s6 = sigma2 * sigma2 * sigma2; // σ^6
+        const auto r6 = squared_distance * squared_distance * squared_distance;
+        const auto r14 = r6 * r6 * squared_distance;
+        // LJ force magnitude: 6 * 4ε * σ^6 * (2σ^6 - r^6) / r^14
+        const auto f_lj = 6.0 * (*epsilon_quadruple)(a.id, b.id) * s6 * (2.0 * s6 - r6) / r14;
+        if (squared_distance <= r_min_squared) {
+            // Repulsive region: same force as LJ (constant term doesn't contribute)
+            return f_lj * b_towards_a;
+        }
+        // Attractive region: λ * F_LJ
+        return (*lambda)(a.id, b.id) * f_lj * b_towards_a;
+    }
+};
+
+/**
  * @brief Weeks-Chandler-Andersen pair potential
  * @details This is a Lennard-Jones type potential, cut and shifted to zero
  * at @f$r_c=2^{1/6}\sigma@f$. More info can be found in at

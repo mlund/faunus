@@ -1,0 +1,111 @@
+{
+  "analysis": [
+    {
+      "systemenergy": {
+        "Cv/kB": 2.1747,
+        "file": "energy.dat",
+        "final": [
+          -4.5695343958987475
+        ],
+        "init": -4.5571,
+        "mean": -2.7476,
+        "nstep": 100,
+        "samples": 500,
+        "save_min_conf": false
+      }
+    },
+    {
+      "savestate": {
+        "file": "confout.pqr"
+      }
+    },
+    {
+      "savestate": {
+        "file": "state.json"
+      }
+    }
+  ],
+  "compiler": "15.2.0",
+  "energy": [
+    {
+      "hamiltonian": [
+        {
+          "nonbonded": {
+            "functor potential": {
+              "default": [
+                {
+                  "ashbaugh-hatch": {
+                    "mixing": "LB"
+                  }
+                }
+              ]
+            },
+            "relative time": 0.44197255225010806,
+            "selfenergy": {
+              "dipole": false,
+              "monopole": false
+            },
+            "summation_policy": "serial"
+          }
+        }
+      ]
+    }
+  ],
+  "geometry": {
+    "length": [
+      40.0,
+      40.0,
+      40.0
+    ],
+    "type": "cuboid"
+  },
+  "git revision": "e15f4a55 (2025-09-19)",
+  "groups": [
+    {
+      "solute": {
+        "compressible": false,
+        "index": [
+          0,
+          89
+        ],
+        "size": 90
+      }
+    }
+  ],
+  "montecarlo": {
+    "average potential energy (kT)": -2.7673824344758566,
+    "last move": "transrot"
+  },
+  "moves": [
+    {
+      "transrot": {
+        "acceptance": 0.711,
+        "dir": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "dp": 0.0,
+        "dprot": 0.0,
+        "molecule": "solute",
+        "molid": 0,
+        "moves": 4500000,
+        "relative time": 0.989,
+        "relative time (without energy calc)": 0.0468,
+        "repeat": 90,
+        "stochastic": true,
+        "√⟨r²⟩": 14.8
+      }
+    }
+  ],
+  "number of groups": 1,
+  "number of particles": 90,
+  "number of sweeps": 50000,
+  "reactionlist": null,
+  "relative drift": -1.0134740596034101e-14,
+  "simulation time": {
+    "in minutes": 0.2,
+    "in seconds": 12
+  },
+  "temperature": 300.0
+}

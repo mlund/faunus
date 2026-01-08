@@ -106,7 +106,7 @@ int main(int argc, const char** argv)
 
         MetropolisMonteCarlo simulation(input);
         loadState(args, simulation);
-        prefaceActions(input["preface"], simulation.getSpace(), simulation.getHamiltonian());
+        prefaceActions(input.value("preface", json()), simulation.getSpace(), simulation.getHamiltonian());
         checkElectroNeutrality(simulation);
         analysis::CombinedAnalysis analysis(input.at("analysis"), simulation.getSpace(),
                                             simulation.getHamiltonian());

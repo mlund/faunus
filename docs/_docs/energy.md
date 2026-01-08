@@ -428,7 +428,7 @@ Type             | Atomic parameters | $u(r)$ (non-zero part)
 `lennardjones`   | `sigma`, `eps`    | $4\epsilon\_{ij} \left ( (\sigma\_{ij}/r\_{ij})^{12} - (\sigma\_{ij}/r\_{ij})^6\right )$
 `squarewell`     | `sigma`, `eps`    | $-\epsilon\_{ij}$ for $r<\sigma\_{ij}$
 [`wca`](http://dx.doi.org/ct4kh9) | `sigma`, `eps` | $u\_{ij}^{\text{LJ}} + \epsilon\_{ij}$ for $r < 2^{1/6}\sigma\_{ij}$
-[`ashbaugh-hatch`](http://dx.doi.org/10.1063/1.2895747) | `sigma`, `eps`, `lambda` | See below
+[`ashbaugh-hatch`](https://doi.org/10.1021/ja802124e) | `sigma`, `eps`, `lambda` | See below
 
 If several potentials are used together and different values for the coefficients are desired,
 an aliasing of the parameters' names can be introduced. For example by specifying `sigma: sigma_hs`,
@@ -473,8 +473,8 @@ as shown in the example bellow.
 
 ### Ashbaugh-Hatch
 
-The [Ashbaugh-Hatch potential](http://dx.doi.org/10.1063/1.2895747) is a modified Lennard-Jones potential
-with a hydrophobicity parameter $\lambda \in [0,1]$:
+The [Ashbaugh-Hatch potential](https://doi.org/10.1021/ja802124e) is a modified Lennard-Jones potential
+with a hydrophobicity parameter $\lambda \in [-1,1]$:
 
 $$
 V_{AH}(r) = \begin{cases}
@@ -489,6 +489,7 @@ The hydrophobicity parameter $\lambda$ controls the attractive part of the poten
 - $\lambda = 0$: purely repulsive WCA-like potential
 - $\lambda = 1$: standard Lennard-Jones potential
 - $0 < \lambda < 1$: reduced attractive interaction (hydrophilic behavior)
+- $\lambda = -1$: repulsive shoulder
 
 Mixing rules follow Lorentz-Berthelot for $\sigma$ and $\epsilon$, with arithmetic mixing for $\lambda$:
 

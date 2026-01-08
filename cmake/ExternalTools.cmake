@@ -71,14 +71,13 @@ if (pcg-cpp_ADDED)
 endif()
 option(ENABLE_PCG "Enable PCG random number generator" off)
 if (ENABLE_PCG)
-    add_definitions("-DENABLE_PCG")
+    target_compile_definitions(project_options INTERFACE ENABLE_PCG)
 endif()
 
 if (exprtk_ADDED)
-    add_definitions("-Dexprtk_disable_string_capabilities")
-    add_definitions("-Dexprtk_disable_rtl_io_file")
     add_library(exprtk INTERFACE)
     target_include_directories(exprtk INTERFACE "${exprtk_SOURCE_DIR}")
+    target_compile_definitions(exprtk INTERFACE exprtk_disable_string_capabilities exprtk_disable_rtl_io_file)
 endif()
 
 ###################
@@ -199,8 +198,8 @@ if (ENABLE_FREESASA)
     ExternalProject_Get_Property(project_freesasa binary_dir)
     add_library(freesasa STATIC IMPORTED)
     set_property(TARGET freesasa PROPERTY IMPORTED_LOCATION ${binary_dir}/src/libfreesasa.a)
-    add_definitions("-DENABLE_FREESASA")
-    include_directories(SYSTEM "${source_dir}/src")
+    target_compile_definitions(project_options INTERFACE ENABLE_FREESASA)
+    target_include_directories(project_options INTERFACE SYSTEM "${source_dir}/src")
     add_dependencies(freesasa project_freesasa)
 endif ()
 
@@ -220,10 +219,15 @@ FetchContent_GetProperties(coulombgalore)
 if(NOT coulombgalore_POPULATED)
     FetchContent_MakeAvailable(coulombgalore)
 endif()
-include_directories(SYSTEM ${coulombgalore_SOURCE_DIR})
 
-# Add third-party headers to include path. Note this is done with SYSTEM
-# to disable potential compiler warnings
-
-include_directories(SYSTEM ${trompeloeil_SOURCE_DIR}/include ${nanobench_SOURCE_DIR}/src/include
-    ${Pybind11IncludeDir} ${CppsidIncludeDir} ${XdrfileIncludeDir} ${ProgressTrackerIncludeDir} ${doctest_SOURCE_DIR})
+# Add third-party headers to include path via project_options INTERFACE.
+# SYSTEM disables potential compiler warnings from these headers.
+target_include_directories(project_options INTERFACE SYSTEM
+    ${coulombgalore_SOURCE_DIR}
+    ${trompeloeil_SOURCE_DIR}/include
+    ${nanobench_SOURCE_DIR}/src/include
+    ${Pybind11IncludeDir}
+    ${CppsidIncludeDir}
+    ${XdrfileIncludeDir}
+    ${ProgressTrackerIncludeDir}
+    ${doctest_SOURCE_DIR})

@@ -54,7 +54,7 @@ endif ()
 add_library(functionparser STATIC ${CMAKE_SOURCE_DIR}/src/functionparser.cpp ${CMAKE_SOURCE_DIR}/src/functionparser.h)
 set_target_properties(functionparser PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_definitions(functionparser PRIVATE DOCTEST_CONFIG_DISABLE)
-target_link_libraries(functionparser PRIVATE nlohmann_json exprtk)
+target_link_libraries(functionparser PRIVATE project_options nlohmann_json exprtk)
 
 # ========== faunus cpp and header files ==========
 
@@ -69,12 +69,10 @@ set(hdrs actions.h analysis.h average.h atomdata.h auxiliary.h bonds.h celllist.
 	molecule.h montecarlo.h move.h mpicontroller.h particle.h penalty.h potentials_base.h potentials.h
 	reactioncoordinate.h rotate.h sasa.h smart_montecarlo.h space.h speciation.h spherocylinder.h
         random.h regions.h tensor.h units.h aux/arange.h
-	aux/eigen_cerealisation.h aux/eigensupport.h aux/iteratorsupport.h aux/matrixmarket.h aux/multimatrix.h
 	aux/eigen_cerealisation.h aux/eigensupport.h aux/equidistant_table.h aux/error_function.h
-	aux/exp_function.h aux/invsqrt_function.h aux/iteratorsupport.h aux/legendre.h aux/multimatrix.h
-	aux/pairmatrix.h aux/pow_function.h aux/table_1d.h aux/table_2d.h aux/timers.h aux/typeerasure.h aux/sparsehistogram.h)
-
-set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
+	aux/exp_function.h aux/invsqrt_function.h aux/iteratorsupport.h aux/legendre.h aux/matrixmarket.h
+	aux/multimatrix.h aux/pairmatrix.h aux/pow_function.h aux/sparsehistogram.h aux/table_1d.h
+	aux/table_2d.h aux/timers.h aux/typeerasure.h)
 
 # ========== target: libfaunus - main functionality of faunus ==========
 
@@ -117,7 +115,7 @@ if (ENABLE_SID)
     if (SDL2_FOUND)
         # fix buggy sdl2: https://stackoverflow.com/questions/45730098/cmake-leading-or-trailing-whitespace-policy-cmp0004
         string(STRIP ${SDL2_LIBRARIES} SDL2_LIBRARIES)
-        include_directories(SYSTEM ${SDL2_INCLUDE_DIRS})
+        target_include_directories(faunus PRIVATE SYSTEM ${SDL2_INCLUDE_DIRS})
         target_link_libraries(faunus PRIVATE ${SDL2_LIBRARIES} cppsid)
         target_compile_definitions(faunus PRIVATE ENABLE_SID)
         execute_process(
@@ -137,8 +135,8 @@ target_compile_definitions(faunus PRIVATE FAUNUS_INSTALL_PREFIX=\"${CMAKE_INSTAL
 target_compile_definitions(faunus PRIVATE FAUNUS_BINARY_DIR=\"${CMAKE_BINARY_DIR}\")
 install(TARGETS faunus DESTINATION bin)
 
-INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include)
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(${CMAKE_SOURCE_DIR}/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # ========== python bindings ==========
 

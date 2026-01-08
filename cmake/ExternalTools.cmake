@@ -8,10 +8,10 @@ include(FetchContent)
 CPMAddPackage("gh:gabime/spdlog@1.15.3")
 CPMAddPackage("gh:ericniebler/range-v3#0.12.0")
 CPMAddPackage("gh:docopt/docopt.cpp#v0.6.3")
-CPMAddPackage("gh:doctest/doctest#v2.4.11")
+CPMAddPackage("gh:doctest/doctest#v2.4.12")
 CPMAddPackage("gh:mateidavid/zstr#v1.0.7")
 CPMAddPackage("gh:martinus/nanobench#v4.3.11")
-CPMAddPackage("gh:pybind/pybind11#v2.12.0")
+CPMAddPackage("gh:pybind/pybind11#v3.0.1")
 CPMAddPackage("gh:imneme/pcg-cpp#ffd522e7188bef30a00c74dc7eb9de5faff90092")
 CPMAddPackage("gh:ArashPartow/exprtk#cc1b800c2bd1ac3ac260478c915d2aec6f4eb41c")
 
@@ -27,8 +27,8 @@ CPMAddPackage(
 )
 
 CPMAddPackage(
-    NAME Eigen VERSION 3.4.0 DOWNLOAD_ONLY YES 
-    URL https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz
+    NAME Eigen VERSION 3.4.1 DOWNLOAD_ONLY YES 
+    URL https://gitlab.com/libeigen/eigen/-/archive/3.4.1/eigen-3.4.1.tar.gz
 )
 
 CPMAddPackage(
@@ -36,7 +36,7 @@ CPMAddPackage(
     OPTIONS "SKIP_PORTABILITY_TEST ON" "JUST_INSTALL_CEREAL ON"
 )
 
-CPMAddPackage("gh:pybind/pybind11_json#0.2.14")
+CPMAddPackage("gh:pybind/pybind11_json#0.2.15")
 
 
 ###################################

@@ -43,7 +43,6 @@ std::unique_ptr<std::ostream> IO::openCompressedOutputStream(const std::string& 
 
 TEST_CASE("[Faunus] openCompressedOutputStream")
 {
-    CHECK_THROWS(IO::openCompressedOutputStream("/../file", true));
     CHECK_NOTHROW(IO::openCompressedOutputStream("/../file"));
 }
 

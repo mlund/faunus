@@ -428,6 +428,7 @@ Type             | Atomic parameters | $u(r)$ (non-zero part)
 `lennardjones`   | `sigma`, `eps`    | $4\epsilon\_{ij} \left ( (\sigma\_{ij}/r\_{ij})^{12} - (\sigma\_{ij}/r\_{ij})^6\right )$
 `squarewell`     | `sigma`, `eps`    | $-\epsilon\_{ij}$ for $r<\sigma\_{ij}$
 [`wca`](http://dx.doi.org/ct4kh9) | `sigma`, `eps` | $u\_{ij}^{\text{LJ}} + \epsilon\_{ij}$ for $r < 2^{1/6}\sigma\_{ij}$
+[`ashbaugh-hatch`](http://dx.doi.org/10.1063/1.2895747) | `sigma`, `eps`, `lambda` | See below
 
 If several potentials are used together and different values for the coefficients are desired,
 an aliasing of the parameters' names can be introduced. For example by specifying `sigma: sigma_hs`,
@@ -468,6 +469,53 @@ as shown in the example bellow.
     sigma: sigma_hs
     custom:
       - Na Cl: {sigma_hs: 2}
+~~~
+
+### Ashbaugh-Hatch
+
+The [Ashbaugh-Hatch potential](http://dx.doi.org/10.1063/1.2895747) is a modified Lennard-Jones potential
+with a hydrophobicity parameter $\lambda \in [0,1]$:
+
+$$
+V_{AH}(r) = \begin{cases}
+    V_{LJ}(r) + \epsilon(1 - \lambda), & r \leq 2^{1/6}\sigma \\
+    \lambda V_{LJ}(r), & r > 2^{1/6}\sigma
+\end{cases}
+$$
+
+where $V\_{LJ}(r) = 4\epsilon[(\sigma/r)^{12} - (\sigma/r)^{6}]$ is the standard Lennard-Jones potential.
+The hydrophobicity parameter $\lambda$ controls the attractive part of the potential:
+
+- $\lambda = 0$: purely repulsive WCA-like potential
+- $\lambda = 1$: standard Lennard-Jones potential
+- $0 < \lambda < 1$: reduced attractive interaction (hydrophilic behavior)
+
+Mixing rules follow Lorentz-Berthelot for $\sigma$ and $\epsilon$, with arithmetic mixing for $\lambda$:
+
+- $\sigma\_{ij} = (\sigma\_i + \sigma\_j) / 2$
+- $\epsilon\_{ij} = \sqrt{\epsilon\_i \cdot \epsilon\_j}$
+- $\lambda\_{ij} = (\lambda\_i + \lambda\_j) / 2$
+
+Example setup:
+
+~~~ yaml
+atomlist:
+    - hydrophobic: {sigma: 5.0, eps: 1.0, lambda: 1.0}
+    - hydrophilic: {sigma: 5.0, eps: 1.0, lambda: 0.0}
+energy:
+    - nonbonded:
+        default:
+            - ashbaugh-hatch: {mixing: LB}
+~~~
+
+Like other short-ranged potentials, parameter aliasing and custom pair values are supported:
+
+~~~ yaml
+- ashbaugh-hatch:
+    mixing: LB
+    lambda: hydrophobicity  # use 'hydrophobicity' from atomlist instead of 'lambda'
+    custom:
+      - Na Cl: {eps: 0.5, sigma: 3.0, lambda: 0.8}
 ~~~
 
 ### SASA (pair potential)

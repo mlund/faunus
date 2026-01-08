@@ -87,7 +87,7 @@ endif()
 ExternalProject_Add(
     project_progresstracker
     PREFIX "${CMAKE_CURRENT_BINARY_DIR}/_deps"
-    CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DCMAKE_POSITION_INDEPENDENT_CODE=on
+    CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DCMAKE_POSITION_INDEPENDENT_CODE=on -DCMAKE_CXX_FLAGS=-w
     BUILD_COMMAND ${CMAKE_MAKE_PROGRAM}
     INSTALL_COMMAND ""
     LOG_DOWNLOAD ON
@@ -112,7 +112,7 @@ if(ENABLE_SID)
     find_package(SDL2 CONFIG REQUIRED)
     ExternalProject_Add(project_cppsid
         PREFIX "${CMAKE_CURRENT_BINARY_DIR}/_deps"
-        CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DCMAKE_POSITION_INDEPENDENT_CODE=on
+        CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DCMAKE_POSITION_INDEPENDENT_CODE=on -DCMAKE_CXX_FLAGS=-w
         BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} "cppsid"
         INSTALL_COMMAND "" LOG_DOWNLOAD ON
         UPDATE_DISCONNECTED ON
@@ -150,7 +150,7 @@ ExternalProject_Add(
     BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} xdrfile-static
     DOWNLOAD_EXTRACT_TIMESTAMP true
     UPDATE_DISCONNECTED ON
-    CMAKE_ARGS -Wno-dev -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER} -DCMAKE_POSITION_INDEPENDENT_CODE=on
+    CMAKE_ARGS -Wno-dev -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER} -DCMAKE_POSITION_INDEPENDENT_CODE=on -DCMAKE_C_FLAGS=-w
     LOG_DOWNLOAD ON INSTALL_COMMAND "")
 
 ExternalProject_Get_Property(project_xdrfile source_dir)
@@ -189,8 +189,8 @@ if (ENABLE_FREESASA)
             DOWNLOAD_EXTRACT_TIMESTAMP true
             URL https://github.com/mittinatten/freesasa/releases/download/2.0.3/freesasa-2.0.3.tar.gz
             URL_HASH SHA256=ba1d4f7e9dd51ae2452b5c3a80ac34039d51da4826dae1dbe173cd7a1d6aca94
-            # -fPIC flag is needed to link with pyfaunus
-            CONFIGURE_COMMAND CFLAGS=-fPIC <SOURCE_DIR>/configure --disable-xml --disable-json
+            # -fPIC flag is needed to link with pyfaunus; -w suppresses warnings
+            CONFIGURE_COMMAND ${CMAKE_COMMAND} -E env "CFLAGS=-fPIC -w" <SOURCE_DIR>/configure --disable-xml --disable-json
             BUILD_COMMAND ${CMAKE_MAKE_PROGRAM}
             INSTALL_COMMAND ""
     )

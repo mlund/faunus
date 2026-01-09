@@ -385,46 +385,6 @@ template <unsigned int mask> std::function<bool(const Group&)> getGroupFilter()
     return [](const Group& group) { return group.match<mask>(); };
 }
 
-/*
- * The following two functions are used to perform a complete
- * serialisation of a group to/from a Cereal archive. When loading,
- * the group *must* match the capacity of the saved data or an exception
- * is thrown.
- */
-
-template <class Archive>
-void save(Archive& archive, const Group& group, std::uint32_t const version)
-{
-    switch (version) {
-    case 0:
-        archive(group.id, group.conformation_id, group.mass_center, group.size(), group.capacity());
-        std::for_each(group.begin(), group.trueend(),
-                      [&archive](auto& particle) { archive(particle); });
-        break;
-    default:
-        throw std::runtime_error("unknown serialisation version");
-    };
-} //!< Cereal serialisation
-
-template <class Archive> void load(Archive& archive, Group& group, std::uint32_t const version)
-{
-    size_t size = 0;
-    size_t capacity = 0;
-    switch (version) {
-    case 0:
-        archive(group.id, group.conformation_id, group.mass_center, size, capacity);
-        if (capacity != group.capacity()) {
-            throw std::runtime_error("capacity mismatch of archived group");
-        }
-        group.resize(size);
-        std::for_each(group.begin(), group.trueend(),
-                      [&archive](auto& particle) { archive(particle); });
-        break;
-    default:
-        throw std::runtime_error("unknown serialisation version");
-    }
-} //!< Cereal serialisation
-
 /** Concept for a range of groups */
 template <typename T>
 concept RequireGroups =

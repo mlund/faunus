@@ -11,11 +11,6 @@
 #include <numeric>
 #include <ranges>
 
-namespace cereal {
-class BinaryOutputArchive;
-class BinaryInputArchive;
-} // namespace cereal
-
 namespace Faunus {
 
 class Space;
@@ -754,24 +749,5 @@ ParticleVector loadStructure(std::string_view filename, bool prefer_charges_from
  * @return Shared pointer to write instance; empty if unknown suffix
  */
 std::unique_ptr<StructureFileWriter> createStructureFileWriter(const std::string& suffix);
-
-/**
- * @brief Placeholder for Space Trajectory
- *
- * The idea is that the format handles both input and
- * output streams that may of may not be compressed.
- */
-class FormatSpaceTrajectory
-{
-  private:
-    std::unique_ptr<cereal::BinaryOutputArchive> output_archive;
-    std::unique_ptr<cereal::BinaryInputArchive> input_archive;
-
-  public:
-    FormatSpaceTrajectory(std::ostream& ostream);
-    FormatSpaceTrajectory(std::istream& istream);
-    void load(Space&);       //!< Load single frame from stream
-    void save(const Space&); //!< Save single frame from stream
-};
 
 } // namespace Faunus

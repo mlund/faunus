@@ -2,8 +2,6 @@
 #include "aux/eigensupport.h"
 #include <range/v3/view/sample.hpp>
 #include <range/v3/view/common.hpp>
-#include <cereal/archives/binary.hpp>
-#include <cereal/types/memory.hpp>
 #include <nlohmann/json.hpp>
 #include <doctest/doctest.h>
 
@@ -494,41 +492,6 @@ TEST_CASE("[Faunus] Group")
         // new groups point to same particles as original
         auto gvec3 = gvec1;
         CHECK_EQ((*gvec1[0].begin()).id, (*gvec3[0].begin()).id);
-    }
-
-    SUBCASE("cerial serialisation")
-    {
-        std::ostringstream out(std::stringstream::binary);
-        { // serialize g2
-            std::vector<Particle> p2(5);
-            Group g2(0, p2.begin(), p2.end());
-            p2.front().id = 8;
-            p2.back().pos.x() = -10;
-            g2.id = 100;
-            g2.mass_center = {1, 0, 0};
-            g2.conformation_id = 20;
-            g2.resize(4);
-            cereal::BinaryOutputArchive archive(out);
-            archive(g2);
-        }
-
-        {                                     // deserialize into g1
-            std::istringstream in(out.str()); // not pretty...
-            cereal::BinaryInputArchive archive(in);
-            std::vector<Particle> p1(5);
-            Group g1(0, p1.begin(), p1.end());
-            archive(g1);
-
-            CHECK_EQ(g1.id, 100);
-            CHECK_EQ(g1.mass_center.x(), 1);
-            CHECK_EQ(g1.conformation_id, 20);
-            CHECK_EQ(g1.size(), 4);
-            CHECK_EQ(g1.capacity(), 5);
-            CHECK_EQ(g1.begin()->id, 8);
-            CHECK_EQ(p1.front().id, 8);
-            CHECK_EQ(p1.back().pos.x(), -10);
-            CHECK_EQ(p1.back().ext, nullptr);
-        }
     }
 }
 

@@ -19,7 +19,6 @@ if (ENABLE_PCH)
             <limits> <memory>
             <Eigen/Core> <Eigen/Geometry>
             <range/v3/view/filter.hpp> <range/v3/view/transform.hpp> <range/v3/view/join.hpp>
-            <cereal/cereal.hpp> <cereal/types/base_class.hpp> <cereal/types/memory.hpp>
             <nlohmann/json.hpp>
             <spdlog/fmt/fmt.h> <spdlog/spdlog.h>)
 endif()
@@ -69,7 +68,7 @@ set(hdrs actions.h analysis.h average.h atomdata.h auxiliary.h bonds.h celllist.
 	molecule.h montecarlo.h move.h mpicontroller.h particle.h penalty.h potentials_base.h potentials.h
 	reactioncoordinate.h rotate.h sasa.h smart_montecarlo.h space.h speciation.h spherocylinder.h
         random.h regions.h tensor.h units.h aux/arange.h
-	aux/eigen_cerealisation.h aux/eigensupport.h aux/equidistant_table.h aux/error_function.h
+	aux/eigensupport.h aux/equidistant_table.h aux/error_function.h
 	aux/exp_function.h aux/invsqrt_function.h aux/iteratorsupport.h aux/legendre.h aux/matrixmarket.h
 	aux/multimatrix.h aux/pairmatrix.h aux/pow_function.h aux/sparsehistogram.h aux/table_1d.h
 	aux/table_2d.h aux/timers.h aux/typeerasure.h)
@@ -81,7 +80,6 @@ target_compile_definitions(libfaunus PRIVATE SPDLOG_COMPILED_LIB)
 target_link_libraries(libfaunus PUBLIC
         project_options
         project_warnings
-        cereal
         Eigen
         functionparser
         nlohmann_json
@@ -151,7 +149,7 @@ if (ENABLE_PYTHON)
 
     pybind11_add_module(pyfaunus pyfaunus.cpp ${objs})
     target_link_libraries(pyfaunus PRIVATE
-        project_options cereal Eigen functionparser nlohmann_json progresstracker pybind11_json range-v3 spdlog xdrfile zstr)
+        project_options Eigen functionparser nlohmann_json progresstracker pybind11_json range-v3 spdlog xdrfile zstr)
     target_compile_definitions(pyfaunus PUBLIC SPDLOG_COMPILED_LIB)
     target_compile_definitions(pyfaunus PRIVATE DOCTEST_CONFIG_DISABLE)
 

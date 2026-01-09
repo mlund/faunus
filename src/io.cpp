@@ -6,7 +6,6 @@
 #include "multipole.h"
 #include <spdlog/spdlog.h>
 #include <zstr.hpp>
-#include <cereal/archives/binary.hpp>
 
 namespace Faunus {
 
@@ -497,30 +496,6 @@ std::vector<AtomData::index_type> fastaToAtomIds(std::string_view fasta_sequence
         }
     }
     return Faunus::names2ids(Faunus::atoms, names);
-}
-
-FormatSpaceTrajectory::FormatSpaceTrajectory(std::ostream& ostream)
-{
-    if (ostream) {
-        output_archive = std::make_unique<cereal::BinaryOutputArchive>(ostream);
-    }
-}
-
-FormatSpaceTrajectory::FormatSpaceTrajectory(std::istream& istream)
-{
-    if (istream) {
-        input_archive = std::make_unique<cereal::BinaryInputArchive>(istream);
-    }
-}
-
-void FormatSpaceTrajectory::load([[maybe_unused]] Space& spc)
-{
-    assert(input_archive != nullptr);
-}
-
-void FormatSpaceTrajectory::save([[maybe_unused]] const Space& spc)
-{
-    assert(output_archive != nullptr);
 }
 
 // ------------------------

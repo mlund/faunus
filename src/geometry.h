@@ -7,7 +7,6 @@
 #include <iterator>
 #include <concepts>
 #include <Eigen/Geometry>
-#include <cereal/types/base_class.hpp>
 #include <spdlog/spdlog.h>
 #include <ranges>
 #include <range/v3/view/cartesian_product.hpp>
@@ -103,11 +102,6 @@ class BoundaryCondition
     Coordinates coordinates;
     BoundaryXYZ direction;
 
-    template <class Archive> void serialize(Archive& archive)
-    {
-        archive(coordinates, direction);
-    } //!< Cereal serialisation
-
     [[nodiscard]] Eigen::Matrix<bool, 3, 1> isPeriodic() const;
 
     explicit BoundaryCondition(Coordinates coordinates = Coordinates::ORTHOGONAL,
@@ -164,9 +158,6 @@ class GeometryImplementation : public GeometryBase
 
     //! A unique pointer to a copy of self. To be used in copy constructors.
     [[nodiscard]] virtual std::unique_ptr<GeometryImplementation> clone() const = 0;
-
-    //! Cereal serialisation
-    template <class Archive> void serialize(Archive& archive) { archive(boundary_conditions); }
 };
 
 /**
@@ -194,12 +185,6 @@ class Cuboid : public GeometryImplementation
 
     [[nodiscard]] std::unique_ptr<GeometryImplementation>
     clone() const override; //!< A unique pointer to a copy of self.
-
-    //! Cereal serialisation
-    template <class Archive> void serialize(Archive& archive)
-    {
-        archive(cereal::base_class<GeometryImplementation>(this), box);
-    }
 };
 
 /**
@@ -247,12 +232,6 @@ class Sphere : public GeometryImplementation
 
     std::unique_ptr<GeometryImplementation>
     clone() const override; //!< A unique pointer to a copy of self.
-
-    //! Cereal serialisation
-    template <class Archive> void serialize(Archive& archive)
-    {
-        archive(cereal::base_class<GeometryImplementation>(this), radius);
-    }
 };
 
 class Hypersphere2d : public Sphere
@@ -290,12 +269,6 @@ class Cylinder : public GeometryImplementation
 
     [[nodiscard]] std::unique_ptr<GeometryImplementation>
     clone() const override; //!< A unique pointer to a copy of self.
-
-    //! Cereal serialisation
-    template <class Archive> void serialize(Archive& archive)
-    {
-        archive(cereal::base_class<GeometryImplementation>(this), radius, height);
-    }
 };
 
 /**
@@ -331,12 +304,6 @@ class HexagonalPrism : public GeometryImplementation
     [[nodiscard]] std::unique_ptr<GeometryImplementation>
     clone() const override; //!< A unique pointer to a copy of self.
 
-    //! Cereal serialisation
-    template <class Archive> void serialize(Archive& archive)
-    {
-        archive(cereal::base_class<GeometryImplementation>(this), box);
-    }
-
     [[nodiscard]] double innerRadius() const; //!< Inner hexagonal radius
     [[nodiscard]] double outerRadius() const; //!< Outer radius / side-length
     [[nodiscard]] double height() const;      //!< Prism height
@@ -363,12 +330,6 @@ class TruncatedOctahedron : public GeometryImplementation
 
     [[nodiscard]] std::unique_ptr<GeometryImplementation>
     clone() const override; //!< A unique pointer to a copy of self.
-
-    //! Cereal serialisation
-    template <class Archive> void serialize(Archive& archive)
-    {
-        archive(cereal::base_class<GeometryImplementation>(this), side);
-    }
 };
 
 /**

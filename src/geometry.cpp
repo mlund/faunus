@@ -5,8 +5,6 @@
 #include "aux/eigensupport.h"
 #include "aux/arange.h"
 #include <spdlog/spdlog.h>
-#include <cereal/types/memory.hpp>
-#include <cereal/archives/binary.hpp>
 #include <Eigen/Eigenvalues>
 #include <doctest/doctest.h>
 
@@ -1435,27 +1433,6 @@ TEST_CASE("[Faunus] Chameleon")
         Chameleon chameleon(geo, Variant::OCTAHEDRON);
         compare_boundary(chameleon, geo, box);
         compare_vdist(chameleon, geo, box);
-    }
-
-    SUBCASE("Cereal serialisation")
-    {
-        double x = 2.0, y = 3.0, z = 4.0;
-        std::ostringstream os(std::stringstream::binary);
-        { // write
-            Cuboid geo({x, y, z});
-            cereal::BinaryOutputArchive archive(os);
-            archive(geo);
-        }
-
-        { // read
-            Cuboid geo({10, 20, 30});
-            std::istringstream in(os.str());
-            cereal::BinaryInputArchive archive(in);
-            archive(geo);
-            CHECK_EQ(geo.getLength().x(), Approx(x));
-            CHECK_EQ(geo.getLength().y(), Approx(y));
-            CHECK_EQ(geo.getLength().z(), Approx(z));
-        }
     }
 }
 

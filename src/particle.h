@@ -23,8 +23,6 @@ struct ParticlePropertyBase
     virtual void from_json(const json& j) = 0;                        //!< Convert from JSON object
     void rotate(const Eigen::Quaterniond& q, const Eigen::Matrix3d&); //!< Internal rotation
     virtual ~ParticlePropertyBase() = default;
-
-    template <class Archive> void serialize(Archive&) {} //!< Cereal serialisation
 };
 
 template <typename... Ts> auto to_json(json&) -> typename std::enable_if<sizeof...(Ts) == 0>::type
@@ -178,20 +176,6 @@ template <typename... Properties> class ParticleTemplate : public Properties...
         _rotate<Ts...>(q, m, rest...);
     }
 
-    // Cereal serialisation
-
-    template <typename... Ts, class Archive>
-    auto __serialize(Archive&) -> typename std::enable_if<sizeof...(Ts) == 0>::type
-    {
-    }
-
-    template <typename T, typename... Ts, class Archive>
-    void __serialize(Archive& archive, T& a, Ts&... rest)
-    {
-        a.serialize(archive);
-        __serialize<Ts...>(archive, rest...);
-    }
-
   public:
     ParticleTemplate()
         : Properties()... {};
@@ -265,18 +249,6 @@ class Particle
         assert(ext);
         return *ext;
     } //!< Get extended particle properties;
-
-    /**
-     * @brief Cereal serialisation
-     * @param archive Archive to serialize to/from
-     * @warning Still under construction
-     */
-    template <class Archive> void serialize(Archive& archive)
-    {
-        archive(ext, id, charge, pos);
-        // if (ext != nullptr)
-        //    ext->serialize(archive);
-    } //!<
 };
 
 //! Storage type for collections of particles

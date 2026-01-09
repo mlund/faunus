@@ -31,11 +31,6 @@ CPMAddPackage(
     URL https://gitlab.com/libeigen/eigen/-/archive/3.4.1/eigen-3.4.1.tar.gz
 )
 
-CPMAddPackage(
-    NAME cereal VERSION 1.3.2 GITHUB_REPOSITORY USCiLab/cereal
-    OPTIONS "SKIP_PORTABILITY_TEST ON" "JUST_INSTALL_CEREAL ON"
-)
-
 CPMAddPackage("gh:pybind/pybind11_json#0.2.15")
 
 

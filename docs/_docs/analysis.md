@@ -785,25 +785,6 @@ If `nstep` is greater than zero, the output filename will be tagged
 with the current step count.
 
 
-### Space Trajectory (experimental)
-
-Save all particle and group information to a compressed, binary trajectory format.
-The following properties are saved:
-
- - all particle properties (id, position, charge, dipole etc.)
- - all group properties (id, size, capacity etc.)
- - todo: geometry, energy
-
-The file suffix must be either `.traj` (uncomressed) or `.ztraj` (compressed).
-For the latter, the file size is reduced by roughly a factor of two using zlib
-compression.
-
-`spacetraj`  | Description
------------- | ---------------------------------------
-`file`       | Filename of output .traj/.ztraj file
-`nstep`      | Interval between samples.
-
-
 ### XTC trajectory
 
 Generates a Gromacs XTC trajectory file with particle positions and box

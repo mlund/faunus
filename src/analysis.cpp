@@ -21,8 +21,6 @@
 #include <spdlog/spdlog.h>
 #include <spdlog/fmt/ostr.h>
 #include <zstr.hpp>
-#include <cereal/types/memory.hpp>
-#include <cereal/archives/binary.hpp>
 #include <range/v3/view/zip.hpp>
 #include <iomanip>
 #include <iostream>
@@ -252,9 +250,6 @@ std::unique_ptr<Analysis> createAnalysis(const std::string& name, const json& j,
         }
         else if (name == "xtcfile") {
             return std::make_unique<XTCtraj>(j, spc);
-        }
-        else if (name == "spacetraj") {
-            return std::make_unique<SpaceTrajectory>(j, spc);
         }
         // append more analysis here...
         throw ConfigurationError("unknown analysis");
@@ -2873,60 +2868,6 @@ VirtualTranslate::VirtualTranslate(const json& j, Space& spc, Energy::EnergyTerm
     change.groups.resize(1);
     change.groups.front().internal = false;
     from_json(j);
-}
-
-SpaceTrajectory::SpaceTrajectory(const json& j, const Space& spc)
-    : Analysis(spc, "space trajectory")
-    , groups(spc.groups)
-{
-    from_json(j);
-    filename = j.at("file").get<std::string>();
-
-    if (useCompression()) {
-        stream = std::make_unique<zstr::ofstream>(MPI::prefix + filename, std::ios::binary);
-    }
-    else {
-        stream = std::make_unique<std::ofstream>(MPI::prefix + filename, std::ios::binary);
-    }
-
-    if (stream != nullptr && *stream) {
-        archive = std::make_unique<cereal::BinaryOutputArchive>(*stream);
-    }
-
-    if (not archive) {
-        throw std::runtime_error("error creating "s + filename);
-    }
-}
-
-bool SpaceTrajectory::useCompression() const
-{
-    assert(!filename.empty());
-    const auto suffix = filename.substr(filename.find_last_of('.') + 1);
-    if (suffix == "ztraj") {
-        return true;
-    }
-    if (suffix == "traj") {
-        return false;
-    }
-    throw ConfigurationError("Trajectory file suffix must be `.traj` or `.ztraj`");
-}
-
-void SpaceTrajectory::_sample()
-{
-    assert(archive);
-    for (auto& group : groups) {
-        (*archive)(group);
-    }
-}
-
-void SpaceTrajectory::_to_json(json& j) const
-{
-    j = {{"file", filename}};
-}
-
-void SpaceTrajectory::_to_disk()
-{
-    stream->flush();
 }
 
 ElectricPotential::ElectricPotential(const json& j, const Space& spc)

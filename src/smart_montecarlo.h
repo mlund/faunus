@@ -1,8 +1,6 @@
 #pragma once
 
 #include "regions.h"
-#include <optional>
-#include <ranges>
 
 namespace Faunus::SmarterMonteCarlo {
 

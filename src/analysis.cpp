@@ -18,6 +18,10 @@
 #include <range/v3/numeric/accumulate.hpp>
 #include <range/v3/algorithm/for_each.hpp>
 #include <range/v3/view/cache1.hpp>
+#include <range/v3/view/transform.hpp>
+#include <range/v3/view/join.hpp>
+#include <range/v3/view/filter.hpp>
+#include <range/v3/range/conversion.hpp>
 #include <spdlog/spdlog.h>
 #include <spdlog/fmt/ostr.h>
 #include <zstr.hpp>
@@ -1187,7 +1191,7 @@ PointVector AtomicDisplacement::getPositions() const
     auto active_and_inactive = [&](const Group& group) {
         return std::ranges::subrange(group.begin(), group.trueend());
     };
-    namespace rv = ranges::cpp20::views;
+    namespace rv = ranges::views;
     return spc.findMolecules(molid, Space::Selection::ALL) | rv::transform(active_and_inactive) |
            rv::join | rv::transform(&Particle::pos) | ranges::to<PointVector>;
 }
@@ -1699,9 +1703,9 @@ XTCtraj::XTCtraj(const Space& spc, const std::string& filename,
                  const std::vector<std::string>& molecule_names)
     : Analysis(spc, "xtcfile")
 {
-    using ranges::cpp20::views::filter;
-    using ranges::cpp20::views::join;
-    using ranges::cpp20::views::transform;
+    using ranges::views::filter;
+    using ranges::views::join;
+    using ranges::views::transform;
     using ranges::views::cache1;
 
     writer = std::make_unique<XTCWriter>(filename);
@@ -1742,7 +1746,7 @@ void XTCtraj::_to_json(json& j) const
  */
 void XTCtraj::_sample()
 {
-    namespace rv = ranges::cpp20::views;
+    namespace rv = ranges::views;
     if (group_ids.empty()) {
         auto positions = spc.particles | std::views::transform(&Particle::pos);
         writer->writeNext(spc.geometry.getLength(), positions.begin(), positions.end());
@@ -2662,7 +2666,7 @@ Multipole::Multipole(const json& j, const Space& spc)
 
 void ScatteringFunction::_sample()
 {
-    namespace rv = ranges::cpp20::views;
+    namespace rv = ranges::views;
     scatter_positions.clear();
     auto groups =
         molecule_ids | rv::transform([&](auto id) { return spc.findMolecules(id); }) | rv::join;

@@ -9,13 +9,10 @@
 #include "aux/pairmatrix.h"
 #include "smart_montecarlo.h"
 #include <range/v3/range/conversion.hpp>
-#include <Eigen/Core>
 #include <spdlog/spdlog.h>
-#include <ranges>
 #include <numeric>
 #include <algorithm>
 #include <concepts>
-#include <optional>
 
 struct freesasa_parameters_fwd; // workaround for freesasa unnamed struct that cannot be forward
                                 // declared

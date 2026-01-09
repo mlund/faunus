@@ -13,7 +13,6 @@
 #include <range/v3/view/iota.hpp>
 #include <range/v3/view/transform.hpp>
 #include <range/v3/view/indirect.hpp>
-#include <optional>
 
 namespace Faunus {
 

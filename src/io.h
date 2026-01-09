@@ -6,10 +6,8 @@
 #include <fstream>
 #include <type_traits>
 #include <concepts>
-#include <iterator>
 #include <spdlog/spdlog.h>
 #include <numeric>
-#include <ranges>
 
 namespace Faunus {
 

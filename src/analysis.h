@@ -16,7 +16,6 @@
 #include <set>
 #include <string_view>
 #include <string>
-#include <vector>
 
 namespace Faunus::pairpotential {
 class NewCoulombGalore;

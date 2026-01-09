@@ -36,12 +36,7 @@ class Random;
  */
 namespace Geometry {
 
-//! Function to apply PBC to a position, i.e. wrap around the borders if applicable for the given
-//! container geometry
-typedef std::function<void(Point&)> BoundaryFunction;
-
-//! Function to calculate the (minimum) distance between two points depending on contained geometry
-typedef std::function<Point(const Point&, const Point&)> DistanceFunction;
+// Note: BoundaryFunction and DistanceFunction are defined in core.h
 
 //! Geometry variant used for Chameleon
 enum class Variant

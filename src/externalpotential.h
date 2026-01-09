@@ -1,5 +1,6 @@
 #pragma once
 
+#include "geometry.h"
 #include "group.h"
 #include "aux/timers.h"
 #include "aux/equidistant_table.h"

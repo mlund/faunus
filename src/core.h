@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <optional>
 #include <vector>
 #include <format>
@@ -22,6 +23,13 @@ using Point = Eigen::Vector3d;          //!< 3D vector used for positions, veloc
 using PointVector = std::vector<Point>; //!< Vector of 3D vectors
 using json = nlohmann::json;            //!< JSON object
 class Random;
+
+namespace Geometry {
+//! Function to apply PBC to a position
+using BoundaryFunction = std::function<void(Point&)>;
+//! Function to calculate the (minimum) distance between two points
+using DistanceFunction = std::function<Point(const Point&, const Point&)>;
+} // namespace Geometry
 
 /** Concept for a range of points */
 template <class T>

@@ -2,11 +2,6 @@
 #include "core.h"
 #include "particle.h"
 
-namespace Faunus::Geometry {
-// @todo typedef re-defined to avoid geometry.h dependency; consider another fix for this.
-typedef std::function<Point(const Point&, const Point&)> DistanceFunction;
-} // namespace Faunus::Geometry
-
 namespace Faunus::pairpotential {
 
 /**

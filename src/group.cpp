@@ -1,4 +1,5 @@
 #include "group.h"
+#include "geometry.h"
 #include "aux/eigensupport.h"
 #include <range/v3/view/sample.hpp>
 #include <range/v3/view/common.hpp>

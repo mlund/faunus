@@ -464,7 +464,7 @@ void PolicyIonIonIPBC::updateComplex(EwaldData& d, const Change& change,
 double PolicyIonIon::surfaceEnergy(const EwaldData& data, [[maybe_unused]] const Change& change,
                                    const Space::GroupVector& groups)
 {
-    using ranges::cpp20::views::join;
+    using std::views::join;
     if (data.const_inf < 0.5 || change.empty()) {
         return 0.0;
     }
@@ -815,7 +815,7 @@ double ContainerOverlap::energy(const Change& change)
 double ContainerOverlap::energyOfAllGroups() const
 {
     auto positions =
-        spc.groups | ranges::cpp20::views::join | std::views::transform(&Particle::pos);
+        spc.groups | std::views::join | std::views::transform(&Particle::pos);
     bool outside = std::any_of(positions.begin(), positions.end(), [&](const auto& position) {
         return spc.geometry.collision(position);
     });

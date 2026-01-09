@@ -6,10 +6,8 @@
 #include "aux/eigensupport.h"
 #include <functional>
 #include <spdlog/spdlog.h>
-#include <range/v3/view/transform.hpp>
-#include <range/v3/view/join.hpp>
-#include <range/v3/view/filter.hpp>
 #include <range/v3/range/conversion.hpp>
+#include <ranges>
 #include <utility>
 #include <doctest/doctest.h>
 
@@ -120,7 +118,7 @@ void MoleculeData::createMolecularConformations(const json& j)
             else {
                 faunus_logger->debug("replacing all charges from {} with atomlist values",
                                      trajfile);
-                auto all_particles = conformations.data | ranges::cpp20::views::join;
+                auto all_particles = conformations.data | std::views::join;
                 Faunus::applyAtomDataCharges(all_particles.begin(), all_particles.end());
             }
             // make sure all conformations are initially placed in the center of the box which
@@ -279,7 +277,7 @@ void NeighboursGenerator::generatePaths(int bonded_distance)
 
 void NeighboursGenerator::generatePairs(AtomPairList& pairs, int bond_distance)
 {
-    using namespace ranges::cpp20::views;
+    using namespace std::views;
     generatePaths(bond_distance);
     auto is_valid_pair = [](const auto& pair) { return pair.first != pair.second; };
     auto make_ordered_pair = [](const auto& path) {
@@ -506,10 +504,9 @@ void MoleculeBuilder::readParticles(const json& j)
 
 void MoleculeBuilder::readBonds(const json& j)
 {
-    using namespace ranges::cpp20;
     bonds = j.value("bondlist", bonds);
     auto is_invalid_index = [size = particles.size()](auto& i) { return i >= size || i < 0; };
-    auto indices = bonds | views::transform(&pairpotential::BondData::indices) | views::join;
+    auto indices = bonds | std::views::transform(&pairpotential::BondData::indices) | std::views::join;
     if (std::ranges::any_of(indices, is_invalid_index)) {
         throw ConfigurationError("bonded index out of range");
     }

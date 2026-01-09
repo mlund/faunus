@@ -2,11 +2,11 @@
 
 #include <optional>
 #include <vector>
+#include <format>
+#include <iterator>
+#include <ranges>
 #include <Eigen/Core>
 #include <nlohmann/json.hpp>
-#include <spdlog/fmt/fmt.h>
-#include <range/v3/range/concepts.hpp>
-#include <ranges>
 
 // forward declare logger
 namespace spdlog {
@@ -30,7 +30,7 @@ concept RequirePoints =
 
 /** Concept for an iterator to a `Point` */
 template <class T>
-concept RequirePointIterator = std::is_convertible_v<ranges::cpp20::iter_value_t<T>, Point>;
+concept RequirePointIterator = std::is_convertible_v<std::iter_value_t<T>, Point>;
 
 using namespace std::string_literals;
 
@@ -195,8 +195,8 @@ struct GenericError : public std::runtime_error
     explicit GenericError(const char* msg);
 
     template <class... Args>
-    explicit GenericError(std::string_view fmt, const Args&... args)
-        : std::runtime_error(fmt::vformat(fmt, fmt::make_format_args(args...)))
+    explicit GenericError(std::format_string<Args...> fmt, Args&&... args)
+        : std::runtime_error(std::format(fmt, std::forward<Args>(args)...))
     {
     }
 };

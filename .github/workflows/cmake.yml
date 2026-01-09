@@ -17,7 +17,7 @@ jobs:
     - name: Install build dependencies
       run: |
         apt-get update
-        apt-get install -y cmake git zlib1g-dev libomp-20-dev python3
+        apt-get install -y cmake git zlib1g-dev libomp-20-dev python3 libc++-20-dev libc++abi-20-dev
 
     - uses: actions/checkout@v4
 
@@ -25,7 +25,8 @@ jobs:
       run: |
         cmake -B build -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
           -DENABLE_OPENMP=on -DENABLE_PYTHON=off -DENABLE_TBB=off \
-          -DCMAKE_C_COMPILER=clang-20 -DCMAKE_CXX_COMPILER=clang++-20
+          -DCMAKE_C_COMPILER=clang-20 -DCMAKE_CXX_COMPILER=clang++-20 \
+          -DCMAKE_CXX_FLAGS="-stdlib=libc++"
 
     - name: Build
       run: cmake --build build --config $BUILD_TYPE --target faunus -j$(nproc)

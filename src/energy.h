@@ -9,7 +9,7 @@
 #include "aux/pairmatrix.h"
 #include "smart_montecarlo.h"
 #include <range/v3/range/conversion.hpp>
-#include <Eigen/Dense>
+#include <Eigen/Core>
 #include <spdlog/spdlog.h>
 #include <ranges>
 #include <numeric>

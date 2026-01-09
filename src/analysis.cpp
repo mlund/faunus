@@ -12,6 +12,7 @@
 #include "aux/eigensupport.h"
 #include "aux/arange.h"
 #include "aux/matrixmarket.h"
+#include <Eigen/Eigenvalues>
 #include <cmath>
 #include <exception>
 #include <iterator>

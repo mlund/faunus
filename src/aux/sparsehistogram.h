@@ -1,5 +1,6 @@
 #pragma once
 
+#include <format>
 #include <map>
 #include <fstream>
 #if __cplusplus >= 202002L
@@ -42,7 +43,7 @@ template <std::floating_point T = double> class SparseHistogram
     friend auto& operator<<(std::ostream& stream, const SparseHistogram& histogram)
     {
         std::for_each(histogram.data.begin(), histogram.data.end(), [&](const auto& sample) {
-            stream << fmt::format(
+            stream << std::format(
                 "{:.6E} {}\n", static_cast<T>(sample.first) * histogram.resolution, sample.second);
         });
         return stream;

@@ -1,13 +1,13 @@
 #include <doctest/doctest.h>
 #include "units.h"
 #include <cmath>
-#include <spdlog/fmt/fmt.h>
+#include <format>
 
 double Faunus::PhysicalConstants::temperature = 298.15;
 
 std::string Faunus::unicode::bracket(std::string_view sv)
 {
-    return fmt::format("\u27e8{}\u27e9", sv);
+    return std::format("\u27e8{}\u27e9", sv);
 }
 
 TEST_CASE("[Faunus] infinite math")

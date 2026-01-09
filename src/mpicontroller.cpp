@@ -17,7 +17,7 @@ Controller::Controller()
     : world(mpl::environment::comm_world())
 {
     if (world.size() > 1) {
-        prefix = fmt::format("mpi{}.", world.rank());
+        prefix = std::format("mpi{}.", world.rank());
         stream.open((prefix + "stdout"));
     }
     else {

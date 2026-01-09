@@ -29,12 +29,12 @@ AngularScan::AngularScan(const json& j, const Space& spc)
     }
 
     stream = IO::openCompressedOutputStream(j.value("file", "poses.gz"s), true);
-    *stream << fmt::format("# Δ⍺ = {:.1f}° -> {} x {} x {} = {} poses 💃🏽🕺🏼\n",
+    *stream << std::format("# Δ⍺ = {:.1f}° -> {} x {} x {} = {} poses 💃🏽🕺🏼\n",
                            angular_resolution / 1.0_deg, angles.quaternions_1.size(),
                            angles.quaternions_2.size(), angles.dihedrals.size(), angles.size())
-            << fmt::format("# Mass center separation range along z: [{}, {}) with dz = {} Å\n",
+            << std::format("# Mass center separation range along z: [{}, {}) with dz = {} Å\n",
                            zmin, zmax, dz)
-            << fmt::format("# Max energy threshold: {} kJ/mol\n", max_energy / 1.0_kJmol)
+            << std::format("# Max energy threshold: {} kJ/mol\n", max_energy / 1.0_kJmol)
             << "# Column 0-3: Quaternion for molecule 1 (x y z w)\n"
             << "# Column 4-7: Quaternion for molecule 2 (x y z w)\n"
             << "# Column 8:   Mass center z displacement of molecule 2\n"
@@ -64,7 +64,7 @@ void AngularScan::Molecule::initialize(const Space::GroupVector& groups, int mol
         return particle.pos - group.mass_center;
     };
     ref_positions = group | transform(as_centered_position) | ranges::to_vector;
-    XYZWriter().save(fmt::format("molecule{}_reference.xyz", index), group.begin(), group.end(),
+    XYZWriter().save(std::format("molecule{}_reference.xyz", index), group.begin(), group.end(),
                      Point::Zero());
 }
 
@@ -91,14 +91,14 @@ void AngularScan::report(const Group& group1, const Group& group2, const Eigen::
     }
 
     auto format = [](const auto& q) {
-        return fmt::format("{:8.4f}{:8.4f}{:8.4f}{:8.4f}", q.x(), q.y(), q.z(), q.w());
+        return std::format("{:8.4f}{:8.4f}{:8.4f}{:8.4f}", q.x(), q.y(), q.z(), q.w());
     };
 
 #pragma omp critical
     {
         energy_analysis.add(energy);
         *stream << format(q1) << format(q2)
-                << fmt::format("{:8.4f} {:>10.3E}\n", group2.mass_center.z(), energy / 1.0_kJmol);
+                << std::format("{:8.4f} {:>10.3E}\n", group2.mass_center.z(), energy / 1.0_kJmol);
         if (trajectory) {
             auto positions = concat(group1, group2) | transform(&Particle::pos);
             trajectory->writeNext({500, 500, 500}, positions.begin(), positions.end());

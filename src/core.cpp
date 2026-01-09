@@ -148,7 +148,7 @@ std::shared_ptr<spdlog::logger> mcloop_logger = faunus_logger;
     std::string newfile;
     auto exists = [&]() { return std::ifstream(newfile).good(); };
     do {
-        newfile = fmt::format("{}.{}", file, cnt++);
+        newfile = std::format("{}.{}", file, cnt++);
     } while (not exists());
     return newfile;
 }

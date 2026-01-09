@@ -286,7 +286,7 @@ XTCReader::XTCReader(const std::string& filename)
         xdrfile = XdrFile::XDRFILE_unique(XdrFile::xdrfile_open(filename.c_str(), "r"));
     }
     if (!xtc_frame || !xdrfile) {
-        throw std::runtime_error(fmt::format("xtc file {} could not be opened", filename));
+        throw std::runtime_error(std::format("xtc file {} could not be opened", filename));
     }
 }
 
@@ -302,7 +302,7 @@ bool XTCReader::readFrame()
                                     xtc_frame->xtc_coordinates.get(), &xtc_frame->precision);
     if (return_code != XdrFile::exdrENDOFFILE && return_code != XdrFile::exdrOK) {
         throw std::runtime_error(
-            fmt::format("xtc file {} could not be read (error code {})", filename, return_code));
+            std::format("xtc file {} could not be read (error code {})", filename, return_code));
     }
     return return_code == XdrFile::exdrOK;
 }
@@ -323,7 +323,7 @@ XTCWriter::XTCWriter(const std::string& filename)
     , filename(filename)
 {
     if (!xdrfile) {
-        throw std::runtime_error(fmt::format("xtc file {} could not be opened", filename));
+        throw std::runtime_error(std::format("xtc file {} could not be opened", filename));
     }
 }
 
@@ -334,7 +334,7 @@ void XTCWriter::writeFrameAt(int step, float time)
                                      xtc_frame->precision);
     if (return_code != XdrFile::exdrOK) {
         throw std::runtime_error(
-            fmt::format("xtc file {} could not be written (error code {})", filename, return_code));
+            std::format("xtc file {} could not be written (error code {})", filename, return_code));
     }
 }
 
@@ -345,7 +345,7 @@ void XTCWriter::writeFrame()
                                      xtc_frame->xtc_coordinates.get(), xtc_frame->precision);
     if (return_code != XdrFile::exdrOK) {
         throw std::runtime_error(
-            fmt::format("xtc file {} could not be written (error code {})", filename, return_code));
+            std::format("xtc file {} could not be written (error code {})", filename, return_code));
     }
 }
 
@@ -443,7 +443,7 @@ ParticleVector loadStructure(std::string_view filename, bool prefer_charges_from
         return particles;
     }
     catch (std::exception& e) {
-        throw std::runtime_error(fmt::format("{} load error -> {}", filename, e.what()));
+        throw std::runtime_error(std::format("{} load error -> {}", filename, e.what()));
     }
 }
 
@@ -595,7 +595,7 @@ ParticleVector& StructureFileReader::load(std::istream& stream)
 void StructureFileReader::checkLoadedParticles() const
 {
     if (expected_number_of_particles > 0 && expected_number_of_particles != particles.size()) {
-        throw std::out_of_range(fmt::format("expected {} particle records but found {}",
+        throw std::out_of_range(std::format("expected {} particle records but found {}",
                                             expected_number_of_particles, particles.size()));
     }
     if (particles.empty()) {
@@ -710,14 +710,14 @@ TEST_CASE("[Faunus] StructureFileReader and StructureFileWriter")
 
 void AminoAcidModelWriter::saveHeader(std::ostream& stream, int number_of_particles) const
 {
-    stream << fmt::format("# {}\n{}\n", generated_by_faunus_comment, number_of_particles);
+    stream << std::format("# {}\n{}\n", generated_by_faunus_comment, number_of_particles);
 }
 
 void AminoAcidModelWriter::saveParticle(std::ostream& stream, const Particle& particle)
 {
     const auto& traits = particle.traits();
     auto scale = static_cast<double>(particle_is_active) / 1.0_angstrom;
-    stream << fmt::format("{:7} {:7d} {:>13.6E} {:>13.6E} {:>13.6E} {:>13.6E} {:9.3f} {:9.3f}\n",
+    stream << std::format("{:7} {:7d} {:>13.6E} {:>13.6E} {:>13.6E} {:>13.6E} {:9.3f} {:9.3f}\n",
                           traits.name, particle_index + 1, scale * particle.pos[0],
                           scale * particle.pos[1], scale * particle.pos[2], scale * particle.charge,
                           scale * traits.mw, 0.5 * traits.sigma);
@@ -768,7 +768,7 @@ AminoAcidModelReader::AminoAcidModelReader()
 
 void XYZWriter::saveHeader(std::ostream& stream, int number_of_particles) const
 {
-    stream << fmt::format("{}\n{}\n", number_of_particles, generated_by_faunus_comment);
+    stream << std::format("{}\n{}\n", number_of_particles, generated_by_faunus_comment);
 }
 
 void XYZWriter::saveParticle(std::ostream& stream, const Particle& particle)
@@ -783,7 +783,7 @@ void SpheroCylinderXYZWriter::saveHeader(std::ostream& stream,
                                          [[maybe_unused]] int number_of_particles) const
 {
     // @todo we currently have no access to the "sweep" and is now fixed to "0"
-    stream << fmt::format("sweep {}; box ", 0) << box_dimensions.transpose() << "\n";
+    stream << std::format("sweep {}; box ", 0) << box_dimensions.transpose() << "\n";
 }
 
 void SpheroCylinderXYZWriter::saveParticle(std::ostream& stream, const Particle& particle)
@@ -970,21 +970,21 @@ void PQRWriter::saveParticle(std::ostream& stream, const Particle& particle)
 
     switch (style) {
     case Style::PQR:
-        stream << fmt::format("{:6s}{:5d} {:^4.4s}{:1s}{:3.3s} {:1s}{:4d}{:1s}   "
+        stream << std::format("{:6s}{:5d} {:^4.4s}{:1s}{:3.3s} {:1s}{:4d}{:1s}   "
                               "{:8.3f}{:8.3f}{:8.3f}{:6.2f}{:6.2f}\n",
                               "ATOM", particle_index + 1, atom_name, "A", group_name, chain,
                               group_index + 1, "0", position.x(), position.y(), position.z(),
                               scale * particle.charge, scale * particle.traits().sigma * 0.5);
         break;
     case Style::PDB: // see https://cupnet.net/pdb-format
-        stream << fmt::format("{:6s}{:5d} {:^4.4s}{:1s}{:3.3s} {:1s}{:4d}{:1s}   "
+        stream << std::format("{:6s}{:5d} {:^4.4s}{:1s}{:3.3s} {:1s}{:4d}{:1s}   "
                               "{:8.3f}{:8.3f}{:8.3f}{:6.2f}{:6.2f}          {:>2.2s}{:2s}\n",
                               "ATOM", particle_index + 1, atom_name, "A", group_name, chain,
                               group_index + 1, "0", position.x(), position.y(), position.z(),
                               occupancy, temperature_factor, element_symbol, charge);
         break;
     case Style::PQR_LEGACY:
-        stream << fmt::format(
+        stream << std::format(
             "ATOM  {:5d} {:4.4} {:4.3}{:5d}    {:8.3f} {:8.3f} {:8.3f} {:.3f} {:.3f}\n",
             particle_index + 1, atom_name, group_name, group_index + 1, position.x(), position.y(),
             position.z(), scale * particle.charge, scale * particle.traits().sigma * 0.5);
@@ -1000,7 +1000,7 @@ void PQRWriter::saveHeader(std::ostream& stream, [[maybe_unused]] int number_of_
     if (box_dimensions.squaredNorm() > pc::epsilon_dbl) {
         const Point angle = {90.0, 90.0, 90.0};
         const Point box = box_dimensions / 1.0_angstrom;
-        stream << fmt::format("CRYST1{:9.3f}{:9.3f}{:9.3f}{:7.2f}{:7.2f}{:7.2f} P 1           1\n",
+        stream << std::format("CRYST1{:9.3f}{:9.3f}{:9.3f}{:7.2f}{:7.2f}{:7.2f} P 1           1\n",
                               box.x(), box.y(), box.z(), angle.x(), angle.y(), angle.z());
     }
 }
@@ -1019,13 +1019,13 @@ PQRWriter::PQRWriter(PQRWriter::Style style)
 
 void GromacsWriter::saveHeader(std::ostream& stream, const int number_of_particles) const
 {
-    stream << fmt::format("{}\n{:5d}\n", generated_by_faunus_comment, number_of_particles);
+    stream << std::format("{}\n{:5d}\n", generated_by_faunus_comment, number_of_particles);
 }
 
 void GromacsWriter::saveFooter(std::ostream& stream) const
 {
     if (box_dimensions.squaredNorm() > pc::epsilon_dbl) {
-        stream << fmt::format("{:10.5f}{:10.5f}{:10.5f}\n", box_dimensions.x() / 1.0_nm,
+        stream << std::format("{:10.5f}{:10.5f}{:10.5f}\n", box_dimensions.x() / 1.0_nm,
                               box_dimensions.y() / 1.0_nm, box_dimensions.z() / 1.0_nm);
     }
 }
@@ -1035,7 +1035,7 @@ void GromacsWriter::saveParticle(std::ostream& stream, const Particle& particle)
     const auto& atom_name = particle.traits().name;
     const auto scale = static_cast<double>(particle_is_active) / 1.0_nm; // zero if inactive
     Point position = scale * (particle.pos + 0.5 * box_dimensions);      // shift origin
-    stream << fmt::format("{:5d}{:5.5}{:>5.5}{:5d}{:8.3f}{:8.3f}{:8.3f}\n", group_index + 1,
+    stream << std::format("{:5d}{:5.5}{:>5.5}{:5d}{:8.3f}{:8.3f}{:8.3f}\n", group_index + 1,
                           group_name, atom_name, particle_index + 1, position.x(), position.y(),
                           position.z());
 }

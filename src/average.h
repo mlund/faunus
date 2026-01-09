@@ -5,7 +5,7 @@
 #include <cmath>
 #include <fstream>
 #include <concepts>
-#include <spdlog/fmt/fmt.h>
+#include <format>
 #include <nlohmann/json.hpp>
 
 namespace Faunus {
@@ -283,7 +283,7 @@ class Decorrelation
     {
         if (auto stream = std::ofstream(filename); stream) {
             for (size_t i = 0; i < blocked_statistics.size(); i++) {
-                stream << fmt::format("{} {} {}\n", i, blocked_statistics[i].avg(),
+                stream << std::format("{} {} {}\n", i, blocked_statistics[i].avg(),
                                       blocked_statistics[i].stdev());
             }
         }

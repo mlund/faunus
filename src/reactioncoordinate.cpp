@@ -86,7 +86,7 @@ std::unique_ptr<ReactionCoordinateBase> createReactionCoordinate(const json& j, 
             throw ConfigurationError("unknown reaction coordinate");
         }
         catch (std::exception& e) {
-            usageTip.pick(fmt::format("coords=[{}]", key));
+            usageTip.pick(std::format("coords=[{}]", key));
             throw ConfigurationError("'{}': {}", key, e.what());
         }
     }

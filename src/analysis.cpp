@@ -24,7 +24,7 @@
 #include <range/v3/view/filter.hpp>
 #include <range/v3/range/conversion.hpp>
 #include <spdlog/spdlog.h>
-#include <spdlog/fmt/ostr.h>
+#include <format>
 #include <zstr.hpp>
 #include <range/v3/view/zip.hpp>
 #include <iomanip>
@@ -347,9 +347,9 @@ void SystemEnergy::_sample()
         faunus_logger->warn("{}: non-finite energy excluded from averages at step {}", name,
                             getNumberOfSteps());
     }
-    *output_stream << fmt::format("{:10d}{}{:.6E}", getNumberOfSteps(), separator, total_energy);
+    *output_stream << std::format("{:10d}{}{:.6E}", getNumberOfSteps(), separator, total_energy);
     for (auto energy : energies) {
-        *output_stream << fmt::format("{}{:.6E}", separator, energy);
+        *output_stream << std::format("{}{:.6E}", separator, energy);
     }
     *output_stream << "\n";
 }
@@ -384,9 +384,9 @@ void SystemEnergy::createOutputStream()
         separator = " ";
         *output_stream << "#";
     }
-    *output_stream << fmt::format("{:>9}{}{:12}", "step", separator, "total");
+    *output_stream << std::format("{:>9}{}{:12}", "step", separator, "total");
     std::ranges::for_each(hamiltonian, [&](auto& energy) {
-        *output_stream << fmt::format("{}{:12}", separator, energy->name);
+        *output_stream << std::format("{}{:12}", separator, energy->name);
     });
     *output_stream << "\n";
 }
@@ -593,7 +593,7 @@ void SaveState::_sample()
         // tag filename with step number
         auto numbered_filename = filename;
         numbered_filename.insert(filename.find_last_of('.'),
-                                 fmt::format("_{}", getNumberOfSteps()));
+                                 std::format("_{}", getNumberOfSteps()));
         writeFunc(numbered_filename);
     }
     else {
@@ -726,7 +726,7 @@ void PairFunction::_to_disk()
             const auto volume_at_r = volumeElement(r);
             if (volume_at_r > 0.0) {
                 const auto total_number_of_samples = histogram.sumy();
-                o << fmt::format("{:.6E} {:.6E}\n", r,
+                o << std::format("{:.6E} {:.6E}\n", r,
                                  N * mean_volume.avg() / (volume_at_r * total_number_of_samples));
             }
         };
@@ -767,7 +767,7 @@ PairAngleFunction::PairAngleFunction(const Space& spc, const json& j, const std:
     };
     // rename `file` so that it will not be overwritten by base class destructor(!)
     // @todo Call The Wolf!
-    file = fmt::format("{}{}.dummy", MPI::prefix, file);
+    file = std::format("{}{}.dummy", MPI::prefix, file);
 }
 
 void PairAngleFunction::_to_disk()
@@ -859,7 +859,7 @@ void VirtualVolumeMove::writeToFileStream(const Point& scale, const double energ
 {
     if (stream) {
         const auto mean_excess_pressure = -meanFreeEnergy() / volume_displacement; // units of kT/Å³
-        *stream << fmt::format("{:d} {:.3E} {:.6E} {:.6E} {:.6E}", getNumberOfSteps(),
+        *stream << std::format("{:d} {:.3E} {:.6E} {:.6E} {:.6E}", getNumberOfSteps(),
                                volume_displacement, energy_change, std::exp(-energy_change),
                                mean_excess_pressure);
 
@@ -868,11 +868,11 @@ void VirtualVolumeMove::writeToFileStream(const Point& scale, const double energ
         if (volume_scaling_method == Geometry::VolumeMethod::XY) {
             const auto area_change =
                 box_length.x() * box_length.y() * (scale.x() * scale.y() - 1.0);
-            *stream << fmt::format(" {:.6E}", area_change);
+            *stream << std::format(" {:.6E}", area_change);
         }
         else if (volume_scaling_method == Geometry::VolumeMethod::Z) {
             const auto length_change = box_length.z() * (scale.z() - 1.0);
-            *stream << fmt::format(" {:.6E}", length_change);
+            *stream << std::format(" {:.6E}", length_change);
         }
         *stream << "\n"; // trailing newline
     }
@@ -965,7 +965,7 @@ QRtraj::QRtraj(const json& j, const Space& spc, const std::string& name)
                 // loop over *all* particles
                 if (it < group.end()) {
                     // active particles...
-                    *stream << fmt::format("{} {} ", it->charge, it->traits().sigma * 0.5);
+                    *stream << std::format("{} {} ", it->charge, it->traits().sigma * 0.5);
                 }
                 else {
                     // inactive particles...
@@ -992,7 +992,7 @@ PatchySpheroCylinderTrajectory::PatchySpheroCylinderTrajectory(const json& j, co
     }
     write_to_file = [&]() {
         assert(stream);
-        *stream << fmt::format("{}\nsweep {}; box ", spc.particles.size(), getNumberOfSteps())
+        *stream << std::format("{}\nsweep {}; box ", spc.particles.size(), getNumberOfSteps())
                 << spc.geometry.getLength().transpose() << "\n";
 
         for (const auto& group : spc.groups) {
@@ -1030,7 +1030,7 @@ void FileReactionCoordinate::_sample()
     const auto value = reaction_coordinate->operator()();
     mean_reaction_coordinate += value;
     if (stream) {
-        (*stream) << fmt::format("{} {:.6f} {:.6f}\n", getNumberOfSteps(), value,
+        (*stream) << std::format("{} {:.6f} {:.6f}\n", getNumberOfSteps(), value,
                                  mean_reaction_coordinate.avg());
     }
 }
@@ -1077,7 +1077,7 @@ AtomicDisplacement::AtomicDisplacement(const json& j, const Space& spc, std::str
     max_possible_displacement =
         j.value("max_displacement", spc.geometry.getLength().minCoeff() / 4.0);
     displacement_histogram_filename =
-        j.value("histogram_file", fmt::format("displacement_histogram_{}.dat", molecule_name));
+        j.value("histogram_file", std::format("displacement_histogram_{}.dat", molecule_name));
 
     if (j.contains("file")) {
         single_position_stream =
@@ -1161,7 +1161,7 @@ void AtomicDisplacement::sampleDisplacementFromReference(const Point& position, 
     mean_squared_displacement.at(index) += total_displacement.squaredNorm();
     displacement_histogram.add(total_displacement.norm());
     if (index == 0 && single_position_stream) {
-        *single_position_stream << fmt::format("{} {:.2f} {:.2f} {:.2f} {:.2f}\n",
+        *single_position_stream << std::format("{} {:.2f} {:.2f} {:.2f} {:.2f}\n",
                                                getNumberOfSteps(), position.x(), position.y(),
                                                position.z(), total_displacement.norm());
     }
@@ -1354,10 +1354,10 @@ void Density::writeTable(std::string_view name, Table& table)
     }
     table.stream_decorator = [&table](auto& stream, int N, double counts) {
         if (counts > 0) {
-            stream << fmt::format("{} {} {:.3E}\n", N, counts, counts / table.sumy());
+            stream << std::format("{} {} {:.3E}\n", N, counts, counts / table.sumy());
         }
     };
-    const auto filename = fmt::format("{}rho-{}.dat", MPI::prefix, name);
+    const auto filename = std::format("{}rho-{}.dat", MPI::prefix, name);
     if (std::ofstream file(filename); file) {
         file << "# N counts probability\n" << table;
     }
@@ -1476,7 +1476,7 @@ void SanityCheck::_sample()
         }
     }
     catch (std::exception& e) {
-        PQRWriter().save(fmt::format("{}step{}-error.pqr", MPI::prefix, getNumberOfSteps()),
+        PQRWriter().save(std::format("{}step{}-error.pqr", MPI::prefix, getNumberOfSteps()),
                          spc.groups, spc.geometry.getLength());
         throw std::runtime_error(e.what());
     }
@@ -1513,9 +1513,9 @@ void SanityCheck::checkWithinContainer(const Space::GroupType& group)
 
     std::for_each(outside_particles.begin(), outside_particles.end(), [&](const auto& particle) {
         outside_simulation_cell = true;
-        auto group_str = fmt::format("{}{}", group.traits().name, spc.getGroupIndex(group));
+        auto group_str = std::format("{}{}", group.traits().name, spc.getGroupIndex(group));
         if (group.traits().numConformations() > 1) {
-            group_str += fmt::format(" (conformation {})", group.conformation_id);
+            group_str += std::format(" (conformation {})", group.conformation_id);
         }
         faunus_logger->error("step {}: atom {}{} in molecule {}", getNumberOfSteps(),
                              particle.traits().name, group.getParticleIndex(particle), group_str);
@@ -1535,7 +1535,7 @@ void SanityCheck::checkMassCenter(const Space::GroupType& group)
             group.begin(), group.end(), spc.geometry.getBoundaryFunc(), -group.mass_center);
         const auto distance = spc.geometry.vdist(group.mass_center, mass_center).norm();
         if (distance > mass_center_tolerance) {
-            throw std::runtime_error(fmt::format(
+            throw std::runtime_error(std::format(
                 "step {}: {}{} mass center out of sync by {:.3f} Å. This *may* be due to a "
                 "molecule being longer than half the box length: consider increasing the "
                 "simulation cell size.",
@@ -1814,13 +1814,13 @@ void MultipoleDistribution::_to_disk()
     }
     if (std::ofstream stream(MPI::prefix + filename); stream) {
         stream << "# Multipolar energies (kT/lB)\n"
-               << fmt::format("# {:>8}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}\n", "R", "exact",
+               << std::format("# {:>8}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}\n", "R", "exact",
                               "tot", "ii", "id", "dd", "iq", "mucorr");
         for (auto [r_bin, energy] : mean_energy) {
             const auto distance = r_bin * dr;
             const auto u_tot = energy.ion_ion.avg() + energy.ion_dipole.avg() +
                                energy.dipole_dipole.avg() + energy.ion_quadrupole.avg();
-            stream << fmt::format(
+            stream << std::format(
                 "{:10.4f}{:10.4f}{:10.4f}{:10.4f}{:10.4f}{:10.4f}{:10.4f}{:10.4f}\n", distance,
                 energy.exact.avg(), u_tot, energy.ion_ion.avg(), energy.ion_dipole.avg(),
                 energy.dipole_dipole.avg(), energy.ion_quadrupole.avg(),
@@ -1919,7 +1919,7 @@ std::pair<Point, Point> InertiaTensor::compute() const
 void InertiaTensor::_sample()
 {
     const auto [eigen_values, principle_axis] = compute();
-    *stream << fmt::format("{} {} {} {} {} {} {} \n", getNumberOfSteps(), eigen_values[0],
+    *stream << std::format("{} {} {} {} {} {} {} \n", getNumberOfSteps(), eigen_values[0],
                            eigen_values[1], eigen_values[2], principle_axis[0], principle_axis[1],
                            principle_axis[2]);
 }
@@ -1956,7 +1956,7 @@ void MultipoleMoments::_to_json(json& j) const
     const auto& group = spc.groups.at(group_index);
     const auto particle1 = group.begin() + particle_range[0];
     const auto particle2 = group.begin() + particle_range[1];
-    j["particles"] = fmt::format("{}{} {}{}", particle1->traits().name, particle_range[0],
+    j["particles"] = std::format("{}{} {}{}", particle1->traits().name, particle_range[0],
                                  particle2->traits().name, particle_range[1]);
     j["molecule"] = group.traits().name;
 }
@@ -2097,7 +2097,7 @@ void PolymerShape::_sample()
             if (tensor_output_stream) {
                 const auto& t = gyration_tensor;
                 *tensor_output_stream
-                    << fmt::format("{} {:.2f} {:5e} {:5e} {:5e} {:5e} {:5e} {:5e}\n",
+                    << std::format("{} {:.2f} {:5e} {:5e} {:5e} {:5e} {:5e} {:5e}\n",
                                    this->getNumberOfSteps(), std::sqrt(gyration_radius_squared),
                                    t(0, 0), t(0, 1), t(0, 2), t(1, 1), t(1, 2), t(2, 2));
             }
@@ -2108,11 +2108,11 @@ void PolymerShape::_sample()
 void PolymerShape::_to_disk()
 {
     const std::string filename =
-        fmt::format("{}gyration_{}.dat", MPI::prefix, Faunus::molecules[molid].name);
+        std::format("{}gyration_{}.dat", MPI::prefix, Faunus::molecules[molid].name);
     if (auto stream = std::ofstream(filename); stream) {
         gyration_radius_histogram.stream_decorator = [](auto& stream, auto Rg, auto observations) {
             if (observations > 0) {
-                stream << fmt::format("{} {}\n", Rg, observations);
+                stream << std::format("{} {}\n", Rg, observations);
             }
         };
         stream << "# Rg N\n" << gyration_radius_histogram;
@@ -2286,7 +2286,7 @@ void AreaSamplingPolicy::sampleTotalSASA(TBegin first, TEnd last, SASAAnalysis& 
     auto area = analysis.sasa->calcSASA(analysis.spc, first, last);
     analysis.takeSample(area);
     if (analysis.output_stream) {
-        *analysis.output_stream << fmt::format("{} {:.3f}\n", analysis.getNumberOfSteps(), area);
+        *analysis.output_stream << std::format("{} {:.3f}\n", analysis.getNumberOfSteps(), area);
     }
 }
 
@@ -2450,7 +2450,7 @@ void AtomProfile::_to_disk()
             }
 
             N = N / double(number_of_samples); // average number of particles/charges
-            o << fmt::format("{:.6E} {:.6E} {:.6E}\n", r, N, N / Vr * 1e27 / pc::avogadro);
+            o << std::format("{:.6E} {:.6E} {:.6E}\n", r, N, N / Vr * 1e27 / pc::avogadro);
             // ... and molar concentration
         };
         stream << "# r N rho/M\n" << table;
@@ -2518,7 +2518,7 @@ void SlicedDensity::_to_disk()
         stream << "# z rho/M\n";
         for (auto z : arange(-zhalf, zhalf + dz, dz)) {
             // interval [-Lz/2, Lz/2]
-            stream << fmt::format("{:.6E} {:.6E}\n", z, histogram(z) / normalize);
+            stream << std::format("{:.6E} {:.6E}\n", z, histogram(z) / normalize);
         }
     }
 }
@@ -2683,7 +2683,7 @@ void ScatteringFunction::_sample()
     });
 
     // zero-padded suffix to use with `save_after_sample`
-    const auto suffix = fmt::format("{:07d}", number_of_samples);
+    const auto suffix = std::format("{:07d}", number_of_samples);
 
     switch (scheme) {
     case Schemes::DEBYE:
@@ -2833,7 +2833,7 @@ void VirtualTranslate::writeToFileStream(const double energy_change) const
     if (stream) {
         // file to disk?
         const double mean_force = -meanFreeEnergy() / perturbation_distance;
-        *stream << fmt::format("{:d} {:.3E} {:.6E} {:.6E}\n", getNumberOfSteps(),
+        *stream << std::format("{:d} {:.3E} {:.6E} {:.6E}\n", getNumberOfSteps(),
                                perturbation_distance, energy_change, mean_force);
     }
 }
@@ -3021,13 +3021,13 @@ void ElectricPotential::_to_json(json& j) const
 
 void ElectricPotential::_to_disk()
 {
-    auto filename = fmt::format("{}{}_correlation_histogram.dat", MPI::prefix, file_prefix);
+    auto filename = std::format("{}{}_correlation_histogram.dat", MPI::prefix, file_prefix);
     if (auto stream = std::ofstream(filename)) {
         stream << potential_correlation_histogram;
     }
     unsigned int file_number = 1;
     for (const auto& target : targets) {
-        filename = fmt::format("{}{}_histogram{}.dat", MPI::prefix, file_prefix, file_number++);
+        filename = std::format("{}{}_histogram{}.dat", MPI::prefix, file_prefix, file_number++);
         if (auto stream = std::ofstream(filename)) {
             stream << *(target.potential_histogram);
         }
@@ -3065,11 +3065,11 @@ SavePenaltyEnergy::SavePenaltyEnergy(const json& j, const Space& spc,
 void SavePenaltyEnergy::_sample()
 {
     if (penalty_energy) {
-        auto name = fmt::format("{}{:06d}.{}", MPI::prefix, filenumber++, filename);
+        auto name = std::format("{}{:06d}.{}", MPI::prefix, filenumber++, filename);
         if (const auto stream = IO::openCompressedOutputStream(name, true); stream) {
             penalty_energy->streamPenaltyFunction(*stream);
         }
-        name = fmt::format("{}{:06d}-histogram.{}", MPI::prefix, filenumber++, filename);
+        name = std::format("{}{:06d}-histogram.{}", MPI::prefix, filenumber++, filename);
         if (const auto stream = IO::openCompressedOutputStream(name, true); stream) {
             penalty_energy->streamHistogram(*stream);
         }

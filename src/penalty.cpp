@@ -86,7 +86,7 @@ Penalty::~Penalty()
 void Penalty::streamPenaltyFunction(std::ostream& stream) const
 {
     stream.precision(16);
-    stream << fmt::format("# {} {} {}\n", energy_increment, samplings,
+    stream << std::format("# {} {} {}\n", energy_increment, samplings,
                           penalty_function_exchange_counter)
            << penalty_energy.array() - penalty_energy.minCoeff() << "\n";
 }

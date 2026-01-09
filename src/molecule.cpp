@@ -3,7 +3,10 @@
 #include "geometry.h"
 #include "rotate.h"
 #include "bonds.h"
+#include "random.h"
 #include "aux/eigensupport.h"
+#include "aux/json_support.h"
+#include "aux/usagetip.h"
 #include <functional>
 #include <spdlog/spdlog.h>
 #include <range/v3/range/conversion.hpp>

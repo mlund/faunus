@@ -3,6 +3,7 @@
 #include <vector>
 #include <cassert>
 #include <stdexcept>
+#include <Eigen/Core>
 #include <nlohmann/json.hpp>
 
 #ifdef ENABLE_PCG
@@ -10,6 +11,8 @@
 #endif
 
 namespace Faunus {
+
+using Point = Eigen::Vector3d;
 
 #ifdef ENABLE_PCG
 using RandomNumberEngine = pcg32;
@@ -152,4 +155,13 @@ template <typename T> class WeightedDistribution
         return data.at(latest_index);
     }
 };
+
+Point randomUnitVector(
+    Random& rand,
+    const Point& directions =
+        Point::Ones()); //!< Random unit vector using Neuman's method ("sphere picking")
+
+Point randomUnitVectorPolar(
+    Random& rand); //!< Random unit vector using polar coordinates ("sphere picking")
+
 } // namespace Faunus

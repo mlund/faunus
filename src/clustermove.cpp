@@ -1,5 +1,6 @@
 #include "clustermove.h"
 #include "aux/eigensupport.h"
+#include "aux/json_support.h"
 #include <ranges>
 #include <range/v3/view/cartesian_product.hpp>
 #include <range/v3/range/conversion.hpp>
@@ -29,7 +30,7 @@ ClusterShapeAnalysis::findPQRstream(size_t cluster_size)
 {
     auto it = pqr_distribution.find(cluster_size);
     if (it == pqr_distribution.end()) {
-        const std::string file = MPI::prefix + fmt::format("clustersize{}.pqr", cluster_size);
+        const std::string file = MPI::prefix + std::format("clustersize{}.pqr", cluster_size);
         return pqr_distribution.emplace(cluster_size, std::ofstream(file)).first;
     }
     return it;
@@ -248,7 +249,7 @@ void to_json(json& j, const FindCluster& cluster)
     for (const auto k : cluster.molids) {
         for (const auto l : cluster.molids) {
             if (k >= l) {
-                const auto key = fmt::format("{} {}", Faunus::molecules.at(k).name,
+                const auto key = std::format("{} {}", Faunus::molecules.at(k).name,
                                              Faunus::molecules.at(l).name);
                 _j[key] = std::sqrt(cluster.thresholds_squared(k, l));
                 roundJSON(_j[key], 3);

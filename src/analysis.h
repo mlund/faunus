@@ -1,7 +1,5 @@
 #pragma once
 
-#include "particle.h"
-#include "molecule.h"
 #include "space.h"
 #include "io.h"
 #include "scatter.h"
@@ -16,7 +14,6 @@
 #include <set>
 #include <string_view>
 #include <string>
-#include <vector>
 
 namespace Faunus::pairpotential {
 class NewCoulombGalore;

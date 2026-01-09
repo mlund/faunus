@@ -1,5 +1,6 @@
 #include "bonds.h"
 #include "speciation.h"
+#include "random.h"
 #include "aux/iteratorsupport.h"
 #include <algorithm>
 #include <ranges>

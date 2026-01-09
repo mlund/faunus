@@ -7,6 +7,8 @@
 #include "regions.h"
 #include "aux/iteratorsupport.h"
 #include "aux/eigensupport.h"
+#include "aux/json_support.h"
+#include "aux/usagetip.h"
 #include <spdlog/spdlog.h>
 #include <doctest/doctest.h>
 #include <algorithm>
@@ -365,7 +367,7 @@ void AtomicTranslateRotate::saveHistograms()
     if (energy_resolution) {
         for (const auto& [atom_id, histogram] : energy_histogram) {
             const auto filename =
-                fmt::format("energy-histogram-{}.dat", Faunus::atoms[atom_id].name);
+                std::format("energy-histogram-{}.dat", Faunus::atoms[atom_id].name);
             if (auto stream = std::ofstream(filename); stream) {
                 stream << "# energy/kT observations\n" << histogram;
             }
@@ -837,7 +839,7 @@ void ParallelTempering::_to_json(json& j) const
          {"volume_scale", volume_scaling_method}};
     auto& exchange_json = j["exchange"] = json::object();
     for (const auto& [pair, acceptance] : acceptance_map) {
-        auto id = fmt::format("{} <-> {}", pair.first, pair.second);
+        auto id = std::format("{} <-> {}", pair.first, pair.second);
         exchange_json[id] = {{"attempts", acceptance.size()}, {"acceptance", acceptance.avg()}};
     }
 }
@@ -941,7 +943,7 @@ void ParallelTempering::_from_json(const json& j)
 void ParallelTempering::writeToFileStream() const
 {
     if (stream) {
-        *stream << fmt::format("{:d} {}\n", number_of_attempted_moves, exchange.value_or(-1));
+        *stream << std::format("{:d} {}\n", number_of_attempted_moves, exchange.value_or(-1));
     }
 }
 

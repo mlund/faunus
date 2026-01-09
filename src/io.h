@@ -6,15 +6,16 @@
 #include <fstream>
 #include <type_traits>
 #include <concepts>
-#include <iterator>
 #include <spdlog/spdlog.h>
 #include <numeric>
-#include <ranges>
 
 namespace Faunus {
 
 class Space;
 class Group;
+
+[[maybe_unused]] std::string addGrowingSuffix(
+    const std::string&); //!< Add growing suffix filename until non-existing name is found
 
 #ifndef __cplusplus
 #define __cplusplus

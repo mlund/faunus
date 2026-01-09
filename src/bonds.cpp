@@ -2,6 +2,8 @@
 #include "bonds.h"
 #include "geometry.h"
 #include "auxiliary.h"
+#include "aux/json_support.h"
+#include "aux/usagetip.h"
 
 namespace Faunus::pairpotential {
 

@@ -2,6 +2,8 @@
 #include "multipole.h"
 #include "aux/arange.h"
 #include "aux/eigensupport.h"
+#include "aux/json_support.h"
+#include "electrolyte.h"
 #include "functionparser.h"
 #include "space.h"
 #include <spdlog/spdlog.h>

@@ -2,8 +2,6 @@
 
 #include "average.h"
 #include "mpicontroller.h"
-#include "molecule.h"
-#include "geometry.h"
 #include "space.h"
 #include "io.h"
 #include "smart_montecarlo.h"
@@ -13,7 +11,6 @@
 #include <range/v3/view/iota.hpp>
 #include <range/v3/view/transform.hpp>
 #include <range/v3/view/indirect.hpp>
-#include <optional>
 
 namespace Faunus {
 

@@ -4,6 +4,8 @@
 #include "auxiliary.h"
 #include "aux/arange.h"
 #include "smart_montecarlo.h"
+#include "aux/usagetip.h"
+#include "electrolyte.h"
 #include <coulombgalore.h>
 #include <spdlog/spdlog.h>
 
@@ -1415,7 +1417,7 @@ void SplinedPotential::streamPairPotential(std::ostream& stream, const size_t id
     const auto particle_2 = static_cast<Particle>(Faunus::atoms.at(id2));
     const auto rmax = std::sqrt(matrix_of_knots(id1, id2).rmax2);
     for (auto r : arange(dr, rmax, dr)) {
-        stream << fmt::format(
+        stream << std::format(
             "{:.6E} {:.6E} {:.6E}\n", r, operator()(particle_1, particle_2, r * r, {r, 0, 0}),
             FunctorPotential::operator()(particle_1, particle_2, r * r, {r, 0, 0}));
     }
@@ -1429,7 +1431,7 @@ void SplinedPotential::savePotentials()
 {
     for (size_t i = 0; i < Faunus::atoms.size(); ++i) { // loop over atom types
         for (size_t j = 0; j <= i; ++j) { // and build matrix of spline data (knots) for each pair
-            auto filename = fmt::format("{}-{}_tabulated.dat", Faunus::atoms.at(i).name,
+            auto filename = std::format("{}-{}_tabulated.dat", Faunus::atoms.at(i).name,
                                         Faunus::atoms.at(j).name);
             if (auto stream = std::ofstream(filename); stream) {
                 streamPairPotential(stream, i, j);

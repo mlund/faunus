@@ -7,10 +7,8 @@
 #include "core.h"
 #include "particle.h"
 #include "geometry.h"
-#include <vector>
 #include <fstream>
 #include <mpl/mpl.hpp>
-#include <ranges>
 
 // Expose classes for MPI serialization
 MPL_REFLECTION(Faunus::Point, x(), y(), z())

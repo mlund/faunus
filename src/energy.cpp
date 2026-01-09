@@ -2,6 +2,8 @@
 #include "penalty.h"
 #include "potentials.h"
 #include "externalpotential.h"
+#include "aux/json_support.h"
+#include "aux/usagetip.h"
 #include <functional>
 #include <range/v3/view/zip.hpp>
 #include <range/v3/numeric/accumulate.hpp>

@@ -72,13 +72,13 @@ class ClusterShapeAnalysis
         if (stream) {
             const auto seed_index =
                 &(*groups.begin()) - &spc.groups.at(0); // index of first molecule in cluster
-            *stream << fmt::format("{} {} {:.3f}\n", cluster_size, seed_index,
+            *stream << std::format("{} {} {:.3f}\n", cluster_size, seed_index,
                                    shape.relative_shape_anisotropy);
         }
         if (save_pqr_files) {
             auto it = findPQRstream(cluster_size);
-            it->second << fmt::format("REMARK   0 Sample number = {}\n", number_of_samples)
-                       << fmt::format("REMARK   0 Relative shape anisotropy = {:.3f}\n",
+            it->second << std::format("REMARK   0 Sample number = {}\n", number_of_samples)
+                       << std::format("REMARK   0 Relative shape anisotropy = {:.3f}\n",
                                       shape.relative_shape_anisotropy);
             PQRWriter pqr;
             pqr.style = PQRWriter::Style::PQR;

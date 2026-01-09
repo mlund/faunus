@@ -1,6 +1,7 @@
 #include "forcemove.h"
 #include "random.h"
 #include "energy.h"
+#include "aux/json_support.h"
 #include <range/v3/view/zip.hpp>
 #include <utility>
 

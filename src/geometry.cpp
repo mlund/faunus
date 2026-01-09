@@ -4,6 +4,8 @@
 #include "average.h"
 #include "aux/eigensupport.h"
 #include "aux/arange.h"
+#include "aux/coordinates.h"
+#include "aux/usagetip.h"
 #include <spdlog/spdlog.h>
 #include <Eigen/Eigenvalues>
 #include <doctest/doctest.h>
@@ -1583,7 +1585,7 @@ TwobodyAngles::TwobodyAngles(const double angle_resolution)
     const auto n1 = quaternions_1.size();
     const auto n2 = quaternions_2.size();
     const auto n3 = dihedrals.size();
-    faunus_logger->info(fmt::format("rigid body: Δ⍺ = {:.1f}° -> {} x {} x {} = {} poses 💃🏽🕺🏼",
+    faunus_logger->info(std::format("rigid body: Δ⍺ = {:.1f}° -> {} x {} x {} = {} poses 💃🏽🕺🏼",
                                     angle_resolution / 1.0_deg, n1, n2, n3, n1 * n2 * n3));
 
     std::ofstream f("fibonacci_points.xyz");

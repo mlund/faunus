@@ -1,7 +1,6 @@
 #pragma once
 #include "core.h"
-#include <optional>
-#include <ranges>
+#include "aux/json_support.h"
 #include <algorithm>
 #include <range/v3/range/conversion.hpp>
 

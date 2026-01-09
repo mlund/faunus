@@ -2,10 +2,7 @@
 #include "core.h"
 #include "particle.h"
 #include "molecule.h"
-#include "geometry.h"
-#include <ranges>
-#include <nlohmann/json.hpp>
-#include <optional>
+#include "units.h"
 
 namespace Faunus {
 

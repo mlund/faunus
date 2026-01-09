@@ -15,6 +15,7 @@
 #include <regions.h>
 #include <montecarlo.h>
 #include <energy.h>
+#include <aux/eigensupport.h>
 
 namespace py = pybind11;
 using namespace Faunus;

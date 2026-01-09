@@ -1,6 +1,7 @@
 #include "sasa.h"
 #include "particle.h"
 #include "space.h"
+#include "aux/json_support.h"
 #include <cmath>
 #include <range/v3/view/zip.hpp>
 #include <doctest/doctest.h>

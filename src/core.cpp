@@ -3,6 +3,11 @@
 #include "core.h"
 #include "units.h"
 #include "aux/iteratorsupport.h"
+#include "aux/json_support.h"
+#include "aux/eigensupport.h"
+#include "aux/coordinates.h"
+#include "aux/usagetip.h"
+#include "electrolyte.h"
 #include "random.h"
 #include "particle.h"
 #include <stdexcept>
@@ -148,7 +153,7 @@ std::shared_ptr<spdlog::logger> mcloop_logger = faunus_logger;
     std::string newfile;
     auto exists = [&]() { return std::ifstream(newfile).good(); };
     do {
-        newfile = fmt::format("{}.{}", file, cnt++);
+        newfile = std::format("{}.{}", file, cnt++);
     } while (not exists());
     return newfile;
 }

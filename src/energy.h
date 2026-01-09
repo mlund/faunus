@@ -5,17 +5,14 @@
 #include "potentials_base.h"
 #include "sasa.h"
 #include "space.h"
-#include "aux/iteratorsupport.h"
+#include "aux/eigensupport.h"
 #include "aux/pairmatrix.h"
 #include "smart_montecarlo.h"
 #include <range/v3/range/conversion.hpp>
-#include <Eigen/Dense>
 #include <spdlog/spdlog.h>
-#include <ranges>
 #include <numeric>
 #include <algorithm>
 #include <concepts>
-#include <optional>
 
 struct freesasa_parameters_fwd; // workaround for freesasa unnamed struct that cannot be forward
                                 // declared
@@ -628,12 +625,12 @@ class DelayedEnergyAccumulator : public EnergyAccumulatorBase
             number_of_particles = std::min(number_of_particles, max_particles_in_buffer);
             const auto number_of_pairs = (number_of_particles - 1U) * number_of_particles / 2U;
             faunus_logger->debug(
-                fmt::format("reserving memory for {} energy pairs ({} MB)", number_of_pairs,
+                std::format("reserving memory for {} energy pairs ({} MB)", number_of_pairs,
                             number_of_pairs * sizeof(ParticlePair) / (1024U * 1024U)));
             particle_pairs.reserve(number_of_pairs);
         }
         catch (std::exception& e) {
-            throw std::runtime_error(fmt::format(
+            throw std::runtime_error(std::format(
                 "cannot allocate memory for energy pairs: {}. Use another summation policy.",
                 e.what()));
         }

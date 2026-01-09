@@ -1,6 +1,6 @@
 #pragma once
+#include <format>
 #include <ostream>
-#include <spdlog/fmt/fmt.h>
 #include <Eigen/SparseCore>
 
 namespace Faunus {
@@ -23,7 +23,7 @@ bool streamMarket(const SparseMatrixType& mat, std::ostream& out, bool symmetric
     if (!out) {
         return false;
     }
-    out << fmt::format("%%MatrixMarket matrix coordinate  {} {}\n", "real",
+    out << std::format("%%MatrixMarket matrix coordinate  {} {}\n", "real",
                        symmetric ? "symmetric" : "general")
         << mat.rows() << " " << mat.cols() << " " << mat.nonZeros() / (symmetric ? 2 : 1) << "\n";
 
@@ -32,7 +32,7 @@ bool streamMarket(const SparseMatrixType& mat, std::ostream& out, bool symmetric
             if (symmetric && col > it.row()) {
                 continue;
             }
-            out << fmt::format("{} {} {:.6E}\n", it.row() + 1, it.col() + 1, it.value());
+            out << std::format("{} {} {:.6E}\n", it.row() + 1, it.col() + 1, it.value());
         }
     }
     return true;

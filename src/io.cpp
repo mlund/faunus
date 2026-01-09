@@ -4,6 +4,7 @@
 #include "group.h"
 #include "space.h"
 #include "multipole.h"
+#include "aux/json_support.h"
 #include <spdlog/spdlog.h>
 #include <zstr.hpp>
 

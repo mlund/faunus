@@ -10,6 +10,8 @@
 #include "sasa.h"
 #include "aux/iteratorsupport.h"
 #include "aux/eigensupport.h"
+#include "aux/json_support.h"
+#include "aux/usagetip.h"
 #include "aux/arange.h"
 #include "aux/matrixmarket.h"
 #include <Eigen/Eigenvalues>

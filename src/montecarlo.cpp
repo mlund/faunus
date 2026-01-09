@@ -1,6 +1,8 @@
 #include "montecarlo.h"
 #include "energy.h"
 #include "move.h"
+#include "aux/json_support.h"
+#include "aux/usagetip.h"
 #include <spdlog/spdlog.h>
 
 namespace Faunus {

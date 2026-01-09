@@ -5,6 +5,8 @@
 #include "multipole.h"
 #include <Eigen/Dense>
 #include "aux/eigensupport.h"
+#include "aux/json_support.h"
+#include "aux/usagetip.h"
 #include <ranges>
 #include "spdlog/spdlog.h"
 

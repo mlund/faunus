@@ -1,6 +1,7 @@
 #include "space.h"
 #include "io.h"
 #include "aux/eigensupport.h"
+#include "aux/json_support.h"
 #include <spdlog/spdlog.h>
 #include <doctest/doctest.h>
 #include <ranges>

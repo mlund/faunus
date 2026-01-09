@@ -6,6 +6,8 @@
 #include "docopt.h"
 #include "move.h"
 #include "actions.h"
+#include "aux/json_support.h"
+#include "aux/usagetip.h"
 #include <doctest/doctest.h>
 #include <progress_tracker.h>
 #include <spdlog/spdlog.h>

@@ -4,6 +4,8 @@
 #include "auxiliary.h"
 #include "aux/arange.h"
 #include "smart_montecarlo.h"
+#include "aux/usagetip.h"
+#include "electrolyte.h"
 #include <coulombgalore.h>
 #include <spdlog/spdlog.h>
 

@@ -1,5 +1,6 @@
 #include "clustermove.h"
 #include "aux/eigensupport.h"
+#include "aux/json_support.h"
 #include <ranges>
 #include <range/v3/view/cartesian_product.hpp>
 #include <range/v3/range/conversion.hpp>

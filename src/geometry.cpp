@@ -4,6 +4,8 @@
 #include "average.h"
 #include "aux/eigensupport.h"
 #include "aux/arange.h"
+#include "aux/coordinates.h"
+#include "aux/usagetip.h"
 #include <spdlog/spdlog.h>
 #include <Eigen/Eigenvalues>
 #include <doctest/doctest.h>

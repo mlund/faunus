@@ -3,6 +3,7 @@
 #include "potentials.h"
 #include "io.h"
 #include "aux/arange.h"
+#include "aux/json_support.h"
 #include <progress_tracker.h>
 #include <ranges>
 #include <range/v3/view/concat.hpp>

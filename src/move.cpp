@@ -7,6 +7,8 @@
 #include "regions.h"
 #include "aux/iteratorsupport.h"
 #include "aux/eigensupport.h"
+#include "aux/json_support.h"
+#include "aux/usagetip.h"
 #include <spdlog/spdlog.h>
 #include <doctest/doctest.h>
 #include <algorithm>

@@ -88,10 +88,3 @@ struct IOError : public GenericError
 void displayError(spdlog::logger& logger, const std::exception& e, int level = 0);
 
 } // namespace Faunus
-
-// Include moved items for backwards compatibility
-#include "aux/json_support.h"
-#include "aux/eigensupport.h"
-#include "aux/coordinates.h"
-#include "aux/usagetip.h"
-#include "electrolyte.h"

@@ -5,6 +5,7 @@
 #include "potentials_base.h"
 #include "sasa.h"
 #include "space.h"
+#include "aux/eigensupport.h"
 #include "aux/iteratorsupport.h"
 #include "aux/pairmatrix.h"
 #include "smart_montecarlo.h"

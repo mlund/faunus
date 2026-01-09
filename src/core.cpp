@@ -3,6 +3,11 @@
 #include "core.h"
 #include "units.h"
 #include "aux/iteratorsupport.h"
+#include "aux/json_support.h"
+#include "aux/eigensupport.h"
+#include "aux/coordinates.h"
+#include "aux/usagetip.h"
+#include "electrolyte.h"
 #include "random.h"
 #include "particle.h"
 #include <stdexcept>

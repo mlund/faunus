@@ -20,7 +20,7 @@ if (ENABLE_PCH)
             <Eigen/Core> <Eigen/Geometry>
             <range/v3/view/filter.hpp> <range/v3/view/transform.hpp> <range/v3/view/join.hpp>
             <nlohmann/json.hpp>
-            <spdlog/fmt/fmt.h> <spdlog/spdlog.h>)
+            <format> <spdlog/spdlog.h>)
 endif()
 
 # ========== message parsing protocol ==========

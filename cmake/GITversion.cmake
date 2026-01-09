@@ -11,7 +11,7 @@ else()
             OUTPUT_STRIP_TRAILING_WHITESPACE
             )
         if (GIT_COMMIT_HASH)
-            add_definitions("-DGIT_COMMIT_HASH=${GIT_COMMIT_HASH}")
+            target_compile_definitions(project_options INTERFACE "GIT_COMMIT_HASH=${GIT_COMMIT_HASH}")
         endif ()
         execute_process(
             COMMAND ${GIT_EXECUTABLE} rev-list --tags --max-count=1
@@ -28,7 +28,7 @@ else()
     endif()
 endif()
 if (GIT_LATEST_TAG)
-    add_definitions("-DGIT_LATEST_TAG=${GIT_LATEST_TAG}")
+    target_compile_definitions(project_options INTERFACE "GIT_LATEST_TAG=${GIT_LATEST_TAG}")
 endif ()
 
 

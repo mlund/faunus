@@ -53,7 +53,7 @@ if (nlohmann_json_ADDED)
     include_directories(BEFORE SYSTEM ${nlohmann_json_SOURCE_DIR}/include)
 endif()
 
-add_compile_definitions("NLOHMANN_JSON_HPP") # older versions used this macro. Now it's suffixed with "_"
+add_compile_definitions("NLOHMANN_JSON_HPP") # legacy: prevent inclusion of older system-installed json headers
 
 if(mpl_ADDED)
     add_library(mpl INTERFACE IMPORTED)
@@ -71,14 +71,13 @@ if (pcg-cpp_ADDED)
 endif()
 option(ENABLE_PCG "Enable PCG random number generator" off)
 if (ENABLE_PCG)
-    add_definitions("-DENABLE_PCG")
+    target_compile_definitions(project_options INTERFACE ENABLE_PCG)
 endif()
 
 if (exprtk_ADDED)
-    add_definitions("-Dexprtk_disable_string_capabilities")
-    add_definitions("-Dexprtk_disable_rtl_io_file")
     add_library(exprtk INTERFACE)
     target_include_directories(exprtk INTERFACE "${exprtk_SOURCE_DIR}")
+    target_compile_definitions(exprtk INTERFACE exprtk_disable_string_capabilities exprtk_disable_rtl_io_file)
 endif()
 
 ###################
@@ -88,7 +87,7 @@ endif()
 ExternalProject_Add(
     project_progresstracker
     PREFIX "${CMAKE_CURRENT_BINARY_DIR}/_deps"
-    CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DCMAKE_POSITION_INDEPENDENT_CODE=on
+    CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DCMAKE_POSITION_INDEPENDENT_CODE=on -DCMAKE_CXX_FLAGS=-w
     BUILD_COMMAND ${CMAKE_MAKE_PROGRAM}
     INSTALL_COMMAND ""
     LOG_DOWNLOAD ON
@@ -113,7 +112,7 @@ if(ENABLE_SID)
     find_package(SDL2 CONFIG REQUIRED)
     ExternalProject_Add(project_cppsid
         PREFIX "${CMAKE_CURRENT_BINARY_DIR}/_deps"
-        CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DCMAKE_POSITION_INDEPENDENT_CODE=on
+        CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DCMAKE_POSITION_INDEPENDENT_CODE=on -DCMAKE_CXX_FLAGS=-w
         BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} "cppsid"
         INSTALL_COMMAND "" LOG_DOWNLOAD ON
         UPDATE_DISCONNECTED ON
@@ -151,7 +150,7 @@ ExternalProject_Add(
     BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} xdrfile-static
     DOWNLOAD_EXTRACT_TIMESTAMP true
     UPDATE_DISCONNECTED ON
-    CMAKE_ARGS -Wno-dev -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER} -DCMAKE_POSITION_INDEPENDENT_CODE=on
+    CMAKE_ARGS -Wno-dev -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER} -DCMAKE_POSITION_INDEPENDENT_CODE=on -DCMAKE_C_FLAGS=-w
     LOG_DOWNLOAD ON INSTALL_COMMAND "")
 
 ExternalProject_Get_Property(project_xdrfile source_dir)
@@ -190,8 +189,8 @@ if (ENABLE_FREESASA)
             DOWNLOAD_EXTRACT_TIMESTAMP true
             URL https://github.com/mittinatten/freesasa/releases/download/2.0.3/freesasa-2.0.3.tar.gz
             URL_HASH SHA256=ba1d4f7e9dd51ae2452b5c3a80ac34039d51da4826dae1dbe173cd7a1d6aca94
-            # -fPIC flag is needed to link with pyfaunus
-            CONFIGURE_COMMAND CFLAGS=-fPIC <SOURCE_DIR>/configure --disable-xml --disable-json
+            # -fPIC flag is needed to link with pyfaunus; -w suppresses warnings
+            CONFIGURE_COMMAND ${CMAKE_COMMAND} -E env "CFLAGS=-fPIC -w" <SOURCE_DIR>/configure --disable-xml --disable-json
             BUILD_COMMAND ${CMAKE_MAKE_PROGRAM}
             INSTALL_COMMAND ""
     )
@@ -199,8 +198,8 @@ if (ENABLE_FREESASA)
     ExternalProject_Get_Property(project_freesasa binary_dir)
     add_library(freesasa STATIC IMPORTED)
     set_property(TARGET freesasa PROPERTY IMPORTED_LOCATION ${binary_dir}/src/libfreesasa.a)
-    add_definitions("-DENABLE_FREESASA")
-    include_directories(SYSTEM "${source_dir}/src")
+    target_compile_definitions(project_options INTERFACE ENABLE_FREESASA)
+    target_include_directories(project_options INTERFACE SYSTEM "${source_dir}/src")
     add_dependencies(freesasa project_freesasa)
 endif ()
 
@@ -220,10 +219,15 @@ FetchContent_GetProperties(coulombgalore)
 if(NOT coulombgalore_POPULATED)
     FetchContent_MakeAvailable(coulombgalore)
 endif()
-include_directories(SYSTEM ${coulombgalore_SOURCE_DIR})
 
-# Add third-party headers to include path. Note this is done with SYSTEM
-# to disable potential compiler warnings
-
-include_directories(SYSTEM ${trompeloeil_SOURCE_DIR}/include ${nanobench_SOURCE_DIR}/src/include
-    ${Pybind11IncludeDir} ${CppsidIncludeDir} ${XdrfileIncludeDir} ${ProgressTrackerIncludeDir} ${doctest_SOURCE_DIR})
+# Add third-party headers to include path via project_options INTERFACE.
+# SYSTEM disables potential compiler warnings from these headers.
+target_include_directories(project_options INTERFACE SYSTEM
+    ${coulombgalore_SOURCE_DIR}
+    ${trompeloeil_SOURCE_DIR}/include
+    ${nanobench_SOURCE_DIR}/src/include
+    ${Pybind11IncludeDir}
+    ${CppsidIncludeDir}
+    ${XdrfileIncludeDir}
+    ${ProgressTrackerIncludeDir}
+    ${doctest_SOURCE_DIR})

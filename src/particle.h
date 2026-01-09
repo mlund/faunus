@@ -2,9 +2,7 @@
 #include "core.h"
 #include "atomdata.h"
 #include "tensor.h"
-#include <iterator>
 #include <spdlog/spdlog.h>
-#include <ranges>
 
 namespace Eigen {
 using Matrix3d = Matrix<double, 3, 3>;

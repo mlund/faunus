@@ -8,16 +8,13 @@
  * @date 2020-02-01
  */
 
-#include <vector>
+#include "core.h"
+#include "celllist.h"
 #include <set>
 #include <map>
 #include <algorithm>
 #include <cassert>
-#include <Eigen/Core>
 #include <range/v3/range/conversion.hpp>
-#include <ranges>
-#include "celllist.h"
-#include "core.h"
 #include <spdlog/spdlog.h>
 
 /**

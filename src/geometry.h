@@ -4,11 +4,9 @@
 #include "core.h"
 #include "particle.h"
 #include "tensor.h"
-#include <iterator>
 #include <concepts>
 #include <Eigen/Geometry>
 #include <spdlog/spdlog.h>
-#include <ranges>
 #include <range/v3/view/cartesian_product.hpp>
 #include <range/v3/view/zip.hpp>
 #include <utility>

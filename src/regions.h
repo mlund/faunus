@@ -3,7 +3,6 @@
 #include "molecule.h"
 #include "group.h"
 #include "space.h"
-#include <ranges>
 
 namespace Faunus {
 class Space;

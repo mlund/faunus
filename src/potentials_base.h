@@ -3,7 +3,6 @@
 #include "particle.h"
 #include "aux/pairmatrix.h"
 #include <array>
-#include <functional>
 
 /** Namespace for particle pair-potentials */
 namespace Faunus::pairpotential {

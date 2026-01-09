@@ -1,5 +1,4 @@
 #pragma once
-#include "core.h"
 #include "particle.h"
 
 namespace Faunus::pairpotential {

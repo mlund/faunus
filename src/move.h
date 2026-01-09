@@ -2,8 +2,6 @@
 
 #include "average.h"
 #include "mpicontroller.h"
-#include "molecule.h"
-#include "geometry.h"
 #include "space.h"
 #include "io.h"
 #include "smart_montecarlo.h"

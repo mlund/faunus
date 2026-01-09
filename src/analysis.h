@@ -1,7 +1,5 @@
 #pragma once
 
-#include "particle.h"
-#include "molecule.h"
 #include "space.h"
 #include "io.h"
 #include "scatter.h"

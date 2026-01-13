@@ -1,18 +1,18 @@
 # Build and run:
 #
-#   docker build -t faunus - < Dockerfile
+#   docker build -t faunus:latest -t faunus:v2.16.3 - < Dockerfile
 #   docker run -it -p 8888:8888 faunus
 #   (copy-paste generated url into browser)
 #
 # What is installed?
 #
 # - Based on jupyter/scipy - https://jupyter-docker-stacks.readthedocs.io/en/latest/using/selecting.html
-# - gcc11, cmake, openmpi, parmed, nglview, mdtraj, faunus
+# - gcc11, cmake, openmpi, nglview, mdtraj, faunus
 # - faunus main branch compiled w. openmp, mpi, python 
 # - clone of mlund/chemistry-notebooks
 #
 ARG OWNER=jupyter
-ARG BASE_CONTAINER=jupyter/scipy-notebook:lab-4.0.7
+ARG BASE_CONTAINER=quay.io/jupyter/scipy-notebook:lab-4.5.1
 FROM $BASE_CONTAINER
 
 LABEL maintainer="the faun"
@@ -31,7 +31,7 @@ RUN apt-get update --yes && \
     gcc \
     g++ \
     libopenmpi-dev openmpi-bin openmpi-common \
-    zlib1g-dev && \
+    zlib1g-dev vim && \
     apt autoremove --yes && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
@@ -40,7 +40,8 @@ RUN mamba install --quiet --yes \
     'cmake' \
     'jsonschema' \
     'jinja2' \
-    'pypandoc' \
+    'pypandoc=1.7' \
+    'beautifulsoup4=4.10' \
     'yaml' \
     'nglview' \
     'ruamel' && \
@@ -55,11 +56,12 @@ USER root
 RUN git clone https://github.com/mlund/faunus.git && \
     export CXX=g++ && \
     export CC=gcc && \
+    export CMAKE_POLICY_VERSION_MINIMUM=3.5 && \
     cd faunus && \
     cmake -DENABLE_PYTHON=on -DENABLE_OPENMP=on -DENABLE_MPI=on -DCMAKE_BUILD_TYPE=RelWithDebInfo -DPYBIND11_FINDPYTHON=on . && \
-    make faunus && \
-    make pyfaunus && \
+    make faunus -j 4 && \
+    make pyfaunus -j 4 && \
     make install && \
     make clean && \
     cd .. && \
-    rm -fR faunus
+    rm -fR faunus 

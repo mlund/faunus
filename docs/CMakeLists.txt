@@ -88,5 +88,6 @@ endif()
 install(FILES
         ${CMAKE_BINARY_DIR}/manual.pdf
         ${CMAKE_BINARY_DIR}/manual.html
+        ${CMAKE_BINARY_DIR}/tips.json
         ${CMAKE_SOURCE_DIR}/docs/schema.yml
         DESTINATION share/faunus OPTIONAL)

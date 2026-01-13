@@ -35,11 +35,13 @@ d\begin{bmatrix} \mathbf{q} \\ \mathbf{p} \end{bmatrix} =
 $$
 
 Where A, B, and O makes up the terms for solving the Langevin equation, which can be individually solved to obtain a trajectory given by
+$$
 \begin{aligned}
 \varphi^{\mathrm{A}}(\mathbf{q}, \mathbf{p}) &= \left(\mathbf{q} + \Delta t \sqrt{M}~ \mathbf{p}, \mathbf{p}\right) \\
 \varphi^{\mathrm{B}}(\mathbf{q}, \mathbf{p}) &= \left(\mathbf{q}, \mathbf{p} - \Delta t \nabla U(\mathbf{q})\right) \\
 \varphi^{\mathrm{O}}(\mathbf{q}, \mathbf{p}) &= \left(\mathbf{q}, e^{-\gamma \Delta t}\mathbf{p} + \sqrt{\mathrm{k}\_{\mathrm{B}}T (1 - e^{-2\gamma \Delta t})} \sqrt{M} \mathbf{R} \right)
 \end{aligned}
+$$
 
 We currently use the splitting scheme "BAOAB" ([Symmetric Langevin Velocity-Verlet](http://doi.org/ggrnfs)) since it is less errorprone with increasing timestep [Leimkuhler & Matthews, pp. 279-281](http://doi.org/dx7v).
 

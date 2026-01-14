@@ -1228,11 +1228,27 @@ properties:
                         scheme:
                             description: Scattering method
                             enum: [debye, explicit]
+                            default: explicit
                         ipbc: {type: boolean, default: false}
                         file: {type: string, description: Output file for S(q)}
                         stepsave: {type: boolean, default: false, description: Save every sample to disk}
-                        required: [nstep, molecules, scheme]
+                    required: [nstep, molecules]
                     additionalProperties: false
+                    allOf:
+                        - if:
+                              properties: {scheme: {const: debye}}
+                              required: [scheme]
+                          then:
+                              not:
+                                  anyOf:
+                                      - required: [pmax]
+                                      - required: [ipbc]
+                          else:
+                              not:
+                                  anyOf:
+                                      - required: [qmin]
+                                      - required: [qmax]
+                                      - required: [dq]
 
                 sliceddensity:
                     type: object
@@ -1386,4 +1402,3 @@ properties:
                     additionalProperties: false
                     type: object
 # yason.py cluster.yml | jq .analysis | genson | yason.py
-

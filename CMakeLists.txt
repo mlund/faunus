@@ -35,7 +35,7 @@ include(cmake/CompilerFlags.cmake)
 include(cmake/ExternalTools.cmake)
 include(cmake/GITversion.cmake)
 
+add_subdirectory(scripts)
 add_subdirectory(src)
 add_subdirectory(docs)
 add_subdirectory(examples)
-

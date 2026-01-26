@@ -768,22 +768,32 @@ void GibbsMatterMove::_from_json(const json& j)
 
 void GibbsMatterMove::_move(Change& change)
 {
-    auto& random_engine = mpi.random;
+    // Use mpi.random ONLY for the insert/delete decision (must stay in sync between processes).
+    // Use Faunus::random for molecule selection since the number of molecules differs between
+    // cells and uniform_int_distribution can make variable RNG calls due to rejection sampling.
+    auto& mpi_random = mpi.random;
+
     // insert or delete; do the opposite in the other cell
-    insert = static_cast<bool>(random_engine.range(0, 1)); // note internal random generator!
+    insert = static_cast<bool>(mpi_random.range(0, 1)); // synchronized across MPI ranks
     if (gibbs->mpi.isMaster()) {
         insert = !insert; // delete in one cell; remove from the other
     }
 
-    // find a molecule to insert or delete
+    // find a molecule to insert or delete - use local (non-MPI) random generator
     const auto selection = (insert) ? Space::Selection::INACTIVE : Space::Selection::ACTIVE;
-    const auto group = spc.randomMolecule(molid, random_engine, selection);
+    const auto group = spc.randomMolecule(molid, Faunus::random, selection);
 
     // boundary check
     const bool no_group = (group == spc.groups.end());
     const bool cell_is_full =
         (spc.numMolecules<Space::GroupType::ACTIVE>(molid) == gibbs->total_num_particles);
-    if (no_group || (insert && cell_is_full)) {
+
+    // Synchronize early return: if either process fails, both must fail.
+    // This is necessary because bias() contains MPI exchange() calls and is only
+    // called when change is non-empty. Without sync, one process could block in bias().
+    const bool local_failed = no_group || (insert && cell_is_full);
+    const bool other_failed = static_cast<bool>(gibbs->exchange(static_cast<double>(local_failed)));
+    if (local_failed || other_failed) {
         change.clear();
         return;
     }

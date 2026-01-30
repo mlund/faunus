@@ -72,6 +72,7 @@ Atoms are the smallest possible particle entities with properties defined below.
 `sigma=0`     | `2r` [Å] (overrides radius)
 `tension=0`   | Surface tension [kJ/mol/Å$^2$]
 `tfe=0`       | Transfer free energy [kJ/mol/Å$^2$/M]
+`scattering_f0=1` | Atomic scattering form factor (q-independent)
 `psc`         | Patchy sphero-cylinders properties (object)
 
 A filename (`.json`) may be given instead of an atom definition to load

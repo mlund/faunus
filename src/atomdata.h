@@ -93,6 +93,7 @@ class AtomData
     double mulen = 0;                           //!< Dipole moment length
     bool hydrophobic = false;                   //!< Is the particle hydrophobic?
     bool implicit = false;                      //!< Is the particle implicit (e.g. proton)?
+    double scattering_f0 = 1.0;                 //!< Atomic scattering form factor (q-independent)
     InteractionData
         interaction; //!< Arbitrary interaction parameters, e.g., epsilons in various potentials
     SpheroCylinderData sphero_cylinder; //!< Data for patchy sphero cylinders (PSCs)

@@ -99,6 +99,7 @@ void to_json(json& j, const AtomData& a)
           {"mu", a.mu},
           {"mulen", a.mulen},
           {"psc", a.sphero_cylinder},
+          {"scattering_f0", a.scattering_f0},
           {"id", a.id()}};
     if (a.dp.has_value()) {
         _j["dp"] = a.dp.value() / 1.0_angstrom;
@@ -155,6 +156,7 @@ void from_json(const json& j, AtomData& a)
         a.tfe = val.value("tfe", a.tfe) * 1.0_kJmol / (1.0_angstrom * 1.0_angstrom * 1.0_molar);
         a.hydrophobic = val.value("hydrophobic", false);
         a.implicit = val.value("implicit", false);
+        a.scattering_f0 = val.value("scattering_f0", 1.0);
         set_dp_and_dprot(val, a);
         if (val.contains("activity")) {
             a.activity = val.at("activity").get<double>() * 1.0_molar;
@@ -247,7 +249,7 @@ TEST_CASE("[Faunus] AtomData")
 
     json j = R"({ "atomlist" : [
              { "A": { "sigma": 2.5, "pactivity":2, "eps_custom": 0.1 } },
-             { "B": { "r":1.1, "activity":0.2, "eps":0.05, "dp":9.8, "dprot":3.14, "mw":1.1, "tfe":0.98, "tension":0.023 } }
+             { "B": { "r":1.1, "activity":0.2, "eps":0.05, "dp":9.8, "dprot":3.14, "mw":1.1, "tfe":0.98, "tension":0.023, "scattering_f0": 7.5 } }
              ]})"_json;
 
     pc::temperature = 298.15_K;
@@ -265,6 +267,8 @@ TEST_CASE("[Faunus] AtomData")
     // "unknown atom property");
     CHECK_EQ(v.front().sigma, Approx(2.5e-10_m));
     CHECK_EQ(v.front().activity, Approx(0.01_molar));
+    CHECK_EQ(v.front().scattering_f0, Approx(1.0)); // default value
+    CHECK_EQ(v.back().scattering_f0, Approx(7.5));  // explicit value
     CHECK_EQ(v.back().tfe, Approx(0.98_kJmol / (1.0_angstrom * 1.0_angstrom * 1.0_molar)));
 
     AtomData a = json(v.back()); // AtomData -> JSON -> AtomData
@@ -277,6 +281,7 @@ TEST_CASE("[Faunus] AtomData")
     CHECK_EQ(a.dp, Approx(9.8));
     CHECK_EQ(a.dprot, Approx(3.14));
     CHECK_EQ(a.mw, Approx(1.1));
+    CHECK_EQ(a.scattering_f0, Approx(7.5)); // check JSON round-trip
     CHECK_EQ(a.tfe, Approx(0.98_kJmol / 1.0_angstrom / 1.0_angstrom / 1.0_molar));
     CHECK_EQ(a.tension, Approx(0.023_kJmol / 1.0_angstrom / 1.0_angstrom));
 

@@ -392,7 +392,9 @@ void MoleculeProperty::selectMassCenterDistanceZ(const json& j, const Space& spc
                 .z();
         };
     }
-    throw ConfigurationError("An array of 2 or 4 indexes should be specified.");
+    else {
+        throw ConfigurationError("An array of 2 or 4 indexes should be specified.");
+    }
 }
 
 void MoleculeProperty::selectAtomAtomDistance(const json& j, const Space& spc)

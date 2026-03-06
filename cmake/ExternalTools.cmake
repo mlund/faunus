@@ -212,7 +212,7 @@ FetchContent_Declare(
     DOWNLOAD_EXTRACT_TIMESTAMP true)
 FetchContent_GetProperties(coulombgalore)
 if(NOT coulombgalore_POPULATED)
-    FetchContent_MakeAvailable(coulombgalore)
+    FetchContent_Populate(coulombgalore)
 endif()
 
 # Add third-party headers to include path via project_options INTERFACE.

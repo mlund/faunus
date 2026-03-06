@@ -99,7 +99,8 @@ template <std::floating_point T = float> struct FormFactorAtomicConstant
         if (scatterer.id < 0) {
             return T{1};
         }
-        return static_cast<T>(atoms.at(scatterer.id).scattering_f0);
+        assert(static_cast<size_t>(scatterer.id) < atoms.size());
+        return static_cast<T>(atoms[scatterer.id].scattering_f0);
     }
 };
 
@@ -255,9 +256,12 @@ template <class Tformfactor, std::floating_point T = float> class DebyeFormula
                                  (q * r_cutoff * std::cos(q * r_cutoff) - std::sin(q * r_cutoff));
             }
             sampling[m] += weight;
-            intensity[m] +=
-                ((2 * intensity_sum[m] + intensity_self_sum) / intensity_self_sum + intensity_corr) *
-                weight;
+            if (intensity_self_sum != T{0}) {
+                intensity[m] +=
+                    ((2 * intensity_sum[m] + intensity_self_sum) / intensity_self_sum +
+                     intensity_corr) *
+                    weight;
+            }
         }
     }
 
@@ -386,27 +390,17 @@ class StructureFactorPBC : private TSamplingPolicy
         T sum_cos = 0.0;
         T sum_sin = 0.0;
         T sum_f_squared = 0.0;
-        if constexpr (method == SIMD || method == EIGEN) {
-            // For SIMD/EIGEN with form factors, fall back to GENERIC approach
-            // as vectorization with varying weights is more complex
-            for (const auto& scatterer : scatterers) {
-                const auto& pos = getPosition(scatterer);
-                const auto f = form_factor(q.norm(), scatterer);
-                const auto qr = static_cast<T>(q.dot(pos));
-                sum_cos += f * cos(qr);
-                sum_sin += f * sin(qr);
-                sum_f_squared += f * f;
-            }
+        const auto q_norm = q.norm();
+        for (const auto& scatterer : scatterers) {
+            const auto& pos = getPosition(scatterer);
+            const auto f = form_factor(q_norm, scatterer);
+            const auto qr = static_cast<T>(q.dot(pos));
+            sum_cos += f * cos(qr);
+            sum_sin += f * sin(qr);
+            sum_f_squared += f * f;
         }
-        else if constexpr (method == GENERIC) {
-            for (const auto& scatterer : scatterers) {
-                const auto& pos = getPosition(scatterer);
-                const auto f = form_factor(q.norm(), scatterer);
-                const auto qr = static_cast<T>(q.dot(pos));
-                sum_cos += f * cos(qr);
-                sum_sin += f * sin(qr);
-                sum_f_squared += f * f;
-            }
+        if (sum_f_squared == T{0}) {
+            return T{0};
         }
         return std::norm(std::complex<T>(sum_cos, sum_sin)) / sum_f_squared;
     }
@@ -454,9 +448,10 @@ class StructureFactorIPBC : private TSamplingPolicy
                     2.0 * pc::pi * p * directions[i].cwiseQuotient(boxlength); // scattering vector
                 T sum_f_cos = 0;
                 T sum_f_squared = 0;
+                const auto q_norm = q.norm();
                 for (const auto& scatterer : scatterers) {
                     const auto& r = getPosition(scatterer);
-                    const auto f = form_factor(q.norm(), scatterer);
+                    const auto f = form_factor(q_norm, scatterer);
                     // if q[i] == 0 then its cosine == 1 hence we can avoid cosine computation for
                     // performance reasons
                     T product = std::cos(T(q[0] * r[0]));
@@ -470,7 +465,10 @@ class StructureFactorIPBC : private TSamplingPolicy
                 // collect average, `norm()` gives the scattering vector length
                 const T ipbc_factor =
                     std::pow(2, directions[i].count()); // 2 ^ number of non-zero elements
-                const T intensity = (sum_f_cos * sum_f_cos) / sum_f_squared * ipbc_factor;
+                T intensity = T{0};
+                if (sum_f_squared != T{0}) {
+                    intensity = (sum_f_cos * sum_f_cos) / sum_f_squared * ipbc_factor;
+                }
 #pragma omp critical
                 // avoid race conditions when updating the map
                 addSampling(q.norm(), intensity, 1.0);

@@ -164,7 +164,7 @@ the [Debye formula](http://doi.org/dmb9wm),
 
 $$
     I(q) = \frac{1}{\sum_i f_i^2} \left \langle
-           \sum_{i}^{N}\sum_{j}^N f_i f_j \frac{\sin(qr_{ij})}{qr_{ij}}
+           \sum_{i=1}^{N}\sum_{j=1}^{N} f_i f_j \frac{\sin(qr_{ij})}{qr_{ij}}
            \right \rangle
 $$
 
@@ -197,9 +197,9 @@ the following equation over the 3+6+4 directions obtained by permuting the cryst
 $\mathbf{q} = 2\pi p/L(h,k,l)$ where $p=1,2,\dots,p\_{max}$.
 
 $$
-S(q) = \frac{1}{N} \left <
-     \left ( \sum_i^N \sin(\mathbf{qr}\_i) \right )^2 +
-     \left ( \sum_j^N \cos(\mathbf{qr}\_j) \right )^2
+I(q) = \frac{1}{\sum_i f_i^2} \left <
+     \left ( \sum_{i=1}^N f_i \sin(\mathbf{qr}\_i) \right )^2 +
+     \left ( \sum_{j=1}^N f_j \cos(\mathbf{qr}\_j) \right )^2
     \right >
 $$
 

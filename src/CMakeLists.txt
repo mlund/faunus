@@ -95,7 +95,7 @@ target_link_libraries(libfaunus PUBLIC
 
 add_executable(faunus faunus.cpp)
 target_link_libraries(faunus PRIVATE
-    docopt_s
+    docopt
     Eigen
     libfaunus
     doctest

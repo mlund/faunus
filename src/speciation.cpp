@@ -567,6 +567,665 @@ TEST_CASE("[Faunus] Speciation - Ranges::sample")
     CHECK_EQ(range_size(take_too_much), 4);
 }
 
+TEST_CASE("[Faunus] ReactionDirectionRatio")
+{
+    using doctest::Approx;
+    using Faunus::Speciation::ReactionDirectionRatio;
+
+    // Set up minimal atoms/molecules/reactions for the test
+    Faunus::atoms = R"([{"a": {"r": 1.0}}])"_json.get<decltype(atoms)>();
+    Faunus::molecules =
+        R"([{"A": {"atomic": false, "activity": 0.5}}, {"B": {"atomic": false, "activity": 0.5}}])"_json
+            .get<decltype(molecules)>();
+    Faunus::reactions = R"([{"A = B": {"lnK": -1.0}}])"_json.get<decltype(reactions)>();
+
+    ReactionDirectionRatio ratio;
+    auto it = Faunus::reactions.begin();
+
+    // Access creates entry
+    auto& data = ratio[it];
+    CHECK(data.right.empty());
+    CHECK(data.left.empty());
+
+    // Update RIGHT direction: 3 accepted, 2 rejected = 5 attempts, ratio 3/5
+    data.update(ReactionData::Direction::RIGHT, true);
+    data.update(ReactionData::Direction::RIGHT, true);
+    data.update(ReactionData::Direction::RIGHT, true);
+    data.update(ReactionData::Direction::RIGHT, false);
+    data.update(ReactionData::Direction::RIGHT, false);
+
+    CHECK_EQ(data.right.size(), 5);
+    CHECK_EQ(data.right.avg(), Approx(3.0 / 5.0));
+
+    // Update LEFT direction: 2 accepted, 1 rejected = 3 attempts, ratio 2/3
+    data.update(ReactionData::Direction::LEFT, true);
+    data.update(ReactionData::Direction::LEFT, true);
+    data.update(ReactionData::Direction::LEFT, false);
+
+    CHECK_EQ(data.left.size(), 3);
+    CHECK_EQ(data.left.avg(), Approx(2.0 / 3.0));
+
+    // Verify to_json output
+    json j;
+    ratio.to_json(j);
+    CHECK(j.contains("reactions"));
+    CHECK(j["reactions"].contains("A = B"));
+    CHECK_EQ(j["reactions"]["A = B"]["attempts"], 8);
+    CHECK_EQ(j["reactions"]["A = B"]["acceptance -->"].get<double>(), Approx(3.0 / 5.0));
+    CHECK_EQ(j["reactions"]["A = B"]["acceptance <--"].get<double>(), Approx(2.0 / 3.0));
+}
+
+TEST_CASE("[Faunus] ReactionValidator")
+{
+    using namespace Faunus;
+
+    pc::temperature = 298.15_K;
+
+    SUBCASE("atomic GCMC feasibility")
+    {
+        // Two atom types, two atomic groups
+        Faunus::atoms = R"([
+            {"c": {"r": 1.0, "mw": 1.0}},
+            {"d": {"r": 1.0, "mw": 1.0}}
+        ])"_json.get<decltype(atoms)>();
+
+        Faunus::molecules = R"([
+            {"C": {"atomic": true, "atoms": ["c"]}},
+            {"D": {"atomic": true, "atoms": ["d"]}}
+        ])"_json.get<decltype(molecules)>();
+
+        // Reaction: D = C  (remove one d, insert one c)
+        Faunus::reactions = R"([{"D = C": {"lnK": 0.0}}])"_json.get<decltype(reactions)>();
+        auto& rxn = Faunus::reactions.front();
+        rxn.setDirection(ReactionData::Direction::RIGHT);
+
+        Space spc;
+        spc.geometry = R"({"type": "cuboid", "length": 50})"_json;
+
+        // Group D: 10 total d-particles, 5 active
+        json j_insert = json::array();
+        j_insert.push_back({{"D", {{"N", 10}, {"inactive", 5}}}});
+        j_insert.push_back({{"C", {{"N", 5}, {"inactive", 5}}}});
+        InsertMoleculesInSpace::insertMolecules(j_insert, spc);
+
+        Speciation::ReactionValidator validator(spc);
+
+        // 5 active d's and 5 inactive c capacity => feasible
+        CHECK(validator.isPossible(rxn));
+
+        // Deplete D to 0 active
+        spc.groups.at(0).resize(0);
+        CHECK_FALSE(validator.isPossible(rxn));
+
+        // Refill D, fill C to capacity
+        spc.groups.at(0).resize(10);
+        spc.groups.at(1).resize(5); // C now full
+        CHECK_FALSE(validator.isPossible(rxn));
+    }
+
+    SUBCASE("molecular GCMC feasibility")
+    {
+        Faunus::atoms = R"([
+            {"ow": {"r": 1.5, "mw": 16.0}}
+        ])"_json.get<decltype(atoms)>();
+
+        Faunus::molecules = R"([{
+            "M": {
+                "activity": 0.1,
+                "structure": [{"ow": [0, 0, 0]}]
+            }
+        }])"_json.get<decltype(molecules)>();
+
+        // Reaction: = M (pure insertion in RIGHT direction)
+        Faunus::reactions = R"([{"= M": {"lnK": 0.0}}])"_json.get<decltype(reactions)>();
+        auto& rxn = Faunus::reactions.front();
+        rxn.setDirection(ReactionData::Direction::RIGHT);
+
+        Space spc;
+        spc.geometry = R"({"type": "cuboid", "length": 50})"_json;
+
+        // 4 molecular groups: 2 active, 2 inactive
+        json j_insert = json::array();
+        j_insert.push_back({{"M", {{"N", 4}, {"inactive", 2}}}});
+        InsertMoleculesInSpace::insertMolecules(j_insert, spc);
+        CHECK_EQ(spc.groups.size(), 4);
+
+        Speciation::ReactionValidator validator(spc);
+
+        // 2 inactive groups available => can insert
+        CHECK(validator.isPossible(rxn));
+
+        // Activate all groups (no more inactive capacity)
+        for (auto& g : spc.groups) {
+            if (g.empty()) {
+                g.activate(g.inactive().begin(), g.inactive().end());
+            }
+        }
+        CHECK_FALSE(validator.isPossible(rxn));
+    }
+
+    SUBCASE("atom swap feasibility")
+    {
+        Faunus::atoms = R"([
+            {"a": {"r": 1.0, "mw": 1.0}},
+            {"b": {"r": 1.0, "mw": 1.0}}
+        ])"_json.get<decltype(atoms)>();
+
+        Faunus::molecules = R"([
+            {"A": {"atomic": true, "atoms": ["a"]}},
+            {"B": {"atomic": true, "atoms": ["b"]}}
+        ])"_json.get<decltype(molecules)>();
+
+        // Reaction: a + A = b + B (swap a->b plus molecular exchange)
+        Faunus::reactions = R"([{"a + A = b + B": {"lnK": 0.0}}])"_json.get<decltype(reactions)>();
+        auto& rxn = Faunus::reactions.front();
+        rxn.setDirection(ReactionData::Direction::RIGHT);
+
+        Space spc;
+        spc.geometry = R"({"type": "cuboid", "length": 50})"_json;
+
+        json j_insert = json::array();
+        j_insert.push_back({{"A", {{"N", 5}, {"inactive", 2}}}});
+        j_insert.push_back({{"B", {{"N", 5}, {"inactive", 2}}}});
+        InsertMoleculesInSpace::insertMolecules(j_insert, spc);
+
+        Speciation::ReactionValidator validator(spc);
+
+        // 3 active 'a' particles, capacity for b => feasible
+        CHECK(validator.isPossible(rxn));
+
+        // Empty A group of all active atoms
+        spc.groups.at(0).resize(0);
+        CHECK_FALSE(validator.isPossible(rxn));
+    }
+
+    SUBCASE("implicit group feasibility")
+    {
+        Faunus::atoms = R"([
+            {"x": {"r": 1.0, "mw": 1.0}}
+        ])"_json.get<decltype(atoms)>();
+
+        Faunus::molecules = R"([
+            {"I": {"implicit": true, "atoms": ["x"]}},
+            {"X": {"atomic": true, "atoms": ["x"]}}
+        ])"_json.get<decltype(molecules)>();
+
+        // Reaction: I + X = (consume one implicit I and one atomic X)
+        Faunus::reactions = R"([{"I + X = ": {"lnK": 0.0}}])"_json.get<decltype(reactions)>();
+        auto& rxn = Faunus::reactions.front();
+        rxn.setDirection(ReactionData::Direction::RIGHT);
+
+        Space spc;
+        spc.geometry = R"({"type": "cuboid", "length": 50})"_json;
+
+        // Insert atomic group X with some particles
+        json j_insert = json::array();
+        j_insert.push_back({{"X", {{"N", 5}}}});
+        InsertMoleculesInSpace::insertMolecules(j_insert, spc);
+
+        // Set implicit reservoir
+        auto molid_I = Faunus::findName(molecules, "I")->id();
+        spc.getImplicitReservoir()[molid_I] = 10;
+
+        Speciation::ReactionValidator validator(spc);
+        CHECK(validator.isPossible(rxn));
+
+        // Deplete reservoir
+        spc.getImplicitReservoir()[molid_I] = 0;
+        CHECK_FALSE(validator.isPossible(rxn));
+    }
+}
+
+TEST_CASE("[Faunus] AtomicGroupDeActivator")
+{
+    using namespace Faunus;
+
+    pc::temperature = 298.15_K;
+
+    Faunus::atoms = R"([
+        {"na": {"r": 1.9, "mw": 23.0}}
+    ])"_json.get<decltype(atoms)>();
+
+    Faunus::molecules = R"([
+        {"salt": {"atomic": true, "atoms": ["na"]}}
+    ])"_json.get<decltype(molecules)>();
+
+    auto make_space = [](int total, int inactive) {
+        Space spc;
+        spc.geometry = R"({"type": "cuboid", "length": 50})"_json;
+        json j_insert = json::array();
+        j_insert.push_back({{"salt", {{"N", total}, {"inactive", inactive}}}});
+        InsertMoleculesInSpace::insertMolecules(j_insert, spc);
+        return spc;
+    };
+
+    SUBCASE("activate expands group")
+    {
+        auto spc = make_space(10, 5);     // 10 total, 5 active
+        auto old_spc = make_space(10, 5); // identical
+        Random random;
+
+        Speciation::AtomicGroupDeActivator bouncer(spc, old_spc, random);
+
+        auto& group = spc.groups.front();
+        CHECK_EQ(group.size(), 5);
+        CHECK_EQ(group.capacity(), 10);
+
+        auto [change, bias] = bouncer.activate(group, 3);
+
+        CHECK_EQ(group.size(), 8);
+        CHECK(change.dNatomic);
+        CHECK(change.internal);
+        CHECK_EQ(change.relative_atom_indices.size(), 3);
+        CHECK_EQ(bias, 0.0);
+
+        // Verify new particles are within geometry bounds
+        for (auto index : change.relative_atom_indices) {
+            CHECK_FALSE(spc.geometry.collision(group.begin()[index].pos));
+        }
+    }
+
+    SUBCASE("deactivate contracts group")
+    {
+        auto spc = make_space(10, 5);     // 10 total, 5 active
+        auto old_spc = make_space(10, 5); // identical
+        Random random;
+
+        Speciation::AtomicGroupDeActivator bouncer(spc, old_spc, random);
+
+        auto& group = spc.groups.front();
+        CHECK_EQ(group.size(), 5);
+
+        auto [change, bias] = bouncer.deactivate(group, 2);
+
+        CHECK_EQ(group.size(), 3);
+        CHECK(change.dNatomic);
+        CHECK(change.internal);
+        CHECK_EQ(change.relative_atom_indices.size(), 2);
+        CHECK_EQ(bias, 0.0);
+    }
+
+    SUBCASE("error on invalid input")
+    {
+        auto spc = make_space(10, 5);
+        auto old_spc = make_space(10, 5);
+        Random random;
+
+        Speciation::AtomicGroupDeActivator bouncer(spc, old_spc, random);
+        auto& group = spc.groups.front();
+
+        // Activate more than capacity: should throw
+        CHECK_THROWS(bouncer.activate(group, 6));
+
+        // Deactivate more than active size: should throw
+        CHECK_THROWS(bouncer.deactivate(group, 6));
+    }
+}
+
+TEST_CASE("[Faunus] MolecularGroupDeActivator")
+{
+    using namespace Faunus;
+
+    pc::temperature = 298.15_K;
+
+    Faunus::atoms = R"([
+        {"ow": {"r": 1.5, "mw": 16.0, "q": -0.8}},
+        {"hw": {"r": 1.0, "mw": 1.0, "q": 0.4}}
+    ])"_json.get<decltype(atoms)>();
+
+    Faunus::molecules = R"([{
+        "water": {
+            "structure": [
+                {"ow": [0, 0, 0]},
+                {"hw": [1, 0, 0]},
+                {"hw": [0, 1, 0]}
+            ]
+        }
+    }])"_json.get<decltype(molecules)>();
+
+    SUBCASE("activate inactive molecular group")
+    {
+        Space spc;
+        spc.geometry = R"({"type": "cuboid", "length": 50})"_json;
+
+        // Insert 1 molecular group, fully inactive
+        json j_insert = json::array();
+        j_insert.push_back({{"water", {{"N", 1}, {"inactive", 1}}}});
+        InsertMoleculesInSpace::insertMolecules(j_insert, spc);
+
+        CHECK_EQ(spc.groups.size(), 1);
+        auto& group = spc.groups.front();
+        CHECK(group.empty());
+        CHECK_EQ(group.capacity(), 3);
+
+        Random random;
+        Speciation::MolecularGroupDeActivator bouncer(spc, random, false);
+
+        auto [change, bias] = bouncer.activate(group);
+
+        CHECK_EQ(group.size(), 3); // fully activated
+        CHECK(change.all);
+        CHECK(change.internal);
+        CHECK_EQ(change.relative_atom_indices.size(), 3);
+        CHECK_EQ(bias, 0.0); // no bond bias
+
+        // Mass center should be within geometry bounds
+        CHECK_FALSE(spc.geometry.collision(group.mass_center));
+    }
+
+    SUBCASE("deactivate active molecular group")
+    {
+        Space spc;
+        spc.geometry = R"({"type": "cuboid", "length": 50})"_json;
+
+        // Insert 1 active molecular group
+        json j_insert = json::array();
+        j_insert.push_back({{"water", {{"N", 1}}}});
+        InsertMoleculesInSpace::insertMolecules(j_insert, spc);
+
+        auto& group = spc.groups.front();
+        CHECK_EQ(group.size(), 3);
+
+        Random random;
+        Speciation::MolecularGroupDeActivator bouncer(spc, random, false);
+
+        auto [change, bias] = bouncer.deactivate(group);
+
+        CHECK(group.empty());
+        CHECK(change.all);
+        CHECK(change.internal);
+        CHECK_EQ(change.relative_atom_indices.size(), 3);
+        CHECK_EQ(bias, 0.0); // no bond bias
+    }
+
+    SUBCASE("partial activation throws")
+    {
+        Space spc;
+        spc.geometry = R"({"type": "cuboid", "length": 50})"_json;
+
+        json j_insert = json::array();
+        j_insert.push_back({{"water", {{"N", 1}, {"inactive", 1}}}});
+        InsertMoleculesInSpace::insertMolecules(j_insert, spc);
+
+        Random random;
+        Speciation::MolecularGroupDeActivator bouncer(spc, random, false);
+
+        auto& group = spc.groups.front();
+        CHECK(group.empty());
+
+        // Requesting partial activation (1 of 3) should throw
+        CHECK_THROWS(bouncer.activate(group, 1));
+    }
+
+    SUBCASE("partial deactivation throws")
+    {
+        Space spc;
+        spc.geometry = R"({"type": "cuboid", "length": 50})"_json;
+
+        json j_insert = json::array();
+        j_insert.push_back({{"water", {{"N", 1}}}});
+        InsertMoleculesInSpace::insertMolecules(j_insert, spc);
+
+        Random random;
+        Speciation::MolecularGroupDeActivator bouncer(spc, random, false);
+
+        auto& group = spc.groups.front();
+        CHECK_EQ(group.size(), 3);
+
+        // Requesting partial deactivation (1 of 3) should throw
+        CHECK_THROWS(bouncer.deactivate(group, 1));
+    }
+}
+
+TEST_CASE("[Faunus] MolecularGroupDeActivator - bond bias")
+{
+    using namespace Faunus;
+    using doctest::Approx;
+
+    pc::temperature = 298.15_K;
+
+    Faunus::atoms = R"([
+        {"a1": {"r": 1.5, "mw": 16.0}},
+        {"a2": {"r": 1.0, "mw": 1.0}}
+    ])"_json.get<decltype(atoms)>();
+
+    // Molecule with a harmonic bond between atoms 0 and 1
+    Faunus::molecules = R"([{
+        "dimer": {
+            "structure": [
+                {"a1": [0, 0, 0]},
+                {"a2": [2, 0, 0]}
+            ],
+            "bondlist": [{"harmonic": {"index": [0, 1], "k": 5.0, "req": 1.0}}]
+        }
+    }])"_json.get<decltype(molecules)>();
+
+    SUBCASE("deactivate returns positive bond energy bias")
+    {
+        Space spc;
+        spc.geometry = R"({"type": "cuboid", "length": 50})"_json;
+
+        json j_insert = json::array();
+        j_insert.push_back({{"dimer", {{"N", 1}}}});
+        InsertMoleculesInSpace::insertMolecules(j_insert, spc);
+
+        auto& group = spc.groups.front();
+        CHECK_EQ(group.size(), 2);
+
+        Random random;
+        Speciation::MolecularGroupDeActivator bouncer(spc, random, true);
+
+        auto [change, bias] = bouncer.deactivate(group);
+
+        CHECK(group.empty());
+        // Deactivation bias should be positive bond energy (in kT units)
+        CHECK_GT(bias, 0.0);
+    }
+
+    SUBCASE("activate returns negative bond energy bias")
+    {
+        Space spc;
+        spc.geometry = R"({"type": "cuboid", "length": 50})"_json;
+
+        json j_insert = json::array();
+        j_insert.push_back({{"dimer", {{"N", 1}, {"inactive", 1}}}});
+        InsertMoleculesInSpace::insertMolecules(j_insert, spc);
+
+        auto& group = spc.groups.front();
+        CHECK(group.empty());
+
+        Random random;
+        Speciation::MolecularGroupDeActivator bouncer(spc, random, true);
+
+        auto [change, bias] = bouncer.activate(group);
+
+        CHECK_EQ(group.size(), 2);
+        // After random placement, bond energy will generally be non-zero
+        // Activation bias should be negative of bond energy
+        CHECK_NE(bias, 0.0);
+        CHECK_LT(bias, 0.0); // negative bond energy
+    }
+}
+
+TEST_CASE("[Faunus] AtomicGroupDeActivator - old_spc synchronization")
+{
+    using namespace Faunus;
+
+    pc::temperature = 298.15_K;
+
+    Faunus::atoms = R"([
+        {"na": {"r": 1.9, "mw": 23.0}}
+    ])"_json.get<decltype(atoms)>();
+
+    Faunus::molecules = R"([
+        {"salt": {"atomic": true, "atoms": ["na"]}}
+    ])"_json.get<decltype(molecules)>();
+
+    auto make_space = [](int total, int inactive) {
+        Space spc;
+        spc.geometry = R"({"type": "cuboid", "length": 50})"_json;
+        json j_insert = json::array();
+        j_insert.push_back({{"salt", {{"N", total}, {"inactive", inactive}}}});
+        InsertMoleculesInSpace::insertMolecules(j_insert, spc);
+        return spc;
+    };
+
+    SUBCASE("old_spc particles rearranged on deactivate")
+    {
+        auto spc = make_space(10, 5);     // 10 total, 5 active
+        auto old_spc = make_space(10, 5); // identical
+
+        // Give each particle in old_spc a unique position for tracking
+        auto& old_group = old_spc.groups.front();
+        for (int i = 0; i < (int)old_group.capacity(); i++) {
+            old_group.begin()[i].pos = Point(i, 0, 0);
+        }
+
+        // Copy same positions to spc
+        auto& group = spc.groups.front();
+        for (int i = 0; i < (int)group.capacity(); i++) {
+            group.begin()[i].pos = Point(i, 0, 0);
+        }
+
+        Random random;
+        Speciation::AtomicGroupDeActivator bouncer(spc, old_spc, random);
+
+        auto [change, bias] = bouncer.deactivate(group, 2);
+
+        // spc group should have shrunk
+        CHECK_EQ(group.size(), 3);
+
+        // old_spc group should keep original size but have particles rearranged
+        // to match the swap pattern in spc
+        CHECK_EQ(old_group.size(), 5); // old_spc not resized
+
+        // The deactivated indices should point to valid positions
+        for (auto idx : change.relative_atom_indices) {
+            CHECK_LT(idx, 5); // indices within original active range
+        }
+    }
+}
+
+TEST_CASE("[Faunus] swapParticleProperties")
+{
+    using namespace Faunus;
+
+    pc::temperature = 298.15_K;
+
+    Faunus::atoms = R"([
+        {"typeA": {"r": 2.0, "mw": 10.0, "q": 1.0, "sigma": 3.0}},
+        {"typeB": {"r": 3.0, "mw": 20.0, "q": -1.0, "sigma": 4.0}}
+    ])"_json.get<decltype(atoms)>();
+
+    SUBCASE("basic swap preserves position and updates properties")
+    {
+        const Point original_pos(1.5, 2.5, 3.5);
+        Particle particle(atoms.at(0), original_pos);
+        CHECK_EQ(particle.id, 0);
+        CHECK_EQ(particle.charge, 1.0);
+        CHECK_EQ(particle.pos, original_pos);
+
+        move::SpeciationMove::swapParticleProperties(particle, 1);
+
+        // Position must be preserved
+        CHECK_EQ(particle.pos, original_pos);
+        // Properties should come from the new atom type
+        CHECK_EQ(particle.id, 1);
+        CHECK_EQ(particle.charge, -1.0);
+    }
+}
+
+TEST_CASE("[Faunus] ReactionValidator - reverse direction")
+{
+    using namespace Faunus;
+
+    pc::temperature = 298.15_K;
+
+    // Two atom types in atomic groups
+    Faunus::atoms = R"([
+        {"c": {"r": 1.0, "mw": 1.0}},
+        {"d": {"r": 1.0, "mw": 1.0}}
+    ])"_json.get<decltype(atoms)>();
+
+    Faunus::molecules = R"([
+        {"C": {"atomic": true, "atoms": ["c"]}},
+        {"D": {"atomic": true, "atoms": ["d"]}}
+    ])"_json.get<decltype(molecules)>();
+
+    // Reaction: D = C
+    Faunus::reactions = R"([{"D = C": {"lnK": 0.0}}])"_json.get<decltype(reactions)>();
+    auto& rxn = Faunus::reactions.front();
+
+    Space spc;
+    spc.geometry = R"({"type": "cuboid", "length": 50})"_json;
+
+    // D: 5 active out of 5 (no inactive capacity)
+    // C: 0 active out of 5 (5 inactive capacity)
+    json j_insert = json::array();
+    j_insert.push_back({{"D", {{"N", 5}}}});
+    j_insert.push_back({{"C", {{"N", 5}, {"inactive", 5}}}});
+    InsertMoleculesInSpace::insertMolecules(j_insert, spc);
+
+    Speciation::ReactionValidator validator(spc);
+
+    // RIGHT: consume D, produce C => feasible (5 D's available, 5 C capacity)
+    rxn.setDirection(ReactionData::Direction::RIGHT);
+    CHECK(validator.isPossible(rxn));
+
+    // LEFT: consume C, produce D => infeasible (0 active C's, D is full)
+    rxn.setDirection(ReactionData::Direction::LEFT);
+    CHECK_FALSE(validator.isPossible(rxn));
+}
+
+TEST_CASE("[Faunus] ReactionValidator - combined atomic and molecular reaction")
+{
+    using namespace Faunus;
+
+    pc::temperature = 298.15_K;
+
+    Faunus::atoms = R"([
+        {"a": {"r": 1.0, "mw": 1.0}},
+        {"m": {"r": 1.5, "mw": 16.0}}
+    ])"_json.get<decltype(atoms)>();
+
+    Faunus::molecules = R"([
+        {"A": {"atomic": true, "atoms": ["a"]}},
+        {"M": {"activity": 0.1, "structure": [{"m": [0, 0, 0]}]}}
+    ])"_json.get<decltype(molecules)>();
+
+    // Reaction: A + M = (consume one atomic A and one molecular M)
+    Faunus::reactions = R"([{"A + M = ": {"lnK": 0.0}}])"_json.get<decltype(reactions)>();
+    auto& rxn = Faunus::reactions.front();
+    rxn.setDirection(ReactionData::Direction::RIGHT);
+
+    Space spc;
+    spc.geometry = R"({"type": "cuboid", "length": 50})"_json;
+
+    json j_insert = json::array();
+    j_insert.push_back({{"A", {{"N", 5}}}});
+    j_insert.push_back({{"M", {{"N", 3}, {"inactive", 1}}}});
+    InsertMoleculesInSpace::insertMolecules(j_insert, spc);
+
+    Speciation::ReactionValidator validator(spc);
+
+    // 5 active A particles and 2 active M groups => feasible to consume both
+    CHECK(validator.isPossible(rxn));
+
+    // Deplete A group
+    spc.groups.at(0).resize(0);
+    CHECK_FALSE(validator.isPossible(rxn));
+
+    // Refill A, deactivate all M groups
+    spc.groups.at(0).resize(5);
+    for (size_t i = 1; i < spc.groups.size(); i++) {
+        auto& g = spc.groups.at(i);
+        if (!g.empty()) {
+            g.deactivate(g.begin(), g.end());
+        }
+    }
+    CHECK_FALSE(validator.isPossible(rxn));
+}
+
 void SpeciationMove::_move(Change& change)
 {
     if (Faunus::reactions.empty()) {

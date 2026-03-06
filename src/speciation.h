@@ -160,12 +160,12 @@ class SpeciationMove : public Move
     void activateMolecularGroups(Change& change);
     void
     updateGroupMassCenters(const Change& change) const; //!< Update affected molecular mass centers
-    static void swapParticleProperties(Particle& particle, int new_atomid);
     SpeciationMove(Space& spc, Space& old_spc, std::string_view name, std::string_view cite);
 
   public:
     SpeciationMove(Space& spc, Space& old_spc);
     double bias(Change& change, double old_energy, double new_energy) override;
+    static void swapParticleProperties(Particle& particle, int new_atomid);
 };
 
 } // namespace Faunus::move

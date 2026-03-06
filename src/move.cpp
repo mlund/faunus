@@ -1763,8 +1763,10 @@ SmarterTranslateRotate::SmarterTranslateRotate(Space& spc, const json& j)
 TEST_CASE("[Faunus] TranslateRotate")
 {
     using namespace Faunus;
-    CHECK(!atoms.empty());     // set in a previous test
-    CHECK(!molecules.empty()); // set in a previous test
+
+    Faunus::atoms = R"([{"a": {"r": 1.0, "mw": 1.0}}])"_json.get<decltype(atoms)>();
+    Faunus::molecules =
+        R"([{"A": {"structure": [{"a": [0,0,0]}]}}])"_json.get<decltype(molecules)>();
 
     Space spc;
     move::TranslateRotate mv(spc);

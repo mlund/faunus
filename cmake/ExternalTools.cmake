@@ -7,7 +7,7 @@ include(FetchContent)
 
 CPMAddPackage("gh:gabime/spdlog@1.17.0")
 CPMAddPackage("gh:ericniebler/range-v3#0.12.0")
-CPMAddPackage("gh:docopt/docopt.cpp#v0.6.3")
+CPMAddPackage("gh:docopt/docopt.cpp#05d507da0d153faff381f44968833ebffdc03447")
 CPMAddPackage("gh:doctest/doctest#v2.4.12")
 CPMAddPackage("gh:mateidavid/zstr#v1.1.0")
 CPMAddPackage("gh:martinus/nanobench#v4.3.11")

@@ -509,7 +509,8 @@ void MoleculeBuilder::readBonds(const json& j)
 {
     bonds = j.value("bondlist", bonds);
     auto is_invalid_index = [size = particles.size()](auto& i) { return i >= size || i < 0; };
-    auto indices = bonds | std::views::transform(&pairpotential::BondData::indices) | std::views::join;
+    auto indices =
+        bonds | std::views::transform(&pairpotential::BondData::indices) | std::views::join;
     if (std::ranges::any_of(indices, is_invalid_index)) {
         throw ConfigurationError("bonded index out of range");
     }
@@ -1185,6 +1186,107 @@ TEST_CASE("[Faunus] ReactionData")
     CHECK_EQ(r.size(), 1);
     CHECK_EQ(r.front().getReactionString(), "A = B");
     CHECK_EQ(r.front().freeEnergy(), Approx(10.051 + std::log(0.2)));
+
+    SUBCASE("containsAtomicSwap")
+    {
+        // "A = B" has no atoms on either side (A is molecular, B is atomic-group but the
+        // reaction string maps to molecules, not individual atoms) => not a swap
+        CHECK_FALSE(r.front().containsAtomicSwap());
+
+        // Set up a reaction with atoms on both sides: "a = a" effectively
+        // We need two distinct atoms and two atomic groups
+        json j2 = R"(
+            {
+                "atomlist" :
+                    [ {"a": { "r":1.1 } }, {"b": { "r":1.2 } } ],
+                "moleculelist": [
+                    { "A": { "atomic":true, "atoms":["a"] } },
+                    { "B": { "atomic":true, "atoms":["b"] } }
+                ],
+                "reactionlist": [
+                    {"a + A = b + B": {"lnK":-2.0 } }
+                ]
+            } )"_json;
+
+        Faunus::atoms = j2["atomlist"].get<decltype(atoms)>();
+        molecules = j2["moleculelist"].get<decltype(molecules)>();
+        r = j2["reactionlist"].get<decltype(reactions)>();
+
+        CHECK(r.front().containsAtomicSwap());
+
+        // Pure insertion reaction (no atoms): not a swap
+        json j3 = R"(
+            {
+                "atomlist" :
+                    [ {"a": { "r":1.1 } } ],
+                "moleculelist": [
+                    { "A": { "atomic":false, "activity":0.2 } }
+                ],
+                "reactionlist": [
+                    {"= A": {"lnK":1.0 } }
+                ]
+            } )"_json;
+
+        Faunus::atoms = j3["atomlist"].get<decltype(atoms)>();
+        molecules = j3["moleculelist"].get<decltype(molecules)>();
+        r = j3["reactionlist"].get<decltype(reactions)>();
+
+        CHECK_FALSE(r.front().containsAtomicSwap());
+    }
+
+    SUBCASE("direction reversal")
+    {
+        auto& reaction = r.front();
+        reaction.setDirection(ReactionData::Direction::RIGHT);
+        const auto energy_right = reaction.freeEnergy();
+
+        auto [reactants_atoms_r, reactants_mols_r] = reaction.getReactants();
+        auto [products_atoms_r, products_mols_r] = reaction.getProducts();
+
+        reaction.reverseDirection();
+        CHECK_EQ(reaction.getDirection(), ReactionData::Direction::LEFT);
+        CHECK_EQ(reaction.freeEnergy(), Approx(-energy_right));
+
+        // After reversal, reactants and products should be swapped
+        auto [reactants_atoms_l, reactants_mols_l] = reaction.getReactants();
+        auto [products_atoms_l, products_mols_l] = reaction.getProducts();
+
+        CHECK_EQ(reactants_mols_l, products_mols_r);
+        CHECK_EQ(products_mols_l, reactants_mols_r);
+    }
+
+    SUBCASE("participatingAtomsAndMolecules")
+    {
+        // Set up reaction with atoms and molecules on each side
+        json j2 = R"(
+            {
+                "atomlist" :
+                    [ {"a": { "r":1.1 } }, {"b": { "r":1.2 } } ],
+                "moleculelist": [
+                    { "A": { "atomic":true, "atoms":["a"] } },
+                    { "B": { "atomic":true, "atoms":["b"] } }
+                ],
+                "reactionlist": [
+                    {"a + A = b + B": {"lnK":-2.0 } }
+                ]
+            } )"_json;
+
+        Faunus::atoms = j2["atomlist"].get<decltype(atoms)>();
+        molecules = j2["moleculelist"].get<decltype(molecules)>();
+        r = j2["reactionlist"].get<decltype(reactions)>();
+
+        auto [atom_ids, mol_ids] = r.front().participatingAtomsAndMolecules();
+
+        // Should contain atom ids for both 'a' and 'b'
+        CHECK_EQ(atom_ids.size(), 2);
+        CHECK(atom_ids.count(Faunus::findName(atoms, "a")->id()));
+        CHECK(atom_ids.count(Faunus::findName(atoms, "b")->id()));
+
+        // Should contain molecule ids for both 'A' and 'B'
+        CHECK_EQ(mol_ids.size(), 2);
+        CHECK(mol_ids.count(Faunus::findName(molecules, "A")->id()));
+        CHECK(mol_ids.count(Faunus::findName(molecules, "B")->id()));
+    }
 }
 
 void MoleculeInserter::from_json(const json&) {}

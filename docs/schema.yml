@@ -410,7 +410,7 @@ properties:
                 - if: {properties: {property: {const: "cmcm"}}}
                   then: {required: [indexes,dir]}
                 - if: {properties: {property: {const: "cmcm_z"}}}
-                  then: {required: [indexes,dir]}
+                  then: {required: [indexes]}
                 - if: {properties: {property: {const: "mindist"}}}
                   then: {required: [indexes]}
                 - if: {properties: {property: {const: "L/R"}}}
@@ -465,10 +465,22 @@ properties:
                         type:
                             description: "Reaction coordinate class"
                             type: string
-                            items: {"system", "molecule", "atom"}
+                            enum: [system, molecule, atom]
                         index:
                             description: "Molecule or atom index to operate on"
                             type: number
+                        indexes:
+                            type: array
+                            items: {type: integer}
+                            minItems: 2
+                            maxItems: 4
+                            description: "Array of indexes for molecule properties (e.g. cmcm, cmcm_z, atomatom, mindist)"
+                        dir:
+                            type: array
+                            items: {type: number}
+                            minItems: 3
+                            maxItems: 3
+                            description: "Direction vector"
                         property:
                             description: "Reaction coordinate property"
                             type: string

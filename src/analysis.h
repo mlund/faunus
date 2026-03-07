@@ -841,14 +841,14 @@ class ScatteringFunction : public Analysis
     bool mass_center_scattering;          //!< scatter from mass center, only?
     bool save_after_sample = false;       //!< if true, save average S(q) after each sample point
     std::string filename;                 //!< output file name
-    std::vector<Point> scatter_positions; //!< vector of scattering points
+    std::vector<Scatter::Scatterer> scatter_positions; //!< vector of scatterers with position and atom id
     std::vector<MoleculeData::index_type> molecule_ids; //!< Molecule ids
     std::vector<std::string> molecule_names; //!< Molecule names corresponding to `molecule_ids`
-    using Tformfactor = Scatter::FormFactorUnity<double>;
+    using Tformfactor = Scatter::FormFactorAtomicConstant<double>;
 
     std::unique_ptr<Scatter::DebyeFormula<Tformfactor>> debye;
-    std::unique_ptr<Scatter::StructureFactorPBC<>> explicit_average_pbc;
-    std::unique_ptr<Scatter::StructureFactorIPBC<>> explicit_average_ipbc;
+    std::unique_ptr<Scatter::StructureFactorPBC<Tformfactor>> explicit_average_pbc;
+    std::unique_ptr<Scatter::StructureFactorIPBC<Tformfactor, float>> explicit_average_ipbc;
     void _sample() override;
     void _to_disk() override;
     void _to_json(json& j) const override;

@@ -3,6 +3,7 @@
 #include <fstream>
 #include <algorithm>
 #include <cmath>
+#include "atomdata.h"
 
 namespace Faunus {
 
@@ -49,7 +50,58 @@ template <std::floating_point T = float> class FormFactorSphere
  */
 template <std::floating_point T = float> struct FormFactorUnity
 {
-    template <class Tparticle> T operator()(T, const Tparticle&) const { return 1; }
+    template <class Tparticle> [[nodiscard]] constexpr T operator()(T, const Tparticle&) const
+    {
+        return T{1};
+    }
+};
+
+/**
+ * @brief Lightweight scatterer holding position and atom type id.
+ *
+ * Used for scattering calculations where both position and atom-specific
+ * form factors are needed.
+ */
+struct Scatterer
+{
+    Point pos;
+    int id = 0; //!< Atom type id for looking up form factor
+};
+
+/**
+ * @brief Helper to extract position from a scatterer or point.
+ *
+ * For Scatterer types, returns the `.pos` member.
+ * For Point types (Eigen vectors), returns the point directly.
+ */
+template <typename T>
+constexpr const auto& getPosition(const T& scatterer)
+{
+    if constexpr (requires { scatterer.pos; }) {
+        return scatterer.pos;
+    }
+    else {
+        return scatterer;
+    }
+}
+
+/**
+ * @brief Atom-specific constant form factor (q independent).
+ *
+ * Returns the scattering_f0 property from AtomData for each scatterer.
+ * This allows atom-type specific scattering weights.
+ * For scatterers with id < 0, returns 1.0 (unity form factor).
+ */
+template <std::floating_point T = float> struct FormFactorAtomicConstant
+{
+    template <class Tscatterer> [[nodiscard]] T operator()(T, const Tscatterer& scatterer) const
+    {
+        if (scatterer.id < 0) {
+            return T{1};
+        }
+        assert(static_cast<size_t>(scatterer.id) < atoms.size());
+        return static_cast<T>(atoms[scatterer.id].scattering_f0);
+    }
 };
 
 /**
@@ -160,8 +212,8 @@ template <class Tformfactor, std::floating_point T = float> class DebyeFormula
 #pragma omp for schedule(dynamic)
             for (int i = 0; i < N - 1; ++i) {
                 for (int j = i + 1; j < N; ++j) {
-                    T r =
-                        T(Faunus::Geometry::Sphere::sqdist(p[i], p[j])); // the square root follows
+                    T r = T(Faunus::Geometry::Sphere::sqdist(
+                        getPosition(p[i]), getPosition(p[j]))); // the square root follows
                     if (r < r_cutoff * r_cutoff) {
                         r = std::sqrt(r);
                         // Black magic: The q_mesh function must be inlineable otherwise the loop
@@ -204,8 +256,12 @@ template <class Tformfactor, std::floating_point T = float> class DebyeFormula
                                  (q * r_cutoff * std::cos(q * r_cutoff) - std::sin(q * r_cutoff));
             }
             sampling[m] += weight;
-            intensity[m] +=
-                ((2 * intensity_sum[m] + intensity_self_sum) / N + intensity_corr) * weight;
+            if (intensity_self_sum != T{0}) {
+                intensity[m] +=
+                    ((2 * intensity_sum[m] + intensity_self_sum) / intensity_self_sum +
+                     intensity_corr) *
+                    weight;
+            }
         }
     }
 
@@ -275,19 +331,19 @@ template <std::floating_point T> class SamplingPolicy
 };
 
 /**
- * @brief Calculate structure factor using explicit q averaging.
+ * @brief Calculate scattering intensity using explicit q averaging.
  *
  * This averages over the thirteen permutations of the Miller index [100], [110], [101] using:
  *
- * @f[ S(\mathbf{q}) = \frac{1}{N} \left <
- *    \left ( \sum_i^N \sin(\mathbf{qr}_i) \right )^2 +
- *    \left ( \sum_j^N \cos(\mathbf{qr}_j) \right )^2
+ * @f[ I(\mathbf{q}) = \frac{1}{\sum_i f_i^2} \left <
+ *    \left ( \sum_i^N f_i \sin(\mathbf{qr}_i) \right )^2 +
+ *    \left ( \sum_j^N f_j \cos(\mathbf{qr}_j) \right )^2
  *   \right >
  * @f]
  *
  * For more information, see @see http://doi.org/d8zgw5 and @see http://doi.org/10.1063/1.449987.
  */
-template <typename T = double, Algorithm method = SIMD,
+template <class Tformfactor = FormFactorUnity<double>, typename T = double, Algorithm method = SIMD,
           typename TSamplingPolicy = SamplingPolicy<T>>
 class StructureFactorPBC : private TSamplingPolicy
 {
@@ -299,6 +355,7 @@ class StructureFactorPBC : private TSamplingPolicy
     };
 
     const int p_max; //!< multiples of q to be sampled
+    Tformfactor form_factor; //!< form factor functor
     using TSamplingPolicy::addSampling;
 
   public:
@@ -310,57 +367,42 @@ class StructureFactorPBC : private TSamplingPolicy
     /**
      * https://gcc.gnu.org/gcc-9/porting_to.html#ompdatasharing
      * #pragma omp parallel for collapse(2) default(none) shared(directions, p_max, boxlength)
-     * shared(positions)
+     * shared(scatterers)
      */
-    template <RequirePoints Tpositions>
-    void sample(const Tpositions& positions, const Point& boxlength)
+    template <typename Tscatterers>
+    void sample(const Tscatterers& scatterers, const Point& boxlength)
     {
 #pragma omp parallel for collapse(2) default(shared)
         for (size_t i = 0; i < directions.size(); ++i) { // openmp req. tradional loop
             for (int p = 1; p <= p_max; ++p) {           // loop over multiples of q
                 const Point q =
                     2.0 * pc::pi * p * directions[i].cwiseQuotient(boxlength); // scattering vector
-                const auto s_of_q = calculateStructureFactor(positions, q);
+                const auto intensity = calculateIntensity(scatterers, q);
 #pragma omp critical // avoid race conditions when updating the map
-                addSampling(q.norm(), s_of_q, 1.0);
+                addSampling(q.norm(), intensity, 1.0);
             }
         }
     }
 
-    template <RequirePoints Tpositions>
-    T calculateStructureFactor(const Tpositions& positions, const Point& q) const
+    template <typename Tscatterers>
+    T calculateIntensity(const Tscatterers& scatterers, const Point& q) const
     {
         T sum_cos = 0.0;
         T sum_sin = 0.0;
-        if constexpr (method == SIMD) {
-            // When sine and cosine is computed in separate loops, sine and cosine SIMD
-            // instructions may be used to get at least 4 times performance boost.
-            // Note January 2020: only GCC exploits this using libmvec library if --ffast-math is
-            // enabled.
-            auto dot_product = [q](const auto& pos) { return static_cast<T>(q.dot(pos)); };
-            auto qdotr = positions | std::views::transform(dot_product) | ranges::to<std::vector>;
-            std::for_each(qdotr.begin(), qdotr.end(), [&](auto qr) { sum_cos += cos(qr); });
-            std::for_each(qdotr.begin(), qdotr.end(), [&](auto qr) { sum_sin += sin(qr); });
+        T sum_f_squared = 0.0;
+        const auto q_norm = q.norm();
+        for (const auto& scatterer : scatterers) {
+            const auto& pos = getPosition(scatterer);
+            const auto f = form_factor(q_norm, scatterer);
+            const auto qr = static_cast<T>(q.dot(pos));
+            sum_cos += f * cos(qr);
+            sum_sin += f * sin(qr);
+            sum_f_squared += f * f;
         }
-        else if constexpr (method == EIGEN) {
-            // Map is a Nx3 matrix facade into original positions (std::vector)
-            using namespace Eigen;
-            static_assert(std::is_same_v<Tpositions, std::vector<Point>>);
-            auto qdotr =
-                (Map<MatrixXd, 0, Stride<1, 3>>((double*)positions.data(), positions.size(), 3) * q)
-                    .array()
-                    .eval();
-            sum_cos = qdotr.cast<T>().cos().sum();
-            sum_sin = qdotr.cast<T>().sin().sum();
+        if (sum_f_squared == T{0}) {
+            return T{0};
         }
-        else if constexpr (method == GENERIC) {
-            for (const auto& r : positions) {
-                const auto qr = static_cast<T>(q.dot(r));
-                sum_cos += cos(qr); // sine and cosine in same loop obstructs
-                sum_sin += sin(qr); // vectorization on most compilers...
-            }
-        };
-        return std::norm(std::complex<T>(sum_cos, sum_sin)) / static_cast<T>(positions.size());
+        return std::norm(std::complex<T>(sum_cos, sum_sin)) / sum_f_squared;
     }
 
     int getQMultiplier() { return p_max; }
@@ -369,13 +411,14 @@ class StructureFactorPBC : private TSamplingPolicy
 };
 
 /**
- * @brief Calculate structure factor using explicit q averaging in isotropic periodic boundary
+ * @brief Calculate scattering intensity using explicit q averaging in isotropic periodic boundary
  * conditions (IPBC).
  *
  * The sample directions reduce to 3 compared to 13 in regular periodic boundary conditions. Overall
  * simplification shall yield roughly 10 times faster computation.
  */
-template <std::floating_point T = float, typename TSamplingPolicy = SamplingPolicy<T>>
+template <class Tformfactor = FormFactorUnity<float>, std::floating_point T = float,
+          typename TSamplingPolicy = SamplingPolicy<T>>
 class StructureFactorIPBC : private TSamplingPolicy
 {
     //! Sample directions (h,k,l).
@@ -383,6 +426,7 @@ class StructureFactorIPBC : private TSamplingPolicy
     std::vector<Point> directions = {{1, 0, 0}, {1, 1, 0}, {1, 1, 1}};
 
     int p_max; //!< multiples of q to be sampled
+    Tformfactor form_factor; //!< form factor functor
     using TSamplingPolicy::addSampling;
 
   public:
@@ -391,19 +435,23 @@ class StructureFactorIPBC : private TSamplingPolicy
     {
     }
 
-    template <RequirePoints Tpositions>
-    void sample(const Tpositions& positions, const Point& boxlength)
+    template <typename Tscatterers>
+    void sample(const Tscatterers& scatterers, const Point& boxlength)
     {
 // https://gcc.gnu.org/gcc-9/porting_to.html#ompdatasharing
-// #pragma omp parallel for collapse(2) default(none) shared(directions, p_max, positions,
+// #pragma omp parallel for collapse(2) default(none) shared(directions, p_max, scatterers,
 // boxlength)
 #pragma omp parallel for collapse(2) default(shared)
         for (size_t i = 0; i < directions.size(); ++i) {
             for (int p = 1; p <= p_max; ++p) { // loop over multiples of q
                 const Point q =
                     2.0 * pc::pi * p * directions[i].cwiseQuotient(boxlength); // scattering vector
-                T sum_cos = 0;
-                for (auto& r : positions) { // loop over positions
+                T sum_f_cos = 0;
+                T sum_f_squared = 0;
+                const auto q_norm = q.norm();
+                for (const auto& scatterer : scatterers) {
+                    const auto& r = getPosition(scatterer);
+                    const auto f = form_factor(q_norm, scatterer);
                     // if q[i] == 0 then its cosine == 1 hence we can avoid cosine computation for
                     // performance reasons
                     T product = std::cos(T(q[0] * r[0]));
@@ -411,15 +459,19 @@ class StructureFactorIPBC : private TSamplingPolicy
                         product *= std::cos(T(q[1] * r[1]));
                     if (q[2] != 0)
                         product *= std::cos(T(q[2] * r[2]));
-                    sum_cos += product;
+                    sum_f_cos += f * product;
+                    sum_f_squared += f * f;
                 }
                 // collect average, `norm()` gives the scattering vector length
                 const T ipbc_factor =
                     std::pow(2, directions[i].count()); // 2 ^ number of non-zero elements
-                const T sf = (sum_cos * sum_cos) / (float)(positions.size()) * ipbc_factor;
+                T intensity = T{0};
+                if (sum_f_squared != T{0}) {
+                    intensity = (sum_f_cos * sum_f_cos) / sum_f_squared * ipbc_factor;
+                }
 #pragma omp critical
                 // avoid race conditions when updating the map
-                addSampling(q.norm(), sf, 1.0);
+                addSampling(q.norm(), intensity, 1.0);
             }
         }
     }

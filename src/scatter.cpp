@@ -9,8 +9,10 @@ namespace Faunus::Scatter {
 
 using doctest::Approx;
 
-TEST_CASE_TEMPLATE("[Faunus] StructureFactorPBC", T, StructureFactorPBC<float, SIMD>,
-                   StructureFactorPBC<float, EIGEN>, StructureFactorPBC<float, GENERIC>)
+TEST_CASE_TEMPLATE("[Faunus] StructureFactorPBC", T,
+                   StructureFactorPBC<FormFactorUnity<float>, float, SIMD>,
+                   StructureFactorPBC<FormFactorUnity<float>, float, EIGEN>,
+                   StructureFactorPBC<FormFactorUnity<float>, float, GENERIC>)
 {
     size_t cnt = 0;
     Point box = {80.0, 80.0, 80.0};
@@ -39,9 +41,9 @@ TEST_CASE("Benchmark")
     }
     ankerl::nanobench::Bench bench;
     bench.minEpochIterations(100);
-    bench.run("SIMD", [&] { StructureFactorPBC<double, SIMD>(10).sample(positions, box); });
-    bench.run("EIGEN", [&] { StructureFactorPBC<double, EIGEN>(10).sample(positions, box); });
-    bench.run("GENERIC", [&] { StructureFactorPBC<double, GENERIC>(10).sample(positions, box); });
+    bench.run("SIMD", [&] { StructureFactorPBC<FormFactorUnity<double>, double, SIMD>(10).sample(positions, box); });
+    bench.run("EIGEN", [&] { StructureFactorPBC<FormFactorUnity<double>, double, EIGEN>(10).sample(positions, box); });
+    bench.run("GENERIC", [&] { StructureFactorPBC<FormFactorUnity<double>, double, GENERIC>(10).sample(positions, box); });
 }
 #endif
 
@@ -61,6 +63,31 @@ TEST_CASE("[Faunus] StructureFactorIPBC")
         CHECK_EQ(S, Approx(result[cnt++]));
     }
     CHECK_EQ(cnt, result.size());
+}
+
+TEST_CASE("[Faunus] FormFactorAtomicConstant")
+{
+    // Setup atom types with different scattering_f0 values
+    Faunus::atoms = R"([
+        { "A": { "sigma": 2.0, "scattering_f0": 6.0 } },
+        { "B": { "sigma": 3.0, "scattering_f0": 7.5 } }
+    ])"_json.get<decltype(Faunus::atoms)>();
+
+    Scatterer s1{{0, 0, 0}, 0}; // type A
+    Scatterer s2{{1, 1, 1}, 1}; // type B
+    Scatterer s_unity{{2, 2, 2}, -1}; // special id for unity form factor
+
+    FormFactorAtomicConstant<double> ff;
+    CHECK_EQ(ff(0.1, s1), Approx(6.0));  // q-independent
+    CHECK_EQ(ff(0.5, s1), Approx(6.0));  // same for different q
+    CHECK_EQ(ff(0.1, s2), Approx(7.5));  // different atom type
+    CHECK_EQ(ff(0.5, s2), Approx(7.5));  // q-independent for type B
+    CHECK_EQ(ff(0.1, s_unity), Approx(1.0));  // id=-1 returns unity
+
+    // Verify FormFactorUnity still returns 1
+    FormFactorUnity<double> ff_unity;
+    CHECK_EQ(ff_unity(0.1, s1), Approx(1.0));
+    CHECK_EQ(ff_unity(0.1, s2), Approx(1.0));
 }
 
 } // namespace Faunus::Scatter

@@ -2676,11 +2676,12 @@ void ScatteringFunction::_sample()
 
     std::ranges::for_each(groups, [&](auto& group) {
         if (mass_center_scattering && group.isMolecular()) {
-            scatter_positions.push_back(group.mass_center);
+            scatter_positions.push_back({group.mass_center, -1}); // id=-1 for unity form factor
         }
         else {
-            auto positions = group.positions();
-            std::copy(positions.begin(), positions.end(), std::back_inserter(scatter_positions));
+            for (const auto& particle : group) {
+                scatter_positions.push_back({particle.pos, particle.id});
+            }
         }
     });
 
@@ -2759,11 +2760,12 @@ try : Analysis(spc, "scatter") {
         const int pmax = j.value("pmax", 15);
         if (ipbc) {
             scheme = Schemes::EXPLICIT_IPBC;
-            explicit_average_ipbc = std::make_unique<Scatter::StructureFactorIPBC<>>(pmax);
+            explicit_average_ipbc =
+                std::make_unique<Scatter::StructureFactorIPBC<Tformfactor, float>>(pmax);
         }
         else {
             scheme = Schemes::EXPLICIT_PBC;
-            explicit_average_pbc = std::make_unique<Scatter::StructureFactorPBC<>>(pmax);
+            explicit_average_pbc = std::make_unique<Scatter::StructureFactorPBC<Tformfactor>>(pmax);
         }
     }
     else {

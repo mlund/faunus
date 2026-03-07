@@ -159,17 +159,20 @@ and as a function of separation, _r_. In addition, the radial distribution funct
 
 ### Structure Factor
 
-The isotropically averaged static structure factor between $N$ point scatterers is calculated using
+The isotropically averaged static structure factor between $N$ scatterers is calculated using
 the [Debye formula](http://doi.org/dmb9wm),
 
 $$
-    S(q) = 1 + \frac{2}{N} \left \langle
-           \sum_{i=1}^{N-1}\sum_{j=i+1}^N \frac{\sin(qr_{ij})}{qr_{ij}}
+    I(q) = \frac{1}{\sum_i f_i^2} \left \langle
+           \sum_{i=1}^{N}\sum_{j=1}^{N} f_i f_j \frac{\sin(qr_{ij})}{qr_{ij}}
            \right \rangle
 $$
 
-The selected `molecules` can be treated either as single point scatterers (`com=true`) or as a group of individual
-point scatterers of equal intensity, i.e., with a  form factor of unity.
+where $f_i$ is the (q-independent) atomic form factor for particle $i$, defined by `scattering_f0` in the
+[atom properties](topology/#atoms). If not specified, `scattering_f0` defaults to 1.
+
+The selected `molecules` can be treated either as single point scatterers (`com=true`) or as a group of
+individual scatterers with atom-specific form factors.
 
 The computation of the structure factor is rather computationally intensive task, scaling quadratically with the number
 of particles and linearly with the number of scattering vector mesh points. If OpenMP is available, multiple threads
@@ -194,9 +197,9 @@ the following equation over the 3+6+4 directions obtained by permuting the cryst
 $\mathbf{q} = 2\pi p/L(h,k,l)$ where $p=1,2,\dots,p\_{max}$.
 
 $$
-S(q) = \frac{1}{N} \left <
-     \left ( \sum_i^N \sin(\mathbf{qr}\_i) \right )^2 +
-     \left ( \sum_j^N \cos(\mathbf{qr}\_j) \right )^2
+I(q) = \frac{1}{\sum_i f_i^2} \left <
+     \left ( \sum_{i=1}^N f_i \sin(\mathbf{qr}\_i) \right )^2 +
+     \left ( \sum_{j=1}^N f_j \cos(\mathbf{qr}\_j) \right )^2
     \right >
 $$
 

@@ -331,6 +331,36 @@ template <std::floating_point T> class SamplingPolicy
 };
 
 /**
+ * @brief Average values with equivalent keys (same rounded magnitude).
+ *
+ * Groups (key, value) pairs by rounded key and computes the mean value for each group.
+ * Used to average intensities from equivalent q-vectors with the same |q| magnitude.
+ *
+ * @see Equivalent to Rust's `average_duplicates` in pripps/src/explicit.rs
+ */
+template <std::floating_point T>
+std::map<T, T> averageByMagnitude(const std::vector<std::pair<T, T>>& pairs,
+                                  T precision = T{10000})
+{
+    struct Accumulator
+    {
+        T sum = T{0};
+        int count = 0;
+    };
+    std::map<T, Accumulator> bins;
+    for (const auto& [key, value] : pairs) {
+        const T rounded = std::round(key * precision) / precision;
+        bins[rounded].sum += value;
+        bins[rounded].count++;
+    }
+    std::map<T, T> result;
+    for (const auto& [key, acc] : bins) {
+        result[key] = acc.sum / static_cast<T>(acc.count);
+    }
+    return result;
+}
+
+/**
  * @brief Calculate scattering intensity using explicit q averaging.
  *
  * This averages over the thirteen permutations of the Miller index [100], [110], [101] using:
@@ -372,15 +402,21 @@ class StructureFactorPBC : private TSamplingPolicy
     template <typename Tscatterers>
     void sample(const Tscatterers& scatterers, const Point& boxlength)
     {
+        const auto n = directions.size() * static_cast<size_t>(p_max);
+        std::vector<std::pair<T, T>> q_intensity(n);
+
 #pragma omp parallel for collapse(2) default(shared)
-        for (size_t i = 0; i < directions.size(); ++i) { // openmp req. tradional loop
-            for (int p = 1; p <= p_max; ++p) {           // loop over multiples of q
+        for (size_t i = 0; i < directions.size(); ++i) {
+            for (int p = 1; p <= p_max; ++p) {
                 const Point q =
-                    2.0 * pc::pi * p * directions[i].cwiseQuotient(boxlength); // scattering vector
-                const auto intensity = calculateIntensity(scatterers, q);
-#pragma omp critical // avoid race conditions when updating the map
-                addSampling(q.norm(), intensity, 1.0);
+                    2.0 * pc::pi * p * directions[i].cwiseQuotient(boxlength);
+                q_intensity[i * static_cast<size_t>(p_max) + static_cast<size_t>(p - 1)] =
+                    {static_cast<T>(q.norm()), calculateIntensity(scatterers, q)};
             }
+        }
+
+        for (const auto& [q, intensity] : averageByMagnitude(q_intensity)) {
+            addSampling(q, intensity);
         }
     }
 
@@ -438,6 +474,9 @@ class StructureFactorIPBC : private TSamplingPolicy
     template <typename Tscatterers>
     void sample(const Tscatterers& scatterers, const Point& boxlength)
     {
+        const auto n = directions.size() * static_cast<size_t>(p_max);
+        std::vector<std::pair<T, T>> q_intensity(n);
+
 // https://gcc.gnu.org/gcc-9/porting_to.html#ompdatasharing
 // #pragma omp parallel for collapse(2) default(none) shared(directions, p_max, scatterers,
 // boxlength)
@@ -462,17 +501,19 @@ class StructureFactorIPBC : private TSamplingPolicy
                     sum_f_cos += f * product;
                     sum_f_squared += f * f;
                 }
-                // collect average, `norm()` gives the scattering vector length
                 const T ipbc_factor =
                     std::pow(2, directions[i].count()); // 2 ^ number of non-zero elements
                 T intensity = T{0};
                 if (sum_f_squared != T{0}) {
                     intensity = (sum_f_cos * sum_f_cos) / sum_f_squared * ipbc_factor;
                 }
-#pragma omp critical
-                // avoid race conditions when updating the map
-                addSampling(q.norm(), intensity, 1.0);
+                q_intensity[i * static_cast<size_t>(p_max) + static_cast<size_t>(p - 1)] =
+                    {static_cast<T>(q_norm), intensity};
             }
+        }
+
+        for (const auto& [q, intensity] : averageByMagnitude(q_intensity)) {
+            addSampling(q, intensity);
         }
     }
 
